@@ -1,0 +1,105 @@
+
+  // BEGIN_FEEDBACK_ROUTES - Auto-generated, do not modify
+  } else if (url.startsWith('/user/feedback/submit')) {
+    if (!isLoggedIn) {
+      res.writeHead(302, { 'Location': `/login?v=${BUILD_ID}` });
+      res.end();
+      return;
+    }
+    const filePath = path.join(__dirname, 'user_feedback_submit.html');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        res.end('Error loading page');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+    return;
+    
+  } else if (url.startsWith('/user/my-feedback-submissions')) {
+    if (!isLoggedIn) {
+      res.writeHead(302, { 'Location': `/login?v=${BUILD_ID}` });
+      res.end();
+      return;
+    }
+    const filePath = path.join(__dirname, 'user_my_submissions.html');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        res.end('Error loading page');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+    return;
+    
+  } else if (url.startsWith('/user/announcements')) {
+    if (!isLoggedIn) {
+      res.writeHead(302, { 'Location': `/login?v=${BUILD_ID}` });
+      res.end();
+      return;
+    }
+    const filePath = path.join(__dirname, 'user_announcements.html');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        res.end('Error loading page');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+    return;
+    
+  } else if (url.startsWith('/admin/feedback/pending')) {
+    if (!isLoggedIn) {
+      res.writeHead(302, { 'Location': `/login?v=${BUILD_ID}` });
+      res.end();
+      return;
+    }
+    const userRole = getUserRole(sessionToken);
+    if (!['Admin', 'Super Admin', 'VGK ID', 'Finance Admin'].includes(userRole)) {
+      res.writeHead(403);
+      res.end('Access denied');
+      return;
+    }
+    const filePath = path.join(__dirname, 'admin_feedback_pending.html');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        res.end('Error loading page');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+    return;
+    
+  } else if (url.startsWith('/vgk/categories')) {
+    if (!isLoggedIn) {
+      res.writeHead(302, { 'Location': `/login?v=${BUILD_ID}` });
+      res.end();
+      return;
+    }
+    const userRole = getUserRole(sessionToken);
+    if (userRole !== 'VGK ID') {
+      res.writeHead(403);
+      res.end('Access denied - VGK only');
+      return;
+    }
+    const filePath = path.join(__dirname, 'vgk_categories.html');
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        res.end('Error loading page');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+    return;
+  }
+  // END_FEEDBACK_ROUTES

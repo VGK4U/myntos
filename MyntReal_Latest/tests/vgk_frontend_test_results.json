@@ -1,0 +1,203 @@
+{
+  "working": [
+    {
+      "url": "/finance/awards/payment-processing",
+      "name": "Awards Payment Processing"
+    },
+    {
+      "url": "/vgk/company-earnings",
+      "name": "Company Earnings"
+    },
+    {
+      "url": "/admin/birthdays",
+      "name": "Birthday Details"
+    },
+    {
+      "url": "/vgk/popup-control",
+      "name": "Popup Control"
+    },
+    {
+      "url": "/vgk/terms-conditions-management",
+      "name": "T&C Management"
+    },
+    {
+      "url": "/vgk/withdrawal/dashboard",
+      "name": "Withdrawal Dashboard"
+    },
+    {
+      "url": "/vgk/scheduler-dashboard",
+      "name": "Scheduler Dashboard"
+    },
+    {
+      "url": "/vgk/menu-configuration",
+      "name": "Menu Configuration"
+    },
+    {
+      "url": "/vgk/expense-overview",
+      "name": "Expense Overview"
+    }
+  ],
+  "broken": [
+    {
+      "url": "/vgk/income-history-supreme",
+      "name": "Income History Supreme",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/withdrawal-supreme/approvals",
+      "name": "Withdrawal Approvals",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/admin/members/search",
+      "name": "Search Members",
+      "error": "Server Error"
+    },
+    {
+      "url": "/admin/kyc-management",
+      "name": "KYC Management",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/user-data-search",
+      "name": "User Data Search",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/brand-level-management",
+      "name": "Content Management",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/bulk-user-edit",
+      "name": "Bulk User Edit",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/user-activation-control",
+      "name": "User Activation Control",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/role-management",
+      "name": "Role Management",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/award-management",
+      "name": "Award Management",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/system-controls",
+      "name": "System Controls",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/rate-configuration",
+      "name": "Rate Configuration",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/daily-ceiling",
+      "name": "Daily Ceiling",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/emergency-wallet",
+      "name": "Emergency Wallet",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/income-analytics",
+      "name": "Income Analytics",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/withdrawal-supreme/history",
+      "name": "Withdrawal History",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/withdrawal-supreme/analytics",
+      "name": "Withdrawal Analytics",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/finance-overview",
+      "name": "Finance Overview",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/financial-reports",
+      "name": "Financial Reports",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/kyc-pending",
+      "name": "KYC Pending",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/kyc-approved",
+      "name": "KYC Approved",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/kyc-rejected",
+      "name": "KYC Rejected",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/kyc-analytics",
+      "name": "KYC Analytics",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/bank-pending",
+      "name": "Bank Pending",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/bank-approved",
+      "name": "Bank Approved",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/bank-all",
+      "name": "All Bank Details",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/bonanza/create",
+      "name": "Create Bonanza",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/bonanza/active",
+      "name": "Active Bonanzas",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/bonanza/history",
+      "name": "Bonanza History",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/bonanza/claims",
+      "name": "Bonanza Claims",
+      "error": "404 Not Found"
+    },
+    {
+      "url": "/vgk/awards/oversight",
+      "name": "Bonanza Awards",
+      "error": "Alert Text: Error loading awards: Failed to load awards\nMessage: unexpected alert open: {Alert text "
+    },
+    {
+      "url": "/vgk/awards/procurement",
+      "name": "Awards Procurement",
+      "error": "404 Not Found"
+    }
+  ],
+  "total": 41
+}

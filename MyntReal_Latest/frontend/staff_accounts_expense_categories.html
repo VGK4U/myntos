@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>In &amp; Out Cat. - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .btn-success-custom { background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-success-custom:hover { color: white; transform: translateY(-1px); }
+        .btn-income-custom { background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-income-custom:hover { color: white; transform: translateY(-1px); }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { background: #f9fafb; padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151; }
+        .data-table tr:hover { background: #f9fafb; }
+        .badge-active { background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .action-btn { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; margin-right: 6px; }
+        .action-btn-edit { background: #dbeafe; color: #1d4ed8; }
+        .action-btn-edit:hover { background: #1d4ed8; color: white; }
+        .action-btn-delete { background: #fee2e2; color: #dc2626; }
+        .action-btn-delete:hover { background: #dc2626; color: white; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 500px; width: 90%; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        .summary-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .summary-card { background: white; border-radius: 12px; padding: 20px; flex: 1; min-width: 160px; border: 1px solid #e5e7eb; }
+        .summary-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .summary-card .label { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        .summary-card.active .value { color: #059669; }
+        .summary-card.income .value { color: #d97706; }
+
+        /* Section toggle — Expense vs Income */
+        .section-tabs { display: flex; gap: 0; margin-bottom: 24px; border-radius: 10px; overflow: hidden; border: 2px solid #e5e7eb; width: fit-content; }
+        .section-tab-btn { padding: 12px 28px; border: none; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; background: white; color: #6b7280; }
+        .section-tab-btn.active-exp { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; }
+        .section-tab-btn.active-inc { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .section-tab-btn:hover:not(.active-exp):not(.active-inc) { background: #f9fafb; }
+
+        /* Inner tabs within each section */
+        .tab-container { display: flex; gap: 8px; margin-bottom: 24px; }
+        .tab-btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; background: white; color: #6b7280; border: 1px solid #e5e7eb; font-size: 14px; }
+        .tab-btn.active-exp { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; border-color: transparent; }
+        .tab-btn.active-inc { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border-color: transparent; }
+        .tab-btn:hover:not(.active-exp):not(.active-inc) { background: #f9fafb; }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .section-panel { display: none; }
+        .section-panel.active { display: block; }
+        .sub-category-parent { color: #6b7280; font-size: 12px; }
+        .income-badge { background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-arrows-split-up-and-left me-2" style="color:#6366f1;"></i>In &amp; Out Cat.</h1>
+                <p>Manage expense and income categories for SFMS journal entries</p>
+            </div>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="summary-row">
+            <div class="summary-card">
+                <div class="value" id="expMainCount">0</div>
+                <div class="label"><i class="fas fa-folder me-1" style="color:#6366f1;"></i>Expense Main</div>
+            </div>
+            <div class="summary-card active">
+                <div class="value" id="expSubCount">0</div>
+                <div class="label"><i class="fas fa-folder-open me-1" style="color:#059669;"></i>Expense Sub</div>
+            </div>
+            <div class="summary-card income">
+                <div class="value" id="incMainCount">0</div>
+                <div class="label"><i class="fas fa-coins me-1" style="color:#d97706;"></i>Income Main</div>
+            </div>
+            <div class="summary-card income">
+                <div class="value" id="incSubCount">0</div>
+                <div class="label"><i class="fas fa-circle-dollar-to-slot me-1" style="color:#d97706;"></i>Income Sub</div>
+            </div>
+        </div>
+
+        <!-- Section toggle: Expense Heads | Income Heads -->
+        <div class="section-tabs">
+            <button class="section-tab-btn active-exp" id="btnSectionExp" onclick="switchSection('expense')">
+                <i class="fas fa-minus-circle me-2"></i>Expense Heads
+            </button>
+            <button class="section-tab-btn" id="btnSectionInc" onclick="switchSection('income')">
+                <i class="fas fa-plus-circle me-2"></i>Income Heads
+            </button>
+        </div>
+
+        <!-- ═══════════════════ EXPENSE SECTION ═══════════════════ -->
+        <div id="sectionExpense" class="section-panel active">
+            <div class="tab-container">
+                <button class="tab-btn active-exp" id="expTabMain" onclick="switchExpTab('main')">
+                    <i class="fas fa-folder me-2"></i>Main Categories
+                </button>
+                <button class="tab-btn" id="expTabSub" onclick="switchExpTab('sub')">
+                    <i class="fas fa-folder-open me-2"></i>Sub Categories
+                </button>
+            </div>
+
+            <div id="expMainTab" class="tab-content active">
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-folder me-2" style="color:#6366f1;"></i>Expense Main Categories</span>
+                        <button class="btn-primary-custom" onclick="openExpMainModal()"><i class="fas fa-plus me-2"></i>Add Main Category</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="expMainLoading" class="loading-spinner"><div class="spinner"></div></div>
+                        <table class="data-table" id="expMainTable" style="display:none;">
+                            <thead><tr><th>ID</th><th>Category Name</th><th>Description</th><th>Sub Categories</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody id="expMainBody"></tbody>
+                        </table>
+                        <div id="expMainEmpty" class="empty-state" style="display:none;">
+                            <i class="fas fa-folder"></i><h3>No Expense Main Categories</h3><p>Add your first main category to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="expSubTab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-folder-open me-2" style="color:#059669;"></i>Expense Sub Categories</span>
+                        <button class="btn-success-custom" onclick="openExpSubModal()"><i class="fas fa-plus me-2"></i>Add Sub Category</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="expSubLoading" class="loading-spinner"><div class="spinner"></div></div>
+                        <table class="data-table" id="expSubTable" style="display:none;">
+                            <thead><tr><th>ID</th><th>Sub Category Name</th><th>Main Category</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody id="expSubBody"></tbody>
+                        </table>
+                        <div id="expSubEmpty" class="empty-state" style="display:none;">
+                            <i class="fas fa-folder-open"></i><h3>No Expense Sub Categories</h3><p>Add a sub category to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════ INCOME SECTION ═══════════════════ -->
+        <div id="sectionIncome" class="section-panel">
+            <div class="tab-container">
+                <button class="tab-btn" id="incTabMain" onclick="switchIncTab('main')">
+                    <i class="fas fa-coins me-2"></i>Main Categories
+                </button>
+                <button class="tab-btn" id="incTabSub" onclick="switchIncTab('sub')">
+                    <i class="fas fa-circle-dollar-to-slot me-2"></i>Sub Categories
+                </button>
+            </div>
+
+            <div id="incMainTab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-coins me-2" style="color:#d97706;"></i>Income Main Categories</span>
+                        <button class="btn-income-custom" onclick="openIncMainModal()"><i class="fas fa-plus me-2"></i>Add Main Category</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="incMainLoading" class="loading-spinner"><div class="spinner"></div></div>
+                        <table class="data-table" id="incMainTable" style="display:none;">
+                            <thead><tr><th>ID</th><th>Category Name</th><th>Description</th><th>Sub Categories</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody id="incMainBody"></tbody>
+                        </table>
+                        <div id="incMainEmpty" class="empty-state" style="display:none;">
+                            <i class="fas fa-coins"></i><h3>No Income Main Categories</h3><p>Add your first income category to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="incSubTab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-circle-dollar-to-slot me-2" style="color:#d97706;"></i>Income Sub Categories</span>
+                        <button class="btn-income-custom" onclick="openIncSubModal()"><i class="fas fa-plus me-2"></i>Add Sub Category</button>
+                    </div>
+                    <div class="card-body">
+                        <div id="incSubLoading" class="loading-spinner"><div class="spinner"></div></div>
+                        <table class="data-table" id="incSubTable" style="display:none;">
+                            <thead><tr><th>ID</th><th>Sub Category Name</th><th>Main Category</th><th>Description</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody id="incSubBody"></tbody>
+                        </table>
+                        <div id="incSubEmpty" class="empty-state" style="display:none;">
+                            <i class="fas fa-circle-dollar-to-slot"></i><h3>No Income Sub Categories</h3><p>Add a sub category to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- ═══ EXPENSE MAIN CATEGORY MODAL ═══ -->
+    <div class="modal-overlay" id="expMainModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="expMainModalTitle"><i class="fas fa-folder me-2"></i>Add Expense Category</h3>
+                <button class="modal-close" onclick="closeModal('expMainModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="expMainId">
+                <div class="form-group">
+                    <label>Category Name *</label>
+                    <input type="text" id="expMainName" placeholder="e.g., Office Expenses">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="expMainDesc" placeholder="Brief description"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('expMainModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="saveExpMain()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ EXPENSE SUB CATEGORY MODAL ═══ -->
+    <div class="modal-overlay" id="expSubModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="expSubModalTitle"><i class="fas fa-folder-open me-2"></i>Add Expense Sub Category</h3>
+                <button class="modal-close" onclick="closeModal('expSubModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="expSubId">
+                <div class="form-group">
+                    <label>Main Category *</label>
+                    <select id="expSubParent">
+                        <option value="">Select Main Category</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Sub Category Name *</label>
+                    <input type="text" id="expSubName" placeholder="e.g., Stationery">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="expSubDesc" placeholder="Brief description"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('expSubModal')">Cancel</button>
+                <button class="btn-success-custom" onclick="saveExpSub()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ INCOME MAIN CATEGORY MODAL ═══ -->
+    <div class="modal-overlay" id="incMainModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="incMainModalTitle"><i class="fas fa-coins me-2"></i>Add Income Category</h3>
+                <button class="modal-close" onclick="closeModal('incMainModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="incMainId">
+                <div class="form-group">
+                    <label>Category Name *</label>
+                    <input type="text" id="incMainName" placeholder="e.g., Sales Revenue">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="incMainDesc" placeholder="Brief description"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('incMainModal')">Cancel</button>
+                <button class="btn-income-custom" onclick="saveIncMain()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ INCOME SUB CATEGORY MODAL ═══ -->
+    <div class="modal-overlay" id="incSubModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="incSubModalTitle"><i class="fas fa-circle-dollar-to-slot me-2"></i>Add Income Sub Category</h3>
+                <button class="modal-close" onclick="closeModal('incSubModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="incSubId">
+                <div class="form-group">
+                    <label>Main Category *</label>
+                    <select id="incSubParent">
+                        <option value="">Select Main Category</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Sub Category Name *</label>
+                    <input type="text" id="incSubName" placeholder="e.g., Product Sales">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="incSubDesc" placeholder="Brief description"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('incSubModal')">Cancel</button>
+                <button class="btn-income-custom" onclick="saveIncSub()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const EXP_BASE = '/api/v1/expense-categories';
+        const INC_BASE = '/api/v1/income-categories';
+
+        let expMain = [], expSub = [];
+        let incMain = [], incSub = [];
+        let _curSection = 'expense';
+        let _curExpTab = 'main';
+        let _curIncTab = 'main';
+        let _editExpMain = false, _editExpSub = false;
+        let _editIncMain = false, _editIncSub = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('In & Out Cat.', 'fas fa-arrows-split-up-and-left');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            await Promise.all([loadExpense(), loadIncome()]);
+        });
+
+        /* ─── Section toggle ─── */
+        function switchSection(section) {
+            _curSection = section;
+            document.getElementById('sectionExpense').classList.toggle('active', section === 'expense');
+            document.getElementById('sectionIncome').classList.toggle('active', section === 'income');
+            const btnExp = document.getElementById('btnSectionExp');
+            const btnInc = document.getElementById('btnSectionInc');
+            btnExp.className = 'section-tab-btn' + (section === 'expense' ? ' active-exp' : '');
+            btnInc.className = 'section-tab-btn' + (section === 'income' ? ' active-inc' : '');
+            if (section === 'income' && _curIncTab === 'main') {
+                document.getElementById('incMainTab').classList.add('active');
+                document.getElementById('incSubTab').classList.remove('active');
+                document.getElementById('incTabMain').className = 'tab-btn active-inc';
+                document.getElementById('incTabSub').className = 'tab-btn';
+            }
+        }
+
+        /* ─── Expense inner tabs ─── */
+        function switchExpTab(tab) {
+            _curExpTab = tab;
+            document.getElementById('expMainTab').classList.toggle('active', tab === 'main');
+            document.getElementById('expSubTab').classList.toggle('active', tab === 'sub');
+            document.getElementById('expTabMain').className = 'tab-btn' + (tab === 'main' ? ' active-exp' : '');
+            document.getElementById('expTabSub').className = 'tab-btn' + (tab === 'sub' ? ' active-exp' : '');
+        }
+
+        /* ─── Income inner tabs ─── */
+        function switchIncTab(tab) {
+            _curIncTab = tab;
+            document.getElementById('incMainTab').classList.toggle('active', tab === 'main');
+            document.getElementById('incSubTab').classList.toggle('active', tab === 'sub');
+            document.getElementById('incTabMain').className = 'tab-btn' + (tab === 'main' ? ' active-inc' : '');
+            document.getElementById('incTabSub').className = 'tab-btn' + (tab === 'sub' ? ' active-inc' : '');
+        }
+
+        /* ─── Load expense categories ─── */
+        async function loadExpense() {
+            showLoading('exp');
+            try {
+                const r = await staffFetch(`${EXP_BASE}/list`);
+                const d = await r.json();
+                if (d.success) {
+                    expMain = d.main_categories || [];
+                    expSub  = d.sub_categories  || [];
+                    renderExpMain();
+                    renderExpSub();
+                    updateSummary();
+                }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+            } finally {
+                hideLoading('exp');
+            }
+        }
+
+        /* ─── Load income categories ─── */
+        async function loadIncome() {
+            showLoading('inc');
+            try {
+                const r = await staffFetch(`${INC_BASE}/list`);
+                const d = await r.json();
+                if (d.success) {
+                    incMain = d.main_categories || [];
+                    incSub  = d.sub_categories  || [];
+                    renderIncMain();
+                    renderIncSub();
+                    updateSummary();
+                }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+            } finally {
+                hideLoading('inc');
+            }
+        }
+
+        function showLoading(prefix) {
+            document.getElementById(`${prefix}MainLoading`).style.display = 'flex';
+            document.getElementById(`${prefix}SubLoading`).style.display = 'flex';
+        }
+        function hideLoading(prefix) {
+            document.getElementById(`${prefix}MainLoading`).style.display = 'none';
+            document.getElementById(`${prefix}SubLoading`).style.display = 'none';
+        }
+
+        function updateSummary() {
+            document.getElementById('expMainCount').textContent = expMain.length;
+            document.getElementById('expSubCount').textContent  = expSub.length;
+            document.getElementById('incMainCount').textContent = incMain.length;
+            document.getElementById('incSubCount').textContent  = incSub.length;
+        }
+
+        /* ─── Render expense main ─── */
+        function renderExpMain() {
+            const tbody = document.getElementById('expMainBody');
+            const table = document.getElementById('expMainTable');
+            const empty = document.getElementById('expMainEmpty');
+            if (!expMain.length) { table.style.display='none'; empty.style.display='block'; return; }
+            tbody.innerHTML = expMain.map(cat => {
+                const subs = expSub.filter(s => s.parent_id === cat.id);
+                const pills = subs.length
+                    ? `<div id="eSubExp_${cat.id}" style="display:none;margin-top:8px;flex-wrap:wrap;gap:4px;">${subs.map(s=>`<span style="background:#d1fae5;color:#065f46;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:500;display:inline-block;">${s.name}</span>`).join('')}</div>` : '';
+                return `<tr>
+                    <td><code>${cat.id}</code></td>
+                    <td><strong>${cat.name}</strong>${pills}</td>
+                    <td>${cat.description || '-'}</td>
+                    <td><span class="badge bg-info" style="cursor:${subs.length?'pointer':'default'};" onclick="${subs.length?`toggleSubPills('eSubExp_${cat.id}')`:''}">${subs.length} sub${subs.length>1?'s':''}</span></td>
+                    <td><span class="badge-active">Active</span></td>
+                    <td>
+                        <button class="action-btn action-btn-edit" onclick="editExpMain(${cat.id})"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="action-btn action-btn-delete" onclick="delExpMain(${cat.id},'${cat.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i> Delete</button>
+                    </td>
+                </tr>`;
+            }).join('');
+            table.style.display='table'; empty.style.display='none';
+        }
+
+        /* ─── Render expense sub ─── */
+        function renderExpSub() {
+            const tbody = document.getElementById('expSubBody');
+            const table = document.getElementById('expSubTable');
+            const empty = document.getElementById('expSubEmpty');
+            if (!expSub.length) { table.style.display='none'; empty.style.display='block'; return; }
+            tbody.innerHTML = expSub.map(sub => {
+                const par = expMain.find(m => m.id === sub.parent_id);
+                return `<tr>
+                    <td><code>${sub.id}</code></td>
+                    <td><strong>${sub.name}</strong></td>
+                    <td><span class="sub-category-parent"><i class="fas fa-folder me-1"></i>${par ? par.name : 'Unknown'}</span></td>
+                    <td>${sub.description || '-'}</td>
+                    <td><span class="badge-active">Active</span></td>
+                    <td>
+                        <button class="action-btn action-btn-edit" onclick="editExpSub(${sub.id})"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="action-btn action-btn-delete" onclick="delExpSub(${sub.id},'${sub.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i> Delete</button>
+                    </td>
+                </tr>`;
+            }).join('');
+            table.style.display='table'; empty.style.display='none';
+        }
+
+        /* ─── Render income main ─── */
+        function renderIncMain() {
+            const tbody = document.getElementById('incMainBody');
+            const table = document.getElementById('incMainTable');
+            const empty = document.getElementById('incMainEmpty');
+            if (!incMain.length) { table.style.display='none'; empty.style.display='block'; return; }
+            tbody.innerHTML = incMain.map(cat => {
+                const subs = incSub.filter(s => s.parent_id === cat.id);
+                const pills = subs.length
+                    ? `<div id="iSubExp_${cat.id}" style="display:none;margin-top:8px;flex-wrap:wrap;gap:4px;">${subs.map(s=>`<span style="background:#fef3c7;color:#92400e;border-radius:12px;padding:2px 10px;font-size:11px;font-weight:500;display:inline-block;">${s.name}</span>`).join('')}</div>` : '';
+                return `<tr>
+                    <td><code>${cat.id}</code></td>
+                    <td><strong>${cat.name}</strong>${pills}</td>
+                    <td>${cat.description || '-'}</td>
+                    <td><span class="badge bg-warning text-dark" style="cursor:${subs.length?'pointer':'default'};" onclick="${subs.length?`toggleSubPills('iSubExp_${cat.id}')`:''}">${subs.length} sub${subs.length>1?'s':''}</span></td>
+                    <td><span class="income-badge">Active</span></td>
+                    <td>
+                        <button class="action-btn action-btn-edit" onclick="editIncMain(${cat.id})"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="action-btn action-btn-delete" onclick="delIncMain(${cat.id},'${cat.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i> Delete</button>
+                    </td>
+                </tr>`;
+            }).join('');
+            table.style.display='table'; empty.style.display='none';
+        }
+
+        /* ─── Render income sub ─── */
+        function renderIncSub() {
+            const tbody = document.getElementById('incSubBody');
+            const table = document.getElementById('incSubTable');
+            const empty = document.getElementById('incSubEmpty');
+            if (!incSub.length) { table.style.display='none'; empty.style.display='block'; return; }
+            tbody.innerHTML = incSub.map(sub => {
+                const par = incMain.find(m => m.id === sub.parent_id);
+                return `<tr>
+                    <td><code>${sub.id}</code></td>
+                    <td><strong>${sub.name}</strong></td>
+                    <td><span class="sub-category-parent"><i class="fas fa-coins me-1"></i>${par ? par.name : 'Unknown'}</span></td>
+                    <td>${sub.description || '-'}</td>
+                    <td><span class="income-badge">Active</span></td>
+                    <td>
+                        <button class="action-btn action-btn-edit" onclick="editIncSub(${sub.id})"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="action-btn action-btn-delete" onclick="delIncSub(${sub.id},'${sub.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i> Delete</button>
+                    </td>
+                </tr>`;
+            }).join('');
+            table.style.display='table'; empty.style.display='none';
+        }
+
+        function toggleSubPills(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.display = el.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        /* ─── Expense main CRUD ─── */
+        function openExpMainModal() {
+            _editExpMain = false;
+            document.getElementById('expMainModalTitle').innerHTML = '<i class="fas fa-folder me-2"></i>Add Expense Category';
+            document.getElementById('expMainId').value = '';
+            document.getElementById('expMainName').value = '';
+            document.getElementById('expMainDesc').value = '';
+            document.getElementById('expMainModal').classList.add('active');
+        }
+        function editExpMain(id) {
+            const cat = expMain.find(c => c.id === id);
+            if (!cat) return;
+            _editExpMain = true;
+            document.getElementById('expMainModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Expense Category';
+            document.getElementById('expMainId').value = cat.id;
+            document.getElementById('expMainName').value = cat.name;
+            document.getElementById('expMainDesc').value = cat.description || '';
+            document.getElementById('expMainModal').classList.add('active');
+        }
+        async function saveExpMain() {
+            const id   = document.getElementById('expMainId').value;
+            const name = document.getElementById('expMainName').value.trim();
+            const desc = document.getElementById('expMainDesc').value.trim();
+            if (!name) { alert('Category name is required'); return; }
+            try {
+                const url = _editExpMain ? `${EXP_BASE}/main/update/${id}` : `${EXP_BASE}/main/create`;
+                const r = await staffFetch(url, { method: 'POST', body: JSON.stringify({ name, description: desc || null }) });
+                const d = await r.json();
+                if (d.success) { closeModal('expMainModal'); await loadExpense(); }
+                else alert(d.message || 'Failed');
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED') alert('Error: ' + e.message); }
+        }
+        async function delExpMain(id, name) {
+            if (!confirm(`Delete expense category "${name}"?`)) return;
+            try {
+                const r = await staffFetch(`${EXP_BASE}/main/${id}`, { method: 'DELETE' });
+                const d = await r.json();
+                if (d.success) await loadExpense();
+                else alert(d.message || 'Failed to delete');
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED') alert('Error: ' + e.message); }
+        }
+
+        /* ─── Expense sub CRUD ─── */
+        function openExpSubModal() {
+            _editExpSub = false;
+            document.getElementById('expSubModalTitle').innerHTML = '<i class="fas fa-folder-open me-2"></i>Add Expense Sub Category';
+            document.getElementById('expSubId').value = '';
+            document.getElementById('expSubName').value = '';
+            document.getElementById('expSubDesc').value = '';
+            const sel = document.getElementById('expSubParent');
+            sel.innerHTML = '<option value="">Select Main Category</option>';
+            expMain.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('expSubModal').classList.add('active');
+        }
+        function editExpSub(id) {
+            const sub = expSub.find(s => s.id === id);
+            if (!sub) return;
+            _editExpSub = true;
+            document.getElementById('expSubModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Expense Sub Category';
+            document.getElementById('expSubId').value = sub.id;
+            document.getElementById('expSubName').value = sub.name;
+            document.getElementById('expSubDesc').value = sub.description || '';
+            const sel = document.getElementById('expSubParent');
+            sel.innerHTML = '<option value="">Select Main Category</option>';
+            expMain.forEach(c => sel.innerHTML += `<option value="${c.id}"${c.id===sub.parent_id?' selected':''}>${c.name}</option>`);
+            document.getElementById('expSubModal').classList.add('active');
+        }
+        async function saveExpSub() {
+            const id     = document.getElementById('expSubId').value;
+            const pid    = document.getElementById('expSubParent').value;
+            const name   = document.getElementById('expSubName').value.trim();
+            const desc   = document.getElementById('expSubDesc').value.trim();
+            if (!pid) { alert('Please select a main category'); return; }
+            if (!name) { alert('Sub category name is required'); return; }
+            try {
+                const url = _editExpSub ? `${EXP_BASE}/sub/update/${id}` : `${EXP_BASE}/sub/create`;
+                const body = _editExpSub ? { name, description: desc || null } : { name, parent_id: parseInt(pid), description: desc || null };
+                const r = await staffFetch(url, { method: _editExpSub ? 'POST' : 'POST', body: JSON.stringify(body) });
+                const d = await r.json();
+                if (d.success) { closeModal('expSubModal'); await loadExpense(); }
+                else alert(d.message || 'Failed');
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED') alert('Error: ' + e.message); }
+        }
+        async function delExpSub(id, name) {
+            if (!confirm(`Delete sub category "${name}"?`)) return;
+            try {
+                const r = await staffFetch(`${EXP_BASE}/sub/${id}`, { method: 'DELETE' });
+                const d = await r.json();
+                if (d.success) await loadExpense();
+                else alert(d.message || 'Failed to delete');
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED') alert('Error: ' + e.message); }
+        }
+
+        /* ─── Income main CRUD ─── */
+        function openIncMainModal() {
+            _editIncMain = false;
+            document.getElementById('incMainModalTitle').innerHTML = '<i class="fas fa-coins me-2"></i>Add Income Category';
+            document.getElementById('incMainId').value = '';
+            document.getElementById('incMainName').value = '';
+            document.getElementById('incMainDesc').value = '';
+            document.getElementById('incMainModal').classList.add('active');
+        }
+        function editIncMain(id) {
+            const cat = incMain.find(c => c.id === id);
+            if (!cat) return;
+            _editIncMain = true;
+            document.getElementById('incMainModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Income Category';
+            document.getElementById('incMainId').value = cat.id;
+            document.getElementById('incMainName').value = cat.name;
+            document.getElementById('incMainDesc').value = cat.description || '';
+            document.getElementById('incMainModal').classList.add('active');
+        }
+        async function saveIncMain() {
+            const id   = document.getElementById('incMainId').value;
+            const name = document.getElementById('incMainName').value.trim();
+            const desc = document.getElementById('incMainDesc').value.trim();
+            if (!name) { alert('Category name is required'); return; }
+            try {
+                const url = _editIncMain ? `${INC_BASE}/main/update/${id}` : `${INC_BASE}/main/create`;
+                const r = await staffFetch(url, { method: 'POST', body: JSON.stringify({ name, description: desc || null }) });
+                const d = await r.json();
+                if (d.success) { closeModal('incMainModal'); await loadIncome(); }
+                else alert(d.message || 'Failed');
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED') alert('Error: ' + e.message); }
+        }
+        async function delIncMain(id, name) {
+            if (!confirm(`Delete income category "${name}"?`)) return;
+            try {
+                const r = await staffFetch(`${INC_BASE}/main/${id}`, { method: 'DELETE' });
+                const d = await r.json();
+                if (d.success) await loadIncome();
+                else alert(d.message || 'Failed to delete');
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED') alert('Error: ' + e.message); }
+        }
+
+        /* ─── Income sub CRUD ─── */
+        function openIncSubModal() {
+            _editIncSub = false;
+            document.getElementById('incSubModalTitle').innerHTML = '<i class="fas fa-circle-dollar-to-slot me-2"></i>Add Income Sub Category';
+            document.getElementById('incSubId').value = '';
+            document.getElementById('incSubName').value = '';
+            document.getElementById('incSubDesc').value = '';
+            const sel = document.getElementById('incSubParent');
+            sel.innerHTML = '<option value="">Select Main Category</option>';
+            incMain.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('incSubModal').classList.add('active');
+        }
+        function editIncSub(id) {
+            const sub = incSub.find(s => s.id === id);
+            if (!sub) return;
+            _editIncSub = true;
+            document.getElementById('incSubModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Income Sub Category';
+            document.getElementById('incSubId').value = sub.id;
+            document.getElementById('incSubName').value = sub.name;
+            document.getElementById('incSubDesc').value = sub.description || '';
+            const sel = document.getElementById('incSubParent');
+            sel.innerHTML = '<option value="">Select Main Category</option>';
+            incMain.forEach(c => sel.innerHTML += `<option value="${c.id}"${c.id===sub.parent_id?' selected':''}>${c.name}</option>`);
+            document.getElementById('incSubModal').classList.add('active');
+        }
+        async function saveIncSub() {
+            const id   = document.getElementById('incSubId').value;
+            const pid  = document.getElementById('incSubParent').value;
+            const name = document.getElementById('incSubName').value.trim();
+            const desc = document.getElementById('incSubDesc').value.trim();
+            if (!pid) { alert('Please select a main category'); return; }
+            if (!name) { alert('Sub category name is required'); return; }
+            try {
+                const url = _editIncSub ? `${INC_BASE}/sub/update/${id}` : `${INC_BASE}/sub/create`;
+                const body = _editIncSub ? { name, description: desc || null } : { name, parent_id: parseInt(pid), description: desc || null };
+                const r = await staffFetch(url, { method: 'POST', body: JSON.stringify(body) });
+                const d = await r.json();
+                if (d.success) { closeModal('incSubModal'); await loadIncome(); }
+                else alert(d.message || 'Failed');
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED') alert('Error: ' + e.message); }
+        }
+        async function delIncSub(id, name) {
+            if (!confirm(`Delete income sub category "${name}"?`)) return;
+            try {
+                const r = await staffFetch(`${INC_BASE}/sub/${id}`, { method: 'DELETE' });
+                const d = await r.json();
+                if (d.success) await loadIncome();
+                else alert(d.message || 'Failed to delete');
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED') alert('Error: ' + e.message); }
+        }
+    </script>
+</body>
+</html>

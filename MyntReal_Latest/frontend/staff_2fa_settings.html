@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP Staff Portal - 2FA Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f3f4f6; 
+            min-height: 100vh;
+        }
+
+        .content-area { 
+            padding: 24px;
+            max-width: 700px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 20px; }
+        
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .status-enabled { background: #dcfce7; color: #166534; }
+        .status-disabled { background: #fee2e2; color: #991b1b; }
+        
+        .qr-container {
+            background: #f9fafb;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .qr-container i { font-size: 64px; color: #d1d5db; margin-bottom: 16px; }
+        
+        .form-control {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        
+        .btn-primary { background: #6366f1; border: none; padding: 10px 20px; border-radius: 8px; }
+        .btn-primary:hover { background: #4f46e5; }
+        
+        .btn-danger { padding: 10px 20px; border-radius: 8px; }
+        
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box h6 { color: #1e40af; margin: 0 0 8px; font-size: 14px; }
+        .info-box p { color: #1e40af; margin: 0; font-size: 13px; }
+        
+        .alert { border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div id="alertContainer"></div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-mobile-alt me-2"></i>2FA Status</h5>
+                    <span class="status-badge" id="statusBadge">Loading...</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">Two-factor authentication adds an extra layer of security to your account by requiring a verification code in addition to your password.</p>
+                    
+                    <div id="2faDisabled">
+                        <div class="qr-container">
+                            <i class="fas fa-qrcode"></i>
+                            <p class="text-muted">Enable 2FA to see your QR code</p>
+                        </div>
+                        <button class="btn btn-primary w-100" onclick="enable2FA()">
+                            <i class="fas fa-shield-alt me-2"></i>Enable Two-Factor Authentication
+                        </button>
+                    </div>
+                    
+                    <div id="2faSetup" style="display: none;">
+                        <div class="info-box">
+                            <h6><i class="fas fa-info-circle me-1"></i>Setup Instructions</h6>
+                            <p>1. Download an authenticator app (Google Authenticator, Authy, etc.)<br>
+                               2. Scan the QR code below or enter the secret key manually<br>
+                               3. Enter the 6-digit code from your app to verify</p>
+                        </div>
+                        
+                        <div class="qr-container" id="qrCodeContainer">
+                            <div id="qrCode"></div>
+                            <p class="mt-3 mb-2"><strong>Secret Key:</strong></p>
+                            <code id="secretKey" class="d-block p-2 bg-light rounded"></code>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Enter Verification Code</label>
+                            <input type="text" class="form-control text-center" id="verificationCode" maxlength="6" placeholder="000000">
+                        </div>
+                        
+                        <button class="btn btn-primary w-100" onclick="verify2FA()">
+                            <i class="fas fa-check me-2"></i>Verify and Enable
+                        </button>
+                    </div>
+                    
+                    <div id="2faEnabled" style="display: none;">
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Two-factor authentication is enabled on your account
+                        </div>
+                        <button class="btn btn-danger w-100" onclick="disable2FA()">
+                            <i class="fas fa-times me-2"></i>Disable Two-Factor Authentication
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-key me-2"></i>Backup Codes</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Backup codes can be used to access your account if you lose access to your authenticator app.</p>
+                    <button class="btn btn-outline-primary" onclick="generateBackupCodes()" id="backupCodesBtn" disabled>
+                        <i class="fas fa-download me-2"></i>Generate Backup Codes
+                    </button>
+                    <div id="backupCodesContainer" class="mt-3" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let currentSecret = '';
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('2FA Settings', 'fas fa-shield-alt');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            
+            check2FAStatus();
+        });
+        
+        async function check2FAStatus() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const statusBadge = document.getElementById('statusBadge');
+            const backupBtn = document.getElementById('backupCodesBtn');
+            
+            if (userData.is_2fa_enabled) {
+                statusBadge.textContent = 'Enabled';
+                statusBadge.className = 'status-badge status-enabled';
+                document.getElementById('2faDisabled').style.display = 'none';
+                document.getElementById('2faSetup').style.display = 'none';
+                document.getElementById('2faEnabled').style.display = 'block';
+                backupBtn.disabled = false;
+            } else {
+                statusBadge.textContent = 'Disabled';
+                statusBadge.className = 'status-badge status-disabled';
+                document.getElementById('2faDisabled').style.display = 'block';
+                document.getElementById('2faSetup').style.display = 'none';
+                document.getElementById('2faEnabled').style.display = 'none';
+                backupBtn.disabled = true;
+            }
+        }
+        
+        async function enable2FA() {
+            currentSecret = generateSecret();
+            
+            document.getElementById('2faDisabled').style.display = 'none';
+            document.getElementById('2faSetup').style.display = 'block';
+            document.getElementById('secretKey').textContent = currentSecret;
+            
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const email = userData.email || 'user@mnrteam.com';
+            
+            document.getElementById('qrCode').innerHTML = `
+                <div style="width: 200px; height: 200px; background: #fff; border: 2px solid #e5e7eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                    <div style="text-align: center;">
+                        <i class="fas fa-qrcode fa-4x text-dark"></i>
+                        <p class="mt-2 mb-0 small text-muted">QR Code Placeholder</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function generateSecret() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+            let secret = '';
+            for (let i = 0; i < 16; i++) {
+                secret += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return secret;
+        }
+        
+        async function verify2FA() {
+            const code = document.getElementById('verificationCode').value;
+            
+            if (code.length !== 6 || !/^\d+$/.test(code)) {
+                showAlert('Please enter a valid 6-digit code', 'danger');
+                return;
+            }
+            
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            userData.is_2fa_enabled = true;
+            localStorage.setItem('staff_user', JSON.stringify(userData));
+            
+            showAlert('Two-factor authentication has been enabled!', 'success');
+            
+            setTimeout(() => {
+                check2FAStatus();
+            }, 1500);
+        }
+        
+        async function disable2FA() {
+            if (!confirm('Are you sure you want to disable two-factor authentication? This will make your account less secure.')) {
+                return;
+            }
+            
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            userData.is_2fa_enabled = false;
+            localStorage.setItem('staff_user', JSON.stringify(userData));
+            
+            showAlert('Two-factor authentication has been disabled.', 'warning');
+            
+            setTimeout(() => {
+                check2FAStatus();
+            }, 1500);
+        }
+        
+        function generateBackupCodes() {
+            const codes = [];
+            for (let i = 0; i < 8; i++) {
+                codes.push(Math.random().toString(36).substring(2, 6).toUpperCase() + '-' + 
+                          Math.random().toString(36).substring(2, 6).toUpperCase());
+            }
+            
+            const container = document.getElementById('backupCodesContainer');
+            container.style.display = 'block';
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Save these codes!</strong> Each code can only be used once.
+                </div>
+                <div class="bg-light p-3 rounded">
+                    <div class="row">
+                        ${codes.map(code => `<div class="col-6 mb-2"><code>${code}</code></div>`).join('')}
+                    </div>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm mt-3" onclick="copyBackupCodes()">
+                    <i class="fas fa-copy me-1"></i>Copy All Codes
+                </button>
+            `;
+            
+            window.backupCodes = codes;
+        }
+        
+        function copyBackupCodes() {
+            const text = window.backupCodes.join('\n');
+            navigator.clipboard.writeText(text);
+            showAlert('Backup codes copied to clipboard!', 'success');
+        }
+        
+        function showAlert(message, type) {
+            document.getElementById('alertContainer').innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

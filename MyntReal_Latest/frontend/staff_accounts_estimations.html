@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estimations - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 24px; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+
+        .page-header { margin-bottom: 20px; }
+        .page-header h1 { font-size: 22px; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
+        .page-header p { font-size: 13px; color: #6b7280; }
+
+        .filter-section { background: white; padding: 14px 18px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 3px; }
+        .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-group select, .filter-group input { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 160px; }
+
+        .card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: none; margin-bottom: 16px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 14px 18px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .card-body { padding: 16px 18px; }
+
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th { text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+        .data-table td { padding: 10px 12px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .table-container { overflow-x: auto; }
+
+        .amount { font-weight: 600; font-family: 'Courier New', monospace; }
+        .amount.positive { color: #059669; }
+
+        .btn-action { padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: 500; background: white; margin: 1px; transition: all 0.15s; }
+        .btn-confirm { border-color: #059669; color: #059669; }
+        .btn-confirm:hover { background: #059669; color: white; }
+        .btn-revert { border-color: #d97706; color: #d97706; }
+        .btn-revert:hover { background: #d97706; color: white; }
+        .btn-edit { border-color: #0284c7; color: #0284c7; }
+        .btn-edit:hover { background: #0284c7; color: white; }
+
+        .btn-primary-custom { background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 8px 18px; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 13px; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16,185,129,0.4); }
+
+        .empty-state { text-align: center; padding: 50px 20px; color: #6b7280; }
+        .empty-state i { font-size: 40px; margin-bottom: 12px; color: #d1d5db; display: block; }
+        .empty-state h3 { font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+
+        .loading-spinner { display: flex; justify-content: center; align-items: center; padding: 40px; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #b45309; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* DC-ESTIMATIONS-001 */
+        .est-sub-nav { display: flex; gap: 0; border-bottom: 1px solid #e5e7eb; margin-bottom: 16px; background: white; border-radius: 10px 10px 0 0; padding: 0 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow-x: auto; }
+        .est-sub-btn { padding: 12px 18px; border: none; background: transparent; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.2s; }
+        .est-sub-btn:hover { color: #374151; background: #f9fafb; }
+        .est-sub-btn.active { color: #b45309; border-bottom-color: #b45309; }
+        .est-sub-content { display: none; }
+        .est-sub-content.active { display: block; }
+        .est-summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .est-card { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; text-align: center; }
+        .est-card .val { font-size: 20px; font-weight: 700; }
+        .est-card .lbl { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .est-card.in .val { color: #059669; }
+        .est-card.out .val { color: #dc2626; }
+        .est-card.pmt .val { color: #7c3aed; }
+        .est-card.net .val { color: #1f2937; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-header { padding: 18px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h5 { font-size: 16px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 22px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 18px; }
+        .modal-footer { padding: 14px 18px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 10px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .confirm-choice { display: flex; gap: 14px; margin: 16px 0; }
+        .confirm-choice label { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 10px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+        .confirm-choice label:hover { border-color: #059669; background: #f0fdf4; }
+        .confirm-choice label:has(input[type=radio]:checked) { border-color: #059669; background: #d1fae5; color: #065f46; }
+        .confirm-choice label i { font-size: 24px; }
+        .confirm-choice input[type=radio] { display: none; }
+        .conf-section { display: none; }
+        .conf-section.active { display: block; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+    <div class="content-area">
+
+        <div class="page-header">
+            <h1><i class="fas fa-calculator me-2" style="color:#b45309;"></i>Estimations</h1>
+            <p>SFMS estimation tracking — IN estimates, OUT planning, payments and stock movement</p>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="filterCompany" onchange="onCompanyChange()">
+                    <option value="">All Companies</option>
+                </select>
+            </div>
+            <div style="display:flex; gap:8px; align-items:flex-end;">
+                <button class="btn-primary-custom" onclick="refreshData()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+                <a href="/staff/accounts/income-entries" style="padding:7px 14px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; color:#374151; text-decoration:none; background:white; display:inline-flex; align-items:center; gap:6px; font-weight:500;"><i class="fas fa-arrow-left"></i> Income Entries</a>
+            </div>
+        </div>
+
+        <div id="loadingState" class="loading-spinner" style="display:none;"><div class="spinner"></div></div>
+
+        <div id="estContainer">
+            <div class="est-sub-nav">
+                <button class="est-sub-btn active" data-esttab="in" onclick="switchEstSubTab('in')"><i class="fas fa-arrow-down me-1" style="color:#059669;"></i>IN Estimates</button>
+                <button class="est-sub-btn" data-esttab="out" onclick="switchEstSubTab('out')"><i class="fas fa-arrow-up me-1" style="color:#dc2626;"></i>OUT Planning</button>
+                <button class="est-sub-btn" data-esttab="payments" onclick="switchEstSubTab('payments')"><i class="fas fa-credit-card me-1" style="color:#7c3aed;"></i>Payments</button>
+                <button class="est-sub-btn" data-esttab="stock" onclick="switchEstSubTab('stock')"><i class="fas fa-boxes me-1" style="color:#0284c7;"></i>Stock Movement</button>
+                <button class="est-sub-btn" data-esttab="executive" onclick="switchEstSubTab('executive')"><i class="fas fa-chart-pie me-1" style="color:#b45309;"></i>Executive Summary</button>
+            </div>
+            <div id="est-sub-in" class="est-sub-content active"></div>
+            <div id="est-sub-out" class="est-sub-content"></div>
+            <div id="est-sub-payments" class="est-sub-content"></div>
+            <div id="est-sub-stock" class="est-sub-content"></div>
+            <div id="est-sub-executive" class="est-sub-content"></div>
+        </div>
+
+    </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-container" style="max-width:500px; max-height:90vh; overflow-y:auto; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+            <div class="modal-header">
+                <h5><i class="fas fa-check-circle me-2" style="color:#059669;"></i>Confirm Income Entry</h5>
+                <button class="modal-close" onclick="closeModal('confirmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:14px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">ENTRY #</div><div style="font-weight:700;color:#1f2937;" id="confEntryNum">-</div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">AMOUNT</div><div style="font-weight:700;color:#059669;" id="confAmount">-</div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">DATE</div><div style="font-size:13px;" id="confDate">-</div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">PAYMENT MODE</div><div style="font-size:13px;" id="confMode">-</div></div>
+                    <div style="grid-column:1/-1;"><div style="font-size:10px;color:#6b7280;font-weight:600;">COMPANY</div><select id="confCompanySelect" onchange="onConfCompanyChange()" style="width:100%;padding:6px 10px;font-size:13px;font-weight:600;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#1f2937;"></select></div>
+                </div>
+                <div class="form-group">
+                    <label style="font-size:13px;font-weight:600;color:#1f2937;">Select Confirmation Type</label>
+                    <div class="confirm-choice">
+                        <label>
+                            <input type="radio" name="confType" value="TAXED" onchange="onConfTypeChange('TAXED')">
+                            <i class="fas fa-landmark" style="color:#059669;"></i>
+                            Taxed (Confirmed)
+                            <small style="font-size:10px;color:#6b7280;font-weight:400;text-align:center;">Posts to account &amp; party ledger</small>
+                        </label>
+                        <label>
+                            <input type="radio" name="confType" value="ESTIMATED" onchange="onConfTypeChange('ESTIMATED')">
+                            <i class="fas fa-calculator" style="color:#b45309;"></i>
+                            Estimated
+                            <small style="font-size:10px;color:#6b7280;font-weight:400;text-align:center;">No ledger posting, planning only</small>
+                        </label>
+                    </div>
+                </div>
+                <div id="confSectionTaxed" class="conf-section">
+                    <hr style="border-color:#e5e7eb; margin:10px 0;">
+                    <div class="form-group">
+                        <label>Bank / Cash Account <small style="color:#6b7280;">(Optional)</small></label>
+                        <select id="confBankSel"><option value="">Auto-resolve from payment mode</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Payer Name <small style="color:#6b7280;">(Optional)</small></label>
+                        <input type="text" id="confPayer" placeholder="Payer / customer name">
+                    </div>
+                </div>
+                <div id="confSectionEstimated" class="conf-section">
+                    <div style="background:#fef3c7; border:1px solid #fcd34d; border-radius:8px; padding:12px; margin:10px 0; font-size:13px; color:#92400e;">
+                        <i class="fas fa-info-circle me-2"></i>
+                        This entry will move to <strong>Estimated</strong> status. No ledger entries will be posted.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+                <button class="btn btn-success" onclick="submitConfirmModal()"><i class="fas fa-check me-1"></i>Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- OUT Record Modal -->
+    <div class="modal-overlay" id="outRecModal">
+        <div class="modal-container" style="max-width:480px; max-height:90vh; overflow-y:auto; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+            <div class="modal-header">
+                <h5 id="outModalTitle"><i class="fas fa-arrow-up me-2" style="color:#dc2626;"></i>Add OUT Planning Record</h5>
+                <button class="modal-close" onclick="closeModal('outRecModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date *</label>
+                        <input type="date" id="outRecDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount *</label>
+                        <input type="number" id="outRecAmt" step="0.01" min="0" placeholder="Estimated amount">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description *</label>
+                    <input type="text" id="outRecDesc" placeholder="e.g. Spare parts procurement, travel etc.">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Party Name</label>
+                        <input type="text" id="outRecParty" placeholder="Vendor / payee">
+                    </div>
+                    <div class="form-group">
+                        <label>Account</label>
+                        <input type="text" id="outRecAcct" placeholder="Account name">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="outRecNotes" rows="2" placeholder="Additional notes"></textarea>
+                </div>
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px; font-size:12px; color:#991b1b;">
+                    <i class="fas fa-info-circle me-1"></i> OUT records are <strong>informational only</strong>. They have no ledger impact.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('outRecModal')">Cancel</button>
+                <button class="btn btn-danger" onclick="saveOutRecord()"><i class="fas fa-save me-1"></i>Save Record</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+
+        let companiesCache = [];
+        let bankAccountsCache = {};
+        let estimationCompanyId = null;
+        let currentEstSubTab = 'in';
+        let estInEntries = [];
+        let estOutRecords = [];
+        let estPayments = [];
+        let estStock = [];
+        let estSummary = null;
+        let editingOutId = null;
+        let confirmingEntryId = null;
+        let confirmingEntry = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('Estimations', 'fas fa-calculator'); StaffHeader.init(); }
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            await loadCompanies();
+            await refreshData();
+        });
+
+        async function loadCompanies() {
+            try {
+                const r = await staffFetch(`${API_BASE}/companies`);
+                if (r.ok) {
+                    const data = await r.json();
+                    companiesCache = data.companies || [];
+                    const sel = document.getElementById('filterCompany');
+                    companiesCache.forEach(c => {
+                        const o = document.createElement('option');
+                        o.value = c.id; o.textContent = c.company_name || c.name;
+                        sel.appendChild(o);
+                    });
+                }
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') console.error(e); }
+        }
+
+        function onCompanyChange() {
+            estimationCompanyId = document.getElementById('filterCompany').value || null;
+            refreshData();
+        }
+
+        async function refreshData() {
+            document.getElementById('loadingState').style.display = 'flex';
+            estimationCompanyId = document.getElementById('filterCompany').value || null;
+            await loadEstimationData();
+            renderEstSubTab(currentEstSubTab);
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        async function loadEstimationData() {
+            try {
+                const cq = estimationCompanyId ? `?company_id=${estimationCompanyId}` : '';
+                const [rIn, rOut, rStock, rSummary] = await Promise.all([
+                    staffFetch(`${API_BASE}/income-entries/estimations${cq}`),
+                    staffFetch(`${API_BASE}/income-entries/estimations/out${cq}`),
+                    staffFetch(`${API_BASE}/income-entries/estimations/stock${cq}`),
+                    staffFetch(`${API_BASE}/income-entries/estimations/executive-summary${cq}`)
+                ]);
+                if (rIn.ok)      { const d = await rIn.json();      estInEntries = d.entries || []; }
+                if (rOut.ok)     { const d = await rOut.json();     estOutRecords = d.records || []; }
+                if (rStock.ok)   { const d = await rStock.json();   estStock = d.stock_movements || []; }
+                if (rSummary.ok) { const d = await rSummary.json(); estSummary = d.summary || null; }
+                estPayments = [];
+                for (const e of estInEntries.slice(0, 30)) {
+                    try {
+                        const rp = await staffFetch(`${API_BASE}/income-entries/${e.id}/estimation-payments`);
+                        if (rp.ok) { const dp = await rp.json(); (dp.payments || []).forEach(p => { p._entry_number = e.entry_number; estPayments.push(p); }); }
+                    } catch(pe) {}
+                }
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') console.error(e); }
+        }
+
+        function switchEstSubTab(tab) {
+            currentEstSubTab = tab;
+            document.querySelectorAll('.est-sub-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-esttab="${tab}"]`).classList.add('active');
+            document.querySelectorAll('.est-sub-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`est-sub-${tab}`).classList.add('active');
+            renderEstSubTab(tab);
+        }
+
+        function renderEstSubTab(tab) {
+            if (tab === 'in') renderEstIn();
+            else if (tab === 'out') renderEstOut();
+            else if (tab === 'payments') renderEstPayments();
+            else if (tab === 'stock') renderEstStock();
+            else if (tab === 'executive') renderEstExecutive();
+        }
+
+        function fmt(amt) { return '\u20B9' + new Intl.NumberFormat('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amt || 0); }
+        function fmtD(d) { return d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'; }
+
+        function renderEstIn() {
+            const el = document.getElementById('est-sub-in');
+            if (!estInEntries.length) {
+                const hasCompanyFilter = estimationCompanyId;
+                const hint = hasCompanyFilter
+                    ? 'No estimated entries for the selected company. Select <b>All Companies</b> above to see all estimations.'
+                    : 'Create an income entry on the <a href="/staff/accounts/income-entries" style="color:#b45309;">Income Entries</a> page and set its status to <b>Estimated</b> to see it here.';
+                el.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><h3>No Estimated Entries</h3><p>' + hint + '</p></div>';
+                return;
+            }
+            const total = estInEntries.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+            let rows = '';
+            estInEntries.forEach(function(e) {
+                rows += '<tr>' +
+                    '<td><a href="/staff/accounts/income-entries" style="font-family:monospace;font-size:11px;color:#059669;">' + (e.entry_number || e.id) + '</a></td>' +
+                    '<td>' + fmtD(e.income_date) + '</td>' +
+                    '<td><small>' + (e.company_name || '-') + '</small></td>' +
+                    '<td>' + (e.payer_name || '-') + '</td>' +
+                    '<td class="amount positive">' + fmt(e.amount) + '</td>' +
+                    '<td><small>' + (e.payment_mode || '-') + '</small></td>' +
+                    '<td style="white-space:nowrap;">' +
+                        '<button class="btn-action btn-confirm" onclick="openConfirmModal(' + e.id + ')"><i class="fas fa-check me-1"></i>Confirm (Taxed)</button> ' +
+                        '<button class="btn-action btn-revert" onclick="updateStatus(' + e.id + ',\'PENDING\')">Revert</button>' +
+                    '</td>' +
+                '</tr>';
+            });
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-arrow-down me-2" style="color:#059669;"></i>IN Estimates (' + estInEntries.length + ')</span><span class="amount positive">' + fmt(total) + ' total</span></div>' +
+                '<div class="table-container"><table class="data-table"><thead><tr><th>Entry #</th><th>Date</th><th>Company</th><th>Payer</th><th>Amount</th><th>Mode</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        function renderEstOut() {
+            const el = document.getElementById('est-sub-out');
+            const total = estOutRecords.reduce((s, r) => s + (parseFloat(r.estimated_amount) || 0), 0);
+            let rows = '';
+            estOutRecords.forEach(function(r) {
+                rows += '<tr>' +
+                    '<td>' + fmtD(r.entry_date) + '</td>' +
+                    '<td>' + (r.description || '-') + '</td>' +
+                    '<td>' + (r.party_name || '-') + '</td>' +
+                    '<td>' + (r.account_name || '-') + '</td>' +
+                    '<td class="amount" style="color:#dc2626;">' + fmt(r.estimated_amount) + '</td>' +
+                    '<td><span class="badge bg-secondary" style="font-size:10px;">' + (r.status || 'PENDING') + '</span></td>' +
+                    '<td style="white-space:nowrap;">' +
+                        '<button class="btn-action btn-edit" onclick="editOutRecord(' + r.id + ')"><i class="fas fa-pencil-alt"></i></button> ' +
+                        '<button class="btn-action" style="border-color:#dc2626;color:#dc2626;" onclick="deleteOutRecord(' + r.id + ')"><i class="fas fa-trash-alt"></i></button>' +
+                    '</td>' +
+                '</tr>';
+            });
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-arrow-up me-2" style="color:#dc2626;"></i>OUT Planning (' + estOutRecords.length + ')</span>' +
+                '<div style="display:flex;gap:8px;align-items:center;"><span class="amount" style="color:#dc2626;">' + fmt(total) + ' planned</span><button class="btn-action btn-confirm" onclick="openOutModal()"><i class="fas fa-plus me-1"></i>Add OUT Record</button></div></div>' +
+                '<div class="table-container"><table class="data-table"><thead><tr><th>Date</th><th>Description</th><th>Party</th><th>Account</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        function renderEstPayments() {
+            const el = document.getElementById('est-sub-payments');
+            if (!estPayments.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-credit-card"></i><h3>No Payments Recorded</h3><p>Add payments against estimated income entries via the Income Entries page</p></div>'; return; }
+            const total = estPayments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+            let rows = '';
+            estPayments.forEach(function(p) {
+                rows += '<tr>' +
+                    '<td><code style="font-size:10px;">' + (p._entry_number || p.income_entry_id) + '</code></td>' +
+                    '<td>' + fmtD(p.payment_date) + '</td>' +
+                    '<td class="amount positive">' + fmt(p.amount) + '</td>' +
+                    '<td><small>' + (p.payment_mode || '-') + '</small></td>' +
+                    '<td>' + (p.party_name || '-') + '</td>' +
+                    '<td>' + (p.account_received || '-') + '</td>' +
+                    '<td>' + (p.notes || '-') + '</td>' +
+                    '<td><button class="btn-action" style="border-color:#dc2626;color:#dc2626;" onclick="deleteEstPayment(' + p.income_entry_id + ',' + p.id + ')"><i class="fas fa-trash-alt"></i></button></td>' +
+                '</tr>';
+            });
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-credit-card me-2" style="color:#7c3aed;"></i>Estimate Payments (' + estPayments.length + ')</span><span class="amount positive">' + fmt(total) + ' total</span></div>' +
+                '<div class="table-container"><table class="data-table"><thead><tr><th>Entry #</th><th>Date</th><th>Amount</th><th>Mode</th><th>Party</th><th>Account</th><th>Notes</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        function renderEstStock() {
+            const el = document.getElementById('est-sub-stock');
+            if (!estStock.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-boxes"></i><h3>No Estimate Stock Movements</h3><p>Appears when estimated entries have linked spare items</p></div>'; return; }
+            let rows = '';
+            estStock.forEach(function(s) {
+                rows += '<tr>' +
+                    '<td>' + fmtD(s.transaction_date) + '</td>' +
+                    '<td>' + (s.item_name || '-') + '</td>' +
+                    '<td><code style="font-size:10px;">' + (s.item_code || '-') + '</code></td>' +
+                    '<td style="color:#dc2626;font-weight:600;">' + (s.quantity_out || 0) + '</td>' +
+                    '<td><code style="font-size:10px;">' + (s.reference_number || '-') + '</code></td>' +
+                    '<td><span style="background:#fef3c7;color:#b45309;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;">Estimate</span></td>' +
+                '</tr>';
+            });
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-boxes me-2" style="color:#0284c7;"></i>Estimate Stock Movements (' + estStock.length + ')</span><span style="font-size:12px;color:#6b7280;">Soft deductions — not reflected in real stock</span></div>' +
+                '<div class="table-container"><table class="data-table"><thead><tr><th>Date</th><th>Item</th><th>Code</th><th>Qty Out</th><th>Reference</th><th>Type</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        function renderEstExecutive() {
+            const el = document.getElementById('est-sub-executive');
+            const s = estSummary || { in_estimates: {count:0,total:0}, out_estimates: {count:0,total:0}, payments: {count:0,total:0}, net_estimated: 0 };
+            el.innerHTML = '<div class="est-summary-row">' +
+                '<div class="est-card in"><div class="val">' + fmt(s.in_estimates.total) + '</div><div class="lbl">IN Estimated Income (' + s.in_estimates.count + ' entries)</div></div>' +
+                '<div class="est-card out"><div class="val">' + fmt(s.out_estimates.total) + '</div><div class="lbl">OUT Planned Spend (' + s.out_estimates.count + ' records)</div></div>' +
+                '<div class="est-card pmt"><div class="val">' + fmt(s.payments.total) + '</div><div class="lbl">Payments Collected (' + s.payments.count + ')</div></div>' +
+                '<div class="est-card net"><div class="val" style="color:' + (s.net_estimated >= 0 ? '#059669' : '#dc2626') + ';">' + fmt(Math.abs(s.net_estimated)) + '</div><div class="lbl">Net Estimated Cash ' + (s.net_estimated >= 0 ? '(Surplus)' : '(Deficit)') + '</div></div>' +
+                '</div>' +
+                '<div class="card"><div class="card-header"><span><i class="fas fa-info-circle me-2" style="color:#6b7280;"></i>About This Tab</span></div><div class="card-body" style="font-size:13px;color:#374151;line-height:1.7;">' +
+                '<p><strong>IN Estimates</strong> = Income entries in estimation phase. Excluded from confirmed revenue totals until moved to CONFIRMED (Taxed).</p>' +
+                '<p><strong>OUT Planning</strong> = Informational outgoing expense estimates. Zero ledger impact — for planning visibility only.</p>' +
+                '<p><strong>Payments</strong> = Payments collected against estimated entries — tracked, not posted to ledger.</p>' +
+                '<p><strong>Stock Movement</strong> = Soft stock deductions for spare parts linked to estimated service tickets. Excluded from real stock balance calculations.</p>' +
+                '</div></div>';
+        }
+
+        // ---- Modal helpers ----
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // ---- Confirm Modal ----
+        async function openConfirmModal(id) {
+            confirmingEntryId = id;
+            confirmingEntry = estInEntries.find(i => i.id === id) || {};
+            document.getElementById('confEntryNum').textContent = confirmingEntry.entry_number || id;
+            document.getElementById('confAmount').textContent = fmt(confirmingEntry.amount);
+            document.getElementById('confDate').textContent = fmtD(confirmingEntry.income_date);
+            document.getElementById('confPayer').value = confirmingEntry.payer_name || '';
+            document.getElementById('confMode').textContent = confirmingEntry.payment_mode || '-';
+            const compSel = document.getElementById('confCompanySelect');
+            compSel.innerHTML = '';
+            companiesCache.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id; o.textContent = c.company_name || c.name;
+                compSel.appendChild(o);
+            });
+            compSel.value = confirmingEntry.company_id || '';
+            document.querySelectorAll('input[name="confType"]').forEach(r => r.checked = false);
+            document.getElementById('confSectionTaxed').classList.remove('active');
+            document.getElementById('confSectionEstimated').classList.remove('active');
+            await loadConfBankAccounts();
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        async function loadConfBankAccounts() {
+            const compId = parseInt(document.getElementById('confCompanySelect').value);
+            const sel = document.getElementById('confBankSel');
+            sel.innerHTML = '<option value="">Auto-resolve from payment mode</option>';
+            if (!compId) return;
+            if (!bankAccountsCache[compId]) {
+                try {
+                    const r = await staffFetch(`${API_BASE}/ledger-masters/bank-accounts?company_id=${compId}`);
+                    if (r.ok) { const d = await r.json(); bankAccountsCache[compId] = d.accounts || []; }
+                    else bankAccountsCache[compId] = [];
+                } catch(e) { bankAccountsCache[compId] = []; }
+            }
+            (bankAccountsCache[compId] || []).forEach(a => {
+                const o = document.createElement('option');
+                o.value = a.id; o.dataset.name = a.account_name;
+                o.textContent = a.account_name + ' (' + a.account_type + ')';
+                sel.appendChild(o);
+            });
+        }
+
+        async function onConfCompanyChange() { await loadConfBankAccounts(); }
+
+        function onConfTypeChange(val) {
+            document.getElementById('confSectionTaxed').classList.toggle('active', val === 'TAXED');
+            document.getElementById('confSectionEstimated').classList.toggle('active', val === 'ESTIMATED');
+        }
+
+        async function submitConfirmModal() {
+            const confType = document.querySelector('input[name="confType"]:checked')?.value;
+            if (!confType) { alert('Please choose Taxed or Estimated'); return; }
+            const selComp = document.getElementById('confCompanySelect');
+            const payload = {
+                status: confType === 'ESTIMATED' ? 'ESTIMATED' : 'CONFIRMED',
+                confirmation_type: confType,
+                company_id: selComp.value ? parseInt(selComp.value) : null
+            };
+            if (confType === 'TAXED') {
+                const bankSel = document.getElementById('confBankSel');
+                const bankOpt = bankSel.options[bankSel.selectedIndex];
+                if (bankSel.value) { payload.bank_account_id = parseInt(bankSel.value); payload.bank_account_name = bankOpt?.dataset?.name || null; }
+                const payer = document.getElementById('confPayer').value.trim();
+                if (payer) payload.payer_name = payer;
+            }
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/' + confirmingEntryId + '/status', {
+                    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                if (r.ok) { closeModal('confirmModal'); await refreshData(); }
+                else { const err = await r.json().catch(() => ({})); alert(err.detail || err.message || 'Failed to confirm entry'); }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to confirm entry');
+            }
+        }
+
+        async function updateStatus(id, newStatus) {
+            const labels = { CONFIRMED: 'Confirm', PENDING: 'Revert to Pending', ESTIMATED: 'mark as Estimated' };
+            if (!confirm('Are you sure you want to ' + (labels[newStatus] || newStatus) + ' this entry?')) return;
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/' + id + '/status', {
+                    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus })
+                });
+                if (r.ok) { await refreshData(); }
+                else { const err = await r.json().catch(() => ({})); alert(err.detail || err.message || 'Failed to update status'); }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to update status');
+            }
+        }
+
+        // ---- OUT Record Modal ----
+        function openOutModal(id) {
+            editingOutId = id || null;
+            const rec = id ? estOutRecords.find(r => r.id === id) : null;
+            document.getElementById('outRecDate').value = rec ? rec.entry_date : new Date().toISOString().split('T')[0];
+            document.getElementById('outRecDesc').value = rec ? rec.description : '';
+            document.getElementById('outRecAmt').value = rec ? rec.estimated_amount : '';
+            document.getElementById('outRecParty').value = rec ? (rec.party_name || '') : '';
+            document.getElementById('outRecAcct').value = rec ? (rec.account_name || '') : '';
+            document.getElementById('outRecNotes').value = rec ? (rec.notes || '') : '';
+            document.getElementById('outModalTitle').innerHTML = (id ? '<i class="fas fa-pencil-alt me-2" style="color:#dc2626;"></i>Edit OUT Record' : '<i class="fas fa-arrow-up me-2" style="color:#dc2626;"></i>Add OUT Planning Record');
+            document.getElementById('outRecModal').classList.add('active');
+        }
+
+        function editOutRecord(id) { openOutModal(id); }
+
+        async function saveOutRecord() {
+            const compId = estimationCompanyId || (companiesCache.length === 1 ? companiesCache[0].id : null);
+            if (!compId) { alert('Please select a company first (use the Company filter above)'); return; }
+            const payload = {
+                company_id: parseInt(compId),
+                entry_date: document.getElementById('outRecDate').value,
+                description: document.getElementById('outRecDesc').value.trim(),
+                estimated_amount: parseFloat(document.getElementById('outRecAmt').value) || 0,
+                party_name: document.getElementById('outRecParty').value.trim() || null,
+                account_name: document.getElementById('outRecAcct').value.trim() || null,
+                notes: document.getElementById('outRecNotes').value.trim() || null,
+            };
+            if (!payload.description || !payload.entry_date) { alert('Description and date are required'); return; }
+            try {
+                const url = editingOutId ? `${API_BASE}/income-entries/estimations/out/${editingOutId}` : `${API_BASE}/income-entries/estimations/out`;
+                const method = editingOutId ? 'PUT' : 'POST';
+                const r = await staffFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (r.ok) { closeModal('outRecModal'); await refreshData(); }
+                else { const err = await r.json().catch(() => ({})); alert(err.detail || 'Failed to save record'); }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to save record');
+            }
+        }
+
+        async function deleteOutRecord(id) {
+            if (!confirm('Delete this OUT planning record?')) return;
+            try {
+                const r = await staffFetch(`${API_BASE}/income-entries/estimations/out/${id}`, { method: 'DELETE' });
+                if (r.ok) await refreshData();
+                else { const err = await r.json().catch(() => ({})); alert(err.detail || 'Failed to delete'); }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to delete record');
+            }
+        }
+
+        async function deleteEstPayment(entryId, paymentId) {
+            if (!confirm('Delete this payment record?')) return;
+            try {
+                const r = await staffFetch(`${API_BASE}/income-entries/${entryId}/estimation-payments/${paymentId}`, { method: 'DELETE' });
+                if (r.ok) await refreshData();
+                else { const err = await r.json().catch(() => ({})); alert(err.detail || 'Failed to delete'); }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to delete payment');
+            }
+        }
+    </script>
+</body>
+</html>

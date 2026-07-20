@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Test Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .test-banner {
+            background: linear-gradient(90deg, #6f42c1, #e83e8c);
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: 600;
+            color: white;
+        }
+        .test-banner.view-mode {
+            background: linear-gradient(90deg, #17a2b8, #20c997);
+        }
+        .test-banner.edit-mode {
+            background: linear-gradient(90deg, #dc3545, #fd7e14);
+        }
+        .login-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .login-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-header .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #007bff, #6610f2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2.5rem;
+            color: white;
+        }
+        .login-header h2 {
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+        .login-header p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .form-control {
+            padding: 0.875rem 1rem;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+        }
+        .btn-login {
+            padding: 0.875rem;
+            font-weight: 600;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #007bff, #6610f2);
+            border: none;
+        }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #0069d9, #520dc2);
+        }
+        .test-accounts-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+        }
+        .test-accounts-info h6 {
+            color: #007bff;
+            margin-bottom: 0.75rem;
+        }
+        .test-accounts-info code {
+            background: #e9ecef;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-banner" id="test-banner">
+        <i class="fas fa-flask me-2"></i>
+        SANDBOX TEST - <span id="mode-text">VIEW MODE</span>
+    </div>
+
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo"><i class="fas fa-user-tie"></i></div>
+                <h2>Staff Test Login</h2>
+                <p>Sign in with your test Employee ID</p>
+            </div>
+
+            <div class="error-message" id="error-message"></div>
+
+            <form id="login-form">
+                <div class="mb-3">
+                    <label class="form-label">Employee ID</label>
+                    <input type="text" class="form-control" id="emp_code" placeholder="e.g., TESTVGK001" required>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-control" id="password" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="btn btn-login btn-primary w-100">
+                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                </button>
+            </form>
+
+            <div class="test-accounts-info">
+                <h6><i class="fas fa-info-circle me-1"></i>Test Account Credentials</h6>
+                <table class="table table-sm mb-0">
+                    <tr><td>VGK4U Supreme:</td><td><code>TESTVGK001</code></td></tr>
+                    <tr><td>Manager:</td><td><code>TESTMGR001</code></td></tr>
+                    <tr><td>Employee:</td><td><code>TESTEMP001</code></td></tr>
+                </table>
+                <p class="mb-0 mt-2"><strong>Password:</strong> <code>TestAccount@123</code></p>
+            </div>
+
+            <div class="back-link">
+                <a href="" id="back-link"><i class="fas fa-arrow-left me-1"></i>Back to Test Landing</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const currentPath = window.location.pathname;
+        const isEditMode = currentPath.includes('/test/edit/');
+        const mode = isEditMode ? 'edit' : 'view';
+        
+        const banner = document.getElementById('test-banner');
+        const modeText = document.getElementById('mode-text');
+        
+        if (isEditMode) {
+            banner.classList.add('edit-mode');
+            modeText.textContent = 'EDIT MODE';
+        } else {
+            banner.classList.add('view-mode');
+            modeText.textContent = 'VIEW MODE';
+        }
+        
+        document.getElementById('back-link').href = `/test/${mode}/landing`;
+        
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const empCode = document.getElementById('emp_code').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('error-message');
+            
+            errorEl.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/v1/staff/sandbox/auth/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({login_id: empCode, password: password, mode: mode})
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('sandbox_mode', mode);
+                    // DC Protocol: Set staff_token COOKIE (not just localStorage) for production API compatibility
+                    // The frontend server reads from cookies.staff_token for auth header injection
+                    document.cookie = 'staff_token=' + encodeURIComponent(data.access_token) + '; path=/; max-age=86400; SameSite=Lax';
+                    document.cookie = 'sandbox_mode=' + mode + '; path=/; max-age=86400; SameSite=Lax';
+                    document.cookie = 'sandbox_staff_id=' + empCode + '; path=/; max-age=86400; SameSite=Lax';
+                    // Also keep localStorage for StaffTokenManager fallback
+                    localStorage.setItem('staff_token', data.access_token);
+                    window.location.href = '/staff/dashboard';
+                } else {
+                    const error = await response.json();
+                    errorEl.textContent = error.detail || 'Login failed';
+                    errorEl.style.display = 'block';
+                }
+            } catch (error) {
+                errorEl.textContent = 'Connection error. Please try again.';
+                errorEl.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

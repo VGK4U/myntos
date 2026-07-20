@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lead Documents — Myntreal</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;min-height:100vh;color:#1f2937}
+.top-bar{background:linear-gradient(135deg,#0d2137,#1a3a5c);padding:0 20px;height:58px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.tb-logo-wrap{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.tb-logo{height:36px;object-fit:contain;display:block;filter:drop-shadow(0 1px 4px rgba(0,0,0,.3))}
+.tb-logo-vgk{height:32px}
+.tb-brand-fallback{font-size:13px;font-weight:800;color:white;letter-spacing:.06em}
+.tb-center{flex:1;display:flex;justify-content:center;align-items:center}
+.tb-partner-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.tb-partner-label{font-size:8.5px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.1em}
+.top-bar-expiry{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:5px 12px;color:white;font-size:12px}
+.top-bar-expiry.urgent{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.4)}
+.expiry-icon{font-size:13px}
+#expiryCountdown{font-weight:700;font-size:13px}
+.share-footer{margin-top:32px;padding:22px 20px 28px;background:white;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.06);text-align:center}
+.share-footer-logos{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:10px}
+.share-footer-logo{height:26px;object-fit:contain;opacity:.75}
+.share-footer-sep{color:#d1d5db;font-size:16px;font-weight:300}
+.share-footer-note{font-size:11px;color:#d1d5db;border-top:1px solid #f3f4f6;padding-top:10px;margin-top:8px}
+.container{max-width:920px;margin:0 auto;padding:20px 16px 40px}
+.lead-hero{background:white;border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,.07);padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.lead-hero-avatar{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#1e3a5f,#3b82f6);display:flex;align-items:center;justify-content:center;color:white;font-size:18px;font-weight:700;flex-shrink:0}
+.lead-hero-info{flex:1;min-width:0}
+.lead-hero-name{font-size:17px;font-weight:800;color:#1e3a5f;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lead-hero-meta{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px}
+.lead-hero-pill{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.lead-hero-pill.id{background:#e0e7ff;color:#3730a3}
+.lead-hero-pill.app{background:#d1fae5;color:#065f46}
+.lead-hero-pill.no-app{background:#f3f4f6;color:#9ca3af;font-style:italic}
+.alert-box{border-radius:12px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:flex-start;gap:14px}
+.alert-box.info{background:#eff6ff;border:1px solid #bfdbfe}
+.alert-box.warning{background:#fff7ed;border:1px solid #fed7aa}
+.alert-box.error{background:#fef2f2;border:1px solid #fecaca}
+.alert-icon{font-size:20px;flex-shrink:0;margin-top:2px}
+.alert-box.info .alert-icon{color:#2563eb}
+.alert-box.warning .alert-icon{color:#d97706}
+.alert-box.error .alert-icon{color:#dc2626}
+.alert-text h3{font-size:14px;font-weight:700;margin-bottom:4px}
+.alert-text p{font-size:12.5px;color:#6b7280}
+.card{background:white;border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,.07);overflow:hidden;margin-bottom:20px}
+.card-header{background:linear-gradient(135deg,#1e3a5f,#0f2440);padding:13px 18px;display:flex;align-items:center;gap:10px;color:white}
+.card-header i{font-size:14px;opacity:.8}
+.card-header h2{font-size:13px;font-weight:700}
+.card-body{padding:18px}
+.field-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.field-item{display:flex;flex-direction:column;gap:3px}
+.field-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;font-weight:600}
+.field-value{font-size:12.5px;color:#1f2937;font-weight:500;word-break:break-word}
+.field-value.mono{font-family:monospace;font-size:12px}
+.field-value.empty{color:#d1d5db;font-style:italic}
+.section-divider{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;padding:10px 0 6px;border-bottom:1px solid #f0f0f0;margin:14px 0 10px;display:flex;align-items:center;gap:8px}
+.doc-group{margin-bottom:16px}
+.doc-group-title{font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;padding:4px 0;border-bottom:1px solid #e5e7eb;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.doc-g-count{background:#f3f4f6;border-radius:8px;padding:1px 6px;font-size:9px;color:#9ca3af}
+.doc-row{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:8px;background:#f9fafb;margin-bottom:5px;border:1px solid #f0f0f0;gap:10px;flex-wrap:wrap}
+.doc-row.uploaded{background:#f0fdf4;border-color:#bbf7d0}
+.doc-row-info{flex:1;min-width:0}
+.doc-row-label{font-size:12px;font-weight:600;color:#1f2937;display:flex;align-items:center;gap:6px}
+.doc-status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.doc-status-dot.uploaded{background:#22c55e}
+.doc-status-dot.pending{background:#d1d5db}
+.doc-row-meta{font-size:9.5px;color:#9ca3af;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.doc-row-num{font-size:10px;color:#6b7280;margin-top:2px}
+.doc-actions{display:flex;gap:6px;flex-shrink:0}
+.doc-btn{padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;text-decoration:none;transition:background .15s}
+.doc-btn.view{background:#eff6ff;color:#2563eb}.doc-btn.view:hover{background:#dbeafe}
+.doc-btn.download{background:#f0fdf4;color:#15803d}.doc-btn.download:hover{background:#dcfce7}
+.no-doc{color:#d1d5db;font-size:11px;font-style:italic;padding:4px 0}
+.summary-bar{background:#f8fafc;border-top:1px solid #f0f0f0;padding:10px 18px;display:flex;align-items:center;gap:10px;font-size:11.5px;color:#6b7280}
+.summary-bar b{color:#1e3a5f}
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.badge.status-won{background:#d1fae5;color:#065f46}
+.badge.status-default{background:#f3f4f6;color:#6b7280}
+.spinner-wrap{text-align:center;padding:60px 20px;color:#9ca3af}
+.spinner-wrap i{font-size:32px;margin-bottom:12px;display:block}
+.expired-wrap{text-align:center;padding:60px 20px}
+.expired-wrap i{font-size:48px;color:#ef4444;margin-bottom:16px;display:block}
+.expired-wrap h2{font-size:16px;font-weight:700;color:#1f2937;margin-bottom:8px}
+.expired-wrap p{font-size:13px;color:#6b7280}
+.watermark{position:fixed;bottom:18px;right:18px;font-size:10px;color:#d1d5db;letter-spacing:.04em;pointer-events:none;user-select:none}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="tb-logo-wrap">
+    <img src="/myntreal-logo.png" alt="Myntreal" class="tb-logo" onerror="this.style.display='none';document.getElementById('tbMnrFallback').style.display='block'">
+    <span id="tbMnrFallback" class="tb-brand-fallback" style="display:none">MYNTREAL</span>
+  </div>
+  <div class="tb-center">
+    <div class="top-bar-expiry" id="expiryBar" style="display:none">
+      <i class="fas fa-clock expiry-icon"></i>
+      <span>Link expires in</span>
+      <span id="expiryCountdown">—</span>
+    </div>
+  </div>
+  <div class="tb-partner-wrap">
+    <span class="tb-partner-label">Associated Partner</span>
+    <img src="/vgk4u-logo-100.png" alt="VGK4U" class="tb-logo tb-logo-vgk" onerror="this.style.display='none';document.getElementById('tbVgkFallback').style.display='block'">
+    <span id="tbVgkFallback" class="tb-brand-fallback" style="display:none;color:#a78bfa">VGK4U</span>
+  </div>
+</div>
+
+<div class="container" id="appRoot">
+  <div class="spinner-wrap">
+    <i class="fas fa-spinner fa-spin"></i>
+    <p>Loading lead information…</p>
+  </div>
+</div>
+
+<div class="watermark">Myntreal CRM &mdash; Confidential</div>
+
+<script>
+const JPEG_DL_TYPES = new Set(['adhar','passport_photo','bank_book']);
+const SDOC_GROUPS = {
+  consumer: [
+    {group:'Identity & Ownership', docs:[
+      {type:'adhar',label:'Aadhaar Card'},
+      {type:'passport_photo',label:'Passport Photo'},
+      {type:'pan',label:'PAN Card'},
+      {type:'powerbill',label:'Electricity Bill (Powerbill)'},
+    ]},
+    {group:'Financial', docs:[
+      {type:'bank_book',label:'Bank Book'},
+      {type:'bank_statement',label:'Bank Statement'},
+      {type:'bank_submission_letter',label:'Bank Submission Letter'},
+    ]},
+    {group:'Site & Technical', docs:[
+      {type:'roof_top_photo',label:'Roof Top Photo'},
+      {type:'geotagging_photo',label:'Geo Solar Photo'},
+      {type:'geo_location_photo',label:'Geo Location Photo'},
+      {type:'solar_rooftop_registration',label:'Solar Rooftop Registration'},
+      {type:'technical_installation_details',label:'Technical Installation Details'},
+    ]},
+    {group:'Application & Process', docs:[
+      {type:'quotation',label:'Quotation'},
+      {type:'feasibility_letter',label:'Feasibility Letter'},
+      {type:'etoken',label:'Etoken'},
+      {type:'acknowledgement',label:'Acknowledgement'},
+      {type:'net_meter_agreement',label:'Net Meter Agreement'},
+      {type:'net_meter_application',label:'Net Meter Application'},
+    ]},
+    {group:'Certificates & Completion', docs:[
+      {type:'dcr_certificate',label:'DCR Certificate'},
+      {type:'invoice',label:'Invoice'},
+      {type:'installation_certificate',label:'Installation Certificate'},
+      {type:'annexure_a',label:'Annexure-A'},
+      {type:'annexure_c',label:'Annexure-C'},
+      {type:'synchronisation_certificate',label:'Synchronisation Certificate'},
+      {type:'commissioning_test_report',label:'Commissioning Test Report: Solar Project 3KW'},
+    ]},
+  ],
+  co_applicant: [
+    {group:'Co-Applicant Documents', docs:[
+      {type:'co_adhar',label:'Aadhaar Card'},
+      {type:'co_pan',label:'PAN Card'},
+      {type:'co_bank_statement',label:'Bank Statement'},
+    ]},
+  ],
+};
+
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fmtDate(d){if(!d)return'—';try{return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}catch{return String(d).slice(0,10);}}
+function fmtSize(b){if(!b)return'';if(b>1048576)return(b/1048576).toFixed(1)+' MB';if(b>1024)return(b/1024).toFixed(0)+' KB';return b+' B';}
+function fieldVal(v){return v?`<span class="field-value">${esc(v)}</span>`:`<span class="field-value empty">—</span>`;}
+function monoVal(v){return v?`<span class="field-value mono">${esc(v)}</span>`:`<span class="field-value empty">—</span>`;}
+
+async function downloadAsJpegPublic(url,label){
+  try{
+    const resp=await fetch(url);
+    if(!resp.ok)throw new Error('Fetch failed');
+    const blob=await resp.blob();
+    const ct=blob.type||'';
+    if(!ct.startsWith('image/')){
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download=label.replace(/\s+/g,'_');a.click();URL.revokeObjectURL(a.href);return;
+    }
+    const blobUrl=URL.createObjectURL(blob);
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img,0,0);
+      URL.revokeObjectURL(blobUrl);
+      let quality=0.88,dataUrl=canvas.toDataURL('image/jpeg',quality);
+      const maxB=49*1024*1024;
+      while(dataUrl.length*0.75>maxB&&quality>0.15){quality-=0.1;dataUrl=canvas.toDataURL('image/jpeg',quality);}
+      const a=document.createElement('a');a.href=dataUrl;
+      a.download=label.replace(/\s+/g,'_')+'.jpg';a.click();
+    };
+    img.onerror=()=>URL.revokeObjectURL(blobUrl);
+    img.src=blobUrl;
+  }catch(e){alert('JPEG download failed: '+e.message);}
+}
+
+function renderPage(data) {
+  const l = data.lead;
+  const docs = data.docs || [];
+  const docMap = {};
+  docs.forEach(d => { docMap[d.doc_type] = d; });
+  const expiresAt = new Date(data.expires_at);
+  const includedDocTypes = data.included_doc_types || null; // null = all docs
+
+  // start countdown
+  startCountdown(expiresAt);
+
+  const statusBadge = l.status
+    ? `<span class="badge ${l.status.toLowerCase().includes('won') ? 'status-won' : 'status-default'}">${esc(l.status)}</span>`
+    : '';
+
+  function field(label, val, mono=false) {
+    return `<div class="field-item"><div class="field-label">${label}</div>${mono?monoVal(val):fieldVal(val)}</div>`;
+  }
+
+  // build doc groups HTML — filtered by includedDocTypes if set
+  function buildDocGroupsHTML(groups) {
+    return groups.map(g => {
+      // filter to only the doc types included in the share filter
+      const visibleDocs = includedDocTypes
+        ? g.docs.filter(d => includedDocTypes.includes(d.type))
+        : g.docs;
+      if (visibleDocs.length === 0) return ''; // skip entire group if no included docs
+      const uploaded = visibleDocs.filter(d => docMap[d.type]).length;
+      const rows = visibleDocs.map(doc => {
+        const ud = docMap[doc.type];
+        const isUp = !!ud;
+        const meta = isUp
+          ? `<div class="doc-row-meta">
+               <span><i class="fas fa-file-alt" style="font-size:8px"></i> ${esc(ud.original_name||'')}</span>
+               <span><i class="fas fa-user" style="font-size:8px"></i> ${esc(ud.uploaded_by_name||'')}</span>
+               <span>${ud.uploaded_at ? fmtDate(ud.uploaded_at) : ''}</span>
+               ${fmtSize(ud.file_size) ? `<span>${fmtSize(ud.file_size)}</span>` : ''}
+             </div>
+             ${ud.doc_number ? `<div class="doc-row-num"><b>Doc No:</b> ${esc(ud.doc_number)}</div>` : ''}`
+          : '';
+        const jpegBtnHtml = (isUp && ud.view_url && JPEG_DL_TYPES.has(doc.type))
+          ? `<button class="doc-btn" style="background:#f0fdf4;color:#166534;border:1px solid #86efac;font-size:10px;cursor:pointer" onclick="downloadAsJpegPublic('${esc(ud.view_url)}','${esc(doc.label)}')"><i class="fas fa-image"></i> JPG</button>`
+          : '';
+        const actions = isUp && ud.view_url
+          ? `<div class="doc-actions">
+               <a href="${esc(ud.view_url)}" target="_blank" class="doc-btn view"><i class="fas fa-eye"></i> View</a>
+               <a href="${esc(ud.download_url)}" download class="doc-btn download"><i class="fas fa-download"></i> Download</a>
+               ${jpegBtnHtml}
+             </div>`
+          : `<span class="no-doc">Not uploaded</span>`;
+        return `<div class="doc-row${isUp?' uploaded':''}">
+          <div class="doc-row-info">
+            <div class="doc-row-label"><span class="doc-status-dot ${isUp?'uploaded':'pending'}"></span>${esc(doc.label)}</div>
+            ${meta}
+          </div>
+          ${actions}
+        </div>`;
+      }).join('');
+      return `<div class="doc-group">
+        <div class="doc-group-title">${esc(g.group)}<span class="doc-g-count">${uploaded}/${visibleDocs.length}</span></div>
+        ${rows}
+      </div>`;
+    }).join('');
+  }
+
+  const consumerHTML = buildDocGroupsHTML(SDOC_GROUPS.consumer);
+  const coAppHTML    = buildDocGroupsHTML(SDOC_GROUPS.co_applicant);
+
+  const totalDocs = docs.length;
+  const totalPossible = 24; // 21 consumer + 3 co-applicant
+
+  // Compute filtered doc counts
+  const totalConsumerSlots = SDOC_GROUPS.consumer.reduce((s,g)=>s+g.docs.length,0);
+  const totalCoAppSlots    = SDOC_GROUPS.co_applicant.reduce((s,g)=>s+g.docs.length,0);
+  const visibleConsumerSlots = includedDocTypes
+    ? SDOC_GROUPS.consumer.reduce((s,g)=>s+g.docs.filter(d=>includedDocTypes.includes(d.type)).length,0)
+    : totalConsumerSlots;
+  const visibleCoAppSlots = includedDocTypes
+    ? SDOC_GROUPS.co_applicant.reduce((s,g)=>s+g.docs.filter(d=>includedDocTypes.includes(d.type)).length,0)
+    : totalCoAppSlots;
+
+  const filteredNote = includedDocTypes
+    ? `<div class="alert-box warning" style="margin-bottom:12px">
+        <i class="fas fa-filter alert-icon"></i>
+        <div class="alert-text">
+          <h3>Selected Documents Only</h3>
+          <p>This link was generated with a custom document selection — <b>${includedDocTypes.length} of 24</b> document types are included. Other document types are not shared in this link.</p>
+        </div>
+      </div>`
+    : '';
+
+  // Dynamic tab title
+  document.title = `${l.name || 'Lead #'+l.id} — Myntreal`;
+
+  // Lead initials for avatar
+  const _initials = (l.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const appPill = l.application_no
+    ? `<span class="lead-hero-pill app"><i class="fas fa-file-alt"></i> ${esc(l.application_no)}</span>`
+    : `<span class="lead-hero-pill no-app"><i class="fas fa-file-alt"></i> No Application No</span>`;
+
+  document.getElementById('appRoot').innerHTML = `
+    <div class="lead-hero">
+      <div class="lead-hero-avatar">${esc(_initials)}</div>
+      <div class="lead-hero-info">
+        <div class="lead-hero-name">${esc(l.name || 'Unnamed Lead')}</div>
+        <div class="lead-hero-meta">
+          <span class="lead-hero-pill id"><i class="fas fa-hashtag"></i> Lead #${l.id}</span>
+          ${appPill}
+          ${statusBadge}
+        </div>
+      </div>
+    </div>
+
+    <div class="alert-box info">
+      <i class="fas fa-info-circle alert-icon"></i>
+      <div class="alert-text">
+        <h3>Read-Only Document Link</h3>
+        <p>This link was shared by <b>${esc(data.created_by||'Myntreal Staff')}</b>.
+           Documents can be viewed and downloaded, but no edits can be made.
+           This link expires at <b>${expiresAt.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}</b>.</p>
+      </div>
+    </div>
+    ${filteredNote}
+
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-user"></i>
+        <h2>Lead Information</h2>
+      </div>
+      <div class="card-body">
+        <div class="field-grid">
+          ${field('Full Name', l.name)}
+          ${field('Phone', l.phone)}
+          ${field('Email', l.email)}
+          ${field('Address', l.address)}
+          ${field('Pincode', l.pincode)}
+          ${field('Source', l.source)}
+          ${field('Application No', l.application_no)}
+          ${field('Accepted Date', l.accepted_date ? fmtDate(l.accepted_date) : '')}
+          ${field('Support Staff', l.telecaller_name)}
+          ${field('Field Staff', l.field_staff_name)}
+        </div>
+
+        <div class="section-divider"><i class="fas fa-id-card"></i> KYC Details</div>
+        <div class="field-grid">
+          ${field('Aadhaar Number', l.aadhaar_number, true)}
+          ${field('PAN Number', l.pan_number, true)}
+          ${field('EB Number', l.electricity_bill_number, true)}
+        </div>
+
+        <div class="section-divider"><i class="fas fa-university"></i> Bank Details</div>
+        <div class="field-grid">
+          ${field('Bank Account No', l.bank_account_number, true)}
+          ${field('IFSC Code', l.ifsc_code, true)}
+          ${field('Branch', l.bank_branch)}
+          ${field('Loan Bank', l.loan_bank)}
+        </div>
+
+        ${l.co_applicant_name ? `
+        <div class="section-divider"><i class="fas fa-users"></i> Co-Applicant Details</div>
+        <div class="field-grid">
+          ${field('Co-Applicant Name', l.co_applicant_name)}
+          ${field('Co-Applicant Phone', l.co_applicant_phone)}
+          ${field('Co-App Aadhaar', l.co_applicant_aadhaar, true)}
+          ${field('Co-App PAN', l.co_applicant_pan, true)}
+          ${field('Co-App Bank Account', l.co_applicant_bank_account, true)}
+          ${field('Co-App IFSC', l.co_applicant_ifsc, true)}
+        </div>` : ''}
+
+        <div class="section-divider"><i class="fas fa-rupee-sign"></i> Deal & Timeline</div>
+        <div class="field-grid">
+          ${field('Deal Total', l.deal_value_total ? '₹ '+Number(l.deal_value_total).toLocaleString('en-IN') : '')}
+          ${field('Deal Received', l.deal_value_received ? '₹ '+Number(l.deal_value_received).toLocaleString('en-IN') : '')}
+          ${field('Deal Balance', l.deal_value_balance ? '₹ '+Number(l.deal_value_balance).toLocaleString('en-IN') : '')}
+          ${field('Material Date', l.material_reach_date ? fmtDate(l.material_reach_date) : '')}
+          ${field('Installation Date', l.installation_date ? fmtDate(l.installation_date) : '')}
+          ${field('Next Followup', l.next_followup_date ? fmtDate(l.next_followup_date) : '')}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-folder-open"></i>
+        <h2>Consumer Solar Documents</h2>
+      </div>
+      <div class="card-body">
+        ${consumerHTML}
+      </div>
+      <div class="summary-bar">
+        <i class="fas fa-check-circle" style="color:#22c55e"></i>
+        Consumer: <b>${SDOC_GROUPS.consumer.reduce((s,g)=>s+g.docs.filter(d=>(includedDocTypes?includedDocTypes.includes(d.type):true)&&docMap[d.type]).length,0)}</b> of <b>${visibleConsumerSlots}</b> included slots uploaded
+        ${includedDocTypes ? `<span style="margin-left:8px;font-size:9px;background:#fef3c7;color:#b45309;padding:2px 6px;border-radius:10px">${visibleConsumerSlots} of 21 types shared</span>` : ''}
+      </div>
+    </div>
+
+    ${visibleCoAppSlots > 0 ? `<div class="card">
+      <div class="card-header">
+        <i class="fas fa-user-plus"></i>
+        <h2>Co-Applicant Documents</h2>
+      </div>
+      <div class="card-body">
+        ${coAppHTML}
+      </div>
+      <div class="summary-bar">
+        <i class="fas fa-check-circle" style="color:#22c55e"></i>
+        Co-Applicant: <b>${SDOC_GROUPS.co_applicant[0].docs.filter(d=>(includedDocTypes?includedDocTypes.includes(d.type):true)&&docMap[d.type]).length}</b> of <b>${visibleCoAppSlots}</b> included slots uploaded
+        ${includedDocTypes ? `<span style="margin-left:8px;font-size:9px;background:#fef3c7;color:#b45309;padding:2px 6px;border-radius:10px">${visibleCoAppSlots} of 3 types shared</span>` : ''}
+      </div>
+    </div>` : ''}
+
+    <div style="text-align:center;padding:10px 0 20px">
+      <button id="slkDlAllBtn" onclick="downloadShareBundle()" style="background:#1e3a5f;color:#fff;border:none;border-radius:8px;padding:11px 28px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,.18)">
+        <i class="fas fa-file-pdf"></i> Download All as PDF
+      </button>
+      <div style="font-size:10.5px;color:#9ca3af;margin-top:6px">All documents in this link merged into one file</div>
+    </div>
+
+    <div class="share-footer">
+      <div class="share-footer-logos">
+        <img src="/myntreal-logo.png" class="share-footer-logo" alt="Myntreal" onerror="this.style.display='none'">
+        <span class="share-footer-sep">&times;</span>
+        <img src="/vgk4u-logo-100.png" class="share-footer-logo" alt="VGK4U" onerror="this.style.display='none'">
+      </div>
+      <div class="share-footer-note">Myntreal CRM &mdash; Confidential &middot; Lead Document Share &middot; Do not redistribute</div>
+    </div>
+  `;
+}
+
+function startCountdown(expiresAt) {
+  const bar = document.getElementById('expiryBar');
+  const el  = document.getElementById('expiryCountdown');
+  bar.style.display = 'flex';
+
+  function tick() {
+    const diff = expiresAt - new Date();
+    if (diff <= 0) {
+      el.textContent = 'Expired';
+      bar.classList.add('urgent');
+      document.getElementById('appRoot').innerHTML = `
+        <div class="expired-wrap">
+          <i class="fas fa-lock"></i>
+          <h2>This link has expired</h2>
+          <p>The 6-hour access window has closed. Please request a new share link from the staff member.</p>
+        </div>`;
+      return;
+    }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`;
+    if (diff < 600000) bar.classList.add('urgent');
+    setTimeout(tick, 1000);
+  }
+  tick();
+}
+
+let _shareToken = null;
+
+async function downloadShareBundle() {
+  const btn = document.getElementById('slkDlAllBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing PDF…'; }
+  try {
+    const r = await fetch(`/api/v1/crm/share/${_shareToken}/bundle`);
+    if (!r.ok) { const d = await r.json().catch(() => ({})); alert(d.detail || 'Download failed'); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'solar_documents_bundle.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) { alert('Download failed: ' + e.message); }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf"></i> Download All as PDF'; } }
+}
+
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('token');
+  if (!token) {
+    document.getElementById('appRoot').innerHTML = `
+      <div class="alert-box error">
+        <i class="fas fa-exclamation-circle alert-icon"></i>
+        <div class="alert-text"><h3>No Token Provided</h3><p>This URL is missing the required token parameter.</p></div>
+      </div>`;
+    return;
+  }
+
+  _shareToken = token;
+  try {
+    const r = await fetch(`/api/v1/crm/share/${token}`);
+    if (r.status === 410 || r.status === 404) {
+      const d = await r.json().catch(() => ({}));
+      document.getElementById('appRoot').innerHTML = `
+        <div class="expired-wrap">
+          <i class="fas fa-lock"></i>
+          <h2>${r.status === 410 ? 'Link Expired' : 'Link Not Found'}</h2>
+          <p>${d.detail || 'This share link is no longer valid.'}</p>
+        </div>`;
+      return;
+    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    renderPage(data);
+  } catch(e) {
+    document.getElementById('appRoot').innerHTML = `
+      <div class="alert-box error">
+        <i class="fas fa-exclamation-circle alert-icon"></i>
+        <div class="alert-text"><h3>Failed to Load</h3><p>${esc(e.message)}</p></div>
+      </div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

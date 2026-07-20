@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partner Dashboard - Mynt Real LLP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/partner-token-manager.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 0 0 20px 20px;
+            margin-bottom: 30px;
+        }
+        
+        .welcome-text {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            transition: transform 0.2s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+        
+        .stat-icon.orders { background: linear-gradient(135deg, #667eea 0%, #1e40af 100%); color: white; }
+        .stat-icon.invoices { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+        .stat-icon.payments { background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%); color: white; }
+        .stat-icon.products { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+        
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.8rem;
+        }
+        
+        .quick-action {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            transition: all 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        
+        .quick-action:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+        }
+        
+        .quick-action i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #1d4ed8;
+        }
+        
+        .activity-list {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1rem;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            background: #1d4ed8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+        }
+
+        /* ── Profile & KYC ── */
+        .partner-tabs { background: #fff; border-bottom: 2px solid #f0f0f0; padding: 0 24px; display: flex; gap: 4px; }
+        .partner-tab-btn { background: none; border: none; padding: 14px 18px 12px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s; }
+        .partner-tab-btn.active { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+        .partner-tab-btn:hover:not(.active) { color: #1d4ed8; background: #eff6ff; border-radius: 8px 8px 0 0; }
+        .partner-tab-pane { display: none; }
+        .partner-tab-pane.active { display: block; }
+        .kyc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+        .kyc-slot { border: 1.5px dashed #e5e7eb; border-radius: 10px; padding: 14px 16px; background: #fafafa; }
+        .kyc-slot.uploaded { border-style: solid; border-color: #e5e7eb; background: #fff; }
+        .kyc-slot.approved { border-color: #059669; background: #f0fdf4; }
+        .kyc-slot.rejected { border-color: #dc2626; background: #fef2f2; }
+        .kyc-slot .kyc-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #6b7280; letter-spacing: .05em; margin-bottom: 6px; }
+        .kyc-slot .kyc-status { font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+        .kyc-slot .kyc-status.s-approved { color: #059669; }
+        .kyc-slot .kyc-status.s-pending, .kyc-slot .kyc-status.s-staff_validated { color: #d97706; }
+        .kyc-slot .kyc-status.s-rejected { color: #dc2626; }
+        .kyc-slot .kyc-status.s-not_uploaded { color: #9ca3af; }
+        .kyc-slot .kyc-file { font-size: 11px; color: #6b7280; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .kyc-slot .kyc-reason { font-size: 11px; color: #dc2626; margin-bottom: 8px; }
+        .kyc-upload-btn { display: block; font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 6px; border: 1.5px solid #1d4ed8; color: #1d4ed8; background: #fff; cursor: pointer; text-align: center; width: 100%; }
+        .kyc-upload-btn:hover { background: #1d4ed8; color: #fff; }
+        .overall-kyc-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-left: 10px; }
+        .kyc-badge-approved { background: #d1fae5; color: #065f46; }
+        .kyc-badge-pending { background: #fef3c7; color: #92400e; }
+        .kyc-badge-rejected { background: #fee2e2; color: #991b1b; }
+        .kyc-badge-not_submitted { background: #f3f4f6; color: #6b7280; }
+
+        /* ── Business Logo Avatar ── */
+        .biz-logo-wrap { display: flex; align-items: center; gap: 20px; padding: 18px; background: linear-gradient(135deg,#f0f9ff,#f3e8ff); border-radius: 14px; border: 1.5px solid #bfdbfe; margin-bottom: 6px; }
+        .biz-logo-avatar { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; flex-shrink: 0; box-shadow: 0 4px 12px rgba(106,27,154,.18); }
+        .biz-logo-initials { width: 72px; height: 72px; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 24px; letter-spacing: 1px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+        .biz-logo-info { flex: 1; min-width: 0; }
+        .biz-logo-biz-name { font-size: 17px; font-weight: 700; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .biz-logo-code { font-size: 12px; color: #1d4ed8; font-weight: 700; font-family: monospace; margin-bottom: 8px; }
+        .biz-logo-note { font-size: 11px; color: #9ca3af; margin-bottom: 10px; }
+        .biz-logo-upload-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 6px 16px; border-radius: 8px; border: 1.5px solid #1d4ed8; color: #1d4ed8; background: #fff; cursor: pointer; transition: all .15s; }
+        .biz-logo-upload-btn:hover { background: #1d4ed8; color: #fff; }
+        .biz-logo-upload-btn.uploading { opacity:.6; pointer-events:none; }
+        #bizLogoFileInput { display: none; }
+        .pf-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 0; }
+        @media (max-width: 600px) { .pf-row { grid-template-columns: 1fr; } .kyc-grid { grid-template-columns: 1fr 1fr; } }
+        .pf-field { background: #f9fafb; border-radius: 8px; padding: 12px 16px; }
+        .pf-field .pf-label { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #9ca3af; letter-spacing: .06em; }
+        .pf-field .pf-value { font-size: 15px; font-weight: 600; color: #111827; margin-top: 2px; }
+        .edit-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        @media (max-width: 600px) { .edit-form-grid { grid-template-columns: 1fr; } }
+        .ef-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; letter-spacing: .05em; display: block; margin-bottom: 4px; }
+        .ef-group input { width: 100%; border: 1.5px solid #e5e7eb; border-radius: 7px; padding: 8px 12px; font-size: 14px; outline: none; transition: border-color .15s; }
+        .ef-group input:focus { border-color: #1d4ed8; }
+        .ef-group input[readonly] { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
+        .p-section { background: #fff; border-radius: 15px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,.08); margin-bottom: 20px; }
+        .p-section-title { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <div class="spinner-border text-purple" role="status" style="width: 3rem; height: 3rem; color: #1d4ed8;"></div>
+            <p class="mt-3">Loading dashboard...</p>
+        </div>
+    </div>
+    
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <div id="sidebarContainer"></div>
+    
+    <div class="partner-main-content">
+        <div class="dashboard-header">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="welcome-text mb-1">Welcome, <span id="partnerName">Partner</span>!</h1>
+                        <p class="mb-0 opacity-75"><i class="fas fa-building me-2"></i><span id="partnerCategory">Partner</span></p>
+                    </div>
+                    <div class="text-end d-flex flex-column align-items-end gap-2">
+                        <div>
+                            <small class="opacity-75">Partner Code</small>
+                            <h4 class="mb-0" id="partnerCode">-</h4>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap justify-content-end">
+                            <button id="vgkToggleBtnPartner" onclick="switchToVGKFromPartner()" style="display:none;background:linear-gradient(135deg,#0f766e,#0d9488);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:5px 14px;font-size:13px;cursor:pointer;" title="VGK Portal">
+                                <i class="fas fa-exchange-alt"></i><span class="ms-1">VGK4U Portal</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="partner-tabs">
+            <button class="partner-tab-btn active" id="ptab-overview" onclick="showPartnerTab('overview')"><i class="fas fa-tachometer-alt me-1"></i>Overview</button>
+            <button class="partner-tab-btn" id="ptab-profile" onclick="showPartnerTab('profile')"><i class="fas fa-user me-1"></i>Profile & KYC</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div class="partner-tab-pane active" id="pane-overview">
+        <div class="container-fluid px-4">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon orders">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="stat-value" id="totalOrders">0</div>
+                        <div class="stat-label">Total Orders</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon invoices">
+                            <i class="fas fa-file-invoice"></i>
+                        </div>
+                        <div class="stat-value" id="pendingInvoices">0</div>
+                        <div class="stat-label">Pending Invoices</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon payments">
+                            <i class="fas fa-rupee-sign"></i>
+                        </div>
+                        <div class="stat-value" id="totalPayments">₹0</div>
+                        <div class="stat-label">Total Payments</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon products">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                        <div class="stat-value" id="activeProducts">0</div>
+                        <div class="stat-label">Active Products</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Business Activity Section -->
+            <div class="row mb-4">
+                <div class="col-12 mb-3">
+                    <h5 style="font-weight:700;color:#374151"><i class="fas fa-chart-bar me-2 text-primary"></i>Business Activity <small style="font-size:12px;color:#9ca3af;font-weight:400">— This Month</small></h5>
+                </div>
+                <div class="col-md-4 col-12 mb-3">
+                    <div class="stat-card" style="border-left:4px solid #0d9488;cursor:pointer" onclick="window.location='/partner/walkins'">
+                        <div class="stat-icon" style="background:#ecfdf5;color:#0d9488"><i class="fas fa-walking"></i></div>
+                        <div class="stat-value" id="dashWalkins" style="color:#0d9488">—</div>
+                        <div class="stat-label">Walk-ins This Month</div>
+                        <div style="margin-top:6px;font-size:12px;color:#6b7280">₹<span id="dashWalkinsVal">—</span> collected <span style="float:right;color:#0d9488;font-size:11px;font-weight:600">View →</span></div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-12 mb-3">
+                    <div class="stat-card" style="border-left:4px solid #2563eb;cursor:pointer" onclick="window.location='/partner/sales/invoices'">
+                        <div class="stat-icon" style="background:#eff6ff;color:#2563eb"><i class="fas fa-file-invoice-dollar"></i></div>
+                        <div class="stat-value" id="dashInvoices" style="color:#2563eb">—</div>
+                        <div class="stat-label">Sales Invoices This Month</div>
+                        <div style="margin-top:6px;font-size:12px;color:#6b7280">₹<span id="dashInvoicesVal">—</span> billed <span style="float:right;color:#2563eb;font-size:11px;font-weight:600">View →</span></div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-12 mb-3">
+                    <div class="stat-card" style="border-left:4px solid #7c3aed;cursor:pointer" onclick="window.location='/partner/stock'">
+                        <div class="stat-icon" style="background:#f5f3ff;color:#7c3aed"><i class="fas fa-boxes"></i></div>
+                        <div class="stat-value" id="dashStockItems" style="color:#7c3aed">—</div>
+                        <div class="stat-label">Stock Items Tracked</div>
+                        <div style="margin-top:6px;font-size:12px;color:#6b7280"><span id="dashLowStock" style="color:#ef4444">—</span> low stock alerts <span style="float:right;color:#7c3aed;font-size:11px;font-weight:600">View →</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h5 class="mb-3"><i class="fas fa-bolt me-2 text-warning"></i>Quick Actions</h5>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/partner/orders" class="quick-action">
+                        <i class="fas fa-plus-circle"></i>
+                        <div>New Order</div>
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/partner/walkins" class="quick-action">
+                        <i class="fas fa-walking"></i>
+                        <div>Walk-in Entry</div>
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/partner/sales/invoices" class="quick-action">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <div>Sales Invoice</div>
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/partner/stock" class="quick-action">
+                        <i class="fas fa-boxes"></i>
+                        <div>My Stock</div>
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/partner/purchases" class="quick-action">
+                        <i class="fas fa-file-alt"></i>
+                        <div>My Purchases</div>
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/partner/payments" class="quick-action">
+                        <i class="fas fa-credit-card"></i>
+                        <div>Make Payment</div>
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/partner/revenue" class="quick-action">
+                        <i class="fas fa-chart-line"></i>
+                        <div>Revenue Dashboard</div>
+                    </a>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <a href="/partner/support" class="quick-action">
+                        <i class="fas fa-headset"></i>
+                        <div>Get Support</div>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="activity-list">
+                        <h5 class="mb-3"><i class="fas fa-history me-2 text-info"></i>Recent Activity</h5>
+                        <div id="activityList">
+                            <div class="activity-item">
+                                <div class="activity-icon bg-light">
+                                    <i class="fas fa-info-circle text-muted"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-semibold">No recent activity</div>
+                                    <small class="text-muted">Your activity will appear here</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="activity-list">
+                        <h5 class="mb-3"><i class="fas fa-bell me-2 text-warning"></i>Notifications</h5>
+                        <div id="notificationList">
+                            <div class="text-center text-muted py-3">
+                                <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+                                <p class="mb-0">All caught up!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div> <!-- end pane-overview -->
+
+        <!-- Profile & KYC Tab Pane -->
+        <div class="partner-tab-pane" id="pane-profile">
+            <div class="container-fluid px-4 py-4">
+
+                <!-- Business Logo Card -->
+                <div class="p-section">
+                    <div class="p-section-title"><i class="fas fa-image" style="color:#1d4ed8"></i>Business Logo</div>
+                    <div class="biz-logo-wrap" id="bizLogoBlock">
+                        <div class="biz-logo-initials" id="bizLogoInitialsEl" style="background:#1d4ed8"></div>
+                        <div class="biz-logo-info">
+                            <div class="biz-logo-biz-name" id="bizLogoBizName">—</div>
+                            <div class="biz-logo-code" id="bizLogoCode">—</div>
+                            <div class="biz-logo-note" id="bizLogoNote">No logo uploaded yet. Upload your business logo to show it on invoices.</div>
+                            <button class="biz-logo-upload-btn" id="bizLogoUploadBtn" onclick="document.getElementById('bizLogoFileInput').click()">
+                                <i class="fas fa-upload"></i> <span id="bizLogoUploadBtnText">Upload Logo</span>
+                            </button>
+                            <input type="file" id="bizLogoFileInput" accept="image/png,image/jpeg,image/webp" onchange="handleBizLogoUpload(this)">
+                        </div>
+                    </div>
+                    <div id="bizLogoMsg" style="margin-top:8px;font-size:12px"></div>
+                </div>
+
+                <!-- Profile View Card -->
+                <div class="p-section">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="p-section-title"><i class="fas fa-user-circle" style="color:#1d4ed8"></i>My Profile</div>
+                        <button class="btn btn-sm btn-outline-secondary" style="border-radius:7px;font-size:12px;font-weight:600" onclick="showPartnerEditProfile()"><i class="fas fa-pen me-1"></i>Edit Profile</button>
+                    </div>
+                    <div id="partnerProfileContent"><div style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin fa-2x"></i></div></div>
+                </div>
+
+                <!-- Edit Profile Form (hidden by default) -->
+                <div class="p-section" id="partnerEditCard" style="display:none">
+                    <div class="p-section-title"><i class="fas fa-pen" style="color:#1d4ed8"></i>Edit Profile</div>
+                    <p style="font-size:12px;color:#9ca3af;margin-bottom:14px">Partner Code, Full Name, and Phone are locked. Editable: Email, WhatsApp, Address, and MNR Contact details.</p>
+                    <div class="edit-form-grid" id="partnerEditFields"></div>
+                    <div class="mt-3 d-flex gap-2">
+                        <button class="btn btn-primary btn-sm" style="border-radius:7px;font-weight:600;background:#1d4ed8;border-color:#1d4ed8" onclick="savePartnerProfile()" id="savePartnerBtn"><i class="fas fa-save me-1"></i>Save Changes</button>
+                        <button class="btn btn-outline-secondary btn-sm" style="border-radius:7px;font-weight:600" onclick="cancelPartnerEdit()">Cancel</button>
+                    </div>
+                    <div id="partnerEditMsg" style="margin-top:10px;font-size:13px"></div>
+                </div>
+
+                <!-- KYC Documents Card -->
+                <div class="p-section">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="p-section-title"><i class="fas fa-id-card" style="color:#1d4ed8"></i>KYC Documents <span id="partnerKYCBadge"></span></div>
+                        <button class="btn btn-sm btn-outline-secondary" style="border-radius:7px;font-size:12px;font-weight:600" onclick="loadPartnerKYC()"><i class="fas fa-sync me-1"></i>Refresh</button>
+                    </div>
+                    <p style="font-size:12px;color:#9ca3af;margin-bottom:14px">Upload all 4 documents to submit for KYC verification. Approved documents can be replaced and will require staff re-approval.</p>
+                    <div id="partnerKYCContent"><div style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin fa-2x"></i></div></div>
+                </div>
+
+            </div>
+        </div> <!-- end pane-profile -->
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/partner_sidebar.js"></script>
+    <script>
+        // DC_PARTNER_AUTH_001: Partner Dashboard Script (Dec 2025)
+        (function() {
+            'use strict';
+            
+            // DC Protocol: Check sandbox mode
+            const sandboxMode = localStorage.getItem('sandbox_mode');
+            const isSandbox = !!sandboxMode;
+            
+            // Check authentication
+            const token = localStorage.getItem('partner_token');
+            if (!token) {
+                if (isSandbox) {
+                    window.location.href = '/test/' + sandboxMode + '/partner/login';
+                } else {
+                    window.location.href = '/partner/login';
+                }
+                return;
+            }
+            
+            // Load partner info (use sandbox defaults if in sandbox mode)
+            let partnerInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');
+            // [DC-SOLAR-VENDOR-001] Solar vendors have their own portal
+            if (!isSandbox && partnerInfo.category === 'VENDOR') { window.location.href = '/partner/solar-vendor'; return; }
+            if (isSandbox && !partnerInfo.partner_name) {
+                partnerInfo = {
+                    partner_name: 'Test Partner',
+                    partner_code: 'TESTDIST001',
+                    category: 'Distributor',
+                    primary_company_id: 1
+                };
+            }
+            
+            // Update header
+            document.getElementById('partnerName').textContent = partnerInfo.partner_name || 'Partner';
+            document.getElementById('partnerCode').textContent = partnerInfo.partner_code || '-';
+            document.getElementById('partnerCategory').textContent = partnerInfo.category || 'Partner';
+            
+            // Initialize sidebar
+            initPartnerSidebar('sidebarContainer');
+            
+            // Hide loading overlay
+            setTimeout(() => {
+                const ov = document.getElementById('loadingOverlay');
+                if (ov) ov.style.display = 'none';
+            }, 150);
+            
+            // Load dashboard stats (placeholder - would call actual API)
+            loadDashboardStats();
+            
+            async function loadDashboardStats() {
+                const token = localStorage.getItem('partner_token');
+                const h = { 'Authorization': 'Bearer ' + token };
+                // Helper
+                const fmtINR = n => parseFloat(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+                // 1) Orders stats (total orders, active products)
+                try {
+                    const r = await fetch('/api/v1/partner/auth/my-orders?limit=1', { headers: h });
+                    if (r.ok) {
+                        const d = await r.json();
+                        const orders = d.orders || [];
+                        document.getElementById('totalOrders').textContent = orders.length > 0 ? (d.total || orders.length) : '0';
+                        document.getElementById('activeProducts').textContent = new Set(orders.flatMap(o => (o.items || []).map(i => i.item_id))).size;
+                    }
+                } catch(e) {}
+
+                // 2) Walkins MTD
+                try {
+                    const r = await fetch('/api/v1/partner/walkins/summary?date_filter=mtd', { headers: h });
+                    if (r.ok) {
+                        const d = await r.json();
+                        const s = d.summary || {};
+                        document.getElementById('dashWalkins').textContent = s.total_walkins || 0;
+                        document.getElementById('dashWalkinsVal').textContent = fmtINR(s.total_collected || 0);
+                    }
+                } catch(e) { document.getElementById('dashWalkins').textContent = '0'; document.getElementById('dashWalkinsVal').textContent = '0'; }
+
+                // 3) Sales Invoices MTD
+                try {
+                    const r = await fetch('/api/v1/partner/sales-invoices?date_filter=mtd&per_page=1', { headers: h });
+                    if (r.ok) {
+                        const d = await r.json();
+                        document.getElementById('dashInvoices').textContent = d.total || 0;
+                        const invoices = d.data || [];
+                        const totalBilled = invoices.reduce((s, i) => s + (parseFloat(i.grand_total) || 0), 0);
+                        // Try to get total from summary if available, else use page result
+                        document.getElementById('dashInvoicesVal').textContent = fmtINR(d.total_value || totalBilled);
+                        // Also count pending invoices
+                        document.getElementById('pendingInvoices').textContent = d.pending_count || '—';
+                    }
+                } catch(e) { document.getElementById('dashInvoices').textContent = '0'; document.getElementById('dashInvoicesVal').textContent = '0'; }
+
+                // 4) Stock Summary
+                try {
+                    const r = await fetch('/api/v1/partner/stock/summary', { headers: h });
+                    if (r.ok) {
+                        const d = await r.json();
+                        const s = d.summary || {};
+                        document.getElementById('dashStockItems').textContent = s.total_items || 0;
+                        document.getElementById('dashLowStock').textContent = s.low_stock_count || 0;
+                        document.getElementById('totalPayments').textContent = '₹' + fmtINR(s.total_stock_value || 0);
+                    }
+                } catch(e) { document.getElementById('dashStockItems').textContent = '0'; document.getElementById('dashLowStock').textContent = '0'; }
+            }
+            
+            // Mobile menu toggle
+            window.toggleMobileMenu = function() {
+                const sidebar = document.getElementById('partnerSidebar') || document.querySelector('.partner-sidebar');
+                const overlay = document.getElementById('partnerSidebarOverlay');
+                if (!sidebar) return;
+                const isOpen = sidebar.classList.contains('show') || sidebar.classList.contains('mobile-open');
+                if (isOpen) {
+                    sidebar.classList.remove('show', 'mobile-open');
+                    if (overlay) overlay.classList.remove('active');
+                } else {
+                    sidebar.classList.add('show');
+                    if (overlay) overlay.classList.add('active');
+                }
+            };
+        })();
+    </script>
+
+    <!-- DC Protocol Mar 2026: Partner Profile & KYC -->
+    <script>
+        const PARTNER_BASE = '/api/v1/partner';
+        const PARTNER_KYC_LABELS = { aadhaar_front:'Aadhaar Front', aadhaar_back:'Aadhaar Back', pan_card:'PAN Card', passport_photo:'Passport Photo' };
+        const PARTNER_KYC_TYPES = ['aadhaar_front', 'aadhaar_back', 'pan_card', 'passport_photo'];
+        let _partnerData = null;
+        let _profileTabLoaded = false;
+
+        function escP(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+        function partnerAuthHdrs() {
+            const t = localStorage.getItem('partner_token');
+            return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + t };
+        }
+
+        function showPartnerTab(name) {
+            document.querySelectorAll('.partner-tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.partner-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('pane-' + name).classList.add('active');
+            document.getElementById('ptab-' + name).classList.add('active');
+            if (name === 'profile' && !_profileTabLoaded) {
+                _profileTabLoaded = true;
+                loadPartnerProfile();
+            }
+        }
+
+        // ── Business Logo Helpers ─────────────────────────────────────────
+        const _BIZ_LOGO_PALETTE = [
+            '#4f46e5','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#db2777','#0369a1'
+        ];
+        function _bizLogoColor(name) {
+            const s = name || 'BZ';
+            return _BIZ_LOGO_PALETTE[Array.from(s).reduce((a,c)=>a+c.charCodeAt(0),0) % _BIZ_LOGO_PALETTE.length];
+        }
+        function _bizLogoInitials(name) {
+            const words = (name||'BZ').trim().split(/\s+/);
+            return words.length >= 2 ? (words[0][0]+words[1][0]).toUpperCase() : (name||'BZ').slice(0,2).toUpperCase();
+        }
+
+        function renderBizLogo(p) {
+            const color = _bizLogoColor(p.partner_name || '');
+            const initials = _bizLogoInitials(p.partner_name || '');
+            const initialsEl = document.getElementById('bizLogoInitialsEl');
+            const bizName = document.getElementById('bizLogoBizName');
+            const bizCode = document.getElementById('bizLogoCode');
+            const bizNote = document.getElementById('bizLogoNote');
+            const bizBlock = document.getElementById('bizLogoBlock');
+            const btnText = document.getElementById('bizLogoUploadBtnText');
+            if (bizName) bizName.textContent = p.partner_name || '—';
+            if (bizCode) bizCode.textContent = p.partner_code || '—';
+            if (p.logo_url) {
+                // Show actual logo
+                if (initialsEl) {
+                    initialsEl.outerHTML = `<img src="${p.logo_url}" alt="Business Logo" class="biz-logo-avatar" id="bizLogoInitialsEl" onerror="this.outerHTML='<div class=biz-logo-initials id=bizLogoInitialsEl style=background:${color}>${initials}</div>'">`;
+                }
+                if (bizNote) bizNote.textContent = 'Logo is displayed on your invoices.';
+                if (btnText) btnText.textContent = 'Change Logo';
+            } else {
+                // Show initials placeholder
+                if (initialsEl) { initialsEl.style.background = color; initialsEl.textContent = initials; }
+                if (bizNote) bizNote.textContent = 'No logo uploaded yet. Upload your business logo to appear on invoices.';
+                if (btnText) btnText.textContent = 'Upload Logo';
+            }
+        }
+
+        async function handleBizLogoUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                document.getElementById('bizLogoMsg').innerHTML = '<span style="color:#dc2626"><i class="fas fa-exclamation-circle me-1"></i>File must be under 2MB</span>';
+                input.value = '';
+                return;
+            }
+            const btn = document.getElementById('bizLogoUploadBtn');
+            const msg = document.getElementById('bizLogoMsg');
+            btn.classList.add('uploading');
+            document.getElementById('bizLogoUploadBtnText').textContent = 'Uploading…';
+            msg.innerHTML = '';
+            try {
+                const fd = new FormData();
+                fd.append('file', file);
+                const token = localStorage.getItem('partner_token');
+                const resp = await fetch(PARTNER_BASE + '/logo', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token },
+                    body: fd
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    if (_partnerData) { _partnerData.logo_path = result.logo_path; _partnerData.logo_url = result.logo_url; }
+                    renderBizLogo(_partnerData || {});
+                    msg.innerHTML = '<span style="color:#059669"><i class="fas fa-check-circle me-1"></i>Logo uploaded successfully!</span>';
+                } else {
+                    msg.innerHTML = `<span style="color:#dc2626"><i class="fas fa-times-circle me-1"></i>${result.detail || 'Upload failed'}</span>`;
+                }
+            } catch(e) {
+                msg.innerHTML = '<span style="color:#dc2626"><i class="fas fa-times-circle me-1"></i>Upload failed. Please try again.</span>';
+            } finally {
+                btn.classList.remove('uploading');
+                document.getElementById('bizLogoUploadBtnText').textContent = (_partnerData && _partnerData.logo_url) ? 'Change Logo' : 'Upload Logo';
+                input.value = '';
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────
+
+        async function loadPartnerProfile() {
+            const el = document.getElementById('partnerProfileContent');
+            if (el) el.innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            try {
+                const resp = await fetch(PARTNER_BASE + '/auth/me', { headers: partnerAuthHdrs() });
+                if (resp.status === 401) { localStorage.removeItem('partner_token'); localStorage.removeItem('partner_info'); document.cookie='partner_token=;path=/;max-age=0'; window.location.href = '/partner/login'; return; }
+                const data = await resp.json();
+                if (!data.success) throw new Error();
+                const p = data.partner || data.data || data;
+                _partnerData = p;
+
+                // DC_PARTNER_STATUS_001: Refresh login_status in localStorage from live API data
+                const _pInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');
+                if (p.login_status && _pInfo.login_status !== p.login_status) {
+                    _pInfo.login_status = p.login_status;
+                    localStorage.setItem('partner_info', JSON.stringify(_pInfo));
+                }
+
+                const _statusMap = { active:'Active', inactive:'Inactive', pause:'Paused', expired:'Expired', suspended:'Suspended' };
+                const _statusColors = { active:'#059669', inactive:'#dc2626', pause:'#d97706', expired:'#ea580c', suspended:'#7c3aed' };
+                const _ls = p.login_status || (p.is_active ? 'active' : 'inactive');
+                const _statusHtml = `<span style="color:${_statusColors[_ls]||'#6b7280'};font-weight:700">${_statusMap[_ls]||_ls}</span>`;
+
+                const fields = [
+                    ['Partner Code', `<strong style="color:#1d4ed8;font-size:17px">${escP(p.partner_code)}</strong>`],
+                    ['Full Name', escP(p.partner_name||'—')],
+                    ['Phone', escP(p.phone||'—')],
+                    ['Category', escP(p.category||'—')],
+                    ['Email', escP(p.email||'—')],
+                    ['WhatsApp', escP(p.whatsapp_number||'—')],
+                    ['Address', escP([p.address, p.city, p.state, p.pincode].filter(Boolean).join(', ')||'—')],
+                    ['Status', _statusHtml],
+                    ['Last Login', p.last_login ? new Date(p.last_login).toLocaleString('en-IN') : '—'],
+                ];
+
+                // ── Portal Contacts & Module Settings (always shown) ─────
+                const _modIcon = (on) => on === false
+                    ? `<span style="color:#9ca3af;font-size:11px;background:#f3f4f6;padding:2px 8px;border-radius:8px;display:inline-block;margin:2px">✗</span>`
+                    : `<span style="color:#059669;font-size:11px;font-weight:700;background:#dcfce7;padding:2px 8px;border-radius:8px;display:inline-block;margin:2px">✓</span>`;
+
+                const ms = p.module_settings || {};
+                const salesMs = ms.sales_staff || (('walkins' in ms) ? ms : {});
+                const svcMs   = ms.service_staff || (('service' in ms) ? ms : {});
+                const moduleLabels = [
+                    ['walkins','Walk-ins'],['leads','Leads'],['service','Service'],
+                    ['marketplace','Marketplace'],['stock','Stock'],['sales','Sales / Invoice']
+                ];
+                const hasModuleConfig = Object.keys(salesMs).length > 0 || Object.keys(svcMs).length > 0;
+
+                const contactHtml = `
+                    <div style="margin-top:18px;padding-top:14px;border-top:1px solid #e5e7eb">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#1d4ed8;margin-bottom:10px">
+                            <i class="fas fa-headset me-1"></i>Your MNR Contacts
+                        </div>
+                        <div class="pf-row">
+                            <div class="pf-field">
+                                <div class="pf-label">Sales Contact</div>
+                                <div class="pf-value" style="color:${p.sales_contact_name?'#1d4ed8':'#9ca3af'};font-weight:600">
+                                    ${escP(p.sales_contact_name||'Not assigned')}
+                                    ${p.sales_contact_number ? `<div style="font-size:12px;color:#374151;font-weight:400">${escP(p.sales_contact_number)}</div>` : ''}
+                                </div>
+                            </div>
+                            <div class="pf-field">
+                                <div class="pf-label">Service Contact</div>
+                                <div class="pf-value" style="color:${p.service_contact_name?'#059669':'#9ca3af'};font-weight:600">
+                                    ${escP(p.service_contact_name||'Not assigned')}
+                                    ${p.service_contact_number ? `<div style="font-size:12px;color:#374151;font-weight:400">${escP(p.service_contact_number)}</div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+
+                // When no config: default is all-enabled (true), so treat missing key as true
+                const _salesVal = (k) => hasModuleConfig ? salesMs[k] : true;
+                const _svcVal   = (k) => hasModuleConfig ? svcMs[k]   : true;
+
+                const modulesHtml = `
+                    <div style="margin-top:18px;padding-top:14px;border-top:1px solid #e5e7eb">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#374151;margin-bottom:10px">
+                            <i class="fas fa-th me-1"></i>Portal Modules — per staff role
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                            <div style="background:#eff6ff;border-radius:10px;padding:12px;border:1px solid #bfdbfe">
+                                <div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:8px">
+                                    <i class="fas fa-user-tie me-1"></i>Sales Staff Modules
+                                </div>
+                                ${moduleLabels.map(([k,label])=>`
+                                <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:12px">
+                                    <input type="checkbox" ${_salesVal(k) !== false ? 'checked' : ''} disabled style="accent-color:#1d4ed8;width:13px;height:13px">
+                                    <span>${label}</span>
+                                </div>`).join('')}
+                            </div>
+                            <div style="background:#f0fdf4;border-radius:10px;padding:12px;border:1px solid #86efac">
+                                <div style="font-size:11px;font-weight:700;color:#059669;margin-bottom:8px">
+                                    <i class="fas fa-tools me-1"></i>Service Staff Modules
+                                </div>
+                                ${moduleLabels.map(([k,label])=>`
+                                <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;font-size:12px">
+                                    <input type="checkbox" ${_svcVal(k) !== false ? 'checked' : ''} disabled style="accent-color:#059669;width:13px;height:13px">
+                                    <span>${label}</span>
+                                </div>`).join('')}
+                            </div>
+                        </div>
+                        ${!hasModuleConfig ? `<div style="font-size:11px;color:#9ca3af;margin-top:6px;font-style:italic">All modules enabled by default — contact MNR to customise.</div>` : ''}
+                    </div>`;
+
+                if (el) el.innerHTML = `
+                    <div class="pf-row">${fields.map(([l,v])=>`<div class="pf-field"><div class="pf-label">${l}</div><div class="pf-value">${v}</div></div>`).join('')}</div>
+                    ${contactHtml}
+                    ${modulesHtml}
+                `;
+                renderBizLogo(p);
+                loadPartnerKYC();
+            } catch(e) {
+                if (el) el.innerHTML = '<div class="alert alert-danger">Failed to load profile. Please refresh.</div>';
+            }
+        }
+
+        function showPartnerEditProfile() {
+            if (!_partnerData) return;
+            const p = _partnerData;
+            const titleOpts = ['','Mr.','Ms.','Mrs.'].map(t =>
+                `<option value="${t}" ${(p.name_title||'')==t?'selected':''}>${t||'-- Title --'}</option>`).join('');
+            const genderOpts = ['','Male','Female','Other'].map(g =>
+                `<option value="${g}" ${(p.gender||'')==g?'selected':''}>${g||'-- Select --'}</option>`).join('');
+            const lockedFields = [
+                { id:'pef_code', label:'Partner Code', val: p.partner_code||'' },
+                { id:'pef_phone', label:'Phone', val: p.phone||'' },
+            ];
+            // Module settings helpers (re-derived from _partnerData for edit scope)
+            const _ems = p.module_settings || {};
+            const _eSalesMs = _ems.sales_staff || (('walkins' in _ems) ? _ems : {});
+            const _eSvcMs   = _ems.service_staff || (('service' in _ems) ? _ems : {});
+            const _eHasConfig = Object.keys(_eSalesMs).length > 0 || Object.keys(_eSvcMs).length > 0;
+            const moduleLabels = [
+                ['walkins','Walk-ins'],['leads','Leads'],['service','Service'],
+                ['marketplace','Marketplace'],['stock','Stock'],['sales','Sales / Invoice']
+            ];
+            const _salesVal = (k) => _eHasConfig ? _eSalesMs[k] : true;
+            const _svcVal   = (k) => _eHasConfig ? _eSvcMs[k]   : true;
+            document.getElementById('partnerEditFields').innerHTML = `
+                ${lockedFields.map(f => `
+                <div class="ef-group">
+                    <label>${escP(f.label)} <span style="color:#dc2626;font-size:10px">(LOCKED)</span></label>
+                    <input id="${f.id}" type="text" value="${escP(f.val)}" readonly placeholder="Cannot be changed">
+                </div>`).join('')}
+                <div class="ef-group" style="grid-column:1/-1">
+                    <label>Title &amp; Name <span style="font-size:10px;color:#6b7280;font-weight:400">(editable)</span></label>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <select id="pef_title" style="flex:0 0 80px;padding:8px;border-radius:6px;border:1.5px solid #cbd5e1;font-size:13px">${titleOpts}</select>
+                        <input id="pef_fname" type="text" value="${escP(p.first_name||'')}" placeholder="First name" style="flex:1;min-width:100px">
+                        <input id="pef_lname" type="text" value="${escP(p.last_name||'')}" placeholder="Last name" style="flex:1;min-width:100px">
+                    </div>
+                    <div style="font-size:11px;color:#9ca3af;margin-top:4px">Current display name: <strong>${escP(p.partner_name||'')}</strong></div>
+                </div>
+                <div class="ef-group">
+                    <label>Gender <span style="font-size:10px;color:#6b7280;font-weight:400">(editable)</span></label>
+                    <select id="pef_gender" style="padding:8px 12px;border-radius:6px;border:1.5px solid #cbd5e1;font-size:13px;width:100%">${genderOpts}</select>
+                </div>
+                <div class="ef-group">
+                    <label>Email <span style="font-size:10px;color:#6b7280;font-weight:400">(editable)</span></label>
+                    <input id="pef_email" type="email" value="${escP(p.email||'')}" placeholder="your@email.com">
+                </div>
+                <div class="ef-group">
+                    <label>WhatsApp Number</label>
+                    <input id="pef_whatsapp" type="text" value="${escP(p.whatsapp_number||'')}" placeholder="+91XXXXXXXXXX">
+                </div>
+                <div class="ef-group">
+                    <label>Address</label>
+                    <input id="pef_address" type="text" value="${escP(p.address||'')}" placeholder="Full address">
+                </div>
+                <div class="ef-group">
+                    <label>City</label>
+                    <input id="pef_city" type="text" value="${escP(p.city||'')}" placeholder="City">
+                </div>
+                <div class="ef-group">
+                    <label>State</label>
+                    <input id="pef_state" type="text" value="${escP(p.state||'')}" placeholder="State">
+                </div>
+                <div class="ef-group">
+                    <label>Pincode</label>
+                    <input id="pef_pincode" type="text" value="${escP(p.pincode||'')}" placeholder="Pincode">
+                </div>
+                <div style="grid-column:1/-1;margin-top:8px;padding-top:14px;border-top:1px solid #e5e7eb">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#1d4ed8;margin-bottom:12px">
+                        <i class="fas fa-headset me-1"></i>Partner Portal Settings — MNR Contacts
+                    </div>
+                    <div class="edit-form-grid" style="margin-top:0">
+                        <div class="ef-group">
+                            <label>Sales Contact Name</label>
+                            <input id="pef_sales_name" type="text" value="${escP(p.sales_contact_name||'')}" placeholder="Sales POC name">
+                        </div>
+                        <div class="ef-group">
+                            <label>Sales Contact Number</label>
+                            <input id="pef_sales_num" type="text" value="${escP(p.sales_contact_number||'')}" placeholder="Sales mobile">
+                        </div>
+                        <div class="ef-group">
+                            <label>Service Contact Name</label>
+                            <input id="pef_svc_name" type="text" value="${escP(p.service_contact_name||'')}" placeholder="Service POC name">
+                        </div>
+                        <div class="ef-group">
+                            <label>Service Contact Number</label>
+                            <input id="pef_svc_num" type="text" value="${escP(p.service_contact_number||'')}" placeholder="Service mobile">
+                        </div>
+                    </div>
+                </div>
+                <div style="grid-column:1/-1;margin-top:8px;padding-top:14px;border-top:1px solid #e5e7eb">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#374151;margin-bottom:12px">
+                        <i class="fas fa-th me-1"></i>Portal Modules — per staff role
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div style="background:#eff6ff;border-radius:10px;padding:12px;border:1px solid #bfdbfe">
+                            <div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:8px">
+                                <i class="fas fa-user-tie me-1"></i>Sales Staff Modules
+                            </div>
+                            ${moduleLabels.map(([k,label]) => {
+                                const checked = _salesVal(k) !== false;
+                                return `<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;font-size:13px">
+                                    <input type="checkbox" id="pef_sm_${k}" ${checked?'checked':''} style="accent-color:#1d4ed8;width:15px;height:15px;cursor:pointer">
+                                    <label for="pef_sm_${k}" style="cursor:pointer;margin:0">${label}</label>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                        <div style="background:#f0fdf4;border-radius:10px;padding:12px;border:1px solid #86efac">
+                            <div style="font-size:11px;font-weight:700;color:#059669;margin-bottom:8px">
+                                <i class="fas fa-tools me-1"></i>Service Staff Modules
+                            </div>
+                            ${moduleLabels.map(([k,label]) => {
+                                const checked = _svcVal(k) !== false;
+                                return `<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;font-size:13px">
+                                    <input type="checkbox" id="pef_svm_${k}" ${checked?'checked':''} style="accent-color:#059669;width:15px;height:15px;cursor:pointer">
+                                    <label for="pef_svm_${k}" style="cursor:pointer;margin:0">${label}</label>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>`;
+            document.getElementById('partnerEditCard').style.display = '';
+            document.getElementById('partnerEditCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('partnerEditMsg').innerHTML = '';
+        }
+
+        function cancelPartnerEdit() {
+            document.getElementById('partnerEditCard').style.display = 'none';
+        }
+
+        async function savePartnerProfile() {
+            const btn = document.getElementById('savePartnerBtn');
+            const msg = document.getElementById('partnerEditMsg');
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+            msg.innerHTML = '';
+            const _g = v => { const el = document.getElementById(v); return el ? el.value.trim() : ''; };
+            const body = {
+                email:          _g('pef_email') || null,
+                whatsapp_number: _g('pef_whatsapp') || null,
+                address:        _g('pef_address') || null,
+                city:           _g('pef_city') || null,
+                state:          _g('pef_state') || null,
+                pincode:        _g('pef_pincode') || null,
+                // [DC-NAME-GENDER]
+                name_title: _g('pef_title') || null,
+                first_name: _g('pef_fname') || null,
+                last_name:  _g('pef_lname') || null,
+                gender:     _g('pef_gender') || null,
+                // [DC-PARTNER-CONTACTS-001] MNR contact fields
+                sales_contact_name:    _g('pef_sales_name') || null,
+                sales_contact_number:  _g('pef_sales_num')  || null,
+                service_contact_name:  _g('pef_svc_name')   || null,
+                service_contact_number:_g('pef_svc_num')    || null,
+                // [DC-PARTNER-MODULES-001] Staff module access
+                module_settings: {
+                    sales_staff: Object.fromEntries(
+                        ['walkins','leads','service','marketplace','stock','sales'].map(k =>
+                            [k, !!(document.getElementById('pef_sm_' + k)||{}).checked])
+                    ),
+                    service_staff: Object.fromEntries(
+                        ['walkins','leads','service','marketplace','stock','sales'].map(k =>
+                            [k, !!(document.getElementById('pef_svm_' + k)||{}).checked])
+                    )
+                },
+            };
+            try {
+                const resp = await fetch(PARTNER_BASE + '/auth/profile', {
+                    method: 'PUT',
+                    headers: partnerAuthHdrs(),
+                    body: JSON.stringify(body)
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    msg.innerHTML = '<span style="color:#059669"><i class="fas fa-check-circle me-1"></i>Profile updated successfully.</span>';
+                    _profileTabLoaded = false;
+                    loadPartnerProfile();
+                    setTimeout(() => { document.getElementById('partnerEditCard').style.display = 'none'; }, 1200);
+                } else {
+                    msg.innerHTML = `<span style="color:#dc2626"><i class="fas fa-exclamation-circle me-1"></i>${escP(data.detail || data.message || 'Update failed.')}</span>`;
+                }
+            } catch(e) {
+                msg.innerHTML = '<span style="color:#dc2626">Network error. Please try again.</span>';
+            }
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-1"></i>Save Changes';
+        }
+
+        async function loadPartnerKYC() {
+            const el = document.getElementById('partnerKYCContent');
+            const badge = document.getElementById('partnerKYCBadge');
+            if (el) el.innerHTML = '<i class="fas fa-spinner fa-spin fa-lg" style="color:#9ca3af"></i>';
+            try {
+                const resp = await fetch(PARTNER_BASE + '/kyc/status', { headers: partnerAuthHdrs() });
+                if (resp.status === 401) { localStorage.removeItem('partner_token'); localStorage.removeItem('partner_info'); document.cookie='partner_token=;path=/;max-age=0'; window.location.href = '/partner/login'; return; }
+                const data = await resp.json();
+                if (!data.success) throw new Error();
+                const docs = data.documents || [];
+                const overall = data.kyc_status || 'Not Submitted';
+                const cls = { 'Approved':'kyc-badge-approved','Pending':'kyc-badge-pending','Rejected':'kyc-badge-rejected','Staff Validated':'kyc-badge-pending' };
+                if (badge) badge.innerHTML = `<span class="overall-kyc-badge ${cls[overall]||'kyc-badge-not_submitted'}">${escP(overall)}</span>`;
+                const docMap = {};
+                docs.forEach(d => { docMap[d.document_type] = d; });
+                if (el) el.innerHTML = `<div class="kyc-grid">${PARTNER_KYC_TYPES.map(dt => renderPartnerKYCSlot(dt, docMap[dt])).join('')}</div>`;
+            } catch(e) {
+                if (el) el.innerHTML = '<div class="alert alert-danger">Failed to load KYC documents.</div>';
+            }
+        }
+
+        function renderPartnerKYCSlot(docType, doc) {
+            const label = PARTNER_KYC_LABELS[docType] || docType;
+            if (!doc) {
+                return `<div class="kyc-slot">
+                    <div class="kyc-label"><i class="fas fa-file-alt me-1"></i>${escP(label)}</div>
+                    <div class="kyc-status s-not_uploaded">Not Uploaded</div>
+                    <label class="kyc-upload-btn" for="pkyc_${docType}"><i class="fas fa-upload me-1"></i>Upload</label>
+                    <input type="file" id="pkyc_${docType}" style="display:none" accept="image/*,.pdf" onchange="uploadPartnerKYCDoc('${docType}',this)">
+                </div>`;
+            }
+            const st = doc.status || 'Pending';
+            const stCls = st.toLowerCase().replace(/ /g,'_');
+            const uploadLabel = st === 'Approved' ? 'Replace &amp; Re-submit' : 'Re-upload';
+            const uploadIcon = st === 'Approved' ? 'fa-redo' : 'fa-redo';
+            return `<div class="kyc-slot ${st==='Approved'?'approved':st==='Rejected'?'rejected':'uploaded'}">
+                <div class="kyc-label"><i class="fas fa-file-alt me-1"></i>${escP(label)}</div>
+                <div class="kyc-status s-${stCls}">${escP(st)}</div>
+                ${doc.file_name ? `<div class="kyc-file"><i class="fas fa-paperclip me-1"></i>${escP(doc.file_name)}</div>` : ''}
+                ${doc.rejection_reason ? `<div class="kyc-reason"><i class="fas fa-times-circle me-1"></i>${escP(doc.rejection_reason)}</div>` : ''}
+                <label class="kyc-upload-btn" for="pkyc_${docType}" style="font-size:11px${st==='Approved'?';border-color:#059669;color:#059669;background:#fff':''}"><i class="fas ${uploadIcon} me-1"></i>${uploadLabel}</label>
+                ${st === 'Approved' ? `<div style="font-size:10.5px;color:#6b7280;margin-top:4px;text-align:center"><i class="fas fa-info-circle me-1"></i>Replacing will require staff re-approval</div>` : ''}
+                <input type="file" id="pkyc_${docType}" style="display:none" accept="image/*,.pdf" onchange="uploadPartnerKYCDoc('${docType}',this)">
+            </div>`;
+        }
+
+        async function uploadPartnerKYCDoc(docType, input) {
+            const file = input.files[0];
+            if (!file) return;
+            const lbl = document.querySelector(`label[for="pkyc_${docType}"]`);
+            if (lbl) { lbl.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...'; lbl.style.pointerEvents='none'; }
+            const fd = new FormData();
+            fd.append('document_type', docType);
+            fd.append('file', file);
+            const t = localStorage.getItem('partner_token');
+            try {
+                const resp = await fetch(PARTNER_BASE + '/kyc/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + t },
+                    body: fd
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    loadPartnerKYC();
+                } else {
+                    alert(data.detail || data.message || 'Upload failed.');
+                    if (lbl) { lbl.innerHTML = '<i class="fas fa-redo me-1"></i>Re-upload'; lbl.style.pointerEvents=''; }
+                }
+            } catch(e) {
+                alert('Network error. Please try again.');
+                if (lbl) { lbl.innerHTML = '<i class="fas fa-redo me-1"></i>Re-upload'; lbl.style.pointerEvents=''; }
+            }
+            input.value = '';
+        }
+
+        // Check if this partner has a linked VGK account — show toggle only if yes
+        (async function checkVGKLink() {
+            try {
+                const profile = JSON.parse(localStorage.getItem('partner_profile') || '{}');
+                const code = profile.partner_code;
+                if (!code) return;
+                const resp = await fetch('/api/v1/promo/cross-auth/check-vgk-link?partner_code=' + encodeURIComponent(code));
+                const data = await resp.json();
+                if (data.linked) {
+                    const btn = document.getElementById('vgkToggleBtnPartner');
+                    if (btn) btn.style.display = 'inline-flex';
+                }
+            } catch(e) {}
+        })();
+
+        async function switchToVGKFromPartner() {
+            const btn = document.getElementById('vgkToggleBtnPartner');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+            try {
+                const tok = localStorage.getItem('partner_token');
+                const resp = await fetch('/api/v1/promo/cross-auth/generate-partner-to-vgk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + tok }
+                });
+                const data = await resp.json();
+                if (resp.ok && data.success) {
+                    window.location.href = '/vgk/login?ct=' + encodeURIComponent(data.cross_token);
+                } else {
+                    alert(data.detail || 'No VGK4U account is linked to your partner profile.');
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-exchange-alt"></i><span class="ms-1">VGK4U Portal</span>'; }
+                }
+            } catch(e) {
+                alert('Network error. Please try again.');
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-exchange-alt"></i><span class="ms-1">VGK4U Portal</span>'; }
+            }
+        }
+    </script>
+</body>
+</html>

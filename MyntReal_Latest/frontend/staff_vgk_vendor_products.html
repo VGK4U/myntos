@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Marketplace Products — Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;background:#f0fdf4}
+        .main-content{padding:24px}
+        .page-header{background:linear-gradient(135deg,#064e3b,#059669);border-radius:14px;padding:24px 28px;color:#fff;margin-bottom:24px}
+        .page-header h1{font-size:22px;font-weight:800;margin-bottom:4px}
+        .page-header p{font-size:13px;opacity:.85;margin:0}
+        .summary-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+        .sum-card{flex:1;min-width:130px;background:#fff;border-radius:12px;padding:16px 18px;border:1.5px solid #d1fae5;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        .sum-card .label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+        .sum-card .value{font-size:22px;font-weight:800;color:#059669}
+        .filter-bar{background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:16px;border:1.5px solid #d1fae5;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .filter-bar input,.filter-bar select{border:1.5px solid #d1fae5;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;background:#fff;color:#374151}
+        .filter-bar input:focus,.filter-bar select:focus{border-color:#059669}
+        .btn-green{background:#059669;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer}
+        .btn-green:hover{background:#047857}
+        .btn-outline-green{background:#fff;color:#059669;border:1.5px solid #059669;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+        .btn-outline-green:hover{background:#f0fdf4}
+        .table-wrap{background:#fff;border-radius:12px;border:1.5px solid #d1fae5;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        table{width:100%;border-collapse:collapse}
+        thead tr{background:#f0fdf4}
+        th{padding:11px 13px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;border-bottom:1.5px solid #d1fae5;white-space:nowrap}
+        td{padding:10px 13px;font-size:13px;color:#374151;border-bottom:1px solid #f0fdf4;vertical-align:middle}
+        tr:last-child td{border-bottom:none}
+        tr:hover td{background:#f9fafb}
+        .badge{border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;display:inline-block;white-space:nowrap}
+        .badge-active{background:#d1fae5;color:#065f46}
+        .badge-inactive{background:#f3f4f6;color:#6b7280}
+        .badge-featured{background:#fef3c7;color:#92400e}
+        .badge-seg{background:#ede9fe;color:#5b21b6;font-size:10px;padding:2px 7px;border-radius:4px}
+        .prod-img{width:44px;height:44px;object-fit:cover;border-radius:7px;border:1.5px solid #d1fae5}
+        .prod-img-placeholder{width:44px;height:44px;border-radius:7px;background:#f0fdf4;border:1.5px solid #d1fae5;display:flex;align-items:center;justify-content:center;color:#a7f3d0;font-size:20px}
+        .toggle-btn{background:none;border:none;cursor:pointer;font-size:18px;padding:2px 6px;border-radius:5px}
+        .toggle-btn:hover{background:#f0fdf4}
+        .pagination{display:flex;gap:6px;margin-top:14px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+        .pagination button{border:1.5px solid #d1fae5;background:#fff;border-radius:7px;padding:6px 13px;font-size:12px;cursor:pointer;font-weight:600}
+        .pagination button.active{background:#059669;color:#fff;border-color:#059669}
+        .pagination button:disabled{opacity:.4;cursor:not-allowed}
+        .empty-state{padding:48px;text-align:center;color:#9ca3af}
+        .empty-state i{font-size:48px;margin-bottom:12px;opacity:.4;display:block}
+        .prod-name{font-weight:600;color:#111;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .vendor-name{font-size:12px;color:#059669;font-weight:600}
+        .price-cell{font-weight:700;color:#111}
+        .disc-cell{color:#d97706;font-weight:700}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center}
+        .modal-overlay.show{display:flex}
+        .modal-box{background:#fff;border-radius:14px;padding:28px;width:560px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
+        .modal-title{font-size:16px;font-weight:800;color:#111;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center}
+        .modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;line-height:1}
+        .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+        .detail-item .lbl{font-size:11px;color:#6b7280;text-transform:uppercase;margin-bottom:3px}
+        .detail-item .val{font-size:14px;font-weight:600;color:#111}
+        .detail-full{grid-column:1/-1}
+        .img-row{display:flex;gap:8px;margin-top:10px}
+        .img-row img{width:100px;height:80px;object-fit:cover;border-radius:8px;border:1.5px solid #e5e7eb}
+        .alert{border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px}
+        .alert-success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+        .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+    <div class="page-header">
+        <h1><i class="fas fa-boxes me-2"></i>Vendor Marketplace Products</h1>
+        <p>All products listed by empanelled vendors — view, filter, and toggle active/featured status</p>
+    </div>
+
+    <div class="summary-row">
+        <div class="sum-card"><div class="label">Total Products</div><div class="value" id="sumTotal">—</div></div>
+        <div class="sum-card"><div class="label">Active</div><div class="value" id="sumActive" style="color:#059669">—</div></div>
+        <div class="sum-card"><div class="label">Inactive</div><div class="value" id="sumInactive" style="color:#6b7280">—</div></div>
+        <div class="sum-card"><div class="label">Featured</div><div class="value" id="sumFeatured" style="color:#d97706">—</div></div>
+        <div class="sum-card"><div class="label">Segments</div><div class="value" id="sumSegments" style="color:#7c3aed">—</div></div>
+    </div>
+
+    <div class="filter-bar">
+        <select id="filterVendor" onchange="loadProducts(1)" style="min-width:180px">
+            <option value="">All Vendors</option>
+        </select>
+        <select id="filterSegment" onchange="loadProducts(1)" style="min-width:150px">
+            <option value="">All Segments</option>
+            <option value="ev-spares">EV Spares</option>
+            <option value="real-dreams">Real Dreams</option>
+            <option value="furniture">Furniture</option>
+            <option value="restaurant">Restaurant</option>
+            <option value="sweet-shop">Sweet Shop</option>
+            <option value="general">General</option>
+        </select>
+        <select id="filterActive" onchange="loadProducts(1)">
+            <option value="">All Status</option>
+            <option value="true">Active Only</option>
+            <option value="false">Inactive Only</option>
+        </select>
+        <input type="text" id="searchInput" placeholder="Search product, vendor…" oninput="debounce()" style="width:220px">
+        <button class="btn-green" onclick="loadProducts(1)"><i class="fas fa-search me-1"></i>Search</button>
+        <button class="btn-outline-green" onclick="clearFilters()"><i class="fas fa-times me-1"></i>Clear</button>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:50px"></th>
+                    <th>Product Name</th>
+                    <th>Vendor</th>
+                    <th>Segment</th>
+                    <th>Price (excl. GST)</th>
+                    <th>GST%</th>
+                    <th>Price (incl. GST)</th>
+                    <th>Discount%</th>
+                    <th>Featured</th>
+                    <th>Status</th>
+                    <th>Views</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody id="prodBody">
+                <tr><td colspan="12" class="empty-state"><i class="fas fa-spinner fa-spin"></i><br>Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<!-- Product Detail Modal -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal-box">
+        <div class="modal-title">
+            <span><i class="fas fa-box-open me-2" style="color:#059669"></i>Product Details</span>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div id="modalAlert"></div>
+        <div id="modalContent"></div>
+    </div>
+</div>
+
+<script>
+const API = '/api/v1';
+let currentPage = 1;
+let debounceTimer = null;
+let allVendors = [];
+let stats = { total: 0, active: 0, inactive: 0, featured: 0, segments: new Set() };
+
+function debounce() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => loadProducts(1), 400);
+}
+
+function clearFilters() {
+    document.getElementById('filterVendor').value = '';
+    document.getElementById('filterSegment').value = '';
+    document.getElementById('filterActive').value = '';
+    document.getElementById('searchInput').value = '';
+    loadProducts(1);
+}
+
+async function apiGet(path) {
+    const token = window.StaffTokenManager?.getToken?.() || localStorage.getItem('staff_token') || localStorage.getItem('authToken');
+    const r = await fetch(API + path, { headers: { Authorization: 'Bearer ' + token } });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+}
+
+async function apiPut(path, body) {
+    const token = window.StaffTokenManager?.getToken?.() || localStorage.getItem('staff_token') || localStorage.getItem('authToken');
+    const r = await fetch(API + path, {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+}
+
+async function loadVendors() {
+    try {
+        const data = await apiGet('/staff/vgk/vendors?page_size=200');
+        allVendors = data.items || [];
+        const sel = document.getElementById('filterVendor');
+        allVendors.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.id;
+            opt.textContent = v.business_name + (v.city ? ` (${v.city})` : '');
+            sel.appendChild(opt);
+        });
+    } catch(e) {}
+}
+
+async function loadProducts(page = 1) {
+    currentPage = page;
+    const vendorId = document.getElementById('filterVendor').value;
+    const segment = document.getElementById('filterSegment').value;
+    const isActive = document.getElementById('filterActive').value;
+    const search = document.getElementById('searchInput').value.trim();
+
+    let qs = `?page=${page}&page_size=50`;
+    if (vendorId) qs += `&vendor_id=${vendorId}`;
+    if (segment) qs += `&segment_slug=${encodeURIComponent(segment)}`;
+    if (isActive !== '') qs += `&is_active=${isActive}`;
+    if (search) qs += `&search=${encodeURIComponent(search)}`;
+
+    const tbody = document.getElementById('prodBody');
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-state"><i class="fas fa-spinner fa-spin"></i><br>Loading…</td></tr>';
+
+    try {
+        const data = await apiGet('/staff/vgk/vendors/marketplace-products/all' + qs);
+        renderProducts(data);
+        renderPagination(data.total, page, 50);
+        updateSummary(data);
+    } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="12" class="empty-state"><i class="fas fa-exclamation-circle"></i><br>Error: ${e.message}</td></tr>`;
+    }
+}
+
+function updateSummary(data) {
+    const items = data.items || [];
+    document.getElementById('sumTotal').textContent = data.total || 0;
+    const active = items.filter(i => i.is_active).length;
+    const inactive = items.filter(i => !i.is_active).length;
+    const featured = items.filter(i => i.is_featured).length;
+    const segs = new Set(items.map(i => i.segment_slug));
+    document.getElementById('sumActive').textContent = active;
+    document.getElementById('sumInactive').textContent = inactive;
+    document.getElementById('sumFeatured').textContent = featured;
+    document.getElementById('sumSegments').textContent = segs.size;
+}
+
+function renderProducts(data) {
+    const tbody = document.getElementById('prodBody');
+    const items = data.items || [];
+    if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="12" class="empty-state"><i class="fas fa-boxes"></i><br>No products found</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(p => {
+        const img = p.image_url_1
+            ? `<img src="${p.image_url_1}" class="prod-img" onerror="this.style.display='none'">`
+            : `<div class="prod-img-placeholder"><i class="fas fa-image"></i></div>`;
+        const seg = `<span class="badge-seg">${p.segment_slug || '—'}</span>`;
+        const price = p.price_excl_tax != null ? `₹${Number(p.price_excl_tax).toLocaleString('en-IN')}` : '—';
+        const priceInc = p.price_with_tax != null ? `₹${Number(p.price_with_tax).toLocaleString('en-IN')}` : '—';
+        const disc = p.discount_pct > 0 ? `<span class="disc-cell">${p.discount_pct}%</span>` : '<span style="color:#9ca3af">0%</span>';
+        const gst = p.gst_pct > 0 ? p.gst_pct + '%' : '—';
+        const statusBadge = p.is_active
+            ? `<span class="badge badge-active">Active</span>`
+            : `<span class="badge badge-inactive">Inactive</span>`;
+        const featBadge = p.is_featured
+            ? `<span class="badge badge-featured">★ Featured</span>`
+            : '';
+        const toggleActive = `<button class="toggle-btn" title="${p.is_active ? 'Deactivate' : 'Activate'}" onclick="toggleActive(${p.id},${!p.is_active})" style="color:${p.is_active?'#059669':'#9ca3af'}"><i class="fas fa-toggle-${p.is_active?'on':'off'}"></i></button>`;
+        const toggleFeat = `<button class="toggle-btn" title="${p.is_featured ? 'Unfeature' : 'Feature'}" onclick="toggleFeatured(${p.id},${!p.is_featured})" style="color:${p.is_featured?'#d97706':'#9ca3af'}"><i class="fas fa-star${p.is_featured?'':'-o'}"></i></button>`;
+        return `<tr>
+            <td>${img}</td>
+            <td>
+                <div class="prod-name" title="${p.product_name}">${p.product_name}</div>
+                ${p.product_kit ? `<div style="font-size:11px;color:#6b7280">${p.product_kit}</div>` : ''}
+            </td>
+            <td>
+                <div class="vendor-name">${p.vendor_name || '—'}</div>
+                ${p.vendor_city ? `<div style="font-size:11px;color:#9ca3af">${p.vendor_city}</div>` : ''}
+            </td>
+            <td>${seg}</td>
+            <td class="price-cell">${price}</td>
+            <td>${gst}</td>
+            <td class="price-cell">${priceInc}</td>
+            <td>${disc}</td>
+            <td>${toggleFeat} ${featBadge}</td>
+            <td>${toggleActive} ${statusBadge}</td>
+            <td style="color:#6b7280;font-size:12px">${p.views_count || 0}</td>
+            <td><button class="btn-outline-green" onclick="showDetail(${JSON.stringify(JSON.stringify(p))})"><i class="fas fa-eye"></i></button></td>
+        </tr>`;
+    }).join('');
+}
+
+function renderPagination(total, page, pageSize) {
+    const totalPages = Math.ceil(total / pageSize);
+    const div = document.getElementById('pagination');
+    if (totalPages <= 1) { div.innerHTML = ''; return; }
+    let html = `<button ${page<=1?'disabled':''} onclick="loadProducts(${page-1})">‹ Prev</button>`;
+    for (let i = Math.max(1, page-2); i <= Math.min(totalPages, page+2); i++) {
+        html += `<button class="${i===page?'active':''}" onclick="loadProducts(${i})">${i}</button>`;
+    }
+    html += `<button ${page>=totalPages?'disabled':''} onclick="loadProducts(${page+1})">Next ›</button>`;
+    html += `<span style="font-size:12px;color:#6b7280;margin-left:6px">${total} total</span>`;
+    div.innerHTML = html;
+}
+
+async function toggleActive(prodId, newVal) {
+    try {
+        await apiPut(`/staff/vgk/vendors/marketplace-products/${prodId}`, { is_active: newVal });
+        loadProducts(currentPage);
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function toggleFeatured(prodId, newVal) {
+    try {
+        await apiPut(`/staff/vgk/vendors/marketplace-products/${prodId}`, { is_featured: newVal });
+        loadProducts(currentPage);
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+function showDetail(jsonStr) {
+    const p = JSON.parse(jsonStr);
+    document.getElementById('modalAlert').innerHTML = '';
+    const imgs = [p.image_url_1, p.image_url_2, p.image_url_3].filter(Boolean);
+    document.getElementById('modalContent').innerHTML = `
+        <div class="detail-grid">
+            <div class="detail-item detail-full">
+                <div class="lbl">Product Name</div>
+                <div class="val" style="font-size:17px">${p.product_name}</div>
+            </div>
+            ${p.product_kit ? `<div class="detail-item detail-full"><div class="lbl">Kit / Variant</div><div class="val">${p.product_kit}</div></div>` : ''}
+            <div class="detail-item">
+                <div class="lbl">Vendor</div>
+                <div class="val" style="color:#059669">${p.vendor_name || '—'}</div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">City</div>
+                <div class="val">${p.vendor_city || '—'}</div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">Segment</div>
+                <div class="val"><span class="badge-seg" style="font-size:13px;padding:3px 10px">${p.segment_slug}</span></div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">Display Order</div>
+                <div class="val">${p.display_order}</div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">Price (excl. GST)</div>
+                <div class="val">${p.price_excl_tax != null ? '₹' + Number(p.price_excl_tax).toLocaleString('en-IN') : '—'}</div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">GST %</div>
+                <div class="val">${p.gst_pct}%</div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">Price (incl. GST)</div>
+                <div class="val">${p.price_with_tax != null ? '₹' + Number(p.price_with_tax).toLocaleString('en-IN') : '—'}</div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">Discount %</div>
+                <div class="val" style="color:#d97706">${p.discount_pct}%</div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">Status</div>
+                <div class="val">${p.is_active ? '<span class="badge badge-active">Active</span>' : '<span class="badge badge-inactive">Inactive</span>'}</div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">Featured</div>
+                <div class="val">${p.is_featured ? '<span class="badge badge-featured">★ Featured</span>' : 'No'}</div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">Total Views</div>
+                <div class="val">${p.views_count || 0}</div>
+            </div>
+            <div class="detail-item">
+                <div class="lbl">Listed On</div>
+                <div class="val">${p.created_at ? new Date(p.created_at).toLocaleDateString('en-IN') : '—'}</div>
+            </div>
+            ${p.description ? `<div class="detail-item detail-full"><div class="lbl">Description</div><div class="val" style="font-weight:400;line-height:1.5">${p.description}</div></div>` : ''}
+            ${imgs.length ? `<div class="detail-item detail-full">
+                <div class="lbl">Product Images</div>
+                <div class="img-row">${imgs.map(u => `<img src="${u}" onerror="this.style.display='none'">`).join('')}</div>
+            </div>` : ''}
+        </div>
+    `;
+    document.getElementById('detailModal').classList.add('show');
+}
+
+function closeModal() {
+    document.getElementById('detailModal').classList.remove('show');
+}
+
+document.getElementById('detailModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await StaffSidebar.init();
+    StaffHeader.inject('Vendor Marketplace Products', 'fas fa-boxes');
+    await loadVendors();
+    await loadProducts(1);
+});
+</script>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+</body>
+</html>

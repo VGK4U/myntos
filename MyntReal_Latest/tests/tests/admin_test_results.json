@@ -1,0 +1,118 @@
+{
+  "role": "Admin",
+  "total_pages": 45,
+  "tested": 45,
+  "passed": 33,
+  "failed": 12,
+  "errors": [
+    {
+      "page": "Income History",
+      "url": "/admin/income-history",
+      "error": "404"
+    },
+    {
+      "page": "Members Actions",
+      "url": "/admin/members/actions",
+      "error": "404"
+    },
+    {
+      "page": "Network Tree",
+      "url": "/admin/network-tree",
+      "error": "404"
+    },
+    {
+      "page": "Sponsor Tree",
+      "url": "/admin/sponsor-tree",
+      "error": "404"
+    },
+    {
+      "page": "KYC Management",
+      "url": "/admin/kyc-management",
+      "error": "404"
+    },
+    {
+      "page": "Manage Brands",
+      "url": "/admin/brands",
+      "error": "404"
+    },
+    {
+      "page": "Manage Levels",
+      "url": "/admin/levels",
+      "error": "404"
+    },
+    {
+      "page": "Tree Statistics",
+      "url": "/admin/tree-statistics",
+      "error": "404"
+    },
+    {
+      "page": "Withdrawal Approvals",
+      "url": "/admin/withdrawal/approvals",
+      "error": "404"
+    },
+    {
+      "page": "Payment Settings",
+      "url": "/admin/payment/settings",
+      "error": "404"
+    },
+    {
+      "page": "Wallets Distribution",
+      "url": "/admin/payment/wallets",
+      "error": "404"
+    },
+    {
+      "page": "Packages",
+      "url": "/admin/packages",
+      "error": "404"
+    }
+  ],
+  "screenshots": [
+    "tests/screenshots/admin_01_login_page_20251104_065001.png",
+    "tests/screenshots/admin_02_login_success_20251104_065007.png",
+    "tests/screenshots/admin_page_000_Admin_Dashboard_20251104_065010.png",
+    "tests/screenshots/admin_page_001_Income_Verified_20251104_065014.png",
+    "tests/screenshots/admin_page_002_Income_History_20251104_065019.png",
+    "tests/screenshots/admin_page_003_Members_Actions_20251104_065023.png",
+    "tests/screenshots/admin_page_004_Network_Tree_20251104_065028.png",
+    "tests/screenshots/admin_page_005_Sponsor_Tree_20251104_065033.png",
+    "tests/screenshots/admin_page_006_Reports_20251104_065037.png",
+    "tests/screenshots/admin_page_007_Search_Members_20251104_065041.png",
+    "tests/screenshots/admin_page_008_KYC_Management_20251104_065045.png",
+    "tests/screenshots/admin_page_009_Birthday_Details_20251104_065052.png",
+    "tests/screenshots/admin_page_010_Manage_Brands_20251104_065057.png",
+    "tests/screenshots/admin_page_011_Manage_Levels_20251104_065102.png",
+    "tests/screenshots/admin_page_012_Manage_Awards_20251104_065106.png",
+    "tests/screenshots/admin_page_013_Support_Tickets_20251104_065112.png",
+    "tests/screenshots/admin_page_014_Tree_Statistics_20251104_065117.png",
+    "tests/screenshots/admin_page_015_Buy_Coupon_20251104_065121.png",
+    "tests/screenshots/admin_page_016_Activate_Coupon_20251104_065124.png",
+    "tests/screenshots/admin_page_017_Coupon_Status_20251104_065128.png",
+    "tests/screenshots/admin_page_018_Coupon_Progress_20251104_065131.png",
+    "tests/screenshots/admin_page_019_Coupon_Transfer_20251104_065135.png",
+    "tests/screenshots/admin_page_020_All_Members_20251104_065138.png",
+    "tests/screenshots/admin_page_021_Direct_Referrals_20251104_065142.png",
+    "tests/screenshots/admin_page_022_Picture_View_20251104_065145.png",
+    "tests/screenshots/admin_page_023_Ved_Team_20251104_065149.png",
+    "tests/screenshots/admin_page_024_Earnings_Summary_20251104_065153.png",
+    "tests/screenshots/admin_page_025_Direct_Referral_20251104_065156.png",
+    "tests/screenshots/admin_page_026_Matching_Referral_20251104_065200.png",
+    "tests/screenshots/admin_page_027_Ved_Income_20251104_065203.png",
+    "tests/screenshots/admin_page_028_Gurudakshina_20251104_065207.png",
+    "tests/screenshots/admin_page_029_Field_Allowance_20251104_065210.png",
+    "tests/screenshots/admin_page_030_Withdrawals_20251104_065214.png",
+    "tests/screenshots/admin_page_031_Withdrawal_Approvals_20251104_065218.png",
+    "tests/screenshots/admin_page_032_Withdrawal_History_20251104_065221.png",
+    "tests/screenshots/admin_page_033_Awards_20251104_065224.png",
+    "tests/screenshots/admin_page_034_Bonanza_Awards_20251104_065228.png",
+    "tests/screenshots/admin_page_035_Bonanza_Claims_20251104_065232.png",
+    "tests/screenshots/admin_page_036_All_Benefits_20251104_065235.png",
+    "tests/screenshots/admin_page_037_EV_Discount_&_Training_20251104_065239.png",
+    "tests/screenshots/admin_page_038_My_Referral_Income_20251104_065242.png",
+    "tests/screenshots/admin_page_039_Insurance_Earnings_20251104_065246.png",
+    "tests/screenshots/admin_page_040_Franchise_Earnings_20251104_065249.png",
+    "tests/screenshots/admin_page_041_Fleet_Orders_20251104_065253.png",
+    "tests/screenshots/admin_page_042_Payment_Settings_20251104_065256.png",
+    "tests/screenshots/admin_page_043_Wallets_Distribution_20251104_065300.png",
+    "tests/screenshots/admin_page_044_Packages_20251104_065304.png"
+  ]
+}

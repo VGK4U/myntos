@@ -1,0 +1,2022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Overview — Operations Snapshot</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 20px 24px; }
+
+        /* ── Section toggle ── */
+        .snap-section-bar {
+            display: flex; gap: 8px; align-items: center;
+            background: #fff; border-radius: 10px; padding: 12px 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 12px; flex-wrap: wrap;
+        }
+        .snap-section-btn {
+            padding: 7px 20px; border-radius: 6px; border: 1.5px solid #d1d5db;
+            background: #fff; color: #374151; font-weight: 600; font-size: 13px;
+            cursor: pointer; transition: all .15s;
+        }
+        .snap-section-btn.active { background: #1e3a5f; border-color: #1e3a5f; color: #fff; }
+        .snap-date-group { display: flex; align-items: center; gap: 8px; margin-left: 12px; }
+        .snap-date-input { padding: 6px 10px; border: 1.5px solid #d1d5db; border-radius: 6px; font-size: 13px; color: #374151; }
+        .snap-date-input:focus { outline: none; border-color: #4f46e5; }
+        .snap-fetch-btn { padding: 7px 16px; background: #4f46e5; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .snap-fetch-btn:hover { background: #4338ca; }
+
+        /* ── Filter bar ── */
+        .snap-filter-bar {
+            display: flex; gap: 10px; align-items: flex-end;
+            background: #fff; border-radius: 10px; padding: 12px 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 12px; flex-wrap: wrap;
+        }
+        .snap-filter-group { display: flex; flex-direction: column; gap: 3px; }
+        .snap-filter-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .4px; }
+        .snap-filter-input { padding: 6px 10px; border: 1.5px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 140px; }
+        .snap-filter-input:focus { outline: none; border-color: #4f46e5; }
+        .snap-toggle-group { display: flex; border: 1.5px solid #d1d5db; border-radius: 6px; overflow: hidden; }
+        .snap-toggle-btn { padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer; background: #fff; border: none; color: #374151; }
+        .snap-toggle-btn.active { background: #1e3a5f; color: #fff; }
+        .snap-export-btn { padding: 7px 14px; background: #fff; border: 1.5px solid #16a34a; color: #16a34a; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .snap-export-btn:hover { background: #f0fdf4; }
+        .snap-result-count { font-size: 12px; color: #6b7280; margin-left: auto; align-self: center; }
+
+        /* ── Company multi-select dropdown ── */
+        .snap-multiselect-wrap { position: relative; }
+        .snap-multiselect-btn {
+            padding: 6px 10px; border: 1.5px solid #d1d5db; border-radius: 6px;
+            background: #fff; color: #374151; font-size: 13px; cursor: pointer;
+            min-width: 150px; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        }
+        .snap-multiselect-btn:hover { border-color: #9ca3af; }
+        .snap-multiselect-dropdown {
+            position: absolute; top: calc(100% + 4px); left: 0; z-index: 200;
+            background: #fff; border: 1.5px solid #d1d5db; border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,.12);
+            min-width: 200px; max-height: 260px; overflow-y: auto;
+            padding: 6px 0;
+        }
+        .snap-co-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 7px 14px; cursor: pointer; font-size: 13px; color: #374151;
+        }
+        .snap-co-item:hover { background: #f3f4f6; }
+        .snap-co-item input[type=checkbox] { width: 14px; height: 14px; cursor: pointer; accent-color: #1e3a5f; }
+        .snap-co-sep { border-top: 1px solid #e5e7eb; margin: 4px 0; }
+        .snap-co-all-btn {
+            width: 100%; text-align: left; padding: 6px 14px; font-size: 12px; font-weight: 700;
+            color: #1e3a5f; background: none; border: none; cursor: pointer;
+        }
+        .snap-co-all-btn:hover { background: #f0f4f8; }
+
+        /* ── Summary bar ── */
+        .snap-summary-bar {
+            display: flex; gap: 8px; flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .snap-sum-card {
+            background: #fff; border-radius: 8px; padding: 9px 14px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.07); min-width: 100px; text-align: center;
+            border-top: 3px solid #e5e7eb; flex: 1; min-width: 90px;
+        }
+        .snap-sum-card .sv { font-size: 16px; font-weight: 800; color: #1e3a5f; line-height: 1.1; }
+        .snap-sum-card .sl { font-size: 10px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; margin-top: 2px; }
+        .ssc-tasks  { border-top-color: #93c5fd; }
+        .ssc-calls  { border-top-color: #a78bfa; }
+        .ssc-deals  { border-top-color: #fcd34d; }
+        .ssc-rev    { border-top-color: #6ee7b7; }
+        .ssc-kra    { border-top-color: #86efac; }
+        .ssc-att    { border-top-color: #f9a8d4; }
+        .ssc-warn   { border-top-color: #fca5a5; }
+        .ssc-emp    { border-top-color: #c4b5fd; }
+
+        /* ── Table wrapper ── */
+        .snap-table-wrapper {
+            background: #fff; border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.08);
+            overflow: auto; max-height: calc(100vh - 280px);
+        }
+        table.snap-table { border-collapse: separate; border-spacing: 0; min-width: 100%; font-size: 12px; }
+        table.snap-table th, table.snap-table td { white-space: nowrap; padding: 6px 10px; border-bottom: 1px solid #e5e7eb; }
+        table.snap-table td { vertical-align: middle; }
+
+        /* Sticky fixed columns — explicit backgrounds to prevent scroll bleed */
+        .sc-dept { position: sticky; left: 0;   z-index: 2; background: #fff; min-width: 110px; max-width: 130px; }
+        .sc-emp  { position: sticky; left: 112px; z-index: 2; background: #fff; min-width: 160px; }
+        .sc-mgr  { position: sticky; left: 275px; z-index: 2; background: #fff; min-width: 130px; border-right: 2px solid #e5e7eb; }
+        tr.snap-dept-row td.sc-dept,
+        tr.snap-dept-row td.sc-emp,
+        tr.snap-dept-row td.sc-mgr { background: #e8eef5 !important; }
+        tr.snap-emp-row:hover td.sc-dept,
+        tr.snap-emp-row:hover td.sc-emp,
+        tr.snap-emp-row:hover td.sc-mgr { background: #f9fafb !important; }
+
+        /* Sticky header */
+        thead th { position: sticky; top: 0; z-index: 3; }
+        thead th.sc-dept, thead th.sc-emp, thead th.sc-mgr { z-index: 5; }
+
+        /* Group header row */
+        tr.snap-grp-row th { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; text-align: center; border-bottom: none; top: 0; }
+        tr.snap-grp-row .gh-fixed { background: #1e3a5f; color: #fff; top: 0; }
+        .gh-tasks    { background: #dbeafe; color: #1e40af; border-left: 2px solid #93c5fd; }
+        .gh-kra      { background: #dcfce7; color: #166534; border-left: 2px solid #86efac; }
+        .gh-crm      { background: #fef3c7; color: #92400e; border-left: 2px solid #fcd34d; }
+        .gh-ts       { background: #ede9fe; color: #5b21b6; border-left: 2px solid #c4b5fd; }
+        .gh-tickets  { background: #fee2e2; color: #991b1b; border-left: 2px solid #fca5a5; }
+        .gh-po       { background: #e0f2fe; color: #0c4a6e; border-left: 2px solid #7dd3fc; }
+        .gh-pr       { background: #f0fdf4; color: #14532d; border-left: 2px solid #86efac; }
+        .gh-act      { background: #fef9c3; color: #713f12; border-left: 2px solid #fde047; }
+        .gh-att      { background: #fff1f2; color: #9f1239; border-left: 2px solid #f9a8d4; }
+
+        /* Sub-header row */
+        tr.snap-sub-row th { background: #374151; color: #d1d5db; font-size: 10px; font-weight: 600; text-align: center; top: 28px; border-bottom: 1px solid #4b5563; }
+        tr.snap-sub-row .sc-dept, tr.snap-sub-row .sc-emp, tr.snap-sub-row .sc-mgr { background: #374151; }
+
+        /* Group border */
+        .gb-att     { border-left: 2px solid #f9a8d4; }
+        .gb-tasks   { border-left: 2px solid #93c5fd; }
+        .gb-kra     { border-left: 2px solid #86efac; }
+        .gb-act     { border-left: 2px solid #fde047; }
+        .gb-crm-sub { border-left: 1px dotted #fbbf24; }
+        .gb-calls-sub { border-left: 1px dotted #a78bfa; }
+        .gb-dialer-sub { border-left: 1px dotted #34d399; }
+        .gb-rev-sub { border-left: 1px dotted #6ee7b7; }
+        .gb-ts      { border-left: 2px solid #c4b5fd; }
+        .gb-tickets { border-left: 2px solid #fca5a5; }
+        .gb-po      { border-left: 2px solid #7dd3fc; }
+        .gb-pr      { border-left: 2px solid #86efac; }
+
+        /* Quick date filter bar */
+        .snap-quick-bar { display: flex; gap: 6px; align-items: center; }
+        .snap-quick-btn { padding: 6px 16px; border-radius: 6px; border: 1.5px solid #d1d5db; background: #fff; color: #374151; font-weight: 600; font-size: 12px; cursor: pointer; transition: all .15s; }
+        .snap-quick-btn.active { background: #1e3a5f; border-color: #1e3a5f; color: #fff; }
+
+        /* Dept group rows */
+        tr.snap-dept-row td { background: #f0f4f8; font-weight: 700; color: #1e3a5f; font-size: 11px; cursor: pointer; }
+        tr.snap-dept-row td.sc-dept, tr.snap-dept-row td.sc-emp, tr.snap-dept-row td.sc-mgr { background: #e8eef5; }
+        tr.snap-dept-row:hover td { background: #dde8f0; }
+
+        /* Employee rows */
+        tr.snap-emp-row:hover td { background: #f9fafb; }
+        tr.snap-emp-row.collapsed { display: none; }
+
+        /* Number cell helpers */
+        .n-zero   { color: #d1d5db; font-size: 11px; }
+        .n-warn   { color: #d97706; font-weight: 700; }
+        .n-danger { color: #dc2626; font-weight: 700; }
+        .n-good   { color: #16a34a; font-weight: 700; }
+        .n-pct    { font-size: 10px; color: #6b7280; display: block; }
+        .n-num    { font-size: 12px; font-weight: 600; }
+        td.num-cell { text-align: center; min-width: 54px; }
+        td.num-cell-wide { text-align: center; min-width: 76px; }
+
+        /* Loading / empty states */
+        .snap-state { padding: 60px 20px; text-align: center; color: #6b7280; }
+        .snap-state i { font-size: 36px; margin-bottom: 12px; display: block; }
+
+        /* Access denied */
+        #snapAccessDenied { padding: 60px 24px; text-align: center; }
+
+        /* Collapsible group toggle */
+        .grp-toggle-icon { font-size: 9px; margin-left: 4px; opacity: .7; }
+        th.grp-collapsed { opacity: .6; }
+        .col-hidden { display: none; }
+
+        /* ── Exec Dashboard: Table sticky cols ── */
+        #execTable { border-collapse: separate !important; border-spacing: 0; }
+        #execTable thead th { position: sticky; top: 0; z-index: 3; background: #1e3a5f !important; color: #fff; }
+        .exec-sc-1 { position: sticky; left: 0;     z-index: 2; }
+        .exec-sc-2 { position: sticky; left: 50px;  z-index: 2; }
+        .exec-sc-3 { position: sticky; left: 210px; z-index: 2; }
+        .exec-sc-4 { position: sticky; left: 300px; z-index: 2; }
+        .exec-sc-5 { position: sticky; left: 380px; z-index: 2; box-shadow: 3px 0 5px -2px rgba(0,0,0,0.15); }
+        #execTable thead th.exec-sc-1,
+        #execTable thead th.exec-sc-2,
+        #execTable thead th.exec-sc-3,
+        #execTable thead th.exec-sc-4,
+        #execTable thead th.exec-sc-5 { z-index: 5; }
+        #execTable thead th.exec-sc-5 { background: #162d4a !important; border-left: 2px solid #f59e0b; }
+        #execTable tbody tr td.exec-sc-1,
+        #execTable tbody tr td.exec-sc-2,
+        #execTable tbody tr td.exec-sc-3,
+        #execTable tbody tr td.exec-sc-4 { background: #ffffff; }
+        #execTable tbody tr td.exec-sc-5 { background: #fffbeb; border-left: 2px solid #fcd34d; }
+        #execTable tbody tr:hover td.exec-sc-1,
+        #execTable tbody tr:hover td.exec-sc-2,
+        #execTable tbody tr:hover td.exec-sc-3,
+        #execTable tbody tr:hover td.exec-sc-4 { background: #f9fafb; }
+        #execTable tbody tr:hover td.exec-sc-5 { background: #fef3c7; }
+        .exec-table-wrapper { max-height: 74vh; overflow-y: auto; overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table td { padding: 12px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .empty-state { text-align: center; padding: 40px; color: #9ca3af; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+
+        <div class="content-area">
+
+            <div id="snapAccessDenied" style="display:none;">
+                <i class="fas fa-lock" style="font-size:48px;color:#d1d5db;"></i>
+                <h4 style="color:#374151;margin-top:12px;">Access Restricted</h4>
+                <p style="color:#6b7280;margin-top:6px;">The Operations Snapshot is available for Key Leadership, EA, and VGK Mentor roles only.</p>
+            </div>
+
+            <div id="snapContent" style="display:none;">
+
+                <!-- Section selector + Quick filters -->
+                <div class="snap-section-bar">
+                    <!-- Quick period filters -->
+                    <div class="snap-quick-bar" id="snapQuickBar">
+                        <span style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">Period:</span>
+                        <button class="snap-quick-btn" id="qbFTD" onclick="setQuickPeriod('ftd')">FTD</button>
+                        <button class="snap-quick-btn" id="qbWeek" onclick="setQuickPeriod('week')">This Week</button>
+                        <button class="snap-quick-btn" id="qbMTD" onclick="setQuickPeriod('mtd')">MTD</button>
+                        <button class="snap-quick-btn active" id="qbOverall" onclick="setQuickPeriod('overall')">Overall</button>
+                    </div>
+                    <div style="width:1px;background:#e5e7eb;height:28px;margin:0 6px;"></div>
+                    <!-- Custom date range -->
+                    <button class="snap-section-btn" id="btnRange" onclick="switchSection('range')">
+                        <i class="fas fa-calendar-range"></i> Custom Range
+                    </button>
+                    <button class="snap-section-btn" id="btnExec" onclick="switchSection('executive')" style="display:none;">
+                        <i class="fas fa-crown"></i> Executive Dashboard
+                    </button>
+                    <div class="snap-date-group" id="rangeControls" style="display:none;">
+                        <input type="date" class="snap-date-input" id="snapFrom">
+                        <span style="color:#6b7280;font-size:13px;">to</span>
+                        <input type="date" class="snap-date-input" id="snapTo">
+                        <button class="snap-fetch-btn" onclick="loadSnapshot()">
+                            <i class="fas fa-rotate"></i> Apply
+                        </button>
+                    </div>
+                    <div style="margin-left:auto;font-size:12px;color:#6b7280;" id="snapLastUpdated"></div>
+                </div>
+
+                <!-- Filter bar -->
+                <div class="snap-filter-bar">
+                    <div class="snap-filter-group">
+                        <span class="snap-filter-label">Department</span>
+                        <select class="snap-filter-input" id="snapDeptFilter" onchange="applyFilters()">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+
+                    <!-- Company multi-checkbox -->
+                    <div class="snap-filter-group" id="companyFilterGroup" style="display:none;">
+                        <span class="snap-filter-label">Company</span>
+                        <div class="snap-multiselect-wrap">
+                            <button class="snap-multiselect-btn" id="companyFilterBtn" onclick="toggleCompanyDropdown(event)">
+                                <span id="companyBtnLabel">All Companies</span>
+                                <i class="fas fa-chevron-down" style="font-size:10px;"></i>
+                            </button>
+                            <div class="snap-multiselect-dropdown" id="companyDropdown" style="display:none;">
+                                <button class="snap-co-all-btn" onclick="selectAllCompanies()">
+                                    <i class="fas fa-check-double"></i> Select All
+                                </button>
+                                <button class="snap-co-all-btn" onclick="clearCompanies()" style="color:#dc2626;">
+                                    <i class="fas fa-xmark"></i> Clear All
+                                </button>
+                                <div class="snap-co-sep"></div>
+                                <div id="companyCheckboxList"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="snap-filter-group">
+                        <span class="snap-filter-label">Search Name</span>
+                        <input type="text" class="snap-filter-input" id="snapNameSearch"
+                            placeholder="Employee name…" oninput="applyFilters()" style="min-width:180px;">
+                    </div>
+                    <div class="snap-filter-group">
+                        <span class="snap-filter-label">&nbsp;</span>
+                        <button class="snap-export-btn" onclick="exportCSV()">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                    </div>
+                    <div class="snap-result-count" id="snapResultCount"></div>
+                </div>
+
+                <!-- Dept totals table (above employee table) -->
+                <div id="snapTotalsWrapper" style="display:none;overflow-x:auto;margin-bottom:10px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);border:1px solid #e5e7eb;"></div>
+
+                <!-- Summary bar (hidden - replaced by totals table) -->
+                <div id="snapSummaryBar" style="display:none;"></div>
+
+                <!-- Table -->
+                <div class="snap-table-wrapper" id="snapTableWrapper">
+                    <div class="snap-state" id="snapLoading">
+                        <i class="fas fa-spinner fa-spin" style="color:#4f46e5;"></i>
+                        Loading snapshot…
+                    </div>
+                    <div class="snap-state" id="snapEmpty" style="display:none;">
+                        <i class="fas fa-inbox" style="color:#d1d5db;"></i>
+                        No data found for the selected filters.
+                    </div>
+                    <table class="snap-table" id="snapTable" style="display:none;">
+                        <thead>
+                            <!-- Row 1: Group headers -->
+                            <tr class="snap-grp-row">
+                                <th class="sc-dept gh-fixed" rowspan="2" style="text-align:left;">Department</th>
+                                <th class="sc-emp  gh-fixed" rowspan="2" style="text-align:left;">Employee</th>
+                                <th class="sc-mgr  gh-fixed" rowspan="2" style="text-align:left;">Manager</th>
+                                <!-- Attendance FIRST (4) -->
+                                <th colspan="4" class="gh-att" onclick="toggleGroup('att')" style="cursor:pointer;">
+                                    <i class="fas fa-user-clock"></i> Attendance <i class="fas fa-chevron-up grp-toggle-icon" id="gi-att"></i>
+                                </th>
+                                <!-- Tasks (9) -->
+                                <th colspan="9" class="gh-tasks" onclick="toggleGroup('tasks')" style="cursor:pointer;">
+                                    <i class="fas fa-list-check"></i> Tasks &amp; Day Plan <i class="fas fa-chevron-up grp-toggle-icon" id="gi-tasks"></i>
+                                </th>
+                                <!-- KRA (5) -->
+                                <th colspan="5" class="gh-kra" onclick="toggleGroup('kra')" style="cursor:pointer;">
+                                    <i class="fas fa-bullseye"></i> KRA <i class="fas fa-chevron-up grp-toggle-icon" id="gi-kra"></i>
+                                </th>
+                                <!-- CRM + Calls + Dialer + Revenue MERGED (14) -->
+                                <th colspan="14" class="gh-act" onclick="toggleGroup('act')" style="cursor:pointer;">
+                                    <i class="fas fa-chart-line"></i> CRM, Calls &amp; Revenue <i class="fas fa-chevron-up grp-toggle-icon" id="gi-act"></i>
+                                </th>
+                                <!-- Timesheet (5) -->
+                                <th colspan="5" class="gh-ts" onclick="toggleGroup('ts')" style="cursor:pointer;">
+                                    <i class="fas fa-clock"></i> Timesheet <i class="fas fa-chevron-up grp-toggle-icon" id="gi-ts"></i>
+                                </th>
+                                <!-- Tickets (4) -->
+                                <th colspan="4" class="gh-tickets" onclick="toggleGroup('tickets')" style="cursor:pointer;">
+                                    <i class="fas fa-ticket"></i> Tickets <i class="fas fa-chevron-up grp-toggle-icon" id="gi-tickets"></i>
+                                </th>
+                                <!-- PO (4) -->
+                                <th colspan="4" class="gh-po" onclick="toggleGroup('po')" style="cursor:pointer;">
+                                    <i class="fas fa-shopping-cart"></i> PO <i class="fas fa-chevron-up grp-toggle-icon" id="gi-po"></i>
+                                </th>
+                                <!-- PR (4) -->
+                                <th colspan="4" class="gh-pr" onclick="toggleGroup('pr')" style="cursor:pointer;">
+                                    <i class="fas fa-boxes-stacking"></i> Procurement <i class="fas fa-chevron-up grp-toggle-icon" id="gi-pr"></i>
+                                </th>
+                            </tr>
+                            <!-- Row 2: Sub-column headers -->
+                            <tr class="snap-sub-row">
+                                <!-- Attendance (4) -->
+                                <th class="num-cell gb-att grp-att">Days Present</th>
+                                <th class="num-cell grp-att">HR Final</th>
+                                <th class="num-cell grp-att" title="Days clocked in but did not log out">Not Logout</th>
+                                <th class="num-cell-wide grp-att">Avg Hrs/Day</th>
+                                <!-- Tasks (9) -->
+                                <th class="num-cell gb-tasks grp-tasks" title="Tasks assigned to this employee">Assigned</th>
+                                <th class="num-cell grp-tasks" title="Tasks created by this employee">Created</th>
+                                <th class="num-cell grp-tasks">Handled</th>
+                                <th class="num-cell grp-tasks">Pending</th>
+                                <th class="num-cell grp-tasks">Overdue</th>
+                                <th class="num-cell grp-tasks">OD%</th>
+                                <th class="num-cell grp-tasks">Days Planned</th>
+                                <th class="num-cell grp-tasks">Days Done</th>
+                                <th class="num-cell grp-tasks">Diff</th>
+                                <!-- KRA (5) -->
+                                <th class="num-cell gb-kra grp-kra">Assigned</th>
+                                <th class="num-cell grp-kra">Handled</th>
+                                <th class="num-cell grp-kra">Pending</th>
+                                <th class="num-cell grp-kra" title="Delayed/skipped KRA items">Delayed</th>
+                                <th class="num-cell grp-kra">Done%</th>
+                                <!-- CRM+Calls+Dialer+Revenue merged (14) -->
+                                <!-- CRM sub (4) -->
+                                <th class="num-cell gb-act grp-act" title="New CRM leads">CRM New</th>
+                                <th class="num-cell grp-act" title="Won deals">Won</th>
+                                <th class="num-cell grp-act" title="Not handled leads">Not Handled</th>
+                                <th class="num-cell grp-act" title="Overdue leads">Overdue</th>
+                                <!-- Calls sub (2) — avg only -->
+                                <th class="num-cell gb-calls-sub grp-act">Avg Calls/Day</th>
+                                <th class="num-cell-wide grp-act">Avg Talk/Day</th>
+                                <!-- Dialer sub (4) -->
+                                <th class="num-cell gb-dialer-sub grp-act" title="Dialer sessions">Sessions</th>
+                                <th class="num-cell-wide grp-act" title="Total paused time in dialer">Paused Time</th>
+                                <th class="num-cell-wide grp-act" title="Inactive time between clock-in and clock-out minus call time">Inactive Time</th>
+                                <th class="num-cell grp-act" title="Skipped calls in dialer">Skipped</th>
+                                <!-- Revenue sub (4) -->
+                                <th class="num-cell gb-rev-sub grp-act">Deals Won</th>
+                                <th class="num-cell-wide grp-act">Value</th>
+                                <th class="num-cell-wide grp-act">Received</th>
+                                <th class="num-cell-wide grp-act">Balance</th>
+                                <!-- Timesheet (5) -->
+                                <th class="num-cell gb-ts grp-ts">Applied</th>
+                                <th class="num-cell grp-ts">Approved</th>
+                                <th class="num-cell grp-ts">Exceptions</th>
+                                <th class="num-cell-wide grp-ts">Avg Sub/Day</th>
+                                <th class="num-cell-wide grp-ts">Avg App/Day</th>
+                                <!-- Tickets (4) -->
+                                <th class="num-cell gb-tickets grp-tickets">Raised</th>
+                                <th class="num-cell grp-tickets">Handled</th>
+                                <th class="num-cell grp-tickets">Pending</th>
+                                <th class="num-cell grp-tickets">In-Time%</th>
+                                <!-- PO (4) -->
+                                <th class="num-cell gb-po grp-po">In Queue</th>
+                                <th class="num-cell grp-po">Completed</th>
+                                <th class="num-cell grp-po">Pending</th>
+                                <th class="num-cell grp-po">Done%</th>
+                                <!-- PR (4) -->
+                                <th class="num-cell gb-pr grp-pr">In Queue</th>
+                                <th class="num-cell grp-pr">Completed</th>
+                                <th class="num-cell grp-pr">Pending</th>
+                                <th class="num-cell grp-pr">Done%</th>
+                            </tr>
+                        </thead>
+                        <tbody id="snapTableBody"></tbody>
+                    </table>
+                </div>
+
+            <!-- ── Executive Dashboard Panel ── -->
+            <div id="executiveDashboardContent" style="display:none;">
+                <!-- Quick period bar -->
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
+                    <span style="font-size:11px;font-weight:600;color:#6b7280;letter-spacing:.04em;margin-right:2px;">PERIOD:</span>
+                    <button class="snap-quick-btn" id="eqbFTD"     onclick="setExecQuickPeriod('ftd')">FTD</button>
+                    <button class="snap-quick-btn" id="eqbWeek"    onclick="setExecQuickPeriod('week')">This Week</button>
+                    <button class="snap-quick-btn active" id="eqbMTD" onclick="setExecQuickPeriod('mtd')">MTD</button>
+                    <button class="snap-quick-btn" id="eqbOverall" onclick="setExecQuickPeriod('overall')">Overall</button>
+                    <button class="snap-quick-btn" id="eqbCustom"  onclick="setExecQuickPeriod('custom')">Custom Range</button>
+                </div>
+                <!-- Date + filter bar -->
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;">
+                    <div id="execCustomDateWrap" style="display:none;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">From</label>
+                        <input type="date" id="execDateFrom" class="form-control form-control-sm" style="min-width:140px;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">To</label>
+                        <input type="date" id="execDateTo" class="form-control form-control-sm" style="min-width:140px;">
+                    </div>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Company</label>
+                        <select id="execCompanyFilter" class="form-select form-select-sm" style="min-width:160px;">
+                            <option value="">All Companies</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Department</label>
+                        <select id="execDeptFilter" class="form-select form-select-sm" style="min-width:160px;">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    <div id="execIncludeSelfWrap" style="display:none;align-items:center;gap:6px;">
+                        <input type="checkbox" id="execIncludeSelf" class="form-check-input" style="margin:0;" onchange="loadExecutiveDashboard()">
+                        <label for="execIncludeSelf" id="execIncludeSelfLabel" style="font-size:12px;font-weight:600;color:#374151;margin:0;">Include VGK Mentor</label>
+                    </div>
+                    <div id="execMyTeamOnlyWrap" style="display:none;align-items:center;gap:6px;" title="Show only employees who report (directly or indirectly) to you">
+                        <input type="checkbox" id="execMyTeamOnly" class="form-check-input" style="margin:0;" onchange="loadExecutiveDashboard()">
+                        <label for="execMyTeamOnly" style="font-size:12px;font-weight:600;color:#374151;margin:0;">My Team Only</label>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="loadExecutiveDashboard()">
+                        <i class="fas fa-sync-alt"></i> Apply
+                    </button>
+                    <button class="btn btn-outline-success btn-sm ms-auto" onclick="exportExecCSV()">
+                        <i class="fas fa-file-csv"></i> Export CSV
+                    </button>
+                </div>
+                <div id="execSummaryStrip" style="display:none;margin-bottom:14px;">
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <span id="exec-total" class="badge bg-primary" style="font-size:13px;padding:7px 12px;"></span>
+                        <span id="exec-avg" class="badge bg-info" style="font-size:13px;padding:7px 12px;"></span>
+                        <span id="exec-top" class="badge bg-success" style="font-size:13px;padding:7px 12px;"></span>
+                        <span id="exec-range-lbl" class="badge bg-secondary" style="font-size:13px;padding:7px 12px;"></span>
+                    </div>
+                </div>
+                <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <input type="text" id="execSearch" class="form-control form-control-sm"
+                        placeholder="Search by name, code, department, role…"
+                        oninput="filterExecTable()" style="max-width:340px;">
+                    <div class="dropdown" id="execEmpFilterWrap" style="display:none;">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" id="execEmpFilterBtn">
+                            <i class="fas fa-users me-1"></i>Employees <span id="execEmpFilterCount" class="badge bg-primary ms-1" style="font-size:11px;"></span>
+                        </button>
+                        <div class="dropdown-menu p-3" style="min-width:260px;max-height:380px;overflow-y:auto;" id="execEmpFilterMenu">
+                            <div class="mb-2">
+                                <label class="form-check">
+                                    <input type="checkbox" class="form-check-input" id="execSelectAll" checked onchange="toggleExecSelectAll()">
+                                    <span class="form-check-label fw-bold">Select All</span>
+                                </label>
+                            </div>
+                            <hr class="my-1">
+                            <div id="execEmpCheckboxes"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="execLoading" style="display:none;text-align:center;padding:30px;">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div style="margin-top:8px;color:#6b7280;font-size:14px;">Loading performance data…</div>
+                </div>
+                <div class="table-responsive exec-table-wrapper">
+                    <table class="data-table" id="execTable" style="font-size:13px;display:none;">
+                        <thead>
+                            <tr style="background:#1e3a5f;color:#fff;">
+                                <th class="exec-sc-1" style="width:50px;cursor:pointer;" onclick="sortExecTable('rank')">Rank <i class="fas fa-sort" id="esort-rank"></i></th>
+                                <th class="exec-sc-2" style="cursor:pointer;width:160px;" onclick="sortExecTable('name')">Employee <i class="fas fa-sort" id="esort-name"></i></th>
+                                <th class="exec-sc-3" style="cursor:pointer;width:140px;" onclick="sortExecTable('reporting_manager_name')">Reporting<br><small style="opacity:.75;font-weight:400;">Manager</small> <i class="fas fa-sort" id="esort-reporting_manager_name"></i></th>
+                                <th class="exec-sc-4" style="cursor:pointer;text-align:center;width:80px;" onclick="sortExecTable('days_present')">Days<br><small style="opacity:.75;font-weight:400;">Present</small> <i class="fas fa-sort" id="esort-days_present"></i></th>
+                                <th class="exec-sc-5" style="cursor:pointer;text-align:center;width:72px;border-left:2px solid #f59e0b;" onclick="sortExecTable('overall_score')">Score <i class="fas fa-sort" id="esort-overall_score"></i></th>
+                                <th style="cursor:pointer;text-align:center;" onclick="sortExecTable('att_score')">Attend<br><small style="opacity:.75;font-weight:400;" id="hdr-wt-att">—%</small> <i class="fas fa-sort" id="esort-att_score"></i></th>
+                                <th style="cursor:pointer;text-align:center;" onclick="sortExecTable('dp_score')">Day Plan<br><small style="opacity:.75;font-weight:400;" id="hdr-wt-dp">—%</small> <i class="fas fa-sort" id="esort-dp_score"></i></th>
+                                <th style="cursor:pointer;text-align:center;" onclick="sortExecTable('kra_score')">KRA<br><small style="opacity:.75;font-weight:400;" id="hdr-wt-kra">—%</small> <i class="fas fa-sort" id="esort-kra_score"></i></th>
+                                <th style="cursor:pointer;text-align:center;" onclick="sortExecTable('ts_score')">Timesheet<br><small style="opacity:.75;font-weight:400;" id="hdr-wt-ts">—%</small> <i class="fas fa-sort" id="esort-ts_score"></i></th>
+                                <th style="cursor:pointer;text-align:center;" onclick="sortExecTable('dept_score')">Dept Score<br><small style="opacity:.75;font-weight:400;" id="hdr-wt-dept">—%</small> <i class="fas fa-sort" id="esort-dept_score"></i></th>
+                                <th style="cursor:pointer;text-align:center;" onclick="sortExecTable('avg_approved_minutes_per_day')">Avg Hrs<br><small style="opacity:.75;font-weight:400;">Per Day</small> <i class="fas fa-sort" id="esort-avg_approved_minutes_per_day"></i></th>
+                                <th style="cursor:pointer;text-align:center;" onclick="sortExecTable('tickets_resolved')">Tickets<br><small style="opacity:.75;font-weight:400;">Resolved / Total</small> <i class="fas fa-sort" id="esort-tickets_resolved"></i></th>
+                                <th style="cursor:pointer;text-align:center;" onclick="sortExecTable('within_tat_pct')">SLA %<br><small style="opacity:.75;font-weight:400;">Within TAT</small> <i class="fas fa-sort" id="esort-within_tat_pct"></i></th>
+                                <th style="cursor:pointer;text-align:center;" onclick="sortExecTable('talk_time_seconds')">Talk Time<br><small style="opacity:.75;font-weight:400;" id="hdr-wt-talk">Avg/day</small> <i class="fas fa-sort" id="esort-talk_time_seconds"></i></th>
+                                <th class="exec-vgk-col" style="cursor:pointer;text-align:center;display:none;" onclick="sortExecTable('po_total')">PO Handled<br><small style="opacity:.75;font-weight:400;">On-time / Total</small> <i class="fas fa-sort" id="esort-po_total"></i></th>
+                                <th class="exec-vgk-col" style="cursor:pointer;text-align:center;display:none;" onclick="sortExecTable('prh_total')">Proc. Handled<br><small style="opacity:.75;font-weight:400;">On-time / Total</small> <i class="fas fa-sort" id="esort-prh_total"></i></th>
+                                <th class="exec-vgk-col" style="cursor:pointer;text-align:center;display:none;" onclick="sortExecTable('own_deal_value_received')">Own Revenue<br><small style="opacity:.75;font-weight:400;">Value ₹</small> <i class="fas fa-sort" id="esort-own_deal_value_received"></i></th>
+                                <th class="exec-vgk-col" style="cursor:pointer;text-align:center;display:none;" onclick="sortExecTable('crm_txn_revenue')">CRM Rev ₹<br><small style="opacity:.75;font-weight:400;">Transactions</small> <i class="fas fa-sort" id="esort-crm_txn_revenue"></i></th>
+                                <th class="exec-vgk-col" style="cursor:pointer;text-align:center;display:none;" onclick="sortExecTable('team_deal_value_received')">Team Revenue<br><small style="opacity:.75;font-weight:400;">Downline ₹</small> <i class="fas fa-sort" id="esort-team_deal_value_received"></i></th>
+                                <th style="width:36px;text-align:center;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="execTableBody"></tbody>
+                    </table>
+                </div>
+            </div><!-- /executiveDashboardContent -->
+
+            </div><!-- /snapContent -->
+        </div><!-- /content-area -->
+    </div><!-- /main-content -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js?v=1"></script>
+    <script src="/staff_header.js?v=1"></script>
+    <script>
+    // ── State ────────────────────────────────────────────────────────────────
+    let _snapData     = [];
+    let _snapFiltered = [];
+    let _snapSection  = 'overall';
+    
+    let _collapsedGrp = new Set();
+    let _companySel   = new Set();   // selected company names; empty = all
+    let _coDropOpen   = false;
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async function () {
+        if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        if (typeof StaffHeader !== 'undefined') {
+            StaffHeader.inject('Operations Overview', 'fas fa-table-cells');
+            StaffHeader.init();
+        }
+        const today    = new Date();
+        const yyyy     = today.getFullYear();
+        const mm       = String(today.getMonth() + 1).padStart(2, '0');
+        const dd       = String(today.getDate()).padStart(2, '0');
+        document.getElementById('snapFrom').value = yyyy + '-' + mm + '-01';
+        document.getElementById('snapTo').value   = yyyy + '-' + mm + '-' + dd;
+
+        // Close company dropdown on outside click
+        document.addEventListener('click', function (e) {
+            if (_coDropOpen && !document.getElementById('companyFilterGroup').contains(e.target)) {
+                closeCompanyDropdown();
+            }
+        });
+
+        await checkAccessAndLoad();
+    });
+
+    async function checkAccessAndLoad() {
+        try {
+            const resp = await staffFetch('/api/v1/staff/auth/me');
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const emp  = data.employee || data;
+            const rc   = (emp.role_code || '').toLowerCase().trim();
+            const rn   = (emp.role_name  || '').toUpperCase().trim();
+            const ok   = ['vgk4u','vgk4u_supreme','key_leadership','ea','executive_admin'].includes(rc) ||
+                         rc.includes('vgk') ||
+                         ['VGK4U','VGK4U SUPREME','VGK MENTOR','KEY LEADERSHIP','EA','EXECUTIVE ADMIN'].includes(rn);
+            if (!ok) {
+                document.getElementById('snapAccessDenied').style.display = '';
+                return;
+            }
+            document.getElementById('snapContent').style.display = '';
+
+            // ── Exec tab access: same key leadership check (exact match, no 'senior executive') ──
+            const _execRoleCodes = ['vgk4u','vgk4u_supreme','key_leadership','ea','executive_admin'];
+            const _execRoleNames = ['VGK4U','VGK MENTOR','VGK4U SUPREME','KEY LEADERSHIP','EA','EXECUTIVE ADMIN'];
+            const isKeyLeader = _execRoleCodes.includes(rc) || rc.includes('vgk4u') || _execRoleNames.includes(rn);
+            if (isKeyLeader) {
+                const btnExec = document.getElementById('btnExec');
+                if (btnExec) btnExec.style.display = '';
+                window._userIsKeyLeader = true;
+                window._userIsVgkSupreme = rc.includes('vgk4u');
+                if (window._userIsVgkSupreme) {
+                    const inclWrap = document.getElementById('execIncludeSelfWrap');
+                    if (inclWrap) inclWrap.style.display = 'flex';
+                } else {
+                    // Non-VGK4U key leadership: show My Team Only toggle
+                    const myTeamWrap = document.getElementById('execMyTeamOnlyWrap');
+                    if (myTeamWrap) myTeamWrap.style.display = 'flex';
+                }
+                document.querySelectorAll('.exec-vgk-col').forEach(el => el.style.removeProperty('display'));
+            }
+
+            // Init exec dates (MTD)
+            const _todayStr = _execGetISTToday();
+            const _mtdStart = _todayStr.slice(0,7) + '-01';
+            const _edf = document.getElementById('execDateFrom');
+            const _edt = document.getElementById('execDateTo');
+            if (_edf && !_edf.value) _edf.value = _mtdStart;
+            if (_edt && !_edt.value) _edt.value = _todayStr;
+
+            await loadSnapshot();
+        } catch (e) { console.error('[SNAP] Auth check failed:', e); }
+    }
+
+    // ── Section switch ────────────────────────────────────────────────────────
+    function switchSection(mode) {
+        _snapSection = mode;
+        document.getElementById('btnRange').classList.toggle('active', mode === 'range');
+        const btnExecEl = document.getElementById('btnExec');
+        if (btnExecEl) btnExecEl.classList.toggle('active', mode === 'executive');
+        document.getElementById('rangeControls').style.display = (mode === 'range') ? 'flex' : 'none';
+
+        const execPanel    = document.getElementById('executiveDashboardContent');
+        const snapWrapper  = document.getElementById('snapTableWrapper');
+        const totalsWrapper= document.getElementById('snapTotalsWrapper');
+        const filterBar    = document.querySelector('.snap-filter-bar');
+        const quickBar     = document.getElementById('snapQuickBar');
+
+        if (mode === 'executive') {
+            if (execPanel)     execPanel.style.display    = '';
+            if (snapWrapper)   snapWrapper.style.display  = 'none';
+            if (totalsWrapper) totalsWrapper.style.display= 'none';
+            if (filterBar)     filterBar.style.display    = 'none';
+            if (quickBar)      quickBar.style.display     = 'none';
+            if (!_execLastFrom) setExecQuickPeriod(_execQuickPeriod);
+            return;
+        }
+
+        if (execPanel)     execPanel.style.display    = 'none';
+        if (snapWrapper)   snapWrapper.style.display  = '';
+        if (totalsWrapper) totalsWrapper.style.display= _snapFiltered.length ? '' : 'none';
+        if (filterBar)     filterBar.style.display    = '';
+        if (quickBar)      quickBar.style.display     = '';
+        if (mode === 'range') {
+            // Clear quick filter active state
+            ['FTD','Week','MTD','Overall'].forEach(k => {
+                const el = document.getElementById('qb' + k);
+                if (el) el.classList.remove('active');
+            });
+            _snapQuickPeriod = 'custom';
+        } else {
+            loadSnapshot();
+        }
+    }
+
+    
+
+    // ── Column group collapse ─────────────────────────────────────────────────
+    function toggleGroup(grp) {
+        if (_collapsedGrp.has(grp)) _collapsedGrp.delete(grp); else _collapsedGrp.add(grp);
+        _applyGroupVisibility();
+    }
+    function _applyGroupVisibility() {
+        ['att','tasks','kra','act','ts','tickets','po','pr'].forEach(grp => {
+            const hidden = _collapsedGrp.has(grp);
+            document.querySelectorAll('.grp-' + grp).forEach(el => el.classList.toggle('col-hidden', hidden));
+            const icon = document.getElementById('gi-' + grp);
+            if (icon) icon.className = (hidden ? 'fas fa-chevron-down' : 'fas fa-chevron-up') + ' grp-toggle-icon';
+        });
+    }
+
+    // ── Company dropdown ──────────────────────────────────────────────────────
+    function toggleCompanyDropdown(e) {
+        e.stopPropagation();
+        if (_coDropOpen) closeCompanyDropdown(); else openCompanyDropdown();
+    }
+    function openCompanyDropdown() {
+        document.getElementById('companyDropdown').style.display = '';
+        _coDropOpen = true;
+    }
+    function closeCompanyDropdown() {
+        document.getElementById('companyDropdown').style.display = 'none';
+        _coDropOpen = false;
+    }
+    function _populateCompanyFilter(data) {
+        const cos = [...new Set(data.map(r => r.company_name).filter(n => n && n !== '—'))].sort();
+        if (cos.length <= 1) {
+            document.getElementById('companyFilterGroup').style.display = 'none';
+            return;
+        }
+        document.getElementById('companyFilterGroup').style.display = '';
+        const listEl = document.getElementById('companyCheckboxList');
+        listEl.innerHTML = cos.map(c =>
+            '<label class="snap-co-item"><input type="checkbox" value="' + _esc(c) + '" ' +
+            (_companySel.size === 0 || _companySel.has(c) ? 'checked' : '') +
+            ' onchange="onCompanyCheck(this)"> ' + _esc(c) + '</label>'
+        ).join('');
+        _updateCompanyBtnLabel();
+    }
+    function onCompanyCheck(el) {
+        const val = el.value;
+        if (el.checked) _companySel.add(val); else _companySel.delete(val);
+        // If all are checked, treat as "all"
+        const total = document.querySelectorAll('#companyCheckboxList input').length;
+        if (_companySel.size === total) _companySel.clear();
+        _updateCompanyBtnLabel();
+        applyFilters();
+    }
+    function selectAllCompanies() {
+        _companySel.clear();
+        document.querySelectorAll('#companyCheckboxList input').forEach(el => el.checked = true);
+        _updateCompanyBtnLabel();
+        applyFilters();
+    }
+    function clearCompanies() {
+        _companySel.clear();
+        document.querySelectorAll('#companyCheckboxList input').forEach(el => {
+            _companySel.add(el.value);
+            el.checked = false;
+        });
+        _updateCompanyBtnLabel();
+        applyFilters();
+    }
+    function _updateCompanyBtnLabel() {
+        const el = document.getElementById('companyBtnLabel');
+        if (!el) return;
+        if (_companySel.size === 0) el.textContent = 'All Companies';
+        else el.textContent = _companySel.size + ' Compan' + (_companySel.size === 1 ? 'y' : 'ies');
+    }
+
+    // ── Data fetch ────────────────────────────────────────────────────────────
+    // ── Quick period filter ───────────────────────────────────────────────────
+    let _snapQuickPeriod = 'overall';
+
+    function _getISTToday() {
+        const now = new Date();
+        const istMs = now.getTime() + (now.getTimezoneOffset() + 330) * 60000;
+        return new Date(istMs).toISOString().split('T')[0];
+    }
+
+    function setQuickPeriod(period) {
+        _snapQuickPeriod = period;
+        ['FTD','Week','MTD','Overall'].forEach(k => {
+            const el = document.getElementById('qb' + k);
+            if (el) el.classList.remove('active');
+        });
+        const btnMap = { ftd:'FTD', week:'Week', mtd:'MTD', overall:'Overall' };
+        const btn = document.getElementById('qb' + btnMap[period]);
+        if (btn) btn.classList.add('active');
+        // Hide custom range controls
+        document.getElementById('rangeControls').style.display = 'none';
+        document.getElementById('btnRange').classList.remove('active');
+        loadSnapshot();
+    }
+
+    function _quickDateRange() {
+        const today = _getISTToday();
+        if (_snapQuickPeriod === 'ftd') return { from: today, to: today };
+        if (_snapQuickPeriod === 'week') {
+            const d = new Date(today);
+            const day = d.getDay();
+            const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+            const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+            return { from: mon.toISOString().split('T')[0], to: sun.toISOString().split('T')[0] };
+        }
+        if (_snapQuickPeriod === 'mtd') return { from: today.slice(0,7) + '-01', to: today };
+        return null; // overall = no date filter
+    }
+
+    async function loadSnapshot() {
+        _showLoading(true);
+        try {
+            let url = '/api/v1/staff/overview';
+            if (_snapSection === 'range') {
+                const f = document.getElementById('snapFrom').value;
+                const t = document.getElementById('snapTo').value;
+                if (f && t) url += '?from_date=' + f + '&to_date=' + t;
+            } else {
+                const qdr = _quickDateRange();
+                if (qdr) url += '?from_date=' + qdr.from + '&to_date=' + qdr.to;
+            }
+            const resp = await staffFetch(url);
+            if (!resp.ok) { _showLoading(false, 'Failed to load data. Please try again.'); return; }
+            _snapData = await resp.json();
+            _populateDeptFilter(_snapData);
+            _populateCompanyFilter(_snapData);
+            applyFilters();
+            const now = new Date();
+            document.getElementById('snapLastUpdated').textContent =
+                'Updated ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0');
+        } catch (e) {
+            console.error('[SNAP] Load failed:', e);
+            _showLoading(false, 'Network error. Please refresh.');
+        }
+    }
+
+    function _showLoading(show, errMsg) {
+        document.getElementById('snapLoading').style.display  = show ? '' : 'none';
+        document.getElementById('snapEmpty').style.display    = 'none';
+        document.getElementById('snapTable').style.display    = 'none';
+        if (errMsg) {
+            const el = document.getElementById('snapLoading');
+            el.style.display = '';
+            el.innerHTML = '<i class="fas fa-triangle-exclamation" style="color:#dc2626;font-size:36px;"></i><div style="margin-top:12px;color:#dc2626;">' + errMsg + '</div>';
+        }
+    }
+
+    // ── Dept filter ───────────────────────────────────────────────────────────
+    function _populateDeptFilter(data) {
+        const depts = [...new Set(data.map(r => r.department).filter(Boolean))].sort();
+        const sel   = document.getElementById('snapDeptFilter');
+        const cur   = sel.value;
+        sel.innerHTML = '<option value="">All Departments</option>' +
+            depts.map(d => '<option value="' + _esc(d) + '"' + (d === cur ? ' selected' : '') + '>' + _esc(d) + '</option>').join('');
+    }
+
+    // ── Filters ───────────────────────────────────────────────────────────────
+    function applyFilters() {
+        const dept = document.getElementById('snapDeptFilter').value.toLowerCase();
+        const name = document.getElementById('snapNameSearch').value.toLowerCase().trim();
+        _snapFiltered = _snapData.filter(r => {
+            if (dept && (r.department || '').toLowerCase() !== dept) return false;
+            if (name && !(r.name || '').toLowerCase().includes(name) && !(r.emp_code || '').toLowerCase().includes(name)) return false;
+            if (_companySel.size > 0 && !_companySel.has(r.company_name)) return false;
+            return true;
+        });
+        renderTotalsTable(_snapFiltered);
+        renderTable(_snapFiltered);
+    }
+
+    // ── Summary bar (no-op — replaced by totals table) ───────────────────────
+    function renderSummaryBar(rows) { /* removed */ }
+
+    // ── Dept totals table (above employee detail table) ───────────────────────
+    function renderTotalsTable(rows) {
+        const wrap = document.getElementById('snapTotalsWrapper');
+        if (!wrap) return;
+        if (!rows || rows.length === 0) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+
+        const byDept = {};
+        rows.forEach(r => {
+            const d = r.department || '(No Department)';
+            if (!byDept[d]) byDept[d] = [];
+            byDept[d].push(r);
+        });
+        const depts = Object.keys(byDept).sort();
+        const grand  = _sumRows(rows);
+
+        const th = (label, cls, extra) =>
+            '<th class="num-cell ' + (cls||'') + '" style="background:#1e3a5f;color:#e2e8f0;font-size:10px;font-weight:600;white-space:nowrap;padding:5px 6px;' + (extra||'') + '">' + label + '</th>';
+        const thW = (label, cls, extra) =>
+            '<th class="num-cell-wide ' + (cls||'') + '" style="background:#1e3a5f;color:#e2e8f0;font-size:10px;font-weight:600;white-space:nowrap;padding:5px 6px;' + (extra||'') + '">' + label + '</th>';
+        const thG = (label, colspan, cls, bdr) =>
+            '<th colspan="' + colspan + '" class="' + (cls||'') + '" style="background:#162d4a;color:#93c5fd;font-size:10px;font-weight:700;text-align:center;padding:5px 8px;' + (bdr ? 'border-left:2px solid rgba(255,255,255,.15);' : '') + 'letter-spacing:.03em;">' + label + '</th>';
+
+        let thead = '<thead style="position:sticky;top:0;z-index:4;">';
+        thead += '<tr>';
+        thead += '<th style="background:#162d4a;color:#93c5fd;font-size:10px;font-weight:700;padding:5px 10px;text-align:left;min-width:140px;white-space:nowrap;position:sticky;left:0;z-index:6;">Department</th>';
+        thead += '<th style="background:#162d4a;color:#93c5fd;font-size:10px;font-weight:700;padding:5px 8px;text-align:center;white-space:nowrap;">Staff</th>';
+        thead += thG('Attendance',        4, 'gh-att',     false);
+        thead += thG('Tasks &amp; Day Plan', 9, 'gh-tasks',   true);
+        thead += thG('KRA',               5, 'gh-kra',     true);
+        thead += thG('CRM, Calls &amp; Revenue', 14, 'gh-act', true);
+        thead += thG('Timesheet',         5, 'gh-ts',      true);
+        thead += thG('Tickets',           4, 'gh-tickets', true);
+        thead += thG('PO',                4, 'gh-po',      true);
+        thead += thG('Procurement',       4, 'gh-pr',      true);
+        thead += '</tr><tr>';
+        thead += '<th colspan="2" style="background:#1e3a5f;border-bottom:2px solid #334155;"></th>';
+        thead += th('Days Present', 'gb-att grp-att') + th('HR Final','grp-att') + th('Not Logout','grp-att') + thW('Avg Hrs/Day','grp-att');
+        thead += th('Assigned','gb-tasks grp-tasks') + th('Created','grp-tasks') + th('Handled','grp-tasks') + th('Pending','grp-tasks') + th('Overdue','grp-tasks') + th('OD%','grp-tasks') + th('Days Planned','grp-tasks') + th('Days Done','grp-tasks') + th('Diff','grp-tasks');
+        thead += th('Assigned','gb-kra grp-kra') + th('Handled','grp-kra') + th('Pending','grp-kra') + th('Delayed','grp-kra') + th('Done%','grp-kra');
+        thead += th('CRM New','gb-act grp-act') + th('Won','grp-act') + th('Not Handled','grp-act') + th('Overdue','grp-act');
+        thead += th('Avg Calls/Day','gb-calls-sub grp-act') + thW('Avg Talk/Day','grp-act');
+        thead += th('Sessions','gb-dialer-sub grp-act') + thW('Paused Time','grp-act') + thW('Inactive Time','grp-act') + th('Skipped','grp-act');
+        thead += th('Deals Won','gb-rev-sub grp-act') + thW('Deal Value','grp-act') + thW('Received','grp-act') + thW('Balance','grp-act');
+        thead += th('Applied','gb-ts grp-ts') + th('Approved','grp-ts') + th('Exceptions','grp-ts') + thW('Avg Sub/Day','grp-ts') + thW('Avg App/Day','grp-ts');
+        thead += th('Raised','gb-tickets grp-tickets') + th('Handled','grp-tickets') + th('Pending','grp-tickets') + th('In-Time%','grp-tickets');
+        thead += th('In Queue','gb-po grp-po') + th('Completed','grp-po') + th('Pending','grp-po') + th('Done%','grp-po');
+        thead += th('In Queue','gb-pr grp-pr') + th('Completed','grp-pr') + th('Pending','grp-pr') + th('Done%','grp-pr');
+        thead += '</tr></thead>';
+
+        const _tdStyle = 'font-size:11px;padding:4px 6px;text-align:right;white-space:nowrap;border-bottom:1px solid #f1f5f9;';
+        const _td  = (v, cls) => '<td class="num-cell '+(cls||'')+'" style="'+_tdStyle+'">' + (v !== null && v !== undefined ? v : '—') + '</td>';
+        const _tdW = (v, cls) => '<td class="num-cell-wide '+(cls||'')+'" style="'+_tdStyle+'">' + (v !== null && v !== undefined ? v : '—') + '</td>';
+
+        function _deptRow(name, empCount, tot, rowStyle, labelColor) {
+            const dp = tot.day_plan  || { days_planned:0, days_finished:0 };
+            const dl = tot.dialer    || { sessions:0, paused_secs:0, inactive_secs:0, skipped:0 };
+            const ta = tot.tasks_assignee || {};
+            const tc = tot.tasks_creator  || {};
+            const avgDeptMins = tot.attendance.days_present > 0 ? Math.round(tot.attendance.total_worked_minutes / tot.attendance.days_present) : 0;
+            const avgCallsPerDay = tot.calls.call_days > 0 ? Math.round(tot.calls.total_calls / tot.calls.call_days) : 0;
+            const avgSecsPerDay  = tot.calls.call_days > 0 ? Math.round(tot.calls.total_secs  / tot.calls.call_days) : 0;
+            const avgSubMin = (tot.timesheet._cnt||0) > 0 ? Math.round(tot.timesheet.submitted_avg_min / tot.timesheet._cnt) : 0;
+            const avgAppMin = (tot.timesheet._cnt||0) > 0 ? Math.round(tot.timesheet.approved_avg_min  / tot.timesheet._cnt) : 0;
+            const odPct  = ta.total   > 0 ? Math.round(ta.overdue   / ta.total   * 100) : 0;
+            const kraPct = tot.kra.assigned > 0 ? Math.round(tot.kra.handled / tot.kra.assigned * 100) : 0;
+            const tkPct  = tot.tickets.raised > 0 ? Math.round(tot.tickets.in_time / tot.tickets.raised * 100) : 0;
+            const poDone = tot.po.total > 0 ? Math.round(tot.po.completed / tot.po.total * 100) : 0;
+            const prDone = tot.pr.total > 0 ? Math.round(tot.pr.completed / tot.pr.total * 100) : 0;
+            const diff   = dp.days_finished - dp.days_planned;
+
+            const lc = labelColor || '#1e3a5f';
+            const cc = labelColor ? '#e2e8f0' : '#374151';
+            let h = '<tr style="' + (rowStyle||'background:#fff;') + '">';
+            h += '<td style="font-size:11px;font-weight:700;color:'+lc+';padding:5px 10px;white-space:nowrap;position:sticky;left:0;background:inherit;border-bottom:1px solid rgba(255,255,255,.1);">' + _esc(name) + '</td>';
+            h += '<td style="font-size:11px;text-align:center;color:'+cc+';padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.1);">' + empCount + '</td>';
+            h += _td(tot.attendance.days_present     || 0, 'grp-att') + _td(tot.attendance.hr_final_present || 0, 'grp-att') + _td(tot.attendance.not_logged_out || 0, 'grp-att') + _tdW(_fmtMins(avgDeptMins), 'grp-att');
+            h += _td(ta.total||0,'grp-tasks') + _td(tc.total||0,'grp-tasks') + _td(ta.handled||0,'grp-tasks') + _td(ta.pending||0,'grp-tasks') + _td(ta.overdue||0,'grp-tasks') + _td(odPct+'%','grp-tasks') + _td(dp.days_planned,'grp-tasks') + _td(dp.days_finished,'grp-tasks') + _td((diff > 0 ? '+' : '') + diff,'grp-tasks');
+            h += _td(tot.kra.assigned||0,'grp-kra') + _td(tot.kra.handled||0,'grp-kra') + _td(tot.kra.pending||0,'grp-kra') + _td(tot.kra.skipped||0,'grp-kra') + _td(kraPct+'%','grp-kra');
+            h += _td(tot.crm.new_leads||0,'grp-act') + _td(tot.crm.deals_closed||0,'grp-act') + _td(tot.crm.not_handled||0,'grp-act') + _td(tot.crm.overdue||0,'grp-act');
+            h += _td(avgCallsPerDay,'grp-act') + _tdW(_fmtSecs(avgSecsPerDay),'grp-act');
+            h += _td(dl.sessions,'grp-act') + _tdW(_fmtSecs(dl.paused_secs),'grp-act') + _tdW(_fmtSecs(dl.inactive_secs),'grp-act') + _td(dl.skipped,'grp-act');
+            h += _td(tot.deal.deals_won||0,'grp-act') + _tdW(_fmtINR(tot.deal.deal_value_total),'grp-act') + _tdW(_fmtINR(tot.deal.deal_value_received),'grp-act') + _tdW(_fmtINR(tot.deal.deal_value_balance),'grp-act');
+            h += _td(tot.timesheet.applied||0,'grp-ts') + _td(tot.timesheet.approved||0,'grp-ts') + _td(tot.timesheet.exceptions||0,'grp-ts') + _tdW(_fmtMins(avgSubMin),'grp-ts') + _tdW(_fmtMins(avgAppMin),'grp-ts');
+            h += _td(tot.tickets.raised||0,'grp-tickets') + _td(tot.tickets.handled||0,'grp-tickets') + _td(tot.tickets.pending||0,'grp-tickets') + _td(tkPct+'%','grp-tickets');
+            h += _td(tot.po.in_queue||0,'grp-po') + _td(tot.po.completed||0,'grp-po') + _td(tot.po.pending||0,'grp-po') + _td(poDone+'%','grp-po');
+            h += _td(tot.pr.in_queue||0,'grp-pr') + _td(tot.pr.completed||0,'grp-pr') + _td(tot.pr.pending||0,'grp-pr') + _td(prDone+'%','grp-pr');
+            h += '</tr>';
+            return h;
+        }
+
+        let tbody = '';
+        depts.forEach((dept, i) => {
+            const emps = byDept[dept];
+            const tot  = _sumRows(emps);
+            tbody += _deptRow(dept + ' (' + emps.length + ')', emps.length, tot, i % 2 === 0 ? 'background:#fff;' : 'background:#f8fafc;');
+        });
+        tbody += _deptRow('GRAND TOTAL (' + rows.length + ')', rows.length, grand,
+            'background:#1e3a5f;color:#e2e8f0;font-weight:700;', '#93c5fd');
+
+        wrap.style.display = '';
+        wrap.innerHTML = '<table class="snap-table" style="border-collapse:collapse;width:100%;font-size:11px;">' + thead + '<tbody>' + tbody + '</tbody></table>';
+    }
+
+    // ── Render table ──────────────────────────────────────────────────────────
+    function renderTable(rows) {
+        document.getElementById('snapLoading').style.display = 'none';
+        if (!rows || rows.length === 0) {
+            document.getElementById('snapEmpty').style.display = '';
+            document.getElementById('snapTable').style.display = 'none';
+            document.getElementById('snapResultCount').textContent = '';
+            return;
+        }
+        document.getElementById('snapEmpty').style.display = 'none';
+        document.getElementById('snapTable').style.display = '';
+
+        const byDept = {};
+        rows.forEach(r => {
+            const d = r.department || '(No Department)';
+            if (!byDept[d]) byDept[d] = [];
+            byDept[d].push(r);
+        });
+        const depts = Object.keys(byDept).sort();
+        let html = '';
+        let totalEmps = 0;
+
+        depts.forEach(dept => {
+            const emps  = byDept[dept];
+            totalEmps  += emps.length;
+            const deptId = 'dept-' + dept.replace(/\W/g, '_');
+            const tot    = _sumRows(emps);
+
+            html += '<tr class="snap-dept-row" onclick="toggleDeptRows(\'' + deptId + '\')" title="Click to expand/collapse">';
+            html += '<td class="sc-dept" style="font-size:12px;"><i class="fas fa-chevron-down" style="font-size:9px;margin-right:6px;opacity:.6;" id="dc-' + deptId + '"></i>' + _esc(dept) + ' <span style="font-weight:400;color:#6b7280;font-size:10px;">(' + emps.length + ')</span></td>';
+            html += '<td class="sc-emp" style="color:#374151;font-size:11px;font-weight:600;">DEPARTMENT TOTAL</td>';
+            html += '<td class="sc-mgr"></td>';
+            html += _deptCells(tot);
+            html += '</tr>';
+
+            emps.forEach(r => {
+                const ta_emp = r.tasks_assignee || {};
+                const tc_emp = r.tasks_creator  || {};
+                html += '<tr class="snap-emp-row" data-dept="' + deptId + '">';
+                html += '<td class="sc-dept" style="font-size:11px;color:#6b7280;padding-left:20px;">' + _esc(r.department || '') + '</td>';
+                html += '<td class="sc-emp">';
+                html += '<div style="font-weight:600;font-size:12px;">' + _esc(r.name) + '</div>';
+                html += '<div style="font-size:10px;color:#9ca3af;">' + _esc(r.emp_code);
+                if (r.company_name && r.company_name !== '—') html += ' · <span style="color:#6b7280;">' + _esc(r.company_name) + '</span>';
+                html += '</div></td>';
+                html += '<td class="sc-mgr" style="font-size:11px;color:#374151;">' + _esc(r.reporting_manager_name || '—') + '</td>';
+
+                const dp = r.day_plan || {};
+                const dl = r.dialer  || {};
+                // Attendance (FIRST) — 4 cols
+                html += _nc(r.attendance.days_present,     'gb-att grp-att', r.attendance.days_present > 0 ? 'n-good' : '');
+                html += _nc(r.attendance.hr_final_present, 'grp-att', r.attendance.hr_final_present > 0 ? 'n-good' : '');
+                html += _nc(r.attendance.not_logged_out,   'grp-att', r.attendance.not_logged_out > 0 ? 'n-warn' : '');
+                html += _minsCell(r.attendance.avg_mins_per_day, 'grp-att');
+                // Tasks — 9 cols (Assigned + Created always shown)
+                html += _nc(ta_emp.total,   'gb-tasks grp-tasks');
+                html += _nc(tc_emp.total,   'grp-tasks', tc_emp.total > 0 ? 'n-good' : '');
+                html += _nc(ta_emp.handled, 'grp-tasks', ta_emp.handled > 0 ? 'n-good' : '');
+                html += _nc(ta_emp.pending, 'grp-tasks', ta_emp.pending > 0 ? 'n-warn' : '');
+                html += _nc(ta_emp.overdue, 'grp-tasks', ta_emp.overdue > 0 ? 'n-danger' : '');
+                html += _pctCell(ta_emp.overdue, ta_emp.total, 'grp-tasks', true);
+                html += _nc(dp.days_planned,  'grp-tasks', dp.days_planned  > 0 ? 'n-good' : '');
+                html += _nc(dp.days_finished, 'grp-tasks', dp.days_finished > 0 ? 'n-good' : '');
+                html += _diffCell((dp.days_finished || 0) - (dp.days_planned || 0), 'grp-tasks');
+                // KRA — 5 cols
+                html += _nc(r.kra.assigned, 'gb-kra grp-kra');
+                html += _nc(r.kra.handled, 'grp-kra', r.kra.handled > 0 ? 'n-good' : '');
+                html += _nc(r.kra.pending, 'grp-kra', r.kra.pending > 0 ? 'n-warn' : '');
+                html += _nc(r.kra.skipped, 'grp-kra', r.kra.skipped > 0 ? 'n-warn' : '');
+                html += _pctCell(r.kra.handled, r.kra.assigned, 'grp-kra', false);
+                // CRM sub (4) — part of merged 'act' group
+                html += _nc(r.crm.new_leads,    'gb-act grp-act');
+                html += _nc(r.crm.deals_closed, 'grp-act', r.crm.deals_closed > 0 ? 'n-good' : '');
+                html += _nc(r.crm.not_handled,  'grp-act', r.crm.not_handled  > 0 ? 'n-warn' : '');
+                html += _nc(r.crm.overdue,      'grp-act', r.crm.overdue      > 0 ? 'n-danger' : '');
+                // Calls sub (2) — avg only
+                html += _nc(r.calls.avg_calls_per_day, 'gb-calls-sub grp-act', r.calls.avg_calls_per_day > 0 ? 'n-good' : '');
+                html += _secsCell(r.calls.avg_secs_per_day, 'grp-act');
+                // Dialer sub (4)
+                html += _nc(dl.sessions,             'gb-dialer-sub grp-act', dl.sessions > 0 ? 'n-good' : '');
+                html += _secsCell(dl.paused_secs,    'grp-act');
+                html += _secsCell(dl.inactive_secs,  'grp-act');
+                html += _nc(dl.skipped,              'grp-act', dl.skipped > 0 ? 'n-warn' : '');
+                // Revenue sub (4)
+                html += _nc(r.deal.deals_won,              'gb-rev-sub grp-act', r.deal.deals_won > 0 ? 'n-good' : '');
+                html += _inrCell(r.deal.deal_value_total,    'grp-act', r.deal.deal_value_total    > 0 ? 'n-good' : '');
+                html += _inrCell(r.deal.deal_value_received, 'grp-act', r.deal.deal_value_received > 0 ? 'n-good' : '');
+                html += _inrCell(r.deal.deal_value_balance,  'grp-act', r.deal.deal_value_balance  > 0 ? 'n-warn' : '');
+                // Timesheet — 5 cols
+                html += _nc(r.timesheet.applied,    'gb-ts grp-ts');
+                html += _nc(r.timesheet.approved,   'grp-ts', r.timesheet.approved   > 0 ? 'n-good' : '');
+                html += _nc(r.timesheet.exceptions, 'grp-ts', r.timesheet.exceptions > 0 ? 'n-danger' : '');
+                html += _minsCell(r.timesheet.submitted_avg_min, 'grp-ts');
+                html += _minsCell(r.timesheet.approved_avg_min,  'grp-ts');
+                // Tickets — 4 cols
+                html += _nc(r.tickets.raised,  'gb-tickets grp-tickets');
+                html += _nc(r.tickets.handled, 'grp-tickets', r.tickets.handled > 0 ? 'n-good' : '');
+                html += _nc(r.tickets.pending, 'grp-tickets', r.tickets.pending > 0 ? 'n-warn' : '');
+                html += _pctCell(r.tickets.in_time, r.tickets.raised, 'grp-tickets', false);
+                // PO — 4 cols
+                html += _nc(r.po.in_queue,  'gb-po grp-po', r.po.in_queue  > 0 ? 'n-warn' : '');
+                html += _nc(r.po.completed, 'grp-po',       r.po.completed > 0 ? 'n-good' : '');
+                html += _nc(r.po.pending,   'grp-po',       r.po.pending   > 0 ? 'n-warn' : '');
+                html += _pctCell(r.po.completed, r.po.total, 'grp-po', false);
+                // PR — 4 cols
+                html += _nc(r.pr.in_queue,  'gb-pr grp-pr', r.pr.in_queue  > 0 ? 'n-warn' : '');
+                html += _nc(r.pr.completed, 'grp-pr',       r.pr.completed > 0 ? 'n-good' : '');
+                html += _nc(r.pr.pending,   'grp-pr',       r.pr.pending   > 0 ? 'n-warn' : '');
+                html += _pctCell(r.pr.completed, r.pr.total, 'grp-pr', false);
+
+                html += '</tr>';
+            });
+        });
+
+        document.getElementById('snapTableBody').innerHTML = html;
+        document.getElementById('snapResultCount').textContent =
+            totalEmps + ' employee' + (totalEmps !== 1 ? 's' : '') + ' · ' + depts.length + ' dept' + (depts.length !== 1 ? 's' : '');
+        _applyGroupVisibility();
+    }
+
+    // ── Dept collapse toggle ──────────────────────────────────────────────────
+    function toggleDeptRows(deptId) {
+        const rows = document.querySelectorAll('tr.snap-emp-row[data-dept="' + deptId + '"]');
+        const icon = document.getElementById('dc-' + deptId);
+        let anyVisible = false;
+        rows.forEach(r => { if (!r.classList.contains('collapsed')) anyVisible = true; });
+        rows.forEach(r => r.classList.toggle('collapsed', anyVisible));
+        if (icon) {
+            icon.className = anyVisible ? 'fas fa-chevron-right' : 'fas fa-chevron-down';
+            icon.style.cssText = 'font-size:9px;margin-right:6px;opacity:.6;';
+        }
+    }
+
+    // ── Dept totals row ───────────────────────────────────────────────────────
+    function _deptCells(tot) {
+        let h = '';
+        
+        const dp = tot.day_plan  || { days_planned:0, days_finished:0 };
+        const dl = tot.dialer    || { sessions:0, paused_secs:0, inactive_secs:0, skipped:0 };
+
+        // Attendance FIRST — 4 cols
+        h += _nc(tot.attendance.days_present,     'gb-att grp-att', tot.attendance.days_present     > 0 ? 'n-good' : '');
+        h += _nc(tot.attendance.hr_final_present, 'grp-att',        tot.attendance.hr_final_present > 0 ? 'n-good' : '');
+        h += _nc(tot.attendance.not_logged_out,   'grp-att',        tot.attendance.not_logged_out   > 0 ? 'n-warn' : '');
+        const avgDeptMins = tot.attendance.days_present > 0
+            ? Math.round(tot.attendance.total_worked_minutes / tot.attendance.days_present) : 0;
+        h += _minsCell(avgDeptMins, 'grp-att');
+
+        // Tasks — 9 cols (Assigned + Created always shown)
+        const ta_d = tot.tasks_assignee || {};
+        const tc_d = tot.tasks_creator  || {};
+        h += _nc(ta_d.total,   'gb-tasks grp-tasks');
+        h += _nc(tc_d.total,   'grp-tasks', tc_d.total > 0 ? 'n-good' : '');
+        h += _nc(ta_d.handled, 'grp-tasks', 'n-good');
+        h += _nc(ta_d.pending, 'grp-tasks', ta_d.pending > 0 ? 'n-warn' : '');
+        h += _nc(ta_d.overdue, 'grp-tasks', ta_d.overdue > 0 ? 'n-danger' : '');
+        h += _pctCell(ta_d.overdue, ta_d.total, 'grp-tasks', true);
+        h += _nc(dp.days_planned,  'grp-tasks', dp.days_planned  > 0 ? 'n-good' : '');
+        h += _nc(dp.days_finished, 'grp-tasks', dp.days_finished > 0 ? 'n-good' : '');
+        h += _diffCell(dp.days_finished - dp.days_planned, 'grp-tasks');
+
+        // KRA — 5 cols
+        h += _nc(tot.kra.assigned, 'gb-kra grp-kra');
+        h += _nc(tot.kra.handled, 'grp-kra', 'n-good');
+        h += _nc(tot.kra.pending, 'grp-kra', tot.kra.pending > 0 ? 'n-warn' : '');
+        h += _nc(tot.kra.skipped, 'grp-kra', tot.kra.skipped > 0 ? 'n-warn' : '');
+        h += _pctCell(tot.kra.handled, tot.kra.assigned, 'grp-kra', false);
+
+        // CRM sub (4) — merged act group
+        h += _nc(tot.crm.new_leads,    'gb-act grp-act');
+        h += _nc(tot.crm.deals_closed, 'grp-act', 'n-good');
+        h += _nc(tot.crm.not_handled,  'grp-act', tot.crm.not_handled  > 0 ? 'n-warn' : '');
+        h += _nc(tot.crm.overdue,      'grp-act', tot.crm.overdue      > 0 ? 'n-danger' : '');
+        // Calls sub (2) — avg only
+        const avgCallsPerDay = tot.calls.call_days > 0 ? Math.round(tot.calls.total_calls / tot.calls.call_days) : 0;
+        h += _nc(avgCallsPerDay, 'gb-calls-sub grp-act', avgCallsPerDay > 0 ? 'n-good' : '');
+        const avgSecsPerDay = tot.calls.call_days > 0 ? Math.round(tot.calls.total_secs / tot.calls.call_days) : 0;
+        h += _secsCell(avgSecsPerDay, 'grp-act');
+        // Dialer sub (4)
+        h += _nc(dl.sessions,      'gb-dialer-sub grp-act', dl.sessions > 0 ? 'n-good' : '');
+        h += _secsCell(dl.paused_secs,   'grp-act');
+        h += _secsCell(dl.inactive_secs, 'grp-act');
+        h += _nc(dl.skipped, 'grp-act', dl.skipped > 0 ? 'n-warn' : '');
+        // Revenue sub (4)
+        h += _nc(tot.deal.deals_won, 'gb-rev-sub grp-act', tot.deal.deals_won > 0 ? 'n-good' : '');
+        h += _inrCell(tot.deal.deal_value_total,    'grp-act', tot.deal.deal_value_total    > 0 ? 'n-good' : '');
+        h += _inrCell(tot.deal.deal_value_received, 'grp-act', tot.deal.deal_value_received > 0 ? 'n-good' : '');
+        h += _inrCell(tot.deal.deal_value_balance,  'grp-act', tot.deal.deal_value_balance  > 0 ? 'n-warn' : '');
+
+        // Timesheet — 5 cols
+        h += _nc(tot.timesheet.applied,    'gb-ts grp-ts');
+        h += _nc(tot.timesheet.approved,   'grp-ts', 'n-good');
+        h += _nc(tot.timesheet.exceptions, 'grp-ts', tot.timesheet.exceptions > 0 ? 'n-danger' : '');
+        const avgSubMin = (tot.timesheet._cnt||0) > 0 ? Math.round(tot.timesheet.submitted_avg_min / tot.timesheet._cnt) : 0;
+        const avgAppMin = (tot.timesheet._cnt||0) > 0 ? Math.round(tot.timesheet.approved_avg_min  / tot.timesheet._cnt) : 0;
+        h += _minsCell(avgSubMin, 'grp-ts');
+        h += _minsCell(avgAppMin, 'grp-ts');
+
+        // Tickets — 4 cols
+        h += _nc(tot.tickets.raised,  'gb-tickets grp-tickets');
+        h += _nc(tot.tickets.handled, 'grp-tickets', 'n-good');
+        h += _nc(tot.tickets.pending, 'grp-tickets', tot.tickets.pending > 0 ? 'n-warn' : '');
+        h += _pctCell(tot.tickets.in_time, tot.tickets.raised, 'grp-tickets', false);
+
+        // PO — 4 cols
+        h += _nc(tot.po.in_queue,  'gb-po grp-po', tot.po.in_queue  > 0 ? 'n-warn' : '');
+        h += _nc(tot.po.completed, 'grp-po', 'n-good');
+        h += _nc(tot.po.pending,   'grp-po', tot.po.pending   > 0 ? 'n-warn' : '');
+        h += _pctCell(tot.po.completed, tot.po.total, 'grp-po', false);
+
+        // PR — 4 cols
+        h += _nc(tot.pr.in_queue,  'gb-pr grp-pr', tot.pr.in_queue  > 0 ? 'n-warn' : '');
+        h += _nc(tot.pr.completed, 'grp-pr', 'n-good');
+        h += _nc(tot.pr.pending,   'grp-pr', tot.pr.pending   > 0 ? 'n-warn' : '');
+        h += _pctCell(tot.pr.completed, tot.pr.total, 'grp-pr', false);
+
+        return h;
+    }
+
+    // ── Sum rows for dept totals ──────────────────────────────────────────────
+    function _sumRows(rows) {
+        const s = {
+            tasks_assignee: { total:0, handled:0, pending:0, overdue:0 },
+            tasks_creator:  { total:0, handled:0, pending:0, overdue:0 },
+            day_plan:  { days_planned:0, days_finished:0 },
+            kra:       { assigned:0, handled:0, pending:0, skipped:0 },
+            crm:       { new_leads:0, deals_closed:0, not_handled:0, overdue:0 },
+            calls:     { total_calls:0, total_secs:0, call_days:0 },
+            dialer:    { sessions:0, paused_secs:0, inactive_secs:0, skipped:0 },
+            deal:      { deals_won:0, deal_value_total:0, deal_value_received:0, deal_value_balance:0 },
+            timesheet: { applied:0, approved:0, exceptions:0, submitted_avg_min:0, approved_avg_min:0, _cnt:0 },
+            tickets:   { raised:0, handled:0, pending:0, in_time:0 },
+            po:        { total:0, in_queue:0, completed:0, pending:0 },
+            pr:        { total:0, in_queue:0, completed:0, pending:0 },
+            attendance:{ days_present:0, hr_final_present:0, not_logged_out:0, total_worked_minutes:0 },
+        };
+        rows.forEach(r => {
+            ['total','handled','pending','overdue'].forEach(k => {
+                s.tasks_assignee[k] += (r.tasks_assignee[k] || 0);
+                s.tasks_creator[k]  += (r.tasks_creator[k]  || 0);
+            });
+            const dp = r.day_plan || {};
+            s.day_plan.days_planned  += (dp.days_planned  || 0);
+            s.day_plan.days_finished += (dp.days_finished || 0);
+            s.kra.assigned   += (r.kra.assigned   || 0);
+            s.kra.handled    += (r.kra.handled     || 0);
+            s.kra.pending    += (r.kra.pending     || 0);
+            s.kra.skipped    += (r.kra.skipped     || 0);
+            s.crm.new_leads  += (r.crm.new_leads   || 0);
+            s.crm.deals_closed += (r.crm.deals_closed || 0);
+            s.crm.not_handled  += (r.crm.not_handled  || 0);
+            s.crm.overdue      += (r.crm.overdue       || 0);
+            s.calls.total_calls += (r.calls.total_calls || 0);
+            s.calls.total_secs  += (r.calls.total_secs  || 0);
+            s.calls.call_days   += (r.calls.call_days   || 0);
+            const dl = r.dialer || {};
+            s.dialer.sessions     += (dl.sessions     || 0);
+            s.dialer.paused_secs  += (dl.paused_secs  || 0);
+            s.dialer.inactive_secs+= (dl.inactive_secs|| 0);
+            s.dialer.skipped      += (dl.skipped      || 0);
+            s.deal.deals_won           += (r.deal.deals_won           || 0);
+            s.deal.deal_value_total    += (r.deal.deal_value_total    || 0);
+            s.deal.deal_value_received += (r.deal.deal_value_received || 0);
+            s.deal.deal_value_balance  += (r.deal.deal_value_balance  || 0);
+            s.timesheet.applied    += (r.timesheet.applied    || 0);
+            s.timesheet.approved   += (r.timesheet.approved   || 0);
+            s.timesheet.exceptions += (r.timesheet.exceptions || 0);
+            if ((r.timesheet.submitted_avg_min||0) > 0 || (r.timesheet.approved_avg_min||0) > 0) {
+                s.timesheet.submitted_avg_min += (r.timesheet.submitted_avg_min || 0);
+                s.timesheet.approved_avg_min  += (r.timesheet.approved_avg_min  || 0);
+                s.timesheet._cnt++;
+            }
+            s.tickets.raised  += (r.tickets.raised  || 0);
+            s.tickets.handled += (r.tickets.handled || 0);
+            s.tickets.pending += (r.tickets.pending || 0);
+            s.tickets.in_time += (r.tickets.in_time || 0);
+            s.po.total     += (r.po.total     || 0);
+            s.po.in_queue  += (r.po.in_queue  || 0);
+            s.po.completed += (r.po.completed || 0);
+            s.po.pending   += (r.po.pending   || 0);
+            s.pr.total     += (r.pr.total     || 0);
+            s.pr.in_queue  += (r.pr.in_queue  || 0);
+            s.pr.completed += (r.pr.completed || 0);
+            s.pr.pending   += (r.pr.pending   || 0);
+            s.attendance.days_present         += (r.attendance.days_present         || 0);
+            s.attendance.hr_final_present     += (r.attendance.hr_final_present     || 0);
+            s.attendance.not_logged_out       += (r.attendance.not_logged_out       || 0);
+            s.attendance.total_worked_minutes += (r.attendance.total_worked_minutes || 0);
+        });
+        return s;
+    }
+
+    // ── Cell helpers ──────────────────────────────────────────────────────────
+    function _nc(val, extraCls, colorCls) {
+        const v   = val || 0;
+        const cls = colorCls || (v === 0 ? 'n-zero' : '');
+        return '<td class="num-cell ' + (extraCls || '') + '"><span class="n-num ' + cls + '">' + (v === 0 ? '—' : v) + '</span></td>';
+    }
+
+    function _pctCell(num, den, extraCls, isOverdue) {
+        if (!den || den === 0) return '<td class="num-cell ' + (extraCls || '') + '"><span class="n-zero">—</span></td>';
+        const pct = Math.round(num / den * 100);
+        let cls = '';
+        if (isOverdue) cls = pct > 30 ? 'n-danger' : pct > 10 ? 'n-warn' : 'n-good';
+        else           cls = pct >= 80 ? 'n-good' : pct >= 50 ? 'n-warn' : 'n-danger';
+        return '<td class="num-cell ' + (extraCls || '') + '"><span class="n-num ' + cls + '">' + pct + '%</span></td>';
+    }
+
+    function _secsCell(secs, extraCls) {
+        const s = secs || 0;
+        if (s === 0) return '<td class="num-cell-wide ' + (extraCls || '') + '"><span class="n-zero">—</span></td>';
+        return '<td class="num-cell-wide ' + (extraCls || '') + '"><span class="n-num n-good">' + _fmtSecs(s) + '</span></td>';
+    }
+
+    function _minsCell(mins, extraCls) {
+        const m = mins || 0;
+        if (m === 0) return '<td class="num-cell-wide ' + (extraCls || '') + '"><span class="n-zero">—</span></td>';
+        const cls = m >= 480 ? 'n-good' : m >= 360 ? 'n-warn' : 'n-danger'; // 8h / 6h benchmarks
+        return '<td class="num-cell-wide ' + (extraCls || '') + '"><span class="n-num ' + cls + '">' + _fmtMins(m) + '</span></td>';
+    }
+
+    function _inrCell(amt, extraCls, colorCls) {
+        const a = amt || 0;
+        if (a === 0) return '<td class="num-cell-wide ' + (extraCls || '') + '"><span class="n-zero">—</span></td>';
+        return '<td class="num-cell-wide ' + (extraCls || '') + '"><span class="n-num ' + (colorCls || '') + '">' + _fmtINR(a) + '</span></td>';
+    }
+
+    function _diffCell(diff, extraCls) {
+        const d = diff || 0;
+        if (d === 0) return '<td class="num-cell ' + (extraCls || '') + '"><span class="n-zero">—</span></td>';
+        const cls = d > 0 ? 'n-good' : d < 0 ? 'n-danger' : '';
+        const pfx = d > 0 ? '+' : '';
+        return '<td class="num-cell ' + (extraCls || '') + '"><span class="n-num ' + cls + '">' + pfx + d + '</span></td>';
+    }
+
+    // ── Format helpers ────────────────────────────────────────────────────────
+    function _fmtSecs(s) {
+        const secs = Math.round(s || 0);
+        if (secs === 0) return '—';
+        const h = Math.floor(secs / 3600);
+        const m = Math.floor((secs % 3600) / 60);
+        if (h > 0) return h + 'h ' + m + 'm';
+        const sc = secs % 60;
+        return m > 0 ? m + 'm ' + sc + 's' : sc + 's';
+    }
+
+    function _fmtMins(m) {
+        const mins = Math.round(m || 0);
+        if (mins === 0) return '—';
+        const h = Math.floor(mins / 60);
+        const rm = mins % 60;
+        if (h > 0 && rm > 0) return h + 'h ' + rm + 'm';
+        if (h > 0) return h + 'h';
+        return rm + 'm';
+    }
+
+    function _fmtINR(amt) {
+        const a = amt || 0;
+        if (a === 0) return '—';
+        if (a >= 10000000) return '₹' + (a / 10000000).toFixed(2) + 'Cr';
+        if (a >= 100000)   return '₹' + (a / 100000).toFixed(2) + 'L';
+        if (a >= 1000)     return '₹' + Math.round(a).toLocaleString('en-IN');
+        return '₹' + Math.round(a);
+    }
+
+    function _fmtN(n) {
+        const v = n || 0;
+        if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
+        if (v >= 1000)    return (v / 1000).toFixed(1) + 'K';
+        return String(v);
+    }
+
+    function _esc(str) {
+        return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ── Executive Dashboard ───────────────────────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // State
+    let _execData          = [];
+    let _execRowDataStore  = {};
+    let _execFilteredData  = [];
+    let _execSort          = { col: 'rank', asc: true };
+    let _execHiddenEmps    = new Set();
+    let _execDepts         = [];
+    let _execCfg           = {};
+    let _execDynKpiCodes   = [];
+    let _execLastFrom      = '';
+    let _execLastTo        = '';
+
+    const _EXEC_BASE_KPI_CODES = new Set(['attendance','day_plan','kra','timesheet','talk_time','service_tickets']);
+    const _EXEC_KPI_LABELS     = {talk_time:'Talk Time',crm_revenue:'CRM Revenue',service_tickets:'Svc Tickets',procurement:'Procurement'};
+
+    // IST today helper
+    function _execGetISTToday() {
+        const now = new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60000);
+        return ist.toISOString().split('T')[0];
+    }
+
+    // Exec-specific format helpers (complement the existing _fmtINR)
+    function _fmtHrs(m) {
+        if (!m) return '0h';
+        const h  = Math.floor(m / 60);
+        const mn = Math.round(m % 60);
+        return mn > 0 ? h + 'h ' + mn + 'm' : h + 'h';
+    }
+    function _scoreBadgeColor(s) {
+        if (s >= 80) return '#16a34a';
+        if (s >= 60) return '#2563eb';
+        if (s >= 40) return '#d97706';
+        return '#dc2626';
+    }
+    function _scorePill(s) {
+        const c = _scoreBadgeColor(s);
+        return '<span style="display:inline-block;background:' + c + ';color:#fff;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;">' + s + '%</span>';
+    }
+
+    function _execDefaultDates() {
+        const to   = new Date();
+        const from = new Date();
+        from.setDate(from.getDate() - 29);
+        const fmt = d => d.toISOString().split('T')[0];
+        document.getElementById('execDateFrom').value = fmt(from);
+        document.getElementById('execDateTo').value   = fmt(to);
+    }
+
+    let _execQuickPeriod = 'mtd';
+
+    function setExecQuickPeriod(period) {
+        _execQuickPeriod = period;
+        ['FTD','Week','MTD','Overall','Custom'].forEach(k => {
+            const el = document.getElementById('eqb' + k);
+            if (el) el.classList.remove('active');
+        });
+        const btnMap = { ftd:'FTD', week:'Week', mtd:'MTD', overall:'Overall', custom:'Custom' };
+        const btn = document.getElementById('eqb' + btnMap[period]);
+        if (btn) btn.classList.add('active');
+
+        const customWrap = document.getElementById('execCustomDateWrap');
+        if (customWrap) customWrap.style.display = (period === 'custom') ? 'flex' : 'none';
+
+        if (period === 'custom') return; // user sets dates manually then hits Apply
+
+        const today = _execGetISTToday();
+        let from = today, to = today;
+        if (period === 'week') {
+            const d   = new Date(today);
+            const day = d.getDay();
+            const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+            const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+            from = mon.toISOString().split('T')[0];
+            to   = sun.toISOString().split('T')[0];
+        } else if (period === 'mtd') {
+            from = today.slice(0,7) + '-01';
+        } else if (period === 'overall') {
+            from = today.slice(0,4) + '-01-01'; // YTD (Jan 1 of current year)
+        }
+        document.getElementById('execDateFrom').value = from;
+        document.getElementById('execDateTo').value   = to;
+        loadExecutiveDashboard();
+    }
+
+    async function loadExecutiveDashboard() {
+        const _today    = _execGetISTToday();
+        const _mtdStart = _today.slice(0,7) + '-01';
+        const _edfEl    = document.getElementById('execDateFrom');
+        const _edtEl    = document.getElementById('execDateTo');
+        if (_edfEl && !_edfEl.value) _edfEl.value = _mtdStart;
+        if (_edtEl && !_edtEl.value) _edtEl.value = _today;
+        const dFrom    = _edfEl ? _edfEl.value : _mtdStart;
+        const dTo      = _edtEl ? _edtEl.value : _today;
+        const deptId   = document.getElementById('execDeptFilter').value;
+        const companyId = document.getElementById('execCompanyFilter').value;
+        const inclSelf = document.getElementById('execIncludeSelf').checked;
+        const search   = document.getElementById('execSearch').value;
+
+        if (!dFrom || !dTo) return;
+
+        _execLastFrom = dFrom;
+        _execLastTo   = dTo;
+
+        document.getElementById('execLoading').style.display   = 'block';
+        document.getElementById('execTable').style.display     = 'none';
+        document.getElementById('execSummaryStrip').style.display = 'none';
+
+        try {
+            const myTeamOnly = document.getElementById('execMyTeamOnly')?.checked;
+            let url = '/api/v1/staff/progress/executive-dashboard?date_from=' + dFrom + '&date_to=' + dTo;
+            if (deptId)    url += '&department_id=' + deptId;
+            if (companyId) url += '&company_id=' + companyId;
+            if (inclSelf)  url += '&include_self=true';
+            if (myTeamOnly) url += '&my_team_only=true';
+
+            const resp = await staffFetch(url);
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                alert(err.detail || 'Failed to load executive dashboard.');
+                return;
+            }
+            const result = await resp.json();
+            _execData  = result.data  || [];
+            _execDepts = result.departments || [];
+
+            // Populate company filter (once)
+            const coSel  = document.getElementById('execCompanyFilter');
+            const prevCo = coSel.value;
+            if ((result.companies || []).length && coSel.options.length <= 1) {
+                result.companies.sort((a,b) => a.name.localeCompare(b.name)).forEach(c => {
+                    const o = document.createElement('option');
+                    o.value = c.id; o.textContent = c.name;
+                    coSel.appendChild(o);
+                });
+                if (prevCo) coSel.value = prevCo;
+            }
+
+            // Populate dept filter (once)
+            const deptSel = document.getElementById('execDeptFilter');
+            if (_execDepts.length && deptSel.options.length <= 1) {
+                _execDepts.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value   = d.id;
+                    opt.textContent = d.name;
+                    deptSel.appendChild(opt);
+                });
+            }
+
+            // Update column header weight labels from live config
+            const _wts = result.weights || {};
+            const _hdrWtMap = {
+                'hdr-wt-att':  _wts['attendance'],
+                'hdr-wt-dp':   _wts['day_plan'],
+                'hdr-wt-kra':  _wts['kra'],
+                'hdr-wt-ts':   _wts['timesheet'],
+                'hdr-wt-dept': _wts['dept'] || (100 - (_wts['attendance']||0) - (_wts['day_plan']||0) - (_wts['kra']||0) - (_wts['timesheet']||0)),
+                'hdr-wt-talk': _wts['talk_time'],
+            };
+            const _wtsTooltip = 'Global default weight from Performance Configuration.\nIndividual employees may have custom weights or targets applied.';
+            Object.entries(_hdrWtMap).forEach(([elId, wt]) => {
+                const el = document.getElementById(elId);
+                if (el && wt !== undefined && wt !== null) {
+                    el.textContent = Math.round(wt) + '%';
+                    // Mark the enclosing <th> with the global-default tooltip
+                    const th = el.closest('th');
+                    if (th) th.title = _wtsTooltip;
+                }
+            });
+
+            // Show/hide My Team Only toggle based on access level from server
+            window._execViewerUnrestricted = !!result.viewer_unrestricted;
+            const _myTeamWrap = document.getElementById('execMyTeamOnlyWrap');
+            if (_myTeamWrap) {
+                // Only show for non-VGK4U key leadership (server confirms unrestricted = false)
+                if (!window._userIsVgkSupreme && !result.viewer_unrestricted) {
+                    _myTeamWrap.style.display = 'flex';
+                }
+            }
+            _execCfg = result.config || {};
+
+            // Compute dynamic KPI codes
+            _execDynKpiCodes = Object.keys(_execCfg).filter(code =>
+                !_EXEC_BASE_KPI_CODES.has(code) &&
+                !['dept'].includes(code) &&
+                _execCfg[code]?.enabled !== false &&
+                (_execCfg[code]?.weightage || 0) > 0
+            );
+
+            // Inject dynamic TH columns into exec table thead
+            (function _injectExecDynCols() {
+                const theadRow = document.querySelector('#execTable thead tr');
+                if (!theadRow) return;
+                theadRow.querySelectorAll('th[data-exec-dyn="1"]').forEach(th => th.remove());
+                const deptTh = theadRow.querySelector('th[onclick="sortExecTable(\'dept_score\')"]');
+                if (!deptTh) return;
+                let insertAfter = deptTh;
+                _execDynKpiCodes.forEach(code => {
+                    const lbl = _EXEC_KPI_LABELS[code] || code.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+                    const wt  = Math.round(_execCfg[code]?.weightage || 0);
+                    const th  = document.createElement('th');
+                    th.setAttribute('data-exec-dyn', '1');
+                    th.style.cssText = 'cursor:pointer;text-align:center;';
+                    th.setAttribute('onclick', 'sortExecTable(\'_kpi_' + code + '\')');
+                    th.innerHTML = lbl + '<br><small style="opacity:.75;font-weight:400;">' + wt + '%</small> <i class="fas fa-sort" id="esort-_kpi_' + code + '"></i>';
+                    insertAfter.insertAdjacentElement('afterend', th);
+                    insertAfter = th;
+                });
+            })();
+
+            // Add flat score fields for sorting
+            _execData.forEach(r => {
+                r.att_score  = r.score_breakdown?.attendance || 0;
+                r.dp_score   = r.score_breakdown?.day_plan   || 0;
+                r.kra_score  = r.score_breakdown?.kra        || 0;
+                r.ts_score   = r.score_breakdown?.timesheet  || 0;
+                r.dept_score = r.score_breakdown?.dept       || 0;
+                _execDynKpiCodes.forEach(code => {
+                    r['_kpi_' + code] = r.kpi_scores?.[code]?.score || 0;
+                });
+            });
+
+            buildExecEmpFilter(_execData);
+            _execFilteredData = [..._execData];
+            if (search) filterExecTable(); else renderExecTable();
+
+            // Summary strip
+            const avg = _execData.length ? Math.round(_execData.reduce((s,r) => s + r.overall_score, 0) / _execData.length) : 0;
+            const top = _execData[0];
+            document.getElementById('exec-total').textContent     = result.total + ' employees';
+            document.getElementById('exec-avg').textContent       = 'Avg Score: ' + avg + '%';
+            document.getElementById('exec-top').textContent       = top ? 'Top: ' + top.name + ' (' + top.overall_score + '%)' : '';
+            document.getElementById('exec-range-lbl').textContent = dFrom + ' \u2192 ' + dTo;
+            document.getElementById('execSummaryStrip').style.display = 'block';
+
+        } catch (e) {
+            console.error('Executive dashboard error:', e);
+            alert('Error loading data. Please try again.');
+        } finally {
+            document.getElementById('execLoading').style.display = 'none';
+            document.getElementById('execTable').style.display   = '';
+        }
+    }
+
+    function filterExecTable() {
+        const q = (document.getElementById('execSearch').value || '').toLowerCase();
+        _execFilteredData = _execData.filter(r => {
+            if (_execHiddenEmps.has(r.employee_id)) return false;
+            if (!q) return true;
+            return (r.name||'').toLowerCase().includes(q) ||
+                   (r.emp_code||'').toLowerCase().includes(q) ||
+                   (r.department||'').toLowerCase().includes(q) ||
+                   (r.role||'').toLowerCase().includes(q);
+        });
+        const sorted = [..._execFilteredData].sort((a,b) => b.overall_score - a.overall_score);
+        sorted.forEach((r,i) => { r._filtered_rank = i + 1; });
+        renderExecTable();
+    }
+
+    function buildExecEmpFilter(data) {
+        if (!data || !data.length) return;
+        _execHiddenEmps.clear();
+        const container = document.getElementById('execEmpCheckboxes');
+        container.innerHTML = data.map(r =>
+            '<label class="form-check mb-1"><input type="checkbox" class="form-check-input exec-emp-cb" value="' + r.employee_id + '" checked onchange="applyExecEmpFilter()"><span class="form-check-label" style="font-size:13px;">' + (r.name || r.emp_code) + '</span></label>'
+        ).join('');
+        document.getElementById('execSelectAll').checked = true;
+        updateExecFilterCount(data.length, data.length);
+        document.getElementById('execEmpFilterWrap').style.display = '';
+    }
+
+    function toggleExecSelectAll() {
+        const checked = document.getElementById('execSelectAll').checked;
+        document.querySelectorAll('.exec-emp-cb').forEach(cb => { cb.checked = checked; });
+        applyExecEmpFilter();
+    }
+
+    function applyExecEmpFilter() {
+        _execHiddenEmps.clear();
+        const all = document.querySelectorAll('.exec-emp-cb');
+        let visibleCount = 0;
+        all.forEach(cb => {
+            if (cb.checked) visibleCount++;
+            else _execHiddenEmps.add(parseInt(cb.value));
+        });
+        document.getElementById('execSelectAll').checked = _execHiddenEmps.size === 0;
+        updateExecFilterCount(visibleCount, all.length);
+        filterExecTable();
+    }
+
+    function updateExecFilterCount(visible, total) {
+        const badge = document.getElementById('execEmpFilterCount');
+        if (visible === total) { badge.textContent = total; badge.style.background = ''; }
+        else { badge.textContent = visible + '/' + total; badge.style.background = '#f59e0b'; }
+    }
+
+    function sortExecTable(col) {
+        if (_execSort.col === col) _execSort.asc = !_execSort.asc;
+        else { _execSort.col = col; _execSort.asc = col === 'rank' || col === '_filtered_rank'; }
+        document.querySelectorAll('[id^="esort-"]').forEach(i => i.className = 'fas fa-sort');
+        const ic = document.getElementById('esort-' + col);
+        if (ic) ic.className = 'fas fa-sort-' + (_execSort.asc ? 'up' : 'down');
+        renderExecTable();
+    }
+
+    // Returns a small indicator HTML if an employee has custom weight or target for a KPI
+    function _kpiCustomTag(r, kpiCode) {
+        const ks = r.kpi_scores?.[kpiCode];
+        if (!ks) return '';
+        const hasCustom = ks.is_custom_target || ks.is_custom_weight;
+        if (!hasCustom) return '';
+        const parts = [];
+        if (ks.is_custom_weight) parts.push('Weight: ' + Math.round(ks.weightage) + '%');
+        if (ks.is_custom_target) parts.push('Target: ' + ks.target);
+        return '<span style="font-size:9px;background:#f0fdf4;border:1px solid #86efac;color:#15803d;border-radius:3px;padding:0 3px;margin-left:3px;cursor:default;" title="Custom config applied — ' + parts.join(', ') + '">⚙</span>';
+    }
+
+    // Returns a full KPI breakdown HTML table for the expanded row
+    function _buildKpiBreakdown(r) {
+        const _baseKpiMap = [
+            {code:'attendance',  label:'Attendance',   rawField:'att_score'},
+            {code:'day_plan',    label:'Day Plan',     rawField:'dp_score'},
+            {code:'kra',         label:'KRA',          rawField:'kra_score'},
+            {code:'timesheet',   label:'Timesheet',    rawField:'ts_score'},
+        ];
+        const allKpiRows = [..._baseKpiMap];
+        _execDynKpiCodes.forEach(code => {
+            const lbl = _EXEC_KPI_LABELS[code] || code.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+            allKpiRows.push({code, label: lbl, rawField: null});
+        });
+
+        const rows = allKpiRows.map(item => {
+            const ks = r.kpi_scores?.[item.code];
+            if (!ks) return '';
+            const globalCfg = _execCfg[item.code] || {};
+            const isCustomW = ks.is_custom_weight;
+            const isCustomT = ks.is_custom_target;
+            const anyCustom = isCustomW || isCustomT;
+            const wt  = Math.round(ks.weightage);
+            const tgt = ks.target != null ? ks.target : '—';
+            const act = ks.actual  != null ? ks.actual  : '—';
+            const sc  = ks.score   != null ? ks.score + '%' : '—';
+            const customBadge = anyCustom ? '<span style="font-size:9px;background:#f0fdf4;border:1px solid #86efac;color:#15803d;border-radius:3px;padding:0 3px;" title="Per-employee override applied">⚙ custom</span>' : '';
+            const wtStyle = isCustomW ? 'color:#7c3aed;font-weight:700;' : '';
+            const tgtStyle = isCustomT ? 'color:#7c3aed;font-weight:700;' : '';
+            const scoreColor = ks.score >= 80 ? '#16a34a' : ks.score >= 60 ? '#2563eb' : ks.score >= 40 ? '#d97706' : '#dc2626';
+            return '<tr style="font-size:12px;">' +
+                '<td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;">' + item.label + ' ' + customBadge + '</td>' +
+                '<td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center;' + wtStyle + '">' + wt + '%</td>' +
+                '<td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center;' + tgtStyle + '">' + tgt + '</td>' +
+                '<td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center;">' + act + '</td>' +
+                '<td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;text-align:center;font-weight:700;color:' + scoreColor + ';">' + sc + '</td>' +
+                '</tr>';
+        }).join('');
+
+        return '<div style="margin-top:12px;"><div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">KPI Score Breakdown <span style="font-size:10px;color:#9ca3af;font-weight:400;">(⚙ = custom config applied for this employee)</span></div>' +
+            '<table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;">' +
+            '<thead><tr style="background:#f8fafc;font-size:11px;color:#6b7280;">' +
+            '<th style="padding:5px 8px;text-align:left;font-weight:600;">KPI</th>' +
+            '<th style="padding:5px 8px;text-align:center;font-weight:600;">Weight</th>' +
+            '<th style="padding:5px 8px;text-align:center;font-weight:600;">Target</th>' +
+            '<th style="padding:5px 8px;text-align:center;font-weight:600;">Actual</th>' +
+            '<th style="padding:5px 8px;text-align:center;font-weight:600;">Score</th>' +
+            '</tr></thead>' +
+            '<tbody>' + rows + '</tbody></table></div>';
+    }
+
+    function renderExecTable() {
+        const { col, asc } = _execSort;
+        const rows = [..._execFilteredData].sort((a, b) => {
+            let va = a[col] !== undefined ? a[col] : (a._filtered_rank !== undefined ? a._filtered_rank : 0);
+            let vb = b[col] !== undefined ? b[col] : (b._filtered_rank !== undefined ? b._filtered_rank : 0);
+            if (typeof va === 'string') va = va.toLowerCase();
+            if (typeof vb === 'string') vb = vb.toLowerCase();
+            if (va < vb) return asc ? -1 : 1;
+            if (va > vb) return asc ? 1 : -1;
+            return 0;
+        });
+
+        const tbody = document.getElementById('execTableBody');
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="18" class="empty-state">No data for selected filters</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = rows.map((r) => {
+            const deptType = r.dept_type;
+            const rankDisp = r._filtered_rank || r.rank;
+            const rankBadge = rankDisp === 1
+                ? '<span style="background:#f59e0b;color:#fff;border-radius:50%;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;">\uD83E\uDD47</span>'
+                : rankDisp === 2
+                ? '<span style="background:#9ca3af;color:#fff;border-radius:50%;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;">\uD83E\uDD48</span>'
+                : rankDisp === 3
+                ? '<span style="background:#b45309;color:#fff;border-radius:50%;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;">\uD83E\uDD49</span>'
+                : '<span style="font-weight:700;color:#374151;">#' + rankDisp + '</span>';
+
+            let deptRawSub = '';
+            if (deptType === 'sales') {
+                deptRawSub = '<div style="font-size:10px;color:#6b7280;margin-top:2px;">' + r.leads_won + 'W / ' + r.leads_new + ' leads</div>';
+            } else if (deptType === 'service') {
+                deptRawSub = '<div style="font-size:10px;color:#6b7280;margin-top:2px;">' + r.tickets_resolved + '/' + r.tickets_total + ' tickets</div>';
+            } else if (r.prh_total > 0 || r.po_total > 0) {
+                deptRawSub = '<div style="font-size:10px;color:#6b7280;margin-top:2px;">PO: ' + r.po_within_tat + '/' + r.po_total + '</div>';
+            }
+            const deptScoreCell = (deptType === 'other' && r.po_total === 0)
+                ? '<span style="color:#9ca3af;font-size:11px;">N/A</span>'
+                : _scorePill(r.dept_score) + deptRawSub;
+
+            const vgkColDisp = window._userIsKeyLeader ? '' : 'display:none;';
+            const ownDV  = r.own_deal_value_received > 0  ? '<span style="font-weight:600;">'              + _fmtINR(r.own_deal_value_received)  + '</span>' : '<span style="color:#9ca3af;">' + (deptType==='sales'?'₹0':'—') + '</span>';
+            const txnRev = r.crm_txn_revenue > 0          ? '<span style="font-weight:600;color:#16a34a;">' + _fmtINR(r.crm_txn_revenue)          + '</span>' : '<span style="color:#9ca3af;">—</span>';
+            const teamDV = r.team_deal_value_received > 0  ? '<span style="font-weight:600;color:#6366f1;">' + _fmtINR(r.team_deal_value_received) + '</span>' : '<span style="color:#9ca3af;">—</span>';
+
+            const tickets = deptType === 'service'
+                ? '<span style="font-weight:600;">' + r.tickets_resolved + '</span><span style="color:#9ca3af;">/' + r.tickets_total + '</span>'
+                : '<span style="color:#9ca3af;">—</span>';
+
+            const tatCell = deptType === 'service'
+                ? '<span style="font-weight:600;color:' + (r.within_tat_pct>=80?'#16a34a':r.within_tat_pct>=50?'#d97706':'#dc2626') + ';">' + r.within_tat_pct + '%</span><div style="font-size:10px;color:#9ca3af;">' + r.within_tat_count + '/' + r.tickets_total + ' w/in SLA</div>'
+                : '<span style="color:#9ca3af;">—</span>';
+
+            function _fmtSecsE(s) {
+                if (!s) return '—';
+                const h = Math.floor(s/3600), m = Math.floor((s%3600)/60);
+                return h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+            }
+            const avgTalkFmt = r.avg_talk_secs_per_day > 0 ? _fmtSecsE(r.avg_talk_secs_per_day) : null;
+            const talkCell = r.talk_time_seconds > 0
+                ? '<span style="font-weight:600;">' + (avgTalkFmt||'—') + '/day</span><div style="font-size:10px;color:#6b7280;">' + _fmtSecsE(r.talk_time_seconds) + ' total</div>'
+                : '<span style="color:#9ca3af;">—</span>';
+
+            const avgHrsCell = r.avg_approved_minutes_per_day > 0
+                ? '<span style="font-weight:600;">' + _fmtHrs(r.avg_approved_minutes_per_day) + '/day</span><div style="font-size:10px;color:#6b7280;">' + _fmtHrs(r.total_worked_minutes) + ' total</div>'
+                : (r.total_worked_minutes > 0 ? '<span style="color:#9ca3af;">' + _fmtHrs(r.total_worked_minutes) + '</span>' : '<span style="color:#9ca3af;">—</span>');
+
+            const _dpDisp = (r.days_present % 1 === 0) ? r.days_present : (+r.days_present).toFixed(1);
+            const dpCell = '<span style="font-weight:600;">' + _dpDisp + '</span><div style="font-size:10px;color:#6b7280;">' + (r.total_days ? 'of ' + r.total_days + 'd' : '') + '</div>';
+
+            const poCell = r.po_total > 0
+                ? '<span style="font-weight:600;color:' + (r.po_tat_pct>=80?'#16a34a':r.po_tat_pct>=50?'#d97706':'#dc2626') + ';">' + r.po_within_tat + '/' + r.po_total + '</span><div style="font-size:10px;color:#9ca3af;">' + (r.po_tat_pct!=null?r.po_tat_pct+'% on-time':'') + '</div>'
+                : '<span style="color:#9ca3af;">—</span>';
+
+            const prhCell = r.prh_total > 0
+                ? '<span style="font-weight:600;color:' + (r.prh_tat_pct>=80?'#16a34a':r.prh_tat_pct>=50?'#d97706':'#dc2626') + ';">' + r.prh_within_tat + '/' + r.prh_total + '</span><div style="font-size:10px;color:#9ca3af;">' + (r.prh_tat_pct!=null?r.prh_tat_pct+'% on-time':'') + '</div>'
+                : '<span style="color:#9ca3af;">—</span>';
+
+            function _fmtKpiActual(code, ks, row) {
+                if (ks?.actual == null) return '';
+                let txt = '';
+                if (code === 'talk_time')       txt = Math.round(ks.actual) + ' min/day';
+                else if (code === 'crm_revenue') txt = ks.actual > 0 ? _fmtINR(ks.actual) : '₹0';
+                else if (code === 'service_tickets') txt = row.tickets_resolved + '/' + row.tickets_total + ' tkts';
+                else if (['procurement','po_handling','procurement_handling'].includes(code)) txt = ks.actual + '%';
+                else txt = ('' + ks.actual).slice(0, 10);
+                return '<div style="font-size:10px;color:#6b7280;margin-top:2px;">' + txt + '</div>';
+            }
+
+            _execRowDataStore[r.employee_id] = r;
+
+            const dynCols = _execDynKpiCodes.map(code => {
+                const ks = r.kpi_scores?.[code];
+                const actual = _fmtKpiActual(code, ks, r);
+                const customTag = _kpiCustomTag(r, code);
+                return '<td style="text-align:center;">' + (ks ? _scorePill(ks.score) + customTag + actual : '<span style="color:#9ca3af;font-size:11px;">N/A</span>') + '</td>';
+            }).join('');
+
+            // Has any KPI custom config on this employee?
+            const _anyCustom = ['attendance','day_plan','kra','timesheet'].some(c =>
+                r.kpi_scores?.[c]?.is_custom_target || r.kpi_scores?.[c]?.is_custom_weight
+            ) || _execDynKpiCodes.some(c =>
+                r.kpi_scores?.[c]?.is_custom_target || r.kpi_scores?.[c]?.is_custom_weight
+            );
+            const overallCustomNote = _anyCustom
+                ? '<span title="This employee has custom KPI weights or targets — click row to see breakdown" style="font-size:9px;background:#ede9fe;border:1px solid #c4b5fd;color:#7c3aed;border-radius:3px;padding:0 3px;display:inline-block;margin-top:2px;cursor:default;">⚙ custom</span>'
+                : '';
+
+            return '<tr class="exec-row" data-eid="' + r.employee_id + '" style="cursor:pointer;" onclick="toggleExecExpand(this,' + r.employee_id + ')">' +
+                '<td class="exec-sc-1" style="text-align:center;">' + rankBadge + '</td>' +
+                '<td class="exec-sc-2"><div style="font-weight:600;">' + (r.name||'') + '</div><div style="font-size:11px;color:#6b7280;">' + (r.emp_code||'') + '</div><div style="font-size:10px;color:#94a3b8;">' + (r.department||'') + '</div></td>' +
+                '<td class="exec-sc-3" style="font-size:12px;">' + (r.reporting_manager_name||'—') + '</td>' +
+                '<td class="exec-sc-4" style="text-align:center;font-size:12px;">' + dpCell + '</td>' +
+                '<td class="exec-sc-5" style="text-align:center;">' + _scorePill(r.overall_score) + '<div>' + overallCustomNote + '</div></td>' +
+                '<td style="text-align:center;">' + _scorePill(r.att_score) + _kpiCustomTag(r,'attendance') + '<div style="font-size:10px;color:#6b7280;margin-top:2px;">' + r.days_present + 'd pres.</div></td>' +
+                '<td style="text-align:center;">' + _scorePill(r.dp_score) + _kpiCustomTag(r,'day_plan') + '</td>' +
+                '<td style="text-align:center;">' + _scorePill(r.kra_score) + _kpiCustomTag(r,'kra') + '</td>' +
+                '<td style="text-align:center;">' + _scorePill(r.ts_score) + _kpiCustomTag(r,'timesheet') + '</td>' +
+                '<td style="text-align:center;">' + deptScoreCell + '</td>' +
+                dynCols +
+                '<td style="text-align:center;font-size:12px;">' + avgHrsCell + '</td>' +
+                '<td style="text-align:center;font-size:12px;">' + tickets + '</td>' +
+                '<td style="text-align:center;font-size:12px;">' + tatCell + '</td>' +
+                '<td style="text-align:center;font-size:12px;">' + talkCell + '</td>' +
+                '<td class="exec-vgk-col" style="text-align:center;font-size:12px;' + vgkColDisp + '">' + poCell + '</td>' +
+                '<td class="exec-vgk-col" style="text-align:center;font-size:12px;' + vgkColDisp + '">' + prhCell + '</td>' +
+                '<td class="exec-vgk-col" style="text-align:center;font-size:12px;' + vgkColDisp + '">' + ownDV + '</td>' +
+                '<td class="exec-vgk-col" style="text-align:center;font-size:12px;' + vgkColDisp + '">' + txnRev + '</td>' +
+                '<td class="exec-vgk-col" style="text-align:center;font-size:12px;' + vgkColDisp + '">' + teamDV + '</td>' +
+                '<td style="text-align:center;white-space:nowrap;"><i class="fas fa-chevron-down exec-chevron" style="color:#9ca3af;font-size:11px;"></i>' +
+                '<button onclick="event.stopPropagation();viewEmpRange(' + r.employee_id + ',' + JSON.stringify(r.name) + ')" style="margin-left:6px;font-size:10px;padding:2px 7px;border:1px solid #2563eb;background:#eff6ff;color:#2563eb;border-radius:4px;cursor:pointer;font-weight:600;vertical-align:middle;">View</button></td>' +
+                '</tr>' +
+                '<tr class="exec-expand-row" id="exec-expand-' + r.employee_id + '" style="display:none;">' +
+                '<td colspan="30" style="padding:0;background:#f8fafc;" id="exec-expand-td-' + r.employee_id + '"></td>' +
+                '</tr>';
+        }).join('');
+
+        setTimeout(applyExecStickyOffsets, 50);
+    }
+
+    function applyExecStickyOffsets() {
+        const table = document.getElementById('execTable');
+        if (!table) return;
+        const headerRow = table.querySelector('thead tr');
+        if (!headerRow) return;
+        const stickyClasses = ['exec-sc-1','exec-sc-2','exec-sc-3','exec-sc-4','exec-sc-5'];
+        const ths = stickyClasses.map(c => headerRow.querySelector('.' + c));
+        if (ths.some(th => !th || th.getBoundingClientRect().width === 0)) {
+            setTimeout(applyExecStickyOffsets, 100);
+            return;
+        }
+        let cumLeft = 0;
+        const leftMap = {};
+        ths.forEach((th, i) => {
+            leftMap[stickyClasses[i]] = cumLeft;
+            cumLeft += Math.ceil(th.getBoundingClientRect().width);
+        });
+        let styleEl = document.getElementById('exec-sticky-dyn');
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = 'exec-sticky-dyn';
+            document.head.appendChild(styleEl);
+        }
+        styleEl.textContent = stickyClasses.map(c =>
+            '#execTable .' + c + ' { left: ' + (leftMap[c] || 0) + 'px !important; }'
+        ).join('\n');
+    }
+
+    function toggleExecExpand(rowEl, empId) {
+        const r = _execRowDataStore[empId];
+        if (!r) return;
+        const expandRow = document.getElementById('exec-expand-' + r.employee_id);
+        if (!expandRow) return;
+        const isOpen = expandRow.style.display !== 'none';
+        document.querySelectorAll('.exec-expand-row').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.exec-row .exec-chevron').forEach(i => i.className = 'fas fa-chevron-down exec-chevron');
+        if (!isOpen) {
+            const td = document.getElementById('exec-expand-td-' + r.employee_id);
+            if (td && !td._built) {
+                let cards = [
+                    {icon:'\uD83D\uDCC5',label:'Attendance', score:r.att_score, detail: r.days_present + ' days \u00B7 Avg ' + (r.days_present > 0 ? _fmtHrs(Math.round(r.total_worked_minutes / r.days_present)) : '—') + '/day', extra: 'Approved: ' + _fmtHrs(r.avg_approved_minutes_per_day) + '/day'},
+                    {icon:'\uD83D\uDCCB',label:'KRA',        score:r.kra_score, detail:'KRA completion rate'},
+                    {icon:'\u23F1',      label:'Timesheet',  score:r.ts_score,  detail:'Days with submitted entries'},
+                    {icon:'\uD83D\uDCC6',label:'Day Plan',   score:r.dp_score,  detail:'Daily plan completion'},
+                ];
+                if (r.dept_type === 'sales') {
+                    cards.push({icon:'\uD83E\uDD1D',label:'Sales Score',    score:r.dept_score, detail:r.leads_won + ' won / ' + r.leads_new + ' leads'});
+                    cards.push({icon:'\uD83D\uDCB0',label:'Own Deal Value', score:null, detail:'Received: ' + (_fmtINR(r.own_deal_value_received)||'₹0'), extra:'Team Revenue: ' + (_fmtINR(r.team_deal_value_received)||'—')});
+                } else if (r.dept_type === 'service') {
+                    cards.push({icon:'\uD83D\uDD27',label:'Service Score', score:r.dept_score, detail:r.tickets_resolved + ' resolved / ' + r.tickets_total + ' tickets'});
+                }
+                td.innerHTML = '<div style="padding:14px 18px;border-top:2px solid #2563eb;"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">' +
+                    cards.map(c => {
+                        const scoreHtml = (c.score !== null && c.score !== undefined)
+                            ? '<div style="font-size:22px;font-weight:800;color:' + _scoreBadgeColor(c.score) + ';">' + c.score + '%</div>'
+                            : '';
+                        return '<div style="background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:12px;">' +
+                               '<div style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-bottom:6px;">' + c.icon + ' ' + c.label + '</div>' +
+                               scoreHtml +
+                               '<div style="font-size:12px;color:#374151;margin-top:4px;">' + c.detail + '</div>' +
+                               (c.extra ? '<div style="font-size:12px;color:#6b7280;margin-top:2px;">' + c.extra + '</div>' : '') +
+                               '</div>';
+                    }).join('') +
+                '</div>' +
+                _buildKpiBreakdown(r) +
+                '</div>';
+                td._built = true;
+            }
+            expandRow.style.display = '';
+            const icon = rowEl.querySelector('.exec-chevron');
+            if (icon) icon.className = 'fas fa-chevron-up exec-chevron';
+        }
+    }
+
+    function viewEmpRange(empId, empName) {
+        const execFrom = _execLastFrom;
+        const execTo   = _execLastTo;
+        if (!execFrom || !execTo) {
+            alert('No exec date range loaded. Please load the Executive Dashboard first.');
+            return;
+        }
+        // Navigate to the progress page with the employee pre-selected via URL
+        const url = '/staff/progress?emp_id=' + encodeURIComponent(empId) + '&date_from=' + execFrom + '&date_to=' + execTo;
+        window.open(url, '_blank');
+    }
+
+    function exportExecCSV() {
+        if (!_execData.length) { alert('Load data first.'); return; }
+        const _isVgk = !!window._userIsVgkSupreme;
+        const headers = ['Rank','Emp Code','Name','Department','Role','Days Present','Avg Approved Hrs/Day',
+            'Overall Score%','Attendance%','Day Plan%','KRA%','Timesheet%','Dept Score%',
+            'Hours Worked','Tickets Resolved','Tickets Total','Within TAT%','Within TAT Count',
+            'Talk Time (secs)','Avg Talk Time/Day (secs)',
+            ...(_isVgk ? ['Own DV Received','Revenue (Txn)','Team DV Revenue'] : []),
+            'Leads New','Leads Won'];
+        function _secsToHrs(s) { return s ? (s/3600).toFixed(2) : 0; }
+        const rows = _execFilteredData.map(r => [
+            r._filtered_rank || r.rank, r.emp_code, r.name, r.department, r.role,
+            r.days_present||0, r.avg_approved_minutes_per_day ? (r.avg_approved_minutes_per_day/60).toFixed(2) : 0,
+            r.overall_score, r.att_score, r.dp_score, r.kra_score, r.ts_score, r.dept_score,
+            Math.round((r.total_worked_minutes||0)/60),
+            r.tickets_resolved||0, r.tickets_total||0, r.within_tat_pct||0, r.within_tat_count||0,
+            r.talk_time_seconds||0, r.avg_talk_secs_per_day||0,
+            ...(_isVgk ? [r.own_deal_value_received||0, r.crm_txn_revenue||0, r.team_deal_value_received||0] : []),
+            r.leads_new||0, r.leads_won||0
+        ]);
+        const csv = [headers, ...rows].map(row => row.map(v => '"' + String(v||'').replace(/"/g,'""') + '"').join(',')).join('\n');
+        const blob = new Blob([csv], {type:'text/csv'});
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        const dFrom = document.getElementById('execDateFrom').value;
+        const dTo   = document.getElementById('execDateTo').value;
+        a.href = url;
+        a.download = 'executive_dashboard_' + dFrom + '_' + dTo + '.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // ── Export CSV (snapshot) ─────────────────────────────────────────────────
+    function exportCSV() {
+        if (!_snapFiltered.length) return;
+        const hdr = [
+            'Department','Employee','Emp Code','Company','Manager',
+            'Tasks Assigned','Tasks Created','Tasks Handled','Tasks Pending','Tasks Overdue','Tasks OD%',
+            'Day Plan','Day Done','Day Diff',
+            'KRA Assigned','KRA Handled','KRA Pending','KRA Delayed','KRA Done%',
+            'CRM New','CRM Won','CRM Not Handled','CRM Overdue',
+            'Avg Calls/Day','Avg Talk/Day (secs)',
+            'Dialer Sessions','Dialer Paused (secs)','Dialer Inactive (secs)','Dialer Skipped',
+            'Deals Won','Deal Value (INR)','Revenue Received (INR)','Balance (INR)',
+            'TS Applied','TS Approved','TS Exceptions',
+            'Tickets Raised','Tickets Handled','Tickets Pending','Tickets In-Time%',
+            'PO Queue','PO Completed','PO Pending','PO Done%',
+            'PR Queue','PR Completed','PR Pending','PR Done%',
+            'Days Present','HR Final Present','Not Logged Out','Avg Hrs/Day (mins)'
+        ];
+        const rows = _snapFiltered.map(r => {
+            const ta = r.tasks_assignee || {};
+            const tc = r.tasks_creator  || {};
+            const dp = r.day_plan  || {};
+            const dl = r.dialer    || {};
+            const p  = (n, d) => d ? Math.round(n / d * 100) + '%' : '';
+            return [
+                r.department, r.name, r.emp_code, r.company_name, r.reporting_manager_name,
+                ta.total, tc.total, ta.handled, ta.pending, ta.overdue, p(ta.overdue, ta.total),
+                dp.days_planned, dp.days_finished, (dp.days_finished||0)-(dp.days_planned||0),
+                r.kra.assigned, r.kra.handled, r.kra.pending, r.kra.skipped, p(r.kra.handled, r.kra.assigned),
+                r.crm.new_leads, r.crm.deals_closed, r.crm.not_handled, r.crm.overdue,
+                r.calls.avg_calls_per_day, r.calls.avg_secs_per_day,
+                dl.sessions, dl.paused_secs, dl.inactive_secs, dl.skipped,
+                r.deal.deals_won, r.deal.deal_value_total, r.deal.deal_value_received, r.deal.deal_value_balance,
+                r.timesheet.applied, r.timesheet.approved, r.timesheet.exceptions,
+                r.tickets.raised, r.tickets.handled, r.tickets.pending, p(r.tickets.in_time, r.tickets.raised),
+                r.po.in_queue, r.po.completed, r.po.pending, p(r.po.completed, r.po.total),
+                r.pr.in_queue, r.pr.completed, r.pr.pending, p(r.pr.completed, r.pr.total),
+                r.attendance.days_present, r.attendance.hr_final_present, r.attendance.not_logged_out, r.attendance.avg_mins_per_day
+            ].map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',');
+        });
+        const csv  = [hdr.join(','), ...rows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        const mode = _snapSection === 'range'
+            ? document.getElementById('snapFrom').value + '_to_' + document.getElementById('snapTo').value
+            : 'overall';
+        a.href = url; a.download = 'ops_snapshot_' + mode + '.csv';
+        a.click(); URL.revokeObjectURL(url);
+    }
+    </script>
+</body>
+</html>

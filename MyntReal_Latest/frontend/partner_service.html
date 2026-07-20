@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Tickets - Partner Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/partner-token-manager.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; }
+        .page-header {
+            background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%);
+            color: white; padding: 28px 30px; border-radius: 0 0 20px 20px; margin-bottom: 28px;
+        }
+        .page-header h1 { font-size: 1.8rem; font-weight: 700; margin: 0; }
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1001;
+            background: #1565c0; color: white; border: none; border-radius: 8px; padding: 10px 15px;
+        }
+        @media (max-width: 768px) { .mobile-menu-toggle { display: block; } }
+        .card { border: none; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .stat-card { border-radius: 14px; padding: 18px 20px; color: white; text-align: center; margin-bottom: 16px; }
+        .stat-card .stat-val { font-size: 1.8rem; font-weight: 700; }
+        .stat-card .stat-lbl { font-size: 0.82rem; opacity: 0.9; }
+        .stat-blue   { background: linear-gradient(135deg, #1565c0, #42a5f5); }
+        .stat-orange { background: linear-gradient(135deg, #e65100, #ffb74d); }
+        .stat-green  { background: linear-gradient(135deg, #1b5e20, #43a047); }
+        .stat-purple { background: linear-gradient(135deg, #4a148c, #ce93d8); }
+        .filter-bar { background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .filter-btn { border-radius: 20px; font-size: 0.82rem; padding: 5px 14px; margin: 2px; }
+        .filter-btn.active { background: #1565c0; color: white; border-color: #1565c0; }
+        .form-label { font-weight: 600; font-size: 0.88rem; color: #444; margin-bottom: 4px; }
+        .form-control, .form-select { border-radius: 8px; font-size: 0.9rem; }
+        .table th { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: #666; background: #f8f9fa; }
+        .table td { font-size: 0.9rem; vertical-align: middle; }
+        .action-btn { font-size: 0.78rem; padding: 3px 10px; border-radius: 6px; }
+        .modal-header { background: linear-gradient(135deg, #1565c0, #42a5f5); color: white; border-radius: 12px 12px 0 0; }
+        .modal-header .btn-close { filter: brightness(0) invert(1); }
+        .modal-content { border-radius: 14px; border: none; }
+        #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .ticket-id { font-family: monospace; font-weight: 700; color: #1565c0; }
+        .priority-low      { background: #e8f5e9; color: #1b5e20; }
+        .priority-medium   { background: #fff8e1; color: #f57f17; }
+        .priority-high     { background: #fff3e0; color: #e65100; }
+        .priority-critical { background: #fce4ec; color: #b71c1c; }
+        .status-pill { font-size: 0.75rem; padding: 3px 10px; border-radius: 10px; font-weight: 600; display: inline-block; }
+        .status-open        { background: #e3f2fd; color: #1565c0; }
+        .status-in-progress { background: #fff8e1; color: #f57f17; }
+        .status-resolved    { background: #e8f5e9; color: #1b5e20; }
+        .status-closed      { background: #f3f4f6; color: #6b7280; }
+        .status-cancelled   { background: #fce4ec; color: #b71c1c; }
+        .detail-label { font-size: 0.8rem; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+        .detail-value { font-size: 0.95rem; color: #222; margin-top: 2px; }
+        .log-entry { padding: 8px 12px; border-left: 3px solid #e3f2fd; margin-bottom: 8px; background: #f9fafb; border-radius: 0 6px 6px 0; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #888; }
+        .empty-state i { font-size: 3rem; color: #ddd; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+<button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+<div id="sidebarContainer"></div>
+
+<div class="partner-main-content">
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h1><i class="fas fa-wrench me-3"></i>Service Tickets</h1>
+                    <p class="mb-0 mt-1" style="opacity:.85;font-size:.95rem">Manage customer service requests and repairs</p>
+                </div>
+                <button class="btn btn-light fw-600" onclick="openNewTicketModal()">
+                    <i class="fas fa-plus me-2"></i>New Service Ticket
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid px-3 px-md-4">
+
+        <!-- Stats Row -->
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3">
+                <div class="stat-card stat-blue"><div class="stat-val" id="statTotal">—</div><div class="stat-lbl">Total Tickets</div></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card stat-orange"><div class="stat-val" id="statOpen">—</div><div class="stat-lbl">Open</div></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card stat-purple"><div class="stat-val" id="statInProgress">—</div><div class="stat-lbl">In Progress</div></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card stat-green"><div class="stat-val" id="statResolved">—</div><div class="stat-lbl">Resolved</div></div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar d-flex flex-wrap align-items-center gap-2">
+            <div>
+                <button class="btn btn-sm filter-btn active" onclick="setStatusFilter(null, this)">All</button>
+                <button class="btn btn-sm filter-btn" onclick="setStatusFilter('Open', this)">Open</button>
+                <button class="btn btn-sm filter-btn" onclick="setStatusFilter('In Progress', this)">In Progress</button>
+                <button class="btn btn-sm filter-btn" onclick="setStatusFilter('Resolved', this)">Resolved</button>
+                <button class="btn btn-sm filter-btn" onclick="setStatusFilter('Closed', this)">Closed</button>
+            </div>
+            <select id="typeFilter" class="form-select form-select-sm" style="width:140px;" onchange="loadTickets()">
+                <option value="">All Types</option>
+                <option value="technical">Technical</option>
+                <option value="spares">Spares</option>
+                <option value="general">General</option>
+            </select>
+            <input type="text" id="searchQ" class="form-control form-control-sm" style="width:220px;"
+                   placeholder="Search by ticket # or customer..." oninput="debouncedLoad()">
+            <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="loadTickets()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+        </div>
+
+        <!-- Table -->
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Ticket #</th>
+                                <th>Customer</th>
+                                <th>Type</th>
+                                <th>Issue</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticketsBody">
+                            <tr><td colspan="8" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3 mb-4" id="paginationRow" style="display:none!important">
+            <small class="text-muted" id="paginationInfo"></small>
+            <div id="paginationBtns" class="d-flex gap-2"></div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ─── New Ticket Modal ─── -->
+<div class="modal fade" id="newTicketModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>New Service Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Customer Name *</label>
+                        <input type="text" id="ntName" class="form-control" placeholder="Full name">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Customer Phone *</label>
+                        <input type="tel" id="ntPhone" class="form-control" placeholder="10-digit mobile">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Customer Email</label>
+                        <input type="email" id="ntEmail" class="form-control" placeholder="Optional">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Address</label>
+                        <input type="text" id="ntAddress" class="form-control" placeholder="Optional">
+                    </div>
+                    <div class="col-12"><hr class="my-1"></div>
+                    <div class="col-md-4">
+                        <label class="form-label">Ticket Type *</label>
+                        <select id="ntType" class="form-select">
+                            <option value="technical">Technical</option>
+                            <option value="spares">Spares / Parts</option>
+                            <option value="general">General</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Priority</label>
+                        <select id="ntPriority" class="form-select">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Warranty Status</label>
+                        <select id="ntWarranty" class="form-select">
+                            <option value="">— Select —</option>
+                            <option value="under_warranty">Under Warranty</option>
+                            <option value="out_of_warranty">Out of Warranty</option>
+                            <option value="amc">AMC</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Issue Category *</label>
+                        <input type="text" id="ntCategory" class="form-control" placeholder="e.g. Battery, Motor, Inverter…">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Product / Model</label>
+                        <input type="text" id="ntModel" class="form-control" placeholder="Product model">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Serial / Vehicle No.</label>
+                        <input type="text" id="ntSerial" class="form-control" placeholder="Serial or registration">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Issue Description *</label>
+                        <textarea id="ntDesc" class="form-control" rows="3" placeholder="Describe the issue in detail…"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="submitNewTicket()">
+                    <i class="fas fa-paper-plane me-2"></i>Submit Ticket
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ─── View Ticket Modal ─── -->
+<div class="modal fade" id="viewTicketModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-ticket-alt me-2"></i>Ticket Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewTicketBody">
+                <div class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/partner_sidebar.js"></script>
+<script>
+const API = '/api/v1/tickets';
+const PARTNER_API = '/api/v1/partner';
+
+function authHeader() {
+    const t = getPartnerToken();
+    return { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' };
+}
+
+function showToast(msg, type = 'success') {
+    const id = 'toast_' + Date.now();
+    const bg = type === 'success' ? '#1b5e20' : type === 'error' ? '#b71c1c' : '#1565c0';
+    document.getElementById('toastContainer').insertAdjacentHTML('beforeend',
+        `<div id="${id}" style="background:${bg};color:white;padding:12px 18px;border-radius:10px;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,0,0,.2);font-size:.9rem;min-width:220px">${msg}</div>`
+    );
+    setTimeout(() => document.getElementById(id)?.remove(), 3500);
+}
+
+function formatDate(s) {
+    if (!s) return '—';
+    const d = new Date(s);
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function priorityBadge(p) {
+    const cls = { Low: 'priority-low', Medium: 'priority-medium', High: 'priority-high', Critical: 'priority-critical' }[p] || 'priority-medium';
+    return `<span class="status-pill ${cls}">${p || 'Medium'}</span>`;
+}
+
+function statusBadge(s) {
+    const cls = {
+        'Open': 'status-open',
+        'In Progress': 'status-in-progress',
+        'Resolved': 'status-resolved',
+        'Closed': 'status-closed',
+        'Cancelled': 'status-cancelled'
+    }[s] || 'status-open';
+    return `<span class="status-pill ${cls}">${s || 'Open'}</span>`;
+}
+
+// ─── State ───────────────────────────────────────────────────────────────
+let _statusFilter = null;
+let _currentPage  = 1;
+let _searchTimer  = null;
+
+function setStatusFilter(status, btn) {
+    _statusFilter = status;
+    _currentPage  = 1;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    loadTickets();
+}
+
+function debouncedLoad() {
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(() => { _currentPage = 1; loadTickets(); }, 350);
+}
+
+// ─── Load tickets ────────────────────────────────────────────────────────
+async function loadTickets() {
+    const params = new URLSearchParams({ page: _currentPage, limit: 20 });
+    if (_statusFilter) params.set('status', _statusFilter);
+    const type = document.getElementById('typeFilter').value;
+    if (type) params.set('ticket_type', type);
+
+    try {
+        const res = await fetch(`${API}/service/partner/my-tickets?${params}`, { headers: authHeader() });
+        if (res.status === 401) { window.location.href = '/partner/login'; return; }
+        const d = await res.json();
+
+        if (!d.success) { showToast('Failed to load tickets', 'error'); return; }
+
+        // Stats
+        const counts = d.status_counts || {};
+        const total  = d.pagination?.total || 0;
+        document.getElementById('statTotal').textContent     = total;
+        document.getElementById('statOpen').textContent      = counts['Open'] || 0;
+        document.getElementById('statInProgress').textContent= counts['In Progress'] || 0;
+        document.getElementById('statResolved').textContent  = counts['Resolved'] || 0;
+
+        // Filter by search client-side (simple match)
+        const q = (document.getElementById('searchQ').value || '').toLowerCase();
+        let tickets = d.tickets || [];
+        if (q) tickets = tickets.filter(t =>
+            (t.ticket_number || t.ticket_id || '').toLowerCase().includes(q) ||
+            (t.customer_name || '').toLowerCase().includes(q) ||
+            (t.customer_mobile || '').includes(q)
+        );
+
+        const tbody = document.getElementById('ticketsBody');
+        if (!tickets.length) {
+            tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="fas fa-ticket-alt d-block"></i><h5>No service tickets yet</h5><p>Click "New Service Ticket" to log the first one.</p></div></td></tr>`;
+            document.getElementById('paginationRow').style.display = 'none';
+            return;
+        }
+
+        tbody.innerHTML = tickets.map(t => `
+            <tr style="cursor:pointer" onclick="viewTicket(${t.id || t.ticket_db_id || 0})">
+                <td class="ps-3"><span class="ticket-id">${t.ticket_number || t.ticket_id || '—'}</span></td>
+                <td>
+                    <div class="fw-600">${t.customer_name || '—'}</div>
+                    <small class="text-muted">${t.customer_mobile || t.customer_phone || ''}</small>
+                </td>
+                <td><span class="badge bg-light text-dark text-capitalize">${t.ticket_type || '—'}</span></td>
+                <td>
+                    <div style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                         title="${(t.issue_description || '').replace(/"/g,'&quot;')}">
+                        ${t.issue_category || ''} ${t.issue_description ? '— ' + t.issue_description.slice(0, 50) : ''}
+                    </div>
+                </td>
+                <td>${priorityBadge(t.priority)}</td>
+                <td>${statusBadge(t.status)}</td>
+                <td><small>${formatDate(t.created_date || t.created_at)}</small></td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary action-btn" onclick="event.stopPropagation();viewTicket(${t.id || 0})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        // Pagination
+        const pg = d.pagination;
+        if (pg && pg.pages > 1) {
+            document.getElementById('paginationRow').style.display = 'flex';
+            document.getElementById('paginationInfo').textContent = `Showing page ${pg.page} of ${pg.pages} (${pg.total} total)`;
+            let btns = '';
+            if (pg.page > 1) btns += `<button class="btn btn-sm btn-outline-secondary" onclick="gotoPage(${pg.page - 1})">← Prev</button>`;
+            if (pg.page < pg.pages) btns += `<button class="btn btn-sm btn-outline-primary" onclick="gotoPage(${pg.page + 1})">Next →</button>`;
+            document.getElementById('paginationBtns').innerHTML = btns;
+        } else {
+            document.getElementById('paginationRow').style.display = 'none';
+        }
+
+    } catch(e) {
+        document.getElementById('ticketsBody').innerHTML =
+            `<tr><td colspan="8" class="text-center text-danger py-4">Failed to load tickets</td></tr>`;
+    }
+}
+
+function gotoPage(p) { _currentPage = p; loadTickets(); }
+
+// ─── View ticket detail ───────────────────────────────────────────────────
+async function viewTicket(id) {
+    if (!id) return;
+    document.getElementById('viewTicketBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+    new bootstrap.Modal(document.getElementById('viewTicketModal')).show();
+    try {
+        const res = await fetch(`${API}/service/partner/ticket/${id}`, { headers: authHeader() });
+        const d   = await res.json();
+        const t   = d.ticket || d;
+        document.getElementById('viewTicketBody').innerHTML = `
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="detail-label">Ticket Number</div>
+                    <div class="detail-value ticket-id">${t.ticket_number || t.ticket_id || '—'}</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value mt-1">${statusBadge(t.status)}</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-label">Priority</div>
+                    <div class="detail-value mt-1">${priorityBadge(t.priority)}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detail-label">Customer Name</div>
+                    <div class="detail-value">${t.customer_name || '—'}</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-label">Phone</div>
+                    <div class="detail-value">${t.customer_mobile || t.customer_phone || '—'}</div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detail-label">Type</div>
+                    <div class="detail-value text-capitalize">${t.ticket_type || '—'}</div>
+                </div>
+                ${t.product_model || t.vehicle_model ? `
+                <div class="col-md-4">
+                    <div class="detail-label">Product / Model</div>
+                    <div class="detail-value">${t.product_model || t.vehicle_model || '—'}</div>
+                </div>` : ''}
+                ${t.product_serial || t.vehicle_number ? `
+                <div class="col-md-4">
+                    <div class="detail-label">Serial / Vehicle No.</div>
+                    <div class="detail-value">${t.product_serial || t.vehicle_number || '—'}</div>
+                </div>` : ''}
+                ${t.warranty_status ? `
+                <div class="col-md-4">
+                    <div class="detail-label">Warranty</div>
+                    <div class="detail-value text-capitalize">${(t.warranty_status || '').replace(/_/g,' ')}</div>
+                </div>` : ''}
+                <div class="col-12">
+                    <div class="detail-label">Issue Category</div>
+                    <div class="detail-value">${t.issue_category || '—'}</div>
+                </div>
+                <div class="col-12">
+                    <div class="detail-label">Description</div>
+                    <div class="detail-value" style="white-space:pre-wrap">${t.issue_description || '—'}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="detail-label">Created</div>
+                    <div class="detail-value">${formatDate(t.created_date || t.created_at)}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="detail-label">Last Updated</div>
+                    <div class="detail-value">${formatDate(t.updated_at)}</div>
+                </div>
+                ${t.sub_status ? `
+                <div class="col-md-4">
+                    <div class="detail-label">Sub-Status</div>
+                    <div class="detail-value text-capitalize">${(t.sub_status || '').replace(/_/g,' ')}</div>
+                </div>` : ''}
+                ${(t.logs && t.logs.length) ? `
+                <div class="col-12 mt-2">
+                    <div class="detail-label mb-2">Activity Log</div>
+                    ${t.logs.slice(0,5).map(l => `
+                        <div class="log-entry">
+                            <strong>${l.action || l.status || '—'}</strong>
+                            ${l.note ? `<div style="font-size:.85rem;color:#555">${l.note}</div>` : ''}
+                            <small class="text-muted">${formatDate(l.created_at)}</small>
+                        </div>
+                    `).join('')}
+                </div>` : ''}
+            </div>
+        `;
+    } catch(e) {
+        document.getElementById('viewTicketBody').innerHTML = '<p class="text-danger text-center py-4">Failed to load ticket details</p>';
+    }
+}
+
+// ─── New ticket modal ─────────────────────────────────────────────────────
+function openNewTicketModal() {
+    ['ntName','ntPhone','ntEmail','ntAddress','ntCategory','ntModel','ntSerial','ntDesc'].forEach(id => {
+        document.getElementById(id).value = '';
+    });
+    document.getElementById('ntType').value     = 'technical';
+    document.getElementById('ntPriority').value = 'Medium';
+    document.getElementById('ntWarranty').value = '';
+    new bootstrap.Modal(document.getElementById('newTicketModal')).show();
+}
+
+async function submitNewTicket() {
+    const name  = document.getElementById('ntName').value.trim();
+    const phone = document.getElementById('ntPhone').value.trim();
+    const cat   = document.getElementById('ntCategory').value.trim();
+    const desc  = document.getElementById('ntDesc').value.trim();
+
+    if (!name)  { showToast('Customer name is required', 'error'); return; }
+    if (!phone) { showToast('Customer phone is required', 'error'); return; }
+    if (!cat)   { showToast('Issue category is required', 'error'); return; }
+    if (!desc)  { showToast('Issue description is required', 'error'); return; }
+
+    const body = {
+        customer_name:     name,
+        customer_phone:    phone,
+        customer_email:    document.getElementById('ntEmail').value.trim() || null,
+        customer_address:  document.getElementById('ntAddress').value.trim() || null,
+        issue_category:    cat,
+        issue_description: desc,
+        ticket_type:       document.getElementById('ntType').value,
+        priority:          document.getElementById('ntPriority').value,
+        product_model:     document.getElementById('ntModel').value.trim() || null,
+        product_serial:    document.getElementById('ntSerial').value.trim() || null,
+        warranty_status:   document.getElementById('ntWarranty').value || null,
+    };
+
+    try {
+        const res = await fetch(`${API}/service/partner/create`, {
+            method: 'POST',
+            headers: authHeader(),
+            body: JSON.stringify(body)
+        });
+        const d = await res.json();
+        if (d.success) {
+            bootstrap.Modal.getInstance(document.getElementById('newTicketModal'))?.hide();
+            showToast(`Ticket created: ${d.ticket_id}`);
+            loadTickets();
+        } else {
+            showToast(d.detail || d.message || 'Failed to create ticket', 'error');
+        }
+    } catch(e) {
+        showToast('Error submitting ticket', 'error');
+    }
+}
+
+function toggleMobileMenu() {
+    const sb = document.getElementById('sidebarContainer');
+    if (sb) sb.classList.toggle('mobile-open');
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+    loadTickets();
+});
+</script>
+</body>
+</html>

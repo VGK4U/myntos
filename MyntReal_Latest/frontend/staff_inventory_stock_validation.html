@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Validation - Inventory Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .filter-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+        .filter-row select, .filter-row input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 150px; }
+        .btn-primary-custom { background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .btn-secondary:hover { background: #e5e7eb; }
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-item { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-item .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .summary-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .summary-item.draft .value { color: #6b7280; }
+        .summary-item.in-progress .value { color: #3b82f6; }
+        .summary-item.pending .value { color: #f59e0b; }
+        .summary-item.approved .value { color: #10b981; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .amount { font-weight: 600; font-family: monospace; }
+        .qty-positive { color: #059669; font-weight: 600; }
+        .qty-negative { color: #dc2626; font-weight: 600; }
+        .qty-zero { color: #6b7280; }
+        .badge-status { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-DRAFT { background: #e5e7eb; color: #374151; }
+        .badge-IN_PROGRESS { background: #dbeafe; color: #1d4ed8; }
+        .badge-VERIFIED { background: #e0e7ff; color: #4f46e5; }
+        .badge-AWAITING_APPROVAL { background: #fef3c7; color: #d97706; }
+        .badge-APPROVED { background: #d1fae5; color: #059669; }
+        .badge-REJECTED { background: #fee2e2; color: #dc2626; }
+        .badge-COMPLETED { background: #a7f3d0; color: #047857; }
+        .badge-CANCELLED { background: #f3f4f6; color: #6b7280; }
+        .btn-action { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; margin-right: 4px; }
+        .btn-view { background: #f3f4f6; color: #374151; }
+        .btn-view:hover { background: #374151; color: white; }
+        .btn-edit { background: #dbeafe; color: #1d4ed8; }
+        .btn-edit:hover { background: #1d4ed8; color: white; }
+        .btn-approve { background: #d1fae5; color: #059669; }
+        .btn-approve:hover { background: #059669; color: white; }
+        .btn-reject { background: #fee2e2; color: #dc2626; }
+        .btn-reject:hover { background: #dc2626; color: white; }
+        .btn-submit { background: #fef3c7; color: #d97706; }
+        .btn-submit:hover { background: #d97706; color: white; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #f59e0b; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        
+        .pagination { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+        .pagination button { padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination button.active { background: #f59e0b; color: white; border-color: #f59e0b; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 900px; width: 95%; max-height: 90vh; overflow-y: auto; }
+        .modal-content.large { max-width: 1200px; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; background: white; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.1); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .info-item { background: #f9fafb; padding: 12px; border-radius: 8px; }
+        .info-item label { font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        .info-item .value { font-size: 14px; font-weight: 600; color: #1f2937; margin-top: 4px; }
+        .discrepancy-row { background: #fef3c7 !important; }
+        .discrepancy-row.shortage { background: #fee2e2 !important; }
+        .discrepancy-row.excess { background: #d1fae5 !important; }
+        .editable-cell { cursor: pointer; padding: 4px 8px; border-radius: 4px; }
+        .editable-cell:hover { background: #f0fdf4; }
+        .editable-cell input { width: 80px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; }
+        .tabs { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+        .tab { padding: 12px 24px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; font-weight: 500; color: #6b7280; transition: all 0.2s; }
+        .tab:hover { color: #f59e0b; }
+        .tab.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+        .upload-zone { border: 2px dashed #d1d5db; border-radius: 12px; padding: 30px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .upload-zone:hover { border-color: #f59e0b; background: #fffbeb; }
+        .upload-zone.dragover { border-color: #f59e0b; background: #fef3c7; }
+        .upload-zone i { font-size: 36px; color: #9ca3af; margin-bottom: 12px; }
+        .vgk-supreme-badge { background: linear-gradient(135deg, #dc2626, #b91c1c); color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content" id="mainContent">
+            <div id="headerContainer"></div>
+
+    <div class="page-header">
+                <div>
+                    <h1>Stock Validation</h1>
+                    <p>Physical stock verification and adjustment management</p>
+                </div>
+                <button class="btn-primary-custom" onclick="showCreateModal()"><i class="fas fa-plus"></i> New Validation Session</button>
+            </div>
+            <div class="summary-row" id="summaryRow">
+                <div class="summary-item draft"><div class="value" id="draftCount">0</div><div class="label">Draft</div></div>
+                <div class="summary-item in-progress"><div class="value" id="progressCount">0</div><div class="label">In Progress</div></div>
+                <div class="summary-item pending"><div class="value" id="pendingCount">0</div><div class="label">Awaiting Approval</div></div>
+                <div class="summary-item approved"><div class="value" id="approvedCount">0</div><div class="label">Approved</div></div>
+            </div>
+            <div class="filter-row">
+                <select id="filterCompany" onchange="loadSessions()">
+                    <option value="">All Companies</option>
+                </select>
+                <select id="filterStatus" onchange="loadSessions()">
+                    <option value="">All Status</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="AWAITING_APPROVAL">Awaiting Approval</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                </select>
+                <select id="filterType" onchange="loadSessions()">
+                    <option value="">All Types</option>
+                    <option value="ON_DEMAND">On Demand</option>
+                    <option value="PERIODIC">Periodic</option>
+                    <option value="YEAR_END">Year End</option>
+                </select>
+                <input type="date" id="filterFromDate" onchange="loadSessions()">
+                <input type="date" id="filterToDate" onchange="loadSessions()">
+                <button class="btn-secondary" onclick="resetFilters()"><i class="fas fa-undo"></i> Reset</button>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-list"></i> Validation Sessions</span>
+                    <span id="totalSessions" style="font-size: 13px; color: #6b7280;">0 sessions</span>
+                </div>
+                <div class="card-body">
+                    <div id="sessionsLoading" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="sessionsEmpty" class="empty-state" style="display: none;">
+                        <i class="fas fa-clipboard-list"></i>
+                        <h3>No Validation Sessions</h3>
+                        <p>Create a new validation session to start verifying stock</p>
+                    </div>
+                    <div class="table-container" id="sessionsTable" style="display: none;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Session #</th>
+                                    <th>Company</th>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Items</th>
+                                    <th>Discrepancies</th>
+                                    <th>Diff Value</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sessionsBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> Create Validation Session</h3>
+                <button class="modal-close" onclick="closeModal('createModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Company <span style="color:#dc2626">*</span></label>
+                        <select id="createCompany" required>
+                            <option value="">Select Company</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Validation Date <span style="color:#dc2626">*</span></label>
+                        <input type="date" id="createDate" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Validation Type</label>
+                        <select id="createType">
+                            <option value="ON_DEMAND">On Demand</option>
+                            <option value="PERIODIC">Periodic (Scheduled)</option>
+                            <option value="YEAR_END">Year End</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Period (Optional)</label>
+                        <input type="text" id="createPeriod" placeholder="e.g., Q1 2026">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="createTitle" placeholder="e.g., Monthly Stock Count - January 2026">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="createDescription" placeholder="Add notes about this validation session..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Item Category (Optional)</label>
+                        <select id="createCategory">
+                            <option value="">All Categories</option>
+                            <option value="PRODUCT">Products</option>
+                            <option value="SPARES">Spares</option>
+                            <option value="ACCESSORIES">Accessories</option>
+                            <option value="RAW_MATERIAL">Raw Materials</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Auto-populate Items</label>
+                        <select id="createAutoPopulate">
+                            <option value="true">Yes - Include all items with current stock</option>
+                            <option value="false">No - Add items manually</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="createSession()"><i class="fas fa-check"></i> Create Session</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="detailsModal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3><i class="fas fa-clipboard-check"></i> <span id="detailsTitle">Session Details</span></h3>
+                <button class="modal-close" onclick="closeModal('detailsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-grid" id="sessionInfo"></div>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('entries')">Stock Entries</div>
+                    <div class="tab" onclick="switchTab('upload')">Excel Upload</div>
+                    <div class="tab" onclick="switchTab('audit')">Audit Log</div>
+                </div>
+                <div id="entriesTab">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-secondary" onclick="downloadTemplate()"><i class="fas fa-download"></i> Download Template</button>
+                            <button class="btn-secondary" id="btnAddItem" onclick="showAddItemModal()"><i class="fas fa-plus"></i> Add Item</button>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span id="entriesInfo" style="font-size: 13px; color: #6b7280;"></span>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table" id="entriesTable">
+                            <thead>
+                                <tr>
+                                    <th>Item Code</th>
+                                    <th>Item Name</th>
+                                    <th>Spec</th>
+                                    <th>Color</th>
+                                    <th>Unit</th>
+                                    <th>System Qty</th>
+                                    <th>Physical Qty</th>
+                                    <th>Difference</th>
+                                    <th>Reason</th>
+                                    <th>Verified</th>
+                                </tr>
+                            </thead>
+                            <tbody id="entriesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="uploadTab" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 20px; padding: 16px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+                        <p style="margin: 0 0 12px 0; color: #0369a1;"><i class="fas fa-info-circle"></i> Download the template with current stock positions, fill in physical counts, then upload</p>
+                        <button class="btn-primary-custom" onclick="downloadTemplate()"><i class="fas fa-download"></i> Download Template with Stock Positions</button>
+                    </div>
+                    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('uploadFile').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h4>Upload Excel File</h4>
+                        <p>Click or drag & drop Excel file with physical counts</p>
+                        <input type="file" id="uploadFile" accept=".xlsx,.xls,.csv" style="display: none;" onchange="handleUpload(event)">
+                    </div>
+                    <div id="uploadResult" style="margin-top: 20px;"></div>
+                </div>
+                <div id="auditTab" style="display: none;">
+                    <div id="auditBody" class="table-container"></div>
+                </div>
+            </div>
+            <div class="modal-footer" id="sessionActions"></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="approvalModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-check-circle"></i> Approval Decision</h3>
+                <button class="modal-close" onclick="closeModal('approvalModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="approvalInfo"></div>
+                <div class="form-group">
+                    <label>Decision</label>
+                    <select id="approvalAction" onchange="toggleApprovalFields()">
+                        <option value="approve">Approve - Process Stock Adjustments</option>
+                        <option value="reject">Reject - Return for Review</option>
+                    </select>
+                </div>
+                <div class="form-group" id="approvalNotesGroup">
+                    <label>Approval Notes</label>
+                    <textarea id="approvalNotes" placeholder="Add notes for approval..."></textarea>
+                </div>
+                <div class="form-group" id="rejectionReasonGroup" style="display: none;">
+                    <label>Rejection Reason <span style="color:#dc2626">*</span></label>
+                    <textarea id="rejectionReason" placeholder="Provide reason for rejection..." required></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('approvalModal')">Cancel</button>
+                <button class="btn-approve" id="btnApprove" onclick="processApproval()"><i class="fas fa-check"></i> Approve</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="addItemModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle"></i> Add Items to Validation</h3>
+                <button class="modal-close" onclick="closeModal('addItemModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Search Stock Items</label>
+                    <input type="text" id="addItemSearch" placeholder="Search by item code or name..." oninput="searchStockItems()">
+                </div>
+                <div id="addItemResults" style="max-height: 300px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <div class="empty-state" style="padding: 20px;">
+                        <i class="fas fa-search"></i>
+                        <p>Search for items to add to this validation session</p>
+                    </div>
+                </div>
+                <div id="selectedItemsContainer" style="margin-top: 16px; display: none;">
+                    <label style="font-size: 13px; font-weight: 600; color: #374151; display: block; margin-bottom: 8px;">Selected Items (<span id="selectedCount">0</span>)</label>
+                    <div id="selectedItemsList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('addItemModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="addSelectedItems()" id="btnAddSelectedItems" disabled><i class="fas fa-plus"></i> Add Selected Items</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let currentUser = null;
+        let currentSession = null;
+        let companies = [];
+        let currentPage = 1;
+        const pageSize = 20;
+        let availableStockItems = [];
+        let selectedItemIds = new Set();
+
+        async function init() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            await loadUserInfo();
+            await loadCompanies();
+            await loadSessions();
+            document.getElementById('createDate').value = new Date().toISOString().split('T')[0];
+        }
+
+        async function loadUserInfo() {
+            try {
+                const resp = await fetch('/api/v1/staff/auth/me', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('staff_token') }
+                });
+                if (!resp.ok) throw new Error('Auth failed');
+                const data = await resp.json();
+                currentUser = data;
+            } catch (e) {
+                console.error('Failed to load user info:', e);
+            }
+        }
+
+        async function loadCompanies() {
+            try {
+                const resp = await fetch(API_BASE + '/companies', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('staff_token') }
+                });
+                const data = await resp.json();
+                companies = data.companies || [];
+                const options = companies.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
+                document.getElementById('filterCompany').innerHTML = '<option value="">All Companies</option>' + options;
+                document.getElementById('createCompany').innerHTML = '<option value="">Select Company</option>' + options;
+            } catch (e) {
+                console.error('Failed to load companies:', e);
+            }
+        }
+
+        async function loadSessions() {
+            const loading = document.getElementById('sessionsLoading');
+            const empty = document.getElementById('sessionsEmpty');
+            const table = document.getElementById('sessionsTable');
+            loading.style.display = 'flex';
+            empty.style.display = 'none';
+            table.style.display = 'none';
+            try {
+                const params = new URLSearchParams();
+                params.append('page', currentPage);
+                params.append('page_size', pageSize);
+                const company = document.getElementById('filterCompany').value;
+                const status = document.getElementById('filterStatus').value;
+                const type = document.getElementById('filterType').value;
+                const fromDate = document.getElementById('filterFromDate').value;
+                const toDate = document.getElementById('filterToDate').value;
+                if (company) params.append('company_id', company);
+                if (status) params.append('status', status);
+                if (type) params.append('validation_type', type);
+                if (fromDate) params.append('from_date', fromDate);
+                if (toDate) params.append('to_date', toDate);
+                const resp = await fetch(API_BASE + '/stock-validation/sessions?' + params.toString(), {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('staff_token') }
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Failed to load sessions');
+                const result = data.data;
+                const sessions = result.sessions || [];
+                updateSummary(sessions);
+                document.getElementById('totalSessions').textContent = `${result.total || 0} sessions`;
+                if (sessions.length === 0) {
+                    empty.style.display = 'block';
+                } else {
+                    renderSessions(sessions);
+                    renderPagination(result.total || 0);
+                    table.style.display = 'block';
+                }
+            } catch (e) {
+                console.error('Failed to load sessions:', e);
+                empty.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function updateSummary(sessions) {
+            const counts = { DRAFT: 0, IN_PROGRESS: 0, AWAITING_APPROVAL: 0, APPROVED: 0 };
+            sessions.forEach(s => { if (counts.hasOwnProperty(s.status)) counts[s.status]++; });
+            document.getElementById('draftCount').textContent = counts.DRAFT;
+            document.getElementById('progressCount').textContent = counts.IN_PROGRESS;
+            document.getElementById('pendingCount').textContent = counts.AWAITING_APPROVAL;
+            document.getElementById('approvedCount').textContent = counts.APPROVED;
+        }
+
+        function renderSessions(sessions) {
+            const tbody = document.getElementById('sessionsBody');
+            tbody.innerHTML = sessions.map(s => {
+                const diffValue = s.total_difference_value || 0;
+                const diffClass = diffValue < 0 ? 'qty-negative' : (diffValue > 0 ? 'qty-positive' : 'qty-zero');
+                return `<tr>
+                    <td><strong>${s.session_number}</strong></td>
+                    <td>${s.company_name || '-'}</td>
+                    <td>${formatDate(s.validation_date)}</td>
+                    <td>${s.validation_type || '-'}</td>
+                    <td><span class="badge-status badge-${s.status}">${formatStatus(s.status)}</span></td>
+                    <td>${s.total_items || 0}</td>
+                    <td>${s.items_with_discrepancy || 0}</td>
+                    <td class="${diffClass}">₹${formatAmount(diffValue)}</td>
+                    <td>${getActionButtons(s)}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function getActionButtons(s) {
+            let btns = `<button class="btn-action btn-view" onclick="viewSession(${s.id})"><i class="fas fa-eye"></i></button>`;
+            if (s.status === 'AWAITING_APPROVAL' && currentUser && currentUser.role && currentUser.role.toLowerCase() === 'vgk4u') {
+                btns += `<button class="btn-action btn-approve" onclick="showApprovalModal(${s.id})"><i class="fas fa-gavel"></i> Decide</button>`;
+            }
+            if (['DRAFT', 'IN_PROGRESS'].includes(s.status)) {
+                btns += `<button class="btn-action btn-submit" onclick="submitForApproval(${s.id})"><i class="fas fa-paper-plane"></i></button>`;
+            }
+            return btns;
+        }
+
+        function formatStatus(status) {
+            const map = {
+                'DRAFT': 'Draft',
+                'IN_PROGRESS': 'In Progress',
+                'VERIFIED': 'Verified',
+                'AWAITING_APPROVAL': 'Awaiting Approval',
+                'APPROVED': 'Approved',
+                'REJECTED': 'Rejected',
+                'COMPLETED': 'Completed',
+                'CANCELLED': 'Cancelled'
+            };
+            return map[status] || status;
+        }
+
+        function formatDate(d) {
+            if (!d) return '-';
+            return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function formatAmount(val) {
+            return Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function renderPagination(total) {
+            const totalPages = Math.ceil(total / pageSize);
+            if (totalPages <= 1) {
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            let html = `<button ${currentPage <= 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">Prev</button>`;
+            for (let i = 1; i <= totalPages && i <= 5; i++) {
+                html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            html += `<button ${currentPage >= totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next</button>`;
+            document.getElementById('pagination').innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            loadSessions();
+        }
+
+        function resetFilters() {
+            document.getElementById('filterCompany').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterType').value = '';
+            document.getElementById('filterFromDate').value = '';
+            document.getElementById('filterToDate').value = '';
+            currentPage = 1;
+            loadSessions();
+        }
+
+        function showCreateModal() {
+            document.getElementById('createModal').classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        async function createSession() {
+            const company = document.getElementById('createCompany').value;
+            const date = document.getElementById('createDate').value;
+            if (!company || !date) {
+                alert('Please select company and date');
+                return;
+            }
+            try {
+                const resp = await fetch(API_BASE + '/stock-validation/sessions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('staff_token'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        company_id: parseInt(company),
+                        validation_date: date,
+                        validation_type: document.getElementById('createType').value,
+                        validation_period: document.getElementById('createPeriod').value || null,
+                        title: document.getElementById('createTitle').value || null,
+                        description: document.getElementById('createDescription').value || null,
+                        item_category: document.getElementById('createCategory').value || null,
+                        auto_populate_items: document.getElementById('createAutoPopulate').value === 'true'
+                    })
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Failed to create session');
+                closeModal('createModal');
+                loadSessions();
+                alert('Session created successfully!');
+            } catch (e) {
+                console.error('Failed to create session:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function viewSession(id) {
+            try {
+                const resp = await fetch(API_BASE + '/stock-validation/sessions/' + id + '?include_entries=true', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('staff_token') }
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Failed to load session');
+                currentSession = data.data;
+                renderSessionDetails();
+                document.getElementById('detailsModal').classList.add('active');
+            } catch (e) {
+                console.error('Failed to load session:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function renderSessionDetails() {
+            const s = currentSession;
+            document.getElementById('detailsTitle').textContent = s.session_number;
+            const diffValue = s.total_difference_value || 0;
+            const diffClass = diffValue < 0 ? 'qty-negative' : (diffValue > 0 ? 'qty-positive' : 'qty-zero');
+            document.getElementById('sessionInfo').innerHTML = `
+                <div class="info-item"><label>Company</label><div class="value">${s.company_name || '-'}</div></div>
+                <div class="info-item"><label>Date</label><div class="value">${formatDate(s.validation_date)}</div></div>
+                <div class="info-item"><label>Type</label><div class="value">${s.validation_type || '-'}</div></div>
+                <div class="info-item"><label>Status</label><div class="value"><span class="badge-status badge-${s.status}">${formatStatus(s.status)}</span></div></div>
+                <div class="info-item"><label>Total Items</label><div class="value">${s.total_items || 0}</div></div>
+                <div class="info-item"><label>Discrepancies</label><div class="value">${s.items_with_discrepancy || 0}</div></div>
+                <div class="info-item"><label>System Value</label><div class="value">₹${formatAmount(s.total_system_value)}</div></div>
+                <div class="info-item"><label>Difference Value</label><div class="value ${diffClass}">₹${formatAmount(diffValue)}</div></div>
+            `;
+            const entries = s.entries || [];
+            document.getElementById('entriesInfo').textContent = `${entries.length} items`;
+            const editable = ['DRAFT', 'IN_PROGRESS'].includes(s.status);
+            document.getElementById('btnAddItem').style.display = editable ? 'inline-block' : 'none';
+            document.getElementById('entriesBody').innerHTML = entries.map(e => {
+                const diff = e.difference_qty || 0;
+                const diffClass = diff < 0 ? 'qty-negative' : (diff > 0 ? 'qty-positive' : 'qty-zero');
+                const rowClass = diff !== 0 ? (diff < 0 ? 'discrepancy-row shortage' : 'discrepancy-row excess') : '';
+                return `<tr class="${rowClass}">
+                    <td><strong>${e.item_code}</strong></td>
+                    <td>${e.item_name || '-'}</td>
+                    <td>${e.specification || '-'}</td>
+                    <td>${e.color || '-'}</td>
+                    <td>${e.unit_of_measure || '-'}</td>
+                    <td>${Number(e.system_qty || 0).toFixed(2)}</td>
+                    <td>${editable ? renderEditableQty(e) : (e.physical_qty !== null ? Number(e.physical_qty).toFixed(2) : '-')}</td>
+                    <td class="${diffClass}">${diff !== 0 ? (diff > 0 ? '+' : '') + Number(diff).toFixed(2) : '-'}</td>
+                    <td>${e.reason_for_difference || '-'}</td>
+                    <td>${e.is_verified ? '<i class="fas fa-check-circle" style="color:#059669"></i>' : '<i class="fas fa-clock" style="color:#9ca3af"></i>'}</td>
+                </tr>`;
+            }).join('');
+            let actions = '';
+            if (['DRAFT', 'IN_PROGRESS'].includes(s.status)) {
+                actions = `<button class="btn-secondary" onclick="closeModal('detailsModal')">Close</button>
+                           <button class="btn-submit" onclick="submitForApproval(${s.id}); closeModal('detailsModal');"><i class="fas fa-paper-plane"></i> Submit for Approval</button>`;
+            } else if (s.status === 'AWAITING_APPROVAL' && currentUser && currentUser.role && currentUser.role.toLowerCase() === 'vgk4u') {
+                actions = `<button class="btn-secondary" onclick="closeModal('detailsModal')">Close</button>
+                           <span class="vgk-supreme-badge"><i class="fas fa-crown"></i> VGK Mentor Action Required</span>
+                           <button class="btn-approve" onclick="showApprovalModal(${s.id}); closeModal('detailsModal');"><i class="fas fa-gavel"></i> Make Decision</button>`;
+            } else {
+                actions = `<button class="btn-secondary" onclick="closeModal('detailsModal')">Close</button>`;
+            }
+            document.getElementById('sessionActions').innerHTML = actions;
+            switchTab('entries');
+        }
+
+        function renderEditableQty(e) {
+            const val = e.physical_qty !== null ? Number(e.physical_qty).toFixed(2) : '';
+            return `<span class="editable-cell" onclick="editQty(this, ${e.id})">${val || '<span style="color:#9ca3af">Enter qty</span>'}</span>`;
+        }
+
+        async function editQty(el, entryId) {
+            const currentVal = el.textContent.trim();
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.step = '0.01';
+            input.value = isNaN(parseFloat(currentVal)) ? '' : currentVal;
+            input.onblur = () => saveQty(entryId, input.value, el);
+            input.onkeydown = (e) => { if (e.key === 'Enter') input.blur(); };
+            el.innerHTML = '';
+            el.appendChild(input);
+            input.focus();
+        }
+
+        async function saveQty(entryId, value, el) {
+            if (!value || isNaN(parseFloat(value))) {
+                el.innerHTML = '<span style="color:#9ca3af">Enter qty</span>';
+                return;
+            }
+            try {
+                const resp = await fetch(API_BASE + '/stock-validation/entries/' + entryId, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('staff_token'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ physical_qty: parseFloat(value) })
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Failed to update');
+                viewSession(currentSession.id);
+            } catch (e) {
+                console.error('Failed to save qty:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab:nth-child(${tab === 'entries' ? 1 : (tab === 'upload' ? 2 : 3)})`).classList.add('active');
+            document.getElementById('entriesTab').style.display = tab === 'entries' ? 'block' : 'none';
+            document.getElementById('uploadTab').style.display = tab === 'upload' ? 'block' : 'none';
+            document.getElementById('auditTab').style.display = tab === 'audit' ? 'block' : 'none';
+            if (tab === 'audit') loadAuditLog();
+        }
+
+        async function downloadTemplate() {
+            try {
+                const resp = await fetch(API_BASE + '/stock-validation/sessions/' + currentSession.id + '/download', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('staff_token') }
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Failed to download');
+                const entries = data.data.entries || [];
+                const ws = XLSX.utils.json_to_sheet(entries.map(e => ({
+                    'S.No': e.s_no,
+                    'Item Code': e.item_code,
+                    'Item Name': e.item_name,
+                    'Specification': e.specification || '',
+                    'Color': e.color || '',
+                    'Unit': e.unit,
+                    'System Qty': e.system_qty,
+                    'Physical Qty': e.physical_qty,
+                    'Reason': e.reason,
+                    'Notes': e.notes
+                })));
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Stock Validation');
+                XLSX.writeFile(wb, `${currentSession.session_number}_template.xlsx`);
+            } catch (e) {
+                console.error('Download failed:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function handleUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const resp = await fetch(API_BASE + '/stock-validation/sessions/' + currentSession.id + '/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('staff_token') },
+                    body: formData
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Upload failed');
+                const result = data.data;
+                document.getElementById('uploadResult').innerHTML = `
+                    <div style="padding: 16px; background: #d1fae5; border-radius: 8px;">
+                        <strong><i class="fas fa-check-circle"></i> Upload Successful</strong>
+                        <p style="margin-top: 8px;">Updated: ${result.updated} entries | Errors: ${result.errors?.length || 0}</p>
+                    </div>
+                `;
+                viewSession(currentSession.id);
+            } catch (e) {
+                console.error('Upload failed:', e);
+                document.getElementById('uploadResult').innerHTML = `
+                    <div style="padding: 16px; background: #fee2e2; border-radius: 8px;">
+                        <strong><i class="fas fa-exclamation-circle"></i> Upload Failed</strong>
+                        <p style="margin-top: 8px;">${e.message}</p>
+                    </div>
+                `;
+            }
+            event.target.value = '';
+        }
+
+        async function loadAuditLog() {
+            try {
+                const resp = await fetch(API_BASE + '/stock-validation/sessions/' + currentSession.id + '/audit-log', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('staff_token') }
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Failed to load audit log');
+                const logs = data.data || [];
+                document.getElementById('auditBody').innerHTML = `
+                    <table class="data-table">
+                        <thead><tr><th>Time</th><th>Action</th><th>By</th><th>Details</th></tr></thead>
+                        <tbody>${logs.map(l => `
+                            <tr>
+                                <td>${new Date(l.performed_at).toLocaleString('en-IN')}</td>
+                                <td>${l.action}</td>
+                                <td>${l.performed_by_name || '-'}</td>
+                                <td>${JSON.stringify(l.action_details || {}).substring(0, 50)}...</td>
+                            </tr>
+                        `).join('')}</tbody>
+                    </table>
+                `;
+            } catch (e) {
+                console.error('Failed to load audit log:', e);
+            }
+        }
+
+        async function submitForApproval(id) {
+            if (!confirm('Submit this session for VGK Mentor approval? All items must have physical counts entered.')) return;
+            try {
+                const resp = await fetch(API_BASE + '/stock-validation/sessions/' + id + '/submit', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('staff_token') }
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Failed to submit');
+                alert('Session submitted for approval!');
+                loadSessions();
+            } catch (e) {
+                console.error('Submit failed:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function showApprovalModal(id) {
+            currentSession = { id };
+            document.getElementById('approvalInfo').innerHTML = `<p>You are about to make an approval decision for session.</p>
+                <p><strong>Note:</strong> Approving will create stock adjustment entries in the ledger for all discrepancies.</p>`;
+            document.getElementById('approvalModal').classList.add('active');
+        }
+
+        function toggleApprovalFields() {
+            const action = document.getElementById('approvalAction').value;
+            document.getElementById('approvalNotesGroup').style.display = action === 'approve' ? 'block' : 'none';
+            document.getElementById('rejectionReasonGroup').style.display = action === 'reject' ? 'block' : 'none';
+            document.getElementById('btnApprove').innerHTML = action === 'approve' ? '<i class="fas fa-check"></i> Approve' : '<i class="fas fa-times"></i> Reject';
+            document.getElementById('btnApprove').className = action === 'approve' ? 'btn-approve' : 'btn-reject';
+        }
+
+        async function processApproval() {
+            const action = document.getElementById('approvalAction').value;
+            const notes = document.getElementById('approvalNotes').value;
+            const reason = document.getElementById('rejectionReason').value;
+            if (action === 'reject' && !reason) {
+                alert('Please provide rejection reason');
+                return;
+            }
+            try {
+                const resp = await fetch(API_BASE + '/stock-validation/sessions/' + currentSession.id + '/approve', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('staff_token'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: action,
+                        approval_notes: notes || null,
+                        rejection_reason: reason || null
+                    })
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Approval failed');
+                closeModal('approvalModal');
+                loadSessions();
+                alert(action === 'approve' ? 'Session approved! Stock adjustments have been processed.' : 'Session rejected.');
+            } catch (e) {
+                console.error('Approval failed:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function showAddItemModal() {
+            if (!currentSession || currentSession.status === 'AWAITING_APPROVAL' || currentSession.status === 'APPROVED' || currentSession.status === 'COMPLETED') {
+                alert('Cannot add items to this session');
+                return;
+            }
+            selectedItemIds.clear();
+            document.getElementById('addItemSearch').value = '';
+            document.getElementById('addItemResults').innerHTML = '<div class="empty-state" style="padding: 20px;"><i class="fas fa-search"></i><p>Search for items to add to this validation session</p></div>';
+            document.getElementById('selectedItemsContainer').style.display = 'none';
+            document.getElementById('selectedItemsList').innerHTML = '';
+            document.getElementById('btnAddSelectedItems').disabled = true;
+            await loadAvailableStockItems();
+            openModal('addItemModal');
+        }
+
+        async function loadAvailableStockItems() {
+            try {
+                const resp = await fetch(API_BASE + '/stock-items?company_id=' + currentSession.company_id + '&limit=500', {
+                    headers: { 'Authorization': 'Bearer ' + localStorage.getItem('staff_token') }
+                });
+                const data = await resp.json();
+                availableStockItems = data.items || [];
+            } catch (e) {
+                console.error('Failed to load stock items:', e);
+                availableStockItems = [];
+            }
+        }
+
+        function searchStockItems() {
+            const query = document.getElementById('addItemSearch').value.toLowerCase().trim();
+            const resultsDiv = document.getElementById('addItemResults');
+            
+            if (!query) {
+                resultsDiv.innerHTML = '<div class="empty-state" style="padding: 20px;"><i class="fas fa-search"></i><p>Search for items to add to this validation session</p></div>';
+                return;
+            }
+            
+            const existingItemIds = new Set((currentSession.entries || []).map(e => e.item_id));
+            const filtered = availableStockItems.filter(item => 
+                !existingItemIds.has(item.id) &&
+                (item.item_code.toLowerCase().includes(query) || item.item_name.toLowerCase().includes(query))
+            ).slice(0, 50);
+            
+            if (filtered.length === 0) {
+                resultsDiv.innerHTML = '<div class="empty-state" style="padding: 20px;"><i class="fas fa-exclamation-circle"></i><p>No matching items found or all items already added</p></div>';
+                return;
+            }
+            
+            resultsDiv.innerHTML = filtered.map(item => `
+                <div style="padding: 12px 16px; border-bottom: 1px solid #f3f4f6; cursor: pointer; display: flex; align-items: center; gap: 12px; ${selectedItemIds.has(item.id) ? 'background: #d1fae5;' : ''}" onclick="toggleItemSelection(${item.id}, '${item.item_code}', '${item.item_name.replace(/'/g, "\\'")}')">
+                    <input type="checkbox" ${selectedItemIds.has(item.id) ? 'checked' : ''} style="pointer-events: none;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #1f2937;">${item.item_code}</div>
+                        <div style="font-size: 13px; color: #6b7280;">${item.item_name}</div>
+                    </div>
+                    <div style="text-align: right; font-size: 12px; color: #6b7280;">
+                        ${item.specification || ''} ${item.colors ? item.colors.join(', ') : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleItemSelection(itemId, itemCode, itemName) {
+            if (selectedItemIds.has(itemId)) {
+                selectedItemIds.delete(itemId);
+            } else {
+                selectedItemIds.add(itemId);
+            }
+            updateSelectedItemsDisplay();
+            searchStockItems();
+        }
+
+        function updateSelectedItemsDisplay() {
+            const container = document.getElementById('selectedItemsContainer');
+            const list = document.getElementById('selectedItemsList');
+            const count = document.getElementById('selectedCount');
+            const btn = document.getElementById('btnAddSelectedItems');
+            
+            if (selectedItemIds.size === 0) {
+                container.style.display = 'none';
+                btn.disabled = true;
+                return;
+            }
+            
+            container.style.display = 'block';
+            count.textContent = selectedItemIds.size;
+            btn.disabled = false;
+            
+            const selectedItems = availableStockItems.filter(i => selectedItemIds.has(i.id));
+            list.innerHTML = selectedItems.map(item => `
+                <span style="background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                    ${item.item_code}
+                    <span style="cursor: pointer; font-weight: bold;" onclick="toggleItemSelection(${item.id}, '', '')">&times;</span>
+                </span>
+            `).join('');
+        }
+
+        async function addSelectedItems() {
+            if (selectedItemIds.size === 0) return;
+            
+            try {
+                const resp = await fetch(API_BASE + '/stock-validation/sessions/' + currentSession.id + '/add-items', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('staff_token'),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ item_ids: Array.from(selectedItemIds) })
+                });
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Failed to add items');
+                
+                closeModal('addItemModal');
+                alert(`Added ${data.data.added} items to validation. ${data.data.skipped > 0 ? data.data.skipped + ' items skipped (already in session or not applicable).' : ''}`);
+                viewSession(currentSession.id);
+            } catch (e) {
+                console.error('Failed to add items:', e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('staff_token');
+            window.location.href = '/staff/login';
+        }
+
+        const uploadZone = document.getElementById('uploadZone');
+        if (uploadZone) {
+            uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+            uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file) {
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    document.getElementById('uploadFile').files = dt.files;
+                    handleUpload({ target: document.getElementById('uploadFile') });
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Stock Validation', 'fas fa-boxes');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            await init();
+        });
+    </script>
+</body>
+</html>

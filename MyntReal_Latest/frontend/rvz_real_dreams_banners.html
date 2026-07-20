@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Dreams - Banner Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; max-width: 1200px; margin: 0 auto; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .card-body { padding: 24px; }
+        
+        .banner-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            position: relative;
+            transition: all 0.2s;
+        }
+        .banner-item:hover { border-color: #10B981; }
+        .banner-item.inactive { opacity: 0.6; background: #f9fafb; }
+        .banner-item .drag-handle {
+            position: absolute;
+            left: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: grab;
+            color: #9ca3af;
+            padding: 8px;
+        }
+        .banner-item .drag-handle:active { cursor: grabbing; }
+        
+        .banner-preview {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 12px;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .banner-preview h5 { margin: 0; font-size: 16px; font-weight: 600; }
+        .banner-preview p { margin: 4px 0 0; font-size: 13px; opacity: 0.9; }
+        
+        .banner-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        
+        .btn-primary { background: #10B981; border: none; }
+        .btn-primary:hover { background: #059669; }
+        
+        .form-label { font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px; }
+        .form-control, .form-select { border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 14px; font-size: 14px; }
+        .form-control:focus, .form-select:focus { border-color: #10B981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15); }
+        
+        .color-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+            cursor: pointer;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+        .empty-state i { font-size: 48px; color: #d1d5db; margin-bottom: 16px; }
+        
+        .toast-container { position: fixed; top: 80px; right: 24px; z-index: 1000; }
+        
+        .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+        .quick-action-btn { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+        .quick-action-btn:hover { border-color: #10B981; background: #f0fdf4; color: #059669; }
+        
+        .badge-count { background: #10B981; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+        <div class="top-header">
+            <div class="header-left">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" style="height: 36px;">
+                <div style="width: 1px; height: 32px; background: #e5e7eb; margin: 0 8px;"></div>
+                <h1 class="page-title"><i class="fas fa-images"></i> Promotional Banners</h1>
+            </div>
+            <div class="header-right">
+                <button class="btn-logout" onclick="StaffSidebar.logout()">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="page-banner">
+                <div>
+                    <h1><i class="fas fa-images"></i> Promotional Banner Management</h1>
+                    <p>Create and manage up to 5 promotional banners for the public marketplace</p>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <label class="form-label">Select Company</label>
+                    <select class="form-select" id="companySelect" onchange="onCompanyChange()">
+                        <option value="">Loading companies...</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" onclick="openCreateModal()" id="createBtn" style="display:none;">
+                            <i class="fas fa-plus"></i> Add Banner <span class="badge-count" id="bannerCount">0/5</span>
+                        </button>
+                        <a href="/rvz/real-dreams" class="quick-action-btn">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                        <a href="/rvz/real-dreams/properties" class="quick-action-btn">
+                            <i class="fas fa-building"></i> Properties
+                        </a>
+                        <a href="/real-dreams?company_id=" class="quick-action-btn" id="previewLink" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> View Public Page
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-layer-group me-2"></i> Active Banners</h5>
+                </div>
+                <div class="card-body">
+                    <div id="bannersContainer">
+                        <div class="empty-state">
+                            <i class="fas fa-images"></i>
+                            <h5>No Banners Yet</h5>
+                            <p>Select a company and add promotional banners</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="bannerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="bannerModalTitle"><i class="fas fa-plus me-2"></i>Add Promotional Banner</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="bannerForm">
+                        <input type="hidden" id="bannerId">
+                        
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Banner Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="bannerTitle" placeholder="e.g., BOOK NOW & GET FREE E-BIKE!" required minlength="3" maxlength="200">
+                                <div class="form-text">This is the main headline displayed on the banner (3-200 characters)</div>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label">Subtitle</label>
+                                <input type="text" class="form-control" id="bannerSubtitle" placeholder="e.g., Limited time offer on select properties" maxlength="300">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Background Color</label>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <input type="color" class="color-preview" id="bannerBgColor" value="#10B981" onchange="updatePreview()">
+                                    <input type="text" class="form-control" id="bannerBgColorText" value="#10B981" maxlength="20" onchange="document.getElementById('bannerBgColor').value=this.value; updatePreview();">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">Text Color</label>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <input type="color" class="color-preview" id="bannerTextColor" value="#FFFFFF" onchange="updatePreview()">
+                                    <input type="text" class="form-control" id="bannerTextColorText" value="#FFFFFF" maxlength="20" onchange="document.getElementById('bannerTextColor').value=this.value; updatePreview();">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">CTA Button Text</label>
+                                <input type="text" class="form-control" id="bannerCtaText" placeholder="e.g., Learn More" maxlength="100">
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label class="form-label">CTA Link URL</label>
+                                <input type="url" class="form-control" id="bannerCtaLink" placeholder="https://..." maxlength="500">
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label">Preview</label>
+                                <div id="bannerPreview" class="banner-preview" style="background: #10B981; color: white;">
+                                    <h5>Banner Title</h5>
+                                    <p>Subtitle text goes here</p>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="bannerActive" checked>
+                                    <label class="form-check-label" for="bannerActive">Active</label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveBannerBtn" onclick="saveBanner()">
+                        <i class="fas fa-save me-2"></i>Save Banner
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script>
+        let selectedCompanyId = null;
+        let banners = [];
+        let editingBannerId = null;
+
+        async function apiFetch(url, options = {}) {
+            try {
+                return await staffFetchJson(url, options);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return null;
+                throw error;
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.querySelector('.toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast show align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'warning'} border-0`;
+            toast.innerHTML = `<div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        async function init() {
+            await loadCompanies();
+        }
+
+        async function loadCompanies() {
+            const data = await apiFetch('/api/v1/real-dreams/config/enabled-companies');
+            if (data && data.success && data.companies) {
+                const select = document.getElementById('companySelect');
+                select.innerHTML = '<option value="">Select a company...</option>';
+                data.companies.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.name;
+                    select.appendChild(opt);
+                });
+            }
+        }
+
+        async function onCompanyChange() {
+            selectedCompanyId = document.getElementById('companySelect').value;
+            if (!selectedCompanyId) {
+                document.getElementById('createBtn').style.display = 'none';
+                document.getElementById('bannersContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-images"></i>
+                        <h5>No Company Selected</h5>
+                        <p>Select a company to manage its promotional banners</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            document.getElementById('previewLink').href = `/real-dreams?company_id=${selectedCompanyId}`;
+            await loadBanners();
+        }
+
+        async function loadBanners() {
+            if (!selectedCompanyId) return;
+            
+            const data = await apiFetch(`/api/v1/real-dreams/promotional-banners?company_id=${selectedCompanyId}&include_inactive=true`);
+            
+            if (data && data.success) {
+                banners = data.banners || [];
+                renderBanners();
+                
+                document.getElementById('createBtn').style.display = banners.length < 5 ? 'flex' : 'none';
+                document.getElementById('bannerCount').textContent = `${banners.length}/5`;
+            }
+        }
+
+        function renderBanners() {
+            const container = document.getElementById('bannersContainer');
+            
+            if (banners.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-images"></i>
+                        <h5>No Banners Yet</h5>
+                        <p>Click "Add Banner" to create your first promotional banner</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = banners.map((b, idx) => `
+                <div class="banner-item ${b.is_active ? '' : 'inactive'}" data-id="${b.id}">
+                    <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="banner-preview" style="background: ${escapeHtml(b.background_color)}; color: ${escapeHtml(b.text_color)};">
+                                <h5>${escapeHtml(b.title)}</h5>
+                                ${b.subtitle ? `<p>${escapeHtml(b.subtitle)}</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex flex-column gap-2">
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="badge ${b.is_active ? 'bg-success' : 'bg-secondary'}">${b.is_active ? 'Active' : 'Inactive'}</span>
+                                    <small class="text-muted">Order: ${b.display_order + 1}</small>
+                                </div>
+                                <div class="banner-actions">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editBanner(${b.id})" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-${b.is_active ? 'warning' : 'success'}" onclick="toggleBannerStatus(${b.id}, ${!b.is_active})" title="${b.is_active ? 'Deactivate' : 'Activate'}">
+                                        <i class="fas fa-${b.is_active ? 'eye-slash' : 'eye'}"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteBanner(${b.id})" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openCreateModal() {
+            if (banners.length >= 5) {
+                showToast('Maximum 5 banners allowed per company', 'warning');
+                return;
+            }
+            
+            editingBannerId = null;
+            document.getElementById('bannerModalTitle').innerHTML = '<i class="fas fa-plus me-2"></i>Add Promotional Banner';
+            document.getElementById('bannerForm').reset();
+            document.getElementById('bannerId').value = '';
+            document.getElementById('bannerBgColor').value = '#10B981';
+            document.getElementById('bannerBgColorText').value = '#10B981';
+            document.getElementById('bannerTextColor').value = '#FFFFFF';
+            document.getElementById('bannerTextColorText').value = '#FFFFFF';
+            document.getElementById('bannerActive').checked = true;
+            updatePreview();
+            
+            new bootstrap.Modal(document.getElementById('bannerModal')).show();
+        }
+
+        function editBanner(bannerId) {
+            const banner = banners.find(b => b.id === bannerId);
+            if (!banner) return;
+            
+            editingBannerId = bannerId;
+            document.getElementById('bannerModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Promotional Banner';
+            document.getElementById('bannerId').value = bannerId;
+            document.getElementById('bannerTitle').value = banner.title || '';
+            document.getElementById('bannerSubtitle').value = banner.subtitle || '';
+            document.getElementById('bannerBgColor').value = banner.background_color || '#10B981';
+            document.getElementById('bannerBgColorText').value = banner.background_color || '#10B981';
+            document.getElementById('bannerTextColor').value = banner.text_color || '#FFFFFF';
+            document.getElementById('bannerTextColorText').value = banner.text_color || '#FFFFFF';
+            document.getElementById('bannerCtaText').value = banner.cta_text || '';
+            document.getElementById('bannerCtaLink').value = banner.cta_link || '';
+            document.getElementById('bannerActive').checked = banner.is_active;
+            updatePreview();
+            
+            new bootstrap.Modal(document.getElementById('bannerModal')).show();
+        }
+
+        function updatePreview() {
+            const preview = document.getElementById('bannerPreview');
+            const title = document.getElementById('bannerTitle').value || 'Banner Title';
+            const subtitle = document.getElementById('bannerSubtitle').value || 'Subtitle text goes here';
+            const bgColor = document.getElementById('bannerBgColor').value;
+            const textColor = document.getElementById('bannerTextColor').value;
+            
+            document.getElementById('bannerBgColorText').value = bgColor;
+            document.getElementById('bannerTextColorText').value = textColor;
+            
+            preview.style.background = bgColor;
+            preview.style.color = textColor;
+            preview.innerHTML = `<h5>${escapeHtml(title)}</h5><p>${escapeHtml(subtitle)}</p>`;
+        }
+
+        async function saveBanner() {
+            const title = document.getElementById('bannerTitle').value.trim();
+            const subtitle = document.getElementById('bannerSubtitle').value.trim();
+            const bgColor = document.getElementById('bannerBgColor').value;
+            const textColor = document.getElementById('bannerTextColor').value;
+            const ctaText = document.getElementById('bannerCtaText').value.trim();
+            const ctaLink = document.getElementById('bannerCtaLink').value.trim();
+            const isActive = document.getElementById('bannerActive').checked;
+            
+            if (!title || title.length < 3 || title.length > 200) {
+                showToast('Title must be 3-200 characters', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('saveBannerBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+            
+            try {
+                const payload = {
+                    title,
+                    subtitle: subtitle || null,
+                    background_color: bgColor,
+                    text_color: textColor,
+                    cta_text: ctaText || 'Learn More',
+                    cta_link: ctaLink || null,
+                    is_active: isActive
+                };
+                
+                let url, method;
+                if (editingBannerId) {
+                    url = `/api/v1/real-dreams/promotional-banners/${editingBannerId}?company_id=${selectedCompanyId}`;
+                    method = 'PUT';
+                } else {
+                    url = `/api/v1/real-dreams/promotional-banners?company_id=${selectedCompanyId}`;
+                    method = 'POST';
+                }
+                
+                const data = await apiFetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (data && data.success) {
+                    showToast(editingBannerId ? 'Banner updated successfully' : 'Banner created successfully');
+                    bootstrap.Modal.getInstance(document.getElementById('bannerModal')).hide();
+                    await loadBanners();
+                } else {
+                    showToast(data?.detail || 'Failed to save banner', 'error');
+                }
+            } catch (error) {
+                console.error('Save banner error:', error);
+                showToast('Failed to save banner', 'error');
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-2"></i>Save Banner';
+        }
+
+        async function toggleBannerStatus(bannerId, newStatus) {
+            try {
+                const data = await apiFetch(`/api/v1/real-dreams/promotional-banners/${bannerId}?company_id=${selectedCompanyId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ is_active: newStatus })
+                });
+                
+                if (data && data.success) {
+                    showToast(`Banner ${newStatus ? 'activated' : 'deactivated'}`);
+                    await loadBanners();
+                } else {
+                    showToast(data?.detail || 'Failed to update banner', 'error');
+                }
+            } catch (error) {
+                console.error('Toggle banner error:', error);
+                showToast('Failed to update banner', 'error');
+            }
+        }
+
+        async function deleteBanner(bannerId) {
+            if (!confirm('Are you sure you want to delete this banner?')) return;
+            
+            try {
+                const data = await apiFetch(`/api/v1/real-dreams/promotional-banners/${bannerId}?company_id=${selectedCompanyId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (data && data.success) {
+                    showToast('Banner deleted successfully');
+                    await loadBanners();
+                } else {
+                    showToast(data?.detail || 'Failed to delete banner', 'error');
+                }
+            } catch (error) {
+                console.error('Delete banner error:', error);
+                showToast('Failed to delete banner', 'error');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        document.getElementById('bannerTitle').addEventListener('input', updatePreview);
+        document.getElementById('bannerSubtitle').addEventListener('input', updatePreview);
+    </script>
+</body>
+</html>

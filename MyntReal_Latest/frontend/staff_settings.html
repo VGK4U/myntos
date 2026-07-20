@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP Staff Portal - System Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f3f4f6; 
+            min-height: 100vh;
+        }
+
+        .content-area { padding: 24px; }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 24px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: none;
+        }
+        
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .card-header i { color: #6366f1; font-size: 18px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; font-size: 16px; }
+        .card-body { padding: 20px; }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .setting-item:last-child { border-bottom: none; }
+        
+        .setting-info h6 { margin: 0; font-size: 14px; font-weight: 600; color: #374151; }
+        .setting-info p { margin: 4px 0 0; font-size: 13px; color: #6b7280; }
+        
+        .form-switch .form-check-input { width: 48px; height: 24px; cursor: pointer; }
+        .form-switch .form-check-input:checked { background-color: #6366f1; border-color: #6366f1; }
+        
+        .form-select-sm { width: auto; min-width: 120px; }
+        
+        .btn-primary { background: #6366f1; border: none; padding: 10px 20px; border-radius: 8px; }
+        .btn-primary:hover { background: #4f46e5; }
+        
+        .admin-only { display: none; }
+        .admin-only.show { display: block; }
+
+        .catalog-tab-hidden { display: none; }
+
+        .alert { border-radius: 8px; padding: 12px 16px; }
+
+        .nav-tabs .nav-link {
+            color: #6b7280;
+            border: none;
+            border-bottom: 2px solid transparent;
+            padding: 10px 18px;
+            font-weight: 500;
+            border-radius: 0;
+        }
+        .nav-tabs .nav-link.active {
+            color: #6366f1;
+            border-bottom: 2px solid #6366f1;
+            background: transparent;
+        }
+        .nav-tabs { border-bottom: 1px solid #e5e7eb; margin-bottom: 24px; }
+
+        .catalog-info-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+        .catalog-stat-card {
+            flex: 1;
+            min-width: 160px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 16px 20px;
+        }
+        .catalog-stat-card .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+        .catalog-stat-card .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .catalog-stat-card .stat-sub {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .upload-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 10px;
+            padding: 28px 20px;
+            text-align: center;
+            background: #fafafa;
+            transition: border-color 0.2s;
+        }
+        .upload-zone:hover { border-color: #6366f1; }
+        .upload-zone i { font-size: 32px; color: #9ca3af; margin-bottom: 10px; }
+        .upload-zone .upload-hint { font-size: 13px; color: #6b7280; margin-top: 6px; }
+
+        #catalogProgressBar {
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div id="alertContainer"></div>
+
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs" id="settingsTabs">
+            <li class="nav-item">
+                <a class="nav-link active" id="tab-general" href="#" data-tab="general">
+                    <i class="fas fa-sliders-h me-2"></i>General Settings
+                </a>
+            </li>
+            <li class="nav-item catalog-tab-hidden" id="tabItem-catalogue">
+                <a class="nav-link" id="tab-catalogue" href="#" data-tab="catalogue">
+                    <i class="fas fa-book-open me-2"></i>MNR Catalogue
+                </a>
+            </li>
+            <li class="nav-item" id="tabItem-leadsync">
+                <a class="nav-link" href="/staff/lead-sync">
+                    <i class="fab fa-google me-2"></i>Lead Sync
+                </a>
+            </li>
+        </ul>
+
+        <!-- Tab 1: General Settings -->
+        <div id="pane-general" class="tab-pane-content">
+            <div class="settings-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-bell"></i>
+                        <h5>Notification Preferences</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>Email Notifications</h6>
+                                <p>Receive email alerts for important updates</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="emailNotif" checked>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>Push Notifications</h6>
+                                <p>Browser push notifications for real-time alerts</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="pushNotif">
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>Weekly Summary</h6>
+                                <p>Receive weekly summary of activities</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="weeklySummary" checked>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-palette"></i>
+                        <h5>Display Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>Theme</h6>
+                                <p>Choose your preferred theme</p>
+                            </div>
+                            <select class="form-select form-select-sm" id="themeSelect">
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                                <option value="auto">Auto</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>Items Per Page</h6>
+                                <p>Number of items shown in tables</p>
+                            </div>
+                            <select class="form-select form-select-sm" id="itemsPerPage">
+                                <option value="10">10</option>
+                                <option value="25" selected>25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>Compact Mode</h6>
+                                <p>Reduce spacing for more content</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="compactMode">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card admin-only" id="systemSettingsCard">
+                    <div class="card-header">
+                        <i class="fas fa-server"></i>
+                        <h5>System Settings (Admin Only)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>Maintenance Mode</h6>
+                                <p>Enable to restrict access for maintenance</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="maintenanceMode">
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>User Registration</h6>
+                                <p>Allow new employee registration</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="allowRegistration" checked>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>Session Timeout (minutes)</h6>
+                                <p>Auto logout after inactivity</p>
+                            </div>
+                            <select class="form-select form-select-sm" id="sessionTimeout">
+                                <option value="15">15</option>
+                                <option value="30" selected>30</option>
+                                <option value="60">60</option>
+                                <option value="120">120</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-shield-alt"></i>
+                        <h5>Security</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>Change Password</h6>
+                                <p>Update your account password</p>
+                            </div>
+                            <a href="/staff/change-password" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-key me-1"></i>Change
+                            </a>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h6>Two-Factor Authentication</h6>
+                                <p>Add extra security to your account</p>
+                            </div>
+                            <a href="/staff/2fa-settings" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-shield-alt me-1"></i>Configure
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <button class="btn btn-primary" onclick="saveSettings()">
+                    <i class="fas fa-save me-2"></i>Save Settings
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 2: MNR Catalogue (EA / VGK Supreme only) -->
+        <div id="pane-catalogue" class="tab-pane-content" style="display:none;">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-book-open"></i>
+                    <h5>Current Catalogue Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="catalog-info-row" id="catalogStatRow">
+                        <div class="catalog-stat-card">
+                            <div class="stat-label">Pages</div>
+                            <div class="stat-value" id="statPages">—</div>
+                            <div class="stat-sub">page images live</div>
+                        </div>
+                        <div class="catalog-stat-card">
+                            <div class="stat-label">PDF Size</div>
+                            <div class="stat-value" id="statSize">—</div>
+                            <div class="stat-sub">MB on disk</div>
+                        </div>
+                        <div class="catalog-stat-card">
+                            <div class="stat-label">Last Updated</div>
+                            <div class="stat-value" style="font-size:14px;" id="statUpdated">—</div>
+                            <div class="stat-sub">catalog PDF</div>
+                        </div>
+                        <div class="catalog-stat-card">
+                            <div class="stat-label">Max Upload</div>
+                            <div class="stat-value" id="statMax">150</div>
+                            <div class="stat-sub">MB allowed</div>
+                        </div>
+                    </div>
+                    <div id="catalogInfoAlert"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-upload"></i>
+                    <h5>Upload New Catalogue PDF</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4" style="font-size:13px;">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Uploading a new PDF will automatically convert all pages to images and go live on
+                        <strong>/catalog</strong> immediately. The existing catalogue stays live until the
+                        new one is fully ready. Conversion typically takes 10–30 seconds.
+                    </div>
+
+                    <div class="upload-zone mb-3" id="uploadZone" onclick="document.getElementById('catalogPdfInput').click()">
+                        <i class="fas fa-file-pdf"></i>
+                        <div id="uploadZoneText"><strong>Click to choose a PDF</strong></div>
+                        <div class="upload-hint">PDF only &bull; Maximum 150 MB</div>
+                    </div>
+                    <input type="file" id="catalogPdfInput" accept=".pdf,application/pdf" style="display:none;">
+
+                    <div id="fileSelectedInfo" class="mb-3" style="display:none;">
+                        <div class="d-flex align-items-center gap-3 p-3 bg-light rounded">
+                            <i class="fas fa-file-pdf text-danger fa-lg"></i>
+                            <div class="flex-grow-1">
+                                <div id="fileSelectedName" class="fw-semibold" style="font-size:14px;"></div>
+                                <div id="fileSelectedSize" class="text-muted" style="font-size:12px;"></div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearFileSelection()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="catalogUploadProgress" style="display:none;" class="mb-3">
+                        <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
+                            <span id="catalogProgressLabel">Uploading…</span>
+                            <span id="catalogProgressPct">0%</span>
+                        </div>
+                        <div class="progress" style="height:8px;">
+                            <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated"
+                                 id="catalogProgressBar" style="width:0%"></div>
+                        </div>
+                    </div>
+
+                    <div id="catalogUploadResult" class="mb-3" style="display:none;"></div>
+
+                    <button class="btn btn-primary" id="btnUploadCatalog" onclick="uploadCatalog()" disabled>
+                        <i class="fas fa-upload me-2"></i>Upload &amp; Update Catalogue
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const CATALOG_ADMIN_ROLES = ['ea', 'vgk4u'];
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Settings', 'fas fa-cog');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+
+            // Existing admin-only card (VGK Supreme Admin)
+            if (userData.role_name === 'VGK Mentor' || userData.role_name === 'VGK4U Supreme Admin' || userData.authLevel === 'RVZ ID') {
+                document.getElementById('systemSettingsCard').classList.add('show');
+            }
+
+            // MNR Catalogue tab — EA or VGK Supreme only
+            const roleCode = (userData.role_code || '').toLowerCase();
+            if (CATALOG_ADMIN_ROLES.includes(roleCode)) {
+                document.getElementById('tabItem-catalogue').classList.remove('catalog-tab-hidden');
+                loadCatalogInfo();
+            }
+            
+            loadSettings();
+            initTabs();
+        });
+
+        // ── Tab switching ──────────────────────────────────────────────────────
+        function initTabs() {
+            document.querySelectorAll('.nav-tabs .nav-link').forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    const target = this.getAttribute('data-tab');
+                    if (!target) return; // navigation link (e.g. Lead Sync) — allow normal href
+                    e.preventDefault();
+                    document.querySelectorAll('.nav-tabs .nav-link').forEach(function(l) {
+                        l.classList.remove('active');
+                    });
+                    document.querySelectorAll('.tab-pane-content').forEach(function(p) {
+                        p.style.display = 'none';
+                    });
+                    this.classList.add('active');
+                    document.getElementById('pane-' + target).style.display = 'block';
+                });
+            });
+        }
+
+        // ── General settings ──────────────────────────────────────────────────
+        function loadSettings() {
+            const settings = JSON.parse(localStorage.getItem('staff_settings') || '{}');
+            document.getElementById('emailNotif').checked = settings.emailNotif !== false;
+            document.getElementById('pushNotif').checked = settings.pushNotif === true;
+            document.getElementById('weeklySummary').checked = settings.weeklySummary !== false;
+            document.getElementById('themeSelect').value = settings.theme || 'light';
+            document.getElementById('itemsPerPage').value = settings.itemsPerPage || '25';
+            document.getElementById('compactMode').checked = settings.compactMode === true;
+        }
+        
+        function saveSettings() {
+            const settings = {
+                emailNotif: document.getElementById('emailNotif').checked,
+                pushNotif: document.getElementById('pushNotif').checked,
+                weeklySummary: document.getElementById('weeklySummary').checked,
+                theme: document.getElementById('themeSelect').value,
+                itemsPerPage: document.getElementById('itemsPerPage').value,
+                compactMode: document.getElementById('compactMode').checked
+            };
+            localStorage.setItem('staff_settings', JSON.stringify(settings));
+            document.getElementById('alertContainer').innerHTML = `
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="fas fa-check-circle me-2"></i>Settings saved successfully!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+        }
+
+        // ── Catalogue tab ─────────────────────────────────────────────────────
+        async function loadCatalogInfo() {
+            try {
+                const res = await staffFetch('/api/v1/catalog/admin/catalog-info');
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('statPages').textContent = data.page_count || '0';
+                    document.getElementById('statSize').textContent = data.pdf.size_mb || '0';
+                    document.getElementById('statUpdated').textContent = data.pdf.last_modified || 'Unknown';
+                    document.getElementById('statMax').textContent = data.max_upload_mb || '150';
+                }
+            } catch (err) {
+                document.getElementById('catalogInfoAlert').innerHTML =
+                    '<div class="alert alert-warning py-2" style="font-size:13px;"><i class="fas fa-exclamation-triangle me-2"></i>Could not load catalogue status.</div>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.getElementById('catalogPdfInput');
+            if (input) {
+                input.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (!file) return;
+                    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                    if (file.size > 150 * 1024 * 1024) {
+                        showCatalogResult('danger', 'File is too large (' + sizeMB + ' MB). Maximum allowed is 150 MB.');
+                        this.value = '';
+                        return;
+                    }
+                    document.getElementById('uploadZoneText').innerHTML =
+                        '<strong class="text-success"><i class="fas fa-check me-1"></i>File ready</strong>';
+                    document.getElementById('fileSelectedName').textContent = file.name;
+                    document.getElementById('fileSelectedSize').textContent = sizeMB + ' MB';
+                    document.getElementById('fileSelectedInfo').style.display = 'block';
+                    document.getElementById('btnUploadCatalog').disabled = false;
+                    document.getElementById('catalogUploadResult').style.display = 'none';
+                });
+            }
+        });
+
+        function clearFileSelection() {
+            document.getElementById('catalogPdfInput').value = '';
+            document.getElementById('fileSelectedInfo').style.display = 'none';
+            document.getElementById('uploadZoneText').innerHTML = '<strong>Click to choose a PDF</strong>';
+            document.getElementById('btnUploadCatalog').disabled = true;
+            document.getElementById('catalogUploadResult').style.display = 'none';
+        }
+
+        async function uploadCatalog() {
+            const input = document.getElementById('catalogPdfInput');
+            if (!input.files || !input.files[0]) return;
+
+            const file = input.files[0];
+            const token = localStorage.getItem('staff_token');
+            if (!token) { window.location.href = '/staff/login'; return; }
+
+            const btn = document.getElementById('btnUploadCatalog');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading…';
+
+            const progressWrap = document.getElementById('catalogUploadProgress');
+            const progressBar  = document.getElementById('catalogProgressBar');
+            const progressPct  = document.getElementById('catalogProgressPct');
+            const progressLbl  = document.getElementById('catalogProgressLabel');
+
+            progressWrap.style.display = 'block';
+            progressBar.style.width    = '5%';
+            progressPct.textContent    = '5%';
+            progressLbl.textContent    = 'Uploading PDF…';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const xhr = new XMLHttpRequest();
+
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        const pct = Math.min(90, Math.round((e.loaded / e.total) * 90));
+                        progressBar.style.width = pct + '%';
+                        progressPct.textContent = pct + '%';
+                        if (pct >= 90) {
+                            progressLbl.textContent = 'Converting pages… please wait';
+                        }
+                    }
+                });
+
+                const result = await new Promise(function(resolve, reject) {
+                    xhr.open('POST', '/api/v1/catalog/admin/catalog-upload');
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                    xhr.onload = function() { resolve(xhr); };
+                    xhr.onerror = function() { reject(new Error('Network error')); };
+                    xhr.send(formData);
+                });
+
+                progressBar.style.width = '100%';
+                progressPct.textContent = '100%';
+
+                const data = JSON.parse(result.responseText);
+
+                if (result.status === 200 && data.success) {
+                    progressLbl.textContent = 'Done';
+                    showCatalogResult('success',
+                        '<i class="fas fa-check-circle me-2"></i>' +
+                        'Catalogue updated — <strong>' + data.page_count + ' pages</strong> now live on <a href="/catalog" target="_blank">/catalog</a>. ' +
+                        '(' + data.size_mb + ' MB · ' + data.updated_at + ')'
+                    );
+                    clearFileSelection();
+                    setTimeout(loadCatalogInfo, 1000);
+                } else {
+                    const detail = (data.detail || 'Upload failed. Please try again.');
+                    showCatalogResult('danger', '<i class="fas fa-exclamation-circle me-2"></i>' + detail);
+                }
+            } catch (err) {
+                showCatalogResult('danger', '<i class="fas fa-exclamation-circle me-2"></i>Upload failed: ' + (err.message || 'Unknown error'));
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload &amp; Update Catalogue';
+                setTimeout(function() { progressWrap.style.display = 'none'; }, 2000);
+            }
+        }
+
+        function showCatalogResult(type, html) {
+            const el = document.getElementById('catalogUploadResult');
+            el.style.display = 'block';
+            el.innerHTML = '<div class="alert alert-' + type + '" style="font-size:13px;">' + html + '</div>';
+        }
+
+    </script>
+</body>
+</html>

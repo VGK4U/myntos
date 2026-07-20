@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Course Claim - MNR 2.0</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .balance-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .balance-breakdown {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        .bonus-badge {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+        }
+        
+        .course-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .course-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .course-card.selected {
+            border-color: var(--secondary-color);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        
+        .discount-info {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .claim-status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .status-pending { background: #f59e0b; color: white; }
+        .status-approved { background: #10b981; color: white; }
+        .status-rejected { background: #ef4444; color: white; }
+        .status-completed { background: #6366f1; color: white; }
+        
+        .form-section {
+            background: #f9fafb;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-graduation-cap"></i> Training Course Claim</h2>
+                    <p class="mb-0">Get discount on training courses with your coupon</p>
+                </div>
+                <div>
+                    <button class="btn btn-light" onclick="window.history.back()">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Combined Coupon Balance -->
+        <div class="main-card">
+            <h4><i class="fas fa-wallet text-primary"></i> Your Coupon Balance (Combined: EV + Training)</h4>
+            <div id="balance-container">
+                <div class="text-center text-muted">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>Loading balance...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available Training Courses -->
+        <div class="main-card">
+            <h4><i class="fas fa-book-open text-primary"></i> Available Training Courses</h4>
+            <div id="courses-container" class="mt-3">
+                <div class="text-center text-muted">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>Loading courses...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Claim Form (Hidden until course selected) -->
+        <div class="main-card" id="claim-form-section" style="display: none;">
+            <h4><i class="fas fa-file-invoice text-primary"></i> Submit Training Claim</h4>
+            
+            <div class="discount-info" id="discount-preview">
+                <!-- Discount calculation preview will appear here -->
+            </div>
+            
+            <div class="form-section">
+                <form id="training-claim-form">
+                    <input type="hidden" id="selected_course_id">
+                    <input type="hidden" id="selected_coupon_id">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Trainee Name *</label>
+                            <input type="text" class="form-control" id="trainee_name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Trainee Contact *</label>
+                            <input type="text" class="form-control" id="trainee_contact" 
+                                   pattern="[0-9]{10}" maxlength="10" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Trainee Email (Optional)</label>
+                        <input type="email" class="form-control" id="trainee_email">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Payment Reference (Optional)</label>
+                        <input type="text" class="form-control" id="payment_reference" 
+                               placeholder="Transaction ID or reference number">
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>Note:</strong> Your claim will be reviewed by admin. Once approved, 
+                        the training institute will be assigned for coordination.
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-paper-plane"></i> Submit Claim
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-lg ms-2" onclick="cancelClaim()">
+                        Cancel
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- My Claims History -->
+        <div class="main-card">
+            <h4><i class="fas fa-history text-primary"></i> My Training Claims</h4>
+            <div id="claims-container" class="mt-3">
+                <div class="text-center text-muted">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>Loading claims...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        let selectedCourse = null;
+        let selectedCoupon = null;
+        let couponsData = [];
+        
+        $(document).ready(function() {
+            loadBalance();
+            loadCourses();
+            loadMyClaims();
+        });
+        
+        // Load combined balance
+        function loadBalance() {
+            $.ajax({
+                url: '/api/v1/training/my-combined-balance',
+                type: 'GET',
+                success: function(response) {
+                    displayBalance(response);
+                },
+                error: function(xhr) {
+                    $('#balance-container').html(
+                        '<div class="alert alert-danger">Failed to load balance</div>'
+                    );
+                }
+            });
+        }
+        
+        // Display balance
+        function displayBalance(data) {
+            couponsData = data.coupons;
+            
+            if (data.coupons.length === 0) {
+                $('#balance-container').html(
+                    '<div class="alert alert-warning">No active coupons found</div>'
+                );
+                return;
+            }
+            
+            let html = '';
+            data.coupons.forEach(coupon => {
+                html += `
+                    <div class="balance-card">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5><i class="fas fa-ticket-alt"></i> ${coupon.coupon_code}</h5>
+                                <p class="mb-1"><strong>Package:</strong> ${coupon.package}</p>
+                                <p class="mb-1"><strong>Training Discount:</strong> ${coupon.training_discount_pct}%</p>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <h3>₹${coupon.balance.toLocaleString()}</h3>
+                                <p class="mb-0">Balance Available</p>
+                            </div>
+                        </div>
+                        
+                        <div class="balance-breakdown">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <strong>Total Value</strong><br>
+                                    ₹${coupon.total_coupon_value.toLocaleString()}
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>EV Claims</strong><br>
+                                    ${coupon.ev_claims} (₹${coupon.ev_used.toLocaleString()})
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Training Claims</strong><br>
+                                    ${coupon.training_claims} (₹${coupon.training_used.toLocaleString()})
+                                </div>
+                                <div class="col-md-3">
+                                    <strong>Total Used</strong><br>
+                                    ₹${coupon.total_used.toLocaleString()}
+                                </div>
+                            </div>
+                            
+                            ${coupon.bonus_used > 0 ? `
+                                <div class="text-center mt-3">
+                                    <span class="bonus-badge">
+                                        <i class="fas fa-gift"></i> Extra Bonus Used: ₹${coupon.bonus_used.toLocaleString()}
+                                    </span>
+                                    <p class="mb-0 mt-2 small">
+                                        (Bonus allowed only for Training - beyond coupon value)
+                                    </p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            $('#balance-container').html(html);
+        }
+        
+        // Load approved courses
+        function loadCourses() {
+            $.ajax({
+                url: '/api/v1/training/courses/approved',
+                type: 'GET',
+                success: function(response) {
+                    displayCourses(response.courses);
+                },
+                error: function(xhr) {
+                    $('#courses-container').html(
+                        '<div class="alert alert-danger">Failed to load courses</div>'
+                    );
+                }
+            });
+        }
+        
+        // Display courses
+        function displayCourses(courses) {
+            if (courses.length === 0) {
+                $('#courses-container').html(
+                    '<div class="alert alert-info">No approved courses available at the moment</div>'
+                );
+                return;
+            }
+            
+            let html = '';
+            courses.forEach(course => {
+                html += `
+                    <div class="course-card" onclick="selectCourse(${course.id}, '${course.course_name}', ${course.course_fee})">
+                        <div class="d-flex justify-content-between">
+                            <div class="flex-grow-1">
+                                <h5>${course.course_name}</h5>
+                                ${course.course_category ? `<span class="badge bg-info">${course.course_category}</span>` : ''}
+                                
+                                <div class="mt-2">
+                                    <p class="mb-1"><strong>Fee:</strong> ₹${course.course_fee.toLocaleString()}</p>
+                                    ${course.duration ? `<p class="mb-1"><strong>Duration:</strong> ${course.duration}</p>` : ''}
+                                    ${course.trainer_name ? `<p class="mb-1"><strong>Trainer:</strong> ${course.trainer_name}</p>` : ''}
+                                </div>
+                                
+                                ${course.description ? `<p class="text-muted mb-0 mt-2">${course.description}</p>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            $('#courses-container').html(html);
+        }
+        
+        // Select course
+        function selectCourse(courseId, courseName, courseFee) {
+            // Select the best coupon (with balance)
+            selectedCoupon = couponsData.find(c => c.has_balance) || couponsData[0];
+            
+            if (!selectedCoupon) {
+                alert('No active coupon found');
+                return;
+            }
+            
+            selectedCourse = { id: courseId, name: courseName, fee: courseFee };
+            
+            // Calculate discount
+            const discountPct = selectedCoupon.training_discount_pct;
+            const discountAmount = courseFee * (discountPct / 100);
+            const finalAmount = courseFee - discountAmount;
+            
+            // Check if this will be bonus
+            const isBonus = selectedCoupon.balance < discountAmount;
+            const bonusAmount = isBonus ? (discountAmount - Math.max(0, selectedCoupon.balance)) : 0;
+            
+            // Highlight selected course
+            $('.course-card').removeClass('selected');
+            event.currentTarget.classList.add('selected');
+            
+            // Show discount preview
+            $('#discount-preview').html(`
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <strong>Course Fee</strong><br>
+                        ₹${courseFee.toLocaleString()}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Your Discount</strong><br>
+                        ${discountPct}% = ₹${discountAmount.toLocaleString()}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Final Amount</strong><br>
+                        ₹${finalAmount.toLocaleString()}
+                    </div>
+                    <div class="col-md-3">
+                        ${isBonus ? `
+                            <strong>Bonus Used</strong><br>
+                            <span class="bonus-badge">₹${bonusAmount.toLocaleString()}</span>
+                        ` : `
+                            <strong>Balance After</strong><br>
+                            ₹${(selectedCoupon.balance - discountAmount).toLocaleString()}
+                        `}
+                    </div>
+                </div>
+                ${isBonus ? `
+                    <div class="alert alert-warning mt-3 mb-0">
+                        <i class="fas fa-info-circle"></i> This claim exceeds your coupon balance. 
+                        The excess ₹${bonusAmount.toLocaleString()} will be counted as bonus (allowed for training).
+                    </div>
+                ` : ''}
+            `);
+            
+            // Set form values
+            $('#selected_course_id').val(courseId);
+            $('#selected_coupon_id').val(selectedCoupon.coupon_id);
+            
+            // Show claim form
+            $('#claim-form-section').slideDown();
+            $('html, body').animate({
+                scrollTop: $('#claim-form-section').offset().top - 100
+            }, 500);
+        }
+        
+        // Cancel claim
+        function cancelClaim() {
+            selectedCourse = null;
+            selectedCoupon = null;
+            $('.course-card').removeClass('selected');
+            $('#claim-form-section').slideUp();
+            $('#training-claim-form')[0].reset();
+        }
+        
+        // Submit claim
+        $('#training-claim-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            const claimData = {
+                training_course_id: parseInt($('#selected_course_id').val()),
+                coupon_id: parseInt($('#selected_coupon_id').val()),
+                trainee_name: $('#trainee_name').val(),
+                trainee_contact: $('#trainee_contact').val(),
+                trainee_email: $('#trainee_email').val() || null,
+                payment_reference: $('#payment_reference').val() || null
+            };
+            
+            $.ajax({
+                url: '/api/v1/training/claim/submit',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(claimData),
+                success: function(response) {
+                    alert(`Success! Your training claim has been submitted.\n\n` +
+                          `Discount: ₹${response.discount_amount.toLocaleString()} (${response.discount_percentage}%)\n` +
+                          `${response.is_bonus ? `Bonus Used: ₹${response.bonus_amount.toLocaleString()}\n` : ''}` +
+                          `Status: ${response.status}`);
+                    
+                    cancelClaim();
+                    loadBalance();
+                    loadMyClaims();
+                },
+                error: function(xhr) {
+                    alert(xhr.responseJSON?.detail || 'Failed to submit claim');
+                }
+            });
+        });
+        
+        // Load my claims
+        function loadMyClaims() {
+            $.ajax({
+                url: '/api/v1/training/my-claims',
+                type: 'GET',
+                success: function(response) {
+                    displayMyClaims(response.claims);
+                },
+                error: function(xhr) {
+                    $('#claims-container').html(
+                        '<div class="alert alert-danger">Failed to load claims</div>'
+                    );
+                }
+            });
+        }
+        
+        // Display my claims
+        function displayMyClaims(claims) {
+            if (claims.length === 0) {
+                $('#claims-container').html(
+                    '<div class="alert alert-info">No claims yet</div>'
+                );
+                return;
+            }
+            
+            let html = '<div class="table-responsive"><table class="table table-hover">';
+            html += `
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Course</th>
+                        <th>Fee</th>
+                        <th>Discount</th>
+                        <th>Bonus</th>
+                        <th>Status</th>
+                        <th>Institute</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+            
+            claims.forEach(claim => {
+                const statusClass = claim.claim_status.includes('Reject') ? 'status-rejected' :
+                                  claim.claim_status.includes('Completed') ? 'status-completed' :
+                                  claim.claim_status.includes('Approved') ? 'status-approved' : 'status-pending';
+                
+                html += `
+                    <tr>
+                        <td>${new Date(claim.created_at).toLocaleDateString()}</td>
+                        <td>${claim.course_name}</td>
+                        <td>₹${claim.course_fee.toLocaleString()}</td>
+                        <td>₹${claim.discount_amount.toLocaleString()} (${claim.discount_percentage}%)</td>
+                        <td>${claim.is_bonus ? `<span class="bonus-badge">₹${claim.bonus_amount.toLocaleString()}</span>` : '-'}</td>
+                        <td><span class="claim-status-badge ${statusClass}">${claim.claim_status}</span></td>
+                        <td>${claim.institute_name || 'Not assigned'}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            $('#claims-container').html(html);
+        }
+    </script>
+</body>
+</html>

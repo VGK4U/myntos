@@ -1,0 +1,3068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Items - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-item { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-item .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .summary-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table th.sortable { cursor: pointer; user-select: none; transition: background 0.2s; }
+        .data-table th.sortable:hover { background: #f3f4f6; color: #374151; }
+        .data-table th.sortable i { margin-left: 6px; font-size: 10px; color: #9ca3af; }
+        .data-table th.sortable:hover i { color: #6b7280; }
+        .data-table th.sortable i.fa-sort-up, .data-table th.sortable i.fa-sort-down { color: #6d28d9; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .amount { font-weight: 600; font-family: monospace; }
+        .stock-low { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .stock-ok { background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .qty-in { color: #059669; font-weight: 600; }
+        .qty-out { color: #dc2626; font-weight: 600; }
+        .data-table tr { transition: background 0.15s; }
+        .data-table tr[onclick] { cursor: pointer; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 20px 0; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; margin: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; background: white; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .section-header { font-size: 14px; font-weight: 600; color: #6d28d9; margin: 20px 0 12px 0; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+        .section-header:first-child { margin-top: 0; }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        
+        .filter-section { background: white; padding: 16px 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 180px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #6b7280; }
+        .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .company-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .company-badge { background: #ede9fe; color: #6d28d9; padding: 4px 10px; border-radius: 20px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+        .company-badge .remove-badge { cursor: pointer; font-weight: bold; color: #a78bfa; }
+        .company-badge .remove-badge:hover { color: #dc2626; }
+        .color-input-container { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .color-tag { display: flex; align-items: center; gap: 4px; background: #f3f4f6; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .color-tag .remove-color { cursor: pointer; color: #9ca3af; }
+        .color-tag .remove-color:hover { color: #dc2626; }
+        .companies-cell { max-width: 200px; }
+        .companies-cell .company-badge { font-size: 10px; padding: 2px 6px; margin: 2px; display: inline-block; }
+        .action-btn { background: none; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .action-btn:hover { background: #f3f4f6; }
+        .action-btn.edit { color: #8b5cf6; }
+        .action-btn.delete { color: #ef4444; }
+        .action-btn.image { color: #10b981; }
+        .stock-item-thumbnail { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; cursor: pointer; border: 1px solid #e5e7eb; transition: transform 0.2s; }
+        .stock-item-thumbnail:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        .no-image-placeholder { width: 40px; height: 40px; border-radius: 6px; background: #f3f4f6; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 16px; }
+        .image-lightbox { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 2000; cursor: pointer; }
+        .image-lightbox.active { display: flex; }
+        .image-lightbox img { max-width: 90%; max-height: 90%; border-radius: 8px; }
+        .image-lightbox .close-lightbox { position: absolute; top: 20px; right: 30px; color: white; font-size: 36px; cursor: pointer; }
+        .image-gallery { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .image-gallery-item { position: relative; width: 80px; height: 80px; border-radius: 8px; overflow: hidden; border: 2px solid #e5e7eb; }
+        .image-gallery-item.primary { border-color: #8b5cf6; }
+        .image-gallery-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+        .image-gallery-item .image-actions { position: absolute; top: 4px; right: 4px; display: flex; gap: 2px; opacity: 0; transition: opacity 0.2s; }
+        .image-gallery-item:hover .image-actions { opacity: 1; }
+        .image-gallery-item .image-action-btn { width: 20px; height: 20px; border-radius: 4px; background: rgba(0,0,0,0.7); color: white; border: none; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .image-gallery-item .image-action-btn:hover { background: #8b5cf6; }
+        .image-upload-area { border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .image-upload-area:hover { border-color: #8b5cf6; background: #faf5ff; }
+        .image-upload-area i { font-size: 24px; color: #8b5cf6; margin-bottom: 8px; }
+        .image-count-badge { background: #ede9fe; color: #6d28d9; padding: 2px 6px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-left: 4px; }
+        .hsn-search-container { position: relative; }
+        .hsn-search-input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .hsn-search-input:focus { border-color: #8b5cf6; outline: none; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1); }
+        .hsn-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 6px; max-height: 250px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .hsn-dropdown.show { display: block; }
+        .hsn-option { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+        .hsn-option:hover { background: #f3f4f6; }
+        .hsn-option.selected { background: #ede9fe; }
+        .hsn-option.create-new { background: #f0fdf4; color: #059669; font-weight: 600; border-top: 2px solid #d1fae5; }
+        .hsn-option.create-new:hover { background: #dcfce7; }
+        .hsn-option .hsn-code { font-weight: 600; color: #1f2937; }
+        .hsn-option .hsn-desc { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .hsn-option .hsn-gst { font-size: 11px; color: #8b5cf6; float: right; }
+        .hsn-selected-badge { display: inline-flex; align-items: center; gap: 6px; background: #ede9fe; color: #6d28d9; padding: 6px 12px; border-radius: 6px; font-size: 13px; margin-top: 6px; }
+        .hsn-selected-badge .remove-hsn { cursor: pointer; color: #a78bfa; font-weight: bold; }
+        .hsn-selected-badge .remove-hsn:hover { color: #dc2626; }
+        .sub-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1100; }
+        .sub-modal.active { display: flex; }
+        .sub-modal-content { background: white; border-radius: 12px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .sub-modal-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f0fdf4; border-radius: 12px 12px 0 0; }
+        .sub-modal-header h4 { font-size: 16px; font-weight: 600; color: #059669; margin: 0; }
+        .sub-modal-body { padding: 20px; }
+        .sub-modal-footer { padding: 12px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 10px; }
+        .dc-protocol-warning { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+        .dc-protocol-warning i { color: #f59e0b; font-size: 18px; }
+        .stock-warning { color: #f59e0b; font-size: 12px; margin-left: 4px; }
+        .btn-group-header { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn-secondary-custom { background: #374151; border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-secondary-custom:hover { background: #4b5563; color: white; }
+        .btn-outline-custom { background: transparent; border: 2px solid #8b5cf6; color: #8b5cf6; padding: 8px 16px; border-radius: 8px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-outline-custom:hover { background: #8b5cf6; color: white; }
+        .upload-zone { border: 2px dashed #d1d5db; border-radius: 12px; padding: 40px 20px; text-align: center; background: #f9fafb; transition: all 0.2s; cursor: pointer; }
+        .upload-zone:hover, .upload-zone.dragover { border-color: #8b5cf6; background: #faf5ff; }
+        .upload-zone i { font-size: 48px; color: #8b5cf6; margin-bottom: 16px; }
+        .upload-zone p { color: #6b7280; margin: 0; }
+        .upload-zone .file-name { color: #1f2937; font-weight: 600; margin-top: 8px; }
+        .upload-progress { margin-top: 20px; display: none; }
+        .progress-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, #6d28d9); transition: width 0.3s; }
+        .upload-result { margin-top: 20px; padding: 16px; border-radius: 8px; }
+        .upload-result.success { background: #d1fae5; border: 1px solid #10b981; }
+        .upload-result.error { background: #fee2e2; border: 1px solid #ef4444; }
+        .upload-result.partial { background: #fef3c7; border: 1px solid #f59e0b; }
+        .error-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        .error-table th { background: #1e293b; color: white; padding: 10px 12px; text-align: left; font-size: 12px; }
+        .error-table td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; font-size: 13px; vertical-align: top; }
+        .error-table tr:hover { background: #f9fafb; }
+        .error-table tr.row-editing { background: #fffbeb; }
+        .error-table tr.row-corrected { background: #d1fae5; }
+        .error-table tr.row-deleted { background: #fee2e2; opacity: 0.6; text-decoration: line-through; }
+        .error-list { color: #dc2626; font-size: 12px; }
+        .error-list li { margin: 2px 0; }
+        .row-status { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .row-status.error { background: #fee2e2; color: #dc2626; }
+        .row-status.editing { background: #fef3c7; color: #d97706; }
+        .row-status.corrected { background: #d1fae5; color: #059669; }
+        .row-status.deleted { background: #e5e7eb; color: #6b7280; }
+        .row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .row-actions button { padding: 4px 10px; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .row-actions .btn-edit { background: #3b82f6; color: white; }
+        .row-actions .btn-edit:hover { background: #2563eb; }
+        .row-actions .btn-save { background: #10b981; color: white; }
+        .row-actions .btn-save:hover { background: #059669; }
+        .row-actions .btn-cancel { background: #6b7280; color: white; }
+        .row-actions .btn-cancel:hover { background: #4b5563; }
+        .row-actions .btn-delete { background: #ef4444; color: white; }
+        .row-actions .btn-delete:hover { background: #dc2626; }
+        .row-actions .btn-restore { background: #8b5cf6; color: white; }
+        .row-actions .btn-restore:hover { background: #7c3aed; }
+        .row-actions .btn-change-code { background: #f59e0b; color: white; }
+        .row-actions .btn-change-code:hover { background: #d97706; }
+        .inline-edit { width: 100%; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; }
+        .inline-edit:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+        .inline-edit.error { border-color: #ef4444; }
+        .inline-select { padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; }
+        .error-correction-toolbar { display: flex; justify-content: space-between; align-items: center; background: #f3f4f6; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; }
+        .correction-stats { font-size: 13px; color: #374151; }
+        .correction-stats span { font-weight: 600; }
+        .correction-actions { display: flex; gap: 8px; }
+        .correction-actions button { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500; }
+        .btn-save-corrected { background: #10b981; color: white; }
+        .btn-save-corrected:hover { background: #059669; }
+        .btn-save-corrected:disabled { background: #9ca3af; cursor: not-allowed; }
+        .edit-field-group { margin-bottom: 6px; }
+        .edit-field-label { font-size: 10px; color: #6b7280; margin-bottom: 2px; display: block; }
+        .pagination-controls { display: flex; justify-content: flex-start; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+        .pagination-btn { padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: white; cursor: pointer; font-size: 12px; min-width: 32px; text-align: center; }
+        .pagination-btn:hover:not(:disabled) { background: #f3f4f6; border-color: #6366f1; }
+        .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .pagination-btn.active { background: #4f46e5; color: white; border-color: #4f46e5; font-weight: 600; }
+        .pagination-info { font-size: 12px; color: #6b7280; margin-left: 8px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+            <div class="page-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 16px;">
+                <button class="btn-outline-custom" onclick="downloadTemplate()"><i class="fas fa-download"></i>Download Template</button>
+                <button class="btn-secondary-custom" onclick="openBulkUploadModal()"><i class="fas fa-file-excel"></i>Bulk Upload</button>
+                <button class="btn-secondary-custom" style="background:#059669;color:#fff;border-color:#059669;" onclick="openSyncModal()"><i class="fab fa-google me-1"></i>Sync from Google Sheet</button>
+                <button class="btn-primary-custom" onclick="openCreateModal()"><i class="fas fa-plus me-2"></i>Add Stock Item</button>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>Company</label>
+                    <select id="companyFilter" onchange="loadStockItems(1)">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Category</label>
+                    <select id="categoryFilter" onchange="loadStockItems(1)">
+                        <option value="">All Categories</option>
+                        <option value="PRODUCT">Product</option>
+                        <option value="RAW_MATERIAL">Raw Material</option>
+                        <option value="CONSUMABLE">Consumable</option>
+                        <option value="SPARE_PART">Spare Part</option>
+                        <option value="ACCESSORY">Accessory</option>
+                        <option value="BATTERIES">Batteries</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Specification</label>
+                    <select id="specificationFilter" onchange="loadStockItems(1)">
+                        <option value="">All Specifications</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Color</label>
+                    <select id="colorFilter" onchange="loadStockItems(1)">
+                        <option value="">All Colors</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Stock Level</label>
+                    <select id="stockLevelFilter" onchange="loadStockItems(1)">
+                        <option value="">All Items</option>
+                        <option value="in_stock">In Stock (&gt; 0)</option>
+                        <option value="out_of_stock">Out of Stock (= 0)</option>
+                        <option value="below_reorder">Below Reorder Level</option>
+                        <option value="below_zero">Below Zero (&lt; 0)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Search</label>
+                    <input type="text" id="searchInput" placeholder="Search items..." oninput="debouncedStockSearch()">
+                </div>
+                <div class="filter-group" style="min-width:90px;">
+                    <label>Per Page</label>
+                    <select id="pageSizeSelector" onchange="changePageSize()">
+                        <option value="20" selected>20</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()"><i class="fas fa-times me-1"></i>Clear</button>
+            </div>
+            
+            <div id="dcProtocolWarning" class="dc-protocol-warning" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span><strong>DC Protocol:</strong> Select a specific company to see accurate stock levels. "All Companies" view may show aggregated values.</span>
+            </div>
+            
+            <div class="summary-row">
+                <div class="summary-item">
+                    <div class="value" id="totalItems">0</div>
+                    <div class="label">Total Items</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value" id="lowStockItems">0</div>
+                    <div class="label">Low Stock</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value" id="totalValue">0</div>
+                    <div class="label">Total Value</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header"><span><i class="fas fa-boxes me-2"></i>Stock Items</span><span class="text-muted" id="recordCount">0 items</span></div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="tableContainer" style="display: none;">
+                        <div id="stockPagination" class="pagination-controls"></div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 60px;">Image</th>
+                                        <th class="sortable" onclick="sortTable('item_code')">Code <i class="fas fa-sort" id="sort-item_code"></i></th>
+                                        <th class="sortable" onclick="sortTable('item_name')">Name <i class="fas fa-sort" id="sort-item_name"></i></th>
+                                        <th class="sortable" onclick="sortTable('item_category')">Category <i class="fas fa-sort" id="sort-item_category"></i></th>
+                                        <th>Brand</th>
+                                        <th>Compatible With / Model</th>
+                                        <th>Spec / Size</th>
+                                        <th>Companies</th>
+                                        <th>Unit</th>
+                                        <th class="sortable" onclick="sortTable('total_qty_in')" style="color:#059669;" title="Total quantity received">In <i class="fas fa-sort" id="sort-total_qty_in"></i></th>
+                                        <th class="sortable" onclick="sortTable('total_qty_out')" style="color:#dc2626;" title="Total quantity dispatched">Out <i class="fas fa-sort" id="sort-total_qty_out"></i></th>
+                                        <th class="sortable" onclick="sortTable('current_stock')" title="Current balance">Balance <i class="fas fa-sort" id="sort-current_stock"></i></th>
+                                        <th title="Available quantity in marketplace catalog (from Zynova spares)">Mkt Qty</th>
+                                        <th class="sortable" onclick="sortTable('purchase_rate')" title="Avg. Purchase Price: weighted average of all purchases when no fixed rate is set">Avg Purchase Price <i class="fas fa-sort" id="sort-purchase_rate"></i></th>
+                                        <th class="sortable" onclick="sortTable('selling_rate')" title="Selling Price: set rate, or auto-suggested as Avg Purchase Price + 20% markup">Selling Price <i class="fas fa-sort" id="sort-selling_rate"></i></th>
+                                        <th class="sortable" onclick="sortTable('status')">Status <i class="fas fa-sort" id="sort-status"></i></th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stockTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-boxes"></i><h3>No Stock Items Found</h3><p>Add your first stock item to get started</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-plus-circle me-2"></i>Add Stock Item</h3><button class="modal-close" onclick="closeModal('createModal')">&times;</button></div>
+            <div class="modal-body">
+                <form id="createForm">
+                    <div class="section-header"><i class="fas fa-info-circle"></i>Basic Information</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group"><label>Item Name *</label><input type="text" id="formName" required placeholder="Enter item name"></div>
+                        <div class="form-group">
+                            <label>Item Code <small class="text-muted" style="font-weight:400;">(auto-generated · editable)</small></label>
+                            <input type="text" id="formCode" placeholder="Auto-generated on category select" style="font-family:monospace;font-weight:600;color:#4c1d95;" title="Auto-generated from category. You may type a custom code if needed.">
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="formCategory" onchange="onFormCategoryChange()">
+                                <option value="PRODUCT">Product</option>
+                                <option value="RAW_MATERIAL">Raw Material</option>
+                                <option value="CONSUMABLE">Consumable</option>
+                                <option value="SPARE_PART">Spare Part</option>
+                                <option value="ACCESSORY">Accessory</option>
+                                <option value="BATTERIES">Batteries</option>
+                                <option value="__ADD_NEW__" style="font-style:italic;color:#7c3aed;">+ Add new category...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <select id="formUnit">
+                                <option value="PCS">Pieces</option>
+                                <option value="KG">Kilograms</option>
+                                <option value="LTR">Liters</option>
+                                <option value="MTR">Meters</option>
+                                <option value="SET">Set</option>
+                                <option value="BOX">Boxes</option>
+                                <option value="PACK">Pack</option>
+                                <option value="PAIR">Pair</option>
+                                <option value="UNIT">Unit</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="section-header"><i class="fas fa-building"></i>Applicable Companies</div>
+                    <div class="form-group">
+                        <select id="formCompanySelect" onchange="addCompanyBadge('form')">
+                            <option value="">-- Select Company to Add --</option>
+                        </select>
+                        <div class="company-badges" id="formCompanyBadges"></div>
+                        <input type="hidden" id="formApplicableCompanies" value="[]">
+                    </div>
+                    
+                    <div class="section-header"><i class="fas fa-tags"></i>Specifications</div>
+                    <div class="form-group"><label>Description</label><textarea id="formDescription" placeholder="Item description"></textarea></div>
+                    <div class="form-group"><label>Brand / Manufacturer</label><input type="text" id="formBrand" placeholder="e.g., Bosch, Zymone, MRF"></div>
+                    <div class="form-group"><label>Compatible With / Model</label><input type="text" id="formModelCompat" placeholder="e.g., Honda Activa 6G, Bajaj Pulsar NS200"></div>
+                    <div class="form-group"><label>Specification</label><textarea id="formSpecification" placeholder="Technical specifications (e.g., dimensions, material, features)"></textarea></div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group"><label>Size</label><input type="text" id="formSize" placeholder="e.g., Large, 10x20cm, XL"></div>
+                        <div class="form-group">
+                            <label>Colors (press Enter to add)</label>
+                            <input type="text" id="formColorInput" placeholder="Type color and press Enter" onkeydown="if(event.key==='Enter'){event.preventDefault();addColor('form');}">
+                            <div class="color-input-container" id="formColors"></div>
+                            <input type="hidden" id="formColorsData" value="[]">
+                        </div>
+                    </div>
+
+                    <div class="section-header"><i class="fab fa-google-drive" style="color:#4285f4;"></i>&nbsp;Images</div>
+                    <div class="form-group">
+                        <label>Google Drive Folder Link <small class="text-muted">(optional — can also be added after saving)</small></label>
+                        <input type="text" id="formImageUrl" placeholder="https://drive.google.com/drive/folders/...">
+                    </div>
+                    
+                    <div class="section-header"><i class="fas fa-rupee-sign"></i>Pricing & Inventory</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group"><label>Purchase Rate</label><input type="number" id="formPurchaseRate" step="0.01" min="0" placeholder="Purchase price" oninput="calcSellingRate('form')"></div>
+                        <div class="form-group"><label>Selling Rate <small class="text-muted" style="font-weight:400;">(auto-calculated)</small></label><input type="number" id="formSellingRate" step="0.01" min="0" placeholder="Selling price"></div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: -6px; margin-bottom: 10px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:8px 12px;">
+                        <i class="fas fa-percent" style="color:#6d28d9;font-size:13px;"></i>
+                        <label style="font-size:13px;color:#374151;font-weight:500;margin:0;">Selling Markup %</label>
+                        <input type="number" id="formMarkupPct" value="27" min="0" max="500" step="0.5" style="width:72px;padding:5px 8px;border:1px solid #c4b5fd;border-radius:6px;font-size:13px;font-weight:600;color:#4c1d95;" oninput="calcSellingRate('form')">
+                        <span style="font-size:12px;color:#6b7280;">% above purchase rate &nbsp;·&nbsp; Marketplace markup varies per category config</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group"><label>Reorder Level</label><input type="number" id="formReorder" value="10" min="0" placeholder="Low stock alert level"></div>
+                        <div class="form-group">
+                            <label>HSN Code <small class="text-muted">(Search or create new)</small></label>
+                            <div class="hsn-search-container">
+                                <input type="text" class="hsn-search-input" id="formHsnSearch" placeholder="Type to search HSN codes..." autocomplete="off" onfocus="showHsnDropdown('form')" oninput="filterHsnOptions('form')">
+                                <div class="hsn-dropdown" id="formHsnDropdown"></div>
+                                <input type="hidden" id="formHsnId" value="">
+                                <div id="formHsnSelected"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>GST Rate</label><input type="text" id="formGstRate" readonly placeholder="Auto-calculated from HSN" style="background-color: #f5f5f5; cursor: not-allowed;"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="createStockItem()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-edit me-2"></i>Edit Stock Item</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editItemId">
+                    <div class="section-header"><i class="fas fa-info-circle"></i>Basic Information</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group"><label>Item Name *</label><input type="text" id="editName" required placeholder="Enter item name"></div>
+                        <div class="form-group"><label>Item Code</label><input type="text" id="editCode" readonly style="background-color: #f5f5f5; cursor: not-allowed;"></div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="editCategory" onchange="onEditCategoryChange()">
+                                <option value="PRODUCT">Product</option>
+                                <option value="RAW_MATERIAL">Raw Material</option>
+                                <option value="CONSUMABLE">Consumable</option>
+                                <option value="SPARE_PART">Spare Part</option>
+                                <option value="ACCESSORY">Accessory</option>
+                                <option value="BATTERIES">Batteries</option>
+                                <option value="__ADD_NEW__" style="font-style:italic;color:#7c3aed;">+ Add new category...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <select id="editUnit">
+                                <option value="PCS">Pieces</option>
+                                <option value="KG">Kilograms</option>
+                                <option value="LTR">Liters</option>
+                                <option value="MTR">Meters</option>
+                                <option value="SET">Set</option>
+                                <option value="BOX">Boxes</option>
+                                <option value="PACK">Pack</option>
+                                <option value="PAIR">Pair</option>
+                                <option value="UNIT">Unit</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="section-header"><i class="fas fa-building"></i>Applicable Companies</div>
+                    <div class="form-group">
+                        <select id="editCompanySelect" onchange="addCompanyBadge('edit')">
+                            <option value="">-- Select Company to Add --</option>
+                        </select>
+                        <div class="company-badges" id="editCompanyBadges"></div>
+                        <input type="hidden" id="editApplicableCompanies" value="[]">
+                    </div>
+                    
+                    <div class="section-header"><i class="fas fa-tags"></i>Specifications</div>
+                    <div class="form-group"><label>Description</label><textarea id="editDescription" placeholder="Item description"></textarea></div>
+                    <div class="form-group"><label>Brand / Manufacturer</label><input type="text" id="editBrand" placeholder="e.g., Bosch, Zymone, MRF"></div>
+                    <div class="form-group"><label>Compatible With / Model</label><input type="text" id="editModelCompat" placeholder="e.g., Honda Activa 6G, Bajaj Pulsar NS200"></div>
+                    <div class="form-group"><label>Specification</label><textarea id="editSpecification" placeholder="Technical specifications"></textarea></div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group"><label>Size</label><input type="text" id="editSize" placeholder="e.g., Large, 10x20cm, XL"></div>
+                        <div class="form-group">
+                            <label>Colors (press Enter to add)</label>
+                            <input type="text" id="editColorInput" placeholder="Type color and press Enter" onkeydown="if(event.key==='Enter'){event.preventDefault();addColor('edit');}">
+                            <div class="color-input-container" id="editColors"></div>
+                            <input type="hidden" id="editColorsData" value="[]">
+                        </div>
+                    </div>
+                    
+                    <div class="section-header"><i class="fas fa-rupee-sign"></i>Pricing & Inventory</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group"><label>Purchase Rate</label><input type="number" id="editPurchaseRate" step="0.01" min="0" placeholder="Purchase price" oninput="calcSellingRate('edit')"></div>
+                        <div class="form-group"><label>Selling Rate <small class="text-muted" style="font-weight:400;">(auto-calculated)</small></label><input type="number" id="editSellingRate" step="0.01" min="0" placeholder="Selling price"></div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: -6px; margin-bottom: 10px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:8px 12px;">
+                        <i class="fas fa-percent" style="color:#6d28d9;font-size:13px;"></i>
+                        <label style="font-size:13px;color:#374151;font-weight:500;margin:0;">Selling Markup %</label>
+                        <input type="number" id="editMarkupPct" value="27" min="0" max="500" step="0.5" style="width:72px;padding:5px 8px;border:1px solid #c4b5fd;border-radius:6px;font-size:13px;font-weight:600;color:#4c1d95;" oninput="calcSellingRate('edit')">
+                        <span style="font-size:12px;color:#6b7280;">% above purchase rate &nbsp;·&nbsp; Marketplace markup varies per category config</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                        <div class="form-group"><label>Reorder Level</label><input type="number" id="editReorder" value="10" min="0" placeholder="Low stock alert level"></div>
+                        <div class="form-group">
+                            <label>HSN Code <small class="text-muted">(Search or create new)</small></label>
+                            <div class="hsn-search-container">
+                                <input type="text" class="hsn-search-input" id="editHsnSearch" placeholder="Type to search HSN codes..." autocomplete="off" onfocus="showHsnDropdown('edit')" oninput="filterHsnOptions('edit')">
+                                <div class="hsn-dropdown" id="editHsnDropdown"></div>
+                                <input type="hidden" id="editHsnId" value="">
+                                <div id="editHsnSelected"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>GST Rate</label><input type="text" id="editGstRate" readonly placeholder="Auto-calculated from HSN" style="background-color: #f5f5f5; cursor: not-allowed;"></div>
+                    
+                    <div class="section-header"><i class="fas fa-warehouse"></i>Opening Balance <small class="text-muted">(One-time per company)</small></div>
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                        <small class="text-muted">Enter initial stock quantity and total purchase value. This creates a stock ledger OPENING_BALANCE entry. Can only be added once per company.</small>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                        <div class="form-group"><label>Opening Qty</label><input type="number" id="editOpeningQty" step="0.001" min="0" placeholder="e.g., 100"></div>
+                        <div class="form-group"><label>Total Value (Rs.)</label><input type="number" id="editOpeningValue" step="0.01" min="0" placeholder="e.g., 50000"></div>
+                        <div class="form-group"><label>As-of Date</label><input type="date" id="editOpeningDate"></div>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="saveOpeningBalance()"><i class="fas fa-plus-circle me-1"></i>Add Opening Balance</button>
+                    </div>
+                    
+                    <div class="section-header" style="background: linear-gradient(135deg,#1a7f3c,#2d9f56); color:#fff;"><i class="fas fa-store"></i>Marketplace Link <small style="font-weight:400;font-size:11px;margin-left:8px;">Single source of truth — price &amp; qty auto-push</small></div>
+                    <div id="marketplaceLinkStatus" style="margin-bottom:10px;"></div>
+                    <div id="marketplaceLinkForm" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Marketplace SKU <small class="text-muted">(exact SKU from marketplace catalogue)</small></label>
+                            <input type="text" id="editMarketplaceSku" placeholder="e.g. EV-BAT-001" style="font-family:monospace;">
+                        </div>
+                        <button type="button" class="btn btn-success btn-sm" onclick="linkToMarketplace()" style="height:38px;white-space:nowrap;"><i class="fas fa-link me-1"></i>Link &amp; Sync</button>
+                    </div>
+                    <div id="marketplaceUnlinkRow" style="display:none;margin-top:8px;">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="unlinkFromMarketplace()"><i class="fas fa-unlink me-1"></i>Remove Marketplace Link</button>
+                        <small class="text-muted ms-2">Removing the link allows the Google Sheet sync to resume for this item.</small>
+                    </div>
+
+                    <div class="form-group" style="margin-top:16px;">
+                        <label class="d-flex align-items-center gap-2">
+                            <input type="checkbox" id="editIsActive" checked style="width: auto;">
+                            <span>Active</span>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="updateStockItem()"><i class="fas fa-save me-1"></i>Update</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- HSN Quick Create Sub-Modal -->
+    <div class="sub-modal" id="hsnSubModal">
+        <div class="sub-modal-content">
+            <div class="sub-modal-header">
+                <h4><i class="fas fa-plus-circle me-2"></i>Create New HSN Code</h4>
+                <button class="modal-close" onclick="closeSubModal('hsnSubModal')">&times;</button>
+            </div>
+            <div class="sub-modal-body">
+                <div class="form-group">
+                    <label>HSN/SAC Code *</label>
+                    <input type="text" id="newHsnCode" placeholder="e.g., 8507, 9403" maxlength="20">
+                </div>
+                <div class="form-group">
+                    <label>Description *</label>
+                    <input type="text" id="newHsnDescription" placeholder="e.g., Electric Batteries">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label>GST Rate (%)</label>
+                        <select id="newHsnGstRate">
+                            <option value="0">0%</option>
+                            <option value="5">5%</option>
+                            <option value="12">12%</option>
+                            <option value="18" selected>18%</option>
+                            <option value="28">28%</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="newHsnType">
+                            <option value="HSN" selected>HSN (Goods)</option>
+                            <option value="SAC">SAC (Services)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Cess Rate (%) <small class="text-muted">Optional</small></label>
+                    <input type="number" id="newHsnCess" step="0.01" min="0" value="0" placeholder="0">
+                </div>
+                <input type="hidden" id="hsnSubModalContext" value="">
+            </div>
+            <div class="sub-modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeSubModal('hsnSubModal')">Cancel</button>
+                <button type="button" class="btn btn-success btn-sm" onclick="quickCreateHsn()"><i class="fas fa-check me-1"></i>Create & Select</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bulk Upload Modal -->
+    <div class="modal-overlay" id="bulkUploadModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-file-excel me-2"></i>Bulk Upload Stock Items</h3>
+                <button class="modal-close" onclick="closeModal('bulkUploadModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="uploadSection">
+                    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('bulkFile').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p>Click to select or drag & drop Excel file</p>
+                        <p class="file-name" id="selectedFileName" style="display: none;"></p>
+                        <input type="file" id="bulkFile" accept=".xlsx,.xls" style="display: none;" onchange="handleFileSelect(this)">
+                    </div>
+                    <div style="margin-top: 12px; text-align: center;">
+                        <a href="javascript:void(0)" onclick="downloadTemplate()" style="color: #8b5cf6; font-size: 13px;">
+                            <i class="fas fa-download me-1"></i>Download Template with Sample Data
+                        </a>
+                    </div>
+                    <div class="upload-progress" id="uploadProgress">
+                        <div class="progress-bar"><div class="progress-bar-fill" id="progressFill" style="width: 0%"></div></div>
+                        <p class="text-center text-muted" style="margin-top: 8px; font-size: 13px;">Uploading...</p>
+                    </div>
+                </div>
+                
+                <div id="uploadResultSection" style="display: none;">
+                    <div class="upload-result" id="uploadResultSummary"></div>
+                    
+                    <div id="errorListSection" style="display: none;">
+                        <h5 style="margin: 20px 0 12px 0; font-weight: 600;">Errors to Correct</h5>
+                        <p class="text-muted" style="font-size: 13px;">Edit errors directly below, then save corrected items.</p>
+                        
+                        <div class="error-correction-toolbar" id="correctionToolbar">
+                            <div class="correction-stats">
+                                <span id="pendingCount">0</span> pending | 
+                                <span id="correctedCount">0</span> corrected | 
+                                <span id="deletedCount">0</span> deleted
+                            </div>
+                            <div class="correction-actions">
+                                <button class="btn-save-corrected" id="saveCorrectedBtn" onclick="saveCorrectedItems()" disabled>
+                                    <i class="fas fa-save me-1"></i>Save Corrected Items
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                            <table class="error-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">Row</th>
+                                        <th style="width: 80px;">Status</th>
+                                        <th style="width: 140px;">Item Code</th>
+                                        <th style="width: 180px;">Item Name</th>
+                                        <th style="width: 120px;">Category</th>
+                                        <th style="width: 100px;">Unit</th>
+                                        <th>Errors / Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="errorTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-controls" id="errorPagination"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('bulkUploadModal')">Close</button>
+                <button type="button" class="btn-secondary-custom" id="uploadBtn" onclick="processBulkUpload()" disabled>
+                    <i class="fas fa-upload"></i>Upload
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let allStockItems = [];
+        let allCompanies = [];
+        let allHsnCodes = [];
+        let hsnDataCache = {};
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Stock Items', 'fas fa-boxes'); if (typeof StaffHeader !== 'undefined') StaffHeader.init(); if (typeof StaffBackButton !== 'undefined') StaffBackButton.init(); updateHeaderUserInfo();
+            await Promise.all([loadCompanies(), loadStockItems(), loadHsnCodes(), loadCategoryFilter()]);
+            
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.hsn-search-container')) {
+                    document.querySelectorAll('.hsn-dropdown').forEach(d => d.classList.remove('show'));
+                }
+            });
+        });
+        
+        async function loadCategoryFilter() {
+            try {
+                const res = await fetch(`${API_BASE}/stock-items/categories`);
+                const data = await res.json();
+                if (!data.success || !data.categories) return;
+                const sel = document.getElementById('categoryFilter');
+                if (!sel) return;
+                const current = sel.value;
+                sel.innerHTML = '<option value="">All Categories</option>' +
+                    data.categories.map(c =>
+                        `<option value="${c}" ${c === current ? 'selected' : ''}>${c.replace(/_/g,' ')}</option>`
+                    ).join('');
+            } catch (_) { /* keep existing hardcoded options on error */ }
+        }
+
+        async function loadHsnCodes() {
+            try {
+                const response = await staffFetch(`${API_BASE}/hsn`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allHsnCodes = data.hsn_codes || [];
+                    console.log('[DC-STOCK] Loaded HSN codes:', allHsnCodes.length);
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-STOCK] Failed to load HSN codes:', e);
+            }
+        }
+        
+        function showHsnDropdown(prefix) {
+            const dropdown = document.getElementById(`${prefix}HsnDropdown`);
+            renderHsnOptions(prefix, allHsnCodes);
+            dropdown.classList.add('show');
+        }
+        
+        function filterHsnOptions(prefix) {
+            const searchInput = document.getElementById(`${prefix}HsnSearch`);
+            const searchVal = searchInput.value.toLowerCase().trim();
+            
+            if (searchVal.length < 1) {
+                renderHsnOptions(prefix, allHsnCodes);
+                return;
+            }
+            
+            const filtered = allHsnCodes.filter(hsn => 
+                (hsn.hsn_code || '').toLowerCase().includes(searchVal) ||
+                (hsn.description || '').toLowerCase().includes(searchVal)
+            );
+            
+            renderHsnOptions(prefix, filtered, searchVal);
+        }
+        
+        function renderHsnOptions(prefix, hsnList, searchVal = '') {
+            const dropdown = document.getElementById(`${prefix}HsnDropdown`);
+            const selectedId = document.getElementById(`${prefix}HsnId`).value;
+            
+            let html = hsnList.slice(0, 20).map(hsn => {
+                const igstR = parseFloat(hsn.igst_rate || hsn.gst_rate || 0);
+                const cgstR = parseFloat(hsn.cgst_rate) || (igstR / 2);
+                const sgstR = parseFloat(hsn.sgst_rate) || (igstR / 2);
+                return `
+                <div class="hsn-option ${hsn.id == selectedId ? 'selected' : ''}" onclick="selectHsn('${prefix}', ${hsn.id}, '${hsn.hsn_code}', '${(hsn.description || '').replace(/'/g, "\\'")}', ${igstR}, ${cgstR}, ${sgstR})">
+                    <span class="hsn-gst">${igstR}%</span>
+                    <div class="hsn-code">${hsn.hsn_code} <small style="color:#6b7280;font-size:10px;">(C:${cgstR}% S:${sgstR}%)</small></div>
+                    <div class="hsn-desc">${hsn.description || ''}</div>
+                </div>`;
+            }).join('');
+            
+            html += `
+                <div class="hsn-option create-new" onclick="openHsnSubModal('${prefix}', '${searchVal}')">
+                    <i class="fas fa-plus-circle me-2"></i>Create New HSN Code${searchVal ? `: "${searchVal}"` : ''}
+                </div>
+            `;
+            
+            dropdown.innerHTML = html;
+            dropdown.classList.add('show');
+        }
+        
+        function selectHsn(prefix, id, code, description, gstRate, cgstRate, sgstRate) {
+            const cgst = cgstRate !== undefined ? parseFloat(cgstRate) : parseFloat(gstRate) / 2;
+            const sgst = sgstRate !== undefined ? parseFloat(sgstRate) : parseFloat(gstRate) / 2;
+            const igst = parseFloat(gstRate);
+            document.getElementById(`${prefix}HsnId`).value = id;
+            document.getElementById(`${prefix}HsnSearch`).value = '';
+            document.getElementById(`${prefix}HsnDropdown`).classList.remove('show');
+            document.getElementById(`${prefix}GstRate`).value = `${gstRate}% (CGST: ${cgst}% + SGST: ${sgst}% / IGST: ${igst}%)`;
+            
+            document.getElementById(`${prefix}HsnSelected`).innerHTML = `
+                <div class="hsn-selected-badge">
+                    <strong>${code}</strong> - ${description}<br>
+                    <span style="font-size:11px;">GST: ${gstRate}% &nbsp;·&nbsp; CGST: ${cgst}% + SGST: ${sgst}% &nbsp;·&nbsp; IGST: ${igst}%</span>
+                    <span class="remove-hsn" onclick="clearHsnSelection('${prefix}')">&times;</span>
+                </div>
+            `;
+            
+            hsnDataCache[id] = { code, description, gst_rate: gstRate, cgst_rate: cgst, sgst_rate: sgst };
+        }
+        
+        function clearHsnSelection(prefix) {
+            document.getElementById(`${prefix}HsnId`).value = '';
+            document.getElementById(`${prefix}HsnSelected`).innerHTML = '';
+            document.getElementById(`${prefix}GstRate`).value = '';
+        }
+        
+        function openHsnSubModal(prefix, prefillCode = '') {
+            document.getElementById(`${prefix}HsnDropdown`).classList.remove('show');
+            document.getElementById('hsnSubModalContext').value = prefix;
+            document.getElementById('newHsnCode').value = prefillCode;
+            document.getElementById('newHsnDescription').value = '';
+            document.getElementById('newHsnGstRate').value = '18';
+            document.getElementById('newHsnType').value = 'HSN';
+            document.getElementById('newHsnCess').value = '0';
+            document.getElementById('hsnSubModal').classList.add('active');
+        }
+        
+        function closeSubModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+        
+        async function quickCreateHsn() {
+            const token = localStorage.getItem('staff_token');
+            const context = document.getElementById('hsnSubModalContext').value;
+            const code = document.getElementById('newHsnCode').value.trim();
+            const description = document.getElementById('newHsnDescription').value.trim();
+            const gstRate = parseFloat(document.getElementById('newHsnGstRate').value) || 18;
+            const hsnType = document.getElementById('newHsnType').value || 'HSN';
+            const cessRate = parseFloat(document.getElementById('newHsnCess').value) || 0;
+            
+            if (!code || !description) {
+                alert('HSN code and description are required');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/hsn`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        hsn_code: code,
+                        description: description,
+                        cgst_rate: gstRate / 2,
+                        sgst_rate: gstRate / 2,
+                        igst_rate: gstRate,
+                        cess_rate: cessRate,
+                        effective_from: new Date().toISOString().split('T')[0]
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const newHsn = result.hsn || result;
+                    
+                    await loadHsnCodes();
+                    
+                    if (context && newHsn.id) {
+                        const nIgst = parseFloat(newHsn.igst_rate || newHsn.gst_rate || 0);
+                        const nCgst = parseFloat(newHsn.cgst_rate) || (nIgst / 2);
+                        const nSgst = parseFloat(newHsn.sgst_rate) || (nIgst / 2);
+                        selectHsn(context, newHsn.id, newHsn.hsn_code, newHsn.description, nIgst, nCgst, nSgst);
+                    }
+                    
+                    closeSubModal('hsnSubModal');
+                    showSuccess('HSN code created successfully!');
+                } else {
+                    const error = await response.json();
+                    alert(error.message || error.detail || 'Failed to create HSN code');
+                }
+            } catch (e) {
+                console.error('[DC-STOCK] HSN create error:', e);
+                alert('Failed to create HSN code: ' + e.message);
+            }
+        }
+        
+        function showSuccess(msg) {
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed top-0 end-0 p-3';
+            toast.style.zIndex = '9999';
+            toast.innerHTML = `<div class="alert alert-success alert-dismissible fade show" role="alert">${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            document.getElementById('headerUserInitials').textContent = (userData.full_name || 'SM').split(' ').map(n => n[0]).join('').substring(0, 2);
+            document.getElementById('headerUserName').textContent = userData.full_name || 'Staff Member';
+            document.getElementById('headerUserEmpId').textContent = userData.emp_code || '-';
+            document.getElementById('headerUserRole').textContent = userData.role_name || 'Employee';
+        }
+        
+        function formatCurrency(amt) { return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2 }).format(amt || 0); }
+        
+        async function loadCompanies() {
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/companies`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (response.ok) {
+                    const data = await response.json();
+                    allCompanies = (data.companies || []).filter(c => c.is_active !== false);
+                    populateCompanyDropdowns();
+                }
+            } catch (e) { console.error('[DC-STOCK] Failed to load companies:', e); }
+        }
+        
+        function populateCompanyDropdowns() {
+            const filterSelect = document.getElementById('companyFilter');
+            const formSelect = document.getElementById('formCompanySelect');
+            const editSelect = document.getElementById('editCompanySelect');
+            
+            const companyOptions = allCompanies.map(c => `<option value="${c.id}" data-name="${c.company_name}">${c.company_name}</option>`).join('');
+            
+            filterSelect.innerHTML = '<option value="">All Companies</option>' + companyOptions;
+            formSelect.innerHTML = '<option value="">-- Select Company to Add --</option>' + companyOptions;
+            editSelect.innerHTML = '<option value="">-- Select Company to Add --</option>' + companyOptions;
+        }
+        
+        async function loadStockItems(page = 1) {
+            currentStockPage = page;
+            const token = localStorage.getItem('staff_token');
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            try {
+                const companyId = document.getElementById('companyFilter').value;
+                const search = document.getElementById('searchInput').value.trim();
+                const category = document.getElementById('categoryFilter').value;
+                const specFilter = document.getElementById('specificationFilter').value;
+                const colorFilter = document.getElementById('colorFilter').value;
+                const stockLevel = document.getElementById('stockLevelFilter').value;
+                
+                const dcWarning = document.getElementById('dcProtocolWarning');
+                if (!companyId) {
+                    dcWarning.style.display = 'flex';
+                    console.log('[DC-STOCK] Warning: No company selected - stock values may be aggregated');
+                } else {
+                    dcWarning.style.display = 'none';
+                }
+                
+                let url = `${API_BASE}/stock-items?include_summary=true&page=${page}&page_size=${STOCK_PAGE_SIZE}`;
+                if (companyId) url += `&company_id=${encodeURIComponent(companyId)}`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                if (category) url += `&item_category=${encodeURIComponent(category)}`;
+                if (specFilter) url += `&specification=${encodeURIComponent(specFilter)}`;
+                if (colorFilter) url += `&colors=${encodeURIComponent(colorFilter)}`;
+                if (stockLevel) url += `&stock_level=${encodeURIComponent(stockLevel)}`;
+                
+                console.log('[DC-STOCK] Loading page', page, 'url:', url);
+                const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (response.ok) {
+                    const data = await response.json();
+                    allStockItems = data.stock_items || data.items || [];
+                    stockTotalCount = data.total || allStockItems.length;
+                    stockTotalPages = Math.ceil(stockTotalCount / STOCK_PAGE_SIZE);
+                    console.log('[DC-STOCK] Loaded', allStockItems.length, 'items, total:', stockTotalCount, 'pages:', stockTotalPages);
+                    
+                    populateFilterDropdowns();
+                    renderStockItems(allStockItems);
+                    renderStockPagination();
+                    
+                    if (data.summary) {
+                        updateSummary(data.summary);
+                    }
+                } else { 
+                    console.error('[DC-STOCK] Failed to load stock items:', response.status);
+                    showEmptyState(); 
+                }
+            } catch (e) { 
+                console.error('[DC-STOCK] Error loading stock items:', e);
+                showEmptyState(); 
+            }
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        function renderStockPagination() {
+            const container = document.getElementById('stockPagination');
+            if (!container) return;
+            if (stockTotalPages <= 1) {
+                container.innerHTML = stockTotalCount > 0 ? `<span class="pagination-info">${stockTotalCount} item${stockTotalCount !== 1 ? 's' : ''} total</span>` : '';
+                return;
+            }
+            const maxBtns = 7;
+            let start = Math.max(1, currentStockPage - Math.floor(maxBtns / 2));
+            let end = Math.min(stockTotalPages, start + maxBtns - 1);
+            if (end - start < maxBtns - 1) start = Math.max(1, end - maxBtns + 1);
+            let html = `<button class="pagination-btn" onclick="loadStockItems(1)" ${currentStockPage === 1 ? 'disabled' : ''} title="First page">«</button>`;
+            html += `<button class="pagination-btn" onclick="loadStockItems(${currentStockPage - 1})" ${currentStockPage === 1 ? 'disabled' : ''} title="Previous page">‹</button>`;
+            for (let i = start; i <= end; i++) {
+                html += `<button class="pagination-btn${i === currentStockPage ? ' active' : ''}" onclick="loadStockItems(${i})">${i}</button>`;
+            }
+            html += `<button class="pagination-btn" onclick="loadStockItems(${currentStockPage + 1})" ${currentStockPage === stockTotalPages ? 'disabled' : ''} title="Next page">›</button>`;
+            html += `<button class="pagination-btn" onclick="loadStockItems(${stockTotalPages})" ${currentStockPage === stockTotalPages ? 'disabled' : ''} title="Last page">»</button>`;
+            html += `<span class="pagination-info">Page ${currentStockPage} of ${stockTotalPages} &nbsp;·&nbsp; ${stockTotalCount} items total</span>`;
+            container.innerHTML = html;
+        }
+        
+        function populateFilterDropdowns() {
+            const specSet = new Set();
+            const colorSet = new Set();
+            
+            allStockItems.forEach(item => {
+                if (item.specification) {
+                    const specWords = item.specification.split(/[,;]/);
+                    specWords.forEach(w => {
+                        const trimmed = w.trim();
+                        if (trimmed.length > 2 && trimmed.length < 50) specSet.add(trimmed);
+                    });
+                }
+                if (item.colors && Array.isArray(item.colors)) {
+                    item.colors.forEach(c => colorSet.add(c));
+                }
+            });
+            
+            const specFilter = document.getElementById('specificationFilter');
+            const currentSpecVal = specFilter.value;
+            specFilter.innerHTML = '<option value="">All Specifications</option>' +
+                Array.from(specSet).sort().map(s => `<option value="${s}">${s}</option>`).join('');
+            specFilter.value = currentSpecVal;
+            
+            const colorFilter = document.getElementById('colorFilter');
+            const currentColorVal = colorFilter.value;
+            colorFilter.innerHTML = '<option value="">All Colors</option>' +
+                Array.from(colorSet).sort().map(c => `<option value="${c}">${c}</option>`).join('');
+            colorFilter.value = currentColorVal;
+        }
+        
+        function filterStockItems() {
+            loadStockItems(1);
+        }
+        
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('companyFilter').value = '';
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('specificationFilter').value = '';
+            document.getElementById('colorFilter').value = '';
+            document.getElementById('stockLevelFilter').value = '';
+            loadStockItems(1);
+        }
+
+        function changePageSize() {
+            STOCK_PAGE_SIZE = parseInt(document.getElementById('pageSizeSelector').value) || 20;
+            loadStockItems(1);
+        }
+        
+        let currentSortField = 'item_name';
+        let currentSortDirection = 'asc';
+        let currentStockPage = 1;
+        let STOCK_PAGE_SIZE = 20;
+        let stockTotalCount = 0;
+        let stockTotalPages = 0;
+        let stockSearchTimer = null;
+
+        function debouncedStockSearch() {
+            if (stockSearchTimer) clearTimeout(stockSearchTimer);
+            stockSearchTimer = setTimeout(() => loadStockItems(1), 300);
+        }
+        
+        function sortTable(field) {
+            if (currentSortField === field) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortField = field;
+                currentSortDirection = 'asc';
+            }
+            
+            document.querySelectorAll('th.sortable i').forEach(icon => {
+                icon.className = 'fas fa-sort';
+            });
+            const sortIcon = document.getElementById(`sort-${field}`);
+            if (sortIcon) {
+                sortIcon.className = currentSortDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+            }
+            
+            renderStockItems(allStockItems);
+        }
+        
+        function renderStockItems(items) {
+            const tbody = document.getElementById('stockTable');
+            if (!items.length) { showEmptyState(); return; }
+            document.getElementById('tableContainer').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'none';
+            const pageStart = (currentStockPage - 1) * STOCK_PAGE_SIZE + 1;
+            const pageEnd = pageStart + items.length - 1;
+            const countLabel = stockTotalPages > 1
+                ? `${pageStart}–${pageEnd} of ${stockTotalCount} items`
+                : `${stockTotalCount} items`;
+            document.getElementById('recordCount').textContent = countLabel;
+            
+            const sortedItems = [...items].sort((a, b) => {
+                let aVal, bVal;
+                
+                if (currentSortField === 'current_stock') {
+                    aVal = a.current_stock || 0;
+                    bVal = b.current_stock || 0;
+                } else if (currentSortField === 'total_qty_in') {
+                    aVal = a.total_qty_in || 0;
+                    bVal = b.total_qty_in || 0;
+                } else if (currentSortField === 'total_qty_out') {
+                    aVal = a.total_qty_out || 0;
+                    bVal = b.total_qty_out || 0;
+                } else if (currentSortField === 'purchase_rate') {
+                    aVal = a.effective_purchase_rate || a.purchase_rate || 0;
+                    bVal = b.effective_purchase_rate || b.purchase_rate || 0;
+                } else if (currentSortField === 'selling_rate') {
+                    aVal = a.effective_selling_rate || a.selling_rate || 0;
+                    bVal = b.effective_selling_rate || b.selling_rate || 0;
+                } else if (currentSortField === 'status') {
+                    const aStock = a.current_stock || 0;
+                    const bStock = b.current_stock || 0;
+                    const aReorder = a.reorder_level || 10;
+                    const bReorder = b.reorder_level || 10;
+                    aVal = aStock <= aReorder ? 0 : 1;
+                    bVal = bStock <= bReorder ? 0 : 1;
+                } else {
+                    aVal = (a[currentSortField] || '').toString().toLowerCase();
+                    bVal = (b[currentSortField] || '').toString().toLowerCase();
+                }
+                
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return currentSortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+                
+                if (aVal < bVal) return currentSortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return currentSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            tbody.innerHTML = sortedItems.map(item => {
+                const sellingPrice = item.effective_selling_rate || item.selling_rate || item.unit_price || 0;
+                const purchasePrice = item.effective_purchase_rate || item.purchase_rate || 0;
+                const currentStock = item.current_stock || 0;
+                const totalIn = item.total_qty_in || 0;
+                const totalOut = item.total_qty_out || 0;
+                const reorderLevel = item.reorder_level || 10;
+                // DC_LOW_STOCK_FIX_001: Only flag as low stock if the item has actual stock movement
+                const hasMovement = totalIn > 0 || totalOut > 0;
+                const isLow = hasMovement && currentStock <= reorderLevel;
+                
+                const companies = (item.applicable_companies || []).map(id => {
+                    const company = allCompanies.find(c => c.id === id);
+                    return company ? `<span class="company-badge" title="${company.company_name}">${company.company_name}</span>` : '';
+                }).filter(Boolean).join('') || '<span class="text-muted">-</span>';
+                
+                const _rawPrimaryImage = item.primary_image;
+                const primaryImage = _rawPrimaryImage ? (_rawPrimaryImage.startsWith('/') ? _rawPrimaryImage : '/storage/' + _rawPrimaryImage) : null;
+                const hasFolderLink = item.has_folder_link;
+                const folderUrl = item.folder_url;
+                const realImages = (item.images || []).filter(i => i.source_type !== 'folder_link');
+                const imageCount = realImages.length;
+                let imageHtml;
+                if (primaryImage) {
+                    imageHtml = `<img src="${primaryImage}" class="stock-item-thumbnail" onclick="event.stopPropagation();openImageLightbox('${primaryImage}', ${item.id})" title="Click to enlarge${imageCount > 1 ? ' (' + imageCount + ' images)' : ''}">`;
+                } else if (hasFolderLink && folderUrl) {
+                    imageHtml = `<a href="${folderUrl}" target="_blank" onclick="event.stopPropagation();" title="Images in Google Drive folder" style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:6px;border:1px solid #e5e7eb;background:#f8f9fa;text-decoration:none;"><i class="fab fa-google-drive" style="color:#4285f4;font-size:18px;"></i></a>`;
+                } else {
+                    imageHtml = `<div class="no-image-placeholder"><i class="fas fa-image"></i></div>`;
+                }
+                
+                const companyId = document.getElementById('companyFilter').value;
+                const ledgerUrl = `/staff/inventory/stock-ledger?item_id=${item.id}${companyId ? '&company_id=' + companyId : ''}`;
+                
+                return `
+                    <tr style="cursor:pointer;" onclick="window.location.href='${ledgerUrl}'" title="View stock ledger for ${(item.item_name||'').replace(/'/g,'&#39;')}">
+                        <td onclick="event.stopPropagation();">${imageHtml}${imageCount > 1 ? `<span class="image-count-badge">+${imageCount-1}</span>` : ''}</td>
+                        <td><code>${item.item_code || '-'}</code></td>
+                        <td>${/^#(REF|VALUE|N\/A|NAME|NUM|NULL)!$/i.test(item.item_name || '') ? `<span style="color:#dc2626;font-size:11px;font-weight:600;background:#fef2f2;padding:2px 6px;border-radius:4px;" title="Excel import error — edit this item to fix the name"><i class="fas fa-exclamation-triangle"></i> Invalid Name (${item.item_name})</span>` : `<strong>${item.item_name || 'Unnamed'}</strong>`}${item.size ? `<br><small class="text-muted">Size: ${item.size}</small>` : ''}${item.marketplace_linked ? `<br><span style="font-size:10px;background:#198754;color:#fff;padding:1px 6px;border-radius:4px;"><i class="fas fa-store" style="font-size:9px;"></i> MKT: ${item.marketplace_sku}</span>` : ''}</td>
+                        <td>${item.item_category || '-'}</td>
+                        <td style="font-size:12px;">${item.brand ? `<span style="background:#f3f4f6;padding:2px 7px;border-radius:4px;font-weight:600;">${item.brand}</span>` : '<span style="color:#d1d5db;">—</span>'}</td>
+                        <td style="font-size:11px;max-width:140px;color:#374151;">${item.model_compat
+                            ? `<span title="${item.model_compat}" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.model_compat}</span>`
+                            : '<span style="color:#d1d5db;">—</span>'}</td>
+                        <td style="font-size:11px;max-width:120px;">
+                          ${item.specification ? `<span title="${item.specification}" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#374151;">${item.specification}</span>` : ''}
+                          ${item.size ? `<span style="color:#6b7280;">${item.size}</span>` : ''}
+                          ${!item.specification && !item.size ? '<span style="color:#d1d5db;">—</span>' : ''}
+                        </td>
+                        <td class="companies-cell">${companies}</td>
+                        <td>${item.unit_of_measure || 'PCS'}</td>
+                        <td class="qty-in amount">${totalIn % 1 === 0 ? totalIn : totalIn.toFixed(2)}</td>
+                        <td class="qty-out amount">${totalOut % 1 === 0 ? totalOut : totalOut.toFixed(2)}</td>
+                        <td class="amount" style="font-weight:700;">${currentStock % 1 === 0 ? currentStock : currentStock.toFixed(2)}</td>
+                        <td>${item.marketplace_available_qty != null
+                            ? `<span style="font-size:11px;background:${item.marketplace_available_qty > 0 ? '#dcfce7' : '#fef2f2'};color:${item.marketplace_available_qty > 0 ? '#166534' : '#991b1b'};padding:2px 7px;border-radius:4px;font-weight:600;">${item.marketplace_available_qty}</span>`
+                            : '<span style="color:#d1d5db;font-size:11px;">—</span>'
+                        }</td>
+                        <td class="amount" title="${item.is_average_price ? 'Weighted average from actual purchases (no fixed rate set)' : 'Fixed purchase rate'}">${formatCurrency(purchasePrice)}${item.is_average_price ? ' <span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;font-weight:600;font-family:sans-serif;">avg</span>' : ''}</td>
+                        <td class="amount" title="${item.is_suggested_price ? 'Auto-suggested: Avg Purchase Price + 20% markup' : 'Fixed selling rate'}">${formatCurrency(sellingPrice)}${item.is_suggested_price ? ' <span style="font-size:10px;background:#ede9fe;color:#5b21b6;padding:1px 5px;border-radius:3px;font-weight:600;font-family:sans-serif;">~</span>' : ''}</td>
+                        <td>${!hasMovement ? '<span style="color:#9ca3af;font-size:11px;">Not Stocked</span>' : `<span class="${isLow ? 'stock-low' : 'stock-ok'}">${isLow ? 'Low Stock' : 'OK'}</span>`}</td>
+                        <td onclick="event.stopPropagation();">
+                            <button class="action-btn" style="color:#0ea5e9;" onclick="openHistoryModal(${item.id}, '${(item.item_code||'').replace(/'/g,"\\'")}', '${(item.item_name||'').replace(/'/g,"\\'")}') " title="View History"><i class="fas fa-history"></i></button>
+                            <button class="action-btn image" onclick="openImagesModal(${item.id})" title="Manage Images"><i class="fas fa-images"></i></button>
+                            <button class="action-btn" style="color:#f59e0b;" onclick="event.stopPropagation();openAdjustModal(${item.id},'${(item.item_code||'').replace(/'/g,"\\'")}','${(item.item_name||'').replace(/'/g,"\\'")}')" title="Adjust Stock"><i class="fas fa-sliders-h"></i></button>
+                            <button class="action-btn edit" onclick="openEditModal(${item.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function updateSummary(summary) {
+            if (!summary) return;
+            document.getElementById('totalItems').textContent = summary.total_items || 0;
+            document.getElementById('lowStockItems').textContent = summary.low_stock_count || 0;
+            document.getElementById('totalValue').textContent = formatCurrency(summary.total_value);
+        }
+        
+        function showEmptyState() { 
+            document.getElementById('tableContainer').style.display = 'none'; 
+            document.getElementById('emptyState').style.display = 'block'; 
+            document.getElementById('recordCount').textContent = '0 items';
+        }
+        
+        function addCompanyBadge(prefix) {
+            const select = document.getElementById(`${prefix}CompanySelect`);
+            const selectedOption = select.options[select.selectedIndex];
+            if (!select.value) return;
+            
+            const companyId = parseInt(select.value);
+            const hiddenInput = document.getElementById(`${prefix}ApplicableCompanies`);
+            let companies = JSON.parse(hiddenInput.value || '[]');
+            
+            if (!companies.includes(companyId)) {
+                companies.push(companyId);
+                hiddenInput.value = JSON.stringify(companies);
+                renderCompanyBadges(prefix, companies);
+            }
+            
+            select.value = '';
+        }
+        
+        function removeCompanyBadge(prefix, companyId) {
+            const hiddenInput = document.getElementById(`${prefix}ApplicableCompanies`);
+            let companies = JSON.parse(hiddenInput.value || '[]');
+            companies = companies.filter(id => id !== companyId);
+            hiddenInput.value = JSON.stringify(companies);
+            renderCompanyBadges(prefix, companies);
+        }
+        
+        function renderCompanyBadges(prefix, companyIds) {
+            const container = document.getElementById(`${prefix}CompanyBadges`);
+            container.innerHTML = companyIds.map(id => {
+                const company = allCompanies.find(c => c.id === id);
+                const name = company ? company.company_name : `Company #${id}`;
+                return `<span class="company-badge">${name.substring(0, 25)} <span class="remove-badge" onclick="removeCompanyBadge('${prefix}', ${id})">&times;</span></span>`;
+            }).join('');
+        }
+        
+        function addColor(prefix) {
+            const input = document.getElementById(`${prefix}ColorInput`);
+            const color = input.value.trim();
+            if (!color) return;
+            
+            const hiddenInput = document.getElementById(`${prefix}ColorsData`);
+            let colors = JSON.parse(hiddenInput.value || '[]');
+            
+            if (!colors.includes(color)) {
+                colors.push(color);
+                hiddenInput.value = JSON.stringify(colors);
+                renderColors(prefix, colors);
+            }
+            
+            input.value = '';
+        }
+        
+        function removeColor(prefix, color) {
+            const hiddenInput = document.getElementById(`${prefix}ColorsData`);
+            let colors = JSON.parse(hiddenInput.value || '[]');
+            colors = colors.filter(c => c !== color);
+            hiddenInput.value = JSON.stringify(colors);
+            renderColors(prefix, colors);
+        }
+        
+        function renderColors(prefix, colors) {
+            const container = document.getElementById(`${prefix}Colors`);
+            container.innerHTML = colors.map(color => 
+                `<span class="color-tag">${color} <span class="remove-color" onclick="removeColor('${prefix}', '${color}')">&times;</span></span>`
+            ).join('');
+        }
+        
+        function onHsnChange(selectId, gstInputId) {
+            const hsnId = document.getElementById(selectId).value;
+            const gstInput = document.getElementById(gstInputId);
+            if (hsnId && hsnDataCache[hsnId]) {
+                const hsn = hsnDataCache[hsnId];
+                gstInput.value = `${hsn.totalGst}% (CGST: ${hsn.cgst}% + SGST: ${hsn.sgst}%${hsn.cess > 0 ? ' + Cess: ' + hsn.cess + '%' : ''})`;
+            } else {
+                gstInput.value = '';
+            }
+        }
+        
+        function calcSellingRate(prefix) {
+            const purchase = parseFloat(document.getElementById(`${prefix}PurchaseRate`).value) || 0;
+            const markupInput = document.getElementById(`${prefix}MarkupPct`);
+            const markup = (markupInput && !isNaN(parseFloat(markupInput.value))) ? parseFloat(markupInput.value) : 27;
+            if (purchase > 0) {
+                const selling = purchase * (1 + markup / 100);
+                document.getElementById(`${prefix}SellingRate`).value = selling.toFixed(2);
+            }
+        }
+
+        async function loadCategoriesIntoSelect(selectId, selectedValue) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            try {
+                const res = await fetch(`${API_BASE}/stock-items/categories`);
+                const data = await res.json();
+                if (data.success && data.categories) {
+                    const current = selectedValue || sel.value || 'PRODUCT';
+                    sel.innerHTML = data.categories.map(c =>
+                        `<option value="${c}" ${c === current ? 'selected' : ''}>${c.replace(/_/g,' ')}</option>`
+                    ).join('') + `<option value="__ADD_NEW__" style="font-style:italic;color:#7c3aed;">+ Add new category...</option>`;
+                    if (selectedValue) sel.value = selectedValue;
+                }
+            } catch (_) { /* keep existing hardcoded options on error */ }
+        }
+
+        async function onFormCategoryChange() {
+            const sel = document.getElementById('formCategory');
+            if (!sel) return;
+            if (sel.value === '__ADD_NEW__') {
+                const newCat = (prompt('Enter new category name (letters and spaces only):') || '').trim().toUpperCase().replace(/\s+/g,'_');
+                if (!newCat || newCat.length < 2) { sel.value = 'PRODUCT'; return; }
+                // Add to dropdown and select it
+                const opt = document.createElement('option');
+                opt.value = newCat;
+                opt.textContent = newCat.replace(/_/g,' ');
+                sel.insertBefore(opt, sel.querySelector('[value="__ADD_NEW__"]'));
+                sel.value = newCat;
+            }
+            // Fetch preview code
+            const cat = sel.value;
+            const codeField = document.getElementById('formCode');
+            if (codeField) {
+                codeField.value = 'Generating...';
+                try {
+                    const res = await fetch(`${API_BASE}/stock-items/generate-code?category=${encodeURIComponent(cat)}`);
+                    const d = await res.json();
+                    codeField.value = d.item_code || '';
+                } catch (_) { codeField.value = ''; }
+            }
+        }
+
+        async function openCreateModal() { 
+            document.getElementById('createForm').reset(); 
+            document.getElementById('formApplicableCompanies').value = '[]';
+            document.getElementById('formCompanyBadges').innerHTML = '';
+            document.getElementById('formMarkupPct').value = 27;
+            document.getElementById('formColorsData').value = '[]';
+            document.getElementById('formColors').innerHTML = '';
+            clearHsnSelection('form');
+            document.getElementById('formHsnSearch').value = '';
+            document.getElementById('createModal').classList.add('active');
+            // Load dynamic categories then generate code for default selection
+            await loadCategoriesIntoSelect('formCategory', 'PRODUCT');
+            await onFormCategoryChange();
+        }
+        
+        function onEditCategoryChange() {
+            const sel = document.getElementById('editCategory');
+            if (!sel) return;
+            if (sel.value === '__ADD_NEW__') {
+                const newCat = (prompt('Enter new category name:') || '').trim().toUpperCase().replace(/\s+/g,'_');
+                if (!newCat || newCat.length < 2) { sel.value = sel.dataset.prev || 'PRODUCT'; return; }
+                const opt = document.createElement('option');
+                opt.value = newCat;
+                opt.textContent = newCat.replace(/_/g,' ');
+                sel.insertBefore(opt, sel.querySelector('[value="__ADD_NEW__"]'));
+                sel.value = newCat;
+            }
+            sel.dataset.prev = sel.value;
+        }
+
+        async function openEditModal(itemId) {
+            const token = localStorage.getItem('staff_token');
+            const item = allStockItems.find(i => i.id === itemId);
+            if (!item) { alert('Stock item not found'); return; }
+            
+            document.getElementById('editItemId').value = item.id;
+            document.getElementById('editName').value = item.item_name || '';
+            document.getElementById('editCode').value = item.item_code || '';
+            // Load dynamic categories then set saved value
+            await loadCategoriesIntoSelect('editCategory', item.item_category || 'PRODUCT');
+            document.getElementById('editCategory').dataset.prev = item.item_category || 'PRODUCT';
+            document.getElementById('editUnit').value = item.unit_of_measure || 'PCS';
+            document.getElementById('editDescription').value = item.description || '';
+            document.getElementById('editBrand').value = item.brand || '';
+            document.getElementById('editModelCompat').value = item.model_compat || '';
+            document.getElementById('editSpecification').value = item.specification || '';
+            document.getElementById('editSize').value = item.size || '';
+            document.getElementById('editPurchaseRate').value = item.purchase_rate || 0;
+            document.getElementById('editSellingRate').value = item.selling_rate || 0;
+            document.getElementById('editReorder').value = item.reorder_level || 10;
+            // Compute existing markup % from stored rates (fallback to 27)
+            const _pr = parseFloat(item.purchase_rate) || 0;
+            const _sr = parseFloat(item.selling_rate) || 0;
+            const _mk = (_pr > 0 && _sr > 0) ? Math.round(((_sr / _pr) - 1) * 100 * 10) / 10 : 27;
+            document.getElementById('editMarkupPct').value = _mk;
+            calcSellingRate('edit');
+            document.getElementById('editIsActive').checked = item.is_active !== false;
+            
+            document.getElementById('editOpeningQty').value = '';
+            document.getElementById('editOpeningValue').value = '';
+            document.getElementById('editOpeningDate').value = new Date().toISOString().split('T')[0];
+            
+            const companies = item.applicable_companies || [];
+            document.getElementById('editApplicableCompanies').value = JSON.stringify(companies);
+            renderCompanyBadges('edit', companies);
+            
+            const colors = item.colors || [];
+            document.getElementById('editColorsData').value = JSON.stringify(colors);
+            renderColors('edit', colors);
+            
+            clearHsnSelection('edit');
+            document.getElementById('editHsnSearch').value = '';
+            if (item.hsn_id) {
+                const hsn = allHsnCodes.find(h => h.id === item.hsn_id);
+                if (hsn) {
+                    const hIgst = parseFloat(hsn.igst_rate || hsn.gst_rate || 0);
+                    const hCgst = parseFloat(hsn.cgst_rate) || (hIgst / 2);
+                    const hSgst = parseFloat(hsn.sgst_rate) || (hIgst / 2);
+                    selectHsn('edit', hsn.id, hsn.hsn_code, hsn.description || '', hIgst, hCgst, hSgst);
+                } else {
+                    document.getElementById('editHsnId').value = item.hsn_id;
+                }
+            }
+            
+            // DC_STOCK_MKTLINK_001: populate marketplace link UI
+            const mktSku = item.marketplace_sku || '';
+            const mktLinked = item.marketplace_linked || false;
+            document.getElementById('editMarketplaceSku').value = mktSku;
+            const statusEl = document.getElementById('marketplaceLinkStatus');
+            const unlinkRow = document.getElementById('marketplaceUnlinkRow');
+            if (mktLinked) {
+                statusEl.innerHTML = `<div style="background:#d4edda;color:#155724;padding:8px 12px;border-radius:6px;font-size:13px;"><i class="fas fa-check-circle me-2"></i><strong>Linked to Marketplace SKU:</strong> <code>${mktSku}</code> — price &amp; qty auto-syncing.</div>`;
+                unlinkRow.style.display = 'block';
+            } else {
+                statusEl.innerHTML = `<div style="background:#fff3cd;color:#856404;padding:8px 12px;border-radius:6px;font-size:13px;"><i class="fas fa-exclamation-triangle me-2"></i>Not linked. Enter the marketplace SKU below to connect this item.</div>`;
+                unlinkRow.style.display = 'none';
+            }
+
+            document.getElementById('editModal').classList.add('active');
+        }
+
+        async function linkToMarketplace() {
+            const itemId = document.getElementById('editItemId').value;
+            const sku = document.getElementById('editMarketplaceSku').value.trim();
+            if (!sku) { alert('Please enter a marketplace SKU'); return; }
+            const token = localStorage.getItem('staff_token');
+            try {
+                const res = await fetch(`/api/v1/staff/accounts/stock-items/${itemId}/marketplace-link`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ marketplace_sku: sku })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('marketplaceLinkStatus').innerHTML = `<div style="background:#d4edda;color:#155724;padding:8px 12px;border-radius:6px;font-size:13px;"><i class="fas fa-check-circle me-2"></i>Linked to <strong>${data.marketplace_name}</strong> (SKU: <code>${data.marketplace_sku}</code>). Dealer price set to ₹${data.dealer_price}.</div>`;
+                    document.getElementById('marketplaceUnlinkRow').style.display = 'block';
+                    // Refresh item data
+                    const idx = allStockItems.findIndex(i => i.id == itemId);
+                    if (idx >= 0) { allStockItems[idx].marketplace_sku = data.marketplace_sku; allStockItems[idx].marketplace_linked = true; }
+                    renderTable();
+                } else {
+                    alert('Link failed: ' + (data.message || data.detail || 'Unknown error'));
+                }
+            } catch (e) { alert('Network error: ' + e.message); }
+        }
+
+        async function unlinkFromMarketplace() {
+            const itemId = document.getElementById('editItemId').value;
+            if (!confirm('Remove marketplace link? The Google Sheet sync will resume for price and quantity.')) return;
+            const token = localStorage.getItem('staff_token');
+            try {
+                const res = await fetch(`/api/v1/staff/accounts/stock-items/${itemId}/marketplace-link`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('marketplaceLinkStatus').innerHTML = `<div style="background:#fff3cd;color:#856404;padding:8px 12px;border-radius:6px;font-size:13px;"><i class="fas fa-unlink me-2"></i>Link removed. Sheet sync will resume on next run.</div>`;
+                    document.getElementById('marketplaceUnlinkRow').style.display = 'none';
+                    document.getElementById('editMarketplaceSku').value = '';
+                    const idx = allStockItems.findIndex(i => i.id == itemId);
+                    if (idx >= 0) { allStockItems[idx].marketplace_sku = null; allStockItems[idx].marketplace_linked = false; }
+                    renderTable();
+                } else {
+                    alert('Unlink failed: ' + (data.message || data.detail || 'Unknown error'));
+                }
+            } catch (e) { alert('Network error: ' + e.message); }
+        }
+        
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        
+        let isCreating = false;
+        let isUpdating = false;
+        
+        async function createStockItem() {
+            if (isCreating) { console.log('[DC-STOCK] Create already in progress, ignoring'); return; }
+            isCreating = true;
+            
+            const saveBtn = document.querySelector('#createModal .btn-primary-custom');
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...'; }
+            
+            const token = localStorage.getItem('staff_token');
+            const itemName = document.getElementById('formName').value.trim();
+            if (!itemName) { alert('Item name is required'); isCreating = false; if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save'; } return; }
+            
+            const applicableCompanies = JSON.parse(document.getElementById('formApplicableCompanies').value || '[]');
+            const colors = JSON.parse(document.getElementById('formColorsData').value || '[]');
+            
+            const data = { 
+                item_name: itemName,
+                item_category: document.getElementById('formCategory').value || 'PRODUCT',
+                unit_of_measure: document.getElementById('formUnit').value || 'PCS',
+                applicable_companies: applicableCompanies,
+                description: document.getElementById('formDescription').value.trim() || null,
+                brand: document.getElementById('formBrand').value.trim() || null,
+                model_compat: document.getElementById('formModelCompat').value.trim() || null,
+                specification: document.getElementById('formSpecification').value.trim() || null,
+                size: document.getElementById('formSize').value.trim() || null,
+                colors: colors.length > 0 ? colors : null,
+                purchase_rate: parseFloat(document.getElementById('formPurchaseRate').value) || 0,
+                selling_rate: parseFloat(document.getElementById('formSellingRate').value) || 0,
+                reorder_level: parseInt(document.getElementById('formReorder').value) || 10,
+                hsn_id: document.getElementById('formHsnId').value ? parseInt(document.getElementById('formHsnId').value) : null
+            };
+            
+            try {
+                console.log('[DC-STOCK] Creating item:', data.item_code, data.item_name);
+                const response = await fetch(`${API_BASE}/stock-items`, { 
+                    method: 'POST', 
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(data) 
+                });
+                console.log('[DC-STOCK] Create response status:', response.status);
+                if (response.ok) { 
+                    console.log('[DC-STOCK] Create SUCCESS');
+                    const resData = await response.json();
+                    const newItemId = resData.stock_item?.id;
+                    const imageUrl = (document.getElementById('formImageUrl').value || '').trim();
+                    if (newItemId && imageUrl) {
+                        try {
+                            await fetch(`${API_BASE}/stock-items/${newItemId}/image-link`, {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ source_url: imageUrl })
+                            });
+                        } catch (_) { /* non-fatal — image link can be added via Manage Images later */ }
+                    }
+                    closeModal('createModal'); 
+                    loadStockItems(); 
+                    alert('Stock item created successfully'); 
+                } else { 
+                    const err = await response.json(); 
+                    console.log('[DC-STOCK] Create FAILED:', err);
+                    alert(err.message || err.detail || 'Failed to create stock item'); 
+                }
+            } catch (e) { 
+                console.error('[DC-STOCK] Create exception:', e); 
+                alert('Failed to create stock item: ' + e.message); 
+            } finally {
+                isCreating = false;
+                const saveBtn = document.querySelector('#createModal .btn-primary-custom');
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save'; }
+            }
+        }
+        
+        async function updateStockItem() {
+            if (isUpdating) { console.log('[DC-STOCK] Update already in progress, ignoring'); return; }
+            isUpdating = true;
+            
+            const updateBtn = document.querySelector('#editModal .btn-primary-custom');
+            if (updateBtn) { updateBtn.disabled = true; updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating...'; }
+            
+            const token = localStorage.getItem('staff_token');
+            const itemId = document.getElementById('editItemId').value;
+            const itemName = document.getElementById('editName').value.trim();
+            if (!itemName) { alert('Item name is required'); isUpdating = false; if (updateBtn) { updateBtn.disabled = false; updateBtn.innerHTML = '<i class="fas fa-save me-1"></i>Update'; } return; }
+            
+            const applicableCompanies = JSON.parse(document.getElementById('editApplicableCompanies').value || '[]');
+            const colors = JSON.parse(document.getElementById('editColorsData').value || '[]');
+            
+            const mktSkuVal = (document.getElementById('editMarketplaceSku').value || '').trim();
+            const data = { 
+                item_name: itemName, 
+                item_category: document.getElementById('editCategory').value || 'PRODUCT',
+                unit_of_measure: document.getElementById('editUnit').value || 'PCS',
+                applicable_companies: applicableCompanies,
+                description: document.getElementById('editDescription').value.trim() || null,
+                brand: document.getElementById('editBrand').value.trim() || null,
+                model_compat: document.getElementById('editModelCompat').value.trim() || null,
+                specification: document.getElementById('editSpecification').value.trim() || null,
+                size: document.getElementById('editSize').value.trim() || null,
+                colors: colors.length > 0 ? colors : null,
+                purchase_rate: parseFloat(document.getElementById('editPurchaseRate').value) || 0,
+                selling_rate: parseFloat(document.getElementById('editSellingRate').value) || 0,
+                reorder_level: parseInt(document.getElementById('editReorder').value) || 10,
+                hsn_id: document.getElementById('editHsnId').value ? parseInt(document.getElementById('editHsnId').value) : null,
+                is_active: document.getElementById('editIsActive').checked,
+                marketplace_sku: mktSkuVal || null
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/stock-items/${itemId}`, { 
+                    method: 'PUT', 
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(data) 
+                });
+                if (response.ok) { 
+                    closeModal('editModal'); 
+                    loadStockItems(); 
+                    alert('Stock item updated successfully'); 
+                } else { 
+                    const err = await response.json(); 
+                    alert(err.message || err.detail || 'Failed to update stock item'); 
+                }
+            } catch (e) { 
+                console.error('[DC-STOCK] Update error:', e); 
+                alert('Failed to update stock item'); 
+            } finally {
+                isUpdating = false;
+                const updateBtn = document.querySelector('#editModal .btn-primary-custom');
+                if (updateBtn) { updateBtn.disabled = false; updateBtn.innerHTML = '<i class="fas fa-save me-1"></i>Update'; }
+            }
+        }
+        
+        async function saveOpeningBalance() {
+            const token = localStorage.getItem('staff_token');
+            const itemId = document.getElementById('editItemId').value;
+            const quantity = parseFloat(document.getElementById('editOpeningQty').value);
+            const totalValue = parseFloat(document.getElementById('editOpeningValue').value);
+            const balanceDate = document.getElementById('editOpeningDate').value;
+            
+            const applicableCompanies = JSON.parse(document.getElementById('editApplicableCompanies').value || '[]');
+            if (applicableCompanies.length === 0) {
+                alert('Please add at least one company to the stock item first');
+                return;
+            }
+            
+            if (!quantity || quantity <= 0) {
+                alert('Please enter a valid quantity (greater than 0)');
+                return;
+            }
+            
+            if (!totalValue || totalValue <= 0) {
+                alert('Please enter a valid total value (greater than 0)');
+                return;
+            }
+            
+            const companyId = applicableCompanies[0];
+            const company = allCompanies.find(c => c.id === companyId);
+            
+            if (applicableCompanies.length > 1) {
+                if (!confirm(`This will add opening balance to "${company?.company_name || 'First Company'}". If you need to add for other companies, do it separately. Continue?`)) {
+                    return;
+                }
+            }
+            
+            try {
+                const url = `${API_BASE}/stock-items/${itemId}/opening-balance?company_id=${companyId}&quantity=${quantity}&total_value=${totalValue}${balanceDate ? `&balance_date=${balanceDate}` : ''}`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showSuccess(result.message || 'Opening balance added successfully!');
+                    document.getElementById('editOpeningQty').value = '';
+                    document.getElementById('editOpeningValue').value = '';
+                    loadStockItems();
+                } else {
+                    const err = await response.json();
+                    alert(err.detail || 'Failed to add opening balance');
+                }
+            } catch (e) {
+                console.error('[DC-STOCK] Opening balance error:', e);
+                alert('Failed to add opening balance: ' + e.message);
+            }
+        }
+        
+        // ==================== BULK UPLOAD FUNCTIONS ====================
+        let selectedFile = null;
+        let uploadErrors = [];
+        let errorCurrentPage = 1;
+        const errorsPerPage = 10;
+        const validCategories = ['PRODUCT', 'RAW_MATERIAL', 'CONSUMABLE', 'SPARE_PART', 'ACCESSORY', 'BATTERIES'];
+        const validUOMs = ['PCS', 'KG', 'LTR', 'MTR', 'SET', 'BOX', 'PACK', 'PAIR', 'UNIT'];
+        let rowStates = {};
+        let editingData = {};
+        let existingItemCodes = new Set();
+        
+        function openBulkUploadModal() {
+            resetBulkUploadModal();
+            document.getElementById('bulkUploadModal').classList.add('active');
+            loadExistingItemCodes();
+        }
+        
+        async function loadExistingItemCodes() {
+            try {
+                const token = localStorage.getItem('staff_token');
+                existingItemCodes = new Set();
+                let page = 1;
+                const pageSize = 100;
+                let hasMore = true;
+                
+                while (hasMore) {
+                    const response = await fetch(`${API_BASE}/stock-items?page=${page}&page_size=${pageSize}&include_inactive=true`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        const items = data.items || [];
+                        items.forEach(i => existingItemCodes.add((i.item_code || '').toUpperCase()));
+                        hasMore = items.length === pageSize;
+                        page++;
+                    } else {
+                        hasMore = false;
+                    }
+                }
+                console.log('[DC-STOCK] Loaded existing item codes:', existingItemCodes.size);
+            } catch (e) {
+                console.error('[DC-STOCK] Failed to load existing codes:', e);
+            }
+        }
+        
+        function resetBulkUploadModal() {
+            selectedFile = null;
+            uploadErrors = [];
+            errorCurrentPage = 1;
+            rowStates = {};
+            editingData = {};
+            document.getElementById('bulkFile').value = '';
+            document.getElementById('selectedFileName').style.display = 'none';
+            document.getElementById('selectedFileName').textContent = '';
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('uploadResultSection').style.display = 'none';
+            document.getElementById('uploadProgress').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('uploadBtn').disabled = true;
+        }
+        
+        async function downloadTemplate() {
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/stock-items/template`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'stock_items_template.xlsx';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+                } else {
+                    alert('Failed to download template');
+                }
+            } catch (e) {
+                console.error('[DC-STOCK] Template download error:', e);
+                alert('Failed to download template');
+            }
+        }
+        
+        function handleFileSelect(input) {
+            if (input.files && input.files[0]) {
+                selectedFile = input.files[0];
+                document.getElementById('selectedFileName').textContent = selectedFile.name;
+                document.getElementById('selectedFileName').style.display = 'block';
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        }
+        
+        // Drag and drop support
+        const uploadZone = document.getElementById('uploadZone');
+        if (uploadZone) {
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.classList.remove('dragover');
+            });
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    const file = e.dataTransfer.files[0];
+                    if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                        selectedFile = file;
+                        document.getElementById('selectedFileName').textContent = file.name;
+                        document.getElementById('selectedFileName').style.display = 'block';
+                        document.getElementById('uploadBtn').disabled = false;
+                    } else {
+                        alert('Please upload an Excel file (.xlsx or .xls)');
+                    }
+                }
+            });
+        }
+        
+        async function processBulkUpload() {
+            if (!selectedFile) {
+                alert('Please select a file first');
+                return;
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            document.getElementById('uploadProgress').style.display = 'block';
+            document.getElementById('uploadBtn').disabled = true;
+            
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                if (progress <= 90) {
+                    document.getElementById('progressFill').style.width = progress + '%';
+                }
+            }, 200);
+            
+            try {
+                const response = await fetch(`${API_BASE}/stock-items/bulk-upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                
+                clearInterval(progressInterval);
+                document.getElementById('progressFill').style.width = '100%';
+                
+                const result = await response.json();
+                
+                setTimeout(() => {
+                    displayUploadResult(result);
+                }, 500);
+                
+            } catch (e) {
+                clearInterval(progressInterval);
+                console.error('[DC-STOCK] Bulk upload error:', e);
+                document.getElementById('uploadProgress').style.display = 'none';
+                alert('Upload failed: ' + e.message);
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        }
+        
+        function displayUploadResult(result) {
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('uploadResultSection').style.display = 'block';
+            
+            const summaryDiv = document.getElementById('uploadResultSummary');
+            
+            if (result.success && result.error_count === 0) {
+                summaryDiv.className = 'upload-result success';
+                summaryDiv.innerHTML = `
+                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 24px; margin-right: 12px;"></i>
+                    <div>
+                        <strong>Upload Successful!</strong><br>
+                        <span style="font-size: 13px;">${result.created_count} stock items created successfully.</span>
+                    </div>
+                `;
+                summaryDiv.style.display = 'flex';
+                summaryDiv.style.alignItems = 'center';
+                document.getElementById('errorListSection').style.display = 'none';
+                loadStockItems();
+            } else if (result.created_count > 0 && result.error_count > 0) {
+                summaryDiv.className = 'upload-result partial';
+                summaryDiv.innerHTML = `
+                    <i class="fas fa-exclamation-triangle" style="color: #f59e0b; font-size: 24px; margin-right: 12px;"></i>
+                    <div>
+                        <strong>Partial Upload</strong><br>
+                        <span style="font-size: 13px;">${result.created_count} items created, ${result.error_count} items failed. Please review the errors below.</span>
+                    </div>
+                `;
+                summaryDiv.style.display = 'flex';
+                summaryDiv.style.alignItems = 'center';
+                uploadErrors = result.errors || [];
+                displayErrorList();
+                loadStockItems();
+            } else {
+                summaryDiv.className = 'upload-result error';
+                summaryDiv.innerHTML = `
+                    <i class="fas fa-times-circle" style="color: #ef4444; font-size: 24px; margin-right: 12px;"></i>
+                    <div>
+                        <strong>Upload Failed</strong><br>
+                        <span style="font-size: 13px;">${result.message || `${result.error_count} items have errors. Please review and correct them.`}</span>
+                    </div>
+                `;
+                summaryDiv.style.display = 'flex';
+                summaryDiv.style.alignItems = 'center';
+                uploadErrors = result.errors || [];
+                if (uploadErrors.length > 0) {
+                    displayErrorList();
+                }
+            }
+        }
+        
+        function displayErrorList() {
+            if (uploadErrors.length === 0) {
+                document.getElementById('errorListSection').style.display = 'none';
+                return;
+            }
+            
+            uploadErrors.forEach((err, idx) => {
+                if (!rowStates[idx]) {
+                    rowStates[idx] = 'error';
+                    editingData[idx] = {
+                        item_code: err.item_code || '',
+                        item_name: err.item_name || '',
+                        item_category: (err.original_data?.item_category || 'PRODUCT').toUpperCase(),
+                        unit_of_measure: (err.original_data?.unit_of_measure || 'PCS').toUpperCase(),
+                        description: err.original_data?.description || '',
+                        purchase_rate: err.original_data?.purchase_rate || '0',
+                        selling_rate: err.original_data?.selling_rate || '0'
+                    };
+                }
+            });
+            
+            document.getElementById('errorListSection').style.display = 'block';
+            updateCorrectionStats();
+            
+            const totalPages = Math.ceil(uploadErrors.length / errorsPerPage);
+            const startIdx = (errorCurrentPage - 1) * errorsPerPage;
+            const endIdx = Math.min(startIdx + errorsPerPage, uploadErrors.length);
+            const pageErrors = uploadErrors.slice(startIdx, endIdx);
+            
+            const tbody = document.getElementById('errorTableBody');
+            tbody.innerHTML = pageErrors.map((err, pageIdx) => {
+                const idx = startIdx + pageIdx;
+                const state = rowStates[idx] || 'error';
+                const data = editingData[idx] || {};
+                const isEditing = state === 'editing';
+                const isDeleted = state === 'deleted';
+                const isCorrected = state === 'corrected';
+                const isDuplicate = (err.errors || []).some(e => e.toLowerCase().includes('already exists') || e.toLowerCase().includes('duplicated'));
+                
+                return `
+                <tr class="row-${state}" data-row-idx="${idx}">
+                    <td><strong>${err.row_number}</strong></td>
+                    <td>
+                        <span class="row-status ${state}">
+                            ${state === 'error' ? '<i class="fas fa-exclamation-circle"></i> Error' : ''}
+                            ${state === 'editing' ? '<i class="fas fa-edit"></i> Editing' : ''}
+                            ${state === 'corrected' ? '<i class="fas fa-check-circle"></i> Ready' : ''}
+                            ${state === 'deleted' ? '<i class="fas fa-trash"></i> Deleted' : ''}
+                        </span>
+                    </td>
+                    <td>
+                        ${isEditing ? `<input type="text" class="inline-edit" id="edit_code_${idx}" value="${escapeHtml(data.item_code)}" placeholder="Item Code">` : escapeHtml(data.item_code || '-')}
+                    </td>
+                    <td>
+                        ${isEditing ? `<input type="text" class="inline-edit" id="edit_name_${idx}" value="${escapeHtml(data.item_name)}" placeholder="Item Name">` : escapeHtml(data.item_name || '-')}
+                    </td>
+                    <td>
+                        ${isEditing ? `
+                            <select class="inline-select" id="edit_cat_${idx}">
+                                ${validCategories.map(c => `<option value="${c}" ${data.item_category === c ? 'selected' : ''}>${c.replace('_', ' ')}</option>`).join('')}
+                            </select>
+                        ` : (data.item_category || '-')}
+                    </td>
+                    <td>
+                        ${isEditing ? `
+                            <select class="inline-select" id="edit_uom_${idx}">
+                                ${validUOMs.map(u => `<option value="${u}" ${data.unit_of_measure === u ? 'selected' : ''}>${u}</option>`).join('')}
+                            </select>
+                        ` : (data.unit_of_measure || '-')}
+                    </td>
+                    <td>
+                        ${!isDeleted && !isCorrected ? `
+                            <ul class="error-list" style="margin: 0 0 8px 0; padding-left: 16px;">
+                                ${(err.errors || []).map(e => `<li>${escapeHtml(e)}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                        ${isCorrected ? '<span style="color: #059669; font-size: 12px;"><i class="fas fa-check"></i> Corrected and ready to save</span>' : ''}
+                        ${isDeleted ? '<span style="color: #6b7280; font-size: 12px;">This row will be skipped</span>' : ''}
+                        <div class="row-actions">
+                            ${state === 'error' ? `
+                                <button class="btn-edit" onclick="startEditRow(${idx})"><i class="fas fa-edit"></i> Edit</button>
+                                ${isDuplicate ? `<button class="btn-change-code" onclick="promptChangeCode(${idx})"><i class="fas fa-exchange-alt"></i> Change Code</button>` : ''}
+                                <button class="btn-delete" onclick="deleteRow(${idx})"><i class="fas fa-trash"></i> Delete</button>
+                            ` : ''}
+                            ${state === 'editing' ? `
+                                <button class="btn-save" onclick="saveRowEdit(${idx})"><i class="fas fa-check"></i> Save</button>
+                                <button class="btn-cancel" onclick="cancelRowEdit(${idx})"><i class="fas fa-times"></i> Cancel</button>
+                            ` : ''}
+                            ${state === 'corrected' ? `
+                                <button class="btn-edit" onclick="startEditRow(${idx})"><i class="fas fa-edit"></i> Edit Again</button>
+                                <button class="btn-delete" onclick="deleteRow(${idx})"><i class="fas fa-trash"></i> Delete</button>
+                            ` : ''}
+                            ${state === 'deleted' ? `
+                                <button class="btn-restore" onclick="restoreRow(${idx})"><i class="fas fa-undo"></i> Restore</button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+            
+            const paginationDiv = document.getElementById('errorPagination');
+            if (totalPages > 1) {
+                paginationDiv.innerHTML = `
+                    <button class="pagination-btn" onclick="goToErrorPage(1)" ${errorCurrentPage === 1 ? 'disabled' : ''}>
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button class="pagination-btn" onclick="goToErrorPage(${errorCurrentPage - 1})" ${errorCurrentPage === 1 ? 'disabled' : ''}>
+                        <i class="fas fa-angle-left"></i>
+                    </button>
+                    <span class="pagination-info">Page ${errorCurrentPage} of ${totalPages} (${uploadErrors.length} rows)</span>
+                    <button class="pagination-btn" onclick="goToErrorPage(${errorCurrentPage + 1})" ${errorCurrentPage === totalPages ? 'disabled' : ''}>
+                        <i class="fas fa-angle-right"></i>
+                    </button>
+                    <button class="pagination-btn" onclick="goToErrorPage(${totalPages})" ${errorCurrentPage === totalPages ? 'disabled' : ''}>
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
+                `;
+            } else {
+                paginationDiv.innerHTML = `<span class="pagination-info">${uploadErrors.length} row(s)</span>`;
+            }
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        
+        function updateCorrectionStats() {
+            let pending = 0, corrected = 0, deleted = 0;
+            Object.values(rowStates).forEach(s => {
+                if (s === 'error' || s === 'editing') pending++;
+                else if (s === 'corrected') corrected++;
+                else if (s === 'deleted') deleted++;
+            });
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('correctedCount').textContent = corrected;
+            document.getElementById('deletedCount').textContent = deleted;
+            document.getElementById('saveCorrectedBtn').disabled = corrected === 0;
+        }
+        
+        function startEditRow(idx) {
+            rowStates[idx] = 'editing';
+            displayErrorList();
+        }
+        
+        function cancelRowEdit(idx) {
+            editingData[idx] = {
+                item_code: uploadErrors[idx].item_code || '',
+                item_name: uploadErrors[idx].item_name || '',
+                item_category: (uploadErrors[idx].original_data?.item_category || 'PRODUCT').toUpperCase(),
+                unit_of_measure: (uploadErrors[idx].original_data?.unit_of_measure || 'PCS').toUpperCase()
+            };
+            rowStates[idx] = 'error';
+            displayErrorList();
+        }
+        
+        function saveRowEdit(idx) {
+            const code = (document.getElementById(`edit_code_${idx}`)?.value || '').trim().toUpperCase();
+            const name = (document.getElementById(`edit_name_${idx}`)?.value || '').trim();
+            const category = document.getElementById(`edit_cat_${idx}`)?.value || 'PRODUCT';
+            const uom = document.getElementById(`edit_uom_${idx}`)?.value || 'PCS';
+            
+            const errors = [];
+            if (!code) errors.push('Item code is required');
+            else if (!/^[A-Z0-9_-]+$/i.test(code)) errors.push('Item code must be alphanumeric with underscores/hyphens only');
+            else if (existingItemCodes.has(code)) errors.push(`Item code '${code}' already exists in database`);
+            else {
+                const otherCodes = Object.entries(editingData).filter(([i, d]) => parseInt(i) !== idx && rowStates[i] !== 'deleted').map(([i, d]) => d.item_code?.toUpperCase());
+                if (otherCodes.includes(code)) errors.push(`Item code '${code}' is duplicated in this batch`);
+            }
+            if (!name) errors.push('Item name is required');
+            else if (name.length < 2) errors.push('Item name must be at least 2 characters');
+            
+            if (errors.length > 0) {
+                alert('Validation errors:\n' + errors.join('\n'));
+                return;
+            }
+            
+            editingData[idx] = { ...editingData[idx], item_code: code, item_name: name, item_category: category, unit_of_measure: uom };
+            rowStates[idx] = 'corrected';
+            uploadErrors[idx].errors = [];
+            displayErrorList();
+        }
+        
+        function deleteRow(idx) {
+            if (confirm('Delete this row? It will be skipped during save.')) {
+                rowStates[idx] = 'deleted';
+                displayErrorList();
+            }
+        }
+        
+        function restoreRow(idx) {
+            rowStates[idx] = 'error';
+            displayErrorList();
+        }
+        
+        function promptChangeCode(idx) {
+            const currentCode = editingData[idx]?.item_code || '';
+            const newCode = prompt(`Current code "${currentCode}" already exists.\nEnter a new unique item code:`, currentCode + '_NEW');
+            if (newCode && newCode.trim()) {
+                const code = newCode.trim().toUpperCase();
+                if (existingItemCodes.has(code)) {
+                    alert(`Code "${code}" also exists. Please choose a different code.`);
+                    return;
+                }
+                editingData[idx].item_code = code;
+                rowStates[idx] = 'corrected';
+                uploadErrors[idx].errors = [];
+                displayErrorList();
+            }
+        }
+        
+        async function saveCorrectedItems() {
+            const correctedIndices = Object.entries(rowStates).filter(([i, s]) => s === 'corrected').map(([i]) => parseInt(i));
+            if (correctedIndices.length === 0) {
+                alert('No corrected items to save.');
+                return;
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            document.getElementById('saveCorrectedBtn').disabled = true;
+            document.getElementById('saveCorrectedBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+            
+            let savedCount = 0;
+            let failedItems = [];
+            const savedIndices = new Set();
+            
+            for (const idx of correctedIndices) {
+                const data = editingData[idx];
+                try {
+                    const response = await fetch(`${API_BASE}/stock-items`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            item_code: data.item_code,
+                            item_name: data.item_name,
+                            item_category: data.item_category,
+                            unit_of_measure: (['PCS','KG','LTR','MTR','SET','BOX','PACK','PAIR','UNIT'].includes((data.unit_of_measure||'').toUpperCase())) ? data.unit_of_measure.toUpperCase() : 'PCS',
+                            description: data.description || null,
+                            purchase_rate: parseFloat(data.purchase_rate) || 0,
+                            selling_rate: parseFloat(data.selling_rate) || 0,
+                            applicable_companies: [],
+                            is_active: true
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        savedCount++;
+                        existingItemCodes.add(data.item_code.toUpperCase());
+                        savedIndices.add(idx);
+                    } else {
+                        const err = await response.json();
+                        failedItems.push({ code: data.item_code, error: err.detail || 'Unknown error' });
+                        rowStates[idx] = 'error';
+                        uploadErrors[idx].errors = [err.detail || 'Server error'];
+                    }
+                } catch (e) {
+                    failedItems.push({ code: data.item_code, error: e.message });
+                    rowStates[idx] = 'error';
+                    uploadErrors[idx].errors = [e.message];
+                }
+            }
+            
+            const remainingErrors = [];
+            const newRowStates = {};
+            const newEditingData = {};
+            let newIdx = 0;
+            
+            for (let oldIdx = 0; oldIdx < uploadErrors.length; oldIdx++) {
+                if (!savedIndices.has(oldIdx)) {
+                    remainingErrors.push(uploadErrors[oldIdx]);
+                    newRowStates[newIdx] = rowStates[oldIdx] || 'error';
+                    newEditingData[newIdx] = editingData[oldIdx] || {
+                        item_code: uploadErrors[oldIdx].item_code || '',
+                        item_name: uploadErrors[oldIdx].item_name || '',
+                        item_category: 'PRODUCT',
+                        unit_of_measure: 'PCS'
+                    };
+                    newIdx++;
+                }
+            }
+            
+            uploadErrors = remainingErrors;
+            rowStates = newRowStates;
+            editingData = newEditingData;
+            errorCurrentPage = 1;
+            
+            document.getElementById('saveCorrectedBtn').innerHTML = '<i class="fas fa-save me-1"></i>Save Corrected Items';
+            
+            if (savedCount > 0) {
+                showSuccess(`${savedCount} item(s) saved successfully!`);
+                loadStockItems();
+            }
+            
+            if (failedItems.length > 0) {
+                alert(`${failedItems.length} item(s) failed to save:\n` + failedItems.map(f => `${f.code}: ${f.error}`).join('\n'));
+            }
+            
+            const pendingCount = Object.values(rowStates).filter(s => s === 'error' || s === 'editing' || s === 'corrected').length;
+            if (pendingCount === 0 && uploadErrors.length === 0) {
+                const summaryDiv = document.getElementById('uploadResultSummary');
+                summaryDiv.className = 'upload-result success';
+                summaryDiv.innerHTML = `
+                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 24px; margin-right: 12px;"></i>
+                    <div>
+                        <strong>All Items Saved!</strong><br>
+                        <span style="font-size: 13px;">All corrected items have been created successfully.</span>
+                    </div>
+                `;
+                document.getElementById('errorListSection').style.display = 'none';
+            } else {
+                displayErrorList();
+            }
+        }
+        
+        function goToErrorPage(page) {
+            const totalPages = Math.ceil(uploadErrors.length / errorsPerPage);
+            if (page >= 1 && page <= totalPages) {
+                errorCurrentPage = page;
+                displayErrorList();
+            }
+        }
+        
+        let currentLightboxItemId = null;
+        
+        function openImageLightbox(imageSrc, itemId) {
+            currentLightboxItemId = itemId;
+            const lightbox = document.getElementById('imageLightbox');
+            const lightboxImg = document.getElementById('lightboxImage');
+            lightboxImg.src = imageSrc;
+            lightbox.classList.add('active');
+        }
+        
+        function closeImageLightbox() {
+            document.getElementById('imageLightbox').classList.remove('active');
+        }
+        
+        async function openImagesModal(itemId) {
+            const modal = document.getElementById('imagesModal');
+            modal.dataset.itemId = itemId;
+            document.getElementById('imagesGallery').innerHTML = '<div class="text-center py-4"><div class="spinner"></div></div>';
+            document.getElementById('folderLinkInput').value = '';   // reset — will be filled by renderImagesGallery
+            modal.classList.add('active');
+            await loadItemImages(itemId);
+        }
+        
+        function closeImagesModal() {
+            document.getElementById('imagesModal').classList.remove('active');
+        }
+        
+        async function loadItemImages(itemId) {
+            try {
+                const response = await fetch(`/api/v1/staff/accounts/stock-items/${itemId}/images`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    renderImagesGallery(data.images, itemId);
+                } else {
+                    document.getElementById('imagesGallery').innerHTML = '<p class="text-danger">Failed to load images</p>';
+                }
+            } catch (e) {
+                document.getElementById('imagesGallery').innerHTML = '<p class="text-danger">Error loading images</p>';
+            }
+        }
+        
+        function renderImagesGallery(images, itemId) {
+            const gallery = document.getElementById('imagesGallery');
+
+            // Populate the editable Google Drive link input with existing folder_link (if any)
+            const folderLink = images.find(img => img.source_type === 'folder_link');
+            document.getElementById('folderLinkInput').value = folderLink ? (folderLink.source_url || '') : '';
+
+            // Only show actual uploaded images in the gallery (folder_link is shown in the input above)
+            const displayable = images.filter(img => img.source_type !== 'folder_link');
+            if (displayable.length === 0) {
+                gallery.innerHTML = '<p class="text-muted text-center py-4"><i class="fas fa-image me-2"></i>No uploaded images yet</p>';
+                return;
+            }
+            gallery.innerHTML = displayable.map(img => {
+                const _raw = img.compressed_path || img.original_path || '';
+                const _imgSrc = _raw.startsWith('/') ? _raw : '/storage/' + _raw;
+                return `
+                <div class="image-gallery-item ${img.is_primary ? 'primary' : ''}">
+                    <img src="${_imgSrc}" onclick="openImageLightbox('${_imgSrc}', ${itemId})" alt="${img.file_name}">
+                    <div class="image-actions">
+                        ${!img.is_primary ? `<button class="image-action-btn" onclick="setPrimaryImage(${itemId}, ${img.id})" title="Set as Primary"><i class="fas fa-star"></i></button>` : ''}
+                        <button class="image-action-btn" onclick="deleteImage(${itemId}, ${img.id})" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
+                    ${img.is_primary ? '<small style="position: absolute; bottom: 2px; left: 4px; color: #8b5cf6; font-size: 9px; font-weight: 600;">PRIMARY</small>' : ''}
+                </div>`;
+            }).join('');
+        }
+        
+        async function uploadStockImage(itemId) {
+            const fileInput = document.getElementById('stockImageInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select an image file');
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size exceeds 5MB limit');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('is_primary', 'false');
+            
+            try {
+                const response = await fetch(`/api/v1/staff/accounts/stock-items/${itemId}/images`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}` },
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showSuccess('Image uploaded successfully');
+                    await loadItemImages(itemId);
+                    fileInput.value = '';
+                    loadStockItems();
+                } else {
+                    alert(data.detail || 'Failed to upload image');
+                }
+            } catch (e) {
+                alert('Error uploading image: ' + e.message);
+            }
+        }
+        
+        async function setPrimaryImage(itemId, imageId) {
+            try {
+                const response = await fetch(`/api/v1/staff/accounts/stock-items/${itemId}/images/${imageId}/primary`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showSuccess('Primary image updated');
+                    await loadItemImages(itemId);
+                    loadStockItems();
+                } else {
+                    alert(data.detail || 'Failed to set primary image');
+                }
+            } catch (e) {
+                alert('Error setting primary image');
+            }
+        }
+        
+        async function saveImageLink() {
+            const itemId = document.getElementById('imagesModal').dataset.itemId;
+            const url = (document.getElementById('folderLinkInput').value || '').trim();
+            if (url && !url.includes('drive.google.com')) {
+                showToast('Only Google Drive links are accepted.', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(`/api/v1/staff/accounts/stock-items/${itemId}/image-link`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source_url: url })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || 'Image link saved.', 'success');
+                    await loadItemImages(itemId);
+                } else {
+                    showToast(data.detail || 'Failed to save link.', 'error');
+                }
+            } catch (err) {
+                showToast('Network error saving link.', 'error');
+            }
+        }
+
+        async function removeImageLink() {
+            if (!confirm('Remove the Google Drive folder link?')) return;
+            document.getElementById('folderLinkInput').value = '';
+            await saveImageLink();
+        }
+
+        async function deleteImage(itemId, imageId) {
+            if (!confirm('Are you sure you want to delete this image?')) return;
+            try {
+                const response = await fetch(`/api/v1/staff/accounts/stock-items/${itemId}/images/${imageId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    showSuccess('Image deleted');
+                    await loadItemImages(itemId);
+                    loadStockItems();
+                } else {
+                    alert(data.detail || 'Failed to delete image');
+                }
+            } catch (e) {
+                alert('Error deleting image');
+            }
+        }
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeImageLightbox();
+            }
+        });
+    </script>
+    
+    <div class="image-lightbox" id="imageLightbox" onclick="closeImageLightbox()">
+        <span class="close-lightbox">&times;</span>
+        <img id="lightboxImage" src="" alt="Full size image">
+    </div>
+    
+    <div class="modal-overlay" id="imagesModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-images me-2"></i>Manage Images</h3>
+                <button class="modal-close" onclick="closeImagesModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+
+                <!-- Google Drive Folder Link — always editable -->
+                <div class="section-header" style="margin-bottom:10px;"><i class="fab fa-google-drive" style="color:#4285f4;"></i>&nbsp; Google Drive Folder Link</div>
+                <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:6px;">
+                    <input type="text" id="folderLinkInput"
+                           placeholder="https://drive.google.com/drive/folders/..."
+                           style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
+                    <button onclick="saveImageLink()"
+                            style="padding:8px 16px;background:#4285f4;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;white-space:nowrap;">
+                        <i class="fas fa-save me-1"></i>Save Link
+                    </button>
+                    <button onclick="removeImageLink()"
+                            style="padding:8px 12px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;" title="Remove link">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <p style="font-size:11px;color:#9ca3af;margin-bottom:16px;">Only Google Drive folder links are accepted. Existing link is pre-filled — edit and Save to update.</p>
+
+                <!-- File upload -->
+                <div class="image-upload-area" onclick="document.getElementById('stockImageInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Click to upload image (max 5MB)</p>
+                    <small class="text-muted">Supports JPEG, PNG, GIF, WebP</small>
+                </div>
+                <input type="file" id="stockImageInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display: none;" onchange="uploadStockImage(document.getElementById('imagesModal').dataset.itemId)">
+
+                <div class="section-header mt-4"><i class="fas fa-th"></i>Image Gallery</div>
+                <div class="image-gallery" id="imagesGallery"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeImagesModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+<!-- SYNC FROM GOOGLE SHEET MODAL [DC_STOCK_MULTICOMP_001] -->
+<style>
+@keyframes syncBarPulse {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.sync-progress-bar-inner {
+  height: 100%;
+  border-radius: 8px;
+  background: linear-gradient(270deg, #059669, #34d399, #059669);
+  background-size: 300% 300%;
+  animation: syncBarPulse 1.8s ease infinite;
+  transition: width 0.4s ease;
+}
+</style>
+
+<div class="modal-overlay" id="syncModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;align-items:center;justify-content:center;">
+  <div class="modal-content" style="max-width:500px;width:94%;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+    <div class="modal-header" style="background:#059669;color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;font-size:16px;"><i class="fab fa-google me-2"></i>Sync from Google Sheet</h3>
+      <button onclick="closeSyncModal()" id="syncCloseBtn" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:20px;">
+
+      <!-- ── SETUP PANEL (shown before sync starts) ── -->
+      <div id="syncSetupPanel">
+        <p style="margin-bottom:14px;color:#374151;font-size:13.5px;">
+          This will sync the <strong>Google Sheet catalog</strong> — updating product names, prices, descriptions, images, and stock quantities into the marketplace and stock master.
+        </p>
+        <div style="background:#ecfdf5;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12.5px;color:#065f46;">
+          <i class="fas fa-info-circle me-1"></i><strong>On-demand sync:</strong> Runs only when you click this button.
+        </div>
+        <div class="form-group" style="margin-bottom:4px;">
+          <label style="font-size:12px;color:#6b7280;font-weight:600;margin-bottom:5px;display:block;">Company *</label>
+          <select id="syncCompanyId" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
+            <option value="">Select company…</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- ── PROGRESS PANEL (shown while sync is running) ── -->
+      <div id="syncProgressPanel" style="display:none;">
+        <div style="text-align:center;margin-bottom:18px;">
+          <div style="width:52px;height:52px;border-radius:50%;background:#ecfdf5;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;">
+            <i class="fas fa-sync-alt fa-spin" style="color:#059669;font-size:22px;"></i>
+          </div>
+          <div style="font-size:14px;font-weight:600;color:#111827;">Syncing Google Sheet…</div>
+          <div id="syncElapsed" style="font-size:12px;color:#6b7280;margin-top:4px;">0s elapsed</div>
+        </div>
+        <div style="background:#f3f4f6;border-radius:8px;height:14px;overflow:hidden;margin-bottom:10px;">
+          <div class="sync-progress-bar-inner" id="syncProgressBar" style="width:15%;"></div>
+        </div>
+        <div id="syncProgressLabel" style="font-size:12px;color:#6b7280;text-align:center;">Fetching sheet data…</div>
+      </div>
+
+      <!-- ── RESULT PANEL (shown after sync completes) ── -->
+      <div id="syncResultPanel" style="display:none;"></div>
+
+    </div>
+    <div class="modal-footer" id="syncFooter" style="padding:14px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px;">
+      <button onclick="closeSyncModal()" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;">Cancel</button>
+      <button id="syncRunBtn" onclick="runGoogleSheetSync()" style="padding:8px 20px;border:none;border-radius:8px;background:#059669;color:#fff;font-weight:600;cursor:pointer;font-size:13px;"><i class="fab fa-google me-1"></i>Start Sync</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// DC_STOCK_GSHEET_001 — Sync from Google Sheet with live progress
+let _syncPollTimer = null;
+let _syncElapsedTimer = null;
+let _syncElapsedSec = 0;
+
+function openSyncModal() {
+  const sel = document.getElementById('syncCompanyId');
+  sel.innerHTML = '<option value="">Select company…</option>';
+  (allCompanies || []).forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.company_name;
+    sel.appendChild(opt);
+  });
+  _resetSyncModal();
+  document.getElementById('syncModal').style.display = 'flex';
+}
+
+function _resetSyncModal() {
+  clearInterval(_syncPollTimer);
+  clearInterval(_syncElapsedTimer);
+  _syncElapsedSec = 0;
+  document.getElementById('syncSetupPanel').style.display = '';
+  document.getElementById('syncProgressPanel').style.display = 'none';
+  document.getElementById('syncResultPanel').style.display = 'none';
+  document.getElementById('syncResultPanel').innerHTML = '';
+  document.getElementById('syncFooter').style.display = 'flex';
+  document.getElementById('syncRunBtn').disabled = false;
+  document.getElementById('syncRunBtn').innerHTML = '<i class="fab fa-google me-1"></i>Start Sync';
+  document.getElementById('syncCloseBtn').style.display = '';
+}
+
+function closeSyncModal() {
+  clearInterval(_syncPollTimer);
+  clearInterval(_syncElapsedTimer);
+  document.getElementById('syncModal').style.display = 'none';
+}
+
+function _syncShowProgress() {
+  document.getElementById('syncSetupPanel').style.display = 'none';
+  document.getElementById('syncProgressPanel').style.display = '';
+  document.getElementById('syncResultPanel').style.display = 'none';
+  document.getElementById('syncFooter').style.display = 'none';
+  document.getElementById('syncCloseBtn').style.display = 'none';
+  document.getElementById('syncProgressBar').style.width = '15%';
+  document.getElementById('syncElapsed').textContent = '0s elapsed';
+  document.getElementById('syncProgressLabel').textContent = 'Fetching sheet data…';
+
+  _syncElapsedSec = 0;
+  clearInterval(_syncElapsedTimer);
+  _syncElapsedTimer = setInterval(() => {
+    _syncElapsedSec++;
+    document.getElementById('syncElapsed').textContent = `${_syncElapsedSec}s elapsed`;
+    // Animate bar: grows from 15% → 85% over ~60s, never reaches 100% until done
+    const pct = Math.min(85, 15 + (_syncElapsedSec / 70) * 70);
+    document.getElementById('syncProgressBar').style.width = pct + '%';
+    if (_syncElapsedSec < 5)       document.getElementById('syncProgressLabel').textContent = 'Fetching sheet data…';
+    else if (_syncElapsedSec < 15) document.getElementById('syncProgressLabel').textContent = 'Parsing rows…';
+    else if (_syncElapsedSec < 30) document.getElementById('syncProgressLabel').textContent = 'Updating products…';
+    else if (_syncElapsedSec < 50) document.getElementById('syncProgressLabel').textContent = 'Syncing images & prices…';
+    else                           document.getElementById('syncProgressLabel').textContent = 'Finishing up…';
+  }, 1000);
+}
+
+function _syncShowResult(log, hadError) {
+  clearInterval(_syncElapsedTimer);
+  document.getElementById('syncProgressBar').style.width = '100%';
+
+  const total      = log.total_records      || 0;
+  const success    = log.successful_records || 0;
+  const failed     = log.failed_records     || 0;
+  const errs       = log.error_summary      || {};
+  const skipped    = (errs.parse_errors     || []).length;
+  const deactivated= errs.deactivated       || 0;
+  const autoproc   = errs.auto_procurement_raised || 0;
+
+  const allGood = failed === 0 && !hadError;
+  const headerColor = allGood ? '#059669' : '#d97706';
+  const headerBg    = allGood ? '#ecfdf5' : '#fffbeb';
+  const headerBorder= allGood ? '#6ee7b7' : '#fcd34d';
+  const icon        = allGood ? 'fa-check-circle' : 'fa-exclamation-triangle';
+  const iconColor   = allGood ? '#059669' : '#d97706';
+  const title       = allGood ? 'Sync Complete!' : 'Sync Finished with Errors';
+
+  // Build failed SKU detail if any
+  let failedDetail = '';
+  if (failed > 0 && errs.upsert_errors && errs.upsert_errors.length) {
+    const maxShow = 5;
+    const shown = errs.upsert_errors.slice(0, maxShow);
+    const more  = errs.upsert_errors.length - maxShow;
+    failedDetail = `
+      <div style="margin-top:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 12px;font-size:11.5px;">
+        <div style="font-weight:600;color:#991b1b;margin-bottom:6px;"><i class="fas fa-times-circle me-1"></i>Failed SKUs</div>
+        ${shown.map(e => `<div style="color:#7f1d1d;padding:2px 0;border-bottom:1px solid #fee2e2;"><code style="font-size:11px;">${e.sku}</code> — ${(e.error||'').split('\n')[0].slice(0,80)}</div>`).join('')}
+        ${more > 0 ? `<div style="color:#b91c1c;margin-top:4px;">…and ${more} more</div>` : ''}
+      </div>`;
+  }
+
+  let skippedDetail = '';
+  if (skipped > 0) {
+    skippedDetail = `
+      <div style="margin-top:6px;font-size:11.5px;color:#92400e;">
+        <i class="fas fa-info-circle me-1"></i>${skipped} row(s) skipped — missing name or invalid format in sheet.
+      </div>`;
+  }
+
+  const statBox = (icon2, label, val, color, bg) => `
+    <div style="flex:1;min-width:90px;background:${bg};border-radius:8px;padding:10px 8px;text-align:center;">
+      <div style="font-size:20px;font-weight:700;color:${color};">${val}</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:2px;"><i class="fas ${icon2} me-1" style="color:${color};"></i>${label}</div>
+    </div>`;
+
+  document.getElementById('syncProgressPanel').style.display = 'none';
+  document.getElementById('syncResultPanel').innerHTML = `
+    <div style="border:1px solid ${headerBorder};border-radius:10px;overflow:hidden;">
+      <div style="background:${headerBg};padding:12px 16px;display:flex;align-items:center;gap:10px;">
+        <i class="fas ${icon}" style="color:${iconColor};font-size:18px;"></i>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:${headerColor};">${title}</div>
+          <div style="font-size:11.5px;color:#6b7280;">${_syncElapsedSec}s · ${total} rows in sheet</div>
+        </div>
+      </div>
+      <div style="padding:14px 16px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+          ${statBox('fa-check-circle', 'Updated', success, '#059669', '#ecfdf5')}
+          ${statBox('fa-times-circle', 'Failed', failed, failed>0?'#dc2626':'#6b7280', failed>0?'#fef2f2':'#f9fafb')}
+          ${statBox('fa-forward', 'Skipped', skipped, skipped>0?'#d97706':'#6b7280', skipped>0?'#fffbeb':'#f9fafb')}
+          ${statBox('fa-archive', 'Deactivated', deactivated, '#6b7280', '#f3f4f6')}
+        </div>
+        ${autoproc ? `<div style="font-size:11.5px;color:#0369a1;margin-bottom:4px;"><i class="fas fa-clipboard-list me-1"></i>${autoproc} auto-procurement request(s) raised for zero-stock items.</div>` : ''}
+        ${failedDetail}
+        ${skippedDetail}
+        <button onclick="_resetSyncModal();loadStockItems();" style="margin-top:12px;width:100%;padding:9px;border:none;border-radius:8px;background:#059669;color:#fff;font-weight:600;cursor:pointer;font-size:13px;">
+          <i class="fas fa-sync-alt me-1"></i>Done — Refresh Stock List
+        </button>
+      </div>
+    </div>
+  `;
+  document.getElementById('syncResultPanel').style.display = '';
+  document.getElementById('syncFooter').style.display = 'none';
+  document.getElementById('syncCloseBtn').style.display = '';
+}
+
+async function runGoogleSheetSync() {
+  const companyId = document.getElementById('syncCompanyId').value;
+  if (!companyId) { alert('Please select a company.'); return; }
+  const token = localStorage.getItem('staff_token');
+
+  document.getElementById('syncRunBtn').disabled = true;
+  document.getElementById('syncRunBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Starting…';
+
+  try {
+    const res = await fetch(`/api/v1/marketplace/sync?company_id=${companyId}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.detail || data.message || 'Could not start sync.');
+      document.getElementById('syncRunBtn').disabled = false;
+      document.getElementById('syncRunBtn').innerHTML = '<i class="fab fa-google me-1"></i>Start Sync';
+      return;
+    }
+
+    // Switch to progress view
+    _syncShowProgress();
+
+    // Poll /sync/status every 2s; when done, fetch /sync/logs for result
+    clearInterval(_syncPollTimer);
+    _syncPollTimer = setInterval(async () => {
+      try {
+        const sRes = await fetch(`/api/v1/marketplace/sync/status?company_id=${companyId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const sData = await sRes.json();
+        if (!sData.running) {
+          clearInterval(_syncPollTimer);
+          // Fetch last log entry for this company
+          const lRes = await fetch(`/api/v1/marketplace/sync/logs?company_id=${companyId}&limit=1`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const logs = await lRes.json();
+          _syncShowResult(logs && logs[0] ? logs[0] : {}, false);
+        }
+      } catch (_) {
+        // network blip — keep polling
+      }
+    }, 2000);
+
+  } catch(e) {
+    alert('Network error: ' + e.message);
+    document.getElementById('syncRunBtn').disabled = false;
+    document.getElementById('syncRunBtn').innerHTML = '<i class="fab fa-google me-1"></i>Start Sync';
+  }
+}
+</script>
+
+<!-- STOCK HISTORY MODAL -->
+<!-- DC-STOCK-ADJ-001: Adjust Stock Modal -->
+<div id="adjustStockModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1060;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;width:96%;max-width:480px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.25);">
+    <div style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h3 style="margin:0;font-size:16px;font-weight:700;"><i class="fas fa-sliders-h me-2"></i>Adjust Stock</h3>
+        <p style="margin:3px 0 0;font-size:12px;opacity:.85;" id="adjModalSubtitle">—</p>
+      </div>
+      <button onclick="closeAdjustModal()" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:20px;cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">&times;</button>
+    </div>
+    <div style="padding:20px 24px;">
+      <input type="hidden" id="adjItemId">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;color:#92400e;">
+        <i class="fas fa-info-circle me-1"></i>
+        Enter <strong>+5</strong> to add 5 units or <strong>-3</strong> to remove 3 units. This creates a ledger ADJUSTMENT entry with full history tracking.
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Company *</label>
+        <select id="adjCompanyId" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+          <option value="">-- Select Company --</option>
+        </select>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Adjustment Qty * <span style="font-weight:400;color:#6b7280;">(use + or - prefix)</span></label>
+        <input type="number" id="adjDeltaQty" step="0.001" placeholder="e.g. +5 or -3" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;font-weight:700;font-family:monospace;text-align:center;" oninput="adjUpdatePreview()">
+        <div id="adjPreview" style="margin-top:6px;font-size:12px;color:#6b7280;text-align:center;"></div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Rate per Unit (₹) <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+        <input type="number" id="adjRate" step="0.01" min="0" placeholder="Leave blank if not applicable" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+      </div>
+      <div style="margin-bottom:6px;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:5px;">Reason / Narration</label>
+        <textarea id="adjReason" rows="2" placeholder="e.g. Physical count correction, damaged stock removed..." style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div style="padding:12px 24px;border-top:1px solid #e5e7eb;display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="closeAdjustModal()" style="padding:9px 20px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;">Cancel</button>
+      <button id="adjSaveBtn" onclick="saveStockAdjustment()" style="padding:9px 22px;border:none;border-radius:8px;background:#f59e0b;color:#fff;font-weight:700;font-size:14px;cursor:pointer;"><i class="fas fa-check me-1"></i>Apply Adjustment</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="historyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1050;align-items:flex-start;justify-content:center;padding:20px 0;overflow-y:auto;">
+  <div style="background:#fff;border-radius:14px;width:96%;max-width:1100px;margin:auto;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.2);">
+    <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;padding:18px 22px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:10;">
+      <div>
+        <h3 style="margin:0;font-size:17px;font-weight:700;"><i class="fas fa-history me-2"></i>Stock Movement History</h3>
+        <p style="margin:3px 0 0 0;font-size:12px;opacity:.85;" id="historyModalSubtitle">—</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <select id="historyCompanyFilter" onchange="loadHistory(1)" style="padding:6px 10px;border-radius:6px;border:none;font-size:13px;background:rgba(255,255,255,.15);color:#fff;min-width:140px;">
+          <option value="" style="color:#1f2937;">All Companies</option>
+        </select>
+        <button onclick="closeHistoryModal()" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:20px;cursor:pointer;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">&times;</button>
+      </div>
+    </div>
+
+    <!-- summary strip -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid #e5e7eb;">
+      <div style="padding:14px 20px;text-align:center;border-right:1px solid #e5e7eb;">
+        <div style="font-size:22px;font-weight:700;color:#1f2937;" id="histSumEntries">—</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">Total Entries</div>
+      </div>
+      <div style="padding:14px 20px;text-align:center;border-right:1px solid #e5e7eb;">
+        <div style="font-size:22px;font-weight:700;color:#059669;" id="histSumIn">—</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">Total In</div>
+      </div>
+      <div style="padding:14px 20px;text-align:center;border-right:1px solid #e5e7eb;">
+        <div style="font-size:22px;font-weight:700;color:#dc2626;" id="histSumOut">—</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">Total Out</div>
+      </div>
+      <div style="padding:14px 20px;text-align:center;">
+        <div style="font-size:22px;font-weight:700;color:#1f2937;" id="histSumBalance">—</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">Balance</div>
+      </div>
+    </div>
+
+    <div style="padding:16px 20px;overflow-x:auto;">
+      <div id="historySpinner" style="display:flex;justify-content:center;padding:40px;"><div class="spinner"></div></div>
+      <table class="data-table" id="historyTable" style="display:none;min-width:900px;">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Company</th>
+            <th>Type</th>
+            <th>Reference</th>
+            <th style="color:#059669;">Qty In</th>
+            <th style="color:#dc2626;">Qty Out</th>
+            <th>Rate (₹)</th>
+            <th>Value (₹)</th>
+            <th>Balance Qty</th>
+            <th>Spec / Color</th>
+            <th>Narration</th>
+            <th>Updated By</th>
+            <th>Recorded At</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+      <div id="historyEmpty" style="display:none;text-align:center;padding:40px;color:#6b7280;">
+        <i class="fas fa-clipboard-list" style="font-size:36px;color:#d1d5db;margin-bottom:12px;display:block;"></i>
+        No stock movement found for this item.
+      </div>
+      <div id="historyPagination" style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;"></div>
+    </div>
+
+    <div style="padding:12px 20px;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+      <a id="historyLedgerLink" href="#" style="font-size:13px;color:#0ea5e9;text-decoration:none;font-weight:500;"><i class="fas fa-external-link-alt me-1"></i>Open Full Ledger</a>
+      <button onclick="closeHistoryModal()" style="padding:8px 20px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// STOCK HISTORY MODAL
+const HIST_PAGE_SIZE = 50;
+let histCurrentPage = 1;
+let histItemId = null;
+let histItemCode = '';
+let histItemName = '';
+
+function openHistoryModal(itemId, itemCode, itemName) {
+    histItemId = itemId;
+    histItemCode = itemCode;
+    histItemName = itemName;
+    histCurrentPage = 1;
+
+    document.getElementById('historyModalSubtitle').textContent = `${itemCode} — ${itemName}`;
+    document.getElementById('historyLedgerLink').href = `/staff/inventory/stock-ledger?item_id=${itemId}`;
+
+    // populate company filter
+    const sel = document.getElementById('historyCompanyFilter');
+    sel.innerHTML = '<option value="" style="color:#1f2937;">All Companies</option>';
+    (allCompanies || []).forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id; o.textContent = c.company_name;
+        o.style.color = '#1f2937';
+        sel.appendChild(o);
+    });
+
+    const modal = document.getElementById('historyModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    loadHistory(1);
+}
+
+function closeHistoryModal() {
+    document.getElementById('historyModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+async function loadHistory(page) {
+    histCurrentPage = page;
+    document.getElementById('historySpinner').style.display = 'flex';
+    document.getElementById('historyTable').style.display = 'none';
+    document.getElementById('historyEmpty').style.display = 'none';
+    document.getElementById('historyPagination').innerHTML = '';
+
+    const companyId = document.getElementById('historyCompanyFilter').value;
+    let url = `/api/v1/staff/accounts/stock-ledger?item_id=${histItemId}&page=${page}&page_size=${HIST_PAGE_SIZE}`;
+    if (companyId) url += `&company_id=${companyId}`;
+
+    try {
+        const resp = await staffFetch(url);
+        document.getElementById('historySpinner').style.display = 'none';
+        if (!resp.ok) { document.getElementById('historyEmpty').style.display = 'block'; return; }
+        const data = await resp.json();
+        const entries = data.entries || [];
+        if (!entries.length) { document.getElementById('historyEmpty').style.display = 'block'; return; }
+
+        // Summary
+        let sumIn = 0, sumOut = 0;
+        entries.forEach(e => { sumIn += parseFloat(e.quantity_in || 0); sumOut += parseFloat(e.quantity_out || 0); });
+        // for cross-page totals use last entry balance_qty
+        const lastEntry = entries[entries.length - 1];
+        document.getElementById('histSumEntries').textContent = data.total;
+        document.getElementById('histSumIn').textContent = page === 1 ? sumIn.toFixed(sumIn % 1 === 0 ? 0 : 2) : '…';
+        document.getElementById('histSumOut').textContent = page === 1 ? sumOut.toFixed(sumOut % 1 === 0 ? 0 : 2) : '…';
+        const bal = parseFloat(lastEntry.balance_qty || 0);
+        document.getElementById('histSumBalance').textContent = bal.toFixed(bal % 1 === 0 ? 0 : 2);
+
+        const typeColors = {
+            OPENING: '#dbeafe:#2563eb', PURCHASE: '#d1fae5:#059669', SALE: '#fee2e2:#dc2626',
+            TRANSFER_IN: '#d1fae5:#059669', TRANSFER_OUT: '#fef3c7:#d97706',
+            ADJUSTMENT: '#e5e7eb:#374151', RETURN: '#fce7f3:#db2777',
+            SERVICE_CONSUMPTION: '#fef3c7:#d97706', DAMAGE: '#fee2e2:#dc2626',
+            WRITE_OFF: '#fee2e2:#dc2626', MFG_CONSUMPTION: '#fef3c7:#d97706',
+            MFG_OUTPUT: '#d1fae5:#059669'
+        };
+
+        const tbody = document.getElementById('historyBody');
+        tbody.innerHTML = entries.map(e => {
+            const qIn = parseFloat(e.quantity_in || 0);
+            const qOut = parseFloat(e.quantity_out || 0);
+            const rate = parseFloat(e.unit_rate || 0);
+            const value = parseFloat(e.total_value || 0);
+            const bal = parseFloat(e.balance_qty || 0);
+            const tc = (typeColors[e.entry_type] || '#e5e7eb:#374151').split(':');
+            const typeLabel = e.entry_type.replace(/_/g,' ');
+            const specColor = [e.specification, e.color].filter(Boolean).join(' / ') || '—';
+            const updatedAt = e.updated_at ? new Date(e.updated_at).toLocaleString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+            return `<tr>
+                <td style="white-space:nowrap;font-size:12px;">${e.transaction_date || '—'}</td>
+                <td style="font-size:12px;">${e.company_name || '—'}</td>
+                <td><span style="background:${tc[0]};color:${tc[1]};padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;">${typeLabel}</span></td>
+                <td style="font-size:11px;color:#6b7280;">${e.reference_number || (e.reference_type + ' #' + e.reference_id)}</td>
+                <td style="color:#059669;font-weight:600;font-family:monospace;">${qIn > 0 ? '+' + (qIn % 1 === 0 ? qIn : qIn.toFixed(2)) : '—'}</td>
+                <td style="color:#dc2626;font-weight:600;font-family:monospace;">${qOut > 0 ? '-' + (qOut % 1 === 0 ? qOut : qOut.toFixed(2)) : '—'}</td>
+                <td style="font-family:monospace;font-size:12px;">${rate > 0 ? '₹' + formatCurrency(rate).replace('₹','') : '—'}</td>
+                <td style="font-family:monospace;font-size:12px;">${value > 0 ? '₹' + formatCurrency(value).replace('₹','') : '—'}</td>
+                <td style="font-weight:700;font-family:monospace;">${bal % 1 === 0 ? bal : bal.toFixed(2)}</td>
+                <td style="font-size:11px;color:#6b7280;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${specColor}">${specColor}</td>
+                <td style="font-size:11px;color:#6b7280;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.narration || ''}">${e.narration || '—'}</td>
+                <td style="font-size:11px;color:#374151;">${e.updated_by_name || '—'}</td>
+                <td style="font-size:11px;color:#6b7280;white-space:nowrap;">${updatedAt}</td>
+            </tr>`;
+        }).join('');
+
+        document.getElementById('historyTable').style.display = 'table';
+
+        // Pagination
+        const totalPages = Math.ceil(data.total / HIST_PAGE_SIZE);
+        if (totalPages > 1) {
+            const pg = document.getElementById('historyPagination');
+            let html = `<button onclick="loadHistory(${page-1})" ${page<=1?'disabled':''} style="padding:6px 14px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">‹ Prev</button>`;
+            html += `<span style="padding:6px 12px;font-size:13px;color:#6b7280;">Page ${page} of ${totalPages}</span>`;
+            html += `<button onclick="loadHistory(${page+1})" ${page>=totalPages?'disabled':''} style="padding:6px 14px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;">Next ›</button>`;
+            pg.innerHTML = html;
+        }
+    } catch (ex) {
+        document.getElementById('historySpinner').style.display = 'none';
+        if (ex.message !== 'AUTH_EXPIRED' && ex.message !== 'NO_TOKEN')
+            document.getElementById('historyEmpty').style.display = 'block';
+    }
+}
+
+document.getElementById('historyModal').addEventListener('click', function(e) {
+    if (e.target === this) closeHistoryModal();
+});
+
+// ==================== DC-STOCK-ADJ-001: ADJUST STOCK MODAL ====================
+let adjItemId = null;
+
+function openAdjustModal(itemId, itemCode, itemName) {
+    adjItemId = itemId;
+    document.getElementById('adjItemId').value = itemId;
+    document.getElementById('adjModalSubtitle').textContent = `${itemCode} — ${itemName}`;
+    document.getElementById('adjDeltaQty').value = '';
+    document.getElementById('adjRate').value = '';
+    document.getElementById('adjReason').value = '';
+    document.getElementById('adjPreview').textContent = '';
+
+    // Populate company selector from allCompanies
+    const sel = document.getElementById('adjCompanyId');
+    sel.innerHTML = '<option value="">-- Select Company --</option>';
+    (allCompanies || []).forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id; o.textContent = c.company_name;
+        sel.appendChild(o);
+    });
+    // Auto-select if only one company matches the current filter
+    const filterCo = document.getElementById('companyFilter')?.value;
+    if (filterCo) sel.value = filterCo;
+
+    const modal = document.getElementById('adjustStockModal');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    document.getElementById('adjDeltaQty').focus();
+}
+
+function closeAdjustModal() {
+    document.getElementById('adjustStockModal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function adjUpdatePreview() {
+    const v = parseFloat(document.getElementById('adjDeltaQty').value);
+    const el = document.getElementById('adjPreview');
+    if (isNaN(v) || v === 0) { el.textContent = ''; return; }
+    el.innerHTML = v > 0
+        ? `<span style="color:#059669;font-weight:700;">▲ Adding ${Math.abs(v)} unit(s) to stock</span>`
+        : `<span style="color:#dc2626;font-weight:700;">▼ Removing ${Math.abs(v)} unit(s) from stock</span>`;
+}
+
+async function saveStockAdjustment() {
+    const itemId = document.getElementById('adjItemId').value;
+    const companyId = parseInt(document.getElementById('adjCompanyId').value);
+    const deltaQty = parseFloat(document.getElementById('adjDeltaQty').value);
+    const rate = parseFloat(document.getElementById('adjRate').value) || null;
+    const reason = document.getElementById('adjReason').value.trim() || null;
+
+    if (!companyId) { alert('Please select a company'); return; }
+    if (isNaN(deltaQty) || deltaQty === 0) { alert('Please enter a non-zero adjustment quantity (e.g. +5 or -3)'); return; }
+
+    const btn = document.getElementById('adjSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+
+    try {
+        const resp = await staffFetch(`/api/v1/staff/accounts/stock-items/${itemId}/adjust`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ company_id: companyId, delta_qty: deltaQty, rate, reason })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            closeAdjustModal();
+            loadStockItems();
+            alert(`✓ ${data.message}\nNew balance: ${data.new_balance} units\nRef: ${data.reference_number}`);
+        } else {
+            alert(data.detail || data.message || 'Adjustment failed');
+        }
+    } catch (e) {
+        alert('Network error: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>Apply Adjustment';
+    }
+}
+
+document.getElementById('adjustStockModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAdjustModal();
+});
+</script>
+
+</body>
+</html>

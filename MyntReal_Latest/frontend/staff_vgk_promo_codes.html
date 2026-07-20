@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VGK Promo Codes — Staff</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+.content-area { padding: 24px; }
+.page-banner { background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.page-banner h1 { font-size: 20px; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 10px; }
+.page-banner p { opacity: .85; margin: 0; font-size: 12.5px; }
+.filter-bar { background: white; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.filter-bar .fgroup { display: flex; flex-direction: column; gap: 3px; }
+.filter-bar label { font-size: 10.5px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+.filter-bar .form-control, .filter-bar .form-select { font-size: 12.5px; padding: 6px 10px; border-radius: 7px; border: 1px solid #e5e7eb; min-width: 130px; }
+.btn-filter { padding: 7px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; }
+.btn-filter.apply { background: #7c3aed; color: white; }
+.btn-filter.reset { background: #f3f4f6; color: #6b7280; }
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden; }
+.table-card-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; gap: 8px; }
+.table-card-header h3 { font-size: 14px; font-weight: 700; color: #111827; }
+table { width: 100%; border-collapse: collapse; }
+thead th { padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; background: #f9fafb; white-space: nowrap; }
+tbody td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+tbody tr:hover { background: #fafafa; }
+.badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; }
+.badge-active { background: #d1fae5; color: #065f46; }
+.badge-paused { background: #fef3c7; color: #92400e; }
+.badge-inactive { background: #fee2e2; color: #991b1b; }
+.badge-general { background: #ede9fe; color: #5b21b6; }
+.badge-mnr { background: #dbeafe; color: #1e40af; }
+.badge-etc { background: #fce7f3; color: #9d174d; }
+.btn-action { padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; border: none; cursor: pointer; margin-right: 4px; }
+.btn-edit { background: #ede9fe; color: #5b21b6; }
+.btn-edit:hover { background: #ddd6fe; }
+.btn-pause { background: #fef3c7; color: #92400e; }
+.btn-pause:hover { background: #fde68a; }
+.btn-activate { background: #d1fae5; color: #065f46; }
+.btn-activate:hover { background: #a7f3d0; }
+.btn-delete { background: #fee2e2; color: #991b1b; }
+.btn-delete:hover { background: #fecaca; }
+.btn-view { background: #e0f2fe; color: #0369a1; }
+.btn-view:hover { background: #bae6fd; }
+.pagination { display: flex; gap: 6px; align-items: center; padding: 14px 18px; justify-content: flex-end; border-top: 1px solid #f0f0f0; }
+.page-btn { padding: 5px 12px; border: 1px solid #e5e7eb; background: white; border-radius: 6px; font-size: 12px; cursor: pointer; }
+.page-btn.active { background: #7c3aed; color: white; border-color: #7c3aed; }
+.vgk-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1055; display: none; align-items: center; justify-content: center; }
+.vgk-modal-backdrop.show { display: flex; }
+.modal-box { background: white; border-radius: 14px; width: 580px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+.modal-header { padding: 18px 20px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+.modal-header h4 { font-size: 15px; font-weight: 700; color: #111827; }
+.modal-close { background: none; border: none; font-size: 18px; color: #6b7280; cursor: pointer; }
+.modal-body { padding: 20px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; display: block; margin-bottom: 4px; }
+.form-group .form-control, .form-group .form-select { font-size: 13px; border-radius: 8px; border: 1px solid #e5e7eb; padding: 8px 12px; width: 100%; }
+.form-group .form-control:focus, .form-group .form-select:focus { border-color: #7c3aed; outline: none; box-shadow: 0 0 0 3px rgba(124,58,237,.1); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid #f0f0f0; display: flex; gap: 8px; justify-content: flex-end; }
+.btn-primary-vgk { background: #7c3aed; color: white; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-primary-vgk:hover { background: #6d28d9; }
+.btn-primary-vgk:disabled { opacity: .5; cursor: not-allowed; }
+.btn-secondary-vgk { background: #f3f4f6; color: #374151; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.tier-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+.tier-row input { font-size: 12.5px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 6px 10px; width: 100%; }
+.tier-remove { background: #fee2e2; color: #991b1b; border: none; border-radius: 6px; padding: 5px 9px; cursor: pointer; font-size: 12px; }
+.tier-add { background: #ede9fe; color: #5b21b6; border: none; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 12px; font-weight: 600; }
+.type-info-box { border-radius: 8px; padding: 10px 14px; margin-top: 8px; font-size: 12px; }
+.type-info-general { background: #f5f3ff; border: 1px solid #ddd6fe; color: #5b21b6; }
+.type-info-mnr { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+.type-info-etc { background: #fdf2f8; border: 1px solid #fbcfe8; color: #9d174d; }
+.empty-state { text-align: center; padding: 48px 24px; color: #9ca3af; }
+.empty-state i { font-size: 36px; margin-bottom: 12px; }
+.stat-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.stat-chip { background: white; border-radius: 10px; padding: 10px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; align-items: center; gap: 10px; }
+.stat-chip .sc-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+.stat-chip .sc-val { font-size: 18px; font-weight: 800; color: #111827; }
+.stat-chip .sc-lbl { font-size: 11px; color: #6b7280; }
+.appl-section { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+.appl-section .appl-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6d28d9; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.appl-group { margin-bottom: 8px; }
+.appl-group:last-child { margin-bottom: 0; }
+.appl-group .appl-label { font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.appl-options { display: flex; gap: 8px; flex-wrap: wrap; }
+.appl-option { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+.appl-option input[type=radio] { accent-color: #7c3aed; width: 14px; height: 14px; cursor: pointer; }
+.appl-option span { font-size: 12px; color: #374151; font-weight: 500; }
+.badge-appl { display: inline-block; border-radius: 5px; padding: 2px 7px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.badge-appl-timing { background: #ede9fe; color: #6d28d9; }
+.badge-appl-status { background: #dcfce7; color: #15803d; }
+.badge-appl-activated { background: #fef3c7; color: #b45309; }
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; color: white; font-size: 13px; font-weight: 600; z-index: 9999; opacity: 0; transform: translateY(10px); transition: all .3s; pointer-events: none; max-width: 380px; word-break: break-word; line-height: 1.4; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+.redemption-table { width: 100%; border-collapse: collapse; }
+.redemption-table th { padding: 8px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; background: #f9fafb; }
+.redemption-table td { padding: 8px 12px; font-size: 12.5px; border-bottom: 1px solid #f3f4f6; }
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+
+<div class="content-area">
+
+<!-- Page Banner -->
+<div class="page-banner">
+  <div>
+    <h1><i class="fas fa-tags"></i> VGK Promo Codes</h1>
+    <p>Create and manage promo codes that award VGK Discount Credit points to members</p>
+  </div>
+  <button class="btn-filter apply" style="padding:9px 18px;font-size:13px" onclick="openCreateModal()">
+    <i class="fas fa-plus me-1"></i> New Promo Code
+  </button>
+</div>
+
+<!-- Stats -->
+<div class="stat-chips" id="statChips">
+  <div class="stat-chip"><div class="sc-icon" style="background:#ede9fe;color:#7c3aed"><i class="fas fa-tags"></i></div><div><div class="sc-val" id="statTotal">—</div><div class="sc-lbl">Total Codes</div></div></div>
+  <div class="stat-chip"><div class="sc-icon" style="background:#d1fae5;color:#065f46"><i class="fas fa-check-circle"></i></div><div><div class="sc-val" id="statActive">—</div><div class="sc-lbl">Active</div></div></div>
+  <div class="stat-chip"><div class="sc-icon" style="background:#fef3c7;color:#92400e"><i class="fas fa-pause-circle"></i></div><div><div class="sc-val" id="statPaused">—</div><div class="sc-lbl">Paused</div></div></div>
+  <div class="stat-chip"><div class="sc-icon" style="background:#dbeafe;color:#1e40af"><i class="fas fa-gift"></i></div><div><div class="sc-val" id="statRedeemed">—</div><div class="sc-lbl">Total Redemptions</div></div></div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <div class="fgroup"><label>Search</label><input class="form-control" id="searchInput" placeholder="Code or label…" style="min-width:200px"></div>
+  <div class="fgroup"><label>Type</label>
+    <select class="form-select" id="typeFilter">
+      <option value="">All Types</option>
+      <option value="GENERAL">General</option>
+      <option value="MNR_MEMBER">MNR Member</option>
+      <option value="ETC_STUDENT">ETC Student</option>
+    </select>
+  </div>
+  <div class="fgroup"><label>Status</label>
+    <select class="form-select" id="statusFilter">
+      <option value="">All Status</option>
+      <option value="ACTIVE">Active</option>
+      <option value="PAUSED">Paused</option>
+      <option value="INACTIVE">Inactive</option>
+    </select>
+  </div>
+  <button class="btn-filter apply" onclick="loadCodes(1)"><i class="fas fa-search me-1"></i>Search</button>
+  <button class="btn-filter reset" onclick="resetFilters()">Reset</button>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+  <div class="table-card-header">
+    <h3><i class="fas fa-tags me-2" style="color:#7c3aed"></i>Promo Codes <span id="totalBadge" style="background:#ede9fe;color:#7c3aed;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:8px">0</span></h3>
+  </div>
+  <div id="tableBody"></div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+</div>
+</div>
+
+<!-- ── CREATE / EDIT MODAL ───────────────────────────────────────── -->
+<div class="vgk-modal-backdrop" id="codeModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h4 id="modalTitle"><i class="fas fa-tags me-2" style="color:#7c3aed"></i>New Promo Code</h4>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Code <span style="color:red">*</span></label>
+          <input class="form-control" id="fCode" placeholder="e.g. SUMMER2026" style="text-transform:uppercase">
+        </div>
+        <div class="form-group">
+          <label>Type <span style="color:red">*</span></label>
+          <select class="form-select" id="fType" onchange="onTypeChange()">
+            <option value="GENERAL">General Campaign</option>
+            <option value="MNR_MEMBER">MNR Member Code</option>
+            <option value="ETC_STUDENT">ETC Student Code</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Label / Description</label>
+        <input class="form-control" id="fLabel" placeholder="Brief description for staff reference">
+      </div>
+
+      <!-- Type info box -->
+      <div id="typeInfoBox" class="type-info-box type-info-general">
+        <strong>General Code:</strong> Member types the code and receives the configured points immediately. No additional verification required.
+      </div>
+
+      <!-- Points (shown for GENERAL, hidden for MNR_MEMBER which uses fixed 15k/5k) -->
+      <div class="form-group" id="pointsGroup">
+        <label>Points to Award <span style="color:red">*</span></label>
+        <input class="form-control" id="fPoints" type="number" min="0" placeholder="e.g. 10000">
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px">Points credited to the member's VGK Discount Credit balance</div>
+      </div>
+
+      <!-- Tier Config (ETC_STUDENT only) -->
+      <div id="tierSection" style="display:none">
+        <div class="form-group">
+          <label>Package Value Tiers</label>
+          <div id="tierRows"></div>
+          <div style="font-size:11px;color:#9ca3af;margin:4px 0 8px">Set min/max package value (₹) and corresponding points. Leave max blank for "and above".</div>
+          <button class="tier-add" type="button" onclick="addTierRow()"><i class="fas fa-plus me-1"></i>Add Tier</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Valid From</label>
+          <input class="form-control" id="fValidFrom" type="datetime-local">
+        </div>
+        <div class="form-group">
+          <label>Valid To</label>
+          <input class="form-control" id="fValidTo" type="datetime-local">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Usage Limit (total)</label>
+          <input class="form-control" id="fUsageLimit" type="number" min="1" placeholder="Leave blank = unlimited">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select class="form-select" id="fStatus">
+            <option value="ACTIVE">Active</option>
+            <option value="PAUSED">Paused</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Applicability -->
+      <div class="appl-section">
+        <div class="appl-title"><i class="fas fa-users"></i> Who Can Redeem This Code?</div>
+        <div class="appl-group">
+          <div class="appl-label">Member Timing</div>
+          <div class="appl-options">
+            <label class="appl-option"><input type="radio" name="fTiming" value="BOTH" checked><span>Existing &amp; New</span></label>
+            <label class="appl-option"><input type="radio" name="fTiming" value="EXISTING"><span>Existing members only</span></label>
+            <label class="appl-option"><input type="radio" name="fTiming" value="NEW"><span>New members only</span></label>
+          </div>
+        </div>
+        <div class="appl-group">
+          <div class="appl-label">Activation Status</div>
+          <div class="appl-options">
+            <label class="appl-option"><input type="radio" name="fApplStatus" value="ALL" checked><span>All registered members</span></label>
+            <label class="appl-option"><input type="radio" name="fApplStatus" value="ACTIVATED"><span>Activated members only</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-vgk" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary-vgk" id="saveBtn" onclick="saveCode()"><i class="fas fa-save me-1"></i>Save Code</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── REDEMPTIONS MODAL ───────────────────────────────────────────── -->
+<div class="vgk-modal-backdrop" id="redemptionsModal">
+  <div class="modal-box" style="width:700px">
+    <div class="modal-header">
+      <h4 id="redemptionsTitle"><i class="fas fa-list me-2" style="color:#7c3aed"></i>Redemptions</h4>
+      <button class="modal-close" onclick="document.getElementById('redemptionsModal').classList.remove('show')">&times;</button>
+    </div>
+    <div class="modal-body" id="redemptionsBody" style="padding:0">
+      <div style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRM DELETE MODAL ───────────────────────────────────────── -->
+<div class="vgk-modal-backdrop" id="deleteModal">
+  <div class="modal-box" style="width:420px">
+    <div class="modal-header">
+      <h4><i class="fas fa-trash me-2" style="color:#dc2626"></i>Delete Promo Code</h4>
+      <button class="modal-close" onclick="document.getElementById('deleteModal').classList.remove('show')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:#374151">Are you sure you want to delete the promo code <strong id="deleteCodeName"></strong>?</p>
+      <p style="font-size:12.5px;color:#6b7280;margin-top:8px">Codes that have already been redeemed cannot be deleted — pause or deactivate them instead.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary-vgk" onclick="document.getElementById('deleteModal').classList.remove('show')">Cancel</button>
+      <button class="btn-delete" style="padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600" id="confirmDeleteBtn" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastEl" class="toast"></div>
+
+<script src="/staff_sidebar.js"></script>
+<script>
+let currentPage = 1;
+let deleteTargetId = null;
+let editingCode = null;
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toastEl');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── Load codes ───────────────────────────────────────────────────────────────
+function loadCodes(page = 1) {
+  currentPage = page;
+  const search  = document.getElementById('searchInput').value.trim();
+  const type    = document.getElementById('typeFilter').value;
+  const status  = document.getElementById('statusFilter').value;
+  const params  = new URLSearchParams({ page, page_size: 50 });
+  if (search) params.set('search', search);
+  if (type)   params.set('promo_type', type);
+  if (status) params.set('status', status);
+
+  document.getElementById('tableBody').innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+
+  staffFetch(`/api/v1/vgk/promo-codes?${params}`)
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) throw new Error(d.detail || 'Load failed');
+      document.getElementById('totalBadge').textContent = d.total;
+      renderTable(d.data);
+      renderPagination(d.total, d.page, d.page_size);
+      loadStats();
+    })
+    .catch(e => {
+      document.getElementById('tableBody').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#dc2626"></i><p style="margin-top:8px;font-size:13px">Error: ${e.message}</p></div>`;
+    });
+}
+
+function loadStats() {
+  Promise.all([
+    staffFetch('/api/v1/vgk/promo-codes?page_size=1').then(r => r.json()),
+    staffFetch('/api/v1/vgk/promo-codes?status=ACTIVE&page_size=1').then(r => r.json()),
+    staffFetch('/api/v1/vgk/promo-codes?status=PAUSED&page_size=1').then(r => r.json()),
+  ]).then(([all, active, paused]) => {
+    document.getElementById('statTotal').textContent  = all.total || 0;
+    document.getElementById('statActive').textContent = active.total || 0;
+    document.getElementById('statPaused').textContent = paused.total || 0;
+    // Sum times_used across all codes from 'all' response
+    const totalUsed = (all.data || []).reduce((s, c) => s + (c.times_used || 0), 0);
+    document.getElementById('statRedeemed').textContent = totalUsed;
+  }).catch(() => {});
+}
+
+function renderTable(rows) {
+  if (!rows || !rows.length) {
+    document.getElementById('tableBody').innerHTML = '<div class="empty-state"><i class="fas fa-tags"></i><p style="margin-top:10px;font-size:13px">No promo codes found. Create one to get started.</p></div>';
+    return;
+  }
+  let html = `<table><thead><tr>
+    <th>Code</th><th>Type</th><th>Label</th><th>Points</th><th>Status</th><th>Used</th><th>Validity</th><th>Applicability</th><th>Actions</th>
+  </tr></thead><tbody>`;
+  for (const c of rows) {
+    const typeBadge = c.promo_type === 'MNR_MEMBER' ? '<span class="badge badge-mnr">MNR</span>'
+      : c.promo_type === 'ETC_STUDENT' ? '<span class="badge badge-etc">ETC</span>'
+      : '<span class="badge badge-general">General</span>';
+    const statusBadge = c.status === 'ACTIVE' ? '<span class="badge badge-active">Active</span>'
+      : c.status === 'PAUSED' ? '<span class="badge badge-paused">Paused</span>'
+      : '<span class="badge badge-inactive">Inactive</span>';
+    const pts = c.promo_type === 'MNR_MEMBER' ? '5k / 15k' : (c.promo_type === 'ETC_STUDENT' ? 'Tiered' : fmtPts(c.points_credit));
+    const validFrom = c.valid_from ? new Date(c.valid_from).toLocaleDateString('en-IN') : '—';
+    const validTo   = c.valid_to   ? new Date(c.valid_to).toLocaleDateString('en-IN')   : '—';
+    const validity  = `<span style="font-size:11.5px;color:#6b7280">${validFrom} → ${validTo}</span>`;
+
+    const pauseBtn = c.status === 'ACTIVE'
+      ? `<button class="btn-action btn-pause" onclick="setStatus(${c.id},'PAUSED')"><i class="fas fa-pause"></i> Pause</button>`
+      : c.status === 'PAUSED'
+      ? `<button class="btn-action btn-activate" onclick="setStatus(${c.id},'ACTIVE')"><i class="fas fa-play"></i> Activate</button>`
+      : `<button class="btn-action btn-activate" onclick="setStatus(${c.id},'ACTIVE')"><i class="fas fa-play"></i> Activate</button>`;
+
+    const timingLabel = { BOTH: 'All', EXISTING: 'Existing', NEW: 'New' }[c.applicability_timing || 'BOTH'] || 'All';
+    const applStatusLabel = c.applicability_status === 'ACTIVATED' ? 'Activated' : 'All Registered';
+    const timingBadge = `<span class="badge-appl badge-appl-timing">${timingLabel}</span>`;
+    const applStBadge = c.applicability_status === 'ACTIVATED'
+      ? `<span class="badge-appl badge-appl-activated">Activated only</span>`
+      : `<span class="badge-appl badge-appl-status">All registered</span>`;
+
+    html += `<tr>
+      <td><strong style="font-size:13px;color:#4c1d95;letter-spacing:.03em">${c.code}</strong></td>
+      <td>${typeBadge}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#374151">${c.label || '<span style="color:#d1d5db">—</span>'}</td>
+      <td><strong style="color:#7c3aed">${pts}</strong></td>
+      <td>${statusBadge}</td>
+      <td><span style="background:#f3f4f6;border-radius:12px;padding:2px 9px;font-size:12px;font-weight:700">${c.times_used || 0}</span>${c.usage_limit ? `<span style="color:#9ca3af;font-size:11px"> / ${c.usage_limit}</span>` : ''}</td>
+      <td>${validity}</td>
+      <td style="white-space:nowrap">${timingBadge} ${applStBadge}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-action btn-view" onclick="viewRedemptions(${c.id},'${c.code}')"><i class="fas fa-list"></i></button>
+        <button class="btn-action btn-edit" onclick="openEditModal(${JSON.stringify(c).replace(/"/g,'&quot;')})"><i class="fas fa-edit"></i></button>
+        ${pauseBtn}
+        <button class="btn-action btn-delete" onclick="openDeleteModal(${c.id},'${c.code}')"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  document.getElementById('tableBody').innerHTML = html;
+}
+
+function fmtPts(n) {
+  const v = parseFloat(n) || 0;
+  return v >= 1000 ? (v/1000).toFixed(v % 1000 === 0 ? 0 : 1) + 'k' : v.toString();
+}
+
+function renderPagination(total, page, size) {
+  const pages = Math.ceil(total / size);
+  if (pages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+  let h = '';
+  for (let i = 1; i <= pages; i++) {
+    h += `<button class="page-btn${i === page ? ' active' : ''}" onclick="loadCodes(${i})">${i}</button>`;
+  }
+  document.getElementById('pagination').innerHTML = h;
+}
+
+function resetFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('typeFilter').value = '';
+  document.getElementById('statusFilter').value = '';
+  loadCodes(1);
+}
+
+// ── CREATE / EDIT MODAL ──────────────────────────────────────────────────────
+function openCreateModal() {
+  editingCode = null;
+  document.getElementById('editId').value = '';
+  document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus me-2" style="color:#7c3aed"></i>New Promo Code';
+  document.getElementById('fCode').value = '';
+  document.getElementById('fCode').disabled = false;
+  document.getElementById('fType').value = 'GENERAL';
+  document.getElementById('fLabel').value = '';
+  document.getElementById('fPoints').value = '';
+  document.getElementById('fValidFrom').value = '';
+  document.getElementById('fValidTo').value = '';
+  document.getElementById('fUsageLimit').value = '';
+  document.getElementById('fStatus').value = 'ACTIVE';
+  document.getElementById('tierRows').innerHTML = '';
+  document.querySelector('input[name="fTiming"][value="BOTH"]').checked = true;
+  document.querySelector('input[name="fApplStatus"][value="ALL"]').checked = true;
+  onTypeChange();
+  document.getElementById('codeModal').classList.add('show');
+}
+
+function openEditModal(c) {
+  editingCode = c;
+  document.getElementById('editId').value = c.id;
+  document.getElementById('modalTitle').innerHTML = `<i class="fas fa-edit me-2" style="color:#7c3aed"></i>Edit: ${c.code}`;
+  document.getElementById('fCode').value = c.code;
+  document.getElementById('fCode').disabled = true;
+  document.getElementById('fType').value = c.promo_type;
+  document.getElementById('fLabel').value = c.label || '';
+  document.getElementById('fPoints').value = c.points_credit || '';
+  document.getElementById('fStatus').value = c.status;
+  document.getElementById('fValidFrom').value = c.valid_from ? c.valid_from.replace('T',' ').slice(0,16).replace(' ','T') : '';
+  document.getElementById('fValidTo').value   = c.valid_to   ? c.valid_to.replace('T',' ').slice(0,16).replace(' ','T')   : '';
+  document.getElementById('fUsageLimit').value = c.usage_limit || '';
+  // Applicability
+  const timing = c.applicability_timing || 'BOTH';
+  const applSt = c.applicability_status || 'ALL';
+  const timingEl = document.querySelector(`input[name="fTiming"][value="${timing}"]`);
+  if (timingEl) timingEl.checked = true;
+  const applStEl = document.querySelector(`input[name="fApplStatus"][value="${applSt}"]`);
+  if (applStEl) applStEl.checked = true;
+  // Tiers
+  document.getElementById('tierRows').innerHTML = '';
+  if (c.promo_type === 'ETC_STUDENT' && c.tier_config) {
+    for (const t of c.tier_config) addTierRow(t.min_val, t.max_val, t.points);
+  }
+  onTypeChange();
+  document.getElementById('codeModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('codeModal').classList.remove('show');
+}
+
+function onTypeChange() {
+  const type = document.getElementById('fType').value;
+  const infoBox = document.getElementById('typeInfoBox');
+  const pointsGroup = document.getElementById('pointsGroup');
+  const tierSection = document.getElementById('tierSection');
+
+  if (type === 'MNR_MEMBER') {
+    infoBox.className = 'type-info-box type-info-mnr';
+    infoBox.innerHTML = '<strong><i class="fas fa-id-card me-1"></i>MNR Member Code:</strong> Member provides their MNR User ID. If <strong>Activated</strong> → 15,000 points. If <strong>Non-Activated</strong> → 5,000 points. One-time use per member. Points field below is not used.';
+    pointsGroup.style.display = 'none';
+    tierSection.style.display = 'none';
+  } else if (type === 'ETC_STUDENT') {
+    infoBox.className = 'type-info-box type-info-etc';
+    infoBox.innerHTML = '<strong><i class="fas fa-graduation-cap me-1"></i>ETC Student Code:</strong> Member provides their ETC Student ID. Points are calculated from their training package value and the tiers you configure below. Training must be completed. One-time use per member.';
+    pointsGroup.style.display = 'none';
+    tierSection.style.display = 'block';
+    if (!document.getElementById('tierRows').children.length) addTierRow();
+  } else {
+    infoBox.className = 'type-info-box type-info-general';
+    infoBox.innerHTML = '<strong><i class="fas fa-tag me-1"></i>General Code:</strong> Member types the code and receives the configured points immediately. No additional verification required. One-time use per member.';
+    pointsGroup.style.display = 'block';
+    tierSection.style.display = 'none';
+  }
+}
+
+// ── Tier rows ────────────────────────────────────────────────────────────────
+function addTierRow(minV, maxV, pts) {
+  const row = document.createElement('div');
+  row.className = 'tier-row';
+  row.innerHTML = `
+    <input type="number" min="0" placeholder="Min ₹" value="${minV ?? ''}" class="tier-min">
+    <input type="number" min="0" placeholder="Max ₹ (blank=∞)" value="${maxV ?? ''}" class="tier-max">
+    <input type="number" min="0" placeholder="Points" value="${pts ?? ''}" class="tier-pts">
+    <button type="button" class="tier-remove" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+  `;
+  document.getElementById('tierRows').appendChild(row);
+}
+
+function collectTiers() {
+  const rows = document.querySelectorAll('#tierRows .tier-row');
+  const tiers = [];
+  for (const row of rows) {
+    const minV = parseFloat(row.querySelector('.tier-min').value);
+    const maxRaw = row.querySelector('.tier-max').value;
+    const maxV = maxRaw !== '' ? parseFloat(maxRaw) : null;
+    const pts = parseFloat(row.querySelector('.tier-pts').value);
+    if (!isNaN(minV) && !isNaN(pts)) tiers.push({ min_val: minV, max_val: maxV, points: pts });
+  }
+  return tiers;
+}
+
+// ── Save ─────────────────────────────────────────────────────────────────────
+async function saveCode() {
+  const id   = document.getElementById('editId').value;
+  const type = document.getElementById('fType').value;
+  const code = document.getElementById('fCode').value.trim().toUpperCase();
+
+  if (!id && !code) { showToast('Code is required', 'error'); return; }
+
+  const fTimingEl    = document.querySelector('input[name="fTiming"]:checked');
+  const fApplStEl   = document.querySelector('input[name="fApplStatus"]:checked');
+  const body = {
+    code,
+    label: document.getElementById('fLabel').value.trim() || null,
+    promo_type: type,
+    points_credit: type === 'GENERAL' ? (parseFloat(document.getElementById('fPoints').value) || 0) : 0,
+    tier_config: type === 'ETC_STUDENT' ? collectTiers() : null,
+    status: document.getElementById('fStatus').value,
+    valid_from: document.getElementById('fValidFrom').value || null,
+    valid_to:   document.getElementById('fValidTo').value   || null,
+    usage_limit: parseInt(document.getElementById('fUsageLimit').value) || null,
+    applicability_timing:  fTimingEl  ? fTimingEl.value  : 'BOTH',
+    applicability_status:  fApplStEl  ? fApplStEl.value  : 'ALL',
+  };
+
+  if (type === 'GENERAL' && body.points_credit <= 0) { showToast('Points must be > 0 for General codes', 'error'); return; }
+  if (type === 'ETC_STUDENT' && (!body.tier_config || !body.tier_config.length)) { showToast('Add at least one tier for ETC Student codes', 'error'); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const url = id ? `/api/v1/vgk/promo-codes/${id}` : '/api/v1/vgk/promo-codes';
+    const method = id ? 'PUT' : 'POST';
+    const r = await staffFetch(url, { method, body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
+    const d = await r.json();
+    if (!d.success) {
+      let msg = 'Save failed';
+      if (typeof d.detail === 'string') {
+        msg = d.detail;
+      } else if (Array.isArray(d.detail) && d.detail.length) {
+        msg = d.detail.map(e => e.msg || e.message || JSON.stringify(e)).join('; ');
+      } else if (d.detail) {
+        msg = JSON.stringify(d.detail);
+      }
+      throw new Error(msg);
+    }
+    closeModal();
+    showToast(id ? 'Promo code updated' : 'Promo code created');
+    loadCodes(currentPage);
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-1"></i>Save Code';
+  }
+}
+
+// ── Status toggle ─────────────────────────────────────────────────────────────
+async function setStatus(id, newStatus) {
+  try {
+    const r = await staffFetch(`/api/v1/vgk/promo-codes/${id}/set-status`, {
+      method: 'POST', body: JSON.stringify({ new_status: newStatus }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.detail || 'Status update failed');
+    showToast(`Code ${newStatus.toLowerCase()}`);
+    loadCodes(currentPage);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+// ── Delete ───────────────────────────────────────────────────────────────────
+function openDeleteModal(id, code) {
+  deleteTargetId = id;
+  document.getElementById('deleteCodeName').textContent = code;
+  document.getElementById('deleteModal').classList.add('show');
+}
+
+async function confirmDelete() {
+  if (!deleteTargetId) return;
+  try {
+    const r = await staffFetch(`/api/v1/vgk/promo-codes/${deleteTargetId}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.detail || 'Delete failed');
+    document.getElementById('deleteModal').classList.remove('show');
+    showToast('Promo code deleted');
+    deleteTargetId = null;
+    loadCodes(currentPage);
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+// ── Redemptions ───────────────────────────────────────────────────────────────
+async function viewRedemptions(id, code) {
+  document.getElementById('redemptionsTitle').innerHTML = `<i class="fas fa-list me-2" style="color:#7c3aed"></i>Redemptions: ${code}`;
+  document.getElementById('redemptionsBody').innerHTML = '<div style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+  document.getElementById('redemptionsModal').classList.add('show');
+  try {
+    const r = await staffFetch(`/api/v1/vgk/promo-codes/${id}/redemptions?page_size=100`);
+    const d = await r.json();
+    if (!d.success) throw new Error(d.detail || 'Load failed');
+    if (!d.data.length) {
+      document.getElementById('redemptionsBody').innerHTML = '<div style="text-align:center;padding:32px;color:#9ca3af;font-size:13px">No redemptions yet</div>';
+      return;
+    }
+    let html = `<div style="padding:0 4px"><table class="redemption-table"><thead><tr>
+      <th>#</th><th>Member</th><th>VGK Code</th><th>Ref Used</th><th>Points</th><th>Date</th>
+    </tr></thead><tbody>`;
+    d.data.forEach((row, i) => {
+      const dt = row.redeemed_at ? new Date(row.redeemed_at).toLocaleString('en-IN') : '—';
+      html += `<tr>
+        <td style="color:#9ca3af">${i+1}</td>
+        <td><strong>${row.partner_name || '—'}</strong><br><span style="font-size:11px;color:#9ca3af">${row.partner_code || ''}</span></td>
+        <td style="font-size:11.5px;color:#7c3aed">${row.partner_code || '—'}</td>
+        <td style="font-size:11.5px;color:#6b7280">${row.verified_ref || '—'}</td>
+        <td><strong style="color:#059669">${parseFloat(row.points_awarded).toLocaleString()}</strong></td>
+        <td style="font-size:11.5px;color:#6b7280">${dt}</td>
+      </tr>`;
+    });
+    html += `</tbody></table><div style="padding:10px 14px;font-size:12px;color:#6b7280">Total: ${d.total} redemptions</div></div>`;
+    document.getElementById('redemptionsBody').innerHTML = html;
+  } catch (e) {
+    document.getElementById('redemptionsBody').innerHTML = `<div style="text-align:center;padding:24px;color:#dc2626;font-size:13px">${e.message}</div>`;
+  }
+}
+
+// ── Input helpers ─────────────────────────────────────────────────────────────
+document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadCodes(1); });
+document.getElementById('fCode').addEventListener('input', function() { this.value = this.value.toUpperCase().replace(/\s/g, ''); });
+document.querySelectorAll('.vgk-modal-backdrop').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await StaffSidebar.init();
+  StaffHeader.inject('VGK Promo Codes', 'fas fa-tags');
+  loadCodes(1);
+});
+</script>
+</body>
+</html>

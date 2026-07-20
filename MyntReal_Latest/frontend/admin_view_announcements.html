@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Announcements - Admin Panel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- DC Protocol: MNR Lightbox moved to body to survive template head-stripping -->
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem 0;
+    }
+    .main-container {
+      display: flex;
+      gap: 1.5rem;
+    }
+    .filter-sidebar {
+      background: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+      width: 280px;
+      height: fit-content;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .announcements-panel {
+      flex: 1;
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    .announcement-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      transition: all 0.3s;
+    }
+    .announcement-card:hover {
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .media-thumbnail {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .media-thumbnail:hover {
+      transform: scale(1.05);
+    }
+    .video-thumbnail {
+      position: relative;
+    }
+    .video-thumbnail::after {
+      content: '\f04b';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 32px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+    .load-more-btn {
+      width: 100%;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    .rating-display {
+      color: #ffc107;
+      font-size: 0.9rem;
+      margin-right: 0.5rem;
+    }
+    .rating-display i {
+      margin-right: 2px;
+    }
+    .share-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .share-buttons .btn {
+      font-size: 0.85rem;
+      padding: 0.4rem 0.8rem;
+    }
+    .admin-details {
+      background: #f8f9fa;
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+    }
+    .admin-details .detail-item {
+      display: inline-block;
+      margin-right: 1.5rem;
+    }
+    .admin-details .detail-item i {
+      margin-right: 0.3rem;
+      color: #6c757d;
+    }
+    @media (max-width: 768px) {
+      .main-container {
+        flex-direction: column;
+      }
+      .filter-sidebar {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid px-4">
+    <div class="main-container">
+      <!-- Filter Sidebar -->
+      <div class="filter-sidebar">
+        <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filters</h5>
+        
+        <!-- Category Filter -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">Category</label>
+          <select class="form-select" id="categoryFilter">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+
+        <!-- Date Range Filter -->
+        <div class="mb-3">
+          <label class="form-label fw-bold">Date Range</label>
+          <input type="date" class="form-control mb-2" id="startDate" placeholder="Start Date">
+          <input type="date" class="form-control" id="endDate" placeholder="End Date">
+        </div>
+
+        <!-- Visibility Filter (Admin Only) -->
+        <div class="mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="showHiddenFilter">
+            <label class="form-check-label" for="showHiddenFilter">
+              <i class="fas fa-eye-slash me-1"></i>Show Hidden Announcements
+            </label>
+          </div>
+        </div>
+
+        <button class="btn btn-primary w-100 mb-2" id="applyFilters">
+          <i class="fas fa-search me-1"></i>Apply Filters
+        </button>
+        <button class="btn btn-outline-secondary w-100" id="clearFilters">
+          <i class="fas fa-times me-1"></i>Clear Filters
+        </button>
+      </div>
+
+      <!-- Announcements Panel -->
+      <div class="announcements-panel">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2>📢 Community Updates</h2>
+          <div class="text-muted" id="announcementCount">0 announcements</div>
+        </div>
+
+        <div id="announcementsList"></div>
+
+        <button class="btn btn-outline-primary load-more-btn" id="loadMoreBtn" style="display: none;">
+          <i class="fas fa-chevron-down me-1"></i>Load More
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Inject sessionToken into sessionStorage for module access
+    if (typeof sessionToken !== 'undefined') {
+      sessionStorage.setItem('session_token', sessionToken);
+    }
+  </script>
+  <script type="module">
+    import { feedbackApi, showToast, showSpinner, showEmptyState, formatDate, showMediaLightbox, escapeHTML } from '/shared/feedback/feedbackShared.js';
+
+    let allAnnouncements = [];
+    let displayedCount = 12;
+    const loadIncrement = 12;
+    let currentFilters = {};
+
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadCategories();
+      await loadAnnouncements();
+    });
+
+    async function loadCategories() {
+      try {
+        const categories = await feedbackApi.getCategories();
+        const select = document.getElementById('categoryFilter');
+        categories.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat.id;
+          option.textContent = cat.category_name;
+          select.appendChild(option);
+        });
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    }
+
+    async function loadAnnouncements(filters = {}) {
+      const container = document.getElementById('announcementsList');
+      showSpinner(container);
+
+      try {
+        currentFilters = filters;
+        allAnnouncements = await feedbackApi.getAnnouncements(filters);
+        window.announcementsData = allAnnouncements; // Store globally for lightbox
+        displayedCount = loadIncrement;
+        renderAnnouncements();
+      } catch (error) {
+        console.error('Error loading announcements:', error);
+        showToast('Failed to load announcements', 'error');
+        container.innerHTML = '<div class="alert alert-danger">Failed to load announcements. Please try again.</div>';
+      }
+    }
+
+    function renderAnnouncements() {
+      const container = document.getElementById('announcementsList');
+      const items = allAnnouncements.slice(0, displayedCount);
+
+      // Update count
+      document.getElementById('announcementCount').textContent = 
+        `${allAnnouncements.length} announcement${allAnnouncements.length !== 1 ? 's' : ''}`;
+
+      if (allAnnouncements.length === 0) {
+        showEmptyState(container, 'No announcements found', 'bullhorn');
+        document.getElementById('loadMoreBtn').style.display = 'none';
+        return;
+      }
+
+      container.innerHTML = items.map(announcement => {
+        const isHidden = !announcement.is_visible;
+        const categoryName = announcement.category ? announcement.category.category_name : 'General';
+        // DC Protocol: Safari-compatible video with preload and time fragment for first frame
+        const mediaHtml = announcement.media && announcement.media.length > 0
+          ? `<div class="media-grid">
+               ${announcement.media.map((m, idx) => {
+                 const isVideo = m.media_type === 'video' || (m.file_type && m.file_type.startsWith('video/'));
+                 const safariVideoUrl = escapeHTML(m.file_path) + (m.file_path.includes('#') ? '' : '#t=0.001');
+                 return isVideo
+                   ? `<div class="video-thumbnail" onclick="openAnnouncementLightbox(${announcement.id}, ${idx})">
+                        <video class="media-thumbnail" src="${safariVideoUrl}" preload="metadata" muted playsinline></video>
+                      </div>`
+                   : `<img class="media-thumbnail" src="${escapeHTML(m.file_path)}" onclick="openAnnouncementLightbox(${announcement.id}, ${idx})">`;
+               }).join('')}
+             </div>`
+          : '';
+
+        // Rating stars
+        const avgRating = announcement.average_rating || 0;
+        const totalRatings = announcement.total_ratings || 0;
+        const ratingStars = Array.from({length: 5}, (_, i) => {
+          if (i < Math.floor(avgRating)) {
+            return '<i class="fas fa-star"></i>';
+          } else if (i < avgRating) {
+            return '<i class="fas fa-star-half-alt"></i>';
+          } else {
+            return '<i class="far fa-star"></i>';
+          }
+        }).join('');
+
+        return `
+          <div class="announcement-card ${isHidden ? 'border-danger' : ''}" data-announcement-id="${announcement.id}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h4 class="mb-1">${escapeHTML(announcement.title)}</h4>
+                ${isHidden ? '<span class="badge bg-danger">Hidden</span>' : ''}
+              </div>
+              <span class="badge bg-primary">${escapeHTML(categoryName)}</span>
+            </div>
+            
+            <!-- Admin Details -->
+            <div class="admin-details">
+              <span class="detail-item">
+                <i class="fas fa-user"></i><strong>Posted By:</strong> ${escapeHTML(announcement.user_name || 'Unknown')}
+              </span>
+              <span class="detail-item">
+                <i class="fas fa-id-badge"></i><strong>User ID:</strong> ${escapeHTML(announcement.user_id || 'N/A')}
+              </span>
+              ${announcement.city ? `
+                <span class="detail-item">
+                  <i class="fas fa-map-marker-alt"></i><strong>Location:</strong> ${escapeHTML(announcement.city)}
+                </span>
+              ` : ''}
+            </div>
+
+            <p class="mb-3">${escapeHTML(announcement.description)}</p>
+            ${mediaHtml}
+            
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div class="text-muted small">
+                <span><i class="fas fa-clock me-2"></i>${formatDate(announcement.approved_at)}</span>
+                <span class="ms-3"><i class="fas fa-eye me-1"></i>${announcement.views_count || 0} views</span>
+                <span class="ms-2"><i class="fas fa-share-alt me-1"></i>${announcement.shares_count || 0} shares</span>
+              </div>
+              <div class="rating-display">
+                ${ratingStars}
+                <span class="text-muted">${avgRating.toFixed(1)} (${totalRatings})</span>
+              </div>
+            </div>
+
+            <!-- Share Buttons -->
+            <div class="share-buttons">
+              <button class="btn btn-sm btn-outline-primary copy-link-btn" data-announcement-id="${announcement.id}">
+                <i class="fas fa-link me-1"></i>Copy Link
+              </button>
+              <button class="btn btn-sm btn-success share-whatsapp-btn" data-announcement-id="${announcement.id}">
+                <i class="fab fa-whatsapp me-1"></i>Share on WhatsApp
+              </button>
+              <button class="btn btn-sm ${isHidden ? 'btn-success' : 'btn-warning'} toggle-visibility-btn" 
+                      data-announcement-id="${announcement.id}" 
+                      data-is-hidden="${isHidden}">
+                <i class="fas fa-eye${isHidden ? '' : '-slash'}"></i>
+                ${isHidden ? 'Unhide' : 'Hide'}
+              </button>
+              <button class="btn btn-sm btn-danger delete-announcement-btn" 
+                      data-announcement-id="${announcement.id}">
+                <i class="fas fa-trash me-1"></i>Delete
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Load more button
+      const loadMoreBtn = document.getElementById('loadMoreBtn');
+      loadMoreBtn.style.display = displayedCount < allAnnouncements.length ? 'block' : 'none';
+
+      // Make viewMedia available globally
+      window.viewMedia = (announcementId) => {
+        const announcement = allAnnouncements.find(a => a.id === announcementId);
+        if (announcement && announcement.media && announcement.media.length > 0) {
+          showMediaLightbox(announcement.media);
+        }
+      };
+
+      // Add event delegation for hide/unhide buttons
+      const toggleButtons = document.querySelectorAll('.toggle-visibility-btn');
+      toggleButtons.forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const announcementId = parseInt(e.currentTarget.dataset.announcementId);
+          const isHidden = e.currentTarget.dataset.isHidden === 'true';
+          await toggleVisibility(announcementId, isHidden);
+        });
+      });
+
+      // Add event handlers for Copy Link buttons
+      const copyLinkButtons = document.querySelectorAll('.copy-link-btn');
+      copyLinkButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const announcementId = e.currentTarget.dataset.announcementId;
+          copyShareLink(announcementId);
+        });
+      });
+
+      // Add event handlers for WhatsApp Share buttons
+      const whatsappButtons = document.querySelectorAll('.share-whatsapp-btn');
+      whatsappButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const announcementId = e.currentTarget.dataset.announcementId;
+          shareOnWhatsApp(announcementId);
+        });
+      });
+
+      // Add event handlers for Delete buttons (opens modal)
+      const deleteButtons = document.querySelectorAll('.delete-announcement-btn');
+      deleteButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const announcementId = parseInt(e.currentTarget.dataset.announcementId);
+          openDeleteAnnouncementModal(announcementId);
+        });
+      });
+    }
+
+    // DC: Open delete modal for announcements
+    function openDeleteAnnouncementModal(announcementId) {
+      const announcement = allAnnouncements.find(a => a.id === announcementId);
+      if (!announcement) return;
+      
+      document.getElementById('deleteAnnouncementId').value = announcementId;
+      document.getElementById('deleteAnnouncementTitle').textContent = announcement.title;
+      document.getElementById('deleteAnnouncementConfirmText').value = '';
+      document.getElementById('softDeleteAnnouncement').checked = true;
+      
+      const modal = new bootstrap.Modal(document.getElementById('deleteAnnouncementModal'));
+      modal.show();
+    }
+
+    // DC: Confirm delete announcement (exposed to window for modal button)
+    window.confirmDeleteAnnouncement = async function() {
+      const confirmText = document.getElementById('deleteAnnouncementConfirmText').value;
+      if (confirmText !== 'DELETE') {
+        showToast('Please type DELETE to confirm', 'error');
+        return;
+      }
+      
+      const announcementId = document.getElementById('deleteAnnouncementId').value;
+      const deleteType = document.querySelector('input[name="deleteAnnouncementType"]:checked').value;
+      const announcement = allAnnouncements.find(a => a.id === parseInt(announcementId));
+      
+      try {
+        if (deleteType === 'hard') {
+          await feedbackApi.hardDeleteAnnouncement(announcementId);
+          showToast(`Announcement "${announcement?.title}" permanently deleted`, 'success');
+        } else {
+          await feedbackApi.softDeleteAnnouncement(announcementId);
+          showToast(`Announcement "${announcement?.title}" soft deleted (can be restored)`, 'success');
+        }
+        
+        // Close modal and reload
+        bootstrap.Modal.getInstance(document.getElementById('deleteAnnouncementModal')).hide();
+        await loadAnnouncements(currentFilters);
+      } catch (error) {
+        console.error('Error deleting announcement:', error);
+        showToast('Failed to delete announcement. ' + (error.message || ''), 'error');
+      }
+    }
+
+    // Load more button
+    document.getElementById('loadMoreBtn').addEventListener('click', () => {
+      displayedCount += loadIncrement;
+      renderAnnouncements();
+    });
+
+    // Apply filters
+    document.getElementById('applyFilters').addEventListener('click', () => {
+      const filters = {
+        category_id: document.getElementById('categoryFilter').value || undefined,
+        start_date: document.getElementById('startDate').value || undefined,
+        end_date: document.getElementById('endDate').value || undefined,
+        include_hidden: document.getElementById('showHiddenFilter').checked
+      };
+      loadAnnouncements(filters);
+    });
+
+    // Clear filters
+    document.getElementById('clearFilters').addEventListener('click', () => {
+      document.getElementById('categoryFilter').value = '';
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      document.getElementById('showHiddenFilter').checked = false;
+      loadAnnouncements();
+    });
+
+    // Toggle announcement visibility (Hide/Unhide)
+    async function toggleVisibility(announcementId, isHidden) {
+      try {
+        if (isHidden) {
+          await feedbackApi.unhideAnnouncement(announcementId);
+          showToast('Announcement unhidden successfully', 'success');
+        } else {
+          await feedbackApi.hideAnnouncement(announcementId);
+          showToast('Announcement hidden successfully', 'success');
+        }
+        // Reload with current filters to maintain state
+        await loadAnnouncements(currentFilters);
+      } catch (error) {
+        console.error('Error toggling visibility:', error);
+        showToast('Failed to update announcement visibility', 'error');
+      }
+    }
+
+    // Delete announcement (RVZ can delete all)
+    async function deleteAnnouncement(announcementId) {
+      const announcement = allAnnouncements.find(a => a.id === announcementId);
+      const confirmMessage = `Are you sure you want to delete this announcement?\n\nTitle: "${announcement?.title || 'Unknown'}"\n\nThis will permanently delete the announcement and all its media files. This action cannot be undone.`;
+      
+      if (!confirm(confirmMessage)) {
+        return;
+      }
+
+      try {
+        await feedbackApi.deleteAnnouncement(announcementId);
+        showToast('Announcement deleted successfully', 'success');
+        // Reload with current filters to maintain state
+        await loadAnnouncements(currentFilters);
+      } catch (error) {
+        console.error('Error deleting announcement:', error);
+        showToast('Failed to delete announcement. ' + (error.message || ''), 'error');
+      }
+    }
+
+    // Copy / Share — opens universal share modal
+    function copyShareLink(announcementId) {
+      _openShareModal(announcementId);
+    }
+
+    function shareOnWhatsApp(announcementId) {
+      _openShareModal(announcementId);
+    }
+
+    function _openShareModal(announcementId) {
+      const ann = (window.announcementsData || allAnnouncements || []).find(a => a.id === announcementId);
+      if (!ann) return;
+      trackShare(announcementId);
+      if (window.MyntShareModal) {
+        MyntShareModal.shareAnnouncement({
+          id:           ann.id,
+          title:        ann.title,
+          description:  ann.description || '',
+          categoryName: ann.category?.category_name || 'MNR Business Access Program',
+          userName:     ann.user_name || '',
+          city:         ann.city || '',
+        });
+      } else {
+        const url = `https://mnrteam.com/public/announcement?id=${announcementId}&shared=true`;
+        window.open('https://wa.me/?text=' + encodeURIComponent(ann.title + '\n\n' + url), '_blank');
+      }
+    }
+
+    // Track share action
+    async function trackShare(announcementId) {
+      try {
+        await feedbackApi.trackShare(announcementId);
+      } catch (error) {
+        console.error('Failed to track share:', error);
+      }
+    }
+
+    // MNR Lightbox: Open media from announcement (DC Protocol)
+    // Expose to window for inline onclick handlers (module scope fix)
+    window.openAnnouncementLightbox = function openAnnouncementLightbox(announcementId, mediaIndex) {
+      // Find the announcement in the loaded data
+      const announcement = window.announcementsData?.find(a => a.id === announcementId);
+      if (!announcement || !announcement.media || announcement.media.length === 0) {
+        console.warn('[MNR Lightbox] Announcement or media not found');
+        return;
+      }
+
+      // Parse media items for lightbox
+      const mediaItems = announcement.media.map(m => ({
+        url: m.file_path,
+        file_type: m.file_type,
+        type: (m.media_type === 'video' || (m.file_type && m.file_type.startsWith('video/'))) ? 'video' : 'image',
+        title: announcement.title || 'Media'
+      }));
+
+      // Open lightbox at the clicked media index
+      if (window.MNRLightbox && typeof window.MNRLightbox.open === 'function') {
+        window.MNRLightbox.open(mediaItems, mediaIndex || 0);
+      } else {
+        console.warn('[MNR Lightbox] Component not loaded');
+      }
+    }
+  </script>
+
+  <!-- DC Protocol: Delete Announcement Modal (RVZ Supreme/Admin Only) -->
+  <div class="modal fade" id="deleteAnnouncementModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Delete Announcement</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">
+            <strong>Warning!</strong> This action will delete the announcement and its media.
+          </div>
+          <p><strong>Announcement:</strong> <span id="deleteAnnouncementTitle"></span></p>
+          <input type="hidden" id="deleteAnnouncementId">
+          
+          <div class="mb-3">
+            <label class="form-label">Delete Type:</label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="deleteAnnouncementType" id="softDeleteAnnouncement" value="soft" checked>
+              <label class="form-check-label" for="softDeleteAnnouncement">
+                <strong>Soft Delete</strong> - Can be restored later
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="deleteAnnouncementType" id="hardDeleteAnnouncement" value="hard">
+              <label class="form-check-label text-danger" for="hardDeleteAnnouncement">
+                <strong>Hard Delete</strong> - Permanent removal (cannot be undone)
+              </label>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Type <strong>DELETE</strong> to confirm:</label>
+            <input type="text" class="form-control" id="deleteAnnouncementConfirmText" placeholder="Type DELETE">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" onclick="confirmDeleteAnnouncement()">
+            <i class="fas fa-trash me-1"></i>Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DC Protocol: MNR Lightbox Component - placed in body to survive template head-stripping -->
+  <script src="/public/js/share-modal.js"></script>
+  <script src="/public/js/mnr-lightbox.js"></script>
+</body>
+</html>

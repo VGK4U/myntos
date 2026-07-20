@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="theme-color" content="#1a1a2e">
+  
+  <title>MyntReal</title>
+  
+  <!-- Leaflet CSS for Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Critical CSS for faster initial load */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #1a1a2e;
+      color: white;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    #app {
+      min-height: 100vh;
+    }
+    /* DC_FOUC_FIX_001: landscape-warning MUST be hidden before external CSS loads.
+       Without this, the div renders as display:block during the 229KB CSS load window
+       causing a permanent visible "Please Rotate" text on every startup. */
+    .landscape-warning { display: none; }
+    .splash {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .splash-logo {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .splash-text {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .splash-loader {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top-color: #10b981;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+  <script type="module" crossorigin src="/mobile/assets/index-CZki7V3s.js"></script>
+  <link rel="modulepreload" crossorigin href="/mobile/assets/vendor-capacitor-core-zwN_Y1fq.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/vendor-capacitor-plugins-CPV63GsB.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/vendor-CWtoGTp2.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/services-AEce4KDH.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/services-gps-BpnPk7uE.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/components-9q5I9H7Z.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/pages-staff-BqwJeZMY.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/pages-mnr-BErnUOyU.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/pages-vgk-CIrck26-.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/pages-zynova-BOP33fGD.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/pages-myntreal-BeV4wVbg.js">
+  <link rel="modulepreload" crossorigin href="/mobile/assets/pages-partner-DbTpz2yt.js">
+  <link rel="stylesheet" crossorigin href="/mobile/assets/index-DhcOC9MZ.css">
+</head>
+<body>
+  <!-- Portrait Mode Warning (shown when phone is in landscape) -->
+  <div class="landscape-warning">
+    <div class="rotate-icon">📱</div>
+    <h2>Please Rotate Your Device</h2>
+    <p>This app works best in portrait mode</p>
+  </div>
+  
+  <div id="app">
+    <!-- Splash screen while loading -->
+    <div class="splash">
+      <div class="splash-logo">
+        <svg width="48" height="48" viewBox="0 0 100 100" fill="white">
+          <path d="M30 70 L50 30 L70 70 Z"/>
+          <circle cx="50" cy="35" r="8"/>
+        </svg>
+      </div>
+      <p class="splash-text">MyntReal</p>
+      <div class="splash-loader"></div>
+    </div>
+  </div>
+  
+  <!-- DC_SPLASH_GUARD_001: Plain (non-module) script — runs immediately, no imports needed.
+       If the module script fails to load for ANY reason, this guarantees the splash
+       is replaced with the login form after 8 seconds. Absolute last resort. -->
+  <script>
+    (function() {
+      var SPLASH_TIMEOUT_MS = 8000;
+      var splashTimer = setTimeout(function() {
+        var app = document.getElementById('app');
+        var splash = app && app.querySelector('.splash');
+        if (splash) {
+          console.error('[DC_SPLASH] Fallback timer fired — module script may have failed to load');
+          app.innerHTML = [
+            '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;',
+            'justify-content:center;gap:24px;padding:32px;text-align:center;background:#1a1a2e;">',
+            '<div style="width:80px;height:80px;border-radius:20px;background:linear-gradient(135deg,#10b981,#059669);',
+            'display:flex;align-items:center;justify-content:center;">',
+            '<svg width="48" height="48" viewBox="0 0 100 100" fill="white">',
+            '<path d="M30 70 L50 30 L70 70 Z"/><circle cx="50" cy="35" r="8"/></svg></div>',
+            '<p style="font-size:24px;font-weight:700;color:white;margin:0;">MyntReal</p>',
+            '<p style="color:rgba(255,255,255,0.6);font-size:14px;margin:0;">Loading failed. Please check your internet connection and restart the app.</p>',
+            '<button onclick="window.location.reload()" style="background:#10b981;color:white;border:none;',
+            'padding:14px 32px;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;">Retry</button>',
+            '</div>'
+          ].join('');
+        }
+      }, SPLASH_TIMEOUT_MS);
+      // Cancel the timer if the module loads successfully
+      window.__splashGuardTimer = splashTimer;
+    })();
+  </script>
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</body>
+</html>

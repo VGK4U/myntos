@@ -1,0 +1,446 @@
+<div class="mb-3 text-end"><a href="/dashboard" class="btn btn-primary btn-sm"><i class="fas fa-home me-2"></i>Go to Dashboard</a></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Support Tickets - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        
+        .container {
+            max-width: 1200px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1.5rem;
+        }
+        
+        .ticket-card {
+            border-left: 4px solid;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .ticket-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .status-open { border-color: #3b82f6; }
+        .status-in-progress { border-color: #f59e0b; }
+        .status-resolved { border-color: #10b981; }
+        .status-closed { border-color: #6b7280; }
+        
+        .badge-sla-ok { background: #10b981; }
+        .badge-sla-warning { background: #f59e0b; }
+        .badge-sla-breach { background: #ef4444; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .comment-box {
+            background: #f3f4f6;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .comment-user {
+            background: #e0e7ff;
+            border-left: 3px solid #667eea;
+        }
+        
+        .comment-admin {
+            background: #d1fae5;
+            border-left: 3px solid #10b981;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0"><i class="bi bi-headset"></i> Support Tickets</h2>
+                    <button class="btn btn-light" onclick="showCreateTicket()">
+                        <i class="bi bi-plus-circle"></i> Create New Ticket
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-4" id="ticketTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#allTickets">All Tickets</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#openTickets">Open</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#resolvedTickets">Resolved</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="allTickets">
+                        <div id="ticketsContainer">
+                            <p class="text-center">Loading tickets...</p>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="openTickets">
+                        <div id="openTicketsContainer">
+                            <p class="text-center">Loading...</p>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="resolvedTickets">
+                        <div id="resolvedTicketsContainer">
+                            <p class="text-center">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Ticket Modal -->
+    <div class="modal fade" id="createTicketModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h5 class="modal-title">Create Support Ticket</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createTicketForm">
+                        <div class="mb-3">
+                            <label class="form-label">Issue Category</label>
+                            <select class="form-select" name="issue_category" required>
+                                <option value="">Select Category</option>
+                                <option value="Account Issues">Account Issues</option>
+                                <option value="Payment Problems">Payment Problems</option>
+                                <option value="Technical Support">Technical Support</option>
+                                <option value="PIN Management">PIN Management</option>
+                                <option value="Coupon Issues">Coupon Issues</option>
+                                <option value="Income Related">Income Related</option>
+                                <option value="Team Management">Team Management</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Priority</label>
+                            <select class="form-select" name="priority">
+                                <option value="Low">Low</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="High">High</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Issue Description</label>
+                            <textarea class="form-control" name="issue_description" rows="5" required
+                                placeholder="Please describe your issue in detail..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitTicket()">Submit Ticket</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Ticket Modal -->
+    <div class="modal fade" id="viewTicketModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h5 class="modal-title">Ticket Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="ticketDetailsContainer">
+                        <p class="text-center">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE_URL = ''; // Use relative URLs
+        let authToken = localStorage.getItem('authToken');
+        let currentTickets = [];
+
+        $(document).ready(function() {
+            if (!authToken) {
+                alert('Please login first');
+                window.location.href = '/login';
+                return;
+            }
+            loadTickets();
+        });
+
+        function loadTickets(status = null) {
+            const url = status ? `${API_BASE_URL}/api/v1/tickets/my-tickets?status=${status}` : `${API_BASE_URL}/api/v1/tickets/my-tickets`;
+            
+            $.ajax({
+                url: url,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(tickets) {
+                    currentTickets = tickets;
+                    displayTickets(tickets, '#ticketsContainer');
+                    displayTickets(tickets.filter(t => t.status === 'Open'), '#openTicketsContainer');
+                    displayTickets(tickets.filter(t => t.status === 'Resolved'), '#resolvedTicketsContainer');
+                },
+                error: function(err) {
+                    console.error('Error loading tickets:', err);
+                    $('#ticketsContainer').html('<p class="text-danger">Error loading tickets</p>');
+                }
+            });
+        }
+
+        function displayTickets(tickets, container) {
+            let html = '';
+            
+            if (tickets.length === 0) {
+                html = '<p class="text-center text-muted">No tickets found</p>';
+            } else {
+                tickets.forEach(ticket => {
+                    const slaClass = ticket.sla_status === 'Within SLA' ? 'badge-sla-ok' : 
+                                    ticket.sla_status === 'SLA Breached' ? 'badge-sla-breach' : 'badge-sla-warning';
+                    const statusClass = `status-${ticket.status.toLowerCase().replace(' ', '-')}`;
+                    
+                    html += `
+                        <div class="card ticket-card ${statusClass}" onclick="viewTicket(${ticket.id})">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h5 class="card-title">${ticket.ticket_id}</h5>
+                                        <p class="card-text"><strong>${ticket.issue_category}</strong></p>
+                                        <p class="text-muted small">${ticket.issue_description.substring(0, 100)}...</p>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="badge ${slaClass}">${ticket.sla_status}</span><br>
+                                        <span class="badge bg-primary mt-1">${ticket.status}</span><br>
+                                        <span class="badge bg-secondary mt-1">${ticket.priority}</span>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock"></i> ${new Date(ticket.created_date).toLocaleString()}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            $(container).html(html);
+        }
+
+        function showCreateTicket() {
+            $('#createTicketModal').modal('show');
+        }
+
+        function submitTicket() {
+            const formData = $('#createTicketForm').serializeArray();
+            const data = {};
+            formData.forEach(field => {
+                data[field.name] = field.value;
+            });
+            data.user_id = 'CURRENT_USER';
+
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/tickets/create`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function(response) {
+                    alert(`✅ Ticket created successfully! Ticket ID: ${response.ticket_id}`);
+                    $('#createTicketModal').modal('hide');
+                    $('#createTicketForm')[0].reset();
+                    loadTickets();
+                },
+                error: function(err) {
+                    alert('❌ Error creating ticket: ' + (err.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+
+        function viewTicket(ticketId) {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/tickets/${ticketId}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(ticket) {
+                    let html = `
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h4>${ticket.ticket_id}</h4>
+                                <p><strong>Category:</strong> ${ticket.issue_category}</p>
+                                <p><strong>Priority:</strong> <span class="badge bg-secondary">${ticket.priority}</span></p>
+                                <p><strong>Status:</strong> <span class="badge bg-primary">${ticket.status}</span></p>
+                                <p><strong>SLA Status:</strong> <span class="badge ${ticket.sla_status === 'Within SLA' ? 'bg-success' : 'bg-danger'}">${ticket.sla_status}</span></p>
+                                <hr>
+                                <h5>Issue Description</h5>
+                                <p>${ticket.issue_description}</p>
+                                
+                                ${ticket.resolution_summary ? `
+                                    <hr>
+                                    <h5>Resolution</h5>
+                                    <p>${ticket.resolution_summary}</p>
+                                ` : ''}
+                                
+                                <hr>
+                                <h5>Comments & Responses</h5>
+                                <div id="commentsSection">
+                    `;
+                    
+                    if (ticket.comments && ticket.comments.length > 0) {
+                        ticket.comments.forEach(comment => {
+                            const commentClass = comment.comment_type === 'admin_response' ? 'comment-admin' : 'comment-user';
+                            html += `
+                                <div class="comment-box ${commentClass}">
+                                    <strong>${comment.comment_type === 'admin_response' ? 'Admin' : 'You'}</strong>
+                                    <small class="text-muted float-end">${new Date(comment.created_at).toLocaleString()}</small>
+                                    <p class="mb-0 mt-2">${comment.comment_text}</p>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += '<p class="text-muted">No comments yet</p>';
+                    }
+                    
+                    html += `
+                                </div>
+                                
+                                ${ticket.status !== 'Closed' ? `
+                                    <div class="mt-3">
+                                        <h5>Add Comment</h5>
+                                        <textarea class="form-control mb-2" id="newComment" rows="3" placeholder="Type your comment here..."></textarea>
+                                        <button class="btn btn-primary" onclick="addComment(${ticketId})">
+                                            <i class="bi bi-send"></i> Send Comment
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6>Timeline</h6>
+                                        <ul class="list-unstyled">
+                                            <li><i class="bi bi-circle-fill text-primary"></i> Created: ${new Date(ticket.created_date).toLocaleString()}</li>
+                                            ${ticket.assigned_date ? `<li><i class="bi bi-circle-fill text-warning"></i> Assigned: ${new Date(ticket.assigned_date).toLocaleString()}</li>` : ''}
+                                            ${ticket.resolved_date ? `<li><i class="bi bi-circle-fill text-success"></i> Resolved: ${new Date(ticket.resolved_date).toLocaleString()}</li>` : ''}
+                                            ${ticket.closed_date ? `<li><i class="bi bi-circle-fill text-secondary"></i> Closed: ${new Date(ticket.closed_date).toLocaleString()}</li>` : ''}
+                                        </ul>
+                                        
+                                        ${ticket.resolution_time_hours ? `
+                                            <hr>
+                                            <p><strong>Resolution Time:</strong> ${ticket.resolution_time_hours.toFixed(0)} hours</p>
+                                        ` : ''}
+                                        
+                                        ${ticket.status === 'Resolved' ? `
+                                            <hr>
+                                            <button class="btn btn-success w-100" onclick="closeTicket(${ticketId})">
+                                                <i class="bi bi-check-circle"></i> Close Ticket
+                                            </button>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $('#ticketDetailsContainer').html(html);
+                    $('#viewTicketModal').modal('show');
+                },
+                error: function(err) {
+                    alert('Error loading ticket details');
+                }
+            });
+        }
+
+        function addComment(ticketId) {
+            const commentText = $('#newComment').val();
+            if (!commentText) {
+                alert('Please enter a comment');
+                return;
+            }
+
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/tickets/${ticketId}/comment`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    ticket_id: ticketId,
+                    comment_text: commentText
+                }),
+                success: function() {
+                    alert('✅ Comment added successfully!');
+                    viewTicket(ticketId);
+                },
+                error: function(err) {
+                    alert('Error adding comment');
+                }
+            });
+        }
+
+        function closeTicket(ticketId) {
+            if (!confirm('Are you satisfied with the resolution? Closing the ticket will finalize it.')) {
+                return;
+            }
+
+            const rating = prompt('Please rate your satisfaction (1-5):');
+            const satisfaction = rating ? parseInt(rating) : null;
+
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/tickets/${ticketId}/close`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({ customer_satisfaction: satisfaction }),
+                success: function() {
+                    alert('✅ Ticket closed successfully!');
+                    $('#viewTicketModal').modal('hide');
+                    loadTickets();
+                },
+                error: function(err) {
+                    alert('Error closing ticket: ' + (err.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+    </script>
+</body>
+</html>

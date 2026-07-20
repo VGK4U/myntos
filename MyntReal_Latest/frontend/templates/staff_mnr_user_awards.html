@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNR — Awards | Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="/public/css/dark-theme.css" rel="stylesheet">
+    <script src="/staff_header.js"></script>
+    <style>
+        .mnr-search-card { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 12px; }
+        .mnr-search-card .form-control { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; }
+        .nav-tabs .nav-link { color: #adb5bd; border: none; border-bottom: 2px solid transparent; }
+        .nav-tabs .nav-link.active { color: #ffc107; border-bottom-color: #ffc107; background: transparent; }
+        .stat-card { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 12px; padding: 20px; text-align: center; }
+        .stat-card.achieved { background: linear-gradient(135deg, #155724 0%, #1e7e34 100%); }
+        .stat-card.received { background: linear-gradient(135deg, #1c4f72 0%, #2a6496 100%); }
+        .stat-card.pending { background: linear-gradient(135deg, #856404 0%, #d39e00 100%); }
+        .stat-card .stat-icon { font-size: 2rem; margin-bottom: 10px; }
+        .stat-card .stat-value { font-size: 2.5rem; font-weight: bold; }
+        .stat-card .stat-label { font-size: 0.85rem; color: rgba(255,255,255,0.8); }
+        .awards-table { background: rgba(255,255,255,0.02); border-radius: 8px; overflow: hidden; }
+        .awards-table thead { background: linear-gradient(135deg, #2d4a22 0%, #3d6b2e 100%); }
+        .awards-table th { color: #fff; font-weight: 600; padding: 12px 10px; font-size: 13px; white-space: nowrap; border: none; }
+        .awards-table td { padding: 12px 10px; vertical-align: middle; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+        .awards-table tr:hover { background: rgba(255,255,255,0.03); }
+        .badge-achieved { background: #28a745; color: #fff; }
+        .badge-pending { background: #6c757d; color: #fff; }
+        .badge-ordered { background: #007bff; color: #fff; }
+        .badge-dispatched { background: #ffc107; color: #000; }
+        .badge-delivered { background: #28a745; color: #fff; }
+        .badge-pending-approval { background: #fd7e14; color: #fff; }
+        .text-complete { color: #28a745; }
+        .action-btn { padding: 4px 10px; font-size: 11px; }
+        .bonanza-section { background: linear-gradient(135deg, #2a4a1e 0%, #3d6b2e 100%); border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+        .bonanza-section h5 { color: #fff; margin-bottom: 15px; }
+    </style>
+</head>
+<body class="dark-theme">
+    <div id="staffSidebar"></div>
+    <div id="headerContainer"></div>
+
+    <main class="main-content" id="main-content">
+        <div class="container-fluid py-4">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-0"><i class="fas fa-trophy me-2"></i>MNR — Awards</h2>
+                    <p class="text-muted mb-0">View and manage member awards and bonanza status</p>
+                </div>
+            </div>
+
+            <div class="mnr-search-card p-4 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <label class="form-label text-warning fw-bold"><i class="fas fa-search me-2"></i>Search MNR ID</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted">MNR</span>
+                            <input type="text" class="form-control" id="mnr-id-input" placeholder="Enter member ID" style="text-transform: uppercase;">
+                            <button class="btn btn-warning" type="button" id="search-btn"><i class="fas fa-search me-1"></i> Search</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="member-info" style="display: none;" class="p-3 rounded" style="background: rgba(255, 193, 7, 0.1);">
+                            <h5 class="mb-0 text-white" id="member-name">-</h5>
+                            <small class="text-muted"><span id="member-id-display">-</span> | <span id="member-package">-</span> | <span id="member-status">-</span></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="content-area" style="display: none;">
+                <div class="row mb-4" id="stats-row">
+                    <div class="col-md-4">
+                        <div class="stat-card achieved">
+                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="stat-value" id="achieved-count">0</div>
+                            <div class="stat-label">Achieved Awards<br><small>Awards you've qualified for</small></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card received">
+                            <div class="stat-icon"><i class="fas fa-gift"></i></div>
+                            <div class="stat-value" id="received-count">0</div>
+                            <div class="stat-label">Received Awards<br><small>Awards already processed</small></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="stat-card pending">
+                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="stat-value" id="pending-count">0</div>
+                            <div class="stat-label">Pending Awards<br><small>Awards awaiting processing</small></div>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="nav nav-tabs mb-4" id="awardTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-tab="direct">
+                            <i class="fas fa-user-plus me-1"></i> Direct Facilitations
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="matching">
+                            <i class="fas fa-users me-1"></i> Group Performance Recognitions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="bonanza">
+                            <i class="fas fa-gift me-1"></i> Bonanza Status
+                        </a>
+                    </li>
+                </ul>
+
+                <div id="awards-list"></div>
+            </div>
+
+            <div id="no-member-message" class="text-center py-5">
+                <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                <h4 class="text-muted">Enter an MNR ID to view awards</h4>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal fade" id="statusModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark">
+                <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-warning"><i class="fas fa-edit me-2"></i>Update Award Status</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="modal-award-id">
+                    <input type="hidden" id="modal-award-type">
+                    <div class="mb-3">
+                        <label class="form-label text-white">Award</label>
+                        <div id="modal-award-name" class="text-warning fw-bold"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white">New Status</label>
+                        <select class="form-select bg-dark text-white border-secondary" id="modal-new-status">
+                            <option value="Pending Approval">Pending Approval</option>
+                            <option value="Admin Approved">Finance Approved</option>
+                            <option value="Procurement Pending">RVZ Approved</option>
+                            <option value="Processed for Dispatch">Ordered</option>
+                            <option value="Dispatched">Dispatched</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white">Notes (Optional)</label>
+                        <textarea class="form-control bg-dark text-white border-secondary" id="modal-notes" rows="3" placeholder="Add notes for audit trail..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="submitStatusUpdate()">
+                        <i class="fas fa-save me-1"></i> Update Status
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_sidebar.js?v=20260511a"></script>
+    <script>
+        let currentMnrId = null;
+        let currentTab = 'direct';
+        let statusModal = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            StaffSidebar.init();
+            StaffHeader.inject('MNR — Awards', 'fas fa-trophy');
+            statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+
+            document.getElementById('search-btn').addEventListener('click', searchMember);
+            document.getElementById('mnr-id-input').addEventListener('keypress', e => { if (e.key === 'Enter') searchMember(); });
+            
+            document.querySelectorAll('#awardTabs .nav-link').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('#awardTabs .nav-link').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTab = this.dataset.tab;
+                    if (currentMnrId) loadAwards();
+                });
+            });
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const mnrParam = urlParams.get('mnr_id');
+            if (mnrParam) {
+                document.getElementById('mnr-id-input').value = mnrParam;
+                searchMember();
+            }
+        });
+
+        async function searchMember() {
+            let mnrId = document.getElementById('mnr-id-input').value.trim().toUpperCase();
+            if (!mnrId) return;
+            if (!mnrId.startsWith('MNR')) mnrId = 'MNR' + mnrId;
+            currentMnrId = mnrId;
+            
+            document.getElementById('member-info').style.display = 'block';
+            document.getElementById('member-id-display').textContent = mnrId;
+            document.getElementById('content-area').style.display = 'block';
+            document.getElementById('no-member-message').style.display = 'none';
+            
+            loadAwards();
+        }
+
+        async function loadAwards() {
+            const list = document.getElementById('awards-list');
+            list.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-warning"></div></div>';
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/awards/${currentMnrId}?tab=${currentTab}`);
+                if (!response.ok) throw new Error('Failed to load awards');
+                const data = await response.json();
+                console.log('[DC-AWARDS-DEBUG] API response:', data);
+                
+                if (data.member_info) {
+                    document.getElementById('member-name').textContent = data.member_info.name || currentMnrId;
+                    document.getElementById('member-package').textContent = data.member_info.package || '-';
+                    document.getElementById('member-status').textContent = data.member_info.status || '-';
+                }
+                
+                if (data.summary) {
+                    document.getElementById('achieved-count').textContent = data.summary.achieved || 0;
+                    document.getElementById('received-count').textContent = data.summary.received || 0;
+                    document.getElementById('pending-count').textContent = data.summary.pending || 0;
+                }
+                
+                if (currentTab === 'bonanza') {
+                    list.innerHTML = renderBonanzaTable(data.awards || []);
+                } else {
+                    list.innerHTML = renderAwardsTable(data.awards || [], currentTab);
+                }
+                
+            } catch (error) {
+                list.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>${error.message}</div>`;
+            }
+        }
+
+        function renderAwardsTable(awards, tab) {
+            const isMatching = tab === 'matching';
+            const reqCol = isMatching ? 'Requirement' : 'Requirement';
+            const progCol = isMatching ? 'Current Progress' : 'Current Progress';
+            
+            let html = `
+            <div class="table-responsive awards-table">
+                <table class="table table-dark mb-0">
+                    <thead>
+                        <tr>
+                            <th>Award Rank</th>
+                            <th>Award Item</th>
+                            <th>${reqCol}</th>
+                            <th>${progCol}</th>
+                            <th>Bonanza Claimed</th>
+                            <th>Remaining</th>
+                            <th>Achievement Status</th>
+                            <th>Processed Status</th>
+                            <th>Dispatch Date</th>
+                            <th>Received Date</th>
+                            <th>Process Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            
+            if (!awards || awards.length === 0) {
+                html += `<tr><td colspan="12" class="text-center text-muted py-4">No awards data available</td></tr>`;
+            } else {
+                awards.forEach(a => {
+                    const req = isMatching ? (a.required_matches || 0) : (a.required_referrals || 0);
+                    const prog = isMatching ? (a.current_matches || 0) : (a.current_referrals || 0);
+                    const remaining = a.remaining || 0;
+                    const bonanzaClaimed = a.bonanza_claimed || 0;
+                    
+                    const achievedBadge = a.achieved 
+                        ? `<span class="badge badge-achieved"><i class="fas fa-check me-1"></i>Achieved</span>`
+                        : `<span class="badge badge-pending"><i class="fas fa-clock me-1"></i>Pending</span>`;
+                    
+                    const statusBadge = a.processed_status 
+                        ? `<span class="badge bg-${a.status_color || 'secondary'}">${a.status_display || a.processed_status}</span>`
+                        : `<span class="text-muted">-</span>`;
+                    
+                    const dispatchDate = a.dispatch_date ? formatDate(a.dispatch_date) : '<span class="text-muted">- Not Dispatched</span>';
+                    const receivedDate = a.received_date ? formatDate(a.received_date) : '<span class="text-muted">- Not Received</span>';
+                    const processDate = a.process_date ? formatDate(a.process_date) : '<span class="text-muted">- Not Processed Yet</span>';
+                    
+                    const completeMark = a.achieved && remaining === 0 ? `<span class="text-complete"><i class="fas fa-check"></i> Complete</span>` : remaining;
+                    
+                    let actionBtn = '';
+                    if (a.can_update && a.id) {
+                        actionBtn = `<button class="btn btn-sm btn-outline-warning action-btn" onclick="openStatusModal(${a.id}, '${a.type}', '${escapeHtml(a.rank_name)}', '${a.processed_status || 'Pending Approval'}')">
+                            <i class="fas fa-edit"></i> Update
+                        </button>`;
+                    }
+                    
+                    html += `
+                    <tr>
+                        <td class="fw-bold">${escapeHtml(a.rank_name)}</td>
+                        <td>${escapeHtml(a.award_item || '-')}</td>
+                        <td class="text-info fw-bold">${req}</td>
+                        <td class="text-info fw-bold">${prog}</td>
+                        <td class="text-warning">${bonanzaClaimed}</td>
+                        <td>${completeMark}</td>
+                        <td>${achievedBadge}</td>
+                        <td>${statusBadge}</td>
+                        <td>${dispatchDate}</td>
+                        <td>${receivedDate}</td>
+                        <td>${processDate}</td>
+                        <td>${actionBtn}</td>
+                    </tr>`;
+                });
+            }
+            
+            html += `</tbody></table></div>`;
+            return html;
+        }
+
+        function renderBonanzaTable(awards) {
+            let html = `
+            <div class="bonanza-section">
+                <h5><i class="fas fa-gift me-2"></i>Bonanza Campaigns</h5>
+                <p class="text-muted small mb-3">Time-limited special reward campaigns. <span class="text-warning">Bonanzas must be claimed within 5 days after the campaign end date!</span></p>
+            </div>
+            <div class="table-responsive awards-table">
+                <table class="table table-dark mb-0">
+                    <thead>
+                        <tr>
+                            <th>Bonanza Name</th>
+                            <th>Reward</th>
+                            <th>Value</th>
+                            <th>Claimed Date</th>
+                            <th>Processed Status</th>
+                            <th>Dispatch Date</th>
+                            <th>Received Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            
+            if (!awards || awards.length === 0) {
+                html += `<tr><td colspan="8" class="text-center text-muted py-4">No bonanza claims found for this member</td></tr>`;
+            } else {
+                awards.forEach(a => {
+                    const statusBadge = a.processed_status 
+                        ? `<span class="badge bg-${a.status_color || 'secondary'}">${a.status_display || a.processed_status}</span>`
+                        : `<span class="text-muted">Pending</span>`;
+                    
+                    const dispatchDate = a.dispatch_date ? formatDate(a.dispatch_date) : '<span class="text-muted">-</span>';
+                    const receivedDate = a.received_date ? formatDate(a.received_date) : '<span class="text-muted">-</span>';
+                    const claimedDate = a.claimed_date ? formatDate(a.claimed_date) : '-';
+                    
+                    let actionBtn = '';
+                    if (a.can_update && a.id) {
+                        actionBtn = `<button class="btn btn-sm btn-outline-warning action-btn" onclick="openStatusModal(${a.id}, 'bonanza', '${escapeHtml(a.bonanza_name)}', '${a.processed_status || 'Pending'}')">
+                            <i class="fas fa-edit"></i> Update
+                        </button>`;
+                    }
+                    
+                    html += `
+                    <tr>
+                        <td class="fw-bold">${escapeHtml(a.bonanza_name || 'Bonanza')}</td>
+                        <td>${escapeHtml(a.reward_name || '-')}</td>
+                        <td class="text-warning">₹${(a.reward_value || 0).toLocaleString('en-IN')}</td>
+                        <td>${claimedDate}</td>
+                        <td>${statusBadge}</td>
+                        <td>${dispatchDate}</td>
+                        <td>${receivedDate}</td>
+                        <td>${actionBtn}</td>
+                    </tr>`;
+                });
+            }
+            
+            html += `</tbody></table></div>`;
+            return html;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        function openStatusModal(awardId, awardType, awardName, currentStatus) {
+            document.getElementById('modal-award-id').value = awardId;
+            document.getElementById('modal-award-type').value = awardType;
+            document.getElementById('modal-award-name').textContent = awardName;
+            document.getElementById('modal-new-status').value = currentStatus;
+            document.getElementById('modal-notes').value = '';
+            statusModal.show();
+        }
+
+        async function submitStatusUpdate() {
+            const awardId = parseInt(document.getElementById('modal-award-id').value);
+            const awardType = document.getElementById('modal-award-type').value;
+            const newStatus = document.getElementById('modal-new-status').value;
+            const notes = document.getElementById('modal-notes').value;
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/awards/${currentMnrId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        award_id: awardId,
+                        award_type: awardType,
+                        new_status: newStatus,
+                        notes: notes || null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to update status');
+                }
+                
+                statusModal.hide();
+                loadAwards();
+                
+                showToast('success', `Status updated to ${data.new_status}`);
+                
+            } catch (error) {
+                showToast('error', error.message);
+            }
+        }
+
+        function showToast(type, message) {
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>

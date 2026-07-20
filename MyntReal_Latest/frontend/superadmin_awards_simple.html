@@ -1,0 +1,222 @@
+<div class="container-fluid mt-4">
+        <div class="mb-3 text-end">
+            <a href="/superadmin/dashboard" class="btn btn-primary btn-sm">
+                <i class="fas fa-home me-2"></i>Go to Dashboard
+            </a>
+        </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-user-shield text-danger"></i> Awards Approval Queue (Super Admin)</h2>
+            <p class="text-muted mb-0">Review admin-approved awards</p>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <h6 class="text-muted">Awaiting Your Approval</h6>
+                    <h3 id="totalCount">0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Awards Table -->
+    <div class="card">
+        <div class="card-header bg-danger text-white">
+            <i class="fas fa-clipboard-check"></i> Pending Super Admin Approval
+            <button class="btn btn-sm btn-light float-end" onclick="loadAwards()">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="loading" style="display:none; text-align:center; padding:20px;">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p>Loading awards...</p>
+            </div>
+            <div id="error" class="alert alert-danger" style="display:none;"></div>
+            <div id="awardsTable"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Get session token
+const sessionToken = sessionStorage.getItem('sessionToken') || localStorage.getItem('sessionToken');
+
+if (!sessionToken) {
+    window.location.href = '/login';
+}
+
+// Load awards on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAwards();
+});
+
+async function loadAwards() {
+    const loading = document.getElementById('loading');
+    const error = document.getElementById('error');
+    const table = document.getElementById('awardsTable');
+    
+    loading.style.display = 'block';
+    error.style.display = 'none';
+    table.innerHTML = '';
+    
+    try {
+        const response = await fetch('/api/v1/awards/super-admin/awards/pending?limit=500', {
+            method: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + sessionToken,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        loading.style.display = 'none';
+        
+        if (!response.ok) {
+            throw new Error(data.detail || data.message || 'Failed to load awards');
+        }
+        
+        if (data.success) {
+            displayAwards(data);
+        } else {
+            throw new Error('Invalid response format');
+        }
+        
+    } catch (err) {
+        console.error('Error loading awards:', err);
+        loading.style.display = 'none';
+        error.style.display = 'block';
+        error.textContent = 'Error: ' + err.message;
+    }
+}
+
+function displayAwards(data) {
+    const table = document.getElementById('awardsTable');
+    const totalCount = document.getElementById('totalCount');
+    
+    const awards = [
+        ...(data.direct_awards || []),
+        ...(data.matching_awards || []),
+        ...(data.bonanza || [])
+    ];
+    
+    totalCount.textContent = awards.length;
+    
+    if (awards.length === 0) {
+        table.innerHTML = '<p class="text-center text-muted">No pending awards for approval</p>';
+        return;
+    }
+    
+    let html = '<table class="table table-striped">';
+    html += '<thead><tr>';
+    html += '<th>User ID</th>';
+    html += '<th>Type</th>';
+    html += '<th>Award</th>';
+    html += '<th>Admin Notes</th>';
+    html += '<th>Status</th>';
+    html += '<th>Actions</th>';
+    html += '</tr></thead><tbody>';
+    
+    awards.forEach(award => {
+        html += '<tr>';
+        html += '<td>' + (award.user_id || award.user_mnr_id || 'N/A') + '</td>';
+        html += '<td>' + (award.award_type || 'N/A') + '</td>';
+        html += '<td>' + (award.award_name || award.title || 'N/A') + '</td>';
+        html += '<td>' + (award.admin_notes || 'None') + '</td>';
+        html += '<td><span class="badge bg-info">' + (award.status || 'pending') + '</span></td>';
+        html += '<td>';
+        html += '<button class="btn btn-sm btn-success" onclick="approveAward(' + award.id + ', \'' + award.award_type + '\')">Approve</button> ';
+        html += '<button class="btn btn-sm btn-danger" onclick="rejectAward(' + award.id + ', \'' + award.award_type + '\')">Reject</button>';
+        html += '</td>';
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table>';
+    table.innerHTML = html;
+}
+
+async function approveAward(id, type) {
+    const password = prompt('Enter your secondary password to approve:');
+    if (!password) {
+        alert('Secondary password is required');
+        return;
+    }
+    
+    const notes = prompt('Enter approval notes (optional):');
+    
+    try {
+        const response = await fetch('/api/v1/awards/super-admin/awards/' + type + '/' + id + '/decide', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + sessionToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                decision: 'approve',
+                secondary_password: password,
+                notes: notes
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            alert('Award approved successfully!');
+            loadAwards();
+        } else {
+            alert('Error: ' + (data.detail || data.message || 'Failed to approve'));
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+
+async function rejectAward(id, type) {
+    const password = prompt('Enter your secondary password to reject:');
+    if (!password) {
+        alert('Secondary password is required');
+        return;
+    }
+    
+    const notes = prompt('Enter rejection reason:');
+    if (!notes) {
+        alert('Rejection reason is required');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/v1/awards/super-admin/awards/' + type + '/' + id + '/decide', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + sessionToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                decision: 'reject',
+                secondary_password: password,
+                notes: notes
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            alert('Award rejected successfully!');
+            loadAwards();
+        } else {
+            alert('Error: ' + (data.detail || data.message || 'Failed to reject'));
+        }
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+</script>

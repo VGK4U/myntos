@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RVZ Supreme - Bonanza Procurement</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container-fluid { padding: 20px; }
+        .header-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 180px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 2rem;
+            margin: 0;
+            font-weight: bold;
+        }
+        .stat-card p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        .filter-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .btn-rvz {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .btn-rvz:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            color: white;
+        }
+        .table-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .badge-pending-purchase { background-color: #ffc107; color: #000; }
+        .badge-pending-delivery { background-color: #17a2b8; color: white; }
+        .badge-delivered { background-color: #28a745; color: white; }
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .back-btn:hover {
+            background: #f8f9fa;
+            color: #764ba2;
+        }
+        @media (max-width: 768px) {
+            .stats-row { flex-direction: column; }
+            .stat-card { min-width: 100%; }
+            .action-buttons { flex-direction: column; }
+            .action-buttons button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <a href="/rvz-dashboard" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to RVZ Dashboard
+        </a>
+
+        <div class="header-card">
+            <h1 class="mb-0">
+                <i class="fas fa-trophy text-warning"></i>
+                RVZ Supreme - Bonanza Procurement
+            </h1>
+            <p class="text-muted mb-0">Complete bonanza lifecycle: Purchase → Deliver</p>
+        </div>
+
+        <div class="stats-row" id="statsContainer">
+            <div class="stat-card">
+                <h3 id="totalCount">0</h3>
+                <p>Total Bonanzas</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="pendingPurchase">0</h3>
+                <p>Pending Purchase</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="pendingDelivery">0</h3>
+                <p>Pending Delivery</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="totalBudgeted">₹0</h3>
+                <p>Total Budgeted</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="totalSpent">₹0</h3>
+                <p>Total Spent</p>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <div class="filter-section">
+                <div class="row">
+                    <div class="col-md-4">
+                        <label class="form-label">Status Filter</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="pending_purchase">Pending Purchase</option>
+                            <option value="pending_delivery">Pending Delivery</option>
+                            <option value="all">All</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8 d-flex align-items-end">
+                        <button class="btn btn-rvz" onclick="loadBonanzas()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>User ID</th>
+                            <th>User Name</th>
+                            <th>Bonanza</th>
+                            <th>Budgeted</th>
+                            <th>Actual Cost</th>
+                            <th>Variance</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bonanzaTableBody">
+                        <tr>
+                            <td colspan="8" class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="purchaseModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">RVZ Supreme - Purchase Bonanza</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="purchaseBonanzaId">
+                    <div class="mb-3">
+                        <label class="form-label">Vendor Name</label>
+                        <input type="text" class="form-control" id="vendorName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Actual Cost Paid</label>
+                        <input type="number" class="form-control" id="actualCost" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Mode</label>
+                        <select class="form-select" id="paymentMode" required>
+                            <option value="UPI">UPI</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Payment Reference</label>
+                        <input type="text" class="form-control" id="paymentRef">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cost Variance Reason (if any)</label>
+                        <textarea class="form-control" id="varianceReason" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-rvz" onclick="confirmPurchase()">
+                        <i class="fas fa-shopping-cart"></i> Confirm Purchase
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deliveryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">RVZ Supreme - Mark as Delivered</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="deliveryBonanzaId">
+                    <div class="mb-3">
+                        <label class="form-label">Delivery Notes</label>
+                        <textarea class="form-control" id="deliveryNotes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="confirmDelivery()">
+                        <i class="fas fa-check"></i> Confirm Delivery
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/unified-status-badges.js?v=20251114-2"></script>
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const API_BASE = '/api/v1';
+        const token = localStorage.getItem('token');
+
+        async function loadBonanzas() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/rvz-supreme/bonanza/procurement-queue?status_filter=${statusFilter}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateStats(result.data);
+                    renderTable(result.data.bonanzas);
+                } else {
+                    alert('Failed to load bonanzas: ' + (result.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error loading bonanzas');
+            }
+        }
+
+        function updateStats(data) {
+            document.getElementById('totalCount').textContent = data.total_count || 0;
+            document.getElementById('pendingPurchase').textContent = data.pending_purchase_count || 0;
+            document.getElementById('pendingDelivery').textContent = data.pending_delivery_count || 0;
+            document.getElementById('totalBudgeted').textContent = '₹' + (data.total_budgeted || 0).toLocaleString('en-IN');
+            document.getElementById('totalSpent').textContent = '₹' + (data.total_spent || 0).toLocaleString('en-IN');
+        }
+
+        function renderTable(bonanzas) {
+            const tbody = document.getElementById('bonanzaTableBody');
+            
+            if (!bonanzas || bonanzas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No bonanzas found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = bonanzas.map(b => `
+                <tr>
+                    <td>${b.user_id}</td>
+                    <td>${b.user_name}</td>
+                    <td>${b.bonanza_name}</td>
+                    <td>₹${b.budgeted_amount.toLocaleString('en-IN')}</td>
+                    <td>${b.actual_cost_paid ? '₹' + b.actual_cost_paid.toLocaleString('en-IN') : '-'}</td>
+                    <td>${b.cost_variance ? (b.cost_variance > 0 ? '<span class="text-success">+₹' : '<span class="text-danger">-₹') + Math.abs(b.cost_variance).toLocaleString('en-IN') + '</span>' : '-'}</td>
+                    <td>${window.getDCProtocolStatusBadge(b.processed_status)}</td>
+                    <td>${getActionButtons(b)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // DC PROTOCOL: Action buttons use normalized status values
+        function getActionButtons(bonanza) {
+            const normalized = window.normalizeDCProtocolStatus(bonanza.processed_status);
+            
+            if (normalized === 'Procurement Pending') {
+                return `<button class="btn btn-sm btn-warning" onclick="openPurchaseModal(${bonanza.id})">
+                    <i class="fas fa-shopping-cart"></i> Purchase
+                </button>`;
+            } else if (normalized === 'Processed for Dispatch') {
+                return `<button class="btn btn-sm btn-success" onclick="openDeliveryModal(${bonanza.id})">
+                    <i class="fas fa-truck"></i> Deliver
+                </button>`;
+            }
+            return '<span class="text-muted">Completed</span>';
+        }
+
+        function openPurchaseModal(bonanzaId) {
+            document.getElementById('purchaseBonanzaId').value = bonanzaId;
+            new bootstrap.Modal(document.getElementById('purchaseModal')).show();
+        }
+
+        function openDeliveryModal(bonanzaId) {
+            document.getElementById('deliveryBonanzaId').value = bonanzaId;
+            new bootstrap.Modal(document.getElementById('deliveryModal')).show();
+        }
+
+        async function confirmPurchase() {
+            const bonanzaId = document.getElementById('purchaseBonanzaId').value;
+            const vendorName = document.getElementById('vendorName').value;
+            const actualCost = document.getElementById('actualCost').value;
+            const paymentMode = document.getElementById('paymentMode').value;
+            const paymentRef = document.getElementById('paymentRef').value;
+            const varianceReason = document.getElementById('varianceReason').value;
+            
+            if (!vendorName || !actualCost || !paymentMode) {
+                alert('Please fill all required fields');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/rvz-supreme/bonanza/supreme-purchase`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        bonanza_progress_id: parseInt(bonanzaId),
+                        vendor_name: vendorName,
+                        actual_cost_paid: parseFloat(actualCost),
+                        payment_mode: paymentMode,
+                        payment_reference: paymentRef || null,
+                        cost_variance_reason: varianceReason || null
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    bootstrap.Modal.getInstance(document.getElementById('purchaseModal')).hide();
+                    loadBonanzas();
+                    document.getElementById('vendorName').value = '';
+                    document.getElementById('actualCost').value = '';
+                    document.getElementById('paymentRef').value = '';
+                    document.getElementById('varianceReason').value = '';
+                } else {
+                    alert('Error: ' + (result.detail?.error || result.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error processing purchase');
+            }
+        }
+
+        async function confirmDelivery() {
+            const bonanzaId = document.getElementById('deliveryBonanzaId').value;
+            const deliveryNotes = document.getElementById('deliveryNotes').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/rvz-supreme/bonanza/supreme-deliver`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        bonanza_progress_id: parseInt(bonanzaId),
+                        delivery_notes: deliveryNotes || null
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    bootstrap.Modal.getInstance(document.getElementById('deliveryModal')).hide();
+                    loadBonanzas();
+                    document.getElementById('deliveryNotes').value = '';
+                } else {
+                    alert('Error: ' + (result.detail?.error || result.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error processing delivery');
+            }
+        }
+
+        document.getElementById('statusFilter').addEventListener('change', loadBonanzas);
+        loadBonanzas();
+    </script>
+</body>
+</html>

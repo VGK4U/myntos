@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ETC Student Master — VGK4U Training Centre</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+.content-area { padding: 24px; }
+
+.page-banner {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; color: white;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+.page-banner h1 { font-size: 20px; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 10px; }
+.page-banner p { opacity: 0.85; margin: 0; font-size: 12.5px; }
+.banner-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-banner { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .2s; }
+.btn-banner.white { background: white; color: #059669; }
+.btn-banner.white:hover { background: #f0fdf4; }
+.btn-banner.outline { background: rgba(255,255,255,.15); color: white; border: 1px solid rgba(255,255,255,.4); }
+.btn-banner.outline:hover { background: rgba(255,255,255,.25); }
+
+.tab-nav { display: flex; gap: 0; margin-bottom: 20px; background: white; border-radius: 12px; padding: 6px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.tab-btn { flex: 1; padding: 10px 16px; border: none; background: transparent; border-radius: 8px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 7px; }
+.tab-btn.active { background: #059669; color: white; }
+.tab-btn:hover:not(.active) { background: #f0fdf4; color: #059669; }
+
+/* Filter bar */
+.filter-bar { background: white; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.filter-bar .fgroup { display: flex; flex-direction: column; gap: 3px; }
+.filter-bar label { font-size: 10.5px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+.filter-bar .form-control, .filter-bar .form-select { font-size: 12.5px; padding: 6px 10px; border-radius: 7px; border: 1px solid #e5e7eb; min-width: 130px; }
+.filter-bar .form-control:focus, .filter-bar .form-select:focus { border-color: #059669; box-shadow: 0 0 0 3px rgba(5,150,105,.1); outline: none; }
+.btn-filter { padding: 7px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; }
+.btn-filter.apply { background: #059669; color: white; }
+.btn-filter.apply:hover { background: #047857; }
+.btn-filter.reset { background: #f3f4f6; color: #6b7280; }
+.btn-filter.reset:hover { background: #e5e7eb; color: #374151; }
+
+/* Table */
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden; }
+.table-card-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; gap: 8px; }
+.table-card-header h3 { font-size: 14px; font-weight: 700; color: #1f2937; }
+.tbl-wrap { overflow-x: auto; }
+table.etc-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.etc-table th { background: #f8fafc; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; border-bottom: 1px solid #e5e7eb; cursor: pointer; user-select: none; }
+table.etc-table th:hover { background: #f0fdf4; color: #059669; }
+table.etc-table th .sort-icon { margin-left: 4px; opacity: .4; }
+table.etc-table th.sorted { color: #059669; }
+table.etc-table th.sorted .sort-icon { opacity: 1; }
+table.etc-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; white-space: nowrap; }
+table.etc-table tr:hover td { background: #f9fafb; }
+table.etc-table td.wrap-cell { white-space: normal; max-width: 180px; word-break: break-word; }
+.reg-id { font-family: 'Courier New', monospace; font-size: 11px; color: #059669; font-weight: 700; }
+.stu-id { font-family: 'Courier New', monospace; font-size: 11px; color: #0ea5e9; font-weight: 700; background: #f0f9ff; padding: 2px 6px; border-radius: 4px; }
+.batch-pill { background: #f0fdf4; color: #059669; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.bool-yes { color: #059669; font-weight: 700; font-size: 11px; }
+.bool-no  { color: #9ca3af; font-size: 11px; }
+.score-badge { display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+.score-badge.high   { background: #d1fae5; color: #065f46; }
+.score-badge.mid    { background: #fef3c7; color: #92400e; }
+.score-badge.low    { background: #fee2e2; color: #991b1b; }
+.score-badge.na     { background: #f3f4f6; color: #9ca3af; }
+.action-btns { display: flex; gap: 5px; }
+.btn-tbl { padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; border: none; cursor: pointer; }
+.btn-tbl.edit { background: #eff6ff; color: #2563eb; }
+.btn-tbl.edit:hover { background: #dbeafe; }
+.btn-tbl.del  { background: #fff1f2; color: #e11d48; }
+.btn-tbl.del:hover  { background: #fce7f3; }
+
+/* Pagination */
+.pagination-bar { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-top: 1px solid #f0f0f0; }
+.pagination-bar .info { font-size: 12.5px; color: #6b7280; }
+.pg-btns { display: flex; gap: 4px; }
+.pg-btn { padding: 5px 10px; border-radius: 6px; border: 1px solid #e5e7eb; background: white; color: #374151; font-size: 12.5px; cursor: pointer; }
+.pg-btn:hover { border-color: #059669; color: #059669; }
+.pg-btn.active { background: #059669; color: white; border-color: #059669; }
+.pg-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Stat cards (dashboard) */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.stat-card { background: white; border-radius: 10px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); text-align: center; }
+.stat-card .val { font-size: 28px; font-weight: 800; color: #1f2937; }
+.stat-card .lbl { color: #6b7280; font-size: 10.5px; margin-top: 3px; text-transform: uppercase; font-weight: 700; letter-spacing: .05em; }
+.stat-card.green  { border-top: 3px solid #059669; }
+.stat-card.blue   { border-top: 3px solid #0ea5e9; }
+.stat-card.purple { border-top: 3px solid #7c3aed; }
+.stat-card.orange { border-top: 3px solid #d97706; }
+.stat-card.teal   { border-top: 3px solid #0d9488; }
+.stat-card.pink   { border-top: 3px solid #db2777; }
+
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 22px; }
+@media (max-width: 768px) { .chart-grid { grid-template-columns: 1fr; } }
+.chart-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.chart-card h4 { font-size: 13px; font-weight: 700; color: #1f2937; margin-bottom: 16px; }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1050; align-items: center; justify-content: center; padding: 16px; }
+.modal-overlay.show { display: flex; }
+.modal-box { background: white; border-radius: 14px; width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.modal-header { padding: 18px 22px 14px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+.modal-header h3 { font-size: 16px; font-weight: 700; color: #1f2937; }
+.modal-close { background: none; border: none; font-size: 20px; color: #9ca3af; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+.modal-close:hover { background: #f3f4f6; color: #374151; }
+.modal-body { padding: 20px 22px; }
+.modal-footer { padding: 14px 22px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 8px; }
+
+.form-section { margin-bottom: 18px; }
+.form-section-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #059669; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+@media (max-width: 600px) { .form-grid, .form-grid.three { grid-template-columns: 1fr; } }
+.form-group label { display: block; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+.form-group .form-control, .form-group .form-select { font-size: 13px; padding: 7px 10px; border-radius: 7px; border: 1px solid #e5e7eb; width: 100%; }
+.form-group .form-control:focus, .form-group .form-select:focus { border-color: #059669; box-shadow: 0 0 0 3px rgba(5,150,105,.1); outline: none; }
+.form-group .reg-preview { font-family: monospace; font-size: 13px; color: #059669; font-weight: 700; background: #f0fdf4; padding: 8px 12px; border-radius: 7px; border: 1px solid #bbf7d0; }
+.check-row { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 4px; }
+.check-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #374151; }
+.check-item input[type=checkbox] { accent-color: #059669; width: 15px; height: 15px; cursor: pointer; }
+
+.btn-save { background: #059669; color: white; padding: 9px 22px; border-radius: 8px; font-size: 13.5px; font-weight: 700; border: none; cursor: pointer; }
+.btn-save:hover { background: #047857; }
+.btn-save:disabled { opacity: .6; cursor: not-allowed; }
+.btn-cancel { background: #f3f4f6; color: #374151; padding: 9px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600; border: none; cursor: pointer; }
+.btn-cancel:hover { background: #e5e7eb; }
+
+.empty-state { text-align: center; padding: 50px 20px; color: #9ca3af; }
+.empty-state i { font-size: 3rem; margin-bottom: 12px; display: block; }
+.empty-state p { font-size: 14px; }
+
+#toast { position: fixed; bottom: 24px; right: 24px; background: #1f2937; color: white; padding: 12px 20px; border-radius: 10px; font-size: 13px; display: none; z-index: 9999; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+#toast.success { background: #059669; }
+#toast.error   { background: #dc2626; }
+
+.stage-badge { display:inline-block; padding:2px 8px; border-radius:9px; font-size:10px; font-weight:700; white-space:nowrap; }
+.stage-sp { background:#fef3c7; color:#92400e; }
+.stage-ut { background:#dbeafe; color:#1d4ed8; }
+.stage-tc { background:#d1fae5; color:#065f46; }
+
+.won-toggle-wrap { display:flex; align-items:center; gap:6px; }
+.won-toggle-lbl { font-size:11px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.04em; }
+.won-pill { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; border:1.5px solid #bbf7d0; background:#f0fdf4; color:#065f46; font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; user-select:none; }
+.won-pill.active { background:#065f46; color:white; border-color:#065f46; }
+.won-pill:hover:not(.active) { background:#d1fae5; }
+</style>
+</head>
+<body>
+
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+  <div id="headerContainer"></div>
+
+  <div class="content-area">
+
+    <!-- Page Banner -->
+    <div class="page-banner">
+      <div>
+        <h1><i class="fas fa-graduation-cap"></i> ETC Student Master</h1>
+        <p>VGK4U EV Training Centre — Student Records, Batch Management &amp; Analytics</p>
+      </div>
+      <div class="banner-actions">
+        <button class="btn-banner outline" onclick="syncCRM()">
+          <i class="fas fa-sync-alt"></i> Sync from CRM
+        </button>
+        <button class="btn-banner white" onclick="openAddModal()">
+          <i class="fas fa-plus"></i> Add Student
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-nav">
+      <button class="tab-btn active" id="tab-master-btn" onclick="switchTab('master')">
+        <i class="fas fa-table"></i> Student Master
+      </button>
+      <button class="tab-btn" id="tab-dash-btn" onclick="switchTab('dashboard')">
+        <i class="fas fa-chart-bar"></i> Dashboard
+      </button>
+    </div>
+
+    <!-- ═══ TAB 1: STUDENT MASTER ════════════════════════════════════════════ -->
+    <div id="tab-master">
+
+      <!-- Filters -->
+      <div class="filter-bar">
+        <div class="fgroup">
+          <label>Search</label>
+          <input type="text" class="form-control" id="fSearch" placeholder="Name / Student ID / Aadhar…" style="min-width:200px;">
+        </div>
+        <div class="fgroup">
+          <label>Batch</label>
+          <select class="form-select" id="fBatch">
+            <option value="">All Batches</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label>State</label>
+          <input type="text" class="form-control" id="fState" placeholder="e.g. Telangana">
+        </div>
+        <div class="fgroup">
+          <label>MNR Member</label>
+          <select class="form-select" id="fMnr">
+            <option value="">All</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label>Hostel</label>
+          <select class="form-select" id="fHostel">
+            <option value="">All</option>
+            <option value="true">Opted</option>
+            <option value="false">Not Opted</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label>Training</label>
+          <select class="form-select" id="fTraining">
+            <option value="">All</option>
+            <option value="true">Completed</option>
+            <option value="false">Pending</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label>Stage</label>
+          <select class="form-select" id="fStage">
+            <option value="">All Stages</option>
+            <option value="schedule_pending">Schedule Pending</option>
+            <option value="under_training">Under Training</option>
+            <option value="training_completed">Training Completed</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label>Start Date From</label>
+          <input type="date" class="form-control" id="fStartFrom" style="min-width:135px;">
+        </div>
+        <div class="fgroup">
+          <label>Start Date To</label>
+          <input type="date" class="form-control" id="fStartTo" style="min-width:135px;">
+        </div>
+        <div class="fgroup">
+          <label>Completed Date From</label>
+          <input type="date" class="form-control" id="fCompFrom" style="min-width:135px;">
+        </div>
+        <div class="fgroup">
+          <label>Completed Date To</label>
+          <input type="date" class="form-control" id="fCompTo" style="min-width:135px;">
+        </div>
+        <div class="fgroup">
+          <label>CRM Won Only</label>
+          <div class="won-toggle-wrap">
+            <span class="won-pill" id="wonPill" onclick="toggleWonFilter()"><i class="fas fa-trophy"></i> Won+</span>
+          </div>
+        </div>
+        <div class="fgroup">
+          <label>Sort By</label>
+          <select class="form-select" id="fSort">
+            <option value="sno">S.No</option>
+            <option value="name">Name</option>
+            <option value="batch_no">Batch</option>
+            <option value="score">Score</option>
+            <option value="state">State</option>
+            <option value="package_value">Package Value</option>
+            <option value="created_at">Added On</option>
+          </select>
+        </div>
+        <div class="fgroup">
+          <label>Order</label>
+          <select class="form-select" id="fDir" style="min-width:90px;">
+            <option value="asc">Asc</option>
+            <option value="desc">Desc</option>
+          </select>
+        </div>
+        <button class="btn-filter apply" onclick="loadStudents(1)"><i class="fas fa-search me-1"></i>Filter</button>
+        <button class="btn-filter reset" onclick="resetFilters()">Reset</button>
+      </div>
+
+      <!-- Table card -->
+      <div class="table-card">
+        <div class="table-card-header">
+          <h3 id="tableTitle">All Students</h3>
+          <div style="display:flex;gap:8px;">
+            <span id="countLabel" style="font-size:12.5px;color:#6b7280;align-self:center;"></span>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="etc-table">
+            <thead>
+              <tr>
+                <th onclick="setSortCol('sno')">S.No <i class="fas fa-sort sort-icon"></i></th>
+                <th>Registration ID</th>
+                <th>Student ID</th>
+                <th onclick="setSortCol('batch_no')">Batch <i class="fas fa-sort sort-icon"></i></th>
+                <th onclick="setSortCol('batch_start_date')">Start Date <i class="fas fa-sort sort-icon"></i></th>
+                <th onclick="setSortCol('training_completed_date')">Comp. Date <i class="fas fa-sort sort-icon"></i></th>
+                <th onclick="setSortCol('name')">Name <i class="fas fa-sort sort-icon"></i></th>
+                <th>Phone</th>
+                <th onclick="setSortCol('state')">State</th>
+                <th>District</th>
+                <th onclick="setSortCol('score')">Score <i class="fas fa-sort sort-icon"></i></th>
+                <th>Stage</th>
+                <th>MNR</th>
+                <th>Hostel</th>
+                <th>Svc Ctr</th>
+                <th onclick="setSortCol('package_value')">Pkg Value <i class="fas fa-sort sort-icon"></i></th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination-bar">
+          <div class="info" id="pgInfo"></div>
+          <div class="pg-btns" id="pgBtns"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB 2: DASHBOARD ════════════════════════════════════════════════ -->
+    <div id="tab-dashboard" style="display:none;">
+      <div class="stat-grid" id="dashStats"></div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h4><i class="fas fa-layer-group me-2" style="color:#059669;"></i>Students per Batch</h4>
+          <canvas id="chartBatch" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4><i class="fas fa-map-marker-alt me-2" style="color:#0ea5e9;"></i>Students by State</h4>
+          <canvas id="chartState" height="220"></canvas>
+        </div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h4><i class="fas fa-check-circle me-2" style="color:#7c3aed;"></i>Completion Rate by Batch</h4>
+          <canvas id="chartCompletion" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+          <h4><i class="fas fa-calendar me-2" style="color:#d97706;"></i>Monthly Admissions</h4>
+          <canvas id="chartMonthly" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+</div><!-- /main-content -->
+
+<!-- ═══ ADD / EDIT MODAL ════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="studentModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="modalTitle">Add New Student</h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <input type="hidden" id="fCrmLeadId">
+
+      <!-- Registration preview (read-only for new, shown for edit) -->
+      <div id="regPreviewRow" style="display:none;margin-bottom:16px;">
+        <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Registration ID (auto-generated)</label>
+        <div class="reg-preview" id="regPreview">—</div>
+        <div style="margin-top:6px;">
+          <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px;">Student ID (for Marketplace 10% discount)</label>
+          <div class="reg-preview" id="stuPreview" style="color:#0ea5e9;border-color:#bae6fd;background:#f0f9ff;">—</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Batch Information</div>
+        <div class="form-grid three">
+          <div class="form-group">
+            <label>Batch No *</label>
+            <input type="text" class="form-control" id="fBatchNo" placeholder="e.g. Batch-21">
+          </div>
+          <div class="form-group">
+            <label>Batch Start Date</label>
+            <input type="date" class="form-control" id="fBatchStart">
+          </div>
+          <div class="form-group">
+            <label>S.No</label>
+            <input type="number" class="form-control" id="fSno" placeholder="Auto if blank">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Student Details</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Full Name *</label>
+            <input type="text" class="form-control" id="fName" placeholder="Student full name">
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" class="form-control" id="fPhone" placeholder="10-digit mobile">
+          </div>
+        </div>
+        <div class="form-grid" style="margin-top:10px;">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" class="form-control" id="fEmail" placeholder="email@example.com">
+          </div>
+          <div class="form-group">
+            <label>Aadhar Number</label>
+            <input type="text" class="form-control" id="fAadhar" placeholder="12-digit Aadhar">
+          </div>
+        </div>
+        <div class="form-grid three" style="margin-top:10px;">
+          <div class="form-group">
+            <label>Education Qualification</label>
+            <input type="text" class="form-control" id="fEdu" placeholder="e.g. B.Tech, Diploma">
+          </div>
+          <div class="form-group">
+            <label>Experience</label>
+            <input type="text" class="form-control" id="fExp" placeholder="e.g. 2 yrs EV field">
+          </div>
+          <div class="form-group">
+            <label>Score</label>
+            <input type="number" class="form-control" id="fScore" placeholder="e.g. 85" min="0" max="100" step="0.1">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Location</div>
+        <div class="form-grid three">
+          <div class="form-group">
+            <label>Pincode</label>
+            <input type="text" class="form-control" id="fPincode" placeholder="6-digit pincode" maxlength="6">
+          </div>
+          <div class="form-group">
+            <label>District</label>
+            <input type="text" class="form-control" id="fDistrict" placeholder="District name">
+          </div>
+          <div class="form-group">
+            <label>State</label>
+            <input type="text" class="form-control" id="fModalState" placeholder="State name">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:10px;">
+          <label>Area</label>
+          <input type="text" class="form-control" id="fArea" placeholder="Area / locality">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Training &amp; Financials</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Completed Date</label>
+            <input type="date" class="form-control" id="fCompletedDate">
+          </div>
+          <div class="form-group">
+            <label>Training Completed Date</label>
+            <input type="date" class="form-control" id="fTrainingCompDate">
+          </div>
+        </div>
+        <div class="form-grid three" style="margin-top:10px;">
+          <div class="form-group">
+            <label>Deal Total / Package (₹)</label>
+            <input type="number" class="form-control" id="fPkgValue" placeholder="e.g. 25000" step="0.01" oninput="etcUpdateBalance()">
+          </div>
+          <div class="form-group">
+            <label>Received (₹)</label>
+            <input type="number" class="form-control" id="fDealReceived" placeholder="Amount received so far" step="0.01" oninput="etcUpdateBalance()">
+          </div>
+          <div class="form-group">
+            <label>Balance (₹)</label>
+            <div id="fDealBalance" style="padding:6px 10px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;font-weight:700;color:#374151;font-size:13px;min-height:34px">—</div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:10px;">
+          <label>Payment Details</label>
+          <input type="text" class="form-control" id="fPayment" placeholder="Payment reference / details">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title" style="color:#0891b2;border-bottom-color:#a5f3fc"><i class="fas fa-network-wired me-1"></i>Network Assignment</div>
+        <div class="form-grid" style="margin-bottom:10px">
+          <div class="form-group">
+            <label>Source / Type</label>
+            <input type="text" class="form-control" id="fSource" placeholder="e.g. Walk-in, Online, MNR Referral, VGK Partner">
+          </div>
+        </div>
+        <div class="form-grid three" style="margin-bottom:8px;align-items:flex-start">
+          <div class="form-group" style="position:relative">
+            <label>Source / Handler <span style="font-size:10px;color:#6b7280">(MNR / VGK / Partner / Staff)</span></label>
+            <div style="display:flex;gap:4px">
+              <input type="text" class="form-control" id="fSrcSearch" placeholder="Search by name or ID…" oninput="etcNetSearch('src')">
+              <button type="button" style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:0 8px;cursor:pointer" onclick="etcClearSrc()" title="Clear"><i class="fas fa-times" style="color:#6b7280"></i></button>
+            </div>
+            <input type="hidden" id="fSrcCode">
+            <div id="fSrcResults" style="position:absolute;z-index:1060;width:100%;top:100%;left:0;max-height:150px;overflow-y:auto;display:none;background:white;border:1px solid #e5e7eb;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+            <div id="fSrcSelected" style="margin-top:4px;font-size:12px"></div>
+          </div>
+          <div class="form-group" id="fGuruRow" style="display:none">
+            <label>Guru <span style="font-size:10px;color:#6b7280">(Auto from upline)</span></label>
+            <input type="text" class="form-control" id="fGuruDisplay" readonly placeholder="Auto-populated">
+            <input type="hidden" id="fGuruName">
+          </div>
+          <div class="form-group" id="fZGuruRow" style="display:none">
+            <label>Z Guru <span style="font-size:10px;color:#6b7280">(Auto from Guru upline)</span></label>
+            <input type="text" class="form-control" id="fZGuruDisplay" readonly placeholder="Auto-populated">
+            <input type="hidden" id="fZGuruName">
+          </div>
+        </div>
+        <div class="form-grid" style="margin-bottom:4px">
+          <div class="form-group" style="position:relative">
+            <label>Telecaller <span style="font-size:10px;color:#6b7280">(Staff)</span></label>
+            <div style="display:flex;gap:4px">
+              <input type="text" class="form-control" id="fTeleSearch" placeholder="Search staff by name or emp code…" oninput="etcNetSearch('tele')">
+              <button type="button" style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:0 8px;cursor:pointer" onclick="etcClearTele()" title="Clear"><i class="fas fa-times" style="color:#6b7280"></i></button>
+            </div>
+            <input type="hidden" id="fTeleCode">
+            <div id="fTeleResults" style="position:absolute;z-index:1060;width:100%;top:100%;left:0;max-height:150px;overflow-y:auto;display:none;background:white;border:1px solid #e5e7eb;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+            <div id="fTeleSelected" style="margin-top:4px;font-size:12px"></div>
+          </div>
+          <div class="form-group" style="position:relative">
+            <label>Field Staff <span style="font-size:10px;color:#6b7280">(Staff)</span></label>
+            <div style="display:flex;gap:4px">
+              <input type="text" class="form-control" id="fFieldSearch" placeholder="Search staff by name or emp code…" oninput="etcNetSearch('field')">
+              <button type="button" style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:0 8px;cursor:pointer" onclick="etcClearField()" title="Clear"><i class="fas fa-times" style="color:#6b7280"></i></button>
+            </div>
+            <input type="hidden" id="fFieldCode">
+            <div id="fFieldResults" style="position:absolute;z-index:1060;width:100%;top:100%;left:0;max-height:150px;overflow-y:auto;display:none;background:white;border:1px solid #e5e7eb;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+            <div id="fFieldSelected" style="margin-top:4px;font-size:12px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Additional Flags</div>
+        <div class="check-row">
+          <label class="check-item"><input type="checkbox" id="fHostelOpted"> Hostel Opted</label>
+          <label class="check-item"><input type="checkbox" id="fMnrMember"> MNR Member</label>
+          <label class="check-item"><input type="checkbox" id="fServiceCenter"> Service Center</label>
+          <label class="check-item"><input type="checkbox" id="fMyntHub"> MyntReal Hub</label>
+        </div>
+        <div class="form-group" id="mnrIdRow" style="margin-top:10px;display:none;">
+          <label>MNR ID</label>
+          <input type="text" class="form-control" id="fMnrId" placeholder="e.g. MNR1800401" style="max-width:220px;">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Comments</div>
+        <div class="form-group">
+          <textarea class="form-control" id="fComments" rows="2" placeholder="Any remarks…" style="resize:vertical;"></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" id="saveBtnMain" onclick="saveStudent()">
+        <i class="fas fa-save me-1"></i> Save Student
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- View modal -->
+<div class="modal-overlay" id="viewModal">
+  <div class="modal-box" style="max-width:750px;">
+    <div class="modal-header">
+      <h3 id="viewModalTitle">Student Details</h3>
+      <button class="modal-close" onclick="document.getElementById('viewModal').classList.remove('show')">&times;</button>
+    </div>
+    <div class="modal-body" id="viewModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="document.getElementById('viewModal').classList.remove('show')">Close</button>
+      <button class="btn-save" id="viewEditBtn">Edit</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="/staff_sidebar.js"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+<script src="/public/js/crm-handler-confirm.js"></script>
+<script>
+// ── Wrapper: staffFetch returns Response; apiFetch parses JSON automatically ──
+async function apiFetch(url, opts = {}) {
+  const res = await staffFetch(url, opts);
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({ detail: 'Request failed' }));
+    throw new Error(e.detail || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const API = '/api/v1/etc';
+let currentPage = 1, totalPages = 1;
+let sortCol = 'sno', sortDir = 'asc';
+let charts = {};
+let wonFilterActive = false;
+
+function toggleWonFilter() {
+  wonFilterActive = !wonFilterActive;
+  const pill = document.getElementById('wonPill');
+  if (pill) pill.classList.toggle('active', wonFilterActive);
+  loadStudents(1);
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  ['master','dashboard'].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t === tab ? 'block' : 'none';
+    document.getElementById(`tab-${t}-btn`).classList.toggle('active', t === tab);
+  });
+  if (tab === 'dashboard') loadDashboard();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = type;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3500);
+}
+
+// ── Load Batches for dropdown ─────────────────────────────────────────────────
+async function loadBatches() {
+  try {
+    const d = await apiFetch(`${API}/students/batches/list`);
+    const sel = document.getElementById('fBatch');
+    (d.batches || []).forEach(b => {
+      const o = document.createElement('option');
+      o.value = b; o.textContent = b;
+      sel.appendChild(o);
+    });
+  } catch(e) {}
+}
+
+// ── Sort columns ──────────────────────────────────────────────────────────────
+function setSortCol(col) {
+  if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+  else { sortCol = col; sortDir = 'asc'; }
+  document.getElementById('fSort').value = sortCol;
+  document.getElementById('fDir').value = sortDir;
+  loadStudents(currentPage);
+}
+
+// ── Load Students ─────────────────────────────────────────────────────────────
+async function loadStudents(page = 1) {
+  currentPage = page;
+  const search      = document.getElementById('fSearch').value.trim();
+  const batch       = document.getElementById('fBatch').value;
+  const state       = document.getElementById('fState').value.trim();
+  const mnr         = document.getElementById('fMnr').value;
+  const hostel      = document.getElementById('fHostel').value;
+  const training    = document.getElementById('fTraining').value;
+  const stage       = document.getElementById('fStage').value;
+  const startFrom   = document.getElementById('fStartFrom').value;
+  const startTo     = document.getElementById('fStartTo').value;
+  const compFrom    = document.getElementById('fCompFrom').value;
+  const compTo      = document.getElementById('fCompTo').value;
+  sortCol = document.getElementById('fSort').value || sortCol;
+  sortDir = document.getElementById('fDir').value || sortDir;
+
+  let url = `${API}/students/?page=${page}&per_page=50&sort_by=${sortCol}&sort_dir=${sortDir}`;
+  if (search)    url += `&search=${encodeURIComponent(search)}`;
+  if (batch)     url += `&batch_no=${encodeURIComponent(batch)}`;
+  if (state)     url += `&state=${encodeURIComponent(state)}`;
+  if (mnr)       url += `&mnr_member=${mnr}`;
+  if (hostel)    url += `&hostel_opted=${hostel}`;
+  if (training)  url += `&training_completed=${training}`;
+  if (stage)     url += `&training_stage=${encodeURIComponent(stage)}`;
+  if (startFrom) url += `&start_date_from=${startFrom}`;
+  if (startTo)   url += `&start_date_to=${startTo}`;
+  if (compFrom)  url += `&comp_date_from=${compFrom}`;
+  if (compTo)    url += `&comp_date_to=${compTo}`;
+  if (wonFilterActive) url += `&crm_status=won`;
+
+  try {
+    const d = await apiFetch(url);
+    totalPages = d.pages || 1;
+    renderTable(d.students || [], d.total || 0);
+    renderPagination(d.total || 0, d.page || 1, d.per_page || 50);
+    document.getElementById('countLabel').textContent = `${d.total || 0} records`;
+  } catch(e) {
+    document.getElementById('studentsTbody').innerHTML =
+      '<tr><td colspan="17" style="text-align:center;color:#dc2626;padding:20px;">Error loading students</td></tr>';
+  }
+}
+
+function resetFilters() {
+  ['fSearch','fState','fBatch','fMnr','fHostel','fTraining','fStage',
+   'fStartFrom','fStartTo','fCompFrom','fCompTo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('fSort').value = 'sno';
+  document.getElementById('fDir').value = 'asc';
+  sortCol = 'sno'; sortDir = 'asc';
+  wonFilterActive = false;
+  const pill = document.getElementById('wonPill');
+  if (pill) pill.classList.remove('active');
+  loadStudents(1);
+}
+
+// ── Build completed-date cell (editable for enrolled students, plain for CRM) ─
+function buildCompDateCell(s, isCrm) {
+  if (isCrm) {
+    const d = s.training_completed_date ? s.training_completed_date.slice(0,10) : '—';
+    return `<td style="font-size:11px;color:#6b7280;">${d}</td>`;
+  }
+  const cur = s.training_completed_date ? s.training_completed_date.slice(0,10) : '';
+  const display = cur
+    ? `<span style="color:#059669;font-weight:600;cursor:pointer;" title="Click to edit" onclick="inlineEditCompDate(${s.id},'${cur}')">${cur}</span>`
+    : `<span style="color:#d97706;cursor:pointer;font-size:11px;" title="Click to set date" onclick="inlineEditCompDate(${s.id},'')">— Set</span>`;
+  return `<td id="cdc-${s.id}" style="font-size:11px;">${display}</td>`;
+}
+
+// ── Inline edit: training_completed_date ──────────────────────────────────────
+function inlineEditCompDate(sid, cur) {
+  const cell = document.getElementById('cdc-' + sid);
+  if (!cell) return;
+  cell.innerHTML = `<input type="date" value="${cur}"
+    style="border:1px solid #0ea5e9;border-radius:4px;font-size:11px;padding:2px 5px;width:125px;"
+    onblur="saveCompDate(${sid},this.value)"
+    onkeydown="if(event.key==='Escape')loadStudents(currentPage);">`;
+  cell.querySelector('input').focus();
+}
+
+async function saveCompDate(sid, val) {
+  try {
+    await apiFetch(`${API}/students/${sid}`, {
+      method: 'PUT',
+      body: JSON.stringify({ training_completed_date: val || null })
+    });
+    if (_rowData[String(sid)]) _rowData[String(sid)].training_completed_date = val || null;
+    const cell = document.getElementById('cdc-' + sid);
+    if (cell) {
+      const display = val
+        ? `<span style="color:#059669;font-weight:600;cursor:pointer;" title="Click to edit" onclick="inlineEditCompDate(${sid},'${val}')">${val}</span>`
+        : `<span style="color:#d97706;cursor:pointer;font-size:11px;" title="Click to set date" onclick="inlineEditCompDate(${sid},'')">— Set</span>`;
+      cell.innerHTML = display;
+    }
+    showToast('Completed date saved');
+  } catch(e) { showToast('Failed to save date', 'error'); loadStudents(currentPage); }
+}
+
+// ── Row data cache (keyed by string ID) for CRM view-modal lookup ─────────────
+let _rowData = {};
+
+// ── Render table ──────────────────────────────────────────────────────────────
+function renderTable(rows, total) {
+  _rowData = {};
+  const tbody = document.getElementById('studentsTbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="17"><div class="empty-state"><i class="fas fa-graduation-cap"></i><p>No students found</p></div></td></tr>`;
+    return;
+  }
+  const STAGE_MAP = {
+    training_completed: ['Training Completed','stage-tc'],
+    under_training:     ['Under Training','stage-ut'],
+    schedule_pending:   ['Schedule Pending','stage-sp'],
+  };
+  tbody.innerHTML = rows.map(s => {
+    _rowData[String(s.id)] = s;
+    const isCrm = s.source === 'crm';
+    const score = s.score != null ? s.score : null;
+    let scoreBadge = `<span class="score-badge na">—</span>`;
+    if (score !== null) {
+      const cls = score >= 75 ? 'high' : score >= 50 ? 'mid' : 'low';
+      scoreBadge = `<span class="score-badge ${cls}">${score}%</span>`;
+    }
+    const boolY = `<span class="bool-yes"><i class="fas fa-check-circle"></i></span>`;
+    const boolN = `<span class="bool-no">—</span>`;
+    const [stageLbl, stageCls] = STAGE_MAP[s.training_stage] || ['—',''];
+    const stageBadge = s.training_stage ? `<span class="stage-badge ${stageCls}">${stageLbl}</span>` : '—';
+    const actionBtns = isCrm
+      ? `<button class="btn-tbl edit" title="View CRM Lead" onclick="openCrmView('${s.id}')"><i class="fas fa-eye"></i></button>
+         <button class="btn-tbl edit" title="Enroll as Student" onclick="openEnrollFromCrm('${s.id}')" style="background:#f0fdf4;color:#059669;border-color:#bbf7d0;font-size:10px;padding:3px 7px;"><i class="fas fa-user-plus me-1"></i>Enroll</button>`
+      : `<button class="btn-tbl edit" onclick="openViewModal(${s.id})"><i class="fas fa-eye"></i></button>
+         <button class="btn-tbl edit" onclick="openEditModal(${s.id})"><i class="fas fa-pencil"></i></button>
+         <button class="btn-tbl del" onclick="deleteStudent(${s.id}, '${esc(s.name)}')"><i class="fas fa-trash"></i></button>`;
+    return `<tr${isCrm ? ' style="background:#fffbeb;"' : ''}>
+      <td style="color:#9ca3af;font-size:11px;">${s.sno || '—'}</td>
+      <td><span class="reg-id">${s.registration_id || (isCrm ? '<em style="color:#d97706;font-size:11px;">CRM Lead</em>' : '—')}</span></td>
+      <td><span class="stu-id">${s.student_id || '—'}</span></td>
+      <td><span class="batch-pill">${s.batch_no || '—'}</span></td>
+      <td style="font-size:11.5px;">${s.batch_start_date ? s.batch_start_date.slice(0,10) : '—'}</td>
+      ${buildCompDateCell(s, isCrm)}
+      <td style="font-weight:600;color:#1f2937;">${esc(s.name)}</td>
+      <td style="font-size:11.5px;">${s.phone || '—'}</td>
+      <td style="font-size:11.5px;">${s.state || '—'}</td>
+      <td style="font-size:11.5px;">${s.district || '—'}</td>
+      <td>${scoreBadge}</td>
+      <td>${stageBadge}</td>
+      <td>${s.mnr_member ? boolY : boolN}</td>
+      <td>${s.hostel_opted ? boolY : boolN}</td>
+      <td>${s.service_center ? boolY : boolN}</td>
+      <td style="font-size:11.5px;">${s.package_value ? '₹' + Number(s.package_value).toLocaleString('en-IN') : '—'}</td>
+      <td>
+        <div class="action-btns">
+          ${actionBtns}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+function renderPagination(total, page, perPage) {
+  const info = document.getElementById('pgInfo');
+  const btns = document.getElementById('pgBtns');
+  const from = total ? (page-1)*perPage+1 : 0;
+  const to   = Math.min(page*perPage, total);
+  info.textContent = total ? `Showing ${from}–${to} of ${total}` : 'No records';
+  btns.innerHTML = '';
+  const maxBtns = 7;
+  const pages = Math.ceil(total / perPage);
+  const addBtn = (p, label, active, disabled) => {
+    const b = document.createElement('button');
+    b.className = 'pg-btn' + (active ? ' active' : '');
+    b.textContent = label; b.disabled = disabled;
+    if (!disabled) b.onclick = () => loadStudents(p);
+    btns.appendChild(b);
+  };
+  addBtn(page-1, '‹', false, page <= 1);
+  let start = Math.max(1, page-3), end = Math.min(pages, start+maxBtns-1);
+  if (end - start < maxBtns-1) start = Math.max(1, end - maxBtns+1);
+  for (let i = start; i <= end; i++) addBtn(i, i, i===page, false);
+  addBtn(page+1, '›', false, page >= pages);
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+function etcUpdateBalance() {
+  const pv = parseFloat(document.getElementById('fPkgValue').value) || 0;
+  const rv = parseFloat(document.getElementById('fDealReceived').value) || 0;
+  const el = document.getElementById('fDealBalance');
+  if (!el) return;
+  if (!pv && !rv) { el.textContent = '—'; el.style.color = '#9ca3af'; return; }
+  const bal = pv - rv;
+  el.textContent = '₹' + bal.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+  el.style.color = bal < 0 ? '#dc2626' : bal === 0 ? '#16a34a' : '#d97706';
+}
+
+// ── Network Assignment search (debounced) ─────────────────────────────────────
+var _etcSearchTimers = {};
+function etcNetSearch(field) {
+  clearTimeout(_etcSearchTimers[field]);
+  const ids = { src: 'fSrcSearch', tele: 'fTeleSearch', field: 'fFieldSearch' };
+  const q = (document.getElementById(ids[field]) || {}).value || '';
+  if (q.trim().length < 2) {
+    const rId = { src: 'fSrcResults', tele: 'fTeleResults', field: 'fFieldResults' }[field];
+    const rEl = document.getElementById(rId); if (rEl) rEl.style.display = 'none';
+    return;
+  }
+  _etcSearchTimers[field] = setTimeout(() => etcDoNetSearch(field, q.trim()), 280);
+}
+
+async function etcDoNetSearch(field, q) {
+  const type = field === 'src' ? 'all' : 'staff';
+  const rId = { src: 'fSrcResults', tele: 'fTeleResults', field: 'fFieldResults' }[field];
+  const rEl = document.getElementById(rId); if (!rEl) return;
+  try {
+    const data = await apiFetch(`/api/v1/crm/network-search?q=${encodeURIComponent(q)}&type=${type}&per_type=8`);
+    const results = data.results || [];
+    if (!results.length) { rEl.innerHTML = '<div style="padding:8px 12px;color:#9ca3af;font-size:12px">No results</div>'; rEl.style.display = 'block'; return; }
+    const typeColor = { mnr:'#1d4ed8', vgk:'#7c3aed', partner:'#0891b2', staff:'#065f46', vendor:'#92400e' };
+    rEl.innerHTML = results.map(it => {
+      const tc = typeColor[it.type] || '#374151';
+      const badge = `<span style="font-size:10px;background:${tc};color:white;border-radius:4px;padding:1px 5px;margin-right:4px">${(it.type||'').toUpperCase()}</span>`;
+      const code = it.code || it.id || '';
+      return `<div onclick="etcSelectNetResult('${field}','${it.type||''}',${JSON.stringify(it.id)},${JSON.stringify(it.name)},${JSON.stringify(code)},${JSON.stringify(it.z_parent_partner_id||it.z_sponsor_id||'')},${JSON.stringify(it.z_parent_partner_name||it.z_sponsor_name||'')},${JSON.stringify(it.parent_partner_id||it.sponsor_id||'')},${JSON.stringify(it.parent_partner_name||it.sponsor_name||'')})" style="padding:7px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:12px" onmouseenter="this.style.background='#f0f9ff'" onmouseleave="this.style.background=''">${badge}${esc(it.display||it.name||'')}${code&&code!==it.id?' <span style="color:#9ca3af">('+esc(code)+')</span>':''}</div>`;
+    }).join('');
+    rEl.style.display = 'block';
+  } catch(e) { rEl.style.display = 'none'; }
+}
+
+function etcSelectNetResult(field, type, id, name, code, zId, zName, gId, gName) {
+  const rId = { src:'fSrcResults', tele:'fTeleResults', field:'fFieldResults' }[field];
+  const rEl = document.getElementById(rId); if (rEl) rEl.style.display = 'none';
+  const storeCode = (type === 'staff') ? (code || String(id)) : (code || String(id));
+  if (field === 'src') {
+    document.getElementById('fSrcCode').value = storeCode;
+    document.getElementById('fSrcSearch').value = (code ? code + ' — ' : '') + name;
+    document.getElementById('fSrcSelected').innerHTML = etcChip(type, name, code);
+    const hasGuru = !!(gName);
+    const hasZGuru = !!(zName);
+    document.getElementById('fGuruRow').style.display = hasGuru ? '' : 'none';
+    document.getElementById('fZGuruRow').style.display = hasZGuru ? '' : 'none';
+    if (hasGuru) { document.getElementById('fGuruDisplay').value = gName; document.getElementById('fGuruName').value = gName; }
+    if (hasZGuru) { document.getElementById('fZGuruDisplay').value = zName; document.getElementById('fZGuruName').value = zName; }
+  } else if (field === 'tele') {
+    document.getElementById('fTeleCode').value = storeCode;
+    document.getElementById('fTeleSearch').value = (code ? code + ' — ' : '') + name;
+    document.getElementById('fTeleSelected').innerHTML = etcChip('staff', name, code);
+  } else if (field === 'field') {
+    document.getElementById('fFieldCode').value = storeCode;
+    document.getElementById('fFieldSearch').value = (code ? code + ' — ' : '') + name;
+    document.getElementById('fFieldSelected').innerHTML = etcChip('staff', name, code);
+  }
+}
+
+function etcChip(type, name, code) {
+  const tc = { mnr:'#1d4ed8',vgk:'#7c3aed',partner:'#0891b2',staff:'#065f46' }[type] || '#374151';
+  return `<span style="display:inline-flex;align-items:center;gap:4px;background:${tc}18;border:1px solid ${tc}40;border-radius:14px;padding:2px 8px;font-size:11px;color:${tc};font-weight:600">
+    <i class="fas fa-check-circle" style="font-size:9px"></i>${esc(code||'')}${name?' — '+esc(name):''}</span>`;
+}
+
+function etcClearSrc() {
+  ['fSrcCode','fSrcSearch','fGuruDisplay','fGuruName','fZGuruDisplay','fZGuruName'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
+  ['fSrcSelected','fSrcResults'].forEach(id => { const e=document.getElementById(id); if(e){e.innerHTML='';e.style.display='none';} });
+  document.getElementById('fGuruRow').style.display = 'none';
+  document.getElementById('fZGuruRow').style.display = 'none';
+}
+function etcClearTele() {
+  ['fTeleCode','fTeleSearch'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
+  ['fTeleSelected','fTeleResults'].forEach(id => { const e=document.getElementById(id); if(e){e.innerHTML='';e.style.display='none';} });
+}
+function etcClearField() {
+  ['fFieldCode','fFieldSearch'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
+  ['fFieldSelected','fFieldResults'].forEach(id => { const e=document.getElementById(id); if(e){e.innerHTML='';e.style.display='none';} });
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(ev) {
+  ['fSrcResults','fTeleResults','fFieldResults'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.style.display !== 'none' && !el.contains(ev.target)) el.style.display = 'none';
+  });
+});
+
+function clearForm() {
+  ['fBatchNo','fBatchStart','fSno','fName','fPhone','fEmail','fAadhar','fEdu','fExp',
+   'fScore','fPincode','fDistrict','fModalState','fArea','fCompletedDate','fTrainingCompDate',
+   'fPkgValue','fDealReceived','fPayment','fMnrId','fComments','fSource'].forEach(id => {
+     const el = document.getElementById(id); if (el) el.value = '';
+   });
+  ['fHostelOpted','fMnrMember','fServiceCenter','fMyntHub'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.checked = false;
+  });
+  document.getElementById('mnrIdRow').style.display = 'none';
+  document.getElementById('editId').value = '';
+  document.getElementById('fCrmLeadId').value = '';
+  const balEl = document.getElementById('fDealBalance'); if (balEl) { balEl.textContent = '—'; balEl.style.color='#9ca3af'; }
+  etcClearSrc(); etcClearTele(); etcClearField();
+}
+
+function openAddModal() {
+  clearForm();
+  document.getElementById('modalTitle').textContent = 'Add New Student';
+  document.getElementById('regPreviewRow').style.display = 'none';
+  document.getElementById('studentModal').classList.add('show');
+}
+
+async function openEditModal(id) {
+  try {
+    const s = await apiFetch(`${API}/students/${id}`);
+    clearForm();
+    document.getElementById('modalTitle').textContent = 'Edit Student';
+    document.getElementById('editId').value = id;
+    document.getElementById('regPreview').textContent = s.registration_id;
+    document.getElementById('stuPreview').textContent = s.student_id;
+    document.getElementById('regPreviewRow').style.display = 'block';
+
+    const set = (eid, val) => { const el = document.getElementById(eid); if (el && val != null) el.value = val; };
+    const setC = (eid, val) => { const el = document.getElementById(eid); if (el) el.checked = !!val; };
+
+    set('fBatchNo', s.batch_no); set('fBatchStart', s.batch_start_date ? s.batch_start_date.slice(0,10) : '');
+    set('fSno', s.sno); set('fName', s.name); set('fPhone', s.phone); set('fEmail', s.email);
+    set('fAadhar', s.aadhar_number); set('fEdu', s.education_qualification);
+    set('fExp', s.experience); set('fScore', s.score);
+    set('fPincode', s.pincode); set('fDistrict', s.district);
+    set('fModalState', s.state); set('fArea', s.area);
+    set('fCompletedDate', s.completed_date ? s.completed_date.slice(0,10) : '');
+    set('fTrainingCompDate', s.training_completed_date ? s.training_completed_date.slice(0,10) : '');
+    set('fPkgValue', s.package_value); set('fPayment', s.payment_details);
+    set('fMnrId', s.mnr_id); set('fComments', s.comments);
+    setC('fHostelOpted', s.hostel_opted); setC('fMnrMember', s.mnr_member);
+    setC('fServiceCenter', s.service_center); setC('fMyntHub', s.myntreal_hub);
+    document.getElementById('mnrIdRow').style.display = s.mnr_member ? 'block' : 'none';
+
+    // Deal received / balance
+    set('fDealReceived', s.deal_value_received);
+    etcUpdateBalance();
+
+    // Network Assignment
+    set('fSource', s.source);
+    if (s.handler_emp_code) {
+      document.getElementById('fSrcCode').value = s.handler_emp_code;
+      document.getElementById('fSrcSearch').value = s.handler_emp_code;
+      document.getElementById('fSrcSelected').innerHTML = etcChip('', '', s.handler_emp_code);
+    }
+    if (s.guru_name) {
+      document.getElementById('fGuruRow').style.display = '';
+      document.getElementById('fGuruDisplay').value = s.guru_name;
+      document.getElementById('fGuruName').value = s.guru_name;
+    }
+    if (s.z_guru_name) {
+      document.getElementById('fZGuruRow').style.display = '';
+      document.getElementById('fZGuruDisplay').value = s.z_guru_name;
+      document.getElementById('fZGuruName').value = s.z_guru_name;
+    }
+    if (s.telecaller_emp_code) {
+      document.getElementById('fTeleCode').value = s.telecaller_emp_code;
+      document.getElementById('fTeleSearch').value = s.telecaller_emp_code;
+      document.getElementById('fTeleSelected').innerHTML = etcChip('staff', '', s.telecaller_emp_code);
+    }
+    if (s.field_staff_emp_code) {
+      document.getElementById('fFieldCode').value = s.field_staff_emp_code;
+      document.getElementById('fFieldSearch').value = s.field_staff_emp_code;
+      document.getElementById('fFieldSelected').innerHTML = etcChip('staff', '', s.field_staff_emp_code);
+    }
+
+    document.getElementById('studentModal').classList.add('show');
+  } catch(e) { showToast('Failed to load student', 'error'); }
+}
+
+function closeModal() { document.getElementById('studentModal').classList.remove('show'); }
+
+// MNR member toggle
+document.getElementById('fMnrMember').addEventListener('change', e => {
+  document.getElementById('mnrIdRow').style.display = e.target.checked ? 'block' : 'none';
+});
+
+// ── Save Student ──────────────────────────────────────────────────────────────
+async function saveStudent() {
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { showToast('Student name is required', 'error'); return; }
+
+  const btn = document.getElementById('saveBtnMain');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Saving…';
+
+  const payload = {
+    batch_no: document.getElementById('fBatchNo').value.trim() || null,
+    batch_start_date: document.getElementById('fBatchStart').value || null,
+    name,
+    phone: document.getElementById('fPhone').value.trim() || null,
+    email: document.getElementById('fEmail').value.trim() || null,
+    aadhar_number: document.getElementById('fAadhar').value.trim() || null,
+    education_qualification: document.getElementById('fEdu').value.trim() || null,
+    experience: document.getElementById('fExp').value.trim() || null,
+    score: document.getElementById('fScore').value ? parseFloat(document.getElementById('fScore').value) : null,
+    pincode: document.getElementById('fPincode').value.trim() || null,
+    district: document.getElementById('fDistrict').value.trim() || null,
+    state: document.getElementById('fModalState').value.trim() || null,
+    area: document.getElementById('fArea').value.trim() || null,
+    completed_date: document.getElementById('fCompletedDate').value || null,
+    training_completed_date: document.getElementById('fTrainingCompDate').value || null,
+    package_value: document.getElementById('fPkgValue').value ? parseFloat(document.getElementById('fPkgValue').value) : null,
+    deal_value_received: document.getElementById('fDealReceived').value ? parseFloat(document.getElementById('fDealReceived').value) : null,
+    payment_details: document.getElementById('fPayment').value.trim() || null,
+    hostel_opted: document.getElementById('fHostelOpted').checked,
+    mnr_member: document.getElementById('fMnrMember').checked,
+    mnr_id: document.getElementById('fMnrId').value.trim() || null,
+    service_center: document.getElementById('fServiceCenter').checked,
+    myntreal_hub: document.getElementById('fMyntHub').checked,
+    comments: document.getElementById('fComments').value.trim() || null,
+    source: document.getElementById('fSource').value.trim() || null,
+    handler_emp_code: document.getElementById('fSrcCode').value.trim() || null,
+    guru_name: document.getElementById('fGuruName').value.trim() || null,
+    z_guru_name: document.getElementById('fZGuruName').value.trim() || null,
+    telecaller_emp_code: document.getElementById('fTeleCode').value.trim() || null,
+    field_staff_emp_code: document.getElementById('fFieldCode').value.trim() || null,
+    crm_lead_id: document.getElementById('fCrmLeadId').value ? parseInt(document.getElementById('fCrmLeadId').value) : null,
+  };
+
+  const editId = document.getElementById('editId').value;
+  try {
+    if (editId) {
+      await apiFetch(`${API}/students/${editId}`, { method: 'PUT', body: JSON.stringify(payload) });
+      showToast('Student updated successfully');
+    } else {
+      await apiFetch(`${API}/students/`, { method: 'POST', body: JSON.stringify(payload) });
+      showToast('Student added successfully');
+    }
+    closeModal();
+    loadStudents(currentPage);
+  } catch(e) {
+    showToast('Save failed — ' + (e.message || 'Unknown error'), 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-1"></i> Save Student';
+  }
+}
+
+// ── Delete Student ────────────────────────────────────────────────────────────
+async function deleteStudent(id, name) {
+  if (!confirm(`Delete student "${name}"? This action is reversible by staff.`)) return;
+  try {
+    await apiFetch(`${API}/students/${id}`, { method: 'DELETE' });
+    showToast('Student removed');
+    loadStudents(currentPage);
+  } catch(e) { showToast('Delete failed', 'error'); }
+}
+
+// ── CRM Lead View (no API call — uses cached row data) ────────────────────────
+function openCrmView(crmId) {
+  const s = _rowData[String(crmId)];
+  if (!s) { showToast('CRM lead data not found', 'error'); return; }
+  document.getElementById('viewModalTitle').textContent = `${esc(s.name)} — CRM Lead (Not Yet Enrolled)`;
+  document.getElementById('viewEditBtn').style.display = 'none';
+  const row = (l, v) => `<tr>
+    <td style="width:45%;color:#6b7280;font-size:12px;font-weight:600;padding:7px 10px;">${l}</td>
+    <td style="font-size:13px;padding:7px 10px;">${v || '—'}</td></tr>`;
+  document.getElementById('viewModalBody').innerHTML = `
+    <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:#92400e;">
+      <i class="fas fa-info-circle me-1"></i> This is a <strong>CRM lead</strong> — not yet enrolled as an ETC student.
+      Edit/delete are not available until enrollment.
+    </div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #f0f0f0;border-radius:8px;overflow:hidden;">
+      ${row('CRM Lead ID', s.crm_lead_id)}
+      ${row('Name', `<strong>${esc(s.name)}</strong>`)}
+      ${row('Phone', s.phone)} ${row('Email', s.email)}
+      ${row('State', s.state)} ${row('City / Area', s.area)}
+      ${row('Batch (Auto-assigned)', s.batch_no)}
+      ${row('Close Date', s.batch_start_date)}
+      ${row('Deal Value', s.package_value ? '₹' + Number(s.package_value).toLocaleString('en-IN') : null)}
+      ${row('CRM Status', s.crm_status)}
+      ${row('Stage', s.training_stage ? s.training_stage.replace(/_/g,' ') : null)}
+    </table>`;
+  document.getElementById('viewModal').classList.add('show');
+}
+
+// ── Enroll from CRM lead (pre-fill student modal with CRM data) ───────────────
+function openEnrollFromCrm(crmId) {
+  const s = _rowData[String(crmId)];
+  if (!s) { showToast('CRM lead data not found', 'error'); return; }
+  clearForm();
+  document.getElementById('modalTitle').textContent = 'Enroll Student — from CRM Lead';
+  document.getElementById('regPreviewRow').style.display = 'none';
+  document.getElementById('fCrmLeadId').value = s.crm_lead_id || '';
+
+  const set = (eid, val) => { const el = document.getElementById(eid); if (el && val != null) el.value = val; };
+  set('fBatchNo', s.batch_no);
+  set('fBatchStart', s.batch_start_date ? s.batch_start_date.slice(0,10) : '');
+  set('fName', s.name);
+  set('fPhone', s.phone);
+  set('fEmail', s.email);
+  set('fState', s.state);          // fModalState is the correct id
+  document.getElementById('fModalState') && (document.getElementById('fModalState').value = s.state || '');
+  set('fArea', s.area);
+  set('fPkgValue', s.package_value);
+  document.getElementById('studentModal').classList.add('show');
+}
+
+// ── View Modal ────────────────────────────────────────────────────────────────
+async function openViewModal(id) {
+  try {
+    const s = await apiFetch(`${API}/students/${id}`);
+    document.getElementById('viewModalTitle').textContent = `${s.name} — ${s.registration_id}`;
+    document.getElementById('viewEditBtn').style.display = '';
+    document.getElementById('viewEditBtn').onclick = () => {
+      document.getElementById('viewModal').classList.remove('show');
+      openEditModal(id);
+    };
+    const yn = v => v ? '<span style="color:#059669;font-weight:700;">Yes</span>' : '<span style="color:#9ca3af;">No</span>';
+    const row = (l,v) => `<tr><td style="width:45%;color:#6b7280;font-size:12px;font-weight:600;padding:7px 10px;">${l}</td><td style="font-size:13px;padding:7px 10px;">${v||'—'}</td></tr>`;
+    document.getElementById('viewModalBody').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div style="background:#f0fdf4;border-radius:8px;padding:12px;">
+          <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Registration ID</div>
+          <div style="font-family:monospace;font-size:15px;font-weight:800;color:#059669;">${s.registration_id}</div>
+        </div>
+        <div style="background:#f0f9ff;border-radius:8px;padding:12px;">
+          <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Student ID (Marketplace)</div>
+          <div style="font-family:monospace;font-size:15px;font-weight:800;color:#0ea5e9;">${s.student_id}</div>
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;border:1px solid #f0f0f0;border-radius:8px;overflow:hidden;">
+        ${row('Batch', s.batch_no)} ${row('Start Date', s.batch_start_date ? s.batch_start_date.slice(0,10) : null)}
+        ${row('Name', `<strong>${esc(s.name)}</strong>`)} ${row('Phone', s.phone)}
+        ${row('Email', s.email)} ${row('Aadhar', s.aadhar_number)}
+        ${row('Education', s.education_qualification)} ${row('Experience', s.experience)}
+        ${row('Score', s.score != null ? s.score + '%' : null)} ${row('State', s.state)}
+        ${row('District', s.district)} ${row('Pincode', s.pincode)}
+        ${row('Area', s.area)} ${row('Package Value', s.package_value ? '₹' + Number(s.package_value).toLocaleString('en-IN') : null)}
+        ${row('Completed Date', s.completed_date ? s.completed_date.slice(0,10) : null)}
+        ${row('Training Completed', s.training_completed_date ? s.training_completed_date.slice(0,10) : null)}
+        ${row('Payment Details', s.payment_details)}
+        ${row('Hostel Opted', yn(s.hostel_opted))} ${row('MNR Member', yn(s.mnr_member))}
+        ${row('MNR ID', s.mnr_id)} ${row('Service Center', yn(s.service_center))}
+        ${row('MyntReal Hub', yn(s.myntreal_hub))} ${row('Comments', s.comments)}
+      </table>`;
+    document.getElementById('viewModal').classList.add('show');
+  } catch(e) { showToast('Failed to load details', 'error'); }
+}
+
+// ── CRM Sync ──────────────────────────────────────────────────────────────────
+async function syncCRM() {
+  if (!confirm('Pull "Won" CRM leads (ETC/Training category) from last 15 days and create draft student records?')) return;
+  try {
+    const d = await apiFetch(`${API}/students/sync-crm/`, { method: 'POST' });
+    showToast(`Synced ${d.synced || 0} new students from CRM`);
+    if (d.synced > 0) loadStudents(1);
+  } catch(e) { showToast('CRM sync failed', 'error'); }
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const d = await apiFetch(`${API}/students/dashboard/stats`);
+    const t = d.totals;
+
+    document.getElementById('dashStats').innerHTML = `
+      <div class="stat-card green"><div class="val">${t.total}</div><div class="lbl">Total Students</div></div>
+      <div class="stat-card blue"><div class="val">${t.completed}</div><div class="lbl">Training Completed</div></div>
+      <div class="stat-card purple"><div class="val">${t.completion_pct}%</div><div class="lbl">Completion Rate</div></div>
+      <div class="stat-card teal"><div class="val">${t.mnr_members}</div><div class="lbl">MNR Members</div></div>
+      <div class="stat-card orange"><div class="val">${t.service_centers}</div><div class="lbl">Service Centers</div></div>
+      <div class="stat-card pink"><div class="val">${t.hostel}</div><div class="lbl">Hostel Students</div></div>
+      <div class="stat-card green"><div class="val">₹${(t.total_revenue/1000).toFixed(0)}K</div><div class="lbl">Total Revenue</div></div>
+      <div class="stat-card blue"><div class="val">${t.avg_score > 0 ? t.avg_score + '%' : '—'}</div><div class="lbl">Avg Score</div></div>
+    `;
+
+    // Charts
+    const mkChart = (id, type, labels, data, color, label) => {
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(document.getElementById(id), {
+        type, data: { labels, datasets: [{ label, data, backgroundColor: color, borderColor: color, borderWidth: 1.5, borderRadius: 4 }] },
+        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+      });
+    };
+
+    mkChart('chartBatch', 'bar',
+      d.batches.map(b => b.batch), d.batches.map(b => b.total),
+      '#059669', 'Students');
+
+    mkChart('chartState', 'bar',
+      d.states.map(s => s.state), d.states.map(s => s.count),
+      '#0ea5e9', 'Count');
+
+    // Completion rate chart
+    if (charts['chartCompletion']) charts['chartCompletion'].destroy();
+    charts['chartCompletion'] = new Chart(document.getElementById('chartCompletion'), {
+      type: 'bar',
+      data: {
+        labels: d.batches.map(b => b.batch),
+        datasets: [
+          { label: 'Total', data: d.batches.map(b => b.total), backgroundColor: '#e0f2fe' },
+          { label: 'Completed', data: d.batches.map(b => b.completed), backgroundColor: '#7c3aed' },
+        ]
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    mkChart('chartMonthly', 'line',
+      d.monthly.map(m => m.month), d.monthly.map(m => m.count),
+      '#d97706', 'Admissions');
+
+  } catch(e) { console.error('Dashboard error:', e); }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadBatches();
+loadStudents(1);
+</script>
+<script>
+(async function() {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader !== 'undefined') StaffHeader.inject('ETC Student Master', 'fas fa-graduation-cap');
+})();
+</script>
+</body>
+</html>

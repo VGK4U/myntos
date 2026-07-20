@@ -1,0 +1,343 @@
+{
+  "metadata": {
+    "timestamp": "2025-11-02T16:38:34.686463",
+    "rfc_version": "4.1",
+    "unpaid_statuses": [
+      "Pending",
+      "Admin Verified",
+      "Super Admin Verified",
+      "Super Admin Approved"
+    ],
+    "paid_statuses": [
+      "Finance Paid",
+      "Accounts Paid"
+    ],
+    "completed_withdrawal_statuses": [
+      "Bank Sent",
+      "Completed"
+    ]
+  },
+  "summary": {
+    "total_users": 100,
+    "perfect_matches": 88,
+    "total_discrepancies": 12,
+    "earning_wallet_mismatches": 12,
+    "withdrawable_wallet_mismatches": 11,
+    "both_wallets_mismatched": 11,
+    "reconciliation_rate_percent": 88.0,
+    "target_rate_percent": 99.95,
+    "meets_target": false
+  },
+  "top_10_discrepancies": [
+    {
+      "user_id": "BEV1800145",
+      "stored": {
+        "earning_wallet": 40480.0,
+        "withdrawable_wallet": 1000.0
+      },
+      "computed": {
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": -16200.0
+      },
+      "differences": {
+        "earning_wallet": 40480.0,
+        "withdrawable_wallet": 17200.0
+      },
+      "matches": {
+        "earning_wallet": false,
+        "withdrawable_wallet": false,
+        "perfect_match": false
+      },
+      "income_breakdown": {
+        "Finance Paid": {
+          "count": 1,
+          "total_amount": 40480.0
+        }
+      },
+      "withdrawal_breakdown": {
+        "Completed": {
+          "count": 1,
+          "total_amount": 56680.0
+        }
+      }
+    },
+    {
+      "user_id": "BEV1800160",
+      "stored": {
+        "earning_wallet": 31680.0,
+        "withdrawable_wallet": 11616.91
+      },
+      "computed": {
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": -5400.0
+      },
+      "differences": {
+        "earning_wallet": 31680.0,
+        "withdrawable_wallet": 17016.91
+      },
+      "matches": {
+        "earning_wallet": false,
+        "withdrawable_wallet": false,
+        "perfect_match": false
+      },
+      "income_breakdown": {
+        "Finance Paid": {
+          "count": 1,
+          "total_amount": 31680.0
+        }
+      },
+      "withdrawal_breakdown": {
+        "Completed": {
+          "count": 1,
+          "total_amount": 37080.0
+        }
+      }
+    },
+    {
+      "user_id": "BEV1800228",
+      "stored": {
+        "earning_wallet": 14080.0,
+        "withdrawable_wallet": 10492.2
+      },
+      "computed": {
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": -13500.0
+      },
+      "differences": {
+        "earning_wallet": 14080.0,
+        "withdrawable_wallet": 23992.2
+      },
+      "matches": {
+        "earning_wallet": false,
+        "withdrawable_wallet": false,
+        "perfect_match": false
+      },
+      "income_breakdown": {
+        "Finance Paid": {
+          "count": 1,
+          "total_amount": 14080.0
+        }
+      },
+      "withdrawal_breakdown": {
+        "Completed": {
+          "count": 1,
+          "total_amount": 27580.0
+        }
+      }
+    },
+    {
+      "user_id": "BEV1800299",
+      "stored": {
+        "earning_wallet": 10560.0,
+        "withdrawable_wallet": 8910.0
+      },
+      "computed": {
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": -16200.0
+      },
+      "differences": {
+        "earning_wallet": 10560.0,
+        "withdrawable_wallet": 25110.0
+      },
+      "matches": {
+        "earning_wallet": false,
+        "withdrawable_wallet": false,
+        "perfect_match": false
+      },
+      "income_breakdown": {
+        "Finance Paid": {
+          "count": 1,
+          "total_amount": 10560.0
+        }
+      },
+      "withdrawal_breakdown": {
+        "Completed": {
+          "count": 1,
+          "total_amount": 26760.0
+        }
+      }
+    },
+    {
+      "user_id": "BEV1800377",
+      "stored": {
+        "earning_wallet": 8800.0,
+        "withdrawable_wallet": 8656.2
+      },
+      "computed": {
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": -16200.0
+      },
+      "differences": {
+        "earning_wallet": 8800.0,
+        "withdrawable_wallet": 24856.2
+      },
+      "matches": {
+        "earning_wallet": false,
+        "withdrawable_wallet": false,
+        "perfect_match": false
+      },
+      "income_breakdown": {
+        "Finance Paid": {
+          "count": 1,
+          "total_amount": 8800.0
+        }
+      },
+      "withdrawal_breakdown": {
+        "Completed": {
+          "count": 1,
+          "total_amount": 25000.0
+        }
+      }
+    },
+    {
+      "user_id": "BEV1800369",
+      "stored": {
+        "earning_wallet": 8800.0,
+        "withdrawable_wallet": 7576.2
+      },
+      "computed": {
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": -13500.0
+      },
+      "differences": {
+        "earning_wallet": 8800.0,
+        "withdrawable_wallet": 21076.2
+      },
+      "matches": {
+        "earning_wallet": false,
+        "withdrawable_wallet": false,
+        "perfect_match": false
+      },
+      "income_breakdown": {
+        "Finance Paid": {
+          "count": 1,
+          "total_amount": 8800.0
+        }
+      },
+      "withdrawal_breakdown": {
+        "Completed": {
+          "count": 1,
+          "total_amount": 22300.0
+        }
+      }
+    },
+    {
+      "user_id": "BEV1800611",
+      "stored": {
+        "earning_wallet": 7040.0,
+        "withdrawable_wallet": 7117.2
+      },
+      "computed": {
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": -13500.0
+      },
+      "differences": {
+        "earning_wallet": 7040.0,
+        "withdrawable_wallet": 20617.2
+      },
+      "matches": {
+        "earning_wallet": false,
+        "withdrawable_wallet": false,
+        "perfect_match": false
+      },
+      "income_breakdown": {
+        "Finance Paid": {
+          "count": 1,
+          "total_amount": 7040.0
+        }
+      },
+      "withdrawal_breakdown": {
+        "Completed": {
+          "count": 1,
+          "total_amount": 20540.0
+        }
+      }
+    },
+    {
+      "user_id": "BEV1800149",
+      "stored": {
+        "earning_wallet": 1760.0,
+        "withdrawable_wallet": 3812.72
+      },
+      "computed": {
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": -8100.0
+      },
+      "differences": {
+        "earning_wallet": 1760.0,
+        "withdrawable_wallet": 11912.72
+      },
+      "matches": {
+        "earning_wallet": false,
+        "withdrawable_wallet": false,
+        "perfect_match": false
+      },
+      "income_breakdown": {
+        "Finance Paid": {
+          "count": 1,
+          "total_amount": 1760.0
+        }
+      },
+      "withdrawal_breakdown": {
+        "Completed": {
+          "count": 1,
+          "total_amount": 9860.0
+        }
+      }
+    },
+    {
+      "user_id": "BEV1800470",
+      "stored": {
+        "earning_wallet": 1890.0,
+        "withdrawable_wallet": 810.0
+      },
+      "computed": {
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": -2700.0
+      },
+      "differences": {
+        "earning_wallet": 1890.0,
+        "withdrawable_wallet": 3510.0
+      },
+      "matches": {
+        "earning_wallet": false,
+        "withdrawable_wallet": false,
+        "perfect_match": false
+      },
+      "income_breakdown": {},
+      "withdrawal_breakdown": {
+        "Completed": {
+          "count": 1,
+          "total_amount": 2700.0
+        }
+      }
+    },
+    {
+      "user_id": "BEV1800526",
+      "stored": {
+        "earning_wallet": 1890.0,
+        "withdrawable_wallet": 810.0
+      },
+      "computed": {
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": -2700.0
+      },
+      "differences": {
+        "earning_wallet": 1890.0,
+        "withdrawable_wallet": 3510.0
+      },
+      "matches": {
+        "earning_wallet": false,
+        "withdrawable_wallet": false,
+        "perfect_match": false
+      },
+      "income_breakdown": {},
+      "withdrawal_breakdown": {
+        "Completed": {
+          "count": 1,
+          "total_amount": 2700.0
+        }
+      }
+    }
+  ]
+}

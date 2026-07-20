@@ -1,0 +1,62 @@
+{
+  "total_pages": 82,
+  "tested": 5,
+  "passed": 1,
+  "failed": 4,
+  "errors": [
+    {
+      "page": "Income History Supreme",
+      "url": "/vgk/income-history-supreme",
+      "status": "404",
+      "errors": [
+        "Page returns 404"
+      ],
+      "filters_tested": 0,
+      "buttons_tested": 0,
+      "forms_tested": 0
+    },
+    {
+      "page": "Withdrawal Approvals",
+      "url": "/vgk/withdrawal-supreme/approvals",
+      "status": "404",
+      "errors": [
+        "Page returns 404"
+      ],
+      "filters_tested": 0,
+      "buttons_tested": 0,
+      "forms_tested": 0
+    },
+    {
+      "page": "Awards Payment Processing",
+      "url": "/finance/awards/payment-processing",
+      "status": "loaded",
+      "errors": [
+        "http://localhost:5000/favicon.ico - Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "http://localhost:5000/vgk/withdrawal-supreme/approvals - Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "filters_tested": 4,
+      "buttons_tested": 4,
+      "forms_tested": 0
+    },
+    {
+      "page": "Search Members",
+      "url": "/admin/members/search",
+      "status": "error",
+      "errors": [
+        "Server error occurred"
+      ],
+      "filters_tested": 0,
+      "buttons_tested": 0,
+      "forms_tested": 0
+    }
+  ],
+  "screenshots": [
+    "screenshots/vgk_01_login_page_20251104_054915.png",
+    "screenshots/vgk_02_login_success_20251104_054918.png",
+    "screenshots/vgk_page_000_Income_History_Supreme_20251104_054921.png",
+    "screenshots/vgk_page_001_Withdrawal_Approvals_20251104_054924.png",
+    "screenshots/vgk_page_002_Awards_Payment_Processing_20251104_054928.png",
+    "screenshots/vgk_page_003_Company_Earnings_20251104_054935.png",
+    "screenshots/vgk_page_004_Search_Members_20251104_054949.png"
+  ]
+}

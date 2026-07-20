@@ -1,0 +1,3107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VGK Media Manager — Staff</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f3f4f6; min-height:100vh; }
+.main-content { margin-left:0; transition:margin-left .3s; padding-top:88px; }
+.sidebar-expanded .main-content { margin-left:260px; }
+.content-area { padding:24px; }
+
+/* Banner */
+.page-banner { background:linear-gradient(135deg,#1e1b4b 0%,#2563eb 100%); border-radius:12px; padding:20px 24px; margin-bottom:20px; color:white; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.page-banner h1 { font-size:20px; font-weight:700; margin-bottom:3px; display:flex; align-items:center; gap:10px; }
+.page-banner p { opacity:.85; margin:0; font-size:12.5px; }
+
+/* Stats */
+.summary-row { display:flex; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+.stat-card { background:white; border-radius:10px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,.08); flex:1; min-width:130px; }
+.stat-card .val { font-size:22px; font-weight:700; color:#111827; }
+.stat-card .lbl { font-size:11px; color:#6b7280; font-weight:600; text-transform:uppercase; margin-top:3px; }
+
+/* Tabs */
+.tab-bar { display:flex; gap:4px; margin-bottom:20px; background:white; border-radius:12px; padding:6px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.tab-btn { flex:1; padding:10px 18px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:#6b7280; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+.tab-btn.active { background:#2563eb; color:white; }
+.tab-btn:not(.active):hover { background:#f3f4f6; color:#374151; }
+.tab-btn:disabled { opacity:0.45; cursor:not-allowed; pointer-events:none; }
+
+/* Toolbar */
+.toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+.toolbar-left { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.filter-select { border:1.5px solid #d1d5db; border-radius:8px; padding:7px 12px; font-size:13px; outline:none; background:white; }
+.btn-primary { background:#2563eb; color:white; border:none; border-radius:8px; padding:8px 18px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:7px; }
+.btn-primary:hover { background:#1d4ed8; }
+
+/* Table card */
+.table-card { background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); overflow:hidden; }
+.table-card-header { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0f0f0; }
+.table-card-header h3 { font-size:14px; font-weight:700; color:#111827; }
+table { width:100%; border-collapse:collapse; }
+thead th { padding:10px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#6b7280; background:#f9fafb; text-align:left; white-space:nowrap; }
+tbody td { padding:10px 14px; font-size:13px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
+tbody tr:hover td { background:#fafafa; }
+.media-title-cell { max-width:300px; }
+.media-title-cell .mtitle { font-weight:600; color:#111827; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.media-title-cell .msub { font-size:11px; color:#6b7280; margin-top:2px; }
+
+/* Badges */
+.badge-type { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+.badge-youtube { background:#fff0f0; color:#dc2626; }
+.badge-publication { background:#f0fdf4; color:#166534; }
+.badge-blog { background:#eff6ff; color:#1d4ed8; }
+.badge-active { background:#d1fae5; color:#065f46; }
+.badge-paused { background:#fef3c7; color:#92400e; }
+.badge-inactive { background:#f3f4f6; color:#6b7280; }
+.badge-deleted { background:#fee2e2; color:#991b1b; }
+.stat-pill { display:inline-flex; align-items:center; gap:4px; font-size:11px; color:#6b7280; }
+
+/* Actions */
+.action-btns { display:flex; gap:6px; align-items:center; }
+.btn-sm { padding:4px 10px; border:none; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; transition:all .15s; }
+.btn-edit-sm { background:#ede9fe; color:#7c3aed; }
+.btn-edit-sm:hover { background:#ddd6fe; }
+.btn-pause { background:#fef3c7; color:#92400e; }
+.btn-pause:hover { background:#fde68a; }
+.btn-activate { background:#d1fae5; color:#065f46; }
+.btn-activate:hover { background:#a7f3d0; }
+.btn-delete-sm { background:#fee2e2; color:#991b1b; }
+.btn-delete-sm:hover { background:#fecaca; }
+
+/* Toast */
+.toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:10px; color:white; font-size:13px; font-weight:600; z-index:9999; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.success { background:#059669; }
+.toast.error { background:#dc2626; }
+
+/* MODAL */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:2000; align-items:center; justify-content:center; padding:20px; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:white; border-radius:16px; width:100%; max-width:680px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+.modal-header { padding:18px 24px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; }
+.modal-header h2 { font-size:15px; font-weight:700; margin:0; }
+.modal-close { border:none; background:none; font-size:20px; cursor:pointer; color:#6b7280; }
+.modal-body { padding:24px; }
+.form-row { margin-bottom:16px; }
+.form-label { font-size:12px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; display:block; }
+.form-control { width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:9px 12px; font-size:13px; outline:none; transition:border-color .2s; }
+.form-control:focus { border-color:#2563eb; }
+textarea.form-control { resize:vertical; min-height:120px; font-family:inherit; }
+.form-hint { font-size:11px; color:#6b7280; margin-top:4px; }
+.modal-footer { padding:16px 24px; border-top:1px solid #f0f0f0; display:flex; justify-content:flex-end; gap:10px; }
+.btn-cancel { padding:8px 18px; border:1.5px solid #d1d5db; border-radius:8px; background:white; font-size:13px; font-weight:600; cursor:pointer; color:#6b7280; }
+.btn-cancel:hover { background:#f9fafb; }
+.btn-save { padding:8px 20px; background:#2563eb; color:white; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; }
+.btn-save:hover { background:#1d4ed8; }
+
+/* Links editor */
+.links-editor { border:1.5px solid #d1d5db; border-radius:8px; overflow:hidden; }
+.link-row { display:flex; gap:8px; padding:8px 10px; border-bottom:1px solid #f3f4f6; align-items:center; }
+.link-row:last-child { border-bottom:none; }
+.link-row input { flex:1; border:1px solid #d1d5db; border-radius:6px; padding:5px 9px; font-size:12px; }
+.link-row .btn-del-link { border:none; background:#fee2e2; color:#991b1b; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:11px; }
+.add-link-btn { width:100%; padding:8px; border:none; background:#f9fafb; color:#6b7280; font-size:12px; font-weight:600; cursor:pointer; border-top:1px solid #f0f0f0; }
+.add-link-btn:hover { background:#f3f4f6; }
+
+/* AI Enhance */
+.ai-bar { display:flex; gap:8px; margin-top:6px; }
+.btn-ai { background:#ede9fe; color:#7c3aed; border:none; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+.btn-ai:hover { background:#ddd6fe; }
+.btn-ai.loading { opacity:.7; pointer-events:none; }
+.ai-hint { font-size:11px; color:#7c3aed; margin-top:4px; }
+
+/* Quill rich-text editor */
+#blogEditorContainer { border:1.5px solid #d1d5db; border-radius:8px; overflow:hidden; background:#fff; }
+#blogEditorContainer .ql-toolbar { border:none; border-bottom:1.5px solid #e5e7eb; background:#f9fafb; }
+#blogEditorContainer .ql-container { border:none; font-family:inherit; font-size:14px; min-height:220px; max-height:420px; overflow-y:auto; }
+#blogEditorContainer .ql-editor { min-height:220px; line-height:1.7; }
+#blogEditorContainer .ql-editor p { margin-bottom:6px; }
+#blogEditorContainer .ql-editor h1,
+#blogEditorContainer .ql-editor h2,
+#blogEditorContainer .ql-editor h3 { font-weight:700; margin:10px 0 4px; }
+#blogEditorContainer .ql-editor ul,
+#blogEditorContainer .ql-editor ol { padding-left:20px; margin-bottom:6px; }
+
+/* PDF upload */
+.pdf-row { display:flex; align-items:center; gap:10px; }
+.pdf-row .btn-upload { background:#f0fdf4; color:#166534; border:none; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; }
+.pdf-current { font-size:11px; color:#6b7280; }
+
+/* Thumbnail upload widget */
+.thumb-widget { display:flex; align-items:flex-start; gap:12px; }
+.thumb-preview { width:96px; height:64px; border-radius:8px; border:1.5px dashed #d1d5db; background:#f9fafb; display:flex; align-items:center; justify-content:center; flex-shrink:0; overflow:hidden; }
+.thumb-preview img { width:100%; height:100%; object-fit:cover; border-radius:7px; }
+.thumb-preview .thumb-placeholder { font-size:22px; color:#d1d5db; }
+.thumb-controls { flex:1; display:flex; flex-direction:column; gap:7px; }
+.btn-thumb-upload { background:#eff6ff; color:#1d4ed8; border:1.5px solid #bfdbfe; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:6px; width:fit-content; }
+.btn-thumb-upload:hover { background:#dbeafe; }
+.btn-thumb-upload.uploading { opacity:.7; pointer-events:none; }
+
+/* Empty & Loading */
+.empty-row td { text-align:center; padding:40px; color:#9ca3af; font-size:13px; }
+
+/* ── WEBSITE PANEL ── */
+.wp-verticals { display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
+.wp-vert-btn { padding:8px 18px; border-radius:8px; border:1.5px solid #d1d5db; background:#fff; font-size:13px; font-weight:600; cursor:pointer; color:#6b7280; transition:all .2s; }
+.wp-vert-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+.wp-vert-btn:not(.active):hover { background:#f3f4f6; color:#374151; }
+.wp-stats-row { display:flex; gap:14px; margin-bottom:18px; flex-wrap:wrap; }
+.wp-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:18px; }
+.wp-loading { grid-column:1/-1; text-align:center; padding:40px; color:#9ca3af; font-size:13px; }
+.wp-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
+.wp-card-img { height:160px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden; border-bottom:1px solid #f0f0f0; }
+.wp-card-img img { max-width:100%; max-height:100%; object-fit:contain; padding:12px; }
+.wp-card-img .wp-img-placeholder { font-size:2.5rem; color:#d1d5db; }
+.wp-card-body { padding:14px 16px; }
+.wp-card-body h3 { font-size:14px; font-weight:700; color:#111827; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.wp-card-meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+.wp-badge-vert { display:inline-flex; align-items:center; gap:4px; background:#eff6ff; color:#1d4ed8; border-radius:12px; padding:2px 9px; font-size:10.5px; font-weight:700; }
+.wp-badge-active { background:#d1fae5; color:#065f46; border-radius:12px; padding:2px 9px; font-size:10.5px; font-weight:700; }
+.wp-badge-inactive { background:#f3f4f6; color:#6b7280; border-radius:12px; padding:2px 9px; font-size:10.5px; font-weight:700; }
+.wp-spec-count { font-size:11px; color:#9ca3af; }
+.wp-card-actions { display:flex; gap:6px; margin-top:10px; }
+.wp-empty { grid-column:1/-1; text-align:center; padding:40px; color:#9ca3af; font-size:13px; }
+
+/* Product modal extras */
+.spec-rows { border:1.5px solid #e5e7eb; border-radius:8px; overflow:hidden; }
+.spec-row { display:flex; gap:8px; padding:7px 10px; border-bottom:1px solid #f3f4f6; align-items:center; }
+.spec-row:last-child { border-bottom:none; }
+.spec-row input { flex:1; border:1px solid #d1d5db; border-radius:6px; padding:5px 9px; font-size:12px; }
+.spec-row .btn-del-spec { border:none; background:#fee2e2; color:#991b1b; border-radius:6px; padding:4px 8px; cursor:pointer; font-size:11px; flex-shrink:0; }
+.add-spec-btn { width:100%; padding:8px; border:none; background:#f9fafb; color:#6b7280; font-size:12px; font-weight:600; cursor:pointer; border-top:1px solid #f0f0f0; }
+.add-spec-btn:hover { background:#f3f4f6; }
+.variant-block { border:1.5px solid #e5e7eb; border-radius:10px; padding:12px; margin-bottom:10px; background:#fafafa; }
+.variant-block-hdr { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+.variant-block .spec-rows { border-radius:6px; }
+.variant-block .add-spec-btn { border-radius:0 0 6px 6px; }
+.img-upload-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+.img-slot { width:96px; height:70px; border:1.5px dashed #d1d5db; border-radius:8px; background:#f9fafb; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:11px; color:#9ca3af; cursor:pointer; overflow:hidden; position:relative; flex-shrink:0; }
+.img-slot img { width:100%; height:100%; object-fit:cover; border-radius:7px; }
+.img-slot .img-rm { position:absolute; top:2px; right:2px; background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:4px; font-size:10px; cursor:pointer; padding:1px 5px; }
+
+/* upload result (shared) */
+.upload-result { display:none; margin-top:12px; padding:12px 14px; border-radius:8px; font-size:13px; }
+.upload-result.success { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+.upload-result.error   { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+.wa-format-pills { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; }
+.wa-fmt-pill { cursor:pointer; }
+.wa-fmt-pill input[type="radio"] { display:none; }
+.wa-fmt-pill span { display:inline-flex; align-items:center; gap:5px; padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600; border:1.5px solid #d1d5db; color:#6b7280; background:#fff; transition:all .15s; user-select:none; }
+.wa-fmt-pill input:checked + span { border-color:#0891b2; background:#e0f7fa; color:#0e7490; }
+.wa-fmt-pill:hover span { border-color:#0891b2; color:#0891b2; }
+
+/* ── WEBSITE ASSETS TAB [DC_WEB_ASSETS_001] ── */
+.wa-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+.wa-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; transition:box-shadow .2s; display:flex; flex-direction:column; }
+.wa-card:hover { box-shadow:0 4px 14px rgba(0,0,0,.1); }
+.wa-thumb { height:150px; background:#f8fafc; display:flex; align-items:center; justify-content:center; border-bottom:1px solid #f0f0f0; overflow:hidden; position:relative; }
+.wa-thumb img { max-width:100%; max-height:130px; object-fit:contain; }
+.wa-thumb .wa-no-prev { font-size:36px; color:#d1d5db; }
+.wa-sys-badge { position:absolute; top:7px; left:7px; background:#2563eb; color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+.wa-unused-badge { position:absolute; top:7px; right:7px; background:#f3f4f6; color:#9ca3af; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+.wa-body { padding:12px 14px; flex:1; }
+.wa-name { font-weight:700; font-size:12.5px; color:#111827; margin-bottom:2px; word-break:break-all; line-height:1.4; }
+.wa-slot { font-size:11px; color:#2563eb; font-weight:600; margin-bottom:6px; }
+.wa-meta { display:flex; gap:8px; font-size:11px; color:#6b7280; margin-bottom:8px; flex-wrap:wrap; }
+.wa-chips { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px; }
+.wa-chip { background:#eff6ff; color:#1d4ed8; font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
+.wa-no-chip { font-size:11px; color:#9ca3af; font-style:italic; }
+.wa-actions { display:flex; gap:6px; padding:10px 14px; border-top:1px solid #f3f4f6; }
+.wa-tab-bar { display:flex; gap:4px; margin-bottom:16px; background:#f3f4f6; border-radius:10px; padding:5px; overflow-x:auto; }
+.wa-tab-btn { flex-shrink:0; padding:7px 14px; border:none; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; color:#6b7280; transition:all .2s; white-space:nowrap; }
+.wa-tab-btn.active { background:#2563eb; color:#fff; }
+.wa-tab-btn:not(.active):hover { background:#e5e7eb; color:#374151; }
+
+/* ── GALLERY TAB [DC_GALLERY_001] ── */
+.gl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:18px; }
+.gl-card { background:#fff; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; }
+.gl-card-preview { height:155px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; overflow:hidden; border-bottom:1px solid #f0f0f0; position:relative; }
+.gl-card-preview img, .gl-card-preview video { width:100%; height:100%; object-fit:cover; }
+.gl-file-count { position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,.6); color:#fff; font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; }
+.gl-card-body { padding:12px 14px; }
+.gl-card-body h3 { font-size:13px; font-weight:700; color:#111827; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gl-card-desc { font-size:11px; color:#6b7280; margin-bottom:8px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; min-height:14px; }
+.drop-zone { border:2px dashed #d1d5db; border-radius:10px; padding:24px 20px; text-align:center; cursor:pointer; transition:all .2s; background:#fafafa; }
+.drop-zone:hover, .drop-zone.drag-over { border-color:#2563eb; background:#eff6ff; }
+.drop-zone .dz-icon { font-size:30px; margin-bottom:6px; }
+.drop-zone p { font-size:13px; color:#6b7280; margin:0; }
+.drop-zone .dz-hint { font-size:11px; color:#9ca3af; margin-top:3px; }
+.file-preview-grid { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.fp-slot { width:80px; height:65px; border-radius:8px; background:#f3f4f6; border:1.5px solid #e5e7eb; overflow:hidden; position:relative; flex-shrink:0; }
+.fp-slot img, .fp-slot video { width:100%; height:100%; object-fit:cover; }
+.fp-slot .fp-type { position:absolute; top:2px; left:2px; background:rgba(0,0,0,.5); color:#fff; font-size:9px; padding:1px 5px; border-radius:4px; }
+.fp-slot .fp-rm { position:absolute; top:2px; right:2px; background:rgba(220,38,38,.85); color:#fff; border:none; border-radius:4px; font-size:10px; cursor:pointer; padding:1px 5px; line-height:1.2; }
+.gl-upload-progress { background:#f3f4f6; border-radius:8px; padding:10px 14px; margin-top:10px; font-size:12px; color:#374151; }
+.gl-progress-bar { height:4px; border-radius:2px; background:#e5e7eb; margin-top:6px; overflow:hidden; }
+.gl-progress-bar-fill { height:100%; background:#2563eb; transition:width .3s; }
+.gf-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; max-height:60vh; overflow-y:auto; padding:2px; }
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div class="content-area">
+
+  <!-- Banner -->
+  <div class="page-banner">
+    <div>
+      <h1><i class="fas fa-photo-video"></i> VGK Media Manager</h1>
+      <p>Publish YouTube videos, news publications, and blog posts to the public MyntReal Media Hub. Accessible to VGK Mentor &amp; EA roles.</p>
+    </div>
+    <button class="btn-primary" onclick="openCreateModal()">
+      <i class="fas fa-plus"></i> Add Media
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="summary-row">
+    <div class="stat-card"><div class="val" id="statTotal">—</div><div class="lbl">Total Items</div></div>
+    <div class="stat-card"><div class="val" id="statYt">—</div><div class="lbl">YouTube Videos</div></div>
+    <div class="stat-card"><div class="val" id="statPub">—</div><div class="lbl">Publications</div></div>
+    <div class="stat-card"><div class="val" id="statBlog">—</div><div class="lbl">Blogs</div></div>
+    <div class="stat-card"><div class="val" id="statClicks">—</div><div class="lbl">Total Clicks</div></div>
+  </div>
+
+  <!-- Tabs + Toolbar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="filterType('', this)"><i class="fas fa-th-large"></i> All Media</button>
+    <button class="tab-btn" onclick="filterType('youtube', this)"><i class="fab fa-youtube"></i> YouTube</button>
+    <button class="tab-btn" onclick="filterType('publication', this)"><i class="fas fa-newspaper"></i> Publications</button>
+    <button class="tab-btn" onclick="filterType('blog', this)"><i class="fas fa-pen-nib"></i> Blogs</button>
+    <button class="tab-btn" id="vgkMemberTabBtn" onclick="openVgkMemberTab(this)" disabled><i class="fas fa-users"></i> VGK Member Media</button>
+    <button class="tab-btn" id="websiteTabBtn" onclick="openWebsiteTab(this)" disabled><i class="fas fa-globe"></i> Website</button>
+    <button class="tab-btn" id="galleryTabBtn" onclick="openGalleryTab(this)" disabled><i class="fas fa-images"></i> Gallery</button>
+    <button class="tab-btn" id="assetsTabBtn" onclick="openAssetsTab(this)" disabled><i class="fas fa-photo-video"></i> Website Assets</button>
+    <button class="tab-btn" id="partnersTabBtn" onclick="openPartnersTab(this)" disabled><i class="fas fa-handshake"></i> Partners</button>
+    <button class="tab-btn" id="socialTabBtn" onclick="openSocialTab(this)" disabled><i class="fas fa-share-nodes"></i> Social Media</button>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <select class="filter-select" id="statusFilter" onchange="loadMedia()">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="paused">Paused</option>
+        <option value="inactive">Inactive</option>
+      </select>
+    </div>
+    <span style="font-size:12px;color:#6b7280;" id="paginationInfo"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <h3 id="tableTitle">All Media Items</h3>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Title</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Clicks</th>
+            <th>Reactions</th>
+            <th>Created By</th>
+            <th>Published</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="mediaTableBody">
+          <tr><td colspan="9" class="empty-row"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- WEBSITE PRODUCTS PANEL (hidden by default) -->
+  <div id="websitePanel" style="display:none">
+
+    <!-- Vertical Selector -->
+    <div class="wp-verticals">
+      <button class="wp-vert-btn active" onclick="switchVertical('manthra',this)">⚡ Manthra EV</button>
+      <button class="wp-vert-btn" onclick="switchVertical('etc',this)">🔧 ETC Spares</button>
+      <button class="wp-vert-btn" onclick="switchVertical('hgs',this)">☀️ Har Ghar Solar</button>
+      <button class="wp-vert-btn" onclick="switchVertical('realdreams',this)">🏡 VGK Real Dreams</button>
+    </div>
+
+    <!-- Website Stats -->
+    <div class="wp-stats-row">
+      <div class="stat-card"><div class="val" id="wpTotal">—</div><div class="lbl">Total Products</div></div>
+      <div class="stat-card"><div class="val" id="wpActive">—</div><div class="lbl">Active</div></div>
+      <div class="stat-card"><div class="val" id="wpInactive">—</div><div class="lbl">Inactive</div></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar" style="margin-bottom:16px">
+      <div class="toolbar-left">
+        <button class="btn-primary" onclick="openProductModal()"><i class="fas fa-plus"></i> Add Product</button>
+        <select class="filter-select" id="wpStatusFilter" onchange="loadProducts()">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <span style="font-size:12px;color:#6b7280" id="wpCount"></span>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="wp-grid" id="wpGrid">
+      <div class="wp-loading"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+    </div>
+
+  </div>
+
+  <!-- VGK MEMBER MEDIA PANEL [DC-VGK-MEDIA-002] -->
+  <div id="vgkMemberPanel" style="display:none">
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button class="wp-vert-btn active" id="vmCatAll"   onclick="vmSwitchCat('any',this)">📋 All</button>
+      <button class="wp-vert-btn"        id="vmCatPromo" onclick="vmSwitchCat('promotional',this)">📣 Promotional</button>
+      <button class="wp-vert-btn"        id="vmCatTrain" onclick="vmSwitchCat('training',this)">🎓 Training</button>
+    </div>
+    <div class="toolbar" style="margin-bottom:16px">
+      <div class="toolbar-left">
+        <button class="btn-primary" onclick="openVmModal()"><i class="fas fa-plus"></i> Add Item</button>
+        <select class="filter-select" id="vmStatusFilter" onchange="loadVmItems()">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <span style="font-size:12px;color:#6b7280" id="vmCount"></span>
+    </div>
+    <div class="table-card">
+      <div class="table-card-header"><h3 id="vmTableTitle">VGK Member Media</h3></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th><th>Thumbnail</th><th>Title</th><th>Type</th><th>Category</th>
+              <th>Status</th><th>Views</th><th>Shares</th><th>Reactions</th><th>Order</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="vmTableBody">
+            <tr><td colspan="11" class="empty-row"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- GALLERY PANEL [DC_GALLERY_001 Apr 2026] -->
+  <div id="galleryPanel" style="display:none">
+    <div class="toolbar" style="margin-bottom:16px">
+      <div class="toolbar-left">
+        <button class="btn-primary" onclick="openCreateGalleryModal()"><i class="fas fa-plus"></i> Create Gallery</button>
+        <select class="filter-select" id="glStatusFilter" onchange="loadGalleries()">
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="archived">Archived</option>
+        </select>
+      </div>
+      <span style="font-size:12px;color:#6b7280" id="glCount"></span>
+    </div>
+    <div class="gl-grid" id="glGrid">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+    </div>
+  </div>
+
+  <!-- ── WEBSITE ASSETS PANEL [DC_WEB_ASSETS_001] ── -->
+  <div id="assetsPanel" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div class="stat-card" style="min-width:100px;padding:12px 16px;"><div class="val" id="waStat-total">—</div><div class="lbl">Total</div></div>
+        <div class="stat-card" style="min-width:100px;padding:12px 16px;"><div class="val" id="waStat-system">—</div><div class="lbl">System Slots</div></div>
+        <div class="stat-card" style="min-width:100px;padding:12px 16px;"><div class="val" id="waStat-inuse">—</div><div class="lbl">In Use</div></div>
+        <div class="stat-card" style="min-width:100px;padding:12px 16px;"><div class="val" id="waStat-unused">—</div><div class="lbl">Unused</div></div>
+        <div class="stat-card" style="min-width:100px;padding:12px 16px;"><div class="val" id="waStat-size">—</div><div class="lbl">Size</div></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn-primary" style="background:#6b7280;" onclick="waRefresh()"><i class="fas fa-sync-alt" id="waRefreshIcon"></i> Refresh</button>
+        <button class="btn-primary" onclick="waOpenUpload()"><i class="fas fa-cloud-upload-alt"></i> Upload Asset</button>
+      </div>
+    </div>
+
+    <div class="wa-tab-bar">
+      <button class="wa-tab-btn active" data-wacat="all"    onclick="waSetTab(this,'all')">All <span id="waCnt-all">0</span></button>
+      <button class="wa-tab-btn" data-wacat="system"        onclick="waSetTab(this,'system')"><i class="fas fa-star"></i> System Slots <span id="waCnt-system">0</span></button>
+      <button class="wa-tab-btn" data-wacat="logo"          onclick="waSetTab(this,'logo')">Logos <span id="waCnt-logo">0</span></button>
+      <button class="wa-tab-btn" data-wacat="banner"        onclick="waSetTab(this,'banner')">Banners <span id="waCnt-banner">0</span></button>
+      <button class="wa-tab-btn" data-wacat="brand"         onclick="waSetTab(this,'brand')">Brand Logos <span id="waCnt-brand">0</span></button>
+      <button class="wa-tab-btn" data-wacat="other"         onclick="waSetTab(this,'other')">Other <span id="waCnt-other">0</span></button>
+      <button class="wa-tab-btn" data-wacat="unused"        onclick="waSetTab(this,'unused')">Unused <span id="waCnt-unused">0</span></button>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:8px;background:white;border:1.5px solid #d1d5db;border-radius:8px;padding:7px 12px;flex:1;max-width:320px;">
+        <i class="fas fa-search" style="color:#9ca3af;font-size:13px;"></i>
+        <input type="text" id="waSearch" placeholder="Search filename, slot, or page…" style="border:none;outline:none;font-size:13px;width:100%;background:transparent;" oninput="waRenderGrid()">
+      </div>
+      <span style="font-size:12px;color:#6b7280;" id="waResultCount"></span>
+    </div>
+
+    <div class="wa-grid" id="waGrid">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading assets…</div>
+    </div>
+  </div>
+
+  <!-- ── ASSOCIATED PARTNERS PANEL [DC-ASSOC-PARTNERS-001] ── -->
+  <div id="partnersPanel" style="display:none">
+
+    <!-- Stats -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <div class="stat-card" style="min-width:100px;padding:12px 16px;"><div class="val" id="ptTotal">—</div><div class="lbl">Total</div></div>
+        <div class="stat-card" style="min-width:100px;padding:12px 16px;"><div class="val" id="ptActive">—</div><div class="lbl">Active</div></div>
+        <div class="stat-card" style="min-width:100px;padding:12px 16px;"><div class="val" id="ptPaused">—</div><div class="lbl">Paused</div></div>
+      </div>
+      <button class="btn-primary" onclick="openPartnerModal()"><i class="fas fa-plus"></i> Add Partner</button>
+    </div>
+
+    <!-- Partner Cards Grid -->
+    <div id="partnerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+    </div>
+
+  </div>
+
+  <!-- ── SOCIAL MEDIA LINKS PANEL [DC-SOCIAL-001] ── -->
+  <div id="socialPanel" style="display:none">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:1rem;font-weight:700;color:#111827">Social Media Links</div>
+        <div style="font-size:.8rem;color:#6b7280;margin-top:2px">Set social links per brand — only saved &amp; active links appear in public footers.</div>
+      </div>
+      <button class="btn-primary" onclick="loadSocialLinks()"><i class="fas fa-sync-alt"></i> Refresh</button>
+    </div>
+
+    <div id="socialGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+    </div>
+
+  </div>
+
+</div><!-- /.content-area -->
+</div><!-- /.main-content -->
+
+<!-- CREATE / EDIT MODAL -->
+<div class="modal-overlay" id="mediaModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 id="modalTitle">Add Media</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-row" id="rowType">
+        <label class="form-label">Media Type *</label>
+        <select class="form-control" id="fType" onchange="onTypeChange()">
+          <option value="youtube">▶️ YouTube Video</option>
+          <option value="publication">📰 Publication</option>
+          <option value="blog">✍️ Blog</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Title *</label>
+        <input type="text" class="form-control" id="fTitle" placeholder="Enter a clear, descriptive title">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Description</label>
+        <textarea class="form-control" id="fDescription" rows="2" placeholder="Short description (shown as card subtitle)"></textarea>
+      </div>
+
+      <!-- YouTube fields -->
+      <div id="ytFields">
+        <div class="form-row">
+          <label class="form-label">YouTube URL *</label>
+          <input type="url" class="form-control" id="fUrl" placeholder="https://www.youtube.com/watch?v=...">
+          <div class="form-hint">Thumbnail is auto-fetched from YouTube. Optionally upload a custom one below.</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Custom Thumbnail <span style="font-weight:400">(optional)</span></label>
+          <div class="thumb-widget">
+            <div class="thumb-preview" id="ytThumbPreview">
+              <span class="thumb-placeholder">🖼️</span>
+            </div>
+            <div class="thumb-controls">
+              <input type="file" id="ytThumbFile" accept="image/*" style="display:none" onchange="uploadThumb('yt')">
+              <button type="button" class="btn-thumb-upload" id="ytThumbBtn" onclick="document.getElementById('ytThumbFile').click()">
+                <i class="fas fa-image"></i> Upload Image
+              </button>
+              <input type="url" class="form-control" id="fThumbnail" placeholder="or paste URL…" oninput="previewThumbUrl('yt', this.value)" style="font-size:12px;">
+            </div>
+          </div>
+          <div class="form-hint" style="margin-top:5px"><i class="fas fa-crop-alt" style="color:#6366f1"></i> Recommended size: <b>1280 × 720 px</b> (16:9 landscape) — auto-compressed to WebP on upload</div>
+        </div>
+      </div>
+
+      <!-- Publication fields -->
+      <div id="pubFields" style="display:none">
+        <div class="form-row">
+          <label class="form-label">Thumbnail Image <span style="font-weight:400">(optional)</span></label>
+          <div class="thumb-widget">
+            <div class="thumb-preview" id="pubThumbPreview">
+              <span class="thumb-placeholder">🖼️</span>
+            </div>
+            <div class="thumb-controls">
+              <input type="file" id="pubThumbFile" accept="image/*" style="display:none" onchange="uploadThumb('pub')">
+              <button type="button" class="btn-thumb-upload" id="pubThumbBtn" onclick="document.getElementById('pubThumbFile').click()">
+                <i class="fas fa-image"></i> Upload Image
+              </button>
+              <input type="url" class="form-control" id="fPubThumb" placeholder="or paste URL…" oninput="previewThumbUrl('pub', this.value)" style="font-size:12px;">
+            </div>
+          </div>
+          <div class="form-hint" style="margin-top:5px"><i class="fas fa-crop-alt" style="color:#6366f1"></i> Recommended size: <b>560 × 315 px</b> (16:9 landscape) — matches the thumbnail panel width on the public Media Hub. Auto-compressed to WebP on upload.</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Article Links (up to 4)</label>
+          <div class="links-editor" id="linksEditor">
+            <div class="link-row" data-idx="0">
+              <input type="text" placeholder="Label (e.g. Times of India)" class="link-label">
+              <input type="url" placeholder="https://..." class="link-url">
+              <button class="btn-del-link" onclick="delLink(this)">✕</button>
+            </div>
+          </div>
+          <button class="add-link-btn" onclick="addLink()">+ Add Link</button>
+          <div class="form-hint">Add up to 4 news article or press release links.</div>
+        </div>
+        <div class="form-row" id="pdfUploadRow" style="display:none">
+          <label class="form-label">Current PDF</label>
+          <div class="pdf-row">
+            <span class="pdf-current" id="pdfCurrent">None</span>
+            <input type="file" id="pdfFile" accept=".pdf" style="display:none" onchange="uploadPdf()">
+            <button class="btn-upload" onclick="document.getElementById('pdfFile').click()">
+              <i class="fas fa-upload"></i> Upload PDF
+            </button>
+          </div>
+        </div>
+        <div class="form-row" id="pdfUploadRowNew">
+          <label class="form-label">PDF Attachment <span style="font-weight:400">(optional, upload after saving)</span></label>
+          <div class="form-hint">Save the item first, then use the PDF upload button in the table.</div>
+        </div>
+      </div>
+
+      <!-- Blog fields -->
+      <div id="blogFields" style="display:none">
+        <div class="form-row">
+          <label class="form-label">Blog Content *</label>
+          <div id="blogEditorContainer">
+            <div id="fBody"></div>
+          </div>
+          <div class="form-hint" style="margin-top:4px;">Paste from ChatGPT, Google Docs, Word — bold, headings, lists and all formatting are preserved.</div>
+          <div class="ai-bar">
+            <button class="btn-ai" id="aiBtn" onclick="aiEnhance()">
+              <i class="fas fa-magic"></i> AI Enhance
+            </button>
+            <input type="text" class="form-control" id="aiInstruction" placeholder="Instruction (e.g. 'Make it more engaging')" style="flex:1;font-size:12px;">
+          </div>
+          <div class="ai-hint" id="aiHint"></div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Thumbnail Image <span style="font-weight:400">(optional)</span></label>
+          <div class="thumb-widget">
+            <div class="thumb-preview" id="blogThumbPreview">
+              <span class="thumb-placeholder">🖼️</span>
+            </div>
+            <div class="thumb-controls">
+              <input type="file" id="blogThumbFile" accept="image/*" style="display:none" onchange="uploadThumb('blog')">
+              <button type="button" class="btn-thumb-upload" id="blogThumbBtn" onclick="document.getElementById('blogThumbFile').click()">
+                <i class="fas fa-image"></i> Upload Image
+              </button>
+              <input type="url" class="form-control" id="fBlogThumb" placeholder="or paste URL…" oninput="previewThumbUrl('blog', this.value)" style="font-size:12px;">
+            </div>
+          </div>
+          <div class="form-hint" style="margin-top:5px"><i class="fas fa-crop-alt" style="color:#6366f1"></i> Recommended size: <b>560 × 315 px</b> (16:9 landscape) — matches the thumbnail panel width on the public Media Hub. Auto-compressed to WebP on upload.</div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Status</label>
+        <select class="form-control" id="fStatus">
+          <option value="active">Active — visible on hub</option>
+          <option value="paused">Paused — hidden from hub</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Display Order <span style="font-weight:400">(lower = first)</span></label>
+        <input type="number" class="form-control" id="fOrder" value="0" min="0">
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" id="saveBtn" onclick="saveMedia()">
+        <i class="fas fa-save"></i> Save
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ASSOCIATED PARTNER CREATE/EDIT MODAL [DC-ASSOC-PARTNERS-001] -->
+<div class="modal-overlay" id="partnerModal" onclick="if(event.target===this) closePartnerModal()">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <h2 id="ptModalTitle">Add Partner</h2>
+      <button class="modal-close" onclick="closePartnerModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="ptForm" onsubmit="savePartner(event)">
+
+        <div class="form-row">
+          <label class="form-label">Company Name *</label>
+          <input id="ptName" class="form-control" type="text" placeholder="e.g. Quinten Technologies" required>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Address</label>
+          <input id="ptAddress" class="form-control" type="text" placeholder="City, Country">
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Established Year</label>
+          <input id="ptYear" class="form-control" type="text" placeholder="e.g. 2018">
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Notes / Description</label>
+          <div id="ptNotesQuillBox" style="background:#fff;border:1px solid #d1d5db;border-radius:8px;min-height:120px"></div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Logo</label>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div id="ptLogoPreview" style="width:80px;height:56px;background:#f3f4f6;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:.7rem;color:#9ca3af">No logo</div>
+            <div>
+              <input type="hidden" id="ptLogoUrl">
+              <input type="file" id="ptLogoFile" accept="image/*" style="display:none" onchange="uploadPartnerLogo()">
+              <button type="button" id="ptLogoUploadBtn" class="btn-primary" style="padding:6px 14px;font-size:.8rem;" onclick="document.getElementById('ptLogoFile').click()"><i class="fas fa-upload"></i> Upload Logo</button>
+              <div id="ptUploadStatus" style="font-size:.75rem;margin-top:4px;color:#6b7280"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row" id="ptGallerySection" style="display:none">
+          <label class="form-label" style="display:flex;align-items:center;justify-content:space-between">
+            <span>Photos <span id="ptPhotoCount" style="font-size:.75rem;font-weight:400;color:#6b7280">(0/5)</span></span>
+            <span>
+              <input type="file" id="ptGalleryFile" accept="image/*" style="display:none" onchange="uploadGalleryPhoto()">
+              <button type="button" id="ptGalleryUploadBtn" class="btn-primary" style="padding:4px 12px;font-size:.75rem;" onclick="document.getElementById('ptGalleryFile').click()"><i class="fas fa-image"></i> Add Photo</button>
+            </span>
+          </label>
+          <div id="ptGalleryGrid" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;min-height:40px">
+            <span style="color:#9ca3af;font-size:.8rem;align-self:center">No photos yet</span>
+          </div>
+          <div id="ptGalleryStatus" style="font-size:.75rem;margin-top:4px;color:#6b7280"></div>
+        </div>
+
+        <div class="modal-actions" style="margin-top:16px">
+          <button type="button" class="btn-secondary" onclick="closePartnerModal()">Cancel</button>
+          <button type="submit" id="ptSaveBtn" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+const API = '/api/v1';
+let currentType = '';
+let editingId = null;
+let editingItem = null;
+let currentPage = 1;
+const PER_PAGE = 30;
+const staffMediaCache = {};   /* id → full item object — avoids JSON-in-onclick breakage */
+
+/* ── Quill rich-text editor (blog content) ── */
+let _quillEditor = null;
+function _quillGet() {
+  if (!_quillEditor) return '';
+  const html = _quillEditor.root.innerHTML;
+  return html === '<p><br></p>' ? '' : html.trim();
+}
+function _quillSet(html) {
+  if (!_quillEditor) return;
+  if (!html || html.trim() === '') {
+    _quillEditor.setContents([]);
+  } else {
+    _quillEditor.clipboard.dangerouslyPasteHTML(html);
+  }
+}
+
+/* ── Toast ── */
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+/* ── Load media ── */
+async function loadMedia() {
+  const statusFilter = document.getElementById('statusFilter').value;
+  const tbody = document.getElementById('mediaTableBody');
+  tbody.innerHTML = `<tr><td colspan="9" class="empty-row"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>`;
+
+  let url = `${API}/vgk/media?page=${currentPage}&per_page=${PER_PAGE}`;
+  if (currentType) url += `&media_type=${currentType}`;
+  if (statusFilter) url += `&status=${statusFilter}`;
+
+  try {
+    const r = await staffFetch(url);
+    if (!r.ok) throw new Error('Load failed');
+    const data = await r.json();
+
+    document.getElementById('paginationInfo').textContent = `Showing ${data.items.length} of ${data.total}`;
+    updateStats(data.items);
+
+    if (!data.items.length) {
+      tbody.innerHTML = `<tr><td colspan="9" class="empty-row"><i class="fas fa-inbox"></i><br>No media items found.</td></tr>`;
+      return;
+    }
+    data.items.forEach(item => { staffMediaCache[item.id] = item; });
+    tbody.innerHTML = data.items.map((item, i) => renderRow(item, i)).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-row" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i> Failed to load. Are you logged in with VGK Mentor or EA role?</td></tr>`;
+  }
+}
+
+function updateStats(items) {
+  document.getElementById('statTotal').textContent = items.length;
+  document.getElementById('statYt').textContent = items.filter(i=>i.media_type==='youtube').length;
+  document.getElementById('statPub').textContent = items.filter(i=>i.media_type==='publication').length;
+  document.getElementById('statBlog').textContent = items.filter(i=>i.media_type==='blog').length;
+  document.getElementById('statClicks').textContent = items.reduce((s,i)=>s+i.click_count,0).toLocaleString();
+}
+
+function renderRow(item, idx) {
+  const typeBadge = {youtube:'badge-youtube',publication:'badge-publication',blog:'badge-blog'}[item.media_type]||'';
+  const typeLabel = {youtube:'▶️ YouTube',publication:'📰 Publication',blog:'✍️ Blog'}[item.media_type]||item.media_type;
+  const statusBadge = `badge-${item.status}`;
+  const rxn = item.reactions || {};
+  const rxnStr = [rxn.like&&`👍${rxn.like}`,rxn.love&&`❤️${rxn.love}`,rxn.shoutout&&`📣${rxn.shoutout}`].filter(Boolean).join(' ') || '—';
+  const published = item.published_at ? new Date(item.published_at).toLocaleDateString('en-IN') : '—';
+
+  const pauseBtn = item.status === 'active'
+    ? `<button class="btn-sm btn-pause" onclick="quickStatus(${item.id},'paused')">⏸ Pause</button>`
+    : `<button class="btn-sm btn-activate" onclick="quickStatus(${item.id},'active')">▶ Activate</button>`;
+
+  const pdfBtn = item.media_type === 'publication'
+    ? `<button class="btn-sm" style="background:#f0fdf4;color:#166534;" onclick="openPdfUpload(${item.id},'${escHtml(item.pdf_name||'')}')" title="Upload PDF"><i class="fas fa-file-pdf"></i></button>`
+    : '';
+
+  return `<tr>
+    <td style="color:#9ca3af;font-size:11px;">${idx+1}</td>
+    <td class="media-title-cell">
+      <div class="mtitle">${escHtml(item.title)}</div>
+      <div class="msub">${item.description ? escHtml(item.description.slice(0,60)) : ''}</div>
+    </td>
+    <td><span class="badge-type ${typeBadge}">${typeLabel}</span></td>
+    <td><span class="badge-type ${statusBadge}">${item.status}</span></td>
+    <td class="stat-pill"><i class="fas fa-eye"></i> ${item.click_count}</td>
+    <td style="font-size:12px;">${rxnStr}</td>
+    <td style="font-size:12px;color:#6b7280;">${escHtml(item.created_by_name||'—')}</td>
+    <td style="font-size:12px;color:#6b7280;">${published}</td>
+    <td>
+      <div class="action-btns">
+        <button class="btn-sm btn-edit-sm" onclick="editMedia(staffMediaCache[${item.id}])">Edit</button>
+        ${pauseBtn}
+        ${pdfBtn}
+        <button class="btn-sm btn-delete-sm" onclick="deleteMedia(${item.id})">Delete</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+/* ── Filter by tab ── */
+function filterType(type, btn) {
+  currentType = type;
+  currentPage = 1;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const titles = {youtube:'YouTube Videos',publication:'Publications',blog:'Blogs','':"All Media"};
+  document.getElementById('tableTitle').textContent = titles[type]||'All Media';
+  loadMedia();
+}
+
+/* ── Modal helpers ── */
+function openCreateModal() {
+  editingId = null;
+  editingItem = null;
+  document.getElementById('modalTitle').textContent = 'Add Media Item';
+  document.getElementById('fType').value = 'youtube';
+  document.getElementById('rowType').style.display = '';
+  document.getElementById('fTitle').value = '';
+  document.getElementById('fDescription').value = '';
+  document.getElementById('fUrl').value = '';
+  document.getElementById('fThumbnail').value = '';
+  document.getElementById('fPubThumb').value = '';
+  _quillSet('');
+  document.getElementById('fBlogThumb').value = '';
+  document.getElementById('fStatus').value = 'active';
+  document.getElementById('fOrder').value = '0';
+  document.getElementById('pdfUploadRow').style.display = 'none';
+  document.getElementById('pdfUploadRowNew').style.display = '';
+  resetThumbPreviews();
+  resetLinks();
+  onTypeChange();
+  document.getElementById('mediaModal').classList.add('open');
+}
+
+function editMedia(item) {
+  editingId = item.id;
+  editingItem = item;
+  document.getElementById('modalTitle').textContent = 'Edit Media Item';
+  document.getElementById('rowType').style.display = 'none';
+  document.getElementById('fType').value = item.media_type;
+  document.getElementById('fTitle').value = item.title || '';
+  document.getElementById('fDescription').value = item.description || '';
+  document.getElementById('fUrl').value = item.url || '';
+  _quillSet(item.body || '');
+  document.getElementById('fStatus').value = item.status || 'active';
+  document.getElementById('fOrder').value = item.display_order || 0;
+  resetThumbPreviews();
+  const thumb = item.thumbnail_url || '';
+  if (item.media_type === 'youtube') {
+    document.getElementById('fThumbnail').value = thumb;
+    if (thumb) setThumbPreview('yt', thumb);
+  } else if (item.media_type === 'publication') {
+    document.getElementById('fPubThumb').value = thumb;
+    if (thumb) setThumbPreview('pub', thumb);
+    document.getElementById('pdfUploadRow').style.display = '';
+    document.getElementById('pdfUploadRowNew').style.display = 'none';
+    document.getElementById('pdfCurrent').textContent = item.pdf_name || 'None';
+    document.getElementById('pdfFile').dataset.mediaId = item.id;
+    resetLinks(item.links || []);
+  } else if (item.media_type === 'blog') {
+    document.getElementById('fBlogThumb').value = thumb;
+    if (thumb) setThumbPreview('blog', thumb);
+  }
+  onTypeChange();
+  document.getElementById('mediaModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('mediaModal').classList.remove('open'); }
+
+function onTypeChange() {
+  const type = document.getElementById('fType').value;
+  document.getElementById('ytFields').style.display = type==='youtube' ? '' : 'none';
+  document.getElementById('pubFields').style.display = type==='publication' ? '' : 'none';
+  document.getElementById('blogFields').style.display = type==='blog' ? '' : 'none';
+}
+
+/* ── Links editor ── */
+function resetLinks(links=[]) {
+  const editor = document.getElementById('linksEditor');
+  editor.innerHTML = '';
+  const toShow = links.length ? links : [{}];
+  toShow.forEach((l,i) => addLinkRow(l.label||'', l.url||''));
+}
+function addLinkRow(label='', url='') {
+  const row = document.createElement('div');
+  row.className = 'link-row';
+  row.innerHTML = `<input type="text" placeholder="Label (e.g. Times of India)" class="link-label" value="${escHtml(label)}">
+    <input type="url" placeholder="https://..." class="link-url" value="${escHtml(url)}">
+    <button class="btn-del-link" onclick="delLink(this)">✕</button>`;
+  document.getElementById('linksEditor').appendChild(row);
+}
+function addLink() {
+  const rows = document.querySelectorAll('#linksEditor .link-row');
+  if (rows.length >= 4) { showToast('Maximum 4 links allowed','error'); return; }
+  addLinkRow();
+}
+function delLink(btn) {
+  const rows = document.querySelectorAll('#linksEditor .link-row');
+  if (rows.length <= 1) return;
+  btn.closest('.link-row').remove();
+}
+function getLinks() {
+  const rows = document.querySelectorAll('#linksEditor .link-row');
+  return Array.from(rows).map(r=>({ label: r.querySelector('.link-label').value.trim(), url: r.querySelector('.link-url').value.trim() })).filter(l=>l.url);
+}
+
+/* ── Thumbnail upload helpers ── */
+const THUMB_MAP = {
+  yt:   { previewId:'ytThumbPreview',   fileId:'ytThumbFile',   btnId:'ytThumbBtn',   inputId:'fThumbnail' },
+  pub:  { previewId:'pubThumbPreview',  fileId:'pubThumbFile',  btnId:'pubThumbBtn',  inputId:'fPubThumb'  },
+  blog: { previewId:'blogThumbPreview', fileId:'blogThumbFile', btnId:'blogThumbBtn', inputId:'fBlogThumb' },
+};
+
+function setThumbPreview(key, url) {
+  const { previewId } = THUMB_MAP[key];
+  const el = document.getElementById(previewId);
+  el.innerHTML = url
+    ? `<img src="${escHtml(url)}" onerror="this.parentElement.innerHTML='<span class=\\'thumb-placeholder\\'>🖼️</span>'">`
+    : `<span class="thumb-placeholder">🖼️</span>`;
+}
+
+function resetThumbPreviews() {
+  Object.keys(THUMB_MAP).forEach(k => setThumbPreview(k, ''));
+  ['fThumbnail','fPubThumb','fBlogThumb'].forEach(id => { document.getElementById(id).value = ''; });
+  ['ytThumbFile','pubThumbFile','blogThumbFile'].forEach(id => { document.getElementById(id).value = ''; });
+}
+
+function previewThumbUrl(key, url) {
+  setThumbPreview(key, url);
+}
+
+async function uploadThumb(key) {
+  const { fileId, btnId, inputId } = THUMB_MAP[key];
+  const fileInput = document.getElementById(fileId);
+  const file = fileInput.files[0];
+  if (!file) return;
+
+  const btn = document.getElementById(btnId);
+  btn.classList.add('uploading');
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading…';
+
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await staffFetch(`${API}/vgk/media/upload-thumbnail`, { method:'POST', body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Upload failed');
+    document.getElementById(inputId).value = data.url;
+    setThumbPreview(key, data.url);
+    showToast('Thumbnail uploaded ✓');
+  } catch(e) {
+    showToast(e.message || 'Upload failed', 'error');
+  } finally {
+    btn.classList.remove('uploading');
+    btn.innerHTML = '<i class="fas fa-image"></i> Upload Image';
+    fileInput.value = '';
+  }
+}
+
+/* ── Save ── */
+async function saveMedia() {
+  const type = editingId ? (editingItem ? editingItem.media_type : 'youtube') : document.getElementById('fType').value;
+  const title = document.getElementById('fTitle').value.trim();
+  if (!title) { showToast('Title is required','error'); return; }
+
+  const payload = {
+    title,
+    description: document.getElementById('fDescription').value.trim(),
+    status: document.getElementById('fStatus').value,
+    display_order: parseInt(document.getElementById('fOrder').value)||0,
+  };
+  if (!editingId) payload.media_type = type;
+
+  if (type === 'youtube') {
+    payload.url = document.getElementById('fUrl').value.trim();
+    payload.thumbnail_url = document.getElementById('fThumbnail').value.trim();
+  } else if (type === 'publication') {
+    payload.links = getLinks();
+    payload.thumbnail_url = document.getElementById('fPubThumb').value.trim();
+  } else if (type === 'blog') {
+    payload.body = _quillGet();
+    payload.thumbnail_url = document.getElementById('fBlogThumb').value.trim();
+  }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const url = editingId ? `${API}/vgk/media/${editingId}` : `${API}/vgk/media`;
+    const method = editingId ? 'PATCH' : 'POST';
+    const r = await staffFetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    if (!r.ok) { const e=await r.json(); throw new Error(e.detail||'Save failed'); }
+    showToast(editingId ? 'Media updated!' : 'Media item created!');
+    closeModal();
+    loadMedia();
+  } catch(e) {
+    showToast(e.message||'Save failed','error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save';
+  }
+}
+
+/* ── Quick status toggle ── */
+async function quickStatus(mediaId, newStatus) {
+  try {
+    const r = await staffFetch(`${API}/vgk/media/${mediaId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status:newStatus}) });
+    if (!r.ok) throw new Error();
+    showToast(`Status set to ${newStatus}`);
+    loadMedia();
+  } catch(e) { showToast('Update failed','error'); }
+}
+
+/* ── Delete ── */
+async function deleteMedia(mediaId) {
+  if (!confirm('Soft-delete this media item? It will be hidden from the public hub.')) return;
+  try {
+    const r = await staffFetch(`${API}/vgk/media/${mediaId}`, { method:'DELETE' });
+    if (!r.ok) throw new Error();
+    showToast('Media item deleted');
+    loadMedia();
+  } catch(e) { showToast('Delete failed','error'); }
+}
+
+/* ── PDF upload ── */
+function openPdfUpload(mediaId, currentName) {
+  const input = document.getElementById('pdfFile');
+  input.dataset.mediaId = mediaId;
+  document.getElementById('pdfCurrent').textContent = currentName || 'None';
+  input.click();
+}
+async function uploadPdf() {
+  const input = document.getElementById('pdfFile');
+  const mediaId = input.dataset.mediaId;
+  if (!input.files[0] || !mediaId) return;
+  const formData = new FormData();
+  formData.append('file', input.files[0]);
+  try {
+    const r = await staffFetch(`${API}/vgk/media/${mediaId}/upload-pdf`, { method:'POST', body: formData });
+    if (!r.ok) throw new Error();
+    showToast('PDF uploaded!');
+    loadMedia();
+  } catch(e) { showToast('PDF upload failed','error'); }
+}
+
+/* ── AI Enhance ── */
+async function aiEnhance() {
+  const body = _quillGet();
+  if (!body) { showToast('Write some blog content first','error'); return; }
+  const instruction = document.getElementById('aiInstruction').value.trim() || 'Improve the writing quality, grammar, and make it engaging and professional.';
+  const btn = document.getElementById('aiBtn');
+  btn.classList.add('loading'); btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enhancing…';
+  document.getElementById('aiHint').textContent = '';
+
+  try {
+    const r = await staffFetch(`${API}/vgk/media/ai-enhance`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text: body, instruction })
+    });
+    if (!r.ok) throw new Error('AI service error');
+    const data = await r.json();
+    _quillSet(data.enhanced);
+    document.getElementById('aiHint').textContent = '✓ AI has enhanced your content. Review before saving.';
+    showToast('Blog content enhanced by AI!');
+  } catch(e) {
+    showToast(e.message||'AI enhancement failed','error');
+  } finally {
+    btn.classList.remove('loading'); btn.innerHTML = '<i class="fas fa-magic"></i> AI Enhance';
+  }
+}
+
+/* ── Escape HTML ── */
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* Init */
+document.addEventListener('DOMContentLoaded', async function() {
+  if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+  if (typeof StaffHeader !== 'undefined') {
+    StaffHeader.inject('Media Manager', 'fas fa-photo-video');
+    StaffHeader.init();
+  }
+  if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+
+  /* ── Quill editor init ── */
+  if (typeof Quill !== 'undefined') {
+    _quillEditor = new Quill('#fBody', {
+      theme: 'snow',
+      placeholder: 'Write or paste your blog post here — bold, headings, lists and all formatting are preserved…',
+      modules: {
+        toolbar: [
+          [{ header: [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          ['blockquote', 'code-block'],
+          ['link'],
+          ['clean']
+        ],
+        clipboard: { matchVisual: false }
+      }
+    });
+  }
+
+  await loadMedia();
+});
+
+/* ══════════════════════════════════════════
+   WEBSITE TAB — Hub Products Manager
+   ══════════════════════════════════════════ */
+
+let wpVertical = 'manthra';
+let wpEditId   = null;
+let wpImages   = [];   // up to 6 URL strings
+
+/* ── Show / hide website tab ── */
+function openWebsiteTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelector('.toolbar').style.display = 'none';
+  document.querySelector('.table-card').style.display = 'none';
+  document.getElementById('vgkMemberPanel').style.display = 'none';
+  document.getElementById('galleryPanel').style.display = 'none';
+  document.getElementById('assetsPanel').style.display = 'none';
+  document.getElementById('partnersPanel').style.display = 'none';
+  document.getElementById('socialPanel').style.display = 'none';
+  document.getElementById('websitePanel').style.display = 'block';
+  loadProducts();
+}
+
+/* Hide special panels (called when standard type tabs are clicked) */
+const _origFilterType = window.filterType;
+window.filterType = function(type, btn) {
+  document.getElementById('websitePanel').style.display = 'none';
+  document.getElementById('vgkMemberPanel').style.display = 'none';
+  document.getElementById('galleryPanel').style.display = 'none';
+  document.getElementById('assetsPanel').style.display = 'none';
+  document.getElementById('partnersPanel').style.display = 'none';
+  document.getElementById('socialPanel').style.display = 'none';
+  document.querySelector('.toolbar').style.display = '';
+  document.querySelector('.table-card').style.display = '';
+  _origFilterType(type, btn);
+};
+
+function switchVertical(v, btn) {
+  wpVertical = v;
+  document.querySelectorAll('.wp-vert-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadProducts();
+}
+
+/* ── Load products ── */
+async function loadProducts() {
+  const grid = document.getElementById('wpGrid');
+  grid.innerHTML = '<div class="wp-loading"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  const statusFilter = document.getElementById('wpStatusFilter').value;
+  try {
+    const qs = new URLSearchParams({ vertical: wpVertical });
+    if (statusFilter) qs.set('status', statusFilter);
+    const r = await staffFetch(`${API}/vgk/hub/products?${qs}`);
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.detail || 'Load failed');
+    const items = data.products || [];
+    document.getElementById('wpTotal').textContent    = items.length;
+    document.getElementById('wpActive').textContent   = items.filter(p => p.status === 'active').length;
+    document.getElementById('wpInactive').textContent = items.filter(p => p.status === 'inactive').length;
+    document.getElementById('wpCount').textContent    = `${items.length} product${items.length !== 1 ? 's' : ''}`;
+    if (!items.length) {
+      grid.innerHTML = `<div class="wp-empty">No products yet for this vertical. Click <strong>Add Product</strong> to get started.</div>`;
+      return;
+    }
+    grid.innerHTML = items.map(renderProductCard).join('');
+  } catch(e) {
+    grid.innerHTML = `<div class="wp-empty">Failed to load: ${escHtml(e.message)}</div>`;
+  }
+}
+
+function renderProductCard(p) {
+  const imgs = Array.isArray(p.images) ? p.images : [];
+  const specs = Array.isArray(p.specifications) ? p.specifications : [];
+  const imgHtml = imgs[0]
+    ? `<img src="${escHtml(imgs[0])}" alt="${escHtml(p.name)}" onerror="this.style.display='none'">`
+    : `<span class="wp-img-placeholder">📦</span>`;
+  const badge = p.status === 'active'
+    ? `<span class="wp-badge-active">Active</span>`
+    : `<span class="wp-badge-inactive">Inactive</span>`;
+  const vertLabel = {manthra:'⚡ Manthra EV', etc:'🔧 ETC Spares', realdreams:'🏡 Real Dreams'}[p.vertical] || p.vertical;
+  return `<div class="wp-card">
+    <div class="wp-card-img">${imgHtml}</div>
+    <div class="wp-card-body">
+      <h3 title="${escHtml(p.name)}">${escHtml(p.name)}</h3>
+      <div class="wp-card-meta">
+        <span class="wp-badge-vert">${escHtml(vertLabel)}</span>
+        ${badge}
+        <span class="wp-spec-count">${specs.length} spec${specs.length !== 1 ? 's' : ''}</span>
+      </div>
+      <p style="font-size:12px;color:#6b7280;margin-bottom:10px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${escHtml(p.short_description||'')}</p>
+      <div class="wp-card-actions">
+        <button class="btn-sm btn-edit-sm" onclick="editProduct(${p.id})"><i class="fas fa-pen"></i> Edit</button>
+        <button class="btn-sm ${p.status==='active'?'btn-pause':'btn-activate'}" onclick="toggleProductStatus(${p.id},'${p.status}')">
+          ${p.status==='active'?'Pause':'Activate'}
+        </button>
+        <button class="btn-sm btn-delete-sm" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ── Open create modal ── */
+function openProductModal() {
+  wpEditId = null;
+  wpImages = [];
+  document.getElementById('wpModalTitle').textContent = 'Add Product';
+  document.getElementById('wpName').value = '';
+  document.getElementById('wpShortDesc').value = '';
+  document.getElementById('wpFullDesc').value = '';
+  document.getElementById('wpNotes').value = '';
+  document.getElementById('wpVideoUrl').value = '';
+  document.getElementById('wpProductUrl').value = '';
+  document.getElementById('wpOrder').value = '0';
+  document.getElementById('wpStatus').value = 'active';
+  document.getElementById('wpSpecRows').innerHTML = '';
+  document.getElementById('wpVariantBlocks').innerHTML = '';
+  renderImageSlots();
+  document.getElementById('wpModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+/* ── Edit product ── */
+async function editProduct(id) {
+  try {
+    const r = await staffFetch(`${API}/vgk/hub/products/${id}`);
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.detail || 'Failed to load product');
+    const p = data.product;
+    wpEditId = id;
+    wpImages = Array.isArray(p.images) ? [...p.images] : [];
+    document.getElementById('wpModalTitle').textContent = 'Edit Product';
+    document.getElementById('wpName').value = p.name || '';
+    document.getElementById('wpShortDesc').value = p.short_description || '';
+    document.getElementById('wpFullDesc').value = p.full_description || '';
+    document.getElementById('wpNotes').value = p.notes || '';
+    document.getElementById('wpVideoUrl').value = p.video_url || '';
+    document.getElementById('wpProductUrl').value = p.product_url || '';
+    document.getElementById('wpOrder').value = p.display_order || 0;
+    document.getElementById('wpStatus').value = p.status || 'active';
+    const specRows = document.getElementById('wpSpecRows');
+    specRows.innerHTML = '';
+    (p.specifications || []).forEach(s => addSpecRow(s.key, s.value));
+    document.getElementById('wpVariantBlocks').innerHTML = '';
+    (p.variants || []).forEach(v => addVariantBlock(v.label, v.specs));
+    renderImageSlots();
+    document.getElementById('wpModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+/* ── Save product ── */
+async function saveProduct() {
+  const name = document.getElementById('wpName').value.trim();
+  if (!name) { showToast('Product name is required', 'error'); return; }
+
+  const specs = [];
+  document.querySelectorAll('#wpSpecRows .spec-row').forEach(row => {
+    const k = row.querySelector('.spec-key')?.value?.trim();
+    const v = row.querySelector('.spec-val')?.value?.trim();
+    if (k || v) specs.push({ key: k||'', value: v||'' });
+  });
+
+  const payload = {
+    vertical:          wpVertical,
+    name,
+    short_description: document.getElementById('wpShortDesc').value.trim(),
+    full_description:  document.getElementById('wpFullDesc').value.trim(),
+    notes:             document.getElementById('wpNotes').value.trim(),
+    video_url:         document.getElementById('wpVideoUrl').value.trim(),
+    product_url:       document.getElementById('wpProductUrl').value.trim(),
+    display_order:     parseInt(document.getElementById('wpOrder').value) || 0,
+    status:            document.getElementById('wpStatus').value,
+    images:            wpImages.slice(0, 3),
+    specifications:    specs,
+    variants:          readVariants(),
+  };
+
+  try {
+    const btn = document.getElementById('wpSaveBtn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+    let r;
+    if (wpEditId) {
+      r = await staffFetch(`${API}/vgk/hub/products/${wpEditId}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    } else {
+      r = await staffFetch(`${API}/vgk/hub/products`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    }
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.detail || 'Save failed');
+    showToast(wpEditId ? 'Product updated!' : 'Product created!');
+    closeProductModal();
+    loadProducts();
+  } catch(e) {
+    showToast(e.message, 'error');
+  } finally {
+    const btn = document.getElementById('wpSaveBtn');
+    btn.disabled = false; btn.textContent = 'Save Product';
+  }
+}
+
+/* ── Delete product ── */
+async function deleteProduct(id) {
+  if (!confirm('Delete this product? This cannot be undone.')) return;
+  try {
+    const r = await staffFetch(`${API}/vgk/hub/products/${id}`, { method:'DELETE' });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.detail || 'Delete failed');
+    showToast('Product deleted');
+    loadProducts();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+/* ── Toggle status ── */
+async function toggleProductStatus(id, current) {
+  const newStatus = current === 'active' ? 'inactive' : 'active';
+  try {
+    const r = await staffFetch(`${API}/vgk/hub/products/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: newStatus }) });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.detail || 'Update failed');
+    showToast(`Product ${newStatus}`);
+    loadProducts();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+/* ── Spec rows ── */
+function addSpecRow(key, value) {
+  const el = document.createElement('div');
+  el.className = 'spec-row';
+  el.innerHTML = `<input class="spec-key" placeholder="Spec type (e.g. Range)" value="${escHtml(key||'')}">
+    <input class="spec-val" placeholder="Value (e.g. 120 KM)" value="${escHtml(value||'')}">
+    <button class="btn-del-spec" onclick="this.closest('.spec-row').remove()">×</button>`;
+  document.getElementById('wpSpecRows').appendChild(el);
+}
+
+/* ── Variants ── */
+function addVariantBlock(label, specs) {
+  const wrap = document.getElementById('wpVariantBlocks');
+  const block = document.createElement('div');
+  block.className = 'variant-block';
+  block.innerHTML = `
+    <div class="variant-block-hdr">
+      <input class="form-control variant-label" placeholder="Variant label (e.g. 100 KM Range)" value="${escHtml(label||'')}" style="flex:1;font-size:13px">
+      <button type="button" class="btn-del-spec" style="font-size:16px;padding:4px 8px" onclick="this.closest('.variant-block').remove()">× Remove</button>
+    </div>
+    <div class="spec-rows variant-spec-rows"></div>
+    <button type="button" class="add-spec-btn" style="margin-top:4px;font-size:11px" onclick="addVariantSpecRow(this)">+ Add Spec</button>`;
+  wrap.appendChild(block);
+  const specContainer = block.querySelector('.variant-spec-rows');
+  (specs || [{ key:'', value:'' }]).forEach(s => addVariantSpecRow(block.querySelector('.add-spec-btn'), s.key, s.value));
+}
+
+function addVariantSpecRow(btn, key, value) {
+  const container = btn.closest('.variant-block').querySelector('.variant-spec-rows');
+  const el = document.createElement('div');
+  el.className = 'spec-row';
+  el.innerHTML = `<input class="spec-key" placeholder="Spec (e.g. Range)" value="${escHtml(key||'')}">
+    <input class="spec-val" placeholder="Value (e.g. 100 KM)" value="${escHtml(value||'')}">
+    <button class="btn-del-spec" onclick="this.closest('.spec-row').remove()">×</button>`;
+  container.appendChild(el);
+}
+
+function readVariants() {
+  return Array.from(document.querySelectorAll('#wpVariantBlocks .variant-block')).map(block => {
+    const label = block.querySelector('.variant-label')?.value?.trim() || '';
+    const specs = Array.from(block.querySelectorAll('.variant-spec-rows .spec-row')).map(row => ({
+      key:   row.querySelector('.spec-key')?.value?.trim() || '',
+      value: row.querySelector('.spec-val')?.value?.trim() || ''
+    })).filter(s => s.key || s.value);
+    return { label, specs };
+  }).filter(v => v.label || v.specs.length);
+}
+
+/* ── Image / Video slots (up to 6, max 1 video) ── */
+function _isVideoUrl(u){ return /\.(mp4|webm|mov|avi|mpeg)(\?|$)/i.test(u||''); }
+
+function renderImageSlots() {
+  const wrap = document.getElementById('wpImgSlots');
+  wrap.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const url = wpImages[i] || '';
+    const slot = document.createElement('div');
+    slot.className = 'img-slot';
+    slot.dataset.idx = i;
+    if (url) {
+      if (_isVideoUrl(url)) {
+        slot.innerHTML = `<video src="${escHtml(url)}" style="width:100%;height:100%;object-fit:cover" muted playsinline></video><button class="img-rm" onclick="removeImg(${i})">×</button><span style="position:absolute;bottom:3px;left:4px;font-size:9px;background:rgba(0,0,0,.55);color:#fff;border-radius:3px;padding:1px 4px">VIDEO</span>`;
+        slot.style.position='relative';
+      } else {
+        slot.innerHTML = `<img src="${escHtml(url)}" alt="img ${i+1}"><button class="img-rm" onclick="removeImg(${i})">×</button>`;
+      }
+    } else {
+      slot.innerHTML = `<span style="font-size:1.2rem">📷</span><span>Slot ${i+1}</span>`;
+      slot.onclick = () => triggerImgUpload(i);
+    }
+    wrap.appendChild(slot);
+  }
+}
+
+function triggerImgUpload(idx) {
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = 'image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime';
+  inp.onchange = async () => {
+    const file = inp.files[0]; if (!file) return;
+    const isVideo = file.type.startsWith('video/');
+    if (isVideo) {
+      const videoCount = wpImages.filter(u => _isVideoUrl(u)).length;
+      if (videoCount >= 1) { showToast('Only 1 video allowed per product', 'error'); return; }
+      const ok = await new Promise(res => {
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.onloadedmetadata = () => { URL.revokeObjectURL(v.src); res(v.duration <= 180); };
+        v.onerror = () => { URL.revokeObjectURL(v.src); res(false); };
+        v.src = URL.createObjectURL(file);
+      });
+      if (!ok) { showToast('Video must be 3 minutes or less', 'error'); return; }
+    }
+    const slot = document.querySelector(`.img-slot[data-idx="${idx}"]`);
+    slot.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#9ca3af"></i>';
+    try {
+      const fd = new FormData(); fd.append('file', file);
+      const r = await staffFetch(`${API}/vgk/hub/products/upload-image`, { method:'POST', body: fd });
+      const data = await r.json();
+      if (!r.ok || !data.ok) throw new Error(data.detail || 'Upload failed');
+      wpImages[idx] = data.url;
+      renderImageSlots();
+      showToast(isVideo ? 'Video uploaded!' : 'Image uploaded!');
+    } catch(e) { showToast(e.message, 'error'); renderImageSlots(); }
+  };
+  inp.click();
+}
+
+function removeImg(idx) {
+  wpImages.splice(idx, 1);
+  renderImageSlots();
+}
+
+/* ── Paste URL for image ── */
+function pasteImgUrl() {
+  const url = document.getElementById('wpImgUrl').value.trim();
+  if (!url) return;
+  if (wpImages.length >= 3) { showToast('Max 3 images allowed', 'error'); return; }
+  wpImages.push(url);
+  document.getElementById('wpImgUrl').value = '';
+  renderImageSlots();
+}
+
+/* ── Close modal ── */
+function closeProductModal() {
+  document.getElementById('wpModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ─────────────────────────────────────────────────────────────
+// VGK MEMBER MEDIA TAB  [DC-VGK-MEDIA-002]
+// ─────────────────────────────────────────────────────────────
+let _vmCat = 'any';   // current sub-tab category filter
+let _vmEditId = null; // item being edited (null = create)
+
+function openVgkMemberTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelector('.toolbar').style.display = 'none';
+  document.querySelector('.table-card').style.display = 'none';
+  document.getElementById('websitePanel').style.display = 'none';
+  document.getElementById('galleryPanel').style.display = 'none';
+  document.getElementById('assetsPanel').style.display = 'none';
+  document.getElementById('partnersPanel').style.display = 'none';
+  document.getElementById('socialPanel').style.display = 'none';
+  document.getElementById('vgkMemberPanel').style.display = 'block';
+  loadVmItems();
+}
+
+function vmSwitchCat(cat, btn) {
+  _vmCat = cat;
+  document.querySelectorAll('#vgkMemberPanel .wp-vert-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.getElementById('vmTableTitle').textContent = cat === 'any' ? 'All VGK Member Media' : (cat === 'promotional' ? 'Promotional Media' : 'Training Videos');
+  loadVmItems();
+}
+
+async function loadVmItems() {
+  const tbody = document.getElementById('vmTableBody');
+  tbody.innerHTML = '<tr><td colspan="11" class="empty-row"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  const statusVal = document.getElementById('vmStatusFilter').value;
+  let url = `${API}/vgk/media?vgk_category=${_vmCat === 'any' ? 'any' : _vmCat}&per_page=100`;
+  if (statusVal) url += `&status=${statusVal}`;
+  try {
+    const r = await staffFetch(url);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Load failed');
+    const items = data.items || [];
+    document.getElementById('vmCount').textContent = `${items.length} item${items.length !== 1 ? 's' : ''}`;
+    if (!items.length) { tbody.innerHTML = '<tr><td colspan="11" class="empty-row">No items yet. Click Add Item to create one.</td></tr>'; return; }
+    tbody.innerHTML = items.map((item, idx) => {
+      const rxn = item.reactions || {};
+      const total = (rxn.like||0) + (rxn.love||0) + (rxn.shoutout||0);
+      const thumb = item.thumbnail_url || _vmYtThumb(item.url);
+      const catBadge = item.vgk_category === 'promotional'
+        ? `<span class="badge-type" style="background:#fef3c7;color:#92400e">📣 Promo</span>`
+        : `<span class="badge-type" style="background:#dbeafe;color:#1d4ed8">🎓 Training</span>`;
+      const typeBadge = item.media_type === 'youtube'
+        ? `<span class="badge-type badge-youtube"><i class="fab fa-youtube"></i>YT</span>`
+        : `<span class="badge-type" style="background:#f0fdf4;color:#166534"><i class="fas fa-image me-1"></i>IMG</span>`;
+      const statusBadge = item.status === 'active'
+        ? `<span class="badge-active">Active</span>`
+        : item.status === 'paused'
+          ? `<span class="badge-paused">Paused</span>`
+          : `<span class="badge-inactive">Inactive</span>`;
+      return `<tr>
+        <td style="color:#9ca3af">${idx+1}</td>
+        <td>${thumb ? `<img src="${escHtml(thumb)}" style="width:64px;height:42px;object-fit:cover;border-radius:6px;border:1.5px solid #e5e7eb">` : '<span style="color:#d1d5db;font-size:18px">📷</span>'}</td>
+        <td class="media-title-cell"><div class="mtitle" title="${escHtml(item.title)}">${escHtml(item.title)}</div>${item.description ? `<div class="msub">${escHtml(item.description.slice(0,60))}…</div>` : ''}</td>
+        <td>${typeBadge}</td>
+        <td>${catBadge}</td>
+        <td>${statusBadge}</td>
+        <td><span class="stat-pill"><i class="fas fa-eye"></i> ${item.click_count||0}</span></td>
+        <td><span class="stat-pill"><i class="fas fa-share-alt"></i> ${item.share_count||0}</span></td>
+        <td><span class="stat-pill">👍${rxn.like||0} ❤️${rxn.love||0} 👏${rxn.shoutout||0}</span></td>
+        <td>${item.display_order}</td>
+        <td class="action-btns">
+          <button class="btn-sm btn-edit-sm" onclick="openVmModal(${item.id})">Edit</button>
+          ${item.status === 'active'
+            ? `<button class="btn-sm btn-pause" onclick="vmSetStatus(${item.id},'paused')">Pause</button>`
+            : `<button class="btn-sm btn-activate" onclick="vmSetStatus(${item.id},'active')">Activate</button>`}
+          <button class="btn-sm btn-delete-sm" onclick="vmDelete(${item.id})">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="11" class="empty-row" style="color:#dc2626">${e.message}</td></tr>`; }
+}
+
+function _vmYtThumb(url) {
+  if (!url) return null;
+  const m = url.match(/(?:v=|youtu\.be\/|embed\/)([a-zA-Z0-9_-]{11})/);
+  return m ? `https://img.youtube.com/vi/${m[1]}/hqdefault.jpg` : null;
+}
+
+async function openVmModal(id) {
+  _vmEditId = id || null;
+  const overlay = document.getElementById('vmModal');
+  document.getElementById('vmModalTitle').textContent = id ? 'Edit Media Item' : 'Add Media Item';
+  document.getElementById('vmForm').reset();
+  document.getElementById('vmThumbPreview').innerHTML = '<span class="thumb-placeholder">🖼️</span>';
+  document.getElementById('vmFThumbnail').value = '';
+  if (id) {
+    try {
+      const r = await staffFetch(`${API}/vgk/media/${id}`);
+      const item = await r.json();
+      document.getElementById('vmFCat').value = item.vgk_category || 'promotional';
+      vmOnCatChange();
+      document.getElementById('vmFType').value = item.media_type || 'youtube';
+      document.getElementById('vmFTitle').value = item.title || '';
+      document.getElementById('vmFDesc').value = item.description || '';
+      document.getElementById('vmFUrl').value = item.url || '';
+      document.getElementById('vmFStatus').value = item.status || 'active';
+      document.getElementById('vmFOrder').value = item.display_order ?? 0;
+      document.getElementById('vmFThumbnail').value = item.thumbnail_url || '';
+      if (item.thumbnail_url) {
+        document.getElementById('vmThumbPreview').innerHTML = `<img src="${escHtml(item.thumbnail_url)}" style="width:100%;height:100%;object-fit:cover;border-radius:7px">`;
+      }
+    } catch(e) { showToast('Failed to load item', 'error'); return; }
+  } else {
+    document.getElementById('vmFCat').value = _vmCat === 'any' ? 'promotional' : _vmCat;
+    vmOnCatChange();
+  }
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function vmOnCatChange() {
+  const cat = document.getElementById('vmFCat').value;
+  const typeEl = document.getElementById('vmFType');
+  if (cat === 'training') {
+    typeEl.value = 'youtube';
+    document.getElementById('vmRowType').style.display = 'none';
+  } else {
+    document.getElementById('vmRowType').style.display = '';
+  }
+}
+
+function closeVmModal() {
+  document.getElementById('vmModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function saveVmItem() {
+  const cat   = document.getElementById('vmFCat').value;
+  const type  = document.getElementById('vmFType').value;
+  const title = document.getElementById('vmFTitle').value.trim();
+  const desc  = document.getElementById('vmFDesc').value.trim();
+  const url   = document.getElementById('vmFUrl').value.trim();
+  const thumb = document.getElementById('vmFThumbnail').value.trim();
+  const status = document.getElementById('vmFStatus').value;
+  const order  = parseInt(document.getElementById('vmFOrder').value) || 0;
+
+  if (!title) { showToast('Title is required', 'error'); return; }
+  if (type === 'youtube' && !url) { showToast('YouTube URL is required', 'error'); return; }
+
+  const btn = document.getElementById('vmSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const payload = { media_type: type, vgk_category: cat, title, description: desc || null,
+      url: url || null, thumbnail_url: thumb || null, status, display_order: order };
+    const r = await staffFetch(
+      _vmEditId ? `${API}/vgk/media/${_vmEditId}` : `${API}/vgk/media`,
+      { method: _vmEditId ? 'PATCH' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) }
+    );
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Save failed');
+    showToast(_vmEditId ? 'Item updated' : 'Item created');
+    closeVmModal();
+    loadVmItems();
+  } catch(e) { showToast(e.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Save'; }
+}
+
+async function vmSetStatus(id, newStatus) {
+  try {
+    const r = await staffFetch(`${API}/vgk/media/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: newStatus }) });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Update failed');
+    showToast(`Item ${newStatus}`);
+    loadVmItems();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function vmDelete(id) {
+  if (!confirm('Delete this media item? This cannot be undone.')) return;
+  try {
+    const r = await staffFetch(`${API}/vgk/media/${id}`, { method:'DELETE' });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || 'Delete failed');
+    showToast('Item deleted');
+    loadVmItems();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+/* VGK Member thumbnail upload */
+async function vmUploadThumb(inputEl) {
+  const file = inputEl.files[0]; if (!file) return;
+  const btn = document.getElementById('vmThumbBtn');
+  btn.classList.add('uploading'); btn.textContent = 'Uploading…';
+  try {
+    const fd = new FormData(); fd.append('file', file);
+    const r = await staffFetch(`${API}/vgk/media/upload-thumbnail`, { method:'POST', body: fd });
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.detail || 'Upload failed');
+    document.getElementById('vmFThumbnail').value = data.url;
+    document.getElementById('vmThumbPreview').innerHTML = `<img src="${escHtml(data.url)}" style="width:100%;height:100%;object-fit:cover;border-radius:7px">`;
+    showToast('Thumbnail uploaded!');
+  } catch(e) { showToast(e.message, 'error'); }
+  finally { btn.classList.remove('uploading'); btn.textContent = 'Upload Image'; }
+}
+</script>
+
+<!-- PRODUCT CREATE/EDIT MODAL -->
+<div class="modal-overlay" id="wpModal" onclick="if(event.target===this) closeProductModal()">
+  <div class="modal-box" style="max-width:720px">
+    <div class="modal-header">
+      <h2 id="wpModalTitle">Add Product</h2>
+      <button class="modal-close" onclick="closeProductModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-row">
+        <label class="form-label">Product Name *</label>
+        <input type="text" class="form-control" id="wpName" placeholder="Enter product name">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-row">
+          <label class="form-label">Short Description <span style="font-weight:400">(card subtitle)</span></label>
+          <input type="text" class="form-control" id="wpShortDesc" placeholder="Brief one-line description">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Status</label>
+          <select class="form-control" id="wpStatus">
+            <option value="active">Active — visible on website</option>
+            <option value="inactive">Inactive — hidden from website</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Full Description <span style="font-weight:400">(shown in detail modal)</span></label>
+        <textarea class="form-control" id="wpFullDesc" rows="2" placeholder="Detailed product description…"></textarea>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Product Media <span style="font-weight:400">(up to 3 — images or 1 video ≤ 3 min)</span></label>
+        <div class="img-upload-row" id="wpImgSlots"></div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input type="url" class="form-control" id="wpImgUrl" placeholder="Or paste image URL and click Add" style="font-size:12px">
+          <button type="button" class="btn-sm btn-activate" onclick="pasteImgUrl()" style="white-space:nowrap;flex-shrink:0">+ Add URL</button>
+        </div>
+        <div class="form-hint">Click a slot to upload an image (JPEG/PNG/WebP/GIF) or video (MP4/WebM/MOV, max 3 min).</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-row">
+          <label class="form-label">YouTube Video URL <span style="font-weight:400">(optional)</span></label>
+          <input type="url" class="form-control" id="wpVideoUrl" placeholder="https://youtube.com/watch?v=…">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Product / Listing URL <span style="font-weight:400">(optional)</span></label>
+          <input type="url" class="form-control" id="wpProductUrl" placeholder="https://… (ecom page, booking form)">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Base Specifications <span style="font-weight:400">(shown when no variant is selected)</span></label>
+        <div class="spec-rows" id="wpSpecRows"></div>
+        <button type="button" class="add-spec-btn" onclick="addSpecRow('','')">+ Add Specification</button>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Variants <span style="font-weight:400">(optional — e.g. "50 KM Range", "100 KM Range", "150 KM Range")</span></label>
+        <div id="wpVariantBlocks"></div>
+        <button type="button" class="add-spec-btn" style="margin-top:6px" onclick="addVariantBlock()">+ Add Variant</button>
+        <div class="form-hint">Each variant has its own label and specs displayed as selectable tabs on the product page.</div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label">Notes <span style="font-weight:400">(internal / shown on product page)</span></label>
+        <textarea class="form-control" id="wpNotes" rows="2" placeholder="Any notes about this product…"></textarea>
+      </div>
+
+      <div class="form-row" style="max-width:160px">
+        <label class="form-label">Display Order</label>
+        <input type="number" class="form-control" id="wpOrder" value="0" min="0">
+        <div class="form-hint">Lower = shown first</div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeProductModal()">Cancel</button>
+      <button class="btn-save" id="wpSaveBtn" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- VGK MEMBER MEDIA CREATE/EDIT MODAL [DC-VGK-MEDIA-002] -->
+<div class="modal-overlay" id="vmModal" onclick="if(event.target===this) closeVmModal()">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <h2 id="vmModalTitle">Add Media Item</h2>
+      <button class="modal-close" onclick="closeVmModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="vmForm" onsubmit="return false">
+
+        <div class="form-row">
+          <label class="form-label">Category *</label>
+          <select class="form-control" id="vmFCat" onchange="vmOnCatChange()">
+            <option value="promotional">📣 Promotional</option>
+            <option value="training">🎓 Training</option>
+          </select>
+          <div class="form-hint">Promotional = YouTube videos + images. Training = YouTube only.</div>
+        </div>
+
+        <div class="form-row" id="vmRowType">
+          <label class="form-label">Media Type *</label>
+          <select class="form-control" id="vmFType">
+            <option value="youtube">▶️ YouTube Video</option>
+            <option value="image">🖼️ Image</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Title *</label>
+          <input type="text" class="form-control" id="vmFTitle" placeholder="Enter a clear, descriptive title">
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Description <span style="font-weight:400">(optional)</span></label>
+          <textarea class="form-control" id="vmFDesc" rows="2" placeholder="Short description shown under the title"></textarea>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">YouTube URL / Image URL</label>
+          <input type="url" class="form-control" id="vmFUrl" placeholder="https://www.youtube.com/watch?v=… or image URL">
+          <div class="form-hint">For YouTube: thumbnail auto-fetched. For Image: this URL is displayed directly.</div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label">Custom Thumbnail <span style="font-weight:400">(optional)</span></label>
+          <div class="thumb-widget">
+            <div class="thumb-preview" id="vmThumbPreview"><span class="thumb-placeholder">🖼️</span></div>
+            <div class="thumb-controls">
+              <input type="file" id="vmThumbFile" accept="image/*" style="display:none" onchange="vmUploadThumb(this)">
+              <button type="button" class="btn-thumb-upload" id="vmThumbBtn" onclick="document.getElementById('vmThumbFile').click()">
+                <i class="fas fa-image"></i> Upload Image
+              </button>
+              <input type="url" class="form-control" id="vmFThumbnail" placeholder="or paste thumbnail URL…"
+                oninput="if(this.value){document.getElementById('vmThumbPreview').innerHTML=`<img src='${this.value}' style='width:100%;height:100%;object-fit:cover;border-radius:7px'>`}"
+                style="font-size:12px;margin-top:6px">
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="form-row">
+            <label class="form-label">Status</label>
+            <select class="form-control" id="vmFStatus">
+              <option value="active">Active — visible to members</option>
+              <option value="paused">Paused — hidden</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label class="form-label">Display Order <span style="font-weight:400">(lower = first)</span></label>
+            <input type="number" class="form-control" id="vmFOrder" value="0" min="0">
+          </div>
+        </div>
+
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeVmModal()">Cancel</button>
+      <button class="btn-save" id="vmSaveBtn" onclick="saveVmItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- GALLERY CREATE MODAL [DC_GALLERY_001] -->
+<div class="modal-overlay" id="glModal" onclick="if(event.target===this) closeGlModal()">
+  <div class="modal-box" style="max-width:580px">
+    <div class="modal-header">
+      <h2 id="glModalTitle">Create Gallery</h2>
+      <button class="modal-close" onclick="closeGlModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <label class="form-label">Gallery Title *</label>
+        <input type="text" class="form-control" id="glTitle" placeholder="e.g. March 2026 Team Event">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Description</label>
+        <textarea class="form-control" id="glDesc" rows="2" style="min-height:60px" placeholder="Optional short description"></textarea>
+      </div>
+      <div id="glFileSection">
+      <div class="form-row">
+        <label class="form-label">Files <span style="font-weight:400;color:#6b7280">(3–10 · max 2 videos · videos ≤ 3 min)</span></label>
+        <div class="drop-zone" id="glDropZone" onclick="document.getElementById('glFileInput').click()" ondragover="glDragOver(event)" ondragleave="glDragLeave(event)" ondrop="glDrop(event)">
+          <div class="dz-icon">📁</div>
+          <p>Click or drag & drop photos / videos here</p>
+          <div class="dz-hint">JPEG · PNG · WebP · GIF · MP4 · WebM</div>
+        </div>
+        <input type="file" id="glFileInput" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" style="display:none" onchange="glFilesSelected(this.files)">
+        <div class="file-preview-grid" id="glFilePreview"></div>
+        <div style="font-size:11px;margin-top:6px" id="glFileHint"></div>
+      </div>
+      </div>
+      <div id="glUploadProgress" style="display:none" class="gl-upload-progress">
+        <span id="glProgressText">Uploading…</span>
+        <div class="gl-progress-bar"><div class="gl-progress-bar-fill" id="glProgressFill" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeGlModal()">Cancel</button>
+      <button class="btn-save" id="glSaveBtn" onclick="saveGallery()"><i class="fas fa-images"></i> Create Gallery</button>
+    </div>
+  </div>
+</div>
+
+<!-- GALLERY FILES VIEW MODAL [DC_GALLERY_001] -->
+<div class="modal-overlay" id="gfModal" onclick="if(event.target===this) closeGfModal()">
+  <div class="modal-box" style="max-width:780px">
+    <div class="modal-header">
+      <h2 id="gfModalTitle">Gallery Files</h2>
+      <button class="modal-close" onclick="closeGfModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px;display:flex;align-items:center;gap:10px">
+        <label class="form-label" style="margin:0">Add more files</label>
+        <input type="file" id="gfAddFileInput" multiple accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" style="display:none" onchange="gfUploadFiles(this.files)">
+        <button class="btn-sm btn-edit-sm" onclick="document.getElementById('gfAddFileInput').click()"><i class="fas fa-upload"></i> Upload Files</button>
+        <span style="font-size:11px;color:#9ca3af">Max 15 images · 4 videos · videos ≤ 3 min</span>
+      </div>
+      <div class="gf-grid" id="gfGrid">
+        <div style="grid-column:1/-1;text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeGfModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// GALLERY TAB [DC_GALLERY_001 Apr 2026]
+// ─────────────────────────────────────────────────────────────
+let _glPendingFiles = [];
+let _glEditingId = null;       /* gallery id being edited, null = create mode */
+const _glGalleryCache = {};    /* gallery id → {title, description} */
+
+function openGalleryTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelector('.toolbar').style.display = 'none';
+  document.querySelector('.table-card').style.display = 'none';
+  document.getElementById('websitePanel').style.display = 'none';
+  document.getElementById('vgkMemberPanel').style.display = 'none';
+  document.getElementById('assetsPanel').style.display = 'none';
+  document.getElementById('partnersPanel').style.display = 'none';
+  document.getElementById('socialPanel').style.display = 'none';
+  document.getElementById('galleryPanel').style.display = 'block';
+  loadGalleries();
+}
+
+// ─── WEBSITE ASSETS TAB [DC_WEB_ASSETS_001] ─────────────────────────────────
+let _waAssets = [], _waPresets = {}, _waSlots = {}, _waTab = 'all', _waUploadFile = null, _waReplaceOriginal = null;
+
+function openAssetsTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelector('.toolbar').style.display = 'none';
+  document.querySelector('.table-card').style.display = 'none';
+  document.getElementById('websitePanel').style.display = 'none';
+  document.getElementById('vgkMemberPanel').style.display = 'none';
+  document.getElementById('galleryPanel').style.display = 'none';
+  document.getElementById('partnersPanel').style.display = 'none';
+  document.getElementById('socialPanel').style.display = 'none';
+  document.getElementById('assetsPanel').style.display = 'block';
+  if (!_waAssets.length) waLoadAssets();
+}
+
+// ─── ASSOCIATED PARTNERS TAB [DC-ASSOC-PARTNERS-001] ─────────────────────────
+let _ptEditing = null;
+
+function openPartnersTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelector('.toolbar').style.display = 'none';
+  document.querySelector('.table-card').style.display = 'none';
+  document.getElementById('websitePanel').style.display = 'none';
+  document.getElementById('vgkMemberPanel').style.display = 'none';
+  document.getElementById('galleryPanel').style.display = 'none';
+  document.getElementById('assetsPanel').style.display = 'none';
+  document.getElementById('socialPanel').style.display = 'none';
+  document.getElementById('partnersPanel').style.display = 'block';
+  loadPartners();
+}
+
+async function loadPartners() {
+  const grid = document.getElementById('partnerGrid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  try {
+    const r = await staffFetch(`${API}/vgk/partners`);
+    const list = await r.json();
+    if (!r.ok) throw new Error(list.detail || 'Failed');
+    const total  = list.length;
+    const active = list.filter(p => p.status === 'active').length;
+    const paused = list.filter(p => p.status === 'paused').length;
+    document.getElementById('ptTotal').textContent  = total;
+    document.getElementById('ptActive').textContent = active;
+    document.getElementById('ptPaused').textContent = paused;
+    if (!list.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-handshake" style="font-size:2rem;display:block;margin-bottom:12px"></i>No partners yet. Click <strong>Add Partner</strong> to get started.</div>';
+      return;
+    }
+    grid.innerHTML = list.map(p => `
+      <div style="background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:20px;display:flex;flex-direction:column;gap:12px;border-left:4px solid ${p.status==='active'?'#10b981':'#f59e0b'}">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:64px;height:64px;background:#f3f4f6;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+            ${p.logo_url ? `<img src="${escHtml(p.logo_url)}" style="width:100%;height:100%;object-fit:contain;padding:4px">` : `<i class="fas fa-building" style="color:#9ca3af;font-size:1.4rem"></i>`}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:.95rem;color:#111827;margin-bottom:2px">${escHtml(p.company_name)}</div>
+            ${p.established_year ? `<div style="font-size:.78rem;color:#6b7280">Est. ${escHtml(p.established_year)}</div>` : ''}
+            ${p.address ? `<div style="font-size:.78rem;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(p.address)}</div>` : ''}
+          </div>
+        </div>
+        ${p.notes ? `<div style="font-size:.82rem;color:#374151;background:#f9fafb;border-radius:8px;padding:10px;line-height:1.5;max-height:60px;overflow:hidden">${escHtml(p.notes.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim())}</div>` : ''}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
+          <span style="font-size:.72rem;font-weight:600;padding:3px 10px;border-radius:12px;background:${p.status==='active'?'#d1fae5':'#fef3c7'};color:${p.status==='active'?'#065f46':'#92400e'}">${p.status.toUpperCase()}</span>
+          <button class="btn-primary" style="padding:5px 12px;font-size:.78rem;" onclick="openPartnerModal(${JSON.stringify(p).replace(/"/g,'&quot;')})"><i class="fas fa-edit"></i> Edit</button>
+          <button class="btn-primary" style="padding:5px 12px;font-size:.78rem;background:${p.status==='active'?'#f59e0b':'#10b981'};" onclick="togglePartnerStatus(${p.id},'${p.status==='active'?'paused':'active'}')"><i class="fas fa-${p.status==='active'?'pause':'play'}"></i> ${p.status==='active'?'Pause':'Activate'}</button>
+          <button class="btn-primary" style="padding:5px 12px;font-size:.78rem;background:#ef4444;" onclick="deletePartner(${p.id},'${escHtml(p.company_name)}')"><i class="fas fa-trash"></i></button>
+          <a href="/hub/partner/${p.id}" target="_blank" style="padding:5px 12px;font-size:.78rem;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-weight:600"><i class="fas fa-external-link-alt"></i> View</a>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-circle"></i> ${escHtml(e.message)}</div>`;
+  }
+}
+
+let _ptQuill = null;
+function _initPtQuill() {
+  if (_ptQuill) return;
+  _ptQuill = new Quill('#ptNotesQuillBox', {
+    theme: 'snow',
+    placeholder: 'Description shown on the partner page — bold, bullet lists, emojis all supported…',
+    modules: { toolbar: [['bold','italic','underline'],['link'],[ {list:'ordered'},{list:'bullet'}],['clean']] }
+  });
+}
+
+function openPartnerModal(partner) {
+  _ptEditing = partner || null;
+  _initPtQuill();
+  document.getElementById('ptModalTitle').textContent = partner ? 'Edit Partner' : 'Add Partner';
+  document.getElementById('ptName').value        = partner?.company_name     || '';
+  document.getElementById('ptAddress').value     = partner?.address          || '';
+  document.getElementById('ptYear').value        = partner?.established_year || '';
+  if (_ptQuill) {
+    _ptQuill.root.innerHTML = partner?.notes || '';
+  }
+  document.getElementById('ptLogoPreview').innerHTML = partner?.logo_url
+    ? `<img src="${escHtml(partner.logo_url)}" style="height:56px;object-fit:contain;border-radius:8px;">`
+    : '';
+  document.getElementById('ptLogoUrl').value = partner?.logo_url || '';
+  document.getElementById('ptUploadStatus').textContent = '';
+  const galSection = document.getElementById('ptGallerySection');
+  if (partner) {
+    galSection.style.display = '';
+    loadPartnerGallery(partner.id);
+  } else {
+    galSection.style.display = 'none';
+  }
+  document.getElementById('partnerModal').classList.add('open');
+}
+
+function closePartnerModal() {
+  document.getElementById('partnerModal').classList.remove('open');
+  _ptEditing = null;
+}
+
+async function uploadPartnerLogo() {
+  const file = document.getElementById('ptLogoFile').files[0];
+  if (!file) return;
+  const btn = document.getElementById('ptLogoUploadBtn');
+  btn.textContent = 'Uploading…'; btn.disabled = true;
+  try {
+    if (_ptEditing) {
+      const fd = new FormData(); fd.append('file', file);
+      const r = await staffFetch(`${API}/vgk/partners/${_ptEditing.id}/upload-logo`, { method:'POST', body: fd });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Upload failed');
+      document.getElementById('ptLogoUrl').value = d.logo_url;
+      document.getElementById('ptLogoPreview').innerHTML = `<img src="${escHtml(d.logo_url)}" style="height:56px;object-fit:contain;border-radius:8px;">`;
+      document.getElementById('ptUploadStatus').textContent = '✅ Logo uploaded';
+      _ptEditing.logo_url = d.logo_url;
+    } else {
+      document.getElementById('ptUploadStatus').textContent = '⚠️ Save the partner first, then upload the logo.';
+    }
+  } catch(e) {
+    document.getElementById('ptUploadStatus').textContent = '❌ ' + e.message;
+  } finally {
+    btn.textContent = 'Upload Logo'; btn.disabled = false;
+  }
+}
+
+async function savePartner(e) {
+  e.preventDefault();
+  const btn = document.getElementById('ptSaveBtn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  const isNew = !_ptEditing;
+  try {
+    const _rawNotes = _ptQuill ? _ptQuill.root.innerHTML.trim() : '';
+    const _notesVal = (_rawNotes === '<p><br></p>' || _rawNotes === '') ? null : _rawNotes;
+    const body = {
+      company_name:     document.getElementById('ptName').value.trim(),
+      address:          document.getElementById('ptAddress').value.trim() || null,
+      established_year: document.getElementById('ptYear').value.trim() || null,
+      notes:            _notesVal,
+    };
+    if (!body.company_name) { showToast('Company name is required', 'error'); return; }
+    let r;
+    if (_ptEditing) {
+      r = await staffFetch(`${API}/vgk/partners/${_ptEditing.id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    } else {
+      r = await staffFetch(`${API}/vgk/partners`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    }
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Save failed');
+    loadPartners();
+    if (isNew) {
+      _ptEditing = d;
+      document.getElementById('ptModalTitle').textContent = 'Upload Logo (Optional)';
+      showToast('Partner created! Upload a logo or close to finish.', 'success');
+    } else {
+      showToast('Partner updated!', 'success');
+      closePartnerModal();
+    }
+  } catch(ex) {
+    showToast(ex.message, 'error');
+  } finally {
+    btn.textContent = 'Save'; btn.disabled = false;
+  }
+}
+
+async function togglePartnerStatus(id, newStatus) {
+  try {
+    const r = await staffFetch(`${API}/vgk/partners/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status: newStatus }) });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    showToast(`Partner ${newStatus === 'active' ? 'activated' : 'paused'}`, 'success');
+    loadPartners();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deletePartner(id, name) {
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  try {
+    const r = await staffFetch(`${API}/vgk/partners/${id}`, { method:'DELETE' });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    showToast('Partner deleted', 'success');
+    loadPartners();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ─── PARTNER GALLERY [DC-PARTNER-GALLERY-001] ─────────────────────────────────
+async function loadPartnerGallery(partnerId) {
+  const grid   = document.getElementById('ptGalleryGrid');
+  const counter = document.getElementById('ptPhotoCount');
+  const upBtn  = document.getElementById('ptGalleryUploadBtn');
+  grid.innerHTML = '<span style="color:#9ca3af;font-size:.8rem">Loading…</span>';
+  try {
+    const r = await staffFetch(`${API}/vgk/partners/${partnerId}/gallery`);
+    const photos = await r.json();
+    if (!r.ok) throw new Error(photos.detail || 'Failed');
+    counter.textContent = `(${photos.length}/5)`;
+    upBtn.disabled = photos.length >= 5;
+    upBtn.style.opacity = photos.length >= 5 ? '.5' : '1';
+    if (!photos.length) {
+      grid.innerHTML = '<span style="color:#9ca3af;font-size:.8rem;align-self:center">No photos yet</span>';
+      return;
+    }
+    grid.innerHTML = photos.map(ph => `
+      <div style="position:relative;width:90px;flex-shrink:0">
+        <img src="${escHtml(ph.photo_url)}" style="width:90px;height:66px;object-fit:cover;border-radius:8px;display:block;border:1px solid #e5e7eb">
+        ${ph.caption ? `<div style="font-size:.65rem;color:#6b7280;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(ph.caption)}</div>` : ''}
+        <button onclick="deleteGalleryPhoto(${_ptEditing?.id},${ph.id})" style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(239,68,68,.85);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
+      </div>
+    `).join('');
+  } catch(e) {
+    grid.innerHTML = `<span style="color:#ef4444;font-size:.8rem">${escHtml(e.message)}</span>`;
+  }
+}
+
+async function uploadGalleryPhoto() {
+  const file = document.getElementById('ptGalleryFile').files[0];
+  if (!file || !_ptEditing) return;
+  const btn = document.getElementById('ptGalleryUploadBtn');
+  const status = document.getElementById('ptGalleryStatus');
+  btn.textContent = 'Uploading…'; btn.disabled = true;
+  status.textContent = '';
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const r = await staffFetch(`${API}/vgk/partners/${_ptEditing.id}/gallery`, { method:'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Upload failed');
+    status.textContent = '✅ Photo added';
+    loadPartnerGallery(_ptEditing.id);
+  } catch(e) {
+    status.textContent = '❌ ' + e.message;
+  } finally {
+    btn.textContent = 'Add Photo';
+    document.getElementById('ptGalleryFile').value = '';
+  }
+}
+
+async function deleteGalleryPhoto(partnerId, photoId) {
+  if (!confirm('Remove this photo?')) return;
+  try {
+    const r = await staffFetch(`${API}/vgk/partners/${partnerId}/gallery/${photoId}`, { method:'DELETE' });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    loadPartnerGallery(partnerId);
+    document.getElementById('ptGalleryStatus').textContent = '';
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ─── SOCIAL MEDIA LINKS TAB [DC-SOCIAL-001 Apr 2026] ─────────────────────────
+const _SM_PLATFORMS = [
+  { key: 'facebook',  icon: 'fa-brands fa-facebook-f',  label: 'Facebook',  color: '#1877f2' },
+  { key: 'instagram', icon: 'fa-brands fa-instagram',   label: 'Instagram', color: '#e1306c' },
+  { key: 'youtube',   icon: 'fa-brands fa-youtube',     label: 'YouTube',   color: '#ff0000' },
+  { key: 'linkedin',  icon: 'fa-brands fa-linkedin-in', label: 'LinkedIn',  color: '#0a66c2' },
+  { key: 'google',    icon: 'fa-brands fa-google',      label: 'Google',    color: '#ea4335' },
+];
+
+function openSocialTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelector('.toolbar').style.display = 'none';
+  document.querySelector('.table-card').style.display = 'none';
+  document.getElementById('websitePanel').style.display = 'none';
+  document.getElementById('vgkMemberPanel').style.display = 'none';
+  document.getElementById('galleryPanel').style.display = 'none';
+  document.getElementById('assetsPanel').style.display = 'none';
+  document.getElementById('partnersPanel').style.display = 'none';
+  document.getElementById('socialPanel').style.display = 'block';
+  loadSocialLinks();
+}
+
+async function loadSocialLinks() {
+  const grid = document.getElementById('socialGrid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  try {
+    const r = await staffFetch(`${API}/vgk/social-links`);
+    const entities = await r.json();
+    if (!r.ok) throw new Error(entities.detail || 'Failed');
+    grid.innerHTML = entities.map(ent => `
+      <div style="background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:20px;">
+        <div style="font-weight:700;font-size:.92rem;color:#111827;margin-bottom:14px;display:flex;align-items:center;gap:8px;">
+          <i class="fas fa-share-nodes" style="color:#6366f1"></i> ${escHtml(ent.label)}
+          <span style="font-size:.7rem;font-weight:400;color:#9ca3af;margin-left:4px">(${escHtml(ent.entity_key)})</span>
+        </div>
+        ${_SM_PLATFORMS.map(p => {
+          const lnk = ent.links[p.key];
+          const url = lnk?.url || '';
+          const status = lnk?.status || 'active';
+          const isPaused = status === 'paused';
+          return `
+          <div id="sm-row-${ent.entity_key}-${p.key}" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+            <div style="width:30px;height:30px;border-radius:50%;background:${p.color};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="${p.icon}" style="color:#fff;font-size:13px"></i>
+            </div>
+            <span style="font-size:.8rem;font-weight:600;color:#374151;width:72px;flex-shrink:0">${p.label}</span>
+            <input type="url"
+              id="sm-inp-${ent.entity_key}-${p.key}"
+              value="${escHtml(url)}"
+              placeholder="Paste ${p.label} URL…"
+              style="flex:1;min-width:120px;font-size:.78rem;border:1px solid #e5e7eb;border-radius:7px;padding:5px 9px;outline:none;"
+              onkeydown="if(event.key==='Enter') saveSocialLink('${ent.entity_key}','${p.key}')"
+            >
+            <button class="btn-primary" style="padding:4px 10px;font-size:.74rem;flex-shrink:0"
+              onclick="saveSocialLink('${ent.entity_key}','${p.key}')">Save</button>
+            ${url ? `
+            <button class="btn-primary" style="padding:4px 10px;font-size:.74rem;flex-shrink:0;background:${isPaused ? '#10b981' : '#f59e0b'}"
+              onclick="toggleSocialLink('${ent.entity_key}','${p.key}',this)">${isPaused ? '▶ On' : '⏸ Off'}</button>
+            <button class="btn-primary" style="padding:4px 10px;font-size:.74rem;flex-shrink:0;background:#ef4444"
+              onclick="deleteSocialLink('${ent.entity_key}','${p.key}')"><i class="fas fa-trash"></i></button>
+            ` : ''}
+            ${url && isPaused ? '<span style="font-size:.7rem;color:#f59e0b;font-weight:600">HIDDEN</span>' : ''}
+          </div>`;
+        }).join('')}
+      </div>
+    `).join('');
+  } catch(e) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-circle"></i> ${escHtml(e.message)}</div>`;
+  }
+}
+
+async function saveSocialLink(entity, platform) {
+  const inp = document.getElementById(`sm-inp-${entity}-${platform}`);
+  const url = inp?.value?.trim();
+  if (!url) { showToast('Please enter a URL first', 'error'); return; }
+  try {
+    const r = await staffFetch(`${API}/vgk/social-links/${entity}/${platform}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ url }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Save failed');
+    showToast(`${platform} link saved!`, 'success');
+    loadSocialLinks();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function toggleSocialLink(entity, platform, btn) {
+  btn.disabled = true;
+  try {
+    const r = await staffFetch(`${API}/vgk/social-links/${entity}/${platform}/toggle`, { method: 'PATCH' });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Failed');
+    showToast(`${platform} ${d.status === 'active' ? 'activated' : 'paused'}`, 'success');
+    loadSocialLinks();
+  } catch(e) { showToast(e.message, 'error'); btn.disabled = false; }
+}
+
+async function deleteSocialLink(entity, platform) {
+  if (!confirm(`Remove the ${platform} link for ${entity}?`)) return;
+  try {
+    const r = await staffFetch(`${API}/vgk/social-links/${entity}/${platform}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    showToast(`${platform} link removed`, 'success');
+    loadSocialLinks();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function waLoadAssets() {
+  document.getElementById('waGrid').innerHTML =
+    '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Scanning assets…</div>';
+  try {
+    const res = await staffFetch(`${API}/vgk/hub/assets`);
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    _waAssets  = data.assets  || [];
+    _waPresets = data.presets || {};
+    _waSlots   = data.system_slots || {};
+    waUpdateStats(data.stats || {});
+    waPopulateUploadSelects();
+    waRenderGrid();
+  } catch(e) {
+    document.getElementById('waGrid').innerHTML =
+      `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed: ${e.message}</div>`;
+  }
+}
+
+function waRefresh() {
+  const icon = document.getElementById('waRefreshIcon');
+  icon.classList.add('fa-spin');
+  _waAssets = [];
+  waLoadAssets().then(() => icon.classList.remove('fa-spin'));
+}
+
+function waUpdateStats(s) {
+  document.getElementById('waStat-total').textContent  = s.total  ?? '—';
+  document.getElementById('waStat-system').textContent = s.system_slots ?? '—';
+  document.getElementById('waStat-inuse').textContent  = s.in_use ?? '—';
+  document.getElementById('waStat-unused').textContent = s.unused ?? '—';
+  document.getElementById('waStat-size').textContent   = s.total_size_mb != null ? s.total_size_mb + ' MB' : '—';
+}
+
+function waSetTab(btn, cat) {
+  document.querySelectorAll('.wa-tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _waTab = cat;
+  waRenderGrid();
+}
+
+function waRenderGrid() {
+  const q = (document.getElementById('waSearch').value || '').toLowerCase().trim();
+  // Update counts
+  const countOf = cat => {
+    if (cat === 'all')    return _waAssets.length;
+    if (cat === 'system') return _waAssets.filter(a => a.is_system).length;
+    return _waAssets.filter(a => a.category === cat).length;
+  };
+  ['all','system','logo','banner','brand','other','unused'].forEach(c => {
+    const el = document.getElementById('waCnt-' + c);
+    if (el) el.textContent = countOf(c);
+  });
+
+  let items = _waAssets;
+  if (_waTab === 'system') items = items.filter(a => a.is_system);
+  else if (_waTab !== 'all') items = items.filter(a => a.category === _waTab);
+  if (q) items = items.filter(a =>
+    (a.filename||'').toLowerCase().includes(q) ||
+    (a.slot_label||'').toLowerCase().includes(q) ||
+    (a.placements||[]).some(p => (p.page||'').toLowerCase().includes(q))
+  );
+
+  document.getElementById('waResultCount').textContent = `${items.length} asset${items.length !== 1 ? 's' : ''}`;
+
+  if (!items.length) {
+    document.getElementById('waGrid').innerHTML =
+      '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-search"></i> No assets match your filter.</div>';
+    return;
+  }
+  document.getElementById('waGrid').innerHTML = items.map(waCard).join('');
+}
+
+function waCard(a) {
+  const isImg = ['.png','.jpg','.jpeg','.webp','.gif','.avif'].includes(a.ext);
+  const thumb = isImg
+    ? `<img src="${a.url}" alt="${a.filename}" loading="lazy" onerror="this.style.display='none'">`
+    : `<i class="fas fa-file-image wa-no-prev"></i>`;
+  const sysBadge    = a.is_system ? `<span class="wa-sys-badge"><i class="fas fa-star"></i> System</span>` : '';
+  const unusedBadge = !a.is_system && a.placement_count === 0 ? `<span class="wa-unused-badge">Unused</span>` : '';
+  const chips = a.placements && a.placements.length
+    ? a.placements.map(p => `<span class="wa-chip">${p.url ? `<a href="${p.url}" target="_blank" style="color:inherit;text-decoration:none;">${p.page}</a>` : p.page}</span>`).join('')
+    : `<span class="wa-no-chip">Not used on any page</span>`;
+  const meta = [
+    a.width  ? `<span><i class="fas fa-expand-alt"></i> ${a.width}×${a.height}</span>` : '',
+    a.size_kb ? `<span><i class="fas fa-weight"></i> ${a.size_kb} KB</span>` : '',
+    `<span>${(a.ext||'').replace('.','').toUpperCase()}</span>`,
+  ].filter(Boolean).join('');
+  const slotKey = JSON.stringify(a.slot || '');
+  const fname   = JSON.stringify(a.filename);
+  return `<div class="wa-card">
+  <div class="wa-thumb">${thumb}${sysBadge}${unusedBadge}</div>
+  <div class="wa-body">
+    <div class="wa-name">${a.filename}</div>
+    ${a.slot_label ? `<div class="wa-slot"><i class="fas fa-star"></i> ${a.slot_label}</div>` : ''}
+    <div class="wa-meta">${meta}</div>
+    <div class="wa-chips">${chips}</div>
+  </div>
+  <div class="wa-actions">
+    <button class="btn-sm btn-edit-sm" style="flex:1;justify-content:center;" onclick='waOpenReplaceFor(${slotKey},${fname})'>
+      <i class="fas fa-cloud-upload-alt"></i> Replace
+    </button>
+    <a class="btn-sm" style="background:#e0f2fe;color:#0369a1;" href="${a.url}" target="_blank"><i class="fas fa-eye"></i></a>
+    ${!a.is_system ? `<button class="btn-sm btn-delete-sm" onclick='waDelete(${fname})'><i class="fas fa-trash"></i></button>` : ''}
+  </div>
+</div>`;
+}
+
+/* ── Upload modal for Assets tab ── */
+function waPopulateUploadSelects() {
+  const sel = document.getElementById('waSlotSelect');
+  if (!sel) return;
+  const saved = sel.value;
+  sel.innerHTML = '<option value="">— Custom (not a system slot) —</option>';
+  Object.entries(_waSlots).forEach(([k,s]) =>
+    sel.innerHTML += `<option value="${k}">${s.label} (${s.filename})</option>`
+  );
+  sel.value = saved || '';
+
+  const ps = document.getElementById('waPresetSelect');
+  if (!ps) return;
+  ps.innerHTML = '';
+  Object.entries(_waPresets).forEach(([k,p]) =>
+    ps.innerHTML += `<option value="${k}">${p.label} — max ${p.w}×${p.h}px, ${p.fmt}</option>`
+  );
+  waUpdatePresetHint();
+}
+
+function waUpdatePresetHint() {
+  const k = (document.getElementById('waPresetSelect')||{}).value;
+  const p = _waPresets[k];
+  const hint = document.getElementById('waPresetHint');
+  if (!hint || !p) return;
+  hint.textContent = `Resize to max ${p.w}×${p.h}px → ${p.fmt}${p.fmt==='WEBP'?', q'+p.q:''}. Aspect ratio preserved.`;
+}
+
+function waOnSlotChange() {
+  const slot = document.getElementById('waSlotSelect').value;
+  const pg = document.getElementById('waPresetGroup');
+  const cg = document.getElementById('waCustomGroup');
+  const fg = document.getElementById('waFormatGroup');
+  if (slot && _waSlots[slot]) {
+    document.getElementById('waPresetSelect').value = _waSlots[slot].preset;
+    pg.style.opacity = '.5';
+    cg.style.display = 'none';
+    if (fg) fg.style.display = 'none';
+  } else {
+    pg.style.opacity = '1';
+    cg.style.display = '';
+    if (fg) fg.style.display = _waReplaceOriginal ? '' : 'none';
+  }
+  waUpdatePresetHint();
+}
+
+function waOpenUpload() {
+  waResetModal();
+  const btn = document.getElementById('waUploadBtn');
+  if (btn) btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Upload &amp; Optimize';
+  const h2 = document.querySelector('#waUploadModal .modal-header h2');
+  if (h2) h2.innerHTML = '<i class="fas fa-cloud-upload-alt" style="color:#2563eb;margin-right:8px;"></i>Upload / Replace Asset';
+  document.getElementById('waUploadModal').classList.add('open');
+}
+
+function waOpenReplaceFor(slotKey, filename) {
+  waResetModal();
+  _waReplaceOriginal = filename;
+  if (slotKey) {
+    document.getElementById('waSlotSelect').value = slotKey;
+    waOnSlotChange();
+  } else {
+    document.getElementById('waCustomNameInput').value = filename.replace(/\.[^.]+$/,'');
+    const fg = document.getElementById('waFormatGroup');
+    if (fg) fg.style.display = '';
+  }
+  const btn = document.getElementById('waUploadBtn');
+  if (btn) btn.innerHTML = '<i class="fas fa-sync-alt"></i> Replace & Optimize';
+  const h2 = document.querySelector('#waUploadModal .modal-header h2');
+  if (h2) h2.innerHTML = '<i class="fas fa-sync-alt" style="color:#2563eb;margin-right:8px;"></i>Replace Asset';
+  document.getElementById('waUploadModal').classList.add('open');
+}
+
+function waCloseUpload() {
+  document.getElementById('waUploadModal').classList.remove('open');
+  _waUploadFile = null;
+  _waReplaceOriginal = null;
+  document.getElementById('waFileInput').value = '';
+  document.getElementById('waDropPreview').style.display = 'none';
+  document.getElementById('waUploadResult').style.display = 'none';
+}
+
+function waResetModal() {
+  _waUploadFile = null;
+  _waReplaceOriginal = null;
+  const fi = document.getElementById('waFileInput'); if(fi) fi.value = '';
+  const dp = document.getElementById('waDropPreview'); if(dp) dp.style.display = 'none';
+  const ur = document.getElementById('waUploadResult'); if(ur) ur.style.display = 'none';
+  const sl = document.getElementById('waSlotSelect'); if(sl) sl.value = '';
+  const fg = document.getElementById('waFormatGroup'); if(fg) fg.style.display = 'none';
+  const fr = document.querySelector('input[name="waFormatPick"][value="auto"]'); if(fr) fr.checked = true;
+  const ub = document.getElementById('waUploadBtn');
+  if(ub){ ub.disabled=false; ub.innerHTML='<i class="fas fa-cloud-upload-alt"></i> Upload &amp; Optimize'; }
+  waOnSlotChange();
+  waUpdatePresetHint();
+}
+
+function waOnFileSelected(inp) { if(inp.files&&inp.files[0]) waSetFile(inp.files[0]); }
+function waSetFile(file) {
+  _waUploadFile = file;
+  document.getElementById('waDropPreview').style.display = 'flex';
+  document.getElementById('waPreviewName').textContent = file.name;
+  document.getElementById('waPreviewSize').textContent = (file.size/1024).toFixed(1) + ' KB';
+  const r = new FileReader();
+  r.onload = e => { document.getElementById('waPreviewImg').src = e.target.result; };
+  r.readAsDataURL(file);
+}
+
+async function waDoUpload() {
+  if (!_waUploadFile) { showToast('Select a file first', 'error'); return; }
+  const slot   = document.getElementById('waSlotSelect').value;
+  const preset = document.getElementById('waPresetSelect').value;
+  const cname  = document.getElementById('waCustomNameInput').value.trim();
+  const formatEl = document.querySelector('input[name="waFormatPick"]:checked');
+  const forceFmt = formatEl ? formatEl.value : 'auto';
+  const fd = new FormData();
+  fd.append('file', _waUploadFile);
+  fd.append('preset', preset);
+  if (slot)  fd.append('slot', slot);
+  if (cname) fd.append('custom_name', cname);
+  if (_waReplaceOriginal) fd.append('original_filename', _waReplaceOriginal);
+  if (forceFmt && forceFmt !== 'auto') fd.append('force_format', forceFmt);
+  const btn = document.getElementById('waUploadBtn');
+  const isReplace = !!_waReplaceOriginal;
+  btn.disabled = true; btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${isReplace ? 'Replacing…' : 'Uploading…'}`;
+  const res = document.getElementById('waUploadResult');
+  res.style.display = 'none';
+  try {
+    const r = await staffFetch(`${API}/vgk/hub/assets/upload`, { method:'POST', body:fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || JSON.stringify(d));
+    res.className = 'upload-result success'; res.style.display = 'block';
+    const action = d.replaced ? 'Replaced' : 'Uploaded';
+    res.innerHTML = `<strong><i class="fas fa-check-circle"></i> ${action}: ${d.filename}</strong> — ${d.optimized?.w}×${d.optimized?.h}px, ${d.optimized?.kb} KB${d.reduction_pct>0?' (−'+d.reduction_pct+'%)':''}`;
+    showToast(`${d.filename} ${d.replaced ? 'replaced' : 'uploaded'}`, 'success');
+    setTimeout(() => { waCloseUpload(); _waAssets=[]; waLoadAssets(); }, 1600);
+  } catch(e) {
+    res.className = 'upload-result error'; res.style.display = 'block';
+    res.innerHTML = `<strong><i class="fas fa-exclamation-circle"></i> Failed:</strong> ${e.message}`;
+    btn.disabled = false;
+    btn.innerHTML = isReplace ? '<i class="fas fa-sync-alt"></i> Try Again' : '<i class="fas fa-cloud-upload-alt"></i> Try Again';
+  }
+}
+
+async function waDelete(filename) {
+  if (!confirm(`Delete "${filename}"? This cannot be undone.`)) return;
+  try {
+    const r = await staffFetch(`${API}/vgk/hub/assets/${encodeURIComponent(filename)}`, { method:'DELETE' });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Delete failed');
+    showToast(`${filename} deleted`, 'success');
+    _waAssets = _waAssets.filter(a => a.filename !== filename);
+    waRenderGrid();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// Drag & drop for assets modal
+document.addEventListener('DOMContentLoaded', () => {
+  const dz = document.getElementById('waDz');
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) waSetFile(e.dataTransfer.files[0]);
+  });
+  document.getElementById('waPresetSelect') &&
+    document.getElementById('waPresetSelect').addEventListener('change', waUpdatePresetHint);
+});
+
+async function loadGalleries() {
+  const grid = document.getElementById('glGrid');
+  grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  const sf = document.getElementById('glStatusFilter').value;
+  let url = `${API}/vgk/gallery`;
+  if (sf) url += `?status=${sf}`;
+  try {
+    const r = await staffFetch(url);
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.detail || 'Load failed');
+    const items = data.galleries || [];
+    document.getElementById('glCount').textContent = `${items.length} galler${items.length !== 1 ? 'ies' : 'y'}`;
+    if (!items.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:50px;color:#9ca3af"><i class="fas fa-images" style="font-size:2rem;margin-bottom:12px;display:block"></i>No galleries yet. Click <strong>Create Gallery</strong> to get started.</div>`;
+      return;
+    }
+    items.forEach(g => { _glGalleryCache[g.id] = { id: g.id, title: g.title, description: g.description || '' }; });
+    grid.innerHTML = items.map(renderGalleryCard).join('');
+  } catch(e) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:30px;color:#dc2626">${escHtml(e.message)}</div>`;
+  }
+}
+
+function renderGalleryCard(g) {
+  const statusBadge = g.status === 'active'
+    ? `<span class="badge-active">Active</span>`
+    : `<span class="badge-inactive">Archived</span>`;
+  const previewSrc = g.preview_url ? _glFileUrl(g.preview_url) : null;
+  const previewHtml = previewSrc
+    ? (g.preview_type === 'video'
+        ? `<video src="${escHtml(previewSrc)}" muted preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>`
+        : `<img src="${escHtml(previewSrc)}" onerror="_glImgErr(this)" style="width:100%;height:100%;object-fit:cover" alt="">`)
+    : `<div style="font-size:2.5rem;color:#d1d5db">🖼️</div>`;
+  const vcnt = g.video_count || 0;
+  return `<div class="gl-card">
+    <div class="gl-card-preview">
+      ${previewHtml}
+      <span class="gl-file-count">${g.file_count} file${g.file_count !== 1 ? 's' : ''}</span>
+    </div>
+    <div class="gl-card-body">
+      <h3 title="${escHtml(g.title)}">${escHtml(g.title)}</h3>
+      <div class="gl-card-desc">${escHtml(g.description || '')}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        ${statusBadge}
+        ${vcnt > 0 ? `<span style="font-size:10px;color:#6b7280">📹 ${vcnt} video${vcnt !== 1 ? 's' : ''}</span>` : ''}
+      </div>
+      <div class="wp-card-actions">
+        <button class="btn-sm btn-edit-sm" onclick="viewGalleryFiles(${g.id})"><i class="fas fa-images"></i> Files</button>
+        <button class="btn-sm" style="background:#ede9fe;color:#7c3aed" onclick="editGallery(${g.id})"><i class="fas fa-pen"></i> Edit</button>
+        ${g.status === 'active'
+          ? `<button class="btn-sm btn-pause" onclick="archiveGallery(${g.id})">Archive</button>`
+          : `<button class="btn-sm btn-activate" onclick="activateGallery(${g.id})">Activate</button>`}
+        <button class="btn-sm btn-delete-sm" onclick="deleteGallery(${g.id})"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function openCreateGalleryModal() {
+  _glEditingId = null;
+  _glPendingFiles = [];
+  document.getElementById('glTitle').value = '';
+  document.getElementById('glDesc').value = '';
+  document.getElementById('glFilePreview').innerHTML = '';
+  document.getElementById('glFileHint').textContent = '';
+  document.getElementById('glFileInput').value = '';
+  document.getElementById('glUploadProgress').style.display = 'none';
+  document.getElementById('glModalTitle').textContent = 'Create Gallery';
+  document.getElementById('glFileSection').style.display = '';
+  const sb = document.getElementById('glSaveBtn');
+  sb.disabled = false;
+  sb.innerHTML = '<i class="fas fa-images"></i> Create Gallery';
+  document.getElementById('glModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function editGallery(id) {
+  const g = _glGalleryCache[id];
+  if (!g) { showToast('Gallery data not loaded. Please refresh.', 'error'); return; }
+  _glEditingId = id;
+  _glPendingFiles = [];
+  document.getElementById('glTitle').value = g.title || '';
+  document.getElementById('glDesc').value = g.description || '';
+  document.getElementById('glFilePreview').innerHTML = '';
+  document.getElementById('glFileHint').textContent = '';
+  document.getElementById('glFileInput').value = '';
+  document.getElementById('glUploadProgress').style.display = 'none';
+  document.getElementById('glModalTitle').textContent = 'Edit Gallery';
+  document.getElementById('glFileSection').style.display = 'none';
+  const sb = document.getElementById('glSaveBtn');
+  sb.disabled = false;
+  sb.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+  document.getElementById('glModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGlModal() {
+  document.getElementById('glModal').classList.remove('open');
+  document.body.style.overflow = '';
+  _glPendingFiles.forEach(f => { try { URL.revokeObjectURL(f.previewUrl); } catch(e) {} });
+  _glPendingFiles = [];
+}
+
+function glDragOver(e) { e.preventDefault(); document.getElementById('glDropZone').classList.add('drag-over'); }
+function glDragLeave(e) { document.getElementById('glDropZone').classList.remove('drag-over'); }
+function glDrop(e) {
+  e.preventDefault();
+  document.getElementById('glDropZone').classList.remove('drag-over');
+  glFilesSelected(e.dataTransfer.files);
+}
+
+async function glFilesSelected(fileList) {
+  const PHOTO = new Set(['image/jpeg','image/jpg','image/png','image/webp','image/gif']);
+  const VIDEO = new Set(['video/mp4','video/webm','video/quicktime']);
+  for (const file of Array.from(fileList)) {
+    const ct = (file.type || '').toLowerCase();
+    const isPhoto = PHOTO.has(ct);
+    const isVideo = VIDEO.has(ct);
+    if (!isPhoto && !isVideo) { showToast(`${file.name}: unsupported type`, 'error'); continue; }
+    const photoCnt = _glPendingFiles.filter(f => f.ftype === 'photo').length;
+    const vidCnt   = _glPendingFiles.filter(f => f.ftype === 'video').length;
+    if (!isVideo && photoCnt >= 15) { showToast('Max 15 images per gallery', 'error'); continue; }
+    if (isVideo && vidCnt >= 4) { showToast('Max 4 videos per gallery', 'error'); continue; }
+    if (_glPendingFiles.length >= 19) { showToast('Max 19 files per gallery (15 images + 4 videos)', 'error'); break; }
+    if (isVideo) {
+      const dur = await _glGetDuration(file);
+      if (dur > 180) { showToast(`${file.name}: exceeds 3 min (${Math.round(dur)}s)`, 'error'); continue; }
+    }
+    _glPendingFiles.push({ file, previewUrl: URL.createObjectURL(file), ftype: isVideo ? 'video' : 'photo' });
+  }
+  _glRenderPreview();
+}
+
+function _glGetDuration(file) {
+  return new Promise(res => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    const url = URL.createObjectURL(file);
+    v.src = url;
+    v.onloadedmetadata = () => { URL.revokeObjectURL(url); res(v.duration || 0); };
+    v.onerror = () => { URL.revokeObjectURL(url); res(0); };
+    setTimeout(() => res(0), 6000);
+  });
+}
+
+function _glRenderPreview() {
+  const grid = document.getElementById('glFilePreview');
+  const hint = document.getElementById('glFileHint');
+  if (!_glPendingFiles.length) { grid.innerHTML = ''; hint.textContent = ''; return; }
+  grid.innerHTML = _glPendingFiles.map((f, i) => `
+    <div class="fp-slot">
+      ${f.ftype === 'video'
+        ? `<video src="${f.previewUrl}" muted style="width:100%;height:100%;object-fit:cover"></video>`
+        : `<img src="${f.previewUrl}" style="width:100%;height:100%;object-fit:cover">`}
+      <span class="fp-type">${f.ftype === 'video' ? '📹' : '📷'}</span>
+      <button class="fp-rm" onclick="glRemoveFile(${i})">✕</button>
+    </div>`).join('');
+  const total = _glPendingFiles.length;
+  const vids  = _glPendingFiles.filter(f => f.ftype === 'video').length;
+  const imgs  = _glPendingFiles.filter(f => f.ftype === 'photo').length;
+  hint.textContent = `${total} file${total !== 1 ? 's' : ''} · ${imgs}/15 images · ${vids}/4 videos`;
+  hint.style.color = '#059669';
+}
+
+function glRemoveFile(idx) {
+  const f = _glPendingFiles.splice(idx, 1)[0];
+  if (f) { try { URL.revokeObjectURL(f.previewUrl); } catch(e) {} }
+  _glRenderPreview();
+}
+
+async function saveGallery() {
+  const title = document.getElementById('glTitle').value.trim();
+  if (!title) { showToast('Gallery title is required', 'error'); return; }
+
+  const sb = document.getElementById('glSaveBtn');
+  const description = document.getElementById('glDesc').value.trim();
+
+  /* ── EDIT MODE: just PATCH title/description ── */
+  if (_glEditingId) {
+    sb.disabled = true;
+    sb.textContent = 'Saving…';
+    try {
+      const r = await staffFetch(`${API}/vgk/gallery/${_glEditingId}`, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ title, description }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.detail || 'Update failed');
+      closeGlModal();
+      loadGalleries();
+      showToast('Gallery updated!', 'success');
+    } catch(e) {
+      showToast(e.message, 'error');
+      sb.disabled = false;
+      sb.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+    }
+    return;
+  }
+
+  /* ── CREATE MODE ── */
+  if (_glPendingFiles.length < 1) { showToast('Please select at least 1 file', 'error'); return; }
+  sb.disabled = true;
+  sb.textContent = 'Creating…';
+
+  let galleryId;
+  try {
+    const r = await staffFetch(`${API}/vgk/gallery`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ title, description }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.detail || 'Create failed');
+    galleryId = d.id;
+  } catch(e) {
+    showToast(e.message, 'error');
+    sb.disabled = false;
+    sb.innerHTML = '<i class="fas fa-images"></i> Create Gallery';
+    return;
+  }
+
+  const prog = document.getElementById('glUploadProgress');
+  const progText = document.getElementById('glProgressText');
+  const progFill = document.getElementById('glProgressFill');
+  prog.style.display = 'block';
+
+  let ok = 0, fail = 0;
+  for (let i = 0; i < _glPendingFiles.length; i++) {
+    progFill.style.width = Math.round((i / _glPendingFiles.length) * 100) + '%';
+    progText.textContent = `Uploading file ${i + 1} of ${_glPendingFiles.length}…`;
+    const fd = new FormData();
+    fd.append('files', _glPendingFiles[i].file);
+    try {
+      const r = await staffFetch(`${API}/vgk/gallery/${galleryId}/files`, { method: 'POST', body: fd });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.detail || 'fail');
+      ok++;
+    } catch(e) { fail++; }
+  }
+
+  progFill.style.width = '100%';
+  progText.textContent = `Done! ${ok} file${ok !== 1 ? 's' : ''} uploaded${fail > 0 ? ` (${fail} failed)` : ''}.`;
+
+  setTimeout(() => {
+    closeGlModal();
+    loadGalleries();
+    showToast(`Gallery "${title}" created with ${ok} file${ok !== 1 ? 's' : ''}!`, 'success');
+  }, 1200);
+}
+
+async function deleteGallery(id) {
+  if (!confirm('Delete this gallery and all its files? This cannot be undone.')) return;
+  try {
+    const r = await staffFetch(`${API}/vgk/gallery/${id}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.detail || 'Delete failed');
+    showToast('Gallery deleted', 'success');
+    loadGalleries();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function archiveGallery(id) {
+  try {
+    const r = await staffFetch(`${API}/vgk/gallery/${id}`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ status: 'archived' }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.detail || 'Failed');
+    showToast('Gallery archived', 'success'); loadGalleries();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function activateGallery(id) {
+  try {
+    const r = await staffFetch(`${API}/vgk/gallery/${id}`, {
+      method: 'PATCH', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ status: 'active' }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.detail || 'Failed');
+    showToast('Gallery activated', 'success'); loadGalleries();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function viewGalleryFiles(id) {
+  document.getElementById('gfModal').setAttribute('data-gallery-id', id);
+  document.getElementById('gfModalTitle').textContent = 'Gallery Files';
+  document.getElementById('gfGrid').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i></div>';
+  document.getElementById('gfAddFileInput').value = '';
+  document.getElementById('gfModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  _refreshGfGrid(id);
+}
+
+function _glFileUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('/')) return url;
+  /* key stored without leading slash (e.g. "storage/vgk_gallery/...") → serve via /storage/ */
+  if (url.startsWith('storage/')) return '/' + url;
+  return `/storage/${url}`;
+}
+function _glImgErr(img) {
+  img.parentElement.innerHTML = '<div style="font-size:2.5rem;color:#d1d5db;display:flex;align-items:center;justify-content:center;height:100%">🖼️</div>';
+}
+
+async function _refreshGfGrid(id) {
+  try {
+    const r = await staffFetch(`${API}/vgk/gallery/${id}`);
+    const data = await r.json();
+    if (!r.ok || !data.ok) throw new Error(data.detail || 'Load failed');
+    const g = data.gallery;
+    const currentThumb = g.thumbnail_url || '';
+    document.getElementById('gfModalTitle').textContent = `${g.title} — Files (${g.files.length})`;
+    const grid = document.getElementById('gfGrid');
+    if (!g.files.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:30px;color:#9ca3af">No files yet. Use "Upload Files" above to add photos/videos.</div>`;
+      return;
+    }
+    grid.innerHTML = g.files.map(f => {
+      const src = _glFileUrl(f.file_url);
+      const isThumb = currentThumb && (currentThumb === f.file_url || currentThumb === src);
+      return `<div class="gl-card" id="gf-${f.id}">
+        <div class="gl-card-preview" style="height:120px;position:relative">
+          ${f.file_type === 'video'
+            ? `<video src="${escHtml(src)}" controls preload="metadata" style="width:100%;height:100%;object-fit:cover"></video>`
+            : `<img src="${escHtml(src)}" alt="" onerror="_glImgErr(this)" style="width:100%;height:100%;object-fit:cover">`}
+          ${isThumb ? `<span style="position:absolute;top:4px;left:4px;background:#10b981;color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:600">★ Cover</span>` : ''}
+        </div>
+        <div class="gl-card-body" style="padding:8px 10px">
+          <div style="font-size:11px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escHtml(f.file_name||'')}">${escHtml(f.file_name||'Untitled')}</div>
+          <div style="font-size:10px;color:#9ca3af;margin-top:2px">${f.file_type === 'video' ? '📹 Video' : '📷 Photo'}</div>
+          ${f.file_type === 'photo' ? `<button class="btn-sm" style="margin-top:5px;width:100%;background:${isThumb?'#10b981':'#f3f4f6'};color:${isThumb?'#fff':'#374151'};border:1px solid ${isThumb?'#10b981':'#d1d5db'}" onclick="setGalleryThumb(${id},'${escHtml(f.file_url)}')">${isThumb ? '★ Cover set' : '☆ Set as cover'}</button>` : ''}
+          <button class="btn-sm btn-delete-sm" style="margin-top:5px;width:100%" onclick="deleteGalleryFile(${id},${f.id})"><i class="fas fa-trash"></i> Remove</button>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) { showToast('Load failed: ' + e.message, 'error'); }
+}
+
+async function setGalleryThumb(galleryId, fileUrl) {
+  try {
+    const r = await staffFetch(`${API}/vgk/gallery/${galleryId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ thumbnail_url: fileUrl }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.detail || 'Failed');
+    showToast('Cover image updated', 'success');
+    _refreshGfGrid(galleryId);
+    loadGalleries();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function closeGfModal() {
+  document.getElementById('gfModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function gfUploadFiles(fileList) {
+  const gid = parseInt(document.getElementById('gfModal').getAttribute('data-gallery-id'));
+  if (!gid) return;
+  const PHOTO = new Set(['image/jpeg','image/jpg','image/png','image/webp','image/gif']);
+  const VIDEO = new Set(['video/mp4','video/webm','video/quicktime']);
+  const filesToUpload = [];
+  for (const file of Array.from(fileList)) {
+    const ct = (file.type || '').toLowerCase();
+    const isVideo = VIDEO.has(ct);
+    const isPhoto = PHOTO.has(ct);
+    if (!isPhoto && !isVideo) { showToast(`${file.name}: unsupported type`, 'error'); continue; }
+    if (isVideo) {
+      const dur = await _glGetDuration(file);
+      if (dur > 180) { showToast(`${file.name}: exceeds 3 min`, 'error'); continue; }
+    }
+    filesToUpload.push(file);
+  }
+  if (!filesToUpload.length) return;
+  showToast(`Uploading ${filesToUpload.length} file${filesToUpload.length !== 1 ? 's' : ''}…`, 'success');
+  let ok = 0;
+  for (const file of filesToUpload) {
+    const fd = new FormData();
+    fd.append('files', file);
+    try {
+      const r = await staffFetch(`${API}/vgk/gallery/${gid}/files`, { method: 'POST', body: fd });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.detail || 'fail');
+      ok++;
+    } catch(e) { showToast(`${file.name}: ${e.message}`, 'error'); }
+  }
+  if (ok > 0) {
+    showToast(`${ok} file${ok !== 1 ? 's' : ''} uploaded`, 'success');
+    _refreshGfGrid(gid);
+    loadGalleries();
+  }
+}
+
+async function deleteGalleryFile(galleryId, fileId) {
+  if (!confirm('Remove this file from the gallery?')) return;
+  try {
+    const r = await staffFetch(`${API}/vgk/gallery/${galleryId}/files/${fileId}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.detail || 'Delete failed');
+    showToast('File removed', 'success');
+    _refreshGfGrid(galleryId);
+    loadGalleries();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+/* Re-enable special tab buttons now that all handler functions are defined */
+['vgkMemberTabBtn','websiteTabBtn','galleryTabBtn','assetsTabBtn','partnersTabBtn','socialTabBtn']
+  .forEach(function(id){ var b=document.getElementById(id); if(b) b.disabled=false; });
+</script>
+
+<!-- WEBSITE ASSETS UPLOAD MODAL [DC_WEB_ASSETS_001] -->
+<div class="modal-overlay" id="waUploadModal">
+<div class="modal-box" style="max-width:500px;">
+  <div class="modal-header">
+    <h2><i class="fas fa-cloud-upload-alt" style="color:#2563eb;margin-right:8px;"></i>Upload / Replace Asset</h2>
+    <button class="modal-close" onclick="waCloseUpload()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="modal-body">
+
+    <!-- Drop zone -->
+    <div class="drop-zone" id="waDz" onclick="document.getElementById('waFileInput').click()">
+      <input type="file" id="waFileInput" accept="image/*" onchange="waOnFileSelected(this)" style="display:none">
+      <div class="dz-icon"><i class="fas fa-cloud-upload-alt" style="color:#9ca3af;font-size:36px;"></i></div>
+      <p><strong style="color:#2563eb;">Click to browse</strong> or drag &amp; drop</p>
+      <p class="dz-hint">PNG, JPG, WEBP — auto-optimized on upload</p>
+    </div>
+    <div id="waDropPreview" style="display:none;margin-top:10px;background:#f3f4f6;border-radius:8px;padding:10px 14px;align-items:center;gap:10px;">
+      <img id="waPreviewImg" src="" alt="" style="width:60px;height:45px;object-fit:contain;background:white;border-radius:4px;">
+      <div style="flex:1;font-size:12px;color:#374151;">
+        <strong id="waPreviewName">—</strong><br>
+        <span id="waPreviewSize" style="color:#6b7280;"></span>
+      </div>
+      <button class="btn-sm btn-delete-sm" onclick="_waUploadFile=null;document.getElementById('waDropPreview').style.display='none';" title="Remove"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- Slot -->
+    <div class="form-row" style="margin-top:14px;">
+      <label class="form-label"><i class="fas fa-star" style="color:#2563eb;"></i> System Slot <span style="font-weight:400;text-transform:none;color:#6b7280;">(optional)</span></label>
+      <select class="form-control" id="waSlotSelect" onchange="waOnSlotChange()">
+        <option value="">— Custom upload (not a system slot) —</option>
+      </select>
+      <div class="form-hint">Replacing a slot keeps the original filename so all pages update instantly.</div>
+    </div>
+
+    <!-- Preset -->
+    <div class="form-row" id="waPresetGroup">
+      <label class="form-label"><i class="fas fa-magic" style="color:#7c3aed;"></i> Optimization Preset</label>
+      <select class="form-control" id="waPresetSelect">
+        <option value="other">Other</option>
+      </select>
+      <div class="form-hint" id="waPresetHint"></div>
+    </div>
+
+    <!-- Custom name -->
+    <div class="form-row" id="waCustomGroup">
+      <label class="form-label"><i class="fas fa-tag" style="color:#059669;"></i> Custom Filename <span style="font-weight:400;text-transform:none;color:#6b7280;">(optional)</span></label>
+      <input type="text" class="form-control" id="waCustomNameInput" placeholder="e.g. partner-bajaj-logo">
+    </div>
+
+    <!-- Output Format (shown only in Replace mode for custom files) -->
+    <div class="form-row" id="waFormatGroup" style="display:none;">
+      <label class="form-label"><i class="fas fa-file-image" style="color:#0891b2;"></i> Output Format</label>
+      <div class="wa-format-pills">
+        <label class="wa-fmt-pill">
+          <input type="radio" name="waFormatPick" value="auto" checked>
+          <span>Auto</span>
+        </label>
+        <label class="wa-fmt-pill">
+          <input type="radio" name="waFormatPick" value="png">
+          <span><i class="fas fa-chess-board" style="font-size:10px;opacity:.7;"></i> PNG</span>
+        </label>
+        <label class="wa-fmt-pill">
+          <input type="radio" name="waFormatPick" value="jpg">
+          <span><i class="fas fa-image" style="font-size:10px;opacity:.7;"></i> JPG</span>
+        </label>
+        <label class="wa-fmt-pill">
+          <input type="radio" name="waFormatPick" value="webp">
+          <span><i class="fas fa-bolt" style="font-size:10px;opacity:.7;"></i> WEBP</span>
+        </label>
+      </div>
+      <div class="form-hint">PNG keeps transparency · JPG for photos · WEBP is smallest. Auto uses preset default.</div>
+    </div>
+
+    <div id="waUploadResult"></div>
+
+    <div class="modal-footer" style="margin-top:16px;padding:0;">
+      <button class="btn-cancel" onclick="waCloseUpload()">Cancel</button>
+      <button class="btn-save" id="waUploadBtn" onclick="waDoUpload()">
+        <i class="fas fa-cloud-upload-alt"></i> Upload &amp; Optimize
+      </button>
+    </div>
+  </div>
+</div>
+</div>
+
+</body>
+</html>

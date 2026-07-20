@@ -1,0 +1,914 @@
+{
+  "generatedAt": "2025-12-12T03:32:57.867Z",
+  "baseUrl": "http://localhost:5000",
+  "summary": {
+    "total": 50,
+    "passed": 0,
+    "failed": 50,
+    "passRate": "0.0%"
+  },
+  "issues": [
+    {
+      "role": "PUBLIC",
+      "path": "/",
+      "name": "Home/Login",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.793Z"
+    },
+    {
+      "role": "PUBLIC",
+      "path": "/login",
+      "name": "User Login",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.795Z"
+    },
+    {
+      "role": "PUBLIC",
+      "path": "/staff/login",
+      "name": "Staff Login",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.797Z"
+    },
+    {
+      "role": "PUBLIC",
+      "path": "/real-dreams/marketplace",
+      "name": "Real Dreams Marketplace",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.802Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/dashboard",
+      "name": "Staff Dashboard",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.803Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/my-attendance",
+      "name": "My Attendance",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.805Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/my-journeys",
+      "name": "My Journeys",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.806Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/my-timesheet",
+      "name": "My Timesheet",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.807Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/sales-invoices",
+      "name": "Sales Invoices",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.808Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/reports",
+      "name": "SFMS Reports",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.809Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/companies",
+      "name": "SFMS Companies",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.810Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/hsn",
+      "name": "HSN Codes",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.815Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/vendors",
+      "name": "Vendors",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.820Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/stock-items",
+      "name": "Stock Items",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.824Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/purchase-invoices",
+      "name": "Purchase Invoices",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.825Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/bom",
+      "name": "BOM",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.826Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/manufacturing",
+      "name": "Manufacturing",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.827Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/procurement",
+      "name": "Procurement",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.828Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/employees",
+      "name": "Employees",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.829Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/departments",
+      "name": "Departments",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.830Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/team/attendance",
+      "name": "Team Attendance",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.831Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/team/journeys",
+      "name": "Team Journeys",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.832Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/tasks/assigned-to-me",
+      "name": "Tasks Assigned To Me",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.832Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/tasks/assigned-by-me",
+      "name": "Tasks Assigned By Me",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.833Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/kra-templates",
+      "name": "KRA Templates",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.834Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/kra-tracking-sheet",
+      "name": "KRA Tracking Sheet",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.835Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/nda-editor",
+      "name": "NDA Editor",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.835Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/nda-versions",
+      "name": "NDA Versions",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.836Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/audit-logs",
+      "name": "Audit Logs",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.837Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/dashboard",
+      "name": "RVZ Dashboard",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.837Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/user-data-search",
+      "name": "User Data Search",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.838Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/menu-access-config",
+      "name": "Menu Access Control",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.840Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/menu-configuration",
+      "name": "Menu Configuration",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.840Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/department-management",
+      "name": "Department Management",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.841Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/crm/leads",
+      "name": "CRM Leads",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.841Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/real-dreams/dashboard",
+      "name": "Real Dreams Dashboard",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.842Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/award-management",
+      "name": "Award Management",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.843Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/role-management",
+      "name": "Role Management",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.844Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/system-controls",
+      "name": "System Controls",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.845Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/login",
+      "name": "Partner Login",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.845Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/dashboard",
+      "name": "Partner Dashboard",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.846Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/orders",
+      "name": "Partner Orders",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.846Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/master",
+      "name": "Partner Master",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.847Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/pricing",
+      "name": "Partner Pricing",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.847Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/payments",
+      "name": "Partner Payments",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.848Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/order-fulfillment-dashboard",
+      "name": "Order Fulfillment Dashboard",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.851Z"
+    },
+    {
+      "role": "USER",
+      "path": "/dashboard",
+      "name": "User Dashboard",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.851Z"
+    },
+    {
+      "role": "USER",
+      "path": "/user/awards",
+      "name": "User Awards",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.852Z"
+    },
+    {
+      "role": "USER",
+      "path": "/user/field-allowances",
+      "name": "Field Allowances",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.853Z"
+    },
+    {
+      "role": "USER",
+      "path": "/user/direct-referral",
+      "name": "Direct Referral",
+      "issueType": "CONNECTION_ERROR",
+      "details": "connect ECONNREFUSED 127.0.0.1:5000",
+      "solution": "Check if server is running and page route is registered",
+      "timestamp": "2025-12-12T03:32:57.854Z"
+    }
+  ],
+  "results": [
+    {
+      "role": "PUBLIC",
+      "path": "/",
+      "name": "Home/Login",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.793Z"
+    },
+    {
+      "role": "PUBLIC",
+      "path": "/login",
+      "name": "User Login",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.795Z"
+    },
+    {
+      "role": "PUBLIC",
+      "path": "/staff/login",
+      "name": "Staff Login",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.797Z"
+    },
+    {
+      "role": "PUBLIC",
+      "path": "/real-dreams/marketplace",
+      "name": "Real Dreams Marketplace",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.802Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/dashboard",
+      "name": "Staff Dashboard",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.803Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/my-attendance",
+      "name": "My Attendance",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.805Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/my-journeys",
+      "name": "My Journeys",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.806Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/my-timesheet",
+      "name": "My Timesheet",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.807Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/sales-invoices",
+      "name": "Sales Invoices",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.808Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/reports",
+      "name": "SFMS Reports",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.809Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/companies",
+      "name": "SFMS Companies",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.810Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/hsn",
+      "name": "HSN Codes",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.815Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/vendors",
+      "name": "Vendors",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.820Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/stock-items",
+      "name": "Stock Items",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.824Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/purchase-invoices",
+      "name": "Purchase Invoices",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.825Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/bom",
+      "name": "BOM",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.826Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/manufacturing",
+      "name": "Manufacturing",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.827Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/accounts/procurement",
+      "name": "Procurement",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.828Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/employees",
+      "name": "Employees",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.829Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/departments",
+      "name": "Departments",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.830Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/team/attendance",
+      "name": "Team Attendance",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.831Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/team/journeys",
+      "name": "Team Journeys",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.832Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/tasks/assigned-to-me",
+      "name": "Tasks Assigned To Me",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.832Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/tasks/assigned-by-me",
+      "name": "Tasks Assigned By Me",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.833Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/kra-templates",
+      "name": "KRA Templates",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.834Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/kra-tracking-sheet",
+      "name": "KRA Tracking Sheet",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.835Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/nda-editor",
+      "name": "NDA Editor",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.835Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/nda-versions",
+      "name": "NDA Versions",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.836Z"
+    },
+    {
+      "role": "STAFF",
+      "path": "/staff/audit-logs",
+      "name": "Audit Logs",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.837Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/dashboard",
+      "name": "RVZ Dashboard",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.837Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/user-data-search",
+      "name": "User Data Search",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.838Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/menu-access-config",
+      "name": "Menu Access Control",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.840Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/menu-configuration",
+      "name": "Menu Configuration",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.840Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/department-management",
+      "name": "Department Management",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.841Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/crm/leads",
+      "name": "CRM Leads",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.841Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/real-dreams/dashboard",
+      "name": "Real Dreams Dashboard",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.842Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/award-management",
+      "name": "Award Management",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.843Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/role-management",
+      "name": "Role Management",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.844Z"
+    },
+    {
+      "role": "RVZ",
+      "path": "/rvz/system-controls",
+      "name": "System Controls",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.845Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/login",
+      "name": "Partner Login",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.845Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/dashboard",
+      "name": "Partner Dashboard",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.846Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/orders",
+      "name": "Partner Orders",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.846Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/master",
+      "name": "Partner Master",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.847Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/pricing",
+      "name": "Partner Pricing",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.847Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/partner/payments",
+      "name": "Partner Payments",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.848Z"
+    },
+    {
+      "role": "PARTNER",
+      "path": "/order-fulfillment-dashboard",
+      "name": "Order Fulfillment Dashboard",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.851Z"
+    },
+    {
+      "role": "USER",
+      "path": "/dashboard",
+      "name": "User Dashboard",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.851Z"
+    },
+    {
+      "role": "USER",
+      "path": "/user/awards",
+      "name": "User Awards",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.852Z"
+    },
+    {
+      "role": "USER",
+      "path": "/user/field-allowances",
+      "name": "Field Allowances",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.853Z"
+    },
+    {
+      "role": "USER",
+      "path": "/user/direct-referral",
+      "name": "Direct Referral",
+      "status": 0,
+      "error": "connect ECONNREFUSED 127.0.0.1:5000",
+      "passed": false,
+      "timestamp": "2025-12-12T03:32:57.854Z"
+    }
+  ]
+}

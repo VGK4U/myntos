@@ -1,0 +1,141 @@
+/**
+ * Light Theme Styles
+ * DC Protocol: DC_THEME_001
+ * Explicit light theme for consistency when toggling from dark mode
+ */
+
+:root {
+    --light-bg-primary: #f8f9fa;
+    --light-bg-secondary: #ffffff;
+    --light-bg-tertiary: #e9ecef;
+    --light-text-primary: #212529;
+    --light-text-secondary: #495057;
+    --light-text-muted: #6c757d;
+    --light-accent-primary: #0d6efd;
+    --light-accent-secondary: #dc3545;
+    --light-border-color: rgba(0, 0, 0, 0.125);
+    --light-card-bg: #ffffff;
+}
+
+body.light-theme {
+    background: linear-gradient(135deg, var(--light-bg-primary) 0%, var(--light-bg-secondary) 100%);
+    color: var(--light-text-primary);
+    min-height: 100vh;
+}
+
+.light-theme .sidebar,
+.light-theme .unified-sidebar {
+    background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
+}
+
+.light-theme .card {
+    background: var(--light-card-bg);
+    border: 1px solid var(--light-border-color);
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.light-theme .text-muted {
+    color: var(--light-text-muted) !important;
+}
+
+.light-theme .form-control {
+    background: var(--light-bg-secondary);
+    border: 1px solid var(--light-border-color);
+    color: var(--light-text-primary);
+}
+
+.light-theme .form-control:focus {
+    background: var(--light-bg-secondary);
+    border-color: var(--light-accent-primary);
+    color: var(--light-text-primary);
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.light-theme .table {
+    color: var(--light-text-primary);
+}
+
+.light-theme .table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.light-theme .modal-content {
+    background: var(--light-bg-secondary);
+    border: 1px solid var(--light-border-color);
+}
+
+.light-theme .input-group-text {
+    background: var(--light-bg-tertiary);
+    border-color: var(--light-border-color);
+    color: var(--light-text-secondary);
+}
+
+.light-theme .btn-outline-primary {
+    color: var(--light-accent-primary);
+    border-color: var(--light-accent-primary);
+}
+
+.light-theme .btn-outline-primary:hover {
+    background: var(--light-accent-primary);
+    color: #ffffff;
+}
+
+.light-theme .dropdown-menu {
+    background: var(--light-bg-secondary);
+    border: 1px solid var(--light-border-color);
+}
+
+.light-theme .dropdown-item {
+    color: var(--light-text-primary);
+}
+
+.light-theme .dropdown-item:hover {
+    background: var(--light-bg-tertiary);
+}
+
+.light-theme .main-content,
+.light-theme .content-area {
+    background: var(--light-bg-primary);
+}
+
+.light-theme .page-header,
+.light-theme .unified-header {
+    background: var(--light-bg-secondary);
+    border-bottom: 1px solid var(--light-border-color);
+}
+
+.light-theme .alert-info {
+    background-color: #cff4fc;
+    border-color: #b6effb;
+    color: #055160;
+}
+
+.light-theme .badge.bg-primary {
+    background-color: var(--light-accent-primary) !important;
+}
+
+.light-theme .nav-tabs .nav-link {
+    color: var(--light-text-secondary);
+}
+
+.light-theme .nav-tabs .nav-link.active {
+    color: var(--light-accent-primary);
+    background-color: var(--light-bg-secondary);
+    border-color: var(--light-border-color) var(--light-border-color) var(--light-bg-secondary);
+}
+
+.light-theme .list-group-item {
+    background-color: var(--light-bg-secondary);
+    border-color: var(--light-border-color);
+    color: var(--light-text-primary);
+}
+
+.light-theme .toast {
+    background: var(--light-bg-secondary);
+    color: var(--light-text-primary);
+}
+
+.light-theme code {
+    background: var(--light-bg-tertiary);
+    color: #d63384;
+}

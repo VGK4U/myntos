@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Marketplace Config — MNR Staff</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --mnr-dark:#0f1729;--mnr-card:#1a2540;--mnr-border:#2a3a5c;
+  --mnr-accent:#4f6ef7;--mnr-green:#22c55e;--mnr-red:#ef4444;
+  --mnr-gold:#f59e0b;--mnr-text:#e2e8f0;--mnr-muted:#8b9ab5;
+}
+body{background:var(--mnr-dark);color:var(--mnr-text);font-family:'Segoe UI',sans-serif;}
+.page-header{background:linear-gradient(135deg,#0f1729,#1e2f5e);border-bottom:1px solid var(--mnr-border);padding:18px 24px 14px;}
+.page-header h4{font-weight:700;color:#fff;margin:0;}
+.section-card{background:var(--mnr-card);border:1px solid var(--mnr-border);border-radius:12px;margin-bottom:20px;}
+.section-card .card-header-mnr{padding:14px 18px;border-bottom:1px solid var(--mnr-border);background:linear-gradient(90deg,#1a2e6e,#22336e);border-radius:12px 12px 0 0;}
+.section-card .card-header-mnr h6{font-weight:700;color:#fff;margin:0;font-size:0.95rem;}
+.sync-btn{background:linear-gradient(90deg,#059669,#10b981);border:none;color:#fff;padding:10px 24px;border-radius:8px;font-weight:700;font-size:0.9rem;cursor:pointer;transition:opacity .2s;}
+.sync-btn:hover{opacity:.85;}
+.sync-btn:disabled{opacity:.5;cursor:not-allowed;}
+.sync-log-card{background:#0f1729;border:1px solid var(--mnr-border);border-radius:8px;padding:14px;margin-top:12px;font-size:0.82rem;}
+.sync-log-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:8px 0;border-bottom:1px solid var(--mnr-border);}
+.sync-log-row:last-child{border-bottom:none;}
+.cat-table td,.cat-table th{padding:10px 14px;vertical-align:middle;}
+.cat-table th{color:var(--mnr-muted);font-size:0.78rem;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--mnr-border);font-weight:600;}
+.cat-table td{font-size:0.88rem;border-bottom:1px solid rgba(42,58,92,.5);}
+.cat-table tr:hover td{background:rgba(79,110,247,.05);}
+.inline-inp{background:#0f1729;border:1px solid var(--mnr-border);color:var(--mnr-text);border-radius:6px;padding:4px 8px;font-size:0.85rem;width:80px;text-align:right;}
+.inline-inp:focus{outline:none;border-color:var(--mnr-accent);}
+.save-row-btn{background:var(--mnr-accent);border:none;color:#fff;border-radius:5px;padding:4px 12px;font-size:0.78rem;cursor:pointer;font-weight:600;}
+.save-row-btn:hover{opacity:.85;}
+.save-row-btn:disabled{opacity:.4;}
+.markup-badge{font-size:0.72rem;padding:2px 7px;border-radius:20px;font-weight:700;}
+.mk-low{background:#15803d;color:#fff;}
+.mk-mid{background:#b45309;color:#fff;}
+.mk-high{background:#dc2626;color:#fff;}
+.stat-pill{display:inline-flex;align-items:center;gap:6px;background:#0f1729;border:1px solid var(--mnr-border);border-radius:8px;padding:8px 16px;font-size:0.85rem;}
+.stat-pill .val{font-weight:700;font-size:1.1rem;color:#fff;}
+.stat-pill .lbl{color:var(--mnr-muted);font-size:0.75rem;}
+.toast-stack{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast-msg{background:var(--mnr-card);border:1px solid var(--mnr-border);border-radius:8px;padding:10px 18px;font-size:0.85rem;box-shadow:0 4px 20px rgba(0,0,0,.5);min-width:240px;}
+.toast-msg.success{border-left:4px solid var(--mnr-green);}
+.toast-msg.error{border-left:4px solid var(--mnr-red);}
+.toast-msg.info{border-left:4px solid var(--mnr-accent);}
+/* Tab styles */
+.mnr-tabs{display:flex;gap:4px;border-bottom:1px solid var(--mnr-border);margin-bottom:0;padding:0 24px;}
+.mnr-tab{background:none;border:none;color:var(--mnr-muted);padding:10px 20px;font-size:0.88rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;}
+.mnr-tab.active{color:var(--mnr-accent);border-bottom-color:var(--mnr-accent);}
+.mnr-tab:hover:not(.active){color:var(--mnr-text);}
+.tab-content-pane{display:none;}
+.tab-content-pane.active{display:block;}
+/* Product images tab */
+.prod-img-thumb{width:52px;height:52px;object-fit:contain;border-radius:6px;background:#0f1729;border:1px solid var(--mnr-border);padding:2px;}
+.prod-img-placeholder{width:52px;height:52px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:#0f1729;border:1px dashed var(--mnr-border);color:var(--mnr-muted);font-size:0.65rem;}
+.sku-pill{background:rgba(79,110,247,.15);color:#a5b4fc;font-family:monospace;font-size:0.72rem;padding:2px 7px;border-radius:4px;font-weight:600;}
+.company-badge{font-size:0.72rem;padding:2px 8px;border-radius:12px;font-weight:600;background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.2);}
+.edit-img-btn{background:rgba(79,110,247,.2);border:1px solid var(--mnr-accent);color:var(--mnr-accent);border-radius:5px;padding:3px 10px;font-size:0.75rem;cursor:pointer;font-weight:600;}
+.edit-img-btn:hover{background:var(--mnr-accent);color:#fff;}
+.override-badge{font-size:0.65rem;padding:2px 6px;border-radius:10px;font-weight:700;background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.3);white-space:nowrap;}
+.clear-override-btn{background:rgba(239,68,68,.15);border:1px solid var(--mnr-red);color:var(--mnr-red);border-radius:5px;padding:3px 10px;font-size:0.73rem;cursor:pointer;font-weight:600;}
+.clear-override-btn:hover{background:var(--mnr-red);color:#fff;}
+.filter-bar{background:#0f1729;border-bottom:1px solid var(--mnr-border);padding:12px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+.filter-inp{background:var(--mnr-card);border:1px solid var(--mnr-border);color:var(--mnr-text);border-radius:7px;padding:6px 12px;font-size:0.84rem;}
+.filter-inp:focus{outline:none;border-color:var(--mnr-accent);}
+.filter-inp option{background:#1a2540;}
+.pg-info{font-size:0.78rem;color:var(--mnr-muted);}
+.pg-btn{background:var(--mnr-card);border:1px solid var(--mnr-border);color:var(--mnr-text);border-radius:5px;padding:4px 12px;font-size:0.8rem;cursor:pointer;}
+.pg-btn:hover:not(:disabled){background:rgba(79,110,247,.2);border-color:var(--mnr-accent);}
+.pg-btn:disabled{opacity:.4;cursor:not-allowed;}
+/* Image upload drop zone */
+.img-drop-zone{border:2px dashed var(--mnr-border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:#0f1729;}
+.img-drop-zone:hover,.img-drop-zone.drag-over{border-color:var(--mnr-accent);background:rgba(79,110,247,.05);}
+.img-preview{max-width:180px;max-height:180px;object-fit:contain;border-radius:8px;border:1px solid var(--mnr-border);}
+/* Modal input style */
+.modal-inp{background:#0f1729;border:1px solid var(--mnr-border);color:var(--mnr-text);border-radius:7px;padding:8px 12px;font-size:0.88rem;width:100%;}
+.modal-inp:focus{outline:none;border-color:var(--mnr-accent);}
+.modal-lbl{font-size:0.78rem;color:var(--mnr-muted);font-weight:600;margin-bottom:4px;}
+/* Toggle switch */
+.zy-toggle{position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;margin-bottom:0;}
+.zy-toggle input{opacity:0;width:0;height:0;}
+.zy-toggle-slider{position:absolute;top:0;left:0;right:0;bottom:0;background:#374151;border-radius:20px;transition:.2s;}
+.zy-toggle-slider:before{position:absolute;content:"";height:14px;width:14px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s;}
+.zy-toggle input:checked + .zy-toggle-slider{background:var(--mnr-green);}
+.zy-toggle input:checked + .zy-toggle-slider:before{transform:translateX(16px);}
+tr.row-inactive{opacity:.45;}
+</style>
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+
+<div class="page-header">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <h4><i class="fas fa-store me-2" style="color:var(--mnr-gold)"></i>Marketplace Lite — Configuration</h4>
+      <small style="color:var(--mnr-muted);">Phase 1 · Price Intelligence Layer · EV Spare Parts</small>
+    </div>
+    <a href="/marketplace" target="_blank" class="btn btn-sm" style="background:var(--mnr-accent);color:#fff;border-radius:7px;">
+      <i class="fas fa-external-link-alt me-1"></i>View Marketplace
+    </a>
+  </div>
+</div>
+
+<div class="container-fluid p-4 pb-2">
+  <!-- Stats Row -->
+  <div class="d-flex flex-wrap gap-3 mb-4" id="statsRow">
+    <div class="stat-pill"><i class="fas fa-box" style="color:var(--mnr-accent)"></i><div><div class="val" id="statTotal">—</div><div class="lbl">Total Products</div></div></div>
+    <div class="stat-pill"><i class="fas fa-tags" style="color:var(--mnr-gold)"></i><div><div class="val" id="statCats">—</div><div class="lbl">Categories</div></div></div>
+    <div class="stat-pill"><i class="fas fa-sync" style="color:var(--mnr-green)"></i><div><div class="val" id="statLastSync">—</div><div class="lbl">Last Sync</div></div></div>
+    <div class="stat-pill"><i class="fas fa-check-circle" style="color:var(--mnr-green)"></i><div><div class="val" id="statActive">—</div><div class="lbl">Active</div></div></div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="mnr-tabs">
+  <button class="mnr-tab active" onclick="switchTab('sync')"><i class="fas fa-cloud-download-alt me-1"></i>Sync & Logs</button>
+  <button class="mnr-tab" onclick="switchTab('pricing')"><i class="fas fa-sliders-h me-1"></i>Category Pricing</button>
+  <button class="mnr-tab" onclick="switchTab('products')"><i class="fas fa-images me-1"></i>Product Images</button>
+  <button class="mnr-tab" onclick="switchTab('dashboard')"><i class="fas fa-chart-bar me-1"></i>Stock Dashboard</button>
+</div>
+
+<div class="container-fluid p-4">
+
+  <!-- TAB 1: Sync & Logs -->
+  <div class="tab-content-pane active" id="pane-sync">
+    <div class="section-card">
+      <div class="card-header-mnr d-flex align-items-center justify-content-between">
+        <h6><i class="fas fa-cloud-download-alt me-2"></i>Google Sheet Sync</h6>
+        <button class="sync-btn" id="syncBtn" onclick="triggerSync()">
+          <i class="fas fa-sync me-2"></i>Sync Now from Google Sheet
+        </button>
+      </div>
+      <div class="p-3">
+        <div style="color:var(--mnr-muted);font-size:0.82rem;margin-bottom:14px;">
+          <i class="fas fa-info-circle me-1"></i>
+          Fetches latest data from the configured Google Sheet for the selected segment. Upserts by SKU — existing products updated, new ones added.
+          If the Drive or Sheet link has changed, update it below before syncing.
+        </div>
+
+        <!-- Segment selector + Sheet URL updater — DC Protocol Mar 2026 -->
+        <div style="background:rgba(255,255,255,0.03);border:1px solid var(--mnr-border);border-radius:8px;padding:14px;margin-bottom:14px;">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+              <label style="font-size:0.78rem;color:var(--mnr-muted);font-weight:600;display:block;margin-bottom:4px;">
+                <i class="fas fa-layer-group me-1"></i>SEGMENT TO SYNC
+              </label>
+              <select id="syncSegmentSelect" class="form-select form-select-sm" onchange="onSyncSegmentChange()" style="background:var(--mnr-surface);color:var(--mnr-text);border-color:var(--mnr-border);">
+                <option value="">Loading segments…</option>
+              </select>
+            </div>
+            <div class="col-md-7">
+              <label style="font-size:0.78rem;color:var(--mnr-muted);font-weight:600;display:block;margin-bottom:4px;">
+                <i class="fas fa-link me-1"></i>GOOGLE SHEET / DRIVE URL
+                <span id="sheetUrlStatus" style="margin-left:8px;font-size:0.72rem;"></span>
+              </label>
+              <input type="url" id="syncSheetUrl" class="form-control form-control-sm"
+                placeholder="https://docs.google.com/spreadsheets/d/…"
+                style="background:var(--mnr-surface);color:var(--mnr-text);border-color:var(--mnr-border);"
+                oninput="markSheetUrlDirty()">
+            </div>
+            <div class="col-md-2">
+              <button id="saveSheetUrlBtn" class="btn btn-sm w-100" onclick="saveSheetUrl()"
+                style="background:#7c3aed;color:#fff;border:none;font-weight:600;display:none;">
+                <i class="fas fa-save me-1"></i>Save URL
+              </button>
+            </div>
+          </div>
+          <div id="sheetUrlNote" style="font-size:0.75rem;color:var(--mnr-muted);margin-top:8px;display:none;">
+            <i class="fas fa-exclamation-triangle me-1" style="color:#f59e0b;"></i>
+            URL changed — click <strong>Save URL</strong> first, then <strong>Sync Now</strong> to pull from the new sheet.
+          </div>
+        </div>
+
+        <div id="syncProgress" style="display:none;margin-bottom:10px;">
+          <div class="d-flex align-items-center gap-2" style="color:var(--mnr-accent);">
+            <i class="fas fa-spinner fa-spin"></i> Syncing from Google Sheet… please wait
+          </div>
+        </div>
+        <div id="syncResult" style="display:none;"></div>
+        <div id="syncLogs">
+          <div style="color:var(--mnr-muted);font-size:0.82rem;margin-bottom:8px;font-weight:600;">Recent Sync History</div>
+          <div id="syncLogList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: Category Pricing -->
+  <div class="tab-content-pane" id="pane-pricing">
+    <div class="section-card">
+      <div class="card-header-mnr">
+        <h6><i class="fas fa-sliders-h me-2"></i>Category Pricing Configuration</h6>
+      </div>
+      <div class="p-0">
+        <div style="padding:12px 18px;color:var(--mnr-muted);font-size:0.8rem;border-bottom:1px solid var(--mnr-border);">
+          <i class="fas fa-lightbulb me-1" style="color:var(--mnr-gold)"></i>
+          <strong style="color:var(--mnr-text);">Price Engine:</strong>
+          MRP = Dealer Price × (1 + Markup%). MNR members get 1.5% off (points), Dealers get 12% off. GST applied on net price.
+          <span class="ms-2" style="color:var(--mnr-gold)">10–20% markup recommended per category.</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table cat-table mb-0" id="catConfigTable">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th>HSN Code</th>
+                <th>Markup % <small style="color:var(--mnr-muted)">(MRP uplift)</small></th>
+                <th>GST %</th>
+                <th>Margin Floor %</th>
+                <th>Updated By</th>
+                <th>Updated At</th>
+                <th>Save</th>
+              </tr>
+            </thead>
+            <tbody id="catConfigBody">
+              <tr><td colspan="8" class="text-center py-4" style="color:var(--mnr-muted);">
+                <i class="fas fa-spinner fa-spin me-2"></i>Loading categories…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: Product Images -->
+  <div class="tab-content-pane" id="pane-products">
+    <div class="section-card">
+      <div class="card-header-mnr d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h6><i class="fas fa-images me-2"></i>Product Stock — Company-wise with Images</h6>
+        <button class="sync-btn" style="padding:7px 16px;font-size:0.82rem;" onclick="triggerSync().then(()=>loadProducts())">
+          <i class="fas fa-sync me-1"></i>Sync from Google Sheet
+        </button>
+      </div>
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <input type="text" class="filter-inp" id="prodSearch" placeholder="Search SKU or product name…" style="width:220px;" oninput="debounceLoad()">
+        <select class="filter-inp" id="prodCompanyFilter" onchange="prodPage=1;loadProducts()">
+          <option value="">All Companies</option>
+        </select>
+        <select class="filter-inp" id="prodCatFilter" onchange="prodPage=1;loadProducts()">
+          <option value="">All Categories</option>
+        </select>
+        <select class="filter-inp" id="prodImgFilter" onchange="prodPage=1;loadProducts()">
+          <option value="">All Images</option>
+          <option value="missing">Missing Image</option>
+          <option value="has_image">Has Image</option>
+        </select>
+        <select class="filter-inp" id="prodStockFilter" onchange="prodPage=1;loadProducts()">
+          <option value="">All Stock</option>
+          <option value="in_stock">In Stock</option>
+          <option value="oos">Out of Stock</option>
+          <option value="below_threshold">Below Min Level</option>
+        </select>
+        <div class="ms-auto d-flex align-items-center gap-2">
+          <span class="pg-info" id="prodPgInfo">—</span>
+          <button class="pg-btn" id="prodPrev" onclick="prodPage--;loadProducts()"><i class="fas fa-chevron-left"></i></button>
+          <button class="pg-btn" id="prodNext" onclick="prodPage++;loadProducts()"><i class="fas fa-chevron-right"></i></button>
+        </div>
+      </div>
+      <!-- Products Table -->
+      <div class="table-responsive">
+        <table class="table cat-table mb-0">
+          <thead>
+            <tr>
+              <th style="width:36px;">#</th>
+              <th style="width:58px;">Image</th>
+              <th>SKU</th>
+              <th>Product / Category</th>
+              <th>Company</th>
+              <th>Dealer Price</th>
+              <th title="Available stock count from Google Sheet">Avail Qty</th>
+              <th title="Qty in open Purchase Orders right now">Orders</th>
+              <th title="Min Order Level — ZYPR auto-raised when stock falls below this">Min Level</th>
+              <th title="Total PO line items raised for this SKU (all time)">PO Count</th>
+              <th title="Base procurement cost from supplier (excl. transport &amp; tax) — col 20">Base Cost</th>
+              <th title="Proc. with Tax = Base + Transport + Tax — col 24 of sheet. Used for ZYPR budget.">Proc. with Tax</th>
+              <th title="Toggle product visibility in the marketplace">Status</th>
+              <th style="width:76px;position:sticky;right:0;background:#1a2035;z-index:2;border-left:1px solid var(--mnr-border);">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="prodTableBody">
+            <tr><td colspan="14" class="text-center py-4" style="color:var(--mnr-muted);"><i class="fas fa-spinner fa-spin me-2"></i>Loading products…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: Stock Dashboard -->
+  <div class="tab-content-pane" id="pane-dashboard">
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+      <div>
+        <div style="font-size:1.05rem;font-weight:700;color:#fff;"><i class="fas fa-chart-bar me-2" style="color:var(--mnr-accent)"></i>Stock Intelligence Dashboard</div>
+        <div style="font-size:0.75rem;color:var(--mnr-muted);">Live procurement budget & stock health — refreshed on every sync</div>
+      </div>
+      <button onclick="loadDashboard()" class="sync-btn" style="padding:7px 16px;font-size:0.82rem;" id="dashRefreshBtn">
+        <i class="fas fa-sync me-1"></i>Refresh
+      </button>
+    </div>
+
+    <!-- KPI Row 1 -->
+    <div class="row g-3 mb-3" id="dashKpis">
+      <div class="col-6 col-md-3"><div class="section-card p-3 text-center" id="kpi-total"><div style="font-size:0.7rem;color:var(--mnr-muted);text-transform:uppercase;letter-spacing:.08em;">Total SKUs</div><div style="font-size:2rem;font-weight:800;color:#fff;" id="kv-total">—</div></div></div>
+      <div class="col-6 col-md-3"><div class="section-card p-3 text-center"><div style="font-size:0.7rem;color:var(--mnr-muted);text-transform:uppercase;letter-spacing:.08em;">In Stock</div><div style="font-size:2rem;font-weight:800;color:var(--mnr-green);" id="kv-instock">—</div><div style="font-size:0.72rem;color:var(--mnr-muted);" id="kv-instockpct">—</div></div></div>
+      <div class="col-6 col-md-3"><div class="section-card p-3 text-center"><div style="font-size:0.7rem;color:var(--mnr-muted);text-transform:uppercase;letter-spacing:.08em;">Zero Stock (OOS)</div><div style="font-size:2rem;font-weight:800;color:var(--mnr-red);" id="kv-zero">—</div></div></div>
+      <div class="col-6 col-md-3"><div class="section-card p-3 text-center"><div style="font-size:0.7rem;color:var(--mnr-muted);text-transform:uppercase;letter-spacing:.08em;">Below Min Level</div><div style="font-size:2rem;font-weight:800;color:var(--mnr-gold);" id="kv-belowmin">—</div></div></div>
+    </div>
+
+    <!-- KPI Row 2 -->
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-3"><div class="section-card p-3 text-center"><div style="font-size:0.7rem;color:var(--mnr-muted);text-transform:uppercase;letter-spacing:.08em;">Open ZYPRs</div><div style="font-size:2rem;font-weight:800;color:var(--mnr-accent);" id="kv-zypr">—</div><div style="font-size:0.7rem;color:var(--mnr-muted);">Pending procurement</div></div></div>
+      <div class="col-6 col-md-3"><div class="section-card p-3 text-center"><div style="font-size:0.7rem;color:var(--mnr-muted);text-transform:uppercase;letter-spacing:.08em;">Open POs</div><div style="font-size:2rem;font-weight:800;color:#a78bfa;" id="kv-po">—</div><div style="font-size:0.7rem;color:var(--mnr-muted);">In transit/confirmed</div></div></div>
+      <div class="col-6 col-md-3"><div class="section-card p-3 text-center"><div style="font-size:0.7rem;color:var(--mnr-muted);text-transform:uppercase;letter-spacing:.08em;">Inventory Value</div><div style="font-size:1.5rem;font-weight:800;color:var(--mnr-green);" id="kv-invval">—</div><div style="font-size:0.7rem;color:var(--mnr-muted);">Dealer price × qty</div></div></div>
+      <div class="col-6 col-md-3"><div class="section-card p-3 text-center" style="border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.06);"><div style="font-size:0.7rem;color:var(--mnr-gold);text-transform:uppercase;letter-spacing:.08em;font-weight:700;">Proc. Budget Needed</div><div style="font-size:1.5rem;font-weight:800;color:var(--mnr-gold);" id="kv-budget">—</div><div style="font-size:0.7rem;color:var(--mnr-muted);">Proc. with Tax × shortfall</div></div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="row g-3 mb-3">
+      <div class="col-md-7">
+        <div class="section-card p-3">
+          <div style="font-size:0.82rem;font-weight:700;color:var(--mnr-muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em;"><i class="fas fa-boxes me-1"></i>Stock Health by Category</div>
+          <canvas id="chartCategoryStock" height="260"></canvas>
+        </div>
+      </div>
+      <div class="col-md-5">
+        <div class="section-card p-3">
+          <div style="font-size:0.82rem;font-weight:700;color:var(--mnr-muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em;"><i class="fas fa-rupee-sign me-1"></i>Procurement Budget by Category</div>
+          <canvas id="chartBudget" height="260"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Restock Table -->
+    <div class="section-card">
+      <div class="card-header-mnr">
+        <h6><i class="fas fa-exclamation-triangle me-2" style="color:var(--mnr-gold)"></i>Top Items Needing Restock — by Proc. with Tax</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table cat-table mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>SKU / Product</th>
+              <th>Category</th>
+              <th>Avail Qty</th>
+              <th>Min Level</th>
+              <th>Shortfall</th>
+              <th>Proc. with Tax / unit</th>
+              <th style="color:var(--mnr-gold);">Budget Required</th>
+            </tr>
+          </thead>
+          <tbody id="dashRestockBody">
+            <tr><td colspan="8" class="text-center py-4" style="color:var(--mnr-muted);"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container-fluid -->
+
+<!-- Edit Product Modal -->
+<div class="modal fade" id="editProdModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background:var(--mnr-card);border:1px solid var(--mnr-border);color:var(--mnr-text);">
+      <div class="modal-header" style="border-bottom:1px solid var(--mnr-border);">
+        <h5 class="modal-title"><i class="fas fa-edit me-2" style="color:var(--mnr-accent)"></i>Edit Product</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editProdId">
+        <!-- Override status bar -->
+        <div id="editOverrideBar" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:7px;padding:8px 14px;margin-bottom:14px;font-size:0.82rem;"></div>
+        <div class="row g-3">
+          <!-- Left: details -->
+          <div class="col-md-7">
+            <div class="mb-3">
+              <div class="modal-lbl">SKU</div>
+              <input class="modal-inp" id="editSku" readonly style="opacity:.6;">
+            </div>
+            <div class="mb-3">
+              <div class="modal-lbl">Product Name *</div>
+              <input class="modal-inp" id="editName" placeholder="e.g. Mirror Chrome">
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <div class="modal-lbl">Category</div>
+                <input class="modal-inp" id="editCat" readonly style="opacity:.6;">
+              </div>
+              <div class="col-6">
+                <div class="modal-lbl">Company (Vehicle)</div>
+                <input class="modal-inp" id="editCompany" placeholder="e.g. Common / Vespa">
+              </div>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <div class="modal-lbl">Dealer Price (₹)</div>
+                <input type="number" class="modal-inp" id="editPrice" min="0" step="0.01">
+              </div>
+              <div class="col-6">
+                <div class="modal-lbl">Available Qty</div>
+                <input type="number" class="modal-inp" id="editQty" min="0" step="1">
+              </div>
+            </div>
+            <div class="mb-3">
+              <div class="modal-lbl">Model Compatibility</div>
+              <input class="modal-inp" id="editModel" placeholder="e.g. Optima / SL / GT Pro">
+            </div>
+            <div class="mb-3">
+              <div class="modal-lbl">Specifications</div>
+              <input class="modal-inp" id="editSpecs" placeholder="e.g. 60V, 30Ah, LFP">
+            </div>
+            <div class="mb-3">
+              <div class="modal-lbl">Description / Additional Info</div>
+              <textarea class="modal-inp" id="editDesc" rows="2" style="resize:vertical;"></textarea>
+            </div>
+            <!-- Min Order Level -->
+            <div class="mb-3">
+              <div class="modal-lbl">Min Order Level <span style="color:var(--mnr-muted);font-size:0.72rem;">(ZYPR auto-raised when stock falls below this)</span></div>
+              <input type="number" class="modal-inp" id="editMinLevel" min="0" step="1" placeholder="0">
+            </div>
+            <!-- Procurement Costs — read-only from Google Sheet -->
+            <div style="background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:12px;margin-bottom:4px;">
+              <div style="font-size:0.75rem;font-weight:700;color:var(--mnr-gold);margin-bottom:10px;letter-spacing:.05em;">
+                <i class="fas fa-file-invoice me-2"></i>PROCUREMENT COSTS <span style="font-size:0.65rem;font-weight:400;color:var(--mnr-muted);margin-left:6px;">(synced from sheet — read only)</span>
+              </div>
+              <div class="row g-2">
+                <div class="col-4">
+                  <div style="font-size:0.68rem;color:var(--mnr-muted);margin-bottom:3px;">Proc. Cost</div>
+                  <div id="editProcCost" style="font-size:0.85rem;font-weight:600;color:var(--mnr-text);">—</div>
+                </div>
+                <div class="col-4">
+                  <div style="font-size:0.68rem;color:var(--mnr-muted);margin-bottom:3px;">Transport</div>
+                  <div id="editProcTransport" style="font-size:0.85rem;font-weight:600;color:var(--mnr-text);">—</div>
+                </div>
+                <div class="col-4">
+                  <div style="font-size:0.68rem;color:var(--mnr-muted);margin-bottom:3px;">Ex. Tax</div>
+                  <div id="editProcExTax" style="font-size:0.85rem;font-weight:600;color:var(--mnr-text);">—</div>
+                </div>
+                <div class="col-4">
+                  <div style="font-size:0.68rem;color:var(--mnr-muted);margin-bottom:3px;">Tax %</div>
+                  <div id="editProcTaxPct" style="font-size:0.85rem;font-weight:600;color:var(--mnr-text);">—</div>
+                </div>
+                <div class="col-8">
+                  <div style="font-size:0.68rem;color:var(--mnr-muted);margin-bottom:3px;">With Tax (Total Procurement)</div>
+                  <div id="editProcWithTax" style="font-size:1rem;font-weight:700;color:var(--mnr-gold);">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Right: image -->
+          <div class="col-md-5">
+            <div class="modal-lbl mb-2">Product Image</div>
+            <div style="text-align:center;margin-bottom:14px;">
+              <img id="editImgPreview" src="" alt="" class="img-preview" style="display:none;margin:0 auto 10px;">
+              <div id="editImgPlaceholder" style="width:180px;height:180px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:#0f1729;border:1px dashed var(--mnr-border);color:var(--mnr-muted);font-size:0.8rem;flex-direction:column;gap:8px;">
+                <i class="fas fa-image fa-2x"></i><span>No image</span>
+              </div>
+            </div>
+            <div class="img-drop-zone" id="imgDropZone" onclick="document.getElementById('imgFileInput').click()">
+              <i class="fas fa-cloud-upload-alt fa-2x mb-2" style="color:var(--mnr-accent)"></i>
+              <div style="font-size:0.82rem;color:var(--mnr-muted);">Click or drag &amp; drop image here</div>
+              <div style="font-size:0.72rem;color:var(--mnr-muted);margin-top:4px;">PNG, JPG, WEBP — max 5MB</div>
+            </div>
+            <input type="file" id="imgFileInput" accept="image/*" style="display:none;" onchange="previewImg(this)">
+            <div id="imgUploadStatus" style="font-size:0.78rem;margin-top:8px;text-align:center;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid var(--mnr-border);">
+        <button type="button" class="btn btn-sm" style="background:#374151;color:#fff;border:none;border-radius:6px;" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="clearOverrideBtn" class="btn btn-sm clear-override-btn" style="display:none;" onclick="clearOverrides()">
+          <i class="fas fa-unlock me-1"></i>Allow Sheet Sync
+        </button>
+        <button type="button" class="btn btn-sm" style="background:var(--mnr-accent);color:#fff;border:none;border-radius:6px;" onclick="saveProduct()" id="saveProdBtn">
+          <i class="fas fa-save me-1"></i>Save Details
+        </button>
+        <button type="button" class="btn btn-sm" style="background:var(--mnr-green);color:#fff;border:none;border-radius:6px;" onclick="uploadImage()" id="uploadImgBtn">
+          <i class="fas fa-upload me-1"></i>Upload Image
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let COMPANY_ID = 1;
+let prodPage = 1;
+const PROD_PER_PAGE = 30;
+let searchTimer = null;
+let editModal = null;
+let selectedFile = null;
+
+(async () => {
+  try {
+    const r = await fetch('/api/v1/auth/me');
+    if (r.ok) {
+      const u = await r.json();
+      if (u.active_company_id) COMPANY_ID = u.active_company_id;
+      else if (u.base_company_id) COMPANY_ID = u.base_company_id;
+    }
+  } catch(e) {}
+  loadAll();
+  editModal = new bootstrap.Modal(document.getElementById('editProdModal'));
+})();
+
+function switchTab(name) {
+  document.querySelectorAll('.mnr-tab').forEach((t,i) => {
+    const tabs = ['sync','pricing','products','dashboard'];
+    t.classList.toggle('active', tabs[i] === name);
+  });
+  if (name === 'dashboard') loadDashboard();
+  document.querySelectorAll('.tab-content-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-' + name).classList.add('active');
+  if (name === 'products') loadProducts();
+}
+
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = 'toast-msg ' + type;
+  el.innerHTML = `<i class="fas fa-${type==='success'?'check-circle text-success':type==='error'?'times-circle text-danger':'info-circle'} me-2"></i>${msg}`;
+  document.getElementById('toastStack').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+let _syncSegments = [];
+let _originalSheetUrl = '';
+
+async function loadAll() {
+  await Promise.all([loadCategoryConfigs(), loadSyncLogs(), loadStats(), loadSyncSegments()]);
+}
+
+async function loadSyncSegments() {
+  try {
+    const r = await fetch(`/api/v1/marketplace/segments?company_id=${COMPANY_ID}`);
+    if (!r.ok) return;
+    _syncSegments = await r.json();
+    const sel = document.getElementById('syncSegmentSelect');
+    if (!sel) return;
+    sel.innerHTML = _syncSegments.map(s =>
+      `<option value="${s.id}" data-sheet="${s.google_sheet_url||''}" data-type="${s.segment_type||'ECOM'}">${s.name}</option>`
+    ).join('');
+    onSyncSegmentChange();
+  } catch(e) {}
+}
+
+function onSyncSegmentChange() {
+  const sel = document.getElementById('syncSegmentSelect');
+  const urlInput = document.getElementById('syncSheetUrl');
+  const statusEl = document.getElementById('sheetUrlStatus');
+  const noteEl = document.getElementById('sheetUrlNote');
+  const saveBtn = document.getElementById('saveSheetUrlBtn');
+  if (!sel || !urlInput) return;
+  const opt = sel.options[sel.selectedIndex];
+  const sheetUrl = opt ? opt.getAttribute('data-sheet') : '';
+  const segType = opt ? opt.getAttribute('data-type') : 'ECOM';
+  _originalSheetUrl = sheetUrl || '';
+  urlInput.value = sheetUrl || '';
+  if (segType === 'REAL_DREAMS') {
+    urlInput.disabled = true;
+    urlInput.placeholder = 'Real Dreams uses property database — no Sheet sync';
+    if (statusEl) statusEl.innerHTML = '<span style="color:#f59e0b;"><i class="fas fa-info-circle me-1"></i>RD uses property DB</span>';
+  } else {
+    urlInput.disabled = false;
+    urlInput.placeholder = 'https://docs.google.com/spreadsheets/d/…';
+    if (statusEl) statusEl.innerHTML = sheetUrl
+      ? '<span style="color:#10b981;"><i class="fas fa-check-circle me-1"></i>URL configured</span>'
+      : '<span style="color:#ef4444;"><i class="fas fa-exclamation-circle me-1"></i>No URL — sync will use default</span>';
+  }
+  if (noteEl) noteEl.style.display = 'none';
+  if (saveBtn) saveBtn.style.display = 'none';
+}
+
+function markSheetUrlDirty() {
+  const urlInput = document.getElementById('syncSheetUrl');
+  const noteEl = document.getElementById('sheetUrlNote');
+  const saveBtn = document.getElementById('saveSheetUrlBtn');
+  const statusEl = document.getElementById('sheetUrlStatus');
+  const isDirty = urlInput && urlInput.value !== _originalSheetUrl;
+  if (noteEl) noteEl.style.display = isDirty ? '' : 'none';
+  if (saveBtn) saveBtn.style.display = isDirty ? '' : 'none';
+  if (statusEl && isDirty) statusEl.innerHTML = '<span style="color:#f59e0b;"><i class="fas fa-edit me-1"></i>Unsaved changes</span>';
+}
+
+async function saveSheetUrl() {
+  const sel = document.getElementById('syncSegmentSelect');
+  const urlInput = document.getElementById('syncSheetUrl');
+  const saveBtn = document.getElementById('saveSheetUrlBtn');
+  const noteEl = document.getElementById('sheetUrlNote');
+  const statusEl = document.getElementById('sheetUrlStatus');
+  const segId = sel ? sel.value : null;
+  if (!segId) { toast('Select a segment first', 'error'); return; }
+  const newUrl = (urlInput ? urlInput.value : '').trim();
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  try {
+    const r = await staffFetch(`/api/v1/marketplace/segments/${segId}?company_id=${COMPANY_ID}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ google_sheet_url: newUrl })
+    });
+    if (!r.ok) {
+      const d = await r.json();
+      toast('Save failed: ' + (d.detail || 'Unknown error'), 'error');
+      return;
+    }
+    _originalSheetUrl = newUrl;
+    // Update the option's data attribute
+    const opt = sel.options[sel.selectedIndex];
+    if (opt) opt.setAttribute('data-sheet', newUrl);
+    if (noteEl) noteEl.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (statusEl) statusEl.innerHTML = '<span style="color:#10b981;"><i class="fas fa-check-circle me-1"></i>URL saved — ready to sync</span>';
+    toast('Sheet URL updated', 'success');
+  } catch(e) {
+    toast('Save error: ' + e.message, 'error');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save URL';
+  }
+}
+
+async function loadStats() {
+  try {
+    const r = await fetch(`/api/v1/marketplace/categories?company_id=${COMPANY_ID}`);
+    const cats = await r.json();
+    document.getElementById('statCats').textContent = cats.length;
+    document.getElementById('statTotal').textContent = cats.reduce((a,c)=>a+c.count,0);
+    document.getElementById('statActive').textContent = cats.reduce((a,c)=>a+c.count,0);
+  } catch(e) {}
+}
+
+async function loadSyncLogs() {
+  try {
+    const r = await fetch(`/api/v1/marketplace/sync/logs?company_id=${COMPANY_ID}&limit=5`);
+    if (!r.ok) return;
+    const raw = await r.json();
+    const logs = Array.isArray(raw) ? raw : (raw.logs || raw.items || []);
+    const el = document.getElementById('syncLogList');
+    if (!logs.length) {
+      el.innerHTML = '<div style="color:var(--mnr-muted);font-size:0.82rem;padding:8px 0;">No sync history yet. Click "Sync Now" to start.</div>';
+      return;
+    }
+    document.getElementById('statLastSync').textContent =
+      new Date(logs[0].sync_timestamp).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    el.innerHTML = logs.filter(l => l && l.sync_timestamp).map(l => `
+      <div class="sync-log-row">
+        <div>
+          <div style="font-weight:600;color:#fff;">${new Date(l.sync_timestamp).toLocaleString('en-IN')}</div>
+          <div style="color:var(--mnr-muted);font-size:0.75rem;">Company ${l.company_id}</div>
+        </div>
+        <div class="d-flex gap-3">
+          <span style="color:var(--mnr-muted);">Total <strong style="color:#fff">${l.total_records ?? 0}</strong></span>
+          <span style="color:var(--mnr-muted);">OK <strong style="color:var(--mnr-green)">${l.successful_records ?? 0}</strong></span>
+          <span style="color:var(--mnr-muted);">Failed <strong style="color:${(l.failed_records??0)>0?'var(--mnr-red)':'var(--mnr-muted)'}">${l.failed_records ?? 0}</strong></span>
+        </div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+async function loadCategoryConfigs() {
+  try {
+    const r = await fetch(`/api/v1/marketplace/config/categories?company_id=${COMPANY_ID}`);
+    if (!r.ok) throw new Error('Not authorised');
+    const configs = await r.json();
+    renderCatTable(configs);
+    // Populate category filter
+    const catSel = document.getElementById('prodCatFilter');
+    const existing = new Set([...catSel.options].map(o=>o.value));
+    configs.forEach(c => {
+      if (!existing.has(c.category_name)) {
+        const opt = document.createElement('option');
+        opt.value = c.category_name;
+        opt.textContent = c.category_name;
+        catSel.appendChild(opt);
+      }
+    });
+  } catch(e) {
+    document.getElementById('catConfigBody').innerHTML =
+      `<tr><td colspan="8" class="text-center py-4" style="color:var(--mnr-red);">Failed to load — ${e.message}</td></tr>`;
+  }
+}
+
+function mkBadge(pct) {
+  const cls = pct <= 12 ? 'mk-low' : pct <= 17 ? 'mk-mid' : 'mk-high';
+  return `<span class="markup-badge ${cls}">${pct}%</span>`;
+}
+
+function renderCatTable(configs) {
+  const body = document.getElementById('catConfigBody');
+  if (!configs.length) {
+    body.innerHTML = '<tr><td colspan="8" class="text-center py-4" style="color:var(--mnr-muted);">No categories yet. Run a sync to auto-seed.</td></tr>';
+    return;
+  }
+  body.innerHTML = configs.map(c => `
+    <tr id="cat-row-${c.id}">
+      <td>
+        <strong>${esc(c.category_name)}</strong>
+        <div style="font-size:0.72rem;color:var(--mnr-muted);margin-top:2px;">${mkBadge(c.markup_percent)} markup</div>
+      </td>
+      <td><input class="inline-inp" style="width:90px;" id="hsn-${c.id}" value="${esc(c.hsn_code||'')}" placeholder="e.g. 8714"></td>
+      <td>
+        <input type="number" class="inline-inp" id="mk-${c.id}" value="${c.markup_percent}" min="1" max="100" step="0.5" oninput="updateMkBadge(${c.id},this.value)">
+        <small style="color:var(--mnr-muted);font-size:0.72rem;margin-left:4px;">%</small>
+        <span id="mk-badge-${c.id}" class="ms-1">${mkBadge(c.markup_percent)}</span>
+      </td>
+      <td>
+        <input type="number" class="inline-inp" id="gst-${c.id}" value="${c.gst_percent}" min="0" max="28" step="0.5">
+        <small style="color:var(--mnr-muted);font-size:0.72rem;margin-left:4px;">%</small>
+      </td>
+      <td>
+        <input type="number" class="inline-inp" id="floor-${c.id}" value="${c.margin_floor_percent}" min="0" max="50" step="0.5">
+        <small style="color:var(--mnr-muted);font-size:0.72rem;margin-left:4px;">%</small>
+      </td>
+      <td style="color:var(--mnr-muted);font-size:0.8rem;">${esc(c.updated_by||'—')}</td>
+      <td style="color:var(--mnr-muted);font-size:0.78rem;">${c.updated_at ? new Date(c.updated_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+      <td><button class="save-row-btn" id="save-${c.id}" onclick="saveRow('${esc(c.category_name)}',${c.id})"><i class="fas fa-save me-1"></i>Save</button></td>
+    </tr>`).join('');
+}
+
+function updateMkBadge(id, val) {
+  const badge = document.getElementById('mk-badge-' + id);
+  if (badge) badge.outerHTML = `<span id="mk-badge-${id}" class="ms-1">${mkBadge(parseFloat(val)||15)}</span>`;
+}
+
+async function saveRow(categoryName, id) {
+  const btn = document.getElementById('save-' + id);
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  const payload = {
+    markup_percent: parseFloat(document.getElementById('mk-' + id).value) || 15,
+    gst_percent: parseFloat(document.getElementById('gst-' + id).value) || 18,
+    margin_floor_percent: parseFloat(document.getElementById('floor-' + id).value) || 5,
+    hsn_code: document.getElementById('hsn-' + id).value.trim(),
+  };
+  try {
+    const r = await fetch(`/api/v1/marketplace/config/categories/${encodeURIComponent(categoryName)}?company_id=${COMPANY_ID}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error('Server error ' + r.status);
+    toast('Saved: ' + categoryName, 'success');
+    await loadCategoryConfigs();
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save me-1"></i>Save';
+  }
+}
+
+async function triggerSync() {
+  // DC Protocol Mar 2026: Guard — warn if sheet URL has unsaved changes
+  const urlInput = document.getElementById('syncSheetUrl');
+  const saveBtn = document.getElementById('saveSheetUrlBtn');
+  if (saveBtn && saveBtn.style.display !== 'none') {
+    toast('Save the updated Sheet URL first before syncing', 'error');
+    return;
+  }
+  const sel = document.getElementById('syncSegmentSelect');
+  const segId = sel && sel.value ? `&segment_id=${sel.value}` : '';
+  const segName = sel ? sel.options[sel.selectedIndex]?.text : 'Default';
+  const btn = document.getElementById('syncBtn');
+  const progress = document.getElementById('syncProgress');
+  const result = document.getElementById('syncResult');
+  btn.disabled = true;
+  btn.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Syncing ${segName}…`;
+  progress.style.display = '';
+  result.style.display = 'none';
+  try {
+    const r = await staffFetch(`/api/v1/marketplace/sync?company_id=${COMPANY_ID}${segId}`, { method: 'POST' });
+    const data = await r.json();
+    progress.style.display = 'none';
+    if (r.status === 409) {
+      result.style.display = '';
+      result.innerHTML = `<div class="alert alert-warning py-2"><i class="fas fa-clock me-2"></i>${data.detail || 'Sync already in progress — check logs.'}</div>`;
+      toast('Sync already running', 'warning');
+      return;
+    }
+    if (!r.ok) {
+      result.style.display = '';
+      result.innerHTML = `<div class="alert alert-danger py-2"><i class="fas fa-times-circle me-2"></i>Sync failed: ${data.detail || 'Unknown error'}</div>`;
+      toast('Sync failed', 'error');
+      return;
+    }
+    result.style.display = '';
+    result.innerHTML = `<div class="alert alert-info py-2"><i class="fas fa-spinner fa-spin me-2"></i>Sync running in background — logs will update shortly…</div>`;
+    toast('Sync started', 'success');
+    pollSyncCompletion();
+  } catch(e) {
+    progress.style.display = 'none';
+    result.style.display = '';
+    result.innerHTML = `<div class="alert alert-danger py-2">Sync error: ${e.message}</div>`;
+    toast('Sync error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sync me-2"></i>Sync Now from Google Sheet';
+  }
+}
+
+async function pollSyncCompletion() {
+  const result = document.getElementById('syncResult');
+  for (let i = 0; i < 24; i++) {
+    await new Promise(res => setTimeout(res, 5000));
+    try {
+      const sr = await staffFetch(`/api/v1/marketplace/sync/status?company_id=${COMPANY_ID}`);
+      if (!sr.ok) break;
+      const st = await sr.json();
+      if (!st.running) {
+        await loadAll();
+        result.style.display = '';
+        result.innerHTML = `<div class="alert alert-success py-2"><i class="fas fa-check-circle me-2"></i>Sync complete — see logs below</div>`;
+        toast('Sync complete', 'success');
+        return;
+      }
+    } catch(_) { break; }
+  }
+  if (result) {
+    result.innerHTML = `<div class="alert alert-warning py-2"><i class="fas fa-exclamation-triangle me-2"></i>Sync is taking longer than expected — check logs manually</div>`;
+  }
+}
+
+// ── Product Images Tab ────────────────────────────────────
+function debounceLoad() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { prodPage = 1; loadProducts(); }, 400);
+}
+
+async function loadProducts() {
+  const body = document.getElementById('prodTableBody');
+  body.innerHTML = '<tr><td colspan="12" class="text-center py-4" style="color:var(--mnr-muted);"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+  const q = document.getElementById('prodSearch').value.trim();
+  const company = document.getElementById('prodCompanyFilter').value;
+  const cat = document.getElementById('prodCatFilter').value;
+  const imgF = document.getElementById('prodImgFilter').value;
+  const stockF = document.getElementById('prodStockFilter').value;
+  const params = new URLSearchParams({
+    company_id: COMPANY_ID,
+    page: prodPage,
+    per_page: PROD_PER_PAGE,
+  });
+  if (q) params.set('search', q);
+  if (company) params.set('company_filter', company);
+  if (cat) params.set('category', cat);
+  if (imgF) params.set('img_filter', imgF);
+  if (stockF) params.set('stock_filter', stockF);
+
+  try {
+    const r = await fetch(`/api/v1/marketplace/admin/products?${params}`);
+    if (!r.ok) throw new Error('Failed ' + r.status);
+    const data = await r.json();
+    renderProdTable(data.products);
+    const total = data.total;
+    const pages = Math.ceil(total / PROD_PER_PAGE);
+    document.getElementById('prodPgInfo').textContent = `Page ${prodPage}/${pages || 1} · ${total} products`;
+    document.getElementById('prodPrev').disabled = prodPage <= 1;
+    document.getElementById('prodNext').disabled = prodPage >= pages;
+    if (data.companies) {
+      const sel = document.getElementById('prodCompanyFilter');
+      const existing = new Set([...sel.options].map(o=>o.value));
+      data.companies.forEach(c => {
+        if (c && !existing.has(c)) {
+          const opt = document.createElement('option');
+          opt.value = c; opt.textContent = c;
+          sel.appendChild(opt);
+        }
+      });
+    }
+  } catch(e) {
+    body.innerHTML = `<tr><td colspan="12" class="text-center py-4" style="color:var(--mnr-red);">Error: ${e.message}</td></tr>`;
+  }
+}
+
+function imgSrc(p) {
+  if (!p.image_url) return null;
+  const u = p.image_url.trim();
+  if (!u) return null;
+  if (u.startsWith('/') || u.startsWith('http')) return u;
+  return '/marketplace/product-images/' + u;
+}
+
+function renderProdTable(products) {
+  const body = document.getElementById('prodTableBody');
+  if (!products.length) {
+    body.innerHTML = '<tr><td colspan="14" class="text-center py-4" style="color:var(--mnr-muted);">No products found</td></tr>';
+    return;
+  }
+  const offset = (prodPage - 1) * PROD_PER_PAGE;
+  body.innerHTML = products.map((p, i) => {
+    const src = imgSrc(p);
+    const imgHtml = src
+      ? `<img src="${esc(src)}" class="prod-img-thumb" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';">
+         <div class="prod-img-placeholder" style="display:none;"><i class="fas fa-image"></i></div>`
+      : `<div class="prod-img-placeholder" title="No image"><i class="fas fa-image"></i></div>`;
+    const imgBadge = src
+      ? `<span style="font-size:0.65rem;color:var(--mnr-green);"><i class="fas fa-check-circle me-1"></i>Image</span>`
+      : `<span style="font-size:0.65rem;color:var(--mnr-muted);"><i class="fas fa-times me-1"></i>No img</span>`;
+    const overrideBadge = p.manually_overridden
+      ? `<br><span class="override-badge" title="Locked: ${(p.override_fields||[]).join(', ')}"><i class="fas fa-lock me-1"></i>${(p.override_fields||[]).length} locked</span>`
+      : '';
+    // Avail Qty cell
+    const belowThreshold = p.below_threshold;
+    const availColor = p.available_qty > 0 ? 'var(--mnr-green)' : 'var(--mnr-red)';
+    const availBadge = belowThreshold
+      ? `<div style="font-size:0.63rem;color:var(--mnr-gold);margin-top:1px;"><i class="fas fa-exclamation-triangle me-1"></i>Low</div>`
+      : p.available_qty === 0 ? `<div style="font-size:0.63rem;color:var(--mnr-red);">OOS</div>` : '';
+    // Orders cell — live from open POs
+    const orderedQty = p.ordered_qty || 0;
+    // Min level inline editor
+    const minLvl = p.min_stock_threshold || 0;
+    const minColor = belowThreshold ? 'rgba(245,158,11,.3)' : 'var(--mnr-border)';
+    // PO Count — total number of times this SKU has appeared in any Purchase Order
+    const poCount = p.po_count || 0;
+    const poCountColor = poCount > 5 ? 'var(--mnr-green)' : poCount > 0 ? 'var(--mnr-accent)' : 'var(--mnr-muted)';
+    return `<tr id="prod-row-${p.id}" class="${p.is_active === false ? 'row-inactive' : ''}">
+      <td style="color:var(--mnr-muted);font-size:0.75rem;">${offset+i+1}</td>
+      <td>${imgHtml}<div style="text-align:center;margin-top:2px;">${imgBadge}</div></td>
+      <td>
+        <span class="sku-pill">${esc(p.sku)}</span>${overrideBadge}
+      </td>
+      <td>
+        <div style="font-weight:600;font-size:0.85rem;">${esc(p.name)}</div>
+        <div style="font-size:0.7rem;color:var(--mnr-muted);">${esc(p.category_name)}</div>
+        ${p.specifications ? `<div style="font-size:0.68rem;color:var(--mnr-muted);">${esc(p.specifications)}</div>` : ''}
+      </td>
+      <td>${p.company_name ? `<span class="company-badge">${esc(p.company_name)}</span>` : '<span style="color:var(--mnr-muted);font-size:0.78rem;">—</span>'}</td>
+      <td style="font-size:0.85rem;">₹${Number(p.dealer_price||0).toLocaleString('en-IN')}</td>
+      <td>
+        <span style="font-size:0.9rem;font-weight:700;color:${availColor};">${p.available_qty||0}</span>
+        ${availBadge}
+      </td>
+      <td>
+        ${orderedQty > 0
+          ? `<span style="font-weight:700;color:var(--mnr-accent);font-size:0.88rem;">${orderedQty}</span><div style="font-size:0.63rem;color:var(--mnr-accent);">In PO</div>`
+          : `<span style="color:var(--mnr-muted);font-size:0.82rem;">0</span>`}
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <input type="number" min="0" step="1" value="${minLvl}"
+            style="width:54px;background:#0f1729;border:1px solid ${minColor};color:var(--mnr-text);border-radius:5px;padding:3px 6px;font-size:0.8rem;text-align:center;"
+            onchange="saveMinLevel(${p.id}, this.value, this)"
+            title="Min stock level — ZYPR auto-raised when stock falls below this">
+          ${belowThreshold ? `<i class="fas fa-exclamation-triangle" style="color:var(--mnr-gold);font-size:0.75rem;" title="Stock below threshold"></i>` : ''}
+        </div>
+      </td>
+      <td>
+        <span style="font-weight:700;font-size:0.92rem;color:${poCountColor};">${poCount}</span>
+        ${poCount === 0 ? `<div style="font-size:0.62rem;color:var(--mnr-muted);">No POs</div>` : ''}
+      </td>
+      <td>
+        ${p.proc_cost != null
+          ? `<span style="font-size:0.82rem;color:var(--mnr-text);">₹${Number(p.proc_cost).toLocaleString('en-IN',{minimumFractionDigits:0})}</span>
+             ${p.proc_tax_pct != null ? `<div style="font-size:0.65rem;color:var(--mnr-muted);">+${p.proc_tax_pct}% tax</div>` : ''}`
+          : `<span style="color:var(--mnr-muted);font-size:0.78rem;">—</span>`}
+      </td>
+      <td>
+        ${p.proc_with_tax != null
+          ? `<span style="font-size:0.85rem;font-weight:600;color:var(--mnr-gold);">₹${Number(p.proc_with_tax).toLocaleString('en-IN',{minimumFractionDigits:0})}</span>`
+          : `<span style="color:var(--mnr-muted);font-size:0.78rem;">—</span>`}
+      </td>
+      <td style="text-align:center;">
+        <label class="zy-toggle" title="${p.is_active ? 'Active — click to hide from marketplace' : 'Hidden — click to show in marketplace'}">
+          <input type="checkbox" ${p.is_active ? 'checked' : ''} onchange="toggleProduct(${p.id}, this)">
+          <span class="zy-toggle-slider"></span>
+        </label>
+        <div style="font-size:0.62rem;margin-top:2px;color:${p.is_active ? 'var(--mnr-green)' : 'var(--mnr-red)'};">${p.is_active ? 'Active' : 'Hidden'}</div>
+      </td>
+      <td style="position:sticky;right:0;background:#1a2035;z-index:1;box-shadow:-2px 0 6px rgba(0,0,0,.4);">
+        <button class="edit-img-btn" onclick="openEditModal(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+          <i class="fas fa-edit me-1"></i>Edit
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openEditModal(p) {
+  document.getElementById('editProdId').value = p.id;
+  document.getElementById('editSku').value = p.sku || '';
+  document.getElementById('editName').value = p.name || '';
+  document.getElementById('editCat').value = p.category_name || '';
+  document.getElementById('editCompany').value = p.company_name || '';
+  document.getElementById('editPrice').value = p.dealer_price || 0;
+  document.getElementById('editQty').value = p.available_qty || 0;
+  document.getElementById('editModel').value = p.model_compat || '';
+  document.getElementById('editSpecs').value = p.specifications || '';
+  document.getElementById('editDesc').value = p.description || p.speciality || '';
+  document.getElementById('editMinLevel').value = p.min_stock_threshold || 0;
+  // Proc cost fields — read-only display
+  const fmt = (v) => v != null ? '₹' + Number(v).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:2}) : '—';
+  document.getElementById('editProcCost').textContent      = fmt(p.proc_cost);
+  document.getElementById('editProcTransport').textContent = fmt(p.proc_transport);
+  document.getElementById('editProcExTax').textContent     = fmt(p.proc_ex_tax);
+  document.getElementById('editProcTaxPct').textContent    = p.proc_tax_pct != null ? p.proc_tax_pct + '%' : '—';
+  document.getElementById('editProcWithTax').textContent   = fmt(p.proc_with_tax);
+  selectedFile = null;
+  document.getElementById('imgFileInput').value = '';
+  document.getElementById('imgUploadStatus').textContent = '';
+  // Override status
+  const overrideBar = document.getElementById('editOverrideBar');
+  const clearBtn = document.getElementById('clearOverrideBtn');
+  if (p.manually_overridden && (p.override_fields||[]).length > 0) {
+    overrideBar.style.display = '';
+    overrideBar.innerHTML = `<i class="fas fa-lock me-1" style="color:var(--mnr-gold)"></i>
+      <strong style="color:var(--mnr-gold);">${p.override_fields.length} field(s) locked from sheet sync:</strong>
+      <span style="color:var(--mnr-muted);margin-left:6px;">${p.override_fields.join(', ')}</span>`;
+    clearBtn.style.display = '';
+  } else {
+    overrideBar.style.display = 'none';
+    clearBtn.style.display = 'none';
+  }
+  // Show current image
+  const src = imgSrc(p);
+  const prev = document.getElementById('editImgPreview');
+  const placeholder = document.getElementById('editImgPlaceholder');
+  if (src) {
+    prev.src = src + '?v=' + Date.now();
+    prev.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    prev.style.display = 'none';
+    placeholder.style.display = 'inline-flex';
+  }
+  editModal.show();
+}
+
+async function saveProduct() {
+  const id = document.getElementById('editProdId').value;
+  const btn = document.getElementById('saveProdBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  const payload = {
+    name: document.getElementById('editName').value.trim(),
+    company_name: document.getElementById('editCompany').value.trim(),
+    dealer_price: parseFloat(document.getElementById('editPrice').value) || 0,
+    available_qty: parseInt(document.getElementById('editQty').value) || 0,
+    model_compat: document.getElementById('editModel').value.trim(),
+    specifications: document.getElementById('editSpecs').value.trim(),
+    description: document.getElementById('editDesc').value.trim(),
+    min_stock_threshold: parseInt(document.getElementById('editMinLevel').value) || 0,
+  };
+  try {
+    const r = await fetch(`/api/v1/marketplace/admin/products/${id}?company_id=${COMPANY_ID}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error('Server error ' + r.status);
+    toast('Product details saved', 'success');
+    loadProducts();
+  } catch(e) {
+    toast('Save failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save me-1"></i>Save Details';
+  }
+}
+
+async function saveMinLevel(id, val, inputEl) {
+  const old = inputEl.defaultValue;
+  inputEl.style.borderColor = 'var(--mnr-gold)';
+  try {
+    const r = await fetch(`/api/v1/marketplace/admin/products/${id}?company_id=${COMPANY_ID}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ min_stock_threshold: parseInt(val) || 0 }),
+    });
+    if (!r.ok) throw new Error('Server error ' + r.status);
+    inputEl.defaultValue = val;
+    inputEl.style.borderColor = 'var(--mnr-green)';
+    setTimeout(() => { inputEl.style.borderColor = 'var(--mnr-border)'; }, 1500);
+    toast('Min level saved', 'success');
+  } catch(e) {
+    inputEl.value = old;
+    inputEl.style.borderColor = 'var(--mnr-red)';
+    toast('Save failed: ' + e.message, 'error');
+  }
+}
+
+async function clearOverrides() {
+  const id = document.getElementById('editProdId').value;
+  const btn = document.getElementById('clearOverrideBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Clearing…';
+  try {
+    const r = await fetch(`/api/v1/marketplace/admin/products/${id}/clear-overrides?company_id=${COMPANY_ID}`, { method: 'POST' });
+    if (!r.ok) throw new Error('Server error ' + r.status);
+    toast('Overrides cleared — next sync will refresh from Google Sheet', 'success');
+    document.getElementById('editOverrideBar').style.display = 'none';
+    btn.style.display = 'none';
+    loadProducts();
+  } catch(e) {
+    toast('Failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-unlock me-1"></i>Allow Sheet Sync';
+  }
+}
+
+async function uploadImage() {
+  if (!selectedFile) { toast('Select an image first', 'error'); return; }
+  const id = document.getElementById('editProdId').value;
+  const btn = document.getElementById('uploadImgBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading…';
+  const status = document.getElementById('imgUploadStatus');
+  status.innerHTML = '<span style="color:var(--mnr-accent);">Uploading…</span>';
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+  try {
+    const r = await fetch(`/api/v1/marketplace/admin/products/${id}/image?company_id=${COMPANY_ID}`, {
+      method: 'POST', body: fd,
+    });
+    if (!r.ok) throw new Error('Upload failed ' + r.status);
+    const d = await r.json();
+    status.innerHTML = `<span style="color:var(--mnr-green);"><i class="fas fa-check-circle me-1"></i>Uploaded successfully</span>`;
+    toast('Image uploaded', 'success');
+    // Update preview
+    const prev = document.getElementById('editImgPreview');
+    prev.src = d.image_url + '?v=' + Date.now();
+    prev.style.display = 'block';
+    document.getElementById('editImgPlaceholder').style.display = 'none';
+    selectedFile = null;
+    loadProducts();
+  } catch(e) {
+    status.innerHTML = `<span style="color:var(--mnr-red);">Upload failed: ${e.message}</span>`;
+    toast('Upload failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-upload me-1"></i>Upload Image';
+  }
+}
+
+function previewImg(input) {
+  if (!input.files[0]) return;
+  selectedFile = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('editImgPreview');
+    prev.src = e.target.result;
+    prev.style.display = 'block';
+    document.getElementById('editImgPlaceholder').style.display = 'none';
+    document.getElementById('imgUploadStatus').innerHTML = `<span style="color:var(--mnr-gold);">Ready: ${selectedFile.name} (${(selectedFile.size/1024).toFixed(0)} KB)</span>`;
+  };
+  reader.readAsDataURL(selectedFile);
+}
+
+// Drag & drop for image
+const dz = document.getElementById('imgDropZone');
+if (dz) {
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) {
+      selectedFile = f;
+      const inp = document.getElementById('imgFileInput');
+      const dt = new DataTransfer(); dt.items.add(f); inp.files = dt.files;
+      previewImg(inp);
+    }
+  });
+}
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+async function toggleProduct(id, checkbox) {
+  const row = checkbox.closest('tr');
+  checkbox.disabled = true;
+  try {
+    const r = await fetch(`/api/v1/marketplace/products/${id}/toggle?company_id=${COMPANY_ID}`, { method: 'PATCH' });
+    if (!r.ok) throw new Error('Server error ' + r.status);
+    const d = await r.json();
+    const isActive = d.is_active;
+    const label = checkbox.closest('label');
+    const statusDiv = label.nextElementSibling;
+    checkbox.checked = isActive;
+    if (statusDiv) {
+      statusDiv.textContent = isActive ? 'Active' : 'Hidden';
+      statusDiv.style.color = isActive ? 'var(--mnr-green)' : 'var(--mnr-red)';
+    }
+    label.title = isActive ? 'Active — click to hide from marketplace' : 'Hidden — click to show in marketplace';
+    row.classList.toggle('row-inactive', !isActive);
+    toast(isActive ? 'Product now visible in marketplace' : 'Product hidden from marketplace', isActive ? 'success' : 'info');
+    // update stat
+    const statEl = document.getElementById('statActive');
+    if (statEl) {
+      const cur = parseInt(statEl.textContent) || 0;
+      statEl.textContent = isActive ? cur + 1 : Math.max(0, cur - 1);
+    }
+  } catch(e) {
+    checkbox.checked = !checkbox.checked;
+    toast('Toggle failed: ' + e.message, 'error');
+  } finally {
+    checkbox.disabled = false;
+  }
+}
+
+// ── Stock Dashboard ─────────────────────────────────────────────────────────
+let dashCharts = {};
+async function loadDashboard() {
+  const tbody = document.getElementById('dashRestockBody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-3" style="color:var(--mnr-muted);"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+  try {
+    const r = await fetch(`/api/v1/marketplace/admin/stock-dashboard?company_id=${COMPANY_ID}`);
+    if (!r.ok) throw new Error('Server error ' + r.status);
+    const d = await r.json();
+    renderDashKPIs(d);
+    renderDashCharts(d);
+    renderDashRestockTable(d);
+  } catch(e) {
+    const tbody2 = document.getElementById('dashRestockBody');
+    if (tbody2) tbody2.innerHTML = `<tr><td colspan="8" class="text-center py-3" style="color:var(--mnr-red);">Failed: ${e.message}</td></tr>`;
+  }
+}
+
+function renderDashKPIs(d) {
+  const k = d.kpis || {};
+  const fmt = v => v != null ? Number(v).toLocaleString('en-IN') : '—';
+  const fmtRs = v => v != null ? '₹' + Number(v).toLocaleString('en-IN', {maximumFractionDigits:0}) : '—';
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('kv-total', fmt(k.total_products));
+  set('kv-instock', fmt(k.in_stock));
+  if (k.total_products > 0) set('kv-instockpct', Math.round((k.in_stock||0)*100/k.total_products) + '% of total');
+  set('kv-zero', fmt(k.zero_stock));
+  set('kv-belowmin', fmt(k.below_min_level));
+  set('kv-zypr', fmt(k.open_zypr));
+  set('kv-po', fmt(k.open_po));
+  set('kv-invval', fmtRs(k.inventory_value));
+  set('kv-budget', fmtRs(k.proc_budget_needed));
+}
+
+function renderDashCharts(d) {
+  const cats = (d.categories || []).slice(0, 14);
+  const chartOpts = { responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { labels: { color:'#c9d1d9', font:{size:11} } } },
+    scales: { x: { ticks:{color:'#9ca3af',font:{size:9},maxRotation:45}, grid:{color:'rgba(255,255,255,.05)'} },
+              y: { ticks:{color:'#9ca3af'}, grid:{color:'rgba(255,255,255,.06)'} } }
+  };
+  // Category stock health chart
+  const ctx1 = document.getElementById('chartCategoryStock');
+  if (ctx1) {
+    if (dashCharts.cat) { dashCharts.cat.destroy(); }
+    dashCharts.cat = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: cats.map(c => c.name),
+        datasets: [
+          { label: 'In Stock', data: cats.map(c => c.in_stock || 0), backgroundColor: 'rgba(34,197,94,0.72)', borderRadius: 3 },
+          { label: 'Zero Stock', data: cats.map(c => c.zero_stock || 0), backgroundColor: 'rgba(239,68,68,0.72)', borderRadius: 3 },
+        ]
+      },
+      options: chartOpts
+    });
+  }
+  // Procurement budget by category (horizontal bar)
+  const ctx2 = document.getElementById('chartBudget');
+  if (ctx2) {
+    if (dashCharts.budget) { dashCharts.budget.destroy(); }
+    const budgetCats = cats.filter(c => (c.proc_budget || 0) > 0).slice(0, 10);
+    dashCharts.budget = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: budgetCats.map(c => c.name),
+        datasets: [{ label: 'Proc. Budget (₹)', data: budgetCats.map(c => c.proc_budget || 0),
+          backgroundColor: 'rgba(245,158,11,0.72)', borderRadius: 3 }]
+      },
+      options: { ...chartOpts, indexAxis:'y',
+        scales: { x: { ticks:{color:'#9ca3af',callback: v => '₹'+Number(v).toLocaleString('en-IN',{maximumFractionDigits:0})}, grid:{color:'rgba(255,255,255,.05)'} },
+                  y: { ticks:{color:'#9ca3af',font:{size:9}}, grid:{color:'rgba(255,255,255,.06)'} } }
+      }
+    });
+  }
+}
+
+function renderDashRestockTable(d) {
+  const tbody = document.getElementById('dashRestockBody');
+  if (!tbody) return;
+  const items = d.top_restock || [];
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-3" style="color:var(--mnr-muted);">No items need restocking</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map((r, i) => {
+    const shortfall = Math.max(0, (r.min_stock_threshold||0) - (r.available_qty||0));
+    const budget = r.proc_with_tax ? shortfall * r.proc_with_tax : null;
+    return `<tr>
+      <td style="color:var(--mnr-muted);font-size:0.75rem;">${i+1}</td>
+      <td><span class="sku-pill">${esc(r.sku)}</span><div style="font-weight:600;font-size:0.82rem;margin-top:2px;">${esc(r.name)}</div></td>
+      <td><span style="color:var(--mnr-muted);font-size:0.8rem;">${esc(r.category)}</span></td>
+      <td><span style="color:${(r.available_qty||0)===0?'var(--mnr-red)':'var(--mnr-gold)'};font-weight:700;">${r.available_qty||0}</span></td>
+      <td style="color:var(--mnr-muted);">${r.min_stock_threshold||0}</td>
+      <td><span style="color:var(--mnr-red);font-weight:700;">${shortfall}</span></td>
+      <td>${r.proc_with_tax != null ? `<span style="color:var(--mnr-gold);">₹${Number(r.proc_with_tax).toLocaleString('en-IN',{maximumFractionDigits:0})}</span>` : '<span style="color:var(--mnr-muted);">—</span>'}</td>
+      <td>${budget != null ? `<span style="color:var(--mnr-red);font-weight:700;">₹${Number(budget).toLocaleString('en-IN',{maximumFractionDigits:0})}</span>` : '<span style="color:var(--mnr-muted);">—</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+</script>
+</div>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+(async function() {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader !== 'undefined') StaffHeader.inject('Marketplace Configuration', 'fas fa-store');
+})();
+</script>
+</body>
+</html>

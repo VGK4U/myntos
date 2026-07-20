@@ -1,0 +1,2245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto Dialer | Mynt Real</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+    .sidebar-expanded .main-content { margin-left: 260px; }
+    :root {
+      --color-overdue: #ef4444; --color-due-today: #d97706;
+      --color-new: #f97316; --color-second: #0ea5e9;
+      --color-upcoming: #6b7280; --color-session-active: #059669;
+      --color-session-paused: #d97706;
+    }
+
+    /* ── PAGE TABS ── */
+    .dc-page-tabs { display: flex; gap: 4px; padding: 12px 24px 0; background: #f3f4f6; }
+    .dc-page-tab { padding: 10px 22px; border: none; border-radius: 10px 10px 0 0; font-size: 13px; font-weight: 700; cursor: pointer; background: #e5e7eb; color: #6b7280; transition: all .15s; }
+    .dc-page-tab.active { background: white; color: #1f2937; box-shadow: 0 -2px 8px rgba(0,0,0,0.06); }
+    .dc-page-tab.manager-tab { display: none; }
+    .dc-page-tab.manager-tab.visible { display: block; }
+
+    /* ── DIALER LAYOUT ── */
+    .dialer-layout { display: grid; grid-template-columns: 380px 1fr; gap: 20px; padding: 24px; min-height: calc(100vh - 130px); background: #f3f4f6; }
+    @media (max-width: 960px) { .dialer-layout { grid-template-columns: 1fr; } }
+
+    /* ── LEFT PANEL ── */
+    .dialer-left { display: flex; flex-direction: column; gap: 14px; }
+    .dc-session-card { background: linear-gradient(135deg, #1e3a5f 0%, #0ea5e9 100%); border-radius: 16px; padding: 20px; color: white; }
+    .dc-session-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .dc-session-subtitle { font-size: 13px; opacity: 0.8; margin-bottom: 14px; }
+    .dc-session-status { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700; margin-bottom: 14px; }
+    .dc-session-status.active { background: rgba(5,150,105,0.25); color: #6ee7b7; }
+    .dc-session-status.paused { background: rgba(217,119,6,0.25); color: #fde68a; }
+    .dc-session-status.none { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.7); }
+    .dc-session-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+    .dc-btn { border: none; border-radius: 10px; padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity .2s; }
+    .dc-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .dc-btn.green { background: #059669; color: white; } .dc-btn.green:hover:not(:disabled) { background: #047857; }
+    .dc-btn.amber { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.3); } .dc-btn.amber:hover:not(:disabled) { background: rgba(255,255,255,0.25); }
+    .dc-btn.red { background: rgba(239,68,68,0.2); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); } .dc-btn.red:hover:not(:disabled) { background: rgba(239,68,68,0.35); }
+    .dc-btn.blue { background: #0ea5e9; color: white; } .dc-btn.blue:hover:not(:disabled) { background: #0284c7; }
+
+    .dc-queue-badges { display: flex; gap: 8px; }
+    .dc-badge { flex: 1; background: white; border-radius: 12px; padding: 10px 6px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .dc-badge .badge-num { font-size: 22px; font-weight: 800; }
+    .dc-badge .badge-lbl { font-size: 10px; color: #6b7280; text-transform: uppercase; font-weight: 600; margin-top: 2px; }
+    .dc-badge.red { border-top: 3px solid #ef4444; } .dc-badge.red .badge-num { color: #ef4444; }
+    .dc-badge.yellow { border-top: 3px solid #d97706; } .dc-badge.yellow .badge-num { color: #d97706; }
+    .dc-badge.orange { border-top: 3px solid #f97316; } .dc-badge.orange .badge-num { color: #f97316; }
+    .dc-badge.blue { border-top: 3px solid #0ea5e9; } .dc-badge.blue .badge-num { color: #0ea5e9; }
+
+    .dc-lead-card { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    .dc-lead-card.border-overdue { border-left: 5px solid #ef4444; }
+    .dc-lead-card.border-due_today { border-left: 5px solid #d97706; }
+    .dc-lead-card.border-new { border-left: 5px solid #f97316; }
+    .dc-lead-card.border-second_contact { border-left: 5px solid #0ea5e9; }
+    .dc-lead-card.border-upcoming { border-left: 5px solid #6b7280; }
+    .dc-lead-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .dc-lead-name { font-size: 18px; font-weight: 700; color: #111827; }
+    .dc-priority-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: #f3f4f6; color: #374151; }
+    .dc-lead-meta { font-size: 13px; color: #6b7280; margin-bottom: 6px; }
+    .dc-lead-desc { font-size: 13px; color: #374151; background: #f9fafb; border-radius: 8px; padding: 10px; margin-bottom: 12px; line-height: 1.5; }
+    .dc-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .dc-detail-item { background: #f9fafb; border-radius: 8px; padding: 8px 10px; }
+    .dc-detail-item span { display: block; font-size: 10px; color: #9ca3af; text-transform: uppercase; }
+    .dc-detail-item b { font-size: 13px; color: #1f2937; }
+    .dc-dial-btns { display: flex; flex-direction: column; gap: 8px; }
+    .dc-dial-btn { background: #059669; color: white; border: none; border-radius: 30px; padding: 13px 18px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 10px; justify-content: center; width: 100%; transition: background .2s; }
+    .dc-dial-btn:hover { background: #047857; }
+    .dc-dial-btn.alt { background: #0ea5e9; }
+    .dc-dial-btn.alt:hover { background: #0284c7; }
+    .dc-queue-pos { font-size: 12px; color: #9ca3af; text-align: right; margin-bottom: 6px; }
+
+    .dc-queue-list-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); max-height: 200px; overflow-y: auto; }
+    .dc-queue-list-hdr { padding: 10px 14px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #f3f4f6; position: sticky; top: 0; }
+    .dc-queue-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid #f3f4f6; }
+    .dc-queue-item:last-child { border-bottom: none; }
+    .dc-queue-item-num { width: 22px; height: 22px; border-radius: 50%; background: #f3f4f6; color: #6b7280; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .dc-queue-item-name { font-size: 13px; font-weight: 600; color: #1f2937; }
+    .dc-queue-item-meta { font-size: 11px; color: #9ca3af; }
+
+    .dc-analytics-card { background: white; border-radius: 12px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .dc-analytics-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 10px; }
+    .dc-analytics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .dc-analytics-stat { text-align: center; padding: 10px; background: #f9fafb; border-radius: 8px; }
+    .dc-analytics-stat .stat-num { font-size: 20px; font-weight: 800; color: #1f2937; }
+    .dc-analytics-stat .stat-lbl { font-size: 10px; color: #9ca3af; text-transform: uppercase; margin-top: 2px; }
+
+    .dc-idle-placeholder { background: white; border-radius: 16px; padding: 40px 24px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .dc-idle-placeholder .idle-icon { font-size: 48px; margin-bottom: 14px; }
+    .dc-idle-placeholder h3 { font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 8px; }
+    .dc-idle-placeholder p { font-size: 14px; color: #6b7280; }
+
+    /* ── QUICK SEARCH / OVERRIDE DIAL ── */
+    .dc-search-card { background: white; border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; }
+    .dc-search-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .dc-search-input-wrap { position: relative; }
+    .dc-search-input { width: 100%; border: 1.5px solid #d1d5db; border-radius: 10px; padding: 9px 36px 9px 12px; font-size: 14px; outline: none; transition: border .15s; box-sizing: border-box; }
+    .dc-search-input:focus { border-color: #0ea5e9; }
+    .dc-search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px; line-height: 1; display: none; }
+    .dc-search-results { background: white; border: 1px solid #e5e7eb; border-radius: 10px; margin-top: 6px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.1); display: none; max-height: 280px; overflow-y: auto; }
+    .dc-search-result-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background .1s; gap: 8px; }
+    .dc-search-result-item:last-child { border-bottom: none; }
+    .dc-search-result-item:hover { background: #f0f9ff; }
+    .dc-search-result-info { flex: 1; min-width: 0; }
+    .dc-search-result-name { font-size: 13px; font-weight: 700; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dc-search-result-meta { font-size: 11px; color: #6b7280; margin-top: 1px; }
+    .dc-search-result-dial { background: #059669; color: white; border: none; border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+    .dc-search-result-dial.alt { background: #0ea5e9; }
+    .dc-search-no-results { padding: 16px; text-align: center; color: #9ca3af; font-size: 13px; }
+    .dc-search-loading { padding: 12px; text-align: center; color: #9ca3af; font-size: 12px; }
+
+    /* ── RIGHT PANEL — LEAD HEADER BANNER ── */
+    .dialer-right { display: flex; flex-direction: column; gap: 14px; }
+    .dc-lead-banner {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 60%, #0ea5e9 100%);
+      border-radius: 16px; padding: 20px 24px; color: white; box-shadow: 0 4px 20px rgba(14,165,233,0.25);
+    }
+    .dc-banner-name { font-size: 28px; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 8px; line-height: 1.15; }
+    .dc-banner-meta-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .dc-banner-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; background: rgba(255,255,255,0.18); }
+    .dc-banner-chip.priority-high { background: rgba(239,68,68,0.3); }
+    .dc-banner-chip.priority-medium { background: rgba(217,119,6,0.3); }
+    .dc-banner-chip.priority-normal { background: rgba(255,255,255,0.12); }
+    .dc-banner-last-interaction { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 14px; border-left: 3px solid rgba(255,255,255,0.5); }
+    .dc-banner-last-interaction .int-label { font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: 0.7; margin-bottom: 4px; letter-spacing: 0.05em; }
+    .dc-banner-last-interaction .int-text { font-size: 13px; font-weight: 500; line-height: 1.4; opacity: 0.95; }
+    .dc-banner-last-interaction .int-meta { font-size: 11px; opacity: 0.65; margin-top: 3px; }
+    .dc-banner-status-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+    .dc-banner-status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; background: rgba(255,255,255,0.2); }
+    .dc-banner-contact-days { font-size: 12px; opacity: 0.8; }
+
+    /* ── RIGHT PANEL — FULL LEAD EDIT CARD ── */
+    .dc-lead-edit-card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; }
+    .dc-edit-section { padding: 16px 20px; border-bottom: 1px solid #f3f4f6; }
+    .dc-edit-section:last-child { border-bottom: none; }
+    .dc-edit-section-title { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    .dc-field-row { display: grid; gap: 10px; margin-bottom: 10px; }
+    .dc-field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+    .dc-field-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .dc-field-row.cols-1 { grid-template-columns: 1fr; }
+    .dc-field label { display: block; font-size: 11px; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+    .dc-field input, .dc-field select, .dc-field textarea {
+      width: 100%; padding: 9px 11px; border: 1px solid #e5e7eb; border-radius: 8px;
+      font-size: 13px; color: #1f2937; background: #fafafa; transition: border-color .15s;
+    }
+    .dc-field input:focus, .dc-field select:focus, .dc-field textarea:focus {
+      outline: none; border-color: #0ea5e9; background: white; box-shadow: 0 0 0 3px rgba(14,165,233,0.08);
+    }
+    .dc-field textarea { resize: vertical; min-height: 64px; }
+    .dc-field .wa-check { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 11px; color: #059669; }
+    .dc-field .wa-check input { width: 14px; height: 14px; }
+
+    /* Outcome chips */
+    .dc-outcome-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+    .dc-outcome-btn { padding: 11px; border: 2px solid #e5e7eb; border-radius: 10px; background: white; font-size: 13px; font-weight: 600; cursor: pointer; color: #374151; transition: all .15s; }
+    .dc-outcome-btn:hover { border-color: #0ea5e9; color: #0ea5e9; }
+    .dc-outcome-btn.selected-answered { border-color: #059669; background: #d1fae5; color: #059669; }
+    .dc-outcome-btn.selected-no_answer { border-color: #d97706; background: #fef3c7; color: #d97706; }
+    .dc-outcome-btn.selected-busy { border-color: #7c3aed; background: #ede9fe; color: #7c3aed; }
+    .dc-outcome-btn.selected-callback { border-color: #0ea5e9; background: #e0f2fe; color: #0ea5e9; }
+    .dc-outcome-btn.selected-wrong_number { border-color: #ef4444; background: #fee2e2; color: #ef4444; }
+
+    /* Activity chips */
+    .dc-act-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .dc-act-chip { padding: 5px 11px; border: 1.5px solid #e5e7eb; border-radius: 20px; background: white; font-size: 11px; font-weight: 600; cursor: pointer; color: #374151; transition: all .12s; }
+    .dc-act-chip.selected { border-color: #7c3aed; background: #ede9fe; color: #7c3aed; }
+
+    /* Hold button */
+    .dc-hold-btn { width: 100%; padding: 9px 14px; border: 1.5px dashed #d97706; border-radius: 10px; background: #fffbeb; color: #92400e; font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: all .2s; }
+    .dc-hold-btn.active { border-color: #059669; background: #d1fae5; color: #065f46; border-style: solid; }
+
+    /* DNC row */
+    .dc-dnc-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; }
+    .dc-dnc-row input { width: 16px; height: 16px; flex-shrink: 0; }
+    .dc-dnc-row label { font-size: 13px; color: #c2410c; font-weight: 600; cursor: pointer; }
+
+    /* Countdown */
+    .dc-countdown-row { text-align: center; font-size: 12px; color: #9ca3af; margin-bottom: 4px; }
+
+    /* Save row */
+    .dc-save-row { display: flex; gap: 10px; padding: 16px 20px; background: #f9fafb; border-top: 1px solid #f3f4f6; border-radius: 0 0 16px 16px; }
+    .dc-save-btn { flex: 1; background: #059669; color: white; border: none; border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .dc-save-btn:hover { background: #047857; }
+    .dc-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .dc-skip-btn { background: white; color: #6b7280; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 20px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .dc-skip-btn:hover { background: #f9fafb; }
+
+    /* ── MANAGER OVERVIEW PANEL ── */
+    .dc-mgr-panel { padding: 24px; background: #f3f4f6; min-height: calc(100vh - 130px); }
+    .dc-mgr-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: white; padding: 14px 18px; border-radius: 14px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .dc-mgr-filters label { font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
+    .dc-mgr-filters select, .dc-mgr-filters input[type=date] { padding: 7px 11px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; color: #1f2937; background: #fafafa; }
+    .dc-range-btn { padding: 7px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px; background: white; font-size: 12px; font-weight: 600; cursor: pointer; color: #6b7280; transition: all .12s; }
+    .dc-range-btn.active { border-color: #0ea5e9; background: #e0f2fe; color: #0ea5e9; }
+    .dc-range-btn:hover:not(.active) { border-color: #9ca3af; }
+    .dc-mgr-refresh { background: #059669; color: white; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: auto; }
+    .dc-mgr-refresh:hover { background: #047857; }
+
+    .dc-kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 20px; }
+    @media (max-width: 1200px) { .dc-kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 768px) { .dc-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    .dc-kpi-card { background: white; border-radius: 14px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border-top: 3px solid #e5e7eb; }
+    .dc-kpi-card.c-blue { border-top-color: #0ea5e9; }
+    .dc-kpi-card.c-green { border-top-color: #059669; }
+    .dc-kpi-card.c-orange { border-top-color: #f97316; }
+    .dc-kpi-card.c-red { border-top-color: #ef4444; }
+    .dc-kpi-card.c-purple { border-top-color: #7c3aed; }
+    .dc-kpi-card.c-amber { border-top-color: #d97706; }
+    .dc-kpi-val { font-size: 28px; font-weight: 800; color: #1f2937; line-height: 1; margin-bottom: 4px; }
+    .dc-kpi-lbl { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.04em; }
+    .dc-kpi-sub { font-size: 12px; color: #6b7280; margin-top: 4px; }
+
+    .dc-section-header { font-size: 14px; font-weight: 700; color: #374151; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+    /* Hourly chart */
+    .dc-chart-card { background: white; border-radius: 14px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 20px; }
+    .dc-hourly-chart { display: flex; align-items: flex-end; gap: 4px; height: 100px; padding-bottom: 24px; position: relative; }
+    .dc-hourly-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+    .dc-hourly-bar { width: 100%; background: #bfdbfe; border-radius: 4px 4px 0 0; min-height: 2px; position: relative; cursor: default; transition: background .15s; }
+    .dc-hourly-bar .answered-bar { position: absolute; bottom: 0; left: 0; width: 100%; background: #059669; border-radius: 4px 4px 0 0; }
+    .dc-hourly-bar:hover { background: #93c5fd; }
+    .dc-hourly-label { font-size: 9px; color: #9ca3af; font-weight: 600; white-space: nowrap; }
+    .dc-hourly-count { font-size: 8px; color: #374151; font-weight: 700; }
+    .dc-agent-avg-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #f3f4f6; }
+    .dc-agent-avg-pill { display: flex; align-items: center; gap: 5px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 20px; padding: 3px 10px; font-size: 11px; }
+    .dc-agent-avg-pill .dc-pill-name { color: #374151; font-weight: 600; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dc-agent-avg-pill .dc-pill-avg { color: #0ea5e9; font-weight: 700; }
+    .dc-agent-avg-pill .dc-pill-dials { color: #9ca3af; font-size: 10px; }
+    .dc-chart-legend { display: flex; gap: 14px; align-items: center; margin-top: 8px; font-size: 12px; color: #6b7280; }
+    .dc-legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+    /* Agent table */
+    .dc-agent-table-card { background: white; border-radius: 14px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 20px; overflow-x: auto; }
+    .dc-agent-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .dc-agent-table th { background: #f9fafb; padding: 10px 12px; text-align: left; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 2px solid #f3f4f6; white-space: nowrap; }
+    .dc-agent-table td { padding: 11px 12px; border-bottom: 1px solid #f3f4f6; color: #1f2937; vertical-align: middle; }
+    .dc-agent-table tr:last-child td { border-bottom: none; }
+    .dc-agent-table tr:hover td { background: #f9fafb; }
+    .dc-agent-name { font-weight: 700; }
+    .dc-agent-dept { font-size: 11px; color: #9ca3af; font-weight: 500; }
+    .dc-rate-bar { width: 60px; height: 6px; background: #f3f4f6; border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 6px; }
+    .dc-rate-fill { height: 100%; background: #059669; border-radius: 3px; }
+    .dc-agent-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+    .dc-agent-status.active { background: #059669; }
+    .dc-agent-status.inactive { background: #d1d5db; }
+
+    /* Break + Activity analysis */
+    .dc-analysis-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 900px) { .dc-analysis-grid { grid-template-columns: 1fr; } }
+    .dc-analysis-card { background: white; border-radius: 14px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+
+    .dc-act-bar-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+    .dc-act-bar-row:last-child { border-bottom: none; }
+    .dc-act-bar-label { font-size: 13px; color: #374151; min-width: 130px; font-weight: 500; }
+    .dc-act-bar-track { flex: 1; height: 8px; background: #f3f4f6; border-radius: 4px; overflow: hidden; }
+    .dc-act-bar-fill { height: 100%; border-radius: 4px; background: #7c3aed; }
+    .dc-act-bar-val { font-size: 12px; color: #6b7280; min-width: 55px; text-align: right; font-weight: 600; }
+
+    .dc-break-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f3f4f6; gap: 10px; }
+    .dc-break-row:last-child { border-bottom: none; }
+    .dc-break-name { font-size: 13px; font-weight: 600; color: #1f2937; flex: 1; }
+    .dc-break-stat { font-size: 12px; color: #6b7280; text-align: center; min-width: 60px; }
+    .dc-break-stat b { display: block; font-size: 15px; font-weight: 800; color: #d97706; }
+
+    /* Toast */
+    .dc-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 600; z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.2); display: none; }
+    .dc-toast.show { display: block; }
+
+    /* Mobile Active Call Banner */
+    #dc-mobile-banner {
+      display: none; align-items: center; gap: 12px;
+      background: linear-gradient(90deg, #059669 0%, #0ea5e9 100%);
+      color: white; padding: 10px 24px; font-size: 13px; font-weight: 600;
+      position: sticky; top: 0; z-index: 900;
+    }
+    #dc-mobile-banner.active { display: flex; }
+    #dc-mobile-banner .mob-pulse {
+      width: 10px; height: 10px; border-radius: 50%; background: white;
+      animation: mobPulse 1s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes mobPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+    #dc-mobile-banner .mob-info { flex: 1; }
+    #dc-mobile-banner .mob-name { font-size: 14px; font-weight: 700; }
+    #dc-mobile-banner .mob-sub { font-size: 11px; opacity: 0.85; }
+    #dc-mobile-banner .mob-view-btn {
+      background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
+      color: white; border-radius: 8px; padding: 6px 14px; font-size: 12px;
+      font-weight: 600; cursor: pointer; transition: background .2s; white-space: nowrap;
+    }
+    #dc-mobile-banner .mob-view-btn:hover { background: rgba(255,255,255,0.35); }
+
+    .dc-empty-state { text-align: center; padding: 30px; color: #9ca3af; font-size: 14px; }
+    .dc-loading-spinner { text-align: center; padding: 24px; color: #9ca3af; font-size: 22px; }
+  </style>
+</head>
+<body>
+
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+
+<!-- Mobile Active Call Banner: shown when same employee is dialing on mobile -->
+<div id="dc-mobile-banner">
+  <div class="mob-pulse"></div>
+  <div class="mob-info">
+    <div class="mob-name" id="mob-lead-name">📱 Mobile call in progress</div>
+    <div class="mob-sub" id="mob-lead-sub">Loading lead details…</div>
+  </div>
+  <button class="mob-view-btn" onclick="mobileBannerOpenEdit()">View & Edit Lead</button>
+</div>
+
+<!-- Page Tabs (manager tab revealed by JS if manager) -->
+<div class="dc-page-tabs">
+  <button class="dc-page-tab active" id="tab-dialer" onclick="switchTab('dialer')">
+    <i class="fas fa-phone me-2"></i>My Dialer
+  </button>
+  <button class="dc-page-tab" id="tab-history" onclick="switchTab('history')">
+    <i class="fas fa-history me-2"></i>Recent Calls
+  </button>
+  <button class="dc-page-tab manager-tab" id="tab-overview" onclick="switchTab('overview')">
+    <i class="fas fa-chart-bar me-2"></i>Team Overview
+  </button>
+</div>
+
+<!-- ═══════════════════ DIALER TAB ═══════════════════ -->
+<div id="dialerPane">
+  <div class="dialer-layout">
+
+    <!-- LEFT PANEL -->
+    <div class="dialer-left">
+      <div class="dc-session-card">
+        <div class="dc-session-title">📞 Auto Dialer</div>
+        <div class="dc-session-subtitle">Prioritized call queue for your CRM leads</div>
+        <div class="dc-session-status none" id="dc-status-badge">⚪ No Active Session</div>
+        <div class="dc-session-btns">
+          <button class="dc-btn green" id="dc-start-btn">▶ Start Session</button>
+          <button class="dc-btn amber" id="dc-pause-btn" style="display:none">⏸ Pause</button>
+          <button class="dc-btn blue" id="dc-resume-btn" style="display:none">▶ Resume</button>
+          <button class="dc-btn red" id="dc-close-btn" style="display:none">✖ Close Session</button>
+        </div>
+      </div>
+
+      <div class="dc-queue-badges">
+        <div class="dc-badge red"><div class="badge-num" id="badge-overdue">0</div><div class="badge-lbl">Overdue</div></div>
+        <div class="dc-badge yellow"><div class="badge-num" id="badge-due">0</div><div class="badge-lbl">Due Today</div></div>
+        <div class="dc-badge orange"><div class="badge-num" id="badge-new">0</div><div class="badge-lbl">New</div></div>
+        <div class="dc-badge blue"><div class="badge-num" id="badge-second">0</div><div class="badge-lbl">2nd Call</div></div>
+        <button id="dc-web-cat-toggle" onclick="dcToggleCatPanel()" style="margin-left:auto;border:1px solid #e5e7eb;border-radius:16px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;background:#f3f4f6;color:#6b7280;">🎯 Category</button>
+      </div>
+
+      <!-- DC_CAT_PRIORITY: Category priority panel -->
+      <div id="dc-cat-panel" style="display:none;background:white;border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
+        <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:4px;">🎯 Category Priority</div>
+        <div style="font-size:12px;color:#6b7280;margin-bottom:12px;">Preferred categories appear first within each queue tier</div>
+        <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">PRIORITY ORDER</div>
+        <div id="dc-cppanel-list" style="margin-bottom:6px;"></div>
+        <div id="dc-cppanel-add-section" style="display:none;">
+          <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin:10px 0 6px;">ALSO AVAILABLE</div>
+          <div id="dc-cppanel-add-list"></div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;padding-top:12px;border-top:1px solid #f3f4f6;">
+          <button onclick="dcCatClear()" style="background:none;border:1px solid #d1d5db;border-radius:8px;padding:7px 16px;font-size:13px;color:#6b7280;cursor:pointer;">Clear All</button>
+          <button id="dc-cppanel-save-btn" onclick="dcCatSave()" style="background:#1d4ed8;color:white;border:none;border-radius:8px;padding:7px 20px;font-size:13px;font-weight:600;cursor:pointer;">Save & Reload Queue</button>
+        </div>
+      </div>
+
+      <div id="dc-lead-section" style="display:none">
+        <div class="dc-queue-pos" id="dc-queue-pos"></div>
+        <div class="dc-lead-card" id="dc-lead-card"></div>
+      </div>
+
+      <!-- QUICK SEARCH / OVERRIDE DIAL -->
+      <div class="dc-search-card">
+        <div class="dc-search-label"><i class="fas fa-bolt" style="color:#f59e0b"></i> Quick Dial Override</div>
+        <div class="dc-search-input-wrap">
+          <input type="text" id="dc-search-input" class="dc-search-input" placeholder="Search by name or phone…" autocomplete="off">
+          <button class="dc-search-clear" id="dc-search-clear" onclick="dcSearchClear()">✕</button>
+        </div>
+        <div class="dc-search-results" id="dc-search-results"></div>
+      </div>
+
+      <div id="dc-idle-section" class="dc-idle-placeholder">
+        <div class="idle-icon">📞</div>
+        <h3>Ready to Dial</h3>
+        <p>Press Start Session to begin working through your lead queue.</p>
+      </div>
+
+      <div id="dc-queue-list-wrap" style="display:none">
+        <div class="dc-queue-list-card">
+          <div class="dc-queue-list-hdr" id="dc-queue-list-hdr">Up Next</div>
+          <div id="dc-queue-list-body"></div>
+        </div>
+      </div>
+
+      <div class="dc-analytics-card" id="dc-analytics-wrap" style="display:none">
+        <div class="dc-analytics-title">This Session</div>
+        <div class="dc-analytics-grid">
+          <div class="dc-analytics-stat"><div class="stat-num" id="stat-dialed">0</div><div class="stat-lbl">Dialed</div></div>
+          <div class="dc-analytics-stat"><div class="stat-num" id="stat-answered">0</div><div class="stat-lbl">Answered</div></div>
+          <div class="dc-analytics-stat"><div class="stat-num" id="stat-skipped">0</div><div class="stat-lbl">Skipped</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="dialer-right" id="dialerRight">
+
+      <!-- Lead Header Banner (shown when dial active) -->
+      <div id="dc-lead-banner" class="dc-lead-banner" style="display:none">
+        <div class="dc-banner-name" id="banner-name">—</div>
+        <div class="dc-banner-meta-row">
+          <span class="dc-banner-chip" id="banner-category"><i class="fas fa-tag me-1"></i><span id="banner-category-txt">—</span></span>
+          <span class="dc-banner-chip" id="banner-area"><i class="fas fa-map-marker-alt me-1"></i><span id="banner-area-txt">—</span></span>
+          <span class="dc-banner-chip" id="banner-priority-chip"><span id="banner-priority-txt">—</span></span>
+        </div>
+        <div class="dc-banner-status-row">
+          <span class="dc-banner-status-badge" id="banner-status-badge">—</span>
+          <span class="dc-banner-contact-days" id="banner-contact-days"></span>
+        </div>
+        <div id="dc-last-interaction-wrap" style="display:none; margin-top:10px;">
+          <div class="dc-banner-last-interaction">
+            <div class="int-label"><i class="fas fa-history me-1"></i>Last Interaction</div>
+            <div class="int-text" id="banner-last-note">—</div>
+            <div class="int-meta" id="banner-last-note-meta">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full Lead Edit Form + Call Outcome (shown when dial active) -->
+      <div id="dc-edit-section" style="display:none">
+        <div class="dc-lead-edit-card">
+
+          <!-- CONTACT DETAILS -->
+          <div class="dc-edit-section">
+            <div class="dc-edit-section-title"><i class="fas fa-address-book"></i> Contact Details</div>
+            <div class="dc-field-row cols-2">
+              <div class="dc-field">
+                <label>Full Name *</label>
+                <input type="text" id="e-name" placeholder="Customer name">
+              </div>
+              <div class="dc-field">
+                <label>Email</label>
+                <input type="email" id="e-email" placeholder="Email address">
+              </div>
+            </div>
+            <div class="dc-field-row cols-2">
+              <div class="dc-field">
+                <label>Phone (Primary)</label>
+                <input type="tel" id="e-phone" placeholder="10-digit mobile">
+                <div class="wa-check"><input type="checkbox" id="e-phone-wa"><label for="e-phone-wa"><i class="fab fa-whatsapp"></i> WhatsApp</label></div>
+              </div>
+              <div class="dc-field">
+                <label>Alternate Phone</label>
+                <input type="tel" id="e-alt-phone" placeholder="Alternate number">
+                <div class="wa-check"><input type="checkbox" id="e-alt-phone-wa"><label for="e-alt-phone-wa"><i class="fab fa-whatsapp"></i> WhatsApp</label></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LEAD CLASSIFICATION -->
+          <div class="dc-edit-section">
+            <div class="dc-edit-section-title"><i class="fas fa-layer-group"></i> Lead Classification</div>
+            <div class="dc-field-row cols-3">
+              <div class="dc-field">
+                <label>Status</label>
+                <select id="e-status">
+                  <optgroup label="Pipeline">
+                    <option value="new">New</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="interested">Interested</option>
+                    <option value="qualified">Qualified</option>
+                    <option value="proposal">Proposal Sent</option>
+                    <option value="on_hold">On Hold</option>
+                  </optgroup>
+                  <optgroup label="Bank Loan">
+                    <option value="waiting_for_bank_loan">Waiting for Bank Loan</option>
+                    <option value="bank_loan_rejected">Bank Loan Rejected</option>
+                    <option value="loan_process">Loan Process</option>
+                  </optgroup>
+                  <optgroup label="Won & Post-Won">
+                    <option value="won">Won</option>
+                    <option value="order_placed">Order Placed</option>
+                    <option value="dispatched">Dispatched</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="installed">Installed</option>
+                    <option value="completed">Completed</option>
+                  </optgroup>
+                  <optgroup label="Closed">
+                    <option value="lost">Lost</option>
+                    <option value="do_not_call">DNC</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div class="dc-field">
+                <label>Priority</label>
+                <select id="e-priority">
+                  <option value="normal">Normal</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </div>
+              <div class="dc-field">
+                <label>Category / Type</label>
+                <select id="e-category"><option value="">Select…</option></select>
+              </div>
+            </div>
+            <div class="dc-field-row cols-3">
+              <div class="dc-field">
+                <label>Source</label>
+                <input type="text" id="e-source" placeholder="Source">
+              </div>
+              <div class="dc-field">
+                <label>City</label>
+                <input type="text" id="e-city" placeholder="City">
+              </div>
+              <div class="dc-field">
+                <label>Area / Locality</label>
+                <input type="text" id="e-area" placeholder="Area">
+              </div>
+            </div>
+            <div class="dc-field-row cols-2">
+              <div class="dc-field">
+                <label>Budget Min (₹)</label>
+                <input type="number" id="e-budget-min" placeholder="0">
+              </div>
+              <div class="dc-field">
+                <label>Budget Max (₹)</label>
+                <input type="number" id="e-budget-max" placeholder="0">
+              </div>
+            </div>
+          </div>
+
+          <!-- LEAD DETAILS -->
+          <div class="dc-edit-section">
+            <div class="dc-edit-section-title"><i class="fas fa-file-alt"></i> Lead Details</div>
+            <div class="dc-field-row cols-1">
+              <div class="dc-field">
+                <label>Description / Project Details</label>
+                <textarea id="e-description" rows="2" placeholder="Lead description…"></textarea>
+              </div>
+            </div>
+            <div class="dc-field-row cols-1">
+              <div class="dc-field">
+                <label>Requirements</label>
+                <textarea id="e-requirements" rows="2" placeholder="What the customer needs…"></textarea>
+              </div>
+            </div>
+            <div class="dc-field-row cols-1">
+              <div class="dc-field">
+                <label>Recent Comments</label>
+                <textarea id="e-recent-comments" rows="2" placeholder="Quick updates, latest status…"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- HANDLER ASSIGNMENT (lite — no complex search widgets) -->
+          <div class="dc-edit-section">
+            <div class="dc-edit-section-title"><i class="fas fa-headset"></i> Handler Assignment</div>
+            <div class="dc-field-row cols-2">
+              <div class="dc-field">
+                <label>Telecaller Search</label>
+                <div style="position:relative">
+                  <input type="text" id="e-tele-search" placeholder="Type name to search…" autocomplete="off" oninput="dcSearchTelecaller(this.value)">
+                  <div id="e-tele-results" style="position:absolute;z-index:999;background:white;border:1px solid #e5e7eb;border-radius:8px;width:100%;max-height:140px;overflow-y:auto;display:none;box-shadow:0 4px 14px rgba(0,0,0,0.1);"></div>
+                </div>
+                <input type="hidden" id="e-tele-id">
+                <div id="e-tele-selected" style="font-size:11px;color:#059669;font-weight:600;margin-top:4px;"></div>
+              </div>
+              <div class="dc-field">
+                <label>Handler Type</label>
+                <select id="e-handler-type">
+                  <option value="unassigned">Unassigned</option>
+                  <option value="staff">Staff</option>
+                  <option value="mnr">MNR Member</option>
+                  <option value="partner">Partner</option>
+                </select>
+              </div>
+            </div>
+            <div class="dc-field-row cols-2">
+              <div class="dc-field">
+                <label>Next Follow-up</label>
+                <input type="datetime-local" id="e-followup">
+              </div>
+              <div class="dc-field">
+                <label>Expected Close Date</label>
+                <input type="date" id="e-expected-close">
+              </div>
+            </div>
+          </div>
+
+          <!-- CALL OUTCOME -->
+          <div class="dc-edit-section">
+            <div class="dc-edit-section-title"><i class="fas fa-phone-alt"></i> Call Outcome</div>
+            <div class="dc-outcome-grid">
+              <button class="dc-outcome-btn" data-outcome="answered">✅ Answered</button>
+              <button class="dc-outcome-btn" data-outcome="no_answer">📵 No Answer</button>
+              <button class="dc-outcome-btn" data-outcome="busy">📳 Busy</button>
+              <button class="dc-outcome-btn" data-outcome="callback">🔁 Callback</button>
+              <button class="dc-outcome-btn" data-outcome="wrong_number" style="grid-column:1/-1">❌ Wrong Number — remove from dialing list</button>
+            </div>
+            <div class="dc-field-row cols-2" style="margin-top:10px">
+              <div class="dc-field">
+                <label>Duration (seconds)</label>
+                <input type="number" id="e-duration" value="0" min="0">
+              </div>
+              <div class="dc-field">
+                <label>Call Note</label>
+                <input type="text" id="e-note" placeholder="Brief note on this call…">
+              </div>
+            </div>
+          </div>
+
+          <!-- ACTIVITY LOG -->
+          <div class="dc-edit-section">
+            <div class="dc-edit-section-title"><i class="fas fa-clock"></i> Activity Log <span style="font-size:10px;font-weight:400;opacity:.6;text-transform:none;">(auto-syncs to timesheet)</span></div>
+            <div class="dc-act-chips" id="e-act-chips">
+              <button class="dc-act-chip" data-act="Client Call">📞 Client Call</button>
+              <button class="dc-act-chip" data-act="Team Meeting">👥 Team Meeting</button>
+              <button class="dc-act-chip" data-act="Feedback Meeting">💬 Feedback</button>
+              <button class="dc-act-chip" data-act="Training">🎓 Training</button>
+              <button class="dc-act-chip" data-act="Report Preparation">📄 Report Prep</button>
+              <button class="dc-act-chip" data-act="Travel / Field Visit">🚗 Travel/Field</button>
+              <button class="dc-act-chip" data-act="Internal Review">🔍 Internal Review</button>
+              <button class="dc-act-chip" data-act="Admin / Documentation">📁 Admin/Docs</button>
+            </div>
+            <div id="e-act-time-row" style="display:none;margin-top:8px;align-items:center;gap:10px;display:flex">
+              <span style="font-size:12px;color:#6b7280;">Time (min):</span>
+              <input type="number" id="e-act-minutes" min="1" max="480" value="1" style="width:70px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;text-align:center;">
+              <span id="e-act-clear" style="font-size:12px;color:#ef4444;cursor:pointer;">✕ Clear</span>
+            </div>
+          </div>
+
+          <!-- HOLD + DNC -->
+          <div class="dc-edit-section">
+            <div style="margin-bottom:10px;">
+              <button id="e-hold-toggle" class="dc-hold-btn">📝 I need extra time to update this lead</button>
+              <div id="e-hold-timer-row" style="display:none;margin-top:6px;font-size:12px;color:#d97706;text-align:center;">
+                ⏱ Update time running: <b id="e-hold-timer-txt">0m 0s</b>
+              </div>
+            </div>
+            <div class="dc-dnc-row">
+              <input type="checkbox" id="e-dnc">
+              <label for="e-dnc">🚫 Do Not Call — remove from all future dialer queues</label>
+            </div>
+            <div id="e-countdown-row" style="display:none;margin-top:10px;" class="dc-countdown-row">
+              Auto-saving in <b id="e-countdown-sec">15</b>s…
+              <div style="width:100%;height:3px;background:#f3f4f6;border-radius:2px;margin-top:4px;overflow:hidden;">
+                <div id="e-countdown-bar" style="height:3px;background:#059669;width:100%;transition:width 1s linear;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SAVE ROW -->
+          <div class="dc-save-row">
+            <button class="dc-skip-btn" id="dc-skip-btn">Skip →</button>
+            <button class="dc-save-btn" id="dc-save-btn">Save &amp; Next →</button>
+          </div>
+
+        </div><!-- /.dc-lead-edit-card -->
+      </div><!-- /#dc-edit-section -->
+
+      <!-- Right idle state -->
+      <div id="dc-right-idle" class="dc-idle-placeholder">
+        <div class="idle-icon">🎯</div>
+        <h3>Dial to Edit &amp; Log</h3>
+        <p>Click a dial button on the left. The full lead edit form with call outcome will appear here — update everything in one step.</p>
+      </div>
+    </div><!-- /.dialer-right -->
+
+  </div><!-- /.dialer-layout -->
+</div><!-- /#dialerPane -->
+
+<!-- ═══════════════════ MANAGER OVERVIEW TAB ═══════════════════ -->
+<div id="overviewPane" style="display:none">
+  <div class="dc-mgr-panel">
+
+    <!-- Filters -->
+    <div class="dc-mgr-filters">
+      <label>Range:</label>
+      <button class="dc-range-btn active" data-range="today" onclick="setMgrRange('today', this)">Today</button>
+      <button class="dc-range-btn" data-range="yesterday" onclick="setMgrRange('yesterday', this)">Yesterday</button>
+      <button class="dc-range-btn" data-range="week" onclick="setMgrRange('week', this)">This Week</button>
+      <button class="dc-range-btn" data-range="month" onclick="setMgrRange('month', this)">This Month</button>
+      <label style="margin-left:10px;">From:</label>
+      <input type="date" id="mgr-from" onchange="clearRangeBtn()">
+      <label>To:</label>
+      <input type="date" id="mgr-to" onchange="clearRangeBtn()">
+      <button class="dc-mgr-refresh" onclick="loadManagerAnalytics()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="dc-kpi-grid" id="mgr-kpi-grid">
+      <div class="dc-kpi-card c-blue"><div class="dc-kpi-val" id="kpi-total-dials">—</div><div class="dc-kpi-lbl">Total Dials</div><div class="dc-kpi-sub" id="kpi-sessions">— sessions</div></div>
+      <div class="dc-kpi-card c-green"><div class="dc-kpi-val" id="kpi-answer-rate">—</div><div class="dc-kpi-lbl">Answer Rate</div><div class="dc-kpi-sub" id="kpi-answered-cnt">— answered</div></div>
+      <div class="dc-kpi-card c-amber"><div class="dc-kpi-val" id="kpi-talk-time">—</div><div class="dc-kpi-lbl">Total Talk Time</div><div class="dc-kpi-sub" id="kpi-avg-duration">avg — sec/call</div></div>
+      <div class="dc-kpi-card c-purple"><div class="dc-kpi-val" id="kpi-active-now">—</div><div class="dc-kpi-lbl">Active Now</div><div class="dc-kpi-sub" id="kpi-active-users">— dialers online</div></div>
+      <div class="dc-kpi-card c-orange"><div class="dc-kpi-val" id="kpi-leads-updated">—</div><div class="dc-kpi-lbl">Leads Updated</div><div class="dc-kpi-sub" id="kpi-dnc">— DNC set</div></div>
+      <div class="dc-kpi-card c-red"><div class="dc-kpi-val" id="kpi-avg-session">—</div><div class="dc-kpi-lbl">Avg Session</div><div class="dc-kpi-sub" id="kpi-max-session">max — min</div></div>
+    </div>
+
+    <!-- Hourly Pattern -->
+    <div class="dc-chart-card">
+      <div class="dc-section-header"><i class="fas fa-chart-bar" style="color:#0ea5e9"></i>Hourly Calling Pattern</div>
+      <div class="dc-hourly-chart" id="mgr-hourly-chart">
+        <div class="dc-empty-state">Load data to view hourly pattern</div>
+      </div>
+      <div class="dc-chart-legend">
+        <span><span class="dc-legend-dot" style="background:#bfdbfe;display:inline-block"></span> Total Dials</span>
+        <span><span class="dc-legend-dot" style="background:#059669;display:inline-block"></span> Answered</span>
+      </div>
+      <div class="dc-agent-avg-strip" id="mgr-agent-avg-strip" style="display:none"></div>
+    </div>
+
+    <!-- Agent Performance + Break/Activity Analysis -->
+    <div class="dc-agent-table-card">
+      <div class="dc-section-header"><i class="fas fa-users" style="color:#059669"></i>Agent Performance</div>
+      <div id="mgr-agent-table-wrap">
+        <div class="dc-empty-state">Load data to view agent stats</div>
+      </div>
+    </div>
+
+    <div class="dc-analysis-grid">
+      <!-- Break Analysis -->
+      <div class="dc-analysis-card">
+        <div class="dc-section-header"><i class="fas fa-coffee" style="color:#d97706"></i>Break &amp; Session Analysis</div>
+        <div id="mgr-break-list">
+          <div class="dc-empty-state">No break data for period</div>
+        </div>
+      </div>
+      <!-- Activity Analysis -->
+      <div class="dc-analysis-card">
+        <div class="dc-section-header"><i class="fas fa-tasks" style="color:#7c3aed"></i>Activity Breakdown (Timesheet)</div>
+        <div id="mgr-activity-list">
+          <div class="dc-empty-state">No activity data for period</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /#overviewPane -->
+
+<!-- ═══════════════════ RECENT CALLS TAB ═══════════════════ -->
+<div id="historyPane" style="display:none">
+  <div style="max-width:900px;margin:0 auto;padding:24px 20px 80px">
+
+    <!-- Filter row -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center">
+      <button class="rch-filter-btn active" data-type="ALL">All Calls</button>
+      <button class="rch-filter-btn" data-type="MISSED">📵 Missed</button>
+      <button class="rch-filter-btn" data-type="INCOMING">📲 Received</button>
+      <button class="rch-filter-btn" data-type="OUTGOING">📞 Outgoing</button>
+      <button class="rch-filter-btn" data-type="REJECTED">🚫 Rejected</button>
+      <button class="rch-filter-btn" data-type="DIALER">🎯 CRM Dialer</button>
+      <span style="margin-left:auto;font-size:12px;color:#9ca3af">Local direct dials + synced call log</span>
+    </div>
+
+    <!-- Call list -->
+    <div id="rch-list" style="background:white;border-radius:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);overflow:hidden">
+      <div style="padding:40px;text-align:center;color:#9ca3af">Loading call history…</div>
+    </div>
+
+    <!-- Load more -->
+    <div id="rch-load-more-wrap" style="display:none;margin-top:12px">
+      <button id="rch-load-more" style="width:100%;padding:12px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;font-size:13px;font-weight:600;color:#374151;cursor:pointer">
+        Load more
+      </button>
+    </div>
+
+  </div>
+</div><!-- /#historyPane -->
+
+<style>
+  .rch-filter-btn { padding:7px 14px;border:1.5px solid #e5e7eb;border-radius:20px;background:white;font-size:12px;font-weight:600;cursor:pointer;color:#6b7280;transition:all .12s; }
+  .rch-filter-btn.active { border-color:#0ea5e9;background:#eff6ff;color:#0369a1; }
+  .rch-row { display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid #f3f4f6; }
+  .rch-row:last-child { border-bottom:none; }
+  .rch-icon { font-size:22px;width:32px;text-align:center;flex-shrink:0; }
+  .rch-info { flex:1;min-width:0; }
+  .rch-name { font-size:14px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .rch-meta { font-size:12px;color:#6b7280;margin-top:2px;display:flex;gap:6px;flex-wrap:wrap;align-items:center; }
+  .rch-type-label { font-weight:700; }
+  .rch-crm-badge { background:#fef9c3;color:#92400e;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px; }
+  .rch-local-badge { background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px; }
+  .rch-phone { font-size:12px;color:#9ca3af;margin-top:2px; }
+  .rch-dial-btn { background:#059669;color:white;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;white-space:nowrap; }
+  .rch-dial-btn:hover { background:#047857; }
+</style>
+
+</div><!-- /.main-content -->
+
+<div class="dc-toast" id="dc-toast"></div>
+
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<script>
+(async function() {
+  // ── Sidebar/Header ──────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader !== 'undefined') {
+      StaffHeader.inject('Auto Dialer', 'fas fa-phone-volume');
+      StaffHeader.init();
+    }
+    if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+    if (typeof updateHeaderUserInfo === 'function') updateHeaderUserInfo();
+    await dialerPageInit();
+  });
+
+  // ── State ───────────────────────────────────────────────────────────────────
+  let sessionId = null, sessionStatus = 'none', queue = [], currentIndex = 0;
+  let selectedOutcome = null, currentLeadId = null, currentLead = null;
+  // DC_CAT_DEFER: Categories whose leads have been pushed to end of queue ("save for later")
+  let deferredCategoryIds = new Set();
+  let selectedActivity = null, holdMode = false, holdStartTime = 0, holdIntervalId = null;
+  let countdownTimer = null;
+  const COUNTDOWN_TOTAL = 15;
+  let callTimerStart = null;
+  let statsDialed = 0, statsAnswered = 0, statsSkipped = 0;
+  let syncPollTimer = null;
+  let dcCategories = [], isManagerView = false;
+  let mgrDateFrom = '', mgrDateTo = '';
+  // DC_CAT_PRIORITY: Category priority preference state
+  let dcCatPriorityIds = [], dcAllCategories = [];
+
+  // ── Dialer WebSocket (DC_DIALER_WS_001) ─────────────────────────────────────
+  let mobileSyncLeadId = null;
+  let dcDialerWS = null;
+  let dcDialerWS_backoff = 1000;
+  const DC_DIALER_WS_MAX_BACKOFF = 30000;
+  let dcDialerWS_timer = null;
+  let dcDialerWS_open = false;
+  let dcDialerWS_intentionalClose = false; // guard: prevent auto-reconnect on manual close
+
+  function _dcGetStaffToken() {
+    const c = document.cookie.split(';').map(s => s.trim())
+      .find(s => s.startsWith('staff_token='));
+    return c ? c.slice('staff_token='.length) : '';
+  }
+
+  async function _dcHandleCallState(msg) {
+    if (msg.active && msg.lead_id) {
+      document.getElementById('mob-lead-name').textContent =
+        '📱 ' + (msg.lead_name || 'Unknown Lead') + (msg.lead_phone ? ' · ' + msg.lead_phone : '');
+      const subParts = [];
+      if (msg.lead_status) subParts.push(msg.lead_status.replace(/_/g,' ').toUpperCase());
+      if (msg.lead_city) subParts.push(msg.lead_city);
+      if (msg.call_started_at) {
+        const diff = Math.floor((Date.now() - new Date(msg.call_started_at).getTime()) / 1000);
+        subParts.push(`${diff}s ago`);
+      }
+      document.getElementById('mob-lead-sub').textContent =
+        'Mobile call in progress' + (subParts.length ? ' · ' + subParts.join(' · ') : '');
+      document.getElementById('dc-mobile-banner').classList.add('active');
+      if (mobileSyncLeadId !== msg.lead_id) {
+        mobileSyncLeadId = msg.lead_id;
+        const editSection = document.getElementById('dc-edit-section');
+        const editVisible = editSection && editSection.style.display !== 'none';
+        if (!editVisible || currentLeadId === msg.lead_id) {
+          currentLeadId = msg.lead_id;
+          currentLead = { id: msg.lead_id, company_id: msg.company_id };
+          await loadAndShowLeadEdit(msg.lead_id);
+        }
+      }
+    } else {
+      if (mobileSyncLeadId) {
+        mobileSyncLeadId = null;
+        document.getElementById('dc-mobile-banner').classList.remove('active');
+      }
+    }
+  }
+
+  function _dcHandleSessionSync(msg) {
+    const newIdx = typeof msg.current_index === 'number' ? msg.current_index : null;
+    if (newIdx !== null && newIdx !== currentIndex) {
+      currentIndex = newIdx;
+      renderLeadCard();
+      renderQueueList();
+    }
+  }
+
+  function dcDialerWSConnect() {
+    const tk = _dcGetStaffToken();
+    if (!tk) return;
+
+    // Guard: skip if a socket is already live (CONNECTING=0 or OPEN=1) to prevent duplicates.
+    // If somehow stuck CLOSING (2), close it first and let onclose trigger the next connect.
+    if (dcDialerWS !== null) {
+      const rs = dcDialerWS.readyState;
+      if (rs === WebSocket.OPEN || rs === WebSocket.CONNECTING) return;
+      if (rs === WebSocket.CLOSING) { dcDialerWS = null; return; }
+      // CLOSED (3) — clean up ref and proceed to open a new connection
+      dcDialerWS = null;
+    }
+
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${proto}://${location.host}/api/v1/crm/ws/dialer/sync?token=${encodeURIComponent(tk)}`;
+    try {
+      dcDialerWS = new WebSocket(wsUrl);
+    } catch (e) {
+      console.warn('[DC_DIALER_WS] Could not open WebSocket:', e);
+      return;
+    }
+
+    dcDialerWS.onopen = () => {
+      dcDialerWS_open = true;
+      dcDialerWS_backoff = 1000;
+      console.log('[DC_DIALER_WS] Connected');
+    };
+
+    dcDialerWS.onmessage = async (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch { return; }
+      if (msg.type === 'call_state') await _dcHandleCallState(msg);
+      else if (msg.type === 'session_sync') _dcHandleSessionSync(msg);
+    };
+
+    dcDialerWS.onclose = () => {
+      dcDialerWS_open = false;
+      dcDialerWS = null;
+      if (dcDialerWS_intentionalClose) return; // session ended — do not reconnect
+      if (dcDialerWS_timer) clearTimeout(dcDialerWS_timer);
+      dcDialerWS_timer = setTimeout(() => {
+        dcDialerWS_timer = null;
+        dcDialerWSConnect();
+      }, dcDialerWS_backoff);
+      dcDialerWS_backoff = Math.min(dcDialerWS_backoff * 2, DC_DIALER_WS_MAX_BACKOFF);
+    };
+
+    dcDialerWS.onerror = () => {
+      try { dcDialerWS.close(); } catch {}
+    };
+  }
+
+  function dcDialerWSDisconnect() {
+    dcDialerWS_intentionalClose = true;
+    if (dcDialerWS_timer) { clearTimeout(dcDialerWS_timer); dcDialerWS_timer = null; }
+    if (dcDialerWS) { try { dcDialerWS.close(1000, 'session ended'); } catch {} dcDialerWS = null; }
+    dcDialerWS_open = false;
+    dcDialerWS_backoff = 1000; // reset backoff for next session
+  }
+
+  function mobileBannerOpenEdit() {
+    if (!mobileSyncLeadId) return;
+    currentLeadId = mobileSyncLeadId;
+    currentLead = currentLead?.id === mobileSyncLeadId
+      ? currentLead : { id: mobileSyncLeadId };
+    loadAndShowLeadEdit(mobileSyncLeadId);
+  }
+
+  window.addEventListener('beforeunload', dcDialerWSDisconnect);
+
+  const PRIORITY_LABELS = {
+    overdue: '🔴 Overdue', due_today: '🟡 Due Today',
+    new: '🟠 New Lead', second_contact: '🔵 2nd Contact', upcoming: '⚪ Upcoming'
+  };
+  const STATUS_LABELS = {
+    new: 'New', contacted: 'Contacted', interested: 'Interested', qualified: 'Qualified',
+    proposal: 'Proposal Sent', loan_process: 'Loan Process', on_hold: 'On Hold',
+    won: 'Won', lost: 'Lost', do_not_call: '🚫 DNC'
+  };
+
+  // ── API Helpers ─────────────────────────────────────────────────────────────
+  async function apiCall(method, path, body) {
+    const token = document.cookie.split(';').map(c => c.trim())
+      .find(c => c.startsWith('staff_token=') || c.startsWith('session_token='));
+    const tk = token ? token.slice(token.indexOf('=') + 1) : '';
+    const opts = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tk}` } };
+    if (body) opts.body = JSON.stringify(body);
+    try {
+      const res = await fetch('/api/v1' + path, opts);
+      return res.json();
+    } catch(e) {
+      return { success: false, error: e.message };
+    }
+  }
+
+  function toast(msg, dur = 3000) {
+    const el = document.getElementById('dc-toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), dur);
+  }
+
+  function fmtMins(mins) {
+    if (!mins || mins < 1) return '0m';
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+  function fmtSecs(secs) {
+    if (!secs) return '0s';
+    const m = Math.floor(secs / 60), s = secs % 60;
+    return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  }
+
+  // ── Tab switching ────────────────────────────────────────────────────────────
+  window.switchTab = function(tab) {
+    document.querySelectorAll('.dc-page-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.getElementById('dialerPane').style.display = tab === 'dialer' ? '' : 'none';
+    document.getElementById('overviewPane').style.display = tab === 'overview' ? '' : 'none';
+    document.getElementById('historyPane').style.display = tab === 'history' ? '' : 'none';
+    if (tab === 'overview') loadManagerAnalytics();
+    if (tab === 'history') rchLoad(true);
+  };
+
+  // ── Init ────────────────────────────────────────────────────────────────────
+  async function dialerPageInit() {
+    // DC Protocol (Mar 25, 2026): Only show manager Overview tab to users with downline.
+    // is_manager flag is returned by the backend based on recursive downline count.
+    const meRes = await apiCall('GET', '/crm/dialer/analytics?date_from=2099-01-01&date_to=2099-01-02');
+    if (meRes.success && meRes.data && meRes.data.is_manager) {
+      document.querySelector('.dc-page-tab.manager-tab').classList.add('visible');
+    }
+
+    const check = await apiCall('GET', '/crm/dialer/session/current');
+    if (check.success && check.data?.session) {
+      const s = check.data.session;
+      sessionId = s.id;
+      sessionStatus = s.status;
+      currentIndex = s.current_index || 0;
+    }
+
+    await loadQueue();
+    await loadPreferences();
+    updateUI();
+    bindHandlers();
+    // DC_DIALER_WS_001: Only open WS if a session is already active/paused on page load.
+    // For new sessions, startSyncPoll() (called by session/start and session/resume) opens it.
+    if (sessionStatus === 'active' || sessionStatus === 'paused') {
+      dcDialerWSConnect();
+    }
+  }
+
+  async function loadQueue() {
+    const data = await apiCall('GET', '/crm/dialer/queue');
+    if (data.success && data.data) {
+      queue = data.data.queue || [];
+      document.getElementById('badge-overdue').textContent = data.data.overdue || 0;
+      document.getElementById('badge-due').textContent = data.data.due_today || 0;
+      document.getElementById('badge-new').textContent = data.data.new || 0;
+      document.getElementById('badge-second').textContent = data.data.second_contact || 0;
+    }
+  }
+
+  // ── DC_CAT_PRIORITY: Category priority preference functions ─────────────────
+  async function loadPreferences() {
+    try {
+      const res = await apiCall('GET', '/crm/dialer/preferences');
+      if (res.success) {
+        dcCatPriorityIds = (res.category_priority || []).map(Number);
+        dcAllCategories = res.available_categories || [];
+        _dcUpdateCatToggleBtn();
+      }
+    } catch (e) { /* non-fatal */ }
+  }
+
+  function _dcUpdateCatToggleBtn() {
+    const btn = document.getElementById('dc-web-cat-toggle');
+    if (!btn) return;
+    const n = dcCatPriorityIds.length;
+    if (n > 0) {
+      btn.textContent = `🎯 Category (${n})`;
+      btn.style.background = '#dbeafe';
+      btn.style.color = '#1d4ed8';
+      btn.style.borderColor = '#bfdbfe';
+    } else {
+      btn.textContent = '🎯 Category';
+      btn.style.background = '#f3f4f6';
+      btn.style.color = '#6b7280';
+      btn.style.borderColor = '#e5e7eb';
+    }
+  }
+
+  function dcToggleCatPanel() {
+    const panel = document.getElementById('dc-cat-panel');
+    const isOpen = panel.style.display !== 'none';
+    if (!isOpen) {
+      dcRenderCatPanel();
+      panel.style.display = '';
+      const btn = document.getElementById('dc-web-cat-toggle');
+      if (btn) { btn.textContent = '✕ Close'; btn.style.background = '#e5e7eb'; btn.style.color = '#374151'; }
+    } else {
+      panel.style.display = 'none';
+      _dcUpdateCatToggleBtn();
+    }
+  }
+
+  function dcRenderCatPanel() {
+    const prioritisedCats = dcCatPriorityIds.map(id => dcAllCategories.find(c => c.id === id)).filter(Boolean);
+    const unprioritisedCats = dcAllCategories.filter(c => !dcCatPriorityIds.includes(c.id));
+    const listEl = document.getElementById('dc-cppanel-list');
+    const addSection = document.getElementById('dc-cppanel-add-section');
+    const addList = document.getElementById('dc-cppanel-add-list');
+
+    if (prioritisedCats.length === 0) {
+      listEl.innerHTML = `<div style="color:#9ca3af;font-size:13px;padding:6px 0;">No categories selected — all categories shown equally.</div>`;
+    } else {
+      listEl.innerHTML = prioritisedCats.map((cat, i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f3f4f6;">
+          <span style="width:22px;height:22px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">${i + 1}</span>
+          <span style="flex:1;font-size:13px;font-weight:600;color:#1f2937;">${cat.name}</span>
+          <div style="display:flex;gap:4px;">
+            ${i > 0 ? `<button onclick="dcCatMoveUp(${cat.id})" style="border:1px solid #bfdbfe;background:#eff6ff;border-radius:6px;padding:3px 8px;font-size:12px;color:#1d4ed8;cursor:pointer;">↑</button>` : '<span style="width:30px;display:inline-block;"></span>'}
+            ${i < prioritisedCats.length - 1 ? `<button onclick="dcCatMoveDn(${cat.id})" style="border:1px solid #bfdbfe;background:#eff6ff;border-radius:6px;padding:3px 8px;font-size:12px;color:#1d4ed8;cursor:pointer;">↓</button>` : '<span style="width:30px;display:inline-block;"></span>'}
+            <button onclick="dcCatRemove(${cat.id})" style="border:1px solid #fca5a5;background:#fff1f2;border-radius:6px;padding:3px 8px;font-size:12px;color:#dc2626;cursor:pointer;">✕</button>
+          </div>
+        </div>`).join('');
+    }
+
+    if (unprioritisedCats.length > 0) {
+      addSection.style.display = '';
+      addList.innerHTML = unprioritisedCats.map(cat => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;">
+          <span style="font-size:13px;color:#6b7280;">${cat.name}</span>
+          <button onclick="dcCatAdd(${cat.id})" style="border:1px solid #6ee7b7;background:#f0fdf4;border-radius:6px;padding:3px 10px;font-size:12px;color:#059669;cursor:pointer;">+ Add</button>
+        </div>`).join('');
+    } else {
+      addSection.style.display = 'none';
+    }
+  }
+
+  function dcCatMoveUp(id) {
+    const idx = dcCatPriorityIds.indexOf(id);
+    if (idx > 0) { [dcCatPriorityIds[idx - 1], dcCatPriorityIds[idx]] = [dcCatPriorityIds[idx], dcCatPriorityIds[idx - 1]]; dcRenderCatPanel(); }
+  }
+  function dcCatMoveDn(id) {
+    const idx = dcCatPriorityIds.indexOf(id);
+    if (idx >= 0 && idx < dcCatPriorityIds.length - 1) { [dcCatPriorityIds[idx], dcCatPriorityIds[idx + 1]] = [dcCatPriorityIds[idx + 1], dcCatPriorityIds[idx]]; dcRenderCatPanel(); }
+  }
+  function dcCatRemove(id) {
+    dcCatPriorityIds = dcCatPriorityIds.filter(x => x !== id);
+    dcRenderCatPanel();
+  }
+  function dcCatAdd(id) {
+    if (!dcCatPriorityIds.includes(id)) { dcCatPriorityIds = [...dcCatPriorityIds, id]; dcRenderCatPanel(); }
+  }
+  function dcCatClear() {
+    dcCatPriorityIds = [];
+    dcRenderCatPanel();
+  }
+  async function dcCatSave() {
+    const btn = document.getElementById('dc-cppanel-save-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    try {
+      await apiCall('PUT', '/crm/dialer/preferences', { category_priority: dcCatPriorityIds });
+      document.getElementById('dc-cat-panel').style.display = 'none';
+      _dcUpdateCatToggleBtn();
+      await loadQueue();
+      toast('Category priority saved — queue reloaded');
+    } catch (e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Save & Reload Queue'; }
+      toast('Failed to save — please try again');
+    }
+  }
+
+  function updateUI() {
+    const badgeEl = document.getElementById('dc-status-badge');
+    const startBtn = document.getElementById('dc-start-btn');
+    const pauseBtn = document.getElementById('dc-pause-btn');
+    const resumeBtn = document.getElementById('dc-resume-btn');
+    const closeBtn = document.getElementById('dc-close-btn');
+
+    if (sessionStatus === 'active') {
+      badgeEl.className = 'dc-session-status active';
+      badgeEl.textContent = '🟢 Session Active';
+      startBtn.style.display = 'none';
+      pauseBtn.style.display = '';
+      resumeBtn.style.display = 'none';
+      closeBtn.style.display = '';
+      document.getElementById('dc-lead-section').style.display = '';
+      document.getElementById('dc-idle-section').style.display = 'none';
+      document.getElementById('dc-queue-list-wrap').style.display = '';
+      document.getElementById('dc-analytics-wrap').style.display = '';
+    } else if (sessionStatus === 'paused') {
+      badgeEl.className = 'dc-session-status paused';
+      badgeEl.textContent = '⏸ Session Paused';
+      startBtn.style.display = 'none';
+      pauseBtn.style.display = 'none';
+      resumeBtn.style.display = '';
+      closeBtn.style.display = '';
+      document.getElementById('dc-lead-section').style.display = '';
+      document.getElementById('dc-idle-section').style.display = 'none';
+      document.getElementById('dc-queue-list-wrap').style.display = '';
+      document.getElementById('dc-analytics-wrap').style.display = '';
+    } else {
+      badgeEl.className = 'dc-session-status none';
+      badgeEl.textContent = '⚪ No Active Session';
+      startBtn.style.display = '';
+      pauseBtn.style.display = 'none';
+      resumeBtn.style.display = 'none';
+      closeBtn.style.display = 'none';
+      document.getElementById('dc-lead-section').style.display = 'none';
+      document.getElementById('dc-idle-section').style.display = '';
+      document.getElementById('dc-queue-list-wrap').style.display = 'none';
+      document.getElementById('dc-analytics-wrap').style.display = 'none';
+    }
+    renderLeadCard();
+    renderQueueList();
+  }
+
+  function renderLeadCard() {
+    const lead = queue[currentIndex];
+    const cardEl = document.getElementById('dc-lead-card');
+    const posEl = document.getElementById('dc-queue-pos');
+    if (!lead) { if (sessionStatus === 'active') showQueueComplete(); return; }
+    posEl.textContent = `Lead ${currentIndex + 1} of ${queue.length}`;
+
+    const priorLabel = PRIORITY_LABELS[lead.queue_priority] || '⚪ Upcoming';
+    const city = lead.city ? `📍 ${lead.city}` : '';
+    const area = lead.area ? `${lead.area}` : '';
+    const location = [city, area].filter(Boolean).join(', ');
+
+    cardEl.className = `dc-lead-card border-${lead.queue_priority || 'upcoming'}`;
+    cardEl.innerHTML = `
+      <div class="dc-lead-header">
+        <div class="dc-lead-name">${escHtml(lead.name)}</div>
+        <span class="dc-priority-tag">${priorLabel}</span>
+      </div>
+      <div class="dc-lead-meta">${location || '—'}</div>
+      ${lead.description ? `<div class="dc-lead-desc">${escHtml(lead.description.substring(0, 120))}${lead.description.length > 120 ? '…' : ''}</div>` : ''}
+      <div class="dc-detail-grid">
+        <div class="dc-detail-item"><span>Status</span><b>${STATUS_LABELS[lead.status] || lead.status}</b></div>
+        <div class="dc-detail-item"><span>Source</span><b>${escHtml(lead.source || '—')}</b></div>
+        <div class="dc-detail-item"><span>Last Contact</span><b>${lead.last_contact_days != null ? lead.last_contact_days + 'd ago' : 'Never'}</b></div>
+        <div class="dc-detail-item"><span>Follow-up</span><b>${lead.next_followup_date ? new Date(lead.next_followup_date).toLocaleDateString('en-IN') : '—'}</b></div>
+      </div>
+      <div class="dc-dial-btns">
+        ${lead.phone ? `<button class="dc-dial-btn" onclick="doDial('${escHtml(lead.phone)}', ${lead.id})"><i class="fas fa-phone-alt"></i>${escHtml(lead.phone)}</button>` : ''}
+        ${lead.alternate_phone ? `<button class="dc-dial-btn alt" onclick="doDial('${escHtml(lead.alternate_phone)}', ${lead.id})"><i class="fas fa-phone-alt"></i>${escHtml(lead.alternate_phone)} (Alt)</button>` : ''}
+        ${!lead.phone && !lead.alternate_phone ? `<div style="color:#9ca3af;text-align:center;font-size:13px;padding:10px">No phone number on file</div>` : ''}
+      </div>
+    `;
+  }
+
+  // DC_CAT_DEFER: Move all remaining leads of a category to end of queue
+  function deferCategory(catId, catName) {
+    const toDefer = [];
+    let i = currentIndex + 1;
+    while (i < queue.length) {
+      if (queue[i].category_id == catId) {
+        toDefer.push(...queue.splice(i, 1));
+      } else { i++; }
+    }
+    queue.push(...toDefer);
+    deferredCategoryIds.add(catId);
+    console.log(`[DC_DEFER] Moved ${toDefer.length} leads from "${catName}" to end of queue`);
+    renderQueueList();
+  }
+
+  function renderQueueList() {
+    const body = document.getElementById('dc-queue-list-body');
+    const hdr = document.getElementById('dc-queue-list-hdr');
+    const upcoming = queue.slice(currentIndex + 1, currentIndex + 8);
+    hdr.textContent = `Up Next (${queue.length - currentIndex - 1} remaining)`;
+    if (!upcoming.length) { body.innerHTML = '<div style="padding:12px 16px;font-size:12px;color:#9ca3af">Queue complete</div>'; return; }
+
+    // DC_CAT_DEFER: Group by category, show defer button per category group
+    const groups = [];
+    const groupIdx = new Map();
+    upcoming.forEach((l, i) => {
+      const catId = l.category_id ?? null;
+      if (!groupIdx.has(catId)) {
+        const g = { catId, catName: l.category_name || null, items: [] };
+        groups.push(g);
+        groupIdx.set(catId, g);
+      }
+      groupIdx.get(catId).items.push({ l, absIdx: currentIndex + i + 2 });
+    });
+
+    body.innerHTML = groups.map(g => {
+      const isDeferred = g.catId !== null && deferredCategoryIds.has(g.catId);
+      const catHeader = g.catName ? `
+        <div class="dc-qcat-hdr${isDeferred ? ' deferred' : ''}" style="display:flex;align-items:center;justify-content:space-between;padding:6px 14px;background:${isDeferred ? '#f9fafb' : '#f5f3ff'};border-bottom:1px solid #e9e5ff;">
+          <span style="font-size:11px;font-weight:700;color:${isDeferred ? '#9ca3af' : '#6d28d9'};text-transform:uppercase;letter-spacing:0.04em;">${escHtml(g.catName)}</span>
+          ${isDeferred
+            ? `<span style="font-size:11px;color:#9ca3af;font-style:italic;">⏬ Saved for later</span>`
+            : `<button onclick="deferCategory(${g.catId}, '${escHtml(g.catName)}')" style="font-size:11px;font-weight:600;color:#6366f1;background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;padding:3px 9px;cursor:pointer;">⏬ Save for Later</button>`}
+        </div>` : '';
+      const itemRows = g.items.map(({ l, absIdx }) => `
+        <div class="dc-queue-item" style="${isDeferred ? 'opacity:0.55' : ''}">
+          <div class="dc-queue-item-num">${absIdx}</div>
+          <div><div class="dc-queue-item-name">${escHtml(l.name)}</div><div class="dc-queue-item-meta">${PRIORITY_LABELS[l.queue_priority] || ''}</div></div>
+        </div>`).join('');
+      return catHeader + itemRows;
+    }).join('');
+  }
+
+  function showQueueComplete() {
+    document.getElementById('dc-lead-section').style.display = 'none';
+    document.getElementById('dc-idle-section').style.display = '';
+    document.getElementById('dc-idle-section').innerHTML = `
+      <div class="idle-icon">🎉</div>
+      <h3>Queue Complete!</h3>
+      <p>You've worked through all ${queue.length} leads in this session.</p>
+    `;
+  }
+
+  // ── Dial ─────────────────────────────────────────────────────────────────────
+  async function doDial(phone, leadId) {
+    window.open('tel:' + phone, '_self');
+    currentLeadId = leadId;
+    callTimerStart = Date.now();
+    await loadAndShowLeadEdit(leadId);
+  }
+
+  async function loadAndShowLeadEdit(leadId) {
+    // Prefer queue data; fall back to any pre-set currentLead (e.g. from mobile sync) then bare id
+    const inQueue = queue.find(l => l.id === leadId);
+    const lead = inQueue || (currentLead?.id === leadId ? currentLead : { id: leadId });
+    currentLead = lead;
+
+    // Show banner immediately with queue data
+    populateBanner(lead, null);
+    document.getElementById('dc-lead-banner').style.display = '';
+    document.getElementById('dc-edit-section').style.display = '';
+    document.getElementById('dc-right-idle').style.display = 'none';
+
+    // Populate form with queue data
+    populateEditForm(lead);
+
+    // Load categories
+    if (lead.company_id) loadDialerCategories(lead.company_id);
+
+    // Fetch full lead detail (notes, all fields)
+    if (lead.company_id) {
+      const full = await apiCall('GET', `/crm/leads/${leadId}?company_id=${lead.company_id}`);
+      if (full.success && full.data) {
+        currentLead = { ...lead, ...full.data };
+        populateBanner(lead, full.data);
+        populateEditFormFull(full.data);
+      }
+    }
+  }
+
+  function populateBanner(lead, fullData) {
+    const name = lead.name || '—';
+    document.getElementById('banner-name').textContent = name;
+    document.getElementById('banner-area-txt').textContent = [lead.city, lead.area].filter(Boolean).join(', ') || '—';
+
+    const pEl = document.getElementById('banner-priority-chip');
+    const pri = lead.priority || 'normal';
+    pEl.className = `dc-banner-chip priority-${pri}`;
+    document.getElementById('banner-priority-txt').textContent = pri.charAt(0).toUpperCase() + pri.slice(1) + ' Priority';
+
+    const statusBadge = document.getElementById('banner-status-badge');
+    statusBadge.textContent = STATUS_LABELS[lead.status] || lead.status || '—';
+
+    const contactDays = document.getElementById('banner-contact-days');
+    if (lead.last_contact_days != null) {
+      contactDays.textContent = `Last contact: ${lead.last_contact_days}d ago`;
+    } else {
+      contactDays.textContent = 'Never contacted';
+    }
+
+    // Category
+    const catTxt = document.getElementById('banner-category-txt');
+    catTxt.textContent = '—';
+    if (fullData && fullData.category_name) catTxt.textContent = fullData.category_name;
+    else if (lead.category_id && dcCategories.length) {
+      const cat = dcCategories.find(c => c.id == lead.category_id);
+      if (cat) catTxt.textContent = cat.name;
+    }
+
+    // Last interaction (from notes)
+    const lastIntWrap = document.getElementById('dc-last-interaction-wrap');
+    if (fullData && fullData.notes && fullData.notes.length > 0) {
+      const sorted = [...fullData.notes].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      const last = sorted[0];
+      document.getElementById('banner-last-note').textContent = last.content || '—';
+      const when = last.created_at ? new Date(last.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+      document.getElementById('banner-last-note-meta').textContent = `${last.note_type || 'Note'} — ${when}`;
+      lastIntWrap.style.display = '';
+    } else if (fullData && fullData.recent_comments) {
+      document.getElementById('banner-last-note').textContent = fullData.recent_comments;
+      document.getElementById('banner-last-note-meta').textContent = 'Recent Comments';
+      lastIntWrap.style.display = '';
+    } else if (!fullData) {
+      lastIntWrap.style.display = 'none';
+    }
+  }
+
+  function populateEditForm(lead) {
+    setVal('e-name', lead.name);
+    setVal('e-phone', lead.phone);
+    setVal('e-alt-phone', lead.alternate_phone);
+    _setStatusSafe('e-status', lead.status);
+    setVal('e-priority', lead.priority || 'normal');
+    setVal('e-category', lead.category_id);
+    setVal('e-source', lead.source);
+    setVal('e-city', lead.city);
+    setVal('e-area', lead.area);
+    setChk('e-phone-wa', lead.phone_primary_whatsapp);
+    setChk('e-alt-phone-wa', lead.phone_secondary_whatsapp);
+    if (lead.next_followup_date) {
+      try { setVal('e-followup', lead.next_followup_date.slice(0, 16)); } catch(e){}
+    }
+  }
+
+  function populateEditFormFull(data) {
+    setVal('e-name', data.name);
+    setVal('e-email', data.email);
+    setVal('e-phone', data.phone);
+    setVal('e-alt-phone', data.alternate_phone);
+    setChk('e-phone-wa', data.phone_primary_whatsapp);
+    setChk('e-alt-phone-wa', data.phone_secondary_whatsapp);
+    _setStatusSafe('e-status', data.status);
+    setVal('e-priority', data.priority || 'normal');
+    setVal('e-category', data.category_id);
+    setVal('e-source', data.source);
+    setVal('e-city', data.city);
+    setVal('e-area', data.area);
+    setVal('e-budget-min', data.budget_min);
+    setVal('e-budget-max', data.budget_max);
+    setVal('e-description', data.description);
+    setVal('e-requirements', data.requirements);
+    setVal('e-recent-comments', data.recent_comments);
+    setVal('e-handler-type', data.handler_type);
+    if (data.next_followup_date) {
+      try { setVal('e-followup', data.next_followup_date.slice(0, 16)); } catch(e){}
+    }
+    if (data.expected_close_date) {
+      try { setVal('e-expected-close', data.expected_close_date.slice(0, 10)); } catch(e){}
+    }
+    // Telecaller
+    if (data.telecaller_id) {
+      document.getElementById('e-tele-id').value = data.telecaller_id;
+      const name = data.telecaller_name || data.telecaller_code || '';
+      document.getElementById('e-tele-search').value = name;
+      document.getElementById('e-tele-selected').textContent = name ? `✓ ${name}` : '';
+    }
+  }
+
+  function setVal(id, val) {
+    const el = document.getElementById(id);
+    if (el && val != null && val !== '' && val !== undefined) el.value = val;
+  }
+  function setChk(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.checked = !!val;
+  }
+
+  function _setStatusSafe(id, status) {
+    const el = document.getElementById(id);
+    if (!el || !status) return;
+    el.value = status;
+    if (el.value !== status) {
+      const opt = document.createElement('option');
+      opt.value = status;
+      opt.textContent = status.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+      opt.setAttribute('data-dynamic','1');
+      el.appendChild(opt);
+      el.value = status;
+      console.warn('[DC-DIALER] Status "' + status + '" not in dropdown — added dynamically to prevent stale value overwrite.');
+    }
+    el.querySelectorAll('[data-dynamic]').forEach(o => { if (o.value !== el.value) o.remove(); });
+  }
+
+  async function loadDialerCategories(companyId) {
+    const data = await apiCall('GET', `/signup-categories/list?company_id=${companyId}`);
+    if (data && data.success && data.categories) {
+      dcCategories = data.categories;
+      const sel = document.getElementById('e-category');
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Select Category</option>';
+      data.categories.forEach(c => {
+        sel.innerHTML += `<option value="${c.id}">${escHtml(c.name)}</option>`;
+      });
+      if (cur) sel.value = cur;
+      // Update banner category
+      if (currentLead && currentLead.category_id) {
+        const cat = data.categories.find(c => c.id == currentLead.category_id);
+        if (cat) document.getElementById('banner-category-txt').textContent = cat.name;
+      }
+    }
+  }
+
+  // ── Quick Dial Override Search ───────────────────────────────────────────────
+  let dcSearchTimer = null;
+  let dcSearchLastQ = '';
+
+  document.getElementById('dc-search-input').addEventListener('input', function() {
+    const q = this.value.trim();
+    document.getElementById('dc-search-clear').style.display = q ? 'block' : 'none';
+    clearTimeout(dcSearchTimer);
+    if (q.length < 2) {
+      document.getElementById('dc-search-results').style.display = 'none';
+      return;
+    }
+    dcSearchLastQ = q;
+    document.getElementById('dc-search-results').innerHTML = '<div class="dc-search-loading">Searching…</div>';
+    document.getElementById('dc-search-results').style.display = 'block';
+    dcSearchTimer = setTimeout(() => dcRunSearch(q), 280);
+  });
+
+  document.getElementById('dc-search-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') dcSearchClear();
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.dc-search-card')) {
+      document.getElementById('dc-search-results').style.display = 'none';
+    }
+  });
+
+  async function dcRunSearch(q) {
+    if (q !== dcSearchLastQ) return;
+    try {
+      const qs = companyId ? `?q=${encodeURIComponent(q)}&company_id=${companyId}` : `?q=${encodeURIComponent(q)}`;
+      const data = await apiCall('GET', `/crm/dialer/search${qs}`);
+      if (q !== dcSearchLastQ) return;
+      const res = document.getElementById('dc-search-results');
+      if (!data.success || !data.results || !data.results.length) {
+        res.innerHTML = '<div class="dc-search-no-results">No leads found</div>';
+        res.style.display = 'block';
+        return;
+      }
+      res.innerHTML = data.results.map(r => {
+        const loc = [r.area, r.city].filter(Boolean).join(', ');
+        const statusLabel = STATUS_LABELS[r.status] || r.status;
+        const hasAlt = r.alternate_phone && r.alternate_phone !== r.phone;
+        const isContact = r.source === 'contact';
+        const sourceBadge = isContact
+          ? `<span style="background:#f0f9ff;color:#0369a1;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">📱 Contact</span>`
+          : `<span style="background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">🎯 Lead</span>`;
+        const dialedBadge = r.dialed_today
+          ? `<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">✅ Called Today</span>`
+          : '';
+        const metaParts = [r.phone || '—'];
+        if (hasAlt) metaParts.push(`Alt: ${escHtml(r.alternate_phone)}`);
+        if (loc) metaParts.push(escHtml(loc));
+        if (r.status) metaParts.push(`<span style="color:#374151">${escHtml(statusLabel)}</span>`);
+        const dialFn = (isContact && !r.lead_id) ? 'dcDirectDial' : 'dcOverrideDial';
+        return `
+          <div class="dc-search-result-item" style="${r.dialed_today ? 'opacity:0.75;' : ''}">
+            <div class="dc-search-result-info">
+              <div class="dc-search-result-name" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">${escHtml(r.name)} ${sourceBadge} ${dialedBadge}</div>
+              <div class="dc-search-result-meta">${metaParts.join(' · ')}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              ${r.phone ? `<button class="dc-search-result-dial" onclick="${dialFn}('${escHtml(r.phone)}', ${r.lead_id || 'null'}, '${escHtml(r.name)}')">📞 ${escHtml(r.phone)}</button>` : ''}
+              ${hasAlt ? `<button class="dc-search-result-dial alt" onclick="${dialFn}('${escHtml(r.alternate_phone)}', ${r.lead_id || 'null'}, '${escHtml(r.name)}')">📞 Alt</button>` : ''}
+              ${!r.phone && !hasAlt ? `<span style="color:#9ca3af;font-size:12px">No phone</span>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+      res.style.display = 'block';
+    } catch (err) {
+      document.getElementById('dc-search-results').innerHTML = '<div class="dc-search-no-results">Search failed</div>';
+    }
+  }
+
+  function dcSearchClear() {
+    document.getElementById('dc-search-input').value = '';
+    document.getElementById('dc-search-clear').style.display = 'none';
+    document.getElementById('dc-search-results').style.display = 'none';
+    dcSearchLastQ = '';
+  }
+
+  function dcDirectDial(phone, leadId, name) {
+    // Pure contact dial — no CRM lead, just open the phone dialer
+    dcSearchClear();
+    window.open('tel:' + phone, '_self');
+  }
+
+  async function dcOverrideDial(phone, leadId, name) {
+    dcSearchClear();
+    currentLeadId = leadId;
+    currentLead = null;
+    // Try to load full lead data immediately for the right panel
+    try {
+      const full = await apiCall('GET', `/crm/leads/${leadId}`);
+      if (full && full.data) {
+        currentLead = { ...full.data, id: leadId, lead_id: leadId };
+        showLeadBanner(currentLead);
+        populateLeadForm(currentLead);
+        dcLoadCategories();
+        document.getElementById('dialerRight').style.display = '';
+        document.getElementById('dc-lead-banner').style.display = '';
+      }
+    } catch (_) {}
+    // Dial
+    doDial(phone, leadId);
+  }
+
+  // ── Telecaller search ────────────────────────────────────────────────────────
+  let teleSearchTimer = null;
+  window.dcSearchTelecaller = function(q) {
+    clearTimeout(teleSearchTimer);
+    const res = document.getElementById('e-tele-results');
+    if (q.length < 2) { res.style.display = 'none'; return; }
+    teleSearchTimer = setTimeout(async () => {
+      const data = await apiCall('GET', `/staff/employees?search=${encodeURIComponent(q)}&limit=8&status=active`);
+      const emps = data.employees || data.data || [];
+      if (!emps.length) { res.style.display = 'none'; return; }
+      res.innerHTML = emps.map(e => `
+        <div onclick="selectTelecaller(${e.id || e.employee_id}, '${escHtml(e.name || e.full_name || e.emp_code)}')"
+          style="padding:9px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;hover:background:#f9fafb">
+          <b>${escHtml(e.name || e.full_name || '')}</b> <span style="color:#9ca3af">${e.emp_code || ''}</span>
+        </div>`).join('');
+      res.style.display = '';
+    }, 300);
+  };
+  window.selectTelecaller = function(id, name) {
+    document.getElementById('e-tele-id').value = id;
+    document.getElementById('e-tele-search').value = name;
+    document.getElementById('e-tele-selected').textContent = `✓ ${name}`;
+    document.getElementById('e-tele-results').style.display = 'none';
+  };
+
+  // ── Save Lead + Log Attempt ──────────────────────────────────────────────────
+  async function saveAndNext() {
+    if (!sessionId || currentLeadId === null) return;
+    if (!selectedOutcome) toast('No outcome selected — logging as Answered.', 3000);
+    _dcPauseCountdown();
+    if (holdIntervalId) { clearInterval(holdIntervalId); holdIntervalId = null; }
+
+    const btn = document.getElementById('dc-save-btn');
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    const durationSec = callTimerStart ? Math.round((Date.now() - callTimerStart) / 1000) : parseInt(document.getElementById('e-duration').value) || 0;
+    const actMinutesEl = document.getElementById('e-act-minutes');
+    const activityMinutes = selectedActivity && actMinutesEl ? (parseInt(actMinutesEl.value) || null) : null;
+    const leadUpdateMinutes = holdMode && holdStartTime > 0 ? Math.max(1, Math.round((Date.now() - holdStartTime) / 60000)) : null;
+
+    // 1. Update lead
+    const lead = currentLead || {};
+    const companyId = lead.company_id;
+    if (companyId) {
+      const followupVal = document.getElementById('e-followup').value;
+      const closeDateVal = document.getElementById('e-expected-close').value;
+      const teleId = document.getElementById('e-tele-id').value;
+
+      const leadPayload = {
+        name: document.getElementById('e-name').value || undefined,
+        email: document.getElementById('e-email').value || undefined,
+        phone: document.getElementById('e-phone').value || undefined,
+        phone_primary_whatsapp: document.getElementById('e-phone-wa').checked,
+        alternate_phone: document.getElementById('e-alt-phone').value || undefined,
+        phone_secondary_whatsapp: document.getElementById('e-alt-phone-wa').checked,
+        status: document.getElementById('e-status').value || undefined,
+        priority: document.getElementById('e-priority').value || undefined,
+        category_id: document.getElementById('e-category').value ? parseInt(document.getElementById('e-category').value) : undefined,
+        source: document.getElementById('e-source').value || undefined,
+        city: document.getElementById('e-city').value || undefined,
+        area: document.getElementById('e-area').value || undefined,
+        budget_min: document.getElementById('e-budget-min').value ? parseFloat(document.getElementById('e-budget-min').value) : undefined,
+        budget_max: document.getElementById('e-budget-max').value ? parseFloat(document.getElementById('e-budget-max').value) : undefined,
+        description: document.getElementById('e-description').value || undefined,
+        requirements: document.getElementById('e-requirements').value || undefined,
+        recent_comments: document.getElementById('e-recent-comments').value || undefined,
+        handler_type: document.getElementById('e-handler-type').value || undefined,
+        next_followup_date: followupVal ? new Date(followupVal).toISOString() : undefined,
+        expected_close_date: closeDateVal ? new Date(closeDateVal).toISOString() : undefined,
+        telecaller_id: teleId ? parseInt(teleId) : undefined,
+      };
+      // Strip undefined
+      Object.keys(leadPayload).forEach(k => leadPayload[k] === undefined && delete leadPayload[k]);
+      const leadRes = await apiCall('PUT', `/crm/leads/${currentLeadId}?company_id=${companyId}`, leadPayload);
+      if (!leadRes.success) toast('⚠️ Lead update failed — call logged anyway.', 4000);
+    }
+
+    // 2. Log attempt
+    const dncChecked = document.getElementById('e-dnc').checked;
+    await apiCall('POST', '/crm/dialer/attempt', {
+      session_id: sessionId,
+      lead_id: currentLeadId,
+      call_outcome: selectedOutcome || 'answered',
+      duration_seconds: durationSec,
+      note: document.getElementById('e-note').value,
+      next_followup_date: document.getElementById('e-followup').value ? new Date(document.getElementById('e-followup').value).toISOString() : null,
+      new_status: document.getElementById('e-status').value,
+      new_priority: document.getElementById('e-priority').value,
+      do_not_call: dncChecked,
+      current_index: currentIndex,
+      activity_type: selectedActivity || null,
+      activity_minutes: activityMinutes,
+      lead_update_minutes: leadUpdateMinutes,
+    });
+
+    if (selectedOutcome === 'answered') statsAnswered++;
+    statsDialed++;
+    document.getElementById('stat-dialed').textContent = statsDialed;
+    document.getElementById('stat-answered').textContent = statsAnswered;
+
+    // Reset
+    btn.disabled = false; btn.textContent = 'Save & Next →';
+    resetEditPanel();
+    currentIndex++;
+    renderLeadCard();
+    renderQueueList();
+    callTimerStart = null;
+    toast('Saved! Moving to next lead.');
+  }
+
+  function resetEditPanel() {
+    selectedOutcome = null;
+    selectedActivity = null;
+    holdMode = false;
+    document.querySelectorAll('.dc-outcome-btn').forEach(b => b.className = 'dc-outcome-btn');
+    document.querySelectorAll('#e-act-chips .dc-act-chip').forEach(b => b.classList.remove('selected'));
+    document.getElementById('e-act-time-row').style.display = 'none';
+    document.getElementById('e-hold-toggle').className = 'dc-hold-btn';
+    document.getElementById('e-hold-timer-row').style.display = 'none';
+    document.getElementById('e-countdown-row').style.display = 'none';
+    document.getElementById('e-dnc').checked = false;
+    document.getElementById('e-note').value = '';
+    document.getElementById('e-duration').value = 0;
+    document.getElementById('e-tele-id').value = '';
+    document.getElementById('e-tele-search').value = '';
+    document.getElementById('e-tele-selected').textContent = '';
+    document.getElementById('dc-lead-banner').style.display = 'none';
+    document.getElementById('dc-edit-section').style.display = 'none';
+    document.getElementById('dc-right-idle').style.display = '';
+  }
+
+  // ── Skip ─────────────────────────────────────────────────────────────────────
+  async function skipLead() {
+    if (!sessionId || currentLeadId === null) return;
+    _dcPauseCountdown();
+    const spliced = queue.splice(currentIndex, 1);
+    if (spliced.length) queue.push(spliced[0]);
+    await apiCall('POST', '/crm/dialer/attempt', {
+      session_id: sessionId, lead_id: currentLeadId, call_outcome: 'skip', current_index: currentIndex,
+    });
+    statsSkipped++;
+    document.getElementById('stat-skipped').textContent = statsSkipped;
+    resetEditPanel();
+    callTimerStart = null;
+    renderLeadCard();
+    renderQueueList();
+    toast('Lead moved to end of queue.');
+  }
+
+  // ── Countdown ────────────────────────────────────────────────────────────────
+  function _dcPauseCountdown() {
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    document.getElementById('e-countdown-row').style.display = 'none';
+  }
+  function _dcStartCountdown() {
+    let remaining = COUNTDOWN_TOTAL;
+    document.getElementById('e-countdown-row').style.display = '';
+    document.getElementById('e-countdown-sec').textContent = remaining;
+    document.getElementById('e-countdown-bar').style.width = '100%';
+    countdownTimer = setInterval(() => {
+      remaining--;
+      document.getElementById('e-countdown-sec').textContent = remaining;
+      document.getElementById('e-countdown-bar').style.width = ((remaining / COUNTDOWN_TOTAL) * 100) + '%';
+      if (remaining <= 0) { clearInterval(countdownTimer); countdownTimer = null; saveAndNext(); }
+    }, 1000);
+  }
+  function _dcResetHold() {
+    holdMode = false; holdStartTime = 0;
+    if (holdIntervalId) { clearInterval(holdIntervalId); holdIntervalId = null; }
+    document.getElementById('e-hold-toggle').className = 'dc-hold-btn';
+    document.getElementById('e-hold-timer-row').style.display = 'none';
+  }
+
+  // ── Bind all event handlers ──────────────────────────────────────────────────
+  function bindHandlers() {
+    // Session buttons
+    document.getElementById('dc-start-btn').addEventListener('click', async () => {
+      await loadQueue();
+      const qIds = queue.map(l => l.id);
+      const res = await apiCall('POST', '/crm/dialer/session/start', { queue_lead_ids: qIds });
+      if (res.success) { sessionId = res.session?.id || null; sessionStatus = 'active'; updateUI(); startSyncPoll(); toast('Session started!'); }
+      else toast('Failed to start session.');
+    });
+    document.getElementById('dc-pause-btn').addEventListener('click', async () => {
+      _dcPauseCountdown();
+      await apiCall('POST', '/crm/dialer/session/pause', { session_id: sessionId, current_index: currentIndex, queue_lead_ids: queue.map(l => l.id) });
+      sessionStatus = 'paused'; stopSyncPoll(); updateUI(); toast('Session paused.');
+    });
+    document.getElementById('dc-resume-btn').addEventListener('click', async () => {
+      const res = await apiCall('POST', '/crm/dialer/session/resume', {});
+      if (res.success) { sessionId = res.session?.id || sessionId; sessionStatus = 'active'; currentIndex = res.current_index || currentIndex; updateUI(); startSyncPoll(); toast('Session resumed!'); }
+      else toast('Could not resume session.');
+    });
+    document.getElementById('dc-close-btn').addEventListener('click', async () => {
+      if (!confirm('Close this dialer session? You can start a new one anytime.')) return;
+      _dcPauseCountdown();
+      await apiCall('POST', '/crm/dialer/session/close', { session_id: sessionId });
+      sessionId = null; sessionStatus = 'none'; stopSyncPoll(); resetEditPanel(); updateUI(); toast('Session closed.');
+    });
+
+    // Outcome chips
+    document.querySelectorAll('.dc-outcome-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedOutcome = btn.dataset.outcome;
+        document.querySelectorAll('.dc-outcome-btn').forEach(b => b.className = 'dc-outcome-btn');
+        btn.classList.add(`selected-${selectedOutcome}`);
+        if (selectedOutcome === 'answered') _dcStartCountdown();
+        else _dcPauseCountdown();
+      });
+    });
+
+    // Activity chips
+    document.querySelectorAll('#e-act-chips .dc-act-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const isSelected = chip.classList.contains('selected');
+        document.querySelectorAll('#e-act-chips .dc-act-chip').forEach(c => c.classList.remove('selected'));
+        if (!isSelected) {
+          chip.classList.add('selected');
+          selectedActivity = chip.dataset.act;
+          document.getElementById('e-act-time-row').style.display = 'flex';
+        } else {
+          selectedActivity = null;
+          document.getElementById('e-act-time-row').style.display = 'none';
+        }
+      });
+    });
+    document.getElementById('e-act-clear').addEventListener('click', () => {
+      document.querySelectorAll('#e-act-chips .dc-act-chip').forEach(c => c.classList.remove('selected'));
+      selectedActivity = null;
+      document.getElementById('e-act-time-row').style.display = 'none';
+    });
+
+    // DNC checkbox
+    document.getElementById('e-dnc').addEventListener('change', e => {
+      if (e.target.checked) document.getElementById('e-status').value = 'do_not_call';
+    });
+
+    // Hold toggle
+    document.getElementById('e-hold-toggle').addEventListener('click', () => {
+      holdMode = !holdMode;
+      const btn = document.getElementById('e-hold-toggle');
+      const timerRow = document.getElementById('e-hold-timer-row');
+      if (holdMode) {
+        holdStartTime = Date.now();
+        btn.classList.add('active');
+        btn.textContent = '⏱ Tracking update time… (click to stop)';
+        timerRow.style.display = '';
+        holdIntervalId = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - holdStartTime) / 1000);
+          const m = Math.floor(elapsed / 60), s = elapsed % 60;
+          document.getElementById('e-hold-timer-txt').textContent = `${m}m ${s}s`;
+        }, 1000);
+      } else {
+        _dcResetHold();
+        btn.textContent = '📝 I need extra time to update this lead';
+      }
+    });
+
+    // Save & Skip
+    document.getElementById('dc-save-btn').addEventListener('click', saveAndNext);
+    document.getElementById('dc-skip-btn').addEventListener('click', skipLead);
+
+    // Close telecaller dropdown when clicking outside
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#e-tele-search') && !e.target.closest('#e-tele-results')) {
+        document.getElementById('e-tele-results').style.display = 'none';
+      }
+    });
+  }
+
+  // ── Sync Polling replaced by WebSocket (DC_DIALER_WS_001) ───────────────────
+  function startSyncPoll() {
+    dcDialerWS_intentionalClose = false; // allow reconnect
+    dcDialerWSConnect();
+  }
+  function stopSyncPoll() { dcDialerWSDisconnect(); }
+
+  // ── Escape HTML ───────────────────────────────────────────────────────────────
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ═══════════════ MANAGER OVERVIEW ═══════════════════════════════════════════
+  window.setMgrRange = function(range, el) {
+    document.querySelectorAll('.dc-range-btn').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    let from, to = fmt(now);
+    if (range === 'today') { from = fmt(now); }
+    else if (range === 'yesterday') { const y = new Date(now); y.setDate(y.getDate()-1); from = fmt(y); to = fmt(y); }
+    else if (range === 'week') { const w = new Date(now); w.setDate(w.getDate() - w.getDay()); from = fmt(w); }
+    else if (range === 'month') { from = `${now.getFullYear()}-${pad(now.getMonth()+1)}-01`; }
+    document.getElementById('mgr-from').value = from;
+    document.getElementById('mgr-to').value = to;
+    mgrDateFrom = from; mgrDateTo = to;
+  };
+  window.clearRangeBtn = function() {
+    document.querySelectorAll('.dc-range-btn').forEach(b => b.classList.remove('active'));
+    mgrDateFrom = document.getElementById('mgr-from').value;
+    mgrDateTo = document.getElementById('mgr-to').value;
+  };
+
+  // Init manager date range
+  setMgrRange('today', null);
+  document.querySelector('.dc-range-btn[data-range="today"]')?.classList.add('active');
+
+  window.loadManagerAnalytics = async function() {
+    const from = document.getElementById('mgr-from').value || mgrDateFrom;
+    const to = document.getElementById('mgr-to').value || mgrDateTo;
+    if (!from || !to) { toast('Select a date range first.'); return; }
+
+    // Show loading
+    document.getElementById('mgr-agent-table-wrap').innerHTML = '<div class="dc-loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+    document.getElementById('mgr-hourly-chart').innerHTML = '<div class="dc-loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+
+    const url = `/crm/dialer/analytics?date_from=${from}T00:00:00&date_to=${to}T23:59:59`;
+    const data = await apiCall('GET', url);
+    if (!data.success) { toast('Failed to load analytics.'); return; }
+
+    renderMgrKPIs(data);
+    renderMgrHourlyChart(data.hourly_pattern || []);
+    renderMgrAgentAvgLabels(data.per_user || []);
+    renderMgrAgentTable(data.per_user || []);
+    renderMgrBreakAnalysis(data.break_analysis || []);
+    renderMgrActivityAnalysis(data.activity_analysis || []);
+  };
+
+  function renderMgrKPIs(d) {
+    const ov = d.overview || {};
+    const answerRate = ov.total_dials > 0 ? Math.round((ov.answered / ov.total_dials) * 100) : 0;
+    const talkMins = Math.round((ov.total_talk_seconds || 0) / 60);
+    const ss = d.session_stats || {};
+    // Avg per answered call (consistent with per-agent calculation)
+    const avgPerAnswered = (ov.answered > 0)
+      ? Math.round((ov.total_talk_seconds || 0) / ov.answered)
+      : 0;
+
+    document.getElementById('kpi-total-dials').textContent = ov.total_dials ?? '—';
+    document.getElementById('kpi-sessions').textContent = `${ov.total_sessions ?? 0} sessions`;
+    document.getElementById('kpi-answer-rate').textContent = `${answerRate}%`;
+    document.getElementById('kpi-answered-cnt').textContent = `${ov.answered ?? 0} answered`;
+    document.getElementById('kpi-talk-time').textContent = fmtMins(talkMins);
+    document.getElementById('kpi-avg-duration').textContent = `avg ${fmtSecs(avgPerAnswered)}/call`;
+    document.getElementById('kpi-active-now').textContent = ov.active_sessions_now ?? '—';
+    document.getElementById('kpi-active-users').textContent = `${ov.active_users ?? 0} dialers`;
+    document.getElementById('kpi-leads-updated').textContent = ov.leads_updated ?? '—';
+    document.getElementById('kpi-dnc').textContent = `${ov.do_not_call ?? 0} DNC set`;
+    document.getElementById('kpi-avg-session').textContent = fmtMins(ss.avg_session_minutes || 0);
+    document.getElementById('kpi-max-session').textContent = `max ${fmtMins(ss.max_session_minutes || 0)}`;
+  }
+
+  function renderMgrAgentAvgLabels(users) {
+    const strip = document.getElementById('mgr-agent-avg-strip');
+    if (!strip) return;
+    const active = users.filter(u => u.total_dials > 0);
+    if (!active.length) { strip.style.display = 'none'; return; }
+    strip.style.display = 'flex';
+    strip.innerHTML = active.map(u => {
+      const firstName = (u.name || u.user_ref || '').split(' ').slice(0, 2).join(' ');
+      const avgSecs = u.answered > 0 ? Math.round((u.total_talk_seconds || 0) / u.answered) : 0;
+      const ansRate = u.total_dials > 0 ? Math.round((u.answered / u.total_dials) * 100) : 0;
+      return `<div class="dc-agent-avg-pill" title="${escHtml(u.name || u.user_ref)}: ${u.total_dials} dials, ${u.answered} answered (${ansRate}%)">
+        <span class="dc-pill-name">${escHtml(firstName)}</span>
+        <span class="dc-pill-avg">${avgSecs > 0 ? fmtSecs(avgSecs) : '—'}</span>
+        <span class="dc-pill-dials">${u.total_dials}d·${ansRate}%</span>
+      </div>`;
+    }).join('');
+  }
+
+  function renderMgrHourlyChart(hourlyData) {
+    const container = document.getElementById('mgr-hourly-chart');
+    if (!hourlyData.length) {
+      container.innerHTML = '<div class="dc-empty-state">No call data for selected period</div>';
+      return;
+    }
+    const maxDials = Math.max(...hourlyData.map(h => h.dials), 1);
+    const hours = Array.from({length: 24}, (_, i) => {
+      const found = hourlyData.find(h => h.hour === i);
+      return found || { hour: i, dials: 0, answered: 0 };
+    }).filter(h => h.dials > 0 || (h.hour >= 7 && h.hour <= 22));
+
+    container.innerHTML = hours.map(h => {
+      const pct = Math.round((h.dials / maxDials) * 90);
+      const ansPct = h.dials > 0 ? Math.round((h.answered / h.dials) * 100) : 0;
+      const label = h.hour < 12 ? `${h.hour || 12}${h.hour < 12 ? 'a' : 'p'}` :
+        h.hour === 12 ? '12p' : `${h.hour - 12}p`;
+      return `<div class="dc-hourly-bar-wrap" title="${h.hour}:00 — ${h.dials} dials, ${h.answered} answered (${ansPct}%)">
+        <div class="dc-hourly-count">${h.dials > 0 ? h.dials : ''}</div>
+        <div class="dc-hourly-bar" style="height:${pct}px">
+          <div class="answered-bar" style="height:${ansPct}%"></div>
+        </div>
+        <div class="dc-hourly-label">${label}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderMgrAgentTable(users) {
+    const wrap = document.getElementById('mgr-agent-table-wrap');
+    if (!users.length) {
+      wrap.innerHTML = '<div class="dc-empty-state">No agent activity in selected period</div>';
+      return;
+    }
+    // DC Protocol Apr 2026: Added Avg Talk/Call column and Last Calls Sync column.
+    // Talk Time now shows exact seconds via fmtSecs.
+    // Last Calls Sync = MAX(created_at) of call attempts for this agent in the period —
+    // tells you up to what time the displayed stats include.
+    wrap.innerHTML = `
+      <table class="dc-agent-table">
+        <thead><tr>
+          <th>Agent</th><th>Dials</th><th>Answered</th>
+          <th>Total Talk Time</th><th>Avg Talk / Call</th>
+          <th>Updated</th><th>Skipped</th><th>DNC</th>
+          <th style="color:#7c3aed">VGK<br>Created</th>
+          <th style="color:#0d9488">WA<br>Shares</th>
+          <th>Last Active</th><th>Last Calls Sync</th>
+        </tr></thead>
+        <tbody>${users.map(u => {
+          const ansRate = u.total_dials > 0 ? Math.round((u.answered / u.total_dials) * 100) : 0;
+          const totalTalkSecs = u.total_talk_seconds || 0;
+          const avgTalkSecs = u.answered > 0 ? Math.round(totalTalkSecs / u.answered) : 0;
+          const lastAct = u.last_activity
+            ? new Date(u.last_activity).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'})
+            : '—';
+          // Last Calls Sync: full date + time so team lead knows data recency
+          const lastSync = u.last_activity
+            ? (() => {
+                const d = new Date(u.last_activity);
+                const today = new Date();
+                const isToday = d.toDateString() === today.toDateString();
+                const timeStr = d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+                return isToday
+                  ? timeStr
+                  : d.toLocaleDateString('en-IN', {day:'2-digit', month:'short'}) + ' ' + timeStr;
+              })()
+            : '—';
+          const vgk = u.vgk_created || 0;
+          const was = u.wa_shares || 0;
+          return `<tr>
+            <td>
+              <div class="dc-agent-name">${escHtml(u.name || u.user_ref)}</div>
+              <div class="dc-agent-dept">${escHtml(u.department || u.emp_code || '')}</div>
+            </td>
+            <td><b>${u.total_dials}</b></td>
+            <td>
+              ${u.answered} <span style="color:#9ca3af;font-size:11px">(${ansRate}%)</span>
+              <div class="dc-rate-bar"><div class="dc-rate-fill" style="width:${ansRate}%"></div></div>
+            </td>
+            <td><b>${fmtSecs(totalTalkSecs)}</b></td>
+            <td style="color:${avgTalkSecs > 0 ? '#0ea5e9' : '#9ca3af'}">${avgTalkSecs > 0 ? fmtSecs(avgTalkSecs) : '—'}</td>
+            <td>${u.leads_updated || 0}</td>
+            <td>${u.skipped || 0}</td>
+            <td>${u.do_not_call || 0}</td>
+            <td style="font-weight:${vgk>0?'700':'400'};color:${vgk>0?'#7c3aed':'#9ca3af'}">${vgk}</td>
+            <td style="color:${was>0?'#0d9488':'#9ca3af'}">${was}</td>
+            <td style="font-size:12px;color:#6b7280">${lastAct}</td>
+            <td style="font-size:11px;color:#6b7280;white-space:nowrap">${lastSync}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+  }
+
+  function renderMgrBreakAnalysis(breakData) {
+    const wrap = document.getElementById('mgr-break-list');
+    if (!breakData.length) {
+      wrap.innerHTML = '<div class="dc-empty-state">No session data for period</div>';
+      return;
+    }
+    wrap.innerHTML = breakData.map(b => `
+      <div class="dc-break-row">
+        <div class="dc-break-name">${escHtml(b.name || b.user_ref)}</div>
+        <div class="dc-break-stat"><b>${fmtMins(b.total_break_minutes)}</b>break time</div>
+        <div class="dc-break-stat"><b>${b.break_count || 0}</b>pauses</div>
+        <div class="dc-break-stat" style="color:#0ea5e9"><b style="color:#0ea5e9">${fmtMins(b.total_session_minutes)}</b>session</div>
+      </div>`).join('');
+  }
+
+  function renderMgrActivityAnalysis(actData) {
+    const wrap = document.getElementById('mgr-activity-list');
+    if (!actData.length) {
+      wrap.innerHTML = '<div class="dc-empty-state">No activity data for period</div>';
+      return;
+    }
+    const maxMins = Math.max(...actData.map(a => a.total_minutes), 1);
+    const colors = ['#7c3aed','#0ea5e9','#059669','#d97706','#ef4444','#f97316','#6b7280','#1d4ed8'];
+    wrap.innerHTML = actData.map((a, i) => `
+      <div class="dc-act-bar-row">
+        <div class="dc-act-bar-label">${escHtml(a.activity_type)}</div>
+        <div class="dc-act-bar-track"><div class="dc-act-bar-fill" style="width:${Math.round((a.total_minutes/maxMins)*100)}%;background:${colors[i%colors.length]}"></div></div>
+        <div class="dc-act-bar-val">${fmtMins(a.total_minutes)}<br><span style="font-size:10px">${a.entry_count} entries</span></div>
+      </div>`).join('');
+  }
+
+})();
+</script>
+
+<!-- ═══════════════════ RECENT CALLS JS ═══════════════════ -->
+<script>
+(function() {
+  const RCH_TYPE = {
+    INCOMING:  { icon: '📲', color: '#059669', label: 'Received' },
+    OUTGOING:  { icon: '📞', color: '#0ea5e9', label: 'Outgoing' },
+    MISSED:    { icon: '📵', color: '#dc2626', label: 'Missed' },
+    REJECTED:  { icon: '🚫', color: '#7c3aed', label: 'Rejected' },
+    DIALER:    { icon: '🎯', color: '#d97706', label: 'CRM Dialer' },
+  };
+
+  let rchFilter = 'ALL';
+  let rchPage   = 1;
+  let rchHasMore = true;
+  let rchEntries = [];
+  let rchLoading = false;
+
+  function rchFmtDur(s) {
+    if (!s) return '';
+    return s < 60 ? `${s}s` : `${Math.floor(s/60)}m ${s%60}s`;
+  }
+
+  function rchFmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 86400000);
+    const t = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    if (diff === 0) return `Today ${t}`;
+    if (diff === 1) return `Yesterday ${t}`;
+    if (diff < 7)  return `${diff}d ago · ${t}`;
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ` · ${t}`;
+  }
+
+  // Merge local direct-dial history from localStorage
+  function rchGetLocal() {
+    try { return JSON.parse(localStorage.getItem('dc_dial_history') || '[]'); } catch(_){ return []; }
+  }
+
+  function rchSaveLocal(phone, name) {
+    try {
+      const hist = JSON.parse(localStorage.getItem('dc_dial_history') || '[]');
+      const entry = { phone, name, call_type: 'OUTGOING', call_outcome: '', dialed_at: new Date().toISOString(), source: 'direct' };
+      const filtered = hist.filter(h => h.phone !== phone);
+      filtered.unshift(entry);
+      localStorage.setItem('dc_dial_history', JSON.stringify(filtered.slice(0, 30)));
+    } catch(_){}
+  }
+
+  window.rchLoad = async function(reset) {
+    if (rchLoading) return;
+    if (reset) { rchPage = 1; rchEntries = []; rchHasMore = true; }
+    if (!rchHasMore) return;
+    rchLoading = true;
+    rchRender();
+
+    try {
+      const typeQ = rchFilter !== 'ALL' ? `&call_type=${rchFilter}` : '';
+      const res = await apiCall('GET', `/crm/dialer/call-history?page=${rchPage}&per_page=25${typeQ}`);
+      const batch = (res.entries || res.data?.entries || []);
+
+      // On page 1 also prepend local direct-dial history (filter to matching type)
+      if (reset && (rchFilter === 'ALL' || rchFilter === 'OUTGOING')) {
+        const local = rchGetLocal().map(l => ({
+          phone: l.phone, name: l.name || l.phone, call_type: 'OUTGOING',
+          dialed_at: l.dialed_at, duration_seconds: 0, source: 'direct',
+          call_outcome: l.call_outcome || '',
+        }));
+        const localPhones = new Set(batch.map(b => b.phone));
+        const newLocals = local.filter(l => !localPhones.has(l.phone));
+        rchEntries = [...newLocals, ...batch];
+      } else {
+        rchEntries = reset ? batch : [...rchEntries, ...batch];
+      }
+
+      rchHasMore = batch.length === 25;
+      if (rchHasMore) rchPage++;
+    } catch(_) {}
+
+    rchLoading = false;
+    rchRender();
+  };
+
+  function rchRender() {
+    const listEl = document.getElementById('rch-list');
+    const lmWrap = document.getElementById('rch-load-more-wrap');
+    if (!listEl) return;
+
+    if (rchLoading && rchEntries.length === 0) {
+      listEl.innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af">Loading…</div>';
+      return;
+    }
+    if (!rchLoading && rchEntries.length === 0) {
+      listEl.innerHTML = `<div style="padding:40px;text-align:center;color:#9ca3af">No calls found${rchFilter !== 'ALL' ? ` for ${RCH_TYPE[rchFilter]?.label || rchFilter}` : ''}</div>`;
+      lmWrap.style.display = 'none';
+      return;
+    }
+
+    listEl.innerHTML = rchEntries.map(e => {
+      const cfg = RCH_TYPE[e.call_type] || RCH_TYPE['OUTGOING'];
+      const name = (e.contact_name || e.name || e.phone || '').replace(/</g,'&lt;');
+      const phone = e.phone || '';
+      const dur = rchFmtDur(e.duration_seconds || 0);
+      const localBadge = e.source === 'direct' ? '<span class="rch-local-badge">Device</span>' : '';
+      const crmBadge  = e.source === 'dialer'  ? '<span class="rch-crm-badge">CRM</span>' : '';
+      const dialBtn   = phone
+        ? `<button class="rch-dial-btn" onclick="rchDial('${phone.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}')" title="Call ${phone}">📞 Call</button>`
+        : '';
+      return `
+        <div class="rch-row">
+          <div class="rch-icon" style="color:${cfg.color}">${cfg.icon}</div>
+          <div class="rch-info">
+            <div class="rch-name">${name || phone}</div>
+            <div class="rch-meta">
+              <span class="rch-type-label" style="color:${cfg.color}">${cfg.label}</span>
+              ${crmBadge}${localBadge}
+              ${dur ? `<span>· ${dur}</span>` : ''}
+              <span>· ${rchFmtTime(e.dialed_at)}</span>
+            </div>
+            ${phone && phone !== name ? `<div class="rch-phone">${phone}</div>` : ''}
+          </div>
+          <div>${dialBtn}</div>
+        </div>`;
+    }).join('');
+
+    if (lmWrap) lmWrap.style.display = rchHasMore ? '' : 'none';
+  }
+
+  window.rchDial = function(phone, name) {
+    rchSaveLocal(phone, name);
+    window.location.href = `tel:${phone}`;
+  };
+
+  // Filter buttons
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.rch-filter-btn');
+    if (!btn) return;
+    document.querySelectorAll('.rch-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    rchFilter = btn.dataset.type || 'ALL';
+    rchLoad(true);
+  });
+
+  // Load more
+  document.addEventListener('click', function(e) {
+    if (e.target.id === 'rch-load-more') rchLoad(false);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenue Dashboard | Partner Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/public/js/partner-token-manager.js"></script>
+    <style>
+        body { background: #0f0f1a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .partner-main-content { margin-left: 260px; min-height: 100vh; padding: 28px; }
+        /* Header */
+        .page-header { background: linear-gradient(135deg, #0d1b2a 0%, #1a2744 100%); border: 1px solid #2d3a52; border-radius: 14px; padding: 24px 28px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .page-header h1 { margin: 0; font-size: 1.5rem; font-weight: 700; color: #fff; }
+        .page-header p { color: rgba(255,255,255,0.6); font-size: 13px; margin: 4px 0 0; }
+        .btn-back { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.8); padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-back:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        /* Period Selector */
+        .period-bar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+        .period-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #374151; background: #1a1a2e; color: #9ca3af; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .period-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+        .period-btn:hover:not(.active) { border-color: #4b5563; color: #e2e8f0; }
+        .date-inputs { display: flex; gap: 8px; align-items: center; }
+        .date-inputs input { background: #1a1a2e; border: 1px solid #374151; color: #e2e8f0; border-radius: 8px; padding: 5px 10px; font-size: 12px; }
+        /* KPI Row */
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 22px; }
+        .kpi-card { background: #12122a; border: 1px solid #252540; border-radius: 12px; padding: 18px; position: relative; overflow: hidden; }
+        .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .kpi-card.green::before { background: linear-gradient(90deg, #10b981, #34d399); }
+        .kpi-card.blue::before { background: linear-gradient(90deg, #2563eb, #60a5fa); }
+        .kpi-card.teal::before { background: linear-gradient(90deg, #0d9488, #2dd4bf); }
+        .kpi-card.orange::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .kpi-card.purple::before { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+        .kpi-card.red::before { background: linear-gradient(90deg, #ef4444, #fca5a5); }
+        .kpi-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 10px; }
+        .kpi-num { font-size: 1.4rem; font-weight: 700; line-height: 1; }
+        .kpi-lbl { font-size: 11px; color: #6b7280; margin-top: 4px; }
+        .kpi-sub { font-size: 11px; color: #4b5563; margin-top: 6px; }
+        /* Stream Cards */
+        .stream-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 18px; margin-bottom: 22px; }
+        .card { background: #12122a; border: 1px solid #252540; border-radius: 12px; overflow: hidden; }
+        .card-header { padding: 14px 18px; border-bottom: 1px solid #1f1f38; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h5 { margin: 0; font-size: 14px; font-weight: 700; }
+        .card-body { padding: 18px; }
+        .chart-container { position: relative; height: 220px; }
+        .chart-container-lg { height: 270px; }
+        /* Stream header colors */
+        .stream-orders .card-header h5 { color: #34d399; }
+        .stream-sales .card-header h5 { color: #60a5fa; }
+        .stream-walkin .card-header h5 { color: #2dd4bf; }
+        .stream-stock .card-header h5 { color: #a78bfa; }
+        /* Tables */
+        .mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .mini-table th { padding: 7px 10px; font-weight: 600; font-size: 10px; text-transform: uppercase; color: #4b5563; border-bottom: 1px solid #252540; text-align: left; }
+        .mini-table td { padding: 8px 10px; border-bottom: 1px solid #1a1a2e; vertical-align: middle; }
+        .mini-table tr:last-child td { border-bottom: none; }
+        /* Badges */
+        .badge-s { padding: 2px 7px; border-radius: 12px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+        .bs-CONFIRMED,.bs-DELIVERED { background: #064e3b; color: #34d399; }
+        .bs-DRAFT,.bs-PENDING { background: #1f2937; color: #9ca3af; }
+        .bs-PAYMENT_PENDING,.bs-PARTIAL { background: #78350f; color: #fbbf24; }
+        .bs-OVERDUE { background: #7f1d1d; color: #fca5a5; }
+        .bs-CANCELLED { background: #374151; color: #6b7280; }
+        /* Stock alerts */
+        .alert-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1a1a2e; }
+        .alert-item:last-child { border-bottom: none; }
+        .alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .alert-dot.zero { background: #ef4444; }
+        .alert-dot.low { background: #f59e0b; }
+        /* Funnel */
+        .funnel-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid #1a1a2e; font-size: 13px; }
+        .funnel-row:last-child { border-bottom: none; }
+        .funnel-bar { height: 6px; border-radius: 3px; background: #1f2937; flex: 1; margin: 0 10px; overflow: hidden; }
+        .funnel-fill { height: 100%; border-radius: 3px; }
+        /* Revenue stream comparison */
+        .stream-compare { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .stream-pill { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+        .pill-orders { background: rgba(52,211,153,0.1); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+        .pill-sales { background: rgba(96,165,250,0.1); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+        .pill-walkin { background: rgba(45,212,191,0.1); color: #2dd4bf; border: 1px solid rgba(45,212,191,0.3); }
+        /* Loading */
+        .loading-spinner { text-align: center; padding: 30px; color: #4b5563; }
+        .empty-dark { text-align: center; padding: 30px; color: #374151; font-size: 13px; }
+        @media (max-width: 768px) { .partner-main-content { margin-left: 0; padding: 16px; } .stream-grid { grid-template-columns: 1fr; } .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="partner-main-content">
+
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-chart-line me-2" style="color:#10b981"></i>Revenue Dashboard</h1>
+            <p>Executive view — Orders · Sales Invoices · Walk-ins · Stock Position</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+            <button onclick="loadAll()" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer"><i class="fas fa-sync me-1"></i>Refresh</button>
+            <a href="javascript:history.back()" class="btn-back"><i class="fas fa-arrow-left"></i>Back</a>
+        </div>
+    </div>
+
+    <!-- Period Selector -->
+    <div class="period-bar">
+        <button class="period-btn active" onclick="setPeriod('mtd',this)">MTD</button>
+        <button class="period-btn" onclick="setPeriod('ytd',this)">YTD</button>
+        <button class="period-btn" onclick="setPeriod('ftd',this)">FTD</button>
+        <button class="period-btn" onclick="setPeriod('fty',this)">FTY</button>
+        <button class="period-btn" onclick="setPeriod('custom',this)">Custom</button>
+        <div class="date-inputs" id="customRange" style="display:none">
+            <input type="date" id="dateFrom" onchange="loadAll()">
+            <span style="color:#4b5563">—</span>
+            <input type="date" id="dateTo" onchange="loadAll()">
+        </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="kpi-grid">
+        <div class="kpi-card green">
+            <div class="kpi-icon" style="background:rgba(16,185,129,0.1);color:#10b981"><i class="fas fa-shopping-cart"></i></div>
+            <div class="kpi-num" id="kpiOrderVal" style="color:#34d399">—</div>
+            <div class="kpi-lbl">Orders Revenue</div>
+            <div class="kpi-sub" id="kpiOrderCount">— orders</div>
+        </div>
+        <div class="kpi-card blue">
+            <div class="kpi-icon" style="background:rgba(37,99,235,0.1);color:#60a5fa"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div class="kpi-num" id="kpiSalesVal" style="color:#60a5fa">—</div>
+            <div class="kpi-lbl">Sales Invoice Revenue</div>
+            <div class="kpi-sub" id="kpiSalesCount">— invoices</div>
+        </div>
+        <div class="kpi-card teal">
+            <div class="kpi-icon" style="background:rgba(13,148,136,0.1);color:#2dd4bf"><i class="fas fa-walking"></i></div>
+            <div class="kpi-num" id="kpiWalkinVal" style="color:#2dd4bf">—</div>
+            <div class="kpi-lbl">Walk-in Revenue</div>
+            <div class="kpi-sub" id="kpiWalkinCount">— walk-ins</div>
+        </div>
+        <div class="kpi-card orange">
+            <div class="kpi-icon" style="background:rgba(245,158,11,0.1);color:#fbbf24"><i class="fas fa-rupee-sign"></i></div>
+            <div class="kpi-num" id="kpiTotalRev" style="color:#fbbf24">—</div>
+            <div class="kpi-lbl">Total Revenue</div>
+            <div class="kpi-sub">All streams combined</div>
+        </div>
+        <div class="kpi-card purple">
+            <div class="kpi-icon" style="background:rgba(124,58,237,0.1);color:#a78bfa"><i class="fas fa-boxes"></i></div>
+            <div class="kpi-num" id="kpiStockItems" style="color:#a78bfa">—</div>
+            <div class="kpi-lbl">Stock Items</div>
+            <div class="kpi-sub" id="kpiStockValue">₹— value</div>
+        </div>
+        <div class="kpi-card red">
+            <div class="kpi-icon" style="background:rgba(239,68,68,0.1);color:#fca5a5"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="kpi-num" id="kpiLowStock" style="color:#fca5a5">—</div>
+            <div class="kpi-lbl">Low Stock Alerts</div>
+            <div class="kpi-sub" id="kpiZeroStock">— at zero</div>
+        </div>
+    </div>
+
+    <!-- Revenue Streams Trend Chart (full width) -->
+    <div class="card mb-4" style="margin-bottom:18px">
+        <div class="card-header">
+            <h5 style="color:#e2e8f0"><i class="fas fa-chart-bar me-2" style="color:#10b981"></i>Revenue Streams — Monthly Trend</h5>
+            <div class="stream-compare">
+                <span class="stream-pill pill-orders"><i class="fas fa-circle" style="font-size:8px"></i>Orders</span>
+                <span class="stream-pill pill-sales"><i class="fas fa-circle" style="font-size:8px"></i>Sales</span>
+                <span class="stream-pill pill-walkin"><i class="fas fa-circle" style="font-size:8px"></i>Walk-ins</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="chart-container chart-container-lg"><canvas id="trendChart"></canvas></div>
+        </div>
+    </div>
+
+    <!-- Stream Cards: 2 columns -->
+    <div class="stream-grid">
+        <!-- Orders Stream -->
+        <div class="card stream-orders">
+            <div class="card-header">
+                <h5><i class="fas fa-shopping-cart me-2"></i>Partner Orders</h5>
+                <span id="ordersTotal" style="font-size:12px;color:#4b5563">—</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height:180px"><canvas id="statusChart"></canvas></div>
+                <div id="recentOrders" class="mt-3">
+                    <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Invoices Stream -->
+        <div class="card stream-sales">
+            <div class="card-header">
+                <h5><i class="fas fa-file-invoice-dollar me-2"></i>Sales Invoices</h5>
+                <span id="salesTotal" style="font-size:12px;color:#4b5563">—</span>
+            </div>
+            <div class="card-body">
+                <div id="salesBreakdown" style="margin-bottom:14px">
+                    <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+                <div id="recentSales">
+                    <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Walk-ins Stream -->
+        <div class="card stream-walkin">
+            <div class="card-header">
+                <h5><i class="fas fa-walking me-2"></i>Walk-in Funnel</h5>
+                <span id="walkinTotal" style="font-size:12px;color:#4b5563">—</span>
+            </div>
+            <div class="card-body">
+                <div id="walkinFunnel">
+                    <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Position Panel -->
+        <div class="card stream-stock">
+            <div class="card-header">
+                <h5><i class="fas fa-boxes me-2"></i>Stock Position</h5>
+                <a href="/partner/pos7" style="font-size:12px;color:#7c3aed">Manage →</a>
+            </div>
+            <div class="card-body">
+                <div id="stockAlerts">
+                    <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="/partner_sidebar.js"></script>
+<script>
+    const API = '/api/v1/partner';
+    let currentPeriod = 'mtd';
+    let allOrders = [];
+    let trendChart = null;
+    let statusChart = null;
+
+    function getToken() { return localStorage.getItem('partner_token'); }
+    function authH() {
+        const t = getToken();
+        const pi = JSON.parse(localStorage.getItem('partner_info') || '{}');
+        const h = { 'Authorization': 'Bearer ' + t };
+        if (pi.primary_company_id) h['X-Company-ID'] = String(pi.primary_company_id);
+        return h;
+    }
+    function fmt(n) { return '₹' + parseFloat(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 }); }
+    function fmt2(n) { return '₹' + parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+    function setPeriod(p, btn) {
+        currentPeriod = p;
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('customRange').style.display = p === 'custom' ? 'flex' : 'none';
+        if (p !== 'custom') loadAll();
+    }
+
+    function getPeriodParams() {
+        if (currentPeriod === 'custom') {
+            const from = document.getElementById('dateFrom').value;
+            const to = document.getElementById('dateTo').value;
+            return `date_from=${from}&date_to=${to}`;
+        }
+        return `date_filter=${currentPeriod}`;
+    }
+
+    async function loadAll() {
+        const psp = getPeriodParams();
+        await Promise.all([
+            loadOrders(),
+            loadSalesInvoices(psp),
+            loadWalkins(psp),
+            loadStockSummary(),
+        ]);
+    }
+
+    async function loadOrders() {
+        try {
+            const r = await fetch(`${API}/auth/my-orders?limit=200`, { headers: authH() });
+            if (!r.ok) return;
+            const d = await r.json();
+            allOrders = d.orders || [];
+
+            // Filter by period
+            let orders = [...allOrders];
+            if (currentPeriod !== 'custom') {
+                const now = new Date();
+                orders = orders.filter(o => {
+                    const dt = o.order_date ? new Date(o.order_date) : null;
+                    if (!dt) return false;
+                    if (currentPeriod === 'mtd') return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth();
+                    if (currentPeriod === 'ytd') return dt.getFullYear() === now.getFullYear();
+                    if (currentPeriod === 'ftd') {
+                        const fy = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+                        const today = new Date(); today.setHours(23,59,59,999);
+                        const fyStart = new Date(fy, 3, 1);
+                        return dt >= fyStart && dt <= today;
+                    }
+                    if (currentPeriod === 'fty') {
+                        const fy = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+                        const fyStart = new Date(fy, 3, 1);
+                        const fyEnd = new Date(fy + 1, 2, 31, 23, 59, 59);
+                        return dt >= fyStart && dt <= fyEnd;
+                    }
+                    return true;
+                });
+            }
+
+            const totalVal = orders.reduce((s, o) => s + (parseFloat(o.grand_total) || 0), 0);
+            document.getElementById('kpiOrderVal').textContent = fmt(totalVal);
+            document.getElementById('kpiOrderCount').textContent = `${orders.length} orders`;
+            document.getElementById('ordersTotal').textContent = `${orders.length} orders · ${fmt(totalVal)}`;
+
+            renderTrendChart(orders);
+            renderStatusChart(orders);
+            renderRecentOrders(orders);
+        } catch(e) { console.error('Orders load error:', e); }
+    }
+
+    async function loadSalesInvoices(psp) {
+        document.getElementById('salesBreakdown').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+        document.getElementById('recentSales').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+        try {
+            const r = await fetch(`${API}/sales-invoices?${psp}&per_page=100`, { headers: authH() });
+            if (!r.ok) throw new Error();
+            const d = await r.json();
+            const invoices = d.data || [];
+            const total = invoices.reduce((s, i) => s + (parseFloat(i.grand_total) || 0), 0);
+            const collected = invoices.reduce((s, i) => s + (parseFloat(i.amount_received || i.paid_amount) || 0), 0);
+            const pending = invoices.filter(i => ['PENDING','PARTIAL'].includes(i.payment_status)).reduce((s,i) => s + (parseFloat(i.balance_due) || 0), 0);
+
+            document.getElementById('kpiSalesVal').textContent = fmt(total);
+            document.getElementById('kpiSalesCount').textContent = `${d.total || invoices.length} invoices`;
+            document.getElementById('salesTotal').textContent = `${d.total || invoices.length} invoices · ${fmt(total)}`;
+
+            // Update combined total
+            updateTotalRevenue();
+
+            document.getElementById('salesBreakdown').innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+                    <div style="background:#0a1628;border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:14px;font-weight:700;color:#60a5fa">${fmt(total)}</div>
+                        <div style="font-size:10px;color:#4b5563">Total Billed</div>
+                    </div>
+                    <div style="background:#0a1628;border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:14px;font-weight:700;color:#34d399">${fmt(collected)}</div>
+                        <div style="font-size:10px;color:#4b5563">Collected</div>
+                    </div>
+                    <div style="background:#0a1628;border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:14px;font-weight:700;color:#fbbf24">${fmt(pending)}</div>
+                        <div style="font-size:10px;color:#4b5563">Pending</div>
+                    </div>
+                </div>
+            `;
+
+            const recent = invoices.slice(0, 6);
+            if (!recent.length) { document.getElementById('recentSales').innerHTML = '<div class="empty-dark">No sales invoices for this period</div>'; return; }
+            document.getElementById('recentSales').innerHTML = `
+                <table class="mini-table">
+                    <thead><tr><th>Invoice #</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+                    <tbody>${recent.map(i => `
+                        <tr>
+                            <td style="color:#60a5fa;font-weight:600">${i.invoice_number}</td>
+                            <td style="color:#6b7280">${i.invoice_date ? new Date(i.invoice_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '—'}</td>
+                            <td style="font-weight:600">${fmt2(i.grand_total)}</td>
+                            <td><span class="badge-s bs-${i.payment_status}">${i.payment_status}</span></td>
+                        </tr>`).join('')}</tbody>
+                </table>`;
+        } catch(e) { document.getElementById('salesBreakdown').innerHTML = '<div class="empty-dark">Could not load sales invoices</div>'; document.getElementById('recentSales').innerHTML = ''; }
+    }
+
+    async function loadWalkins(psp) {
+        document.getElementById('walkinFunnel').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+        try {
+            const [sumR, listR] = await Promise.all([
+                fetch(`${API}/walkins/summary?${psp}`, { headers: authH() }),
+                fetch(`${API}/walkins?${psp}&per_page=200`, { headers: authH() }),
+            ]);
+            let summary = {};
+            if (sumR.ok) { const d = await sumR.json(); summary = d.summary || {}; }
+            let walkins = [];
+            if (listR.ok) { const d = await listR.json(); walkins = d.data || []; }
+
+            const total = parseInt(summary.total_walkins || walkins.length || 0);
+            const totalVal = parseFloat(summary.total_collected || 0) || walkins.reduce((s, w) => s + parseFloat(w.total_amount || 0), 0);
+            const confirmed = walkins.filter(w => w.status === 'CONFIRMED').length;
+            const draft = walkins.filter(w => w.status === 'DRAFT').length;
+            const avgTicket = total > 0 ? totalVal / total : 0;
+
+            // EV vs non-EV breakdown
+            const evWalkins = walkins.filter(w => (w.vehicle_type || '').toLowerCase().includes('ev') || (w.vehicle_category || '').toLowerCase().includes('electric'));
+            const evCount = evWalkins.length;
+            const nonEvCount = total - evCount;
+
+            document.getElementById('kpiWalkinVal').textContent = fmt(totalVal);
+            document.getElementById('kpiWalkinCount').textContent = `${total} walk-ins`;
+            document.getElementById('walkinTotal').textContent = `${total} walk-ins · ${fmt(totalVal)}`;
+            updateTotalRevenue();
+
+            document.getElementById('walkinFunnel').innerHTML = `
+                <div style="margin-bottom:14px">
+                    <div class="funnel-row">
+                        <span style="color:#2dd4bf;font-weight:600;min-width:80px">Total</span>
+                        <div class="funnel-bar"><div class="funnel-fill" style="width:100%;background:#2dd4bf"></div></div>
+                        <span style="font-weight:700;color:#e2e8f0">${total}</span>
+                    </div>
+                    <div class="funnel-row">
+                        <span style="color:#34d399;min-width:80px">Confirmed</span>
+                        <div class="funnel-bar"><div class="funnel-fill" style="width:${total > 0 ? (confirmed/total*100).toFixed(0) : 0}%;background:#34d399"></div></div>
+                        <span style="font-weight:700;color:#34d399">${confirmed}</span>
+                    </div>
+                    <div class="funnel-row">
+                        <span style="color:#fbbf24;min-width:80px">Draft</span>
+                        <div class="funnel-bar"><div class="funnel-fill" style="width:${total > 0 ? (draft/total*100).toFixed(0) : 0}%;background:#fbbf24"></div></div>
+                        <span style="font-weight:700;color:#fbbf24">${draft}</span>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+                    <div style="background:#0a1628;border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:14px;font-weight:700;color:#2dd4bf">${fmt(totalVal)}</div>
+                        <div style="font-size:10px;color:#4b5563">Total Revenue</div>
+                    </div>
+                    <div style="background:#0a1628;border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:14px;font-weight:700;color:#a78bfa">${fmt(avgTicket)}</div>
+                        <div style="font-size:10px;color:#4b5563">Avg. Ticket</div>
+                    </div>
+                </div>
+                ${evCount > 0 ? `
+                <div style="font-size:11px;color:#4b5563;margin-bottom:8px;font-weight:700;text-transform:uppercase">Vehicle Mix</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                    <span style="background:rgba(45,212,191,0.1);color:#2dd4bf;border:1px solid rgba(45,212,191,0.2);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700"><i class="fas fa-bolt me-1"></i>EV: ${evCount}</span>
+                    <span style="background:rgba(107,114,128,0.1);color:#9ca3af;border:1px solid rgba(107,114,128,0.2);padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700">ICE/Other: ${nonEvCount}</span>
+                </div>` : ''}
+                ${summary.payment_mode_breakdown ? renderPaymentModes(summary.payment_mode_breakdown) : ''}
+            `;
+        } catch(e) { document.getElementById('walkinFunnel').innerHTML = '<div class="empty-dark">Could not load walk-in data</div>'; }
+    }
+
+    function renderPaymentModes(breakdown) {
+        if (!breakdown || typeof breakdown !== 'object') return '';
+        const entries = Object.entries(breakdown).filter(([,v]) => v > 0);
+        if (!entries.length) return '';
+        return `<div style="margin-top:14px;font-size:11px;color:#4b5563;font-weight:700;text-transform:uppercase;margin-bottom:8px">Payment Modes</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                ${entries.map(([k, v]) => `<span style="background:#1a1a2e;border:1px solid #252540;color:#9ca3af;padding:3px 9px;border-radius:12px;font-size:11px">${k}: ${fmt(v)}</span>`).join('')}
+            </div>`;
+    }
+
+    async function loadStockSummary() {
+        document.getElementById('stockAlerts').innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+        try {
+            const [sumR, itemsR] = await Promise.all([
+                fetch(`${API}/stock/summary`, { headers: authH() }),
+                fetch(`${API}/stock/items?per_page=200`, { headers: authH() }),
+            ]);
+            let sumData = {};
+            if (sumR.ok) { const d = await sumR.json(); sumData = d.summary || {}; }
+            let items = [];
+            if (itemsR.ok) { const d = await itemsR.json(); items = d.data || []; }
+
+            document.getElementById('kpiStockItems').textContent = sumData.total_items || items.length;
+            document.getElementById('kpiStockValue').textContent = fmt(sumData.total_stock_value || 0) + ' value';
+            document.getElementById('kpiLowStock').textContent = sumData.low_stock_count || 0;
+            document.getElementById('kpiZeroStock').textContent = `${sumData.zero_stock_count || 0} at zero`;
+
+            // Stock alerts section
+            const zeroItems = items.filter(i => i.current_qty <= 0);
+            const lowItems = items.filter(i => i.is_low_stock && i.current_qty > 0);
+            const okItems = items.filter(i => !i.is_low_stock && i.current_qty > 0);
+
+            let html = `
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+                    <div style="background:#0a1628;border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:16px;font-weight:700;color:#34d399">${okItems.length}</div>
+                        <div style="font-size:10px;color:#4b5563">Healthy</div>
+                    </div>
+                    <div style="background:#0a1628;border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:16px;font-weight:700;color:#f59e0b">${lowItems.length}</div>
+                        <div style="font-size:10px;color:#4b5563">Low Stock</div>
+                    </div>
+                    <div style="background:#0a1628;border-radius:8px;padding:10px;text-align:center">
+                        <div style="font-size:16px;font-weight:700;color:#ef4444">${zeroItems.length}</div>
+                        <div style="font-size:10px;color:#4b5563">Zero Stock</div>
+                    </div>
+                </div>`;
+
+            if (!items.length) {
+                html += '<div class="empty-dark">No stock items set up yet. <a href="/partner/pos7" style="color:#7c3aed">Set up now →</a></div>';
+            } else {
+                const alertItems = [...zeroItems, ...lowItems].slice(0, 8);
+                if (alertItems.length) {
+                    html += '<div style="font-size:11px;color:#4b5563;font-weight:700;text-transform:uppercase;margin-bottom:10px">Items Needing Attention</div>';
+                    html += alertItems.map(i => `
+                        <div class="alert-item">
+                            <div class="alert-dot ${i.current_qty <= 0 ? 'zero' : 'low'}"></div>
+                            <div style="flex:1">
+                                <div style="font-size:12px;font-weight:600;color:#e2e8f0">${i.item_name}</div>
+                                <div style="font-size:10px;color:#4b5563">${i.item_code || ''}</div>
+                            </div>
+                            <div style="text-align:right">
+                                <div style="font-weight:700;color:${i.current_qty <= 0 ? '#ef4444' : '#f59e0b'};font-size:13px">${i.current_qty} ${i.unit_of_measure}</div>
+                                ${i.reorder_level > 0 ? `<div style="font-size:10px;color:#4b5563">Reorder at ${i.reorder_level}</div>` : ''}
+                            </div>
+                        </div>`).join('');
+                } else {
+                    html += '<div style="text-align:center;padding:20px;color:#34d399"><i class="fas fa-check-circle fa-2x mb-2 d-block"></i>All items are adequately stocked!</div>';
+                }
+            }
+            document.getElementById('stockAlerts').innerHTML = html;
+        } catch(e) { document.getElementById('stockAlerts').innerHTML = '<div class="empty-dark">Could not load stock data</div>'; }
+    }
+
+    function updateTotalRevenue() {
+        const orderNum = parseFloat(document.getElementById('kpiOrderVal').textContent.replace(/[₹,]/g, '')) || 0;
+        const salesNum = parseFloat(document.getElementById('kpiSalesVal').textContent.replace(/[₹,]/g, '')) || 0;
+        const walkinNum = parseFloat(document.getElementById('kpiWalkinVal').textContent.replace(/[₹,]/g, '')) || 0;
+        document.getElementById('kpiTotalRev').textContent = fmt(orderNum + salesNum + walkinNum);
+    }
+
+    function renderTrendChart(orders) {
+        const monthly = {};
+        // Initialize from orders
+        orders.forEach(o => {
+            if (!o.order_date) return;
+            const m = o.order_date.substring(0, 7);
+            if (!monthly[m]) monthly[m] = { orders: 0, sales: 0, walkins: 0 };
+            monthly[m].orders += parseFloat(o.grand_total) || 0;
+        });
+        const labels = Object.keys(monthly).sort().slice(-12);
+
+        if (trendChart) trendChart.destroy();
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        trendChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Orders', data: labels.map(m => monthly[m]?.orders || 0), backgroundColor: 'rgba(52,211,153,0.5)', borderColor: '#34d399', borderWidth: 1 },
+                    { label: 'Sales', data: labels.map(m => monthly[m]?.sales || 0), backgroundColor: 'rgba(96,165,250,0.5)', borderColor: '#60a5fa', borderWidth: 1 },
+                    { label: 'Walk-ins', data: labels.map(m => monthly[m]?.walkins || 0), backgroundColor: 'rgba(45,212,191,0.5)', borderColor: '#2dd4bf', borderWidth: 1 },
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#9ca3af', font: { size: 11 }, boxWidth: 12 } }
+                },
+                scales: {
+                    x: { ticks: { color: '#4b5563', font: { size: 10 } }, grid: { color: '#1a1a2e' }, stacked: false },
+                    y: { ticks: { color: '#4b5563', callback: v => '₹' + (v/1000).toFixed(0) + 'K', font: { size: 10 } }, grid: { color: '#1a1a2e' }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    function renderStatusChart(orders) {
+        const counts = {};
+        orders.forEach(o => { counts[o.status] = (counts[o.status] || 0) + 1; });
+        const labels = Object.keys(counts);
+        if (!labels.length) { document.getElementById('statusChart').parentElement.innerHTML = '<div class="empty-dark">No order data for this period</div>'; return; }
+        const values = labels.map(k => counts[k]);
+        const colors = ['#34d399','#60a5fa','#fbbf24','#a78bfa','#ef4444','#2dd4bf','#f97316','#ec4899','#84cc16'];
+        if (statusChart) statusChart.destroy();
+        const ctx = document.getElementById('statusChart').getContext('2d');
+        statusChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels.map(l => l.replace(/_/g,' ')),
+                datasets: [{ data: values, backgroundColor: colors.slice(0, labels.length), borderWidth: 0, borderRadius: 4 }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right', labels: { color: '#6b7280', font: { size: 10 }, boxWidth: 10 } }
+                }
+            }
+        });
+    }
+
+    function renderRecentOrders(orders) {
+        const recent = [...orders].sort((a, b) => (b.order_date || '').localeCompare(a.order_date || '')).slice(0, 5);
+        if (!recent.length) { document.getElementById('recentOrders').innerHTML = '<div class="empty-dark">No orders for this period</div>'; return; }
+        document.getElementById('recentOrders').innerHTML = `
+            <table class="mini-table">
+                <thead><tr><th>Order #</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+                <tbody>${recent.map(o => `
+                    <tr>
+                        <td style="color:#34d399;font-weight:600">${o.order_number}</td>
+                        <td style="color:#6b7280">${o.order_date ? new Date(o.order_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short'}) : '—'}</td>
+                        <td style="font-weight:600">${fmt2(o.grand_total)}</td>
+                        <td><span class="badge-s bs-${o.status}">${(o.status||'').replace(/_/g,' ')}</span></td>
+                    </tr>`).join('')}</tbody>
+            </table>`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!getToken()) { window.location.href = '/partner/login'; return; }
+        initPartnerSidebar('sidebarContainer');
+        loadAll();
+    });
+</script>
+</body>
+</html>

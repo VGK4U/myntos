@@ -1,0 +1,566 @@
+<style>
+    .zynova-insurance-page .page-banner {
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        border-radius: 16px; padding: 24px; margin-bottom: 24px; color: white;
+    }
+    .zynova-insurance-page .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+    .zynova-insurance-page .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+    .zynova-insurance-page .page-banner .segment-badge {
+        background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px;
+    }
+    
+    .zynova-insurance-page .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    
+    .zynova-insurance-page .summary-card {
+        background: white; border-radius: 16px; padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;
+    }
+    .zynova-insurance-page .summary-card .icon {
+        width: 48px; height: 48px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 12px; font-size: 20px;
+    }
+    .zynova-insurance-page .summary-card .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+    .zynova-insurance-page .summary-card .label { color: #6b7280; font-size: 12px; margin-top: 4px; }
+    
+    .zynova-insurance-page .card-red .icon { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #dc2626; }
+    .zynova-insurance-page .card-green .icon { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
+    .zynova-insurance-page .card-gold .icon { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
+    .zynova-insurance-page .card-purple .icon { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #7c3aed; }
+    
+    .zynova-insurance-page .role-card {
+        background: linear-gradient(135deg, #dc2626, #ef4444);
+        border-radius: 16px; padding: 24px; color: white; margin-bottom: 24px;
+    }
+    .zynova-insurance-page .role-card .role-title { font-size: 14px; opacity: 0.8; margin-bottom: 4px; }
+    .zynova-insurance-page .role-card .role-name { font-size: 28px; font-weight: 700; margin-bottom: 16px; }
+    .zynova-insurance-page .role-card .next-role { font-size: 13px; opacity: 0.9; }
+    
+    .zynova-insurance-page .progress-section {
+        background: white; border-radius: 16px; padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 24px;
+    }
+    .zynova-insurance-page .progress-section h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 16px; }
+    .zynova-insurance-page .progress-bar-container {
+        height: 24px; background: #e5e7eb; border-radius: 12px; overflow: hidden;
+    }
+    .zynova-insurance-page .progress-bar-fill {
+        height: 100%; background: linear-gradient(90deg, #dc2626, #ef4444);
+        border-radius: 12px; transition: width 0.5s; display: flex;
+        align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 12px;
+    }
+    .zynova-insurance-page .progress-info { display: flex; justify-content: space-between; margin-top: 12px; font-size: 14px; color: #6b7280; }
+    
+    .zynova-insurance-page .card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: none; margin-bottom: 24px; }
+    .zynova-insurance-page .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 20px 24px; }
+    .zynova-insurance-page .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 10px; }
+    .zynova-insurance-page .card-body { padding: 24px; }
+    
+    .zynova-insurance-page .earnings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; }
+    .zynova-insurance-page .earnings-item { text-align: center; padding: 16px; background: #f9fafb; border-radius: 12px; }
+    .zynova-insurance-page .earnings-item .value { font-size: 20px; font-weight: 700; }
+    .zynova-insurance-page .earnings-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .zynova-insurance-page .earnings-pending .value { color: #d97706; }
+    .zynova-insurance-page .earnings-approved .value { color: #059669; }
+    .zynova-insurance-page .earnings-disbursed .value { color: #1e40af; }
+    .zynova-insurance-page .earnings-total .value { color: #7c3aed; }
+    
+    .zynova-insurance-page .team-section { margin-top: 24px; }
+    .zynova-insurance-page .team-member { display: flex; align-items: center; padding: 16px; background: #f9fafb; border-radius: 12px; margin-bottom: 12px; }
+    .zynova-insurance-page .team-member .avatar { width: 48px; height: 48px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; font-weight: 600; margin-right: 16px; }
+    .zynova-insurance-page .team-member .info { flex: 1; }
+    .zynova-insurance-page .team-member .name { font-weight: 600; color: #1f2937; }
+    .zynova-insurance-page .team-member .role-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #fee2e2; color: #dc2626; }
+    .zynova-insurance-page .team-member .revenue { text-align: right; font-weight: 600; color: #059669; }
+    
+    .zynova-insurance-page .deadline-alert { background: #fef3c7; border-left: 4px solid #d97706; padding: 16px; border-radius: 8px; margin-bottom: 24px; }
+    .zynova-insurance-page .deadline-alert i { color: #d97706; margin-right: 8px; }
+    
+    .zynova-insurance-page .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+    .zynova-insurance-page .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+    
+    .zynova-insurance-page .loading-spinner { width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: #dc2626; border-radius: 50%; animation: zynovaInsSpin 0.8s linear infinite; margin: 40px auto; }
+    @keyframes zynovaInsSpin { to { transform: rotate(360deg); } }
+    
+    .zynova-insurance-page .target-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    .zynova-insurance-page .target-table th, .zynova-insurance-page .target-table td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+    .zynova-insurance-page .target-table th { background: #f9fafb; font-weight: 600; color: #6b7280; }
+    .zynova-insurance-page .target-table .current-row { background: #fee2e2; }
+    
+    .zynova-insurance-page .motivation-hero { background: linear-gradient(135deg, #dc2626 0%, #ef4444 50%, #f87171 100%); border-radius: 16px; padding: 48px; text-align: center; color: white; margin: 24px 0; box-shadow: 0 8px 32px rgba(220, 38, 38, 0.3); }
+    .zynova-insurance-page .motivation-icon { font-size: 64px; margin-bottom: 24px; opacity: 0.9; animation: motivationPulseIns 2s infinite; }
+    @keyframes motivationPulseIns { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+    .zynova-insurance-page .motivation-hero h2 { font-size: 28px; font-weight: 700; margin-bottom: 16px; }
+    .zynova-insurance-page .motivation-quote { font-size: 18px; font-style: italic; opacity: 0.9; margin-bottom: 24px; padding: 16px 32px; background: rgba(255,255,255,0.1); border-radius: 8px; border-left: 4px solid rgba(255,255,255,0.5); }
+    .zynova-insurance-page .motivation-message { margin-bottom: 32px; font-size: 16px; opacity: 0.95; }
+    .zynova-insurance-page .motivation-message p { margin: 8px 0; }
+    .zynova-insurance-page .motivation-cta .btn { padding: 16px 48px; font-size: 18px; font-weight: 600; border-radius: 50px; background: white; color: #dc2626; border: none; box-shadow: 0 4px 16px rgba(0,0,0,0.2); transition: all 0.3s; }
+    .zynova-insurance-page .motivation-cta .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.3); background: #fef2f2; }
+    .zynova-insurance-page .cta-hint { margin-top: 16px; font-size: 14px; opacity: 0.8; }
+    
+    .zynova-insurance-page .journey-preview-section {
+        background: white; border-radius: 16px; padding: 32px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-top: 24px;
+    }
+    .zynova-insurance-page .journey-header { text-align: center; margin-bottom: 32px; }
+    .zynova-insurance-page .journey-header h3 { font-size: 22px; font-weight: 700; color: #dc2626; margin-bottom: 8px; }
+    .zynova-insurance-page .journey-header p { color: #6b7280; font-size: 14px; }
+    
+    .zynova-insurance-page .journey-roadmap {
+        display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 32px;
+    }
+    .zynova-insurance-page .journey-step {
+        display: flex; flex-direction: column; align-items: center; padding: 20px 24px;
+        border-radius: 16px; background: linear-gradient(135deg, #fef2f2, #fee2e2);
+        transition: all 0.3s; min-width: 140px; position: relative;
+    }
+    .zynova-insurance-page .journey-step:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(220, 38, 38, 0.15); }
+    .zynova-insurance-page .journey-step .step-icon {
+        width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 24px; margin-bottom: 12px; color: white;
+    }
+    .zynova-insurance-page .step-promoter .step-icon { background: linear-gradient(135deg, #f87171, #ef4444); }
+    .zynova-insurance-page .step-team-leader .step-icon { background: linear-gradient(135deg, #fb923c, #f97316); }
+    .zynova-insurance-page .step-zonal-manager .step-icon { background: linear-gradient(135deg, #a855f7, #9333ea); }
+    .zynova-insurance-page .step-director .step-icon { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+    .zynova-insurance-page .journey-step .step-content h4 { font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 4px; }
+    .zynova-insurance-page .journey-step .step-content p { font-size: 12px; color: #6b7280; margin: 0; }
+    .zynova-insurance-page .journey-step .step-connector { color: #fecaca; font-size: 18px; position: absolute; right: -18px; }
+    .zynova-insurance-page .step-director .step-connector { display: none; }
+    
+    .zynova-insurance-page .journey-motivation {
+        background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 16px 24px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center; gap: 12px; color: #92400e; font-weight: 500;
+    }
+    .zynova-insurance-page .journey-motivation i { font-size: 20px; }
+    
+    @media (max-width: 768px) {
+        .zynova-insurance-page .journey-roadmap { flex-direction: column; }
+        .zynova-insurance-page .journey-step .step-connector { display: none; }
+        .zynova-insurance-page .journey-step { width: 100%; flex-direction: row; gap: 16px; padding: 16px 20px; }
+        .zynova-insurance-page .journey-step .step-icon { margin-bottom: 0; width: 48px; height: 48px; font-size: 20px; }
+        .zynova-insurance-page .journey-step .step-content { text-align: left; }
+    }
+</style>
+
+<div class="zynova-insurance-page">
+    <div class="page-banner">
+        <h1>
+            <i class="fas fa-shield-alt"></i> VGK Care
+            <span class="segment-badge"><i class="fas fa-heartbeat"></i> Insurance</span>
+        </h1>
+        <p>Loyalty Program</p>
+    </div>
+    
+    <div style="background: #fef9c3; border-left: 4px solid #eab308; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;">
+        <h6 style="color: #854d0e; margin-bottom: 10px; font-weight: 600;"><i class="fas fa-video"></i> Feedback Video and Photos Requirement</h6>
+        <p style="color: #854d0e; margin-bottom: 10px; font-size: 14px;">
+            <strong>For Zynova incentive eligibility:</strong> Sharing feedback videos and photos is mandatory for members activated before 1st Dec 2025.
+        </p>
+        <p style="color: #713f12; font-size: 13px; margin-bottom: 8px;"><strong>Eligible Engagement Activities:</strong></p>
+        <ul style="color: #854d0e; font-size: 13px; margin: 0; padding-left: 20px;">
+            <li>Reels (video content)</li>
+            <li>WhatsApp Status sharing</li>
+            <li>Social Media posts</li>
+            <li>Sharing & Ratings in Announcement sections</li>
+            <li>Engaging with teams</li>
+            <li>Attending Zoom calls</li>
+        </ul>
+        <p style="color: #713f12; font-size: 12px; margin-top: 12px; font-style: italic;">
+            <i class="fas fa-info-circle me-1"></i> Please note: Submitted feedback videos and photos may be publicly displayed on our platforms for promotional and community engagement purposes. By sharing your content, you acknowledge and consent to this use.
+        </p>
+    </div>
+    
+    <div id="loadingStateIns">
+        <div class="loading-spinner"></div>
+        <p class="text-center text-muted">Loading your Insurance data...</p>
+    </div>
+    
+    <div id="mainContentIns" style="display: none;">
+        <div id="deadlineAlertIns" class="deadline-alert" style="display: none;">
+            <i class="fas fa-clock"></i>
+            <strong>Promotion Deadline:</strong> <span id="deadlineTextIns"></span>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="role-card">
+                    <div class="role-title">Your Current Role</div>
+                    <div class="role-name" id="currentRoleIns">--</div>
+                    <div class="next-role" id="nextRoleInfoIns">--</div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="progress-section">
+                    <h3><i class="fas fa-chart-line me-2"></i>Progress to Next Promotion</h3>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="progressBarIns" style="width: 0%">0%</div>
+                    </div>
+                    <div class="progress-info">
+                        <span>Current: <strong id="currentRevenueIns">₹0</strong></span>
+                        <span>Target: <strong id="targetRevenueIns">₹0</strong></span>
+                    </div>
+                    <p class="mt-2 text-muted small" id="remainingInfoIns"></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="summary-cards">
+            <div class="summary-card card-red">
+                <div class="icon"><i class="fas fa-rupee-sign"></i></div>
+                <div class="value" id="selfRevenueIns">₹0</div>
+                <div class="label">Self Revenue</div>
+            </div>
+            <div class="summary-card card-green">
+                <div class="icon"><i class="fas fa-users"></i></div>
+                <div class="value" id="teamRevenueIns">₹0</div>
+                <div class="label">Team Revenue</div>
+            </div>
+            <div class="summary-card card-purple">
+                <div class="icon"><i class="fas fa-coins"></i></div>
+                <div class="value" id="totalRevenueIns">₹0</div>
+                <div class="label">Total Revenue</div>
+            </div>
+            <div class="summary-card card-gold">
+                <div class="icon"><i class="fas fa-user-friends"></i></div>
+                <div class="value" id="teamCountIns">0</div>
+                <div class="label">Team Members</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-wallet text-success"></i> Earnings Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="earnings-grid">
+                    <div class="earnings-item earnings-pending">
+                        <div class="value" id="pendingEarningsIns">₹0</div>
+                        <div class="label">Pending</div>
+                    </div>
+                    <div class="earnings-item earnings-approved">
+                        <div class="value" id="approvedEarningsIns">₹0</div>
+                        <div class="label">Approved</div>
+                    </div>
+                    <div class="earnings-item earnings-disbursed">
+                        <div class="value" id="disbursedEarningsIns">₹0</div>
+                        <div class="label">Disbursed</div>
+                    </div>
+                    <div class="earnings-item earnings-total">
+                        <div class="value" id="totalEarningsIns">₹0</div>
+                        <div class="label">Total Earnings</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-bullseye text-warning"></i> Promotion Targets</h5>
+            </div>
+            <div class="card-body">
+                <table class="target-table">
+                    <thead>
+                        <tr>
+                            <th>Role</th>
+                            <th>Revenue Target</th>
+                            <th>Time Limit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="targetTableBodyIns">
+                        <tr>
+                            <td>Promoter</td>
+                            <td>₹0 (Starting Role)</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td>Team Leader</td>
+                            <td>₹1,00,000</td>
+                            <td>6 months from joining</td>
+                        </tr>
+                        <tr>
+                            <td>Zonal Manager</td>
+                            <td>₹5,00,000</td>
+                            <td>6 months from last promotion</td>
+                        </tr>
+                        <tr>
+                            <td>Director</td>
+                            <td>₹10,00,000</td>
+                            <td>6 months from last promotion</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card team-section">
+            <div class="card-header">
+                <h5><i class="fas fa-users text-danger"></i> My Insurance Team</h5>
+            </div>
+            <div class="card-body" id="teamContainerIns">
+                <div class="empty-state">
+                    <i class="fas fa-users"></i>
+                    <p>No team members yet. Start building your Insurance team!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="notMemberStateIns" style="display: none;">
+        <div class="journey-preview-section">
+            <div class="journey-header">
+                <h3><i class="fas fa-rocket me-2"></i>Your Growth Journey</h3>
+                <p>Protect families and grow your success</p>
+            </div>
+            <div class="journey-roadmap">
+                <div class="journey-step step-promoter">
+                    <div class="step-icon"><i class="fas fa-heart"></i></div>
+                    <div class="step-content">
+                        <h4>Promoter</h4>
+                        <p>Start protecting families</p>
+                    </div>
+                    <div class="step-connector"><i class="fas fa-arrow-right"></i></div>
+                </div>
+                <div class="journey-step step-team-leader">
+                    <div class="step-icon"><i class="fas fa-hands-helping"></i></div>
+                    <div class="step-content">
+                        <h4>Team Leader</h4>
+                        <p>Guide your caring team</p>
+                    </div>
+                    <div class="step-connector"><i class="fas fa-arrow-right"></i></div>
+                </div>
+                <div class="journey-step step-zonal-manager">
+                    <div class="step-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="step-content">
+                        <h4>Zonal Manager</h4>
+                        <p>Expand your protection zone</p>
+                    </div>
+                    <div class="step-connector"><i class="fas fa-arrow-right"></i></div>
+                </div>
+                <div class="journey-step step-director">
+                    <div class="step-icon"><i class="fas fa-crown"></i></div>
+                    <div class="step-content">
+                        <h4>Director</h4>
+                        <p>Lead with compassion</p>
+                    </div>
+                </div>
+            </div>
+            <div class="journey-motivation">
+                <i class="fas fa-lightbulb"></i>
+                <span>Be the reason someone sleeps peacefully. Start your journey today!</span>
+            </div>
+        </div>
+        
+        <div class="motivation-hero" style="margin-top: 24px;">
+            <div class="motivation-content">
+                <div class="motivation-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h2 id="motivationTitleIns">Welcome to VGK Care</h2>
+                <p class="motivation-quote" id="motivationQuoteIns">"Protect what matters most. Help others secure their future today!"</p>
+                <div class="motivation-message">
+                    <p>You are not yet a member of the Insurance Zynova program.</p>
+                    <p>Add leads and work with your team to unlock amazing rewards!</p>
+                </div>
+                <div class="motivation-cta">
+                    <a href="/user/my-leads" class="btn btn-primary btn-lg">
+                        <i class="fas fa-user-plus me-2"></i> My Leads
+                    </a>
+                    <p class="cta-hint">Start adding leads to begin your progress</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const formatCurrencyIns = (amount) => {
+        return '₹' + (amount || 0).toLocaleString('en-IN');
+    };
+    
+    const formatDateIns = (dateStr) => {
+        if (!dateStr) return 'Not set';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
+    
+    const insuranceMotivations = [
+        { quote: "Protect what matters most. Help others secure their future today!", icon: "fas fa-shield-alt" },
+        { quote: "Insurance is not just a policy, it's peace of mind. Share this gift!", icon: "fas fa-heart" },
+        { quote: "Be the reason someone sleeps peacefully knowing their family is protected.", icon: "fas fa-umbrella" },
+        { quote: "Every policy sold is a family secured. Start making a difference!", icon: "fas fa-hands-helping" },
+        { quote: "The best investment is in protection. Help others invest wisely!", icon: "fas fa-user-shield" }
+    ];
+    
+    function showRandomMotivationHeroIns() {
+        const motivation = insuranceMotivations[Math.floor(Math.random() * insuranceMotivations.length)];
+        const notMemberState = document.getElementById('notMemberStateIns');
+        if (!notMemberState) return;
+        const quoteEl = notMemberState.querySelector('#motivationQuoteIns');
+        const iconEl = notMemberState.querySelector('.motivation-icon i');
+        if (quoteEl) quoteEl.textContent = '"' + motivation.quote + '"';
+        if (iconEl) iconEl.className = motivation.icon;
+    }
+    
+    async function loadDataIns() {
+        console.log('[ZynovaIns] Loading Insurance data...');
+        try {
+            // DC Protocol (Jan 2026): Use unified mobile-compatible endpoint
+            const response = await fetch('/api/v1/users/zynova/insurance');
+            console.log('[ZynovaIns] API response status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error('API request failed with status ' + response.status);
+            }
+            
+            const result = await response.json();
+            console.log('[ZynovaIns] API result:', JSON.stringify(result).substring(0, 200));
+            
+            // Hide loading state first
+            const loadingEl = document.getElementById('loadingStateIns');
+            if (loadingEl) loadingEl.style.display = 'none';
+            
+            // DC Protocol (Jan 2026): Check membership - unified endpoint provides is_member flag
+            const isMember = result.success && result.data && result.data.is_member === true;
+            console.log('[ZynovaIns] is_member check:', isMember);
+            
+            if (!isMember) {
+                console.log('[ZynovaIns] Showing not-member state');
+                const notMemberEl = document.getElementById('notMemberStateIns');
+                if (notMemberEl) notMemberEl.style.display = 'block';
+                showRandomMotivationHeroIns();
+                return;
+            }
+            
+            // Show main content for members
+            console.log('[ZynovaIns] User is member - showing main content');
+            const mainContentEl = document.getElementById('mainContentIns');
+            if (mainContentEl) {
+                mainContentEl.style.display = 'block';
+            } else {
+                console.error('[ZynovaIns] mainContentIns element not found!');
+                return;
+            }
+            
+            const data = result.data;
+            
+            // Populate role information
+            const currentRoleEl = document.getElementById('currentRoleIns');
+            if (currentRoleEl) currentRoleEl.textContent = data.current_role_display || 'Promoter';
+            
+            const nextRoleInfoEl = document.getElementById('nextRoleInfoIns');
+            if (nextRoleInfoEl) {
+                // DC Protocol (Jan 2026): Use next_role_display, handle null/Top Level for max level
+                const nextRoleDisplay = data.next_role_display;
+                if (nextRoleDisplay && nextRoleDisplay !== 'Top Level') {
+                    nextRoleInfoEl.innerHTML = '<i class="fas fa-arrow-up me-1"></i> Next: ' + nextRoleDisplay;
+                } else {
+                    nextRoleInfoEl.textContent = 'You have reached the highest level!';
+                }
+            }
+            
+            // Populate progress data with null checks
+            const progress = data.promotion_progress || { progress: 0, remaining: 0 };
+            const progressBarEl = document.getElementById('progressBarIns');
+            if (progressBarEl) {
+                progressBarEl.style.width = (progress.progress || 0) + '%';
+                progressBarEl.textContent = (progress.progress || 0) + '%';
+            }
+            
+            const currentRevenueEl = document.getElementById('currentRevenueIns');
+            if (currentRevenueEl) currentRevenueEl.textContent = formatCurrencyIns(data.self_revenue);
+            
+            const targetRevenueEl = document.getElementById('targetRevenueIns');
+            if (targetRevenueEl) targetRevenueEl.textContent = formatCurrencyIns(data.promotion_target);
+            
+            const remainingInfoEl = document.getElementById('remainingInfoIns');
+            if (remainingInfoEl) {
+                remainingInfoEl.textContent = (progress.remaining || 0) > 0 
+                    ? '₹' + (progress.remaining || 0).toLocaleString('en-IN') + ' more needed for promotion' 
+                    : 'Ready for promotion!';
+            }
+            
+            // Populate summary cards
+            const selfRevenueEl = document.getElementById('selfRevenueIns');
+            if (selfRevenueEl) selfRevenueEl.textContent = formatCurrencyIns(data.self_revenue);
+            
+            const teamRevenueEl = document.getElementById('teamRevenueIns');
+            if (teamRevenueEl) teamRevenueEl.textContent = formatCurrencyIns(data.team_revenue);
+            
+            const totalRevenueEl = document.getElementById('totalRevenueIns');
+            if (totalRevenueEl) totalRevenueEl.textContent = formatCurrencyIns(data.total_revenue);
+            
+            const teamCountEl = document.getElementById('teamCountIns');
+            if (teamCountEl) teamCountEl.textContent = data.team_count || 0;
+            
+            // Populate earnings with null checks
+            const earnings = data.earnings || { pending: 0, approved: 0, disbursed: 0, total: 0 };
+            const pendingEarningsEl = document.getElementById('pendingEarningsIns');
+            if (pendingEarningsEl) pendingEarningsEl.textContent = formatCurrencyIns(earnings.pending);
+            
+            const approvedEarningsEl = document.getElementById('approvedEarningsIns');
+            if (approvedEarningsEl) approvedEarningsEl.textContent = formatCurrencyIns(earnings.approved);
+            
+            const disbursedEarningsEl = document.getElementById('disbursedEarningsIns');
+            if (disbursedEarningsEl) disbursedEarningsEl.textContent = formatCurrencyIns(earnings.disbursed);
+            
+            const totalEarningsEl = document.getElementById('totalEarningsIns');
+            if (totalEarningsEl) totalEarningsEl.textContent = formatCurrencyIns(earnings.total);
+            
+            // Show deadline if set
+            if (data.promotion_deadline) {
+                const deadlineAlertEl = document.getElementById('deadlineAlertIns');
+                if (deadlineAlertEl) deadlineAlertEl.style.display = 'block';
+                const deadlineTextEl = document.getElementById('deadlineTextIns');
+                if (deadlineTextEl) deadlineTextEl.textContent = formatDateIns(data.promotion_deadline);
+            }
+            
+            highlightCurrentRoleIns(data.current_role || 'promoter');
+            loadTeamIns();
+            
+            console.log('[ZynovaIns] Data loaded successfully');
+            
+        } catch (error) {
+            console.error('[ZynovaIns] Error loading data:', error);
+            const loadingEl = document.getElementById('loadingStateIns');
+            if (loadingEl) {
+                loadingEl.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle text-danger"></i><p>Error loading data. Please refresh the page.</p></div>';
+                loadingEl.style.display = 'block';
+            }
+        }
+    }
+    
+    function highlightCurrentRoleIns(role) {
+        const rows = document.querySelectorAll('#targetTableBodyIns tr');
+        const roleMap = { 'promoter': 0, 'team_leader': 1, 'zonal_manager': 2, 'director': 3 };
+        const idx = roleMap[role.toLowerCase()];
+        if (idx !== undefined && rows[idx]) {
+            rows[idx].classList.add('current-row');
+        }
+    }
+    
+    async function loadTeamIns() {
+        try {
+            const response = await fetch('/api/v1/myntreal/zynova/insurance/team');
+            const result = await response.json();
+            
+            if (result.success && result.data.team.length > 0) {
+                const container = document.getElementById('teamContainerIns');
+                container.innerHTML = result.data.team.map(member => 
+                    '<div class="team-member">' +
+                        '<div class="avatar">' + member.name.charAt(0) + '</div>' +
+                        '<div class="info">' +
+                            '<div class="name">' + member.name + '</div>' +
+                            '<span class="role-badge">' + member.role_display + '</span>' +
+                        '</div>' +
+                        '<div class="revenue">' + formatCurrencyIns(member.self_revenue) + '</div>' +
+                    '</div>'
+                ).join('');
+            }
+        } catch (error) {
+            console.error('Error loading team:', error);
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', loadDataIns);
+</script>

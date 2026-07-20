@@ -1,0 +1,371 @@
+<style>
+    .zynova-training-page .page-banner {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        border-radius: 16px; padding: 24px; margin-bottom: 24px; color: white;
+    }
+    .zynova-training-page .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+    .zynova-training-page .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+    .zynova-training-page .page-banner .segment-badge {
+        background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 20px; font-size: 12px;
+    }
+    
+    .zynova-training-page .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    
+    .zynova-training-page .summary-card {
+        background: white; border-radius: 16px; padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;
+    }
+    .zynova-training-page .summary-card .icon {
+        width: 48px; height: 48px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 12px; font-size: 20px;
+    }
+    .zynova-training-page .summary-card .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+    .zynova-training-page .summary-card .label { color: #6b7280; font-size: 12px; margin-top: 4px; }
+    
+    .zynova-training-page .card-green .icon { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
+    .zynova-training-page .card-blue .icon { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af; }
+    .zynova-training-page .card-gold .icon { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
+    .zynova-training-page .card-purple .icon { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #7c3aed; }
+    
+    .zynova-training-page .card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: none; margin-bottom: 24px; }
+    .zynova-training-page .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .zynova-training-page .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 10px; }
+    .zynova-training-page .card-body { padding: 24px; }
+    
+    .zynova-training-page .table { margin: 0; }
+    .zynova-training-page .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; }
+    .zynova-training-page .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+    .zynova-training-page .table tbody tr:hover { background: #f9fafb; }
+    
+    .zynova-training-page .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .zynova-training-page .status-new { background: #dbeafe; color: #1e40af; }
+    .zynova-training-page .status-in_progress { background: #fef3c7; color: #92400e; }
+    .zynova-training-page .status-won { background: #d1fae5; color: #065f46; }
+    .zynova-training-page .status-closed { background: #d1fae5; color: #065f46; }
+    .zynova-training-page .status-lost { background: #fee2e2; color: #991b1b; }
+    
+    .zynova-training-page .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+    .zynova-training-page .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+    
+    .zynova-training-page .loading-spinner { width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: #059669; border-radius: 50%; animation: zynovaTrainingSpin 0.8s linear infinite; margin: 40px auto; }
+    @keyframes zynovaTrainingSpin { to { transform: rotate(360deg); } }
+    
+    .zynova-training-page .filter-section { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .zynova-training-page .filter-section select { padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white; }
+    
+    .zynova-training-page .btn-add-lead {
+        background: linear-gradient(135deg, #059669, #10b981);
+        border: none; color: white; border-radius: 8px; padding: 10px 20px;
+        font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 8px;
+        text-decoration: none; transition: all 0.2s;
+    }
+    .zynova-training-page .btn-add-lead:hover { background: linear-gradient(135deg, #047857, #059669); color: white; transform: translateY(-1px); }
+    
+    .zynova-training-page .points-badge { background: #fef3c7; color: #92400e; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+    .zynova-training-page .earnings-badge { background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+    
+    .zynova-training-page .motivation-hero { 
+        background: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%); 
+        border-radius: 16px; padding: 48px; text-align: center; color: white; 
+        margin: 24px 0; box-shadow: 0 8px 32px rgba(5, 150, 105, 0.3); 
+    }
+    .zynova-training-page .motivation-icon { font-size: 64px; margin-bottom: 24px; opacity: 0.9; animation: trainingMotivationPulse 2s infinite; }
+    @keyframes trainingMotivationPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+    .zynova-training-page .motivation-hero h2 { font-size: 28px; font-weight: 700; margin-bottom: 16px; }
+    .zynova-training-page .motivation-quote { font-size: 18px; font-style: italic; opacity: 0.9; margin-bottom: 24px; padding: 16px 32px; background: rgba(255,255,255,0.1); border-radius: 8px; border-left: 4px solid rgba(255,255,255,0.5); }
+    .zynova-training-page .motivation-message { margin-bottom: 32px; font-size: 16px; opacity: 0.95; }
+    .zynova-training-page .motivation-message p { margin: 8px 0; }
+    .zynova-training-page .motivation-cta .btn { padding: 16px 48px; font-size: 18px; font-weight: 600; border-radius: 50px; background: white; color: #059669; border: none; box-shadow: 0 4px 16px rgba(0,0,0,0.2); transition: all 0.3s; }
+    .zynova-training-page .motivation-cta .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.3); background: #f0fdf4; }
+    .zynova-training-page .cta-hint { margin-top: 16px; font-size: 14px; opacity: 0.8; }
+</style>
+
+<div class="zynova-training-page">
+    <div class="page-banner">
+        <h1>
+            <i class="fas fa-graduation-cap"></i> EVolution Training Center (ETC)
+            <span class="segment-badge"><i class="fas fa-chalkboard-teacher"></i> Training</span>
+        </h1>
+        <p>Loyalty Program</p>
+    </div>
+    
+    <div style="background: #fef9c3; border-left: 4px solid #eab308; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;">
+        <h6 style="color: #854d0e; margin-bottom: 10px; font-weight: 600;"><i class="fas fa-video"></i> Feedback Video and Photos Requirement</h6>
+        <p style="color: #854d0e; margin-bottom: 10px; font-size: 14px;">
+            <strong>For Zynova incentive eligibility:</strong> Sharing feedback videos and photos is mandatory for members activated before 1st Dec 2025.
+        </p>
+        <p style="color: #713f12; font-size: 13px; margin-bottom: 8px;"><strong>Eligible Engagement Activities:</strong></p>
+        <ul style="color: #854d0e; font-size: 13px; margin: 0; padding-left: 20px;">
+            <li>Reels (video content)</li>
+            <li>WhatsApp Status sharing</li>
+            <li>Social Media posts</li>
+            <li>Sharing & Ratings in Announcement sections</li>
+            <li>Engaging with teams</li>
+            <li>Attending Zoom calls</li>
+        </ul>
+        <p style="color: #713f12; font-size: 12px; margin-top: 12px; font-style: italic;">
+            <i class="fas fa-info-circle me-1"></i> Please note: Submitted feedback videos and photos may be publicly displayed on our platforms for promotional and community engagement purposes. By sharing your content, you acknowledge and consent to this use.
+        </p>
+    </div>
+    
+    <div id="trainingLoadingState">
+        <div class="loading-spinner"></div>
+        <p class="text-center text-muted">Loading your training data...</p>
+    </div>
+    
+    <div id="trainingDataContent" style="display: none;">
+        <div class="summary-cards">
+            <div class="summary-card card-green">
+                <div class="icon"><i class="fas fa-user-graduate"></i></div>
+                <div class="value" id="trainingTotalLeads">0</div>
+                <div class="label">Total Training Leads</div>
+            </div>
+            <div class="summary-card card-blue">
+                <div class="icon"><i class="fas fa-trophy"></i></div>
+                <div class="value" id="trainingWonDeals">0</div>
+                <div class="label">Won / Closed Deals</div>
+            </div>
+            <div class="summary-card card-gold">
+                <div class="icon"><i class="fas fa-coins"></i></div>
+                <div class="value" id="trainingPointsUtilized">0</div>
+                <div class="label">Points Utilized</div>
+            </div>
+            <div class="summary-card card-purple">
+                <div class="icon"><i class="fas fa-rupee-sign"></i></div>
+                <div class="value" id="trainingTotalEarnings">₹0</div>
+                <div class="label">Total Earnings</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list-alt text-success"></i> Training Leads & Deals</h5>
+                <div class="filter-section">
+                    <select id="trainingStatusFilter" onchange="filterTrainingLeads()">
+                        <option value="">All Status</option>
+                        <option value="new">New</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="won">Won</option>
+                        <option value="closed">Closed</option>
+                        <option value="lost">Lost</option>
+                    </select>
+                    <a href="/user/my-leads?category=training" class="btn-add-lead">
+                        <i class="fas fa-plus-circle"></i> Add Training Lead
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="trainingLeadsTable">
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Course</th>
+                                <th>Lead Date</th>
+                                <th>Status</th>
+                                <th>Points Used</th>
+                                <th>Earnings</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trainingLeadsTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="fas fa-spinner fa-spin me-2"></i> Loading...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="trainingEmptyLeads" class="empty-state" style="display: none;">
+                    <i class="fas fa-graduation-cap"></i>
+                    <p>No training leads yet. Start adding leads to track your progress!</p>
+                    <a href="/user/my-leads?category=training" class="btn-add-lead mt-3">
+                        <i class="fas fa-plus-circle"></i> Add Your First Training Lead
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="trainingMotivationState" style="display: none;">
+        <div class="motivation-hero">
+            <div class="motivation-content">
+                <div class="motivation-icon">
+                    <i class="fas fa-graduation-cap"></i>
+                </div>
+                <h2 id="trainingMotivationTitle">Educate a Team, Empower a Nation</h2>
+                <p class="motivation-quote" id="trainingMotivationQuote">"Education is the most powerful weapon which you can use to change the world." - Nelson Mandela</p>
+                <div class="motivation-message">
+                    <p><strong>Create Self-Empowerment in Society</strong></p>
+                    <p>Transform lives through education. Every student you refer is a step towards building a better future.</p>
+                    <p>Join the EVolution Training Center and be part of the change!</p>
+                </div>
+                <div class="motivation-cta">
+                    <a href="/user/my-leads?category=training" class="btn btn-primary btn-lg">
+                        <i class="fas fa-user-plus me-2"></i> Add Training Lead
+                    </a>
+                    <p class="cta-hint">Start your journey by adding your first training lead</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const trainingMotivations = [
+        {
+            title: "Educate a Team, Empower a Nation",
+            quote: '"Education is the most powerful weapon which you can use to change the world." - Nelson Mandela'
+        },
+        {
+            title: "Create Self-Empowerment in Society",
+            quote: '"The beautiful thing about learning is that nobody can take it away from you." - B.B. King'
+        },
+        {
+            title: "Transform Lives Through Knowledge",
+            quote: '"An investment in knowledge pays the best interest." - Benjamin Franklin'
+        },
+        {
+            title: "Build Leaders, Build Tomorrow",
+            quote: '"Education is not preparation for life; education is life itself." - John Dewey'
+        },
+        {
+            title: "Inspire Growth, Ignite Potential",
+            quote: '"The roots of education are bitter, but the fruit is sweet." - Aristotle'
+        }
+    ];
+    
+    function showTrainingMotivation() {
+        const motivation = trainingMotivations[Math.floor(Math.random() * trainingMotivations.length)];
+        const motivationState = document.getElementById('trainingMotivationState');
+        const loadingState = document.getElementById('trainingLoadingState');
+        const dataContent = document.getElementById('trainingDataContent');
+        
+        if (loadingState) loadingState.style.display = 'none';
+        if (dataContent) dataContent.style.display = 'none';
+        
+        if (motivationState) {
+            const titleEl = document.getElementById('trainingMotivationTitle');
+            const quoteEl = document.getElementById('trainingMotivationQuote');
+            if (titleEl) titleEl.textContent = motivation.title;
+            if (quoteEl) quoteEl.textContent = motivation.quote;
+            motivationState.style.display = 'block';
+        }
+    }
+    
+    const formatTrainingCurrency = (amount) => {
+        return '₹' + (amount || 0).toLocaleString('en-IN');
+    };
+    
+    const formatTrainingDate = (dateStr) => {
+        if (!dateStr) return '-';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
+    
+    let allTrainingLeads = [];
+    
+    function getTrainingStatusClass(status) {
+        const statusLower = (status || '').toLowerCase().replace(' ', '_');
+        return 'status-' + statusLower;
+    }
+    
+    function filterTrainingLeads() {
+        const statusFilter = document.getElementById('trainingStatusFilter').value.toLowerCase();
+        const filtered = statusFilter 
+            ? allTrainingLeads.filter(lead => (lead.status || '').toLowerCase() === statusFilter)
+            : allTrainingLeads;
+        renderTrainingLeads(filtered);
+    }
+    
+    function renderTrainingLeads(leads) {
+        const tbody = document.getElementById('trainingLeadsTableBody');
+        const emptyState = document.getElementById('trainingEmptyLeads');
+        const table = document.getElementById('trainingLeadsTable');
+        
+        if (!leads || leads.length === 0) {
+            table.style.display = 'none';
+            emptyState.style.display = 'block';
+            return;
+        }
+        
+        table.style.display = 'table';
+        emptyState.style.display = 'none';
+        
+        tbody.innerHTML = leads.map(lead => `
+            <tr>
+                <td>
+                    <strong>${lead.name || lead.lead_name || '-'}</strong>
+                    ${lead.mobile ? '<br><small class="text-muted">' + lead.mobile + '</small>' : ''}
+                </td>
+                <td>${lead.course_name || lead.product_name || lead.notes || '-'}</td>
+                <td>${formatTrainingDate(lead.created_at || lead.lead_date)}</td>
+                <td><span class="status-badge ${getTrainingStatusClass(lead.status)}">${lead.status || 'New'}</span></td>
+                <td>${lead.points_used ? '<span class="points-badge">' + lead.points_used + ' pts</span>' : '-'}</td>
+                <td>${lead.earnings ? '<span class="earnings-badge">' + formatTrainingCurrency(lead.earnings) + '</span>' : '-'}</td>
+            </tr>
+        `).join('');
+    }
+    
+    function updateTrainingSummary(leads) {
+        const totalLeads = leads.length;
+        const wonDeals = leads.filter(l => ['won', 'closed'].includes((l.status || '').toLowerCase())).length;
+        const pointsUtilized = leads.reduce((sum, l) => sum + (l.points_used || 0), 0);
+        const totalEarnings = leads.reduce((sum, l) => sum + (l.earnings || 0), 0);
+        
+        document.getElementById('trainingTotalLeads').textContent = totalLeads;
+        document.getElementById('trainingWonDeals').textContent = wonDeals;
+        document.getElementById('trainingPointsUtilized').textContent = pointsUtilized.toLocaleString('en-IN');
+        document.getElementById('trainingTotalEarnings').textContent = formatTrainingCurrency(totalEarnings);
+    }
+    
+    async function loadTrainingData() {
+        try {
+            const response = await fetch('/api/v1/myntreal/zynova/training/me');
+            
+            if (!response.ok) {
+                document.getElementById('trainingLoadingState').style.display = 'none';
+                showTrainingMotivation();
+                return;
+            }
+            
+            const result = await response.json();
+            
+            document.getElementById('trainingLoadingState').style.display = 'none';
+            
+            if (!result.success || !result.data) {
+                showTrainingMotivation();
+                return;
+            }
+            
+            const data = result.data;
+            
+            if (!data.leads || data.leads.length === 0) {
+                showTrainingMotivation();
+                return;
+            }
+            
+            document.getElementById('trainingDataContent').style.display = 'block';
+            allTrainingLeads = data.leads;
+            
+            if (data.summary) {
+                document.getElementById('trainingTotalLeads').textContent = data.summary.total_leads || 0;
+                document.getElementById('trainingWonDeals').textContent = data.summary.won_deals || 0;
+                document.getElementById('trainingPointsUtilized').textContent = (data.summary.points_utilized || 0).toLocaleString('en-IN');
+                document.getElementById('trainingTotalEarnings').textContent = formatTrainingCurrency(data.summary.total_earnings || 0);
+            } else {
+                updateTrainingSummary(allTrainingLeads);
+            }
+            
+            renderTrainingLeads(allTrainingLeads);
+            
+        } catch (error) {
+            console.error('[ETC] Error loading data:', error);
+            document.getElementById('trainingLoadingState').style.display = 'none';
+            showTrainingMotivation();
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', loadTrainingData);
+</script>

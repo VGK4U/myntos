@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income Pending - Admin Verification - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .income-card { border-radius: 10px; margin-bottom: 10px; padding: 15px; background: white; border-left: 4px solid #f59e0b; }
+        .details-row { animation: slideDown 0.3s ease-out; }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1"><i class="fas fa-cash-register"></i> Income Pending - Admin Verification</span>
+            <div>
+                <span class="text-white me-3" id="adminInfo">Loading...</span>
+                <a href="/admin/dashboard" class="btn btn-outline-light btn-sm" id="dashboardBtn">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Workflow Info -->
+        <div class="alert alert-info mb-3">
+            <strong>WVV Workflow - Stage 1:</strong> 
+            <strong style="color: #667eea;">Admin Verification (YOU ARE HERE)</strong> → Super Admin Approval → Finance Completion → Paid to Bank ✅
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="fas fa-filter"></i> Filters</h6>
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Date Range</label>
+                        <select id="dateFilter" class="form-select">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Income Type</label>
+                        <select id="incomeTypeFilter" class="form-select">
+                            <option value="">All Types</option>
+                            <option value="Direct Facilitation">Direct Facilitation</option>
+                            <option value="Group Performance Recognition">Group Performance Recognition</option>
+                            <option value="VED Leadership Recognition">VED Leadership Recognition</option>
+                            <option value="Mentorship Contribution Benefit">Mentorship Contribution Benefit</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Package</label>
+                        <select id="packageFilter" class="form-select">
+                            <option value="">All Packages</option>
+                            <option value="Plus">Plus</option>
+                            <option value="Deluxe">Deluxe</option>
+                            <option value="Premium">Premium</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">User ID</label>
+                        <input type="text" id="userIdFilter" class="form-control" placeholder="Search User ID">
+                    </div>
+                    <div class="col-md-2" style="display: flex; align-items: flex-end;">
+                        <button class="btn btn-primary w-100" onclick="applyFilters()">
+                            <i class="fas fa-search"></i> Apply
+                        </button>
+                    </div>
+                    <div class="col-md-2" style="display: flex; align-items: flex-end;">
+                        <button class="btn btn-secondary w-100" onclick="clearFilters()">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="font-size: 32px;">💰</div>
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold; color: #667eea;" id="statTotalIncomes">0</div>
+                                <div style="color: #666; font-size: 14px;">Total Incomes</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="font-size: 32px;">👥</div>
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold; color: #667eea;" id="statTotalUsers">0</div>
+                                <div style="color: #666; font-size: 14px;">Total Users</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="font-size: 32px;">₹</div>
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold; color: #667eea;" id="statTotalAmount">₹0</div>
+                                <div style="color: #666; font-size: 14px;">Total Amount</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="font-size: 32px;">✅</div>
+                            <div>
+                                <div style="font-size: 24px; font-weight: bold; color: #667eea;" id="statSelected">0</div>
+                                <div style="color: #666; font-size: 14px;">Selected</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Actions & Table -->
+        <div class="card">
+            <div class="card-body">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h6 style="margin: 0;"><i class="fas fa-list"></i> Pending Income Records</h6>
+                    <div>
+                        <button class="btn btn-success" id="verifyBtn" onclick="bulkVerify()" disabled>
+                            <i class="fas fa-check-circle"></i> Verify Selected (<span id="selectedCount">0</span>)
+                        </button>
+                        <button class="btn btn-primary ms-2" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div id="tableContent">
+                    <div style="text-align: center; padding: 40px;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3">Loading incomes...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/public/js/income_grouped_table.js"></script>
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const API_BASE = '/api/v1';
+        let authToken = localStorage.getItem('authToken');
+        let allIncomes = [];
+        let incomeTable;
+
+        $(document).ready(function() {
+            console.log('🚀 Admin Income Pending Page Loaded');
+            console.log('Auth Token:', authToken ? 'Present' : 'MISSING');
+            // DC Protocol: Skip loadAdminInfo on Staff MNR pages (staff sidebar already shows identity)
+            if (!window.location.pathname.startsWith('/staff/mnr/')) {
+                loadAdminInfo();
+            }
+            initializeTable();
+            loadPendingIncomes();
+        });
+
+        function initializeTable() {
+            incomeTable = new IncomeGroupedTable({
+                containerId: 'tableContent',
+                allowSelection: true,
+                statusFilter: 'Pending',
+                enableUngroup: true,
+                onSelectionChange: updateSelectionUI
+            });
+        }
+
+        function loadAdminInfo() {
+            $.ajax({
+                url: `${API_BASE}/users/profile`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    if (data.success && data.user) {
+                        const userRole = data.user.user_type;
+                        $('#adminInfo').text(`${data.user.name} (${userRole})`);
+                        
+                        let dashboardUrl = '/admin/dashboard';
+                        if (userRole === 'Super Admin') {
+                            dashboardUrl = '/superadmin/dashboard';
+                        } else if (userRole === 'Finance Admin') {
+                            dashboardUrl = '/finance/dashboard';
+                        } else if (userRole === 'RVZ ID') {
+                            dashboardUrl = '/rvz/dashboard';
+                        }
+                        
+                        $('#dashboardBtn').attr('href', dashboardUrl);
+                    } else {
+                        window.location.href = '/login';
+                    }
+                },
+                error: function() {
+                    alert('Authentication failed. Please login again.');
+                    window.location.href = '/login';
+                }
+            });
+        }
+
+        function loadPendingIncomes() {
+            console.log('📥 Loading pending incomes...');
+            const dateFilter = document.getElementById('dateFilter').value;
+            const userIdFilter = document.getElementById('userIdFilter').value.trim();
+
+            let dateParam = '';
+            if (dateFilter !== 'all') {
+                const daysAgo = new Date();
+                daysAgo.setDate(daysAgo.getDate() - parseInt(dateFilter));
+                dateParam = `&from_date=${daysAgo.toISOString().split('T')[0]}`;
+            }
+            
+            let userParam = userIdFilter ? `&user_id=${userIdFilter}` : '';
+
+            $.ajax({
+                url: `${API_BASE}/income-verification/admin/pending-incomes?status_filter=Pending${dateParam}${userParam}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    if (response.success || response.data) {
+                        allIncomes = response.data || [];
+                        
+                        allIncomes = applyClientSideFilters(allIncomes);
+                        
+                        console.log('📦 Total pending incomes loaded:', allIncomes.length);
+                        incomeTable.render(allIncomes);
+                        updateStatistics();
+                    } else {
+                        console.error('❌ Invalid response format:', response);
+                        $('#tableContent').html('<div class="alert alert-danger">Error loading incomes</div>');
+                    }
+                },
+                error: function(xhr) {
+                    console.error('❌ Error loading incomes:', xhr);
+                    $('#tableContent').html(`<div class="alert alert-danger">Error: ${xhr.responseJSON?.detail || 'Failed to load income data'}</div>`);
+                }
+            });
+        }
+
+        function applyClientSideFilters(incomes) {
+            const incomeTypeFilter = document.getElementById('incomeTypeFilter').value;
+            const packageFilter = document.getElementById('packageFilter').value;
+            
+            let filtered = incomes;
+            
+            if (incomeTypeFilter) {
+                filtered = filtered.filter(inc => inc.income_type === incomeTypeFilter);
+            }
+            
+            if (packageFilter) {
+                filtered = filtered.filter(inc => inc.package_type === packageFilter);
+            }
+            
+            return filtered;
+        }
+
+        function applyFilters() {
+            loadPendingIncomes();
+        }
+
+        function clearFilters() {
+            document.getElementById('dateFilter').value = '30';
+            document.getElementById('incomeTypeFilter').value = '';
+            document.getElementById('packageFilter').value = '';
+            document.getElementById('userIdFilter').value = '';
+            loadPendingIncomes();
+        }
+
+        function refreshData() {
+            incomeTable.clearSelections();
+            loadPendingIncomes();
+        }
+
+        function updateSelectionUI(selectedIds) {
+            const count = selectedIds.size;
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('statSelected').textContent = count;
+            document.getElementById('verifyBtn').disabled = count === 0;
+        }
+
+        function updateStatistics() {
+            const totalIncomes = allIncomes.length;
+            const uniqueUsers = new Set(allIncomes.map(inc => inc.user_id)).size;
+            const totalAmount = allIncomes.reduce((sum, inc) => sum + parseFloat(inc.net_amount || 0), 0);
+            
+            document.getElementById('statTotalIncomes').textContent = totalIncomes;
+            document.getElementById('statTotalUsers').textContent = uniqueUsers;
+            document.getElementById('statTotalAmount').textContent = '₹' + totalAmount.toFixed(2);
+        }
+
+        function bulkVerify() {
+            // Get selected IDs from the grouped table component
+            const selectedIds = incomeTable ? incomeTable.getSelectedIds() : [];
+            
+            if (selectedIds.length === 0) {
+                alert('Please select at least one income to verify');
+                return;
+            }
+
+            const totalAmount = allIncomes
+                .filter(inc => selectedIds.includes(inc.id))
+                .reduce((sum, inc) => sum + parseFloat(inc.net_amount || 0), 0);
+
+            const confirmation = confirm(
+                `Are you sure you want to verify ${selectedIds.length} income(s)?\n\n` +
+                `Total Amount: ₹${totalAmount.toFixed(2)}\n\n` +
+                `This will:\n` +
+                `✅ Mark incomes as "Admin Verified"\n` +
+                `✅ Move to Super Admin approval queue\n\n` +
+                `Continue?`
+            );
+
+            if (!confirmation) return;
+
+            const verifyBtn = document.getElementById('verifyBtn');
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            $.ajax({
+                url: `${API_BASE}/income-verification/admin/verify`,
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                contentType: 'application/json',
+                data: JSON.stringify({ pending_income_ids: selectedIds }),
+                success: function(response) {
+                    console.log('✅ Incomes verified successfully:', response);
+                    alert(`✅ Success!\n\n${selectedIds.length} income(s) verified successfully!\n\nThey are now awaiting Super Admin approval.`);
+                    
+                    // Clear selections and reload
+                    if (incomeTable) {
+                        incomeTable.clearSelections();
+                    }
+                    loadPendingIncomes();
+                },
+                error: function(xhr) {
+                    console.error('❌ Error verifying incomes:', xhr);
+                    alert('Error: ' + (xhr.responseJSON?.detail || 'Failed to verify incomes'));
+                    
+                    // Reset button state
+                    verifyBtn.disabled = false;
+                    const currentCount = selectedIds.length;
+                    verifyBtn.innerHTML = `<i class="fas fa-check-circle"></i> Verify Selected (<span id="selectedCount">${currentCount}</span>)`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

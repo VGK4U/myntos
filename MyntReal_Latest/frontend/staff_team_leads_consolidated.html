@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Leads - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        
+        .main-content { margin-left: 280px; padding-top: 0; min-height: 100vh; transition: margin-left 0.3s ease; padding-top: 88px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+
+        .header-logo { height: 36px; width: auto; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #ede9fe; color: #7c3aed; }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .stat-card.indigo { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; }
+        .stat-card.green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+        .stat-card.purple { background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%); color: white; }
+        .stat-card.pink { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+        .stat-card.blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+        .stat-card h3 { font-size: 2rem; font-weight: bold; margin-bottom: 4px; }
+        .stat-card h6 { font-size: 0.875rem; margin: 0; opacity: 0.9; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-body { padding: 24px; }
+        
+        .filter-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: flex-end; }
+        .filter-row label { font-weight: 500; font-size: 14px; color: #374151; }
+        .filter-row .form-select, .filter-row .form-control { border-radius: 8px; font-size: 14px; }
+        
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; display: inline-block; }
+        .status-new { background: #dbeafe; color: #1e40af; }
+        .status-contacted { background: #e0f2fe; color: #0369a1; }
+        .status-qualified { background: #cffafe; color: #0e7490; }
+        .status-interested { background: #d1fae5; color: #047857; }
+        .status-proposal { background: #fef3c7; color: #92400e; }
+        .status-negotiation { background: #fce7f3; color: #9d174d; }
+        .status-won { background: #d1fae5; color: #065f46; }
+        .status-lost { background: #fee2e2; color: #991b1b; }
+        
+        .priority-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .priority-low { background: #f3f4f6; color: #6b7280; }
+        .priority-medium { background: #dbeafe; color: #1e40af; }
+        .priority-high { background: #fef3c7; color: #92400e; }
+        .priority-urgent { background: #fee2e2; color: #dc2626; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .lead-name { font-weight: 600; color: #1f2937; }
+        .lead-contact { font-size: 12px; color: #6b7280; }
+        
+        .handler-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #ede9fe; color: #7c3aed; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; color: #6366f1; }
+        
+        .btn-primary { background: #6366f1; border: none; }
+        .btn-primary:hover { background: #4f46e5; }
+        
+        .access-denied { text-align: center; padding: 80px 20px; }
+        .access-denied i { font-size: 64px; color: #ef4444; margin-bottom: 20px; }
+        .access-denied h3 { color: #1f2937; margin-bottom: 8px; }
+        .access-denied p { color: #6b7280; }
+        
+        .action-btn { padding: 4px 8px; font-size: 12px; border-radius: 6px; }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div id="accessDenied" class="access-denied" style="display: none;">
+                <i class="fas fa-lock"></i>
+                <h3>Access Restricted</h3>
+                <p>This page is only available to team leaders with direct reports.</p>
+                <a href="/staff/dashboard" class="btn btn-primary mt-3">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+            
+            <div id="mainContent" style="display: none;">
+                <div class="page-banner">
+                    <h1><i class="fas fa-users"></i> Team Leads</h1>
+                    <p>View and manage leads assigned to team members in your team</p>
+                </div>
+                
+                <div class="stats-row">
+                    <div class="stat-card indigo">
+                        <div class="mb-2"><i class="fas fa-users fa-2x opacity-75"></i></div>
+                        <h3 id="totalTeamLeads">0</h3>
+                        <h6>Total Team Leads</h6>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="mb-2"><i class="fas fa-star fa-2x opacity-75"></i></div>
+                        <h3 id="newLeadsCount">0</h3>
+                        <h6>New Leads</h6>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="mb-2"><i class="fas fa-comments fa-2x opacity-75"></i></div>
+                        <h3 id="contactedLeadsCount">0</h3>
+                        <h6>Contacted</h6>
+                    </div>
+                    <div class="stat-card pink">
+                        <div class="mb-2"><i class="fas fa-handshake fa-2x opacity-75"></i></div>
+                        <h3 id="negotiationLeadsCount">0</h3>
+                        <h6>In Negotiation</h6>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="mb-2"><i class="fas fa-trophy fa-2x opacity-75"></i></div>
+                        <h3 id="wonLeadsCount">0</h3>
+                        <h6>Won Deals</h6>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filters</h5>
+                        <div class="filter-row">
+                            <div>
+                                <label class="form-label mb-1">Team Member</label>
+                                <select class="form-select" id="filterTeamMember" onchange="loadLeads()">
+                                    <option value="">All Team Members</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label mb-1">Status</label>
+                                <select class="form-select" id="filterStatus" onchange="loadLeads()">
+                                    <option value="">All Status</option>
+                                    <option value="new">New</option>
+                                    <option value="contacted">Contacted</option>
+                                    <option value="interested">Interested</option>
+                                    <option value="qualified">Qualified</option>
+                                    <option value="proposal">Proposal</option>
+                                    <option value="negotiation">Negotiation</option>
+                                    <option value="won">Won</option>
+                                    <option value="lost">Lost</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label mb-1">Priority</label>
+                                <select class="form-select" id="filterPriority" onchange="loadLeads()">
+                                    <option value="">All Priority</option>
+                                    <option value="urgent">Urgent</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label mb-1">Search</label>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Name, phone, pincode..." onkeyup="debounceSearch()">
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-primary" onclick="loadLeads()">
+                                    <i class="fas fa-filter me-1"></i>Filter
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="resetFilters()">
+                                    <i class="fas fa-undo me-1"></i>Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="leadsTableContainer">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Lead</th>
+                                            <th>Contact</th>
+                                            <th>Category</th>
+                                            <th>Status</th>
+                                            <th>Priority</th>
+                                            <th>Handler</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="leadsTableBody">
+                                        <tr>
+                                            <td colspan="7" class="text-center py-5">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <p class="mt-3 text-muted">Loading team leads...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="emptyState" class="empty-state" style="display: none;">
+                            <i class="fas fa-inbox"></i>
+                            <h5>No Team Leads Found</h5>
+                            <p>No leads match your current filters or you have no team members with leads.</p>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white border-top" id="paginationContainer" style="display: none;">
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0 justify-content-center" id="paginationList"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script>
+        let currentUser = null;
+        let hierarchyLevel = 0;
+        let teamMembers = [];
+        let currentPage = 1;
+        let searchTimeout = null;
+        let useFullDownline = false;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            await StaffSidebar.init();
+            StaffHeader.inject('Team Leads', 'fas fa-users');
+            await checkAccessAndLoadData();
+        });
+        
+        async function checkAccessAndLoadData() {
+            try {
+                const userData = await staffFetchJson('/api/v1/staff/auth/me');
+                if (!userData || !userData.employee) {
+                    showAccessDenied();
+                    return;
+                }
+                
+                currentUser = userData.employee;
+                hierarchyLevel = currentUser.hierarchy_level || 0;
+                useFullDownline = hierarchyLevel >= 100;
+                
+                // Check if VGK4U Supreme (full access bypass)
+                const staffType = (currentUser.staff_type || '').toUpperCase();
+                const isVGK4U = staffType.includes('VGK4U') || staffType.includes('SUPREME');
+                
+                updateUserHeader(currentUser);
+                
+                const optionsData = await staffFetchJson('/api/v1/crm/assignment-options');
+                if (!optionsData.success || !optionsData.data.is_leader) {
+                    showAccessDenied();
+                    return;
+                }
+                
+                teamMembers = optionsData.data.team_members || [];
+                
+                // VGK4U Supreme can access even with no team members
+                if (teamMembers.length === 0 && !isVGK4U) {
+                    showAccessDenied();
+                    return;
+                }
+                
+                document.getElementById('accessDenied').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+                
+                populateTeamMemberFilter();
+                await loadLeads();
+                
+            } catch (error) {
+                console.error('DC: Failed to check access:', error);
+                showAccessDenied();
+            }
+        }
+        
+        function showAccessDenied() {
+            document.getElementById('accessDenied').style.display = 'block';
+            document.getElementById('mainContent').style.display = 'none';
+        }
+        
+        function updateUserHeader(user) {
+            if (user) {
+                const name = user.full_name || user.name || 'User';
+                const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                document.getElementById('headerUserInitials').textContent = initials.toUpperCase();
+                document.getElementById('headerUserName').textContent = name;
+                document.getElementById('headerUserRole').textContent = user.role_name || user.designation || '-';
+                document.getElementById('headerUserEmpId').textContent = user.employee_id || '';
+            }
+        }
+        
+        function populateTeamMemberFilter() {
+            const select = document.getElementById('filterTeamMember');
+            select.innerHTML = '<option value="">All Team Members</option>';
+            teamMembers.forEach(member => {
+                select.innerHTML += `<option value="${member.employee_id}">${member.name} (${member.employee_id})</option>`;
+            });
+        }
+        
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => loadLeads(), 300);
+        }
+        
+        function resetFilters() {
+            document.getElementById('filterTeamMember').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterPriority').value = '';
+            document.getElementById('searchInput').value = '';
+            loadLeads();
+        }
+        
+        async function loadLeads(page = 1) {
+            currentPage = page;
+            
+            const status = document.getElementById('filterStatus').value;
+            const priority = document.getElementById('filterPriority').value;
+            const search = document.getElementById('searchInput').value;
+            const teamMember = document.getElementById('filterTeamMember').value;
+            
+            let endpoint = `/api/v1/crm/unified-my-leads?segment=team&page=${page}&per_page=20`;
+            
+            if (status) endpoint += `&status=${status}`;
+            if (priority) endpoint += `&priority=${priority}`;
+            if (search) endpoint += `&search=${encodeURIComponent(search)}`;
+            
+            try {
+                const data = await staffFetchJson(endpoint);
+                
+                if (data.success) {
+                    let leads = data.data || [];
+                    
+                    if (teamMember) {
+                        leads = leads.filter(l => l.handler_id === teamMember);
+                    }
+                    
+                    updateStats(leads, data.data || []);
+                    renderLeadsTable(leads);
+                    renderPagination(data.pagination);
+                } else {
+                    console.error('DC: Failed to load leads:', data.message);
+                    renderLeadsTable([]);
+                }
+            } catch (error) {
+                console.error('DC: Error loading leads:', error);
+                renderLeadsTable([]);
+            }
+        }
+        
+        function updateStats(filteredLeads, allLeads) {
+            document.getElementById('totalTeamLeads').textContent = allLeads.length;
+            document.getElementById('newLeadsCount').textContent = allLeads.filter(l => l.status === 'new').length;
+            document.getElementById('contactedLeadsCount').textContent = allLeads.filter(l => l.status === 'contacted').length;
+            document.getElementById('negotiationLeadsCount').textContent = allLeads.filter(l => l.status === 'negotiation').length;
+            document.getElementById('wonLeadsCount').textContent = allLeads.filter(l => l.status === 'won').length;
+        }
+        
+        function renderLeadsTable(leads) {
+            const tbody = document.getElementById('leadsTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const tableContainer = document.getElementById('leadsTableContainer');
+            
+            if (leads.length === 0) {
+                tableContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            tableContainer.style.display = 'block';
+            emptyState.style.display = 'none';
+            
+            tbody.innerHTML = leads.map(lead => `
+                <tr>
+                    <td>
+                        <div class="lead-name">${escapeHtml(lead.name)}</div>
+                        <div class="lead-contact text-muted small">
+                            ${lead.company_name || ''}
+                        </div>
+                    </td>
+                    <td>
+                        <div>${lead.phone || '-'}</div>
+                        <div class="lead-contact">${lead.email || ''}</div>
+                    </td>
+                    <td>${escapeHtml(lead.category_name || '-')}</td>
+                    <td><span class="status-badge status-${lead.status}">${formatStatus(lead.status)}</span></td>
+                    <td><span class="priority-badge priority-${lead.priority}">${lead.priority || 'medium'}</span></td>
+                    <td>
+                        <span class="handler-badge">
+                            <i class="fas fa-user"></i>
+                            ${escapeHtml(lead.handler_name || lead.handler_id || '-')}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary action-btn" onclick="viewLead(${lead.id})" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function renderPagination(pagination) {
+            const container = document.getElementById('paginationContainer');
+            const list = document.getElementById('paginationList');
+            
+            if (!pagination || pagination.pages <= 1) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            let html = '';
+            
+            html += `<li class="page-item ${pagination.page === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadLeads(${pagination.page - 1}); return false;">Prev</a>
+            </li>`;
+            
+            const startPage = Math.max(1, pagination.page - 2);
+            const endPage = Math.min(pagination.pages, startPage + 4);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<li class="page-item ${i === pagination.page ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="loadLeads(${i}); return false;">${i}</a>
+                </li>`;
+            }
+            
+            html += `<li class="page-item ${pagination.page === pagination.pages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadLeads(${pagination.page + 1}); return false;">Next</a>
+            </li>`;
+            
+            list.innerHTML = html;
+        }
+        
+        function viewLead(leadId) {
+            window.location.href = `/rvz/crm/leads?lead=${leadId}`;
+        }
+        
+        function formatStatus(status) {
+            if (!status) return '-';
+            return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

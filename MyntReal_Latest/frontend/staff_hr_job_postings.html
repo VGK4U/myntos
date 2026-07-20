@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Job Postings — HR</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; background: #f4f6fb; color: #111827; }
+.main-content { margin-left: 260px; transition: margin-left .3s; }
+.content-area { padding: 24px; max-width: 1300px; }
+@media(max-width:768px) { .main-content { margin-left: 0; } }
+
+/* Page header */
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.page-header h1 { font-size:20px; font-weight:800; color:#111827; display:flex; align-items:center; gap:8px; }
+.page-header p { font-size:13px; color:#6b7280; margin-top:3px; }
+
+/* Stats */
+.stats-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:12px; margin-bottom:20px; }
+.stat-card { background:#fff; border-radius:12px; padding:14px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); }
+.sc-val { font-size:22px; font-weight:800; color:#2563eb; }
+.sc-label { font-size:11px; color:#6b7280; margin-top:2px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+.sc-active .sc-val { color:#059669; }
+.sc-paused .sc-val { color:#d97706; }
+.sc-draft .sc-val  { color:#7c3aed; }
+
+/* Filters bar */
+.filters-bar { background:#fff; border-radius:12px; padding:14px 16px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.07); display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.filters-bar select, .filters-bar input { padding:7px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; background:#fff; color:#374151; outline:none; }
+.filters-bar select:focus, .filters-bar input:focus { border-color:#2563eb; }
+.btn-primary { background:#2563eb; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
+.btn-primary:hover { background:#1d4ed8; }
+.btn-outline { background:transparent; border:1.5px solid #e5e7eb; color:#374151; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+.btn-outline:hover { border-color:#2563eb; color:#2563eb; }
+.btn-sm { padding:5px 10px; font-size:12px; border-radius:6px; font-weight:600; cursor:pointer; border:none; }
+.btn-edit    { background:#eff6ff; color:#2563eb; }
+.btn-pause   { background:#fffbeb; color:#d97706; }
+.btn-resume  { background:#f0fdf4; color:#059669; }
+.btn-deact   { background:#fef2f2; color:#dc2626; }
+.btn-view    { background:#f5f3ff; color:#7c3aed; }
+
+/* Table */
+.table-card { background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.07); overflow:hidden; }
+.table-card-header { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0f0f0; }
+.table-card-header h3 { font-size:14px; font-weight:700; color:#111827; }
+table { width:100%; border-collapse:collapse; }
+th { padding:10px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#6b7280; background:#f9fafb; text-align:left; border-bottom:1px solid #f0f0f0; white-space:nowrap; cursor:pointer; }
+th:hover { color:#2563eb; }
+td { padding:11px 14px; font-size:13px; border-bottom:1px solid #f9fafb; vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:#f9fafb; }
+.actions-cell { display:flex; gap:6px; flex-wrap:wrap; }
+
+/* Status badges */
+.badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+.badge-active  { background:#d1fae5; color:#065f46; }
+.badge-draft   { background:#ede9fe; color:#5b21b6; }
+.badge-paused  { background:#fef3c7; color:#92400e; }
+.badge-deactivated { background:#fee2e2; color:#991b1b; }
+
+/* Modal */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1000; align-items:center; justify-content:center; padding:16px; }
+.modal-overlay.open { display:flex; }
+.modal { background:#fff; border-radius:16px; width:100%; max-width:780px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+.modal-header { padding:18px 22px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:#fff; z-index:1; }
+.modal-header h2 { font-size:16px; font-weight:800; color:#111827; }
+.modal-close { background:none; border:none; font-size:20px; color:#9ca3af; cursor:pointer; }
+.modal-body { padding:22px; }
+.modal-footer { padding:16px 22px; border-top:1px solid #f0f0f0; display:flex; justify-content:flex-end; gap:10px; }
+
+/* Form */
+.form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.form-grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+@media(max-width:600px) { .form-grid-2,.form-grid-3 { grid-template-columns:1fr; } }
+.form-group label { display:block; font-size:12px; font-weight:700; color:#374151; margin-bottom:5px; text-transform:uppercase; letter-spacing:.4px; }
+.form-group input, .form-group select, .form-group textarea {
+  width:100%; padding:9px 11px; border:1.5px solid #e5e7eb; border-radius:8px;
+  font-size:13px; color:#111827; outline:none; font-family:inherit; transition:border .2s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:#2563eb; }
+.form-group textarea { resize:vertical; min-height:80px; }
+.hint { font-size:11px; color:#9ca3af; margin-top:3px; }
+.form-section-title { font-size:12px; font-weight:700; color:#6b7280; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #f0f0f0; }
+
+/* Skills tags */
+.skills-input-row { display:flex; gap:8px; margin-bottom:8px; }
+.skills-tags { display:flex; flex-wrap:wrap; gap:6px; }
+.skill-tag { background:#eff6ff; color:#2563eb; border-radius:20px; padding:3px 10px; font-size:12px; font-weight:600; display:flex; align-items:center; gap:5px; }
+.skill-tag button { background:none; border:none; color:#2563eb; cursor:pointer; font-size:12px; }
+
+/* Salary section */
+.salary-section { background:#f9fafb; border-radius:10px; padding:14px; margin-bottom:16px; }
+.salary-toggle { display:flex; align-items:center; gap:8px; margin-bottom:10px; font-size:13px; font-weight:600; color:#374151; cursor:pointer; }
+.salary-toggle input[type=checkbox] { width:16px; height:16px; accent-color:#2563eb; }
+
+/* Pagination */
+.pagination { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid #f0f0f0; }
+.pagination-info { font-size:12px; color:#6b7280; }
+.pagination-btns { display:flex; gap:6px; }
+.pg-btn { padding:5px 12px; border-radius:6px; border:1.5px solid #e5e7eb; background:#fff; font-size:12px; font-weight:600; cursor:pointer; }
+.pg-btn:hover { border-color:#2563eb; color:#2563eb; }
+.pg-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+.pg-btn:disabled { opacity:.4; cursor:default; }
+
+/* Alert */
+.alert { padding:10px 14px; border-radius:8px; font-size:13px; font-weight:600; margin-bottom:12px; display:none; }
+.alert-success { background:#d1fae5; color:#065f46; }
+.alert-danger  { background:#fee2e2; color:#991b1b; }
+.empty-state { text-align:center; padding:40px; color:#9ca3af; }
+.empty-state i { font-size:36px; margin-bottom:10px; opacity:.4; }
+.spinner { display:inline-block; width:18px; height:18px; border:2.5px solid #e5e7eb; border-top-color:#2563eb; border-radius:50%; animation:spin .6s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div class="content-area">
+
+  <div class="page-header">
+    <div>
+      <h1><i class="fas fa-briefcase" style="color:#2563eb;"></i> Job Postings</h1>
+      <p>Create and manage all open positions — control visibility, status and applicant flow</p>
+    </div>
+    <button class="btn-primary" onclick="openCreateModal()">
+      <i class="fas fa-plus"></i> New Job Posting
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="sc-val" id="statTotal">—</div><div class="sc-label">Total</div></div>
+    <div class="stat-card sc-active"><div class="sc-val" id="statActive">—</div><div class="sc-label">Active</div></div>
+    <div class="stat-card sc-paused"><div class="sc-val" id="statPaused">—</div><div class="sc-label">Paused</div></div>
+    <div class="stat-card sc-draft"><div class="sc-val" id="statDraft">—</div><div class="sc-label">Draft</div></div>
+    <div class="stat-card"><div class="sc-val" id="statApps">—</div><div class="sc-label">Total Applications</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar">
+    <select id="fStatus" onchange="loadJobs(1)">
+      <option value="">All Statuses</option>
+      <option>ACTIVE</option><option>PAUSED</option><option>DRAFT</option><option>DEACTIVATED</option>
+    </select>
+    <select id="fDept" onchange="loadJobs(1)">
+      <option value="">All Departments</option>
+      <option>Sales</option><option>Technology</option><option>Operations</option>
+      <option>HR</option><option>Finance</option><option>Marketing</option><option>Customer Support</option>
+    </select>
+    <select id="fType" onchange="loadJobs(1)">
+      <option value="">All Types</option>
+      <option>Full-Time</option><option>Part-Time</option><option>Contract</option><option>Internship</option>
+    </select>
+    <select id="fSort" onchange="loadJobs(1)">
+      <option value="created_at|desc">Newest First</option>
+      <option value="created_at|asc">Oldest First</option>
+      <option value="title|asc">Title A–Z</option>
+      <option value="status|asc">Status</option>
+    </select>
+    <button class="btn-outline" onclick="loadJobs(1)"><i class="fas fa-sync-alt"></i> Refresh</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <h3 id="tableTitle">All Job Postings</h3>
+      <span id="tableSpinner"></span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('title')">Title <i class="fas fa-sort fa-xs"></i></th>
+            <th>Department</th>
+            <th>Type</th>
+            <th>Experience</th>
+            <th onclick="sortBy('status')">Status <i class="fas fa-sort fa-xs"></i></th>
+            <th>Applied</th>
+            <th>Posted</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="jobsBody">
+          <tr><td colspan="8" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <div class="pagination-info" id="pgInfo"></div>
+      <div class="pagination-btns" id="pgBtns"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ── CREATE / EDIT MODAL ── -->
+<div class="modal-overlay" id="jobModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle"><i class="fas fa-briefcase me-2"></i> New Job Posting</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-success" id="mSuccess"></div>
+      <div class="alert alert-danger"  id="mError"></div>
+
+      <input type="hidden" id="editJobId">
+
+      <div class="form-section-title">Basic Information</div>
+      <div class="form-grid-2" style="margin-bottom:16px;">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Job Title *</label>
+          <input type="text" id="fTitle" placeholder="e.g. Senior Sales Executive">
+        </div>
+      </div>
+      <div class="form-grid-3">
+        <div class="form-group">
+          <label>Department *</label>
+          <select id="fDept2">
+            <option value="">— Select —</option>
+            <option>Sales</option><option>Technology</option><option>Operations</option>
+            <option>HR</option><option>Finance</option><option>Marketing</option><option>Customer Support</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Job Type *</label>
+          <select id="fJobType">
+            <option>Full-Time</option><option>Part-Time</option><option>Contract</option><option>Internship</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <input type="text" id="fLocation" placeholder="e.g. Hyderabad / Remote">
+        </div>
+      </div>
+
+      <div class="form-grid-3">
+        <div class="form-group">
+          <label>Min Experience (yrs)</label>
+          <input type="number" id="fExpMin" min="0" max="50" value="0">
+        </div>
+        <div class="form-group">
+          <label>Max Experience (yrs)</label>
+          <input type="number" id="fExpMax" min="0" max="50" value="5">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="fJobStatus">
+            <option value="ACTIVE">Active (Accepting Applications)</option>
+            <option value="DRAFT">Draft (Not Published)</option>
+            <option value="PAUSED">Paused</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-section-title" style="margin-top:8px;">Job Details</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Job Description</label>
+        <textarea id="fDesc" placeholder="Describe the role, responsibilities and day-to-day work..." rows="4"></textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Requirements</label>
+        <textarea id="fReq" placeholder="List qualifications, skills and experience required..." rows="3"></textarea>
+      </div>
+
+      <div class="form-group" style="margin-bottom:16px;">
+        <label>Skills / Keywords</label>
+        <div class="skills-input-row">
+          <input type="text" id="skillInput" placeholder="Type skill and press Add or Enter" style="flex:1;">
+          <button class="btn-primary" type="button" onclick="addSkill()"><i class="fas fa-plus"></i> Add</button>
+        </div>
+        <div class="skills-tags" id="skillTags"></div>
+      </div>
+
+      <div class="salary-section">
+        <div class="form-section-title" style="margin-bottom:10px;">Salary</div>
+        <label class="salary-toggle">
+          <input type="checkbox" id="fSalVis"> Show salary publicly on the careers page
+        </label>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label>Min Salary (₹)</label>
+            <input type="number" id="fSalMin" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Max Salary (₹)</label>
+            <input type="number" id="fSalMax" min="0" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label>Period</label>
+            <select id="fSalPeriod">
+              <option value="MONTHLY">Monthly</option>
+              <option value="ANNUAL">Annual</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" id="saveBtn" onclick="saveJob()"><i class="fas fa-save"></i> Save Job Posting</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api/v1/staff/hr';
+let _page = 1, _total = 0, _sortBy = 'created_at', _sortDir = 'desc';
+let _skills = [];
+
+async function init() {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('Job Postings — HR', 'fas fa-briefcase'); StaffHeader.init(); }
+    if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+    await loadStats();
+    await loadJobs(1);
+}
+
+async function loadStats() {
+    try {
+        const r = await staffFetch(`${API}/jobs?page_size=1`);
+        if (!r.ok) return;
+        const d = await r.json();
+        document.getElementById('statTotal').textContent = d.total ?? '—';
+        const rA = await staffFetch(`${API}/jobs?status=ACTIVE&page_size=1`);
+        const dA = rA.ok ? await rA.json() : {};
+        document.getElementById('statActive').textContent = dA.total ?? '—';
+        const rP = await staffFetch(`${API}/jobs?status=PAUSED&page_size=1`);
+        const dP = rP.ok ? await rP.json() : {};
+        document.getElementById('statPaused').textContent = dP.total ?? '—';
+        const rD = await staffFetch(`${API}/jobs?status=DRAFT&page_size=1`);
+        const dD = rD.ok ? await rD.json() : {};
+        document.getElementById('statDraft').textContent = dD.total ?? '—';
+        const rApps = await staffFetch('/api/v1/staff/hr/applications?page_size=1');
+        const dApps = rApps.ok ? await rApps.json() : {};
+        document.getElementById('statApps').textContent = dApps.total ?? '—';
+    } catch(e) {}
+}
+
+function sortBy(col) {
+    if (_sortBy === col) _sortDir = _sortDir === 'desc' ? 'asc' : 'desc';
+    else { _sortBy = col; _sortDir = 'asc'; }
+    loadJobs(_page);
+}
+
+async function loadJobs(page) {
+    _page = page;
+    const spinner = document.getElementById('tableSpinner');
+    spinner.innerHTML = '<span class="spinner"></span>';
+    const [sb, sd] = document.getElementById('fSort').value.split('|');
+    const status = document.getElementById('fStatus').value;
+    const dept   = document.getElementById('fDept').value;
+    const type   = document.getElementById('fType').value;
+    let url = `${API}/jobs?page=${page}&page_size=20&sort_by=${sb||_sortBy}&sort_dir=${sd||_sortDir}`;
+    if (status) url += `&status=${encodeURIComponent(status)}`;
+    if (dept)   url += `&department=${encodeURIComponent(dept)}`;
+    if (type)   url += `&job_type=${encodeURIComponent(type)}`;
+    try {
+        const r = await staffFetch(url);
+        if (!r.ok) { spinner.innerHTML = ''; showBodyError('Failed to load jobs'); return; }
+        const d = await r.json();
+        _total = d.total || 0;
+        renderJobs(d.jobs || []);
+        renderPagination(page, d.total || 0, 20);
+    } catch(e) { showBodyError('Network error'); }
+    spinner.innerHTML = '';
+}
+
+function renderJobs(jobs) {
+    const tbody = document.getElementById('jobsBody');
+    if (!jobs.length) {
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="fas fa-briefcase"></i><br>No job postings found</div></td></tr>`;
+        return;
+    }
+    tbody.innerHTML = jobs.map(j => {
+        const badge = {ACTIVE:'badge-active',DRAFT:'badge-draft',PAUSED:'badge-paused',DEACTIVATED:'badge-deactivated'}[j.status] || '';
+        const exp = j.exp_min === j.exp_max ? `${j.exp_min}yr` : `${j.exp_min}–${j.exp_max}yr`;
+        const postedDate = j.created_at ? new Date(j.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+        const pauseBtn = j.status === 'ACTIVE'
+            ? `<button class="btn-sm btn-pause" onclick="changeStatus(${j.id},'PAUSED')"><i class="fas fa-pause"></i> Pause</button>`
+            : j.status === 'PAUSED'
+            ? `<button class="btn-sm btn-resume" onclick="changeStatus(${j.id},'ACTIVE')"><i class="fas fa-play"></i> Resume</button>`
+            : '';
+        const deactBtn = j.status !== 'DEACTIVATED'
+            ? `<button class="btn-sm btn-deact" onclick="changeStatus(${j.id},'DEACTIVATED')"><i class="fas fa-ban"></i></button>`
+            : `<button class="btn-sm btn-resume" onclick="changeStatus(${j.id},'ACTIVE')"><i class="fas fa-check"></i> Activate</button>`;
+        return `<tr>
+            <td><strong>${escHtml(j.title)}</strong></td>
+            <td>${escHtml(j.department)}</td>
+            <td>${escHtml(j.job_type)}</td>
+            <td>${exp}</td>
+            <td><span class="badge ${badge}">${j.status}</span></td>
+            <td><strong>${j.display_applicants || 0}</strong></td>
+            <td style="font-size:12px;color:#6b7280;">${postedDate}</td>
+            <td>
+              <div class="actions-cell">
+                <button class="btn-sm btn-edit" onclick="openEditModal(${j.id})"><i class="fas fa-edit"></i> Edit</button>
+                ${pauseBtn}
+                ${deactBtn}
+                <a href="/staff/hr/candidates?job_id=${j.id}" class="btn-sm btn-view" style="text-decoration:none;"><i class="fas fa-users"></i> Candidates</a>
+              </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function renderPagination(page, total, size) {
+    const pages = Math.ceil(total / size) || 1;
+    const from = (page-1)*size+1, to = Math.min(page*size, total);
+    document.getElementById('pgInfo').textContent = total ? `Showing ${from}–${to} of ${total}` : 'No results';
+    const btns = document.getElementById('pgBtns');
+    let html = `<button class="pg-btn" onclick="loadJobs(${page-1})" ${page<=1?'disabled':''}>‹</button>`;
+    for (let p = Math.max(1,page-2); p <= Math.min(pages,page+2); p++)
+        html += `<button class="pg-btn${p===page?' active':''}" onclick="loadJobs(${p})">${p}</button>`;
+    html += `<button class="pg-btn" onclick="loadJobs(${page+1})" ${page>=pages?'disabled':''}>›</button>`;
+    btns.innerHTML = html;
+}
+
+function showBodyError(msg) {
+    document.getElementById('jobsBody').innerHTML = `<tr><td colspan="8"><div class="empty-state" style="color:#dc2626;">${msg}</div></td></tr>`;
+}
+
+// ─── Create / Edit Modal ───────────────────────────────────────
+function openCreateModal() {
+    document.getElementById('editJobId').value = '';
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus-circle" style="color:#2563eb;"></i> New Job Posting';
+    document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save"></i> Create Job Posting';
+    resetForm();
+    showModal();
+}
+
+async function openEditModal(id) {
+    try {
+        const r = await staffFetch(`${API}/jobs/${id}`);
+        if (!r.ok) { alert('Failed to load job details'); return; }
+        const j = await r.json();
+        document.getElementById('editJobId').value = id;
+        document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit" style="color:#2563eb;"></i> Edit Job Posting';
+        document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save"></i> Save Changes';
+        document.getElementById('fTitle').value     = j.title || '';
+        document.getElementById('fDept2').value     = j.department || '';
+        document.getElementById('fJobType').value   = j.job_type || 'Full-Time';
+        document.getElementById('fLocation').value  = j.location || '';
+        document.getElementById('fExpMin').value    = j.exp_min ?? 0;
+        document.getElementById('fExpMax').value    = j.exp_max ?? 0;
+        document.getElementById('fJobStatus').value = j.status || 'ACTIVE';
+        document.getElementById('fDesc').value      = j.description || '';
+        document.getElementById('fReq').value       = j.requirements || '';
+        document.getElementById('fSalMin').value    = j.salary_min || '';
+        document.getElementById('fSalMax').value    = j.salary_max || '';
+        document.getElementById('fSalPeriod').value = j.salary_period || 'MONTHLY';
+        document.getElementById('fSalVis').checked  = !!j.salary_visible;
+        _skills = Array.isArray(j.skills) ? [...j.skills] : [];
+        renderSkills();
+        showModal();
+    } catch(e) { alert('Error loading job'); }
+}
+
+function resetForm() {
+    ['fTitle','fLocation','fDesc','fReq','fSalMin','fSalMax'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('fDept2').value     = '';
+    document.getElementById('fJobType').value   = 'Full-Time';
+    document.getElementById('fExpMin').value    = '0';
+    document.getElementById('fExpMax').value    = '5';
+    document.getElementById('fJobStatus').value = 'ACTIVE';
+    document.getElementById('fSalPeriod').value = 'MONTHLY';
+    document.getElementById('fSalVis').checked  = false;
+    _skills = [];
+    renderSkills();
+    hideAlert();
+}
+
+function showModal()  { document.getElementById('jobModal').classList.add('open'); }
+function closeModal() { document.getElementById('jobModal').classList.remove('open'); }
+
+function addSkill() {
+    const inp = document.getElementById('skillInput');
+    const val = (inp.value || '').trim();
+    if (val && !_skills.includes(val)) { _skills.push(val); renderSkills(); }
+    inp.value = '';
+    inp.focus();
+}
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('skillInput').addEventListener('keydown', e => { if(e.key==='Enter'){e.preventDefault();addSkill();} });
+});
+
+function removeSkill(s) { _skills = _skills.filter(x=>x!==s); renderSkills(); }
+function renderSkills() {
+    document.getElementById('skillTags').innerHTML = _skills.map(s =>
+        `<span class="skill-tag">${escHtml(s)}<button onclick="removeSkill('${escHtml(s)}')">&times;</button></span>`
+    ).join('');
+}
+
+function hideAlert() {
+    document.getElementById('mSuccess').style.display='none';
+    document.getElementById('mError').style.display='none';
+}
+function showSuccess(msg) {
+    const el = document.getElementById('mSuccess');
+    el.textContent = msg; el.style.display = 'block';
+    document.getElementById('mError').style.display = 'none';
+    setTimeout(()=>el.style.display='none', 4000);
+}
+function showError(msg) {
+    const el = document.getElementById('mError');
+    el.textContent = msg; el.style.display = 'block';
+    document.getElementById('mSuccess').style.display = 'none';
+}
+
+async function saveJob() {
+    const id = document.getElementById('editJobId').value;
+    const title  = document.getElementById('fTitle').value.trim();
+    const dept   = document.getElementById('fDept2').value;
+    const jtype  = document.getElementById('fJobType').value;
+    if (!title) { showError('Job title is required'); return; }
+    if (!dept)  { showError('Department is required'); return; }
+
+    const fd = new FormData();
+    fd.append('title',          title);
+    fd.append('department',     dept);
+    fd.append('job_type',       jtype);
+    fd.append('location',       document.getElementById('fLocation').value);
+    fd.append('exp_min',        document.getElementById('fExpMin').value);
+    fd.append('exp_max',        document.getElementById('fExpMax').value);
+    fd.append('status',         document.getElementById('fJobStatus').value);
+    fd.append('description',    document.getElementById('fDesc').value);
+    fd.append('requirements',   document.getElementById('fReq').value);
+    fd.append('skills',         JSON.stringify(_skills));
+    fd.append('salary_min',     document.getElementById('fSalMin').value || '');
+    fd.append('salary_max',     document.getElementById('fSalMax').value || '');
+    fd.append('salary_period',  document.getElementById('fSalPeriod').value);
+    fd.append('salary_visible', document.getElementById('fSalVis').checked ? 'true' : 'false');
+
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving...';
+
+    try {
+        const method = id ? 'PATCH' : 'POST';
+        const url    = id ? `${API}/jobs/${id}` : `${API}/jobs`;
+        const r = await staffFetch(url, { method, body: fd });
+        const data = await r.json();
+        if (!r.ok) { showError(data.detail || 'Save failed'); return; }
+        showSuccess(id ? 'Job updated successfully!' : 'Job created successfully!');
+        setTimeout(()=>{ closeModal(); loadStats(); loadJobs(_page); }, 1200);
+    } catch(e) { showError('Network error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fas fa-save"></i> Save Job Posting'; }
+}
+
+async function changeStatus(id, status) {
+    const labels = { PAUSED:'Pausing', ACTIVE:'Activating', DEACTIVATED:'Deactivating' };
+    if (!confirm(`${labels[status]||'Updating'} this job posting. Continue?`)) return;
+    const fd = new FormData(); fd.append('status', status);
+    try {
+        const r = await staffFetch(`${API}/jobs/${id}/status`, { method:'PATCH', body:fd });
+        const d = await r.json();
+        if (!r.ok) { alert(d.detail || 'Update failed'); return; }
+        loadJobs(_page); loadStats();
+    } catch(e) { alert('Network error'); }
+}
+
+function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js?v=1769200000"></script>
+</body>
+</html>

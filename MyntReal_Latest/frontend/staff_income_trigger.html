@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP Staff Portal - Income Trigger</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f3f4f6; 
+            min-height: 100vh;
+        }
+        .content-area { padding: 24px; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .card-header i { color: #6366f1; font-size: 18px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; font-size: 16px; }
+        .card-body { padding: 20px; }
+        .page-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+        .page-subtitle {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .form-label { font-weight: 600; color: #374151; font-size: 14px; }
+        .form-control { border-radius: 8px; border: 1px solid #d1d5db; }
+        .form-control:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .btn-preview {
+            background: #6366f1;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-weight: 600;
+        }
+        .btn-preview:hover { background: #4f46e5; color: white; }
+        .btn-execute {
+            background: #059669;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-weight: 600;
+        }
+        .btn-execute:hover { background: #047857; color: white; }
+        .btn-execute:disabled { background: #9ca3af; cursor: not-allowed; }
+        .preview-table th, .status-table th, .excl-table th, .log-table th {
+            background: #f9fafb;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .preview-table td, .status-table td, .excl-table td, .log-table td {
+            font-size: 13px;
+            color: #4b5563;
+            vertical-align: middle;
+        }
+        .badge-needs { background: #fef3c7; color: #92400e; font-size: 11px; }
+        .badge-done { background: #d1fae5; color: #065f46; font-size: 11px; }
+        .badge-zero { background: #fee2e2; color: #991b1b; font-size: 11px; }
+        .summary-stat {
+            text-align: center;
+            padding: 16px;
+            border-radius: 8px;
+            background: #f9fafb;
+        }
+        .summary-stat .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .summary-stat .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-warning .stat-value { color: #d97706; }
+        .stat-success .stat-value { color: #059669; }
+        .stat-info .stat-value { color: #6366f1; }
+        .stat-danger .stat-value { color: #dc2626; }
+        .alert-info-custom {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #1e40af;
+            font-size: 13px;
+        }
+        .spinner-border-sm { width: 1rem; height: 1rem; }
+        .confirmation-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .confirmation-box {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 520px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .confirmation-box h4 { font-weight: 700; color: #1f2937; margin-bottom: 16px; }
+        .confirm-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 14px;
+        }
+        .confirm-detail .label { color: #6b7280; }
+        .confirm-detail .value { font-weight: 600; color: #1f2937; }
+        .nav-tabs .nav-link {
+            color: #6b7280;
+            font-weight: 600;
+            font-size: 14px;
+            border: none;
+            padding: 12px 20px;
+        }
+        .nav-tabs .nav-link.active {
+            color: #6366f1;
+            border-bottom: 3px solid #6366f1;
+            background: transparent;
+        }
+        .nav-tabs .nav-link:hover:not(.active) {
+            color: #374151;
+            border-bottom: 3px solid #e5e7eb;
+        }
+        .tab-content { padding-top: 20px; }
+        .excl-rule-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .excl-rule-card .rule-title { font-weight: 700; font-size: 15px; color: #1f2937; }
+        .excl-rule-card .rule-desc { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        .excl-rule-card .rule-count { font-size: 24px; font-weight: 700; color: #dc2626; }
+        .log-status-success { color: #059669; font-weight: 600; }
+        .log-status-error { color: #dc2626; font-weight: 600; }
+        .log-status-unknown { color: #9ca3af; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="page-title">Income Management</div>
+        <div class="page-subtitle">Trigger income calculations, view exclusions, run diagnostics, and monitor scheduler activity.</div>
+
+        <ul class="nav nav-tabs" id="incomeTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="trigger-tab" data-bs-toggle="tab" data-bs-target="#triggerPane" type="button" role="tab">
+                    <i class="fas fa-bolt me-1"></i> Income Trigger
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="exclusions-tab" data-bs-toggle="tab" data-bs-target="#exclusionsPane" type="button" role="tab" onclick="loadExclusions()">
+                    <i class="fas fa-ban me-1"></i> Exclusions
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="diagnostics-tab" data-bs-toggle="tab" data-bs-target="#diagnosticsPane" type="button" role="tab">
+                    <i class="fas fa-stethoscope me-1"></i> Diagnostics
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logsPane" type="button" role="tab" onclick="loadSchedulerLogs()">
+                    <i class="fas fa-clipboard-list me-1"></i> Scheduler Logs
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="vedtracker-tab" data-bs-toggle="tab" data-bs-target="#vedTrackerPane" type="button" role="tab">
+                    <i class="fas fa-project-diagram me-1"></i> Ved Tracker
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="incomeTabContent">
+            <!-- TAB 1: INCOME TRIGGER -->
+            <div class="tab-pane fade show active" id="triggerPane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-calendar-alt"></i>
+                        <h5>Date Range Selection</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="startDate">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="endDate">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-preview w-100" id="btnPreview" onclick="runPreview()">
+                                    <i class="fas fa-search me-2"></i>Preview Impact
+                                </button>
+                            </div>
+                        </div>
+                        <div class="alert-info-custom mt-3">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            <strong>Duplicate Protection Active:</strong> Existing income records are automatically skipped via check_duplicate_income(). The midnight scheduler will also skip any dates already processed.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="previewSection" style="display:none;">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-3">
+                            <div class="summary-stat stat-info">
+                                <div class="stat-value" id="statTotalDates">0</div>
+                                <div class="stat-label">Total Dates</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-stat stat-warning">
+                                <div class="stat-value" id="statImpactedDates">0</div>
+                                <div class="stat-label">Needs Processing</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-stat stat-success">
+                                <div class="stat-value" id="statActivatedUsers">0</div>
+                                <div class="stat-label">Activated Users</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-stat">
+                                <div class="stat-value" id="statExistingRecords">0</div>
+                                <div class="stat-label">Existing Records</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-table"></i>
+                            <h5>Date-wise Impact Preview</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover preview-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Group Perf.</th>
+                                            <th>Direct Ref.</th>
+                                            <th>Ved Income</th>
+                                            <th>Guru Dakshina</th>
+                                            <th>Total Existing</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="previewTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end mt-3">
+                        <button class="btn btn-execute" id="btnExecute" onclick="showConfirmation()">
+                            <i class="fas fa-play me-2"></i>Process Income Calculations
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <i class="fas fa-history"></i>
+                        <h5>Recent Processing Status</h5>
+                        <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="loadStatus()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover status-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Matching</th>
+                                        <th>Direct Ref.</th>
+                                        <th>Ved Income</th>
+                                        <th>Guru D.</th>
+                                        <th>Total Records</th>
+                                        <th>Total Gross</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="statusTableBody">
+                                    <tr><td colspan="7" class="text-center py-4 text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: EXCLUSIONS -->
+            <div class="tab-pane fade" id="exclusionsPane" role="tabpanel">
+                <div id="exclusionsLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Loading exclusion data...</p>
+                </div>
+                <div id="exclusionsContent" style="display:none;">
+                    <div class="alert-info-custom mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Exclusion Rules:</strong> Users listed below are excluded from ALL pair calculations (Matching Referral) and cannot generate Direct Referral, Ved Income, or Guru Dakshina for their sponsors/Ved heads. Only Platinum and Diamond packages are eligible for income generation.
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <div class="summary-stat stat-info">
+                                <div class="stat-value" id="exclTotalActive">0</div>
+                                <div class="stat-label">Total Active Users</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-stat stat-success">
+                                <div class="stat-value" id="exclEligible">0</div>
+                                <div class="stat-label">Eligible for Income</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-stat stat-danger">
+                                <div class="stat-value" id="exclTotal">0</div>
+                                <div class="stat-label">Total Excluded</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="summary-stat stat-warning">
+                                <div class="stat-value" id="exclPercentage">0%</div>
+                                <div class="stat-label">Exclusion Rate</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="exclusionRules" class="mb-4"></div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-users-slash"></i>
+                            <h5>Excluded Users</h5>
+                            <span class="badge bg-secondary ms-auto" id="exclUserCount">0</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                                <table class="table table-hover excl-table mb-0">
+                                    <thead style="position: sticky; top: 0; z-index: 1;">
+                                        <tr>
+                                            <th>User ID</th>
+                                            <th>Name</th>
+                                            <th>Package</th>
+                                            <th>Points</th>
+                                            <th>Status</th>
+                                            <th>Exclusion Reason</th>
+                                            <th>Sponsor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="exclusionTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: DIAGNOSTICS -->
+            <div class="tab-pane fade" id="diagnosticsPane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-stethoscope"></i>
+                        <h5>Matching Referral Diagnostics</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3" style="font-size:13px;">Check why a specific user has or doesn't have matching income. Leave User ID blank to see all users with available pairs.</p>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="diagnoseUserId" placeholder="User ID (blank = all with pairs)">
+                            </div>
+                            <div class="col-md-4">
+                                <input type="date" class="form-control" id="diagnoseDate">
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-preview w-100" onclick="runDiagnostics()">
+                                    <i class="fas fa-search-plus me-1"></i> Run Diagnostics
+                                </button>
+                            </div>
+                        </div>
+                        <div id="diagnosticResults" style="display:none;">
+                            <div id="diagnosticSummary" class="mb-2"></div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0" style="font-size:12px;">
+                                    <thead>
+                                        <tr>
+                                            <th>User ID</th>
+                                            <th>Pkg Pts</th>
+                                            <th>Left Total</th>
+                                            <th>Right Total</th>
+                                            <th>Left Consumed</th>
+                                            <th>Right Consumed</th>
+                                            <th>Avail Pairs</th>
+                                            <th>1st Match?</th>
+                                            <th>Dup?</th>
+                                            <th>Eligible?</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="diagnosticTableBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: SCHEDULER LOGS -->
+            <div class="tab-pane fade" id="logsPane" role="tabpanel">
+                <div id="logsLoading" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Loading scheduler logs...</p>
+                </div>
+                <div id="logsContent" style="display:none;">
+                    <div class="alert-info-custom mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Scheduler Runs:</strong> Shows history of midnight scheduler executions with status for each income type. Green = completed successfully, Red = errors occurred, Grey = not tracked.
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-clipboard-list"></i>
+                            <h5>Scheduler Run History</h5>
+                            <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="loadSchedulerLogs()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover log-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Run Date</th>
+                                            <th>Job</th>
+                                            <th>Started</th>
+                                            <th>Duration</th>
+                                            <th>Status</th>
+                                            <th>Matching</th>
+                                            <th>Direct Ref.</th>
+                                            <th>Ved Income</th>
+                                            <th>Guru D.</th>
+                                            <th>Total Created</th>
+                                            <th>Errors</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="logsTableBody">
+                                        <tr><td colspan="11" class="text-center py-4 text-muted">Loading...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: VED TRACKER -->
+            <div class="tab-pane fade" id="vedTrackerPane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-search"></i>
+                        <h5>Ved Connection Lookup</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-end g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" style="color:#9ca3af;">Enter MNR ID</label>
+                                <input type="text" class="form-control" id="vedTrackerId" placeholder="e.g. MNR1800143" style="background:#1e293b;border:1px solid #374151;color:#f1f5f9;">
+                            </div>
+                            <div class="col-md-3">
+                                <button class="btn btn-execute w-100" onclick="loadVedTracker()">
+                                    <i class="fas fa-search me-2"></i>Track Ved
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="vedTrackerLoading" class="text-center py-5" style="display:none;">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Loading Ved connections...</p>
+                </div>
+
+                <div id="vedTrackerResults" style="display:none;">
+                    <!-- User Summary -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <i class="fas fa-user"></i>
+                            <h5 id="vedUserTitle">User Info</h5>
+                        </div>
+                        <div class="card-body" id="vedUserSummary"></div>
+                    </div>
+
+                    <!-- Eligibility -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <i class="fas fa-check-circle"></i>
+                            <h5>Ved Income Eligibility</h5>
+                        </div>
+                        <div class="card-body" id="vedEligibility"></div>
+                    </div>
+
+                    <!-- Member Of (which Ved teams this user belongs to) -->
+                    <div class="card mt-3" id="vedMemberOfCard" style="display:none;">
+                        <div class="card-header">
+                            <i class="fas fa-sitemap"></i>
+                            <h5>Member of Ved Teams (Income goes to these owners)</h5>
+                        </div>
+                        <div class="card-body" id="vedMemberOfBody"></div>
+                    </div>
+
+                    <!-- Facilitation Chain Upward -->
+                    <div class="card mt-3" id="vedChainCard" style="display:none;">
+                        <div class="card-header">
+                            <i class="fas fa-arrow-up"></i>
+                            <h5>Facilitation Chain (Upward to Root)</h5>
+                        </div>
+                        <div class="card-body p-0" id="vedChainBody"></div>
+                    </div>
+
+                    <!-- Direct Facilitations -->
+                    <div class="card mt-3">
+                        <div class="card-header">
+                            <i class="fas fa-users"></i>
+                            <h5>Direct Facilitations</h5>
+                        </div>
+                        <div class="card-body p-0" id="vedDirectRefs"></div>
+                    </div>
+
+                    <!-- Ved Heads Owned -->
+                    <div class="card mt-3" id="vedHeadsCard" style="display:none;">
+                        <div class="card-header">
+                            <i class="fas fa-crown"></i>
+                            <h5>Ved Heads Owned (3rd+ Facilitations)</h5>
+                        </div>
+                        <div class="card-body" id="vedHeadsBody"></div>
+                    </div>
+
+                    <!-- Ved Income History -->
+                    <div class="card mt-3" id="vedHistoryCard" style="display:none;">
+                        <div class="card-header">
+                            <i class="fas fa-rupee-sign"></i>
+                            <h5>Ved Income History</h5>
+                        </div>
+                        <div class="card-body p-0" id="vedHistoryBody"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div id="confirmationModal" class="confirmation-overlay" style="display:none;">
+        <div class="confirmation-box">
+            <h4><i class="fas fa-exclamation-triangle text-warning me-2"></i>Confirm Income Processing</h4>
+            <p style="color:#6b7280; font-size:14px;">Please review the details below before confirming. This action will create income records for the selected date range.</p>
+            <div id="confirmDetails"></div>
+            <div class="alert-info-custom mt-3">
+                <i class="fas fa-info-circle me-2"></i>
+                Duplicate records are automatically prevented. The midnight scheduler will skip any dates already processed here.
+            </div>
+            <div class="d-flex gap-3 mt-4">
+                <button class="btn btn-outline-secondary flex-fill" onclick="hideConfirmation()">Cancel</button>
+                <button class="btn btn-execute flex-fill" id="btnConfirmExecute" onclick="executeIncomeTrigger()">
+                    <i class="fas fa-check me-2"></i>Confirm & Process
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="processingModal" class="confirmation-overlay" style="display:none;">
+        <div class="confirmation-box text-center">
+            <div class="spinner-border text-primary mb-3" role="status" style="width:3rem;height:3rem;">
+                <span class="visually-hidden">Processing...</span>
+            </div>
+            <h4>Processing Income Calculations</h4>
+            <p style="color:#6b7280;">This is running in the background. You can close this dialog and check status below.</p>
+            <button class="btn btn-outline-secondary mt-2" onclick="hideProcessing()">Close & Monitor Status</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let previewData = null;
+        let exclusionsLoaded = false;
+        let logsLoaded = false;
+
+        function getToday() {
+            const d = new Date();
+            return d.toISOString().split('T')[0];
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('MNR — Income Management', 'fas fa-bolt');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+
+            const today = getToday();
+            document.getElementById('endDate').value = today;
+            document.getElementById('endDate').max = today;
+            document.getElementById('startDate').max = today;
+            document.getElementById('diagnoseDate').value = today;
+            loadStatus();
+        });
+
+        // ==================== TAB 1: INCOME TRIGGER ====================
+        async function runPreview() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            if (startDate > endDate) {
+                alert('Start date must be before or equal to end date');
+                return;
+            }
+
+            const btn = document.getElementById('btnPreview');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
+
+            try {
+                const response = await staffFetch(`/api/v1/rvz/scheduler/trigger/income-preview?start_date=${startDate}&end_date=${endDate}`);
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Preview failed');
+                }
+                previewData = await response.json();
+                renderPreview(previewData);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-search me-2"></i>Preview Impact';
+            }
+        }
+
+        function renderPreview(data) {
+            document.getElementById('previewSection').style.display = 'block';
+            document.getElementById('statTotalDates').textContent = data.total_dates;
+            document.getElementById('statImpactedDates').textContent = data.impacted_dates;
+            document.getElementById('statActivatedUsers').textContent = data.total_activated_users;
+
+            let totalExisting = 0;
+            const tbody = document.getElementById('previewTableBody');
+            tbody.innerHTML = '';
+
+            data.dates.forEach(d => {
+                const matching = d.existing_records['Matching Referral'] || 0;
+                const direct = d.existing_records['Direct Referral'] || 0;
+                const ved = d.existing_records['Ved Income'] || 0;
+                const guru = d.existing_records['Guru Dakshina'] || 0;
+                totalExisting += d.total_existing;
+
+                let statusBadge;
+                if (d.scheduler_had_errors) {
+                    statusBadge = '<span class="badge badge-needs">Errors - Retry</span>';
+                } else if (d.needs_processing) {
+                    statusBadge = '<span class="badge badge-zero">No Records</span>';
+                } else if (d.scheduler_ran && d.total_existing === 0) {
+                    statusBadge = '<span class="badge badge-done">Processed (No Income)</span>';
+                } else if (d.total_existing > 0) {
+                    statusBadge = '<span class="badge badge-done">Complete</span>';
+                } else {
+                    statusBadge = '<span class="badge badge-needs">Pending</span>';
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${d.date}</strong></td>
+                        <td>${matching > 0 ? matching : '<span class="text-danger">0</span>'}</td>
+                        <td>${direct > 0 ? direct : '<span class="text-muted">0</span>'}</td>
+                        <td>${ved > 0 ? ved : '<span class="text-muted">0</span>'}</td>
+                        <td>${guru > 0 ? guru : '<span class="text-muted">0</span>'}</td>
+                        <td>${d.total_existing}</td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('statExistingRecords').textContent = totalExisting;
+        }
+
+        function showConfirmation() {
+            if (!previewData) return;
+            const details = document.getElementById('confirmDetails');
+            details.innerHTML = `
+                <div class="confirm-detail"><span class="label">Date Range</span><span class="value">${previewData.start_date} to ${previewData.end_date}</span></div>
+                <div class="confirm-detail"><span class="label">Total Dates</span><span class="value">${previewData.total_dates}</span></div>
+                <div class="confirm-detail"><span class="label">Dates Needing Processing</span><span class="value" style="color:#d97706;">${previewData.impacted_dates}</span></div>
+                <div class="confirm-detail"><span class="label">Activated Users</span><span class="value">${previewData.total_activated_users}</span></div>
+                <div class="confirm-detail"><span class="label">Income Types</span><span class="value">${previewData.income_types.join(', ')}</span></div>
+                <div class="confirm-detail"><span class="label">Duplicate Protection</span><span class="value" style="color:#059669;">Active</span></div>
+            `;
+            document.getElementById('confirmationModal').style.display = 'flex';
+        }
+
+        function hideConfirmation() {
+            document.getElementById('confirmationModal').style.display = 'none';
+        }
+
+        function hideProcessing() {
+            document.getElementById('processingModal').style.display = 'none';
+            loadStatus();
+        }
+
+        async function executeIncomeTrigger() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            const btn = document.getElementById('btnConfirmExecute');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Triggering...';
+
+            try {
+                const response = await staffFetch(`/api/v1/rvz/scheduler/trigger/income-execute?start_date=${startDate}&end_date=${endDate}`, {
+                    method: 'POST'
+                });
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Execution failed');
+                }
+                const result = await response.json();
+                hideConfirmation();
+                document.getElementById('processingModal').style.display = 'flex';
+                setTimeout(() => loadStatus(), 5000);
+            } catch (e) {
+                alert('Error: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check me-2"></i>Confirm & Process';
+            }
+        }
+
+        async function loadStatus() {
+            try {
+                const response = await staffFetch(`/api/v1/rvz/scheduler/trigger/income-status`);
+                if (!response.ok) return;
+                const data = await response.json();
+                renderStatus(data);
+            } catch (e) {
+                console.error('Status load error:', e);
+            }
+        }
+
+        function renderStatus(data) {
+            const tbody = document.getElementById('statusTableBody');
+            if (!data.income_by_date || data.income_by_date.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No income records found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            data.income_by_date.forEach(row => {
+                const matching = row.types['Matching Referral'] ? row.types['Matching Referral'].count : 0;
+                const direct = row.types['Direct Referral'] ? row.types['Direct Referral'].count : 0;
+                const ved = row.types['Ved Income'] ? row.types['Ved Income'].count : 0;
+                const guru = row.types['Guru Dakshina'] ? row.types['Guru Dakshina'].count : 0;
+                const gross = row.total_gross ? '\u20B9' + row.total_gross.toLocaleString('en-IN', {minimumFractionDigits: 2}) : '\u20B90.00';
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${row.date}</strong></td>
+                        <td>${matching > 0 ? matching : '<span class="text-danger">0</span>'}</td>
+                        <td>${direct > 0 ? direct : '<span class="text-muted">0</span>'}</td>
+                        <td>${ved > 0 ? ved : '<span class="text-muted">0</span>'}</td>
+                        <td>${guru > 0 ? guru : '<span class="text-muted">0</span>'}</td>
+                        <td>${row.total_records}</td>
+                        <td>${gross}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // ==================== TAB 2: EXCLUSIONS ====================
+        async function loadExclusions() {
+            if (exclusionsLoaded) return;
+            
+            try {
+                const response = await staffFetch(`/api/v1/rvz/scheduler/trigger/income-exclusions`);
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Failed to load exclusions');
+                }
+                const data = await response.json();
+                renderExclusions(data);
+                exclusionsLoaded = true;
+            } catch (e) {
+                document.getElementById('exclusionsLoading').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+            }
+        }
+
+        function renderExclusions(data) {
+            document.getElementById('exclusionsLoading').style.display = 'none';
+            document.getElementById('exclusionsContent').style.display = 'block';
+            
+            document.getElementById('exclTotalActive').textContent = data.total_active_users;
+            document.getElementById('exclEligible').textContent = data.total_eligible;
+            document.getElementById('exclTotal').textContent = data.total_excluded;
+            const pct = data.total_active_users > 0 ? ((data.total_excluded / data.total_active_users) * 100).toFixed(1) : '0';
+            document.getElementById('exclPercentage').textContent = pct + '%';
+            
+            const rulesDiv = document.getElementById('exclusionRules');
+            rulesDiv.innerHTML = '';
+            data.exclusion_rules.forEach(rule => {
+                const iconMap = {
+                    'Welcome Coupon': 'fas fa-gift',
+                    'Star (\u20B91,000)': 'fas fa-star',
+                    'Loyal (\u20B9500)': 'fas fa-heart'
+                };
+                const colorMap = {
+                    'Welcome Coupon': '#7c3aed',
+                    'Star (\u20B91,000)': '#d97706',
+                    'Loyal (\u20B9500)': '#dc2626'
+                };
+                const icon = iconMap[rule.type] || 'fas fa-ban';
+                const color = colorMap[rule.type] || '#6b7280';
+                rulesDiv.innerHTML += `
+                    <div class="excl-rule-card d-flex align-items-center gap-3">
+                        <div style="width:48px;height:48px;border-radius:12px;background:${color}15;display:flex;align-items:center;justify-content:center;">
+                            <i class="${icon}" style="color:${color};font-size:20px;"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="rule-title">${rule.type}</div>
+                            <div class="rule-desc">${rule.description}</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="rule-count" style="color:${color}">${rule.count}</div>
+                            <div style="font-size:11px;color:#6b7280;">users</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('exclUserCount').textContent = data.excluded_users.length;
+            const tbody = document.getElementById('exclusionTableBody');
+            tbody.innerHTML = '';
+            
+            if (data.excluded_users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No excluded users found</td></tr>';
+                return;
+            }
+            
+            data.excluded_users.forEach(u => {
+                const ct = u.coupon_type || '';
+                const pkgLabel = ct === '15000' ? 'Platinum' : ct === '7500' ? 'Diamond' : ct === '1000' ? 'Star' : ct === '500' ? 'Loyal' : u.is_welcome_coupon ? 'Welcome' : ct || '-';
+                const reasonClass = u.exclusion_type === 'welcome_coupon' ? 'text-primary' : 'text-danger';
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${u.user_id}</strong></td>
+                        <td>${u.name || '-'}</td>
+                        <td>${pkgLabel} ${ct ? '(\u20B9' + Number(ct).toLocaleString('en-IN') + ')' : ''}</td>
+                        <td>${u.package_points}</td>
+                        <td><span class="badge ${u.coupon_status === 'Activated' ? 'bg-success' : 'bg-secondary'}">${u.coupon_status}</span></td>
+                        <td class="${reasonClass}" style="font-weight:600;">${u.exclusion_reason}</td>
+                        <td style="font-size:11px;">${u.sponsor_id || u.referrer_id || '-'}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // ==================== TAB 3: DIAGNOSTICS ====================
+        async function runDiagnostics() {
+            const userId = document.getElementById('diagnoseUserId').value.trim();
+            const dateVal = document.getElementById('diagnoseDate').value;
+            const resultsDiv = document.getElementById('diagnosticResults');
+            const summaryDiv = document.getElementById('diagnosticSummary');
+            const tbody = document.getElementById('diagnosticTableBody');
+            
+            resultsDiv.style.display = 'block';
+            summaryDiv.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Running diagnostics...';
+            tbody.innerHTML = '';
+            
+            try {
+                let url = `/api/v1/rvz/scheduler/trigger/income-trigger/diagnose-matching?`;
+                if (userId) url += `user_id=${encodeURIComponent(userId)}&`;
+                if (dateVal) url += `business_date=${dateVal}&`;
+                
+                const response = await staffFetch(url);
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Diagnostic failed');
+                }
+                const data = await response.json();
+                
+                summaryDiv.innerHTML = `
+                    <div class="alert ${data.users_with_available_pairs > 0 ? 'alert-warning' : 'alert-info'} py-2 mb-2">
+                        <strong>Date:</strong> ${data.target_date} | 
+                        <strong>Users checked:</strong> ${data.total_users_checked} | 
+                        <strong>With available pairs:</strong> ${data.users_with_available_pairs}
+                    </div>`;
+                
+                if (data.results.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted">No users with available matching pairs found</td></tr>';
+                    return;
+                }
+                
+                data.results.forEach(r => {
+                    if (r.error) {
+                        tbody.innerHTML += `<tr class="table-danger"><td>${r.user_id}</td><td colspan="9">${r.error}</td></tr>`;
+                        return;
+                    }
+                    const pairsClass = r.available_pairs > 0 ? 'text-success fw-bold' : 'text-muted';
+                    const dupClass = r.has_duplicate_for_date ? 'text-danger' : 'text-success';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${r.user_id}</strong></td>
+                            <td>${r.package_points}</td>
+                            <td>${r.total_left}</td>
+                            <td>${r.total_right}</td>
+                            <td>${r.consumed_left}</td>
+                            <td>${r.consumed_right}</td>
+                            <td class="${pairsClass}">${r.available_pairs}</td>
+                            <td>${r.is_first_matching ? 'Yes' : 'No'} (${r.previous_matching_count})</td>
+                            <td class="${dupClass}">${r.has_duplicate_for_date ? 'YES' : 'No'}</td>
+                            <td>${r.has_direct_both_sides && r.has_first_matching_achieved ? '<span class="text-success">Yes</span>' : '<span class="text-warning">No</span>'}</td>
+                        </tr>`;
+                });
+            } catch (e) {
+                summaryDiv.innerHTML = `<div class="alert alert-danger py-2">${e.message}</div>`;
+            }
+        }
+
+        // ==================== TAB 4: SCHEDULER LOGS ====================
+        async function loadSchedulerLogs() {
+            if (logsLoaded) return;
+            
+            try {
+                const response = await staffFetch(`/api/v1/rvz/scheduler/trigger/scheduler-run-logs?limit=30`);
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Failed to load scheduler logs');
+                }
+                const data = await response.json();
+                renderSchedulerLogs(data);
+                logsLoaded = true;
+            } catch (e) {
+                document.getElementById('logsLoading').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+            }
+        }
+
+        function getStatusBadge(status) {
+            if (!status || status === 'unknown') return '<span class="badge bg-secondary">N/A</span>';
+            const s = status.toLowerCase();
+            if (s === 'completed' || s === 'success' || s === 'done') return '<span class="badge bg-success">Done</span>';
+            if (s === 'error' || s === 'failed') return '<span class="badge bg-danger">Error</span>';
+            if (s === 'skipped') return '<span class="badge bg-warning text-dark">Skipped</span>';
+            if (s === 'running' || s === 'in_progress') return '<span class="badge bg-info">Running</span>';
+            if (s === 'pending') return '<span class="badge bg-light text-dark border">Pending</span>';
+            return `<span class="badge bg-secondary">${status}</span>`;
+        }
+
+        function renderSchedulerLogs(data) {
+            document.getElementById('logsLoading').style.display = 'none';
+            document.getElementById('logsContent').style.display = 'block';
+            
+            const tbody = document.getElementById('logsTableBody');
+            
+            if (!data.logs || data.logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">No scheduler logs found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            data.logs.forEach(log => {
+                const statusClass = log.status === 'Completed' || log.status === 'completed' ? 'log-status-success' : 
+                                    log.status === 'Error' || log.status === 'error' || log.status === 'Failed' ? 'log-status-error' : 'log-status-unknown';
+                const duration = log.duration_seconds > 0 ? log.duration_seconds + 's' : '-';
+                const startTime = log.started_at ? new Date(log.started_at).toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'}) : '-';
+                const errorTrunc = log.error_message ? (log.error_message.length > 60 ? log.error_message.substring(0, 60) + '...' : log.error_message) : '-';
+                const jobShort = log.job_name ? (log.job_name.length > 25 ? log.job_name.substring(0, 25) + '...' : log.job_name) : '-';
+                const runDateShort = log.run_date ? log.run_date.split(' ')[0] : '-';
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${runDateShort}</strong></td>
+                        <td style="font-size:11px;" title="${log.job_name || ''}">${jobShort}</td>
+                        <td>${startTime}</td>
+                        <td>${duration}</td>
+                        <td class="${statusClass}">${log.status || 'N/A'}</td>
+                        <td>${getStatusBadge(log.matching_status)}</td>
+                        <td>${getStatusBadge(log.direct_referral_status)}</td>
+                        <td>${getStatusBadge(log.ved_income_status)}</td>
+                        <td>${getStatusBadge(log.guru_dakshina_status)}</td>
+                        <td><strong>${log.total_incomes_created}</strong></td>
+                        <td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;" title="${log.error_message || ''}">${errorTrunc}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // ==================== TAB 5: VED TRACKER ====================
+        async function loadVedTracker() {
+            const userId = document.getElementById('vedTrackerId').value.trim().toUpperCase();
+            if (!userId) { alert('Please enter an MNR ID'); return; }
+
+            document.getElementById('vedTrackerLoading').style.display = 'block';
+            document.getElementById('vedTrackerResults').style.display = 'none';
+
+            try {
+                const resp = await fetch(`/api/v1/rvz/scheduler/ved-tracker/${userId}`);
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    throw new Error(err.detail || 'Failed to load');
+                }
+                const d = await resp.json();
+                renderVedTracker(d);
+            } catch(e) {
+                alert('Error: ' + e.message);
+            } finally {
+                document.getElementById('vedTrackerLoading').style.display = 'none';
+            }
+        }
+
+        document.getElementById('vedTrackerId')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') loadVedTracker();
+        });
+
+        function vedBadge(val, trueText, falseText) {
+            return val 
+                ? `<span class="badge bg-success">${trueText || 'Yes'}</span>` 
+                : `<span class="badge bg-danger">${falseText || 'No'}</span>`;
+        }
+
+        function mapSide(s) {
+            if (!s) return '-';
+            if (s === 'LEFT' || s === 'left') return 'Group A';
+            if (s === 'RIGHT' || s === 'right') return 'Group B';
+            return s;
+        }
+
+        function renderVedTracker(d) {
+            document.getElementById('vedUserTitle').textContent = `${d.user_name} (${d.user_id})`;
+
+            document.getElementById('vedUserSummary').innerHTML = `
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="color:#9ca3af;font-size:11px;">Package Points</div>
+                            <div style="font-size:20px;font-weight:700;color:#f1f5f9;">${d.package_points}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="color:#9ca3af;font-size:11px;">Status</div>
+                            <div style="font-size:14px;font-weight:600;color:#f1f5f9;">${d.coupon_status || 'N/A'}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="color:#9ca3af;font-size:11px;">Is Ved Head?</div>
+                            <div>${vedBadge(d.is_ved_head)}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
+                            <div style="color:#9ca3af;font-size:11px;">Ved Paused?</div>
+                            <div>${vedBadge(!d.ved_paused, 'Active', 'Paused')}</div>
+                        </div>
+                    </div>
+                </div>
+                ${d.is_ved_head ? `<div class="alert-info-custom mt-3"><i class="fas fa-info-circle me-2"></i>This user IS a Ved Head. Ved Owner: <strong>${d.ved_owner_id || 'N/A'}</strong> (${d.ved_owner_name || 'N/A'})</div>` : ''}
+            `;
+
+            const el = d.eligibility;
+            document.getElementById('vedEligibility').innerHTML = `
+                <div class="row g-2">
+                    <div class="col-md-4"><div style="background:#1e293b;border-radius:8px;padding:10px;display:flex;align-items:center;gap:10px;">${vedBadge(el.is_activated)} <span style="color:#d1d5db;font-size:13px;">Activated (pts >= 0.5)</span></div></div>
+                    <div class="col-md-4"><div style="background:#1e293b;border-radius:8px;padding:10px;display:flex;align-items:center;gap:10px;">${vedBadge(el.has_direct_both_sides)} <span style="color:#d1d5db;font-size:13px;">Both Teams A & B Activated?</span></div></div>
+                    <div class="col-md-4"><div style="background:#1e293b;border-radius:8px;padding:10px;display:flex;align-items:center;gap:10px;">${vedBadge(el.has_first_matching)} <span style="color:#d1d5db;font-size:13px;">1st Group Req. Completed?</span></div></div>
+                    <div class="col-md-4"><div style="background:#1e293b;border-radius:8px;padding:10px;display:flex;align-items:center;gap:10px;">${vedBadge(el.has_ved_head)} <span style="color:#d1d5db;font-size:13px;">Has Ved Head (3rd+ Facilitation)</span></div></div>
+                    <div class="col-md-4"><div style="background:#1e293b;border-radius:8px;padding:10px;display:flex;align-items:center;gap:10px;">${vedBadge(el.any_ved_head_activated)} <span style="color:#d1d5db;font-size:13px;">Ved Head Activated</span></div></div>
+                    <div class="col-md-4"><div style="background:${el.fully_eligible ? '#064e3b' : '#7f1d1d'};border-radius:8px;padding:10px;display:flex;align-items:center;gap:10px;"><i class="fas ${el.fully_eligible ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'}"></i> <span style="color:#f1f5f9;font-size:13px;font-weight:600;">${el.fully_eligible ? 'FULLY ELIGIBLE' : 'NOT ELIGIBLE'}</span></div></div>
+                </div>
+            `;
+
+            if (d.member_of_ved_teams && d.member_of_ved_teams.length > 0) {
+                document.getElementById('vedMemberOfCard').style.display = 'block';
+                let moHtml = '';
+                d.member_of_ved_teams.forEach((m, idx) => {
+                    moHtml += `
+                    <div style="padding:15px;${idx > 0 ? 'border-top:2px solid #374151;' : ''}">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <div style="background:#1e293b;border-radius:8px;padding:12px;">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                                        <span style="color:#9ca3af;font-size:11px;">Ved Owner (Earns Income)</span>
+                                        ${m.owner_activated 
+                                            ? '<span class="badge bg-success" style="font-size:9px;"><i class="fas fa-check-circle me-1"></i>Activated</span>' 
+                                            : '<span class="badge bg-danger" style="font-size:9px;"><i class="fas fa-times-circle me-1"></i>Not Activated</span>'}
+                                    </div>
+                                    <div><a href="#" onclick="document.getElementById('vedTrackerId').value='${m.ved_owner_id}';loadVedTracker();return false;" style="color:#60a5fa;font-weight:600;">${m.ved_owner_id}</a></div>
+                                    <div style="color:#f1f5f9;font-size:13px;">${m.ved_owner_name}</div>
+                                    <div style="margin-top:6px;border-top:1px solid #374151;padding-top:6px;">
+                                        ${m.owner_ved_income_created 
+                                            ? '<span class="badge bg-success" style="font-size:10px;"><i class="fas fa-rupee-sign me-1"></i>Ved Income: Yes (' + m.owner_ved_income_count + ' records)</span>' 
+                                            : '<span class="badge bg-danger" style="font-size:10px;"><i class="fas fa-rupee-sign me-1"></i>Ved Income: No</span>'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div style="background:#1e293b;border-radius:8px;padding:12px;">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                                        <span style="color:#9ca3af;font-size:11px;">Ved Head (3rd+ Facilitation)</span>
+                                        ${m.head_activated 
+                                            ? '<span class="badge bg-success" style="font-size:9px;"><i class="fas fa-check-circle me-1"></i>Activated</span>' 
+                                            : '<span class="badge bg-danger" style="font-size:9px;"><i class="fas fa-times-circle me-1"></i>Not Activated</span>'}
+                                    </div>
+                                    <div><a href="#" onclick="document.getElementById('vedTrackerId').value='${m.ved_head_id}';loadVedTracker();return false;" style="color:#60a5fa;font-weight:600;">${m.ved_head_id}</a></div>
+                                    <div style="color:#f1f5f9;font-size:13px;">${m.ved_head_name}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
+                                    <div style="color:#9ca3af;font-size:11px;">Position No.</div>
+                                    <div><span class="badge bg-info" style="font-size:14px;">P${m.level}</span></div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div style="background:#1e293b;border-radius:8px;padding:12px;text-align:center;">
+                                    <div style="color:#9ca3af;font-size:11px;">Group</div>
+                                    <div style="color:#f1f5f9;font-weight:600;">${mapSide(m.position)}</div>
+                                    <div>${vedBadge(m.is_active)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="background:#0f172a;border:1px solid #1e3a5f;border-radius:8px;padding:12px;margin-top:8px;">
+                            <div style="color:#f59e0b;font-weight:600;font-size:14px;margin-bottom:4px;">
+                                <i class="fas fa-crown me-1"></i>Ved Owner: ${m.ved_owner_name} (${m.ved_owner_id}) - Complete Ved Structure
+                            </div>
+                            <div style="color:#9ca3af;font-size:11px;margin-bottom:10px;">All direct facilitations (1st, 2nd, 3rd+) and their Ved team downlines</div>`;
+
+                    if (m.full_team && m.full_team.length > 0) {
+                        moHtml += `<div class="table-responsive">
+                            <table class="table table-hover mb-0" style="font-size:12px;">
+                                <thead><tr><th>Facilitation #</th><th>Position No.</th><th>ID</th><th>Name</th><th>Parent</th><th>Group</th><th>Points</th><th>Status</th><th>Active</th></tr></thead>
+                                <tbody>`;
+                        m.full_team.forEach(tm => {
+                            let rowStyle = '';
+                            if (tm.is_current_user) rowStyle = 'style="background:#1e3a5f;font-weight:bold;"';
+                            else if (tm.is_ved_head_row) rowStyle = 'style="background:#312e81;border-top:2px solid #6366f1;"';
+                            else if (tm.row_type === 'direct_ref') rowStyle = 'style="background:#1a2332;"';
+                            
+                            const youBadge = tm.is_current_user ? ' <span class="badge bg-primary" style="font-size:9px;">YOU</span>' : '';
+                            let roleBadge = '';
+                            if (tm.is_ved_head_row) roleBadge = ' <span class="badge bg-warning text-dark" style="font-size:9px;">VED HEAD</span>';
+                            else if (tm.row_type === 'direct_ref') roleBadge = ' <span class="badge bg-secondary" style="font-size:9px;">DIRECT</span>';
+                            else if (tm.is_ved) roleBadge = ' <span class="badge bg-info" style="font-size:9px;">NESTED VED</span>';
+                            
+                            let refNumDisplay = '';
+                            if (tm.ref_number) refNumDisplay = `<strong style="color:${tm.ref_number >= 3 ? '#f59e0b' : '#9ca3af'};">#${tm.ref_number}</strong>`;
+                            
+                            let levelDisplay = '';
+                            if (tm.row_type === 'direct_ref' || tm.row_type === 'ved_head') levelDisplay = `<span class="badge ${tm.is_ved_head_row ? 'bg-warning text-dark' : 'bg-secondary'}">${tm.is_ved_head_row ? 'HEAD' : 'Direct'}</span>`;
+                            else levelDisplay = `<span class="badge bg-info">P${tm.level}</span>`;
+                            
+                            moHtml += `<tr ${rowStyle}>
+                                <td>${refNumDisplay}</td>
+                                <td>${levelDisplay}</td>
+                                <td><a href="#" onclick="document.getElementById('vedTrackerId').value='${tm.member_id}';loadVedTracker();return false;" style="color:#60a5fa;">${tm.member_id}</a>${youBadge}</td>
+                                <td>${tm.name || '-'}${roleBadge}</td>
+                                <td>${tm.parent_id ? '<a href="#" onclick="document.getElementById(\'vedTrackerId\').value=\''+tm.parent_id+'\';loadVedTracker();return false;" style="color:#60a5fa;font-size:11px;">'+tm.parent_id+'</a>' : '-'}</td>
+                                <td>${mapSide(tm.position)}</td>
+                                <td>${tm.package_points}</td>
+                                <td>${tm.coupon_status || '-'}</td>
+                                <td>${vedBadge(tm.is_active)}</td>
+                            </tr>`;
+                        });
+                        moHtml += '</tbody></table></div>';
+                    } else {
+                        moHtml += '<div class="text-muted text-center py-2" style="font-size:12px;">No direct facilitations found for this Ved Owner</div>';
+                    }
+                    moHtml += '</div></div>';
+                });
+                document.getElementById('vedMemberOfBody').innerHTML = moHtml;
+            } else {
+                document.getElementById('vedMemberOfCard').style.display = 'none';
+            }
+
+            if (d.placement_chain_upward && d.placement_chain_upward.length > 0) {
+                document.getElementById('vedChainCard').style.display = 'block';
+                let chainHtml = '<table class="table table-hover mb-0"><thead><tr><th>Position No.</th><th>ID</th><th>Name</th><th>Points</th><th>Status</th><th>Is Ved Head</th><th>Ved Owner</th></tr></thead><tbody>';
+                d.placement_chain_upward.forEach(c => {
+                    const rowClass = c.is_ved_head ? 'style="background:#1e3a5f;"' : '';
+                    chainHtml += `<tr ${rowClass}>
+                        <td><span class="badge bg-secondary">${c.depth}</span></td>
+                        <td><a href="#" onclick="document.getElementById('vedTrackerId').value='${c.id}';loadVedTracker();return false;" style="color:#60a5fa;">${c.id}</a></td>
+                        <td>${c.name}</td>
+                        <td>${c.package_points || 0}</td>
+                        <td>${c.coupon_status || '-'}</td>
+                        <td>${c.is_ved_head ? '<span class="badge bg-warning text-dark">VED HEAD</span>' : '-'}</td>
+                        <td>${c.ved_owner_id ? `<a href="#" onclick="document.getElementById('vedTrackerId').value='${c.ved_owner_id}';loadVedTracker();return false;" style="color:#60a5fa;">${c.ved_owner_id}</a>` : '-'}</td>
+                    </tr>`;
+                });
+                chainHtml += '</tbody></table>';
+                document.getElementById('vedChainBody').innerHTML = chainHtml;
+            } else {
+                document.getElementById('vedChainCard').style.display = 'none';
+            }
+
+            let drHtml = '<table class="table table-hover mb-0"><thead><tr><th>#</th><th>ID</th><th>Name</th><th>Points</th><th>Status</th><th>Ved Head?</th></tr></thead><tbody>';
+            if (d.direct_referrals.length === 0) {
+                drHtml += '<tr><td colspan="6" class="text-center text-muted py-3">No direct facilitations</td></tr>';
+            } else {
+                d.direct_referrals.forEach(r => {
+                    const rowClass = r.is_3rd_or_later ? 'style="background:#1e3a5f;"' : '';
+                    drHtml += `<tr ${rowClass}>
+                        <td><strong>${r.referral_number}</strong>${r.is_3rd_or_later ? ' <span class="badge bg-warning text-dark" style="font-size:9px;">VED</span>' : ''}</td>
+                        <td><a href="#" onclick="document.getElementById('vedTrackerId').value='${r.id}';loadVedTracker();return false;" style="color:#60a5fa;">${r.id}</a></td>
+                        <td>${r.name}</td>
+                        <td>${r.package_points}</td>
+                        <td>${r.coupon_status || '-'}</td>
+                        <td>${r.is_ved_head ? '<span class="badge bg-warning text-dark">YES</span>' : '-'}</td>
+                    </tr>`;
+                });
+            }
+            drHtml += '</tbody></table>';
+            document.getElementById('vedDirectRefs').innerHTML = drHtml;
+
+            if (d.ved_heads_owned && d.ved_heads_owned.length > 0) {
+                document.getElementById('vedHeadsCard').style.display = 'block';
+                let vhHtml = '';
+                d.ved_heads_owned.forEach(vh => {
+                    const activatedBadge = vh.ved_head_activated 
+                        ? '<span class="badge bg-success">Activated</span>' 
+                        : '<span class="badge bg-danger">Not Activated</span>';
+                    vhHtml += `
+                        <div style="background:#1e293b;border-radius:8px;padding:15px;margin-bottom:12px;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <strong style="color:#f59e0b;font-size:15px;">Ved Head #${vh.referral_number}: ${vh.ved_head_name}</strong>
+                                    (<a href="#" onclick="document.getElementById('vedTrackerId').value='${vh.ved_head_id}';loadVedTracker();return false;" style="color:#60a5fa;">${vh.ved_head_id}</a>)
+                                    ${activatedBadge}
+                                </div>
+                                <div style="color:#9ca3af;font-size:12px;">
+                                    Team: <strong style="color:#f1f5f9;">${vh.team_total}</strong> | 
+                                    Active: <strong style="color:#10b981;">${vh.team_active}</strong> | 
+                                    Inactive: <strong style="color:#ef4444;">${vh.team_inactive}</strong>
+                                </div>
+                            </div>`;
+                    if (vh.team_members.length > 0) {
+                        vhHtml += `<div class="table-responsive"><table class="table table-hover mb-0" style="font-size:12px;">
+                            <thead><tr><th>Position No.</th><th>ID</th><th>Name</th><th>Group</th><th>Points</th><th>Activated</th></tr></thead><tbody>`;
+                        vh.team_members.forEach(tm => {
+                            vhHtml += `<tr>
+                                <td><span class="badge bg-info">P${tm.level}</span></td>
+                                <td><a href="#" onclick="document.getElementById('vedTrackerId').value='${tm.id}';loadVedTracker();return false;" style="color:#60a5fa;">${tm.id}</a></td>
+                                <td>${tm.name}${tm.is_ved_head_nested ? ' <span class="badge bg-warning text-dark" style="font-size:9px;">NESTED VED</span>' : ''}</td>
+                                <td>${mapSide(tm.side)}</td>
+                                <td>${tm.package_points}</td>
+                                <td>${tm.is_activated ? '<span class="text-success">Yes</span>' : '<span class="text-danger">No</span>'}</td>
+                            </tr>`;
+                        });
+                        vhHtml += '</tbody></table></div>';
+                    } else {
+                        vhHtml += '<div class="text-muted text-center py-2">No team members yet</div>';
+                    }
+                    vhHtml += '</div>';
+                });
+                document.getElementById('vedHeadsBody').innerHTML = vhHtml;
+            } else {
+                document.getElementById('vedHeadsCard').style.display = 'none';
+            }
+
+            if (d.ved_income_history && d.ved_income_history.length > 0) {
+                document.getElementById('vedHistoryCard').style.display = 'block';
+                let ihHtml = '<table class="table table-hover mb-0"><thead><tr><th>Date</th><th>From User</th><th>Gross</th><th>Net</th><th>Status</th></tr></thead><tbody>';
+                d.ved_income_history.forEach(h => {
+                    ihHtml += `<tr>
+                        <td>${h.business_date ? h.business_date.split(' ')[0] : '-'}</td>
+                        <td>${h.related_user_id || '-'}<br><small style="color:#9ca3af;">${h.related_user_name || ''}</small></td>
+                        <td style="color:#10b981;">₹${h.gross_amount.toLocaleString()}</td>
+                        <td>₹${h.net_amount.toLocaleString()}</td>
+                        <td><span class="badge ${h.status === 'Approved' ? 'bg-success' : h.status === 'Pending' ? 'bg-warning text-dark' : 'bg-secondary'}">${h.status}</span></td>
+                    </tr>`;
+                });
+                ihHtml += '</tbody></table>';
+                document.getElementById('vedHistoryBody').innerHTML = ihHtml;
+            } else {
+                document.getElementById('vedHistoryCard').style.display = 'none';
+            }
+
+            document.getElementById('vedTrackerResults').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

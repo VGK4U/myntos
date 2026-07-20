@@ -1,0 +1,87 @@
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <i class="fas fa-filter"></i> Filter by User ID
+    </div>
+    <div class="card-body">
+        <form id="userFilterForm" class="row g-3">
+            <div class="col-md-8">
+                <label for="userIdInput" class="form-label">Enter User ID (MNR ID)</label>
+                <input type="text" class="form-control" id="userIdInput" 
+                       placeholder="e.g., MNR182364369 or MNR1800143" 
+                       pattern="MNR[0-9]{7,9}" 
+                       title="Enter a valid MNR ID (10 or 12 digits: MNR1800143 or MNR182364369)">
+                <div class="form-text">Leave empty to view your own data</div>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" id="applyFilterBtn" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Apply Filter
+                </button>
+            </div>
+        </form>
+        <div id="filterInfo" class="mt-3" style="display: none;">
+            <div class="alert alert-info mb-0">
+                <i class="fas fa-info-circle"></i> 
+                Showing data for: <strong id="filteredUserId"></strong>
+                <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="clearUserFilter()">
+                    <i class="fas fa-times"></i> Clear Filter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/public/js/admin-id-utils.js"></script>
+<script>
+// Get user_id from URL parameter
+function getUserIdFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('user_id');
+    return userId ? normalizeAdminUserId(userId) : userId;
+}
+
+// Initialize filter on page load
+(function initializeUserFilter() {
+    const userId = getUserIdFromUrl();
+    const filterInput = document.getElementById('userIdInput');
+    const filterInfo = document.getElementById('filterInfo');
+    const filteredUserIdSpan = document.getElementById('filteredUserId');
+    
+    if (userId) {
+        filterInput.value = userId;
+        filteredUserIdSpan.textContent = userId;
+        filterInfo.style.display = 'block';
+    }
+})();
+
+// Handle filter form submission
+document.getElementById('userFilterForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const rawUserId = document.getElementById('userIdInput').value;
+    const userId = normalizeAdminUserId(rawUserId);
+    
+    if (userId) {
+        // Validate format (10 or 12 digits: MNR + 7-9 digits)
+        if (!isValidMnrId(userId)) {
+            alert('Please enter a valid MNR ID (10 or 12 digits: MNR1800143 or MNR182364369). MNR IDs will be automatically converted to MNR format.');
+            return;
+        }
+        
+        // Update URL with normalized user_id parameter
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('user_id', userId);
+        window.location.href = currentUrl.toString();
+    } else {
+        // Remove user_id parameter if empty
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.delete('user_id');
+        window.location.href = currentUrl.toString();
+    }
+});
+
+// Clear filter function
+function clearUserFilter() {
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.delete('user_id');
+    window.location.href = currentUrl.toString();
+}
+</script>

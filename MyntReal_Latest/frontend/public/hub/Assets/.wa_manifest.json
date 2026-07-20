@@ -1,0 +1,626 @@
+{
+  "Insurance 1.png": {
+    "obj_url": "/storage/hub_assets/Insurance 1.png",
+    "obj_key": "hub_assets/Insurance 1.png",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-04-22T05:21:26.413161+00:00",
+    "size_kb": 8.8
+  },
+  "ICICI 1.jpg": {
+    "obj_url": "/storage/hub_assets/ICICI 1.jpg",
+    "obj_key": "hub_assets/ICICI 1.jpg",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-04-22T06:00:29.929276+00:00",
+    "size_kb": 4.5
+  },
+  "vgk 12.webp": {
+    "obj_url": "/storage/hub_assets/vgk 12.webp",
+    "obj_key": "hub_assets/vgk 12.webp",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-04-22T05:57:31.193400+00:00",
+    "size_kb": 7.7
+  },
+  "M99.png": {
+    "obj_url": "/storage/hub_assets/M99.png",
+    "obj_key": "hub_assets/M99.png",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-04-22T06:09:52.826694+00:00",
+    "size_kb": 18.0
+  },
+  "Star.png": {
+    "obj_url": "/storage/hub_assets/Star.png",
+    "obj_key": "hub_assets/Star.png",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-04-22T06:24:37.965725+00:00",
+    "size_kb": 14.9
+  },
+  "TATA.jpg": {
+    "obj_url": "/storage/hub_assets/TATA.jpg",
+    "obj_key": "hub_assets/TATA.jpg",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-04-22T06:26:41.137849+00:00",
+    "size_kb": 7.2
+  },
+  "ManthraEV-logo.png": {
+    "obj_url": "/storage/hub_assets/ManthraEV-logo.png",
+    "obj_key": "hub_assets/ManthraEV-logo.png",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-04-22T13:31:44.203658+00:00",
+    "size_kb": 42.5
+  },
+  "ManthraEV_logo.png": {
+    "obj_url": "/storage/hub_assets/ManthraEV_logo.png",
+    "obj_key": "hub_assets/ManthraEV_logo.png",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-04-22T13:31:08.659563+00:00",
+    "size_kb": 42.5
+  },
+  "Solar1.png": {
+    "obj_url": "/storage/hub_assets/Solar1.png",
+    "obj_key": "hub_assets/Solar1.png",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-04-22T13:33:40.779695+00:00",
+    "size_kb": 37.1
+  },
+  "hero-bg.webp": {
+    "obj_url": "/storage/hub_assets/hero-bg.webp",
+    "obj_key": "hub_assets/hero-bg.webp",
+    "preset": "hero-bg",
+    "slot": "hub-hero-bg",
+    "uploaded_at": "2026-04-22T14:48:15.877888+00:00",
+    "size_kb": 88.3
+  },
+  "4-Photoroom.png": {
+    "obj_key": "hub_assets/4-Photoroom.png",
+    "obj_url": "/storage/hub_assets/4-Photoroom.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:07Z",
+    "size_kb": 1201.8
+  },
+  "5-Photoroom.png": {
+    "obj_url": "/storage/hub_assets/5-Photoroom.png",
+    "obj_key": "hub_assets/5-Photoroom.png",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-05-27T13:58:40.134746+00:00",
+    "size_kb": 13.7
+  },
+  "6-Photoroom.png": {
+    "obj_url": "/storage/hub_assets/6-Photoroom.png",
+    "obj_key": "hub_assets/6-Photoroom.png",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-05-27T13:44:39.902721+00:00",
+    "size_kb": 13.1
+  },
+  "Bajaj 1.png": {
+    "obj_key": "hub_assets/Bajaj 1.png",
+    "obj_url": "/storage/hub_assets/Bajaj 1.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:08Z",
+    "size_kb": 5.1
+  },
+  "Bajaj.webp": {
+    "obj_key": "hub_assets/Bajaj.webp",
+    "obj_url": "/storage/hub_assets/Bajaj.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:09Z",
+    "size_kb": 13.9
+  },
+  "Batterry 1.png": {
+    "obj_key": "hub_assets/Batterry 1.png",
+    "obj_url": "/storage/hub_assets/Batterry 1.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:09Z",
+    "size_kb": 1932.2
+  },
+  "Battery.png": {
+    "obj_key": "hub_assets/Battery.png",
+    "obj_url": "/storage/hub_assets/Battery.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:10Z",
+    "size_kb": 2643.6
+  },
+  "Care.png": {
+    "obj_key": "hub_assets/Care.png",
+    "obj_url": "/storage/hub_assets/Care.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:11Z",
+    "size_kb": 54.9
+  },
+  "Enterprenuer.jpg": {
+    "obj_key": "hub_assets/Enterprenuer.jpg",
+    "obj_url": "/storage/hub_assets/Enterprenuer.jpg",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:11Z",
+    "size_kb": 50.6
+  },
+  "Estate.png": {
+    "obj_key": "hub_assets/Estate.png",
+    "obj_url": "/storage/hub_assets/Estate.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:11Z",
+    "size_kb": 7.4
+  },
+  "ETC.png": {
+    "obj_key": "hub_assets/ETC.png",
+    "obj_url": "/storage/hub_assets/ETC.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:11Z",
+    "size_kb": 111.3
+  },
+  "ETC1.png": {
+    "obj_key": "hub_assets/ETC1.png",
+    "obj_url": "/storage/hub_assets/ETC1.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:12Z",
+    "size_kb": 2174.8
+  },
+  "EV tech.png": {
+    "obj_key": "hub_assets/EV tech.png",
+    "obj_url": "/storage/hub_assets/EV tech.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:13Z",
+    "size_kb": 1601.3
+  },
+  "EV Tech1.png": {
+    "obj_key": "hub_assets/EV Tech1.png",
+    "obj_url": "/storage/hub_assets/EV Tech1.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:13Z",
+    "size_kb": 2553.9
+  },
+  "Ev.png": {
+    "obj_key": "hub_assets/Ev.png",
+    "obj_url": "/storage/hub_assets/Ev.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:14Z",
+    "size_kb": 13.7
+  },
+  "HDFC.png": {
+    "obj_key": "hub_assets/HDFC.png",
+    "obj_url": "/storage/hub_assets/HDFC.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:14Z",
+    "size_kb": 4.2
+  },
+  "hgs.png": {
+    "obj_key": "hub_assets/hgs.png",
+    "obj_url": "/storage/hub_assets/hgs.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:14Z",
+    "size_kb": 101.4
+  },
+  "ICICI.png": {
+    "obj_key": "hub_assets/ICICI.png",
+    "obj_url": "/storage/hub_assets/ICICI.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:15Z",
+    "size_kb": 85.6
+  },
+  "Solar-PM.webp": {
+    "obj_key": "hub_assets/Solar-PM.webp",
+    "obj_url": "/storage/hub_assets/Solar-PM.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:15Z",
+    "size_kb": 19.0
+  },
+  "Insurance 12.webp": {
+    "obj_key": "hub_assets/Insurance 12.webp",
+    "obj_url": "/storage/hub_assets/Insurance 12.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:16Z",
+    "size_kb": 8.6
+  },
+  "MYNT ISO.jpeg": {
+    "obj_key": "hub_assets/MYNT ISO.jpeg",
+    "obj_url": "/storage/hub_assets/MYNT ISO.jpeg",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:16Z",
+    "size_kb": 12.9
+  },
+  "Manthra.png": {
+    "obj_url": "/storage/hub_assets/Manthra.png",
+    "obj_key": "hub_assets/Manthra.png",
+    "preset": "logo-h",
+    "slot": null,
+    "uploaded_at": "2026-05-27T13:59:10.811500+00:00",
+    "size_kb": 12.5
+  },
+  "Manthra_1.png": {
+    "obj_key": "hub_assets/Manthra_1.png",
+    "obj_url": "/storage/hub_assets/Manthra_1.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:17Z",
+    "size_kb": 2354.1
+  },
+  "Manthra-D.png": {
+    "obj_key": "hub_assets/Manthra-D.png",
+    "obj_url": "/storage/hub_assets/Manthra-D.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:18Z",
+    "size_kb": 2825.3
+  },
+  "MYNTREAL ISO.jpg": {
+    "obj_key": "hub_assets/MYNTREAL ISO.jpg",
+    "obj_url": "/storage/hub_assets/MYNTREAL ISO.jpg",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:19Z",
+    "size_kb": 41.5
+  },
+  "Insurance 1.jpg": {
+    "obj_key": "hub_assets/Insurance 1.jpg",
+    "obj_url": "/storage/hub_assets/Insurance 1.jpg",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:19Z",
+    "size_kb": 16.7
+  },
+  "Star.svg": {
+    "obj_key": "hub_assets/Star.svg",
+    "obj_url": "/storage/hub_assets/Star.svg",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:19Z",
+    "size_kb": 1.6
+  },
+  "insurance-concept-protection-against-a-possible-eventuality-hand-holding-umbrella-icon-for-security-symbol-and-house-car-health-care-and-travel-icon-on-wooden-circle-for-assurance-life-concept-photo.jpg": {
+    "obj_key": "hub_assets/insurance-concept-protection-against-a-possible-eventuality-hand-holding-umbrella-icon-for-security-symbol-and-house-car-health-care-and-travel-icon-on-wooden-circle-for-assurance-life-concept-photo.jpg",
+    "obj_url": "/storage/hub_assets/insurance-concept-protection-against-a-possible-eventuality-hand-holding-umbrella-icon-for-security-symbol-and-house-car-health-care-and-travel-icon-on-wooden-circle-for-assurance-life-concept-photo.jpg",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:20Z",
+    "size_kb": 2112.1
+  },
+  "Mynt White.png": {
+    "obj_key": "hub_assets/Mynt White.png",
+    "obj_url": "/storage/hub_assets/Mynt White.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:21Z",
+    "size_kb": 60.7
+  },
+  "realdreams.png": {
+    "obj_key": "hub_assets/realdreams.png",
+    "obj_url": "/storage/hub_assets/realdreams.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:21Z",
+    "size_kb": 140.4
+  },
+  "Solar_D.jpg": {
+    "obj_key": "hub_assets/Solar_D.jpg",
+    "obj_url": "/storage/hub_assets/Solar_D.jpg",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:22Z",
+    "size_kb": 305.6
+  },
+  "Shield_D.avif": {
+    "obj_key": "hub_assets/Shield_D.avif",
+    "obj_url": "/storage/hub_assets/Shield_D.avif",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:22Z",
+    "size_kb": 5.3
+  },
+  "Insurance 2.jpg": {
+    "obj_key": "hub_assets/Insurance 2.jpg",
+    "obj_url": "/storage/hub_assets/Insurance 2.jpg",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:23Z",
+    "size_kb": 274.4
+  },
+  "Manthraev.jpg": {
+    "obj_key": "hub_assets/Manthraev.jpg",
+    "obj_url": "/storage/hub_assets/Manthraev.jpg",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:24Z",
+    "size_kb": 5446.8
+  },
+  "Solar 1.jpg": {
+    "obj_key": "hub_assets/Solar 1.jpg",
+    "obj_url": "/storage/hub_assets/Solar 1.jpg",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:24Z",
+    "size_kb": 74.6
+  },
+  "Mynt White alt.png": {
+    "obj_key": "hub_assets/Mynt White alt.png",
+    "obj_url": "/storage/hub_assets/Mynt White alt.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:25Z",
+    "size_kb": 4.3
+  },
+  "Insurance.png": {
+    "obj_key": "hub_assets/Insurance.png",
+    "obj_url": "/storage/hub_assets/Insurance.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:25Z",
+    "size_kb": 7.3
+  },
+  "Train.png": {
+    "obj_key": "hub_assets/Train.png",
+    "obj_url": "/storage/hub_assets/Train.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:26Z",
+    "size_kb": 9.7
+  },
+  "Solar.png": {
+    "obj_key": "hub_assets/Solar.png",
+    "obj_url": "/storage/hub_assets/Solar.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:26Z",
+    "size_kb": 13.1
+  },
+  "Myntreal.logo.png": {
+    "obj_key": "hub_assets/Myntreal.logo.png",
+    "obj_url": "/storage/hub_assets/Myntreal.logo.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:27Z",
+    "size_kb": 48.8
+  },
+  "Manthra_1.webp": {
+    "obj_key": "hub_assets/Manthra_1.webp",
+    "obj_url": "/storage/hub_assets/Manthra_1.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:27Z",
+    "size_kb": 111.0
+  },
+  "4-Photoroom.webp": {
+    "obj_key": "hub_assets/4-Photoroom.webp",
+    "obj_url": "/storage/hub_assets/4-Photoroom.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:27Z",
+    "size_kb": 54.1
+  },
+  "5-Photoroom.webp": {
+    "obj_key": "hub_assets/5-Photoroom.webp",
+    "obj_url": "/storage/hub_assets/5-Photoroom.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:28Z",
+    "size_kb": 61.8
+  },
+  "6-Photoroom.webp": {
+    "obj_key": "hub_assets/6-Photoroom.webp",
+    "obj_url": "/storage/hub_assets/6-Photoroom.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:28Z",
+    "size_kb": 53.5
+  },
+  "hgs-new-h.png": {
+    "obj_key": "hub_assets/hgs-new-h.png",
+    "obj_url": "/storage/hub_assets/hgs-new-h.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:29Z",
+    "size_kb": 55.4
+  },
+  "hgs-new-sq.png": {
+    "obj_key": "hub_assets/hgs-new-sq.png",
+    "obj_url": "/storage/hub_assets/hgs-new-sq.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:29Z",
+    "size_kb": 371.9
+  },
+  "hgs-logo.png": {
+    "obj_key": "hub_assets/hgs-logo.png",
+    "obj_url": "/storage/hub_assets/hgs-logo.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:30Z",
+    "size_kb": 55.6
+  },
+  "EV Tech1.webp": {
+    "obj_key": "hub_assets/EV Tech1.webp",
+    "obj_url": "/storage/hub_assets/EV Tech1.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:30Z",
+    "size_kb": 100.6
+  },
+  "ETC1.webp": {
+    "obj_key": "hub_assets/ETC1.webp",
+    "obj_url": "/storage/hub_assets/ETC1.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:30Z",
+    "size_kb": 52.0
+  },
+  "EV tech.webp": {
+    "obj_key": "hub_assets/EV tech.webp",
+    "obj_url": "/storage/hub_assets/EV tech.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:31Z",
+    "size_kb": 68.1
+  },
+  "Battery.webp": {
+    "obj_key": "hub_assets/Battery.webp",
+    "obj_url": "/storage/hub_assets/Battery.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:31Z",
+    "size_kb": 82.9
+  },
+  "Batterry1.webp": {
+    "obj_key": "hub_assets/Batterry1.webp",
+    "obj_url": "/storage/hub_assets/Batterry1.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:32Z",
+    "size_kb": 166.2
+  },
+  "Manthraev.webp": {
+    "obj_key": "hub_assets/Manthraev.webp",
+    "obj_url": "/storage/hub_assets/Manthraev.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:32Z",
+    "size_kb": 89.9
+  },
+  "Manthra-D.webp": {
+    "obj_key": "hub_assets/Manthra-D.webp",
+    "obj_url": "/storage/hub_assets/Manthra-D.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:33Z",
+    "size_kb": 155.3
+  },
+  "Manthra.webp": {
+    "obj_key": "hub_assets/Manthra.webp",
+    "obj_url": "/storage/hub_assets/Manthra.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:33Z",
+    "size_kb": 46.0
+  },
+  "realdreams.webp": {
+    "obj_key": "hub_assets/realdreams.webp",
+    "obj_url": "/storage/hub_assets/realdreams.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:33Z",
+    "size_kb": 39.2
+  },
+  "Solar_D.webp": {
+    "obj_key": "hub_assets/Solar_D.webp",
+    "obj_url": "/storage/hub_assets/Solar_D.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:34Z",
+    "size_kb": 90.6
+  },
+  "ETC.webp": {
+    "obj_key": "hub_assets/ETC.webp",
+    "obj_url": "/storage/hub_assets/ETC.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:34Z",
+    "size_kb": 40.2
+  },
+  "BajajCapital.webp": {
+    "obj_key": "hub_assets/BajajCapital.webp",
+    "obj_url": "/storage/hub_assets/BajajCapital.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:35Z",
+    "size_kb": 4.5
+  },
+  "ISO-Certificate.png": {
+    "obj_key": "hub_assets/ISO-Certificate.png",
+    "obj_url": "/storage/hub_assets/ISO-Certificate.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:35Z",
+    "size_kb": 656.1
+  },
+  "hero-bg-orig.webp": {
+    "obj_key": "hub_assets/hero-bg-orig.webp",
+    "obj_url": "/storage/hub_assets/hero-bg-orig.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:36Z",
+    "size_kb": 681.3
+  },
+  "zynova-mobility-logo.png": {
+    "obj_key": "hub_assets/zynova-mobility-logo.png",
+    "obj_url": "/storage/hub_assets/zynova-mobility-logo.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:36Z",
+    "size_kb": 92.9
+  },
+  "vgk4u-logo.png": {
+    "obj_key": "hub_assets/vgk4u-logo.png",
+    "obj_url": "/storage/hub_assets/vgk4u-logo.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:37Z",
+    "size_kb": 518.7
+  },
+  "mnr-logo.png": {
+    "obj_key": "hub_assets/mnr-logo.png",
+    "obj_url": "/storage/hub_assets/mnr-logo.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:37Z",
+    "size_kb": 250.3
+  },
+  "MyntWhite.png": {
+    "obj_key": "hub_assets/MyntWhite.png",
+    "obj_url": "/storage/hub_assets/MyntWhite.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:38Z",
+    "size_kb": 60.7
+  },
+  "Insurance12.webp": {
+    "obj_key": "hub_assets/Insurance12.webp",
+    "obj_url": "/storage/hub_assets/Insurance12.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:38Z",
+    "size_kb": 8.6
+  },
+  "quinten-technologies-logo.png": {
+    "obj_key": "hub_assets/quinten-technologies-logo.png",
+    "obj_url": "/storage/hub_assets/quinten-technologies-logo.png",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-01T03:06:39Z",
+    "size_kb": 429.5
+  },
+  "Care.webp": {
+    "obj_key": "hub_assets/Care.webp",
+    "obj_url": "/storage/hub_assets/Care.webp",
+    "preset": "partner",
+    "slot": null,
+    "uploaded_at": "2026-05-09T15:31:44Z",
+    "size_kb": 14.3
+  }
+}

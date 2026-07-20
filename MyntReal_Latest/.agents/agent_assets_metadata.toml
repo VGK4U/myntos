@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "JVVo-Dt_lrjH7iRRG_fin"
+uri = "file://frontend/public/vgk_program_guide.pdf"
+type = "pdf"
+title = "VGK4U Official Partner Program Guide"
+
+[[outputs]]
+id = "IHDskBVgpYsxzXfZzajx3"
+uri = "file://frontend/public/vgk_sample_invoice.pdf"
+type = "pdf"
+title = "VGK GST Tax Invoice — Updated Preview"

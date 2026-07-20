@@ -1,0 +1,41 @@
+{
+  "name": "@mnr/journey-core",
+  "version": "1.0.0",
+  "description": "Unified journey tracking core library for Web and Mobile",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./types": {
+      "import": "./dist/types/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./adapters": {
+      "import": "./dist/adapters/index.js",
+      "types": "./dist/adapters/index.d.ts"
+    },
+    "./engine": {
+      "import": "./dist/engine/index.js",
+      "types": "./dist/engine/index.d.ts"
+    },
+    "./validators": {
+      "import": "./dist/validators/index.js",
+      "types": "./dist/validators/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "rebuild": "npm run clean && npm run build"
+  },
+  "keywords": ["journey", "gps", "tracking", "wvv", "dc-protocol"],
+  "author": "MyntReal LLP",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

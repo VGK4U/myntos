@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SFMS Reports | Staff Financial Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1e40af;
+            --secondary-color: #3b82f6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-bg: #1f2937;
+            --card-bg: #ffffff;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+        }
+        body {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 24px 32px;
+            margin-bottom: 24px;
+        }
+        .page-header h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .main-container {
+            padding: 0 24px 24px 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .filter-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+        }
+        .filter-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr auto;
+            gap: 16px;
+            align-items: end;
+        }
+        @media (max-width: 992px) {
+            .filter-row {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        @media (max-width: 576px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        .filter-group label {
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            display: block;
+        }
+        .filter-group select, .filter-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .filter-group select:focus, .filter-group input:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+        .report-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .report-tab {
+            padding: 12px 20px;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .report-tab:hover {
+            border-color: var(--secondary-color);
+            background: #eff6ff;
+        }
+        .report-tab.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .summary-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-left: 4px solid var(--secondary-color);
+        }
+        .summary-card.taxable { border-left-color: #6366f1; }
+        .summary-card.cgst { border-left-color: #10b981; }
+        .summary-card.sgst { border-left-color: #f59e0b; }
+        .summary-card.igst { border-left-color: #ef4444; }
+        .summary-card.total { border-left-color: #8b5cf6; }
+        .summary-card.grand { border-left-color: var(--primary-color); background: #eff6ff; }
+        .summary-card .label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .summary-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .data-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .data-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .data-card-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .export-btns {
+            display: flex;
+            gap: 8px;
+        }
+        .btn-export {
+            padding: 8px 14px;
+            font-size: 13px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-export:hover {
+            background: #f3f4f6;
+        }
+        .btn-export.csv { color: #10b981; }
+        .btn-export.excel { color: #059669; }
+        .btn-export.pdf { color: #ef4444; }
+        .table-container {
+            overflow-x: auto;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .data-table th {
+            background: #f1f5f9;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+            white-space: nowrap;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-confirmed { background: #d1fae5; color: #065f46; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-cancelled { background: #fee2e2; color: #991b1b; }
+        .status-draft { background: #e5e7eb; color: #374151; }
+        .hsn-summary-section {
+            margin-top: 24px;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .loading-overlay.hidden {
+            display: none;
+        }
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--text-secondary);
+        }
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-top: 1px solid var(--border-color);
+        }
+        .page-info {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        .page-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        .page-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+        }
+        .page-btn:hover:not(:disabled) {
+            background: #f3f4f6;
+        }
+        .page-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255,255,255,0.9);
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .back-btn:hover {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div id="headerContainer"></div>
+
+    <div class="page-header">
+        <a href="staff_accounts_dashboard.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        <h1><i class="fas fa-chart-bar me-2"></i>SFMS Invoice Reports</h1>
+        <p style="margin: 8px 0 0 0; opacity: 0.9;">Company-wise sales and purchase reports with HSN breakdowns</p>
+    </div>
+
+    <div class="main-container">
+        <div class="filter-card">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label><i class="fas fa-building me-1"></i>Company (Required)</label>
+                    <select id="companyFilter" onchange="loadReport()">
+                        <option value="">-- Select Company --</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-calendar me-1"></i>From Date</label>
+                    <input type="date" id="dateFrom" onchange="loadReport()">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-calendar me-1"></i>To Date</label>
+                    <input type="date" id="dateTo" onchange="loadReport()">
+                </div>
+                <div class="filter-group">
+                    <label><i class="fas fa-filter me-1"></i>Status</label>
+                    <select id="statusFilter" onchange="loadReport()">
+                        <option value="">All Status</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="CANCELLED">Cancelled</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <button class="btn btn-primary" onclick="loadReport()" style="padding: 10px 20px;">
+                        <i class="fas fa-search me-1"></i> Load Report
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="report-tabs">
+            <div class="report-tab active" data-report="sales-invoices" onclick="switchReport('sales-invoices')">
+                <i class="fas fa-file-invoice-dollar"></i> Sales Invoices
+            </div>
+            <div class="report-tab" data-report="purchase-invoices" onclick="switchReport('purchase-invoices')">
+                <i class="fas fa-receipt"></i> Purchase Invoices
+            </div>
+            <div class="report-tab" data-report="hsn-sales" onclick="switchReport('hsn-sales')">
+                <i class="fas fa-hashtag"></i> HSN-wise Sales
+            </div>
+            <div class="report-tab" data-report="hsn-purchases" onclick="switchReport('hsn-purchases')">
+                <i class="fas fa-hashtag"></i> HSN-wise Purchases
+            </div>
+        </div>
+
+        <div class="summary-cards" id="summaryCards"></div>
+
+        <div class="data-card">
+            <div class="data-card-header">
+                <h3 id="reportTitle"><i class="fas fa-table me-2"></i>Report Data</h3>
+                <div class="export-btns">
+                    <button class="btn-export csv" onclick="exportCSV()">
+                        <i class="fas fa-file-csv"></i> CSV
+                    </button>
+                    <button class="btn-export excel" onclick="exportExcel()">
+                        <i class="fas fa-file-excel"></i> Excel
+                    </button>
+                </div>
+            </div>
+            <div class="table-container" id="tableContainer">
+                <div class="empty-state">
+                    <i class="fas fa-building"></i>
+                    <h4>Select a Company</h4>
+                    <p>Please select a company from the filter above to view the report</p>
+                </div>
+            </div>
+            <div class="pagination-container" id="paginationContainer" style="display: none;">
+                <div class="page-info" id="pageInfo">Showing 0 of 0 records</div>
+                <div class="page-buttons">
+                    <button class="page-btn" id="prevBtn" onclick="changePage(-1)" disabled>
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <button class="page-btn" id="nextBtn" onclick="changePage(1)" disabled>
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="hsnSummarySection"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/sfms-hsn-summary.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let currentReport = 'sales-invoices';
+        let currentPage = 1;
+        let pageSize = 50;
+        let reportData = null;
+        let companies = [];
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount || 0);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch(`${API_BASE}/companies`);
+                if (response.ok) {
+                    const data = await response.json();
+                    companies = (data.companies || []).filter(c => c.is_active !== false);
+                    
+                    const select = document.getElementById('companyFilter');
+                    select.innerHTML = '<option value="">-- Select Company --</option>' +
+                        companies.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
+                    
+                    const defaultCompany = companies.find(c => c.id === 20);
+                    if (defaultCompany) {
+                        select.value = 20;
+                    }
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Failed to load companies:', e);
+            }
+        }
+
+        function switchReport(report) {
+            currentReport = report;
+            currentPage = 1;
+            
+            document.querySelectorAll('.report-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.report === report);
+            });
+            
+            const statusFilter = document.getElementById('statusFilter');
+            if (report.includes('hsn')) {
+                statusFilter.disabled = true;
+                statusFilter.value = '';
+            } else {
+                statusFilter.disabled = false;
+            }
+            
+            loadReport();
+        }
+
+        async function loadReport() {
+            const companyId = document.getElementById('companyFilter').value;
+            
+            if (!companyId) {
+                document.getElementById('tableContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-building"></i>
+                        <h4>Select a Company</h4>
+                        <p>Company selection is mandatory for data segregation</p>
+                    </div>
+                `;
+                document.getElementById('summaryCards').innerHTML = '';
+                document.getElementById('hsnSummarySection').innerHTML = '';
+                document.getElementById('paginationContainer').style.display = 'none';
+                return;
+            }
+
+            showLoading();
+
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const status = document.getElementById('statusFilter').value;
+
+            let url = `${API_BASE}/reports/${currentReport}?company_id=${companyId}`;
+            if (dateFrom) url += `&date_from=${dateFrom}`;
+            if (dateTo) url += `&date_to=${dateTo}`;
+            if (status && !currentReport.includes('hsn')) url += `&status=${status}`;
+            if (!currentReport.includes('hsn')) {
+                url += `&page=${currentPage}&page_size=${pageSize}`;
+            }
+
+            try {
+                const response = await staffFetch(url);
+                if (response.ok) {
+                    reportData = await response.json();
+                    renderReport();
+                } else {
+                    const error = await response.json();
+                    document.getElementById('tableContainer').innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                            <h4>Error Loading Report</h4>
+                            <p>${error.detail || 'Failed to load report data'}</p>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Failed to load report:', e);
+                document.getElementById('tableContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                        <h4>Connection Error</h4>
+                        <p>Unable to connect to server</p>
+                    </div>
+                `;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function renderReport() {
+            if (!reportData) return;
+
+            const titles = {
+                'sales-invoices': 'Sales Invoice Report',
+                'purchase-invoices': 'Purchase Invoice Report',
+                'hsn-sales': 'HSN Code-wise Sales Report',
+                'hsn-purchases': 'HSN Code-wise Purchase Report'
+            };
+            document.getElementById('reportTitle').innerHTML = `<i class="fas fa-table me-2"></i>${titles[currentReport]}`;
+
+            renderSummaryCards();
+
+            if (currentReport.includes('hsn')) {
+                renderHsnTable();
+                document.getElementById('paginationContainer').style.display = 'none';
+            } else {
+                renderInvoiceTable();
+                renderPagination();
+            }
+        }
+
+        function renderSummaryCards() {
+            const summary = reportData.summary || {};
+            
+            let html = '';
+            
+            if (currentReport.includes('hsn')) {
+                html = `
+                    <div class="summary-card taxable">
+                        <div class="label">Taxable Value</div>
+                        <div class="value">₹ ${formatCurrency(summary.total_taxable)}</div>
+                    </div>
+                    <div class="summary-card cgst">
+                        <div class="label">Total CGST</div>
+                        <div class="value">₹ ${formatCurrency(summary.total_cgst)}</div>
+                    </div>
+                    <div class="summary-card sgst">
+                        <div class="label">Total SGST</div>
+                        <div class="value">₹ ${formatCurrency(summary.total_sgst)}</div>
+                    </div>
+                    <div class="summary-card igst">
+                        <div class="label">Total IGST</div>
+                        <div class="value">₹ ${formatCurrency(summary.total_igst)}</div>
+                    </div>
+                    <div class="summary-card total">
+                        <div class="label">Total Tax</div>
+                        <div class="value">₹ ${formatCurrency(summary.total_tax)}</div>
+                    </div>
+                    <div class="summary-card grand">
+                        <div class="label">Grand Total</div>
+                        <div class="value">₹ ${formatCurrency(summary.grand_total)}</div>
+                    </div>
+                `;
+            } else {
+                html = `
+                    <div class="summary-card">
+                        <div class="label">Total Invoices</div>
+                        <div class="value">${summary.total_invoices || 0}</div>
+                    </div>
+                    <div class="summary-card taxable">
+                        <div class="label">Taxable Amount</div>
+                        <div class="value">₹ ${formatCurrency(summary.total_taxable)}</div>
+                    </div>
+                    <div class="summary-card cgst">
+                        <div class="label">CGST</div>
+                        <div class="value">₹ ${formatCurrency(summary.total_cgst)}</div>
+                    </div>
+                    <div class="summary-card sgst">
+                        <div class="label">SGST</div>
+                        <div class="value">₹ ${formatCurrency(summary.total_sgst)}</div>
+                    </div>
+                    <div class="summary-card igst">
+                        <div class="label">IGST</div>
+                        <div class="value">₹ ${formatCurrency(summary.total_igst)}</div>
+                    </div>
+                    <div class="summary-card grand">
+                        <div class="label">Grand Total</div>
+                        <div class="value">₹ ${formatCurrency(summary.grand_total)}</div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('summaryCards').innerHTML = html;
+        }
+
+        function renderInvoiceTable() {
+            const invoices = reportData.invoices || [];
+            
+            if (invoices.length === 0) {
+                document.getElementById('tableContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h4>No Invoices Found</h4>
+                        <p>No data matches the selected filters</p>
+                    </div>
+                `;
+                document.getElementById('hsnSummarySection').innerHTML = '';
+                return;
+            }
+
+            const isSales = currentReport === 'sales-invoices';
+            
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Date</th>
+                            <th>${isSales ? 'Customer' : 'Vendor'}</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-right">Taxable</th>
+                            <th class="text-right">CGST</th>
+                            <th class="text-right">SGST</th>
+                            <th class="text-right">IGST</th>
+                            <th class="text-right">Total Tax</th>
+                            <th class="text-right">Grand Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            invoices.forEach(inv => {
+                const status = inv.status || 'PENDING';
+                const statusClass = status.toLowerCase();
+                
+                html += `
+                    <tr>
+                        <td><strong>${inv.invoice_number || '-'}</strong></td>
+                        <td>${formatDate(inv.invoice_date)}</td>
+                        <td>${isSales ? (inv.customer_name || '-') : (inv.vendor_name || '-')}</td>
+                        <td class="text-center"><span class="status-badge status-${statusClass}">${status}</span></td>
+                        <td class="text-right">${formatCurrency(inv.taxable_amount)}</td>
+                        <td class="text-right">${formatCurrency(inv.cgst_amount)}</td>
+                        <td class="text-right">${formatCurrency(inv.sgst_amount)}</td>
+                        <td class="text-right">${formatCurrency(inv.igst_amount)}</td>
+                        <td class="text-right">${formatCurrency(inv.total_tax)}</td>
+                        <td class="text-right"><strong>₹ ${formatCurrency(inv.grand_total)}</strong></td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('tableContainer').innerHTML = html;
+            document.getElementById('hsnSummarySection').innerHTML = '';
+        }
+
+        function renderHsnTable() {
+            const hsnData = reportData.hsn_data || [];
+            
+            if (hsnData.length === 0) {
+                document.getElementById('tableContainer').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-hashtag"></i>
+                        <h4>No HSN Data Found</h4>
+                        <p>No confirmed invoices with HSN codes in the selected period</p>
+                    </div>
+                `;
+                document.getElementById('hsnSummarySection').innerHTML = '';
+                return;
+            }
+
+            let html = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>HSN/SAC</th>
+                            <th>Description</th>
+                            <th class="text-right">Quantity</th>
+                            <th class="text-right">Taxable Value</th>
+                            <th class="text-center">CGST Rate</th>
+                            <th class="text-right">CGST Amount</th>
+                            <th class="text-center">SGST Rate</th>
+                            <th class="text-right">SGST Amount</th>
+                            <th class="text-right">IGST Amount</th>
+                            <th class="text-right">Total Tax</th>
+                            <th class="text-right">Total Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            hsnData.forEach(h => {
+                html += `
+                    <tr>
+                        <td><strong>${h.hsn_code}</strong></td>
+                        <td>${h.description || '-'}</td>
+                        <td class="text-right">${h.quantity?.toFixed(2) || '-'}</td>
+                        <td class="text-right">${formatCurrency(h.taxable_value)}</td>
+                        <td class="text-center">${h.cgst_rate}%</td>
+                        <td class="text-right">${formatCurrency(h.cgst_amount)}</td>
+                        <td class="text-center">${h.sgst_rate}%</td>
+                        <td class="text-right">${formatCurrency(h.sgst_amount)}</td>
+                        <td class="text-right">${formatCurrency(h.igst_amount)}</td>
+                        <td class="text-right">${formatCurrency(h.total_tax)}</td>
+                        <td class="text-right"><strong>₹ ${formatCurrency(h.total_value)}</strong></td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            document.getElementById('tableContainer').innerHTML = html;
+            
+            if (typeof SFMSHsnSummary !== 'undefined') {
+                const section = document.getElementById('hsnSummarySection');
+                section.innerHTML = SFMSHsnSummary.createSummarySection('GST Summary - ' + (currentReport.includes('sales') ? 'Sales' : 'Purchases'));
+                SFMSHsnSummary.renderTable('hsnSummaryContent', hsnData, false);
+            }
+        }
+
+        function renderPagination() {
+            const pagination = reportData.pagination || {};
+            const container = document.getElementById('paginationContainer');
+            
+            if (pagination.total <= pageSize) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'flex';
+            
+            const from = ((pagination.page - 1) * pagination.page_size) + 1;
+            const to = Math.min(pagination.page * pagination.page_size, pagination.total);
+            
+            document.getElementById('pageInfo').textContent = `Showing ${from}-${to} of ${pagination.total} records`;
+            document.getElementById('prevBtn').disabled = pagination.page <= 1;
+            document.getElementById('nextBtn').disabled = pagination.page >= pagination.total_pages;
+        }
+
+        function changePage(delta) {
+            currentPage += delta;
+            loadReport();
+        }
+
+        function exportCSV() {
+            if (!reportData) return;
+            
+            const data = currentReport.includes('hsn') ? reportData.hsn_data : reportData.invoices;
+            if (!data || data.length === 0) return;
+            
+            const headers = Object.keys(data[0]);
+            let csv = headers.join(',') + '\n';
+            
+            data.forEach(row => {
+                csv += headers.map(h => {
+                    let val = row[h];
+                    if (typeof val === 'string' && val.includes(',')) {
+                        val = `"${val}"`;
+                    }
+                    return val ?? '';
+                }).join(',') + '\n';
+            });
+            
+            const company = companies.find(c => c.id == document.getElementById('companyFilter').value);
+            const filename = `${currentReport}_${company?.company_name || 'report'}_${new Date().toISOString().split('T')[0]}.csv`;
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportExcel() {
+            if (!reportData) return;
+            
+            const data = currentReport.includes('hsn') ? reportData.hsn_data : reportData.invoices;
+            if (!data || data.length === 0) return;
+            
+            const headers = Object.keys(data[0]);
+            let table = '<table border="1"><thead><tr>';
+            headers.forEach(h => { table += `<th>${h}</th>`; });
+            table += '</tr></thead><tbody>';
+            
+            data.forEach(row => {
+                table += '<tr>';
+                headers.forEach(h => { table += `<td>${row[h] ?? ''}</td>`; });
+                table += '</tr>';
+            });
+            table += '</tbody></table>';
+            
+            const company = companies.find(c => c.id == document.getElementById('companyFilter').value);
+            const filename = `${currentReport}_${company?.company_name || 'report'}_${new Date().toISOString().split('T')[0]}.xls`;
+            
+            const blob = new Blob([table], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        async function init() {
+            StaffHeader.inject('SFMS Reports', 'fas fa-chart-bar');
+            
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('dateFrom').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+
+            await loadCompanies();
+            hideLoading();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('SFMS Invoice Reports', 'fas fa-chart-bar');
+            await init();
+        });
+    </script>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+</body>
+</html>

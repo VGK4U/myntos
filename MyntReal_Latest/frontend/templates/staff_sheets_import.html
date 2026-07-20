@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Leads from Google Sheets — Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --brand: #1a3c6e;
+            --gold: #d4af37;
+            --green: #28a745;
+            --red: #dc3545;
+        }
+        body { background: #f4f6fb; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .page-header {
+            background: linear-gradient(135deg, #1a3c6e, #2e5fa3);
+            border-bottom: 3px solid var(--gold);
+            padding: 1.4rem 2rem;
+        }
+        .page-title { color: var(--gold); font-weight: 700; margin: 0; font-size: 1.4rem; }
+        .page-subtitle { color: rgba(255,255,255,.75); font-size: .88rem; margin-top: 4px; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+        .card-header-custom {
+            background: linear-gradient(90deg, #1a3c6e, #2e5fa3);
+            color: #fff; border-radius: 12px 12px 0 0;
+            padding: 14px 20px; font-weight: 600;
+        }
+        .step-badge {
+            background: var(--gold); color: #1a3c6e;
+            border-radius: 50%; width: 28px; height: 28px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: .88rem; margin-right: 10px; flex-shrink: 0;
+        }
+        .step-row { display: flex; align-items: flex-start; margin-bottom: 18px; }
+        .step-content h6 { margin: 0 0 4px; font-weight: 700; color: #1a3c6e; }
+        .step-content p { margin: 0; font-size: .9rem; color: #555; line-height: 1.5; }
+        .stat-box {
+            background: #fff; border-radius: 10px; padding: 18px 22px;
+            border-left: 4px solid var(--brand);
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            text-align: center;
+        }
+        .stat-box.green { border-left-color: var(--green); }
+        .stat-box.orange { border-left-color: #fd7e14; }
+        .stat-box.red { border-left-color: var(--red); }
+        .stat-val { font-size: 2rem; font-weight: 800; color: #1a3c6e; }
+        .stat-lbl { font-size: .8rem; color: #777; text-transform: uppercase; letter-spacing: .5px; }
+        .preview-table { font-size: .82rem; }
+        .preview-table th { background: #1a3c6e; color: #fff; white-space: nowrap; }
+        .badge-mapped { background: #d4edda; color: #155724; border-radius: 20px; padding: 2px 10px; font-size: .78rem; }
+        .badge-unmapped { background: #fff3cd; color: #856404; border-radius: 20px; padding: 2px 10px; font-size: .78rem; }
+        .result-card { border-radius: 10px; padding: 20px 24px; }
+        .result-card.success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .result-card.error   { background: #f8d7da; border: 1px solid #f5c6cb; }
+        code { background: #eef; padding: 2px 8px; border-radius: 4px; font-size: .87rem; }
+        .spinner-border-sm { width: 1rem; height: 1rem; }
+        #headerContainer { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="headerContainer"></div>
+<div id="staffSidebar"></div>
+
+<div class="page-header">
+    <div class="page-title"><i class="fab fa-google me-2"></i>Import Leads from Google Sheets</div>
+    <div class="page-subtitle">Sync Facebook Lead Ads exports or Google Form responses directly into CRM — no CSV download needed</div>
+</div>
+
+<div class="container-fluid py-4 px-4" style="max-width: 960px;">
+
+    <!-- How it works -->
+    <div class="card mb-4">
+        <div class="card-header-custom"><i class="fas fa-info-circle me-2"></i>How this works</div>
+        <div class="card-body p-4">
+            <div class="step-row">
+                <span class="step-badge">1</span>
+                <div class="step-content">
+                    <h6>Facebook exports leads to Google Sheets automatically</h6>
+                    <p>On your Facebook Lead Ads form → CRM Setup tab → connect Google Sheets. Facebook will push every new lead into the sheet in real-time.</p>
+                </div>
+            </div>
+            <div class="step-row">
+                <span class="step-badge">2</span>
+                <div class="step-content">
+                    <h6>Share your Google Sheet publicly (view only)</h6>
+                    <p>Open the sheet → <strong>File → Share → Anyone with the link → Viewer</strong>. Copy the sheet URL.</p>
+                </div>
+            </div>
+            <div class="step-row">
+                <span class="step-badge">3</span>
+                <div class="step-content">
+                    <h6>Paste the URL below and click Import</h6>
+                    <p>We'll read all rows, auto-detect columns (name, phone, city etc.), skip duplicates, and create CRM leads for all new entries.</p>
+                </div>
+            </div>
+            <div class="alert alert-info mb-0 py-2">
+                <i class="fas fa-lightbulb me-1"></i>
+                <strong>Also works with Google Forms</strong> — if you've set up a Google Form for leads, just share the linked response sheet the same way.
+            </div>
+        </div>
+    </div>
+
+    <!-- Import form -->
+    <div class="card mb-4">
+        <div class="card-header-custom"><i class="fas fa-file-import me-2"></i>Import Settings</div>
+        <div class="card-body p-4">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Google Sheet URL <span class="text-danger">*</span></label>
+                <input type="url" class="form-control form-control-lg" id="sheetUrl"
+                    placeholder="https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit..."
+                    style="font-size:.92rem;" />
+                <div class="form-text">Paste the full Google Sheets URL. The sheet must be shared as "Anyone with the link can view".</div>
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Lead Source Label</label>
+                    <select class="form-select" id="sourceTag">
+                        <option value="Online - M">Online - M</option>
+                        <option value="Google Form">Google Form</option>
+                        <option value="Manual Upload">Manual Upload</option>
+                        <option value="WhatsApp Enquiry">WhatsApp Enquiry</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <div class="form-text">How the lead source will appear in CRM.</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Sheet Tab (gid)</label>
+                    <input type="text" class="form-control" id="gid" value="0" placeholder="0" />
+                    <div class="form-text">Leave as 0 for first/only tab. Find gid in the URL after #gid=</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Skip Duplicates?</label>
+                    <select class="form-select" id="skipDuplicates">
+                        <option value="true">Yes — skip if phone already in CRM</option>
+                        <option value="false">No — import all rows</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-outline-primary" onclick="previewSheet()">
+                    <i class="fas fa-eye me-1"></i> Preview Columns
+                </button>
+                <button class="btn btn-success px-4" onclick="importSheet()" id="importBtn">
+                    <i class="fas fa-file-import me-1"></i> Import to CRM
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview section -->
+    <div id="previewSection" class="card mb-4 d-none">
+        <div class="card-header-custom"><i class="fas fa-table me-2"></i>Sheet Preview</div>
+        <div class="card-body p-4">
+            <div id="previewContent"></div>
+        </div>
+    </div>
+
+    <!-- Result section -->
+    <div id="resultSection" class="d-none mb-4">
+        <div id="resultContent"></div>
+    </div>
+
+    <!-- Recent imports -->
+    <div class="card">
+        <div class="card-header-custom"><i class="fas fa-history me-2"></i>Recent Facebook Lead Imports</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 preview-table">
+                    <thead>
+                        <tr>
+                            <th class="px-3 py-2">Name</th>
+                            <th>Phone</th>
+                            <th>City</th>
+                            <th>Source</th>
+                            <th>Looking For</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentLeads">
+                        <tr><td colspan="6" class="text-center text-muted py-4">Loading recent leads...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+let staffToken = null;
+
+async function getToken() {
+    if (staffToken) return staffToken;
+    const keys = ['staff_auth_token', 'mnr_staff_token', 'auth_token'];
+    for (const k of keys) {
+        const t = localStorage.getItem(k) || sessionStorage.getItem(k);
+        if (t) { staffToken = t; return t; }
+    }
+    return null;
+}
+
+async function apiCall(path, method = 'GET', body = null) {
+    const token = await getToken();
+    const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json', ...(token ? {'Authorization': `Bearer ${token}`} : {}) }
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(`/api/v1/crm${path}`, opts);
+    return r.json();
+}
+
+function getFormData() {
+    return {
+        sheet_url:       document.getElementById('sheetUrl').value.trim(),
+        source_tag:      document.getElementById('sourceTag').value,
+        gid:             document.getElementById('gid').value.trim() || '0',
+        skip_duplicates: document.getElementById('skipDuplicates').value === 'true',
+        company_id:      1
+    };
+}
+
+async function previewSheet() {
+    const data = getFormData();
+    if (!data.sheet_url) { alert('Please paste a Google Sheet URL first.'); return; }
+
+    document.getElementById('previewSection').classList.remove('d-none');
+    document.getElementById('previewContent').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Reading sheet...</p></div>';
+
+    const res = await apiCall('/preview-sheet', 'POST', data);
+    if (!res.success) {
+        document.getElementById('previewContent').innerHTML =
+            `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>${res.error}</div>`;
+        return;
+    }
+
+    const mappedFields = Object.keys(res.column_mapping);
+    const mappingHtml = Object.entries(res.column_mapping).map(([field, col]) =>
+        `<span class="badge-mapped me-1 mb-1 d-inline-block"><i class="fas fa-check me-1"></i>${field} ← "${col}"</span>`
+    ).join('');
+    const unmappedHtml = res.unmapped_columns.map(c =>
+        `<span class="badge-unmapped me-1 mb-1 d-inline-block">${c}</span>`
+    ).join('') || '<span class="text-muted">None</span>';
+
+    let previewTable = '';
+    if (res.preview && res.preview.length) {
+        const headers = Object.keys(res.preview[0]);
+        previewTable = `
+            <div class="table-responsive mt-3">
+                <table class="table table-sm table-bordered preview-table">
+                    <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                    <tbody>
+                        ${res.preview.map(row =>
+                            `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`
+                        ).join('')}
+                    </tbody>
+                </table>
+                <p class="text-muted small mb-0">Showing first ${res.preview.length} of ${res.total_rows} rows</p>
+            </div>`;
+    }
+
+    document.getElementById('previewContent').innerHTML = `
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <div class="stat-box green text-center">
+                    <div class="stat-val">${res.total_rows}</div>
+                    <div class="stat-lbl">Total Rows</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-box text-center">
+                    <div class="stat-val">${res.headers.length}</div>
+                    <div class="stat-lbl">Columns Found</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-box text-center">
+                    <div class="stat-val">${mappedFields.length}</div>
+                    <div class="stat-lbl">Columns Mapped</div>
+                </div>
+            </div>
+        </div>
+        <h6 class="fw-bold text-success mb-2"><i class="fas fa-check-circle me-1"></i>Detected CRM Columns:</h6>
+        <div class="mb-3">${mappingHtml}</div>
+        <h6 class="fw-bold text-warning mb-2"><i class="fas fa-question-circle me-1"></i>Unrecognised Columns (will be ignored):</h6>
+        <div class="mb-3">${unmappedHtml}</div>
+        ${previewTable}
+    `;
+}
+
+async function importSheet() {
+    const data = getFormData();
+    if (!data.sheet_url) { alert('Please paste a Google Sheet URL first.'); return; }
+
+    const btn = document.getElementById('importBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Importing...';
+
+    document.getElementById('resultSection').classList.remove('d-none');
+    document.getElementById('resultContent').innerHTML =
+        '<div class="result-card success"><div class="spinner-border text-success me-2"></div>Reading sheet and importing leads...</div>';
+
+    const res = await apiCall('/import-from-sheets', 'POST', data);
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-file-import me-1"></i> Import to CRM';
+
+    if (!res.success) {
+        document.getElementById('resultContent').innerHTML = `
+            <div class="result-card error">
+                <h5 class="text-danger"><i class="fas fa-times-circle me-2"></i>Import Failed</h5>
+                <p class="mb-0">${res.error}</p>
+                ${res.detected_headers ? `<p class="small text-muted mt-2">Detected headers: ${res.detected_headers.join(', ')}</p>` : ''}
+            </div>`;
+        return;
+    }
+
+    const errHtml = res.errors && res.errors.length
+        ? `<div class="mt-3"><strong>Row errors (${res.errors.length}):</strong><ul class="small mb-0">${res.errors.map(e => `<li>${e}</li>`).join('')}</ul></div>`
+        : '';
+
+    document.getElementById('resultContent').innerHTML = `
+        <div class="result-card success">
+            <h5 class="text-success"><i class="fas fa-check-circle me-2"></i>Import Complete!</h5>
+            <div class="row g-3 mt-1">
+                <div class="col-6 col-md-3">
+                    <div class="stat-box green">
+                        <div class="stat-val">${res.imported}</div>
+                        <div class="stat-lbl">New Leads Added</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-box orange">
+                        <div class="stat-val">${res.skipped_duplicates}</div>
+                        <div class="stat-lbl">Duplicates Skipped</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-box">
+                        <div class="stat-val">${res.total_rows}</div>
+                        <div class="stat-lbl">Total Rows</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-box red">
+                        <div class="stat-val">${res.errors ? res.errors.length : 0}</div>
+                        <div class="stat-lbl">Errors</div>
+                    </div>
+                </div>
+            </div>
+            ${errHtml}
+            <div class="mt-3">
+                <a href="/staff/crm" class="btn btn-success btn-sm">
+                    <i class="fas fa-external-link-alt me-1"></i>View in CRM
+                </a>
+            </div>
+        </div>`;
+
+    loadRecentLeads();
+}
+
+async function loadRecentLeads() {
+    const res = await apiCall('/leads?source=Facebook+Lead+Ads&limit=20');
+    const tbody = document.getElementById('recentLeads');
+    if (!res.success || !res.leads || !res.leads.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No Facebook leads yet — import your first sheet above.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = res.leads.map(l => `
+        <tr>
+            <td class="px-3 fw-semibold">${l.name || '—'}</td>
+            <td>${l.phone || '—'}</td>
+            <td>${l.city || '—'}</td>
+            <td><span class="badge bg-primary" style="font-size:.75rem;">${l.source || '—'}</span></td>
+            <td>${l.looking_for || '—'}</td>
+            <td class="text-muted" style="font-size:.82rem;">${l.created_at ? l.created_at.slice(0,10) : '—'}</td>
+        </tr>`).join('');
+}
+
+loadRecentLeads();
+</script>
+</body>
+</html>

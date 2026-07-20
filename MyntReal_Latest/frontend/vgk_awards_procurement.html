@@ -1,0 +1,1362 @@
+<style>
+.sortable-header { cursor: pointer; user-select: none; white-space: nowrap; }
+.sortable-header:hover { background: rgba(255,255,255,0.1); }
+.sort-icon { font-size: 0.75rem; opacity: 0.6; }
+.sortable-header:hover .sort-icon { opacity: 1; }
+</style>
+<div class="container-fluid mt-4">
+    <div class="mb-3 text-end">
+        <a href="/staff/dashboard" class="btn btn-primary btn-sm">
+            <i class="fas fa-home me-2"></i>Back to Staff Dashboard
+        </a>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-trophy text-warning"></i> Awards Procurement Queue</h2>
+            <p class="text-muted mb-0">Staff Portal - Procurement lifecycle aligned with Awards Management</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card border-start border-warning border-4">
+                <div class="card-body py-2">
+                    <h6 class="text-muted small">Pending / Claimed</h6>
+                    <h4 id="statPending">0</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-start border-primary border-4">
+                <div class="card-body py-2">
+                    <h6 class="text-muted small">Approved</h6>
+                    <h4 id="statApproved">0</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-start border-info border-4">
+                <div class="card-body py-2">
+                    <h6 class="text-muted small">Processed</h6>
+                    <h4 id="statProcessed">0</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-start border-success border-4">
+                <div class="card-body py-2">
+                    <h6 class="text-muted small">Completed</h6>
+                    <h4 id="statCompleted">0</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-start border-danger border-4">
+                <div class="card-body py-2">
+                    <h6 class="text-muted small">Rejected</h6>
+                    <h4 id="statRejected">0</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body py-2">
+                    <h6 class="text-muted small mb-1">Total Budget</h6>
+                    <h4 class="text-primary mb-0" id="totalBudget">₹0</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body py-2">
+                    <h6 class="text-muted small mb-1">Amount Spent</h6>
+                    <h4 class="text-success mb-0" id="totalSpent">₹0</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-light">
+                <div class="card-body py-2">
+                    <h6 class="text-muted small mb-1">Pending Amount</h6>
+                    <h4 class="text-warning mb-0" id="pendingAmount">₹0</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 d-flex align-items-center">
+            <button class="btn btn-success w-100" onclick="exportToExcel()">
+                <i class="fas fa-file-excel me-2"></i>Export to Excel
+            </button>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header"><i class="fas fa-filter"></i> Filters</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Award Type</label>
+                    <select class="form-select" id="filterType" onchange="applyFilters()">
+                        <option value="">All Types</option>
+                        <option value="direct">Direct Facilitation</option>
+                        <option value="matching">Group Performance</option>
+                        <option value="bonanza">Bonanza</option>
+                        <option value="insurance">Insurance</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="filterStatus" onchange="applyFilters()">
+                        <option value="">All Status</option>
+                        <option value="Pending">Pending / Claimed</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Processed">Processed</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Rejected">Rejected / Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Search Item/User</label>
+                    <input type="text" class="form-control" id="filterSearch" placeholder="Search..." oninput="applyFilters()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <button class="btn btn-secondary w-100" onclick="clearFilters()">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-list-alt"></i> All Awards, Bonanzas &amp; Insurance
+        </div>
+        <div class="card-body">
+            <ul class="nav nav-tabs mb-3" id="awardsTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="individual-tab" data-bs-toggle="tab" data-bs-target="#individual-view" type="button" role="tab" onclick="switchTab('individual')">
+                        <i class="fas fa-list"></i> Individual Gifts
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="grouped-tab" data-bs-toggle="tab" data-bs-target="#grouped-view" type="button" role="tab" onclick="switchTab('grouped')">
+                        <i class="fas fa-users"></i> User-Wise Grouping
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="gift-summary-tab" data-bs-toggle="tab" data-bs-target="#gift-summary-view" type="button" role="tab" onclick="switchTab('gift-summary'); loadGiftSummary();">
+                        <i class="fas fa-chart-pie"></i> Gift Summary
+                    </button>
+                </li>
+            </ul>
+
+            <div id="loading" class="text-center py-5">
+                <div class="spinner-border text-warning"></div>
+                <p class="mt-3">Loading awards...</p>
+            </div>
+
+            <div class="tab-content" id="awardsTabContent" style="display:none;">
+                <div class="tab-pane fade show active" id="individual-view" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-sm" id="individualTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="sortable-header" data-sort="user_id" data-tab="individual">User ID <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="user_name" data-tab="individual">User Name <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="award_type" data-tab="individual">Type <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="gift_name" data-tab="individual">Gift Name <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="simplified_status" data-tab="individual">Status <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="kyc_status" data-tab="individual">KYC Status <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="group_eligibility" data-tab="individual">Group Eligibility <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="budgeted_amount" data-tab="individual">Budget/Actual Cost <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="achievement_date" data-tab="individual">Achievement Date <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="individualAwardsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="grouped-view" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-sm" id="groupedTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th></th>
+                                    <th class="sortable-header" data-sort="user_id" data-tab="grouped">User ID <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="user_name" data-tab="grouped">User Name <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th>KYC Status</th>
+                                    <th>Group Eligibility</th>
+                                    <th class="sortable-header" data-sort="gift_count" data-tab="grouped">Gifts Count <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="total_budgeted" data-tab="grouped">Total Budgeted <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="total_actual" data-tab="grouped">Total Actual Paid <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="outstanding" data-tab="grouped">Outstanding <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="aggregated_status" data-tab="grouped">Status <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="completed_count" data-tab="grouped">Completed / Total <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="latest_update" data-tab="grouped">Latest Update <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="groupedAwardsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="gift-summary-view" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-sm" id="giftSummaryTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th class="sortable-header" data-sort="gift_name" data-tab="gift-summary">Gift Name <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="award_type_breakdown" data-tab="gift-summary">Type <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="total_count" data-tab="gift-summary">Total <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="pending_approval" data-tab="gift-summary">Pending <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="admin_approved" data-tab="gift-summary">Approved <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="processed" data-tab="gift-summary">Processed <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="delivered" data-tab="gift-summary">Completed <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="rejected" data-tab="gift-summary">Rejected <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="budget" data-tab="gift-summary">Budget <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="actual_spent" data-tab="gift-summary">Actual Spent <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                    <th class="sortable-header" data-sort="variance_percent" data-tab="gift-summary">Variance % <i class="fas fa-sort ms-1 sort-icon"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="giftSummaryBody">
+                                <tr>
+                                    <td colspan="12" class="text-center">
+                                        <i class="fas fa-info-circle"></i> Click "Gift Summary" tab to load data
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr class="fw-bold">
+                                    <td colspan="3" class="text-end">TOTALS:</td>
+                                    <td id="giftTotalCount">0</td>
+                                    <td id="giftTotalPending">0</td>
+                                    <td id="giftTotalApproved">0</td>
+                                    <td id="giftTotalProcessed">0</td>
+                                    <td id="giftTotalCompleted">0</td>
+                                    <td id="giftTotalRejected">0</td>
+                                    <td id="giftTotalBudget">₹0</td>
+                                    <td id="giftTotalSpent">₹0</td>
+                                    <td id="giftTotalVariance">-</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="actionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="actionModalTitle">Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="actionModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="actionModalSubmit" onclick="submitAction()">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allAwards = [];
+let filteredAwards = [];
+let awardsMap = {};
+let insuranceItems = [];
+let currentTab = 'individual';
+let currentAction = null;
+
+const API_BASE = '/api/v1/unified-awards';
+
+const sortState = { individual: { key: null, dir: 'asc' }, grouped: { key: null, dir: 'asc' }, 'gift-summary': { key: null, dir: 'asc' } };
+
+function switchTab(tabName) {
+    currentTab = tabName;
+}
+
+document.addEventListener('click', function(e) {
+    const header = e.target.closest('.sortable-header');
+    if (!header) return;
+    const sortKey = header.dataset.sort;
+    const tab = header.dataset.tab;
+    if (!sortKey || !tab) return;
+    const state = sortState[tab];
+    if (state.key === sortKey) {
+        state.dir = state.dir === 'asc' ? 'desc' : 'asc';
+    } else {
+        state.key = sortKey;
+        state.dir = 'asc';
+    }
+    const parentTr = header.closest('tr');
+    parentTr.querySelectorAll('.sort-icon').forEach(icon => { icon.className = 'fas fa-sort ms-1 sort-icon'; });
+    const icon = header.querySelector('.sort-icon');
+    icon.className = state.dir === 'asc' ? 'fas fa-sort-up ms-1 sort-icon' : 'fas fa-sort-down ms-1 sort-icon';
+    if (tab === 'individual') applyFilters();
+    else if (tab === 'grouped') applyFilters();
+    else if (tab === 'gift-summary' && giftSummaryLoaded) renderGiftSummarySorted();
+});
+
+function sortArray(arr, key, dir) {
+    return [...arr].sort((a, b) => {
+        let va = a[key], vb = b[key];
+        if (va == null) va = '';
+        if (vb == null) vb = '';
+        if (key === 'budgeted_amount' || key === 'actual_cost_paid' || key === 'total_budgeted' || key === 'total_actual' || key === 'outstanding' || key === 'gift_count' || key === 'completed_count' || key === 'total_count' || key === 'pending_approval' || key === 'admin_approved' || key === 'delivered' || key === 'budget' || key === 'actual_spent' || key === 'variance_percent' || key === 'processed') {
+            va = parseFloat(va) || 0;
+            vb = parseFloat(vb) || 0;
+        } else if (key === 'achievement_date' || key === 'latest_update') {
+            va = va ? new Date(va).getTime() : 0;
+            vb = vb ? new Date(vb).getTime() : 0;
+        } else {
+            va = String(va).toLowerCase();
+            vb = String(vb).toLowerCase();
+        }
+        if (va < vb) return dir === 'asc' ? -1 : 1;
+        if (va > vb) return dir === 'asc' ? 1 : -1;
+        return 0;
+    });
+}
+
+function renderGiftSummarySorted() {
+    const state = sortState['gift-summary'];
+    let sorted = giftSummaryData;
+    if (state.key) {
+        sorted = sortArray(sorted, state.key, state.dir);
+    }
+    let totalBudget = 0, totalSpent = 0, totalCount = 0;
+    sorted.forEach(g => { totalBudget += g.budget; totalSpent += g.actual_spent; totalCount += g.total_count; });
+    const totals = { total_count: totalCount, total_budget: totalBudget, total_spent: totalSpent, total_variance: totalBudget - totalSpent };
+    renderGiftSummary(sorted, totals);
+}
+
+function getSimplifiedStatus(processedStatus) {
+    const map = {
+        'Pending Approval': 'Pending',
+        'Admin Approved': 'Approved',
+        'Procurement Pending': 'Processed',
+        'Processed for Dispatch': 'Processed',
+        'Dispatched': 'Processed',
+        'Delivered': 'Completed',
+        'Rejected': 'Rejected'
+    };
+    return map[processedStatus] || processedStatus || 'Pending';
+}
+
+function getStatusBadge(simplifiedStatus) {
+    const badges = {
+        'Pending': '<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Pending</span>',
+        'Claimed': '<span class="badge bg-warning text-dark"><i class="fas fa-hand-holding me-1"></i>Claimed</span>',
+        'Approved': '<span class="badge bg-primary"><i class="fas fa-check me-1"></i>Approved</span>',
+        'Processed': '<span class="badge bg-info"><i class="fas fa-cog me-1"></i>Processed</span>',
+        'Completed': '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Completed</span>',
+        'Rejected': '<span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i>Rejected</span>'
+    };
+    return badges[simplifiedStatus] || `<span class="badge bg-secondary">${simplifiedStatus}</span>`;
+}
+
+function getTypeBadge(type) {
+    const badges = {
+        'direct': '<span class="badge bg-primary" style="font-size:0.75rem;">Direct Facilitation</span>',
+        'matching': '<span class="badge bg-info" style="font-size:0.75rem;">Group Performance</span>',
+        'bonanza': '<span class="badge bg-warning text-dark" style="font-size:0.75rem;">Bonanza</span>',
+        'insurance': '<span class="badge bg-success" style="font-size:0.75rem;">Insurance</span>'
+    };
+    return badges[type] || `<span class="badge bg-secondary">${type}</span>`;
+}
+
+function getKycBadge(kycStatus) {
+    const s = (kycStatus || 'Pending').toLowerCase();
+    if (s === 'approved' || s === 'verified') return '<span class="badge bg-success" style="font-size:0.7rem;"><i class="fas fa-check-circle me-1"></i>Approved</span>';
+    if (s === 'rejected') return '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-times-circle me-1"></i>Rejected</span>';
+    if (s === 'submitted' || s === 'under review') return '<span class="badge bg-info" style="font-size:0.7rem;"><i class="fas fa-hourglass-half me-1"></i>Under Review</span>';
+    return '<span class="badge bg-warning text-dark" style="font-size:0.7rem;"><i class="fas fa-clock me-1"></i>Pending</span>';
+}
+
+function getGroupEligibilityBadge(groupElig) {
+    const s = (groupElig || 'Unknown').toLowerCase();
+    if (s === 'yes' || s === 'eligible') return '<span class="badge bg-success" style="font-size:0.7rem;"><i class="fas fa-check me-1"></i>Eligible</span>';
+    if (s === 'no' || s === 'not eligible') return '<span class="badge bg-danger" style="font-size:0.7rem;"><i class="fas fa-times me-1"></i>Not Eligible</span>';
+    if (s.includes('group a missing')) return '<span class="badge bg-warning text-dark" style="font-size:0.7rem;"><i class="fas fa-exclamation-triangle me-1"></i>Group A Missing</span>';
+    if (s.includes('group b missing')) return '<span class="badge bg-warning text-dark" style="font-size:0.7rem;"><i class="fas fa-exclamation-triangle me-1"></i>Group B Missing</span>';
+    return '<span class="badge bg-secondary" style="font-size:0.7rem;">Unknown</span>';
+}
+
+function getActionButtons(award) {
+    if (award.is_insurance) {
+        return '<span class="text-muted small">Managed in Insurance</span>';
+    }
+    const s = award.simplified_status;
+    const type = award.award_type;
+    const id = award.id;
+    let buttons = '';
+
+    if (s === 'Pending' || s === 'Claimed') {
+        buttons += `<button class="btn btn-sm btn-success me-1" onclick="performAction(${id}, '${type}', 'approve')" title="Approve"><i class="fas fa-thumbs-up"></i> Approve</button>`;
+    } else if (s === 'Approved') {
+        buttons += `<button class="btn btn-sm btn-info me-1" onclick="performAction(${id}, '${type}', 'process')" title="Mark Processed"><i class="fas fa-cog"></i> Process</button>`;
+    } else if (s === 'Processed') {
+        buttons += `<button class="btn btn-sm btn-primary me-1" onclick="performAction(${id}, '${type}', 'complete')" title="Mark Completed"><i class="fas fa-check-circle"></i> Complete</button>`;
+    }
+
+    if (s !== 'Completed' && s !== 'Rejected') {
+        buttons += `<button class="btn btn-sm btn-outline-danger me-1" onclick="performAction(${id}, '${type}', 'reject')" title="Reject"><i class="fas fa-times"></i></button>`;
+    }
+
+    if (s === 'Approved' || s === 'Processed') {
+        buttons += `<button class="btn btn-sm btn-outline-secondary" onclick="performAction(${id}, '${type}', 'update_cost')" title="Update Cost"><i class="fas fa-rupee-sign"></i></button>`;
+    }
+
+    return buttons || '<span class="text-muted">-</span>';
+}
+
+async function loadAwards() {
+    try {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('awardsTabContent').style.display = 'none';
+
+        const response = await fetch(`${API_BASE}/list?award_types=all&limit=100`, {
+            headers: { 'Authorization': `Bearer ${window.sessionToken}` }
+        });
+
+        if (!response.ok) throw new Error('Failed to load awards');
+
+        const data = await response.json();
+        allAwards = (data.awards || []).map(award => ({
+            id: award.award_id,
+            user_id: award.user_id,
+            user_name: award.user_name,
+            award_type: award.award_type,
+            gift_name: award.gift_name || award.rank_name,
+            budgeted_amount: award.budgeted_amount,
+            actual_cost_paid: award.actual_cost_paid,
+            processed_status: award.processed_status,
+            simplified_status: award.simplified_status || getSimplifiedStatus(award.processed_status),
+            achievement_date: award.achievement_date,
+            dispatch_date: award.dispatch_date,
+            received_date: award.received_date,
+            is_monetary: award.budgeted_amount === 0,
+            bonanza_name: award.bonanza_name,
+            kyc_status: award.kyc_status || 'Pending',
+            group_eligibility: award.group_eligibility || 'Unknown'
+        }));
+
+        awardsMap = {};
+        allAwards.forEach(a => { awardsMap[a.id] = a; });
+
+        await loadInsuranceForProcurement();
+
+        updateStats();
+        applyFilters();
+        updateBudgetSummary();
+        giftSummaryLoaded = false;
+        if (currentTab === 'gift-summary') loadGiftSummary(true);
+
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading awards: ' + error.message);
+    }
+}
+
+async function loadInsuranceForProcurement() {
+    try {
+        insuranceItems = [];
+        let offset = 0;
+        const pageSize = 200;
+        let hasMore = true;
+
+        while (hasMore) {
+            const resp = await fetch(`/api/v1/staff/points-insurance/insurance/eligible-users?limit=${pageSize}&offset=${offset}`, {
+                headers: { 'Authorization': `Bearer ${window.sessionToken}` }
+            });
+            if (!resp.ok) break;
+            const data = await resp.json();
+            if (!data.success) break;
+
+            const users = data.results || [];
+            if (users.length === 0) { hasMore = false; break; }
+
+            users.forEach(u => {
+                if (u.insurance && (u.insurance_status === 'Issued' || u.insurance_status === 'Active')) {
+                    insuranceItems.push({
+                        id: 'ins_' + u.user_id,
+                        user_id: u.user_id,
+                        user_name: u.name || u.user_name || '',
+                        award_type: 'insurance',
+                        gift_name: 'Accidental Insurance (Rs.5,00,000)',
+                        budgeted_amount: 500,
+                        actual_cost_paid: 500,
+                        simplified_status: 'Completed',
+                        achievement_date: u.insurance_issued_date || u.activation_date || '',
+                        is_insurance: true
+                    });
+                } else if (u.is_eligible && !u.insurance) {
+                    insuranceItems.push({
+                        id: 'ins_' + u.user_id,
+                        user_id: u.user_id,
+                        user_name: u.name || u.user_name || '',
+                        award_type: 'insurance',
+                        gift_name: 'Accidental Insurance (Rs.5,00,000)',
+                        budgeted_amount: 500,
+                        actual_cost_paid: 0,
+                        simplified_status: 'Pending',
+                        achievement_date: u.activation_date || '',
+                        is_insurance: true
+                    });
+                }
+            });
+
+            offset += pageSize;
+            if (users.length < pageSize) hasMore = false;
+        }
+    } catch(e) {
+        console.error('Insurance load error:', e);
+    }
+}
+
+function updateStats() {
+    const stats = { pending: 0, approved: 0, processed: 0, completed: 0, rejected: 0 };
+
+    allAwards.forEach(award => {
+        const s = award.simplified_status;
+        if (s === 'Pending' || s === 'Claimed') stats.pending++;
+        else if (s === 'Approved') stats.approved++;
+        else if (s === 'Processed') stats.processed++;
+        else if (s === 'Completed') stats.completed++;
+        else if (s === 'Rejected' || s === 'Cancelled') stats.rejected++;
+    });
+
+    if (insuranceItems.length > 0) {
+        insuranceItems.forEach(item => {
+            if (item.simplified_status === 'Pending') stats.pending++;
+            else if (item.simplified_status === 'Completed') stats.completed++;
+        });
+    }
+
+    document.getElementById('statPending').textContent = stats.pending;
+    document.getElementById('statApproved').textContent = stats.approved;
+    document.getElementById('statProcessed').textContent = stats.processed;
+    document.getElementById('statCompleted').textContent = stats.completed;
+    document.getElementById('statRejected').textContent = stats.rejected;
+}
+
+function updateBudgetSummary() {
+    let totalBudget = 0, totalSpent = 0, pendingAmount = 0;
+
+    allAwards.forEach(award => {
+        const budget = parseFloat(award.budgeted_amount) || 0;
+        const spent = parseFloat(award.actual_cost_paid) || 0;
+        const s = award.simplified_status;
+
+        totalBudget += budget;
+
+        if (s === 'Completed' || s === 'Processed') {
+            totalSpent += spent || budget;
+        } else {
+            pendingAmount += budget;
+        }
+    });
+
+    insuranceItems.forEach(item => {
+        const budget = parseFloat(item.budgeted_amount) || 0;
+        const spent = parseFloat(item.actual_cost_paid) || 0;
+        totalBudget += budget;
+        if (item.simplified_status === 'Completed') { totalSpent += spent || budget; }
+        else { pendingAmount += budget; }
+    });
+
+    document.getElementById('totalBudget').textContent = '\u20B9' + totalBudget.toLocaleString('en-IN');
+    document.getElementById('totalSpent').textContent = '\u20B9' + totalSpent.toLocaleString('en-IN');
+    document.getElementById('pendingAmount').textContent = '\u20B9' + pendingAmount.toLocaleString('en-IN');
+}
+
+function applyFilters() {
+    const filterType = document.getElementById('filterType').value;
+    const filterStatus = document.getElementById('filterStatus').value;
+    const filterSearch = document.getElementById('filterSearch').value.toLowerCase();
+
+    const combined = [...allAwards, ...insuranceItems];
+    filteredAwards = combined.filter(award => {
+        if (filterType && award.award_type !== filterType) return false;
+        if (filterStatus) {
+            if (filterStatus === 'Pending' && award.simplified_status !== 'Pending' && award.simplified_status !== 'Claimed') return false;
+            else if (filterStatus === 'Rejected' && award.simplified_status !== 'Rejected' && award.simplified_status !== 'Cancelled') return false;
+            else if (filterStatus !== 'Pending' && filterStatus !== 'Rejected' && award.simplified_status !== filterStatus) return false;
+        }
+        if (filterSearch) {
+            const searchStr = `${award.user_id} ${award.user_name} ${award.gift_name || ''}`.toLowerCase();
+            if (!searchStr.includes(filterSearch)) return false;
+        }
+        return true;
+    });
+
+    renderAwards(filteredAwards);
+}
+
+function clearFilters() {
+    document.getElementById('filterType').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterSearch').value = '';
+    applyFilters();
+}
+
+function renderAwards(awards) {
+    let sortedIndividual = awards;
+    const indState = sortState['individual'];
+    if (indState.key) {
+        sortedIndividual = sortArray(awards, indState.key, indState.dir);
+    }
+    renderIndividualTab(sortedIndividual);
+
+    let groupedData = aggregateByUser(awards);
+    const grpState = sortState['grouped'];
+    if (grpState.key) {
+        if (grpState.key === 'outstanding') {
+            groupedData.forEach(g => { g.outstanding = g.total_budgeted - g.total_actual; });
+        }
+        groupedData = sortArray(groupedData, grpState.key, grpState.dir);
+    }
+    renderGroupedTabFromData(groupedData);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('awardsTabContent').style.display = 'block';
+}
+
+function renderIndividualTab(awards) {
+    const tbody = document.getElementById('individualAwardsBody');
+    tbody.innerHTML = '';
+
+    if (!awards || awards.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted py-3">No awards found</td></tr>';
+        return;
+    }
+
+    awards.forEach(award => {
+        const budgetAmount = award.budgeted_amount ? '\u20B9' + parseFloat(award.budgeted_amount).toLocaleString('en-IN') : '-';
+        const actualCost = award.actual_cost_paid ? '\u20B9' + parseFloat(award.actual_cost_paid).toLocaleString('en-IN') : '-';
+        const costDisplay = award.actual_cost_paid ? `${budgetAmount} / ${actualCost}` : budgetAmount;
+        const achieveDate = award.achievement_date ? new Date(award.achievement_date).toLocaleDateString('en-IN') : '-';
+
+        tbody.innerHTML += `
+            <tr>
+                <td><span class="badge bg-secondary">${award.user_id || 'N/A'}</span></td>
+                <td>${award.user_name || 'Unknown'}</td>
+                <td>${getTypeBadge(award.award_type)}</td>
+                <td><strong>${award.gift_name || 'N/A'}</strong></td>
+                <td>${getStatusBadge(award.simplified_status)}</td>
+                <td>${getKycBadge(award.kyc_status)}</td>
+                <td>${getGroupEligibilityBadge(award.group_eligibility)}</td>
+                <td><strong>${costDisplay}</strong></td>
+                <td><small class="text-muted">${achieveDate}</small></td>
+                <td>
+                    <div class="d-flex gap-1 flex-wrap">
+                        ${getActionButtons(award)}
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function aggregateByUser(awards) {
+    const userMap = {};
+
+    awards.forEach(award => {
+        const userId = award.user_id;
+
+        if (!userMap[userId]) {
+            userMap[userId] = {
+                user_id: userId,
+                user_name: award.user_name,
+                kyc_status: award.kyc_status || 'Pending',
+                group_eligibility: award.group_eligibility || 'Unknown',
+                gift_count: 0,
+                total_budgeted: 0,
+                total_actual: 0,
+                completed_count: 0,
+                pending_count: 0,
+                gifts: [],
+                latest_update: null
+            };
+        }
+
+        const userGroup = userMap[userId];
+        userGroup.gift_count++;
+
+        const budgeted = parseFloat(award.budgeted_amount) || 0;
+        const actual = parseFloat(award.actual_cost_paid) || 0;
+
+        userGroup.total_budgeted += budgeted;
+        userGroup.total_actual += actual;
+
+        if (award.simplified_status === 'Completed') userGroup.completed_count++;
+        else userGroup.pending_count++;
+
+        userGroup.gifts.push(award);
+    });
+
+    Object.values(userMap).forEach(group => {
+        if (group.completed_count === group.gift_count) {
+            group.aggregated_status = 'Completed';
+        } else if (group.pending_count === group.gift_count) {
+            group.aggregated_status = 'Pending';
+        } else {
+            group.aggregated_status = 'In Progress';
+        }
+    });
+
+    return Object.values(userMap);
+}
+
+function toggleUserDetails(rowId) {
+    const detailsRow = document.getElementById(`${rowId}_details`);
+    const expandBtn = document.querySelector(`#${rowId} .expand-btn i`);
+
+    if (detailsRow.style.display === 'none') {
+        detailsRow.style.display = 'table-row';
+        expandBtn.className = 'fas fa-minus-circle';
+        expandBtn.style.color = '#dc3545';
+    } else {
+        detailsRow.style.display = 'none';
+        expandBtn.className = 'fas fa-plus-circle';
+        expandBtn.style.color = '#d97706';
+    }
+}
+
+function renderGroupedTab(awards) {
+    renderGroupedTabFromData(aggregateByUser(awards));
+}
+
+function renderGroupedTabFromData(userGroups) {
+    const tbody = document.getElementById('groupedAwardsBody');
+    tbody.innerHTML = '';
+
+    if (!userGroups || userGroups.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted py-3">No awards found</td></tr>';
+        return;
+    }
+
+    userGroups.forEach((group, index) => {
+        const rowId = `user_${index}`;
+        const outstanding = group.total_budgeted - group.total_actual;
+        const latestUpdate = group.latest_update ? new Date(group.latest_update).toLocaleDateString('en-IN') : '-';
+        const actualDisplay = group.total_actual > 0 ? '\u20B9' + group.total_actual.toLocaleString('en-IN', {maximumFractionDigits: 0}) : '\u2014';
+        const statusBadge = getStatusBadge(group.aggregated_status);
+
+        tbody.innerHTML += `
+            <tr id="${rowId}" style="background: #fffbeb; font-weight: 500;">
+                <td>
+                    <button class="btn btn-sm btn-link expand-btn" onclick="toggleUserDetails('${rowId}')" title="View gifts">
+                        <i class="fas fa-plus-circle" style="color: #d97706; font-size: 18px;"></i>
+                    </button>
+                </td>
+                <td><span class="badge bg-secondary">${group.user_id}</span></td>
+                <td>${group.user_name || 'Unknown'}</td>
+                <td>${getKycBadge(group.kyc_status)}</td>
+                <td>${getGroupEligibilityBadge(group.group_eligibility)}</td>
+                <td><span class="badge bg-info">${group.gift_count} gifts</span></td>
+                <td>\u20B9${group.total_budgeted.toLocaleString('en-IN', {maximumFractionDigits: 0})}</td>
+                <td>${actualDisplay}</td>
+                <td><strong style="color: ${outstanding > 0 ? '#d97706' : outstanding < 0 ? '#dc3545' : '#059669'};">\u20B9${outstanding.toLocaleString('en-IN', {maximumFractionDigits: 0})}</strong></td>
+                <td>${statusBadge}</td>
+                <td><span class="badge bg-success">${group.completed_count} / ${group.gift_count}</span></td>
+                <td><small class="text-muted">${latestUpdate}</small></td>
+            </tr>
+        `;
+
+        tbody.innerHTML += `
+            <tr id="${rowId}_details" style="display: none; background: #fef3c7;">
+                <td colspan="12" style="padding: 20px;">
+                    <div style="margin-left: 40px;">
+                        <h6 style="color: #d97706; margin-bottom: 15px;"><i class="fas fa-gifts"></i> Gift-Wise Breakdown for ${group.user_name}</h6>
+                        <table class="table table-sm table-bordered" style="background: white;">
+                            <thead style="background: #f3f4f6;">
+                                <tr>
+                                    <th>Type</th>
+                                    <th>Gift Name</th>
+                                    <th>Status</th>
+                                    <th>Budget / Actual</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${renderGiftRows(group.gifts)}
+                            </tbody>
+                        </table>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function renderGiftRows(gifts) {
+    return gifts.map(award => {
+        const budgetAmount = award.budgeted_amount ? '\u20B9' + parseFloat(award.budgeted_amount).toLocaleString('en-IN') : '-';
+        const actualCost = award.actual_cost_paid ? '\u20B9' + parseFloat(award.actual_cost_paid).toLocaleString('en-IN') : '-';
+        const costDisplay = award.actual_cost_paid ? `${budgetAmount} / ${actualCost}` : budgetAmount;
+
+        return `
+            <tr>
+                <td>${getTypeBadge(award.award_type)}</td>
+                <td><strong>${award.gift_name || 'N/A'}</strong></td>
+                <td>${getStatusBadge(award.simplified_status)}</td>
+                <td><strong>${costDisplay}</strong></td>
+                <td>
+                    <div class="d-flex gap-1 flex-wrap">
+                        ${getActionButtons(award)}
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function performAction(awardId, awardType, action) {
+    const award = awardsMap[awardId];
+    currentAction = { awardId, awardType, action };
+
+    const titles = {
+        'approve': 'Approve Award',
+        'process': 'Mark as Processed',
+        'complete': 'Mark as Completed',
+        'reject': 'Reject Award',
+        'update_cost': 'Update Cost'
+    };
+
+    document.getElementById('actionModalTitle').textContent = titles[action] || 'Action';
+
+    let content = '';
+
+    if (action === 'process' || action === 'update_cost') {
+        const budgeted = award ? (parseFloat(award.budgeted_amount) || 0) : 0;
+        const existing = award ? (parseFloat(award.actual_cost_paid) || 0) : 0;
+        content += `
+            <div class="mb-3">
+                <label class="form-label fw-bold">Budgeted Amount</label>
+                <input type="text" class="form-control" value="\u20B9${budgeted.toLocaleString('en-IN')}" readonly>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Actual Cost</label>
+                <input type="number" class="form-control" id="actionActualCost" step="0.01" value="${existing || budgeted}" placeholder="Enter actual cost...">
+            </div>
+        `;
+    }
+
+    content += `
+        <div class="mb-3">
+            <label class="form-label fw-bold">${action === 'reject' ? 'Rejection Reason' : 'Comments (Optional)'}</label>
+            <textarea class="form-control" id="actionNotes" rows="3" ${action === 'reject' ? 'required' : ''} placeholder="${action === 'reject' ? 'Enter reason for rejection...' : 'Add any comments...'}"></textarea>
+        </div>
+    `;
+
+    document.getElementById('actionModalBody').innerHTML = content;
+
+    const submitBtn = document.getElementById('actionModalSubmit');
+    const btnColors = {
+        'approve': 'btn-success',
+        'process': 'btn-info',
+        'complete': 'btn-primary',
+        'reject': 'btn-danger',
+        'update_cost': 'btn-warning'
+    };
+    submitBtn.className = `btn ${btnColors[action] || 'btn-primary'}`;
+    submitBtn.innerHTML = titles[action] || 'Submit';
+
+    new bootstrap.Modal(document.getElementById('actionModal')).show();
+}
+
+async function submitAction() {
+    if (!currentAction) return;
+
+    const { awardId, awardType, action } = currentAction;
+    const comment = document.getElementById('actionNotes')?.value || '';
+
+    if (action === 'reject' && !comment.trim()) {
+        alert('Please enter a rejection reason');
+        return;
+    }
+
+    if (action === 'update_cost') {
+        await submitCostUpdate(awardId, awardType, comment);
+        return;
+    }
+
+    if (action === 'process') {
+        const actualCost = parseFloat(document.getElementById('actionActualCost')?.value) || 0;
+        if (actualCost > 0) {
+            try {
+                const costResp = await fetch(`/api/v1/awards/finance/awards/${awardType}/${awardId}/process`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${window.sessionToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        actual_cost: actualCost,
+                        cost_variance_reason: comment || null,
+                        notes: comment || null
+                    })
+                });
+                if (!costResp.ok) {
+                    const costErr = await costResp.json().catch(() => ({ detail: 'Cost update failed' }));
+                    console.warn('Cost update warning:', costErr.detail);
+                }
+            } catch (e) {
+                console.error('Cost update during process:', e);
+            }
+        }
+    }
+
+    const statusMap = {
+        'approve': 'Approved',
+        'process': 'Processed',
+        'complete': 'Completed',
+        'reject': 'Rejected'
+    };
+
+    const newStatus = statusMap[action];
+    if (!newStatus) { alert('Unknown action'); return; }
+
+    try {
+        const response = await fetch(`${API_BASE}/update-status`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${window.sessionToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                award_id: awardId,
+                award_type: awardType,
+                new_status: newStatus,
+                comment: comment || null
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ detail: 'Request failed' }));
+            throw new Error(err.detail || 'Request failed');
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+        alert('Status updated to ' + newStatus + ' successfully!');
+        giftSummaryLoaded = false;
+        await loadAwards();
+        if (currentTab === 'gift-summary') await loadGiftSummary();
+
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+
+    currentAction = null;
+}
+
+async function submitCostUpdate(awardId, awardType, comment) {
+    const actualCost = parseFloat(document.getElementById('actionActualCost')?.value) || 0;
+
+    try {
+        const response = await fetch(`/api/v1/awards/finance/awards/${awardType}/${awardId}/process`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${window.sessionToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                actual_cost: actualCost,
+                cost_variance_reason: comment || null,
+                notes: comment || null
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({ detail: 'Cost update failed' }));
+            throw new Error(err.detail || 'Cost update failed');
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+        alert('Cost updated successfully!');
+        giftSummaryLoaded = false;
+        await loadAwards();
+        if (currentTab === 'gift-summary') await loadGiftSummary();
+
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+
+    currentAction = null;
+}
+
+function exportToExcel() {
+    const combined = [...allAwards, ...insuranceItems];
+    if (combined.length === 0) {
+        alert('No data to export');
+        return;
+    }
+
+    let csv = 'User ID,User Name,Type,Gift Name,Status,Achievement Date,Budget,Actual Cost\n';
+    combined.forEach(award => {
+        csv += `"${award.user_id || ''}","${award.user_name || ''}","${award.award_type || ''}","${award.gift_name || ''}","${award.simplified_status || ''}","${award.achievement_date || ''}","${award.budgeted_amount || 0}","${award.actual_cost_paid || ''}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `procurement_queue_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+}
+
+window.addEventListener('storage', (e) => {
+    if (e.key === 'lastTrackingUpdate') {
+        loadAwards();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', loadAwards);
+
+let giftSummaryData = [];
+let giftSummaryLoaded = false;
+
+function loadGiftSummary(forceReload) {
+    if (giftSummaryLoaded && !forceReload) return;
+
+    const combined = [...allAwards, ...insuranceItems];
+    const gifts = buildGiftSummaryFromAwards(combined);
+    const allWonUsers = new Set();
+    const allClaimedUsers = new Set();
+    let totalBudget = 0, totalSpent = 0;
+
+    gifts.forEach(g => {
+        g._wonUsers.forEach(u => allWonUsers.add(u));
+        g._claimedUsers.forEach(u => allClaimedUsers.add(u));
+        totalBudget += g.budget;
+        totalSpent += g.actual_spent;
+    });
+
+    let totalCount = 0;
+    gifts.forEach(g => { totalCount += g.total_count; });
+
+    const totals = {
+        total_count: totalCount,
+        total_budget: totalBudget,
+        total_spent: totalSpent,
+        total_variance: totalBudget - totalSpent
+    };
+
+    giftSummaryData = gifts;
+    giftSummaryLoaded = true;
+    renderGiftSummary(giftSummaryData, totals);
+}
+
+function buildGiftSummaryFromAwards(awards) {
+    const giftMap = {};
+
+    awards.forEach(award => {
+        const giftName = award.gift_name || 'Unknown';
+        const s = award.simplified_status;
+
+        if (!giftMap[giftName]) {
+            giftMap[giftName] = {
+                gift_name: giftName,
+                award_types: new Set(),
+                _wonUsers: new Set(),
+                _claimedUsers: new Set(),
+                won_people: 0,
+                total_count: 0,
+                pending_approval: 0,
+                admin_approved: 0,
+                ready_for_procurement: 0,
+                ordered: 0,
+                dispatched: 0,
+                delivered: 0,
+                rejected: 0,
+                budget: 0,
+                actual_spent: 0
+            };
+        }
+
+        const agg = giftMap[giftName];
+        agg.award_types.add(award.award_type);
+        agg._wonUsers.add(award.user_id);
+        agg.total_count++;
+
+        if (s === 'Pending' || s === 'Claimed') agg.pending_approval++;
+        else if (s === 'Approved') agg.admin_approved++;
+        else if (s === 'Processed') agg.ready_for_procurement++;
+        else if (s === 'Completed') { agg.delivered++; agg._claimedUsers.add(award.user_id); }
+        else if (s === 'Rejected' || s === 'Cancelled') agg.rejected++;
+
+        agg.budget += parseFloat(award.budgeted_amount) || 0;
+        agg.actual_spent += parseFloat(award.actual_cost_paid) || 0;
+    });
+
+    return Object.values(giftMap).map(agg => {
+        const typeCounts = {};
+        agg.award_types.forEach(t => { typeCounts[t] = 0; });
+        awards.forEach(a => {
+            if ((a.gift_name || 'Unknown') === agg.gift_name) {
+                typeCounts[a.award_type] = (typeCounts[a.award_type] || 0) + 1;
+            }
+        });
+        const typeParts = Object.entries(typeCounts).sort().map(([t, c]) => `${t}: ${c}`);
+        const variance = agg.budget - agg.actual_spent;
+        const variancePercent = agg.budget > 0 ? (variance / agg.budget * 100) : 0;
+
+        return {
+            gift_name: agg.gift_name,
+            award_type_breakdown: typeParts.sort().join(', '),
+            won_people: agg._wonUsers.size,
+            claimed_people: agg._claimedUsers.size,
+            total_count: agg.total_count,
+            pending_approval: agg.pending_approval,
+            admin_approved: agg.admin_approved,
+            ready_for_procurement: agg.ready_for_procurement,
+            processed: agg.ready_for_procurement,
+            ordered: 0,
+            dispatched: 0,
+            delivered: agg.delivered,
+            rejected: agg.rejected,
+            budget: Math.round(agg.budget * 100) / 100,
+            actual_spent: Math.round(agg.actual_spent * 100) / 100,
+            variance: Math.round(variance * 100) / 100,
+            variance_percent: Math.round(variancePercent * 100) / 100,
+            _wonUsers: agg._wonUsers,
+            _claimedUsers: agg._claimedUsers
+        };
+    }).sort((a, b) => a.gift_name.localeCompare(b.gift_name));
+}
+
+function renderGiftSummary(gifts, totals) {
+    const tbody = document.getElementById('giftSummaryBody');
+
+    if (!gifts || gifts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted">No gifts found</td></tr>';
+        return;
+    }
+
+    let totalPending = 0, totalApproved = 0, totalProcessed = 0, totalCompleted = 0, totalRejected = 0;
+    let totalBudget = 0, totalSpent = 0;
+
+    let html = '';
+    gifts.forEach((gift, index) => {
+        const pending = (gift.pending_approval || 0);
+        const approved = (gift.admin_approved || 0);
+        const processed = (gift.ready_for_procurement || 0) + (gift.ordered || 0) + (gift.dispatched || 0);
+        const completed = (gift.delivered || 0);
+        const rejected = (gift.rejected || 0);
+
+        totalPending += pending;
+        totalApproved += approved;
+        totalProcessed += processed;
+        totalCompleted += completed;
+        totalRejected += rejected;
+        totalBudget += gift.budget || 0;
+        totalSpent += gift.actual_spent || 0;
+
+        const varianceClass = gift.variance_percent >= 0 ? 'text-success' : 'text-danger';
+        const varianceIcon = gift.variance_percent >= 0 ? '\u2193' : '\u2191';
+        const rowId = `gift_${index}`;
+        const giftNameEncoded = encodeURIComponent(gift.gift_name);
+
+        const typeBadges = getAwardTypeBadges(gift.award_type_breakdown);
+
+        html += `
+            <tr id="${rowId}" style="background: #fffbeb; cursor: pointer;" onclick="toggleGiftContributors('${rowId}', '${giftNameEncoded}')">
+                <td>
+                    <button class="btn btn-sm btn-link expand-btn p-0" title="View contributors">
+                        <i class="fas fa-plus-circle" style="color: #d97706; font-size: 18px;"></i>
+                    </button>
+                </td>
+                <td><strong>${escapeHtml(gift.gift_name)}</strong></td>
+                <td>${typeBadges}</td>
+                <td>${gift.total_count || 0}</td>
+                <td>${pending}</td>
+                <td>${approved}</td>
+                <td class="fw-bold text-info">${processed}</td>
+                <td class="fw-bold text-success">${completed}</td>
+                <td class="text-danger">${rejected}</td>
+                <td>\u20B9${(gift.budget || 0).toLocaleString()}</td>
+                <td>\u20B9${(gift.actual_spent || 0).toLocaleString()}</td>
+                <td class="${varianceClass}">${varianceIcon} ${(gift.variance_percent || 0).toFixed(1)}%</td>
+            </tr>
+            <tr id="${rowId}_details" style="display: none; background: #fef3c7;">
+                <td colspan="12" style="padding: 15px;">
+                    <div style="margin-left: 30px;">
+                        <div class="contributors-loading text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary"></div> Loading contributors...
+                        </div>
+                        <div class="contributors-content" style="display: none;"></div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+
+    document.getElementById('giftTotalCount').textContent = totals?.total_count || 0;
+    document.getElementById('giftTotalPending').textContent = totalPending;
+    document.getElementById('giftTotalApproved').textContent = totalApproved;
+    document.getElementById('giftTotalProcessed').textContent = totalProcessed;
+    document.getElementById('giftTotalCompleted').textContent = totalCompleted;
+    document.getElementById('giftTotalRejected').textContent = totalRejected;
+    document.getElementById('giftTotalBudget').textContent = '\u20B9' + totalBudget.toLocaleString();
+    document.getElementById('giftTotalSpent').textContent = '\u20B9' + totalSpent.toLocaleString();
+
+    if (totalBudget > 0) {
+        const variance = ((totalBudget - totalSpent) / totalBudget * 100);
+        const varClass = variance >= 0 ? 'text-success' : 'text-danger';
+        document.getElementById('giftTotalVariance').innerHTML = `<span class="${varClass}">${variance >= 0 ? '\u2193' : '\u2191'} ${variance.toFixed(1)}%</span>`;
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function getAwardTypeBadges(breakdown) {
+    if (!breakdown) return '<span class="badge bg-secondary">Unknown</span>';
+
+    const badges = [];
+    const parts = breakdown.toLowerCase().split(',');
+
+    parts.forEach(part => {
+        const trimmed = part.trim();
+        if (trimmed.includes('direct')) {
+            badges.push('<span class="badge bg-primary" style="font-size: 0.7rem;">Direct Facilitation</span>');
+        } else if (trimmed.includes('matching')) {
+            badges.push('<span class="badge bg-info" style="font-size: 0.7rem;">Group Performance</span>');
+        } else if (trimmed.includes('bonanza')) {
+            badges.push('<span class="badge bg-warning text-dark" style="font-size: 0.7rem;">Bonanza</span>');
+        } else if (trimmed.includes('insurance')) {
+            badges.push('<span class="badge bg-success" style="font-size: 0.7rem;">Insurance</span>');
+        }
+    });
+
+    return badges.length > 0 ? badges.join(' ') : '<span class="badge bg-secondary">Unknown</span>';
+}
+
+const giftContributorsCache = {};
+
+async function toggleGiftContributors(rowId, giftNameEncoded) {
+    const detailsRow = document.getElementById(`${rowId}_details`);
+    const expandBtn = document.querySelector(`#${rowId} .expand-btn i`);
+    const giftName = decodeURIComponent(giftNameEncoded);
+
+    if (detailsRow.style.display === 'none') {
+        detailsRow.style.display = 'table-row';
+        expandBtn.className = 'fas fa-minus-circle';
+        expandBtn.style.color = '#dc3545';
+
+        if (!giftContributorsCache[giftName]) {
+            await loadGiftContributors(rowId, giftName);
+        } else {
+            renderGiftContributors(rowId, giftContributorsCache[giftName]);
+        }
+    } else {
+        detailsRow.style.display = 'none';
+        expandBtn.className = 'fas fa-plus-circle';
+        expandBtn.style.color = '#d97706';
+    }
+}
+
+async function loadGiftContributors(rowId, giftName) {
+    const detailsRow = document.getElementById(`${rowId}_details`);
+    const loadingDiv = detailsRow.querySelector('.contributors-loading');
+    const contentDiv = detailsRow.querySelector('.contributors-content');
+
+    loadingDiv.style.display = 'block';
+    contentDiv.style.display = 'none';
+
+    const combined = [...allAwards, ...insuranceItems];
+    const matchingItems = combined.filter(a => (a.gift_name || 'Unknown') === giftName);
+
+    const contributors = matchingItems.map(item => ({
+        user_id: item.user_id,
+        user_name: item.user_name,
+        award_type: item.award_type || 'Unknown',
+        status: item.processed_status || (item.simplified_status === 'Completed' ? 'Delivered' : 'Pending Approval'),
+        simplified_status: item.simplified_status,
+        achieved_at: item.achievement_date || null,
+        budgeted_amount: parseFloat(item.budgeted_amount) || 0,
+        actual_cost_paid: parseFloat(item.actual_cost_paid) || 0,
+        kyc_status: item.kyc_status || 'Pending',
+        group_eligibility: item.group_eligibility || 'Unknown'
+    }));
+
+    giftContributorsCache[giftName] = contributors;
+    renderGiftContributors(rowId, contributors);
+}
+
+function renderGiftContributors(rowId, contributors) {
+    const detailsRow = document.getElementById(`${rowId}_details`);
+    const loadingDiv = detailsRow.querySelector('.contributors-loading');
+    const contentDiv = detailsRow.querySelector('.contributors-content');
+
+    loadingDiv.style.display = 'none';
+
+    if (!contributors || contributors.length === 0) {
+        contentDiv.innerHTML = '<div class="text-muted text-center py-2"><i class="fas fa-info-circle me-1"></i>No contributors found for this gift</div>';
+        contentDiv.style.display = 'block';
+        return;
+    }
+
+    let tableHtml = `
+        <h6 style="color: #d97706; margin-bottom: 10px;"><i class="fas fa-users"></i> Contributors (${contributors.length})</h6>
+        <table class="table table-sm table-bordered" style="background: white; font-size: 0.85rem;">
+            <thead style="background: #f3f4f6;">
+                <tr>
+                    <th>User ID</th>
+                    <th>User Name</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>KYC Status</th>
+                    <th>Group Eligibility</th>
+                    <th>Achievement Date</th>
+                    <th>Budget</th>
+                    <th>Actual Paid</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    contributors.forEach(c => {
+        const achievedDate = c.achieved_at ? new Date(c.achieved_at).toLocaleDateString('en-IN') : '-';
+        const simplifiedStatus = c.simplified_status ? getStatusBadge(c.simplified_status) : getStatusBadge(getSimplifiedStatus(c.status));
+        const kycBadge = getKycBadge(c.kyc_status);
+        const groupBadge = getGroupEligibilityBadge(c.group_eligibility);
+
+        tableHtml += `
+            <tr>
+                <td><span class="badge bg-secondary">${c.user_id || '-'}</span></td>
+                <td>${c.user_name || 'Unknown'}</td>
+                <td>${getTypeBadge(c.award_type)}</td>
+                <td>${simplifiedStatus}</td>
+                <td>${kycBadge}</td>
+                <td>${groupBadge}</td>
+                <td>${achievedDate}</td>
+                <td>\u20B9${(c.budgeted_amount || 0).toLocaleString()}</td>
+                <td>${c.actual_cost_paid > 0 ? '\u20B9' + c.actual_cost_paid.toLocaleString() : '\u2014'}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += '</tbody></table>';
+    contentDiv.innerHTML = tableHtml;
+    contentDiv.style.display = 'block';
+}
+</script>

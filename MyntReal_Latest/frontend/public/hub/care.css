@@ -1,0 +1,162 @@
+/* VGK Care — full redesign Apr 2026 */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:#fff;color:#0f172a;line-height:1.6}
+
+/* HEADER */
+.c-header{position:fixed;top:0;left:0;right:0;z-index:100;padding:12px 0;background:transparent;transition:background .3s,box-shadow .3s}
+.c-header.scrolled{background:rgba(255,255,255,.97);backdrop-filter:blur(8px);box-shadow:0 2px 14px rgba(0,0,0,.08)}
+.c-nav{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.c-logo img{height:52px;object-fit:contain;transition:filter .3s;
+  filter:drop-shadow(0 0 3px rgba(255,255,255,.9)) drop-shadow(0 0 3px rgba(255,255,255,.9)) drop-shadow(0 0 2px rgba(255,255,255,.7))}
+.c-header.scrolled .c-logo img{filter:drop-shadow(0 1px 3px rgba(0,0,0,.12))}
+.c-navlinks{display:flex;align-items:center;gap:26px;list-style:none}
+.c-navlinks a{color:#fff;text-decoration:none;font-size:14px;font-weight:500;transition:color .2s}
+.c-header.scrolled .c-navlinks a{color:#0f172a}
+.c-navlinks a:hover{color:#fbbf24}
+.c-dropdown{position:relative}
+.c-drop-btn{cursor:pointer;background:none;border:none;color:#fff;font-size:14px;font-weight:500;font-family:inherit;padding:0}
+.c-header.scrolled .c-drop-btn{color:#0f172a}
+.c-drop-btn:hover{color:#fbbf24}
+.c-dropdown-menu{display:none;position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%);background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:8px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+.c-dropdown:hover .c-dropdown-menu,.c-dropdown.active .c-dropdown-menu{display:block}
+.c-dropdown-menu a{display:block;padding:8px 14px;color:#374151;text-decoration:none;font-size:13px;border-radius:7px;transition:background .15s}
+.c-dropdown-menu a:hover{background:#fffbeb;color:#f59e0b}
+.c-toggle{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px}
+.c-toggle span{display:block;width:22px;height:2px;background:#fff;border-radius:2px}
+.c-header.scrolled .c-toggle span{background:#374151}
+@media(max-width:768px){
+  .c-navlinks{display:none;position:fixed;top:70px;left:0;right:0;background:rgba(255,255,255,.97);flex-direction:column;align-items:flex-start;padding:16px 24px;gap:14px;border-top:1px solid #e5e7eb}
+  .c-navlinks.open{display:flex}
+  .c-navlinks a{color:#0f172a !important}
+  .c-toggle{display:flex}
+  .c-dropdown-menu{position:static;transform:none;box-shadow:none;border:none;background:transparent;padding:4px 0 4px 12px}
+}
+
+/* HERO */
+.c-hero{min-height:92vh;display:flex;align-items:center;position:relative;overflow:hidden;
+  background:#0c1445 url("/hub/Assets/Care.webp") center center / cover no-repeat}
+.c-hero::before{content:"";position:absolute;inset:0;
+  background:rgba(12,20,69,0.74)}
+.c-hero-inner{max-width:1200px;margin:0 auto;padding:110px 24px 70px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;position:relative;z-index:1;width:100%}
+.c-hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.08em;margin-bottom:20px}
+.c-hero h1{font-size:clamp(2rem,4vw,3.2rem);font-weight:800;line-height:1.15;color:#f8fafc;margin-bottom:18px}
+.c-hero h1 span{color:#fbbf24}
+.c-hero-sub{font-size:1rem;color:#93c5fd;margin-bottom:28px;max-width:440px}
+.c-hero-btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn-c{display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;transition:all .2s;cursor:pointer;border:none;font-family:inherit}
+.btn-c-gold{background:#f59e0b;color:#1a1a2e}
+.btn-c-gold:hover{background:#d97706;transform:translateY(-2px)}
+.btn-c-outline{background:transparent;color:#fbbf24;border:1.5px solid #fbbf24}
+.btn-c-outline:hover{background:rgba(245,158,11,.1)}
+.c-hero-right{display:flex;flex-direction:column;gap:14px}
+.c-hero-stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:18px 22px;backdrop-filter:blur(4px)}
+.c-hero-stat strong{display:block;font-size:1.6rem;font-weight:800;color:#fbbf24}
+.c-hero-stat span{font-size:.82rem;color:#93c5fd}
+@media(max-width:768px){
+  .c-hero-inner{grid-template-columns:1fr;text-align:center;gap:32px}
+  .c-hero-sub{margin:0 auto 28px}
+  .c-hero-btns{justify-content:center}
+  .c-hero-right{flex-direction:row;flex-wrap:wrap;justify-content:center}
+  .c-hero-stat{flex:1;min-width:130px}
+}
+
+/* OFFICIAL PARTNER BANNER */
+.c-partner-banner{background:linear-gradient(90deg,#1a237e 0%,#1565c0 100%);padding:40px 0}
+.c-partner-inner{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:32px;flex-wrap:wrap}
+.c-partner-tag{display:inline-block;background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.4);color:#fbbf24;font-size:11px;font-weight:700;letter-spacing:.08em;padding:4px 12px;border-radius:12px;margin-bottom:10px}
+.c-partner-left h3{font-size:1.3rem;font-weight:800;color:#f8fafc;margin-bottom:8px}
+.c-partner-left p{color:#93c5fd;font-size:.9rem;max-width:560px}
+.c-partner-right{display:flex;flex-direction:column;align-items:center;gap:14px;flex-shrink:0}
+.c-bajaj-logo{height:60px;object-fit:contain;background:#fff;padding:10px 20px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+
+/* SECTIONS */
+.c-section{padding:72px 0}
+.c-container{max-width:1200px;margin:0 auto;padding:0 24px}
+.c-label{display:inline-block;color:#2563eb;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+.c-label-light{color:#93c5fd}
+.c-title{font-size:clamp(1.6rem,3vw,2.2rem);font-weight:800;color:#0f172a;margin-bottom:14px}
+.c-title-white{color:#f8fafc}
+.c-title span{color:#2563eb}
+.c-sub{color:#6b7280;max-width:560px;margin-bottom:36px}
+.c-bg-light{background:#f8fafc}
+.c-bg-white{background:#fff}
+.c-bg-dark{background:linear-gradient(135deg,#0c1445 0%,#1a237e 100%)}
+
+/* INSURANCE TYPES GRID */
+.c-ins-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:22px;margin-top:8px}
+.c-ins-card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:28px;transition:transform .25s,box-shadow .25s,border-color .25s}
+.c-ins-card:hover{transform:translateY(-5px);box-shadow:0 16px 40px rgba(37,99,235,.12);border-color:#93c5fd}
+.c-ins-icon{font-size:2.2rem;margin-bottom:14px}
+.c-ins-card h4{font-size:1rem;font-weight:700;color:#0f172a;margin-bottom:8px}
+.c-ins-card>p{font-size:.85rem;color:#6b7280;margin-bottom:14px}
+.c-ins-points{list-style:none;display:flex;flex-direction:column;gap:5px}
+.c-ins-points li{font-size:.82rem;color:#374151;padding-left:16px;position:relative}
+.c-ins-points li::before{content:"✓";position:absolute;left:0;color:#2563eb;font-weight:700}
+
+/* WHY SECTION */
+.c-why-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.c-why-cards{display:flex;flex-direction:column;gap:14px;margin-top:24px}
+.c-why-card{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;transition:box-shadow .2s,border-color .2s}
+.c-why-card:hover{box-shadow:0 6px 20px rgba(37,99,235,.1);border-color:#93c5fd}
+.c-why-icon{font-size:1.4rem;flex-shrink:0;margin-top:2px}
+.c-why-card strong{display:block;font-size:.92rem;font-weight:700;color:#0f172a;margin-bottom:2px}
+.c-why-card p{font-size:.82rem;color:#6b7280;margin:0}
+.c-why-img{border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.12)}
+.c-why-img img{width:100%;display:block;transition:transform .6s}
+.c-why-img:hover img{transform:scale(1.04)}
+@media(max-width:900px){.c-why-grid{grid-template-columns:1fr}}
+
+/* CLAIM PROCESS */
+.c-claim-grid{display:flex;align-items:flex-start;justify-content:center;gap:0;margin-top:40px;flex-wrap:wrap}
+.c-claim-step{flex:1;min-width:200px;max-width:260px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:26px 22px;text-align:center}
+.c-claim-arrow{font-size:1.6rem;color:rgba(251,191,36,.6);align-self:center;padding:0 4px;flex-shrink:0}
+.c-step-num{font-size:2rem;font-weight:800;color:#fbbf24;margin-bottom:10px}
+.c-claim-step h4{font-size:.95rem;font-weight:700;color:#f8fafc;margin-bottom:8px}
+.c-claim-step p{font-size:.82rem;color:#93c5fd}
+@media(max-width:768px){
+  .c-claim-arrow{display:none}
+  .c-claim-grid{gap:14px}
+  .c-claim-step{min-width:140px}
+}
+
+/* PARTNERS GRID */
+.c-partners-grid{display:flex;flex-wrap:wrap;gap:16px;align-items:stretch;margin-top:32px}
+.c-partner-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px 24px;display:flex;flex-direction:column;align-items:center;gap:10px;flex:1;min-width:150px;max-width:220px;transition:box-shadow .2s,border-color .2s;position:relative}
+.c-partner-card:hover{box-shadow:0 8px 24px rgba(0,0,0,.1);border-color:#93c5fd}
+.c-partner-card img{height:44px;object-fit:contain;max-width:120px}
+.c-partner-card span{font-size:.78rem;font-weight:600;color:#374151;text-align:center}
+.c-partner-featured{border:2px solid #f59e0b;box-shadow:0 4px 20px rgba(245,158,11,.15)}
+.c-partner-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#f59e0b;color:#1a1a2e;font-size:10px;font-weight:700;padding:2px 10px;border-radius:10px;white-space:nowrap}
+.c-brands-label{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6b7280;margin-top:40px;margin-bottom:16px}
+.c-brands-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.c-brand-tile{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:12px 10px 10px;font-size:.75rem;font-weight:600;color:#374151;text-align:center;transition:background .2s,border-color .2s;display:flex;flex-direction:column;align-items:center;gap:7px}
+.c-brand-tile img{height:32px;width:auto;max-width:100px;object-fit:contain}
+.c-brand-tile:hover{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+
+/* TRUST */
+.c-trust{background:linear-gradient(135deg,#1a237e 0%,#1565c0 100%);padding:52px 0}
+.c-trust-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center}
+.c-trust-box{padding:16px}
+.c-trust-box strong{display:block;font-size:2rem;font-weight:800;color:#fbbf24;margin-bottom:6px}
+.c-trust-box span{font-size:.88rem;color:#93c5fd}
+@media(max-width:600px){.c-trust-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* CTA */
+.c-cta{background:linear-gradient(135deg,#0c1445 0%,#1a1a2e 100%);padding:72px 0;text-align:center}
+.c-cta h2{font-size:clamp(1.8rem,3vw,2.4rem);font-weight:800;color:#f8fafc;margin-bottom:14px}
+.c-cta p{color:#93c5fd;max-width:500px;margin:0 auto 28px}
+.c-cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* FOOTER */
+.c-footer{background:#020617;border-top:1px solid #1e293b;padding:44px 0 22px}
+.c-footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:36px;margin-bottom:32px}
+.c-footer-brand p{color:#475569;font-size:.82rem;margin-top:10px;max-width:240px}
+.c-footer-col h4{font-size:.75rem;font-weight:700;color:#e2e8f0;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+.c-footer-col a{display:block;color:#475569;text-decoration:none;font-size:.82rem;margin-bottom:7px;transition:color .2s}
+.c-footer-col a:hover{color:#f59e0b}
+.c-footer-col p{color:#475569;font-size:.82rem;margin-bottom:5px}
+.c-footer-bottom{border-top:1px solid #1e293b;padding-top:18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.c-footer-bottom p{color:#334155;font-size:.78rem}
+@media(max-width:768px){.c-footer-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.c-footer-grid{grid-template-columns:1fr}}

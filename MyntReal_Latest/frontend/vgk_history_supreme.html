@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📜 Complete History (All Stages) - RVZ Supreme - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); }
+        .history-card { 
+            border-radius: 10px; margin-bottom: 10px; padding: 15px; 
+            background: white; border-left: 4px solid #6366f1; 
+        }
+        .supreme-badge { 
+            background: linear-gradient(135deg, #d97706, #f59e0b); 
+            color: white; padding: 5px 15px; border-radius: 20px; 
+            font-weight: bold; font-size: 12px;
+        }
+        .stage-badge { font-size: 11px; padding: 3px 8px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1" style="display:flex;align-items:center;gap:10px;">
+                <img src="/public/vgk4u-logo-100.png" alt="VGK4U" style="height:32px;background:#fff;border-radius:6px;padding:2px 7px;">
+                <span><i class="bi bi-crown"></i> Complete History (All Stages) <span class="supreme-badge ms-2">RVZ SUPREME</span></span>
+            </span>
+            <div>
+                <span class="text-white me-3" id="adminInfo">Loading...</span>
+                <a href="/rvz/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div id="filterComponentContainer"></div>
+
+        <div class="alert alert-info mt-3">
+            <strong>📊 Complete Audit Trail:</strong> View all withdrawals across all stages - Pending → Verified → Approved → Completed → Rejected
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>Filters</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Status Filter</label>
+                        <select class="form-select" id="statusFilter" onchange="refreshData()">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Verified">Verified (Admin)</option>
+                            <option value="Approved">Approved (Super Admin)</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-primary w-100" onclick="refreshData()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="historyList"></div>
+    </div>
+
+    <!-- Withdrawal Details Modal -->
+    <div class="modal fade" id="historyDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="bi bi-receipt"></i> Withdrawal History Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <div class="text-center"><div class="spinner-border text-info"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const API_BASE = '/api/v1';
+        // DC Protocol: Robust Staff MNR auth detection - checks wrapper-injected tokens first
+        let authToken = window.sessionToken || window.rvzSessionToken || localStorage.getItem('authToken');
+        const isStaffMnrContext = !!(window.sessionToken || window.rvzSessionToken);
+        console.log('[DC-AUTH] Context:', isStaffMnrContext ? 'Staff MNR' : 'Direct MNR', '| Token:', authToken ? 'Present' : 'MISSING');
+
+        $(document).ready(function() {
+            console.log('🔐 Auth Token:', authToken ? 'Present' : 'MISSING');
+            // DC Protocol: Skip loadAdminInfo on Staff MNR pages (staff sidebar already shows identity)
+            if (!window.location.pathname.startsWith('/staff/mnr/')) {
+                loadAdminInfo();
+            }
+            $('#filterComponentContainer').load('/components/admin_user_filter.html', function() {
+                loadFilteredData(UserFilter.getFilterParams());
+            });
+        });
+
+        function loadFilteredData(params) {
+            loadHistory(params.user_id, params.page, params.per_page);
+        }
+
+        function refreshData() {
+            const params = typeof UserFilter !== 'undefined' ? UserFilter.getFilterParams() : {page: 1, per_page: 20};
+            loadHistory(params.user_id, params.page, params.per_page);
+        }
+
+        function loadAdminInfo() {
+            $.ajax({
+                url: `${API_BASE}/auth/me-hybrid`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    // DC Protocol: Handle nested response structure {success: true, data: {...}}
+                    const userData = response.data || response;
+                    console.log('[DC-AUTH] Response:', response.success ? 'wrapped' : 'direct', userData);
+                    
+                    // DC Protocol: Support both MNR users (user_type) and Staff users (staff_type)
+                    if (userData && (userData.user_type || userData.staff_type)) {
+                        const displayName = userData.name || userData.full_name || userData.user_id || userData.emp_code;
+                        const roleType = userData.user_type || userData.staff_type;
+                        $('#adminInfo').text(`${displayName} (${roleType})`);
+                        console.log('[DC-AUTH] ✅ User authenticated:', roleType);
+                    } else {
+                        console.log('[DC-AUTH] ❌ No user_type or staff_type in response:', userData);
+                        // In Staff MNR context, don't redirect - page should work with injected token
+                        if (!isStaffMnrContext) {
+                            window.location.href = '/login';
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    console.log('[DC-AUTH] ❌ Auth error:', xhr.status, xhr.responseText);
+                    // Only redirect if not in Staff MNR context (staff auth is handled by wrapper)
+                    if (!isStaffMnrContext) {
+                        alert('Authentication failed. Please login again.');
+                        window.location.href = '/login';
+                    } else {
+                        console.log('[DC-AUTH] Staff MNR context - continuing despite auth error');
+                    }
+                }
+            });
+        }
+
+        function loadHistory(userId = null, page = 1, perPage = 20) {
+            const statusFilter = $('#statusFilter').val();
+            const params = new URLSearchParams({ page, per_page: perPage });
+            if (userId) params.append('user_id', userId);
+            if (statusFilter) params.append('status_filter', statusFilter);
+
+            $.ajax({
+                url: `${API_BASE}/withdrawals/admin/withdrawal-report?${params.toString()}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    if (response.requests) {
+                        renderHistoryList(response.requests);
+                    }
+                },
+                error: function(xhr) {
+                    $('#historyList').html(`<div class="alert alert-danger">Error: ${xhr.responseJSON?.detail || 'Failed to load history'}</div>`);
+                }
+            });
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'Pending': '<span class="stage-badge badge bg-warning">⏳ Pending</span>',
+                'Verified': '<span class="stage-badge badge bg-info">✓ Verified</span>',
+                'Approved': '<span class="stage-badge badge bg-success">✓✓ Approved</span>',
+                'Completed': '<span class="stage-badge badge bg-primary">💰 Completed</span>',
+                'Rejected': '<span class="stage-badge badge bg-danger">❌ Rejected</span>'
+            };
+            return badges[status] || '<span class="badge bg-secondary">' + status + '</span>';
+        }
+
+        function renderHistoryList(history) {
+            if (!history || history.length === 0) {
+                $('#historyList').html('<div class="alert alert-info">No withdrawal records found</div>');
+                return;
+            }
+
+            const html = history.map(h => `
+                <div class="history-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            <strong>${h.user_id}</strong><br>
+                            <small class="text-muted">${h.user_name || 'N/A'}</small>
+                        </div>
+                        <div class="col-md-2">
+                            <strong>₹${parseFloat(h.withdrawal_amount || h.final_payout || 0).toLocaleString()}</strong><br>
+                            <small class="text-muted">NET Amount</small>
+                        </div>
+                        <div class="col-md-2">
+                            ${h.request_date ? new Date(h.request_date).toLocaleDateString() : 'N/A'}
+                        </div>
+                        <div class="col-md-3">
+                            ${getStatusBadge(h.status)}<br>
+                            <small class="text-muted">
+                                ${h.verified_at ? '✓ Verified ' + new Date(h.verified_at).toLocaleDateString() : ''}
+                                ${h.approved_at ? '✓ Approved ' + new Date(h.approved_at).toLocaleDateString() : ''}
+                            </small>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-sm btn-info" onclick="viewHistoryDetails('${h.user_id}', ${h.id})">
+                                <i class="bi bi-eye"></i> View Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            $('#historyList').html(html);
+        }
+
+        async function viewHistoryDetails(userId, withdrawalId) {
+            const modal = new bootstrap.Modal(document.getElementById('historyDetailsModal'));
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = '<div class="text-center"><div class="spinner-border text-info"></div></div>';
+            modal.show();
+
+            try {
+                const [summaryRes, withdrawalRes, breakdownRes] = await Promise.all([
+                    fetch(`${API_BASE}/withdrawals/income-transactions?user_id=` + userId, { credentials: 'include' }),
+                    fetch(`${API_BASE}/withdrawals/admin/withdrawal-report?user_id=` + userId, { credentials: 'include' }),
+                    fetch(`${API_BASE}/withdrawals/admin/withdrawal-income-breakdown/` + withdrawalId, { credentials: 'include' })
+                ]);
+
+                const summaryData = await summaryRes.json();
+                const withdrawalData = await withdrawalRes.json();
+                const breakdownData = await breakdownRes.json();
+                const summary = summaryData.data?.summary || {};
+                const withdrawal = withdrawalData.requests?.find(w => w.id === withdrawalId) || {};
+                const detailedBreakdown = breakdownData || {};
+
+                let h = '<div class="row mb-4"><div class="col-md-6"><h6 class="text-primary border-bottom pb-2"><i class="bi bi-person"></i> User Info</h6><table class="table table-sm">';
+                h += '<tr><th>User ID:</th><td>' + userId + '</td></tr>';
+                h += '<tr><th>Name:</th><td>' + (withdrawal.user_name || 'N/A') + '</td></tr>';
+                h += '<tr><th>Email:</th><td>N/A</td></tr>';
+                h += '<tr><th>Phone:</th><td>N/A</td></tr>';
+                h += '<tr><th>KYC:</th><td><span class="badge bg-warning">N/A</span></td></tr>';
+                h += '</table></div>';
+
+                h += '<div class="col-md-6"><h6 class="text-success border-bottom pb-2"><i class="bi bi-bank"></i> Bank Details</h6><table class="table table-sm">';
+                h += '<tr><th>Holder:</th><td>' + (withdrawal.account_holder_name || withdrawal.user_name || 'N/A') + '</td></tr>';
+                h += '<tr><th>Account:</th><td>' + (withdrawal.account_number || 'N/A') + '</td></tr>';
+                h += '<tr><th>IFSC:</th><td>' + (withdrawal.ifsc_code || 'N/A') + '</td></tr>';
+                h += '<tr><th>Bank:</th><td>' + (withdrawal.bank_name || 'N/A') + '</td></tr>';
+                h += '</table></div></div>';
+
+                // Approval Stage Timeline
+                h += '<h6 class="text-info border-bottom pb-2 mt-3"><i class="bi bi-clock-history"></i> Approval Timeline</h6>';
+                h += '<div class="row mb-3">';
+                h += '<div class="col-md-12">';
+                h += '<div class="progress" style="height: 30px;">';
+                
+                const stages = [
+                    { name: 'Requested', date: withdrawal.request_date, color: 'secondary' },
+                    { name: 'Verified', date: withdrawal.verified_at, color: 'info' },
+                    { name: 'Approved', date: withdrawal.approved_at, color: 'success' },
+                    { name: 'Completed', date: withdrawal.processed_at, color: 'primary' }
+                ];
+                
+                stages.forEach((stage, idx) => {
+                    if (stage.date) {
+                        h += '<div class="progress-bar bg-' + stage.color + '" style="width: 25%">' + stage.name + '</div>';
+                    } else if (idx === 0) {
+                        h += '<div class="progress-bar bg-' + stage.color + '" style="width: 25%">' + stage.name + '</div>';
+                    }
+                });
+                
+                h += '</div>';
+                h += '<div class="mt-2">';
+                stages.forEach(stage => {
+                    if (stage.date) {
+                        h += '<span class="badge bg-' + stage.color + ' me-2">' + stage.name + ': ' + new Date(stage.date).toLocaleString() + '</span>';
+                    }
+                });
+                h += '</div>';
+                h += '</div></div>';
+
+                if (detailedBreakdown.success && detailedBreakdown.breakdown_by_type) {
+                    h += '<h6 class="text-danger border-bottom pb-2 mt-3"><i class="bi bi-receipt"></i> Deduction Breakdown (How NET was calculated)</h6>';
+                    h += '<table class="table table-sm table-bordered">';
+                    h += '<thead class="table-light"><tr><th>Income Type</th><th class="text-end">GROSS</th><th class="text-end">Mentorship Contribution Benefit</th><th class="text-end">Admin (8%)</th><th class="text-end">TDS (2%)</th><th class="text-end">Total Deducted</th><th class="text-end text-success">NET</th></tr></thead>';
+                    h += '<tbody>';
+                    
+                    detailedBreakdown.breakdown_by_type.forEach(function(item) {
+                        h += '<tr>';
+                        h += '<td><strong>' + item.income_type + '</strong></td>';
+                        h += '<td class="text-end">₹' + (item.gross || 0).toLocaleString('en-IN') + '</td>';
+                        h += '<td class="text-end text-warning">-₹' + (item.guru_dakshina_deduction || 0).toLocaleString('en-IN') + '</td>';
+                        h += '<td class="text-end text-danger">-₹' + (item.admin_deduction || 0).toLocaleString('en-IN') + '</td>';
+                        h += '<td class="text-end text-info">-₹' + (item.tds_deduction || 0).toLocaleString('en-IN') + '</td>';
+                        h += '<td class="text-end text-danger">-₹' + (item.total_deductions || 0).toLocaleString('en-IN') + '</td>';
+                        h += '<td class="text-end text-success">₹' + (item.net || 0).toLocaleString('en-IN') + '</td>';
+                        h += '</tr>';
+                    });
+                    
+                    const totals = detailedBreakdown.totals || {};
+                    h += '<tr class="table-primary fw-bold">';
+                    h += '<td>TOTAL</td>';
+                    h += '<td class="text-end">₹' + (totals.gross || 0).toLocaleString('en-IN') + '</td>';
+                    h += '<td class="text-end text-warning">-₹' + (totals.guru_dakshina_deduction || 0).toLocaleString('en-IN') + '</td>';
+                    h += '<td class="text-end text-danger">-₹' + (totals.admin_deduction || 0).toLocaleString('en-IN') + '</td>';
+                    h += '<td class="text-end text-info">-₹' + (totals.tds_deduction || 0).toLocaleString('en-IN') + '</td>';
+                    h += '<td class="text-end text-danger">-₹' + (totals.total_deductions || 0).toLocaleString('en-IN') + '</td>';
+                    h += '<td class="text-end text-success">₹' + (totals.net || 0).toLocaleString('en-IN') + '</td>';
+                    h += '</tr>';
+                    h += '</tbody></table>';
+                }
+
+                h += '<div class="alert alert-info mt-3"><strong>📊 Current Status:</strong> ' + getStatusBadge(withdrawal.status) + '</div>';
+                h += '<div class="alert alert-success mt-3"><strong>✅ DC Protocol:</strong> Single source of truth - Data from withdrawal table</div>';
+
+                modalBody.innerHTML = h;
+            } catch (error) {
+                modalBody.innerHTML = '<div class="alert alert-danger">Error: ' + error.message + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>

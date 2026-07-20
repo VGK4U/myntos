@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>CRM WhatsApp Inbox — MyntReal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#111827}
+
+    /* ── Layout ─────────────────────────────────────────────────────── */
+    .main-content{margin-left:260px;min-height:100vh;display:flex;flex-direction:column}
+    @media(max-width:768px){.main-content{margin-left:0}}
+    .content-area{flex:1;padding:20px 24px;max-width:1400px;width:100%}
+
+    /* ── Page banner ─────────────────────────────────────────────────── */
+    .page-banner{background:linear-gradient(135deg,#064e3b,#065f46,#047857);color:#fff;border-radius:14px;padding:18px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .page-banner h1{font-size:20px;font-weight:700;display:flex;align-items:center;gap:10px}
+    .page-banner p{font-size:12.5px;opacity:.85;margin-top:3px}
+
+    /* ── Stats bar ─────────────────────────────────────────────────── */
+    .stats-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .stat-card{background:#fff;border-radius:10px;padding:12px 18px;flex:1;min-width:110px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.07);cursor:pointer;transition:.15s;border:2px solid transparent}
+    .stat-card:hover{border-color:#a7f3d0}
+    .stat-card.active{border-color:#059669;background:#ecfdf5}
+    .stat-card .stat-val{font-size:22px;font-weight:800;color:#059669}
+    .stat-card .stat-lbl{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;margin-top:2px}
+
+    /* ── Tabs ─────────────────────────────────────────────────────── */
+    .tab-bar{display:flex;align-items:center;gap:0;background:#fff;border-radius:12px 12px 0 0;border-bottom:2px solid #e5e7eb;padding:0 4px;overflow-x:auto;flex-shrink:0}
+    .tab-btn{padding:12px 18px;font-size:13px;font-weight:600;color:#6b7280;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;display:flex;align-items:center;gap:7px;transition:.15s}
+    .tab-btn.active{color:#059669;border-bottom-color:#059669}
+    .tab-btn:hover:not(.active){color:#111827}
+    .badge{background:#dc2626;color:#fff;border-radius:999px;padding:1px 7px;font-size:10px;font-weight:700}
+    .badge-gray{background:#e5e7eb;color:#374151}
+
+    /* ── Filters bar ─────────────────────────────────────────────────── */
+    .filter-wrap{background:#fff;padding:12px 16px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
+    .filter-wrap input, .filter-wrap select{padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;min-width:0}
+    .filter-wrap input:focus, .filter-wrap select:focus{border-color:#059669}
+    .filter-wrap label{font-size:12px;font-weight:600;color:#6b7280;white-space:nowrap}
+    .filter-group{display:flex;align-items:center;gap:6px}
+    .btn{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+    .btn-green{background:#059669;color:#fff}
+    .btn-green:hover{background:#047857}
+    .btn-gray{background:#6b7280;color:#fff}
+    .btn-gray:hover{background:#4b5563}
+    .btn-outline{background:#fff;color:#374151;border:1px solid #d1d5db}
+    .btn-outline:hover{background:#f9fafb}
+    .btn-sm{padding:5px 10px;font-size:12px}
+
+    /* ── Inbox table ─────────────────────────────────────────────────── */
+    .inbox-wrap{background:#fff;border-radius:0 0 14px 14px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden}
+    .inbox-header{display:grid;grid-template-columns:14px 28px 185px 1fr 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;background:#f9fafb;border-bottom:2px solid #e5e7eb;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;align-items:center}
+    .inbox-row{display:grid;grid-template-columns:14px 28px 185px 1fr 150px 80px 75px 80px 145px 110px;gap:8px;padding:11px 14px;border-bottom:1px solid #f3f4f6;align-items:center;cursor:pointer;transition:.12s}
+    .inbox-row:last-child{border-bottom:none}
+    .inbox-row:hover{background:#f0fdf4}
+    .inbox-row.unread{background:#f0fdf4;font-weight:600}
+    .unread-dot{width:9px;height:9px;background:#25d366;border-radius:50%;flex-shrink:0}
+    .read-dot{width:9px;height:9px;background:#d1d5db;border-radius:50%}
+    .phone-cell{font-family:monospace;font-size:12px;color:#1f2937;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+    .caller-name{font-size:11px;color:#059669;font-weight:600;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .name-cell{font-size:12.5px;color:#374151;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .msg-preview{font-size:12.5px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
+    .time-cell{font-size:11px;color:#9ca3af;white-space:nowrap;flex-shrink:0}
+    .msg-count{background:#e5e7eb;color:#374151;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0}
+    .msg-count-unread{background:#25d366;color:#fff}
+    /* Existing In chips */
+    .ei-wrap{display:flex;flex-direction:column;gap:2px;align-items:flex-start}
+    .ei-chip{display:inline-flex;align-items:center;gap:3px;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700;white-space:nowrap}
+    .ei-crm{background:#ede9fe;color:#6d28d9}
+    .ei-service{background:#dbeafe;color:#1d4ed8}
+    .ei-walkin{background:#fef3c7;color:#92400e}
+    .ei-contacts{background:#d1fae5;color:#065f46}
+    .ei-new{background:#f3f4f6;color:#6b7280}
+    .ei-with{font-size:9.5px;font-weight:500;color:#6b7280;padding-left:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;display:inline-block}
+    .lead-chip{display:inline-block;background:#ede9fe;color:#6d28d9;border-radius:999px;padding:1px 7px;font-size:10.5px;font-weight:600;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+    .dept-chip{display:inline-block;background:#dbeafe;color:#1d4ed8;border-radius:999px;padding:1px 7px;font-size:10.5px;font-weight:600;white-space:nowrap}
+    .cat-chip{display:inline-block;background:#fef3c7;color:#92400e;border-radius:999px;padding:1px 7px;font-size:10.5px;font-weight:600;white-space:nowrap;text-transform:capitalize}
+    .status-chip{display:inline-block;border-radius:999px;padding:2px 8px;font-size:10.5px;font-weight:700;white-space:nowrap}
+    .s-new{background:#d1fae5;color:#065f46}
+    .s-pending{background:#fef3c7;color:#92400e}
+    .s-completed{background:#e0e7ff;color:#3730a3}
+    .action-btns{display:flex;gap:5px;align-items:center;flex-wrap:nowrap}
+    .icon-btn{width:28px;height:28px;border-radius:7px;border:none;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:.12s;flex-shrink:0}
+    .icon-btn-thread{background:#dbeafe;color:#1d4ed8}
+    .icon-btn-assign{background:#d1fae5;color:#065f46}
+    .icon-btn-reply{background:#e0e7ff;color:#5b21b6}
+    .icon-btn-done{background:#fef3c7;color:#92400e}
+    .icon-btn:hover{filter:brightness(.9)}
+    /* Thread contact-details panel */
+    .td-panel{border-top:1px solid #e5e7eb;background:#f9fafb;padding:10px 14px;max-height:240px;overflow-y:auto}
+    .td-toggle{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#374151;cursor:pointer;padding:8px 14px;border-top:1px solid #e5e7eb;background:#fff;border:none;width:100%;text-align:left}
+    .td-toggle:hover{background:#f0fdf4}
+    .td-section{margin-bottom:10px}
+    .td-section-head{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;display:flex;align-items:center;gap:4px}
+    .td-crm-head{color:#6d28d9}.td-wi-head{color:#92400e}.td-svc-head{color:#1d4ed8}.td-cnt-head{color:#065f46}
+    .td-card{background:#fff;border-radius:7px;padding:8px 10px;border:1px solid #e5e7eb;margin-bottom:4px;font-size:12px}
+    .td-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+    .td-item{margin-bottom:2px}
+    .td-label{font-size:9.5px;font-weight:700;color:#9ca3af;text-transform:uppercase;display:block}
+    .td-val{color:#1f2937;font-weight:600;font-size:12px}
+    .td-empty{color:#9ca3af;font-style:italic;font-size:11px}
+
+    /* ── Checkbox ─────────────────────────────────────────────────── */
+    input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:#059669}
+
+    /* ── Pagination ─────────────────────────────────────────────────── */
+    .pagination{display:flex;align-items:center;gap:8px;padding:12px 16px;justify-content:flex-end;border-top:1px solid #f3f4f6;background:#fff}
+    .pagination span{font-size:13px;color:#6b7280}
+    .pagination button{padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:#374151}
+    .pagination button:disabled{opacity:.4;cursor:default}
+
+    /* ── Empty state ─────────────────────────────────────────────────── */
+    .empty-state{padding:60px 20px;text-align:center;color:#9ca3af;font-size:14px}
+    .empty-state i{font-size:40px;margin-bottom:12px;display:block;color:#d1d5db}
+
+    /* ── Modals ─────────────────────────────────────────────────────── */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:#fff;border-radius:16px;width:100%;box-shadow:0 12px 48px rgba(0,0,0,.22);overflow:hidden;margin:auto}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #e5e7eb}
+    .modal-head h4{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+    .modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280;padding:4px}
+    .modal-close:hover{color:#111}
+    .modal-body{padding:18px;max-height:78vh;overflow-y:auto}
+    .modal-footer{padding:14px 18px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px;background:#f9fafb}
+
+    /* Thread modal */
+    #threadModal .modal-box{max-width:640px}
+    .thread-head{background:linear-gradient(135deg,#064e3b,#065f46);color:#fff;padding:14px 18px;display:flex;align-items:center;gap:12px}
+    .thread-head .wa-avatar{width:42px;height:42px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0}
+    .thread-head .th-info h4{font-size:14px;font-weight:700}
+    .thread-head .th-info p{font-size:11.5px;opacity:.8;margin-top:2px}
+    .thread-msgs{padding:14px 12px;display:flex;flex-direction:column;background:#e5ddd5;min-height:280px;max-height:440px;overflow-y:auto}
+    /* Message group wrapper — gap is set inline based on sender change */
+    .msg-group{display:flex;flex-direction:column}
+    .msg-group.out{align-items:flex-end}
+    .msg-group.in{align-items:flex-start}
+    .thread-bubble{max-width:75%;padding:7px 11px;border-radius:12px;font-size:13px;line-height:1.5;word-break:break-word;position:relative}
+    .bubble-in{background:#fff;border-radius:0 12px 12px 12px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+    .bubble-out{background:#d9fdd3;border-radius:12px 0 12px 12px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+    /* Within same group: tight spacing; between groups: spacious */
+    .msg-item{display:flex;flex-direction:column}
+    .msg-item.out{align-items:flex-end}
+    .msg-item.in{align-items:flex-start}
+    .bubble-time{font-size:10px;color:#9ca3af;margin-top:2px;text-align:right}
+    /* Media inside bubbles */
+    .bubble-img{max-width:240px;max-height:200px;border-radius:8px;display:block;cursor:pointer;object-fit:cover;margin-bottom:4px}
+    .bubble-video{max-width:240px;border-radius:8px;display:block;outline:none;margin-bottom:4px}
+    .bubble-audio{width:220px;margin-bottom:4px}
+    .bubble-doc{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(0,0,0,.06);border-radius:8px;text-decoration:none;color:inherit;font-size:12px;margin-bottom:4px;max-width:220px;overflow:hidden}
+    .bubble-doc i{font-size:18px;color:#059669;flex-shrink:0}
+    .bubble-doc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .thread-reply-bar{padding:0;border-top:1px solid #d1d5db;background:#fff}
+    .trb-tabs{display:flex;gap:0;border-bottom:1px solid #e5e7eb}
+    .trb-tab{flex:1;padding:7px 10px;font-size:11.5px;font-weight:600;cursor:pointer;border:none;background:#f9fafb;color:#6b7280;transition:.15s;display:flex;align-items:center;justify-content:center;gap:5px}
+    .trb-tab.active{background:#fff;color:#065f46;border-bottom:2px solid #059669}
+    .trb-pane{display:none;padding:10px 12px}
+    .trb-pane.active{display:block}
+    .trb-reply-inner{display:flex;gap:8px;align-items:flex-end}
+    .trb-reply-inner textarea{flex:1;border:1px solid #d1d5db;border-radius:10px;padding:9px 12px;font-size:13px;resize:none;height:68px;font-family:inherit;outline:none}
+    .trb-reply-inner textarea:focus{border-color:#059669}
+    .trb-sel{width:100%;padding:7px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:12px;outline:none;margin-bottom:7px}
+    .trb-sel:focus{border-color:#059669}
+    .trb-var-section{background:#f8faff;border:1.5px solid #dbeafe;border-radius:7px;padding:8px 10px;margin-bottom:7px;font-size:11px}
+    .trb-var-section label{display:block;font-size:11px;font-weight:600;color:#1d4ed8;margin-bottom:5px}
+    .trb-var-input{width:100%;padding:5px 8px;border:1px solid #c7d2fe;border-radius:6px;font-size:12px;margin-bottom:5px;outline:none}
+    .trb-preview{background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:7px 9px;font-size:11.5px;color:#065f46;white-space:pre-wrap;margin-bottom:7px;max-height:100px;overflow-y:auto}
+    .trb-send-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+    .trb-stype{display:flex;gap:4px}
+    .trb-stype label{display:flex;align-items:center;gap:3px;font-size:11px;cursor:pointer;padding:4px 8px;border:1.5px solid #d1d5db;border-radius:6px;background:#fff;white-space:nowrap}
+    .trb-stype input[type=radio]{accent-color:#7c3aed}
+
+    /* Assign modal */
+    #assignModal .modal-box{max-width:580px}
+    .form-row{margin-bottom:14px}
+    .form-row label{display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+    .form-row input, .form-row select, .form-row textarea{width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;font-family:inherit}
+    .form-row input:focus, .form-row select:focus, .form-row textarea:focus{border-color:#059669}
+    .form-row textarea{resize:vertical;min-height:64px}
+    .form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .section-divider{border:none;border-top:1px solid #e5e7eb;margin:16px 0}
+    .section-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#059669;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+    .lead-tabs{display:flex;gap:0;margin-bottom:12px;border:1px solid #d1d5db;border-radius:8px;overflow:hidden}
+    .lead-tab{flex:1;padding:8px;text-align:center;font-size:12.5px;font-weight:600;cursor:pointer;border:none;background:#f9fafb;color:#6b7280;transition:.15s}
+    .lead-tab.active{background:#059669;color:#fff}
+    .emp-search-wrap{position:relative}
+    .emp-dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:8px;max-height:160px;overflow-y:auto;z-index:100;box-shadow:0 4px 16px rgba(0,0,0,.12);display:none}
+    .emp-dropdown.open{display:block}
+    .emp-opt{padding:8px 12px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f3f4f6}
+    .emp-opt:hover{background:#f0fdf4}
+    .emp-opt .emp-name{font-weight:600;color:#111827}
+    .emp-opt .emp-dept{font-size:11px;color:#6b7280}
+    .service-info-box{background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:12px 14px;font-size:13px;color:#78350f;display:flex;gap:10px;align-items:flex-start}
+    .lead-search-results{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;max-height:130px;overflow-y:auto;display:none}
+    .lead-result-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid #e5e7eb;font-size:13px}
+    .lead-result-item:hover{background:#f0fdf4}
+
+    /* ── Loading spinner ─────────────────────────────────────────────── */
+    .spinner{display:inline-block;width:20px;height:20px;border:3px solid #d1d5db;border-top-color:#059669;border-radius:50%;animation:spin .7s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── Toast ─────────────────────────────────────────────────────── */
+    .toast{position:fixed;bottom:24px;right:24px;background:#111827;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:99999;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;max-width:320px}
+    .toast.show{opacity:1;transform:translateY(0)}
+    .toast.green{background:#059669}
+    .toast.red{background:#dc2626}
+
+    /* Last Sent By chips */
+    .lsb-chip{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:700;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+    .lsb-system{background:#f3f4f6;color:#374151}
+    .lsb-staff{background:#d1fae5;color:#065f46}
+    .lsb-partner{background:#dbeafe;color:#1d4ed8}
+    .lsb-none{color:#d1d5db;font-size:11px}
+    /* Outbound/inbound sender label in thread */
+    .bubble-sender{font-size:9.5px;color:#6b7280;margin-top:2px;font-style:italic}
+    .bubble-sender-out{text-align:right}
+    .bubble-sender-in{text-align:left}
+
+    /* ── My Leads & Team panel ────────────────────────────────────────── */
+    .leads-team-bar{background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:none;box-shadow:0 1px 4px rgba(0,0,0,.08);gap:10px;align-items:center;flex-wrap:wrap}
+    .leads-team-bar.show{display:flex}
+    .lt-btn{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:2px solid #e5e7eb;background:#fff;color:#6b7280;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+    .lt-btn.active{background:#059669;color:#fff;border-color:#059669}
+    .lt-btn:hover:not(.active){border-color:#a7f3d0;color:#059669}
+    .lt-divider{width:1px;height:28px;background:#e5e7eb;flex-shrink:0}
+    /* Team emp picker */
+    .team-picker-wrap{display:none;align-items:center;gap:8px;flex-wrap:wrap}
+    .team-picker-wrap.show{display:flex}
+    .team-emp-select{padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;min-width:180px;max-width:260px}
+    .team-emp-select:focus{border-color:#059669}
+    .team-dept-filter{display:none;align-items:center;gap:8px;flex-wrap:wrap}
+    .team-dept-filter.show{display:flex}
+    .team-dept-filter select{padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:12.5px;outline:none}
+    .team-dept-filter select:focus{border-color:#059669}
+    .team-badge{background:#0284c7;color:#fff;border-radius:999px;padding:2px 8px;font-size:10.5px;font-weight:700;white-space:nowrap}
+
+    /* Responsive */
+    @media(max-width:900px){
+      /* Hide Dept(6), Category(7) and Last Sent By(9) on medium screens */
+      .inbox-header,.inbox-row{grid-template-columns:14px 28px 160px 1fr 140px 80px 110px}
+      .inbox-header span:nth-child(6),.inbox-row>*:nth-child(6),
+      .inbox-header span:nth-child(7),.inbox-row>*:nth-child(7),
+      .inbox-header span:nth-child(9),.inbox-row>*:nth-child(9){display:none}
+    }
+    @media(max-width:600px){
+      /* Show only: dot, phone/name, existing-in, actions */
+      .inbox-header,.inbox-row{grid-template-columns:14px 160px 120px 90px}
+      .inbox-header span:nth-child(2),.inbox-row>*:nth-child(2),
+      .inbox-header span:nth-child(4),.inbox-row>*:nth-child(4),
+      .inbox-header span:nth-child(6),.inbox-row>*:nth-child(6),
+      .inbox-header span:nth-child(7),.inbox-row>*:nth-child(7),
+      .inbox-header span:nth-child(8),.inbox-row>*:nth-child(8),
+      .inbox-header span:nth-child(9),.inbox-row>*:nth-child(9){display:none}
+      .form-row-2{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+  <div id="headerContainer"></div>
+  <div class="content-area">
+
+    <!-- Banner -->
+    <div class="page-banner">
+      <div>
+        <h1><i class="fab fa-whatsapp"></i> CRM WhatsApp Inbox</h1>
+        <p>Incoming messages · Assign to departments · Manage leads & service tickets</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-outline" style="color:#fff;border-color:rgba(255,255,255,.5);background:transparent" onclick="toggleFilters()">
+          <i class="fas fa-filter"></i> Filters
+        </button>
+        <button class="btn btn-outline" style="color:#fff;border-color:rgba(255,255,255,.5);background:transparent" onclick="loadInbox(1)">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+        <button class="btn btn-outline" style="color:#fff;border-color:rgba(255,255,255,.5);background:transparent" onclick="markAllRead()">
+          <i class="fas fa-check-double"></i> Mark All Read
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card active" onclick="switchTab('all')" id="tab-all">
+        <div class="stat-val" id="stat-all">—</div>
+        <div class="stat-lbl">All Messages</div>
+      </div>
+      <div class="stat-card" onclick="switchTab('unread')" id="tab-unread">
+        <div class="stat-val" style="color:#dc2626" id="stat-unread">—</div>
+        <div class="stat-lbl">Unread</div>
+      </div>
+      <div class="stat-card" onclick="switchTab('pending')" id="tab-pending">
+        <div class="stat-val" style="color:#d97706" id="stat-pending">—</div>
+        <div class="stat-lbl">Pending</div>
+      </div>
+      <div class="stat-card" onclick="switchTab('completed')" id="tab-completed">
+        <div class="stat-val" style="color:#7c3aed" id="stat-completed">—</div>
+        <div class="stat-lbl">Completed</div>
+      </div>
+      <div class="stat-card" onclick="switchTab('assigned')" id="tab-assigned">
+        <div class="stat-val" style="color:#0284c7" id="stat-assigned">—</div>
+        <div class="stat-lbl">Assigned</div>
+      </div>
+      <div class="stat-card" onclick="switchTab('my-leads-team')" id="tab-my-leads-team" style="display:none">
+        <div class="stat-val" style="color:#7c3aed"><i class="fas fa-users" style="font-size:18px"></i></div>
+        <div class="stat-lbl">My Leads &amp; Team</div>
+      </div>
+      <div class="stat-card" onclick="switchTab('delivery')" id="tab-delivery">
+        <div class="stat-val" style="color:#0891b2"><i class="fas fa-satellite-dish" style="font-size:18px"></i></div>
+        <div class="stat-lbl">Delivery Status</div>
+      </div>
+    </div>
+
+    <!-- My Leads & Team sub-tab bar -->
+    <div class="leads-team-bar" id="leadsTeamBar">
+      <button class="lt-btn active" id="lt-my-leads" onclick="switchLeadsView('my-leads')">
+        <i class="fas fa-star"></i> My Leads
+      </button>
+      <button class="lt-btn" id="lt-team" onclick="switchLeadsView('team')" style="display:none">
+        <i class="fas fa-users"></i> Team
+        <span class="team-badge" id="teamCountBadge" style="display:none">0</span>
+      </button>
+      <div class="lt-divider" id="ltDivider" style="display:none"></div>
+      <!-- Team filters (shown when Team is selected) -->
+      <div class="team-picker-wrap" id="teamPickerWrap">
+        <label style="font-size:12px;font-weight:600;color:#6b7280;white-space:nowrap">Employee:</label>
+        <select class="team-emp-select" id="teamEmpSelect" onchange="onTeamEmpChange()">
+          <option value="">— All Team —</option>
+        </select>
+      </div>
+      <div class="team-dept-filter" id="teamDeptFilter">
+        <label style="font-size:12px;font-weight:600;color:#6b7280;white-space:nowrap">Dept:</label>
+        <select id="tDept" onchange="loadInbox(1)">
+          <option value="">All Depts</option>
+        </select>
+        <label style="font-size:12px;font-weight:600;color:#6b7280;white-space:nowrap">Category:</label>
+        <select id="tCat" onchange="loadInbox(1)">
+          <option value="">All</option>
+        </select>
+        <input type="text" id="tPhone" placeholder="Search phone…" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:12.5px;outline:none;width:150px" oninput="debounceLoad()">
+      </div>
+    </div>
+
+    <!-- Filters (hidden by default) -->
+    <div id="filtersBar" style="display:none">
+      <div class="filter-wrap">
+        <div class="filter-group">
+          <label>Phone / Name</label>
+          <input type="text" id="fPhone" placeholder="Search..." style="width:160px" oninput="debounceLoad()">
+        </div>
+        <div class="filter-group">
+          <label>From</label>
+          <input type="date" id="fFrom" onchange="loadInbox(1)">
+        </div>
+        <div class="filter-group">
+          <label>To</label>
+          <input type="date" id="fTo" onchange="loadInbox(1)">
+        </div>
+        <div class="filter-group">
+          <label>Department</label>
+          <select id="fDept" onchange="loadInbox(1)">
+            <option value="">All Depts</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Category</label>
+          <select id="fCat" onchange="loadInbox(1)">
+            <option value="">All</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>Status</label>
+          <select id="fStatus" onchange="loadInbox(1)">
+            <option value="">All</option>
+            <option value="new">New</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="clearFilters()"><i class="fas fa-times"></i> Clear</button>
+      </div>
+    </div>
+
+    <!-- Inbox -->
+    <div class="inbox-wrap">
+      <div class="inbox-header">
+        <span></span>
+        <span></span>
+        <span>Caller / Name</span>
+        <span>Last Message</span>
+        <span>Existing In</span>
+        <span>Dept</span>
+        <span>Cat</span>
+        <span>Status</span>
+        <span>Last Sent By</span>
+        <span>Actions</span>
+      </div>
+      <div id="inboxBody">
+        <div class="empty-state"><i class="fas fa-spinner fa-spin"></i>Loading…</div>
+      </div>
+    </div>
+
+    <!-- ═══ DELIVERY STATUS SECTION (main page tab) ═══════════════════════ -->
+    <div id="deliverySection" style="display:none;background:#fff;border-radius:0 0 14px 14px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden">
+      <!-- Filters bar -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;background:#f9fafb;border-bottom:1px solid #e5e7eb;align-items:center">
+        <input id="dlv-phone" type="text" placeholder="Phone…" style="width:120px;padding:5px 9px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;outline:none">
+        <input id="dlv-search" type="text" placeholder="Search name / body…" style="flex:1;min-width:140px;padding:5px 9px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;outline:none">
+        <select id="dlv-status" style="padding:5px 9px;font-size:12px;border:1px solid #d1d5db;border-radius:6px">
+          <option value="">All Status</option>
+          <option value="sent">Sent</option>
+          <option value="delivered">Delivered</option>
+          <option value="read">Read</option>
+          <option value="failed">Failed</option>
+          <option value="queued">Queued</option>
+        </select>
+        <select id="dlv-source" style="padding:5px 9px;font-size:12px;border:1px solid #d1d5db;border-radius:6px">
+          <option value="">All Sources</option>
+          <option value="message_log">System (Auto)</option>
+          <option value="crm_wa_sends">CRM Staff Sends</option>
+        </select>
+        <select id="dlv-type" style="padding:5px 9px;font-size:12px;border:1px solid #d1d5db;border-radius:6px">
+          <option value="">All Types</option>
+          <option value="otp">OTP</option>
+          <option value="welcome">Welcome</option>
+          <option value="template">Template</option>
+          <option value="meta">Meta</option>
+          <option value="text">Direct WA (System)</option>
+          <option value="direct_wa">Direct WA (Staff Lead)</option>
+        </select>
+        <input id="dlv-date-from" type="date" title="From date" style="padding:5px 9px;font-size:12px;border:1px solid #d1d5db;border-radius:6px">
+        <input id="dlv-date-to" type="date" title="To date" style="padding:5px 9px;font-size:12px;border:1px solid #d1d5db;border-radius:6px">
+        <button onclick="loadDeliveryLog(1)" style="padding:5px 14px;background:#059669;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer"><i class="fas fa-search"></i> Search</button>
+        <button onclick="resetDeliveryFilters()" style="padding:5px 10px;background:#f1f5f9;color:#374151;border:1px solid #d1d5db;border-radius:6px;font-size:12px;cursor:pointer"><i class="fas fa-times"></i> Reset</button>
+        <button onclick="loadDeliveryLog(1)" title="Refresh" style="padding:5px 10px;background:#f1f5f9;color:#0891b2;border:1px solid #d1d5db;border-radius:6px;font-size:12px;cursor:pointer"><i class="fas fa-sync-alt"></i></button>
+      </div>
+      <!-- Summary badges -->
+      <div id="dlv-summary" style="display:flex;gap:7px;flex-wrap:wrap;padding:7px 14px;background:#f0fdf4;border-bottom:1px solid #e5e7eb;font-size:11.5px;align-items:center"></div>
+      <!-- Table -->
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead style="position:sticky;top:0;background:#f9fafb;z-index:1">
+            <tr style="border-bottom:2px solid #e5e7eb">
+              <th style="padding:8px 10px;text-align:left;font-weight:700;color:#6b7280;white-space:nowrap">Phone</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:700;color:#6b7280">Name / Template</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:700;color:#6b7280">Type</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:700;color:#6b7280">Source</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:700;color:#6b7280">Status</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:700;color:#6b7280;white-space:nowrap">Sent At</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:700;color:#6b7280;white-space:nowrap">Delivered At</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:700;color:#6b7280">Sent By</th>
+              <th style="padding:8px 10px;text-align:left;font-weight:700;color:#6b7280">Error</th>
+              <th style="padding:8px 10px;text-align:center;font-weight:700;color:#6b7280">View</th>
+            </tr>
+          </thead>
+          <tbody id="dlv-body">
+            <tr><td colspan="10" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-satellite-dish" style="font-size:20px;display:block;margin-bottom:8px"></i>Click Search to load delivery records</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Pagination -->
+      <div id="dlv-pagination" style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-top:1px solid #e5e7eb;background:#f9fafb;font-size:12px"></div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="paginationBar" style="display:none">
+      <span id="paginationInfo"></span>
+      <button id="btnPrev" onclick="loadInbox(currentPage-1)"><i class="fas fa-chevron-left"></i> Prev</button>
+      <button id="btnNext" onclick="loadInbox(currentPage+1)">Next <i class="fas fa-chevron-right"></i></button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ THREAD MODAL ═══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="threadModal" onclick="closeModal('threadModal',event)">
+  <div class="modal-box">
+    <div class="thread-head">
+      <div class="wa-avatar" id="th-avatar">W</div>
+      <div class="th-info">
+        <h4 id="th-name">—</h4>
+        <p id="th-phone">—</p>
+      </div>
+      <button class="modal-close" style="color:#fff;margin-left:auto" onclick="closeModal('threadModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="thread-msgs" id="threadMsgs">
+      <div style="text-align:center;color:#888;padding:20px">Loading conversation…</div>
+    </div>
+    <!-- Contact Details Toggle -->
+    <button class="td-toggle" onclick="toggleContactDetails()" id="tdToggleBtn">
+      <i class="fas fa-address-card" style="color:#059669"></i> Contact Details
+      <i class="fas fa-chevron-down" id="tdChevron" style="margin-left:auto;transition:.2s;font-size:10px"></i>
+    </button>
+    <div class="td-panel" id="tdPanel" style="display:none">
+      <div id="tdContent"><div class="td-empty">Loading details…</div></div>
+    </div>
+    <div class="thread-reply-bar">
+      <!-- Tabs -->
+      <div class="trb-tabs">
+        <button class="trb-tab active" id="trb-tab-reply" onclick="switchReplyTab('reply')"><i class="fas fa-reply"></i> Reply</button>
+        <button class="trb-tab" id="trb-tab-template" onclick="switchReplyTab('template')"><i class="fas fa-file-alt"></i> Template</button>
+      </div>
+      <!-- Reply pane -->
+      <div class="trb-pane active" id="trb-pane-reply">
+        <div class="trb-reply-inner">
+          <textarea id="threadReplyText" placeholder="Type a reply… (only works within 24h window)"></textarea>
+          <button class="btn btn-green" onclick="sendThreadReply()" id="threadSendBtn"><i class="fas fa-paper-plane"></i> Send</button>
+        </div>
+      </div>
+      <!-- Template pane -->
+      <div class="trb-pane" id="trb-pane-template">
+        <!-- Category + template row -->
+        <div style="display:flex;gap:6px;margin-bottom:7px">
+          <select class="trb-sel" id="trb-seg-sel" onchange="filterTrbTemplates()" style="flex:0 0 120px;margin-bottom:0">
+            <option value="">All Segments</option>
+            <option value="vgk">VGK</option>
+            <option value="general">General</option>
+            <option value="system">System</option>
+            <option value="ev_b2b">EV B2B</option>
+            <option value="ev_b2c">EV B2C</option>
+            <option value="real_estate">Real Estate</option>
+            <option value="etc_training">ETC</option>
+          </select>
+          <select class="trb-sel" id="trb-tpl-sel" onchange="onTrbTemplateChange()" style="flex:1;margin-bottom:0">
+            <option value="">— Select a template —</option>
+          </select>
+        </div>
+        <!-- Variable inputs -->
+        <div id="trb-var-section" style="display:none" class="trb-var-section">
+          <label><i class="fas fa-list-ol"></i> Template Variables — pre-filled from contact &amp; segment</label>
+          <div id="trb-var-inputs"></div>
+        </div>
+        <!-- Preview -->
+        <div id="trb-preview" class="trb-preview" style="display:none"></div>
+        <!-- Send row -->
+        <div class="trb-send-row">
+          <div class="trb-stype">
+            <label><input type="radio" name="trbStype" value="meta" checked onchange="updateTrbPreview()"> <i class="fab fa-meta" style="color:#7c3aed"></i> Meta</label>
+            <label><input type="radio" name="trbStype" value="text" onchange="updateTrbPreview()"> <i class="fab fa-whatsapp" style="color:#25d366"></i> Direct WA</label>
+            <label><input type="radio" name="trbStype" value="both" onchange="updateTrbPreview()"> <i class="fas fa-layer-group" style="color:#d97706"></i> Both</label>
+          </div>
+          <button class="btn btn-green" onclick="sendTrbTemplate()" id="trbSendBtn" style="margin-left:auto"><i class="fas fa-paper-plane"></i> Send</button>
+        </div>
+        <div id="trb-result" style="font-size:11.5px;margin-top:6px;min-height:16px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ASSIGN MODAL ════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="assignModal" onclick="closeModal('assignModal',event)">
+  <div class="modal-box">
+    <div class="modal-head" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5)">
+      <h4 style="color:#065f46"><i class="fas fa-user-tag"></i> Assign &amp; Categorise</h4>
+      <button class="modal-close" onclick="closeModal('assignModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Assignment info -->
+      <div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px">
+        <span id="assignMsgInfo" style="color:#374151"></span>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-row">
+          <label>Department <span style="color:#dc2626">*</span></label>
+          <select id="aDept" onchange="onDeptChange()">
+            <option value="">Select department…</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Target Date <span style="color:#dc2626">*</span></label>
+          <input type="date" id="aTargetDate">
+        </div>
+      </div>
+
+      <!-- Employee search -->
+      <div class="form-row">
+        <label>Assign to Employee <span style="color:#dc2626">*</span></label>
+        <div class="emp-search-wrap">
+          <input type="text" id="aEmpSearch" placeholder="Type name or employee code…" oninput="searchEmployees()" autocomplete="off">
+          <div class="emp-dropdown" id="empDropdown"></div>
+        </div>
+        <input type="hidden" id="aEmpId">
+        <input type="hidden" id="aEmpCode">
+        <div id="aEmpSelected" style="margin-top:5px;font-size:12px;color:#059669;font-weight:600"></div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="form-row">
+          <label>Category</label>
+          <select id="aCatCode">
+            <option value="">Select category…</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>Status</label>
+          <select id="aStatus">
+            <option value="pending">Pending</option>
+            <option value="new">New</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Notes</label>
+        <textarea id="aNotes" placeholder="Add context or instructions…"></textarea>
+      </div>
+
+      <!-- ── Sales section ── -->
+      <div id="salesSection" style="display:none">
+        <hr class="section-divider">
+        <p class="section-label"><i class="fas fa-user-plus"></i> Lead Management</p>
+        <div class="lead-tabs">
+          <button class="lead-tab active" onclick="setLeadTab('new')">New Lead</button>
+          <button class="lead-tab" onclick="setLeadTab('existing')">Existing Lead</button>
+          <button class="lead-tab" onclick="setLeadTab('none')">No Lead</button>
+        </div>
+        <!-- New lead fields -->
+        <div id="newLeadForm">
+          <div class="form-row-2">
+            <div class="form-row">
+              <label>Lead Name</label>
+              <input type="text" id="lName" placeholder="Customer name">
+            </div>
+            <div class="form-row">
+              <label>Phone (pre-filled)</label>
+              <input type="text" id="lPhone" placeholder="+91…">
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="form-row">
+              <label>Email</label>
+              <input type="email" id="lEmail" placeholder="Optional">
+            </div>
+            <div class="form-row">
+              <label>Category</label>
+              <select id="lCatId">
+                <option value="">Select…</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <!-- Existing lead search -->
+        <div id="existingLeadForm" style="display:none">
+          <div class="form-row">
+            <label>Search Existing Lead</label>
+            <input type="text" id="leadSearchInput" placeholder="Name or phone…" oninput="searchLeads()">
+            <div class="lead-search-results" id="leadSearchResults"></div>
+            <input type="hidden" id="selectedLeadId">
+            <div id="selectedLeadInfo" style="margin-top:5px;font-size:12px;color:#059669;font-weight:600"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Service section ── -->
+      <div id="serviceSection" style="display:none">
+        <hr class="section-divider">
+        <p class="section-label"><i class="fas fa-tools"></i> Service Ticket</p>
+        <div class="service-info-box">
+          <i class="fas fa-exclamation-triangle" style="margin-top:2px;flex-shrink:0"></i>
+          <div>A service ticket will be <strong>raised immediately</strong> on save. Customer phone and name (if available) will be pre-filled. Add notes above to include them as the issue description.</div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('assignModal')">Cancel</button>
+      <button class="btn btn-green" onclick="submitAssign()" id="assignSubmitBtn">
+        <i class="fas fa-check"></i> Save Assignment
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script>
+const API = '/api/v1';
+let currentPage     = 1;
+let currentTab      = 'all';
+let totalPages      = 1;
+let totalCount      = 0;
+let activeInboxId   = null;
+let activePhone     = null;
+let activeLeadTab   = 'new';
+let allDepts        = [];
+let allCategories   = [];
+let signupCats      = [];
+let empSearchTimer  = null;
+let debounceTimer   = null;
+
+// ── My Leads & Team state ────────────────────────────────────────────────────
+let currentStaff    = null;   // {id, emp_code, name, role_code, hierarchy_level}
+let leadsViewMode   = 'my-leads'; // 'my-leads' | 'team'
+let teamMembers     = [];     // [{id, emp_code, name, depth}]
+let teamEmpId       = null;   // selected team member id (null = all team)
+
+// Roles that can see "All Team" aggregate (all team members combined)
+function canSeeAllTeam() {
+  if (!currentStaff) return false;
+  const rc = currentStaff.role_code || '';
+  const hl = currentStaff.hierarchy_level || 0;
+  return rc === 'vgk4u' || rc === 'key_leadership' || rc === 'ea' || hl >= 100;
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+function getToken() {
+  return localStorage.getItem('staff_token') ||
+         document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('staff_token='))?.split('=')[1] || '';
+}
+async function staffFetch(url, opts = {}) {
+  const token = getToken();
+  opts.headers = Object.assign({ 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, opts.headers || {});
+  if (opts.body && typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(txt || res.statusText);
+  }
+  return res.json();
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type='green') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ── Filters toggle ────────────────────────────────────────────────────────────
+function toggleFilters() {
+  const b = document.getElementById('filtersBar');
+  b.style.display = b.style.display === 'none' ? 'block' : 'none';
+}
+function clearFilters() {
+  ['fPhone','fFrom','fTo'].forEach(id => document.getElementById(id).value = '');
+  ['fDept','fCat','fStatus'].forEach(id => document.getElementById(id).value = '');
+  loadInbox(1);
+}
+function debounceLoad() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => loadInbox(1), 400);
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+  const el = document.getElementById(`tab-${tab}`);
+  if (el) el.classList.add('active');
+
+  const isDelivery = tab === 'delivery';
+  document.querySelector('.inbox-wrap').style.display = isDelivery ? 'none' : '';
+  if (isDelivery) document.getElementById('paginationBar').style.display = 'none';
+  document.getElementById('deliverySection').style.display = isDelivery ? '' : 'none';
+
+  const ltBar = document.getElementById('leadsTeamBar');
+  if (tab === 'my-leads-team') {
+    ltBar.classList.add('show');
+    leadsViewMode = 'my-leads';
+    document.getElementById('lt-my-leads').classList.add('active');
+    document.getElementById('lt-team').classList.remove('active');
+    document.getElementById('teamPickerWrap').classList.remove('show');
+    document.getElementById('teamDeptFilter').classList.remove('show');
+  } else {
+    ltBar.classList.remove('show');
+  }
+
+  if (isDelivery) {
+    loadDeliveryLog(1);
+  } else {
+    loadInbox(1);
+  }
+}
+
+// ── My Leads / Team sub-view switcher ────────────────────────────────────────
+function switchLeadsView(mode) {
+  leadsViewMode = mode;
+  document.getElementById('lt-my-leads').classList.toggle('active', mode === 'my-leads');
+  document.getElementById('lt-team').classList.toggle('active', mode === 'team');
+  const pickerWrap = document.getElementById('teamPickerWrap');
+  const deptFilter = document.getElementById('teamDeptFilter');
+  if (mode === 'team') {
+    pickerWrap.classList.add('show');
+    deptFilter.classList.add('show');
+  } else {
+    pickerWrap.classList.remove('show');
+    deptFilter.classList.remove('show');
+    teamEmpId = null;
+  }
+  loadInbox(1);
+}
+
+function onTeamEmpChange() {
+  const sel = document.getElementById('teamEmpSelect');
+  teamEmpId = sel.value ? parseInt(sel.value) : null;
+  loadInbox(1);
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function applyStats(stats) {
+  if (!stats) return;
+  const map = {all:'all', unread:'unread', pending:'pending', completed:'completed', assigned:'assigned'};
+  Object.entries(map).forEach(([key, tabId]) => {
+    const el = document.getElementById(`stat-${tabId}`);
+    if (el && stats[key] !== undefined) el.textContent = stats[key];
+  });
+}
+async function loadStats() {
+  // Stats are now included in the main inbox response — this is a fallback
+  try {
+    const r = await staffFetch(`${API}/whatsapp/inbox?page=1&page_size=1`);
+    applyStats(r.stats);
+  } catch(_) {}
+}
+
+// ── Load Inbox ─────────────────────────────────────────────────────────────────
+async function loadInbox(page = 1) {
+  currentPage = page;
+  document.getElementById('inboxBody').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  document.getElementById('paginationBar').style.display = 'none';
+
+  const PAGE_SIZE = 25;
+  let url = `${API}/whatsapp/inbox?page=${page}&page_size=${PAGE_SIZE}`;
+
+  // ── My Leads & Team mode ──────────────────────────────────────────────
+  if (currentTab === 'my-leads-team') {
+    if (leadsViewMode === 'my-leads') {
+      url += '&my_leads=true';
+    } else {
+      // Team mode
+      if (teamEmpId) {
+        url += `&team_emp_id=${teamEmpId}`;
+      } else if (canSeeAllTeam()) {
+        // Show all team members combined — use all known team ids
+        if (teamMembers.length > 0) {
+          // Use first member as anchor; backend returns all team convos when no emp_id but all_team=true
+          // Since backend doesn't have all_team yet, we just use no filter = all conversations
+          // (privileged users can see all)
+        }
+      } else if (teamMembers.length > 0) {
+        // Non-privileged: must select specific employee
+        if (!teamEmpId && teamMembers.length > 0) {
+          // Default to first team member
+          teamEmpId = teamMembers[0].id;
+          document.getElementById('teamEmpSelect').value = teamEmpId;
+          url += `&team_emp_id=${teamEmpId}`;
+        }
+      }
+    }
+    // Team dept/cat/phone filters
+    const tDept  = document.getElementById('tDept')?.value;
+    const tCat   = document.getElementById('tCat')?.value;
+    const tPhone = document.getElementById('tPhone')?.value?.trim();
+    if (tDept)  url += `&dept_code=${encodeURIComponent(tDept)}`;
+    if (tCat)   url += `&category_code=${encodeURIComponent(tCat)}`;
+    if (tPhone) url += `&phone=${encodeURIComponent(tPhone)}`;
+  } else {
+    // Standard inbox mode — tab filters
+    if (currentTab === 'unread')    url += '&unread_only=true';
+    if (currentTab === 'pending')   url += '&status=pending';
+    if (currentTab === 'completed') url += '&status=completed';
+    if (currentTab === 'assigned')  url += '&assigned=true';
+
+    const phone  = document.getElementById('fPhone')?.value?.trim();
+    const from   = document.getElementById('fFrom')?.value;
+    const to     = document.getElementById('fTo')?.value;
+    const dept   = document.getElementById('fDept')?.value;
+    const cat    = document.getElementById('fCat')?.value;
+    const status = document.getElementById('fStatus')?.value;
+
+    if (phone)  url += `&phone=${encodeURIComponent(phone)}`;
+    if (from)   url += `&from_date=${from}`;
+    if (to)     url += `&to_date=${to}`;
+    if (dept)   url += `&dept_code=${encodeURIComponent(dept)}`;
+    if (cat)    url += `&category_code=${encodeURIComponent(cat)}`;
+    if (status && currentTab === 'all') url += `&status=${status}`;
+  }
+
+  try {
+    const r = await staffFetch(url);
+    totalCount = r.total || 0;
+    totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
+    applyStats(r.stats);
+    renderInbox(r.data || []);
+  } catch(e) {
+    document.getElementById('inboxBody').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle"></i>Error loading inbox: ${e.message}</div>`;
+  }
+}
+
+function fmtTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
+  const now = new Date();
+  const diff = now - d;
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000) return d.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleDateString('en-IN', {day:'2-digit',month:'short'});
+}
+
+function statusChip(s) {
+  const map = {new:'s-new',pending:'s-pending',completed:'s-completed'};
+  return `<span class="status-chip ${map[s]||'s-new'}">${(s||'new').toUpperCase()}</span>`;
+}
+
+function renderLastSentBy(lsb) {
+  if (!lsb || !lsb.type) return '<span class="lsb-none">—</span>';
+  const t = lsb.type || '';
+  const n = lsb.name || '';
+  if (t === 'auto' || t === 'system') {
+    return `<span class="lsb-chip lsb-system" title="${escHtml(n || 'Auto-triggered')}"><i class="fas fa-robot" style="font-size:9px"></i> System</span>`;
+  }
+  if (t === 'staff') {
+    const label = n ? n.split('(')[0].trim() : 'Staff';
+    return `<span class="lsb-chip lsb-staff" title="${escHtml(n)}"><i class="fas fa-user-tie" style="font-size:9px"></i> ${escHtml(label)}</span>`;
+  }
+  if (t === 'partner') {
+    const label = n ? n.split('(')[0].trim() : 'Partner';
+    return `<span class="lsb-chip lsb-partner" title="${escHtml(n)}"><i class="fas fa-handshake" style="font-size:9px"></i> ${escHtml(label)}</span>`;
+  }
+  return `<span class="lsb-chip lsb-system" title="${escHtml(n)}">${escHtml(n || t)}</span>`;
+}
+
+function renderExistingIn(eiArr) {
+  if (!eiArr || !eiArr.length) return '<span style="color:#d1d5db;font-size:11px">—</span>';
+  const iconMap = {crm:'🏷', walkin:'🚶', service:'🔧', contacts:'📞', new:'✨'};
+  return '<div class="ei-wrap">' + eiArr.map(e => {
+    const cls = `ei-${e.type}`;
+    const icon = iconMap[e.type] || '';
+    let html = `<span class="ei-chip ${cls}">${icon} ${escHtml(e.label)}</span>`;
+    if (e.with_whom) html += `<span class="ei-with" title="${escHtml(e.with_whom)}">${escHtml(e.with_whom)}</span>`;
+    return html;
+  }).join('') + '</div>';
+}
+
+function renderInbox(rows) {
+  if (!rows.length) {
+    document.getElementById('inboxBody').innerHTML = '<div class="empty-state"><i class="fab fa-whatsapp"></i>No conversations found.</div>';
+    return;
+  }
+  let html = '';
+  rows.forEach(t => {
+    // t = thread object: from_phone, resolved_name, message_count, unread_count, last_message, last_activity, status, ...
+    const phone    = t.from_phone || '';
+    const name     = t.resolved_name || t.from_name || '';
+    const preview  = t.last_message
+      ? (t.last_message.length > 60 ? t.last_message.slice(0, 60) + '…' : t.last_message)
+      : t.last_message_type ? `[${t.last_message_type}]` : '—';
+    const hasUnread  = (t.unread_count || 0) > 0;
+    const dot        = hasUnread ? '<span class="unread-dot"></span>' : '<span class="read-dot"></span>';
+    const unreadClass = hasUnread ? 'unread' : '';
+    const countClass  = hasUnread ? 'msg-count msg-count-unread' : 'msg-count';
+    const countBadge  = (t.message_count || 0) > 1
+      ? `<span class="${countClass}" title="${t.message_count} messages">${hasUnread ? t.unread_count + '/' : ''}${t.message_count}</span>`
+      : '';
+    const deptChip = t.dept_code ? `<span class="dept-chip">${escHtml(t.dept_code)}</span>` : '<span style="color:#d1d5db;font-size:11px">—</span>';
+    const catChip  = t.category_code ? `<span class="cat-chip">${escHtml(t.category_code)}</span>` : '<span style="color:#d1d5db;font-size:11px">—</span>';
+    const eiHtml   = renderExistingIn(t.existing_in);
+    const safePhone = escHtml(phone);
+    const safeName  = escHtml(name || phone);
+    const latestId  = t.latest_msg_id || 0;
+    const lsbHtml   = renderLastSentBy(t.last_sent_by);
+
+    html += `<div class="inbox-row ${unreadClass}" onclick="openThread('${safePhone}','${safeName}')">
+      <input type="checkbox" onclick="event.stopPropagation()" title="Select">
+      ${dot}
+      <div>
+        <div class="phone-cell" title="${safePhone}">${safePhone}</div>
+        ${name ? `<div class="caller-name">${safeName}</div>` : ''}
+      </div>
+      <div class="msg-preview">
+        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">${escHtml(preview)}</span>
+        ${countBadge}
+        <span class="time-cell">${fmtTime(t.last_activity)}</span>
+      </div>
+      <div>${eiHtml}</div>
+      <div>${deptChip}</div>
+      <div>${catChip}</div>
+      <div>${statusChip(t.status)}</div>
+      <div>${lsbHtml}</div>
+      <div class="action-btns" onclick="event.stopPropagation()">
+        <button class="icon-btn icon-btn-thread"  title="View Thread" onclick="openThread('${safePhone}','${safeName}')"><i class="fas fa-comments"></i></button>
+        <button class="icon-btn icon-btn-assign"  title="Assign"      onclick="openAssign(${latestId},'${safePhone}','${safeName}')"><i class="fas fa-user-tag"></i></button>
+        <button class="icon-btn icon-btn-done"    title="${t.status==='completed'?'Reopen':'Mark Complete'}" onclick="quickStatus(${latestId},'${t.status==='completed'?'new':'completed'}')"><i class="fas fa-${t.status==='completed'?'undo':'check'}"></i></button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('inboxBody').innerHTML = html;
+
+  // Pagination
+  const pb = document.getElementById('paginationBar');
+  if (totalPages > 1) {
+    pb.style.display = 'flex';
+    document.getElementById('paginationInfo').textContent = `Page ${currentPage} of ${totalPages} (${totalCount} total)`;
+    document.getElementById('btnPrev').disabled = currentPage <= 1;
+    document.getElementById('btnNext').disabled = currentPage >= totalPages;
+  }
+}
+
+// ── Mark all read ──────────────────────────────────────────────────────────────
+async function markAllRead() {
+  try {
+    await staffFetch(`${API}/whatsapp/inbox/mark-all-read`, {method:'PATCH'});
+    showToast('All messages marked as read');
+    loadInbox(currentPage);
+  } catch(e) { showToast('Error: ' + e.message, 'red'); }
+}
+
+// ── Quick status change ────────────────────────────────────────────────────────
+async function quickStatus(id, status) {
+  try {
+    await staffFetch(`${API}/whatsapp/inbox/${id}/status`, {method:'PATCH', body:{status}});
+    showToast(`Marked as ${status}`);
+    loadInbox(currentPage);
+  } catch(e) { showToast('Error: ' + e.message, 'red'); }
+}
+
+// ── Thread Modal ──────────────────────────────────────────────────────────────
+let _threadContactData = null;
+
+async function openThread(phone, name) {
+  activePhone = phone;
+  document.getElementById('th-name').textContent = name || phone;
+  document.getElementById('th-phone').textContent = phone;
+  document.getElementById('th-avatar').textContent = (name || phone).charAt(0).toUpperCase();
+  document.getElementById('threadMsgs').innerHTML = '<div style="text-align:center;color:#888;padding:20px"><span class="spinner"></span></div>';
+  document.getElementById('threadModal').classList.add('open');
+  document.getElementById('threadReplyText').value = '';
+  // Reset reply tabs to "Reply" tab
+  switchReplyTab('reply');
+  document.getElementById('trb-result').textContent = '';
+  // Reset details panel
+  _threadContactData = null;
+  document.getElementById('tdPanel').style.display = 'none';
+  document.getElementById('tdContent').innerHTML = '<div class="td-empty">Loading details…</div>';
+  const chevron = document.getElementById('tdChevron');
+  if (chevron) chevron.style.transform = '';
+
+  try {
+    const r = await staffFetch(`${API}/whatsapp/inbox/thread/${encodeURIComponent(phone)}`);
+    const msgs = r.data || [];
+    if (msgs.length) activeInboxId = msgs[msgs.length - 1].id;
+    // Update modal header with resolved name
+    if (r.contact_info?.resolved_name && r.contact_info.resolved_name !== name) {
+      document.getElementById('th-name').textContent = r.contact_info.resolved_name;
+      document.getElementById('th-avatar').textContent = r.contact_info.resolved_name.charAt(0).toUpperCase();
+    }
+    _threadContactData = r;
+    renderThread(msgs, r.contact_info);
+    // Pre-render contact details (hidden until toggled)
+    renderContactDetails(r);
+  } catch(e) {
+    document.getElementById('threadMsgs').innerHTML = `<div style="text-align:center;color:#dc2626;padding:20px">Error: ${e.message}</div>`;
+  }
+}
+
+function toggleContactDetails() {
+  const panel = document.getElementById('tdPanel');
+  const chevron = document.getElementById('tdChevron');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+  if (!isOpen && _threadContactData) renderContactDetails(_threadContactData);
+}
+
+function renderContactDetails(r) {
+  const crm     = r.crm_leads     || [];
+  const walkins = r.walkins        || [];
+  const svc     = r.service_tickets || [];
+  const contacts = r.staff_contacts || [];
+  const ei      = r.contact_info?.existing_in || [];
+
+  let html = '';
+
+  // ── CRM Leads ────────────────────────────────────────────────────────────
+  if (crm.length) {
+    html += `<div class="td-section">
+      <div class="td-section-head td-crm-head"><i class="fas fa-tag"></i> CRM Leads</div>`;
+    crm.forEach(l => {
+      html += `<div class="td-card">
+        <div class="td-grid">
+          <div class="td-item"><span class="td-label">Name</span><span class="td-val">${escHtml(l.name||'—')}</span></div>
+          <div class="td-item"><span class="td-label">Status</span><span class="td-val">${escHtml(l.status||'—')}</span></div>
+          <div class="td-item"><span class="td-label">Owner</span><span class="td-val">${escHtml(l.owner_name||'Unassigned')}</span></div>
+          <div class="td-item"><span class="td-label">Source</span><span class="td-val">${escHtml(l.source||'—')}</span></div>
+          ${l.budget_min||l.budget_max ? `<div class="td-item"><span class="td-label">Budget</span><span class="td-val">₹${l.budget_min||0} – ₹${l.budget_max||'?'}</span></div>` : ''}
+          ${l.deal_value ? `<div class="td-item"><span class="td-label">Value</span><span class="td-val">₹${l.deal_value}</span></div>` : ''}
+          ${l.city ? `<div class="td-item"><span class="td-label">City</span><span class="td-val">${escHtml(l.city)}</span></div>` : ''}
+          ${l.next_followup_date ? `<div class="td-item"><span class="td-label">Follow-up</span><span class="td-val">${l.next_followup_date}</span></div>` : ''}
+        </div>
+        ${l.recent_comments ? `<div style="margin-top:5px;font-size:11px;color:#6b7280;border-top:1px solid #f3f4f6;padding-top:4px"><i class="fas fa-comment" style="margin-right:3px"></i>${escHtml(l.recent_comments.slice(0,120))}${l.recent_comments.length>120?'…':''}</div>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // ── Walk-ins ──────────────────────────────────────────────────────────────
+  if (walkins.length) {
+    html += `<div class="td-section">
+      <div class="td-section-head td-wi-head"><i class="fas fa-walking"></i> Walk-in Visits</div>`;
+    walkins.forEach(w => {
+      html += `<div class="td-card">
+        <div class="td-grid">
+          <div class="td-item"><span class="td-label">Customer</span><span class="td-val">${escHtml(w.customer_name||'—')}</span></div>
+          <div class="td-item"><span class="td-label">Visit Date</span><span class="td-val">${w.visit_date||'—'}</span></div>
+          <div class="td-item"><span class="td-label">Purpose</span><span class="td-val">${escHtml(w.visit_purpose||'—')}</span></div>
+          <div class="td-item"><span class="td-label">Status</span><span class="td-val">${escHtml(w.status||'—')}</span></div>
+          ${w.assigned_to ? `<div class="td-item"><span class="td-label">Assigned To</span><span class="td-val">${escHtml(w.assigned_to)}</span></div>` : ''}
+          ${w.product_interest ? `<div class="td-item"><span class="td-label">Interest</span><span class="td-val">${escHtml(w.product_interest)}</span></div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // ── Service Tickets ───────────────────────────────────────────────────────
+  if (svc.length) {
+    html += `<div class="td-section">
+      <div class="td-section-head td-svc-head"><i class="fas fa-tools"></i> Service Tickets</div>`;
+    svc.forEach(s => {
+      html += `<div class="td-card">
+        <div class="td-grid">
+          <div class="td-item"><span class="td-label">Ticket ID</span><span class="td-val">${escHtml(s.ticket_id||String(s.id))}</span></div>
+          <div class="td-item"><span class="td-label">Status</span><span class="td-val">${escHtml(s.status||'—')}</span></div>
+          ${s.technician ? `<div class="td-item"><span class="td-label">Technician</span><span class="td-val">${escHtml(s.technician)}</span></div>` : ''}
+          ${s.priority ? `<div class="td-item"><span class="td-label">Priority</span><span class="td-val">${escHtml(s.priority)}</span></div>` : ''}
+          ${s.issue_category ? `<div class="td-item"><span class="td-label">Category</span><span class="td-val">${escHtml(s.issue_category)}</span></div>` : ''}
+        </div>
+        ${s.issue_description ? `<div style="margin-top:5px;font-size:11px;color:#6b7280;border-top:1px solid #f3f4f6;padding-top:4px">${escHtml(s.issue_description.slice(0,120))}${s.issue_description.length>120?'…':''}</div>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // ── Staff Contacts ────────────────────────────────────────────────────────
+  if (contacts.length) {
+    html += `<div class="td-section">
+      <div class="td-section-head td-cnt-head"><i class="fas fa-address-book"></i> Staff Contacts</div>`;
+    contacts.forEach(c => {
+      html += `<div class="td-card">
+        <div class="td-grid">
+          <div class="td-item"><span class="td-label">Name</span><span class="td-val">${escHtml(c.contact_name||'—')}</span></div>
+          ${c.saved_by ? `<div class="td-item"><span class="td-label">Saved By</span><span class="td-val">${escHtml(c.saved_by)}</span></div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  if (!html) {
+    html = `<div class="td-empty"><i class="fas fa-info-circle" style="margin-right:5px"></i>No records found in any system for this contact.</div>`;
+  }
+
+  document.getElementById('tdContent').innerHTML = html;
+}
+
+function renderMediaContent(m) {
+  const url  = m.media_url || '';
+  const mime = (m.media_mime_type || '').toLowerCase();
+  if (!url) return '';
+  if (mime.startsWith('image/') || url.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/i)) {
+    return `<img src="${url}" class="bubble-img" loading="lazy" onerror="this.style.display='none'" onclick="window.open('${url}','_blank')">`;
+  }
+  if (mime.startsWith('video/') || url.match(/\.(mp4|mov|webm|ogg)(\?|$)/i)) {
+    return `<video class="bubble-video" controls preload="metadata"><source src="${url}" type="${mime||'video/mp4'}">
+      <a href="${url}" target="_blank" class="bubble-doc"><i class="fas fa-file-video"></i><span>View Video</span></a></video>`;
+  }
+  if (mime.startsWith('audio/') || url.match(/\.(ogg|mp3|aac|opus|wav)(\?|$)/i)) {
+    return `<audio class="bubble-audio" controls preload="metadata"><source src="${url}" type="${mime||'audio/ogg'}">
+      <a href="${url}" target="_blank" class="bubble-doc"><i class="fas fa-file-audio"></i><span>Audio Message</span></a></audio>`;
+  }
+  // Document / generic file
+  const ext = (url.split('?')[0].split('.').pop() || 'file').toUpperCase();
+  const icons = {PDF:'fa-file-pdf',DOC:'fa-file-word',DOCX:'fa-file-word',XLS:'fa-file-excel',XLSX:'fa-file-excel',PPT:'fa-file-powerpoint',PPTX:'fa-file-powerpoint',ZIP:'fa-file-archive'};
+  const ico = icons[ext] || 'fa-file';
+  return `<a href="${url}" target="_blank" class="bubble-doc"><i class="fas ${ico}"></i><span>${ext} Document</span></a>`;
+}
+
+function buildSenderLabel(m, isOut, contactName) {
+  const segmentLabel = (m.dept_code || m.category_code || '').replace(/_/g,' ').toUpperCase() || null;
+  if (!isOut) {
+    const lbl = contactName ? escHtml(contactName) : escHtml(m.from_phone || '');
+    if (lbl) return `<div class="bubble-sender bubble-sender-in"><i class="fas fa-user" style="font-size:8px;color:#6b7280"></i> ${lbl}</div>`;
+    return '';
+  }
+  const st = m.sender_type || '';
+  const sn = (m.sent_by_name || '').split('(')[0].trim();
+  if (m._source === 'message_log') {
+    if (st === 'auto' || st === 'system') {
+      const seg = segmentLabel ? ` · ${escHtml(segmentLabel)}` : '';
+      return `<div class="bubble-sender bubble-sender-out"><i class="fas fa-robot" style="font-size:8px"></i> System${seg}</div>`;
+    }
+    if (st === 'staff')   return `<div class="bubble-sender bubble-sender-out"><i class="fas fa-user-tie" style="font-size:8px"></i> ${escHtml(sn || 'Staff')}</div>`;
+    if (st === 'partner') return `<div class="bubble-sender bubble-sender-out"><i class="fas fa-handshake" style="font-size:8px"></i> ${escHtml(sn || 'Partner')}</div>`;
+    if (sn)               return `<div class="bubble-sender bubble-sender-out"><i class="fas fa-paper-plane" style="font-size:8px"></i> ${escHtml(sn)}</div>`;
+    if (segmentLabel)     return `<div class="bubble-sender bubble-sender-out"><i class="fas fa-bolt" style="font-size:8px"></i> ${escHtml(segmentLabel)}</div>`;
+    return '';
+  }
+  // wa_inbox outbound
+  if (m.auto_replied) {
+    const seg = segmentLabel ? ` · ${escHtml(segmentLabel)}` : '';
+    return `<div class="bubble-sender bubble-sender-out"><i class="fas fa-robot" style="font-size:8px"></i> System (Auto)${seg}</div>`;
+  }
+  if (m.replied_by_name) return `<div class="bubble-sender bubble-sender-out"><i class="fas fa-user-tie" style="font-size:8px"></i> ${escHtml(m.replied_by_name)}</div>`;
+  if (segmentLabel)      return `<div class="bubble-sender bubble-sender-out"><i class="fas fa-tag" style="font-size:8px"></i> ${escHtml(segmentLabel)}</div>`;
+  return `<div class="bubble-sender bubble-sender-out"><i class="fas fa-paper-plane" style="font-size:8px"></i> Sent</div>`;
+}
+
+function renderThread(msgs, contactInfo) {
+  if (!msgs.length) {
+    document.getElementById('threadMsgs').innerHTML = '<div style="text-align:center;color:#888;padding:20px">No messages yet.</div>';
+    return;
+  }
+  const contactName = contactInfo?.resolved_name || contactInfo?.saved_name || null;
+
+  // ── Group consecutive messages from the same direction ──────────────────
+  const groups = [];
+  msgs.forEach(m => {
+    const dir = m.message_type === 'outbound' ? 'out' : 'in';
+    if (groups.length && groups[groups.length-1].dir === dir) {
+      groups[groups.length-1].items.push(m);
+    } else {
+      groups.push({ dir, items: [m] });
+    }
+  });
+
+  let html = '';
+  groups.forEach((g, gi) => {
+    // Gap between groups: 12px; first group has 0 top margin
+    const marginTop = gi > 0 ? 'margin-top:12px' : '';
+    html += `<div class="msg-group ${g.dir}" style="${marginTop}">`;
+
+    g.items.forEach((m, mi) => {
+      const isOut = g.dir === 'out';
+      const bubbleClass = isOut ? 'bubble-out' : 'bubble-in';
+      const body = (m.body_text || '').trim();
+      const auto = m.auto_replied && !isOut ? ' <span style="font-size:10px;color:#059669;font-weight:600">[Auto]</span>' : '';
+      const readIcon = isOut
+        ? (m.is_read
+            ? ' <i class="fas fa-check-double" style="font-size:9px;color:#25d366;margin-left:3px"></i>'
+            : ' <i class="fas fa-check" style="font-size:9px;color:#9ca3af;margin-left:3px"></i>')
+        : '';
+
+      // Media content
+      const mediaHtml = renderMediaContent(m);
+
+      // Only show sender label on the LAST message of the group
+      const isLastInGroup = mi === g.items.length - 1;
+      const senderLabel = isLastInGroup ? buildSenderLabel(m, isOut, contactName) : '';
+
+      // Body text — skip if it's a template placeholder like {{1}} with no real content
+      const showText = body && !body.match(/^\{\{.*\}\}$/);
+
+      // Small gap between messages within same group (tight like WhatsApp)
+      const itemMarginTop = mi > 0 ? 'margin-top:3px' : '';
+
+      html += `<div class="msg-item ${isOut?'out':'in'}" style="${itemMarginTop}">
+        <div class="thread-bubble ${bubbleClass}">
+          ${mediaHtml}
+          ${showText ? escHtml(body) : (mediaHtml ? '' : escHtml(body || `[${m.message_type||'message'}]`))}${auto}${readIcon}
+          <div class="bubble-time">${fmtTime(m.received_at)}</div>
+        </div>
+        ${senderLabel}
+      </div>`;
+    });
+
+    html += '</div>';
+  });
+
+  const wrap = document.getElementById('threadMsgs');
+  wrap.innerHTML = html;
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+async function sendThreadReply() {
+  if (!activeInboxId) { showToast('No active message to reply to', 'red'); return; }
+  const text = document.getElementById('threadReplyText').value.trim();
+  if (!text) { showToast('Type a message first', 'red'); return; }
+  const btn = document.getElementById('threadSendBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    await staffFetch(`${API}/whatsapp/inbox/${activeInboxId}/reply`, {method:'POST', body:{text}});
+    showToast('Reply sent!');
+    document.getElementById('threadReplyText').value = '';
+    await openThread(activePhone, document.getElementById('th-name').textContent);
+  } catch(e) {
+    showToast('Failed to send: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+  }
+}
+
+// ── Thread Reply Tab (Template) ──────────────────────────────────────────────
+let _trbAllTemplates = [];
+
+// Single source of truth: segment → variable key → default value
+const TRB_SEGMENT_DEFAULTS = {
+  vgk: { '1':'Rahul Sharma','2':'VGK07012345','3':'https://vgk4u.com/vgk/login','4':'10,000',
+         'name':'Rahul Sharma','member_id':'VGK07012345','login_url':'https://vgk4u.com/vgk/login','points_balance':'10,000' },
+  general: { '1':'Rahul Sharma','2':'VGK07012345','3':'https://vgk4u.com/vgk/login','4':'10,000',
+              'name':'Rahul Kumar','partner_phone':'+91 98765 43210','otp':'123456' },
+  system: { 'name':'Rahul Kumar','ticket_id':'TKT2001','status':'In Progress',
+             'po_number':'PO-2025-001','pending_count':'5','meetings':'3','1':'123456' },
+  ev_b2b: { 'name':'Business Owner','1':'Business Owner' },
+  ev_b2c: { 'name':'Rahul Kumar','1':'Rahul Kumar' },
+  real_estate: { 'name':'Rahul Kumar','1':'Rahul Kumar' },
+  etc_training: { 'name':'Rahul Kumar','1':'Rahul Kumar' },
+};
+
+function switchReplyTab(tab) {
+  ['reply','template'].forEach(t => {
+    document.getElementById(`trb-tab-${t}`)?.classList.toggle('active', t===tab);
+    document.getElementById(`trb-pane-${t}`)?.classList.toggle('active', t===tab);
+  });
+  if (tab === 'template') loadTrbTemplates();
+}
+
+async function loadTrbTemplates() {
+  const sel = document.getElementById('trb-tpl-sel');
+  sel.innerHTML = '<option value="">⏳ Loading…</option>';
+  try {
+    const d = await staffFetch(`${API}/whatsapp-config/templates?is_active=true`);
+    _trbAllTemplates = d.templates || [];
+    filterTrbTemplates();
+  } catch(e) {
+    sel.innerHTML = '<option value="">⚠️ Failed to load</option>';
+    console.warn('Templates load failed', e);
+  }
+}
+
+function filterTrbTemplates() {
+  const seg = (document.getElementById('trb-seg-sel')?.value || '').toLowerCase();
+  const sel = document.getElementById('trb-tpl-sel');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Select a template —</option>';
+  _trbAllTemplates.forEach(t => {
+    if (seg && (t.segment || '').toLowerCase() !== seg) return;
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    const segLabel = t.segment ? `[${t.segment.toUpperCase()}]` : '';
+    const approvedBadge = t.is_meta_approved ? ' ✓' : '';
+    opt.textContent = `${t.name} ${segLabel}${approvedBadge}`;
+    opt.dataset.tpl = JSON.stringify(t);
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+  onTrbTemplateChange();
+}
+
+function _trbExtractVars(body) {
+  const vars = [];
+  const seen = new Set();
+  for (const m of (body || '').matchAll(/\{\{(\w+)\}\}/g)) {
+    if (!seen.has(m[1])) { seen.add(m[1]); vars.push(m[1]); }
+  }
+  return vars;
+}
+
+// Get the best value for a variable: contact data → example_values → segment defaults
+function _trbGetVarValue(varKey, idx, examples, segment) {
+  const contactInfo = _threadContactData?.contact_info || {};
+  const contactName = contactInfo.resolved_name || contactInfo.saved_name || '';
+  // Contact data mapping
+  const contactMap = {
+    '1': contactName, 'name': contactName,
+    '2': '', 'member_id': '', 'login_url': 'https://vgk4u.com/vgk/login',
+    '3': 'https://vgk4u.com/vgk/login',
+  };
+  // 1st priority: contact data (non-empty)
+  const fromContact = contactMap[varKey] || '';
+  if (fromContact) return fromContact;
+  // 2nd priority: stored example_values
+  if (examples && examples[idx] !== undefined && examples[idx] !== '') return String(examples[idx]);
+  // 3rd priority: segment defaults
+  const segDefaults = TRB_SEGMENT_DEFAULTS[segment] || TRB_SEGMENT_DEFAULTS['general'] || {};
+  return segDefaults[varKey] || '';
+}
+
+function onTrbTemplateChange() {
+  const sel = document.getElementById('trb-tpl-sel');
+  const opt = sel.options[sel.selectedIndex];
+  const section = document.getElementById('trb-var-section');
+  const varDiv = document.getElementById('trb-var-inputs');
+  const preview = document.getElementById('trb-preview');
+  if (!opt || !opt.dataset.tpl) {
+    section.style.display = 'none';
+    preview.style.display = 'none';
+    return;
+  }
+  const tpl = JSON.parse(opt.dataset.tpl);
+  const vars = _trbExtractVars(tpl.body_text);
+  const examples = Array.isArray(tpl.example_values) ? tpl.example_values : [];
+  const segment = tpl.segment || 'general';
+  if (vars.length) {
+    section.style.display = 'block';
+    varDiv.innerHTML = vars.map((v, i) => {
+      const val = _trbGetVarValue(v, i, examples, segment);
+      return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <span style="flex:0 0 90px;font-size:10.5px;color:#1d4ed8;font-weight:700">{{${v}}}</span>
+        <input class="trb-var-input" id="trb-var-${v}" value="${escHtml(val)}"
+               placeholder="${escHtml(val || 'Enter value…')}" oninput="updateTrbPreview()">
+      </div>`;
+    }).join('');
+  } else {
+    section.style.display = 'none';
+    varDiv.innerHTML = '';
+  }
+  updateTrbPreview();
+}
+
+function updateTrbPreview() {
+  const sel = document.getElementById('trb-tpl-sel');
+  const opt = sel.options[sel.selectedIndex];
+  const preview = document.getElementById('trb-preview');
+  if (!opt || !opt.dataset.tpl) { preview.style.display='none'; return; }
+  const tpl = JSON.parse(opt.dataset.tpl);
+  const vars = _trbExtractVars(tpl.body_text);
+  let body = tpl.body_text || '';
+  vars.forEach(v => {
+    const inp = document.getElementById(`trb-var-${v}`);
+    if (inp && inp.value) body = body.split(`{{${v}}}`).join(inp.value);
+  });
+  preview.textContent = body;
+  preview.style.display = 'block';
+}
+
+function _buildTrbContext() {
+  const ctx = {};
+  document.querySelectorAll('.trb-var-input').forEach(inp => {
+    const key = inp.id.replace('trb-var-', '');
+    ctx[key] = inp.value;
+  });
+  return ctx;
+}
+
+async function sendTrbTemplate() {
+  const sel = document.getElementById('trb-tpl-sel');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.dataset.tpl) { showToast('Select a template first', 'red'); return; }
+  const tpl = JSON.parse(opt.dataset.tpl);
+  const sendType = document.querySelector('input[name="trbStype"]:checked')?.value || 'meta';
+  const ctx = _buildTrbContext();
+  const btn = document.getElementById('trbSendBtn');
+  const res = document.getElementById('trb-result');
+  // Build substituted message
+  let msg = tpl.body_text || '';
+  Object.entries(ctx).forEach(([k,v]) => { msg = msg.split(`{{${k}}}`).join(v); });
+  // Use active contact's phone
+  const phone = (activePhone || '').replace(/\D/g,'').slice(-10);
+  if (!phone || phone.length < 10) { showToast('No contact phone available', 'red'); return; }
+  if (!msg) { showToast('Message is empty', 'red'); return; }
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  res.textContent = '';
+  try {
+    const d = await staffFetch(`${API}/whatsapp-config/test-send`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        phone,
+        custom_message: msg,
+        template_id: parseInt(tpl.id),
+        context_vars: ctx,
+        send_type: sendType,
+      })
+    });
+    if (d.success) {
+      res.innerHTML = `<span style="color:#059669">✅ Sent (${sendType})${d.wamid ? ' · WAMID: '+d.wamid : ''}</span>`;
+      showToast('Message sent!');
+      setTimeout(() => openThread(activePhone, document.getElementById('th-name').textContent), 3000);
+    } else {
+      res.innerHTML = `<span style="color:#dc2626">❌ ${d.reason || 'Send failed'}</span>`;
+    }
+  } catch(e) {
+    res.innerHTML = `<span style="color:#dc2626">❌ ${e.message}</span>`;
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+  }
+}
+
+// ── Delivery Status Tab ────────────────────────────────────────────────────────
+// DC-B-131047: Human-readable Meta error code labels
+const _WA_ERR_LABELS = {
+  '131047': 'Outside 24h window — use an approved Meta template',
+  '130429': 'Rate limit reached — too many messages',
+  '131026': 'Message undeliverable — recipient device/number issue',
+  '131021': 'Sender not in WhatsApp recipient list',
+  '131042': 'Business account issue — check Meta Business Manager',
+  '131045': 'Incorrect WhatsApp number format',
+  '131051': 'Message type not supported',
+  '131052': 'Media download failed',
+  '131053': 'Media upload failed on Meta servers',
+  '368':    'Temporarily blocked — send rate too high',
+  '100':    'Invalid parameter in request',
+  '190':    'Access token expired or invalid',
+};
+function _waErrLabel(code, msg) {
+  if (!code && !msg) return null;
+  const c = String(code || '');
+  return _WA_ERR_LABELS[c] || (msg ? msg : `Error ${c}`);
+}
+
+let _dlvPage = 1;
+const _DLV_STATUS_STYLES = {
+  sent:         { bg:'#dbeafe', color:'#1e40af', icon:'⬆️' },
+  delivered:    { bg:'#d1fae5', color:'#065f46', icon:'✅' },
+  read:         { bg:'#a7f3d0', color:'#047857', icon:'👁️' },
+  failed:       { bg:'#fee2e2', color:'#991b1b', icon:'❌' },
+  queued:       { bg:'#fef3c7', color:'#92400e', icon:'⏳' },
+  direct_sent:  { bg:'#f0fdf4', color:'#166534', icon:'↗️' },
+};
+const _DLV_SOURCE_LABELS = {
+  message_log:  { label:'System', bg:'#ede9fe', color:'#5b21b6' },
+  crm_wa_sends: { label:'CRM Staff', bg:'#dcfce7', color:'#15803d' },
+};
+
+async function loadDeliveryLog(page = 1) {
+  _dlvPage = page;
+  const body = document.getElementById('dlv-body');
+  body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+
+  const params = new URLSearchParams({ page, page_size: 50 });
+  const phone   = document.getElementById('dlv-phone')?.value.trim();
+  const search  = document.getElementById('dlv-search')?.value.trim();
+  const status  = document.getElementById('dlv-status')?.value;
+  const source  = document.getElementById('dlv-source')?.value;
+  const mtype   = document.getElementById('dlv-type')?.value;
+  const dFrom   = document.getElementById('dlv-date-from')?.value;
+  const dTo     = document.getElementById('dlv-date-to')?.value;
+  if (phone)   params.set('phone', phone);
+  if (search)  params.set('search', search);
+  if (status)  params.set('status', status);
+  if (source)  params.set('source', source);
+  if (mtype)   params.set('message_type', mtype);
+  if (dFrom)   params.set('date_from', dFrom);
+  if (dTo)     params.set('date_to', dTo);
+
+  try {
+    const d = await staffFetch(`${API}/whatsapp-config/delivery-log?${params}`);
+    const rows = d.rows || [];
+    const total = d.total || 0;
+
+    // Summary counts
+    const counts = {};
+    rows.forEach(r => { counts[r.status] = (counts[r.status]||0) + 1; });
+    document.getElementById('dlv-summary').innerHTML =
+      `<span style="font-weight:700;color:#374151">Showing ${rows.length} of ${total}</span>` +
+      Object.entries(counts).map(([s, n]) => {
+        const st = _DLV_STATUS_STYLES[s] || { bg:'#f1f5f9', color:'#374151', icon:'•' };
+        return `<span style="background:${st.bg};color:${st.color};padding:2px 8px;border-radius:99px;font-weight:700">${st.icon} ${s}: ${n}</span>`;
+      }).join('');
+
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af">No messages found for these filters</td></tr>';
+      document.getElementById('dlv-pagination').innerHTML = '';
+      return;
+    }
+
+    function _fmtDt(iso) {
+      if (!iso) return '<span style="color:#d1d5db">—</span>';
+      const d = new Date(iso);
+      return d.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+    }
+
+    body.innerHTML = rows.map(r => {
+      const st = _DLV_STATUS_STYLES[r.status] || { bg:'#f1f5f9', color:'#374151', icon:'•' };
+      const src = _DLV_SOURCE_LABELS[r.source] || { label: r.source, bg:'#f1f5f9', color:'#374151' };
+      const errLabel = _waErrLabel(r.error_code, r.error_message);
+      const rawErrTip = [r.error_code ? `Code: ${r.error_code}` : null, r.error_message || null].filter(Boolean).join(' — ');
+      const errTitle  = rawErrTip ? ` title="${escHtml(rawErrTip)}"` : '';
+      const errHtml   = errLabel
+        ? `<span style="font-size:10px;color:#ef4444">${escHtml(errLabel.substring(0,60))}${errLabel.length>60?'…':''}</span>`
+        : '<span style="color:#d1d5db">—</span>';
+      const hasBody = !!(r.body);
+      const rowId = escHtml(String(r.id || ''));
+      const bodyData = hasBody ? escHtml(r.body) : '';
+      const isDirect = r.message_type === 'direct_wa';
+      const viewBtn = hasBody
+        ? `<button onclick="_dlvViewMsg('${rowId}')" style="background:#0d9488;color:#fff;border:none;border-radius:5px;padding:2px 8px;font-size:10px;cursor:pointer;white-space:nowrap"><i class="fas fa-eye"></i></button>`
+        : '<span style="color:#d1d5db">—</span>';
+      return `<tr id="dlvrow_${rowId}" data-body="${bodyData}" data-is-direct="${isDirect}" style="border-bottom:1px solid #f3f4f6">
+        <td style="padding:5px 8px;font-size:11px;font-weight:600;color:#0d9488;white-space:nowrap">${escHtml(r.phone||'—')}</td>
+        <td style="padding:5px 8px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escHtml(r.template_name||r.contact_name||'')}">${escHtml(r.template_name || r.contact_name || '—')}</td>
+        <td style="padding:5px 8px;font-size:10px;white-space:nowrap"><span style="background:#f1f5f9;padding:1px 6px;border-radius:4px">${escHtml(r.message_type||'—')}</span></td>
+        <td style="padding:5px 8px"><span style="background:${src.bg};color:${src.color};font-size:10px;padding:1px 6px;border-radius:99px;font-weight:700;white-space:nowrap">${src.label}</span></td>
+        <td style="padding:5px 8px"><span style="background:${st.bg};color:${st.color};font-size:10px;padding:1px 8px;border-radius:99px;font-weight:700;white-space:nowrap">${st.icon} ${r.status||'—'}</span></td>
+        <td style="padding:5px 8px;font-size:10.5px;color:#6b7280;white-space:nowrap">${_fmtDt(r.sent_at)}</td>
+        <td style="padding:5px 8px;font-size:10.5px;color:#6b7280;white-space:nowrap">${_fmtDt(r.delivered_at)}</td>
+        <td style="padding:5px 8px;font-size:10.5px;color:#6b7280;white-space:nowrap">${escHtml(r.sent_by||'—')}</td>
+        <td style="padding:5px 8px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"${errTitle}>${errHtml}</td>
+        <td style="padding:5px 8px;text-align:center">${viewBtn}</td>
+      </tr>`;
+    }).join('');
+
+    // Pagination
+    const totalPages = Math.ceil(total / 50);
+    document.getElementById('dlv-pagination').innerHTML = totalPages <= 1 ? `<span style="color:#9ca3af">${total} record${total!==1?'s':''}</span>` :
+      `<span style="color:#6b7280">${total} records</span>
+       <button onclick="loadDeliveryLog(${page-1})" ${page<=1?'disabled':''} style="padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;cursor:pointer;background:#fff">← Prev</button>
+       <span style="font-size:11px;color:#374151">Page ${page} of ${totalPages}</span>
+       <button onclick="loadDeliveryLog(${page+1})" ${page>=totalPages?'disabled':''} style="padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:11px;cursor:pointer;background:#fff">Next →</button>`;
+  } catch(e) {
+    body.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:16px;color:#dc2626">Error: ${escHtml(e.message)}</td></tr>`;
+  }
+}
+
+// ── Delivery Log — Message View Panel ─────────────────────────────────────────
+function _dlvViewMsg(rowId) {
+  const row = document.getElementById('dlvrow_' + rowId);
+  if (!row) return;
+  const body    = row.dataset.body    || '';
+  const isDirect = row.dataset.isDirect === 'true';
+
+  // Status indicator for direct sends
+  const statusHtml = isDirect
+    ? `<div style="display:flex;align-items:center;gap:6px;margin-top:10px;padding:8px 10px;background:#f0fdf4;border-radius:7px;font-size:11px;color:#166534">
+         <span style="font-size:14px">✔✔</span>
+         <span>Sent (Direct WA) — no delivery confirmation available</span>
+       </div>`
+    : '';
+
+  let panel = document.getElementById('_dlvViewPanel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = '_dlvViewPanel';
+    panel.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#fff;border-top:2px solid #0d9488;box-shadow:0 -4px 24px rgba(0,0,0,.15);padding:0;max-height:60vh;display:flex;flex-direction:column';
+    document.body.appendChild(panel);
+  }
+  panel.style.display = 'flex';
+  panel.innerHTML = `
+    <div style="background:linear-gradient(135deg,#0d9488,#059669);color:#fff;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <span style="font-weight:700;font-size:13px"><i class="fab fa-whatsapp me-1"></i>Message Preview</span>
+      <button onclick="document.getElementById('_dlvViewPanel').style.display='none'" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1">&times;</button>
+    </div>
+    <div style="overflow-y:auto;padding:14px 16px;flex:1">
+      <div style="background:#e9fbe5;border-radius:10px 10px 10px 2px;padding:12px 14px;max-width:540px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word;font-family:inherit;box-shadow:0 1px 3px rgba(0,0,0,.08)">${escHtml(body)}</div>
+      ${statusHtml}
+    </div>`;
+}
+
+function resetDeliveryFilters() {
+  ['dlv-phone','dlv-search','dlv-date-from','dlv-date-to'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  ['dlv-status','dlv-source','dlv-type'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  loadDeliveryLog(1);
+}
+
+// ── Assign Modal ──────────────────────────────────────────────────────────────
+function openAssign(id, phone, name) {
+  activeInboxId = id;
+  activePhone   = phone;
+  document.getElementById('assignMsgInfo').innerHTML = `<i class="fab fa-whatsapp" style="color:#25d366"></i> <strong>${escHtml(name)}</strong> · ${escHtml(phone)}`;
+  document.getElementById('aDept').value       = '';
+  document.getElementById('aTargetDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('aEmpSearch').value  = '';
+  document.getElementById('aEmpId').value      = '';
+  document.getElementById('aEmpCode').value    = '';
+  document.getElementById('aEmpSelected').textContent = '';
+  document.getElementById('aCatCode').value    = '';
+  document.getElementById('aStatus').value     = 'pending';
+  document.getElementById('aNotes').value      = '';
+  document.getElementById('salesSection').style.display = 'none';
+  document.getElementById('serviceSection').style.display = 'none';
+  document.getElementById('empDropdown').classList.remove('open');
+  document.getElementById('lPhone').value = phone;
+  document.getElementById('lName').value  = name !== phone ? name : '';
+  document.getElementById('selectedLeadId').value = '';
+  document.getElementById('selectedLeadInfo').textContent = '';
+  setLeadTab('new');
+  document.getElementById('assignModal').classList.add('open');
+}
+
+function onDeptChange() {
+  const sel = document.getElementById('aDept');
+  const opt = sel.options[sel.selectedIndex];
+  const name = opt ? opt.text.toUpperCase() : '';
+  const deptId = sel.value;
+
+  document.getElementById('salesSection').style.display   = name.includes('SALES')   ? 'block' : 'none';
+  document.getElementById('serviceSection').style.display = name.includes('SERVICE')  ? 'block' : 'none';
+
+  document.getElementById('aEmpSearch').value  = '';
+  document.getElementById('aEmpId').value      = '';
+  document.getElementById('aEmpCode').value    = '';
+  document.getElementById('aEmpSelected').textContent = '';
+}
+
+function setLeadTab(tab) {
+  activeLeadTab = tab;
+  document.querySelectorAll('.lead-tab').forEach((t,i) => {
+    const tabs = ['new','existing','none'];
+    t.classList.toggle('active', tabs[i] === tab);
+  });
+  document.getElementById('newLeadForm').style.display      = tab === 'new'      ? 'block' : 'none';
+  document.getElementById('existingLeadForm').style.display = tab === 'existing' ? 'block' : 'none';
+}
+
+async function searchEmployees() {
+  clearTimeout(empSearchTimer);
+  empSearchTimer = setTimeout(async () => {
+    const q      = document.getElementById('aEmpSearch').value.trim();
+    const deptEl = document.getElementById('aDept');
+    const deptId = deptEl.value;
+    if (!q && !deptId) { document.getElementById('empDropdown').classList.remove('open'); return; }
+    let url = `${API}/whatsapp/inbox/dept-employees?`;
+    if (deptId)  url += `dept_id=${deptId}&`;
+    if (q)       url += `search=${encodeURIComponent(q)}`;
+    try {
+      const r = await staffFetch(url);
+      const dd = document.getElementById('empDropdown');
+      if (!r.data?.length) { dd.innerHTML = '<div class="emp-opt" style="cursor:default;color:#9ca3af">No employees found</div>'; dd.classList.add('open'); return; }
+      dd.innerHTML = r.data.map(e => `<div class="emp-opt" onclick="selectEmp(${e.id},'${escHtml(e.emp_code)}','${escHtml(e.name)}','${escHtml(e.dept_name)}')">
+        <div><div class="emp-name">${escHtml(e.name)}</div><div class="emp-dept">${escHtml(e.emp_code)} · ${escHtml(e.dept_name)}</div></div>
+      </div>`).join('');
+      dd.classList.add('open');
+    } catch(_) {}
+  }, 300);
+}
+
+function selectEmp(id, code, name, dept) {
+  document.getElementById('aEmpId').value   = id;
+  document.getElementById('aEmpCode').value = code;
+  document.getElementById('aEmpSearch').value = name;
+  document.getElementById('aEmpSelected').textContent = `✓ ${name} (${code}) · ${dept}`;
+  document.getElementById('empDropdown').classList.remove('open');
+}
+
+async function searchLeads() {
+  const q = document.getElementById('leadSearchInput').value.trim();
+  if (q.length < 2) { document.getElementById('leadSearchResults').style.display='none'; return; }
+  try {
+    const r = await staffFetch(`${API}/crm/leads?search=${encodeURIComponent(q)}&page_size=10`);
+    const items = r.leads || r.data || [];
+    const box = document.getElementById('leadSearchResults');
+    if (!items.length) { box.innerHTML = '<div class="lead-result-item" style="color:#9ca3af">No leads found</div>'; box.style.display='block'; return; }
+    box.innerHTML = items.map(l => `<div class="lead-result-item" onclick="selectLead(${l.id},'${escHtml(l.name||'')}','${escHtml(l.phone||'')}')">
+      <strong>${escHtml(l.name||'—')}</strong> · ${escHtml(l.phone||'')} · <span style="color:#6b7280;font-size:11px">${escHtml(l.status||'')}</span>
+    </div>`).join('');
+    box.style.display = 'block';
+  } catch(_) {}
+}
+
+function selectLead(id, name, phone) {
+  document.getElementById('selectedLeadId').value = id;
+  document.getElementById('selectedLeadInfo').textContent = `✓ Lead #${id}: ${name} · ${phone}`;
+  document.getElementById('leadSearchResults').style.display = 'none';
+  document.getElementById('leadSearchInput').value = `${name} (${phone})`;
+}
+
+async function submitAssign() {
+  const deptEl   = document.getElementById('aDept');
+  const deptOpt  = deptEl.options[deptEl.selectedIndex];
+  const deptId   = deptEl.value;
+  const deptCode = deptOpt ? deptOpt.getAttribute('data-code') || '' : '';
+  const empId    = document.getElementById('aEmpId').value;
+  const empCode  = document.getElementById('aEmpCode').value;
+  const tDate    = document.getElementById('aTargetDate').value;
+  const cat      = document.getElementById('aCatCode').value;
+  const status   = document.getElementById('aStatus').value;
+  const notes    = document.getElementById('aNotes').value.trim();
+
+  if (!deptId)  { showToast('Please select a department', 'red'); return; }
+  if (!empId)   { showToast('Please assign to an employee', 'red'); return; }
+  if (!tDate)   { showToast('Please set a target date', 'red'); return; }
+
+  const payload = {
+    dept_code:    deptCode,
+    dept_id:      parseInt(deptId),
+    emp_id:       parseInt(empId),
+    emp_code:     empCode,
+    target_date:  tDate,
+    category_code: cat,
+    status,
+    notes,
+  };
+
+  const deptName = (deptOpt?.text || '').toUpperCase();
+
+  // Sales lead
+  if (deptName.includes('SALES') && activeLeadTab !== 'none') {
+    if (activeLeadTab === 'new') {
+      payload.lead_action  = 'new';
+      payload.lead_name    = document.getElementById('lName').value.trim() || activePhone;
+      payload.lead_phone   = document.getElementById('lPhone').value.trim() || activePhone;
+      payload.lead_email   = document.getElementById('lEmail').value.trim() || null;
+      payload.lead_category_id = parseInt(document.getElementById('lCatId').value) || null;
+    } else if (activeLeadTab === 'existing') {
+      const lid = document.getElementById('selectedLeadId').value;
+      if (!lid) { showToast('Please select an existing lead', 'red'); return; }
+      payload.lead_action = 'existing';
+      payload.lead_id     = parseInt(lid);
+    }
+  }
+
+  const btn = document.getElementById('assignSubmitBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Saving…';
+  try {
+    const r = await staffFetch(`${API}/whatsapp/inbox/${activeInboxId}/assign`, {method:'POST', body: payload});
+    let msg = 'Assignment saved!';
+    if (r.ticket_id) msg += ` · Service ticket #${r.ticket_id} raised`;
+    if (r.lead_id)   msg += ` · Lead #${r.lead_id} created`;
+    showToast(msg);
+    closeModal('assignModal');
+    loadInbox(currentPage);
+  } catch(e) {
+    showToast('Error: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Save Assignment';
+  }
+}
+
+// ── Modal helpers ──────────────────────────────────────────────────────────────
+function closeModal(id, event) {
+  if (event && event.target !== document.getElementById(id)) return;
+  document.getElementById(id).classList.remove('open');
+}
+
+// ── Escape HTML ────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── Load depts & categories into all selects ──────────────────────────────────
+async function loadDepts() {
+  try {
+    const r = await staffFetch(`${API}/whatsapp/inbox/departments`);
+    allDepts = r.data || [];
+    const aDept = document.getElementById('aDept');
+    const fDept = document.getElementById('fDept');
+    allDepts.forEach(d => {
+      const op1 = new Option(d.name, d.id); op1.setAttribute('data-code', d.dept_code||d.name);
+      const op2 = new Option(d.name, d.dept_code||d.name);
+      aDept.appendChild(op1);
+      fDept.appendChild(op2);
+    });
+  } catch(_) {}
+}
+
+async function loadCategories() {
+  try {
+    const r = await staffFetch(`${API}/whatsapp/inbox/categories`);
+    allCategories = r.data || [];
+    const aCat = document.getElementById('aCatCode');
+    const fCat = document.getElementById('fCat');
+    allCategories.forEach(c => {
+      aCat.appendChild(new Option(c.label, c.code));
+      fCat.appendChild(new Option(c.label, c.code));
+    });
+  } catch(_) {}
+}
+
+async function loadSignupCategories() {
+  try {
+    const r = await staffFetch(`${API}/crm/lead-categories`);
+    signupCats = r.categories || r.data || [];
+    const sel = document.getElementById('lCatId');
+    signupCats.forEach(c => sel.appendChild(new Option(c.name, c.id)));
+  } catch(_) {}
+}
+
+// ── Close dropdown when clicking outside ──────────────────────────────────────
+document.addEventListener('click', e => {
+  if (!e.target.closest('.emp-search-wrap')) document.getElementById('empDropdown').classList.remove('open');
+  if (!e.target.closest('#leadSearchInput') && !e.target.closest('#leadSearchResults')) {
+    document.getElementById('leadSearchResults').style.display = 'none';
+  }
+});
+
+// ── My Leads & Team: load current staff identity ──────────────────────────────
+async function loadCurrentStaff() {
+  try {
+    const r = await staffFetch(`${API}/whatsapp/inbox/me-info`);
+    // me-info returns data at root level (id, emp_code, name, role_code, hierarchy_level)
+    if (r && r.id) {
+      currentStaff = {
+        id: r.id,
+        emp_code: r.emp_code,
+        name: r.name,
+        role_code: r.role_code,
+        role_name: r.role_name,
+        hierarchy_level: r.hierarchy_level || 0,
+      };
+    } else if (r && r.data) {
+      currentStaff = r.data;
+    }
+    if (!currentStaff) return;
+    await loadTeamMembers();
+  } catch(_) {}
+}
+
+async function loadTeamMembers() {
+  if (!currentStaff) return;
+  try {
+    const r = await staffFetch(`${API}/whatsapp/inbox/my-team`);
+    teamMembers = r.data || [];
+    // Always show the "My Leads & Team" tab once we know who the user is
+    document.getElementById('tab-my-leads-team').style.display = 'block';
+    // Show "Team" sub-tab only if user has direct reports
+    const hasTeam = teamMembers.length > 0;
+    const ltTeamBtn = document.getElementById('lt-team');
+    const ltDivider = document.getElementById('ltDivider');
+    if (hasTeam) {
+      ltTeamBtn.style.display = 'inline-flex';
+      ltDivider.style.display = 'block';
+      document.getElementById('teamCountBadge').textContent = teamMembers.length;
+      document.getElementById('teamCountBadge').style.display = 'inline';
+      buildTeamEmpSelect();
+    } else {
+      ltTeamBtn.style.display = 'none';
+      ltDivider.style.display = 'none';
+    }
+  } catch(_) {}
+}
+
+function buildTeamEmpSelect() {
+  const sel = document.getElementById('teamEmpSelect');
+  // Remove all except first option ("— All Team —")
+  while (sel.options.length > 1) sel.remove(1);
+  // "All Team" option visibility: only for privileged users
+  if (!canSeeAllTeam()) {
+    // Remove the "All Team" option for non-privileged users
+    sel.remove(0);
+  }
+  // Group by depth for visual clarity
+  const depths = [...new Set(teamMembers.map(m => m.depth||0))].sort();
+  depths.forEach(d => {
+    const grp = document.createElement('optgroup');
+    grp.label = d === 1 ? 'Direct Reports' : `Level ${d}`;
+    teamMembers.filter(m => (m.depth||0) === d).forEach(m => {
+      const op = document.createElement('option');
+      op.value = m.id;
+      op.textContent = `${m.name} (${m.emp_code || m.id})`;
+      grp.appendChild(op);
+    });
+    sel.appendChild(grp);
+  });
+  // For non-privileged users without "All Team", select first member by default
+  if (!canSeeAllTeam() && sel.options.length > 0) {
+    sel.selectedIndex = 0;
+    teamEmpId = parseInt(sel.options[0].value) || null;
+  }
+}
+
+// ── Populate team dept/cat filters (mirrors loadDepts/loadCategories) ─────────
+function populateTeamFilters() {
+  const tDeptSel = document.getElementById('tDept');
+  const tCatSel  = document.getElementById('tCat');
+  // Clear existing (keep first "All" option)
+  while (tDeptSel.options.length > 1) tDeptSel.remove(1);
+  while (tCatSel.options.length > 1)  tCatSel.remove(1);
+  allDepts.forEach(d => {
+    tDeptSel.appendChild(new Option(d.name, d.dept_code || d.name));
+  });
+  allCategories.forEach(c => {
+    tCatSel.appendChild(new Option(c.label, c.code));
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await StaffSidebar.init();
+  if (typeof StaffHeader !== 'undefined') {
+    StaffHeader.inject('CRM WhatsApp Inbox', 'fab fa-whatsapp');
+    StaffHeader.init();
+  }
+  await Promise.all([loadDepts(), loadCategories(), loadSignupCategories()]);
+  populateTeamFilters();
+  loadCurrentStaff();   // async — shows tab when ready
+  loadInbox(1);
+  setInterval(loadStats, 60000);
+});
+</script>
+</body>
+</html>

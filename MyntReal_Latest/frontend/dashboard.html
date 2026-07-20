@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNR User Dashboard - Sandbox</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --dark-bg: #1a1a2e;
+            --card-bg: #16213e;
+        }
+        body {
+            background: var(--dark-bg);
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            padding-top: 60px;
+        }
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 2rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .dashboard-header h1 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+        .dashboard-header p {
+            margin: 0.5rem 0 0;
+            opacity: 0.9;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .card-header {
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+        }
+        .card-body {
+            padding: 1.5rem;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            opacity: 0.8;
+        }
+        .stat-card h3 {
+            font-size: 2rem;
+            margin: 0;
+            font-weight: 700;
+        }
+        .stat-card p {
+            margin: 0.5rem 0 0;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+        .user-info-card {
+            background: linear-gradient(135deg, #2d3436, #636e72);
+        }
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .menu-item {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            text-align: center;
+            text-decoration: none;
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+        .menu-item:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-2px);
+            color: #fff;
+        }
+        .menu-item i {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .sandbox-notice {
+            background: linear-gradient(90deg, #17a2b8, #20c997);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        .sandbox-notice.edit-mode {
+            background: linear-gradient(90deg, #dc3545, #fd7e14);
+        }
+        .logout-btn {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sandbox-notice" id="sandbox-notice">
+            <i class="fas fa-flask me-2"></i>
+            <strong>SANDBOX TEST MODE</strong> - All actions are simulated and do not affect production data
+        </div>
+        
+        <button class="btn btn-danger logout-btn" onclick="sandboxLogout()">
+            <i class="fas fa-sign-out-alt me-2"></i>Logout
+        </button>
+        
+        <div class="dashboard-header">
+            <h1><i class="fas fa-home me-3"></i>MNR User Dashboard</h1>
+            <p>Welcome to your sandbox test environment</p>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card user-info-card">
+                    <div class="card-body stat-card">
+                        <i class="fas fa-user-circle text-primary"></i>
+                        <h3 id="user-id">---</h3>
+                        <p>MNR ID</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body stat-card">
+                        <i class="fas fa-wallet text-success"></i>
+                        <h3 id="wallet-balance">0.00</h3>
+                        <p>Wallet Balance</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body stat-card">
+                        <i class="fas fa-users text-info"></i>
+                        <h3 id="referral-count">0</h3>
+                        <p>Direct Facilitations</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-th-large me-2"></i>Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="menu-grid">
+                    <a href="#" class="menu-item" onclick="showSandboxMessage('Profile View')">
+                        <i class="fas fa-user"></i>
+                        View Profile
+                    </a>
+                    <a href="#" class="menu-item" onclick="showSandboxMessage('Add Member')">
+                        <i class="fas fa-user-plus"></i>
+                        Add Member
+                    </a>
+                    <a href="#" class="menu-item" onclick="showSandboxMessage('My Network')">
+                        <i class="fas fa-sitemap"></i>
+                        My Network
+                    </a>
+                    <a href="#" class="menu-item" onclick="showSandboxMessage('Earnings')">
+                        <i class="fas fa-chart-line"></i>
+                        View Earnings
+                    </a>
+                    <a href="#" class="menu-item" onclick="showSandboxMessage('Withdrawals')">
+                        <i class="fas fa-money-bill-wave"></i>
+                        Withdrawals
+                    </a>
+                    <a href="#" class="menu-item" onclick="showSandboxMessage('Announcements')">
+                        <i class="fas fa-bullhorn"></i>
+                        Announcements
+                    </a>
+                    <a href="#" class="menu-item" onclick="showSandboxMessage('EV Benefits')">
+                        <i class="fas fa-car"></i>
+                        EV Benefits
+                    </a>
+                    <a href="#" class="menu-item" onclick="showSandboxMessage('Support')">
+                        <i class="fas fa-headset"></i>
+                        Support
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- VGK4U EV Marketplace Banner -->
+        <div style="background:linear-gradient(135deg,#0b1e38 0%,#071a10 100%);border-radius:12px;padding:0;margin-bottom:1.5rem;overflow:hidden;border:1px solid rgba(58,171,92,.25);box-shadow:0 4px 20px rgba(0,0,0,.3);">
+            <div style="display:flex;align-items:stretch;min-height:100px;">
+                <div style="flex:1;padding:18px 22px;display:flex;flex-direction:column;justify-content:center;gap:8px;">
+                    <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(58,171,92,.15);border:1px solid rgba(58,171,92,.3);color:#86efac;font-size:0.6rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:2px 10px;border-radius:20px;width:fit-content;">
+                        <i class="fas fa-bolt"></i> VGK4U EV Spares &amp; Accessories
+                    </div>
+                    <h5 style="color:#fff;font-weight:800;margin:0;font-size:1.1rem;">Get the Best Quality EV Products &amp; <span style="color:#3aab5c;">Best Prices</span></h5>
+                    <p style="color:rgba(255,255,255,.55);font-size:0.75rem;margin:0;">Genuine spare parts · Batteries · Controllers · Genuine Accessories — directly from VGK4U.<br>
+                    <strong style="color:#86efac;">Get the best discount by associating with us.</strong></p>
+                    <div style="margin-top:4px;">
+                        <a href="/marketplace" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#3aab5c,#059669);color:#fff;font-weight:800;font-size:0.82rem;padding:9px 20px;border-radius:8px;text-decoration:none;box-shadow:0 4px 12px rgba(58,171,92,.35);letter-spacing:.02em;">
+                            <i class="fas fa-store"></i> Browse EV Spares Marketplace
+                        </a>
+                    </div>
+                </div>
+                <div style="width:140px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:12px;position:relative;">
+                    <div style="position:absolute;inset:0;background:radial-gradient(circle at center,rgba(58,171,92,.2) 0%,transparent 70%);pointer-events:none;"></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;z-index:1;">
+                        <i class="fas fa-motorcycle" style="font-size:3rem;color:#3aab5c;filter:drop-shadow(0 4px 8px rgba(58,171,92,.4));"></i>
+                        <span style="font-size:0.6rem;color:#86efac;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">Manthra EV</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle me-2"></i>Sandbox Information
+            </div>
+            <div class="card-body">
+                <p><strong>Mode:</strong> <span id="mode-display">View Only</span></p>
+                <p><strong>Session:</strong> Active sandbox session</p>
+                <p><strong>Note:</strong> This is a test environment. All data displayed is sample data for testing purposes.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sandboxMode = localStorage.getItem('sandbox_mode') || 'view';
+            const token = localStorage.getItem('access_token');
+            
+            if (!token) {
+                window.location.href = `/test/${sandboxMode}/login`;
+                return;
+            }
+            
+            const modeDisplay = document.getElementById('mode-display');
+            const sandboxNotice = document.getElementById('sandbox-notice');
+            
+            if (sandboxMode === 'edit') {
+                modeDisplay.textContent = 'Edit Mode (Full Access)';
+                sandboxNotice.classList.add('edit-mode');
+                sandboxNotice.innerHTML = '<i class="fas fa-flask me-2"></i><strong>SANDBOX EDIT MODE</strong> - Full functionality enabled (test data only)';
+            } else {
+                modeDisplay.textContent = 'View Only Mode';
+            }
+            
+            document.getElementById('user-id').textContent = 'MNR111000001';
+            document.getElementById('wallet-balance').textContent = '12,500.00';
+            document.getElementById('referral-count').textContent = '15';
+        });
+        
+        function showSandboxMessage(feature) {
+            const sandboxMode = localStorage.getItem('sandbox_mode') || 'view';
+            if (sandboxMode === 'view') {
+                alert(`[SANDBOX VIEW MODE]\n\n${feature} feature is available in the production environment.\n\nThis is a read-only sandbox preview.`);
+            } else {
+                alert(`[SANDBOX EDIT MODE]\n\n${feature} feature would be active here.\n\nIn production, this would allow full interaction.`);
+            }
+        }
+        
+        function sandboxLogout() {
+            const sandboxMode = localStorage.getItem('sandbox_mode') || 'view';
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('sandbox_mode');
+            window.location.href = `/test/${sandboxMode}/landing`;
+        }
+    </script>
+</body>
+</html>

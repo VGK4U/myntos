@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSN Master - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .filter-section { background: white; padding: 16px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #6b7280; }
+        .filter-group input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 200px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .badge-active { background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-inactive { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-gst { background: #dbeafe; color: #2563eb; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #f59e0b; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 90%; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .form-row-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .gst-summary { background: #f9fafb; padding: 16px; border-radius: 8px; margin-top: 16px; }
+        .gst-summary h6 { margin: 0 0 12px 0; color: #374151; font-size: 14px; }
+        .gst-summary .total { font-size: 18px; font-weight: 700; color: #059669; }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        
+        .hsn-code { font-family: 'Courier New', monospace; font-weight: 600; background: #f3f4f6; padding: 4px 8px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+            <div class="page-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 16px;">
+                <button class="btn-primary-custom" onclick="openCreateModal()"><i class="fas fa-plus me-2"></i>Add HSN Code</button>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>Search</label>
+                    <input type="text" id="searchInput" placeholder="Search by HSN code or description..." onkeyup="filterHSN()">
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header"><span><i class="fas fa-barcode me-2"></i>HSN/SAC Codes</span><span class="text-muted" id="recordCount">0 records</span></div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="tableContainer" style="display: none;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>HSN/SAC Code</th>
+                                        <th>Description</th>
+                                        <th>CGST %</th>
+                                        <th>SGST %</th>
+                                        <th>IGST %</th>
+                                        <th>Cess %</th>
+                                        <th>Effective From</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="hsnTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-barcode"></i><h3>No HSN Codes Found</h3><p>Add your first HSN/SAC code to get started</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-plus-circle me-2"></i>Add HSN/SAC Code</h3><button class="modal-close" onclick="closeModal('createModal')">&times;</button></div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <form id="createForm">
+                    <div class="form-row">
+                        <div class="form-group"><label>HSN/SAC Code *</label><input type="text" id="formCode" required placeholder="e.g., 8503 or 9973" maxlength="10" style="text-transform: uppercase;"></div>
+                        <div class="form-group"><label>Effective From *</label><input type="date" id="formEffectiveFrom" required></div>
+                    </div>
+                    <div class="form-group"><label>Description *</label><textarea id="formDescription" required placeholder="Description of goods/services" rows="2"></textarea></div>
+                    <h6 style="margin-top: 20px; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;"><i class="fas fa-percent me-2"></i>GST Rates</h6>
+                    <div class="form-row-4">
+                        <div class="form-group"><label>CGST %</label><input type="number" id="formCgst" placeholder="0.00" min="0" max="50" step="0.01" value="0" onchange="calculateTotalGST()"></div>
+                        <div class="form-group"><label>SGST %</label><input type="number" id="formSgst" placeholder="0.00" min="0" max="50" step="0.01" value="0" onchange="calculateTotalGST()"></div>
+                        <div class="form-group"><label>IGST %</label><input type="number" id="formIgst" placeholder="0.00" min="0" max="50" step="0.01" value="0" onchange="calculateTotalGST()"></div>
+                        <div class="form-group"><label>Cess %</label><input type="number" id="formCess" placeholder="0.00" min="0" max="100" step="0.01" value="0" onchange="calculateTotalGST()"></div>
+                    </div>
+                    <div class="gst-summary">
+                        <h6><i class="fas fa-calculator me-2"></i>Total GST (Intra-state): <span id="totalGstDisplay" class="total">0.00%</span></h6>
+                        <small class="text-muted">CGST + SGST (Intra-state) or IGST (Inter-state)</small>
+                    </div>
+                    <div class="form-group" style="margin-top: 16px;"><label>Effective To (Optional)</label><input type="date" id="formEffectiveTo" placeholder="Leave blank if still active"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="createHSN()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-edit me-2"></i>Edit HSN/SAC Code</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <div class="form-row">
+                        <div class="form-group"><label>HSN/SAC Code</label><input type="text" id="editCode" readonly style="background: #f3f4f6; cursor: not-allowed;"></div>
+                        <div class="form-group"><label>Effective From *</label><input type="date" id="editEffectiveFrom" required></div>
+                    </div>
+                    <div class="form-group"><label>Description *</label><textarea id="editDescription" required placeholder="Description of goods/services" rows="2"></textarea></div>
+                    <h6 style="margin-top: 20px; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;"><i class="fas fa-percent me-2"></i>GST Rates</h6>
+                    <div class="form-row-4">
+                        <div class="form-group"><label>CGST %</label><input type="number" id="editCgst" placeholder="0.00" min="0" max="50" step="0.01" onchange="calculateEditTotalGST()"></div>
+                        <div class="form-group"><label>SGST %</label><input type="number" id="editSgst" placeholder="0.00" min="0" max="50" step="0.01" onchange="calculateEditTotalGST()"></div>
+                        <div class="form-group"><label>IGST %</label><input type="number" id="editIgst" placeholder="0.00" min="0" max="50" step="0.01" onchange="calculateEditTotalGST()"></div>
+                        <div class="form-group"><label>Cess %</label><input type="number" id="editCess" placeholder="0.00" min="0" max="100" step="0.01" onchange="calculateEditTotalGST()"></div>
+                    </div>
+                    <div class="gst-summary">
+                        <h6><i class="fas fa-calculator me-2"></i>Total GST (Intra-state): <span id="editTotalGstDisplay" class="total">0.00%</span></h6>
+                        <small class="text-muted">CGST + SGST (Intra-state) or IGST (Inter-state)</small>
+                    </div>
+                    <div class="form-group" style="margin-top: 16px;"><label>Effective To (Optional)</label><input type="date" id="editEffectiveTo" placeholder="Leave blank if still active"></div>
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label class="d-flex align-items-center gap-2"><input type="checkbox" id="editIsActive" checked> <span>Active</span></label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="updateHSN()"><i class="fas fa-save me-1"></i>Update</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let allHSN = [];
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('HSN Master', 'fas fa-barcode'); if (typeof StaffHeader !== 'undefined') StaffHeader.init(); if (typeof StaffBackButton !== 'undefined') StaffBackButton.init(); updateHeaderUserInfo();
+            document.getElementById('formEffectiveFrom').value = new Date().toISOString().split('T')[0];
+            await loadHSN();
+        });
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            document.getElementById('headerUserInitials').textContent = (userData.full_name || 'SM').split(' ').map(n => n[0]).join('').substring(0, 2);
+            document.getElementById('headerUserName').textContent = userData.full_name || 'Staff Member';
+            document.getElementById('headerUserEmpId').textContent = userData.emp_code || '-';
+            document.getElementById('headerUserRole').textContent = userData.role_name || 'Employee';
+        }
+        
+        async function loadHSN() {
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/hsn`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allHSN = data.hsn_codes || [];
+                    renderHSN(allHSN);
+                } else { showEmptyState(); }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showEmptyState();
+            }
+            document.getElementById('loadingState').style.display = 'none';
+        }
+        
+        function renderHSN(items) {
+            const tbody = document.getElementById('hsnTable');
+            if (!items.length) { showEmptyState(); return; }
+            document.getElementById('tableContainer').style.display = 'block';
+            document.getElementById('recordCount').textContent = `${items.length} records`;
+            tbody.innerHTML = items.map(h => `
+                <tr>
+                    <td><span class="hsn-code">${h.hsn_code || '-'}</span></td>
+                    <td>${h.description || '-'}</td>
+                    <td>${parseFloat(h.cgst_rate || 0).toFixed(2)}%</td>
+                    <td>${parseFloat(h.sgst_rate || 0).toFixed(2)}%</td>
+                    <td>${parseFloat(h.igst_rate || 0).toFixed(2)}%</td>
+                    <td>${parseFloat(h.cess_rate || 0).toFixed(2)}%</td>
+                    <td>${h.effective_from ? new Date(h.effective_from).toLocaleDateString('en-IN') : '-'}</td>
+                    <td><span class="${h.is_active !== false ? 'badge-active' : 'badge-inactive'}">${h.is_active !== false ? 'Active' : 'Inactive'}</span></td>
+                    <td><button class="btn btn-sm btn-outline-secondary" onclick="openEditModal(${h.id})"><i class="fas fa-edit"></i></button></td>
+                </tr>
+            `).join('');
+        }
+        
+        function filterHSN() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allHSN.filter(h => 
+                (h.hsn_code || '').toLowerCase().includes(search) || 
+                (h.description || '').toLowerCase().includes(search)
+            );
+            renderHSN(filtered);
+        }
+        
+        function showEmptyState() { document.getElementById('tableContainer').style.display = 'none'; document.getElementById('emptyState').style.display = 'block'; }
+        
+        function openCreateModal() { 
+            document.getElementById('createForm').reset();
+            document.getElementById('formEffectiveFrom').value = new Date().toISOString().split('T')[0];
+            document.getElementById('formCgst').value = '0';
+            document.getElementById('formSgst').value = '0';
+            document.getElementById('formIgst').value = '0';
+            document.getElementById('formCess').value = '0';
+            calculateTotalGST();
+            document.getElementById('createModal').classList.add('active'); 
+        }
+        
+        function calculateTotalGST() {
+            const cgst = parseFloat(document.getElementById('formCgst').value) || 0;
+            const sgst = parseFloat(document.getElementById('formSgst').value) || 0;
+            const cess = parseFloat(document.getElementById('formCess').value) || 0;
+            const total = cgst + sgst + cess;
+            document.getElementById('totalGstDisplay').textContent = total.toFixed(2) + '%';
+        }
+        
+        function calculateEditTotalGST() {
+            const cgst = parseFloat(document.getElementById('editCgst').value) || 0;
+            const sgst = parseFloat(document.getElementById('editSgst').value) || 0;
+            const cess = parseFloat(document.getElementById('editCess').value) || 0;
+            const total = cgst + sgst + cess;
+            document.getElementById('editTotalGstDisplay').textContent = total.toFixed(2) + '%';
+        }
+        
+        async function openEditModal(hsnId) {
+            try {
+                const response = await staffFetch(`${API_BASE}/hsn/${hsnId}`);
+                if (!response.ok) { alert('Failed to load HSN details'); return; }
+                const data = await response.json();
+                const h = data.hsn;
+                
+                document.getElementById('editId').value = h.id;
+                document.getElementById('editCode').value = h.hsn_code || '';
+                document.getElementById('editDescription').value = h.description || '';
+                document.getElementById('editCgst').value = h.cgst_rate || 0;
+                document.getElementById('editSgst').value = h.sgst_rate || 0;
+                document.getElementById('editIgst').value = h.igst_rate || 0;
+                document.getElementById('editCess').value = h.cess_rate || 0;
+                document.getElementById('editEffectiveFrom').value = h.effective_from ? h.effective_from.split('T')[0] : '';
+                document.getElementById('editEffectiveTo').value = h.effective_to ? h.effective_to.split('T')[0] : '';
+                document.getElementById('editIsActive').checked = h.is_active !== false;
+                calculateEditTotalGST();
+                
+                document.getElementById('editModal').classList.add('active');
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading HSN:', e);
+                alert('Failed to load HSN details'); 
+            }
+        }
+        
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        
+        async function createHSN() {
+            const hsnCode = document.getElementById('formCode').value.trim().toUpperCase();
+            const description = document.getElementById('formDescription').value.trim();
+            const effectiveFrom = document.getElementById('formEffectiveFrom').value;
+            
+            if (!hsnCode) { alert('HSN/SAC code is required'); return; }
+            if (!description) { alert('Description is required'); return; }
+            if (!effectiveFrom) { alert('Effective from date is required'); return; }
+            
+            const data = { 
+                hsn_code: hsnCode, 
+                description: description,
+                cgst_rate: parseFloat(document.getElementById('formCgst').value) || 0,
+                sgst_rate: parseFloat(document.getElementById('formSgst').value) || 0,
+                igst_rate: parseFloat(document.getElementById('formIgst').value) || 0,
+                cess_rate: parseFloat(document.getElementById('formCess').value) || 0,
+                effective_from: effectiveFrom,
+                effective_to: document.getElementById('formEffectiveTo').value || null
+            };
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/hsn`, { method: 'POST', body: JSON.stringify(data) });
+                if (response.ok) { 
+                    closeModal('createModal'); 
+                    loadHSN(); 
+                    alert('HSN code created successfully'); 
+                } else { 
+                    const err = await response.json(); 
+                    alert(err.message || err.detail?.message || err.detail || 'Failed to create HSN code'); 
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Create HSN error:', e);
+                alert('Failed to create HSN code'); 
+            }
+        }
+        
+        async function updateHSN() {
+            const hsnId = document.getElementById('editId').value;
+            const description = document.getElementById('editDescription').value.trim();
+            const effectiveFrom = document.getElementById('editEffectiveFrom').value;
+            
+            if (!description) { alert('Description is required'); return; }
+            if (!effectiveFrom) { alert('Effective from date is required'); return; }
+            
+            const data = { 
+                description: description,
+                cgst_rate: parseFloat(document.getElementById('editCgst').value) || 0,
+                sgst_rate: parseFloat(document.getElementById('editSgst').value) || 0,
+                igst_rate: parseFloat(document.getElementById('editIgst').value) || 0,
+                cess_rate: parseFloat(document.getElementById('editCess').value) || 0,
+                effective_from: effectiveFrom,
+                effective_to: document.getElementById('editEffectiveTo').value || null,
+                is_active: document.getElementById('editIsActive').checked
+            };
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/hsn/${hsnId}`, { method: 'PUT', body: JSON.stringify(data) });
+                if (response.ok) { 
+                    closeModal('editModal'); 
+                    loadHSN(); 
+                    alert('HSN code updated successfully'); 
+                } else { 
+                    const err = await response.json(); 
+                    alert(err.message || err.detail?.message || err.detail || 'Failed to update HSN code'); 
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Update HSN error:', e);
+                alert('Failed to update HSN code'); 
+            }
+        }
+    </script>
+</body>
+</html>

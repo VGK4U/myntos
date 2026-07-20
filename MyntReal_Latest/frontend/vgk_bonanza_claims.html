@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VGK Bonanza Claims — Staff</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="/public/css/dark-theme.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; color: #e2e8f0; min-height: 100vh; }
+.main-content { margin-left: 260px; padding: 24px; transition: margin-left 0.3s ease; padding-top: 0; }
+body.sidebar-collapsed-mode .main-content { margin-left: 70px; }
+body.sidebar-collapsed-mode #headerContainer { margin-left: 70px !important; }
+@media (max-width: 768px) { .main-content { margin-left: 0 !important; } #headerContainer { margin-left: 0 !important; } }
+.page-banner { background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.page-banner h1 { font-size: 20px; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 10px; }
+.page-banner p { opacity: .85; margin: 0; font-size: 12.5px; }
+.btn-banner { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; text-decoration: none; }
+.btn-banner.outline { background: transparent; color: white; border: 2px solid rgba(255,255,255,.5); }
+.filter-bar { background: #16213e; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.filter-bar label { font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 3px; }
+.filter-bar .form-control, .filter-bar .form-select { font-size: 12.5px; padding: 6px 10px; border-radius: 7px; border: 1px solid rgba(255,255,255,.15); min-width: 130px; color: #e2e8f0 !important; background: #0f3460 !important; }
+.filter-bar .form-control::placeholder { color: #64748b; }
+.filter-bar .form-select option { background: #0f3460; color: #e2e8f0; }
+.btn-filter { padding: 7px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; }
+.btn-filter.apply { background: #7c3aed; color: white; }
+.btn-filter.apply:hover { background: #6d28d9; }
+.btn-filter.reset { background: rgba(255,255,255,.1); color: #cbd5e1; }
+.btn-filter.reset:hover { background: rgba(255,255,255,.15); }
+.table-card { background: #16213e; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; overflow: hidden; }
+.table-card-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,.08); flex-wrap: wrap; gap: 8px; }
+.table-card-header h3 { font-size: 14px; font-weight: 700; color: #f1f5f9; }
+table { width: 100%; border-collapse: collapse; }
+thead th { padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #94a3b8; background: #0f3460; white-space: nowrap; }
+tbody td { padding: 11px 14px; font-size: 13px; color: #e2e8f0; border-bottom: 1px solid rgba(255,255,255,.06); vertical-align: middle; }
+tbody tr:hover { background: rgba(124,58,237,.1); }
+.badge-chip { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.chip-pending { background: rgba(251,191,36,.15); color: #fbbf24; border: 1px solid rgba(251,191,36,.3); }
+.chip-verified { background: rgba(59,130,246,.15); color: #60a5fa; border: 1px solid rgba(59,130,246,.3); }
+.chip-procurement { background: rgba(139,92,246,.15); color: #a78bfa; border: 1px solid rgba(139,92,246,.3); }
+.chip-dispatched { background: rgba(234,179,8,.15); color: #fde047; border: 1px solid rgba(234,179,8,.3); }
+.chip-delivered { background: rgba(16,185,129,.15); color: #34d399; border: 1px solid rgba(16,185,129,.3); }
+.chip-rejected { background: rgba(239,68,68,.15); color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+.progress-mini { height: 6px; background: rgba(255,255,255,.1); border-radius: 999px; overflow: hidden; min-width: 80px; }
+.progress-mini-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7c3aed, #a855f7); }
+.stat-card { background: #16213e; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 16px 18px; }
+.stat-val { font-size: 24px; font-weight: 800; color: #a78bfa; }
+.stat-label { font-size: 12px; color: #94a3b8; font-weight: 600; margin-top: 2px; }
+/* Status timeline */
+.status-timeline { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+.st-step { display: flex; align-items: center; }
+.st-dot { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+.st-dot.done { background: #7c3aed; color: #fff; }
+.st-dot.current { background: #a855f7; color: #fff; box-shadow: 0 0 0 3px rgba(168,85,247,.3); }
+.st-dot.todo { background: rgba(255,255,255,.1); color: #64748b; }
+.st-line { width: 20px; height: 2px; background: rgba(255,255,255,.1); flex-shrink: 0; }
+.st-line.done { background: #7c3aed; }
+/* Side drawer */
+.side-panel { position: fixed; top: 0; right: -480px; width: 480px; height: 100vh; background: #16213e; border-left: 1px solid rgba(255,255,255,.1); box-shadow: -4px 0 20px rgba(0,0,0,.4); z-index: 1000; transition: right .3s; overflow-y: auto; }
+.side-panel.open { right: 0; }
+.side-panel-header { padding: 18px 20px; background: linear-gradient(135deg, #7c3aed, #5b21b6); color: white; display: flex; justify-content: space-between; align-items: center; }
+.side-panel-header h4 { font-size: 15px; font-weight: 700; margin: 0; }
+.side-panel-body { padding: 20px; }
+.info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.07); font-size: 13px; }
+.info-row .lbl { color: #94a3b8; font-weight: 600; }
+.info-row .val { font-weight: 600; color: #f1f5f9; }
+.status-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.status-btn { padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.status-btn.primary { background: #7c3aed; color: #fff; }
+.status-btn.primary:hover { background: #6d28d9; }
+.status-btn.primary:disabled { opacity: .5; cursor: not-allowed; }
+.status-btn.reject { background: rgba(239,68,68,.15); color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+.status-btn.reject:hover { background: rgba(239,68,68,.25); }
+.notes-input { width: 100%; border: 1px solid rgba(255,255,255,.15); border-radius: 8px; padding: 8px 12px; font-size: 13px; resize: vertical; min-height: 70px; margin-top: 10px; background: #0f3460; color: #e2e8f0; }
+.notes-input::placeholder { color: #64748b; }
+.section-title-sm { font-size: 12px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: .05em; margin-bottom: 8px; }
+/* DC-VGK-MEMBER-TRACKING-001: tab nav */
+.page-tabs { display: flex; gap: 4px; margin-bottom: 18px; background: #16213e; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 5px; }
+.page-tab { padding: 8px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; background: transparent; color: #94a3b8; transition: all .2s; }
+.page-tab.active { background: #7c3aed; color: #fff; box-shadow: 0 2px 8px rgba(124,58,237,.4); }
+.page-tab:hover:not(.active) { background: rgba(255,255,255,.07); color: #e2e8f0; }
+/* tracking table */
+.track-filter { background: #16213e; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.track-filter label { font-size: 10.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 3px; }
+.track-filter .form-control, .track-filter .form-select { font-size: 12.5px; padding: 6px 10px; border-radius: 7px; border: 1px solid rgba(255,255,255,.15); min-width: 160px; color: #e2e8f0 !important; background: #0f3460 !important; }
+.track-filter .form-select option { background: #0f3460; color: #e2e8f0; }
+.slab-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.slab-yes { background: rgba(16,185,129,.15); color: #34d399; border: 1px solid rgba(16,185,129,.3); }
+.slab-no  { background: rgba(239,68,68,.12); color: #f87171; border: 1px solid rgba(239,68,68,.25); }
+.slab-na  { background: rgba(148,163,184,.1); color: #64748b; border: 1px solid rgba(148,163,184,.2); }
+.eligible-row td { border-left: 3px solid #10b981 !important; }
+.close-row   td { border-left: 3px solid #f59e0b !important; }
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div id="headerContainer" style="position:sticky;top:0;z-index:1000;margin-left:260px;"><header class="top-header"></header></div>
+<main class="main-content" id="main-content">
+    <div class="page-banner">
+        <div>
+            <h1><i class="fas fa-clipboard-check"></i>VGK Bonanza Claims</h1>
+            <p>Review, verify, and process VGK partner reward claims — 5-step approval workflow</p>
+        </div>
+        <div style="display:flex;gap:8px">
+            <a href="/staff/vgk/bonanza-management" class="btn-banner outline"><i class="fas fa-trophy"></i>Manage Campaigns</a>
+        </div>
+    </div>
+
+    <!-- Tab navigation -->
+    <div class="page-tabs">
+        <button class="page-tab active" id="tabBtnClaims" onclick="switchTab('claims')"><i class="fas fa-clipboard-check me-2"></i>Submitted Claims</button>
+        <button class="page-tab" id="tabBtnTracking" onclick="switchTab('tracking')"><i class="fas fa-chart-bar me-2"></i>Member Progress</button>
+    </div>
+
+    <!-- ── TAB: Submitted Claims ─────────────────────────────────────── -->
+    <div id="tabClaims">
+
+    <!-- Status chain info -->
+    <div style="background:#16213e;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:14px 18px;margin-bottom:18px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:10px">Approval Chain</div>
+        <div class="status-timeline">
+            <div class="st-step"><div class="st-dot done">1</div></div><div class="st-line done"></div>
+            <div class="st-step"><div class="st-dot todo">2</div></div><div class="st-line"></div>
+            <div class="st-step"><div class="st-dot todo">3</div></div><div class="st-line"></div>
+            <div class="st-step"><div class="st-dot todo">4</div></div><div class="st-line"></div>
+            <div class="st-step"><div class="st-dot todo">5</div></div>
+        </div>
+        <div style="display:flex;gap:0;margin-top:4px;font-size:10px;color:#94a3b8;font-weight:600">
+            <span style="width:44px;text-align:center">Pending</span>
+            <span style="width:44px;text-align:center">Verified</span>
+            <span style="width:44px;text-align:center">Procure</span>
+            <span style="width:44px;text-align:center">Dispatch</span>
+            <span style="width:44px;text-align:center">Deliver</span>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:20px">
+        <div class="stat-card"><div class="stat-val" id="sCntPending" style="color:#d97706">—</div><div class="stat-label">Pending</div></div>
+        <div class="stat-card"><div class="stat-val" id="sCntVerified" style="color:#2563eb">—</div><div class="stat-label">Verified</div></div>
+        <div class="stat-card"><div class="stat-val" id="sCntProcure" style="color:#7c3aed">—</div><div class="stat-label">Procurement</div></div>
+        <div class="stat-card"><div class="stat-val" id="sCntDispatch" style="color:#d97706">—</div><div class="stat-label">Dispatched</div></div>
+        <div class="stat-card"><div class="stat-val" id="sCntDelivered" style="color:#059669">—</div><div class="stat-label">Delivered</div></div>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-bar">
+        <div>
+            <label>Status</label>
+            <select class="form-select" id="filterStatus" style="min-width:160px">
+                <option value="">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="Staff Verified">Staff Verified</option>
+                <option value="Procurement In Progress">Procurement In Progress</option>
+                <option value="Dispatched">Dispatched</option>
+                <option value="Delivered">Delivered</option>
+                <option value="Rejected">Rejected</option>
+            </select>
+        </div>
+        <div>
+            <label>Campaign</label>
+            <select class="form-select" id="filterBonanza" style="min-width:180px">
+                <option value="">All Campaigns</option>
+            </select>
+        </div>
+        <div>
+            <label>Partner Search</label>
+            <input class="form-control" id="filterPartner" placeholder="Name or code…" style="min-width:150px">
+        </div>
+        <button class="btn-filter apply" onclick="loadClaims()"><i class="fas fa-search me-1"></i>Apply</button>
+        <button class="btn-filter reset" onclick="clearFilters()">Reset</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <div class="table-card-header">
+            <h3><i class="fas fa-clipboard-check me-2" style="color:#7c3aed"></i>VGK Bonanza Claims</h3>
+            <button class="btn-filter apply" onclick="loadClaims()"><i class="fas fa-sync me-1"></i>Refresh</button>
+        </div>
+        <div style="overflow-x:auto">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Partner</th>
+                        <th>Campaign</th>
+                        <th>Segment</th>
+                        <th>Progress</th>
+                        <th>Reward</th>
+                        <th>Claimed</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="claimsTbody">
+                    <tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    </div><!-- /tabClaims -->
+
+    <!-- ── TAB: Member Progress ───────────────────────────────────────── -->
+    <div id="tabTracking" style="display:none">
+
+        <!-- Summary stats -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:18px" id="trackStatsRow">
+            <div class="stat-card"><div class="stat-val" id="tStatTotal" style="color:#a78bfa">—</div><div class="stat-label">Total Members</div></div>
+            <div class="stat-card"><div class="stat-val" id="tStatEligible" style="color:#34d399">—</div><div class="stat-label">Eligible</div></div>
+            <div class="stat-card"><div class="stat-val" id="tStatClaimed" style="color:#60a5fa">—</div><div class="stat-label">Claimed</div></div>
+            <div class="stat-card"><div class="stat-val" id="tStatZero" style="color:#64748b">—</div><div class="stat-label">No Progress</div></div>
+        </div>
+
+        <!-- Filters -->
+        <div class="track-filter">
+            <div>
+                <label>Campaign</label>
+                <select class="form-select" id="tFilterBonanza" style="min-width:200px">
+                    <option value="">All Campaigns</option>
+                </select>
+            </div>
+            <div>
+                <label>Partner Search</label>
+                <input class="form-control" id="tFilterPartner" placeholder="Name or code…" style="min-width:160px">
+            </div>
+            <button class="btn-filter apply" onclick="loadTracking()"><i class="fas fa-search me-1"></i>Apply</button>
+            <button class="btn-filter reset" onclick="clearTrackFilters()">Reset</button>
+            <div style="margin-left:auto;display:flex;gap:6px;align-items:flex-end">
+                <button id="tBtnAll"      class="btn-filter apply" style="background:#334155;opacity:0.55" onclick="setTrackView('all')">All Members</button>
+                <button id="tBtnProgress" class="btn-filter apply" style="background:#7c3aed;opacity:1" onclick="setTrackView('progress')" title="Members who have done at least 1 deal">Has Progress</button>
+                <button id="tBtnAchieved" class="btn-filter apply" style="background:#065f46;opacity:0.55" onclick="setTrackView('achieved')" title="Members who fully met the target">Achieved Only</button>
+                <button class="btn-filter apply" style="background:#0f3460" onclick="loadTracking()"><i class="fas fa-sync me-1"></i>Refresh</button>
+            </div>
+        </div>
+
+        <!-- Pivot tracking table -->
+        <div id="trackingContent">
+            <div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading member progress…</div>
+        </div>
+
+    </div><!-- /tabTracking -->
+</div>
+
+<!-- Side Drawer: Claim Details + Actions -->
+<div class="side-panel" id="claimDrawer">
+    <div class="side-panel-header">
+        <h4><i class="fas fa-clipboard-check me-2"></i>Claim Details</h4>
+        <button onclick="closeDrawer()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px">&times;</button>
+    </div>
+    <div class="side-panel-body" id="drawerContent">
+    </div>
+</div>
+<div id="drawerOverlay" onclick="closeDrawer()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:999"></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+const BONANZA_BASE = '/api/v1/bonanza';
+let _claims = [], _activeClaim = null;
+const STATUS_CHAIN = ['Pending', 'Staff Verified', 'Procurement In Progress', 'Dispatched', 'Delivered'];
+const STATUS_NEXT = { 'Pending': 'Staff Verified', 'Staff Verified': 'Procurement In Progress', 'Procurement In Progress': 'Dispatched', 'Dispatched': 'Delivered' };
+const CHIP_CLASS = { 'Pending': 'chip-pending', 'Staff Verified': 'chip-verified', 'Procurement In Progress': 'chip-procurement', 'Dispatched': 'chip-dispatched', 'Delivered': 'chip-delivered', 'Rejected': 'chip-rejected' };
+
+async function loadClaims() {
+    const status = document.getElementById('filterStatus').value;
+    const bonanzaId = document.getElementById('filterBonanza').value;
+    const partnerSearch = document.getElementById('filterPartner').value.trim().toLowerCase();
+    const tbody = document.getElementById('claimsTbody');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+
+    let url = BONANZA_BASE + '/vgk/claims';
+    const params = [];
+    if (status) params.push('processed_status=' + encodeURIComponent(status));
+    if (bonanzaId) params.push('bonanza_id=' + bonanzaId);
+    if (params.length) url += '?' + params.join('&');
+
+    try {
+        const r = await staffFetch(url);
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed');
+        let items = d.claims || [];
+        if (partnerSearch) items = items.filter(c => ((c.partner_name||'') + (c.partner_code||'')).toLowerCase().includes(partnerSearch));
+        _claims = items;
+
+        // Populate bonanza filter
+        const sel = document.getElementById('filterBonanza');
+        const existing = new Set(Array.from(sel.options).map(o => o.value));
+        items.forEach(c => {
+            if (c.bonanza_id && !existing.has(String(c.bonanza_id))) {
+                const opt = document.createElement('option');
+                opt.value = c.bonanza_id;
+                opt.textContent = c.bonanza_name || ('Bonanza #' + c.bonanza_id);
+                sel.appendChild(opt);
+                existing.add(String(c.bonanza_id));
+            }
+        });
+
+        // Stats
+        const cnt = {};
+        STATUS_CHAIN.concat(['Rejected']).forEach(s => cnt[s] = 0);
+        items.forEach(c => { cnt[c.processed_status] = (cnt[c.processed_status]||0) + 1; });
+        document.getElementById('sCntPending').textContent = cnt['Pending'] || 0;
+        document.getElementById('sCntVerified').textContent = cnt['Staff Verified'] || 0;
+        document.getElementById('sCntProcure').textContent = cnt['Procurement In Progress'] || 0;
+        document.getElementById('sCntDispatch').textContent = cnt['Dispatched'] || 0;
+        document.getElementById('sCntDelivered').textContent = cnt['Delivered'] || 0;
+
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No claims found</td></tr>';
+            return;
+        }
+        tbody.innerHTML = items.map(c => {
+            const pct = c.target ? Math.round((c.deal_count||0) / c.target * 100) : 100;
+            const chip = CHIP_CLASS[c.processed_status] || 'chip-pending';
+            // DC_VGK_SLAB_CLAIM_001: slab_wise has no reward_amount — show slab_payout (files × ₹/file)
+        const rewardText = c.reward_type === 'slab_wise'
+            ? (c.slab_payout != null ? `₹${c.slab_payout.toLocaleString('en-IN')} (${c.deal_count||0}×₹${(c.slab_extra_amount||0).toLocaleString('en-IN')})` : (c.slab_extra_amount ? `₹${c.slab_extra_amount.toLocaleString('en-IN')}/file` : '—'))
+            : (c.reward_amount ? `₹${(c.reward_amount||0).toLocaleString('en-IN')}` : (c.award_name || '—'));
+            return `<tr style="cursor:pointer" onclick="openDrawer(${c.claim_id})">
+                <td>
+                    <div style="font-weight:700;font-size:13px;color:#f1f5f9">${escH(c.partner_name||'—')}</div>
+                    <div style="font-size:11px;color:#64748b">${escH(c.partner_code||'')} ${c.partner_phone ? '· '+escH(c.partner_phone) : ''}</div>
+                </td>
+                <td style="font-size:13px;font-weight:600">${escH(c.bonanza_name||'—')}</td>
+                <td><span style="background:rgba(124,58,237,.2);color:#a78bfa;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid rgba(124,58,237,.3)">${escH(c.segment_id ? ('#'+c.segment_id) : 'All')}</span></td>
+                <td>
+                    <span style="font-weight:700;font-size:13px">${c.deal_count||0} / ${c.target||'?'}</span>
+                    <div class="progress-mini" style="margin-top:4px"><div class="progress-mini-fill" style="width:${pct}%"></div></div>
+                </td>
+                <td style="font-weight:700">${escH(rewardText)}</td>
+                <td style="font-size:12px;color:#94a3b8">${fmtDate(c.claimed_date)}</td>
+                <td><span class="badge-chip ${chip}">${escH(c.processed_status)}</span></td>
+                <td><button class="btn-filter apply" style="padding:5px 10px;font-size:12px" onclick="openDrawer(${c.claim_id});event.stopPropagation()"><i class="fas fa-arrow-right"></i></button></td>
+            </tr>`;
+        }).join('');
+    } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</td></tr>`;
+    }
+}
+
+function clearFilters() {
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterPartner').value = '';
+    loadClaims();
+}
+
+function openDrawer(claimId) {
+    const c = _claims.find(x => x.claim_id === claimId);
+    if (!c) return;
+    _activeClaim = c;
+    const content = document.getElementById('drawerContent');
+    const currentIdx = STATUS_CHAIN.indexOf(c.processed_status);
+    const nextStatus = STATUS_NEXT[c.processed_status];
+    const isDone = c.processed_status === 'Delivered' || c.processed_status === 'Rejected';
+    // DC_VGK_SLAB_CLAIM_001: slab_wise — show files × per-file amount and total
+    const rewardText = c.reward_type === 'slab_wise'
+        ? (c.slab_payout != null ? `₹${c.slab_payout.toLocaleString('en-IN')} total (${c.deal_count||0} files × ₹${(c.slab_extra_amount||0).toLocaleString('en-IN')}/file)` : (c.slab_extra_amount ? `₹${c.slab_extra_amount.toLocaleString('en-IN')}/file` : '—'))
+        : (c.reward_amount ? `₹${(c.reward_amount||0).toLocaleString('en-IN')} (${c.reward_type||'cash'})` : (c.award_name || '—'));
+
+    // Status timeline
+    const timeline = STATUS_CHAIN.map((s, i) => {
+        const cls = i < currentIdx ? 'done' : (i === currentIdx ? 'current' : 'todo');
+        const line = i < STATUS_CHAIN.length - 1 ? `<div class="st-line ${i < currentIdx ? 'done' : ''}"></div>` : '';
+        return `<div class="st-step"><div class="st-dot ${cls}">${i+1}</div></div>${line}`;
+    }).join('');
+
+    content.innerHTML = `
+        <div class="section-title-sm">Partner</div>
+        <div class="info-row"><span class="lbl">Name</span><span class="val">${escH(c.partner_name||'—')}</span></div>
+        <div class="info-row"><span class="lbl">Code</span><span class="val">${escH(c.partner_code||'—')}</span></div>
+        <div class="info-row"><span class="lbl">Phone</span><span class="val">${escH(c.partner_phone||'—')}</span></div>
+        <div class="info-row"><span class="lbl">Email</span><span class="val">${escH(c.partner_email||'—')}</span></div>
+        <div style="height:14px"></div>
+        <div class="section-title-sm">Bonanza</div>
+        <div class="info-row"><span class="lbl">Campaign</span><span class="val">${escH(c.bonanza_name||'—')}</span></div>
+        <div class="info-row"><span class="lbl">Deals Qualified</span><span class="val" style="color:#7c3aed;font-size:16px;font-weight:800">${c.deal_count||0} / ${c.target||'?'}</span></div>
+        <div class="info-row"><span class="lbl">Reward</span><span class="val">${escH(rewardText)}</span></div>
+        <div class="info-row"><span class="lbl">Claimed On</span><span class="val">${fmtDate(c.claimed_date)}</span></div>
+        <div class="info-row"><span class="lbl">Last Updated</span><span class="val">${fmtDate(c.processed_date)}</span></div>
+        ${c.auto_triggered ? `<div class="info-row"><span class="lbl">Claim Origin</span><span class="val"><span style="background:rgba(124,58,237,.18);color:#c4b5fd;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid rgba(124,58,237,.35)"><i class="fas fa-bolt me-1"></i>Auto-Triggered${c.trigger_event_source ? ' · '+escH(c.trigger_event_source) : ''}</span></span></div>` : ''}
+        ${c.notes ? `<div class="info-row"><span class="lbl">Notes</span><span class="val">${escH(c.notes)}</span></div>` : ''}
+        <div style="height:14px"></div>
+        <div class="section-title-sm">Current Status</div>
+        <div class="status-timeline" style="margin-bottom:6px">${timeline}</div>
+        <div style="display:flex;gap:0;font-size:10px;color:#64748b;font-weight:600;margin-bottom:16px">
+            ${STATUS_CHAIN.map(s => `<span style="width:44px;text-align:center;font-size:9px">${s.split(' ')[0]}</span>`).join('')}
+        </div>
+        ${isDone ? `<div style="text-align:center;padding:14px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);border-radius:8px;color:#34d399;font-weight:700;font-size:13px"><i class="fas fa-check-circle me-2"></i>${c.processed_status}</div>` : `
+        <div class="section-title-sm">Advance Status</div>
+        <textarea class="notes-input" id="drawerNotes" placeholder="Optional notes / reason…"></textarea>
+        <div class="status-actions" style="margin-top:12px">
+            ${nextStatus ? `<button class="status-btn primary" onclick="advanceStatus('${nextStatus}')"><i class="fas fa-arrow-right me-2"></i>Move to: ${escH(nextStatus)}</button>` : ''}
+            <button class="status-btn reject" onclick="advanceStatus('Rejected')"><i class="fas fa-times-circle me-2"></i>Reject Claim</button>
+        </div>`}
+    `;
+    document.getElementById('claimDrawer').classList.add('open');
+    document.getElementById('drawerOverlay').style.display = 'block';
+}
+
+function closeDrawer() {
+    document.getElementById('claimDrawer').classList.remove('open');
+    document.getElementById('drawerOverlay').style.display = 'none';
+    _activeClaim = null;
+}
+
+async function advanceStatus(newStatus) {
+    if (!_activeClaim) return;
+    const notes = (document.getElementById('drawerNotes')?.value || '').trim();
+    if (newStatus === 'Rejected' && !notes) {
+        if (!confirm('Rejecting without notes. Continue?')) return;
+    }
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/vgk/claims/' + _activeClaim.claim_id + '/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus, notes: notes || null })
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed');
+        closeDrawer();
+        loadClaims();
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+function fmtDate(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function escH(s) {
+    const el = document.createElement('div'); el.textContent = s || ''; return el.innerHTML;
+}
+
+// ── DC-VGK-MEMBER-TRACKING-001: Tab switching ────────────────────────────────
+let _trackData = [], _trackLoaded = false;
+
+function switchTab(tab) {
+    document.getElementById('tabClaims').style.display   = tab === 'claims'   ? '' : 'none';
+    document.getElementById('tabTracking').style.display = tab === 'tracking' ? '' : 'none';
+    document.getElementById('tabBtnClaims').classList.toggle('active',   tab === 'claims');
+    document.getElementById('tabBtnTracking').classList.toggle('active', tab === 'tracking');
+    if (tab === 'tracking' && !_trackLoaded) loadTracking();
+}
+
+let _trackView = 'progress'; // 'all' | 'progress' | 'achieved'
+let _trackApiData = null; // last API response
+
+function _applyTrackBtnState(v) {
+    document.getElementById('tBtnAll').style.opacity      = v === 'all'      ? '1' : '0.55';
+    document.getElementById('tBtnProgress').style.opacity = v === 'progress' ? '1' : '0.55';
+    document.getElementById('tBtnAchieved').style.opacity = v === 'achieved' ? '1' : '0.55';
+}
+
+function setTrackView(v) {
+    _trackView = v;
+    _applyTrackBtnState(v);
+    if (_trackApiData) renderTracking(_trackApiData);
+}
+
+function clearTrackFilters() {
+    document.getElementById('tFilterBonanza').value = '';
+    document.getElementById('tFilterPartner').value = '';
+    setTrackView('all');
+    _trackLoaded = false;
+    loadTracking();
+}
+
+async function loadBonanzaOptions() {
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/vgk/all-bonanzas');
+        if (!r.ok) return;
+        const d = await r.json();
+        const sel = document.getElementById('tFilterBonanza');
+        const existing = new Set(Array.from(sel.options).map(o => String(o.value)));
+        (d.bonanzas || []).filter(b => b.id !== 54).forEach(b => {
+            if (!existing.has(String(b.id))) {
+                const opt = document.createElement('option');
+                opt.value = b.id;
+                opt.textContent = b.name;
+                sel.appendChild(opt);
+                existing.add(String(b.id));
+            }
+        });
+        // Auto-select most recent bonanza (first after "All Campaigns")
+        if (!sel.value && sel.options.length > 1) {
+            sel.value = sel.options[1].value;
+        }
+    } catch(e) {}
+}
+
+async function loadTracking() {
+    const bonanzaId     = document.getElementById('tFilterBonanza').value;
+    const partnerSearch = document.getElementById('tFilterPartner').value.trim();
+    const content       = document.getElementById('trackingContent');
+    content.innerHTML   = '<div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading member progress…</div>';
+
+    let url = BONANZA_BASE + '/vgk/member-tracking';
+    const params = [];
+    if (bonanzaId)     params.push('bonanza_id=' + bonanzaId);
+    if (partnerSearch) params.push('partner_search=' + encodeURIComponent(partnerSearch));
+    if (params.length) url += '?' + params.join('&');
+
+    try {
+        const r = await staffFetch(url);
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed');
+        _trackLoaded = true;
+        // DC-CLAIMS-HIDE-54: "Extra Field Allowance Rs. 3000/-" hidden on claims page only
+        const filtered = Object.assign({}, d, {
+            rows: (d.rows || []).filter(row => row.bonanza_id !== 54)
+        });
+        _trackApiData = filtered;
+        renderTracking(filtered);
+
+        // Populate bonanza filter — unique bonanzas from rows
+        const sel = document.getElementById('tFilterBonanza');
+        const existing = new Set(Array.from(sel.options).map(o => o.value));
+        const seenBz   = new Set();
+        (filtered.rows || []).forEach(row => {
+            if (!seenBz.has(row.bonanza_id) && !existing.has(String(row.bonanza_id))) {
+                const opt = document.createElement('option');
+                opt.value = row.bonanza_id; opt.textContent = row.name;
+                sel.appendChild(opt); existing.add(String(row.bonanza_id));
+            }
+            seenBz.add(row.bonanza_id);
+        });
+    } catch(e) {
+        content.innerHTML = `<div style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</div>`;
+    }
+}
+
+// ── DC-VGK-MEMBER-TRACKING-002 row-wise render (dark theme) ──────────────────
+function renderTracking(d) {
+    const content = document.getElementById('trackingContent');
+    const rows    = d.rows || [];
+
+    // Summary stats
+    const nonZeroSet = new Set(), claimedSet = new Set();
+    rows.forEach(row => (row.members || []).forEach(m => {
+        if (m.achieved > 0)   nonZeroSet.add(m.partner_id);
+        if (m.claim_status)   claimedSet.add(m.partner_id);
+    }));
+    document.getElementById('tStatTotal').textContent    = d.total_members || 0;
+    document.getElementById('tStatEligible').textContent = d.eligible_count || 0;
+    document.getElementById('tStatClaimed').textContent  = claimedSet.size;
+    document.getElementById('tStatZero').textContent     = Math.max(0, (d.total_members || 0) - nonZeroSet.size);
+
+    if (!rows.length) {
+        content.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No active bonanzas</div>';
+        _applyTrackBtnState(_trackView);
+        return;
+    }
+
+    const fmtD = s => s ? new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '?';
+
+    // Group rows by bonanza_id (preserve order)
+    const groupMap = {}, groupOrder = [];
+    rows.forEach(row => {
+        if (!groupMap[row.bonanza_id]) {
+            groupMap[row.bonanza_id] = {bonanza_id: row.bonanza_id, name: row.name,
+                basis: row.basis, start_date: row.start_date, end_date: row.end_date, tiers: []};
+            groupOrder.push(groupMap[row.bonanza_id]);
+        }
+        groupMap[row.bonanza_id].tiers.push(row);
+    });
+
+    const html = groupOrder.map(g => {
+        const hasSlabs = g.tiers.length > 1;
+        let tableHtml = '';
+
+        if (hasSlabs) {
+            // ── Tier-column layout: members = rows, tiers = column groups ────
+            // Build member map: partner_id → per-tier data
+            const memberMap = {};
+            const baseOrder = [];
+            g.tiers.forEach((tier, ti) => {
+                (tier.members || []).forEach(m => {
+                    if (!memberMap[m.partner_id]) {
+                        memberMap[m.partner_id] = {
+                            partner_id: m.partner_id, partner_name: m.partner_name,
+                            partner_code: m.partner_code, claim_status: m.claim_status,
+                            tiers: {}, any_eligible: false
+                        };
+                        if (ti === 0) baseOrder.push(m.partner_id);
+                    }
+                    memberMap[m.partner_id].tiers[tier.row_key] = {
+                        achieved: m.achieved, gap: m.gap, is_eligible: m.is_eligible
+                    };
+                    if (m.is_eligible) memberMap[m.partner_id].any_eligible = true;
+                });
+            });
+
+            let displayOrder = baseOrder;
+            if (_trackView === 'achieved') {
+                displayOrder = baseOrder.filter(pid => memberMap[pid].any_eligible);
+            } else if (_trackView === 'progress') {
+                displayOrder = baseOrder.filter(pid =>
+                    Object.values(memberMap[pid].tiers).some(t => (t.achieved || 0) > 0)
+                );
+            }
+
+            // 2-row column header: tier name (colspan 2) + Claim
+            const tierColHeaders = g.tiers.map(tier => {
+                const lbl = tier.tier_label || `🏅 ${tier.award_name} (${tier.target} deals)`;
+                return `<th colspan="2" style="text-align:center;border-left:1px solid rgba(255,255,255,.08);white-space:nowrap">
+                    <div style="color:#a78bfa;font-size:11px;font-weight:700">${escH(lbl)}</div>
+                    <div style="color:#64748b;font-size:10px">${tier.eligible_count} eligible</div>
+                </th>`;
+            }).join('');
+            const tierSubHeaders = g.tiers.map(() =>
+                `<th style="text-align:center;border-left:1px solid rgba(255,255,255,.08)">Done</th><th style="text-align:center">Need</th>`
+            ).join('');
+            const totalCols = 2 + g.tiers.length * 2 + 1;
+
+            const memberRows = displayOrder.map((pid, idx) => {
+                const md = memberMap[pid];
+                const tierCells = g.tiers.map(tier => {
+                    const t = (md.tiers || {})[tier.row_key] || {};
+                    const doneCell = t.is_eligible
+                        ? `<span style="color:#34d399;font-weight:800">${t.achieved}</span>&nbsp;<i class="fas fa-check-circle" style="color:#34d399;font-size:10px"></i>`
+                        : `<span style="font-weight:700">${t.achieved ?? 0}</span>`;
+                    const needCell = (t.gap > 0)
+                        ? `<span style="color:#f87171;font-weight:600">-${t.gap}</span>`
+                        : `<span style="color:#34d399;font-weight:600">✓</span>`;
+                    return `<td style="text-align:center;border-left:1px solid rgba(255,255,255,.08)">${doneCell}</td><td style="text-align:center">${needCell}</td>`;
+                }).join('');
+                const statusCell = md.claim_status
+                    ? `<span class="badge-chip ${CHIP_CLASS[md.claim_status]||'chip-pending'}" style="font-size:10px">${escH(md.claim_status)}</span>`
+                    : `<span style="color:#475569;font-size:10px">—</span>`;
+                const rowCls = md.any_eligible ? 'eligible-row' : '';
+                return `<tr class="${rowCls}">
+                    <td style="width:28px;color:#64748b;font-size:11px;text-align:center">${idx+1}</td>
+                    <td><div style="font-weight:700;font-size:13px">${escH(md.partner_name)}</div>
+                        <div style="font-size:11px;color:#64748b">${escH(md.partner_code)}</div></td>
+                    ${tierCells}
+                    <td>${statusCell}</td>
+                </tr>`;
+            }).join('') || `<tr><td colspan="${totalCols}" style="text-align:center;padding:14px;color:#64748b">No members match</td></tr>`;
+
+            tableHtml = `<div style="overflow-x:auto"><table>
+                <thead>
+                    <tr><th rowspan="2" style="width:28px">#</th><th rowspan="2">Member</th>${tierColHeaders}<th rowspan="2">Claim</th></tr>
+                    <tr>${tierSubHeaders}</tr>
+                </thead>
+                <tbody>${memberRows}</tbody>
+            </table></div>`;
+
+        } else {
+            // ── Simple single-tier layout ─────────────────────────────────────
+            const tier = g.tiers[0];
+            let members = tier.members || [];
+            if (_trackView === 'achieved') members = members.filter(m => m.is_eligible);
+            else if (_trackView === 'progress') members = members.filter(m => (m.achieved || 0) > 0);
+
+            const memberRows = members.map((m, idx) => {
+                const isElig = m.is_eligible;
+                const doneCell = isElig
+                    ? `<span style="color:#34d399;font-weight:800">${m.achieved}</span>&nbsp;<i class="fas fa-check-circle" style="color:#34d399;font-size:10px"></i>`
+                    : `<span style="font-weight:700">${m.achieved}</span>`;
+                const gapCell = m.gap > 0
+                    ? `<span style="color:#f87171;font-weight:600">Need ${m.gap} more</span>`
+                    : `<span style="color:#34d399;font-weight:600">✓ Done</span>`;
+                const statusCell = m.claim_status
+                    ? `<span class="badge-chip ${CHIP_CLASS[m.claim_status]||'chip-pending'}" style="font-size:10px">${escH(m.claim_status)}</span>`
+                    : `<span style="color:#475569;font-size:10px">—</span>`;
+                const rowCls = isElig ? 'eligible-row' : (m.gap > 0 && m.gap <= 2 ? 'close-row' : '');
+                return `<tr class="${rowCls}">
+                    <td style="width:28px;color:#64748b;font-size:11px;text-align:center">${idx+1}</td>
+                    <td><div style="font-weight:700;font-size:13px">${escH(m.partner_name)}</div>
+                        <div style="font-size:11px;color:#64748b">${escH(m.partner_code)}</div></td>
+                    <td style="text-align:center">${doneCell}</td>
+                    <td style="text-align:center">${gapCell}</td>
+                    <td>${statusCell}</td>
+                </tr>`;
+            }).join('') || `<tr><td colspan="5" style="text-align:center;padding:14px;color:#64748b">No members match</td></tr>`;
+
+            const awardBadge = tier.award_name
+                ? `<span style="font-size:11px;color:#94a3b8;margin-left:10px">🏅 ${escH(tier.award_name)}</span>` : '';
+            const eligBadge = `<span style="font-size:11px;color:#64748b;float:right">Target: ${tier.target} · ${tier.eligible_count} eligible</span>`;
+            tableHtml = `
+                <div style="padding:8px 16px;background:rgba(255,255,255,.03);border-bottom:1px solid rgba(255,255,255,.06)">
+                    ${awardBadge}${eligBadge}
+                </div>
+                <div style="overflow-x:auto"><table>
+                    <thead><tr>
+                        <th style="width:28px">#</th><th>Member</th>
+                        <th style="text-align:center">Done</th>
+                        <th style="text-align:center">Remaining</th>
+                        <th>Claim Status</th>
+                    </tr></thead>
+                    <tbody>${memberRows}</tbody>
+                </table></div>`;
+        }
+
+        return `<div class="table-card" style="margin-bottom:20px">
+            <div class="table-card-header">
+                <h3><i class="fas fa-trophy me-2" style="color:#fbbf24"></i>${escH(g.name)}</h3>
+                <span style="font-size:11px;color:#64748b">${fmtD(g.start_date)} → ${fmtD(g.end_date)}&nbsp;·&nbsp;${g.basis}</span>
+            </div>
+            ${tableHtml}
+        </div>`;
+    }).join('');
+
+    content.innerHTML = html;
+    _applyTrackBtnState(_trackView);
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    StaffHeader.inject('VGK Bonanza Claims', 'fas fa-clipboard-check');
+    if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+    await loadBonanzaOptions(); // populate dropdown + auto-select most recent
+    await loadClaims();
+});
+</script>
+</body>
+</html>

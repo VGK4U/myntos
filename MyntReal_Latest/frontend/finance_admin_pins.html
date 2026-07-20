@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PIN Approvals | Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        .status-badge { padding: 5px 10px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
+        .status-pending { background: #ffc107; color: #000; }
+        .status-approved-by-admin { background: #17a2b8; color: #fff; }
+        .status-approved, .status-fulfilled { background: #28a745; color: #fff; }
+        .status-rejected { background: #dc3545; color: #fff; }
+        .table-hover tbody tr:hover { background-color: #f1f3f5; cursor: pointer; }
+        .payment-proof-img { max-width: 100%; max-height: 400px; border: 1px solid #ddd; border-radius: 4px; }
+        .audit-trail { background: #f8f9fa; border-radius: 8px; padding: 12px; margin-top: 12px; }
+        .audit-trail .audit-step { display: flex; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid #e9ecef; }
+        .audit-trail .audit-step:last-child { border-bottom: none; }
+        .audit-trail .audit-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; flex-shrink: 0; font-size: 12px; }
+        .audit-trail .audit-icon.requested { background: #e3f2fd; color: #1976d2; }
+        .audit-trail .audit-icon.approved { background: #e8f5e9; color: #388e3c; }
+        .audit-trail .audit-icon.rejected { background: #ffebee; color: #d32f2f; }
+        .audit-trail .audit-icon.completed { background: #f3e5f5; color: #7b1fa2; }
+    </style>
+</head>
+<body style="background:#f8f9fa">
+    <nav class="navbar navbar-dark" style="background:#198754">
+        <div class="container-fluid">
+            <span class="navbar-brand"><i class="bi bi-credit-card-2-front"></i> PIN Approvals</span>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Pending Approval</h6>
+                        <h2 id="stat-pending" class="text-warning">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Fulfilled</h6>
+                        <h2 id="stat-approved" class="text-success">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Rejected</h6>
+                        <h2 id="stat-rejected" class="text-danger">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Pending Amount</h6>
+                        <h2 id="stat-pending-amount" class="text-primary">₹0</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Status Filter</label>
+                        <select id="filterStatus" class="form-select">
+                            <option value="All" selected>All Requests</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Fulfilled">Fulfilled</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">PIN Type Filter</label>
+                        <select id="filterPinType" class="form-select">
+                            <option value="">All Types</option>
+                            <option value="500">₹500</option>
+                            <option value="1000">₹1000</option>
+                            <option value="7500">₹7500</option>
+                            <option value="15000">₹15000</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" onclick="loadRequests()">
+                            <i class="bi bi-search"></i> Apply Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-list-check"></i> PIN Purchase Requests</h5>
+            </div>
+            <div class="card-body">
+                <div id="loadingSpinner" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="requestsTable" style="display:none;">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-success">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>User</th>
+                                    <th>PIN Type</th>
+                                    <th>Qty</th>
+                                    <th>Amount</th>
+                                    <th>Transaction ID</th>
+                                    <th>Status</th>
+                                    <th>Requested</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="requestsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="approvalModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-check-circle"></i> PIN Request Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="requestDetails"></div>
+                    <div id="auditTrailSection"></div>
+                    <div id="notesSection" style="display:none;" class="mt-3">
+                        <label class="form-label">Staff Notes</label>
+                        <textarea id="approvalNotes" class="form-control" rows="3" placeholder="Add notes about this approval..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" id="modalFooter">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let authToken = localStorage.getItem('authToken') || window.sessionToken;
+        let selectedRequestId = null;
+        let approvalModalInstance = null;
+
+        function loadRequests() {
+            const status = $('#filterStatus').val();
+            const pinType = $('#filterPinType').val();
+            
+            $('#loadingSpinner').show();
+            $('#requestsTable').hide();
+            
+            let url = `${API_BASE}/admin/purchase-requests?limit=100&offset=0`;
+            if (status && status !== 'All') url += `&status=${encodeURIComponent(status)}`;
+            if (pinType) url += `&pin_type_filter=${pinType}`;
+            
+            $.ajax({
+                url: url,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    if (response.success) {
+                        displayRequests(response.data.requests);
+                        updateStats(response.data.stats);
+                    }
+                },
+                error: function(xhr) {
+                    alert('Failed to load PIN requests: ' + (xhr.responseJSON?.detail || 'Unknown error'));
+                },
+                complete: function() {
+                    $('#loadingSpinner').hide();
+                    $('#requestsTable').show();
+                }
+            });
+        }
+
+        function displayRequests(requests) {
+            const tbody = $('#requestsTableBody');
+            tbody.empty();
+            
+            if (requests.length === 0) {
+                tbody.html('<tr><td colspan="9" class="text-center text-muted">No requests found</td></tr>');
+                return;
+            }
+            
+            requests.forEach(req => {
+                const statusClass = getStatusClass(req.status);
+                const requestDate = new Date(req.requested_at).toLocaleDateString('en-IN');
+                const canReview = req.status === 'Pending' || req.status === 'Approved by Admin';
+                
+                tbody.append(`
+                    <tr onclick="showRequestDetails(${req.id})">
+                        <td>${req.id}</td>
+                        <td>
+                            <div><strong>${escapeHtml(req.user_name)}</strong></div>
+                            <small class="text-muted">${escapeHtml(req.user_id)}</small>
+                        </td>
+                        <td><span class="badge bg-primary">\u20B9${req.package_type}</span></td>
+                        <td>${req.quantity}</td>
+                        <td><strong>\u20B9${req.total_amount.toLocaleString()}</strong></td>
+                        <td><small>${escapeHtml(req.transaction_id || 'N/A')}</small></td>
+                        <td><span class="status-badge ${statusClass}">${escapeHtml(req.status)}</span></td>
+                        <td>${requestDate}</td>
+                        <td>
+                            ${canReview ? 
+                                '<button class="btn btn-sm btn-success" onclick="event.stopPropagation(); showRequestDetails(' + req.id + ')"><i class="bi bi-check-circle"></i> Review</button>' : 
+                                '<button class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation(); showRequestDetails(' + req.id + ')"><i class="bi bi-eye"></i> View</button>'}
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateStats(stats) {
+            $('#stat-pending').text(stats.pending_count || 0);
+            $('#stat-approved').text(stats.approved_count || 0);
+            $('#stat-rejected').text(stats.rejected_count || 0);
+            $('#stat-pending-amount').text('\u20B9' + (stats.total_pending_amount || 0).toLocaleString());
+        }
+
+        function getStatusClass(status) {
+            const map = {
+                'Pending': 'status-pending',
+                'Approved by Admin': 'status-approved-by-admin',
+                'Approved': 'status-approved',
+                'Fulfilled': 'status-fulfilled',
+                'Rejected': 'status-rejected'
+            };
+            return map[status] || 'status-pending';
+        }
+
+        function renderAuditTrail(auditTrail) {
+            if (!auditTrail || auditTrail.length === 0) return '';
+            
+            let html = '<div class="audit-trail mt-3"><h6 class="mb-2"><i class="bi bi-clock-history"></i> Approval History</h6>';
+            auditTrail.forEach(step => {
+                let iconClass = 'requested';
+                let icon = 'bi-person';
+                if (step.action.includes('Approved') || step.action.includes('Validated')) {
+                    iconClass = 'approved';
+                    icon = 'bi-check-lg';
+                } else if (step.action.includes('Rejected')) {
+                    iconClass = 'rejected';
+                    icon = 'bi-x-lg';
+                } else if (step.action.includes('Completed')) {
+                    iconClass = 'completed';
+                    icon = 'bi-flag';
+                }
+                
+                const dateStr = step.date ? new Date(step.date).toLocaleString('en-IN') : '-';
+                html += `
+                    <div class="audit-step">
+                        <div class="audit-icon ${iconClass}"><i class="bi ${icon}"></i></div>
+                        <div>
+                            <strong>${escapeHtml(step.action)}</strong><br>
+                            <small class="text-muted">By: ${escapeHtml(step.by || '-')} | ${dateStr}</small>
+                            ${step.notes ? `<br><small class="text-secondary"><i class="bi bi-chat-left-text"></i> ${escapeHtml(step.notes)}</small>` : ''}
+                        </div>
+                    </div>`;
+            });
+            html += '</div>';
+            return html;
+        }
+
+        function showRequestDetails(requestId) {
+            selectedRequestId = requestId;
+            
+            $.ajax({
+                url: `${API_BASE}/admin/purchase-requests/${requestId}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    if (response.success) {
+                        const req = response.data.request;
+                        const requestDate = new Date(req.requested_at).toLocaleString('en-IN');
+                        const canApprove = req.can_approve === true;
+                        
+                        let paymentProof = '';
+                        if (req.payment_proof_url) {
+                            paymentProof = `<div class="mt-3">
+                                <strong>Payment Proof:</strong><br>
+                                <img src="${req.payment_proof_url}" class="payment-proof-img mt-2" alt="Payment Proof">
+                            </div>`;
+                        }
+                        
+                        $('#requestDetails').html(`
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p><strong>Request ID:</strong> ${req.id}</p>
+                                    <p><strong>User:</strong> ${escapeHtml(req.user_name)} (${escapeHtml(req.user_id)})</p>
+                                    <p><strong>Email:</strong> ${escapeHtml(req.user_email)}</p>
+                                    <p><strong>PIN Type:</strong> <span class="badge bg-primary">\u20B9${req.package_type}</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><strong>Quantity:</strong> ${req.quantity}</p>
+                                    <p><strong>Total Amount:</strong> <strong>\u20B9${req.total_amount.toLocaleString()}</strong></p>
+                                    <p><strong>Transaction ID:</strong> ${escapeHtml(req.transaction_id || 'N/A')}</p>
+                                    <p><strong>Status:</strong> <span class="status-badge ${getStatusClass(req.status)}">${escapeHtml(req.status)}</span></p>
+                                    <p><strong>Requested:</strong> ${requestDate}</p>
+                                </div>
+                            </div>
+                            ${paymentProof}
+                            ${req.admin_notes ? `<div class="mt-3 alert alert-info"><strong>Staff Notes:</strong> ${escapeHtml(req.admin_notes)}</div>` : ''}
+                        `);
+                        
+                        $('#auditTrailSection').html(renderAuditTrail(req.audit_trail));
+                        
+                        if (canApprove) {
+                            $('#notesSection').show();
+                            $('#modalFooter').html(`
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-danger" onclick="processRequest('reject')">
+                                    <i class="bi bi-x-circle"></i> Reject
+                                </button>
+                                <button type="button" class="btn btn-success" onclick="processRequest('approve')">
+                                    <i class="bi bi-check-circle"></i> Approve & Generate PINs
+                                </button>
+                            `);
+                        } else {
+                            $('#notesSection').hide();
+                            $('#modalFooter').html(`
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            `);
+                        }
+                        
+                        const modal = new bootstrap.Modal(document.getElementById('approvalModal'));
+                        modal.show();
+                        approvalModalInstance = modal;
+                    }
+                },
+                error: function(xhr) {
+                    alert('Failed to load request details: ' + (xhr.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+
+        function processRequest(action) {
+            if (!selectedRequestId) return;
+            
+            const notes = $('#approvalNotes').val();
+            
+            if (!confirm(`Are you sure you want to ${action} this PIN request?`)) return;
+            
+            $.ajax({
+                url: `${API_BASE}/admin/purchase-requests/${selectedRequestId}/approve-admin`,
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    action: action,
+                    notes: notes,
+                    rejection_reason: action === 'reject' ? notes : ''
+                }),
+                success: function(response) {
+                    if (response.success) {
+                        alert(response.message);
+                        if (approvalModalInstance) {
+                            approvalModalInstance.hide();
+                        }
+                        $('#approvalNotes').val('');
+                        selectedRequestId = null;
+                        loadRequests();
+                    }
+                },
+                error: function(xhr) {
+                    alert('Failed to process request: ' + (xhr.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            loadRequests();
+        });
+    </script>
+</body>
+</html>

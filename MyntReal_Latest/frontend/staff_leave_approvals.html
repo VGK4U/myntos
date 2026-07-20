@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - Leave Approvals</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/gps-service.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; }
+        
+        .tab-nav { display: flex; gap: 4px; margin-bottom: 24px; background: white; padding: 4px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .tab-btn {
+            padding: 12px 24px; border: none; background: transparent;
+            border-radius: 8px; font-weight: 500; color: #6b7280;
+            cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .tab-btn:hover { background: #f3f4f6; }
+        .tab-btn.active { background: #4f46e5; color: white; }
+        .tab-btn .badge { background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-size: 11px; }
+        .tab-btn.active .badge { background: rgba(255,255,255,0.3); }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .stat-icon.pending { background: #fef3c7; color: #d97706; }
+        .stat-icon.approved { background: #d1fae5; color: #059669; }
+        .stat-icon.rejected { background: #fee2e2; color: #dc2626; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #1f2937; margin-top: 8px; }
+        .stat-label { font-size: 13px; color: #6b7280; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 0; }
+        
+        .request-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            margin: 16px;
+            overflow: hidden;
+        }
+        .request-header {
+            background: #f9fafb;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .request-employee { display: flex; align-items: center; gap: 12px; }
+        .employee-avatar {
+            width: 44px; height: 44px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 600;
+        }
+        .employee-name { font-weight: 600; color: #1f2937; }
+        .employee-id { font-size: 12px; color: #6b7280; }
+        .employee-dept { font-size: 12px; color: #6b7280; }
+        
+        .request-body { padding: 16px; }
+        .request-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        .info-item label { display: block; font-size: 11px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
+        .info-item span { font-weight: 500; color: #1f2937; }
+        
+        .request-dates { margin-bottom: 16px; }
+        .date-chip {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #e0e7ff;
+            color: #4338ca;
+            border-radius: 6px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        .date-chip.half-day { background: #fef3c7; color: #92400e; }
+        
+        .request-reason { background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+        .request-reason label { font-size: 11px; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 4px; }
+        .request-reason p { margin: 0; color: #374151; font-size: 14px; }
+        
+        .request-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+        .action-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .action-btn.approve { background: #10b981; color: white; }
+        .action-btn.approve:hover { background: #059669; }
+        .action-btn.reject { background: #ef4444; color: white; }
+        .action-btn.reject:hover { background: #dc2626; }
+        .action-btn.view { background: #e0e7ff; color: #4338ca; }
+        .action-btn.view:hover { background: #c7d2fe; }
+        
+        .leave-type-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500; }
+        .leave-type-badge.casual { background: #d1fae5; color: #059669; }
+        .leave-type-badge.sick { background: #fee2e2; color: #dc2626; }
+        .leave-type-badge.privilege { background: #dbeafe; color: #2563eb; }
+        .leave-type-badge.unpaid { background: #f3f4f6; color: #6b7280; }
+        
+        .empty-state { text-align: center; padding: 48px 24px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .empty-state h6 { color: #374151; margin-bottom: 8px; }
+        
+        .modal-header { border-bottom: 1px solid #e5e7eb; padding: 20px 24px; }
+        .modal-body { padding: 24px; }
+        .modal-footer { border-top: 1px solid #e5e7eb; padding: 16px 24px; }
+        
+        .form-label { font-weight: 500; color: #374151; margin-bottom: 6px; }
+        .form-control { border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 14px; }
+        .form-control:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        
+        @media (max-width: 768px) {
+            .content-area { padding: 16px; }
+            .tab-nav { flex-wrap: wrap; }
+            .request-header { flex-direction: column; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="manager" onclick="switchTab('manager')">
+                <i class="fas fa-user-tie"></i>
+                Manager Queue
+                <span class="badge" id="managerCount">0</span>
+            </button>
+            <button class="tab-btn" data-tab="hr" onclick="switchTab('hr')" id="hrTabBtn">
+                <i class="fas fa-user-shield"></i>
+                HR Queue
+                <span class="badge" id="hrCount">0</span>
+            </button>
+        </div>
+        
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-value" id="pendingCount">0</div>
+                        <div class="stat-label">Pending Approval</div>
+                    </div>
+                    <div class="stat-icon pending"><i class="fas fa-clock"></i></div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-value" id="approvedTodayCount">0</div>
+                        <div class="stat-label">Approved Today</div>
+                    </div>
+                    <div class="stat-icon approved"><i class="fas fa-check"></i></div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-value" id="rejectedTodayCount">0</div>
+                        <div class="stat-label">Rejected Today</div>
+                    </div>
+                    <div class="stat-icon rejected"><i class="fas fa-times"></i></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list me-2 text-muted"></i>Pending Requests</h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadCurrentTab()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body" id="requestsContainer">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div><!-- Close main-content -->
+    
+    <div class="modal fade" id="approvalModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="approvalModalTitle">Approve Leave Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="approvalDetails"></div>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Remarks (optional for approval, required for rejection)</label>
+                        <textarea class="form-control" id="approvalRemarks" rows="3" placeholder="Enter your remarks..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirmApproveBtn" onclick="confirmAction('approve')">
+                        <i class="fas fa-check me-1"></i>Approve
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmRejectBtn" onclick="confirmAction('reject')">
+                        <i class="fas fa-times me-1"></i>Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    
+    <script>
+        const API_BASE = '/api/v1/staff/leaves';
+        let currentTab = 'manager';
+        let currentRequestId = null;
+        let currentAction = null;
+        let isHR = false;
+        
+        async function checkUserRole() {
+            try {
+                const response = await staffFetch('/api/v1/staff/auth/me');
+                const data = await response.json();
+                
+                if (data.employee_id) {
+                    const roleCode = data.role?.role_code || data.role_code || '';
+                    isHR = ['hr', 'ea', 'vgk4u'].includes(roleCode.toLowerCase());
+                    
+                    if (!isHR) {
+                        document.getElementById('hrTabBtn').style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check role:', error);
+            }
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tab);
+            });
+            loadCurrentTab();
+        }
+        
+        async function loadCurrentTab() {
+            if (currentTab === 'manager') {
+                await loadManagerQueue();
+            } else {
+                await loadHRQueue();
+            }
+        }
+        
+        async function loadManagerQueue() {
+            const container = document.getElementById('requestsContainer');
+            container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/pending-approvals/manager`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('managerCount').textContent = data.total;
+                    document.getElementById('pendingCount').textContent = data.total;
+                    renderRequests(data.requests, 'manager');
+                }
+            } catch (error) {
+                console.error('Failed to load manager queue:', error);
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h6>Failed to load requests</h6></div>';
+            }
+        }
+        
+        async function loadHRQueue() {
+            const container = document.getElementById('requestsContainer');
+            container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/pending-approvals/hr`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('hrCount').textContent = data.total;
+                    document.getElementById('pendingCount').textContent = data.total;
+                    renderRequests(data.requests, 'hr');
+                } else {
+                    container.innerHTML = `<div class="empty-state"><i class="fas fa-lock"></i><h6>Access Denied</h6><p>${data.detail || 'You do not have permission to view HR queue'}</p></div>`;
+                }
+            } catch (error) {
+                console.error('Failed to load HR queue:', error);
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h6>Failed to load requests</h6></div>';
+            }
+        }
+        
+        function renderRequests(requests, queue) {
+            const container = document.getElementById('requestsContainer');
+            
+            if (!requests.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <h6>All caught up!</h6>
+                        <p>No pending leave requests in the ${queue === 'manager' ? 'manager' : 'HR'} queue</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const typeClasses = {
+                'Casual Leave': 'casual',
+                'Sick Leave': 'sick',
+                'Privilege Leave': 'privilege',
+                'Unpaid Leave': 'unpaid'
+            };
+            
+            container.innerHTML = requests.map(req => {
+                const tc = typeClasses[req.leave_type_name] || 'casual';
+                const initials = req.employee_name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                const dates = req.days.map(d => {
+                    const dateStr = new Date(d.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+                    return d.is_half_day ? 
+                        `<span class="date-chip half-day">${dateStr} (${d.half_day_type})</span>` :
+                        `<span class="date-chip">${dateStr}</span>`;
+                }).join('');
+                
+                return `
+                    <div class="request-card">
+                        <div class="request-header">
+                            <div class="request-employee">
+                                <div class="employee-avatar">${initials}</div>
+                                <div>
+                                    <div class="employee-name">${req.employee_name}</div>
+                                    <div class="employee-id">${req.employee_code}</div>
+                                    ${req.department ? `<div class="employee-dept">${req.department}</div>` : ''}
+                                </div>
+                            </div>
+                            <span class="leave-type-badge ${tc}">${req.leave_type_name}</span>
+                        </div>
+                        <div class="request-body">
+                            <div class="request-info">
+                                <div class="info-item">
+                                    <label>Total Days</label>
+                                    <span>${req.total_days}</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Applied On</label>
+                                    <span>${req.applied_at ? new Date(req.applied_at).toLocaleDateString('en-IN') : '-'}</span>
+                                </div>
+                                ${req.manager_approved_at ? `
+                                    <div class="info-item">
+                                        <label>Manager Approved</label>
+                                        <span>${new Date(req.manager_approved_at).toLocaleDateString('en-IN')}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="request-dates">
+                                <label style="font-size: 11px; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 8px;">Leave Dates</label>
+                                ${dates}
+                            </div>
+                            <div class="request-reason">
+                                <label>Reason</label>
+                                <p>${req.reason}</p>
+                            </div>
+                            ${req.manager_remarks ? `
+                                <div class="request-reason">
+                                    <label>Manager Remarks</label>
+                                    <p>${req.manager_remarks}</p>
+                                </div>
+                            ` : ''}
+                            <div class="request-actions">
+                                <button class="action-btn approve" onclick="showApprovalModal(${req.id}, 'approve', '${queue}')">
+                                    <i class="fas fa-check"></i>Approve
+                                </button>
+                                <button class="action-btn reject" onclick="showApprovalModal(${req.id}, 'reject', '${queue}')">
+                                    <i class="fas fa-times"></i>Reject
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function showApprovalModal(requestId, action, queue) {
+            currentRequestId = requestId;
+            currentAction = action;
+            
+            document.getElementById('approvalModalTitle').textContent = 
+                action === 'approve' ? 'Approve Leave Request' : 'Reject Leave Request';
+            
+            document.getElementById('approvalDetails').innerHTML = `
+                <p>You are about to <strong>${action}</strong> leave request #${requestId}.</p>
+                <p class="text-muted">This action will be recorded and the employee will be notified.</p>
+            `;
+            
+            document.getElementById('approvalRemarks').value = '';
+            document.getElementById('confirmApproveBtn').style.display = action === 'approve' ? 'inline-block' : 'none';
+            document.getElementById('confirmRejectBtn').style.display = action === 'reject' ? 'inline-block' : 'none';
+            
+            new bootstrap.Modal(document.getElementById('approvalModal')).show();
+        }
+        
+        async function confirmAction(action) {
+            const remarks = document.getElementById('approvalRemarks').value.trim();
+            
+            if (action === 'reject' && !remarks) {
+                alert('Remarks are required when rejecting a leave request');
+                return;
+            }
+            
+            const endpoint = currentTab === 'manager' ? 
+                `${API_BASE}/approve/manager/${currentRequestId}` :
+                `${API_BASE}/approve/hr/${currentRequestId}`;
+            
+            try {
+                const response = await staffFetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: action,
+                        remarks: remarks || null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('approvalModal')).hide();
+                    alert(data.message);
+                    loadCurrentTab();
+                } else {
+                    alert(data.detail || 'Action failed');
+                }
+            } catch (error) {
+                console.error('Action failed:', error);
+                alert('Failed to process action. Please try again.');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Leave Approvals', 'fas fa-user-check');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            
+            await checkUserRole();
+            await loadManagerQueue();
+            
+            if (isHR) {
+                try {
+                    const hrResponse = await staffFetch(`${API_BASE}/pending-approvals/hr`);
+                    const hrData = await hrResponse.json();
+                    if (hrData.success) {
+                        document.getElementById('hrCount').textContent = hrData.total;
+                    }
+                } catch (e) {
+                    console.log('HR queue not accessible');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

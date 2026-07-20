@@ -1,0 +1,18 @@
+{
+  "name": "bev-system",
+  "version": "1.0.0",
+  "description": "BeV EV Reference Program with VGK ID System",
+  "scripts": {
+    "build": "cd frontend && npm install && DISABLE_ESLINT_PLUGIN=true npm run build",
+    "start": "cd backend && python app/main.py & cd frontend && npm run dev -- --port 5000 --hostname 0.0.0.0",
+    "dev": "cd backend && python app/main.py & cd frontend && npm run dev -- --port 5000 --hostname 0.0.0.0",
+    "install": "cd frontend && npm install",
+    "postinstall": "pip install -r backend/requirements.txt"
+  },
+  "dependencies": {
+    "cookie": "^1.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

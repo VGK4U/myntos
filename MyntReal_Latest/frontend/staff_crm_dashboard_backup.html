@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My CRM Dashboard - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        
+        .main-content { margin-left: 280px; padding-top: 0; min-height: 100vh; transition: margin-left 0.3s ease; padding-top: 88px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 24px; }
+        
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; height: 100%; }
+        .stat-card .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-card .label { color: #6b7280; font-size: 13px; margin-top: 4px; }
+        
+        .stat-blue .icon { background: #dbeafe; color: #2563eb; }
+        .stat-green .icon { background: #d1fae5; color: #059669; }
+        .stat-yellow .icon { background: #fef3c7; color: #d97706; }
+        .stat-red .icon { background: #fee2e2; color: #dc2626; }
+        .stat-purple .icon { background: #ede9fe; color: #7c3aed; }
+        .stat-cyan .icon { background: #cffafe; color: #0891b2; }
+        
+        .scope-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .scope-tab { padding: 10px 20px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; color: #6b7280; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+        .scope-tab:hover { border-color: #6366f1; color: #6366f1; }
+        .scope-tab.active { background: #6366f1; border-color: #6366f1; color: white; }
+        .scope-tab.team-only { display: none; }
+        .scope-tab.admin-only { display: none; }
+        
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; display: inline-block; }
+        .status-new { background: #dbeafe; color: #1e40af; }
+        .status-contacted { background: #e0f2fe; color: #0369a1; }
+        .status-qualified { background: #cffafe; color: #0e7490; }
+        .status-proposal { background: #fef3c7; color: #92400e; }
+        .status-negotiation { background: #fce7f3; color: #9d174d; }
+        .status-won { background: #d1fae5; color: #065f46; }
+        .status-lost { background: #fee2e2; color: #991b1b; }
+        
+        .priority-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .priority-low { background: #f3f4f6; color: #6b7280; }
+        .priority-medium { background: #dbeafe; color: #1e40af; }
+        .priority-high { background: #fef3c7; color: #92400e; }
+        .priority-urgent { background: #fee2e2; color: #dc2626; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; cursor: pointer; }
+        
+        .lead-name { font-weight: 600; color: #1f2937; }
+        .lead-contact { font-size: 12px; color: #6b7280; }
+        
+        .team-performance { margin-top: 20px; }
+        .team-member-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f9fafb; border-radius: 8px; margin-bottom: 8px; }
+        .team-member-info { display: flex; align-items: center; gap: 12px; }
+        .team-member-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+        .team-member-stats { display: flex; gap: 16px; }
+        .team-stat { text-align: center; }
+        .team-stat-value { font-weight: 700; font-size: 16px; color: #1f2937; }
+        .team-stat-label { font-size: 11px; color: #6b7280; }
+        
+        .filter-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+        .filter-row .form-select, .filter-row .form-control { min-width: 140px; border-radius: 8px; font-size: 14px; }
+        
+        .filter-panel {
+            background: white; border-radius: 12px; padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px;
+        }
+        .filter-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .filter-panel-title { font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 4px; display: block; text-transform: uppercase; }
+        .filter-group .form-control, .filter-group .form-select { border-radius: 8px; border: 1px solid #e5e7eb; }
+        .filter-group .form-control:focus, .filter-group .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        .filter-group.has-error .form-control, .filter-group.has-error .form-select { border-color: #ef4444; }
+        .filter-group .error-message { color: #ef4444; font-size: 11px; margin-top: 4px; display: none; }
+        .filter-group.has-error .error-message { display: block; }
+        .filter-actions { display: flex; gap: 12px; align-items: flex-end; }
+        
+        .performance-table { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 24px; }
+        .performance-table-header { padding: 16px 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .performance-table-title { font-weight: 600; color: #1f2937; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .performance-table table { width: 100%; border-collapse: collapse; }
+        .performance-table th { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #6b7280; padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; text-align: center; }
+        .performance-table th.text-start { text-align: left; }
+        .performance-table td { padding: 14px 16px; border-bottom: 1px solid #f3f4f6; text-align: center; font-size: 14px; color: #374151; }
+        .performance-table td.text-start { text-align: left; }
+        .performance-table tbody tr:hover { background: #f9fafb; }
+        .performance-table .emp-info { display: flex; align-items: center; gap: 12px; }
+        .performance-table .emp-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; }
+        .performance-table .emp-details { display: flex; flex-direction: column; }
+        .performance-table .emp-name { font-weight: 600; color: #1f2937; }
+        .performance-table .emp-id { font-size: 11px; color: #9ca3af; }
+        .performance-table .header-group { background: #ede9fe; color: #6366f1; font-weight: 700; text-transform: uppercase; font-size: 10px; }
+        .performance-table .revenue-positive { color: #059669; font-weight: 600; }
+        .performance-table .revenue-negative { color: #dc2626; font-weight: 600; }
+        .performance-table tfoot td { font-weight: 700; background: #f3f4f6; }
+        
+        .breakdown-table { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; margin-bottom: 24px; }
+        .breakdown-table-header { padding: 16px 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .breakdown-table-title { font-weight: 600; color: #1f2937; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .breakdown-table .table-wrapper { overflow-x: auto; }
+        .breakdown-table table { width: 100%; border-collapse: collapse; min-width: 1400px; }
+        .breakdown-table th { font-size: 10px; font-weight: 600; text-transform: uppercase; color: #6b7280; padding: 10px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; text-align: center; white-space: nowrap; }
+        .breakdown-table th.text-start { text-align: left; }
+        .breakdown-table td { padding: 12px; border-bottom: 1px solid #f3f4f6; text-align: center; font-size: 13px; color: #374151; }
+        .breakdown-table td.text-start { text-align: left; }
+        .breakdown-table tbody tr:hover { background: #f9fafb; }
+        .breakdown-table .emp-info { display: flex; align-items: center; gap: 10px; }
+        .breakdown-table .emp-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 11px; flex-shrink: 0; }
+        .breakdown-table .emp-details { display: flex; flex-direction: column; }
+        .breakdown-table .emp-name { font-weight: 600; color: #1f2937; font-size: 13px; }
+        .breakdown-table .emp-id { font-size: 10px; color: #9ca3af; }
+        .breakdown-table .emp-manager { font-size: 10px; color: #6b7280; }
+        .breakdown-table .owner-group { background: #dbeafe; }
+        .breakdown-table .handler-group { background: #dcfce7; }
+        .breakdown-table .section-header { font-weight: 700; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+        .breakdown-table .owner-header { background: #3b82f6; color: white; }
+        .breakdown-table .handler-header { background: #22c55e; color: white; }
+        .breakdown-table tfoot td { font-weight: 700; background: #f3f4f6; }
+        .breakdown-table .revenue-col { color: #059669; font-weight: 500; }
+        .breakdown-table .self-row { background: #fefce8; }
+        
+        .breakdown-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+        .breakdown-filters .form-group { display: flex; flex-direction: column; gap: 4px; }
+        .breakdown-filters .form-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .breakdown-filters .form-control, .breakdown-filters .form-select { font-size: 13px; padding: 6px 10px; border-radius: 6px; min-width: 150px; }
+        
+        .loading-overlay { position: relative; }
+        .loading-overlay::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); display: none; align-items: center; justify-content: center; z-index: 10; }
+        .loading-overlay.is-loading::after { display: flex; }
+        .loading-spinner { width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; color: #6366f1; }
+        
+        .btn-primary { background: #6366f1; border: none; }
+        .btn-primary:hover { background: #4f46e5; }
+        
+        .company-selector { min-width: 200px; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ede9fe; color: #7c3aed; }
+
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-banner">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                    <div>
+                        <h1><i class="fas fa-chart-line"></i> My CRM Dashboard</h1>
+                        <p id="dashboardSubtitle">Track your leads and performance</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-white me-2 mb-0" style="font-size: 14px;">Company:</label>
+                        <select id="companySelector" class="form-select company-selector" onchange="onCompanyChange()">
+                            <option value="">Select Company</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="noCompanyMessage" class="alert alert-info" style="display: none;">
+                <i class="fas fa-info-circle me-2"></i>
+                Please select a company to view your CRM dashboard.
+            </div>
+            
+            <div id="mainContent">
+                <div class="scope-tabs">
+                    <button class="scope-tab active" data-scope="my" onclick="changeScope('my')">
+                        <i class="fas fa-user me-1"></i> My Performance
+                    </button>
+                    <button class="scope-tab team-only" data-scope="team" onclick="changeScope('team')">
+                        <i class="fas fa-users me-1"></i> Team Performance
+                    </button>
+                    <button class="scope-tab team-only" data-scope="breakdown" onclick="changeScope('breakdown')">
+                        <i class="fas fa-columns me-1"></i> Team Breakdown
+                    </button>
+                    <button class="scope-tab admin-only" data-scope="all" onclick="changeScope('all')" style="display: none;">
+                        <i class="fas fa-globe me-1"></i> All Performance
+                    </button>
+                </div>
+                
+                <div class="filter-panel" id="filterPanel">
+                    <div class="filter-panel-header">
+                        <div class="filter-panel-title">
+                            <i class="fas fa-filter"></i> Filter Performance
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="resetFilters()">
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </button>
+                    </div>
+                    <div class="filter-grid">
+                        <div class="filter-group">
+                            <label for="filterStartDate">From Date</label>
+                            <input type="date" class="form-control" id="filterStartDate" onchange="validateFilters()">
+                            <span class="error-message" id="startDateError"></span>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterEndDate">To Date</label>
+                            <input type="date" class="form-control" id="filterEndDate" onchange="validateFilters()">
+                            <span class="error-message" id="endDateError"></span>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterSource">Source</label>
+                            <select class="form-select" id="filterSource">
+                                <option value="">All Sources</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filterCategory">Category</label>
+                            <select class="form-select" id="filterCategory">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <div class="filter-group team-only-filter" id="managerFilterGroup" style="display: none;">
+                            <label for="filterManager">Team Manager</label>
+                            <select class="form-select" id="filterManager">
+                                <option value="">All Managers</option>
+                            </select>
+                        </div>
+                        <div class="filter-actions">
+                            <button class="btn btn-primary" onclick="applyFilters()">
+                                <i class="fas fa-search me-1"></i> Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="performance-table loading-overlay" id="performanceTableContainer">
+                    <div class="performance-table-header">
+                        <h5 class="performance-table-title">
+                            <i class="fas fa-chart-bar"></i> 
+                            <span id="performanceTableTitle">My Performance Summary</span>
+                        </h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted" style="font-size: 12px;" id="performanceCount">0 employees</span>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" class="text-start" style="width: 50px;">S.No</th>
+                                    <th rowspan="2" class="text-start" style="min-width: 200px;">Employee Name</th>
+                                    <th colspan="3" class="header-group">Overall</th>
+                                    <th colspan="4" class="header-group">Status Wise</th>
+                                    <th colspan="2" class="header-group">Revenue</th>
+                                </tr>
+                                <tr>
+                                    <th>New Leads</th>
+                                    <th>Overall Leads</th>
+                                    <th>Self Generated</th>
+                                    <th>In Progress</th>
+                                    <th>Deal Closed</th>
+                                    <th>On Hold</th>
+                                    <th>Lost</th>
+                                    <th>Generated</th>
+                                    <th>Lost</th>
+                                </tr>
+                            </thead>
+                            <tbody id="performanceTableBody">
+                            </tbody>
+                            <tfoot id="performanceTableFooter">
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div id="performanceEmptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-chart-bar"></i>
+                        <h5>No Performance Data</h5>
+                        <p>Apply filters to view performance summary</p>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-2 col-6 mb-3">
+                        <div class="stat-card stat-blue">
+                            <div class="icon"><i class="fas fa-users"></i></div>
+                            <div class="value" id="totalLeads">0</div>
+                            <div class="label">Total Leads</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6 mb-3">
+                        <div class="stat-card stat-cyan">
+                            <div class="icon"><i class="fas fa-user-plus"></i></div>
+                            <div class="value" id="newLeads">0</div>
+                            <div class="label">New</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6 mb-3">
+                        <div class="stat-card stat-purple">
+                            <div class="icon"><i class="fas fa-handshake"></i></div>
+                            <div class="value" id="inProgressLeads">0</div>
+                            <div class="label">In Progress</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6 mb-3">
+                        <div class="stat-card stat-green">
+                            <div class="icon"><i class="fas fa-trophy"></i></div>
+                            <div class="value" id="wonLeads">0</div>
+                            <div class="label">Won</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6 mb-3">
+                        <div class="stat-card stat-yellow">
+                            <div class="icon"><i class="fas fa-calendar-check"></i></div>
+                            <div class="value" id="todayFollowups">0</div>
+                            <div class="label">Today's Followups</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6 mb-3">
+                        <div class="stat-card stat-red">
+                            <div class="icon"><i class="fas fa-exclamation-triangle"></i></div>
+                            <div class="value" id="overdueFollowups">0</div>
+                            <div class="label">Overdue</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="teamPerformanceSection" class="card" style="display: none;">
+                    <div class="card-header">
+                        <h5><i class="fas fa-users-cog me-2"></i>Team Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="teamPerformanceContainer"></div>
+                    </div>
+                </div>
+                
+                <!-- DC Protocol (Jan 22, 2026): Team Breakdown Section - Side-by-Side View -->
+                <div id="breakdownSection" style="display: none;">
+                    <div class="breakdown-table loading-overlay" id="breakdownTableContainer">
+                        <div class="breakdown-table-header">
+                            <h5 class="breakdown-table-title">
+                                <i class="fas fa-columns"></i> Team Performance Breakdown
+                            </h5>
+                            <div class="breakdown-filters">
+                                <div class="form-group">
+                                    <label for="breakdownCompany">Company</label>
+                                    <select class="form-select" id="breakdownCompany" onchange="onBreakdownCompanyChange()">
+                                        <option value="">Select Company</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="breakdownDateFrom">From Date</label>
+                                    <input type="date" class="form-control" id="breakdownDateFrom">
+                                </div>
+                                <div class="form-group">
+                                    <label for="breakdownDateTo">To Date</label>
+                                    <input type="date" class="form-control" id="breakdownDateTo">
+                                </div>
+                                <div class="form-group">
+                                    <label for="breakdownManager">Reporting Manager</label>
+                                    <select class="form-select" id="breakdownManager">
+                                        <option value="">All Managers</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="breakdownSearch">Employee Name</label>
+                                    <input type="text" class="form-control" id="breakdownSearch" placeholder="Search...">
+                                </div>
+                                <div class="form-group">
+                                    <button class="btn btn-primary btn-sm" onclick="loadBreakdownData()">
+                                        <i class="fas fa-search me-1"></i> Apply
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm ms-1" onclick="resetBreakdownFilters()">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th rowspan="2" class="text-start" style="width: 40px;">S.No</th>
+                                        <th rowspan="2" class="text-start" style="min-width: 180px;">Employee</th>
+                                        <th colspan="10" class="owner-header section-header">As Primary Owner</th>
+                                        <th colspan="10" class="handler-header section-header">As Handler</th>
+                                    </tr>
+                                    <tr>
+                                        <!-- Primary Owner Columns -->
+                                        <th class="owner-group">New</th>
+                                        <th class="owner-group">Contacted</th>
+                                        <th class="owner-group">Qualified</th>
+                                        <th class="owner-group">Won</th>
+                                        <th class="owner-group">Lost</th>
+                                        <th class="owner-group">On Hold</th>
+                                        <th class="owner-group">Total</th>
+                                        <th class="owner-group">Revenue</th>
+                                        <th class="owner-group">Received</th>
+                                        <th class="owner-group">Balance</th>
+                                        <!-- Handler Columns -->
+                                        <th class="handler-group">New</th>
+                                        <th class="handler-group">Contacted</th>
+                                        <th class="handler-group">Qualified</th>
+                                        <th class="handler-group">Won</th>
+                                        <th class="handler-group">Lost</th>
+                                        <th class="handler-group">On Hold</th>
+                                        <th class="handler-group">Total</th>
+                                        <th class="handler-group">Revenue</th>
+                                        <th class="handler-group">Received</th>
+                                        <th class="handler-group">Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="breakdownTableBody">
+                                </tbody>
+                                <tfoot id="breakdownTableFooter">
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div id="breakdownEmptyState" class="empty-state" style="display: none;">
+                            <i class="fas fa-columns"></i>
+                            <h5>No Data Found</h5>
+                            <p>No team members found for the selected filters</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card" id="leadsSection">
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h5><i class="fas fa-list me-2"></i>Recent Leads</h5>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <select class="form-select form-select-sm" id="filterStatus" style="width: auto;" onchange="loadLeads()">
+                                <option value="">All Status</option>
+                                <option value="new">New</option>
+                                <option value="contacted">Contacted</option>
+                                <option value="qualified">Qualified</option>
+                                <option value="proposal">Proposal</option>
+                                <option value="negotiation">Negotiation</option>
+                                <option value="won">Won</option>
+                                <option value="lost">Lost</option>
+                            </select>
+                            <select class="form-select form-select-sm" id="filterPriority" style="width: auto;" onchange="loadLeads()">
+                                <option value="">All Priority</option>
+                                <option value="urgent">Urgent</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                            <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search..." style="width: 150px;" onkeyup="debounceSearch()">
+                            <a href="/rvz/crm/leads" class="btn btn-primary btn-sm">
+                                <i class="fas fa-external-link-alt me-1"></i> All Leads
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="leadsTableContainer">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Lead</th>
+                                        <th>Category</th>
+                                        <th>Status</th>
+                                        <th>Priority</th>
+                                        <th id="handlerColumn" style="display: none;">Handler</th>
+                                        <th>Next Followup</th>
+                                        <th>Last Comment</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leadsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="emptyState" class="empty-state" style="display: none;">
+                            <i class="fas fa-inbox"></i>
+                            <h5>No Leads Found</h5>
+                            <p>You don't have any leads assigned yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+        <div id="toast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="fas fa-bell me-2"></i>
+                <strong class="me-auto" id="toastTitle">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastBody"></div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script>
+        let companyId = null;
+        let currentScope = 'my';
+        let isLeader = false;
+        let isAdmin = false;  // DC Protocol (Jan 1, 2026): VGK/EA/Key Leadership flag
+        let currentUser = null;
+        let searchTimeout = null;
+        
+        const API_BASE = '/api/v1/crm';
+        
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            // DC Protocol: Support "all" companies mode (company_id=0)
+            let url;
+            if (companyId === 'all') {
+                url = `${API_BASE}${endpoint}${endpoint.includes('?') ? '&' : '?'}company_id=0`;
+            } else {
+                url = `${API_BASE}${endpoint}${endpoint.includes('?') ? '&' : '?'}company_id=${companyId}`;
+            }
+            const options = { method, headers: {} };
+            if (body) {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
+            }
+            const response = await staffFetchJson(url, options);
+            return response;
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // DC Protocol (Jan 22, 2026): Add error handling to prevent blank page
+                await StaffSidebar.init();
+                StaffHeader.inject('My CRM Dashboard', 'fas fa-chart-line');
+                await checkAdminStatus();  // Check admin status first
+                await loadCompanies();
+                
+                // Show content area even if some calls fail
+                const mainContent = document.getElementById('mainContent');
+                if (mainContent) mainContent.style.display = 'block';
+            } catch (error) {
+                console.error('[DC-CRM-INIT] Initialization error:', error);
+                // Still show the page with error state
+                const mainContent = document.getElementById('mainContent');
+                if (mainContent) mainContent.style.display = 'block';
+                showToast('Page initialization error. Please refresh.', 'error');
+            }
+        });
+        
+        // DC Protocol (Jan 1, 2026): Check if user is VGK/EA/Key Leadership
+        async function checkAdminStatus() {
+            try {
+                const data = await staffFetchJson('/api/v1/crm/assignment-options');
+                if (data && data.success && data.data) {
+                    isAdmin = data.data.is_admin || false;
+                    isLeader = data.data.is_leader || false;
+                    currentUser = data.data.current_user;
+                }
+            } catch (error) {
+                console.warn('Failed to check admin status:', error);
+            }
+        }
+        
+        async function loadCompanies() {
+            try {
+                const data = await staffFetchJson('/api/v1/staff/accounts/companies');
+                if (data && data.companies) {
+                    const companies = data.companies.filter(c => c.is_active !== false);
+                    const selector = document.getElementById('companySelector');
+                    selector.innerHTML = '<option value="">Select Company</option>';
+                    
+                    // DC Protocol (Jan 1, 2026): Add "All Companies" for VGK/EA/Key Leadership
+                    if (isAdmin && companies.length > 1) {
+                        selector.innerHTML += '<option value="all">All Companies</option>';
+                    }
+                    
+                    companies.forEach(comp => {
+                        selector.innerHTML += `<option value="${comp.id}">${comp.company_name} (${comp.company_code})</option>`;
+                    });
+                    if (companies.length > 0) {
+                        selector.value = companies[0].id;
+                        companyId = companies[0].id;
+                        onCompanyChange();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load companies:', error);
+                showToast('Failed to load companies', 'error');
+            }
+        }
+        
+        async function loadAssignmentOptions() {
+            if (!companyId && companyId !== 'all') return;
+            try {
+                const data = await apiCall('/assignment-options');
+                if (data.success) {
+                    isLeader = data.data.is_leader;
+                    isAdmin = data.data.is_admin || false;
+                    currentUser = data.data.current_user;
+                    
+                    // DC Protocol: Show/hide Team Performance tab for leaders
+                    document.querySelectorAll('.scope-tab.team-only').forEach(tab => {
+                        if (isLeader) {
+                            tab.style.display = 'inline-block';
+                            tab.disabled = false;
+                        } else {
+                            tab.style.display = 'none';
+                            tab.disabled = true;
+                        }
+                    });
+                    
+                    // DC Protocol (Jan 1, 2026): Show All Performance tab for VGK/EA/Key Leadership only
+                    document.querySelectorAll('.scope-tab.admin-only').forEach(tab => {
+                        if (isAdmin) {
+                            tab.style.display = 'inline-block';
+                            tab.disabled = false;
+                        } else {
+                            tab.style.display = 'none';
+                            tab.disabled = true;
+                        }
+                    });
+                    
+                    if (isLeader) {
+                        document.getElementById('dashboardSubtitle').textContent = 'Track your leads and team performance';
+                    }
+                    
+                    updateUserHeader();
+                }
+            } catch (error) {
+                console.error('Failed to load assignment options:', error);
+            }
+        }
+        
+        function updateUserHeader() {
+            if (currentUser) {
+                const initials = currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                document.getElementById('headerUserInitials').textContent = initials.toUpperCase();
+                document.getElementById('headerUserName').textContent = currentUser.name;
+                document.getElementById('headerUserRole').textContent = isLeader ? 'Team Leader' : 'Staff';
+            }
+        }
+        
+        function onCompanyChange() {
+            companyId = document.getElementById('companySelector').value;
+            const noCompanyMsg = document.getElementById('noCompanyMessage');
+            const mainContent = document.getElementById('mainContent');
+            
+            if (!companyId) {
+                noCompanyMsg.style.display = 'block';
+                mainContent.style.display = 'none';
+                return;
+            }
+            
+            noCompanyMsg.style.display = 'none';
+            mainContent.style.display = 'block';
+            
+            loadAssignmentOptions();
+            loadFilterOptions();
+            loadDashboard();
+            loadPerformanceSummary();
+            loadLeads();
+        }
+        
+        function changeScope(scope) {
+            currentScope = scope;
+            document.querySelectorAll('.scope-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.scope === scope);
+            });
+            
+            const handlerCol = document.getElementById('handlerColumn');
+            handlerCol.style.display = (scope !== 'my' && scope !== 'breakdown') ? '' : 'none';
+            
+            const managerFilter = document.getElementById('managerFilterGroup');
+            if (isLeader && scope !== 'my' && scope !== 'breakdown') {
+                managerFilter.style.display = 'block';
+            } else {
+                managerFilter.style.display = 'none';
+            }
+            
+            // DC Protocol (Jan 22, 2026): Handle breakdown section visibility
+            const breakdownSection = document.getElementById('breakdownSection');
+            const filterPanel = document.getElementById('filterPanel');
+            const performanceTable = document.getElementById('performanceTableContainer');
+            const statsRow = document.querySelector('.row.mb-4');
+            const leadsSection = document.getElementById('leadsSection');
+            
+            if (scope === 'breakdown') {
+                breakdownSection.style.display = 'block';
+                filterPanel.style.display = 'none';
+                performanceTable.style.display = 'none';
+                if (statsRow) statsRow.style.display = 'none';
+                if (leadsSection) leadsSection.style.display = 'none';
+                // DC Protocol (Jan 22, 2026): Populate company filter and load data
+                populateBreakdownCompanyFilter();
+                loadBreakdownData();
+            } else {
+                breakdownSection.style.display = 'none';
+                filterPanel.style.display = 'block';
+                performanceTable.style.display = 'block';
+                if (statsRow) statsRow.style.display = '';
+                if (leadsSection) leadsSection.style.display = '';
+                updatePerformanceTableTitle();
+                loadDashboard();
+                loadPerformanceSummary();
+                loadLeads();
+            }
+        }
+        
+        function updatePerformanceTableTitle() {
+            const titleEl = document.getElementById('performanceTableTitle');
+            if (currentScope === 'my') {
+                titleEl.textContent = 'My Performance Summary';
+            } else if (currentScope === 'team') {
+                titleEl.textContent = 'Team Performance Summary';
+            } else {
+                titleEl.textContent = 'All Performance Summary';
+            }
+        }
+        
+        async function loadFilterOptions() {
+            if (!companyId) return;
+            
+            try {
+                const [sourcesRes, categoriesRes] = await Promise.all([
+                    apiCall('/sources'),
+                    staffFetchJson(`/api/v1/signup-categories/list?company_id=${companyId}`)
+                ]);
+                
+                const sourceSelect = document.getElementById('filterSource');
+                sourceSelect.innerHTML = '<option value="">All Sources</option>';
+                if (sourcesRes.success && sourcesRes.data) {
+                    sourcesRes.data.forEach(source => {
+                        sourceSelect.innerHTML += `<option value="${source.id}">${escapeHtml(source.name)}</option>`;
+                    });
+                }
+                
+                const categorySelect = document.getElementById('filterCategory');
+                categorySelect.innerHTML = '<option value="">All Categories</option>';
+                if (categoriesRes.success && categoriesRes.data) {
+                    categoriesRes.data.forEach(cat => {
+                        categorySelect.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load filter options:', error);
+            }
+        }
+        
+        function validateFilters() {
+            let isValid = true;
+            
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+            const startGroup = document.getElementById('filterStartDate').parentElement;
+            const endGroup = document.getElementById('filterEndDate').parentElement;
+            const startError = document.getElementById('startDateError');
+            const endError = document.getElementById('endDateError');
+            
+            startGroup.classList.remove('has-error');
+            endGroup.classList.remove('has-error');
+            startError.textContent = '';
+            endError.textContent = '';
+            
+            if (startDate && endDate) {
+                if (new Date(startDate) > new Date(endDate)) {
+                    endGroup.classList.add('has-error');
+                    endError.textContent = 'End date must be after start date';
+                    isValid = false;
+                }
+            }
+            
+            return isValid;
+        }
+        
+        function resetFilters() {
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            document.getElementById('filterSource').value = '';
+            document.getElementById('filterCategory').value = '';
+            document.getElementById('filterManager').value = '';
+            
+            document.querySelectorAll('.filter-group').forEach(g => g.classList.remove('has-error'));
+            document.querySelectorAll('.error-message').forEach(e => e.textContent = '');
+            
+            loadPerformanceSummary();
+        }
+        
+        function applyFilters() {
+            if (!validateFilters()) {
+                showToast('Please fix the filter errors', 'error');
+                return;
+            }
+            loadPerformanceSummary();
+        }
+        
+        async function loadPerformanceSummary() {
+            if (!companyId) return;
+            
+            const container = document.getElementById('performanceTableContainer');
+            container.classList.add('is-loading');
+            
+            const startDate = document.getElementById('filterStartDate').value;
+            const endDate = document.getElementById('filterEndDate').value;
+            const sourceId = document.getElementById('filterSource').value;
+            const categoryId = document.getElementById('filterCategory').value;
+            const managerId = document.getElementById('filterManager').value;
+            
+            let endpoint = `/performance-summary?scope=${currentScope}`;
+            if (startDate) endpoint += `&start_date=${startDate}`;
+            if (endDate) endpoint += `&end_date=${endDate}`;
+            if (sourceId) endpoint += `&source_id=${sourceId}`;
+            if (categoryId) endpoint += `&category_id=${categoryId}`;
+            if (managerId && currentScope !== 'my') endpoint += `&manager_id=${managerId}`;
+            
+            try {
+                const data = await apiCall(endpoint);
+                container.classList.remove('is-loading');
+                
+                if (data.success) {
+                    if (data.data.available_managers && data.data.available_managers.length > 0) {
+                        const managerSelect = document.getElementById('filterManager');
+                        managerSelect.innerHTML = '<option value="">All Managers</option>';
+                        data.data.available_managers.forEach(mgr => {
+                            managerSelect.innerHTML += `<option value="${mgr.id}">${escapeHtml(mgr.name)} (${mgr.employee_id})</option>`;
+                        });
+                    }
+                    
+                    renderPerformanceTable(data.data.performance, data.data.totals);
+                } else {
+                    showToast('Failed to load performance data', 'error');
+                }
+            } catch (error) {
+                container.classList.remove('is-loading');
+                console.error('Failed to load performance summary:', error);
+                showToast('Failed to load performance data', 'error');
+            }
+        }
+        
+        function renderPerformanceTable(performanceData, totals) {
+            const tbody = document.getElementById('performanceTableBody');
+            const tfoot = document.getElementById('performanceTableFooter');
+            const emptyState = document.getElementById('performanceEmptyState');
+            const tableContainer = document.getElementById('performanceTableContainer');
+            const countEl = document.getElementById('performanceCount');
+            
+            countEl.textContent = `${performanceData.length} employee${performanceData.length !== 1 ? 's' : ''}`;
+            
+            if (performanceData.length === 0) {
+                tbody.innerHTML = '';
+                tfoot.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            tbody.innerHTML = performanceData.map((emp, idx) => {
+                const initials = emp.employee_name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                return `
+                    <tr>
+                        <td class="text-start">${idx + 1}</td>
+                        <td class="text-start">
+                            <div class="emp-info">
+                                <div class="emp-avatar">${initials.toUpperCase()}</div>
+                                <div class="emp-details">
+                                    <span class="emp-name">${escapeHtml(emp.employee_name)}</span>
+                                    <span class="emp-id">${emp.employee_id}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${emp.overall.new_leads}</td>
+                        <td>${emp.overall.overall_leads}</td>
+                        <td>${emp.overall.self_generated_leads}</td>
+                        <td>${emp.status_wise.in_progress}</td>
+                        <td>${emp.status_wise.deal_closed}</td>
+                        <td>${emp.status_wise.on_hold}</td>
+                        <td>${emp.status_wise.lost_leads}</td>
+                        <td class="revenue-positive">${formatCurrency(emp.revenue.generated)}</td>
+                        <td class="revenue-negative">${formatCurrency(emp.revenue.lost)}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tfoot.innerHTML = `
+                <tr>
+                    <td class="text-start" colspan="2"><strong>Total</strong></td>
+                    <td><strong>${totals.new_leads}</strong></td>
+                    <td><strong>${totals.overall_leads}</strong></td>
+                    <td><strong>${totals.self_generated_leads}</strong></td>
+                    <td><strong>${totals.in_progress}</strong></td>
+                    <td><strong>${totals.deal_closed}</strong></td>
+                    <td><strong>${totals.on_hold}</strong></td>
+                    <td><strong>${totals.lost_leads}</strong></td>
+                    <td class="revenue-positive"><strong>${formatCurrency(totals.revenue_generated)}</strong></td>
+                    <td class="revenue-negative"><strong>${formatCurrency(totals.revenue_lost)}</strong></td>
+                </tr>
+            `;
+        }
+        
+        function formatCurrency(value) {
+            if (!value || value === 0) return '-';
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
+        }
+        
+        async function loadDashboard() {
+            if (!companyId) return;
+            try {
+                const data = await apiCall(`/my-dashboard?scope=${currentScope}`);
+                if (data.success) {
+                    const stats = data.data;
+                    document.getElementById('totalLeads').textContent = stats.total_leads;
+                    document.getElementById('newLeads').textContent = stats.status_breakdown.new;
+                    document.getElementById('inProgressLeads').textContent = 
+                        stats.status_breakdown.contacted + stats.status_breakdown.qualified + 
+                        stats.status_breakdown.proposal + stats.status_breakdown.negotiation;
+                    document.getElementById('wonLeads').textContent = stats.status_breakdown.won;
+                    document.getElementById('todayFollowups').textContent = stats.today_followups;
+                    document.getElementById('overdueFollowups').textContent = stats.overdue_followups;
+                    
+                    const teamSection = document.getElementById('teamPerformanceSection');
+                    if (stats.team_breakdown && stats.team_breakdown.length > 0 && currentScope !== 'my') {
+                        teamSection.style.display = 'block';
+                        renderTeamPerformance(stats.team_breakdown);
+                    } else {
+                        teamSection.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+            }
+        }
+        
+        function renderTeamPerformance(teamData) {
+            const container = document.getElementById('teamPerformanceContainer');
+            container.innerHTML = teamData.map(member => {
+                const initials = member.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                return `
+                    <div class="team-member-row">
+                        <div class="team-member-info">
+                            <div class="team-member-avatar">${initials}</div>
+                            <div>
+                                <div class="fw-semibold">${member.name}</div>
+                                <div class="text-muted" style="font-size: 12px;">${member.employee_id}</div>
+                            </div>
+                        </div>
+                        <div class="team-member-stats">
+                            <div class="team-stat">
+                                <div class="team-stat-value">${member.total_leads}</div>
+                                <div class="team-stat-label">Total</div>
+                            </div>
+                            <div class="team-stat">
+                                <div class="team-stat-value text-success">${member.won_leads}</div>
+                                <div class="team-stat-label">Won</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(loadLeads, 300);
+        }
+        
+        async function loadLeads() {
+            if (!companyId) return;
+            
+            const status = document.getElementById('filterStatus').value;
+            const priority = document.getElementById('filterPriority').value;
+            const search = document.getElementById('searchInput').value;
+            
+            let endpoint = `/my-leads?scope=${currentScope}&page=1&per_page=10`;
+            if (status) endpoint += `&status=${status}`;
+            if (priority) endpoint += `&priority=${priority}`;
+            if (search) endpoint += `&search=${encodeURIComponent(search)}`;
+            
+            try {
+                const data = await apiCall(endpoint);
+                if (data.success) {
+                    renderLeadsTable(data.data);
+                }
+            } catch (error) {
+                console.error('Failed to load leads:', error);
+            }
+        }
+        
+        function renderLeadsTable(leads) {
+            const tbody = document.getElementById('leadsTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const tableContainer = document.getElementById('leadsTableContainer');
+            
+            if (leads.length === 0) {
+                tableContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            tableContainer.style.display = 'block';
+            emptyState.style.display = 'none';
+            
+            const showHandler = currentScope !== 'my';
+            
+            tbody.innerHTML = leads.map(lead => `
+                <tr onclick="window.location.href='/rvz/crm/leads?lead=${lead.id}&company_id=${companyId}'">
+                    <td>
+                        <div class="lead-name">${escapeHtml(lead.name)}</div>
+                        <div class="lead-contact">
+                            ${lead.email || ''} ${lead.phone ? '| ' + lead.phone : ''}
+                        </div>
+                    </td>
+                    <td>${lead.category_name || '-'}</td>
+                    <td><span class="status-badge status-${lead.status}">${formatStatus(lead.status)}</span></td>
+                    <td><span class="priority-badge priority-${lead.priority}">${lead.priority}</span></td>
+                    ${showHandler ? `<td>${lead.handler_name || lead.handler_id || '-'}</td>` : ''}
+                    <td>${lead.next_followup_date ? formatDate(lead.next_followup_date) : '-'}</td>
+                    <td>${lead.latest_comment ? truncate(lead.latest_comment.note, 30) : '-'}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function formatStatus(status) {
+            return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+        }
+        
+        function truncate(str, len) {
+            if (!str) return '';
+            return str.length > len ? str.substring(0, len) + '...' : str;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // DC Protocol (Jan 22, 2026): Team Performance Breakdown Functions
+        let breakdownCompanyId = null;
+        
+        function populateBreakdownCompanyFilter() {
+            const mainSelector = document.getElementById('companySelector');
+            const breakdownSelector = document.getElementById('breakdownCompany');
+            if (!mainSelector || !breakdownSelector) return;
+            
+            // Copy options from main company selector
+            breakdownSelector.innerHTML = '<option value="">Select Company</option>';
+            
+            // DC Protocol (Jan 22, 2026): Add "All Companies" option for admins
+            if (isAdmin) {
+                breakdownSelector.innerHTML += '<option value="all">All Companies</option>';
+            }
+            
+            // Copy company options
+            Array.from(mainSelector.options).forEach(opt => {
+                if (opt.value && opt.value !== '' && opt.value !== 'all') {
+                    breakdownSelector.innerHTML += `<option value="${opt.value}">${opt.text}</option>`;
+                }
+            });
+            
+            // Set default to current company or first company
+            if (companyId) {
+                breakdownSelector.value = companyId;
+                breakdownCompanyId = companyId;
+            }
+        }
+        
+        function onBreakdownCompanyChange() {
+            breakdownCompanyId = document.getElementById('breakdownCompany').value;
+            if (breakdownCompanyId) {
+                loadBreakdownData();
+            }
+        }
+        
+        async function loadBreakdownData() {
+            const selectedCompany = document.getElementById('breakdownCompany').value || companyId;
+            if (!selectedCompany) {
+                showToast('Please select a company', 'error');
+                return;
+            }
+            
+            const container = document.getElementById('breakdownTableContainer');
+            container.classList.add('is-loading');
+            
+            const startDate = document.getElementById('breakdownDateFrom').value;
+            const endDate = document.getElementById('breakdownDateTo').value;
+            const managerId = document.getElementById('breakdownManager').value;
+            const searchTerm = document.getElementById('breakdownSearch').value;
+            
+            let endpoint = `/team-performance-breakdown?company_id=${selectedCompany}`;
+            if (startDate) endpoint += `&start_date=${startDate}`;
+            if (endDate) endpoint += `&end_date=${endDate}`;
+            if (managerId) endpoint += `&manager_id=${managerId}`;
+            if (searchTerm) endpoint += `&employee_search=${encodeURIComponent(searchTerm)}`;
+            
+            try {
+                const data = await staffFetchJson(`/api/v1/crm${endpoint}`);
+                container.classList.remove('is-loading');
+                
+                if (data.success) {
+                    // Populate managers dropdown
+                    if (data.data.available_managers && data.data.available_managers.length > 0) {
+                        const managerSelect = document.getElementById('breakdownManager');
+                        const currentValue = managerSelect.value;
+                        managerSelect.innerHTML = '<option value="">All Managers</option>';
+                        data.data.available_managers.forEach(mgr => {
+                            managerSelect.innerHTML += `<option value="${mgr.id}">${escapeHtml(mgr.name)} (${mgr.employee_id})</option>`;
+                        });
+                        managerSelect.value = currentValue;
+                    }
+                    
+                    renderBreakdownTable(data.data.performance, data.data.owner_totals, data.data.handler_totals);
+                } else {
+                    showToast('Failed to load breakdown data', 'error');
+                }
+            } catch (error) {
+                container.classList.remove('is-loading');
+                console.error('Failed to load breakdown data:', error);
+                showToast('Failed to load breakdown data', 'error');
+            }
+        }
+        
+        function renderBreakdownTable(performanceData, ownerTotals, handlerTotals) {
+            const tbody = document.getElementById('breakdownTableBody');
+            const tfoot = document.getElementById('breakdownTableFooter');
+            const emptyState = document.getElementById('breakdownEmptyState');
+            const tableWrapper = document.querySelector('.breakdown-table .table-wrapper');
+            
+            if (performanceData.length === 0) {
+                tbody.innerHTML = '';
+                tfoot.innerHTML = '';
+                emptyState.style.display = 'block';
+                if (tableWrapper) tableWrapper.style.display = 'none';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            if (tableWrapper) tableWrapper.style.display = 'block';
+            
+            tbody.innerHTML = performanceData.map((emp, idx) => {
+                const initials = emp.employee_name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                const o = emp.as_primary_owner;
+                const h = emp.as_handler;
+                const rowClass = emp.is_self ? 'self-row' : '';
+                
+                return `
+                    <tr class="${rowClass}">
+                        <td class="text-start">${idx + 1}</td>
+                        <td class="text-start">
+                            <div class="emp-info">
+                                <div class="emp-avatar">${initials.toUpperCase()}</div>
+                                <div class="emp-details">
+                                    <span class="emp-name">${escapeHtml(emp.employee_name)}${emp.is_self ? ' (You)' : ''}</span>
+                                    <span class="emp-id">${emp.emp_code}</span>
+                                    ${emp.reporting_manager ? `<span class="emp-manager">RM: ${escapeHtml(emp.reporting_manager)}</span>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <!-- Primary Owner Stats -->
+                        <td class="owner-group">${o.new}</td>
+                        <td class="owner-group">${o.contacted}</td>
+                        <td class="owner-group">${o.qualified}</td>
+                        <td class="owner-group">${o.won}</td>
+                        <td class="owner-group">${o.lost}</td>
+                        <td class="owner-group">${o.on_hold}</td>
+                        <td class="owner-group"><strong>${o.total}</strong></td>
+                        <td class="owner-group revenue-col">${formatCompactCurrency(o.revenue_total)}</td>
+                        <td class="owner-group revenue-col">${formatCompactCurrency(o.revenue_received)}</td>
+                        <td class="owner-group revenue-col">${formatCompactCurrency(o.revenue_balance)}</td>
+                        <!-- Handler Stats -->
+                        <td class="handler-group">${h.new}</td>
+                        <td class="handler-group">${h.contacted}</td>
+                        <td class="handler-group">${h.qualified}</td>
+                        <td class="handler-group">${h.won}</td>
+                        <td class="handler-group">${h.lost}</td>
+                        <td class="handler-group">${h.on_hold}</td>
+                        <td class="handler-group"><strong>${h.total}</strong></td>
+                        <td class="handler-group revenue-col">${formatCompactCurrency(h.revenue_total)}</td>
+                        <td class="handler-group revenue-col">${formatCompactCurrency(h.revenue_received)}</td>
+                        <td class="handler-group revenue-col">${formatCompactCurrency(h.revenue_balance)}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tfoot.innerHTML = `
+                <tr>
+                    <td class="text-start" colspan="2"><strong>Total (${performanceData.length} employees)</strong></td>
+                    <!-- Owner Totals -->
+                    <td class="owner-group"><strong>${ownerTotals.new}</strong></td>
+                    <td class="owner-group"><strong>${ownerTotals.contacted}</strong></td>
+                    <td class="owner-group"><strong>${ownerTotals.qualified}</strong></td>
+                    <td class="owner-group"><strong>${ownerTotals.won}</strong></td>
+                    <td class="owner-group"><strong>${ownerTotals.lost}</strong></td>
+                    <td class="owner-group"><strong>${ownerTotals.on_hold}</strong></td>
+                    <td class="owner-group"><strong>${ownerTotals.total}</strong></td>
+                    <td class="owner-group revenue-col"><strong>${formatCompactCurrency(ownerTotals.revenue_total)}</strong></td>
+                    <td class="owner-group revenue-col"><strong>${formatCompactCurrency(ownerTotals.revenue_received)}</strong></td>
+                    <td class="owner-group revenue-col"><strong>${formatCompactCurrency(ownerTotals.revenue_balance)}</strong></td>
+                    <!-- Handler Totals -->
+                    <td class="handler-group"><strong>${handlerTotals.new}</strong></td>
+                    <td class="handler-group"><strong>${handlerTotals.contacted}</strong></td>
+                    <td class="handler-group"><strong>${handlerTotals.qualified}</strong></td>
+                    <td class="handler-group"><strong>${handlerTotals.won}</strong></td>
+                    <td class="handler-group"><strong>${handlerTotals.lost}</strong></td>
+                    <td class="handler-group"><strong>${handlerTotals.on_hold}</strong></td>
+                    <td class="handler-group"><strong>${handlerTotals.total}</strong></td>
+                    <td class="handler-group revenue-col"><strong>${formatCompactCurrency(handlerTotals.revenue_total)}</strong></td>
+                    <td class="handler-group revenue-col"><strong>${formatCompactCurrency(handlerTotals.revenue_received)}</strong></td>
+                    <td class="handler-group revenue-col"><strong>${formatCompactCurrency(handlerTotals.revenue_balance)}</strong></td>
+                </tr>
+            `;
+        }
+        
+        function formatCompactCurrency(value) {
+            if (!value || value === 0) return '-';
+            if (value >= 10000000) return '₹' + (value / 10000000).toFixed(1) + 'Cr';
+            if (value >= 100000) return '₹' + (value / 100000).toFixed(1) + 'L';
+            if (value >= 1000) return '₹' + (value / 1000).toFixed(1) + 'K';
+            return '₹' + value.toFixed(0);
+        }
+        
+        function resetBreakdownFilters() {
+            // DC Protocol (Jan 22, 2026): Reset company to current main selection
+            const breakdownCompanyEl = document.getElementById('breakdownCompany');
+            if (breakdownCompanyEl && companyId) {
+                breakdownCompanyEl.value = companyId;
+            }
+            document.getElementById('breakdownDateFrom').value = '';
+            document.getElementById('breakdownDateTo').value = '';
+            document.getElementById('breakdownManager').value = '';
+            document.getElementById('breakdownSearch').value = '';
+            loadBreakdownData();
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastBody = document.getElementById('toastBody');
+            toastBody.textContent = message;
+            toast.classList.remove('bg-success', 'bg-danger', 'bg-warning');
+            if (type === 'success') toast.classList.add('bg-success', 'text-white');
+            else if (type === 'error') toast.classList.add('bg-danger', 'text-white');
+            new bootstrap.Toast(toast).show();
+        }
+    </script>
+</body>
+</html>

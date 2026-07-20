@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏦 Bank Transfers (Skip-Level) - RVZ Supreme - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); }
+        .transfer-card { 
+            border-radius: 10px; margin-bottom: 10px; padding: 15px; 
+            background: white; border-left: 4px solid #3b82f6; 
+        }
+        .supreme-badge { 
+            background: linear-gradient(135deg, #d97706, #f59e0b); 
+            color: white; padding: 5px 15px; border-radius: 20px; 
+            font-weight: bold; font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1" style="display:flex;align-items:center;gap:10px;">
+                <img src="/public/vgk4u-logo-100.png" alt="VGK4U" style="height:32px;background:#fff;border-radius:6px;padding:2px 7px;">
+                <span><i class="bi bi-crown"></i> Bank Transfers (Skip-Level) <span class="supreme-badge ms-2">RVZ SUPREME</span></span>
+            </span>
+            <div>
+                <span class="text-white me-3" id="adminInfo">Loading...</span>
+                <a href="/rvz/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div id="filterComponentContainer"></div>
+
+        <div class="alert alert-warning mt-3">
+            <strong>⚡ Skip-Level Workflow:</strong> RVZ Supreme can process bank transfers instantly → Bypasses Finance Admin queue → Marks withdrawal as "Completed" immediately
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>Bulk Actions</h5>
+                <button class="btn btn-primary" onclick="bulkSupremeTransfer()">
+                    <i class="bi bi-lightning-fill"></i> Supreme Transfer Selected
+                </button>
+                <button class="btn btn-secondary ms-2" onclick="refreshData()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <div id="transferList"></div>
+    </div>
+
+    <!-- Withdrawal Details Modal -->
+    <div class="modal fade" id="transferDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-receipt"></i> Transfer Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <div class="text-center"><div class="spinner-border text-primary"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const API_BASE = '/api/v1';
+        // DC Protocol: Robust Staff MNR auth detection - checks wrapper-injected tokens first
+        let authToken = window.sessionToken || window.rvzSessionToken || localStorage.getItem('authToken');
+        const isStaffMnrContext = !!(window.sessionToken || window.rvzSessionToken);
+        console.log('[DC-AUTH] Context:', isStaffMnrContext ? 'Staff MNR' : 'Direct MNR', '| Token:', authToken ? 'Present' : 'MISSING');
+        let selectedTransfers = [];
+
+        $(document).ready(function() {
+            console.log('🔐 Auth Token:', authToken ? 'Present' : 'MISSING');
+            // DC Protocol: Skip loadAdminInfo on Staff MNR pages (staff sidebar already shows identity)
+            if (!window.location.pathname.startsWith('/staff/mnr/')) {
+                loadAdminInfo();
+            }
+            $('#filterComponentContainer').load('/components/admin_user_filter.html', function() {
+                loadFilteredData(UserFilter.getFilterParams());
+            });
+        });
+
+        function loadFilteredData(params) {
+            loadPendingTransfers(params.user_id, params.page, params.per_page);
+        }
+
+        function refreshData() {
+            const params = typeof UserFilter !== 'undefined' ? UserFilter.getFilterParams() : {page: 1, per_page: 20};
+            loadPendingTransfers(params.user_id, params.page, params.per_page);
+        }
+
+        function loadAdminInfo() {
+            $.ajax({
+                url: `${API_BASE}/auth/me-hybrid`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    // DC Protocol: Handle nested response structure {success: true, data: {...}}
+                    const userData = response.data || response;
+                    console.log('[DC-AUTH] Response:', response.success ? 'wrapped' : 'direct', userData);
+                    
+                    // DC Protocol: Support both MNR users (user_type) and Staff users (staff_type)
+                    if (userData && (userData.user_type || userData.staff_type)) {
+                        const displayName = userData.name || userData.full_name || userData.user_id || userData.emp_code;
+                        const roleType = userData.user_type || userData.staff_type;
+                        $('#adminInfo').text(`${displayName} (${roleType})`);
+                        console.log('[DC-AUTH] ✅ User authenticated:', roleType);
+                    } else {
+                        console.log('[DC-AUTH] ❌ No user_type or staff_type in response:', userData);
+                        // In Staff MNR context, don't redirect - page should work with injected token
+                        if (!isStaffMnrContext) {
+                            window.location.href = '/login';
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    console.log('[DC-AUTH] ❌ Auth error:', xhr.status, xhr.responseText);
+                    // Only redirect if not in Staff MNR context (staff auth is handled by wrapper)
+                    if (!isStaffMnrContext) {
+                        alert('Authentication failed. Please login again.');
+                        window.location.href = '/login';
+                    } else {
+                        console.log('[DC-AUTH] Staff MNR context - continuing despite auth error');
+                    }
+                }
+            });
+        }
+
+        function loadPendingTransfers(userId = null, page = 1, perPage = 20) {
+            const params = new URLSearchParams({ status_filter: 'Approved', page, per_page: perPage });
+            if (userId) params.append('user_id', userId);
+
+            $.ajax({
+                url: `${API_BASE}/withdrawals/admin/withdrawal-report?${params.toString()}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    if (response.requests) {
+                        renderTransferList(response.requests);
+                    }
+                },
+                error: function(xhr) {
+                    $('#transferList').html(`<div class="alert alert-danger">Error: ${xhr.responseJSON?.detail || 'Failed to load transfers'}</div>`);
+                }
+            });
+        }
+
+        function renderTransferList(transfers) {
+            if (!transfers || transfers.length === 0) {
+                $('#transferList').html('<div class="alert alert-info">No approved withdrawals pending bank transfer</div>');
+                return;
+            }
+
+            const html = transfers.map(t => `
+                <div class="transfer-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <input type="checkbox" class="form-check-input" onchange="toggleSelection(${t.id})">
+                        </div>
+                        <div class="col-md-2">
+                            <strong>${t.user_id}</strong><br>
+                            <small class="text-muted">${t.user_name || 'N/A'}</small>
+                        </div>
+                        <div class="col-md-2">
+                            <strong>₹${parseFloat(t.withdrawal_amount || t.final_payout || 0).toLocaleString()}</strong><br>
+                            <small class="text-muted">Bank Transfer Amount</small>
+                        </div>
+                        <div class="col-md-2">
+                            <small>${t.account_number || 'N/A'}</small><br>
+                            <small class="text-muted">${t.bank_name || 'N/A'}</small>
+                        </div>
+                        <div class="col-md-2">
+                            ${t.approved_at ? new Date(t.approved_at).toLocaleDateString() : 'N/A'}
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-sm btn-info mb-1" onclick="viewTransferDetails('${t.user_id}', ${t.id})">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="supremeTransferSingle(${t.id})">
+                                <i class="bi bi-lightning-fill"></i> Supreme Transfer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            $('#transferList').html(html);
+        }
+
+        async function viewTransferDetails(userId, withdrawalId) {
+            const modal = new bootstrap.Modal(document.getElementById('transferDetailsModal'));
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = '<div class="text-center"><div class="spinner-border text-primary"></div></div>';
+            modal.show();
+
+            try {
+                const [summaryRes, withdrawalRes, breakdownRes] = await Promise.all([
+                    fetch(`${API_BASE}/withdrawals/income-transactions?user_id=` + userId, { credentials: 'include' }),
+                    fetch(`${API_BASE}/withdrawals/admin/withdrawal-report?user_id=` + userId, { credentials: 'include' }),
+                    fetch(`${API_BASE}/withdrawals/admin/withdrawal-income-breakdown/` + withdrawalId, { credentials: 'include' })
+                ]);
+
+                const summaryData = await summaryRes.json();
+                const withdrawalData = await withdrawalRes.json();
+                const breakdownData = await breakdownRes.json();
+                const summary = summaryData.data?.summary || {};
+                const withdrawal = withdrawalData.requests?.find(w => w.id === withdrawalId) || {};
+                const detailedBreakdown = breakdownData || {};
+
+                let h = '<div class="row mb-4"><div class="col-md-6"><h6 class="text-primary border-bottom pb-2"><i class="bi bi-person"></i> User Info</h6><table class="table table-sm">';
+                h += '<tr><th>User ID:</th><td>' + userId + '</td></tr>';
+                h += '<tr><th>Name:</th><td>' + (withdrawal.user_name || 'N/A') + '</td></tr>';
+                h += '<tr><th>Email:</th><td>N/A</td></tr>';
+                h += '<tr><th>Phone:</th><td>N/A</td></tr>';
+                h += '<tr><th>KYC:</th><td><span class="badge bg-warning">N/A</span></td></tr>';
+                h += '</table></div>';
+
+                h += '<div class="col-md-6"><h6 class="text-success border-bottom pb-2"><i class="bi bi-bank"></i> Bank Details</h6><table class="table table-sm">';
+                h += '<tr><th>Holder:</th><td>' + (withdrawal.account_holder_name || withdrawal.user_name || 'N/A') + '</td></tr>';
+                h += '<tr><th>Account:</th><td>' + (withdrawal.account_number || 'N/A') + '</td></tr>';
+                h += '<tr><th>IFSC:</th><td>' + (withdrawal.ifsc_code || 'N/A') + '</td></tr>';
+                h += '<tr><th>Bank:</th><td>' + (withdrawal.bank_name || 'N/A') + '</td></tr>';
+                h += '</table></div></div>';
+
+                if (detailedBreakdown.success && detailedBreakdown.breakdown_by_type) {
+                    h += '<h6 class="text-danger border-bottom pb-2 mt-3"><i class="bi bi-receipt"></i> Deduction Breakdown (How NET was calculated)</h6>';
+                    h += '<table class="table table-sm table-bordered">';
+                    h += '<thead class="table-light"><tr><th>Income Type</th><th class="text-end">GROSS</th><th class="text-end">Mentorship Contribution Benefit</th><th class="text-end">Admin (8%)</th><th class="text-end">TDS (2%)</th><th class="text-end">Total Deducted</th><th class="text-end text-success">NET</th></tr></thead>';
+                    h += '<tbody>';
+                    
+                    detailedBreakdown.breakdown_by_type.forEach(function(item) {
+                        h += '<tr>';
+                        h += '<td><strong>' + item.income_type + '</strong></td>';
+                        h += '<td class="text-end">₹' + (item.gross || 0).toLocaleString('en-IN') + '</td>';
+                        h += '<td class="text-end text-warning">-₹' + (item.guru_dakshina_deduction || 0).toLocaleString('en-IN') + '</td>';
+                        h += '<td class="text-end text-danger">-₹' + (item.admin_deduction || 0).toLocaleString('en-IN') + '</td>';
+                        h += '<td class="text-end text-info">-₹' + (item.tds_deduction || 0).toLocaleString('en-IN') + '</td>';
+                        h += '<td class="text-end text-danger">-₹' + (item.total_deductions || 0).toLocaleString('en-IN') + '</td>';
+                        h += '<td class="text-end text-success">₹' + (item.net || 0).toLocaleString('en-IN') + '</td>';
+                        h += '</tr>';
+                    });
+                    
+                    const totals = detailedBreakdown.totals || {};
+                    h += '<tr class="table-primary fw-bold">';
+                    h += '<td>TOTAL</td>';
+                    h += '<td class="text-end">₹' + (totals.gross || 0).toLocaleString('en-IN') + '</td>';
+                    h += '<td class="text-end text-warning">-₹' + (totals.guru_dakshina_deduction || 0).toLocaleString('en-IN') + '</td>';
+                    h += '<td class="text-end text-danger">-₹' + (totals.admin_deduction || 0).toLocaleString('en-IN') + '</td>';
+                    h += '<td class="text-end text-info">-₹' + (totals.tds_deduction || 0).toLocaleString('en-IN') + '</td>';
+                    h += '<td class="text-end text-danger">-₹' + (totals.total_deductions || 0).toLocaleString('en-IN') + '</td>';
+                    h += '<td class="text-end text-success">₹' + (totals.net || 0).toLocaleString('en-IN') + '</td>';
+                    h += '</tr>';
+                    h += '</tbody></table>';
+                }
+
+                h += '<div class="alert alert-success mt-3"><strong>✅ Ready for Bank Transfer:</strong> This withdrawal has been approved and is ready for payment</div>';
+                h += '<div class="alert alert-info mt-3"><strong>💰 Transfer Amount:</strong> ₹' + parseFloat(withdrawal.withdrawal_amount || withdrawal.final_payout || 0).toLocaleString() + '</div>';
+
+                modalBody.innerHTML = h;
+            } catch (error) {
+                modalBody.innerHTML = '<div class="alert alert-danger">Error: ' + error.message + '</div>';
+            }
+        }
+
+        function toggleSelection(id) {
+            const index = selectedTransfers.indexOf(id);
+            if (index > -1) {
+                selectedTransfers.splice(index, 1);
+            } else {
+                selectedTransfers.push(id);
+            }
+        }
+
+        function supremeTransferSingle(id) {
+            if (!confirm('⚡ RVZ SUPREME BANK TRANSFER:\n\nThis will mark this withdrawal as "Completed" and complete the transfer process.\n\nContinue?')) {
+                return;
+            }
+
+            $.ajax({
+                url: `${API_BASE}/rvz-supreme/withdrawal/supreme-transfer`,
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                contentType: 'application/json',
+                data: JSON.stringify({ 
+                    withdrawal_ids: [id],
+                    utr_number: 'VGK_SUPREME_' + Date.now()
+                }),
+                success: function(response) {
+                    alert('✅ ' + (response.message || 'Bank transfer completed by RVZ Supreme!'));
+                    refreshData();
+                },
+                error: function(xhr) {
+                    alert('❌ Error: ' + (xhr.responseJSON?.detail || 'Failed to process transfer'));
+                }
+            });
+        }
+
+        function bulkSupremeTransfer() {
+            if (selectedTransfers.length === 0) {
+                alert('Please select at least one transfer to process');
+                return;
+            }
+
+            if (!confirm(`⚡ RVZ SUPREME BULK TRANSFER:\n\nYou are about to process ${selectedTransfers.length} bank transfer(s) instantly.\n\nContinue?`)) {
+                return;
+            }
+
+            $.ajax({
+                url: `${API_BASE}/rvz-supreme/withdrawal/supreme-transfer`,
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                contentType: 'application/json',
+                data: JSON.stringify({ 
+                    withdrawal_ids: selectedTransfers,
+                    utr_number: 'VGK_SUPREME_BULK_' + Date.now()
+                }),
+                success: function(response) {
+                    alert('✅ ' + (response.message || `${selectedTransfers.length} transfer(s) completed by RVZ Supreme!`));
+                    selectedTransfers = [];
+                    refreshData();
+                },
+                error: function(xhr) {
+                    alert('❌ Error: ' + (xhr.responseJSON?.detail || 'Failed to process transfers'));
+                }
+            });
+        }
+    </script>
+</body>
+</html>

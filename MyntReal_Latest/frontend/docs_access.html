@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Protected Documents — Access Reference | MyntReal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 60px;
+    }
+
+    /* ── Password Gate ─────────────────────────────────────────────────────── */
+    #gate {
+      position: fixed; inset: 0; z-index: 9999;
+      background: #0f172a;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #gate.hidden { display: none; }
+
+    .gate-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 36px 32px;
+      width: 100%; max-width: 380px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.5);
+      text-align: center;
+    }
+    .gate-logo {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .gate-logo svg { width: 30px; height: 30px; }
+    .gate-title { font-size: 18px; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+    .gate-sub { font-size: 13px; color: #64748b; margin-bottom: 28px; }
+
+    .gate-field { margin-bottom: 14px; text-align: left; }
+    .gate-field label { display: block; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+    .gate-field input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #f1f5f9;
+      font-family: 'Courier New', monospace;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .gate-field input:focus { border-color: #10b981; }
+
+    .gate-btn {
+      width: 100%; margin-top: 8px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: none; border-radius: 8px;
+      padding: 12px;
+      font-size: 14px; font-weight: 700; color: #fff;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .gate-btn:hover { opacity: .9; }
+
+    .gate-error {
+      margin-top: 12px;
+      font-size: 13px; color: #f87171;
+      display: none;
+    }
+    .gate-error.visible { display: block; }
+
+    /* ── Main Content ──────────────────────────────────────────────────────── */
+    #content { width: 100%; display: flex; flex-direction: column; align-items: center; }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .logo-mark {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .logo-mark svg { width: 26px; height: 26px; }
+    .logo-name { font-size: 22px; font-weight: 700; color: #f1f5f9; }
+
+    .page-title {
+      font-size: 14px;
+      color: #94a3b8;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+
+    .notice {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-left: 4px solid #f59e0b;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #fbbf24;
+      margin-bottom: 32px;
+      max-width: 720px;
+      width: 100%;
+      line-height: 1.6;
+    }
+
+    .section-header {
+      max-width: 720px; width: 100%;
+      font-size: 11px; font-weight: 700;
+      color: #475569; text-transform: uppercase; letter-spacing: .08em;
+      margin: 8px 0 12px;
+      padding-left: 4px;
+    }
+
+    .cards { max-width: 720px; width: 100%; display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; }
+
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .card-header {
+      background: #0f172a;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #334155;
+    }
+    .card-num {
+      width: 28px; height: 28px;
+      background: #10b981;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    .card-num.purple { background: #7c3aed; }
+    .card-num.blue   { background: #1d4ed8; }
+    .card-num.orange { background: #d97706; }
+    .card-num.red    { background: #dc2626; }
+    .card-num.teal   { background: #0d9488; }
+    .card-num.rose   { background: #e11d48; }
+
+    .card-title { font-size: 15px; font-weight: 600; color: #f1f5f9; }
+    .card-badge {
+      margin-left: auto;
+      font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 4px;
+    }
+    .card-badge.new     { background: #10b981; color: #fff; }
+    .card-badge.updated { background: #f59e0b; color: #0f172a; }
+    .card-badge.live    { background: #6366f1; color: #fff; }
+
+    .card-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+    .field-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .field-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      width: 80px;
+      flex-shrink: 0;
+      padding-top: 3px;
+    }
+    .field-value {
+      font-size: 14px;
+      color: #e2e8f0;
+      word-break: break-all;
+      flex: 1;
+    }
+    .field-value a {
+      color: #38bdf8;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .field-value a:hover { text-decoration: underline; }
+
+    .pill {
+      display: inline-block;
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      color: #e2e8f0;
+      letter-spacing: 0.04em;
+      margin-right: 6px;
+      margin-bottom: 4px;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 6px;
+    }
+    .tag-view   { background: #1d4ed8; color: #bfdbfe; }
+    .tag-print  { background: #7c3aed; color: #ddd6fe; }
+    .tag-live   { background: #059669; color: #a7f3d0; }
+    .tag-ai     { background: #7c3aed; color: #e9d5ff; }
+    .tag-secure { background: #dc2626; color: #fecaca; }
+    .tag-api    { background: #0d9488; color: #99f6e4; }
+
+    .cred-table { width: 100%; border-collapse: collapse; }
+    .cred-table th {
+      font-size: 11px; font-weight: 600; color: #64748b;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      text-align: left; padding: 4px 8px 8px;
+    }
+    .cred-table td {
+      padding: 6px 8px;
+      font-size: 13px; color: #e2e8f0;
+      border-top: 1px solid #1e293b;
+    }
+    .cred-table td:first-child { width: 36px; }
+    .cred-table td.mono { font-family: 'Courier New', monospace; letter-spacing: 0.04em; }
+
+    .logout-row {
+      max-width: 720px; width: 100%;
+      display: flex; justify-content: flex-end;
+      margin-bottom: 20px;
+    }
+    .logout-btn {
+      background: none; border: 1px solid #334155;
+      border-radius: 6px; padding: 6px 14px;
+      font-size: 12px; color: #64748b;
+      cursor: pointer; transition: .2s;
+    }
+    .logout-btn:hover { border-color: #f87171; color: #f87171; }
+
+    /* ── Architecture / Flow ─────────────────────────────────────────────── */
+    .arch-block {
+      background: #0f172a;
+      border: 1px solid #1e3a5f;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 0;
+    }
+    .arch-block-title {
+      font-size: 11px; font-weight: 700;
+      color: #38bdf8; text-transform: uppercase; letter-spacing: .07em;
+      margin-bottom: 10px;
+    }
+    .arch-list {
+      list-style: none;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+    .arch-list li {
+      font-size: 12.5px; color: #cbd5e1;
+      padding-left: 14px;
+      position: relative;
+      line-height: 1.55;
+    }
+    .arch-list li::before {
+      content: '›';
+      position: absolute; left: 0;
+      color: #475569;
+    }
+    .arch-list li b { color: #f1f5f9; }
+    .arch-list li code {
+      font-family: 'Courier New', monospace;
+      font-size: 11.5px;
+      background: #1e293b;
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: #a5f3fc;
+    }
+
+    .flow-steps {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .flow-step {
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .flow-num {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #1e3a5f; border: 1px solid #2563eb;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; color: #93c5fd;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .flow-text { font-size: 12.5px; color: #cbd5e1; line-height: 1.55; }
+    .flow-text b { color: #f1f5f9; }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media(max-width:560px){ .two-col{ grid-template-columns: 1fr; } }
+
+    .sec-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10.5px; font-weight: 700;
+      padding: 3px 8px; border-radius: 20px;
+      margin-right: 4px; margin-bottom: 4px;
+    }
+    .sec-badge.green  { background: rgba(16,185,129,.15); color: #34d399; border: 1px solid rgba(16,185,129,.3); }
+    .sec-badge.blue   { background: rgba(59,130,246,.15); color: #60a5fa; border: 1px solid rgba(59,130,246,.3); }
+    .sec-badge.amber  { background: rgba(245,158,11,.15); color: #fbbf24; border: 1px solid rgba(245,158,11,.3); }
+    .sec-badge.red    { background: rgba(239,68,68,.15);  color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+
+    .divider-line {
+      max-width: 720px; width: 100%;
+      border: none; border-top: 1px solid #1e293b;
+      margin: 24px 0 8px;
+    }
+
+    .footer {
+      margin-top: 40px;
+      font-size: 12px;
+      color: #475569;
+      text-align: center;
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Password Gate ──────────────────────────────────────────────────────── -->
+  <div id="gate">
+    <div class="gate-card">
+      <div class="gate-logo">
+        <svg viewBox="0 0 100 100" fill="white">
+          <path d="M30 70 L50 30 L70 70 Z"/>
+          <circle cx="50" cy="35" r="8"/>
+        </svg>
+      </div>
+      <div class="gate-title">MyntReal — Internal Access</div>
+      <div class="gate-sub">Protected Documents Reference</div>
+
+      <form onsubmit="gateLogin();return false;" autocomplete="off">
+        <div class="gate-field">
+          <label>User ID</label>
+          <input type="text" id="gateUser" placeholder="Enter User ID" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="gate-field">
+          <label>Password</label>
+          <input type="password" id="gatePass" placeholder="Enter Password" autocomplete="new-password">
+        </div>
+        <button type="submit" class="gate-btn">Access Documents</button>
+      </form>
+      <div class="gate-error" id="gateError">Incorrect credentials. Please try again.</div>
+    </div>
+  </div>
+
+  <!-- ── Main Content ──────────────────────────────────────────────────────── -->
+  <div id="content" style="display:none">
+
+    <div class="logo-row">
+      <div class="logo-mark">
+        <svg viewBox="0 0 100 100" fill="white">
+          <path d="M30 70 L50 30 L70 70 Z"/>
+          <circle cx="50" cy="35" r="8"/>
+        </svg>
+      </div>
+      <div class="logo-name">MyntReal</div>
+    </div>
+    <div class="page-title">Protected Documents — Access Reference</div>
+
+    <div class="logout-row">
+      <button class="logout-btn" onclick="gateLock()">🔒 Lock</button>
+    </div>
+
+    <div class="notice">
+      ⚠️ This page is for internal use only. Do not share credentials outside the organisation.
+      All documents have view-only access under MR10001. Print access is available under MR10002.
+      This reference is updated automatically with every platform release.
+    </div>
+
+    <!-- ── Section A: System Guides ── -->
+    <div class="section-header">A — System Guides</div>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num">1</div>
+          <div class="card-title">Staff System Guide</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/staffguide" target="_blank">mnrteam.com/staffguide</a>
+            </div>
+          </div>
+          <table class="cred-table">
+            <thead><tr><th></th><th>User ID</th><th>Password</th><th>Access</th></tr></thead>
+            <tbody>
+              <tr><td>→</td><td class="mono">MR10001</td><td class="mono">Mrguide</td><td><span class="tag tag-view">View</span></td></tr>
+              <tr><td>→</td><td class="mono">MR10002</td><td class="mono">MR10001</td><td><span class="tag tag-print">Print</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num">2</div>
+          <div class="card-title">MNR System Guide</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/mnrguide" target="_blank">mnrteam.com/mnrguide</a>
+            </div>
+          </div>
+          <table class="cred-table">
+            <thead><tr><th></th><th>User ID</th><th>Password</th><th>Access</th></tr></thead>
+            <tbody>
+              <tr><td>→</td><td class="mono">MR10001</td><td class="mono">Mnrguide</td><td><span class="tag tag-view">View</span></td></tr>
+              <tr><td>→</td><td class="mono">MR10002</td><td class="mono">MR10001</td><td><span class="tag tag-print">Print</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num">3</div>
+          <div class="card-title">MNR Member User Guide</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/mnruserguide" target="_blank">mnrteam.com/mnruserguide</a>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value">
+              <span class="tag tag-live">Member Login</span>
+              &nbsp; Each MNR member logs in with their own Member ID and password.
+              No shared credentials — uses the member's live account.
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Section B: Validation Documents ── -->
+    <div class="section-header">B — Validation Documents</div>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num blue">4</div>
+          <div class="card-title">Staff Validation Document</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/staffvalidation" target="_blank">mnrteam.com/staffvalidation</a>
+            </div>
+          </div>
+          <table class="cred-table">
+            <thead><tr><th></th><th>User ID</th><th>Password</th><th>Access</th></tr></thead>
+            <tbody>
+              <tr><td>→</td><td class="mono">MR10001</td><td class="mono">Staffui</td><td><span class="tag tag-view">View</span></td></tr>
+              <tr><td>→</td><td class="mono">MR10002</td><td class="mono">MR10001</td><td><span class="tag tag-print">Print</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num blue">5</div>
+          <div class="card-title">MNR Validation Document</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/mnrvalidation" target="_blank">mnrteam.com/mnrvalidation</a>
+            </div>
+          </div>
+          <table class="cred-table">
+            <thead><tr><th></th><th>User ID</th><th>Password</th><th>Access</th></tr></thead>
+            <tbody>
+              <tr><td>→</td><td class="mono">MR10001</td><td class="mono">Mnrui</td><td><span class="tag tag-view">View</span></td></tr>
+              <tr><td>→</td><td class="mono">MR10002</td><td class="mono">MR10001</td><td><span class="tag tag-print">Print</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num blue">6</div>
+          <div class="card-title">Staff Testing Requirements</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/testreq" target="_blank">mnrteam.com/testreq</a>
+            </div>
+          </div>
+          <table class="cred-table">
+            <thead><tr><th></th><th>User ID</th><th>Password</th><th>Access</th></tr></thead>
+            <tbody>
+              <tr><td>→</td><td class="mono">MR10001</td><td class="mono">Testreq</td><td><span class="tag tag-view">View</span></td></tr>
+              <tr><td>→</td><td class="mono">MR10002</td><td class="mono">MR10001</td><td><span class="tag tag-print">Print</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Section C: Modules & Platforms ── -->
+    <div class="section-header">C — Modules & Platforms</div>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num purple">7</div>
+          <div class="card-title">VGK4U EV Spares Marketplace</div>
+          <span class="card-badge live">LIVE</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/ecom" target="_blank">mnrteam.com/ecom</a>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value">
+              <span class="tag tag-live">Public</span>
+              &nbsp; Partner, MNR Member, and Guest access.
+              Discount modes: MNR (3%), Dealer (12%), ETC Student (10%).
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Features</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              238 SKUs · Category &amp; price filters · VGK AI search (EN / हि / తె) ·
+              Quote export (PDF + CSV) · Basket share link · PO submission
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num purple">8</div>
+          <div class="card-title">VGK AI Voice &amp; Text Assistant</div>
+          <span class="card-badge live">LIVE</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">Portals</div>
+            <div class="field-value">
+              <span class="tag tag-live">Staff</span>
+              <span class="tag tag-live" style="margin-left:6px">Partner</span>
+              <span class="tag tag-live" style="margin-left:6px">Marketplace</span>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              Available via the floating 🤖 button (bottom-right) on all portals.
+              Staff portal uses Gemini AI. Marketplace uses rule-based engine.
+              Supports English, Hindi (हि), and Telugu (తె).
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Commands</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              Search spares · Create tasks · Log journeys · Create CRM leads ·
+              Open service tickets · Find products · Multilingual mic input
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num purple">9</div>
+          <div class="card-title">Service Ticket → VGK4U Marketplace Integration</div>
+          <span class="card-badge live">LIVE</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/staff/service-queue" target="_blank">mnrteam.com/staff/service-queue</a>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value">
+              <span class="tag tag-view">Staff Login</span>
+              &nbsp; Service / Technical ticket spare-parts workflow.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Features</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              Catalog search-and-pick · Auto ZYPO (in-stock) or ZYPR (out-of-stock) ·
+              Discount modes (MNR / Dealer / Student) · Source tracking in procurement views
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num orange">10</div>
+          <div class="card-title">ETC Training Centre — Student Master</div>
+          <span class="card-badge live">LIVE</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/staff/etc-students" target="_blank">mnrteam.com/staff/etc-students</a>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value">
+              <span class="tag tag-view">Staff Login</span>
+              &nbsp; VGK4U EV Training Centre student records management.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num orange">11</div>
+          <div class="card-title">Real Dreams — Real Estate Marketplace</div>
+          <span class="card-badge live">LIVE</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/realestate" target="_blank">mnrteam.com/realestate</a>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value">
+              <span class="tag tag-live">Public</span>
+              &nbsp; Property listings, CRM integration, and VGK4U dual-segment system.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num orange">12</div>
+          <div class="card-title">Universal CRM / Lead Management</div>
+          <span class="card-badge updated">UPDATED</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/staff/crm" target="_blank">mnrteam.com/staff/crm</a>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value">
+              <span class="tag tag-view">Staff Login</span>
+              &nbsp; Cross-category leads · Polymorphic handler assignment · SFMS auto-sync ·
+              CRM transaction receipts
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Solar CRM</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              <a href="https://mnrteam.com/staff/solar-leads" target="_blank" style="color:#38bdf8">mnrteam.com/staff/solar-leads</a><br>
+              26-slot solar document management per lead (Consumer + Co-Applicant) ·
+              UPSERT on re-upload · PDF/image viewer · Doc number tracking
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Section D: Solar CRM & AI Features (Latest) ── -->
+    <div class="section-header">D — Solar CRM &amp; AI Features — Latest</div>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num teal">13</div>
+          <div class="card-title">AI Auto-Dialer &amp; Campaign Calling</div>
+          <span class="card-badge new">NEW</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/staff/ai-calling" target="_blank">mnrteam.com/staff/ai-calling</a>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value">
+              <span class="tag tag-view">Staff Login</span>
+              <span class="tag tag-ai" style="margin-left:6px">AI Powered</span>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Features</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              Twilio outbound calling · GPT-4 two-way AI conversations during live calls ·
+              Campaign auto-dialer (bulk lead lists) · IVR bypass for campaign calls ·
+              Hindi / English language auto-detection · Knowledge base integration ·
+              Call recording playback · Call outcome tracking · Webhook real-time event handling
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">API</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;">
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:2px 6px;border-radius:4px;color:#a5f3fc">POST /api/v1/ai-calling/outbound-call</code> &nbsp;·&nbsp;
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:2px 6px;border-radius:4px;color:#a5f3fc">POST /api/v1/ai-calling/campaign/start</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num teal">14</div>
+          <div class="card-title">Solar Document Management (24-Slot System)</div>
+          <span class="card-badge new">NEW</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              Accessible via <b>Docs</b> button on any Solar CRM lead row
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value">
+              <span class="tag tag-view">Staff Login</span>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Doc Types</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              <b style="color:#f1f5f9">Consumer (21):</b> Aadhaar · PAN · Electricity Bill · Bank Book · Bank Statement · Roof Top Photo · Geotagging Photo · Solar Rooftop Registration · Technical Installation Details · Quotation · Feasibility Letter · Etoken · Acknowledgement · Net Meter Agreement · DCR Certificate · Invoice · Installation Certificate · Annexure-A · Annexure-C · Synchronisation Certificate · Commissioning Test Report<br>
+              <b style="color:#f1f5f9">Co-Applicant (3):</b> Aadhaar · PAN · Bank Statement
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Storage</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;">
+              Replit Object Storage · UPSERT on re-upload · PDF + image support ·
+              Doc number field per document · Upload audit trail (uploader name + timestamp)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num teal">15</div>
+          <div class="card-title">Lead Document Share Links (6-Hour Expiry)</div>
+          <span class="card-badge new">NEW</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value">
+              <span class="tag tag-view">Staff Login</span> to generate &nbsp;·&nbsp;
+              <span class="tag tag-live">Public</span> to view (no login required)
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Share URL</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;">
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:2px 6px;border-radius:4px;color:#a5f3fc">mnrteam.com/lead-share?token=&lt;40-byte token&gt;</code><br>
+              Token expires 6 hours from generation · Auto-invalidates after expiry
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Features</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              2-phase modal: select all docs or specific types (24 checkboxes) ·
+              Lead hero (Full Name + Lead ID + Application No + Status) ·
+              Live countdown timer · Filtered doc groups (skips excluded types) ·
+              "Selected Documents Only" notice when filter active ·
+              View + Download buttons per document · Bulk token generation for exports ·
+              "Documents Link" column in Excel/PDF exports
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">API</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;">
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:2px 6px;border-radius:4px;color:#a5f3fc">POST /api/v1/crm/leads/{id}/share-link</code><br>
+              Body: <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:2px 6px;border-radius:4px;color:#a5f3fc">{ doc_types: ["adhar","pan",...] }</code> — omit for all docs
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num teal">16</div>
+          <div class="card-title">WhatsApp Monitoring (3-Tab Dashboard)</div>
+          <span class="card-badge new">NEW</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">URL</div>
+            <div class="field-value">
+              <a href="https://mnrteam.com/staff/whatsapp" target="_blank">mnrteam.com/staff/whatsapp</a>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Access</div>
+            <div class="field-value">
+              <span class="tag tag-view">Staff Login</span>
+              &nbsp; Connected to: <b style="color:#f1f5f9">+91 85858 52738</b> (Meta WhatsApp Business API)
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Tabs</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              <b style="color:#f1f5f9">Incoming</b> — All messages received · Sender name/number · Timestamp · Message body<br>
+              <b style="color:#f1f5f9">Outgoing</b> — All messages sent by staff · Template / free-form<br>
+              <b style="color:#f1f5f9">Conversations</b> — Grouped by contact · Full thread view
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Section E: Platform Architecture End-to-End ── -->
+    <hr class="divider-line">
+    <div class="section-header">E — Platform Architecture — End to End</div>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num" style="background:#1e3a5f;border:1px solid #2563eb;color:#93c5fd;font-size:11px">E1</div>
+          <div class="card-title">Tech Stack Overview</div>
+        </div>
+        <div class="card-body">
+          <div class="two-col">
+            <div class="arch-block">
+              <div class="arch-block-title">Backend</div>
+              <ul class="arch-list">
+                <li><b>Python 3.11</b> + FastAPI</li>
+                <li>Uvicorn ASGI — <b>4 workers</b></li>
+                <li>SQLAlchemy (ORM) + psycopg2</li>
+                <li>PostgreSQL 15 database</li>
+                <li>Pydantic v2 data models</li>
+                <li>Runs on port <code>8000</code></li>
+              </ul>
+            </div>
+            <div class="arch-block">
+              <div class="arch-block-title">Frontend</div>
+              <ul class="arch-list">
+                <li><b>Node.js</b> HTTP server (<code>server.js</code>)</li>
+                <li>Vanilla HTML + CSS + JavaScript</li>
+                <li>No framework — hand-optimised pages</li>
+                <li>Runs on port <code>3000</code></li>
+                <li>All pages served with <code>no-cache</code></li>
+                <li>Proxied via Replit mTLS iframe</li>
+              </ul>
+            </div>
+            <div class="arch-block">
+              <div class="arch-block-title">Mobile App</div>
+              <ul class="arch-list">
+                <li><b>Vite</b> build watcher</li>
+                <li>Output built to <code>frontend/public/mobile</code></li>
+                <li>Served as static files by frontend server</li>
+                <li>Auto-rebuilds on source change</li>
+              </ul>
+            </div>
+            <div class="arch-block">
+              <div class="arch-block-title">Storage</div>
+              <ul class="arch-list">
+                <li>PostgreSQL — all structured data</li>
+                <li>Replit Object Storage — documents</li>
+                <li>Files: <code>/storage/{filename}</code></li>
+                <li>PDF + image uploads (up to ~10 MB)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num" style="background:#1e3a5f;border:1px solid #2563eb;color:#93c5fd;font-size:11px">E2</div>
+          <div class="card-title">Request Flow — Staff CRM Page Load</div>
+        </div>
+        <div class="card-body">
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">User browser hits <b>mnrteam.com/staff/solar-leads</b> → Replit reverse proxy → Node.js server on port 3000</div></div>
+            <div class="flow-step"><div class="flow-num">2</div><div class="flow-text">server.js checks cookies for <code>staff_token</code>. No token → redirect to <b>/login</b></div></div>
+            <div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Valid token → NDA enforcement injected into HTML. HTML served with <code>no-cache</code> headers</div></div>
+            <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Browser renders page. JavaScript calls <code>staffFetch()</code> — auto-attaches <code>staff_token</code> cookie on every API call</div></div>
+            <div class="flow-step"><div class="flow-num">5</div><div class="flow-text">API call hits <b>FastAPI backend</b> at <code>/api/v1/crm/...</code> on port 8000. Auth middleware validates token → looks up employee in DB</div></div>
+            <div class="flow-step"><div class="flow-num">6</div><div class="flow-text">Backend queries PostgreSQL → returns JSON. Frontend renders table/cards. Files served from Object Storage at <code>/storage/</code></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num" style="background:#1e3a5f;border:1px solid #2563eb;color:#93c5fd;font-size:11px">E3</div>
+          <div class="card-title">AI Calling Flow — Twilio + GPT-4</div>
+        </div>
+        <div class="card-body">
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">Staff triggers call from dashboard → <code>POST /api/v1/ai-calling/outbound-call</code> → Twilio REST API initiates call to lead's phone number</div></div>
+            <div class="flow-step"><div class="flow-num">2</div><div class="flow-text">Lead answers → Twilio webhook fires to backend → TwiML response plays greeting (TTS, language auto-detected: Hindi / English)</div></div>
+            <div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Lead speaks → Twilio Speech-to-Text transcribes → sent to <b>GPT-4</b> with full conversation history + knowledge base context</div></div>
+            <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">GPT-4 generates reply → backend TTS (Twilio) speaks response to lead. Loop continues until call ends</div></div>
+            <div class="flow-step"><div class="flow-num">5</div><div class="flow-text">Call ends → recording stored → outcome tracked. Campaign auto-dials next lead. IVR entirely skipped for campaign calls</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num" style="background:#1e3a5f;border:1px solid #2563eb;color:#93c5fd;font-size:11px">E4</div>
+          <div class="card-title">Lead Document Share Flow</div>
+        </div>
+        <div class="card-body">
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-num">1</div><div class="flow-text">Staff clicks <b>Share</b> button on lead row → 2-phase modal opens. Staff chooses All or Selected doc types</div></div>
+            <div class="flow-step"><div class="flow-num">2</div><div class="flow-text"><code>POST /api/v1/crm/leads/{id}/share-link</code> with optional <code>doc_types</code> array → backend generates 40-byte URL-safe token</div></div>
+            <div class="flow-step"><div class="flow-num">3</div><div class="flow-text">Token stored in <code>crm_lead_share_tokens</code> table with expiry = <b>now + 6 hours UTC</b> + doc_filter JSON</div></div>
+            <div class="flow-step"><div class="flow-num">4</div><div class="flow-text">Staff copies URL: <code>mnrteam.com/lead-share?token=...</code> and sends to client via WhatsApp/SMS</div></div>
+            <div class="flow-step"><div class="flow-num">5</div><div class="flow-text">Client opens link → <code>GET /api/v1/crm/share/{token}</code> → backend validates expiry, filters docs by doc_filter → returns lead data</div></div>
+            <div class="flow-step"><div class="flow-num">6</div><div class="flow-text">Share page renders: lead hero (Name + Lead ID + App No) · countdown timer · only included doc groups · View/Download per doc. No login needed. No edits possible</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num" style="background:#1e3a5f;border:1px solid #2563eb;color:#93c5fd;font-size:11px">E5</div>
+          <div class="card-title">External Integrations</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">Twilio</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Outbound calling · SMS · IVR · Speech-to-Text · TTS · Call recording · Webhooks
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">OpenAI</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              GPT-4 for live call conversations · Knowledge base Q&amp;A · AI assistant on staff portal
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">WhatsApp</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Meta WhatsApp Business API · Webhook receives all messages → stored in DB · Staff monitoring dashboard
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">MyOperator</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Additional telephony integration · Call routing · Webhook event sync
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Storage</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Replit Object Storage (JS SDK) — all uploaded documents, images, PDFs
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num" style="background:#1e3a5f;border:1px solid #2563eb;color:#93c5fd;font-size:11px">E6</div>
+          <div class="card-title">Database Schema — Key Tables</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">CRM</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">crm_leads</code> — leads master &nbsp;·&nbsp;
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">crm_lead_solar_documents</code> — 26-slot docs (UNIQUE lead_id + doc_type) &nbsp;·&nbsp;
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">crm_lead_share_tokens</code> — share tokens with 6h expiry + doc_filter
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Calling</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">ai_call_logs</code> — all call records &nbsp;·&nbsp;
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">ai_call_campaigns</code> — campaign definitions &nbsp;·&nbsp;
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">ai_knowledge_base</code> — knowledge entries
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">WhatsApp</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;">
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">whatsapp_messages</code> — all in/out messages with sender, body, timestamp, direction
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Staff</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">employees</code> — staff master &nbsp;·&nbsp;
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">staff_sessions</code> — active login sessions &nbsp;·&nbsp;
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">nda_acceptances</code> — NDA records
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Section F: Security & Hosting ── -->
+    <hr class="divider-line">
+    <div class="section-header">F — Security &amp; Hosting Details</div>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num red">F1</div>
+          <div class="card-title">Hosting &amp; Infrastructure</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">Platform</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              <b>Replit Cloud</b> — managed cloud hosting on shared Linux containers (NixOS).
+              Auto-restart on crash via loop wrappers in all workflow commands.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Domain</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              <b>mnrteam.com</b> — custom domain via Replit deployment (CNAME to Replit CDN).
+              Dev environment also accessible at <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">*.replit.app</code> subdomain.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">TLS / SSL</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Enforced on all traffic. Replit provides automatic TLS certificates (Let's Encrypt).
+              Preview pane uses Replit mTLS proxy. All HTTP → HTTPS redirect enforced.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Uptime</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Processes managed by Replit Workflow engine. Backend: FastAPI with 4 Uvicorn workers.
+              Frontend: Node.js single-process. Each restarts automatically within 3–5 seconds of crash.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Storage</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              PostgreSQL hosted by Replit (Neon-compatible). Replit Object Storage for all files.
+              Both are persistent across restarts and deployments.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num red">F2</div>
+          <div class="card-title">Authentication &amp; Access Control</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">Staff Login</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Employee ID + password. Session token issued on success → stored as
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">httpOnly</code> cookie.
+              All API calls require this token. Token validated on every request against DB.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">NDA Gate</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Every staff page has NDA enforcement injected server-side. Staff must accept NDA before first access.
+              Acceptance recorded in <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">nda_acceptances</code> table with timestamp + IP.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Share Links</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              40-byte cryptographically random URL-safe tokens (<code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">secrets.token_urlsafe(40)</code>).
+              Hard expiry 6 hours from generation (UTC). Expired tokens return HTTP 410.
+              Share page is read-only — no data can be modified by the recipient.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">API Auth</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              All protected endpoints use FastAPI dependency injection to validate the session token
+              before executing any query. Unauthenticated requests get HTTP 401.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">CORS</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Backend allows requests from the frontend proxy origin only.
+              All API calls made via relative URLs to prevent cross-origin leakage.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num red">F3</div>
+          <div class="card-title">Data Security &amp; Document Protection</div>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">At Rest</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              PostgreSQL data encrypted at rest by Replit infrastructure. 
+              Object Storage files encrypted at rest (AES-256 via Replit/Cloudflare R2).
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">In Transit</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              All traffic HTTPS/TLS 1.3. File download URLs served via the same authenticated
+              session — not publicly guessable paths.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Documents</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Files stored with randomised internal names (UUID-based). Access to
+              <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">/storage/{file}</code> is only meaningful when the staff session is active or a valid share token is present.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Secrets</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              All API keys (Twilio, OpenAI, Meta, MyOperator) stored as Replit Secrets —
+              never in code or config files. Injected as environment variables at runtime.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Badges</div>
+            <div class="field-value">
+              <span class="sec-badge green">✓ TLS 1.3</span>
+              <span class="sec-badge green">✓ AES-256 at rest</span>
+              <span class="sec-badge blue">✓ httpOnly cookies</span>
+              <span class="sec-badge blue">✓ Token auth</span>
+              <span class="sec-badge amber">✓ 6h expiry links</span>
+              <span class="sec-badge amber">✓ NDA enforcement</span>
+              <span class="sec-badge red">✓ Secrets vault</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Section G: AI Agent ── -->
+    <hr class="divider-line">
+    <div class="section-header">G — AI Development Agent</div>
+    <div class="cards">
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num rose">G1</div>
+          <div class="card-title">Replit AI Agent — How the Platform is Built</div>
+          <span class="card-badge live">ACTIVE</span>
+        </div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field-label">What it is</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              The entire MyntReal platform — backend, frontend, database, integrations — is built
+              and continuously maintained by <b>Replit Agent</b>, an autonomous AI software engineer.
+              It reads the codebase, writes code, tests features, fixes bugs, and deploys changes — all in real time.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">How it works</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;line-height:1.7;">
+              The business owner (Mynt Real LLP) describes a feature or fix in plain language.
+              The agent reads relevant files, makes targeted edits to backend Python + frontend HTML/JS,
+              runs the workflows to test, then confirms the feature is live.
+              No separate deployment step needed for development — changes appear immediately via live reload.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Scope</div>
+            <div class="field-value" style="font-size:12.5px;color:#94a3b8;line-height:1.7;">
+              Writes Python (FastAPI endpoints, DB migrations, business logic) ·
+              Writes HTML/CSS/JS (pages, modals, tables, charts) ·
+              Manages Replit Secrets and environment configuration ·
+              Adds DB migrations inline in <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">main.py</code> startup ·
+              Integrates third-party APIs (Twilio, OpenAI, Meta, MyOperator) ·
+              Maintains this reference document
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Memory</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              The agent maintains a <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">replit.md</code> file with project architecture, key decisions,
+              and current state. Context from previous sessions is passed via a conversation scratchpad.
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">Deployment</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Production deployment at <b>mnrteam.com</b> is triggered manually by the owner via
+              Replit's one-click publish. Dev changes are live instantly on the Replit preview URL.
+              Prod and dev run the same codebase — no separate branches or CI/CD pipeline.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num rose">G2</div>
+          <div class="card-title">Feature Development Timeline — March 2026</div>
+        </div>
+        <div class="card-body">
+          <div class="flow-steps">
+            <div class="flow-step"><div class="flow-num">✓</div><div class="flow-text"><b>Solar Document Management</b> — 26-slot upload system with UPSERT, doc numbers, viewer, audit trail</div></div>
+            <div class="flow-step"><div class="flow-num">✓</div><div class="flow-text"><b>Lead Share Links</b> — 6-hour token system with doc filter (24-checkbox 2-phase modal), public share page with lead hero + countdown</div></div>
+            <div class="flow-step"><div class="flow-num">✓</div><div class="flow-text"><b>AI Auto-Dialer</b> — Twilio + GPT-4 live call conversations, campaign system, IVR bypass, Hindi/English auto-detect</div></div>
+            <div class="flow-step"><div class="flow-num">✓</div><div class="flow-text"><b>WhatsApp Monitoring</b> — 3-tab dashboard (Incoming / Outgoing / Conversations) connected to Meta Business API</div></div>
+            <div class="flow-step"><div class="flow-num">✓</div><div class="flow-text"><b>Knowledge Base</b> — AI knowledge entries for call context, searchable by GPT during live conversations</div></div>
+            <div class="flow-step"><div class="flow-num">✓</div><div class="flow-text"><b>Export with Share Links</b> — "Documents Link (6h)" column auto-generated in Excel + PDF lead exports</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-num rose">G3</div>
+          <div class="card-title">Full Build Environment &amp; Platform Inventory</div>
+          <span class="card-badge live">COMPLETE</span>
+        </div>
+        <div class="card-body">
+
+          <div class="field-row">
+            <div class="field-label">IDE / Dev</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              <b>Replit Cloud IDE</b> — browser-based development environment. Code, run, test, and deploy all from one place.
+              No local setup required. Auto-saves and auto-restarts on file change.
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Languages</div>
+            <div class="field-value">
+              <span class="sec-badge blue">Python 3.11</span>
+              <span class="sec-badge blue">JavaScript (ES2022)</span>
+              <span class="sec-badge blue">Node.js 20</span>
+              <span class="sec-badge blue">HTML5 / CSS3</span>
+              <span class="sec-badge blue">SQL (PostgreSQL)</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Frameworks</div>
+            <div class="field-value">
+              <span class="sec-badge green">FastAPI</span>
+              <span class="sec-badge green">Uvicorn (ASGI)</span>
+              <span class="sec-badge green">SQLAlchemy ORM</span>
+              <span class="sec-badge green">Pydantic v2</span>
+              <span class="sec-badge green">Vite (mobile build)</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Database</div>
+            <div class="field-value">
+              <span class="sec-badge amber">PostgreSQL 15</span>
+              <span class="sec-badge amber">Replit Neon-compatible DB</span>
+              <span class="sec-badge amber">psycopg2 driver</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Hosting</div>
+            <div class="field-value">
+              <span class="sec-badge green">Replit Cloud (Linux / NixOS)</span>
+              <span class="sec-badge green">mnrteam.com (custom domain)</span>
+              <span class="sec-badge green">Auto TLS via Let's Encrypt</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Storage</div>
+            <div class="field-value">
+              <span class="sec-badge amber">Replit Object Storage</span>
+              <span class="sec-badge amber">Cloudflare R2 backend</span>
+              <span class="sec-badge amber">AES-256 at rest</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">AI / ML</div>
+            <div class="field-value">
+              <span class="sec-badge red">OpenAI GPT-4</span>
+              <span class="sec-badge red">Google Gemini AI</span>
+              <span class="sec-badge red">Twilio STT (Speech-to-Text)</span>
+              <span class="sec-badge red">Twilio TTS (Text-to-Speech)</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Telephony</div>
+            <div class="field-value">
+              <span class="sec-badge blue">Twilio Voice API</span>
+              <span class="sec-badge blue">Twilio TwiML Webhooks</span>
+              <span class="sec-badge blue">MyOperator API</span>
+              <span class="sec-badge blue">MyOperator Webhooks</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Messaging</div>
+            <div class="field-value">
+              <span class="sec-badge green">Meta WhatsApp Business API</span>
+              <span class="sec-badge green">Twilio SMS</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Auth</div>
+            <div class="field-value">
+              <span class="sec-badge amber">httpOnly session cookies</span>
+              <span class="sec-badge amber">secrets.token_urlsafe tokens</span>
+              <span class="sec-badge amber">Google OAuth (member portal)</span>
+              <span class="sec-badge amber">NDA enforcement gate</span>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Version Ctrl</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              Git — auto-managed by Replit. Checkpoint commits created after every major change.
+              Rollback available to any checkpoint from the Replit UI.
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Deploy</div>
+            <div class="field-value" style="font-size:12.5px;color:#cbd5e1;">
+              One-click publish from Replit → live at <b>mnrteam.com</b> within ~60 seconds.
+              Health checks run automatically. Production and dev share same codebase.
+              Production DB is separate from the dev DB — full isolation.
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Processes</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              <b style="color:#f1f5f9">FastAPI Backend</b> — <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4</code><br>
+              <b style="color:#f1f5f9">Frontend Server</b> — <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">node server.js</code> (port 3000) — all HTML routes + file proxy<br>
+              <b style="color:#f1f5f9">Mobile Watcher</b> — <code style="font-family:'Courier New',monospace;font-size:11px;background:#0f172a;padding:1px 5px;border-radius:3px;color:#a5f3fc">vite build --watch --outDir ../frontend/public/mobile</code><br>
+              All three run in auto-restart loops — crash recovery within 3–5 seconds
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field-label">Platforms Built</div>
+            <div class="field-value" style="font-size:12px;color:#94a3b8;line-height:1.7;">
+              Staff CRM Portal (Solar, MNR, Real Estate leads) ·
+              MNR Member Portal (coupons, rewards, referrals) ·
+              VGK4U EV Spares Marketplace (238 SKUs) ·
+              ETC Training Centre (student management) ·
+              Real Dreams Real Estate Marketplace ·
+              AI Auto-Dialer &amp; Campaign System ·
+              WhatsApp Monitoring Dashboard ·
+              Lead Document Share System ·
+              VGK AI Voice &amp; Text Assistant (3 portals) ·
+              Service Ticket → Marketplace Integration ·
+              Staff Day Planner &amp; Task Manager ·
+              Protected Documents Access Hub (this page)
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <div class="footer">
+      MyntReal (Mynt Real LLP) &nbsp;·&nbsp; Internal Reference &nbsp;·&nbsp; mnrteam.com<br>
+      All documents are updated with each platform release by the AI development agent.<br>
+      Platform maintained by Replit Agent &nbsp;·&nbsp; Last updated: March 2026
+    </div>
+
+  </div>
+
+  <script>
+    const VALID_USER = 'MR10002';
+    const VALID_PASS = 'MR10001';
+    const SESSION_KEY = 'mnr_docsaccess_auth';
+
+    function gateLogin() {
+      const user = document.getElementById('gateUser').value.trim();
+      const pass = document.getElementById('gatePass').value;
+      const err  = document.getElementById('gateError');
+      if (user === VALID_USER && pass === VALID_PASS) {
+        sessionStorage.setItem(SESSION_KEY, '1');
+        document.getElementById('gate').classList.add('hidden');
+        document.getElementById('content').style.display = 'flex';
+        document.getElementById('content').style.flexDirection = 'column';
+        document.getElementById('content').style.alignItems = 'center';
+        err.classList.remove('visible');
+      } else {
+        err.classList.add('visible');
+        document.getElementById('gatePass').value = '';
+        document.getElementById('gatePass').focus();
+      }
+    }
+
+    function gateLock() {
+      sessionStorage.removeItem(SESSION_KEY);
+      document.getElementById('gate').classList.remove('hidden');
+      document.getElementById('content').style.display = 'none';
+      document.getElementById('gateUser').value = '';
+      document.getElementById('gatePass').value = '';
+      document.getElementById('gateError').classList.remove('visible');
+    }
+
+    if (sessionStorage.getItem(SESSION_KEY) === '1') {
+      document.getElementById('gate').classList.add('hidden');
+      document.getElementById('content').style.display = 'flex';
+      document.getElementById('content').style.flexDirection = 'column';
+      document.getElementById('content').style.alignItems = 'center';
+    }
+
+    ['gateUser','gatePass'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') gateLogin();
+      });
+    });
+  </script>
+
+</body>
+</html>

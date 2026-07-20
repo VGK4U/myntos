@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Approval Console - DC_PARTNER_001</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .top-header { height: 64px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .page-title { font-size: 18px; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-card .stat-value { font-size: 32px; font-weight: 700; color: #1f2937; }
+        .stat-card .stat-label { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        .stat-card.pending { border-left: 4px solid #f59e0b; }
+        .stat-card.approved { border-left: 4px solid #10b981; }
+        .stat-card.rejected { border-left: 4px solid #ef4444; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 20px; }
+        .approval-list { list-style: none; padding: 0; margin: 0; }
+        .approval-item { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid #e5e7eb; }
+        .approval-item:last-child { border-bottom: none; }
+        .approval-item:hover { background: #f9fafb; }
+        .order-info h4 { font-size: 15px; font-weight: 600; color: #1f2937; margin: 0 0 4px 0; }
+        .order-info p { font-size: 13px; color: #6b7280; margin: 0; }
+        .order-amount { font-size: 18px; font-weight: 700; color: #059669; }
+        .approval-actions { display: flex; gap: 8px; }
+        .btn-approve { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .btn-approve:hover { background: #059669; }
+        .btn-reject { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .btn-reject:hover { background: #dc2626; }
+        .btn-view { background: #f3f4f6; color: #374151; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #10b981; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        .header-divider { width: 1px; height: 32px; background: #e5e7eb; margin: 0 8px; }
+        .user-info-header { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .user-info-header .user-avatar-sm { width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { font-weight: 500; color: #6b7280; }
+        .detail-value { font-weight: 600; color: #1f2937; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div class="top-header">
+            <div class="header-left">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" class="header-logo" onerror="this.style.display='none'">
+                <div class="header-divider"></div>
+                <h1 class="page-title"><i class="fas fa-clipboard-check text-success"></i>Order Approval Console</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info-header" id="headerUserInfo">
+                    <div class="user-avatar-sm" id="headerUserInitials">--</div>
+                    <div class="user-info-details">
+                        <span class="user-info-name" id="headerUserName">Loading...</span>
+                        <div class="user-info-meta"><span class="user-info-role" id="headerUserRole">-</span></div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="StaffSidebar.logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="page-header">
+                <div><h1>Store Manager Approval Console</h1><p>Review and approve pending partner orders</p></div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card pending"><div class="stat-value" id="pendingCount">0</div><div class="stat-label">Pending Approval</div></div>
+                <div class="stat-card approved"><div class="stat-value" id="approvedToday">0</div><div class="stat-label">Approved Today</div></div>
+                <div class="stat-card rejected"><div class="stat-value" id="rejectedToday">0</div><div class="stat-label">Rejected Today</div></div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header"><i class="fas fa-clock me-2"></i>Orders Pending Approval</div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+                    <ul class="approval-list" id="approvalList" style="display: none;"></ul>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-check-circle"></i><h3>All Caught Up!</h3><p>No orders pending approval at this time</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-file-invoice me-2"></i>Order Details</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+            <div class="modal-body" id="orderDetailBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
+                <button type="button" class="btn-reject" id="modalRejectBtn" onclick="rejectOrder()"><i class="fas fa-times me-1"></i>Reject</button>
+                <button type="button" class="btn-approve" id="modalApproveBtn" onclick="approveOrder()"><i class="fas fa-check me-1"></i>Approve</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let pendingOrders = [];
+        let allPartners = [];
+        let currentOrderId = null;
+        const API_BASE = '/api/v1/partner';
+        
+        function getAuthToken() { return localStorage.getItem('staff_token'); }
+        
+        async function loadData() {
+            try {
+                const partnersRes = await fetch(API_BASE + '/partners', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
+                if (partnersRes.ok) {
+                    const data = await partnersRes.json();
+                    allPartners = data.data || [];
+                }
+                loadPendingOrders();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        async function loadPendingOrders() {
+            try {
+                document.getElementById('loadingState').style.display = 'flex';
+                document.getElementById('approvalList').style.display = 'none';
+                
+                const response = await fetch(`${API_BASE}/orders/approval-queue`, { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    pendingOrders = result.data || [];
+                    document.getElementById('pendingCount').textContent = pendingOrders.length;
+                    renderPendingOrders();
+                } else {
+                    pendingOrders = [];
+                    renderPendingOrders();
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                renderPendingOrders();
+            }
+        }
+        
+        function renderPendingOrders() {
+            document.getElementById('loadingState').style.display = 'none';
+            const list = document.getElementById('approvalList');
+            
+            if (pendingOrders.length === 0) {
+                list.style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('emptyState').style.display = 'none';
+            list.style.display = 'block';
+            
+            list.innerHTML = pendingOrders.map(order => {
+                const partner = allPartners.find(p => p.id === order.partner_id);
+                return `
+                    <li class="approval-item">
+                        <div class="order-info">
+                            <h4>${order.order_number} ${order.pi_number ? '| PI: ' + order.pi_number : ''}</h4>
+                            <p>${partner ? partner.partner_name : 'Partner #' + order.partner_id} | ${formatDate(order.order_date)}</p>
+                        </div>
+                        <div class="order-amount">₹${(order.grand_total || 0).toLocaleString()}</div>
+                        <div class="approval-actions">
+                            <button class="btn-view" onclick="viewOrder(${order.id})"><i class="fas fa-eye me-1"></i>View</button>
+                            <button class="btn-approve" onclick="quickApprove(${order.id})"><i class="fas fa-check"></i></button>
+                            <button class="btn-reject" onclick="quickReject(${order.id})"><i class="fas fa-times"></i></button>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        }
+        
+        function formatDate(date) { return date ? new Date(date).toLocaleDateString('en-IN') : '-'; }
+        
+        function viewOrder(id) {
+            currentOrderId = id;
+            const order = pendingOrders.find(o => o.id === id);
+            if (!order) return;
+            
+            const partner = allPartners.find(p => p.id === order.partner_id);
+            document.getElementById('orderDetailBody').innerHTML = `
+                <div class="detail-row"><span class="detail-label">Order Number</span><span class="detail-value">${order.order_number}</span></div>
+                <div class="detail-row"><span class="detail-label">PI Number</span><span class="detail-value">${order.pi_number || '-'}</span></div>
+                <div class="detail-row"><span class="detail-label">Partner</span><span class="detail-value">${partner ? partner.partner_name : 'Unknown'}</span></div>
+                <div class="detail-row"><span class="detail-label">Order Date</span><span class="detail-value">${formatDate(order.order_date)}</span></div>
+                <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">${order.status}</span></div>
+                <div class="detail-row"><span class="detail-label">Subtotal</span><span class="detail-value">₹${(order.subtotal || 0).toLocaleString()}</span></div>
+                <div class="detail-row"><span class="detail-label">Tax</span><span class="detail-value">₹${(order.tax_amount || 0).toLocaleString()}</span></div>
+                <div class="detail-row"><span class="detail-label">Grand Total</span><span class="detail-value" style="color: #059669; font-size: 18px;">₹${(order.grand_total || 0).toLocaleString()}</span></div>
+                ${order.remarks ? `<div class="detail-row"><span class="detail-label">Remarks</span><span class="detail-value">${order.remarks}</span></div>` : ''}
+            `;
+            document.getElementById('detailModal').classList.add('active');
+        }
+        
+        function closeModal() { document.getElementById('detailModal').classList.remove('active'); currentOrderId = null; }
+        
+        async function quickApprove(id) { await processApproval(id, 'APPROVE'); }
+        async function quickReject(id) { await processApproval(id, 'REJECT'); }
+        async function approveOrder() { if (currentOrderId) await processApproval(currentOrderId, 'APPROVE'); }
+        async function rejectOrder() { if (currentOrderId) await processApproval(currentOrderId, 'REJECT'); }
+        
+        async function processApproval(orderId, action) {
+            const endpoint = action === 'APPROVE' ? 'approve' : 'reject';
+            try {
+                const response = await fetch(`${API_BASE}/orders/${orderId}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                
+                if (response.ok) {
+                    closeModal();
+                    loadPendingOrders();
+                    alert(`Order ${action === 'APPROVE' ? 'approved' : 'rejected'} successfully!`);
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Action failed'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => { StaffSidebar.init(); loadData(); });
+    </script>
+</body>
+</html>

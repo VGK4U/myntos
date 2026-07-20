@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KRA Tracking Sheet - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { flex: 1; overflow-y: auto; }
+        .content-area { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header-gradient { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 12px 12px 0 0 !important; padding: 16px 20px; border: none; }
+
+        .summary-cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+        .summary-card { flex: 1; min-width: 120px; background: white; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid #e5e7eb; }
+        .summary-card .sc-icon { font-size: 20px; margin-bottom: 6px; }
+        .summary-card .sc-count { font-size: 24px; font-weight: 700; }
+        .summary-card .sc-label { font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        .sc-total { border-left-color: var(--primary); }
+        .sc-total .sc-icon, .sc-total .sc-count { color: var(--primary); }
+        .sc-completed { border-left-color: var(--success); }
+        .sc-completed .sc-icon, .sc-completed .sc-count { color: var(--success); }
+        .sc-pending { border-left-color: var(--warning); }
+        .sc-pending .sc-icon, .sc-pending .sc-count { color: var(--warning); }
+        .sc-in_progress { border-left-color: #0284c7; }
+        .sc-in_progress .sc-icon, .sc-in_progress .sc-count { color: #0284c7; }
+        .sc-partial { border-left-color: #f97316; }
+        .sc-partial .sc-icon, .sc-partial .sc-count { color: #f97316; }
+        .sc-skipped { border-left-color: var(--danger); }
+        .sc-skipped .sc-icon, .sc-skipped .sc-count { color: var(--danger); }
+        .sc-na { border-left-color: #9ca3af; }
+        .sc-na .sc-icon, .sc-na .sc-count { color: #9ca3af; }
+
+        .filters-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #374151; }
+        .filter-group input, .filter-group select { border: 1px solid #d1d5db; border-radius: 8px; padding: 7px 10px; font-size: 13px; }
+        .filter-group input:focus, .filter-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); outline: none; }
+
+        .btn-load { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border: none; border-radius: 8px; padding: 8px 20px; font-weight: 600; font-size: 13px; cursor: pointer; }
+        .btn-load:hover { opacity: 0.9; }
+
+        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+        table.kra-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.kra-table th { background: #f8fafc; color: #1f2937; font-weight: 600; padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center; cursor: pointer; white-space: nowrap; user-select: none; }
+        table.kra-table th:hover { background: #eef2ff; }
+        table.kra-table th .sort-arrow { font-size: 10px; margin-left: 4px; color: #9ca3af; }
+        table.kra-table th.sorted .sort-arrow { color: var(--primary); }
+        table.kra-table td { padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center; vertical-align: middle; }
+
+        .badge-status { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 11px; }
+        .badge-completed { background: #d1fae5; color: #059669; }
+        .badge-submitted { background: #c7d2fe; color: #4338ca; }
+        .badge-pending { background: #fef08a; color: #b45309; }
+        .badge-in_progress { background: #dbeafe; color: #0284c7; }
+        .badge-partial { background: #fed7aa; color: #b45309; }
+        .badge-skipped { background: #fee2e2; color: #dc2626; }
+        .badge-na { background: #f3f4f6; color: #9ca3af; border: 2px dashed #9ca3af; }
+
+        .badge-review-pending { background: #fef08a; color: #b45309; }
+        .badge-review-approved { background: #d1fae5; color: #059669; }
+        .badge-review-rejected { background: #fee2e2; color: #dc2626; }
+
+        .kra-title-col { text-align: left !important; font-weight: 500; color: #1f2937; max-width: 200px; word-wrap: break-word; }
+        .notes-col { text-align: left !important; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #6b7280; }
+
+        .pagination-row { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 16px 0; font-size: 13px; }
+        .pagination-row button { background: #eef2ff; color: var(--primary); border: none; border-radius: 6px; padding: 6px 14px; font-weight: 600; cursor: pointer; font-size: 12px; }
+        .pagination-row button:disabled { opacity: 0.4; cursor: default; }
+        .pagination-row span { color: #6b7280; }
+
+        .empty-state { text-align: center; padding: 40px; color: #9ca3af; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast-msg { padding: 12px 20px; border-radius: 8px; color: white; font-size: 13px; font-weight: 500; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease; }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .team-layout { display: flex; gap: 20px; }
+        .team-left { width: 30%; min-width: 260px; }
+        .team-right { width: 70%; flex: 1; }
+        .member-card { background: white; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; border: 2px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.06); transition: all 0.2s; }
+        .member-card:hover { border-color: #c7d2fe; }
+        .member-card.selected { border-color: var(--primary); background: #eef2ff; }
+        .member-card .mc-name { font-weight: 600; font-size: 14px; color: #1f2937; }
+        .member-card .mc-dept { font-size: 11px; color: #6b7280; }
+        .member-card .mc-stats { display: flex; gap: 10px; margin-top: 6px; font-size: 11px; }
+        .member-card .mc-perf { font-weight: 700; color: var(--primary); }
+        .member-search { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+        .member-search:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .team-members-list { max-height: 600px; overflow-y: auto; }
+
+        .info-banner { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px; }
+        .info-banner i { color: #0369a1; font-size: 18px; }
+        .info-banner span { color: #0c4a6e; font-size: 13px; }
+
+        @media (max-width: 768px) {
+            .content-area { padding: 12px; }
+            .summary-cards { gap: 8px; }
+            .summary-card { min-width: 90px; padding: 10px 6px; }
+            .summary-card .sc-count { font-size: 18px; }
+            .filters-row { flex-direction: column; gap: 8px; }
+            .filter-group { width: 100%; }
+            .filter-group input, .filter-group select { width: 100%; }
+            .table-container { font-size: 11px; }
+            table.kra-table th, table.kra-table td { padding: 6px 4px; }
+            .team-layout { flex-direction: column; }
+            .team-left, .team-right { width: 100%; }
+        }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+            <div class="toast-container" id="toastContainer"></div>
+            <div class="info-banner">
+                <i class="fas fa-info-circle"></i>
+                <span>View team KRA tracking across all staff members. Select a member to see their daily KRA details.</span>
+            </div>
+
+            <div class="team-layout">
+                <div class="team-left">
+                    <div class="card">
+                        <div class="card-header-gradient">
+                            <h6 class="mb-0"><i class="fas fa-users me-2"></i>Team Members</h6>
+                        </div>
+                        <div class="card-body">
+                            <input type="text" class="member-search" id="memberSearch" placeholder="Search member..." oninput="filterMembers()">
+                            <div class="team-members-list" id="membersList">
+                                <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading team...</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="team-right">
+                    <div class="summary-cards" id="summaryCards"></div>
+                    <div class="card">
+                        <div class="card-header-gradient">
+                            <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="filters-row">
+                                <div class="filter-group">
+                                    <label>Date From</label>
+                                    <input type="date" id="dateFrom">
+                                </div>
+                                <div class="filter-group">
+                                    <label>Date To <span style="font-size:10px;color:#999;">(auto +3 days)</span></label>
+                                    <input type="date" id="dateTo" readonly style="background:#f3f4f6;">
+                                </div>
+                                <div class="filter-group">
+                                    <label>Status</label>
+                                    <select id="statusFilter">
+                                        <option value="all">All</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="completed">Completed</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="partial">Partial</option>
+                                        <option value="skipped">Skipped</option>
+                                        <option value="na">NA</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>Review Status</label>
+                                    <select id="reviewFilter">
+                                        <option value="all">All</option>
+                                        <option value="pending_review">Pending Review</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="rejected">Rejected</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>Search KRA</label>
+                                    <input type="text" id="searchFilter" placeholder="Search KRA title...">
+                                </div>
+                                <div class="filter-group" style="justify-content:flex-end;">
+                                    <label>&nbsp;</label>
+                                    <button class="btn-load" onclick="loadMemberKras()"><i class="fas fa-sync-alt me-1"></i> Load</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div class="table-container">
+                                <table class="kra-table" id="kraTable">
+                                    <thead>
+                                        <tr>
+                                            <th data-col="instance_date" onclick="sortTable('instance_date')">Date <span class="sort-arrow">&#9660;</span></th>
+                                            <th data-col="kra_title" onclick="sortTable('kra_title')">KRA Title <span class="sort-arrow"></span></th>
+                                            <th data-col="completion_status" onclick="sortTable('completion_status')">Status <span class="sort-arrow"></span></th>
+                                            <th data-col="manager_review_status" onclick="sortTable('manager_review_status')">Review Status <span class="sort-arrow"></span></th>
+                                            <th data-col="time_spent_minutes" onclick="sortTable('time_spent_minutes')">Time Spent <span class="sort-arrow"></span></th>
+                                            <th>Notes</th>
+                                            <th>Manager Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="kraBody">
+                                        <tr><td colspan="7"><div class="empty-state"><i class="fas fa-hand-pointer"></i><p>Select a team member to view their KRAs</p></div></td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="pagination-row" id="paginationRow"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+
+    <script>
+    const API_BASE = '';
+    const PAGE_SIZE = 25;
+
+    let teamMembers = [];
+    let selectedMemberId = null;
+    let krasData = [];
+    let filteredData = [];
+    let currentPage = 1;
+    let sortCol = 'instance_date';
+    let sortDir = 'desc';
+
+    function showToast(msg, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const el = document.createElement('div');
+        el.className = 'toast-msg toast-' + type;
+        el.textContent = msg;
+        container.appendChild(el);
+        setTimeout(() => { el.remove(); }, 3500);
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr + 'T00:00:00');
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    function statusBadge(s, submittedAt) {
+        if (submittedAt) {
+            return '<span class="badge-status badge-submitted">Submitted</span>';
+        }
+        const map = { completed: 'badge-completed', pending: 'badge-pending', in_progress: 'badge-in_progress', partial: 'badge-partial', skipped: 'badge-skipped', na: 'badge-na' };
+        const labels = { completed: 'Completed', pending: 'Pending', in_progress: 'In Progress', partial: 'Partial', skipped: 'Skipped', na: 'NA' };
+        return '<span class="badge-status ' + (map[s] || 'badge-pending') + '">' + (labels[s] || s) + '</span>';
+    }
+
+    function reviewBadge(s) {
+        if (s === 'approved' || s === 'edited_by_manager') return '<span class="badge-status badge-review-approved">Approved &#10003;</span>';
+        if (s === 'rejected') return '<span class="badge-status badge-review-rejected">Rejected</span>';
+        if (s === 'pending_review') return '<span class="badge-status badge-review-pending">Pending Review</span>';
+        return '<span class="badge-status badge-review-pending">' + (s || 'Pending') + '</span>';
+    }
+
+    function truncate(str, len) {
+        if (!str) return '-';
+        return str.length > len ? str.substring(0, len) + '...' : str;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function setDateDefaults() {
+        const today = new Date();
+        const fromEl = document.getElementById('dateFrom');
+        const toEl = document.getElementById('dateTo');
+        fromEl.value = today.toISOString().split('T')[0];
+        const to = new Date(today);
+        to.setDate(to.getDate() + 3);
+        toEl.value = to.toISOString().split('T')[0];
+        fromEl.addEventListener('change', function() {
+            const f = new Date(this.value);
+            f.setDate(f.getDate() + 3);
+            toEl.value = f.toISOString().split('T')[0];
+        });
+    }
+
+    function renderSummaryCards(data) {
+        const counts = { total: 0, completed: 0, pending: 0, in_progress: 0, partial: 0, skipped: 0, na: 0 };
+        (data || []).forEach(k => {
+            const s = k.completion_status || 'pending';
+            counts.total++;
+            if (counts[s] !== undefined) counts[s]++;
+        });
+        const cards = [
+            { key: 'total', label: 'Total', icon: 'fas fa-list-check', cls: 'sc-total' },
+            { key: 'completed', label: 'Completed', icon: 'fas fa-check-circle', cls: 'sc-completed' },
+            { key: 'pending', label: 'Pending', icon: 'fas fa-clock', cls: 'sc-pending' },
+            { key: 'in_progress', label: 'In Progress', icon: 'fas fa-spinner', cls: 'sc-in_progress' },
+            { key: 'partial', label: 'Partial', icon: 'fas fa-adjust', cls: 'sc-partial' },
+            { key: 'skipped', label: 'Skipped', icon: 'fas fa-forward', cls: 'sc-skipped' },
+            { key: 'na', label: 'NA/Exempted', icon: 'fas fa-ban', cls: 'sc-na' }
+        ];
+        document.getElementById('summaryCards').innerHTML = cards.map(c =>
+            '<div class="summary-card ' + c.cls + '">' +
+            '<div class="sc-icon"><i class="' + c.icon + '"></i></div>' +
+            '<div class="sc-count">' + counts[c.key] + '</div>' +
+            '<div class="sc-label">' + c.label + '</div></div>'
+        ).join('');
+    }
+
+    function applyFilters() {
+        let data = [...krasData];
+        const statusVal = document.getElementById('statusFilter').value;
+        const reviewVal = document.getElementById('reviewFilter').value;
+        const searchVal = (document.getElementById('searchFilter').value || '').toLowerCase().trim();
+        if (statusVal !== 'all') data = data.filter(k => k.completion_status === statusVal);
+        if (reviewVal !== 'all') {
+            if (reviewVal === 'approved') {
+                data = data.filter(k => k.manager_review_status === 'approved' || k.manager_review_status === 'edited_by_manager');
+            } else {
+                data = data.filter(k => k.manager_review_status === reviewVal);
+            }
+        }
+        if (searchVal) data = data.filter(k => (k.kra_title || '').toLowerCase().includes(searchVal));
+        return data;
+    }
+
+    function sortData(data) {
+        const sorted = [...data];
+        sorted.sort((a, b) => {
+            let va = a[sortCol], vb = b[sortCol];
+            if (sortCol === 'instance_date') {
+                const da = new Date(va || '1970-01-01'), db = new Date(vb || '1970-01-01');
+                if (da.getTime() === db.getTime()) {
+                    const pa = a.completion_status === 'pending' ? 0 : 1;
+                    const pb = b.completion_status === 'pending' ? 0 : 1;
+                    return pa - pb;
+                }
+                return sortDir === 'asc' ? da - db : db - da;
+            }
+            if (typeof va === 'number' && typeof vb === 'number') return sortDir === 'asc' ? va - vb : vb - va;
+            va = (va || '').toString().toLowerCase();
+            vb = (vb || '').toString().toLowerCase();
+            if (va < vb) return sortDir === 'asc' ? -1 : 1;
+            if (va > vb) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return sorted;
+    }
+
+    function updateSortHeaders() {
+        const table = document.getElementById('kraTable');
+        table.querySelectorAll('th').forEach(th => {
+            th.classList.remove('sorted');
+            const arrow = th.querySelector('.sort-arrow');
+            if (arrow) arrow.textContent = '';
+        });
+        const activeTh = table.querySelector('th[data-col="' + sortCol + '"]');
+        if (activeTh) {
+            activeTh.classList.add('sorted');
+            const arrow = activeTh.querySelector('.sort-arrow');
+            if (arrow) arrow.textContent = sortDir === 'asc' ? '\u25B2' : '\u25BC';
+        }
+    }
+
+    function renderTable() {
+        filteredData = applyFilters();
+        const sorted = sortData(filteredData);
+        updateSortHeaders();
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const page = sorted.slice(start, start + PAGE_SIZE);
+        const tbody = document.getElementById('kraBody');
+        if (page.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-inbox"></i><p>No KRAs found for selected filters</p></div></td></tr>';
+            document.getElementById('paginationRow').innerHTML = '';
+            return;
+        }
+        tbody.innerHTML = page.map(k => {
+            return '<tr>' +
+                '<td style="white-space:nowrap;">' + formatDate(k.instance_date) + '</td>' +
+                '<td class="kra-title-col">' + escapeHtml(k.kra_title || '-') + '</td>' +
+                '<td>' + statusBadge(k.completion_status, k.submitted_at) + '</td>' +
+                '<td>' + reviewBadge(k.manager_review_status) + '</td>' +
+                '<td>' + (k.time_spent_minutes || 0) + ' mins</td>' +
+                '<td class="notes-col" title="' + escapeHtml(k.staff_notes || '') + '">' + truncate(k.staff_notes, 50) + '</td>' +
+                '<td class="notes-col" title="' + escapeHtml(k.manager_remarks || '') + '">' + truncate(k.manager_remarks, 50) + '</td>' +
+                '</tr>';
+        }).join('');
+        renderPagination();
+    }
+
+    function renderPagination() {
+        const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
+        const container = document.getElementById('paginationRow');
+        if (filteredData.length === 0) { container.innerHTML = ''; return; }
+        container.innerHTML =
+            '<button ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="goPage(' + (currentPage - 1) + ')">&#171; Prev</button>' +
+            '<span>Page ' + currentPage + ' of ' + totalPages + '</span>' +
+            '<button ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="goPage(' + (currentPage + 1) + ')">Next &#187;</button>';
+    }
+
+    function goPage(p) { currentPage = p; renderTable(); }
+
+    function sortTable(col) {
+        if (sortCol === col) { sortDir = sortDir === 'asc' ? 'desc' : 'asc'; }
+        else { sortCol = col; sortDir = 'asc'; }
+        currentPage = 1;
+        renderTable();
+    }
+
+    async function loadTeamMembers() {
+        try {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            let response = await staffFetch(API_BASE + '/api/v1/staff/kra/team-summary?scope=all&date_from=' + dateFrom + '&date_to=' + dateTo, {
+                headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.error === 'AUTH_EXPIRED') { window.location.href = '/staff/login'; return; }
+                teamMembers = data.summary || [];
+                renderMembers();
+                return;
+            }
+            response = await staffFetch(API_BASE + '/api/v1/staff/kra/team-summary?scope=team&date_from=' + dateFrom + '&date_to=' + dateTo, {
+                headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.error === 'AUTH_EXPIRED') { window.location.href = '/staff/login'; return; }
+                teamMembers = data.summary || [];
+                renderMembers();
+                return;
+            }
+            document.getElementById('membersList').innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><p>No team access available</p></div>';
+        } catch (e) {
+            console.error('loadTeamMembers error:', e);
+            showToast('Failed to load team members', 'error');
+        }
+    }
+
+    function renderMembers() {
+        const search = (document.getElementById('memberSearch').value || '').toLowerCase();
+        const filtered = teamMembers.filter(m => !search || (m.employee_name || '').toLowerCase().includes(search));
+        const container = document.getElementById('membersList');
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No team members found</p></div>';
+            return;
+        }
+        container.innerHTML = filtered.map(m =>
+            '<div class="member-card ' + (selectedMemberId === m.employee_id ? 'selected' : '') + '" onclick="selectMember(' + m.employee_id + ')">' +
+            '<div class="mc-name">' + (m.employee_name || 'Unknown') + '</div>' +
+            '<div class="mc-dept">' + (m.department || '-') + '</div>' +
+            '<div class="mc-stats">' +
+            '<span class="mc-perf">' + (m.performance_percentage || 0) + '%</span>' +
+            '<span>Assigned: ' + (m.assigned_kras || 0) + '</span>' +
+            '<span>Done: ' + (m.completed_kras || 0) + '</span>' +
+            '</div></div>'
+        ).join('');
+    }
+
+    function filterMembers() { renderMembers(); }
+
+    async function selectMember(empId) {
+        selectedMemberId = empId;
+        renderMembers();
+        await loadMemberKras();
+    }
+
+    async function loadMemberKras() {
+        if (!selectedMemberId) {
+            document.getElementById('kraBody').innerHTML = '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-hand-pointer"></i><p>Select a team member to view their KRAs</p></div></td></tr>';
+            document.getElementById('paginationRow').innerHTML = '';
+            document.getElementById('summaryCards').innerHTML = '';
+            return;
+        }
+        try {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            let url = API_BASE + '/api/v1/staff/kra/instances?employee_id=' + selectedMemberId + '&date_from=' + dateFrom + '&date_to=' + dateTo;
+            const response = await staffFetch(url, { headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' } });
+            const data = await response.json();
+            if (data.error === 'AUTH_EXPIRED') { window.location.href = '/staff/login'; return; }
+            krasData = data.instances || [];
+            renderSummaryCards(krasData);
+            currentPage = 1;
+            renderTable();
+        } catch (e) {
+            console.error('loadMemberKras error:', e);
+            showToast('Failed to load member KRAs: ' + e.message, 'error');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await StaffSidebar.init();
+        StaffHeader.inject('KRA Tracking Sheet', 'fas fa-table');
+        setDateDefaults();
+        await loadTeamMembers();
+    });
+    </script>
+</body>
+</html>

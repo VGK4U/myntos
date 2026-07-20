@@ -1,0 +1,1760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Dashboard - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 280px; padding-top: 88px; min-height: 100vh; transition: margin-left 0.3s ease; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        .content-area { padding: 24px; }
+
+        .page-banner {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+
+        .filter-bar {
+            background: white; border-radius: 12px; padding: 16px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
+        }
+        .filter-bar .filter-grid { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+        .filter-bar .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-bar .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-bar .form-control, .filter-bar .form-select { font-size: 13px; padding: 6px 10px; border-radius: 6px; min-width: 140px; border: 1px solid #e5e7eb; }
+        .filter-bar .form-control:focus, .filter-bar .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+
+        .dashboard-tabs { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+        .dash-tab {
+            padding: 8px 18px; border-radius: 8px; border: 1px solid #e5e7eb; background: white;
+            color: #6b7280; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+        }
+        .dash-tab:hover { border-color: #6366f1; color: #6366f1; }
+        .dash-tab.active { background: #6366f1; border-color: #6366f1; color: white; }
+        .dash-tab.hidden { display: none; }
+        .tab-main { display: flex; align-items: center; gap: 4px; }
+        .tab-sub { font-size: 10px; font-weight: 400; opacity: 0.75; white-space: nowrap; }
+        .dash-tab.active .tab-sub { opacity: 0.85; }
+
+        .stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; }
+        .stat-card .val { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .stat-card .lbl { color: #6b7280; font-size: 11px; margin-top: 2px; text-transform: uppercase; font-weight: 600; }
+        .stat-card.highlight { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+        .stat-card.highlight .val, .stat-card.highlight .lbl { color: white; }
+        .stat-card.green { border-left: 3px solid #059669; }
+        .stat-card.orange { border-left: 3px solid #d97706; }
+        .stat-card.red { border-left: 3px solid #dc2626; }
+        .stat-card.blue { border-left: 3px solid #2563eb; }
+
+        .data-table-wrap {
+            background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden; margin-bottom: 24px;
+        }
+        .data-table-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .data-table-title { font-weight: 600; color: #1f2937; margin: 0; font-size: 15px; }
+        .table-scroll { overflow-x: auto; overflow-y: auto; max-height: 70vh; }
+        .data-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+        .data-table th {
+            font-size: 10px; font-weight: 700; text-transform: uppercase; color: #6b7280;
+            padding: 10px 10px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+            text-align: center; white-space: nowrap; position: sticky; top: 0; z-index: 3;
+        }
+        .data-table th.text-start { text-align: left; }
+        .data-table td { padding: 10px; border-bottom: 1px solid #f3f4f6; text-align: center; font-size: 13px; color: #374151; }
+        .data-table td.text-start { text-align: left; }
+        .data-table tbody tr:hover { background: #f9fafb; }
+        .data-table tfoot td { font-weight: 700; background: #f3f4f6; border-top: 2px solid #e5e7eb; }
+
+        .data-table .th-contacted-today { background: #dbeafe; color: #1e40af; }
+        .data-table .th-overdue { background: #fee2e2; color: #991b1b; }
+        .data-table .th-status { background: #f0fdf4; color: #166534; }
+        .data-table .th-revenue { background: #fef3c7; color: #92400e; }
+        .data-table .th-daily-leads { background: #ede9fe; color: #5b21b6; }
+        .data-table .th-avg-leads { background: #e0f2fe; color: #0369a1; }
+
+        .table-scroll { position: relative; }
+        .data-table .sticky-col { position: sticky; z-index: 2; background: #fff; }
+        .data-table thead .sticky-col { z-index: 4 !important; }
+        .data-table tfoot .sticky-col { z-index: 3 !important; background: #f3f4f6 !important; }
+        .data-table tbody tr:hover .sticky-col { background: #f9fafb !important; }
+        .data-table .sticky-col-last::after {
+            content: ''; position: absolute; top: 0; right: -4px; bottom: 0; width: 4px;
+            box-shadow: inset 4px 0 4px -4px rgba(0,0,0,0.15); pointer-events: none;
+        }
+
+        .team-filter-bar {
+            padding: 12px 20px; border-bottom: 1px solid #e5e7eb;
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        }
+        .team-filter-bar .form-check { margin: 0; }
+        .team-filter-bar .form-check-input { cursor: pointer; }
+        .team-filter-bar .form-check-label { font-size: 12px; cursor: pointer; }
+        .team-select-toggle { font-size: 12px; color: #6366f1; cursor: pointer; font-weight: 600; text-decoration: underline; }
+        .team-select-toggle:hover { color: #4f46e5; }
+        .emp-select-panel {
+            padding: 10px 20px; border-bottom: 1px solid #e5e7eb;
+            background: #f9fafb; display: none; max-height: 200px; overflow-y: auto;
+        }
+        .emp-select-panel.open { display: flex; flex-wrap: wrap; gap: 8px; }
+        .emp-chip {
+            display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+            border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #e5e7eb;
+            background: white; transition: all 0.2s; user-select: none;
+        }
+        .emp-chip:hover { border-color: #6366f1; }
+        .emp-chip.selected { background: #6366f1; color: white; border-color: #6366f1; }
+        .emp-chip input { display: none; }
+        .data-table th.th-checkbox { width: 32px; min-width: 32px; background: #f9fafb; }
+
+        .emp-info { display: flex; align-items: center; gap: 10px; }
+        .emp-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 11px; flex-shrink: 0; }
+        .emp-name { font-weight: 600; color: #1f2937; font-size: 13px; }
+        .emp-id { font-size: 10px; color: #9ca3af; }
+
+        .self-highlight { background: #fefce8; }
+        .val-zero { color: #d1d5db; }
+        .val-positive { color: #059669; font-weight: 600; }
+        .val-alert { color: #dc2626; font-weight: 600; }
+
+        .loading-overlay { position: relative; min-height: 100px; }
+        .loading-overlay.is-loading::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8); z-index: 10; }
+        .loading-overlay.is-loading::after { content: ''; position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border: 3px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; z-index: 11; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty-state { text-align: center; padding: 48px 20px; color: #9ca3af; }
+        .empty-state i { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+
+        .btn-primary { background: #6366f1; border: none; }
+        .btn-primary:hover { background: #4f46e5; }
+
+        .error-alert { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin-bottom: 20px; color: #991b1b; display: none; }
+
+        .tab-content-area { display: none; }
+        .tab-content-area.active { display: block; }
+
+        .rupee { font-family: 'Segoe UI', sans-serif; }
+
+        .data-table th.sortable { cursor: pointer; user-select: none; position: relative; padding-right: 18px; }
+        .data-table th.sortable:hover { background: #e5e7eb; }
+        .data-table th.sortable::after { content: '\f0dc'; font-family: 'Font Awesome 6 Free'; font-weight: 900; font-size: 8px; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); opacity: 0.3; }
+        .data-table th.sortable.sort-asc::after { content: '\f0de'; opacity: 1; color: #6366f1; }
+        .data-table th.sortable.sort-desc::after { content: '\f0dd'; opacity: 1; color: #6366f1; }
+
+        /* ── Call Activity Tab ── */
+        .ca-filter-card { background: white; border-radius: 12px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px; }
+        .ca-quick-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+        .ca-quick-btn { padding: 5px 12px; border-radius: 6px; border: 1px solid #e5e7eb; background: white; font-size: 12px; cursor: pointer; font-weight: 500; color: #6b7280; transition: all 0.15s; }
+        .ca-quick-btn:hover { border-color: #6366f1; color: #6366f1; }
+        .ca-quick-btn.active { background: #6366f1; border-color: #6366f1; color: white; }
+        .ca-avg-badge { display: inline-block; background: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 20px; font-size: 11px; font-weight: 600; padding: 2px 10px; margin-left: 8px; }
+        .ca-slot-cell { font-size: 13px; font-weight: 700; color: #1f2937; line-height: 1.3; }
+        .ca-slot-dur { font-size: 10px; color: #9ca3af; font-weight: 400; }
+        .ca-slot-detail { font-size: 10px; color: #6b7280; }
+        .ca-slot-detail span { display: inline-block; margin-right: 4px; }
+        .ca-staff-name { font-weight: 600; color: #1f2937; font-size: 13px; }
+        .ca-emp-code { font-size: 10px; color: #9ca3af; }
+        .ca-dept { font-size: 11px; color: #6b7280; }
+        .ca-slot-hdr { background: #ede9fe; color: #5b21b6; }
+        .ca-slot-hdr.other { background: #f3f4f6; color: #4b5563; }
+        .ca-slot-hdr.total { background: #dbeafe; color: #1e40af; }
+        .ca-zero { color: #d1d5db; }
+        .ca-stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .ca-stat-card { background: white; border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; }
+        .ca-stat-card .ca-val { font-size: 22px; font-weight: 700; color: #1f2937; }
+        .ca-stat-card .ca-lbl { color: #6b7280; font-size: 10px; margin-top: 2px; text-transform: uppercase; font-weight: 600; }
+        .ca-stat-card.green { border-left: 3px solid #059669; }
+        .ca-stat-card.orange { border-left: 3px solid #d97706; }
+        .ca-stat-card.red { border-left: 3px solid #dc2626; }
+        .ca-stat-card.blue { border-left: 3px solid #2563eb; }
+        .ca-stat-card.purple { border-left: 3px solid #7c3aed; }
+        .ca-tfoot td { font-weight: 700 !important; background: #f3f4f6 !important; border-top: 2px solid #e5e7eb !important; }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+            <div class="page-banner">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                    <div>
+                        <h1><i class="fas fa-chart-line"></i> CRM Dashboard</h1>
+                        <p id="dashboardSubtitle">Performance overview across all leads</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="initErrorAlert" class="error-alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <span id="initErrorMessage"></span>
+                <button class="btn btn-sm btn-outline-danger ms-3" onclick="location.reload()"><i class="fas fa-redo me-1"></i>Retry</button>
+            </div>
+
+            <div class="filter-bar" id="filterBar">
+                <div class="filter-grid">
+                    <div class="filter-group">
+                        <label>Company</label>
+                        <select class="form-select" id="companySelector" onchange="onCompanyChange()">
+                            <option value="">All Companies</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>From Date</label>
+                        <input type="date" class="form-control" id="filterStartDate">
+                    </div>
+                    <div class="filter-group">
+                        <label>To Date</label>
+                        <input type="date" class="form-control" id="filterEndDate">
+                    </div>
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select class="form-select" id="filterStatus">
+                            <option value="">All</option>
+                            <option value="new">New</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="not_answered">Not Answered</option>
+                            <option value="interested">Interested</option>
+                            <option value="qualified">Qualified</option>
+                            <option value="proposal">Proposal</option>
+                            <option value="loan_process">At Bank</option>
+                            <option value="won">Won</option>
+                            <option value="processing">Processing</option>
+                            <option value="completed">Completed</option>
+                            <option value="lost">Lost</option>
+                            <option value="on_hold">On Hold</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Priority</label>
+                        <select class="form-select" id="filterPriority">
+                            <option value="">All</option>
+                            <option value="normal">Normal</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Department</label>
+                        <select class="form-select" id="filterDepartment">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Category</label>
+                        <select class="form-select" id="filterCategory">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="align-self:flex-end;">
+                        <button class="btn btn-primary btn-sm" onclick="loadDashboard()"><i class="fas fa-search me-1"></i>Apply</button>
+                        <button class="btn btn-outline-secondary btn-sm ms-1" onclick="resetFilters()"><i class="fas fa-undo me-1"></i>Reset</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-tabs" id="tabBar">
+                <button class="dash-tab active" data-tab="my" onclick="switchTab('my')">
+                    <span class="tab-main"><i class="fas fa-user"></i> My Performance</span>
+                    <span class="tab-sub" id="tabBadgeMy"></span>
+                </button>
+                <button class="dash-tab hidden" data-tab="team" onclick="switchTab('team')">
+                    <span class="tab-main"><i class="fas fa-users"></i> Team Performance</span>
+                    <span class="tab-sub" id="tabBadgeTeam"></span>
+                </button>
+                <button class="dash-tab hidden" data-tab="status" onclick="switchTab('status')">
+                    <span class="tab-main"><i class="fas fa-list-ol"></i> Status Wise</span>
+                    <span class="tab-sub" id="tabBadgeStatus"></span>
+                </button>
+                <button class="dash-tab hidden" data-tab="category" onclick="switchTab('category')">
+                    <span class="tab-main"><i class="fas fa-tags"></i> Category Wise</span>
+                    <span class="tab-sub" id="tabBadgeCategory"></span>
+                </button>
+                <button class="dash-tab hidden" data-tab="company" onclick="switchTab('company')">
+                    <span class="tab-main"><i class="fas fa-building"></i> Company Wise</span>
+                    <span class="tab-sub" id="tabBadgeCompany"></span>
+                </button>
+                <button class="dash-tab" data-tab="calls" onclick="switchTab('calls')">
+                    <span class="tab-main"><i class="fas fa-phone-alt"></i> Call Activity</span>
+                    <span class="tab-sub" id="tabBadgeCalls"></span>
+                </button>
+                <button class="dash-tab" data-tab="earnings" onclick="switchTab('earnings')">
+                    <span class="tab-main"><i class="fas fa-wallet"></i> Earnings</span>
+                    <span class="tab-sub" id="tabBadgeEarnings"></span>
+                </button>
+            </div>
+
+            <div id="tabMy" class="tab-content-area active loading-overlay">
+                <div class="stat-cards" id="myStatCards"></div>
+                <div class="data-table-wrap">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-tags me-2"></i>Category Breakdown</h5>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table" id="myCategoryTable">
+                            <thead id="myCategoryHead"></thead>
+                            <tbody id="myCategoryBody"></tbody>
+                            <tfoot id="myCategoryFoot"></tfoot>
+                        </table>
+                    </div>
+                    <div id="myCategoryEmpty" class="empty-state" style="display:none;">
+                        <i class="fas fa-folder-open"></i><p>No category data available</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabTeam" class="tab-content-area loading-overlay">
+                <div class="data-table-wrap">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-users me-2"></i>Team Performance</h5>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="text-muted" style="font-size:12px;" id="teamCount"></span>
+                            <span class="team-select-toggle" id="teamSelectToggle" onclick="toggleEmpSelectPanel()"><i class="fas fa-filter me-1"></i>Select Employees</span>
+                        </div>
+                    </div>
+                    <div class="emp-select-panel" id="empSelectPanel"></div>
+                    <div class="table-scroll">
+                        <table class="data-table" id="teamTable">
+                            <thead id="teamHead"></thead>
+                            <tbody id="teamBody"></tbody>
+                            <tfoot id="teamFoot"></tfoot>
+                        </table>
+                    </div>
+                    <div id="teamEmpty" class="empty-state" style="display:none;">
+                        <i class="fas fa-users"></i><p>No team data available</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabStatus" class="tab-content-area loading-overlay">
+                <div class="data-table-wrap">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-list-ol me-2"></i>Status Wise Breakdown</h5>
+                        <span class="text-muted" style="font-size:12px;" id="statusCount"></span>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table" id="statusTable">
+                            <thead id="statusHead"></thead>
+                            <tbody id="statusBody"></tbody>
+                            <tfoot id="statusFoot"></tfoot>
+                        </table>
+                    </div>
+                    <div id="statusEmpty" class="empty-state" style="display:none;">
+                        <i class="fas fa-list-ol"></i><p>No status data available</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabCategory" class="tab-content-area loading-overlay">
+                <div class="data-table-wrap">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-tags me-2"></i>Category Wise Performance</h5>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table" id="catTable">
+                            <thead id="catHead"></thead>
+                            <tbody id="catBody"></tbody>
+                            <tfoot id="catFoot"></tfoot>
+                        </table>
+                    </div>
+                    <div id="catEmpty" class="empty-state" style="display:none;">
+                        <i class="fas fa-tags"></i><p>No category data available</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tabCompany" class="tab-content-area loading-overlay">
+                <div class="data-table-wrap">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-building me-2"></i>Company Wise Performance</h5>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table" id="compTable">
+                            <thead id="compHead"></thead>
+                            <tbody id="compBody"></tbody>
+                            <tfoot id="compFoot"></tfoot>
+                        </table>
+                    </div>
+                    <div id="compEmpty" class="empty-state" style="display:none;">
+                        <i class="fas fa-building"></i><p>No company data available</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════ CALL ACTIVITY TAB ══════════════════════ -->
+            <div id="tabCalls" class="tab-content-area loading-overlay">
+
+                <!-- Auto-fallback info banner -->
+                <div id="caFallbackBanner" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:14px;color:#1e40af;font-size:13px;align-items:center;gap:8px;"></div>
+
+                <!-- Filter bar -->
+                <div class="ca-filter-card">
+                    <div class="d-flex flex-wrap align-items-end gap-3">
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">Quick Range</label>
+                            <div class="ca-quick-btns">
+                                <button class="ca-quick-btn active" data-ca-range="today" onclick="setCaQuickRange('today')">Today</button>
+                                <button class="ca-quick-btn" data-ca-range="yesterday" onclick="setCaQuickRange('yesterday')">Yesterday</button>
+                                <button class="ca-quick-btn" data-ca-range="this_week" onclick="setCaQuickRange('this_week')">This Week</button>
+                                <button class="ca-quick-btn" data-ca-range="last_7" onclick="setCaQuickRange('last_7')">Last 7 Days</button>
+                                <button class="ca-quick-btn" data-ca-range="this_month" onclick="setCaQuickRange('this_month')">This Month</button>
+                                <button class="ca-quick-btn" data-ca-range="last_30" onclick="setCaQuickRange('last_30')">Last 30 Days</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">From</label>
+                            <input type="date" class="form-control form-control-sm" id="caDateFrom" style="min-width:130px;" oninput="onCaDateChange()">
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">To</label>
+                            <input type="date" class="form-control form-control-sm" id="caDateTo" style="min-width:130px;" oninput="onCaDateChange()">
+                        </div>
+                        <div class="ms-auto d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="resetCaFilters()"><i class="fas fa-undo me-1"></i>Reset</button>
+                            <button class="btn btn-sm btn-primary" onclick="loadCallActivity()"><i class="fas fa-sync me-1"></i>Refresh</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary cards -->
+                <div class="ca-stat-cards" id="caStatCards"></div>
+
+                <!-- Slot breakdown table -->
+                <div class="data-table-wrap">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-phone-alt me-2"></i>2-Hour Slot Breakdown
+                            <span id="caAvgBadge" class="ca-avg-badge" style="display:none;">Avg / Day</span>
+                        </h5>
+                        <span id="caDateRangeLabel" class="text-muted" style="font-size:12px;"></span>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table" id="caTable" style="min-width:1100px;">
+                            <thead id="caHead"></thead>
+                            <tbody id="caBody"></tbody>
+                            <tfoot id="caFoot" class="ca-tfoot"></tfoot>
+                        </table>
+                    </div>
+                    <div id="caEmpty" class="empty-state" style="display:none;">
+                        <i class="fas fa-phone-slash"></i><p>No call data found for this period</p>
+                    </div>
+                </div>
+
+            </div>
+            <!-- ══════════════════════ END CALL ACTIVITY TAB ══════════════════ -->
+
+            <!-- ══════════════════════ EARNINGS TAB ══════════════════════════ -->
+            <div id="tabEarnings" class="tab-content-area">
+
+                <!-- Filter bar -->
+                <div class="ca-filter-card" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+                    <div class="d-flex flex-wrap align-items-end gap-3">
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">Month</label>
+                            <select id="earnMonth" class="form-select form-select-sm" style="min-width:110px;">
+                                <option value="1">January</option><option value="2">February</option>
+                                <option value="3">March</option><option value="4">April</option>
+                                <option value="5">May</option><option value="6">June</option>
+                                <option value="7">July</option><option value="8">August</option>
+                                <option value="9">September</option><option value="10">October</option>
+                                <option value="11">November</option><option value="12">December</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">Year</label>
+                            <select id="earnYear" class="form-select form-select-sm" style="min-width:90px;"></select>
+                        </div>
+                        <div>
+                            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:4px;">Company</label>
+                            <select id="earnCompany" class="form-select form-select-sm" style="min-width:130px;">
+                                <option value="">All Companies</option>
+                            </select>
+                        </div>
+                        <div class="ms-auto d-flex gap-2 align-items-end">
+                            <button class="btn btn-sm btn-primary" onclick="loadEarnings()"><i class="fas fa-calculator me-1"></i>Calculate</button>
+                        </div>
+                    </div>
+                    <div id="earnDueLine" style="display:none;margin-top:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:7px 12px;font-size:12px;color:#92400e;font-weight:600;">
+                        <i class="fas fa-calendar-alt me-1"></i><span id="earnDueText"></span>
+                    </div>
+                </div>
+
+                <!-- Section 1: Incentive Rate Configuration -->
+                <div class="data-table-wrap" id="earnConfigWrap" style="display:none;margin-bottom:16px;">
+                    <div class="data-table-header">
+                        <h5 class="data-table-title"><i class="fas fa-sliders-h me-2" style="color:#6d28d9;"></i>Incentive Rate Configuration</h5>
+                        <span id="earnConfigNote" class="text-muted" style="font-size:11px;"></span>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="data-table" id="earnConfigTable" style="min-width:820px;">
+                            <thead>
+                                <tr>
+                                    <th class="text-start" style="min-width:120px;">Category</th>
+                                    <th>Min Target</th>
+                                    <th>Rate (No Support)</th>
+                                    <th>Rate (With Support)</th>
+                                    <th>Type</th>
+                                    <th>Bonus Trigger</th>
+                                    <th>Multiplier</th>
+                                </tr>
+                            </thead>
+                            <tbody id="earnConfigTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Section 2: Achievement + Earnings side by side -->
+                <div id="earnSideBySide" style="display:none;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;">
+
+                        <!-- Left: Achievement -->
+                        <div class="data-table-wrap">
+                            <div class="data-table-header">
+                                <h5 class="data-table-title"><i class="fas fa-star me-2" style="color:#f59e0b;"></i>Achievement</h5>
+                                <span id="earnCount" class="text-muted" style="font-size:12px;"></span>
+                            </div>
+                            <div class="table-scroll">
+                                <table class="data-table" id="earnAchTable" style="min-width:620px;">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-start" style="min-width:140px;">Employee</th>
+                                            <th title="Solar">Solar</th>
+                                            <th title="EV B2C">EV B2C</th>
+                                            <th title="EV B2B">EV B2B</th>
+                                            <th title="Training">Train</th>
+                                            <th title="Insurance">Insure</th>
+                                            <th title="Real Estate">RE</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="earnAchTbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Right: Earnings & Payout -->
+                        <div class="data-table-wrap">
+                            <div class="data-table-header">
+                                <h5 class="data-table-title"><i class="fas fa-wallet me-2" style="color:#059669;"></i>Earnings &amp; Payout</h5>
+                            </div>
+                            <div class="table-scroll">
+                                <table class="data-table" id="earnPayTable" style="min-width:620px;">
+                                    <thead>
+                                        <tr>
+                                            <th class="text-start" style="min-width:140px;">Employee</th>
+                                            <th>Solar ₹</th>
+                                            <th>EV B2C ₹</th>
+                                            <th>EV B2B ₹</th>
+                                            <th>Train ₹</th>
+                                            <th>Insure ₹</th>
+                                            <th>RE ₹</th>
+                                            <th style="background:#fef3c7;color:#92400e;">Total</th>
+                                            <th style="background:#ede9fe;color:#5b21b6;min-width:110px;">Status</th>
+                                            <th style="background:#ecfdf5;color:#065f46;min-width:90px;">Due</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="earnTbody"></tbody>
+                                    <tfoot id="earnTfoot"></tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="earnEmpty" class="empty-state">
+                    <i class="fas fa-wallet"></i><p>Click Calculate to load earnings for the selected month</p>
+                </div>
+            </div>
+            <!-- ══════════════════════ END EARNINGS TAB ════════════════════════ -->
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script>
+        let companyId = '';
+        let dashData = null;
+        let activeTab = 'my';
+        const API_BASE = '/api/v1/crm';
+        const STATUS_COLS = ['new','contacted','interested','qualified','proposal','loan_process','won','processing','completed','lost','on_hold'];
+        const STATUS_LABELS = {
+            new:'New', contacted:'Contacted', interested:'Interested', qualified:'Qualified',
+            proposal:'Proposal', loan_process:'At Bank', won:'Won', processing:'Processing',
+            completed:'Completed', lost:'Lost', on_hold:'On Hold'
+        };
+
+        function showError(msg) {
+            const el = document.getElementById('initErrorAlert');
+            document.getElementById('initErrorMessage').textContent = msg;
+            el.style.display = 'block';
+        }
+        function hideError() { document.getElementById('initErrorAlert').style.display = 'none'; }
+
+        async function safeStaffFetch(url, options = {}) {
+            if (typeof staffFetchJson === 'function') return await staffFetchJson(url, options);
+            const token = localStorage.getItem('staff_token');
+            if (!options.headers) options.headers = {};
+            if (token) options.headers['Authorization'] = `Bearer ${token}`;
+            const r = await fetch(url, options);
+            return await r.json();
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                if (typeof StaffSidebar !== 'undefined' && StaffSidebar.init) await StaffSidebar.init();
+            } catch(e) { console.warn('Sidebar init:', e); }
+            try {
+                if (typeof StaffHeader !== 'undefined' && StaffHeader.inject) StaffHeader.inject('CRM Dashboard', 'fas fa-chart-line');
+            } catch(e) {}
+
+            try {
+                const data = await safeStaffFetch('/api/v1/staff/accounts/companies');
+                const sel = document.getElementById('companySelector');
+                sel.innerHTML = '<option value="">All Companies</option>';
+                if (data.success) {
+                    const companies = data.companies || (Array.isArray(data.data) ? data.data : (data.data && data.data.companies ? data.data.companies : []));
+                    companies.forEach(c => {
+                        const o = document.createElement('option');
+                        o.value = c.id;
+                        o.textContent = c.company_name || c.name;
+                        sel.appendChild(o);
+                    });
+                }
+            } catch(e) { console.warn('Failed to load companies filter:', e); }
+
+            try {
+                const deptData = await safeStaffFetch('/api/v1/crm/departments-list');
+                const deptSel = document.getElementById('filterDepartment');
+                deptSel.innerHTML = '<option value="">All Departments</option>';
+                const depts = (deptData.success && deptData.departments) ? deptData.departments : [];
+                depts.forEach(d => {
+                    const o = document.createElement('option');
+                    o.value = d.id;
+                    o.textContent = d.name;
+                    deptSel.appendChild(o);
+                });
+            } catch(e) { console.warn('Failed to load departments:', e); }
+
+            loadCategories();
+            loadDashboard();
+            initCallActivityFilters();
+            initEarningsFilters();
+        });
+
+        function onCompanyChange() {
+            companyId = document.getElementById('companySelector').value;
+            loadCategories();
+            loadDashboard();
+        }
+
+        async function loadCategories() {
+            try {
+                const sel = document.getElementById('filterCategory');
+                sel.innerHTML = '<option value="">All Categories</option>';
+                if (!companyId) {
+                    const compSel = document.getElementById('companySelector');
+                    const compIds = [];
+                    for (let i = 0; i < compSel.options.length; i++) {
+                        if (compSel.options[i].value) compIds.push(compSel.options[i].value);
+                    }
+                    const allCats = new Map();
+                    for (const cid of compIds) {
+                        try {
+                            const data = await safeStaffFetch(`/api/v1/signup-categories/list?company_id=${cid}`);
+                            const cats = data.categories || [];
+                            cats.forEach(c => {
+                                const key = (c.name || '').toLowerCase().trim();
+                                if (!allCats.has(key)) allCats.set(key, c);
+                            });
+                        } catch(e) {}
+                    }
+                    allCats.forEach(c => {
+                        const o = document.createElement('option');
+                        o.value = c.id;
+                        o.textContent = c.name;
+                        sel.appendChild(o);
+                    });
+                } else {
+                    const data = await safeStaffFetch(`/api/v1/signup-categories/list?company_id=${companyId}`);
+                    const cats = data.categories || [];
+                    cats.forEach(c => {
+                        const o = document.createElement('option');
+                        o.value = c.id;
+                        o.textContent = c.name;
+                        sel.appendChild(o);
+                    });
+                }
+            } catch(e) { console.warn('Failed to load categories:', e); }
+        }
+
+        function resetFilters() {
+            document.getElementById('companySelector').value = '';
+            companyId = '';
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterPriority').value = '';
+            document.getElementById('filterDepartment').value = '';
+            document.getElementById('filterCategory').value = '';
+            loadDashboard();
+        }
+
+        function buildQueryParams() {
+            const params = new URLSearchParams();
+            if (companyId) params.set('company_id', companyId);
+            const sd = document.getElementById('filterStartDate').value;
+            const ed = document.getElementById('filterEndDate').value;
+            const st = document.getElementById('filterStatus').value;
+            const pr = document.getElementById('filterPriority').value;
+            const dept = document.getElementById('filterDepartment').value;
+            const cat = document.getElementById('filterCategory').value;
+            if (sd) params.set('start_date', sd);
+            if (ed) params.set('end_date', ed);
+            if (st) params.set('status', st);
+            if (pr) params.set('priority', pr);
+            if (dept) params.set('department_id', dept);
+            if (cat) params.set('category_id', cat);
+            return params.toString();
+        }
+
+        async function loadDashboard() {
+            hideError();
+            setLoading(true);
+            try {
+                const qs = buildQueryParams();
+                const url = qs ? `${API_BASE}/dashboard-v2?${qs}` : `${API_BASE}/dashboard-v2`;
+                const data = await safeStaffFetch(url);
+                if (!data.success) { showError(data.detail || 'Failed to load dashboard'); setLoading(false); return; }
+                dashData = data.data;
+                teamSelectedEmpIds = null;
+                const panel = document.getElementById('empSelectPanel');
+                if (panel) panel.classList.remove('open');
+                const toggle = document.getElementById('teamSelectToggle');
+                if (toggle) toggle.innerHTML = '<i class="fas fa-filter me-1"></i>Select Employees';
+                setupTabs();
+                renderActiveTab();
+                updateTabBadges();
+            } catch(e) {
+                showError('Failed to load dashboard data');
+                console.error(e);
+            }
+            setLoading(false);
+        }
+
+        function setLoading(on) {
+            document.querySelectorAll('.tab-content-area').forEach(el => {
+                el.classList.toggle('is-loading', on);
+            });
+        }
+
+        function setupTabs() {
+            if (!dashData) return;
+            const tabs = document.querySelectorAll('.dash-tab');
+            tabs.forEach(t => {
+                const tab = t.dataset.tab;
+                if (tab === 'my') { t.classList.remove('hidden'); }
+                else if (tab === 'calls') { t.classList.remove('hidden'); }
+                else if (tab === 'earnings') { t.classList.remove('hidden'); }
+                else if (tab === 'team' || tab === 'status') {
+                    t.classList.toggle('hidden', !dashData.is_leader && !dashData.is_admin);
+                }
+                else if (tab === 'category') {
+                    t.classList.toggle('hidden', !dashData.is_leader && !dashData.is_admin);
+                }
+                else if (tab === 'company') {
+                    t.classList.toggle('hidden', !dashData.is_leader && !dashData.is_admin);
+                }
+            });
+            if (activeTab !== 'my' && activeTab !== 'calls' && activeTab !== 'earnings') {
+                const tabBtn = document.querySelector(`.dash-tab[data-tab="${activeTab}"]`);
+                if (tabBtn && tabBtn.classList.contains('hidden')) {
+                    activeTab = 'my';
+                    document.querySelectorAll('.dash-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'my'));
+                }
+            }
+        }
+
+        function switchTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll('.dash-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+            document.querySelectorAll('.tab-content-area').forEach(el => el.classList.remove('active'));
+            const tabEl = document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1));
+            if (tabEl) tabEl.classList.add('active');
+            if (tab === 'calls') {
+                if (!callActivityData) loadCallActivity();
+                return;
+            }
+            if (tab === 'earnings') {
+                return;
+            }
+            renderActiveTab();
+        }
+
+        function renderActiveTab() {
+            if (!dashData) return;
+            switch(activeTab) {
+                case 'my': renderMyPerformance(); break;
+                case 'team': renderTeamPerformance(); break;
+                case 'status': renderStatusWise(); break;
+                case 'category': renderCategoryWise(); break;
+                case 'company': renderCompanyWise(); break;
+            }
+        }
+
+        function fmtLakh(n) {
+            n = n || 0;
+            if (n >= 10000000) return (n/10000000).toFixed(1) + 'Cr';
+            if (n >= 100000) return (n/100000).toFixed(1) + 'L';
+            if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+            return n.toLocaleString('en-IN');
+        }
+
+        function updateTabBadges() {
+            if (!dashData) return;
+            function setBadge(id, count, value) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const parts = [];
+                if (count > 0 || count === 0) parts.push(count.toLocaleString('en-IN') + ' leads');
+                if (value > 0) parts.push('₹' + fmtLakh(value));
+                el.textContent = parts.join(' · ');
+            }
+            const my = dashData.my_performance;
+            const myCount = my?.summary?.total_leads || 0;
+            const myVal = my?.deal_value || 0;
+            setBadge('tabBadgeMy', myCount, myVal);
+
+            const teamRows = dashData.team_performance?.employees || [];
+            const teamCount = teamRows.reduce((s,r) => s + (r.total||0), 0);
+            const teamVal = teamRows.reduce((s,r) => s + (r.deal_value||0), 0);
+            setBadge('tabBadgeTeam', teamCount, teamVal);
+
+            const statusRows = dashData.status_wise?.employees || [];
+            const statusCount = statusRows.reduce((s,r) => s + (r.total||0), 0);
+            const statusVal = statusRows.reduce((s,r) => s + (r.deal_value||0), 0);
+            setBadge('tabBadgeStatus', statusCount, statusVal);
+
+            const catRows = dashData.category_wise || [];
+            const catCount = catRows.reduce((s,r) => s + (r.total||0), 0);
+            const catVal = catRows.reduce((s,r) => s + (r.deal_value||0), 0);
+            setBadge('tabBadgeCategory', catCount, catVal);
+
+            const compRows = dashData.company_wise || [];
+            const compCount = compRows.reduce((s,r) => s + (r.total||0), 0);
+            const compVal = compRows.reduce((s,r) => s + (r.deal_value||0), 0);
+            setBadge('tabBadgeCompany', compCount, compVal);
+        }
+
+        function fmtNum(n) { return (n || 0).toLocaleString('en-IN'); }
+        function fmtCur(n) { return '<span class="rupee">&#8377;</span>' + (n || 0).toLocaleString('en-IN', {maximumFractionDigits: 0}); }
+        function cellClass(v) { return v > 0 ? '' : 'val-zero'; }
+        function initials(name) { return (name || '?').split(' ').map(w => w[0]).join('').substring(0,2).toUpperCase(); }
+
+        const sortState = {};
+        const STANDARD_KEYS = ['contacted_today','avg_daily_leads','overdue',...STATUS_COLS,'total','self_leads','company_leads','actual_revenue','deal_value','avg_daily_talk_time','vgk_created','wa_shares'];
+        function getStandardLabels() {
+            const days = (dashData && dashData.avg_num_days) || 3;
+            return {'contacted_today':'Contacted<br>Today','avg_daily_leads':`Avg Daily<br>Leads <small style="font-size:8px;opacity:0.7;">(${days}d)</small>`,'overdue':'Overdue','total':'Total','self_leads':'Self<br>Leads','company_leads':'Company<br>Leads','actual_revenue':'Actual<br>Revenue','deal_value':'Value','avg_daily_talk_time':'Avg Daily<br>Talk Time','vgk_created':'VGK<br>Created','wa_shares':'WA<br>Shares'};
+        }
+        const STANDARD_LABELS = {'contacted_today':'Contacted<br>Today','avg_daily_leads':'Avg Daily<br>Leads','overdue':'Overdue','total':'Total','self_leads':'Self<br>Leads','company_leads':'Company<br>Leads','actual_revenue':'Actual<br>Revenue','deal_value':'Value','avg_daily_talk_time':'Avg Daily<br>Talk Time','vgk_created':'VGK Created','wa_shares':'WA Shares'};
+        const STANDARD_TH_CLASS = {};
+        STANDARD_KEYS.forEach(k => {
+            if (k === 'contacted_today') STANDARD_TH_CLASS[k] = 'th-contacted-today';
+            else if (k === 'avg_daily_leads') STANDARD_TH_CLASS[k] = 'th-avg-leads';
+            else if (k === 'overdue') STANDARD_TH_CLASS[k] = 'th-overdue';
+            else if (k === 'actual_revenue' || k === 'deal_value') STANDARD_TH_CLASS[k] = 'th-revenue';
+            else if (k === 'vgk_created' || k === 'wa_shares') STANDARD_TH_CLASS[k] = 'th-status';
+            else STANDARD_TH_CLASS[k] = 'th-status';
+        });
+
+        let teamSelectedEmpIds = null;
+
+        function toggleEmpSelectPanel() {
+            const panel = document.getElementById('empSelectPanel');
+            panel.classList.toggle('open');
+            const toggle = document.getElementById('teamSelectToggle');
+            if (panel.classList.contains('open')) {
+                toggle.innerHTML = '<i class="fas fa-times me-1"></i>Close';
+                buildEmpSelectPanel();
+            } else {
+                toggle.innerHTML = '<i class="fas fa-filter me-1"></i>Select Employees';
+            }
+        }
+
+        function buildEmpSelectPanel() {
+            const panel = document.getElementById('empSelectPanel');
+            const tp = dashData && dashData.team_performance;
+            if (!tp || !tp.employees || tp.employees.length === 0) {
+                panel.innerHTML = '<span class="text-muted" style="font-size:12px;">No team members</span>';
+                return;
+            }
+            const allSelected = !teamSelectedEmpIds;
+            let html = `<label class="emp-chip ${allSelected ? 'selected' : ''}" onclick="toggleAllEmps(event)">
+                <input type="checkbox" ${allSelected ? 'checked' : ''}>
+                <i class="fas fa-users" style="font-size:10px;"></i> All (${tp.employees.length})
+            </label>`;
+            tp.employees.forEach(emp => {
+                const isSelected = allSelected || (teamSelectedEmpIds && teamSelectedEmpIds.has(emp.emp_id));
+                html += `<label class="emp-chip ${isSelected ? 'selected' : ''}" onclick="toggleEmpSelection(event, ${emp.emp_id})">
+                    <input type="checkbox" ${isSelected ? 'checked' : ''}>
+                    ${emp.name || emp.emp_code}
+                </label>`;
+            });
+            panel.innerHTML = html;
+        }
+
+        function toggleAllEmps(e) {
+            e.preventDefault();
+            teamSelectedEmpIds = null;
+            buildEmpSelectPanel();
+            renderTeamPerformance();
+        }
+
+        function toggleEmpSelection(e, empId) {
+            e.preventDefault();
+            const tp = dashData && dashData.team_performance;
+            if (!tp || !tp.employees) return;
+            if (!teamSelectedEmpIds) {
+                teamSelectedEmpIds = new Set(tp.employees.map(emp => emp.emp_id));
+            }
+            if (teamSelectedEmpIds.has(empId)) {
+                teamSelectedEmpIds.delete(empId);
+            } else {
+                teamSelectedEmpIds.add(empId);
+            }
+            if (teamSelectedEmpIds.size === tp.employees.length) {
+                teamSelectedEmpIds = null;
+            }
+            buildEmpSelectPanel();
+            renderTeamPerformance();
+        }
+
+        function getFilteredTeamEmployees() {
+            const tp = dashData && dashData.team_performance;
+            if (!tp || !tp.employees) return [];
+            if (!teamSelectedEmpIds) return tp.employees;
+            return tp.employees.filter(emp => teamSelectedEmpIds.has(emp.emp_id));
+        }
+
+        function getDailyDates() {
+            return (dashData && dashData.daily_dates) ? dashData.daily_dates : [];
+        }
+
+        function fmtDateLabel(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            const day = d.getDate();
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${day} ${months[d.getMonth()]}`;
+        }
+
+        function buildSortableHead(tableKey, extraCols) {
+            let html = '<tr>';
+            let leftPos = 0;
+            const stickyCount = Math.min(extraCols.length, 2);
+            extraCols.forEach((ec, idx) => {
+                const w = ec.width || 200;
+                const isSticky = idx < stickyCount;
+                const isLast = idx === stickyCount - 1;
+                const stickyStyle = isSticky ? `position:sticky;left:${leftPos}px;z-index:4;background:#f9fafb;` : '';
+                const stickyClass = isSticky ? (' sticky-col' + (isLast ? ' sticky-col-last' : '')) : '';
+                const sortAttr = ec.sortKey
+                    ? `class="sortable text-start${stickyClass}" data-table="${tableKey}" data-key="${ec.sortKey}"`
+                    : `class="text-start${stickyClass}"`;
+                html += `<th ${sortAttr} style="${ec.style || ''}min-width:${w}px;${stickyStyle}">${ec.label}</th>`;
+                if (isSticky) leftPos += w;
+            });
+            const dates = getDailyDates();
+            dates.forEach(ds => {
+                html += `<th class="sortable th-daily-leads" data-table="${tableKey}" data-key="dc_${ds}">${fmtDateLabel(ds)}</th>`;
+            });
+            const dynLabels = getStandardLabels();
+            STANDARD_KEYS.forEach(k => {
+                const label = STATUS_LABELS[k] || dynLabels[k] || STANDARD_LABELS[k] || k;
+                const cls = STANDARD_TH_CLASS[k] || '';
+                html += `<th class="sortable ${cls}" data-table="${tableKey}" data-key="${k}">${label}</th>`;
+            });
+            html += '</tr>';
+            return html;
+        }
+
+        function applySortIndicators(tableKey, headEl) {
+            const st = sortState[tableKey];
+            headEl.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc','sort-desc');
+                if (st && th.dataset.key === st.key) th.classList.add(st.dir === 'asc' ? 'sort-asc' : 'sort-desc');
+            });
+        }
+
+        function attachSortListeners(tableKey, headEl, renderFn) {
+            headEl.querySelectorAll('th.sortable').forEach(th => {
+                th.addEventListener('click', function() {
+                    const key = this.dataset.key;
+                    const cur = sortState[tableKey];
+                    if (cur && cur.key === key) {
+                        if (cur.dir === 'desc') sortState[tableKey] = {key, dir:'asc'};
+                        else sortState[tableKey] = null;
+                    } else {
+                        sortState[tableKey] = {key, dir:'desc'};
+                    }
+                    renderFn();
+                });
+            });
+        }
+
+        function sortRows(rows, tableKey) {
+            const st = sortState[tableKey];
+            if (!st) return rows;
+            const sorted = [...rows];
+            const k = st.key;
+            sorted.sort((a,b) => {
+                let va, vb;
+                if (k.startsWith('dc_')) {
+                    const ds = k.substring(3);
+                    va = (a.daily_contacted || {})[ds] || 0;
+                    vb = (b.daily_contacted || {})[ds] || 0;
+                } else {
+                    va = a[k]; vb = b[k];
+                }
+                if (typeof va === 'string') { va = va.toLowerCase(); vb = (vb || '').toLowerCase(); return st.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
+                va = va || 0; vb = vb || 0;
+                return st.dir === 'asc' ? va - vb : vb - va;
+            });
+            return sorted;
+        }
+
+        function fmtTalkTime(seconds) {
+            if (!seconds || seconds <= 0) return '<span class="val-zero">0m</span>';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            if (h > 0) return `<span class="val-positive">${h}h ${m}m</span>`;
+            return `<span class="${m >= 30 ? 'val-positive' : ''}">${m}m</span>`;
+        }
+
+        function buildStandardRow(row) {
+            let html = '';
+            const dc = row.daily_contacted || {};
+            getDailyDates().forEach(ds => {
+                const v = dc[ds] || 0;
+                html += `<td class="${v > 0 ? 'val-positive' : 'val-zero'}">${fmtNum(v)}</td>`;
+            });
+            const ct = row.contacted_today || 0;
+            const avg = row.avg_daily_leads || 0;
+            const od = row.overdue || 0;
+            html += `<td class="${ct > 0 ? 'val-positive' : 'val-zero'}">${fmtNum(ct)}</td>`;
+            html += `<td class="${avg > 0 ? 'val-positive' : 'val-zero'}" style="font-weight:600;">${avg % 1 === 0 ? fmtNum(avg) : avg.toFixed(1)}</td>`;
+            html += `<td class="${od > 0 ? 'val-alert' : 'val-zero'}">${fmtNum(od)}</td>`;
+            STATUS_COLS.forEach(s => {
+                const v = row[s] || 0;
+                html += `<td class="${cellClass(v)}">${fmtNum(v)}</td>`;
+            });
+            html += `<td><strong>${fmtNum(row.total || 0)}</strong></td>`;
+            html += `<td class="${cellClass(row.self_leads)}">${fmtNum(row.self_leads || 0)}</td>`;
+            html += `<td class="${cellClass(row.company_leads)}">${fmtNum(row.company_leads || 0)}</td>`;
+            html += `<td class="val-positive">${fmtCur(row.actual_revenue || 0)}</td>`;
+            html += `<td class="val-positive">${fmtCur(row.deal_value || 0)}</td>`;
+            html += `<td>${fmtTalkTime(row.avg_daily_talk_time || 0)}</td>`;
+            const vgk = row.vgk_created || 0;
+            const was = row.wa_shares || 0;
+            html += `<td class="${vgk > 0 ? 'val-positive' : 'val-zero'}" style="font-weight:${vgk>0?'700':'400'}">${fmtNum(vgk)}</td>`;
+            html += `<td class="${was > 0 ? 'val-positive' : 'val-zero'}">${fmtNum(was)}</td>`;
+            return html;
+        }
+
+        function calcTotals(rows) {
+            const totals = {contacted_today:0, avg_daily_leads:0, overdue:0, total:0, self_leads:0, company_leads:0, actual_revenue:0, deal_value:0, avg_daily_talk_time:0, vgk_created:0, wa_shares:0};
+            STATUS_COLS.forEach(s => totals[s] = 0);
+            const dailyTotals = {};
+            getDailyDates().forEach(ds => { dailyTotals[ds] = 0; });
+            let avgSum = 0;
+            rows.forEach(r => {
+                STANDARD_KEYS.forEach(k => {
+                    if (k === 'avg_daily_leads' || k === 'avg_daily_talk_time') return;
+                    totals[k] = (totals[k] || 0) + (r[k] || 0);
+                });
+                avgSum += (r.avg_daily_leads || 0);
+                const dc = r.daily_contacted || {};
+                getDailyDates().forEach(ds => { dailyTotals[ds] += (dc[ds] || 0); });
+            });
+            totals.avg_daily_leads = rows.length > 0 ? Math.round(avgSum / rows.length * 10) / 10 : 0;
+            const talkSum = rows.reduce((s, r) => s + (r.avg_daily_talk_time || 0), 0);
+            const talkActive = rows.filter(r => (r.avg_daily_talk_time || 0) > 0).length;
+            totals.avg_daily_talk_time = talkActive > 0 ? Math.floor(talkSum / talkActive) : 0;
+            totals.daily_contacted = dailyTotals;
+            return totals;
+        }
+
+        function renderMyPerformance() {
+            const my = dashData.my_performance;
+            if (!my) return;
+            const s = my.summary;
+            const cards = document.getElementById('myStatCards');
+            let dailyCards = '';
+            const myDC = s.daily_contacted || {};
+            getDailyDates().forEach(ds => {
+                const v = myDC[ds] || 0;
+                dailyCards += `<div class="stat-card" style="border-left:3px solid #7c3aed;"><div class="val">${fmtNum(v)}</div><div class="lbl">${fmtDateLabel(ds)}</div></div>`;
+            });
+            cards.innerHTML = `
+                <div class="stat-card highlight"><div class="val">${fmtNum(s.total_leads)}</div><div class="lbl">Total Leads</div></div>
+                ${dailyCards}
+                <div class="stat-card blue"><div class="val">${fmtNum(s.contacted_today)}</div><div class="lbl">Contacted Today</div></div>
+                <div class="stat-card" style="border-left:3px solid #0369a1;"><div class="val">${s.avg_daily_leads || 0}</div><div class="lbl">Avg Daily Leads<br><small style="font-size:9px;opacity:0.7;">(${dashData.avg_num_days || 3} days)</small></div></div>
+                <div class="stat-card red"><div class="val">${fmtNum(s.overdue)}</div><div class="lbl">Overdue</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(s.new)}</div><div class="lbl">New</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(s.contacted)}</div><div class="lbl">Contacted</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(s.interested)}</div><div class="lbl">Interested</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(s.qualified)}</div><div class="lbl">Qualified</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(s.proposal)}</div><div class="lbl">Proposal</div></div>
+                <div class="stat-card orange"><div class="val">${fmtNum(s.loan_process)}</div><div class="lbl">At Bank</div></div>
+                <div class="stat-card green"><div class="val">${fmtNum(s.won)}</div><div class="lbl">Won</div></div>
+                <div class="stat-card orange"><div class="val">${fmtNum(s.processing||0)}</div><div class="lbl">Processing</div></div>
+                <div class="stat-card green"><div class="val">${fmtNum(s.completed)}</div><div class="lbl">Completed</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(s.lost)}</div><div class="lbl">Lost</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(s.on_hold)}</div><div class="lbl">On Hold</div></div>
+                <div class="stat-card green"><div class="val">${fmtCur(my.actual_revenue)}</div><div class="lbl">Actual Revenue</div></div>
+                <div class="stat-card green"><div class="val">${fmtCur(my.deal_value)}</div><div class="lbl">Value</div></div>
+                <div class="stat-card blue"><div class="val">${fmtNum(my.self_leads)}</div><div class="lbl">Self Leads</div></div>
+                <div class="stat-card"><div class="val">${fmtNum(my.company_leads)}</div><div class="lbl">Company Leads</div></div>
+                <div class="stat-card" style="border-left:3px solid #7c3aed;"><div class="val">${fmtNum(my.vgk_created||0)}</div><div class="lbl">VGK Created</div></div>
+                <div class="stat-card" style="border-left:3px solid #0d9488;"><div class="val">${fmtNum(my.wa_shares||0)}</div><div class="lbl">WA Shares</div></div>
+            `;
+
+            const cats = my.category_breakdown || [];
+            const headEl = document.getElementById('myCategoryHead');
+            const bodyEl = document.getElementById('myCategoryBody');
+            const footEl = document.getElementById('myCategoryFoot');
+            const emptyEl = document.getElementById('myCategoryEmpty');
+
+            if (cats.length === 0) {
+                headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = '';
+                emptyEl.style.display = 'block';
+                return;
+            }
+            emptyEl.style.display = 'none';
+
+            const TK = 'myCategory';
+            headEl.innerHTML = buildSortableHead(TK, [{label:'Category', sortKey:'category_name', width:200}]);
+            const sorted = sortRows(cats, TK);
+            let bodyHtml = '';
+            sorted.forEach(c => {
+                bodyHtml += '<tr>';
+                bodyHtml += `<td class="text-start sticky-col sticky-col-last" style="position:sticky;left:0;background:#fff;min-width:200px;"><strong>${c.category_name || 'Unknown'}</strong></td>`;
+                bodyHtml += buildStandardRow(c);
+                bodyHtml += '</tr>';
+            });
+            bodyEl.innerHTML = bodyHtml;
+            const totals = calcTotals(cats);
+            let footHtml = '<tr><td class="text-start sticky-col sticky-col-last" style="position:sticky;left:0;min-width:200px;"><strong>TOTAL</strong></td>';
+            footHtml += buildStandardRow(totals);
+            footHtml += '</tr>';
+            footEl.innerHTML = footHtml;
+            applySortIndicators(TK, headEl);
+            attachSortListeners(TK, headEl, renderMyPerformance);
+        }
+
+        function renderEmployeeTable(tableId, data, countElId) {
+            if (!data) return;
+            const employees = data.employees || [];
+            const prefix = tableId.replace('Table','').replace('table','');
+            const headEl = document.getElementById(prefix + 'Head');
+            const bodyEl = document.getElementById(prefix + 'Body');
+            const footEl = document.getElementById(prefix + 'Foot');
+            const emptyEl = document.getElementById(prefix + 'Empty');
+            if (countElId) {
+                const ce = document.getElementById(countElId);
+                if (ce) ce.textContent = `${employees.length} employees`;
+            }
+
+            if (employees.length === 0) {
+                headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = '';
+                if (emptyEl) emptyEl.style.display = 'block';
+                return;
+            }
+            if (emptyEl) emptyEl.style.display = 'none';
+
+            const TK = prefix;
+            headEl.innerHTML = buildSortableHead(TK, [
+                {label:'S.No', width:50},
+                {label:'Employee', sortKey:'name', width:200}
+            ]);
+            const sorted = sortRows(employees, TK);
+            let bodyHtml = '';
+            sorted.forEach((emp, idx) => {
+                const isSelf = emp.emp_id === (dashData.current_employee && dashData.current_employee.id);
+                bodyHtml += `<tr class="${isSelf ? 'self-highlight' : ''}">`;
+                bodyHtml += `<td class="text-start sticky-col" style="position:sticky;left:0;background:#fff;min-width:50px;">${idx + 1}</td>`;
+                bodyHtml += `<td class="text-start sticky-col sticky-col-last" style="position:sticky;left:50px;background:#fff;min-width:200px;">
+                    <div class="emp-info">
+                        <div class="emp-avatar">${initials(emp.name)}</div>
+                        <div>
+                            <div class="emp-name">${emp.name || '-'}</div>
+                            <div class="emp-id">${emp.emp_code || ''}</div>
+                        </div>
+                    </div>
+                </td>`;
+                bodyHtml += buildStandardRow(emp);
+                bodyHtml += '</tr>';
+            });
+            bodyEl.innerHTML = bodyHtml;
+            const totals = calcTotals(employees);
+            let footHtml = '<tr><td class="sticky-col" style="position:sticky;left:0;min-width:50px;"></td><td class="text-start sticky-col sticky-col-last" style="position:sticky;left:50px;min-width:200px;"><strong>TOTAL</strong></td>';
+            footHtml += buildStandardRow(totals);
+            footHtml += '</tr>';
+            footEl.innerHTML = footHtml;
+            applySortIndicators(TK, headEl);
+            attachSortListeners(TK, headEl, () => renderEmployeeTable(tableId, data, countElId));
+        }
+
+        function renderTeamPerformance() {
+            const filtered = getFilteredTeamEmployees();
+            const filteredData = { employees: filtered, totals: dashData.team_performance ? dashData.team_performance.totals : {} };
+            renderEmployeeTable('teamTable', filteredData, 'teamCount');
+            const ce = document.getElementById('teamCount');
+            if (ce && dashData.team_performance) {
+                const total = dashData.team_performance.employees ? dashData.team_performance.employees.length : 0;
+                if (teamSelectedEmpIds) {
+                    ce.textContent = `${filtered.length} of ${total} employees selected`;
+                } else {
+                    ce.textContent = `${total} employees`;
+                }
+            }
+        }
+
+        function renderStatusWise() {
+            renderEmployeeTable('statusTable', dashData.status_wise, 'statusCount');
+        }
+
+        function renderGroupTable(tableId, rows, labelField, emptyId) {
+            const prefix = tableId.replace('Table','').replace('table','');
+            const headEl = document.getElementById(prefix + 'Head');
+            const bodyEl = document.getElementById(prefix + 'Body');
+            const footEl = document.getElementById(prefix + 'Foot');
+            const emptyEl = document.getElementById(emptyId);
+
+            if (!rows || rows.length === 0) {
+                headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = '';
+                if (emptyEl) emptyEl.style.display = 'block';
+                return;
+            }
+            if (emptyEl) emptyEl.style.display = 'none';
+
+            const TK = prefix;
+            const label = labelField === 'category_name' ? 'Category' : 'Company';
+            headEl.innerHTML = buildSortableHead(TK, [{label, sortKey: labelField, width:200}]);
+            const sorted = sortRows(rows, TK);
+            let bodyHtml = '';
+            sorted.forEach(r => {
+                bodyHtml += '<tr>';
+                bodyHtml += `<td class="text-start sticky-col sticky-col-last" style="position:sticky;left:0;background:#fff;min-width:200px;"><strong>${r[labelField] || 'Unknown'}</strong></td>`;
+                bodyHtml += buildStandardRow(r);
+                bodyHtml += '</tr>';
+            });
+            bodyEl.innerHTML = bodyHtml;
+            const totals = calcTotals(rows);
+            let footHtml = '<tr><td class="text-start sticky-col sticky-col-last" style="position:sticky;left:0;min-width:200px;"><strong>TOTAL</strong></td>';
+            footHtml += buildStandardRow(totals);
+            footHtml += '</tr>';
+            footEl.innerHTML = footHtml;
+            applySortIndicators(TK, headEl);
+            attachSortListeners(TK, headEl, () => renderGroupTable(tableId, rows, labelField, emptyId));
+        }
+
+        function renderCategoryWise() {
+            renderGroupTable('catTable', dashData.category_wise, 'category_name', 'catEmpty');
+        }
+
+        function renderCompanyWise() {
+            renderGroupTable('compTable', dashData.company_wise, 'company_name', 'compEmpty');
+        }
+
+        /* ══════════════════════ CALL ACTIVITY TAB ══════════════════════ */
+        let callActivityData = null;
+        const CA_SLOT_KEYS = ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'other'];
+
+        function initCallActivityFilters() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('caDateFrom').value = today;
+            document.getElementById('caDateTo').value = today;
+        }
+
+        function setCaQuickRange(range) {
+            document.querySelectorAll('.ca-quick-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector(`.ca-quick-btn[data-ca-range="${range}"]`);
+            if (btn) btn.classList.add('active');
+            document.getElementById('caDateFrom').value = '';
+            document.getElementById('caDateTo').value = '';
+            loadCallActivity(range);
+        }
+
+        function onCaDateChange() {
+            document.querySelectorAll('.ca-quick-btn').forEach(b => b.classList.remove('active'));
+            const df = document.getElementById('caDateFrom').value;
+            const dt = document.getElementById('caDateTo').value;
+            if (df && dt) loadCallActivity(null, df, dt);
+        }
+
+        function resetCaFilters() {
+            document.querySelectorAll('.ca-quick-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector('.ca-quick-btn[data-ca-range="today"]');
+            if (btn) btn.classList.add('active');
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('caDateFrom').value = today;
+            document.getElementById('caDateTo').value = today;
+            loadCallActivity('today');
+        }
+
+        async function loadCallActivity(quickRange, df, dt) {
+            const panel = document.getElementById('tabCalls');
+            panel.classList.add('is-loading');
+            hideCaFallbackBanner();
+            const params = new URLSearchParams();
+            if (quickRange) {
+                params.set('quick_range', quickRange);
+            } else {
+                if (df) params.set('date_from', df);
+                if (dt) params.set('date_to', dt);
+            }
+            try {
+                const data = await safeStaffFetch(`/api/v1/call-tracking/management/slot-breakdown?${params.toString()}`);
+                if (data && data.success) {
+                    /* Auto-fallback: if "today" returns 0 records, silently load last_30 and show banner */
+                    const isEmpty = !data.per_staff || data.per_staff.length === 0;
+                    if (isEmpty && (quickRange === 'today' || (!quickRange && !df && !dt))) {
+                        const fallback = await safeStaffFetch('/api/v1/call-tracking/management/slot-breakdown?quick_range=last_30');
+                        if (fallback && fallback.success && fallback.per_staff && fallback.per_staff.length > 0) {
+                            callActivityData = fallback;
+                            showCaFallbackBanner(data.date_range ? data.date_range.from : 'today');
+                            /* Sync filter UI to last_30 */
+                            document.querySelectorAll('.ca-quick-btn').forEach(b => b.classList.remove('active'));
+                            const lb = document.querySelector('.ca-quick-btn[data-ca-range="last_30"]');
+                            if (lb) lb.classList.add('active');
+                        } else {
+                            callActivityData = data;
+                        }
+                    } else {
+                        callActivityData = data;
+                    }
+                    renderCallActivityView();
+                } else {
+                    console.error('Call Activity: API returned failure', data);
+                }
+            } catch (e) {
+                console.error('Call Activity load error:', e);
+            }
+            panel.classList.remove('is-loading');
+        }
+
+        function showCaFallbackBanner(todayDate) {
+            const el = document.getElementById('caFallbackBanner');
+            if (el) {
+                el.innerHTML = `<i class="fas fa-info-circle me-2"></i>No calls logged for <strong>${todayDate}</strong> — showing last 30 days automatically.`;
+                el.style.display = 'flex';
+            }
+        }
+        function hideCaFallbackBanner() {
+            const el = document.getElementById('caFallbackBanner');
+            if (el) el.style.display = 'none';
+        }
+
+        function fmtDur(secs) {
+            if (!secs || secs <= 0) return '0m';
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        }
+
+        function fmtAvgDur(secs, days) {
+            if (!secs || secs <= 0) return '0m';
+            return fmtDur(Math.round(secs / days));
+        }
+
+        function renderCallActivityView() {
+            const d = callActivityData;
+            if (!d) return;
+            const isAvg = d.is_multi_day;
+            const days = d.day_count || 1;
+            const labels = d.slot_labels || {};
+            const perStaff = d.per_staff || [];
+            const orgTotals = d.org_totals || {};
+            const orgSlots = orgTotals.slots || {};
+            const orgTotal = orgTotals.total || {};
+
+            /* ─── avg badge ─── */
+            const badge = document.getElementById('caAvgBadge');
+            badge.style.display = isAvg ? '' : 'none';
+
+            /* ─── date label ─── */
+            const rangeLabel = document.getElementById('caDateRangeLabel');
+            const dr = d.date_range || {};
+            if (dr.from === dr.to) {
+                rangeLabel.textContent = dr.from || '';
+            } else {
+                rangeLabel.textContent = `${dr.from || ''} → ${dr.to || ''}${isAvg ? ` (${days} days)` : ''}`;
+            }
+
+            /* ─── summary cards ─── */
+            const divider = isAvg ? days : 1;
+            const ot = orgTotal;
+            const cards = document.getElementById('caStatCards');
+            cards.innerHTML = [
+                { cls: 'blue',   icon: 'fa-phone', val: isAvg ? (ot.calls/divider).toFixed(1) : ot.calls, lbl: isAvg ? 'Avg Calls/Day' : 'Total Calls' },
+                { cls: 'green',  icon: 'fa-phone-volume', val: isAvg ? (ot.answered/divider).toFixed(1) : ot.answered, lbl: isAvg ? 'Avg Answered/Day' : 'Answered' },
+                { cls: 'orange', icon: 'fa-phone-alt', val: isAvg ? (ot.outgoing/divider).toFixed(1) : ot.outgoing, lbl: isAvg ? 'Avg Outgoing/Day' : 'Outgoing' },
+                { cls: 'purple', icon: 'fa-phone-slash', val: isAvg ? (ot.missed/divider).toFixed(1) : ot.missed, lbl: isAvg ? 'Avg Missed/Day' : 'Missed' },
+                { cls: 'green',  icon: 'fa-clock', val: isAvg ? fmtAvgDur(ot.duration_seconds, divider) : fmtDur(ot.duration_seconds), lbl: isAvg ? 'Avg Talk Time/Day' : 'Total Talk Time' },
+                { cls: 'blue',   icon: 'fa-link', val: isAvg ? (ot.crm_matched/divider).toFixed(1) : ot.crm_matched, lbl: isAvg ? 'Avg CRM Matched/Day' : 'CRM Matched' },
+                { cls: 'orange', icon: 'fa-users', val: perStaff.length, lbl: 'Active Staff' },
+            ].map(c => `
+                <div class="ca-stat-card ${c.cls}">
+                    <div class="ca-val"><i class="fas ${c.icon}" style="font-size:14px;opacity:0.6;"></i> ${c.val}</div>
+                    <div class="ca-lbl">${c.lbl}</div>
+                </div>`).join('');
+
+            /* ─── table header ─── */
+            const head = document.getElementById('caHead');
+            let hHtml = '<tr><th class="text-start sticky-col" style="position:sticky;left:0;min-width:180px;z-index:4;">Staff</th><th style="min-width:80px;">Dept</th>';
+            CA_SLOT_KEYS.forEach(sk => {
+                const isOther = sk === 'other';
+                hHtml += `<th class="ca-slot-hdr${isOther ? ' other' : ''}" style="min-width:115px;">${labels[sk] || sk}</th>`;
+            });
+            hHtml += `<th class="ca-slot-hdr total" style="min-width:115px;">Total</th></tr>`;
+            head.innerHTML = hHtml;
+
+            /* ─── build a slot cell ─── */
+            function slotCell(s, isDivided) {
+                if (!s || s.calls === 0) return `<td class="ca-zero">—</td>`;
+                const calls = isDivided ? (s.calls / days).toFixed(1) : s.calls;
+                const dur   = isDivided ? fmtAvgDur(s.duration_seconds, days) : fmtDur(s.duration_seconds);
+                const ans   = isDivided ? (s.answered / days).toFixed(1) : s.answered;
+                const out   = isDivided ? (s.outgoing / days).toFixed(1) : s.outgoing;
+                const inc   = isDivided ? (s.incoming / days).toFixed(1) : s.incoming;
+                const mis   = isDivided ? (s.missed / days).toFixed(1)   : s.missed;
+                const crm   = isDivided ? (s.crm_matched / days).toFixed(1) : s.crm_matched;
+                return `<td>
+                    <div class="ca-slot-cell">${calls}</div>
+                    <div class="ca-slot-dur">${dur}</div>
+                    <div class="ca-slot-detail">
+                        <span title="Answered" style="color:#059669;">✓${ans}</span>
+                        <span title="Outgoing" style="color:#2563eb;">↑${out}</span>
+                        <span title="Incoming" style="color:#7c3aed;">↓${inc}</span>
+                        <span title="Missed" style="color:#dc2626;">✗${mis}</span>
+                        ${crm > 0 ? `<span title="CRM Matched" style="color:#d97706;">⚑${crm}</span>` : ''}
+                    </div>
+                </td>`;
+            }
+
+            /* ─── table body ─── */
+            const body = document.getElementById('caBody');
+            const emptyEl = document.getElementById('caEmpty');
+            if (perStaff.length === 0) {
+                body.innerHTML = '';
+                document.getElementById('caFoot').innerHTML = '';
+                emptyEl.style.display = '';
+                return;
+            }
+            emptyEl.style.display = 'none';
+
+            let bHtml = '';
+            perStaff.forEach(row => {
+                const av = row.emp_code ? ` <span style="color:#9ca3af;font-weight:400;">(${row.emp_code})</span>` : '';
+                bHtml += `<tr>
+                    <td class="text-start sticky-col" style="position:sticky;left:0;background:#fff;">
+                        <div class="ca-staff-name">${row.name || '—'}${av}</div>
+                        ${row.call_tracking_enabled ? '<div style="font-size:10px;color:#059669;">● Tracking On</div>' : '<div style="font-size:10px;color:#9ca3af;">○ No Tracking</div>'}
+                    </td>
+                    <td class="ca-dept">${row.department || '—'}</td>`;
+                CA_SLOT_KEYS.forEach(sk => { bHtml += slotCell(row.slots[sk], isAvg); });
+                bHtml += slotCell(row.total, isAvg);
+                bHtml += '</tr>';
+            });
+            body.innerHTML = bHtml;
+
+            /* ─── totals footer ─── */
+            const foot = document.getElementById('caFoot');
+            let fHtml = `<tr class="ca-tfoot">
+                <td class="text-start sticky-col" style="position:sticky;left:0;background:#f3f4f6;font-weight:700;">ORG TOTAL${isAvg ? ' (avg/day)' : ''}</td>
+                <td>—</td>`;
+            CA_SLOT_KEYS.forEach(sk => { fHtml += slotCell(orgSlots[sk], isAvg); });
+            fHtml += slotCell(orgTotal, isAvg);
+            fHtml += '</tr>';
+            foot.innerHTML = fHtml;
+        }
+        /* ══════════════════════ END CALL ACTIVITY TAB ══════════════════ */
+
+        /* ══════════════════════ EARNINGS TAB ════════════════════════════ */
+        const EARN_SLUGS = ['solar','ev_b2c','ev_b2b','training','insurance','real_estate'];
+
+        function initEarningsFilters() {
+            const now   = new Date();
+            const curMo = now.getMonth() + 1;
+            const curYr = now.getFullYear();
+            // Set month dropdown
+            document.getElementById('earnMonth').value = curMo;
+            // Populate year dropdown
+            const yrSel = document.getElementById('earnYear');
+            yrSel.innerHTML = '';
+            for (let y = curYr; y >= 2024; y--) {
+                const o = document.createElement('option');
+                o.value = y; o.textContent = y;
+                if (y === curYr) o.selected = true;
+                yrSel.appendChild(o);
+            }
+            // Populate earnCompany — keep "All Companies" as first option
+            try {
+                safeStaffFetch('/api/v1/staff/accounts/companies').then(data => {
+                    if (!data.success) return;
+                    const companies = data.companies || (Array.isArray(data.data) ? data.data : []);
+                    if (!companies.length) return;
+                    const sel = document.getElementById('earnCompany');
+                    sel.innerHTML = '<option value="">All Companies</option>';
+                    companies.forEach(c => {
+                        const o = document.createElement('option');
+                        o.value = c.id;
+                        o.textContent = c.company_name || c.name;
+                        sel.appendChild(o);
+                    });
+                });
+            } catch(e) {}
+        }
+
+        function earnPayoutBadge(status) {
+            const cfg = {
+                in_progress: { cls: 'background:#fef3c7;color:#92400e;border:1px solid #fde68a;', icon: 'fa-clock',        label: 'In Progress' },
+                pending:     { cls: 'background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;', icon: 'fa-hourglass-half', label: 'Pending'      },
+                cleared:     { cls: 'background:#dcfce7;color:#166534;border:1px solid #86efac;', icon: 'fa-check-circle',  label: 'Cleared'      },
+            };
+            const c = cfg[status] || cfg.pending;
+            return `<span style="${c.cls}padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
+                <i class="fas ${c.icon}"></i>${c.label}</span>`;
+        }
+
+        function earnFmt(val) {
+            if (!val || val === 0) return '<span style="color:#d1d5db;">—</span>';
+            return `<span style="color:#7c3aed;font-weight:600;">₹${parseFloat(val).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0})}</span>`;
+        }
+
+        // ── Reusable: render achievement + earnings side-by-side ─────────
+        function _renderEarningsSideBySide(rows, payoutMap, month, year) {
+            const tbody    = document.getElementById('earnTbody');
+            const achTbody = document.getElementById('earnAchTbody');
+            const tfoot    = document.getElementById('earnTfoot');
+            const emptyEl  = document.getElementById('earnEmpty');
+            const countEl  = document.getElementById('earnCount');
+            const dueLine  = document.getElementById('earnDueLine');
+            const dueText  = document.getElementById('earnDueText');
+            const sideBy   = document.getElementById('earnSideBySide');
+
+            const nextMo  = month === 12 ? 1 : month + 1;
+            const nextYr  = month === 12 ? year + 1 : year;
+            const moNames = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const noData  = (cols) => `<tr><td colspan="${cols}" class="text-center py-3" style="color:#9ca3af;font-size:12px;"><i class="fas fa-inbox me-1"></i>No achievement data for this period</td></tr>`;
+
+            emptyEl.style.display = 'none';
+            sideBy.style.display  = '';
+
+            if (!rows.length) {
+                achTbody.innerHTML = noData(7);
+                tbody.innerHTML    = noData(10);
+                tfoot.innerHTML    = '';
+                countEl.textContent = '0 employees';
+                dueLine.style.display = 'none';
+                return;
+            }
+
+            dueText.textContent   = `Incentive clearance due: 15 ${moNames[nextMo]} ${nextYr}`;
+            dueLine.style.display = '';
+
+            // Achievement (left panel)
+            let achHtml = '';
+            rows.forEach(r => {
+                let slugAch = {};
+                (r.categories || []).forEach(c => { slugAch[c.slug] = c; });
+                achHtml += `<tr>
+                    <td class="text-start">
+                        <div style="font-weight:600;font-size:12px;">${r.name || '—'}</div>
+                        <div style="font-size:10px;color:#9ca3af;">${r.emp_code || ''}${r.companyLabel ? ` · ${r.companyLabel}` : ''}</div>
+                    </td>
+                    ${EARN_SLUGS.map(s => {
+                        const c = slugAch[s];
+                        if (!c) return '<td style="color:#d1d5db;font-size:11px;">—</td>';
+                        const metColor = c.target_met ? '#059669' : '#9ca3af';
+                        const metIcon  = c.target_met ? '✓' : '·';
+                        const val = c.min_target_unit === 'count'
+                            ? `${c.achieved_count || 0}`
+                            : `₹${parseFloat(c.achieved_amount || 0).toLocaleString('en-IN',{maximumFractionDigits:0})}`;
+                        return `<td style="font-size:11px;text-align:center;"><div style="color:${metColor};font-weight:600;">${metIcon} ${val}</div></td>`;
+                    }).join('')}
+                </tr>`;
+            });
+            achTbody.innerHTML = achHtml;
+            countEl.textContent = `${rows.length} employee${rows.length !== 1 ? 's' : ''}`;
+
+            // Earnings & Payout (right panel)
+            let html = ''; let totals = {}; EARN_SLUGS.forEach(s => totals[s] = 0); let grandTotal = 0;
+            rows.forEach(r => {
+                const payout   = payoutMap[r.employee_id];
+                const status   = payout ? payout.payout_status : ((new Date().getFullYear() === year && new Date().getMonth()+1 === month) ? 'in_progress' : 'pending');
+                const dueLabel = payout ? (payout.due_date_label || `15 ${moNames[nextMo]} ${nextYr}`) : `15 ${moNames[nextMo]} ${nextYr}`;
+                let slugMap    = {};
+                (r.categories || []).forEach(c => { slugMap[c.slug] = c.incentive_earned; });
+                EARN_SLUGS.forEach(s => totals[s] += slugMap[s] || 0);
+                grandTotal += r.total_incentive_earned || 0;
+                html += `<tr>
+                    <td class="text-start">
+                        <div style="font-weight:600;font-size:12px;">${r.name || '—'}</div>
+                        <div style="font-size:10px;color:#9ca3af;">${r.emp_code || ''}${r.companyLabel ? ` · ${r.companyLabel}` : ''}</div>
+                    </td>
+                    ${EARN_SLUGS.map(s => `<td style="font-size:11px;">${earnFmt(slugMap[s] || 0)}</td>`).join('')}
+                    <td style="font-weight:700;color:#d97706;font-size:12px;">${earnFmt(r.total_incentive_earned)}</td>
+                    <td>${earnPayoutBadge(status)}</td>
+                    <td style="font-size:11px;color:#065f46;font-weight:500;">${dueLabel}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+            tfoot.innerHTML = `<tr>
+                <td class="text-start" style="background:#f3f4f6;font-weight:700;font-size:12px;">TOTAL</td>
+                ${EARN_SLUGS.map(s => `<td style="font-weight:700;font-size:11px;">${earnFmt(totals[s])}</td>`).join('')}
+                <td style="font-weight:700;color:#d97706;font-size:12px;">${earnFmt(grandTotal)}</td>
+                <td></td><td></td>
+            </tr>`;
+        }
+
+        // ── Reusable: render incentive config table ────────────────────────
+        function _renderEarningsConfig(cfgRows, month, year) {
+            const configWrap = document.getElementById('earnConfigWrap');
+            const configNote = document.getElementById('earnConfigNote');
+            const cfgTbody   = document.getElementById('earnConfigTbody');
+            if (!cfgRows.length) {
+                if (configNote) configNote.textContent = 'No config for this period';
+                cfgTbody.innerHTML = `<tr><td colspan="7" class="text-center py-3" style="color:#9ca3af;font-size:12px;"><i class="fas fa-inbox me-1"></i>No incentive configuration found for this company / month</td></tr>`;
+                configWrap.style.display = '';
+                return;
+            }
+            if (configNote) configNote.textContent = `${cfgRows.length} categories · ${month}/${year}`;
+            cfgTbody.innerHTML = cfgRows.map(cfg => {
+                const rateType = cfg.incentive_type === 'fixed_per_unit' ? 'fixed/unit' : '%';
+                const minTgt   = cfg.min_target_unit === 'count' ? `${cfg.min_target_value} units` : `₹${parseFloat(cfg.min_target_value).toLocaleString('en-IN')}`;
+                const rateNS   = cfg.incentive_rate_without_support != null ? `${cfg.incentive_rate_without_support}${rateType === '%' ? '%' : ''}` : '—';
+                const rateWS   = cfg.incentive_rate_with_support   != null ? `${cfg.incentive_rate_with_support}${rateType === '%' ? '%' : ''}` : '—';
+                const bonus    = cfg.bonus_trigger_value != null ? `${cfg.bonus_trigger_value} ${cfg.min_target_unit === 'count' ? 'units' : '₹'}` : '—';
+                const mult     = cfg.bonus_multiplier != null ? `×${cfg.bonus_multiplier}` : '—';
+                return `<tr>
+                    <td class="text-start fw-semibold">${cfg.category_label || cfg.category_slug || '—'}</td>
+                    <td>${minTgt}</td>
+                    <td style="color:#7c3aed;">${rateNS}</td>
+                    <td style="color:#059669;">${rateWS}</td>
+                    <td style="font-size:11px;color:#6b7280;">${rateType}</td>
+                    <td style="color:#d97706;">${bonus}</td>
+                    <td style="color:#b91c1c;">${mult}</td>
+                </tr>`;
+            }).join('');
+            configWrap.style.display = '';
+        }
+
+        async function loadEarnings() {
+            const month      = parseInt(document.getElementById('earnMonth').value);
+            const year       = parseInt(document.getElementById('earnYear').value);
+            const company_id = parseInt(document.getElementById('earnCompany').value) || 0;
+
+            const tbody      = document.getElementById('earnTbody');
+            const achTbody   = document.getElementById('earnAchTbody');
+            const configWrap = document.getElementById('earnConfigWrap');
+            const sideBy     = document.getElementById('earnSideBySide');
+            const emptyEl    = document.getElementById('earnEmpty');
+
+            // Reset to loading state
+            tbody.innerHTML    = '<tr><td colspan="10" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+            achTbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+            document.getElementById('earnTfoot').innerHTML = '';
+            configWrap.style.display = 'none';
+            sideBy.style.display     = 'none';
+            emptyEl.style.display    = 'none';
+            document.getElementById('earnDueLine').style.display = 'none';
+
+            try {
+                // ── "All Companies" mode: fetch each company in parallel ────
+                if (!company_id) {
+                    const sel = document.getElementById('earnCompany');
+                    const companyOpts = [...sel.options].filter(o => o.value).map(o => ({ id: parseInt(o.value), name: o.textContent }));
+
+                    const results = await Promise.all(companyOpts.map(c =>
+                        Promise.all([
+                            safeStaffFetch(`/api/v1/staff/incentive-achievements?month=${month}&year=${year}&company_id=${c.id}`),
+                            safeStaffFetch(`/api/v1/staff/incentive-payouts/list?month=${month}&year=${year}&company_id=${c.id}`)
+                        ]).then(([achData, payoutData]) => ({ company: c, achData, payoutData })).catch(() => null)
+                    ));
+
+                    let allRows = []; let allPayoutMap = {};
+                    results.filter(Boolean).forEach(({ company, achData, payoutData }) => {
+                        if (achData.success) (achData.data || []).forEach(r => allRows.push({ ...r, companyLabel: company.name }));
+                        if (payoutData.success) (payoutData.data || []).forEach(p => { allPayoutMap[p.employee_id] = p; });
+                        // Auto-upsert payouts (fire-and-forget)
+                        if (achData.success) (achData.data || []).forEach(r => {
+                            if (!r.total_incentive_earned) return;
+                            safeStaffFetch('/api/v1/staff/incentive-payouts/upsert', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ employee_id: r.employee_id, company_id: company.id, month, year, total_incentive: r.total_incentive_earned })
+                            }).catch(() => {});
+                        });
+                    });
+
+                    // Config hidden for multi-company (no single config to show)
+                    configWrap.style.display = 'none';
+                    _renderEarningsSideBySide(allRows, allPayoutMap, month, year);
+                    return;
+                }
+
+                // ── Single company mode: fetch all three in parallel ───────
+                const [achData, cfgData, payoutData] = await Promise.all([
+                    safeStaffFetch(`/api/v1/staff/incentive-achievements?month=${month}&year=${year}&company_id=${company_id}`),
+                    safeStaffFetch(`/api/v1/staff/incentive-config?month=${month}&year=${year}&company_id=${company_id}`),
+                    safeStaffFetch(`/api/v1/staff/incentive-payouts/list?month=${month}&year=${year}&company_id=${company_id}`)
+                ]);
+
+                // Always show config section (empty state if no rows)
+                const cfgRows = (cfgData.success && cfgData.config) ? cfgData.config : [];
+                _renderEarningsConfig(cfgRows, month, year);
+
+                // Achievements
+                if (!achData.success) {
+                    achTbody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${achData.detail || 'Failed to load'}</td></tr>`;
+                    tbody.innerHTML    = `<tr><td colspan="10" class="text-center text-danger py-4">${achData.detail || 'Failed to load'}</td></tr>`;
+                    sideBy.style.display = '';
+                    return;
+                }
+
+                const rows = achData.data || [];
+                let payoutMap = {};
+                if (payoutData.success) (payoutData.data || []).forEach(p => { payoutMap[p.employee_id] = p; });
+
+                // Auto-upsert payout rows (fire-and-forget)
+                rows.forEach(r => {
+                    if (!r.total_incentive_earned) return;
+                    safeStaffFetch('/api/v1/staff/incentive-payouts/upsert', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ employee_id: r.employee_id, company_id, month, year, total_incentive: r.total_incentive_earned })
+                    }).catch(() => {});
+                });
+
+                _renderEarningsSideBySide(rows, payoutMap, month, year);
+
+            } catch(e) {
+                document.getElementById('earnTbody').innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">Error: ${e.message}</td></tr>`;
+                document.getElementById('earnAchTbody').innerHTML = '';
+                sideBy.style.display = '';
+                console.error('loadEarnings error:', e);
+            }
+        }
+        /* ══════════════════════ END EARNINGS TAB ════════════════════════ */
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Call Tracking Dashboard - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 24px; }
+
+        .page-banner {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+
+        .tab-nav {
+            display: flex; gap: 0; margin-bottom: 24px;
+            background: white; border-radius: 12px; padding: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .tab-btn {
+            flex: 1; padding: 10px 20px; border: none; background: transparent;
+            border-radius: 8px; font-size: 14px; font-weight: 600; color: #6b7280;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+            flex-direction: column; gap: 2px;
+        }
+        .tab-btn-main { display: flex; align-items: center; gap: 8px; }
+        .tab-btn-sync { font-size: 10px; font-weight: 400; opacity: 0.7; letter-spacing: 0; }
+        .tab-btn.active .tab-btn-sync { opacity: 0.85; color: rgba(255,255,255,0.9); }
+        .tab-btn:not(.active) .tab-btn-sync { color: #9ca3af; }
+        .tab-btn.active { background: #0ea5e9; color: white; }
+        .tab-btn:hover:not(.active) { background: #f0f9ff; color: #0ea5e9; }
+
+        .filter-card {
+            background: white; border-radius: 12px; padding: 16px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
+        }
+        .filter-card label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-card .form-control, .filter-card .form-select {
+            font-size: 13px; padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb;
+        }
+        .filter-card .form-control:focus, .filter-card .form-select:focus {
+            border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.1);
+        }
+
+        .quick-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .quick-btn {
+            padding: 5px 12px; border-radius: 6px; border: 1px solid #e5e7eb; background: white;
+            color: #6b7280; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s;
+        }
+        .quick-btn:hover { border-color: #0ea5e9; color: #0ea5e9; }
+        .quick-btn.active { background: #0ea5e9; border-color: #0ea5e9; color: white; }
+
+        .stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+        .stat-card {
+            background: white; border-radius: 10px; padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center;
+        }
+        .stat-card .val { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-card .lbl { color: #6b7280; font-size: 11px; margin-top: 2px; text-transform: uppercase; font-weight: 600; }
+        .stat-card.blue { border-top: 3px solid #0ea5e9; }
+        .stat-card.green { border-top: 3px solid #059669; }
+        .stat-card.red { border-top: 3px solid #dc2626; }
+        .stat-card.orange { border-top: 3px solid #d97706; }
+        .stat-card.purple { border-top: 3px solid #7c3aed; }
+
+        .data-card {
+            background: white; border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 24px; overflow: hidden;
+        }
+        .data-card-header {
+            padding: 14px 20px; border-bottom: 1px solid #f3f4f6;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .data-card-header h5 { font-size: 15px; font-weight: 600; color: #1f2937; margin: 0; }
+        .data-card-body { padding: 0; }
+
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th {
+            background: #f9fafb; padding: 10px 12px; text-align: center;
+            font-weight: 600; color: #6b7280; border-bottom: 2px solid #e5e7eb;
+            font-size: 11px; text-transform: uppercase; white-space: nowrap;
+        }
+        .data-table td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; }
+        .data-table tbody tr:hover { background: #f0f9ff; }
+        .data-table th.text-start, .data-table td.text-start { text-align: left; }
+
+        .emp-info { display: flex; align-items: center; gap: 10px; }
+        .emp-avatar {
+            width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #0ea5e9, #0284c7);
+            display: flex; align-items: center; justify-content: center; color: white;
+            font-size: 11px; font-weight: 700; flex-shrink: 0;
+        }
+        .emp-name { font-weight: 600; color: #1f2937; font-size: 13px; }
+        .emp-code { font-size: 11px; color: #9ca3af; }
+        .tracking-badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; }
+        .tracking-on { background: #d1fae5; color: #059669; }
+        .tracking-off { background: #fee2e2; color: #dc2626; }
+
+        .duration-fmt { font-family: 'Courier New', monospace; }
+        .val-good { color: #059669; font-weight: 600; }
+        .val-warn { color: #d97706; font-weight: 600; }
+        .val-bad { color: #dc2626; font-weight: 600; }
+        .val-zero { color: #d1d5db; }
+
+        .empty-state { padding: 40px; text-align: center; color: #9ca3af; }
+        .empty-state i { font-size: 36px; margin-bottom: 12px; }
+
+        .trend-row { display: flex; gap: 4px; align-items: flex-end; height: 60px; }
+        .trend-bar {
+            flex: 1; background: #0ea5e9; border-radius: 2px 2px 0 0; min-width: 4px;
+            transition: height 0.3s; cursor: pointer; position: relative;
+        }
+        .trend-bar:hover { background: #0284c7; }
+        .trend-bar .tip {
+            display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+            background: #1f2937; color: white; padding: 4px 8px; border-radius: 4px;
+            font-size: 10px; white-space: nowrap; z-index: 10;
+        }
+        .trend-bar:hover .tip { display: block; }
+
+        .spinner-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.7); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .no-tracking-banner {
+            background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px;
+            padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;
+        }
+        .no-tracking-banner i { color: #d97706; font-size: 20px; }
+        .no-tracking-banner p { margin: 0; color: #92400e; font-size: 13px; }
+
+        .sync-info { font-size: 11px; color: #9ca3af; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+
+    <div class="main-content">
+    <div id="headerContainer"></div>
+        <div class="content-area">
+            <div class="page-banner">
+                <h1><i class="fas fa-phone-alt"></i>Call Management</h1>
+                <p>Monitor your call activity and team call performance</p>
+            </div>
+
+            <div id="loadingOverlay" class="spinner-overlay" style="display:none;">
+                <div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" id="tabMyCallsBtn" onclick="switchTab('my-calls')">
+                    <span class="tab-btn-main"><i class="fas fa-user"></i> My Calls</span>
+                    <span class="tab-btn-sync" id="tabMyCallsSync"></span>
+                </button>
+                <button class="tab-btn" id="tabTeamCallsBtn" onclick="switchTab('team-calls')">
+                    <span class="tab-btn-main"><i class="fas fa-users"></i> Team Calls</span>
+                    <span class="tab-btn-sync" id="tabTeamCallsSync"></span>
+                </button>
+                <button class="tab-btn" id="tabDialerBtn" onclick="switchTab('dialer')">
+                    <span class="tab-btn-main"><i class="fas fa-phone-alt"></i> Dialer Analytics</span>
+                </button>
+            </div>
+
+            <!-- ===== MY CALLS TAB ===== -->
+            <div id="tabMyCallsPanel">
+
+                <div id="noTrackingBanner" class="no-tracking-banner" style="display:none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Call tracking is not enabled for your account. Contact your manager to enable call tracking.</p>
+                </div>
+
+                <!-- My Calls Filter -->
+                <div class="filter-card">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 mb-2">
+                            <label class="d-block mb-1">Quick Range</label>
+                            <div class="quick-btns">
+                                <button class="quick-btn" data-my-range="today" onclick="setMyQuickRange('today')">Today</button>
+                                <button class="quick-btn" data-my-range="yesterday" onclick="setMyQuickRange('yesterday')">Yesterday</button>
+                                <button class="quick-btn" data-my-range="last_3" onclick="setMyQuickRange('last_3')">Last 3 Days</button>
+                                <button class="quick-btn" data-my-range="this_week" onclick="setMyQuickRange('this_week')">This Week</button>
+                                <button class="quick-btn active" data-my-range="last_7" onclick="setMyQuickRange('last_7')">Last 7 Days</button>
+                                <button class="quick-btn" data-my-range="this_month" onclick="setMyQuickRange('this_month')">This Month</button>
+                                <button class="quick-btn" data-my-range="last_30" onclick="setMyQuickRange('last_30')">Last 30 Days</button>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label>From Date</label>
+                            <input type="date" class="form-control" id="myDateFrom">
+                        </div>
+                        <div class="col-md-2">
+                            <label>To Date</label>
+                            <input type="date" class="form-control" id="myDateTo">
+                        </div>
+                        <div class="col-md-2">
+                            <label>Call Type</label>
+                            <select class="form-select" id="myFilterCallType" onchange="loadMyCalls()">
+                                <option value="">All Types</option>
+                                <option value="INCOMING">Incoming</option>
+                                <option value="OUTGOING">Outgoing</option>
+                                <option value="MISSED">Missed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Phone Number</label>
+                            <input type="text" class="form-control" id="myFilterPhone" placeholder="Search by phone number...">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-2 gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="resetMyFilters()"><i class="fas fa-undo me-1"></i>Reset</button>
+                        <button class="btn btn-sm btn-primary" onclick="loadMyCalls()"><i class="fas fa-search me-1"></i>Apply</button>
+                    </div>
+                </div>
+
+                <!-- My Stats Cards -->
+                <div class="stat-cards" id="myStatCards"></div>
+
+                <!-- My Daily Trend -->
+                <div class="data-card">
+                    <div class="data-card-header">
+                        <h5><i class="fas fa-chart-bar me-2"></i>My Daily Call Trend</h5>
+                        <span id="myTrendDateRange" class="text-muted" style="font-size:12px;"></span>
+                    </div>
+                    <div class="data-card-body" style="padding:16px;">
+                        <div class="trend-row" id="myTrendChart"></div>
+                        <div class="d-flex justify-content-between mt-1" style="font-size:10px;color:#9ca3af;">
+                            <span id="myTrendStart"></span>
+                            <span id="myTrendEnd"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- My Call List -->
+                <div class="data-card">
+                    <div class="data-card-header">
+                        <h5><i class="fas fa-list-alt me-2"></i>My Call Records</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <span id="myCallsLastSync" class="sync-info"></span>
+                            <span id="myCallsPagLabel" class="text-muted" style="font-size:12px;"></span>
+                        </div>
+                    </div>
+                    <div class="data-card-body">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th class="text-start" style="width:40px;">S.No</th>
+                                        <th>Date &amp; Time</th>
+                                        <th>Phone Number</th>
+                                        <th>Contact</th>
+                                        <th>Type</th>
+                                        <th>Duration</th>
+                                        <th>CRM Lead</th>
+                                        <th>Recording</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="myCallsBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center p-3" id="myCallsPagRow">
+                            <span id="myCallsPagInfo" class="text-muted" style="font-size:12px;"></span>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" id="myCallsPrev" onclick="prevMyCallsPage()"><i class="fas fa-chevron-left"></i></button>
+                                <button class="btn btn-outline-secondary" id="myCallsNext" onclick="nextMyCallsPage()"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <div id="myAudioPlayerContainer" style="display:none;padding:8px 16px;background:#f0f9ff;border-top:1px solid #e5e7eb;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-headphones text-info"></i>
+                                <audio controls id="myCallAudioPlayer" style="flex:1;height:32px;"></audio>
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeMyAudioPlayer()"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ===== TEAM CALLS TAB ===== -->
+            <div id="tabTeamCallsPanel" style="display:none;">
+
+                <!-- Team Filter Bar -->
+                <div class="filter-card">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 mb-2">
+                            <label class="d-block mb-1">Quick Range</label>
+                            <div class="quick-btns">
+                                <button class="quick-btn" data-range="today" onclick="setQuickRange('today')">Today</button>
+                                <button class="quick-btn" data-range="yesterday" onclick="setQuickRange('yesterday')">Yesterday</button>
+                                <button class="quick-btn" data-range="this_week" onclick="setQuickRange('this_week')">This Week</button>
+                                <button class="quick-btn" data-range="last_week" onclick="setQuickRange('last_week')">Last Week</button>
+                                <button class="quick-btn" data-range="this_month" onclick="setQuickRange('this_month')">This Month</button>
+                                <button class="quick-btn active" data-range="last_30" onclick="setQuickRange('last_30')">Last 30 Days</button>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label>From Date</label>
+                            <input type="date" class="form-control" id="dateFrom">
+                        </div>
+                        <div class="col-md-2">
+                            <label>To Date</label>
+                            <input type="date" class="form-control" id="dateTo">
+                        </div>
+                        <div class="col-md-2">
+                            <label>Department</label>
+                            <select class="form-select" id="filterDept" onchange="loadDashboard()">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label>Reporting Manager</label>
+                            <select class="form-select" id="filterManager" onchange="loadDashboard()">
+                                <option value="">All Managers</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label>Staff Member</label>
+                            <select class="form-select" id="filterStaff" onchange="loadDashboard()">
+                                <option value="">All Staff</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label>Call Type</label>
+                            <select class="form-select" id="filterCallType" onchange="loadDashboard()">
+                                <option value="">All Types</option>
+                                <option value="INCOMING">Incoming</option>
+                                <option value="OUTGOING">Outgoing</option>
+                                <option value="MISSED">Missed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label>Phone Number</label>
+                            <input type="text" class="form-control" id="filterPhone" placeholder="Search by phone number...">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-2 gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="resetFilters()"><i class="fas fa-undo me-1"></i>Reset</button>
+                        <button class="btn btn-sm btn-primary" onclick="loadDashboard()"><i class="fas fa-search me-1"></i>Apply</button>
+                    </div>
+                </div>
+
+                <!-- Team Summary Cards -->
+                <div class="stat-cards" id="summaryCards"></div>
+
+                <!-- Team Daily Trend -->
+                <div class="data-card">
+                    <div class="data-card-header">
+                        <h5><i class="fas fa-chart-bar me-2"></i>Daily Call Trend</h5>
+                        <span id="trendDateRange" class="text-muted" style="font-size:12px;"></span>
+                    </div>
+                    <div class="data-card-body" style="padding:16px;">
+                        <div class="trend-row" id="trendChart"></div>
+                        <div class="d-flex justify-content-between mt-1" style="font-size:10px;color:#9ca3af;">
+                            <span id="trendStart"></span>
+                            <span id="trendEnd"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Per-Staff Table -->
+                <div class="data-card">
+                    <div class="data-card-header">
+                        <h5><i class="fas fa-users me-2"></i>Staff Call Activity</h5>
+                        <span id="staffCount" class="text-muted" style="font-size:12px;"></span>
+                    </div>
+                    <div class="data-card-body">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead id="staffTableHead"></thead>
+                                <tbody id="staffTableBody"></tbody>
+                                <tfoot id="staffTableFoot"></tfoot>
+                            </table>
+                        </div>
+                        <div id="staffEmpty" class="empty-state" style="display:none;">
+                            <i class="fas fa-phone-slash d-block"></i>
+                            <p>No call data found for the selected filters</p>
+                        </div>
+                        <div id="syncStatusBanner" style="display:none;margin:0 0 8px 0;padding:10px 16px;border-radius:7px;font-size:13px;display:none;align-items:center;gap:10px;"></div>
+                    </div>
+                </div>
+
+                <!-- Call Details Section (shown when Call Details button is clicked) -->
+                <div class="data-card" id="callDetailsSection" style="display:none;">
+                    <div class="data-card-header">
+                        <h5><i class="fas fa-list-alt me-2"></i>Call Details: <span id="callDetailsStaffName"></span></h5>
+                        <div class="d-flex gap-2 align-items-center">
+                            <select class="form-select form-select-sm" id="callDetailsTypeFilter" onchange="loadCallDetails()" style="width:auto;font-size:12px;">
+                                <option value="">All Types</option>
+                                <option value="INCOMING">Incoming</option>
+                                <option value="OUTGOING">Outgoing</option>
+                                <option value="MISSED">Missed</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="closeCallDetails()"><i class="fas fa-times me-1"></i>Close</button>
+                        </div>
+                    </div>
+                    <div id="callDetailsSyncBanner" style="display:none;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid #e5e7eb;font-size:12px;"></div>
+                    <div class="data-card-body">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th class="text-start" style="width:30px;">S.No</th>
+                                        <th>Date &amp; Time</th>
+                                        <th>Phone Number</th>
+                                        <th>Contact</th>
+                                        <th>Type</th>
+                                        <th>Duration</th>
+                                        <th>CRM Lead</th>
+                                        <th>Recording</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="callDetailsBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center p-3">
+                            <span id="callDetailsPagination" class="text-muted" style="font-size:12px;"></span>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-secondary" id="callDetailsPrev" onclick="prevCallDetailsPage()"><i class="fas fa-chevron-left"></i></button>
+                                <button class="btn btn-outline-secondary" id="callDetailsNext" onclick="nextCallDetailsPage()"><i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <div id="audioPlayerContainer" style="display:none;padding:8px 16px;background:#f0f9ff;border-top:1px solid #e5e7eb;">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-headphones text-info"></i>
+                                <audio controls id="callAudioPlayer" style="flex:1;height:32px;"></audio>
+                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeAudioPlayer()"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ===== DIALER ANALYTICS TAB ===== -->
+            <div id="tabDialerPanel" style="display:none;">
+              <div style="padding:20px 0;">
+
+                <!-- Quick Stats Row -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px;" id="dialer-stats-row">
+                  <div class="stat-card" style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                    <div style="font-size:26px;font-weight:800;color:#0ea5e9" id="ds-total-sessions">–</div>
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;margin-top:4px">Sessions</div>
+                  </div>
+                  <div class="stat-card" style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                    <div style="font-size:26px;font-weight:800;color:#1f2937" id="ds-total-calls">–</div>
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;margin-top:4px">Total Dials</div>
+                  </div>
+                  <div class="stat-card" style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                    <div style="font-size:26px;font-weight:800;color:#059669" id="ds-answered">–</div>
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;margin-top:4px">Answered</div>
+                  </div>
+                  <div class="stat-card" style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                    <div style="font-size:26px;font-weight:800;color:#d97706" id="ds-no-answer">–</div>
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;margin-top:4px">No Answer</div>
+                  </div>
+                  <div class="stat-card" style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                    <div style="font-size:26px;font-weight:800;color:#7c3aed" id="ds-busy">–</div>
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;margin-top:4px">Busy</div>
+                  </div>
+                  <div class="stat-card" style="background:white;border-radius:12px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                    <div style="font-size:26px;font-weight:800;color:#ef4444" id="ds-dnc">–</div>
+                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:600;margin-top:4px">Do Not Call</div>
+                  </div>
+                </div>
+
+                <!-- Period filter -->
+                <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;">
+                  <span style="font-size:13px;color:#6b7280;font-weight:600;">Period:</span>
+                  <button class="btn btn-sm btn-outline-secondary active" id="dp-today" onclick="loadDialerAnalytics('today')">Today</button>
+                  <button class="btn btn-sm btn-outline-secondary" id="dp-week" onclick="loadDialerAnalytics('week')">This Week</button>
+                  <button class="btn btn-sm btn-outline-secondary" id="dp-month" onclick="loadDialerAnalytics('month')">This Month</button>
+                  <a href="/staff/dialer" class="btn btn-sm btn-primary ms-auto" style="background:#059669;border-color:#059669;">
+                    <i class="fas fa-phone-alt me-1"></i> Open Dialer
+                  </a>
+                </div>
+
+                <!-- Attempts Table -->
+                <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+                  <div style="padding:14px 16px;border-bottom:1px solid #f3f4f6;font-size:13px;font-weight:700;color:#374151;">
+                    Recent Dialer Attempts
+                  </div>
+                  <div style="overflow-x:auto;">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th class="text-start">#</th>
+                          <th class="text-start">Lead</th>
+                          <th>Outcome</th>
+                          <th>Duration</th>
+                          <th>Status Updated</th>
+                          <th class="text-start">Note</th>
+                          <th>Time</th>
+                        </tr>
+                      </thead>
+                      <tbody id="dialer-attempts-tbody">
+                        <tr><td colspan="7" class="text-center py-4 text-muted">Loading...</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let dashData = null;
+        let companyId = '';
+        let myStaffId = null;
+        let activeTab = 'my-calls';
+
+        // ===== SHARED UTILS =====
+        function fmtDuration(seconds) {
+            if (!seconds || seconds <= 0) return '<span class="val-zero">0m</span>';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            if (h > 0) return `${h}h ${m}m`;
+            if (m > 0) return `${m}m ${s}s`;
+            return `${s}s`;
+        }
+
+        function fmtTalkClass(seconds) {
+            if (!seconds || seconds <= 0) return 'val-zero';
+            const mins = seconds / 60;
+            if (mins >= 60) return 'val-good';
+            if (mins >= 30) return 'val-warn';
+            return 'val-bad';
+        }
+
+        function initials(name) {
+            return (name || '?').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+        }
+
+        function buildCallRow(call, sno) {
+            const dt = new Date(call.call_datetime);
+            const dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
+            const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            let typeBadge = '';
+            switch(call.call_type) {
+                case 'OUTGOING': typeBadge = '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Outgoing</span>'; break;
+                case 'INCOMING': typeBadge = '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>Incoming</span>'; break;
+                case 'MISSED': typeBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Missed</span>'; break;
+                case 'REJECTED': typeBadge = '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>'; break;
+                default: typeBadge = `<span class="badge bg-secondary">${call.call_type}</span>`;
+            }
+
+            const leadLink = call.matched_lead_name
+                ? `<span class="text-info"><i class="fas fa-link me-1"></i>${call.matched_lead_name}</span>`
+                : '<span class="text-muted">-</span>';
+
+            return `<tr>
+                <td class="text-start">${sno}</td>
+                <td><small>${dateStr}<br><span class="text-muted">${timeStr}</span></small></td>
+                <td><strong style="font-size:13px;">${call.phone_number || '-'}</strong></td>
+                <td>${typeBadge}</td>
+                <td class="duration-fmt">${fmtDuration(call.duration_seconds)}</td>
+                <td><small>${leadLink}</small></td>
+                <td>${call.has_recording && call.recording_id
+                    ? `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="${arguments[2]}(${call.recording_id})" title="Play Recording"><i class="fas fa-play me-1"></i>Play</button>`
+                    : '<span class="text-muted">-</span>'}</td>
+            </tr>`;
+        }
+
+        // ===== TAB SWITCHING =====
+        function switchTab(tab) {
+            activeTab = tab;
+            document.getElementById('tabMyCallsBtn').classList.toggle('active', tab === 'my-calls');
+            document.getElementById('tabTeamCallsBtn').classList.toggle('active', tab === 'team-calls');
+            document.getElementById('tabDialerBtn').classList.toggle('active', tab === 'dialer');
+            document.getElementById('tabMyCallsPanel').style.display = tab === 'my-calls' ? '' : 'none';
+            document.getElementById('tabTeamCallsPanel').style.display = tab === 'team-calls' ? '' : 'none';
+            document.getElementById('tabDialerPanel').style.display = tab === 'dialer' ? '' : 'none';
+
+            if (tab === 'my-calls' && myStaffId && !myCallsLoaded) {
+                loadMyCalls();
+            }
+            if (tab === 'team-calls' && !dashData) {
+                loadDashboard();
+            }
+            if (tab === 'dialer') {
+                loadDialerAnalytics('today');
+            }
+        }
+
+        let dialerAnalyticsLoaded = false;
+        async function loadDialerAnalytics(period = 'today') {
+            ['dp-today','dp-week','dp-month'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.remove('active');
+            });
+            const activeId = period === 'today' ? 'dp-today' : period === 'week' ? 'dp-week' : 'dp-month';
+            document.getElementById(activeId)?.classList.add('active');
+            document.getElementById('dialer-attempts-tbody').innerHTML = '<tr><td colspan="7" class="text-center py-4"><span class="spinner-border spinner-border-sm text-info"></span> Loading...</td></tr>';
+            try {
+                const token = document.cookie.split(';').map(c=>c.trim()).find(c=>c.startsWith('staff_token=')||c.startsWith('session_token='));
+                const tk = token ? token.split('=')[1] : '';
+                const res = await fetch(`/api/v1/crm/dialer/analytics?period=${period}`, { headers: { 'Authorization': `Bearer ${tk}` } });
+                const data = await res.json();
+                if (!data.success) throw new Error('Failed to load');
+                const d = data.overview || {};
+                document.getElementById('ds-total-sessions').textContent = d.total_sessions || 0;
+                document.getElementById('ds-total-calls').textContent = d.total_dials || 0;
+                document.getElementById('ds-answered').textContent = d.answered || 0;
+                document.getElementById('ds-no-answer').textContent = d.no_answer || 0;
+                document.getElementById('ds-busy').textContent = d.busy || 0;
+                document.getElementById('ds-dnc').textContent = d.do_not_call || 0;
+                const attempts = data.recent_attempts || [];
+                const OUTCOME_COLORS = { answered:'#059669', no_answer:'#d97706', busy:'#7c3aed', callback:'#0ea5e9', skip:'#6b7280' };
+                const tbody = document.getElementById('dialer-attempts-tbody');
+                if (!attempts.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No dialer activity in this period</td></tr>'; return; }
+                tbody.innerHTML = attempts.map((a, i) => {
+                    const color = OUTCOME_COLORS[a.call_outcome] || '#6b7280';
+                    const dt = a.dialed_at ? new Date(a.dialed_at) : null;
+                    const timeStr = dt ? dt.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }) : '-';
+                    const dateStr = dt ? dt.toLocaleDateString('en-IN', { day:'2-digit', month:'short' }) : '-';
+                    const dur = a.duration_seconds > 0 ? `${Math.floor(a.duration_seconds/60)}m ${a.duration_seconds%60}s` : '-';
+                    const outcomeLabel = (a.call_outcome||'').replace(/_/g,' ');
+                    return `<tr>
+                        <td>${i+1}</td>
+                        <td class="text-start"><b>${a.lead_name || 'Lead #'+a.lead_id}</b><br><small class="text-muted">${a.lead_phone || ''}</small></td>
+                        <td><span style="padding:3px 10px;border-radius:20px;background:${color}20;color:${color};font-size:12px;font-weight:700">${outcomeLabel || '-'}</span></td>
+                        <td>${dur}</td>
+                        <td><small style="color:#6b7280">${(a.status_updated_to||'').replace(/_/g,' ') || '-'}</small></td>
+                        <td class="text-start"><small style="color:#374151">${(a.note || '').slice(0,60)}${a.note && a.note.length>60?'...':''}</small></td>
+                        <td><small>${dateStr}<br>${timeStr}</small></td>
+                    </tr>`;
+                }).join('');
+            } catch(e) {
+                console.error('Dialer analytics error:', e);
+                document.getElementById('dialer-attempts-tbody').innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Failed to load dialer analytics</td></tr>';
+            }
+        }
+
+        // ===== INIT =====
+        async function init() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') StaffHeader.inject('Call Management', 'fas fa-phone-alt');
+            try {
+                const profileData = await staffFetchJson('/api/v1/staff/auth/me');
+                if (profileData && profileData.employee) {
+                    companyId = profileData.employee.base_company_id || '';
+                    myStaffId = profileData.employee.id;
+                }
+            } catch (e) {
+                console.error('Init error:', e);
+            }
+            loadMyCalls();
+        }
+
+        // ===== MY CALLS TAB =====
+        let myCurrentQuickRange = 'last_7';
+        let myCallsPage = 1;
+        let myCallsLoaded = false;
+        let myCallsData = null;
+
+        function setMyQuickRange(range) {
+            myCurrentQuickRange = range;
+            document.querySelectorAll('.quick-btn[data-my-range]').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector(`.quick-btn[data-my-range="${range}"]`);
+            if (btn) btn.classList.add('active');
+            document.getElementById('myDateFrom').value = '';
+            document.getElementById('myDateTo').value = '';
+            loadMyCalls();
+        }
+
+        function resetMyFilters() {
+            document.getElementById('myDateFrom').value = '';
+            document.getElementById('myDateTo').value = '';
+            document.getElementById('myFilterCallType').value = '';
+            document.getElementById('myFilterPhone').value = '';
+            myCurrentQuickRange = 'last_7';
+            document.querySelectorAll('.quick-btn[data-my-range]').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector('.quick-btn[data-my-range="last_7"]');
+            if (btn) btn.classList.add('active');
+            myCallsPage = 1;
+            loadMyCalls();
+        }
+
+        async function loadMyCalls() {
+            if (!myStaffId) return;
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            myCallsLoaded = true;
+            try {
+                // Load stats
+                let statsUrl = `/api/v1/call-tracking/my-stats?`;
+                const myDateFrom = document.getElementById('myDateFrom').value;
+                const myDateTo = document.getElementById('myDateTo').value;
+                if (myDateFrom) statsUrl += `date_from=${myDateFrom}&`;
+                if (myDateTo) statsUrl += `date_to=${myDateTo}&`;
+                if (!myDateFrom && !myDateTo && myCurrentQuickRange) statsUrl += `quick_range=${myCurrentQuickRange}&`;
+
+                const statsData = await staffFetchJson(statsUrl);
+                if (statsData && statsData.success) {
+                    myCallsData = statsData;
+                    renderMyStats(statsData);
+                    renderMyTrend(statsData);
+
+                    const noTrackBanner = document.getElementById('noTrackingBanner');
+                    noTrackBanner.style.display = statsData.call_tracking_enabled ? 'none' : 'flex';
+
+                    if (statsData.last_sync) {
+                        const syncDt = new Date(statsData.last_sync.sync_completed_at);
+                        const syncStr = `Last sync: ${syncDt.toLocaleString('en-IN')}`;
+                        document.getElementById('myCallsLastSync').textContent = syncStr;
+                        document.getElementById('tabMyCallsSync').textContent = syncStr;
+                    } else {
+                        document.getElementById('myCallsLastSync').textContent = 'No sync yet';
+                        document.getElementById('tabMyCallsSync').textContent = 'No sync yet';
+                    }
+                }
+
+                // Load call list
+                await loadMyCallList();
+
+            } catch (e) {
+                console.error('My calls load error:', e);
+            }
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        async function loadMyCallList() {
+            if (!myStaffId) return;
+            const tbody = document.getElementById('myCallsBody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3"><div class="spinner-border spinner-border-sm text-info"></div> Loading...</td></tr>';
+
+            const myDateFrom = document.getElementById('myDateFrom').value;
+            const myDateTo = document.getElementById('myDateTo').value;
+            const callType = document.getElementById('myFilterCallType').value;
+            const phone = document.getElementById('myFilterPhone').value.trim();
+
+            let url = `/api/v1/call-tracking/staff/${myStaffId}/calls?page=${myCallsPage}&per_page=50`;
+            if (myDateFrom) url += `&date_from=${myDateFrom}`;
+            if (myDateTo) url += `&date_to=${myDateTo}`;
+            if (!myDateFrom && !myDateTo && myCurrentQuickRange) url += `&quick_range=${myCurrentQuickRange}`;
+            if (callType) url += `&call_type=${callType}`;
+            if (phone) url += `&phone_number=${encodeURIComponent(phone)}`;
+
+            try {
+                const data = await staffFetchJson(url);
+                if (data && data.success) {
+                    const callList = data.data?.calls || [];
+                    const pg = data.data?.pagination || { page: 1, pages: 0, total: 0 };
+                    if (callList.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-phone-slash me-2"></i>No call records found</td></tr>';
+                    } else {
+                        tbody.innerHTML = callList.map((call, idx) => {
+                            const sno = ((myCallsPage - 1) * 50) + idx + 1;
+                            const dt = new Date(call.call_datetime);
+                            const dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
+                            const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                            let typeBadge = '';
+                            switch(call.call_type) {
+                                case 'OUTGOING': typeBadge = '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Outgoing</span>'; break;
+                                case 'INCOMING': typeBadge = '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>Incoming</span>'; break;
+                                case 'MISSED': typeBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Missed</span>'; break;
+                                case 'REJECTED': typeBadge = '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>'; break;
+                                default: typeBadge = `<span class="badge bg-secondary">${call.call_type}</span>`;
+                            }
+                            const crmName = call.contact_name_crm || call.matched_lead_name || '';
+                            const deviceName = call.contact_name || '';
+                            const displayName = crmName || deviceName;
+                            const leadStatus = call.contact_lead_status || call.matched_lead_status || '';
+                            let contactHtml = '<span class="text-muted" style="font-size:11px;">-</span>';
+                            if (displayName) {
+                                const badge = crmName
+                                    ? `<span class="badge" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;font-size:9px;">CRM${leadStatus ? ' · ' + leadStatus : ''}</span>`
+                                    : `<span class="badge bg-secondary" style="font-size:9px;">Device</span>`;
+                                contactHtml = `<small style="font-weight:600;color:#1f2937;">${displayName}</small><br>${badge}`;
+                            }
+                            const leadLink = (call.matched_lead_name || call.contact_name_crm)
+                                ? `<span class="text-info"><i class="fas fa-link me-1"></i>${call.matched_lead_name || call.contact_name_crm}</span>`
+                                : '<span class="text-muted">-</span>';
+                            const recBtn = (call.has_recording && call.recording_id)
+                                ? `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="playMyRecording(${call.recording_id})"><i class="fas fa-play me-1"></i>Play</button>`
+                                : '<span class="text-muted">-</span>';
+                            return `<tr>
+                                <td class="text-start">${sno}</td>
+                                <td><small>${dateStr}<br><span class="text-muted">${timeStr}</span></small></td>
+                                <td><strong class="phone-link" onclick="openPhoneDetail('${call.phone_number}',${myStaffId})" style="font-size:13px;cursor:pointer;color:#3b82f6;text-decoration:underline dotted;">${call.phone_number || '-'}</strong></td>
+                                <td>${contactHtml}</td>
+                                <td>${typeBadge}</td>
+                                <td class="duration-fmt">${fmtDuration(call.duration_seconds)}</td>
+                                <td><small>${leadLink}</small></td>
+                                <td>${recBtn}</td>
+                            </tr>`;
+                        }).join('');
+                    }
+                    document.getElementById('myCallsPagInfo').textContent = pg.total > 0 ? `Page ${pg.page} of ${pg.pages} (${pg.total} records)` : '';
+                    document.getElementById('myCallsPagRow').style.display = pg.total > 0 ? 'flex' : 'none';
+                    document.getElementById('myCallsPrev').disabled = pg.page <= 1;
+                    document.getElementById('myCallsNext').disabled = pg.page >= pg.pages;
+                }
+            } catch (e) {
+                console.error('My calls list error:', e);
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-3">Error loading calls</td></tr>';
+            }
+        }
+
+        function prevMyCallsPage() { if (myCallsPage > 1) { myCallsPage--; loadMyCallList(); } }
+        function nextMyCallsPage() { myCallsPage++; loadMyCallList(); }
+
+        function renderMyStats(data) {
+            const s = data.stats;
+            const cards = document.getElementById('myStatCards');
+            cards.innerHTML = `
+                <div class="stat-card blue"><div class="val">${(s.total_calls || 0).toLocaleString()}</div><div class="lbl">Total Calls</div></div>
+                <div class="stat-card green"><div class="val">${fmtDuration(s.total_duration_seconds)}</div><div class="lbl">Total Talk Time</div></div>
+                <div class="stat-card"><div class="val">${s.outgoing || 0}</div><div class="lbl">Outgoing</div></div>
+                <div class="stat-card"><div class="val">${s.incoming || 0}</div><div class="lbl">Incoming</div></div>
+                <div class="stat-card red"><div class="val">${s.missed || 0}</div><div class="lbl">Missed</div></div>
+                <div class="stat-card orange"><div class="val">${s.rejected || 0}</div><div class="lbl">Rejected</div></div>
+                <div class="stat-card"><div class="val">${s.unique_numbers || 0}</div><div class="lbl">Unique Numbers</div></div>
+                <div class="stat-card purple"><div class="val">${s.crm_matched || 0}</div><div class="lbl">CRM Matched</div></div>
+            `;
+        }
+
+        function renderMyTrend(data) {
+            const trend = data.daily || [];
+            const chart = document.getElementById('myTrendChart');
+            if (trend.length === 0) {
+                chart.innerHTML = '<div class="text-center text-muted w-100 py-3">No trend data</div>';
+                return;
+            }
+            const reversed = [...trend].reverse();
+            const maxCalls = Math.max(...reversed.map(d => d.calls), 1);
+            chart.innerHTML = reversed.map(d => {
+                const h = Math.max((d.calls / maxCalls) * 100, 2);
+                const dur = Math.floor((d.duration || 0) / 60);
+                return `<div class="trend-bar" style="height:${h}%;" title="${d.date}: ${d.calls} calls">
+                    <div class="tip">${d.date}<br>${d.calls} calls, ${dur}m talk<br>Missed:${d.missed||0}</div>
+                </div>`;
+            }).join('');
+            document.getElementById('myTrendStart').textContent = reversed[0]?.date || '';
+            document.getElementById('myTrendEnd').textContent = reversed[reversed.length - 1]?.date || '';
+            if (data.date_range) {
+                document.getElementById('myTrendDateRange').textContent = `${data.date_range.from} to ${data.date_range.to}`;
+            }
+        }
+
+        function playMyRecording(recordingId) {
+            const container = document.getElementById('myAudioPlayerContainer');
+            const player = document.getElementById('myCallAudioPlayer');
+            player.src = `/api/v1/call-tracking/recordings/${recordingId}/stream`;
+            container.style.display = 'block';
+            player.play().catch(() => {});
+        }
+
+        function closeMyAudioPlayer() {
+            const container = document.getElementById('myAudioPlayerContainer');
+            const player = document.getElementById('myCallAudioPlayer');
+            if (player) { player.pause(); player.src = ''; }
+            if (container) container.style.display = 'none';
+        }
+
+        document.getElementById('myFilterPhone').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { myCallsPage = 1; loadMyCalls(); }
+        });
+
+        // ===== TEAM CALLS TAB =====
+        let currentQuickRange = 'last_30';
+
+        function setQuickRange(range) {
+            currentQuickRange = range;
+            document.querySelectorAll('.quick-btn[data-range]').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector(`.quick-btn[data-range="${range}"]`);
+            if (btn) btn.classList.add('active');
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            loadDashboard();
+        }
+
+        function resetFilters() {
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('filterDept').value = '';
+            document.getElementById('filterManager').value = '';
+            document.getElementById('filterStaff').value = '';
+            document.getElementById('filterCallType').value = '';
+            document.getElementById('filterPhone').value = '';
+            currentQuickRange = 'last_30';
+            document.querySelectorAll('.quick-btn[data-range]').forEach(b => b.classList.remove('active'));
+            const btn = document.querySelector('.quick-btn[data-range="last_30"]');
+            if (btn) btn.classList.add('active');
+            closeCallDetails();
+            loadDashboard();
+        }
+
+        async function loadDashboard() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            try {
+                const params = new URLSearchParams();
+
+                const dateFrom = document.getElementById('dateFrom').value;
+                const dateTo = document.getElementById('dateTo').value;
+                if (dateFrom) params.set('date_from', dateFrom);
+                if (dateTo) params.set('date_to', dateTo);
+                if (!dateFrom && !dateTo && currentQuickRange) params.set('quick_range', currentQuickRange);
+
+                const dept = document.getElementById('filterDept').value;
+                const mgr = document.getElementById('filterManager').value;
+                const staff = document.getElementById('filterStaff').value;
+                const callType = document.getElementById('filterCallType').value;
+                const phoneNum = document.getElementById('filterPhone').value.trim();
+                if (dept) params.set('department_id', dept);
+                if (mgr) params.set('reporting_manager_id', mgr);
+                if (staff) params.set('staff_id', staff);
+                if (callType) params.set('call_type', callType);
+                if (phoneNum) params.set('phone_number', phoneNum);
+
+                const url = `/api/v1/call-tracking/management/overview?${params.toString()}`;
+
+                const data = await staffFetchJson(url);
+                if (data && data.success) {
+                    dashData = data;
+                    renderSummary();
+                    renderTrend();
+                    renderStaffTable();
+                    populateFilterDropdowns();
+                    const staffList = dashData.per_staff || [];
+                    const latestSync = staffList
+                        .map(s => s.last_synced_at ? new Date(s.last_synced_at).getTime() : 0)
+                        .filter(t => t > 0)
+                        .sort((a, b) => b - a)[0];
+                    const teamSyncEl = document.getElementById('tabTeamCallsSync');
+                    if (teamSyncEl) {
+                        teamSyncEl.textContent = latestSync
+                            ? `Last sync: ${new Date(latestSync).toLocaleString('en-IN')}`
+                            : 'No sync yet';
+                    }
+                }
+            } catch (e) {
+                console.error('Dashboard load error:', e);
+            }
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function populateFilterDropdowns() {
+            if (!dashData) return;
+
+            const deptSelect = document.getElementById('filterDept');
+            const currentDept = deptSelect.value;
+            if (dashData.departments && deptSelect.options.length <= 1) {
+                dashData.departments.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.id; opt.textContent = d.name;
+                    deptSelect.appendChild(opt);
+                });
+                deptSelect.value = currentDept;
+            }
+
+            const mgrSelect = document.getElementById('filterManager');
+            const currentMgr = mgrSelect.value;
+            if (dashData.managers && mgrSelect.options.length <= 1) {
+                dashData.managers.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id; opt.textContent = `${m.name} (${m.emp_code})`;
+                    mgrSelect.appendChild(opt);
+                });
+                mgrSelect.value = currentMgr;
+            }
+
+            const staffSelect = document.getElementById('filterStaff');
+            const currentStaff = staffSelect.value;
+            if (dashData.staff_list && staffSelect.options.length <= 1) {
+                dashData.staff_list.forEach(s => {
+                    const trackIcon = s.call_tracking_enabled ? ' ✓' : '';
+                    const opt = document.createElement('option');
+                    opt.value = s.id; opt.textContent = `${s.name} (${s.emp_code})${trackIcon}`;
+                    staffSelect.appendChild(opt);
+                });
+                staffSelect.value = currentStaff;
+            }
+        }
+
+        function renderSummary() {
+            const o = dashData.overview;
+            const cards = document.getElementById('summaryCards');
+            cards.innerHTML = `
+                <div class="stat-card blue"><div class="val">${(o.total_calls || 0).toLocaleString()}</div><div class="lbl">Total Calls</div></div>
+                <div class="stat-card green"><div class="val">${fmtDuration(o.total_duration_seconds)}</div><div class="lbl">Total Talk Time</div></div>
+                <div class="stat-card purple"><div class="val">${fmtDuration(o.avg_daily_talk_time)}</div><div class="lbl">Avg Daily Talk</div></div>
+                <div class="stat-card"><div class="val">${o.outgoing || 0}</div><div class="lbl">Outgoing</div></div>
+                <div class="stat-card"><div class="val">${o.incoming || 0}</div><div class="lbl">Incoming</div></div>
+                <div class="stat-card red"><div class="val">${o.missed || 0}</div><div class="lbl">Missed</div></div>
+                <div class="stat-card"><div class="val">${o.unique_numbers || 0}</div><div class="lbl">Unique Numbers</div></div>
+                <div class="stat-card orange"><div class="val">${o.crm_matched || 0}</div><div class="lbl">CRM Matched</div></div>
+                <div class="stat-card"><div class="val">${o.active_staff || 0}</div><div class="lbl">Active Staff</div></div>
+            `;
+        }
+
+        function renderTrend() {
+            const trend = dashData.daily_trend || [];
+            const chart = document.getElementById('trendChart');
+            if (trend.length === 0) {
+                chart.innerHTML = '<div class="text-center text-muted w-100 py-3">No trend data</div>';
+                return;
+            }
+            const reversed = [...trend].reverse();
+            const maxCalls = Math.max(...reversed.map(d => d.calls), 1);
+            chart.innerHTML = reversed.map(d => {
+                const h = Math.max((d.calls / maxCalls) * 100, 2);
+                const dur = Math.floor((d.duration || 0) / 60);
+                return `<div class="trend-bar" style="height:${h}%;" title="${d.date}: ${d.calls} calls">
+                    <div class="tip">${d.date}<br>${d.calls} calls, ${dur}m talk<br>Out:${d.outgoing||0} In:${d.incoming||0} Miss:${d.missed||0}</div>
+                </div>`;
+            }).join('');
+            document.getElementById('trendStart').textContent = reversed[0]?.date || '';
+            document.getElementById('trendEnd').textContent = reversed[reversed.length - 1]?.date || '';
+            document.getElementById('trendDateRange').textContent = `${dashData.date_range.from} to ${dashData.date_range.to}`;
+        }
+
+        function renderSyncStatusBanner(syncStatus) {
+            const banner = document.getElementById('syncStatusBanner');
+            if (!banner) return;
+            if (!syncStatus) { banner.style.display = 'none'; return; }
+
+            if (syncStatus.type === 'specific_staff') {
+                const name = `${syncStatus.staff_name} (${syncStatus.emp_code})`;
+                if (!syncStatus.last_synced_at) {
+                    banner.style.cssText = 'display:flex;align-items:center;gap:10px;margin:0 0 8px 0;padding:10px 16px;border-radius:7px;font-size:13px;background:#fef3c7;border:1px solid #fde68a;color:#92400e;';
+                    banner.innerHTML = `<i class="fas fa-exclamation-triangle" style="font-size:16px;color:#d97706;flex-shrink:0;"></i><span><strong>${name}</strong> has never synced calls from their mobile device. Ask them to open the MNR mobile app and trigger a call sync.</span>`;
+                } else {
+                    const dt = new Date(syncStatus.last_synced_at);
+                    const total = syncStatus.total_records_synced || 0;
+                    banner.style.cssText = 'display:flex;align-items:center;gap:10px;margin:0 0 8px 0;padding:10px 16px;border-radius:7px;font-size:13px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;';
+                    banner.innerHTML = `<i class="fas fa-info-circle" style="font-size:16px;color:#3b82f6;flex-shrink:0;"></i><span><strong>${name}</strong> last synced on <strong>${dt.toLocaleString('en-IN')}</strong> (${total.toLocaleString()} calls ever synced) — but has no calls in the selected date range. Try widening the date range.</span>`;
+                }
+            } else if (syncStatus.type === 'all_staff') {
+                const count = syncStatus.synced_staff_count || 0;
+                if (count === 0) {
+                    banner.style.cssText = 'display:flex;align-items:center;gap:10px;margin:0 0 8px 0;padding:10px 16px;border-radius:7px;font-size:13px;background:#fef3c7;border:1px solid #fde68a;color:#92400e;';
+                    banner.innerHTML = `<i class="fas fa-exclamation-triangle" style="font-size:16px;color:#d97706;flex-shrink:0;"></i><span>No staff members have synced any calls yet. Staff need to open the MNR mobile app and trigger a call sync to see data here.</span>`;
+                } else {
+                    banner.style.cssText = 'display:flex;align-items:center;gap:10px;margin:0 0 8px 0;padding:10px 16px;border-radius:7px;font-size:13px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;';
+                    banner.innerHTML = `<i class="fas fa-info-circle" style="font-size:16px;color:#3b82f6;flex-shrink:0;"></i><span><strong>${count} staff member${count !== 1 ? 's' : ''}</strong> have synced calls historically, but no calls exist for the selected date range and filters. Try widening the date range or resetting filters.</span>`;
+                }
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        function renderStaffTable() {
+            const staff = dashData.per_staff || [];
+            const thead = document.getElementById('staffTableHead');
+            const tbody = document.getElementById('staffTableBody');
+            const tfoot = document.getElementById('staffTableFoot');
+            const empty = document.getElementById('staffEmpty');
+            const count = document.getElementById('staffCount');
+
+            count.textContent = `${staff.length} staff members`;
+
+            if (staff.length === 0) {
+                thead.innerHTML = ''; tbody.innerHTML = ''; tfoot.innerHTML = '';
+                empty.style.display = 'block';
+                renderSyncStatusBanner(dashData.sync_status || null);
+                return;
+            }
+            empty.style.display = 'none';
+            renderSyncStatusBanner(null);
+
+            thead.innerHTML = `<tr>
+                <th class="text-start" style="width:40px;">S.No</th>
+                <th class="text-start" style="min-width:180px;">Employee</th>
+                <th>Total Calls</th>
+                <th>Outgoing</th>
+                <th>Incoming</th>
+                <th>Missed</th>
+                <th>Total Talk Time</th>
+                <th>Avg Daily Talk</th>
+                <th>Unique Numbers</th>
+                <th>CRM Matched</th>
+                <th style="color:#7c3aed">VGK<br>Created</th>
+                <th style="color:#0d9488">WA<br>Shares</th>
+                <th>Actions</th>
+            </tr>`;
+
+            tbody.innerHTML = staff.map((s, i) => {
+                const talkClass = fmtTalkClass(s.avg_daily_talk_time);
+                return `<tr>
+                    <td class="text-start">${i + 1}</td>
+                    <td class="text-start">
+                        <div class="emp-info">
+                            <div class="emp-avatar">${initials(s.staff_name)}</div>
+                            <div>
+                                <div class="emp-name">${s.staff_name || '-'}</div>
+                                <div class="emp-code">${s.emp_code || ''}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><strong>${s.total_calls}</strong></td>
+                    <td>${s.outgoing || 0}</td>
+                    <td>${s.incoming || 0}</td>
+                    <td class="${(s.missed || 0) > 0 ? 'val-bad' : 'val-zero'}">${s.missed || 0}</td>
+                    <td class="duration-fmt">${fmtDuration(s.total_duration)}</td>
+                    <td class="${talkClass} duration-fmt">${fmtDuration(s.avg_daily_talk_time)}</td>
+                    <td>${s.unique_numbers || 0}</td>
+                    <td>${s.crm_matched || 0}</td>
+                    <td style="font-weight:${(s.vgk_created||0)>0?'700':'400'};color:${(s.vgk_created||0)>0?'#7c3aed':'#9ca3af'}">${s.vgk_created || 0}</td>
+                    <td style="color:${(s.wa_shares||0)>0?'#0d9488':'#9ca3af'}">${s.wa_shares || 0}</td>
+                    <td><button class="btn btn-sm btn-outline-info" onclick="openCallDetails(${s.staff_id}, '${(s.staff_name || '').replace(/'/g, "\\'")}', '${s.emp_code || ''}', '${s.last_synced_at || ''}')"><i class="fas fa-list me-1"></i>Call Details</button></td>
+                </tr>`;
+            }).join('');
+
+            const totals = staff.reduce((acc, s) => {
+                acc.total_calls += s.total_calls || 0;
+                acc.outgoing += s.outgoing || 0;
+                acc.incoming += s.incoming || 0;
+                acc.missed += s.missed || 0;
+                acc.total_duration += s.total_duration || 0;
+                acc.unique_numbers += s.unique_numbers || 0;
+                acc.crm_matched += s.crm_matched || 0;
+                acc.vgk_created += s.vgk_created || 0;
+                acc.wa_shares += s.wa_shares || 0;
+                return acc;
+            }, { total_calls: 0, outgoing: 0, incoming: 0, missed: 0, total_duration: 0, unique_numbers: 0, crm_matched: 0, vgk_created: 0, wa_shares: 0 });
+
+            tfoot.innerHTML = `<tr style="background:#f9fafb;font-weight:600;">
+                <td></td>
+                <td class="text-start">TOTAL</td>
+                <td>${totals.total_calls}</td>
+                <td>${totals.outgoing}</td>
+                <td>${totals.incoming}</td>
+                <td>${totals.missed}</td>
+                <td class="duration-fmt">${fmtDuration(totals.total_duration)}</td>
+                <td>-</td>
+                <td>${totals.unique_numbers}</td>
+                <td>${totals.crm_matched}</td>
+                <td style="color:${totals.vgk_created>0?'#7c3aed':'#9ca3af'}">${totals.vgk_created}</td>
+                <td style="color:${totals.wa_shares>0?'#0d9488':'#9ca3af'}">${totals.wa_shares}</td>
+                <td></td>
+            </tr>`;
+        }
+
+        let callDetailsStaffId = null;
+        let callDetailsPage = 1;
+
+        function openCallDetails(staffId, staffName, empCode, lastSyncedAt) {
+            callDetailsStaffId = staffId;
+            callDetailsPage = 1;
+            document.getElementById('callDetailsStaffName').textContent = `${staffName} (${empCode})`;
+            document.getElementById('callDetailsSection').style.display = 'block';
+            document.getElementById('callDetailsTypeFilter').value = '';
+            const syncBanner = document.getElementById('callDetailsSyncBanner');
+            if (syncBanner) {
+                if (lastSyncedAt) {
+                    const dt = new Date(lastSyncedAt);
+                    syncBanner.innerHTML = `<i class="fas fa-cloud-upload-alt" style="color:#059669;"></i><span style="color:#059669;font-weight:600;">Last Synced: ${dt.toLocaleString('en-IN')}</span>`;
+                    syncBanner.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid #bbf7d0;background:#f0fdf4;font-size:12px;';
+                } else {
+                    syncBanner.innerHTML = `<i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="color:#d97706;font-weight:600;">This staff member has never synced calls from their mobile device</span>`;
+                    syncBanner.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid #fde68a;background:#fef3c7;font-size:12px;';
+                }
+            }
+            document.getElementById('callDetailsSection').scrollIntoView({ behavior: 'smooth' });
+            loadCallDetails();
+        }
+
+        function closeCallDetails() {
+            document.getElementById('callDetailsSection').style.display = 'none';
+            callDetailsStaffId = null;
+            closeAudioPlayer();
+        }
+
+        async function loadCallDetails() {
+            if (!callDetailsStaffId) return;
+            const tbody = document.getElementById('callDetailsBody');
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center py-3"><div class="spinner-border spinner-border-sm text-info"></div> Loading...</td></tr>';
+
+            try {
+                const dateFrom = document.getElementById('dateFrom').value;
+                const dateTo = document.getElementById('dateTo').value;
+                const detailCallType = document.getElementById('callDetailsTypeFilter').value;
+
+                let url = `/api/v1/call-tracking/staff/${callDetailsStaffId}/calls?page=${callDetailsPage}&per_page=50`;
+                if (dateFrom) url += `&date_from=${dateFrom}`;
+                if (dateTo) url += `&date_to=${dateTo}`;
+                if (!dateFrom && !dateTo && currentQuickRange) url += `&quick_range=${currentQuickRange}`;
+                if (detailCallType) url += `&call_type=${detailCallType}`;
+
+                const data = await staffFetchJson(url);
+                if (data && data.success) {
+                    const callList = data.data?.calls || [];
+                    const pg = data.data?.pagination || { page: 1, pages: 0, total: 0 };
+                    if (callList.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-phone-slash me-2"></i>No call records found for this staff member in the selected date range</td></tr>';
+                    } else {
+                        tbody.innerHTML = callList.map((call, idx) => {
+                            const sno = ((callDetailsPage - 1) * 50) + idx + 1;
+                            const dt = new Date(call.call_datetime);
+                            const dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
+                            const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                            let typeBadge = '';
+                            switch(call.call_type) {
+                                case 'OUTGOING': typeBadge = '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Outgoing</span>'; break;
+                                case 'INCOMING': typeBadge = '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>Incoming</span>'; break;
+                                case 'MISSED': typeBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Missed</span>'; break;
+                                case 'REJECTED': typeBadge = '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>'; break;
+                                default: typeBadge = `<span class="badge bg-secondary">${call.call_type}</span>`;
+                            }
+                            const crmName = call.contact_name_crm || call.matched_lead_name || '';
+                            const deviceName = call.contact_name || '';
+                            const displayName = crmName || deviceName;
+                            const leadStatus = call.contact_lead_status || call.matched_lead_status || '';
+                            let contactHtml = '<span class="text-muted" style="font-size:11px;">-</span>';
+                            if (displayName) {
+                                const badge = crmName
+                                    ? `<span class="badge" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;font-size:9px;">CRM${leadStatus ? ' · ' + leadStatus : ''}</span>`
+                                    : `<span class="badge bg-secondary" style="font-size:9px;">Device</span>`;
+                                contactHtml = `<small style="font-weight:600;color:#1f2937;">${displayName}</small><br>${badge}`;
+                            }
+                            const leadLink = (call.matched_lead_name || call.contact_name_crm)
+                                ? `<span class="text-info"><i class="fas fa-link me-1"></i>${call.matched_lead_name || call.contact_name_crm}</span>`
+                                : '<span class="text-muted">-</span>';
+                            let recordingCol = '<span class="text-muted">-</span>';
+                            if (call.has_recording && call.recording_id) {
+                                recordingCol = `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="playCallRecording(${call.recording_id})"><i class="fas fa-play me-1"></i>Play</button>`;
+                            }
+                            return `<tr>
+                                <td class="text-start">${sno}</td>
+                                <td><small>${dateStr}<br><span class="text-muted">${timeStr}</span></small></td>
+                                <td><strong class="phone-link" onclick="openPhoneDetail('${call.phone_number}',${callDetailsStaffId})" style="font-size:13px;cursor:pointer;color:#3b82f6;text-decoration:underline dotted;">${call.phone_number || '-'}</strong></td>
+                                <td>${contactHtml}</td>
+                                <td>${typeBadge}</td>
+                                <td class="duration-fmt">${fmtDuration(call.duration_seconds)}</td>
+                                <td><small>${leadLink}</small></td>
+                                <td>${recordingCol}</td>
+                            </tr>`;
+                        }).join('');
+                    }
+                    document.getElementById('callDetailsPagination').textContent = pg.total > 0 ? `Page ${pg.page} of ${pg.pages} (${pg.total} records)` : '';
+                    document.getElementById('callDetailsPrev').disabled = pg.page <= 1;
+                    document.getElementById('callDetailsNext').disabled = pg.page >= pg.pages;
+                }
+            } catch (e) {
+                console.error('Call details load error:', e);
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-3">Error loading call details</td></tr>';
+            }
+        }
+
+        function prevCallDetailsPage() {
+            if (callDetailsPage > 1) { callDetailsPage--; loadCallDetails(); }
+        }
+
+        function nextCallDetailsPage() {
+            callDetailsPage++;
+            loadCallDetails();
+        }
+
+        function playCallRecording(recordingId) {
+            const container = document.getElementById('audioPlayerContainer');
+            const player = document.getElementById('callAudioPlayer');
+            player.src = `/api/v1/call-tracking/recordings/${recordingId}/stream`;
+            container.style.display = 'block';
+            player.play().catch(() => {});
+        }
+
+        function closeAudioPlayer() {
+            const container = document.getElementById('audioPlayerContainer');
+            const player = document.getElementById('callAudioPlayer');
+            if (player) { player.pause(); player.src = ''; }
+            if (container) container.style.display = 'none';
+        }
+
+        document.getElementById('filterPhone').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') loadDashboard();
+        });
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        // ===== PHONE DETAIL MODAL =====
+        let _pdPhone = '', _pdStaffId = null, _pdPage = 1, _pdDateFrom = '', _pdDateTo = '', _pdQuickRange = '';
+
+        function openPhoneDetail(phone, staffId) {
+            if (!phone || phone === '-') return;
+            _pdPhone = phone;
+            _pdStaffId = staffId;
+            _pdPage = 1;
+            if (staffId === myStaffId) {
+                _pdDateFrom = document.getElementById('myDateFrom').value;
+                _pdDateTo = document.getElementById('myDateTo').value;
+                _pdQuickRange = myCurrentQuickRange;
+            } else {
+                _pdDateFrom = document.getElementById('dateFrom').value;
+                _pdDateTo = document.getElementById('dateTo').value;
+                _pdQuickRange = currentQuickRange;
+            }
+            document.getElementById('pdModalPhone').textContent = phone;
+            document.getElementById('pdTypeFilter').value = '';
+            loadPhoneDetail(1);
+            const modal = new bootstrap.Modal(document.getElementById('phoneDetailModal'));
+            modal.show();
+        }
+
+        async function loadPhoneDetail(page) {
+            _pdPage = page || 1;
+            const tbody = document.getElementById('pdBody');
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3"><div class="spinner-border spinner-border-sm text-info"></div> Loading...</td></tr>';
+            const typeFilter = document.getElementById('pdTypeFilter').value;
+            let url = `/api/v1/call-tracking/staff/${_pdStaffId}/calls?page=${_pdPage}&per_page=50&phone_number=${encodeURIComponent(_pdPhone)}`;
+            if (_pdDateFrom) url += `&date_from=${_pdDateFrom}`;
+            if (_pdDateTo) url += `&date_to=${_pdDateTo}`;
+            if (!_pdDateFrom && !_pdDateTo && _pdQuickRange) url += `&quick_range=${_pdQuickRange}`;
+            if (typeFilter) url += `&call_type=${typeFilter}`;
+            try {
+                const data = await staffFetchJson(url);
+                if (data && data.success) {
+                    const calls = data.data?.calls || [];
+                    const pg = data.data?.pagination || { page: 1, pages: 0, total: 0 };
+                    const outCnt = calls.filter(c => c.call_type === 'OUTGOING').length;
+                    const inCnt = calls.filter(c => c.call_type === 'INCOMING').length;
+                    const misCnt = calls.filter(c => c.call_type === 'MISSED' || c.call_type === 'REJECTED').length;
+                    const totalSecs = calls.reduce((s, c) => s + (c.duration_seconds || 0), 0);
+                    const h = Math.floor(totalSecs / 3600), m = Math.floor((totalSecs % 3600) / 60), s = totalSecs % 60;
+                    const durStr = h > 0 ? `${h}h ${m}m` : `${m}m ${s}s`;
+                    document.getElementById('pdSummary').innerHTML =
+                        `<span style="font-weight:600;color:#374151;">${pg.total} calls</span>
+                         <span style="color:#16a34a;">↑ ${outCnt} outgoing</span>
+                         <span style="color:#2563eb;">↓ ${inCnt} incoming</span>
+                         <span style="color:#dc2626;">✕ ${misCnt} missed/rejected</span>
+                         <span style="color:#6b7280;">⏱ ${durStr} total</span>`;
+                    if (calls.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4"><i class="fas fa-phone-slash me-2"></i>No calls found for this number</td></tr>';
+                    } else {
+                        tbody.innerHTML = calls.map((call, idx) => {
+                            const sno = ((_pdPage - 1) * 50) + idx + 1;
+                            const dt = new Date(call.call_datetime);
+                            const dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' });
+                            const timeStr = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                            let badge = '';
+                            switch(call.call_type) {
+                                case 'OUTGOING': badge = '<span class="badge bg-success"><i class="fas fa-arrow-up me-1"></i>Out</span>'; break;
+                                case 'INCOMING': badge = '<span class="badge bg-primary"><i class="fas fa-arrow-down me-1"></i>In</span>'; break;
+                                case 'MISSED': badge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Missed</span>'; break;
+                                case 'REJECTED': badge = '<span class="badge bg-warning text-dark"><i class="fas fa-ban me-1"></i>Rejected</span>'; break;
+                                default: badge = `<span class="badge bg-secondary">${call.call_type}</span>`;
+                            }
+                            const crmName = call.contact_name_crm || call.matched_lead_name || '';
+                            const devName = call.contact_name || '';
+                            const name = crmName || devName;
+                            let contactHtml = '<span class="text-muted">-</span>';
+                            if (name) {
+                                const bge = crmName
+                                    ? `<span class="badge" style="background:#f5f3ff;color:#7c3aed;font-size:9px;">CRM</span>`
+                                    : `<span class="badge bg-secondary" style="font-size:9px;">Device</span>`;
+                                contactHtml = `<span style="font-weight:600;">${name}</span>&nbsp;${bge}`;
+                            }
+                            const leadLink = (call.matched_lead_name || call.contact_name_crm)
+                                ? `<small class="text-info">${call.matched_lead_name || call.contact_name_crm}</small>`
+                                : '<span class="text-muted">-</span>';
+                            const recBtn = call.has_recording && call.recording_id
+                                ? `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="playPdRecording(${call.recording_id})"><i class="fas fa-play me-1"></i>Play</button>`
+                                : '<span class="text-muted">-</span>';
+                            return `<tr>
+                                <td class="px-3">${sno}</td>
+                                <td><small>${dateStr}<br><span class="text-muted">${timeStr}</span></small></td>
+                                <td>${contactHtml}</td>
+                                <td>${badge}</td>
+                                <td>${fmtDuration(call.duration_seconds)}</td>
+                                <td><small>${leadLink}</small></td>
+                                <td>${recBtn}</td>
+                            </tr>`;
+                        }).join('');
+                    }
+                    document.getElementById('pdPagInfo').textContent = pg.total > 0 ? `Page ${pg.page} of ${pg.pages} (${pg.total} records)` : '';
+                    document.getElementById('pdPrev').disabled = _pdPage <= 1;
+                    document.getElementById('pdNext').disabled = _pdPage >= pg.pages;
+                }
+            } catch (e) {
+                console.error('Phone detail error:', e);
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Error loading call details</td></tr>';
+            }
+        }
+
+        function playPdRecording(recordingId) {
+            const container = document.getElementById('audioPlayerContainer');
+            const player = document.getElementById('callAudioPlayer');
+            player.src = `/api/v1/call-tracking/recordings/${recordingId}/stream`;
+            container.style.display = 'block';
+            player.play().catch(() => {});
+        }
+    </script>
+
+    <!-- Phone Number Detail Modal -->
+    <div class="modal fade" id="phoneDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header" style="background:#1e3a5f;color:#fff;padding:12px 16px;">
+                    <h5 class="modal-title" style="font-size:15px;"><i class="fas fa-phone me-2"></i>All Calls: <span id="pdModalPhone" style="font-family:monospace;"></span></h5>
+                    <div class="d-flex align-items-center gap-2 ms-auto me-3">
+                        <select id="pdTypeFilter" class="form-select form-select-sm" style="width:auto;font-size:12px;" onchange="loadPhoneDetail(1)">
+                            <option value="">All Types</option>
+                            <option value="OUTGOING">Outgoing</option>
+                            <option value="INCOMING">Incoming</option>
+                            <option value="MISSED">Missed</option>
+                            <option value="REJECTED">Rejected</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="pdSummary" style="display:flex;gap:20px;flex-wrap:wrap;padding:8px 16px;background:#f8fafc;border-bottom:1px solid #e5e7eb;font-size:12px;"></div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0" style="font-size:13px;">
+                            <thead style="background:#f1f5f9;position:sticky;top:0;z-index:1;">
+                                <tr>
+                                    <th class="px-3">#</th>
+                                    <th>Date &amp; Time</th>
+                                    <th>Contact</th>
+                                    <th>Type</th>
+                                    <th>Duration</th>
+                                    <th>CRM Lead</th>
+                                    <th>Recording</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pdBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center px-3 py-2">
+                        <span id="pdPagInfo" class="text-muted" style="font-size:12px;"></span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" id="pdPrev" onclick="loadPhoneDetail(_pdPage-1)"><i class="fas fa-chevron-left"></i></button>
+                            <button class="btn btn-outline-secondary" id="pdNext" onclick="loadPhoneDetail(_pdPage+1)"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Management - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+        }
+        
+        .stats-card {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .ticket-row {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .ticket-row:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge-sla-ok { background: #10b981; }
+        .badge-sla-warning { background: #f59e0b; }
+        .badge-sla-breach { background: #ef4444; }
+        
+        .priority-critical { border-left: 4px solid #dc3545; }
+        .priority-high { border-left: 4px solid #fd7e14; }
+        .priority-medium { border-left: 4px solid #ffc107; }
+        .priority-low { border-left: 4px solid #20c997; }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #1e40af 0%, #059669 100%);
+            color: white;
+        }
+        
+        .comment-admin {
+            background: #d1fae5;
+            border-left: 3px solid #10b981;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .comment-user {
+            background: #e0e7ff;
+            border-left: 3px solid #6366f1;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-headset"></i> Support Ticket Management</h2>
+            <div>
+                <button class="btn btn-outline-primary me-2" onclick="loadTickets()">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+                <a href="/admin/dashboard" class="btn btn-primary">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                    <div class="card-body text-white">
+                        <h6>Total Open</h6>
+                        <h2 id="totalOpen">0</h2>
+                        <small>Active tickets</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                    <div class="card-body text-white">
+                        <h6>In Progress</h6>
+                        <h2 id="totalInProgress">0</h2>
+                        <small>Being worked on</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                    <div class="card-body text-white">
+                        <h6>SLA Breached</h6>
+                        <h2 id="totalBreached">0</h2>
+                        <small>Urgent attention</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+                    <div class="card-body text-white">
+                        <h6>Resolved Today</h6>
+                        <h2 id="totalResolved">0</h2>
+                        <small>Last 24 hours</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="statusFilter" onchange="filterTickets()">
+                            <option value="">All Status</option>
+                            <option value="Open">Open</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Priority</label>
+                        <select class="form-select" id="priorityFilter" onchange="filterTickets()">
+                            <option value="">All Priorities</option>
+                            <option value="Critical">Critical</option>
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Category</label>
+                        <select class="form-select" id="categoryFilter" onchange="filterTickets()">
+                            <option value="">All Categories</option>
+                            <option value="Account Issues">Account Issues</option>
+                            <option value="Payment Problems">Payment Problems</option>
+                            <option value="Technical Support">Technical Support</option>
+                            <option value="Income Related">Income Related</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Assigned To</label>
+                        <select class="form-select" id="assignedFilter" onchange="filterTickets()">
+                            <option value="">All Assignments</option>
+                            <option value="unassigned">Unassigned</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tickets Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">All Support Tickets</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>User</th>
+                                <th>Category</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>SLA</th>
+                                <th>Created</th>
+                                <th>Assigned To</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ticketsTableBody">
+                            <tr>
+                                <td colspan="9" class="text-center">Loading tickets...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticket Detail Modal -->
+    <div class="modal fade" id="ticketDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Ticket Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="ticketDetailContainer">
+                        <p class="text-center">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign Ticket Modal -->
+    <div class="modal fade" id="assignModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Assign Ticket</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="assignForm">
+                        <input type="hidden" id="assignTicketId">
+                        <div class="mb-3">
+                            <label class="form-label">Assign To (Admin User ID)</label>
+                            <input type="text" class="form-control" id="assignToUserId" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Assignment Reason</label>
+                            <textarea class="form-control" id="assignmentReason" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitAssignment()">Assign</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resolve Ticket Modal -->
+    <div class="modal fade" id="resolveModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Resolve Ticket</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="resolveForm">
+                        <input type="hidden" id="resolveTicketId">
+                        <div class="mb-3">
+                            <label class="form-label">Resolution Summary</label>
+                            <textarea class="form-control" id="resolutionSummary" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Admin Response</label>
+                            <textarea class="form-control" id="adminResponse" rows="3" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="submitResolution()">Mark as Resolved</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE_URL = ''; // Use relative URLs
+        let authToken = localStorage.getItem('authToken');
+        let allTickets = [];
+        let currentTicketId = null;
+
+        $(document).ready(function() {
+            if (!authToken) {
+                alert('Please login first');
+                window.location.href = '/login';
+                return;
+            }
+            loadTickets();
+        });
+
+        function loadTickets() {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/tickets/admin/all`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(tickets) {
+                    allTickets = tickets;
+                    updateStatistics(tickets);
+                    displayTickets(tickets);
+                },
+                error: function(err) {
+                    console.error('Error loading tickets:', err);
+                    $('#ticketsTableBody').html('<tr><td colspan="9" class="text-danger text-center">Error loading tickets</td></tr>');
+                }
+            });
+        }
+
+        function updateStatistics(tickets) {
+            const open = tickets.filter(t => t.status === 'Open').length;
+            const inProgress = tickets.filter(t => t.status === 'In Progress').length;
+            const breached = tickets.filter(t => t.sla_status === 'SLA Breached').length;
+            
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const resolved = tickets.filter(t => {
+                if (!t.resolved_date) return false;
+                const resolvedDate = new Date(t.resolved_date);
+                return resolvedDate >= today;
+            }).length;
+
+            $('#totalOpen').text(open);
+            $('#totalInProgress').text(inProgress);
+            $('#totalBreached').text(breached);
+            $('#totalResolved').text(resolved);
+        }
+
+        function displayTickets(tickets) {
+            let html = '';
+            
+            if (tickets.length === 0) {
+                html = '<tr><td colspan="9" class="text-center text-muted">No tickets found</td></tr>';
+            } else {
+                tickets.forEach(ticket => {
+                    const slaClass = ticket.sla_status === 'Within SLA' ? 'badge-sla-ok' : 
+                                    ticket.sla_status === 'SLA Breached' ? 'badge-sla-breach' : 'badge-sla-warning';
+                    
+                    const priorityClass = `priority-${ticket.priority.toLowerCase()}`;
+                    
+                    const statusBadge = 
+                        ticket.status === 'Open' ? 'bg-primary' :
+                        ticket.status === 'In Progress' ? 'bg-warning' :
+                        ticket.status === 'Resolved' ? 'bg-success' : 'bg-secondary';
+                    
+                    html += `
+                        <tr class="ticket-row ${priorityClass}" onclick="viewTicketDetail(${ticket.id})">
+                            <td><strong>${ticket.ticket_id}</strong></td>
+                            <td>${ticket.user_id}</td>
+                            <td>${ticket.issue_category}</td>
+                            <td><span class="badge bg-${ticket.priority === 'Critical' ? 'danger' : ticket.priority === 'High' ? 'warning' : 'secondary'}">${ticket.priority}</span></td>
+                            <td><span class="badge ${statusBadge}">${ticket.status}</span></td>
+                            <td><span class="badge ${slaClass}">${ticket.sla_status}</span></td>
+                            <td>${new Date(ticket.created_date).toLocaleString()}</td>
+                            <td>${ticket.assigned_to || '<span class="text-muted">Unassigned</span>'}</td>
+                            <td onclick="event.stopPropagation()">
+                                <button class="btn btn-sm btn-outline-primary" onclick="showAssignModal(${ticket.id})">
+                                    <i class="bi bi-person-plus"></i>
+                                </button>
+                                ${ticket.status !== 'Resolved' && ticket.status !== 'Closed' ? `
+                                    <button class="btn btn-sm btn-outline-success" onclick="showResolveModal(${ticket.id})">
+                                        <i class="bi bi-check-circle"></i>
+                                    </button>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            $('#ticketsTableBody').html(html);
+        }
+
+        function filterTickets() {
+            const status = $('#statusFilter').val();
+            const priority = $('#priorityFilter').val();
+            const category = $('#categoryFilter').val();
+            const assigned = $('#assignedFilter').val();
+
+            let filtered = allTickets;
+
+            if (status) filtered = filtered.filter(t => t.status === status);
+            if (priority) filtered = filtered.filter(t => t.priority === priority);
+            if (category) filtered = filtered.filter(t => t.issue_category === category);
+            if (assigned === 'unassigned') filtered = filtered.filter(t => !t.assigned_to);
+            else if (assigned) filtered = filtered.filter(t => t.assigned_to === assigned);
+
+            displayTickets(filtered);
+        }
+
+        function viewTicketDetail(ticketId) {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/tickets/${ticketId}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(ticket) {
+                    let html = `
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h4>${ticket.ticket_id}</h4>
+                                <p><strong>User ID:</strong> ${ticket.user_id}</p>
+                                <p><strong>Category:</strong> ${ticket.issue_category}</p>
+                                <p><strong>Priority:</strong> <span class="badge bg-warning">${ticket.priority}</span></p>
+                                <p><strong>Status:</strong> <span class="badge bg-primary">${ticket.status}</span></p>
+                                <hr>
+                                <h5>Issue Description</h5>
+                                <p>${ticket.issue_description}</p>
+                                
+                                ${ticket.resolution_summary ? `
+                                    <hr>
+                                    <h5>Resolution</h5>
+                                    <p>${ticket.resolution_summary}</p>
+                                ` : ''}
+                                
+                                <hr>
+                                <h5>Comments & Responses</h5>
+                                <div id="adminCommentsSection">
+                    `;
+                    
+                    if (ticket.comments && ticket.comments.length > 0) {
+                        ticket.comments.forEach(comment => {
+                            const commentClass = comment.comment_type === 'admin_response' ? 'comment-admin' : 'comment-user';
+                            html += `
+                                <div class="${commentClass}">
+                                    <strong>${comment.comment_type === 'admin_response' ? 'Admin' : 'User'}</strong>
+                                    <small class="float-end text-muted">${new Date(comment.created_at).toLocaleString()}</small>
+                                    <p class="mb-0 mt-2">${comment.comment_text}</p>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += '<p class="text-muted">No comments yet</p>';
+                    }
+                    
+                    html += `
+                                </div>
+                                
+                                ${ticket.status !== 'Closed' ? `
+                                    <div class="mt-3">
+                                        <h5>Add Admin Comment</h5>
+                                        <textarea class="form-control mb-2" id="adminNewComment" rows="3" placeholder="Type admin response..."></textarea>
+                                        <button class="btn btn-primary" onclick="addAdminComment(${ticketId})">
+                                            <i class="bi bi-send"></i> Send Comment
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6>Timeline</h6>
+                                        <ul class="list-unstyled">
+                                            <li><i class="bi bi-circle-fill text-primary"></i> Created: ${new Date(ticket.created_date).toLocaleString()}</li>
+                                            ${ticket.assigned_date ? `<li><i class="bi bi-circle-fill text-warning"></i> Assigned: ${new Date(ticket.assigned_date).toLocaleString()}</li>` : ''}
+                                            ${ticket.resolved_date ? `<li><i class="bi bi-circle-fill text-success"></i> Resolved: ${new Date(ticket.resolved_date).toLocaleString()}</li>` : ''}
+                                        </ul>
+                                        
+                                        <hr>
+                                        <p><strong>SLA Deadline:</strong><br>${new Date(ticket.sla_deadline).toLocaleString()}</p>
+                                        ${ticket.resolution_time_hours ? `<p><strong>Resolution Time:</strong> ${ticket.resolution_time_hours.toFixed(0)} hours</p>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    $('#ticketDetailContainer').html(html);
+                    $('#ticketDetailModal').modal('show');
+                }
+            });
+        }
+
+        function showAssignModal(ticketId) {
+            currentTicketId = ticketId;
+            $('#assignTicketId').val(ticketId);
+            $('#assignModal').modal('show');
+        }
+
+        function submitAssignment() {
+            const ticketId = $('#assignTicketId').val();
+            const assignedTo = $('#assignToUserId').val();
+            const reason = $('#assignmentReason').val();
+
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/tickets/${ticketId}/assign`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    assigned_to: assignedTo,
+                    assignment_reason: reason
+                }),
+                success: function() {
+                    alert('✅ Ticket assigned successfully!');
+                    $('#assignModal').modal('hide');
+                    $('#assignForm')[0].reset();
+                    loadTickets();
+                },
+                error: function(err) {
+                    alert('❌ Error assigning ticket: ' + (err.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+
+        function showResolveModal(ticketId) {
+            currentTicketId = ticketId;
+            $('#resolveTicketId').val(ticketId);
+            $('#resolveModal').modal('show');
+        }
+
+        function submitResolution() {
+            const ticketId = $('#resolveTicketId').val();
+            const summary = $('#resolutionSummary').val();
+            const response = $('#adminResponse').val();
+
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/tickets/${ticketId}/resolve`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    resolution_summary: summary,
+                    admin_response: response
+                }),
+                success: function() {
+                    alert('✅ Ticket resolved successfully!');
+                    $('#resolveModal').modal('hide');
+                    $('#resolveForm')[0].reset();
+                    loadTickets();
+                },
+                error: function(err) {
+                    alert('❌ Error resolving ticket: ' + (err.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+
+        function addAdminComment(ticketId) {
+            const commentText = $('#adminNewComment').val();
+            if (!commentText) {
+                alert('Please enter a comment');
+                return;
+            }
+
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/tickets/${ticketId}/comment`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    ticket_id: ticketId,
+                    comment_text: commentText
+                }),
+                success: function() {
+                    alert('✅ Comment added successfully!');
+                    viewTicketDetail(ticketId);
+                },
+                error: function(err) {
+                    alert('❌ Error adding comment');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

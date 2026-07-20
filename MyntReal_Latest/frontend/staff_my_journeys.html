@@ -1,0 +1,2385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Journeys - MyntReal LLP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="/public/css/staff-kyc-theme.css" rel="stylesheet">
+    <script src="/public/js/gps-service.js"></script>
+    <!-- Journey Core (DC_JOURNEY_UNIFIED_001) -->
+    <script src="/js/journey-core/journey-core-bundle.js"></script>
+    <script src="/js/journey-core/web-gps-adapter.js"></script>
+    <script src="/js/journey-core/web-storage-adapter.js"></script>
+    <script src="/js/journey-core/web-api-adapter.js"></script>
+    <script src="/js/journey-core/web-platform-adapter.js"></script>
+    <script src="/js/journey-core/journey-web-facade.js"></script>
+    <style>
+        /* Stats Grid Layout Fix */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        .stat-icon.success { background: #d1fae5; color: #059669; }
+        .stat-icon.info { background: #dbeafe; color: #2563eb; }
+        .stat-icon.warning { background: #fef3c7; color: #d97706; }
+        .stat-icon.primary { background: #e0e7ff; color: #4f46e5; }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+            line-height: 1.2;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: #6b7280;
+        }
+        
+        @media (max-width: 992px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        @media (max-width: 576px) {
+            .stats-row { grid-template-columns: 1fr; }
+        }
+        
+        /* Journey-specific overrides */
+        .tracking-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .transport-btn {
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #d1d5db;
+            background: white;
+            color: #374151;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+        
+        .transport-btn:hover {
+            background: #f3f4f6;
+            border-color: #6366f1;
+            color: #374151;
+        }
+        
+        .transport-btn.active {
+            background: #6366f1;
+            border-color: #6366f1;
+            color: white;
+            font-weight: 700;
+        }
+        
+        .purpose-option {
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #d1d5db;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            color: #374151;
+        }
+        
+        .purpose-option i {
+            color: #6b7280;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .purpose-option small {
+            color: #374151;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        
+        .purpose-option:hover {
+            background: #f3f4f6;
+            border-color: #6366f1;
+        }
+        
+        .purpose-option.selected {
+            background: #6366f1;
+            border-color: #6366f1;
+            box-shadow: 0 4px 6px rgba(99,102,241,0.3);
+        }
+        
+        .purpose-option.selected i {
+            color: white;
+        }
+        
+        .purpose-option.selected small {
+            color: white;
+            font-weight: 700;
+        }
+        
+        .gps-warning {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            color: #92400e;
+        }
+        
+        .btn-start-journey {
+            background: #10b981;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .btn-start-journey:hover {
+            background: #059669;
+            color: white;
+        }
+        
+        .btn-end-journey {
+            background: #ef4444;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .btn-end-journey:hover {
+            background: #dc2626;
+            color: white;
+        }
+        
+        .live-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .live-stat-item {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .live-stat-item .value { 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            color: #1f2937;
+        }
+        
+        .live-stat-item .label { 
+            font-size: 0.8rem; 
+            color: #6b7280; 
+        }
+        
+        @media (max-width: 768px) {
+            .live-stats { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        .playback-controls {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .stops-panel {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+        }
+    </style>
+    <!-- DC-FIX: jQuery for staff pages -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="card mb-4">
+                <div class="card-body d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h4 class="mb-1" style="color: #1f2937;"><i class="fas fa-route me-2"></i>My Journeys</h4>
+                        <p class="text-muted mb-0" style="color: #6b7280;">Track your trips for reimbursement</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <select class="form-select" id="periodFilter" style="width: auto;">
+                            <option value="week">This Week</option>
+                            <option value="month" selected>This Month</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon info">
+                        <i class="fas fa-road"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalKm">0</div>
+                        <div class="stat-label">Total KM</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon success">
+                        <i class="fas fa-rupee-sign"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="totalReimbursement">₹0</div>
+                        <div class="stat-label">Approved Amount</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="pendingAmount">₹0</div>
+                        <div class="stat-label">Pending Approval</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon primary">
+                        <i class="fas fa-tachometer-alt"></i>
+                    </div>
+                    <div>
+                        <div class="stat-value" id="avgSpeed">0</div>
+                        <div class="stat-label">Avg Speed (km/h)</div>
+                    </div>
+                </div>
+            </div>
+        
+        <div class="card mb-4" id="activeJourneyCard" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-play-circle text-success me-2"></i>Active Journey</h5>
+            </div>
+            <div class="card-body">
+                <div id="journeyMap"></div>
+                
+                <div class="tracking-panel mt-3">
+                    <div class="row align-items-center">
+                        <div class="col-md-3 text-center">
+                            <div class="speed-display" id="currentSpeed">0</div>
+                            <div class="speed-unit">km/h (current)</div>
+                        </div>
+                        <div class="col-md-9">
+                            <div class="live-stats">
+                                <div class="live-stat-item">
+                                    <div class="value" id="liveDistance">0.00</div>
+                                    <div class="label">KM Travelled</div>
+                                </div>
+                                <div class="live-stat-item">
+                                    <div class="value" id="liveDuration">00:00</div>
+                                    <div class="label">Duration</div>
+                                </div>
+                                <div class="live-stat-item">
+                                    <div class="value" id="maxSpeed">0</div>
+                                    <div class="label">Max Speed</div>
+                                </div>
+                                <div class="live-stat-item">
+                                    <div class="value" id="liveReimbursement">₹0</div>
+                                    <div class="label">Est. Reimbursement</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <button class="btn btn-end-journey btn-lg" onclick="endJourney()">
+                            <i class="fas fa-stop-circle me-2"></i>End Journey
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="gpsWarningActive" class="gps-warning mt-3" style="display: none;">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    <strong>GPS Disabled:</strong> This journey will NOT be eligible for reimbursement. Distance is being tracked but won't count for payment.
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4" id="startJourneyCard">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Start New Journey</h5>
+            </div>
+            <div class="card-body">
+                <div id="gpsWarning" class="gps-warning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    <strong>GPS is disabled!</strong> Your journey will be tracked but will NOT be eligible for reimbursement. Enable GPS for reimbursable trips.
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Journey Purpose</label>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="purpose-option selected" data-purpose="client_visit" onclick="selectPurpose('client_visit')">
+                                    <i class="fas fa-user-tie fa-2x mb-2"></i><br>
+                                    <small>Client Visit</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="purpose-option" data-purpose="site_inspection" onclick="selectPurpose('site_inspection')">
+                                    <i class="fas fa-building fa-2x mb-2"></i><br>
+                                    <small>Site Visit</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="purpose-option" data-purpose="meeting" onclick="selectPurpose('meeting')">
+                                    <i class="fas fa-handshake fa-2x mb-2"></i><br>
+                                    <small>Meeting</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="purpose-option" data-purpose="delivery" onclick="selectPurpose('delivery')">
+                                    <i class="fas fa-truck fa-2x mb-2"></i><br>
+                                    <small>Delivery</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="purpose-option" data-purpose="collection" onclick="selectPurpose('collection')">
+                                    <i class="fas fa-box fa-2x mb-2"></i><br>
+                                    <small>Collection</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="purpose-option" data-purpose="other" onclick="selectPurpose('other')">
+                                    <i class="fas fa-ellipsis-h fa-2x mb-2"></i><br>
+                                    <small>Other</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Transport Mode</label>
+                        <div class="btn-group d-flex flex-wrap gap-2" role="group" id="transportButtonGroup">
+                            <button type="button" class="transport-btn" data-mode="car" onclick="selectTransport('car')">
+                                <i class="fas fa-car"></i> Car <span class="rate-text">(₹8/km)</span>
+                            </button>
+                            <button type="button" class="transport-btn active" data-mode="bike" onclick="selectTransport('bike')">
+                                <i class="fas fa-motorcycle"></i> Bike <span class="rate-text">(₹4/km)</span>
+                            </button>
+                            <button type="button" class="transport-btn" data-mode="electric_bike" onclick="selectTransport('electric_bike')">
+                                <i class="fas fa-bolt"></i> E-Bike <span class="rate-text">(₹1/km)</span>
+                            </button>
+                            <button type="button" class="transport-btn" data-mode="cart" onclick="selectTransport('cart')">
+                                <i class="fas fa-truck-pickup"></i> Cart <span class="rate-text">(₹10/km)</span>
+                            </button>
+                            <button type="button" class="transport-btn" data-mode="local_transport" onclick="selectTransport('local_transport')">
+                                <i class="fas fa-bus"></i> Local <span class="rate-text">(₹3/km)</span>
+                            </button>
+                            <button type="button" class="transport-btn" data-mode="others" onclick="selectTransport('others')">
+                                <i class="fas fa-walking"></i> Other <span class="rate-text">(₹2/km)</span>
+                            </button>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label class="form-label">Company <span class="text-danger">*</span></label>
+                            <select class="form-select" id="companySelect" required>
+                                <option value="">Select Company</option>
+                            </select>
+                            <div class="invalid-feedback">Please select a company</div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label class="form-label">Client/Location Name (Optional)</label>
+                            <input type="text" class="form-control" id="clientName" placeholder="Enter client or location name">
+                        </div>
+                        
+                        <div class="mt-3">
+                            <label class="form-label">Description (Optional)</label>
+                            <textarea class="form-control" id="purposeDescription" rows="2" placeholder="Brief description of your trip"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4">
+                    <button class="btn btn-start-journey btn-lg" onclick="startJourney()">
+                        <i class="fas fa-play me-2"></i>Start Journey
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Journey History</h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadJourneys()">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="journeyList">
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Loading journeys...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="journeyDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-route me-2"></i>Journey Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-lg-8">
+                            <div id="detailMap" style="height: 400px; border-radius: 12px;"></div>
+                            <div class="playback-controls mt-3 p-3" style="border-radius: 10px;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <button class="btn btn-sm btn-success" id="playPauseBtn" onclick="togglePlayback()">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-secondary" onclick="resetPlayback()">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                    <input type="range" class="form-range flex-grow-1" id="playbackSlider" min="0" max="100" value="0" onchange="seekPlayback(this.value)">
+                                    <select class="form-select form-select-sm" id="playbackSpeed" style="width: auto;">
+                                        <option value="1">1x</option>
+                                        <option value="2" selected>2x</option>
+                                        <option value="4">4x</option>
+                                        <option value="8">8x</option>
+                                    </select>
+                                </div>
+                                <div class="mt-2 d-flex justify-content-between small text-muted">
+                                    <span id="playbackTime">00:00</span>
+                                    <span id="playbackProgress">0 / 0 points</span>
+                                    <span id="playbackDuration">00:00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div id="journeyDetails" class="mb-3"></div>
+                            <div class="stops-panel p-3" style="border-radius: 10px; max-height: 250px; overflow-y: auto;">
+                                <h6 class="mb-2"><i class="fas fa-map-marker-alt me-2"></i>Route Points</h6>
+                                <div id="stopsList">
+                                    <p class="text-muted small">Loading route details...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="endJourneyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-camera me-2"></i>Upload Journey Photo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Please upload a photo to confirm your journey endpoint:</p>
+                    <input type="file" class="form-control mb-3" id="journeyPhoto" accept="image/*" capture="environment">
+                    <img id="photoPreview" class="img-fluid rounded mb-3" style="display: none; max-height: 200px;">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="journeyNotes" rows="2" placeholder="Any additional notes..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="submitEndJourney()">
+                        <i class="fas fa-check me-1"></i>Complete Journey
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="startJourneyPreflightModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="background: #2d3748; color: #e2e8f0; border: 1px solid #4a5568;">
+                <div class="modal-header border-0" style="border-bottom: 1px solid #4a5568;">
+                    <h5 class="modal-title" style="color: #fff;"><i class="fas fa-route me-2"></i>Start New Journey</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info mb-3" style="background: rgba(0,208,156,0.25); border-color: #00d09c; color: #e2e8f0;">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Link this journey to a KRA, Task, or proceed as an independent trip.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Assignment Type</label>
+                        <div class="btn-group d-flex" role="group">
+                            <input type="radio" class="btn-check" name="assignmentType" id="assignKra" value="kra" autocomplete="off">
+                            <label class="btn btn-outline-success flex-fill" for="assignKra">
+                                <i class="fas fa-bullseye me-1"></i>KRA
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="assignmentType" id="assignTask" value="task" autocomplete="off">
+                            <label class="btn btn-outline-warning flex-fill" for="assignTask">
+                                <i class="fas fa-tasks me-1"></i>Task
+                            </label>
+                            
+                            <input type="radio" class="btn-check" name="assignmentType" id="assignOther" value="other" autocomplete="off" checked>
+                            <label class="btn btn-outline-light flex-fill" for="assignOther">
+                                <i class="fas fa-ellipsis-h me-1"></i>Other
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="kraSelectContainer" class="mb-3" style="display: none;">
+                        <label class="form-label" style="color: #cbd5e0;">Select KRA</label>
+                        <select class="form-select" id="kraSelect" style="background: #374151; border-color: #4a5568; color: #fff; font-size: 14px;">
+                            <option value="">Loading KRAs...</option>
+                        </select>
+                    </div>
+                    
+                    <div id="taskSelectContainer" class="mb-3" style="display: none;">
+                        <label class="form-label" style="color: #cbd5e0;">Select Task</label>
+                        <select class="form-select" id="taskSelect" style="background: #374151; border-color: #4a5568; color: #fff; font-size: 14px;">
+                            <option value="">Loading Tasks...</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-success mt-2" onclick="showAddActivityForm()">
+                            <i class="fas fa-plus me-1"></i>Add New Activity
+                        </button>
+                    </div>
+                    
+                    <div id="addActivityContainer" class="mb-3 p-3" style="display: none; background: #374151; border-radius: 10px; border: 1px solid #4a5568;">
+                        <h6 class="mb-3" style="color: #00d09c;"><i class="fas fa-plus-circle me-2"></i>Quick Add Activity</h6>
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label small" style="color: #cbd5e0;">Activity Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control form-control-sm" id="newActivityTitle" placeholder="Enter activity title" style="background: #2d3748; border-color: #4a5568; color: #fff;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small" style="color: #cbd5e0;">Priority</label>
+                                <select class="form-select form-select-sm" id="newActivityPriority" style="background: #2d3748; border-color: #4a5568; color: #fff;">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small" style="color: #cbd5e0;">Category</label>
+                                <select class="form-select form-select-sm" id="newActivityCategory" style="background: #2d3748; border-color: #4a5568; color: #fff;">
+                                    <option value="field_work" selected>Field Work</option>
+                                    <option value="client_meeting">Client Meeting</option>
+                                    <option value="site_visit">Site Visit</option>
+                                    <option value="delivery">Delivery</option>
+                                    <option value="collection">Collection</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small" style="color: #cbd5e0;">Description (Optional)</label>
+                                <textarea class="form-control form-control-sm" id="newActivityDesc" rows="2" placeholder="Brief description of the activity" style="background: #2d3748; border-color: #4a5568; color: #fff;"></textarea>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <button class="btn btn-sm btn-success" onclick="createQuickActivity()">
+                                    <i class="fas fa-save me-1"></i>Create & Link to Journey
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="hideAddActivityForm()">Cancel</button>
+                            </div>
+                        </div>
+                        <div class="mt-2 small text-muted">
+                            <i class="fas fa-info-circle me-1"></i>This activity will be added to your Tasks list and linked to this journey.
+                        </div>
+                    </div>
+                    
+                    <div id="otherContainer" class="mb-3">
+                        <div class="p-3" style="background: #374151; border-radius: 10px;">
+                            <p class="small mb-0" style="color: #9ca3af;"><i class="fas fa-info-circle me-1"></i>This journey will be recorded as an independent trip not linked to any specific KRA or Task.</p>
+                        </div>
+                    </div>
+                    
+                    <hr style="border-color: #4a5568;">
+                    
+                    <div id="gpsStatusSection">
+                        <div id="gpsCheckingStatus" class="text-center py-2" style="color: #e2e8f0;">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Checking GPS status...
+                        </div>
+                        <div id="gpsEnabledStatus" class="alert alert-success py-2 mb-0" style="display: none; background: rgba(16,185,129,0.15); border-color: #10b981; color: #a7f3d0;">
+                            <i class="fas fa-check-circle me-2"></i>GPS is enabled. Your journey will be eligible for reimbursement.
+                        </div>
+                        <div id="gpsDisabledError" class="alert alert-danger py-2 mb-0" style="display: none; background: rgba(239,68,68,0.15); border-color: #ef4444; color: #fca5a5;">
+                            <i class="fas fa-times-circle me-2"></i><strong>GPS is disabled!</strong> Please enable GPS location services to start journey. Without GPS, reimbursement will NOT be processed.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0" style="border-top: 1px solid #4a5568;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="preflightCancelBtn">Cancel</button>
+                    <button type="button" class="btn btn-success" id="startJourneyBtn" onclick="proceedWithJourneyStart()" disabled>
+                        <i class="fas fa-play me-1"></i>Start Journey
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let map = null;
+        let detailMap = null;
+        let routePolyline = null;
+        let currentMarker = null;
+        let startMarker = null;
+        let trackPoints = [];
+        
+        let selectedPurpose = 'client_visit';
+        let selectedTransport = 'bike';
+        let activeJourney = null;
+        let gpsEnabled = true;
+        let gpsWatchId = null;
+        let heartbeatInterval = null;
+        let durationInterval = null;
+        let journeyStartTime = null;
+        
+        let playbackInterval = null;
+        let playbackIndex = 0;
+        let playbackCoordinates = [];
+        let playbackMarker = null;
+        let playbackPolyline = null;
+        let isPlaying = false;
+        let isAnimating = false;  // DC: Animation lock for smooth marker movement
+        
+        let transportRates = { car: 8.00, bike: 4.00, electric_bike: 1.00, cart: 10.00, local_transport: 3.00, others: 2.00 };
+        
+        let companies = [];
+        let selectedCompanyId = null;
+        
+        async function loadTransportRates() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/transport-rates`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.rates && data.rates.length > 0) {
+                        const fetchedRates = {};
+                        data.rates.forEach(r => {
+                            if (r.is_active) {
+                                fetchedRates[r.transport_mode] = r.rate_per_km;
+                            }
+                        });
+                        transportRates = { ...transportRates, ...fetchedRates };
+                        updateTransportButtons();
+                        console.log('[My Journeys] Transport rates loaded from API:', transportRates);
+                    }
+                }
+            } catch (error) {
+                console.warn('[My Journeys] Using default transport rates:', error);
+            }
+        }
+        
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/companies`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.companies && data.companies.length > 0) {
+                        companies = data.companies;
+                        const select = document.getElementById('companySelect');
+                        select.innerHTML = '<option value="">Select Company</option>';
+                        companies.forEach(c => {
+                            const option = document.createElement('option');
+                            option.value = c.id;
+                            option.textContent = `${c.name} (${c.code})`;
+                            select.appendChild(option);
+                        });
+                        
+                        if (companies.length === 1) {
+                            select.value = companies[0].id;
+                            selectedCompanyId = companies[0].id;
+                        }
+                        
+                        select.addEventListener('change', (e) => {
+                            selectedCompanyId = e.target.value ? parseInt(e.target.value) : null;
+                        });
+                        
+                        console.log('[My Journeys] Companies loaded:', companies.length);
+                    }
+                }
+            } catch (error) {
+                console.warn('[My Journeys] Could not load companies:', error);
+            }
+        }
+        
+        function updateTransportButtons() {
+            document.querySelectorAll('.transport-btn').forEach(btn => {
+                const mode = btn.dataset.mode;
+                if (mode && transportRates[mode] !== undefined) {
+                    const rateSpan = btn.querySelector('.rate-text');
+                    if (rateSpan) {
+                        rateSpan.textContent = `(₹${transportRates[mode]}/km)`;
+                    }
+                }
+            });
+        }
+        
+        let selectedKraId = null;
+        let selectedTaskId = null;
+        let assignmentType = 'other';
+        let myKras = [];
+        let myTasks = [];
+        let preflightModal = null;
+        let startJourneyTrigger = null;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('My Journeys', 'fas fa-route');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            
+            checkGpsPermission();
+            await loadTransportRates();
+            await loadCompanies();
+            await checkActiveJourney();
+            await loadJourneys();
+            await loadStats();
+            
+            document.getElementById('periodFilter').addEventListener('change', loadStats);
+            document.getElementById('journeyPhoto').addEventListener('change', previewPhoto);
+            
+            document.querySelectorAll('input[name="assignmentType"]').forEach(radio => {
+                radio.addEventListener('change', (e) => toggleAssignmentContainer(e.target.value));
+            });
+            
+            const preflightModalEl = document.getElementById('startJourneyPreflightModal');
+            preflightModal = new bootstrap.Modal(preflightModalEl);
+            
+            preflightModalEl.addEventListener('hidden.bs.modal', () => {
+                if (startJourneyTrigger) {
+                    startJourneyTrigger.focus();
+                }
+            });
+        });
+        
+        function checkGpsPermission() {
+            if (!navigator.geolocation) {
+                gpsEnabled = false;
+                document.getElementById('gpsWarning').style.display = 'block';
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                () => { gpsEnabled = true; },
+                (error) => {
+                    if (error.code === error.PERMISSION_DENIED) {
+                        gpsEnabled = false;
+                        document.getElementById('gpsWarning').style.display = 'block';
+                    }
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+        
+        function selectPurpose(purpose) {
+            selectedPurpose = purpose;
+            document.querySelectorAll('.purpose-option').forEach(el => {
+                el.classList.toggle('selected', el.dataset.purpose === purpose);
+            });
+        }
+        
+        function selectTransport(mode) {
+            selectedTransport = mode;
+            document.querySelectorAll('.transport-btn').forEach(el => {
+                el.classList.toggle('active', el.dataset.mode === mode);
+            });
+        }
+        
+        async function checkActiveJourney() {
+            // DC Protocol: Check localStorage for cached active journey ID
+            const cachedJourneyId = localStorage.getItem('active_journey_id');
+            console.log('Check active journey request:', { cached_journey_id: cachedJourneyId });
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/active`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Check active journey success:', { has_journey: !!data.journey });
+                    if (data.journey) {
+                        activeJourney = data.journey;
+                        trackPoints = data.track_points || [];
+                        
+                        // DC Protocol: Sync localStorage with server state
+                        localStorage.setItem('active_journey_id', activeJourney.id.toString());
+                        
+                        showActiveJourney();
+                    } else {
+                        // DC Protocol: Clear stale localStorage if no active journey on server
+                        if (cachedJourneyId) {
+                            console.log('Clearing stale localStorage journey ID - no active journey on server');
+                            localStorage.removeItem('active_journey_id');
+                        }
+                    }
+                } else {
+                    const error = await response.json();
+                    console.error('Check active journey error:', error);
+                    
+                    // DC Protocol: Clear localStorage on error to prevent stale state
+                    if (cachedJourneyId) {
+                        localStorage.removeItem('active_journey_id');
+                    }
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Check active journey network error:', error);
+            }
+        }
+        
+        function showActiveJourney() {
+            document.getElementById('startJourneyCard').style.display = 'none';
+            document.getElementById('activeJourneyCard').style.display = 'block';
+            
+            if (!activeJourney.is_reimbursable) {
+                document.getElementById('gpsWarningActive').style.display = 'block';
+            }
+            
+            // DC Protocol (Dec 06, 2025): Gap detection - warn if last track point is older than 5 minutes
+            if (trackPoints && trackPoints.length > 0) {
+                const lastPoint = trackPoints[trackPoints.length - 1];
+                const lastPointTime = new Date(lastPoint.timestamp);
+                const now = new Date();
+                const gapMinutes = Math.floor((now - lastPointTime) / 60000);
+                
+                if (gapMinutes > 5) {
+                    const gapHours = Math.floor(gapMinutes / 60);
+                    const gapMins = gapMinutes % 60;
+                    let gapText = gapMinutes < 60 ? `${gapMinutes} minutes` : `${gapHours} hour${gapHours > 1 ? 's' : ''} ${gapMins > 0 ? gapMins + ' minutes' : ''}`;
+                    
+                    console.warn(`[DC_JOURNEY_GAP] Gap detected: ${gapMinutes} minutes since last track point`);
+                    
+                    // Show non-blocking notification
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-warning alert-dismissible fade show';
+                    alertDiv.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; max-width: 350px;';
+                    alertDiv.innerHTML = `
+                        <strong><i class="fas fa-exclamation-triangle me-2"></i>Tracking Gap Detected</strong><br>
+                        No GPS data for the last ${gapText}. Distance during this time was not tracked.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.appendChild(alertDiv);
+                    
+                    // Auto-dismiss after 10 seconds
+                    setTimeout(() => {
+                        if (alertDiv.parentNode) alertDiv.remove();
+                    }, 10000);
+                }
+            }
+            
+            initMap();
+            startTracking();
+            
+            journeyStartTime = new Date(activeJourney.start_time);
+            updateDuration();
+            durationInterval = setInterval(updateDuration, 1000);
+            
+            document.getElementById('liveDistance').textContent = activeJourney.total_distance_km.toFixed(2);
+            document.getElementById('maxSpeed').textContent = Math.round(activeJourney.max_speed_kmh);
+            document.getElementById('liveReimbursement').textContent = '₹' + activeJourney.reimbursement_amount.toFixed(0);
+        }
+        
+        function initMap() {
+            if (map) map.remove();
+            
+            map = L.map('journeyMap').setView([20.5937, 78.9629], 5);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+            
+            if (trackPoints.length > 0) {
+                const coords = trackPoints.map(tp => [tp.latitude, tp.longitude]);
+                routePolyline = L.polyline(coords, { color: '#00d09c', weight: 4 }).addTo(map);
+                
+                startMarker = L.marker(coords[0], {
+                    icon: L.divIcon({
+                        className: 'start-marker',
+                        html: '<i class="fas fa-play-circle" style="color: #00d09c; font-size: 24px;"></i>',
+                        iconSize: [24, 24]
+                    })
+                }).addTo(map);
+                
+                currentMarker = L.marker(coords[coords.length - 1], {
+                    icon: L.divIcon({
+                        className: 'current-marker',
+                        html: '<i class="fas fa-location-arrow" style="color: #e94560; font-size: 24px;"></i>',
+                        iconSize: [24, 24]
+                    })
+                }).addTo(map);
+                
+                map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+            }
+        }
+        
+        // DC_GPS_CENTRALIZATION_001: Journey tracking uses universal GPS service
+        function startTracking() {
+            console.log('[DC_JOURNEY_GPS] Starting journey tracking via universal GPS service');
+            
+            // Subscribe to universal GPS service for real-time updates
+            window._journeyGpsUnsubscribe = gpsService.subscribe((update) => {
+                if (update.event === 'gps:updated' && update.data.location) {
+                    const loc = update.data.location;
+                    const speedKmh = loc.speed_kmh || 0;
+                    
+                    document.getElementById('currentSpeed').textContent = Math.round(speedKmh);
+                    
+                    // Update current position marker on map
+                    if (currentMarker) {
+                        currentMarker.setLatLng([loc.latitude, loc.longitude]);
+                    } else {
+                        currentMarker = L.marker([loc.latitude, loc.longitude], {
+                            icon: L.divIcon({
+                                className: 'current-marker',
+                                html: '<i class="fas fa-location-arrow" style="color: #e94560; font-size: 24px;"></i>',
+                                iconSize: [24, 24]
+                            })
+                        }).addTo(map);
+                    }
+                    
+                    // Update route polyline
+                    if (routePolyline) {
+                        const latlngs = routePolyline.getLatLngs();
+                        latlngs.push([loc.latitude, loc.longitude]);
+                        routePolyline.setLatLngs(latlngs);
+                    }
+                    
+                    map.panTo([loc.latitude, loc.longitude]);
+                    
+                    // DC_JOURNEY_ADDRESS_001: Send heartbeat with GPS data and address
+                    sendHeartbeat({
+                        latitude: loc.latitude,
+                        longitude: loc.longitude,
+                        accuracy: loc.accuracy_m,
+                        altitude: loc.altitude,
+                        speed: speedKmh,
+                        heading: loc.heading,
+                        battery_percentage: loc.battery_percentage,
+                        address: loc.address || gpsService.getCurrentAddress()
+                    });
+                } else if (update.event === 'gps:error') {
+                    document.getElementById('gpsWarningActive').style.display = 'block';
+                }
+            });
+            
+            // DC_JOURNEY_ADDRESS_001: Set heartbeat interval to also query service periodically
+            heartbeatInterval = setInterval(() => {
+                const location = gpsService.getLocation();
+                if (location) {
+                    sendHeartbeat({
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        accuracy: location.accuracy_m,
+                        altitude: location.altitude,
+                        speed: location.speed_kmh || 0,
+                        heading: location.heading,
+                        battery_percentage: location.battery_percentage,
+                        address: location.address || gpsService.getCurrentAddress()
+                    });
+                }
+            }, 15000);
+        }
+        
+        function stopTracking() {
+            console.log('[DC_JOURNEY_GPS] Stopping journey tracking');
+            if (window._journeyGpsUnsubscribe) {
+                window._journeyGpsUnsubscribe();
+                window._journeyGpsUnsubscribe = null;
+            }
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
+        }
+        
+        async function sendHeartbeat(location) {
+            if (!activeJourney) return;
+            if (window.wvvPaused) return;
+            
+            try {
+                // DC_GPS_CENTRALIZATION_001: Include battery percentage in heartbeat
+                const heartbeatData = {
+                    location,
+                    speed_kmh: location.speed,
+                    battery_percentage: location.battery_percentage
+                };
+                
+                const response = await staffFetch(`${API_BASE}/staff/journeys/${activeJourney.id}/heartbeat`, {
+                    method: 'POST',
+                    body: JSON.stringify(heartbeatData)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('liveDistance').textContent = data.distance_km.toFixed(2);
+                    document.getElementById('maxSpeed').textContent = Math.round(data.max_speed_kmh);
+                    document.getElementById('liveReimbursement').textContent = '₹' + data.reimbursement_amount;
+                    
+                    // WVV Protocol Fix (Dec 05, 2025): Handle degraded GPS tracking
+                    // Backend now returns 200 OK with wvv_compliant=false for degraded points
+                    const gpsWarningEl = document.getElementById('gpsWarningActive');
+                    if (data.wvv_compliant === false) {
+                        // Show degraded warning but keep tracking (point is recorded for audit)
+                        if (gpsWarningEl) {
+                            const accuracyStr = data.wvv_accuracy_m ? `${Math.round(data.wvv_accuracy_m)}m` : 'N/A';
+                            const reasonStr = data.wvv_reason || 'GPS accuracy too low';
+                            gpsWarningEl.innerHTML = `<i class="fas fa-info-circle text-warning me-2"></i>
+                                <strong>GPS Degraded:</strong> Accuracy ${accuracyStr} exceeds 100m limit. 
+                                Total tracked: ${data.distance_km.toFixed(2)} km | Reimbursable: ${data.reimbursable_distance_km?.toFixed(2) || '0.00'} km
+                                <br><small class="text-muted">${reasonStr}</small>`;
+                            gpsWarningEl.style.display = 'block';
+                        }
+                        console.log('[WVV_DEGRADED] GPS point tracked but not reimbursable:', data.wvv_reason);
+                    } else if (window.wvvWarningShown || gpsWarningEl?.style.display === 'block') {
+                        // GPS recovered to compliant state
+                        window.wvvWarningShown = false;
+                        window.wvvPaused = false;
+                        if (gpsWarningEl) {
+                            gpsWarningEl.style.display = 'none';
+                        }
+                        console.log('GPS signal recovered - fully compliant tracking resumed');
+                    }
+                } else if (response.status === 400) {
+                    const error = await response.json();
+                    if (error.detail && error.detail.includes('WVV')) {
+                        window.wvvPaused = true;
+                        
+                        const gpsWarningEl = document.getElementById('gpsWarningActive');
+                        if (gpsWarningEl) {
+                            gpsWarningEl.innerHTML = `<i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                                <strong>WVV GPS Error:</strong> GPS signal too weak (accuracy >100m). Tracking paused. Move to open area for better signal.
+                                <button class="btn btn-sm btn-warning ms-3" onclick="retryWvvTracking()">Retry Now</button>`;
+                            gpsWarningEl.style.display = 'block';
+                        }
+                        if (!window.wvvWarningShown) {
+                            window.wvvWarningShown = true;
+                            alert('GPS Quality Issue:\n\nYour GPS accuracy is too low for WVV compliance. Tracking is PAUSED until GPS improves.\n\nClick "Retry Now" button when you have better GPS signal.');
+                        }
+                        console.warn('WVV GPS compliance error - tracking paused:', error.detail);
+                    }
+                }
+            } catch (error) {
+                console.error('Heartbeat error:', error);
+            }
+        }
+        
+        function retryWvvTracking() {
+            window.wvvPaused = false;
+            window.wvvWarningShown = false;
+            const gpsWarningEl = document.getElementById('gpsWarningActive');
+            if (gpsWarningEl) {
+                gpsWarningEl.innerHTML = `<i class="fas fa-spinner fa-spin me-2"></i>Retrying GPS tracking...`;
+            }
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    const { latitude, longitude, accuracy, altitude, heading, speed } = pos.coords;
+                    // DC_JOURNEY_ADDRESS_001: Include address from GPS service
+                    sendHeartbeat({ 
+                        latitude, longitude, accuracy, altitude, 
+                        speed: speed ? speed * 3.6 : 0, heading,
+                        address: gpsService.getCurrentAddress()
+                    });
+                });
+            }
+        }
+        
+        function updateDuration() {
+            if (!journeyStartTime) return;
+            
+            const now = new Date();
+            const diff = now - journeyStartTime;
+            const hours = Math.floor(diff / 3600000);
+            const mins = Math.floor((diff % 3600000) / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            
+            document.getElementById('liveDuration').textContent = 
+                `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        function showStartJourneyPreflight() {
+            assignmentType = 'other';
+            selectedKraId = null;
+            selectedTaskId = null;
+            
+            document.getElementById('assignOther').checked = true;
+            toggleAssignmentContainer('other');
+            
+            document.getElementById('gpsCheckingStatus').style.display = 'block';
+            document.getElementById('gpsEnabledStatus').style.display = 'none';
+            document.getElementById('gpsDisabledError').style.display = 'none';
+            document.getElementById('startJourneyBtn').disabled = true;
+            
+            loadMyKras();
+            loadMyTasks();
+            
+            startJourneyTrigger = document.activeElement;
+            preflightModal.show();
+            
+            checkGpsForJourney();
+        }
+        
+        function checkGpsForJourney() {
+            if (!navigator.geolocation) {
+                showGpsError();
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    gpsEnabled = true;
+                    document.getElementById('gpsCheckingStatus').style.display = 'none';
+                    document.getElementById('gpsEnabledStatus').style.display = 'block';
+                    document.getElementById('gpsDisabledError').style.display = 'none';
+                    document.getElementById('startJourneyBtn').disabled = false;
+                    console.log('GPS check passed:', { lat: position.coords.latitude, lon: position.coords.longitude });
+                },
+                (error) => {
+                    showGpsError();
+                    console.error('GPS check failed:', error.message);
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+        
+        function showGpsError() {
+            gpsEnabled = false;
+            document.getElementById('gpsCheckingStatus').style.display = 'none';
+            document.getElementById('gpsEnabledStatus').style.display = 'none';
+            document.getElementById('gpsDisabledError').style.display = 'block';
+            document.getElementById('startJourneyBtn').disabled = true;
+        }
+        
+        function toggleAssignmentContainer(type) {
+            assignmentType = type;
+            document.getElementById('kraSelectContainer').style.display = type === 'kra' ? 'block' : 'none';
+            document.getElementById('taskSelectContainer').style.display = type === 'task' ? 'block' : 'none';
+            document.getElementById('otherContainer').style.display = type === 'other' ? 'block' : 'none';
+            document.getElementById('addActivityContainer').style.display = 'none';
+        }
+        
+        async function loadMyKras() {
+            console.log('loadMyKras WVv request');
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/kra/my-kras`);
+                
+                const select = document.getElementById('kraSelect');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    myKras = data.kras || data.instances || data || [];
+                    console.log('loadMyKras WVv success:', { count: myKras.length });
+                    
+                    select.innerHTML = '<option value="">-- Select KRA --</option>';
+                    
+                    if (!Array.isArray(myKras) || myKras.length === 0) {
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'No active KRAs assigned';
+                        opt.disabled = true;
+                        select.appendChild(opt);
+                    } else {
+                        myKras.forEach(kra => {
+                            const opt = document.createElement('option');
+                            opt.value = kra.id || kra.instance_id;
+                            opt.textContent = `${kra.title || kra.responsibility || kra.kra_name || 'KRA'} (${kra.status || 'Active'})`;
+                            select.appendChild(opt);
+                        });
+                    }
+                } else {
+                    const error = await response.json().catch(() => ({}));
+                    console.error('loadMyKras WVv error:', { status: response.status, detail: error.detail });
+                    select.innerHTML = `<option value="">Failed to load KRAs (${response.status})</option>`;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('loadMyKras WVv network error:', error);
+                document.getElementById('kraSelect').innerHTML = '<option value="">Network error loading KRAs</option>';
+            }
+        }
+        
+        async function loadMyTasks() {
+            console.log('loadMyTasks WVv request');
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/assigned-to-me?status=in_progress,pending`);
+                
+                const select = document.getElementById('taskSelect');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    myTasks = data.tasks || data || [];
+                    console.log('loadMyTasks WVv success:', { count: myTasks.length });
+                    
+                    select.innerHTML = '<option value="">-- Select Task --</option>';
+                    
+                    if (!Array.isArray(myTasks) || myTasks.length === 0) {
+                        const opt = document.createElement('option');
+                        opt.value = '';
+                        opt.textContent = 'No active tasks assigned';
+                        opt.disabled = true;
+                        select.appendChild(opt);
+                    } else {
+                        myTasks.forEach(task => {
+                            const opt = document.createElement('option');
+                            opt.value = task.id;
+                            opt.textContent = `${task.title} (${task.status || 'Pending'})`;
+                            select.appendChild(opt);
+                        });
+                    }
+                } else {
+                    const error = await response.json().catch(() => ({}));
+                    console.error('loadMyTasks WVv error:', { status: response.status, detail: error.detail });
+                    select.innerHTML = `<option value="">Failed to load tasks (${response.status})</option>`;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('loadMyTasks WVv network error:', error);
+                document.getElementById('taskSelect').innerHTML = '<option value="">Network error loading tasks</option>';
+            }
+        }
+        
+        function showAddActivityForm() {
+            document.getElementById('addActivityContainer').style.display = 'block';
+            document.getElementById('newActivityTitle').value = '';
+            document.getElementById('newActivityDesc').value = '';
+            document.getElementById('newActivityPriority').value = 'medium';
+            document.getElementById('newActivityCategory').value = 'field_work';
+        }
+        
+        function hideAddActivityForm() {
+            document.getElementById('addActivityContainer').style.display = 'none';
+            document.getElementById('newActivityTitle').value = '';
+            document.getElementById('newActivityDesc').value = '';
+            document.getElementById('newActivityPriority').value = 'medium';
+            document.getElementById('newActivityCategory').value = 'field_work';
+        }
+        
+        async function createQuickActivity() {
+            const title = document.getElementById('newActivityTitle').value.trim();
+            
+            if (!title) {
+                alert('Please enter an activity title');
+                return;
+            }
+            
+            const priority = document.getElementById('newActivityPriority').value;
+            const category = document.getElementById('newActivityCategory').value;
+            const description = document.getElementById('newActivityDesc').value.trim();
+            
+            const payload = {
+                title: title,
+                description: description || null,
+                priority: priority,
+                category: category
+            };
+            
+            console.log('createQuickActivity WVv request:', { title: payload.title, priority: payload.priority, category: payload.category });
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const newTaskId = data.task?.id || data.id;
+                    console.log('createQuickActivity WVv success:', { task_id: newTaskId });
+                    
+                    await loadMyTasks();
+                    
+                    if (newTaskId) {
+                        document.getElementById('taskSelect').value = newTaskId;
+                        selectedTaskId = newTaskId;
+                    }
+                    hideAddActivityForm();
+                    
+                    alert('Activity created and selected!');
+                } else {
+                    const error = await response.json().catch(() => ({}));
+                    console.error('createQuickActivity WVv error:', { status: response.status, detail: error.detail });
+                    alert(error.detail || `Failed to create activity (Error ${response.status})`);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('createQuickActivity WVv network error:', error);
+                alert('Network error creating activity. Please try again.');
+            }
+        }
+        
+        async function proceedWithJourneyStart() {
+            if (!gpsEnabled) {
+                alert('GPS is required to start a journey. Please enable GPS location services.');
+                return;
+            }
+            
+            if (assignmentType === 'kra') {
+                selectedKraId = document.getElementById('kraSelect').value;
+                if (!selectedKraId) {
+                    alert('Please select a KRA or choose "Other"');
+                    return;
+                }
+            } else if (assignmentType === 'task') {
+                selectedTaskId = document.getElementById('taskSelect').value;
+                if (!selectedTaskId) {
+                    alert('Please select a Task or choose "Other"');
+                    return;
+                }
+            }
+            
+            preflightModal.hide();
+            
+            await actuallyStartJourney();
+        }
+        
+        async function actuallyStartJourney() {
+            const companySelect = document.getElementById('companySelect');
+            if (!selectedCompanyId && companySelect.value) {
+                selectedCompanyId = parseInt(companySelect.value);
+            }
+            
+            if (!selectedCompanyId) {
+                companySelect.classList.add('is-invalid');
+                alert('Please select a company before starting the journey.');
+                return;
+            }
+            companySelect.classList.remove('is-invalid');
+            
+            let location = null;
+            if (navigator.geolocation) {
+                try {
+                    const pos = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true });
+                    });
+                    location = {
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy,
+                        altitude: pos.coords.altitude,
+                        speed: pos.coords.speed ? pos.coords.speed * 3.6 : null,
+                        heading: pos.coords.heading
+                    };
+                } catch (e) {
+                    gpsEnabled = false;
+                }
+            }
+            
+            const payload = {
+                purpose: selectedPurpose,
+                purpose_description: document.getElementById('purposeDescription').value,
+                client_name: document.getElementById('clientName').value,
+                transport_mode: selectedTransport,
+                company_id: selectedCompanyId,
+                gps_enabled: gpsEnabled,
+                gps_permission_denied: !gpsEnabled,
+                location: location,
+                device_info: {
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform
+                },
+                linked_kra_id: selectedKraId ? parseInt(selectedKraId) : null,
+                linked_task_id: selectedTaskId ? parseInt(selectedTaskId) : null
+            };
+            
+            console.log('Start journey request:', { purpose: payload.purpose, transport_mode: payload.transport_mode, gps_enabled: payload.gps_enabled });
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/start`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Start journey success:', { journey_id: data.journey?.id, is_reimbursable: data.is_reimbursable });
+                    activeJourney = data.journey;
+                    trackPoints = [];
+                    window.wvvWarningShown = false;
+                    window.wvvPaused = false;
+                    
+                    // DC Protocol: Store active journey ID for recovery
+                    if (activeJourney && activeJourney.id) {
+                        localStorage.setItem('active_journey_id', activeJourney.id.toString());
+                        console.log('Stored active journey ID in localStorage:', activeJourney.id);
+                    }
+                    
+                    if (location) {
+                        trackPoints.push({
+                            latitude: location.latitude,
+                            longitude: location.longitude,
+                            timestamp: new Date().toISOString()
+                        });
+                    }
+                    
+                    showActiveJourney();
+                    
+                    // DC_GPS_LIFECYCLE_001: Start universal GPS tracking on successful journey start
+                    console.log('[DC_JOURNEY_GPS] Journey started - triggering GPS service');
+                    gpsService.start('journey_tracking');
+                    startTracking();
+                    
+                    if (!data.is_reimbursable) {
+                        alert('Warning: GPS is off. This journey will NOT be eligible for reimbursement.');
+                    }
+                } else {
+                    const error = await response.json();
+                    console.error('Start journey error response:', error);
+                    if (response.status === 400 && error.detail && error.detail.includes('WVV')) {
+                        alert(`GPS Quality Issue:\n\n${error.detail}\n\nPlease move to an area with better GPS signal and try again.`);
+                    } else {
+                        alert(error.detail || `Failed to start journey (Error ${response.status})`);
+                    }
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Start journey network error:', error);
+                alert('Network error. Please check your connection and try again.');
+            }
+        }
+        
+        function startJourney() {
+            showStartJourneyPreflight();
+        }
+        
+        async function endJourney() {
+            // DC Protocol (Dec 06, 2025): Verify active journey exists before showing modal
+            if (!activeJourney || !activeJourney.id) {
+                console.warn('[DC_JOURNEY_END] No active journey in memory, checking server...');
+                try {
+                    const response = await staffFetch(`${API_BASE}/staff/journeys/active`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.journey) {
+                            activeJourney = data.journey;
+                            console.log('[DC_JOURNEY_END] Loaded journey from server:', activeJourney.id);
+                        } else {
+                            alert('No active journey found. Please refresh the page.');
+                            window.location.reload();
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                    console.error('[DC_JOURNEY_END] Error checking active journey:', error);
+                    alert('Unable to verify your journey. Please refresh the page and try again.');
+                    return;
+                }
+            }
+            new bootstrap.Modal(document.getElementById('endJourneyModal')).show();
+        }
+        
+        function previewPhoto(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('photoPreview').src = e.target.result;
+                    document.getElementById('photoPreview').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        async function submitEndJourney() {
+            // DC Protocol (Dec 06, 2025): Null check for activeJourney with recovery attempt
+            if (!activeJourney || !activeJourney.id) {
+                console.warn('[DC_JOURNEY_END] activeJourney is null, attempting recovery from localStorage');
+                const cachedJourneyId = localStorage.getItem('active_journey_id');
+                if (cachedJourneyId) {
+                    console.log('[DC_JOURNEY_END] Found cached journey ID:', cachedJourneyId);
+                    // Attempt to reload the journey state from server
+                    try {
+                        const recoveryResponse = await staffFetch(`${API_BASE}/staff/journeys/active`);
+                        if (recoveryResponse.ok) {
+                            const recoveryData = await recoveryResponse.json();
+                            if (recoveryData.journey) {
+                                activeJourney = recoveryData.journey;
+                                console.log('[DC_JOURNEY_END] Recovered journey from server:', activeJourney.id);
+                            } else {
+                                console.error('[DC_JOURNEY_END] No active journey found on server');
+                                alert('No active journey found. The journey may have already ended or there was an error. Please refresh the page.');
+                                localStorage.removeItem('active_journey_id');
+                                window.location.reload();
+                                return;
+                            }
+                        } else {
+                            // Recovery response not OK - return early
+                            console.error('[DC_JOURNEY_END] Recovery response not OK:', recoveryResponse.status);
+                            alert('Unable to verify your journey status. Please refresh the page and try again.');
+                            return;
+                        }
+                    } catch (recoveryError) {
+                        if (recoveryError.message === 'AUTH_EXPIRED' || recoveryError.message === 'NO_TOKEN') return;
+                        console.error('[DC_JOURNEY_END] Recovery failed:', recoveryError);
+                        alert('Unable to find your active journey. Please refresh the page and try again.');
+                        return;
+                    }
+                } else {
+                    console.error('[DC_JOURNEY_END] No active journey and no cached ID');
+                    alert('No active journey found. Please refresh the page and try again.');
+                    window.location.reload();
+                    return;
+                }
+            }
+            
+            // DC Protocol: Final guard - ensure activeJourney is valid before proceeding
+            if (!activeJourney || !activeJourney.id) {
+                console.error('[DC_JOURNEY_END] activeJourney still null after recovery attempts');
+                alert('Unable to end journey. Please refresh the page and try again.');
+                return;
+            }
+            
+            let location = null;
+            if (navigator.geolocation) {
+                try {
+                    // DC Protocol: Add timeout for GPS to prevent hanging
+                    const pos = await new Promise((resolve, reject) => {
+                        const timeoutId = setTimeout(() => {
+                            reject(new Error('GPS timeout'));
+                        }, 10000); // 10 second timeout
+                        
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                clearTimeout(timeoutId);
+                                resolve(position);
+                            },
+                            (error) => {
+                                clearTimeout(timeoutId);
+                                reject(error);
+                            },
+                            { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+                        );
+                    });
+                    location = {
+                        latitude: pos.coords.latitude,
+                        longitude: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy
+                    };
+                } catch (e) {
+                    console.warn('[DC_JOURNEY_END] GPS location unavailable:', e.message);
+                    // Continue without location - journey can still end
+                }
+            }
+            
+            console.log('End journey request:', { journey_id: activeJourney?.id, has_location: !!location });
+            
+            try {
+                const endResponse = await staffFetch(`${API_BASE}/staff/journeys/${activeJourney.id}/end`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        location: location,
+                        notes: document.getElementById('journeyNotes').value
+                    })
+                });
+                
+                if (!endResponse.ok) {
+                    const error = await endResponse.json();
+                    console.error('End journey error response:', error);
+                    alert(error.detail || `Failed to end journey (Error ${endResponse.status})`);
+                    return;
+                }
+                
+                console.log('End journey success');
+                
+                const photoFile = document.getElementById('journeyPhoto').files[0];
+                if (photoFile) {
+                    const formData = new FormData();
+                    formData.append('photo', photoFile);
+                    
+                    console.log('Uploading journey photo');
+                    await staffFetch(`${API_BASE}/staff/journeys/${activeJourney.id}/photo`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                }
+                
+                // DC_GPS_LIFECYCLE_001: Stop universal GPS tracking on successful journey end
+                console.log('[DC_JOURNEY_GPS] Journey ended - stopping GPS service');
+                stopTracking();
+                gpsService.stop('journey_tracking');
+                
+                if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
+                if (heartbeatInterval) clearInterval(heartbeatInterval);
+                if (durationInterval) clearInterval(durationInterval);
+                
+                // DC Protocol: Clear active journey from localStorage on successful end
+                localStorage.removeItem('active_journey_id');
+                console.log('Cleared active journey from localStorage');
+                
+                activeJourney = null;
+                trackPoints = [];
+                
+                document.activeElement?.blur();
+                bootstrap.Modal.getInstance(document.getElementById('endJourneyModal')).hide();
+                
+                document.getElementById('activeJourneyCard').style.display = 'none';
+                document.getElementById('startJourneyCard').style.display = 'block';
+                
+                await loadJourneys();
+                await loadStats();
+                
+                alert('Journey completed successfully!');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('End journey network error:', error);
+                alert('Network error. Please check your connection and try again.');
+            }
+        }
+        
+        async function loadJourneys() {
+            const period = document.getElementById('periodFilter').value;
+            
+            let startDate = '';
+            const today = new Date();
+            
+            if (period === 'week') {
+                const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                startDate = weekAgo.toISOString().split('T')[0];
+            } else if (period === 'month') {
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+            }
+            
+            console.log('Load journeys request:', { period, start_date: startDate });
+            
+            try {
+                const url = startDate ? 
+                    `${API_BASE}/staff/journeys/my?start_date=${startDate}` :
+                    `${API_BASE}/staff/journeys/my`;
+                    
+                const response = await staffFetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Load journeys success:', { count: data.journeys?.length || 0 });
+                    renderJourneyList(data.journeys);
+                } else {
+                    const error = await response.json();
+                    console.error('Load journeys error:', error);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Load journeys network error:', error);
+            }
+        }
+        
+        function renderJourneyList(journeys) {
+            const container = document.getElementById('journeyList');
+            
+            if (!journeys || journeys.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-route fa-3x mb-3"></i>
+                        <p>No journeys found for this period</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = journeys.map(j => `
+                <div class="journey-card ${j.status === 'in_progress' ? 'active' : ''} ${!j.is_reimbursable ? 'non-reimbursable' : ''}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">
+                                <i class="fas fa-${getPurposeIcon(j.purpose)} me-2"></i>
+                                ${formatPurpose(j.purpose)}
+                                ${j.client_name ? `- ${j.client_name}` : ''}
+                            </h6>
+                            <small class="text-muted">
+                                ${formatDate(j.date)} | ${formatTime(j.start_time)} - ${j.end_time ? formatTime(j.end_time) : 'In Progress'}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge ${getStatusClass(j.status, j.approval_status)}">
+                                ${getStatusText(j.status, j.approval_status)}
+                            </span>
+                            ${!j.is_reimbursable ? '<br><small class="text-warning"><i class="fas fa-exclamation-triangle"></i> GPS Off</small>' : ''}
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span><i class="fas fa-road me-1"></i>${j.total_distance_km.toFixed(2)} km</span>
+                        <span><i class="fas fa-${getTransportIcon(j.transport_mode)} me-1"></i>${formatTransport(j.transport_mode)}</span>
+                        <span><i class="fas fa-tachometer-alt me-1"></i>Avg ${Math.round(j.average_speed_kmh)} km/h</span>
+                        <span class="${j.is_reimbursable ? 'text-success' : 'text-muted'}">
+                            <i class="fas fa-rupee-sign me-1"></i>${j.is_reimbursable ? '₹' + j.reimbursement_amount.toFixed(0) : 'N/A'}
+                        </span>
+                        <button class="btn btn-sm btn-outline-success" onclick="event.stopPropagation(); viewJourneyDetails(${j.id})">
+                            <i class="fas fa-eye me-1"></i>View
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function viewJourneyDetails(journeyId) {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                console.error('viewJourneyDetails failed: No authentication token found');
+                alert('Session expired. Please login again.');
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            console.log('View journey details request:', { journey_id: journeyId });
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/${journeyId}/track-points`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('View journey details success:', { track_points_count: data.route_coordinates?.length || 0 });
+                    // DC_JOURNEY_ADDRESS_001: Pass track_points for address and timestamp data
+                    showJourneyDetailModal(data.journey, data.route_coordinates, data.track_points);
+                } else {
+                    const error = await response.json();
+                    console.error('View journey details error:', error);
+                    alert(error.detail || `Failed to load journey details (Error ${response.status})`);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('View journey details network error:', error);
+                alert('Network error. Please check your connection and try again.');
+            }
+        }
+        
+        // DC_JOURNEY_ADDRESS_001: Enhanced modal with playback, addresses, and timestamp-based stop detection
+        let playbackTrackPoints = [];
+        
+        function showJourneyDetailModal(journey, coordinates, trackPoints = []) {
+            stopPlayback();
+            playbackCoordinates = coordinates || [];
+            playbackTrackPoints = trackPoints || [];
+            playbackIndex = 0;
+            
+            const modal = new bootstrap.Modal(document.getElementById('journeyDetailModal'));
+            
+            document.getElementById('journeyDetails').innerHTML = `
+                <div class="mb-3 p-3" style="background: rgba(255,255,255,0.08); border-radius: 10px;">
+                    <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>Journey Info</h6>
+                    <div class="small">
+                        <strong>Company:</strong> ${journey.company_name || '-'}<br>
+                        <strong>Purpose:</strong> ${formatPurpose(journey.purpose)}<br>
+                        <strong>Client:</strong> ${journey.client_name || '-'}<br>
+                        <strong>Transport:</strong> ${formatTransport(journey.transport_mode)} @ ₹${journey.rate_per_km}/km<br>
+                        <strong>Distance:</strong> ${journey.total_distance_km.toFixed(2)} km<br>
+                        <strong>Duration:</strong> ${Math.round(journey.total_duration_minutes)} mins<br>
+                        <strong>Avg Speed:</strong> ${Math.round(journey.average_speed_kmh)} km/h<br>
+                        <strong>Max Speed:</strong> ${Math.round(journey.max_speed_kmh || 0)} km/h<br>
+                        <strong>Status:</strong> 
+                        ${journey.is_reimbursable ? 
+                            `<span class="text-success">₹${journey.reimbursement_amount.toFixed(2)}</span> (${journey.approval_status})` :
+                            `<span class="text-warning">Not Eligible</span>`
+                        }
+                        ${journey.notes ? `<br><strong>Notes:</strong> ${journey.notes}` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // DC_JOURNEY_ADDRESS_001: Update stops panel with addresses and timestamp-based duration
+            const stopsList = document.getElementById('stopsList');
+            if (coordinates && coordinates.length > 0) {
+                const stops = detectStopsWithTimestamps(playbackTrackPoints);
+                const startAddress = playbackTrackPoints[0]?.address;
+                const endAddress = playbackTrackPoints[playbackTrackPoints.length - 1]?.address;
+                
+                stopsList.innerHTML = `
+                    <div class="small">
+                        <div class="mb-2 text-success">
+                            <i class="fas fa-play-circle me-2"></i><strong>Start Point</strong>
+                            ${startAddress ? `<div class="text-muted ms-4" style="font-size: 11px;">${startAddress}</div>` : ''}
+                        </div>
+                        ${stops.map((stop, i) => `
+                            <div class="mb-2" style="padding-left: 1rem; border-left: 2px solid var(--warning-color);">
+                                <i class="fas fa-pause-circle text-warning me-1"></i>Stop ${i+1} 
+                                <span class="text-muted">(${formatStopDuration(stop.durationMinutes)})</span>
+                                ${stop.address ? `<div class="text-muted" style="font-size: 11px; margin-left: 1.2rem;">${stop.address}</div>` : ''}
+                            </div>
+                        `).join('')}
+                        <div class="mt-2 text-danger">
+                            <i class="fas fa-flag-checkered me-2"></i><strong>End Point</strong>
+                            ${endAddress ? `<div class="text-muted ms-4" style="font-size: 11px;">${endAddress}</div>` : ''}
+                        </div>
+                        <div class="mt-2 text-muted">${coordinates.length} GPS points recorded</div>
+                    </div>
+                `;
+            } else {
+                stopsList.innerHTML = '<p class="text-warning small">No GPS track data available</p>';
+            }
+            
+            document.getElementById('playbackSlider').value = 0;
+            document.getElementById('playbackSlider').max = Math.max(coordinates.length - 1, 1);
+            document.getElementById('playbackProgress').textContent = `0 / ${coordinates.length} points`;
+            document.getElementById('playbackDuration').textContent = formatDuration(journey.total_duration_minutes || 0);
+            document.getElementById('playbackTime').textContent = '00:00';
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+            
+            modal.show();
+            
+            setTimeout(() => {
+                if (detailMap) detailMap.remove();
+                
+                detailMap = L.map('detailMap').setView([20.5937, 78.9629], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(detailMap);
+                
+                if (coordinates && coordinates.length > 0) {
+                    // Progressive playback polyline
+                    playbackPolyline = L.polyline([], { color: '#00d09c', weight: 4 }).addTo(detailMap);
+                    
+                    // Faded background polyline showing full route
+                    L.polyline(coordinates, { color: 'rgba(255,255,255,0.3)', weight: 2, dashArray: '5, 10' }).addTo(detailMap);
+                    
+                    // Start marker - DC: Added className to remove default Leaflet styling
+                    L.marker(coordinates[0], {
+                        icon: L.divIcon({
+                            className: '',
+                            html: '<i class="fas fa-play-circle" style="color: #00d09c; font-size: 24px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"></i>',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        })
+                    }).addTo(detailMap).bindPopup('Start');
+                    
+                    // End marker - DC: Added className to remove default Leaflet styling
+                    L.marker(coordinates[coordinates.length - 1], {
+                        icon: L.divIcon({
+                            className: '',
+                            html: '<i class="fas fa-flag-checkered" style="color: #e94560; font-size: 24px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"></i>',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        })
+                    }).addTo(detailMap).bindPopup('End');
+                    
+                    // Animated playback marker - DC: Enhanced visibility with className
+                    playbackMarker = L.marker(coordinates[0], {
+                        icon: L.divIcon({
+                            className: '',
+                            html: '<div style="background: #ffc107; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(255,193,7,0.8), 0 2px 6px rgba(0,0,0,0.4);"></div>',
+                            iconSize: [16, 16],
+                            iconAnchor: [8, 8]
+                        }),
+                        zIndexOffset: 1000
+                    }).addTo(detailMap);
+                    
+                    const bounds = L.latLngBounds(coordinates);
+                    detailMap.fitBounds(bounds, { padding: [30, 30] });
+                    
+                    // DC: Initialize playback position
+                    updatePlaybackPosition();
+                }
+            }, 300);
+        }
+        
+        // DC Protocol: Legacy stop detection (coordinate-only)
+        function detectStops(coordinates) {
+            const stops = [];
+            const minStopTime = 120;
+            let stopStart = null;
+            
+            for (let i = 1; i < coordinates.length - 1; i++) {
+                const dist = haversineDistance(
+                    coordinates[i-1][0], coordinates[i-1][1],
+                    coordinates[i][0], coordinates[i][1]
+                );
+                if (dist < 0.05) {
+                    if (!stopStart) stopStart = i;
+                } else if (stopStart) {
+                    if (i - stopStart > 3) {
+                        stops.push({ index: stopStart, duration: i - stopStart });
+                    }
+                    stopStart = null;
+                }
+            }
+            return stops.slice(0, 5);
+        }
+        
+        // DC_JOURNEY_ADDRESS_001 (Jan 22, 2026): Enhanced stop detection with timestamps and addresses
+        function detectStopsWithTimestamps(trackPoints) {
+            if (!trackPoints || trackPoints.length < 3) return [];
+            
+            const stops = [];
+            const minStopDistanceKm = 0.05;
+            const minStopDurationMins = 2;
+            
+            let stopStartIndex = null;
+            let stopStartTime = null;
+            
+            for (let i = 1; i < trackPoints.length - 1; i++) {
+                const prev = trackPoints[i - 1];
+                const curr = trackPoints[i];
+                
+                if (!prev || !curr || !prev.latitude || !curr.latitude) continue;
+                
+                const dist = haversineDistance(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
+                
+                if (dist < minStopDistanceKm) {
+                    if (stopStartIndex === null) {
+                        stopStartIndex = i;
+                        const ts = prev.timestamp || prev.captured_at;
+                        stopStartTime = ts ? new Date(ts) : null;
+                    }
+                } else if (stopStartIndex !== null && stopStartTime) {
+                    const ts = curr.timestamp || curr.captured_at;
+                    const stopEndTime = ts ? new Date(ts) : null;
+                    
+                    if (stopEndTime && !isNaN(stopEndTime.getTime())) {
+                        const durationMinutes = (stopEndTime - stopStartTime) / (1000 * 60);
+                        
+                        if (durationMinutes >= minStopDurationMins && !isNaN(durationMinutes)) {
+                            stops.push({
+                                index: stopStartIndex,
+                                durationMinutes: durationMinutes,
+                                latitude: trackPoints[stopStartIndex].latitude,
+                                longitude: trackPoints[stopStartIndex].longitude,
+                                address: trackPoints[stopStartIndex].address || null
+                            });
+                        }
+                    }
+                    stopStartIndex = null;
+                    stopStartTime = null;
+                }
+            }
+            
+            return stops.slice(0, 10);
+        }
+        
+        function formatStopDuration(minutes) {
+            if (!minutes || isNaN(minutes)) return '0 min';
+            if (minutes < 60) return `${Math.round(minutes)} min`;
+            const hrs = Math.floor(minutes / 60);
+            const mins = Math.round(minutes % 60);
+            return `${hrs}h ${mins}m`;
+        }
+        
+        function haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+        
+        function formatDuration(minutes) {
+            const hrs = Math.floor(minutes / 60);
+            const mins = Math.round(minutes % 60);
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        }
+        
+        function togglePlayback() {
+            if (isPlaying) {
+                stopPlayback();
+            } else {
+                startPlayback();
+            }
+        }
+        
+        function startPlayback() {
+            if (playbackCoordinates.length === 0) return;
+            if (playbackIndex >= playbackCoordinates.length - 1) {
+                playbackIndex = 0;
+            }
+            
+            isPlaying = true;
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+            
+            const speed = parseInt(document.getElementById('playbackSpeed').value);
+            const interval = Math.max(50, 200 / speed);
+            
+            playbackInterval = setInterval(() => {
+                if (playbackIndex >= playbackCoordinates.length - 1) {
+                    stopPlayback();
+                    return;
+                }
+                
+                playbackIndex++;
+                updatePlaybackPosition();
+            }, interval);
+        }
+        
+        function stopPlayback() {
+            isPlaying = false;
+            isAnimating = false;  // DC: Reset animation lock
+            if (playbackInterval) {
+                clearInterval(playbackInterval);
+                playbackInterval = null;
+            }
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+        }
+        
+        function resetPlayback() {
+            stopPlayback();
+            playbackIndex = 0;
+            updatePlaybackPosition();
+        }
+        
+        function seekPlayback(value) {
+            playbackIndex = parseInt(value);
+            updatePlaybackPosition();
+        }
+        
+        // DC Protocol (Jan 13, 2026): Enhanced with smooth animation
+        function updatePlaybackPosition(animate = true) {
+            if (!playbackCoordinates.length) return;
+            
+            const coord = playbackCoordinates[playbackIndex];
+            
+            // DC: Smooth animation for marker movement
+            if (playbackMarker && coord) {
+                if (animate && isPlaying && playbackIndex > 0) {
+                    animateMarkerTo(playbackMarker, coord);
+                } else {
+                    playbackMarker.setLatLng(coord);
+                }
+            }
+            
+            if (playbackPolyline) {
+                playbackPolyline.setLatLngs(playbackCoordinates.slice(0, playbackIndex + 1));
+            }
+            
+            document.getElementById('playbackSlider').value = playbackIndex;
+            document.getElementById('playbackProgress').textContent = `${playbackIndex + 1} / ${playbackCoordinates.length} points`;
+            
+            // Calculate time based on progress - DC: Harden against placeholder text
+            const progress = playbackIndex / Math.max(playbackCoordinates.length - 1, 1);
+            const durationEl = document.getElementById('playbackDuration');
+            const timeParts = durationEl.textContent.split(':');
+            const hrs = parseInt(timeParts[0]) || 0;
+            const mins = parseInt(timeParts[1]) || 0;
+            const totalMins = hrs * 60 + mins;
+            const currentMins = totalMins * progress;
+            document.getElementById('playbackTime').textContent = formatDuration(isNaN(currentMins) ? 0 : currentMins);
+            
+            // DC: Smooth map panning (disabled during animation to avoid jitter)
+            if (detailMap && coord && !isAnimating) {
+                detailMap.panTo(coord, { animate: true, duration: 0.3 });
+            }
+        }
+        
+        // DC Protocol (Jan 13, 2026): Smooth marker animation using requestAnimationFrame
+        function animateMarkerTo(marker, targetCoord, duration = 150) {
+            if (isAnimating) return;
+            
+            const startLatLng = marker.getLatLng();
+            const startLat = startLatLng.lat;
+            const startLng = startLatLng.lng;
+            const targetLat = targetCoord[0];
+            const targetLng = targetCoord[1];
+            
+            const startTime = performance.now();
+            isAnimating = true;
+            
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Ease-out cubic for smooth deceleration
+                const eased = 1 - Math.pow(1 - progress, 3);
+                
+                const lat = startLat + (targetLat - startLat) * eased;
+                const lng = startLng + (targetLng - startLng) * eased;
+                
+                marker.setLatLng([lat, lng]);
+                
+                if (progress < 1 && isPlaying) {
+                    requestAnimationFrame(animate);
+                } else {
+                    isAnimating = false;
+                    marker.setLatLng(targetCoord);
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        async function loadStats() {
+            const period = document.getElementById('periodFilter').value;
+            
+            console.log('Load stats request:', { period });
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/stats?period=${period}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const stats = data.stats;
+                    console.log('Load stats success:', { total_km: stats.total_km });
+                    
+                    document.getElementById('totalKm').textContent = stats.total_km.toFixed(1);
+                    document.getElementById('totalReimbursement').textContent = '₹' + stats.approved_reimbursement.toFixed(0);
+                    document.getElementById('pendingAmount').textContent = '₹' + stats.pending_reimbursement.toFixed(0);
+                    document.getElementById('avgSpeed').textContent = Math.round(stats.average_speed_kmh);
+                } else {
+                    const error = await response.json();
+                    console.error('Load stats error:', error);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Load stats network error:', error);
+            }
+        }
+        
+        function getPurposeIcon(purpose) {
+            const icons = {
+                client_visit: 'user-tie', site_inspection: 'building', meeting: 'handshake',
+                delivery: 'truck', collection: 'box', other: 'route'
+            };
+            return icons[purpose] || 'route';
+        }
+        
+        function formatPurpose(purpose) {
+            const labels = {
+                client_visit: 'Client Visit', site_inspection: 'Site Inspection', meeting: 'Meeting',
+                delivery: 'Delivery', collection: 'Collection', other: 'Other'
+            };
+            return labels[purpose] || purpose;
+        }
+        
+        function getTransportIcon(mode) {
+            const icons = { car: 'car', bike: 'motorcycle', local_transport: 'bus', others: 'walking' };
+            return icons[mode] || 'route';
+        }
+        
+        function formatTransport(mode) {
+            const labels = { car: 'Car', bike: 'Bike', local_transport: 'Local Transport', others: 'Other' };
+            return labels[mode] || mode;
+        }
+        
+        function getStatusClass(status, approvalStatus) {
+            if (status === 'in_progress') return 'badge-in-progress';
+            if (approvalStatus === 'approved') return 'badge-approved';
+            if (approvalStatus === 'rejected') return 'badge-rejected';
+            if (approvalStatus === 'pending') return 'badge-pending';
+            return 'badge-completed';
+        }
+        
+        function getStatusText(status, approvalStatus) {
+            if (status === 'in_progress') return 'In Progress';
+            if (approvalStatus === 'approved') return 'Approved';
+            if (approvalStatus === 'rejected') return 'Rejected';
+            if (approvalStatus === 'pending') return 'Pending';
+            return 'Completed';
+        }
+        
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+        }
+        
+        function formatTime(dateStr) {
+            if (!dateStr) return '';
+            return new Date(dateStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // DC_JOURNEY_UNIFIED_001: Journey Core Integration (Jan 23, 2026)
+        // Replaces gps-service.js journey math with shared journey-core library
+        let journeyCoreInitialized = false;
+        let journeyCoreEngine = null;
+        
+        async function initJourneyCore() {
+            if (journeyCoreInitialized || !window.JourneyWebFacade) {
+                console.log('[DC_JOURNEY_CORE] Facade not available or already initialized');
+                return false;
+            }
+            
+            try {
+                journeyCoreEngine = await window.JourneyWebFacade.initialize(API_BASE, {
+                    onHeartbeatSent: handleCoreHeartbeatResponse,
+                    onHeartbeatFailed: handleCoreHeartbeatError,
+                    onGPSUpdated: handleCoreGPSUpdate,
+                    onError: handleCoreError
+                });
+                journeyCoreInitialized = true;
+                console.log('[DC_JOURNEY_CORE] Initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('[DC_JOURNEY_CORE] Initialization failed:', error);
+                return false;
+            }
+        }
+        
+        function handleCoreHeartbeatResponse(data) {
+            if (!data.response) return;
+            const resp = data.response;
+            
+            if (resp.success) {
+                document.getElementById('liveDistance').textContent = (resp.distance_km || 0).toFixed(2);
+                document.getElementById('maxSpeed').textContent = Math.round(resp.max_speed_kmh || 0);
+                document.getElementById('liveReimbursement').textContent = '₹' + (resp.reimbursement_amount || 0);
+                
+                const gpsWarningEl = document.getElementById('gpsWarningActive');
+                if (!resp.wvv_compliant) {
+                    if (gpsWarningEl) {
+                        const accuracyStr = resp.wvv_accuracy_m ? `${Math.round(resp.wvv_accuracy_m)}m` : 'N/A';
+                        const reasonStr = resp.wvv_reason || 'GPS accuracy too low';
+                        gpsWarningEl.innerHTML = `<i class="fas fa-info-circle text-warning me-2"></i>
+                            <strong>GPS Degraded:</strong> Accuracy ${accuracyStr} exceeds 100m limit. 
+                            Total tracked: ${(resp.distance_km || 0).toFixed(2)} km | Reimbursable: ${(resp.reimbursable_distance_km || 0).toFixed(2)} km
+                            <br><small class="text-muted">${reasonStr}</small>`;
+                        gpsWarningEl.style.display = 'block';
+                    }
+                    console.log('[WVV_DEGRADED] GPS point tracked but not reimbursable:', resp.wvv_reason);
+                } else if (window.wvvWarningShown || gpsWarningEl?.style.display === 'block') {
+                    window.wvvWarningShown = false;
+                    window.wvvPaused = false;
+                    if (gpsWarningEl) gpsWarningEl.style.display = 'none';
+                    console.log('GPS signal recovered - fully compliant tracking resumed');
+                }
+            }
+        }
+        
+        function handleCoreHeartbeatError(data) {
+            if (data.error && data.error.message && data.error.message.includes('WVV')) {
+                window.wvvPaused = true;
+                const gpsWarningEl = document.getElementById('gpsWarningActive');
+                if (gpsWarningEl) {
+                    gpsWarningEl.innerHTML = `<i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                        <strong>WVV GPS Error:</strong> GPS signal too weak (accuracy >100m). Tracking paused.
+                        <button class="btn btn-sm btn-warning ms-3" onclick="retryWvvTracking()">Retry Now</button>`;
+                    gpsWarningEl.style.display = 'block';
+                }
+                if (!window.wvvWarningShown) {
+                    window.wvvWarningShown = true;
+                }
+            }
+        }
+        
+        function handleCoreGPSUpdate(data) {
+            if (!data.position) return;
+            const loc = data.position;
+            const speedKmh = loc.speed || 0;
+            
+            document.getElementById('currentSpeed').textContent = Math.round(speedKmh);
+            
+            if (currentMarker) {
+                currentMarker.setLatLng([loc.latitude, loc.longitude]);
+            } else if (map) {
+                currentMarker = L.marker([loc.latitude, loc.longitude], {
+                    icon: L.divIcon({
+                        className: 'current-marker',
+                        html: '<i class="fas fa-location-arrow" style="color: #e94560; font-size: 24px;"></i>',
+                        iconSize: [24, 24]
+                    })
+                }).addTo(map);
+            }
+            
+            if (routePolyline) {
+                const latlngs = routePolyline.getLatLngs();
+                latlngs.push([loc.latitude, loc.longitude]);
+                routePolyline.setLatLngs(latlngs);
+            }
+            
+            if (map) map.panTo([loc.latitude, loc.longitude]);
+        }
+        
+        function handleCoreError(data) {
+            console.error('[DC_JOURNEY_CORE] Error:', data);
+        }
+        
+        // DC_JOURNEY_UNIFIED_001: Replace startTracking with journey-core (no fallback)
+        startTracking = async function() {
+            console.log('[DC_JOURNEY_CORE] Starting journey tracking via core (mandatory)');
+            
+            if (!window.JourneyWebFacade) {
+                console.error('[DC_JOURNEY_CORE] CRITICAL: journey-core not loaded');
+                alert('GPS Tracking Error: Required journey tracking module not loaded. Please refresh the page.');
+                return;
+            }
+            
+            if (!journeyCoreInitialized) {
+                const success = await initJourneyCore();
+                if (!success) {
+                    console.error('[DC_JOURNEY_CORE] CRITICAL: Failed to initialize journey-core');
+                    alert('GPS Tracking Error: Unable to initialize GPS tracking. Please refresh and try again.');
+                    return;
+                }
+            }
+            
+            if (!activeJourney || !activeJourney.id) {
+                console.error('[DC_JOURNEY_CORE] CRITICAL: No active journey to attach');
+                alert('GPS Tracking Error: No active journey found. Please start a new journey.');
+                return;
+            }
+            
+            const result = await window.JourneyWebFacade.attachToExistingJourney(activeJourney);
+            if (result.success) {
+                console.log('[DC_JOURNEY_CORE] Attached to journey:', activeJourney.id);
+            } else {
+                console.error('[DC_JOURNEY_CORE] Failed to attach to journey:', result.error);
+                alert(`GPS Tracking Error: ${result.error || 'Unable to start GPS tracking'}. Please try again.`);
+                return;
+            }
+            
+            console.log('[DC_JOURNEY_CORE] Journey tracking active via core');
+        };
+        
+        // DC_JOURNEY_UNIFIED_001: Replace stopTracking with journey-core cleanup
+        stopTracking = function() {
+            console.log('[DC_JOURNEY_CORE] Stopping journey tracking');
+            
+            if (journeyCoreInitialized && window.JourneyWebFacade) {
+                window.JourneyWebFacade.destroy();
+                journeyCoreInitialized = false;
+                journeyCoreEngine = null;
+            }
+            
+            // Clear any stale legacy interval (defensive)
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
+        };
+    </script>
+    <script src="/public/js/dc-error-handler.js"></script>
+</body>
+</html>

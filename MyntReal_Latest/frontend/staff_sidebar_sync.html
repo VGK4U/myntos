@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sidebar Menu Sync - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-weight: 600; font-size: 14px; color: #1f2937; }
+        .user-info-role { padding: 2px 8px; border-radius: 12px; background: #ede9fe; color: #7c3aed; font-size: 11px; font-weight: 500; }
+        .user-info-empid { font-size: 10px; color: #6b7280; }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .header-logo { height: 36px; width: auto; }
+
+        .sync-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .sync-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .sync-header i {
+            font-size: 32px;
+            color: #7c3aed;
+        }
+        .sync-header h2 {
+            margin: 0;
+            font-size: 24px;
+            color: #1f2937;
+        }
+        .sync-description {
+            color: #6b7280;
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+        .sync-btn {
+            background: linear-gradient(135deg, #7c3aed, #5b21b6);
+            border: none;
+            padding: 14px 28px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s;
+        }
+        .sync-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+        }
+        .sync-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .sync-btn i.fa-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+        .result-box {
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 8px;
+            display: none;
+        }
+        .result-box.success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+            display: block;
+        }
+        .result-box.error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+            display: block;
+        }
+        .section-list {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .section-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            background: #f9fafb;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        .section-item .order {
+            width: 32px;
+            height: 32px;
+            background: #7c3aed;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .section-item .name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .section-item .id {
+            color: #6b7280;
+            font-size: 12px;
+        }
+        .warning-box {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            color: #92400e;
+        }
+        .warning-box i {
+            margin-right: 8px;
+        }
+        .toast-container { position: fixed; top: 80px; right: 20px; z-index: 9999; }
+        
+        .main-content {
+            margin-left: 260px;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+        
+        body.sidebar-collapsed-mode .main-content {
+            margin-left: 72px;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        
+        <div class="content-area">
+            <div class="page-banner">
+                <h1><i class="fas fa-sync-alt"></i> Sidebar Menu Sync</h1>
+                <p>Synchronize sidebar menu structure from code to database registry. Use this after publishing to ensure production matches development.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="sync-card">
+                        <div class="sync-header">
+                            <i class="fas fa-database"></i>
+                            <h2>Sync Sidebar Registry</h2>
+                        </div>
+                        
+                        <div class="warning-box">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Important:</strong> This action will update the database menu registry with the current 18-section sidebar structure. 
+                            Use this after publishing to ensure production matches development.
+                        </div>
+                        
+                        <div class="sync-description">
+                            <p>This tool synchronizes the sidebar menu configuration from the codebase to the database. It ensures that:</p>
+                            <ul>
+                                <li>All 18 sections are properly ordered (Progress through MNR User Sidebar)</li>
+                                <li>Section names are updated (MNR, MNR USER SIDEBAR)</li>
+                                <li>Menu items are correctly assigned to their sections</li>
+                                <li>Legacy/duplicate sections are cleaned up</li>
+                            </ul>
+                        </div>
+                        
+                        <button class="sync-btn" id="syncBtn" onclick="performSync()">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>Sync Sidebar Menu</span>
+                        </button>
+                        
+                        <div class="result-box" id="resultBox">
+                            <div id="resultContent"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="sync-card">
+                        <h4><i class="fas fa-list-ol"></i> Current Section Order (18 Sections)</h4>
+                        <div class="section-list" id="sectionList">
+                            <div class="section-item"><div class="order">1</div><div><div class="name">Progress</div><div class="id">progress</div></div></div>
+                            <div class="section-item"><div class="order">2</div><div><div class="name">Staff Dashboard</div><div class="id">staff-dashboard</div></div></div>
+                            <div class="section-item"><div class="order">3</div><div><div class="name">Attendance</div><div class="id">attendance</div></div></div>
+                            <div class="section-item"><div class="order">4</div><div><div class="name">CRM & Leads</div><div class="id">crm</div></div></div>
+                            <div class="section-item"><div class="order">5</div><div><div class="name">Task Management</div><div class="id">task-management</div></div></div>
+                            <div class="section-item"><div class="order">6</div><div><div class="name">KRA Management</div><div class="id">kra-management</div></div></div>
+                            <div class="section-item"><div class="order">7</div><div><div class="name">Timesheet</div><div class="id">timesheet</div></div></div>
+                            <div class="section-item"><div class="order">8</div><div><div class="name">Journey Tracking</div><div class="id">journey-tracking</div></div></div>
+                            <div class="section-item"><div class="order">9</div><div><div class="name">Location Tracking</div><div class="id">location-tracking</div></div></div>
+                            <div class="section-item"><div class="order">10</div><div><div class="name">Reimbursement</div><div class="id">reimbursement</div></div></div>
+                            <div class="section-item"><div class="order">11</div><div><div class="name">Service Tickets</div><div class="id">service-tickets</div></div></div>
+                            <div class="section-item"><div class="order">12</div><div><div class="name">Accounts</div><div class="id">accounts</div></div></div>
+                            <div class="section-item"><div class="order">13</div><div><div class="name">Business Partners</div><div class="id">official-partners</div></div></div>
+                            <div class="section-item"><div class="order">14</div><div><div class="name">NDA Management</div><div class="id">nda-management</div></div></div>
+                            <div class="section-item"><div class="order">15</div><div><div class="name">Configuration</div><div class="id">configuration</div></div></div>
+                            <div class="section-item"><div class="order">16</div><div><div class="name">ZYNOVA</div><div class="id">zynova</div></div></div>
+                            <div class="section-item"><div class="order">17</div><div><div class="name">MNR</div><div class="id">mnr</div></div></div>
+                            <div class="section-item"><div class="order">18</div><div><div class="name">MNR User Sidebar</div><div class="id">mnr-user-sidebar</div></div></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="sync-card">
+                        <h5><i class="fas fa-info-circle"></i> When to Use</h5>
+                        <ul class="mt-3" style="color: #6b7280;">
+                            <li class="mb-2">After publishing new code to production</li>
+                            <li class="mb-2">When sidebar sections appear incorrect</li>
+                            <li class="mb-2">After menu structure changes in code</li>
+                            <li class="mb-2">To fix legacy/duplicate sections</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="sync-card">
+                        <h5><i class="fas fa-shield-alt"></i> Access Control</h5>
+                        <p style="color: #6b7280; font-size: 14px;">
+                            Only VGK Mentor can perform this sync. 
+                            The Zero-Default Access Policy is preserved - new sections won't automatically grant access to users.
+                        </p>
+                    </div>
+                    
+                    <div class="sync-card">
+                        <h5><i class="fas fa-users"></i> Staff Impact</h5>
+                        <p style="color: #6b7280; font-size: 14px;">
+                            This sync only updates menu registry structure. <strong>It does NOT change any staff member's access permissions.</strong>
+                            Existing permissions in the Access Matrix are preserved.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/staff_sidebar.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffHeader !== 'undefined') {
+                StaffHeader.inject('Sidebar Menu Sync', 'fas fa-sync-alt');
+            }
+            if (typeof StaffSidebar !== 'undefined') {
+                await StaffSidebar.init();
+            }
+        });
+        
+        async function performSync() {
+            const btn = document.getElementById('syncBtn');
+            const resultBox = document.getElementById('resultBox');
+            const resultContent = document.getElementById('resultContent');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Syncing...</span>';
+            resultBox.className = 'result-box';
+            resultBox.style.display = 'none';
+            resultContent.innerHTML = '';
+            
+            try {
+                const response = await staffFetch('/api/v1/staff/menu-settings/registry/sync-sidebar', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Sync failed');
+                }
+                
+                const data = await response.json();
+                
+                resultBox.className = 'result-box success';
+                resultBox.style.display = 'block';
+                resultContent.innerHTML = `
+                    <h5><i class="fas fa-check-circle"></i> Sync Completed Successfully!</h5>
+                    <p class="mb-2">The sidebar menu registry has been updated.</p>
+                    <ul class="mb-0">
+                        <li><strong>${data.updated_count || 0}</strong> menu items updated with section info</li>
+                        <li><strong>${data.legacy_reset_count || 0}</strong> legacy entries normalized</li>
+                        <li><strong>${data.total_menus || 0}</strong> total menu items in registry</li>
+                    </ul>
+                    <p class="mt-3 mb-0"><strong>Next step:</strong> Refresh your browser to see the updated sidebar.</p>
+                `;
+                showToast('Sidebar menu synced successfully!', 'success');
+            } catch (error) {
+                resultBox.className = 'result-box error';
+                resultBox.style.display = 'block';
+                resultContent.innerHTML = `
+                    <h5><i class="fas fa-times-circle"></i> Sync Failed</h5>
+                    <p class="mb-0">${error.message}</p>
+                `;
+                showToast('Sync failed: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i><span>Sync Sidebar Menu</span>';
+            }
+        }
+        
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'} alert-dismissible fade show`;
+            toast.style.cssText = 'min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+            toast.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+    </script>
+</body>
+</html>

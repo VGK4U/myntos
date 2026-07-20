@@ -1,0 +1,320 @@
+<!-- [DC-T33] VGK4U audience tabs (auto-mount + jQuery audience injector) -->
+<script src="/audience-tabs.js"></script>
+<div class="container-fluid mt-4">
+        <div class="mb-3 text-end">
+            <a href="/admin/dashboard" class="btn btn-primary btn-sm">
+                <i class="fas fa-home me-2"></i>Go to Dashboard
+            </a>
+        </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-users text-primary"></i> Awards Pending - User-Wise View</h2>
+            <p class="text-muted mb-0">View all pending awards grouped by user</p>
+        </div>
+        <div>
+            <a href="/admin/awards/awardwise" class="btn btn-outline-primary">
+                <i class="fas fa-trophy"></i> Switch to Award-Wise View
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="fas fa-filter"></i> Filters</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">User ID</label>
+                    <input type="text" id="filterUserId" class="form-control" placeholder="Enter User ID">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Award Type</label>
+                    <select id="filterAwardType" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="direct">Direct Awards</option>
+                        <option value="matching">Matching Awards</option>
+                        <option value="bonanza">Bonanza</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Award Item (Gift)</label>
+                    <select id="filterAwardItem" class="form-select">
+                        <option value="">All Items</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Date From</label>
+                    <input type="date" id="filterDateFrom" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Date To</label>
+                    <input type="date" id="filterDateTo" class="form-control">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()">
+                        <i class="fas fa-search"></i> Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Users</h6>
+                    <h3 id="totalUsers">0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Awards</h6>
+                    <h3 id="totalAwards">0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User-wise Table -->
+    <div class="card">
+        <div class="card-header">
+            <i class="fas fa-list"></i> Users with Pending Awards
+            <button class="btn btn-sm btn-primary float-end" onclick="loadUserData()">
+                <i class="fas fa-sync"></i> Refresh
+            </button>
+        </div>
+        <div class="card-body">
+            <div id="loading" style="display:none; text-align:center; padding:20px;">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p>Loading...</p>
+            </div>
+            <div id="error" class="alert alert-danger" style="display:none;"></div>
+            <div id="dataTable"></div>
+        </div>
+    </div>
+</div>
+
+<script src="/public/js/admin-id-utils.js"></script>
+<script>
+(function() {
+    var allAwards = [];
+    var uniqueGiftDescriptions = new Set();
+    
+    function getToken() {
+        return window.sessionToken || sessionStorage.getItem('sessionToken') || localStorage.getItem('sessionToken');
+    }
+
+    window.applyFilters = function() {
+        applyClientFilters();
+    };
+
+    window.loadUserData = function() {
+        var token = getToken();
+        var loading = document.getElementById('loading');
+        var error = document.getElementById('error');
+        var table = document.getElementById('dataTable');
+        
+        loading.style.display = 'block';
+        error.style.display = 'none';
+        table.innerHTML = '';
+        
+        fetch('/api/v1/awards/admin/awards/pending?limit=500', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(function(response) {
+            return response.json().then(function(data) {
+                loading.style.display = 'none';
+                if (!response.ok) throw new Error(data.detail || 'Failed to load');
+                if (!data.success) throw new Error('Invalid response');
+                processUserData(data);
+            });
+        })
+        .catch(function(err) {
+            loading.style.display = 'none';
+            error.style.display = 'block';
+            error.textContent = 'Error: ' + err.message;
+        });
+    };
+
+    function processUserData(data) {
+        allAwards = [];
+        uniqueGiftDescriptions = new Set();
+        
+        var direct = data.direct_awards || [];
+        var matching = data.matching_awards || [];
+        var bonanza = data.bonanza || [];
+        
+        direct.forEach(function(award) {
+            award.type_value = 'direct';
+            allAwards.push(award);
+            if (award.award_description) uniqueGiftDescriptions.add(award.award_description);
+        });
+        
+        matching.forEach(function(award) {
+            award.type_value = 'matching';
+            allAwards.push(award);
+            if (award.award_description) uniqueGiftDescriptions.add(award.award_description);
+        });
+        
+        bonanza.forEach(function(award) {
+            award.type_value = 'bonanza';
+            allAwards.push(award);
+            if (award.award_description) uniqueGiftDescriptions.add(award.award_description);
+        });
+        
+        populateAwardItemFilter();
+        displayFilteredUsers(allAwards);
+    }
+
+    function populateAwardItemFilter() {
+        var select = document.getElementById('filterAwardItem');
+        select.innerHTML = '<option value="">All Items</option>';
+        
+        var sortedDescriptions = Array.from(uniqueGiftDescriptions).sort();
+        sortedDescriptions.forEach(function(desc) {
+            var option = document.createElement('option');
+            option.value = desc;
+            option.textContent = desc;
+            select.appendChild(option);
+        });
+    }
+
+    function applyClientFilters() {
+        var userId = document.getElementById('filterUserId').value.trim().toUpperCase();
+        var awardType = document.getElementById('filterAwardType').value;
+        var awardItem = document.getElementById('filterAwardItem').value;
+        var dateFrom = document.getElementById('filterDateFrom').value;
+        var dateTo = document.getElementById('filterDateTo').value;
+        
+        var filtered = allAwards.filter(function(award) {
+            if (userId && award.user_id && award.user_id.toUpperCase().indexOf(userId) === -1) {
+                return false;
+            }
+            
+            if (awardType && award.type_value !== awardType) {
+                return false;
+            }
+            
+            if (awardItem && award.award_description !== awardItem) {
+                return false;
+            }
+            
+            if (dateFrom) {
+                var achievedDate = award.achieved_date || award.achieved_at || '';
+                if (achievedDate && achievedDate.substring(0, 10) < dateFrom) {
+                    return false;
+                }
+            }
+            
+            if (dateTo) {
+                var achievedDate = award.achieved_date || award.achieved_at || '';
+                if (achievedDate && achievedDate.substring(0, 10) > dateTo) {
+                    return false;
+                }
+            }
+            
+            return true;
+        });
+        
+        displayFilteredUsers(filtered);
+    }
+
+    function displayFilteredUsers(awards) {
+        var userMap = {};
+        awards.forEach(function(award) {
+            var userId = award.user_id || 'Unknown';
+            if (!userMap[userId]) {
+                userMap[userId] = { 
+                    userId: userId, 
+                    userName: award.user_name || 'Unknown',
+                    awards: [] 
+                };
+            }
+            userMap[userId].awards.push(award);
+        });
+        
+        var users = Object.values(userMap);
+        document.getElementById('totalUsers').textContent = users.length;
+        document.getElementById('totalAwards').textContent = awards.length;
+        
+        if (users.length === 0) {
+            document.getElementById('dataTable').innerHTML = '<p class="text-center text-muted">No awards found matching filters</p>';
+            return;
+        }
+        
+        var html = '<div class="table-responsive"><table class="table table-bordered table-hover">';
+        html += '<thead class="table-light"><tr><th>User ID</th><th>User Name</th><th>Awards Count</th><th>Awards Details</th><th>Actions</th></tr></thead><tbody>';
+        
+        users.forEach(function(user) {
+            html += '<tr>';
+            html += '<td><strong>' + user.userId + '</strong></td>';
+            html += '<td>' + user.userName + '</td>';
+            html += '<td><span class="badge bg-primary">' + user.awards.length + '</span></td>';
+            html += '<td><ul class="mb-0">';
+            user.awards.forEach(function(award) {
+                var dateStr = award.achieved_date || award.achieved_at || '';
+                var deliveryStatus = award.delivery_status || 'Pending Admin';
+                var deliveryBadge = 'bg-secondary';
+                if (deliveryStatus === 'Delivered') deliveryBadge = 'bg-success';
+                else if (deliveryStatus === 'In Transit') deliveryBadge = 'bg-info';
+                else if (deliveryStatus === 'Awaiting Finance') deliveryBadge = 'bg-primary';
+                else if (deliveryStatus === 'Awaiting Super Admin') deliveryBadge = 'bg-warning';
+                
+                html += '<li><strong>' + (award.award_description || award.award_name || award.tier_name || 'N/A') + '</strong> (' + (award.award_type || 'N/A') + ')';
+                html += ' - <small class="text-muted">' + (dateStr ? dateStr.substring(0, 10) : 'N/A') + '</small>';
+                html += ' <span class="badge bg-warning text-dark">' + (award.status || 'pending') + '</span>';
+                html += ' <span class="badge ' + deliveryBadge + '">' + deliveryStatus + '</span>';
+                html += '</li>';
+            });
+            html += '</ul></td>';
+            html += '<td>';
+            user.awards.forEach(function(award) {
+                html += '<button class="btn btn-sm btn-success me-1 mb-1" onclick="approveAward(' + award.id + ',\'' + award.type_value + '\')">';
+                html += '<i class="fas fa-check"></i> ' + (award.award_type || 'Award');
+                html += '</button> ';
+            });
+            html += '</td></tr>';
+        });
+        
+        html += '</tbody></table></div>';
+        document.getElementById('dataTable').innerHTML = html;
+    }
+
+    window.approveAward = function(id, type) {
+        var token = getToken();
+        var notes = prompt('Admin Notes (optional):');
+        if (notes === null) return;
+        
+        fetch('/api/v1/awards/admin/awards/' + type + '/' + id + '/review', {
+            method: 'POST',
+            headers: { 
+                'Authorization': 'Bearer ' + token, 
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ decision: 'approve', notes: notes || '' })
+        })
+        .then(function(response) {
+            return response.json().then(function(data) {
+                if (response.ok && data.success) {
+                    alert('✅ Award approved successfully!');
+                    loadUserData();
+                } else {
+                    alert('❌ Error: ' + (data.detail || data.error || 'Failed'));
+                }
+            });
+        })
+        .catch(function(err) {
+            alert('❌ Error: ' + err.message);
+        });
+    };
+
+    setTimeout(loadUserData, 500);
+})();
+</script>

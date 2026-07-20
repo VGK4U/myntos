@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Segments - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .filter-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-row select, .filter-row input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 180px; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { background: #f9fafb; padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151; }
+        .data-table tr:hover { background: #f9fafb; }
+        .badge-active { background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-inactive { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .action-btn { padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; margin-right: 6px; }
+        .action-btn-edit { background: #dbeafe; color: #1d4ed8; }
+        .action-btn-edit:hover { background: #1d4ed8; color: white; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 500px; width: 90%; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        
+        .summary-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .summary-card { background: white; border-radius: 12px; padding: 20px; flex: 1; min-width: 200px; border: 1px solid #e5e7eb; }
+        .summary-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .summary-card .label { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        .summary-card.active .value { color: #059669; }
+        .summary-card.inactive .value { color: #dc2626; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-header">
+                <div><h1>Company Segments</h1><p>Manage business segments for each company</p></div>
+                <button class="btn-primary-custom" onclick="openCreateModal()"><i class="fas fa-plus me-2"></i>Add Segment</button>
+            </div>
+            
+            <div class="summary-row">
+                <div class="summary-card">
+                    <div class="value" id="totalCount">0</div>
+                    <div class="label">Total Segments</div>
+                </div>
+                <div class="summary-card active">
+                    <div class="value" id="activeCount">0</div>
+                    <div class="label">Active Segments</div>
+                </div>
+                <div class="summary-card inactive">
+                    <div class="value" id="inactiveCount">0</div>
+                    <div class="label">Inactive Segments</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-layer-group me-2"></i>Segments</span>
+                    <span class="text-muted" id="recordCount">0 records</span>
+                </div>
+                <div class="card-body">
+                    <div class="filter-row">
+                        <select id="filterCompany" onchange="loadSegments()">
+                            <option value="">All Companies</option>
+                        </select>
+                        <select id="filterStatus" onchange="loadSegments()">
+                            <option value="">All Status</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="INACTIVE">Inactive</option>
+                        </select>
+                    </div>
+                    
+                    <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+                    
+                    <table class="data-table" id="dataTable" style="display: none;">
+                        <thead>
+                            <tr>
+                                <th>Segment Name</th>
+                                <th>Code</th>
+                                <th>Company</th>
+                                <th>Description</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                    
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-layer-group"></i>
+                        <h3>No Segments Found</h3>
+                        <p>Add your first segment to get started</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle me-2"></i>Add Segment</h3>
+                <button class="modal-close" onclick="closeModal('createModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createForm">
+                    <div class="form-group">
+                        <label>Company *</label>
+                        <select id="formCompany" required>
+                            <option value="">Select Company</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Segment Name *</label>
+                        <input type="text" id="formName" required placeholder="e.g., Electronics Division">
+                    </div>
+                    <div class="form-group">
+                        <label>Segment Code *</label>
+                        <input type="text" id="formCode" required placeholder="e.g., ELEC" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="formDescription" placeholder="Brief description of the segment"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="createSegment()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit me-2"></i>Edit Segment</h3>
+                <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <div class="form-group">
+                        <label>Company</label>
+                        <input type="text" id="editCompanyName" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Segment Name *</label>
+                        <input type="text" id="editName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Segment Code</label>
+                        <input type="text" id="editCode" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="editDescription"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="editStatus">
+                            <option value="ACTIVE">Active</option>
+                            <option value="INACTIVE">Inactive</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="updateSegment()"><i class="fas fa-save me-1"></i>Update</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let companies = [];
+        let segments = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('Company Segments', 'fas fa-layer-group');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            await loadCompanies();
+            await loadSegments();
+        });
+        
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch(`${API_BASE}/companies`);
+                const data = await response.json();
+                if (data.success && data.companies) {
+                    companies = data.companies;
+                    const filterSelect = document.getElementById('filterCompany');
+                    const formSelect = document.getElementById('formCompany');
+                    
+                    companies.forEach(c => {
+                        filterSelect.innerHTML += `<option value="${c.id}">${c.company_name}</option>`;
+                        formSelect.innerHTML += `<option value="${c.id}">${c.company_name}</option>`;
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading companies:', error);
+            }
+        }
+        
+        async function loadSegments() {
+            const loadingState = document.getElementById('loadingState');
+            const dataTable = document.getElementById('dataTable');
+            const emptyState = document.getElementById('emptyState');
+            const tableBody = document.getElementById('tableBody');
+            
+            loadingState.style.display = 'flex';
+            dataTable.style.display = 'none';
+            emptyState.style.display = 'none';
+            
+            try {
+                const companyId = document.getElementById('filterCompany').value;
+                const status = document.getElementById('filterStatus').value;
+                
+                let url = `${API_BASE}/segments?`;
+                if (companyId) url += `company_id=${companyId}&`;
+                if (status) url += `status_filter=${status}&`;
+                
+                const response = await staffFetch(url);
+                
+                const data = await response.json();
+                loadingState.style.display = 'none';
+                
+                if (data.success && data.segments && data.segments.length > 0) {
+                    segments = data.segments;
+                    
+                    let activeCount = 0;
+                    let inactiveCount = 0;
+                    
+                    tableBody.innerHTML = segments.map(s => {
+                        const segStatus = s.is_active ? 'ACTIVE' : 'INACTIVE';
+                        if (s.is_active) activeCount++;
+                        else inactiveCount++;
+                        
+                        return `
+                            <tr>
+                                <td><strong>${s.segment_name}</strong></td>
+                                <td><code>${s.segment_code || '-'}</code></td>
+                                <td>${s.company_name || 'Unknown'}</td>
+                                <td>${s.description || '-'}</td>
+                                <td><span class="badge-${s.is_active ? 'active' : 'inactive'}">${segStatus}</span></td>
+                                <td>
+                                    <button class="action-btn action-btn-edit" onclick="openEditModal(${s.id})">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                    
+                    document.getElementById('totalCount').textContent = segments.length;
+                    document.getElementById('activeCount').textContent = activeCount;
+                    document.getElementById('inactiveCount').textContent = inactiveCount;
+                    document.getElementById('recordCount').textContent = `${segments.length} records`;
+                    
+                    dataTable.style.display = 'table';
+                } else {
+                    document.getElementById('totalCount').textContent = '0';
+                    document.getElementById('activeCount').textContent = '0';
+                    document.getElementById('inactiveCount').textContent = '0';
+                    document.getElementById('recordCount').textContent = '0 records';
+                    emptyState.style.display = 'block';
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading segments:', error);
+                loadingState.style.display = 'none';
+                emptyState.style.display = 'block';
+            }
+        }
+        
+        function openCreateModal() {
+            document.getElementById('formCompany').value = '';
+            document.getElementById('formName').value = '';
+            document.getElementById('formCode').value = '';
+            document.getElementById('formDescription').value = '';
+            document.getElementById('createModal').classList.add('active');
+        }
+        
+        async function createSegment() {
+            const companyId = document.getElementById('formCompany').value;
+            const name = document.getElementById('formName').value.trim();
+            const code = document.getElementById('formCode').value.trim();
+            const description = document.getElementById('formDescription').value.trim();
+            
+            if (!companyId || !name || !code) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/segments`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        company_id: parseInt(companyId),
+                        segment_name: name,
+                        segment_code: code,
+                        description: description || null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    closeModal('createModal');
+                    await loadSegments();
+                    alert('Segment created successfully');
+                } else {
+                    alert(data.detail || data.message || 'Failed to create segment');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error creating segment:', error);
+                alert('Failed to create segment');
+            }
+        }
+        
+        async function openEditModal(segmentId) {
+            try {
+                const response = await staffFetch(`${API_BASE}/segments/${segmentId}`);
+                
+                const data = await response.json();
+                
+                if (data.success && data.segment) {
+                    const s = data.segment;
+                    document.getElementById('editId').value = s.id;
+                    document.getElementById('editCompanyName').value = s.company_name || 'Unknown';
+                    document.getElementById('editName').value = s.segment_name;
+                    document.getElementById('editCode').value = s.segment_code || '';
+                    document.getElementById('editDescription').value = s.description || '';
+                    document.getElementById('editStatus').value = s.is_active ? 'ACTIVE' : 'INACTIVE';
+                    document.getElementById('editModal').classList.add('active');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading segment:', error);
+                alert('Failed to load segment details');
+            }
+        }
+        
+        async function updateSegment() {
+            const id = document.getElementById('editId').value;
+            const name = document.getElementById('editName').value.trim();
+            const description = document.getElementById('editDescription').value.trim();
+            const status = document.getElementById('editStatus').value;
+            
+            if (!name) {
+                alert('Segment name is required');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/segments/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        segment_name: name,
+                        description: description || null,
+                        status: status
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    closeModal('editModal');
+                    await loadSegments();
+                    alert('Segment updated successfully');
+                } else {
+                    alert(data.detail || data.message || 'Failed to update segment');
+                }
+            } catch (error) {
+                console.error('Error updating segment:', error);
+                alert('Failed to update segment');
+            }
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+    </script>
+</body>
+</html>

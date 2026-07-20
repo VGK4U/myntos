@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Color Sheet — Inventory</title>
+  <script>
+  (function(){try{var m=document.cookie.match(/(?:^|;\s*)staff_token=([^;]+)/);if(m&&m[1]){var t=decodeURIComponent(m[1]);if(t&&t!==localStorage.getItem('staff_token'))localStorage.setItem('staff_token',t);}}catch(e){}}());
+  </script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh;}
+    .content-area{padding:20px;}
+    .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+    .page-header h1{font-size:22px;font-weight:700;color:#1f2937;margin:0;}
+    .page-header p{font-size:13px;color:#6b7280;margin:3px 0 0;}
+    .card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);border:none;margin-bottom:18px;}
+    .card-header{background:transparent;border-bottom:1px solid #e5e7eb;padding:14px 18px;font-weight:600;color:#1f2937;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+    .card-body{padding:16px 18px;}
+
+    /* Tabs */
+    .tab-nav{display:flex;gap:4px;margin-bottom:18px;border-bottom:2px solid #e5e7eb;padding-bottom:0;}
+    .tab-btn{padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;}
+    .tab-btn.active{color:#059669;border-bottom-color:#059669;}
+    .tab-btn:hover:not(.active){color:#374151;}
+    .tab-pane{display:none;}
+    .tab-pane.active{display:block;}
+
+    /* Sheet table */
+    .sheet-wrap{overflow-x:auto;border-radius:10px;border:1px solid #e5e7eb;}
+    .sheet-table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px;}
+    .sheet-table th{background:#1e3a5f;color:#fff;padding:8px 10px;text-align:center;white-space:nowrap;font-size:11px;font-weight:600;border:1px solid rgba(255,255,255,.15);}
+    .sheet-table th.th-left{text-align:left;}
+    .sheet-table td{padding:6px 8px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;}
+    .sheet-table td.td-left{text-align:left;}
+    .row-model>td{background:#dbeafe;font-weight:700;font-size:12px;color:#1e3a5f;}
+    .row-subtotal>td{background:#bfdbfe;font-weight:700;font-size:11px;color:#1e40af;}
+    .row-total>td{background:#1e3a5f;color:#fff;font-weight:700;}
+    .row-color>td{background:#f9fafb;}
+    .row-color:hover>td{background:#f0fdf4;}
+    .qty-cell{font-weight:600;font-family:monospace;color:#1f2937;}
+    .qty-zero{color:#d1d5db;}
+    .qty-pos{color:#059669;font-weight:700;}
+    .qty-neg{color:#dc2626;font-weight:700;}
+    .cell-editable{cursor:pointer;border-radius:4px;transition:background .15s;}
+    .cell-editable:hover{background:#fef3c7!important;}
+    .cell-add-hint{display:inline-flex;align-items:center;font-size:10px;color:#6366f1;opacity:.75;font-style:italic;white-space:nowrap;}
+    .cell-out-plan{background:rgba(99,102,241,.04);}
+    .cell-out-sold{background:rgba(239,68,68,.03);}
+    .cell-out-plan:hover,.cell-out-sold:hover{background:#fef3c7!important;}
+    .cell-out-plan:hover .cell-add-hint,.cell-out-sold:hover .cell-add-hint{opacity:1;color:#4f46e5;}
+    .badge-in{background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;}
+    .badge-plan{background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:10px;font-size:10px;}
+    .badge-sold{background:#f3f4f6;color:#374151;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;}
+    .th-group-in{background:#065f46!important;}
+    .th-group-out{background:#1e40af!important;}
+    .th-sub{background:#374151!important;font-size:10px!important;}
+
+    /* Filter bar */
+    .filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .filter-bar select{padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;min-width:120px;}
+    .btn-primary-c{background:linear-gradient(135deg,#059669,#047857);border:none;color:#fff;padding:8px 18px;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;}
+    .btn-primary-c:hover{opacity:.9;}
+    .btn-secondary-c{background:#f3f4f6;color:#374151;border:1px solid #d1d5db;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:13px;}
+    .btn-secondary-c:hover{background:#e5e7eb;}
+    .btn-sm-icon{border:none;background:none;cursor:pointer;padding:4px 6px;border-radius:5px;font-size:13px;}
+
+    /* Modals */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1050;align-items:center;justify-content:center;}
+    .modal-overlay.active{display:flex;}
+    .modal-box{background:#fff;border-radius:14px;padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,.25);}
+    .modal-box.wide{width:680px;}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+    .modal-title{font-size:16px;font-weight:700;color:#1f2937;}
+    .modal-close{border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280;}
+    .modal-close:hover{color:#374151;}
+    .form-label{font-size:13px;font-weight:600;color:#374151;margin-bottom:5px;display:block;}
+    .form-control-c{width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;}
+    .form-control-c:focus{outline:none;border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,.1);}
+    .form-row{margin-bottom:14px;}
+    .form-hint{font-size:11px;color:#9ca3af;margin-top:3px;}
+    .form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+    /* Typeahead */
+    .ta-wrap{position:relative;}
+    .ta-results{position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:3000;max-height:230px;overflow-y:auto;display:none;}
+    .ta-item{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:8px;}
+    .ta-item:hover{background:#f0fdf4;}
+    .ta-item:last-child{border-bottom:none;}
+    .ta-badge{font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+    .ta-vendor {background:#fef3c7;color:#92400e;}
+    .ta-staff  {background:#dbeafe;color:#1e40af;}
+    .ta-partner{background:#d1fae5;color:#065f46;}
+    .ta-company{background:#f3e8ff;color:#7c3aed;}
+    .ta-mnr    {background:#fee2e2;color:#dc2626;}
+    .ta-vgk    {background:#fdf2f8;color:#9d174d;}
+    .ta-selected{background:#f0fdf4;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;font-size:12px;margin-top:5px;display:flex;align-items:center;gap:6px;}
+    .ta-clear{border:none;background:none;color:#9ca3af;cursor:pointer;font-size:14px;margin-left:auto;}
+    .ta-clear:hover{color:#dc2626;}
+
+    /* Admin list */
+    .admin-list{list-style:none;padding:0;margin:0;}
+    .admin-list-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;background:#f9fafb;}
+    .admin-list-item:hover{background:#f0fdf4;}
+    .color-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;background:#f3f4f6;font-size:11px;font-weight:600;margin:2px;cursor:pointer;}
+    .color-chip:hover{background:#d1fae5;}
+    .badge-type{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:700;}
+    .badge-opening{background:#fef3c7;color:#92400e;}
+    .badge-purchase{background:#d1fae5;color:#065f46;}
+    .badge-inactive{background:#f3f4f6;color:#9ca3af;}
+
+    /* Out detail */
+    .party-list{list-style:none;padding:0;margin:0;}
+    .party-list li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:12px;}
+    .party-list li:last-child{border-bottom:none;}
+
+    /* Loading */
+    .spinner{display:inline-block;width:18px;height:18px;border:2px solid #e5e7eb;border-top-color:#059669;border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .loading-row td{text-align:center;padding:32px;color:#9ca3af;font-size:13px;}
+    .empty-state{text-align:center;padding:40px 20px;color:#9ca3af;}
+    .empty-state i{font-size:36px;margin-bottom:12px;color:#d1d5db;}
+
+    /* Summary cards */
+    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+    .summary-card{background:#fff;padding:14px 16px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);text-align:center;}
+    .summary-card .val{font-size:22px;font-weight:700;color:#1f2937;}
+    .summary-card .lbl{font-size:11px;color:#6b7280;margin-top:3px;}
+    .summary-card.green .val{color:#059669;}
+    .summary-card.blue .val{color:#1d4ed8;}
+    .summary-card.amber .val{color:#d97706;}
+    .summary-card.red .val{color:#dc2626;}
+  </style>
+</head>
+<body>
+  <nav id="staffSidebar"></nav>
+  <div class="main-content">
+    <div id="headerContainer"></div>
+    <div class="content-area">
+      <div class="page-header">
+        <div>
+          <h1><i class="fas fa-palette me-2" style="color:#059669"></i>Vehicle Color Sheet</h1>
+          <p>Color-wise inventory tracking — IN (purchase) and OUT (planned + sold)</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary-c" onclick="loadSheet()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="summary-grid" id="summaryCards">
+        <div class="summary-card"><div class="val" id="sumModels">—</div><div class="lbl">Models</div></div>
+        <div class="summary-card green"><div class="val" id="sumTotalIn">—</div><div class="lbl">Total In</div></div>
+        <div class="summary-card amber"><div class="val" id="sumTotalPlanned">—</div><div class="lbl">Planned Out</div></div>
+        <div class="summary-card blue"><div class="val" id="sumTotalSold">—</div><div class="lbl">Sold</div></div>
+        <div class="summary-card red"><div class="val" id="sumBalance">—</div><div class="lbl">Balance</div></div>
+      </div>
+
+      <!-- Tab Nav -->
+      <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('tabSheet',this)"><i class="fas fa-table me-1"></i>Color Sheet</button>
+        <button class="tab-btn" onclick="switchTab('tabBatches',this)"><i class="fas fa-boxes me-1"></i>Batches</button>
+        <button class="tab-btn" onclick="switchTab('tabAdmin',this)"><i class="fas fa-cog me-1"></i>Models &amp; Colors</button>
+      </div>
+
+      <!-- ═══ TAB: COLOR SHEET ═══ -->
+      <div class="tab-pane active" id="tabSheet">
+
+        <!-- Model-Wise Summary (above main Color-Wise Register) -->
+        <div class="card" id="modelSummaryCard" style="margin-bottom:12px;">
+          <div class="card-header" style="cursor:pointer;" onclick="toggleModelSummary()">
+            <span><i class="fas fa-chart-bar me-2" style="color:#6366f1"></i>Model-Wise Summary</span>
+            <span id="modelSummaryToggleIcon" style="font-size:12px;color:#9ca3af">▲ Collapse</span>
+          </div>
+          <div id="modelSummaryWrap">
+            <div class="sheet-wrap">
+              <table class="sheet-table" id="modelSummaryTable">
+                <thead id="modelSummaryHead"></thead>
+                <tbody id="modelSummaryBody">
+                  <tr class="loading-row"><td colspan="20"><span class="spinner"></span> Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span>Color-Wise Register</span>
+            <div class="filter-bar">
+              <select id="filterModel" onchange="renderSheet()">
+                <option value="">All Models</option>
+              </select>
+              <select id="filterColor" onchange="renderSheet()">
+                <option value="">All Colors</option>
+              </select>
+              <select id="filterCompany" onchange="loadSheet()">
+                <option value="">All Companies</option>
+              </select>
+              <span style="font-size:12px;color:#6b7280" id="sheetTs"></span>
+            </div>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="sheet-wrap">
+              <table class="sheet-table" id="sheetTable">
+                <thead id="sheetHead"></thead>
+                <tbody id="sheetBody">
+                  <tr class="loading-row"><td colspan="20"><span class="spinner"></span> Loading sheet…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB: BATCHES ═══ -->
+      <div class="tab-pane" id="tabBatches">
+        <div class="card">
+          <div class="card-header">
+            <span>Purchase Batches</span>
+            <button class="btn-primary-c" onclick="openBatchModal()"><i class="fas fa-plus me-1"></i>Add Batch</button>
+          </div>
+          <div class="card-body">
+            <div id="batchList"><div class="empty-state"><i class="fas fa-boxes"></i><p>Loading…</p></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB: ADMIN ═══ -->
+      <div class="tab-pane" id="tabAdmin">
+        <div class="card">
+          <div class="card-header">
+            <span>Vehicle Models</span>
+            <button class="btn-primary-c" onclick="openModelModal()"><i class="fas fa-plus me-1"></i>Add Model</button>
+          </div>
+          <div class="card-body">
+            <div id="modelList"><div class="empty-state"><i class="fas fa-car"></i><p>Loading…</p></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: IN Entry ═══ -->
+  <div class="modal-overlay" id="inModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="inModalTitle">Enter IN Quantity</div>
+        <button class="modal-close" onclick="closeModal('inModal')">&times;</button>
+      </div>
+      <div id="inModalBody">
+        <div class="form-row">
+          <label class="form-label">Quantity (IN)</label>
+          <input type="number" id="inQty" min="0" class="form-control-c" placeholder="0">
+          <div class="form-hint" id="inCapHint"></div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Supplier / Party <span style="font-size:11px;font-weight:400;color:#9ca3af">(vendor, staff, partner, company)</span></label>
+          <div class="ta-wrap">
+            <input type="text" id="inPartyInput" class="form-control-c" placeholder="Type name or code to search…" autocomplete="off">
+            <div class="ta-results" id="inPartyResults"></div>
+          </div>
+          <div id="inPartySelected" style="display:none" class="ta-selected">
+            <span id="inPartySelectedText"></span>
+            <button class="ta-clear" onclick="clearInParty()" title="Clear">&times;</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Company Tag <span style="font-size:11px;font-weight:400;color:#9ca3af">(for reporting)</span></label>
+          <select id="inCompanyTag" class="form-control-c">
+            <option value="">— Untagged —</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+          <button class="btn-secondary-c" onclick="closeModal('inModal')">Cancel</button>
+          <button class="btn-primary-c" onclick="saveInEntry()"><i class="fas fa-save me-1"></i>Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: OUT Entry ═══ -->
+  <div class="modal-overlay" id="outModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <div class="modal-title" id="outModalTitle">OUT Entry — Planned / Sold</div>
+        <button class="modal-close" onclick="closeModal('outModal')">&times;</button>
+      </div>
+      <div id="outModalBody">
+        <div class="form-row">
+          <label class="form-label">Party (Buyer) <span style="font-size:11px;font-weight:400;color:#9ca3af">(partner, staff, MNR/VGK member)</span></label>
+          <div class="ta-wrap">
+            <input type="text" id="outPartyInput" class="form-control-c" placeholder="Type name or code to search…" autocomplete="off">
+            <div class="ta-results" id="outPartyResults"></div>
+          </div>
+          <div id="outPartySelected" style="display:none" class="ta-selected">
+            <span id="outPartySelectedText"></span>
+            <button class="ta-clear" onclick="clearOutParty()" title="Clear">&times;</button>
+          </div>
+        </div>
+        <div class="form-grid2">
+          <div class="form-row">
+            <label class="form-label">Planned Qty</label>
+            <input type="number" id="outPlanned" min="0" class="form-control-c" placeholder="0">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Sold Qty</label>
+            <input type="number" id="outSold" min="0" class="form-control-c" placeholder="0">
+          </div>
+        </div>
+        <div class="form-grid2">
+          <div class="form-row">
+            <label class="form-label">Entry Date</label>
+            <input type="date" id="outDate" class="form-control-c">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Company Tag <span style="font-size:11px;font-weight:400;color:#9ca3af">(reporting)</span></label>
+            <select id="outCompanyTag" class="form-control-c">
+              <option value="">— Untagged —</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Notes</label>
+          <input type="text" id="outNotes" class="form-control-c" placeholder="Optional notes" maxlength="200">
+        </div>
+        <!-- Existing entries for this cell -->
+        <div id="outPartyBreakdown" style="margin-top:4px;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+          <button class="btn-secondary-c" onclick="closeModal('outModal')">Cancel</button>
+          <button class="btn-primary-c" onclick="saveOutEntry()"><i class="fas fa-save me-1"></i>Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: Batch ═══ -->
+  <div class="modal-overlay" id="batchModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="batchModalTitle">Add Batch</div>
+        <button class="modal-close" onclick="closeModal('batchModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Batch Label</label>
+        <input type="text" id="batchLabel" class="form-control-c" placeholder="e.g. New 1 (01/06/2026)" maxlength="100">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Batch Date</label>
+        <input type="date" id="batchDate" class="form-control-c">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Type</label>
+        <select id="batchType" class="form-control-c" onchange="togglePurchaseQty()">
+          <option value="purchase">Purchase Batch</option>
+          <option value="opening">Opening Balance</option>
+        </select>
+      </div>
+      <div class="form-row" id="purchaseQtyRow">
+        <label class="form-label">Purchase Qty (cap)</label>
+        <input type="number" id="batchPurchaseQty" min="0" class="form-control-c" placeholder="e.g. 40">
+        <div class="form-hint">Total vehicles purchased in this batch. Color entries cannot exceed this.</div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Ref / Invoice No</label>
+        <input type="text" id="batchRef" class="form-control-c" placeholder="Optional PO/Invoice reference" maxlength="100">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Supplier / Party <span style="font-size:11px;font-weight:400;color:#9ca3af">(vendor, staff, partner, company)</span></label>
+        <div class="ta-wrap">
+          <input type="text" id="batchPartyInput" class="form-control-c" placeholder="Type name or code to search…" autocomplete="off">
+          <div class="ta-results" id="batchPartyResults"></div>
+        </div>
+        <div id="batchPartySelected" style="display:none" class="ta-selected">
+          <span id="batchPartySelectedText"></span>
+          <button class="ta-clear" onclick="clearBatchParty()" title="Clear">&times;</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('batchModal')">Cancel</button>
+        <button class="btn-primary-c" onclick="saveBatch()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: Model ═══ -->
+  <div class="modal-overlay" id="modelModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="modelModalTitle">Add Model</div>
+        <button class="modal-close" onclick="closeModal('modelModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Model Name</label>
+        <input type="text" id="modelName" class="form-control-c" placeholder="e.g. GT PRO" maxlength="100">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Sort Order</label>
+        <input type="number" id="modelSort" class="form-control-c" value="0" min="0">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('modelModal')">Cancel</button>
+        <button class="btn-primary-c" onclick="saveModel()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODAL: Color ═══ -->
+  <div class="modal-overlay" id="colorModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="colorModalTitle">Add Color</div>
+        <button class="modal-close" onclick="closeModal('colorModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Color Name</label>
+        <input type="text" id="colorName" class="form-control-c" placeholder="e.g. White" maxlength="50">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Sort Order</label>
+        <input type="number" id="colorSort" class="form-control-c" value="0" min="0">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('colorModal')">Cancel</button>
+        <button class="btn-primary-c" onclick="saveColor()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/staff_sidebar.js?v=20260602c"></script>
+  <script src="/staff_header.js"></script>
+  <script>
+  const API = '/api/v1/staff/inventory/vehicle-color';
+  let _sheet   = null;
+  let _batches = [];
+  let _models  = [];
+  let _companies = [];
+
+  let _inCtx  = null;
+  let _outCtx = null;
+  let _inParty  = null;
+  let _outParty = null;
+
+  let _taTimer = null;
+
+  function getToken(){ return localStorage.getItem('staff_token') || ''; }
+  function hdr(){ return {'Authorization':'Bearer '+getToken(),'Content-Type':'application/json'}; }
+
+  async function apiFetch(url, opts={}){
+    const res = await fetch(url, {...opts, headers:{...hdr(),...(opts.headers||{})}});
+    if(!res.ok){
+      const body = await res.json().catch(()=>null);
+      const msg = body?.detail || body?.message || `HTTP ${res.status}`;
+      throw new Error(String(msg).substring(0,200));
+    }
+    return res.json();
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  async function init(){
+    try{
+      if(typeof StaffSidebar!=='undefined') await StaffSidebar.init();
+      if(typeof StaffHeader!=='undefined') StaffHeader.inject('Vehicle Color Sheet','fas fa-palette');
+      if(typeof StaffBackButton!=='undefined') StaffBackButton.init();
+    }catch(e){ console.warn('Sidebar/header init:',e); }
+    await Promise.all([loadSheet(), loadBatches(), loadModelsAdmin(), loadCompanies()]);
+  }
+
+  // ── Tab switching ─────────────────────────────────────────────────────────
+  function switchTab(id, btn){
+    document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ── Companies ─────────────────────────────────────────────────────────────
+  async function loadCompanies(){
+    try{
+      _companies = await apiFetch(API+'/companies');
+      populateCompanySelects();
+    }catch(e){ console.warn('Companies load:', e); }
+  }
+
+  function populateCompanySelects(){
+    ['inCompanyTag','outCompanyTag','filterCompany'].forEach(id=>{
+      const sel = document.getElementById(id);
+      if(!sel) return;
+      const cur = sel.value;
+      sel.innerHTML = id==='filterCompany'
+        ? '<option value="">All Companies</option>'
+        : '<option value="">— Untagged —</option>';
+      _companies.forEach(c=>{
+        sel.innerHTML += `<option value="${c.id}">${escH(c.code)} — ${escH(c.name)}</option>`;
+      });
+      sel.value = cur;
+    });
+  }
+
+  // ── Load Sheet ────────────────────────────────────────────────────────────
+  async function loadSheet(){
+    try{
+      const cid = document.getElementById('filterCompany').value;
+      const url = API+'/sheet'+(cid?'?company_id='+cid:'');
+      _sheet = await apiFetch(url);
+      populateModelFilter();
+      populateColorFilter();
+      renderSheet();
+      updateSummaryCards();
+    }catch(e){
+      document.getElementById('sheetBody').innerHTML = `<tr class="loading-row"><td colspan="30" style="color:#dc2626"><i class="fas fa-exclamation-triangle me-1"></i>${escH(e.message)}</td></tr>`;
+    }
+  }
+
+  function populateModelFilter(){
+    const sel = document.getElementById('filterModel');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">All Models</option>';
+    (_sheet?.models||[]).forEach(m=>{
+      sel.innerHTML += `<option value="${m.model_id}">${escH(m.model_name)}</option>`;
+    });
+    sel.value = cur;
+  }
+
+  function populateColorFilter(){
+    const sel = document.getElementById('filterColor');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">All Colors</option>';
+    const seen = new Set();
+    (_sheet?.models||[]).forEach(m=>m.colors.forEach(c=>{
+      if(!seen.has(c.color_name)){
+        seen.add(c.color_name);
+        sel.innerHTML += `<option value="${escH(c.color_name)}">${escH(c.color_name)}</option>`;
+      }
+    }));
+    sel.value = cur;
+  }
+
+  // ── Render Sheet ──────────────────────────────────────────────────────────
+  function renderSheet(){
+    if(!_sheet) return;
+    const filterMid   = document.getElementById('filterModel').value;
+    const filterColor = document.getElementById('filterColor').value;
+
+    const batches    = _sheet.batches || [];
+    const outBatchSet = new Set(_sheet.out_batch_ids || []);
+    // OUT columns only for batches that actually have OUT data
+    const outBatches = batches.filter(b => outBatchSet.has(b.id));
+    const hasOut     = outBatches.length > 0;
+
+    const models = (_sheet.models||[]).filter(m=> !filterMid || String(m.model_id)===filterMid);
+
+    // ── Header ──
+    const thead = document.getElementById('sheetHead');
+    const inCols = batches.length + 1;
+    let h1 = `<tr>
+      <th class="th-left" rowspan="2" style="min-width:100px">Model</th>
+      <th class="th-left" rowspan="2" style="min-width:70px">Colour</th>
+      <th rowspan="2">Balance</th>
+      <th class="th-group-in" colspan="${inCols}">Vehicles IN</th>`;
+    if(hasOut){
+      const outCols = outBatches.length*2 + 2;
+      h1 += `<th class="th-group-out" colspan="${outCols}" style="border-left:3px solid #6366f1">Vehicles OUT</th>`;
+    }
+    h1 += `</tr>`;
+
+    let h2 = `<tr>`;
+    batches.forEach(b=>{
+      h2 += `<th class="th-sub" title="${escH(b.ref_no||'')}">${escH(b.batch_label)}<br><span style="font-size:9px;opacity:.7">${b.purchase_qty>0?'cap:'+b.purchase_qty:''}</span></th>`;
+    });
+    h2 += `<th class="th-sub">Total IN</th>`;
+    if(hasOut){
+      outBatches.forEach(b=>{
+        h2 += `<th class="th-sub" style="border-left:2px solid rgba(255,255,255,.2)">Plan<br><span style="font-size:9px">${escH(b.batch_label)}</span></th>`;
+        h2 += `<th class="th-sub">Sold</th>`;
+      });
+      h2 += `<th class="th-sub">Tot.Plan</th><th class="th-sub">Tot.Sold</th>`;
+    }
+    h2 += `</tr>`;
+    thead.innerHTML = h1 + h2;
+
+    // ── Body ──
+    const tbody = document.getElementById('sheetBody');
+    if(!models.length){
+      tbody.innerHTML = `<tr class="loading-row"><td colspan="30"><div class="empty-state"><i class="fas fa-palette"></i><p>No models found. Add models in the Admin tab.</p></div></td></tr>`;
+      return;
+    }
+
+    let grandTotalIn=0, grandTotalPlan=0, grandTotalSold=0;
+    let html = '';
+
+    models.forEach(m=>{
+      let modelTotalIn=0, modelTotalPlan=0, modelTotalSold=0;
+      let inByBatch={}, outByBatch={};
+      batches.forEach(b=>{inByBatch[b.id]=0; outByBatch[b.id]={planned:0,sold:0};});
+
+      // Filter colors
+      const filteredColors = m.colors.filter(c=> !filterColor || c.color_name===filterColor);
+      filteredColors.forEach(c=>{
+        modelTotalIn   += c.total_in;
+        modelTotalPlan += c.total_planned;
+        modelTotalSold += c.total_sold;
+        batches.forEach(b=>{
+          inByBatch[b.id] += (c.in[String(b.id)]||0);
+          outByBatch[b.id].planned += (c.out[String(b.id)]?.planned||0);
+          outByBatch[b.id].sold    += (c.out[String(b.id)]?.sold||0);
+        });
+      });
+      if(!filteredColors.length) return; // skip model if no matching colors
+      grandTotalIn   += modelTotalIn;
+      grandTotalPlan += modelTotalPlan;
+      grandTotalSold += modelTotalSold;
+
+      const modelBalance = modelTotalIn - modelTotalSold;
+      html += `<tr class="row-model">
+        <td class="td-left" colspan="2" style="font-size:13px">${escH(m.model_name)}</td>
+        <td>${qCell(modelBalance)}</td>`;
+      batches.forEach(b=>{ html += `<td>${qCell(inByBatch[b.id])}</td>`; });
+      html += `<td>${qCell(modelTotalIn)}</td>`;
+      if(hasOut){
+        outBatches.forEach(b=>{
+          html += `<td style="border-left:2px solid rgba(100,116,139,.3)">${qCell(outByBatch[b.id]?.planned||0)}</td>`;
+          html += `<td>${qCell(outByBatch[b.id]?.sold||0)}</td>`;
+        });
+        html += `<td>${qCell(modelTotalPlan)}</td><td>${qCell(modelTotalSold)}</td>`;
+      }
+      html += `</tr>`;
+
+      filteredColors.forEach(c=>{
+        html += `<tr class="row-color">
+          <td class="td-left" style="padding-left:18px;color:#6b7280;font-size:11px">${escH(m.model_name)}</td>
+          <td class="td-left" style="font-size:12px;font-weight:600">${escH(c.color_name)}</td>
+          <td>${qBal(c.final_balance)}</td>`;
+
+        // IN cells
+        batches.forEach(b=>{
+          const qty = c.in[String(b.id)]||0;
+          const isOpening = b.batch_type==='opening';
+          const obStyle = isOpening?'border:1px dashed #d97706;':'';
+          html += `<td class="cell-editable qty-cell" style="${obStyle}"
+                       onclick="openInModal(${b.id},${m.model_id},${c.color_id},'${escH(m.model_name)}','${escH(c.color_name)}',${b.purchase_qty},'${escH(b.batch_label)}',${isOpening?1:0})"
+                       title="${isOpening?'Opening Balance — click to edit':'Click to edit IN qty'}">
+                       ${qty>0?`<span class="badge-in">${qty}</span>`:'<span class="qty-zero">—</span>'}
+                   </td>`;
+        });
+        html += `<td class="qty-cell" style="font-weight:700;color:#059669">${c.total_in||'—'}</td>`;
+
+        // OUT cells — only for out-batches
+        if(hasOut){
+          outBatches.forEach(b=>{
+            const od = c.out[String(b.id)]||{planned:0,sold:0,party_detail:[]};
+            const tip = (od.party_detail||[]).length>0
+              ? (od.party_detail||[]).map(p=>escH(p.party_name||'General')).join(', ')
+              : 'Click to add planned qty';
+            html += `<td class="cell-editable cell-out-plan" style="border-left:2px solid rgba(100,116,139,.2)"
+                         onclick="openOutModal(${b.id},${m.model_id},${c.color_id},'${escH(m.model_name)}','${escH(c.color_name)}','${escH(b.batch_label)}')"
+                         title="${tip}">
+                         ${od.planned>0?`<span class="badge-plan">${od.planned}</span>`:'<span class="cell-add-hint"><i class="fas fa-pen" style="font-size:8px;opacity:.45;margin-right:2px"></i>Plan</span>'}
+                     </td>`;
+            html += `<td class="cell-editable cell-out-sold"
+                         onclick="openOutModal(${b.id},${m.model_id},${c.color_id},'${escH(m.model_name)}','${escH(c.color_name)}','${escH(b.batch_label)}')"
+                         title="Click to add sold qty">
+                         ${od.sold>0?`<span class="badge-sold">${od.sold}</span>`:'<span class="cell-add-hint"><i class="fas fa-pen" style="font-size:8px;opacity:.45;margin-right:2px"></i>Sold</span>'}
+                     </td>`;
+          });
+          html += `<td style="color:#1d4ed8;font-weight:600">${c.total_planned||'—'}</td>`;
+          html += `<td style="color:#374151;font-weight:700">${c.total_sold||'—'}</td>`;
+        }
+        html += `</tr>`;
+      });
+    });
+
+    // Grand total row
+    const grandBal = grandTotalIn - grandTotalSold;
+    const totalCols = 3 + batches.length + 1 + (hasOut ? outBatches.length*2+2 : 0);
+    html += `<tr class="row-total">
+      <td class="td-left" colspan="2">TOTAL</td>
+      <td>${grandBal}</td>`;
+    batches.forEach(b=>{
+      let bIn=0;
+      _sheet.models.forEach(mo=>mo.colors.forEach(c=>bIn+=(c.in[String(b.id)]||0)));
+      html+=`<td>${bIn||'—'}</td>`;
+    });
+    html+=`<td>${grandTotalIn||'—'}</td>`;
+    if(hasOut){
+      outBatches.forEach(b=>{
+        let bPlan=0,bSold=0;
+        _sheet.models.forEach(mo=>mo.colors.forEach(c=>{
+          bPlan+=(c.out[String(b.id)]?.planned||0);
+          bSold+=(c.out[String(b.id)]?.sold||0);
+        }));
+        html+=`<td style="border-left:2px solid rgba(255,255,255,.2)">${bPlan||'—'}</td><td>${bSold||'—'}</td>`;
+      });
+      html+=`<td>${grandTotalPlan||'—'}</td><td>${grandTotalSold||'—'}</td>`;
+    }
+    html+=`</tr>`;
+
+    tbody.innerHTML = html;
+    document.getElementById('sheetTs').textContent = 'Updated '+new Date().toLocaleTimeString();
+    renderModelSummary();
+  }
+
+  function qCell(n){ return n>0?`<span class="qty-pos">${n}</span>`:n<0?`<span class="qty-neg">${n}</span>`:`<span class="qty-zero">0</span>`; }
+  function qBal(n) { return n>0?`<span class="qty-pos">${n}</span>`:n<0?`<span class="qty-neg">${n}</span>`:`<span style="color:#9ca3af">0</span>`; }
+
+  // ── Model-Wise Summary ────────────────────────────────────────────────────
+  let _modelSummaryCollapsed = false;
+  function toggleModelSummary(){
+    _modelSummaryCollapsed = !_modelSummaryCollapsed;
+    document.getElementById('modelSummaryWrap').style.display = _modelSummaryCollapsed ? 'none' : '';
+    document.getElementById('modelSummaryToggleIcon').textContent = _modelSummaryCollapsed ? '▼ Expand' : '▲ Collapse';
+  }
+
+  function renderModelSummary(){
+    if(!_sheet) return;
+    const filterMid   = document.getElementById('filterModel').value;
+    const filterColor = document.getElementById('filterColor').value;
+    const batches     = _sheet.batches || [];
+    const outBatchSet = new Set(_sheet.out_batch_ids || []);
+    const outBatches  = batches.filter(b => outBatchSet.has(b.id));
+    const hasOut      = outBatches.length > 0;
+    const models      = (_sheet.models||[]).filter(m => !filterMid || String(m.model_id)===filterMid);
+
+    // ── Summary Header (same columns as main sheet minus the Colour column) ──
+    const inCols = batches.length + 1;
+    let h1 = `<tr>
+      <th class="th-left" rowspan="2" style="min-width:130px">Model</th>
+      <th rowspan="2">Balance</th>
+      <th class="th-group-in" colspan="${inCols}">Vehicles IN</th>`;
+    if(hasOut){
+      const outCols = outBatches.length*2 + 2;
+      h1 += `<th class="th-group-out" colspan="${outCols}" style="border-left:3px solid #6366f1">Vehicles OUT</th>`;
+    }
+    h1 += `</tr>`;
+    let h2 = `<tr>`;
+    batches.forEach(b=>{
+      h2 += `<th class="th-sub" title="${escH(b.ref_no||'')}">${escH(b.batch_label)}<br><span style="font-size:9px;opacity:.7">${b.purchase_qty>0?'cap:'+b.purchase_qty:''}</span></th>`;
+    });
+    h2 += `<th class="th-sub">Total IN</th>`;
+    if(hasOut){
+      outBatches.forEach(b=>{
+        h2 += `<th class="th-sub" style="border-left:2px solid rgba(255,255,255,.2)">Plan<br><span style="font-size:9px">${escH(b.batch_label)}</span></th>`;
+        h2 += `<th class="th-sub">Sold</th>`;
+      });
+      h2 += `<th class="th-sub">Tot.Plan</th><th class="th-sub">Tot.Sold</th>`;
+    }
+    h2 += `</tr>`;
+    document.getElementById('modelSummaryHead').innerHTML = h1 + h2;
+
+    // ── Summary Body — one row per model ──
+    let html = '';
+    let gtIn=0, gtPlan=0, gtSold=0;
+    models.forEach(m=>{
+      let mIn=0, mPlan=0, mSold=0;
+      const inByBatch={}, outByBatch={};
+      batches.forEach(b=>{ inByBatch[b.id]=0; outByBatch[b.id]={planned:0,sold:0}; });
+      const filteredColors = m.colors.filter(c=> !filterColor || c.color_name===filterColor);
+      if(!filteredColors.length) return;
+      filteredColors.forEach(c=>{
+        mIn   += c.total_in;
+        mPlan += c.total_planned;
+        mSold += c.total_sold;
+        batches.forEach(b=>{
+          inByBatch[b.id]         += (c.in[String(b.id)]||0);
+          outByBatch[b.id].planned += (c.out[String(b.id)]?.planned||0);
+          outByBatch[b.id].sold    += (c.out[String(b.id)]?.sold||0);
+        });
+      });
+      gtIn+=mIn; gtPlan+=mPlan; gtSold+=mSold;
+      const mBal = mIn - mSold;
+      html += `<tr class="row-model">
+        <td class="td-left" style="font-size:13px">${escH(m.model_name)}</td>
+        <td>${qCell(mBal)}</td>`;
+      batches.forEach(b=>{ html += `<td>${qCell(inByBatch[b.id])}</td>`; });
+      html += `<td>${qCell(mIn)}</td>`;
+      if(hasOut){
+        outBatches.forEach(b=>{
+          html += `<td style="border-left:2px solid rgba(100,116,139,.3)">${qCell(outByBatch[b.id]?.planned||0)}</td>`;
+          html += `<td>${qCell(outByBatch[b.id]?.sold||0)}</td>`;
+        });
+        html += `<td>${qCell(mPlan)}</td><td>${qCell(mSold)}</td>`;
+      }
+      html += `</tr>`;
+    });
+
+    if(!html){
+      document.getElementById('modelSummaryBody').innerHTML = `<tr><td colspan="30" style="text-align:center;color:#9ca3af;padding:12px;font-size:12px">No models to display</td></tr>`;
+      return;
+    }
+
+    // Grand total row
+    const gtBal = gtIn - gtSold;
+    html += `<tr class="row-total">
+      <td class="td-left">TOTAL</td>
+      <td>${gtBal}</td>`;
+    batches.forEach(b=>{
+      let bIn=0;
+      models.forEach(mo=>{
+        const fc = mo.colors.filter(c=> !filterColor || c.color_name===filterColor);
+        fc.forEach(c=>bIn+=(c.in[String(b.id)]||0));
+      });
+      html+=`<td>${bIn||'—'}</td>`;
+    });
+    html+=`<td>${gtIn||'—'}</td>`;
+    if(hasOut){
+      outBatches.forEach(b=>{
+        let bPlan=0,bSold=0;
+        models.forEach(mo=>{
+          const fc = mo.colors.filter(c=> !filterColor || c.color_name===filterColor);
+          fc.forEach(c=>{ bPlan+=(c.out[String(b.id)]?.planned||0); bSold+=(c.out[String(b.id)]?.sold||0); });
+        });
+        html+=`<td style="border-left:2px solid rgba(255,255,255,.2)">${bPlan||'—'}</td><td>${bSold||'—'}</td>`;
+      });
+      html+=`<td>${gtPlan||'—'}</td><td>${gtSold||'—'}</td>`;
+    }
+    html+=`</tr>`;
+    document.getElementById('modelSummaryBody').innerHTML = html;
+  }
+
+  function updateSummaryCards(){
+    if(!_sheet) return;
+    const models = _sheet.models||[];
+    let ti=0,tp=0,ts=0;
+    models.forEach(m=>m.colors.forEach(c=>{ti+=c.total_in;tp+=c.total_planned;ts+=c.total_sold;}));
+    document.getElementById('sumModels').textContent = models.length;
+    document.getElementById('sumTotalIn').textContent = ti;
+    document.getElementById('sumTotalPlanned').textContent = tp;
+    document.getElementById('sumTotalSold').textContent = ts;
+    document.getElementById('sumBalance').textContent = ti-ts;
+  }
+
+  // ── Typeahead utility ─────────────────────────────────────────────────────
+  function initTypeahead(inputId, resultsId, selectedId, selectedTextId, side, onSelect){
+    const inp = document.getElementById(inputId);
+    const res = document.getElementById(resultsId);
+    if(!inp || !res) return;
+
+    // Remove old listeners by cloning
+    const newInp = inp.cloneNode(true);
+    inp.parentNode.replaceChild(newInp, inp);
+
+    newInp.addEventListener('input', ()=>{
+      clearTimeout(_taTimer);
+      const q = newInp.value.trim();
+      if(q.length < 2){ res.style.display='none'; return; }
+      _taTimer = setTimeout(async()=>{
+        try{
+          const data = await apiFetch(`${API}/parties/search?q=${encodeURIComponent(q)}&side=${side}`);
+          if(!data.length){ res.style.display='none'; return; }
+          res.innerHTML = data.map(p=>
+            `<div class="ta-item"
+                 data-id="${p.id||''}"
+                 data-code="${escAttr(p.code||'')}"
+                 data-name="${escAttr(p.name)}"
+                 data-type="${escAttr(p.type)}">
+               <span class="ta-badge ta-${p.type.toLowerCase()}">${escH(p.type)}</span>
+               <span>${p.code?escH(p.code)+' — ':''} ${escH(p.name)}</span>
+             </div>`
+          ).join('');
+          res.querySelectorAll('.ta-item').forEach(el=>{
+            el.addEventListener('mousedown', e=>{
+              e.preventDefault();
+              const sel = {
+                id:   el.dataset.id ? parseInt(el.dataset.id) : null,
+                code: el.dataset.code,
+                name: el.dataset.name,
+                type: el.dataset.type
+              };
+              onSelect(sel);
+              newInp.value = '';
+              res.style.display = 'none';
+              // Show selected badge
+              const selDiv  = document.getElementById(selectedId);
+              const selText = document.getElementById(selectedTextId);
+              if(selDiv && selText){
+                selText.innerHTML = `<span class="ta-badge ta-${sel.type.toLowerCase()}">${escH(sel.type)}</span> ${sel.code?escH(sel.code)+' — ':''}${escH(sel.name)}`;
+                selDiv.style.display = 'flex';
+              }
+            });
+          });
+          res.style.display = 'block';
+        }catch(e){ res.style.display='none'; }
+      }, 280);
+    });
+
+    newInp.addEventListener('blur', ()=>{
+      setTimeout(()=>{ res.style.display='none'; }, 200);
+    });
+  }
+
+  function clearInParty(){
+    _inParty = null;
+    document.getElementById('inPartyInput').value = '';
+    document.getElementById('inPartySelected').style.display = 'none';
+  }
+  function clearOutParty(){
+    _outParty = null;
+    document.getElementById('outPartyInput').value = '';
+    document.getElementById('outPartySelected').style.display = 'none';
+  }
+
+  // ── IN MODAL ──────────────────────────────────────────────────────────────
+  function openInModal(batchId, modelId, colorId, modelName, colorName, cap, batchLabel, isOpening){
+    _inCtx = {
+      batch_id:batchId, model_id:modelId, color_id:colorId,
+      batch:{purchase_qty:cap, batch_type:isOpening?'opening':'purchase', batch_label:batchLabel},
+      model_name:modelName, color_name:colorName
+    };
+    let curQty = 0;
+    if(_sheet){
+      const m = _sheet.models.find(x=>x.model_id===modelId);
+      if(m){ const c=m.colors.find(x=>x.color_id===colorId); if(c) curQty = c.in[String(batchId)]||0; }
+    }
+    document.getElementById('inModalTitle').textContent = `IN — ${modelName} / ${colorName}`;
+    document.getElementById('inQty').value = curQty;
+
+    let hint = `Batch: ${batchLabel}`;
+    if(!isOpening && cap>0){
+      let already=0;
+      if(_sheet) _sheet.models.forEach(mod=>mod.colors.forEach(c=>{
+        if(!(mod.model_id===modelId && c.color_id===colorId)) already+=(c.in[String(batchId)]||0);
+      }));
+      const remaining = cap - already;
+      hint += ` | Cap: ${cap} | Remaining: ${Math.max(0,remaining)}`;
+      document.getElementById('inCapHint').textContent = hint;
+      document.getElementById('inQty').max = Math.max(0, remaining + curQty);
+    } else {
+      document.getElementById('inCapHint').textContent = isOpening ? '⚠ Opening Balance — edit carefully, affects all balances' : 'No cap set for this batch';
+      document.getElementById('inQty').removeAttribute('max');
+    }
+
+    // Reset party
+    _inParty = null;
+    document.getElementById('inPartyInput').value = '';
+    document.getElementById('inPartySelected').style.display = 'none';
+    initTypeahead('inPartyInput','inPartyResults','inPartySelected','inPartySelectedText','in',(p)=>{ _inParty=p; });
+
+    openModal('inModal');
+    setTimeout(()=>document.getElementById('inQty').focus(),100);
+  }
+
+  async function saveInEntry(){
+    if(!_inCtx) return;
+    const qty = parseInt(document.getElementById('inQty').value)||0;
+
+    // OB Guard — confirmation before saving opening balance
+    if(_inCtx.batch.batch_type === 'opening'){
+      if(!confirm(
+        `⚠ You are editing the Opening Balance for:\n${_inCtx.model_name} / ${_inCtx.color_name}\n\n` +
+        `This affects all balance calculations.\n\nProceed?`
+      )) return;
+    }
+
+    const ctag = parseInt(document.getElementById('inCompanyTag').value)||null;
+    try{
+      await apiFetch(API+'/in', {method:'PUT', body:JSON.stringify({
+        batch_id:_inCtx.batch_id, model_id:_inCtx.model_id, color_id:_inCtx.color_id,
+        qty,
+        party_type:  _inParty?.type  || null,
+        party_ref_id: _inParty?.id   || null,
+        party_name:  _inParty?.name  || null,
+        company_tag_id: ctag
+      })});
+      closeModal('inModal');
+      await loadSheet();
+    }catch(e){ alert('Save failed: '+e.message); }
+  }
+
+  // ── OUT MODAL ─────────────────────────────────────────────────────────────
+  function openOutModal(batchId, modelId, colorId, modelName, colorName, batchLabel){
+    _outCtx = {batch_id:batchId, model_id:modelId, color_id:colorId};
+    document.getElementById('outModalTitle').textContent = `OUT — ${modelName} / ${colorName} / ${batchLabel}`;
+    document.getElementById('outDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('outPlanned').value = '';
+    document.getElementById('outSold').value = '';
+    document.getElementById('outNotes').value = '';
+
+    // Reset party
+    _outParty = null;
+    document.getElementById('outPartyInput').value = '';
+    document.getElementById('outPartySelected').style.display = 'none';
+    initTypeahead('outPartyInput','outPartyResults','outPartySelected','outPartySelectedText','out',(p)=>{ _outParty=p; });
+
+    // Show existing entries for this cell
+    const m = _sheet?.models.find(x=>x.model_id===modelId);
+    let breakdown = '';
+    if(m){
+      const c  = m.colors.find(x=>x.color_id===colorId);
+      const od = c?.out[String(batchId)];
+      if(od && (od.planned>0||od.sold>0)){
+        breakdown = `<div style="margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:8px;font-size:12px;">
+          <strong>Existing entries for this cell:</strong>
+          <ul class="party-list" style="margin-top:6px;">`;
+        (od.party_detail||[]).forEach(p=>{
+          const badge = p.party_type?`<span class="ta-badge ta-${(p.party_type||'').toLowerCase()}">${escH(p.party_type)}</span> `:'' ;
+          breakdown += `<li>
+            <span>${badge}${escH(p.party_name||'General')}</span>
+            <span><span class="badge-plan me-1">P:${p.planned}</span><span class="badge-sold">S:${p.sold}</span></span>
+          </li>`;
+        });
+        if(!(od.party_detail||[]).length)
+          breakdown += `<li><span>General</span><span><span class="badge-plan me-1">P:${od.planned}</span><span class="badge-sold">S:${od.sold}</span></span></li>`;
+        breakdown += `</ul></div>`;
+      }
+    }
+    document.getElementById('outPartyBreakdown').innerHTML = breakdown;
+    openModal('outModal');
+  }
+
+  async function saveOutEntry(){
+    if(!_outCtx) return;
+    const planned  = parseInt(document.getElementById('outPlanned').value)||0;
+    const sold     = parseInt(document.getElementById('outSold').value)||0;
+    const entryDate= document.getElementById('outDate').value;
+    const notes    = document.getElementById('outNotes').value.trim();
+    const ctag     = parseInt(document.getElementById('outCompanyTag').value)||null;
+    try{
+      await apiFetch(API+'/out', {method:'PUT', body:JSON.stringify({
+        batch_id:    _outCtx.batch_id,
+        model_id:    _outCtx.model_id,
+        color_id:    _outCtx.color_id,
+        party_type:  _outParty?.type  || null,
+        party_ref_id: _outParty?.id   || null,
+        party_name:  _outParty?.name  || null,
+        company_tag_id: ctag,
+        planned_qty: planned,
+        sold_qty:    sold,
+        entry_date:  entryDate||null,
+        notes:       notes||null
+      })});
+      closeModal('outModal');
+      await loadSheet();
+    }catch(e){ alert('Save failed: '+e.message); }
+  }
+
+  // ── BATCHES ───────────────────────────────────────────────────────────────
+  async function loadBatches(){
+    try{
+      _batches = await apiFetch(API+'/batches?include_inactive=true');
+      renderBatchList();
+    }catch(e){ document.getElementById('batchList').innerHTML=`<p style="color:#dc2626">${escH(e.message)}</p>`; }
+  }
+
+  function renderBatchList(){
+    if(!_batches.length){
+      document.getElementById('batchList').innerHTML=`<div class="empty-state"><i class="fas fa-boxes"></i><p>No batches yet. Add a batch to start tracking.</p></div>`;
+      return;
+    }
+    let html = '<ul class="admin-list">';
+    _batches.forEach(b=>{
+      const typeBadge = b.batch_type==='opening'
+        ? `<span class="badge-type badge-opening">Opening</span>`
+        : `<span class="badge-type badge-purchase">Purchase ${b.purchase_qty>0?'(cap:'+b.purchase_qty+')':''}</span>`;
+      const status = b.is_active ? '' : `<span class="badge-type badge-inactive ms-1">Inactive</span>`;
+      const partyHtml = b.party_name
+        ? `<span class="ta-badge ta-${(b.party_type||'').toLowerCase()}" style="margin-left:2px">${escH(b.party_type||'')}</span> ${escH(b.party_name)}`
+        : '';
+      html += `<li class="admin-list-item" style="${!b.is_active?'opacity:.6':''}">
+        <div>
+          <strong>${escH(b.batch_label)}</strong> ${typeBadge} ${status}
+          <div style="font-size:11px;color:#6b7280;margin-top:3px">
+            Date: ${b.batch_date}${b.ref_no?' | Ref: '+escH(b.ref_no):''}
+            ${partyHtml?`<span style="margin-left:6px">Party: ${partyHtml}</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-sm-icon" title="Edit" onclick="editBatch(${b.id})" style="color:#1d4ed8"><i class="fas fa-pen"></i></button>
+          <button class="btn-sm-icon" title="${b.is_active?'Deactivate':'Activate'}" onclick="toggleBatch(${b.id},${b.is_active})" style="color:${b.is_active?'#dc2626':'#059669'}">
+            <i class="fas ${b.is_active?'fa-eye-slash':'fa-eye'}"></i></button>
+        </div>
+      </li>`;
+    });
+    html += '</ul>';
+    document.getElementById('batchList').innerHTML = html;
+  }
+
+  let _editBatchId = null;
+  let _batchParty  = null;
+
+  function clearBatchParty(){
+    _batchParty = null;
+    document.getElementById('batchPartyInput').value = '';
+    document.getElementById('batchPartySelected').style.display = 'none';
+  }
+
+  function _initBatchPartyTypeahead(batchType){
+    const side = batchType === 'sales' ? 'out' : 'in';
+    initTypeahead('batchPartyInput','batchPartyResults','batchPartySelected','batchPartySelectedText', side, (p)=>{ _batchParty=p; });
+  }
+
+  function openBatchModal(){
+    _editBatchId = null;
+    _batchParty  = null;
+    document.getElementById('batchModalTitle').textContent = 'Add Batch';
+    document.getElementById('batchLabel').value  = '';
+    document.getElementById('batchDate').value   = new Date().toISOString().slice(0,10);
+    document.getElementById('batchType').value   = 'purchase';
+    document.getElementById('batchPurchaseQty').value = '';
+    document.getElementById('batchRef').value    = '';
+    document.getElementById('batchPartyInput').value = '';
+    document.getElementById('batchPartySelected').style.display = 'none';
+    _initBatchPartyTypeahead('purchase');
+    togglePurchaseQty();
+    openModal('batchModal');
+  }
+
+  function editBatch(id){
+    const b = _batches.find(x=>x.id===id);
+    if(!b) return;
+    _editBatchId = id;
+    _batchParty  = null;
+    document.getElementById('batchModalTitle').textContent = 'Edit Batch';
+    document.getElementById('batchLabel').value  = b.batch_label;
+    document.getElementById('batchDate').value   = b.batch_date;
+    document.getElementById('batchType').value   = b.batch_type;
+    document.getElementById('batchPurchaseQty').value = b.purchase_qty;
+    document.getElementById('batchRef').value    = b.ref_no || '';
+    document.getElementById('batchPartyInput').value = '';
+    const _bpSel = document.getElementById('batchPartySelected');
+    const _bpTxt = document.getElementById('batchPartySelectedText');
+    if(b.party_name){
+      _batchParty = {type: b.party_type||'', id: b.party_ref_id||null, name: b.party_name};
+      _bpTxt.innerHTML = (b.party_type?`<span class="ta-badge ta-${b.party_type.toLowerCase()}">${escH(b.party_type)}</span> `:'') + escH(b.party_name);
+      _bpSel.style.display = 'flex';
+    } else {
+      _bpSel.style.display = 'none';
+    }
+    _initBatchPartyTypeahead(b.batch_type);
+    togglePurchaseQty();
+    openModal('batchModal');
+  }
+
+  function togglePurchaseQty(){ document.getElementById('purchaseQtyRow').style.display=document.getElementById('batchType').value==='opening'?'none':''; }
+
+  async function saveBatch(){
+    const label = document.getElementById('batchLabel').value.trim();
+    const dt    = document.getElementById('batchDate').value;
+    const bt    = document.getElementById('batchType').value;
+    const pq    = parseInt(document.getElementById('batchPurchaseQty').value)||0;
+    const ref   = document.getElementById('batchRef').value.trim();
+    if(!label||!dt){alert('Batch label and date are required.');return;}
+    const partyPayload = {
+      party_type:   _batchParty?.type   || null,
+      party_ref_id: _batchParty?.id     || null,
+      party_name:   _batchParty?.name   || null,
+    };
+    try{
+      if(_editBatchId){
+        await apiFetch(`${API}/batches/${_editBatchId}`,{method:'PUT',body:JSON.stringify({
+          batch_label:label, batch_date:dt, purchase_qty:pq, ref_no:ref||null,
+          set_party:true, ...partyPayload
+        })});
+      } else {
+        await apiFetch(API+'/batches',{method:'POST',body:JSON.stringify({
+          batch_label:label, batch_date:dt, batch_type:bt, purchase_qty:pq, ref_no:ref||null,
+          ...partyPayload
+        })});
+      }
+      closeModal('batchModal');
+      await loadBatches();
+      await loadSheet();
+    }catch(e){alert('Save failed: '+e.message);}
+  }
+
+  async function toggleBatch(id, isActive){
+    if(!confirm(`${isActive?'Deactivate':'Activate'} this batch?`))return;
+    try{ await apiFetch(`${API}/batches/${id}`,{method:'PUT',body:JSON.stringify({is_active:!isActive})}); await loadBatches(); await loadSheet(); }
+    catch(e){alert('Error: '+e.message);}
+  }
+
+  // ── MODELS ADMIN ──────────────────────────────────────────────────────────
+  async function loadModelsAdmin(){
+    try{
+      _models = await apiFetch(API+'/models?include_inactive=true');
+      renderModelList();
+    }catch(e){ document.getElementById('modelList').innerHTML=`<p style="color:#dc2626">${escH(e.message)}</p>`; }
+  }
+
+  function renderModelList(){
+    if(!_models.length){
+      document.getElementById('modelList').innerHTML=`<div class="empty-state"><i class="fas fa-car"></i><p>No models yet.</p></div>`;
+      return;
+    }
+    let html='<ul class="admin-list">';
+    _models.forEach(m=>{
+      const colors=(m.colors||[]);
+      const colorHtml = colors.length
+        ? colors.map(c=>`<span class="color-chip" onclick="editColor(${c.id},'${escH(c.color_name)}','${escH(m.name)}')" title="Click to edit" style="${!c.is_active?'opacity:.4;text-decoration:line-through':''}">●&nbsp;${escH(c.color_name)}</span>`).join('')
+        : '<span style="font-size:11px;color:#9ca3af">No colors</span>';
+      html+=`<li class="admin-list-item" style="${!m.is_active?'opacity:.6':''}">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <strong>${escH(m.name)}</strong>
+            ${!m.is_active?'<span class="badge-type badge-inactive">Inactive</span>':''}
+          </div>
+          <div>${colorHtml}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;min-width:80px">
+          <button class="btn-sm-icon" title="Edit model" onclick="editModel(${m.id},'${escH(m.name)}',${m.sort_order})" style="color:#1d4ed8"><i class="fas fa-pen"></i></button>
+          <button class="btn-sm-icon" title="Add color" onclick="openColorModal(${m.id},'${escH(m.name)}')" style="color:#059669;font-size:11px"><i class="fas fa-plus"></i> Color</button>
+          <button class="btn-sm-icon" title="${m.is_active?'Deactivate':'Activate'}" onclick="toggleModel(${m.id},${m.is_active})" style="color:${m.is_active?'#dc2626':'#059669'}">
+            <i class="fas ${m.is_active?'fa-eye-slash':'fa-eye'}"></i></button>
+        </div>
+      </li>`;
+    });
+    html+='</ul>';
+    document.getElementById('modelList').innerHTML=html;
+  }
+
+  let _editModelId=null;
+  function openModelModal(){ _editModelId=null; document.getElementById('modelModalTitle').textContent='Add Model'; document.getElementById('modelName').value=''; document.getElementById('modelSort').value=0; openModal('modelModal'); }
+  function editModel(id,name,sort){ _editModelId=id; document.getElementById('modelModalTitle').textContent='Edit Model'; document.getElementById('modelName').value=name; document.getElementById('modelSort').value=sort; openModal('modelModal'); }
+
+  async function saveModel(){
+    const name=document.getElementById('modelName').value.trim();
+    const sort=parseInt(document.getElementById('modelSort').value)||0;
+    if(!name){alert('Model name is required.');return;}
+    try{
+      if(_editModelId){ await apiFetch(`${API}/models/${_editModelId}`,{method:'PUT',body:JSON.stringify({name,sort_order:sort})}); }
+      else { await apiFetch(API+'/models',{method:'POST',body:JSON.stringify({name,sort_order:sort})}); }
+      closeModal('modelModal');
+      await loadModelsAdmin();
+      await loadSheet();
+    }catch(e){alert('Save failed: '+e.message);}
+  }
+
+  async function toggleModel(id,isActive){
+    if(!confirm(`${isActive?'Deactivate':'Activate'} this model?`))return;
+    try{ await apiFetch(`${API}/models/${id}`,{method:'PUT',body:JSON.stringify({is_active:!isActive})}); await loadModelsAdmin(); await loadSheet(); }
+    catch(e){alert('Error: '+e.message);}
+  }
+
+  // ── COLORS ADMIN ──────────────────────────────────────────────────────────
+  let _colorModelId=null, _colorModelName='', _editColorId=null;
+  function openColorModal(modelId, modelName){ _colorModelId=modelId; _colorModelName=modelName; _editColorId=null; document.getElementById('colorModalTitle').textContent='Add Color — '+modelName; document.getElementById('colorName').value=''; document.getElementById('colorSort').value=0; openModal('colorModal'); }
+  function editColor(id, colorName, modelName){ _editColorId=id; document.getElementById('colorModalTitle').textContent='Edit Color — '+modelName; document.getElementById('colorName').value=colorName; document.getElementById('colorSort').value=0; openModal('colorModal'); }
+
+  async function saveColor(){
+    const name=document.getElementById('colorName').value.trim();
+    const sort=parseInt(document.getElementById('colorSort').value)||0;
+    if(!name){alert('Color name is required.');return;}
+    try{
+      if(_editColorId){ await apiFetch(`${API}/colors/${_editColorId}`,{method:'PUT',body:JSON.stringify({color_name:name,sort_order:sort})}); }
+      else { await apiFetch(`${API}/models/${_colorModelId}/colors`,{method:'POST',body:JSON.stringify({color_name:name,sort_order:sort})}); }
+      closeModal('colorModal');
+      await loadModelsAdmin();
+      await loadSheet();
+    }catch(e){alert('Save failed: '+e.message);}
+  }
+
+  // ── MODAL helpers ─────────────────────────────────────────────────────────
+  function openModal(id){ document.getElementById(id).classList.add('active'); }
+  function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-overlay.active').forEach(m=>m.classList.remove('active')); });
+  document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('active'); }));
+
+  function escH(s){ const d=document.createElement('div'); d.textContent=String(s||''); return d.innerHTML; }
+  function escAttr(s){ return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

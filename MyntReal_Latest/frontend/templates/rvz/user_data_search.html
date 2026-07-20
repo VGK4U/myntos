@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Data Search - RVZ ID Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .dashboard-container {
+            padding: 20px;
+        }
+        .search-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        .data-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .badge-activated {
+            background-color: #28a745;
+        }
+        .badge-not-activated {
+            background-color: #dc3545;
+        }
+        .badge-ved-owner {
+            background-color: #fd7e14;
+        }
+        .earnings-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .earnings-box h3 {
+            margin: 0;
+            font-size: 2rem;
+        }
+        .earnings-box p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        .back-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        .back-btn:hover {
+            background: #5568d3;
+            color: white;
+        }
+        .search-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 10px 30px;
+            color: white;
+            border-radius: 5px;
+            font-weight: 600;
+        }
+        .search-btn:hover {
+            opacity: 0.9;
+        }
+        .user-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .user-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        .user-header p {
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+        #user-data-section {
+            display: none;
+        }
+        .award-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+        }
+        .award-achieved {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <a href="/rvz-dashboard" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to RVZ Dashboard
+        </a>
+
+        <div class="search-card">
+            <h1 class="mb-4">
+                <i class="fas fa-search"></i> User Data Search
+            </h1>
+            <p class="text-muted mb-4">Search by User ID, Email, or Name to view comprehensive user information</p>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="Enter User ID (MNR...), Email, or Name">
+                </div>
+                <div class="col-md-4">
+                    <button onclick="searchUser()" class="btn search-btn w-100">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+            <div id="search-error" class="alert alert-danger mt-3" style="display: none;"></div>
+        </div>
+
+        <div id="user-data-section">
+            <div class="user-header">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 id="user-name">-</h2>
+                        <p id="user-id-display">-</p>
+                    </div>
+                    <button onclick="clearSearch()" class="btn" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">
+                        <i class="fas fa-search"></i> New Search
+                    </button>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-user"></i> Profile Information
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email:</span>
+                            <span class="info-value" id="profile-email">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Mobile:</span>
+                            <span class="info-value" id="profile-mobile">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Registration Date:</span>
+                            <span class="info-value" id="profile-registration">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Direct Facilitation Rank:</span>
+                            <span class="info-value" id="profile-direct-rank">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Group Performance Recognition Rank:</span>
+                            <span class="info-value" id="profile-matching-rank">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">User Type:</span>
+                            <span class="info-value" id="profile-type">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Account Status:</span>
+                            <span class="info-value" id="profile-status">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Account Locked:</span>
+                            <span class="info-value" id="profile-locked">-</span>
+                        </div>
+                    </div>
+
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-box"></i> Package & Activation
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Package:</span>
+                            <span class="info-value" id="activation-package">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Package Points:</span>
+                            <span class="info-value" id="activation-points">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Activation Date:</span>
+                            <span class="info-value" id="activation-date">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Status:</span>
+                            <span class="info-value" id="activation-status">-</span>
+                        </div>
+                    </div>
+
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-users"></i> Referral Information
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Sponsor ID:</span>
+                            <span class="info-value" id="referral-sponsor-id">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Sponsor Name:</span>
+                            <span class="info-value" id="referral-sponsor-name">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">My Directs:</span>
+                            <span class="info-value" id="referral-count">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Direct Activated:</span>
+                            <span class="info-value" id="referral-activated">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Earned Matching:</span>
+                            <span class="info-value" id="referral-matching">-</span>
+                        </div>
+                    </div>
+
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-sitemap"></i> Placement & Team
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Placement Parent:</span>
+                            <span class="info-value" id="team-parent">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Placement Side:</span>
+                            <span class="info-value" id="team-side">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">My Team:</span>
+                            <span class="info-value" id="team-total">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Group A:</span>
+                            <span class="info-value" id="team-group-a">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Group A Active:</span>
+                            <span class="info-value" id="team-group-a-active">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Group B:</span>
+                            <span class="info-value" id="team-group-b">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Group B Active:</span>
+                            <span class="info-value" id="team-group-b-active">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-rupee-sign"></i> Earnings Summary
+                        </div>
+                        <div class="earnings-box">
+                            <h3 id="earnings-total">₹0.00</h3>
+                            <p>Total Earnings</p>
+                        </div>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="info-row">
+                                    <span class="info-label">Direct Facilitation (Paid):</span>
+                                    <span class="info-value" id="earnings-direct-paid">₹0.00</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Direct Facilitation (Pending):</span>
+                                    <span class="info-value" id="earnings-direct-pending">₹0.00</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="info-row">
+                                    <span class="info-label">Matching (Paid):</span>
+                                    <span class="info-value" id="earnings-matching-paid">₹0.00</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Matching (Pending):</span>
+                                    <span class="info-value" id="earnings-matching-pending">₹0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <div class="info-row">
+                                    <span class="info-label">VED Leadership Recognition (Paid):</span>
+                                    <span class="info-value" id="earnings-ved-paid">₹0.00</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">VED Leadership Recognition (Pending):</span>
+                                    <span class="info-value" id="earnings-ved-pending">₹0.00</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="info-row">
+                                    <span class="info-label">Mentorship Contribution Benefit (Paid):</span>
+                                    <span class="info-value" id="earnings-guru-paid">₹0.00</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Mentorship Contribution Benefit (Pending):</span>
+                                    <span class="info-value" id="earnings-guru-pending">₹0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-trophy"></i> Awards
+                        </div>
+                        <div id="awards-direct-section">
+                            <p class="mb-2"><strong>Direct Awards:</strong></p>
+                            <div id="awards-direct">No direct awards</div>
+                        </div>
+                        <div id="awards-matching-section" class="mt-3">
+                            <p class="mb-2"><strong>Matching Awards:</strong></p>
+                            <div id="awards-matching">No matching awards</div>
+                        </div>
+                    </div>
+
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-book"></i> Ved Program
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Ved Overall:</span>
+                            <span class="info-value" id="ved-overall">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Ved Activated:</span>
+                            <span class="info-value" id="ved-activated">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Ved Head:</span>
+                            <span class="info-value" id="ved-head">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Ved Head Status:</span>
+                            <span class="info-value" id="ved-head-status">-</span>
+                        </div>
+                    </div>
+
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-id-card"></i> KYC & Bank Details
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">KYC Status:</span>
+                            <span class="info-value" id="kyc-status">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Aadhaar Verified:</span>
+                            <span class="info-value" id="kyc-aadhar">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">PAN Verified:</span>
+                            <span class="info-value" id="kyc-pan">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Bank Name:</span>
+                            <span class="info-value" id="bank-name">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Account Number:</span>
+                            <span class="info-value" id="bank-account">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">IFSC Code:</span>
+                            <span class="info-value" id="bank-ifsc">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Bank Approval:</span>
+                            <span class="info-value" id="bank-approval">-</span>
+                        </div>
+                    </div>
+
+                    <!-- NEW: BONANZA SYSTEM -->
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-trophy"></i> Bonanza System
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Bonanzas:</span>
+                            <span class="info-value" id="bonanza-total">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Achieved:</span>
+                            <span class="info-value" id="bonanza-achieved">-</span>
+                        </div>
+                        <div id="bonanza-list" class="mt-2"></div>
+                    </div>
+
+                    <!-- NEW: FIELD ALLOWANCE -->
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-money-bill-wave"></i> Field Allowance
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Status:</span>
+                            <span class="info-value" id="allowance-status">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Tier:</span>
+                            <span class="info-value" id="allowance-tier">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Monthly Amount:</span>
+                            <span class="info-value" id="allowance-amount">-</span>
+                        </div>
+                    </div>
+
+                    <!-- NEW: PIN PURCHASE HISTORY -->
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-ticket-alt"></i> PIN Purchase History
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total PINs Purchased:</span>
+                            <span class="info-value" id="pin-total">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Approved Requests:</span>
+                            <span class="info-value" id="pin-approved">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Pending Requests:</span>
+                            <span class="info-value" id="pin-pending">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Amount Spent:</span>
+                            <span class="info-value" id="pin-amount">-</span>
+                        </div>
+                    </div>
+
+                    <!-- NEW: WITHDRAWAL HISTORY -->
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-hand-holding-usd"></i> Withdrawal History
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Requests:</span>
+                            <span class="info-value" id="withdrawal-requests">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Approved:</span>
+                            <span class="info-value" id="withdrawal-approved">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Pending:</span>
+                            <span class="info-value" id="withdrawal-pending">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Withdrawn:</span>
+                            <span class="info-value" id="withdrawal-total">-</span>
+                        </div>
+                    </div>
+
+                    <!-- NEW: ACCOUNT ACTIVITY -->
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-clock"></i> Account Activity
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Last Login:</span>
+                            <span class="info-value" id="activity-last-login">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Days Since Registration:</span>
+                            <span class="info-value" id="activity-reg-days">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Days Since Last Login:</span>
+                            <span class="info-value" id="activity-login-days">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Account Age (Months):</span>
+                            <span class="info-value" id="activity-age-months">-</span>
+                        </div>
+                    </div>
+
+                    <!-- NEW: RED COUPON SYSTEM -->
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-exclamation-triangle"></i> Red Coupon System
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Is Red Coupon:</span>
+                            <span class="info-value" id="red-coupon-status">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Locked Status:</span>
+                            <span class="info-value" id="red-coupon-locked">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Red Coupon Date:</span>
+                            <span class="info-value" id="red-coupon-date">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Unlock Requests:</span>
+                            <span class="info-value" id="red-coupon-requests">-</span>
+                        </div>
+                    </div>
+
+                    <!-- NEW: REFERRAL STATISTICS -->
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-chart-line"></i> Referral Statistics
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Referrals:</span>
+                            <span class="info-value" id="stats-total-referrals">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Activated Referrals:</span>
+                            <span class="info-value" id="stats-activated">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Unactivated Referrals:</span>
+                            <span class="info-value" id="stats-unactivated">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Referral Bonus Count:</span>
+                            <span class="info-value" id="stats-bonus-count">-</span>
+                        </div>
+                    </div>
+
+                    <!-- NEW: TRANSACTION SUMMARY -->
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-file-invoice-dollar"></i> Transaction Summary
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Transactions:</span>
+                            <span class="info-value" id="trans-count">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Earned:</span>
+                            <span class="info-value" id="trans-earned">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Released:</span>
+                            <span class="info-value" id="trans-released">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Balance:</span>
+                            <span class="info-value" id="trans-balance">-</span>
+                        </div>
+                    </div>
+
+                    <!-- NEW: PACKAGE HISTORY -->
+                    <div class="data-card">
+                        <div class="section-title">
+                            <i class="fas fa-history"></i> Package History
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Current Package:</span>
+                            <span class="info-value" id="pkg-current">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Coupon Status:</span>
+                            <span class="info-value" id="pkg-coupon-status">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Last Package Assigned:</span>
+                            <span class="info-value" id="pkg-last-assigned">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Status Changed:</span>
+                            <span class="info-value" id="pkg-status-changed">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/admin-id-utils.js"></script>
+    <script>
+        function searchUser() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            const errorDiv = document.getElementById('search-error');
+            const dataSection = document.getElementById('user-data-section');
+            
+            if (!searchTerm) {
+                errorDiv.textContent = 'Please enter a User ID, Email, or Name';
+                errorDiv.style.display = 'block';
+                dataSection.style.display = 'none';
+                return;
+            }
+            
+            errorDiv.style.display = 'none';
+            
+            fetch('/api/v1/rvz/search-users', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('authToken')
+                },
+                body: JSON.stringify({
+                    search_term: searchTerm,
+                    search_type: 'all'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.users.length > 0) {
+                    loadUserData(data.users[0].id);
+                } else {
+                    errorDiv.textContent = 'User not found';
+                    errorDiv.style.display = 'block';
+                    dataSection.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                errorDiv.textContent = 'Error searching for user: ' + error.message;
+                errorDiv.style.display = 'block';
+                dataSection.style.display = 'none';
+            });
+        }
+        
+        function loadUserData(userId) {
+            const errorDiv = document.getElementById('search-error');
+            const dataSection = document.getElementById('user-data-section');
+            
+            // Normalize MNR IDs to MNR format before API call
+            const normalizedUserId = normalizeAdminUserId(userId);
+            
+            fetch(`/api/v1/rvz/user-data/${normalizedUserId}`, {
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('authToken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Save normalized MNR ID to sessionStorage
+                    sessionStorage.setItem('vgk_current_user_id', normalizedUserId);
+                    populateUserData(data);
+                    dataSection.style.display = 'block';
+                } else {
+                    errorDiv.textContent = 'Error loading user data';
+                    errorDiv.style.display = 'block';
+                    dataSection.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                errorDiv.textContent = 'Error loading user data: ' + error.message;
+                errorDiv.style.display = 'block';
+                dataSection.style.display = 'none';
+            });
+        }
+        
+        function clearSearch() {
+            sessionStorage.removeItem('vgk_current_user_id');
+            document.getElementById('user-data-section').style.display = 'none';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('search-error').style.display = 'none';
+        }
+        
+        // Auto-restore previous search on page load
+        window.addEventListener('DOMContentLoaded', function() {
+            // Get and normalize saved user ID (handles legacy MNR IDs)
+            const savedUserId = getAndNormalizeFromStorage('vgk_current_user_id');
+            if (savedUserId) {
+                loadUserData(savedUserId);
+            }
+        });
+        
+        function populateUserData(data) {
+            document.getElementById('user-name').textContent = data.profile.name;
+            document.getElementById('user-id-display').textContent = data.profile.id + ' | ' + data.profile.email;
+            
+            document.getElementById('profile-email').textContent = data.profile.email || '-';
+            document.getElementById('profile-mobile').textContent = data.profile.mobile || '-';
+            document.getElementById('profile-registration').textContent = data.profile.registration_date ? new Date(data.profile.registration_date).toLocaleDateString() : '-';
+            document.getElementById('profile-direct-rank').textContent = data.profile.direct_referral_rank || 'No Rank';
+            document.getElementById('profile-matching-rank').textContent = data.profile.matching_referral_rank || 'No Rank';
+            document.getElementById('profile-type').textContent = data.profile.user_type || '-';
+            document.getElementById('profile-status').textContent = data.profile.account_status || '-';
+            document.getElementById('profile-locked').textContent = data.profile.account_locked ? 'Yes' : 'No';
+            
+            document.getElementById('activation-package').textContent = data.activation.package_name || 'Not Activated';
+            document.getElementById('activation-points').textContent = data.activation.package_points || '0';
+            document.getElementById('activation-date').textContent = data.activation.activation_date ? new Date(data.activation.activation_date).toLocaleDateString() : 'Not Activated';
+            document.getElementById('activation-status').innerHTML = data.activation.is_activated ? 
+                '<span class="badge badge-activated">Activated</span>' : 
+                '<span class="badge badge-not-activated">Not Activated</span>';
+            
+            document.getElementById('referral-sponsor-id').textContent = data.referral_info.sponsor ? data.referral_info.sponsor.id : '-';
+            document.getElementById('referral-sponsor-name').textContent = data.referral_info.sponsor ? data.referral_info.sponsor.name : '-';
+            document.getElementById('referral-count').textContent = data.referral_info.direct_referrals_count || '0';
+            document.getElementById('referral-activated').textContent = data.referral_info.direct_activated_count || '0';
+            document.getElementById('referral-matching').textContent = data.referral_info.matching_earned_count || '0';
+            
+            document.getElementById('team-parent').textContent = data.team_info.placement_parent ? 
+                `${data.team_info.placement_parent.name} (${data.team_info.placement_parent.id})` : '-';
+            document.getElementById('team-side').textContent = data.team_info.placement_parent ? data.team_info.placement_parent.side : '-';
+            document.getElementById('team-total').textContent = data.team_info.total_team || '0';
+            document.getElementById('team-group-a').textContent = data.team_info.left_team_count || '0';
+            document.getElementById('team-group-a-active').textContent = data.team_info.left_active_count || '0';
+            document.getElementById('team-group-b').textContent = data.team_info.right_team_count || '0';
+            document.getElementById('team-group-b-active').textContent = data.team_info.right_active_count || '0';
+            
+            document.getElementById('earnings-total').textContent = '₹' + (data.earnings.total_earnings || 0).toFixed(0);
+            document.getElementById('earnings-direct-paid').textContent = '₹' + (data.earnings.direct_referral.paid || 0).toFixed(0);
+            document.getElementById('earnings-direct-pending').textContent = '₹' + (data.earnings.direct_referral.pending || 0).toFixed(0);
+            document.getElementById('earnings-matching-paid').textContent = '₹' + (data.earnings.matching_referral.paid || 0).toFixed(0);
+            document.getElementById('earnings-matching-pending').textContent = '₹' + (data.earnings.matching_referral.pending || 0).toFixed(0);
+            document.getElementById('earnings-ved-paid').textContent = '₹' + (data.earnings.ved_income.paid || 0).toFixed(0);
+            document.getElementById('earnings-ved-pending').textContent = '₹' + (data.earnings.ved_income.pending || 0).toFixed(0);
+            document.getElementById('earnings-guru-paid').textContent = '₹' + (data.earnings.guru_dakshina.paid || 0).toFixed(0);
+            document.getElementById('earnings-guru-pending').textContent = '₹' + (data.earnings.guru_dakshina.pending || 0).toFixed(0);
+            
+            let directAwardsHTML = '';
+            if (data.awards.direct_awards && data.awards.direct_awards.length > 0) {
+                data.awards.direct_awards.forEach(award => {
+                    directAwardsHTML += `<span class="award-badge ${award.achieved ? 'award-achieved' : ''}">${award.tier_name}</span>`;
+                });
+            } else {
+                directAwardsHTML = 'No direct awards';
+            }
+            document.getElementById('awards-direct').innerHTML = directAwardsHTML;
+            
+            let matchingAwardsHTML = '';
+            if (data.awards.matching_awards && data.awards.matching_awards.length > 0) {
+                data.awards.matching_awards.forEach(award => {
+                    matchingAwardsHTML += `<span class="award-badge ${award.achieved ? 'award-achieved' : ''}">${award.tier_name}</span>`;
+                });
+            } else {
+                matchingAwardsHTML = 'No matching awards';
+            }
+            document.getElementById('awards-matching').innerHTML = matchingAwardsHTML;
+            
+            // Ved Program Section - Updated to match user dashboard
+            document.getElementById('ved-overall').textContent = data.ved_info.ved_overall || '0';
+            document.getElementById('ved-activated').textContent = data.ved_info.ved_activated || '0';
+            document.getElementById('ved-head').textContent = data.ved_info.ved_head ? 
+                `${data.ved_info.ved_head.name} (${data.ved_info.ved_head.id})` : 'Not Found';
+            document.getElementById('ved-head-status').textContent = data.ved_info.ved_head ? 
+                (data.ved_info.ved_head.is_activated ? 'Activated' : 'Not Activated') : '-';
+            
+            document.getElementById('kyc-status').textContent = data.kyc.status || '-';
+            document.getElementById('kyc-aadhar').textContent = data.kyc.aadhar_verified ? 'Yes' : 'No';
+            document.getElementById('kyc-pan').textContent = data.kyc.pan_verified ? 'Yes' : 'No';
+            document.getElementById('bank-name').textContent = data.bank.bank_name || '-';
+            document.getElementById('bank-account').textContent = data.bank.account_number || '-';
+            document.getElementById('bank-ifsc').textContent = data.bank.ifsc_code || '-';
+            document.getElementById('bank-approval').textContent = data.bank.approval_status || '-';
+            
+            // NEW SECTIONS POPULATION
+            // 1. Bonanza System
+            if (data.bonanza) {
+                document.getElementById('bonanza-total').textContent = data.bonanza.total_bonanzas || '0';
+                document.getElementById('bonanza-achieved').textContent = data.bonanza.achieved_count || '0';
+                if (data.bonanza.bonanzas && data.bonanza.bonanzas.length > 0) {
+                    let bonanzaHTML = '<small>';
+                    data.bonanza.bonanzas.forEach(b => {
+                        bonanzaHTML += `<div><strong>${b.bonanza_name}:</strong> ${b.achievement_status} (${b.current_progress})</div>`;
+                    });
+                    bonanzaHTML += '</small>';
+                    document.getElementById('bonanza-list').innerHTML = bonanzaHTML;
+                }
+            }
+            
+            // 2. Field Allowance
+            if (data.field_allowance) {
+                document.getElementById('allowance-status').textContent = data.field_allowance.has_allowance ? data.field_allowance.status : 'No Allowance';
+                document.getElementById('allowance-tier').textContent = data.field_allowance.tier_name || '-';
+                document.getElementById('allowance-amount').textContent = data.field_allowance.monthly_amount ? '₹' + data.field_allowance.monthly_amount.toFixed(0) : '₹0.00';
+            }
+            
+            // 3. PIN Purchase History
+            if (data.pin_summary) {
+                document.getElementById('pin-total').textContent = data.pin_summary.total_pins_requested || '0';
+                document.getElementById('pin-approved').textContent = data.pin_summary.approved_requests || '0';
+                document.getElementById('pin-pending').textContent = data.pin_summary.pending_requests || '0';
+                document.getElementById('pin-amount').textContent = '₹' + (data.pin_summary.total_amount_spent || 0).toFixed(0);
+            }
+            
+            // 4. Withdrawal History
+            if (data.withdrawal_summary) {
+                document.getElementById('withdrawal-requests').textContent = data.withdrawal_summary.total_requests || '0';
+                document.getElementById('withdrawal-approved').textContent = data.withdrawal_summary.approved_count || '0';
+                document.getElementById('withdrawal-pending').textContent = data.withdrawal_summary.pending_count || '0';
+                document.getElementById('withdrawal-total').textContent = '₹' + (data.withdrawal_summary.total_withdrawn || 0).toFixed(0);
+            }
+            
+            // 5. Account Activity
+            if (data.account_activity) {
+                document.getElementById('activity-last-login').textContent = data.account_activity.last_login ? new Date(data.account_activity.last_login).toLocaleString() : 'Never';
+                document.getElementById('activity-reg-days').textContent = data.account_activity.days_since_registration || '0';
+                document.getElementById('activity-login-days').textContent = data.account_activity.days_since_last_login || '-';
+                document.getElementById('activity-age-months').textContent = data.account_activity.account_age_months || '0';
+            }
+            
+            // 7. Red Coupon System
+            if (data.red_coupon) {
+                document.getElementById('red-coupon-status').textContent = data.red_coupon.is_red_coupon ? 'Yes' : 'No';
+                document.getElementById('red-coupon-locked').textContent = data.red_coupon.red_coupon_locked ? 'Locked' : 'Not Locked';
+                document.getElementById('red-coupon-date').textContent = data.red_coupon.red_coupon_date ? new Date(data.red_coupon.red_coupon_date).toLocaleDateString() : '-';
+                document.getElementById('red-coupon-requests').textContent = data.red_coupon.unlock_requests || '0';
+            }
+            
+            // 8. Referral Statistics
+            if (data.referral_stats) {
+                document.getElementById('stats-total-referrals').textContent = data.referral_stats.total_referrals || '0';
+                document.getElementById('stats-activated').textContent = data.referral_stats.activated_referrals || '0';
+                document.getElementById('stats-unactivated').textContent = data.referral_stats.unactivated_referrals || '0';
+                document.getElementById('stats-bonus-count').textContent = data.referral_stats.referral_bonus_count || '0';
+            }
+            
+            // 9. Transaction Summary
+            if (data.transaction_summary) {
+                document.getElementById('trans-count').textContent = data.transaction_summary.total_transactions || '0';
+                document.getElementById('trans-earned').textContent = '₹' + (data.transaction_summary.total_earned || 0).toFixed(0);
+                document.getElementById('trans-released').textContent = '₹' + (data.transaction_summary.total_released || 0).toFixed(0);
+                document.getElementById('trans-balance').textContent = '₹' + (data.transaction_summary.balance || 0).toFixed(0);
+            }
+            
+            // 10. Package History
+            if (data.package_history) {
+                document.getElementById('pkg-current').textContent = data.package_history.current_package || '-';
+                document.getElementById('pkg-coupon-status').textContent = data.package_history.coupon_status || '-';
+                document.getElementById('pkg-last-assigned').textContent = data.package_history.last_package_assigned ? new Date(data.package_history.last_package_assigned).toLocaleDateString() : '-';
+                document.getElementById('pkg-status-changed').textContent = data.package_history.coupon_status_changed ? new Date(data.package_history.coupon_status_changed).toLocaleDateString() : '-';
+            }
+        }
+        
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchUser();
+            }
+        });
+    </script>
+</body>
+</html>

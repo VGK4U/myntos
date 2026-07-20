@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Operator Calls Dashboard - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 280px; padding-top: 64px; min-height: 100vh; transition: margin-left 0.3s ease; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        .content-area { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+        .page-banner {
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        .page-banner .sync-info { font-size: 12px; opacity: 1; margin-top: 8px; background: rgba(255,255,255,0.15); display: inline-block; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+        .banner-actions { display: flex; gap: 8px; }
+        .banner-btn {
+            padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.15); color: white; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all 0.15s; white-space: nowrap;
+        }
+        .banner-btn:hover { background: rgba(255,255,255,0.3); }
+
+        .tab-nav {
+            display: flex; gap: 0; margin-bottom: 24px;
+            background: white; border-radius: 12px; padding: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+        .tab-btn {
+            flex: 1; padding: 10px 20px; border: none; background: transparent;
+            border-radius: 8px; font-size: 14px; font-weight: 600; color: #6b7280;
+            cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .tab-btn.active { background: #7c3aed; color: white; }
+        .tab-btn:hover:not(.active) { background: #f5f3ff; color: #7c3aed; }
+        .tab-count {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 20px; height: 20px; padding: 0 5px;
+            border-radius: 10px; font-size: 11px; font-weight: 700;
+            background: rgba(0,0,0,0.15);
+        }
+        .tab-btn.active .tab-count { background: rgba(255,255,255,0.25); }
+
+        .filter-card {
+            background: white; border-radius: 12px; padding: 16px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px;
+        }
+        .filter-card label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-card .form-control, .filter-card .form-select {
+            font-size: 13px; padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb;
+        }
+
+        .stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .stat-card {
+            background: white; border-radius: 8px; padding: 10px 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center;
+        }
+        .stat-card .val { font-size: 22px; font-weight: 700; color: #1f2937; line-height: 1.2; }
+        .stat-card .lbl { color: #6b7280; font-size: 9px; margin-top: 2px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+        .stat-card.purple { border-top: 3px solid #7c3aed; }
+        .stat-card.green { border-top: 3px solid #059669; }
+        .stat-card.red { border-top: 3px solid #dc2626; }
+        .stat-card.blue { border-top: 3px solid #0ea5e9; }
+        .stat-card.amber { border-top: 3px solid #f59e0b; }
+        .stat-card.teal { border-top: 3px solid #0d9488; }
+
+        .data-card {
+            background: white; border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 24px; overflow: hidden;
+        }
+        .data-card-header {
+            padding: 14px 20px; border-bottom: 1px solid #f3f4f6;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .data-card-header h5 { font-size: 15px; font-weight: 600; color: #1f2937; margin: 0; }
+        .data-card-body { padding: 0; overflow-x: auto; }
+
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th {
+            background: #f9fafb; padding: 10px 12px; text-align: center;
+            font-weight: 600; color: #6b7280; border-bottom: 2px solid #e5e7eb;
+            font-size: 11px; text-transform: uppercase; white-space: nowrap;
+            position: sticky; top: 0; z-index: 10;
+        }
+        .data-table td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .data-table tbody tr:hover { background: #faf5ff; cursor: pointer; }
+        .data-table th.text-start, .data-table td.text-start { text-align: left; }
+
+        .btn-dispose {
+            font-size: 10px; padding: 2px 7px; border-radius: 10px; border: none; cursor: pointer;
+            font-weight: 600; white-space: nowrap; line-height: 1.5;
+        }
+        .btn-dispose.pending { background: #fef3c7; color: #b45309; }
+        .btn-dispose.pending:hover { background: #fde68a; }
+        .btn-dispose.disposed { background: #d1fae5; color: #065f46; }
+        .btn-dispose.disposed:hover { background: #a7f3d0; }
+
+        .badge-status {
+            display: inline-block; padding: 3px 10px; border-radius: 20px;
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+        }
+        .badge-ringing { background: #fef3c7; color: #d97706; }
+        .badge-active { background: #d1fae5; color: #059669; }
+        .badge-answered { background: #d1fae5; color: #059669; }
+        .badge-missed { background: #fee2e2; color: #dc2626; }
+        .badge-voicemail { background: #ede9fe; color: #6d28d9; }
+        .badge-ended { background: #f3f4f6; color: #6b7280; }
+        .badge-not-answered { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+
+        .btn-action {
+            padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+            border: 1px solid; cursor: pointer; white-space: nowrap; transition: all 0.15s;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 3px;
+        }
+        .btn-dial { border-color: #059669; color: #047857; background: #d1fae5; }
+        .btn-dial:hover { background: #059669; color: white; }
+        .btn-followup { border-color: #f59e0b; color: #b45309; background: #fffbeb; }
+        .btn-followup:hover { background: #f59e0b; color: white; }
+        .btn-lead { border-color: #7c3aed; color: #5b21b6; background: #f5f3ff; }
+        .btn-lead:hover { background: #7c3aed; color: white; }
+        .btn-record { border-color: #0ea5e9; color: #0284c7; background: #f0f9ff; }
+        .btn-record:hover { background: #0ea5e9; color: white; }
+        .btn-detail { border-color: #6b7280; color: #374151; background: #f9fafb; }
+        .btn-detail:hover { background: #374151; color: white; }
+        .btn-history { border-color: #8b5cf6; color: #6d28d9; background: #ede9fe; }
+        .btn-history:hover { background: #8b5cf6; color: white; }
+
+        .phone-tag {
+            font-family: 'Courier New', monospace; font-size: 12px;
+            background: #f3f4f6; border-radius: 4px; padding: 2px 6px;
+        }
+        .phone-link { cursor: pointer; color: #1f2937; transition: color 0.1s; }
+        .phone-link:hover { color: #7c3aed; }
+
+        .active-pulse {
+            display: inline-block; width: 8px; height: 8px; background: #059669;
+            border-radius: 50%; animation: pulse 1.5s infinite;
+            margin-right: 4px;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(5,150,105,0.6); }
+            70% { box-shadow: 0 0 0 8px rgba(5,150,105,0); }
+            100% { box-shadow: 0 0 0 0 rgba(5,150,105,0); }
+        }
+
+        .loading-row td { text-align: center; padding: 40px; color: #9ca3af; }
+        .empty-row td { text-align: center; padding: 40px; color: #9ca3af; font-size: 14px; }
+
+        .btn-refresh {
+            padding: 6px 14px; border-radius: 8px; border: 1px solid #e5e7eb;
+            background: white; color: #374151; font-size: 13px; cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-refresh:hover { border-color: #7c3aed; color: #7c3aed; }
+
+        .lead-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+        }
+        .lead-linked { background: #f5f3ff; color: #7c3aed; }
+        .lead-unlinked { background: #f3f4f6; color: #9ca3af; }
+
+        /* Modal */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+            z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal-box {
+            background: white; border-radius: 16px; padding: 28px; width: 520px; max-width: 95vw;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25); max-height: 90vh; overflow-y: auto;
+        }
+        .modal-box.wide { width: 720px; }
+        .modal-box h4 { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .modal-box label { font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; display: block; margin-top: 12px; }
+        .modal-box input, .modal-box textarea, .modal-box select {
+            width: 100%; padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px;
+            font-size: 13px; margin-top: 4px;
+        }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+        .btn-cancel { padding: 8px 18px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; cursor: pointer; font-size: 13px; }
+        .btn-submit { padding: 8px 20px; border: none; border-radius: 8px; background: #7c3aed; color: white; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .btn-submit:hover { background: #5b21b6; }
+        .btn-submit.green { background: #059669; }
+        .btn-submit.green:hover { background: #047857; }
+
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+        .detail-item label { margin: 0; font-size: 10px; }
+        .detail-item .val { font-size: 14px; font-weight: 600; color: #1f2937; margin-top: 2px; }
+
+        .lead-panel {
+            background: #f5f3ff; border-radius: 10px; padding: 14px; margin: 12px 0;
+            border: 1px solid #ede9fe;
+        }
+        .lead-panel h6 { font-size: 13px; font-weight: 700; color: #5b21b6; margin: 0 0 8px 0; }
+        .lead-panel .lead-row { display: flex; justify-content: space-between; font-size: 12px; margin: 3px 0; }
+        .lead-panel .lead-row .k { color: #6b7280; }
+        .lead-panel .lead-row .v { font-weight: 600; color: #1f2937; }
+
+        .history-list { max-height: 200px; overflow-y: auto; margin: 8px 0; }
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 10px; border-bottom: 1px solid #f3f4f6; font-size: 12px;
+        }
+        .history-item:hover { background: #faf5ff; }
+
+        .note-item {
+            background: #fffbeb; border-radius: 6px; padding: 8px 10px; margin: 4px 0;
+            font-size: 12px; color: #374151;
+        }
+        .note-item .note-meta { font-size: 10px; color: #9ca3af; margin-top: 2px; }
+
+        .fu-item {
+            background: #f0f9ff; border-radius: 6px; padding: 8px 10px; margin: 4px 0;
+            font-size: 12px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .fu-item .fu-status { font-weight: 600; text-transform: uppercase; }
+
+        /* ── Quick filter pills (DC_QF_CALLS_001) ─────────────────────────────── */
+        .qf-strip {
+            display: flex; gap: 6px; flex-wrap: wrap;
+            margin-bottom: 12px; align-items: center;
+        }
+        .qf-strip .qf-label {
+            font-size: 11px; font-weight: 700; color: #6b7280;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            margin-right: 2px; white-space: nowrap;
+        }
+        .qf-pill {
+            padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+            border: 1px solid #e5e7eb; background: white; color: #6b7280;
+            cursor: pointer; transition: all 0.15s; white-space: nowrap;
+        }
+        .qf-pill:hover { border-color: #7c3aed; color: #7c3aed; background: #f5f3ff; }
+        .qf-pill.active { background: #7c3aed; color: white; border-color: #7c3aed; }
+
+        /* ── Inline expand row (DC_EXPAND_CALLS_001) ─────────────────────────── */
+        .expand-row td { padding: 0 !important; border-bottom: 2px solid #ede9fe !important; }
+        .expand-panel {
+            background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
+            border-left: 4px solid #7c3aed;
+            padding: 14px 18px; display: grid;
+            grid-template-columns: 1fr 1fr 1fr; gap: 16px;
+        }
+        @media (max-width: 900px) { .expand-panel { grid-template-columns: 1fr; } }
+        .expand-section h6 {
+            font-size: 10px; font-weight: 700; color: #7c3aed;
+            text-transform: uppercase; letter-spacing: 0.6px; margin: 0 0 8px 0;
+        }
+        .expand-kv { display: flex; gap: 6px; font-size: 12px; margin-bottom: 4px; }
+        .expand-kv .k { color: #9ca3af; min-width: 80px; flex-shrink: 0; }
+        .expand-kv .v { color: #1f2937; font-weight: 600; }
+        .expand-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+        .expand-note { background: #fffbeb; border-radius: 5px; padding: 6px 8px; font-size: 11px; color: #374151; margin-bottom: 4px; }
+        .expand-fu  { background: #f0fdf4; border-radius: 5px; padding: 6px 8px; font-size: 11px; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+<div class="content-area">
+    <div class="page-banner">
+        <div>
+            <h1><i class="fas fa-phone-volume"></i> Operator Call Dashboard</h1>
+            <p>Real-time view of inbound & outbound calls via MyOperator — Dial, View Details, Sync Leads</p>
+            <div class="sync-info" id="sync-info">Last synced: Loading...</div>
+        </div>
+        <div class="banner-actions">
+            <button class="banner-btn" onclick="triggerBulkMatch()"><i class="fas fa-link"></i> Bulk Match Leads</button>
+            <button class="banner-btn" onclick="triggerManualSync()"><i class="fas fa-sync-alt"></i> Sync Now</button>
+        </div>
+    </div>
+
+    <div class="stat-cards" id="stat-cards">
+        <div class="stat-card purple"><div class="val" id="stat-total">—</div><div class="lbl">Total Calls</div></div>
+        <div class="stat-card blue"><div class="val" id="stat-active">—</div><div class="lbl">Active / Live</div></div>
+        <div class="stat-card green"><div class="val" id="stat-answered">—</div><div class="lbl">Answered</div></div>
+        <div class="stat-card red"><div class="val" id="stat-missed">—</div><div class="lbl">Missed</div></div>
+        <div class="stat-card" style="border-top:3px solid #8b5cf6;"><div class="val" id="stat-voicemail">—</div><div class="lbl">Voicemail</div></div>
+        <div class="stat-card amber"><div class="val" id="stat-pending">—</div><div class="lbl">Pending</div></div>
+        <div class="stat-card teal"><div class="val" id="stat-disposed">—</div><div class="lbl">Disposed</div></div>
+    </div>
+
+    <div class="tab-nav">
+        <button class="tab-btn" data-tab="active">
+            <span class="active-pulse"></span> Active
+            <span class="tab-count" id="cnt-active">0</span>
+        </button>
+        <button class="tab-btn active" data-tab="all">
+            <i class="fas fa-list"></i> All Calls
+            <span class="tab-count" id="cnt-all">0</span>
+        </button>
+        <button class="tab-btn" data-tab="answered">
+            <i class="fas fa-phone-alt"></i> Answered
+            <span class="tab-count" id="cnt-answered">0</span>
+        </button>
+        <button class="tab-btn" data-tab="voicemail">
+            <i class="fas fa-voicemail"></i> Voicemail
+            <span class="tab-count" id="cnt-voicemail">0</span>
+        </button>
+        <button class="tab-btn" data-tab="followups">
+            <i class="fas fa-calendar-check"></i> Follow-ups
+            <span class="tab-count" id="cnt-followups">—</span>
+        </button>
+        <button class="tab-btn" data-tab="person-wise">
+            <i class="fas fa-user-chart"></i> Person Wise
+        </button>
+        <button class="tab-btn" data-tab="dept-wise">
+            <i class="fas fa-building"></i> Dept Wise
+        </button>
+    </div>
+
+    <!-- DC_QF_CALLS_001: Quick date filter strip for all calls tabs -->
+    <div id="qf-strip-calls" class="qf-strip">
+        <span class="qf-label"><i class="fas fa-bolt"></i> Quick:</span>
+        <button class="qf-pill active" data-preset="overall" onclick="setCallsQF('overall')">Overall</button>
+        <button class="qf-pill" data-preset="today" onclick="setCallsQF('today')">Today</button>
+        <button class="qf-pill" data-preset="yesterday" onclick="setCallsQF('yesterday')">Yesterday</button>
+        <button class="qf-pill" data-preset="this_week" onclick="setCallsQF('this_week')">This Week</button>
+        <button class="qf-pill" data-preset="last_week" onclick="setCallsQF('last_week')">Last Week</button>
+    </div>
+
+    <div class="filter-card">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label>Phone / Caller / Operator</label>
+                <input type="text" class="form-control" id="filter-phone" placeholder="Search number or name...">
+            </div>
+            <div class="col-md-2">
+                <label>Handled By</label>
+                <select class="form-select" id="filter-handled-by">
+                    <option value="">All Staff</option>
+                </select>
+            </div>
+            <div class="col-md-2" id="filter-status-wrap">
+                <label>Status</label>
+                <select class="form-select" id="filter-status">
+                    <option value="">All Statuses</option>
+                    <option value="answered">Answered</option>
+                    <option value="missed">Missed</option>
+                    <option value="voicemail">Voicemail</option>
+                    <option value="active">Active / Ringing</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label>Call Type</label>
+                <select class="form-select" id="filter-type">
+                    <option value="">All</option>
+                    <option value="inbound">Inbound</option>
+                    <option value="outbound">Outbound</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <label>From</label>
+                <input type="date" class="form-control" id="filter-from">
+            </div>
+            <div class="col-md-1">
+                <label>To</label>
+                <input type="date" class="form-control" id="filter-to">
+            </div>
+            <div class="col-md-2">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary w-100" onclick="loadCalls(true)" style="background:#7c3aed;border:none;">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+            <div class="col-md-1">
+                <label>&nbsp;</label>
+                <button class="btn-refresh w-100" onclick="resetFilters()">
+                    <i class="fas fa-times"></i> Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="data-card">
+        <div class="data-card-header">
+            <h5 id="table-title">All Calls</h5>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span id="table-sync-badge" style="font-size:11px;color:#6b7280;"></span>
+                <button class="btn-refresh" onclick="loadCalls(true)"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+        </div>
+        <div class="data-card-body">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th class="text-start">Status</th>
+                        <th class="text-start">Caller</th>
+                        <th class="text-start">Called</th>
+                        <th class="text-start">Department</th>
+                        <th class="text-start">Handled By</th>
+                        <th>Type</th>
+                        <th>Duration</th>
+                        <th>Time</th>
+                        <th>CRM Lead</th>
+                        <th class="text-start">Lead Owner</th>
+                        <th class="text-start">Existing In</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="calls-tbody">
+                    <tr class="loading-row"><td colspan="12"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="pagination" style="display:none;" class="d-flex justify-content-between align-items-center mb-4 px-1">
+        <span class="text-muted" style="font-size:13px;" id="page-info"></span>
+        <div class="d-flex gap-2">
+            <button class="btn-refresh" id="btn-prev" onclick="changePage(-1)">&#8592; Prev</button>
+            <button class="btn-refresh" id="btn-next" onclick="changePage(1)">Next &#8594;</button>
+        </div>
+    </div>
+
+    <!-- Department-wise Tab Content -->
+    <div id="dept-wise-section" style="display:none;">
+        <div class="filter-card">
+            <div class="qf-strip" style="margin-bottom:10px;">
+                <span class="qf-label"><i class="fas fa-bolt"></i> Quick:</span>
+                <button class="qf-pill active" data-preset="overall" onclick="setDeptQF('overall')">Overall</button>
+                <button class="qf-pill" data-preset="today" onclick="setDeptQF('today')">Today</button>
+                <button class="qf-pill" data-preset="yesterday" onclick="setDeptQF('yesterday')">Yesterday</button>
+                <button class="qf-pill" data-preset="this_week" onclick="setDeptQF('this_week')">This Week</button>
+                <button class="qf-pill" data-preset="last_week" onclick="setDeptQF('last_week')">Last Week</button>
+            </div>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label>From Date</label>
+                    <input type="date" class="form-control" id="dept-from">
+                </div>
+                <div class="col-md-2">
+                    <label>To Date</label>
+                    <input type="date" class="form-control" id="dept-to">
+                </div>
+                <div class="col-md-2">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-primary w-100" onclick="loadDeptReport()" style="background:#7c3aed;border:none;">
+                        <i class="fas fa-search"></i> Apply
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <label>&nbsp;</label>
+                    <button class="btn-refresh w-100" onclick="resetDeptFilters()"><i class="fas fa-times"></i> Reset</button>
+                </div>
+            </div>
+        </div>
+        <div class="stat-cards" id="dept-stat-cards" style="display:none;">
+            <div class="stat-card purple"><div class="val" id="dept-stat-total">—</div><div class="lbl">Total Calls</div></div>
+            <div class="stat-card green"><div class="val" id="dept-stat-answered">—</div><div class="lbl">Answered</div></div>
+            <div class="stat-card red"><div class="val" id="dept-stat-missed">—</div><div class="lbl">Missed</div></div>
+            <div class="stat-card" style="border-top:3px solid #8b5cf6;"><div class="val" id="dept-stat-voicemail">—</div><div class="lbl">Voicemail</div></div>
+            <div class="stat-card teal"><div class="val" id="dept-stat-avg">—</div><div class="lbl">Avg Talk Time</div></div>
+        </div>
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-building" style="color:#7c3aed;"></i> Department-wise Call Report</h5>
+                <button class="btn-refresh" onclick="loadDeptReport()"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+            <div class="data-card-body">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="text-start">Department / Operator</th>
+                            <th>Total Calls</th>
+                            <th>Answered</th>
+                            <th>Missed</th>
+                            <th>Voicemail</th>
+                            <th>Answer Rate</th>
+                            <th>Total Talk</th>
+                            <th>Avg Talk</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dept-tbody">
+                        <tr class="loading-row"><td colspan="8"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Person-wise Tab Content -->
+    <div id="person-wise-section" style="display:none;">
+        <div class="filter-card">
+            <div class="qf-strip" style="margin-bottom:10px;">
+                <span class="qf-label"><i class="fas fa-bolt"></i> Quick:</span>
+                <button class="qf-pill active" data-preset="overall" onclick="setPersonQF('overall')">Overall</button>
+                <button class="qf-pill" data-preset="today" onclick="setPersonQF('today')">Today</button>
+                <button class="qf-pill" data-preset="yesterday" onclick="setPersonQF('yesterday')">Yesterday</button>
+                <button class="qf-pill" data-preset="this_week" onclick="setPersonQF('this_week')">This Week</button>
+                <button class="qf-pill" data-preset="last_week" onclick="setPersonQF('last_week')">Last Week</button>
+            </div>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label>From Date</label>
+                    <input type="date" class="form-control" id="person-from">
+                </div>
+                <div class="col-md-2">
+                    <label>To Date</label>
+                    <input type="date" class="form-control" id="person-to">
+                </div>
+                <div class="col-md-2">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-primary w-100" onclick="loadPersonReport()" style="background:#7c3aed;border:none;">
+                        <i class="fas fa-search"></i> Apply
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <label>&nbsp;</label>
+                    <button class="btn-refresh w-100" onclick="resetPersonFilters()"><i class="fas fa-times"></i> Reset</button>
+                </div>
+            </div>
+        </div>
+        <div class="stat-cards" id="person-stat-cards" style="display:none;">
+            <div class="stat-card purple"><div class="val" id="person-stat-total">—</div><div class="lbl">Total Calls</div></div>
+            <div class="stat-card green"><div class="val" id="person-stat-answered">—</div><div class="lbl">Answered</div></div>
+            <div class="stat-card red"><div class="val" id="person-stat-missed">—</div><div class="lbl">Missed</div></div>
+            <div class="stat-card" style="border-top:3px solid #8b5cf6;"><div class="val" id="person-stat-voicemail">—</div><div class="lbl">Voicemail</div></div>
+            <div class="stat-card teal"><div class="val" id="person-stat-avg">—</div><div class="lbl">Avg Talk Time</div></div>
+        </div>
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-user-chart" style="color:#059669;"></i> Person-wise Call Report</h5>
+                <button class="btn-refresh" onclick="loadPersonReport()"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+            <div class="data-card-body">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="text-start">Staff / Handler</th>
+                            <th>Total Calls</th>
+                            <th>Answered</th>
+                            <th>Missed</th>
+                            <th>Voicemail</th>
+                            <th>Answer Rate</th>
+                            <th>Total Talk</th>
+                            <th>Avg Talk</th>
+                        </tr>
+                    </thead>
+                    <tbody id="person-tbody">
+                        <tr class="loading-row"><td colspan="8"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Follow-ups Tab Content -->
+    <div id="followups-section" style="display:none;">
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-calendar-check" style="color:#f59e0b;"></i> Follow-ups from Operator Calls</h5>
+                <button class="btn-refresh" onclick="loadFollowups(true)"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+            <div class="data-card-body">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="text-start">Caller</th>
+                            <th class="text-start">Lead / Contact</th>
+                            <th class="text-start">Subject</th>
+                            <th>Scheduled</th>
+                            <th>Status</th>
+                            <th>Call Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="followups-tbody">
+                        <tr class="loading-row"><td colspan="7"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div id="fu-pagination" style="display:none;" class="d-flex justify-content-between align-items-center mb-4 px-1">
+            <span class="text-muted" style="font-size:13px;" id="fu-page-info"></span>
+            <div class="d-flex gap-2">
+                <button class="btn-refresh" id="fu-btn-prev" onclick="changeFuPage(-1)">&#8592; Prev</button>
+                <button class="btn-refresh" id="fu-btn-next" onclick="changeFuPage(1)">Next &#8594;</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call Detail Modal -->
+<div class="modal-overlay" id="detail-modal">
+    <div class="modal-box wide">
+        <h4><i class="fas fa-info-circle" style="color:#7c3aed;"></i> Call Details</h4>
+        <div id="detail-content">Loading...</div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('detail-modal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Caller History Modal -->
+<div class="modal-overlay" id="history-modal">
+    <div class="modal-box wide">
+        <h4><i class="fas fa-history" style="color:#8b5cf6;"></i> Caller History — <span id="hist-phone"></span></h4>
+        <div id="history-content">Loading...</div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('history-modal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Follow-up Modal -->
+<div class="modal-overlay" id="followup-modal">
+    <div class="modal-box">
+        <h4><i class="fas fa-calendar-check" style="color:#f59e0b;"></i> Create Follow-Up</h4>
+        <input type="hidden" id="fu-call-id">
+        <label>Caller Number</label>
+        <input type="text" id="fu-phone" readonly>
+        <label>Subject</label>
+        <input type="text" id="fu-subject" placeholder="Follow up on missed call...">
+        <label>Scheduled Date & Time</label>
+        <input type="datetime-local" id="fu-date">
+        <label>Notes</label>
+        <textarea id="fu-notes" rows="3" placeholder="Add any notes..."></textarea>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('followup-modal')">Cancel</button>
+            <button class="btn-submit" onclick="submitFollowup()"><i class="fas fa-check"></i> Create Follow-Up</button>
+        </div>
+    </div>
+</div>
+
+<!-- Convert to Lead Modal -->
+<div class="modal-overlay" id="lead-modal">
+    <div class="modal-box">
+        <h4><i class="fas fa-user-plus" style="color:#7c3aed;"></i> Convert to CRM Lead</h4>
+        <input type="hidden" id="lead-call-id">
+        <label>Caller Number</label>
+        <input type="text" id="lead-phone" readonly>
+        <label>Contact Name</label>
+        <input type="text" id="lead-name" placeholder="Enter name (optional)...">
+        <label>Assign Salesperson <span style="color:#9ca3af;font-weight:400;text-transform:none;">(optional)</span></label>
+        <select id="lead-handler">
+            <option value="">— Unassigned —</option>
+        </select>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('lead-modal')">Cancel</button>
+            <button class="btn-submit" onclick="submitLead()"><i class="fas fa-user-plus"></i> Create Lead</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Note Modal -->
+<div class="modal-overlay" id="note-modal">
+    <div class="modal-box">
+        <h4><i class="fas fa-sticky-note" style="color:#f59e0b;"></i> Add Note to Lead</h4>
+        <input type="hidden" id="note-call-id">
+        <label>Note</label>
+        <textarea id="note-text" rows="4" placeholder="Enter your note..."></textarea>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('note-modal')">Cancel</button>
+            <button class="btn-submit" onclick="submitNote()"><i class="fas fa-check"></i> Save Note</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_BASE = '/api/v1/operator-calls';
+let currentTab = 'all';
+let currentPage = 1;
+let totalPages = 1;
+let totalRows = 0;
+let fuCurrentPage = 1;
+let fuTotalPages = 1;
+let autoRefreshTimer = null;
+let staffList = [];
+
+function staffFetch(url, options = {}) {
+    const token = window.staffTokenManager?.getToken?.() || localStorage.getItem('staff_token') || localStorage.getItem('staff_auth_token');
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(url, { ...options, headers });
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── Staff List (for salesperson dropdown) ──────────────────────────────────
+
+async function loadStaffList() {
+    try {
+        const res = await staffFetch(`${API_BASE}/staff-list`);
+        const data = await res.json();
+        if (data.success) {
+            staffList = data.data || [];
+            const sel = document.getElementById('lead-handler');
+            if (sel) {
+                sel.innerHTML = '<option value="">— Unassigned —</option>';
+                staffList.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e.id;
+                    opt.textContent = `${e.name}${e.designation ? ' · ' + e.designation : ''}`;
+                    sel.appendChild(opt);
+                });
+            }
+        }
+    } catch (e) { console.warn('Staff list load failed', e); }
+}
+
+// ── Load Calls ──────────────────────────────────────────────────────────────
+
+async function loadCalls(reset = false) {
+    if (reset) currentPage = 1;
+
+    if (currentTab === 'followups') {
+        loadFollowups(reset);
+        return;
+    }
+
+    const tbody = document.getElementById('calls-tbody');
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="12"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+
+    document.getElementById('calls-section')?.style && (document.getElementById('calls-section').style.display = '');
+    document.getElementById('followups-section').style.display = 'none';
+    document.getElementById('filter-card')?.style && (document.getElementById('filter-card').style.display = '');
+
+    const phone = document.getElementById('filter-phone').value.trim();
+    const callType = document.getElementById('filter-type').value;
+    const handledByFilter = document.getElementById('filter-handled-by').value;
+    const from = document.getElementById('filter-from').value;
+    const to = document.getElementById('filter-to').value;
+
+    let url = `${API_BASE}/?page=${currentPage}&per_page=25`;
+    if (currentTab !== 'all') {
+        url += `&status=${currentTab}`;
+    } else {
+        const statusFilter = document.getElementById('filter-status')?.value;
+        if (statusFilter) url += `&status=${statusFilter}`;
+    }
+    if (phone) url += `&caller=${encodeURIComponent(phone)}`;
+    if (callType) url += `&call_type=${callType}`;
+    if (handledByFilter) url += `&handled_by=${encodeURIComponent(handledByFilter)}`;
+    if (from) url += `&date_from=${from}`;
+    if (to) url += `&date_to=${to}`;
+
+    try {
+        const res = await staffFetch(url);
+        const data = await res.json();
+
+        if (!data.success) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="12">Failed to load calls.</td></tr>';
+            return;
+        }
+
+        const stats = data.stats || {};
+        document.getElementById('stat-active').textContent = stats.active || 0;
+        document.getElementById('stat-answered').textContent = stats.answered || 0;
+        document.getElementById('stat-missed').textContent = stats.missed || 0;
+        document.getElementById('stat-voicemail').textContent = stats.voicemail || 0;
+        document.getElementById('stat-total').textContent = stats.total || 0;
+        document.getElementById('stat-pending').textContent = stats.pending ?? '—';
+        document.getElementById('stat-disposed').textContent = stats.disposed ?? '—';
+        document.getElementById('cnt-active').textContent = stats.active || 0;
+        document.getElementById('cnt-all').textContent = stats.total || 0;
+        document.getElementById('cnt-answered').textContent = stats.answered || 0;
+        document.getElementById('cnt-voicemail').textContent = stats.voicemail || 0;
+
+        totalRows = data.pagination?.total || 0;
+        totalPages = data.pagination?.pages || 1;
+
+        const calls = data.data || [];
+        if (calls.length === 0) {
+            const tabLabel = currentTab === 'all' ? '' : `${currentTab} `;
+            tbody.innerHTML = `<tr class="empty-row"><td colspan="12"><i class="fas fa-phone-slash" style="font-size:24px;opacity:0.3;margin-bottom:8px;display:block;"></i>No ${tabLabel}calls found.</td></tr>`;
+            document.getElementById('pagination').style.display = 'none';
+            return;
+        }
+
+        tbody.innerHTML = calls.map(c => renderRow(c)).join('');
+
+        if (totalPages > 1) {
+            document.getElementById('pagination').style.display = 'flex';
+            document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages} (${totalRows} total)`;
+            document.getElementById('btn-prev').disabled = currentPage <= 1;
+            document.getElementById('btn-next').disabled = currentPage >= totalPages;
+        } else {
+            document.getElementById('pagination').style.display = 'none';
+        }
+
+        document.getElementById('sync-info').textContent = 'Last refreshed: ' + new Date().toLocaleTimeString('en-IN');
+
+    } catch (e) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="12">Error loading calls. Retry.</td></tr>';
+    }
+}
+
+function renderRow(c) {
+    const isOutbound = c.call_type === 'outbound';
+    // Outbound unanswered calls → show "Not Answered" instead of "Missed"
+    const isMissedOutbound = c.status === 'missed' && isOutbound;
+    const statusClass = isMissedOutbound ? 'badge-not-answered' : `badge-${c.status || 'ended'}`;
+    const statusLabel = isMissedOutbound ? 'Not Answered' : (c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : '—');
+    const isActive = ['ringing', 'active'].includes(c.status);
+    const duration = c.duration_seconds ? fmtDuration(c.duration_seconds) : '—';
+    const time = fmtTime(c.started_at || c.created_at);
+    const missReasonColor = {'Caller Hung Up':'#dc2626','No Answer':'#f59e0b','Busy':'#d97706','Connected':'#059669','Voicemail':'#8b5cf6'}[c.miss_reason] || '#6b7280';
+
+    let leadHtml;
+    if (c.crm_lead_id) {
+        const lname = c.lead_name || `Lead #${c.crm_lead_id}`;
+        leadHtml = `<span class="lead-tag lead-linked" title="${lname}">
+            <i class="fas fa-user"></i>
+            <a href="/staff_leads.html?lead_id=${c.crm_lead_id}" target="_blank" style="color:#5b21b6;text-decoration:none;">${lname}</a>
+        </span>`;
+    } else {
+        leadHtml = '<span class="lead-tag lead-unlinked">Not linked</span>';
+    }
+
+    const leadOwnerHtml = c.lead_owner
+        ? `<span style="font-size:12px;font-weight:600;color:#0d9488;"><i class="fas fa-user-check" style="margin-right:3px;font-size:10px;"></i>${c.lead_owner}</span>`
+        : `<span style="color:#d1d5db;font-size:11px;">—</span>`;
+
+    const esc = s => (s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    const escUrl = s => (s||'').replace(/"/g,'&quot;');
+    const cid = esc(c.call_id);
+    const cphone = esc(c.caller_number);
+
+    const actions = [];
+    actions.push(`<a href="tel:${c.caller_number}" class="btn-action btn-dial" title="Dial"><i class="fas fa-phone"></i></a>`);
+    actions.push(`<button class="btn-action btn-detail" onclick="event.stopPropagation();openDetail('${cid}')" title="View Details"><i class="fas fa-eye"></i></button>`);
+    actions.push(`<button class="btn-action btn-history" onclick="event.stopPropagation();openCallerHistory('${cphone}')" title="Caller History"><i class="fas fa-history"></i></button>`);
+    if (['missed','voicemail'].includes(c.status) || !c.crm_lead_id) {
+        actions.push(`<button class="btn-action btn-followup" onclick="event.stopPropagation();openFollowupModal('${cid}','${cphone}')" title="Follow Up"><i class="fas fa-calendar-plus"></i></button>`);
+    }
+    if (!c.crm_lead_id) {
+        actions.push(`<button class="btn-action btn-lead" onclick="event.stopPropagation();openLeadModal('${cid}','${cphone}')" title="Convert to Lead"><i class="fas fa-user-plus"></i></button>`);
+    }
+    if (c.recording_url) {
+        actions.push(`<button class="btn-action btn-record" onclick="event.stopPropagation();togglePlayer('player-${cid}')" title="Play Recording"><i class="fas fa-play-circle"></i></button>`);
+    }
+
+    const playerRow = c.recording_url ? `
+    <tr id="player-${cid}" style="display:none;background:#f0f9ff;">
+        <td colspan="12" style="padding:6px 16px 10px;">
+            <audio id="audio-${cid}" controls style="width:100%;height:34px;"
+                src="/api/v1/operator-calls/${encodeURIComponent(cid)}/recording-proxy"
+                onerror="document.getElementById('audio-${cid}').style.display='none';document.getElementById('audio-fb-${cid}').style.display='flex';">
+            </audio>
+            <div id="audio-fb-${cid}" style="display:none;align-items:center;gap:8px;padding:2px 0;">
+                <i class="fas fa-microphone" style="color:#9ca3af;font-size:12px;"></i>
+                <span style="font-size:12px;color:#6b7280;">Recording stored on MyOperator</span>
+                <a href="${c.recording_url}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#0ea5e9;color:#fff;border-radius:5px;text-decoration:none;font-size:11px;font-weight:600;"><i class="fas fa-external-link-alt"></i> Open Recording</a>
+            </div>
+        </td>
+    </tr>` : '';
+
+    const handledByHtml = c.handled_by
+        ? `<span style="font-size:12px;font-weight:600;color:#4f46e5;"><i class="fas fa-user-tie" style="margin-right:3px;font-size:10px;"></i>${c.handled_by}</span>`
+        : `<span style="color:#9ca3af;font-size:11px;">—</span>`;
+
+    // Dispose/pending button — inbound missed calls only (auto-dialer handles outbound separately)
+    let disposeHtml = '';
+    if (c.status === 'missed' && !isOutbound && c.missed_status) {
+        const isDisposed = c.missed_status === 'disposed';
+        const nextStatus = isDisposed ? 'pending' : 'disposed';
+        const btnLabel = isDisposed ? '<i class="fas fa-check-circle"></i> Disposed' : '<i class="fas fa-clock"></i> Pending';
+        const btnClass = isDisposed ? 'disposed' : 'pending';
+        disposeHtml = `<div style="margin-top:4px;"><button class="btn-dispose ${btnClass}" onclick="event.stopPropagation();toggleDispose('${cid}','${nextStatus}',this)">${btnLabel}</button></div>`;
+    }
+
+    // ── Existing In chips ───────────────────────────────────────────────────────
+    const eiIconMap = {crm:'🏷', walkin:'🚶', service:'🔧', contacts:'📞', new:'✨'};
+    const eiBgMap   = {crm:'#ede9fe', walkin:'#fef3c7', service:'#dbeafe', contacts:'#d1fae5', new:'#f3f4f6'};
+    const eiClrMap  = {crm:'#6d28d9', walkin:'#92400e', service:'#1d4ed8', contacts:'#065f46', new:'#6b7280'};
+    const eiArr = Array.isArray(c.existing_in) ? c.existing_in : [];
+    const eiHtml = eiArr.length
+        ? eiArr.map(e => {
+            const bg  = eiBgMap[e.type]  || eiBgMap.new;
+            const clr = eiClrMap[e.type] || eiClrMap.new;
+            const icon = eiIconMap[e.type] || '';
+            const withWhom = e.with_whom ? `<span style="font-size:9px;color:#6b7280;margin-left:2px">${e.with_whom.length > 14 ? e.with_whom.slice(0,14)+'…' : e.with_whom}</span>` : '';
+            return `<div style="display:inline-flex;align-items:center;gap:2px;background:${bg};border-radius:4px;padding:1px 5px;margin-bottom:1px">
+                <span style="font-size:10px;font-weight:700;color:${clr}">${icon} ${e.label}</span>${withWhom}
+            </div>`;
+          }).join('')
+        : '<span style="color:#d1d5db;font-size:11px">—</span>';
+
+    // DC_EXPAND_CALLS_001: row click = inline expand (eye button still opens modal)
+    return `<tr onclick="toggleRowExpand('${cid}')" style="cursor:pointer;" id="row-${cid}">
+        <td class="text-start">
+            ${isActive ? '<span class="active-pulse"></span>' : ''}
+            <span class="badge-status ${statusClass}">${statusLabel}</span>
+            ${c.miss_reason ? `<div style="font-size:10px;margin-top:2px;color:${missReasonColor};font-weight:500;">${c.miss_reason}</div>` : ''}
+            ${disposeHtml}
+        </td>
+        <td class="text-start">
+            <span class="phone-tag phone-link">${c.caller_number || '—'}</span>
+            ${c.caller_resolved_name ? `<div style="font-size:10.5px;color:#059669;font-weight:600;margin-top:1px">${c.caller_resolved_name}</div>` : ''}
+        </td>
+        <td class="text-start"><span class="phone-tag">${c.called_number || '—'}</span></td>
+        <td class="text-start" style="font-size:12px;">${c.operator_name || '—'}</td>
+        <td class="text-start">${handledByHtml}</td>
+        <td><span style="font-size:11px;text-transform:uppercase;color:${c.call_type==='outbound'?'#0ea5e9':'#6b7280'}">${c.call_type || 'inbound'}</span></td>
+        <td style="white-space:nowrap;">${duration}</td>
+        <td style="white-space:nowrap;">${time}</td>
+        <td>${leadHtml}</td>
+        <td class="text-start">${leadOwnerHtml}</td>
+        <td class="text-start"><div style="display:flex;flex-direction:column;gap:1px">${eiHtml}</div></td>
+        <td onclick="event.stopPropagation();">
+            <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;">${actions.join('')}</div>
+        </td>
+    </tr>
+    <tr class="expand-row" id="exp-${cid}" style="display:none;">
+        <td colspan="12"><div id="exp-content-${cid}"></div></td>
+    </tr>
+    ${playerRow}`;
+}
+
+// ── DC_EXPAND_CALLS_001: Inline row expand ───────────────────────────────────
+
+const _expandCache = {};
+
+async function toggleRowExpand(callId) {
+    const expRow = document.getElementById('exp-' + callId);
+    if (!expRow) return;
+
+    const isOpen = expRow.style.display !== 'none';
+    // Collapse any other open expand rows first
+    document.querySelectorAll('.expand-row').forEach(r => { r.style.display = 'none'; });
+    document.querySelectorAll('[id^="row-"]').forEach(r => r.style.background = '');
+
+    if (isOpen) return; // was open — just collapsed it above
+
+    // Mark this row as expanded
+    const mainRow = document.getElementById('row-' + callId);
+    if (mainRow) mainRow.style.background = '#f5f3ff';
+    expRow.style.display = '';
+
+    const content = document.getElementById('exp-content-' + callId);
+    if (_expandCache[callId]) {
+        content.innerHTML = _renderExpandPanel(_expandCache[callId]);
+        return;
+    }
+
+    content.innerHTML = '<div style="padding:14px 18px;color:#9ca3af;"><i class="fas fa-spinner fa-spin"></i> Loading details…</div>';
+    try {
+        const res = await staffFetch(`${API_BASE}/${callId}/detail`);
+        const data = await res.json();
+        if (data.success) {
+            _expandCache[callId] = data.data;
+            content.innerHTML = _renderExpandPanel(data.data);
+        } else {
+            content.innerHTML = '<div style="padding:14px 18px;color:#dc2626;">Failed to load details.</div>';
+        }
+    } catch (e) {
+        content.innerHTML = '<div style="padding:14px 18px;color:#dc2626;">Error loading details.</div>';
+    }
+}
+
+function _renderExpandPanel(c) {
+    const esc = s => (s||'').replace(/'/g,"\\'");
+    const cid = esc(c.call_id);
+    const cphone = esc(c.caller_number);
+    const isOutbound = c.call_type === 'outbound';
+    const isMissedOutbound = c.status === 'missed' && isOutbound;
+    const statusLabel = isMissedOutbound ? 'Not Answered' : (c.status||'ended').charAt(0).toUpperCase() + (c.status||'ended').slice(1);
+    const statusClass = isMissedOutbound ? 'badge-not-answered' : `badge-${c.status||'ended'}`;
+
+    // ── Col 1: Call Info ──
+    let col1 = `<div class="expand-section">
+        <h6><i class="fas fa-phone"></i> Call Info</h6>
+        <div class="expand-kv"><span class="k">Status</span><span class="v"><span class="badge-status ${statusClass}" style="font-size:10px;">${statusLabel}</span></span></div>
+        <div class="expand-kv"><span class="k">Type</span><span class="v">${(c.call_type||'inbound').toUpperCase()}</span></div>
+        <div class="expand-kv"><span class="k">Caller</span><span class="v"><a href="tel:${c.caller_number}" style="color:#059669;">${c.caller_number||'—'}</a></span></div>
+        <div class="expand-kv"><span class="k">Called</span><span class="v">${c.called_number||'—'}</span></div>
+        <div class="expand-kv"><span class="k">Operator</span><span class="v">${c.operator_name||'—'}</span></div>
+        <div class="expand-kv"><span class="k">Duration</span><span class="v">${fmtDuration(c.duration_seconds)}</span></div>
+        <div class="expand-kv"><span class="k">Started</span><span class="v">${fmtTime(c.started_at)}</span></div>
+        <div class="expand-kv"><span class="k">Ended</span><span class="v">${fmtTime(c.ended_at)}</span></div>
+        ${c.caller_stats ? `<div class="expand-kv" style="margin-top:6px;"><span class="k">Call History</span><span class="v" style="color:#7c3aed;">${c.caller_stats.total_calls} calls from this number</span></div>` : ''}
+    </div>`;
+
+    if (c.recording_url) {
+        const proxyUrl = '/api/v1/operator-calls/' + encodeURIComponent(c.call_id) + '/recording-proxy';
+        const rid = 'rec-exp-' + c.call_id.replace(/[^a-z0-9]/gi,'_');
+        col1 += `<div style="margin-top:10px;">
+            <audio controls style="width:100%;height:32px;" src="${proxyUrl}"
+                onerror="this.style.display='none';document.getElementById('${rid}-fb').style.display='flex';">
+            </audio>
+            <div id="${rid}-fb" style="display:none;align-items:center;gap:6px;font-size:11px;color:#6b7280;padding-top:2px;">
+                <i class="fas fa-microphone"></i> <span>Recording on MyOperator</span>
+                <a href="${c.recording_url}" target="_blank" style="padding:2px 8px;background:#0ea5e9;color:#fff;border-radius:4px;text-decoration:none;font-size:10px;font-weight:600;">Open</a>
+            </div>
+        </div>`;
+    }
+
+    // ── Col 2: Lead / Notes / Follow-ups ──
+    let col2 = `<div class="expand-section"><h6><i class="fas fa-user"></i> Lead & Notes</h6>`;
+    if (c.lead) {
+        const l = c.lead;
+        col2 += `<div style="background:#f5f3ff;border-radius:6px;padding:8px 10px;margin-bottom:8px;border:1px solid #ede9fe;">
+            <div style="font-weight:700;font-size:12px;color:#5b21b6;margin-bottom:4px;">
+                <a href="/staff_leads.html?lead_id=${l.id}" target="_blank" style="color:#5b21b6;">${l.name||'Lead #'+l.id}</a>
+            </div>
+            <div class="expand-kv"><span class="k">Status</span><span class="v">${l.status||'—'}</span></div>
+            <div class="expand-kv"><span class="k">Source</span><span class="v">${l.source||'—'}</span></div>
+            <div class="expand-kv"><span class="k">Handler</span><span class="v">${l.handler_type||'—'}</span></div>
+        </div>`;
+        if (l.followups && l.followups.length > 0) {
+            col2 += `<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Follow-ups</div>`;
+            l.followups.slice(0,3).forEach(fu => {
+                const fuColor = fu.status === 'completed' ? '#059669' : fu.status === 'overdue' ? '#dc2626' : '#f59e0b';
+                col2 += `<div class="expand-fu"><span style="color:${fuColor};font-weight:700;">${fu.status}</span> — ${fu.subject||'Follow-up'} · ${fmtTime(fu.scheduled_date)}</div>`;
+            });
+        }
+        if (l.notes && l.notes.length > 0) {
+            col2 += `<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin:6px 0 4px;">Notes</div>`;
+            l.notes.slice(0,2).forEach(n => {
+                col2 += `<div class="expand-note">${n.note}<div style="font-size:10px;color:#9ca3af;margin-top:2px;">${fmtTime(n.created_at)}</div></div>`;
+            });
+        }
+    } else if (c.potential_lead) {
+        const pl = c.potential_lead;
+        col2 += `<div style="background:#fef3c7;border-radius:6px;padding:8px 10px;border:1px solid #fde68a;">
+            <div style="font-weight:700;font-size:11px;color:#b45309;margin-bottom:4px;"><i class="fas fa-exclamation-triangle"></i> Potential Match</div>
+            <div class="expand-kv"><span class="k">Name</span><span class="v">${pl.name||'—'}</span></div>
+            <div class="expand-kv"><span class="k">Phone</span><span class="v">${pl.phone||'—'}</span></div>
+            <div class="expand-kv"><span class="k">Status</span><span class="v">${pl.status||'—'}</span></div>
+            <button class="btn-action btn-lead" style="margin-top:6px;font-size:11px;padding:3px 10px;" onclick="event.stopPropagation();matchLeadManual('${cid}')"><i class="fas fa-link"></i> Link This Lead</button>
+        </div>`;
+    } else {
+        col2 += `<div style="color:#9ca3af;font-size:12px;padding:8px 0;"><i class="fas fa-unlink"></i> No CRM lead linked to this call.</div>`;
+    }
+    col2 += `</div>`;
+
+    // ── Col 3: Quick Actions ──
+    let col3 = `<div class="expand-section"><h6><i class="fas fa-bolt"></i> Quick Actions</h6><div class="expand-actions">`;
+    col3 += `<a href="tel:${c.caller_number}" class="btn-action btn-dial" style="font-size:11px;padding:4px 10px;"><i class="fas fa-phone"></i> Dial ${c.caller_number||''}</a>`;
+    col3 += `<button class="btn-action btn-history" onclick="event.stopPropagation();openCallerHistory('${cphone}')" style="font-size:11px;padding:4px 10px;"><i class="fas fa-history"></i> Call History</button>`;
+    col3 += `<button class="btn-action btn-followup" onclick="event.stopPropagation();openFollowupModal('${cid}','${cphone}')" style="font-size:11px;padding:4px 10px;"><i class="fas fa-calendar-plus"></i> Follow-up</button>`;
+    if (!c.crm_lead_id) {
+        col3 += `<button class="btn-action btn-lead" onclick="event.stopPropagation();openLeadModal('${cid}','${cphone}')" style="font-size:11px;padding:4px 10px;"><i class="fas fa-user-plus"></i> Convert to Lead</button>`;
+    }
+    if (!c.crm_lead_id && !c.lead_matched) {
+        col3 += `<button class="btn-action btn-lead" onclick="event.stopPropagation();matchLeadManual('${cid}')" style="font-size:11px;padding:4px 10px;"><i class="fas fa-link"></i> Auto-Match Lead</button>`;
+    }
+    if (c.crm_lead_id) {
+        col3 += `<button class="btn-action" onclick="event.stopPropagation();openNoteModal('${cid}')" style="font-size:11px;padding:4px 10px;border-color:#f59e0b;color:#b45309;background:#fffbeb;"><i class="fas fa-sticky-note"></i> Add Note</button>`;
+    }
+    col3 += `<button class="btn-action btn-detail" onclick="event.stopPropagation();openDetail('${cid}')" style="font-size:11px;padding:4px 10px;"><i class="fas fa-eye"></i> Full Details</button>`;
+    col3 += `</div>`;
+
+    if (c.caller_stats) {
+        const cs = c.caller_stats;
+        col3 += `<div style="margin-top:12px;background:white;border-radius:6px;padding:8px 10px;border:1px solid #e5e7eb;">
+            <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:6px;">Caller Stats</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                <div class="expand-kv"><span class="k">Total</span><span class="v">${cs.total_calls}</span></div>
+                <div class="expand-kv"><span class="k">Answered</span><span class="v" style="color:#059669;">${cs.answered}</span></div>
+                <div class="expand-kv"><span class="k">Missed</span><span class="v" style="color:#dc2626;">${cs.missed}</span></div>
+                <div class="expand-kv"><span class="k">Talk Time</span><span class="v">${fmtDuration(cs.total_duration)}</span></div>
+            </div>
+        </div>`;
+    }
+    col3 += `</div>`;
+
+    return `<div class="expand-panel">${col1}${col2}${col3}</div>`;
+}
+
+
+function togglePlayer(rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    row.style.display = row.style.display === 'none' ? '' : 'none';
+}
+
+async function toggleDispose(callId, newStatus, btn) {
+    btn.disabled = true;
+    try {
+        const res = await staffFetch(`${API_BASE}/${callId}/missed-status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ missed_status: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+            const isDisposed = newStatus === 'disposed';
+            btn.className = `btn-dispose ${isDisposed ? 'disposed' : 'pending'}`;
+            btn.innerHTML = isDisposed ? '<i class="fas fa-check-circle"></i> Disposed' : '<i class="fas fa-clock"></i> Pending';
+            btn.onclick = (e) => { e.stopPropagation(); toggleDispose(callId, isDisposed ? 'pending' : 'disposed', btn); };
+            // Update global stat counts
+            const pendingEl = document.getElementById('stat-pending');
+            const disposedEl = document.getElementById('stat-disposed');
+            const pendingVal = parseInt(pendingEl.textContent) || 0;
+            const disposedVal = parseInt(disposedEl.textContent) || 0;
+            if (isDisposed) {
+                pendingEl.textContent = Math.max(0, pendingVal - 1);
+                disposedEl.textContent = disposedVal + 1;
+            } else {
+                pendingEl.textContent = pendingVal + 1;
+                disposedEl.textContent = Math.max(0, disposedVal - 1);
+            }
+        }
+    } catch (e) {
+        console.error('toggleDispose error', e);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function fmtDuration(secs) {
+    if (!secs) return '—';
+    if (secs < 60) return `${secs}s`;
+    return `${Math.floor(secs / 60)}m ${secs % 60}s`;
+}
+
+function fmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const now = new Date();
+    const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const toISTDateStr = (dt) => new Date(dt.getTime() + istOffset).toISOString().slice(0, 10);
+    const dDate   = toISTDateStr(d);
+    const nowDate = toISTDateStr(now);
+    const yDate   = toISTDateStr(new Date(now.getTime() - 86400000));
+    if (dDate === nowDate) return `Today ${timeStr}`;
+    if (dDate === yDate)   return `Yesterday ${timeStr}`;
+    const diffDays = Math.round((now - d) / 86400000);
+    if (diffDays < 7) return `${diffDays}d ago · ${timeStr}`;
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ` · ${timeStr}`;
+}
+
+function switchTab(tab) {
+    currentTab = tab;
+    currentPage = 1;
+    fuCurrentPage = 1;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+
+    const titles = {
+        active: 'Active / Live Calls',
+        all: 'All Calls',
+        answered: 'Answered Calls',
+        voicemail: 'Voicemail Calls',
+        followups: 'Follow-ups from Calls',
+        'dept-wise': 'Department-wise Report',
+        'person-wise': 'Person-wise Report',
+    };
+    document.getElementById('table-title').textContent = titles[tab] || 'Calls';
+
+    // Show status dropdown only on All Calls tab
+    const statusWrap = document.getElementById('filter-status-wrap');
+    if (statusWrap) {
+        statusWrap.style.display = (tab === 'all') ? '' : 'none';
+        if (tab !== 'all') document.getElementById('filter-status').value = '';
+    }
+
+    // DC_QF_CALLS_001: Show quick filter strip only for call-list tabs
+    const qfStrip = document.getElementById('qf-strip-calls');
+    const callsTabs = ['active', 'all', 'answered', 'voicemail'];
+    if (qfStrip) qfStrip.style.display = callsTabs.includes(tab) ? 'flex' : 'none';
+
+    const callsSection = document.querySelector('.data-card');
+    const mainFilterCard = document.querySelector('.filter-card');
+    const fuSection = document.getElementById('followups-section');
+    const deptSection = document.getElementById('dept-wise-section');
+    const personSection = document.getElementById('person-wise-section');
+
+    // hide all special sections first
+    fuSection.style.display = 'none';
+    deptSection.style.display = 'none';
+    personSection.style.display = 'none';
+    document.getElementById('pagination').style.display = 'none';
+
+    if (tab === 'followups') {
+        callsSection.style.display = 'none';
+        mainFilterCard.style.display = 'none';
+        fuSection.style.display = '';
+        loadFollowups(true);
+    } else if (tab === 'dept-wise') {
+        callsSection.style.display = 'none';
+        mainFilterCard.style.display = 'none';
+        deptSection.style.display = '';
+        setDeptQF('today');
+    } else if (tab === 'person-wise') {
+        callsSection.style.display = 'none';
+        mainFilterCard.style.display = 'none';
+        personSection.style.display = '';
+        setPersonQF('today');
+    } else {
+        callsSection.style.display = '';
+        mainFilterCard.style.display = '';
+        loadCalls(true);
+    }
+}
+
+// ── DC_QF_CALLS_001: Quick date filter helpers ────────────────────────────
+
+function _istDateOffset(daysBack) {
+    const now = new Date();
+    // Shift to IST (UTC+5:30), subtract daysBack full days, return YYYY-MM-DD
+    const ist = new Date(now.getTime() + 5.5 * 60 * 60 * 1000 - daysBack * 86400000);
+    return ist.toISOString().slice(0, 10);
+}
+
+function _applyQFPills(stripSelector, preset) {
+    document.querySelectorAll(stripSelector + ' .qf-pill').forEach(p => p.classList.remove('active'));
+    const active = document.querySelector(stripSelector + ` [data-preset="${preset}"]`);
+    if (active) active.classList.add('active');
+}
+
+function _calcQFDates(preset) {
+    const today = _istDateOffset(0);
+    const yesterday = _istDateOffset(1);
+    // Monday-start week
+    const dow = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).getDay(); // 0=Sun
+    const daysFromMon = dow === 0 ? 6 : dow - 1;
+    switch (preset) {
+        case 'today':      return { from: today,                        to: today };
+        case 'yesterday':  return { from: yesterday,                    to: yesterday };
+        case 'this_week':  return { from: _istDateOffset(daysFromMon),  to: today };
+        case 'last_week':  return { from: _istDateOffset(daysFromMon + 7), to: _istDateOffset(daysFromMon + 1) };
+        default:           return { from: '', to: '' };
+    }
+}
+
+function setCallsQF(preset) {
+    _applyQFPills('#qf-strip-calls', preset);
+    const { from, to } = _calcQFDates(preset);
+    document.getElementById('filter-from').value = from;
+    document.getElementById('filter-to').value = to;
+    loadCalls(true);
+}
+
+function setDeptQF(preset) {
+    _applyQFPills('#dept-wise-section .qf-strip', preset);
+    const { from, to } = _calcQFDates(preset);
+    document.getElementById('dept-from').value = from;
+    document.getElementById('dept-to').value = to;
+    loadDeptReport();
+}
+
+function setPersonQF(preset) {
+    _applyQFPills('#person-wise-section .qf-strip', preset);
+    const { from, to } = _calcQFDates(preset);
+    document.getElementById('person-from').value = from;
+    document.getElementById('person-to').value = to;
+    loadPersonReport();
+}
+
+// ── Follow-ups Tab ───────────────────────────────────────────────────────────
+
+async function loadFollowups(reset = false) {
+    if (reset) fuCurrentPage = 1;
+    const tbody = document.getElementById('followups-tbody');
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="7"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+
+    try {
+        const res = await staffFetch(`${API_BASE}/followups?page=${fuCurrentPage}&per_page=25`);
+        const data = await res.json();
+
+        if (!data.success) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Failed to load follow-ups.</td></tr>';
+            return;
+        }
+
+        const rows = data.data || [];
+        document.getElementById('cnt-followups').textContent = data.pagination?.total || 0;
+
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="7"><i class="fas fa-calendar-check" style="font-size:24px;opacity:0.3;margin-bottom:8px;display:block;"></i>No follow-ups created from calls yet.</td></tr>';
+            document.getElementById('fu-pagination').style.display = 'none';
+            return;
+        }
+
+        tbody.innerHTML = rows.map(r => renderFollowupRow(r)).join('');
+
+        const total = data.pagination?.total || 0;
+        fuTotalPages = data.pagination?.pages || 1;
+        if (fuTotalPages > 1) {
+            document.getElementById('fu-pagination').style.display = 'flex';
+            document.getElementById('fu-page-info').textContent = `Page ${fuCurrentPage} of ${fuTotalPages} (${total} total)`;
+            document.getElementById('fu-btn-prev').disabled = fuCurrentPage <= 1;
+            document.getElementById('fu-btn-next').disabled = fuCurrentPage >= fuTotalPages;
+        } else {
+            document.getElementById('fu-pagination').style.display = 'none';
+        }
+    } catch (e) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="7">Error loading follow-ups. Retry.</td></tr>';
+    }
+}
+
+function renderFollowupRow(c) {
+    const fu = c.followup || {};
+    const fuStatus = fu.status || 'scheduled';
+    const fuStatusColor = fuStatus === 'completed' ? '#059669' : fuStatus === 'overdue' ? '#dc2626' : '#f59e0b';
+    const esc = s => (s||'').replace(/'/g,"\\'");
+    const cid = esc(c.call_id);
+    const cphone = esc(c.caller_number);
+
+    return `<tr>
+        <td class="text-start"><span class="phone-tag">${c.caller_number || '—'}</span></td>
+        <td class="text-start">
+            ${c.crm_lead_id
+                ? `<a href="/staff_leads.html?lead_id=${c.crm_lead_id}" target="_blank" style="color:#5b21b6;font-size:12px;">${c.lead_name || 'Lead #' + c.crm_lead_id}</a>`
+                : '<span style="color:#9ca3af;font-size:12px;">No lead linked</span>'}
+        </td>
+        <td class="text-start" style="font-size:12px;">${fu.subject || '—'}</td>
+        <td style="white-space:nowrap;font-size:12px;">${fmtTime(fu.scheduled_date)}</td>
+        <td><span style="font-size:11px;font-weight:700;text-transform:uppercase;color:${fuStatusColor};">${fuStatus}</span></td>
+        <td style="white-space:nowrap;font-size:12px;">${fmtTime(c.started_at || c.created_at)}</td>
+        <td>
+            <div style="display:flex;gap:3px;flex-wrap:wrap;justify-content:center;">
+                <button class="btn-action btn-detail" onclick="openDetail('${cid}')" title="View Call"><i class="fas fa-eye"></i></button>
+                <button class="btn-action btn-followup" onclick="openFollowupModal('${cid}','${cphone}')" title="New Follow-up"><i class="fas fa-calendar-plus"></i></button>
+            </div>
+        </td>
+    </tr>`;
+}
+
+function changeFuPage(dir) {
+    const next = fuCurrentPage + dir;
+    if (next < 1 || next > fuTotalPages) return;
+    fuCurrentPage = next;
+    loadFollowups(false);
+}
+
+function changePage(dir) {
+    const next = currentPage + dir;
+    if (next < 1 || next > totalPages) return;
+    currentPage = next;
+    loadCalls(false);
+}
+
+function resetFilters() {
+    document.getElementById('filter-phone').value = '';
+    document.getElementById('filter-type').value = '';
+    document.getElementById('filter-status').value = '';
+    document.getElementById('filter-handled-by').value = '';
+    document.getElementById('filter-from').value = '';
+    document.getElementById('filter-to').value = '';
+    _applyQFPills('#qf-strip-calls', 'overall');
+    loadCalls(true);
+}
+
+async function loadHandledByList() {
+    try {
+        const res = await staffFetch(`${API_BASE}/handled-by-list`);
+        const data = await res.json();
+        const sel = document.getElementById('filter-handled-by');
+        if (!sel || !data.success) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">All Staff</option>';
+        (data.data || []).forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            if (name === current) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    } catch (e) {
+        console.warn('[Operator Calls] Could not load handled-by list:', e);
+    }
+}
+
+// ── Call Detail ──────────────────────────────────────────────────────────────
+
+async function openDetail(callId) {
+    const content = document.getElementById('detail-content');
+    openModal('detail-modal');
+
+    // Reuse expand cache to avoid a duplicate API call
+    if (_expandCache[callId]) {
+        _renderDetailContent(content, _expandCache[callId]);
+        return;
+    }
+
+    content.innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading details...</div>';
+
+    try {
+        const res = await staffFetch(`${API_BASE}/${callId}/detail`);
+        const data = await res.json();
+        if (!data.success) {
+            content.innerHTML = '<p style="color:red;">Failed to load details.</p>';
+            return;
+        }
+        _expandCache[callId] = data.data;
+        _renderDetailContent(content, data.data);
+    } catch (e) {
+        content.innerHTML = '<p style="color:red;">Error loading details.</p>';
+    }
+}
+
+// Shared renderer used by both openDetail() and the cache-hit path
+function _renderDetailContent(content, c) {
+    const s = c.status || 'ended';
+    const detailIsOutbound = c.call_type === 'outbound';
+    const detailIsMissedOutbound = s === 'missed' && detailIsOutbound;
+    const statusClass = detailIsMissedOutbound ? 'badge-not-answered' : `badge-${s}`;
+    const statusLabel = detailIsMissedOutbound ? 'Not Answered' : (s.charAt(0).toUpperCase()+s.slice(1));
+
+    let html = `
+    <div class="detail-grid">
+        <div class="detail-item"><label>Status</label><div class="val"><span class="badge-status ${statusClass}">${statusLabel}</span></div></div>
+        <div class="detail-item"><label>Call Type</label><div class="val">${(c.call_type||'inbound').toUpperCase()}</div></div>
+        <div class="detail-item"><label>Caller Number</label><div class="val"><a href="tel:${c.caller_number}" style="color:#059669;text-decoration:none;"><i class="fas fa-phone"></i> ${c.caller_number||'—'}</a></div></div>
+        <div class="detail-item"><label>Called Number</label><div class="val">${c.called_number||'—'}</div></div>
+        <div class="detail-item"><label>Operator</label><div class="val">${c.operator_name||'—'} ${c.operator_number?'('+c.operator_number+')':''}</div></div>
+        <div class="detail-item"><label>Duration</label><div class="val">${fmtDuration(c.duration_seconds)}</div></div>
+        <div class="detail-item"><label>Started</label><div class="val">${fmtTime(c.started_at)}</div></div>
+        <div class="detail-item"><label>Ended</label><div class="val">${fmtTime(c.ended_at)}</div></div>
+    </div>`;
+
+    if (c.recording_url) {
+        const recId = 'rec-' + Math.random().toString(36).slice(2);
+        const proxyUrl = '/api/v1/operator-calls/' + encodeURIComponent(c.call_id) + '/recording-proxy';
+        html += `<div style="margin:12px 0;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;">Recording</label>
+            <div style="margin-top:6px;padding:10px 12px;background:#f0f9ff;border-radius:8px;border:1px solid #bae6fd;">
+                <audio id="${recId}" controls style="width:100%;height:36px;display:block;"
+                    src="${proxyUrl}"
+                    onerror="document.getElementById('${recId}').style.display='none';document.getElementById('${recId}-fb').style.display='flex';">
+                </audio>
+                <div id="${recId}-fb" style="display:none;align-items:center;gap:8px;padding:4px 2px;">
+                    <i class="fas fa-microphone" style="color:#9ca3af;font-size:13px;"></i>
+                    <span style="font-size:12px;color:#6b7280;">Recording stored on MyOperator</span>
+                    <a href="${c.recording_url}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#0ea5e9;color:#fff;border-radius:6px;text-decoration:none;font-size:12px;font-weight:600;"><i class="fas fa-external-link-alt"></i> Open Recording</a>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    html += `<div style="display:flex;gap:6px;margin:12px 0;flex-wrap:wrap;">
+        <a href="tel:${c.caller_number}" class="btn-action btn-dial" style="padding:6px 14px;font-size:12px;"><i class="fas fa-phone"></i> Dial Caller</a>
+        <button class="btn-action btn-history" onclick="closeModal('detail-modal');openCallerHistory('${(c.caller_number||'').replace(/'/g,"\\'")}')"><i class="fas fa-history"></i> View Call History (${c.caller_total_calls || 1})</button>`;
+
+    if (!c.crm_lead_id) {
+        html += `<button class="btn-action btn-lead" onclick="closeModal('detail-modal');openLeadModal('${(c.call_id||'').replace(/'/g,"\\'")}','${(c.caller_number||'').replace(/'/g,"\\'")}')"><i class="fas fa-user-plus"></i> Convert to Lead</button>`;
+    }
+    if (!c.crm_lead_id && !c.lead_matched) {
+        html += `<button class="btn-action btn-lead" onclick="matchLeadManual('${(c.call_id||'').replace(/'/g,"\\'")}')"><i class="fas fa-link"></i> Auto-Match Lead</button>`;
+    }
+    html += `</div>`;
+
+    if (c.lead) {
+        const l = c.lead;
+        html += `<div class="lead-panel">
+            <h6><i class="fas fa-user-check"></i> Linked CRM Lead #${l.id}</h6>
+            <div class="lead-row"><span class="k">Name</span><span class="v"><a href="/staff_leads.html?lead_id=${l.id}" target="_blank" style="color:#5b21b6;">${l.name||'—'}</a></span></div>
+            <div class="lead-row"><span class="k">Phone</span><span class="v">${l.phone||'—'}</span></div>
+            <div class="lead-row"><span class="k">Status</span><span class="v">${l.status||'—'}</span></div>
+            <div class="lead-row"><span class="k">Source</span><span class="v">${l.source||'—'}</span></div>
+            <div class="lead-row"><span class="k">Priority</span><span class="v">${l.priority||'—'}</span></div>
+            <div class="lead-row"><span class="k">Handler</span><span class="v">${l.handler_type||'—'}</span></div>`;
+        if (l.followups && l.followups.length > 0) {
+            html += `<div style="margin-top:8px;"><label style="font-size:10px;font-weight:600;color:#5b21b6;">Follow-ups</label>`;
+            l.followups.slice(0,5).forEach(fu => {
+                html += `<div class="fu-item">
+                    <div>${fu.subject||'Follow-up'} — ${fmtTime(fu.scheduled_date)}</div>
+                    <span class="fu-status" style="color:${fu.status==='completed'?'#059669':'#f59e0b'};">${fu.status}</span>
+                </div>`;
+            });
+            html += `</div>`;
+        }
+        if (l.notes && l.notes.length > 0) {
+            html += `<div style="margin-top:8px;"><label style="font-size:10px;font-weight:600;color:#5b21b6;">Notes</label>`;
+            l.notes.slice(0,5).forEach(n => {
+                html += `<div class="note-item">${n.note}<div class="note-meta">${fmtTime(n.created_at)}</div></div>`;
+            });
+            html += `</div>`;
+        }
+        html += `<div style="margin-top:8px;">
+            <button class="btn-action btn-followup" onclick="closeModal('detail-modal');openFollowupModal('${(c.call_id||'').replace(/'/g,"\\'")}','${(c.caller_number||'').replace(/'/g,"\\'")}')"><i class="fas fa-calendar-plus"></i> New Follow-Up</button>
+            <button class="btn-action" style="border-color:#f59e0b;color:#b45309;background:#fffbeb;" onclick="closeModal('detail-modal');openNoteModal('${(c.call_id||'').replace(/'/g,"\\'")}')"><i class="fas fa-sticky-note"></i> Add Note</button>
+        </div>`;
+        html += `</div>`;
+    } else if (c.potential_lead) {
+        const pl = c.potential_lead;
+        html += `<div class="lead-panel" style="background:#fef3c7;border-color:#fde68a;">
+            <h6 style="color:#b45309;"><i class="fas fa-exclamation-triangle"></i> Potential Match Found</h6>
+            <div class="lead-row"><span class="k">Name</span><span class="v">${pl.name||'—'}</span></div>
+            <div class="lead-row"><span class="k">Phone</span><span class="v">${pl.phone||'—'}</span></div>
+            <div class="lead-row"><span class="k">Status</span><span class="v">${pl.status||'—'}</span></div>
+            <button class="btn-action btn-lead" style="margin-top:6px;" onclick="matchLeadManual('${(c.call_id||'').replace(/'/g,"\\'")}')"><i class="fas fa-link"></i> Link This Lead</button>
+        </div>`;
+    }
+
+    if (c.caller_stats) {
+        const cs = c.caller_stats;
+        html += `<div style="margin-top:12px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;">Caller Statistics</label>
+            <div class="detail-grid" style="margin-top:6px;">
+                <div class="detail-item"><label>Total Calls</label><div class="val">${cs.total_calls}</div></div>
+                <div class="detail-item"><label>Answered</label><div class="val" style="color:#059669;">${cs.answered}</div></div>
+                <div class="detail-item"><label>Missed</label><div class="val" style="color:#dc2626;">${cs.missed}</div></div>
+                <div class="detail-item"><label>Total Talk Time</label><div class="val">${fmtDuration(cs.total_duration)}</div></div>
+            </div>
+        </div>`;
+    }
+
+    if (c.caller_history && c.caller_history.length > 0) {
+        html += `<div style="margin-top:12px;">
+            <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;">Previous Calls from This Number (${c.caller_history.length})</label>
+            <div class="history-list">`;
+        c.caller_history.forEach(h => {
+            const hs = h.status || 'ended';
+            html += `<div class="history-item">
+                <div><span class="badge-status badge-${hs}" style="font-size:10px;">${hs}</span> <span style="color:#6b7280;margin-left:4px;">${h.call_type||'inbound'}</span></div>
+                <div>${fmtDuration(h.duration_seconds)} · ${fmtTime(h.started_at||h.created_at)}</div>
+            </div>`;
+        });
+        html += `</div></div>`;
+    }
+
+    content.innerHTML = html;
+}
+
+// ── Caller History ──────────────────────────────────────────────────────────
+
+async function openCallerHistory(phone) {
+    if (!phone) return;
+    document.getElementById('hist-phone').textContent = phone;
+    const content = document.getElementById('history-content');
+    content.innerHTML = '<div style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading history...</div>';
+    openModal('history-modal');
+
+    try {
+        const res = await staffFetch(`${API_BASE}/caller-history/${encodeURIComponent(phone)}`);
+        const data = await res.json();
+        if (!data.success) {
+            content.innerHTML = '<p style="color:red;">Failed to load history.</p>';
+            return;
+        }
+
+        let html = '';
+
+        if (data.lead) {
+            const l = data.lead;
+            html += `<div class="lead-panel">
+                <h6><i class="fas fa-user"></i> Linked CRM Lead</h6>
+                <div class="lead-row"><span class="k">Name</span><span class="v"><a href="/staff_leads.html?lead_id=${l.id}" target="_blank" style="color:#5b21b6;">${l.name||'—'}</a></span></div>
+                <div class="lead-row"><span class="k">Phone</span><span class="v">${l.phone||'—'}</span></div>
+                <div class="lead-row"><span class="k">Status</span><span class="v">${l.status||'—'}</span></div>
+                <div class="lead-row"><span class="k">Source</span><span class="v">${l.source||'—'}</span></div>
+            </div>`;
+        }
+
+        const s = data.stats || {};
+        html += `<div class="detail-grid">
+            <div class="detail-item"><label>Total Calls</label><div class="val">${s.total||0}</div></div>
+            <div class="detail-item"><label>Answered</label><div class="val" style="color:#059669;">${s.answered||0}</div></div>
+            <div class="detail-item"><label>Missed</label><div class="val" style="color:#dc2626;">${s.missed||0}</div></div>
+            <div class="detail-item"><label>Total Talk Time</label><div class="val">${fmtDuration(s.total_duration)}</div></div>
+        </div>`;
+
+        html += `<div style="display:flex;gap:6px;margin:12px 0;">
+            <a href="tel:${phone}" class="btn-action btn-dial" style="padding:6px 14px;"><i class="fas fa-phone"></i> Dial ${phone}</a>
+        </div>`;
+
+        const calls = data.data || [];
+        if (calls.length > 0) {
+            html += `<table class="data-table" style="margin-top:12px;">
+                <thead><tr><th>Status</th><th>Type</th><th>Operator</th><th>Duration</th><th>Time</th><th>Actions</th></tr></thead><tbody>`;
+            calls.forEach(c => {
+                const hs = c.status||'ended';
+                html += `<tr>
+                    <td><span class="badge-status badge-${hs}">${hs.charAt(0).toUpperCase()+hs.slice(1)}</span></td>
+                    <td>${(c.call_type||'inbound').toUpperCase()}</td>
+                    <td>${c.operator_name||'—'}</td>
+                    <td>${fmtDuration(c.duration_seconds)}</td>
+                    <td style="white-space:nowrap;">${fmtTime(c.started_at||c.created_at)}</td>
+                    <td>
+                        <button class="btn-action btn-detail" onclick="closeModal('history-modal');openDetail('${(c.call_id||'').replace(/'/g,"\\'")}')"><i class="fas fa-eye"></i></button>
+                        ${c.recording_url?`<a href="${c.recording_url}" target="_blank" class="btn-action btn-record" title="Open Recording in MyOperator"><i class="fas fa-play-circle"></i></a>`:''}
+                    </td>
+                </tr>`;
+            });
+            html += `</tbody></table>`;
+        } else {
+            html += `<p style="color:#9ca3af;text-align:center;margin-top:20px;">No call history found for this number.</p>`;
+        }
+
+        content.innerHTML = html;
+    } catch (e) {
+        content.innerHTML = '<p style="color:red;">Error loading history.</p>';
+    }
+}
+
+// ── Manual lead match ───────────────────────────────────────────────────────
+
+async function matchLeadManual(callId) {
+    try {
+        const res = await staffFetch(`${API_BASE}/${callId}/match-lead`, { method: 'POST', body: '{}' });
+        const data = await res.json();
+        if (data.success) {
+            alert(`Linked to lead: ${data.lead_name} (ID: ${data.lead_id})`);
+            closeModal('detail-modal');
+            loadCalls(false);
+        } else {
+            alert(data.detail || 'No matching lead found.');
+        }
+    } catch (e) {
+        alert('Request failed.');
+    }
+}
+
+// ── Sync & Bulk Match ───────────────────────────────────────────────────────
+
+async function loadSyncStatus() {
+    try {
+        const res = await staffFetch(`${API_BASE}/sync-status`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success && data.sync_status) {
+            const s = data.sync_status;
+            const banner = document.getElementById('sync-info');
+            const badge = document.getElementById('table-sync-badge');
+
+            if (!s.token_configured) {
+                const msg = '⚠️ API token not set — sync disabled';
+                if (banner) { banner.textContent = msg; banner.style.background = 'rgba(255,179,71,0.25)'; }
+                if (badge) badge.textContent = msg;
+                return;
+            }
+            if (!s.ran_at) {
+                const msg = '🕐 Auto-sync every 30 min — not yet run this session';
+                if (banner) { banner.textContent = msg; banner.style.background = ''; }
+                if (badge) badge.textContent = 'Sync: pending first run';
+                return;
+            }
+            const ts = new Date(s.ran_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+            if (s.error) {
+                const msg = `⚠️ Last sync: ${ts} — Error: ${s.error.substring(0, 60)}`;
+                if (banner) { banner.textContent = msg; banner.style.background = 'rgba(255,179,71,0.25)'; }
+                if (badge) badge.textContent = `⚠️ Sync error at ${ts}`;
+            } else {
+                const summary = s.synced > 0
+                    ? `${s.synced} calls (${s.created} new, ${s.updated} updated)`
+                    : 'no new calls';
+                const msg = `✅ Last sync: ${ts} — ${summary}`;
+                if (banner) { banner.textContent = msg; banner.style.background = ''; }
+                if (badge) badge.textContent = `Synced ${ts}`;
+            }
+        }
+    } catch (e) {
+        // non-critical
+    }
+}
+
+// ── Department-wise Report ────────────────────────────────────────────────────
+
+function fmtDurationReport(secs) {
+    if (!secs) return '—';
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+}
+
+function renderReportTotalsBar(totals, prefix) {
+    const pct = t => t.total > 0 ? Math.round((t.answered / t.total) * 100) : 0;
+    const answerRate = pct(totals);
+    document.getElementById(`${prefix}-stat-total`).textContent = totals.total || 0;
+    document.getElementById(`${prefix}-stat-answered`).textContent = totals.answered || 0;
+    document.getElementById(`${prefix}-stat-missed`).textContent = totals.missed || 0;
+    document.getElementById(`${prefix}-stat-voicemail`).textContent = totals.voicemail || 0;
+    document.getElementById(`${prefix}-stat-avg`).textContent = fmtDurationReport(totals.avg_duration);
+    document.getElementById(`${prefix}-stat-cards`).style.display = '';
+}
+
+// DC_REPORT_EXPAND_001: report row click → inline drilldown of calls
+const _reportExpandCache = {};
+let _reportExpandOpen = null; // tracks currently-open report expand id
+
+function renderReportRow(r, labelKey, labelTitle) {
+    const total = r.total || 0;
+    const answered = r.answered || 0;
+    const answerRate = total > 0 ? Math.round((answered / total) * 100) : 0;
+    const rateColor = answerRate >= 70 ? '#059669' : answerRate >= 40 ? '#f59e0b' : '#dc2626';
+    const name = r[labelKey] || '—';
+
+    // Derive filter param: person → handled_by, department → operator
+    const filterKey = labelKey === 'person' ? 'handled_by' : 'operator';
+
+    // (Unhandled) / (Unknown Department) rows use __none__ to fetch null/empty records
+    const rowId = 'rep-row-' + btoa(encodeURIComponent(name)).replace(/[^a-zA-Z0-9]/g,'').slice(0, 20);
+    const expId = 'rep-exp-' + rowId;
+    const fromEl = labelKey === 'person' ? 'person-from' : 'dept-from';
+    const toEl   = labelKey === 'person' ? 'person-to'   : 'dept-to';
+
+    const clickAttr = `onclick="toggleReportExpand('${rowId}','${expId}','${filterKey}','${name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}','${fromEl}','${toEl}')" style="cursor:pointer;"`;
+
+    const chevronCell = `<td class="text-start" style="font-weight:600;font-size:13px;">
+               <i class="fas fa-chevron-right" id="chev-${rowId}" style="font-size:9px;color:#9ca3af;margin-right:5px;transition:transform 0.2s;"></i>${name}
+           </td>`;
+
+    return `<tr id="${rowId}" ${clickAttr}>
+        ${chevronCell}
+        <td style="font-weight:700;font-size:14px;">${total}</td>
+        <td style="color:#059669;font-weight:600;">${answered}</td>
+        <td style="color:#dc2626;font-weight:600;">${r.missed || 0}</td>
+        <td style="color:#8b5cf6;font-weight:600;">${r.voicemail || 0}</td>
+        <td><span style="font-weight:700;color:${rateColor};">${answerRate}%</span></td>
+        <td style="white-space:nowrap;">${fmtDurationReport(r.total_duration)}</td>
+        <td style="white-space:nowrap;">${fmtDurationReport(r.avg_duration)}</td>
+    </tr>
+    <tr id="${expId}" class="expand-row" style="display:none;">
+        <td colspan="8"><div id="${expId}-content"></div></td>
+    </tr>`;
+}
+
+async function toggleReportExpand(rowId, expId, filterKey, name, fromEl, toEl) {
+    const expRow = document.getElementById(expId);
+    const chev   = document.getElementById('chev-' + rowId);
+    if (!expRow) return;
+
+    const isOpen = expRow.style.display !== 'none';
+
+    // Collapse previously open report expand (if different)
+    if (_reportExpandOpen && _reportExpandOpen !== expId) {
+        const prev = document.getElementById(_reportExpandOpen);
+        if (prev) prev.style.display = 'none';
+        const prevChev = document.getElementById('chev-' + _reportExpandOpen.replace('rep-exp-', ''));
+        if (prevChev) prevChev.style.transform = '';
+        document.querySelectorAll('[id^="rep-row-"]').forEach(r => r.style.background = '');
+    }
+
+    if (isOpen) {
+        expRow.style.display = 'none';
+        if (chev) chev.style.transform = '';
+        document.getElementById(rowId).style.background = '';
+        _reportExpandOpen = null;
+        return;
+    }
+
+    // Open
+    expRow.style.display = '';
+    _reportExpandOpen = expId;
+    if (chev) chev.style.transform = 'rotate(90deg)';
+    document.getElementById(rowId).style.background = '#f5f3ff';
+
+    const content = document.getElementById(expId + '-content');
+
+    // (Unhandled)/(Unknown Department) → pass __none__ to backend to fetch null/empty records
+    const filterValue = name.startsWith('(') ? '__none__' : name;
+    const from = document.getElementById(fromEl)?.value || '';
+    const to   = document.getElementById(toEl)?.value   || '';
+
+    // Cache key includes the actual date values so stale data is never shown
+    const cacheKey = filterKey + ':' + filterValue + ':' + (from || 'all') + ':' + (to || 'all');
+    if (_reportExpandCache[cacheKey]) {
+        content.innerHTML = _renderReportExpandContent(_reportExpandCache[cacheKey], name);
+        return;
+    }
+
+    content.innerHTML = '<div style="padding:12px 16px;color:#9ca3af;"><i class="fas fa-spinner fa-spin"></i> Loading calls…</div>';
+
+    const params = [`${filterKey}=${encodeURIComponent(filterValue)}`, 'per_page=50', 'page=1'];
+    if (from) params.push(`date_from=${from}`);
+    if (to)   params.push(`date_to=${to}`);
+
+    try {
+        const res  = await staffFetch(`${API_BASE}/?${params.join('&')}`);
+        const data = await res.json();
+        if (!data.success) {
+            content.innerHTML = '<div style="padding:12px 16px;color:#dc2626;">Failed to load calls.</div>';
+            return;
+        }
+        _reportExpandCache[cacheKey] = data.data || [];
+        content.innerHTML = _renderReportExpandContent(_reportExpandCache[cacheKey], name);
+    } catch (e) {
+        content.innerHTML = '<div style="padding:12px 16px;color:#dc2626;">Error loading calls.</div>';
+    }
+}
+
+function _renderReportExpandContent(calls, name) {
+    if (!calls.length) {
+        return `<div style="padding:12px 16px;color:#9ca3af;font-size:12px;"><i class="fas fa-phone-slash"></i> No calls found for "${name}" in this date range.</div>`;
+    }
+    const rows = calls.map(c => {
+        const isOutbound = c.call_type === 'outbound';
+        const isMissedOB = c.status === 'missed' && isOutbound;
+        const statusClass = isMissedOB ? 'badge-not-answered' : `badge-${c.status||'ended'}`;
+        const statusLabel = isMissedOB ? 'Not Answered' : (c.status||'ended').charAt(0).toUpperCase() + (c.status||'ended').slice(1);
+        const esc = s => (s||'').replace(/'/g,"\\'");
+        const cid = esc(c.call_id);
+        const leadCell = c.crm_lead_id
+            ? `<a href="/staff_leads.html?lead_id=${c.crm_lead_id}" target="_blank" style="color:#5b21b6;font-size:11px;">${c.lead_name||'Lead #'+c.crm_lead_id}</a>`
+            : `<span style="color:#d1d5db;font-size:11px;">—</span>`;
+        return `<tr onclick="openDetail('${cid}')" style="cursor:pointer;font-size:12px;">
+            <td><span class="badge-status ${statusClass}" style="font-size:10px;">${statusLabel}</span></td>
+            <td><span class="phone-tag phone-link" style="font-size:11px;">${c.caller_number||'—'}</span>
+                ${c.caller_resolved_name ? `<div style="font-size:10px;color:#059669;">${c.caller_resolved_name}</div>` : ''}
+            </td>
+            <td style="color:${isOutbound?'#0ea5e9':'#6b7280'};font-size:10px;text-transform:uppercase;">${c.call_type||'inbound'}</td>
+            <td style="white-space:nowrap;">${fmtDuration(c.duration_seconds)}</td>
+            <td style="white-space:nowrap;font-size:11px;">${fmtTime(c.started_at||c.created_at)}</td>
+            <td>${leadCell}</td>
+            <td onclick="event.stopPropagation();">
+                <button class="btn-action btn-detail" onclick="openDetail('${cid}')" title="Full Details" style="padding:2px 6px;font-size:10px;"><i class="fas fa-eye"></i></button>
+                <button class="btn-action btn-followup" onclick="openFollowupModal('${cid}','${esc(c.caller_number)}')" title="Follow Up" style="padding:2px 6px;font-size:10px;"><i class="fas fa-calendar-plus"></i></button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    const total = calls.length;
+    return `<div style="padding:8px 12px 12px;">
+        <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:6px;">
+            ${total} call${total===1?'':'s'} — click any row to view full details
+        </div>
+        <table class="data-table" style="font-size:12px;">
+            <thead><tr>
+                <th>Status</th><th class="text-start">Caller</th><th>Type</th>
+                <th>Duration</th><th>Time</th><th class="text-start">Lead</th><th>Actions</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
+}
+
+async function loadDeptReport() {
+    // Clear expand state so rows don't appear stuck open after a reload
+    _reportExpandOpen = null;
+    Object.keys(_reportExpandCache).filter(k => k.startsWith('operator:')).forEach(k => delete _reportExpandCache[k]);
+    const tbody = document.getElementById('dept-tbody');
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="8"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    const from = document.getElementById('dept-from').value;
+    const to = document.getElementById('dept-to').value;
+    let url = `${API_BASE}/reports/department-wise`;
+    const params = [];
+    if (from) params.push(`date_from=${from}`);
+    if (to) params.push(`date_to=${to}`);
+    if (params.length) url += '?' + params.join('&');
+
+    try {
+        const res = await staffFetch(url);
+        const data = await res.json();
+        if (!data.success) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Failed to load report.</td></tr>';
+            return;
+        }
+        const rows = data.data || [];
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No data for selected date range.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(r => renderReportRow(r, 'department', 'Department')).join('');
+        renderReportTotalsBar(data.totals || {}, 'dept');
+    } catch (e) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Error loading report. Retry.</td></tr>';
+    }
+}
+
+function resetDeptFilters() {
+    document.getElementById('dept-from').value = '';
+    document.getElementById('dept-to').value = '';
+    _applyQFPills('#dept-wise-section .qf-strip', 'overall');
+    loadDeptReport();
+}
+
+// ── Person-wise Report ────────────────────────────────────────────────────────
+
+async function loadPersonReport() {
+    // Clear expand state so rows don't appear stuck open after a reload
+    _reportExpandOpen = null;
+    Object.keys(_reportExpandCache).filter(k => k.startsWith('handled_by:')).forEach(k => delete _reportExpandCache[k]);
+    const tbody = document.getElementById('person-tbody');
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="8"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    const from = document.getElementById('person-from').value;
+    const to = document.getElementById('person-to').value;
+    let url = `${API_BASE}/reports/person-wise`;
+    const params = [];
+    if (from) params.push(`date_from=${from}`);
+    if (to) params.push(`date_to=${to}`);
+    if (params.length) url += '?' + params.join('&');
+
+    try {
+        const res = await staffFetch(url);
+        const data = await res.json();
+        if (!data.success) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Failed to load report.</td></tr>';
+            return;
+        }
+        const rows = data.data || [];
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No data for selected date range.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = rows.map(r => renderReportRow(r, 'person', 'Person')).join('');
+        renderReportTotalsBar(data.totals || {}, 'person');
+    } catch (e) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="8">Error loading report. Retry.</td></tr>';
+    }
+}
+
+function resetPersonFilters() {
+    document.getElementById('person-from').value = '';
+    document.getElementById('person-to').value = '';
+    _applyQFPills('#person-wise-section .qf-strip', 'overall');
+    loadPersonReport();
+}
+
+async function triggerManualSync() {
+    const daysInput = prompt('Sync call logs from MyOperator.\n\nEnter number of days to look back (1–30), or 0 for last 2 hours only:', '7');
+    if (daysInput === null) return;
+    const daysBack = parseInt(daysInput) || 0;
+    const label = daysBack > 0 ? `last ${daysBack} days` : 'last 2 hours';
+    if (!confirm(`Sync call logs from MyOperator (${label})?`)) return;
+    const el = document.getElementById('sync-info');
+    if (el) el.textContent = 'Syncing…';
+    try {
+        const res = await staffFetch(`${API_BASE}/sync?days_back=${daysBack}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            const r = data.result || {};
+            if (r.error) {
+                alert('Sync error: ' + r.error);
+            } else {
+                alert(`Sync complete (${label}): ${r.synced || 0} calls processed — ${r.created||0} new, ${r.updated||0} updated`);
+            }
+            await loadSyncStatus();
+            loadCalls(true);
+        } else {
+            alert('Sync failed: ' + (data.detail || 'Unknown error'));
+            await loadSyncStatus();
+        }
+    } catch (e) {
+        alert('Sync request failed.');
+    }
+}
+
+async function triggerBulkMatch() {
+    if (!confirm('Match all unlinked calls to CRM leads by phone number?')) return;
+    try {
+        const res = await staffFetch(`${API_BASE}/bulk-match`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            alert(`${data.matched} calls matched to leads (${data.still_unmatched} still unmatched)`);
+            loadCalls(true);
+        } else {
+            alert('Bulk match failed.');
+        }
+    } catch (e) {
+        alert('Request failed.');
+    }
+}
+
+// ── Follow-up modal ─────────────────────────────────────────────────────────
+
+function openFollowupModal(callId, phone) {
+    document.getElementById('fu-call-id').value = callId;
+    document.getElementById('fu-phone').value = phone;
+    document.getElementById('fu-subject').value = `Follow up on missed call from ${phone}`;
+    const now = new Date();
+    now.setHours(now.getHours() + 2);
+    document.getElementById('fu-date').value = now.toISOString().slice(0, 16);
+    document.getElementById('fu-notes').value = '';
+    openModal('followup-modal');
+}
+
+async function submitFollowup() {
+    const callId = document.getElementById('fu-call-id').value;
+    const body = {
+        subject: document.getElementById('fu-subject').value,
+        scheduled_date: document.getElementById('fu-date').value,
+        notes: document.getElementById('fu-notes').value,
+    };
+    try {
+        const res = await staffFetch(`${API_BASE}/${callId}/create-followup`, { method: 'POST', body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.success) {
+            closeModal('followup-modal');
+            alert('Follow-up created!');
+            loadCalls(false);
+        } else {
+            alert('Error: ' + (data.detail || 'Unknown'));
+        }
+    } catch (e) {
+        alert('Request failed.');
+    }
+}
+
+// ── Lead modal ──────────────────────────────────────────────────────────────
+
+function openLeadModal(callId, phone) {
+    document.getElementById('lead-call-id').value = callId;
+    document.getElementById('lead-phone').value = phone;
+    document.getElementById('lead-name').value = '';
+    document.getElementById('lead-handler').value = '';
+    openModal('lead-modal');
+}
+
+async function submitLead() {
+    const callId = document.getElementById('lead-call-id').value;
+    const handlerId = document.getElementById('lead-handler').value;
+    const body = {
+        name: document.getElementById('lead-name').value || undefined,
+        handler_id: handlerId ? parseInt(handlerId) : undefined,
+    };
+    try {
+        const res = await staffFetch(`${API_BASE}/${callId}/convert-lead`, { method: 'POST', body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.success) {
+            closeModal('lead-modal');
+            alert(`Lead created! ID: ${data.lead_id}`);
+            loadCalls(false);
+        } else {
+            alert('Error: ' + (data.detail || 'Unknown'));
+        }
+    } catch (e) {
+        alert('Request failed.');
+    }
+}
+
+// ── Note modal ──────────────────────────────────────────────────────────────
+
+function openNoteModal(callId) {
+    document.getElementById('note-call-id').value = callId;
+    document.getElementById('note-text').value = '';
+    openModal('note-modal');
+}
+
+async function submitNote() {
+    const callId = document.getElementById('note-call-id').value;
+    const note = document.getElementById('note-text').value.trim();
+    if (!note) { alert('Note text is required.'); return; }
+    try {
+        const res = await staffFetch(`${API_BASE}/${callId}/add-note`, { method: 'POST', body: JSON.stringify({ note }) });
+        const data = await res.json();
+        if (data.success) {
+            closeModal('note-modal');
+            alert('Note added!');
+        } else {
+            alert('Error: ' + (data.detail || 'Unknown'));
+        }
+    } catch (e) {
+        alert('Request failed.');
+    }
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+});
+
+loadStaffList();
+loadHandledByList();
+loadCalls(true);
+loadSyncStatus();
+
+autoRefreshTimer = setInterval(() => {
+    if (currentTab === 'active') loadCalls(false);
+}, 15000);
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', (e) => {
+        if (e.target === m) m.classList.remove('open');
+    });
+});
+</script>
+</div>
+</div>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/staff_header.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        if (typeof StaffHeader !== 'undefined') {
+            StaffHeader.inject('Operator Call Dashboard', 'fas fa-phone-volume');
+            StaffHeader.init();
+        }
+        if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+    });
+</script>
+</body>
+</html>

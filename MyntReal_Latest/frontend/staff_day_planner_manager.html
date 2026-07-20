@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - Team Day Plans</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; }
+
+        .date-selector-bar { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .date-selector-bar input[type="date"] { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .date-selector-bar select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 180px; }
+
+        .plan-status-badge { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+        .plan-status-badge.active { background: #d1fae5; color: #065f46; }
+        .plan-status-badge.finalized { background: #dbeafe; color: #1e40af; }
+        .plan-status-badge.no-plan { background: #f3f4f6; color: #6b7280; }
+
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        @media (max-width: 1200px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 768px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 16px; transition: transform 0.2s, box-shadow 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .stat-icon.members { background: #e0e7ff; color: #4338ca; }
+        .stat-icon.total { background: #ede9fe; color: #7c3aed; }
+        .stat-icon.completed { background: #d1fae5; color: #059669; }
+        .stat-icon.rate { background: #fef3c7; color: #d97706; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-label { font-size: 14px; color: #6b7280; }
+
+        .team-plans-grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 0; }
+
+        .member-info { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .member-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
+        .member-name { font-weight: 600; color: #1f2937; font-size: 16px; }
+        .member-code { font-size: 13px; color: #6b7280; }
+
+        .card-summary { padding: 12px 20px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 14px; color: #6b7280; border-radius: 0 0 12px 12px; }
+
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-top: none; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .badge-in_progress { background: #dbeafe; color: #1e40af; }
+        .badge-completed { background: #dcfce7; color: #166534; }
+        .badge-cancelled { background: #f3f4f6; color: #6b7280; }
+        .badge-on_hold { background: #fce7f3; color: #9d174d; }
+        .badge-under_review { background: #e0e7ff; color: #4338ca; }
+
+        .badge-low { background: #d1fae5; color: #065f46; }
+        .badge-medium { background: #fef3c7; color: #92400e; }
+        .badge-high { background: #fee2e2; color: #991b1b; }
+        .badge-urgent { background: #dc2626; color: white; }
+        .badge-critical { background: #dc2626; color: white; }
+
+        .badge-task { background: #e0e7ff; color: #4338ca; }
+        .badge-phase { background: #fce7f3; color: #9d174d; }
+
+        .progress-bar-container { width: 80px; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #4f46e5, #8b5cf6); transition: width 0.3s; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+        .no-plan-card { opacity: 0.7; }
+        .no-plan-card .card-header { background: #f9fafb; }
+
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast-msg { padding: 12px 20px; border-radius: 8px; color: white; font-size: 14px; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease; }
+        .toast-msg.success { background: #059669; }
+        .toast-msg.error { background: #dc2626; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .task-title { font-weight: 600; color: #1f2937; }
+
+        .loading-overlay { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #6b7280; }
+        .loading-overlay i { font-size: 32px; margin-bottom: 12px; color: #6366f1; }
+
+        @media (max-width: 768px) {
+            .content-area { padding: 12px; }
+            .date-selector-bar { padding: 12px 14px; gap: 8px; flex-direction: column; align-items: stretch; }
+            .date-selector-bar select { min-width: 100%; }
+            .stat-card { padding: 12px; gap: 10px; }
+            .stat-icon { width: 36px; height: 36px; font-size: 16px; }
+            .stat-value { font-size: 20px; }
+            .stat-label { font-size: 12px; }
+            .card-header { padding: 12px 14px; gap: 8px; }
+            .card-header h5 { font-size: 14px; }
+            .member-name { font-size: 14px; }
+            .member-avatar { width: 32px; height: 32px; font-size: 13px; }
+            .table th { font-size: 10px; padding: 8px 6px; white-space: nowrap; }
+            .table td { padding: 10px 6px; font-size: 12px; }
+            .badge { font-size: 10px; padding: 2px 6px; }
+            .card-summary { padding: 10px 14px; font-size: 12px; }
+            .empty-state { padding: 30px 12px; }
+            .empty-state i { font-size: 32px; }
+            .progress-bar-container { width: 50px; }
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="date-selector-bar">
+            <i class="fas fa-calendar-day" style="color: #6366f1; font-size: 18px;"></i>
+            <input type="date" id="planDateInput" onchange="changePlanDate(this.value)">
+            <button class="btn btn-outline-primary btn-sm" onclick="goToToday()">
+                <i class="fas fa-crosshairs me-1"></i>Today
+            </button>
+            <select id="memberFilter" onchange="filterByMember(this.value)">
+                <option value="">All Team Members</option>
+            </select>
+            <button class="btn btn-outline-secondary btn-sm" onclick="showAllMembers()">
+                <i class="fas fa-users me-1"></i>Show All
+            </button>
+            <button class="btn btn-outline-secondary btn-sm" onclick="loadTeamPlans()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon members"><i class="fas fa-users"></i></div>
+                <div>
+                    <div class="stat-value" id="membersWithPlansCount">0</div>
+                    <div class="stat-label">Members with Plans</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon total"><i class="fas fa-list-check"></i></div>
+                <div>
+                    <div class="stat-value" id="totalTasksCount">0</div>
+                    <div class="stat-label">Total Tasks Planned</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon completed"><i class="fas fa-check-circle"></i></div>
+                <div>
+                    <div class="stat-value" id="totalCompletedCount">0</div>
+                    <div class="stat-label">Total Completed</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon rate"><i class="fas fa-chart-pie"></i></div>
+                <div>
+                    <div class="stat-value" id="avgCompletionRate">0%</div>
+                    <div class="stat-label">Avg Completion Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="team-plans-grid" id="teamPlansContainer">
+            <div class="loading-overlay">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading team plans...</p>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let teamPlans = [];
+        let teamMembers = [];
+        let selectedDate = null;
+        let selectedMemberId = '';
+
+        function getISTToday() {
+            const now = new Date();
+            const istOffset = 5.5 * 60 * 60 * 1000;
+            const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60000);
+            return ist.toISOString().split('T')[0];
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') {
+                StaffHeader.inject('Team Day Plans', 'fas fa-users-cog');
+                StaffHeader.init();
+            }
+            selectedDate = getISTToday();
+            document.getElementById('planDateInput').value = selectedDate;
+            await loadTeamMembers();
+            await loadTeamPlans();
+        });
+
+        function showToast(message, type) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast-msg ' + (type || 'success');
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 3000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.appendChild(document.createTextNode(str));
+            return div.innerHTML;
+        }
+
+        function formatStatus(status) {
+            if (!status) return '-';
+            return status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        }
+
+        function getStatusBadgeClass(status) {
+            if (!status) return 'badge-pending';
+            const s = status.toLowerCase().replace(/ /g, '_');
+            const map = { pending: 'badge-pending', in_progress: 'badge-in_progress', completed: 'badge-completed', cancelled: 'badge-cancelled', on_hold: 'badge-on_hold', under_review: 'badge-under_review' };
+            return map[s] || 'badge-pending';
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(' ').map(w => w.charAt(0)).join('').substring(0, 2).toUpperCase();
+        }
+
+        function goToToday() {
+            selectedDate = getISTToday();
+            document.getElementById('planDateInput').value = selectedDate;
+            loadTeamPlans();
+        }
+
+        async function changePlanDate(dateStr) {
+            selectedDate = dateStr;
+            await loadTeamPlans();
+        }
+
+        function showAllMembers() {
+            selectedMemberId = '';
+            document.getElementById('memberFilter').value = '';
+            loadTeamPlans();
+        }
+
+        function filterByMember(employeeId) {
+            selectedMemberId = employeeId;
+            loadTeamPlans();
+        }
+
+        async function loadTeamMembers() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/day-plans/team/members`);
+                if (response.ok) {
+                    const data = await response.json();
+                    teamMembers = data.members || data || [];
+                    const dropdown = document.getElementById('memberFilter');
+                    dropdown.innerHTML = '<option value="">All Team Members</option>';
+                    teamMembers.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.employee_id || m.id;
+                        opt.textContent = `${m.name || m.full_name || ''} (${m.emp_code || ''})`;
+                        dropdown.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to load team members:', err);
+            }
+        }
+
+        async function loadTeamPlans() {
+            const container = document.getElementById('teamPlansContainer');
+            container.innerHTML = '<div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i><p>Loading team plans...</p></div>';
+
+            try {
+                let url = `${API_BASE}/staff/day-plans/team?plan_date=${selectedDate}`;
+                if (selectedMemberId) {
+                    url += `&employee_id=${selectedMemberId}`;
+                }
+
+                const response = await staffFetch(url);
+                if (!response.ok) {
+                    throw new Error('Failed to load team plans');
+                }
+
+                const data = await response.json();
+                teamPlans = data.plans || data || [];
+
+                updateStats();
+                renderTeamPlans();
+            } catch (err) {
+                console.error('Failed to load team plans:', err);
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h5>Failed to Load</h5><p>Could not load team plans. Please try again.</p></div>';
+                showToast('Failed to load team plans', 'error');
+            }
+        }
+
+        function updateStats() {
+            let membersWithPlans = 0;
+            let totalTasks = 0;
+            let totalCompleted = 0;
+            let completionRates = [];
+
+            const plansArray = Array.isArray(teamPlans) ? teamPlans : [];
+
+            plansArray.forEach(plan => {
+                const items = plan.items || plan.plan_items || [];
+                if (items.length > 0) {
+                    membersWithPlans++;
+                    totalTasks += items.length;
+                    const completed = items.filter(i => (i.eod_status || i.status || '').toLowerCase() === 'completed').length;
+                    totalCompleted += completed;
+                    if (items.length > 0) {
+                        completionRates.push(Math.round((completed / items.length) * 100));
+                    }
+                }
+            });
+
+            const avgRate = completionRates.length > 0 ? Math.round(completionRates.reduce((a, b) => a + b, 0) / completionRates.length) : 0;
+
+            document.getElementById('membersWithPlansCount').textContent = membersWithPlans;
+            document.getElementById('totalTasksCount').textContent = totalTasks;
+            document.getElementById('totalCompletedCount').textContent = totalCompleted;
+            document.getElementById('avgCompletionRate').textContent = avgRate + '%';
+        }
+
+        function renderTeamPlans() {
+            const container = document.getElementById('teamPlansContainer');
+            const plansArray = Array.isArray(teamPlans) ? teamPlans : [];
+
+            if (plansArray.length === 0 && teamMembers.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-users-slash"></i><h5>No Team Members</h5><p>No team members found. You may not have team management access.</p></div>';
+                return;
+            }
+
+            if (plansArray.length === 0 && !selectedMemberId) {
+                let html = '';
+                teamMembers.forEach(member => {
+                    html += renderNoPlanCard(member);
+                });
+                if (html === '') {
+                    html = '<div class="empty-state"><i class="fas fa-calendar-xmark"></i><h5>No Plans Found</h5><p>No day plans found for this date.</p></div>';
+                }
+                container.innerHTML = html;
+                return;
+            }
+
+            let html = '';
+            const planMemberIds = new Set();
+
+            plansArray.forEach(plan => {
+                planMemberIds.add(String(plan.employee_id || plan.id));
+                html += renderTeamPlanCard(plan);
+            });
+
+            if (!selectedMemberId) {
+                teamMembers.forEach(member => {
+                    const memberId = String(member.employee_id || member.id);
+                    if (!planMemberIds.has(memberId)) {
+                        html += renderNoPlanCard(member);
+                    }
+                });
+            }
+
+            container.innerHTML = html || '<div class="empty-state"><i class="fas fa-calendar-xmark"></i><h5>No Plans Found</h5><p>No day plans found for this date.</p></div>';
+        }
+
+        function renderTeamPlanCard(plan) {
+            const empName = escapeHtml(plan.employee_name || plan.name || plan.full_name || 'Unknown');
+            const empCode = escapeHtml(plan.emp_code || '');
+            const planStatus = plan.status || plan.plan_status || 'active';
+            const items = plan.items || plan.plan_items || [];
+
+            let statusBadgeClass = 'no-plan';
+            if (planStatus === 'finalized') statusBadgeClass = 'finalized';
+            else if (items.length > 0) statusBadgeClass = 'active';
+
+            const completedCount = items.filter(i => (i.eod_status || i.status || '').toLowerCase() === 'completed').length;
+
+            let itemsHtml = '';
+            if (items.length === 0) {
+                itemsHtml = `<tr><td colspan="6" class="text-center py-4" style="color: #6b7280;"><i class="fas fa-inbox me-2"></i>No items in this plan</td></tr>`;
+            } else {
+                items.forEach((item, idx) => {
+                    const title = escapeHtml(item.task_title || item.title || '');
+                    const type = item.item_type || item.type || 'task';
+                    const taskStatus = item.task_status || item.status || 'pending';
+                    const eodStatus = item.eod_status || '-';
+                    const progress = item.eod_progress || item.progress || 0;
+
+                    itemsHtml += `<tr>
+                        <td>${item.priority_order || idx + 1}</td>
+                        <td class="task-title">${title}</td>
+                        <td><span class="badge badge-${type}">${formatStatus(type)}</span></td>
+                        <td><span class="badge ${getStatusBadgeClass(taskStatus)}">${formatStatus(taskStatus)}</span></td>
+                        <td>${eodStatus !== '-' ? '<span class="badge ' + getStatusBadgeClass(eodStatus) + '">' + formatStatus(eodStatus) + '</span>' : '<span style="color:#9ca3af;">-</span>'}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${progress}%"></div></div>
+                                <span style="font-size:12px;color:#6b7280;">${progress}%</span>
+                            </div>
+                        </td>
+                    </tr>`;
+                });
+            }
+
+            return `<div class="card">
+                <div class="card-header">
+                    <div class="member-info">
+                        <div class="member-avatar">${getInitials(empName)}</div>
+                        <div>
+                            <div class="member-name">${empName}</div>
+                            <div class="member-code">${empCode}</div>
+                        </div>
+                    </div>
+                    <span class="plan-status-badge ${statusBadgeClass}">${formatStatus(planStatus)}</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Task</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>EOD Status</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>${itemsHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-summary">
+                    <span><i class="fas fa-tasks me-1"></i>${completedCount} completed / ${items.length} total</span>
+                    <span>${items.length > 0 ? Math.round((completedCount / items.length) * 100) : 0}% done</span>
+                </div>
+            </div>`;
+        }
+
+        function renderNoPlanCard(member) {
+            const empName = escapeHtml(member.name || member.full_name || 'Unknown');
+            const empCode = escapeHtml(member.emp_code || '');
+
+            return `<div class="card no-plan-card">
+                <div class="card-header">
+                    <div class="member-info">
+                        <div class="member-avatar" style="background: linear-gradient(135deg, #9ca3af, #6b7280);">${getInitials(empName)}</div>
+                        <div>
+                            <div class="member-name">${empName}</div>
+                            <div class="member-code">${empCode}</div>
+                        </div>
+                    </div>
+                    <span class="plan-status-badge no-plan"><i class="fas fa-minus-circle me-1"></i>No Plan</span>
+                </div>
+                <div class="card-body">
+                    <div style="text-align:center;padding:30px 20px;color:#9ca3af;">
+                        <i class="fas fa-calendar-xmark" style="font-size:28px;margin-bottom:8px;"></i>
+                        <p style="margin:0;">No plan created for this date</p>
+                    </div>
+                </div>
+            </div>`;
+        }
+    </script>
+</body>
+</html>

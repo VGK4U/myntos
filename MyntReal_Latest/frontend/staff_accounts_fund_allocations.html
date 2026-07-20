@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fund Allocations - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .header-logo { height: 36px; width: auto; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .role-badge-supreme { background: #fef2f2; color: #dc2626; }
+        .role-badge-ea { background: #ede9fe; color: #7c3aed; }
+        .role-badge-default { background: #f3f4f6; color: #374151; }
+        
+        .content-area { padding: 24px; }
+        
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        
+        .filter-section { background: white; padding: 16px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #6b7280; }
+        .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 150px; }
+        
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-item { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-item .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .summary-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .summary-item.pending .value { color: #f59e0b; }
+        .summary-item.confirmed .value { color: #3b82f6; }
+        .summary-item.settled .value { color: #10b981; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        
+        .amount { font-weight: 600; font-family: monospace; }
+        
+        .badge-status { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-pending { background: #fef3c7; color: #d97706; }
+        .badge-confirmed { background: #dbeafe; color: #1d4ed8; }
+        .badge-settled { background: #d1fae5; color: #059669; }
+        
+        .btn-action { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
+        .btn-confirm { background: #dbeafe; color: #1d4ed8; }
+        .btn-confirm:hover { background: #1d4ed8; color: white; }
+        .btn-settle { background: #d1fae5; color: #059669; }
+        .btn-settle:hover { background: #059669; color: white; }
+        .btn-view { background: #f3f4f6; color: #374151; }
+        .btn-view:hover { background: #374151; color: white; }
+        
+        .btn-primary-custom { background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-primary-custom:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); color: white; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .empty-state h3 { font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+        .empty-state p { font-size: 14px; }
+        
+        .loading-spinner { display: flex; justify-content: center; align-items: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        
+        .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
+        .pagination button { padding: 8px 14px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; }
+        .pagination button:hover { background: #f9fafb; }
+        .pagination button.active { background: #3b82f6; color: white; border-color: #3b82f6; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-header">
+                <div>
+                    <h1>Fund Allocations</h1>
+                    <p>Manage fund allocations with PENDING, CONFIRMED, and SETTLED workflow</p>
+                </div>
+                <div>
+                    <button class="btn-primary-custom" onclick="openCreateModal()">
+                        <i class="fas fa-plus me-2"></i>New Allocation
+                    </button>
+                </div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>Status</label>
+                    <select id="filterStatus" onchange="loadAllocations()">
+                        <option value="">All Status</option>
+                        <option value="PENDING">Pending</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="SETTLED">Settled</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Company</label>
+                    <select id="filterCompany" onchange="loadAllocations()">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Recipient</label>
+                    <select id="filterRecipient" onchange="loadAllocations()">
+                        <option value="">All Recipients</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>From Date</label>
+                    <input type="date" id="filterFromDate" onchange="loadAllocations()">
+                </div>
+                <div class="filter-group">
+                    <label>To Date</label>
+                    <input type="date" id="filterToDate" onchange="loadAllocations()">
+                </div>
+            </div>
+            
+            <div class="summary-row">
+                <div class="summary-item pending">
+                    <div class="value" id="pendingCount">0</div>
+                    <div class="label">Pending</div>
+                </div>
+                <div class="summary-item confirmed">
+                    <div class="value" id="confirmedCount">0</div>
+                    <div class="label">Confirmed</div>
+                </div>
+                <div class="summary-item settled">
+                    <div class="value" id="settledCount">0</div>
+                    <div class="label">Settled</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value" id="totalAmount">0</div>
+                    <div class="label">Total Amount</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-list me-2"></i>Fund Allocation Records</span>
+                    <span class="text-muted" id="recordCount">0 records</span>
+                </div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
+                    <div id="tableContainer" style="display: none;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Company</th>
+                                        <th>From</th>
+                                        <th>To</th>
+                                        <th>Payment Source</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Balance Used</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allocationTable">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="pagination"></div>
+                    </div>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-folder-open"></i>
+                        <h3>No Fund Allocations Found</h3>
+                        <p>Create your first fund allocation to get started</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle me-2"></i>New Fund Allocation</h3>
+                <button class="modal-close" onclick="closeModal('createModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createForm">
+                    <div class="form-group">
+                        <label>Company *</label>
+                        <select id="formCompany" required>
+                            <option value="">Select Company</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Recipient Staff *</label>
+                        <select id="formRecipient" required>
+                            <option value="">Select Recipient</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Source *</label>
+                        <select id="formPaymentSource" required onchange="onPaymentSourceChange()">
+                            <option value="">Select Payment Source</option>
+                            <option value="CASH">Cash</option>
+                            <option value="ACCOUNT">Account</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="formAccountGroup" style="display:none;">
+                        <label>Select Account *</label>
+                        <select id="formBankAccount">
+                            <option value="">Select Account</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Allocation Date *</label>
+                        <input type="date" id="formAllocationDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount *</label>
+                        <input type="number" id="formAmount" step="0.01" min="0.01" required placeholder="Enter amount">
+                    </div>
+                    <div class="form-group">
+                        <label>Category <small style="color:#6b7280;font-weight:400;">(optional)</small> &nbsp;<a href="#" onclick="ExpCatPicker.openQuickAdd(onAllocCatCreated); return false;" style="font-size:11px;color:#059669;text-decoration:none;"><i class="fas fa-plus-circle"></i> Add Category</a></label>
+                        <select id="formMainCat" style="margin-bottom:6px;width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;" onchange="ExpCatPicker.populateSub(this, document.getElementById('formSubCat'))">
+                            <option value="">— Main Category —</option>
+                        </select>
+                        <select id="formSubCat" disabled style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="">— Sub Category (optional) —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Purpose / Description</label>
+                        <textarea id="formDescription" placeholder="Enter purpose or description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Reference Number</label>
+                        <input type="text" id="formReference" placeholder="Optional reference number">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="createAllocation()">
+                    <i class="fas fa-save me-1"></i>Create Allocation
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-check-circle me-2 text-primary"></i>Confirm Allocation</h3>
+                <button class="modal-close" onclick="closeModal('confirmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to confirm this fund allocation?</p>
+                <div class="alert alert-info mt-3">
+                    <strong>Allocation ID:</strong> <span id="confirmAllocId"></span><br>
+                    <strong>Amount:</strong> <span id="confirmAmount"></span><br>
+                    <strong>Recipient:</strong> <span id="confirmRecipient"></span>
+                </div>
+                <div class="form-group mt-3">
+                    <label>Confirmation Notes</label>
+                    <textarea id="confirmNotes" placeholder="Optional notes"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="confirmAllocation()">
+                    <i class="fas fa-check me-1"></i>Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="settleModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-check-double me-2 text-success"></i>Settle Allocation</h3>
+                <button class="modal-close" onclick="closeModal('settleModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to mark this allocation as settled?</p>
+                <div class="alert alert-success mt-3">
+                    <strong>Allocation ID:</strong> <span id="settleAllocId"></span><br>
+                    <strong>Amount:</strong> <span id="settleAmount"></span><br>
+                    <strong>Balance Used:</strong> <span id="settleBalanceUsed"></span>
+                </div>
+                <div class="form-group mt-3">
+                    <label>Settlement Notes</label>
+                    <textarea id="settleNotes" placeholder="Optional settlement notes"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('settleModal')">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="settleAllocation()">
+                    <i class="fas fa-check-double me-1"></i>Settle
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/expense-cat-picker.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let currentPage = 1;
+        let totalPages = 1;
+        let selectedAllocation = null;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Fund Allocations', 'fas fa-money-bill-wave');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            updateHeaderUserInfo();
+            
+            await Promise.all([loadCompanies(), loadStaffList()]);
+            await loadAllocations();
+        });
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const name = userData.full_name || 'Staff Member';
+            const role = userData.role_name || 'Employee';
+            const empId = userData.emp_code || userData.employee_code || '-';
+            
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            
+            document.getElementById('headerUserInitials').textContent = initials;
+            document.getElementById('headerUserName').textContent = name;
+            document.getElementById('headerUserEmpId').textContent = empId;
+            
+            const roleEl = document.getElementById('headerUserRole');
+            roleEl.textContent = role;
+            
+            if (role.includes('Supreme') || role.includes('VGK4U')) {
+                roleEl.className = 'user-info-role role-badge-supreme';
+            } else if (role.includes('EA') || role.includes('Executive')) {
+                roleEl.className = 'user-info-role role-badge-ea';
+            } else {
+                roleEl.className = 'user-info-role role-badge-default';
+            }
+        }
+        
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch(`${API_BASE}/companies`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const companies = data.companies || [];
+                    
+                    ['filterCompany', 'formCompany'].forEach(id => {
+                        const select = document.getElementById(id);
+                        const firstOption = select.options[0];
+                        select.innerHTML = '';
+                        select.appendChild(firstOption);
+                        
+                        companies.forEach(company => {
+                            const option = document.createElement('option');
+                            option.value = company.id;
+                            option.textContent = company.company_name || company.name || `Company ${company.id}`;
+                            select.appendChild(option);
+                        });
+                    });
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading companies:', e);
+            }
+        }
+        
+        async function loadLedgerAccounts(companyId) {
+            const select = document.getElementById('formBankAccount');
+            select.innerHTML = '<option value="">Select Account</option>';
+            if (!companyId) return;
+            try {
+                const response = await staffFetch(`${API_BASE}/ledger-masters/bank-accounts?company_id=${companyId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const accounts = data.accounts || [];
+                    accounts.forEach(acc => {
+                        const option = document.createElement('option');
+                        option.value = acc.id;
+                        option.textContent = `${acc.account_name} (${acc.account_type})`;
+                        option.dataset.type = acc.account_type;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading ledger accounts:', e);
+            }
+        }
+
+        function onPaymentSourceChange() {
+            const source = document.getElementById('formPaymentSource').value;
+            const accountGroup = document.getElementById('formAccountGroup');
+            if (source === 'ACCOUNT') {
+                accountGroup.style.display = 'block';
+                const companyId = document.getElementById('formCompany').value;
+                if (companyId) loadLedgerAccounts(companyId);
+            } else {
+                accountGroup.style.display = 'none';
+            }
+        }
+
+        async function loadStaffList() {
+            try {
+                const response = await staffFetch(`${API_BASE}/fund-allocation-parties`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const employees = data.employees || [];
+                    
+                    ['filterRecipient', 'formRecipient'].forEach(id => {
+                        const select = document.getElementById(id);
+                        const firstOption = select.options[0];
+                        select.innerHTML = '';
+                        select.appendChild(firstOption);
+                        
+                        employees.forEach(emp => {
+                            const option = document.createElement('option');
+                            option.value = emp.id;
+                            option.textContent = `${emp.full_name} (${emp.emp_code || emp.employee_code})`;
+                            select.appendChild(option);
+                        });
+                    });
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading staff list:', e);
+            }
+        }
+        
+        async function loadAllocations() {
+            const params = new URLSearchParams({ page: currentPage, limit: 20 });
+            
+            const status = document.getElementById('filterStatus').value;
+            const company = document.getElementById('filterCompany').value;
+            const recipient = document.getElementById('filterRecipient').value;
+            const fromDate = document.getElementById('filterFromDate').value;
+            const toDate = document.getElementById('filterToDate').value;
+            
+            if (status) params.append('status', status);
+            if (company) params.append('company_id', company);
+            if (recipient) params.append('to_employee_id', recipient);
+            if (fromDate) params.append('from_date', fromDate);
+            if (toDate) params.append('to_date', toDate);
+            
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/fund-allocations?${params}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    renderAllocations(data);
+                    updateSummary(data.summary);
+                } else { showEmptyState(); }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading allocations:', e);
+                showEmptyState();
+            } finally {
+                document.getElementById('loadingState').style.display = 'none';
+            }
+        }
+        
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount || 0);
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        
+        function renderAllocations(data) {
+            const allocations = data.allocations || [];
+            const tbody = document.getElementById('allocationTable');
+            
+            if (!allocations.length) {
+                showEmptyState();
+                return;
+            }
+            
+            document.getElementById('tableContainer').style.display = 'block';
+            document.getElementById('recordCount').textContent = `${data.total || allocations.length} records`;
+            
+            tbody.innerHTML = allocations.map(alloc => `
+                <tr>
+                    <td><code>${alloc.id}</code></td>
+                    <td>${formatDate(alloc.allocation_date || alloc.created_at)}</td>
+                    <td>${alloc.company_name || '-'}</td>
+                    <td>${alloc.from_employee_name || '-'}</td>
+                    <td>${alloc.to_employee_name || alloc.recipient_name || '-'}</td>
+                    <td><span style="font-size:12px;font-weight:600;color:${alloc.payment_mode === 'CASH' ? '#059669' : '#1d4ed8'}">${alloc.payment_mode || 'CASH'}</span></td>
+                    <td class="amount">${formatCurrency(alloc.amount)}</td>
+                    <td><span class="badge-status badge-${(alloc.status || '').toLowerCase()}">${alloc.status}</span></td>
+                    <td class="amount">${formatCurrency(alloc.balance_used)}</td>
+                    <td>
+                        ${getActionButtons(alloc)}
+                    </td>
+                </tr>
+            `).join('');
+            
+            totalPages = data.total_pages || 1;
+            renderPagination();
+        }
+        
+        function getActionButtons(alloc) {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const isRecipient = alloc.recipient_id === userData.id;
+            const isCreator = alloc.created_by === userData.id;
+            const hasFullAccess = ['VGK Mentor', 'VGK4U Supreme', 'VGK4U', 'Executive Assistant', 'EA'].some(r => userData.role_name?.includes(r));
+            
+            let buttons = `<button class="btn-action btn-view" onclick="viewAllocation(${alloc.id})"><i class="fas fa-eye"></i></button>`;
+            
+            if (alloc.status === 'PENDING' && (isRecipient || hasFullAccess)) {
+                buttons += ` <button class="btn-action btn-confirm" onclick="openConfirmModal(${JSON.stringify(alloc).replace(/"/g, '&quot;')})"><i class="fas fa-check"></i></button>`;
+            }
+            
+            if (alloc.status === 'CONFIRMED' && (isRecipient || hasFullAccess)) {
+                buttons += ` <button class="btn-action btn-settle" onclick="openSettleModal(${JSON.stringify(alloc).replace(/"/g, '&quot;')})"><i class="fas fa-check-double"></i></button>`;
+            }
+            
+            return buttons;
+        }
+        
+        function showEmptyState() {
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        }
+        
+        function updateSummary(summary) {
+            if (!summary) return;
+            document.getElementById('pendingCount').textContent = summary.pending_count || 0;
+            document.getElementById('confirmedCount').textContent = summary.confirmed_count || 0;
+            document.getElementById('settledCount').textContent = summary.settled_count || 0;
+            document.getElementById('totalAmount').textContent = formatCurrency(summary.total_amount);
+        }
+        
+        function renderPagination() {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+                } else if (i === currentPage - 2 || i === currentPage + 2) {
+                    html += `<button disabled>...</button>`;
+                }
+            }
+            
+            html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
+            
+            container.innerHTML = html;
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            loadAllocations();
+        }
+        
+        function openCreateModal() {
+            document.getElementById('createForm').reset();
+            document.getElementById('formAllocationDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('formAccountGroup').style.display = 'none';
+            document.getElementById('formBankAccount').innerHTML = '<option value="">Select Account</option>';
+            document.getElementById('formMainCat').value = '';
+            document.getElementById('formSubCat').value = '';
+            document.getElementById('formSubCat').disabled = true;
+            // Init category picker
+            ExpCatPicker.init(
+                document.getElementById('formMainCat'),
+                document.getElementById('formSubCat')
+            );
+            document.getElementById('createModal').classList.add('active');
+        }
+
+        function onAllocCatCreated() {
+            ExpCatPicker.init(
+                document.getElementById('formMainCat'),
+                document.getElementById('formSubCat')
+            );
+        }
+        
+        function openConfirmModal(alloc) {
+            selectedAllocation = alloc;
+            document.getElementById('confirmAllocId').textContent = alloc.id;
+            document.getElementById('confirmAmount').textContent = formatCurrency(alloc.amount);
+            document.getElementById('confirmRecipient').textContent = alloc.recipient_name;
+            document.getElementById('confirmNotes').value = '';
+            document.getElementById('confirmModal').classList.add('active');
+        }
+        
+        function openSettleModal(alloc) {
+            selectedAllocation = alloc;
+            document.getElementById('settleAllocId').textContent = alloc.id;
+            document.getElementById('settleAmount').textContent = formatCurrency(alloc.amount);
+            document.getElementById('settleBalanceUsed').textContent = formatCurrency(alloc.balance_used);
+            document.getElementById('settleNotes').value = '';
+            document.getElementById('settleModal').classList.add('active');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            selectedAllocation = null;
+        }
+        
+        async function createAllocation() {
+            const paymentSource = document.getElementById('formPaymentSource').value;
+            const bankAccountEl = document.getElementById('formBankAccount');
+            const bankAccountId = bankAccountEl.value ? parseInt(bankAccountEl.value) : null;
+            const selectedAccOption = bankAccountEl.options[bankAccountEl.selectedIndex];
+            const accountType = bankAccountId && selectedAccOption ? (selectedAccOption.dataset.type || 'BANK') : null;
+
+            const categoryId = parseInt(document.getElementById('formSubCat').value) || null;
+            const data = {
+                company_id: parseInt(document.getElementById('formCompany').value),
+                to_employee_id: parseInt(document.getElementById('formRecipient').value),
+                allocation_date: document.getElementById('formAllocationDate').value,
+                amount: parseFloat(document.getElementById('formAmount').value),
+                purpose: document.getElementById('formDescription').value || null,
+                payment_reference: document.getElementById('formReference').value || null,
+                payment_mode: paymentSource === 'ACCOUNT' ? (accountType || 'BANK') : 'CASH',
+                bank_account_id: paymentSource === 'ACCOUNT' ? bankAccountId : null
+            };
+            if (categoryId) data.category_id = categoryId;
+            
+            if (!data.company_id || !data.to_employee_id || !data.allocation_date || !data.amount || !paymentSource) {
+                alert('Please fill in all required fields');
+                return;
+            }
+            if (paymentSource === 'ACCOUNT' && !bankAccountId) {
+                alert('Please select an account');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/fund-allocations`, { method: 'POST', body: JSON.stringify(data) });
+                if (response.ok) {
+                    closeModal('createModal');
+                    loadAllocations();
+                    alert('Fund allocation created successfully');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to create allocation');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error creating allocation:', e);
+                alert('Failed to create allocation');
+            }
+        }
+        
+        async function confirmAllocation() {
+            if (!selectedAllocation) return;
+            
+            const notes = document.getElementById('confirmNotes').value;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/fund-allocations/${selectedAllocation.id}/confirm`, { method: 'POST', body: JSON.stringify({ confirmation_remarks: notes }) });
+                if (response.ok) {
+                    closeModal('confirmModal');
+                    loadAllocations();
+                    alert('Allocation confirmed successfully');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || error.message || 'Failed to confirm allocation');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error confirming allocation:', e);
+                alert('Failed to confirm allocation');
+            }
+        }
+        
+        async function settleAllocation() {
+            if (!selectedAllocation) return;
+            
+            const notes = document.getElementById('settleNotes').value;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/fund-allocations/${selectedAllocation.id}/settle`, { method: 'POST', body: JSON.stringify({ settlement_remarks: notes }) });
+                if (response.ok) {
+                    closeModal('settleModal');
+                    loadAllocations();
+                    alert('Allocation settled successfully');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || error.message || 'Failed to settle allocation');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error settling allocation:', e);
+                alert('Failed to settle allocation');
+            }
+        }
+        
+        function viewAllocation(id) {
+            window.location.href = `/staff/accounts/fund-allocations/${id}`;
+        }
+    </script>
+
+    <!-- ═══ Quick-Add Expense Category Modal (DC_CATPICKER_001) ═══ -->
+    <div class="modal-overlay" id="expCatQuickAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9900;align-items:center;justify-content:center;">
+        <div style="background:white;border-radius:14px;max-width:420px;width:100%;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <div style="background:linear-gradient(135deg,#059669,#047857);border-radius:10px 10px 0 0;padding:16px 20px;margin:-28px -28px 20px;display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="color:#fff;margin:0;font-size:15px;"><i class="fas fa-plus-circle me-2"></i>Add Expense Category</h3>
+                <button onclick="ExpCatPicker._closeModal()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;">&times;</button>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Create</label>
+                <select id="ecqaMode" onchange="ExpCatPicker._toggleEcqaMode()" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
+                    <option value="sub">Sub Category (under an existing Main)</option>
+                    <option value="main">New Main Category</option>
+                </select>
+            </div>
+            <div id="ecqaMainGroup" style="display:none;margin-bottom:14px;">
+                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Main Category Name *</label>
+                <input type="text" id="ecqaMainName" placeholder="e.g., Vehicle Expenses" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
+            </div>
+            <div id="ecqaSubGroup">
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Under Main Category *</label>
+                    <select id="ecqaParentSel" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;"><option value="">— Select —</option></select>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Sub Category Name *</label>
+                    <input type="text" id="ecqaSubName" placeholder="e.g., Fuel Expenses" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button onclick="ExpCatPicker._closeModal()" style="padding:9px 18px;border:1px solid #d1d5db;background:white;border-radius:8px;cursor:pointer;font-size:13px;">Cancel</button>
+                <button id="ecqaSaveBtn" onclick="ExpCatPicker.saveQuickAdd()" style="padding:9px 18px;background:#059669;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

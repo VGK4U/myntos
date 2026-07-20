@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accounts Receivable - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 13px; color: #6b7280; margin: 3px 0 0 0; }
+
+        /* ── Filter bar ────────────────────────────────── */
+        .filter-bar { background: white; padding: 14px 18px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-group select, .filter-group input { padding: 7px 11px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 150px; background: white; }
+        .period-group { display: flex; flex-direction: column; gap: 4px; }
+        .period-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .period-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+        .period-btn { padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; background: white; color: #374151; transition: all 0.15s; }
+        .period-btn:hover { background: #f3f4f6; }
+        .period-btn.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+        .btn-apply { background: #1d4ed8; color: white; border: none; padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .btn-apply:hover { background: #1e40af; }
+        .btn-reset { background: white; color: #6b7280; border: 1px solid #d1d5db; padding: 7px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+
+        /* ── Summary cards ─────────────────────────────── */
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .summary-card { background: white; padding: 18px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .summary-card .lbl { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 6px; }
+        .summary-card .val { font-size: 22px; font-weight: 700; color: #1f2937; }
+        .summary-card .sub { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+        .summary-card.success .val { color: #059669; }
+        .summary-card.danger .val  { color: #dc2626; }
+
+        /* ── Tabs ──────────────────────────────────────── */
+        .tabs-bar { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+        .tab-btn { padding: 10px 22px; border: none; background: none; font-size: 14px; font-weight: 500; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+        .tab-btn.active { color: #1d4ed8; border-bottom-color: #1d4ed8; font-weight: 600; }
+        .tab-btn:hover:not(.active) { color: #374151; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .source-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+        .source-match { background: #dcfce7; color: #166534; }
+        .source-detail { background: #dbeafe; color: #1e40af; }
+
+        /* ── Cards / Tables ────────────────────────────── */
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: none; }
+        .card-header { border-bottom: 1px solid #e5e7eb; padding: 14px 18px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .card-body { padding: 0; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 11px 14px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 12px 14px; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: #fafafa; }
+        .badge-unpaid  { background: #fef3c7; color: #d97706; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-partial { background: #dbeafe; color: #2563eb; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-overdue { background: #fee2e2; color: #dc2626; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-paid    { background: #d1fae5; color: #059669; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .overdue-text  { color: #dc2626; font-size: 11px; margin-top: 2px; }
+        .empty-state   { text-align: center; padding: 50px 20px; color: #6b7280; }
+        .empty-state i { font-size: 42px; margin-bottom: 12px; color: #d1d5db; display: block; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #10b981; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .action-btn { padding: 5px 11px; border: none; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; }
+        .btn-receive { background: #2563eb; color: white; }
+        .btn-receive:hover { background: #1d4ed8; }
+        .btn-ledger  { background: #4f46e5; color: white; margin-left: 4px; }
+        .btn-ledger:hover  { background: #4338ca; }
+
+        /* ── Context banner ────────────────────────────── */
+        .context-banner { background: #dcfce7; border: 1px solid #86efac; border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; font-size: 12px; color: #166534; display: none; align-items: center; gap: 8px; }
+        .context-banner.show { display: flex; }
+
+        /* ── Modal ─────────────────────────────────────── */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: white; border-radius: 12px; max-width: 500px; width: 90%; }
+        .modal-hdr { padding: 18px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-hdr h3 { font-size: 16px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 22px; color: #6b7280; cursor: pointer; }
+        .modal-bdy { padding: 18px 20px; }
+        .modal-ftr { padding: 14px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 10px; }
+        .fg { margin-bottom: 14px; }
+        .fg label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+        .fg input, .fg select, .fg textarea { width: 100%; padding: 8px 11px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+    <div class="content-area">
+
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-hand-holding-usd me-2" style="color:#10b981"></i>Accounts Receivable</h1>
+                <p>Outstanding receivables from customers — sourced from Sales Invoices (matches Consolidated Balance Sheet)</p>
+            </div>
+        </div>
+
+        <!-- Context banner -->
+        <div class="context-banner" id="ctxBanner">
+            <i class="fas fa-link"></i>
+            <span id="ctxText">Filtered from Consolidated Balance Sheet</span>
+            <button onclick="clearCtx()" style="margin-left:auto;background:none;border:none;color:#166534;cursor:pointer;font-size:12px;">✕ Clear filter</button>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="filterCompany"><option value="0">All Companies</option></select>
+            </div>
+            <div class="period-group">
+                <label>Period</label>
+                <div class="period-btns">
+                    <button class="period-btn" onclick="setPeriod('month')">This Month</button>
+                    <button class="period-btn" onclick="setPeriod('quarter')">This Quarter</button>
+                    <button class="period-btn active" onclick="setPeriod('fy')">This FY</button>
+                    <button class="period-btn" onclick="setPeriod('overall')">Overall</button>
+                    <button class="period-btn" onclick="setPeriod('custom')">Custom</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>From Date</label>
+                <input type="date" id="filterFrom">
+            </div>
+            <div class="filter-group">
+                <label>To Date</label>
+                <input type="date" id="filterTo">
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select id="filterStatus">
+                    <option value="">All Status</option>
+                    <option value="UNPAID">Unpaid</option>
+                    <option value="PARTIAL">Partial</option>
+                    <option value="OVERDUE">Overdue</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Search</label>
+                <input type="text" id="searchInput" placeholder="Customer name…" style="min-width:160px">
+            </div>
+            <button class="btn-apply" onclick="applyFilters()"><i class="fas fa-search me-1"></i>Apply</button>
+            <button class="btn-reset" onclick="resetFilters()">Reset</button>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="summary-cards">
+            <div class="summary-card success">
+                <div class="lbl">Total Receivable</div>
+                <div class="val" id="totalReceivable">₹0</div>
+                <div class="sub">= Consolidated Balance Sheet</div>
+            </div>
+            <div class="summary-card danger">
+                <div class="lbl">Total Overdue</div>
+                <div class="val" id="totalOverdue">₹0</div>
+                <div class="sub">Past due date</div>
+            </div>
+            <div class="summary-card">
+                <div class="lbl">Customers</div>
+                <div class="val" id="customerCount">0</div>
+                <div class="sub">With outstanding balance</div>
+            </div>
+            <div class="summary-card">
+                <div class="lbl">Invoice Count</div>
+                <div class="val" id="invoiceCount">0</div>
+                <div class="sub">Pending invoices</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-bar">
+            <button class="tab-btn active" onclick="switchTab('summary')" id="tabSummary">
+                <i class="fas fa-users me-1"></i>Customer Summary
+                <span class="source-badge source-match ms-1">= Consolidated</span>
+            </button>
+            <button class="tab-btn" onclick="switchTab('invoices')" id="tabInvoices">
+                <i class="fas fa-file-invoice me-1"></i>Invoice List
+                <span class="source-badge source-detail ms-1">Per Invoice</span>
+            </button>
+        </div>
+
+        <!-- TAB 1: Customer Summary -->
+        <div class="tab-pane active" id="paneSummary">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-users me-2" style="color:#059669"></i>Customer-wise Outstanding</span>
+                    <span class="text-muted" id="summaryCount" style="font-size:12px;font-weight:400">0 customers</span>
+                </div>
+                <div class="card-body">
+                    <div id="summaryLoading" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="summaryTable" style="display:none;overflow-x:auto">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>#</th><th>Customer Name</th><th>Company</th>
+                                <th style="text-align:right">Invoices</th>
+                                <th style="text-align:right">Total Billed</th>
+                                <th style="text-align:right">Received</th>
+                                <th style="text-align:right">Outstanding</th>
+                                <th>Actions</th>
+                            </tr></thead>
+                            <tbody id="summaryBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="summaryEmpty" class="empty-state" style="display:none">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>No Outstanding Receivables</h3>
+                        <p>All customer payments have been received as on selected date</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Invoice List -->
+        <div class="tab-pane" id="paneInvoices">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-file-invoice me-2" style="color:#2563eb"></i>Pending Sales Invoices</span>
+                    <span class="text-muted" id="listCount" style="font-size:12px;font-weight:400">0 records</span>
+                </div>
+                <div class="card-body">
+                    <div id="listLoading" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="listTable" style="display:none;overflow-x:auto">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Invoice #</th><th>Customer</th><th>Company</th>
+                                <th>Date</th>
+                                <th style="text-align:right">Total</th>
+                                <th style="text-align:right">Received</th>
+                                <th style="text-align:right">Balance Due</th>
+                                <th>Due Date</th><th>Status</th><th>Actions</th>
+                            </tr></thead>
+                            <tbody id="listBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="listEmpty" class="empty-state" style="display:none">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>No Pending Invoices</h3>
+                        <p>All customer invoices are settled</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /content-area -->
+    </div><!-- /main-content -->
+
+    <!-- Receipt modal -->
+    <div class="modal-overlay" id="receiptModal">
+        <div class="modal-box">
+            <div class="modal-hdr">
+                <h3><i class="fas fa-money-check-alt me-2"></i>Record Receipt</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-bdy">
+                <div style="background:#f9fafb;padding:11px;border-radius:8px;margin-bottom:14px">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px">Invoice:</span><strong id="mInvoiceNo">-</strong></div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px">Customer:</span><strong id="mCustomer">-</strong></div>
+                    <div style="display:flex;justify-content:space-between"><span style="font-size:13px">Balance Due:</span><strong id="mBalance" style="color:#059669">₹0</strong></div>
+                </div>
+                <form id="receiptForm">
+                    <input type="hidden" id="mInvoiceId">
+                    <div class="fg"><label>Receipt Amount *</label><input type="number" id="mAmount" required step="0.01" min="0.01"></div>
+                    <div class="fg"><label>Receipt Date *</label><input type="date" id="mDate" required></div>
+                    <div class="fg"><label>Payment Mode *</label>
+                        <select id="mMode" required>
+                            <option value="">Select mode</option>
+                            <option value="CASH">Cash</option><option value="BANK">Bank Transfer</option>
+                            <option value="UPI">UPI</option><option value="CHEQUE">Cheque</option>
+                            <option value="NEFT">NEFT</option><option value="RTGS">RTGS</option>
+                        </select>
+                    </div>
+                    <div class="fg"><label>Reference Number</label><input type="text" id="mRef" placeholder="Transaction reference"></div>
+                    <div class="fg"><label>Narration</label><textarea id="mNote" rows="2" placeholder="Optional notes"></textarea></div>
+                </form>
+            </div>
+            <div class="modal-ftr">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn btn-success btn-sm" onclick="submitReceipt()"><i class="fas fa-check me-1"></i>Record Receipt</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+    const API = '/api/v1/staff/accounts';
+
+    // ── URL params from Consolidated drill-through ────────────────
+    const _up = new URLSearchParams(window.location.search);
+    let _ctxCo   = _up.get('company_id') || '0';
+    let _ctxAsOn = _up.get('as_on') || _up.get('date_to') || _up.get('to_date') || '';
+    let _ctxFrom = _up.get('from_date') || _up.get('date_from') || '';
+    let _activePeriod = 'fy';
+
+    // ── Period helpers ────────────────────────────────────────────
+    function fyStart() {
+        const t = new Date(); const m = t.getMonth();
+        const y = m >= 3 ? t.getFullYear() : t.getFullYear() - 1;
+        return new Date(y, 3, 1);
+    }
+    function fmt_date(d) { return d.toISOString().split('T')[0]; }
+    function setPeriod(p) {
+        _activePeriod = p;
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        const today = new Date();
+        const todayStr = fmt_date(today);
+        if (p === 'month') {
+            const ms = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('filterFrom').value = fmt_date(ms);
+            document.getElementById('filterTo').value   = todayStr;
+        } else if (p === 'quarter') {
+            const qm = [0,0,0,3,3,3,6,6,6,9,9,9][today.getMonth()];
+            const qs = new Date(today.getFullYear(), qm, 1);
+            document.getElementById('filterFrom').value = fmt_date(qs);
+            document.getElementById('filterTo').value   = todayStr;
+        } else if (p === 'fy') {
+            document.getElementById('filterFrom').value = fmt_date(fyStart());
+            document.getElementById('filterTo').value   = todayStr;
+        } else if (p === 'overall') {
+            document.getElementById('filterFrom').value = '';
+            document.getElementById('filterTo').value   = todayStr;
+        } else if (p === 'custom') {
+            document.getElementById('filterFrom').focus();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        StaffHeader.inject('Accounts Receivable', 'fas fa-hand-holding-usd');
+        if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+        if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+
+        document.getElementById('filterFrom').value = _ctxFrom || fmt_date(fyStart());
+        document.getElementById('filterTo').value   = _ctxAsOn || fmt_date(new Date());
+        document.getElementById('mDate').valueAsDate = new Date();
+
+        await loadCompanies();
+        if (_ctxCo && _ctxCo !== '0') document.getElementById('filterCompany').value = _ctxCo;
+
+        if (_ctxCo !== '0' || _ctxAsOn) {
+            const banner = document.getElementById('ctxBanner');
+            banner.classList.add('show');
+            const sel = document.getElementById('filterCompany');
+            const coName = sel.options[sel.selectedIndex]?.text || '';
+            document.getElementById('ctxText').textContent =
+                `Filtered from Consolidated Balance Sheet${coName ? ' — ' + coName : ''}${_ctxAsOn ? ' as on ' + fmtDisp(_ctxAsOn) : ''}`;
+        }
+
+        await Promise.all([loadSummary(), loadInvoices()]);
+    });
+
+    async function loadCompanies() {
+        try {
+            const r = await staffFetch(`${API}/companies`);
+            const d = await r.json();
+            const sel = document.getElementById('filterCompany');
+            (Array.isArray(d) ? d : (d.companies || [])).forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id; o.textContent = c.company_name || c.name;
+                sel.appendChild(o);
+            });
+        } catch(e) { console.warn(e); }
+    }
+
+    async function loadSummary() {
+        show('summaryLoading'); hide('summaryTable'); hide('summaryEmpty');
+        const cid  = document.getElementById('filterCompany').value || '0';
+        const frm  = document.getElementById('filterFrom').value;
+        const toD  = document.getElementById('filterTo').value;
+        const srch = document.getElementById('searchInput').value.toLowerCase();
+        let url = `${API}/receivables-summary?company_id=${cid}`;
+        if (frm) url += `&from_date=${frm}`;
+        if (toD) url += `&to_date=${toD}`;
+        try {
+            const r = await staffFetch(url);
+            const d = await r.json();
+            hide('summaryLoading');
+            if (!d.success) { show('summaryEmpty'); return; }
+            let list = d.customers || [];
+            if (srch) list = list.filter(c => c.customer_name.toLowerCase().includes(srch));
+
+            document.getElementById('totalReceivable').textContent = '₹' + fmt(d.total_outstanding || 0);
+            document.getElementById('customerCount').textContent = list.length;
+            document.getElementById('summaryCount').textContent = list.length + ' customers';
+
+            if (!list.length) { show('summaryEmpty'); return; }
+            show('summaryTable');
+            document.getElementById('summaryBody').innerHTML = list.map((c, i) => `
+                <tr>
+                    <td style="color:#9ca3af;font-size:12px">${i+1}</td>
+                    <td><strong>${esc(c.customer_name)}</strong></td>
+                    <td style="font-size:12px;color:#6b7280">${esc(c.company_name)}</td>
+                    <td style="text-align:right">${c.invoice_count}</td>
+                    <td style="text-align:right">₹${fmt(c.total_billed)}</td>
+                    <td style="text-align:right;color:#059669">₹${fmt(c.total_received)}</td>
+                    <td style="text-align:right;font-weight:700;color:#059669">₹${fmt(c.total_outstanding)}</td>
+                    <td>
+                        <button class="action-btn btn-ledger"
+                            onclick="openLedger('${encodeURIComponent(c.customer_name)}', ${c.company_id})">
+                            <i class="fas fa-book-open me-1"></i>Ledger
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch(e) { if (isAuth(e)) return; hide('summaryLoading'); show('summaryEmpty'); }
+    }
+
+    async function loadInvoices() {
+        show('listLoading'); hide('listTable'); hide('listEmpty');
+        const cid    = document.getElementById('filterCompany').value || '';
+        const frm    = document.getElementById('filterFrom').value;
+        const toD    = document.getElementById('filterTo').value;
+        const status = document.getElementById('filterStatus').value;
+        const srch   = document.getElementById('searchInput').value.toLowerCase();
+        let url = `${API}/receivables?page_size=500`;
+        if (cid && cid !== '0') url += `&company_id=${cid}`;
+        if (frm) url += `&from_date=${frm}`;
+        if (toD) url += `&as_on_date=${toD}`;
+        if (status) url += `&status=${status}`;
+        try {
+            const r = await staffFetch(url);
+            const d = await r.json();
+            hide('listLoading');
+            if (!d.success) { show('listEmpty'); return; }
+            let list = d.receivables || [];
+            if (srch) list = list.filter(x => (x.party_name||'').toLowerCase().includes(srch) || (x.invoice_number||'').toLowerCase().includes(srch));
+
+            document.getElementById('totalOverdue').textContent  = '₹' + fmt(d.total_overdue || 0);
+            document.getElementById('invoiceCount').textContent  = list.length;
+            document.getElementById('listCount').textContent     = list.length + ' records';
+
+            if (!list.length) { show('listEmpty'); return; }
+            show('listTable');
+            const today = new Date();
+            document.getElementById('listBody').innerHTML = list.map(r => {
+                const od = r.days_overdue ? `<div class="overdue-text">${r.days_overdue}d overdue</div>` : '';
+                return `<tr>
+                    <td><code style="font-size:11px">${r.invoice_number||'-'}</code></td>
+                    <td><strong>${esc(r.party_name||'-')}</strong></td>
+                    <td style="font-size:12px;color:#6b7280">${esc(r.company_name||'-')}</td>
+                    <td style="font-size:12px">${fmtDate(r.invoice_date)}</td>
+                    <td style="text-align:right">₹${fmt(r.grand_total||0)}</td>
+                    <td style="text-align:right;color:#059669">₹${fmt(r.amount_received||0)}</td>
+                    <td style="text-align:right;font-weight:700;color:#059669">₹${fmt(r.balance_due||0)}</td>
+                    <td>${fmtDate(r.due_date)}${od}</td>
+                    <td>${badge(r.payment_status)}</td>
+                    <td>
+                        <button class="action-btn btn-receive"
+                            onclick="openReceipt(${r.id},'${(r.invoice_number||'').replace(/'/g,"\\'")}','${(r.party_name||'').replace(/'/g,"\\'")}',${r.balance_due})">
+                            <i class="fas fa-hand-holding-usd me-1"></i>Receive
+                        </button>
+                        <button class="action-btn btn-ledger"
+                            onclick="openLedger('${encodeURIComponent(r.party_name||'')}', ${r.company_id})">
+                            <i class="fas fa-book-open me-1"></i>Ledger
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+        } catch(e) { if (isAuth(e)) return; hide('listLoading'); show('listEmpty'); }
+    }
+
+    function applyFilters() { loadSummary(); loadInvoices(); }
+
+    function resetFilters() {
+        document.getElementById('filterCompany').value = '0';
+        document.getElementById('filterFrom').value = fmt_date(fyStart());
+        document.getElementById('filterTo').value   = fmt_date(new Date());
+        document.getElementById('filterStatus').value = '';
+        document.getElementById('searchInput').value = '';
+        document.getElementById('ctxBanner').classList.remove('show');
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.period-btn')[2].classList.add('active');
+        _activePeriod = 'fy';
+        applyFilters();
+    }
+
+    function clearCtx() { document.getElementById('ctxBanner').classList.remove('show'); resetFilters(); }
+
+    function switchTab(t) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('active');
+        document.getElementById('pane' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('active');
+    }
+
+    function openLedger(name, companyId) {
+        const frm = document.getElementById('filterFrom').value;
+        const toD = document.getElementById('filterTo').value;
+        let url = `/staff/accounts/party-ledger?party_name=${name}&party_type=All+Types&company_id=${companyId}`;
+        if (frm) url += `&from_date=${frm}`;
+        if (toD) url += `&to_date=${toD}`;
+        window.location.href = url;
+    }
+
+    function openReceipt(id, invNo, party, balance) {
+        document.getElementById('mInvoiceId').value = id;
+        document.getElementById('mInvoiceNo').textContent  = invNo;
+        document.getElementById('mCustomer').textContent   = party;
+        document.getElementById('mBalance').textContent    = '₹' + fmt(balance);
+        document.getElementById('mAmount').max   = balance;
+        document.getElementById('receiptForm').reset();
+        document.getElementById('mDate').valueAsDate = new Date();
+        document.getElementById('mAmount').value = balance;
+        document.getElementById('receiptModal').classList.add('active');
+    }
+
+    function closeModal() { document.getElementById('receiptModal').classList.remove('active'); }
+
+    async function submitReceipt() {
+        const iid  = document.getElementById('mInvoiceId').value;
+        const amt  = parseFloat(document.getElementById('mAmount').value);
+        const dt   = document.getElementById('mDate').value;
+        const mode = document.getElementById('mMode').value;
+        const ref  = document.getElementById('mRef').value;
+        const note = document.getElementById('mNote').value;
+        if (!amt || !dt || !mode) { alert('Please fill all required fields'); return; }
+        try {
+            const r = await staffFetch(`${API}/receivables/record-receipt`, {
+                method: 'POST',
+                body: JSON.stringify({ invoice_id: +iid, amount: amt, receipt_date: dt, payment_mode: mode, payment_reference: ref||null, narration: note||null })
+            });
+            const d = await r.json();
+            if (r.ok && d.success) { alert(d.message||'Receipt recorded'); closeModal(); applyFilters(); }
+            else alert(d.detail||d.message||'Failed');
+        } catch(e) { if (!isAuth(e)) { console.error(e); alert('Error'); } }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function fmt(n) { return parseFloat(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    function fmtDate(d) { if (!d) return '-'; return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+    function fmtDisp(d) { if (!d) return ''; return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+    function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+    function show(id) { document.getElementById(id).style.display=''; }
+    function hide(id) { document.getElementById(id).style.display='none'; }
+    function isAuth(e) { return e?.message==='AUTH_EXPIRED'||e?.message==='NO_TOKEN'; }
+    function badge(s) {
+        const m={UNPAID:'badge-unpaid',PARTIAL:'badge-partial',OVERDUE:'badge-overdue',PAID:'badge-paid',FULLY_PAID:'badge-paid'};
+        const l={UNPAID:'Unpaid',PARTIAL:'Partial',OVERDUE:'Overdue',PAID:'Paid',FULLY_PAID:'Paid'};
+        return `<span class="${m[s]||'badge-unpaid'}">${l[s]||s||'Unpaid'}</span>`;
+    }
+    </script>
+</body>
+</html>

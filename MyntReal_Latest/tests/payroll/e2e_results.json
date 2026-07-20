@@ -1,0 +1,220 @@
+{
+  "passed": 1,
+  "failed": 0,
+  "warnings": 7,
+  "results": [
+    {
+      "route": "Profiles",
+      "path": "/staff/payroll/profiles",
+      "loaded": true,
+      "console_errors": [
+        {
+          "level": "SEVERE",
+          "message": "http://localhost:5000/api/v1/sfms/companies - Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "network",
+          "timestamp": 1767781037458
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://localhost:5000/api/v1/sfms/companies",
+          "status": 404
+        }
+      ],
+      "elements_found": {
+        "stats_cards": 0,
+        "data_table": 4,
+        "filters": 1,
+        "action_buttons": 73
+      },
+      "data_loaded": true
+    },
+    {
+      "route": "Cycles",
+      "path": "/staff/payroll/cycles",
+      "loaded": true,
+      "console_errors": [
+        {
+          "level": "SEVERE",
+          "message": "http://localhost:5000/api/v1/sfms/companies - Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "network",
+          "timestamp": 1767781038773
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://localhost:5000/api/v1/sfms/companies",
+          "status": 404
+        }
+      ],
+      "elements_found": {
+        "stats_cards": 0,
+        "data_table": 4,
+        "filters": 1,
+        "action_buttons": 63
+      },
+      "data_loaded": true
+    },
+    {
+      "route": "Runs",
+      "path": "/staff/payroll/runs",
+      "loaded": true,
+      "console_errors": [
+        {
+          "level": "SEVERE",
+          "message": "http://localhost:5000/api/v1/sfms/companies - Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "network",
+          "timestamp": 1767781043233
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://localhost:5000/api/v1/sfms/companies",
+          "status": 404
+        }
+      ],
+      "elements_found": {
+        "stats_cards": 0,
+        "data_table": 4,
+        "filters": 1,
+        "action_buttons": 54
+      },
+      "data_loaded": true
+    },
+    {
+      "route": "Approvals",
+      "path": "/staff/payroll/approvals",
+      "loaded": true,
+      "console_errors": [
+        {
+          "level": "SEVERE",
+          "message": "http://localhost:5000/api/v1/sfms/companies - Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "network",
+          "timestamp": 1767781047687
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://localhost:5000/api/v1/sfms/companies",
+          "status": 404
+        }
+      ],
+      "elements_found": {
+        "stats_cards": 0,
+        "data_table": 4,
+        "filters": 1,
+        "action_buttons": 80
+      },
+      "data_loaded": true
+    },
+    {
+      "route": "Consultant Invoices",
+      "path": "/staff/payroll/consultant-invoices",
+      "loaded": true,
+      "console_errors": [
+        {
+          "level": "SEVERE",
+          "message": "http://localhost:5000/api/v1/sfms/companies - Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "network",
+          "timestamp": 1767781052093
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://localhost:5000/api/v1/sfms/companies",
+          "status": 404
+        }
+      ],
+      "elements_found": {
+        "stats_cards": 0,
+        "data_table": 4,
+        "filters": 1,
+        "action_buttons": 71
+      },
+      "data_loaded": true
+    },
+    {
+      "route": "Allowance Catalog",
+      "path": "/staff/payroll/allowance-catalog",
+      "loaded": true,
+      "console_errors": [
+        {
+          "level": "SEVERE",
+          "message": "http://localhost:5000/api/v1/sfms/companies - Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "network",
+          "timestamp": 1767781056623
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://localhost:5000/api/v1/sfms/companies",
+          "status": 404
+        }
+      ],
+      "elements_found": {
+        "stats_cards": 0,
+        "data_table": 4,
+        "filters": 1,
+        "action_buttons": 87
+      },
+      "data_loaded": true
+    },
+    {
+      "route": "Documents",
+      "path": "/staff/payroll/documents",
+      "loaded": true,
+      "console_errors": [
+        {
+          "level": "SEVERE",
+          "message": "http://localhost:5000/api/v1/sfms/companies - Failed to load resource: the server responded with a status of 404 (Not Found)",
+          "source": "network",
+          "timestamp": 1767781061214
+        },
+        {
+          "level": "SEVERE",
+          "message": "http://localhost:5000/api/v1/staff/payroll/documents?limit=100 - Failed to load resource: the server responded with a status of 403 (Forbidden)",
+          "source": "network",
+          "timestamp": 1767781064448
+        },
+        {
+          "level": "SEVERE",
+          "message": "http://localhost:5000/public/js/payroll/documents.js 94:20 \"Error loading documents:\" Error: Failed to load documents\n    at loadDocuments (http://localhost:5000/public/js/payroll/documents.js:54:37)\n    at async http://localhost:5000/public/js/payroll/documents.js:359:5",
+          "source": "console-api",
+          "timestamp": 1767781064448
+        }
+      ],
+      "network_errors": [
+        {
+          "url": "http://localhost:5000/api/v1/sfms/companies",
+          "status": 404
+        },
+        {
+          "url": "http://localhost:5000/api/v1/staff/payroll/documents?limit=100",
+          "status": 403
+        }
+      ],
+      "elements_found": {
+        "stats_cards": 0,
+        "data_table": 4,
+        "filters": 2,
+        "action_buttons": 62
+      },
+      "data_loaded": true
+    },
+    {
+      "operation": "documents_crud",
+      "steps": [
+        {
+          "filter_found": false
+        },
+        {
+          "view_buttons": 0
+        },
+        {
+          "download_buttons": 0
+        }
+      ],
+      "console_errors": 3
+    }
+  ]
+}

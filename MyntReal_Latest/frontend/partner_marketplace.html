@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketplace - Partner Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="/public/js/partner-token-manager.js"></script>
+    <style>
+        body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .partner-main-content { margin-left: 260px; height: 100vh; display: flex; flex-direction: column; }
+        .page-header {
+            background: linear-gradient(135deg, #1d4ed8, #0f2044);
+            padding: 14px 24px; display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
+        }
+        .page-header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff; }
+        .partner-badge {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px; padding: 5px 14px; font-size: 0.78rem; color: #fff;
+        }
+        .partner-badge .code { font-weight: 700; color: #fbbf24; }
+        .partner-badge .disc-status { font-size: 0.7rem; opacity: 0.8; }
+        iframe#mpFrame {
+            flex: 1; border: none; width: 100%;
+        }
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1001;
+            background: #1d4ed8; color: white; border: none; border-radius: 8px; padding: 10px 15px;
+        }
+        @media (max-width: 768px) {
+            .partner-main-content { margin-left: 0; }
+            .mobile-menu-toggle { display: block; }
+        }
+    </style>
+</head>
+<body>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div id="sidebarContainer"></div>
+
+    <div class="partner-main-content">
+        <div class="page-header">
+            <h1><i class="fas fa-store me-2"></i>Marketplace</h1>
+            <div class="partner-badge" id="partnerBadge">
+                <i class="fas fa-id-badge"></i>
+                <span>Partner: <span class="code" id="badgeCode">Loading…</span></span>
+                <span class="disc-status" id="badgeDiscStatus"></span>
+            </div>
+        </div>
+        <iframe id="mpFrame" src="/ecom" title="Marketplace"></iframe>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="/partner_sidebar.js?v=1"></script>
+    <script>
+        const partnerInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');
+        const partnerCode = (partnerInfo.partner_code || '').toUpperCase();
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const token = localStorage.getItem('partner_token');
+            if (!token) { window.location.href = '/partner/login'; return; }
+            initPartnerSidebar('sidebarContainer');
+
+            // Show partner code in header badge
+            const badgeCodeEl = document.getElementById('badgeCode');
+            if (badgeCodeEl) badgeCodeEl.textContent = partnerCode || 'N/A';
+
+            // Auto-inject partner code into marketplace after iframe loads
+            const frame = document.getElementById('mpFrame');
+            frame.addEventListener('load', function () {
+                if (!partnerCode) return;
+                try {
+                    const iDoc = frame.contentDocument || frame.contentWindow.document;
+                    const iWin = frame.contentWindow;
+
+                    // Set the association input and trigger validation
+                    const assocInput = iDoc.getElementById('assocInput');
+                    if (assocInput && typeof iWin.validateAssocId === 'function') {
+                        assocInput.value = partnerCode;
+                        // Small delay to let marketplace JS fully initialise
+                        setTimeout(async () => {
+                            try {
+                                await iWin.validateAssocId();
+                                document.getElementById('badgeDiscStatus').textContent = '✓ Discount active';
+                            } catch (e) {
+                                console.warn('[Partner-Mkt] Auto-fill warn:', e);
+                            }
+                        }, 600);
+                    }
+                } catch (err) {
+                    console.warn('[Partner-Mkt] iframe access error:', err);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

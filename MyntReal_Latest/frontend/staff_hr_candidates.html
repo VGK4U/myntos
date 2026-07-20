@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Candidates — HR</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Inter',system-ui,sans-serif; background:#f4f6fb; color:#111827; }
+.main-content { margin-left:260px; transition:margin-left .3s; }
+.content-area { padding:24px; max-width:1400px; }
+@media(max-width:768px) { .main-content{margin-left:0;} }
+
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+.page-header h1 { font-size:20px; font-weight:800; color:#111827; display:flex; align-items:center; gap:8px; }
+.page-header p  { font-size:13px; color:#6b7280; margin-top:3px; }
+
+/* Stats */
+.stats-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:12px; margin-bottom:20px; }
+.stat-card { background:#fff; border-radius:12px; padding:14px 16px; box-shadow:0 1px 3px rgba(0,0,0,.07); }
+.sc-val { font-size:22px; font-weight:800; color:#2563eb; }
+.sc-label { font-size:11px; color:#6b7280; margin-top:2px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+.sc-pending .sc-val    { color:#d97706; }
+.sc-short .sc-val      { color:#059669; }
+.sc-hold .sc-val       { color:#7c3aed; }
+.sc-rejected .sc-val   { color:#dc2626; }
+.sc-future .sc-val     { color:#0891b2; }
+
+/* Tab strip */
+.tab-strip { display:flex; gap:4px; background:#fff; border-radius:12px; padding:6px; box-shadow:0 1px 3px rgba(0,0,0,.07); margin-bottom:16px; flex-wrap:wrap; }
+.tab-btn { flex:1; min-width:100px; padding:8px 12px; border:none; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; background:transparent; color:#6b7280; transition:all .2s; text-align:center; }
+.tab-btn.active { background:#2563eb; color:#fff; }
+.tab-btn:not(.active):hover { background:#f3f4f6; color:#374151; }
+
+/* Filters */
+.filters-bar { background:#fff; border-radius:12px; padding:14px 16px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.07); display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+.filters-bar select, .filters-bar input { padding:7px 10px; border:1px solid #e5e7eb; border-radius:8px; font-size:13px; color:#374151; outline:none; }
+.filters-bar select:focus, .filters-bar input:focus { border-color:#2563eb; }
+.btn-outline { background:transparent; border:1.5px solid #e5e7eb; color:#374151; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; }
+.btn-outline:hover { border-color:#2563eb; color:#2563eb; }
+
+/* Table */
+.table-card { background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.07); overflow:hidden; }
+.table-card-header { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f0f0f0; }
+.table-card-header h3 { font-size:14px; font-weight:700; color:#111827; }
+table { width:100%; border-collapse:collapse; }
+th { padding:10px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#6b7280; background:#f9fafb; border-bottom:1px solid #f0f0f0; white-space:nowrap; cursor:pointer; text-align:left; }
+th:hover { color:#2563eb; }
+td { padding:11px 14px; font-size:13px; border-bottom:1px solid #f9fafb; vertical-align:middle; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:#f9fafb; }
+.actions-cell { display:flex; gap:6px; flex-wrap:wrap; }
+
+/* Status badges */
+.badge { display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:.3px; }
+.badge-PENDING             { background:#fef3c7; color:#92400e; }
+.badge-SHORTLISTED         { background:#d1fae5; color:#065f46; }
+.badge-HOLD                { background:#ede9fe; color:#5b21b6; }
+.badge-REJECTED            { background:#fee2e2; color:#991b1b; }
+.badge-FUTURE_CONSIDERATION{ background:#cffafe; color:#0e7490; }
+
+.btn-sm { padding:5px 10px; font-size:12px; border-radius:6px; font-weight:600; cursor:pointer; border:none; }
+.btn-view     { background:#eff6ff; color:#2563eb; }
+.btn-resume   { background:#f0fdf4; color:#059669; }
+.btn-no-resume{ background:#f3f4f6; color:#9ca3af; cursor:default; }
+
+/* Pagination */
+.pagination { display:flex; align-items:center; justify-content:space-between; padding:12px 18px; border-top:1px solid #f0f0f0; }
+.pagination-info { font-size:12px; color:#6b7280; }
+.pagination-btns { display:flex; gap:6px; }
+.pg-btn { padding:5px 12px; border-radius:6px; border:1.5px solid #e5e7eb; background:#fff; font-size:12px; font-weight:600; cursor:pointer; }
+.pg-btn:hover { border-color:#2563eb; color:#2563eb; }
+.pg-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+.pg-btn:disabled { opacity:.4; cursor:default; }
+
+/* Detail Panel (slide-in) */
+.panel-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:900; }
+.panel-overlay.open { display:block; }
+.detail-panel { position:fixed; right:0; top:0; width:480px; max-width:100vw; height:100%; background:#fff; box-shadow:-4px 0 30px rgba(0,0,0,.15); z-index:901; overflow-y:auto; transform:translateX(100%); transition:transform .3s; }
+.detail-panel.open { transform:translateX(0); }
+.panel-header { padding:18px 22px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:#fff; z-index:1; }
+.panel-header h2 { font-size:16px; font-weight:800; color:#111827; }
+.panel-close { background:none; border:none; font-size:20px; color:#9ca3af; cursor:pointer; }
+.panel-body { padding:22px; }
+.info-row { display:flex; gap:8px; align-items:flex-start; margin-bottom:12px; font-size:13px; }
+.info-row i { color:#6b7280; width:18px; margin-top:1px; }
+.info-label { font-weight:700; color:#374151; min-width:90px; }
+.info-val { color:#111827; flex:1; word-break:break-word; }
+.section-divider { font-size:11px; font-weight:700; color:#9ca3af; text-transform:uppercase; letter-spacing:.5px; margin:16px 0 10px; border-top:1px solid #f0f0f0; padding-top:12px; }
+.cover-letter-box { background:#f9fafb; border-radius:8px; padding:12px; font-size:13px; color:#374151; line-height:1.6; white-space:pre-wrap; }
+.notes-box { width:100%; padding:9px 11px; border:1.5px solid #e5e7eb; border-radius:8px; font-size:13px; color:#111827; font-family:inherit; resize:vertical; min-height:70px; outline:none; }
+.notes-box:focus { border-color:#2563eb; }
+
+/* Status select */
+.status-control { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:10px; }
+.status-select { padding:8px 12px; border:1.5px solid #e5e7eb; border-radius:8px; font-size:13px; font-weight:600; color:#374151; outline:none; }
+.status-select:focus { border-color:#2563eb; }
+.btn-primary { background:#2563eb; color:#fff; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; }
+.btn-primary:hover { background:#1d4ed8; }
+
+/* Empty / spinner */
+.empty-state { text-align:center; padding:40px; color:#9ca3af; }
+.empty-state i { font-size:36px; margin-bottom:10px; opacity:.4; display:block; }
+.spinner { display:inline-block; width:18px; height:18px; border:2.5px solid #e5e7eb; border-top-color:#2563eb; border-radius:50%; animation:spin .6s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg);} }
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div class="content-area">
+
+  <div class="page-header">
+    <div>
+      <h1><i class="fas fa-user-tie" style="color:#2563eb;"></i> Candidates</h1>
+      <p>Review and manage all job applications — shortlist, hold, reject or mark for future consideration</p>
+    </div>
+    <a href="/staff/hr/job-postings" class="btn-outline" style="text-decoration:none;"><i class="fas fa-briefcase"></i> Job Postings</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="sc-val" id="statTotal">—</div><div class="sc-label">Total</div></div>
+    <div class="stat-card sc-pending"><div class="sc-val" id="statPending">—</div><div class="sc-label">Pending</div></div>
+    <div class="stat-card sc-short"><div class="sc-val" id="statShort">—</div><div class="sc-label">Shortlisted</div></div>
+    <div class="stat-card sc-hold"><div class="sc-val" id="statHold">—</div><div class="sc-label">Hold</div></div>
+    <div class="stat-card sc-rejected"><div class="sc-val" id="statRej">—</div><div class="sc-label">Rejected</div></div>
+    <div class="stat-card sc-future"><div class="sc-val" id="statFuture">—</div><div class="sc-label">Future</div></div>
+  </div>
+
+  <!-- Status Tabs -->
+  <div class="tab-strip">
+    <button class="tab-btn active" onclick="setTab('',this)">All</button>
+    <button class="tab-btn" onclick="setTab('PENDING',this)"><i class="fas fa-clock"></i> Pending</button>
+    <button class="tab-btn" onclick="setTab('SHORTLISTED',this)"><i class="fas fa-star"></i> Shortlisted</button>
+    <button class="tab-btn" onclick="setTab('HOLD',this)"><i class="fas fa-pause-circle"></i> Hold</button>
+    <button class="tab-btn" onclick="setTab('FUTURE_CONSIDERATION',this)"><i class="fas fa-bookmark"></i> Future</button>
+    <button class="tab-btn" onclick="setTab('REJECTED',this)"><i class="fas fa-times-circle"></i> Rejected</button>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-bar">
+    <input type="text" id="fSearch" placeholder="Search name / email / phone..." style="flex:1;min-width:180px;" oninput="debounceLoad()">
+    <select id="fJob" onchange="loadApps(1)">
+      <option value="">All Jobs</option>
+    </select>
+    <input type="number" id="fExpMin" placeholder="Exp min" style="width:90px;" oninput="debounceLoad()">
+    <input type="number" id="fExpMax" placeholder="Exp max" style="width:90px;" oninput="debounceLoad()">
+    <input type="date" id="fDateFrom" onchange="loadApps(1)">
+    <input type="date" id="fDateTo"   onchange="loadApps(1)">
+    <select id="fSort" onchange="loadApps(1)">
+      <option value="applied_at|desc">Newest First</option>
+      <option value="applied_at|asc">Oldest First</option>
+      <option value="full_name|asc">Name A–Z</option>
+      <option value="exp_years|desc">Most Experienced</option>
+    </select>
+    <button class="btn-outline" onclick="clearFilters()"><i class="fas fa-times"></i> Clear</button>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <h3 id="tableTitle">All Candidates</h3>
+      <span id="tableSpinner"></span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Applied For</th>
+            <th>Contact</th>
+            <th onclick="sortBy('exp_years')">Experience <i class="fas fa-sort fa-xs"></i></th>
+            <th>Status</th>
+            <th onclick="sortBy('applied_at')">Applied <i class="fas fa-sort fa-xs"></i></th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="appsBody">
+          <tr><td colspan="7" class="empty-state"><span class="spinner"></span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <div class="pagination-info" id="pgInfo"></div>
+      <div class="pagination-btns" id="pgBtns"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- Panel overlay -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="panel-header">
+    <h2 id="panelName">Candidate Details</h2>
+    <button class="panel-close" onclick="closePanel()">&times;</button>
+  </div>
+  <div class="panel-body" id="panelBody">Loading...</div>
+</div>
+
+<script>
+const API = '/api/v1/staff/hr';
+let _page = 1, _total = 0, _activeTab = '', _sortBy = 'applied_at', _sortDir = 'desc';
+let _debounceTimer = null;
+
+async function init() {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('Candidates — HR', 'fas fa-user-tie'); StaffHeader.init(); }
+    if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+
+    // Pre-fill job filter from URL param
+    const params = new URLSearchParams(window.location.search);
+    const jobId = params.get('job_id');
+
+    await loadJobsDropdown(jobId);
+    await loadStats();
+    await loadApps(1);
+}
+
+async function loadJobsDropdown(preselect) {
+    try {
+        const r = await staffFetch(`${API}/jobs?page_size=100&status=ACTIVE`);
+        if (!r.ok) return;
+        const d = await r.json();
+        const sel = document.getElementById('fJob');
+        (d.jobs || []).forEach(j => {
+            const o = document.createElement('option');
+            o.value = j.id; o.textContent = j.title;
+            if (String(j.id) === String(preselect)) o.selected = true;
+            sel.appendChild(o);
+        });
+        if (preselect) loadApps(1);
+    } catch(e) {}
+}
+
+async function loadStats() {
+    const statusMap = {
+        statTotal:'', statPending:'PENDING', statShort:'SHORTLISTED',
+        statHold:'HOLD', statRej:'REJECTED', statFuture:'FUTURE_CONSIDERATION'
+    };
+    for (const [elId, status] of Object.entries(statusMap)) {
+        try {
+            const url = status ? `${API}/applications?status=${status}&page_size=1` : `${API}/applications?page_size=1`;
+            const r = await staffFetch(url);
+            const d = r.ok ? await r.json() : {};
+            document.getElementById(elId).textContent = d.total ?? '—';
+        } catch(e) {}
+    }
+}
+
+function setTab(status, btn) {
+    _activeTab = status;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadApps(1);
+}
+
+function sortBy(col) {
+    if (_sortBy === col) _sortDir = _sortDir === 'desc' ? 'asc' : 'desc';
+    else { _sortBy = col; _sortDir = 'asc'; }
+    loadApps(_page);
+}
+
+function debounceLoad() {
+    clearTimeout(_debounceTimer);
+    _debounceTimer = setTimeout(() => loadApps(1), 400);
+}
+
+function clearFilters() {
+    ['fSearch','fExpMin','fExpMax','fDateFrom','fDateTo'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('fJob').value='';
+    document.getElementById('fSort').value='applied_at|desc';
+    loadApps(1);
+}
+
+async function loadApps(page) {
+    _page = page;
+    document.getElementById('tableSpinner').innerHTML = '<span class="spinner"></span>';
+    const [sb, sd] = document.getElementById('fSort').value.split('|');
+    let url = `${API}/applications?page=${page}&page_size=25&sort_by=${sb||_sortBy}&sort_dir=${sd||_sortDir}`;
+    const search = document.getElementById('fSearch').value.trim();
+    const job    = document.getElementById('fJob').value;
+    const expMin = document.getElementById('fExpMin').value;
+    const expMax = document.getElementById('fExpMax').value;
+    const dfrom  = document.getElementById('fDateFrom').value;
+    const dto    = document.getElementById('fDateTo').value;
+    if (_activeTab) url += `&status=${_activeTab}`;
+    if (search)  url += `&search=${encodeURIComponent(search)}`;
+    if (job)     url += `&job_id=${job}`;
+    if (expMin)  url += `&exp_min=${expMin}`;
+    if (expMax)  url += `&exp_max=${expMax}`;
+    if (dfrom)   url += `&date_from=${dfrom}`;
+    if (dto)     url += `&date_to=${dto}`;
+    try {
+        const r = await staffFetch(url);
+        if (!r.ok) { showBodyError('Failed to load candidates'); return; }
+        const d = await r.json();
+        _total = d.total || 0;
+        renderApps(d.applications || []);
+        renderPagination(page, _total, 25);
+    } catch(e) { showBodyError('Network error'); }
+    document.getElementById('tableSpinner').innerHTML = '';
+}
+
+function renderApps(apps) {
+    const tbody = document.getElementById('appsBody');
+    if (!apps.length) {
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="fas fa-user-slash"></i>No candidates found</div></td></tr>`;
+        return;
+    }
+    tbody.innerHTML = apps.map(a => {
+        const badge = `<span class="badge badge-${a.status}">${a.status.replace('_',' ')}</span>`;
+        const date  = a.applied_at ? new Date(a.applied_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+        const resumeBtn = a.has_resume
+            ? `<button class="btn-sm btn-resume" onclick="downloadResume(${a.id})"><i class="fas fa-file-download"></i> Resume</button>`
+            : `<span class="btn-sm btn-no-resume"><i class="fas fa-file"></i> No CV</span>`;
+        return `<tr>
+            <td><strong>${escHtml(a.full_name)}</strong></td>
+            <td style="font-size:12px;">${escHtml(a.job_title||'—')}</td>
+            <td style="font-size:12px;">
+                <div>${escHtml(a.email)}</div>
+                <div style="color:#6b7280;">${escHtml(a.phone)}</div>
+            </td>
+            <td>${a.exp_years ?? 0}yr</td>
+            <td>${badge}</td>
+            <td style="font-size:12px;color:#6b7280;">${date}</td>
+            <td>
+                <div class="actions-cell">
+                    <button class="btn-sm btn-view" onclick="openPanel(${a.id})"><i class="fas fa-eye"></i> View</button>
+                    ${resumeBtn}
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+function renderPagination(page, total, size) {
+    const pages = Math.ceil(total/size)||1;
+    const from=(page-1)*size+1, to=Math.min(page*size,total);
+    document.getElementById('pgInfo').textContent = total ? `Showing ${from}–${to} of ${total}` : 'No results';
+    const btns = document.getElementById('pgBtns');
+    let html = `<button class="pg-btn" onclick="loadApps(${page-1})" ${page<=1?'disabled':''}>‹</button>`;
+    for (let p=Math.max(1,page-2); p<=Math.min(pages,page+2); p++)
+        html += `<button class="pg-btn${p===page?' active':''}" onclick="loadApps(${p})">${p}</button>`;
+    html += `<button class="pg-btn" onclick="loadApps(${page+1})" ${page>=pages?'disabled':''}>›</button>`;
+    btns.innerHTML = html;
+}
+
+function showBodyError(msg) {
+    document.getElementById('appsBody').innerHTML = `<tr><td colspan="7"><div class="empty-state" style="color:#dc2626;">${msg}</div></td></tr>`;
+}
+
+// ─── Detail Panel ──────────────────────────────────────────────
+let _currentAppId = null;
+
+async function openPanel(id) {
+    _currentAppId = id;
+    document.getElementById('panelBody').innerHTML = '<div class="empty-state"><span class="spinner"></span></div>';
+    document.getElementById('detailPanel').classList.add('open');
+    document.getElementById('panelOverlay').classList.add('open');
+    try {
+        const r = await staffFetch(`${API}/applications/${id}`);
+        if (!r.ok) { document.getElementById('panelBody').innerHTML = '<div class="empty-state" style="color:#dc2626;">Failed to load</div>'; return; }
+        const a = await r.json();
+        document.getElementById('panelName').textContent = a.full_name || 'Candidate';
+        renderPanel(a);
+    } catch(e) { document.getElementById('panelBody').innerHTML = '<div class="empty-state" style="color:#dc2626;">Network error</div>'; }
+}
+
+function renderPanel(a) {
+    const badge = `<span class="badge badge-${a.status}">${a.status.replace(/_/g,' ')}</span>`;
+    const resumeBtn = a.has_resume
+        ? `<button class="btn-primary" onclick="downloadResume(${a.id})" style="margin-top:10px;"><i class="fas fa-file-download"></i> Download Resume</button>`
+        : `<div style="font-size:13px;color:#9ca3af;margin-top:6px;"><i class="fas fa-file"></i> No resume uploaded</div>`;
+    const applied = a.applied_at ? new Date(a.applied_at).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+    const coverLetter = a.cover_letter
+        ? `<div class="cover-letter-box">${escHtml(a.cover_letter)}</div>`
+        : `<div style="font-size:13px;color:#9ca3af;">No cover letter provided</div>`;
+
+    document.getElementById('panelBody').innerHTML = `
+        <div class="info-row"><i class="fas fa-briefcase"></i><span class="info-label">Applied For</span><span class="info-val">${escHtml(a.job_title||'—')}</span></div>
+        <div class="info-row"><i class="fas fa-envelope"></i><span class="info-label">Email</span><span class="info-val">${escHtml(a.email)}</span></div>
+        <div class="info-row"><i class="fas fa-phone"></i><span class="info-label">Phone</span><span class="info-val">${escHtml(a.phone)}</span></div>
+        <div class="info-row"><i class="fas fa-chart-line"></i><span class="info-label">Experience</span><span class="info-val">${a.exp_years ?? 0} year(s)</span></div>
+        <div class="info-row"><i class="fas fa-building"></i><span class="info-label">Current Co.</span><span class="info-val">${escHtml(a.current_company||'—')}</span></div>
+        <div class="info-row"><i class="fas fa-calendar"></i><span class="info-label">Applied On</span><span class="info-val">${applied}</span></div>
+        <div class="info-row"><i class="fas fa-tag"></i><span class="info-label">Status</span><span class="info-val">${badge}</span></div>
+
+        <div class="section-divider">Resume</div>
+        ${resumeBtn}
+
+        <div class="section-divider">Cover Letter</div>
+        ${coverLetter}
+
+        <div class="section-divider">Update Status</div>
+        <div class="status-control">
+            <select class="status-select" id="panelStatus">
+                <option value="PENDING"             ${a.status==='PENDING'?'selected':''}>Pending</option>
+                <option value="SHORTLISTED"         ${a.status==='SHORTLISTED'?'selected':''}>Shortlisted</option>
+                <option value="HOLD"                ${a.status==='HOLD'?'selected':''}>Hold</option>
+                <option value="FUTURE_CONSIDERATION"${a.status==='FUTURE_CONSIDERATION'?'selected':''}>Future Consideration</option>
+                <option value="REJECTED"            ${a.status==='REJECTED'?'selected':''}>Rejected</option>
+            </select>
+            <button class="btn-primary" onclick="updateStatus(${a.id})"><i class="fas fa-check"></i> Update</button>
+        </div>
+
+        <div class="section-divider">Staff Notes</div>
+        <textarea class="notes-box" id="panelNotes" placeholder="Add internal notes about this candidate...">${escHtml(a.staff_notes||'')}</textarea>
+        <button class="btn-primary" style="margin-top:8px;" onclick="saveNotes(${a.id})"><i class="fas fa-save"></i> Save Notes</button>
+    `;
+}
+
+function closePanel() {
+    document.getElementById('detailPanel').classList.remove('open');
+    document.getElementById('panelOverlay').classList.remove('open');
+    _currentAppId = null;
+}
+
+async function updateStatus(id) {
+    const status = document.getElementById('panelStatus').value;
+    const notes  = document.getElementById('panelNotes').value;
+    const fd = new FormData();
+    fd.append('status', status);
+    if (notes) fd.append('staff_notes', notes);
+    try {
+        const r = await staffFetch(`${API}/applications/${id}/status`, { method:'PATCH', body:fd });
+        const d = await r.json();
+        if (!r.ok) { alert(d.detail||'Update failed'); return; }
+        loadStats(); loadApps(_page); closePanel();
+    } catch(e) { alert('Network error'); }
+}
+
+async function saveNotes(id) {
+    const status = document.getElementById('panelStatus').value;
+    const notes  = document.getElementById('panelNotes').value;
+    const fd = new FormData();
+    fd.append('status', status);
+    fd.append('staff_notes', notes);
+    try {
+        const r = await staffFetch(`${API}/applications/${id}/status`, { method:'PATCH', body:fd });
+        if (r.ok) { alert('Notes saved!'); }
+    } catch(e) {}
+}
+
+async function downloadResume(id) {
+    try {
+        const r = await staffFetch(`${API}/applications/${id}/resume`);
+        if (!r.ok) { alert('Resume not available'); return; }
+        const blob = await r.blob();
+        const cd   = r.headers.get('Content-Disposition') || '';
+        const fn   = (cd.match(/filename="(.+?)"/) || [])[1] || 'resume.pdf';
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a'); a.href=url; a.download=fn; a.click();
+        URL.revokeObjectURL(url);
+    } catch(e) { alert('Download failed'); }
+}
+
+function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js?v=1769200000"></script>
+</body>
+</html>

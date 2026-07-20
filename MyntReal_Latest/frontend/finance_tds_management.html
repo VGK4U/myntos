@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TDS Management - Finance Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+    .promo-tds-card{background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:16px 20px;text-align:center;border-top:3px solid #0d9488}
+    .promo-tds-val{font-size:22px;font-weight:900;color:#0d9488;margin-bottom:2px}
+    .promo-tds-lbl{font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.4px}
+    .section-hdr{background:linear-gradient(135deg,#1a2744,#1e3a5f);color:#fff;border-radius:10px;padding:16px 20px;margin:28px 0 16px;display:flex;align-items:center;gap:14px}
+    .tds-notice{background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;font-size:13px;color:#92400e;margin-bottom:16px}
+    </style>
+</head>
+<body style="background:#f8f9fa">
+    <nav class="navbar navbar-dark bg-success">
+        <div class="container-fluid">
+            <span class="navbar-brand"><i class="bi bi-percent"></i> TDS Payable Management</span>
+            <a href="/finance/dashboard" class="btn btn-outline-light btn-sm">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+
+        <!-- ── Existing TDS Section ── -->
+        <h6 class="text-muted text-uppercase fw-bold mb-3" style="letter-spacing:.5px"><i class="bi bi-people me-2"></i>Member / User TDS</h6>
+        <div class="row mb-3">
+            <div class="col-md-4"><div class="card text-center p-3"><h3 id="totalTDS">₹0</h3><p>Total TDS Payable</p></div></div>
+            <div class="col-md-4"><div class="card text-center p-3"><h3 id="paidTDS">₹0</h3><p>TDS Paid</p></div></div>
+            <div class="col-md-4"><div class="card text-center p-3"><h3 id="pendingTDS">₹0</h3><p>TDS Pending</p></div></div>
+        </div>
+        <div class="card mb-4"><div class="card-body"><div id="tdsList"></div></div></div>
+
+        <!-- ── Promoter TDS Section ── -->
+        <div class="section-hdr">
+            <i class="fas fa-bullhorn" style="font-size:22px;opacity:.9"></i>
+            <div>
+                <div style="font-weight:800;font-size:15px">Promoter / Influencer TDS (2%)</div>
+                <div style="font-size:12px;opacity:.8;margin-top:2px">Compliance view — TDS deducted from promotion deal payments</div>
+            </div>
+        </div>
+
+        <div class="tds-notice">
+            <i class="fas fa-info-circle" style="margin-right:6px;color:#d97706"></i>
+            <b>Regulatory Note:</b> 2% TDS is deducted from influencer/promoter payments under Section 194C/194H of the Income Tax Act.
+            TDS on <b>paid deals</b> is the company's government-payable liability. TDS on <b>pending deals</b> is a future liability.
+        </div>
+
+        <!-- Promo TDS summary cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px" id="promoTdsCards">
+            <div class="promo-tds-card"><div class="promo-tds-val" id="ptTotal">—</div><div class="promo-tds-lbl">Total Deals</div></div>
+            <div class="promo-tds-card" style="border-top-color:#ef4444"><div class="promo-tds-val" style="color:#ef4444" id="ptTotalTDS">—</div><div class="promo-tds-lbl">Total TDS (All Deals)</div></div>
+            <div class="promo-tds-card" style="border-top-color:#7c3aed"><div class="promo-tds-val" style="color:#7c3aed" id="ptPayable">—</div><div class="promo-tds-lbl">TDS Payable (Paid Deals)</div></div>
+            <div class="promo-tds-card" style="border-top-color:#f59e0b"><div class="promo-tds-val" style="color:#d97706" id="ptPending">—</div><div class="promo-tds-lbl">Future Liability (Pending)</div></div>
+        </div>
+
+        <!-- Filters -->
+        <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+            <select id="ptStatusFilter" class="form-select form-select-sm" style="width:auto" onchange="loadPromoTDS()">
+                <option value="">All Payment Statuses</option>
+                <option value="paid">Paid Only</option>
+                <option value="pending">Pending Only</option>
+                <option value="cancelled">Cancelled Only</option>
+            </select>
+            <input type="date" id="ptDateFrom" class="form-control form-control-sm" style="width:160px" onchange="loadPromoTDS()" title="Payment date from">
+            <input type="date" id="ptDateTo" class="form-control form-control-sm" style="width:160px" onchange="loadPromoTDS()" title="Payment date to">
+            <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('ptStatusFilter').value='';document.getElementById('ptDateFrom').value='';document.getElementById('ptDateTo').value='';loadPromoTDS()">Reset</button>
+            <span id="ptResultCount" style="font-size:12px;color:#64748b"></span>
+        </div>
+
+        <!-- Promo TDS table -->
+        <div class="card mb-5">
+            <div class="card-body p-0">
+                <div style="overflow-x:auto">
+                    <table class="table table-sm table-hover mb-0" style="font-size:13px">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Promoter</th>
+                                <th>Ref Code</th>
+                                <th>Campaign</th>
+                                <th>Platform</th>
+                                <th class="text-end">Agreed ₹</th>
+                                <th class="text-end" style="color:#ef4444">TDS 2%</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-end">Paid Out ₹</th>
+                                <th>Deal Date</th>
+                                <th>Payment Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="promoTdsList">
+                            <tr><td colspan="10" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE='/api/v1';
+        const authToken = localStorage.getItem('authToken');
+        const authHeaders = {'Authorization':`Bearer ${authToken}`};
+
+        // ── Existing TDS (Member) ──
+        $.ajax({url:`${API_BASE}/finance/tds/summary`, headers: authHeaders,
+        success: r => {
+            if (r.success) {
+                $('#totalTDS').text(`₹${(r.summary.total_tds||0).toLocaleString()}`);
+                $('#paidTDS').text(`₹${(r.summary.paid_tds||0).toLocaleString()}`);
+                $('#pendingTDS').text(`₹${(r.summary.pending_tds||0).toLocaleString()}`);
+                $('#tdsList').html(r.tds_entries.map(t=>`<div class="border p-3 mb-2"><strong>${t.user_id}</strong> - ₹${(t.tds_amount||0).toLocaleString()}
+                <span class="badge ${t.is_paid?'bg-success':'bg-warning'}">${t.is_paid?'Paid':'Pending'}</span>
+                ${!t.is_paid?`<button class="btn btn-sm btn-success float-end" onclick="markPaid(${t.id})">Mark Paid</button>`:''}</div>`).join(''))
+            }
+        }});
+
+        function markPaid(id) {
+            $.ajax({url:`${API_BASE}/financial-reports/tds-payable/${id}/mark-paid`, method:'POST', headers: authHeaders,
+            success: () => { alert('✅ Marked as paid!'); location.reload(); },
+            error: () => alert('❌ Failed')});
+        }
+
+        // ── Promoter TDS ──
+        function _inr(n) {
+            return '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        }
+        function _fmtDate(s) {
+            if (!s) return '—';
+            return new Date(s).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+        }
+        const statusBadge = {
+            paid: '<span class="badge bg-success">Paid</span>',
+            pending: '<span class="badge bg-warning text-dark">Pending</span>',
+            cancelled: '<span class="badge bg-secondary">Cancelled</span>',
+        };
+
+        async function loadPromoTDS() {
+            const status = document.getElementById('ptStatusFilter').value;
+            const dateFrom = document.getElementById('ptDateFrom').value;
+            const dateTo = document.getElementById('ptDateTo').value;
+            let url = `${API_BASE}/promo/staff/promoter-tds-summary?`;
+            if (status) url += `status=${encodeURIComponent(status)}&`;
+            if (dateFrom) url += `date_from=${encodeURIComponent(dateFrom)}&`;
+            if (dateTo) url += `date_to=${encodeURIComponent(dateTo)}&`;
+
+            document.getElementById('promoTdsList').innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+
+            try {
+                const resp = await fetch(url, {headers: authHeaders});
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Failed');
+                const s = data.summary || {};
+                document.getElementById('ptTotal').textContent = s.total_deals || 0;
+                document.getElementById('ptTotalTDS').textContent = _inr(s.total_tds);
+                document.getElementById('ptPayable').textContent = _inr(s.tds_payable);
+                document.getElementById('ptPending').textContent = _inr(s.tds_pending_liability);
+                document.getElementById('ptResultCount').textContent = `${data.items.length} record(s)`;
+
+                if (!data.items.length) {
+                    document.getElementById('promoTdsList').innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No promoter deals match the selected filters.</td></tr>';
+                    return;
+                }
+                document.getElementById('promoTdsList').innerHTML = data.items.map(d => `
+                    <tr>
+                        <td class="fw-semibold">${d.promoter_name || '—'}</td>
+                        <td><code style="font-size:11px;background:#f1f5f9;padding:2px 6px;border-radius:4px">${d.referral_code || '—'}</code></td>
+                        <td>${d.promotion_name || '—'}</td>
+                        <td>${d.platform ? `<span class="badge bg-light text-dark border">${d.platform}</span>` : '—'}</td>
+                        <td class="text-end fw-semibold text-success">${_inr(d.agreed_charge)}</td>
+                        <td class="text-end fw-bold text-danger">${_inr(d.tds_amount)}</td>
+                        <td class="text-center">${statusBadge[d.payment_status] || d.payment_status}</td>
+                        <td class="text-end text-success">${_inr(d.payment_amount)}</td>
+                        <td style="white-space:nowrap;font-size:12px">${_fmtDate(d.deal_date)}</td>
+                        <td style="white-space:nowrap;font-size:12px">${_fmtDate(d.payment_date)}</td>
+                    </tr>`).join('');
+            } catch(e) {
+                document.getElementById('promoTdsList').innerHTML = `<tr><td colspan="10" class="text-center py-4 text-danger"><i class="fas fa-exclamation-circle"></i> Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        loadPromoTDS();
+    </script>
+</body>
+</html>

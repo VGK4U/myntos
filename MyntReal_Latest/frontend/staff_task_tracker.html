@@ -1,0 +1,2776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - Task Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; }
+        
+        /* Stats Cards */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .stat-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .stat-icon.blue { background: #dbeafe; color: #2563eb; }
+        .stat-icon.green { background: #d1fae5; color: #059669; }
+        .stat-icon.yellow { background: #fef3c7; color: #d97706; }
+        .stat-icon.red { background: #fee2e2; color: #dc2626; }
+        .stat-icon.purple { background: #e0e7ff; color: #4338ca; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-label { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        
+        /* Filters */
+        .filters-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; }
+        .filters-title { font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 12px; }
+        .filters-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .filters-row select, .filters-row input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white; }
+        .filter-label { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
+        .filter-group { display: flex; flex-direction: column; }
+        
+        /* Tabs */
+        .custom-tabs { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        .tab-headers { display: flex; border-bottom: 2px solid #e5e7eb; background: #f9fafb; }
+        .tab-header { flex: 1; padding: 16px 20px; text-align: center; cursor: pointer; font-weight: 600; color: #6b7280; transition: all 0.2s; border-bottom: 3px solid transparent; }
+        .tab-header:hover { background: #f3f4f6; color: #1f2937; }
+        .tab-header.active { background: white; color: #2563eb; border-bottom-color: #2563eb; }
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+        
+        /* Expandable Tables */
+        .expandable-table { width: 100%; border-collapse: collapse; }
+        .expandable-table thead th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; border-bottom: 2px solid #e5e7eb; }
+        .expandable-table tbody tr { border-bottom: 1px solid #e5e7eb; transition: background 0.2s; }
+        .expandable-table tbody tr:hover { background: #f9fafb; }
+        .expandable-table tbody td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .expand-btn { background: none; border: none; color: #2563eb; font-size: 16px; cursor: pointer; padding: 4px 8px; transition: transform 0.2s; }
+        .expand-btn.expanded { transform: rotate(90deg); }
+        .expanded-row { display: none; background: #f9fafb; }
+        .expanded-row.show { display: table-row; }
+        .expanded-content { padding: 16px 48px; }
+        .sub-table { width: 100%; margin-top: 8px; border-collapse: collapse; }
+        .sub-table thead th { background: #e5e7eb; font-size: 11px; padding: 8px 12px; }
+        .sub-table tbody td { padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #e5e7eb; }
+        
+        /* Badges */
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .badge-in_progress { background: #dbeafe; color: #1e40af; }
+        .badge-completed { background: #dcfce7; color: #166534; }
+        .badge-cancelled { background: #fee2e2; color: #991b1b; }
+        .badge-high { background: #fee2e2; color: #991b1b; }
+        .badge-medium { background: #fef3c7; color: #92400e; }
+        .badge-low { background: #e0f2fe; color: #075985; }
+        
+        /* Progress Bar */
+        .progress { height: 8px; border-radius: 4px; background: #e5e7eb; }
+        .progress-bar { border-radius: 4px; }
+        
+        /* Charts */
+        .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
+        .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
+        
+        /* Empty State */
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+        .empty-state h5 { color: #374151; margin-bottom: 8px; }
+        
+        /* Loading */
+        .loading { text-align: center; padding: 40px; color: #6b7280; }
+        
+        /* Overdue Highlight */
+        .overdue-cell { color: #dc2626; font-weight: 600; }
+        
+        /* Manager Badge */
+        .manager-badge { background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-left: 8px; }
+        
+        /* DC_MOBILE_SCROLL_001: Enhanced table-responsive for mobile horizontal scrolling */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch; /* Smooth iOS scrolling */
+            margin-bottom: 1rem;
+        }
+        
+        /* Default: show full header text, hide short */
+        .th-full { display: inline; }
+        .th-short { display: none; }
+
+        /* DC_MOBILE_SCROLL_002: Mobile-optimized layout for task tracker */
+        @media (max-width: 576px) {
+            .content-area { padding: 8px; }
+
+            /* Stats grid: 2 cols + 3 cols compact */
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 10px; }
+            .stat-card { padding: 8px 10px; border-radius: 8px; }
+            .stat-header { margin-bottom: 2px; }
+            .stat-value { font-size: 18px; }
+            .stat-label { font-size: 10px; margin-top: 1px; }
+            .stat-icon { width: 28px; height: 28px; border-radius: 6px; font-size: 13px; }
+
+            /* Tabs: compact text */
+            .tab-headers { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .tab-header { padding: 8px 6px; font-size: 11px; white-space: nowrap; min-width: 0; }
+            .tab-header i { display: none; }
+
+            /* Tables: fit all columns, show full data */
+            .table-responsive { overflow-x: auto; margin-bottom: 0.5rem; }
+            .table-responsive .table { min-width: unset !important; width: 100%; }
+            .table-responsive .table th,
+            .table-responsive .table td { 
+                padding: 4px 3px; font-size: 11px; text-align: center; 
+                white-space: normal; word-break: break-word; vertical-align: middle;
+            }
+            .table-responsive .table th:first-child,
+            .table-responsive .table td:first-child { text-align: left; }
+
+            /* Section headers compact */
+            .content-area h5 { font-size: 12px; padding: 5px 8px !important; margin-bottom: 6px !important; }
+            .content-area h5 i { font-size: 11px; }
+            .content-area .mt-4 { margin-top: 10px !important; }
+
+            /* Filters compact */
+            .filters-card { padding: 8px 10px; }
+            .filters-title { font-size: 12px; margin-bottom: 6px; }
+            .filters-row { gap: 6px; }
+            .filters-row select, .filters-row input { padding: 5px 8px; font-size: 12px; }
+            .filter-label { font-size: 11px; }
+            .filter-group { flex: 1 1 45%; min-width: 0; }
+
+            /* Manager badge */
+            .manager-badge { font-size: 10px; padding: 3px 8px; margin-bottom: 6px; display: inline-block; }
+
+            /* Charts compact */
+            .charts-grid { grid-template-columns: 1fr; gap: 12px; }
+            .chart-container { height: 200px; }
+
+            /* Tab content less padding */
+            .tab-content { padding: 8px; }
+
+            /* Badges smaller */
+            .badge { padding: 2px 6px; font-size: 10px; }
+
+            /* Empty state compact */
+            .empty-state { padding: 30px 10px; }
+            .empty-state i { font-size: 32px; margin-bottom: 8px; }
+            .empty-state h5 { font-size: 14px; }
+            .empty-state p { font-size: 12px; }
+
+            /* Abbreviated table headers for mobile */
+            .th-full { display: none; }
+            .th-short { display: inline; }
+
+            /* Expandable tables compact */
+            .expandable-table thead th { padding: 6px 4px; font-size: 10px; }
+            .expandable-table tbody td { padding: 6px 4px; font-size: 11px; }
+            .expanded-content { padding: 8px 10px; }
+            .sub-table thead th { padding: 4px 6px; font-size: 10px; }
+            .sub-table tbody td { padding: 6px; font-size: 11px; }
+
+            /* Chart cards compact */
+            .card-header h5 { font-size: 13px; margin-bottom: 0; }
+            .card-header { padding: 8px 10px; }
+            .card-body { padding: 8px; }
+
+            /* Universal filter container */
+            #universalFilterContainer { padding: 6px 8px !important; }
+
+            /* Fallback filters */
+            #fallbackFiltersContainer { flex-wrap: wrap; gap: 6px; padding: 6px 8px !important; }
+            #fallbackFiltersContainer select,
+            #fallbackFiltersContainer input { min-width: unset !important; flex: 1 1 45%; font-size: 12px; }
+        }
+
+        .employee-search-results { max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; background: white; position: absolute; z-index: 1050; width: 100%; }
+        .employee-search-item, .search-result-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; }
+        .employee-search-item:hover, .search-result-item:hover { background: #f3f4f6; }
+        .selected-assignee { display: inline-flex; align-items: center; background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 20px; margin: 4px; font-size: 13px; }
+        .selected-assignee.primary { background: #dbeafe; color: #1d4ed8; }
+        .selected-assignee .remove-btn { cursor: pointer; margin-left: 6px; }
+        .selected-assignees { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .char-counter { text-align: right; font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group label { font-weight: 500; margin-bottom: 4px; display: block; font-size: 13px; }
+        .file-preview-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 4px; }
+        .file-preview-info { display: flex; align-items: center; gap: 8px; }
+        .file-preview-icon { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 14px; }
+        .file-preview-icon.image { background: #dbeafe; color: #2563eb; }
+        .file-preview-icon.document { background: #fef3c7; color: #d97706; }
+        .file-preview-name { font-size: 13px; font-weight: 500; }
+        .file-preview-size { font-size: 11px; color: #6b7280; }
+        .file-preview-size.error { color: #dc2626; }
+        .upload-progress-container { display: none; margin-top: 8px; }
+        .upload-progress-container.active { display: block; }
+        .upload-progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; position: relative; }
+        .upload-progress-fill { height: 100%; background: #2563eb; transition: width 0.3s; }
+        .upload-progress-text { position: absolute; right: 4px; top: -2px; font-size: 10px; color: #6b7280; }
+        .upload-progress-file { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .phase-item { background: #f8fafc; }
+        .phase-item.phase-confirmed { background: #f0fdf4; border-color: #86efac !important; }
+        .modal-content { border-radius: 12px; border: none; }
+        .modal-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-bottom: none; padding: 16px 24px; border-radius: 12px 12px 0 0; }
+        .modal-header .btn-close { filter: invert(1); }
+        .modal-body { padding: 24px; max-height: 70vh; overflow-y: scroll; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; border-radius: 0 0 12px 12px; }
+
+        @media (min-width: 577px) and (max-width: 768px) {
+            .content-area { padding: 12px; }
+            .stats-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+            .stat-card { padding: 12px; }
+            .stat-value { font-size: 22px; }
+            .stat-label { font-size: 11px; }
+            .stat-icon { width: 32px; height: 32px; font-size: 14px; }
+            .tab-header { padding: 10px 8px; font-size: 12px; }
+            .tab-header i { margin-right: 4px !important; }
+            .table-responsive .table { min-width: unset !important; width: 100%; }
+            .table-responsive .table th,
+            .table-responsive .table td { padding: 6px 5px; font-size: 12px; text-align: center; white-space: normal; word-break: break-word; }
+            .table-responsive .table th:first-child,
+            .table-responsive .table td:first-child { text-align: left; }
+            .charts-grid { grid-template-columns: 1fr; }
+            .chart-container { height: 240px; }
+            .tab-content { padding: 12px; }
+            .filters-row { gap: 8px; }
+            .filter-group { flex: 1 1 30%; min-width: 0; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <!-- DC Protocol (Jan 22, 2026): Manager badge - shown for hierarchy_level >= 60 -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span id="managerBadge" class="manager-badge" style="display:none;">
+                    <i class="fas fa-crown me-1"></i>Manager View
+                </span>
+                <button class="btn btn-primary btn-sm" onclick="openCreateTaskModal()">
+                    <i class="fas fa-plus me-1"></i>Create Task
+                </button>
+            </div>
+            
+            <!-- Stats Cards - Always Visible -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value" id="totalTasks">0</div>
+                            <div class="stat-label">Total Tasks</div>
+                        </div>
+                        <div class="stat-icon blue"><i class="fas fa-tasks"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value" id="completedTasks">0</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                        <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value" id="inProgressTasks">0</div>
+                            <div class="stat-label">In Progress</div>
+                        </div>
+                        <div class="stat-icon yellow"><i class="fas fa-spinner"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value" id="overdueTasks">0</div>
+                            <div class="stat-label">Overdue</div>
+                        </div>
+                        <div class="stat-icon red"><i class="fas fa-exclamation-triangle"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-value" id="pendingTasks">0</div>
+                            <div class="stat-label">Pending</div>
+                        </div>
+                        <div class="stat-icon purple"><i class="fas fa-clock"></i></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DC_UNIVERSAL_FILTER_001: Universal Filter Container -->
+            <div id="universalFilterContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0; background: white; border-radius: 12px 12px 0 0; margin-bottom: 0;"></div>
+            
+            <!-- Fallback filters - shown if universal filter fails to load -->
+            <div id="fallbackFiltersContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0; display: flex; background: white; margin-bottom: 0;">
+                <select id="fallbackDepartmentFilter" style="min-width: 160px;" onchange="applyFilters()">
+                    <option value="">All Departments</option>
+                </select>
+                <select id="fallbackStaffTypeFilter" style="min-width: 140px;" onchange="applyFilters()">
+                    <option value="">All Staff Types</option>
+                    <option value="MN_STAFF">MN Staff</option>
+                    <option value="MN_EMPLOYEE">MN Employee</option>
+                    <option value="FREELANCER">Freelancer</option>
+                    <option value="MYNT_REAL">Mynt Real</option>
+                </select>
+                <input type="text" id="fallbackEmployeeSearch" class="form-control" style="min-width: 200px;" placeholder="Search employee..." oninput="debounceEmployeeSearch()">
+            </div>
+            
+            <!-- Filters Card - DC Protocol: Synchronized Across Tabs -->
+            <div class="filters-card" style="border-radius: 0 0 12px 12px; margin-top: 0;">
+                <div class="filters-title"><i class="fas fa-filter me-2"></i>Filters (Synced Across Tabs)</div>
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <label class="filter-label">Date Range</label>
+                        <select id="filterDateRange" onchange="applyFilters()">
+                            <option value="overall">Overall</option>
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="90">Last 90 Days</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" id="customDateGroup" style="display:none;">
+                        <label class="filter-label">Start Date</label>
+                        <input type="date" id="filterStartDate" onchange="applyFilters()">
+                    </div>
+                    <div class="filter-group" id="customDateEndGroup" style="display:none;">
+                        <label class="filter-label">End Date</label>
+                        <input type="date" id="filterEndDate" onchange="applyFilters()">
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Status</label>
+                        <select id="filterStatus" onchange="applyFilters()">
+                            <option value="all">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Priority</label>
+                        <select id="filterPriority" onchange="applyFilters()">
+                            <option value="all">All Priorities</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label class="filter-label">Category</label>
+                        <select id="filterCategory" onchange="applyFilters()">
+                            <option value="all">All Categories</option>
+                            <option value="development">Development</option>
+                            <option value="design">Design</option>
+                            <option value="testing">Testing</option>
+                            <option value="documentation">Documentation</option>
+                            <option value="support">Support</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" id="departmentFilterGroup" style="display:none;">
+                        <label class="filter-label">Department</label>
+                        <select id="filterDepartment">
+                            <option value="all">All Departments</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" id="employeeFilterGroup" style="display:none;">
+                        <label class="filter-label">Employee</label>
+                        <select id="filterEmployee" onchange="applyFilters()">
+                            <option value="all">All Employees</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" style="justify-content: flex-end; margin-top: 20px;">
+                        <button class="btn btn-primary btn-sm" onclick="applyFilters()">
+                            <i class="fas fa-sync-alt me-1"></i>Apply Filters
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm ms-2" onclick="resetFilters()">
+                            <i class="fas fa-times me-1"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab Structure -->
+            <div class="custom-tabs">
+                <div class="tab-headers">
+                    <div class="tab-header active" onclick="switchTab(event, 'myTasks')">
+                        <i class="fas fa-user me-2"></i>My Tasks
+                    </div>
+                    <div class="tab-header" onclick="switchTab(event, 'team')">
+                        <i class="fas fa-users-cog me-2"></i>Team
+                    </div>
+                    <div class="tab-header" id="teamPerformanceTabHeader" onclick="switchTab(event, 'teamPerformance')" style="display:none;">
+                        <i class="fas fa-users me-2"></i>Overall Team Performance
+                    </div>
+                    <div class="tab-header" onclick="switchTab(event, 'charts')">
+                        <i class="fas fa-chart-bar me-2"></i>Analytics Charts
+                    </div>
+                </div>
+                
+                <!-- Tab 1: My Tasks (Self Data) -->
+                <div id="myTasksTab" class="tab-content active">
+                    <div id="myTasksLoading" class="loading">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-3">Loading your task data...</p>
+                    </div>
+                    
+                    <div id="myTasksContent" style="display:none;">
+                        <!-- ASSIGNED BY ME -->
+                        <h5 class="mb-3" style="background: linear-gradient(90deg, #dbeafe 0%, transparent 100%); padding: 8px 12px; border-radius: 4px;">
+                            <i class="fas fa-paper-plane me-2"></i>TASKS ASSIGNED BY ME
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover mb-2">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Type</th>
+                                        <th><span class="th-full">Total</span><span class="th-short">Tot</span></th>
+                                        <th>New</th>
+                                        <th><span class="th-full">Completed</span><span class="th-short">Done</span></th>
+                                        <th><span class="th-full">In Progress</span><span class="th-short">WIP</span></th>
+                                        <th><span class="th-full">Pending</span><span class="th-short">Pend</span></th>
+                                        <th><span class="th-full">Overdue</span><span class="th-short">Over</span></th>
+                                        <th>Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="myAssignedByMeBody">
+                                    <tr><td colspan="8" class="text-center text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- ASSIGNED TO ME -->
+                        <h5 class="mb-3 mt-4" style="background: linear-gradient(90deg, #d1fae5 0%, transparent 100%); padding: 8px 12px; border-radius: 4px;">
+                            <i class="fas fa-inbox me-2"></i>TASKS ASSIGNED TO ME
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Type</th>
+                                        <th><span class="th-full">Total</span><span class="th-short">Tot</span></th>
+                                        <th>New</th>
+                                        <th><span class="th-full">Completed</span><span class="th-short">Done</span></th>
+                                        <th><span class="th-full">In Progress</span><span class="th-short">WIP</span></th>
+                                        <th><span class="th-full">Pending</span><span class="th-short">Pend</span></th>
+                                        <th><span class="th-full">Overdue</span><span class="th-short">Over</span></th>
+                                        <th>Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="myAssignedToMeBody">
+                                    <tr><td colspan="8" class="text-center text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 2: Team (View any downline member's data) -->
+                <div id="teamTab" class="tab-content">
+                    <div class="mb-3">
+                        <label class="filter-label fw-bold"><i class="fas fa-user-friends me-1"></i> Select Team Member</label>
+                        <select id="teamMemberSelect" class="form-select" onchange="loadTeamMemberData()" style="max-width: 400px;">
+                            <option value="">-- Select an employee --</option>
+                        </select>
+                    </div>
+                    
+                    <div id="teamMemberLoading" class="loading" style="display:none;">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-3">Loading team member data...</p>
+                    </div>
+                    
+                    <div id="teamMemberEmpty" class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <h5>Select a team member</h5>
+                        <p>Choose an employee from the dropdown above to view their task and sub task summary.</p>
+                    </div>
+                    
+                    <div id="teamMemberContent" style="display:none;">
+                        <div id="teamMemberName" class="mb-3 fw-bold" style="font-size: 16px;"></div>
+                        
+                        <h5 class="mb-3" style="background: linear-gradient(90deg, #dbeafe 0%, transparent 100%); padding: 8px 12px; border-radius: 4px;">
+                            <i class="fas fa-paper-plane me-2"></i>TASKS ASSIGNED BY THEM
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover mb-2">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Type</th>
+                                        <th><span class="th-full">Total</span><span class="th-short">Tot</span></th>
+                                        <th>New</th>
+                                        <th><span class="th-full">Completed</span><span class="th-short">Done</span></th>
+                                        <th><span class="th-full">In Progress</span><span class="th-short">WIP</span></th>
+                                        <th><span class="th-full">Pending</span><span class="th-short">Pend</span></th>
+                                        <th><span class="th-full">Overdue</span><span class="th-short">Over</span></th>
+                                        <th>Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamAssignedByBody">
+                                    <tr><td colspan="8" class="text-center text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <h5 class="mb-3 mt-4" style="background: linear-gradient(90deg, #d1fae5 0%, transparent 100%); padding: 8px 12px; border-radius: 4px;">
+                            <i class="fas fa-inbox me-2"></i>TASKS ASSIGNED TO THEM
+                        </h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Type</th>
+                                        <th><span class="th-full">Total</span><span class="th-short">Tot</span></th>
+                                        <th>New</th>
+                                        <th><span class="th-full">Completed</span><span class="th-short">Done</span></th>
+                                        <th><span class="th-full">In Progress</span><span class="th-short">WIP</span></th>
+                                        <th><span class="th-full">Pending</span><span class="th-short">Pend</span></th>
+                                        <th><span class="th-full">Overdue</span><span class="th-short">Over</span></th>
+                                        <th>Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamAssignedToBody">
+                                    <tr><td colspan="8" class="text-center text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 2: Overall Team Performance (DC Protocol - Dec 04, 2025) -->
+                <div id="teamPerformanceTab" class="tab-content">
+                    <div id="teamPerformanceLoading" class="loading">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-3">Loading team performance data...</p>
+                    </div>
+                    
+                    <div id="teamPerformanceContent" style="display:none;">
+                        <!-- DC Protocol: Uses common page filters, no separate filter here -->
+                        
+                        <!-- TEAM PERFORMANCE (Department-wise) - DC Protocol Format Matching ASSIGNED BY ME -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0" style="background: linear-gradient(90deg, #fff3cd 0%, transparent 100%); padding: 8px 12px; border-radius: 4px;">
+                                <i class="fas fa-building me-2"></i>TEAM PERFORMANCE (Department-wise)
+                            </h5>
+                            <span class="badge bg-info" id="teamAccessLevelBadge">Loading...</span>
+                        </div>
+                        <!-- DC_MOBILE_SCROLL_001: Responsive wrapper for horizontal scrolling -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover mb-4">
+                                <thead>
+                                    <tr class="table-warning">
+                                        <th>Totals</th>
+                                        <th id="teamDeptTotalAll">0</th>
+                                        <th id="teamDeptTotalCompletedDues">0 / 0</th>
+                                        <th id="teamDeptTotalNew">0</th>
+                                        <th id="teamDeptTotalCompleted">0</th>
+                                        <th id="teamDeptTotalInProgress">0</th>
+                                        <th id="teamDeptTotalPending">0</th>
+                                        <th id="teamDeptTotalOverdue">0</th>
+                                    </tr>
+                                    <tr class="table-light">
+                                        <th><span class="th-full">Department</span><span class="th-short">Dept</span></th>
+                                        <th><span class="th-full">Total</span><span class="th-short">Tot</span></th>
+                                        <th><span class="th-full">Completed / Dues</span><span class="th-short">C/D</span></th>
+                                        <th><span class="th-full">New Tasks Assigned</span><span class="th-short">New</span></th>
+                                        <th><span class="th-full">Completed</span><span class="th-short">Done</span></th>
+                                        <th><span class="th-full">In Progress</span><span class="th-short">WIP</span></th>
+                                        <th><span class="th-full">Pending</span><span class="th-short">Pend</span></th>
+                                        <th><span class="th-full">Overdue</span><span class="th-short">Over</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamPerfDeptBody">
+                                    <tr><td colspan="8" class="text-center text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- TEAM PERFORMANCE (Employee-wise) - DC Protocol Format Matching ASSIGNED TO ME -->
+                        <h5 class="mb-3 mt-4" style="background: linear-gradient(90deg, #fff3cd 0%, transparent 100%); padding: 8px 12px; border-radius: 4px;">
+                            <i class="fas fa-users me-2"></i>TEAM PERFORMANCE (Employee-wise)
+                        </h5>
+                        <!-- DC_MOBILE_SCROLL_001: Responsive wrapper for horizontal scrolling -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead>
+                                    <tr class="table-warning">
+                                        <th>Totals</th>
+                                        <th id="teamEmpTotalAll">0</th>
+                                        <th id="teamEmpTotalCompletedDues">0 / 0</th>
+                                        <th id="teamEmpTotalNew">0</th>
+                                        <th id="teamEmpTotalCompleted">0</th>
+                                        <th id="teamEmpTotalInProgress">0</th>
+                                        <th id="teamEmpTotalPending">0</th>
+                                        <th id="teamEmpTotalOverdue">0</th>
+                                    </tr>
+                                    <tr class="table-light">
+                                        <th><span class="th-full">Employee</span><span class="th-short">Emp</span></th>
+                                        <th><span class="th-full">Total</span><span class="th-short">Tot</span></th>
+                                        <th><span class="th-full">Completed / Dues</span><span class="th-short">C/D</span></th>
+                                        <th><span class="th-full">New Tasks Assigned</span><span class="th-short">New</span></th>
+                                        <th><span class="th-full">Completed</span><span class="th-short">Done</span></th>
+                                        <th><span class="th-full">In Progress</span><span class="th-short">WIP</span></th>
+                                        <th><span class="th-full">Pending</span><span class="th-short">Pend</span></th>
+                                        <th><span class="th-full">Overdue</span><span class="th-short">Over</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teamPerfEmpBody">
+                                    <tr><td colspan="8" class="text-center text-muted">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tab 3: Charts -->
+                <div id="chartsTab" class="tab-content">
+                    <div id="chartsLoading" class="loading">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-3">Loading charts...</p>
+                    </div>
+                    
+                    <div id="chartsContent" style="display:none;">
+                        <div class="charts-grid">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-pie me-2"></i>Status Distribution</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="statusChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-bar me-2"></i>Priority Breakdown</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="priorityChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-chart-line me-2"></i>Tasks Timeline</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="timelineChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card" id="departmentChartSection" style="display:none;">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-building me-2"></i>Department Heatmap</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="departmentChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff_universal_filter.js?v=1764165148"></script>
+    
+    <script>
+        // DC Protocol: Global filter state synchronized across tabs
+        const filterState = {
+            dateRange: '30',
+            startDate: null,
+            endDate: null,
+            status: 'all',
+            priority: 'all',
+            category: 'all',
+            department: 'all',
+            employee: 'all'
+        };
+        
+        let isManager = false;
+        let currentUser = null;
+        let chartInstances = {};
+        
+        const API_BASE = '/api/v1';
+        let universalFilter = null;
+        let universalFilterReady = false;
+        
+        let allEmployees = [];
+        let selectedPrimaryAssignee = null;
+        let selectedSecondaryAssignees = [];
+        let selectedCustomAssigner = null;
+        let taskPhases = [];
+        let phaseAssigneeSearchTimeouts = {};
+        let totalAvailableEmployees = 0;
+        let searchDebounceTimer = null;
+        let currentSearchToken = 0;
+        
+        let employeeSearchTimeout = null;
+        function debounceEmployeeSearch() {
+            clearTimeout(employeeSearchTimeout);
+            employeeSearchTimeout = setTimeout(() => {
+                applyFilters();
+            }, 500);
+        }
+        
+        function buildFilterPayload() {
+            if (universalFilterReady && universalFilter && universalFilter.isReady && !universalFilter.initFailed) {
+                try {
+                    const filters = universalFilter.getFilters();
+                    return filters;
+                } catch (e) {
+                    console.warn('[DC] Error getting universal filter values:', e);
+                }
+            }
+            const fallbackDept = document.getElementById('fallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('fallbackStaffTypeFilter');
+            const fallbackEmployeeSearch = document.getElementById('fallbackEmployeeSearch');
+            return {
+                company_id: null,
+                staff_type: fallbackStaff ? (fallbackStaff.value || null) : null,
+                department_id: fallbackDept ? (fallbackDept.value || null) : null,
+                employee_id: null,
+                employee: null,
+                search: fallbackEmployeeSearch ? (fallbackEmployeeSearch.value || null) : null
+            };
+        }
+        
+        async function loadFallbackDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/departments`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('fallbackDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading fallback departments:', error);
+            }
+        }
+        
+        function hideFallbackFilters() {
+            const fallback = document.getElementById('fallbackFiltersContainer');
+            if (fallback) fallback.style.display = 'none';
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Task Dashboard', 'fas fa-chart-line');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            currentUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
+
+            const nestedModalIds = ['addSubTaskModal', 'updatePhaseStatusModal', 'logTimeModal'];
+            nestedModalIds.forEach(modalId => {
+                const el = document.getElementById(modalId);
+                if (!el) return;
+                el.addEventListener('show.bs.modal', function() {
+                    const taskModal = document.getElementById('taskDetailModal');
+                    if (taskModal && taskModal.classList.contains('show')) {
+                        taskModal.style.opacity = '0';
+                        taskModal.style.pointerEvents = 'none';
+                    }
+                });
+                el.addEventListener('hidden.bs.modal', function() {
+                    const taskModal = document.getElementById('taskDetailModal');
+                    if (taskModal) {
+                        taskModal.style.opacity = '1';
+                        taskModal.style.pointerEvents = '';
+                    }
+                    if (document.querySelectorAll('.modal.show').length > 0) {
+                        document.body.classList.add('modal-open');
+                    }
+                });
+            });
+
+            loadFallbackDepartments();
+            
+            // DC_UNIVERSAL_FILTER_001: Initialize universal filter
+            if (typeof DCUniversalFilter !== 'undefined') {
+                universalFilter = new DCUniversalFilter('universalFilterContainer', {
+                    showCompany: false,
+                    showStaffType: true,
+                    showDepartment: true,
+                    showEmployee: true,
+                    showSearch: false,
+                    pageKey: 'staff_task_tracker',
+                    onFilterChange: () => {
+                        if (universalFilterReady) applyFilters();
+                    }
+                });
+                
+                try {
+                    const success = await Promise.race([
+                        universalFilter.waitForReady(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                    ]);
+                    await new Promise(r => setTimeout(r, 50));
+                    if (success === true && 
+                        universalFilter.isReady === true && 
+                        universalFilter.initFailed === false &&
+                        document.getElementById('universalFilterContainer')?.children.length > 0) {
+                        universalFilterReady = true;
+                        hideFallbackFilters();
+                        console.log('[DC] Universal filter ready - using enhanced filters');
+                    } else {
+                        console.warn('[DC] Universal filter not fully ready, keeping fallback');
+                        universalFilterReady = false;
+                    }
+                } catch (e) {
+                    console.warn('[DC] Universal filter initialization failed or timed out, using fallback:', e);
+                    universalFilterReady = false;
+                }
+            } else {
+                console.warn('[DC] DCUniversalFilter not available - using fallback filters');
+            }
+            
+            // Check if user is manager (hierarchy_level >= 60)
+            // DC Protocol Fix (Dec 04, 2025): Access hierarchy_level from nested role object
+            const hierarchyLevel = currentUser?.role?.hierarchy_level || 0;
+            if (currentUser && hierarchyLevel >= 60) {
+                isManager = true;
+                document.getElementById('managerBadge').style.display = 'inline-block';
+                document.getElementById('departmentFilterGroup').style.display = 'block';
+                document.getElementById('employeeFilterGroup').style.display = 'block';
+                
+                // DC Protocol (Dec 04, 2025): Show Team Performance tab for managers/EA/VGK
+                document.getElementById('teamPerformanceTabHeader').style.display = 'block';
+                
+                // Load departments and employees for filters
+                await loadDepartmentList();
+                await loadEmployeeList();
+            }
+            
+            loadEmployees();
+            
+            const primaryInput = document.getElementById('primaryAssigneeSearch');
+            const secondaryInput = document.getElementById('secondaryAssigneeSearch');
+            const customAssignerInput = document.getElementById('customAssignerSearch');
+
+            if (primaryInput) primaryInput.addEventListener('input', () => searchAssignees('primary'));
+            if (secondaryInput) secondaryInput.addEventListener('input', () => searchAssignees('secondary'));
+            if (customAssignerInput) customAssignerInput.addEventListener('input', () => searchAssignees('customAssigner'));
+
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#primaryAssigneeSearch') && !e.target.closest('#primarySearchResults')) {
+                    const el = document.getElementById('primarySearchResults');
+                    if (el) el.style.display = 'none';
+                }
+                if (!e.target.closest('#secondaryAssigneeSearch') && !e.target.closest('#secondarySearchResults')) {
+                    const el = document.getElementById('secondarySearchResults');
+                    if (el) el.style.display = 'none';
+                }
+                if (!e.target.closest('#customAssignerSearch') && !e.target.closest('#customAssignerSearchResults')) {
+                    const el = document.getElementById('customAssignerSearchResults');
+                    if (el) el.style.display = 'none';
+                }
+            });
+            
+            await loadMyTasksTab();
+        });
+        
+        // Switch tabs (DC Protocol: Maintain filter state)
+        function switchTab(event, tabName) {
+            document.querySelectorAll('.tab-header').forEach(header => header.classList.remove('active'));
+            event.target.closest('.tab-header').classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tabName === 'myTasks') {
+                document.getElementById('myTasksTab').classList.add('active');
+                loadMyTasksTab();
+            } else if (tabName === 'team') {
+                document.getElementById('teamTab').classList.add('active');
+                loadTeamTabEmployees();
+                const sel = document.getElementById('teamMemberSelect');
+                if (sel && sel.value) loadTeamMemberData();
+            } else if (tabName === 'teamPerformance') {
+                document.getElementById('teamPerformanceTab').classList.add('active');
+                loadTeamPerformance();
+            } else if (tabName === 'charts') {
+                document.getElementById('chartsTab').classList.add('active');
+                loadCharts();
+            }
+        }
+        
+        // Load departments for filter dropdown
+        async function loadDepartmentList() {
+            try {
+                const response = await staffFetch('/api/v1/staff/departments');
+                const data = await response.json();
+                
+                if (data.success && data.departments) {
+                    const select = document.getElementById('filterDepartment');
+                    data.departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Failed to load departments:', error);
+            }
+        }
+        
+        // Load employees for filter dropdown
+        async function loadEmployeeList() {
+            try {
+                const response = await staffFetch('/api/v1/staff/employees?status=active');
+                const data = await response.json();
+                
+                if (data.success && data.employees) {
+                    const select = document.getElementById('filterEmployee');
+                    data.employees.forEach(emp => {
+                        const option = document.createElement('option');
+                        option.value = emp.id;
+                        option.textContent = `${emp.emp_code} - ${emp.full_name}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Failed to load employees:', error);
+            }
+        }
+        
+        // Apply filters (DC Protocol: Update state and reload)
+        function applyFilters() {
+            const dateRange = document.getElementById('filterDateRange').value;
+            
+            // Update filter state
+            filterState.dateRange = dateRange;
+            filterState.status = document.getElementById('filterStatus').value;
+            filterState.priority = document.getElementById('filterPriority').value;
+            filterState.category = document.getElementById('filterCategory').value;
+            
+            if (isManager) {
+                filterState.department = document.getElementById('filterDepartment').value;
+                filterState.employee = document.getElementById('filterEmployee').value;
+            }
+            
+            // Handle custom date range
+            if (dateRange === 'custom') {
+                document.getElementById('customDateGroup').style.display = 'block';
+                document.getElementById('customDateEndGroup').style.display = 'block';
+                filterState.startDate = document.getElementById('filterStartDate').value;
+                filterState.endDate = document.getElementById('filterEndDate').value;
+            } else {
+                document.getElementById('customDateGroup').style.display = 'none';
+                document.getElementById('customDateEndGroup').style.display = 'none';
+                filterState.startDate = null;
+                filterState.endDate = null;
+            }
+            // "overall" just sends no date params — handled in buildQueryParams
+            
+            // Reload active tab data
+            const myTasksTab = document.getElementById('myTasksTab');
+            if (myTasksTab && myTasksTab.classList.contains('active')) {
+                loadMyTasksTab();
+            }
+            
+            const teamTab = document.getElementById('teamTab');
+            if (teamTab && teamTab.classList.contains('active')) {
+                const sel = document.getElementById('teamMemberSelect');
+                if (sel && sel.value) loadTeamMemberData();
+            }
+            
+            const teamPerfTab = document.getElementById('teamPerformanceTab');
+            if (teamPerfTab && teamPerfTab.classList.contains('active')) {
+                loadTeamPerformance();
+            }
+            
+            const chartsTab = document.getElementById('chartsTab');
+            if (chartsTab && chartsTab.classList.contains('active')) {
+                loadCharts();
+            }
+        }
+        
+        // Reset filters
+        function resetFilters() {
+            document.getElementById('filterDateRange').value = '30';
+            document.getElementById('filterStatus').value = 'all';
+            document.getElementById('filterPriority').value = 'all';
+            document.getElementById('filterCategory').value = 'all';
+            
+            if (isManager) {
+                document.getElementById('filterDepartment').value = 'all';
+                document.getElementById('filterEmployee').value = 'all';
+            }
+            
+            document.getElementById('customDateGroup').style.display = 'none';
+            document.getElementById('customDateEndGroup').style.display = 'none';
+            
+            applyFilters();
+        }
+        
+        // Build query params from filter state
+        function buildQueryParams() {
+            const params = new URLSearchParams();
+            
+            // DC_UNIVERSAL_FILTER_001: Get universal filter values
+            const universalFilters = buildFilterPayload();
+            
+            // Date range - skip dates entirely for "overall"
+            if (filterState.dateRange === 'overall') {
+                // No date params — show all-time data
+            } else if (filterState.startDate && filterState.endDate) {
+                params.append('start_date', filterState.startDate);
+                params.append('end_date', filterState.endDate);
+            } else if (filterState.dateRange && filterState.dateRange !== 'custom') {
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(endDate.getDate() - parseInt(filterState.dateRange));
+                params.append('start_date', startDate.toISOString().split('T')[0]);
+                params.append('end_date', endDate.toISOString().split('T')[0]);
+            }
+            
+            if (filterState.status !== 'all') params.append('status', filterState.status);
+            if (filterState.priority !== 'all') params.append('priority', filterState.priority);
+            if (filterState.category !== 'all') params.append('category', filterState.category);
+            
+            // DC_UNIVERSAL_FILTER_001: Use universal filter values for department/staff/employee
+            // Priority: Universal filter > Page-specific manager filters
+            if (universalFilters.department_id) {
+                params.append('department_id', universalFilters.department_id);
+            } else if (filterState.department !== 'all') {
+                params.append('department_id', filterState.department);
+            }
+            
+            if (universalFilters.staff_type) {
+                params.append('staff_type', universalFilters.staff_type);
+            }
+            
+            if (universalFilters.employee_id) {
+                params.append('employee_id', universalFilters.employee_id);
+            } else if (universalFilters.employee && universalFilters.employee.id) {
+                params.append('employee_id', universalFilters.employee.id);
+            } else if (filterState.employee !== 'all') {
+                params.append('employee_id', filterState.employee);
+            }
+            
+            return params.toString();
+        }
+        
+        // DC Protocol Feb 2026: Load My Tasks tab (self data with subtask counts)
+        async function loadMyTasksTab() {
+            document.getElementById('myTasksLoading').style.display = 'block';
+            document.getElementById('myTasksContent').style.display = 'none';
+            
+            try {
+                const queryParams = buildQueryParams();
+                const [assignedByMeRes, assignedToMeRes] = await Promise.all([
+                    staffFetch(`/api/v1/staff/tasks/analytics/my-assigned-summary?${queryParams}`),
+                    staffFetch(`/api/v1/staff/tasks/analytics/my-summary?${queryParams}`)
+                ]);
+                
+                const assignedByMe = await assignedByMeRes.json();
+                const assignedToMe = await assignedToMeRes.json();
+                
+                // Render ASSIGNED BY ME with subtasks
+                const byMeBody = document.getElementById('myAssignedByMeBody');
+                if (assignedByMe.success && assignedByMe.summary) {
+                    const s = assignedByMe.summary;
+                    const st = assignedByMe.subtask_summary || {};
+                    byMeBody.innerHTML = `
+                        <tr class="table-primary">
+                            <td><strong><i class="fas fa-tasks me-1"></i> Tasks</strong></td>
+                            <td><strong>${s.total}</strong></td>
+                            <td><span class="badge bg-info">${s.new_tasks_assigned || 0}</span></td>
+                            <td>${s.completed}</td>
+                            <td>${s.in_progress}</td>
+                            <td>${s.pending}</td>
+                            <td class="${s.overdue > 0 ? 'overdue-cell' : ''}">${s.overdue}</td>
+                            <td>${s.completion_rate}%</td>
+                        </tr>
+                        <tr class="table-light">
+                            <td><i class="fas fa-project-diagram me-1"></i> Sub Tasks</td>
+                            <td><strong>${st.total || 0}</strong></td>
+                            <td>-</td>
+                            <td>${st.completed || 0}</td>
+                            <td>${st.in_progress || 0}</td>
+                            <td>${st.pending || 0}</td>
+                            <td class="${(st.overdue || 0) > 0 ? 'overdue-cell' : ''}">${st.overdue || 0}</td>
+                            <td>${st.completion_rate || 0}%</td>
+                        </tr>
+                    `;
+                } else {
+                    byMeBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No tasks assigned by you</td></tr>';
+                }
+                
+                // Render ASSIGNED TO ME with subtasks
+                const toMeBody = document.getElementById('myAssignedToMeBody');
+                if (assignedToMe.success && assignedToMe.summary) {
+                    const s = assignedToMe.summary;
+                    const statusBreakdown = s.status_breakdown || [];
+                    const completed = statusBreakdown.find(x => x.status === 'completed')?.count || 0;
+                    const inProgress = statusBreakdown.find(x => x.status === 'in_progress')?.count || 0;
+                    const pending = statusBreakdown.find(x => x.status === 'pending')?.count || 0;
+                    const st = assignedToMe.subtask_summary || {};
+                    toMeBody.innerHTML = `
+                        <tr class="table-success">
+                            <td><strong><i class="fas fa-tasks me-1"></i> Tasks</strong></td>
+                            <td><strong>${s.total}</strong></td>
+                            <td><span class="badge bg-info">${s.new_tasks_assigned || 0}</span></td>
+                            <td>${completed}</td>
+                            <td>${inProgress}</td>
+                            <td>${pending}</td>
+                            <td class="${s.overdue > 0 ? 'overdue-cell' : ''}">${s.overdue}</td>
+                            <td>${s.completion_rate}%</td>
+                        </tr>
+                        <tr class="table-light">
+                            <td><i class="fas fa-project-diagram me-1"></i> Sub Tasks</td>
+                            <td><strong>${st.total || 0}</strong></td>
+                            <td>-</td>
+                            <td>${st.completed || 0}</td>
+                            <td>${st.in_progress || 0}</td>
+                            <td>${st.pending || 0}</td>
+                            <td class="${(st.overdue || 0) > 0 ? 'overdue-cell' : ''}">${st.overdue || 0}</td>
+                            <td>${st.completion_rate || 0}%</td>
+                        </tr>
+                    `;
+                } else {
+                    toMeBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No tasks assigned to you</td></tr>';
+                }
+                
+                document.getElementById('myTasksLoading').style.display = 'none';
+                document.getElementById('myTasksContent').style.display = 'block';
+            } catch (error) {
+                console.error('Failed to load My Tasks:', error);
+                document.getElementById('myTasksLoading').style.display = 'none';
+                document.getElementById('myTasksContent').style.display = 'block';
+                document.getElementById('myAssignedByMeBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger py-3">Error loading data</td></tr>';
+                document.getElementById('myAssignedToMeBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger py-3">Error loading data</td></tr>';
+            }
+        }
+        
+        // DC Protocol Feb 2026: Team tab - load employees for selector
+        let teamEmployeesLoaded = false;
+        async function loadTeamTabEmployees() {
+            if (teamEmployeesLoaded) return;
+            try {
+                const response = await staffFetch('/api/v1/staff/employees?status=active');
+                const data = await response.json();
+                const select = document.getElementById('teamMemberSelect');
+                if (data.success && data.employees && select) {
+                    data.employees.forEach(emp => {
+                        const option = document.createElement('option');
+                        option.value = emp.id;
+                        option.textContent = `${emp.emp_code} - ${emp.full_name}`;
+                        select.appendChild(option);
+                    });
+                    teamEmployeesLoaded = true;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Failed to load team employees:', error);
+            }
+        }
+        
+        // DC Protocol Feb 2026: Load selected team member data
+        async function loadTeamMemberData() {
+            const select = document.getElementById('teamMemberSelect');
+            const employeeId = select ? select.value : '';
+            
+            if (!employeeId) {
+                document.getElementById('teamMemberEmpty').style.display = 'block';
+                document.getElementById('teamMemberContent').style.display = 'none';
+                document.getElementById('teamMemberLoading').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('teamMemberEmpty').style.display = 'none';
+            document.getElementById('teamMemberContent').style.display = 'none';
+            document.getElementById('teamMemberLoading').style.display = 'block';
+            
+            try {
+                const queryParams = buildQueryParams();
+                const response = await staffFetch(`/api/v1/staff/tasks/analytics/team-member-summary?employee_id=${employeeId}&${queryParams}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('teamMemberName').innerHTML = `<i class="fas fa-user-circle me-2"></i>${data.employee.emp_code} - ${data.employee.full_name}`;
+                    
+                    // Render ASSIGNED BY section
+                    const byBody = document.getElementById('teamAssignedByBody');
+                    const ab = data.assigned_by;
+                    if (ab && ab.success && ab.summary) {
+                        const s = ab.summary;
+                        const st = ab.subtask_summary || {};
+                        byBody.innerHTML = `
+                            <tr class="table-primary">
+                                <td><strong><i class="fas fa-tasks me-1"></i> Tasks</strong></td>
+                                <td><strong>${s.total}</strong></td>
+                                <td><span class="badge bg-info">${s.new_tasks_assigned || 0}</span></td>
+                                <td>${s.completed}</td>
+                                <td>${s.in_progress}</td>
+                                <td>${s.pending}</td>
+                                <td class="${s.overdue > 0 ? 'overdue-cell' : ''}">${s.overdue}</td>
+                                <td>${s.completion_rate}%</td>
+                            </tr>
+                            <tr class="table-light">
+                                <td><i class="fas fa-project-diagram me-1"></i> Sub Tasks</td>
+                                <td><strong>${st.total || 0}</strong></td>
+                                <td>-</td>
+                                <td>${st.completed || 0}</td>
+                                <td>${st.in_progress || 0}</td>
+                                <td>${st.pending || 0}</td>
+                                <td class="${(st.overdue || 0) > 0 ? 'overdue-cell' : ''}">${st.overdue || 0}</td>
+                                <td>${st.completion_rate || 0}%</td>
+                            </tr>
+                        `;
+                    } else {
+                        byBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No tasks assigned by them</td></tr>';
+                    }
+                    
+                    // Render ASSIGNED TO section
+                    const toBody = document.getElementById('teamAssignedToBody');
+                    const at = data.assigned_to;
+                    if (at && at.success && at.summary) {
+                        const s = at.summary;
+                        const statusBreakdown = s.status_breakdown || [];
+                        const completed = statusBreakdown.find(x => x.status === 'completed')?.count || 0;
+                        const inProgress = statusBreakdown.find(x => x.status === 'in_progress')?.count || 0;
+                        const pending = statusBreakdown.find(x => x.status === 'pending')?.count || 0;
+                        const st = at.subtask_summary || {};
+                        toBody.innerHTML = `
+                            <tr class="table-success">
+                                <td><strong><i class="fas fa-tasks me-1"></i> Tasks</strong></td>
+                                <td><strong>${s.total}</strong></td>
+                                <td><span class="badge bg-info">${s.new_tasks_assigned || 0}</span></td>
+                                <td>${completed}</td>
+                                <td>${inProgress}</td>
+                                <td>${pending}</td>
+                                <td class="${s.overdue > 0 ? 'overdue-cell' : ''}">${s.overdue}</td>
+                                <td>${s.completion_rate}%</td>
+                            </tr>
+                            <tr class="table-light">
+                                <td><i class="fas fa-project-diagram me-1"></i> Sub Tasks</td>
+                                <td><strong>${st.total || 0}</strong></td>
+                                <td>-</td>
+                                <td>${st.completed || 0}</td>
+                                <td>${st.in_progress || 0}</td>
+                                <td>${st.pending || 0}</td>
+                                <td class="${(st.overdue || 0) > 0 ? 'overdue-cell' : ''}">${st.overdue || 0}</td>
+                                <td>${st.completion_rate || 0}%</td>
+                            </tr>
+                        `;
+                    } else {
+                        toBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No tasks assigned to them</td></tr>';
+                    }
+                    
+                    document.getElementById('teamMemberLoading').style.display = 'none';
+                    document.getElementById('teamMemberContent').style.display = 'block';
+                } else {
+                    document.getElementById('teamMemberLoading').style.display = 'none';
+                    document.getElementById('teamMemberEmpty').style.display = 'block';
+                    document.getElementById('teamMemberEmpty').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h5>Error loading data</h5><p>' + (data.detail || 'Unknown error') + '</p></div>';
+                }
+            } catch (error) {
+                console.error('Failed to load team member data:', error);
+                document.getElementById('teamMemberLoading').style.display = 'none';
+                document.getElementById('teamMemberEmpty').style.display = 'block';
+                document.getElementById('teamMemberEmpty').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h5>Error loading data</h5></div>';
+            }
+        }
+        
+        // Load all analytics data
+        async function loadAnalytics() {
+            document.getElementById('summaryLoading').style.display = 'block';
+            document.getElementById('summaryContent').style.display = 'none';
+            
+            try {
+                // Load stats cards
+                await loadStatsCards();
+                
+                // Load Table 1: ASSIGNED BY ME (Department-wise)
+                await loadAssignedByMeTable();
+                
+                // Load Table 2: ASSIGNED TO ME (Status breakdown)
+                await loadAssignedToMeTable();
+                
+                document.getElementById('summaryLoading').style.display = 'none';
+                document.getElementById('summaryContent').style.display = 'block';
+            } catch (error) {
+                console.error('Failed to load analytics:', error);
+                alert('Failed to load analytics. Please try again.');
+            }
+        }
+        
+        // Load stats cards
+        async function loadStatsCards() {
+            try {
+                const queryParams = buildQueryParams();
+                const response = await staffFetch(`/api/v1/staff/tasks/analytics/my-summary?${queryParams}`);
+                const data = await response.json();
+                
+                if (data.success && data.summary) {
+                    const summary = data.summary;
+                    
+                    document.getElementById('totalTasks').textContent = summary.total || 0;
+                    document.getElementById('overdueTasks').textContent = summary.overdue || 0;
+                    
+                    const statusBreakdown = summary.status_breakdown || [];
+                    const pending = statusBreakdown.find(s => s.status === 'pending')?.count || 0;
+                    const inProgress = statusBreakdown.find(s => s.status === 'in_progress')?.count || 0;
+                    const completed = statusBreakdown.find(s => s.status === 'completed')?.count || 0;
+                    
+                    document.getElementById('pendingTasks').textContent = pending;
+                    document.getElementById('inProgressTasks').textContent = inProgress;
+                    document.getElementById('completedTasks').textContent = completed;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Failed to load stats:', error);
+            }
+        }
+        
+        // Track if manager filters have been initialized
+        let managerFiltersInitialized = false;
+        
+        // Load Table 1: ASSIGNED BY ME (Department-wise)
+        async function loadAssignedByMeTable() {
+            try {
+                const queryParams = buildQueryParams();
+                const response = await staffFetch(`/api/v1/staff/tasks/analytics/department-summary?${queryParams}`);
+                const data = await response.json();
+                
+                // Initialize manager filters ONLY ONCE on first load
+                if (data.is_manager && data.available_departments && !managerFiltersInitialized) {
+                    await initializeManagerFilters(data.available_departments, data.is_supreme);
+                    managerFiltersInitialized = true;
+                }
+                
+                const tbody = document.getElementById('assignedByMeBody');
+                
+                if (data.success && data.departments && data.departments.length > 0) {
+                    tbody.innerHTML = data.departments.map(dept => `
+                        <tr>
+                            <td><strong>${dept.department_name}</strong></td>
+                            <td><strong>${dept.total}</strong></td>
+                            <td><span class="badge bg-info">${dept.new_tasks_assigned || 0}</span></td>
+                            <td>${dept.completed}</td>
+                            <td>${dept.in_progress}</td>
+                            <td>${dept.pending}</td>
+                            <td class="${dept.overdue > 0 ? 'overdue-cell' : ''}">${dept.overdue}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">No tasks assigned by you</td></tr>';
+                }
+            } catch (error) {
+                console.error('Failed to load assigned by me data:', error);
+                document.getElementById('assignedByMeBody').innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Error loading data</td></tr>';
+            }
+        }
+        
+        // Initialize manager-specific filters
+        async function initializeManagerFilters(availableDepartments, isSupreme) {
+            // Show manager filter groups
+            document.getElementById('departmentFilterGroup').style.display = 'block';
+            document.getElementById('employeeFilterGroup').style.display = 'block';
+            
+            // Populate department dropdown
+            const deptSelect = document.getElementById('filterDepartment');
+            deptSelect.innerHTML = '<option value="all">All Departments</option>';
+            availableDepartments.forEach(dept => {
+                deptSelect.innerHTML += `<option value="${dept.id}">${dept.name}</option>`;
+            });
+            
+            // Add event listener to load employees when department changes
+            deptSelect.onchange = async function() {
+                // Wait for employee list to load before applying filters
+                await loadEmployeesForDepartment(this.value);
+                // Reset employee filter to "all" when department changes
+                document.getElementById('filterEmployee').value = 'all';
+                // Sync filterState
+                filterState.employee = 'all';
+                applyFilters();
+            };
+            
+            // Load all employees initially (for supreme) or department employees
+            // CRITICAL: Await initial load to sync filterState before first analytics fetch
+            if (isSupreme) {
+                await loadEmployeesForDepartment('all');
+            } else if (availableDepartments.length > 0) {
+                await loadEmployeesForDepartment(availableDepartments[0].id);
+            }
+        }
+        
+        // Load employees based on selected department
+        async function loadEmployeesForDepartment(departmentId) {
+            try {
+                // Preserve current employee selection
+                const empSelect = document.getElementById('filterEmployee');
+                const currentEmployeeId = empSelect.value;
+                
+                let url = '/api/v1/staff/tasks/analytics/employees-for-filter';
+                if (departmentId !== 'all') {
+                    url += `?department_id=${departmentId}`;
+                }
+                
+                const response = await staffFetch(url);
+                const data = await response.json();
+                
+                empSelect.innerHTML = '<option value="all">All Employees</option>';
+                
+                if (data.success && data.employees) {
+                    data.employees.forEach(emp => {
+                        const selected = emp.id == currentEmployeeId ? ' selected' : '';
+                        empSelect.innerHTML += `<option value="${emp.id}"${selected}>${emp.emp_code} - ${emp.full_name}</option>`;
+                    });
+                }
+                
+                if (currentEmployeeId && currentEmployeeId !== 'all') {
+                    const optionExists = empSelect.querySelector(`option[value="${currentEmployeeId}"]`);
+                    if (!optionExists) {
+                        empSelect.value = 'all';
+                    }
+                }
+                
+                filterState.employee = empSelect.value;
+                
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Failed to load employees:', error);
+            }
+        }
+        
+        // Load Table 2: ASSIGNED TO ME (same format as Table 1)
+        async function loadAssignedToMeTable() {
+            try {
+                const queryParams = buildQueryParams();
+                const response = await staffFetch(`/api/v1/staff/tasks/analytics/my-summary?${queryParams}`);
+                const data = await response.json();
+                
+                const tbody = document.getElementById('assignedToMeBody');
+                
+                if (data.success && data.summary) {
+                    const summary = data.summary;
+                    const statusBreakdown = summary.status_breakdown || [];
+                    
+                    // Calculate totals
+                    const total = summary.total || 0;
+                    const newTasksAssigned = summary.new_tasks_assigned || 0;
+                    const completed = statusBreakdown.find(s => s.status === 'completed')?.count || 0;
+                    const inProgress = statusBreakdown.find(s => s.status === 'in_progress')?.count || 0;
+                    const pending = statusBreakdown.find(s => s.status === 'pending')?.count || 0;
+                    const overdue = summary.overdue || 0;
+                    
+                    // Show one row with overall totals
+                    tbody.innerHTML = `
+                        <tr>
+                            <td><strong>All My Tasks</strong></td>
+                            <td><strong>${total}</strong></td>
+                            <td><span class="badge bg-info">${newTasksAssigned}</span></td>
+                            <td>${completed}</td>
+                            <td>${inProgress}</td>
+                            <td>${pending}</td>
+                            <td class="${overdue > 0 ? 'overdue-cell' : ''}">${overdue}</td>
+                        </tr>
+                    `;
+                    
+                    // Add category breakdown if available
+                    if (summary.category_breakdown) {
+                        for (const [category, count] of Object.entries(summary.category_breakdown)) {
+                            // For each category, we need to fetch breakdown - for now just show total
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${category.charAt(0).toUpperCase() + category.slice(1)}</td>
+                                    <td>${count}</td>
+                                    <td colspan="5" class="text-muted">-</td>
+                                </tr>
+                            `;
+                        }
+                    }
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">No tasks assigned to you</td></tr>';
+                }
+            } catch (error) {
+                console.error('Failed to load assigned to me data:', error);
+                document.getElementById('assignedToMeBody').innerHTML = '<tr><td colspan="7" class="text-center text-danger py-3">Error loading data</td></tr>';
+            }
+        }
+        
+        // DC Protocol (Dec 04, 2025): Load Overall Team Performance data - Uses common page filters
+        async function loadTeamPerformance() {
+            document.getElementById('teamPerformanceLoading').style.display = 'block';
+            document.getElementById('teamPerformanceContent').style.display = 'none';
+            
+            try {
+                const queryParams = buildQueryParams();
+                let url = `/api/v1/staff/tasks/analytics/team-performance?${queryParams}`;
+                
+                const response = await staffFetch(url);
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update access level badge
+                    const accessLevel = data.access_level;
+                    const badge = document.getElementById('teamAccessLevelBadge');
+                    if (accessLevel === 'supreme') {
+                        badge.textContent = 'VGK Mentor Access';
+                        badge.className = 'badge bg-danger';
+                    } else if (accessLevel === 'ea') {
+                        badge.textContent = 'EA Access';
+                        badge.className = 'badge bg-warning text-dark';
+                    } else {
+                        badge.textContent = 'Manager Access';
+                        badge.className = 'badge bg-info';
+                    }
+                    
+                    // Update Department-wise Totals row (DC Protocol - integrated in table header)
+                    const totals = data.totals || {};
+                    document.getElementById('teamDeptTotalAll').textContent = totals.total || 0;
+                    document.getElementById('teamDeptTotalCompletedDues').textContent = `${totals.completed || 0} / ${totals.dues || 0}`;
+                    document.getElementById('teamDeptTotalNew').textContent = totals.new_tasks_assigned || 0;
+                    document.getElementById('teamDeptTotalCompleted').textContent = totals.completed || 0;
+                    document.getElementById('teamDeptTotalInProgress').textContent = totals.in_progress || 0;
+                    document.getElementById('teamDeptTotalPending').textContent = totals.pending || 0;
+                    document.getElementById('teamDeptTotalOverdue').textContent = totals.overdue || 0;
+                    
+                    // Update Employee-wise Totals row (same totals, different table)
+                    document.getElementById('teamEmpTotalAll').textContent = totals.total || 0;
+                    document.getElementById('teamEmpTotalCompletedDues').textContent = `${totals.completed || 0} / ${totals.dues || 0}`;
+                    document.getElementById('teamEmpTotalNew').textContent = totals.new_tasks_assigned || 0;
+                    document.getElementById('teamEmpTotalCompleted').textContent = totals.completed || 0;
+                    document.getElementById('teamEmpTotalInProgress').textContent = totals.in_progress || 0;
+                    document.getElementById('teamEmpTotalPending').textContent = totals.pending || 0;
+                    document.getElementById('teamEmpTotalOverdue').textContent = totals.overdue || 0;
+                    
+                    // Render department-wise table (DC Protocol: includes Completed/Dues column)
+                    const deptBody = document.getElementById('teamPerfDeptBody');
+                    if (data.departments && data.departments.length > 0) {
+                        deptBody.innerHTML = data.departments.map(dept => `
+                            <tr>
+                                <td><strong>${dept.department_name}</strong></td>
+                                <td><strong>${dept.total}</strong></td>
+                                <td><span class="badge bg-success">${dept.completed || 0}</span> / <span class="badge bg-warning text-dark">${dept.dues || 0}</span></td>
+                                <td><span class="badge bg-info">${dept.new_tasks_assigned || 0}</span></td>
+                                <td>${dept.completed}</td>
+                                <td>${dept.in_progress}</td>
+                                <td>${dept.pending}</td>
+                                <td class="${dept.overdue > 0 ? 'overdue-cell' : ''}">${dept.overdue}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        deptBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No department data available</td></tr>';
+                    }
+                    
+                    // Render employee-wise table (DC Protocol: includes Completed/Dues column)
+                    const empBody = document.getElementById('teamPerfEmpBody');
+                    if (data.employees && data.employees.length > 0) {
+                        empBody.innerHTML = data.employees.map(emp => `
+                            <tr>
+                                <td>
+                                    <strong>${emp.employee_name || emp.emp_code}</strong>
+                                    <br><small class="text-muted">${emp.department_name || ''}</small>
+                                </td>
+                                <td><strong>${emp.total}</strong></td>
+                                <td><span class="badge bg-success">${emp.completed || 0}</span> / <span class="badge bg-warning text-dark">${emp.dues || 0}</span></td>
+                                <td><span class="badge bg-info">${emp.new_tasks_assigned || 0}</span></td>
+                                <td>${emp.completed}</td>
+                                <td>${emp.in_progress}</td>
+                                <td>${emp.pending}</td>
+                                <td class="${emp.overdue > 0 ? 'overdue-cell' : ''}">${emp.overdue}</td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        empBody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">No employee data available</td></tr>';
+                    }
+                } else {
+                    throw new Error(data.detail || 'Failed to load team performance data');
+                }
+                
+                document.getElementById('teamPerformanceLoading').style.display = 'none';
+                document.getElementById('teamPerformanceContent').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Failed to load team performance:', error);
+                document.getElementById('teamPerformanceLoading').style.display = 'none';
+                document.getElementById('teamPerformanceContent').style.display = 'block';
+                document.getElementById('teamPerfDeptBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger py-3">Error loading data: ' + error.message + '</td></tr>';
+                document.getElementById('teamPerfEmpBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger py-3">Error loading data</td></tr>';
+            }
+        }
+        
+        // Load charts (Tab 3)
+        async function loadCharts() {
+            // Remove any previous error banners
+            const existingError = document.getElementById('chartsErrorBanner');
+            if (existingError) existingError.remove();
+            
+            document.getElementById('chartsLoading').style.display = 'block';
+            document.getElementById('chartsContent').style.display = 'none';
+            
+            try {
+                const queryParams = buildQueryParams();
+                const response = await staffFetch(`/api/v1/staff/tasks/analytics/chart-data?${queryParams}`);
+                const data = await response.json();
+                
+                if (data.success && data.charts) {
+                    renderCharts(data.charts);
+                    
+                    if (isManager) {
+                        document.getElementById('departmentChartSection').style.display = 'block';
+                        await loadDepartmentChart();
+                    }
+                }
+                
+                document.getElementById('chartsLoading').style.display = 'none';
+                document.getElementById('chartsContent').style.display = 'block';
+            } catch (error) {
+                console.error('Failed to load charts:', error);
+                document.getElementById('chartsLoading').style.display = 'none';
+                document.getElementById('chartsContent').style.display = 'block';
+                
+                // Show non-blocking error banner
+                const errorBanner = document.createElement('div');
+                errorBanner.id = 'chartsErrorBanner';
+                errorBanner.className = 'alert alert-danger alert-dismissible fade show mb-3';
+                errorBanner.innerHTML = `
+                    <strong>Error:</strong> Failed to load charts. Please check your connection and try again.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="loadCharts()">
+                        <i class="fas fa-redo"></i> Retry
+                    </button>
+                `;
+                document.getElementById('chartsTab').insertBefore(errorBanner, document.getElementById('chartsLoading'));
+            }
+        }
+        
+        // Render charts
+        function renderCharts(charts) {
+            // Destroy existing charts
+            Object.values(chartInstances).forEach(chart => chart?.destroy());
+            chartInstances = {};
+            
+            // 1. Status Distribution Chart (Pie)
+            const statusData = charts.status_distribution || [];
+            const statusLabels = statusData.map(s => s.status.replace('_', ' ').toUpperCase());
+            const statusCounts = statusData.map(s => s.count);
+            
+            chartInstances.status = new Chart(document.getElementById('statusChart'), {
+                type: 'pie',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusCounts,
+                        backgroundColor: ['#fef3c7', '#dbeafe', '#dcfce7', '#fee2e2']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: {
+                            display: true,
+                            text: 'Status Distribution'
+                        }
+                    }
+                }
+            });
+            
+            // 2. Priority Breakdown Chart (Bar)
+            const priorityData = charts.priority_breakdown || [];
+            const priorityLabels = priorityData.map(p => p.priority.charAt(0).toUpperCase() + p.priority.slice(1));
+            const priorityCounts = priorityData.map(p => p.count);
+            
+            chartInstances.priority = new Chart(document.getElementById('priorityChart'), {
+                type: 'bar',
+                data: {
+                    labels: priorityLabels,
+                    datasets: [{
+                        label: 'Tasks by Priority',
+                        data: priorityCounts,
+                        backgroundColor: ['#fee2e2', '#fef3c7', '#e0f2fe']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Priority Breakdown'
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+            
+            // 3. Timeline Chart (Line) - Category-wise tasks over time
+            const timeline = charts.timeline || {};
+            const categories = Object.keys(timeline).filter(cat => timeline[cat].length > 0);
+            
+            // If no timeline data, show empty chart
+            if (categories.length === 0) {
+                chartInstances.timeline = new Chart(document.getElementById('timelineChart'), {
+                    type: 'line',
+                    data: {
+                        labels: ['No Data'],
+                        datasets: [{
+                            label: 'No tasks',
+                            data: [0],
+                            borderColor: '#cbd5e1',
+                            backgroundColor: 'rgba(203, 213, 225, 0.1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Tasks Timeline'
+                            }
+                        }
+                    }
+                });
+                return;
+            }
+            
+            // Collect all unique dates across all categories
+            const allDates = new Set();
+            categories.forEach(cat => {
+                timeline[cat].forEach(item => allDates.add(item.date));
+            });
+            const sortedDates = Array.from(allDates).sort();
+            
+            // Create datasets for each category
+            const colors = {
+                'development': '#2563eb',
+                'design': '#7c3aed',
+                'testing': '#dc2626',
+                'documentation': '#059669',
+                'support': '#ea580c',
+                'other': '#64748b'
+            };
+            
+            const datasets = categories.map(cat => {
+                const dataCounts = sortedDates.map(date => {
+                    const item = timeline[cat].find(t => t.date === date);
+                    return item ? item.count : 0;
+                });
+                
+                return {
+                    label: cat.charAt(0).toUpperCase() + cat.slice(1),
+                    data: dataCounts,
+                    borderColor: colors[cat] || '#64748b',
+                    backgroundColor: (colors[cat] || '#64748b') + '20',
+                    tension: 0.4,
+                    fill: false
+                };
+            });
+            
+            chartInstances.timeline = new Chart(document.getElementById('timelineChart'), {
+                type: 'line',
+                data: {
+                    labels: sortedDates,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: {
+                            display: true,
+                            text: 'Tasks Timeline'
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+        
+        // Load department chart
+        async function loadDepartmentChart() {
+            try {
+                const queryParams = buildQueryParams();
+                const response = await staffFetch(`/api/v1/staff/tasks/analytics/department-summary?${queryParams}`);
+                const data = await response.json();
+                
+                if (data.success && data.departments) {
+                    chartInstances.department = new Chart(document.getElementById('departmentChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: data.departments.map(d => d.department_name),
+                            datasets: [
+                                {
+                                    label: 'Completed',
+                                    data: data.departments.map(d => d.completed),
+                                    backgroundColor: '#dcfce7'
+                                },
+                                {
+                                    label: 'In Progress',
+                                    data: data.departments.map(d => d.in_progress),
+                                    backgroundColor: '#dbeafe'
+                                },
+                                {
+                                    label: 'Overdue',
+                                    data: data.departments.map(d => d.overdue),
+                                    backgroundColor: '#fee2e2'
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { stacked: true },
+                                y: { stacked: true }
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Failed to load department chart:', error);
+            }
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        async function loadEmployees() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/assignable-employees`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allEmployees = data.employees || [];
+                    totalAvailableEmployees = data.total_available || allEmployees.length;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading assignable employees:', error);
+            }
+        }
+        
+        function togglePhasesSection() {
+            const checkbox = document.getElementById('enablePhasesCheckbox');
+            const section = document.getElementById('phasesSection');
+            section.style.display = checkbox.checked ? 'block' : 'none';
+            if (!checkbox.checked) {
+                taskPhases = [];
+                document.getElementById('phasesContainer').innerHTML = '';
+            }
+        }
+        
+        function addPhase() {
+            const phaseNumber = taskPhases.length + 1;
+            const phaseId = `phase_${Date.now()}`;
+            
+            const phaseData = {
+                id: phaseId,
+                phase_number: phaseNumber,
+                phase_title: '',
+                phase_description: '',
+                phase_assignee_id: null,
+                phase_assignee: null,
+                target_date: null,
+                contact_phone: null,
+                contact_person_name: null,
+                confirmed: false
+            };
+            taskPhases.push(phaseData);
+            
+            const container = document.getElementById('phasesContainer');
+            const phaseHtml = `
+                <div class="phase-item border rounded p-2 mb-2" id="${phaseId}" data-phase-number="${phaseNumber}">
+                    <div class="phase-editing-state" id="phaseEditing_${phaseId}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-info">Phase ${phaseNumber}</span>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-success btn-sm" id="phaseConfirmBtn_${phaseId}" 
+                                    onclick="confirmPhase('${phaseId}')" style="display: none;" title="Save Phase">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removePhase('${phaseId}')" title="Remove Phase">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control form-control-sm" 
+                                    id="phaseTitle_${phaseId}"
+                                    placeholder="Phase Title *" 
+                                    onchange="updatePhaseField('${phaseId}', 'phase_title', this.value); checkPhaseConfirmable('${phaseId}')"
+                                    oninput="updatePhaseField('${phaseId}', 'phase_title', this.value); checkPhaseConfirmable('${phaseId}')"
+                                    required>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="date" class="form-control form-control-sm" 
+                                    id="phaseTargetDate_${phaseId}"
+                                    placeholder="Target Date"
+                                    onchange="updatePhaseField('${phaseId}', 'target_date', this.value)">
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-12">
+                                <div class="position-relative">
+                                    <input type="text" class="form-control form-control-sm" 
+                                        id="phaseAssigneeSearch_${phaseId}"
+                                        placeholder="Search assignee by name or ID... *"
+                                        oninput="searchPhaseAssignee('${phaseId}', this.value)">
+                                    <div class="employee-search-results" id="phaseSearchResults_${phaseId}" style="display: none;"></div>
+                                    <div class="selected-assignees mt-1" id="phaseAssigneeSelected_${phaseId}"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-12">
+                                <textarea class="form-control form-control-sm" rows="1" 
+                                    id="phaseDescription_${phaseId}"
+                                    placeholder="Phase description (optional)"
+                                    onchange="updatePhaseField('${phaseId}', 'phase_description', this.value)"></textarea>
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-md-6">
+                                <input type="tel" class="form-control form-control-sm" 
+                                    id="phaseContactPhone_${phaseId}"
+                                    placeholder="Contact mobile number"
+                                    maxlength="20"
+                                    onchange="updatePhaseField('${phaseId}', 'contact_phone', this.value)">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control form-control-sm" 
+                                    id="phaseContactPerson_${phaseId}"
+                                    placeholder="Contact person name (optional)"
+                                    maxlength="128"
+                                    onchange="updatePhaseField('${phaseId}', 'contact_person_name', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="phase-confirmed-state" id="phaseConfirmed_${phaseId}" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-success"><i class="fas fa-check me-1"></i>Phase ${phaseNumber}</span>
+                                <span class="phase-confirmed-title fw-bold" id="phaseConfirmedTitle_${phaseId}"></span>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="editPhase('${phaseId}')" title="Edit Phase">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removePhase('${phaseId}')" title="Remove Phase">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="phase-confirmed-details mt-1 small text-muted">
+                            <span id="phaseConfirmedAssignee_${phaseId}"></span>
+                            <span id="phaseConfirmedDate_${phaseId}"></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', phaseHtml);
+        }
+        
+        function checkPhaseConfirmable(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            const confirmBtn = document.getElementById(`phaseConfirmBtn_${phaseId}`);
+            
+            if (phase && confirmBtn) {
+                const isValid = phase.phase_title && phase.phase_title.trim() && phase.phase_assignee_id;
+                confirmBtn.style.display = isValid ? 'inline-block' : 'none';
+            }
+        }
+        
+        function confirmPhase(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (!phase) return;
+            
+            if (!phase.phase_title || !phase.phase_title.trim()) {
+                alert('Please enter a phase title');
+                return;
+            }
+            if (!phase.phase_assignee_id) {
+                alert('Please select an assignee for this phase');
+                return;
+            }
+            
+            phase.confirmed = true;
+            
+            document.getElementById(`phaseConfirmedTitle_${phaseId}`).textContent = phase.phase_title;
+            document.getElementById(`phaseConfirmedAssignee_${phaseId}`).innerHTML = 
+                `<i class="fas fa-user me-1"></i>${escapeHtml(phase.phase_assignee?.full_name || 'Unknown')}`;
+            document.getElementById(`phaseConfirmedDate_${phaseId}`).innerHTML = 
+                phase.target_date ? ` | <i class="fas fa-calendar me-1"></i>${phase.target_date}` : '';
+            
+            document.getElementById(`phaseEditing_${phaseId}`).style.display = 'none';
+            document.getElementById(`phaseConfirmed_${phaseId}`).style.display = 'block';
+            
+            const phaseEl = document.getElementById(phaseId);
+            phaseEl.classList.add('phase-confirmed');
+        }
+        
+        function editPhase(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (!phase) return;
+            
+            phase.confirmed = false;
+            
+            document.getElementById(`phaseEditing_${phaseId}`).style.display = 'block';
+            document.getElementById(`phaseConfirmed_${phaseId}`).style.display = 'none';
+            
+            checkPhaseConfirmable(phaseId);
+            
+            const phaseEl = document.getElementById(phaseId);
+            phaseEl.classList.remove('phase-confirmed');
+        }
+        
+        function removePhase(phaseId) {
+            const index = taskPhases.findIndex(p => p.id === phaseId);
+            if (index > -1) {
+                taskPhases.splice(index, 1);
+                document.getElementById(phaseId).remove();
+                renumberPhases();
+            }
+        }
+        
+        function renumberPhases() {
+            taskPhases.forEach((phase, index) => {
+                phase.phase_number = index + 1;
+                const el = document.getElementById(phase.id);
+                if (el) {
+                    el.querySelector('.badge').textContent = `Phase ${index + 1}`;
+                    el.dataset.phaseNumber = index + 1;
+                }
+            });
+        }
+        
+        function updatePhaseField(phaseId, field, value) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (phase) {
+                phase[field] = value || null;
+            }
+        }
+        
+        async function searchPhaseAssignee(phaseId, query) {
+            clearTimeout(phaseAssigneeSearchTimeouts[phaseId]);
+            const resultsDiv = document.getElementById(`phaseSearchResults_${phaseId}`);
+            
+            if (!query || query.length < 2) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            
+            phaseAssigneeSearchTimeouts[phaseId] = setTimeout(async () => {
+                try {
+                    const response = await staffFetch(`${API_BASE}/staff/tasks/assignable-employees?search=${encodeURIComponent(query)}&limit=10`);
+                    if (!response.ok) return;
+                    
+                    const data = await response.json();
+                    const employees = data.employees || [];
+                    
+                    if (employees.length === 0) {
+                        resultsDiv.innerHTML = '<div class="search-result-item text-muted">No employees found</div>';
+                    } else {
+                        resultsDiv.innerHTML = employees.map(emp => `
+                            <div class="search-result-item" onclick="selectPhaseAssignee('${phaseId}', ${JSON.stringify({
+                                id: emp.id,
+                                full_name: emp.full_name,
+                                emp_code: emp.employee_code,
+                                department_name: emp.department || 'No Dept'
+                            }).replace(/"/g, '&quot;')})">
+                                <strong>${escapeHtml(emp.full_name)}</strong>
+                                <small class="text-muted">${escapeHtml(emp.employee_code)} - ${escapeHtml(emp.department || 'No Dept')}</small>
+                            </div>
+                        `).join('');
+                    }
+                    resultsDiv.style.display = 'block';
+                } catch (error) {
+                    console.error('Error searching phase assignee:', error);
+                }
+            }, 300);
+        }
+        
+        function selectPhaseAssignee(phaseId, employee) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (phase) {
+                phase.phase_assignee_id = employee.id;
+                phase.phase_assignee = employee;
+            }
+            
+            document.getElementById(`phaseAssigneeSearch_${phaseId}`).value = '';
+            document.getElementById(`phaseSearchResults_${phaseId}`).style.display = 'none';
+            document.getElementById(`phaseAssigneeSelected_${phaseId}`).innerHTML = `
+                <span class="badge bg-primary me-1">
+                    ${escapeHtml(employee.full_name)} (${escapeHtml(employee.emp_code)})
+                    <i class="fas fa-times ms-1" style="cursor: pointer;" onclick="clearPhaseAssignee('${phaseId}')"></i>
+                </span>
+            `;
+            
+            checkPhaseConfirmable(phaseId);
+        }
+        
+        function clearPhaseAssignee(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (phase) {
+                phase.phase_assignee_id = null;
+                phase.phase_assignee = null;
+            }
+            document.getElementById(`phaseAssigneeSelected_${phaseId}`).innerHTML = '';
+            
+            checkPhaseConfirmable(phaseId);
+        }
+        
+        function getValidPhases() {
+            return taskPhases.filter(p => p.phase_title && p.phase_assignee_id);
+        }
+        
+        function resetPhases() {
+            taskPhases = [];
+            document.getElementById('phasesContainer').innerHTML = '';
+            document.getElementById('enablePhasesCheckbox').checked = false;
+            document.getElementById('phasesSection').style.display = 'none';
+        }
+        
+        function openCreateTaskModal() {
+            document.getElementById('createTaskForm').reset();
+            selectedPrimaryAssignee = null;
+            selectedSecondaryAssignees = [];
+            selectedCustomAssigner = null;
+            document.getElementById('primaryAssigneeSelected').innerHTML = '';
+            document.getElementById('secondaryAssigneesSelected').innerHTML = '';
+            document.getElementById('customAssignerSelected').innerHTML = '';
+            
+            document.getElementById('assignToSelfCheckbox').checked = false;
+            document.getElementById('primaryAssigneeSection').style.display = 'block';
+            document.getElementById('assignerSection').style.display = 'none';
+            document.getElementById('assignerChoice').value = 'self';
+            document.getElementById('customAssignerSearchBox').style.display = 'none';
+            
+            resetPhases();
+            
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(17, 0, 0, 0);
+            document.getElementById('taskDueDate').value = tomorrow.toISOString().slice(0, 16);
+            
+            new bootstrap.Modal(document.getElementById('createTaskModal')).show();
+        }
+        
+        function previewFiles() {
+            const fileInput = document.getElementById('taskAttachments');
+            const preview = document.getElementById('filePreview');
+            const files = Array.from(fileInput.files);
+            
+            if (files.length > 2) {
+                alert('Maximum 2 files allowed. Only first 2 files will be used.');
+                const dt = new DataTransfer();
+                files.slice(0, 2).forEach(file => dt.items.add(file));
+                fileInput.files = dt.files;
+                return previewFiles();
+            }
+            
+            preview.innerHTML = '';
+            files.forEach((file, index) => {
+                const isImage = file.type.startsWith('image/');
+                const sizeKB = (file.size / 1024).toFixed(2);
+                const maxSize = 5 * 1024 * 1024;
+                const sizeExceeded = file.size > maxSize;
+                
+                preview.innerHTML += `
+                    <div class="file-preview-item">
+                        <div class="file-preview-info">
+                            <div class="file-preview-icon ${isImage ? 'image' : 'document'}">
+                                <i class="fas fa-${isImage ? 'image' : 'file-alt'}"></i>
+                            </div>
+                            <div class="file-preview-details">
+                                <span class="file-preview-name">${escapeHtml(file.name)}</span>
+                                <span class="file-preview-size ${sizeExceeded ? 'error' : ''}">
+                                    ${sizeKB} KB ${sizeExceeded ? '(Exceeds 5MB limit!)' : (isImage && file.size > 512000 ? '(will be compressed)' : '')}
+                                </span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFileFromPreview(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        }
+        
+        function removeFileFromPreview(index) {
+            const fileInput = document.getElementById('taskAttachments');
+            const dt = new DataTransfer();
+            const files = Array.from(fileInput.files);
+            files.splice(index, 1);
+            files.forEach(file => dt.items.add(file));
+            fileInput.files = dt.files;
+            previewFiles();
+        }
+
+        async function createTask() {
+            if (!selectedPrimaryAssignee) {
+                alert('Please select a primary assignee');
+                return;
+            }
+            
+            const title = document.getElementById('taskTitle').value.trim();
+            if (!title) {
+                alert('Please enter a task title');
+                return;
+            }
+            
+            const isSelfAssigned = document.getElementById('assignToSelfCheckbox').checked;
+            if (isSelfAssigned) {
+                const assignerChoice = document.getElementById('assignerChoice').value;
+                if (assignerChoice === 'other' && !selectedCustomAssigner) {
+                    alert('Please select an assigner when choosing "Someone Else"');
+                    return;
+                }
+            }
+            
+            const fileInput = document.getElementById('taskAttachments');
+            const files = Array.from(fileInput.files);
+            
+            for (const file of files) {
+                const isImage = file.type.startsWith('image/');
+                const maxSize = 5 * 1024 * 1024;
+                
+                if (file.size > maxSize) {
+                    alert(`File "${file.name}" exceeds 5MB limit. ${isImage ? 'Images will be auto-compressed after upload.' : ''}`);
+                    return;
+                }
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            const createBtn = document.getElementById('createTaskBtn');
+            createBtn.disabled = true;
+            createBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
+            
+            let customAssignerId = null;
+            
+            if (isSelfAssigned) {
+                const assignerChoice = document.getElementById('assignerChoice').value;
+                if (assignerChoice === 'other' && selectedCustomAssigner) {
+                    customAssignerId = selectedCustomAssigner.id;
+                }
+            }
+            
+            const taskData = {
+                title: title,
+                description: document.getElementById('taskDescription').value.trim(),
+                priority: document.getElementById('taskPriority').value,
+                category: document.getElementById('taskCategory').value,
+                due_date: document.getElementById('taskDueDate').value,
+                estimated_hours: parseFloat(document.getElementById('taskEstimatedHours').value) || null,
+                primary_assignee_id: selectedPrimaryAssignee.id,
+                secondary_assignee_ids: selectedSecondaryAssignees.map(e => e.id),
+                tags: document.getElementById('taskTags').value.split(',').map(t => t.trim()).filter(t => t),
+                contact_phone: document.getElementById('taskContactPhone').value.trim() || null,
+                contact_person_name: document.getElementById('taskContactPerson').value.trim() || null
+            };
+            
+            if (customAssignerId) {
+                taskData.custom_assigner_id = customAssignerId;
+            } else {
+                taskData.custom_assigner_id = null;
+            }
+            
+            const enablePhases = document.getElementById('enablePhasesCheckbox').checked;
+            if (enablePhases) {
+                const validPhases = getValidPhases();
+                if (validPhases.length > 0) {
+                    taskData.phases = validPhases.map(p => ({
+                        phase_number: p.phase_number,
+                        phase_title: p.phase_title,
+                        phase_description: p.phase_description || null,
+                        phase_assignee_id: p.phase_assignee_id,
+                        target_date: p.target_date || null,
+                        contact_phone: p.contact_phone || null,
+                        contact_person_name: p.contact_person_name || null
+                    }));
+                } else if (taskPhases.length > 0) {
+                    alert('Please complete all phase fields (Title and Assignee required) or disable phases');
+                    createBtn.disabled = false;
+                    createBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Create Task';
+                    return;
+                }
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/`, {
+                    method: 'POST',
+                    body: JSON.stringify(taskData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const taskId = result.task.id;
+                    
+                    if (files.length > 0) {
+                        createBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading files...';
+                        const progressContainer = document.getElementById('createTaskUploadProgress');
+                        const progressFill = document.getElementById('createTaskProgressFill');
+                        const progressText = document.getElementById('createTaskProgressText');
+                        const progressFile = document.getElementById('createTaskProgressFile');
+                        
+                        progressContainer.classList.add('active');
+                        
+                        for (let i = 0; i < files.length; i++) {
+                            try {
+                                await uploadFileWithProgress(
+                                    `${API_BASE}/staff/tasks/${taskId}/attachments`,
+                                    files[i],
+                                    (percent, filename) => {
+                                        progressFill.style.width = `${percent}%`;
+                                        progressText.textContent = `${percent}%`;
+                                        progressFile.textContent = `Uploading ${i + 1}/${files.length}: ${filename}`;
+                                    }
+                                );
+                            } catch (error) {
+                                alert(`Failed to upload ${files[i].name}: ${error.message}`);
+                            }
+                        }
+                        
+                        progressContainer.classList.remove('active');
+                        progressFill.style.width = '0%';
+                        progressText.textContent = '0%';
+                        progressFile.textContent = '';
+                    }
+                    
+                    document.activeElement?.blur();
+                    bootstrap.Modal.getInstance(document.getElementById('createTaskModal')).hide();
+                    
+                    const phasesMsg = taskData.phases ? ` with ${taskData.phases.length} phase(s)` : '';
+                    alert('Task created successfully' + phasesMsg + (files.length > 0 ? ' and attachments!' : '!'));
+                    
+                    document.getElementById('createTaskForm').reset();
+                    document.getElementById('filePreview').innerHTML = '';
+                    resetPhases();
+                    
+                    window.location.href = '/staff/tasks/assigned-by-me-v2';
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to create task');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error creating task:', error);
+                alert('Error creating task');
+            } finally {
+                createBtn.disabled = false;
+                createBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Create Task';
+            }
+        }
+        
+        async function searchAssignees(type) {
+            let input, results;
+            
+            if (type === 'customAssigner') {
+                input = document.getElementById('customAssignerSearch');
+                results = document.getElementById('customAssignerSearchResults');
+            } else {
+                input = document.getElementById(type === 'primary' ? 'primaryAssigneeSearch' : 'secondaryAssigneeSearch');
+                results = document.getElementById(type === 'primary' ? 'primarySearchResults' : 'secondarySearchResults');
+            }
+            
+            const query = input.value.toLowerCase().trim();
+            
+            if (query.length < 2) {
+                results.style.display = 'none';
+                return;
+            }
+            
+            const excludeIds = type === 'secondary' 
+                ? [selectedPrimaryAssignee?.id, ...selectedSecondaryAssignees.map(e => e.id)].filter(Boolean)
+                : type === 'customAssigner'
+                ? []
+                : selectedSecondaryAssignees.map(e => e.id);
+            
+            let filtered = allEmployees.filter(emp => 
+                !excludeIds.includes(emp.id) &&
+                (emp.full_name?.toLowerCase().includes(query) || 
+                 emp.employee_code?.toLowerCase().includes(query))
+            ).slice(0, 10);
+            
+            const hasUncachedEmployees = totalAvailableEmployees > allEmployees.length;
+            
+            if (hasUncachedEmployees) {
+                if (filtered.length > 0) {
+                    renderEmployeeResults(filtered, results, type);
+                } else {
+                    results.innerHTML = '<div class="employee-search-item text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Searching...</div>';
+                    results.style.display = 'block';
+                }
+                
+                const thisSearchToken = ++currentSearchToken;
+                
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(async () => {
+                    try {
+                        const response = await staffFetch(`${API_BASE}/staff/tasks/assignable-employees?search=${encodeURIComponent(query)}&limit=50`);
+                        
+                        if (thisSearchToken !== currentSearchToken) return;
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            const serverResults = (data.employees || []).filter(emp => !excludeIds.includes(emp.id));
+                            
+                            mergeEmployeesToCache(data.employees || []);
+                            
+                            const mergedFiltered = allEmployees.filter(emp => 
+                                !excludeIds.includes(emp.id) &&
+                                (emp.full_name?.toLowerCase().includes(query) || 
+                                 emp.employee_code?.toLowerCase().includes(query))
+                            ).slice(0, 10);
+                            
+                            renderEmployeeResults(mergedFiltered, results, type);
+                        }
+                    } catch (error) {
+                        if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                        console.error('Server search failed:', error);
+                    }
+                }, 300);
+                return;
+            }
+            
+            renderEmployeeResults(filtered, results, type);
+        }
+        
+        function mergeEmployeesToCache(newEmployees) {
+            const existingIds = new Set(allEmployees.map(e => e.id));
+            newEmployees.forEach(emp => {
+                if (!existingIds.has(emp.id)) {
+                    allEmployees.push(emp);
+                    existingIds.add(emp.id);
+                }
+            });
+        }
+        
+        function renderEmployeeResults(filtered, results, type) {
+            if (filtered.length === 0) {
+                results.innerHTML = '<div class="employee-search-item text-muted">No employees found</div>';
+            } else {
+                const functionName = type === 'customAssigner' ? 'selectCustomAssigner' : 'selectAssignee';
+                const args = type === 'customAssigner' ? '' : `'${type}', `;
+                
+                results.innerHTML = filtered.map(emp => `
+                    <div class="employee-search-item" onclick="${functionName}(${args}${JSON.stringify(emp).replace(/"/g, '&quot;')})">
+                        <strong>${escapeHtml(emp.full_name)}</strong>
+                        <br><small class="text-muted">${emp.employee_code} - ${emp.role_name || emp.designation || 'Staff'}</small>
+                    </div>
+                `).join('');
+            }
+            results.style.display = 'block';
+        }
+        
+        function selectAssignee(type, emp) {
+            if (type === 'primary') {
+                selectedPrimaryAssignee = emp;
+                document.getElementById('primaryAssigneeSearch').value = '';
+                document.getElementById('primarySearchResults').style.display = 'none';
+                document.getElementById('primaryAssigneeSelected').innerHTML = `
+                    <div class="selected-assignee primary">
+                        ${escapeHtml(emp.full_name)} (${emp.employee_code})
+                        <span class="remove-btn" onclick="removePrimaryAssignee()"><i class="fas fa-times"></i></span>
+                    </div>`;
+            } else {
+                if (selectedSecondaryAssignees.length >= 2) {
+                    alert('Maximum 2 secondary assignees allowed');
+                    return;
+                }
+                selectedSecondaryAssignees.push(emp);
+                document.getElementById('secondaryAssigneeSearch').value = '';
+                document.getElementById('secondarySearchResults').style.display = 'none';
+                renderSecondaryAssignees();
+            }
+        }
+        
+        function removePrimaryAssignee() {
+            selectedPrimaryAssignee = null;
+            document.getElementById('primaryAssigneeSelected').innerHTML = '';
+        }
+        
+        function removeSecondaryAssignee(index) {
+            selectedSecondaryAssignees.splice(index, 1);
+            renderSecondaryAssignees();
+        }
+        
+        function renderSecondaryAssignees() {
+            document.getElementById('secondaryAssigneesSelected').innerHTML = selectedSecondaryAssignees.map((emp, i) => `
+                <div class="selected-assignee">
+                    ${escapeHtml(emp.full_name)} (${emp.employee_code})
+                    <span class="remove-btn" onclick="removeSecondaryAssignee(${i})"><i class="fas fa-times"></i></span>
+                </div>
+            `).join('');
+        }
+        
+        function toggleSelfAssignment() {
+            const checkbox = document.getElementById('assignToSelfCheckbox');
+            const primarySection = document.getElementById('primaryAssigneeSection');
+            const assignerSection = document.getElementById('assignerSection');
+            
+            if (checkbox.checked) {
+                primarySection.style.display = 'none';
+                assignerSection.style.display = 'block';
+                
+                selectedPrimaryAssignee = {
+                    id: currentUser.id,
+                    full_name: currentUser.full_name,
+                    employee_code: currentUser.emp_code
+                };
+                
+                selectedCustomAssigner = null;
+                document.getElementById('assignerChoice').value = 'self';
+                document.getElementById('customAssignerSearchBox').style.display = 'none';
+            } else {
+                primarySection.style.display = 'block';
+                assignerSection.style.display = 'none';
+                
+                selectedPrimaryAssignee = null;
+                selectedCustomAssigner = null;
+                document.getElementById('primaryAssigneeSelected').innerHTML = '';
+            }
+        }
+        
+        function toggleAssignerSearch() {
+            const choice = document.getElementById('assignerChoice').value;
+            const searchBox = document.getElementById('customAssignerSearchBox');
+            
+            if (choice === 'other') {
+                searchBox.style.display = 'block';
+                selectedCustomAssigner = null;
+                document.getElementById('customAssignerSelected').innerHTML = '';
+            } else {
+                searchBox.style.display = 'none';
+                selectedCustomAssigner = null;
+            }
+        }
+        
+        function selectCustomAssigner(emp) {
+            selectedCustomAssigner = emp;
+            document.getElementById('customAssignerSearch').value = '';
+            document.getElementById('customAssignerSearchResults').style.display = 'none';
+            document.getElementById('customAssignerSelected').innerHTML = `
+                <div class="selected-assignee primary">
+                    ${escapeHtml(emp.full_name)} (${emp.employee_code})
+                    <span class="remove-btn" onclick="removeCustomAssigner()"><i class="fas fa-times"></i></span>
+                </div>`;
+        }
+        
+        function removeCustomAssigner() {
+            selectedCustomAssigner = null;
+            document.getElementById('customAssignerSelected').innerHTML = '';
+        }
+        
+        // Handle custom date range visibility
+        document.getElementById('filterDateRange').addEventListener('change', function() {
+            if (this.value === 'custom') {
+                document.getElementById('customDateGroup').style.display = 'block';
+                document.getElementById('customDateEndGroup').style.display = 'block';
+            } else {
+                document.getElementById('customDateGroup').style.display = 'none';
+                document.getElementById('customDateEndGroup').style.display = 'none';
+            }
+        });
+    </script>
+    <script src="/public/js/dc-error-handler.js"></script>
+
+    <div class="modal fade" id="createTaskModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Create New Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createTaskForm">
+                        <div class="form-group">
+                            <label>Task Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="taskTitle" maxlength="200" required>
+                            <div class="char-counter"><span id="titleCharCount">0</span>/200</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea class="form-control" id="taskDescription" rows="4" maxlength="2000"></textarea>
+                            <div class="char-counter"><span id="descCharCount">0</span>/2000</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Priority <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="taskPriority" required>
+                                        <option value="low">Low</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="critical">Critical</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Category <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="taskCategory" required>
+                                        <option value="development">Development</option>
+                                        <option value="support">Support</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="meeting">Meeting</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Due Date <span class="text-danger">*</span></label>
+                                    <input type="datetime-local" class="form-control" id="taskDueDate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Estimated Hours</label>
+                                    <input type="number" class="form-control" id="taskEstimatedHours" min="0" step="0.5" placeholder="e.g., 4">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="assignToSelfCheckbox" onchange="toggleSelfAssignment()">
+                                <label class="form-check-label" for="assignToSelfCheckbox">
+                                    <i class="fas fa-user-check me-1"></i>Assign to Me
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group" id="primaryAssigneeSection">
+                            <label>Primary Assignee <span class="text-danger">*</span> (1 required)</label>
+                            <input type="text" class="form-control" id="primaryAssigneeSearch" placeholder="Search employee by name or ID...">
+                            <div class="employee-search-results" id="primarySearchResults" style="display: none;"></div>
+                            <div class="selected-assignees" id="primaryAssigneeSelected"></div>
+                        </div>
+                        <div class="form-group" id="assignerSection" style="display: none;">
+                            <label>Assigned By <span class="text-danger">*</span></label>
+                            <select class="form-select" id="assignerChoice" onchange="toggleAssignerSearch()">
+                                <option value="self" selected>Self</option>
+                                <option value="other">Someone Else</option>
+                            </select>
+                            <div id="customAssignerSearchBox" style="display: none; margin-top: 10px;">
+                                <input type="text" class="form-control" id="customAssignerSearch" placeholder="Search employee by name or ID...">
+                                <div class="employee-search-results" id="customAssignerSearchResults" style="display: none;"></div>
+                                <div class="selected-assignees" id="customAssignerSelected"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Secondary Assignees (max 2)</label>
+                            <input type="text" class="form-control" id="secondaryAssigneeSearch" placeholder="Search employee by name or ID...">
+                            <div class="employee-search-results" id="secondarySearchResults" style="display: none;"></div>
+                            <div class="selected-assignees" id="secondaryAssigneesSelected"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Tags (comma separated)</label>
+                            <input type="text" class="form-control" id="taskTags" placeholder="e.g., urgent, frontend, bug-fix">
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label><i class="fas fa-phone-alt me-1 text-info"></i>Contact Mobile Number</label>
+                                    <input type="tel" class="form-control" id="taskContactPhone" maxlength="20" placeholder="e.g., 9876543210">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label><i class="fas fa-user me-1 text-info"></i>Contact Person Name <small class="text-muted">(Optional)</small></label>
+                                    <input type="text" class="form-control" id="taskContactPerson" maxlength="128" placeholder="e.g., Mr. Sharma">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group mt-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="enablePhasesCheckbox" onchange="togglePhasesSection()">
+                                <label class="form-check-label" for="enablePhasesCheckbox">
+                                    <i class="fas fa-layer-group me-1"></i>Multi-Stage Task (Add Phases)
+                                </label>
+                            </div>
+                        </div>
+                        <div id="phasesSection" style="display: none;">
+                            <div class="card border-info mb-3">
+                                <div class="card-header bg-info text-white py-2">
+                                    <i class="fas fa-tasks me-2"></i>Task Phases
+                                    <small class="float-end">Each phase creates a sub-task for the assigned person</small>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div id="phasesContainer"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-info w-100" onclick="addPhase()">
+                                        <i class="fas fa-plus me-1"></i>Add Phase
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-paperclip me-1"></i>Attachments (Optional)
+                                <small class="text-muted">Max 2 files. Images/Documents: up to 5MB (images auto-compressed to <500KB). Allowed: Images (JPEG, PNG, GIF), Documents (PDF, DOC, XLS, PPT, TXT)</small>
+                            </label>
+                            <input type="file" class="form-control" id="taskAttachments" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onchange="previewFiles()">
+                            <div id="filePreview" class="file-preview mt-2"></div>
+                            <div id="createTaskUploadProgress" class="upload-progress-container">
+                                <div class="upload-progress-bar">
+                                    <div class="upload-progress-fill" id="createTaskProgressFill" style="width: 0%"></div>
+                                    <div class="upload-progress-text" id="createTaskProgressText">0%</div>
+                                </div>
+                                <div class="upload-progress-file" id="createTaskProgressFile"></div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="createTaskBtn" onclick="createTask()">
+                        <i class="fas fa-plus me-1"></i>Create Task
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

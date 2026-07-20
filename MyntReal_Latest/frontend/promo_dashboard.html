@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Promoter Dashboard — VGK4U</title>
+<link rel="icon" href="/public/vgk4u-logo-100.png" type="image/png">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;min-height:100vh;background:#f0f4f8;color:#1e293b}
+
+/* ── Header ── */
+.top-bar{background:linear-gradient(135deg,#1a2744 0%,#243860 100%);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.top-bar-left{display:flex;align-items:center;gap:14px}
+.logo-wrap{background:#fff;border-radius:10px;padding:5px 8px;display:flex;align-items:center;justify-content:center;height:44px;min-width:80px}
+.logo-wrap img{height:32px;width:auto;object-fit:contain}
+.header-info{}
+.header-sub{font-size:10px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.7px}
+.header-name{font-size:17px;font-weight:800;color:#fff;line-height:1.2}
+.top-bar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.status-badge{padding:4px 12px;border-radius:50px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+.status-active{background:#dcfce7;color:#15803d}
+.status-pending{background:#fef3c7;color:#d97706}
+.status-paused{background:#dbeafe;color:#1d4ed8}
+.status-inactive{background:#fee2e2;color:#b91c1c}
+.logout-btn{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;text-decoration:none;transition:background .2s}
+.logout-btn:hover{background:rgba(255,255,255,.22)}
+
+/* ── Left Sidebar Layout ── */
+.page-wrap{display:flex;min-height:calc(100vh - 68px)}
+.left-nav{width:220px;flex-shrink:0;background:#1a2744;display:flex;flex-direction:column;padding:12px 0 24px;position:sticky;top:0;height:calc(100vh - 68px);overflow-y:auto;z-index:100;transition:left .25s}
+.nav-sect{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.3);padding:14px 20px 8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 20px;color:rgba(255,255,255,.7);font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:all .18s;white-space:nowrap}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,.08);border-left-color:rgba(13,148,136,.5)}
+.nav-item.active{color:#fff;background:rgba(13,148,136,.18);border-left-color:#0d9488}
+.nav-item .ni{width:17px;text-align:center;font-size:14px;color:rgba(255,255,255,.45);transition:color .18s}
+.nav-item.active .ni,.nav-item:hover .ni{color:#0d9488}
+.nav-divider{border:none;border-top:1px solid rgba(255,255,255,.09);margin:10px 16px}
+.nav-vgk-btn{margin:10px 14px 0;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:9px;padding:10px 14px;font-size:12.5px;font-weight:700;cursor:pointer;display:none;align-items:center;gap:8px;width:calc(100% - 28px);transition:opacity .2s}
+.nav-vgk-btn:hover{opacity:.88}
+.nav-vgk-activate{background:linear-gradient(135deg,#d97706,#f59e0b)}
+.nav-vgk-activate:hover{opacity:.9}
+.main-content{flex:1;min-width:0;overflow-x:hidden}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+
+/* ── Sidebar profile header ── */
+.nav-profile{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;align-items:center;text-align:center;gap:0}
+.nav-profile-logo{width:64px;height:64px;border-radius:13px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:10px}
+.nav-profile-logo img{width:54px;height:54px;object-fit:contain}
+.nav-profile-info{width:100%;overflow:hidden}
+.nav-profile-name{font-size:14px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.nav-profile-id{font-size:11.5px;font-weight:700;color:#0d9488;letter-spacing:.5px;margin-top:4px;font-family:'Courier New',monospace}
+.nav-logout-item{display:flex;align-items:center;gap:10px;padding:11px 20px;color:#fca5a5;font-size:13px;font-weight:700;cursor:pointer;border:none;background:none;width:100%;text-align:left;border-left:3px solid transparent;transition:all .18s}
+.nav-logout-item:hover{color:#f87171;background:rgba(255,255,255,.06)}
+
+/* Mobile sidebar */
+.mob-nav-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:997}
+.mob-nav-overlay.open{display:block}
+.mob-hamburger{display:none;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px 8px;margin-right:4px;border-radius:7px;transition:background .15s}
+.mob-hamburger:hover{background:rgba(255,255,255,.12)}
+@media(max-width:768px){
+  .mob-hamburger{display:inline-flex;align-items:center;justify-content:center}
+  .left-nav{position:fixed;left:-240px;top:0;height:100vh;width:220px;padding-top:60px;z-index:998}
+  .left-nav.open{left:0}
+}
+
+/* ── Content ── */
+.content{max-width:960px;margin:0 auto;padding:24px 20px}
+.section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#64748b;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.section-title::before{content:'';display:inline-block;width:3px;height:13px;background:#0d9488;border-radius:2px}
+
+/* ── Referral Code Card ── */
+.code-card{background:linear-gradient(135deg,#0d9488 0%,#0f766e 100%);border-radius:16px;padding:22px 26px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;box-shadow:0 4px 20px rgba(13,148,136,.3)}
+.code-label{font-size:11px;font-weight:700;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.code-value{font-size:30px;font-weight:900;color:#fff;letter-spacing:4px;font-family:'Courier New',monospace}
+.copy-btn{background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .2s;white-space:nowrap}
+.copy-btn:hover{background:rgba(255,255,255,.3)}
+.share-btn{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.35);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .2s;white-space:nowrap}
+.share-btn:hover{background:rgba(255,255,255,.28)}
+.code-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* ── Stats Grid ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px}
+.stat-card{background:#fff;border-radius:12px;padding:18px 20px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.06);border-top:3px solid #0d9488;cursor:pointer;transition:box-shadow .15s,transform .1s}
+.stat-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.1);transform:translateY(-1px)}
+.stat-card.filter-active{border:2px solid currentcolor;box-shadow:0 4px 16px rgba(0,0,0,.12);transform:translateY(-1px)}
+.stat-num{font-size:28px;font-weight:900;color:#0d9488;line-height:1}
+.stat-label{font-size:11px;font-weight:700;color:#64748b;margin-top:6px;text-transform:uppercase;letter-spacing:.4px}
+.stat-filter-hint{font-size:10px;color:#94a3b8;margin-top:4px;font-style:italic}
+
+/* ── Target Card ── */
+.target-card{background:#fff;border-radius:12px;padding:20px 22px;margin-bottom:24px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.target-bar-wrap{background:#e2e8f0;border-radius:50px;height:10px;margin:12px 0;overflow:hidden}
+.target-bar{height:100%;background:linear-gradient(90deg,#0d9488,#f59e0b);border-radius:50px;transition:width .6s ease}
+.target-info{display:flex;justify-content:space-between;font-size:12px;color:#64748b;font-weight:600}
+
+/* ── Link Generator ── */
+.card{background:#fff;border-radius:12px;padding:20px 22px;margin-bottom:24px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.link-row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-top:12px}
+.portal-select{flex:1;min-width:180px;background:#f8fafc;border:1.5px solid #cbd5e1;color:#1e293b;padding:10px 14px;border-radius:9px;font-size:13px;cursor:pointer;outline:none}
+.portal-select:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.1)}
+.link-output{flex:2;min-width:200px;background:#f0f4f8;border:1.5px solid #cbd5e1;color:#475569;padding:10px 14px;border-radius:9px;font-size:12px;word-break:break-all;font-family:monospace;min-height:42px;display:flex;align-items:center}
+
+/* ── Activity Table ── */
+.activity-table{width:100%;border-collapse:collapse;font-size:13px}
+.activity-table th{text-align:left;padding:10px 12px;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #e2e8f0;background:#f8fafc}
+.activity-table td{padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#374151}
+.activity-table tr:last-child td{border-bottom:none}
+.activity-table tr:hover td{background:#f8fafc}
+.portal-pill{padding:3px 9px;border-radius:50px;font-size:10px;font-weight:800;text-transform:uppercase}
+.portal-vgk{background:#ede9fe;color:#6d28d9}
+.portal-mnr{background:#dcfce7;color:#15803d}
+.portal-partner{background:#dbeafe;color:#1d4ed8}
+.portal-other{background:#f1f5f9;color:#475569}
+
+/* ── KYC Form ── */
+.kyc-card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:18px;overflow:hidden}
+.kyc-card-header{padding:14px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:8px}
+.kyc-card-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#0d9488}
+.kyc-card-body{padding:20px}
+.kyc-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.kyc-field{display:flex;flex-direction:column;gap:5px}
+.kyc-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#64748b}
+.kyc-locked{font-size:14px;font-weight:700;color:#334155;background:#f0f4f8;border:1.5px solid #e2e8f0;padding:10px 14px;border-radius:8px}
+.kyc-locked.code{font-family:'Courier New',monospace;font-size:16px;letter-spacing:2px;color:#0d9488}
+.kyc-input{font-size:14px;font-weight:500;color:#1e293b;background:#fff;border:1.5px solid #cbd5e1;padding:10px 14px;border-radius:8px;outline:none;transition:border-color .2s;width:100%}
+.kyc-input:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.1)}
+.kyc-input[readonly]{background:#f0f4f8;color:#64748b}
+.social-table-head{display:grid;grid-template-columns:100px 1fr 130px;gap:8px;padding:8px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.social-table-head span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#64748b}
+.social-row{display:grid;grid-template-columns:100px 1fr 130px;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #f1f5f9}
+.social-row:last-child{border-bottom:none}
+.social-plabel{font-size:12px;font-weight:700;color:#475569;display:flex;align-items:center;gap:6px}
+.save-btn{background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;transition:opacity .2s;box-shadow:0 2px 8px rgba(13,148,136,.3)}
+.save-btn:hover{opacity:.9}
+.save-btn:disabled{opacity:.5;cursor:not-allowed}
+.msg-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;padding:11px 16px;border-radius:8px;font-size:13px;font-weight:600;margin-top:12px}
+.msg-err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:11px 16px;border-radius:8px;font-size:13px;font-weight:600;margin-top:12px}
+.lock-note{font-size:12px;color:#64748b;padding:10px 14px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;align-items:center;gap:7px}
+
+/* ── Security Tab ── */
+.pw-input{font-size:14px;color:#1e293b;background:#fff;border:1.5px solid #cbd5e1;padding:10px 14px;border-radius:8px;outline:none;transition:border-color .2s;width:100%}
+.pw-input:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.1)}
+.pw-row{position:relative;margin-bottom:16px}
+.pw-toggle{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:#64748b;cursor:pointer;padding:4px;font-size:14px}
+
+/* ── Footer ── */
+.footer-note{text-align:center;margin-top:28px;padding:16px;font-size:12px;color:#94a3b8;border-top:1px solid #e2e8f0}
+
+/* ── Share Modal ── */
+.share-modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9995;align-items:center;justify-content:center;padding:16px}
+.share-modal-wrap.open{display:flex}
+.share-modal{background:#fff;border-radius:16px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+.smo-header{background:linear-gradient(135deg,#0d9488,#0f766e);padding:18px 22px;color:#fff;display:flex;align-items:center;justify-content:space-between}
+.smo-header-title{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}
+.smo-close{background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:5px 11px;font-size:16px;cursor:pointer;line-height:1}
+.smo-body{padding:20px 22px}
+.lang-tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.lang-tab{border:1.5px solid #e2e8f0;border-radius:7px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;background:#f8fafc;color:#64748b;transition:all .15s}
+.lang-tab.active{background:#0d9488;color:#fff;border-color:#0d9488}
+.smo-msg{background:#f0fdf4;border:1px solid #99f6e4;border-radius:10px;padding:14px;font-size:13px;color:#134e4a;line-height:1.65;margin-bottom:16px;white-space:pre-wrap;word-break:break-word;max-height:180px;overflow-y:auto}
+.smo-platforms{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.smo-plat-btn{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:9px;border:none;cursor:pointer;font-size:13px;font-weight:700;transition:opacity .18s;color:#fff}
+.smo-plat-btn:hover{opacity:.85}
+.smo-copy-msg{background:#f8fafc;color:#374151;border:1.5px solid #e2e8f0;border-radius:9px;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;grid-column:1/-1;transition:background .15s}
+.smo-copy-msg:hover{background:#f0fdf4;border-color:#0d9488;color:#0d9488}
+
+@media(max-width:640px){
+  .content{padding:16px 12px}
+  .code-value{font-size:22px;letter-spacing:2px}
+  .kyc-grid{grid-template-columns:1fr}
+  .social-row,.social-table-head{grid-template-columns:70px 1fr 90px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .smo-platforms{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Top Header ── -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <button class="mob-hamburger" onclick="toggleSidebar()" title="Open Menu">
+      <i class="fas fa-bars"></i>
+    </button>
+    <div class="logo-wrap">
+      <img src="/public/vgk4u-logo-100.png" onerror="this.style.display='none'" alt="VGK4U">
+    </div>
+    <div class="header-info">
+      <div class="header-sub">Promoter Dashboard</div>
+      <div class="header-name" id="welcomeName">Loading…</div>
+    </div>
+  </div>
+  <div class="top-bar-right">
+    <span class="status-badge" id="statusBadge"></span>
+    <a href="/promo/login" class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</a>
+  </div>
+</div>
+
+<!-- VGK Registration Modal -->
+<div id="vgkRegModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#1e1b4b;border:1px solid rgba(139,92,246,.4);border-radius:16px;padding:32px 28px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);">
+    <div style="width:60px;height:60px;background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <i class="fas fa-crown" style="font-size:24px;color:#fff;"></i>
+    </div>
+    <h5 style="color:#e9d5ff;font-weight:700;margin-bottom:10px;">Activate VGK4U Access</h5>
+    <p style="color:rgba(255,255,255,.7);font-size:14px;line-height:1.6;margin-bottom:8px;">
+      You don't have a VGK4U account yet — but we'll create one for you <strong style="color:#c4b5fd">automatically</strong> using your registered details. No forms to fill.
+    </p>
+    <div style="background:rgba(99,102,241,.15);border:1px solid rgba(139,92,246,.3);border-radius:10px;padding:12px 16px;margin-bottom:22px;text-align:left;font-size:13px;color:rgba(255,255,255,.75);line-height:1.6">
+      <i class="fas fa-info-circle" style="color:#a78bfa;margin-right:6px"></i>
+      Your VGK account will be created under the default VGK network using your name and mobile number. Your login password will be <code style="background:rgba(255,255,255,.1);padding:1px 6px;border-radius:4px;color:#c4b5fd">VGK + last 4 digits of your mobile</code>.
+    </div>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <button id="vgkAutoCreateBtn" onclick="autoCreateAndOpenVGK()" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:10px;padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer;min-width:190px;">
+        <i class="fas fa-magic" style="margin-right:8px"></i>Create Account &amp; Open VGK
+      </button>
+      <button onclick="document.getElementById('vgkRegModal').style.display='none';" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:10px 18px;font-size:14px;cursor:pointer;">
+        Not Now
+      </button>
+    </div>
+    <div id="vgkAutoCreateMsg" style="margin-top:14px;font-size:13px;color:rgba(255,255,255,.7)"></div>
+  </div>
+</div>
+
+<!-- ── Page Layout: Sidebar + Content ── -->
+<div class="mob-nav-overlay" id="navOverlay" onclick="closeSidebar()"></div>
+<div class="page-wrap">
+
+  <!-- Left Sidebar -->
+  <nav class="left-nav" id="leftNav">
+    <!-- Profile header -->
+    <div class="nav-profile">
+      <div class="nav-profile-logo">
+        <img src="/public/vgk4u-logo-100.png" onerror="this.style.display='none'" alt="VGK4U">
+      </div>
+      <div class="nav-profile-info">
+        <div class="nav-profile-name" id="sidebarName">Loading…</div>
+        <div class="nav-profile-id" id="sidebarCode">——</div>
+      </div>
+    </div>
+    <div class="nav-sect">Menu</div>
+    <button class="nav-item active" id="nav-overview" onclick="switchNav('overview')">
+      <i class="fas fa-chart-line ni"></i> Overview
+    </button>
+    <button class="nav-item" id="nav-kyc" onclick="switchNav('kyc')">
+      <i class="fas fa-id-card ni"></i> My Profile &amp; KYC
+    </button>
+    <button class="nav-item" id="nav-security" onclick="switchNav('security')">
+      <i class="fas fa-lock ni"></i> Security
+    </button>
+    <button class="nav-item" id="nav-deals" onclick="switchNav('deals')">
+      <i class="fas fa-handshake ni"></i> My Deals
+    </button>
+    <button class="nav-item" id="nav-products" onclick="switchNav('products')">
+      <i class="fas fa-store ni"></i> Promote Products
+    </button>
+    <hr class="nav-divider">
+    <div class="nav-sect">VGK4U</div>
+    <button class="nav-vgk-btn" id="vgkNavBtn" onclick="handleVGKPortalClick()">
+      <i class="fas fa-exchange-alt"></i> <span id="vgkNavBtnLabel">VGK4U Portal</span>
+    </button>
+    <hr class="nav-divider" style="margin-top:auto">
+    <button class="nav-logout-item" onclick="doLogout()">
+      <i class="fas fa-sign-out-alt" style="width:17px;text-align:center;font-size:14px"></i> Logout
+    </button>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-content">
+
+<!-- ════════════════════════════════════════
+     TAB 1: OVERVIEW
+════════════════════════════════════════ -->
+<div id="pane-overview" class="tab-pane active">
+<div class="content">
+
+  <div class="section-title">Your Referral Code</div>
+  <div class="code-card">
+    <div style="flex:1;min-width:0">
+      <div class="code-label">Promo / Referral Code</div>
+      <div class="code-value" id="refCode">——</div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:12px;color:rgba(255,255,255,.75)">Signup Bonus for new joiners via your link:</span>
+        <span id="refBonusPts" style="font-size:13px;font-weight:800;color:#fff;background:rgba(255,255,255,.22);border:1.5px solid rgba(255,255,255,.4);padding:3px 11px;border-radius:20px">——</span>
+      </div>
+    </div>
+    <div class="code-actions">
+      <button class="copy-btn" onclick="copyCode()"><i class="fas fa-copy"></i> Copy Code</button>
+      <button class="share-btn" onclick="openShareModal()"><i class="fas fa-share-alt"></i> Share</button>
+    </div>
+  </div>
+
+  <!-- ── Referral Impact Summary — 4-stat strip below the green card ── -->
+  <div id="refImpactSection" style="display:none;margin-bottom:20px">
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+      <div style="background:#fff;border-radius:12px;padding:14px 12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.06);border-top:3px solid #0d9488;text-align:center">
+        <div style="font-size:26px;font-weight:900;color:#0d9488;line-height:1" id="impactRegistered">0</div>
+        <div style="font-size:10px;font-weight:700;color:#64748b;margin-top:6px;text-transform:uppercase;letter-spacing:.4px;line-height:1.3">Members<br>Joined</div>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:14px 12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.06);border-top:3px solid #16a34a;text-align:center">
+        <div style="font-size:26px;font-weight:900;color:#16a34a;line-height:1" id="impactActivated">0</div>
+        <div style="font-size:10px;font-weight:700;color:#64748b;margin-top:6px;text-transform:uppercase;letter-spacing:.4px;line-height:1.3">Activated<br><span style="text-transform:none;font-weight:600;font-size:9px;color:#16a34a">(Paid ₹5,000)</span></div>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:14px 12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.06);border-top:3px solid #7c3aed;text-align:center">
+        <div style="font-size:17px;font-weight:900;color:#7c3aed;line-height:1" id="impactPoints">0</div>
+        <div style="font-size:10px;font-weight:700;color:#64748b;margin-top:6px;text-transform:uppercase;letter-spacing:.4px;line-height:1.3">Members'<br>Total Pts</div>
+      </div>
+      <div style="background:#fff;border-radius:12px;padding:14px 12px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.06);border-top:3px solid #d97706;text-align:center">
+        <div style="font-size:17px;font-weight:900;color:#d97706;line-height:1" id="impactEarnings">₹0</div>
+        <div style="font-size:10px;font-weight:700;color:#64748b;margin-top:6px;text-transform:uppercase;letter-spacing:.4px;line-height:1.3">Your<br>Earnings</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">Your Performance</div>
+  <div class="stats-grid">
+    <div class="stat-card filter-active" id="cardAll" onclick="filterByCard('all')" title="Show all activity">
+      <div class="stat-num" id="statTotal">—</div>
+      <div class="stat-label">Total Leads</div>
+      <div class="stat-filter-hint">tap to filter ↓</div>
+    </div>
+    <div class="stat-card" id="cardVGK" style="border-top-color:#7c3aed" onclick="filterByCard('vgk')" title="Show VGK signups only">
+      <div class="stat-num" style="color:#7c3aed" id="statVGK">—</div>
+      <div class="stat-label">VGK Signups</div>
+      <div class="stat-filter-hint">tap to filter ↓</div>
+    </div>
+    <div class="stat-card" id="cardMNR" style="border-top-color:#16a34a" onclick="filterByCard('mnr')" title="Show MNR contacts only">
+      <div class="stat-num" style="color:#16a34a" id="statMNR">—</div>
+      <div class="stat-label">MNR Contacts</div>
+      <div class="stat-filter-hint">tap to filter ↓</div>
+    </div>
+    <div class="stat-card" id="cardOther" style="border-top-color:#d97706" onclick="filterByCard('other')" title="Show other portal activity">
+      <div class="stat-num" style="color:#d97706" id="statOther">—</div>
+      <div class="stat-label">Other Portals</div>
+      <div class="stat-filter-hint">tap to filter ↓</div>
+    </div>
+  </div>
+
+  <!-- VGK Target Progress (shown only if VGK member) -->
+  <div id="targetSection" style="display:none">
+    <div class="section-title">VGK Loyalty Target</div>
+    <div class="target-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="font-weight:700;color:#1e293b;font-size:15px">Registration Target Progress</div>
+        <div id="targetPct" style="font-size:13px;font-weight:800;color:#f59e0b"></div>
+      </div>
+      <div class="target-bar-wrap"><div class="target-bar" id="targetBar" style="width:0%"></div></div>
+      <div class="target-info">
+        <span id="targetDone">0 completed</span>
+        <span id="targetGoal">Target: —</span>
+      </div>
+      <div id="targetMsg" style="margin-top:10px;font-size:13px;color:#64748b"></div>
+    </div>
+  </div>
+
+
+  <div class="section-title">Generate Your Referral Link</div>
+  <div class="card">
+    <div style="font-size:13px;color:#64748b;margin-bottom:4px">Choose a portal and get your unique referral link to share:</div>
+    <div class="link-row">
+      <select class="portal-select" id="portalSelect" onchange="genLink()">
+        <option value="">— Select Portal —</option>
+        <option value="vgk">VGK4U Registration</option>
+        <option value="mnr_contact">MNR Contact Form</option>
+        <option value="partner">Partner Portal</option>
+      </select>
+      <div class="link-output" id="linkOutput">Select a portal above to generate your link</div>
+      <button class="copy-btn" onclick="copyLink()" style="background:#1a2744;border-color:#243860;flex-shrink:0"><i class="fas fa-copy"></i> Copy Link</button>
+    </div>
+  </div>
+
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+    <span>Recent Activity</span>
+    <span id="activityFilterLabel" style="font-size:11px;font-weight:700;color:#0d9488;background:#f0fdfa;border:1px solid #99f6e4;border-radius:20px;padding:3px 12px;display:none"></span>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <table class="activity-table">
+      <thead>
+        <tr>
+          <th>Portal</th><th>Type</th><th>Name</th><th>Phone</th><th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="activityBody">
+        <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:28px"><i class="fas fa-spinner fa-spin"></i> Loading activity…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Members Who Joined Via Your Code -->
+  <div id="referralMembersSection" style="display:none">
+    <div class="section-title" style="margin-top:6px">Members Who Joined Via Your Code</div>
+    <div class="card" style="padding:0;overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <div id="referralMembersBody">
+        <div style="text-align:center;padding:28px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    For support, contact your VGK Mentor.<br>
+    <em>— Team VGK4U | MyntReal (An ISO 9001-2015 certified company)</em>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     TAB 2: MY PROFILE & KYC
+════════════════════════════════════════ -->
+<div id="pane-kyc" class="tab-pane">
+<div class="content">
+
+  <!-- Identity / Locked Fields -->
+  <div class="kyc-card">
+    <div class="kyc-card-header">
+      <i class="fas fa-user-circle" style="color:#0d9488;font-size:14px"></i>
+      <div class="kyc-card-title">My Identity</div>
+    </div>
+    <div class="kyc-card-body">
+      <div class="kyc-grid">
+        <div class="kyc-field">
+          <div class="kyc-label">Display Name <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">(auto-built)</span></div>
+          <div class="kyc-locked" id="kycName">—</div>
+        </div>
+        <div class="kyc-field">
+          <div class="kyc-label">Referral Code</div>
+          <div class="kyc-locked code" id="kycCode">—</div>
+        </div>
+        <div class="kyc-field">
+          <div class="kyc-label">Mobile Number</div>
+          <div class="kyc-locked" id="kycPhone">—</div>
+        </div>
+        <!-- [DC-NAME-GENDER] Title + First + Last (span full width) -->
+        <div class="kyc-field" style="grid-column:1/-1">
+          <div class="kyc-label">Title &amp; Name <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">(editable)</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="kycTitle" class="kyc-input" style="flex:0 0 85px;padding:8px;font-size:13px">
+              <option value="">-- Title --</option>
+              <option value="Mr.">Mr.</option>
+              <option value="Ms.">Ms.</option>
+              <option value="Mrs.">Mrs.</option>
+            </select>
+            <input class="kyc-input" id="kycFirstName" type="text" placeholder="First name" style="flex:1;min-width:100px">
+            <input class="kyc-input" id="kycLastName" type="text" placeholder="Last name" style="flex:1;min-width:100px">
+          </div>
+        </div>
+        <div class="kyc-field">
+          <div class="kyc-label">Gender <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">(editable)</span></div>
+          <select id="kycGender" class="kyc-input" style="padding:8px 12px;font-size:13px">
+            <option value="">-- Select --</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="kyc-field">
+          <div class="kyc-label">Email Address <span style="color:#94a3b8;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">(editable)</span></div>
+          <input class="kyc-input" id="kycEmail" type="email" placeholder="your@email.com">
+        </div>
+        <div class="kyc-field">
+          <div class="kyc-label">Account Status</div>
+          <div id="kycStatusBadge" style="margin-top:4px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="lock-note">
+      <i class="fas fa-lock" style="color:#94a3b8"></i>
+      Mobile and referral code are locked. Contact your VGK Mentor to update these.
+    </div>
+  </div>
+
+  <!-- Social Media Profiles & Followers -->
+  <div class="kyc-card">
+    <div class="kyc-card-header">
+      <i class="fas fa-share-alt" style="color:#0d9488;font-size:14px"></i>
+      <div class="kyc-card-title">Social Media Profiles &amp; Followers</div>
+    </div>
+    <div style="padding:14px 20px 6px;font-size:13px;color:#64748b">Add your social media profile links and follower counts to help your VGK Mentor verify your reach.</div>
+
+    <!-- Platform Checkboxes -->
+    <div style="padding:0 20px 14px">
+      <div class="kyc-label" style="margin-bottom:10px">Active Platforms</div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px" id="kycPlatformChecks">
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:#374151;background:#f8fafc;border:1.5px solid #e2e8f0;padding:7px 14px;border-radius:8px">
+          <input type="checkbox" value="instagram" id="kpInsta" style="accent-color:#e1306c"> <i class="fab fa-instagram" style="color:#e1306c"></i> Instagram</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:#374151;background:#f8fafc;border:1.5px solid #e2e8f0;padding:7px 14px;border-radius:8px">
+          <input type="checkbox" value="youtube" id="kpYT" style="accent-color:#ff0000"> <i class="fab fa-youtube" style="color:#ff0000"></i> YouTube</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:#374151;background:#f8fafc;border:1.5px solid #e2e8f0;padding:7px 14px;border-radius:8px">
+          <input type="checkbox" value="facebook" id="kpFB" style="accent-color:#1877f2"> <i class="fab fa-facebook" style="color:#1877f2"></i> Facebook</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:#374151;background:#f8fafc;border:1.5px solid #e2e8f0;padding:7px 14px;border-radius:8px">
+          <input type="checkbox" value="whatsapp" id="kpWA" style="accent-color:#25d366"> <i class="fab fa-whatsapp" style="color:#25d366"></i> WhatsApp</label>
+        <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer;color:#374151;background:#f8fafc;border:1.5px solid #e2e8f0;padding:7px 14px;border-radius:8px">
+          <input type="checkbox" value="other" id="kpOther" style="accent-color:#6b7280"> <i class="fas fa-link" style="color:#6b7280"></i> Other</label>
+      </div>
+    </div>
+
+    <!-- Social Profile Table -->
+    <div class="social-table-head">
+      <span>Platform</span><span>Profile Link</span><span style="text-align:right">Followers</span>
+    </div>
+    <div class="social-row">
+      <div class="social-plabel"><i class="fab fa-instagram" style="color:#e1306c"></i> Instagram</div>
+      <input class="kyc-input" style="padding:8px 11px;font-size:13px" id="kslInsta" placeholder="https://instagram.com/username" type="url">
+      <input class="kyc-input" style="padding:8px 11px;font-size:13px;text-align:right" id="kslInstaFc" type="number" min="0" placeholder="0">
+    </div>
+    <div class="social-row">
+      <div class="social-plabel"><i class="fab fa-youtube" style="color:#ff0000"></i> YouTube</div>
+      <input class="kyc-input" style="padding:8px 11px;font-size:13px" id="kslYT" placeholder="https://youtube.com/@channel" type="url">
+      <input class="kyc-input" style="padding:8px 11px;font-size:13px;text-align:right" id="kslYTFc" type="number" min="0" placeholder="0">
+    </div>
+    <div class="social-row">
+      <div class="social-plabel"><i class="fab fa-facebook" style="color:#1877f2"></i> Facebook</div>
+      <input class="kyc-input" style="padding:8px 11px;font-size:13px" id="kslFB" placeholder="https://facebook.com/page" type="url">
+      <input class="kyc-input" style="padding:8px 11px;font-size:13px;text-align:right" id="kslFBFc" type="number" min="0" placeholder="0">
+    </div>
+    <div class="social-row">
+      <div class="social-plabel"><i class="fab fa-whatsapp" style="color:#25d366"></i> WhatsApp</div>
+      <input class="kyc-input" style="padding:8px 11px;font-size:13px" id="kslWA" placeholder="https://wa.me/91XXXXXXXXXX" type="url">
+      <input class="kyc-input" style="padding:8px 11px;font-size:13px;text-align:right" id="kslWAFc" type="number" min="0" placeholder="0">
+    </div>
+    <div class="social-row">
+      <div class="social-plabel"><i class="fas fa-link" style="color:#6b7280"></i> Other</div>
+      <input class="kyc-input" style="padding:8px 11px;font-size:13px" id="kslOther" placeholder="Website / other link" type="url">
+      <input class="kyc-input" style="padding:8px 11px;font-size:13px;text-align:right" id="kslOtherFc" type="number" min="0" placeholder="0">
+    </div>
+  </div>
+
+  <!-- Staff Notes (read-only) -->
+  <div class="kyc-card" id="kycNotesSection" style="display:none">
+    <div class="kyc-card-header">
+      <i class="fas fa-sticky-note" style="color:#0d9488;font-size:14px"></i>
+      <div class="kyc-card-title">Notes from VGK Mentor</div>
+    </div>
+    <div class="kyc-card-body">
+      <div style="font-size:13px;color:#374151;background:#f8fafc;padding:12px 16px;border-radius:8px;border:1px solid #e2e8f0;line-height:1.6" id="kycNotesText">—</div>
+    </div>
+  </div>
+
+  <!-- Save Button -->
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:4px">
+    <button class="save-btn" id="kycSaveBtn" onclick="saveKYC()">
+      <i class="fas fa-save"></i> <span id="kycSaveBtnText">Save My Profile</span>
+    </button>
+    <div id="kycMsg" style="display:none"></div>
+  </div>
+
+  <div class="footer-note">
+    For support, contact your VGK Mentor.<br>
+    <em>— Team VGK4U | MyntReal (An ISO 9001-2015 certified company)</em>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     TAB 3: SECURITY (Change Password)
+════════════════════════════════════════ -->
+<div id="pane-security" class="tab-pane">
+<div class="content">
+
+  <div class="kyc-card">
+    <div class="kyc-card-header">
+      <i class="fas fa-key" style="color:#0d9488;font-size:14px"></i>
+      <div class="kyc-card-title">Change Password</div>
+    </div>
+    <div class="kyc-card-body" style="max-width:480px">
+      <div style="font-size:13px;color:#64748b;margin-bottom:20px">Update your login password. Use at least 6 characters. Your current password is required to confirm the change.</div>
+
+      <div class="kyc-field" style="margin-bottom:16px">
+        <div class="kyc-label">Current Password</div>
+        <div class="pw-row">
+          <input class="pw-input" type="password" id="pwCurrent" placeholder="Enter your current password" autocomplete="current-password">
+          <button class="pw-toggle" onclick="togglePw('pwCurrent',this)" type="button"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+
+      <div class="kyc-field" style="margin-bottom:16px">
+        <div class="kyc-label">New Password</div>
+        <div class="pw-row">
+          <input class="pw-input" type="password" id="pwNew" placeholder="At least 6 characters" autocomplete="new-password">
+          <button class="pw-toggle" onclick="togglePw('pwNew',this)" type="button"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+
+      <div class="kyc-field" style="margin-bottom:20px">
+        <div class="kyc-label">Confirm New Password</div>
+        <div class="pw-row">
+          <input class="pw-input" type="password" id="pwConfirm" placeholder="Re-enter new password" autocomplete="new-password">
+          <button class="pw-toggle" onclick="togglePw('pwConfirm',this)" type="button"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+
+      <button class="save-btn" id="pwSaveBtn" onclick="changePassword()">
+        <i class="fas fa-shield-alt"></i> <span id="pwSaveBtnText">Update Password</span>
+      </button>
+      <div id="pwMsg" style="display:none;margin-top:14px"></div>
+    </div>
+  </div>
+
+  <div class="kyc-card">
+    <div class="kyc-card-header">
+      <i class="fas fa-info-circle" style="color:#d97706;font-size:14px"></i>
+      <div class="kyc-card-title" style="color:#d97706">Password Tips</div>
+    </div>
+    <div class="kyc-card-body">
+      <ul style="font-size:13px;color:#475569;line-height:1.9;padding-left:18px">
+        <li>Use at least 6 characters</li>
+        <li>Mix uppercase, lowercase, numbers, and symbols for better security</li>
+        <li>Never share your password with anyone, including VGK staff</li>
+        <li>If you forget your password, contact your VGK Mentor to reset it</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-note">
+    For support, contact your VGK Mentor.<br>
+    <em>— Team VGK4U | MyntReal (An ISO 9001-2015 certified company)</em>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     TAB 4: MY DEALS
+════════════════════════════════════════ -->
+<div id="pane-deals" class="tab-pane">
+<div class="content">
+
+  <!-- Summary cards -->
+  <div id="dealsMyLoading" style="text-align:center;padding:40px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Loading your deals…</div>
+  <div id="dealsMyContent" style="display:none">
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px" id="dealsSummaryCards"></div>
+
+    <!-- TDS notice -->
+    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:flex-start;gap:12px;font-size:13px;color:#92400e">
+      <i class="fas fa-info-circle" style="margin-top:2px;font-size:15px;color:#d97706"></i>
+      <div>
+        <b>TDS Deduction — 2%:</b> As per Indian income tax regulations, 2% TDS is deducted from your agreed deal charge before payment is released.
+        Your <b>Net Payable</b> = Agreed Charge − 2% TDS. Payments shown under "Paid Out" are the actual amounts credited to you.
+      </div>
+    </div>
+
+    <!-- Deals table -->
+    <div class="kyc-card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 18px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:700;color:#1a2744;font-size:14px"><i class="fas fa-handshake" style="color:#0d9488;margin-right:8px"></i>Promotion Deals</div>
+        <div id="dealsMyCount" style="font-size:12px;color:#64748b"></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead>
+            <tr style="background:#f1f5f9;text-transform:uppercase;font-size:10px;color:#6b7280;letter-spacing:.5px">
+              <th style="padding:9px 12px;text-align:left;white-space:nowrap">Date</th>
+              <th style="padding:9px 12px;text-align:left">Campaign / Promotion</th>
+              <th style="padding:9px 12px;text-align:left">Platform</th>
+              <th style="padding:9px 12px;text-align:right">Agreed ₹</th>
+              <th style="padding:9px 12px;text-align:right;color:#ef4444">TDS 2%</th>
+              <th style="padding:9px 12px;text-align:right;color:#7c3aed">Net Payable</th>
+              <th style="padding:9px 12px;text-align:center">Status</th>
+              <th style="padding:9px 12px;text-align:right;color:#16a34a">Paid Out</th>
+              <th style="padding:9px 12px;text-align:left">Payment Info</th>
+              <th style="padding:9px 12px;text-align:left;white-space:nowrap">Pay Date</th>
+            </tr>
+          </thead>
+          <tbody id="dealsMyTableBody">
+            <tr><td colspan="10" style="text-align:center;padding:32px;color:#94a3b8">No deals found.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer-note">
+    All amounts in Indian Rupees (INR). TDS deductions as applicable.<br>
+    <em>— Team VGK4U | MyntReal (An ISO 9001-2015 certified company)</em>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════
+     TAB 5: PROMOTE PRODUCTS
+════════════════════════════════════════ -->
+<div id="pane-products" class="tab-pane">
+<div class="content">
+
+  <!-- Intro banner -->
+  <div style="background:linear-gradient(135deg,#0d9488,#0f766e);border-radius:14px;padding:20px 24px;margin-bottom:24px;color:#fff;display:flex;align-items:center;gap:16px">
+    <i class="fas fa-store" style="font-size:32px;opacity:.9"></i>
+    <div>
+      <div style="font-weight:800;font-size:16px;margin-bottom:4px">Promote &amp; Earn</div>
+      <div style="font-size:13px;opacity:.9">Browse products below, click <b>"Copy My Link"</b> and share it with your audience. Every click is tracked to you automatically via your referral code.</div>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="productsMyLoading" style="text-align:center;padding:40px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Loading products…</div>
+
+  <div id="productsMyContent" style="display:none">
+    <!-- Category filter pills -->
+    <div id="productCatPills" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px"></div>
+
+    <!-- Copied toast -->
+    <div id="copyToast" style="display:none;position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1a2744;color:#fff;padding:10px 22px;border-radius:50px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2)"><i class="fas fa-check-circle" style="color:#34d399;margin-right:6px"></i>Link copied to clipboard!</div>
+
+    <!-- Product grid -->
+    <div id="productsMyGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px"></div>
+
+  </div>
+
+  <div class="footer-note">
+    <i class="fas fa-info-circle" style="color:#0d9488;margin-right:4px"></i>
+    Each shared link is uniquely tagged with your referral code for accurate tracking.<br>
+    <em>— Team VGK4U | MyntReal (An ISO 9001-2015 certified company)</em>
+  </div>
+</div>
+</div>
+
+  </div><!-- end .main-content -->
+</div><!-- end .page-wrap -->
+
+<!-- ── Share Modal ── -->
+<div class="share-modal-wrap" id="shareModalWrap">
+  <div class="share-modal">
+    <div class="smo-header">
+      <div class="smo-header-title"><i class="fas fa-share-alt"></i> Share Your Referral Code</div>
+      <button class="smo-close" onclick="closeShareModal()">&#x2715;</button>
+    </div>
+    <div class="smo-body">
+      <div style="font-size:12px;color:#64748b;margin-bottom:10px;font-weight:600">Choose Language</div>
+      <div class="lang-tabs" id="shareLangTabs">
+        <button class="lang-tab active" onclick="setShareLang('en')">English</button>
+        <button class="lang-tab" onclick="setShareLang('hi')">हिंदी</button>
+        <button class="lang-tab" onclick="setShareLang('ta')">தமிழ்</button>
+        <button class="lang-tab" onclick="setShareLang('te')">తెలుగు</button>
+      </div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:6px;font-weight:600">Message Preview</div>
+      <div class="smo-msg" id="shareMsgPreview"></div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:8px;font-weight:600">Share On</div>
+      <div class="smo-platforms">
+        <button class="smo-plat-btn" style="background:#25d366" onclick="shareOnPlatform('whatsapp')">
+          <i class="fab fa-whatsapp" style="font-size:16px"></i> WhatsApp
+        </button>
+        <button class="smo-plat-btn" style="background:#0088cc" onclick="shareOnPlatform('telegram')">
+          <i class="fab fa-telegram-plane" style="font-size:16px"></i> Telegram
+        </button>
+        <button class="smo-plat-btn" style="background:#1877f2" onclick="shareOnPlatform('facebook')">
+          <i class="fab fa-facebook" style="font-size:16px"></i> Facebook
+        </button>
+        <button class="smo-plat-btn" style="background:#000" onclick="shareOnPlatform('twitter')">
+          <i class="fab fa-x-twitter" style="font-size:16px"></i> X / Twitter
+        </button>
+        <button class="smo-copy-msg" onclick="copyShareMessage()">
+          <i class="fas fa-copy" style="color:#0d9488"></i> Copy Message Text
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DC Protocol: Load inactivity manager BEFORE inline init so DCInactivityManager is defined -->
+<script src="/shared/dc_universal_inactivity.js"></script>
+
+<script>
+let influencer = null;
+let kycProfileLoaded = false;
+const PORTALS = { vgk: '/vgk/login', mnr_contact: '/contact', partner: '/partner/login' };
+const KYC_PLATFORMS = [
+  {key:'instagram',urlId:'kslInsta', fcId:'kslInstaFc', cbId:'kpInsta'},
+  {key:'youtube',  urlId:'kslYT',    fcId:'kslYTFc',    cbId:'kpYT'},
+  {key:'facebook', urlId:'kslFB',    fcId:'kslFBFc',    cbId:'kpFB'},
+  {key:'whatsapp', urlId:'kslWA',    fcId:'kslWAFc',    cbId:'kpWA'},
+  {key:'other',    urlId:'kslOther', fcId:'kslOtherFc', cbId:'kpOther'},
+];
+
+// ── Sidebar Navigation ──
+let dealsMyLoaded = false;
+let productsMyLoaded = false;
+
+function switchNav(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('pane-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+  if (name === 'kyc' && !kycProfileLoaded) loadKYCProfile();
+  if (name === 'deals' && !dealsMyLoaded) loadMyDeals();
+  if (name === 'products' && !productsMyLoaded) loadMyProducts();
+  closeSidebar();
+}
+
+function toggleSidebar() {
+  document.getElementById('leftNav').classList.toggle('open');
+  document.getElementById('navOverlay').classList.toggle('open');
+}
+
+function closeSidebar() {
+  document.getElementById('leftNav').classList.remove('open');
+  document.getElementById('navOverlay').classList.remove('open');
+}
+
+// ── Status helpers ──
+function getStatusClass(s) {
+  return ({active:'status-active',pending:'status-pending',paused:'status-paused',inactive:'status-inactive'})[s] || 'status-pending';
+}
+function getPortalPill(p) {
+  const cls = ({vgk:'portal-vgk',mnr_contact:'portal-mnr',partner:'portal-partner'})[p] || 'portal-other';
+  const label = ({vgk:'VGK',mnr_contact:'MNR',partner:'Partner'})[p] || p;
+  return `<span class="portal-pill ${cls}">${label}</span>`;
+}
+
+// ── Copy helpers ──
+function copyCode() {
+  const code = document.getElementById('refCode').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = event.target.closest('button');
+    const orig = btn.innerHTML; btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    setTimeout(() => btn.innerHTML = orig, 1500);
+  });
+}
+function genLink() {
+  const portal = document.getElementById('portalSelect').value;
+  const code = influencer?.referral_code || '';
+  if (!portal || !code) { document.getElementById('linkOutput').textContent = 'Select a portal above'; return; }
+  const link = `${window.location.origin}${PORTALS[portal]||'/'}?ref=${code}`;
+  document.getElementById('linkOutput').textContent = link;
+}
+function copyLink() {
+  const link = document.getElementById('linkOutput').textContent;
+  if (!link || link.startsWith('Select')) return;
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = event.target.closest('button');
+    const orig = btn.innerHTML; btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    setTimeout(() => btn.innerHTML = orig, 1500);
+  });
+}
+
+// ── Share Modal ──
+let _shareLang = 'en';
+const _DEFAULT_REFERRAL_BONUS = 5000;
+const _shareMsgs = {
+  en: (name, code, url, refBonus, promoPts) =>
+    `Hi! I'm ${name} and I'm using VGK4U services — a Loyalty Rewards platform for Solar, EV, Insurance & Real Estate.\n\nI joined FREE and got 10,000 Welcome Points instantly! 🎁\n\nYou can also join using my referral code and get:\n⭐ *+${Number(refBonus).toLocaleString('en-IN')} Bonus Points* just for signing up via my link!${promoPts > 0 ? `\n🎁 Also enter promo code *${code}* at signup to get an extra *+${Number(promoPts).toLocaleString('en-IN')} bonus points*!` : ''}\n\n🔑 My Promo Code: *${code}*\n🔗 Register here: ${url}\n\n1 PT = ₹1 value. Start earning real rewards today!\n\n— ${name} | VGK4U Member`,
+  hi: (name, code, url, refBonus, promoPts) =>
+    `नमस्ते! मैं ${name} हूँ और मैं VGK4U सेवाओं का उपयोग कर रहा/रही हूँ — Solar, EV, Insurance और Real Estate के लिए Loyalty Rewards Platform।\n\nमैंने FREE जॉइन किया और तुरंत 10,000 Welcome Points पाए! 🎁\n\nआप भी मेरे referral code से जॉइन करें और पाएं:\n⭐ *+${Number(refBonus).toLocaleString('en-IN')} Bonus Points* सिर्फ मेरे लिंक से साइन अप करने पर!${promoPts > 0 ? `\n🎁 Signup पर promo code *${code}* डालें और पाएं अतिरिक्त *+${Number(promoPts).toLocaleString('en-IN')} bonus points*!` : ''}\n\n🔑 मेरा Promo Code: *${code}*\n🔗 यहाँ रजिस्टर करें: ${url}\n\n1 PT = ₹1 मूल्य। आज ही कमाना शुरू करें!\n\n— ${name} | VGK4U Member`,
+  ta: (name, code, url, refBonus, promoPts) =>
+    `வணக்கம்! நான் ${name}, VGK4U சேவைகளை பயன்படுத்துகிறேன் — Solar, EV, Insurance & Real Estate-க்கான Loyalty Rewards Platform.\n\nநான் FREE-யாக சேர்ந்து உடனே 10,000 Welcome Points பெற்றேன்! 🎁\n\nநீங்களும் என் referral code மூலம் சேர்ந்து பெறுங்கள்:\n⭐ *+${Number(refBonus).toLocaleString('en-IN')} Bonus Points* என் link மூலம் sign up செய்தால்!${promoPts > 0 ? `\n🎁 Signup-ல் promo code *${code}* உள்ளிட்டு கூடுதல் *+${Number(promoPts).toLocaleString('en-IN')} bonus points* பெறுங்கள்!` : ''}\n\n🔑 என் Promo Code: *${code}*\n🔗 இங்கே பதிவு செய்யுங்கள்: ${url}\n\n1 PT = ₹1 மதிப்பு. இன்றே சம்பாதிக்கத் தொடங்குங்கள்!\n\n— ${name} | VGK4U Member`,
+  te: (name, code, url, refBonus, promoPts) =>
+    `నమస్కారం! నేను ${name}, VGK4U సేవలను ఉపయోగిస్తున్నాను — Solar, EV, Insurance & Real Estate కోసం Loyalty Rewards Platform.\n\nనేను FREE గా చేరి వెంటనే 10,000 Welcome Points పొందాను! 🎁\n\nమీరు కూడా నా referral code తో చేరి పొందండి:\n⭐ *+${Number(refBonus).toLocaleString('en-IN')} Bonus Points* నా link ద్వారా sign up చేస్తే!${promoPts > 0 ? `\n🎁 Signup లో promo code *${code}* నమోదు చేసి మరింత *+${Number(promoPts).toLocaleString('en-IN')} bonus points* పొందండి!` : ''}\n\n🔑 నా Promo Code: *${code}*\n🔗 ఇక్కడ నమోదు చేసుకోండి: ${url}\n\n1 PT = ₹1 విలువ. ఈరోజే సంపాదించడం ప్రారంభించండి!\n\n— ${name} | VGK4U Member`,
+};
+
+function _buildShareMessage() {
+  const name = influencer?.name || 'VGK4U Promoter';
+  const code = influencer?.referral_code || '';
+  const url = `${window.location.origin}/vgk/login?ref=${code}`;
+  const refBonus = _DEFAULT_REFERRAL_BONUS;
+  const promoPts = (influencer?.signup_bonus_points > 0) ? Number(influencer.signup_bonus_points) : 0;
+  return (_shareMsgs[_shareLang] || _shareMsgs.en)(name, code, url, refBonus, promoPts);
+}
+
+function openShareModal() {
+  _shareLang = 'en';
+  document.querySelectorAll('.lang-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.lang-tab')[0].classList.add('active');
+  document.getElementById('shareMsgPreview').textContent = _buildShareMessage();
+  document.getElementById('shareModalWrap').classList.add('open');
+}
+
+function closeShareModal() {
+  document.getElementById('shareModalWrap').classList.remove('open');
+}
+
+function setShareLang(lang) {
+  _shareLang = lang;
+  document.querySelectorAll('.lang-tab').forEach(t => t.classList.remove('active'));
+  const langs = ['en','hi','ta','te'];
+  const idx = langs.indexOf(lang);
+  if (idx >= 0) document.querySelectorAll('.lang-tab')[idx].classList.add('active');
+  document.getElementById('shareMsgPreview').textContent = _buildShareMessage();
+}
+
+function shareOnPlatform(platform) {
+  const msg = _buildShareMessage();
+  const enc = encodeURIComponent(msg);
+  const urls = {
+    whatsapp: `https://wa.me/?text=${enc}`,
+    telegram: `https://t.me/share/url?url=${encodeURIComponent(window.location.origin + '/vgk/login')}&text=${enc}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.origin + '/vgk/login?ref=' + (influencer?.referral_code||''))}&quote=${enc}`,
+    twitter:  `https://twitter.com/intent/tweet?text=${enc}`,
+  };
+  if (urls[platform]) window.open(urls[platform], '_blank');
+}
+
+function copyShareMessage() {
+  const msg = _buildShareMessage();
+  navigator.clipboard.writeText(msg).then(() => {
+    const btn = event.target.closest('button');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check" style="color:#059669"></i> Message Copied!';
+    btn.style.background = '#f0fdf4';
+    btn.style.borderColor = '#0d9488';
+    btn.style.color = '#0d9488';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.background=''; btn.style.borderColor=''; btn.style.color=''; }, 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = msg; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  });
+}
+
+// Close share modal on overlay click
+document.getElementById('shareModalWrap').addEventListener('click', function(e) {
+  if (e.target === this) closeShareModal();
+});
+
+// ── Stats + Activity ──
+let allActivity = [];
+let activeStatFilter = 'all';
+
+function renderActivityTable(filter) {
+  activeStatFilter = filter;
+  const tbody = document.getElementById('activityBody');
+  const label = document.getElementById('activityFilterLabel');
+
+  ['All','VGK','MNR','Other'].forEach(k => {
+    const el = document.getElementById('card' + k);
+    if (el) el.classList.remove('filter-active');
+  });
+  const cardMap = {all:'cardAll', vgk:'cardVGK', mnr:'cardMNR', other:'cardOther'};
+  const activeCard = document.getElementById(cardMap[filter]);
+  if (activeCard) activeCard.classList.add('filter-active');
+
+  const labelMap = {all: null, vgk: 'Showing: VGK Signups only', mnr: 'Showing: MNR Contacts only', other: 'Showing: Other Portals only'};
+  if (labelMap[filter]) {
+    label.textContent = labelMap[filter];
+    label.style.display = 'inline-block';
+  } else {
+    label.style.display = 'none';
+  }
+
+  let rows = allActivity;
+  if (filter === 'vgk')   rows = allActivity.filter(r => r.portal === 'vgk');
+  else if (filter === 'mnr')   rows = allActivity.filter(r => r.portal === 'mnr_contact');
+  else if (filter === 'other') rows = allActivity.filter(r => r.portal !== 'vgk' && r.portal !== 'mnr_contact');
+
+  if (!rows.length) {
+    const emptyMsg = filter === 'all'
+      ? 'No activity yet. Share your referral link to get started!'
+      : 'No activity for this portal yet.';
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:28px">${emptyMsg}</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${getPortalPill(r.portal)}</td>
+      <td style="text-transform:capitalize">${r.event_type}</td>
+      <td>${r.source_name || '—'}</td>
+      <td>${r.source_phone || '—'}</td>
+      <td>${r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—'}</td>
+    </tr>`).join('');
+}
+
+function filterByCard(filter) {
+  renderActivityTable(filter);
+}
+
+async function loadStats() {
+  if (!influencer) return;
+  try {
+    const resp = await fetch(`/api/v1/promo/my/stats?influencer_id=${influencer.id}`);
+    const data = await resp.json();
+    if (!data.success) return;
+    document.getElementById('statTotal').textContent = data.total;
+    let vgk = 0, mnr = 0, other = 0;
+    (data.by_portal || []).forEach(r => {
+      if (r.portal === 'vgk') vgk += parseInt(r.cnt);
+      else if (r.portal === 'mnr_contact') mnr += parseInt(r.cnt);
+      else other += parseInt(r.cnt);
+    });
+    document.getElementById('statVGK').textContent = vgk;
+    document.getElementById('statMNR').textContent = mnr;
+    document.getElementById('statOther').textContent = other;
+    allActivity = data.recent || [];
+    renderActivityTable('all');
+  } catch(e) { console.error('Stats error', e); }
+}
+
+function updateTarget() {
+  if (!influencer || !influencer.is_vgk_member || !influencer.vgk_registration_target) return;
+  const done = influencer.vgk_reg_count || 0;
+  const goal = influencer.vgk_registration_target;
+  const pct = Math.min(100, Math.round((done / goal) * 100));
+  document.getElementById('targetSection').style.display = '';
+  document.getElementById('targetBar').style.width = pct + '%';
+  document.getElementById('targetDone').textContent = done + ' completed';
+  document.getElementById('targetGoal').textContent = 'Target: ' + goal;
+  document.getElementById('targetPct').textContent = pct + '%';
+  const remaining = Math.max(0, goal - done);
+  document.getElementById('targetMsg').textContent = remaining > 0
+    ? `You need ${remaining} more VGK registration${remaining === 1 ? '' : 's'} to activate your account.`
+    : '🎉 Target achieved! Your account is being reviewed for activation.';
+}
+
+// ── KYC Profile ──
+function kycSetSocialLinks(jsonStr) {
+  let obj = {};
+  try { obj = JSON.parse(jsonStr || '{}') || {}; } catch(e) {}
+  KYC_PLATFORMS.forEach(p => {
+    const data = obj[p.key] || {};
+    const url = typeof data === 'string' ? data : (data.url || '');
+    const fc = typeof data === 'string' ? '' : (data.followers || '');
+    document.getElementById(p.urlId).value = url;
+    document.getElementById(p.fcId).value = fc;
+    document.getElementById(p.cbId).checked = !!url || !!fc;
+  });
+}
+function kycGetSocialLinks() {
+  const obj = {};
+  KYC_PLATFORMS.forEach(p => {
+    const url = document.getElementById(p.urlId).value.trim();
+    const fc = parseInt(document.getElementById(p.fcId).value) || 0;
+    if (url || fc) obj[p.key] = {url, followers: fc};
+  });
+  return Object.keys(obj).length ? JSON.stringify(obj) : null;
+}
+function kycGetPlatforms() {
+  return Array.from(document.querySelectorAll('#kycPlatformChecks input:checked')).map(c => c.value).join(',');
+}
+
+async function loadKYCProfile() {
+  if (!influencer) return;
+  try {
+    const resp = await fetch(`/api/v1/promo/my/profile?influencer_id=${influencer.id}`);
+    const data = await resp.json();
+    if (!data.success) return;
+    const p = data.profile;
+    document.getElementById('kycName').textContent = p.name || '—';
+    document.getElementById('kycCode').textContent = p.referral_code || '—';
+    document.getElementById('kycPhone').textContent = p.phone || '—';
+    document.getElementById('kycEmail').value = p.email || '';
+    // [DC-NAME-GENDER] populate split name fields; fall back to parsing full name if split fields empty
+    const _setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    _setVal('kycTitle', p.name_title); _setVal('kycGender', p.gender);
+    if (p.first_name || p.last_name) {
+      _setVal('kycFirstName', p.first_name);
+      _setVal('kycLastName', p.last_name);
+    } else if (p.name) {
+      // Legacy: user registered with a single name — parse it into first/last
+      const parts = p.name.trim().split(/\s+/);
+      _setVal('kycFirstName', parts[0] || '');
+      _setVal('kycLastName', parts.slice(1).join(' ') || '');
+    }
+    const sb = document.getElementById('kycStatusBadge');
+    const sc = {active:'status-active',pending:'status-pending',paused:'status-paused',inactive:'status-inactive'};
+    sb.innerHTML = `<span class="status-badge ${sc[p.status]||'status-pending'}">${p.status||'pending'}</span>`;
+    const platformVals = (p.platforms || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+    document.querySelectorAll('#kycPlatformChecks input').forEach(cb => { cb.checked = platformVals.includes(cb.value); });
+    kycSetSocialLinks(p.social_links || '{}');
+    if (p.notes) {
+      document.getElementById('kycNotesSection').style.display = '';
+      document.getElementById('kycNotesText').textContent = p.notes;
+    }
+    kycProfileLoaded = true;
+  } catch(e) { console.error('KYC profile error', e); }
+}
+
+async function saveKYC() {
+  if (!influencer) return;
+  const btn = document.getElementById('kycSaveBtn');
+  const msgEl = document.getElementById('kycMsg');
+  btn.disabled = true;
+  document.getElementById('kycSaveBtnText').textContent = 'Saving…';
+  msgEl.style.display = 'none';
+  try {
+    const resp = await fetch(`/api/v1/promo/my/profile?influencer_id=${influencer.id}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        email: document.getElementById('kycEmail').value.trim(),
+        social_links: kycGetSocialLinks(),
+        name_title: (document.getElementById('kycTitle')?.value||'').trim() || null,
+        first_name: (document.getElementById('kycFirstName')?.value||'').trim() || null,
+        last_name:  (document.getElementById('kycLastName')?.value||'').trim() || null,
+        gender:     (document.getElementById('kycGender')?.value||'').trim() || null,
+      })
+    });
+    const data = await resp.json();
+    msgEl.style.display = '';
+    if (data.success) {
+      msgEl.className = 'msg-ok';
+      msgEl.innerHTML = '<i class="fas fa-check-circle"></i> Profile saved successfully!';
+      influencer.email = document.getElementById('kycEmail').value.trim();
+      sessionStorage.setItem('promo_influencer', JSON.stringify(influencer));
+    } else {
+      msgEl.className = 'msg-err';
+      msgEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + (data.detail || 'Failed to save profile');
+    }
+    setTimeout(() => { msgEl.style.display = 'none'; }, 5000);
+  } catch(e) {
+    msgEl.style.display = ''; msgEl.className = 'msg-err'; msgEl.textContent = 'Network error. Please try again.';
+  } finally {
+    btn.disabled = false; document.getElementById('kycSaveBtnText').textContent = 'Save My Profile';
+  }
+}
+
+// ── Password Change ──
+function togglePw(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  btn.innerHTML = `<i class="fas fa-eye${isHidden ? '-slash' : ''}"></i>`;
+}
+
+async function changePassword() {
+  if (!influencer) return;
+  const current = document.getElementById('pwCurrent').value;
+  const newPw = document.getElementById('pwNew').value;
+  const confirm = document.getElementById('pwConfirm').value;
+  const msgEl = document.getElementById('pwMsg');
+  const showErr = msg => { msgEl.className = 'msg-err'; msgEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + msg; msgEl.style.display = ''; };
+  const showOk = msg => { msgEl.className = 'msg-ok'; msgEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + msg; msgEl.style.display = ''; };
+  msgEl.style.display = 'none';
+  if (!current || !newPw || !confirm) { showErr('Please fill in all fields.'); return; }
+  if (newPw.length < 6) { showErr('New password must be at least 6 characters.'); return; }
+  if (newPw !== confirm) { showErr('New password and confirmation do not match.'); return; }
+  const btn = document.getElementById('pwSaveBtn');
+  btn.disabled = true; document.getElementById('pwSaveBtnText').textContent = 'Updating…';
+  try {
+    const resp = await fetch(`/api/v1/promo/my/change-password?influencer_id=${influencer.id}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ current_password: current, new_password: newPw })
+    });
+    const data = await resp.json();
+    if (resp.ok && data.success) {
+      showOk('Password changed successfully! Use your new password next time you log in.');
+      document.getElementById('pwCurrent').value = '';
+      document.getElementById('pwNew').value = '';
+      document.getElementById('pwConfirm').value = '';
+    } else {
+      showErr(data.detail || 'Failed to change password.');
+    }
+  } catch(e) { showErr('Network error. Please try again.'); }
+  finally { btn.disabled = false; document.getElementById('pwSaveBtnText').textContent = 'Update Password'; }
+}
+
+function doLogout() {
+  sessionStorage.removeItem('promo_token');
+  sessionStorage.removeItem('promo_influencer');
+}
+
+// ── Promote Products ──
+let _myProductsAll = [];
+let _activeCatFilter = '';
+
+async function loadMyProducts() {
+  if (!influencer) return;
+  try {
+    const resp = await fetch(`/api/v1/promo/my/marketplace-products?influencer_id=${influencer.id}`);
+    const data = await resp.json();
+    document.getElementById('productsMyLoading').style.display = 'none';
+    document.getElementById('productsMyContent').style.display = 'block';
+    _myProductsAll = data.items || [];
+    productsMyLoaded = true;
+    const cats = data.categories || [];
+    document.getElementById('productCatPills').innerHTML =
+      `<button onclick="filterProductCat('')" id="catPill__all" style="padding:6px 16px;border-radius:50px;border:none;font-size:12px;font-weight:700;cursor:pointer;background:#0d9488;color:#fff">All</button>` +
+      cats.map(c => `<button onclick="filterProductCat('${c}')" id="catPill__${c.replace(/\s/g,'_')}" style="padding:6px 16px;border-radius:50px;border:1.5px solid #e2e8f0;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:#475569">${c}</button>`).join('');
+    renderMyProducts();
+  } catch(e) {
+    document.getElementById('productsMyLoading').innerHTML = '<i class="fas fa-exclamation-circle" style="color:#ef4444"></i> Failed to load products.';
+  }
+}
+
+function filterProductCat(cat) {
+  _activeCatFilter = cat;
+  document.querySelectorAll('[id^="catPill__"]').forEach(btn => {
+    const active = (cat === '' && btn.id === 'catPill__all') || (cat && btn.id === `catPill__${cat.replace(/\s/g,'_')}`);
+    btn.style.background = active ? '#0d9488' : '#fff';
+    btn.style.color = active ? '#fff' : '#475569';
+    btn.style.border = active ? 'none' : '1.5px solid #e2e8f0';
+  });
+  renderMyProducts();
+}
+
+function renderMyProducts() {
+  const items = _activeCatFilter ? _myProductsAll.filter(p => p.category === _activeCatFilter) : _myProductsAll;
+  const grid = document.getElementById('productsMyGrid');
+  if (!items.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:60px;color:#94a3b8"><i class="fas fa-store" style="font-size:36px;display:block;margin-bottom:10px;opacity:.4"></i>No products available in this category yet.</div>';
+    return;
+  }
+  grid.innerHTML = items.map(p => {
+    const img = (p.image_urls||[])[0];
+    const specs = p.specifications || {};
+    const specEntries = Object.entries(specs);
+    const trackedLink = window.location.origin + (p.tracked_link || '');
+    const isYT = (p.video_url||'').includes('youtube.com') || (p.video_url||'').includes('youtu.be');
+    let videoEmbed = '';
+    if (p.video_url) {
+      if (isYT) {
+        const ytId = (p.video_url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/) || [])[1];
+        if (ytId) videoEmbed = `<iframe width="100%" height="160" src="https://www.youtube.com/embed/${ytId}" frameborder="0" allowfullscreen style="border-radius:8px;margin-top:10px"></iframe>`;
+      } else {
+        videoEmbed = `<video controls style="width:100%;border-radius:8px;margin-top:10px;max-height:160px" src="${p.video_url}"></video>`;
+      }
+    }
+    return `<div style="background:#fff;border-radius:14px;box-shadow:0 1px 6px rgba(0,0,0,.07);border:1px solid #e2e8f0;overflow:hidden;display:flex;flex-direction:column">
+      ${img ? `<div style="height:180px;overflow:hidden;background:#f1f5f9"><img src="${img}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.style.display='none'"></div>` : ''}
+      <div style="padding:16px;flex:1;display:flex;flex-direction:column;gap:8px">
+        <div>
+          ${p.category ? `<span style="font-size:10px;font-weight:800;color:#6366f1;text-transform:uppercase;letter-spacing:.5px;background:#eef2ff;padding:2px 8px;border-radius:4px">${p.category}</span>` : ''}
+          <div style="font-weight:800;font-size:14px;color:#1e293b;margin-top:6px;line-height:1.3">${p.title}</div>
+        </div>
+        ${p.description ? `<div style="font-size:12.5px;color:#64748b;line-height:1.6">${p.description}</div>` : ''}
+        ${specEntries.length ? `<div style="background:#f8fafc;border-radius:8px;padding:10px;font-size:12px">
+          <div style="font-weight:700;color:#374151;margin-bottom:6px;font-size:11px;text-transform:uppercase;letter-spacing:.4px">Specifications</div>
+          ${specEntries.map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f1f5f9"><span style="color:#64748b">${k}</span><span style="font-weight:600;color:#1e293b">${v}</span></div>`).join('')}
+        </div>` : ''}
+        ${videoEmbed}
+        <div style="display:flex;gap:8px;margin-top:auto;padding-top:8px;flex-wrap:wrap">
+          ${p.sample_link ? `<a href="${p.sample_link}" target="_blank" style="flex:1;text-align:center;padding:8px;background:#f0fdf4;color:#15803d;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;border:1.5px solid #bbf7d0"><i class="fas fa-flask" style="margin-right:5px"></i>View Sample</a>` : ''}
+          <button onclick="copyPromoLink('${trackedLink}', this)" style="flex:2;padding:9px 14px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="fas fa-copy"></i> Copy My Link
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function copyPromoLink(link, btn) {
+  navigator.clipboard.writeText(link).then(() => {
+    const toast = document.getElementById('copyToast');
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display='none', 2800);
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    btn.style.background = '#15803d';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.background=''; }, 2200);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = link; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    const toast = document.getElementById('copyToast');
+    toast.style.display='block'; setTimeout(()=>toast.style.display='none', 2800);
+  });
+}
+
+// ── My Deals ──
+function _fmtMoney(n) {
+  if (!n && n !== 0) return '—';
+  return '₹' + Number(n).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+async function loadMyDeals() {
+  if (!influencer) return;
+  try {
+    const resp = await fetch(`/api/v1/promo/my/deals?influencer_id=${influencer.id}`);
+    const data = await resp.json();
+    document.getElementById('dealsMyLoading').style.display = 'none';
+    document.getElementById('dealsMyContent').style.display = 'block';
+    const s = data.summary || {};
+    document.getElementById('dealsMyCount').textContent = `${s.total_deals || 0} deal(s)`;
+
+    const cardDefs = [
+      {label:'Total Deals', value: s.total_deals || 0, color:'#0d9488', icon:'fa-handshake', isNum:true},
+      {label:'Total Agreed', value: _fmtMoney(s.total_agreed), color:'#0d9488', icon:'fa-rupee-sign'},
+      {label:'TDS Deducted (2%)', value: _fmtMoney(s.total_tds), color:'#ef4444', icon:'fa-percent'},
+      {label:'Net Payable', value: _fmtMoney(s.total_net_payable), color:'#7c3aed', icon:'fa-wallet'},
+      {label:'Received / Paid Out', value: _fmtMoney(s.total_received), color:'#16a34a', icon:'fa-check-circle'},
+    ];
+    document.getElementById('dealsSummaryCards').innerHTML = cardDefs.map(c => `
+      <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.04);border-top:3px solid ${c.color}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <i class="fas ${c.icon}" style="color:${c.color};font-size:14px"></i>
+          <div style="font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.4px">${c.label}</div>
+        </div>
+        <div style="font-size:${c.isNum?'22px':'16px'};font-weight:800;color:${c.color}">${c.value}</div>
+      </div>`).join('');
+
+    if (!data.items || !data.items.length) {
+      document.getElementById('dealsMyTableBody').innerHTML =
+        '<tr><td colspan="10" style="text-align:center;padding:36px;color:#94a3b8"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px"></i>No promotion deals recorded yet.</td></tr>';
+      dealsMyLoaded = true;
+      return;
+    }
+
+    const statusColors = {paid:'#16a34a', pending:'#d97706', cancelled:'#ef4444'};
+    const statusBg = {paid:'#f0fdf4', pending:'#fffbeb', cancelled:'#fef2f2'};
+    document.getElementById('dealsMyTableBody').innerHTML = data.items.map(d => {
+      const st = d.payment_status || 'pending';
+      const dealDate = d.deal_date ? new Date(d.deal_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+      const payDate  = d.payment_date ? new Date(d.payment_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+      return `<tr style="border-bottom:1px solid #f1f5f9">
+        <td style="padding:10px 12px;font-size:12px;color:#6b7280;white-space:nowrap">${dealDate}</td>
+        <td style="padding:10px 12px;font-weight:600;color:#1e293b">${d.promotion_name || '—'}</td>
+        <td style="padding:10px 12px">${d.platform ? `<span style="background:#f1f5f9;padding:2px 8px;border-radius:4px;font-size:11px">${d.platform}</span>` : '—'}</td>
+        <td style="padding:10px 12px;text-align:right;font-weight:600;color:#0d9488">${_fmtMoney(d.agreed_charge)}</td>
+        <td style="padding:10px 12px;text-align:right;color:#ef4444;font-size:11.5px">${_fmtMoney(d.tds_amount)}</td>
+        <td style="padding:10px 12px;text-align:right;font-weight:700;color:#7c3aed">${_fmtMoney(d.net_payable)}</td>
+        <td style="padding:10px 12px;text-align:center">
+          <span style="background:${statusBg[st]||'#f1f5f9'};color:${statusColors[st]||'#6b7280'};padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:capitalize">${st}</span>
+        </td>
+        <td style="padding:10px 12px;text-align:right;color:#16a34a;font-weight:600">${_fmtMoney(d.payment_amount)}</td>
+        <td style="padding:10px 12px;font-size:11.5px;color:#6b7280;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.payment_details||''}">${d.payment_details || '—'}</td>
+        <td style="padding:10px 12px;font-size:12px;color:#6b7280;white-space:nowrap">${payDate}</td>
+      </tr>`;
+    }).join('');
+    dealsMyLoaded = true;
+  } catch(e) {
+    document.getElementById('dealsMyLoading').innerHTML = '<i class="fas fa-exclamation-circle" style="color:#ef4444"></i> Failed to load deals. Please try again.';
+  }
+}
+
+// ── VGK Portal Handling ──
+function handleVGKPortalClick() {
+  if (!influencer) return;
+  if (influencer.is_vgk_member && influencer.vgk_member_id) {
+    switchToVGK();
+  } else {
+    document.getElementById('vgkRegModal').style.display = 'flex';
+  }
+}
+
+async function switchToVGK() {
+  if (!influencer) { alert('Session expired. Please log in again.'); return; }
+  const promoToken = sessionStorage.getItem('promo_token');
+  if (!promoToken) { alert('Session expired. Please log in again.'); return; }
+  const btn = document.getElementById('vgkNavBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Switching…'; }
+  try {
+    const resp = await fetch('/api/v1/promo/cross-auth/generate-promo-to-vgk', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ influencer_id: influencer.id, promo_token: promoToken })
+    });
+    const data = await resp.json();
+    if (resp.ok && data.success) {
+      window.location.href = '/vgk/login?ct=' + encodeURIComponent(data.cross_token);
+    } else {
+      alert(data.detail || 'Could not switch to VGK portal. Try again.');
+      if (btn) { btn.disabled = false; btn.style.display = 'flex'; btn.innerHTML = '<i class="fas fa-exchange-alt"></i> <span id="vgkNavBtnLabel">VGK4U Portal</span>'; }
+    }
+  } catch(e) {
+    alert('Network error. Please try again.');
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-exchange-alt"></i> <span id="vgkNavBtnLabel">VGK4U Portal</span>'; }
+  }
+}
+
+async function autoCreateAndOpenVGK() {
+  if (!influencer) return;
+  const promoToken = sessionStorage.getItem('promo_token');
+  if (!promoToken) { alert('Session expired. Please log in again.'); return; }
+  const btn = document.getElementById('vgkAutoCreateBtn');
+  const msgEl = document.getElementById('vgkAutoCreateMsg');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>Creating your VGK account…';
+  msgEl.textContent = '';
+  try {
+    const resp = await fetch('/api/v1/promo/cross-auth/auto-link-vgk', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ influencer_id: influencer.id, promo_token: promoToken })
+    });
+    const data = await resp.json();
+    if (resp.ok && data.success) {
+      influencer.is_vgk_member = true;
+      influencer.vgk_member_id = data.vgk_member_id;
+      sessionStorage.setItem('promo_influencer', JSON.stringify(influencer));
+      msgEl.style.color = '#a3e635';
+      msgEl.textContent = data.created
+        ? 'VGK account created! Redirecting…'
+        : 'VGK account found! Redirecting…';
+      setTimeout(() => {
+        window.location.href = '/vgk/login?ct=' + encodeURIComponent(data.cross_token);
+      }, 900);
+    } else {
+      msgEl.style.color = '#fca5a5';
+      msgEl.textContent = data.detail || 'Could not create VGK account. Please contact support.';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-magic" style="margin-right:8px"></i>Create Account & Open VGK';
+    }
+  } catch(e) {
+    msgEl.style.color = '#fca5a5';
+    msgEl.textContent = 'Network error. Please try again.';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-magic" style="margin-right:8px"></i>Create Account & Open VGK';
+  }
+}
+
+// ── NDA Gate ──────────────────────────────────────────────────────────────────
+async function checkAndShowNda(inf, token) {
+  try {
+    const r = await fetch(`/api/v1/promo/nda/my-status?influencer_id=${inf.id}&promo_token=${encodeURIComponent(token)}`);
+    const d = await r.json();
+    if (!d.must_show) return;
+    const r2 = await fetch(`/api/v1/promo/nda/active?influencer_id=${inf.id}&promo_token=${encodeURIComponent(token)}`);
+    const d2 = await r2.json();
+    const html = d2.has_active ? d2.content_html : '<p>Please read and accept the Promoter Agreement to continue.</p>';
+    const title = d2.has_active ? d2.title : 'Promoter Agreement';
+    const count = d.current_count || 0;
+    const required = d.required || 1;
+    const isFirst = d.reason === 'first_time';
+    const modal = document.getElementById('ndaGateModal');
+    document.getElementById('ndaModalTitle').textContent = title;
+    document.getElementById('ndaModalBody').innerHTML = html;
+    const info = document.getElementById('ndaModalInfo');
+    if (isFirst) {
+      info.innerHTML = `<i class="fas fa-info-circle me-1"></i> First-time agreement: acceptance <strong>${count+1} of ${required}</strong> required. You must accept on <strong>${required} separate sessions</strong> to complete onboarding.`;
+    } else {
+      info.innerHTML = `<i class="fas fa-refresh me-1"></i> Updated Terms: Please review and accept the new version to continue.`;
+    }
+    document.getElementById('ndaAcceptBtn').disabled = true;
+    modal.style.display = 'flex';
+    await new Promise(resolve => {
+      document.getElementById('ndaAcceptBtn').onclick = async () => {
+        const btn = document.getElementById('ndaAcceptBtn');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Recording…';
+        try {
+          await fetch(`/api/v1/promo/nda/accept?influencer_id=${inf.id}&promo_token=${encodeURIComponent(token)}`, {method:'POST'});
+        } catch(e) {}
+        modal.style.display = 'none';
+        resolve();
+      };
+    });
+  } catch(e) { /* non-fatal */ }
+}
+
+// ── Referral Members ──
+async function loadReferralMembers() {
+  if (!influencer) return;
+  try {
+    const resp = await fetch(`/api/v1/promo/my/referral-members?influencer_id=${influencer.id}`);
+    const data = await resp.json();
+    if (!data.success) return;
+    const members = data.members || [];
+
+    // Populate 4-stat impact strip (shown only when referrals exist)
+    if (members.length > 0) {
+      const totalRegistered = members.length;
+      const totalActivated = members.filter(m => m.is_active).length;
+      const totalMemberPoints = members.reduce((sum, m) => sum + (m.points_balance || 0), 0);
+      const bonusPerReferral = (influencer && influencer.signup_bonus_points > 0) ? influencer.signup_bonus_points : 5000;
+      const promoterPtsEarned = totalActivated * bonusPerReferral;
+      document.getElementById('impactRegistered').textContent = totalRegistered;
+      document.getElementById('impactActivated').textContent = totalActivated;
+      document.getElementById('impactPoints').textContent = '+' + Number(totalMemberPoints).toLocaleString('en-IN') + ' pts';
+      document.getElementById('impactEarnings').textContent = '₹' + Number(promoterPtsEarned).toLocaleString('en-IN');
+      document.getElementById('refImpactSection').style.display = '';
+    }
+
+    // Members table
+    const section = document.getElementById('referralMembersSection');
+    const body = document.getElementById('referralMembersBody');
+    if (!members.length) {
+      section.style.display = 'none';
+      return;
+    }
+    section.style.display = '';
+    body.innerHTML = `
+      <table class="activity-table" style="min-width:540px">
+        <thead>
+          <tr>
+            <th style="padding:11px 14px">#</th>
+            <th style="padding:11px 14px">Name</th>
+            <th style="padding:11px 14px">Phone</th>
+            <th style="padding:11px 14px">Joined On</th>
+            <th style="padding:11px 14px;text-align:center">Status</th>
+            <th style="padding:11px 14px;text-align:right">Points Earned</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${members.map((m, i) => {
+            const phone = m.source_phone
+              ? m.source_phone.replace(/^(\d{5})(\d+)$/, (_, a, b) => a + '·····')
+              : '—';
+            const joinDate = m.joined_at
+              ? new Date(m.joined_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})
+              : '—';
+            const isActive = m.is_active;
+            const pts = m.points_balance;
+            return `<tr>
+              <td style="padding:10px 14px;color:#94a3b8;font-size:12px">${i + 1}</td>
+              <td style="padding:10px 14px;font-weight:700;color:#1e293b">${m.source_name || '—'}</td>
+              <td style="padding:10px 14px;color:#64748b;font-family:monospace;font-size:12px">${phone}</td>
+              <td style="padding:10px 14px;color:#475569;font-size:12px">${joinDate}</td>
+              <td style="padding:10px 14px;text-align:center">
+                <span style="background:${isActive ? '#dcfce7' : '#fef3c7'};color:${isActive ? '#15803d' : '#d97706'};padding:3px 10px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px">${isActive ? 'Active' : 'Pending'}</span>
+              </td>
+              <td style="padding:10px 14px;text-align:right;font-weight:800;font-size:13px;color:${pts > 0 ? '#7c3aed' : '#94a3b8'}">${pts > 0 ? '+' + Number(pts).toLocaleString('en-IN') + ' pts' : '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  } catch(e) { console.error('Referral members error', e); }
+}
+
+// ── Init ──
+(async function init() {
+  const stored = sessionStorage.getItem('promo_influencer');
+  if (!stored) { window.location.href = '/promo/login'; return; }
+  influencer = JSON.parse(stored);
+  const token = sessionStorage.getItem('promo_token') || '';
+
+  // DC Protocol: Start universal 15-min inactivity manager
+  DCInactivityManager.init({
+    tokenKey:      'promo_token',
+    tokenStorage:  'sessionStorage',
+    loginUrl:      '/promo/login',
+    portalName:    'Promoter Portal',
+    accentColor:   '#7c3aed',
+    companionKeys: ['promo_influencer'],
+  });
+
+  document.getElementById('welcomeName').textContent = influencer.name || 'Promoter';
+  document.getElementById('refCode').textContent = influencer.referral_code || '——';
+  // Show signup bonus: staff-set value, or fall back to system default
+  const _bonusPts = (influencer.signup_bonus_points > 0) ? influencer.signup_bonus_points : _DEFAULT_REFERRAL_BONUS;
+  const refBonusEl = document.getElementById('refBonusPts');
+  if (refBonusEl) refBonusEl.textContent = '+' + Number(_bonusPts).toLocaleString('en-IN') + ' pts';
+  const sbName = document.getElementById('sidebarName');
+  const sbCode = document.getElementById('sidebarCode');
+  if (sbName) sbName.textContent = influencer.name || 'Promoter';
+  if (sbCode) sbCode.textContent = influencer.referral_code || '——';
+  const sb = document.getElementById('statusBadge');
+  sb.textContent = influencer.status || 'pending';
+  sb.className = 'status-badge ' + getStatusClass(influencer.status);
+
+  // Show VGK nav button for ALL promoters (switch if linked, activate if not)
+  const vgkNavBtn = document.getElementById('vgkNavBtn');
+  const vgkLbl = document.getElementById('vgkNavBtnLabel');
+  if (vgkNavBtn) {
+    vgkNavBtn.style.display = 'flex';
+    if (influencer.is_vgk_member && influencer.vgk_member_id) {
+      vgkNavBtn.classList.remove('nav-vgk-activate');
+      vgkNavBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> VGK4U Portal';
+    } else {
+      vgkNavBtn.classList.add('nav-vgk-activate');
+      vgkNavBtn.innerHTML = '<i class="fas fa-star"></i> Activate VGK4U';
+    }
+  }
+
+  await checkAndShowNda(influencer, token);
+  updateTarget();
+  await loadStats();
+  await loadReferralMembers();
+})();
+</script>
+
+<!-- NDA Gate Modal -->
+<div id="ndaGateModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#0f172a;border:1px solid rgba(99,102,241,.4);border-radius:16px;width:100%;max-width:760px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.6);">
+    <div style="padding:20px 24px 16px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <div style="width:36px;height:36px;background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="fas fa-file-contract" style="color:#fff;font-size:15px;"></i>
+        </div>
+        <h5 id="ndaModalTitle" style="color:#e0e7ff;font-weight:700;margin:0;font-size:16px;">Promoter Agreement</h5>
+      </div>
+      <div id="ndaModalInfo" style="font-size:13px;color:rgba(255,255,255,.6);background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:10px 14px;line-height:1.5;"></div>
+    </div>
+    <div id="ndaModalBody" style="flex:1;overflow-y:auto;padding:20px 24px;font-size:13.5px;color:rgba(255,255,255,.8);line-height:1.75;"></div>
+    <div style="padding:16px 24px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;flex:1;">
+        <input type="checkbox" id="ndaReadCheck" style="accent-color:#6366f1;margin-top:2px;width:16px;height:16px;flex-shrink:0;"
+          onchange="document.getElementById('ndaAcceptBtn').disabled=!this.checked">
+        <span style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.5;">I have read and understood the above Promoter Agreement and agree to abide by its terms.</span>
+      </label>
+      <button id="ndaAcceptBtn" disabled style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:10px;padding:11px 24px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;opacity:.5;transition:opacity .2s;"
+        onmouseenter="if(!this.disabled)this.style.opacity='.85'" onmouseleave="if(!this.disabled)this.style.opacity='1'"
+        onclick="if(!document.getElementById('ndaReadCheck').checked)return;this.style.opacity='1'">
+        <i class="fas fa-check-circle" style="margin-right:6px;"></i>I Accept & Continue
+      </button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

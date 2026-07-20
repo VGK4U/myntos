@@ -1,0 +1,92 @@
+<!--
+VGK4U MEMBER PAGE TEMPLATE — Task #33 Phase 1 (Read-Only)
+This file is a reference shell. Each vgk_<module>.html copies this structure
+and only changes:
+  TITLE_PLACEHOLDER, MODULE_PLACEHOLDER, ENDPOINT_PLACEHOLDER, COLUMNS_PLACEHOLDER
+-->
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TITLE_PLACEHOLDER · VGK4U Member</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<style>
+body{background:#f6f9fc;font-family:'Segoe UI',sans-serif}
+.topbar{background:linear-gradient(135deg,#0ea5e9,#0369a1);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 6px rgba(0,0,0,.1)}
+.brand{font-weight:800;font-size:18px}
+.btn-link-white{color:#fff;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);padding:5px 12px;border-radius:8px;text-decoration:none;font-size:13px}
+.section-card{background:#fff;border-radius:12px;padding:20px;margin:18px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.muted{color:#64748b;font-size:13px}
+table.table-vgk th{font-size:11px;text-transform:uppercase;color:#64748b;letter-spacing:.04em;background:#f1f5f9;font-weight:700;border-bottom:2px solid #cbd5e1}
+table.table-vgk td{font-size:13px;vertical-align:middle}
+.empty{padding:40px;text-align:center;color:#94a3b8}
+.metric-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.metric{background:#fff;border-left:4px solid #0ea5e9;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.metric .l{font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700}
+.metric .v{font-size:18px;font-weight:800;color:#0c4a6e;margin-top:3px}
+</style></head>
+<body>
+<div class="topbar">
+  <div class="brand"><i class="bi bi-stars"></i> VGK4U · TITLE_PLACEHOLDER</div>
+  <a href="/vgk/dashboard" class="btn-link-white"><i class="bi bi-arrow-left"></i> Dashboard</a>
+</div>
+
+<div class="section-card">
+  <div class="metric-row" id="metricRow"></div>
+  <h6 class="muted text-uppercase mb-3">MODULE_PLACEHOLDER</h6>
+  <div class="table-responsive">
+    <table class="table table-vgk table-sm" id="dataTable">
+      <thead><tr id="tableHead"></tr></thead>
+      <tbody id="tableBody"><tr><td class="empty" colspan="20"><i class="bi bi-hourglass-split"></i> Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function(){
+  const ENDPOINT = 'ENDPOINT_PLACEHOLDER';     // e.g. '/api/v1/admin/birthdays-today'
+  const COLUMNS  = COLUMNS_PLACEHOLDER;        // [{key:'name',label:'Name'}, …]
+  const TITLE    = 'TITLE_PLACEHOLDER';
+  const TOKEN    = localStorage.getItem('vgkAuthToken') || localStorage.getItem('authToken') || '';
+
+  // Render header
+  const head = document.getElementById('tableHead');
+  head.innerHTML = COLUMNS.map(c => `<th>${c.label}</th>`).join('');
+
+  function fmtMoney(v){ return '₹' + Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtCell(v, key){
+    if (v === null || v === undefined) return '<span class="muted">—</span>';
+    if (typeof v === 'number' && /amount|earning|total|payable|net/i.test(key)) return fmtMoney(v);
+    return String(v);
+  }
+
+  async function load(){
+    try{
+      const url = ENDPOINT.includes('?') ? `${ENDPOINT}&audience=vgk4u` : `${ENDPOINT}?audience=vgk4u`;
+      const r = await fetch(url, { headers: TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {} });
+      const j = await r.json();
+      const rows = j.users || j.items || j.data || j.records || (Array.isArray(j) ? j : []);
+      const body = document.getElementById('tableBody');
+      if (!rows.length){
+        body.innerHTML = `<tr><td class="empty" colspan="20"><i class="bi bi-inbox"></i> No VGK4U records yet.</td></tr>`;
+        return;
+      }
+      body.innerHTML = rows.map(row => {
+        return '<tr>' + COLUMNS.map(c => `<td>${fmtCell(row[c.key], c.key)}</td>`).join('') + '</tr>';
+      }).join('');
+      // Optional totals metric
+      const total = rows.length;
+      const sumKey = COLUMNS.find(c => /amount|total|earning/i.test(c.key));
+      const totalAmt = sumKey ? rows.reduce((a,r)=>a + Number(r[sumKey.key]||0), 0) : null;
+      document.getElementById('metricRow').innerHTML =
+        `<div class="metric"><div class="l">Records</div><div class="v">${total}</div></div>` +
+        (totalAmt !== null ? `<div class="metric"><div class="l">Total</div><div class="v">${fmtMoney(totalAmt)}</div></div>` : '');
+    }catch(err){
+      console.error('VGK page load failed', err);
+      document.getElementById('tableBody').innerHTML =
+        `<tr><td class="empty" colspan="20"><i class="bi bi-exclamation-triangle"></i> Failed to load: ${err.message}</td></tr>`;
+    }
+  }
+  load();
+})();
+</script>
+</body></html>

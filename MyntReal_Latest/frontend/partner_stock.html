@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Stock | Partner Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/partner-token-manager.js"></script>
+    <style>
+        body { background: #f3f4f6; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .partner-main-content { margin-left: 260px; min-height: 100vh; transition: margin-left 0.3s; }
+        .page-top { background: linear-gradient(135deg, #064e3b 0%, #0d9488 100%); padding: 24px 28px 20px; color: #fff; }
+        .page-top h1 { margin: 0; font-size: 1.4rem; font-weight: 700; }
+        .page-top p { margin: 4px 0 0; font-size: 13px; opacity: 0.8; }
+        .content-wrap { padding: 20px 28px; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; margin-bottom: 18px; }
+        .stat-card { background: #fff; border-radius: 10px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-left: 4px solid #0d9488; }
+        .stat-card.red { border-left-color: #ef4444; }
+        .stat-card.orange { border-left-color: #f59e0b; }
+        .stat-card.purple { border-left-color: #8b5cf6; }
+        .stat-num { font-size: 1.4rem; font-weight: 700; color: #1f2937; }
+        .stat-lbl { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .tab-row { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 18px; }
+        .tab-btn { padding: 10px 20px; font-size: 13px; font-weight: 600; color: #6b7280; background: none; border: none; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+        .tab-btn.active { color: #0d9488; border-bottom-color: #0d9488; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .filter-bar { background: #fff; border-radius: 10px; padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); margin-bottom: 16px; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+        .filter-bar label { font-size: 11px; font-weight: 600; color: #6b7280; display: block; margin-bottom: 3px; }
+        .filter-bar input, .filter-bar select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+        .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 12px 16px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th { padding: 9px 12px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .data-table tr:hover td { background: #f9fafb; }
+        .badge-type { padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .type-catalog { background: #dbeafe; color: #1e40af; }
+        .type-custom { background: #d1fae5; color: #065f46; }
+        .badge-stock { padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+        .stock-low { background: #fee2e2; color: #991b1b; }
+        .stock-ok { background: #d1fae5; color: #065f46; }
+        .stock-zero { background: #f3f4f6; color: #6b7280; }
+        .entry-opening { color: #6b7280; }
+        .entry-purchase_in { color: #065f46; }
+        .entry-sales_out { color: #991b1b; }
+        .entry-adj_in { color: #1e40af; }
+        .entry-adj_out { color: #9a3412; }
+        .entry-damage { color: #7c3aed; }
+        .entry-return { color: #0369a1; }
+        .progress-bar-stock { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-top: 3px; }
+        .progress-fill { height: 100%; border-radius: 3px; background: #0d9488; transition: width 0.3s; }
+        .progress-fill.low { background: #ef4444; }
+        .empty-state { text-align: center; padding: 50px 20px; color: #9ca3af; }
+        .btn-add { background: #0d9488; color: #fff; border: none; padding: 7px 14px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-add:hover { background: #0f766e; }
+        .btn-sm-action { padding: 3px 8px; border-radius: 5px; font-size: 11px; border: 1px solid; cursor: pointer; background: #fff; }
+        .btn-adj { border-color: #f59e0b; color: #92400e; }
+        .btn-adj:hover { background: #fef3c7; }
+        .btn-edit { border-color: #6b7280; color: #374151; }
+        .btn-edit:hover { background: #f3f4f6; }
+        /* Modals */
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1050; justify-content: center; align-items: flex-start; padding: 40px 20px; overflow-y: auto; }
+        .overlay.open { display: flex; }
+        .modal-box { background: #fff; border-radius: 12px; width: 100%; max-width: 480px; padding: 24px; position: relative; margin: auto; }
+        .modal-box h3 { margin: 0 0 18px; font-size: 1rem; font-weight: 700; color: #1f2937; }
+        .form-row { margin-bottom: 14px; }
+        .form-row label { font-size: 12px; font-weight: 600; color: #374151; display: block; margin-bottom: 4px; }
+        .form-row input, .form-row select, .form-row textarea { width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+        .form-row textarea { resize: vertical; min-height: 60px; }
+        .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid #e5e7eb; }
+        .btn-cancel { padding: 8px 16px; border-radius: 7px; border: 1px solid #d1d5db; background: #fff; color: #374151; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .btn-save { padding: 8px 16px; border-radius: 7px; border: none; background: #0d9488; color: #fff; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .btn-save:hover { background: #0f766e; }
+        .autocomplete-wrap { position: relative; }
+        .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 6px 6px; max-height: 180px; overflow-y: auto; z-index: 2000; }
+        .autocomplete-item { padding: 8px 10px; font-size: 13px; cursor: pointer; }
+        .autocomplete-item:hover { background: #f3f4f6; }
+        .ledger-type-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        @media (max-width: 768px) { .partner-main-content { margin-left: 0; } .info-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div id="sidebarContainer"></div>
+<div class="partner-main-content">
+    <div class="page-top">
+        <h1><i class="fas fa-boxes me-2"></i>My Stock</h1>
+        <p>Track your inventory — opening qty, purchases, sales, adjustments &amp; full ledger</p>
+    </div>
+    <div class="content-wrap">
+        <div class="stats-row">
+            <div class="stat-card"><div class="stat-num" id="statItems">—</div><div class="stat-lbl">Total Items</div></div>
+            <div class="stat-card purple"><div class="stat-num" id="statValue">—</div><div class="stat-lbl">Total Stock Value</div></div>
+            <div class="stat-card red"><div class="stat-num" id="statLow">—</div><div class="stat-lbl">Low Stock Alerts</div></div>
+            <div class="stat-card orange"><div class="stat-num" id="statZero">—</div><div class="stat-lbl">Zero Stock</div></div>
+        </div>
+
+        <div class="tab-row">
+            <button class="tab-btn active" onclick="switchTab('items')"><i class="fas fa-boxes me-1"></i>Stock Items</button>
+            <button class="tab-btn" onclick="switchTab('ledger')"><i class="fas fa-scroll me-1"></i>Full Ledger</button>
+            <button class="tab-btn" onclick="switchTab('pending')"><i class="fas fa-truck me-1"></i>Pending Delivery</button>
+        </div>
+
+        <!-- Stock Items Tab -->
+        <div class="tab-pane active" id="tab-items">
+            <div class="filter-bar">
+                <div><label>Search</label><input type="text" id="itemSearch" placeholder="Item name or code..." oninput="debouncedItems()" style="min-width:180px"></div>
+                <div><label>Type</label>
+                    <select id="itemTypeFilter" onchange="loadItems()">
+                        <option value="">All Types</option>
+                        <option value="catalog">Catalog Items</option>
+                        <option value="custom">Custom Spares</option>
+                    </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;padding-top:16px">
+                    <input type="checkbox" id="lowStockOnly" onchange="loadItems()" style="width:16px;height:16px">
+                    <label for="lowStockOnly" style="margin:0;font-size:13px;cursor:pointer">Low stock only</label>
+                </div>
+                <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end">
+                    <button class="btn-add" onclick="openAddCatalog()"><i class="fas fa-plus"></i>Add Catalog Item</button>
+                    <button class="btn-add" style="background:#6d28d9" onclick="openAddCustom()"><i class="fas fa-wrench"></i>Add Custom Spare</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <span>Stock Items <span class="badge bg-secondary ms-1" id="itemsBadge">0</span></span>
+                    <button onclick="loadItems()" style="background:none;border:none;color:#6b7280;cursor:pointer"><i class="fas fa-sync"></i></button>
+                </div>
+                <div id="itemsLoading" style="text-align:center;padding:40px"><div class="spinner-border text-success" style="width:2rem;height:2rem"></div></div>
+                <div id="itemsWrap" style="display:none;overflow-x:auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Type</th>
+                                <th>Opening</th>
+                                <th>Purchased</th>
+                                <th>Sold</th>
+                                <th>Adjustments</th>
+                                <th>Current Stock</th>
+                                <th>Stock Value</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsBody"></tbody>
+                    </table>
+                </div>
+                <div id="itemsEmpty" class="empty-state" style="display:none">
+                    <i class="fas fa-boxes fa-2x mb-3 text-muted"></i>
+                    <h5>No Stock Items Yet</h5>
+                    <p>Add catalog items with opening quantity or add custom spares your showroom deals in.</p>
+                    <div style="display:flex;gap:10px;justify-content:center;margin-top:12px">
+                        <button class="btn-add" onclick="openAddCatalog()"><i class="fas fa-plus me-1"></i>Add Catalog Item</button>
+                        <button class="btn-add" style="background:#6d28d9" onclick="openAddCustom()"><i class="fas fa-wrench me-1"></i>Add Custom Spare</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ledger Tab -->
+        <div class="tab-pane" id="tab-ledger">
+            <div class="filter-bar">
+                <div><label>Filter by Item</label>
+                    <select id="ledgerItemFilter" onchange="loadLedger()" style="min-width:200px">
+                        <option value="">All Items</option>
+                    </select>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm" style="align-self:flex-end" onclick="loadLedger()"><i class="fas fa-sync me-1"></i>Refresh</button>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <span>Complete Stock Ledger</span>
+                    <small style="color:#6b7280;font-size:11px">All entries: opening → purchases in → sales out → adjustments</small>
+                </div>
+                <div id="ledgerLoading" style="text-align:center;padding:40px"><div class="spinner-border text-success" style="width:2rem;height:2rem"></div></div>
+                <div id="ledgerWrap" style="display:none;overflow-x:auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Item</th>
+                                <th>Entry Type</th>
+                                <th>Description</th>
+                                <th>Ref Doc</th>
+                                <th>Qty</th>
+                                <th>Running Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledgerBody"></tbody>
+                    </table>
+                </div>
+                <div id="ledgerEmpty" class="empty-state" style="display:none">
+                    <i class="fas fa-scroll fa-2x mb-3 text-muted"></i>
+                    <h5>No Ledger Entries</h5>
+                    <p>Add stock items to start tracking your inventory ledger.</p>
+                </div>
+                <div class="pagination-row" id="ledgerPaginationRow" style="display:none;padding:12px 16px;justify-content:space-between;align-items:center;border-top:1px solid #f3f4f6">
+                    <span id="ledgerPageInfo" style="font-size:13px;color:#6b7280"></span>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-sm btn-outline-secondary" id="ledgerBtnPrev" onclick="changeLedgerPage(-1)">← Prev</button>
+                        <button class="btn btn-sm btn-outline-secondary" id="ledgerBtnNext" onclick="changeLedgerPage(1)">Next →</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Delivery Tab -->
+        <div class="tab-pane" id="tab-pending">
+            <div class="card">
+                <div class="card-header">
+                    <span>Pending Delivery <span class="badge bg-warning text-dark ms-1" id="pendingBadge">0</span></span>
+                    <small style="color:#6b7280;font-size:11px">Items from confirmed invoices not yet fully dispatched</small>
+                </div>
+                <div id="pendingLoading" style="text-align:center;padding:40px"><div class="spinner-border text-warning" style="width:2rem;height:2rem"></div></div>
+                <div id="pendingWrap" style="display:none;overflow-x:auto"></div>
+                <div id="pendingEmpty" class="empty-state" style="display:none">
+                    <i class="fas fa-truck fa-2x mb-3" style="color:#d1d5db"></i>
+                    <h5>No Pending Deliveries</h5>
+                    <p>All dispatches are up to date.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Catalog Item Modal -->
+<div class="overlay" id="addCatalogOverlay">
+    <div class="modal-box">
+        <h3><i class="fas fa-plus-circle me-2 text-success"></i>Add Catalog Item</h3>
+        <div class="form-row">
+            <label>Search Catalog Item *</label>
+            <div class="autocomplete-wrap">
+                <input type="text" id="catSearch" placeholder="Type item name or code..." autocomplete="off" oninput="searchCatalog()">
+                <div class="autocomplete-list" id="catList" style="display:none"></div>
+            </div>
+            <input type="hidden" id="catItemId">
+            <div id="catSelected" style="margin-top:6px;font-size:12px;color:#059669;display:none">
+                <i class="fas fa-check-circle me-1"></i><span id="catSelectedName"></span>
+            </div>
+        </div>
+        <div class="form-row-2">
+            <div class="form-row" style="margin:0"><label>Opening Qty *</label><input type="number" id="catOpeningQty" min="0" step="0.01" value="0" placeholder="0"></div>
+            <div class="form-row" style="margin:0"><label>Unit</label><input type="text" id="catUom" placeholder="PCS" value="PCS"></div>
+        </div>
+        <div class="form-row-2" style="margin-top:12px">
+            <div class="form-row" style="margin:0"><label>Reorder Level</label><input type="number" id="catReorder" min="0" step="0.01" value="0" placeholder="0"></div>
+            <div class="form-row" style="margin:0"><label>Selling Price (₹)</label><input type="number" id="catSellingPrice" min="0" step="0.01" placeholder="Optional"></div>
+        </div>
+        <div class="form-row" style="margin-top:12px"><label>Notes</label><textarea id="catNotes" placeholder="Optional notes..."></textarea></div>
+        <div id="catMsg" style="font-size:12px;margin-top:8px"></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('addCatalogOverlay')">Cancel</button>
+            <button class="btn-save" onclick="saveCatalogItem()"><i class="fas fa-save me-1"></i>Add Item</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Custom Spare Modal -->
+<div class="overlay" id="addCustomOverlay">
+    <div class="modal-box">
+        <h3><i class="fas fa-wrench me-2" style="color:#6d28d9"></i>Add Custom Spare</h3>
+        <div class="form-row"><label>Item Name *</label><input type="text" id="custName" placeholder="e.g. Brake Pad - Ather 450X"></div>
+        <div class="form-row-2">
+            <div class="form-row" style="margin:0"><label>Item Code</label><input type="text" id="custCode" placeholder="e.g. BP-ATH-001"></div>
+            <div class="form-row" style="margin:0"><label>HSN Code</label><input type="text" id="custHsn" placeholder="e.g. 8708"></div>
+        </div>
+        <div class="form-row-2" style="margin-top:12px">
+            <div class="form-row" style="margin:0"><label>Unit</label>
+                <select id="custUom">
+                    <option>PCS</option><option>KG</option><option>LTR</option><option>MTR</option><option>SET</option><option>BOX</option><option>PACK</option><option>PAIR</option>
+                </select>
+            </div>
+            <div class="form-row" style="margin:0"><label>Opening Qty *</label><input type="number" id="custOpeningQty" min="0" step="0.01" value="0"></div>
+        </div>
+        <div class="form-row-2" style="margin-top:12px">
+            <div class="form-row" style="margin:0"><label>Reorder Level</label><input type="number" id="custReorder" min="0" step="0.01" value="0"></div>
+            <div class="form-row" style="margin:0"><label>Selling Price (₹)</label><input type="number" id="custSellingPrice" min="0" step="0.01" placeholder="Optional"></div>
+        </div>
+        <div class="form-row" style="margin-top:12px"><label>Notes</label><textarea id="custNotes" placeholder="Optional notes..."></textarea></div>
+        <div id="custMsg" style="font-size:12px;margin-top:8px"></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('addCustomOverlay')">Cancel</button>
+            <button class="btn-save" style="background:#6d28d9" onclick="saveCustomSpare()"><i class="fas fa-save me-1"></i>Add Spare</button>
+        </div>
+    </div>
+</div>
+
+<!-- Adjustment Modal -->
+<div class="overlay" id="adjOverlay">
+    <div class="modal-box">
+        <h3><i class="fas fa-exchange-alt me-2 text-warning"></i>Add Stock Adjustment</h3>
+        <input type="hidden" id="adjItemId">
+        <div class="form-row"><label>Item</label><div id="adjItemName" style="font-weight:600;color:#1f2937;padding:8px 0"></div></div>
+        <div class="form-row-2">
+            <div class="form-row" style="margin:0"><label>Adjustment Type *</label>
+                <select id="adjType">
+                    <option value="adj_in">Stock In (Received)</option>
+                    <option value="adj_out">Stock Out (Issued)</option>
+                    <option value="damage">Damage / Loss</option>
+                    <option value="return">Return / Received Back</option>
+                </select>
+            </div>
+            <div class="form-row" style="margin:0"><label>Quantity *</label><input type="number" id="adjQty" min="0.001" step="0.001" placeholder="Enter qty"></div>
+        </div>
+        <div class="form-row" style="margin-top:12px"><label>Reason *</label><input type="text" id="adjReason" placeholder="e.g. Physical count adjustment"></div>
+        <div class="form-row"><label>Reference Doc (optional)</label><input type="text" id="adjRefDoc" placeholder="e.g. DC-001 or PO number"></div>
+        <div class="form-row"><label>Notes</label><textarea id="adjNotes" placeholder="Additional notes..."></textarea></div>
+        <div id="adjMsg" style="font-size:12px;margin-top:8px"></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('adjOverlay')">Cancel</button>
+            <button class="btn-save" onclick="saveAdjustment()"><i class="fas fa-check me-1"></i>Save Adjustment</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div class="overlay" id="editOverlay">
+    <div class="modal-box">
+        <h3><i class="fas fa-edit me-2 text-secondary"></i>Edit Stock Item</h3>
+        <input type="hidden" id="editItemId">
+        <div class="form-row"><label>Item Name *</label><input type="text" id="editName"></div>
+        <div class="form-row-2">
+            <div class="form-row" style="margin:0"><label>Opening Qty</label><input type="number" id="editOpeningQty" min="0" step="0.01"></div>
+            <div class="form-row" style="margin:0"><label>Reorder Level</label><input type="number" id="editReorder" min="0" step="0.01"></div>
+        </div>
+        <div class="form-row-2" style="margin-top:12px">
+            <div class="form-row" style="margin:0"><label>Selling Price (₹)</label><input type="number" id="editSellingPrice" min="0" step="0.01"></div>
+            <div class="form-row" style="margin:0"><label>HSN Code</label><input type="text" id="editHsn"></div>
+        </div>
+        <div class="form-row" style="margin-top:12px"><label>Notes</label><textarea id="editNotes"></textarea></div>
+        <div id="editMsg" style="font-size:12px;margin-top:8px"></div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('editOverlay')">Cancel</button>
+            <button class="btn-save" onclick="saveEdit()"><i class="fas fa-save me-1"></i>Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<script src="/partner_sidebar.js"></script>
+<script>
+    const API = '/api/v1/partner';
+    let itemDebTimer = null;
+    let ledgerPage = 1;
+    let ledgerTotalPages = 1;
+    let allItemIds = [];
+    let catSearchTimer = null;
+
+    function getToken() { return localStorage.getItem('partner_token'); }
+    function authH() { return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+    function fmt(n) { return '₹' + parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 }); }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach((b, i) => { b.classList.toggle('active', ['items','ledger','pending'][i] === tab); });
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        if (tab === 'ledger') loadLedger();
+        if (tab === 'pending') loadPendingDelivery();
+    }
+
+    function debouncedItems() { clearTimeout(itemDebTimer); itemDebTimer = setTimeout(loadItems, 400); }
+    function changeLedgerPage(dir) { const n = ledgerPage + dir; if (n < 1 || n > ledgerTotalPages) return; ledgerPage = n; loadLedger(); }
+
+    async function loadPendingDelivery() {
+        document.getElementById('pendingLoading').style.display = 'block';
+        document.getElementById('pendingWrap').style.display = 'none';
+        document.getElementById('pendingEmpty').style.display = 'none';
+        try {
+            const res = await fetch(`${API}/pending-dispatch`, { headers: authH() });
+            if (!res.ok) throw new Error('Failed to load');
+            const d = await res.json();
+            document.getElementById('pendingLoading').style.display = 'none';
+            document.getElementById('pendingBadge').textContent = d.total_invoices || 0;
+            if (!d.invoices?.length) { document.getElementById('pendingEmpty').style.display = 'block'; return; }
+            document.getElementById('pendingWrap').innerHTML = d.invoices.map(inv => `
+                <div style="padding:14px 16px;border-bottom:1px solid #f3f4f6">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+                        <strong style="color:#2563eb">${inv.invoice_number}</strong>
+                        <span class="company-badge co-${inv.company_code||'VGK'}" style="font-size:11px;padding:2px 8px;border-radius:8px;background:#ede9fe;color:#6d28d9">${inv.company_code||'—'}</span>
+                        <span style="font-size:12px;color:#6b7280">${inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'}</span>
+                        <span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#fef3c7;color:#92400e">${(inv.dispatch_status||'').replace(/_/g,' ')}</span>
+                    </div>
+                    <table style="width:100%;border-collapse:collapse;font-size:13px">
+                        <thead><tr style="background:#f9fafb">
+                            <th style="padding:7px 10px;text-align:left;font-weight:600;font-size:11px;color:#6b7280;text-transform:uppercase">Item</th>
+                            <th style="padding:7px 10px;text-align:left;font-weight:600;font-size:11px;color:#6b7280;text-transform:uppercase">UOM</th>
+                            <th style="padding:7px 10px;text-align:right;font-weight:600;font-size:11px;color:#6b7280;text-transform:uppercase">Invoiced</th>
+                            <th style="padding:7px 10px;text-align:right;font-weight:600;font-size:11px;color:#6b7280;text-transform:uppercase">Delivered</th>
+                            <th style="padding:7px 10px;text-align:right;font-weight:600;font-size:11px;color:#ef4444;text-transform:uppercase">Still Pending</th>
+                        </tr></thead>
+                        <tbody>${inv.items.map(it => `
+                            <tr style="border-bottom:1px solid #f3f4f6">
+                                <td style="padding:8px 10px">${it.item_description}<br><small style="color:#9ca3af">${it.item_code||''}</small></td>
+                                <td style="padding:8px 10px;color:#6b7280">${it.unit_of_measure||'—'}</td>
+                                <td style="padding:8px 10px;text-align:right">${it.invoiced_qty}</td>
+                                <td style="padding:8px 10px;text-align:right;color:#10b981">${it.dispatched_qty}</td>
+                                <td style="padding:8px 10px;text-align:right;font-weight:700;color:#ef4444">${it.remaining_qty}</td>
+                            </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`).join('');
+            document.getElementById('pendingWrap').style.display = 'block';
+        } catch(e) {
+            document.getElementById('pendingLoading').style.display = 'none';
+            document.getElementById('pendingWrap').innerHTML = `<div style="text-align:center;padding:30px;color:#ef4444"><i class="fas fa-exclamation-circle me-2"></i>${e.message}</div>`;
+            document.getElementById('pendingWrap').style.display = 'block';
+        }
+    }
+
+    async function loadSummary() {
+        try {
+            const r = await fetch(`${API}/stock/summary`, { headers: authH() });
+            if (!r.ok) return;
+            const { summary: s } = await r.json();
+            document.getElementById('statItems').textContent = s.total_items;
+            document.getElementById('statValue').textContent = fmt(s.total_stock_value);
+            document.getElementById('statLow').textContent = s.low_stock_count;
+            document.getElementById('statZero').textContent = s.zero_stock_count;
+        } catch(e) {}
+    }
+
+    async function loadItems() {
+        document.getElementById('itemsLoading').style.display = 'block';
+        document.getElementById('itemsWrap').style.display = 'none';
+        document.getElementById('itemsEmpty').style.display = 'none';
+        const params = new URLSearchParams({
+            search: document.getElementById('itemSearch').value,
+            item_type: document.getElementById('itemTypeFilter').value,
+            low_stock_only: document.getElementById('lowStockOnly').checked,
+            per_page: 100,
+        });
+        for (const [k, v] of [...params.entries()]) { if (!v || v === 'false') params.delete(k); }
+        try {
+            const r = await fetch(`${API}/stock/items?${params}`, { headers: authH() });
+            if (!r.ok) throw new Error('Failed');
+            const d = await r.json();
+            document.getElementById('itemsLoading').style.display = 'none';
+            document.getElementById('itemsBadge').textContent = d.total;
+            const items = d.data || [];
+            if (!items.length) { document.getElementById('itemsEmpty').style.display = 'block'; return; }
+            // Populate ledger item filter
+            document.getElementById('ledgerItemFilter').innerHTML = '<option value="">All Items</option>' +
+                items.map(it => `<option value="${it.id}">${it.item_name}${it.item_code ? ' (' + it.item_code + ')' : ''}</option>`).join('');
+            renderItems(items);
+            document.getElementById('itemsWrap').style.display = 'block';
+            loadSummary();
+        } catch(e) {
+            document.getElementById('itemsLoading').style.display = 'none';
+            document.getElementById('itemsEmpty').style.display = 'block';
+        }
+    }
+
+    function renderItems(items) {
+        document.getElementById('itemsBody').innerHTML = items.map(it => {
+            const cur = it.current_qty;
+            const isZero = cur <= 0;
+            const isLow = it.is_low_stock;
+            const pct = it.reorder_level > 0 ? Math.min(100, (cur / (it.reorder_level * 2)) * 100) : (cur > 0 ? 100 : 0);
+            const stockClass = isZero ? 'stock-zero' : (isLow ? 'stock-low' : 'stock-ok');
+            return `
+            <tr>
+                <td>
+                    <div style="font-weight:600;color:#1f2937">${it.item_name}</div>
+                    <div style="font-size:11px;color:#9ca3af">${it.item_code || ''} ${it.hsn_code ? '| HSN: ' + it.hsn_code : ''}</div>
+                </td>
+                <td><span class="badge-type type-${it.item_type}">${it.item_type === 'catalog' ? 'Catalog' : 'Custom'}</span></td>
+                <td>${it.opening_qty} ${it.unit_of_measure}</td>
+                <td style="color:#059669">+${it.purchases_in}</td>
+                <td style="color:#dc2626">-${it.sales_out}</td>
+                <td style="color:${it.adj_total >= 0 ? '#2563eb' : '#dc2626'}">${it.adj_total >= 0 ? '+' : ''}${it.adj_total}</td>
+                <td>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span class="badge-stock ${stockClass}" style="font-size:13px;font-weight:700">${cur} ${it.unit_of_measure}</span>
+                        ${isLow ? '<span style="font-size:10px;color:#ef4444;font-weight:700">⚠ LOW</span>' : ''}
+                    </div>
+                    ${it.reorder_level > 0 ? `<div class="progress-bar-stock" style="width:80px;margin-top:4px"><div class="progress-fill ${isLow ? 'low' : ''}" style="width:${pct}%"></div></div>` : ''}
+                    ${it.reorder_level > 0 ? `<div style="font-size:10px;color:#9ca3af">Reorder: ${it.reorder_level}</div>` : ''}
+                </td>
+                <td style="font-weight:600">${it.selling_price ? fmt(it.stock_value) : '—'}</td>
+                <td>
+                    <button class="btn-sm-action btn-adj" onclick="openAdj(${it.id},'${it.item_name.replace(/'/g,"\\'")}')"><i class="fas fa-exchange-alt me-1"></i>Adjust</button>
+                    <button class="btn-sm-action btn-edit" style="margin-top:3px" onclick="openEdit(${JSON.stringify(it).replace(/"/g,'&quot;')})"><i class="fas fa-edit me-1"></i>Edit</button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    async function loadLedger() {
+        document.getElementById('ledgerLoading').style.display = 'block';
+        document.getElementById('ledgerWrap').style.display = 'none';
+        document.getElementById('ledgerEmpty').style.display = 'none';
+        document.getElementById('ledgerPaginationRow').style.display = 'none';
+        const stockItemId = document.getElementById('ledgerItemFilter').value;
+        const params = new URLSearchParams({ page: ledgerPage, per_page: 50 });
+        if (stockItemId) params.set('stock_item_id', stockItemId);
+        try {
+            const r = await fetch(`${API}/stock/ledger?${params}`, { headers: authH() });
+            if (!r.ok) throw new Error();
+            const d = await r.json();
+            document.getElementById('ledgerLoading').style.display = 'none';
+            if (!d.data.length) { document.getElementById('ledgerEmpty').style.display = 'block'; return; }
+            ledgerTotalPages = Math.ceil(d.total / 50) || 1;
+            document.getElementById('ledgerWrap').style.display = 'block';
+            document.getElementById('ledgerPaginationRow').style.display = 'flex';
+            document.getElementById('ledgerPageInfo').textContent = `Page ${ledgerPage} of ${ledgerTotalPages} (${d.total} entries)`;
+            document.getElementById('ledgerBtnPrev').disabled = ledgerPage <= 1;
+            document.getElementById('ledgerBtnNext').disabled = ledgerPage >= ledgerTotalPages;
+            renderLedger(d.data);
+        } catch(e) {
+            document.getElementById('ledgerLoading').style.display = 'none';
+            document.getElementById('ledgerEmpty').style.display = 'block';
+        }
+    }
+
+    const typeColors = { opening:'#6b7280', purchase_in:'#059669', sales_out:'#dc2626', adj_in:'#2563eb', adj_out:'#d97706', damage:'#7c3aed', return:'#0369a1' };
+    const typeLabels = { opening:'Opening', purchase_in:'Purchase In', sales_out:'Sale Out', adj_in:'Adj In', adj_out:'Adj Out', damage:'Damage', return:'Return' };
+
+    function renderLedger(rows) {
+        document.getElementById('ledgerBody').innerHTML = rows.map(r => {
+            const color = typeColors[r.entry_type] || '#374151';
+            const label = typeLabels[r.entry_type] || r.entry_type;
+            const qtySign = r.qty >= 0 ? '+' : '';
+            return `
+            <tr>
+                <td style="color:#6b7280;font-size:12px">${r.entry_date || '—'}</td>
+                <td>
+                    <div style="font-weight:600;font-size:13px">${r.item_name}</div>
+                    <div style="font-size:11px;color:#9ca3af">${r.item_code || ''}</div>
+                </td>
+                <td><span class="ledger-type-pill" style="background:${color}22;color:${color}">${label}</span></td>
+                <td style="font-size:12px">${r.description || '—'}</td>
+                <td style="font-size:12px;color:#6b7280">${r.ref_doc || '—'}</td>
+                <td style="font-weight:700;color:${r.qty >= 0 ? '#059669' : '#dc2626'}">${qtySign}${r.qty} ${r.unit_of_measure}</td>
+                <td style="font-weight:700;color:#1f2937">${r.running_balance} ${r.unit_of_measure}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // --- Catalog item search ---
+    async function searchCatalog() {
+        clearTimeout(catSearchTimer);
+        const q = document.getElementById('catSearch').value.trim();
+        document.getElementById('catItemId').value = '';
+        document.getElementById('catSelected').style.display = 'none';
+        if (q.length < 2) { document.getElementById('catList').style.display = 'none'; return; }
+        catSearchTimer = setTimeout(async () => {
+            try {
+                const r = await fetch(`${API}/stock-items-search?search=${encodeURIComponent(q)}&per_page=10`, { headers: authH() });
+                const d = await r.json();
+                const list = document.getElementById('catList');
+                if (!d.data || !d.data.length) { list.style.display = 'none'; return; }
+                list.style.display = 'block';
+                list.innerHTML = d.data.map(it => `
+                    <div class="autocomplete-item" onclick="selectCatalogItem(${it.id},'${it.item_name.replace(/'/g,"\\'")}','${it.unit_of_measure || 'PCS'}','${it.hsn_code || ''}')">
+                        <strong>${it.item_name}</strong> <span style="color:#9ca3af;font-size:11px">${it.item_code || ''}</span>
+                    </div>`).join('');
+            } catch(e) {}
+        }, 300);
+    }
+
+    function selectCatalogItem(id, name, uom, hsn) {
+        document.getElementById('catItemId').value = id;
+        document.getElementById('catSearch').value = name;
+        document.getElementById('catUom').value = uom || 'PCS';
+        document.getElementById('catSelectedName').textContent = name;
+        document.getElementById('catSelected').style.display = 'block';
+        document.getElementById('catList').style.display = 'none';
+    }
+
+    // --- Modals ---
+    function openAddCatalog() {
+        document.getElementById('catSearch').value = '';
+        document.getElementById('catItemId').value = '';
+        document.getElementById('catSelected').style.display = 'none';
+        document.getElementById('catList').style.display = 'none';
+        document.getElementById('catOpeningQty').value = '0';
+        document.getElementById('catUom').value = 'PCS';
+        document.getElementById('catReorder').value = '0';
+        document.getElementById('catSellingPrice').value = '';
+        document.getElementById('catNotes').value = '';
+        document.getElementById('catMsg').textContent = '';
+        document.getElementById('addCatalogOverlay').classList.add('open');
+    }
+
+    function openAddCustom() {
+        ['custName','custCode','custHsn','custNotes'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('custOpeningQty').value = '0';
+        document.getElementById('custReorder').value = '0';
+        document.getElementById('custSellingPrice').value = '';
+        document.getElementById('custUom').value = 'PCS';
+        document.getElementById('custMsg').textContent = '';
+        document.getElementById('addCustomOverlay').classList.add('open');
+    }
+
+    function openAdj(itemId, itemName) {
+        document.getElementById('adjItemId').value = itemId;
+        document.getElementById('adjItemName').textContent = itemName;
+        document.getElementById('adjQty').value = '';
+        document.getElementById('adjReason').value = '';
+        document.getElementById('adjRefDoc').value = '';
+        document.getElementById('adjNotes').value = '';
+        document.getElementById('adjMsg').textContent = '';
+        document.getElementById('adjOverlay').classList.add('open');
+    }
+
+    function openEdit(item) {
+        if (typeof item === 'string') item = JSON.parse(item.replace(/&quot;/g, '"'));
+        document.getElementById('editItemId').value = item.id;
+        document.getElementById('editName').value = item.item_name;
+        document.getElementById('editOpeningQty').value = item.opening_qty;
+        document.getElementById('editReorder').value = item.reorder_level;
+        document.getElementById('editSellingPrice').value = item.selling_price || '';
+        document.getElementById('editHsn').value = item.hsn_code || '';
+        document.getElementById('editNotes').value = item.notes || '';
+        document.getElementById('editMsg').textContent = '';
+        document.getElementById('editOverlay').classList.add('open');
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+    async function saveCatalogItem() {
+        const sid = parseInt(document.getElementById('catItemId').value);
+        if (!sid) { setMsg('catMsg', 'Please select a catalog item first.', 'red'); return; }
+        const payload = {
+            item_type: 'catalog', stock_item_id: sid,
+            item_name: document.getElementById('catSearch').value,
+            unit_of_measure: document.getElementById('catUom').value || 'PCS',
+            opening_qty: parseFloat(document.getElementById('catOpeningQty').value) || 0,
+            reorder_level: parseFloat(document.getElementById('catReorder').value) || 0,
+            selling_price: document.getElementById('catSellingPrice').value ? parseFloat(document.getElementById('catSellingPrice').value) : null,
+            notes: document.getElementById('catNotes').value || null,
+        };
+        await postStock('/stock/items', payload, 'catMsg', 'addCatalogOverlay');
+    }
+
+    async function saveCustomSpare() {
+        const name = document.getElementById('custName').value.trim();
+        if (!name) { setMsg('custMsg', 'Item name is required.', 'red'); return; }
+        const payload = {
+            item_type: 'custom', item_name: name,
+            item_code: document.getElementById('custCode').value || null,
+            hsn_code: document.getElementById('custHsn').value || null,
+            unit_of_measure: document.getElementById('custUom').value || 'PCS',
+            opening_qty: parseFloat(document.getElementById('custOpeningQty').value) || 0,
+            reorder_level: parseFloat(document.getElementById('custReorder').value) || 0,
+            selling_price: document.getElementById('custSellingPrice').value ? parseFloat(document.getElementById('custSellingPrice').value) : null,
+            notes: document.getElementById('custNotes').value || null,
+        };
+        await postStock('/stock/items', payload, 'custMsg', 'addCustomOverlay');
+    }
+
+    async function saveAdjustment() {
+        const qty = parseFloat(document.getElementById('adjQty').value);
+        const reason = document.getElementById('adjReason').value.trim();
+        if (!qty || qty <= 0) { setMsg('adjMsg', 'Enter a valid quantity.', 'red'); return; }
+        if (!reason) { setMsg('adjMsg', 'Reason is required.', 'red'); return; }
+        const payload = {
+            partner_stock_item_id: parseInt(document.getElementById('adjItemId').value),
+            adj_type: document.getElementById('adjType').value,
+            qty, reason,
+            notes: document.getElementById('adjNotes').value || null,
+            ref_doc_number: document.getElementById('adjRefDoc').value || null,
+        };
+        await postStock('/stock/adjustments', payload, 'adjMsg', 'adjOverlay');
+    }
+
+    async function saveEdit() {
+        const id = document.getElementById('editItemId').value;
+        const name = document.getElementById('editName').value.trim();
+        if (!name) { setMsg('editMsg', 'Name is required.', 'red'); return; }
+        const payload = {
+            item_name: name,
+            opening_qty: parseFloat(document.getElementById('editOpeningQty').value) || 0,
+            reorder_level: parseFloat(document.getElementById('editReorder').value) || 0,
+            selling_price: document.getElementById('editSellingPrice').value ? parseFloat(document.getElementById('editSellingPrice').value) : null,
+            hsn_code: document.getElementById('editHsn').value || null,
+            notes: document.getElementById('editNotes').value || null,
+        };
+        try {
+            const r = await fetch(`${API}/stock/items/${id}`, { method: 'PUT', headers: authH(), body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (d.success) { closeModal('editOverlay'); loadItems(); }
+            else setMsg('editMsg', d.detail || 'Failed', 'red');
+        } catch(e) { setMsg('editMsg', 'Error: ' + e.message, 'red'); }
+    }
+
+    async function postStock(path, payload, msgId, overlayId) {
+        try {
+            const r = await fetch(`${API}${path}`, { method: 'POST', headers: authH(), body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (d.success) {
+                setMsg(msgId, '✓ Saved!', 'green');
+                setTimeout(() => { closeModal(overlayId); loadItems(); loadSummary(); }, 800);
+            } else {
+                setMsg(msgId, d.detail || 'Failed to save.', 'red');
+            }
+        } catch(e) { setMsg(msgId, 'Error: ' + e.message, 'red'); }
+    }
+
+    function setMsg(id, msg, color) {
+        const el = document.getElementById(id);
+        el.textContent = msg;
+        el.style.color = color === 'green' ? '#059669' : '#dc2626';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => { loadItems(); loadSummary(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Invoices - Partner Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/partner-token-manager.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; }
+        .page-header {
+            background: linear-gradient(135deg, #1b5e20 0%, #43a047 100%);
+            color: white; padding: 28px 30px; border-radius: 0 0 20px 20px; margin-bottom: 28px;
+        }
+        .page-header h1 { font-size: 1.8rem; font-weight: 700; margin: 0; }
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1001;
+            background: #1b5e20; color: white; border: none; border-radius: 8px; padding: 10px 15px;
+        }
+        @media (max-width: 768px) { .mobile-menu-toggle { display: block; } }
+        .card { border: none; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .stat-card { border-radius: 14px; padding: 18px 20px; color: white; text-align: center; margin-bottom: 16px; }
+        .stat-card .stat-val { font-size: 1.8rem; font-weight: 700; }
+        .stat-card .stat-lbl { font-size: 0.82rem; opacity: 0.9; }
+        .stat-green { background: linear-gradient(135deg, #1b5e20, #43a047); }
+        .stat-blue { background: linear-gradient(135deg, #1565c0, #42a5f5); }
+        .stat-orange { background: linear-gradient(135deg, #e65100, #ffb74d); }
+        .stat-purple { background: linear-gradient(135deg, #1d4ed8, #ce93d8); }
+        .stat-teal { background: linear-gradient(135deg, #00695c, #4db6ac); }
+        .filter-bar { background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .filter-btn { border-radius: 20px; font-size: 0.82rem; padding: 5px 14px; margin: 2px; }
+        .filter-btn.active { background: #1b5e20; color: white; border-color: #1b5e20; }
+        .form-label { font-weight: 600; font-size: 0.88rem; color: #444; margin-bottom: 4px; }
+        .form-control, .form-select { border-radius: 8px; font-size: 0.9rem; }
+        .section-divider { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #888; margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #eee; }
+        .table th { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: #666; background: #f8f9fa; }
+        .table td { font-size: 0.9rem; vertical-align: middle; }
+        .action-btn { font-size: 0.78rem; padding: 3px 10px; border-radius: 6px; }
+        .status-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 10px; }
+        .modal-header { background: linear-gradient(135deg, #1b5e20, #43a047); color: white; border-radius: 12px 12px 0 0; }
+        .modal-header.blue { background: linear-gradient(135deg, #1565c0, #42a5f5); }
+        .modal-header.purple { background: linear-gradient(135deg, #1d4ed8, #ce93d8); }
+        .modal-header .btn-close { filter: brightness(0) invert(1); }
+        .modal-content { border-radius: 14px; border: none; }
+        .line-item-row { background: #fafafa; border-radius: 8px; padding: 12px; margin-bottom: 8px; border: 1px solid #eee; }
+        .gst-summary-box { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 10px; padding: 14px; }
+        .gst-row { display: flex; justify-content: space-between; font-size: 0.9rem; padding: 3px 0; }
+        .gst-row.total { font-weight: 600; border-top: 1px solid #a5d6a7; padding-top: 8px; margin-top: 4px; font-size: 0.95rem; color: #2e7d32; }
+        .gst-row.net-payable { font-weight: 700; background: #2e7d32; color: white; border-radius: 7px; padding: 8px 10px; margin-top: 6px; font-size: 1rem; }
+        .invoice-actions-row { display: flex; gap: 6px; flex-wrap: wrap; }
+        .autocomplete-results { position: absolute; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 8px; max-height: 200px; overflow-y: auto; width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .autocomplete-item { padding: 8px 12px; cursor: pointer; font-size: 0.88rem; }
+        .autocomplete-item:hover { background: #f0f7ff; }
+        .seller-block { background: #f1f8e9; border: 1px solid #c5e1a5; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+        #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .inv-number { font-family: monospace; font-weight: 700; color: #1b5e20; }
+        .draft-label { background: #fff3e0; color: #e65100; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; font-weight: 700; }
+        .confirmed-label { background: #e8f5e9; color: #1b5e20; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; font-weight: 700; }
+        .cancelled-label { background: #fce4ec; color: #b71c1c; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; font-weight: 700; }
+        .pay-pending { color: #e65100; font-weight: 600; }
+        .pay-paid { color: #1b5e20; font-weight: 600; }
+        .pay-partial { color: #1565c0; font-weight: 600; }
+    </style>
+</head>
+<body>
+<button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+<div id="sidebarContainer"></div>
+
+<div class="partner-main-content">
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <h1><i class="fas fa-file-invoice-dollar me-3"></i>Sales Invoices</h1>
+                    <p class="mb-0 opacity-80 mt-1">Create and manage your sales invoices &amp; quotations</p>
+                </div>
+                <div class="mt-2 mt-md-0 d-flex gap-2">
+                    <button class="btn btn-light" onclick="openCreateModal('tax_invoice')">
+                        <i class="fas fa-plus me-2"></i>New Invoice
+                    </button>
+                    <button class="btn btn-outline-light" onclick="openCreateModal('estimate')">
+                        <i class="fas fa-file-alt me-2"></i>New Quotation
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" data-bs-toggle="dropdown"><i class="fas fa-download me-1"></i>Export GST</button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" onclick="exportGST()"><i class="fas fa-file-excel me-2 text-success"></i>Export to Excel</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid px-4">
+        <!-- Summary Cards -->
+        <div class="row g-3 mb-4" id="summaryCards">
+            <div class="col-6 col-md-2"><div class="stat-card stat-blue"><div class="stat-val" id="sTotal">-</div><div class="stat-lbl">Total Invoices</div></div></div>
+            <div class="col-6 col-md-2"><div class="stat-card stat-green"><div class="stat-val" id="sConfirmed">-</div><div class="stat-lbl">Confirmed</div></div></div>
+            <div class="col-6 col-md-2"><div class="stat-card stat-orange"><div class="stat-val" id="sDraft">-</div><div class="stat-lbl">Draft</div></div></div>
+            <div class="col-6 col-md-2"><div class="stat-card stat-green"><div class="stat-val" id="sValue">-</div><div class="stat-lbl">Total Value</div></div></div>
+            <div class="col-6 col-md-2"><div class="stat-card stat-purple"><div class="stat-val" id="sPending">-</div><div class="stat-lbl">Pending Payment</div></div></div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar mb-3">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="text-muted fw-600" style="font-size:0.85rem;">Period:</span>
+                <button class="btn btn-outline-secondary filter-btn" onclick="setFilter('ftd', this)">Today</button>
+                <button class="btn btn-outline-secondary filter-btn" onclick="setFilter('yesterday', this)">Yesterday</button>
+                <button class="btn btn-outline-secondary filter-btn active" onclick="setFilter('mtd', this)">MTD</button>
+                <button class="btn btn-outline-secondary filter-btn" onclick="setFilter('fty', this)">FTY (Apr 1)</button>
+                <button class="btn btn-outline-secondary filter-btn" onclick="setFilter('custom', this)">Custom</button>
+                <div id="customRange" style="display:none;" class="d-flex gap-2 ms-1">
+                    <input type="date" id="dfrom" class="form-control form-control-sm" style="width:140px;">
+                    <input type="date" id="dto" class="form-control form-control-sm" style="width:140px;">
+                    <button class="btn btn-primary btn-sm" onclick="loadInvoices()">Apply</button>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+                <input type="text" id="searchQ" class="form-control form-control-sm" style="width:220px;" placeholder="Invoice # or customer..." oninput="debounce()">
+                <select id="statusFilter" class="form-select form-select-sm" style="width:140px;" onchange="loadInvoices()">
+                    <option value="">All Status</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                </select>
+                <select id="payFilter" class="form-select form-select-sm" style="width:140px;" onchange="loadInvoices()">
+                    <option value="">All Payments</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="PARTIAL">Partial</option>
+                    <option value="PAID">Paid</option>
+                </select>
+                <select id="docTypeFilter" class="form-select form-select-sm" style="width:150px;" onchange="loadInvoices()">
+                    <option value="">All Doc Types</option>
+                    <option value="tax_invoice">Tax Invoice</option>
+                    <option value="estimate">Quotation/Estimate</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Invoice Table -->
+        <div class="card">
+            <div class="card-body p-0">
+                <div id="loadingSpinner" style="text-align:center;padding:40px;display:none;"><div class="spinner-border text-success"></div></div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Date</th>
+                                <th>Customer</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Payment</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoiceTableBody">
+                            <tr><td colspan="8" class="text-center py-4 text-muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3" id="paginationRow"></div>
+    </div>
+</div>
+
+<!-- ─── Create / Edit Invoice Modal ─── -->
+<div class="modal fade" id="invoiceModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="invoiceModalTitle"><i class="fas fa-file-invoice me-2"></i>New Invoice</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <!-- Document Settings -->
+                    <div class="col-12"><div class="section-divider">Document Settings</div></div>
+                    <div class="col-md-3">
+                        <label class="form-label">Document Type</label>
+                        <select id="docType" class="form-select" onchange="onDocTypeChange()">
+                            <option value="tax_invoice">Tax Invoice</option>
+                            <option value="estimate">Quotation / Estimate</option>
+                            <option value="proforma">Proforma Invoice</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Invoice Date *</label>
+                        <input type="date" id="invDate" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">SO / Reference No.</label>
+                        <input type="text" id="soNumber" class="form-control" placeholder="PO/SO reference">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">GST Type</label>
+                        <select id="gstType" class="form-select" onchange="onGstTypeChange()">
+                            <option value="intra">Intra-State (CGST + SGST)</option>
+                            <option value="inter">Inter-State (IGST)</option>
+                        </select>
+                    </div>
+
+                    <!-- Seller Block (read-only from partner profile) -->
+                    <div class="col-12">
+                        <div class="seller-block">
+                            <div class="row">
+                                <div class="col-12 mb-1"><strong style="font-size:0.82rem;color:#5d4037;">SELLER (Your Details)</strong></div>
+                                <div class="col-md-4"><small class="text-muted">Name</small><div id="sellerName" class="fw-600">—</div></div>
+                                <div class="col-md-4"><small class="text-muted">GSTIN</small><div id="sellerGST" class="fw-600">—</div></div>
+                                <div class="col-md-4"><small class="text-muted">State</small><div id="sellerState" class="fw-600">—</div></div>
+                                <div class="col-12 mt-1"><small class="text-muted">Address</small><div id="sellerAddress" class="fw-600">—</div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Customer Details -->
+                    <div class="col-12"><div class="section-divider">Customer / Party Details</div></div>
+                    <div class="col-md-3">
+                        <label class="form-label">Customer Type</label>
+                        <select id="custType" class="form-select">
+                            <option value="WALK_IN">Walk-in</option>
+                            <option value="REGISTERED">Registered</option>
+                            <option value="DEALER">Dealer</option>
+                            <option value="DISTRIBUTOR">Distributor</option>
+                            <option value="CORPORATE">Corporate</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Customer Name *</label>
+                        <input type="text" id="custName" class="form-control" placeholder="Full name" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Primary Phone <span class="text-danger">*</span></label>
+                        <input type="tel" id="custPhone" class="form-control" placeholder="Mobile" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="custEmail" class="form-control" placeholder="Email">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">GSTIN</label>
+                        <input type="text" id="custGST" class="form-control" placeholder="15-digit GSTIN" maxlength="15">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">State</label>
+                        <select id="custState" class="form-select" onchange="onCustStateChange()">
+                            <option value="">Select State</option>
+                            <option>Andhra Pradesh</option><option>Assam</option><option>Bihar</option><option>Chhattisgarh</option>
+                            <option>Delhi</option><option>Goa</option><option>Gujarat</option><option>Haryana</option>
+                            <option>Himachal Pradesh</option><option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+                            <option>Madhya Pradesh</option><option>Maharashtra</option><option>Odisha</option><option>Punjab</option>
+                            <option>Rajasthan</option><option>Tamil Nadu</option><option>Telangana</option><option>Uttar Pradesh</option>
+                            <option>Uttarakhand</option><option>West Bengal</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Linked Walk-in (optional)</label>
+                        <input type="number" id="linkedWalkin" class="form-control" placeholder="Walk-in ID">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Billing Address</label>
+                        <textarea id="billAddr" class="form-control" rows="2" placeholder="Billing address"></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Shipping Address</label>
+                        <div class="form-check mb-1"><input type="checkbox" class="form-check-input" id="sameAddr" onchange="onSameAddr()"><label class="form-check-label" for="sameAddr" style="font-size:0.82rem;">Same as billing</label></div>
+                        <textarea id="shipAddr" class="form-control" rows="2" placeholder="Shipping address"></textarea>
+                    </div>
+
+                    <!-- Line Items -->
+                    <div class="col-12"><div class="section-divider">Line Items</div></div>
+
+                    <!-- DC_SOLAR_TEMPLATE_001: Solar quick-fill bar (visible only for Quotation/Estimate) -->
+                    <div class="col-12" id="solarTemplateBar" style="display:none;">
+                        <div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fbbf24;border-radius:10px;overflow:hidden;">
+
+                            <!-- Row 1: Template selector -->
+                            <div style="padding:10px 14px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;border-bottom:1px solid #fde68a;">
+                                <span style="color:#d97706;font-size:1rem;"><i class="fas fa-solar-panel"></i></span>
+                                <strong style="color:#92400e;font-size:0.88rem;">Solar Template</strong>
+                                <select id="solarCapacity" class="form-select form-select-sm" style="width:auto;min-width:170px;border-color:#fbbf24;">
+                                    <option value="">— Select Capacity —</option>
+                                    <option value="1KW">1 KW On-Grid System</option>
+                                    <option value="3KW">3 KW On-Grid System</option>
+                                    <option value="5KW">5 KW On-Grid System</option>
+                                    <option value="10KW">10 KW On-Grid System</option>
+                                    <option value="CUSTOM">Custom (blank structure)</option>
+                                </select>
+                                <button class="btn btn-sm" style="background:#f59e0b;color:#fff;border:none;" onclick="applySolarTemplate()">
+                                    <i class="fas fa-bolt me-1"></i>Apply Template
+                                </button>
+                                <small class="text-muted ms-1" style="font-size:0.75rem;">Rates are indicative — edit before saving</small>
+                            </div>
+
+                            <!-- Row 2: Solar config panel (shown after template applied) -->
+                            <div id="solarConfigPanel" style="display:none;padding:12px 14px;">
+                                <div style="font-size:0.78rem;font-weight:600;color:#92400e;margin-bottom:8px;">
+                                    <i class="fas fa-sliders-h me-1"></i>Configuration Details
+                                    <span style="font-weight:400;color:#6b7280;margin-left:6px;">— all optional · fills Description &amp; Specification columns automatically</span>
+                                </div>
+                                <div class="row g-2">
+                                    <!-- Panels -->
+                                    <div class="col-6 col-md-2">
+                                        <label style="font-size:0.75rem;color:#78350f;font-weight:600;">Panel Brand</label>
+                                        <input type="text" id="sc_panelBrand" class="form-control form-control-sm" placeholder="e.g. Waaree, Adani"
+                                            style="border-color:#fbbf24;font-size:0.82rem;" oninput="onSolarConfigChange()">
+                                    </div>
+                                    <div class="col-6 col-md-2">
+                                        <label style="font-size:0.75rem;color:#78350f;font-weight:600;">Panel Wattage</label>
+                                        <input type="text" id="sc_panelWattage" class="form-control form-control-sm" placeholder="e.g. 395Wp, 540Wp"
+                                            style="border-color:#fbbf24;font-size:0.82rem;" oninput="onSolarConfigChange()">
+                                    </div>
+                                    <div class="col-6 col-md-1">
+                                        <label style="font-size:0.75rem;color:#78350f;font-weight:600;">Panel Count</label>
+                                        <input type="number" id="sc_panelCount" class="form-control form-control-sm" min="1" step="1"
+                                            style="border-color:#fbbf24;font-size:0.82rem;" oninput="onSolarConfigChange()">
+                                    </div>
+                                    <div class="col-6 col-md-2">
+                                        <label style="font-size:0.75rem;color:#78350f;font-weight:600;">Panel Warranty</label>
+                                        <input type="text" id="sc_panelWarranty" class="form-control form-control-sm" placeholder="e.g. 25 yr performance"
+                                            style="border-color:#fbbf24;font-size:0.82rem;" oninput="onSolarConfigChange()">
+                                    </div>
+                                    <!-- Inverter -->
+                                    <div class="col-6 col-md-2">
+                                        <label style="font-size:0.75rem;color:#78350f;font-weight:600;">Inverter Brand</label>
+                                        <input type="text" id="sc_invBrand" class="form-control form-control-sm" placeholder="e.g. Growatt, Solis"
+                                            style="border-color:#fbbf24;font-size:0.82rem;" oninput="onSolarConfigChange()">
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <label style="font-size:0.75rem;color:#78350f;font-weight:600;">Inverter Model / Specs</label>
+                                        <input type="text" id="sc_invModel" class="form-control form-control-sm" placeholder="e.g. MIN 3600TL-X, Single Phase"
+                                            style="border-color:#fbbf24;font-size:0.82rem;" oninput="onSolarConfigChange()">
+                                    </div>
+                                    <!-- Structure -->
+                                    <div class="col-6 col-md-2">
+                                        <label style="font-size:0.75rem;color:#78350f;font-weight:600;">Structure Type</label>
+                                        <input type="text" id="sc_structType" class="form-control form-control-sm" placeholder="e.g. RCC, Tin Sheet"
+                                            style="border-color:#fbbf24;font-size:0.82rem;" oninput="onSolarConfigChange()">
+                                    </div>
+                                    <!-- Cable -->
+                                    <div class="col-6 col-md-2">
+                                        <label style="font-size:0.75rem;color:#78350f;font-weight:600;">Cable Size</label>
+                                        <input type="text" id="sc_cableSpec" class="form-control form-control-sm" placeholder="e.g. 4mm², 6mm²"
+                                            style="border-color:#fbbf24;font-size:0.82rem;" oninput="onSolarConfigChange()">
+                                    </div>
+                                    <!-- Monitoring -->
+                                    <div class="col-6 col-md-2">
+                                        <label style="font-size:0.75rem;color:#78350f;font-weight:600;">Monitoring Brand</label>
+                                        <input type="text" id="sc_monBrand" class="form-control form-control-sm" placeholder="e.g. Solarman, Fronius"
+                                            style="border-color:#fbbf24;font-size:0.82rem;" oninput="onSolarConfigChange()">
+                                    </div>
+                                    <!-- Notes -->
+                                    <div class="col-12 col-md-4">
+                                        <label style="font-size:0.75rem;color:#78350f;font-weight:600;">Site / Installation Notes</label>
+                                        <input type="text" id="sc_notes" class="form-control form-control-sm" placeholder="e.g. 2nd floor, south-facing, 30° tilt"
+                                            style="border-color:#fbbf24;font-size:0.82rem;" oninput="onSolarConfigChange()">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div id="lineItemsContainer"></div>
+                        <button class="btn btn-outline-success btn-sm mt-2" onclick="addLineItem()"><i class="fas fa-plus me-1"></i>Add Item</button>
+                    </div>
+
+                    <!-- Totals & Discounts -->
+                    <div class="col-12 col-md-6">
+                        <div class="section-divider">Coupon &amp; Discount</div>
+                        <div class="row g-2">
+                            <div class="col-8">
+                                <input type="text" id="couponCode" class="form-control" placeholder="Coupon code">
+                            </div>
+                            <div class="col-4">
+                                <button class="btn btn-outline-primary w-100" onclick="applyCoupon()">Apply</button>
+                            </div>
+                            <div class="col-12" id="couponInfo"></div>
+                            <div class="col-8">
+                                <label class="form-label">Manual Discount (₹)</label>
+                                <input type="number" id="manualDisc" class="form-control" placeholder="0" min="0" oninput="recalcTotals()">
+                            </div>
+                            <div class="col-12">
+                                <input type="text" id="manualDiscNote" class="form-control" placeholder="Discount reason / note">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6">
+                        <div class="section-divider">GST Summary</div>
+                        <div class="gst-summary-box">
+                            <div class="gst-row"><span>Subtotal</span><span id="gSubtotal">₹0.00</span></div>
+                            <div class="gst-row"><span>Discount</span><span id="gDiscount" style="color:#b71c1c;">-₹0.00</span></div>
+                            <div class="gst-row"><span>Taxable Amount</span><span id="gTaxable">₹0.00</span></div>
+                            <div class="gst-row" id="cgstRow"><span>CGST</span><span id="gCGST">₹0.00</span></div>
+                            <div class="gst-row" id="sgstRow"><span>SGST</span><span id="gSGST">₹0.00</span></div>
+                            <div class="gst-row" id="igstRow" style="display:none;"><span>IGST</span><span id="gIGST">₹0.00</span></div>
+                            <div class="gst-row total" id="grandTotalRow"><span>Grand Total</span><span id="gGrandTotal">₹0.00</span></div>
+                            <div class="gst-row" id="couponRow" style="display:none;color:#e65100;font-size:0.85rem;"><span><i class="fas fa-tag me-1"></i>Coupon Discount</span><span id="gCoupon">-₹0.00</span></div>
+                            <div class="gst-row" id="manualRow" style="display:none;color:#e65100;font-size:0.85rem;"><span><i class="fas fa-scissors me-1"></i>Manual Discount</span><span id="gManual">-₹0.00</span></div>
+                            <div class="gst-row net-payable" id="netPayRow" style="display:none;"><span>Net Payable</span><span id="gNetPay">₹0.00</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Payment & Terms -->
+                    <div class="col-12"><div class="section-divider">Payment &amp; Terms</div></div>
+                    <div class="col-md-3">
+                        <label class="form-label">Payment Mode</label>
+                        <select id="payMode" class="form-select">
+                            <option value="">Not specified</option>
+                            <option value="CASH">Cash</option>
+                            <option value="UPI">UPI</option>
+                            <option value="CARD">Card</option>
+                            <option value="NEFT">NEFT</option>
+                            <option value="RTGS">RTGS</option>
+                            <option value="CHEQUE">Cheque</option>
+                            <option value="CREDIT">Credit</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-check mt-4 pt-2">
+                            <input class="form-check-input" type="checkbox" id="isCreditSale" onchange="onCreditToggle()">
+                            <label class="form-check-label fw-600" for="isCreditSale">Credit Sale</label>
+                        </div>
+                    </div>
+                    <div id="creditBlock" style="display:none;" class="col-md-6">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label">Credit Days</label>
+                                <input type="number" id="creditDays" class="form-control" min="0" value="30">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" id="dueDate" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Terms &amp; Conditions</label>
+                        <textarea id="termsText" class="form-control" rows="3" placeholder="Terms and conditions..."></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Remarks</label>
+                        <textarea id="remarksText" class="form-control" rows="2" placeholder="Additional remarks..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-warning text-dark" onclick="saveInvoice('DRAFT')" id="saveDraftBtn">
+                    <i class="fas fa-save me-2"></i>Save Draft
+                </button>
+                <button class="btn btn-success" onclick="saveAndConfirm()" id="saveConfirmBtn">
+                    <i class="fas fa-check me-2"></i>Save &amp; Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Invoice Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header blue">
+                <h5 class="modal-title"><i class="fas fa-eye me-2"></i>Invoice Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewModalBody">Loading...</div>
+            <div class="modal-footer" id="viewModalActions"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Record Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header purple">
+                <h5 class="modal-title"><i class="fas fa-money-bill me-2"></i>Record Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label">Amount (₹) *</label><input type="number" id="payAmount" class="form-control" placeholder="0.00" min="0" step="0.01"></div>
+                <div class="mb-3"><label class="form-label">Payment Mode *</label>
+                    <select id="payModeRec" class="form-select">
+                        <option value="CASH">Cash</option><option value="UPI">UPI</option><option value="CARD">Card</option>
+                        <option value="NEFT">NEFT</option><option value="RTGS">RTGS</option><option value="CHEQUE">Cheque</option><option value="OTHER">Other</option>
+                    </select>
+                </div>
+                <div class="mb-3"><label class="form-label">Payment Date</label><input type="date" id="payDate" class="form-control"></div>
+                <div class="mb-3"><label class="form-label">Reference / UTR No.</label><input type="text" id="payRef" class="form-control" placeholder="Reference number"></div>
+                <div class="mb-3"><label class="form-label">Notes</label><textarea id="payNotes" class="form-control" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-success" onclick="submitPayment()"><i class="fas fa-save me-2"></i>Record Payment</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Column Select Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-excel me-2 text-success"></i>Export GST to Excel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Select columns to include in the export:</p>
+                <div id="exportColChecks"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-success" onclick="doExport()"><i class="fas fa-download me-2"></i>Download Excel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/partner_sidebar.js"></script>
+<script>
+// ─── State ───
+let currentFilter = 'mtd';
+let currentPage = 1;
+let searchTimer = null;
+let editingInvoiceId = null;
+let payingInvoiceId = null;
+let partnerProfile = null;
+let lineItems = [];
+let isIGST = false;
+let couponApplied = null;
+const EXPORT_COLS = ['Invoice No','Invoice Date','Customer Name','Customer GSTIN','Customer State','Taxable Value','CGST','SGST','IGST','Total Tax','Grand Total','Payment Mode','Payment Status'];
+
+// ─── Init ───
+document.addEventListener('DOMContentLoaded', () => {
+    // DC Protocol (Apr 2026): Auth guard — redirect if partner_token missing
+    const _token = localStorage.getItem('partner_token');
+    const _sbMode = localStorage.getItem('sandbox_mode');
+    if (!_token) {
+        window.location.href = _sbMode ? '/test/' + _sbMode + '/partner/login' : '/partner/login';
+        return;
+    }
+
+    document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
+
+    // Check URL params for pre-fill
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('doc') === 'estimate') setTimeout(() => openCreateModal('estimate'), 800);
+    if (params.get('walkin_id')) {
+        setTimeout(() => {
+            openCreateModal('tax_invoice');
+            document.getElementById('linkedWalkin').value = params.get('walkin_id');
+            if (params.get('customer')) document.getElementById('custName').value = decodeURIComponent(params.get('customer'));
+            if (params.get('phone')) document.getElementById('custPhone').value = decodeURIComponent(params.get('phone'));
+        }, 800);
+    }
+
+    loadProfile();
+    setTimeout(() => { loadSummary(); loadInvoices(); }, 600);
+});
+
+// toggleMobileMenu is defined globally by partner_sidebar.js
+
+async function loadProfile() {
+    try {
+        const res = await fetch('/api/v1/partner/auth/me', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        const d = await res.json();
+        if (d.success || d.partner_name) {
+            partnerProfile = d;
+            const p = d.partner || d;
+            document.getElementById('sellerName').textContent = p.partner_name || '—';
+            document.getElementById('sellerGST').textContent = p.gst_number || 'Not set';
+            document.getElementById('sellerState').textContent = p.state || '—';
+            document.getElementById('sellerAddress').textContent = [p.address, p.city, p.state, p.pincode].filter(Boolean).join(', ') || '—';
+        }
+    } catch(e) {}
+}
+
+// ─── Filters ───
+function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('customRange').style.display = f === 'custom' ? 'flex' : 'none';
+    if (f !== 'custom') { currentPage = 1; loadSummary(); loadInvoices(); }
+}
+
+function debounce() { clearTimeout(searchTimer); searchTimer = setTimeout(() => { currentPage = 1; loadInvoices(); }, 400); }
+
+function getDateParams() {
+    let p = `date_filter=${currentFilter}`;
+    if (currentFilter === 'custom') {
+        const from = document.getElementById('dfrom').value;
+        const to = document.getElementById('dto').value;
+        if (from) p += `&date_from=${from}`;
+        if (to) p += `&date_to=${to}`;
+    }
+    return p;
+}
+
+// ─── Load Data ───
+async function loadSummary() {
+    try {
+        const res = await fetch(`/api/v1/partner/sales-invoices?${getDateParams()}&per_page=1`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const d = await res.json();
+        if (!d.success) return;
+        const s = d.summary || {};
+        document.getElementById('sTotal').textContent = d.total || 0;
+        document.getElementById('sConfirmed').textContent = s.confirmed || 0;
+        document.getElementById('sDraft').textContent = s.draft || 0;
+        document.getElementById('sValue').textContent = '₹' + fmt(s.total_value);
+        document.getElementById('sPending').textContent = '₹' + fmt(s.pending_payment);
+    } catch(e) {}
+}
+
+async function loadInvoices() {
+    document.getElementById('loadingSpinner').style.display = 'block';
+    const search = document.getElementById('searchQ').value;
+    const status = document.getElementById('statusFilter').value;
+    const pay = document.getElementById('payFilter').value;
+    const doc = document.getElementById('docTypeFilter').value;
+    let url = `/api/v1/partner/sales-invoices?page=${currentPage}&per_page=20&${getDateParams()}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (status) url += `&status=${status}`;
+    if (pay) url += `&payment_status=${pay}`;
+    if (doc) url += `&doc_type=${doc}`;
+    try {
+        const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        const d = await res.json();
+        document.getElementById('loadingSpinner').style.display = 'none';
+        if (!d.success) { showToast('Failed to load invoices', 'danger'); return; }
+        renderTable(d.data);
+        renderPagination(d.total, d.page, d.per_page);
+    } catch(e) { document.getElementById('loadingSpinner').style.display = 'none'; }
+}
+
+function renderTable(rows) {
+    const tbody = document.getElementById('invoiceTableBody');
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-muted"><i class="fas fa-file-invoice fa-2x mb-2 d-block"></i>No invoices found</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map(inv => {
+        const statusEl = inv.status === 'DRAFT'
+            ? `<span class="draft-label">DRAFT</span>`
+            : inv.status === 'CONFIRMED'
+            ? `<span class="confirmed-label">CONFIRMED</span>`
+            : `<span class="cancelled-label">CANCELLED</span>`;
+        const payEl = inv.payment_status === 'PAID'
+            ? `<span class="pay-paid">Paid</span>`
+            : inv.payment_status === 'PARTIAL'
+            ? `<span class="pay-partial">Partial ₹${fmt(inv.amount_received)}</span>`
+            : `<span class="pay-pending">₹${fmt(inv.balance_due)}</span>`;
+        const docLabel = inv.document_type === 'estimate' ? '📋 Quotation' : inv.document_type === 'proforma' ? '📄 Proforma' : '🧾 Tax Invoice';
+        const editBtn = inv.status === 'DRAFT' ? `<button class="btn btn-outline-warning action-btn" onclick="editInvoice(${inv.id})" title="Edit"><i class="fas fa-edit"></i></button>` : '';
+        const confirmBtn = inv.status === 'DRAFT' ? `<button class="btn btn-outline-success action-btn" onclick="confirmInvoice(${inv.id})" title="Confirm"><i class="fas fa-check"></i></button>` : '';
+        const payBtn = inv.status === 'CONFIRMED' && inv.payment_status !== 'PAID' ? `<button class="btn btn-outline-primary action-btn" onclick="openPayment(${inv.id})" title="Record Payment"><i class="fas fa-money-bill"></i></button>` : '';
+        const pdfBtn = `<button class="btn btn-outline-secondary action-btn" onclick="downloadPDF(${inv.id})" title="PDF"><i class="fas fa-file-pdf"></i></button>`;
+        const waBtn = `<button class="btn btn-outline-success action-btn" onclick="shareWhatsapp(${inv.id}, '${inv.invoice_number}')" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>`;
+        return `<tr>
+            <td><span class="inv-number">${inv.invoice_number}</span></td>
+            <td>${fdate(inv.invoice_date)}</td>
+            <td><div class="fw-600">${inv.customer_name}</div><small class="text-muted">${inv.customer_phone || ''}</small></td>
+            <td style="font-size:0.82rem;">${docLabel}</td>
+            <td class="fw-600">₹${fmt(inv.grand_total)}</td>
+            <td>${statusEl}</td>
+            <td>${payEl}</td>
+            <td>
+                <div class="invoice-actions-row">
+                    <button class="btn btn-outline-info action-btn" onclick="viewInvoice(${inv.id})" title="View"><i class="fas fa-eye"></i></button>
+                    ${editBtn}${confirmBtn}${payBtn}${pdfBtn}${waBtn}
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ─── Create / Edit Modal ───
+function openCreateModal(docType = 'tax_invoice') {
+    editingInvoiceId = null;
+    lineItems = [];
+    couponApplied = null;
+    _solarCap = '';
+    const cfg = document.getElementById('solarConfigPanel');
+    if (cfg) cfg.style.display = 'none';
+    document.getElementById('invoiceModalTitle').innerHTML = '<i class="fas fa-plus me-2"></i>' + (docType === 'estimate' ? 'New Quotation' : 'New Invoice');
+    document.getElementById('docType').value = docType;
+    onDocTypeChange();
+    document.getElementById('invDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('soNumber').value = '';
+    document.getElementById('custName').value = '';
+    document.getElementById('custPhone').value = '';
+    document.getElementById('custEmail').value = '';
+    document.getElementById('custGST').value = '';
+    document.getElementById('custState').value = '';
+    document.getElementById('billAddr').value = '';
+    document.getElementById('shipAddr').value = '';
+    document.getElementById('couponCode').value = '';
+    document.getElementById('couponInfo').innerHTML = '';
+    document.getElementById('manualDisc').value = '';
+    document.getElementById('manualDiscNote').value = '';
+    document.getElementById('termsText').value = 'Goods once sold will not be taken back or exchanged. Payment due within 30 days. Subject to local jurisdiction.';
+    document.getElementById('remarksText').value = '';
+    document.getElementById('isCreditSale').checked = false;
+    document.getElementById('creditBlock').style.display = 'none';
+    document.getElementById('linkedWalkin').value = '';
+    renderLineItems();
+    recalcTotals();
+    new bootstrap.Modal(document.getElementById('invoiceModal')).show();
+}
+
+async function editInvoice(id) {
+    try {
+        const res = await fetch(`/api/v1/partner/sales-invoices/${id}`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        const d = await res.json();
+        if (!d.success) { showToast('Failed to load invoice', 'danger'); return; }
+        const inv = d.data;
+        editingInvoiceId = id;
+        document.getElementById('docType').value = inv.document_type || 'tax_invoice';
+        onDocTypeChange();
+        document.getElementById('invDate').value = inv.invoice_date || '';
+        document.getElementById('soNumber').value = inv.so_number || '';
+        document.getElementById('gstType').value = inv.is_igst ? 'inter' : 'intra';
+        isIGST = inv.is_igst;
+        document.getElementById('custType').value = inv.customer_type || 'WALK_IN';
+        document.getElementById('custName').value = inv.customer_name || '';
+        document.getElementById('custPhone').value = inv.customer_phone || '';
+        document.getElementById('custEmail').value = inv.customer_email || '';
+        document.getElementById('custGST').value = inv.customer_gstin || '';
+        document.getElementById('custState').value = inv.customer_state || '';
+        document.getElementById('billAddr').value = inv.billing_address || '';
+        document.getElementById('shipAddr').value = inv.shipping_address || '';
+        document.getElementById('couponCode').value = inv.coupon_code || '';
+        document.getElementById('manualDisc').value = inv.manual_discount_amount || '';
+        document.getElementById('manualDiscNote').value = inv.manual_discount_note || '';
+        document.getElementById('termsText').value = inv.terms_conditions || '';
+        document.getElementById('remarksText').value = inv.remarks || '';
+        document.getElementById('isCreditSale').checked = inv.is_credit_sale;
+        document.getElementById('creditBlock').style.display = inv.is_credit_sale ? 'block' : 'none';
+        document.getElementById('creditDays').value = inv.credit_days || 30;
+        document.getElementById('dueDate').value = inv.due_date || '';
+        document.getElementById('linkedWalkin').value = inv.linked_walkin_id || '';
+        lineItems = inv.line_items.map(li => ({
+            item_id: li.item_id, item_code: li.item_code, item_description: li.item_description,
+            hsn_id: li.hsn_id, hsn_code: li.hsn_code, quantity: li.quantity, unit_of_measure: li.unit_of_measure,
+            unit_rate: li.unit_rate, mrp: li.mrp, discount_percent: li.discount_percent, gst_rate: li.gst_rate,
+            specification: li.specification, color: li.color, warranty_months: li.warranty_months,
+        }));
+        renderLineItems();
+        recalcTotals();
+        document.getElementById('invoiceModalTitle').innerHTML = `<i class="fas fa-edit me-2"></i>Edit Invoice ${inv.invoice_number}`;
+        new bootstrap.Modal(document.getElementById('invoiceModal')).show();
+    } catch(e) { showToast('Error loading invoice', 'danger'); }
+}
+
+// ─── Line Items ───
+function addLineItem() {
+    lineItems.push({ item_description: '', hsn_code: '', quantity: 1, unit_of_measure: 'PCS', unit_rate: 0, discount_percent: 0, gst_rate: 0 });
+    renderLineItems();
+}
+
+function removeLineItem(idx) { lineItems.splice(idx, 1); renderLineItems(); recalcTotals(); }
+
+function renderLineItems() {
+    const container = document.getElementById('lineItemsContainer');
+    if (!lineItems.length) {
+        container.innerHTML = '<div class="text-muted text-center py-3 border rounded">No items added. Click "Add Item" to begin.</div>';
+        return;
+    }
+    container.innerHTML = lineItems.map((item, i) => `
+        <div class="line-item-row position-relative">
+            <button class="btn btn-sm btn-outline-danger position-absolute" style="top:8px;right:8px;" onclick="removeLineItem(${i})"><i class="fas fa-times"></i></button>
+            <div class="row g-2">
+                <div class="col-md-4 position-relative">
+                    <label class="form-label">Product / Description *</label>
+                    <input type="text" class="form-control" value="${item.item_description||''}" oninput="lineItems[${i}].item_description=this.value;searchItems(${i},this.value)"
+                        placeholder="Search catalog or type custom product..." id="itemDesc${i}">
+                    <div class="autocomplete-results" id="acResults${i}" style="display:none;"></div>
+                </div>
+                <div class="col-md-2 position-relative">
+                    <label class="form-label">HSN Code</label>
+                    <input type="text" class="form-control" value="${item.hsn_code||''}" oninput="lineItems[${i}].hsn_code=this.value;searchHSN(${i},this.value)" id="hsnInp${i}" placeholder="HSN...">
+                    <div class="autocomplete-results" id="hsnResults${i}" style="display:none;"></div>
+                </div>
+                <div class="col-md-1"><label class="form-label">Qty</label><input type="number" class="form-control" value="${item.quantity||1}" min="0.001" step="any" oninput="lineItems[${i}].quantity=+this.value;recalcTotals()"></div>
+                <div class="col-md-1"><label class="form-label">Unit</label>
+                    <select class="form-select" onchange="lineItems[${i}].unit_of_measure=this.value">
+                        ${['PCS','KG','LTR','MTR','SET','BOX','UNIT'].map(u => `<option ${item.unit_of_measure===u?'selected':''}>${u}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-md-2"><label class="form-label">Rate (₹)</label><input type="number" class="form-control" value="${item.unit_rate||0}" min="0" step="0.01" oninput="lineItems[${i}].unit_rate=+this.value;recalcTotals()"></div>
+                <div class="col-md-1"><label class="form-label">Disc%</label><input type="number" class="form-control" value="${item.discount_percent||0}" min="0" max="100" step="0.01" oninput="lineItems[${i}].discount_percent=+this.value;recalcTotals()"></div>
+                <div class="col-md-1"><label class="form-label">GST%</label><input type="number" class="form-control" value="${item.gst_rate||0}" min="0" max="28" step="0.01" id="gstRate${i}" oninput="lineItems[${i}].gst_rate=+this.value;recalcTotals()"></div>
+            </div>
+            <div class="row g-2 mt-1">
+                <div class="col-md-4"><input type="text" class="form-control form-control-sm" value="${item.specification||''}" placeholder="Specification / model" oninput="lineItems[${i}].specification=this.value"></div>
+                <div class="col-md-2"><input type="number" class="form-control form-control-sm" value="${item.warranty_months||0}" min="0" placeholder="Warranty (months)" oninput="lineItems[${i}].warranty_months=+this.value"></div>
+                <div class="col-auto ms-auto"><small class="text-success fw-600">Line Total: ₹${calcLineTotal(item)}</small></div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function calcLineTotal(item) {
+    const qty = +(item.quantity || 1);
+    const rate = +(item.unit_rate || 0);
+    const disc = +(item.discount_percent || 0);
+    const gst = +(item.gst_rate || 0);
+    const gross = qty * rate;
+    const discAmt = gross * disc / 100;
+    const taxable = gross - discAmt;
+    const tax = taxable * gst / 100;
+    return (taxable + tax).toFixed(2);
+}
+
+// ─── HSN / Product Autocomplete ───
+let hsnTimer = null;
+let itemTimer = null;
+
+async function searchHSN(idx, val) {
+    clearTimeout(hsnTimer);
+    if (val.length < 2) { document.getElementById(`hsnResults${idx}`).style.display = 'none'; return; }
+    hsnTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/v1/partner/hsn-search?search=${encodeURIComponent(val)}&per_page=8`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+            const d = await res.json();
+            const box = document.getElementById(`hsnResults${idx}`);
+            if (!d.success || !d.data.length) { box.style.display = 'none'; return; }
+            box.style.display = 'block';
+            box.innerHTML = d.data.map(h => `
+                <div class="autocomplete-item" onclick="selectHSN(${idx}, '${h.hsn_code}', ${h.id}, ${h.gst_rate})">
+                    <strong>${h.hsn_code}</strong> — ${h.description} <small class="text-muted">(GST: ${h.gst_rate}%)</small>
+                </div>
+            `).join('');
+        } catch(e) {}
+    }, 300);
+}
+
+function selectHSN(idx, code, id, gstRate) {
+    lineItems[idx].hsn_code = code;
+    lineItems[idx].hsn_id = id;
+    lineItems[idx].gst_rate = gstRate;
+    document.getElementById(`hsnInp${idx}`).value = code;
+    document.getElementById(`gstRate${idx}`).value = gstRate;
+    document.getElementById(`hsnResults${idx}`).style.display = 'none';
+    recalcTotals();
+}
+
+async function searchItems(idx, val) {
+    clearTimeout(itemTimer);
+    if (val.length < 2) { const b = document.getElementById(`acResults${idx}`); if (b) b.style.display = 'none'; return; }
+    itemTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/v1/partner/stock-items-search?search=${encodeURIComponent(val)}&per_page=12`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+            const d = await res.json();
+            const box = document.getElementById(`acResults${idx}`);
+            if (!box) return;
+            box.style.display = 'block';
+            let rows = '';
+            if (d.success && d.data && d.data.length) {
+                const sourceBadgeStyle = {
+                    stock:        'background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:600',
+                    global_stock: 'background:#e0e7ff;color:#3730a3;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:600',
+                    marketplace:  'background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;font-size:10px;font-weight:600',
+                };
+                rows = d.data.map(it => {
+                    const badge = it.source ? `<span style="${sourceBadgeStyle[it.source]||''}">${it.source_label||it.source}</span>` : '';
+                    const price = it.selling_price ? `<small class="text-success ms-2">₹${parseFloat(it.selling_price).toFixed(2)}</small>` : '';
+                    const code  = it.item_code ? `<small class="text-muted ms-1">(${it.item_code})</small>` : '';
+                    return `<div class="autocomplete-item" onclick="selectItem(${idx}, ${JSON.stringify(it).replace(/"/g,'&quot;')})">
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                            <strong>${it.item_name}</strong>${code}${price}
+                            <span style="margin-left:auto">${badge}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+            const customLabel = val.length > 2 ? val : '';
+            rows += `<div class="autocomplete-item text-primary" style="border-top:1px solid #dee2e6;font-size:0.85rem;" onclick="addCustomItem(${idx}, '${customLabel.replace(/'/g,"\\'")}')">
+                        <i class="fas fa-plus-circle me-1"></i> Add <b>${customLabel || 'this'}</b> as custom item
+                     </div>`;
+            box.innerHTML = rows;
+        } catch(e) {}
+    }, 300);
+}
+
+function addCustomItem(idx, name) {
+    lineItems[idx].item_id = null;
+    lineItems[idx].item_code = '';
+    lineItems[idx].item_description = name;
+    lineItems[idx].hsn_code = '';
+    lineItems[idx].hsn_id = null;
+    lineItems[idx].unit_of_measure = 'PCS';
+    lineItems[idx].unit_rate = 0;
+    lineItems[idx].mrp = null;
+    renderLineItems();
+    document.getElementById(`acResults${idx}`).style.display = 'none';
+    recalcTotals();
+}
+
+function selectItem(idx, item) {
+    lineItems[idx].item_id = item.id;
+    lineItems[idx].item_code = item.item_code;
+    lineItems[idx].item_description = item.item_name;
+    lineItems[idx].hsn_code = item.hsn_code || '';
+    lineItems[idx].hsn_id = item.hsn_id || null;
+    lineItems[idx].unit_of_measure = item.unit_of_measure || 'PCS';
+    lineItems[idx].unit_rate = item.selling_price || 0;
+    lineItems[idx].mrp = item.mrp || null;
+    renderLineItems();
+    if (item.hsn_code) {
+        document.getElementById(`hsnInp${idx}`).value = item.hsn_code;
+    }
+    document.getElementById(`acResults${idx}`).style.display = 'none';
+    recalcTotals();
+}
+
+// ─── Totals Calculation ───
+function recalcTotals() {
+    let subtotal = 0, totalDisc = 0, taxable = 0, totalCGST = 0, totalSGST = 0, totalIGST = 0;
+    lineItems.forEach(item => {
+        const qty = +(item.quantity || 1);
+        const rate = +(item.unit_rate || 0);
+        const disc = +(item.discount_percent || 0);
+        const gst = +(item.gst_rate || 0);
+        const gross = qty * rate;
+        const discAmt = gross * disc / 100;
+        const tax = (gross - discAmt);
+        const taxAmt = tax * gst / 100;
+        subtotal += gross;
+        totalDisc += discAmt;
+        taxable += tax;
+        if (isIGST) { totalIGST += taxAmt; }
+        else { totalCGST += taxAmt / 2; totalSGST += taxAmt / 2; }
+    });
+    const totalTax = isIGST ? totalIGST : totalCGST + totalSGST;
+    const grand = Math.round(taxable + totalTax);
+    const couponDisc = couponApplied ? (taxable * couponApplied.pct / 100) : 0;
+    const manualDisc = +(document.getElementById('manualDisc').value || 0);
+    const netPay = grand - couponDisc - manualDisc;
+
+    document.getElementById('gSubtotal').textContent = '₹' + fmtD(subtotal);
+    document.getElementById('gDiscount').textContent = '-₹' + fmtD(totalDisc);
+    document.getElementById('gTaxable').textContent = '₹' + fmtD(taxable);
+    document.getElementById('gCGST').textContent = '₹' + fmtD(totalCGST);
+    document.getElementById('gSGST').textContent = '₹' + fmtD(totalSGST);
+    document.getElementById('gIGST').textContent = '₹' + fmtD(totalIGST);
+    document.getElementById('gGrandTotal').textContent = '₹' + fmtD(grand);
+
+    document.getElementById('igstRow').style.display = isIGST ? '' : 'none';
+    document.getElementById('cgstRow').style.display = isIGST ? 'none' : '';
+    document.getElementById('sgstRow').style.display = isIGST ? 'none' : '';
+
+    const hasCoupon = couponApplied && couponDisc > 0;
+    document.getElementById('couponRow').style.display = hasCoupon ? '' : 'none';
+    if (hasCoupon) document.getElementById('gCoupon').textContent = '-₹' + fmtD(couponDisc);
+
+    const hasManual = manualDisc > 0;
+    document.getElementById('manualRow').style.display = hasManual ? '' : 'none';
+    if (hasManual) document.getElementById('gManual').textContent = '-₹' + fmtD(manualDisc);
+
+    document.getElementById('netPayRow').style.display = (hasCoupon || hasManual) ? '' : 'none';
+    document.getElementById('gNetPay').textContent = '₹' + fmtD(netPay);
+}
+
+function onGstTypeChange() { isIGST = document.getElementById('gstType').value === 'inter'; recalcTotals(); }
+function onDocTypeChange() {
+    const isEstimate = document.getElementById('docType').value === 'estimate';
+    const bar = document.getElementById('solarTemplateBar');
+    if (bar) {
+        bar.style.display = isEstimate ? '' : 'none';
+        if (!isEstimate) {
+            document.getElementById('solarCapacity').value = '';
+            const cfg = document.getElementById('solarConfigPanel');
+            if (cfg) cfg.style.display = 'none';
+        }
+    }
+}
+function onCustStateChange() {}
+
+// ─── DC_SOLAR_TEMPLATE_001: Solar quick-fill preset ───────────────────────
+const SOLAR_TEMPLATES = {
+    '1KW': [
+        { item_description: 'Monocrystalline Solar Panel (395Wp)', hsn_code: '85414011', quantity: 3,  unit_of_measure: 'NOS', unit_rate: 8500,  discount_percent: 0, gst_rate: 5,  specification: '395Wp, 24V, Tier-1 Module — 25 yr performance warranty', warranty_months: 300 },
+        { item_description: 'On-Grid Solar Inverter (1 KVA)',       hsn_code: '85044030', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 14000, discount_percent: 0, gst_rate: 12, specification: '1 KVA, Single Phase, Grid-Tie with Wi-Fi',               warranty_months: 60  },
+        { item_description: 'GI Mounting Structure',                hsn_code: '73089090', quantity: 1,  unit_of_measure: 'SET', unit_rate: 8000,  discount_percent: 0, gst_rate: 18, specification: 'Hot-Dip Galvanised, Rooftop (RCC / Sheet)',               warranty_months: 0   },
+        { item_description: 'AC/DC Cables & MC4 Connectors',        hsn_code: '85444290', quantity: 1,  unit_of_measure: 'SET', unit_rate: 4500,  discount_percent: 0, gst_rate: 18, specification: 'Solar-grade DC cable, 4mm² + AC armoured cable',          warranty_months: 0   },
+        { item_description: 'Wi-Fi Solar Monitoring System',        hsn_code: '85176290', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 3500,  discount_percent: 0, gst_rate: 18, specification: 'Mobile App + Cloud Dashboard monitoring',                  warranty_months: 12  },
+        { item_description: 'Installation & Commissioning Charges', hsn_code: '995443',   quantity: 1,  unit_of_measure: 'JOB', unit_rate: 5000,  discount_percent: 0, gst_rate: 18, specification: '1 KW On-Grid Rooftop Solar System',                       warranty_months: 0   },
+    ],
+    '3KW': [
+        { item_description: 'Monocrystalline Solar Panel (395Wp)', hsn_code: '85414011', quantity: 8,  unit_of_measure: 'NOS', unit_rate: 8500,  discount_percent: 0, gst_rate: 5,  specification: '395Wp, 24V, Tier-1 Module — 25 yr performance warranty', warranty_months: 300 },
+        { item_description: 'On-Grid Solar Inverter (3 KVA)',       hsn_code: '85044030', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 32000, discount_percent: 0, gst_rate: 12, specification: '3 KVA, Single Phase, Grid-Tie with Wi-Fi',               warranty_months: 60  },
+        { item_description: 'GI Mounting Structure',                hsn_code: '73089090', quantity: 1,  unit_of_measure: 'SET', unit_rate: 18000, discount_percent: 0, gst_rate: 18, specification: 'Hot-Dip Galvanised, Rooftop (RCC / Sheet)',               warranty_months: 0   },
+        { item_description: 'AC/DC Cables & MC4 Connectors',        hsn_code: '85444290', quantity: 1,  unit_of_measure: 'SET', unit_rate: 6000,  discount_percent: 0, gst_rate: 18, specification: 'Solar-grade DC cable, 4mm² + AC armoured cable',          warranty_months: 0   },
+        { item_description: 'Wi-Fi Solar Monitoring System',        hsn_code: '85176290', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 3500,  discount_percent: 0, gst_rate: 18, specification: 'Mobile App + Cloud Dashboard monitoring',                  warranty_months: 12  },
+        { item_description: 'Installation & Commissioning Charges', hsn_code: '995443',   quantity: 1,  unit_of_measure: 'JOB', unit_rate: 12000, discount_percent: 0, gst_rate: 18, specification: '3 KW On-Grid Rooftop Solar System',                       warranty_months: 0   },
+    ],
+    '5KW': [
+        { item_description: 'Monocrystalline Solar Panel (395Wp)', hsn_code: '85414011', quantity: 13, unit_of_measure: 'NOS', unit_rate: 8500,  discount_percent: 0, gst_rate: 5,  specification: '395Wp, 24V, Tier-1 Module — 25 yr performance warranty', warranty_months: 300 },
+        { item_description: 'On-Grid Solar Inverter (5 KVA)',       hsn_code: '85044030', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 48000, discount_percent: 0, gst_rate: 12, specification: '5 KVA, Single Phase, Grid-Tie with Wi-Fi',               warranty_months: 60  },
+        { item_description: 'GI Mounting Structure',                hsn_code: '73089090', quantity: 1,  unit_of_measure: 'SET', unit_rate: 28000, discount_percent: 0, gst_rate: 18, specification: 'Hot-Dip Galvanised, Rooftop (RCC / Sheet)',               warranty_months: 0   },
+        { item_description: 'AC/DC Cables & MC4 Connectors',        hsn_code: '85444290', quantity: 1,  unit_of_measure: 'SET', unit_rate: 8000,  discount_percent: 0, gst_rate: 18, specification: 'Solar-grade DC cable, 4mm² + AC armoured cable',          warranty_months: 0   },
+        { item_description: 'Wi-Fi Solar Monitoring System',        hsn_code: '85176290', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 3500,  discount_percent: 0, gst_rate: 18, specification: 'Mobile App + Cloud Dashboard monitoring',                  warranty_months: 12  },
+        { item_description: 'Installation & Commissioning Charges', hsn_code: '995443',   quantity: 1,  unit_of_measure: 'JOB', unit_rate: 18000, discount_percent: 0, gst_rate: 18, specification: '5 KW On-Grid Rooftop Solar System',                       warranty_months: 0   },
+    ],
+    '10KW': [
+        { item_description: 'Monocrystalline Solar Panel (395Wp)', hsn_code: '85414011', quantity: 26, unit_of_measure: 'NOS', unit_rate: 8500,  discount_percent: 0, gst_rate: 5,  specification: '395Wp, 24V, Tier-1 Module — 25 yr performance warranty', warranty_months: 300 },
+        { item_description: 'On-Grid Solar Inverter (10 KVA)',      hsn_code: '85044030', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 85000, discount_percent: 0, gst_rate: 12, specification: '10 KVA, Three Phase, Grid-Tie with Wi-Fi',              warranty_months: 60  },
+        { item_description: 'GI Mounting Structure',                hsn_code: '73089090', quantity: 1,  unit_of_measure: 'SET', unit_rate: 52000, discount_percent: 0, gst_rate: 18, specification: 'Hot-Dip Galvanised, Rooftop (RCC / Sheet)',               warranty_months: 0   },
+        { item_description: 'AC/DC Cables & MC4 Connectors',        hsn_code: '85444290', quantity: 1,  unit_of_measure: 'SET', unit_rate: 14000, discount_percent: 0, gst_rate: 18, specification: 'Solar-grade DC cable, 6mm² + AC armoured cable',          warranty_months: 0   },
+        { item_description: 'Wi-Fi Solar Monitoring System',        hsn_code: '85176290', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 3500,  discount_percent: 0, gst_rate: 18, specification: 'Mobile App + Cloud Dashboard monitoring',                  warranty_months: 12  },
+        { item_description: 'Installation & Commissioning Charges', hsn_code: '995443',   quantity: 1,  unit_of_measure: 'JOB', unit_rate: 32000, discount_percent: 0, gst_rate: 18, specification: '10 KW On-Grid Rooftop Solar System',                      warranty_months: 0   },
+    ],
+    'CUSTOM': [
+        { item_description: 'Solar Panels',                         hsn_code: '85414011', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 0, discount_percent: 0, gst_rate: 5,  specification: '', warranty_months: 0 },
+        { item_description: 'On-Grid Solar Inverter',               hsn_code: '85044030', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 0, discount_percent: 0, gst_rate: 12, specification: '', warranty_months: 0 },
+        { item_description: 'Mounting Structure',                   hsn_code: '73089090', quantity: 1,  unit_of_measure: 'SET', unit_rate: 0, discount_percent: 0, gst_rate: 18, specification: '', warranty_months: 0 },
+        { item_description: 'AC/DC Cables & Connectors',            hsn_code: '85444290', quantity: 1,  unit_of_measure: 'SET', unit_rate: 0, discount_percent: 0, gst_rate: 18, specification: '', warranty_months: 0 },
+        { item_description: 'Wi-Fi Monitoring System',              hsn_code: '85176290', quantity: 1,  unit_of_measure: 'NOS', unit_rate: 0, discount_percent: 0, gst_rate: 18, specification: '', warranty_months: 0 },
+        { item_description: 'Installation & Commissioning Charges', hsn_code: '995443',   quantity: 1,  unit_of_measure: 'JOB', unit_rate: 0, discount_percent: 0, gst_rate: 18, specification: '', warranty_months: 0 },
+    ],
+};
+
+// Tracks the current applied solar capacity so config changes know which template is active
+let _solarCap = '';
+
+function applySolarTemplate() {
+    const cap = document.getElementById('solarCapacity').value;
+    if (!cap) { showToast('Please select a capacity first', 'warning'); return; }
+    const tpl = SOLAR_TEMPLATES[cap];
+    if (!tpl) return;
+    if (lineItems.length && !confirm('This will replace the existing line items with the solar template. Continue?')) return;
+    _solarCap = cap;
+    lineItems = tpl.map(item => ({ ...item }));
+    // Reset config fields and pre-fill panel count from template
+    const panelItem = tpl[0];
+    const setV = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+    setV('sc_panelBrand', ''); setV('sc_panelWattage', ''); setV('sc_panelWarranty', '');
+    setV('sc_invBrand', '');   setV('sc_invModel', '');
+    setV('sc_structType', ''); setV('sc_cableSpec', ''); setV('sc_monBrand', ''); setV('sc_notes', '');
+    if (document.getElementById('sc_panelCount')) document.getElementById('sc_panelCount').value = panelItem ? panelItem.quantity : '';
+    // Show config panel
+    const cfg = document.getElementById('solarConfigPanel');
+    if (cfg) cfg.style.display = '';
+    renderLineItems();
+    recalcTotals();
+    const label = cap === 'CUSTOM' ? 'Custom solar template' : `${cap} On-Grid solar template`;
+    showToast(`${label} applied — fill in brand/model details below if needed`, 'success');
+}
+
+function onSolarConfigChange() {
+    if (!_solarCap || !lineItems.length) return;
+    const gV = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+
+    const panelBrand   = gV('sc_panelBrand');
+    const panelWattage = gV('sc_panelWattage');
+    const panelCount   = parseInt(gV('sc_panelCount')) || null;
+    const panelWarr    = gV('sc_panelWarranty');
+    const invBrand     = gV('sc_invBrand');
+    const invModel     = gV('sc_invModel');
+    const structType   = gV('sc_structType');
+    const cableSpec    = gV('sc_cableSpec');
+    const monBrand     = gV('sc_monBrand');
+    const notes        = gV('sc_notes');
+
+    const tpl = SOLAR_TEMPLATES[_solarCap];
+    if (!tpl) return;
+
+    lineItems.forEach((item, i) => {
+        const base = tpl[i];
+        if (!base) return;
+        const baseDesc = base.item_description;
+
+        if (i === 0) {
+            // ── Solar Panel ──
+            const watt   = panelWattage || baseDesc.match(/\(([^)]+)\)/)?.[1] || '';
+            const brand  = panelBrand;
+            item.item_description = brand
+                ? `${brand} Solar Panel${watt ? ' (' + watt + ')' : ''}`
+                : (watt ? `Monocrystalline Solar Panel (${watt})` : base.item_description);
+            if (panelCount) item.quantity = panelCount;
+            // Build specification — only include non-empty parts
+            const specParts = [];
+            if (watt)      specParts.push(watt);
+            if (panelWarr) specParts.push(panelWarr + ' warranty');
+            else           specParts.push('25 yr performance warranty');
+            item.specification = specParts.join(' · ');
+
+        } else if (i === 1) {
+            // ── Inverter ──
+            const cap = _solarCap !== 'CUSTOM' ? _solarCap.replace('KW', ' KVA') : '';
+            const phase = (parseInt(_solarCap) >= 10) ? 'Three Phase' : 'Single Phase';
+            item.item_description = invBrand
+                ? `${invBrand} On-Grid Solar Inverter${cap ? ' (' + cap + ')' : ''}`
+                : base.item_description;
+            const specParts = [];
+            if (cap)     specParts.push(cap);
+            if (phase)   specParts.push(phase);
+            if (invModel) specParts.push(invModel);
+            else          specParts.push('Grid-Tie with Wi-Fi');
+            item.specification = specParts.join(', ');
+
+        } else if (i === 2) {
+            // ── Mounting Structure ──
+            item.item_description = base.item_description;
+            const specParts = ['Hot-Dip Galvanised'];
+            if (structType) specParts.push(structType + ' Rooftop');
+            else specParts.push('Rooftop (RCC / Sheet)');
+            item.specification = specParts.join(', ');
+
+        } else if (i === 3) {
+            // ── Cables ──
+            item.item_description = base.item_description;
+            const specParts = [];
+            if (cableSpec) specParts.push('Solar-grade DC cable, ' + cableSpec);
+            else specParts.push('Solar-grade DC cable');
+            specParts.push('AC armoured cable');
+            item.specification = specParts.join(' + ');
+
+        } else if (i === 4) {
+            // ── Monitoring ──
+            item.item_description = monBrand
+                ? `${monBrand} Solar Monitoring System`
+                : base.item_description;
+            item.specification = 'Mobile App + Cloud Dashboard monitoring';
+
+        } else if (i === 5) {
+            // ── Installation ──
+            item.item_description = base.item_description;
+            const specParts = [];
+            if (_solarCap !== 'CUSTOM') specParts.push(`${_solarCap} On-Grid Rooftop Solar System`);
+            if (notes) specParts.push(notes);
+            item.specification = specParts.join(' · ') || base.specification;
+        }
+    });
+
+    renderLineItems();
+}
+function onSameAddr() {
+    const same = document.getElementById('sameAddr').checked;
+    document.getElementById('shipAddr').value = same ? document.getElementById('billAddr').value : '';
+    document.getElementById('shipAddr').disabled = same;
+}
+function onCreditToggle() { document.getElementById('creditBlock').style.display = document.getElementById('isCreditSale').checked ? 'block' : 'none'; }
+
+// ─── Coupon — DC_COUPON_VALIDATE_001: validate first (no save required), apply to DB if saved ───
+async function applyCoupon() {
+    const code = document.getElementById('couponCode').value.trim().toUpperCase();
+    if (!code) return;
+    const infoEl = document.getElementById('couponInfo');
+    infoEl.innerHTML = '<small class="text-muted">Validating...</small>';
+    try {
+        // Step 1: validate without requiring a saved invoice (read-only)
+        const vRes = await fetch(`/api/v1/partner/coupon-validate?code=${encodeURIComponent(code)}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const v = await vRes.json();
+        if (!v.valid) {
+            couponApplied = null;
+            infoEl.innerHTML = `<div class="alert alert-danger py-1 mt-2">${v.message || 'Invalid or expired coupon'}</div>`;
+            recalcTotals();
+            return;
+        }
+
+        // Step 2: store validated coupon for live preview (works before and after save)
+        couponApplied = { code: v.coupon_code, pct: v.discount_percent };
+        recalcTotals();
+        const previewDisc = (parseFloat(document.getElementById('gTaxable').textContent.replace(/[^\d.]/g,'')) * v.discount_percent / 100).toFixed(2);
+        let infoHtml = `<div class="alert alert-success py-1 mt-2">✓ Coupon valid: <b>${v.discount_percent}% off</b>`;
+        if (v.description) infoHtml += ` — ${v.description}`;
+        infoHtml += `</div>`;
+        infoEl.innerHTML = infoHtml;
+        showToast(`Coupon ${v.coupon_code} applied!`, 'success');
+
+        // Step 3: if invoice already saved, persist to DB too
+        if (editingInvoiceId) {
+            const aRes = await fetch(`/api/v1/partner/sales-invoices/${editingInvoiceId}/coupon`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({ coupon_code: code })
+            });
+            const a = await aRes.json();
+            if (!a.success) {
+                infoEl.innerHTML += `<div class="alert alert-warning py-1 mt-1" style="font-size:0.8rem;">Preview applied — will save with invoice.</div>`;
+            }
+        }
+    } catch(e) { showToast('Error validating coupon', 'danger'); }
+}
+
+// ─── Save Invoice ───
+async function saveInvoice(status = 'DRAFT') {
+    const custName = document.getElementById('custName').value.trim();
+    if (!custName) { showToast('Customer name is required', 'danger'); return; }
+    const custPhone = document.getElementById('custPhone').value.trim();
+    if (!custPhone) { showToast('Customer mobile number is required', 'danger'); document.getElementById('custPhone').focus(); return; }
+    if (!lineItems.length) { showToast('Add at least one line item', 'danger'); return; }
+
+    const payload = {
+        document_type: document.getElementById('docType').value,
+        invoice_date: document.getElementById('invDate').value,
+        customer_type: document.getElementById('custType').value,
+        customer_name: custName,
+        customer_phone: custPhone || null,
+        customer_email: document.getElementById('custEmail').value.trim() || null,
+        customer_gstin: document.getElementById('custGST').value.trim() || null,
+        customer_state: document.getElementById('custState').value || null,
+        billing_address: document.getElementById('billAddr').value.trim() || null,
+        shipping_address: document.getElementById('shipAddr').value.trim() || null,
+        is_igst: isIGST,
+        so_number: document.getElementById('soNumber').value.trim() || null,
+        terms_conditions: document.getElementById('termsText').value.trim() || null,
+        remarks: document.getElementById('remarksText').value.trim() || null,
+        is_credit_sale: document.getElementById('isCreditSale').checked,
+        credit_days: +(document.getElementById('creditDays').value || 0),
+        due_date: document.getElementById('dueDate').value || null,
+        payment_mode: document.getElementById('payMode').value || null,
+        linked_walkin_id: +(document.getElementById('linkedWalkin').value) || null,
+        manual_discount_amount: +(document.getElementById('manualDisc').value || 0),
+        manual_discount_note: document.getElementById('manualDiscNote').value.trim() || null,
+        coupon_code: couponApplied ? couponApplied.code : null,
+        line_items: lineItems,
+    };
+
+    const btn = document.getElementById('saveDraftBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+    try {
+        let res, d;
+        if (editingInvoiceId) {
+            // Update line items
+            res = await fetch(`/api/v1/partner/sales-invoices/${editingInvoiceId}/line-items`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify({ line_items: lineItems })
+            });
+            d = await res.json();
+        } else {
+            res = await fetch('/api/v1/partner/sales-invoices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+                body: JSON.stringify(payload)
+            });
+            d = await res.json();
+        }
+
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-2"></i>Save Draft';
+        if (res.status === 401 || res.status === 403) {
+            showToast('Session expired — please log in again', 'danger');
+            setTimeout(() => { window.location.href = '/partner/login'; }, 2500);
+            return;
+        }
+        if (d.success) {
+            showToast(`Invoice ${d.invoice_number || 'saved'} successfully!`, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('invoiceModal')).hide();
+            loadSummary(); loadInvoices();
+        } else {
+            showToast(d.detail || 'Failed to save invoice', 'danger');
+        }
+    } catch(e) {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-2"></i>Save Draft';
+        showToast('Network error', 'danger');
+    }
+}
+
+async function saveAndConfirm() {
+    await saveInvoice('DRAFT');
+    // After save, confirm if editingInvoiceId was set
+}
+
+async function confirmInvoice(id) {
+    if (!confirm('Confirm this invoice? This will change the status to CONFIRMED and lock editing.')) return;
+    try {
+        const res = await fetch(`/api/v1/partner/sales-invoices/${id}/confirm`, {
+            method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const d = await res.json();
+        if (d.success) { showToast('Invoice confirmed: ' + d.invoice_number, 'success'); loadInvoices(); loadSummary(); }
+        else showToast(d.detail || 'Failed to confirm', 'danger');
+    } catch(e) { showToast('Error', 'danger'); }
+}
+
+// ─── View Invoice ───
+async function viewInvoice(id) {
+    document.getElementById('viewModalBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+    new bootstrap.Modal(document.getElementById('viewModal')).show();
+    try {
+        const res = await fetch(`/api/v1/partner/sales-invoices/${id}`, { headers: { 'Authorization': 'Bearer ' + getToken() } });
+        const d = await res.json();
+        if (!d.success) return;
+        const inv = d.data;
+        const itemsHtml = inv.line_items.map((li, i) => `
+            <tr>
+                <td>${i+1}</td>
+                <td>${li.item_description}${li.hsn_code ? `<br><small class="text-muted">HSN: ${li.hsn_code}</small>` : ''}</td>
+                <td>${li.quantity} ${li.unit_of_measure}</td>
+                <td>₹${fmtD(li.unit_rate)}</td>
+                <td>${li.discount_percent}%</td>
+                <td>${li.gst_rate}%</td>
+                <td class="fw-600">₹${fmtD(li.line_total)}</td>
+            </tr>
+        `).join('');
+
+        document.getElementById('viewModalBody').innerHTML = `
+            <div class="row mb-3">
+                <div class="col-md-6"><strong>Invoice #:</strong> <span class="inv-number">${inv.invoice_number}</span></div>
+                <div class="col-md-6"><strong>Date:</strong> ${fdate(inv.invoice_date)}</div>
+                <div class="col-md-6 mt-2"><strong>Customer:</strong> ${inv.customer_name}</div>
+                <div class="col-md-6 mt-2"><strong>Phone:</strong> ${inv.customer_phone || '—'}</div>
+                <div class="col-md-6 mt-2"><strong>GSTIN:</strong> ${inv.customer_gstin || '—'}</div>
+                <div class="col-md-6 mt-2"><strong>State:</strong> ${inv.customer_state || '—'}</div>
+                <div class="col-md-6 mt-2"><strong>Billing:</strong> ${inv.billing_address || '—'}</div>
+                <div class="col-md-6 mt-2"><strong>Shipping:</strong> ${inv.shipping_address || '—'}</div>
+            </div>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light"><tr><th>#</th><th>Description</th><th>Qty</th><th>Rate</th><th>Disc</th><th>GST</th><th>Total</th></tr></thead>
+                    <tbody>${itemsHtml}</tbody>
+                </table>
+            </div>
+            <div class="row">
+                <div class="col-md-6 offset-md-6">
+                    <table class="table table-sm">
+                        <tr><td>Subtotal</td><td class="text-end">₹${fmtD(inv.subtotal)}</td></tr>
+                        ${inv.total_discount > 0 ? `<tr><td>Discount</td><td class="text-end text-danger">-₹${fmtD(inv.total_discount)}</td></tr>` : ''}
+                        <tr><td>Taxable Amount</td><td class="text-end">₹${fmtD(inv.taxable_amount)}</td></tr>
+                        ${inv.is_igst ? `<tr><td>IGST</td><td class="text-end">₹${fmtD(inv.igst_amount)}</td></tr>` : `
+                            <tr><td>CGST</td><td class="text-end">₹${fmtD(inv.cgst_amount)}</td></tr>
+                            <tr><td>SGST</td><td class="text-end">₹${fmtD(inv.sgst_amount)}</td></tr>
+                        `}
+                        <tr class="fw-700 table-success"><td>Grand Total</td><td class="text-end">₹${fmtD(inv.grand_total)}</td></tr>
+                        ${inv.coupon_discount_amount > 0 ? `<tr><td>Coupon (${inv.coupon_code})</td><td class="text-end text-warning">-₹${fmtD(inv.coupon_discount_amount)}</td></tr>` : ''}
+                        ${inv.manual_discount_amount > 0 ? `<tr><td>Manual Discount</td><td class="text-end text-warning">-₹${fmtD(inv.manual_discount_amount)}</td></tr>` : ''}
+                        ${(inv.coupon_discount_amount > 0 || inv.manual_discount_amount > 0) ? `<tr class="fw-700"><td>Net Payable</td><td class="text-end">₹${fmtD(inv.net_payable)}</td></tr>` : ''}
+                        <tr><td>Amount Received</td><td class="text-end text-success">₹${fmtD(inv.amount_received)}</td></tr>
+                        <tr><td>Balance Due</td><td class="text-end text-danger">₹${fmtD(inv.balance_due)}</td></tr>
+                    </table>
+                </div>
+            </div>
+            ${inv.terms_conditions ? `<div class="mt-3"><strong>Terms:</strong><br><small class="text-muted">${inv.terms_conditions}</small></div>` : ''}
+            <div class="mt-3 text-center"><small class="text-muted">Powered by Myntreal | Partner: ${inv.partner_id || ''}</small></div>
+        `;
+        const actions = document.getElementById('viewModalActions');
+        actions.innerHTML = `
+            <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button class="btn btn-outline-danger" onclick="downloadPDF(${inv.id})"><i class="fas fa-file-pdf me-1"></i>PDF</button>
+            <button class="btn btn-outline-success" onclick="shareWhatsapp(${inv.id},'${inv.invoice_number}')"><i class="fab fa-whatsapp me-1"></i>WhatsApp</button>
+            ${inv.status === 'DRAFT' ? `<button class="btn btn-success" onclick="confirmInvoice(${inv.id});bootstrap.Modal.getInstance(document.getElementById('viewModal')).hide()">Confirm</button>` : ''}
+            ${inv.status === 'CONFIRMED' && inv.payment_status !== 'PAID' ? `<button class="btn btn-primary" onclick="openPayment(${inv.id});bootstrap.Modal.getInstance(document.getElementById('viewModal')).hide()">Record Payment</button>` : ''}
+        `;
+    } catch(e) { showToast('Error loading invoice', 'danger'); }
+}
+
+// ─── Payment ───
+function openPayment(id) {
+    payingInvoiceId = id;
+    document.getElementById('payAmount').value = '';
+    document.getElementById('payRef').value = '';
+    document.getElementById('payNotes').value = '';
+    document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
+    new bootstrap.Modal(document.getElementById('paymentModal')).show();
+}
+
+async function submitPayment() {
+    const amount = +(document.getElementById('payAmount').value);
+    if (!amount || amount <= 0) { showToast('Enter a valid amount', 'danger'); return; }
+    try {
+        const res = await fetch(`/api/v1/partner/sales-invoices/${payingInvoiceId}/payment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+            body: JSON.stringify({
+                amount,
+                payment_mode: document.getElementById('payModeRec').value,
+                payment_date: document.getElementById('payDate').value,
+                reference_number: document.getElementById('payRef').value || null,
+                notes: document.getElementById('payNotes').value || null,
+            })
+        });
+        const d = await res.json();
+        if (d.success) {
+            showToast(`Payment recorded! Status: ${d.payment_status}. Balance: ₹${fmtD(d.balance_due)}`, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+            loadInvoices(); loadSummary();
+        } else showToast(d.detail || 'Failed', 'danger');
+    } catch(e) { showToast('Error', 'danger'); }
+}
+
+// ─── PDF / Share / Export ───
+async function downloadPDF(id) {
+    window.open(`/api/v1/partner/sales-invoices/${id}/pdf?Authorization=${encodeURIComponent('Bearer ' + getToken())}`, '_blank');
+}
+
+function shareWhatsapp(id, invNum) {
+    const url = window.location.origin + `/api/v1/partner/sales-invoices/${id}/pdf`;
+    const msg = `Hi, please find your invoice ${invNum} here: ${url}`;
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function exportGST() {
+    const checksHtml = EXPORT_COLS.map(c => `
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="ec_${c.replace(/\s/g,'_')}" checked>
+            <label class="form-check-label">${c}</label>
+        </div>
+    `).join('');
+    document.getElementById('exportColChecks').innerHTML = checksHtml;
+    new bootstrap.Modal(document.getElementById('exportModal')).show();
+}
+
+function doExport() {
+    const selected = EXPORT_COLS.filter(c => document.getElementById('ec_' + c.replace(/\s/g,'_')).checked);
+    let url = `/api/v1/partner/sales-invoices/export/gst?${getDateParams()}&columns=${encodeURIComponent(selected.join(','))}`;
+    const a = document.createElement('a');
+    a.href = url;
+    a.click();
+    bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+}
+
+// ─── Pagination ───
+function renderPagination(total, page, perPage) {
+    const pages = Math.max(1, Math.ceil(total / perPage));
+    const container = document.getElementById('paginationRow');
+    if (pages <= 1) { container.innerHTML = ''; return; }
+    let html = `<small class="text-muted">${(page-1)*perPage+1}–${Math.min(page*perPage,total)} of ${total}</small><div class="d-flex gap-1">`;
+    if (page > 1) html += `<button class="btn btn-outline-secondary btn-sm" onclick="goPage(${page-1})">← Prev</button>`;
+    for (let p = Math.max(1,page-2); p <= Math.min(pages,page+2); p++) {
+        html += `<button class="btn btn-sm ${p===page?'btn-success':'btn-outline-secondary'}" onclick="goPage(${p})">${p}</button>`;
+    }
+    if (page < pages) html += `<button class="btn btn-outline-secondary btn-sm" onclick="goPage(${page+1})">Next →</button>`;
+    html += '</div>';
+    container.innerHTML = html;
+}
+function goPage(p) { currentPage = p; loadInvoices(); }
+
+// ─── Helpers ───
+function getToken() { return localStorage.getItem('partner_token') || ''; }
+function fmt(n) { return Number(n||0).toLocaleString('en-IN', {maximumFractionDigits:0}); }
+function fmtD(n) { return Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fdate(s) { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}); }
+
+function showToast(msg, type='success') {
+    const id = 'toast' + Date.now();
+    const colors = { success:'#2e7d32', danger:'#b71c1c', warning:'#e65100', info:'#1565c0' };
+    document.getElementById('toastContainer').insertAdjacentHTML('beforeend', `
+        <div id="${id}" style="background:${colors[type]||colors.info};color:white;padding:12px 20px;border-radius:10px;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);min-width:280px;">${msg}</div>
+    `);
+    setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, 4500);
+}
+</script>
+</body>
+</html>

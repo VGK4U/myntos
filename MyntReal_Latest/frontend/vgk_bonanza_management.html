@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VGK Bonanza Management — Staff</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<link href="/public/css/dark-theme.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+.main-content { margin-left: 260px; padding: 24px; transition: margin-left 0.3s ease; padding-top: 0; }
+body.sidebar-collapsed-mode .main-content { margin-left: 70px; }
+body.sidebar-collapsed-mode #headerContainer { margin-left: 70px !important; }
+@media (max-width: 768px) { .main-content { margin-left: 0 !important; } #headerContainer { margin-left: 0 !important; } }
+.page-banner { background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.page-banner h1 { font-size: 20px; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 10px; }
+.page-banner p { opacity: .85; margin: 0; font-size: 12.5px; }
+.btn-banner { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.btn-banner.white { background: white; color: #7c3aed; }
+.btn-banner.outline { background: transparent; color: white; border: 2px solid rgba(255,255,255,.5); }
+.filter-bar { background: white; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.filter-bar label { font-size: 10.5px; font-weight: 700; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 3px; }
+.filter-bar .form-control, .filter-bar .form-select { font-size: 12.5px; padding: 6px 10px; border-radius: 7px; border: 1px solid #e5e7eb; min-width: 130px; color: #111827 !important; background: #ffffff !important; }
+.btn-filter { padding: 7px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; }
+.btn-filter.apply { background: #7c3aed; color: white; }
+.btn-filter.reset { background: #f3f4f6; color: #6b7280; }
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden; }
+.table-card-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; gap: 8px; }
+.table-card-header h3 { font-size: 14px; font-weight: 700; color: #111827; }
+table { width: 100%; border-collapse: collapse; }
+thead th { padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; background: #f9fafb; white-space: nowrap; }
+tbody td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; background: #ffffff !important; color: #111827 !important; }
+tbody tr:hover td { background: #f9fafb !important; }
+tbody tr { background: #ffffff !important; }
+.badge { padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-pending { background: #fef3c7; color: #92400e; }
+.badge-approved { background: #d1fae5; color: #065f46; }
+.badge-active { background: #dbeafe; color: #1e40af; }
+.badge-cancelled { background: #fee2e2; color: #991b1b; }
+        .badge-paused   { background: #ffedd5; color: #c2410c; }
+        .btn-sm-icon.activate { color: #15803d; border-color: #86efac; }
+        .btn-sm-icon.activate:hover { background: #f0fdf4; }
+        .btn-sm-icon.pause { color: #b45309; border-color: #fcd34d; }
+        .btn-sm-icon.pause:hover { background: #fffbeb; }
+.badge-draft { background: #f3f4f6; color: #6b7280; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 2000; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: white; border-radius: 14px; width: 520px; max-height: 90vh; overflow-y: auto; }
+.modal-header { padding: 18px 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h4 { font-size: 15px; font-weight: 700; margin: 0; }
+.modal-body { padding: 20px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; display: block; margin-bottom: 4px; }
+.form-group .form-control, .form-group .form-select { font-size: 13px; border-radius: 8px; border: 1px solid #e5e7eb; padding: 8px 12px; width: 100%; color: #111827 !important; background: #ffffff !important; }
+.form-group textarea.form-control { color: #111827 !important; background: #ffffff !important; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid #f0f0f0; display: flex; gap: 8px; justify-content: flex-end; }
+.btn-primary-vgk { background: #7c3aed; color: white; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-primary-vgk:hover { background: #6d28d9; }
+.btn-secondary-vgk { background: #f3f4f6; color: #374151; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-danger-vgk { background: #fee2e2; color: #dc2626; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-sm-icon { background: none; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 8px; font-size: 12px; cursor: pointer; margin: 0 2px; }
+.btn-sm-icon.edit { color: #7c3aed; border-color: #c4b5fd; }
+.btn-sm-icon.edit:hover { background: #f5f3ff; }
+.btn-sm-icon.approve { color: #059669; border-color: #6ee7b7; }
+.btn-sm-icon.approve:hover { background: #f0fdf4; }
+.btn-sm-icon.cancel { color: #dc2626; border-color: #fca5a5; }
+.btn-sm-icon.cancel:hover { background: #fef2f2; }
+.progress-mini { height: 6px; background: #f3f4f6; border-radius: 999px; overflow: hidden; min-width: 80px; }
+.progress-mini-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7c3aed, #a855f7); }
+.stat-card { background: white; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.stat-val { font-size: 24px; font-weight: 800; color: #7c3aed; }
+.stat-label { font-size: 12px; color: #6b7280; font-weight: 600; margin-top: 2px; }
+/* DC-VGK-MEMBER-TRACKING-001: management page tab nav */
+.mgmt-tabs { display: flex; gap: 4px; margin-bottom: 18px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 5px; width: fit-content; }
+.mgmt-tab { padding: 8px 20px; border-radius: 7px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; background: transparent; color: #6b7280; transition: all .2s; }
+.mgmt-tab.active { background: #7c3aed; color: #fff; box-shadow: 0 2px 8px rgba(124,58,237,.3); }
+.mgmt-tab:hover:not(.active) { background: #f3f4f6; color: #374151; }
+/* tracking section (light theme) */
+.mgmt-track-filter { background: white; border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.07); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.mgmt-track-filter label { font-size: 10.5px; font-weight: 700; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 3px; }
+.mgmt-track-filter .form-control, .mgmt-track-filter .form-select { font-size: 12.5px; padding: 6px 10px; border-radius: 7px; border: 1px solid #e5e7eb; min-width: 160px; color: #111827 !important; background: #fff !important; }
+.mslab-chip { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.mslab-yes { background: #d1fae5; color: #065f46; }
+.mslab-no  { background: #fee2e2; color: #991b1b; }
+.mtrack-eligible td:first-child { border-left: 3px solid #059669; }
+.mtrack-close    td:first-child { border-left: 3px solid #d97706; }
+.mtrack-stat-card { background: white; border-radius: 10px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div id="headerContainer" style="position:sticky;top:0;z-index:1000;margin-left:260px;"><header class="top-header"></header></div>
+<main class="main-content" id="main-content">
+    <div class="page-banner">
+        <div>
+            <h1><i class="fas fa-trophy"></i>VGK Bonanza Management</h1>
+            <p>Create and manage deal-based reward campaigns for VGK partners</p>
+        </div>
+        <div style="display:flex;gap:8px">
+            <a href="/staff/vgk/bonanza-claims" class="btn-banner outline"><i class="fas fa-clipboard-check"></i>Claims</a>
+            <button class="btn-banner white" onclick="openCreateModal()"><i class="fas fa-plus"></i>New Bonanza</button>
+        </div>
+    </div>
+
+    <!-- Stats row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px" id="statsRow">
+        <div class="stat-card"><div class="stat-val" id="statTotal">—</div><div class="stat-label">Total Campaigns</div></div>
+        <div class="stat-card"><div class="stat-val" id="statActive" style="color:#059669">—</div><div class="stat-label">Active</div></div>
+        <div class="stat-card"><div class="stat-val" id="statPending" style="color:#d97706">—</div><div class="stat-label">Pending Approval</div></div>
+        <div class="stat-card"><div class="stat-val" id="statClaims" style="color:#2563eb">—</div><div class="stat-label">Total Claims</div></div>
+    </div>
+
+    <!-- Tab navigation -->
+    <div class="mgmt-tabs">
+        <button class="mgmt-tab active" id="mgmtTabBtnCampaigns" onclick="mgmtSwitchTab('campaigns')"><i class="fas fa-trophy me-2"></i>Campaigns</button>
+        <button class="mgmt-tab" id="mgmtTabBtnTracking" onclick="mgmtSwitchTab('tracking')"><i class="fas fa-chart-bar me-2"></i>Member Tracking</button>
+    </div>
+
+    <!-- ── TAB: Campaigns ────────────────────────────────────────────── -->
+    <div id="mgmtTabCampaigns">
+    <!-- Filter -->
+    <div class="filter-bar">
+        <div>
+            <label>Status</label>
+            <select class="form-select" id="filterStatus" style="min-width:120px">
+                <option value="">All</option>
+                <option value="Pending">Pending</option>
+                <option value="Approved">Approved</option>
+                <option value="Paused">Paused</option>
+                <option value="Cancelled">Cancelled</option>
+                <option value="Draft">Draft</option>
+            </select>
+        </div>
+        <div>
+            <label>Search</label>
+            <input class="form-control" id="filterSearch" placeholder="Campaign name…" style="min-width:180px">
+        </div>
+        <button class="btn-filter apply" onclick="loadBonanzas()"><i class="fas fa-search me-1"></i>Apply</button>
+        <button class="btn-filter reset" onclick="clearFilters()">Reset</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+        <div class="table-card-header">
+            <h3><i class="fas fa-trophy me-2" style="color:#7c3aed"></i>VGK Bonanza Campaigns</h3>
+            <button class="btn-filter apply" onclick="loadBonanzas()"><i class="fas fa-sync me-1"></i>Refresh</button>
+        </div>
+        <div id="tableWrap" style="overflow-x:auto">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Campaign</th>
+                        <th>Segment</th>
+                        <th>Period</th>
+                        <th>Target</th>
+                        <th>Reward</th>
+                        <th>Claims</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                    <!-- closing tr duplicated above; keep below -->
+                </thead>
+                <tbody id="bonanzaTbody">
+                    <tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div><!-- /mgmtTabCampaigns -->
+
+    <!-- ── TAB: Member Tracking ──────────────────────────────────────── -->
+    <div id="mgmtTabTracking" style="display:none">
+
+        <!-- Summary stats -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:18px">
+            <div class="mtrack-stat-card"><div class="stat-val" id="mStatTotal" style="color:#7c3aed">—</div><div class="stat-label">Total Members</div></div>
+            <div class="mtrack-stat-card"><div class="stat-val" id="mStatEligible" style="color:#059669">—</div><div class="stat-label">Eligible</div></div>
+            <div class="mtrack-stat-card"><div class="stat-val" id="mStatClaimed" style="color:#2563eb">—</div><div class="stat-label">Claimed</div></div>
+            <div class="mtrack-stat-card"><div class="stat-val" id="mStatZero" style="color:#9ca3af">—</div><div class="stat-label">No Progress</div></div>
+        </div>
+
+        <!-- Filters -->
+        <div class="mgmt-track-filter">
+            <div>
+                <label>Campaign</label>
+                <select class="form-select" id="mFilterBonanza" style="min-width:220px">
+                    <option value="">All Campaigns</option>
+                </select>
+            </div>
+            <div>
+                <label>Partner Search</label>
+                <input class="form-control" id="mFilterPartner" placeholder="Name or code…" style="min-width:160px">
+            </div>
+            <button class="btn-filter apply" onclick="mgmtLoadTracking()"><i class="fas fa-search me-1"></i>Apply</button>
+            <button class="btn-filter reset" onclick="mgmtClearTrackFilters()">Reset</button>
+            <div style="margin-left:auto;display:flex;gap:6px;align-items:flex-end">
+                <button id="mBtnAll"      class="btn-filter apply" style="background:#374151;opacity:0.55" onclick="mgmtSetTrackView('all')">All Members</button>
+                <button id="mBtnProgress" class="btn-filter apply" style="background:#7c3aed;color:#fff;opacity:1" onclick="mgmtSetTrackView('progress')" title="Members who have done at least 1 deal">Has Progress</button>
+                <button id="mBtnAchieved" class="btn-filter apply" style="background:#065f46;color:#fff;opacity:0.55" onclick="mgmtSetTrackView('achieved')" title="Members who fully met the target">Achieved Only</button>
+                <button class="btn-filter apply" style="background:#e0e7ff;color:#4338ca" onclick="mgmtLoadTracking()"><i class="fas fa-sync me-1"></i>Refresh</button>
+            </div>
+        </div>
+
+        <!-- Per-bonanza tracking tables -->
+        <div id="mgmtTrackingContent">
+            <div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading member progress…</div>
+        </div>
+
+    </div><!-- /mgmtTabTracking -->
+</div>
+
+<!-- Create / Edit Modal -->
+<div class="modal-overlay" id="bonanzaModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h4 id="modalTitle"><i class="fas fa-trophy me-2" style="color:#7c3aed"></i>New VGK Bonanza</h4>
+            <button onclick="closeModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280">&times;</button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="editBonanzaId">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="form-group" style="grid-column:span 2">
+                    <label>Campaign Name *</label>
+                    <input class="form-control" id="mName" placeholder="e.g. VGK Solar Sprint Q1 2026">
+                </div>
+                <div class="form-group">
+                    <label>Start Date *</label>
+                    <input class="form-control" id="mStartDate" type="date">
+                </div>
+                <div class="form-group">
+                    <label>End Date *</label>
+                    <input class="form-control" id="mEndDate" type="date">
+                </div>
+                <div class="form-group">
+                    <label>Segment (Category)</label>
+                    <select class="form-select" id="mSegment">
+                        <option value="">All Segments</option>
+                    </select>
+                </div>
+                <div class="form-group" id="mTargetGrp">
+                    <label>Target — Activated Members (deals) *</label>
+                    <input class="form-control" id="mTarget" type="number" min="1" placeholder="e.g. 5">
+                </div>
+                <div class="form-group" id="mRegBonusGrp">
+                    <label>Extra Deals for Registered Members</label>
+                    <input class="form-control" id="mRegBonus" type="number" min="0" placeholder="e.g. 3 (blank = same as activated)">
+                    <div style="font-size:10px;color:#6b7280;margin-top:3px">Registered (non-activated) members must complete <em>Target + this bonus</em> deals. Leave blank to use the same target for all.</div>
+                </div>
+                <div class="form-group" id="mGraceGrp">
+                    <label>Grace Days (after end date)</label>
+                    <input class="form-control" id="mGrace" type="number" min="1" max="90" value="15" placeholder="15">
+                </div>
+                <div class="form-group" id="mMaxWinnersGrp">
+                    <label>Max Winners</label>
+                    <input class="form-control" id="mMaxWinners" type="number" min="1" value="50" placeholder="50">
+                </div>
+                <div class="form-group">
+                    <label>Reward Type *</label>
+                    <select class="form-select" id="mRewardType" onchange="toggleRewardFields()">
+                        <option value="cash">Cash</option>
+                        <option value="bonus">Bonus</option>
+                        <option value="slab_wise">⚡ Slab Wise (Solar File Advance + Extra)</option>
+                        <option value="extra_commission">🎯 Special Bonanza — Extra Commission</option>
+                        <option value="award">Award</option>
+                        <option value="gift">Gift</option>
+                    </select>
+                </div>
+                <div class="form-group" id="rewardAmtGrp">
+                    <label>Reward Amount (₹) *</label>
+                    <input class="form-control" id="mRewardAmount" type="number" min="0" placeholder="e.g. 5000">
+                </div>
+                <div class="form-group" id="awardNameGrp" style="display:none">
+                    <label>Award Name *</label>
+                    <input class="form-control" id="mAwardName" placeholder="e.g. Gold Trophy">
+                </div>
+                <!-- DC_BONANZA_SLABWISE_001: Slab Wise fields -->
+                <div class="form-group" id="slabWiseGrp" style="display:none;grid-column:span 2">
+                    <div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border:1.5px solid #7c3aed;border-radius:12px;padding:16px 18px">
+                        <div style="font-weight:700;font-size:13px;color:#c4b5fd;margin-bottom:12px"><i class="fas fa-layer-group me-2"></i>Slab Wise Bonus Configuration</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                            <div>
+                                <label style="font-size:12px;color:#a5b4fc;font-weight:600;display:block;margin-bottom:4px">Base Reference Amount (₹) <span style="font-weight:400;color:#6b7280">display only</span></label>
+                                <input class="form-control" id="mSlabBaseRef" type="number" min="0" step="1" value="1000" placeholder="e.g. 1000" oninput="updateSlabPreview()" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0">
+                                <div style="font-size:10.5px;color:#7c3aed;margin-top:3px">The Solar File Advance base members already receive — shown on their earner card for context, not paid by this bonanza.</div>
+                            </div>
+                            <div>
+                                <label style="font-size:12px;color:#a5b4fc;font-weight:600;display:block;margin-bottom:4px">Extra Slab Amount (₹) *</label>
+                                <input class="form-control" id="mSlabExtra" type="number" min="1" step="1" placeholder="e.g. 3000" oninput="updateSlabPreview()" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0">
+                                <div style="font-size:10.5px;color:#7c3aed;margin-top:3px">The additional bonus this bonanza campaign pays on top of the base.</div>
+                            </div>
+                        </div>
+                        <!-- DC-SOLAR-DVR-ADV-20260701-001: advance kind that counts toward this campaign's slab target -->
+                        <div style="margin-top:12px">
+                            <label style="font-size:12px;color:#a5b4fc;font-weight:600;display:block;margin-bottom:4px">Advance Count Basis</label>
+                            <select class="form-select" id="mAdvanceCountBasis" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0;font-size:13px">
+                                <option value="DVR">DVR Only — count 1st-payment DVR advances (₹1,000/₹500 per file, ≥ 1 Jul 2026)</option>
+                                <option value="BOTH">Both — count either kind (each lead counted once)</option>
+                            </select>
+                            <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Controls which type of solar advance is counted when measuring a partner's progress toward this bonanza's slab targets.</div>
+                        </div>
+                        <div id="slabPreview" style="margin-top:12px;background:rgba(0,0,0,.35);border-radius:8px;padding:10px 14px;font-size:13px;display:none">
+                            <div style="color:#a5b4fc;font-weight:600;margin-bottom:6px;font-size:11px;letter-spacing:.04em;text-transform:uppercase">Auto-Credit Preview — Per File Released</div>
+                            <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+                                <span style="color:#9ca3af;font-size:12px">Solar Advance</span>
+                                <span id="slabPreviewBase" style="color:#e2e8f0;font-weight:700;font-size:14px"></span>
+                                <span style="color:#6b7280">+</span>
+                                <span style="color:#9ca3af;font-size:12px">Slab Bonus</span>
+                                <span id="slabPreviewExtra" style="color:#fbbf24;font-weight:700;font-size:14px"></span>
+                                <span style="color:#6b7280">=</span>
+                                <span style="color:#34d399;font-weight:800;font-size:17px" id="slabPreviewTotal"></span>
+                                <span style="color:#a5b4fc;font-size:12px">per file, auto-credited on release</span>
+                            </div>
+                            <div style="margin-top:6px;padding:5px 8px;background:rgba(52,211,153,.08);border-radius:6px;font-size:10.5px;color:#6ee7b7">
+                                <i class="fas fa-bolt me-1"></i>No claim required — bonus fires automatically when staff releases any Solar File Advance during the campaign period.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" style="grid-column:span 2">
+                    <label>Reward Description</label>
+                    <textarea class="form-control" id="mRewardText" rows="2" placeholder="Additional details about the reward…"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Total Budget (₹)</label>
+                    <input class="form-control" id="mBudget" type="number" min="0" placeholder="Optional">
+                </div>
+                <!-- Promo Image Upload -->
+                <div class="form-group" style="grid-column:span 2" id="mImageGroup">
+                    <label>Promo / Banner Image <span style="font-weight:400;color:#9ca3af">(optional — shown on /voffers page)</span></label>
+                    <div id="mImagePreviewWrap" style="display:none;margin-bottom:8px;position:relative;width:200px;height:200px">
+                        <img id="mImagePreview" src="" alt="Preview" style="width:200px;height:200px;object-fit:cover;border-radius:10px;border:1.5px solid #e5e7eb;display:block">
+                        <button type="button" onclick="clearBonanzaImage()" style="position:absolute;top:6px;right:6px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1">&times;</button>
+                    </div>
+                    <div id="mImageUploadArea" style="border:2px dashed #d1d5db;border-radius:10px;padding:18px;text-align:center;cursor:pointer;color:#6b7280;font-size:13px;transition:border-color .2s" onclick="document.getElementById('mImageFile').click()" ondragover="event.preventDefault();this.style.borderColor='#7c3aed'" ondragleave="this.style.borderColor='#d1d5db'" ondrop="handleBonanzaImageDrop(event)">
+                        <i class="fas fa-image" style="font-size:24px;display:block;margin-bottom:8px;color:#9ca3af"></i>
+                        <span style="display:block;font-size:13px;color:#4b5563;font-weight:600">Click or drag &amp; drop to upload</span>
+                        <span style="display:block;font-size:12px;color:#9ca3af;margin-top:3px">JPEG · PNG · WebP &nbsp;|&nbsp; Max 5 MB</span>
+                        <span style="display:block;font-size:11.5px;color:#a78bfa;margin-top:2px;font-weight:500">Recommended: 400 × 400 px (1:1 square)</span>
+                    </div>
+                    <input type="file" id="mImageFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleBonanzaImageSelect(event)">
+                    <input type="hidden" id="mImageUrl" value="">
+                    <div id="mImageStatus" style="font-size:12px;margin-top:6px;color:#059669;display:none"></div>
+                </div>
+                <!-- DC-EXTRA-COMM-001: Special Bonanza Extra Commission configuration -->
+                <!-- DC-EC-PER-LEVEL-TRIGGER-001: Unified Per-Level Trigger Configuration (all non-slab types) -->
+                <div class="form-group" id="perLevelTriggerGrp" style="display:none;grid-column:span 2">
+                    <div style="background:linear-gradient(135deg,#0c1a2e,#0f2a1a);border:1.5px solid #059669;border-radius:12px;padding:16px 18px">
+                        <div style="font-weight:700;font-size:13px;color:#6ee7b7;margin-bottom:4px"><i class="fas fa-bolt me-2"></i>Per-Level Trigger Configuration</div>
+                        <div id="pltSubtitle" style="font-size:11.5px;color:#9ca3af;margin-bottom:14px">Each level fires at its own trigger point. Same lead fires independently per bonanza. Idempotent — once per lead per level per bonanza.</div>
+                        <div style="overflow-x:auto">
+                            <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+                                <thead>
+                                    <tr style="border-bottom:1px solid #1e3a2e">
+                                        <th style="text-align:left;padding:6px 10px;color:#6ee7b7;font-size:11px;font-weight:700;width:130px">Level</th>
+                                        <th style="text-align:left;padding:6px 10px;color:#6ee7b7;font-size:11px;font-weight:700">Trigger Event</th>
+                                        <th id="pltAmtHeader" style="text-align:left;padding:6px 10px;color:#6ee7b7;font-size:11px;font-weight:700;width:140px">Amount (₹)</th>
+                                        <th id="pltPartHeader" style="text-align:left;padding:6px 10px;color:#6ee7b7;font-size:11px;font-weight:700;width:100px;display:none">Participate?</th>
+                                        <th id="pltNoteHeader" style="text-align:left;padding:6px 10px;color:#6ee7b7;font-size:11px;font-weight:700;display:none">Note</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom:1px solid #1a2a1a">
+                                        <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L1 — Direct</td>
+                                        <td style="padding:7px 10px"><select class="form-select" id="pltL1Trigger" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px;padding:4px 8px"><option value="">— no trigger —</option><option value="file_submitted">📋 File Submitted</option><option value="first_payment">💳 First Payment</option><option value="file_completed">✅ File Completed</option></select></td>
+                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL1Amt" type="number" min="0" step="1" placeholder="e.g. 500" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
+                                        <td class="pltPartCol" style="padding:7px 10px;display:none;text-align:center"><input type="checkbox" id="pltL1Part" style="accent-color:#7c3aed;width:16px;height:16px;cursor:pointer"></td>
+                                        <td class="pltNoteCol" style="padding:7px 10px;display:none"><input class="form-control" id="pltL1Note" type="text" placeholder="Note (optional)" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:11px;padding:4px 8px"></td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid #1a2a1a">
+                                        <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L2 — Senior</td>
+                                        <td style="padding:7px 10px"><select class="form-select" id="pltL2Trigger" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px;padding:4px 8px"><option value="">— no trigger —</option><option value="file_submitted">📋 File Submitted</option><option value="first_payment">💳 First Payment</option><option value="file_completed">✅ File Completed</option></select></td>
+                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL2Amt" type="number" min="0" step="1" placeholder="e.g. 300" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
+                                        <td class="pltPartCol" style="padding:7px 10px;display:none;text-align:center"><input type="checkbox" id="pltL2Part" style="accent-color:#7c3aed;width:16px;height:16px;cursor:pointer"></td>
+                                        <td class="pltNoteCol" style="padding:7px 10px;display:none"><input class="form-control" id="pltL2Note" type="text" placeholder="Note (optional)" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:11px;padding:4px 8px"></td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid #1a2a1a">
+                                        <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L3 — Extended</td>
+                                        <td style="padding:7px 10px"><select class="form-select" id="pltL3Trigger" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px;padding:4px 8px"><option value="">— no trigger —</option><option value="file_submitted">📋 File Submitted</option><option value="first_payment">💳 First Payment</option><option value="file_completed">✅ File Completed</option></select></td>
+                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL3Amt" type="number" min="0" step="1" placeholder="e.g. 200" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
+                                        <td class="pltPartCol" style="padding:7px 10px;display:none;text-align:center"><input type="checkbox" id="pltL3Part" style="accent-color:#7c3aed;width:16px;height:16px;cursor:pointer"></td>
+                                        <td class="pltNoteCol" style="padding:7px 10px;display:none"><input class="form-control" id="pltL3Note" type="text" placeholder="Note (optional)" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:11px;padding:4px 8px"></td>
+                                    </tr>
+                                    <tr style="border-bottom:1px solid #1a2a1a">
+                                        <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L4 — Core</td>
+                                        <td style="padding:7px 10px"><select class="form-select" id="pltL4Trigger" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px;padding:4px 8px"><option value="">— no trigger —</option><option value="file_submitted">📋 File Submitted</option><option value="first_payment">💳 First Payment</option><option value="file_completed">✅ File Completed</option></select></td>
+                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL4Amt" type="number" min="0" step="1" placeholder="e.g. 150" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
+                                        <td class="pltPartCol" style="padding:7px 10px;display:none;text-align:center"><input type="checkbox" id="pltL4Part" style="accent-color:#7c3aed;width:16px;height:16px;cursor:pointer"></td>
+                                        <td class="pltNoteCol" style="padding:7px 10px;display:none"><input class="form-control" id="pltL4Note" type="text" placeholder="Note (optional)" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:11px;padding:4px 8px"></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L5 — Field</td>
+                                        <td style="padding:7px 10px"><select class="form-select" id="pltL5Trigger" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px;padding:4px 8px"><option value="">— no trigger —</option><option value="file_submitted">📋 File Submitted</option><option value="first_payment">💳 First Payment</option><option value="file_completed">✅ File Completed</option></select></td>
+                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL5Amt" type="number" min="0" step="1" placeholder="e.g. 100" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
+                                        <td class="pltPartCol" style="padding:7px 10px;display:none;text-align:center"><input type="checkbox" id="pltL5Part" style="accent-color:#7c3aed;width:16px;height:16px;cursor:pointer"></td>
+                                        <td class="pltNoteCol" style="padding:7px 10px;display:none"><input class="form-control" id="pltL5Note" type="text" placeholder="Note (optional)" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:11px;padding:4px 8px"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="font-size:10.5px;color:#6b7280;margin-top:8px">
+                            Bonanza fires <b style="color:#9ca3af">at</b> these pipeline events — &nbsp;
+                            <b style="color:#9ca3af">📋 File Submitted</b>: fires <i>when</i> Solar CIBIL advance is released &nbsp;|&nbsp;
+                            <b style="color:#9ca3af">💳 First Payment</b>: fires <i>when</i> DVR / first-payment advance is released &nbsp;|&nbsp;
+                            <b style="color:#9ca3af">✅ File Completed</b>: fires <i>when</i> lead is marked completed (all categories). Leave trigger blank to skip a level.
+                        </div>
+                        <!-- Category Filter (shared across all trigger-capable types) -->
+                        <div style="margin-top:14px">
+                            <label style="font-size:12px;color:#6ee7b7;font-weight:600;display:block;margin-bottom:4px">Category Filter <span style="font-weight:400;color:#9ca3af">(all categories if none selected)</span></label>
+                            <select class="form-select" id="pltCategoryFilter" multiple style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12.5px;height:100px"></select>
+                            <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Hold Ctrl / Cmd to select multiple. Leave blank = fires for all categories.</div>
+                        </div>
+                        <div id="pltInfoNote" style="margin-top:10px;padding:8px 12px;background:rgba(5,150,105,.08);border-radius:6px;font-size:11px;color:#6ee7b7">
+                            <i class="fas fa-info-circle me-1"></i>Each level fires at its own configured trigger. Same lead fires once per level per bonanza — counted independently across different bonanzas.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inline Slab Builder -->
+                <div class="form-group" style="grid-column:span 2" id="inlineSlabsSection">
+                    <hr style="margin:4px 0 14px;border-color:#e5e7eb">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                        <div style="font-weight:700;font-size:13px;color:#374151"><i class="fas fa-layer-group me-2" style="color:#7c3aed"></i>Reward Slabs <span style="font-weight:400;color:#6b7280;font-size:11.5px">(optional — define multiple tiers)</span></div>
+                        <button type="button" onclick="toggleInlineSlabForm()" id="inlineSlabToggleBtn" style="font-size:12px;padding:4px 11px;border:1px solid #c4b5fd;border-radius:6px;background:#f5f3ff;color:#7c3aed;cursor:pointer"><i class="fas fa-plus me-1"></i>Add Slab</button>
+                    </div>
+                    <div id="inlineSlabsList" style="margin-bottom:6px"></div>
+                    <div id="inlineSlabForm" style="display:none;background:#faf5ff;border:1px solid #ddd6fe;border-radius:10px;padding:14px;margin-bottom:6px">
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                            <div>
+                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Label *</label>
+                                <input class="form-control" id="isLabel" placeholder="e.g. Silver" style="font-size:12.5px">
+                            </div>
+                            <div>
+                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Target From *</label>
+                                <input class="form-control" id="isFrom" type="number" min="1" placeholder="e.g. 1" style="font-size:12.5px">
+                            </div>
+                            <div>
+                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Target To</label>
+                                <input class="form-control" id="isTo" type="number" min="1" placeholder="blank = unlimited" style="font-size:12.5px">
+                            </div>
+                            <div>
+                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Reward Type</label>
+                                <select class="form-select" id="isType" onchange="toggleInlineRewardFields()" style="font-size:12.5px">
+                                    <option value="cash">Cash</option>
+                                    <option value="bonus">Bonus</option>
+                                    <option value="award">Award</option>
+                                    <option value="gift">Gift</option>
+                                </select>
+                            </div>
+                            <div id="isAmtGrp">
+                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Amount (₹) *</label>
+                                <input class="form-control" id="isAmt" type="number" min="0" placeholder="e.g. 5000" style="font-size:12.5px">
+                            </div>
+                            <div id="isNameGrp" style="display:none">
+                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Award Name *</label>
+                                <input class="form-control" id="isAwardName" placeholder="e.g. Gold Trophy" style="font-size:12.5px">
+                            </div>
+                            <div>
+                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Max Winners</label>
+                                <input class="form-control" id="isMaxW" type="number" min="1" placeholder="blank = unlimited" style="font-size:12.5px">
+                            </div>
+                        </div>
+                        <!-- Slab promo image -->
+                        <div style="margin-top:10px">
+                            <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Slab Image <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+                            <div id="isImagePreviewWrap" style="display:none;margin-bottom:6px;position:relative;width:90px;height:90px">
+                                <img id="isImagePreview" src="" alt="" style="width:90px;height:90px;object-fit:cover;border-radius:7px;border:1.5px solid #e5e7eb;display:block">
+                                <button type="button" onclick="clearSlabImage()" style="position:absolute;top:3px;right:3px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1">&times;</button>
+                            </div>
+                            <div id="isImageUploadArea" style="border:1.5px dashed #d1d5db;border-radius:8px;padding:12px 10px;text-align:center;cursor:pointer;color:#6b7280;font-size:12px;transition:border-color .2s" onclick="document.getElementById('isImageFile').click()" ondragover="event.preventDefault();this.style.borderColor='#7c3aed'" ondragleave="this.style.borderColor='#d1d5db'" ondrop="handleSlabImageDrop(event)">
+                                <i class="fas fa-image" style="display:block;font-size:20px;color:#9ca3af;margin-bottom:5px"></i>
+                                <span style="display:block;font-size:12px;color:#4b5563;font-weight:600">Click or drag &amp; drop to upload</span>
+                                <span style="display:block;font-size:11px;color:#9ca3af;margin-top:3px">JPEG · PNG · WebP &nbsp;|&nbsp; Max 2 MB</span>
+                                <span style="display:block;font-size:10.5px;color:#a78bfa;margin-top:2px;font-weight:500">Recommended: 400 × 400 px (1:1 square)</span>
+                            </div>
+                            <input type="file" id="isImageFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleSlabImageSelect(event)">
+                        </div>
+                        <div id="isError" style="display:none;color:#dc2626;font-size:12px;margin-top:6px"></div>
+                        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+                            <button type="button" onclick="hideInlineSlabForm()" style="font-size:12px;padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;background:white;cursor:pointer;color:#6b7280">Cancel</button>
+                            <button type="button" onclick="addInlineSlab()" style="font-size:12px;padding:5px 14px;border:none;border-radius:6px;background:#7c3aed;color:white;cursor:pointer;font-weight:700"><i class="fas fa-plus me-1"></i>Add</button>
+                        </div>
+                    </div>
+                    <div id="inlineSlabsNote" style="display:none;font-size:11px;color:#7c3aed;margin-top:4px"><i class="fas fa-info-circle me-1"></i>To edit or delete existing slabs, use the <strong><i class="fas fa-layer-group"></i> Manage Slabs</strong> button on the campaign row.</div>
+                </div>
+            </div>
+            <div id="modalError" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:8px"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary-vgk" onclick="closeModal()">Cancel</button>
+            <button class="btn-primary-vgk" id="modalSaveBtn" onclick="saveBonanza()"><i class="fas fa-save me-1"></i>Save Campaign</button>
+        </div>
+    </div>
+</div>
+
+<!-- T007: Bonanza Slabs Management Modal -->
+<div class="modal-overlay" id="slabsModal">
+    <div class="modal-box" style="width:680px;max-width:98vw">
+        <div class="modal-header">
+            <h4 id="slabsModalTitle"><i class="fas fa-layer-group me-2" style="color:#7c3aed"></i>Reward Slabs</h4>
+            <button onclick="closeSlabsModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280">&times;</button>
+        </div>
+        <div class="modal-body" style="padding:16px 20px">
+            <div id="slabsModalInfo" style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#5b21b6;margin-bottom:14px">
+                Loading campaign info…
+            </div>
+
+            <!-- Existing Slabs List -->
+            <div id="slabsList" style="margin-bottom:16px"></div>
+
+            <!-- Add Slab Form -->
+            <div style="background:#f9fafb;border:1px dashed #d1d5db;border-radius:10px;padding:14px 16px">
+                <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px"><i class="fas fa-plus me-2" style="color:#7c3aed"></i>Add New Slab</div>
+                <input type="hidden" id="slabEditId">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+                    <div class="form-group" style="grid-column:span 3">
+                        <label>Slab Label *</label>
+                        <input class="form-control" id="slabLabel" placeholder="e.g. Bronze / Silver / Gold / Platinum">
+                    </div>
+                    <div class="form-group">
+                        <label>Target From (deals) *</label>
+                        <input class="form-control" id="slabTargetFrom" type="number" min="1" placeholder="e.g. 1">
+                    </div>
+                    <div class="form-group">
+                        <label>Target To (deals)</label>
+                        <input class="form-control" id="slabTargetTo" type="number" min="1" placeholder="Leave blank = unlimited">
+                    </div>
+                    <div class="form-group">
+                        <label>Display Order</label>
+                        <input class="form-control" id="slabOrder" type="number" min="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Reward Type *</label>
+                        <select class="form-select" id="slabRewardType" onchange="toggleSlabRewardFields()">
+                            <option value="cash">Cash</option>
+                            <option value="bonus">Bonus</option>
+                            <option value="award">Award</option>
+                            <option value="gift">Gift</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="slabAmtGrp">
+                        <label>Reward Amount (₹) *</label>
+                        <input class="form-control" id="slabRewardAmount" type="number" min="0" placeholder="e.g. 5000">
+                    </div>
+                    <div class="form-group" id="slabAwardNameGrp" style="display:none">
+                        <label>Award / Gift Name *</label>
+                        <input class="form-control" id="slabAwardName" placeholder="e.g. Gold Trophy">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Winners</label>
+                        <input class="form-control" id="slabMaxWinners" type="number" min="1" placeholder="Blank = unlimited">
+                    </div>
+                    <div class="form-group">
+                        <label>Slab Budget (₹)</label>
+                        <input class="form-control" id="slabBudget" type="number" min="0" placeholder="Optional">
+                    </div>
+                </div>
+                <div id="slabFormError" style="display:none;background:#fef2f2;color:#dc2626;border-radius:7px;padding:8px 12px;font-size:13px;margin-top:8px"></div>
+                <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end">
+                    <button class="btn-secondary-vgk" onclick="resetSlabForm()">Clear</button>
+                    <button class="btn-primary-vgk" id="slabSaveBtn" onclick="saveSlab()"><i class="fas fa-save me-1"></i>Save Slab</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary-vgk" onclick="closeSlabsModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Confirm Modal -->
+<div class="modal-overlay" id="approveModal">
+    <div class="modal-box" style="width:380px">
+        <div class="modal-header">
+            <h4><i class="fas fa-check-circle me-2" style="color:#059669"></i>Approve Bonanza</h4>
+            <button onclick="document.getElementById('approveModal').classList.remove('open')" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:14px;color:#374151">Approving <strong id="approveName"></strong> will make it visible to VGK partners. Confirm?</p>
+            <input type="hidden" id="approveBonanzaId">
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary-vgk" onclick="document.getElementById('approveModal').classList.remove('open')">Cancel</button>
+            <button class="btn-primary-vgk" id="approveBtn" onclick="confirmApprove()"><i class="fas fa-check me-1"></i>Approve</button>
+        </div>
+    </div>
+</div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+const BASE = '/api/v1/staff';
+const BONANZA_BASE = '/api/v1/bonanza';
+let _bonanzas = [], _segments = [];
+
+async function loadSegments() {
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/segments');
+        const d = await r.json();
+        _segments = d.segments || [];
+        const sel = document.getElementById('mSegment');
+        sel.innerHTML = '<option value="">All Segments</option>' +
+            _segments.map(s => `<option value="${s.id}">${escH(s.name)}</option>`).join('');
+    } catch(e) {}
+}
+
+async function loadBonanzas() {
+    const status = document.getElementById('filterStatus').value;
+    const search = document.getElementById('filterSearch').value.trim().toLowerCase();
+    const tbody = document.getElementById('bonanzaTbody');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/vgk/all-bonanzas');
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed to load');
+        let items = d.bonanzas || [];
+        if (status) items = items.filter(b => b.status === status);
+        if (search) items = items.filter(b => (b.name||'').toLowerCase().includes(search));
+        _bonanzas = items;
+
+        document.getElementById('statTotal').textContent = d.total || 0;
+        document.getElementById('statActive').textContent = items.filter(b => b.status === 'Approved').length;
+        document.getElementById('statPending').textContent = items.filter(b => b.status === 'Pending').length;
+        document.getElementById('statClaims').textContent = items.reduce((s,b) => s + (b.total_claims||0), 0);
+
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No bonanzas found</td></tr>';
+            return;
+        }
+
+        // Fetch slabs for all bonanzas in parallel
+        const slabResults = await Promise.all(
+            items.map(b => staffFetch(`${BONANZA_BASE}/${b.id}/slabs`).then(r => r.json()).catch(() => ({ slabs: [] })))
+        );
+        slabResults.forEach((res, i) => { items[i]._slabs = res.slabs || []; });
+
+        tbody.innerHTML = items.map(b => {
+            const pct = b.max_winners ? Math.round((b.current_winners||0) / b.max_winners * 100) : 0;
+            // DC_BONANZA_SLABWISE_001: per-file model — show per-file slab amount × N files
+            const rewardText = b.reward_type === 'slab_wise'
+                ? `<span style="color:#fbbf24;font-weight:700">₹${(b.slab_extra_amount||0).toLocaleString('en-IN')} / file</span><span style="font-size:10px;color:#9ca3af;display:block">×N files submitted · base ₹${(b.slab_base_reference||0).toLocaleString('en-IN')}/file (display only)</span>`
+                : (b.is_monetary ? `₹${(b.reward_amount||0).toLocaleString('en-IN')}` : (b.award_name || '—'));
+            const statusCls = { Pending: 'badge-pending', Approved: 'badge-approved', Paused: 'badge-paused', Cancelled: 'badge-cancelled', Draft: 'badge-draft' }[b.status] || 'badge-draft';
+            const period = `${fmtDate(b.start_date)} → ${fmtDate(b.end_date)}`;
+            const claimsSummary = Object.entries(b.claims_summary||{}).map(([k,v]) => `<span style="font-size:10px;background:#f3f4f6;padding:2px 6px;border-radius:4px;margin:1px">${escH(k)}: ${v}</span>`).join('');
+
+            // Inline slab rows
+            const slabs = b._slabs || [];
+            const slabsHtml = slabs.length > 0
+                ? `<div style="margin-top:7px;border-top:1px dashed #e5e7eb;padding-top:6px">
+                    <div style="font-size:10px;color:#7c3aed;font-weight:700;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px"><i class="fas fa-layer-group me-1"></i>Reward Slabs (${slabs.length})</div>
+                    ${slabs.map(s => {
+                        const slabReward = s.is_monetary
+                            ? `<span style="color:#059669;font-weight:700">₹${(s.reward_amount||0).toLocaleString('en-IN')}</span>`
+                            : `<span style="color:#7c3aed;font-weight:700"><i class="fas fa-gift me-1" style="font-size:9px"></i>${escH(s.award_name||'—')}</span>`;
+                        const slabRange = s.target_to
+                            ? `${s.target_from}–${s.target_to} deals`
+                            : `${s.target_from}+ deals`;
+                        const maxW = s.max_winners ? ` · max ${s.max_winners}` : '';
+                        const winners = `<span style="color:#6b7280">${s.current_winners||0}${s.max_winners ? '/'+s.max_winners : ''} won</span>`;
+                        return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid #f3f4f6;flex-wrap:wrap">
+                            <span style="background:#f5f3ff;color:#5b21b6;font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px;white-space:nowrap">${escH(s.slab_label)}</span>
+                            <span style="font-size:10px;color:#374151;white-space:nowrap">${slabRange}</span>
+                            <span style="font-size:10.5px">${slabReward}</span>
+                            ${winners}
+                        </div>`;
+                    }).join('')}
+                  </div>`
+                : '';
+
+            return `<tr>
+                <td><div style="font-weight:700;font-size:13px;color:#111">${escH(b.name)}</div><div style="font-size:11px;color:#9ca3af">Grace: ${b.grace_days ?? 15}d · Max: ${b.max_winners}</div></td>
+                <td><span style="background:#f5f3ff;color:#7c3aed;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700">${escH(b.segment_name||'All')}</span></td>
+                <td style="font-size:12px;white-space:nowrap">${period}</td>
+                <td>
+                    <strong>${b.target_requirement}</strong> deals
+                    ${b.registered_target_bonus ? `<div style="font-size:10px;color:#7c3aed;margin-top:2px"><i class="fas fa-id-card" style="margin-right:2px"></i>+${b.registered_target_bonus} for registered → ${b.target_requirement + b.registered_target_bonus} deals</div>` : ''}
+                </td>
+                <td><div style="font-weight:700;font-size:13px">${b.reward_type === 'slab_wise' ? rewardText : escH(rewardText)}</div><div style="font-size:11px;color:#9ca3af">${escH(b.reward_type||'cash')}</div>${slabsHtml}</td>
+                <td>
+                    <div style="font-size:12px;font-weight:700">${b.current_winners||0} / ${b.max_winners}</div>
+                    <div class="progress-mini" style="margin-top:4px"><div class="progress-mini-fill" style="width:${pct}%"></div></div>
+                    <div style="margin-top:4px">${claimsSummary}</div>
+                </td>
+                <td><span class="badge ${statusCls}">${escH(b.status)}</span></td>
+                <td>
+                    <button class="btn-sm-icon edit" title="Edit" onclick="openEditModal(${b.id})"><i class="fas fa-edit"></i></button>
+                    <button class="btn-sm-icon" title="Manage Slabs" onclick="openSlabsModal(${b.id},\`${escH(b.name)}\`)" style="color:#7c3aed;border-color:#c4b5fd"><i class="fas fa-layer-group"></i></button>
+                    ${b.status === 'Pending'   ? `<button class="btn-sm-icon approve"  title="Approve"    onclick="openApprove(${b.id},\`${escH(b.name)}\`)"><i class="fas fa-check"></i></button>` : ''}
+                    ${b.status === 'Approved'  ? `<button class="btn-sm-icon pause"    title="Pause"      onclick="pauseBonanza(${b.id},\`${escH(b.name)}\`)"><i class="fas fa-pause"></i></button>` : ''}
+                    ${(b.status === 'Cancelled' || b.status === 'Paused') ? `<button class="btn-sm-icon activate" title="Activate / Re-activate" onclick="activateBonanza(${b.id},\`${escH(b.name)}\`,\`${escH(b.status)}\`)"><i class="fas fa-play"></i></button>` : ''}
+                    ${b.status !== 'Cancelled' ? `<button class="btn-sm-icon cancel"   title="Cancel"    onclick="cancelBonanza(${b.id},\`${escH(b.name)}\`)"><i class="fas fa-times"></i></button>` : ''}
+                </td>
+            </tr>`;
+        }).join('');
+    } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</td></tr>`;
+    }
+}
+
+function clearFilters() {
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterSearch').value = '';
+    loadBonanzas();
+}
+
+// DC-EC-PER-LEVEL-TRIGGER-001: toggle amount vs participate columns inside the unified trigger grid.
+function _togglePltColumns(rt) {
+    const isAwardGift = rt === 'award' || rt === 'gift';
+    const isExtraComm = rt === 'extra_commission';
+    document.getElementById('pltAmtHeader').style.display  = isAwardGift ? 'none' : '';
+    document.getElementById('pltPartHeader').style.display = isAwardGift ? '' : 'none';
+    document.getElementById('pltNoteHeader').style.display = isAwardGift ? '' : 'none';
+    document.querySelectorAll('.pltAmtCol').forEach(el  => el.style.display = isAwardGift ? 'none' : '');
+    document.querySelectorAll('.pltPartCol').forEach(el => el.style.display = isAwardGift ? '' : 'none');
+    document.querySelectorAll('.pltNoteCol').forEach(el => el.style.display = isAwardGift ? '' : 'none');
+    const infoEl = document.getElementById('pltInfoNote');
+    const subEl  = document.getElementById('pltSubtitle');
+    if (isExtraComm) {
+        if (infoEl) infoEl.innerHTML = '<i class="fas fa-info-circle me-1"></i>Extra Commission entries are created as <b>PENDING</b> VCI immediately — partner sees them as achieved and claimable through the standard release flow.';
+        if (subEl)  subEl.textContent = 'Per-file flat bonus credited automatically when the trigger fires. Only levels with a trigger + amount set will be paid. Idempotent — fires once per lead per level.';
+    } else if (isAwardGift) {
+        if (infoEl) infoEl.innerHTML = '<i class="fas fa-info-circle me-1"></i>Each lead is counted <b>once</b> per partner per bonanza. Rejected claims release their trigger log rows — partner can re-qualify on the next event.';
+        if (subEl)  subEl.textContent = 'Set a per-level trigger to auto-create Pending claims when the partner\'s target count is reached. Gross VGK points (= Budget) credited at claim creation.';
+    } else {
+        if (infoEl) infoEl.innerHTML = '<i class="fas fa-info-circle me-1"></i>A BonanzaProgress <b>Pending</b> claim is auto-created per level per lead when the trigger fires. Claims follow the standard 5-step approval flow before payout.';
+        if (subEl)  subEl.textContent = 'Set a per-level trigger to auto-create Pending payout claims. Each level fires at its own trigger point — same lead counts independently per bonanza.';
+    }
+}
+
+function toggleRewardFields() {
+    const rt = document.getElementById('mRewardType').value;
+    const isMonetary     = ['cash','bonus'].includes(rt);
+    const isSlabWise     = rt === 'slab_wise';
+    const isExtraComm    = rt === 'extra_commission';
+    const isAwardGift    = rt === 'award' || rt === 'gift';
+    const isAutoFire     = isSlabWise || isExtraComm;  // these hide target/cap/grace
+    document.getElementById('rewardAmtGrp').style.display       = isMonetary ? '' : 'none';
+    document.getElementById('awardNameGrp').style.display       = isAwardGift ? '' : 'none';
+    document.getElementById('slabWiseGrp').style.display        = isSlabWise  ? '' : 'none';
+    // DC-EC-PER-LEVEL-TRIGGER-001: unified trigger grid for all non-slab types
+    document.getElementById('perLevelTriggerGrp').style.display = !isSlabWise ? '' : 'none';
+    _togglePltColumns(rt);
+    // Auto-fire types: hide target/reg-bonus/grace/max-winners
+    const hideAuto = isAutoFire ? 'none' : '';
+    document.getElementById('mTargetGrp').style.display     = hideAuto;
+    document.getElementById('mRegBonusGrp').style.display   = hideAuto;
+    document.getElementById('mGraceGrp').style.display      = hideAuto;
+    document.getElementById('mMaxWinnersGrp').style.display = hideAuto;
+    if (isSlabWise) updateSlabPreview();
+}
+
+function updateSlabPreview() {
+    const base  = parseFloat(document.getElementById('mSlabBaseRef').value) || 0;
+    const extra = parseFloat(document.getElementById('mSlabExtra').value)   || 0;
+    const prev  = document.getElementById('slabPreview');
+    if (extra > 0) {
+        const fmt = v => '\u20b9' + v.toLocaleString('en-IN');
+        document.getElementById('slabPreviewBase').textContent  = fmt(base);
+        document.getElementById('slabPreviewExtra').textContent = fmt(extra);
+        // DC_BONANZA_SLABWISE_AUTO_001: combined payout per file = base advance + slab bonus
+        document.getElementById('slabPreviewTotal').textContent = fmt(base + extra);
+        prev.style.display = '';
+    } else {
+        prev.style.display = 'none';
+    }
+}
+
+function _resetImageField() {
+    document.getElementById('mImageUrl').value = '';
+    document.getElementById('mImagePreview').src = '';
+    document.getElementById('mImagePreviewWrap').style.display = 'none';
+    document.getElementById('mImageUploadArea').style.display = '';
+    document.getElementById('mImageStatus').style.display = 'none';
+    document.getElementById('mImageFile').value = '';
+}
+function _setBonanzaImage(url) {
+    if (!url) { _resetImageField(); return; }
+    document.getElementById('mImageUrl').value = url;
+    document.getElementById('mImagePreview').src = url;
+    document.getElementById('mImagePreviewWrap').style.display = '';
+    document.getElementById('mImageUploadArea').style.display = 'none';
+}
+function clearBonanzaImage() {
+    _resetImageField();
+}
+function handleBonanzaImageDrop(e) {
+    e.preventDefault();
+    document.getElementById('mImageUploadArea').style.borderColor = '#d1d5db';
+    const file = e.dataTransfer.files[0];
+    if (file) _previewAndUploadBonanzaImage(file);
+}
+function handleBonanzaImageSelect(e) {
+    const file = e.target.files[0];
+    if (file) _previewAndUploadBonanzaImage(file);
+}
+function _previewAndUploadBonanzaImage(file) {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+        showErr('Only JPEG, PNG, or WebP images are allowed');
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        showErr('Image must be under 5 MB');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+        document.getElementById('mImagePreview').src = e.target.result;
+        document.getElementById('mImagePreviewWrap').style.display = '';
+        document.getElementById('mImageUploadArea').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+    // Store file reference for later upload after save
+    window._pendingBonanzaImageFile = file;
+    const status = document.getElementById('mImageStatus');
+    status.textContent = '📎 Image selected — will upload on save';
+    status.style.display = '';
+    status.style.color = '#7c3aed';
+}
+
+function openCreateModal() {
+    document.getElementById('editBonanzaId').value = '';
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-trophy me-2" style="color:#7c3aed"></i>New VGK Bonanza';
+    document.getElementById('mName').value = '';
+    document.getElementById('mStartDate').value = '';
+    document.getElementById('mEndDate').value = '';
+    document.getElementById('mSegment').value = '';
+    document.getElementById('mTarget').value = '';
+    document.getElementById('mRegBonus').value = '';
+    document.getElementById('mGrace').value = '15';
+    document.getElementById('mMaxWinners').value = '50';
+    document.getElementById('mRewardType').value = 'cash';
+    document.getElementById('mRewardAmount').value = '';
+    document.getElementById('mAwardName').value = '';
+    document.getElementById('mRewardText').value = '';
+    document.getElementById('mBudget').value = '';
+    // DC_BONANZA_SLABWISE_001: reset slab fields
+    document.getElementById('mSlabBaseRef').value = '1000';
+    document.getElementById('mSlabExtra').value = '';
+    document.getElementById('slabPreview').style.display = 'none';
+    // DC-EC-PER-LEVEL-TRIGGER-001: reset unified per-level trigger grid
+    [1,2,3,4,5].forEach(n => {
+        document.getElementById('pltL'+n+'Trigger').value = '';
+        document.getElementById('pltL'+n+'Amt').value = '';
+        document.getElementById('pltL'+n+'Part').checked = false;
+        document.getElementById('pltL'+n+'Note').value = '';
+    });
+    Array.from(document.getElementById('pltCategoryFilter').options).forEach(o => o.selected = false);
+    document.getElementById('modalError').style.display = 'none';
+    window._pendingBonanzaImageFile = null;
+    _resetImageField();
+    // Reset inline slab builder
+    _inlineSlabs = [];
+    _existingSlabs = [];
+    hideInlineSlabForm();
+    renderInlineSlabs();
+    toggleRewardFields();
+    document.getElementById('bonanzaModal').classList.add('open');
+}
+
+function _toLocalDatetimeValue(isoStr) {
+    // DC-BONANZA-DATE-ONLY-001: extract date part only — time is stripped, always 00:00
+    if (!isoStr) return '';
+    try {
+        const d = new Date(isoStr);
+        if (isNaN(d)) return '';
+        const pad = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    } catch(e) { return ''; }
+}
+
+function openEditModal(id) {
+    const b = _bonanzas.find(x => x.id === id);
+    if (!b) return;
+    document.getElementById('editBonanzaId').value = id;
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit me-2" style="color:#7c3aed"></i>Edit Bonanza';
+    document.getElementById('mName').value = b.name || '';
+    document.getElementById('mStartDate').value = _toLocalDatetimeValue(b.start_date);
+    document.getElementById('mEndDate').value = _toLocalDatetimeValue(b.end_date);
+    document.getElementById('mSegment').value = b.segment_id || '';
+    document.getElementById('mTarget').value = b.target_requirement || '';
+    document.getElementById('mRegBonus').value = b.registered_target_bonus != null ? b.registered_target_bonus : '';
+    document.getElementById('mGrace').value = b.grace_days ?? 15;
+    document.getElementById('mMaxWinners').value = b.max_winners || 50;
+    document.getElementById('mRewardType').value = b.reward_type || 'cash';
+    document.getElementById('mRewardAmount').value = b.reward_amount || '';
+    document.getElementById('mAwardName').value = b.award_name || '';
+    document.getElementById('mRewardText').value = b.reward_text || '';
+    document.getElementById('mBudget').value = b.total_budget || '';
+    // DC_BONANZA_SLABWISE_001: populate slab fields when editing
+    document.getElementById('mSlabBaseRef').value = b.slab_base_reference != null ? b.slab_base_reference : '1000';
+    document.getElementById('mSlabExtra').value = b.slab_extra_amount != null ? b.slab_extra_amount : '';
+    // DC-SOLAR-DVR-ADV-20260701-001
+    document.getElementById('mAdvanceCountBasis').value = b.advance_count_basis || 'DVR';
+    document.getElementById('slabPreview').style.display = 'none';
+    // DC-EC-PER-LEVEL-TRIGGER-001: populate unified per-level trigger grid
+    const _savedCatIds = new Set((b.category_filter_ids || []).map(Number));
+    const _aln = b.award_level_notes || {};
+    [1,2,3,4,5].forEach(n => {
+        document.getElementById('pltL'+n+'Trigger').value = b['ec_l'+n+'_trigger'] || '';
+        document.getElementById('pltL'+n+'Amt').value = b['ec_l'+n+'_amount'] != null ? b['ec_l'+n+'_amount'] : '';
+        const _cfg = _aln[n] || _aln[String(n)] || {};
+        document.getElementById('pltL'+n+'Part').checked = !!(typeof _cfg === 'object' ? _cfg.participate : _cfg);
+        document.getElementById('pltL'+n+'Note').value = typeof _cfg === 'object' ? (_cfg.note || '') : '';
+    });
+    Array.from(document.getElementById('pltCategoryFilter').options).forEach(o => {
+        const _oIds = o.value.split('|').map(Number);
+        o.selected = _oIds.some(id => _savedCatIds.has(id));
+    });
+    document.getElementById('modalError').style.display = 'none';
+    window._pendingBonanzaImageFile = null;
+    _setBonanzaImage(b.image_url || '');
+    // Load existing slabs into inline section
+    _inlineSlabs = [];
+    _existingSlabs = [];
+    hideInlineSlabForm();
+    renderInlineSlabs(); // shows loading state
+    _loadExistingSlabsForEdit(id);
+    toggleRewardFields();
+    document.getElementById('bonanzaModal').classList.add('open');
+}
+
+function closeModal() {
+    document.getElementById('bonanzaModal').classList.remove('open');
+}
+
+async function saveBonanza() {
+    const editId = document.getElementById('editBonanzaId').value;
+    const rewardType = document.getElementById('mRewardType').value;
+    const isMonetary = ['cash','bonus'].includes(rewardType);
+    // DC-BONANZA-DATE-ONLY-001: input is type="date" (YYYY-MM-DD) — always send midnight 00:00:00
+    const _toISO = v => {
+        if (!v) return '';
+        return `${v}T00:00:00`;
+    };
+    const isSlabWise  = rewardType === 'slab_wise';
+    const isExtraComm = rewardType === 'extra_commission';
+    const isAwardGift = rewardType === 'award' || rewardType === 'gift';
+    const slabExtra  = isSlabWise ? (parseFloat(document.getElementById('mSlabExtra').value) || null) : null;
+    const slabBase   = isSlabWise ? (parseFloat(document.getElementById('mSlabBaseRef').value) || null) : null;
+    const body = {
+        name: document.getElementById('mName').value.trim(),
+        start_date: _toISO(document.getElementById('mStartDate').value),
+        end_date: _toISO(document.getElementById('mEndDate').value),
+        segment_id: document.getElementById('mSegment').value ? parseInt(document.getElementById('mSegment').value) : null,
+        // EC has no target — DB constraint relaxed to allow 0 for extra_commission (positive_target_relaxed_ec migration)
+        target_requirement: isExtraComm ? 0 : (parseInt(document.getElementById('mTarget').value) || 1),
+        registered_target_bonus: document.getElementById('mRegBonus').value !== '' ? parseInt(document.getElementById('mRegBonus').value) : null,
+        grace_days: isExtraComm ? 0 : (parseInt(document.getElementById('mGrace').value) || 15),
+        max_winners: isExtraComm ? 9999999 : (parseInt(document.getElementById('mMaxWinners').value) || 50),
+        reward_type: rewardType,
+        is_monetary: isMonetary || isSlabWise,
+        reward_amount: isMonetary ? (parseFloat(document.getElementById('mRewardAmount').value) || null) : null,
+        // award_name only makes sense for award/gift types — extra_commission and slab_wise never have one
+        award_name: isAwardGift ? (document.getElementById('mAwardName').value.trim() || null) : null,
+        reward_text: document.getElementById('mRewardText').value.trim() || null,
+        total_budget: document.getElementById('mBudget').value ? parseFloat(document.getElementById('mBudget').value) : null,
+        portal: 'VGK',
+        criteria_type: 'completed_deals',
+        counts_towards_regular: false,
+        consume_achievements: false,
+        // DC_BONANZA_SLABWISE_001
+        slab_extra_amount: slabExtra,
+        slab_base_reference: slabBase,
+        // DC-SOLAR-DVR-ADV-20260701-001
+        advance_count_basis: isSlabWise ? (document.getElementById('mAdvanceCountBasis').value || 'DVR') : 'DVR',
+    };
+    // DC-EC-PER-LEVEL-TRIGGER-001: unified per-level trigger payload for all non-slab types
+    if (!isSlabWise) {
+        [1,2,3,4,5].forEach(n => {
+            body['ec_l'+n+'_trigger'] = document.getElementById('pltL'+n+'Trigger').value || null;
+            body['ec_l'+n+'_amount']  = parseFloat(document.getElementById('pltL'+n+'Amt').value) || null;
+        });
+        const _pltCats = Array.from(document.getElementById('pltCategoryFilter').selectedOptions)
+            .flatMap(o => o.value.split('|').map(v => parseInt(v)).filter(n => !isNaN(n)));
+        body.category_filter_ids = _pltCats.length > 0 ? _pltCats : null;
+    }
+    if (isExtraComm) {
+        // target/max_winners/grace already set in body init above for extra_commission
+        body.is_monetary = false;
+        body.registered_target_bonus = null;
+    }
+    if (isAwardGift) {
+        body.is_monetary = false;
+        // Build award_level_notes from per-level participate + note fields
+        const _aln = {};
+        [1,2,3,4,5].forEach(n => {
+            _aln[String(n)] = {
+                participate: document.getElementById('pltL'+n+'Part').checked,
+                note: document.getElementById('pltL'+n+'Note').value.trim()
+            };
+        });
+        body.award_level_notes = _aln;
+    }
+    const errEl = document.getElementById('modalError');
+    if (!body.name) { showErr('Campaign name is required'); return; }
+    if (!body.start_date || !body.end_date) { showErr('Start and end dates are required'); return; }
+    if (new Date(body.end_date) <= new Date(body.start_date)) { showErr('End date must be after start date'); return; }
+    // DC_BONANZA_SLABWISE_AUTO_001: Slab Wise has no target/cap — auto-set silent defaults
+    if (isSlabWise) {
+        body.target_requirement       = 1;
+        body.max_winners              = null;
+        body.grace_days               = 0;
+        body.registered_target_bonus  = null;
+    }
+    if (!isSlabWise && !isExtraComm && !isAwardGift && (!body.target_requirement || body.target_requirement < 1)) { showErr('Target must be at least 1'); return; }
+    if (isAwardGift && (!body.target_requirement || body.target_requirement < 1)) { showErr('Target (number of files required) must be at least 1'); return; }
+    if (isSlabWise && !slabExtra) { showErr('Extra Slab Amount is required for Slab Wise bonanzas'); return; }
+    // DC-EC-PER-LEVEL-TRIGGER-001: require at least one level to have both a trigger AND an amount
+    if (isExtraComm && ![1,2,3,4,5].some(n => body['ec_l'+n+'_trigger'] && body['ec_l'+n+'_amount'])) {
+        showErr('At least one level must have both a Trigger Event and an Amount set'); return;
+    }
+    if (isMonetary && !body.reward_amount) { showErr('Reward amount is required'); return; }
+    if (isAwardGift && !body.award_name) { showErr('Award name is required'); return; }
+    // DC-AWARD-TRIGGER-001: if trigger set for award/gift, validate at least one level participating
+    if (isAwardGift && body.trigger_event) {
+        const _anyParticipate = [1,2,3,4,5].some(n => document.getElementById('atL'+n+'Participate').checked);
+        if (!_anyParticipate) { showErr('Select at least one participating level when a trigger event is set'); return; }
+    }
+    if (!isMonetary && !isSlabWise && !isExtraComm && !isAwardGift && !body.award_name) { showErr('Award name is required'); return; }
+
+    const btn = document.getElementById('modalSaveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+    try {
+        let r, d;
+        if (editId) {
+            r = await staffFetch(BONANZA_BASE + '/edit/' + editId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        } else {
+            r = await staffFetch(BONANZA_BASE + '/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        }
+        d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed to save');
+
+        // Post pending slabs (both create and edit modes)
+        const targetBonanzaId = editId ? parseInt(editId) : (d.bonanza_id || d.bonanza?.id || d.id || null);
+        if (targetBonanzaId && _inlineSlabs.length > 0) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving slabs…';
+            const slabErrors = [];
+            for (const slab of _inlineSlabs) {
+                try {
+                    const { _imageFile, ...slabPayload } = slab;
+                    const slabResp = await staffFetch(`${BONANZA_BASE}/${targetBonanzaId}/slabs`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(slabPayload)
+                    });
+                    if (!slabResp.ok) {
+                        const se = await slabResp.json().catch(() => ({}));
+                        slabErrors.push(`Slab "${slab.slab_label}": ${se.detail || slabResp.status}`);
+                        continue;
+                    }
+                    // Upload slab image if one was selected
+                    if (_imageFile) {
+                        const sd = await slabResp.json();
+                        const slabId = sd.slab?.id;
+                        if (slabId) {
+                            try {
+                                const fd = new FormData();
+                                fd.append('file', _imageFile);
+                                await staffFetch(`${BONANZA_BASE}/${targetBonanzaId}/slabs/${slabId}/upload-image`, { method: 'POST', body: fd });
+                            } catch(ie) { console.warn('[DC-Bonanza] Slab image upload failed:', ie); }
+                        }
+                    }
+                } catch(se) { slabErrors.push(`Slab "${slab.slab_label}": network error`); }
+            }
+            if (slabErrors.length > 0) {
+                closeModal();
+                loadBonanzas();
+                alert('⚠️ Campaign saved but some slabs failed:\n\n' + slabErrors.join('\n') + '\n\nUse the Manage Slabs button to add them manually.');
+                return;
+            }
+        }
+
+        // Upload pending image (after campaign saved so we have the ID)
+        if (targetBonanzaId && window._pendingBonanzaImageFile) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading image…';
+            try {
+                const fd = new FormData();
+                fd.append('file', window._pendingBonanzaImageFile);
+                const imgResp = await staffFetch(`${BONANZA_BASE}/${targetBonanzaId}/upload-image`, { method: 'POST', body: fd });
+                if (!imgResp.ok) console.warn('[DC-Bonanza] Image upload failed');
+                window._pendingBonanzaImageFile = null;
+            } catch(ie) { console.warn('[DC-Bonanza] Image upload error:', ie); }
+        }
+
+        closeModal();
+        loadBonanzas();
+    } catch(e) {
+        showErr(e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-1"></i>Save Campaign';
+    }
+}
+
+function showErr(msg) {
+    const el = document.getElementById('modalError');
+    el.textContent = msg;
+    el.style.display = '';
+}
+
+function openApprove(id, name) {
+    document.getElementById('approveBonanzaId').value = id;
+    document.getElementById('approveName').textContent = name;
+    document.getElementById('approveModal').classList.add('open');
+}
+
+async function confirmApprove() {
+    const id = document.getElementById('approveBonanzaId').value;
+    const btn = document.getElementById('approveBtn');
+    btn.disabled = true;
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/approve/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed');
+        document.getElementById('approveModal').classList.remove('open');
+        loadBonanzas();
+    } catch(e) {
+        alert('Error: ' + e.message);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function cancelBonanza(id, name) {
+    if (!confirm(`Cancel bonanza "${name}"?\n\nNote: you can re-activate it later if needed.`)) return;
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/cancel/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed');
+        loadBonanzas();
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function pauseBonanza(id, name) {
+    if (!confirm(`Pause bonanza "${name}"?\n\nIt will be hidden from partners until you re-activate it.`)) return;
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/pause/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed');
+        loadBonanzas();
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+async function activateBonanza(id, name, currentStatus) {
+    const fromLabel = currentStatus === 'Paused' ? 'paused' : 'cancelled';
+    if (!confirm(`Re-activate bonanza "${name}"?\n\nIt will go back to Approved and become visible to partners immediately.`)) return;
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/activate/' + id, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed');
+        loadBonanzas();
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
+
+function fmtDate(s) {
+    if (!s) return '—';
+    return new Date(s).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function escH(s) {
+    const el = document.createElement('div'); el.textContent = s || ''; return el.innerHTML;
+}
+
+// ── Inline Slab Builder (inside create/edit modal) ───────────────────────────
+let _inlineSlabs = [];   // pending slabs for a new bonanza
+let _existingSlabs = []; // loaded slabs when editing
+
+function toggleInlineSlabForm() {
+    const f = document.getElementById('inlineSlabForm');
+    f.style.display = (f.style.display === 'none') ? '' : 'none';
+    if (f.style.display !== 'none') { document.getElementById('isLabel').focus(); }
+}
+
+function _resetSlabImageField() {
+    document.getElementById('isImageUrl') && (document.getElementById('isImageUrl').value = '');
+    document.getElementById('isImagePreview').src = '';
+    document.getElementById('isImagePreviewWrap').style.display = 'none';
+    document.getElementById('isImageUploadArea').style.display = '';
+    document.getElementById('isImageFile').value = '';
+    window._pendingSlabImageFile = null;
+}
+function clearSlabImage() { _resetSlabImageField(); }
+function handleSlabImageDrop(e) {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) _previewSlabImage(file);
+}
+function handleSlabImageSelect(e) {
+    const file = e.target.files[0];
+    if (file) _previewSlabImage(file);
+}
+function _previewSlabImage(file) {
+    const allowed = ['image/jpeg','image/png','image/webp'];
+    if (!allowed.includes(file.type)) { document.getElementById('isError').textContent='Only JPEG/PNG/WebP images'; document.getElementById('isError').style.display=''; return; }
+    if (file.size > 5*1024*1024) { document.getElementById('isError').textContent='Image must be < 5 MB'; document.getElementById('isError').style.display=''; return; }
+    window._pendingSlabImageFile = file;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        document.getElementById('isImagePreview').src = ev.target.result;
+        document.getElementById('isImagePreviewWrap').style.display = '';
+        document.getElementById('isImageUploadArea').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+}
+
+function hideInlineSlabForm() {
+    document.getElementById('inlineSlabForm').style.display = 'none';
+    document.getElementById('isError').style.display = 'none';
+}
+
+function toggleInlineRewardFields() {
+    const monetary = ['cash','bonus'].includes(document.getElementById('isType').value);
+    document.getElementById('isAmtGrp').style.display  = monetary ? '' : 'none';
+    document.getElementById('isNameGrp').style.display = monetary ? 'none' : '';
+}
+
+function addInlineSlab() {
+    const label = document.getElementById('isLabel').value.trim();
+    const from  = parseInt(document.getElementById('isFrom').value);
+    const toRaw = document.getElementById('isTo').value;
+    const to    = toRaw ? parseInt(toRaw) : null;
+    const type  = document.getElementById('isType').value;
+    const monetary = ['cash','bonus'].includes(type);
+    const amt  = document.getElementById('isAmt').value ? parseFloat(document.getElementById('isAmt').value) : null;
+    const awardName = document.getElementById('isAwardName').value.trim() || null;
+    const maxW = document.getElementById('isMaxW').value ? parseInt(document.getElementById('isMaxW').value) : null;
+    const errEl = document.getElementById('isError');
+    if (!label)            { errEl.textContent = 'Label is required'; errEl.style.display=''; return; }
+    if (!from || from < 1) { errEl.textContent = 'Target From must be ≥ 1'; errEl.style.display=''; return; }
+    if (monetary && !amt)  { errEl.textContent = 'Amount is required for cash/bonus rewards'; errEl.style.display=''; return; }
+    if (!monetary && !awardName) { errEl.textContent = 'Award name is required'; errEl.style.display=''; return; }
+    errEl.style.display = 'none';
+    _inlineSlabs.push({
+        slab_label:   label,
+        slab_order:   _inlineSlabs.length + 1,
+        target_from:  from,
+        target_to:    to,
+        reward_type:  type,
+        is_monetary:  monetary,
+        reward_amount: monetary ? amt : null,
+        award_name:   !monetary ? awardName : null,
+        max_winners:  maxW,
+        _imageFile:   window._pendingSlabImageFile || null
+    });
+    // clear inline form fields
+    ['isLabel','isFrom','isTo','isAmt','isAwardName','isMaxW'].forEach(id => { document.getElementById(id).value = ''; });
+    _resetSlabImageField();
+    hideInlineSlabForm();
+    renderInlineSlabs();
+}
+
+function removeInlineSlab(idx) {
+    _inlineSlabs.splice(idx, 1);
+    renderInlineSlabs();
+}
+
+function renderInlineSlabs() {
+    const editId  = document.getElementById('editBonanzaId').value;
+    const listDiv = document.getElementById('inlineSlabsList');
+    const noteDiv = document.getElementById('inlineSlabsNote');
+    let html = '';
+
+    // Existing slabs (edit mode, read-only)
+    if (editId && _existingSlabs.length > 0) {
+        noteDiv.style.display = '';
+        html += `<div style="font-size:12px;color:#5b21b6;margin-bottom:4px;font-weight:600">${_existingSlabs.length} saved slab${_existingSlabs.length !== 1 ? 's' : ''}:</div>`;
+        html += _existingSlabs.map(s => {
+            const rText = s.is_monetary ? `₹${(s.reward_amount||0).toLocaleString('en-IN')}` : (s.award_name || '—');
+            return `<div style="font-size:12px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:7px;padding:7px 12px;margin-bottom:5px;display:flex;justify-content:space-between">
+                <span style="font-weight:700;color:#5b21b6">${escH(s.slab_label)}</span>
+                <span style="color:#374151">Deals ${s.target_from}–${s.target_to != null ? s.target_to : '∞'} &nbsp;·&nbsp; ${escH(rText)} (${escH(s.reward_type)})</span>
+            </div>`;
+        }).join('');
+    } else if (editId) {
+        noteDiv.style.display = '';
+    } else {
+        noteDiv.style.display = 'none';
+    }
+
+    // Pending new slabs (shown in both create and edit modes)
+    if (_inlineSlabs.length > 0) {
+        if (editId) html += `<div style="font-size:12px;color:#059669;margin-top:6px;margin-bottom:4px;font-weight:600">New slabs to add on save:</div>`;
+        html += _inlineSlabs.map((s, i) => {
+            const rText = s.reward_amount != null ? `₹${(+s.reward_amount).toLocaleString('en-IN')}` : (s.award_name || '—');
+            return `<div style="font-size:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:7px 12px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center">
+                <span><strong style="color:#059669">${escH(s.slab_label)}</strong> &nbsp;·&nbsp; Deals ${s.target_from}–${s.target_to != null ? s.target_to : '∞'} &nbsp;·&nbsp; <strong>${escH(rText)}</strong> (${escH(s.reward_type)})</span>
+                <button type="button" onclick="removeInlineSlab(${i})" style="border:none;background:none;cursor:pointer;color:#dc2626;font-size:15px;line-height:1" title="Remove">✕</button>
+            </div>`;
+        }).join('');
+    }
+
+    listDiv.innerHTML = html || (editId && _existingSlabs.length === 0
+        ? '<div style="font-size:12px;color:#9ca3af;margin-bottom:4px">No slabs yet. Add tiers below or use the Manage Slabs button on the row after saving.</div>'
+        : '');
+}
+
+async function _loadExistingSlabsForEdit(bonanzaId) {
+    _existingSlabs = [];
+    try {
+        const r = await staffFetch(`${BONANZA_BASE}/${bonanzaId}/slabs`);
+        const d = await r.json();
+        if (r.ok) { _existingSlabs = d.slabs || []; }
+    } catch(e) { /* non-fatal */ }
+    renderInlineSlabs();
+}
+
+// ── T007: Bonanza Slabs Management ───────────────────────────────────────────
+let _slabsBonanzaId = null;
+
+async function openSlabsModal(bonanzaId, name) {
+    _slabsBonanzaId = bonanzaId;
+    document.getElementById('slabsModalTitle').innerHTML = `<i class="fas fa-layer-group me-2" style="color:#7c3aed"></i>Reward Slabs — ${escH(name)}`;
+    const b = _bonanzas.find(x => x.id === bonanzaId);
+    if (b) {
+        document.getElementById('slabsModalInfo').innerHTML =
+            `<strong>${escH(b.name)}</strong> &nbsp;·&nbsp; Target: ${b.target_requirement} deals &nbsp;·&nbsp; Status: <span style="font-weight:700">${escH(b.status)}</span> &nbsp;·&nbsp; Max Winners: ${b.max_winners}`;
+    }
+    resetSlabForm();
+    document.getElementById('slabsModal').classList.add('open');
+    await loadSlabs();
+}
+
+function closeSlabsModal() {
+    document.getElementById('slabsModal').classList.remove('open');
+    _slabsBonanzaId = null;
+}
+
+function toggleSlabRewardFields() {
+    const rt = document.getElementById('slabRewardType').value;
+    const isMonetary = ['cash','bonus'].includes(rt);
+    document.getElementById('slabAmtGrp').style.display = isMonetary ? '' : 'none';
+    document.getElementById('slabAwardNameGrp').style.display = isMonetary ? 'none' : '';
+}
+
+function resetSlabForm() {
+    document.getElementById('slabEditId').value = '';
+    document.getElementById('slabLabel').value = '';
+    document.getElementById('slabTargetFrom').value = '';
+    document.getElementById('slabTargetTo').value = '';
+    document.getElementById('slabOrder').value = '1';
+    document.getElementById('slabRewardType').value = 'cash';
+    document.getElementById('slabRewardAmount').value = '';
+    document.getElementById('slabAwardName').value = '';
+    document.getElementById('slabMaxWinners').value = '';
+    document.getElementById('slabBudget').value = '';
+    document.getElementById('slabFormError').style.display = 'none';
+    document.getElementById('slabSaveBtn').innerHTML = '<i class="fas fa-save me-1"></i>Save Slab';
+    toggleSlabRewardFields();
+}
+
+async function loadSlabs() {
+    if (!_slabsBonanzaId) return;
+    const listDiv = document.getElementById('slabsList');
+    listDiv.innerHTML = '<div style="text-align:center;padding:16px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading slabs…</div>';
+    try {
+        const r = await staffFetch(`${BONANZA_BASE}/${_slabsBonanzaId}/slabs`);
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed to load slabs');
+        const slabs = d.slabs || [];
+        if (!slabs.length) {
+            listDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#6b7280;font-size:13px"><i class="fas fa-inbox me-2"></i>No slabs yet. Add reward tiers below.</div>';
+            return;
+        }
+        const slabColors = { cash:'#059669', bonus:'#2563eb', award:'#d97706', gift:'#dc2626' };
+        listDiv.innerHTML = `<div style="margin-bottom:8px;font-weight:700;font-size:12.5px;color:#374151"><i class="fas fa-list me-2"></i>${slabs.length} Slab${slabs.length !== 1 ? 's' : ''}</div>` +
+            slabs.map(s => {
+                const rewardStr = s.is_monetary ? `₹${(s.reward_amount||0).toLocaleString('en-IN')}` : (s.award_name || '—');
+                const rangeStr = s.target_from + ' – ' + (s.target_to != null ? s.target_to : '∞');
+                const clr = slabColors[s.reward_type] || '#6b7280';
+                const thumb = s.image_url
+                    ? `<img src="${escH(s.image_url)}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1.5px solid #e5e7eb;display:block;flex-shrink:0">`
+                    : `<div style="flex:0 0 44px;height:44px;background:${clr}15;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:${clr};text-align:center;line-height:1.2">${escH(s.slab_label)}</div>`;
+                return `<div style="display:flex;align-items:center;gap:10px;background:white;border:1px solid #e5e7eb;border-radius:9px;padding:10px 14px;margin-bottom:8px">
+                    ${thumb}
+                    <div style="flex:1;min-width:0">
+                        <div style="font-weight:700;font-size:13px;color:#111">${escH(s.slab_label)}</div>
+                        <div style="font-size:11px;color:#6b7280">Deals: ${rangeStr} &nbsp;·&nbsp; Reward: <span style="color:${clr};font-weight:700">${escH(rewardStr)}</span> (${escH(s.reward_type)})</div>
+                        <div style="font-size:11px;color:#9ca3af">Order: ${s.slab_order} &nbsp;·&nbsp; Max Winners: ${s.max_winners ?? '∞'} &nbsp;·&nbsp; ${s.is_active ? '<span style="color:#059669">Active</span>' : '<span style="color:#dc2626">Inactive</span>'}</div>
+                    </div>
+                    <div style="display:flex;gap:6px">
+                        <button class="btn-sm-icon edit" onclick='editSlab(${JSON.stringify(s)})' title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="btn-sm-icon cancel" onclick="deleteSlab(${s.id},'${escH(s.slab_label)}')" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+    } catch(e) {
+        listDiv.innerHTML = `<div style="color:#dc2626;padding:12px;font-size:13px"><i class="fas fa-exclamation-triangle me-2"></i>${escH(e.message)}</div>`;
+    }
+}
+
+function editSlab(s) {
+    document.getElementById('slabEditId').value = s.id;
+    document.getElementById('slabLabel').value = s.slab_label || '';
+    document.getElementById('slabTargetFrom').value = s.target_from ?? '';
+    document.getElementById('slabTargetTo').value = s.target_to != null ? s.target_to : '';
+    document.getElementById('slabOrder').value = s.slab_order || 1;
+    document.getElementById('slabRewardType').value = s.reward_type || 'cash';
+    document.getElementById('slabRewardAmount').value = s.reward_amount != null ? s.reward_amount : '';
+    document.getElementById('slabAwardName').value = s.award_name || '';
+    document.getElementById('slabMaxWinners').value = s.max_winners != null ? s.max_winners : '';
+    document.getElementById('slabBudget').value = s.budget_amount != null ? s.budget_amount : '';
+    document.getElementById('slabSaveBtn').innerHTML = '<i class="fas fa-check me-1"></i>Update Slab';
+    document.getElementById('slabFormError').style.display = 'none';
+    toggleSlabRewardFields();
+}
+
+async function saveSlab() {
+    const editId = document.getElementById('slabEditId').value;
+    const rewardType = document.getElementById('slabRewardType').value;
+    const isMonetary = ['cash','bonus'].includes(rewardType);
+    const label = document.getElementById('slabLabel').value.trim();
+    const targetFrom = document.getElementById('slabTargetFrom').value;
+    const errDiv = document.getElementById('slabFormError');
+    errDiv.style.display = 'none';
+    if (!label) { errDiv.textContent = 'Slab label is required'; errDiv.style.display = ''; return; }
+    if (!targetFrom) { errDiv.textContent = 'Target From is required'; errDiv.style.display = ''; return; }
+    if (isMonetary && !document.getElementById('slabRewardAmount').value) {
+        errDiv.textContent = 'Reward amount is required for monetary rewards'; errDiv.style.display = ''; return;
+    }
+    if (!isMonetary && !document.getElementById('slabAwardName').value.trim()) {
+        errDiv.textContent = 'Award/Gift name is required for non-monetary rewards'; errDiv.style.display = ''; return;
+    }
+    const payload = {
+        slab_label: label,
+        slab_order: parseInt(document.getElementById('slabOrder').value) || 1,
+        target_from: parseInt(targetFrom),
+        target_to: document.getElementById('slabTargetTo').value ? parseInt(document.getElementById('slabTargetTo').value) : null,
+        reward_type: rewardType,
+        is_monetary: isMonetary,
+        reward_amount: isMonetary ? (parseFloat(document.getElementById('slabRewardAmount').value) || null) : null,
+        award_name: !isMonetary ? document.getElementById('slabAwardName').value.trim() : null,
+        max_winners: document.getElementById('slabMaxWinners').value ? parseInt(document.getElementById('slabMaxWinners').value) : null,
+        budget_amount: document.getElementById('slabBudget').value ? parseFloat(document.getElementById('slabBudget').value) : null,
+        is_active: true
+    };
+    try {
+        const url = editId
+            ? `${BONANZA_BASE}/${_slabsBonanzaId}/slabs/${editId}`
+            : `${BONANZA_BASE}/${_slabsBonanzaId}/slabs`;
+        const method = editId ? 'PUT' : 'POST';
+        const r = await staffFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed to save slab');
+        resetSlabForm();
+        await loadSlabs();
+    } catch(e) {
+        errDiv.textContent = 'Error: ' + e.message;
+        errDiv.style.display = '';
+    }
+}
+
+async function deleteSlab(slabId, label) {
+    if (!confirm(`Delete slab "${label}"?`)) return;
+    try {
+        const r = await staffFetch(`${BONANZA_BASE}/${_slabsBonanzaId}/slabs/${slabId}`, { method: 'DELETE' });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed');
+        await loadSlabs();
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
+// ── End T007 Slabs Management ─────────────────────────────────────────────────
+
+// DC-EXTRA-COMM-001: Load signup categories — cross-company, deduplicated by name.
+// Groups all company variants of the same name so the filter covers leads from any company.
+async function loadEcCategories() {
+    try {
+        // Fetch without company_id filter so we get all categories across all companies
+        const r = await staffFetch('/api/v1/crm/signup/categories');
+        if (!r.ok) return;
+        const json = await r.json();
+        const cats = Array.isArray(json) ? json : (json.data || []);
+
+        // Group by name — collect ALL ids for each unique name
+        const grouped = {};
+        (cats || []).forEach(c => {
+            const name = (c.name || c.category_name || `Category ${c.id}`).trim();
+            if (!grouped[name]) grouped[name] = [];
+            grouped[name].push(c.id);
+        });
+
+        const _buildOptions = () => Object.keys(grouped).sort().map(name => {
+            const o = document.createElement('option');
+            o.value = grouped[name].join('|');
+            o.textContent = name;
+            o.dataset.name = name;
+            return o;
+        });
+        // DC-EC-PER-LEVEL-TRIGGER-001: populate unified category filter
+        const sel = document.getElementById('pltCategoryFilter');
+        sel.innerHTML = '';
+        _buildOptions().forEach(o => sel.appendChild(o));
+    } catch (_) {}
+}
+
+async function init() {
+    await loadSegments();
+    await loadEcCategories();
+    await loadBonanzas();
+}
+
+// ── DC-VGK-MEMBER-TRACKING-001: Management page tab + tracking ────────────────
+let _mgmtTrackLoaded = false;
+
+function mgmtSwitchTab(tab) {
+    document.getElementById('mgmtTabCampaigns').style.display = tab === 'campaigns' ? '' : 'none';
+    document.getElementById('mgmtTabTracking').style.display  = tab === 'tracking'  ? '' : 'none';
+    document.getElementById('mgmtTabBtnCampaigns').classList.toggle('active', tab === 'campaigns');
+    document.getElementById('mgmtTabBtnTracking').classList.toggle('active',  tab === 'tracking');
+    if (tab === 'tracking' && !_mgmtTrackLoaded) mgmtLoadTracking();
+}
+
+function mgmtClearTrackFilters() {
+    document.getElementById('mFilterBonanza').value = '';
+    document.getElementById('mFilterPartner').value = '';
+    mgmtSetTrackView('all');
+    _mgmtTrackLoaded = false;
+    mgmtLoadTracking();
+}
+
+let _mgmtTrackView = 'progress';
+let _mgmtTrackApiData = null;
+
+function _applyMgmtBtnState(v) {
+    document.getElementById('mBtnAll').style.opacity      = v === 'all'      ? '1' : '0.55';
+    document.getElementById('mBtnProgress').style.opacity = v === 'progress' ? '1' : '0.55';
+    document.getElementById('mBtnAchieved').style.opacity = v === 'achieved' ? '1' : '0.55';
+}
+
+function mgmtSetTrackView(v) {
+    _mgmtTrackView = v;
+    _applyMgmtBtnState(v);
+    if (_mgmtTrackApiData) mgmtRenderTracking(_mgmtTrackApiData);
+}
+
+async function loadMgmtBonanzaOptions() {
+    try {
+        const r = await staffFetch(BONANZA_BASE + '/vgk/all-bonanzas');
+        if (!r.ok) return;
+        const d = await r.json();
+        const sel = document.getElementById('mFilterBonanza');
+        const existing = new Set(Array.from(sel.options).map(o => String(o.value)));
+        (d.bonanzas || []).filter(b => b.id !== 54).forEach(b => {
+            if (!existing.has(String(b.id))) {
+                const opt = document.createElement('option');
+                opt.value = b.id;
+                opt.textContent = b.name;
+                sel.appendChild(opt);
+                existing.add(String(b.id));
+            }
+        });
+        // Auto-select most recent bonanza (first after "All Campaigns")
+        if (!sel.value && sel.options.length > 1) {
+            sel.value = sel.options[1].value;
+        }
+    } catch(e) {}
+}
+
+async function mgmtLoadTracking() {
+    const bonanzaId     = document.getElementById('mFilterBonanza').value;
+    const partnerSearch = document.getElementById('mFilterPartner').value.trim();
+    const content       = document.getElementById('mgmtTrackingContent');
+    content.innerHTML   = '<div style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading member progress…</div>';
+
+    let url = BONANZA_BASE + '/vgk/member-tracking';
+    const params = [];
+    if (bonanzaId)     params.push('bonanza_id=' + bonanzaId);
+    if (partnerSearch) params.push('partner_search=' + encodeURIComponent(partnerSearch));
+    if (params.length) url += '?' + params.join('&');
+
+    try {
+        const r = await staffFetch(url);
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Failed');
+        _mgmtTrackLoaded  = true;
+        // DC-MGMT-HIDE-54: hide "Extra Field Allowance Rs. 3000/-" from management tracking
+        const filtered = Object.assign({}, d, {
+            rows: (d.rows || []).filter(row => row.bonanza_id !== 54)
+        });
+        _mgmtTrackApiData = filtered;
+        mgmtRenderTracking(filtered);
+
+        // Populate bonanza filter dropdown — unique bonanzas from rows (also skip 54)
+        const sel = document.getElementById('mFilterBonanza');
+        const existing = new Set(Array.from(sel.options).map(o => o.value));
+        const seenBz   = new Set();
+        (filtered.rows || []).forEach(row => {
+            if (!seenBz.has(row.bonanza_id) && !existing.has(String(row.bonanza_id))) {
+                const opt = document.createElement('option');
+                opt.value = row.bonanza_id; opt.textContent = row.name;
+                sel.appendChild(opt); existing.add(String(row.bonanza_id));
+            }
+            seenBz.add(row.bonanza_id);
+        });
+    } catch(e) {
+        content.innerHTML = `<div style="text-align:center;padding:32px;color:#dc2626"><i class="fas fa-exclamation-triangle me-2"></i>${escBonanzaH(e.message)}</div>`;
+    }
+}
+
+function escBonanzaH(s) {
+    const el = document.createElement('div'); el.textContent = s || ''; return el.innerHTML;
+}
+
+// ── DC-VGK-MEMBER-TRACKING-002 row-wise render (light theme) ─────────────────
+const MGMT_CLAIM_COLORS = {
+    'Pending':'#d97706','Staff Verified':'#2563eb',
+    'Procurement In Progress':'#7c3aed','Dispatched':'#d97706',
+    'Delivered':'#059669','Rejected':'#dc2626'
+};
+
+function mgmtRenderTracking(d) {
+    const content = document.getElementById('mgmtTrackingContent');
+    const rows    = d.rows || [];
+
+    // Summary stats
+    const nonZeroSet = new Set(), claimedSet = new Set();
+    rows.forEach(row => (row.members || []).forEach(m => {
+        if (m.achieved > 0)  nonZeroSet.add(m.partner_id);
+        if (m.claim_status)  claimedSet.add(m.partner_id);
+    }));
+    document.getElementById('mStatTotal').textContent    = d.total_members || 0;
+    document.getElementById('mStatEligible').textContent = d.eligible_count || 0;
+    document.getElementById('mStatClaimed').textContent  = claimedSet.size;
+    document.getElementById('mStatZero').textContent     = Math.max(0, (d.total_members || 0) - nonZeroSet.size);
+
+    if (!rows.length) {
+        content.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280"><i class="fas fa-inbox me-2"></i>No active bonanzas</div>';
+        _applyMgmtBtnState(_mgmtTrackView);
+        return;
+    }
+
+    const fmtD = s => s ? new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '?';
+
+    // Group rows by bonanza_id (preserve order)
+    const groupMap = {}, groupOrder = [];
+    rows.forEach(row => {
+        if (!groupMap[row.bonanza_id]) {
+            groupMap[row.bonanza_id] = {bonanza_id: row.bonanza_id, name: row.name,
+                basis: row.basis, start_date: row.start_date, end_date: row.end_date, tiers: []};
+            groupOrder.push(groupMap[row.bonanza_id]);
+        }
+        groupMap[row.bonanza_id].tiers.push(row);
+    });
+
+    const html = groupOrder.map(g => {
+        const hasSlabs = g.tiers.length > 1;
+        let tableHtml = '';
+
+        if (hasSlabs) {
+            // ── Tier-column layout: members = rows, tiers = column groups ────
+            const memberMap = {};
+            const baseOrder = [];
+            g.tiers.forEach((tier, ti) => {
+                (tier.members || []).forEach(m => {
+                    if (!memberMap[m.partner_id]) {
+                        memberMap[m.partner_id] = {
+                            partner_id: m.partner_id, partner_name: m.partner_name,
+                            partner_code: m.partner_code, claim_status: m.claim_status,
+                            tiers: {}, any_eligible: false
+                        };
+                        if (ti === 0) baseOrder.push(m.partner_id);
+                    }
+                    memberMap[m.partner_id].tiers[tier.row_key] = {
+                        achieved: m.achieved, gap: m.gap, is_eligible: m.is_eligible
+                    };
+                    if (m.is_eligible) memberMap[m.partner_id].any_eligible = true;
+                });
+            });
+
+            let displayOrder = baseOrder;
+            if (_mgmtTrackView === 'achieved') {
+                displayOrder = baseOrder.filter(pid => memberMap[pid].any_eligible);
+            } else if (_mgmtTrackView === 'progress') {
+                displayOrder = baseOrder.filter(pid =>
+                    Object.values(memberMap[pid].tiers).some(t => (t.achieved || 0) > 0)
+                );
+            }
+
+            const tierColHeaders = g.tiers.map(tier => {
+                const lbl = tier.tier_label || `🏅 ${tier.award_name} (${tier.target} deals)`;
+                return `<th colspan="2" style="text-align:center;border-left:1px solid #e5e7eb;white-space:nowrap">
+                    <div style="color:#7c3aed;font-size:11px;font-weight:700">${escBonanzaH(lbl)}</div>
+                    <div style="color:#6b7280;font-size:10px">${tier.eligible_count} eligible</div>
+                </th>`;
+            }).join('');
+            const tierSubHeaders = g.tiers.map(() =>
+                `<th style="text-align:center;border-left:1px solid #e5e7eb">Done</th><th style="text-align:center">Need</th>`
+            ).join('');
+            const totalCols = 2 + g.tiers.length * 2 + 1;
+
+            const memberRows = displayOrder.map((pid, idx) => {
+                const md = memberMap[pid];
+                const tierCells = g.tiers.map(tier => {
+                    const t = (md.tiers || {})[tier.row_key] || {};
+                    const doneCell = t.is_eligible
+                        ? `<span style="color:#059669;font-weight:800">${t.achieved}</span>&nbsp;<i class="fas fa-check-circle" style="color:#059669;font-size:10px"></i>`
+                        : `<span style="font-weight:700;color:#111827">${t.achieved ?? 0}</span>`;
+                    const needCell = (t.gap > 0)
+                        ? `<span style="color:#dc2626;font-weight:600">-${t.gap}</span>`
+                        : `<span style="color:#059669;font-weight:600">✓</span>`;
+                    return `<td style="text-align:center;border-left:1px solid #e5e7eb">${doneCell}</td><td style="text-align:center">${needCell}</td>`;
+                }).join('');
+                const claimBadge = md.claim_status
+                    ? `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(0,0,0,.06);color:${MGMT_CLAIM_COLORS[md.claim_status]||'#374151'}">${escBonanzaH(md.claim_status)}</span>`
+                    : `<span style="color:#9ca3af;font-size:10px">—</span>`;
+                const rowCls = md.any_eligible ? 'mtrack-eligible' : '';
+                return `<tr class="${rowCls}">
+                    <td style="width:28px;color:#9ca3af;font-size:11px;text-align:center">${idx+1}</td>
+                    <td><div style="font-weight:700;font-size:13px;color:#111827">${escBonanzaH(md.partner_name)}</div>
+                        <div style="font-size:11px;color:#6b7280">${escBonanzaH(md.partner_code)}</div></td>
+                    ${tierCells}
+                    <td>${claimBadge}</td>
+                </tr>`;
+            }).join('') || `<tr><td colspan="${totalCols}" style="text-align:center;padding:14px;color:#9ca3af">No members match</td></tr>`;
+
+            tableHtml = `<div style="overflow-x:auto"><table>
+                <thead>
+                    <tr><th rowspan="2" style="width:28px">#</th><th rowspan="2">Member</th>${tierColHeaders}<th rowspan="2">Claim</th></tr>
+                    <tr>${tierSubHeaders}</tr>
+                </thead>
+                <tbody>${memberRows}</tbody>
+            </table></div>`;
+
+        } else {
+            // ── Simple single-tier layout ─────────────────────────────────────
+            const tier = g.tiers[0];
+            let members = tier.members || [];
+            if (_mgmtTrackView === 'achieved') members = members.filter(m => m.is_eligible);
+            else if (_mgmtTrackView === 'progress') members = members.filter(m => (m.achieved || 0) > 0);
+
+            const memberRows = members.map((m, idx) => {
+                const isElig = m.is_eligible;
+                const doneCell = isElig
+                    ? `<span style="color:#059669;font-weight:800">${m.achieved}</span>&nbsp;<i class="fas fa-check-circle" style="color:#059669;font-size:10px"></i>`
+                    : `<span style="font-weight:700;color:#111827">${m.achieved}</span>`;
+                const gapCell = m.gap > 0
+                    ? `<span style="color:#dc2626;font-weight:600">Need ${m.gap} more</span>`
+                    : `<span style="color:#059669;font-weight:600">✓ Done</span>`;
+                const claimBadge = m.claim_status
+                    ? `<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:rgba(0,0,0,.06);color:${MGMT_CLAIM_COLORS[m.claim_status]||'#374151'}">${escBonanzaH(m.claim_status)}</span>`
+                    : `<span style="color:#9ca3af;font-size:10px">—</span>`;
+                const rowCls = isElig ? 'mtrack-eligible' : (m.gap > 0 && m.gap <= 2 ? 'mtrack-close' : '');
+                return `<tr class="${rowCls}">
+                    <td style="width:28px;color:#9ca3af;font-size:11px;text-align:center">${idx+1}</td>
+                    <td><div style="font-weight:700;font-size:13px;color:#111827">${escBonanzaH(m.partner_name)}</div>
+                        <div style="font-size:11px;color:#6b7280">${escBonanzaH(m.partner_code)}</div></td>
+                    <td style="text-align:center">${doneCell}</td>
+                    <td style="text-align:center">${gapCell}</td>
+                    <td>${claimBadge}</td>
+                </tr>`;
+            }).join('') || `<tr><td colspan="5" style="text-align:center;padding:14px;color:#9ca3af">No members match</td></tr>`;
+
+            const awardBadge = tier.award_name
+                ? `<span style="font-size:11px;color:#6b7280;margin-left:8px">🏅 ${escBonanzaH(tier.award_name)}</span>` : '';
+            const eligBadge = `<span style="font-size:11px;color:#6b7280;float:right">Target: ${tier.target} · ${tier.eligible_count} eligible</span>`;
+            tableHtml = `
+                <div style="padding:8px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb">
+                    ${awardBadge}${eligBadge}
+                </div>
+                <div style="overflow-x:auto"><table>
+                    <thead><tr>
+                        <th style="width:28px">#</th><th>Member</th>
+                        <th style="text-align:center">Done</th>
+                        <th style="text-align:center">Remaining</th>
+                        <th>Claim Status</th>
+                    </tr></thead>
+                    <tbody>${memberRows}</tbody>
+                </table></div>`;
+        }
+
+        return `<div class="table-card" style="margin-bottom:20px">
+            <div class="table-card-header">
+                <h3><i class="fas fa-trophy me-2" style="color:#f59e0b"></i>${escBonanzaH(g.name)}</h3>
+                <span style="font-size:11px;color:#6b7280">${fmtD(g.start_date)} → ${fmtD(g.end_date)}&nbsp;·&nbsp;${g.basis}</span>
+            </div>
+            ${tableHtml}
+        </div>`;
+    }).join('');
+
+    content.innerHTML = html;
+    _applyMgmtBtnState(_mgmtTrackView);
+}
+// ── End DC-VGK-MEMBER-TRACKING-002 ───────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', async function() {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    StaffHeader.inject('VGK Bonanza Management', 'fas fa-trophy');
+    if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+    await loadMgmtBonanzaOptions(); // populate dropdown + auto-select most recent
+    await init();
+    mgmtLoadTracking(); // loads with most recent bonanza pre-selected
+});
+</script>
+</body>
+</html>

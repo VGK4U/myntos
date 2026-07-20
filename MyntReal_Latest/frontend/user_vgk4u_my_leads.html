@@ -1,0 +1,569 @@
+<style>
+.vgk-stage-badge{display:inline-block;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700;white-space:nowrap}
+.vgk-stage-solar{background:#e0f2fe;color:#0369a1}
+.vgk-stage-b2b{background:#ede9fe;color:#6d28d9}
+.supp-panel{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;margin-top:8px}
+.supp-label{font-size:11px;font-weight:700;color:#065f46;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.supp-row{display:flex;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap}
+.supp-handler{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:6px;background:white;border:1px solid #d1fae5;min-width:180px;flex:1}
+.supp-handler .name{font-size:12px;font-weight:600;color:#1f2937}
+.supp-handler .code{font-size:10.5px;color:#6b7280}
+.supp-handler .role-tag{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:700}
+.role-guru{background:#dbeafe;color:#1e40af}
+.role-zguru{background:#fce7f3;color:#9d174d}
+.role-partner{background:#fef3c7;color:#92400e}
+.supp-chk{width:17px;height:17px;cursor:pointer;accent-color:#059669}
+.supp-status-yes{font-size:10.5px;font-weight:700;color:#059669;background:#d1fae5;padding:2px 8px;border-radius:10px}
+.supp-status-no{font-size:10.5px;font-weight:700;color:#991b1b;background:#fee2e2;padding:2px 8px;border-radius:10px}
+.supp-status-pend{font-size:10.5px;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:10px}
+.row-confirmed{background:#f0fdf4!important}
+.row-denied{background:#fff7f7!important}
+.row-pending-supp{background:#fffbeb!important}
+/* ── Mobile table: fix iOS overflow scroll ── */
+html { overflow-x: hidden; }
+body { overflow-x: visible !important; }
+@media (max-width: 639px) {
+    .table-responsive { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+    .table-responsive table, .table-responsive .table { min-width: max-content; }
+    .table-responsive th { padding: 7px 8px !important; font-size: 10px !important; white-space: nowrap; }
+    .table-responsive td { padding: 7px 8px !important; font-size: 11px !important; }
+}
+</style>
+
+<div class="container-fluid p-4">
+
+    <!-- Header Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background:linear-gradient(135deg,#064e3b 0%,#059669 100%);">
+                <div class="card-body text-white p-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div>
+                            <h3 class="mb-2"><i class="fas fa-briefcase me-3"></i>My Leads — VGK4U</h3>
+                            <p class="mb-0 opacity-90">Track your leads, upline support, and referral bonuses</p>
+                        </div>
+                        <div>
+                            <span id="vgkMemberBadge" class="badge fs-6 fw-normal" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);padding:8px 16px;border-radius:20px;">
+                                <i class="fas fa-id-badge me-2"></i><span id="vgkMemberName">Loading…</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="row mb-4" id="statCards">
+        <div class="col-lg col-md-4 col-6 mb-2">
+            <div class="card h-100 border-0 shadow-sm" style="background:linear-gradient(135deg,#064e3b,#059669)">
+                <div class="card-body text-white text-center p-3">
+                    <div class="mb-1"><i class="fas fa-globe fa-lg opacity-75"></i></div>
+                    <h4 class="mb-0 fw-bold" id="statOverall">0</h4>
+                    <div class="small">Overall</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6 mb-2">
+            <div class="card h-100 border-0 shadow-sm" style="background:linear-gradient(135deg,#065f46,#10b981)">
+                <div class="card-body text-white text-center p-3">
+                    <div class="mb-1"><i class="fas fa-user-tag fa-lg opacity-75"></i></div>
+                    <h4 class="mb-0 fw-bold" id="statSource">0</h4>
+                    <div class="small">Source (L1)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6 mb-2">
+            <div class="card h-100 border-0 shadow-sm" style="background:linear-gradient(135deg,#1e3a8a,#3b82f6)">
+                <div class="card-body text-white text-center p-3">
+                    <div class="mb-1"><i class="fas fa-user-tie fa-lg opacity-75"></i></div>
+                    <h4 class="mb-0 fw-bold" id="statGuru">0</h4>
+                    <div class="small">Senior (L2)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6 mb-2">
+            <div class="card h-100 border-0 shadow-sm" style="background:linear-gradient(135deg,#831843,#ec4899)">
+                <div class="card-body text-white text-center p-3">
+                    <div class="mb-1"><i class="fas fa-crown fa-lg opacity-75"></i></div>
+                    <h4 class="mb-0 fw-bold" id="statZGuru">0</h4>
+                    <div class="small">Extended (L3)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg col-md-4 col-6 mb-2">
+            <div class="card h-100 border-0 shadow-sm" style="background:linear-gradient(135deg,#78350f,#f59e0b)">
+                <div class="card-body text-white text-center p-3">
+                    <div class="mb-1"><i class="fas fa-hands-helping fa-lg opacity-75"></i></div>
+                    <h4 class="mb-0 fw-bold" id="statSupport">0</h4>
+                    <div class="small">Support (L4)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body p-0">
+            <ul class="nav nav-tabs flex-nowrap overflow-auto" id="vgkTabNav">
+                <li class="nav-item">
+                    <button class="nav-link active" onclick="switchTab('overall')" id="tab-overall">
+                        <i class="fas fa-globe me-1"></i>Overall <span class="badge bg-secondary ms-1" id="cnt-overall">0</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="switchTab('source')" id="tab-source">
+                        <i class="fas fa-user-tag me-1"></i>Source <span class="badge bg-success ms-1" id="cnt-source">0</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="switchTab('guru')" id="tab-guru">
+                        <i class="fas fa-user-tie me-1"></i>Senior (L2) <span class="badge bg-primary ms-1" id="cnt-guru">0</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="switchTab('zguru')" id="tab-zguru">
+                        <i class="fas fa-crown me-1"></i>Extended (L3) <span class="badge ms-1" style="background:#ec4899" id="cnt-zguru">0</span>
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" onclick="switchTab('support')" id="tab-support">
+                        <i class="fas fa-hands-helping me-1"></i>Support (L4) <span class="badge bg-warning text-dark ms-1" id="cnt-support">0</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-3" id="leadsFiltersRow">
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control" id="leadSearch" placeholder="Search leads…" onkeyup="debounceSearch()">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="statusFilter" onchange="loadLeads()">
+                <option value="">All Status</option>
+                <option value="new">New</option>
+                <option value="contacted">Contacted</option>
+                <option value="interested">Interested</option>
+                <option value="negotiation">Negotiation</option>
+                <option value="won">Won</option>
+                <option value="lost">Lost</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="priorityFilter" onchange="loadLeads()">
+                <option value="">All Priority</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+            </select>
+        </div>
+        <div class="col-md-2 text-end">
+            <button class="btn btn-outline-secondary" onclick="resetFilters()">
+                <i class="fas fa-undo me-1"></i>Reset
+            </button>
+        </div>
+    </div>
+
+    <!-- Support legend for Senior/Extended tabs -->
+    <div id="supportLegend" class="mb-3" style="display:none">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <small class="text-muted fw-bold">Support Status:</small>
+            <span class="supp-status-yes"><i class="fas fa-check me-1"></i>Confirmed (100% yours)</span>
+            <span class="supp-status-pend"><i class="fas fa-clock me-1"></i>Pending decision</span>
+            <span class="supp-status-no"><i class="fas fa-times me-1"></i>Not Confirmed (redistribution applies)</span>
+        </div>
+    </div>
+
+    <!-- Leads Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="leadsTable">
+                    <thead class="table-light" id="leadsTableHead">
+                        <tr>
+                            <th>Lead</th>
+                            <th>Contact</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Stage</th>
+                            <th>Priority</th>
+                            <th>Updated</th>
+                            <th>Submit Date</th>
+                            <th>Complete Date</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="leadsTableBody">
+                        <tr><td colspan="10" class="text-center py-5">
+                            <div class="spinner-border text-success"></div>
+                            <p class="mt-3 text-muted">Loading leads…</p>
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <nav class="p-3">
+                <ul class="pagination justify-content-center mb-0" id="leadsPagList"></ul>
+            </nav>
+        </div>
+    </div>
+
+</div>
+
+<!-- Lead Detail Modal -->
+<div class="modal fade" id="leadDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header text-white" style="background:linear-gradient(135deg,#064e3b,#059669);">
+                <h5 class="modal-title" id="leadDetailTitle">Lead Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="leadDetailBody">
+                <div class="text-center py-5"><div class="spinner-border text-success"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const _vgkToken = localStorage.getItem('vgk_token');
+let _seg = 'overall';
+let _page = 1;
+let _searchTimeout = null;
+
+function _auth() { return _vgkToken ? { 'Authorization': 'Bearer ' + _vgkToken } : {}; }
+function esc(t) { if (!t) return ''; const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+function fmtDate(iso) { if (!iso) return '—'; return new Date(iso).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtMoney(n) { if (!n && n!==0) return '—'; return '₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+function statusBadge(s) {
+    const m={new:'bg-info',contacted:'bg-primary',interested:'bg-warning text-dark',negotiation:'bg-secondary',won:'bg-success',lost:'bg-danger'};
+    return `<span class="badge ${m[s]||'bg-secondary'}">${s||'?'}</span>`;
+}
+function priBadge(p) {
+    const m={high:'bg-danger',medium:'bg-warning text-dark',low:'bg-secondary'};
+    return `<span class="badge ${m[p]||'bg-secondary'}">${p||'Normal'}</span>`;
+}
+
+const _PIPE={documents_pending:'Docs Pending',application_submitted:'App Submitted',pending_with_bank:'With Bank',
+    loan_rejected:'Loan Rejected',documents_issue:'Docs Issue',load_extension:'Load Ext',
+    electricity_bill_change:'Bill Change',installation_pending:'Install Pending',
+    net_meter_pending:'Net Meter',subsidy_pending:'Subsidy',completed:'Completed',
+    not_interested:'Not Interested',cancelled:'Cancelled',different_vendor:'Diff. Vendor'};
+const _B2B={application_pending:'App Pending',agreement_pending:'Agreement Pending',gst_pending:'GST Pending',
+    training_pending:'Training Pending',branding_pending:'Branding Pending',payment_pending:'Payment Pending',
+    dispatch_pending:'Dispatch Pending',confirmation_pending:'Confirm Pending',completed:'Completed'};
+
+function stageBadge(l) {
+    const cat=(l.category_name||l.looking_for||'').toLowerCase();
+    if(cat==='solar'&&l.solar_pipeline_status) return `<span class="vgk-stage-badge vgk-stage-solar">${_PIPE[l.solar_pipeline_status]||l.solar_pipeline_status}</span>`;
+    if(cat==='ev b2b'&&l.ev_b2b_stage) return `<span class="vgk-stage-badge vgk-stage-b2b">${_B2B[l.ev_b2b_stage]||l.ev_b2b_stage}</span>`;
+    return '<span class="text-muted small">—</span>';
+}
+
+function suppStatusHtml(confirmed) {
+    if (confirmed === true)  return '<span class="supp-status-yes"><i class="fas fa-check me-1"></i>Supported</span>';
+    if (confirmed === false) return '<span class="supp-status-no"><i class="fas fa-times me-1"></i>Not Confirmed</span>';
+    return '<span class="supp-status-pend"><i class="fas fa-clock me-1"></i>Pending</span>';
+}
+
+async function initAuth() {
+    if (!_vgkToken) { alert('VGK4U session not found. Please log in.'); window.location.href='/vgk4u'; return false; }
+    try {
+        const r = await fetch('/api/v1/vgk/dashboard/profile', { headers: _auth() });
+        if (!r.ok) throw new Error('auth');
+        const d = await r.json();
+        const p = d.data || d;
+        document.getElementById('vgkMemberName').textContent =
+            (p.partner_name || p.contact_person || 'VGK Channel Partner') + (p.partner_code ? ' · '+p.partner_code : '');
+        return true;
+    } catch { alert('Session expired.'); localStorage.removeItem('vgk_token'); window.location.href='/vgk4u'; return false; }
+}
+
+function switchTab(seg) {
+    _seg = seg;
+    _page = 1;
+    ['overall','source','guru','zguru','support'].forEach(s => {
+        document.getElementById('tab-'+s).classList.toggle('active', s===seg);
+    });
+    document.getElementById('supportLegend').style.display = (seg==='guru'||seg==='zguru') ? '' : 'none';
+    // Update table header for source tab (add support column)
+    const isSource = seg === 'source';
+    document.getElementById('leadsTableHead').innerHTML = `<tr>
+        <th>Lead</th><th>Contact</th><th>Category</th><th>Status</th><th>Stage</th>
+        <th>Priority</th><th>Updated</th><th>Submit Date</th><th>Complete Date</th>
+        ${isSource ? '<th>Support (Senior/Extended)</th>' : ''}
+        ${(seg==='guru'||seg==='zguru') ? '<th>Support</th><th>Commission</th>' : ''}
+        <th></th>
+    </tr>`;
+    loadLeads();
+}
+
+function debounceSearch() {
+    clearTimeout(_searchTimeout);
+    _searchTimeout = setTimeout(loadLeads, 300);
+}
+function resetFilters() {
+    document.getElementById('leadSearch').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('priorityFilter').value = '';
+    _page = 1;
+    loadLeads();
+}
+
+async function loadLeads() {
+    const tbody = document.getElementById('leadsTableBody');
+    const colCount = _seg === 'source' ? 11 : (_seg === 'guru' || _seg === 'zguru') ? 12 : 10;
+    tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-center py-5"><div class="spinner-border spinner-border-sm text-success"></div> Loading…</td></tr>`;
+
+    const qs = new URLSearchParams({
+        segment: _seg, page: _page,
+        search: document.getElementById('leadSearch').value.trim(),
+        status: document.getElementById('statusFilter').value,
+        priority: document.getElementById('priorityFilter').value,
+    });
+
+    try {
+        const r = await fetch('/api/v1/vgk/dashboard/leads?' + qs.toString(), { headers: _auth() });
+        if (!r.ok) throw new Error('fetch');
+        const d = await r.json();
+
+        const tc = d.tab_counts || {};
+        document.getElementById('statOverall').textContent = tc.overall || 0;
+        document.getElementById('statSource').textContent  = tc.source  || 0;
+        document.getElementById('statGuru').textContent    = tc.guru    || 0;
+        document.getElementById('statZGuru').textContent   = tc.zguru   || 0;
+        document.getElementById('statSupport').textContent = tc.support || 0;
+        document.getElementById('cnt-overall').textContent = tc.overall || 0;
+        document.getElementById('cnt-source').textContent  = tc.source  || 0;
+        document.getElementById('cnt-guru').textContent    = tc.guru    || 0;
+        document.getElementById('cnt-zguru').textContent   = tc.zguru   || 0;
+        document.getElementById('cnt-support').textContent = tc.support || 0;
+
+        renderLeads(d.data || [], d.total || 0);
+    } catch(e) {
+        tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-center py-4 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leads.</td></tr>`;
+    }
+}
+
+function renderLeads(leads, total) {
+    const tbody = document.getElementById('leadsTableBody');
+    if (!leads.length) {
+        const colCount = _seg === 'source' ? 11 : (_seg === 'guru' || _seg === 'zguru') ? 12 : 10;
+        tbody.innerHTML = `<tr><td colspan="${colCount}" class="text-center py-5 text-muted"><i class="fas fa-inbox fa-2x d-block mb-3 opacity-50"></i>No leads found.</td></tr>`;
+        document.getElementById('leadsPagList').innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = leads.map(l => {
+        let rowClass = '';
+        let extraCols = '';
+
+        if (_seg === 'source') {
+            const si = l.support_info || {};
+            extraCols = `<td>${buildSupportPanel(l.id, si)}</td>`;
+        } else if (_seg === 'guru' || _seg === 'zguru') {
+            const sc = l.support_confirmed;
+            if (sc === true)  rowClass = 'row-confirmed';
+            else if (sc === false) rowClass = 'row-denied';
+            else rowClass = 'row-pending-supp';
+            extraCols = `<td>${suppStatusHtml(sc)}</td><td class="fw-bold text-success small">${fmtMoney(l.commission_amount)}</td>`;
+        }
+
+        return `<tr class="${rowClass}">
+            <td>
+                <div class="fw-semibold">${esc(l.name)}</div>
+                <div class="text-muted small">${esc(l.source||'')} ${l.company_id?'· Co.'+l.company_id:''}</div>
+            </td>
+            <td>
+                <div>${esc(l.phone)}</div>
+                ${l.email?`<div class="text-muted small">${esc(l.email)}</div>`:''}
+            </td>
+            <td><span class="badge bg-light text-dark border">${esc(l.category_name||l.looking_for||'—')}</span></td>
+            <td>${statusBadge(l.status)}</td>
+            <td>${stageBadge(l)}</td>
+            <td>${priBadge(l.priority)}</td>
+            <td class="text-muted small">${fmtDate(l.updated_at)}</td>
+            <td class="text-muted small">${l.submit_date ? fmtDate(l.submit_date) : '—'}</td>
+            <td class="text-muted small">${l.complete_date ? fmtDate(l.complete_date) : '—'}</td>
+            ${extraCols}
+            <td>
+                <button class="btn btn-sm btn-outline-success" onclick="viewLead(${l.id})" title="View">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+
+    renderPagination(total);
+}
+
+function buildSupportPanel(leadId, si) {
+    if (!si.guru && !si.zguru && (!si.handlers || !si.handlers.length)) {
+        return '<span class="text-muted small">No upline/handlers</span>';
+    }
+    let html = '<div class="supp-panel">';
+    html += '<div class="supp-label"><i class="fas fa-check-circle me-1"></i>Support Confirmation</div>';
+
+    if (si.guru) {
+        const g = si.guru;
+        const sc = g.support_confirmed;
+        const chkId = `chk-guru-${leadId}`;
+        html += `<div class="supp-row">
+            <div class="supp-handler">
+                <span class="role-tag role-guru">Senior (L2)</span>
+                <div><div class="name">${esc(g.partner_name)}</div><div class="code">${esc(g.partner_code)}</div></div>
+                <small class="text-muted ms-auto">${fmtMoney(g.commission_amount)}</small>
+            </div>
+            <label class="d-flex align-items-center gap-1 mb-0 cursor-pointer" style="cursor:pointer;white-space:nowrap">
+                <input type="checkbox" class="supp-chk" id="${chkId}" ${sc===true?'checked':''} 
+                    onchange="toggleSupport(${leadId}, 2, this.checked, '${chkId}')">
+                <span class="small fw-semibold">Supported</span>
+            </label>
+            ${suppStatusHtml(sc)}
+        </div>`;
+    }
+
+    if (si.zguru) {
+        const z = si.zguru;
+        const sc = z.support_confirmed;
+        const chkId = `chk-zguru-${leadId}`;
+        html += `<div class="supp-row">
+            <div class="supp-handler">
+                <span class="role-tag role-zguru">Extended (L3)</span>
+                <div><div class="name">${esc(z.partner_name)}</div><div class="code">${esc(z.partner_code)}</div></div>
+                <small class="text-muted ms-auto">${fmtMoney(z.commission_amount)}</small>
+            </div>
+            <label class="d-flex align-items-center gap-1 mb-0" style="cursor:pointer;white-space:nowrap">
+                <input type="checkbox" class="supp-chk" id="${chkId}" ${sc===true?'checked':''}
+                    onchange="toggleSupport(${leadId}, 3, this.checked, '${chkId}')">
+                <span class="small fw-semibold">Supported</span>
+            </label>
+            ${suppStatusHtml(sc)}
+        </div>`;
+    }
+
+    if (si.handlers && si.handlers.length) {
+        si.handlers.forEach(h => {
+            html += `<div class="supp-row">
+                <div class="supp-handler">
+                    <span class="role-tag role-partner">${esc(h.type)}</span>
+                    <div><div class="name">${esc(h.name)}</div><div class="code">${esc(h.code||'')}</div></div>
+                </div>
+                <span class="text-muted small">Informational only</span>
+            </div>`;
+        });
+    }
+
+    if (!si.guru && !si.zguru) {
+        html += '<div class="text-muted small py-1"><i class="fas fa-info-circle me-1"></i>No L2/L3 upline income entries for this lead yet.</div>';
+    }
+
+    html += '</div>';
+    return html;
+}
+
+async function toggleSupport(leadId, level, checked, chkId) {
+    const chk = document.getElementById(chkId);
+    if (chk) chk.disabled = true;
+    try {
+        const r = await fetch(`/api/v1/vgk/dashboard/leads/${leadId}/set-support`, {
+            method: 'POST',
+            headers: { ...(_auth()), 'Content-Type': 'application/json' },
+            body: JSON.stringify({ level, confirmed: checked })
+        });
+        const d = await r.json();
+        if (d.success) {
+            showToast(`L${level} support ${checked ? 'confirmed ✓' : 'unconfirmed'}`, checked ? 'success' : 'warning');
+            // Reload to reflect updated state
+            setTimeout(loadLeads, 600);
+        } else {
+            showToast(d.detail || 'Failed to update', 'error');
+            if (chk) { chk.checked = !checked; chk.disabled = false; }
+        }
+    } catch {
+        showToast('Error updating support', 'error');
+        if (chk) { chk.checked = !checked; chk.disabled = false; }
+    }
+}
+
+function renderPagination(total) {
+    const perPage = 20;
+    const pages = Math.ceil(total / perPage);
+    const list = document.getElementById('leadsPagList');
+    if (pages <= 1) { list.innerHTML = ''; return; }
+    let html = '';
+    if (_page > 1) html += `<li class="page-item"><a class="page-link" href="#" onclick="gotoPage(${_page-1});return false;">‹</a></li>`;
+    const start = Math.max(1, _page-2), end = Math.min(pages, _page+2);
+    for (let p = start; p <= end; p++) {
+        html += `<li class="page-item ${p===_page?'active':''}"><a class="page-link" href="#" onclick="gotoPage(${p});return false;">${p}</a></li>`;
+    }
+    if (_page < pages) html += `<li class="page-item"><a class="page-link" href="#" onclick="gotoPage(${_page+1});return false;">›</a></li>`;
+    list.innerHTML = html;
+}
+
+function gotoPage(p) { _page = p; loadLeads(); }
+
+async function viewLead(leadId) {
+    const modal = new bootstrap.Modal(document.getElementById('leadDetailModal'));
+    document.getElementById('leadDetailTitle').textContent = 'Lead #' + leadId;
+    document.getElementById('leadDetailBody').innerHTML = '<div class="text-center py-5"><div class="spinner-border text-success"></div></div>';
+    modal.show();
+    try {
+        const r = await fetch('/api/v1/crm/unified-my-leads/' + leadId + '/details?role=mnr', { credentials: 'include' });
+        if (!r.ok) throw new Error();
+        const d = await r.json();
+        const l = d.lead || d;
+        document.getElementById('leadDetailTitle').textContent = esc(l.name || 'Lead #' + leadId);
+        document.getElementById('leadDetailBody').innerHTML = `
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="mb-3"><label class="fw-bold small text-muted">Name</label><div>${esc(l.name)}</div></div>
+                    <div class="mb-3"><label class="fw-bold small text-muted">Phone</label><div>${esc(l.phone||'—')}</div></div>
+                    <div class="mb-3"><label class="fw-bold small text-muted">Email</label><div>${esc(l.email||'—')}</div></div>
+                    <div class="mb-3"><label class="fw-bold small text-muted">City / State</label><div>${esc((l.city||'')+(l.state?', '+l.state:''))}</div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3"><label class="fw-bold small text-muted">Category</label><div>${esc(l.category_name||'—')}</div></div>
+                    <div class="mb-3"><label class="fw-bold small text-muted">Status</label><div>${statusBadge(l.status)}</div></div>
+                    <div class="mb-3"><label class="fw-bold small text-muted">Priority</label><div>${priBadge(l.priority)}</div></div>
+                    <div class="mb-3"><label class="fw-bold small text-muted">Next Follow-up</label><div>${fmtDate(l.next_followup_date)}</div></div>
+                </div>
+                ${l.deal_value_total ? `<div class="col-12">
+                    <div class="alert alert-success py-2">
+                        <i class="fas fa-trophy me-2"></i><strong>Deal Total:</strong> ${fmtMoney(l.deal_value_total)}
+                        · Received: ${fmtMoney(l.deal_value_received)}
+                        ${l.confirmed_final_value != null ? `· <span style="font-weight:800;color:#92400e;background:#fef3c7;padding:1px 6px;border-radius:4px;border:1px solid #fcd34d" title="Locked at completion — payout base">&#128274; Confirmed: ${fmtMoney(l.confirmed_final_value)}</span>` : ''}
+                    </div>
+                </div>` : ''}
+            </div>`;
+    } catch {
+        document.getElementById('leadDetailBody').innerHTML = '<div class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Could not load lead details.</div>';
+    }
+}
+
+function showToast(msg, type='success') {
+    let t = document.getElementById('vgkToast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'vgkToast';
+        t.style.cssText='position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;color:white;font-size:13px;font-weight:600;z-index:9999;opacity:0;transform:translateY(10px);transition:all .3s;pointer-events:none';
+        document.body.appendChild(t);
+    }
+    const colors = {success:'#059669', error:'#dc2626', warning:'#d97706'};
+    t.style.background = colors[type] || colors.success;
+    t.textContent = msg;
+    t.style.opacity = '1'; t.style.transform = 'translateY(0)';
+    setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(10px)'; }, 3000);
+}
+
+(async function init() {
+    const ok = await initAuth();
+    if (!ok) return;
+    switchTab('overall');
+})();
+</script>

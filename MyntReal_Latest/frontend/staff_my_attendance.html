@@ -1,0 +1,3526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - In/Out Time</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/gps-service.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <!-- DC_PHOTO_AI_001: Face detection library for human verification -->
+    <script async src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@0.0.7/dist/face-api.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; }
+        
+        .punch-card {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border-radius: 16px;
+            padding: 32px;
+            color: white;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .punch-time { font-size: 48px; font-weight: 700; margin-bottom: 8px; }
+        .punch-date { font-size: 16px; opacity: 0.9; margin-bottom: 24px; }
+        .punch-status { font-size: 18px; margin-bottom: 24px; }
+        .punch-status .status-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 20px; border-radius: 24px;
+            background: rgba(255,255,255,0.2); font-weight: 600;
+        }
+        .punch-status .status-badge.clocked-in { background: rgba(16, 185, 129, 0.3); }
+        .punch-status .status-badge.on-break { background: rgba(245, 158, 11, 0.3); }
+        
+        .punch-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .punch-btn {
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .punch-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .punch-btn.clock-in { background: #10b981; color: white; }
+        .punch-btn.clock-out { background: #ef4444; color: white; }
+        .punch-btn.start-break { background: #f59e0b; color: white; }
+        .punch-btn.end-break { background: #3b82f6; color: white; }
+        .punch-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        .work-mode-selector { margin-bottom: 24px; }
+        .mode-options { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .mode-option {
+            padding: 10px 24px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .mode-option:hover { background: rgba(255,255,255,0.2); }
+        .mode-option.selected { border-color: white; background: rgba(255,255,255,0.2); }
+        .mode-option i { margin-right: 8px; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .stat-icon.blue { background: #dbeafe; color: #2563eb; }
+        .stat-icon.green { background: #d1fae5; color: #059669; }
+        .stat-icon.yellow { background: #fef3c7; color: #d97706; }
+        .stat-icon.purple { background: #e0e7ff; color: #4338ca; }
+        .stat-value { font-size: 24px; font-weight: 700; color: #1f2937; margin-top: 8px; }
+        .stat-label { font-size: 13px; color: #6b7280; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 0; }
+        
+        .filters-bar { padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filters-bar select, .filters-bar input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; border-top: none; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-office { background: #dbeafe; color: #1e40af; }
+        .badge-wfh { background: #d1fae5; color: #065f46; }
+        .badge-field { background: #fef3c7; color: #92400e; }
+        .badge-present { background: #dcfce7; color: #166534; }
+        .badge-absent { background: #fee2e2; color: #991b1b; }
+        .badge-half-day { background: #fef3c7; color: #92400e; }
+        
+        .timeline { padding: 20px; }
+        .timeline-item { display: flex; gap: 16px; margin-bottom: 16px; position: relative; }
+        .timeline-item:before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 36px;
+            bottom: -16px;
+            width: 2px;
+            background: #e5e7eb;
+        }
+        .timeline-item:last-child:before { display: none; }
+        .timeline-icon {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+            z-index: 1;
+        }
+        .timeline-icon.clock-in { background: #d1fae5; color: #059669; }
+        .timeline-icon.clock-out { background: #fee2e2; color: #dc2626; }
+        .timeline-icon.break-start { background: #fef3c7; color: #d97706; }
+        .timeline-icon.break-end { background: #dbeafe; color: #2563eb; }
+        .timeline-content { flex: 1; }
+        .timeline-title { font-weight: 600; color: #1f2937; }
+        .timeline-time { font-size: 13px; color: #6b7280; }
+        .timeline-location { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+        
+        .location-display { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 8px; }
+        .location-display i { margin-right: 4px; }
+        
+        /* DC_BATTERY_003: Live battery indicator in punch card */
+        .battery-live-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .battery-live-display i { font-size: 16px; }
+        .battery-live-display.battery-high { color: #4ade80; }
+        .battery-live-display.battery-medium { color: #fbbf24; }
+        .battery-live-display.battery-low { color: #f87171; }
+        .battery-live-display.battery-critical { color: #ef4444; animation: batteryBlink 1s infinite; }
+        .battery-live-display.battery-na { color: rgba(255,255,255,0.6); }
+        @keyframes batteryBlink { 50% { opacity: 0.5; } }
+        
+        /* DC_BATTERY_003: Battery badge in timeline */
+        .timeline-battery {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+        .timeline-battery.battery-high { background: #dcfce7; color: #166534; }
+        .timeline-battery.battery-medium { background: #fef3c7; color: #92400e; }
+        .timeline-battery.battery-low { background: #fee2e2; color: #991b1b; }
+        .timeline-battery.battery-critical { background: #fee2e2; color: #991b1b; }
+        .timeline-battery.battery-na { background: #f3f4f6; color: #6b7280; }
+        
+        .empty-state { text-align: center; padding: 40px 20px; color: #6b7280; }
+        .empty-state i { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+        
+        /* Camera Capture Modal Styles - WVV Protocol */
+        .camera-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .camera-modal-overlay.active { display: flex; }
+        
+        .camera-modal {
+            background: #1f2937;
+            border-radius: 16px;
+            max-width: 480px;
+            width: 95%;
+            overflow: hidden;
+            color: white;
+        }
+        .camera-header {
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .camera-header h3 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+        .camera-header .close-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .camera-header .close-btn:hover { background: rgba(255,255,255,0.3); }
+        
+        .camera-body { padding: 0; }
+        
+        .camera-preview-container {
+            position: relative;
+            background: #000;
+            aspect-ratio: 4/3;
+        }
+        #cameraPreview, #capturedPhoto {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        #capturedPhoto { display: none; }
+        
+        .camera-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px;
+            pointer-events: none;
+        }
+        .camera-overlay .gps-status {
+            background: rgba(0,0,0,0.6);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: auto;
+        }
+        .camera-overlay .gps-status.success { color: #10b981; }
+        .camera-overlay .gps-status.error { color: #ef4444; }
+        .camera-overlay .gps-status.loading { color: #f59e0b; }
+        
+        /* Break Type Selector Modal Styles */
+        .break-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .break-modal-overlay.active { display: flex; }
+        
+        .break-modal {
+            background: #1f2937;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 90%;
+            overflow: hidden;
+            color: white;
+        }
+        .break-modal-header {
+            padding: 16px 20px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .break-modal-header h3 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+        .break-modal-header .close-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .break-modal-header .close-btn:hover { background: rgba(255,255,255,0.3); }
+        
+        .break-modal-body {
+            padding: 20px;
+        }
+        .break-type-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .break-type-option {
+            background: #374151;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            padding: 16px 12px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        .break-type-option:hover { background: #4b5563; }
+        .break-type-option.selected { 
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.2);
+        }
+        .break-type-option i {
+            font-size: 24px;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .break-type-option .break-type-name {
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .break-type-option .break-type-desc {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+        .break-type-option[data-code="LUNCH"] i { color: #f59e0b; }
+        .break-type-option[data-code="TEA"] i { color: #10b981; }
+        .break-type-option[data-code="PERSONAL"] i { color: #6366f1; }
+        .break-type-option[data-code="CLIENT_VISIT"] i { color: #3b82f6; }
+        .break-type-option[data-code="TRAVEL"] i { color: #8b5cf6; }
+        .break-type-option[data-code="EMERGENCY"] i { color: #ef4444; }
+        
+        .start-break-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+        .start-break-btn:hover { opacity: 0.9; }
+        .start-break-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .camera-controls {
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+        .capture-btn {
+            width: 72px; height: 72px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid #e5e7eb;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s;
+        }
+        .capture-btn:hover { transform: scale(1.05); }
+        .capture-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        
+        .retake-btn, .confirm-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .retake-btn { background: #374151; color: white; }
+        .confirm-btn { background: #10b981; color: white; }
+        .retake-btn:hover { background: #4b5563; }
+        .confirm-btn:hover { background: #059669; }
+        .confirm-btn:disabled { background: #6b7280; cursor: not-allowed; }
+        
+        .camera-info {
+            padding: 12px 20px;
+            background: #111827;
+            font-size: 13px;
+            color: #9ca3af;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .camera-info .location-info { display: flex; align-items: center; gap: 6px; }
+        .camera-info .accuracy-info { color: #6b7280; }
+        
+        .camera-loading {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+        }
+        .camera-loading i { font-size: 32px; margin-bottom: 8px; }
+        .camera-loading .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .evidence-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        .evidence-tag i { font-size: 10px; }
+        
+        .location-timeline {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .drift-event {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            border-left: 3px solid #6366f1;
+            background: #f8fafc;
+            margin-bottom: 8px;
+            border-radius: 0 8px 8px 0;
+        }
+        .drift-event:hover { background: #f1f5f9; }
+        .drift-event .drift-seq {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; font-size: 12px;
+            flex-shrink: 0;
+        }
+        .drift-event .drift-content { flex: 1; }
+        .drift-event .drift-time {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+        .drift-event .drift-distance {
+            font-weight: bold;
+            color: #059669;
+            margin-bottom: 4px;
+        }
+        .drift-event .drift-locations {
+            font-size: 12px;
+            color: #475569;
+        }
+        .drift-event .drift-locations .from-loc { color: #dc2626; }
+        .drift-event .drift-locations .to-loc { color: #059669; }
+        .drift-event .drift-dc-code {
+            font-size: 10px;
+            color: #94a3b8;
+            font-family: monospace;
+            margin-top: 4px;
+        }
+        .no-drifts {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+        .no-drifts i { font-size: 48px; margin-bottom: 12px; display: block; }
+    </style>
+    <!-- DC-FIX: jQuery for staff pages -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="punch-card">
+                <div class="punch-time" id="currentTime">00:00:00</div>
+                <div class="punch-date" id="currentDate">Loading...</div>
+                
+                <div class="punch-status">
+                    <span class="status-badge" id="statusBadge">
+                        <i class="fas fa-circle"></i>
+                        <span id="statusText">Not Clocked In</span>
+                    </span>
+                </div>
+                
+                <div class="work-mode-selector" id="workModeSelector">
+                    <div style="margin-bottom: 8px; opacity: 0.9;">Select Work Mode:</div>
+                    <div class="mode-options">
+                        <div class="mode-option selected" data-mode="office" onclick="selectWorkMode('office')">
+                            <i class="fas fa-building"></i>Office
+                        </div>
+                        <div class="mode-option" data-mode="wfh" onclick="selectWorkMode('wfh')">
+                            <i class="fas fa-home"></i>Work From Home
+                        </div>
+                        <div class="mode-option" data-mode="field" onclick="selectWorkMode('field')">
+                            <i class="fas fa-map-marker-alt"></i>Field Work
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="location-display" id="locationDisplay">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span id="locationText">Fetching location...</span>
+                </div>
+                
+                <!-- DC_BATTERY_003: Live battery indicator in punch card -->
+                <div class="battery-live-display battery-na" id="liveBatteryDisplay">
+                    <i class="fas fa-battery-empty"></i>
+                    <span id="liveBatteryText">Battery: --</span>
+                </div>
+                
+                <div class="punch-buttons">
+                    <button class="punch-btn clock-in" id="clockInBtn" onclick="openCameraModal('clock_in')">
+                        <i class="fas fa-sign-in-alt"></i>Clock In
+                        <span class="evidence-tag"><i class="fas fa-camera"></i> Selfie</span>
+                    </button>
+                    <button class="punch-btn start-break" id="startBreakBtn" onclick="openBreakTypeModal()" style="display: none;">
+                        <i class="fas fa-coffee"></i>Start Break
+                    </button>
+                    <button class="punch-btn end-break" id="endBreakBtn" onclick="endBreak()" style="display: none;">
+                        <i class="fas fa-play"></i>End Break
+                    </button>
+                    <button class="punch-btn clock-out" id="clockOutBtn" onclick="openCameraModal('clock_out')" style="display: none;">
+                        <i class="fas fa-sign-out-alt"></i>Clock Out
+                        <span class="evidence-tag"><i class="fas fa-camera"></i> Selfie</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">Today's Hours</div>
+                            <div class="stat-value" id="todayHours">0:00</div>
+                        </div>
+                        <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">This Week</div>
+                            <div class="stat-value" id="weekHours">0:00</div>
+                        </div>
+                        <div class="stat-icon green"><i class="fas fa-calendar-week"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">This Month</div>
+                            <div class="stat-value" id="monthHours">0:00</div>
+                        </div>
+                        <div class="stat-icon purple"><i class="fas fa-calendar-alt"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div>
+                            <div class="stat-label">Break Time Today</div>
+                            <div class="stat-value" id="breakTime">0:00</div>
+                        </div>
+                        <div class="stat-icon yellow"><i class="fas fa-coffee"></i></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Location Drift Tracker Card (DC Protocol: WVV Location Tracking) -->
+            <div class="card mb-4" id="locationDriftCard" style="display: none;">
+                <div class="card-header" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; display: flex; justify-content: space-between; align-items: center;">
+                    <h5 style="margin: 0;"><i class="fas fa-route me-2"></i>Location Tracking</h5>
+                    <div>
+                        <span class="badge bg-light text-dark" id="driftTrackingStatus">
+                            <i class="fas fa-satellite-dish"></i> Tracking
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row text-center">
+                        <div class="col-4 border-end">
+                            <div class="text-muted small">Locations</div>
+                            <div class="fs-3 fw-bold text-primary" id="uniqueLocationsCount">0</div>
+                        </div>
+                        <div class="col-4 border-end">
+                            <div class="text-muted small">Changes</div>
+                            <div class="fs-3 fw-bold text-warning" id="locationChangeCount">0</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">Distance</div>
+                            <div class="fs-3 fw-bold text-success" id="totalDistanceKm">0.0 <span class="fs-6">km</span></div>
+                        </div>
+                    </div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted" id="lastLocationUpdate">Last update: --</small>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewLocationHistory()">
+                            <i class="fas fa-history"></i> View History
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Field Work Tracker Card (shows when in field mode) -->
+            <div class="card mb-4" id="fieldWorkCard" style="display: none;">
+                <div class="card-header" style="background: linear-gradient(135deg, #f97316, #ea580c); color: white;">
+                    <h5><i class="fas fa-map-marked-alt me-2"></i>Field Work Tracker</h5>
+                    <div id="fieldWorkStatus">
+                        <span class="badge bg-warning text-dark" id="fieldSessionStatus">Not Started</span>
+                    </div>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row">
+                        <div class="col-md-4 text-center border-end">
+                            <div class="p-2">
+                                <div class="text-muted small">GPS Status</div>
+                                <div class="fs-4 fw-bold" id="gpsStatusDisplay">
+                                    <i class="fas fa-satellite-dish text-warning"></i> Checking...
+                                </div>
+                                <div class="text-muted small" id="gpsOffDuration" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle text-danger"></i> 
+                                    GPS off: <span id="gpsOffMinutes">0</span> mins
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center border-end">
+                            <div class="p-2">
+                                <div class="text-muted small">Distance Traveled</div>
+                                <div class="fs-2 fw-bold text-primary" id="kmCounter">0.00 <span class="fs-5">km</span></div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="p-2">
+                                <div class="text-muted small">Estimated Reimbursement</div>
+                                <div class="fs-4 fw-bold text-success" id="reimbursementEstimate">₹0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small">Transport Mode</label>
+                            <div class="btn-group d-flex" role="group" id="transportModeGroup">
+                                <button type="button" class="btn btn-outline-primary transport-btn" data-mode="car" onclick="selectTransportMode('car')">
+                                    <i class="fas fa-car"></i> Car (₹8/km)
+                                </button>
+                                <button type="button" class="btn btn-outline-primary transport-btn active" data-mode="bike" onclick="selectTransportMode('bike')">
+                                    <i class="fas fa-motorcycle"></i> Bike (₹4/km)
+                                </button>
+                                <button type="button" class="btn btn-outline-primary transport-btn" data-mode="local_transport" onclick="selectTransportMode('local_transport')">
+                                    <i class="fas fa-bus"></i> Local (₹3/km)
+                                </button>
+                                <button type="button" class="btn btn-outline-primary transport-btn" data-mode="others" onclick="selectTransportMode('others')">
+                                    <i class="fas fa-walking"></i> Other (₹2/km)
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <button class="btn btn-success btn-lg" id="startFieldWorkBtn" onclick="startFieldWork()">
+                                <i class="fas fa-play me-1"></i> Start Tracking
+                            </button>
+                            <button class="btn btn-danger btn-lg" id="stopFieldWorkBtn" onclick="stopFieldWork()" style="display: none;">
+                                <i class="fas fa-stop me-1"></i> Stop Tracking
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3 mb-0" id="gpsWarning" style="display: none;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>GPS Permission Required:</strong> Please enable GPS for accurate distance tracking.
+                        Attendance will be calculated based on GPS-on duration only.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Today's Intervals Section (shown when clocked in) -->
+            <div class="card mb-4" id="intervalsCard" style="display: none;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Today's Work Intervals</h5>
+                    <button class="btn btn-primary btn-sm" onclick="openLogIntervalModal()">
+                        <i class="fas fa-plus me-1"></i>Log Work
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Type</th>
+                                    <th>Activity</th>
+                                    <th>Duration</th>
+                                    <th>Linked To</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="intervalsTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-3 bg-light border-top">
+                        <div class="row text-center">
+                            <div class="col">
+                                <div class="fw-bold text-primary" id="totalIntervalMinutes">0:00</div>
+                                <small class="text-muted">Total Logged</small>
+                            </div>
+                            <div class="col">
+                                <div class="fw-bold text-success" id="activeIntervalStatus">-</div>
+                                <small class="text-muted">Active Interval</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-history me-2"></i><span id="timelineTitle">Today's Timeline</span></h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="toggleTimelineDatePicker()" title="Select date">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                            </button>
+                        </div>
+                        <div id="timelineDatePickerBar" style="display: none; padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                            <div class="row mb-2 g-2">
+                                <div class="col-auto">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="loadTimelineDate('today')" style="font-size: 11px; padding: 4px 8px;">Today</button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="loadTimelineDate('yesterday')" style="font-size: 11px; padding: 4px 8px;">Yesterday</button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="loadTimelineDate('this_week')" style="font-size: 11px; padding: 4px 8px;">This Week</button>
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <input type="date" id="timelineCustomDate" class="form-control form-control-sm" onchange="loadTimelineDate('custom')" style="font-size: 12px;">
+                                </div>
+                                <div class="col-6">
+                                    <button class="btn btn-sm btn-primary w-100" onclick="loadTimelineDate('custom')" style="font-size: 12px;">Load</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="timeline" id="todayTimeline">
+                            <div class="empty-state">
+                                <i class="fas fa-clock"></i>
+                                <p>No activity yet today</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-calendar me-2"></i>Attendance History</h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="toggleHistoryDatePicker()" title="Date Range Filter">
+                                <i class="fas fa-filter me-1"></i>Filter
+                            </button>
+                        </div>
+                        <div id="historyDatePickerBar" style="display: none; padding: 12px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                            <div class="row mb-2 g-2">
+                                <div class="col-auto">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="loadHistoryDateRange('today')" style="font-size: 11px; padding: 4px 8px;">Today</button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="loadHistoryDateRange('this_week')" style="font-size: 11px; padding: 4px 8px;">This Week</button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="loadHistoryDateRange('this_month')" style="font-size: 11px; padding: 4px 8px;">This Month</button>
+                                </div>
+                                <div class="col-auto">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="loadHistoryDateRange('last_month')" style="font-size: 11px; padding: 4px 8px;">Last Month</button>
+                                </div>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1">From Date</label>
+                                    <input type="date" id="historyFromDate" class="form-control form-control-sm" style="font-size: 12px;">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold mb-1">To Date</label>
+                                    <input type="date" id="historyToDate" class="form-control form-control-sm" style="font-size: 12px;">
+                                </div>
+                                <div class="col-md-6 d-flex align-items-end gap-2">
+                                    <button class="btn btn-sm btn-primary flex-grow-1" onclick="loadHistoryDateRange('custom')" style="font-size: 12px;">Load Range</button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleHistoryDatePicker()" style="font-size: 12px;">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="filters-bar">
+                            <span id="historyDateRangeDisplay" style="font-size: 13px; color: #6b7280; font-weight: 500;">This Month</span>
+                            <button class="btn btn-outline-secondary btn-sm ms-auto" onclick="loadHistory()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Mode</th>
+                                            <th>Clock In</th>
+                                            <th>Clock Out</th>
+                                            <th>Work Hours</th>
+                                            <th>Break Time</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="historyTableBody">
+                                        <tr>
+                                            <td colspan="7" class="text-center py-4">
+                                                <i class="fas fa-spinner fa-spin"></i> Loading...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Location History Modal (DC Protocol: Drift Event Viewer) -->
+    <div class="modal fade" id="locationHistoryModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white;">
+                    <h5 class="modal-title"><i class="fas fa-route me-2"></i>Location History</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-bold">Date Filter</label>
+                            <select class="form-select form-select-sm" id="driftDateFilter" onchange="loadLocationHistory()">
+                                <option value="today">Today</option>
+                                <option value="yesterday">Yesterday</option>
+                                <option value="this_week">This Week</option>
+                                <option value="this_month">This Month</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="customStartDateCol" style="display: none;">
+                            <label class="form-label small fw-bold">Start Date</label>
+                            <input type="date" class="form-control form-control-sm" id="driftStartDate" onchange="loadLocationHistory()">
+                        </div>
+                        <div class="col-md-4" id="customEndDateCol" style="display: none;">
+                            <label class="form-label small fw-bold">End Date</label>
+                            <input type="date" class="form-control form-control-sm" id="driftEndDate" onchange="loadLocationHistory()">
+                        </div>
+                    </div>
+                    
+                    <div class="card bg-light mb-3" id="driftSummaryCard">
+                        <div class="card-body py-2">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="small text-muted">Total Changes</div>
+                                    <div class="fs-5 fw-bold text-primary" id="historyTotalChanges">0</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="small text-muted">Total Distance</div>
+                                    <div class="fs-5 fw-bold text-success" id="historyTotalDistance">0 km</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="small text-muted">Unique Locations</div>
+                                    <div class="fs-5 fw-bold text-warning" id="historyUniqueLocations">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="location-timeline" id="locationTimeline">
+                        <div class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin"></i> Loading history...
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Log Work Interval Modal -->
+    <div class="modal fade" id="logIntervalModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white;">
+                    <h5 class="modal-title"><i class="fas fa-clock me-2"></i>Log Work Interval</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="intervalForm">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Activity Type</label>
+                                <select class="form-select" id="intervalActivityType" onchange="handleActivityTypeChange()">
+                                    <option value="general">General Work</option>
+                                    <option value="kra">KRA Activity</option>
+                                    <option value="task">Task Work</option>
+                                    <option value="meeting">Meeting</option>
+                                    <option value="training">Training</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Billable</label>
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" id="intervalBillable" checked>
+                                    <label class="form-check-label" for="intervalBillable">Billable Hours</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3" id="kraSection" style="display: none;">
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Select KRA</label>
+                                <select class="form-select" id="intervalKraSelect">
+                                    <option value="">-- Select KRA Entry --</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3" id="taskSection" style="display: none;">
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Select Task</label>
+                                <select class="form-select" id="intervalTaskSelect">
+                                    <option value="">-- Select Task --</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Start Time</label>
+                                <input type="datetime-local" class="form-control" id="intervalStart">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">End Time <span class="text-muted">(optional)</span></label>
+                                <input type="datetime-local" class="form-control" id="intervalEnd">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Activity Title</label>
+                            <input type="text" class="form-control" id="intervalTitle" placeholder="What did you work on?">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Notes <span class="text-muted">(optional)</span></label>
+                            <textarea class="form-control" id="intervalNotes" rows="3" placeholder="Additional details..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveWorkInterval()">
+                        <i class="fas fa-save me-1"></i>Save Interval
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js?v=1764165148"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        let currentStatus = 'not_clocked_in';
+        let selectedWorkMode = 'office';
+        let currentLocation = null;
+        let todayAttendance = null;
+        const API_BASE = '/api/v1';
+        
+        let fieldWorkSession = null;
+        let selectedTransportMode = 'bike';
+        let gpsWatchId = null;
+        let heartbeatInterval = null;
+        let gpsOffStartTime = null;
+        let totalGpsOffMinutes = 0;
+        
+        const transportRates = {
+            car: 8.00,
+            bike: 4.00,
+            local_transport: 3.00,
+            others: 2.00
+        };
+        
+        let driftTrackingInterval = null;
+        let lastDriftLocation = null;
+        const DRIFT_POLL_INTERVAL_MS = 180000;
+        const DRIFT_THRESHOLD_METERS = 200;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('In/Out Time', 'fas fa-clock');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            getLocation();
+            initLiveBattery(); // DC_BATTERY_003: Start live battery monitoring
+            populateMonthFilter();
+            await loadTodayStatus();
+            
+            // DC_GPS_AUTO_RESTART_001: Start GPS if user is already clocked in (Dec 05, 2025)
+            // This ensures returning sessions resume heartbeats for battery/location tracking
+            if (todayAttendance && todayAttendance.attendance && 
+                todayAttendance.attendance.clock_in && !todayAttendance.attendance.clock_out) {
+                console.log('[DC_GPS_AUTO_RESTART] User is already clocked in, starting GPS service');
+                gpsService.start('attendance_page_load');
+            }
+            
+            // DC_RESUME_008: Check for interrupted tracking sessions (Jan 13, 2026)
+            // Shows resume prompt if user closed browser while tracking was active
+            // Note: Callbacks must throw on error for modal to stay open and show retry
+            if (typeof gpsService !== 'undefined' && gpsService.checkAndPromptResume) {
+                gpsService.checkAndPromptResume(
+                    // Resume callback - restart GPS tracking
+                    async (sessionData) => {
+                        console.log('[DC_RESUME] User chose to resume tracking');
+                        gpsService.start('session_resume');
+                        gpsService.clearTrackingState();
+                        showToast('GPS tracking resumed', 'success');
+                        
+                        // Non-critical UI refresh - don't fail if this errors
+                        try {
+                            if (sessionData.active_journey) {
+                                await checkFieldWorkSession();
+                            }
+                        } catch (e) {
+                            console.warn('[DC_RESUME] UI refresh error (non-critical):', e);
+                        }
+                    },
+                    // End callback - user wants to end session
+                    async (sessionData) => {
+                        console.log('[DC_RESUME] User chose to end session');
+                        
+                        // DC_JOURNEY_RESOLVE_001: Use authoritative resolveActiveWork()
+                        // This handles both journey and field work cleanup
+                        // and allows clock out to proceed regardless of outcome
+                        await resolveActiveWork();
+                        await performClockOut();
+                        
+                        // Clear tracking state after successful end
+                        gpsService.clearTrackingState();
+                        showToast('Session ended successfully', 'success');
+                        
+                        // Non-critical UI refresh - don't fail if this errors
+                        try {
+                            await loadTodayStatus();
+                            await loadStats();
+                        } catch (e) {
+                            console.warn('[DC_RESUME] UI refresh error (non-critical):', e);
+                        }
+                    }
+                );
+            }
+            
+            await loadHistory();
+            await loadStats();
+            await checkFieldWorkSession();
+            await loadTodayIntervals();
+            await fetchBreakTypes();
+        });
+        
+        // DC_RESUME_FIX (Jan 22, 2026): Simple toast notification function
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+            toast.style.cssText = `
+                position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+                background: ${bgColor}; color: white; padding: 12px 24px;
+                border-radius: 8px; z-index: 10001; font-size: 14px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: fadeIn 0.3s ease;
+            `;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-IN', { hour12: false });
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-IN', { 
+                weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' 
+            });
+        }
+        
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        currentLocation = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy: position.coords.accuracy
+                        };
+                        document.getElementById('locationText').textContent = 
+                            `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+                    },
+                    (error) => {
+                        console.error('Location error:', error);
+                        document.getElementById('locationText').textContent = 'Location unavailable';
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                document.getElementById('locationText').textContent = 'Geolocation not supported';
+            }
+        }
+        
+        function selectWorkMode(mode) {
+            selectedWorkMode = mode;
+            document.querySelectorAll('.mode-option').forEach(el => {
+                el.classList.toggle('selected', el.dataset.mode === mode);
+            });
+            updateFieldWorkCardVisibility();
+        }
+        
+        // ==================== DC_BATTERY_003: Live Battery Monitoring ====================
+        let batteryUpdateInterval = null;
+        let currentBatteryLevel = null;
+        
+        async function initLiveBattery() {
+            // DC_BATTERY_003: Initialize battery monitoring with feature detection
+            console.log('[DC_BATTERY_003] Initializing live battery monitoring');
+            
+            // Check if Battery Status API is supported
+            if (!navigator.getBattery) {
+                console.log('[DC_BATTERY_003] Battery API not supported in this browser');
+                const display = document.getElementById('liveBatteryDisplay');
+                display.className = 'battery-live-display battery-na';
+                display.innerHTML = `<i class="fas fa-battery-empty"></i><span>Battery: Not Available</span>`;
+                display.title = 'Battery Status API not supported in this browser';
+                return; // Don't start interval if API not supported
+            }
+            
+            await updateLiveBattery();
+            batteryUpdateInterval = setInterval(updateLiveBattery, 30000); // 30 seconds
+            
+            // Listen for battery events
+            try {
+                const battery = await navigator.getBattery();
+                battery.addEventListener('levelchange', () => {
+                    console.log('[DC_BATTERY_003] Battery level changed');
+                    updateLiveBattery();
+                });
+            } catch (e) {
+                console.log('[DC_BATTERY_003] Battery event listener not supported');
+            }
+        }
+        
+        async function updateLiveBattery() {
+            const display = document.getElementById('liveBatteryDisplay');
+            const text = document.getElementById('liveBatteryText');
+            
+            try {
+                let percentage = null;
+                
+                // Try native Battery API first
+                if (navigator.getBattery) {
+                    try {
+                        const battery = await navigator.getBattery();
+                        percentage = Math.round(battery.level * 100);
+                    } catch (e) {
+                        console.log('[DC_BATTERY_003] Native battery API failed');
+                    }
+                }
+                
+                currentBatteryLevel = percentage;
+                
+                if (percentage !== null) {
+                    display.className = 'battery-live-display ' + getBatteryColorClass(percentage);
+                    display.innerHTML = `<i class="fas ${getBatteryIcon(percentage)}"></i><span id="liveBatteryText">Battery: ${percentage}%</span>`;
+                    console.log('[DC_BATTERY_003] Battery updated:', percentage + '%');
+                } else {
+                    display.className = 'battery-live-display battery-na';
+                    display.innerHTML = `<i class="fas fa-battery-empty"></i><span id="liveBatteryText">Battery: N/A</span>`;
+                }
+            } catch (error) {
+                console.error('[DC_BATTERY_003] Battery update error:', error);
+                display.className = 'battery-live-display battery-na';
+                display.innerHTML = `<i class="fas fa-battery-empty"></i><span id="liveBatteryText">Battery: N/A</span>`;
+            }
+        }
+        
+        function getBatteryColorClass(percentage) {
+            if (percentage > 50) return 'battery-high';
+            if (percentage > 20) return 'battery-medium';
+            if (percentage > 10) return 'battery-low';
+            return 'battery-critical';
+        }
+        
+        function getBatteryIcon(percentage) {
+            if (percentage > 75) return 'fa-battery-full';
+            if (percentage > 50) return 'fa-battery-three-quarters';
+            if (percentage > 25) return 'fa-battery-half';
+            if (percentage > 10) return 'fa-battery-quarter';
+            return 'fa-battery-empty';
+        }
+        
+        function formatBatteryBadge(percentage) {
+            // DC_BATTERY_003: Only show badge if battery data exists, hide when N/A
+            if (percentage === null || percentage === undefined) {
+                return ''; // Return empty string to hide badge when data unavailable
+            }
+            const colorClass = getBatteryColorClass(percentage);
+            const icon = getBatteryIcon(percentage);
+            return `<span class="timeline-battery ${colorClass}"><i class="fas ${icon}"></i> ${percentage}%</span>`;
+        }
+        // ==================== END DC_BATTERY_003 ====================
+        
+        // ==================== DC_ATTENDANCE_TIMELINE_001: Dynamic Date Selection for Timeline ====================
+        let selectedTimelineDate = null; // null = today
+        
+        function toggleTimelineDatePicker() {
+            const picker = document.getElementById('timelineDatePickerBar');
+            picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+            if (picker.style.display !== 'none') {
+                // Set current date in input
+                const today = new Date();
+                document.getElementById('timelineCustomDate').value = today.toISOString().split('T')[0];
+            }
+        }
+        
+        async function loadTimelineDate(option) {
+            let targetDate = null;
+            const today = new Date();
+            
+            // DC_AUDIT_TRAIL_001: Log date selection
+            console.log('[DC_TIMELINE] Date selection:', option);
+            
+            if (option === 'today') {
+                targetDate = new Date();
+                selectedTimelineDate = null;
+            } else if (option === 'yesterday') {
+                targetDate = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+                selectedTimelineDate = targetDate;
+            } else if (option === 'this_week') {
+                // Show today (this_week means current week ending today)
+                targetDate = new Date();
+                selectedTimelineDate = null;
+            } else if (option === 'custom') {
+                const dateInput = document.getElementById('timelineCustomDate').value;
+                if (!dateInput) {
+                    alert('Please select a date');
+                    return;
+                }
+                targetDate = new Date(dateInput);
+                selectedTimelineDate = targetDate;
+            }
+            
+            if (!targetDate) {
+                console.error('[DC_ERROR] No target date');
+                return;
+            }
+            
+            const dateStr = targetDate.toISOString().split('T')[0];
+            
+            try {
+                // Call new DC Protocol endpoint for timeline with date parameter
+                const response = await staffFetch(`${API_BASE}/staff/attendance/timeline?date=${dateStr}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    renderTimelineForDate(data, targetDate);
+                    
+                    // Update title to show selected date
+                    const dateDisplay = targetDate.toLocaleDateString('en-IN', { 
+                        weekday: 'short', 
+                        day: 'numeric', 
+                        month: '2-digit'
+                    });
+                    document.getElementById('timelineTitle').textContent = 
+                        option === 'today' ? "Today's Timeline" : `${dateDisplay}'s Timeline`;
+                    
+                    // Hide date picker after selection
+                    document.getElementById('timelineDatePickerBar').style.display = 'none';
+                } else {
+                    console.error('[DC_ERROR] Failed to load timeline:', response.status);
+                    alert('Failed to load timeline for selected date');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC_ERROR] Timeline date load error:', error);
+            }
+        }
+        
+        function renderTimelineForDate(response, targetDate) {
+            const timeline = document.getElementById('todayTimeline');
+            const attendance = response.attendance;
+            
+            if (!attendance || !attendance.clock_in) {
+                timeline.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-clock"></i>
+                        <p>No activity on ${targetDate.toLocaleDateString('en-IN')}</p>
+                    </div>`;
+                return;
+            }
+            
+            let html = '';
+            
+            // DC_BATTERY_003: Clock In with battery badge
+            const clockInBattery = formatBatteryBadge(attendance.clock_in_battery);
+            html += `
+                <div class="timeline-item">
+                    <div class="timeline-icon clock-in"><i class="fas fa-sign-in-alt"></i></div>
+                    <div class="timeline-content">
+                        <div class="timeline-title">Clocked In${clockInBattery}</div>
+                        <div class="timeline-time">${formatTime(attendance.clock_in)}</div>
+                        <div class="timeline-location">${attendance.location_mode || 'Office'}</div>
+                    </div>
+                </div>`;
+            
+            if (attendance.breaks && attendance.breaks.length > 0) {
+                attendance.breaks.forEach(brk => {
+                    // DC_BATTERY_003: Break events - battery tracking deferred until backend supports it
+                    html += `
+                        <div class="timeline-item">
+                            <div class="timeline-icon break-start"><i class="fas fa-coffee"></i></div>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Break Started (${brk.break_type || 'personal'})</div>
+                                <div class="timeline-time">${formatTime(brk.break_start)}</div>
+                            </div>
+                        </div>`;
+                    
+                    if (brk.break_end) {
+                        html += `
+                            <div class="timeline-item">
+                                <div class="timeline-icon break-end"><i class="fas fa-play"></i></div>
+                                <div class="timeline-content">
+                                    <div class="timeline-title">Break Ended</div>
+                                    <div class="timeline-time">${formatTime(brk.break_end)}</div>
+                                    <div class="timeline-location">${formatDuration(brk.duration_minutes)}</div>
+                                </div>
+                            </div>`;
+                    }
+                });
+            }
+            
+            if (attendance.clock_out) {
+                // DC_BATTERY_003: Clock Out with battery badge
+                const clockOutBattery = formatBatteryBadge(attendance.clock_out_battery);
+                html += `
+                    <div class="timeline-item">
+                        <div class="timeline-icon clock-out"><i class="fas fa-sign-out-alt"></i></div>
+                        <div class="timeline-content">
+                            <div class="timeline-title">Clocked Out${clockOutBattery}</div>
+                            <div class="timeline-time">${formatTime(attendance.clock_out)}</div>
+                        </div>
+                    </div>`;
+            }
+            
+            timeline.innerHTML = html;
+        }
+        // ==================== END DC_ATTENDANCE_TIMELINE_001 ====================
+        
+        async function loadTodayStatus() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/attendance/today`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    todayAttendance = data;
+                    updateStatusUI(data);
+                    renderTimeline(data);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading status:', error);
+            }
+        }
+        
+        function updateStatusUI(response) {
+            const clockInBtn = document.getElementById('clockInBtn');
+            const clockOutBtn = document.getElementById('clockOutBtn');
+            const startBreakBtn = document.getElementById('startBreakBtn');
+            const endBreakBtn = document.getElementById('endBreakBtn');
+            const workModeSelector = document.getElementById('workModeSelector');
+            const statusBadge = document.getElementById('statusBadge');
+            const statusText = document.getElementById('statusText');
+            
+            const status = response.status;
+            const attendance = response.attendance;
+            
+            if (status === 'not_clocked_in' || !attendance) {
+                currentStatus = 'not_clocked_in';
+                clockInBtn.style.display = 'flex';
+                clockOutBtn.style.display = 'none';
+                startBreakBtn.style.display = 'none';
+                endBreakBtn.style.display = 'none';
+                workModeSelector.style.display = 'block';
+                statusBadge.className = 'status-badge';
+                statusText.textContent = 'Not Clocked In';
+                stopDriftTracking();
+            } else if (status === 'clocked_out') {
+                currentStatus = 'clocked_out';
+                clockInBtn.style.display = 'none';
+                clockOutBtn.style.display = 'none';
+                startBreakBtn.style.display = 'none';
+                endBreakBtn.style.display = 'none';
+                workModeSelector.style.display = 'none';
+                statusBadge.className = 'status-badge';
+                statusText.textContent = 'Day Completed';
+                stopDriftTracking();
+            } else if (status === 'on_break') {
+                currentStatus = 'on_break';
+                clockInBtn.style.display = 'none';
+                clockOutBtn.style.display = 'none';
+                startBreakBtn.style.display = 'none';
+                endBreakBtn.style.display = 'flex';
+                workModeSelector.style.display = 'none';
+                statusBadge.className = 'status-badge on-break';
+                statusText.textContent = 'On Break';
+                startDriftTracking();
+            } else {
+                currentStatus = 'clocked_in';
+                clockInBtn.style.display = 'none';
+                clockOutBtn.style.display = 'flex';
+                startBreakBtn.style.display = 'flex';
+                endBreakBtn.style.display = 'none';
+                workModeSelector.style.display = 'none';
+                statusBadge.className = 'status-badge clocked-in';
+                statusText.textContent = 'Clocked In';
+                startDriftTracking();
+            }
+        }
+        
+        function renderTimeline(response) {
+            // Default: Show today's timeline on initial load
+            const today = new Date();
+            renderTimelineForDate(response, today);
+            document.getElementById('timelineTitle').textContent = "Today's Timeline";
+        }
+        
+        async function clockIn() {
+            console.log('Clock-in request:', { 
+                work_mode: selectedWorkMode, 
+                location: currentLocation
+            });
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/attendance/clock-in`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        work_mode: selectedWorkMode,
+                        location: currentLocation
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('Clock-in successful');
+                    await loadTodayStatus();
+                    await loadStats();
+                } else {
+                    const error = await response.json();
+                    console.error('Clock-in error response:', error);
+                    alert(error.detail || `Failed to clock in (Error ${response.status})`);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Clock-in network error:', error);
+                alert('Network error. Please check your connection and try again.');
+            }
+        }
+        
+        async function clockOut() {
+            if (!confirm('Are you sure you want to clock out for today?')) return;
+            
+            console.log('Clock-out request:', { location: currentLocation });
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/attendance/clock-out`, {
+                    method: 'POST',
+                    body: JSON.stringify({ location: currentLocation })
+                });
+                
+                if (response.ok) {
+                    console.log('Clock-out successful');
+                    await loadTodayStatus();
+                    await loadStats();
+                    await loadHistory();
+                } else {
+                    const error = await response.json();
+                    console.error('Clock-out error response:', error);
+                    alert(error.detail || `Failed to clock out (Error ${response.status})`);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Clock-out network error:', error);
+                alert('Network error. Please check your connection and try again.');
+            }
+        }
+        
+        /**
+         * DC_RESUME_CLOCKOUT_001: Performs clock-out without confirmation prompt
+         * Used by GPS resume modal when user chooses to end session
+         * Must throw errors so modal can show retry option
+         * Evidence is optional for interrupted sessions (user closed browser)
+         */
+        async function performClockOut() {
+            console.log('[DC_RESUME_CLOCKOUT] Performing clock-out from resume modal');
+            
+            const requestData = {
+                location: currentLocation || null,
+                notes: 'RESUME_MODAL: Clock-out from GPS resume prompt'
+            };
+            
+            console.log('[DC_RESUME_CLOCKOUT] Request payload:', { 
+                hasLocation: !!currentLocation,
+                location: currentLocation
+            });
+            
+            const response = await staffFetch(`${API_BASE}/staff/attendance/clock-out`, {
+                method: 'POST',
+                body: JSON.stringify(requestData)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                console.error('[DC_RESUME_CLOCKOUT] Clock-out failed:', errorData);
+                throw new Error(errorData.detail || `Clock-out failed (Error ${response.status})`);
+            }
+            
+            const data = await response.json();
+            console.log('[DC_RESUME_CLOCKOUT] Clock-out successful:', data);
+            
+            // DC_GPS_LIFECYCLE_001: Stop GPS tracking on successful clock-out
+            gpsService.stop('resume_modal_clock_out');
+            
+            return data;
+        }
+        
+        async function startBreak() {
+            // Redirect to break type modal for type selection
+            openBreakTypeModal();
+        }
+        
+        async function endBreak() {
+            console.log('End break request');
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/attendance/break/end`, {
+                    method: 'POST',
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    console.log('Break ended successfully');
+                    await loadTodayStatus();
+                    await loadStats();
+                } else {
+                    const error = await response.json();
+                    console.error('End break error:', error);
+                    alert(error.detail || `Failed to end break (Error ${response.status})`);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('End break network error:', error);
+                alert('Network error. Please check your connection and try again.');
+            }
+        }
+        
+        async function loadStats() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/attendance/summary`);
+                
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById('todayHours').textContent = formatHoursMinutes(stats.today_hours || 0);
+                    document.getElementById('weekHours').textContent = formatHoursMinutes(stats.week_hours || 0);
+                    document.getElementById('monthHours').textContent = formatHoursMinutes(stats.month_hours || 0);
+                    document.getElementById('breakTime').textContent = formatHoursMinutes(stats.today_break || 0);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        // ==================== DC_ATTENDANCE_HISTORY_RANGE_001: Dynamic Date Range Selection ====================
+        let historyFromDate = null;
+        let historyToDate = null;
+        
+        function toggleHistoryDatePicker() {
+            const picker = document.getElementById('historyDatePickerBar');
+            picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+            if (picker.style.display !== 'none') {
+                // Initialize with current range
+                const today = new Date();
+                const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                document.getElementById('historyFromDate').value = lastMonth.toISOString().split('T')[0];
+                document.getElementById('historyToDate').value = today.toISOString().split('T')[0];
+            }
+        }
+        
+        async function loadHistoryDateRange(rangeType) {
+            const today = new Date();
+            let fromDate, toDate;
+            
+            // DC_AUDIT_TRAIL_001: Log date range selection
+            console.log('[DC_HISTORY] Date range selection:', rangeType);
+            
+            if (rangeType === 'today') {
+                fromDate = new Date(today);
+                toDate = new Date(today);
+            } else if (rangeType === 'this_week') {
+                const dayOfWeek = today.getDay();
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() - dayOfWeek);
+                fromDate = startOfWeek;
+                toDate = new Date(today);
+            } else if (rangeType === 'this_month') {
+                fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                toDate = new Date(today);
+            } else if (rangeType === 'last_month') {
+                const lastMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                fromDate = lastMonthDate;
+                toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+            } else if (rangeType === 'custom') {
+                const fromInput = document.getElementById('historyFromDate').value;
+                const toInput = document.getElementById('historyToDate').value;
+                
+                if (!fromInput || !toInput) {
+                    alert('Please select both From Date and To Date');
+                    return;
+                }
+                
+                fromDate = new Date(fromInput);
+                toDate = new Date(toInput);
+                
+                if (fromDate > toDate) {
+                    alert('From Date cannot be after To Date');
+                    return;
+                }
+            }
+            
+            historyFromDate = fromDate;
+            historyToDate = toDate;
+            
+            await loadHistory();
+            document.getElementById('historyDatePickerBar').style.display = 'none';
+        }
+        
+        function populateMonthFilter() {
+            // Deprecated - using date range picker now
+        }
+        
+        async function loadHistory() {
+            // Use selected date range or default to this month
+            let fromDate = historyFromDate;
+            let toDate = historyToDate;
+            
+            if (!fromDate || !toDate) {
+                const today = new Date();
+                toDate = new Date(today);
+                fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                historyFromDate = fromDate;
+                historyToDate = toDate;
+            }
+            
+            const fromStr = fromDate.toISOString().split('T')[0];
+            const toStr = toDate.toISOString().split('T')[0];
+            
+            // DC_AUDIT_TRAIL_001: Log history query with date range
+            console.log('[DC_HISTORY_RANGE] Loading attendance from', fromStr, 'to', toStr);
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/attendance/my-history?from_date=${fromStr}&to_date=${toStr}&limit=100`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    renderHistory(data.records || []);
+                    
+                    // Update display text - DC_DATA_TYPE_SAFETY_001: Validated date formatting
+                    const fromDisplay = fromDate.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                    const toDisplay = toDate.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                    document.getElementById('historyDateRangeDisplay').textContent = `${fromDisplay} to ${toDisplay}`;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC_ERROR] Error loading history:', error);
+                document.getElementById('historyTableBody').innerHTML = `
+                    <tr><td colspan="7" class="text-center py-4 text-danger">Error loading history</td></tr>`;
+            }
+        }
+        // ==================== END DC_ATTENDANCE_HISTORY_RANGE_001 ====================
+        
+        function renderHistory(records) {
+            const tbody = document.getElementById('historyTableBody');
+            
+            if (!records || records.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="7" class="empty-state">
+                        <i class="fas fa-calendar-times"></i>
+                        <p>No attendance records found</p>
+                    </td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = records.map(record => `
+                <tr>
+                    <td>${formatDate(record.date)}</td>
+                    <td><span class="badge badge-${record.work_mode}">${capitalize(record.work_mode)}</span></td>
+                    <td>${record.clock_in ? formatTime(record.clock_in) : '-'}</td>
+                    <td>${record.clock_out ? formatTime(record.clock_out) : '-'}</td>
+                    <td>${formatHoursMinutes(record.work_hours || 0)}</td>
+                    <td>${formatHoursMinutes(record.break_minutes || 0)}</td>
+                    <td><span class="badge badge-${record.status}">${capitalize(record.status)}</span></td>
+                </tr>
+            `).join('');
+        }
+        
+        function formatTime(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            try {
+                return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', weekday: 'short' });
+            } catch (e) {
+                console.error('[DC_ERROR] Date format error:', e);
+                return dateStr;
+            }
+        }
+        
+        function formatHoursMinutes(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const mins = Math.round(minutes % 60);
+            return `${hours}:${mins.toString().padStart(2, '0')}`;
+        }
+        
+        function formatDuration(minutes) {
+            if (!minutes) return '';
+            if (minutes < 60) return `${minutes} min`;
+            return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+        }
+        
+        function capitalize(str) {
+            return str ? str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ') : '';
+        }
+        
+        function selectTransportMode(mode) {
+            selectedTransportMode = mode;
+            document.querySelectorAll('.transport-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+            
+            if (fieldWorkSession && fieldWorkSession.status === 'active') {
+                updateTransportModeOnServer(mode);
+            }
+            updateReimbursementEstimate();
+        }
+        
+        async function updateTransportModeOnServer(mode) {
+            try {
+                await staffFetch(`${API_BASE}/staff/field-work/transport-mode`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ transport_mode: mode })
+                });
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error updating transport mode:', error);
+            }
+        }
+        
+        async function checkFieldWorkSession() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/field-work/session/current`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.session && data.session.status === 'active') {
+                        fieldWorkSession = data.session;
+                        updateFieldWorkUI(true);
+                        startGpsTracking();
+                    }
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error checking field work session:', error);
+            }
+            
+            updateFieldWorkCardVisibility();
+        }
+        
+        function updateFieldWorkCardVisibility() {
+            const fieldWorkCard = document.getElementById('fieldWorkCard');
+            const attendance = todayAttendance?.attendance;
+            
+            if (attendance && attendance.location_mode === 'field' && !attendance.clock_out) {
+                fieldWorkCard.style.display = 'block';
+            } else if (selectedWorkMode === 'field' && currentStatus === 'not_clocked_in') {
+                fieldWorkCard.style.display = 'block';
+            } else if (fieldWorkSession && fieldWorkSession.status === 'active') {
+                fieldWorkCard.style.display = 'block';
+            } else {
+                fieldWorkCard.style.display = 'none';
+            }
+        }
+        
+        async function startFieldWork() {
+            if (!currentLocation) {
+                showGpsWarning(true);
+                alert('Please enable GPS to start field work tracking.');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/field-work/session/start`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        transport_mode: selectedTransportMode,
+                        location: currentLocation
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    fieldWorkSession = data.session;
+                    updateFieldWorkUI(true);
+                    startGpsTracking();
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to start field work');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error starting field work:', error);
+                alert('Error starting field work tracking');
+            }
+        }
+        
+        async function stopFieldWork() {
+            if (!confirm('Stop field work tracking? Distance and reimbursement will be finalized.')) return;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/field-work/session/finalize`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        location: currentLocation
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    stopGpsTracking();
+                    fieldWorkSession = null;
+                    updateFieldWorkUI(false);
+                    
+                    alert(`Field work completed! Distance: ${data.session.total_distance_km.toFixed(2)} km, Reimbursement: ₹${data.session.reimbursement_amount.toFixed(2)}`);
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to stop field work');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error stopping field work:', error);
+                alert('Error stopping field work tracking');
+            }
+        }
+        
+        /**
+         * DC_JOURNEY_RESOLVE_001: Authoritative function to end active work (journey or field work)
+         * Called from Resume modal "End" button
+         * Handles both Journey and FieldWork sessions
+         * Allows Clock Out to proceed regardless of outcome
+         */
+        async function resolveActiveWork() {
+            console.log('[DC_RESOLVE] Starting resolveActiveWork()');
+            
+            try {
+                // Step 1: Check for active session
+                const sessionResponse = await staffFetch(`${API_BASE}/staff/attendance/check-active-session`);
+                if (!sessionResponse.ok) {
+                    console.warn('[DC_RESOLVE] Could not check active session, proceeding anyway');
+                    stopGpsTracking();
+                    return { success: true, skipped: true };
+                }
+                
+                const sessionData = await sessionResponse.json();
+                console.log('[DC_RESOLVE] Session data:', sessionData);
+                
+                // Step 2: End active journey if exists
+                if (sessionData.active_journey && sessionData.active_journey.id) {
+                    console.log('[DC_RESOLVE] Ending journey:', sessionData.active_journey.id);
+                    
+                    const journeyEndPayload = {
+                        location: currentLocation || null,
+                        notes: 'USER_RESUME_ACTION: Ended from resume prompt'
+                    };
+                    
+                    const journeyResponse = await staffFetch(
+                        `${API_BASE}/staff/journeys/${sessionData.active_journey.id}/end`,
+                        {
+                            method: 'POST',
+                            body: JSON.stringify(journeyEndPayload)
+                        }
+                    );
+                    
+                    if (journeyResponse.ok) {
+                        const journeyResult = await journeyResponse.json();
+                        console.log('[DC_RESOLVE] Journey ended successfully:', journeyResult);
+                    } else {
+                        // Log error but continue - don't block clock out
+                        const errorData = await journeyResponse.json().catch(() => ({}));
+                        console.warn('[DC_RESOLVE] Journey end failed (non-blocking):', errorData);
+                    }
+                }
+                
+                // Step 3: Finalize field work session if exists
+                if (sessionData.has_active_session) {
+                    console.log('[DC_RESOLVE] Finalizing field work session');
+                    
+                    try {
+                        const fieldResponse = await staffFetch(`${API_BASE}/staff/field-work/session/finalize`, {
+                            method: 'POST',
+                            body: JSON.stringify({ location: currentLocation })
+                        });
+                        
+                        if (fieldResponse.ok) {
+                            const fieldResult = await fieldResponse.json();
+                            console.log('[DC_RESOLVE] Field work finalized:', fieldResult);
+                            fieldWorkSession = null;
+                            updateFieldWorkUI(false);
+                        } else {
+                            console.warn('[DC_RESOLVE] Field work finalize failed (non-blocking)');
+                        }
+                    } catch (fieldError) {
+                        console.warn('[DC_RESOLVE] Field work error (non-blocking):', fieldError);
+                    }
+                }
+                
+                // Step 4: Stop GPS tracking safely
+                stopGpsTracking();
+                console.log('[DC_RESOLVE] GPS tracking stopped');
+                
+                return { success: true };
+                
+            } catch (error) {
+                console.error('[DC_RESOLVE] Error in resolveActiveWork:', error);
+                // Always stop GPS even on error
+                stopGpsTracking();
+                // Don't throw - allow clock out to proceed
+                return { success: false, error: error.message };
+            }
+        }
+        
+        function updateFieldWorkUI(isActive) {
+            const startBtn = document.getElementById('startFieldWorkBtn');
+            const stopBtn = document.getElementById('stopFieldWorkBtn');
+            const statusBadge = document.getElementById('fieldSessionStatus');
+            const transportGroup = document.getElementById('transportModeGroup');
+            
+            if (isActive) {
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+                statusBadge.className = 'badge bg-success';
+                statusBadge.textContent = 'Tracking Active';
+                transportGroup.querySelectorAll('button').forEach(btn => btn.disabled = false);
+                
+                if (fieldWorkSession) {
+                    updateDistanceDisplay(fieldWorkSession.total_distance_km || 0);
+                    selectedTransportMode = fieldWorkSession.transport_mode || 'bike';
+                    document.querySelectorAll('.transport-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.dataset.mode === selectedTransportMode);
+                    });
+                }
+            } else {
+                startBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'none';
+                statusBadge.className = 'badge bg-warning text-dark';
+                statusBadge.textContent = 'Not Started';
+                document.getElementById('kmCounter').textContent = '0.00 km';
+                document.getElementById('reimbursementEstimate').textContent = '₹0.00';
+            }
+        }
+        
+        // DC_GPS_CENTRALIZATION_001: Use universal GPS service
+        // Old functions kept for backward compatibility but delegate to service
+        function startGpsTracking() {
+            console.log('[DC_GPS_001] Field work GPS tracking delegated to universal service');
+            
+            // Subscribe to GPS updates from universal service
+            const unsubscribe = gpsService.subscribe((update) => {
+                if (update.event === 'gps:updated' && update.data.location) {
+                    currentLocation = update.data.location;
+                    updateGpsStatusDisplay(true);
+                    handleGpsStatusChange(true);
+                    sendHeartbeat();
+                } else if (update.event === 'gps:error') {
+                    updateGpsStatusDisplay(false);
+                    handleGpsStatusChange(false);
+                }
+            });
+            
+            // Store unsubscriber for cleanup
+            window._fieldWorkGpsUnsubscribe = unsubscribe;
+            
+            // Send initial heartbeat
+            heartbeatInterval = setInterval(sendHeartbeat, 30000);
+        }
+        
+        function stopGpsTracking() {
+            console.log('[DC_GPS_001] Field work GPS tracking stopped');
+            
+            if (window._fieldWorkGpsUnsubscribe) {
+                window._fieldWorkGpsUnsubscribe();
+                window._fieldWorkGpsUnsubscribe = null;
+            }
+            
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
+        }
+        
+        async function sendHeartbeat() {
+            if (!fieldWorkSession) return;
+            
+            // DC_GPS_CENTRALIZATION_001: Get location from universal GPS service
+            const location = gpsService.getLocation();
+            if (!location) return;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/field-work/session/heartbeat`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        accuracy: location.accuracy_m,
+                        battery_percentage: location.battery_percentage,
+                        gps_status: 'active'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.session) {
+                        fieldWorkSession = data.session;
+                        updateDistanceDisplay(data.session.total_distance_km || 0);
+                    }
+                } else if (response.status === 400) {
+                    // Session no longer active on backend (server restart, ended remotely, etc.)
+                    // Stop the heartbeat so it doesn't keep firing silently without resetting the
+                    // inactivity timer — which would cause the inactivity manager to log the user out.
+                    const errData = await response.json().catch(() => ({}));
+                    if ((errData.detail || '').toLowerCase().includes('no active field work session') ||
+                        (errData.detail || '').toLowerCase().includes('no active')) {
+                        console.warn('[DC_GPS] Field work session no longer active on server — stopping heartbeat');
+                        stopGpsTracking();
+                        fieldWorkSession = null;
+                    }
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error sending heartbeat:', error);
+            }
+        }
+        
+        function updateDistanceDisplay(km) {
+            document.getElementById('kmCounter').innerHTML = `${km.toFixed(2)} <span class="fs-5">km</span>`;
+            updateReimbursementEstimate(km);
+        }
+        
+        function updateReimbursementEstimate(km = 0) {
+            if (fieldWorkSession) {
+                km = fieldWorkSession.total_distance_km || km;
+            }
+            const rate = transportRates[selectedTransportMode] || 4.00;
+            const reimbursement = km * rate;
+            document.getElementById('reimbursementEstimate').textContent = `₹${reimbursement.toFixed(2)}`;
+        }
+        
+        function updateGpsStatusDisplay(isActive) {
+            const display = document.getElementById('gpsStatusDisplay');
+            if (isActive) {
+                display.innerHTML = '<i class="fas fa-satellite-dish text-success"></i> Active';
+            } else {
+                display.innerHTML = '<i class="fas fa-satellite-dish text-danger"></i> Off';
+            }
+        }
+        
+        function handleGpsStatusChange(isActive) {
+            const gpsOffDuration = document.getElementById('gpsOffDuration');
+            
+            if (!isActive && !gpsOffStartTime) {
+                gpsOffStartTime = new Date();
+                gpsOffDuration.style.display = 'block';
+                showGpsWarning(true);
+            } else if (isActive && gpsOffStartTime) {
+                const offDuration = Math.floor((new Date() - gpsOffStartTime) / 60000);
+                totalGpsOffMinutes += offDuration;
+                gpsOffStartTime = null;
+                gpsOffDuration.style.display = 'none';
+                showGpsWarning(false);
+                reportGpsStatus('granted');
+            }
+            
+            if (gpsOffStartTime) {
+                const offMinutes = Math.floor((new Date() - gpsOffStartTime) / 60000);
+                document.getElementById('gpsOffMinutes').textContent = offMinutes + totalGpsOffMinutes;
+            }
+        }
+        
+        async function reportGpsStatus(status, reason = null) {
+            try {
+                await staffFetch(`${API_BASE}/staff/field-work/gps-status`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ status, reason })
+                });
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error reporting GPS status:', error);
+            }
+        }
+        
+        function showGpsWarning(show) {
+            document.getElementById('gpsWarning').style.display = show ? 'block' : 'none';
+        }
+        
+        let logIntervalModal = null;
+        let todayIntervals = [];
+        let availableKras = [];
+        let availableTasks = [];
+        
+        function openLogIntervalModal() {
+            if (!logIntervalModal) {
+                logIntervalModal = new bootstrap.Modal(document.getElementById('logIntervalModal'));
+            }
+            
+            document.getElementById('intervalForm').reset();
+            document.getElementById('kraSection').style.display = 'none';
+            document.getElementById('taskSection').style.display = 'none';
+            
+            const now = new Date();
+            const localISOTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            document.getElementById('intervalStart').value = localISOTime;
+            
+            loadKrasForInterval();
+            loadTasksForInterval();
+            
+            logIntervalModal.show();
+        }
+        
+        function handleActivityTypeChange() {
+            const type = document.getElementById('intervalActivityType').value;
+            document.getElementById('kraSection').style.display = type === 'kra' ? 'block' : 'none';
+            document.getElementById('taskSection').style.display = type === 'task' ? 'block' : 'none';
+        }
+        
+        async function loadKrasForInterval() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/kra/my-entries?status=in_progress,pending`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    availableKras = data.entries || [];
+                    const select = document.getElementById('intervalKraSelect');
+                    select.innerHTML = '<option value="">-- Select KRA Entry --</option>';
+                    availableKras.forEach(kra => {
+                        select.innerHTML += `<option value="${kra.id}">${kra.kra_title} - ${kra.responsibility}</option>`;
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading KRAs:', error);
+            }
+        }
+        
+        async function loadTasksForInterval() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/my-tasks?status=in_progress,pending`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    availableTasks = data.tasks || [];
+                    const select = document.getElementById('intervalTaskSelect');
+                    select.innerHTML = '<option value="">-- Select Task --</option>';
+                    availableTasks.forEach(task => {
+                        select.innerHTML += `<option value="${task.id}">${task.title}</option>`;
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading tasks:', error);
+            }
+        }
+        
+        async function saveWorkInterval() {
+            const activityType = document.getElementById('intervalActivityType').value;
+            
+            const intervalData = {
+                activity_type: activityType,
+                activity_title: document.getElementById('intervalTitle').value,
+                activity_notes: document.getElementById('intervalNotes').value,
+                interval_start: document.getElementById('intervalStart').value,
+                interval_end: document.getElementById('intervalEnd').value || null,
+                is_billable: document.getElementById('intervalBillable').checked
+            };
+            
+            if (activityType === 'kra') {
+                intervalData.kra_entry_id = document.getElementById('intervalKraSelect').value || null;
+            } else if (activityType === 'task') {
+                intervalData.task_id = document.getElementById('intervalTaskSelect').value || null;
+            }
+            
+            try {
+                // DC_ENDPOINT_CONSISTENCY_001: Use correct /staff/intervals prefix
+                const response = await staffFetch(`${API_BASE}/staff/intervals/start`, {
+                    method: 'POST',
+                    body: JSON.stringify(intervalData)
+                });
+                
+                if (response.ok) {
+                    logIntervalModal.hide();
+                    await loadTodayIntervals();
+                    alert('Work interval saved successfully!');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to save interval');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error saving interval:', error);
+                alert('Error saving work interval');
+            }
+        }
+        
+        async function loadTodayIntervals() {
+            try {
+                // DC_ENDPOINT_CONSISTENCY_001: Use correct /staff/intervals prefix
+                const response = await staffFetch(`${API_BASE}/staff/intervals/today`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    todayIntervals = data.intervals || [];
+                    renderIntervals(data);
+                    updateIntervalsCardVisibility();
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading intervals:', error);
+            }
+        }
+        
+        function renderIntervals(data) {
+            const tbody = document.getElementById('intervalsTableBody');
+            const intervals = data.intervals || [];
+            
+            if (intervals.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="7" class="text-center py-4">
+                        <i class="fas fa-clock"></i>
+                        <p class="mb-0 text-muted">No intervals logged yet</p>
+                    </td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = intervals.map(interval => `
+                <tr>
+                    <td>${formatTime(interval.interval_start)}${interval.interval_end ? ' - ' + formatTime(interval.interval_end) : ' - ongoing'}</td>
+                    <td><span class="badge bg-info">${capitalize(interval.activity_type)}</span></td>
+                    <td>${interval.activity_title || '-'}</td>
+                    <td>${interval.duration_minutes ? formatDuration(interval.duration_minutes) : 'Active'}</td>
+                    <td>${getLinkedEntityText(interval)}</td>
+                    <td><span class="badge ${getIntervalStatusBadge(interval.status)}">${capitalize(interval.status)}</span></td>
+                    <td>
+                        ${!interval.interval_end ? `<button class="btn btn-sm btn-warning" onclick="endInterval(${interval.id})"><i class="fas fa-stop"></i></button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+            
+            document.getElementById('totalIntervalMinutes').textContent = formatHoursMinutes(data.total_minutes || 0);
+            document.getElementById('activeIntervalStatus').textContent = data.active_interval ? 'In Progress' : 'None';
+        }
+        
+        function getLinkedEntityText(interval) {
+            if (interval.kra_entry_id) {
+                return `<span class="text-primary"><i class="fas fa-bullseye"></i> KRA</span>`;
+            } else if (interval.task_id) {
+                return `<span class="text-success"><i class="fas fa-tasks"></i> Task</span>`;
+            }
+            return '-';
+        }
+        
+        function getIntervalStatusBadge(status) {
+            const badges = {
+                'active': 'bg-success',
+                'completed': 'bg-primary',
+                'pending_review': 'bg-warning text-dark',
+                'approved': 'bg-success',
+                'rejected': 'bg-danger'
+            };
+            return badges[status] || 'bg-secondary';
+        }
+        
+        async function endInterval(intervalId) {
+            try {
+                // DC_ENDPOINT_CONSISTENCY_001: Use correct /staff/intervals prefix
+                const response = await staffFetch(`${API_BASE}/staff/intervals/${intervalId}/end`, {
+                    method: 'POST',
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    await loadTodayIntervals();
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to end interval');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error ending interval:', error);
+            }
+        }
+        
+        function updateIntervalsCardVisibility() {
+            const intervalsCard = document.getElementById('intervalsCard');
+            const attendance = todayAttendance?.attendance;
+            
+            if (attendance && attendance.clock_in && !attendance.clock_out) {
+                intervalsCard.style.display = 'block';
+            } else {
+                intervalsCard.style.display = 'none';
+            }
+        }
+    </script>
+    
+    <!-- Camera Capture Modal - WVV Protocol -->
+    <div class="camera-modal-overlay" id="cameraModal">
+        <div class="camera-modal">
+            <div class="camera-header">
+                <h3><i class="fas fa-camera"></i> <span id="cameraModalTitle">Clock In Verification</span></h3>
+                <button class="close-btn" onclick="closeCameraModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="camera-body">
+                <div class="camera-preview-container">
+                    <video id="cameraPreview" autoplay playsinline muted></video>
+                    <canvas id="photoCanvas" style="display: none;"></canvas>
+                    <img id="capturedPhoto" alt="Captured selfie">
+                    <div class="camera-overlay">
+                        <div class="gps-status loading" id="gpsStatus">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span id="gpsStatusText">Getting location...</span>
+                        </div>
+                        <div></div>
+                    </div>
+                    <div class="camera-loading" id="cameraLoading">
+                        <i class="fas fa-spinner spinner"></i>
+                        <div>Initializing camera...</div>
+                    </div>
+                </div>
+                <div class="camera-info">
+                    <div class="location-info">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span id="cameraLocationText">Fetching location...</span>
+                    </div>
+                    <div class="accuracy-info" id="cameraAccuracy"></div>
+                </div>
+                <div class="camera-controls" id="captureControls">
+                    <button class="capture-btn" id="captureBtn" onclick="capturePhoto()"></button>
+                </div>
+                <div class="camera-controls" id="confirmControls" style="display: none;">
+                    <button class="retake-btn" onclick="retakePhoto()">
+                        <i class="fas fa-redo"></i> Retake
+                    </button>
+                    <button class="confirm-btn" id="confirmBtn" onclick="confirmEvidenceCapture()">
+                        <i class="fas fa-check"></i> Confirm & <span id="confirmAction">Clock In</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Break Type Selector Modal -->
+    <div class="break-modal-overlay" id="breakTypeModal">
+        <div class="break-modal">
+            <div class="break-modal-header">
+                <h3><i class="fas fa-coffee"></i> Select Break Type</h3>
+                <button class="close-btn" onclick="closeBreakTypeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="break-modal-body">
+                <div class="break-type-grid" id="breakTypeGrid">
+                    <!-- Break types will be populated dynamically -->
+                </div>
+                <button class="start-break-btn" id="confirmBreakBtn" onclick="confirmStartBreak()" disabled>
+                    <i class="fas fa-play"></i> Start Break
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    // ==================== BREAK TYPE SELECTOR FUNCTIONALITY ====================
+    // DC_BREAK_INIT: Initialize with 8 default types SYNCHRONOUSLY (backend validated)
+    let breakTypes = [
+        { id: 1, code: 'LUNCH', name: 'Lunch Break', description: 'Lunch break (30-60 mins)' },
+        { id: 2, code: 'TEA', name: 'Tea Break', description: 'Short tea/coffee break' },
+        { id: 3, code: 'PERSONAL', name: 'Personal', description: 'Personal matters' },
+        { id: 4, code: 'MEETING', name: 'Meeting', description: 'Meeting time' },
+        { id: 5, code: 'CLIENT_VISIT', name: 'Client Visit', description: 'Visiting a client' },
+        { id: 6, code: 'TRAVEL', name: 'Travel', description: 'Travel between locations' },
+        { id: 7, code: 'EMERGENCY', name: 'Emergency', description: 'Emergency break' },
+        { id: 8, code: 'OTHER', name: 'Other', description: 'Other break reason' }
+    ];
+    let selectedBreakTypeId = null;
+    
+    const breakTypeIcons = {
+        'LUNCH': 'fas fa-utensils',
+        'TEA': 'fas fa-mug-hot',
+        'PERSONAL': 'fas fa-user',
+        'MEETING': 'fas fa-calendar-alt',
+        'CLIENT_VISIT': 'fas fa-handshake',
+        'TRAVEL': 'fas fa-car',
+        'EMERGENCY': 'fas fa-exclamation-triangle',
+        'OTHER': 'fas fa-ellipsis-h'
+    };
+    
+    async function fetchBreakTypes() {
+        try {
+            const response = await staffFetch(`${API_BASE}/staff/attendance/break-types`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.break_types && data.break_types.length > 0) {
+                    breakTypes = data.break_types;
+                    console.log('✅ DC_BREAK_001: Successfully loaded', breakTypes.length, 'break types from backend API');
+                } else {
+                    console.warn('⚠️ DC_BREAK_002: API returned empty array - keeping default 6 types');
+                }
+            } else {
+                console.warn('⚠️ DC_BREAK_002: API returned HTTP', response.status, '- keeping default 6 types');
+            }
+        } catch (error) {
+            if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+            console.error('❌ DC_ERR_BREAK_003: Error fetching break types:', error.message, '- keeping default 6 types');
+        }
+    }
+    
+    function getDefaultBreakTypes() {
+        return [
+            { id: 1, code: 'LUNCH', name: 'Lunch Break', description: 'Lunch break (30-60 mins)' },
+            { id: 2, code: 'TEA', name: 'Tea Break', description: 'Short tea/coffee break' },
+            { id: 3, code: 'PERSONAL', name: 'Personal', description: 'Personal matters' },
+            { id: 4, code: 'MEETING', name: 'Meeting', description: 'Meeting time' },
+            { id: 5, code: 'CLIENT_VISIT', name: 'Client Visit', description: 'Visiting a client' },
+            { id: 6, code: 'TRAVEL', name: 'Travel', description: 'Travel between locations' },
+            { id: 7, code: 'EMERGENCY', name: 'Emergency', description: 'Emergency break' },
+            { id: 8, code: 'OTHER', name: 'Other', description: 'Other break reason' }
+        ];
+    }
+    
+    function openBreakTypeModal() {
+        selectedBreakTypeId = null;
+        const modal = document.getElementById('breakTypeModal');
+        const grid = document.getElementById('breakTypeGrid');
+        const confirmBtn = document.getElementById('confirmBreakBtn');
+        
+        // DC_BREAK_VERIFY: Ensure breakTypes array has data before rendering
+        if (!breakTypes || breakTypes.length === 0) {
+            console.warn('⚠️ DC_ERR_BREAK_005: breakTypes array is empty - initializing with defaults');
+            breakTypes = getDefaultBreakTypes();
+        }
+        
+        console.log('🎯 DC_BREAK_MODAL: Opening with', breakTypes.length, 'break types ready');
+        
+        // Populate break types with full error handling
+        try {
+            grid.innerHTML = breakTypes.map(bt => `
+                <div class="break-type-option" data-id="${bt.id}" data-code="${bt.code}" onclick="selectBreakType(${bt.id})">
+                    <i class="${breakTypeIcons[bt.code] || 'fas fa-pause'}"></i>
+                    <div class="break-type-name">${bt.name}</div>
+                    <div class="break-type-desc">${bt.description || ''}</div>
+                </div>
+            `).join('');
+            
+            console.log('✅ DC_BREAK_RENDER: Modal grid populated successfully with', breakTypes.length, 'options');
+        } catch (renderError) {
+            console.error('❌ DC_ERR_BREAK_006: Failed to render break types:', renderError);
+            grid.innerHTML = '<div style="padding: 20px; text-align: center; color: red;">Error loading break types. Please refresh page.</div>';
+        }
+        
+        confirmBtn.disabled = true;
+        modal.classList.add('active');
+    }
+    
+    function closeBreakTypeModal() {
+        const modal = document.getElementById('breakTypeModal');
+        modal.classList.remove('active');
+        selectedBreakTypeId = null;
+    }
+    
+    function selectBreakType(id) {
+        selectedBreakTypeId = id;
+        
+        // Update visual selection
+        document.querySelectorAll('.break-type-option').forEach(opt => {
+            opt.classList.remove('selected');
+            if (parseInt(opt.dataset.id) === id) {
+                opt.classList.add('selected');
+            }
+        });
+        
+        // Enable confirm button
+        document.getElementById('confirmBreakBtn').disabled = false;
+    }
+    
+    async function confirmStartBreak() {
+        if (!selectedBreakTypeId) {
+            alert('Please select a break type');
+            return;
+        }
+        
+        const selectedBreakType = breakTypes.find(bt => bt.id === selectedBreakTypeId);
+        if (!selectedBreakType) {
+            console.error('❌ DC_ERR_BREAK_007: Selected break type not found in breakTypes array');
+            alert('Error: Selected break type not found. Please refresh and try again.');
+            return;
+        }
+        
+        console.log('🔄 DC_BREAK_SUBMIT: Starting break with type:', selectedBreakType.name, '(code:', selectedBreakType.code, ')');
+        
+        try {
+            const response = await staffFetch(`${API_BASE}/staff/attendance/break/start`, {
+                method: 'POST',
+                body: JSON.stringify({ 
+                    break_type: selectedBreakType.code.toLowerCase(),
+                    break_type_id: selectedBreakTypeId
+                })
+            });
+            
+            if (response.ok) {
+                console.log('Break started successfully with type:', selectedBreakType?.name);
+                closeBreakTypeModal();
+                await loadTodayStatus(); await loadStats(); await loadHistory();;
+            } else {
+                const error = await response.json();
+                console.error('Start break error:', error);
+                alert(error.detail || `Failed to start break (Error ${response.status})`);
+            }
+        } catch (error) {
+            if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+            console.error('Start break network error:', error);
+            alert('Network error. Please try again.');
+        }
+    }
+    </script>
+    
+    <script>
+    // ==================== CAMERA CAPTURE FUNCTIONALITY (WVV Protocol) ====================
+    let cameraStream = null;
+    let capturedPhotoData = null;
+    let cameraGpsData = null;
+    let cameraEventType = null; // 'clock_in' or 'clock_out'
+    let cameraLocationWatcher = null;
+    
+    // DC_PREFLIGHT_VALIDATION_001: Get GPS BEFORE opening camera modal
+    async function acquirePreflightGps() {
+        console.log('[DC_PREFLIGHT] Acquiring GPS before camera modal opens');
+        
+        return new Promise((resolve) => {
+            // First attempt: Use current location if available
+            if (currentLocation && currentLocation.latitude && currentLocation.longitude) {
+                console.log('[DC_PREFLIGHT] Using currentLocation as fallback:', currentLocation);
+                cameraGpsData = {
+                    latitude: currentLocation.latitude,
+                    longitude: currentLocation.longitude,
+                    accuracy_m: currentLocation.accuracy || 50,
+                    altitude: null
+                };
+                resolve(true);
+                return;
+            }
+            
+            // Second attempt: Request fresh GPS position
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        console.log('[DC_PREFLIGHT] Fresh GPS acquired:', position.coords);
+                        cameraGpsData = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy_m: position.coords.accuracy,
+                            altitude: position.coords.altitude
+                        };
+                        resolve(true);
+                    },
+                    (error) => {
+                        console.warn('[DC_PREFLIGHT_ERROR] Fresh GPS failed, using fallback:', error);
+                        // Fallback to currentLocation even if not ideal
+                        if (currentLocation && currentLocation.latitude && currentLocation.longitude) {
+                            cameraGpsData = {
+                                latitude: currentLocation.latitude,
+                                longitude: currentLocation.longitude,
+                                accuracy_m: currentLocation.accuracy || 100,
+                                altitude: null
+                            };
+                        } else {
+                            // Last resort: Use approximate/dummy location
+                            cameraGpsData = {
+                                latitude: 0,
+                                longitude: 0,
+                                accuracy_m: 999,
+                                altitude: null
+                            };
+                        }
+                        resolve(true);
+                    },
+                    { enableHighAccuracy: true, timeout: 3000, maximumAge: 0 }
+                );
+            } else {
+                resolve(true); // Geolocation not available, continue anyway
+            }
+        });
+    }
+    
+    async function openCameraModal(eventType) {
+        console.log('[DC_CAMERA_MODAL] Opening camera modal for', eventType);
+        
+        // DC_PREFLIGHT_VALIDATION_001: Acquire GPS before showing camera
+        await acquirePreflightGps();
+        
+        cameraEventType = eventType;
+        capturedPhotoData = null;
+        
+        const modal = document.getElementById('cameraModal');
+        const modalTitle = document.getElementById('cameraModalTitle');
+        const confirmAction = document.getElementById('confirmAction');
+        
+        if (eventType === 'clock_in') {
+            modalTitle.innerHTML = '<i class="fas fa-sign-in-alt"></i> Clock In Verification';
+            confirmAction.textContent = 'Clock In';
+        } else {
+            modalTitle.innerHTML = '<i class="fas fa-sign-out-alt"></i> Clock Out Verification';
+            confirmAction.textContent = 'Clock Out';
+        }
+        
+        modal.classList.add('active');
+        document.getElementById('cameraLoading').style.display = 'block';
+        document.getElementById('captureControls').style.display = 'flex';
+        document.getElementById('confirmControls').style.display = 'none';
+        document.getElementById('cameraPreview').style.display = 'block';
+        document.getElementById('capturedPhoto').style.display = 'none';
+        
+        // Start continuous GPS updates while camera is active
+        startCameraGpsTracking();
+        await startCamera();
+        
+        // Show GPS status immediately with preflight data
+        if (cameraGpsData && cameraGpsData.accuracy_m && cameraGpsData.accuracy_m <= 100) {
+            updateGpsStatus('success', 'Location acquired (±' + Math.round(cameraGpsData.accuracy_m) + 'm)');
+            const confirmBtn = document.getElementById('confirmBtn');
+            if (confirmBtn) confirmBtn.disabled = false;
+        }
+        
+        // Pre-warm video element metadata
+        const videoEl = document.getElementById('cameraPreview');
+        videoEl.onloadedmetadata = () => {
+            console.log('[DC_CAMERA_WARMUP] Video metadata loaded:', {
+                videoWidth: videoEl.videoWidth,
+                videoHeight: videoEl.videoHeight
+            });
+        };
+    }
+    
+    function closeCameraModal() {
+        const modal = document.getElementById('cameraModal');
+        modal.classList.remove('active');
+        stopCamera();
+        stopCameraGpsTracking();
+        capturedPhotoData = null;
+        cameraGpsData = null;
+    }
+    
+    async function startCamera() {
+        try {
+            const constraints = {
+                video: {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: 'user'
+                },
+                audio: false
+            };
+            
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            const videoElement = document.getElementById('cameraPreview');
+            videoElement.srcObject = cameraStream;
+            
+            videoElement.onloadedmetadata = () => {
+                document.getElementById('cameraLoading').style.display = 'none';
+            };
+        } catch (error) {
+            console.error('Camera error:', error);
+            document.getElementById('cameraLoading').innerHTML = `
+                <i class="fas fa-exclamation-triangle"></i>
+                <div>Camera access denied</div>
+                <div style="font-size: 12px; margin-top: 8px;">Please allow camera access to continue</div>
+            `;
+        }
+    }
+    
+    function stopCamera() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track => track.stop());
+            cameraStream = null;
+        }
+    }
+    
+    // DC_GPS_CENTRALIZATION_001: Camera GPS uses universal service instead of duplicate watcher
+    function startCameraGpsTracking() {
+        console.log('[DC_GPS_001] Camera GPS uses universal service');
+        updateGpsStatus('loading', 'Getting location...');
+        
+        // DC_LIFECYCLE_MANAGEMENT_001: Set 8-second timeout for GPS acquisition
+        const gpsTimeoutId = setTimeout(() => {
+            console.warn('[DC_GPS_TIMEOUT] GPS acquisition timeout - user can retry manually');
+            updateGpsStatus('error', 'GPS timeout - try moving to open area');
+        }, 8000);
+        
+        // Subscribe to universal GPS service
+        window._cameraGpsUnsubscribe = gpsService.subscribe((update) => {
+            if (update.event === 'gps:updated' && update.data.location) {
+                clearTimeout(gpsTimeoutId);
+                const loc = update.data.location;
+                cameraGpsData = {
+                    latitude: loc.latitude,
+                    longitude: loc.longitude,
+                    accuracy_m: loc.accuracy_m,
+                    altitude: loc.altitude
+                };
+                
+                const accuracy = loc.accuracy_m;
+                let statusText = `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`;
+                
+                if (accuracy <= 20) {
+                    updateGpsStatus('success', 'Location locked - Ready to confirm');
+                } else if (accuracy <= 100) {
+                    updateGpsStatus('success', 'Location acquired (±' + Math.round(accuracy) + 'm)');
+                } else {
+                    updateGpsStatus('loading', 'Improving accuracy (±' + Math.round(accuracy) + 'm)...');
+                }
+                
+                document.getElementById('cameraLocationText').textContent = statusText;
+                document.getElementById('cameraAccuracy').textContent = `±${Math.round(accuracy)}m`;
+                
+                // Enable confirm button once GPS acquired
+                const confirmBtn = document.getElementById('confirmBtn');
+                if (confirmBtn && accuracy <= 100) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.title = '';
+                }
+            } else if (update.event === 'gps:error') {
+                clearTimeout(gpsTimeoutId);
+                updateGpsStatus('error', 'Location unavailable');
+                document.getElementById('cameraLocationText').textContent = 'Location unavailable';
+            }
+        });
+        
+        // If GPS service not already tracking, start it
+        if (!gpsService.isActive()) {
+            console.log('[DC_GPS_LIFECYCLE] Starting GPS service for camera evidence');
+            gpsService.start('camera_evidence');
+        }
+    }
+    
+    function stopCameraGpsTracking() {
+        if (window._cameraGpsUnsubscribe) {
+            window._cameraGpsUnsubscribe();
+            window._cameraGpsUnsubscribe = null;
+        }
+    }
+    
+    function updateGpsStatus(status, text) {
+        const statusEl = document.getElementById('gpsStatus');
+        const textEl = document.getElementById('gpsStatusText');
+        
+        statusEl.className = 'gps-status ' + status;
+        
+        let icon = '';
+        if (status === 'loading') icon = '<i class="fas fa-spinner fa-spin"></i>';
+        else if (status === 'success') icon = '<i class="fas fa-check-circle"></i>';
+        else if (status === 'error') icon = '<i class="fas fa-exclamation-circle"></i>';
+        
+        statusEl.innerHTML = icon + ' <span id="gpsStatusText">' + text + '</span>';
+    }
+    
+    function capturePhoto() {
+        const video = document.getElementById('cameraPreview');
+        const canvas = document.getElementById('photoCanvas');
+        const photo = document.getElementById('capturedPhoto');
+        
+        console.log('[DC_PHOTO_CAPTURE] Starting photo capture with dimensions:', {
+            videoWidth: video?.videoWidth,
+            videoHeight: video?.videoHeight,
+            readyState: video?.readyState
+        });
+        
+        // DC_PHOTO_VALIDATION_001: Validate video stream readiness (readyState >= 2)
+        if (!video || video.readyState < 2) {
+            console.error('[DC_PHOTO_ERROR] Video not ready for capture', {
+                videoWidth: video?.videoWidth,
+                videoHeight: video?.videoHeight,
+                readyState: video?.readyState
+            });
+            alert('Camera still initializing. Please wait a moment and try again.');
+            return;
+        }
+        
+        if (!video.videoWidth || !video.videoHeight) {
+            console.error('[DC_PHOTO_ERROR] Video dimensions are zero');
+            alert('Camera dimensions unavailable. Please try again.');
+            return;
+        }
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            console.error('[DC_PHOTO_ERROR] Canvas context not available');
+            alert('Canvas context failed. Please try again.');
+            return;
+        }
+        
+        try {
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, 0, 0);
+            
+            // DC_PHOTO_CAPTURE_001: Capture with multiple format fallbacks
+            let photoData = null;
+            let attempts = 0;
+            
+            // First attempt: JPEG with 0.95 quality for better size
+            photoData = canvas.toDataURL('image/jpeg', 0.95);
+            attempts++;
+            
+            console.log('[DC_PHOTO_ATTEMPT_' + attempts + '] JPEG capture size:', photoData.length);
+            
+            // WVV requirement: Photo must be at least 5KB
+            if (!photoData || photoData.length < 6000) {
+                console.warn('[DC_PHOTO_WARN] JPEG size insufficient (' + photoData.length + 'B), trying PNG');
+                photoData = canvas.toDataURL('image/png');
+                attempts++;
+                console.log('[DC_PHOTO_ATTEMPT_' + attempts + '] PNG capture size:', photoData.length);
+            }
+            
+            // Final validation
+            if (!photoData || photoData.length < 6000) {
+                console.error('[DC_PHOTO_ERROR] Photo data too small after all attempts', {
+                    jpegLength: photoData?.length,
+                    attempts: attempts
+                });
+                alert('Photo capture too small (WVV requires minimum 5KB). Please ensure proper lighting and try again.');
+                return;
+            }
+            
+            // DC_PHOTO_FORMAT_VALIDATION: Check for valid image headers
+            if (!photoData.startsWith('data:image/')) {
+                console.error('[DC_PHOTO_ERROR] Invalid data URL format');
+                alert('Photo format invalid. Please try again.');
+                return;
+            }
+            
+            console.log('[DC_PHOTO_SUCCESS] Photo captured:', {
+                format: photoData.includes('jpeg') ? 'JPEG' : 'PNG',
+                sizeKB: (photoData.length / 1024).toFixed(2),
+                preview: photoData.substring(0, 50)
+            });
+            
+            capturedPhotoData = photoData;
+            photo.src = capturedPhotoData;
+            video.style.display = 'none';
+            photo.style.display = 'block';
+            
+            document.getElementById('captureControls').style.display = 'none';
+            document.getElementById('confirmControls').style.display = 'flex';
+            
+            const confirmBtn = document.getElementById('confirmBtn');
+            if (!cameraGpsData) {
+                confirmBtn.disabled = true;
+                confirmBtn.title = 'Waiting for GPS location';
+            } else {
+                confirmBtn.disabled = false;
+                confirmBtn.title = '';
+            }
+        } catch (error) {
+            console.error('[DC_PHOTO_CAPTURE_ERROR] Exception during capture:', error);
+            alert('Photo capture error: ' + error.message + '. Please try again.');
+        }
+    }
+    
+    function retakePhoto() {
+        const video = document.getElementById('cameraPreview');
+        const photo = document.getElementById('capturedPhoto');
+        
+        capturedPhotoData = null;
+        
+        video.style.display = 'block';
+        photo.style.display = 'none';
+        
+        document.getElementById('captureControls').style.display = 'flex';
+        document.getElementById('confirmControls').style.display = 'none';
+    }
+    
+    // DC_PHOTO_TIMESTAMP_OVERLAY_001: Add visible timestamp to photo
+    async function addTimestampToPhoto(photoDataUrl) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.drawImage(img, 0, 0);
+                
+                // IST timestamp format
+                const now = new Date();
+                const istTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+                const timestamp = istTime.toLocaleDateString('en-IN') + ' ' + 
+                                istTime.toLocaleTimeString('en-IN', { hour12: false });
+                
+                // Draw timestamp overlay
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(10, canvas.height - 50, 300, 40);
+                ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+                ctx.font = 'bold 18px Arial';
+                ctx.fillText(timestamp + ' IST', 20, canvas.height - 20);
+                
+                resolve(canvas.toDataURL('image/jpeg', 0.95));
+            };
+            img.src = photoDataUrl;
+        });
+    }
+    
+    // DC_PHOTO_AI_001: Detect human face in photo using face-api.js
+    async function detectHumanFace(photoDataUrl) {
+        try {
+            console.log('[DC_FACE_DETECT] Starting face detection');
+            
+            // Wait for face-api to load
+            if (!window.faceapi) {
+                console.warn('[DC_FACE_WARN] Face-api not loaded yet, skipping face detection');
+                return { detected: true, confidence: 0, source: 'skipped' };
+            }
+            
+            const img = new Image();
+            img.src = photoDataUrl;
+            
+            return new Promise((resolve) => {
+                img.onload = async () => {
+                    try {
+                        const detections = await faceapi.detectSingleFace(img)
+                            .withFaceLandmarks()
+                            .withFaceDescriptor();
+                        
+                        if (detections) {
+                            console.log('[DC_FACE_SUCCESS] Face detected:', {
+                                confidence: detections.detection.score.toFixed(2),
+                                box: detections.detection.box
+                            });
+                            resolve({
+                                detected: true,
+                                confidence: Math.round(detections.detection.score * 100),
+                                source: 'face_api'
+                            });
+                        } else {
+                            console.warn('[DC_FACE_WARN] No face detected in photo');
+                            resolve({
+                                detected: false,
+                                confidence: 0,
+                                source: 'face_api'
+                            });
+                        }
+                    } catch (error) {
+                        console.error('[DC_FACE_ERROR] Detection failed:', error);
+                        resolve({
+                            detected: true,
+                            confidence: 0,
+                            source: 'error_fallback'
+                        });
+                    }
+                };
+            });
+        } catch (error) {
+            console.error('[DC_FACE_ERROR] Face detection exception:', error);
+            return { detected: true, confidence: 0, source: 'error_fallback' };
+        }
+    }
+    
+    async function confirmEvidenceCapture() {
+        // DC_DATA_VALIDATION_001: Comprehensive evidence validation
+        console.log('[DC_EVIDENCE_CHECK] Starting evidence validation');
+        
+        // DC_PHOTO_VALIDATION_001: Validate photo data with WVV compliance
+        if (!capturedPhotoData) {
+            console.error('[DC_ERROR] No photo data captured');
+            alert('Please capture a photo first');
+            return;
+        }
+        
+        if (typeof capturedPhotoData !== 'string') {
+            console.error('[DC_ERROR] Photo data is not string:', typeof capturedPhotoData);
+            alert('Photo data format is invalid. Please capture again.');
+            return;
+        }
+        
+        // WVV_EVIDENCE_SIZE_VALIDATION: Minimum 5KB for valid WVV compliance
+        if (capturedPhotoData.length < 6000) {
+            console.error('[DC_ERROR] Photo data too small for WVV compliance:', capturedPhotoData.length + ' bytes');
+            alert('Photo too small (WVV requires ≥5KB). Please ensure good lighting and try again.');
+            return;
+        }
+        
+        if (!capturedPhotoData.startsWith('data:image/')) {
+            console.error('[DC_ERROR] Photo data format invalid:', capturedPhotoData.substring(0, 50));
+            alert('Photo format is invalid (must be data:image/...). Please capture again.');
+            return;
+        }
+        
+        console.log('[DC_PHOTO_OK] Photo validated:', {
+            type: capturedPhotoData.includes('jpeg') ? 'JPEG' : capturedPhotoData.includes('png') ? 'PNG' : 'unknown',
+            sizeKB: (capturedPhotoData.length / 1024).toFixed(2),
+            wvvCompliant: capturedPhotoData.length >= 6000
+        });
+        
+        // DC_PHOTO_TIMESTAMP_OVERLAY_001: Add timestamp BEFORE face detection
+        console.log('[DC_PROCESS] Adding timestamp overlay to photo');
+        const photoWithTimestamp = await addTimestampToPhoto(capturedPhotoData);
+        
+        // DC_PHOTO_AI_001: Detect human face (Option A - client-side)
+        console.log('[DC_PROCESS] Detecting human face...');
+        const faceDetection = await detectHumanFace(photoWithTimestamp);
+        
+        if (!faceDetection.detected) {
+            alert('No human face detected in photo. Please ensure your face is clearly visible and try again.');
+            return;
+        }
+        
+        console.log('[DC_FACE_OK] Face detection passed:', faceDetection);
+        
+        // DC_FALLBACK_001: Check if GPS data exists (use preflight or current)
+        if (!cameraGpsData) {
+            console.error('[DC_ERROR] No GPS data available - attempting recovery');
+            // Try to use currentLocation as fallback
+            if (currentLocation && currentLocation.latitude) {
+                cameraGpsData = {
+                    latitude: currentLocation.latitude,
+                    longitude: currentLocation.longitude,
+                    accuracy_m: currentLocation.accuracy || 50,
+                    altitude: null
+                };
+                console.log('[DC_FALLBACK] Using currentLocation:', cameraGpsData);
+            } else {
+                alert('GPS location is required. Please ensure location services are enabled.');
+                return;
+            }
+        }
+        
+        // WVV_LOCATION_VALIDATION_001: Validate GPS data structure
+        if (!cameraGpsData.latitude || !cameraGpsData.longitude) {
+            alert('GPS data is invalid. Please try again.');
+            console.error('[DC_VALIDATION] Invalid GPS data:', cameraGpsData);
+            return;
+        }
+        
+        // WVV_GPS_ACCURACY_001: Warn but allow submission with poor accuracy
+        if (cameraGpsData.accuracy_m > 100) {
+            const proceed = confirm(`GPS accuracy is poor (${Math.round(cameraGpsData.accuracy_m)}m). Submit anyway?`);
+            if (!proceed) return;
+            console.warn('[DC_WARN] Submitting with poor GPS accuracy:', cameraGpsData.accuracy_m + 'm');
+        }
+        
+        console.log('[DC_EVIDENCE] Evidence validated - photo + GPS with timestamp + face detection');
+        
+        // Store timestamped photo for submission
+        const finalPhotoData = photoWithTimestamp;
+        const finalFaceData = faceDetection;
+        
+        // DC_PHOTO_PRESERVATION_001: Don't close modal until AFTER async submission completes
+        try {
+            if (cameraEventType === 'clock_in') {
+                await submitClockIn(finalPhotoData, cameraGpsData, finalFaceData);
+            } else if (cameraEventType === 'clock_out') {
+                await submitClockOut(finalPhotoData, cameraGpsData, finalFaceData);
+            }
+        } finally {
+            closeCameraModal(); // Only close AFTER submission completes
+        }
+    }
+    
+    async function submitClockIn(photoData, gpsData, faceData) {
+        // DC_DATA_VALIDATION_001: Null safety with comprehensive fallback
+        let safeGpsData = gpsData;
+        if (!gpsData || gpsData.latitude === null || gpsData.longitude === null) {
+            console.warn('[DC_FALLBACK] GPS data null, using currentLocation fallback');
+            if (currentLocation && currentLocation.latitude) {
+                safeGpsData = {
+                    latitude: currentLocation.latitude,
+                    longitude: currentLocation.longitude,
+                    accuracy_m: currentLocation.accuracy || 50,
+                    altitude: null
+                };
+            } else {
+                console.error('[DC_ERROR] Clock-in blocked: No GPS data available');
+                alert('GPS location data is missing. Please enable location services.');
+                return;
+            }
+        }
+        
+        // WVV_EVIDENCE_INTEGRITY_001: Validate all critical evidence fields
+        if (!photoData || photoData.length === 0) {
+            console.error('[DC_ERROR] Clock-in blocked: Photo data invalid');
+            alert('Photo data is invalid. Please capture again.');
+            return;
+        }
+        
+        const requestData = {
+            work_mode: selectedWorkMode,
+            location: currentLocation,
+            evidence: {
+                photo_base64: photoData,
+                gps_latitude: safeGpsData.latitude,
+                gps_longitude: safeGpsData.longitude,
+                gps_accuracy_m: safeGpsData.accuracy_m || 50,
+                gps_altitude: safeGpsData.altitude || null,
+                location_address: currentLocation?.address || null,
+                captured_at: new Date().toISOString(),
+                gps_source: 'preflight_camera',
+                timestamp_overlay: true,
+                face_detected: faceData?.detected || false,
+                face_confidence: faceData?.confidence || 0,
+                dc_compliance: 'DC_PHOTO_VALIDATION_001'
+            }
+        };
+        
+        console.log('Clock-in with evidence request:', { 
+            work_mode: selectedWorkMode, 
+            hasEvidence: true,
+            gps: gpsData
+        });
+        
+        try {
+            // DC_CONTENT_TYPE_001: Use staffFetchJson for proper Content-Type header
+            const data = await staffFetchJson(`${API_BASE}/staff/attendance/clock-in`, {
+                method: 'POST',
+                body: JSON.stringify(requestData)
+            });
+            
+            console.log('Clock-in successful with evidence:', data);
+            
+            // DC_GPS_LIFECYCLE_001: Start universal GPS tracking on successful clock-in
+            console.log('[DC] Triggering GPS service start after successful clock-in');
+            gpsService.start('attendance_clock_in');
+            
+            await loadTodayStatus();
+            await loadStats();
+        } catch (error) {
+            // DC_ERROR_HANDLING_001: Comprehensive error handling
+            if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+            
+            // DC_TOKEN_EXPIRY_001: Handle expired token with clear redirect
+            if (error.status === 401) {
+                const errorDetail = (error.data?.detail || '').toUpperCase();
+                if (errorDetail.includes('TOKEN_EXPIRED') || errorDetail.includes('COULD NOT VALIDATE CREDENTIALS')) {
+                    console.warn('[DC_SESSION] Token expired, redirecting to login');
+                    localStorage.removeItem('staff_token');
+                    localStorage.removeItem('staff_user');
+                    alert('Your session has expired. Please login again.');
+                    window.location.href = '/staff/login';
+                    return;
+                }
+            }
+            
+            console.error('Clock-in error:', error);
+            alert(error.data?.detail || error.message || 'Failed to clock in. Please try again.');
+        }
+    }
+    
+    async function submitClockOut(photoData, gpsData, faceData) {
+        // DC_DATA_VALIDATION_001: Null safety with comprehensive fallback
+        let safeGpsData = gpsData;
+        if (!gpsData || gpsData.latitude === null || gpsData.longitude === null) {
+            console.warn('[DC_FALLBACK] GPS data null, using currentLocation fallback');
+            if (currentLocation && currentLocation.latitude) {
+                safeGpsData = {
+                    latitude: currentLocation.latitude,
+                    longitude: currentLocation.longitude,
+                    accuracy_m: currentLocation.accuracy || 50,
+                    altitude: null
+                };
+            } else {
+                console.error('[DC_ERROR] Clock-out blocked: No GPS data available');
+                alert('GPS location data is missing. Please enable location services.');
+                return;
+            }
+        }
+        
+        // WVV_EVIDENCE_INTEGRITY_001: Validate all critical evidence fields
+        if (!photoData || photoData.length === 0) {
+            console.error('[DC_ERROR] Clock-out blocked: Photo data invalid');
+            alert('Photo data is invalid. Please capture again.');
+            return;
+        }
+        
+        const requestData = {
+            location: currentLocation,
+            evidence: {
+                photo_base64: photoData,
+                gps_latitude: safeGpsData.latitude,
+                gps_longitude: safeGpsData.longitude,
+                gps_accuracy_m: safeGpsData.accuracy_m || 50,
+                gps_altitude: safeGpsData.altitude || null,
+                location_address: currentLocation?.address || null,
+                captured_at: new Date().toISOString(),
+                gps_source: 'preflight_camera',
+                timestamp_overlay: true,
+                face_detected: faceData?.detected || false,
+                face_confidence: faceData?.confidence || 0,
+                dc_compliance: 'DC_PHOTO_VALIDATION_001'
+            }
+        };
+        
+        console.log('Clock-out with evidence request:', { 
+            hasEvidence: true,
+            gps: gpsData
+        });
+        
+        try {
+            // DC_CONTENT_TYPE_001: Use staffFetchJson for proper Content-Type header
+            const data = await staffFetchJson(`${API_BASE}/staff/attendance/clock-out`, {
+                method: 'POST',
+                body: JSON.stringify(requestData)
+            });
+            
+            console.log('Clock-out successful with evidence:', data);
+            
+            // DC_GPS_LIFECYCLE_001: Stop universal GPS tracking on successful clock-out
+            console.log('[DC] Triggering GPS service stop after successful clock-out');
+            gpsService.stop('attendance_clock_out');
+            
+            await loadTodayStatus();
+            await loadStats();
+            await loadHistory();
+        } catch (error) {
+            // DC_ERROR_HANDLING_001: Comprehensive error handling
+            if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+            
+            // DC_TOKEN_EXPIRY_001: Handle expired token with clear redirect
+            if (error.status === 401) {
+                const errorDetail = (error.data?.detail || '').toUpperCase();
+                if (errorDetail.includes('TOKEN_EXPIRED') || errorDetail.includes('COULD NOT VALIDATE CREDENTIALS')) {
+                    console.warn('[DC_SESSION] Token expired, redirecting to login');
+                    localStorage.removeItem('staff_token');
+                    localStorage.removeItem('staff_user');
+                    alert('Your session has expired. Please login again.');
+                    window.location.href = '/staff/login';
+                    return;
+                }
+            }
+            
+            console.error('Clock-out error:', error);
+            alert(error.data?.detail || error.message || 'Failed to clock out. Please try again.');
+        }
+    }
+    
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const toRad = (deg) => deg * Math.PI / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+    
+    function startDriftTracking() {
+        if (driftTrackingInterval) return;
+        
+        console.log('[DC_DRIFT_001] Starting drift tracking via universal GPS service');
+        document.getElementById('locationDriftCard').style.display = 'block';
+        document.getElementById('driftTrackingStatus').innerHTML = '<i class="fas fa-satellite-dish text-success"></i> Active';
+        
+        // DC_GPS_CENTRALIZATION_001: Use universal GPS service for drift detection
+        window._driftGpsUnsubscribe = gpsService.subscribe((update) => {
+            if (update.event === 'gps:updated' && update.data.location) {
+                const newLoc = update.data.location;
+                
+                if (!lastDriftLocation) {
+                    lastDriftLocation = { 
+                        latitude: newLoc.latitude, 
+                        longitude: newLoc.longitude, 
+                        timestamp: new Date().toISOString() 
+                    };
+                    return;
+                }
+                
+                const distance = haversineDistance(
+                    lastDriftLocation.latitude, lastDriftLocation.longitude,
+                    newLoc.latitude, newLoc.longitude
+                );
+                
+                document.getElementById('lastLocationUpdate').textContent = 
+                    'Last update: ' + new Date().toLocaleTimeString('en-IN');
+                
+                if (distance >= DRIFT_THRESHOLD_METERS && newLoc.accuracy_m <= 100) {
+                    console.log('[DC_DRIFT_001] Drift detected:', distance.toFixed(2), 'm');
+                    recordDriftEvent(lastDriftLocation, { 
+                        latitude: newLoc.latitude, 
+                        longitude: newLoc.longitude 
+                    }, distance, newLoc.accuracy_m);
+                    lastDriftLocation = { 
+                        latitude: newLoc.latitude, 
+                        longitude: newLoc.longitude, 
+                        timestamp: new Date().toISOString() 
+                    };
+                }
+            }
+        });
+        
+        loadDriftSummary();
+    }
+    
+    function stopDriftTracking() {
+        if (window._driftGpsUnsubscribe) {
+            window._driftGpsUnsubscribe();
+            window._driftGpsUnsubscribe = null;
+        }
+        if (driftTrackingInterval) {
+            clearInterval(driftTrackingInterval);
+            driftTrackingInterval = null;
+        }
+        lastDriftLocation = null;
+        document.getElementById('locationDriftCard').style.display = 'none';
+        console.log('[DC_DRIFT_001] Stopped location drift tracking');
+    }
+    
+    async function recordDriftEvent(prevLoc, currLoc, distance, accuracy) {
+        try {
+            const response = await staffFetch(`${API_BASE}/staff/attendance/location/drift`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    latitude: currLoc.latitude,
+                    longitude: currLoc.longitude,
+                    accuracy_m: accuracy,
+                    capture_method: 'foreground_poll',
+                    device_info: {
+                        userAgent: navigator.userAgent,
+                        platform: navigator.platform,
+                        timestamp: new Date().toISOString()
+                    }
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('[DC] Drift event recorded:', data.dc_code);
+                await loadDriftSummary();
+            } else {
+                const error = await response.json();
+                if (response.status === 400 && error.detail && error.detail.includes('WVV Protocol')) {
+                    console.log('[WVV] GPS accuracy too low, skipping drift recording');
+                    document.getElementById('driftTrackingStatus').innerHTML = 
+                        '<i class="fas fa-exclamation-triangle text-warning"></i> Low GPS';
+                } else {
+                    console.error('[DC] Failed to record drift:', error);
+                }
+            }
+        } catch (error) {
+            if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+            console.error('[DC] Drift recording network error:', error);
+        }
+    }
+    
+    async function loadDriftSummary() {
+        try {
+            const response = await staffFetch(`${API_BASE}/staff/attendance/location/summary`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('uniqueLocationsCount').textContent = data.unique_locations || 0;
+                document.getElementById('locationChangeCount').textContent = data.location_changes || 0;
+                const distKm = ((data.total_distance_meters || 0) / 1000).toFixed(1);
+                document.getElementById('totalDistanceKm').innerHTML = `${distKm} <span class="fs-6">km</span>`;
+            }
+        } catch (error) {
+            if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+            console.error('[DC] Failed to load drift summary:', error);
+        }
+    }
+    
+    function viewLocationHistory() {
+        const modal = new bootstrap.Modal(document.getElementById('locationHistoryModal'));
+        modal.show();
+        loadLocationHistory();
+    }
+    
+    async function loadLocationHistory() {
+        const filter = document.getElementById('driftDateFilter').value;
+        const customStartCol = document.getElementById('customStartDateCol');
+        const customEndCol = document.getElementById('customEndDateCol');
+        
+        if (filter === 'custom') {
+            customStartCol.style.display = 'block';
+            customEndCol.style.display = 'block';
+        } else {
+            customStartCol.style.display = 'none';
+            customEndCol.style.display = 'none';
+        }
+        
+        let url = `${API_BASE}/staff/attendance/location/history?filter_type=${filter}`;
+        
+        if (filter === 'custom') {
+            const startDate = document.getElementById('driftStartDate').value;
+            const endDate = document.getElementById('driftEndDate').value;
+            if (startDate) url += `&start_date=${startDate}`;
+            if (endDate) url += `&end_date=${endDate}`;
+        }
+        
+        try {
+            const response = await staffFetch(url);
+            
+            if (response.ok) {
+                const data = await response.json();
+                renderLocationHistory(data);
+            }
+        } catch (error) {
+            if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+            console.error('[DC] Failed to load location history:', error);
+        }
+    }
+    
+    function renderLocationHistory(data) {
+        document.getElementById('historyTotalChanges').textContent = data.summary?.total_changes || 0;
+        const totalDistKm = ((data.summary?.total_distance_meters || 0) / 1000).toFixed(2);
+        document.getElementById('historyTotalDistance').textContent = `${totalDistKm} km`;
+        document.getElementById('historyUniqueLocations').textContent = data.summary?.unique_locations || 0;
+        
+        const timeline = document.getElementById('locationTimeline');
+        
+        if (!data.events || data.events.length === 0) {
+            timeline.innerHTML = `
+                <div class="no-drifts">
+                    <i class="fas fa-route"></i>
+                    <div>No location changes recorded</div>
+                    <small>Location changes (200m+) will appear here</small>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        data.events.forEach(event => {
+            const capturedAt = new Date(event.captured_at).toLocaleString('en-IN', {
+                day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+            });
+            const distanceKm = (event.distance_meters / 1000).toFixed(2);
+            
+            html += `
+                <div class="drift-event">
+                    <div class="drift-seq">${event.drift_sequence}</div>
+                    <div class="drift-content">
+                        <div class="drift-time">${capturedAt}</div>
+                        <div class="drift-distance">
+                            <i class="fas fa-route"></i> ${distanceKm} km (${event.distance_meters.toFixed(0)} m)
+                        </div>
+                        <div class="drift-locations">
+                            <span class="from-loc"><i class="fas fa-map-pin"></i> From: ${event.previous_latitude?.toFixed(5)}, ${event.previous_longitude?.toFixed(5)}</span>
+                            <br>
+                            <span class="to-loc"><i class="fas fa-map-marker-alt"></i> To: ${event.current_latitude?.toFixed(5)}, ${event.current_longitude?.toFixed(5)}</span>
+                        </div>
+                        <div class="drift-dc-code"><i class="fas fa-fingerprint"></i> ${event.dc_code}</div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        timeline.innerHTML = html;
+    }
+    </script>
+</body>
+</html>

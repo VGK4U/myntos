@@ -1,0 +1,54 @@
+╔══════════════════════════════════════════════════════════════╗
+║       BeV CACHE REFRESH UTILITY - Speed Up System            ║
+╔══════════════════════════════════════════════════════════════╗
+
+📋 WHEN TO USE:
+   • Dashboard loading slowly (15-31 seconds instead of < 1 second)
+   • After adding many new users
+   • After system maintenance or restart
+   • When users complain about slow performance
+
+🚀 HOW TO RUN:
+
+   1. Open terminal/shell
+   
+   2. Run this command:
+      python3 backend/refresh_cache.py
+   
+   3. Wait for completion (takes 5-10 minutes for 1000+ users)
+   
+   4. Dashboard should be fast again!
+
+✅ WHAT IT DOES:
+   • Refreshes cached metrics for ALL users
+   • Pre-calculates team data, points, and counts
+   • Reduces dashboard load time from 15-31s to ~0.1s
+   • 100x speed improvement!
+
+⏰ AUTOMATIC REFRESH:
+   System automatically refreshes cache every night at 11:30 PM
+   Manual refresh only needed if system slows down during the day
+
+📊 EXPECTED OUTPUT:
+   ============================================================
+   🚀 BeV Cache Refresh Utility
+   ============================================================
+   Started at: 2025-10-03 07:51:00
+   
+   📊 Total users in system: 1035
+   🔄 Starting cache refresh...
+   
+      ✅ 100/1035 users processed...
+      ✅ 200/1035 users processed...
+      ...
+   
+   ============================================================
+   ✅ Cache refresh completed!
+      Users processed: 1035
+      Completed at: 2025-10-03 07:58:00
+   
+   💡 Dashboard should now load in ~0.1s instead of 15-31s
+   ============================================================
+
+⚡ QUICK TIP:
+   Run this utility during low-traffic hours for best results

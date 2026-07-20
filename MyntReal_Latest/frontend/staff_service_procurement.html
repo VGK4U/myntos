@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procurement Queue - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 280px; min-height: 100vh; transition: margin-left 0.3s ease; padding-top: 0; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        .content-area { margin-left: 260px; margin-top: 64px; min-height: calc(100vh - 64px); padding: 24px; transition: margin-left 0.3s ease; }
+        body.sidebar-collapsed-mode .content-area { margin-left: 70px; }
+        @media (max-width: 768px) { .content-area { margin-left: 0; margin-top: 56px; } }
+        .page-banner { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white; }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .stat-card .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-card .label { color: #6b7280; font-size: 13px; margin-top: 4px; }
+        .stat-yellow .icon { background: #fef3c7; color: #d97706; }
+        .stat-blue .icon { background: #dbeafe; color: #2563eb; }
+        .stat-green .icon { background: #d1fae5; color: #059669; }
+        .stat-purple .icon { background: #ede9fe; color: #7c3aed; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-acknowledged { background: #dbeafe; color: #1e40af; }
+        .status-ordered { background: #e0f2fe; color: #0369a1; }
+        .status-released { background: #d1fae5; color: #065f46; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        .action-btn { padding: 6px 12px; border-radius: 6px; font-size: 12px; border: none; cursor: pointer; }
+        .action-btn-primary { background: #8b5cf6; color: white; }
+        .action-btn-primary:hover { background: #7c3aed; }
+        .action-btn-success { background: #10b981; color: white; }
+        .action-btn-success:hover { background: #059669; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .loading-state { text-align: center; padding: 40px; }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <div id="staffSidebar"></div>
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-banner">
+                <h1><i class="fas fa-boxes"></i> Spare Parts Procurement</h1>
+                <p>Manage spare parts requests from service tickets. Acknowledge availability and release parts.</p>
+            </div>
+            <div class="row mb-4">
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card stat-yellow">
+                        <div class="icon"><i class="fas fa-clock"></i></div>
+                        <div class="value" id="stat-pending">0</div>
+                        <div class="label">Pending</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card stat-blue">
+                        <div class="icon"><i class="fas fa-check"></i></div>
+                        <div class="value" id="stat-acknowledged">0</div>
+                        <div class="label">Acknowledged</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card stat-purple">
+                        <div class="icon"><i class="fas fa-truck"></i></div>
+                        <div class="value" id="stat-ordered">0</div>
+                        <div class="label">Ordered</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card stat-green">
+                        <div class="icon"><i class="fas fa-box-open"></i></div>
+                        <div class="value" id="stat-released">0</div>
+                        <div class="label">Released</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5><i class="fas fa-list me-2"></i>Spare Requests</h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        <select class="form-select form-select-sm" id="filter-status" style="width:auto;" onchange="renderSpares()">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="acknowledged">Acknowledged</option>
+                            <option value="ordered">Ordered</option>
+                            <option value="received">Received</option>
+                            <option value="released">Released</option>
+                        </select>
+                        <select class="form-select form-select-sm" id="filter-urgency" style="width:auto;" onchange="renderSpares()">
+                            <option value="">All Urgency</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="normal">Normal</option>
+                        </select>
+                        <input type="text" class="form-control form-control-sm" id="filter-search" placeholder="Search item/ticket..." style="width:150px;" oninput="renderSpares()">
+                        <input type="date" class="form-control form-control-sm" id="filter-date" style="width:auto;" onchange="renderSpares()">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="loading-state" class="loading-state">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-3 text-muted">Loading spare requests...</p>
+                    </div>
+                    <div id="empty-state" class="empty-state" style="display: none;">
+                        <i class="fas fa-inbox"></i>
+                        <h4>No Spare Requests</h4>
+                        <p>No pending spare parts requests.</p>
+                    </div>
+                    <div class="table-responsive" id="spares-table" style="display: none;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Ticket</th>
+                                    <th>Customer</th>
+                                    <th>Spare Item</th>
+                                    <th>Qty</th>
+                                    <th style="min-width:90px;">Unit Price</th>
+                                    <th style="min-width:70px;">GST %</th>
+                                    <th style="min-width:100px;">Total</th>
+                                    <th>Status</th>
+                                    <th>Source</th>
+                                    <th>Attachments</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="spares-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="spareModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="spareModalTitle">Spare Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="spareModalBody"></div>
+                <div class="modal-footer" id="spareModalFooter"></div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script>
+        let allSpares = [];
+        function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Procurement Queue', 'fas fa-shopping-cart');
+            loadData();
+        });
+        
+        async function loadData() {
+            try {
+                document.getElementById('loading-state').style.display = 'block';
+                document.getElementById('spares-table').style.display = 'none';
+                
+                const response = await fetch('/api/v1/tickets/service/procurement-queue', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load data');
+                allSpares = await response.json();
+                updateStats();
+                renderSpares();
+            } catch (error) {
+                document.getElementById('loading-state').innerHTML = `<div class="text-danger"><i class="fas fa-exclamation-circle fa-3x mb-3"></i><h4>Failed to Load</h4><button class="btn btn-primary" onclick="loadData()">Retry</button></div>`;
+            }
+        }
+        
+        function updateStats() {
+            document.getElementById('stat-pending').textContent = allSpares.filter(s => s.procurement_status === 'pending').length;
+            document.getElementById('stat-acknowledged').textContent = allSpares.filter(s => s.procurement_status === 'acknowledged').length;
+            document.getElementById('stat-ordered').textContent = allSpares.filter(s => s.procurement_status === 'ordered').length;
+            document.getElementById('stat-released').textContent = allSpares.filter(s => s.procurement_status === 'released').length;
+        }
+        
+        function clearFilters() {
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-urgency').value = '';
+            document.getElementById('filter-search').value = '';
+            document.getElementById('filter-date').value = '';
+            renderSpares();
+        }
+        
+        function renderSpares() {
+            const statusFilter = document.getElementById('filter-status').value;
+            const urgencyFilter = document.getElementById('filter-urgency').value;
+            const searchFilter = document.getElementById('filter-search').value.toLowerCase();
+            const dateFilter = document.getElementById('filter-date').value;
+            
+            let filtered = allSpares;
+            
+            if (statusFilter) {
+                filtered = filtered.filter(s => s.procurement_status === statusFilter);
+            }
+            if (urgencyFilter) {
+                filtered = filtered.filter(s => (s.urgency || 'normal').toLowerCase() === urgencyFilter);
+            }
+            if (searchFilter) {
+                filtered = filtered.filter(s => 
+                    (s.spare_item_name || '').toLowerCase().includes(searchFilter) ||
+                    (s.spare_item_code || '').toLowerCase().includes(searchFilter) ||
+                    (s.ticket_id_str || '').toLowerCase().includes(searchFilter)
+                );
+            }
+            if (dateFilter) {
+                const filterDate = new Date(dateFilter).toDateString();
+                filtered = filtered.filter(s => new Date(s.requested_at).toDateString() === filterDate);
+            }
+            
+            document.getElementById('loading-state').style.display = 'none';
+            if (filtered.length === 0) {
+                document.getElementById('empty-state').style.display = 'block';
+                document.getElementById('spares-table').style.display = 'none';
+                return;
+            }
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('spares-table').style.display = 'block';
+            document.getElementById('spares-body').innerHTML = filtered.map(spare => `
+                <tr>
+                    <td><strong>${spare.ticket_id_str || 'TKT-' + spare.ticket_id}</strong></td>
+                    <td>${spare.customer_name || 'N/A'}<br><small class="text-muted">${spare.product_name || ''}</small></td>
+                    <td><strong>${spare.spare_item_name}</strong><br><small class="text-muted">${spare.spare_item_code || ''} ${spare.hsn_code ? '(HSN: '+spare.hsn_code+')' : ''}</small></td>
+                    <td>${spare.quantity_required}</td>
+                    <td>${spare.unit_price ? '₹' + spare.unit_price.toLocaleString() : '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Not set</span>'}</td>
+                    <td>${spare.gst_rate ? spare.gst_rate + '%' : '18%'}</td>
+                    <td><strong>${spare.total_with_gst ? '₹' + spare.total_with_gst.toLocaleString() : '-'}</strong>${spare.price_overridden ? '<br><small class="text-info"><i class="fas fa-edit"></i> Override</small>' : ''}</td>
+                    <td><span class="status-badge status-${spare.procurement_status}">${spare.procurement_status}</span></td>
+                    <td>${formatSpareSource(spare)}</td>
+                    <td>${(spare.attachments && spare.attachments.length > 0) ? spare.attachments.map(a => `<a href="${a.url}" target="_blank" class="badge bg-secondary me-1" title="${a.filename}"><i class="fas fa-paperclip"></i></a>`).join('') : '<span class="text-muted">-</span>'}</td>
+                    <td>${getActionButtons(spare)}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function formatSpareSource(spare) {
+            if (spare.marketplace_po_number) {
+                let po_label = spare.marketplace_po_number;
+                return `<span style="background:#dcfce7;color:#166534;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;font-family:monospace;">
+                    <i class="fas fa-check-circle me-1"></i>${po_label}</span>`;
+            }
+            if (spare.marketplace_procurement_number) {
+                let proc_label = spare.marketplace_procurement_number;
+                return `<span style="background:#fef3c7;color:#92400e;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;font-family:monospace;">
+                    <i class="fas fa-clock me-1"></i>${proc_label}</span>`;
+            }
+            if (spare.source_ticket_id) {
+                return `<span style="background:#fce7f3;color:#9d174d;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;"><i class="fas fa-ticket-alt me-1"></i>TKT-${spare.source_ticket_id}</span>`;
+            }
+            return '<span style="color:#9ca3af;font-size:11px;">Manual</span>';
+        }
+
+        function getActionButtons(spare) {
+            let buttons = [];
+            if (!spare.unit_price || spare.procurement_status === 'pending' || spare.procurement_status === 'acknowledged') {
+                buttons.push(`<button class="action-btn btn-sm btn-outline-primary me-1" onclick="showPricingModal(${spare.id})" title="Set/Edit Price"><i class="fas fa-rupee-sign"></i></button>`);
+            }
+            const hasDraftOrNoPo = !spare.marketplace_po_id || (spare.marketplace_po_status === 'draft');
+            if (spare.is_custom && hasDraftOrNoPo && (spare.procurement_status === 'pending' || spare.procurement_status === 'acknowledged')) {
+                buttons.push(`<button class="action-btn btn-sm btn-outline-warning me-1" onclick="showEditSpareModal(${spare.id})" title="Edit Custom Spare"><i class="fas fa-pencil-alt"></i></button>`);
+            }
+            if (spare.procurement_status === 'pending') {
+                buttons.push(`<button class="action-btn action-btn-primary me-1" onclick="showAcknowledgeModal(${spare.id})">Acknowledge</button>`);
+                buttons.push(`<button class="action-btn btn-sm btn-outline-danger" onclick="cancelSpareFromRow(${spare.id})" title="Cancel Spare"><i class="fas fa-times"></i></button>`);
+            } else if (spare.procurement_status === 'acknowledged' || spare.procurement_status === 'ordered') {
+                buttons.push(`<button class="action-btn action-btn-success me-1" onclick="showReleaseModal(${spare.id})">Release</button>`);
+                if (spare.procurement_status === 'acknowledged') {
+                    buttons.push(`<button class="action-btn btn-sm btn-outline-danger" onclick="cancelSpareFromRow(${spare.id})" title="Cancel Spare"><i class="fas fa-times"></i></button>`);
+                }
+            }
+            return buttons.length > 0 ? buttons.join('') : '<span class="text-muted">-</span>';
+        }
+        
+        function showAcknowledgeModal(spareId) {
+            const spare = allSpares.find(s => s.id === spareId);
+            const modal = new bootstrap.Modal(document.getElementById('spareModal'));
+            document.getElementById('spareModalTitle').textContent = 'Acknowledge Spare Request';
+            document.getElementById('spareModalBody').innerHTML = `
+                <p><strong>Item:</strong> ${spare.spare_item_name}</p>
+                <p><strong>Quantity:</strong> ${spare.quantity_required}</p>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="stockAvailable" checked>
+                        <label class="form-check-label" for="stockAvailable">Stock Available</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Stock Quantity</label>
+                    <input type="number" class="form-control" id="stockQuantity" value="${spare.quantity_required}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" id="ackNotes" rows="2"></textarea>
+                </div>
+            `;
+            document.getElementById('spareModalFooter').innerHTML = `
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="submitAcknowledge(${spareId})">Acknowledge</button>
+            `;
+            modal.show();
+        }
+        
+        async function submitAcknowledge(spareId) {
+            try {
+                const response = await fetch(`/api/v1/tickets/service/spares/${spareId}/acknowledge`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        stock_available: document.getElementById('stockAvailable').checked,
+                        stock_quantity: parseInt(document.getElementById('stockQuantity').value) || 0,
+                        notes: document.getElementById('ackNotes').value
+                    })
+                });
+                if (!response.ok) throw new Error((await response.json()).detail || 'Failed');
+                bootstrap.Modal.getInstance(document.getElementById('spareModal')).hide();
+                alert('Acknowledged successfully!');
+                loadData();
+            } catch (error) { alert('Error: ' + error.message); }
+        }
+        
+        function showReleaseModal(spareId) {
+            const spare = allSpares.find(s => s.id === spareId);
+            const modal = new bootstrap.Modal(document.getElementById('spareModal'));
+            document.getElementById('spareModalTitle').textContent = 'Release Spare Parts';
+            document.getElementById('spareModalBody').innerHTML = `
+                <p><strong>Item:</strong> ${spare.spare_item_name}</p>
+                <p><strong>Quantity:</strong> ${spare.quantity_required}</p>
+                <div class="mb-3">
+                    <label class="form-label">Actual Cost (₹)</label>
+                    <input type="number" class="form-control" id="actualCost" value="${spare.estimated_cost || ''}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Release Notes</label>
+                    <textarea class="form-control" id="releaseNotes" rows="2"></textarea>
+                </div>
+            `;
+            document.getElementById('spareModalFooter').innerHTML = `
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-success" onclick="submitRelease(${spareId})">Release</button>
+            `;
+            modal.show();
+        }
+        
+        async function submitRelease(spareId) {
+            try {
+                const response = await fetch(`/api/v1/tickets/service/spares/${spareId}/release`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        actual_cost: parseFloat(document.getElementById('actualCost').value) || null,
+                        notes: document.getElementById('releaseNotes').value
+                    })
+                });
+                if (!response.ok) throw new Error((await response.json()).detail || 'Failed');
+                bootstrap.Modal.getInstance(document.getElementById('spareModal')).hide();
+                alert('Released successfully!');
+                loadData();
+            } catch (error) { alert('Error: ' + error.message); }
+        }
+        
+        let stockSearchTimeout;
+        function showPricingModal(spareId) {
+            const spare = allSpares.find(s => s.id === spareId);
+            const modal = new bootstrap.Modal(document.getElementById('spareModal'));
+            document.getElementById('spareModalTitle').textContent = 'Set Pricing & GST';
+            document.getElementById('spareModalBody').innerHTML = `
+                <p class="mb-3"><strong>Item:</strong> ${spare.spare_item_name} <span class="badge bg-secondary">${spare.quantity_required} pcs</span></p>
+                <div class="mb-3">
+                    <label class="form-label">Search Stock Item (auto-populate)</label>
+                    <input type="text" class="form-control" id="stockSearch" placeholder="Type to search stock items..." oninput="searchStockItems(${spareId})">
+                    <div id="stockSearchResults" class="mt-2" style="max-height:150px;overflow-y:auto;"></div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label">Unit Price (₹)</label>
+                        <input type="number" step="0.01" class="form-control" id="pricingUnitPrice" value="${spare.unit_price || ''}" onchange="calculateTotal(${spare.quantity_required})">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label">GST Rate (%)</label>
+                        <input type="number" step="0.5" class="form-control" id="pricingGstRate" value="${spare.gst_rate || 18}" onchange="calculateTotal(${spare.quantity_required})">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">HSN Code</label>
+                    <input type="text" class="form-control" id="pricingHsnCode" value="${spare.hsn_code || ''}">
+                </div>
+                <div class="alert alert-info py-2" id="pricingPreview">
+                    <strong>Total:</strong> ₹<span id="previewTotal">0</span> (GST: ₹<span id="previewGst">0</span>)
+                </div>
+            `;
+            document.getElementById('spareModalFooter').innerHTML = `
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="submitPricing(${spareId})"><i class="fas fa-save"></i> Save Pricing</button>
+            `;
+            calculateTotal(spare.quantity_required);
+            modal.show();
+        }
+        
+        function calculateTotal(qty) {
+            const unitPrice = parseFloat(document.getElementById('pricingUnitPrice').value) || 0;
+            const gstRate = parseFloat(document.getElementById('pricingGstRate').value) || 0;
+            const subtotal = unitPrice * qty;
+            const gstAmount = (subtotal * gstRate) / 100;
+            const total = subtotal + gstAmount;
+            document.getElementById('previewTotal').textContent = total.toLocaleString();
+            document.getElementById('previewGst').textContent = gstAmount.toLocaleString();
+        }
+        
+        async function searchStockItems(spareId) {
+            clearTimeout(stockSearchTimeout);
+            const query = document.getElementById('stockSearch').value;
+            if (query.length < 2) {
+                document.getElementById('stockSearchResults').innerHTML = '';
+                return;
+            }
+            stockSearchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/v1/tickets/service/stock-items/search?q=${encodeURIComponent(query)}`, {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}` }
+                    });
+                    const data = await response.json();
+                    if (data.success && data.items.length > 0) {
+                        document.getElementById('stockSearchResults').innerHTML = data.items.map(item => `
+                            <div class="border rounded p-2 mb-1 bg-light" style="cursor:pointer;" onclick="selectStockItem(${spareId}, ${item.id}, '${item.item_name}', ${item.selling_rate || 0}, ${item.default_gst_rate || 18}, '${item.hsn_code || ''}')">
+                                <strong>${item.item_name}</strong> <small class="text-muted">${item.item_code}</small>
+                                <br><small>₹${item.selling_rate || 0} | GST: ${item.default_gst_rate || 18}% | HSN: ${item.hsn_code || 'N/A'}</small>
+                            </div>
+                        `).join('');
+                    } else {
+                        document.getElementById('stockSearchResults').innerHTML = '<div class="text-muted small">No stock items found</div>';
+                    }
+                } catch (error) {
+                    document.getElementById('stockSearchResults').innerHTML = '<div class="text-danger small">Search error</div>';
+                }
+            }, 300);
+        }
+        
+        function selectStockItem(spareId, stockItemId, itemName, price, gstRate, hsnCode) {
+            document.getElementById('pricingUnitPrice').value = price;
+            document.getElementById('pricingGstRate').value = gstRate;
+            document.getElementById('pricingHsnCode').value = hsnCode;
+            document.getElementById('stockSearchResults').innerHTML = `<div class="alert alert-success py-1 small"><i class="fas fa-check"></i> Selected: ${itemName}</div>`;
+            const spare = allSpares.find(s => s.id === spareId);
+            calculateTotal(spare.quantity_required);
+        }
+        
+        async function submitPricing(spareId) {
+            try {
+                const response = await fetch(`/api/v1/tickets/service/spares/${spareId}/pricing`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        unit_price: parseFloat(document.getElementById('pricingUnitPrice').value) || 0,
+                        gst_rate: parseFloat(document.getElementById('pricingGstRate').value) || 18,
+                        hsn_code: document.getElementById('pricingHsnCode').value || null
+                    })
+                });
+                if (!response.ok) throw new Error((await response.json()).detail || 'Failed');
+                bootstrap.Modal.getInstance(document.getElementById('spareModal')).hide();
+                alert('Pricing saved successfully!');
+                loadData();
+            } catch (error) { alert('Error: ' + error.message); }
+        }
+
+        let editCatalogSearchTimeout;
+        let editSelectedCatalogId = null;
+
+        function showEditSpareModal(spareId) {
+            const spare = allSpares.find(s => s.id === spareId);
+            if (!spare) return;
+            editSelectedCatalogId = null;
+            const modal = new bootstrap.Modal(document.getElementById('spareModal'));
+            document.getElementById('spareModalTitle').textContent = 'Edit Custom Spare';
+            document.getElementById('spareModalBody').innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Item Name</label>
+                    <input type="text" class="form-control" id="editSpareName" value="${esc(spare.spare_item_name)}" maxlength="200">
+                    ${spare.original_item_name ? `<small class="text-muted">Original: ${esc(spare.original_item_name)}</small>` : ''}
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Link to Catalog Product <span class="text-muted fw-normal">(optional)</span></label>
+                    <input type="text" class="form-control" id="editCatalogSearch" placeholder="Search catalog by name or SKU..." oninput="searchCatalogItems()">
+                    <div id="editCatalogResults" class="mt-2" style="max-height:160px;overflow-y:auto;"></div>
+                    <div id="editCatalogSelected" class="mt-2"></div>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Quantity</label>
+                        <input type="number" class="form-control" id="editSpareQty" value="${spare.quantity_required || 1}" min="1">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Status</label>
+                        <input type="text" class="form-control" value="${spare.procurement_status}" disabled>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Notes</label>
+                    <textarea class="form-control" id="editSpareNotes" rows="2">${esc(spare.request_notes)}</textarea>
+                </div>
+                <hr>
+                <button class="btn btn-outline-danger btn-sm w-100" onclick="cancelSpareFromEdit(${spareId})">
+                    <i class="fas fa-times-circle me-1"></i> Cancel This Spare
+                </button>
+            `;
+            document.getElementById('spareModalFooter').innerHTML = `
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-primary" onclick="submitEditSpare(${spareId})"><i class="fas fa-save me-1"></i>Save Changes</button>
+            `;
+            modal.show();
+        }
+
+        function searchCatalogItems() {
+            clearTimeout(editCatalogSearchTimeout);
+            const query = document.getElementById('editCatalogSearch').value;
+            if (query.length < 2) {
+                document.getElementById('editCatalogResults').innerHTML = '';
+                return;
+            }
+            editCatalogSearchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/v1/marketplace-po/catalog-search?q=${encodeURIComponent(query)}&limit=10`, {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}` }
+                    });
+                    const data = await response.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        const container = document.getElementById('editCatalogResults');
+                        container.innerHTML = '';
+                        data.forEach(item => {
+                            const div = document.createElement('div');
+                            div.className = 'border rounded p-2 mb-1 bg-light';
+                            div.style.cursor = 'pointer';
+                            div.dataset.catId = item.id;
+                            div.dataset.catName = item.name || '';
+                            div.dataset.catSku = item.sku || '';
+                            div.dataset.catPrice = parseFloat(item.dealer_price) || 0;
+                            div.innerHTML = `<strong>${esc(item.name)}</strong> <small class="text-muted">${esc(item.sku)}</small><br><small>₹${(parseFloat(item.dealer_price)||0).toLocaleString()} | Avail: ${parseInt(item.available_qty)||0}</small>`;
+                            div.addEventListener('click', function() {
+                                selectCatalogProduct(parseInt(this.dataset.catId), this.dataset.catName, this.dataset.catSku, parseFloat(this.dataset.catPrice));
+                            });
+                            container.appendChild(div);
+                        });
+                    } else {
+                        document.getElementById('editCatalogResults').innerHTML = '<div class="text-muted small p-2">No catalog items found</div>';
+                    }
+                } catch (err) {
+                    document.getElementById('editCatalogResults').innerHTML = '<div class="text-danger small p-2">Search failed</div>';
+                }
+            }, 300);
+        }
+
+        function selectCatalogProduct(id, name, sku, price) {
+            editSelectedCatalogId = id;
+            document.getElementById('editCatalogResults').innerHTML = '';
+            document.getElementById('editCatalogSearch').value = '';
+            document.getElementById('editCatalogSelected').innerHTML = `
+                <div class="alert alert-success py-2 mb-0 d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-check-circle me-1"></i> <strong>${esc(name)}</strong> <small class="text-muted">(${esc(sku)}) — ₹${parseFloat(price).toLocaleString()}</small></span>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearCatalogSelection()"><i class="fas fa-times"></i></button>
+                </div>
+            `;
+        }
+
+        function clearCatalogSelection() {
+            editSelectedCatalogId = null;
+            document.getElementById('editCatalogSelected').innerHTML = '';
+        }
+
+        async function submitEditSpare(spareId) {
+            const name = document.getElementById('editSpareName').value.trim();
+            const qty = parseInt(document.getElementById('editSpareQty').value) || 1;
+            const notes = document.getElementById('editSpareNotes').value;
+            if (!name || name.length < 2) { alert('Item name must be at least 2 characters'); return; }
+            if (qty < 1) { alert('Quantity must be at least 1'); return; }
+            const body = {
+                spare_item_name: name,
+                quantity_required: qty,
+                request_notes: notes
+            };
+            if (editSelectedCatalogId) {
+                body.marketplace_spare_id = editSelectedCatalogId;
+            }
+            try {
+                const response = await fetch(`/api/v1/tickets/service/spares/${spareId}/update`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(body)
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.detail || 'Failed to update spare');
+                bootstrap.Modal.getInstance(document.getElementById('spareModal')).hide();
+                alert('Spare updated successfully!' + (editSelectedCatalogId ? ' Catalog product linked.' : ''));
+                editSelectedCatalogId = null;
+                loadData();
+            } catch (error) { alert('Error: ' + error.message); }
+        }
+
+        async function cancelSpareFromRow(spareId) {
+            if (!confirm('Are you sure you want to cancel this spare request? This cannot be undone.')) return;
+            try {
+                const response = await fetch(`/api/v1/tickets/service/spares/${spareId}/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ reason: 'Cancelled by store staff' })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.detail || 'Failed to cancel spare');
+                alert('Spare request cancelled.');
+                loadData();
+            } catch (error) { alert('Error: ' + error.message); }
+        }
+
+        async function cancelSpareFromEdit(spareId) {
+            if (!confirm('Are you sure you want to cancel this spare request? This cannot be undone.')) return;
+            try {
+                const response = await fetch(`/api/v1/tickets/service/spares/${spareId}/cancel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ reason: 'Cancelled via Edit Spare panel' })
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.detail || 'Failed to cancel spare');
+                bootstrap.Modal.getInstance(document.getElementById('spareModal')).hide();
+                alert('Spare request cancelled.');
+                loadData();
+            } catch (error) { alert('Error: ' + error.message); }
+        }
+    </script>
+</body>
+</html>

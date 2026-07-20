@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Service Ticket - VGK4U</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --mg: #2ECC71; --mgd: #27ae60; --ab: #2C3E50; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Poppins',sans-serif; min-height:100vh;
+            background:linear-gradient(135deg,#667eea 0%,#764ba2 25%,#2ECC71 50%,#27ae60 75%,#1abc9c 100%);
+            background-size:400% 400%; animation:gradShift 15s ease infinite; }
+        @keyframes gradShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        .container-main { min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:40px 20px; }
+        .back-link { position:absolute; top:20px; left:20px; background:rgba(255,255,255,.9); padding:10px 20px; border-radius:25px; text-decoration:none; color:var(--ab); font-weight:600; display:flex; align-items:center; gap:8px; transition:transform .3s; }
+        .back-link:hover { transform:translateX(-5px); color:var(--ab); }
+        .card-wrap { background:#fff; border-radius:20px; padding:36px; max-width:620px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.15); margin-top:40px; }
+        .page-header { text-align:center; margin-bottom:28px; }
+        .page-header img { height:46px; margin-bottom:14px; }
+        .page-header h1 { font-size:1.7rem; color:var(--ab); font-weight:700; }
+        .page-header p { color:#666; margin-top:5px; font-size:.9rem; }
+        .form-label { font-weight:600; color:var(--ab); margin-bottom:7px; display:block; }
+        .form-control { border:2px solid #e0e0e0; border-radius:10px; padding:12px 15px; font-size:1rem; transition:border-color .3s; width:100%; font-family:inherit; }
+        .form-control:focus { border-color:var(--mg); box-shadow:0 0 0 3px rgba(46,204,113,.1); outline:none; }
+        .track-btn { width:100%; background:linear-gradient(135deg,var(--mg),var(--mgd)); color:#fff; border:none; padding:14px; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:transform .3s; margin-top:4px; }
+        .track-btn:hover { transform:translateY(-2px); }
+        .track-btn:disabled { background:#ccc; cursor:not-allowed; transform:none; }
+        .error-alert { background:#fee; border:1px solid #f5c6cb; color:#721c24; padding:13px 15px; border-radius:10px; margin-bottom:16px; display:none; font-size:.9rem; }
+        .error-alert.show { display:flex; align-items:center; gap:8px; }
+
+        /* ── Result panel ── */
+        #resultPanel { display:none; margin-top:8px; }
+        .status-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:20px; font-size:.85rem; font-weight:600; margin:4px 0 12px; }
+        .s-open       { background:#fef3c7; color:#92400e; }
+        .s-in_progress{ background:#dbeafe; color:#1e40af; }
+        .s-pending_parts { background:#fde8d8; color:#9a3412; }
+        .s-resolved   { background:#dcfce7; color:#166534; }
+        .s-closed     { background:#f3f4f6; color:#374151; }
+        .s-cancelled  { background:#fee2e2; color:#991b1b; }
+        .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+        .info-cell { background:#f8f9fa; border-radius:10px; padding:11px 13px; }
+        .info-cell .lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#9ca3af; margin-bottom:3px; }
+        .info-cell .val { font-size:13px; font-weight:600; color:var(--ab); }
+        .info-cell.full { grid-column:1/-1; }
+        .parts-section { border:1.5px solid #bbf7d0; border-radius:12px; overflow:hidden; margin-bottom:16px; }
+        .parts-hdr { background:#dcfce7; padding:8px 13px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#166534; }
+        .parts-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .parts-table thead th { background:#f0fdf4; padding:7px 10px; text-align:left; color:#374151; font-weight:600; border-bottom:1px solid #d1fae5; }
+        .parts-table tbody td { padding:8px 10px; border-bottom:1px solid #f0fdf4; color:#374151; }
+        .parts-table tbody tr:last-child td { border-bottom:none; }
+        .proc-badge { font-size:10px; padding:2px 7px; border-radius:8px; font-weight:600; }
+        .proc-pending  { background:#fef3c7; color:#92400e; }
+        .proc-ordered  { background:#dbeafe; color:#1e40af; }
+        .proc-received { background:#dcfce7; color:#166534; }
+        .proc-sourcing { background:#ede9fe; color:#5b21b6; }
+        .step-bar { display:flex; align-items:center; margin:18px 0; overflow-x:auto; padding-bottom:4px; }
+        .step { display:flex; flex-direction:column; align-items:center; flex:1; min-width:60px; position:relative; }
+        .step:not(:last-child)::after { content:''; position:absolute; top:13px; left:60%; width:80%; height:2px; background:#e5e7eb; z-index:0; }
+        .step.done:not(:last-child)::after { background:var(--mg); }
+        .step-dot { width:28px; height:28px; border-radius:50%; border:2px solid #e5e7eb; background:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; z-index:1; }
+        .step.done .step-dot { background:var(--mg); border-color:var(--mg); color:#fff; }
+        .step.active .step-dot { border-color:var(--ab); color:var(--ab); font-weight:700; }
+        .step-label { font-size:9px; color:#6b7280; margin-top:5px; text-align:center; line-height:1.3; }
+        .step.done .step-label { color:#166534; font-weight:600; }
+        .step.active .step-label { color:var(--ab); font-weight:700; }
+        .action-btns { display:flex; flex-direction:column; gap:10px; }
+        .btn-refresh { background:linear-gradient(135deg,#6366f1,#4338ca); color:#fff; border:none; padding:11px 20px; border-radius:10px; font-size:.9rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; }
+        .btn-home { display:inline-flex; align-items:center; gap:6px; padding:10px 20px; border-radius:10px; color:var(--mgd); border:2px solid var(--mg); font-weight:600; text-decoration:none; font-size:.9rem; justify-content:center; }
+
+        @media(max-width:576px){ .card-wrap{padding:22px;margin:16px;} .info-grid{grid-template-columns:1fr;} }
+    </style>
+</head>
+<body>
+<div class="container-main">
+    <a href="/" class="back-link"><i class="fas fa-arrow-left"></i> Back to Home</a>
+
+    <div class="card-wrap">
+        <div class="page-header">
+            <img src="/public/vgk4u-logo-200.png" alt="VGK4U" style="height:48px;width:auto;" onerror="this.style.display='none'">
+            <h1><i class="fas fa-search-location" style="color:var(--mg);"></i> Track Your Ticket</h1>
+            <p>Enter your ticket ID and phone number to see the latest status</p>
+        </div>
+
+        <div class="error-alert" id="errorAlert"><i class="fas fa-exclamation-circle"></i><span id="errorText"></span></div>
+
+        <!-- Lookup form -->
+        <div id="lookupForm">
+            <div class="mb-3">
+                <label class="form-label">Ticket ID <span style="color:#e74c3c;">*</span></label>
+                <input type="text" class="form-control" id="ticketIdInput" placeholder="e.g. TKT-20260303-XXXX" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Phone Number (last 4+ digits) <span style="color:#e74c3c;">*</span></label>
+                <input type="tel" class="form-control" id="phoneInput" placeholder="Enter the phone number you submitted" maxlength="15">
+                <div style="font-size:11px;color:#9ca3af;margin-top:4px;"><i class="fas fa-shield-alt me-1"></i>Used to verify your identity — minimum last 4 digits</div>
+            </div>
+            <button class="track-btn" id="trackBtn" onclick="doTrack()">
+                <i class="fas fa-search-location"></i> Track Ticket
+            </button>
+        </div>
+
+        <!-- Result panel -->
+        <div id="resultPanel">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px;">
+                <div>
+                    <div style="font-size:12px;color:#9ca3af;font-weight:500;">Ticket ID</div>
+                    <div style="font-size:1.2rem;font-weight:700;color:var(--ab);" id="rTicketId">—</div>
+                </div>
+                <div id="rStatusBadge"></div>
+            </div>
+
+            <!-- Progress steps -->
+            <div class="step-bar" id="rStepBar"></div>
+
+            <!-- Info grid -->
+            <div class="info-grid" id="rInfoGrid"></div>
+
+            <!-- Spare parts (if any) -->
+            <div id="rPartsSection"></div>
+
+            <!-- Last updated -->
+            <div style="font-size:11px;color:#9ca3af;margin-bottom:16px;" id="rUpdated"></div>
+
+            <!-- Action buttons -->
+            <div class="action-btns">
+                <button class="btn-refresh" onclick="doTrack()"><i class="fas fa-sync-alt"></i> Refresh Status</button>
+                <a href="/service-request" style="display:flex;align-items:center;justify-content:center;gap:7px;padding:11px;border-radius:10px;background:#f0fdf4;border:1.5px solid #bbf7d0;color:#166534;font-weight:600;text-decoration:none;font-size:.9rem;">
+                    <i class="fas fa-plus-circle"></i> Raise Another Request
+                </a>
+                <a href="/" class="btn-home"><i class="fas fa-home"></i> Back to Home</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Pre-fill ticket ID from URL path: /ticket-status/TKT-20260303-XXXX
+(function() {
+    const path = window.location.pathname;
+    const match = path.match(/\/ticket-status\/(.+)/);
+    if (match && match[1]) {
+        document.getElementById('ticketIdInput').value = decodeURIComponent(match[1]).toUpperCase();
+        // Auto-focus phone field
+        setTimeout(() => document.getElementById('phoneInput').focus(), 300);
+    }
+})();
+
+const STATUS_STEPS = [
+    { key: 'open',          label: 'Submitted',    icon: 'fas fa-paper-plane' },
+    { key: 'in_progress',   label: 'In Progress',  icon: 'fas fa-tools' },
+    { key: 'pending_parts', label: 'Awaiting Parts', icon: 'fas fa-boxes' },
+    { key: 'resolved',      label: 'Resolved',     icon: 'fas fa-check-circle' },
+    { key: 'closed',        label: 'Closed',       icon: 'fas fa-lock' },
+];
+const STATUS_CLASS = {
+    open:'s-open', in_progress:'s-in_progress', pending_parts:'s-pending_parts',
+    resolved:'s-resolved', closed:'s-closed', cancelled:'s-cancelled',
+};
+const PROC_CLASS = { pending:'proc-pending', ordered:'proc-ordered', received:'proc-received', sourcing:'proc-sourcing' };
+
+async function doTrack() {
+    const ticketId = (document.getElementById('ticketIdInput').value || '').trim().toUpperCase();
+    const phone    = (document.getElementById('phoneInput').value || '').trim();
+    const errEl    = document.getElementById('errorAlert');
+    errEl.classList.remove('show');
+
+    if (!ticketId) { showErr('Please enter your Ticket ID.'); return; }
+    if (!phone)    { showErr('Please enter your phone number.'); return; }
+
+    const btn = document.getElementById('trackBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Tracking…';
+
+    try {
+        const r = await fetch(`/api/v1/tickets/service/public/status/${encodeURIComponent(ticketId)}?phone=${encodeURIComponent(phone)}`);
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Could not find ticket');
+        renderResult(d);
+        document.getElementById('lookupForm').style.display = 'none';
+        document.getElementById('resultPanel').style.display = 'block';
+    } catch(e) {
+        showErr(e.message || 'Something went wrong. Please try again.');
+    } finally {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-search-location"></i> Track Ticket';
+    }
+}
+
+function renderResult(d) {
+    // Ticket ID + status badge
+    document.getElementById('rTicketId').textContent = d.ticket_id;
+    const cls = STATUS_CLASS[d.status] || 's-open';
+    document.getElementById('rStatusBadge').innerHTML =
+        `<span class="status-badge ${cls}"><i class="fas fa-circle" style="font-size:8px;"></i> ${d.status_label || d.status}</span>`;
+
+    // Step bar
+    const curIdx = STATUS_STEPS.findIndex(s => s.key === d.status);
+    document.getElementById('rStepBar').innerHTML = STATUS_STEPS.map((s, i) => {
+        const done   = i < (curIdx === -1 ? 0 : curIdx);
+        const active = i === curIdx;
+        const cls    = done ? 'done' : active ? 'active' : '';
+        return `<div class="step ${cls}">
+            <div class="step-dot"><i class="${s.icon}" style="font-size:10px;"></i></div>
+            <div class="step-label">${s.label}</div>
+        </div>`;
+    }).join('');
+
+    // Info grid
+    const cells = [
+        { lbl:'Request Type', val: d.ticket_type ? d.ticket_type.charAt(0).toUpperCase()+d.ticket_type.slice(1) : '—' },
+        { lbl:'Category', val: d.issue_category || '—' },
+        d.product_name ? { lbl:'Product', val: d.product_name + (d.product_model ? ' · '+d.product_model : '') } : null,
+        { lbl:'Customer', val: d.customer_name || '—' },
+        { lbl:'Submitted', val: d.created_at ? fmtDate(d.created_at) : '—' },
+    ].filter(Boolean);
+    document.getElementById('rInfoGrid').innerHTML = cells.map((c, i) =>
+        `<div class="info-cell${i === cells.length-1 && cells.length % 2 !== 0 ? ' full' : ''}">
+            <div class="lbl">${c.lbl}</div><div class="val">${escHtml(String(c.val))}</div>
+        </div>`
+    ).join('') + `<div class="info-cell full"><div class="lbl">Issue Description</div><div class="val" style="white-space:pre-wrap;font-size:12px;">${escHtml(d.issue_description||'—')}</div></div>`;
+
+    // Spare parts
+    const parts = d.spare_parts || [];
+    if (parts.length) {
+        document.getElementById('rPartsSection').innerHTML = `<div class="parts-section">
+            <div class="parts-hdr"><i class="fas fa-cubes me-1"></i> Spare Parts (${parts.length})</div>
+            <table class="parts-table">
+                <thead><tr><th>#</th><th>Part Name</th><th>Code</th><th>Qty</th><th>Unit</th><th>Status</th></tr></thead>
+                <tbody>${parts.map((p, i) => {
+                    const pc = PROC_CLASS[p.procurement_status] || 'proc-pending';
+                    return `<tr>
+                        <td>${i+1}</td>
+                        <td><strong>${escHtml(p.name)}</strong></td>
+                        <td style="color:#6b7280;font-size:11px;">${escHtml(p.code||'—')}</td>
+                        <td style="text-align:center;">${p.quantity}</td>
+                        <td>${p.unit_price ? fmtRs(p.unit_price) : '—'}</td>
+                        <td><span class="proc-badge ${pc}">${(p.procurement_status||'pending').replace('_',' ')}</span></td>
+                    </tr>`;
+                }).join('')}</tbody>
+            </table>
+        </div>`;
+    } else {
+        document.getElementById('rPartsSection').innerHTML = '';
+    }
+
+    // Last updated
+    if (d.updated_at) {
+        document.getElementById('rUpdated').innerHTML =
+            `<i class="fas fa-clock me-1"></i> Last updated: ${fmtDate(d.updated_at)}`;
+    }
+}
+
+function showErr(msg) {
+    document.getElementById('errorText').textContent = msg;
+    document.getElementById('errorAlert').classList.add('show');
+}
+
+function fmtDate(iso) {
+    try { return new Date(iso).toLocaleString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+    catch { return iso; }
+}
+function fmtRs(n) { return '₹'+(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Enter key support
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && document.getElementById('lookupForm').style.display !== 'none') doTrack();
+});
+</script>
+</body>
+</html>

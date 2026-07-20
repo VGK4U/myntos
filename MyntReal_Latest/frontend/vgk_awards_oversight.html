@@ -1,0 +1,306 @@
+<div class="container-fluid mt-4">
+        <div class="mb-3 text-end">
+            <a href="/rvz/dashboard" class="btn btn-primary btn-sm">
+                <i class="fas fa-home me-2"></i>Go to Dashboard
+            </a>
+        </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-eye text-danger"></i> Awards Oversight Console - RVZ ID</h2>
+            <p class="text-muted mb-0">Complete visibility and override controls for all awards</p>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card border-start border-secondary border-4">
+                <div class="card-body p-2">
+                    <small class="text-muted">Pending Admin</small>
+                    <h5 id="countPendingAdmin">-</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-start border-info border-4">
+                <div class="card-body p-2">
+                    <small class="text-muted">Pending Super Admin</small>
+                    <h5 id="countPendingSuperAdmin">-</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-start border-warning border-4">
+                <div class="card-body p-2">
+                    <small class="text-muted">Pending Finance</small>
+                    <h5 id="countPendingFinance">-</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-start border-success border-4">
+                <div class="card-body p-2">
+                    <small class="text-muted">Completed</small>
+                    <h5 id="countCompleted">-</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-start border-danger border-4">
+                <div class="card-body p-2">
+                    <small class="text-muted">Rejected</small>
+                    <h5 id="countRejected">-</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-start border-primary border-4">
+                <div class="card-body p-2">
+                    <small class="text-muted">Total Awards</small>
+                    <h5 id="countTotal">-</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="fas fa-filter"></i> Filters</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending Approval</option>
+                        <option value="admin_approved">Admin Approved</option>
+                        <option value="vgk_approved">Procurement Pending</option>
+                        <option value="finance_processed">Processed for Dispatch</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select id="typeFilter" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="direct">Direct Facilitation</option>
+                        <option value="matching">Group Performance Recognition</option>
+                        <option value="bonanza">Bonanza</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="loadAwards()"><i class="fas fa-sync"></i> Refresh</button>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-secondary" onclick="viewAuditTrail()"><i class="fas fa-history"></i> View Audit Trail</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Awards Table -->
+    <div class="card">
+        <div class="card-header"><i class="fas fa-table"></i> All Awards</div>
+        <div class="card-body">
+            <div id="loading" class="text-center py-5">
+                <div class="spinner-border text-danger"></div>
+                <p class="mt-3">Loading oversight data...</p>
+            </div>
+            <div id="awards" style="display:none;">
+                <table class="table table-sm table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Applied On</th>
+                            <th>Latest Update</th>
+                            <th>Actions</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="awardsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RVZ Override Modal -->
+<div class="modal fade" id="vgkOverrideModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> RVZ Override</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <strong>Warning:</strong> This action will override the normal approval workflow.
+                </div>
+                <label class="form-label">Secondary Password</label>
+                <input type="password" class="form-control mb-3" id="vgkSecondaryPassword">
+                <label class="form-label">Override Action</label>
+                <select class="form-select mb-3" id="overrideAction">
+                    <option value="force_approve">Force Approve</option>
+                    <option value="force_reject">Force Reject</option>
+                    <option value="reset">Reset Status</option>
+                </select>
+                <label class="form-label">Reason (Required)</label>
+                <textarea class="form-control" id="overrideReason" rows="3"></textarea>
+                <input type="hidden" id="overrideType">
+                <input type="hidden" id="overrideId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="confirmOverride()">Execute Override</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadAwards() {
+    try {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('awards').style.display = 'none';
+        
+        const status = document.getElementById('statusFilter').value;
+        const type = document.getElementById('typeFilter').value;
+        
+        const response = await fetch(`${window.BACKEND_URL}/awards/rvz/awards/oversight?status=${status}&award_type=${type}`, {
+            headers: { 'Authorization': `Bearer ${window.sessionToken}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load awards');
+        
+        const data = await response.json();
+        renderAwards(data.awards);
+        updateSummary(data.stats);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading awards: ' + error.message);
+    }
+}
+
+function renderAwards(awards) {
+    const tbody = document.getElementById('awardsBody');
+    tbody.innerHTML = '';
+    
+    if (!awards || awards.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No awards found</td></tr>';
+    } else {
+        awards.forEach(award => {
+            const statusBadge = getStatusBadge(award.status);
+            // Calculate latest update date (most recent timestamp from various status changes)
+            const latestUpdate = award.finance_processed_at || award.super_admin_decision_at || award.admin_approved_at || '-';
+            const latestUpdateDisplay = latestUpdate !== '-' ? new Date(latestUpdate).toLocaleDateString('en-IN') : '-';
+            
+            const row = `
+                <tr>
+                    <td>${award.user_id}</td>
+                    <td><span class="badge bg-secondary">${award.award_type}</span></td>
+                    <td>${statusBadge}</td>
+                    <td>${award.achieved_at ? new Date(award.achieved_at).toLocaleDateString() : 'N/A'}</td>
+                    <td><small class="text-muted">${latestUpdateDisplay}</small></td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="openOverrideModal('${award.type}', ${award.id})">
+                            <i class="fas fa-crown"></i> Override
+                        </button>
+                    </td>
+                    <td>₹${award.budgeted_amount || 0}</td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+    
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('awards').style.display = 'block';
+}
+
+function getStatusBadge(status) {
+    // DC Protocol: Unified status display across all award types
+    const badges = {
+        'Pending Approval': '<span class="badge bg-secondary">Pending Approval</span>',
+        'Admin Approved': '<span class="badge bg-info">Admin Approved</span>',
+        'Procurement Pending': '<span class="badge bg-primary">Procurement Pending</span>',
+        'Processed for Dispatch': '<span class="badge bg-warning">Processed for Dispatch</span>',
+        'Delivered': '<span class="badge bg-success">Delivered</span>',
+        'Rejected': '<span class="badge bg-danger">Rejected</span>'
+    };
+    return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+}
+
+function updateSummary(stats) {
+    document.getElementById('countPendingAdmin').textContent = stats?.pending_admin || 0;
+    document.getElementById('countPendingSuperAdmin').textContent = stats?.pending_super_admin || 0;
+    document.getElementById('countPendingFinance').textContent = stats?.pending_finance || 0;
+    document.getElementById('countCompleted').textContent = stats?.completed || 0;
+    document.getElementById('countRejected').textContent = stats?.rejected || 0;
+    document.getElementById('countTotal').textContent = stats?.total || 0;
+}
+
+function openOverrideModal(type, id) {
+    document.getElementById('overrideType').value = type;
+    document.getElementById('overrideId').value = id;
+    new bootstrap.Modal(document.getElementById('vgkOverrideModal')).show();
+}
+
+async function confirmOverride() {
+    const type = document.getElementById('overrideType').value;
+    const id = document.getElementById('overrideId').value;
+    const action = document.getElementById('overrideAction').value;
+    const reason = document.getElementById('overrideReason').value;
+    const secondaryPassword = document.getElementById('vgkSecondaryPassword').value;
+    
+    if (!secondaryPassword || !reason) {
+        alert('Secondary password and reason are required');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${window.BACKEND_URL}/api/v1/awards/rvz/awards/${type}/${id}/override`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${window.sessionToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                action,
+                secondary_password: secondaryPassword,
+                reason 
+            })
+        });
+        
+        if (!response.ok) throw new Error('Override failed');
+        
+        alert('Override executed successfully');
+        bootstrap.Modal.getInstance(document.getElementById('vgkOverrideModal')).hide();
+        document.getElementById('vgkSecondaryPassword').value = '';
+        document.getElementById('overrideReason').value = '';
+        loadAwards();
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+async function viewAuditTrail() {
+    try {
+        const response = await fetch(`${window.BACKEND_URL}/api/v1/awards/rvz/awards/audit-trail`, {
+            headers: { 'Authorization': `Bearer ${window.sessionToken}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load audit trail');
+        
+        const data = await response.json();
+        alert(`Audit Trail:\n\nTotal Events: ${data.audit_trail?.length || 0}\n\nSee console for details`);
+        console.log('Audit Trail:', data.audit_trail);
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadAwards);
+</script>

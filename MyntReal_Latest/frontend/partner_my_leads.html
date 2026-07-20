@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Leads - Partner Portal - Mynt Real LLP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/partner-token-manager.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f8f9fa;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 0 0 20px 20px;
+            margin-bottom: 30px;
+        }
+        
+        .welcome-text {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            transition: transform 0.2s;
+            text-align: center;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .stat-card.my-leads {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .stat-card.team-leads {
+            background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%);
+            color: white;
+        }
+        
+        .stat-card.won-deals {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        
+        .nav-tabs .nav-link {
+            color: #1d4ed8;
+            font-weight: 500;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: #1d4ed8;
+            border-bottom: 3px solid #1d4ed8;
+        }
+        
+        .btn-purple {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            color: white;
+            border: none;
+        }
+        
+        .btn-purple:hover {
+            background: linear-gradient(135deg, #5a1089 0%, #7e1498 100%);
+            color: white;
+        }
+        
+        .btn-outline-purple {
+            color: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+        
+        .btn-outline-purple:hover {
+            background: #1d4ed8;
+            color: white;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            background: #1d4ed8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 15px;
+        }
+        
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-new { background: #e3f2fd; color: #1565c0; }
+        .status-contacted { background: #fff3e0; color: #e65100; }
+        .status-interested { background: #e8f5e9; color: #2e7d32; }
+        .status-negotiation { background: #f3e5f5; color: #7b1fa2; }
+        .status-won { background: #c8e6c9; color: #1b5e20; }
+        .status-lost { background: #ffcdd2; color: #b71c1c; }
+        
+        .priority-high { color: #d32f2f; }
+        .priority-medium { color: #f57c00; }
+        .priority-low { color: #388e3c; }
+
+        .partner-stage-badge{display:inline-block;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:700;white-space:nowrap;letter-spacing:.01em}
+        .partner-stage-solar{background:#e0f2fe;color:#0369a1}
+        .partner-stage-b2b{background:#ede9fe;color:#6d28d9}
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        
+        .table th {
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #eee;
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+        }
+
+        /* ── WA Template Picker ── */
+        .wa-tpl-item { border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:10px; cursor:pointer; transition:all .15s; background:#fff; }
+        .wa-tpl-item:hover { border-color:#25d366; background:#f0fdf4; }
+        .wa-tpl-item.selected { border-color:#25d366; background:#f0fdf4; box-shadow:0 0 0 2px rgba(37,211,102,.25); }
+        .wa-tpl-name { font-size:13px; font-weight:700; color:#1e293b; margin-bottom:4px; }
+        .wa-tpl-segment { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:2px 8px; border-radius:20px; background:#f1f5f9; color:#64748b; display:inline-block; margin-bottom:6px; }
+        .wa-tpl-body { font-size:12px; color:#475569; line-height:1.55; white-space:pre-wrap; word-break:break-word; max-height:80px; overflow:hidden; }
+        .wa-tpl-body.expanded { max-height:none; }
+        .btn-call { background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
+        .btn-call:hover { background:#1e40af; border-color:#1e40af; color:#fff; }
+        .btn-wa { background:#25d366; border-color:#25d366; color:#fff; }
+        .btn-wa:hover { background:#1aad53; border-color:#1aad53; color:#fff; }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="text-center">
+            <div class="spinner-border" role="status" style="width: 3rem; height: 3rem; color: #1d4ed8;"></div>
+            <p class="mt-3">Loading leads...</p>
+        </div>
+    </div>
+    
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+        <i class="fas fa-bars"></i>
+    </button>
+    
+    <div id="sidebarContainer"></div>
+    
+    <div class="partner-main-content">
+        <div class="dashboard-header">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h1 class="welcome-text mb-1"><i class="fas fa-users me-3"></i>My Leads</h1>
+                        <p class="mb-0 opacity-75">Manage your leads and track assignments</p>
+                    </div>
+                    <div class="mt-2 mt-md-0">
+                        <button class="btn btn-light btn-sm me-2" onclick="showAddLeadModal()">
+                            <i class="fas fa-plus me-2"></i>Add Lead
+                        </button>
+                        <a href="/partner/real-dreams/dashboard" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-home me-2"></i>Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="container-fluid px-4">
+            <div class="row mb-4">
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-card my-leads">
+                        <div class="mb-2"><i class="fas fa-briefcase fa-2x opacity-75"></i></div>
+                        <div class="stat-value" id="myLeadsCount">0</div>
+                        <div class="stat-label">My Leads</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-card team-leads">
+                        <div class="mb-2"><i class="fas fa-user-check fa-2x opacity-75"></i></div>
+                        <div class="stat-value" id="assignedLeadsCount">0</div>
+                        <div class="stat-label">Assigned Leads</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-card won-deals">
+                        <div class="mb-2"><i class="fas fa-trophy fa-2x opacity-75"></i></div>
+                        <div class="stat-value" id="wonLeadsCount">0</div>
+                        <div class="stat-label">Won Deals</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <!-- DC Protocol (Apr 2026): 5-tab layout matching VGK4u — Overall/Source/Guru/Extended/Field Support -->
+                            <ul class="nav nav-tabs" id="leadsTabNav" role="tablist" style="flex-wrap:wrap;border-bottom:2px solid #e2e8f0">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="partner-tab-overall" type="button" role="tab" onclick="switchPartnerTab('overall')" style="font-weight:600">
+                                        <i class="fas fa-layer-group me-1"></i>Overall
+                                        <span id="ptCountOverall" style="background:#ede9fe;color:#7c3aed;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">0</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="partner-tab-source" type="button" role="tab" onclick="switchPartnerTab('source')" style="font-weight:600">
+                                        <i class="fas fa-map-marker-alt me-1"></i>Source
+                                        <span id="ptCountSource" style="background:#f3f4f6;color:#6b7280;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">0</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="partner-tab-guru" type="button" role="tab" onclick="switchPartnerTab('guru')" style="font-weight:600">
+                                        <i class="fas fa-user-graduate me-1"></i>Senior
+                                        <span id="ptCountGuru" style="background:#f3f4f6;color:#6b7280;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">0</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="partner-tab-zguru" type="button" role="tab" onclick="switchPartnerTab('zguru')" style="font-weight:600">
+                                        <i class="fas fa-star me-1"></i>Extended
+                                        <span id="ptCountZGuru" style="background:#f3f4f6;color:#6b7280;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">0</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="partner-tab-support" type="button" role="tab" onclick="switchPartnerTab('support')" style="font-weight:600">
+                                        <i class="fas fa-hands-helping me-1"></i>Field Support
+                                        <span id="ptCountSupport" style="background:#f3f4f6;color:#6b7280;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">0</span>
+                                    </button>
+                                </li>
+                            </ul>
+                            <!-- Senior/Extended/Support disclaimer -->
+                            <div id="partnerLeadDisclaimer" style="display:none;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:12px;color:#1e40af;margin:8px 16px 0;align-items:flex-start;gap:8px">
+                                <i class="fas fa-info-circle" style="margin-top:1px;flex-shrink:0"></i>
+                                <span id="partnerLeadDisclaimerText"></span>
+                            </div>
+                            <!-- Followup quick-filter pills -->
+                            <div style="display:flex;gap:8px;padding:8px 16px;border-top:1px solid #f3f4f6;background:#fafafa;flex-wrap:wrap;align-items:center">
+                                <span style="font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Quick Filter:</span>
+                                <button id="fup-pill-today" onclick="setFollowupFilter('today')" style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;transition:all .15s">
+                                    <i class="fas fa-calendar-day me-1" style="color:#7c3aed"></i>Today Followup
+                                </button>
+                                <button id="fup-pill-overdue" onclick="setFollowupFilter('overdue')" style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;border:1.5px solid #d1d5db;background:#fff;color:#374151;cursor:pointer;transition:all .15s">
+                                    <i class="fas fa-exclamation-circle me-1" style="color:#dc2626"></i>Overdue
+                                </button>
+                                <button id="fup-pill-clear" onclick="setFollowupFilter('')" style="padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid #e5e7eb;background:#f3f4f6;color:#9ca3af;cursor:pointer;display:none">
+                                    <i class="fas fa-times me-1"></i>Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="leadSearch" placeholder="Search leads..." onkeyup="debounceSearch()">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter" onchange="loadLeads()">
+                        <option value="">All Status</option>
+                        <option value="new">New</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="interested">Interested</option>
+                        <option value="negotiation">Negotiation</option>
+                        <option value="won">Won</option>
+                        <option value="lost">Lost</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="priorityFilter" onchange="loadLeads()">
+                        <option value="">All Priority</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="categoryFilter" onchange="loadLeads()">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="sortByFilter" onchange="loadLeads()">
+                        <option value="updated_at|desc">Last Updated</option>
+                        <option value="created_at|desc">Newest First</option>
+                        <option value="next_followup_date|asc">Next Follow-up</option>
+                        <option value="deal_value_total|desc">Value ↓</option>
+                        <option value="deal_value_total|asc">Value ↑</option>
+                    </select>
+                </div>
+                <div class="col-md-1 text-end">
+                    <button class="btn btn-purple me-1" onclick="loadLeads()">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="resetAllFilters()">
+                        <i class="fas fa-undo me-1"></i>Reset
+                    </button>
+                </div>
+            </div>
+
+            <div class="row" id="leadsTableRow">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle" id="leadsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Lead</th>
+                                            <th>Contact</th>
+                                            <th>Category</th>
+                                            <th>Company</th>
+                                            <th>Status</th>
+                                            <th>Stage</th>
+                                            <th>Priority</th>
+                                            <th>Last Updated</th>
+                                            <th>Submit Date</th>
+                                            <th>Complete Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="leadsTableBody">
+                                        <tr>
+                                            <td colspan="11" class="text-center py-5">
+                                                <div class="spinner-border" role="status" style="color: #1d4ed8;">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <p class="mt-3 text-muted">Loading leads...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <nav aria-label="Leads pagination" id="paginationNav" class="mt-3">
+                                <ul class="pagination justify-content-center" id="paginationList"></ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="leadDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); color: white;">
+                    <h5 class="modal-title" id="leadDetailTitle">Lead Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="leadDetailBody">
+                    <div class="text-center py-5">
+                        <div class="spinner-border" style="color: #1d4ed8;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="crmLeadEditorContainer"></div>
+
+    <div class="modal fade" id="addLeadModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); color: white;">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add New Lead</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addLeadForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Company <span class="text-danger">*</span></label>
+                                <select class="form-select" id="leadCompany" required onchange="onLeadCompanyChange()">
+                                    <option value="">Select Company</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Category</label>
+                                <select class="form-select" id="leadCategory">
+                                    <option value="">Select Category</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="leadName" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" id="leadEmail">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone (Primary) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <input type="tel" class="form-control" id="leadPhone" placeholder="10-digit phone" required>
+                                </div>
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox" id="leadPhoneWhatsapp" checked>
+                                    <label class="form-check-label small" for="leadPhoneWhatsapp">WhatsApp Available</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone (Secondary)</label>
+                                <input type="tel" class="form-control" id="leadPhoneSecondary" placeholder="Alternate phone">
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox" id="leadPhoneSecondaryWhatsapp">
+                                    <label class="form-check-label small" for="leadPhoneSecondaryWhatsapp">WhatsApp Available</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Source</label>
+                                <select class="form-select" id="leadSource">
+                                    <option value="">Select Source</option>
+                                    <option value="referral">Referral</option>
+                                    <option value="website">Website</option>
+                                    <option value="social_media">Social Media</option>
+                                    <option value="walk_in">Walk-in</option>
+                                    <option value="exhibition">Exhibition</option>
+                                    <option value="advertisement">Advertisement</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Priority</label>
+                                <select class="form-select" id="leadPriority">
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="leadStatus">
+                                    <option value="new">New</option>
+                                    <option value="contacted">Contacted</option>
+                                    <option value="interested">Interested</option>
+                                    <option value="negotiation">Negotiation</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Next Follow-up Date</label>
+                                <input type="datetime-local" class="form-control" id="leadNextFollowup">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">PIN Code</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="leadPincode" placeholder="6-digit PIN" maxlength="6">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="lookupPincode()">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Area / Locality</label>
+                                <input type="text" class="form-control" id="leadArea">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">City</label>
+                                <input type="text" class="form-control" id="leadCity">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">State</label>
+                                <input type="text" class="form-control" id="leadState">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Budget Min</label>
+                                <input type="number" class="form-control" id="leadBudgetMin" placeholder="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Budget Max</label>
+                                <input type="number" class="form-control" id="leadBudgetMax" placeholder="0">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Looking For</label>
+                                <textarea class="form-control" id="leadLookingFor" rows="2" placeholder="What is the lead looking for?"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Description / Notes</label>
+                                <textarea class="form-control" id="leadDescription" rows="2"></textarea>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <hr>
+                                <h6 class="text-primary"><i class="fas fa-users me-2"></i>On Ground Team</h6>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Ground Source <span class="text-muted small">(MNR / VGK / Partner)</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="addLeadMnrSearch" placeholder="Search MNR / VGK / Partner...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearAddLeadMnr()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="addLeadMnrId">
+                                <input type="hidden" id="addLeadMnrType">
+                                <div id="addLeadMnrResults" class="list-group mt-1" style="max-height: 150px; overflow-y: auto; display: none; position: absolute; z-index: 1050; width: 90%;"></div>
+                                <div id="addLeadMnrSelected" class="mt-1"></div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Senior <span class="text-muted small">(Auto)</span></label>
+                                <input type="text" class="form-control bg-light" id="addLeadGuruDisplay" readonly placeholder="Auto from upline">
+                                <input type="hidden" id="addLeadGuruId">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Extended <span class="text-muted small">(Auto)</span></label>
+                                <input type="text" class="form-control bg-light" id="addLeadZGuruDisplay" readonly placeholder="Auto from Senior upline">
+                                <input type="hidden" id="addLeadZGuruId">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">On Ground Support <span class="text-muted small">(Search)</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="addLeadAdiGuruSearch" placeholder="Search MNR / VGK / Partner...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearAddLeadAdiGuru()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="addLeadAdiGuruId">
+                                <div id="addLeadAdiGuruResults" class="list-group mt-1" style="max-height: 150px; overflow-y: auto; display: none; position: absolute; z-index: 1050; width: 90%;"></div>
+                                <div id="addLeadAdiGuruSelected" class="mt-1"></div>
+                            </div>
+                            <!-- T005: Sales Staff Search -->
+                            <div class="col-md-3">
+                                <label class="form-label">Sales Staff <span class="text-muted small">(Search &amp; assign)</span></label>
+                                <div class="input-group" style="position:relative">
+                                    <input type="text" class="form-control" id="addLeadSalesStaffSearch" placeholder="Search sales staff name...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearAddLeadSalesStaff()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <input type="hidden" id="addLeadSalesStaffId">
+                                <div id="addLeadSalesStaffResults" class="list-group mt-1" style="max-height: 150px; overflow-y: auto; display: none; position: absolute; z-index: 1050; width: calc(25% - 24px);"></div>
+                                <div id="addLeadSalesStaffSelected" class="mt-1"></div>
+                            </div>
+
+                            <!-- T005: VGK Share Model Card -->
+                            <div class="col-12 mt-2">
+                                <div style="background: linear-gradient(135deg, #ede9fe 0%, #f3f4f6 100%); border: 1px solid #c4b5fd; border-radius: 12px; padding: 14px 18px;">
+                                    <div style="font-weight: 700; font-size: 13px; color: #5b21b6; margin-bottom: 10px;">
+                                        <i class="fas fa-chart-pie me-2"></i>VGK Income Share Model
+                                        <span style="font-size: 11px; font-weight: 400; color: #7c3aed; margin-left: 8px;">How earnings are split when your lead converts</span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
+                                        <div style="background: white; border-radius: 8px; padding: 8px 12px; text-align: center; border-left: 3px solid #7c3aed;">
+                                            <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;">Source</div>
+                                            <div style="font-size: 15px; font-weight: 800; color: #7c3aed;">You</div>
+                                            <div style="font-size: 10px; color: #9ca3af;">Lead originator</div>
+                                        </div>
+                                        <div style="background: white; border-radius: 8px; padding: 8px 12px; text-align: center; border-left: 3px solid #059669;">
+                                            <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;">Senior</div>
+                                            <div style="font-size: 15px; font-weight: 800; color: #059669;" id="slashModelGuruName">L2 Upline</div>
+                                            <div style="font-size: 10px; color: #9ca3af;">Your sponsor</div>
+                                        </div>
+                                        <div style="background: white; border-radius: 8px; padding: 8px 12px; text-align: center; border-left: 3px solid #2563eb;">
+                                            <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;">Extended</div>
+                                            <div style="font-size: 15px; font-weight: 800; color: #2563eb;" id="slashModelZGuruName">L3 Upline</div>
+                                            <div style="font-size: 10px; color: #9ca3af;">Senior's sponsor</div>
+                                        </div>
+                                        <div style="background: white; border-radius: 8px; padding: 8px 12px; text-align: center; border-left: 3px solid #d97706;">
+                                            <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;">Field Support</div>
+                                            <div style="font-size: 15px; font-weight: 800; color: #d97706;" id="slashModelSupportName">On Ground</div>
+                                            <div style="font-size: 10px; color: #9ca3af;">Adi Guru</div>
+                                        </div>
+                                        <div style="background: white; border-radius: 8px; padding: 8px 12px; text-align: center; border-left: 3px solid #dc2626;">
+                                            <div style="font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;">MyntReal</div>
+                                            <div style="font-size: 15px; font-weight: 800; color: #dc2626;">Company</div>
+                                            <div style="font-size: 10px; color: #9ca3af;">Platform fee</div>
+                                        </div>
+                                    </div>
+                                    <div style="margin-top: 8px; font-size: 11px; color: #6b7280; padding: 6px 10px; background: rgba(124,58,237,.06); border-radius: 6px;">
+                                        <i class="fas fa-info-circle me-1" style="color:#7c3aed"></i>
+                                        Income is automatically distributed when this lead's deal is activated. Exact percentages depend on the applicable VGK plan.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-purple" onclick="submitNewLead()">
+                        <i class="fas fa-save me-2"></i>Save Lead
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/shared/crm_lead_editor.js?v=20260316"></script>
+    <script src="/partner_sidebar.js"></script>
+    <script>
+        (function() {
+            'use strict';
+            
+            const sandboxMode = localStorage.getItem('sandbox_mode');
+            const isSandbox = !!sandboxMode;
+            
+            const token = localStorage.getItem('partner_token');
+            if (!token) {
+                if (isSandbox) {
+                    window.location.href = '/test/' + sandboxMode + '/partner/login';
+                } else {
+                    window.location.href = '/partner/login';
+                }
+                return;
+            }
+            
+            let partnerInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');
+            if (isSandbox && !partnerInfo.partner_name) {
+                partnerInfo = {
+                    partner_name: 'Test Partner',
+                    partner_code: 'TESTDIST001',
+                    category: 'Distributor',
+                    primary_company_id: 1
+                };
+            }
+            
+            initPartnerSidebar('sidebarContainer');
+            
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }, 500);
+            
+            window.toggleMobileMenu = function() {
+                const sidebar = document.getElementById('partnerSidebar') || document.querySelector('.partner-sidebar');
+                const overlay = document.getElementById('partnerSidebarOverlay');
+                if (!sidebar) return;
+                const isOpen = sidebar.classList.contains('show') || sidebar.classList.contains('mobile-open');
+                if (isOpen) {
+                    sidebar.classList.remove('show', 'mobile-open');
+                    if (overlay) overlay.classList.remove('active');
+                } else {
+                    sidebar.classList.add('show');
+                    if (overlay) overlay.classList.add('active');
+                }
+            };
+        })();
+
+        let currentTab = 'overall';
+        let currentPage = 1;
+        let searchTimeout = null;
+        let followupFilter = '';
+
+        // DC Protocol (Apr 2026): 5-tab VGK4u-matching tab system
+        const PARTNER_TAB_DISCLAIMERS = {
+            guru:    '<strong>Senior Role (L2) — Support Status:</strong> Your reference bonus for leads where you are listed as Senior depends on the Source Partner confirming your on-ground support. <strong>Confirmed</strong> = bonus approved. <strong>Pending</strong> = awaiting confirmation. <strong>Denied</strong> = bonus will not be paid.',
+            zguru:   '<strong>Extended Role (L3) — Support Status:</strong> Your reference bonus for leads where you are listed as Extended depends on the Source Partner confirming your on-ground support. <strong>Confirmed</strong> = bonus approved. <strong>Pending</strong> = awaiting confirmation. <strong>Denied</strong> = bonus will not be paid.',
+            support: '<strong>Field Support Role (L4):</strong> You are listed as the on-ground field executive for these leads. Your reference bonus is based on deal closure.'
+        };
+
+        function switchPartnerTab(seg) {
+            currentTab = seg;
+            currentPage = 1;
+            followupFilter = '';
+            const pc = document.getElementById('fup-pill-clear');
+            if (pc) pc.style.display = 'none';
+            // Update tab active state
+            document.querySelectorAll('#leadsTabNav .nav-link').forEach(btn => {
+                btn.classList.remove('active');
+                btn.style.color = '#6b7280';
+            });
+            const segTabMap = { overall:'partner-tab-overall', source:'partner-tab-source', guru:'partner-tab-guru', zguru:'partner-tab-zguru', support:'partner-tab-support' };
+            const activeBtn = document.getElementById(segTabMap[seg] || 'partner-tab-overall');
+            if (activeBtn) { activeBtn.classList.add('active'); activeBtn.style.color = '#7c3aed'; }
+            // Show/hide disclaimer
+            const dEl = document.getElementById('partnerLeadDisclaimer');
+            const dTxt = document.getElementById('partnerLeadDisclaimerText');
+            const msg = PARTNER_TAB_DISCLAIMERS[seg];
+            if (dEl && dTxt && msg) { dTxt.innerHTML = msg; dEl.style.display = 'flex'; }
+            else if (dEl) { dEl.style.display = 'none'; }
+            loadLeads();
+        }
+
+        function _updateTabCounts(counts) {
+            if (!counts) return;
+            const map = { overall:'ptCountOverall', source:'ptCountSource', guru:'ptCountGuru', zguru:'ptCountZGuru', support:'ptCountSupport' };
+            Object.keys(map).forEach(k => {
+                const el = document.getElementById(map[k]);
+                if (el && counts[k] != null) el.textContent = counts[k];
+            });
+        }
+
+        function getAuthFetchOptions(additionalHeaders = {}) {
+            const token = localStorage.getItem('partner_token');
+            const partnerInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');
+            
+            const headers = {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json',
+                ...additionalHeaders
+            };
+            
+            if (partnerInfo.primary_company_id) {
+                headers['X-Company-ID'] = String(partnerInfo.primary_company_id);
+            }
+            
+            return { headers };
+        }
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => loadLeads(), 300);
+        }
+        
+        // DC Protocol (Jan 23, 2026): Reset all filters to default values
+        function resetAllFilters() {
+            document.getElementById('leadSearch').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('priorityFilter').value = '';
+            document.getElementById('categoryFilter').value = '';
+            const sortEl = document.getElementById('sortByFilter');
+            if (sortEl) sortEl.value = 'updated_at|desc';
+            // DC Protocol (Apr 2026): Reset followup filter pills
+            followupFilter = '';
+            const pc = document.getElementById('fup-pill-clear');
+            if (pc) pc.style.display = 'none';
+            const pt = document.getElementById('fup-pill-today');
+            const po = document.getElementById('fup-pill-overdue');
+            if (pt) { pt.style.background = '#fff'; pt.style.borderColor = '#d1d5db'; pt.style.color = '#374151'; }
+            if (po) { po.style.background = '#fff'; po.style.borderColor = '#d1d5db'; po.style.color = '#374151'; }
+            currentPage = 1;
+            loadLeads();
+        }
+
+        function setFollowupFilter(val) {
+            followupFilter = val;
+            const pillToday   = document.getElementById('fup-pill-today');
+            const pillOverdue = document.getElementById('fup-pill-overdue');
+            const pillClear   = document.getElementById('fup-pill-clear');
+            const activeStyle = 'background:#ede9fe;border-color:#7c3aed;color:#5b21b6;';
+            const baseStyle   = 'background:#fff;border-color:#d1d5db;color:#374151;';
+            const redStyle    = 'background:#fee2e2;border-color:#dc2626;color:#b91c1c;';
+            if (pillToday)   pillToday.style.cssText   += val === 'today'   ? activeStyle : baseStyle;
+            if (pillOverdue) pillOverdue.style.cssText += val === 'overdue' ? redStyle    : baseStyle;
+            if (pillClear)   pillClear.style.display   = val ? 'block' : 'none';
+            currentPage = 1;
+            loadLeads();
+        }
+
+        async function loadLeads(tab) {
+            // DC Protocol (Apr 2026): tab switching now handled by switchPartnerTab()
+            // loadLeads() just reloads current tab — no tab management here
+            
+            const search = document.getElementById('leadSearch').value.trim();
+            const status = document.getElementById('statusFilter').value;
+            const priority = document.getElementById('priorityFilter').value;
+            const categoryId = document.getElementById('categoryFilter').value;
+            const sortVal = (document.getElementById('sortByFilter')?.value) || 'updated_at|desc';
+            const [sortBy, sortDir] = sortVal.split('|');
+            
+            const tbody = document.getElementById('leadsTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center py-5">
+                        <div class="spinner-border" role="status" style="color: #1d4ed8;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 text-muted">Loading leads...</p>
+                    </td>
+                </tr>`;
+            
+            try {
+                let url = `/api/v1/crm/unified-my-leads?segment=${currentTab}&role=partner&page=${currentPage}&per_page=20&sort_by=${sortBy}&sort_dir=${sortDir}`;
+                if (followupFilter) url += `&followup_filter=${followupFilter}`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                if (status) url += `&status=${status}`;
+                if (priority) url += `&priority=${priority}`;
+                if (categoryId) url += `&category_id=${categoryId}`;
+                
+                const response = await fetch(url, getAuthFetchOptions());
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderLeadsTable(data.data || []);
+                    updateStats(data.stats || {});
+                    // DC Protocol (Apr 2026): Update 5-tab count badges from segment_counts
+                    if (data.segment_counts) _updateTabCounts(data.segment_counts);
+                    renderPagination(data.total || data.pagination?.total || 0, data.page || 1, data.per_page || 20);
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
+                                <p class="text-muted">${data.detail || 'Error loading leads'}</p>
+                            </td>
+                        </tr>`;
+                }
+            } catch (error) {
+                console.error('Error loading leads:', error);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center py-5">
+                            <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+                            <p class="text-muted">Error loading leads. Please try again.</p>
+                        </td>
+                    </tr>`;
+            }
+        }
+
+        function updateStats(stats) {
+            document.getElementById('myLeadsCount').textContent = stats.my_leads || 0;
+            document.getElementById('assignedLeadsCount').textContent = stats.assigned_leads || 0;
+            document.getElementById('wonLeadsCount').textContent = stats.won_deals || 0;
+        }
+
+        function renderLeadsTable(leads) {
+            const tbody = document.getElementById('leadsTableBody');
+            
+            if (!leads || leads.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">No leads found</p>
+                        </td>
+                    </tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = leads.map(lead => `
+                <tr>
+                    <td>
+                        <div class="fw-semibold">${escapeHtml(lead.name || '-')}</div>
+                        <small class="text-muted">${lead.looking_for ? escapeHtml(lead.looking_for.substring(0, 50)) : ''}</small>
+                    </td>
+                    <td>
+                        <div><i class="fas fa-phone me-1 text-muted"></i>${escapeHtml(lead.phone || '-')}</div>
+                        ${lead.email ? `<small class="text-muted"><i class="fas fa-envelope me-1"></i>${escapeHtml(lead.email)}</small>` : ''}
+                    </td>
+                    <td>${escapeHtml(lead.category_name || '-')}</td>
+                    <td><span class="text-muted" style="font-size: 11px;">${lead.company_name || '-'}</span></td>
+                    <td><span class="status-badge status-${lead.status || 'new'}">${capitalizeFirst(lead.status || 'new')}</span></td>
+                    <td>${getStageBadge(lead)}</td>
+                    <td><span class="priority-${lead.priority || 'medium'}"><i class="fas fa-flag me-1"></i>${capitalizeFirst(lead.priority || 'medium')}</span></td>
+                    <td>${formatDate(lead.updated_at || lead.created_at)}</td>
+                    <td><small class="text-muted">${lead.submit_date ? formatDate(lead.submit_date) : '—'}</small></td>
+                    <td><small class="text-muted">${lead.complete_date ? formatDate(lead.complete_date) : '—'}</small></td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            ${lead.phone ? `<a href="tel:${escapeHtml(lead.phone)}" class="btn btn-sm btn-call" title="Call ${escapeHtml(lead.phone)}"><i class="fas fa-phone"></i></a>` : ''}
+                            ${lead.phone ? `<button class="btn btn-sm btn-wa" onclick="openWATemplates('${(lead.phone||'').replace(/'/g,'')}', '${(lead.name||'').replace(/'/g,"\\'")}', ${lead.id}, '${(lead.category_name||'').replace(/'/g,'')}')" title="WhatsApp Message"><i class="fab fa-whatsapp"></i></button>` : ''}
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewLead(${lead.id}, ${lead.company_id})" title="View Details"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="editLead(${lead.id}, ${lead.company_id})" title="Edit Assignment"><i class="fas fa-edit"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPagination(total, page, limit) {
+            const totalPages = Math.ceil(total / limit);
+            const paginationList = document.getElementById('paginationList');
+            
+            if (totalPages <= 1) {
+                paginationList.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            
+            html += `<li class="page-item ${page <= 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="goToPage(${page - 1}); return false;">Previous</a>
+            </li>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
+                    html += `<li class="page-item ${i === page ? 'active' : ''}">
+                        <a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a>
+                    </li>`;
+                } else if (i === page - 3 || i === page + 3) {
+                    html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+            
+            html += `<li class="page-item ${page >= totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="goToPage(${page + 1}); return false;">Next</a>
+            </li>`;
+            
+            paginationList.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            const activeTab = document.querySelector('#leadsTabNav .nav-link.active');
+            if (activeTab && activeTab.id === 'updated-leads-tab') {
+                loadUpdatedLeads(page);
+            } else {
+                currentPage = page;
+                loadLeads();
+            }
+        }
+
+        async function viewLead(leadId, companyId) {
+            const modal = new bootstrap.Modal(document.getElementById('leadDetailModal'));
+            document.getElementById('leadDetailBody').innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border" style="color: #1d4ed8;"></div>
+                    <p class="mt-3">Loading lead details...</p>
+                </div>`;
+            modal.show();
+            
+            try {
+                // DC Protocol (Dec 30, 2025): Require lead's actual company_id
+                if (!companyId) {
+                    console.error('[DC-CRM] Lead company_id missing for viewLead:', leadId);
+                    document.getElementById('leadDetailBody').innerHTML = `<div class="alert alert-danger">Error: Lead company information missing. Please refresh the page.</div>`;
+                    return;
+                }
+                // DC Protocol (Dec 31, 2025): Use unified endpoint for partner users
+                const response = await fetch(`/api/v1/crm/unified-my-leads/${leadId}/details?company_id=${companyId}`, getAuthFetchOptions());
+                const data = await response.json();
+                
+                if (data.success) {
+                    const lead = data.data;
+                    document.getElementById('leadDetailTitle').textContent = `Lead: ${lead.name || '-'}`;
+                    document.getElementById('leadDetailBody').innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3"><i class="fas fa-user me-2"></i>Contact Information</h6>
+                                <table class="table table-sm">
+                                    <tr><td class="fw-semibold w-50">Name</td><td>${escapeHtml(lead.name || '-')}</td></tr>
+                                    <tr><td class="fw-semibold">Phone</td><td>${escapeHtml(lead.phone || '-')}</td></tr>
+                                    <tr><td class="fw-semibold">Email</td><td>${escapeHtml(lead.email || '-')}</td></tr>
+                                    <tr><td class="fw-semibold">City</td><td>${escapeHtml(lead.city || '-')}</td></tr>
+                                    <tr><td class="fw-semibold">State</td><td>${escapeHtml(lead.state || '-')}</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3"><i class="fas fa-chart-line me-2"></i>Lead Status</h6>
+                                <table class="table table-sm">
+                                    <tr><td class="fw-semibold w-50">Status</td><td><span class="status-badge status-${lead.status || 'new'}">${capitalizeFirst(lead.status || 'new')}</span></td></tr>
+                                    <tr><td class="fw-semibold">Priority</td><td><span class="priority-${lead.priority || 'medium'}">${capitalizeFirst(lead.priority || 'medium')}</span></td></tr>
+                                    <tr><td class="fw-semibold">Category</td><td>${escapeHtml(lead.category_name || '-')}</td></tr>
+                                    <tr><td class="fw-semibold">Source</td><td>${escapeHtml(lead.source || '-')}</td></tr>
+                                    <tr><td class="fw-semibold">Created</td><td>${formatDate(lead.created_at)}</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <h6 class="text-primary mb-3"><i class="fas fa-users me-2"></i>On Ground Team</h6>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-2 text-center">
+                                                <small class="text-muted">Ground Source</small>
+                                                <div class="fw-semibold">${lead.source_ref_name || lead.mnr_handler_name || lead.mnr_handler_id || '-'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-2 text-center">
+                                                <small class="text-muted">Senior</small>
+                                                <div class="fw-semibold">${lead.guru_name || lead.guru_id || '-'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-2 text-center">
+                                                <small class="text-muted">Extended</small>
+                                                <div class="fw-semibold">${lead.z_guru_name || lead.z_guru_id || '-'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-2 text-center">
+                                                <small class="text-muted">On Ground Support</small>
+                                                <div class="fw-semibold">${lead.field_support_ref_name || lead.adi_guru_name || lead.adi_guru_id || '-'}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 mt-3">
+                                <h6 class="text-primary mb-3"><i class="fas fa-headset me-2"></i>Staff & Partner Assignment</h6>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-2 text-center">
+                                                <small class="text-muted">Tele Caller</small>
+                                                <div class="fw-semibold">${escapeHtml(lead.telecaller_name || '-')}</div>
+                                                ${lead.telecaller_code ? `<small class="text-muted">${escapeHtml(lead.telecaller_code)}</small>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-2 text-center">
+                                                <small class="text-muted">Field Staff</small>
+                                                <div class="fw-semibold">${escapeHtml(lead.field_staff_name || '-')}</div>
+                                                ${lead.field_staff_code ? `<small class="text-muted">${escapeHtml(lead.field_staff_code)}</small>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="card bg-light">
+                                            <div class="card-body p-2 text-center">
+                                                <small class="text-muted">Partner</small>
+                                                <div class="fw-semibold">${escapeHtml(lead.associated_partner_name || '-')}</div>
+                                                ${lead.associated_partner_code ? `<small class="text-muted">${escapeHtml(lead.associated_partner_code)}</small>` : ''}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            ${lead.deal_value_total > 0 ? `
+                            <div class="col-12 mt-3">
+                                <h6 class="text-primary mb-3"><i class="fas fa-rupee-sign me-2"></i>Values</h6>
+                                <table class="table table-sm">
+                                    <tr><td class="fw-semibold w-50">Deal Total</td><td><strong>₹${parseFloat(lead.deal_value_total).toLocaleString('en-IN')}</strong></td></tr>
+                                    <tr><td class="fw-semibold">Received</td><td style="color:#047857;font-weight:600">${lead.deal_value_received > 0 ? '₹' + parseFloat(lead.deal_value_received).toLocaleString('en-IN') : '—'}</td></tr>
+                                    <tr><td class="fw-semibold">Balance</td><td style="color:${(lead.deal_value_balance||0)>0?'#b91c1c':'#6b7280'}">${(lead.deal_value_balance||0)>0 ? '₹'+parseFloat(lead.deal_value_balance).toLocaleString('en-IN') : '—'}</td></tr>
+                                    <tr><td class="fw-semibold" title="Locked at completion — used for all commission and incentive calculations">Confirmed Final &#128274;</td><td>${lead.confirmed_final_value != null ? '<span style="font-weight:800;color:#92400e;background:#fef3c7;padding:1px 6px;border-radius:4px;border:1px solid #fcd34d">₹' + parseFloat(lead.confirmed_final_value).toLocaleString('en-IN') + '</span>' : '<span style="color:#9ca3af;font-size:11px">Not locked yet</span>'}</td></tr>
+                                </table>
+                            </div>` : ''}
+                            ${lead.looking_for ? `
+                            <div class="col-12 mt-3">
+                                <h6 class="text-primary mb-3"><i class="fas fa-search me-2"></i>Looking For</h6>
+                                <p class="mb-0">${escapeHtml(lead.looking_for)}</p>
+                            </div>` : ''}
+                            ${lead.description ? `
+                            <div class="col-12 mt-3">
+                                <h6 class="text-primary mb-3"><i class="fas fa-sticky-note me-2"></i>Description</h6>
+                                <p class="mb-0">${escapeHtml(lead.description)}</p>
+                            </div>` : ''}
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('leadDetailBody').innerHTML = `
+                        <div class="text-center py-5 text-danger">
+                            <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
+                            <p>Error loading lead details</p>
+                        </div>`;
+                }
+            } catch (error) {
+                console.error('Error loading lead:', error);
+                document.getElementById('leadDetailBody').innerHTML = `
+                    <div class="text-center py-5 text-danger">
+                        <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
+                        <p>Error loading lead details</p>
+                    </div>`;
+            }
+        }
+
+        function editLead(leadId, companyId) {
+            if (!companyId) {
+                console.error('[DC-CRM] Lead company_id missing for lead:', leadId);
+                alert('Error: Lead company information missing. Please refresh the page.');
+                return;
+            }
+            if (!window.crmLeadEditor) {
+                if (typeof CRMLeadEditor !== 'undefined') {
+                    const authOpts = getAuthFetchOptions();
+                    authOpts.headers['Content-Type'] = 'application/json';
+                    
+                    window.crmLeadEditor = new CRMLeadEditor({
+                        containerId: 'crmLeadEditorContainer',
+                        userRole: 'partner',
+                        companyId: companyId,
+                        authOptions: { headers: authOpts.headers },
+                        onSave: function() { loadLeads(); }
+                    });
+                    window.crmLeadEditor.init();
+                } else {
+                    alert('Lead editor not available. Please refresh.');
+                    return;
+                }
+            }
+            window.crmLeadEditor.openEditModal(leadId, companyId);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function capitalizeFirst(str) {
+            if (!str) return '';
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            try {
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch {
+                return dateStr;
+            }
+        }
+
+        // ========== ADD LEAD FUNCTIONS ==========
+        
+        // DC Protocol: Store companies list for lead form
+        let availableCompanies = [];
+        
+        function showAddLeadModal() {
+            const modal = new bootstrap.Modal(document.getElementById('addLeadModal'));
+            document.getElementById('addLeadForm').reset();
+            clearAddLeadMnr();
+            clearAddLeadAdiGuru();
+            clearAddLeadSalesStaff();
+            _resetShareModelCard();
+            loadCompaniesForLead();
+            modal.show();
+        }
+        
+        async function loadCompaniesForLead() {
+            try {
+                // DC Protocol: Get all active companies for lead form
+                const response = await fetch('/api/v1/staff/accounts/companies', getAuthFetchOptions());
+                const data = await response.json();
+                
+                const select = document.getElementById('leadCompany');
+                if (data.companies && data.companies.length > 0) {
+                    availableCompanies = data.companies.filter(c => c.is_active !== false);
+                    select.innerHTML = '<option value="">Select Company *</option>' +
+                        availableCompanies.map(c => `<option value="${c.id}">${escapeHtml(c.company_name)} (${escapeHtml(c.company_code)})</option>`).join('');
+                    
+                    // Auto-select if only one company
+                    if (availableCompanies.length === 1) {
+                        select.value = availableCompanies[0].id;
+                        onLeadCompanyChange();
+                    }
+                } else {
+                    select.innerHTML = '<option value="">No companies available</option>';
+                }
+            } catch (error) {
+                console.error('[PARTNER-LEADS] Error loading companies:', error);
+                // Fallback: try to load categories without company filter
+                loadCategories(null);
+            }
+        }
+        
+        function onLeadCompanyChange() {
+            const companyId = document.getElementById('leadCompany').value;
+            if (companyId) {
+                loadCategories(parseInt(companyId));
+            } else {
+                document.getElementById('leadCategory').innerHTML = '<option value="">Select Category</option>';
+            }
+        }
+
+        async function loadCategories(companyId = null) {
+            try {
+                // DC Protocol: Categories endpoint with optional company filter
+                let url = '/api/v1/crm/signup/categories';
+                if (companyId) {
+                    url += `?company_id=${companyId}`;
+                }
+                const response = await fetch(url, getAuthFetchOptions());
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('leadCategory');
+                    select.innerHTML = '<option value="">Select Category</option>' +
+                        data.data.map(cat => `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`).join('');
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        let addLeadMnrSearchTimeout = null;
+
+        function clearAddLeadMnr() {
+            document.getElementById('addLeadMnrId').value = '';
+            document.getElementById('addLeadMnrType').value = '';
+            document.getElementById('addLeadMnrSearch').value = '';
+            document.getElementById('addLeadMnrResults').style.display = 'none';
+            document.getElementById('addLeadMnrSelected').innerHTML = '';
+            document.getElementById('addLeadGuruId').value = '';
+            document.getElementById('addLeadGuruDisplay').value = '';
+            document.getElementById('addLeadZGuruId').value = '';
+            document.getElementById('addLeadZGuruDisplay').value = '';
+        }
+
+        function clearAddLeadAdiGuru() {
+            document.getElementById('addLeadAdiGuruId').value = '';
+            document.getElementById('addLeadAdiGuruSearch').value = '';
+            document.getElementById('addLeadAdiGuruResults').style.display = 'none';
+            document.getElementById('addLeadAdiGuruSelected').innerHTML = '';
+        }
+
+        document.getElementById('addLeadMnrSearch').addEventListener('input', function() {
+            clearTimeout(addLeadMnrSearchTimeout);
+            const query = this.value.trim();
+            if (query.length < 2) {
+                document.getElementById('addLeadMnrResults').style.display = 'none';
+                return;
+            }
+            addLeadMnrSearchTimeout = setTimeout(() => searchAddLeadMnr(query), 300);
+        });
+
+        async function searchAddLeadMnr(query) {
+            try {
+                const response = await fetch(`/api/v1/crm/network-search?q=${encodeURIComponent(query)}&limit=10`, getAuthFetchOptions());
+                const data = await response.json();
+                const resultsDiv = document.getElementById('addLeadMnrResults');
+                if (data.success && data.results && data.results.length > 0) {
+                    const typeColors = { mnr: '#0d6efd', vgk: '#7c3aed', partner: '#198754' };
+                    const typeLabels = { mnr: 'MNR', vgk: 'VGK', partner: 'Partner' };
+                    resultsDiv.innerHTML = data.results.map(r => {
+                        const color = typeColors[r.type] || '#6c757d';
+                        const label = typeLabels[r.type] || r.type;
+                        return `<button type="button" class="list-group-item list-group-item-action py-2" onclick='selectAddLeadMnrMember(${JSON.stringify(r)})'>
+                            <span class="badge me-1" style="background:${color};font-size:10px">${label}</span>
+                            <strong>${escapeHtml(r.name||r.display||r.id)}</strong> <small class="text-muted">(${r.code||r.id})</small>
+                        </button>`;
+                    }).join('');
+                    resultsDiv.style.display = 'block';
+                } else {
+                    resultsDiv.innerHTML = '<div class="list-group-item text-muted py-2">No results found</div>';
+                    resultsDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error searching ground network:', error);
+            }
+        }
+
+        function selectAddLeadMnrMember(member) {
+            document.getElementById('addLeadMnrId').value = member.id;
+            document.getElementById('addLeadMnrType').value = member.type || '';
+            document.getElementById('addLeadMnrSearch').value = '';
+            document.getElementById('addLeadMnrResults').style.display = 'none';
+            document.getElementById('addLeadMnrSelected').innerHTML = `<span class="badge bg-success p-2">${escapeHtml(member.name||member.display||member.id)}</span>`;
+            // DC Protocol Fix (Apr 2026): Show VGK partner upline chain in Guru/Extended
+            const _isNonUserTypePml = ['partner', 'vgk', 'vgk_partner', 'vendor', 'staff', 'external'].includes(member.type);
+            if (_isNonUserTypePml) {
+                const _guruName = member.parent_partner_name || '';
+                const _guruCode = member.parent_partner_code || '';
+                const _guruId = member.parent_partner_id || '';
+                const _zGuruName = member.z_parent_partner_name || '';
+                const _zGuruCode = member.z_parent_partner_code || '';
+                const _zGuruId = member.z_parent_partner_id || '';
+                document.getElementById('addLeadGuruId').value = '';
+                document.getElementById('addLeadGuruDisplay').value = _guruId ? `${_guruName}${_guruCode ? ' (' + _guruCode + ')' : ''} [Partner L1]` : '';
+                document.getElementById('addLeadZGuruId').value = '';
+                document.getElementById('addLeadZGuruDisplay').value = _zGuruId ? `${_zGuruName}${_zGuruCode ? ' (' + _zGuruCode + ')' : ''} [Partner L2]` : '';
+                const ge = document.getElementById('slashModelGuruName'); if (ge) ge.textContent = _guruName || 'L2 Upline';
+                const ze = document.getElementById('slashModelZGuruName'); if (ze) ze.textContent = _zGuruName || 'L3 Upline';
+            } else {
+                if (member.sponsor_id) {
+                    document.getElementById('addLeadGuruId').value = member.sponsor_id;
+                    document.getElementById('addLeadGuruDisplay').value = member.sponsor_name ? `${member.sponsor_name} (${member.sponsor_id})` : member.sponsor_id;
+                    const ge = document.getElementById('slashModelGuruName'); if (ge) ge.textContent = member.sponsor_name || member.sponsor_id;
+                } else { document.getElementById('addLeadGuruId').value = ''; document.getElementById('addLeadGuruDisplay').value = ''; }
+                if (member.z_sponsor_id) {
+                    document.getElementById('addLeadZGuruId').value = member.z_sponsor_id;
+                    document.getElementById('addLeadZGuruDisplay').value = member.z_sponsor_name ? `${member.z_sponsor_name} (${member.z_sponsor_id})` : member.z_sponsor_id;
+                    const ze = document.getElementById('slashModelZGuruName'); if (ze) ze.textContent = member.z_sponsor_name || member.z_sponsor_id;
+                } else { document.getElementById('addLeadZGuruId').value = ''; document.getElementById('addLeadZGuruDisplay').value = ''; }
+            }
+        }
+
+        async function selectAddLeadMnr(mnrId, name) { selectAddLeadMnrMember({ id: mnrId, name, type: 'mnr', code: mnrId, display: name }); }
+
+        let addLeadAdiGuruSearchTimeout = null;
+        document.getElementById('addLeadAdiGuruSearch').addEventListener('input', function() {
+            clearTimeout(addLeadAdiGuruSearchTimeout);
+            const query = this.value.trim();
+            if (query.length < 2) {
+                document.getElementById('addLeadAdiGuruResults').style.display = 'none';
+                return;
+            }
+            addLeadAdiGuruSearchTimeout = setTimeout(() => searchAddLeadAdiGuru(query), 300);
+        });
+
+        async function searchAddLeadAdiGuru(query) {
+            try {
+                const response = await fetch(`/api/v1/crm/unified-my-leads/search-mnr?q=${encodeURIComponent(query)}`, getAuthFetchOptions());
+                const data = await response.json();
+                
+                const resultsDiv = document.getElementById('addLeadAdiGuruResults');
+                if (data.success && data.data.length > 0) {
+                    resultsDiv.innerHTML = data.data.map(user => `
+                        <button type="button" class="list-group-item list-group-item-action py-2" onclick="selectAddLeadAdiGuru('${user.id}', '${(user.name || '').replace(/'/g, "\\'")}')">
+                            <strong>${user.id}</strong> - ${escapeHtml(user.name || '')} <small class="text-muted">${escapeHtml(user.phone || '')}</small>
+                        </button>
+                    `).join('');
+                    resultsDiv.style.display = 'block';
+                } else {
+                    resultsDiv.innerHTML = '<div class="list-group-item text-muted py-2">No MNR members found</div>';
+                    resultsDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error searching MNR members for Adi Guru:', error);
+            }
+        }
+
+        function selectAddLeadAdiGuru(mnrId, name) {
+            document.getElementById('addLeadAdiGuruId').value = mnrId;
+            document.getElementById('addLeadAdiGuruSearch').value = '';
+            document.getElementById('addLeadAdiGuruResults').style.display = 'none';
+            document.getElementById('addLeadAdiGuruSelected').innerHTML = `<span class="badge bg-info p-2"><i class="fas fa-user me-1"></i>${escapeHtml(name || mnrId)}</span>`;
+            _updateShareModelSupport(name || mnrId);
+        }
+
+        // ── T005: Sales Staff Search ──────────────────────────────────────────
+        function clearAddLeadSalesStaff() {
+            document.getElementById('addLeadSalesStaffId').value = '';
+            document.getElementById('addLeadSalesStaffSearch').value = '';
+            document.getElementById('addLeadSalesStaffResults').style.display = 'none';
+            document.getElementById('addLeadSalesStaffSelected').innerHTML = '';
+        }
+
+        let _ssTimeout = null;
+        document.getElementById('addLeadSalesStaffSearch').addEventListener('input', function() {
+            clearTimeout(_ssTimeout);
+            const q = this.value.trim();
+            if (q.length < 2) { document.getElementById('addLeadSalesStaffResults').style.display = 'none'; return; }
+            _ssTimeout = setTimeout(() => _searchSalesStaff(q), 300);
+        });
+
+        async function _searchSalesStaff(q) {
+            try {
+                const res = await fetch(`/api/v1/crm/network-search?q=${encodeURIComponent(q)}&type=staff&limit=10`, getAuthFetchOptions());
+                const data = await res.json();
+                const div = document.getElementById('addLeadSalesStaffResults');
+                const results = data.results || [];
+                if (results.length > 0) {
+                    div.innerHTML = results.map(r => `<button type="button" class="list-group-item list-group-item-action py-2" onclick='_selectSalesStaff(${JSON.stringify(r)})'>
+                        <span class="badge me-1" style="background:#2563eb;font-size:10px">Staff</span>
+                        <strong>${escapeHtml(r.name||r.display||r.id)}</strong> <small class="text-muted">${escapeHtml(r.designation||r.staff_type||'')}</small>
+                    </button>`).join('');
+                } else {
+                    div.innerHTML = '<div class="list-group-item text-muted py-2">No staff found. Try a different name.</div>';
+                }
+                div.style.display = 'block';
+            } catch(e) { console.error('Sales staff search error', e); }
+        }
+
+        function _selectSalesStaff(member) {
+            document.getElementById('addLeadSalesStaffId').value = member.id;
+            document.getElementById('addLeadSalesStaffSearch').value = '';
+            document.getElementById('addLeadSalesStaffResults').style.display = 'none';
+            document.getElementById('addLeadSalesStaffSelected').innerHTML = `<span class="badge p-2" style="background:#2563eb"><i class="fas fa-id-badge me-1"></i>${escapeHtml(member.name||member.id)}</span>`;
+        }
+
+        // ── T005: VGK Share Model card helpers ────────────────────────────────
+        function _resetShareModelCard() {
+            const el = document.getElementById('slashModelGuruName');
+            const ze = document.getElementById('slashModelZGuruName');
+            const se = document.getElementById('slashModelSupportName');
+            if (el) el.textContent = 'L2 Upline';
+            if (ze) ze.textContent = 'L3 Upline';
+            if (se) se.textContent = 'On Ground';
+        }
+
+        function _updateShareModelSupport(name) {
+            const se = document.getElementById('slashModelSupportName');
+            if (se) se.textContent = name || 'On Ground';
+        }
+
+        async function lookupPincode() {
+            const pincode = document.getElementById('leadPincode').value.trim();
+            if (!pincode || pincode.length !== 6) {
+                alert('Please enter a valid 6-digit PIN code');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+                const data = await response.json();
+                
+                if (data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
+                    const po = data[0].PostOffice[0];
+                    document.getElementById('leadCity').value = po.District || '';
+                    document.getElementById('leadState').value = po.State || '';
+                    document.getElementById('leadArea').value = po.Name || '';
+                } else {
+                    alert('PIN code not found');
+                }
+            } catch (error) {
+                console.error('Error looking up pincode:', error);
+            }
+        }
+
+        async function submitNewLead() {
+            const name = document.getElementById('leadName').value.trim();
+            const phone = document.getElementById('leadPhone').value.trim();
+            const selectedCompanyId = document.getElementById('leadCompany').value;
+            
+            if (!selectedCompanyId) {
+                alert('Please select a Company');
+                return;
+            }
+            
+            if (!name || !phone) {
+                alert('Please fill in Name and Phone');
+                return;
+            }
+            
+            try {
+                const partnerInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');
+                
+                const payload = {
+                    company_id: parseInt(selectedCompanyId),
+                    name: name,
+                    phone: phone,
+                    phone_primary_whatsapp: document.getElementById('leadPhoneWhatsapp').checked,
+                    alternate_phone: document.getElementById('leadPhoneSecondary').value.trim() || null,
+                    email: document.getElementById('leadEmail').value.trim() || null,
+                    category_id: document.getElementById('leadCategory').value || null,
+                    priority: document.getElementById('leadPriority').value,
+                    status: document.getElementById('leadStatus').value,
+                    source: document.getElementById('leadSource').value || null,
+                    next_followup_date: document.getElementById('leadNextFollowup').value || null,
+                    pincode: document.getElementById('leadPincode').value.trim() || null,
+                    area: document.getElementById('leadArea').value.trim() || null,
+                    city: document.getElementById('leadCity').value.trim() || null,
+                    state: document.getElementById('leadState').value.trim() || null,
+                    budget_min: parseInt(document.getElementById('leadBudgetMin').value) || null,
+                    budget_max: parseInt(document.getElementById('leadBudgetMax').value) || null,
+                    looking_for: document.getElementById('leadLookingFor').value.trim() || null,
+                    description: document.getElementById('leadDescription').value.trim() || null,
+                    // DC Protocol Fix (Apr 2026): Only send mnr_handler_id for user-type sources
+                    mnr_handler_id: (['mnr','vgk'].includes(document.getElementById('addLeadMnrType').value || ''))
+                        ? (document.getElementById('addLeadMnrId').value || null) : null,
+                    guru_id: document.getElementById('addLeadGuruId').value || null,
+                    z_guru_id: document.getElementById('addLeadZGuruId').value || null,
+                    guru_name: (() => { const _t = document.getElementById('addLeadMnrType').value || ''; if (!['mnr','vgk'].includes(_t) && _t) { return (document.getElementById('addLeadGuruDisplay').value || '').replace(/\s*\[Partner\s*L[12]\]\s*$/i,'').replace(/\s*\([^)]*\)\s*$/,'').trim() || null; } return null; })(),
+                    z_guru_name: (() => { const _t = document.getElementById('addLeadMnrType').value || ''; if (!['mnr','vgk'].includes(_t) && _t) { return (document.getElementById('addLeadZGuruDisplay').value || '').replace(/\s*\[Partner\s*L[12]\]\s*$/i,'').replace(/\s*\([^)]*\)\s*$/,'').trim() || null; } return null; })(),
+                    adi_guru_id: document.getElementById('addLeadAdiGuruId').value || null,
+                    source_ref_type: document.getElementById('addLeadMnrType').value || null,
+                    source_ref_id: document.getElementById('addLeadMnrId').value || null,
+                    source_ref_name: (document.getElementById('addLeadMnrSelected').querySelector('.badge')?.textContent?.trim().replace(/\s*\(.*\)\s*$/, '').trim()) || null,
+                    field_support_ref_id: document.getElementById('addLeadAdiGuruId').value || null,
+                    associated_partner_id: partnerInfo.partner_id || null,
+                    sales_staff_id: document.getElementById('addLeadSalesStaffId').value || null
+                };
+                
+                const response = await fetch('/api/v1/crm/unified-my-leads', {
+                    method: 'POST',
+                    headers: {
+                        ...getAuthFetchOptions().headers,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('addLeadModal')).hide();
+                    alert('Lead added successfully!');
+                    loadLeads('my');
+                } else {
+                    alert(data.detail || 'Error adding lead');
+                }
+            } catch (error) {
+                console.error('Error adding lead:', error);
+                alert('Error adding lead');
+            }
+        }
+
+        async function loadFilterCategories() {
+            try {
+                const response = await fetch('/api/v1/crm/signup/categories', getAuthFetchOptions());
+                const data = await response.json();
+                if (data.success && data.data) {
+                    const select = document.getElementById('categoryFilter');
+                    select.innerHTML = '<option value="">All Categories</option>';
+                    data.data.forEach(cat => {
+                        select.innerHTML += `<option value="${cat.id}">${escapeHtml(cat.name)}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('[PARTNER-LEADS] Error loading filter categories:', error);
+            }
+        }
+
+        // DC Protocol (Apr 2026): Stage badge — solar_pipeline_status / ev_b2b_stage, read-only
+        const _PIPELINE_LABELS = {
+            documents_pending:'Docs Pending', application_submitted:'App Submitted',
+            pending_with_bank:'With Bank', loan_rejected:'Loan Rejected',
+            documents_issue:'Docs Issue', load_extension:'Load Ext',
+            electricity_bill_change:'Bill Change', installation_pending:'Install Pending',
+            net_meter_pending:'Net Meter', balance_pending:'Bal. Pending', balance_received:'Bal. Received', subsidy_pending:'Subsidy Pending',
+            completed:'Completed', not_interested:'Not Interested', cancelled:'Cancelled',
+            different_vendor:'Diff. Vendor'
+        };
+        const _B2B_STAGE_LABELS = {
+            application_pending:'Application Pending', agreement_pending:'Agreement Pending',
+            gst_pending:'GST Pending', training_pending:'Training Pending',
+            branding_pending:'Branding Pending', payment_pending:'Payment Pending',
+            dispatch_pending:'Dispatch Pending', confirmation_pending:'Confirmation Pending',
+            completed:'Completed'
+        };
+        function getStageBadge(lead) {
+            const cat = (lead.category_name || '').toLowerCase();
+            if (cat === 'solar' && lead.solar_pipeline_status) {
+                const lbl = _PIPELINE_LABELS[lead.solar_pipeline_status] || lead.solar_pipeline_status;
+                return `<span class="partner-stage-badge partner-stage-solar" title="Solar Stage">${lbl}</span>`;
+            }
+            if (cat === 'ev b2b' && lead.ev_b2b_stage) {
+                const lbl = _B2B_STAGE_LABELS[lead.ev_b2b_stage] || lead.ev_b2b_stage;
+                return `<span class="partner-stage-badge partner-stage-b2b" title="EV B2B Stage">${lbl}</span>`;
+            }
+            return '<span class="text-muted" style="font-size:11px">—</span>';
+        }
+
+        // DC Protocol (Apr 2026): Updated Leads tab — leads where partner is tagged as handler
+        let _updatedLeadsPage = 1;
+        async function loadUpdatedLeads(page) {
+            _updatedLeadsPage = page || 1;
+            document.querySelectorAll('#leadsTabNav .nav-link').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('updated-leads-tab').classList.add('active');
+
+            const search = document.getElementById('leadSearch').value.trim();
+            const status = document.getElementById('statusFilter').value;
+            const sortVal = (document.getElementById('sortByFilter')?.value) || 'updated_at|desc';
+            const [sortBy, sortDir] = sortVal.split('|');
+
+            const tbody = document.getElementById('leadsTableBody');
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5">
+                <div class="spinner-border" role="status" style="color:#1d4ed8;"></div>
+                <p class="mt-3 text-muted">Loading updated leads...</p></td></tr>`;
+
+            try {
+                let url = `/api/v1/partner/auth/updated-leads?page=${_updatedLeadsPage}&per_page=20&sort_by=${sortBy}&sort_dir=${sortDir}`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                if (status) url += `&status=${status}`;
+
+                const response = await fetch(url, getAuthFetchOptions());
+                const data = await response.json();
+
+                if (data.success) {
+                    renderLeadsTable(data.data || []);
+                    renderPagination(data.total || 0, data.page || 1, data.per_page || 20);
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5">
+                        <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
+                        <p class="text-muted">${data.detail || 'Error loading leads'}</p></td></tr>`;
+                }
+            } catch (error) {
+                console.error('[PARTNER-UPDATED-LEADS] error:', error);
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5">
+                    <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+                    <p class="text-muted">Error loading leads. Please try again.</p></td></tr>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLeads('overall');
+            loadFilterCategories();
+        });
+    </script>
+
+    <!-- ── WhatsApp Template Picker Modal ── -->
+    <div class="modal fade" id="waTplModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:14px;overflow:hidden">
+          <div class="modal-header" style="background:linear-gradient(135deg,#25d366,#128c7e);border:none">
+            <div class="d-flex align-items-center gap-3">
+              <div style="width:38px;height:38px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="fab fa-whatsapp" style="font-size:20px;color:#fff"></i>
+              </div>
+              <div>
+                <div style="font-size:15px;font-weight:800;color:#fff" id="waTplModalTitle">Send WhatsApp Message</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.8)" id="waTplModalSub">Pick a message template</div>
+              </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" style="padding:20px;max-height:68vh;overflow-y:auto">
+            <!-- Search -->
+            <div style="margin-bottom:14px;position:relative">
+              <input type="text" id="waTplSearch" class="form-control form-control-sm" placeholder="Search templates…" oninput="_filterWaTpls()" style="padding-left:32px">
+              <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px"></i>
+            </div>
+            <div id="waTplList">
+              <div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading templates…</div>
+            </div>
+          </div>
+          <div class="modal-footer" style="background:#f8fafc;border-top:1px solid #e2e8f0;gap:10px">
+            <div style="flex:1;font-size:12px;color:#64748b" id="waTplSelectedNote">Select a template above to preview, then click Send.</div>
+            <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button class="btn btn-sm btn-wa" id="waTplSendBtn" onclick="_sendSelectedWATpl()" disabled>
+              <i class="fab fa-whatsapp me-1"></i> Open WhatsApp
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    // ── WA Template Picker (partner_my_leads.html) ──
+    let _waTplAll = null;         // cached template list
+    let _waTplPhone = '';         // current lead phone
+    let _waTplLeadName = '';      // current lead name
+    let _waTplSelected = null;    // currently selected template object
+
+    function _fmtPhoneWA(raw) {
+      const digits = (raw || '').replace(/\D/g, '');
+      if (digits.length === 10) return '91' + digits;
+      if (digits.length === 12 && digits.startsWith('91')) return digits;
+      if (digits.length === 11 && digits.startsWith('0')) return '91' + digits.slice(1);
+      return digits;
+    }
+
+    function _substituteWATpl(text, name, phone) {
+      return (text || '')
+        .replace(/\{\{name\}\}/gi, name || 'Customer')
+        .replace(/\{\{phone\}\}/gi, phone || '')
+        .replace(/\{\{custom_1\}\}/gi, name || 'Customer')
+        .replace(/\{\{custom_2\}\}/gi, '')
+        .replace(/\{\{1\}\}/gi, name || 'Customer')
+        .replace(/\{\{2\}\}/gi, phone || '');
+    }
+
+    async function openWATemplates(phone, name, leadId, segment) {
+      _waTplPhone = phone;
+      _waTplLeadName = name;
+      _waTplSelected = null;
+      document.getElementById('waTplModalSub').textContent = `To: ${name} · ${phone}`;
+      document.getElementById('waTplSearch').value = '';
+      document.getElementById('waTplSendBtn').disabled = true;
+      document.getElementById('waTplSelectedNote').textContent = 'Select a template above to preview, then click Send.';
+      new bootstrap.Modal(document.getElementById('waTplModal')).show();
+      if (!_waTplAll) await _fetchWATpls();
+      _renderWATpls(segment || '');
+    }
+
+    async function _fetchWATpls() {
+      document.getElementById('waTplList').innerHTML =
+        '<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading templates…</div>';
+      try {
+        const resp = await fetch('/api/v1/partner/wa-templates', getAuthFetchOptions());
+        const data = await resp.json();
+        _waTplAll = data.success ? (data.templates || []) : [];
+      } catch(e) {
+        _waTplAll = [];
+        document.getElementById('waTplList').innerHTML =
+          '<div class="alert alert-warning">Could not load templates. Please try again.</div>';
+      }
+    }
+
+    function _filterWaTpls() {
+      _renderWATpls('', document.getElementById('waTplSearch').value);
+    }
+
+    function _renderWATpls(segment, search) {
+      const q = (search || '').toLowerCase();
+      let tpls = (_waTplAll || []).filter(t => {
+        if (!t.is_active) return false;
+        if (q && !t.name.toLowerCase().includes(q) && !(t.body_text || '').toLowerCase().includes(q)) return false;
+        return true;
+      });
+      // Prefer segment-matching templates first
+      if (segment) {
+        const seg = segment.toLowerCase().replace(/[\s\/]/g, '_');
+        tpls.sort((a, b) => {
+          const aMatch = (a.segment || '').toLowerCase().includes(seg) ? 0 : 1;
+          const bMatch = (b.segment || '').toLowerCase().includes(seg) ? 0 : 1;
+          return aMatch - bMatch;
+        });
+      }
+      if (!tpls.length) {
+        document.getElementById('waTplList').innerHTML =
+          '<div class="text-center py-4 text-muted">No templates found.</div>';
+        return;
+      }
+      document.getElementById('waTplList').innerHTML = tpls.map(t => {
+        const preview = _substituteWATpl(t.body_text, _waTplLeadName, _waTplPhone);
+        return `<div class="wa-tpl-item" id="waTpl_${t.id}" onclick="_selectWATpl(${t.id})">
+          <div class="d-flex align-items-start justify-content-between gap-2">
+            <div style="min-width:0">
+              <div class="wa-tpl-name">${t.name}</div>
+              <span class="wa-tpl-segment">${t.segment || 'general'}</span>
+              <div class="wa-tpl-body">${preview}</div>
+            </div>
+            <div style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:2px solid #cbd5e1;display:flex;align-items:center;justify-content:center;margin-top:2px" id="waTplChk_${t.id}"></div>
+          </div>
+        </div>`;
+      }).join('');
+      // Re-apply selection if any
+      if (_waTplSelected) {
+        const el = document.getElementById('waTpl_' + _waTplSelected.id);
+        if (el) {
+          el.classList.add('selected');
+          const chk = document.getElementById('waTplChk_' + _waTplSelected.id);
+          if (chk) { chk.style.background='#25d366'; chk.style.borderColor='#25d366'; chk.innerHTML='<i class="fas fa-check" style="font-size:10px;color:#fff"></i>'; }
+        }
+      }
+    }
+
+    function _selectWATpl(id) {
+      const t = (_waTplAll || []).find(x => x.id === id);
+      if (!t) return;
+      _waTplSelected = t;
+      // Deselect all
+      document.querySelectorAll('.wa-tpl-item').forEach(el => { el.classList.remove('selected'); });
+      document.querySelectorAll('[id^="waTplChk_"]').forEach(el => { el.style.background=''; el.style.borderColor='#cbd5e1'; el.innerHTML=''; });
+      // Select this one
+      const el = document.getElementById('waTpl_' + id);
+      if (el) el.classList.add('selected');
+      const chk = document.getElementById('waTplChk_' + id);
+      if (chk) { chk.style.background='#25d366'; chk.style.borderColor='#25d366'; chk.innerHTML='<i class="fas fa-check" style="font-size:10px;color:#fff"></i>'; }
+      // Expand body
+      const body = el ? el.querySelector('.wa-tpl-body') : null;
+      if (body) body.classList.add('expanded');
+      const preview = _substituteWATpl(t.body_text, _waTplLeadName, _waTplPhone);
+      document.getElementById('waTplSelectedNote').textContent = `"${t.name}" selected — will open WhatsApp with this message.`;
+      document.getElementById('waTplSendBtn').disabled = false;
+    }
+
+    function _sendSelectedWATpl() {
+      if (!_waTplSelected || !_waTplPhone) return;
+      const msg = _substituteWATpl(_waTplSelected.body_text, _waTplLeadName, _waTplPhone);
+      const waPhone = _fmtPhoneWA(_waTplPhone);
+      const url = `https://wa.me/${waPhone}?text=${encodeURIComponent(msg)}`;
+      window.open(url, '_blank');
+      bootstrap.Modal.getInstance(document.getElementById('waTplModal'))?.hide();
+    }
+    </script>
+</body>
+</html>

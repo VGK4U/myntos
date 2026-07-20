@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income Verified - Super Admin & Finance Admin - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .income-card { border-radius: 10px; margin-bottom: 10px; padding: 15px; background: white; }
+        .admin-verified { border-left: 4px solid #3b82f6; }
+        .super-admin-verified { border-left: 4px solid #10b981; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1"><i class="bi bi-shield-check"></i> Income Verified</span>
+            <div>
+                <span class="text-white me-3" id="adminInfo">Loading...</span>
+                <a href="/admin/dashboard" class="btn btn-outline-light btn-sm" id="dashboardBtn">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div id="filterComponentContainer"></div>
+
+        <div class="alert alert-info mt-3">
+            <strong id="workflowInfo">Loading workflow...</strong>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-primary" onclick="loadVerifiedIncomes('Admin Verified')">Admin Verified</button>
+                    <button class="btn btn-outline-success" onclick="loadVerifiedIncomes('Super Admin Verified')">Transfer Queue</button>
+                </div>
+                <button class="btn btn-success ms-3" id="actionButton" onclick="performAction()">Action</button>
+            </div>
+        </div>
+
+        <div id="incomeList"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const API_BASE = '/api/v1';
+        let authToken = localStorage.getItem('authToken');
+        let userRole = '';
+        let selectedIncomes = [];
+        let currentStatus = 'Admin Verified';
+
+        // Debug: Log initial state
+        console.log('Page loaded - Initial authToken:', authToken ? 'Present (' + authToken.substring(0, 20) + '...)' : 'MISSING');
+
+        $(document).ready(function() {
+            console.log('Document ready - Starting initialization');
+            
+            // Load user info IMMEDIATELY (don't wait for filter component)
+            loadUserInfo();
+            
+            // Load filter component asynchronously (optional)
+            $('#filterComponentContainer').load('/components/admin_user_filter.html', function(response, status, xhr) {
+                if (status === "error") {
+                    console.warn('Filter component failed to load:', xhr.status, xhr.statusText);
+                } else {
+                    console.log('Filter component loaded successfully');
+                }
+            });
+        });
+
+        function loadFilteredData(params) {
+            loadVerifiedIncomes(currentStatus, params.user_id, params.page, params.per_page);
+        }
+
+        function loadUserInfo() {
+            console.log('loadUserInfo called');
+            console.log('Calling /api/v1/users/profile with token:', authToken ? 'Present' : 'MISSING');
+            
+            $.ajax({
+                url: `${API_BASE}/users/profile`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    console.log('Profile API response:', data);
+                    
+                    // Profile API returns data.data (not data.user)
+                    const user = data.data || data.user;
+                    
+                    if (data.success && user) {
+                        userRole = user.user_type;
+                        console.log('User role set to:', userRole);
+                        $('#adminInfo').text(`${user.name} (${userRole})`);
+                        
+                        let dashboardUrl = '/admin/dashboard';
+                        if (userRole === 'Super Admin') {
+                            dashboardUrl = '/superadmin/dashboard';
+                            $('#workflowInfo').html('<strong>Super Admin:</strong> Review Admin-verified incomes and approve for Finance processing');
+                            $('#actionButton').html('<i class="bi bi-check-circle"></i> Super Admin Approve');
+                            console.log('Loading Admin Verified incomes for Super Admin');
+                            loadVerifiedIncomes('Admin Verified');
+                        } else if (userRole === 'Finance Admin') {
+                            dashboardUrl = '/finance/dashboard';
+                            $('#workflowInfo').html('<strong>Finance Admin:</strong> Process Transfer Queue - Credit incomes to user wallets and create withdrawal records');
+                            $('#actionButton').html('<i class="bi bi-cash"></i> Process Payment');
+                            console.log('Loading Transfer Queue for Finance Admin');
+                            loadVerifiedIncomes('Super Admin Verified');
+                        } else if (userRole === 'RVZ ID') {
+                            dashboardUrl = '/rvz/dashboard';
+                            
+                            // RVZ ID has access to all stages - determine which based on current URL
+                            const currentPath = window.location.pathname;
+                            
+                            if (currentPath.includes('/finance/income/payment')) {
+                                // Finance stage: Process payments
+                                $('#workflowInfo').html('<strong>RVZ ID (Finance Stage):</strong> Process Transfer Queue - Credit incomes to user wallets and create withdrawal records');
+                                $('#actionButton').html('<i class="bi bi-cash"></i> Process Payment');
+                                console.log('Loading Transfer Queue for RVZ ID (Finance Stage)');
+                                loadVerifiedIncomes('Super Admin Verified');
+                            } else {
+                                // Super Admin stage: Verify incomes
+                                $('#workflowInfo').html('<strong>RVZ ID (Super Admin Stage):</strong> Review Admin-verified incomes and approve for Finance processing');
+                                $('#actionButton').html('<i class="bi bi-check-circle"></i> Super Admin Approve');
+                                console.log('Loading Admin Verified incomes for RVZ ID (Super Admin Stage)');
+                                loadVerifiedIncomes('Admin Verified');
+                            }
+                        } else {
+                            console.log('User role not authorized:', userRole);
+                            $('#workflowInfo').html('View verified incomes (Read-only)');
+                            $('#actionButton').hide();
+                            loadVerifiedIncomes('Admin Verified');
+                        }
+                        
+                        $('#dashboardBtn').attr('href', dashboardUrl);
+                    } else {
+                        console.error('Profile API returned invalid data:', data);
+                        window.location.href = '/login';
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Profile API error:', {xhr, status, error});
+                    alert('Authentication failed. Please login again.');
+                    window.location.href = '/login';
+                }
+            });
+        }
+
+        function loadVerifiedIncomes(status, userId = null, page = 1, perPage = 20) {
+            currentStatus = status;
+            // WVV WORKFLOW: Use Transfer Queue endpoint for Finance stage
+            const endpoint = status === 'Admin Verified' ? 'income-verification/super-admin/pending-incomes' : 'income-verification/finance-admin/transfer-queue';
+            const params = new URLSearchParams({ page, per_page: perPage });
+            if (userId) params.append('user_id', userId);
+            
+            console.log('Loading data from endpoint:', endpoint);
+            
+            $.ajax({
+                url: `${API_BASE}/${endpoint}?${params.toString()}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    console.log('API response:', response);
+                    if (response.success) {
+                        renderIncomeList(response.data);
+                        if (response.pagination && typeof UserFilter !== 'undefined') {
+                            UserFilter.updatePagination(response.pagination.total || response.data.length, page, perPage);
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    console.error('API error:', xhr);
+                    $('#incomeList').html(`<div class="alert alert-danger">Error: ${xhr.responseJSON?.detail || 'Failed to load data'}</div>`);
+                }
+            });
+        }
+
+        function renderIncomeList(incomes) {
+            if (!incomes || incomes.length === 0) {
+                $('#incomeList').html('<div class="alert alert-info">No incomes found in queue</div>');
+                return;
+            }
+
+            // WVV PROTOCOL: Group incomes by DATE (one row per date)
+            const dateGroups = {};
+            const incomeIdsByDate = {};
+            
+            incomes.forEach(income => {
+                const date = new Date(income.business_date).toLocaleDateString();
+                const dateKey = new Date(income.business_date).toISOString().split('T')[0];
+                
+                if (!dateGroups[dateKey]) {
+                    dateGroups[dateKey] = {
+                        date: date,
+                        dateKey: dateKey,
+                        user_id: income.user_id,
+                        totalGross: 0,
+                        totalNet: 0,
+                        status: income.status || currentStatus,
+                        incomeTypes: new Set()
+                    };
+                    incomeIdsByDate[dateKey] = [];
+                }
+                
+                dateGroups[dateKey].totalGross += parseFloat(income.gross_amount || 0);
+                dateGroups[dateKey].totalNet += parseFloat(income.net_amount || 0);
+                dateGroups[dateKey].incomeTypes.add(income.income_type);
+                incomeIdsByDate[dateKey].push(income.id);
+            });
+
+            // Convert to array and sort by date (newest first)
+            const dateGroupsArray = Object.values(dateGroups).sort((a, b) => 
+                new Date(b.dateKey) - new Date(a.dateKey)
+            );
+
+            const html = dateGroupsArray.map(group => {
+                const incomeTypesList = Array.from(group.incomeTypes).join(', ');
+                const incomeIds = incomeIdsByDate[group.dateKey].join(',');
+                
+                return `
+                <div class="income-card ${currentStatus === 'Admin Verified' ? 'admin-verified' : 'super-admin-verified'}">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <input type="checkbox" class="form-check-input" value="${incomeIds}" onchange="toggleDateSelection('${incomeIds}')">
+                        </div>
+                        <div class="col-md-2">
+                            <strong>${group.user_id}</strong>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="badge bg-secondary">${group.date}</span>
+                        </div>
+                        <div class="col-md-2">
+                            <strong>₹${group.totalGross.toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong><br>
+                            <small class="text-muted">Net: ₹${group.totalNet.toLocaleString('en-IN', {minimumFractionDigits: 2})}</small>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">${incomeTypesList}</small>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="badge ${currentStatus === 'Admin Verified' ? 'bg-primary' : 'bg-warning'}">${group.status}</span>
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-sm btn-info" onclick="viewDateBreakdown('${group.user_id}', '${group.dateKey}')">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            }).join('');
+
+            $('#incomeList').html(html);
+        }
+
+        function toggleDateSelection(incomeIds) {
+            const ids = incomeIds.split(',').map(id => parseInt(id));
+            const allSelected = ids.every(id => selectedIncomes.includes(id));
+            
+            if (allSelected) {
+                // Deselect all
+                ids.forEach(id => {
+                    const index = selectedIncomes.indexOf(id);
+                    if (index > -1) selectedIncomes.splice(index, 1);
+                });
+            } else {
+                // Select all
+                ids.forEach(id => {
+                    if (!selectedIncomes.includes(id)) {
+                        selectedIncomes.push(id);
+                    }
+                });
+            }
+        }
+
+        function viewDateBreakdown(userId, businessDate) {
+            // Show modal with date-specific income breakdown
+            const modalHtml = `
+                <div class="modal fade" id="dateBreakdownModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">
+                                    <i class="bi bi-calendar"></i> Income Breakdown - ${businessDate}
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body" id="breakdownContent">
+                                <div class="text-center py-4">
+                                    <div class="spinner-border text-primary"></div>
+                                    <p class="mt-2">Loading breakdown...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Remove existing modal if any
+            $('#dateBreakdownModal').remove();
+            $('body').append(modalHtml);
+            
+            const modal = new bootstrap.Modal(document.getElementById('dateBreakdownModal'));
+            modal.show();
+            
+            // Fetch breakdown from API
+            $.ajax({
+                url: `${API_BASE}/withdrawals/admin/date-wise-income-breakdown?user_id=${userId}&business_date=${businessDate}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    if (data.success) {
+                        let html = `
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <h6 class="text-primary">User: ${data.user_id}</h6>
+                                    <p class="mb-0">Date: ${new Date(data.business_date).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            
+                            <h6 class="text-danger border-bottom pb-2 mt-3">
+                                <i class="bi bi-receipt"></i> Income Breakdown (GROSS & NET)
+                            </h6>
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Income Type</th>
+                                        <th class="text-end">GROSS</th>
+                                        <th class="text-end">Deductions</th>
+                                        <th class="text-end text-success">NET</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        
+                        data.breakdown_by_type.forEach(item => {
+                            html += `
+                                <tr>
+                                    <td><strong>${item.income_type}</strong></td>
+                                    <td class="text-end">₹${item.gross.toLocaleString('en-IN')}</td>
+                                    <td class="text-end text-danger">-₹${item.total_deductions.toLocaleString('en-IN')}</td>
+                                    <td class="text-end text-success fw-bold">₹${item.net.toLocaleString('en-IN')}</td>
+                                </tr>
+                            `;
+                        });
+                        
+                        const totals = data.totals;
+                        html += `
+                                <tr class="table-primary fw-bold">
+                                    <td>TOTAL</td>
+                                    <td class="text-end">₹${totals.gross.toLocaleString('en-IN')}</td>
+                                    <td class="text-end text-danger">-₹${totals.total_deductions.toLocaleString('en-IN')}</td>
+                                    <td class="text-end text-success">₹${totals.net.toLocaleString('en-IN')}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="alert alert-info mt-3">
+                            <strong>WVV Protocol:</strong> This shows income earned on ${new Date(data.business_date).toLocaleDateString()} only (not all-time totals).
+                        </div>
+                        `;
+                        
+                        $('#breakdownContent').html(html);
+                    } else {
+                        $('#breakdownContent').html('<div class="alert alert-warning">No data available</div>');
+                    }
+                },
+                error: function() {
+                    $('#breakdownContent').html('<div class="alert alert-danger">Error loading breakdown</div>');
+                }
+            });
+        }
+
+        function toggleSelection(id) {
+            const index = selectedIncomes.indexOf(id);
+            if (index > -1) {
+                selectedIncomes.splice(index, 1);
+            } else {
+                selectedIncomes.push(id);
+            }
+        }
+
+        function performAction() {
+            if (selectedIncomes.length === 0) {
+                alert('Please select at least one income');
+                return;
+            }
+
+            console.log('performAction called');
+            console.log('userRole:', userRole);
+            console.log('selectedIncomes:', selectedIncomes);
+
+            // Determine which function to call based on role AND current page
+            const currentPath = window.location.pathname;
+            
+            if (userRole === 'RVZ ID') {
+                // RVZ ID: Check which page we're on
+                if (currentPath.includes('/finance/income/payment')) {
+                    console.log('RVZ ID on Finance page - calling financeAdminProcess()');
+                    financeAdminProcess();
+                } else {
+                    console.log('RVZ ID on Super Admin page - calling superAdminVerify()');
+                    superAdminVerify();
+                }
+            } else if (userRole === 'Super Admin') {
+                superAdminVerify();
+            } else if (userRole === 'Finance Admin') {
+                financeAdminProcess();
+            } else {
+                alert('Your role (' + userRole + ') is not authorized to perform this action');
+            }
+        }
+
+        function superAdminVerify() {
+            console.log('superAdminVerify called');
+            console.log('API_BASE:', API_BASE);
+            console.log('authToken:', authToken ? 'Present' : 'MISSING');
+            console.log('selectedIncomes:', selectedIncomes);
+
+            if (!authToken) {
+                alert('Authentication token missing. Please refresh the page and login again.');
+                return;
+            }
+
+            $.ajax({
+                url: `${API_BASE}/income-verification/super-admin/verify`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({ pending_income_ids: selectedIncomes }),
+                success: function(response) {
+                    console.log('Verification success:', response);
+                    alert('✅ Super Admin verification successful!\n\n' + response.message + '\n\nRecords moved to Finance Admin queue.');
+                    selectedIncomes = [];
+                    loadVerifiedIncomes('Admin Verified');
+                },
+                error: function(xhr) {
+                    console.error('Verification error:', xhr);
+                    const errorMsg = xhr.responseJSON?.detail || xhr.statusText || 'Failed to verify';
+                    alert('❌ Error: ' + errorMsg + '\n\nPlease check console for details (F12)');
+                }
+            });
+        }
+
+        function financeAdminProcess() {
+            $.ajax({
+                url: `${API_BASE}/income-verification/finance-admin/process-payment`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({ pending_income_ids: selectedIncomes }),
+                success: function(response) {
+                    alert(`Payment processed! ₹${response.total_paid || 0} credited to ${response.processed_count || 0} users.`);
+                    selectedIncomes = [];
+                    loadVerifiedIncomes('Super Admin Verified');
+                },
+                error: function(xhr) {
+                    alert('Error: ' + (xhr.responseJSON?.detail || 'Failed to process payment'));
+                }
+            });
+        }
+    </script>
+</body>
+</html>

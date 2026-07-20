@@ -1,0 +1,237 @@
+<div class="main-content" id="mainContent">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1><i class="fas fa-money-check-alt"></i> 💰 Finance Completion (Final Step)</h1>
+        <p>Process Super Admin Verified incomes → Mark as Completed → Credit wallets → Auto-create withdrawals</p>
+    </div>
+
+    <!-- Workflow Info -->
+    <div class="workflow-info">
+        <h5><i class="fas fa-info-circle"></i> 3-Stage Income Approval Workflow (WVV)</h5>
+        <p>
+            <strong>Stage 1:</strong> Admin Verified → 
+            <strong>Stage 2:</strong> Super Admin Verified → 
+            <strong>Stage 3 (YOU ARE HERE):</strong> Finance Completion → Accounts Paid ✅
+        </p>
+        <p style="margin-top: 0.5rem;">
+            <strong>DC Protocol:</strong> This page shows ONLY "Super Admin Verified" incomes ready for final payment processing.
+            After processing, incomes are marked "Completed", wallets are credited in real-time, and withdrawal requests are auto-created.
+        </p>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-panel">
+        <h6 class="mb-3"><i class="fas fa-filter"></i> Filters</h6>
+        <div class="filter-row">
+            <div>
+                <label class="form-label">Date Range</label>
+                <select id="dateFilter" class="form-select">
+                    <option value="7">Last 7 Days</option>
+                    <option value="30" selected>Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                    <option value="all">All Time</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">User ID</label>
+                <input type="text" id="userIdFilter" class="form-control" placeholder="Search by User ID">
+            </div>
+            <div>
+                <label class="form-label">Income Type</label>
+                <select id="incomeTypeFilter" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="Direct Facilitation">Direct Facilitation</option>
+                    <option value="Group Performance Recognition">Group Performance Recognition</option>
+                    <option value="VED Leadership Recognition">VED Leadership Recognition</option>
+                    <option value="Mentorship Contribution Benefit">Mentorship Contribution Benefit</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">Package</label>
+                <select id="packageFilter" class="form-select">
+                    <option value="">All Packages</option>
+                    <option value="Plus">Plus</option>
+                    <option value="Deluxe">Deluxe</option>
+                    <option value="Premium">Premium</option>
+                </select>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-rvz-primary" onclick="applyFilters()">
+                <i class="fas fa-search"></i> Apply Filters
+            </button>
+            <button class="btn btn-rvz-secondary" onclick="resetFilters()">
+                <i class="fas fa-redo"></i> Reset
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="stats-row" id="statsRow">
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-value" id="statTotalIncomes">0</div>
+            <div class="stat-label">Total Incomes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value" id="statTotalUsers">0</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">₹</div>
+            <div class="stat-value" id="statTotalAmount">₹0</div>
+            <div class="stat-label">Total Amount</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value" id="statSelected">0</div>
+            <div class="stat-label">Selected</div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-container">
+        <div class="table-header">
+            <h5><i class="fas fa-list"></i> Super Admin Verified Incomes</h5>
+            <button class="btn btn-rvz-primary" onclick="processSelectedPayments()" id="processBtn" disabled>
+                <i class="fas fa-check-circle"></i> Process Payment (<span id="selectedCount">0</span>)
+            </button>
+        </div>
+        <div id="tableContent">
+            <div class="loading-spinner">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3">Loading incomes...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/public/js/admin-id-utils.js"></script>
+<script>
+    const API_BASE_URL = '/api/v1';
+    let allIncomes = [];
+    let selectedIncomeIds = new Set();
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        await loadUserProfile();
+        await loadIncomes();
+    });
+
+    async function loadUserProfile() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/me-hybrid`, {
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                window.location.href = '/login';
+                return;
+            }
+            
+            const data = await response.json();
+            console.log('User profile loaded:', data);
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            window.location.href = '/login';
+        }
+    }
+
+    async function loadIncomes() {
+        try {
+            const dateFilter = document.getElementById('dateFilter').value;
+            const userIdFilter = document.getElementById('userIdFilter').value.trim();
+            const incomeTypeFilter = document.getElementById('incomeTypeFilter').value;
+            const packageFilter = document.getElementById('packageFilter').value;
+
+            let url = `${API_BASE_URL}/income-verification/pending-incomes?verification_status=Super Admin Verified`;
+            
+            if (dateFilter !== 'all') {
+                const daysAgo = new Date();
+                daysAgo.setDate(daysAgo.getDate() - parseInt(dateFilter));
+                url += `&start_date=${daysAgo.toISOString().split('T')[0]}`;
+            }
+            
+            if (userIdFilter) url += `&user_id=${userIdFilter}`;
+            if (incomeTypeFilter) url += `&income_type=${encodeURIComponent(incomeTypeFilter)}`;
+            if (packageFilter) url += `&package=${packageFilter}`;
+
+            const response = await fetch(url, { credentials: 'include' });
+            
+            if (!response.ok) {
+                throw new Error('Failed to load incomes');
+            }
+            
+            const data = await response.json();
+            allIncomes = data.incomes || [];
+            
+            renderIncomes();
+            updateStatistics();
+        } catch (error) {
+            console.error('Error loading incomes:', error);
+            document.getElementById('tableContent').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h5>Error Loading Incomes</h5>
+                    <p>${error.message}</p>
+                </div>
+            `;
+        }
+    }
+
+    function renderIncomes() {
+        if (allIncomes.length === 0) {
+            document.getElementById('tableContent').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h5>No Incomes Found</h5>
+                    <p>No Super Admin Verified incomes awaiting finance completion.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const tableHTML = `
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>
+                            <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll()">
+                        </th>
+                        <th>User ID</th>
+                        <th>Name</th>
+                        <th>Income Date</th>
+                        <th>Type</th>
+                        <th>Package</th>
+                        <th>Gross Amount</th>
+                        <th>Deductions (12%)</th>
+                        <th>Net Amount</th>
+                        <th>Approved By</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${allIncomes.map(income => `
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input income-checkbox" 
+                                       value="${income.id}" 
+                                       onchange="toggleIncomeSelection(${income.id})"
+                                       ${selectedIncomeIds.has(income.id) ? 'checked' : ''}>
+                            </td>
+                            <td><strong>${income.user_id || 'N/A'}</strong></td>
+                            <td>${income.user_name || 'N/A'}</td>
+                            <td>${formatDate(income.income_date)}</td>
+                            <td>${income.income_type || 'N/A'}</td>
+                            <td>${income.package_name || 'N/A'}</td>
+                            <td>₹${formatAmount(income.gross_amount)}</td>
+                            <td>₹${formatAmount(income.total_deduction)}</td>
+                            <td><strong>₹${formatAmount(income.net_amount)}</strong></td>
+                            <td>${income.super_admin_verified_by || 'N/A'}</td>
+                            <td><span class="status-badge status-super-admin">${income.verification_status}</span></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>

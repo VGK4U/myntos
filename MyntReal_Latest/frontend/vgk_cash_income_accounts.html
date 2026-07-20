@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGK Cash Income — Accounts Release</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;background:#eff6ff}
+        .main-content{padding:24px}
+        .page-header{background:linear-gradient(135deg,#1e3a5f,#1d4ed8);border-radius:14px;padding:24px 28px;color:#fff;margin-bottom:24px}
+        .page-header h1{font-size:22px;font-weight:800;margin-bottom:6px}
+        .page-header p{font-size:14px;opacity:.85;margin:0}
+        .workflow-steps{display:flex;gap:0;margin-bottom:24px;border-radius:10px;overflow:hidden;border:1.5px solid #bfdbfe}
+        .step{flex:1;padding:12px 16px;background:#eff6ff;font-size:12px;font-weight:600;color:#6b7280;text-align:center;border-right:1.5px solid #bfdbfe}
+        .step:last-child{border-right:none}
+        .step.done{background:#dbeafe;color:#1e40af}
+        .step.active{background:#1d4ed8;color:#fff}
+        .summary-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+        .sum-card{flex:1;min-width:140px;background:#fff;border-radius:12px;padding:16px 18px;border:1.5px solid #bfdbfe;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        .sum-card .label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+        .sum-card .value{font-size:22px;font-weight:800;color:#1d4ed8}
+        .filter-row{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+        .filter-row input{border:1.5px solid #bfdbfe;border-radius:8px;padding:8px 12px;font-size:13px;outline:none}
+        .table-wrap{background:#fff;border-radius:12px;border:1.5px solid #bfdbfe;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        table{width:100%;border-collapse:collapse}
+        thead tr{background:#eff6ff}
+        th{padding:12px 14px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;border-bottom:1.5px solid #bfdbfe;white-space:nowrap}
+        td{padding:11px 14px;font-size:13px;color:#374151;border-bottom:1px solid #eff6ff;vertical-align:middle}
+        tr:last-child td{border-bottom:none}
+        tr:hover td{background:#f8fafc}
+        .badge-pending{background:#dbeafe;color:#1e40af;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
+        .badge-released{background:#d1fae5;color:#065f46;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
+        .level-pill{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700}
+        .deduction-pill{background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700}
+        .btn-release{background:#1d4ed8;color:#fff;border:none;border-radius:7px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer}
+        .btn-release:hover{background:#1e40af}
+        .empty-state{padding:48px;text-align:center;color:#9ca3af}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center}
+        .modal-overlay.show{display:flex}
+        .modal-box{background:#fff;border-radius:14px;padding:28px;width:500px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+        .modal-title{font-size:16px;font-weight:800;color:#111;margin-bottom:16px}
+        .breakdown-card{background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:16px;margin-bottom:16px}
+        .breakdown-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #dbeafe;font-size:13px}
+        .breakdown-row:last-child{border-bottom:none;font-weight:800;font-size:15px;color:#1d4ed8}
+        .form-label{font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;display:block}
+        textarea{width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;resize:vertical}
+        textarea:focus{border-color:#1d4ed8}
+        .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+        .btn-cancel-modal{background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
+        .btn-proceed-release{background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer}
+        .toast-wrap{position:fixed;top:70px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+        .toast-msg{background:#111;color:#fff;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:600}
+        .toast-msg.success{background:#059669}
+        .toast-msg.error{background:#dc2626}
+        @media(max-width:768px){.summary-row{flex-direction:column}}
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+
+    <div class="page-header">
+        <h1><i class="fas fa-hand-holding-usd me-2"></i>Cash Income — Accounts Release</h1>
+        <p>Release PENDING income entries. Apply 8% admin charges + 2% TDS and credit net payout to member wallets.</p>
+    </div>
+
+    <div class="workflow-steps">
+        <div class="step done"><i class="fas fa-check me-1"></i>1. DRAFT — Sales Confirmed</div>
+        <div class="step active"><i class="fas fa-clock me-1"></i>2. PENDING (You are here)</div>
+        <div class="step"><i class="fas fa-check-double me-1"></i>3. RELEASED — Paid</div>
+    </div>
+
+    <div class="summary-row">
+        <div class="sum-card"><div class="label">Pending Entries</div><div class="value" id="sumPending">—</div></div>
+        <div class="sum-card"><div class="label">Total Gross (Pending)</div><div class="value" id="sumGross">—</div></div>
+        <div class="sum-card"><div class="label">Estimated Net Payout</div><div class="value" style="color:#059669" id="sumNet">—</div></div>
+        <div class="sum-card"><div class="label">TDS + Admin (10%)</div><div class="value" style="color:#d97706" id="sumDeductions">—</div></div>
+    </div>
+
+    <div class="filter-row">
+        <input type="text" id="searchInput" placeholder="Search partner, client, entry #…" oninput="filterTable()" style="min-width:220px">
+        <button onclick="loadPending()" style="background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer"><i class="fas fa-sync me-1"></i>Refresh</button>
+        <span id="lastRefresh" style="font-size:11px;color:#9ca3af"></span>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Entry #</th>
+                    <th>Partner</th>
+                    <th>Level</th>
+                    <th>Client</th>
+                    <th>Gross Income</th>
+                    <th>Admin (8%)</th>
+                    <th>TDS (2%)</th>
+                    <th>Net Payout</th>
+                    <th>Confirmed</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="pendingBody">
+                <tr><td colspan="10" class="empty-state"><i class="fas fa-spinner fa-spin fa-2x"></i></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Release Modal -->
+<div class="modal-overlay" id="releaseModal">
+    <div class="modal-box">
+        <div class="modal-title"><i class="fas fa-money-bill-wave me-2" style="color:#1d4ed8"></i>Release Cash Income Payout</div>
+        <div class="breakdown-card" id="breakdownCard"></div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;font-size:12px;color:#065f46;margin-bottom:14px">
+            <strong>On release:</strong> Admin charges (8%) and TDS (2%) will be deducted from gross income. Net amount remains in the member's wallet as spendable balance. The member's Earned Income total will increase by the net payout.
+        </div>
+        <label class="form-label">Release Notes (optional)</label>
+        <textarea id="releaseNotes" rows="2" placeholder="Transaction reference, UTR, remarks…"></textarea>
+        <div class="modal-actions">
+            <button class="btn-cancel-modal" onclick="closeModal()">Cancel</button>
+            <button class="btn-proceed-release" onclick="doRelease()"><i class="fas fa-paper-plane me-1"></i>Release Payout</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const API = '/api/v1';
+let companyId = null;
+let selectedEntry = null;
+let allRows = [];
+
+function getStaffToken() { return localStorage.getItem('staff_token') || getCookie('staff_token') || ''; }
+function getCookie(n) { const m = document.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : ''; }
+function staffLogout() { localStorage.clear(); document.cookie = 'staff_token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/'; location.href = '/staff/login'; }
+function showToast(msg, type='success') {
+    const t = document.createElement('div'); t.className = `toast-msg ${type}`; t.textContent = msg;
+    document.getElementById('toastWrap').appendChild(t); setTimeout(() => t.remove(), 4500);
+}
+function fmt(n) { return '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(s) { if (!s) return '—'; return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+
+async function initPage() {
+    const token = getStaffToken();
+    if (!token) { location.href = '/staff/login'; return; }
+    try {
+        const r = await fetch(`${API}/staff/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!r.ok) { location.href = '/staff/login'; return; }
+        const d = await r.json();
+        const emp = d.employee || d;
+        companyId = emp.company_id;
+    } catch (e) { console.error('[initPage]', e); location.href = '/staff/login'; return; }
+    await loadPending();
+}
+
+async function loadPending() {
+    const token = getStaffToken();
+    document.getElementById('pendingBody').innerHTML = '<tr><td colspan="10" class="empty-state"><i class="fas fa-spinner fa-spin fa-2x"></i></td></tr>';
+    try {
+        const r = await fetch(`${API}/vgk/staff/vgk/cash-income/pending?company_id=${companyId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await r.json();
+        document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+        allRows = d.data || [];
+        renderSummary(allRows);
+        renderTable(allRows);
+    } catch (e) {
+        document.getElementById('pendingBody').innerHTML = `<tr><td colspan="10" class="empty-state"><i class="fas fa-exclamation-triangle fa-2x"></i><br>${e.message}</td></tr>`;
+    }
+}
+
+function renderSummary(rows) {
+    let gross = 0, net = 0, deductions = 0;
+    rows.forEach(r => {
+        const g = Number(r.commission_amount||0);
+        const admin = g * 0.08;
+        const tds = g * 0.02;
+        gross += g; net += g - admin - tds; deductions += admin + tds;
+    });
+    document.getElementById('sumPending').textContent = rows.length;
+    document.getElementById('sumGross').textContent = fmt(gross);
+    document.getElementById('sumNet').textContent = fmt(net);
+    document.getElementById('sumDeductions').textContent = fmt(deductions);
+}
+
+function renderTable(rows) {
+    const tbody = document.getElementById('pendingBody');
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="empty-state"><i class="fas fa-check-circle fa-3x" style="color:#1d4ed8"></i><br><strong style="color:#1d4ed8">No pending entries.</strong></td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map(r => {
+        const g = Number(r.commission_amount||0);
+        const admin = g * 0.08; const tds = g * 0.02; const net = g - admin - tds;
+        return `<tr>
+            <td style="font-weight:700;font-family:monospace">${r.entry_number}</td>
+            <td><div style="font-weight:700">${r.partner_name||'—'}</div><div style="font-size:11px;color:#6b7280">${r.partner_code||''}</div></td>
+            <td><span class="level-pill">L${r.level}</span></td>
+            <td>${r.client_name||'—'}</td>
+            <td style="font-weight:700">${fmt(g)}</td>
+            <td><span class="deduction-pill">${fmt(admin)}</span></td>
+            <td><span class="deduction-pill">${fmt(tds)}</span></td>
+            <td style="font-weight:800;color:#059669">${fmt(net)}</td>
+            <td style="font-size:12px;color:#6b7280">${fmtDate(r.confirmed_at)}</td>
+            <td><button class="btn-release" onclick="openRelease(${JSON.stringify(r).replace(/"/g,'&quot;')})"><i class="fas fa-paper-plane me-1"></i>Release</button></td>
+        </tr>`;
+    }).join('');
+}
+
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    renderTable(allRows.filter(r =>
+        (r.entry_number||'').toLowerCase().includes(q) ||
+        (r.partner_name||'').toLowerCase().includes(q) ||
+        (r.partner_code||'').toLowerCase().includes(q) ||
+        (r.client_name||'').toLowerCase().includes(q)
+    ));
+}
+
+function openRelease(r) {
+    selectedEntry = r;
+    const g = Number(r.commission_amount||0);
+    const admin = g * 0.08; const tds = g * 0.02; const net = g - admin - tds;
+    document.getElementById('breakdownCard').innerHTML = `
+        <div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:10px">${r.entry_number} — ${r.partner_name||'—'} (${r.partner_code||''})</div>
+        <div class="breakdown-row"><span>Gross Commission Income</span><span style="font-weight:700">${fmt(g)}</span></div>
+        <div class="breakdown-row"><span>Admin Charges (8%)</span><span style="color:#d97706">- ${fmt(admin)}</span></div>
+        <div class="breakdown-row"><span>TDS Deduction (2%)</span><span style="color:#d97706">- ${fmt(tds)}</span></div>
+        <div class="breakdown-row"><span>Net Payout to Member</span><span style="color:#059669">${fmt(net)}</span></div>
+    `;
+    document.getElementById('releaseNotes').value = '';
+    document.getElementById('releaseModal').classList.add('show');
+}
+function closeModal() {
+    document.getElementById('releaseModal').classList.remove('show');
+    selectedEntry = null;
+}
+
+async function doRelease() {
+    if (!selectedEntry) return;
+    const token = getStaffToken();
+    const btn = document.querySelector('#releaseModal .btn-proceed-release');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Releasing…';
+    try {
+        const r = await fetch(`${API}/vgk/staff/vgk/cash-income/${selectedEntry.id}/release?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes: document.getElementById('releaseNotes').value })
+        });
+        const d = await r.json();
+        if (r.ok && d.success) {
+            const net = Number(d.net_payout||0);
+            showToast(`✅ ${selectedEntry.entry_number} released — Net ${fmt(net)} credited to wallet`, 'success');
+            closeModal(); loadPending();
+        } else {
+            showToast(d.detail || d.error || 'Release failed', 'error');
+        }
+    } catch (e) {
+        showToast('Network error: ' + e.message, 'error');
+    }
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Release Payout';
+}
+
+document.getElementById('releaseModal').addEventListener('click', e => { if (e.target === document.getElementById('releaseModal')) closeModal(); });
+document.addEventListener('DOMContentLoaded', async () => {
+    await StaffSidebar.init();
+    StaffHeader.inject('Cash Income — Accounts', 'fas fa-hand-holding-usd');
+    await initPage();
+});
+</script>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+</body>
+</html>

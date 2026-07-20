@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Routing - DC_PARTNER_001</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .top-header { height: 64px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .page-title { font-size: 18px; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .routing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 24px; }
+        .route-column { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 400px; }
+        .route-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 12px; }
+        .route-header i { font-size: 20px; }
+        .route-header.production { color: #f59e0b; }
+        .route-header.procurement { color: #3b82f6; }
+        .route-header.dispatch { color: #10b981; }
+        .route-header h3 { font-size: 16px; font-weight: 600; margin: 0; color: #1f2937; }
+        .route-header .count { background: #f3f4f6; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; color: #6b7280; margin-left: auto; }
+        .route-body { padding: 16px; max-height: 500px; overflow-y: auto; }
+        .order-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
+        .order-card:hover { border-color: #10b981; background: white; }
+        .order-card h4 { font-size: 14px; font-weight: 600; color: #1f2937; margin: 0 0 4px 0; }
+        .order-card p { font-size: 12px; color: #6b7280; margin: 0; }
+        .order-card .amount { font-size: 14px; font-weight: 700; color: #059669; margin-top: 8px; }
+        .route-actions { display: flex; gap: 8px; margin-top: 8px; }
+        .btn-route { padding: 6px 12px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+        .btn-production { background: #fef3c7; color: #b45309; }
+        .btn-procurement { background: #dbeafe; color: #1d4ed8; }
+        .btn-dispatch { background: #d1fae5; color: #059669; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #9ca3af; }
+        .empty-state i { font-size: 32px; margin-bottom: 12px; }
+        .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        .header-divider { width: 1px; height: 32px; background: #e5e7eb; margin: 0 8px; }
+        .user-info-header { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .user-info-header .user-avatar-sm { width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+        @media (max-width: 1024px) { .routing-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div class="top-header">
+            <div class="header-left">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" class="header-logo" onerror="this.style.display='none'">
+                <div class="header-divider"></div>
+                <h1 class="page-title"><i class="fas fa-route text-success"></i>Order Routing</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info-header" id="headerUserInfo">
+                    <div class="user-avatar-sm" id="headerUserInitials">--</div>
+                    <div class="user-info-details">
+                        <span class="user-info-name" id="headerUserName">Loading...</span>
+                        <div class="user-info-meta"><span class="user-info-role" id="headerUserRole">-</span></div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="StaffSidebar.logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="page-header">
+                <div><h1>Order Routing Dashboard</h1><p>Route approved orders to Production, Procurement, or Direct Dispatch</p></div>
+            </div>
+            
+            <div class="routing-grid">
+                <div class="route-column">
+                    <div class="route-header production"><i class="fas fa-industry"></i><h3>Production Queue</h3><span class="count" id="productionCount">0</span></div>
+                    <div class="route-body" id="productionQueue"></div>
+                </div>
+                <div class="route-column">
+                    <div class="route-header procurement"><i class="fas fa-shopping-cart"></i><h3>Procurement Queue</h3><span class="count" id="procurementCount">0</span></div>
+                    <div class="route-body" id="procurementQueue"></div>
+                </div>
+                <div class="route-column">
+                    <div class="route-header dispatch"><i class="fas fa-truck"></i><h3>Ready for Dispatch</h3><span class="count" id="dispatchCount">0</span></div>
+                    <div class="route-body" id="dispatchQueue"></div>
+                </div>
+            </div>
+            
+            <div class="card" style="background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div class="card-header" style="padding: 16px 20px; border-bottom: 1px solid #e5e7eb; font-weight: 600;"><i class="fas fa-clock me-2"></i>Approved Orders Pending Routing</div>
+                <div class="card-body" style="padding: 20px;">
+                    <div id="pendingRouting"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let allPartners = [];
+        const API_BASE = '/api/v1/partner';
+        
+        function getAuthToken() { return localStorage.getItem('staff_token'); }
+        
+        async function loadData() {
+            try {
+                const partnersRes = await fetch(API_BASE + '/partners', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
+                if (partnersRes.ok) {
+                    const data = await partnersRes.json();
+                    allPartners = data.data || [];
+                }
+                loadQueues();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        async function loadQueues() {
+            try {
+                const [productionRes, procurementRes, dispatchRes, pendingRes] = await Promise.all([
+                    fetch(`${API_BASE}/orders/queue/production`, { headers: { 'Authorization': `Bearer ${getAuthToken()}` } }),
+                    fetch(`${API_BASE}/orders/queue/procurement`, { headers: { 'Authorization': `Bearer ${getAuthToken()}` } }),
+                    fetch(`${API_BASE}/orders/queue/dispatch`, { headers: { 'Authorization': `Bearer ${getAuthToken()}` } }),
+                    fetch(`${API_BASE}/orders/routing-pending`, { headers: { 'Authorization': `Bearer ${getAuthToken()}` } })
+                ]);
+                
+                if (productionRes.ok) {
+                    const data = await productionRes.json();
+                    renderQueue('productionQueue', data.data || [], 'production');
+                    document.getElementById('productionCount').textContent = (data.data || []).length;
+                }
+                
+                if (procurementRes.ok) {
+                    const data = await procurementRes.json();
+                    renderQueue('procurementQueue', data.data || [], 'procurement');
+                    document.getElementById('procurementCount').textContent = (data.data || []).length;
+                }
+                
+                if (dispatchRes.ok) {
+                    const data = await dispatchRes.json();
+                    renderQueue('dispatchQueue', data.data || [], 'dispatch');
+                    document.getElementById('dispatchCount').textContent = (data.data || []).length;
+                }
+                
+                if (pendingRes.ok) {
+                    const data = await pendingRes.json();
+                    renderPendingRouting(data.data || []);
+                } else {
+                    document.getElementById('pendingRouting').innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No orders pending routing</p></div>';
+                }
+            } catch (error) {
+                console.error('Error loading queues:', error);
+            }
+        }
+        
+        function renderQueue(containerId, orders, type) {
+            const container = document.getElementById(containerId);
+            if (orders.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No orders in queue</p></div>';
+                return;
+            }
+            container.innerHTML = orders.map(o => {
+                const partner = allPartners.find(p => p.id === o.partner_id);
+                return `
+                    <div class="order-card">
+                        <h4>${o.order_number}</h4>
+                        <p>${partner ? partner.partner_name : 'Unknown'}</p>
+                        <div class="amount">₹${(o.grand_total || 0).toLocaleString()}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderPendingRouting(orders) {
+            const container = document.getElementById('pendingRouting');
+            if (orders.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>All orders have been routed</p></div>';
+                return;
+            }
+            container.innerHTML = orders.map(o => {
+                const partner = allPartners.find(p => p.id === o.partner_id);
+                return `
+                    <div class="order-card" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h4>${o.order_number} | PI: ${o.pi_number || '-'}</h4>
+                            <p>${partner ? partner.partner_name : 'Unknown'} | ₹${(o.grand_total || 0).toLocaleString()}</p>
+                        </div>
+                        <div class="route-actions">
+                            <button class="btn-route btn-production" onclick="routeOrder(${o.id}, 'production')"><i class="fas fa-industry me-1"></i>Production</button>
+                            <button class="btn-route btn-procurement" onclick="routeOrder(${o.id}, 'procurement')"><i class="fas fa-shopping-cart me-1"></i>Procurement</button>
+                            <button class="btn-route btn-dispatch" onclick="routeOrder(${o.id}, 'dispatch')"><i class="fas fa-truck me-1"></i>Direct Dispatch</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function routeOrder(orderId, route) {
+            try {
+                const response = await fetch(`${API_BASE}/orders/${orderId}/route`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAuthToken()}` },
+                    body: JSON.stringify({ route_type: route.toUpperCase() })
+                });
+                
+                if (response.ok) {
+                    loadQueues();
+                    alert(`Order routed to ${route} successfully!`);
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Routing failed'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => { StaffSidebar.init(); loadData(); });
+    </script>
+</body>
+</html>

@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Dreams - Property Marketplace</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2d5016;
+            --secondary-color: #4a7c23;
+            --accent-color: #f97316;
+            --bg-light: #f8fafc;
+            --text-dark: #1e293b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-light); color: var(--text-dark); }
+        
+        .navbar { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .navbar-brand { font-weight: 700; font-size: 1.3rem; color: var(--primary-color) !important; display: flex; align-items: center; gap: 8px; }
+        .navbar-brand img { height: 36px; }
+        .navbar-brand .brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+        .navbar-brand .brand-name { font-size: 1.1rem; font-weight: 700; color: var(--primary-color); }
+        .navbar-brand .brand-tagline { font-size: 0.65rem; color: #6b7280; font-weight: 500; }
+        .nav-link { color: #374151 !important; font-weight: 500; }
+        .nav-link:hover { color: var(--primary-color) !important; }
+        .btn-login { background: var(--primary-color); color: white !important; border-radius: 8px; padding: 8px 16px; }
+        .btn-login:hover { background: var(--secondary-color); }
+        
+        .banner-carousel-wrapper {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        }
+        .banner-carousel { max-height: 100px; overflow: hidden; }
+        .banner-slide { display: none; padding: 16px; text-align: center; color: white; min-height: 80px; align-items: center; justify-content: center; }
+        .banner-slide.active { display: flex; }
+        .banner-slide h2 { font-size: 1.2rem; font-weight: 700; margin: 0; }
+        .banner-slide p { font-size: 0.85rem; opacity: 0.9; margin: 4px 0 0; }
+        .banner-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.3); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; }
+        .banner-nav:hover { background: rgba(255,255,255,0.5); }
+        .banner-nav.prev { left: 8px; }
+        .banner-nav.next { right: 8px; }
+        .banner-dots { display: flex; justify-content: center; gap: 4px; padding-bottom: 6px; }
+        .banner-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); border: none; cursor: pointer; }
+        .banner-dot.active { background: white; }
+        
+        .main-layout { display: flex; gap: 20px; padding: 20px; max-width: 1400px; margin: 0 auto; }
+        
+        .filter-sidebar { width: 280px; flex-shrink: 0; }
+        .filter-sidebar .filter-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 20px; position: sticky; top: 120px; max-height: calc(100vh - 140px); overflow-y: auto; }
+        .filter-sidebar .filter-card::-webkit-scrollbar { width: 6px; }
+        .filter-sidebar .filter-card::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 3px; }
+        .filter-sidebar .filter-card::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        .filter-sidebar .filter-card::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
+        .filter-sidebar h5 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--primary-color); display: flex; align-items: center; gap: 8px; }
+        .filter-section-title { font-size: 0.7rem; text-transform: uppercase; color: #6b7280; font-weight: 600; margin-top: 16px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; }
+        .filter-section-title:first-child { margin-top: 0; }
+        .filter-sidebar .form-label { font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
+        .filter-sidebar .form-control, .filter-sidebar .form-select { font-size: 0.85rem; padding: 8px 10px; border-radius: 6px; }
+        .filter-sidebar .btn-apply { background: var(--primary-color); color: white; border: none; width: 100%; padding: 10px; border-radius: 8px; font-weight: 500; margin-top: 16px; }
+        .filter-sidebar .btn-apply:hover { background: var(--secondary-color); }
+        .filter-sidebar .btn-clear { background: #f3f4f6; color: #374151; border: none; width: 100%; padding: 8px; border-radius: 6px; font-size: 0.85rem; margin-top: 8px; }
+        .filter-sidebar .btn-clear:hover { background: #e5e7eb; }
+        
+        .properties-main { flex: 1; min-width: 0; }
+        .properties-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+        .properties-header h5 { margin: 0; font-weight: 600; }
+        .properties-header .sort-select { width: auto; font-size: 0.85rem; }
+        
+        .property-list { display: flex; flex-direction: column; gap: 16px; }
+        
+        .property-card-horizontal {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            transition: box-shadow 0.2s;
+        }
+        .property-card-horizontal:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+        
+        .property-image-section { width: 200px; min-width: 200px; height: 180px; position: relative; flex-shrink: 0; }
+        .property-image-section img { width: 100%; height: 100%; object-fit: cover; }
+        .property-image-section .placeholder-icon { display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%); color: #94a3b8; }
+        .property-price-badge { position: absolute; bottom: 10px; left: 10px; background: var(--primary-color); color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; }
+        .image-count-badge { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
+        .youtube-badge { position: absolute; top: 10px; right: 10px; background: #ff0000; color: white; width: 24px; height: 24px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+        
+        .property-content-section { flex: 1; padding: 16px; display: flex; flex-direction: column; }
+        .property-category-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+        .category-residential { background: #d1fae5; color: #065f46; }
+        .category-commercial { background: #dbeafe; color: #1e40af; }
+        .category-agricultural { background: #fef3c7; color: #92400e; }
+        .category-industrial { background: #e5e7eb; color: #374151; }
+        .category-mixed_use { background: #f3e8ff; color: #6b21a8; }
+        
+        .property-title { font-size: 1.1rem; font-weight: 600; color: var(--text-dark); margin-bottom: 4px; }
+        .property-location { color: #6b7280; font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+        .property-location i { color: var(--accent-color); }
+        
+        .property-features { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 8px; }
+        .feature-item { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: #6b7280; }
+        .feature-item i { color: var(--primary-color); }
+        
+        .property-meta { display: flex; align-items: center; gap: 8px; margin-top: auto; }
+        .employee-badge { background: #e5e7eb; color: #374151; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; }
+        .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+        .status-draft { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        
+        .property-actions { width: 180px; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; border-left: 1px solid #e5e7eb; }
+        .rating-section { text-align: center; margin-bottom: 8px; }
+        .rating-stars { color: #fbbf24; font-size: 14px; }
+        .rating-count { font-size: 0.75rem; color: #6b7280; }
+        .share-section { display: flex; justify-content: center; gap: 8px; margin-bottom: 12px; }
+        .share-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #e5e7eb; background: white; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; color: #6b7280; transition: all 0.2s; }
+        .share-btn:hover { background: #f3f4f6; color: var(--primary-color); }
+        .share-btn.whatsapp:hover { color: #25d366; }
+        .share-btn.facebook:hover { color: #1877f2; }
+        .share-btn.twitter:hover { color: #1da1f2; }
+        .share-btn.copy:hover { color: var(--primary-color); }
+        
+        .btn-enquire { background: var(--primary-color); color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 500; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: background 0.2s; }
+        .btn-enquire:hover { background: var(--secondary-color); }
+        
+        .no-properties { text-align: center; padding: 60px 20px; background: white; border-radius: 12px; }
+        .no-properties i { font-size: 4rem; color: #cbd5e1; margin-bottom: 16px; }
+        
+        .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding: 16px; background: white; border-radius: 8px; }
+        .page-info { color: #6b7280; font-size: 0.9rem; }
+        
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        
+        .footer { background: var(--primary-color); color: white; padding: 24px 0; margin-top: 40px; text-align: center; }
+        
+        .login-dropdown .dropdown-menu { min-width: 200px; padding: 8px; }
+        .login-dropdown .dropdown-item { padding: 10px 16px; border-radius: 6px; display: flex; align-items: center; gap: 10px; }
+        .login-dropdown .dropdown-item:hover { background: #f3f4f6; }
+        .login-dropdown .dropdown-item i { width: 20px; text-align: center; color: var(--primary-color); }
+        
+        /* Mobile Filter Toggle Button */
+        .mobile-filter-toggle {
+            display: none;
+            width: 100%;
+            padding: 12px 16px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-weight: 500;
+            color: #374151;
+            cursor: pointer;
+            margin-bottom: 16px;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .mobile-filter-toggle:hover { background: #f9fafb; }
+        .mobile-filter-toggle i { color: var(--primary-color); }
+        
+        @media (max-width: 991px) {
+            .main-layout { flex-direction: column; }
+            .filter-sidebar { width: 100%; display: none; }
+            .filter-sidebar.show-filters { display: block; }
+            .filter-sidebar .filter-card { position: static; }
+            .property-card-horizontal { flex-direction: column; }
+            .property-image-section { width: 100%; height: 200px; }
+            .property-actions { width: 100%; flex-direction: row; border-left: none; border-top: 1px solid #e5e7eb; }
+            .mobile-filter-toggle { display: flex; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" onerror="this.style.display='none'">
+                <span class="brand-text">
+                    <span class="brand-name">Real Dreams</span>
+                    <span class="brand-tagline">Powered by MyntReal</span>
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link active" href="#"><i class="fas fa-home me-1"></i> Properties</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/ecom" style="color:#2d5016;font-weight:500;"><i class="fas fa-store me-1"></i> EV Spares Marketplace</a></li>
+                    <li class="nav-item dropdown login-dropdown">
+                        <a class="nav-link dropdown-toggle btn-login" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-sign-in-alt me-1"></i> Login
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/login"><i class="fas fa-user"></i> User Login</a></li>
+                            <li><a class="dropdown-item" href="/staff/login"><i class="fas fa-id-badge"></i> Staff Login</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="banner-carousel-wrapper" id="bannerWrapper">
+        <div class="banner-carousel" id="bannerCarousel">
+            <div class="banner-slide active" id="defaultBanner">
+                <div class="container">
+                    <div class="d-flex flex-wrap justify-content-center align-items-center gap-3">
+                        <div>
+                            <h2 class="mb-0"><i class="fas fa-bicycle me-2"></i> BOOK THIS PROPERTY & GET A FREE E-BIKE!</h2>
+                            <p class="mb-0">Limited time offer on select properties</p>
+                        </div>
+                        <div class="d-none d-md-block" style="border-left: 2px solid rgba(255,255,255,0.4); height: 40px;"></div>
+                        <a href="tel:+918585852738" class="d-flex align-items-center gap-2 text-white text-decoration-none" style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 8px;">
+                            <i class="fas fa-phone-alt"></i>
+                            <span class="fw-bold">+91 85 85 85 27 38</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="banner-nav prev" onclick="prevBanner()" style="display:none;"><i class="fas fa-chevron-left"></i></button>
+        <button class="banner-nav next" onclick="nextBanner()" style="display:none;"><i class="fas fa-chevron-right"></i></button>
+        <div class="banner-dots" id="bannerDots"></div>
+    </div>
+
+    <div class="main-layout">
+        <button class="mobile-filter-toggle" id="mobileFilterToggle" onclick="toggleMobileFilters()">
+            <i class="fas fa-filter"></i>
+            <span id="filterToggleText">Show Filters</span>
+        </button>
+        <aside class="filter-sidebar" id="filterSidebar">
+            <div class="filter-card">
+                <h5><i class="fas fa-filter"></i> Filter Properties</h5>
+                
+                <div class="filter-section-title">Search</div>
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="filterSearch" placeholder="Search properties..." maxlength="100">
+                </div>
+                
+                <div class="filter-section-title">Property Type</div>
+                <div class="mb-3">
+                    <select class="form-select" id="filterPropertyType" onchange="applyFilters()">
+                        <option value="">All Types</option>
+                    </select>
+                </div>
+                
+                <div class="filter-section-title">Location</div>
+                <div class="mb-2">
+                    <input type="text" class="form-control" id="filterCity" placeholder="City" maxlength="50">
+                </div>
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="filterState" placeholder="State" maxlength="50">
+                </div>
+                
+                <div class="filter-section-title">Price Range</div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <input type="number" class="form-control" id="filterMinPrice" placeholder="Min" min="0">
+                    </div>
+                    <div class="col-6">
+                        <input type="number" class="form-control" id="filterMaxPrice" placeholder="Max" min="0">
+                    </div>
+                </div>
+                
+                <div class="filter-section-title">Bedrooms</div>
+                <div class="mb-3">
+                    <select class="form-select" id="filterBedrooms" onchange="applyFilters()">
+                        <option value="">Any</option>
+                        <option value="1">1+</option>
+                        <option value="2">2+</option>
+                        <option value="3">3+</option>
+                        <option value="4">4+</option>
+                        <option value="5">5+</option>
+                    </select>
+                </div>
+                
+                <div class="filter-section-title">Area (Sq.Ft.)</div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <input type="number" class="form-control" id="filterMinArea" placeholder="Min" min="0">
+                    </div>
+                    <div class="col-6">
+                        <input type="number" class="form-control" id="filterMaxArea" placeholder="Max" min="0">
+                    </div>
+                </div>
+                
+                <div class="filter-section-title">Possession</div>
+                <div class="mb-3">
+                    <select class="form-select" id="filterPossession" onchange="applyFilters()">
+                        <option value="">Any</option>
+                        <option value="READY">Ready to Move</option>
+                        <option value="UNDER_CONSTRUCTION">Under Construction</option>
+                        <option value="UPCOMING">Upcoming</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="filterFreeBike" onchange="applyFilters()">
+                        <label class="form-check-label" for="filterFreeBike">
+                            <i class="fas fa-bicycle text-success me-1"></i> Free Bike Offer Only
+                        </label>
+                    </div>
+                </div>
+                
+                <button class="btn-apply" onclick="applyFilters()"><i class="fas fa-search me-2"></i> Search</button>
+                <button class="btn-clear" onclick="clearFilters()"><i class="fas fa-times me-1"></i> Clear Filters</button>
+            </div>
+        </aside>
+        
+        <main class="properties-main">
+            <div class="properties-header">
+                <h5><span id="totalCount">0</span> Properties Found</h5>
+                <select class="form-select sort-select" id="filterSort" onchange="applyFilters()">
+                    <option value="newest">Newest First</option>
+                    <option value="oldest">Oldest First</option>
+                    <option value="price_low">Price: Low to High</option>
+                    <option value="price_high">Price: High to Low</option>
+                    <option value="area_high">Area: Large to Small</option>
+                </select>
+            </div>
+            
+            <div class="property-list" id="propertyList"></div>
+            
+            <div id="noProperties" class="no-properties" style="display: none;">
+                <i class="fas fa-home"></i>
+                <h4>No Properties Found</h4>
+                <p class="text-muted">Try adjusting your search filters</p>
+            </div>
+            
+            <div class="pagination-container" id="paginationContainer" style="display: none;">
+                <div class="page-info">Page <span id="currentPage">1</span> of <span id="totalPages">1</span> (<span id="totalResults">0</span> total)</div>
+                <div>
+                    <button class="btn btn-outline-secondary btn-sm me-2" id="prevPageBtn" onclick="changePage(-1)">Previous</button>
+                    <button class="btn btn-outline-secondary btn-sm" id="nextPageBtn" onclick="changePage(1)">Next</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="mb-1"><strong>Real Dreams</strong> - Property Marketplace</p>
+            <small>Powered by Mynt Real LLP</small>
+        </div>
+    </footer>
+
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="text-center">
+            <div class="spinner-border text-success" style="width: 3rem; height: 3rem;"></div>
+            <p class="mt-3 text-muted">Loading properties...</p>
+        </div>
+    </div>
+
+    <div class="modal fade" id="enquiryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-envelope me-2"></i> Enquire About Property</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small mb-3">
+                        <i class="fas fa-info-circle me-2"></i> Enquiring about: <strong id="enquiryPropertyTitle"></strong>
+                    </div>
+                    <form id="enquiryForm" novalidate>
+                        <input type="hidden" id="enquiryPropertyId">
+                        <div class="mb-3">
+                            <label class="form-label">Your Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="enquiryName" placeholder="Enter your full name" required minlength="2" maxlength="100">
+                            <div class="invalid-feedback">Please enter a valid name (minimum 2 characters)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mobile Number <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="enquiryMobile" placeholder="Enter 10-digit mobile" maxlength="10" pattern="[0-9]{10}" required>
+                            <div class="invalid-feedback">Please enter a valid 10-digit mobile number</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email (Optional)</label>
+                            <input type="email" class="form-control" id="enquiryEmail" placeholder="Enter email address" maxlength="100">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Message (Optional)</label>
+                            <textarea class="form-control" id="enquiryMessage" rows="3" placeholder="Any specific requirements..." maxlength="500"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="enquirySubmitBtn" onclick="submitEnquiry()">
+                        <i class="fas fa-paper-plane me-1"></i> Submit Enquiry
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1/real-dreams';
+        let companyId = null;
+        let filtersVisible = false;
+
+        function toggleMobileFilters() {
+            const sidebar = document.getElementById('filterSidebar');
+            const toggleText = document.getElementById('filterToggleText');
+            const toggleBtn = document.getElementById('mobileFilterToggle');
+            
+            if (!sidebar) return;
+            
+            filtersVisible = !filtersVisible;
+            
+            if (filtersVisible) {
+                sidebar.classList.add('show-filters');
+                sidebar.style.display = 'block';
+                if (toggleText) toggleText.textContent = 'Hide Filters';
+                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+            } else {
+                sidebar.classList.remove('show-filters');
+                sidebar.style.display = 'none';
+                if (toggleText) toggleText.textContent = 'Show Filters';
+                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+            }
+        }
+        let currentPage = 1;
+        let totalPages = 1;
+        let banners = [];
+        let currentBannerIndex = 0;
+        let bannerInterval = null;
+
+        function getUrlParam(name) {
+            return new URLSearchParams(window.location.search).get(name);
+        }
+
+        async function init() {
+            const urlCompanyId = getUrlParam('company_id');
+            if (urlCompanyId) {
+                companyId = parseInt(urlCompanyId);
+                console.log('[DC-MARKETPLACE] Using company_id from URL:', companyId);
+            } else {
+                console.log('[DC-MARKETPLACE] No company_id specified - showing ALL companies');
+            }
+
+            await Promise.all([
+                loadBanners(),
+                loadPropertyTypes(),
+                loadProperties()
+            ]);
+        }
+
+        async function loadBanners() {
+            try {
+                const params = companyId ? `?company_id=${companyId}` : '';
+                const response = await fetch(`${API_BASE}/public/promotional-banners${params}`);
+                const data = await response.json();
+                
+                if (data.success && data.banners && data.banners.length > 0) {
+                    banners = data.banners;
+                    renderBanners();
+                    if (banners.length > 1) {
+                        startBannerAutoPlay();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load banners:', error);
+            }
+        }
+
+        function renderBanners() {
+            const carousel = document.getElementById('bannerCarousel');
+            const dotsContainer = document.getElementById('bannerDots');
+            
+            if (banners.length === 0) return;
+            
+            carousel.innerHTML = banners.map((b, i) => `
+                <div class="banner-slide ${i === 0 ? 'active' : ''}" style="background: linear-gradient(135deg, ${escapeHtml(b.background_color)} 0%, ${escapeHtml(b.background_color)}dd 100%); color: ${escapeHtml(b.text_color)};">
+                    <div class="container">
+                        <h2>${escapeHtml(b.title)}</h2>
+                        ${b.subtitle ? `<p>${escapeHtml(b.subtitle)}</p>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            
+            if (banners.length > 1) {
+                dotsContainer.innerHTML = banners.map((_, i) => `
+                    <button class="banner-dot ${i === 0 ? 'active' : ''}" onclick="goToBanner(${i})"></button>
+                `).join('');
+                document.querySelector('.banner-nav.prev').style.display = 'block';
+                document.querySelector('.banner-nav.next').style.display = 'block';
+            }
+        }
+
+        function goToBanner(index) {
+            const slides = document.querySelectorAll('.banner-slide');
+            const dots = document.querySelectorAll('.banner-dot');
+            
+            slides[currentBannerIndex]?.classList.remove('active');
+            dots[currentBannerIndex]?.classList.remove('active');
+            
+            currentBannerIndex = index;
+            if (currentBannerIndex >= banners.length) currentBannerIndex = 0;
+            if (currentBannerIndex < 0) currentBannerIndex = banners.length - 1;
+            
+            slides[currentBannerIndex]?.classList.add('active');
+            dots[currentBannerIndex]?.classList.add('active');
+        }
+
+        function prevBanner() { goToBanner(currentBannerIndex - 1); }
+        function nextBanner() { goToBanner(currentBannerIndex + 1); }
+        function startBannerAutoPlay() { bannerInterval = setInterval(() => nextBanner(), 5000); }
+
+        async function loadPropertyTypes() {
+            try {
+                const params = companyId ? `?company_id=${companyId}` : '';
+                const response = await fetch(`${API_BASE}/public/property-types${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('filterPropertyType');
+                    data.property_types.forEach(type => {
+                        const option = document.createElement('option');
+                        option.value = type.id;
+                        option.textContent = type.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load property types:', error);
+            }
+        }
+
+        function validateFilters() {
+            let valid = true;
+            const minPrice = parseFloat(document.getElementById('filterMinPrice').value);
+            const maxPrice = parseFloat(document.getElementById('filterMaxPrice').value);
+            const minArea = parseFloat(document.getElementById('filterMinArea').value);
+            const maxArea = parseFloat(document.getElementById('filterMaxArea').value);
+
+            if (minPrice && maxPrice && minPrice > maxPrice) {
+                alert('Minimum price cannot be greater than maximum price');
+                valid = false;
+            }
+            if (minArea && maxArea && minArea > maxArea) {
+                alert('Minimum area cannot be greater than maximum area');
+                valid = false;
+            }
+            return valid;
+        }
+
+        function applyFilters() {
+            if (!validateFilters()) return;
+            loadProperties(1);
+        }
+
+        async function loadProperties(page = 1) {
+            showLoading(true);
+            currentPage = page;
+
+            const params = new URLSearchParams({ page: page, limit: 10 });
+            if (companyId) params.append('company_id', companyId);
+
+            const propertyType = document.getElementById('filterPropertyType').value;
+            const city = document.getElementById('filterCity').value.trim();
+            const state = document.getElementById('filterState').value.trim();
+            const minPrice = document.getElementById('filterMinPrice').value;
+            const maxPrice = document.getElementById('filterMaxPrice').value;
+            const bedrooms = document.getElementById('filterBedrooms').value;
+            const search = document.getElementById('filterSearch').value.trim();
+            const sortBy = document.getElementById('filterSort').value;
+            const minArea = document.getElementById('filterMinArea').value;
+            const maxArea = document.getElementById('filterMaxArea').value;
+            const possession = document.getElementById('filterPossession').value;
+            const freeBike = document.getElementById('filterFreeBike').checked;
+
+            if (propertyType) params.append('property_type_id', propertyType);
+            if (city) params.append('city', city);
+            if (state) params.append('state', state);
+            if (minPrice) params.append('min_price', minPrice);
+            if (maxPrice) params.append('max_price', maxPrice);
+            if (bedrooms) params.append('bedrooms', bedrooms);
+            if (search) params.append('search', search);
+            if (sortBy) params.append('sort_by', sortBy);
+            if (minArea) params.append('min_area', minArea);
+            if (maxArea) params.append('max_area', maxArea);
+            if (possession) params.append('possession_status', possession);
+            if (freeBike) params.append('free_bike_offer', 'true');
+
+            try {
+                console.log('[DC-MARKETPLACE] Fetching properties with company_id:', companyId);
+                const response = await fetch(`${API_BASE}/public/properties?${params}`);
+                const data = await response.json();
+                
+                console.log('[DC-MARKETPLACE] API Response:', {
+                    success: data.success,
+                    total: data.total,
+                    message: data.message,
+                    propertyCount: data.properties ? data.properties.length : 0
+                });
+
+                if (data.success) {
+                    if (data.message) {
+                        console.warn('[DC-MARKETPLACE] API Message:', data.message);
+                    }
+                    renderProperties(data.properties);
+                    document.getElementById('totalCount').textContent = data.total;
+                    totalPages = data.total_pages || 1;
+                    document.getElementById('totalResults').textContent = data.total;
+                    document.getElementById('currentPage').textContent = page;
+                    document.getElementById('totalPages').textContent = totalPages;
+                    
+                    const paginationContainer = document.getElementById('paginationContainer');
+                    paginationContainer.style.display = data.total > 0 ? 'flex' : 'none';
+                    document.getElementById('prevPageBtn').disabled = page <= 1;
+                    document.getElementById('nextPageBtn').disabled = page >= totalPages;
+                } else {
+                    console.error('[DC-MARKETPLACE] API returned success=false:', data);
+                }
+            } catch (error) {
+                console.error('[DC-MARKETPLACE] Failed to load properties:', error);
+                document.getElementById('propertyList').innerHTML = '<div class="text-center text-danger p-4">Failed to load properties. Please try again.</div>';
+            }
+
+            showLoading(false);
+        }
+
+        function renderProperties(properties) {
+            const list = document.getElementById('propertyList');
+            const noProps = document.getElementById('noProperties');
+
+            if (!properties || properties.length === 0) {
+                list.innerHTML = '';
+                noProps.style.display = 'block';
+                return;
+            }
+
+            noProps.style.display = 'none';
+            list.innerHTML = properties.map(p => {
+                const categoryClass = `category-${(p.property_category || 'residential').toLowerCase().replace(' ', '_')}`;
+                const bedroomDisplay = p.bedroom_configurations && p.bedroom_configurations.length > 0 
+                    ? p.bedroom_configurations.join(', ') 
+                    : (p.bedrooms ? `${p.bedrooms} BHK` : '');
+                const hasYoutube = p.youtube_links && p.youtube_links.length > 0;
+                
+                return `
+                <div class="property-card-horizontal">
+                    <div class="property-image-section" onclick="viewProperty(${p.id})" style="cursor: pointer;">
+                        ${p.thumbnail_url || p.primary_image 
+                            ? `<img src="${p.thumbnail_url || p.primary_image}" alt="${escapeHtml(p.title)}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'><i class=\\'fas fa-building fa-3x\\'></i></div>'">`
+                            : `<div class="placeholder-icon"><i class="fas fa-building fa-3x"></i></div>`
+                        }
+                        <span class="property-price-badge">${formatPrice(p.listed_price, p.price_on_request)}</span>
+                        ${p.image_count > 1 ? `<span class="image-count-badge"><i class="fas fa-images me-1"></i>${p.image_count}</span>` : ''}
+                        ${hasYoutube ? `<span class="youtube-badge"><i class="fab fa-youtube"></i></span>` : ''}
+                    </div>
+                    <div class="property-content-section" onclick="viewProperty(${p.id})" style="cursor: pointer;">
+                        <span class="property-category-badge ${categoryClass}">${(p.property_category || 'Residential').replace('_', ' ')}</span>
+                        <h5 class="property-title">${escapeHtml(p.title)}</h5>
+                        <div class="property-location"><i class="fas fa-map-marker-alt"></i> ${escapeHtml(p.city || 'N/A')}${p.state ? ', ' + escapeHtml(p.state) : ''}</div>
+                        <div class="property-features">
+                            ${bedroomDisplay ? `<span class="feature-item"><i class="fas fa-bed"></i> ${bedroomDisplay}</span>` : ''}
+                            ${p.bathrooms ? `<span class="feature-item"><i class="fas fa-bath"></i> ${p.bathrooms} Bath</span>` : ''}
+                            ${p.total_area ? `<span class="feature-item"><i class="fas fa-ruler-combined"></i> ${p.total_area} ${p.area_unit || 'SQ_FT'}</span>` : ''}
+                            ${p.facings && p.facings.length > 0 ? `<span class="feature-item"><i class="fas fa-compass"></i> ${escapeHtml(p.facings.join(', '))}</span>` : ''}
+                            ${p.approach_road_size ? `<span class="feature-item"><i class="fas fa-road"></i> ${escapeHtml(p.approach_road_size)}</span>` : ''}
+                        </div>
+                        <div class="property-meta">
+                            <span class="employee-badge">Employee</span>
+                            <span class="status-badge ${p.status === 'APPROVED' ? 'status-approved' : 'status-draft'}">${p.status}</span>
+                        </div>
+                        ${p.show_company_contact ? 
+                            `<div class="contact-display mt-2" style="background: #e8f5e9; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #4caf50;">
+                                <i class="fas fa-phone-alt text-success me-2"></i>
+                                <a href="tel:+918585852738" style="color: #2e7d32; font-weight: 600; text-decoration: none;">+91 85 85 85 27 38</a>
+                                <small class="text-muted ms-2">(Company Hotline)</small>
+                            </div>` 
+                            : (p.contact_person_phone && !p.hide_contact_number ? 
+                                `<div class="contact-display mt-2" style="background: #e3f2fd; padding: 8px 12px; border-radius: 6px; border-left: 3px solid #2196f3;">
+                                    <i class="fas fa-user text-primary me-2"></i>
+                                    <a href="tel:${p.contact_person_phone}" style="color: #1565c0; font-weight: 600; text-decoration: none;">${p.contact_person_phone}</a>
+                                    ${p.contact_person_name ? `<small class="text-muted ms-2">(${escapeHtml(p.contact_person_name)})</small>` : ''}
+                                </div>` 
+                                : '')}
+                    </div>
+                    <div class="property-actions">
+                        <div>
+                            <div class="rating-section">
+                                <div class="rating-stars">${renderStars(p.average_rating || 0)}</div>
+                                <div class="rating-count">${p.average_rating ? p.average_rating.toFixed(1) : '0.0'} (${p.total_ratings || 0} reviews)</div>
+                            </div>
+                            <div class="share-section">
+                                <button class="share-btn whatsapp" onclick="shareProperty(${p.id}, 'whatsapp', ${p.company_id})" title="Share on WhatsApp">
+                                    <i class="fab fa-whatsapp"></i>
+                                </button>
+                                <button class="share-btn facebook" onclick="shareProperty(${p.id}, 'facebook', ${p.company_id})" title="Share on Facebook">
+                                    <i class="fab fa-facebook-f"></i>
+                                </button>
+                                <button class="share-btn twitter" onclick="shareProperty(${p.id}, 'twitter', ${p.company_id})" title="Share on Twitter">
+                                    <i class="fab fa-twitter"></i>
+                                </button>
+                                <button class="share-btn copy" onclick="copyPropertyLink(${p.id}, ${p.company_id})" title="Copy Link">
+                                    <i class="fas fa-link"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn-enquire flex-fill" onclick="openEnquiry(${p.id}, '${escapeHtml(p.title).replace(/'/g, "\\'")}', ${p.company_id})">
+                                <i class="fas fa-envelope"></i> Enquire
+                            </button>
+                            ${(p.show_company_contact || (p.contact_person_phone && (!p.hide_contact_number || (p.hide_contact_number && p.allow_hidden_call)))) ? 
+                                `<button class="btn btn-primary btn-sm" onclick="callProperty(${p.id}, ${p.company_id})" title="${p.show_company_contact ? 'Call Company' : 'Call Agent'}" style="padding: 8px 12px;"><i class="fas fa-phone-alt"></i></button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        // DC Protocol: Helper to generate property URL with valid company_id only
+        function getPropertyUrl(propertyId) {
+            const base = `/real-dreams/property/${propertyId}`;
+            return companyId && !isNaN(companyId) ? `${base}?company_id=${companyId}` : base;
+        }
+        
+        // DC Protocol: Helper to generate property URL with specific company_id
+        function getPropertyUrlWithCompany(propertyId, propCompanyId) {
+            const base = `/real-dreams/property/${propertyId}`;
+            return propCompanyId && !isNaN(propCompanyId) ? `${base}?company_id=${propCompanyId}` : base;
+        }
+
+        function viewProperty(propertyId) {
+            window.location.href = getPropertyUrl(propertyId);
+        }
+
+        async function callProperty(propertyId, propertyCompanyId) {
+            // DC Protocol: Use property's own company_id for API call - MUST be numeric
+            const numericCompanyId = parseInt(propertyCompanyId, 10);
+            
+            if (!numericCompanyId || isNaN(numericCompanyId)) {
+                console.warn('[DC] callProperty: No valid company_id, calling without company filter');
+            }
+            
+            try {
+                const params = numericCompanyId && !isNaN(numericCompanyId) ? `?company_id=${numericCompanyId}` : '';
+                const response = await fetch(`${API_BASE}/properties/${propertyId}/call-info${params}`);
+                const data = await response.json();
+                
+                if (response.ok && data.success && data.phone) {
+                    window.location.href = `tel:${data.phone}`;
+                } else {
+                    alert(data.detail || 'Unable to retrieve contact number');
+                }
+            } catch (error) {
+                console.error('Call error:', error);
+                alert('Contact calling not available');
+            }
+        }
+
+        function changePage(direction) {
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                loadProperties(newPage);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function shareProperty(propertyId, platform, propertyCompanyId) {
+            // DC Protocol: Use property's own company_id for URL generation
+            const effectiveCompanyId = propertyCompanyId || companyId;
+            const url = `${window.location.origin}${getPropertyUrlWithCompany(propertyId, effectiveCompanyId)}`;
+            const text = 'Check out this property on Real Dreams!';
+            
+            let shareUrl = '';
+            switch(platform) {
+                case 'whatsapp':
+                    shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`;
+                    break;
+                case 'facebook':
+                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+                    break;
+                case 'twitter':
+                    shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+                    break;
+            }
+            
+            if (shareUrl) {
+                window.open(shareUrl, '_blank', 'width=600,height=400');
+                trackShare(propertyId, platform, effectiveCompanyId);
+            }
+        }
+
+        function copyPropertyLink(propertyId, propertyCompanyId) {
+            // DC Protocol: Use property's own company_id for URL generation
+            const effectiveCompanyId = propertyCompanyId || companyId;
+            const url = `${window.location.origin}${getPropertyUrlWithCompany(propertyId, effectiveCompanyId)}`;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Link copied to clipboard!');
+                trackShare(propertyId, 'copy', effectiveCompanyId);
+            }).catch(() => {
+                alert('Failed to copy link');
+            });
+        }
+
+        async function trackShare(propertyId, platform, propertyCompanyId) {
+            // DC Protocol: Use property's own company_id for tracking
+            const effectiveCompanyId = propertyCompanyId || companyId;
+            try {
+                const params = effectiveCompanyId && !isNaN(effectiveCompanyId) ? `?company_id=${effectiveCompanyId}` : '';
+                await fetch(`${API_BASE}/public/properties/${propertyId}/share${params}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ platform })
+                });
+            } catch (e) {}
+        }
+
+        // DC Protocol: Store property's company_id for enquiry submission
+        let enquiryPropertyCompanyId = null;
+        
+        function openEnquiry(propertyId, title, propertyCompanyId) {
+            document.getElementById('enquiryPropertyId').value = propertyId;
+            document.getElementById('enquiryPropertyTitle').textContent = title;
+            enquiryPropertyCompanyId = propertyCompanyId || companyId;
+            document.getElementById('enquiryForm').reset();
+            document.getElementById('enquiryForm').classList.remove('was-validated');
+            new bootstrap.Modal(document.getElementById('enquiryModal')).show();
+        }
+
+        async function submitEnquiry() {
+            const form = document.getElementById('enquiryForm');
+            form.classList.add('was-validated');
+            
+            const propertyId = document.getElementById('enquiryPropertyId').value;
+            const name = document.getElementById('enquiryName').value.trim();
+            const mobile = document.getElementById('enquiryMobile').value.trim();
+            const email = document.getElementById('enquiryEmail').value.trim();
+            const message = document.getElementById('enquiryMessage').value.trim();
+            
+            if (!name || name.length < 2) {
+                document.getElementById('enquiryName').focus();
+                return;
+            }
+            if (!mobile || !/^[0-9]{10}$/.test(mobile)) {
+                document.getElementById('enquiryMobile').focus();
+                return;
+            }
+            
+            const btn = document.getElementById('enquirySubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...';
+            
+            try {
+                // DC Protocol: Use property's own company_id for enquiry submission
+                const effectiveCompanyId = enquiryPropertyCompanyId || companyId;
+                const params = effectiveCompanyId && !isNaN(effectiveCompanyId) ? `?company_id=${effectiveCompanyId}` : '';
+                const response = await fetch(`${API_BASE}/public/properties/${propertyId}/enquiry${params}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, mobile, email: email || null, message: message || null })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('enquiryModal')).hide();
+                    alert('Thank you! Your enquiry has been submitted. Our team will contact you soon.');
+                } else {
+                    alert(data.detail || 'Failed to submit enquiry. Please try again.');
+                }
+            } catch (error) {
+                console.error('Enquiry error:', error);
+                alert('Failed to submit enquiry. Please try again.');
+            }
+            
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Submit Enquiry';
+        }
+
+        function renderStars(rating) {
+            const roundedRating = Math.round(rating * 2) / 2;
+            const fullStars = Math.floor(roundedRating);
+            const halfStar = roundedRating - fullStars === 0.5;
+            const emptyStars = 5 - fullStars - (halfStar ? 1 : 0);
+            let html = '';
+            for (let i = 0; i < fullStars; i++) html += '<i class="fas fa-star"></i>';
+            if (halfStar) html += '<i class="fas fa-star-half-alt"></i>';
+            for (let i = 0; i < emptyStars; i++) html += '<i class="far fa-star"></i>';
+            return html;
+        }
+
+        function formatPrice(price, priceOnRequest) {
+            if (priceOnRequest || !price) return 'Price on Request';
+            if (price >= 10000000) return '\u20B9' + (price / 10000000).toFixed(2) + ' Cr';
+            if (price >= 100000) return '\u20B9' + (price / 100000).toFixed(2) + ' L';
+            return '\u20B9' + price.toLocaleString('en-IN');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function clearFilters() {
+            document.getElementById('filterPropertyType').value = '';
+            document.getElementById('filterCity').value = '';
+            document.getElementById('filterState').value = '';
+            document.getElementById('filterMinPrice').value = '';
+            document.getElementById('filterMaxPrice').value = '';
+            document.getElementById('filterBedrooms').value = '';
+            document.getElementById('filterSearch').value = '';
+            document.getElementById('filterSort').value = 'newest';
+            document.getElementById('filterMinArea').value = '';
+            document.getElementById('filterMaxArea').value = '';
+            document.getElementById('filterPossession').value = '';
+            document.getElementById('filterFreeBike').checked = false;
+            loadProperties(1);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        document.getElementById('filterSearch').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') applyFilters();
+        });
+    </script>
+
+    <footer style="background: linear-gradient(135deg, #1e3a0f 0%, #2d5016 100%); color: white; padding: 30px 0; margin-top: 40px;">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
+                    <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2">
+                        <img src="/public/mnr-logo.png" alt="Real Dreams" style="height: 40px; filter: brightness(0) invert(1);" onerror="this.style.display='none'">
+                        <div>
+                            <h5 class="mb-0" style="font-size: 1.1rem;">Real Dreams</h5>
+                            <small class="opacity-75">Property Marketplace</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-3 mb-md-0">
+                    <div class="d-flex flex-column align-items-center">
+                        <small class="opacity-75 mb-1">Company Hotline</small>
+                        <a href="tel:+918585852738" class="d-flex align-items-center gap-2 text-white text-decoration-none" style="background: rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 8px; font-size: 1.1rem;">
+                            <i class="fas fa-phone-alt"></i>
+                            <span class="fw-bold">+91 85 85 85 27 38</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center text-md-end">
+                    <small class="opacity-75">&copy; 2025 MyntReal LLP. All rights reserved.</small>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

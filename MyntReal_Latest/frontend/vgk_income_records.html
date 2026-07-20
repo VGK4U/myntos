@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📋 Income Records - RVZ Supreme - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        
+        /* Header - Gold/Amber theme for RVZ ID */
+        .top-header { 
+            position: fixed; top: 0; left: 0; right: 0; height: 60px; 
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); 
+            color: white; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+            display: flex !important; align-items: center; padding: 0 20px; justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .hamburger { cursor: pointer; font-size: 24px; }
+        .header-logo { font-size: 20px; font-weight: bold; }
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        .user-name-display {
+            display: flex !important; align-items: center; gap: 8px;
+            color: white; padding: 8px 16px; background: rgba(255,255,255,0.15);
+            border-radius: 20px; font-weight: 500; margin-right: 5px;
+        }
+        .user-name-display i { font-size: 18px; }
+        .user-name-display span { font-size: 14px; }
+        .profile-dropdown { position: relative; }
+        .profile-btn { 
+            background: rgba(255,255,255,0.2); border: none; color: white; 
+            padding: 8px 15px; border-radius: 8px; cursor: pointer; display: flex; 
+            align-items: center; gap: 8px;
+        }
+        .profile-btn:hover { background: rgba(255,255,255,0.3); }
+        .dropdown-menu-custom { 
+            position: absolute; top: 50px; right: 0; background: white; 
+            min-width: 200px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); 
+            display: none; z-index: 1001;
+        }
+        .dropdown-menu-custom.show { display: block; }
+        .dropdown-item-custom { 
+            padding: 12px 20px; color: #333; text-decoration: none; 
+            display: flex !important; align-items: center; gap: 10px; border-bottom: 1px solid #eee;
+        }
+        .dropdown-item-custom:hover { background: #f8f9fa; }
+        .dropdown-item-custom:last-child { border-bottom: none; }
+        
+        /* Sidebar */
+        .sidebar { 
+            position: fixed; top: 60px; left: 0; width: 260px; height: calc(100vh - 60px); 
+            background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.05); 
+            overflow-y: auto !important; transition: transform 0.3s; z-index: 999;
+        }
+        .sidebar.collapsed { transform: translateX(-100%); }
+        .sidebar-menu { list-style: none; padding: 10px 0; }
+        .sidebar-item { margin: 2px 0; }
+        .sidebar-link { 
+            display: flex !important; align-items: center; gap: 12px; padding: 12px 20px; 
+            color: #555; text-decoration: none; transition: all 0.3s;
+        }
+        .sidebar-link:hover, .sidebar-link.active { 
+            background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%); 
+            color: white; border-left: 4px solid #b45309;
+        }
+        .sidebar-link i { width: 20px; text-align: center; }
+        
+        /* Collapsible Menu Groups */
+        .menu-group-header {
+            display: flex !important; align-items: center; justify-content: space-between;
+            padding: 12px 20px; color: #555; cursor: pointer;
+            transition: all 0.3s; font-weight: 500;
+        }
+        .menu-group-header:hover { background: #f8f9fa; }
+        .menu-group-header i { color: #d97706; font-size: 14px; }
+        .menu-parent-header i.fa-chevron-down,
+        .menu-parent-header i.fa-chevron-up { color: white; font-size: 14px; }
+        .menu-group-items {
+            list-style: none !important; 
+            padding-left: 0 !important; 
+            max-height: 0 !important;
+            overflow: hidden !important; 
+            transition: max-height 0.3s ease !important;
+            visibility: hidden !important;
+            display: block !important;
+        }
+        .menu-group-items.expanded { 
+            max-height: none !important; 
+            visibility: visible !important;
+        }
+        .menu-group-items .sidebar-link {
+            padding-left: 52px; font-size: 14px;
+        }
+        
+        /* Parent Menu Styles (for nested groups like User Menus) */
+        .menu-parent-header {
+            display: flex !important; align-items: center; justify-content: space-between;
+            padding: 12px 20px; color: white; font-weight: 700; cursor: pointer;
+            transition: all 0.3s; background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;
+        }
+        .menu-parent-header:hover { 
+            background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .menu-parent-header i { width: 20px; text-align: center; }
+        .menu-parent-items {
+            list-style: none !important;
+            padding: 0 !important;
+            max-height: 0 !important;
+            overflow: hidden !important;
+            transition: max-height 0.3s ease !important;
+            visibility: hidden !important;
+            display: block !important;
+            background: #fafafa;
+        }
+        .menu-parent-items.expanded {
+            max-height: none !important;
+            visibility: visible !important;
+        }
+        .menu-parent-items .menu-group-header {
+            padding-left: 30px;
+            background: #f3f4f6;
+            border-left: 3px solid #d97706;
+        }
+        .menu-parent-items .menu-group-header:hover {
+            background: #e5e7eb;
+        }
+        .menu-parent-items .menu-group-items .sidebar-link {
+            padding-left: 62px;
+        }
+        
+        /* Main Content */
+        .main-content { 
+            margin-left: 260px; margin-top: 60px; padding: 30px; 
+            min-height: calc(100vh - 60px); transition: margin-left 0.3s;
+        }
+        .main-content.expanded { margin-left: 0; }
+
+        /* Filters */
+        .filter-panel {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Statistics Cards */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--rvz-orange);
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        /* Tabs */
+        .custom-tabs {
+            background: white;
+            border-radius: 12px 12px 0 0;
+            padding: 0;
+            margin-bottom: 0;
+        }
+
+        .custom-tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .custom-tab.active {
+            color: var(--rvz-orange);
+            border-bottom-color: var(--rvz-orange);
+        }
+
+        .custom-tab:hover {
+            background: rgba(249, 115, 22, 0.1);
+        }
+
+        /* Table */
+        .table-container {
+            background: white;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .data-table {
+            width: 100%;
+            margin: 0;
+        }
+
+        .data-table thead {
+            background: #f8fafc;
+        }
+
+        .data-table th {
+            padding: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Expandable Row */
+        .expand-btn {
+            background: var(--rvz-orange);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .expand-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .expand-btn.expanded {
+            transform: rotate(45deg);
+        }
+
+        .expanded-row {
+            display: none;
+            background: #fef3c7;
+        }
+
+        .expanded-row.show {
+            display: table-row;
+        }
+
+        .nested-table {
+            width: 100%;
+            margin: 1rem 0;
+        }
+
+        .nested-table thead {
+            background: #fbbf24;
+        }
+
+        .nested-table th {
+            padding: 0.75rem;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .nested-table td {
+            padding: 0.75rem;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #fde68a;
+        }
+
+        /* Breakup Display */
+        .breakup-box {
+            background: #f1f5f9;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .breakup-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.25rem 0;
+        }
+
+        .breakup-total {
+            font-weight: bold;
+            border-top: 2px solid #94a3b8;
+            padding-top: 0.25rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Badges */
+        .package-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .package-bronze { background: #cd7f32; color: white; }
+        .package-silver { background: #c0c0c0; color: #333; }
+        .package-gold { background: #ffd700; color: #333; }
+        .package-platinum { background: #e5e4e2; color: #333; }
+
+        .status-completed { background: #10b981; color: white; }
+        .status-pending { background: #fbbf24; color: #333; }
+        .status-verified { background: #3b82f6; color: white; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--rvz-orange);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Pagination */
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            gap: 1rem;
+        }
+
+        .pagination-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: var(--rvz-orange);
+            color: white;
+            border-color: var(--rvz-orange);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .main-content { padding: 10px !important; }
+            .filter-panel { padding: 0.75rem !important; }
+            .filter-row {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px !important;
+            }
+            .filter-row .form-label { font-size: 0.7rem !important; }
+            .filter-row .form-control,
+            .filter-row .form-select { font-size: 0.8rem !important; padding: 0.3rem 0.5rem !important; }
+
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+            }
+            .stat-card { padding: 0.75rem 0.5rem !important; }
+            .stat-value { font-size: 1.2rem !important; }
+            .stat-label { font-size: 0.7rem !important; }
+            .stat-icon { font-size: 1.2rem !important; }
+
+            .custom-tabs {
+                display: flex !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+            .custom-tab {
+                padding: 0.6rem 1rem !important;
+                font-size: 0.8rem !important;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+
+            .table-container { overflow-x: auto !important; }
+            .data-table {
+                min-width: 700px !important;
+            }
+            .data-table th,
+            .data-table td {
+                padding: 0.5rem 0.4rem !important;
+                font-size: 0.75rem !important;
+                white-space: nowrap !important;
+            }
+
+            .nested-table {
+                min-width: 500px !important;
+            }
+            .nested-table th,
+            .nested-table td {
+                padding: 0.4rem !important;
+                font-size: 0.7rem !important;
+                white-space: nowrap !important;
+            }
+
+            .breakup-box { font-size: 0.7rem !important; padding: 0.3rem !important; }
+            .breakup-line { font-size: 0.7rem !important; }
+
+            .pagination-controls {
+                flex-direction: column !important;
+                gap: 6px !important;
+                padding: 0.75rem !important;
+            }
+            .pagination-btn { font-size: 0.8rem !important; padding: 0.4rem 0.75rem !important; }
+
+            .expand-btn { width: 26px !important; height: 26px !important; font-size: 0.7rem !important; }
+            .package-badge { font-size: 0.7rem !important; padding: 0.15rem 0.5rem !important; }
+        }
+
+        @media (max-width: 480px) {
+            .filter-row { grid-template-columns: 1fr !important; }
+            .stats-row { grid-template-columns: repeat(2, 1fr) !important; }
+            .stat-value { font-size: 1rem !important; }
+            .header-logo { font-size: 14px !important; }
+            .user-name-display { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="top-header">
+        <div class="header-left">
+            <div class="hamburger" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </div>
+            <div class="header-logo"><img src="/public/vgk4u-logo-100.png" alt="VGK4U" style="height:28px;background:#fff;border-radius:5px;padding:2px 6px;margin-right:8px;vertical-align:middle;">RVZ - Income Records</div>
+        </div>
+        <div class="header-right">
+            <div class="user-name-display" id="headerUserName">
+                <i class="fas fa-shield-alt"></i>
+                <span id="displayName">Loading...</span>
+            </div>
+            <div class="profile-dropdown">
+                <button class="profile-btn" onclick="toggleProfileMenu()">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>RVZ ID</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="dropdown-menu-custom" id="profileMenu">
+                    <a href="/rvz/dashboard" class="dropdown-item-custom">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a href="/user/change-password" class="dropdown-item-custom">
+                        <i class="fas fa-key"></i> Change Password
+                    </a>
+                    <a href="/logout" class="dropdown-item-custom">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="staffSidebar"></div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Filter Panel -->
+        <div class="filter-panel">
+            <h5><i class="fas fa-filter"></i> Filters</h5>
+            <div class="filter-row">
+                <div>
+                    <label class="form-label">From Date</label>
+                    <input type="date" id="startDate" class="form-control">
+                </div>
+                <div>
+                    <label class="form-label">To Date</label>
+                    <input type="date" id="endDate" class="form-control">
+                </div>
+                <div>
+                    <label class="form-label">User ID (Optional)</label>
+                    <input type="text" id="userId" placeholder="MNR ID" class="form-control">
+                </div>
+                <div>
+                    <label class="form-label">Status</label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="Completed" selected>Completed</option>
+                        <option value="Super Admin Verified">Super Admin Verified</option>
+                        <option value="Admin Verified">Admin Verified</option>
+                        <option value="Pending">Pending</option>
+                        <option value="">All Statuses</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Income Type</label>
+                    <select id="incomeType" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="Direct Facilitation">Direct Facilitation</option>
+                        <option value="Group Performance Recognition">Group Performance Recognition</option>
+                        <option value="VED Leadership Recognition">VED Leadership Recognition</option>
+                        <option value="Mentorship Contribution Benefit">Mentorship Contribution Benefit</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Package</label>
+                    <select id="packageFilter" class="form-select">
+                        <option value="">All Packages</option>
+                        <option value="Bronze">Bronze</option>
+                        <option value="Silver">Silver</option>
+                        <option value="Gold">Gold</option>
+                        <option value="Platinum">Platinum</option>
+                    </select>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <button class="btn btn-primary" onclick="applyFilters()">
+                    <i class="fas fa-search"></i> Apply Filters
+                </button>
+                <button class="btn btn-secondary" onclick="clearFilters()">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+                <button class="btn btn-success" onclick="exportToCSV()">
+                    <i class="fas fa-file-csv"></i> Export CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-value" id="totalUsers">0</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-value" id="totalAmount">₹0</div>
+                <div class="stat-label">Total Net Amount</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value" id="avgPerUser">₹0</div>
+                <div class="stat-label">Avg Per User</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">Total Transactions</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="custom-tabs">
+            <button class="custom-tab active" onclick="switchTab('user-wise')" id="tab-user-wise">
+                👤 User-Wise View
+            </button>
+            <button class="custom-tab" onclick="switchTab('date-wise')" id="tab-date-wise">
+                📅 Date-Wise View
+            </button>
+        </div>
+
+        <!-- Table Container -->
+        <div class="table-container">
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="loading">
+                <div class="spinner"></div>
+                <p>Loading income records...</p>
+            </div>
+
+            <!-- User-Wise Table -->
+            <div id="userWiseTable" style="display: none;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th width="50"></th>
+                            <th>User ID</th>
+                            <th>Name</th>
+                            <th>Package</th>
+                            <th>Transactions</th>
+                            <th>Gross Breakup</th>
+                            <th>Net Breakup</th>
+                            <th>Total Net</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userWiseBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Date-Wise Table -->
+            <div id="dateWiseTable" style="display: none;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th width="50"></th>
+                            <th>Date</th>
+                            <th>Total Users</th>
+                            <th>Transactions</th>
+                            <th>Total Gross</th>
+                            <th>Deductions</th>
+                            <th>Total Net</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dateWiseBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination-controls" id="paginationControls" style="display: none;">
+                <button class="pagination-btn" onclick="changePage(-1)" id="prevBtn">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <span class="pagination-info">
+                    Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                </span>
+                <button class="pagination-btn" onclick="changePage(1)" id="nextBtn">
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let authToken = localStorage.getItem('authToken');
+        let currentTab = 'user-wise';
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentData = [];
+
+        // Initialize
+        $(document).ready(function() {
+            console.log('🔐 Auth Token:', authToken ? 'Present' : 'MISSING');
+            if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
+            loadUserProfile();
+            setDefaultDates();
+            applyFilters();
+        });
+
+        // Set default dates - All Time (no date filters by default)
+        function setDefaultDates() {
+            // DC Protocol: Show ALL income data by default (no date restrictions)
+            // Users can optionally filter by date range if needed
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+        }
+
+        // Load user profile using RVZ hybrid authentication endpoint
+        function loadUserProfile() {
+            $.ajax({
+                url: `${API_BASE}/auth/me-hybrid`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    if (data && data.display_name) {
+                        $('#displayName').text(data.display_name);
+                    } else if (data && data.name) {
+                        $('#displayName').text(data.name);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        window.location.href = '/login';
+                    } else {
+                        console.error('Failed to load RVZ profile:', xhr.status);
+                        $('#displayName').text('RVZ Admin');
+                    }
+                }
+            });
+        }
+
+        // Toggle functions
+        function toggleSidebar() {
+            $('#sidebar').toggleClass('collapsed');
+            $('#mainContent').toggleClass('expanded');
+        }
+
+        function toggleMenuGroup(groupId) {
+            $(`#${groupId}-items`).toggleClass('expanded');
+            $(`#${groupId}-chevron`).toggleClass('fa-chevron-up fa-chevron-down');
+        }
+
+        function toggleMenuParent(parentId) {
+            const items = $(`#${parentId}-items`);
+            const chevron = $(`#${parentId}-chevron`);
+            items.toggleClass('expanded');
+            chevron.toggleClass('fa-chevron-up fa-chevron-down');
+            
+            // If collapsing parent, also collapse all child groups
+            if (!items.hasClass('expanded')) {
+                items.find('.menu-group-items').removeClass('expanded');
+                items.find('.menu-group-header i[id$="-chevron"]').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+            }
+        }
+
+        function toggleProfileMenu() {
+            $('#profileMenu').toggleClass('show');
+        }
+
+        // Switch tabs
+        function switchTab(tab) {
+            currentTab = tab;
+            currentPage = 1;
+            
+            $('.custom-tab').removeClass('active');
+            $(`#tab-${tab}`).addClass('active');
+            
+            applyFilters();
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const filters = {
+                start_date: $('#startDate').val(),
+                end_date: $('#endDate').val(),
+                user_id: $('#userId').val(),
+                status_filter: $('#statusFilter').val(),
+                income_type: $('#incomeType').val(),
+                package_filter: $('#packageFilter').val(),
+                page: currentPage,
+                per_page: 20
+            };
+
+            console.log('🔍 Applying filters:', filters);
+
+            $('#loadingIndicator').show();
+            $('#userWiseTable').hide();
+            $('#dateWiseTable').hide();
+            $('#paginationControls').hide();
+
+            const endpoint = currentTab === 'user-wise' 
+                ? `${API_BASE}/rvz-supreme/income/user-wise`
+                : `${API_BASE}/rvz-supreme/income/date-wise`;
+
+            $.ajax({
+                url: endpoint,
+                data: filters,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    console.log('✅ API Response:', response);
+                    
+                    $('#loadingIndicator').hide();
+                    
+                    if (response.success && response.data) {
+                        currentData = response.data;
+                        totalPages = response.total_pages || 1;
+                        
+                        // Update statistics
+                        updateStatistics(response.statistics);
+                        
+                        // Render table
+                        if (currentTab === 'user-wise') {
+                            renderUserWiseTable(response.data);
+                        } else {
+                            renderDateWiseTable(response.data);
+                        }
+                        
+                        // Update pagination
+                        updatePagination();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('❌ API Error:', xhr);
+                    $('#loadingIndicator').hide();
+                    alert('Failed to load data: ' + (xhr.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+
+        // Update statistics
+        function updateStatistics(stats) {
+            if (!stats) return;
+            
+            const totalUsers = currentTab === 'user-wise' ? stats.total_users : stats.total_dates;
+            $('#totalUsers').text(formatNumber(totalUsers));
+            $('#totalAmount').text('₹' + formatNumber(stats.total_net_amount || 0));
+            $('#avgPerUser').text('₹' + formatNumber(stats.avg_per_user || 0));
+            $('#totalCount').text(formatNumber(stats.total_transactions || 0));
+        }
+
+        // Render User-Wise Table
+        function renderUserWiseTable(data) {
+            const tbody = $('#userWiseBody');
+            tbody.empty();
+
+            data.forEach((user, index) => {
+                const rowId = `user-${index}`;
+                const packageClass = `package-${(user.package_name || 'bronze').toLowerCase()}`;
+                
+                // Main row
+                const mainRow = $(`
+                    <tr>
+                        <td>
+                            <button class="expand-btn" onclick="toggleRow('${rowId}')">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </td>
+                        <td><strong>${user.user_id}</strong></td>
+                        <td>${user.user_name}</td>
+                        <td><span class="package-badge ${packageClass}">${user.package_name || 'N/A'}</span></td>
+                        <td>${user.total_transactions}</td>
+                        <td>${renderGrossBreakup(user.gross_breakup)}</td>
+                        <td>${renderNetBreakup(user.gross_breakup, user.deduction_breakup)}</td>
+                        <td><strong style="color: #10b981;">₹${formatNumber(user.total_net)}</strong></td>
+                    </tr>
+                `);
+                
+                // Expanded row
+                const expandedRow = $(`
+                    <tr class="expanded-row" id="${rowId}">
+                        <td colspan="8">
+                            <table class="nested-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Income Type</th>
+                                        <th>Gross Amount</th>
+                                        <th>Deductions</th>
+                                        <th>Net Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${user.date_wise_transactions.map(t => `
+                                        <tr>
+                                            <td>${formatDate(t.business_date)}</td>
+                                            <td>${t.income_type}</td>
+                                            <td>₹${formatNumber(t.gross_amount)}</td>
+                                            <td>₹${formatNumber(t.deductions)}</td>
+                                            <td>₹${formatNumber(t.net_amount)}</td>
+                                            <td><span class="badge status-${t.verification_status.toLowerCase().replace(' ', '-')}">${t.verification_status}</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                `);
+                
+                tbody.append(mainRow);
+                tbody.append(expandedRow);
+            });
+
+            $('#userWiseTable').show();
+            $('#paginationControls').show();
+        }
+
+        // Render Date-Wise Table
+        function renderDateWiseTable(data) {
+            const tbody = $('#dateWiseBody');
+            tbody.empty();
+
+            data.forEach((dateGroup, index) => {
+                const rowId = `date-${index}`;
+                
+                // Main row
+                const mainRow = $(`
+                    <tr>
+                        <td>
+                            <button class="expand-btn" onclick="toggleRow('${rowId}')">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </td>
+                        <td><strong>${formatDate(dateGroup.business_date)}</strong></td>
+                        <td>${dateGroup.total_users}</td>
+                        <td>${dateGroup.total_transactions}</td>
+                        <td>₹${formatNumber(dateGroup.total_gross)}</td>
+                        <td style="color: #ef4444;">₹${formatNumber(dateGroup.total_deductions)}</td>
+                        <td><strong style="color: #10b981;">₹${formatNumber(dateGroup.total_net)}</strong></td>
+                    </tr>
+                `);
+                
+                // Expanded row
+                const expandedRow = $(`
+                    <tr class="expanded-row" id="${rowId}">
+                        <td colspan="7">
+                            <table class="nested-table">
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Name</th>
+                                        <th>Package</th>
+                                        <th>Income Type</th>
+                                        <th>Gross</th>
+                                        <th>Deductions</th>
+                                        <th>Net</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${dateGroup.user_transactions.map(t => {
+                                        const pkgClass = `package-${(t.package_name || 'bronze').toLowerCase()}`;
+                                        return `
+                                            <tr>
+                                                <td>${t.user_id}</td>
+                                                <td>${t.user_name}</td>
+                                                <td><span class="package-badge ${pkgClass}">${t.package_name || 'N/A'}</span></td>
+                                                <td>${t.income_type}</td>
+                                                <td>₹${formatNumber(t.gross_amount)}</td>
+                                                <td>₹${formatNumber(t.deductions)}</td>
+                                                <td>₹${formatNumber(t.net_amount)}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                `);
+                
+                tbody.append(mainRow);
+                tbody.append(expandedRow);
+            });
+
+            $('#dateWiseTable').show();
+            $('#paginationControls').show();
+        }
+
+        // Toggle expandable row
+        function toggleRow(rowId) {
+            const row = $(`#${rowId}`);
+            const btn = row.prev().find('.expand-btn');
+            const icon = btn.find('i');
+            
+            row.toggleClass('show');
+            btn.toggleClass('expanded');
+            
+            if (row.hasClass('show')) {
+                icon.removeClass('fa-plus').addClass('fa-minus');
+            } else {
+                icon.removeClass('fa-minus').addClass('fa-plus');
+            }
+        }
+
+        // Render Gross Breakup
+        function renderGrossBreakup(breakup) {
+            if (!breakup) return 'N/A';
+            
+            return `
+                <div class="breakup-box">
+                    <div class="breakup-line">
+                        <span>DR:</span><span>₹${formatNumber(breakup.direct_referral)}</span>
+                    </div>
+                    <div class="breakup-line">
+                        <span>MR:</span><span>₹${formatNumber(breakup.matching_referral)}</span>
+                    </div>
+                    <div class="breakup-line">
+                        <span>Ved:</span><span>₹${formatNumber(breakup.ved_income)}</span>
+                    </div>
+                    <div class="breakup-line breakup-total">
+                        <span>Total:</span><span>₹${formatNumber(breakup.total_gross)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render Net Breakup
+        function renderNetBreakup(gross, deductions) {
+            if (!gross || !deductions) return 'N/A';
+            
+            return `
+                <div class="breakup-box">
+                    <div class="breakup-line">
+                        <span>Gross:</span><span>₹${formatNumber(gross.total_gross)}</span>
+                    </div>
+                    <div class="breakup-line" style="color: #ef4444;">
+                        <span>Admin:</span><span>-₹${formatNumber(deductions.admin_deduction)}</span>
+                    </div>
+                    <div class="breakup-line" style="color: #ef4444;">
+                        <span>TDS:</span><span>-₹${formatNumber(deductions.tds_deduction)}</span>
+                    </div>
+                    <div class="breakup-line breakup-total" style="color: #10b981;">
+                        <span>Net:</span><span>₹${formatNumber(gross.total_gross - deductions.total_deductions)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Pagination
+        function updatePagination() {
+            $('#currentPage').text(currentPage);
+            $('#totalPages').text(totalPages);
+            
+            $('#prevBtn').prop('disabled', currentPage <= 1);
+            $('#nextBtn').prop('disabled', currentPage >= totalPages);
+        }
+
+        function changePage(direction) {
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                applyFilters();
+            }
+        }
+
+        // Clear filters
+        function clearFilters() {
+            $('#userId').val('');
+            $('#incomeType').val('');
+            $('#packageFilter').val('');
+            $('#statusFilter').val('Completed');
+            setDefaultDates();
+            applyFilters();
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            if (!currentData || currentData.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            let csvContent = '';
+            
+            if (currentTab === 'user-wise') {
+                csvContent = 'User ID,Name,Package,Total Transactions,Direct Facilitation,Group Performance Recognition,VED Leadership Recognition,Total Gross,Total Deductions,Total Net\n';
+                currentData.forEach(user => {
+                    csvContent += `${user.user_id},${user.user_name},${user.package_name},${user.total_transactions},`;
+                    csvContent += `${user.gross_breakup.direct_referral},${user.gross_breakup.matching_referral},`;
+                    csvContent += `${user.gross_breakup.ved_income},${user.gross_breakup.total_gross},`;
+                    csvContent += `${user.deduction_breakup.total_deductions},${user.total_net}\n`;
+                });
+            } else {
+                csvContent = 'Date,Total Users,Total Transactions,Total Gross,Total Deductions,Total Net\n';
+                currentData.forEach(dateGroup => {
+                    csvContent += `${dateGroup.business_date},${dateGroup.total_users},${dateGroup.total_transactions},`;
+                    csvContent += `${dateGroup.total_gross},${dateGroup.total_deductions},${dateGroup.total_net}\n`;
+                });
+            }
+
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `income_records_${currentTab}_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        // Utility functions
+        function formatNumber(num) {
+            if (!num) return '0';
+            return parseFloat(num).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN');
+        }
+    </script>
+    
+</body>
+</html>

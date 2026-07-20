@@ -1,0 +1,113 @@
+# Security - Never commit sensitive files
+cookies*.jar
+session_data*
+*.session
+*.cookie
+
+# Environment variables and secrets
+.env
+.env.local
+.env.production
+*.key
+*.pem
+*.cert
+secrets.txt
+
+# Database files (for local development)
+*.sqlite
+*.sqlite3
+*.db
+
+# Python cache and temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing artifacts
+test_output/
+test_results/
+coverage/
+.coverage
+.pytest_cache/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+/tmp/
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# User uploads and assets (not part of code)
+attached_assets/
+backend/uploads/
+backend/storage/
+frontend/storage/
+uploads/
+instance/
+*.db
+
+# Migration backups (database exports)
+migration_backups/
+
+# Test screenshots and reports
+test_screenshots/
+**/screenshots/
+**/reports/screenshots/
+frontend/tests/selenium/reports/
+
+# Node modules (dependencies, not source code)
+node_modules/
+frontend/node_modules/
+
+# Python libraries (auto-installed)
+.pythonlibs/
+.local/
+.cache/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+backups/
+*.tar.gz
+database_exports/
+
+# Alembic noop SQLite (auto-created during provision)
+alembic_noop.db

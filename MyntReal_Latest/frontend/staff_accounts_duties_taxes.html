@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Duties &amp; Taxes (GST) - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 13px; color: #6b7280; margin: 3px 0 0 0; }
+
+        /* ── Filter bar ─────────────────────────────────── */
+        .filter-bar { background: white; padding: 14px 18px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-group select, .filter-group input { padding: 7px 11px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 150px; background: white; }
+        .period-group { display: flex; flex-direction: column; gap: 4px; }
+        .period-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .period-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+        .period-btn { padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; background: white; color: #374151; transition: all 0.15s; }
+        .period-btn:hover { background: #f3f4f6; }
+        .period-btn.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+        .btn-apply { background: #1d4ed8; color: white; border: none; padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .btn-apply:hover { background: #1e40af; }
+        .btn-reset { background: white; color: #6b7280; border: 1px solid #d1d5db; padding: 7px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+
+        /* ── Context banner ─────────────────────────────── */
+        .context-banner { background: #ede9fe; border: 1px solid #c4b5fd; border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; font-size: 12px; color: #5b21b6; display: none; align-items: center; gap: 8px; }
+        .context-banner.show { display: flex; }
+
+        /* ── Accounting note ────────────────────────────── */
+        .acct-note { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 16px; margin-bottom: 20px; font-size: 12px; color: #166534; display: flex; gap: 10px; align-items: flex-start; }
+        .acct-note i { margin-top: 1px; flex-shrink: 0; }
+
+        /* ── Summary cards ──────────────────────────────── */
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .summary-card { background: white; padding: 18px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .summary-card .lbl { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 6px; }
+        .summary-card .val { font-size: 22px; font-weight: 700; color: #1f2937; }
+        .summary-card .sub { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+        .summary-card.output .val { color: #dc2626; }
+        .summary-card.input  .val { color: #059669; }
+        .summary-card.net    .val { color: #d97706; }
+
+        /* ── Tabs ───────────────────────────────────────── */
+        .tabs-bar { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+        .tab-btn { padding: 10px 22px; border: none; background: none; font-size: 14px; font-weight: 500; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; white-space: nowrap; }
+        .tab-btn.active { color: #1d4ed8; border-bottom-color: #1d4ed8; font-weight: 600; }
+        .tab-btn:hover:not(.active) { color: #374151; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* ── Cards / Tables ─────────────────────────────── */
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: none; margin-bottom: 20px; }
+        .card-header { border-bottom: 1px solid #e5e7eb; padding: 14px 18px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .card-body { padding: 0; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+        .data-table th.num { text-align: right; }
+        .data-table td { padding: 11px 14px; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .data-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: #fafafa; }
+        .data-table .total-row td { font-weight: 700; background: #f9fafb; border-top: 2px solid #e5e7eb; }
+
+        /* Colour helpers */
+        .c-red   { color: #dc2626; }
+        .c-green { color: #059669; }
+        .c-warn  { color: #d97706; }
+        .c-blue  { color: #2563eb; }
+
+        /* Net pills */
+        .net-payable { background: #fee2e2; color: #dc2626; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .net-credit  { background: #d1fae5; color: #059669; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .net-nil     { background: #f3f4f6; color: #6b7280;  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+        /* HSN code chip */
+        .hsn-chip { background: #ede9fe; color: #6d28d9; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; font-family: monospace; }
+
+        /* ── HSN Expand / Drill-through ── */
+        .expand-btn { background: none; border: none; cursor: pointer; padding: 2px 6px; color: #9ca3af; font-size: 13px; transition: transform 0.2s, color 0.15s; }
+        .expand-btn:hover { color: #6d28d9; }
+        .expand-btn.open { transform: rotate(90deg); color: #6d28d9; }
+        .hsn-detail-row { display: none; }
+        .hsn-detail-row.open { display: table-row; }
+        .hsn-detail-cell { background: #f8f7ff; padding: 0 !important; border-bottom: 2px solid #c4b5fd !important; }
+        .detail-wrap { padding: 14px 18px 18px 36px; }
+        .detail-tabs { display: flex; gap: 0; border-bottom: 1px solid #e5e7eb; margin-bottom: 12px; }
+        .detail-tab { padding: 6px 16px; border: none; background: none; font-size: 12px; font-weight: 500; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+        .detail-tab.active { color: #6d28d9; border-bottom-color: #6d28d9; font-weight: 600; }
+        .detail-pane { display: none; }
+        .detail-pane.active { display: block; }
+        .detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .detail-table th { text-align: left; padding: 7px 10px; background: #f3f0ff; color: #6d28d9; font-size: 11px; font-weight: 700; text-transform: uppercase; white-space: nowrap; border-bottom: 1px solid #ddd6fe; }
+        .detail-table th.r { text-align: right; }
+        .detail-table td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+        .detail-table td.r { text-align: right; font-variant-numeric: tabular-nums; }
+        .detail-table tr:hover td { background: #faf5ff; }
+        .detail-table tr:last-child td { border-bottom: none; }
+        .detail-table .dtotal td { background: #ede9fe; font-weight: 700; border-top: 1px solid #c4b5fd; color: #4c1d95; }
+        .detail-spinner { display: flex; align-items: center; gap: 8px; color: #6d28d9; font-size: 12px; padding: 14px; }
+        .detail-spinner .sp { width: 16px; height: 16px; border: 2px solid #ddd6fe; border-top-color: #6d28d9; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        .detail-empty { text-align: center; padding: 20px; color: #9ca3af; font-size: 12px; }
+        .inv-badge { background: #e0f2fe; color: #0369a1; padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 700; font-family: monospace; }
+        .qty-cell { color: #059669; font-weight: 600; }
+        .item-code { color: #6b7280; font-size: 10px; font-family: monospace; }
+
+        /* GST rate badge */
+        .rate-badge { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+        /* Loader */
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #d97706; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { text-align: center; padding: 50px 20px; color: #6b7280; }
+        .empty-state i { font-size: 42px; margin-bottom: 12px; color: #d1d5db; display: block; }
+
+        /* Tab sub-section header */
+        .hsn-section-hdr { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 10px 14px 6px; color: #374151; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .source-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+        .badge-output { background: #fee2e2; color: #dc2626; }
+        .badge-input  { background: #d1fae5; color: #059669; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+    <div class="content-area">
+
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-percent me-2" style="color:#d97706"></i>Duties &amp; Taxes (GST)</h1>
+                <p>Net GST liability = Output Tax (Sales) &minus; Input Tax Credit (Purchases) &mdash; as per standard accounting</p>
+            </div>
+        </div>
+
+        <!-- Context banner (from BS drill-through) -->
+        <div class="context-banner" id="ctxBanner">
+            <i class="fas fa-link"></i>
+            <span id="ctxText">Filtered from Consolidated Balance Sheet</span>
+            <button onclick="clearCtx()" style="margin-left:auto;background:none;border:none;color:#5b21b6;cursor:pointer;font-size:12px;">&#10005; Clear filter</button>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="filterCompany"><option value="0">All Companies</option></select>
+            </div>
+            <div class="period-group">
+                <label>Period</label>
+                <div class="period-btns">
+                    <button class="period-btn" onclick="setPeriod('month',this)">This Month</button>
+                    <button class="period-btn" onclick="setPeriod('quarter',this)">This Quarter</button>
+                    <button class="period-btn active" onclick="setPeriod('fy',this)">This FY</button>
+                    <button class="period-btn" onclick="setPeriod('overall',this)">Overall</button>
+                    <button class="period-btn" onclick="setPeriod('custom',this)">Custom</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>From Date</label>
+                <input type="date" id="filterFrom">
+            </div>
+            <div class="filter-group">
+                <label>To Date</label>
+                <input type="date" id="filterTo">
+            </div>
+            <button class="btn-apply" onclick="applyFilters()"><i class="fas fa-search me-1"></i>Apply</button>
+            <button class="btn-reset" onclick="resetFilters()">Reset</button>
+        </div>
+
+        <!-- Accounting principle note -->
+        <div class="acct-note">
+            <i class="fas fa-info-circle"></i>
+            <div>
+                <strong>Standard Accounting:</strong> Output GST (collected on sales) is a <em>liability</em> until remitted to the government.
+                Input Tax Credit reduces that liability.
+                <strong>Net Payable = Output &minus; ITC.</strong>
+                If ITC &gt; Output, the balance is a credit (shown as asset).
+            </div>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="summary-cards">
+            <div class="summary-card output">
+                <div class="lbl">Output Tax (Sales)</div>
+                <div class="val" id="cardOutput">&#8377;0</div>
+                <div class="sub">GST collected from customers</div>
+            </div>
+            <div class="summary-card input">
+                <div class="lbl">Input Tax Credit (ITC)</div>
+                <div class="val" id="cardInput">&#8377;0</div>
+                <div class="sub">GST paid to vendors</div>
+            </div>
+            <div class="summary-card net" id="cardNetWrap">
+                <div class="lbl" id="cardNetLbl">Net GST Payable</div>
+                <div class="val" id="cardNet">&#8377;0</div>
+                <div class="sub" id="cardNetSub">= Consolidated Balance Sheet</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs-bar">
+            <button class="tab-btn active" id="tabCompany" onclick="switchTab('company')">
+                <i class="fas fa-building me-1"></i>Company-wise Summary
+                <span class="source-badge badge-output ms-1">= Consolidated BS</span>
+            </button>
+            <button class="tab-btn" id="tabHsn" onclick="switchTab('hsn')">
+                <i class="fas fa-barcode me-1"></i>HSN Code-wise Breakup
+                <span class="source-badge badge-input ms-1">GST Return Filing</span>
+            </button>
+        </div>
+
+        <!-- TAB 1: Company-wise -->
+        <div class="tab-pane active" id="paneCompany">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-building me-2" style="color:#d97706"></i>Company-wise GST Summary</span>
+                    <span class="text-muted" style="font-size:12px;font-weight:400" id="companyCount">0 companies</span>
+                </div>
+                <div class="card-body">
+                    <div id="coLoading" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="coTable" style="display:none;overflow-x:auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" style="vertical-align:middle;">Company</th>
+                                    <th colspan="4" class="num" style="background:#fef2f2;color:#dc2626;border-bottom:none;text-align:center;">Output Tax (Sales)</th>
+                                    <th colspan="4" class="num" style="background:#f0fdf4;color:#059669;border-bottom:none;text-align:center;">Input Tax Credit (ITC)</th>
+                                    <th rowspan="2" class="num" style="vertical-align:middle;">Net Payable</th>
+                                </tr>
+                                <tr>
+                                    <th class="num" style="background:#fef2f2;">CGST</th>
+                                    <th class="num" style="background:#fef2f2;">SGST</th>
+                                    <th class="num" style="background:#fef2f2;">IGST</th>
+                                    <th class="num" style="background:#fef2f2;">Total</th>
+                                    <th class="num" style="background:#f0fdf4;">CGST</th>
+                                    <th class="num" style="background:#f0fdf4;">SGST</th>
+                                    <th class="num" style="background:#f0fdf4;">IGST</th>
+                                    <th class="num" style="background:#f0fdf4;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="coBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="coEmpty" style="display:none" class="empty-state">
+                        <i class="fas fa-receipt"></i><h4>No GST Data</h4>
+                        <p>No confirmed invoices in the selected period</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: HSN Code-wise -->
+        <div class="tab-pane" id="paneHsn">
+            <!-- Output HSN -->
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-file-invoice-dollar me-2 c-red"></i>Output Tax — HSN Code-wise (Sales) <span class="source-badge badge-output ms-2">GSTR-1</span></span>
+                    <span class="text-muted" style="font-size:12px;font-weight:400" id="outHsnCount">0 HSN codes</span>
+                </div>
+                <div class="card-body">
+                    <div id="outHsnLoading" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="outHsnTable" style="display:none;overflow-x:auto">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th style="width:28px"></th>
+                                <th>HSN Code</th>
+                                <th class="num">GST Rate</th>
+                                <th class="num">Invoices</th>
+                                <th class="num">Taxable Value</th>
+                                <th class="num c-blue">CGST</th>
+                                <th class="num c-blue">SGST</th>
+                                <th class="num c-blue">IGST</th>
+                                <th class="num c-red">Total Tax</th>
+                            </tr></thead>
+                            <tbody id="outHsnBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="outHsnEmpty" style="display:none" class="empty-state">
+                        <i class="fas fa-barcode"></i><h4>No Output HSN Data</h4>
+                        <p>No sales invoice line items in the selected period</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input HSN -->
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-shopping-cart me-2 c-green"></i>Input Tax Credit — HSN Code-wise (Purchases) <span class="source-badge badge-input ms-2">GSTR-2A/2B</span></span>
+                    <span class="text-muted" style="font-size:12px;font-weight:400" id="inHsnCount">0 HSN codes</span>
+                </div>
+                <div class="card-body">
+                    <div id="inHsnLoading" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="inHsnTable" style="display:none;overflow-x:auto">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th style="width:28px"></th>
+                                <th>HSN Code</th>
+                                <th class="num">GST Rate</th>
+                                <th class="num">Invoices</th>
+                                <th class="num">Taxable Value</th>
+                                <th class="num c-blue">CGST</th>
+                                <th class="num c-blue">SGST</th>
+                                <th class="num c-blue">IGST</th>
+                                <th class="num c-green">Total Tax (ITC)</th>
+                            </tr></thead>
+                            <tbody id="inHsnBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="inHsnEmpty" style="display:none" class="empty-state">
+                        <i class="fas fa-barcode"></i><h4>No Input HSN Data</h4>
+                        <p>No purchase invoice line items in the selected period</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /.content-area -->
+    </div><!-- /.main-content -->
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+    const API = '/api/v1/staff/accounts';
+    const _up  = new URLSearchParams(window.location.search);
+
+    let _ctxCo   = _up.get('company_id') || '0';
+    let _ctxAsOn = _up.get('as_on') || _up.get('date_to') || _up.get('to_date') || '';
+    let _ctxFrom = _up.get('from_date') || _up.get('date_from') || '';
+    let _activeTab = 'company';
+    let _hsnLoaded = false;
+
+    /* ── Helpers ────────────────────────────────────────── */
+    const R = n => { const v = parseFloat(n)||0; return '&#8377;' + v.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+    const fmt_date = d => d instanceof Date ? d.toISOString().slice(0,10) : (d?String(d).slice(0,10):'');
+    function fyStart() { const t=new Date(); const y=t.getMonth()>=3?t.getFullYear():t.getFullYear()-1; return new Date(y,3,1); }
+    function monthStart() { const t=new Date(); return new Date(t.getFullYear(),t.getMonth(),1); }
+    function quarterStart() { const t=new Date(); const qm=[0,0,0,3,3,3,6,6,6,9,9,9][t.getMonth()]; return new Date(t.getFullYear(),qm,1); }
+    function today() { return new Date(); }
+    function getFrom() { return document.getElementById('filterFrom').value; }
+    function getTo()   { return document.getElementById('filterTo').value; }
+    function getCo()   { return document.getElementById('filterCompany').value || '0'; }
+
+    /* ── Tab switch ─────────────────────────────────────── */
+    function switchTab(t) {
+        _activeTab = t;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab' + (t==='company'?'Company':'Hsn')).classList.add('active');
+        document.getElementById('pane' + (t==='company'?'Company':'Hsn')).classList.add('active');
+        if (t === 'hsn' && !_hsnLoaded) loadHsn();
+    }
+
+    /* ── Period buttons ─────────────────────────────────── */
+    function setPeriod(p, btn) {
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        const to = fmt_date(today());
+        if (p==='month')   { document.getElementById('filterFrom').value=fmt_date(monthStart());   document.getElementById('filterTo').value=to; }
+        else if (p==='quarter') { document.getElementById('filterFrom').value=fmt_date(quarterStart()); document.getElementById('filterTo').value=to; }
+        else if (p==='fy') { document.getElementById('filterFrom').value=fmt_date(fyStart());      document.getElementById('filterTo').value=to; }
+        else if (p==='overall') { document.getElementById('filterFrom').value='';                  document.getElementById('filterTo').value=to; }
+        if (p!=='custom') applyFilters();
+    }
+
+    /* ── Company dropdown ───────────────────────────────── */
+    async function loadCompanies() {
+        try {
+            const r = await fetch(`${API}/companies`,{credentials:'include'});
+            const d = await r.json();
+            const sel = document.getElementById('filterCompany');
+            (d.companies||[]).forEach(c => {
+                const o=document.createElement('option'); o.value=c.id; o.textContent=c.company_name||c.name; sel.appendChild(o);
+            });
+            if (_ctxCo && _ctxCo!=='0') sel.value=_ctxCo;
+        } catch(e){ console.error('Company load error',e); }
+    }
+
+    /* ── Context banner ─────────────────────────────────── */
+    function initContext() {
+        if (_ctxAsOn || _ctxCo!=='0') {
+            document.getElementById('ctxBanner').classList.add('show');
+            const parts=[];
+            if (_ctxCo&&_ctxCo!=='0') parts.push('Company ID: '+_ctxCo);
+            if (_ctxAsOn) parts.push('As on: '+_ctxAsOn);
+            document.getElementById('ctxText').textContent='Filtered from Consolidated Balance Sheet — '+parts.join(', ');
+        }
+        if (_ctxAsOn) document.getElementById('filterTo').value=_ctxAsOn;
+        if (_ctxFrom) document.getElementById('filterFrom').value=_ctxFrom;
+    }
+    function clearCtx() {
+        _ctxCo='0'; _ctxAsOn=''; _ctxFrom='';
+        document.getElementById('ctxBanner').classList.remove('show');
+        document.getElementById('filterCompany').value='0';
+        resetFilters();
+    }
+
+    /* ── Apply / Reset ──────────────────────────────────── */
+    function applyFilters() {
+        _hsnLoaded = false;
+        loadCompanyData();
+        if (_activeTab==='hsn') loadHsn();
+    }
+    function resetFilters() {
+        document.getElementById('filterCompany').value='0';
+        document.getElementById('filterFrom').value=fmt_date(fyStart());
+        document.getElementById('filterTo').value=fmt_date(today());
+        document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+        document.querySelector('.period-btn[onclick*="\'fy\'"]').classList.add('active');
+        _hsnLoaded=false;
+        loadCompanyData();
+        if (_activeTab==='hsn') loadHsn();
+    }
+
+    /* ── Build URL params ───────────────────────────────── */
+    function buildParams(extra) {
+        const cid=getCo(), frm=getFrom(), toD=getTo();
+        let p=`company_id=${cid}`;
+        if (frm) p+=`&from_date=${frm}`;
+        if (toD) p+=`&to_date=${toD}`;
+        if (extra) p+=extra;
+        return p;
+    }
+
+    /* ═══ TAB 1: Company-wise ══════════════════════════════ */
+    async function loadCompanyData() {
+        showCo(true);
+        try {
+            const r = await fetch(`${API}/duties-taxes-summary?${buildParams()}`,{credentials:'include'});
+            const d = await r.json();
+            if (!d.success) { showCoError(d.detail||'Failed'); return; }
+            renderCompany(d);
+        } catch(e) { showCoError('Network error: '+e.message); }
+    }
+    function showCo(loading) {
+        document.getElementById('coLoading').style.display = loading?'flex':'none';
+        document.getElementById('coTable').style.display   = 'none';
+        document.getElementById('coEmpty').style.display   = 'none';
+    }
+    function showCoError(msg) {
+        showCo(false);
+        document.getElementById('coEmpty').innerHTML=`<i class="fas fa-exclamation-circle" style="color:#dc2626"></i><h4>Error</h4><p>${msg}</p>`;
+        document.getElementById('coEmpty').style.display='block';
+    }
+    function renderCompany(d) {
+        showCo(false);
+        const outT=parseFloat(d.total_output_gst)||0, inT=parseFloat(d.total_input_gst)||0, netT=parseFloat(d.net_gst_liability)||0;
+        document.getElementById('cardOutput').innerHTML=R(outT);
+        document.getElementById('cardInput').innerHTML=R(inT);
+        document.getElementById('cardNet').innerHTML=R(Math.abs(netT));
+        const cw=document.getElementById('cardNetWrap'), cl=document.getElementById('cardNetLbl'), cs=document.getElementById('cardNetSub');
+        if (netT>0.005) { cw.className='summary-card net'; cl.textContent='Net GST Payable'; cs.textContent='= Consolidated Balance Sheet (Liability)'; }
+        else if (netT<-0.005) { cw.className='summary-card input'; cl.textContent='ITC Credit Balance'; cs.textContent='ITC exceeds Output — credit available (asset)'; }
+        else { cw.className='summary-card'; cl.textContent='Net GST'; cs.textContent='Output = ITC (balanced)'; }
+
+        const cos=(d.companies||[]).filter(c=>parseFloat(c.output.total_tax)>0||parseFloat(c.input.total_tax)>0);
+        document.getElementById('companyCount').textContent=`${cos.length} compan${cos.length!==1?'ies':'y'}`;
+        if (!cos.length) { document.getElementById('coEmpty').style.display='block'; return; }
+
+        const tbody=document.getElementById('coBody'); tbody.innerHTML='';
+        let tot={oCGST:0,oSGST:0,oIGST:0,oT:0,iCGST:0,iSGST:0,iIGST:0,iT:0};
+        cos.forEach(co => {
+            const o=co.output, i=co.input, net=parseFloat(co.net_liability)||0;
+            tot.oCGST+=parseFloat(o.cgst)||0; tot.oSGST+=parseFloat(o.sgst)||0; tot.oIGST+=parseFloat(o.igst)||0; tot.oT+=parseFloat(o.total_tax)||0;
+            tot.iCGST+=parseFloat(i.cgst)||0; tot.iSGST+=parseFloat(i.sgst)||0; tot.iIGST+=parseFloat(i.igst)||0; tot.iT+=parseFloat(i.total_tax)||0;
+            const netPill=net>0.005?`<span class="net-payable">${R(net)}</span>`:net<-0.005?`<span class="net-credit">${R(Math.abs(net))} Cr</span>`:`<span class="net-nil">Nil</span>`;
+            const tr=document.createElement('tr');
+            tr.innerHTML=`<td><div style="font-weight:600">${co.company_name}</div><div style="font-size:11px;color:#6b7280">${o.invoice_count} sales &nbsp;|&nbsp; ${i.invoice_count} purchase</div></td>
+                <td class="num c-red">${R(o.cgst)}</td><td class="num c-red">${R(o.sgst)}</td><td class="num c-red">${R(o.igst)}</td><td class="num c-red" style="font-weight:600">${R(o.total_tax)}</td>
+                <td class="num c-green">${R(i.cgst)}</td><td class="num c-green">${R(i.sgst)}</td><td class="num c-green">${R(i.igst)}</td><td class="num c-green" style="font-weight:600">${R(i.total_tax)}</td>
+                <td class="num">${netPill}</td>`;
+            tbody.appendChild(tr);
+        });
+        const netFin=tot.oT-tot.iT;
+        const totPill=netFin>0.005?`<span class="net-payable">${R(netFin)}</span>`:netFin<-0.005?`<span class="net-credit">${R(Math.abs(netFin))} Cr</span>`:`<span class="net-nil">Nil</span>`;
+        const tf=document.createElement('tr'); tf.className='total-row';
+        tf.innerHTML=`<td>Total</td><td class="num c-red">${R(tot.oCGST)}</td><td class="num c-red">${R(tot.oSGST)}</td><td class="num c-red">${R(tot.oIGST)}</td><td class="num c-red">${R(tot.oT)}</td>
+            <td class="num c-green">${R(tot.iCGST)}</td><td class="num c-green">${R(tot.iSGST)}</td><td class="num c-green">${R(tot.iIGST)}</td><td class="num c-green">${R(tot.iT)}</td><td class="num">${totPill}</td>`;
+        tbody.appendChild(tf);
+        document.getElementById('coTable').style.display='block';
+    }
+
+    /* ═══ TAB 2: HSN Code-wise ═════════════════════════════ */
+    async function loadHsn() {
+        _hsnLoaded=true;
+        showHsnLoading(true);
+        try {
+            const r = await fetch(`${API}/duties-taxes-hsn-summary?${buildParams()}`,{credentials:'include'});
+            const d = await r.json();
+            if (!d.success) { showHsnError(d.detail||'Failed'); return; }
+            renderHsn(d);
+        } catch(e) { showHsnError('Network error: '+e.message); }
+    }
+    function showHsnLoading(on) {
+        ['outHsnLoading','inHsnLoading'].forEach(id=>document.getElementById(id).style.display=on?'flex':'none');
+        ['outHsnTable','inHsnTable','outHsnEmpty','inHsnEmpty'].forEach(id=>document.getElementById(id).style.display='none');
+    }
+    function showHsnError(msg) {
+        showHsnLoading(false);
+        ['outHsnEmpty','inHsnEmpty'].forEach(id=>{
+            document.getElementById(id).innerHTML=`<i class="fas fa-exclamation-circle" style="color:#dc2626"></i><h4>Error</h4><p>${msg}</p>`;
+            document.getElementById(id).style.display='block';
+        });
+    }
+    /* ── HSN detail cache: key = "side|hsn_code|filterParams" ── */
+    const _hsnDetailCache = {};
+
+    function renderHsnTable(rows, bodyId, emptyId, tableId, countId, colorClass, side) {
+        document.getElementById(countId).textContent=`${rows.length} HSN code${rows.length!==1?'s':''}`;
+        if (!rows.length) { document.getElementById(emptyId).style.display='block'; return; }
+        const tbody=document.getElementById(bodyId); tbody.innerHTML='';
+        let tTax=0, tTaxable=0, tCGST=0, tSGST=0, tIGST=0;
+        rows.forEach((r, idx) => {
+            tTaxable+=parseFloat(r.taxable)||0; tCGST+=parseFloat(r.cgst)||0;
+            tSGST+=parseFloat(r.sgst)||0; tIGST+=parseFloat(r.igst)||0; tTax+=parseFloat(r.total_tax)||0;
+
+            const uid = `hsn_${side}_${idx}_${r.hsn_code.replace(/[^a-zA-Z0-9]/g,'_')}`;
+
+            /* ── Summary row ── */
+            const tr = document.createElement('tr');
+            tr.className = 'hsn-summary-row';
+            tr.style.cursor = 'pointer';
+            tr.dataset.hsnCode = r.hsn_code;
+            tr.dataset.side    = side;
+            tr.dataset.uid     = uid;
+            tr.innerHTML = `
+                <td style="width:28px;padding-left:8px;">
+                    <button class="expand-btn" id="btn_${uid}" title="Expand invoices">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </td>
+                <td><span class="hsn-chip">${r.hsn_code}</span></td>
+                <td class="num"><span class="rate-badge">${parseFloat(r.gst_rate).toFixed(1)}%</span></td>
+                <td class="num">${r.inv_count}</td>
+                <td class="num">${R(r.taxable)}</td>
+                <td class="num c-blue">${R(r.cgst)}</td>
+                <td class="num c-blue">${R(r.sgst)}</td>
+                <td class="num c-blue">${R(r.igst)}</td>
+                <td class="num ${colorClass}" style="font-weight:600">${R(r.total_tax)}</td>`;
+            tr.addEventListener('click', () => toggleHsnDetail(uid, r.hsn_code, side));
+            tbody.appendChild(tr);
+
+            /* ── Detail row (hidden until expanded) ── */
+            const dr = document.createElement('tr');
+            dr.className = 'hsn-detail-row';
+            dr.id = `detail_${uid}`;
+            const colspan = 9;
+            dr.innerHTML = `<td colspan="${colspan}" class="hsn-detail-cell">
+                <div class="detail-wrap" id="wrap_${uid}">
+                    <div class="detail-spinner"><div class="sp"></div>Loading invoice details…</div>
+                </div>
+            </td>`;
+            tbody.appendChild(dr);
+        });
+
+        const tf=document.createElement('tr'); tf.className='total-row';
+        tf.innerHTML=`<td></td><td colspan="3">Total</td><td class="num">${R(tTaxable)}</td><td class="num c-blue">${R(tCGST)}</td><td class="num c-blue">${R(tSGST)}</td><td class="num c-blue">${R(tIGST)}</td><td class="num ${colorClass}">${R(tTax)}</td>`;
+        tbody.appendChild(tf);
+        document.getElementById(tableId).style.display='block';
+    }
+
+    function toggleHsnDetail(uid, hsnCode, side) {
+        const btn    = document.getElementById(`btn_${uid}`);
+        const detRow = document.getElementById(`detail_${uid}`);
+        const isOpen = detRow.classList.contains('open');
+
+        if (isOpen) {
+            detRow.classList.remove('open');
+            btn.classList.remove('open');
+            return;
+        }
+        detRow.classList.add('open');
+        btn.classList.add('open');
+
+        const cacheKey = `${side}|${hsnCode}|${buildParams()}`;
+        if (_hsnDetailCache[cacheKey]) {
+            renderDetailContent(uid, _hsnDetailCache[cacheKey], side);
+        } else {
+            loadHsnDetail(uid, hsnCode, side, cacheKey);
+        }
+    }
+
+    async function loadHsnDetail(uid, hsnCode, side, cacheKey) {
+        const p = new URLSearchParams(buildParams());
+        p.set('hsn_code', hsnCode);
+        p.set('side', side);
+        try {
+            const r = await fetch(`${API}/duties-taxes-hsn-detail?${p.toString()}`, {credentials:'include'});
+            const d = await r.json();
+            if (!d.success) throw new Error(d.detail || 'Failed to load');
+            _hsnDetailCache[cacheKey] = d;
+            renderDetailContent(uid, d, side);
+        } catch(e) {
+            document.getElementById(`wrap_${uid}`).innerHTML =
+                `<div class="detail-empty"><i class="fas fa-exclamation-circle" style="color:#dc2626"></i> ${e.message}</div>`;
+        }
+    }
+
+    function renderDetailContent(uid, d, side) {
+        const isOutput = side === 'output';
+        const invLabel = isOutput ? 'Customer' : 'Vendor';
+        const invs     = d.invoices   || [];
+        const lis      = d.line_items || [];
+
+        /* ── Invoice summary table ── */
+        let invHtml = `<div style="overflow-x:auto"><table class="detail-table">
+            <thead><tr>
+                <th>Invoice #</th><th>Date</th><th>${invLabel}</th>
+                ${isOutput ? '<th>GSTIN</th>' : ''}
+                <th class="r">Lines</th><th class="r">Qty</th>
+                <th class="r">Taxable</th><th class="r">CGST</th>
+                <th class="r">SGST</th><th class="r">IGST</th>
+                <th class="r">Total Tax</th>
+            </tr></thead><tbody>`;
+        let sumTax=0, sumTaxable=0, sumCGST=0, sumSGST=0, sumIGST=0;
+        invs.forEach(inv => {
+            sumTax+=parseFloat(inv.total_tax)||0; sumTaxable+=parseFloat(inv.taxable)||0;
+            sumCGST+=parseFloat(inv.cgst)||0; sumSGST+=parseFloat(inv.sgst)||0; sumIGST+=parseFloat(inv.igst)||0;
+            invHtml += `<tr>
+                <td><span class="inv-badge">${inv.invoice_number}</span></td>
+                <td style="white-space:nowrap">${inv.invoice_date}</td>
+                <td>${inv.party_name}</td>
+                ${isOutput ? `<td style="font-size:10px;color:#6b7280">${inv.gstin||'—'}</td>` : ''}
+                <td class="r">${inv.line_count}</td>
+                <td class="r qty-cell">${inv.total_qty}</td>
+                <td class="r">${R(inv.taxable)}</td>
+                <td class="r c-blue">${R(inv.cgst)}</td>
+                <td class="r c-blue">${R(inv.sgst)}</td>
+                <td class="r c-blue">${R(inv.igst)}</td>
+                <td class="r" style="font-weight:600">${R(inv.total_tax)}</td>
+            </tr>`;
+        });
+        if (invs.length > 1) {
+            invHtml += `<tr class="dtotal">
+                <td colspan="${isOutput ? 6 : 5}">Total (${invs.length} invoices)</td>
+                <td class="r">${R(sumTaxable)}</td>
+                <td class="r">${R(sumCGST)}</td>
+                <td class="r">${R(sumSGST)}</td>
+                <td class="r">${R(sumIGST)}</td>
+                <td class="r">${R(sumTax)}</td>
+            </tr>`;
+        }
+        invHtml += `</tbody></table></div>`;
+
+        /* ── Line items table ── */
+        let liHtml = `<div style="overflow-x:auto"><table class="detail-table">
+            <thead><tr>
+                <th>Invoice #</th><th>Date</th><th>${invLabel}</th>
+                <th>Item Code</th><th>Description</th>
+                <th class="r">Qty</th><th>UOM</th><th class="r">Unit Rate</th>
+                <th class="r">Taxable</th><th class="r">GST%</th>
+                <th class="r">CGST</th><th class="r">SGST</th><th class="r">IGST</th>
+                <th class="r">Total Tax</th><th class="r">Line Total</th>
+            </tr></thead><tbody>`;
+        lis.forEach(li => {
+            liHtml += `<tr>
+                <td><span class="inv-badge">${li.invoice_number}</span></td>
+                <td style="white-space:nowrap">${li.invoice_date}</td>
+                <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${li.party_name}">${li.party_name}</td>
+                <td><span class="item-code">${li.item_code}</span></td>
+                <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${li.item_description}">${li.item_description}</td>
+                <td class="r qty-cell">${li.quantity}</td>
+                <td style="color:#6b7280;font-size:11px">${li.uom||'—'}</td>
+                <td class="r">${R(li.unit_rate)}</td>
+                <td class="r">${R(li.taxable)}</td>
+                <td class="r"><span class="rate-badge" style="font-size:10px">${li.gst_rate}%</span></td>
+                <td class="r c-blue">${R(li.cgst)}</td>
+                <td class="r c-blue">${R(li.sgst)}</td>
+                <td class="r c-blue">${R(li.igst)}</td>
+                <td class="r" style="font-weight:600">${R(li.total_tax)}</td>
+                <td class="r">${R(li.line_total)}</td>
+            </tr>`;
+        });
+        liHtml += `</tbody></table></div>`;
+
+        if (!lis.length) liHtml = `<div class="detail-empty">No line items found</div>`;
+        if (!invs.length) invHtml = `<div class="detail-empty">No invoices found</div>`;
+
+        document.getElementById(`wrap_${uid}`).innerHTML = `
+            <div class="detail-tabs">
+                <button class="detail-tab active" onclick="switchDetailTab('${uid}','inv')">
+                    <i class="fas fa-file-invoice me-1"></i>Invoice Summary
+                    <span style="background:#ddd6fe;color:#6d28d9;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px">${invs.length}</span>
+                </button>
+                <button class="detail-tab" onclick="switchDetailTab('${uid}','li')">
+                    <i class="fas fa-list me-1"></i>All Line Items
+                    <span style="background:#ddd6fe;color:#6d28d9;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px">${lis.length}</span>
+                </button>
+            </div>
+            <div class="detail-pane active" id="dpane_inv_${uid}">${invHtml}</div>
+            <div class="detail-pane" id="dpane_li_${uid}">${liHtml}</div>`;
+    }
+
+    function switchDetailTab(uid, tab) {
+        ['inv','li'].forEach(t => {
+            const btn  = document.querySelector(`[onclick="switchDetailTab('${uid}','${t}')"]`);
+            const pane = document.getElementById(`dpane_${t}_${uid}`);
+            if (btn)  btn.classList.toggle('active',  t === tab);
+            if (pane) pane.classList.toggle('active', t === tab);
+        });
+    }
+
+    function renderHsn(d) {
+        showHsnLoading(false);
+        renderHsnTable(d.output_hsn||[], 'outHsnBody', 'outHsnEmpty', 'outHsnTable', 'outHsnCount', 'c-red',   'output');
+        renderHsnTable(d.input_hsn||[],  'inHsnBody',  'inHsnEmpty',  'inHsnTable',  'inHsnCount',  'c-green', 'input');
+    }
+
+    /* ── Init ───────────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        StaffHeader.inject('Duties & Taxes (GST)', 'fas fa-percent');
+        if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+        if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+
+        await loadCompanies();
+        initContext();
+
+        if (!_ctxAsOn && !_ctxFrom) {
+            document.getElementById('filterFrom').value = fmt_date(fyStart());
+            document.getElementById('filterTo').value   = fmt_date(today());
+        }
+
+        loadCompanyData();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Announcement | MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-green: #10b981;
+            --primary-blue: #3b82f6;
+            --dark-bg: #1f2937;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .feedback-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .feedback-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .card-header-custom {
+            background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-blue) 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .submission-type-card {
+            border: 3px solid transparent;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        }
+        
+        .submission-type-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .submission-type-card.active {
+            border-color: var(--primary-green);
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        }
+        
+        .upload-zone {
+            border: 3px dashed #d1d5db;
+            border-radius: 15px;
+            padding: 50px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+        
+        .upload-zone:hover {
+            border-color: var(--primary-green);
+            background: #f0fdf4;
+        }
+        
+        .upload-zone.dragover {
+            border-color: var(--primary-blue);
+            background: #dbeafe;
+        }
+        
+        .file-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .file-preview-item {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .file-preview-item img,
+        .file-preview-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .file-preview-item .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(239, 68, 68, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-blue) 100%);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .validation-message {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        
+        .validation-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .validation-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        /* Spin animation for uploading icon */
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* DC Protocol (Mar 2026): Video thumbnail frame picker */
+        .thumb-picker-card {
+            background: #f0f9ff;
+            border: 1.5px solid #bae6fd;
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 16px;
+        }
+        .thumb-picker-card h6 {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #0369a1;
+            margin-bottom: 10px;
+        }
+        .thumb-canvas-wrap {
+            position: relative;
+            display: inline-block;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+        }
+        .thumb-canvas-wrap canvas {
+            display: block;
+            max-width: 200px;
+            height: auto;
+            border-radius: 8px;
+        }
+        .thumb-scrubber {
+            width: 100%;
+            accent-color: #0ea5e9;
+            margin: 6px 0 4px;
+        }
+        .thumb-confirm-btn {
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .thumb-confirm-btn:hover { background: #0284c7; }
+        .thumb-confirmed-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+            color: #16a34a;
+            font-weight: 600;
+        }
+
+        /* Progress bar animation */
+        .progress-bar-animated {
+            background-image: linear-gradient(
+                45deg,
+                rgba(255,255,255,.15) 25%,
+                transparent 25%,
+                transparent 50%,
+                rgba(255,255,255,.15) 50%,
+                rgba(255,255,255,.15) 75%,
+                transparent 75%,
+                transparent
+            );
+            background-size: 1rem 1rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="feedback-container">
+    <div class="feedback-card">
+        <div class="card-header-custom">
+            <h1>📤 Submit Your Update</h1>
+            <p class="mb-0">Share your experience with videos or photos</p>
+        </div>
+        
+        <div class="card-body p-4">
+            <!-- Step 1: Choose Submission Type -->
+            <div class="mb-4">
+                <h4 class="mb-3">Step 1: Choose Submission Type</h4>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="submission-type-card" id="videoTypeCard" onclick="selectType('video')">
+                            <i class="bi bi-camera-video" style="font-size: 48px; color: #3b82f6;"></i>
+                            <h5 class="mt-3">Video</h5>
+                            <p class="text-muted mb-0">Upload max 5 videos</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="submission-type-card" id="photoTypeCard" onclick="selectType('photo')">
+                            <i class="bi bi-images" style="font-size: 48px; color: #10b981;"></i>
+                            <h5 class="mt-3">Photos</h5>
+                            <p class="text-muted mb-0">Upload max 10 photos</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4" id="textTypeContainer" style="display:none;">
+                        <div class="submission-type-card" id="textTypeCard" onclick="selectType('text')">
+                            <i class="bi bi-card-text" style="font-size: 48px; color: #f97316;"></i>
+                            <h5 class="mt-3">Text Only</h5>
+                            <p class="text-muted mb-0">Text announcement - No media required</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 2: Category Selection -->
+            <div class="mb-4">
+                <h4 class="mb-3">Step 2: Select Category</h4>
+                <select class="form-select form-select-lg" id="categorySelect">
+                    <option value="">-- Choose a category --</option>
+                </select>
+            </div>
+            
+            <!-- Step 3: Upload Files -->
+            <div class="mb-4" id="uploadSection" style="display:none;">
+                <h4 class="mb-3">Step 3: Upload Media</h4>
+                <div class="upload-zone" id="uploadZone">
+                    <i class="bi bi-cloud-upload" style="font-size: 64px; color: #9ca3af;"></i>
+                    <h5 class="mt-3">Drag & Drop Files Here</h5>
+                    <p class="text-muted">or click to browse</p>
+                    <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none;">
+                    <button class="btn btn-primary mt-3" onclick="document.getElementById('fileInput').click()">
+                        <i class="bi bi-folder2-open"></i> Browse Files
+                    </button>
+                </div>
+                <div class="file-preview" id="filePreview"></div>
+                <div id="validationMessage"></div>
+            </div>
+            
+            <!-- Step 4: Add Details -->
+            <div class="mb-4" id="detailsSection" style="display:none;">
+                <h4 class="mb-3">Step 4: Add Details</h4>
+                <div class="mb-3">
+                    <label class="form-label">Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-lg" id="titleInput" placeholder="Give your submission a title">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" id="descriptionInput" rows="4" placeholder="Add a description (optional)"></textarea>
+                </div>
+            </div>
+            
+            <!-- Upload Progress Section -->
+            <div class="mb-4" id="progressSection" style="display:none;">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="mb-3"><i class="bi bi-cloud-upload text-primary"></i> Upload Progress</h5>
+                        
+                        <!-- Overall Progress -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span id="progressStatusText" class="fw-semibold">Preparing upload...</span>
+                                <span id="progressPercentText" class="badge bg-primary">0%</span>
+                            </div>
+                            <div class="progress" style="height: 25px;">
+                                <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- File-by-file Status -->
+                        <div id="fileProgressList" class="small"></div>
+                        
+                        <!-- Current Step Indicator -->
+                        <div class="mt-3 p-3 rounded" id="currentStepBox" style="background: #f0fdf4;">
+                            <i class="bi bi-hourglass-split text-success"></i>
+                            <span id="currentStepText">Initializing...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <div class="text-center mt-4" id="submitSection" style="display:none;">
+                <button class="submit-btn" id="submitBtn" onclick="submitAnnouncement()">
+                    <i class="bi bi-send"></i> Submit Announcement
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- My Submissions Link -->
+    <div class="text-center mt-4">
+        <a href="#" onclick="goToMySubmissions()" class="text-white">
+            <i class="bi bi-list-ul"></i> View My Submissions
+        </a>
+    </div>
+</div>
+
+<script>
+    let selectedType = null;
+    let selectedFiles = [];
+    let categories = [];
+    const authToken = sessionToken;
+    // DC Protocol (Mar 2026): thumbnail blobs keyed by file index (only for videos)
+    const videoThumbnails = {};
+    
+    // Load categories on page load
+    async function loadCategories() {
+        try {
+            const response = await fetch(`/api/v1/feedback/categories`, {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            });
+            categories = await response.json();
+            
+            const select = document.getElementById('categorySelect');
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading categories:', error);
+        }
+    }
+    
+    // Select submission type
+    function selectType(type) {
+        selectedType = type;
+        selectedFiles = [];
+        
+        // Update UI
+        document.getElementById('videoTypeCard').classList.remove('active');
+        document.getElementById('photoTypeCard').classList.remove('active');
+        if (document.getElementById('textTypeCard')) {
+            document.getElementById('textTypeCard').classList.remove('active');
+        }
+        document.getElementById(type + 'TypeCard').classList.add('active');
+        
+        // TEXT type doesn't need file upload
+        if (type === 'text') {
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('detailsSection').style.display = 'block';
+            document.getElementById('submitSection').style.display = 'block';
+            // Make description required for text
+            document.getElementById('descriptionInput').setAttribute('required', 'true');
+            document.getElementById('descriptionInput').placeholder = 'Enter your announcement text (min 10 characters)';
+        } else {
+            // Show upload section
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('filePreview').innerHTML = '';
+            document.getElementById('validationMessage').innerHTML = '';
+            document.getElementById('descriptionInput').removeAttribute('required');
+            document.getElementById('descriptionInput').placeholder = 'Add a description (optional)';
+            
+            // Update file input accept
+            const fileInput = document.getElementById('fileInput');
+            if (type === 'video') {
+                fileInput.accept = 'video/*';
+                fileInput.multiple = true; // Allow multiple videos (max 5)
+            } else {
+                fileInput.accept = 'image/*';
+                fileInput.multiple = true; // Allow multiple photos (max 10)
+            }
+        }
+    }
+    
+    // Check if user is RVZ or Admin and show text option
+    if (typeof sessionUserType !== 'undefined' && (sessionUserType === 'RVZ ID' || sessionUserType === 'VGK ID' || sessionUserType === 'General Admin' || sessionUserType === 'Super Admin' || sessionUserType === 'Finance Admin')) {
+        document.getElementById('textTypeContainer').style.display = 'block';
+    }
+    
+    // File input change handler
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        handleFiles(e.target.files);
+    });
+    
+    // Drag and drop handlers
+    const uploadZone = document.getElementById('uploadZone');
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+    
+    // Handle file selection
+    function handleFiles(files) {
+        selectedFiles = Array.from(files);
+        validateAndPreview();
+    }
+    
+    // Validate and show preview
+    function validateAndPreview() {
+        const validationMsg = document.getElementById('validationMessage');
+        let isValid = false;
+        let message = '';
+        
+        if (selectedType === 'video') {
+            if (selectedFiles.length < 1 || selectedFiles.length > 5) {
+                message = '<div class="validation-error"><i class="bi bi-x-circle"></i> Please select 1-5 video files (max 5 videos)</div>';
+            } else if (!selectedFiles.every(f => f.type.startsWith('video/'))) {
+                message = '<div class="validation-error"><i class="bi bi-x-circle"></i> All files must be videos</div>';
+            } else {
+                // Check file sizes (max 50MB per video)
+                const oversizedFiles = selectedFiles.filter(f => f.size > 50 * 1024 * 1024);
+                if (oversizedFiles.length > 0) {
+                    message = '<div class="validation-error"><i class="bi bi-x-circle"></i> Some video files are too large (max 50MB per video)</div>';
+                } else {
+                    message = '<div class="validation-success"><i class="bi bi-check-circle"></i> ' + selectedFiles.length + ' video(s) selected successfully</div>';
+                    isValid = true;
+                }
+            }
+        } else if (selectedType === 'photo') {
+            if (selectedFiles.length < 1 || selectedFiles.length > 10) {
+                message = '<div class="validation-error"><i class="bi bi-x-circle"></i> Please select 1-10 photo files (max 10 photos)</div>';
+            } else if (!selectedFiles.every(f => f.type.startsWith('image/'))) {
+                message = '<div class="validation-error"><i class="bi bi-x-circle"></i> All files must be images</div>';
+            } else {
+                message = '<div class="validation-success"><i class="bi bi-check-circle"></i> ' + selectedFiles.length + ' photos selected successfully</div>';
+                isValid = true;
+            }
+        }
+        
+        validationMsg.innerHTML = message;
+        
+        // Show preview
+        if (isValid) {
+            showPreview();
+            document.getElementById('detailsSection').style.display = 'block';
+            document.getElementById('submitSection').style.display = 'block';
+        } else {
+            document.getElementById('filePreview').innerHTML = '';
+            document.getElementById('detailsSection').style.display = 'none';
+            document.getElementById('submitSection').style.display = 'none';
+        }
+    }
+    
+    // Show file preview
+    function showPreview() {
+        const preview = document.getElementById('filePreview');
+        preview.innerHTML = '';
+        // Clear old thumbnails
+        Object.keys(videoThumbnails).forEach(k => delete videoThumbnails[k]);
+
+        selectedFiles.forEach((file, index) => {
+            const item = document.createElement('div');
+            item.className = 'file-preview-item';
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                if (file.type.startsWith('image/')) {
+                    item.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <button class="remove-btn" onclick="removeFile(${index})">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    `;
+                } else if (file.type.startsWith('video/')) {
+                    item.innerHTML = `
+                        <video id="vidPrev_${index}" src="${e.target.result}" controls></video>
+                        <button class="remove-btn" onclick="removeFile(${index})">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    `;
+                    // Attach thumbnail picker AFTER video metadata loads
+                    setTimeout(() => initVideoThumbPicker(index, e.target.result, file), 300);
+                }
+            };
+            reader.readAsDataURL(file);
+            preview.appendChild(item);
+        });
+    }
+
+    // DC Protocol (Mar 2026): Initialize thumbnail frame picker for a video
+    function initVideoThumbPicker(fileIndex, dataSrc, file) {
+        const pickerId = 'thumbPicker_' + fileIndex;
+        // Remove old picker if any
+        const old = document.getElementById(pickerId);
+        if (old) old.remove();
+
+        const card = document.createElement('div');
+        card.className = 'thumb-picker-card';
+        card.id = pickerId;
+        card.style.width = '100%';
+        card.style.maxWidth = '460px';
+        card.style.marginTop = '12px';
+        card.innerHTML = `
+            <h6><i class="bi bi-image me-1"></i> Thumbnail for "${file.name.length > 22 ? file.name.substring(0,20)+'...' : file.name}"</h6>
+            <div style="display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+                <div class="thumb-canvas-wrap">
+                    <canvas id="thumbCanvas_${fileIndex}" width="200" height="112" style="background:#111;border-radius:8px;"></canvas>
+                </div>
+                <div style="flex:1; min-width:150px;">
+                    <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">Scrub to choose frame:</div>
+                    <input type="range" class="thumb-scrubber" id="thumbScrubber_${fileIndex}" min="0" max="100" value="10" step="1">
+                    <div style="font-size:0.72rem; color:#9ca3af; margin-bottom:6px;" id="thumbTime_${fileIndex}">t = 0.0s</div>
+                    <button class="thumb-confirm-btn" onclick="confirmThumbFrame(${fileIndex})">
+                        <i class="bi bi-check-circle me-1"></i>Use This Frame
+                    </button>
+                    <div id="thumbBadge_${fileIndex}" style="margin-top:6px;"></div>
+                </div>
+            </div>
+        `;
+
+        // Insert after the file preview container
+        const preview = document.getElementById('filePreview');
+        preview.parentNode.insertBefore(card, preview.nextSibling);
+
+        // Set up hidden video for frame extraction
+        const hidVid = document.createElement('video');
+        hidVid.src = dataSrc;
+        hidVid.muted = true;
+        hidVid.preload = 'metadata';
+        hidVid.style.display = 'none';
+        document.body.appendChild(hidVid);
+
+        hidVid.addEventListener('loadedmetadata', () => {
+            const dur = hidVid.duration || 10;
+            const scrubber = document.getElementById('thumbScrubber_' + fileIndex);
+            if (!scrubber) return;
+            scrubber.max = Math.floor(dur * 10);
+            // Auto-extract at t=1.5s (or mid if video < 3s)
+            const autoT = Math.min(1.5, dur * 0.2);
+            hidVid.currentTime = autoT;
+        });
+
+        hidVid.addEventListener('seeked', () => {
+            _drawVideoFrame(fileIndex, hidVid);
+        });
+
+        const scrubber = document.getElementById('thumbScrubber_' + fileIndex);
+        if (scrubber) {
+            scrubber.addEventListener('input', function() {
+                const t = parseFloat(this.value) / 10;
+                const timeEl = document.getElementById('thumbTime_' + fileIndex);
+                if (timeEl) timeEl.textContent = 't = ' + t.toFixed(1) + 's';
+                hidVid.currentTime = t;
+            });
+        }
+
+        // Store reference for cleanup
+        card._hidVid = hidVid;
+    }
+
+    function _drawVideoFrame(fileIndex, vid) {
+        const canvas = document.getElementById('thumbCanvas_' + fileIndex);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        // Keep 16:9 aspect
+        const w = vid.videoWidth || 320;
+        const h = vid.videoHeight || 180;
+        const ratio = w / h;
+        canvas.width = 200;
+        canvas.height = Math.round(200 / ratio);
+        ctx.drawImage(vid, 0, 0, canvas.width, canvas.height);
+        // Auto-set this frame as the thumbnail (update on each seek)
+        canvas.toBlob(blob => {
+            if (blob) videoThumbnails[fileIndex] = blob;
+        }, 'image/jpeg', 0.88);
+    }
+
+    function confirmThumbFrame(fileIndex) {
+        const canvas = document.getElementById('thumbCanvas_' + fileIndex);
+        if (!canvas) return;
+        canvas.toBlob(blob => {
+            if (blob) {
+                videoThumbnails[fileIndex] = blob;
+                const badge = document.getElementById('thumbBadge_' + fileIndex);
+                if (badge) badge.innerHTML = '<span class="thumb-confirmed-badge"><i class="bi bi-check-circle-fill"></i> Frame confirmed!</span>';
+            }
+        }, 'image/jpeg', 0.88);
+    }
+
+    // DC Protocol (Mar 2026): Upload stored video thumbnails to their media records
+    async function uploadVideoThumbnails(submitResult) {
+        try {
+            const videoMedia = (submitResult && submitResult.video_media) || [];
+            if (!videoMedia.length) return;
+
+            // Match video files (by order) to media IDs returned from backend
+            let vidFileIdx = 0;
+            for (let i = 0; i < selectedFiles.length && vidFileIdx < videoMedia.length; i++) {
+                if (!selectedFiles[i].type.startsWith('video/')) continue;
+                const mediaRecord = videoMedia[vidFileIdx];
+                const thumbBlob = videoThumbnails[i];
+                if (thumbBlob && mediaRecord && mediaRecord.media_id) {
+                    const fd = new FormData();
+                    fd.append('thumbnail', thumbBlob, `thumb_${mediaRecord.media_id}.jpg`);
+                    try {
+                        await fetch(`/api/v1/feedback/media/${mediaRecord.media_id}/thumbnail`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${authToken}` },
+                            body: fd
+                        });
+                    } catch (e) {
+                        console.warn('[DC] Thumbnail upload skipped for media', mediaRecord.media_id, e);
+                    }
+                }
+                vidFileIdx++;
+            }
+        } catch (e) {
+            console.warn('[DC] uploadVideoThumbnails failed (non-fatal):', e);
+        }
+    }
+
+    // Remove file from selection
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        validateAndPreview();
+    }
+    
+    // Progress update helpers
+    function updateProgress(percent, statusText, stepText) {
+        document.getElementById('uploadProgressBar').style.width = percent + '%';
+        document.getElementById('progressPercentText').textContent = percent + '%';
+        if (statusText) document.getElementById('progressStatusText').textContent = statusText;
+        if (stepText) document.getElementById('currentStepText').textContent = stepText;
+    }
+    
+    function updateFileProgress(files) {
+        const listEl = document.getElementById('fileProgressList');
+        listEl.innerHTML = files.map((f, i) => `
+            <div class="d-flex align-items-center mb-1">
+                <i class="bi ${f.status === 'done' ? 'bi-check-circle-fill text-success' : f.status === 'uploading' ? 'bi-arrow-repeat text-primary spin' : 'bi-circle text-muted'} me-2"></i>
+                <span class="${f.status === 'done' ? 'text-success' : ''}">${f.name}</span>
+                <span class="ms-auto badge ${f.status === 'done' ? 'bg-success' : f.status === 'uploading' ? 'bg-primary' : 'bg-secondary'}">${f.statusText}</span>
+            </div>
+        `).join('');
+    }
+    
+    function showProgressSection() {
+        document.getElementById('progressSection').style.display = 'block';
+        document.getElementById('submitBtn').disabled = true;
+        document.getElementById('submitBtn').innerHTML = '<i class="bi bi-hourglass-split"></i> Uploading...';
+    }
+    
+    function hideProgressSection(success) {
+        if (success) {
+            document.getElementById('currentStepBox').style.background = '#d1fae5';
+            document.getElementById('currentStepBox').innerHTML = '<i class="bi bi-check-circle-fill text-success"></i> <span class="text-success fw-bold">Upload Complete!</span>';
+        }
+    }
+    
+    // Submit announcement with progress tracking
+    async function submitAnnouncement() {
+        const title = document.getElementById('titleInput').value.trim();
+        const description = document.getElementById('descriptionInput').value.trim();
+        const categoryId = document.getElementById('categorySelect').value;
+        
+        if (!title) {
+            alert('Please enter a title');
+            return;
+        }
+        
+        if (!categoryId) {
+            alert('Please select a category');
+            return;
+        }
+        
+        // TEXT type requires description (min 10 chars)
+        if (selectedType === 'text') {
+            if (!description || description.length < 10) {
+                alert('Please enter a description (minimum 10 characters) for TEXT announcement');
+                return;
+            }
+        } else {
+            // Media types require files
+            if (selectedFiles.length === 0) {
+                alert('Please upload files');
+                return;
+            }
+        }
+        
+        // Show progress section
+        showProgressSection();
+        
+        // Initialize file progress list
+        const fileProgressData = selectedFiles.map(f => ({
+            name: f.name.length > 25 ? f.name.substring(0, 22) + '...' : f.name,
+            status: 'pending',
+            statusText: 'Waiting...'
+        }));
+        updateFileProgress(fileProgressData);
+        updateProgress(5, 'Preparing upload...', 'Step 1/4: Validating files');
+        
+        // Create FormData
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('category_id', categoryId);
+        formData.append('submission_type', selectedType);
+        
+        // Only append files for non-TEXT submissions
+        if (selectedType !== 'text') {
+            selectedFiles.forEach((file, idx) => {
+                formData.append('files', file);
+                fileProgressData[idx].status = 'uploading';
+                fileProgressData[idx].statusText = 'Queued';
+            });
+            updateFileProgress(fileProgressData);
+        }
+        
+        // Use XMLHttpRequest for progress tracking
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 70) + 10; // 10-80%
+                updateProgress(percent, `Uploading ${selectedFiles.length} file(s)...`, 'Step 2/4: Uploading media files');
+                
+                // Update individual file status based on progress
+                const filesCompleted = Math.floor((e.loaded / e.total) * selectedFiles.length);
+                fileProgressData.forEach((f, idx) => {
+                    if (idx < filesCompleted) {
+                        f.status = 'done';
+                        f.statusText = 'Uploaded';
+                    } else if (idx === filesCompleted) {
+                        f.status = 'uploading';
+                        f.statusText = 'Uploading...';
+                    }
+                });
+                updateFileProgress(fileProgressData);
+            }
+        });
+        
+        xhr.addEventListener('load', () => {
+            try {
+                const result = JSON.parse(xhr.responseText);
+                
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Mark all files done
+                    fileProgressData.forEach(f => {
+                        f.status = 'done';
+                        f.statusText = 'Complete';
+                    });
+                    updateFileProgress(fileProgressData);
+                    
+                    updateProgress(85, 'Processing...', 'Step 3/4: Server processing & optimization');
+
+                    // DC Protocol (Mar 2026): Upload video thumbnails if any
+                    uploadVideoThumbnails(result).finally(() => {
+                        updateProgress(100, 'Success!', 'Step 4/4: Announcement submitted!');
+                        hideProgressSection(true);
+                        
+                        setTimeout(() => {
+                            const isVGK = (typeof sessionUserType !== 'undefined' && sessionUserType === 'RVZ ID');
+                            const successMsg = isVGK
+                                ? '✅ Announcement published successfully! (Direct RVZ approval)' 
+                                : '✅ Announcement submitted successfully! Your submission is pending approval.';
+                            alert(successMsg);
+                            window.location.href = `/user/my-feedback-submissions`;
+                        }, 500);
+                    });
+                } else {
+                    document.getElementById('currentStepBox').style.background = '#fee2e2';
+                    document.getElementById('currentStepBox').innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> <span class="text-danger">Upload Failed</span>';
+                    document.getElementById('submitBtn').disabled = false;
+                    document.getElementById('submitBtn').innerHTML = '<i class="bi bi-send"></i> Try Again';
+                    alert('❌ Error: ' + (result.detail || 'Failed to submit announcement'));
+                }
+            } catch (error) {
+                document.getElementById('currentStepBox').style.background = '#fee2e2';
+                document.getElementById('currentStepBox').innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> <span class="text-danger">Upload Failed</span>';
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('submitBtn').innerHTML = '<i class="bi bi-send"></i> Try Again';
+                alert('❌ Error processing response');
+            }
+        });
+        
+        xhr.addEventListener('error', () => {
+            document.getElementById('currentStepBox').style.background = '#fee2e2';
+            document.getElementById('currentStepBox').innerHTML = '<i class="bi bi-x-circle-fill text-danger"></i> <span class="text-danger">Connection Error</span>';
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').innerHTML = '<i class="bi bi-send"></i> Try Again';
+            alert('❌ Network error. Please check your connection and try again.');
+        });
+        
+        updateProgress(10, 'Connecting to server...', 'Step 2/4: Uploading media files');
+        
+        xhr.open('POST', '/api/v1/feedback/submit');
+        xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+        xhr.send(formData);
+    }
+    
+    function goToMySubmissions() {
+        window.location.href = `/user/my-feedback-submissions`;
+    }
+    
+    // Load categories on page load
+    loadCategories();
+</script>
+
+</body>
+</html>

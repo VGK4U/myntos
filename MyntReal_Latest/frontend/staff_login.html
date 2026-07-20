@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP - Staff Portal Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a237e;
+            --secondary-color: #3949ab;
+            --accent-color: #5c6bc0;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%, var(--accent-color) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .login-container {
+            max-width: 450px;
+            width: 100%;
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .login-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .login-logo {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+        
+        .login-subtitle {
+            margin: 0;
+            color: #495057;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        
+        .login-body {
+            padding: 40px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .input-group {
+            position: relative;
+        }
+        
+        .input-group i.input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            z-index: 10;
+        }
+        
+        .form-control {
+            padding: 12px 15px 12px 45px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .form-control:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(57, 73, 171, 0.1);
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-login:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .btn-login:disabled {
+            background: #ccc;
+            transform: none;
+        }
+        
+        .login-footer {
+            text-align: center;
+            padding: 20px 40px 30px;
+            border-top: 1px solid #eee;
+        }
+        
+        .login-footer a {
+            color: var(--secondary-color);
+            text-decoration: none;
+        }
+        
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+        }
+        
+        .spinner-border {
+            width: 1.2rem;
+            height: 1.2rem;
+            border-width: 2px;
+        }
+        
+        /* NDA Modal Styles */
+        .nda-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .nda-modal-overlay.show {
+            display: flex;
+        }
+        
+        .nda-modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 900px;
+            width: 95%;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .nda-modal-header {
+            background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
+            color: white;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .nda-modal-header i {
+            font-size: 32px;
+        }
+        
+        .nda-modal-header h4 {
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .nda-modal-header p {
+            margin: 4px 0 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .nda-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: #f9fafb;
+        }
+        
+        .nda-content {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #374151;
+        }
+        
+        .nda-content h4, .nda-content h5 {
+            color: #1f2937;
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+        
+        .nda-content p {
+            margin-bottom: 12px;
+        }
+        
+        .nda-content ol, .nda-content ul {
+            padding-left: 24px;
+            margin-bottom: 12px;
+        }
+        
+        .nda-modal-footer {
+            padding: 20px 24px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .nda-warning {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #92400e;
+            font-size: 13px;
+        }
+        
+        .nda-warning i {
+            color: #d97706;
+        }
+        
+        .nda-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn-nda {
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-nda-cancel {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        .btn-nda-cancel:hover {
+            background: #e5e7eb;
+        }
+        
+        .btn-nda-accept {
+            background: #059669;
+            color: white;
+            border: none;
+        }
+        
+        .btn-nda-accept:hover {
+            background: #047857;
+        }
+        
+        .btn-nda:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        @media (max-width: 768px) {
+            .nda-modal {
+                width: 100%;
+                height: 100%;
+                max-height: 100%;
+                border-radius: 0;
+            }
+            
+            .nda-modal-footer {
+                flex-direction: column;
+            }
+            
+            .nda-buttons {
+                width: 100%;
+            }
+            
+            .nda-buttons button {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+<a href="/landing" onclick="event.preventDefault();sessionStorage.setItem('showLoginSelection','true');window.location.href='/landing';" style="position:fixed;top:16px;right:130px;z-index:9999;background:rgba(0,0,0,0.28);border:1.5px solid rgba(255,255,255,0.5);color:#fff;padding:9px 20px;border-radius:50px;font-size:0.82rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .25s ease;" onmouseover="this.style.background='rgba(0,0,0,0.42)'" onmouseout="this.style.background='rgba(0,0,0,0.28)'"><i class="fas fa-th"></i> All Logins</a>
+<a href="/hub" style="position:fixed;top:16px;right:20px;z-index:9999;background:rgba(0,0,0,0.28);border:1.5px solid rgba(255,255,255,0.5);color:#fff;padding:9px 20px;border-radius:50px;font-size:0.82rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .25s ease;" onmouseover="this.style.background='rgba(0,0,0,0.42)'" onmouseout="this.style.background='rgba(0,0,0,0.28)'"><i class="fas fa-home"></i> Home</a>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" class="login-logo">
+                <p class="login-subtitle">Employee Management System</p>
+            </div>
+            
+            <div class="login-body">
+                <div id="alertContainer"></div>
+                
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>Employee ID</label>
+                        <div class="input-group">
+                            <i class="fas fa-id-card input-icon"></i>
+                            <input type="text" class="form-control" id="employeeId" placeholder="e.g., MR10001" required style="text-transform: uppercase;" autocomplete="username">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-group">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" class="form-control" id="password" placeholder="Enter your password" required autocomplete="current-password">
+                            <button type="button" class="password-toggle" onclick="togglePassword()">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-login" id="loginBtn">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </button>
+                    <div style="text-align:center;margin-top:12px">
+                        <button type="button" onclick="sfToggleForgot()" style="background:none;border:none;color:#3b82f6;font-size:13px;cursor:pointer;text-decoration:underline;padding:0">
+                            <i class="fas fa-key me-1"></i>Forgot Password?
+                        </button>
+                    </div>
+                </form>
+
+                <!-- DC-OTP-RESET-001: Forgot Password Inline Panel -->
+                <div id="sfForgotPanel" style="display:none;margin-top:16px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:12px;padding:16px 18px">
+                    <div style="font-size:13px;font-weight:700;color:#0369a1;margin-bottom:14px"><i class="fas fa-shield-alt me-1"></i>Reset via WhatsApp OTP</div>
+                    <!-- Step 1 -->
+                    <div id="sfStep1">
+                        <label style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em">Your Employee ID</label>
+                        <input id="sfUserId" type="text" placeholder="e.g., MR10001" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;margin:6px 0 10px;box-sizing:border-box;text-transform:uppercase">
+                        <button onclick="sfSendOTP()" style="width:100%;padding:10px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+                            <i class="fas fa-paper-plane me-1"></i>Send OTP to WhatsApp
+                        </button>
+                    </div>
+                    <!-- Step 2 -->
+                    <div id="sfStep2" style="display:none">
+                        <div style="font-size:12px;color:#64748b;margin-bottom:8px" id="sfOtpNote"></div>
+                        <label style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em">6-Digit OTP</label>
+                        <input id="sfOtp" type="text" maxlength="6" placeholder="Enter OTP" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:18px;letter-spacing:6px;margin:6px 0 10px;box-sizing:border-box;text-align:center">
+                        <button onclick="sfVerifyOTP()" style="width:100%;padding:10px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+                            <i class="fas fa-check me-1"></i>Verify OTP
+                        </button>
+                        <div style="text-align:center;margin-top:8px">
+                            <button type="button" onclick="sfSendOTP(true)" style="background:none;border:none;color:#64748b;font-size:12px;cursor:pointer;text-decoration:underline">Resend OTP</button>
+                        </div>
+                    </div>
+                    <!-- Step 3 -->
+                    <div id="sfStep3" style="display:none">
+                        <label style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em">New Password</label>
+                        <input id="sfNewPwd" type="password" placeholder="At least 6 characters" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;margin:6px 0 8px;box-sizing:border-box">
+                        <label style="font-size:12px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em">Confirm Password</label>
+                        <input id="sfConfPwd" type="password" placeholder="Repeat password" style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;margin:6px 0 10px;box-sizing:border-box">
+                        <button onclick="sfResetPwd()" style="width:100%;padding:10px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+                            <i class="fas fa-lock me-1"></i>Reset Password
+                        </button>
+                    </div>
+                    <div id="sfForgotMsg" style="margin-top:10px;font-size:13px;font-weight:600;text-align:center"></div>
+                </div>
+            </div>
+            
+            <div class="login-footer" style="display: flex; flex-direction: column; gap: 0.75rem; align-items: center;">
+                <a href="/landing" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #2ECC71; color: white; border-radius: 0.5rem; text-decoration: none; font-weight: 500; transition: background 0.2s;">
+                    <i class="fas fa-home"></i> Go to Main Page
+                </a>
+                <a href="/landing" onclick="event.preventDefault(); sessionStorage.setItem('showLoginSelection', 'true'); window.location.href='/landing';" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #5D6D7E; color: white; border-radius: 0.5rem; text-decoration: none; font-weight: 500; transition: background 0.2s;">
+                    <i class="fas fa-sign-in-alt"></i> Go to Main Login Page
+                </a>
+            </div>
+        </div>
+
+        <div id="staffAnnouncementSection" style="margin-top: 20px; display: none;">
+            <div style="background: rgba(255,255,255,0.12); border-radius: 16px; padding: 18px; border: 1px solid rgba(255,255,255,0.18);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 14px;">
+                    <div style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse-dot 2s infinite;"></div>
+                    <span style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 1px;">Announcements</span>
+                </div>
+                <div id="staffAnnLoading" style="text-align: center; color: rgba(255,255,255,0.6); padding: 20px 12px; font-size: 13px;">
+                    <i class="fas fa-spinner fa-spin"></i> Loading announcements...
+                </div>
+                <div id="staffAnnContent" style="display:none;"></div>
+                <div id="staffAnnControls" style="display:none; justify-content: center; align-items: center; gap: 10px; margin-top: 12px;">
+                    <button onclick="staffAnnNav(-1)" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Previous"><i class="fas fa-chevron-left" style="font-size:11px;"></i></button>
+                    <div id="staffAnnDots" style="display:flex;gap:6px;align-items:center;"></div>
+                    <button id="staffAnnPlayPauseBtn" onclick="staffAnnToggle()" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Play/Pause"><i class="fas fa-pause" id="staffAnnPlayPauseIcon" style="font-size:11px;"></i></button>
+                    <button onclick="staffAnnNav(1)" style="width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,0.25);background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Next"><i class="fas fa-chevron-right" style="font-size:11px;"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+    </style>
+
+    <!-- NDA Acceptance Modal -->
+    <div class="nda-modal-overlay" id="ndaModal">
+        <div class="nda-modal">
+            <div class="nda-modal-header">
+                <i class="fas fa-file-contract"></i>
+                <div>
+                    <h4>Non-Disclosure Agreement</h4>
+                    <p>Please review and accept to continue</p>
+                </div>
+            </div>
+            <div class="nda-modal-body">
+                <div class="nda-content" id="ndaContent">
+                    Loading NDA content...
+                </div>
+            </div>
+            <div class="nda-modal-footer">
+                <div class="nda-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>You must accept the NDA to access the system</span>
+                </div>
+                <div class="nda-buttons">
+                    <button class="btn-nda btn-nda-cancel" onclick="cancelNda()">
+                        <i class="fas fa-times me-2"></i>Cancel & Logout
+                    </button>
+                    <button class="btn-nda btn-nda-accept" id="acceptNdaBtn" onclick="acceptNda()">
+                        <i class="fas fa-check me-2"></i>I Accept
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // DC Protocol: Fetch with retry for production resilience
+        async function fetchWithRetry(url, options = {}, maxRetries = 3, delay = 1000) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok || response.status < 500) {
+                        return response;
+                    }
+                    console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${url} (status: ${response.status})`);
+                } catch (error) {
+                    console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${url}: ${error.message}`);
+                }
+                if (i < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+                }
+            }
+            throw new Error('Failed after ' + maxRetries + ' retries');
+        }
+        
+        let pendingNdaData = null;
+        let pendingToken = null;
+        let pendingEmployee = null;
+        
+        function getRedirectUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirect = urlParams.get('redirect');
+            if (redirect && redirect.startsWith('/') && !redirect.includes('//')) {
+                return decodeURIComponent(redirect);
+            }
+            return '/staff/progress';
+        }
+
+        async function isTokenValid(token) {
+            try {
+                const response = await fetch('/api/v1/staff/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                return response.ok;
+            } catch {
+                return false;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (token) {
+                const valid = await isTokenValid(token);
+                if (valid) {
+                    window.location.href = getRedirectUrl();
+                    return;
+                } else {
+                    localStorage.removeItem('staff_token');
+                    localStorage.removeItem('staff_user');
+                }
+            }
+            
+            // Check for auto-logout message
+            const logoutReason = sessionStorage.getItem('staff_logout_reason');
+            if (logoutReason) {
+                const alertContainer = document.getElementById('alertContainer');
+                let message = '';
+                let alertClass = 'alert-info';
+                
+                if (logoutReason === 'INACTIVITY_TIMEOUT') {
+                    message = '<i class="fas fa-clock me-2"></i>Your session expired due to 15 minutes of inactivity. Please log in again.';
+                    alertClass = 'alert-warning';
+                } else if (logoutReason === 'USER_REQUESTED') {
+                    message = '<i class="fas fa-sign-out-alt me-2"></i>You have been logged out successfully.';
+                    alertClass = 'alert-info';
+                }
+                
+                if (message) {
+                    alertContainer.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+                }
+                
+                // Clear the message after displaying
+                sessionStorage.removeItem('staff_logout_reason');
+            }
+            
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+        });
+        
+        function togglePassword() {
+            const passwordField = document.getElementById('password');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                toggleIcon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                passwordField.type = 'password';
+                toggleIcon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+        
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const employeeId = document.getElementById('employeeId').value.toUpperCase().trim();
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const alertContainer = document.getElementById('alertContainer');
+            
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="spinner-border me-2"></span>Logging in...';
+            alertContainer.innerHTML = '';
+            
+            try {
+                const response = await fetchWithRetry('/api/v1/staff/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ employee_id: employeeId, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    // Check if NDA acceptance is required BEFORE committing session
+                    if (data.nda_required && data.nda_data) {
+                        // DC Protocol: Hold token in memory only — do NOT write to localStorage
+                        // until the employee explicitly accepts the NDA.
+                        // This prevents the token-reuse bypass where a tab close + revisit
+                        // skips the NDA modal entirely.
+                        pendingToken = data.access_token;
+                        pendingEmployee = data.employee;
+                        pendingNdaData = data.nda_data;
+                        showNdaModal(data.nda_data, data.employee);
+
+                        loginBtn.disabled = false;
+                        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+                    } else {
+                        // No NDA pending — commit session immediately
+                        localStorage.setItem('staff_token', data.access_token);
+                        document.cookie = `staff_token=${data.access_token}; path=/; max-age=86400; SameSite=Lax`;
+
+                        if (data.employee) {
+                            localStorage.setItem('staff_user', JSON.stringify(data.employee));
+                        }
+
+                        alertContainer.innerHTML = `
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>Login successful! Redirecting...
+                            </div>
+                        `;
+
+                        setTimeout(() => {
+                            window.location.href = getRedirectUrl();
+                        }, 1000);
+                    }
+                } else {
+                    throw new Error(data.detail || 'Invalid Employee ID or password');
+                }
+            } catch (error) {
+                alertContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>${error.message}
+                    </div>
+                `;
+                
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+            }
+        }
+        
+        function showNdaModal(ndaData, employee) {
+            const modal = document.getElementById('ndaModal');
+            const contentDiv = document.getElementById('ndaContent');
+            
+            // Replace dynamic placeholders
+            let content = ndaData.content_html;
+            const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+            
+            content = content.replace(/\{\{current_date\}\}/g, today);
+            content = content.replace(/\{\{employee_name\}\}/g, employee.full_name || 'Employee');
+            content = content.replace(/\{\{employee_code\}\}/g, employee.emp_code || '-');
+            content = content.replace(/\{\{employee_designation\}\}/g, employee.role_name || employee.designation || 'Staff');
+            content = content.replace(/\{\{company_name\}\}/g, 'MyntReal LLP');
+            content = content.replace(/\{\{company_address\}\}/g, 'Kothavalasa, Vizianagaram, Andhra Pradesh, India');
+            
+            contentDiv.innerHTML = content;
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function cancelNda() {
+            // DC Protocol: Discard pending token — never stored, so no removal needed.
+            // Also clean up any residual localStorage entries defensively.
+            pendingToken = null;
+            pendingEmployee = null;
+            pendingNdaData = null;
+            localStorage.removeItem('staff_token');
+            localStorage.removeItem('staff_user');
+
+            document.getElementById('ndaModal').classList.remove('show');
+            document.body.style.overflow = '';
+
+            document.getElementById('alertContainer').innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle me-2"></i>You must accept the NDA to access the system.
+                </div>
+            `;
+        }
+
+        async function acceptNda() {
+            if (!pendingNdaData) return;
+
+            const acceptBtn = document.getElementById('acceptNdaBtn');
+            acceptBtn.disabled = true;
+            acceptBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+
+            // DC Protocol: Use the in-memory pending token (not yet in localStorage)
+            const token = pendingToken || localStorage.getItem('staff_token');
+            
+            try {
+                const response = await fetchWithRetry('/api/v1/staff/nda/accept', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nda_version_id: pendingNdaData.id })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // DC Protocol: NDA accepted — now commit session to localStorage
+                    if (pendingToken) {
+                        localStorage.setItem('staff_token', pendingToken);
+                        document.cookie = `staff_token=${pendingToken}; path=/; max-age=86400; SameSite=Lax`;
+                    }
+                    if (pendingEmployee) {
+                        localStorage.setItem('staff_user', JSON.stringify(pendingEmployee));
+                    }
+                    pendingToken = null;
+                    pendingEmployee = null;
+                    pendingNdaData = null;
+
+                    document.getElementById('ndaModal').classList.remove('show');
+                    document.body.style.overflow = '';
+
+                    document.getElementById('alertContainer').innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>NDA accepted. Redirecting to dashboard...
+                        </div>
+                    `;
+
+                    setTimeout(() => {
+                        window.location.href = getRedirectUrl();
+                    }, 1500);
+                } else {
+                    throw new Error(data.detail || 'Failed to accept NDA');
+                }
+                
+            } catch (error) {
+                console.error('NDA acceptance error:', error);
+                
+                acceptBtn.disabled = false;
+                acceptBtn.innerHTML = '<i class="fas fa-check me-2"></i>I Accept';
+                
+                alert('Error accepting NDA: ' + error.message);
+            }
+        }
+
+        // DC-OTP-RESET-001: Staff Portal Forgot Password
+        var _sfForgotOpen = false, _sfOtpVerified = false;
+        function sfToggleForgot() {
+            _sfForgotOpen = !_sfForgotOpen;
+            document.getElementById('sfForgotPanel').style.display = _sfForgotOpen ? 'block' : 'none';
+        }
+        function sfMsg(txt, color) {
+            var el = document.getElementById('sfForgotMsg');
+            el.style.color = color || '#0369a1';
+            el.textContent = txt;
+        }
+        async function sfSendOTP(resend) {
+            var uid = document.getElementById('sfUserId').value.trim().toUpperCase();
+            if (!uid) { sfMsg('Please enter your Employee ID', '#dc2626'); return; }
+            sfMsg('Sending OTP…', '#0369a1');
+            try {
+                var r = await fetch('/api/v1/password-reset/portal/staff/forgot-password', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({user_id: uid})
+                });
+                var d = await r.json();
+                if (d.success || r.ok) {
+                    document.getElementById('sfOtpNote').textContent = 'OTP sent to your registered WhatsApp number. Valid for 10 minutes.';
+                    document.getElementById('sfStep1').style.display = 'none';
+                    document.getElementById('sfStep2').style.display = 'block';
+                    sfMsg('OTP sent! Check your WhatsApp.', '#059669');
+                } else {
+                    sfMsg(d.detail || 'Could not send OTP', '#dc2626');
+                }
+            } catch(e) { sfMsg('Network error. Please try again.', '#dc2626'); }
+        }
+        async function sfVerifyOTP() {
+            var uid = document.getElementById('sfUserId').value.trim().toUpperCase();
+            var otp = document.getElementById('sfOtp').value.trim();
+            if (otp.length !== 6) { sfMsg('Enter the 6-digit OTP', '#dc2626'); return; }
+            sfMsg('Verifying…', '#0369a1');
+            try {
+                var r = await fetch('/api/v1/password-reset/portal/staff/verify-otp', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({user_id: uid, otp_code: otp})
+                });
+                var d = await r.json();
+                if (d.success) {
+                    _sfOtpVerified = true;
+                    document.getElementById('sfStep2').style.display = 'none';
+                    document.getElementById('sfStep3').style.display = 'block';
+                    sfMsg('OTP verified! Set your new password.', '#059669');
+                } else {
+                    sfMsg(d.detail || 'Invalid OTP', '#dc2626');
+                }
+            } catch(e) { sfMsg('Network error.', '#dc2626'); }
+        }
+        async function sfResetPwd() {
+            var uid = document.getElementById('sfUserId').value.trim().toUpperCase();
+            var otp = document.getElementById('sfOtp').value.trim();
+            var np = document.getElementById('sfNewPwd').value;
+            var cp = document.getElementById('sfConfPwd').value;
+            if (np.length < 6) { sfMsg('Password must be at least 6 characters', '#dc2626'); return; }
+            if (np !== cp) { sfMsg('Passwords do not match', '#dc2626'); return; }
+            sfMsg('Resetting password…', '#0369a1');
+            try {
+                var r = await fetch('/api/v1/password-reset/portal/staff/reset-password', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({user_id: uid, otp_code: otp, new_password: np})
+                });
+                var d = await r.json();
+                if (d.success) {
+                    sfMsg('✅ ' + d.message, '#059669');
+                    setTimeout(function(){ document.getElementById('sfForgotPanel').style.display='none'; }, 3000);
+                } else {
+                    sfMsg(d.detail || 'Reset failed', '#dc2626');
+                }
+            } catch(e) { sfMsg('Network error.', '#dc2626'); }
+        }
+    </script>
+    <script>
+    (function(){
+        var staffAnnData = [], staffAnnIdx = 0, staffAnnTimer = null, staffAnnPaused = false;
+        function escH(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+        function relD(iso){ if(!iso) return ''; return new Date(iso).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}); }
+
+        window.staffAnnNav = function(dir){
+            if(!staffAnnData.length) return;
+            staffAnnIdx = (staffAnnIdx + dir + staffAnnData.length) % staffAnnData.length;
+            staffAnnRender(staffAnnIdx);
+            clearInterval(staffAnnTimer);
+            staffAnnStartTimer();
+        };
+        window.staffAnnToggle = function(){
+            staffAnnPaused = !staffAnnPaused;
+            var ic = document.getElementById('staffAnnPlayPauseIcon');
+            if(ic) ic.className = staffAnnPaused ? 'fas fa-play' : 'fas fa-pause';
+        };
+
+        function staffAnnRender(idx){
+            var ann = staffAnnData[idx]; if(!ann) return;
+            staffAnnIdx = idx;
+            var mediaHTML = '';
+            if(ann.media && ann.media.length > 0){
+                var m = ann.media[0];
+                if(m.file_type && m.file_type.startsWith('image/')){
+                    mediaHTML = '<div style="position:relative;cursor:zoom-in" onclick="staffOpenLightbox(\''+ann.id+'\', 0)"><img src="'+escH(m.file_path)+'" style="width:100%;max-height:140px;object-fit:cover;border-radius:8px;margin-bottom:8px;" onerror="this.style.display=\'none\'"></div>';
+                } else if(m.file_type && m.file_type.startsWith('video/')){
+                    mediaHTML = '<div style="position:relative"><video controls playsinline muted preload="metadata" style="width:100%;max-height:140px;border-radius:8px;background:#000;margin-bottom:8px;"><source src="'+escH(m.file_path)+'" type="'+(m.file_type||'video/mp4')+'"></video><button onclick="event.stopPropagation(); staffOpenLightbox(\''+ann.id+'\', 0)" style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.7);color:#fff;border:none;padding:4px 8px;border-radius:6px;font-size:10px;cursor:pointer;z-index:5;display:flex;align-items:center;gap:3px" title="Fullscreen"><i class="fas fa-expand"></i> Expand</button></div>';
+                }
+            }
+            var catName = ann.category && ann.category.name ? escH(ann.category.name) : '';
+            var title = escH(ann.title || 'Announcement');
+            var desc = (ann.description||'');
+            var shortDesc = escH(desc.length > 100 ? desc.substring(0,100)+'…' : desc);
+            var dateStr = relD(ann.approved_at || ann.created_at);
+
+            // View + Share button row
+            var viewUrl = '/public/announcement?id=' + encodeURIComponent(ann.id);
+            var shareHTML = '<div style="display:flex;align-items:center;gap:5px;margin-top:8px;flex-wrap:wrap;">'+
+                '<div style="flex:1"></div>'+
+                '<a href="'+viewUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;border:1px solid rgba(59,130,246,.35);background:rgba(59,130,246,.08);color:#93c5fd;font-size:11.5px;font-weight:600;text-decoration:none;flex-shrink:0"><i class="fas fa-eye"></i> View</a>'+
+                '<div style="position:relative;display:inline-block;flex-shrink:0">'+
+                '<button onclick="staffShareAnn(\''+ann.id+'\')" title="Share this shoutout" '+
+                'style="display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;border:1px solid rgba(59,130,246,.5);background:rgba(59,130,246,.2);cursor:pointer;color:#93c5fd;font-size:11.5px;font-weight:600;">'+
+                '<i class="fas fa-share-alt"></i> Share</button>'+
+                '<div id="staffSharePopup_'+ann.id+'" style="display:none;position:absolute;bottom:calc(100% + 6px);right:0;background:#1e2a45;border:1px solid rgba(59,130,246,.4);border-radius:10px;padding:8px;width:185px;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.5)">'+
+                '<div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;padding:0 4px">Share via</div>'+
+                '<a href="'+window.location.origin+'/public/announcement?id='+encodeURIComponent(ann.id)+'&shared=true" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:7px;color:#a5b4fc;font-size:11.5px;font-weight:600;text-decoration:none;background:rgba(99,102,241,.1);margin-bottom:4px"><i class="fas fa-external-link-alt" style="font-size:12px"></i> View Full Page</a>'+
+                '<a href="https://wa.me/?text='+encodeURIComponent((ann.title||'Shoutout')+'\n\n'+(ann.description||'').slice(0,120)+'\n\n'+window.location.origin+'/public/announcement?id='+ann.id+'&shared=true')+'" target="_blank" rel="noopener" '+
+                'style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;color:#4ade80;font-size:12px;font-weight:600;text-decoration:none;background:rgba(74,222,128,.08);margin-bottom:4px">'+
+                '<i class="fab fa-whatsapp" style="font-size:15px"></i> WhatsApp</a>'+
+                '<button onclick="staffCopyAnn(\''+ann.id+'\')" '+
+                'style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;color:#93c5fd;font-size:12px;font-weight:600;background:rgba(59,130,246,.1);border:none;cursor:pointer;width:100%;text-align:left">'+
+                '<i class="fas fa-copy" style="font-size:13px"></i> Copy Link + Text</button>'+
+                '</div></div>'+
+                '</div>';
+
+            document.getElementById('staffAnnContent').innerHTML =
+                '<div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px;">'+
+                mediaHTML+
+                (catName ? '<span style="display:inline-block;font-size:10px;font-weight:700;background:rgba(59,130,246,0.3);color:#93c5fd;padding:2px 8px;border-radius:12px;margin-bottom:5px;">'+catName+'</span>' : '')+
+                '<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:3px;">'+title+'</div>'+
+                (shortDesc ? '<div style="font-size:12px;color:rgba(255,255,255,0.7);line-height:1.4;">'+shortDesc+'</div>' : '')+
+                '<div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:5px;"><i class="fas fa-calendar-alt" style="margin-right:4px;"></i>'+dateStr+'</div>'+
+                shareHTML+
+                '</div>';
+            var dotsEl = document.getElementById('staffAnnDots');
+            dotsEl.innerHTML = staffAnnData.map(function(_,i){
+                return '<div style="width:'+(i===idx?'18px':'7px')+';height:7px;border-radius:4px;background:'+(i===idx?'#3b82f6':'rgba(255,255,255,0.3)')+';cursor:pointer;transition:all 0.3s;" onclick="staffAnnNav('+(i-staffAnnIdx)+')"></div>';
+            }).join('');
+        }
+
+        function staffAnnStartTimer(){
+            if(staffAnnData.length > 1){
+                staffAnnTimer = setInterval(function(){
+                    if(!staffAnnPaused){
+                        staffAnnIdx = (staffAnnIdx + 1) % staffAnnData.length;
+                        staffAnnRender(staffAnnIdx);
+                    }
+                }, 6000);
+            }
+        }
+
+        async function loadStaffAnnouncements(){
+            try {
+                var resp = await fetch('/api/v1/feedback/public/announcements?limit=10');
+                var data = await resp.json();
+                var items = Array.isArray(data) ? data : (data.data || []);
+                document.getElementById('staffAnnLoading').style.display = 'none';
+                if(items.length > 0){
+                    staffAnnData = items;
+                    document.getElementById('staffAnnouncementSection').style.display = 'block';
+                    document.getElementById('staffAnnContent').style.display = 'block';
+                    staffAnnRender(0);
+                    if(items.length >= 1){
+                        document.getElementById('staffAnnControls').style.display = 'flex';
+                        if(items.length > 1) staffAnnStartTimer();
+                    }
+                }
+            } catch(e){
+                document.getElementById('staffAnnLoading').innerHTML = '<span style="color:rgba(255,255,255,0.5);font-size:12px;">Unable to load announcements</span>';
+            }
+        }
+        window.staffShareAnn = function(annId) {
+            var popup = document.getElementById('staffSharePopup_' + annId);
+            if (!popup) return;
+            var isOpen = popup.style.display !== 'none';
+            document.querySelectorAll('[id^="staffSharePopup_"]').forEach(function(p){ p.style.display='none'; });
+            if (!isOpen) {
+                popup.style.display = 'block';
+                setTimeout(function() {
+                    document.addEventListener('click', function h(e) {
+                        if (!popup.contains(e.target)) { popup.style.display='none'; document.removeEventListener('click',h); }
+                    });
+                }, 10);
+            }
+            var ann = staffAnnData.find(function(a){ return String(a.id) === String(annId); });
+            if (ann && navigator.share) {
+                navigator.share({ title: ann.title || 'Mynt Real Shoutout', text: (ann.description||'').slice(0,200) })
+                    .then(function(){ popup.style.display='none'; }).catch(function(){});
+            }
+        };
+
+        window.staffCopyAnn = function(annId) {
+            var ann = staffAnnData.find(function(a){ return String(a.id) === String(annId); });
+            if (!ann) return;
+            var link = window.location.origin + '/public/announcement?id=' + annId + '&shared=true';
+            var text = (ann.title ? ann.title + '\n\n' : '') + (ann.description||'').slice(0,200) + '\n\n' + link + '\n\nVia Mynt Real MNR';
+            var popup = document.getElementById('staffSharePopup_' + annId);
+            navigator.clipboard.writeText(text).then(function() {
+                if (popup) { popup.innerHTML = '<div style="text-align:center;padding:8px;color:#4ade80;font-size:12px;font-weight:700"><i class="fas fa-check-circle" style="margin-right:4px"></i>Copied!</div>'; setTimeout(function(){ popup.style.display='none'; }, 1200); }
+            }).catch(function(){ alert('Could not copy. Please copy manually.'); });
+        };
+
+        window.staffOpenLightbox = function(announcementId, mediaIndex) {
+            var ann = staffAnnData.find(function(a) { return String(a.id) === String(announcementId); });
+            if (!ann || !ann.media || ann.media.length === 0) return;
+            var mediaItems = ann.media.map(function(m) {
+                return {
+                    url: m.file_path,
+                    file_type: m.file_type,
+                    type: (m.media_type === 'video' || (m.file_type && m.file_type.startsWith('video/'))) ? 'video' : 'image',
+                    title: ann.title || 'Media'
+                };
+            });
+            if (typeof MNRLightbox !== 'undefined' && typeof MNRLightbox.open === 'function') {
+                MNRLightbox.open(mediaItems, mediaIndex || 0);
+            }
+        };
+
+        loadStaffAnnouncements();
+    })();
+    </script>
+    <script src="/public/js/mnr-lightbox.js"></script>
+</body>
+</html>

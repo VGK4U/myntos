@@ -1,0 +1,1802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Journeys - MyntReal LLP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="/public/css/staff-kyc-theme.css" rel="stylesheet">
+    <style>
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        .stat-icon.success { background: #d1fae5; color: #059669; }
+        .stat-icon.info { background: #dbeafe; color: #2563eb; }
+        .stat-icon.warning { background: #fef3c7; color: #d97706; }
+        .stat-icon.primary { background: #e0e7ff; color: #4f46e5; }
+        .stat-value { font-size: 24px; font-weight: 700; color: #1f2937; line-height: 1.2; }
+        .stat-label { font-size: 13px; color: #6b7280; }
+        .filters-bar { 
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 16px 20px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        @media (max-width: 992px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 576px) { .stats-row { grid-template-columns: 1fr; } }
+        
+        /* Active Journeys Tab Styles (DC Dec 04 2025) */
+        .nav-tabs-custom { border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+        .nav-tabs-custom .nav-link {
+            border: none; padding: 12px 24px; font-weight: 500; color: #6b7280;
+            border-bottom: 3px solid transparent; margin-bottom: -2px;
+        }
+        .nav-tabs-custom .nav-link:hover { color: #4f46e5; background: transparent; }
+        .nav-tabs-custom .nav-link.active {
+            color: #4f46e5; border-bottom-color: #4f46e5; background: transparent;
+        }
+        .live-badge { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .active-journey-row { transition: background 0.3s; }
+        .active-journey-row:hover { background: #f3f4f6 !important; }
+        .force-stop-btn { background: #dc2626; border-color: #dc2626; }
+        .force-stop-btn:hover { background: #b91c1c; border-color: #b91c1c; }
+        .duration-live { color: #059669; font-weight: 600; }
+        .fingerprint-warning { color: #d97706; font-size: 11px; }
+        
+        /* DC Protocol (Dec 05, 2025): Journey Playback Controls */
+        .playback-controls {
+            background: rgba(0, 208, 156, 0.1);
+            border: 1px solid rgba(0, 208, 156, 0.3);
+        }
+        .stops-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        #playbackSlider {
+            accent-color: #00d09c;
+        }
+    </style>
+    <!-- DC-FIX: jQuery for staff pages -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
+            <div>
+                <p class="text-muted mb-0" style="font-size: 14px;">Manage, review and approve journeys across your organization</p>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <!-- DC Protocol (Jan 2026): Include My Journeys Toggle -->
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="includeMyJourneys" onchange="loadJourneys()">
+                    <label class="form-check-label small" for="includeMyJourneys">Include My Journeys</label>
+                </div>
+                <span class="badge badge-warning" id="pendingBadge" style="padding: 6px 14px; font-size: 14px;">0 Pending</span>
+            </div>
+        </div>
+        
+        <!-- DC Protocol (Jan 2026): Tab Navigation - Team, Organization, Active -->
+        <ul class="nav nav-tabs nav-tabs-custom" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="teamJourneysTab" data-bs-toggle="tab" href="#teamJourneysContent" role="tab">
+                    <i class="fas fa-users me-2"></i>Team Journeys
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="orgJourneysTab" data-bs-toggle="tab" href="#orgJourneysContent" role="tab">
+                    <i class="fas fa-building me-2"></i>Organization
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="activeJourneysTab" data-bs-toggle="tab" href="#activeJourneysContent" role="tab">
+                    <i class="fas fa-play-circle me-2"></i>Active Journeys
+                    <span class="badge bg-danger ms-2 live-badge" id="activeCountBadge" style="display: none;">0</span>
+                </a>
+            </li>
+        </ul>
+        
+        <div class="tab-content">
+        <!-- TEAM JOURNEYS TAB -->
+        <div class="tab-pane fade show active" id="teamJourneysContent" role="tabpanel">
+        
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon info"><i class="fas fa-route"></i></div>
+                <div>
+                    <div class="stat-value" id="totalJourneys">0</div>
+                    <div class="stat-label">Total Journeys</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon warning"><i class="fas fa-clock"></i></div>
+                <div>
+                    <div class="stat-value" id="pendingCount">0</div>
+                    <div class="stat-label">Pending Approval</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon success"><i class="fas fa-road"></i></div>
+                <div>
+                    <div class="stat-value" id="totalKm">0</div>
+                    <div class="stat-label">Total KM</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon primary"><i class="fas fa-rupee-sign"></i></div>
+                <div>
+                    <div class="stat-value" id="totalReimbursement">₹0</div>
+                    <div class="stat-label">Pending Amount</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <!-- DC_UNIVERSAL_FILTER_001: Universal Filter Container -->
+            <div id="universalFilterContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0;"></div>
+            
+            <!-- Fallback filters - shown if universal filter fails to load -->
+            <div id="fallbackFiltersContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0; display: flex;">
+                <div class="col-md-2">
+                    <label class="form-label small" style="font-size: 12px; font-weight: 500; color: #6b7280;">Department</label>
+                    <select class="form-select" id="fallbackDepartmentFilter" style="font-size: 14px;" onchange="loadJourneys()">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small" style="font-size: 12px; font-weight: 500; color: #6b7280;">Staff Type</label>
+                    <select class="form-select" id="fallbackStaffTypeFilter" style="font-size: 14px;" onchange="loadJourneys()">
+                        <option value="">All Types</option>
+                        <option value="MN_STAFF">MN Staff</option>
+                        <option value="MN_EMPLOYEE">MN Employee</option>
+                        <option value="FREELANCER">Freelancer</option>
+                        <option value="MYNT_REAL">Mynt Real</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small" style="font-size: 12px; font-weight: 500; color: #6b7280;">Employee</label>
+                    <div id="teamMemberSearchContainer"></div>
+                </div>
+            </div>
+            
+            <div class="filters-bar">
+                <div class="col-md-2">
+                    <label class="form-label small" style="font-size: 12px; font-weight: 500; color: #6b7280;">Start Date</label>
+                    <input type="date" class="form-control" id="startDate" style="font-size: 14px;">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small" style="font-size: 12px; font-weight: 500; color: #6b7280;">End Date</label>
+                    <input type="date" class="form-control" id="endDate" style="font-size: 14px;">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small" style="font-size: 12px; font-weight: 500; color: #6b7280;">Status</label>
+                    <select class="form-select" id="approvalFilter" style="font-size: 14px;">
+                        <option value="">All</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small" style="font-size: 12px; font-weight: 500; color: transparent;">Filter</label>
+                    <button class="btn btn-primary w-100" onclick="loadJourneys()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small" style="font-size: 12px; font-weight: 500; color: transparent;">Reset</label>
+                    <button class="btn btn-secondary w-100" onclick="resetFilters()">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card" id="bulkActions" style="display: none; border-left: 4px solid #10b981;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <input type="checkbox" class="form-check-input me-2" id="selectAll" onchange="toggleSelectAll()">
+                        <span id="selectedCount" style="font-weight: 600; color: #1f2937;">0</span> journeys selected
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success" onclick="bulkApprove('approve')">
+                            <i class="fas fa-check me-1"></i>Approve Selected
+                        </button>
+                        <button class="btn btn-danger" onclick="bulkApprove('reject')">
+                            <i class="fas fa-times me-1"></i>Reject Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Team Journeys</h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="loadJourneys()">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="journeyList">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x" style="color: #6366f1;"></i>
+                        <p class="mt-2" style="color: #6b7280;">Loading journeys...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        </div><!-- End Team Journeys Tab -->
+        
+        <!-- ORGANIZATION-WIDE JOURNEYS TAB (DC Protocol Jan 2026) -->
+        <div class="tab-pane fade" id="orgJourneysContent" role="tabpanel">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon info"><i class="fas fa-route"></i></div>
+                    <div>
+                        <div class="stat-value" id="orgTotalJourneys">0</div>
+                        <div class="stat-label">Total Journeys</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon success"><i class="fas fa-road"></i></div>
+                    <div>
+                        <div class="stat-value" id="orgTotalKm">0.0</div>
+                        <div class="stat-label">Total KM</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon primary"><i class="fas fa-rupee-sign"></i></div>
+                    <div>
+                        <div class="stat-value" id="orgApprovedAmount">₹0</div>
+                        <div class="stat-label">Approved Amount</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon warning"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div>
+                        <div class="stat-value" id="orgNonReimbursable">0</div>
+                        <div class="stat-label">Non-Reimbursable</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="filters-bar">
+                    <div class="row g-3 align-items-end w-100">
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">Start Date</label>
+                            <input type="date" class="form-control" id="orgStartDate">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">End Date</label>
+                            <input type="date" class="form-control" id="orgEndDate">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">Department</label>
+                            <select class="form-select" id="orgDepartmentFilter">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">Staff Type</label>
+                            <select class="form-select" id="orgStaffTypeFilter">
+                                <option value="">All Types</option>
+                                <option value="MN_STAFF">MN Staff</option>
+                                <option value="MN_EMPLOYEE">MN Employee</option>
+                                <option value="FREELANCER">Freelancer</option>
+                                <option value="MYNT_REAL">Mynt Real</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small mb-1">Status</label>
+                            <select class="form-select" id="orgApprovalFilter">
+                                <option value="">All</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small mb-1" style="color: transparent;">.</label>
+                            <button class="btn btn-primary w-100" onclick="loadOrgJourneys()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small mb-1" style="color: transparent;">.</label>
+                            <button class="btn btn-secondary w-100" onclick="resetOrgFilters()">
+                                <i class="fas fa-undo"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-building me-2"></i>Organization Journeys</h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-success me-2" onclick="exportOrgData()">
+                            <i class="fas fa-download me-1"></i>Export CSV
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadOrgJourneys()">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="orgJourneyList">
+                        <div class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x" style="color: #6366f1;"></i>
+                            <p class="mt-2" style="color: #6b7280;">Loading organization journeys...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- End Organization Journeys Tab -->
+        
+        <!-- ACTIVE JOURNEYS TAB (DC Protocol Dec 04, 2025) -->
+        <div class="tab-pane fade" id="activeJourneysContent" role="tabpanel">
+            <div class="card mb-3" style="border-left: 4px solid #10b981;">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
+                        <div>
+                            <h5 class="mb-1"><i class="fas fa-broadcast-tower me-2 text-success"></i>Live Field Work Monitor</h5>
+                            <small class="text-muted">Track team members currently traveling. Force stop if they're stuck due to device issues.</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="text-muted" id="activeLastUpdate">Last updated: --</span>
+                            <button class="btn btn-outline-success btn-sm" onclick="loadActiveJourneys()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <div id="activeJourneysList">
+                        <div class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x" style="color: #10b981;"></i>
+                            <p class="mt-2" style="color: #6b7280;">Loading active journeys...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- End Active Journeys Tab -->
+        
+        </div><!-- End Tab Content -->
+    </div>
+    
+    <!-- DC Protocol (Dec 05, 2025): Upgraded to modal-xl with playback controls for WVV compliance -->
+    <div class="modal fade" id="journeyDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-route me-2"></i>Journey Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-lg-8">
+                            <div id="journeyMap" style="height: 400px; border-radius: 12px;"></div>
+                            <div class="playback-controls mt-3 p-3" style="border-radius: 10px;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <button class="btn btn-sm btn-success" id="playPauseBtn" onclick="togglePlayback()">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-secondary" onclick="resetPlayback()">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                    <input type="range" class="form-range flex-grow-1" id="playbackSlider" min="0" max="100" value="0" onchange="seekPlayback(this.value)">
+                                    <select class="form-select form-select-sm" id="playbackSpeed" style="width: auto;">
+                                        <option value="1">1x</option>
+                                        <option value="2" selected>2x</option>
+                                        <option value="4">4x</option>
+                                        <option value="8">8x</option>
+                                    </select>
+                                </div>
+                                <div class="mt-2 d-flex justify-content-between small text-muted">
+                                    <span id="playbackTime">00:00</span>
+                                    <span id="playbackProgress">0 / 0 points</span>
+                                    <span id="playbackDuration">00:00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div id="journeyDetails" class="mb-3"></div>
+                            <div class="stops-panel p-3" style="border-radius: 10px; max-height: 200px; overflow-y: auto;">
+                                <h6 class="mb-2"><i class="fas fa-map-marker-alt me-2"></i>Route Points</h6>
+                                <div id="stopsList">
+                                    <p class="text-muted small">Loading route details...</p>
+                                </div>
+                            </div>
+                            <div id="approvalSection" class="mt-3">
+                                <label class="form-label">Remarks (Optional)</label>
+                                <textarea class="form-control mb-3" id="approvalRemarks" rows="2" placeholder="Add remarks..."></textarea>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-success flex-grow-1" onclick="approveJourney('approve')">
+                                        <i class="fas fa-check me-1"></i>Approve
+                                    </button>
+                                    <button class="btn btn-danger flex-grow-1" onclick="approveJourney('reject')">
+                                        <i class="fas fa-times me-1"></i>Reject
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DC Protocol (Dec 04, 2025): Force Stop Modal -->
+    <div class="modal fade" id="forceStopModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-stop-circle me-2"></i>Force Stop Journey</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning mb-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Manager Override</strong><br>
+                        Use this only when the employee cannot end their journey due to device issues (network change, cache clear, etc.)
+                    </div>
+                    
+                    <div id="forceStopJourneyInfo" class="mb-3 p-3 bg-light rounded"></div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Reason for Force Stop <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="forceStopReason" rows="3" 
+                                  placeholder="e.g., Employee reported device binding error after network switch..."
+                                  required></textarea>
+                        <small class="text-muted">This reason will be logged in the journey's audit trail.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger force-stop-btn" onclick="executeForceStop()">
+                        <i class="fas fa-stop-circle me-1"></i>Force Stop Journey
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff_universal_filter.js?v=1764165148"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/team-member-search.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let journeys = [];
+        let activeJourneys = [];
+        let selectedJourneyId = null;
+        let forceStopJourneyId = null;
+        let map = null;
+        let selectedJourneys = new Set();
+        let activeJourneysRefreshInterval = null;
+        
+        // DC Protocol (Dec 05, 2025): Playback state variables for WVV compliance
+        let playbackInterval = null;
+        let playbackIndex = 0;
+        let playbackCoordinates = [];
+        let playbackTrackPoints = [];  // DC: Full track points with timestamps
+        let playbackMarker = null;
+        let playbackPolyline = null;
+        let stopMarkers = [];  // DC: Stop markers on map
+        let isPlaying = false;
+        let isAnimating = false;  // DC: Animation lock
+        let currentJourneyData = null;
+        
+        // DC_UNIVERSAL_FILTER_001: Universal filter state
+        let universalFilter = null;
+        let universalFilterReady = false;
+        let teamMemberSearch = null;
+        
+        // DC_UNIVERSAL_FILTER_001: Build filter payload from universal filter or fallback
+        function buildFilterPayload() {
+            if (universalFilterReady && universalFilter && universalFilter.isReady && !universalFilter.initFailed) {
+                try {
+                    const filters = universalFilter.getFilters();
+                    return filters;
+                } catch (e) {
+                    console.warn('[DC] Error getting universal filter values:', e);
+                }
+            }
+            const fallbackDept = document.getElementById('fallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('fallbackStaffTypeFilter');
+            return {
+                company_id: null,
+                staff_type: fallbackStaff ? (fallbackStaff.value || null) : null,
+                department_id: fallbackDept ? (fallbackDept.value || null) : null,
+                employee_id: (teamMemberSearch ? teamMemberSearch.getValue() : '') || null,
+                employee: null,
+                search: null
+            };
+        }
+        
+        // DC_UNIVERSAL_FILTER_001: Load departments for fallback filter
+        async function loadFallbackDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/departments`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('fallbackDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading fallback departments:', error);
+            }
+        }
+        
+        // DC_UNIVERSAL_FILTER_001: Hide fallback filters when universal filter is ready
+        function hideFallbackFilters() {
+            const fallback = document.getElementById('fallbackFiltersContainer');
+            if (fallback) fallback.style.display = 'none';
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Team Journeys', 'fas fa-route');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            
+            setDefaultDates();
+            
+            // DC_UNIVERSAL_FILTER_001: Load fallback data first
+            loadFallbackDepartments();
+            await loadTeamMembers();
+            
+            // DC_UNIVERSAL_FILTER_001: Initialize universal filter
+            if (typeof DCUniversalFilter !== 'undefined') {
+                universalFilter = new DCUniversalFilter('universalFilterContainer', {
+                    showCompany: false,
+                    showStaffType: true,
+                    showDepartment: true,
+                    showEmployee: true,
+                    showSearch: false,
+                    pageKey: 'staff_team_journeys',
+                    onFilterChange: () => {
+                        if (universalFilterReady) loadJourneys();
+                    }
+                });
+                
+                try {
+                    const success = await Promise.race([
+                        universalFilter.waitForReady(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                    ]);
+                    await new Promise(r => setTimeout(r, 50));
+                    if (success === true && 
+                        universalFilter.isReady === true && 
+                        universalFilter.initFailed === false &&
+                        document.getElementById('universalFilterContainer')?.children.length > 0) {
+                        universalFilterReady = true;
+                        hideFallbackFilters();
+                        console.log('[DC] Universal filter ready - using enhanced filters');
+                    } else {
+                        console.warn('[DC] Universal filter not fully ready, keeping fallback');
+                        universalFilterReady = false;
+                    }
+                } catch (e) {
+                    console.warn('[DC] Universal filter initialization failed or timed out, using fallback:', e);
+                    universalFilterReady = false;
+                }
+            } else {
+                console.warn('[DC] DCUniversalFilter not available - using fallback filters');
+            }
+            
+            await loadJourneys();
+            await loadActiveJourneys();
+            
+            // Tab change listeners - DC Protocol (Jan 2026): Load data on tab switch
+            document.getElementById('activeJourneysTab').addEventListener('shown.bs.tab', () => {
+                loadActiveJourneys();
+                activeJourneysRefreshInterval = setInterval(loadActiveJourneys, 30000);
+            });
+            
+            document.getElementById('teamJourneysTab').addEventListener('shown.bs.tab', () => {
+                if (activeJourneysRefreshInterval) {
+                    clearInterval(activeJourneysRefreshInterval);
+                    activeJourneysRefreshInterval = null;
+                }
+                loadJourneys();
+            });
+            
+            // DC Protocol (Jan 2026): Organization tab listener
+            document.getElementById('orgJourneysTab').addEventListener('shown.bs.tab', () => {
+                if (activeJourneysRefreshInterval) {
+                    clearInterval(activeJourneysRefreshInterval);
+                    activeJourneysRefreshInterval = null;
+                }
+                initOrgFilters();
+                loadOrgJourneys();
+            });
+        });
+        
+        function setDefaultDates() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        }
+        
+        // DC Protocol (Jan 2026): Organization Tab Functions
+        let orgJourneys = [];
+        let orgFiltersInitialized = false;
+        
+        function initOrgFilters() {
+            if (orgFiltersInitialized) return;
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('orgStartDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('orgEndDate').value = today.toISOString().split('T')[0];
+            loadOrgDepartments();
+            orgFiltersInitialized = true;
+        }
+        
+        async function loadOrgDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/departments`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('orgDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading org departments:', error);
+            }
+        }
+        
+        async function loadOrgJourneys() {
+            const params = new URLSearchParams();
+            const startDate = document.getElementById('orgStartDate')?.value;
+            const endDate = document.getElementById('orgEndDate')?.value;
+            const departmentId = document.getElementById('orgDepartmentFilter')?.value;
+            const staffType = document.getElementById('orgStaffTypeFilter')?.value;
+            const approvalStatus = document.getElementById('orgApprovalFilter')?.value;
+            
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (departmentId) params.append('department_id', departmentId);
+            if (staffType) params.append('staff_type', staffType);
+            if (approvalStatus) params.append('approval_status', approvalStatus);
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/all?${params}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    orgJourneys = data.journeys || [];
+                    
+                    document.getElementById('orgTotalJourneys').textContent = data.total || 0;
+                    document.getElementById('orgTotalKm').textContent = (data.summary?.total_km || 0).toFixed(1);
+                    document.getElementById('orgApprovedAmount').textContent = '₹' + (data.summary?.total_reimbursement || 0).toFixed(0);
+                    
+                    const nonReimbursable = orgJourneys.filter(j => !j.is_reimbursable).length;
+                    document.getElementById('orgNonReimbursable').textContent = nonReimbursable;
+                    
+                    renderOrgJourneyList();
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading org journeys:', error);
+            }
+        }
+        
+        function renderOrgJourneyList() {
+            const container = document.getElementById('orgJourneyList');
+            
+            if (!orgJourneys || orgJourneys.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-route"></i>
+                        <p>No journeys found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Date</th>
+                                <th>Purpose</th>
+                                <th>Distance</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${orgJourneys.map(j => `
+                                <tr style="${!j.is_reimbursable ? 'background: #fef3c7;' : ''}">
+                                    <td>
+                                        <strong style="color: #1f2937;">${j.employee_name || 'N/A'}</strong><br>
+                                        <small class="text-muted">${j.employee_id_code || ''}</small>
+                                    </td>
+                                    <td>
+                                        <span style="color: #374151;">${formatDate(j.date)}</span><br>
+                                        <small class="text-muted">${formatTime(j.start_time)}</small>
+                                    </td>
+                                    <td>
+                                        <i class="fas fa-${getPurposeIcon(j.purpose)} me-1" style="color: #6366f1;"></i>
+                                        <span style="color: #374151;">${formatPurpose(j.purpose)}</span>
+                                        ${j.client_name ? `<br><small style="color: #6b7280;">${j.client_name}</small>` : ''}
+                                    </td>
+                                    <td>
+                                        <span style="color: #374151;">${(j.total_distance_km || 0).toFixed(2)} km</span>
+                                    </td>
+                                    <td>
+                                        ${j.is_reimbursable ? 
+                                            `<span style="color: #059669; font-weight: 600;">₹${(j.reimbursement_amount || 0).toFixed(0)}</span>` :
+                                            `<span style="color: #f59e0b;"><i class="fas fa-exclamation-triangle"></i> Non-Reimb</span>`
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-${j.approval_status}">${j.approval_status}</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewJourney(${j.id})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        function resetOrgFilters() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('orgStartDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('orgEndDate').value = today.toISOString().split('T')[0];
+            document.getElementById('orgDepartmentFilter').value = '';
+            document.getElementById('orgStaffTypeFilter').value = '';
+            document.getElementById('orgApprovalFilter').value = '';
+            loadOrgJourneys();
+        }
+        
+        function exportOrgData() {
+            if (!orgJourneys || orgJourneys.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            const headers = ['Employee', 'Employee ID', 'Date', 'Purpose', 'Client', 'Distance (km)', 'Amount', 'Status'];
+            const rows = orgJourneys.map(j => [
+                j.employee_name || '',
+                j.employee_id_code || '',
+                j.date || '',
+                j.purpose || '',
+                j.client_name || '',
+                (j.total_distance_km || 0).toFixed(2),
+                j.is_reimbursable ? (j.reimbursement_amount || 0).toFixed(0) : '0',
+                j.approval_status || ''
+            ]);
+            
+            const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `organization_journeys_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        async function loadTeamMembers() {
+            if (!teamMemberSearch) {
+                teamMemberSearch = new TeamMemberSearch({
+                    containerId: 'teamMemberSearchContainer',
+                    placeholder: 'Search team member...',
+                    compactMode: true,
+                    onSelect: (member) => { onTeamMemberChange(); },
+                    onClear: () => { onTeamMemberChange(); }
+                });
+            }
+            
+            try {
+                const response = await staffFetch(`/api/v1/crm/my-downline`);
+                if (!response.ok) {
+                    console.warn('[Team-Journeys] Failed to load team members');
+                    return;
+                }
+                const data = await response.json();
+                if (data.success) {
+                    teamMemberSearch.setMembers(data.self, data.data || []);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading team members:', error);
+            }
+        }
+        
+        function onTeamMemberChange() {
+            loadJourneys();
+        }
+        
+        async function loadJourneys() {
+            const params = new URLSearchParams();
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const approvalStatus = document.getElementById('approvalFilter').value;
+            
+            // DC Protocol (Jan 2026): Include My Journeys toggle
+            const includeMyJourneys = document.getElementById('includeMyJourneys')?.checked || false;
+            
+            // DC_UNIVERSAL_FILTER_001: Get filter values from universal filter or fallback
+            const filters = buildFilterPayload();
+            const employeeId = filters.employee_id || (filters.employee ? filters.employee.id : null);
+            const staffType = filters.staff_type;
+            const departmentId = filters.department_id;
+            
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (employeeId) params.append('employee_id', employeeId);
+            if (staffType) params.append('staff_type', staffType);
+            if (departmentId) params.append('department_id', departmentId);
+            if (approvalStatus) params.append('approval_status', approvalStatus);
+            if (includeMyJourneys) params.append('include_self', 'true');
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/team?${params}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    journeys = data.journeys;
+                    
+                    document.getElementById('pendingBadge').textContent = `${data.pending_approval_count} Pending`;
+                    document.getElementById('totalJourneys').textContent = data.total;
+                    document.getElementById('pendingCount').textContent = data.pending_approval_count;
+                    
+                    const totalKm = journeys.reduce((sum, j) => sum + j.total_distance_km, 0);
+                    const pendingAmount = journeys
+                        .filter(j => j.approval_status === 'pending' && j.is_reimbursable)
+                        .reduce((sum, j) => sum + j.reimbursement_amount, 0);
+                    
+                    document.getElementById('totalKm').textContent = totalKm.toFixed(1);
+                    document.getElementById('totalReimbursement').textContent = '₹' + pendingAmount.toFixed(0);
+                    
+                    renderJourneyList();
+                    updateBulkActionsVisibility();
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading journeys:', error);
+            }
+        }
+        
+        function renderJourneyList() {
+            const container = document.getElementById('journeyList');
+            
+            if (!journeys || journeys.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-route"></i>
+                        <p>No journeys found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" class="form-check-input" id="selectAllHeader" onchange="toggleSelectAll()"></th>
+                                <th>Employee</th>
+                                <th>Date</th>
+                                <th>Purpose</th>
+                                <th>Distance</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${journeys.map(j => `
+                                <tr style="${!j.is_reimbursable ? 'background: #fef3c7;' : ''}">
+                                    <td>
+                                        <input type="checkbox" class="form-check-input journey-checkbox" 
+                                               data-id="${j.id}" onchange="updateSelection()"
+                                               ${j.approval_status !== 'pending' ? 'disabled' : ''}>
+                                    </td>
+                                    <td>
+                                        <strong style="color: #1f2937;">${j.employee_name}</strong><br>
+                                        <small class="text-muted">${j.employee_id_code}</small>
+                                    </td>
+                                    <td>
+                                        <span style="color: #374151;">${formatDate(j.date)}</span><br>
+                                        <small class="text-muted">${formatTime(j.start_time)}</small>
+                                    </td>
+                                    <td>
+                                        <i class="fas fa-${getPurposeIcon(j.purpose)} me-1" style="color: #6366f1;"></i>
+                                        <span style="color: #374151;">${formatPurpose(j.purpose)}</span>
+                                        ${j.client_name ? `<br><small style="color: #6b7280;">${j.client_name}</small>` : ''}
+                                    </td>
+                                    <td>
+                                        <span style="color: #374151;">${(j.total_distance_km || 0).toFixed(2)} km</span><br>
+                                        <small class="text-muted">${Math.round(j.average_speed_kmh || 0)} km/h avg</small>
+                                    </td>
+                                    <td>
+                                        ${j.is_reimbursable ? 
+                                            `<span style="color: #059669; font-weight: 600;">₹${(j.reimbursement_amount || 0).toFixed(0)}</span>` :
+                                            `<span style="color: #f59e0b;"><i class="fas fa-exclamation-triangle"></i> GPS Off</span>`
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-${j.approval_status}">${j.approval_status}</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewJourney(${j.id})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        ${j.approval_status === 'pending' ? `
+                                            <button class="btn btn-sm btn-success ms-1" onclick="quickApprove(${j.id}, 'approve')">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger ms-1" onclick="quickApprove(${j.id}, 'reject')">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        ` : ''}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        function updateSelection() {
+            selectedJourneys.clear();
+            document.querySelectorAll('.journey-checkbox:checked').forEach(cb => {
+                selectedJourneys.add(parseInt(cb.dataset.id));
+            });
+            document.getElementById('selectedCount').textContent = selectedJourneys.size;
+            updateBulkActionsVisibility();
+        }
+        
+        function toggleSelectAll() {
+            const checkboxes = document.querySelectorAll('.journey-checkbox:not(:disabled)');
+            const selectAll = document.getElementById('selectAllHeader');
+            
+            checkboxes.forEach(cb => {
+                cb.checked = selectAll.checked;
+            });
+            updateSelection();
+        }
+        
+        function updateBulkActionsVisibility() {
+            const pendingJourneys = journeys.filter(j => j.approval_status === 'pending');
+            document.getElementById('bulkActions').style.display = pendingJourneys.length > 0 ? 'block' : 'none';
+        }
+        
+        async function viewJourney(journeyId) {
+            selectedJourneyId = journeyId;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/${journeyId}/track-points`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    // DC Protocol (Jan 13, 2026): Pass track_points for timestamp-based stop detection
+                    showJourneyModal(data.journey, data.route_coordinates, data.track_points);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading journey:', error);
+            }
+        }
+        
+        // DC Protocol (Dec 05, 2025): Enhanced showJourneyModal with playback for WVV compliance
+        // DC Protocol (Jan 13, 2026): Enhanced with smooth animation and timestamp-based stop detection
+        function showJourneyModal(journey, coordinates, trackPoints = []) {
+            stopPlayback();
+            // DC Fix: Normalize coordinates to [lat, lng] format - handles both array and object formats
+            playbackCoordinates = (coordinates || []).map(p => 
+                Array.isArray(p) ? p : [p.latitude || p.lat, p.longitude || p.lng]
+            );
+            // DC: Store track points with timestamps for stop detection
+            playbackTrackPoints = trackPoints || [];
+            playbackIndex = 0;
+            playbackMarker = null;
+            playbackPolyline = null;
+            stopMarkers = [];
+            isAnimating = false;
+            currentJourneyData = journey;
+            
+            const modal = new bootstrap.Modal(document.getElementById('journeyDetailModal'));
+            
+            document.getElementById('journeyDetails').innerHTML = `
+                <div class="mb-3 p-3" style="background: rgba(255,255,255,0.08); border-radius: 10px;">
+                    <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>Journey Info</h6>
+                    <div class="small">
+                        <strong>Employee:</strong> ${journey.employee_name}<br>
+                        <strong>Purpose:</strong> ${formatPurpose(journey.purpose)}<br>
+                        <strong>Client:</strong> ${journey.client_name || '-'}<br>
+                        <strong>Transport:</strong> ${formatTransport(journey.transport_mode)}<br>
+                        <strong>Distance:</strong> ${(journey.total_distance_km || 0).toFixed(2)} km<br>
+                        <strong>Duration:</strong> ${Math.round(journey.total_duration_minutes || 0)} mins<br>
+                        <strong>Avg Speed:</strong> ${Math.round(journey.average_speed_kmh || 0)} km/h<br>
+                        <strong>Max Speed:</strong> ${Math.round(journey.max_speed_kmh || 0)} km/h<br>
+                        <strong>Reimbursement:</strong> 
+                        ${journey.is_reimbursable ? 
+                            `<span class="text-success">₹${(journey.reimbursement_amount || 0).toFixed(2)}</span>` :
+                            `<span class="text-warning">Not Eligible - ${journey.non_reimbursable_reason || 'GPS Off'}</span>`
+                        }
+                        ${journey.photo_path ? `<br><strong>End Photo:</strong> <a href="/${journey.photo_path}" target="_blank">View</a>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Update stops panel - DC_JOURNEY_ADDRESS_001: Enhanced with address and timestamp-based duration
+            const stopsList = document.getElementById('stopsList');
+            if (coordinates && coordinates.length > 0) {
+                const stops = detectStopsWithTimestamps(playbackTrackPoints);
+                // DC_JOURNEY_ADDRESS_001: Get start/end addresses from track points
+                const startAddress = playbackTrackPoints[0]?.address;
+                const endAddress = playbackTrackPoints[playbackTrackPoints.length - 1]?.address;
+                
+                stopsList.innerHTML = `
+                    <div class="small">
+                        <div class="mb-2 text-success">
+                            <i class="fas fa-play-circle me-2"></i><strong>Start Point</strong>
+                            ${startAddress ? `<div class="text-muted ms-4" style="font-size: 11px;">${startAddress}</div>` : ''}
+                        </div>
+                        ${stops.map((stop, i) => `
+                            <div class="mb-2" style="padding-left: 1rem; border-left: 2px solid var(--warning-color, #ffc107);">
+                                <i class="fas fa-pause-circle text-warning me-1"></i>Stop ${i+1} 
+                                <span class="text-muted">(${formatStopDuration(stop.durationMinutes)})</span>
+                                ${stop.address ? `<div class="text-muted" style="font-size: 11px; margin-left: 1.2rem;">${stop.address}</div>` : ''}
+                            </div>
+                        `).join('')}
+                        <div class="mt-2 text-danger">
+                            <i class="fas fa-flag-checkered me-2"></i><strong>End Point</strong>
+                            ${endAddress ? `<div class="text-muted ms-4" style="font-size: 11px;">${endAddress}</div>` : ''}
+                        </div>
+                        <div class="mt-2 text-muted">${coordinates.length} GPS points recorded</div>
+                    </div>
+                `;
+            } else {
+                stopsList.innerHTML = '<p class="text-warning small">No GPS track data available</p>';
+            }
+            
+            // Initialize playback controls
+            document.getElementById('playbackSlider').value = 0;
+            document.getElementById('playbackSlider').max = Math.max(coordinates.length - 1, 1);
+            document.getElementById('playbackProgress').textContent = `0 / ${coordinates.length} points`;
+            document.getElementById('playbackDuration').textContent = formatDuration(journey.total_duration_minutes || 0);
+            document.getElementById('playbackTime').textContent = '00:00';
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-play"></i>';
+            
+            document.getElementById('approvalSection').style.display = 
+                journey.approval_status === 'pending' ? 'block' : 'none';
+            
+            modal.show();
+            
+            setTimeout(() => {
+                if (map) map.remove();
+                
+                map = L.map('journeyMap').setView([20.5937, 78.9629], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                
+                if (playbackCoordinates && playbackCoordinates.length > 0) {
+                    // DC Fix: Use normalized playbackCoordinates for all map operations
+                    // Faded background polyline showing full route
+                    L.polyline(playbackCoordinates, { color: 'rgba(255,255,255,0.3)', weight: 2, dashArray: '5, 10' }).addTo(map);
+                    
+                    // Progressive playback polyline
+                    playbackPolyline = L.polyline([], { color: '#00d09c', weight: 4 }).addTo(map);
+                    
+                    // DC_JOURNEY_ADDRESS_001: Get start/end addresses for map popups
+                    const mapStartAddress = playbackTrackPoints[0]?.address;
+                    const mapEndAddress = playbackTrackPoints[playbackTrackPoints.length - 1]?.address;
+                    const startPopup = mapStartAddress ? `<b>Start</b><br><span style="font-size: 11px; color: #666;">${mapStartAddress}</span>` : 'Start';
+                    const endPopup = mapEndAddress ? `<b>End</b><br><span style="font-size: 11px; color: #666;">${mapEndAddress}</span>` : 'End';
+                    
+                    // Start marker - DC: Added className to remove default Leaflet styling
+                    L.marker(playbackCoordinates[0], {
+                        icon: L.divIcon({
+                            className: '',
+                            html: '<i class="fas fa-play-circle" style="color: #00d09c; font-size: 24px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"></i>',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        })
+                    }).addTo(map).bindPopup(startPopup);
+                    
+                    // End marker - DC: Added className to remove default Leaflet styling
+                    L.marker(playbackCoordinates[playbackCoordinates.length - 1], {
+                        icon: L.divIcon({
+                            className: '',
+                            html: '<i class="fas fa-flag-checkered" style="color: #e94560; font-size: 24px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5));"></i>',
+                            iconSize: [24, 24],
+                            iconAnchor: [12, 12]
+                        })
+                    }).addTo(map).bindPopup(endPopup);
+                    
+                    // DC_JOURNEY_ADDRESS_001 (Jan 22, 2026): Add stop markers with address and duration tooltips
+                    const detectedStops = detectStopsWithTimestamps(playbackTrackPoints);
+                    detectedStops.forEach((stop, idx) => {
+                        if (stop.index < playbackCoordinates.length) {
+                            // DC_JOURNEY_ADDRESS_001: Include address in popup if available
+                            const addressLine = stop.address ? `<br><span style="font-size: 11px; color: #666;">${stop.address}</span>` : '';
+                            const stopMarker = L.marker(playbackCoordinates[stop.index], {
+                                icon: L.divIcon({
+                                    className: '',
+                                    html: `<div style="background: #ffc107; color: #000; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 11px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${idx + 1}</div>`,
+                                    iconSize: [22, 22],
+                                    iconAnchor: [11, 11]
+                                })
+                            }).addTo(map).bindPopup(`<b>Stop ${idx + 1}</b><br>Duration: ${formatStopDuration(stop.durationMinutes)}${addressLine}`);
+                            stopMarkers.push(stopMarker);
+                        }
+                    });
+                    
+                    // Animated playback marker - DC: Added className and enhanced visibility
+                    playbackMarker = L.marker(playbackCoordinates[0], {
+                        icon: L.divIcon({
+                            className: '',
+                            html: '<div style="background: #ffc107; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px rgba(255,193,7,0.8), 0 2px 6px rgba(0,0,0,0.4);"></div>',
+                            iconSize: [16, 16],
+                            iconAnchor: [8, 8]
+                        }),
+                        zIndexOffset: 1000
+                    }).addTo(map);
+                    
+                    const bounds = L.latLngBounds(playbackCoordinates);
+                    map.fitBounds(bounds, { padding: [30, 30] });
+                    
+                    // DC Fix: Initialize playback position after map is ready
+                    updatePlaybackPosition();
+                }
+            }, 300);
+            
+            // DC Fix: Add modal close listener to reset playback state
+            const modalEl = document.getElementById('journeyDetailModal');
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                stopPlayback();
+                playbackCoordinates = [];
+                playbackTrackPoints = [];
+                playbackIndex = 0;
+                playbackMarker = null;
+                playbackPolyline = null;
+                stopMarkers = [];
+                isAnimating = false;
+                currentJourneyData = null;
+            }, { once: true });
+        }
+        
+        // DC Protocol (Dec 05, 2025): Stop detection for route points panel (legacy)
+        function detectStops(coordinates) {
+            const stops = [];
+            const minStopTime = 120;
+            let stopStart = null;
+            
+            for (let i = 1; i < coordinates.length - 1; i++) {
+                const dist = haversineDistance(
+                    coordinates[i-1][0], coordinates[i-1][1],
+                    coordinates[i][0], coordinates[i][1]
+                );
+                if (dist < 0.05) {
+                    if (!stopStart) stopStart = i;
+                } else if (stopStart) {
+                    if (i - stopStart > 3) {
+                        stops.push({ index: stopStart, duration: i - stopStart });
+                    }
+                    stopStart = null;
+                }
+            }
+            return stops.slice(0, 5);
+        }
+        
+        // DC Protocol (Jan 13, 2026): Enhanced stop detection with timestamps
+        function detectStopsWithTimestamps(trackPoints) {
+            if (!trackPoints || trackPoints.length < 3) return [];
+            
+            const stops = [];
+            const minStopDistanceKm = 0.05;  // 50 meters threshold
+            const minStopDurationMins = 2;    // Minimum 2 minutes to count as stop
+            
+            let stopStartIndex = null;
+            let stopStartTime = null;
+            
+            for (let i = 1; i < trackPoints.length - 1; i++) {
+                const prev = trackPoints[i - 1];
+                const curr = trackPoints[i];
+                
+                // DC: Guard against missing data
+                if (!prev || !curr || !prev.latitude || !curr.latitude) continue;
+                
+                const dist = haversineDistance(
+                    prev.latitude, prev.longitude,
+                    curr.latitude, curr.longitude
+                );
+                
+                if (dist < minStopDistanceKm) {
+                    if (stopStartIndex === null) {
+                        stopStartIndex = i;
+                        // DC: Handle both 'timestamp' and 'captured_at' field names
+                        const ts = prev.timestamp || prev.captured_at;
+                        stopStartTime = ts ? new Date(ts) : null;
+                    }
+                } else if (stopStartIndex !== null && stopStartTime) {
+                    const ts = curr.timestamp || curr.captured_at;
+                    const stopEndTime = ts ? new Date(ts) : null;
+                    
+                    if (stopEndTime && !isNaN(stopEndTime.getTime())) {
+                        const durationMinutes = (stopEndTime - stopStartTime) / (1000 * 60);
+                        
+                        if (durationMinutes >= minStopDurationMins && !isNaN(durationMinutes)) {
+                            // DC_JOURNEY_ADDRESS_001: Include address from track point for stop visualization
+                            stops.push({
+                                index: stopStartIndex,
+                                endIndex: i - 1,
+                                startTime: stopStartTime,
+                                endTime: stopEndTime,
+                                durationMinutes: durationMinutes,
+                                latitude: trackPoints[stopStartIndex].latitude,
+                                longitude: trackPoints[stopStartIndex].longitude,
+                                address: trackPoints[stopStartIndex].address || null
+                            });
+                        }
+                    }
+                    stopStartIndex = null;
+                    stopStartTime = null;
+                }
+            }
+            
+            // Check for stop at end
+            if (stopStartIndex !== null && stopStartTime && trackPoints.length > 0) {
+                const lastPoint = trackPoints[trackPoints.length - 1];
+                const ts = lastPoint.timestamp || lastPoint.captured_at;
+                const stopEndTime = ts ? new Date(ts) : null;
+                
+                if (stopEndTime && !isNaN(stopEndTime.getTime())) {
+                    const durationMinutes = (stopEndTime - stopStartTime) / (1000 * 60);
+                    
+                    if (durationMinutes >= minStopDurationMins && !isNaN(durationMinutes)) {
+                        // DC_JOURNEY_ADDRESS_001: Include address from track point for stop visualization
+                        stops.push({
+                            index: stopStartIndex,
+                            endIndex: trackPoints.length - 1,
+                            startTime: stopStartTime,
+                            endTime: stopEndTime,
+                            durationMinutes: durationMinutes,
+                            latitude: trackPoints[stopStartIndex].latitude,
+                            longitude: trackPoints[stopStartIndex].longitude,
+                            address: trackPoints[stopStartIndex].address || null
+                        });
+                    }
+                }
+            }
+            
+            return stops.slice(0, 10);  // Max 10 stops
+        }
+        
+        function haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+        
+        function formatDuration(minutes) {
+            const hrs = Math.floor(minutes / 60);
+            const mins = Math.round(minutes % 60);
+            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        }
+        
+        // DC Protocol (Jan 13, 2026): Format stop duration for display
+        function formatStopDuration(minutes) {
+            if (minutes < 1) return 'Less than 1 min';
+            if (minutes < 60) return `${Math.round(minutes)} min`;
+            const hrs = Math.floor(minutes / 60);
+            const mins = Math.round(minutes % 60);
+            if (mins === 0) return `${hrs} hr`;
+            return `${hrs} hr ${mins} min`;
+        }
+        
+        // DC Protocol (Dec 05, 2025): Playback control functions for WVV compliance
+        function togglePlayback() {
+            if (isPlaying) {
+                stopPlayback();
+            } else {
+                startPlayback();
+            }
+        }
+        
+        function startPlayback() {
+            if (playbackCoordinates.length === 0) return;
+            if (playbackIndex >= playbackCoordinates.length - 1) {
+                playbackIndex = 0;
+            }
+            
+            isPlaying = true;
+            document.getElementById('playPauseBtn').innerHTML = '<i class="fas fa-pause"></i>';
+            
+            const speed = parseInt(document.getElementById('playbackSpeed').value);
+            const interval = Math.max(50, 200 / speed);
+            
+            playbackInterval = setInterval(() => {
+                if (playbackIndex >= playbackCoordinates.length - 1) {
+                    stopPlayback();
+                    return;
+                }
+                
+                playbackIndex++;
+                updatePlaybackPosition();
+            }, interval);
+        }
+        
+        function stopPlayback() {
+            isPlaying = false;
+            isAnimating = false;  // DC: Reset animation lock
+            if (playbackInterval) {
+                clearInterval(playbackInterval);
+                playbackInterval = null;
+            }
+            const btn = document.getElementById('playPauseBtn');
+            if (btn) btn.innerHTML = '<i class="fas fa-play"></i>';
+        }
+        
+        function resetPlayback() {
+            stopPlayback();
+            playbackIndex = 0;
+            updatePlaybackPosition();
+        }
+        
+        function seekPlayback(value) {
+            playbackIndex = parseInt(value);
+            updatePlaybackPosition();
+        }
+        
+        // DC Protocol (Jan 13, 2026): Enhanced with smooth animation
+        function updatePlaybackPosition(animate = true) {
+            if (!playbackCoordinates.length) return;
+            
+            const coord = playbackCoordinates[playbackIndex];
+            
+            // DC: Smooth animation for marker movement
+            if (playbackMarker && coord) {
+                if (animate && isPlaying && playbackIndex > 0) {
+                    animateMarkerTo(playbackMarker, coord);
+                } else {
+                    playbackMarker.setLatLng(coord);
+                }
+            }
+            
+            // DC: Progressive polyline drawing
+            if (playbackPolyline) {
+                playbackPolyline.setLatLngs(playbackCoordinates.slice(0, playbackIndex + 1));
+            }
+            
+            // Update UI elements
+            document.getElementById('playbackSlider').value = playbackIndex;
+            document.getElementById('playbackProgress').textContent = `${playbackIndex + 1} / ${playbackCoordinates.length} points`;
+            
+            // Calculate time based on progress - DC: Use journey data instead of parsing UI
+            const progress = playbackIndex / Math.max(playbackCoordinates.length - 1, 1);
+            const totalMins = currentJourneyData?.total_duration_minutes || 0;
+            const currentMins = totalMins * progress;
+            document.getElementById('playbackTime').textContent = formatDuration(isNaN(currentMins) ? 0 : currentMins);
+            
+            // DC: Smooth map panning (disabled during animation to avoid jitter)
+            if (map && coord && !isAnimating) {
+                map.panTo(coord, { animate: true, duration: 0.3 });
+            }
+        }
+        
+        // DC Protocol (Jan 13, 2026): Smooth marker animation using requestAnimationFrame
+        function animateMarkerTo(marker, targetCoord, duration = 150) {
+            if (isAnimating) return;
+            
+            const startLatLng = marker.getLatLng();
+            const startLat = startLatLng.lat;
+            const startLng = startLatLng.lng;
+            const targetLat = targetCoord[0];
+            const targetLng = targetCoord[1];
+            
+            const startTime = performance.now();
+            isAnimating = true;
+            
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Ease-out cubic for smooth deceleration
+                const eased = 1 - Math.pow(1 - progress, 3);
+                
+                const lat = startLat + (targetLat - startLat) * eased;
+                const lng = startLng + (targetLng - startLng) * eased;
+                
+                marker.setLatLng([lat, lng]);
+                
+                if (progress < 1 && isPlaying) {
+                    requestAnimationFrame(animate);
+                } else {
+                    isAnimating = false;
+                    marker.setLatLng(targetCoord);  // Ensure final position
+                }
+            }
+            
+            requestAnimationFrame(animate);
+        }
+        
+        async function approveJourney(action) {
+            if (!selectedJourneyId) return;
+            
+            const remarks = document.getElementById('approvalRemarks').value;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/${selectedJourneyId}/approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({ action, remarks })
+                });
+                
+                if (response.ok) {
+                    document.activeElement?.blur();
+                    bootstrap.Modal.getInstance(document.getElementById('journeyDetailModal')).hide();
+                    await loadJourneys();
+                    alert(`Journey ${action}d successfully`);
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to process approval');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error approving journey:', error);
+            }
+        }
+        
+        async function quickApprove(journeyId, action) {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/${journeyId}/approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({ action })
+                });
+                
+                if (response.ok) {
+                    await loadJourneys();
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to process approval');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error:', error);
+            }
+        }
+        
+        async function bulkApprove(action) {
+            if (selectedJourneys.size === 0) {
+                alert('Please select journeys to process');
+                return;
+            }
+            
+            if (!confirm(`${action === 'approve' ? 'Approve' : 'Reject'} ${selectedJourneys.size} journeys?`)) {
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/bulk-approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        journey_ids: Array.from(selectedJourneys),
+                        action
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    selectedJourneys.clear();
+                    await loadJourneys();
+                    alert(`Processed ${data.processed.length} journeys`);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error:', error);
+            }
+        }
+        
+        function resetFilters() {
+            setDefaultDates();
+            document.getElementById('employeeFilter').value = '';
+            document.getElementById('staffTypeFilter').value = '';
+            document.getElementById('approvalFilter').value = '';
+            loadJourneys();
+        }
+        
+        function getPurposeIcon(purpose) {
+            const icons = {
+                client_visit: 'user-tie', site_inspection: 'building', meeting: 'handshake',
+                delivery: 'truck', collection: 'box', other: 'route'
+            };
+            return icons[purpose] || 'route';
+        }
+        
+        function formatPurpose(purpose) {
+            const labels = {
+                client_visit: 'Client Visit', site_inspection: 'Site Inspection', meeting: 'Meeting',
+                delivery: 'Delivery', collection: 'Collection', other: 'Other'
+            };
+            return labels[purpose] || purpose;
+        }
+        
+        function formatTransport(mode) {
+            const labels = { car: 'Car', bike: 'Bike', local_transport: 'Local Transport', others: 'Other' };
+            return labels[mode] || mode;
+        }
+        
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+        }
+        
+        function formatTime(dateStr) {
+            return new Date(dateStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // ==================== ACTIVE JOURNEYS (DC Protocol Dec 04, 2025) ====================
+        
+        async function loadActiveJourneys() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/active/all`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    activeJourneys = data.active_journeys;
+                    
+                    // Update badge
+                    const badge = document.getElementById('activeCountBadge');
+                    if (activeJourneys.length > 0) {
+                        badge.textContent = activeJourneys.length;
+                        badge.style.display = 'inline-block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                    
+                    // Update last refresh time
+                    document.getElementById('activeLastUpdate').textContent = 
+                        `Last updated: ${new Date().toLocaleTimeString('en-IN')}`;
+                    
+                    renderActiveJourneysList();
+                } else {
+                    console.error('Failed to load active journeys:', response.status);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading active journeys:', error);
+            }
+        }
+        
+        function renderActiveJourneysList() {
+            const container = document.getElementById('activeJourneysList');
+            
+            if (!activeJourneys || activeJourneys.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-car-side fa-3x mb-3" style="color: #d1d5db;"></i>
+                        <h5 style="color: #6b7280;">No Active Journeys</h5>
+                        <p class="text-muted">No team members are currently traveling.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead style="background: #f9fafb;">
+                            <tr>
+                                <th style="color: #374151;">Employee</th>
+                                <th style="color: #374151;">Purpose</th>
+                                <th style="color: #374151;">Started</th>
+                                <th style="color: #374151;">Duration</th>
+                                <th style="color: #374151;">Distance</th>
+                                <th style="color: #374151;">Est. Amount</th>
+                                <th style="color: #374151;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${activeJourneys.map(j => `
+                                <tr class="active-journey-row">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-2" style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite;"></div>
+                                            <div>
+                                                <strong style="color: #1f2937;">${j.employee_name}</strong><br>
+                                                <small class="text-muted">${j.employee_code} | ${j.department}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <i class="fas fa-${getPurposeIcon(j.purpose)} me-1" style="color: #6366f1;"></i>
+                                        ${formatPurpose(j.purpose)}<br>
+                                        <small class="text-muted">${j.transport_mode}</small>
+                                    </td>
+                                    <td>
+                                        <span style="color: #374151;">${j.start_time_formatted || '--'}</span>
+                                    </td>
+                                    <td>
+                                        <span class="duration-live">
+                                            <i class="fas fa-clock me-1"></i>${j.duration_formatted}
+                                        </span>
+                                        ${j.fingerprint_warnings_count > 0 ? `
+                                            <br><span class="fingerprint-warning">
+                                                <i class="fas fa-exclamation-triangle"></i> ${j.fingerprint_warnings_count} device warnings
+                                            </span>
+                                        ` : ''}
+                                    </td>
+                                    <td>
+                                        <span style="color: #374151; font-weight: 600;">${j.total_distance_km} km</span><br>
+                                        <small class="text-muted">${j.track_points_count} GPS points</small>
+                                    </td>
+                                    <td>
+                                        ${j.is_reimbursable ? 
+                                            `<span style="color: #059669; font-weight: 600;">₹${j.est_reimbursement}</span>` :
+                                            `<span style="color: #d97706;"><i class="fas fa-exclamation-triangle"></i> GPS Off</span>`
+                                        }
+                                    </td>
+                                    <td>
+                                        ${j.can_force_stop ? `
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="showForceStopModal(${j.id}, '${escapeHtml(j.employee_name)}', '${j.duration_formatted}', ${j.total_distance_km})">
+                                                <i class="fas fa-stop-circle me-1"></i>Stop
+                                            </button>
+                                        ` : `
+                                            <span class="text-muted">-</span>
+                                        `}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML.replace(/'/g, "\\'");
+        }
+        
+        function showForceStopModal(journeyId, employeeName, duration, distance) {
+            forceStopJourneyId = journeyId;
+            
+            document.getElementById('forceStopJourneyInfo').innerHTML = `
+                <div class="row">
+                    <div class="col-6">
+                        <strong>Employee:</strong> ${employeeName}
+                    </div>
+                    <div class="col-6">
+                        <strong>Journey ID:</strong> #${journeyId}
+                    </div>
+                    <div class="col-6 mt-2">
+                        <strong>Duration:</strong> ${duration}
+                    </div>
+                    <div class="col-6 mt-2">
+                        <strong>Distance:</strong> ${distance} km
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('forceStopReason').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('forceStopModal'));
+            modal.show();
+        }
+        
+        async function executeForceStop() {
+            if (!forceStopJourneyId) return;
+            
+            const reason = document.getElementById('forceStopReason').value.trim();
+            if (!reason) {
+                alert('Please provide a reason for force stopping this journey.');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/${forceStopJourneyId}/force-stop`, {
+                    method: 'POST',
+                    body: JSON.stringify({ reason })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Close modal - WCAG 2.1 AA: Blur focus before hiding
+                    document.activeElement?.blur();
+                    bootstrap.Modal.getInstance(document.getElementById('forceStopModal')).hide();
+                    
+                    // Show success message
+                    alert(`Journey force-stopped successfully.\n\nFinal Distance: ${data.force_stop_details.final_distance_km} km\nFinal Duration: ${Math.round(data.force_stop_details.final_duration_minutes)} mins${data.force_stop_details.final_reimbursement > 0 ? `\nReimbursement: ₹${data.force_stop_details.final_reimbursement}` : ''}`);
+                    
+                    // Reload active journeys
+                    await loadActiveJourneys();
+                    forceStopJourneyId = null;
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to force stop journey');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error force stopping journey:', error);
+                alert('An error occurred while stopping the journey. Please try again.');
+            }
+        }
+    </script>
+    <script src="/public/js/dc-error-handler.js"></script>
+</body>
+</html>

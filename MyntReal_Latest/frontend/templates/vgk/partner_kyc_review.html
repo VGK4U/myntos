@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGK Partner KYC Review</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="/public/css/dark-theme.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_header.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+
+        /* DC-VGK-PARTNER-SYNC-001: Use shared StaffSidebar (260px) + StaffHeader chrome.
+           Margins/transitions match staff_mnr_user_coupons.html pattern. */
+        .main-content {
+            margin-left: 260px;
+            padding: 28px;
+            padding-top: 88px;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+        body.sidebar-collapsed-mode .main-content { margin-left: 70px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0 !important; padding: 16px; padding-top: 88px; } }
+
+        .page-header {
+            background: linear-gradient(135deg, #6c3483 0%, #8e44ad 100%);
+            color: white; padding: 26px 30px; border-radius: 14px;
+            margin-bottom: 24px; box-shadow: 0 8px 24px rgba(108,52,131,0.3);
+        }
+        .page-header h1 { font-size: 1.8rem; font-weight: 700; margin: 0; }
+        .page-header p { margin: 6px 0 0 0; opacity: 0.88; font-size: 14px; }
+
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card {
+            background: white; border-radius: 12px; padding: 20px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.07); text-align: center;
+            border-left: 4px solid transparent; cursor: pointer; transition: transform 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-card.pending   { border-left-color: #f59e0b; }
+        .stat-card.validated { border-left-color: #3b82f6; }
+        .stat-card.approved  { border-left-color: #10b981; }
+        .stat-card.rejected  { border-left-color: #ef4444; }
+        .stat-card.active    { background: #f8f4ff; }
+        .stat-count { font-size: 2rem; font-weight: 700; line-height: 1; }
+        .stat-label { font-size: 12px; color: #6b7280; margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card.pending   .stat-count { color: #f59e0b; }
+        .stat-card.validated .stat-count { color: #3b82f6; }
+        .stat-card.approved  .stat-count { color: #10b981; }
+        .stat-card.rejected  .stat-count { color: #ef4444; }
+
+        .controls-bar {
+            background: white; border-radius: 12px; padding: 18px 24px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.07); margin-bottom: 24px;
+            display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+        }
+        .controls-bar .search-box {
+            flex: 1; min-width: 200px;
+            border: 1px solid #e5e7eb; border-radius: 8px;
+            padding: 9px 14px; font-size: 14px; outline: none;
+            transition: border-color 0.2s;
+        }
+        .controls-bar .search-box:focus { border-color: #8e44ad; }
+        .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+        .filter-tab {
+            padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 600;
+            border: 2px solid #e5e7eb; background: white; color: #6b7280;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .filter-tab:hover { border-color: #8e44ad; color: #8e44ad; }
+        .filter-tab.active { background: #8e44ad; color: white; border-color: #8e44ad; }
+        .btn-refresh {
+            background: #6c3483; color: white; border: none;
+            padding: 9px 18px; border-radius: 8px; font-size: 14px;
+            font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;
+            transition: background 0.2s; white-space: nowrap;
+        }
+        .btn-refresh:hover { background: #5b2c6f; }
+
+        .partners-list { display: flex; flex-direction: column; gap: 20px; }
+
+        .partner-card {
+            background: white; border-radius: 14px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.07); overflow: hidden;
+        }
+        .partner-card-header {
+            padding: 18px 24px; border-bottom: 1px solid #f3f4f6;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+        }
+        .partner-info { display: flex; align-items: center; gap: 14px; }
+        .partner-avatar {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: linear-gradient(135deg, #6c3483, #8e44ad);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 18px; font-weight: 700; flex-shrink: 0;
+        }
+        .partner-name { font-size: 16px; font-weight: 700; color: #1f2937; margin: 0; }
+        .partner-meta { font-size: 13px; color: #6b7280; margin: 2px 0 0 0; }
+        .partner-actions { display: flex; align-items: center; gap: 10px; }
+
+        .kyc-docs-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 20px 24px;
+        }
+        .doc-slot {
+            border: 2px solid #e5e7eb; border-radius: 12px; overflow: hidden;
+            background: #fafafa; transition: border-color 0.2s;
+        }
+        .doc-slot.status-Pending        { border-color: #fcd34d; }
+        .doc-slot.status-Staff-Validated { border-color: #60a5fa; }
+        .doc-slot.status-Approved       { border-color: #34d399; }
+        .doc-slot.status-Rejected       { border-color: #f87171; }
+        .doc-slot.status-missing        { border-color: #e5e7eb; background: #f9fafb; }
+
+        .doc-slot-header {
+            padding: 10px 12px; border-bottom: 1px solid #f3f4f6;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .doc-type-label { font-size: 12px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.4px; }
+
+        .doc-img-wrapper {
+            position: relative; aspect-ratio: 4/3; overflow: hidden; background: #f3f4f6;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .doc-img-wrapper img {
+            width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s;
+        }
+        .doc-img-wrapper:hover img { transform: scale(1.04); }
+        .doc-img-wrapper .view-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.45);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .doc-img-wrapper:hover .view-overlay { opacity: 1; }
+        .view-overlay span { color: white; font-size: 13px; font-weight: 600; }
+        .doc-missing-placeholder {
+            width: 100%; aspect-ratio: 4/3; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 8px;
+            color: #9ca3af; background: #f9fafb;
+        }
+        .doc-missing-placeholder i { font-size: 32px; }
+        .doc-missing-placeholder span { font-size: 12px; font-weight: 500; }
+
+        .doc-slot-footer { padding: 10px 12px; }
+        .doc-filename { font-size: 11px; color: #6b7280; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .doc-uploaded-at { font-size: 11px; color: #9ca3af; margin-bottom: 8px; }
+        .doc-rejection-reason {
+            font-size: 11px; color: #dc2626; background: #fef2f2;
+            padding: 6px 8px; border-radius: 6px; margin-bottom: 8px;
+        }
+        .doc-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .btn-validate {
+            flex: 1; padding: 6px 8px; border: none; border-radius: 6px;
+            background: #dbeafe; color: #1d4ed8; font-size: 11px; font-weight: 700;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .btn-validate:hover { background: #bfdbfe; }
+        .btn-approve {
+            flex: 1; padding: 6px 8px; border: none; border-radius: 6px;
+            background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 700;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .btn-approve:hover { background: #a7f3d0; }
+        .btn-reject {
+            flex: 1; padding: 6px 8px; border: none; border-radius: 6px;
+            background: #fee2e2; color: #991b1b; font-size: 11px; font-weight: 700;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .btn-reject:hover { background: #fecaca; }
+
+        .badge-status {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+        }
+        .badge-Pending        { background: #fef3c7; color: #92400e; }
+        .badge-Staff-Validated { background: #dbeafe; color: #1e40af; }
+        .badge-Approved       { background: #d1fae5; color: #065f46; }
+        .badge-Rejected       { background: #fee2e2; color: #991b1b; }
+        .badge-Not-Submitted  { background: #f3f4f6; color: #6b7280; }
+
+        .partner-badge {
+            padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+        }
+        .partner-Pending        { background: #fef3c7; color: #92400e; }
+        .partner-Staff-Validated { background: #dbeafe; color: #1e40af; }
+        .partner-Approved       { background: #d1fae5; color: #065f46; }
+        .partner-Rejected       { background: #fee2e2; color: #991b1b; }
+        .partner-Not-Submitted  { background: #f3f4f6; color: #6b7280; }
+
+        .empty-state {
+            background: white; border-radius: 14px; padding: 60px 20px; text-align: center;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.07); color: #9ca3af;
+        }
+        .empty-state i { font-size: 52px; margin-bottom: 16px; }
+        .empty-state h4 { font-size: 18px; font-weight: 700; color: #374151; margin-bottom: 8px; }
+        .empty-state p { font-size: 14px; }
+
+        .loading-spinner {
+            background: white; border-radius: 14px; padding: 60px 20px; text-align: center;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.07); color: #8e44ad;
+        }
+        .spinner { width: 44px; height: 44px; border: 4px solid #e5e7eb; border-top-color: #8e44ad; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toast-container { position: fixed; top: 72px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+        .toast-msg {
+            padding: 14px 20px; border-radius: 10px; font-size: 14px; font-weight: 600;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15); animation: slideIn 0.3s ease;
+            max-width: 340px; display: flex; align-items: center; gap: 10px;
+        }
+        .toast-msg.success { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
+        .toast-msg.error   { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .modal-backdrop-custom {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            z-index: 10000; display: flex; align-items: center; justify-content: center;
+        }
+        .modal-box {
+            background: white; border-radius: 16px; padding: 28px;
+            width: 94%; max-width: 480px; box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        .modal-box h5 { font-size: 17px; font-weight: 700; color: #1f2937; margin-bottom: 16px; }
+        .modal-box textarea {
+            width: 100%; border: 1px solid #e5e7eb; border-radius: 8px;
+            padding: 10px 14px; font-size: 14px; resize: vertical; min-height: 90px; outline: none;
+        }
+        .modal-box textarea:focus { border-color: #8e44ad; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end; }
+        .btn-cancel-modal {
+            padding: 9px 20px; border: 2px solid #e5e7eb; border-radius: 8px;
+            background: white; color: #6b7280; font-weight: 600; cursor: pointer; font-size: 14px;
+        }
+        .btn-cancel-modal:hover { background: #f9fafb; }
+        .btn-confirm-reject {
+            padding: 9px 20px; border: none; border-radius: 8px;
+            background: #ef4444; color: white; font-weight: 700; cursor: pointer; font-size: 14px;
+        }
+        .btn-confirm-reject:hover { background: #dc2626; }
+
+        .lightbox {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+            z-index: 10500; display: flex; align-items: center; justify-content: center;
+            flex-direction: column; gap: 16px;
+        }
+        .lightbox img { max-width: 92vw; max-height: 82vh; border-radius: 8px; object-fit: contain; }
+        .lightbox-label { color: white; font-size: 14px; font-weight: 600; }
+        .lightbox-close {
+            position: absolute; top: 18px; right: 22px; color: white; font-size: 28px;
+            cursor: pointer; background: rgba(255,255,255,0.15); border-radius: 50%;
+            width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+        }
+        .lightbox-close:hover { background: rgba(255,255,255,0.25); }
+
+        @media (max-width: 900px) {
+            .kyc-docs-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 576px) {
+            .kyc-docs-grid { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- DC-VGK-PARTNER-SYNC-001: Shared sidebar+header (matches staff_progress.html pattern) -->
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+    <div id="headerContainer"></div>
+    <div id="backButtonContainer"></div>
+    <div class="page-header">
+        <h1><i class="fas fa-file-shield"></i> VGK Partner KYC Document Review</h1>
+        <p>Review, validate, approve or reject VGK partner KYC documents. All 4 docs must be Approved to activate the partner's KYC status.</p>
+    </div>
+
+    <div class="stats-row" id="statsRow">
+        <div class="stat-card pending" onclick="setFilter('Pending')">
+            <div class="stat-count" id="statPending">—</div>
+            <div class="stat-label"><i class="fas fa-clock"></i> Pending</div>
+        </div>
+        <div class="stat-card validated" onclick="setFilter('Staff Validated')">
+            <div class="stat-count" id="statValidated">—</div>
+            <div class="stat-label"><i class="fas fa-check-circle"></i> Staff Validated</div>
+        </div>
+        <div class="stat-card approved" onclick="setFilter('Approved')">
+            <div class="stat-count" id="statApproved">—</div>
+            <div class="stat-label"><i class="fas fa-shield-alt"></i> Approved</div>
+        </div>
+        <div class="stat-card rejected" onclick="setFilter('Rejected')">
+            <div class="stat-count" id="statRejected">—</div>
+            <div class="stat-label"><i class="fas fa-times-circle"></i> Rejected</div>
+        </div>
+    </div>
+
+    <div class="controls-bar">
+        <input type="text" class="search-box" id="searchBox" placeholder="Search by partner name or code…" oninput="renderPartners()">
+        <div class="filter-tabs">
+            <div class="filter-tab active" onclick="setFilter('all')" id="tab-all">All</div>
+            <div class="filter-tab" onclick="setFilter('Pending')" id="tab-Pending">Pending</div>
+            <div class="filter-tab" onclick="setFilter('Staff Validated')" id="tab-Staff Validated">Validated</div>
+            <div class="filter-tab" onclick="setFilter('Approved')" id="tab-Approved">Approved</div>
+            <div class="filter-tab" onclick="setFilter('Rejected')" id="tab-Rejected">Rejected</div>
+        </div>
+        <button class="btn-refresh" onclick="loadData()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+
+    <div id="partnersList" class="partners-list">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div>Loading KYC documents…</div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div id="rejectModal" style="display:none;">
+    <div class="modal-backdrop-custom">
+        <div class="modal-box">
+            <h5><i class="fas fa-times-circle text-danger me-2"></i>Reject KYC Document</h5>
+            <p style="font-size:14px;color:#6b7280;margin-bottom:12px;">
+                Provide a clear reason so the partner knows what to fix and re-upload.
+            </p>
+            <textarea id="rejectReason" placeholder="e.g. Document is blurry, please re-upload a clear photo…"></textarea>
+            <div class="modal-actions">
+                <button class="btn-cancel-modal" onclick="closeRejectModal()">Cancel</button>
+                <button class="btn-confirm-reject" onclick="confirmReject()">
+                    <i class="fas fa-times-circle"></i> Confirm Reject
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="lightbox" style="display:none;" onclick="closeLightbox()">
+    <div class="lightbox">
+        <div class="lightbox-close"><i class="fas fa-times"></i></div>
+        <img id="lightboxImg" src="" alt="">
+        <div class="lightbox-label" id="lightboxLabel"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js?v=20260511a"></script>
+<script>
+const API = '/api/v1/kyc-bank';
+// DC-VGK-PARTNER-SYNC-001: Staff portal uses staff_token (set by StaffSidebar/staff_header).
+// Fall back to legacy 'token' for backwards compatibility.
+const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+
+const DOC_LABELS = {
+    aadhar_front: 'Aadhaar Front',
+    aadhar_back:  'Aadhaar Back',
+    pan_card:     'PAN Card',
+    passport_photo: 'Passport Photo'
+};
+const DOC_REQUIRED = ['aadhar_front', 'aadhar_back', 'pan_card', 'passport_photo'];
+
+let allPartners = [];
+let currentFilter = 'all';
+let rejectDocId = null;
+
+function authHeaders() {
+    return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+}
+
+async function loadData() {
+    document.getElementById('partnersList').innerHTML = `
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div>Loading KYC documents…</div>
+        </div>`;
+    try {
+        const res = await fetch(`${API}/staff/partner-kyc-pending?status_filter=all&limit=500`, {
+            headers: authHeaders()
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.detail || 'Failed to load data');
+        }
+        const data = await res.json();
+        allPartners = data.partners || [];
+
+        const s = data.stats || {};
+        document.getElementById('statPending').textContent   = s.pending   ?? 0;
+        document.getElementById('statValidated').textContent = s.staff_validated ?? 0;
+        document.getElementById('statApproved').textContent  = s.approved  ?? 0;
+        document.getElementById('statRejected').textContent  = s.rejected  ?? 0;
+
+        renderPartners();
+    } catch (e) {
+        document.getElementById('partnersList').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle text-danger"></i>
+                <h4>Could not load data</h4>
+                <p>${e.message}</p>
+            </div>`;
+    }
+}
+
+function setFilter(f) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    const tabId = 'tab-' + f;
+    const tabEl = document.getElementById(tabId);
+    if (tabEl) tabEl.classList.add('active');
+
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+    const scMap = { 'Pending': '.stat-card.pending', 'Staff Validated': '.stat-card.validated', 'Approved': '.stat-card.approved', 'Rejected': '.stat-card.rejected' };
+    if (scMap[f]) document.querySelector(scMap[f])?.classList.add('active');
+
+    renderPartners();
+}
+
+function renderPartners() {
+    const search = (document.getElementById('searchBox').value || '').toLowerCase().trim();
+
+    let partners = allPartners;
+
+    if (currentFilter !== 'all') {
+        partners = partners.filter(p =>
+            (p.documents || []).some(d => d.status === currentFilter)
+        );
+    }
+
+    if (search) {
+        partners = partners.filter(p =>
+            (p.partner_name || '').toLowerCase().includes(search) ||
+            (p.partner_code || '').toLowerCase().includes(search)
+        );
+    }
+
+    if (!partners.length) {
+        document.getElementById('partnersList').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-folder-open"></i>
+                <h4>No partners found</h4>
+                <p>No VGK partners match the current filter.</p>
+            </div>`;
+        return;
+    }
+
+    const html = partners.map(p => renderPartnerCard(p)).join('');
+    document.getElementById('partnersList').innerHTML = html;
+}
+
+function renderPartnerCard(p) {
+    const initials = (p.partner_name || 'P').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const ks = (p.kyc_status || 'Not Submitted').replace(/ /g, '-');
+    const docsMap = {};
+    (p.documents || []).forEach(d => { docsMap[d.document_type] = d; });
+
+    const docsHtml = DOC_REQUIRED.map(dt => renderDocSlot(dt, docsMap[dt], p.partner_id)).join('');
+
+    return `
+    <div class="partner-card" id="partner-${p.partner_id}">
+        <div class="partner-card-header">
+            <div class="partner-info">
+                <div class="partner-avatar">${initials}</div>
+                <div>
+                    <div class="partner-name">${escHtml(p.partner_name || '—')}</div>
+                    <div class="partner-meta">${escHtml(p.partner_code || '—')} &bull; ${escHtml(p.category || '—')}</div>
+                </div>
+            </div>
+            <div class="partner-actions">
+                <span class="partner-badge partner-${ks}">KYC: ${escHtml(p.kyc_status || 'Not Submitted')}</span>
+            </div>
+        </div>
+        <div class="kyc-docs-grid">
+            ${docsHtml}
+        </div>
+    </div>`;
+}
+
+function renderDocSlot(docType, doc, partnerId) {
+    const label = DOC_LABELS[docType] || docType;
+
+    if (!doc) {
+        return `
+        <div class="doc-slot status-missing">
+            <div class="doc-slot-header">
+                <span class="doc-type-label">${escHtml(label)}</span>
+                <span class="badge-status badge-Not-Submitted"><i class="fas fa-minus-circle"></i> Not Uploaded</span>
+            </div>
+            <div class="doc-missing-placeholder">
+                <i class="fas fa-file-upload"></i>
+                <span>No document uploaded</span>
+            </div>
+            <div class="doc-slot-footer"></div>
+        </div>`;
+    }
+
+    const st = doc.status || 'Pending';
+    const stClass = st.replace(/ /g, '-');
+    const imgUrl = doc.file_path ? `/storage/${doc.file_path}` : '';
+    const displayName = doc.original_filename || doc.file_name || '—';
+    const uploadedAt = doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+
+    const imgHtml = imgUrl ? `
+        <div class="doc-img-wrapper" onclick="openLightbox('${escAttr(imgUrl)}','${escAttr(label)}')">
+            <img src="${escAttr(imgUrl)}" alt="${escAttr(label)}" onerror="this.parentNode.innerHTML='<div class=&quot;doc-missing-placeholder&quot;><i class=&quot;fas fa-file-image&quot;></i><span>Image not available</span></div>'">
+            <div class="view-overlay"><span><i class="fas fa-expand"></i> View Full</span></div>
+        </div>` :
+        `<div class="doc-missing-placeholder"><i class="fas fa-file-image"></i><span>No preview</span></div>`;
+
+    const rejectionHtml = (st === 'Rejected' && doc.rejection_reason) ?
+        `<div class="doc-rejection-reason"><i class="fas fa-exclamation-circle"></i> ${escHtml(doc.rejection_reason)}</div>` : '';
+
+    let actionsHtml = '';
+    if (st === 'Pending') {
+        actionsHtml = `
+            <button class="btn-validate" onclick="validateDoc(${doc.id})"><i class="fas fa-check"></i> Validate</button>
+            <button class="btn-reject" onclick="openRejectModal(${doc.id})"><i class="fas fa-times"></i> Reject</button>`;
+    } else if (st === 'Staff Validated') {
+        actionsHtml = `
+            <button class="btn-approve" onclick="approveDoc(${doc.id})"><i class="fas fa-shield-alt"></i> Approve</button>
+            <button class="btn-reject" onclick="openRejectModal(${doc.id})"><i class="fas fa-times"></i> Reject</button>`;
+    } else if (st === 'Approved') {
+        actionsHtml = `<div style="font-size:12px;color:#065f46;font-weight:700;"><i class="fas fa-check-circle"></i> Approved</div>
+            <button class="btn-reject" onclick="openRejectModal(${doc.id})"><i class="fas fa-times"></i> Reject</button>`;
+    } else if (st === 'Rejected') {
+        actionsHtml = `
+            <button class="btn-validate" onclick="validateDoc(${doc.id})"><i class="fas fa-redo"></i> Re-Validate</button>`;
+    }
+
+    return `
+    <div class="doc-slot status-${stClass}" id="doc-${doc.id}">
+        <div class="doc-slot-header">
+            <span class="doc-type-label">${escHtml(label)}</span>
+            <span class="badge-status badge-${stClass}"><i class="fas fa-circle" style="font-size:7px;"></i> ${escHtml(st)}</span>
+        </div>
+        ${imgHtml}
+        <div class="doc-slot-footer">
+            <div class="doc-filename" title="${escAttr(displayName)}"><i class="fas fa-file"></i> ${escHtml(displayName)}</div>
+            <div class="doc-uploaded-at"><i class="fas fa-clock"></i> ${uploadedAt}</div>
+            ${rejectionHtml}
+            <div class="doc-actions">${actionsHtml}</div>
+        </div>
+    </div>`;
+}
+
+async function validateDoc(docId) {
+    try {
+        const res = await fetch(`${API}/staff/kyc-validate`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ kyc_ids: [docId] })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Document marked as Staff Validated', 'success');
+            await loadData();
+        } else {
+            throw new Error(data.detail || 'Validation failed');
+        }
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
+
+async function approveDoc(docId) {
+    try {
+        const res = await fetch(`${API}/staff/kyc-approve`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ kyc_ids: [docId] })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Document approved. Partner KYC auto-updates when all 4 are approved.', 'success');
+            await loadData();
+        } else {
+            throw new Error(data.detail?.error || data.detail || 'Approval failed');
+        }
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
+
+function openRejectModal(docId) {
+    rejectDocId = docId;
+    document.getElementById('rejectReason').value = '';
+    document.getElementById('rejectModal').style.display = 'block';
+    setTimeout(() => document.getElementById('rejectReason').focus(), 100);
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+    rejectDocId = null;
+}
+
+async function confirmReject() {
+    const reason = document.getElementById('rejectReason').value.trim();
+    if (!reason) {
+        document.getElementById('rejectReason').style.borderColor = '#ef4444';
+        return;
+    }
+    document.getElementById('rejectReason').style.borderColor = '#e5e7eb';
+    closeRejectModal();
+    try {
+        const res = await fetch(`${API}/staff/kyc-reject`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ kyc_ids: [rejectDocId], reason: reason })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Document rejected. Partner will see the reason and can re-upload.', 'success');
+            await loadData();
+        } else {
+            throw new Error(data.detail || 'Rejection failed');
+        }
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+}
+
+function openLightbox(url, label) {
+    document.getElementById('lightboxImg').src = url;
+    document.getElementById('lightboxLabel').textContent = label;
+    document.getElementById('lightbox').style.display = 'flex';
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+}
+
+function showToast(msg, type) {
+    const c = document.getElementById('toastContainer');
+    const el = document.createElement('div');
+    el.className = `toast-msg ${type}`;
+    el.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${escHtml(msg)}`;
+    c.appendChild(el);
+    setTimeout(() => el.remove(), 4500);
+}
+
+function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+    return String(s || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeLightbox(); closeRejectModal(); } });
+
+document.addEventListener('DOMContentLoaded', async function () {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader  !== 'undefined') {
+        StaffHeader.inject('VGK Partner KYC Review', 'fas fa-id-card-alt');
+        StaffHeader.init();
+    }
+    if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+    loadData();
+});
+</script>
+</body>
+</html>

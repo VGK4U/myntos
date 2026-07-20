@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partner Orders - DC_PARTNER_001</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .top-header { height: 64px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .page-title { font-size: 18px; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .user-info-header { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .user-info-header .user-avatar-sm { width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+        .btn-primary-custom:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; transition: all 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .stat-card.active { ring: 2px solid #10b981; box-shadow: 0 0 0 2px #10b981; }
+        .stat-card .stat-value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .stat-card .stat-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .stat-card.pending { border-left: 4px solid #f59e0b; }
+        .stat-card.approved { border-left: 4px solid #10b981; }
+        .stat-card.manufacturing { border-left: 4px solid #8b5cf6; }
+        .stat-card.dispatched { border-left: 4px solid #3b82f6; }
+        .stat-card.total { border-left: 4px solid #6366f1; }
+        .order-table { width: 100%; border-collapse: collapse; }
+        .order-table th, .order-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        .order-table th { background: #f9fafb; font-weight: 600; font-size: 12px; text-transform: uppercase; color: #6b7280; cursor: pointer; user-select: none; }
+        .order-table th:hover { background: #f3f4f6; }
+        .order-table th .sort-icon { margin-left: 4px; opacity: 0.5; }
+        .order-table th.sorted .sort-icon { opacity: 1; color: #10b981; }
+        .order-table tr:hover { background: #f9fafb; }
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .status-draft { background: #e5e7eb; color: #374151; }
+        .status-pending { background: #fef3c7; color: #b45309; }
+        .status-approved { background: #d1fae5; color: #059669; }
+        .status-manufacturing { background: #ede9fe; color: #7c3aed; }
+        .status-dispatched { background: #dbeafe; color: #1d4ed8; }
+        .status-delivered { background: #dcfce7; color: #166534; }
+        .status-cancelled { background: #fee2e2; color: #dc2626; }
+        .filter-section { background: white; border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #6b7280; }
+        .filter-group input, .filter-group select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 150px; }
+        .filter-group input:focus, .filter-group select:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1); }
+        .btn-filter { background: #f3f4f6; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-filter:hover { background: #e5e7eb; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #10b981; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        .header-divider { width: 1px; height: 32px; background: #e5e7eb; margin: 0 8px; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; border: none; margin-right: 4px; }
+        .btn-view { background: #dbeafe; color: #1d4ed8; }
+        .btn-edit { background: #fef3c7; color: #b45309; }
+        .btn-approve { background: #d1fae5; color: #059669; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 900px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; background: white; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group label .required { color: #ef4444; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1); }
+        .form-group input.error, .form-group select.error { border-color: #ef4444; }
+        .form-group .error-message { color: #ef4444; font-size: 12px; margin-top: 4px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .line-items-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+        .line-items-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .line-items-header h5 { font-size: 16px; font-weight: 600; color: #1f2937; margin: 0; }
+        .add-item-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 16px; padding: 12px; background: #f9fafb; border-radius: 8px; }
+        .add-item-row .form-group { margin-bottom: 0; flex: 1; min-width: 150px; }
+        .line-items-table { width: 100%; border-collapse: collapse; }
+        .line-items-table th, .line-items-table td { padding: 10px 12px; border: 1px solid #e5e7eb; font-size: 13px; }
+        .line-items-table th { background: #f9fafb; font-weight: 600; text-align: left; }
+        .line-items-table .text-right { text-align: right; }
+        .line-items-table tfoot td { font-weight: 600; background: #f9fafb; }
+        .stock-indicator { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+        .stock-available { background: #d1fae5; color: #059669; }
+        .stock-low { background: #fef3c7; color: #b45309; }
+        .stock-out { background: #fee2e2; color: #dc2626; }
+        .order-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .order-info-item { padding: 12px; background: #f9fafb; border-radius: 8px; }
+        .order-info-item .label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+        .order-info-item .value { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .fulfillment-section { margin-top: 20px; padding: 16px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; }
+        .fulfillment-section h5 { font-size: 14px; font-weight: 600; color: #b45309; margin-bottom: 12px; }
+        .fulfillment-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #fcd34d; }
+        .fulfillment-item:last-child { border-bottom: none; }
+        .btn-action { padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; border: none; }
+        .btn-manufacture { background: #ede9fe; color: #7c3aed; }
+        .btn-procure { background: #fef3c7; color: #b45309; }
+        .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
+        .pagination button { padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; }
+        .pagination button:hover { background: #f3f4f6; }
+        .pagination button.active { background: #10b981; color: white; border-color: #10b981; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        @media (max-width: 768px) { 
+            .order-table { display: block; overflow-x: auto; } 
+            .form-row { grid-template-columns: 1fr; } 
+            .filter-row { flex-direction: column; }
+            .filter-group { width: 100%; }
+            .filter-group input, .filter-group select { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div class="top-header">
+            <div class="header-left">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" class="header-logo" onerror="this.style.display='none'">
+                <div class="header-divider"></div>
+                <h1 class="page-title"><i class="fas fa-file-invoice text-success"></i>Partner Orders</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info-header" id="headerUserInfo">
+                    <div class="user-avatar-sm" id="headerUserInitials">--</div>
+                    <div class="user-info-details">
+                        <span class="user-info-name" id="headerUserName">Loading...</span>
+                        <div class="user-info-meta"><span class="user-info-role" id="headerUserRole">-</span></div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="StaffSidebar.logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="page-header">
+                <div><h1>Partner Orders</h1><p>Create and manage B2B orders with PI generation, manufacturing integration, and lifecycle tracking</p></div>
+                <button class="btn-primary-custom" onclick="openCreateOrderModal()"><i class="fas fa-plus me-2"></i>Create Order</button>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card pending" onclick="filterByStatus('PENDING_APPROVAL')"><div class="stat-value" id="pendingCount">0</div><div class="stat-label">Pending Approval</div></div>
+                <div class="stat-card approved" onclick="filterByStatus('APPROVED,PAYMENT_CONFIRMED')"><div class="stat-value" id="approvedCount">0</div><div class="stat-label">Approved</div></div>
+                <div class="stat-card manufacturing" onclick="filterByStatus('IN_MANUFACTURING,ROUTED_TO_PRODUCTION')"><div class="stat-value" id="manufacturingCount">0</div><div class="stat-label">In Manufacturing</div></div>
+                <div class="stat-card dispatched" onclick="filterByStatus('DISPATCHED,IN_TRANSIT')"><div class="stat-value" id="dispatchedCount">0</div><div class="stat-label">Dispatched</div></div>
+                <div class="stat-card total" onclick="filterByStatus('')"><div class="stat-value" id="totalCount">0</div><div class="stat-label">Total Orders</div></div>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Company</label>
+                        <select id="companyFilter" onchange="applyFilters()">
+                            <option value="">All Companies</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Partner</label>
+                        <select id="partnerFilter" onchange="applyFilters()">
+                            <option value="">All Partners</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select id="statusFilter" onchange="applyFilters()">
+                            <option value="">All Status</option>
+                            <option value="DRAFT">Draft</option>
+                            <option value="PI_GENERATED">PI Generated</option>
+                            <option value="PENDING_APPROVAL">Pending Approval</option>
+                            <option value="APPROVED">Approved</option>
+                            <option value="PAYMENT_CONFIRMED">Payment Confirmed</option>
+                            <option value="ROUTED_TO_PRODUCTION">Routed to Production</option>
+                            <option value="IN_MANUFACTURING">In Manufacturing</option>
+                            <option value="ROUTED_TO_PROCUREMENT">Routed to Procurement</option>
+                            <option value="READY_TO_DISPATCH">Ready to Dispatch</option>
+                            <option value="DISPATCHED">Dispatched</option>
+                            <option value="IN_TRANSIT">In Transit</option>
+                            <option value="DELIVERED">Delivered</option>
+                            <option value="CANCELLED">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>From Date</label>
+                        <input type="date" id="fromDate" onchange="applyFilters()">
+                    </div>
+                    <div class="filter-group">
+                        <label>To Date</label>
+                        <input type="date" id="toDate" onchange="applyFilters()">
+                    </div>
+                    <div class="filter-group">
+                        <label>Search</label>
+                        <input type="text" id="searchInput" placeholder="Order #, Partner, Item..." oninput="debounceSearch()">
+                    </div>
+                    <button class="btn-filter" onclick="resetFilters()"><i class="fas fa-redo me-1"></i>Reset</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-list me-2"></i>Orders</span>
+                    <span class="text-muted" id="recordCount">0 orders</span>
+                </div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="orderTableContainer" style="display: none; overflow-x: auto;">
+                        <table class="order-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortBy('order_number')">Order # <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortBy('pi_number')">PI # <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortBy('partner_name')">Partner <i class="fas fa-sort sort-icon"></i></th>
+                                    <th>Company</th>
+                                    <th onclick="sortBy('order_date')">Date <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortBy('grand_total')">Amount <i class="fas fa-sort sort-icon"></i></th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orderTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-file-invoice"></i><h3>No Orders Found</h3><p>Create your first partner order or adjust filters</p>
+                    </div>
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="createOrderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle me-2"></i>Create Partner Order</h3>
+                <button class="modal-close" onclick="closeModal('createOrderModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="orderForm" novalidate>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Company <span class="required">*</span></label>
+                            <select id="orderCompany" required onchange="onCompanyChange()">
+                                <option value="">Select company</option>
+                            </select>
+                            <div class="error-message" id="orderCompanyError"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Partner <span class="required">*</span></label>
+                            <select id="orderPartner" required onchange="loadPartnerPricing()">
+                                <option value="">Select partner</option>
+                            </select>
+                            <div class="error-message" id="orderPartnerError"></div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Order Date <span class="required">*</span></label>
+                            <input type="date" id="orderDate" required>
+                            <div class="error-message" id="orderDateError"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Commitment Date</label>
+                            <input type="date" id="commitmentDate">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Remarks</label>
+                        <textarea id="orderRemarks" rows="2" placeholder="Order notes"></textarea>
+                    </div>
+                    
+                    <div class="line-items-section">
+                        <div class="line-items-header">
+                            <h5>Line Items <span class="required">*</span></h5>
+                        </div>
+                        <div class="add-item-row">
+                            <div class="form-group" style="flex: 2;">
+                                <label>Stock Item</label>
+                                <select id="lineItem">
+                                    <option value="">Select item</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>Quantity</label>
+                                <input type="number" id="lineQty" min="1" value="1">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>Unit Price</label>
+                                <input type="number" id="linePrice" step="0.01" placeholder="Auto">
+                            </div>
+                            <button type="button" class="btn-primary-custom" onclick="addLineItem()" style="height: 42px;">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                        </div>
+                        <div class="error-message" id="lineItemsError"></div>
+                        <table class="line-items-table" id="lineItemsTable">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Code</th>
+                                    <th class="text-right">Qty</th>
+                                    <th class="text-right">Rate</th>
+                                    <th class="text-right">Amount</th>
+                                    <th>Stock</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="lineItemsBody"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="4" class="text-right"><strong>Subtotal:</strong></td>
+                                    <td class="text-right" id="orderSubtotal">0.00</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="text-right"><strong>Grand Total:</strong></td>
+                                    <td class="text-right" id="orderTotal">0.00</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createOrderModal')">Cancel</button>
+                <button type="button" class="btn btn-outline-primary" onclick="saveAsDraft()" id="btnSaveDraft">Save as Draft</button>
+                <button type="button" class="btn-primary-custom" onclick="createOrder()" id="btnCreateOrder">
+                    <i class="fas fa-file-invoice me-1"></i>Create & Generate PI
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="viewOrderModal">
+        <div class="modal-content" style="max-width: 1000px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-eye me-2"></i>Order Details - <span id="viewOrderNumber"></span></h3>
+                <button class="modal-close" onclick="closeModal('viewOrderModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="viewOrderContent">
+            </div>
+            <div class="modal-footer" id="viewOrderActions">
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let allOrders = [];
+        let allPartners = [];
+        let allItems = [];
+        let allCompanies = [];
+        let lineItems = [];
+        let currentPage = 1;
+        let pageSize = 20;
+        let totalRecords = 0;
+        let sortColumn = 'order_date';
+        let sortDirection = 'desc';
+        let searchTimeout = null;
+        const API_BASE = '/api/v1/partner';
+        const ACCOUNTS_API = '/api/v1/staff/accounts';
+        
+        function getAuthToken() { return localStorage.getItem('staff_token'); }
+        
+        async function loadInitialData() {
+            try {
+                const [partnersRes, companiesRes, itemsRes] = await Promise.all([
+                    fetch(API_BASE + '/partners', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } }),
+                    fetch(ACCOUNTS_API + '/companies', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } }),
+                    fetch(ACCOUNTS_API + '/stock-items?limit=500', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } })
+                ]);
+                
+                if (partnersRes.ok) {
+                    const data = await partnersRes.json();
+                    allPartners = data.data || [];
+                    populatePartnerDropdowns();
+                }
+                
+                if (companiesRes.ok) {
+                    const data = await companiesRes.json();
+                    allCompanies = data.data || [];
+                    populateCompanyDropdowns();
+                }
+                
+                if (itemsRes.ok) {
+                    const data = await itemsRes.json();
+                    allItems = data.data || [];
+                    populateItemDropdown();
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+        
+        function populatePartnerDropdowns() {
+            const options = allPartners.map(p => `<option value="${p.id}">${p.partner_name} (${p.partner_code})</option>`).join('');
+            document.getElementById('orderPartner').innerHTML = '<option value="">Select partner</option>' + options;
+            document.getElementById('partnerFilter').innerHTML = '<option value="">All Partners</option>' + options;
+        }
+        
+        function populateCompanyDropdowns() {
+            const options = allCompanies.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
+            document.getElementById('orderCompany').innerHTML = '<option value="">Select company</option>' + options;
+            document.getElementById('companyFilter').innerHTML = '<option value="">All Companies</option>' + options;
+        }
+        
+        function populateItemDropdown() {
+            const companyId = document.getElementById('orderCompany').value;
+            let filteredItems = allItems;
+            
+            if (companyId) {
+                filteredItems = allItems.filter(item => {
+                    if (!item.applicable_companies || item.applicable_companies.length === 0) return true;
+                    return item.applicable_companies.includes(parseInt(companyId));
+                });
+            }
+            
+            document.getElementById('lineItem').innerHTML = '<option value="">Select item</option>' + 
+                filteredItems.map(i => `<option value="${i.id}" data-price="${i.selling_rate || 0}" data-code="${i.item_code}">${i.item_name}</option>`).join('');
+        }
+        
+        function onCompanyChange() {
+            populateItemDropdown();
+            lineItems = [];
+            renderLineItems();
+        }
+        
+        async function loadOrders() {
+            try {
+                document.getElementById('loadingState').style.display = 'flex';
+                document.getElementById('orderTableContainer').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'none';
+                
+                const params = new URLSearchParams();
+                const companyId = document.getElementById('companyFilter').value;
+                const partnerId = document.getElementById('partnerFilter').value;
+                const status = document.getElementById('statusFilter').value;
+                const fromDate = document.getElementById('fromDate').value;
+                const toDate = document.getElementById('toDate').value;
+                const search = document.getElementById('searchInput').value;
+                
+                if (companyId) params.append('company_id', companyId);
+                if (partnerId) params.append('partner_id', partnerId);
+                if (status) params.append('status', status);
+                if (fromDate) params.append('from_date', fromDate);
+                if (toDate) params.append('to_date', toDate);
+                if (search) params.append('search', search);
+                params.append('skip', (currentPage - 1) * pageSize);
+                params.append('limit', pageSize);
+                
+                const response = await fetch(`${API_BASE}/orders?${params.toString()}`, { 
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` } 
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    allOrders = result.data || [];
+                    totalRecords = result.total || 0;
+                    updateStats();
+                    sortOrders();
+                    renderOrders();
+                    renderPagination();
+                } else {
+                    throw new Error('Failed to load orders');
+                }
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+            }
+        }
+        
+        function updateStats() {
+            const pending = allOrders.filter(o => ['PENDING_APPROVAL', 'PI_GENERATED'].includes(o.status)).length;
+            const approved = allOrders.filter(o => ['APPROVED', 'PAYMENT_CONFIRMED', 'READY_TO_DISPATCH'].includes(o.status)).length;
+            const manufacturing = allOrders.filter(o => ['IN_MANUFACTURING', 'ROUTED_TO_PRODUCTION'].includes(o.status)).length;
+            const dispatched = allOrders.filter(o => ['DISPATCHED', 'IN_TRANSIT', 'DELIVERED'].includes(o.status)).length;
+            
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('approvedCount').textContent = approved;
+            document.getElementById('manufacturingCount').textContent = manufacturing;
+            document.getElementById('dispatchedCount').textContent = dispatched;
+            document.getElementById('totalCount').textContent = totalRecords;
+        }
+        
+        function sortOrders() {
+            allOrders.sort((a, b) => {
+                let aVal = a[sortColumn];
+                let bVal = b[sortColumn];
+                
+                if (sortColumn === 'partner_name') {
+                    const partnerA = allPartners.find(p => p.id === a.partner_id);
+                    const partnerB = allPartners.find(p => p.id === b.partner_id);
+                    aVal = partnerA ? partnerA.partner_name : '';
+                    bVal = partnerB ? partnerB.partner_name : '';
+                }
+                
+                if (sortColumn === 'grand_total') {
+                    aVal = parseFloat(aVal) || 0;
+                    bVal = parseFloat(bVal) || 0;
+                }
+                
+                if (sortColumn === 'order_date') {
+                    aVal = new Date(aVal || 0);
+                    bVal = new Date(bVal || 0);
+                }
+                
+                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        
+        function sortBy(column) {
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = 'asc';
+            }
+            sortOrders();
+            renderOrders();
+            
+            document.querySelectorAll('.order-table th').forEach(th => th.classList.remove('sorted'));
+        }
+        
+        function renderOrders() {
+            document.getElementById('loadingState').style.display = 'none';
+            const tbody = document.getElementById('orderTableBody');
+            
+            if (allOrders.length === 0) {
+                document.getElementById('orderTableContainer').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('recordCount').textContent = '0 orders';
+                return;
+            }
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('orderTableContainer').style.display = 'block';
+            document.getElementById('recordCount').textContent = `${totalRecords} order${totalRecords !== 1 ? 's' : ''}`;
+            
+            tbody.innerHTML = allOrders.map(o => {
+                const partner = allPartners.find(p => p.id === o.partner_id);
+                const company = allCompanies.find(c => c.id === o.company_id);
+                const statusClass = getStatusClass(o.status);
+                return `
+                    <tr>
+                        <td><strong>${o.order_number}</strong></td>
+                        <td>${o.pi_number || '-'}</td>
+                        <td>${partner ? partner.partner_name : 'Unknown'}</td>
+                        <td>${company ? company.company_name : '-'}</td>
+                        <td>${formatDate(o.order_date)}</td>
+                        <td class="text-right">₹${(o.grand_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                        <td><span class="status-badge ${statusClass}">${formatStatus(o.status)}</span></td>
+                        <td>
+                            <button class="btn-sm btn-view" onclick="viewOrder(${o.id})" title="View"><i class="fas fa-eye"></i></button>
+                            ${['DRAFT', 'PI_GENERATED'].includes(o.status) ? `<button class="btn-sm btn-edit" onclick="editOrder(${o.id})" title="Edit"><i class="fas fa-edit"></i></button>` : ''}
+                            ${o.status === 'PENDING_APPROVAL' ? `<button class="btn-sm btn-approve" onclick="approveOrder(${o.id})" title="Approve"><i class="fas fa-check"></i></button>` : ''}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function renderPagination() {
+            const totalPages = Math.ceil(totalRecords / pageSize);
+            const pagination = document.getElementById('pagination');
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+            
+            for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+                const page = currentPage <= 3 ? i : currentPage - 3 + i;
+                if (page > totalPages) break;
+                html += `<button class="${page === currentPage ? 'active' : ''}" onclick="goToPage(${page})">${page}</button>`;
+            }
+            
+            html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
+            
+            pagination.innerHTML = html;
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            loadOrders();
+        }
+        
+        function getStatusClass(status) {
+            const map = { 
+                'DRAFT': 'status-draft', 
+                'PI_GENERATED': 'status-pending', 
+                'PENDING_APPROVAL': 'status-pending', 
+                'APPROVED': 'status-approved', 
+                'PAYMENT_CONFIRMED': 'status-approved',
+                'ROUTED_TO_PRODUCTION': 'status-manufacturing',
+                'IN_MANUFACTURING': 'status-manufacturing',
+                'ROUTED_TO_PROCUREMENT': 'status-pending',
+                'PROCUREMENT_IN_PROGRESS': 'status-pending',
+                'READY_TO_DISPATCH': 'status-approved',
+                'DISPATCHED': 'status-dispatched', 
+                'IN_TRANSIT': 'status-dispatched',
+                'DELIVERED': 'status-delivered', 
+                'CANCELLED': 'status-cancelled',
+                'REJECTED': 'status-cancelled',
+                'CLOSED': 'status-delivered'
+            };
+            return map[status] || 'status-draft';
+        }
+        
+        function formatStatus(status) { return status ? status.replace(/_/g, ' ') : '-'; }
+        function formatDate(date) { if (!date) return '-'; return new Date(date).toLocaleDateString('en-IN'); }
+        
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                loadOrders();
+            }, 300);
+        }
+        
+        function applyFilters() {
+            currentPage = 1;
+            loadOrders();
+        }
+        
+        function resetFilters() {
+            document.getElementById('companyFilter').value = '';
+            document.getElementById('partnerFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('fromDate').value = '';
+            document.getElementById('toDate').value = '';
+            document.getElementById('searchInput').value = '';
+            currentPage = 1;
+            loadOrders();
+        }
+        
+        function filterByStatus(statuses) {
+            document.getElementById('statusFilter').value = statuses.split(',')[0] || '';
+            applyFilters();
+        }
+        
+        function openCreateOrderModal() {
+            document.getElementById('orderForm').reset();
+            document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+            lineItems = [];
+            renderLineItems();
+            clearAllErrors();
+            document.getElementById('createOrderModal').classList.add('active');
+        }
+        
+        function closeModal(id) { 
+            document.getElementById(id).classList.remove('active'); 
+        }
+        
+        function clearAllErrors() {
+            document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
+            document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+        }
+        
+        function showError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            const errorEl = document.getElementById(fieldId + 'Error');
+            if (field) field.classList.add('error');
+            if (errorEl) errorEl.textContent = message;
+        }
+        
+        function validateForm() {
+            clearAllErrors();
+            let isValid = true;
+            
+            if (!document.getElementById('orderCompany').value) {
+                showError('orderCompany', 'Company is required');
+                isValid = false;
+            }
+            
+            if (!document.getElementById('orderPartner').value) {
+                showError('orderPartner', 'Partner is required');
+                isValid = false;
+            }
+            
+            if (!document.getElementById('orderDate').value) {
+                showError('orderDate', 'Order date is required');
+                isValid = false;
+            }
+            
+            if (lineItems.length === 0) {
+                document.getElementById('lineItemsError').textContent = 'At least one line item is required';
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+        
+        function addLineItem() {
+            const itemSelect = document.getElementById('lineItem');
+            const qty = parseInt(document.getElementById('lineQty').value) || 1;
+            const customPrice = parseFloat(document.getElementById('linePrice').value);
+            const itemId = itemSelect.value;
+            
+            if (!itemId) { 
+                alert('Please select an item'); 
+                return; 
+            }
+            
+            if (qty <= 0) {
+                alert('Quantity must be greater than 0');
+                return;
+            }
+            
+            const item = allItems.find(i => i.id == itemId);
+            const price = !isNaN(customPrice) && customPrice > 0 ? customPrice : (item.selling_rate || 0);
+            const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+            
+            const existingIndex = lineItems.findIndex(li => li.item_id === parseInt(itemId));
+            if (existingIndex >= 0) {
+                lineItems[existingIndex].quantity += qty;
+                lineItems[existingIndex].total = lineItems[existingIndex].quantity * lineItems[existingIndex].unit_price;
+            } else {
+                lineItems.push({ 
+                    item_id: parseInt(itemId), 
+                    item_name: item.item_name, 
+                    item_code: item.item_code,
+                    quantity: qty, 
+                    unit_price: price, 
+                    total: qty * price 
+                });
+            }
+            
+            renderLineItems();
+            document.getElementById('lineQty').value = 1;
+            document.getElementById('linePrice').value = '';
+            document.getElementById('lineItem').value = '';
+            document.getElementById('lineItemsError').textContent = '';
+        }
+        
+        function removeLineItem(index) { 
+            lineItems.splice(index, 1); 
+            renderLineItems(); 
+        }
+        
+        function renderLineItems() {
+            const tbody = document.getElementById('lineItemsBody');
+            tbody.innerHTML = lineItems.map((li, i) => `
+                <tr>
+                    <td>${li.item_name}</td>
+                    <td><code>${li.item_code}</code></td>
+                    <td class="text-right">${li.quantity}</td>
+                    <td class="text-right">₹${li.unit_price.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td class="text-right">₹${li.total.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td><span class="stock-indicator stock-available"><i class="fas fa-check"></i> Check on save</span></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLineItem(${i})"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('');
+            
+            const subtotal = lineItems.reduce((sum, li) => sum + li.total, 0);
+            document.getElementById('orderSubtotal').textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
+            document.getElementById('orderTotal').textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        }
+        
+        async function createOrder() {
+            if (!validateForm()) return;
+            
+            const btn = document.getElementById('btnCreateOrder');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
+            
+            const data = {
+                partner_id: parseInt(document.getElementById('orderPartner').value),
+                company_id: parseInt(document.getElementById('orderCompany').value),
+                order_date: document.getElementById('orderDate').value,
+                commitment_date: document.getElementById('commitmentDate').value || null,
+                remarks: document.getElementById('orderRemarks').value || null,
+                line_items: lineItems.map(li => ({ 
+                    item_id: li.item_id, 
+                    quantity: li.quantity, 
+                    unit_rate: li.unit_price 
+                })),
+                generate_pi: true
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/orders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAuthToken()}` },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    closeModal('createOrderModal');
+                    loadOrders();
+                    alert('Order created and PI generated successfully!');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to create order'));
+                }
+            } catch (error) {
+                console.error('Error creating order:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-file-invoice me-1"></i>Create & Generate PI';
+            }
+        }
+        
+        async function saveAsDraft() {
+            if (!document.getElementById('orderCompany').value || !document.getElementById('orderPartner').value) {
+                alert('Company and Partner are required to save draft');
+                return;
+            }
+            
+            const btn = document.getElementById('btnSaveDraft');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            
+            const data = {
+                partner_id: parseInt(document.getElementById('orderPartner').value),
+                company_id: parseInt(document.getElementById('orderCompany').value),
+                order_date: document.getElementById('orderDate').value || new Date().toISOString().split('T')[0],
+                commitment_date: document.getElementById('commitmentDate').value || null,
+                remarks: document.getElementById('orderRemarks').value || null,
+                line_items: lineItems.map(li => ({ 
+                    item_id: li.item_id, 
+                    quantity: li.quantity, 
+                    unit_rate: li.unit_price 
+                })),
+                generate_pi: false
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/orders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAuthToken()}` },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    closeModal('createOrderModal');
+                    loadOrders();
+                    alert('Order saved as draft');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to save draft'));
+                }
+            } catch (error) {
+                console.error('Error saving draft:', error);
+                alert('Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save as Draft';
+            }
+        }
+        
+        async function viewOrder(id) {
+            try {
+                const [orderRes, fulfillRes] = await Promise.all([
+                    fetch(`${API_BASE}/orders/${id}`, { headers: { 'Authorization': `Bearer ${getAuthToken()}` } }),
+                    fetch(`${API_BASE}/orders/${id}/fulfillability`, { headers: { 'Authorization': `Bearer ${getAuthToken()}` } })
+                ]);
+                
+                if (!orderRes.ok) throw new Error('Failed to load order');
+                
+                const orderData = await orderRes.json();
+                const order = orderData.data;
+                
+                let fulfillability = null;
+                if (fulfillRes.ok) {
+                    const fulfillData = await fulfillRes.json();
+                    fulfillability = fulfillData.data;
+                }
+                
+                document.getElementById('viewOrderNumber').textContent = order.order_number;
+                
+                const partner = allPartners.find(p => p.id === order.partner_id);
+                const company = allCompanies.find(c => c.id === order.company_id);
+                
+                let html = `
+                    <div class="order-info-grid">
+                        <div class="order-info-item">
+                            <div class="label">Order Number</div>
+                            <div class="value">${order.order_number}</div>
+                        </div>
+                        <div class="order-info-item">
+                            <div class="label">PI Number</div>
+                            <div class="value">${order.pi_number || '-'}</div>
+                        </div>
+                        <div class="order-info-item">
+                            <div class="label">Partner</div>
+                            <div class="value">${partner ? partner.partner_name : 'Unknown'}</div>
+                        </div>
+                        <div class="order-info-item">
+                            <div class="label">Company</div>
+                            <div class="value">${company ? company.company_name : '-'}</div>
+                        </div>
+                        <div class="order-info-item">
+                            <div class="label">Order Date</div>
+                            <div class="value">${formatDate(order.order_date)}</div>
+                        </div>
+                        <div class="order-info-item">
+                            <div class="label">Status</div>
+                            <div class="value"><span class="status-badge ${getStatusClass(order.status)}">${formatStatus(order.status)}</span></div>
+                        </div>
+                        <div class="order-info-item">
+                            <div class="label">Grand Total</div>
+                            <div class="value">₹${(order.grand_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</div>
+                        </div>
+                    </div>
+                    
+                    <h5 style="margin: 20px 0 12px 0;">Line Items</h5>
+                    <table class="line-items-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th class="text-right">Qty</th>
+                                <th class="text-right">Rate</th>
+                                <th class="text-right">Amount</th>
+                                <th>Stock Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                if (order.line_items && order.line_items.length > 0) {
+                    order.line_items.forEach(li => {
+                        const item = allItems.find(i => i.id === li.item_id);
+                        let stockStatus = '<span class="stock-indicator stock-available"><i class="fas fa-check"></i> Available</span>';
+                        
+                        if (fulfillability) {
+                            const lineFulfill = fulfillability.line_items.find(f => f.line_id === li.id);
+                            if (lineFulfill) {
+                                if (lineFulfill.is_sufficient) {
+                                    stockStatus = `<span class="stock-indicator stock-available"><i class="fas fa-check"></i> ${lineFulfill.available_qty} available</span>`;
+                                } else if (lineFulfill.can_manufacture) {
+                                    stockStatus = `<span class="stock-indicator stock-low"><i class="fas fa-industry"></i> Need to manufacture ${lineFulfill.shortage_qty}</span>`;
+                                } else {
+                                    stockStatus = `<span class="stock-indicator stock-out"><i class="fas fa-shopping-cart"></i> Need to procure ${lineFulfill.shortage_qty}</span>`;
+                                }
+                            }
+                        }
+                        
+                        html += `
+                            <tr>
+                                <td>${item ? item.item_name : 'Item #' + li.item_id}</td>
+                                <td class="text-right">${li.quantity}</td>
+                                <td class="text-right">₹${(li.unit_rate || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                <td class="text-right">₹${(li.line_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                <td>${stockStatus}</td>
+                            </tr>
+                        `;
+                    });
+                }
+                
+                html += `
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3" class="text-right"><strong>Subtotal:</strong></td>
+                                <td class="text-right">₹${(order.subtotal || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-right"><strong>Tax:</strong></td>
+                                <td class="text-right">₹${(order.tax_amount || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="text-right"><strong>Grand Total:</strong></td>
+                                <td class="text-right"><strong>₹${(order.grand_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</strong></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                `;
+                
+                if (fulfillability && !fulfillability.all_in_stock && ['APPROVED', 'PAYMENT_CONFIRMED'].includes(order.status)) {
+                    html += `
+                        <div class="fulfillment-section">
+                            <h5><i class="fas fa-exclamation-triangle me-2"></i>Fulfillment Action Required</h5>
+                            <p style="margin-bottom: 12px;">Recommended routing: <strong>${fulfillability.overall_recommendation}</strong></p>
+                            <div style="display: flex; gap: 12px;">
+                                <button class="btn-action btn-manufacture" onclick="triggerManufacturing(${order.id})">
+                                    <i class="fas fa-industry me-1"></i>Create Manufacturing Order
+                                </button>
+                                <button class="btn-action btn-procure" onclick="routeToProcurement(${order.id})">
+                                    <i class="fas fa-shopping-cart me-1"></i>Route to Procurement
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('viewOrderContent').innerHTML = html;
+                
+                let actionsHtml = '<button type="button" class="btn btn-secondary" onclick="closeModal(\'viewOrderModal\')">Close</button>';
+                
+                if (order.status === 'PENDING_APPROVAL') {
+                    actionsHtml += `<button type="button" class="btn-primary-custom" onclick="approveOrder(${order.id})"><i class="fas fa-check me-1"></i>Approve</button>`;
+                }
+                
+                document.getElementById('viewOrderActions').innerHTML = actionsHtml;
+                document.getElementById('viewOrderModal').classList.add('active');
+                
+            } catch (error) {
+                console.error('Error loading order:', error);
+                alert('Failed to load order details');
+            }
+        }
+        
+        async function triggerManufacturing(orderId) {
+            try {
+                const fulfillRes = await fetch(`${API_BASE}/orders/${orderId}/fulfillability`, { 
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` } 
+                });
+                
+                if (!fulfillRes.ok) throw new Error('Failed to check fulfillability');
+                
+                const fulfillData = await fulfillRes.json();
+                const lineItemIds = fulfillData.data.line_items
+                    .filter(li => !li.is_sufficient && li.can_manufacture)
+                    .map(li => li.line_id);
+                
+                if (lineItemIds.length === 0) {
+                    alert('No items require manufacturing or all items lack BOMs');
+                    return;
+                }
+                
+                const params = new URLSearchParams();
+                lineItemIds.forEach(id => params.append('line_item_ids', id));
+                params.append('priority', 'NORMAL');
+                
+                const response = await fetch(`${API_BASE}/orders/${orderId}/create-manufacturing?${params.toString()}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`Created ${result.data.manufacturing_orders_created.length} manufacturing order(s)`);
+                    closeModal('viewOrderModal');
+                    loadOrders();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to create manufacturing'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        async function routeToProcurement(orderId) {
+            try {
+                const response = await fetch(`${API_BASE}/orders/${orderId}/route`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAuthToken()}` },
+                    body: JSON.stringify({ route_to: 'PROCUREMENT' })
+                });
+                
+                if (response.ok) {
+                    alert('Order routed to procurement');
+                    closeModal('viewOrderModal');
+                    loadOrders();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to route order'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        async function approveOrder(orderId) {
+            if (!confirm('Are you sure you want to approve this order?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/orders/${orderId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAuthToken()}` },
+                    body: JSON.stringify({ approved: true, remarks: 'Approved' })
+                });
+                
+                if (response.ok) {
+                    alert('Order approved successfully');
+                    closeModal('viewOrderModal');
+                    loadOrders();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to approve order'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        function editOrder(id) { 
+            alert('Edit order functionality - ID: ' + id); 
+        }
+        
+        function loadPartnerPricing() {
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            StaffSidebar.init();
+            loadInitialData();
+            loadOrders();
+        });
+    </script>
+</body>
+</html>

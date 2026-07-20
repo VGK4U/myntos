@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP Staff Portal - Employee Offboarding</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f3f4f6; 
+            min-height: 100vh;
+        }
+        .content-area { padding: 24px; }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 20px; }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .page-header h4 { font-weight: 700; color: #1f2937; margin: 0; }
+        .badge-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            height: 24px;
+            padding: 0 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .segment-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .segment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            background: #f9fafb;
+            cursor: pointer;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .segment-header:hover { background: #f3f4f6; }
+        .segment-header h6 { margin: 0; font-weight: 600; color: #374151; font-size: 14px; }
+        .segment-body { padding: 16px 18px; display: none; }
+        .segment-body.show { display: block; }
+        .segment-items { max-height: 300px; overflow-y: auto; }
+        .segment-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 13px;
+        }
+        .segment-item:last-child { border-bottom: none; }
+        .transfer-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 14px 18px;
+            background: #f0fdf4;
+            border-top: 1px solid #bbf7d0;
+        }
+        .transfer-controls select {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .employee-list-card {
+            cursor: pointer;
+            padding: 14px 18px;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.15s;
+        }
+        .employee-list-card:hover { background: #f9fafb; }
+        .employee-list-card.active { background: #eff6ff; border-left: 3px solid #3b82f6; }
+        .status-badge {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        .status-deactivated { background: #fee2e2; color: #991b1b; }
+        .status-resigned { background: #fef3c7; color: #92400e; }
+        .summary-stat {
+            text-align: center;
+            padding: 16px;
+            border-radius: 10px;
+            background: #f9fafb;
+        }
+        .summary-stat .number { font-size: 28px; font-weight: 700; }
+        .summary-stat .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .btn-transfer {
+            background: #059669;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .btn-transfer:hover { background: #047857; color: white; }
+        .btn-bulk {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .btn-bulk:hover { background: #1d4ed8; color: white; }
+        .back-btn {
+            background: none;
+            border: 1px solid #d1d5db;
+            padding: 8px 16px;
+            border-radius: 8px;
+            color: #374151;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .back-btn:hover { background: #f3f4f6; }
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: #9ca3af;
+        }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .history-item {
+            padding: 14px 18px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 13px;
+        }
+        table { width: 100%; }
+        table th { font-size: 12px; text-transform: uppercase; color: #6b7280; font-weight: 600; padding: 10px 14px; background: #f9fafb; cursor: pointer; user-select: none; white-space: nowrap; }
+        table th:hover { color: #374151; background: #f3f4f6; }
+        table th .sort-icon { margin-left: 4px; font-size: 10px; opacity: 0.4; }
+        table th.sort-active .sort-icon { opacity: 1; color: #2563eb; }
+        table td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #f3f4f6; }
+        .days-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .days-badge.high { background: #fee2e2; color: #991b1b; }
+        .days-badge.medium { background: #fef3c7; color: #92400e; }
+        .days-badge.low { background: #d1fae5; color: #065f46; }
+        .plan-count { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
+        .plan-count.zero { color: #ef4444; }
+        .plan-count.active { color: #059669; }
+        .priority-high { color: #dc2626; }
+        .priority-medium { color: #d97706; }
+        .priority-low { color: #059669; }
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area" id="mainContent">
+        <div id="toastContainer" class="toast-container"></div>
+
+        <div id="listView">
+            <div class="page-header">
+                <div>
+                    <h4><i class="fas fa-user-minus me-2"></i>Employee Offboarding & Data Transfer</h4>
+                    <p class="text-muted mb-0" style="font-size:13px">Transfer data from deactivated/resigned employees to active team members</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="tab-btn active" onclick="showTab('employees')" id="tabEmployees">
+                        <i class="fas fa-users me-1"></i> Employees
+                    </button>
+                    <button class="tab-btn" onclick="showTab('history')" id="tabHistory">
+                        <i class="fas fa-history me-1"></i> Transfer History
+                    </button>
+                </div>
+            </div>
+
+            <div id="employeesTab">
+                <div id="employeeList"></div>
+            </div>
+
+            <div id="historyTab" style="display:none">
+                <div class="card">
+                    <div class="card-header"><h5>Transfer Audit Trail</h5></div>
+                    <div class="card-body p-0" id="historyContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="detailView" style="display:none">
+            <div class="page-header">
+                <div class="d-flex align-items-center gap-3">
+                    <button class="back-btn" onclick="showListView()"><i class="fas fa-arrow-left me-1"></i> Back</button>
+                    <div>
+                        <h4 id="detailEmployeeName"></h4>
+                        <span class="text-muted" style="font-size:13px" id="detailEmployeeInfo"></span>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn-bulk" onclick="openBulkTransferModal()">
+                        <i class="fas fa-exchange-alt me-1"></i> Bulk Transfer All
+                    </button>
+                </div>
+            </div>
+
+            <div class="row mb-4" id="summaryStats"></div>
+
+            <div id="segmentsContainer"></div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="transferModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="transferModalTitle">Transfer Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Transfer To (Active Employee)</label>
+                        <select class="form-select" id="transferTargetSelect">
+                            <option value="">Select employee...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Reason</label>
+                        <textarea class="form-control" id="transferReason" rows="2" placeholder="Reason for transfer (optional)"></textarea>
+                    </div>
+                    <div id="transferSegmentInfo" class="p-3 bg-light rounded" style="font-size:13px"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirmTransferBtn" onclick="executeTransfer()">
+                        <i class="fas fa-check me-1"></i> Confirm Transfer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+
+    <script>
+        const API_BASE = '';
+        let currentEmployeeId = null;
+        let currentSummary = null;
+        let activeEmployees = [];
+        let pendingTransferSegments = [];
+
+        async function init() {
+            await StaffSidebar.init();
+            StaffHeader.inject('Employee Offboarding', 'fas fa-user-minus');
+            await loadActiveEmployees();
+            await loadOffboardingEmployees();
+        }
+
+        function showTab(tab) {
+            document.getElementById('tabEmployees').classList.toggle('active', tab === 'employees');
+            document.getElementById('tabHistory').classList.toggle('active', tab === 'history');
+            document.getElementById('employeesTab').style.display = tab === 'employees' ? 'block' : 'none';
+            document.getElementById('historyTab').style.display = tab === 'history' ? 'block' : 'none';
+            if (tab === 'history') loadTransferHistory();
+        }
+
+        async function loadActiveEmployees() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/employees?status=active`);
+                if (response.ok) {
+                    const data = await response.json();
+                    activeEmployees = data.employees || [];
+                }
+            } catch (e) { console.error('Failed to load active employees:', e); }
+        }
+
+        async function loadOffboardingEmployees() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/offboarding/employees`);
+                if (!response.ok) {
+                    const err = await response.json();
+                    document.getElementById('employeeList').innerHTML = `<div class="card"><div class="card-body"><div class="empty-state"><i class="fas fa-lock"></i><p>${err.detail || 'Access denied'}</p></div></div></div>`;
+                    return;
+                }
+                const data = await response.json();
+                renderEmployeeList(data.employees || []);
+            } catch (e) {
+                console.error('Failed to load offboarding employees:', e);
+                document.getElementById('employeeList').innerHTML = `<div class="card"><div class="card-body"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Failed to load data</p></div></div></div>`;
+            }
+        }
+
+        function renderEmployeeList(employees) {
+            if (!employees.length) {
+                document.getElementById('employeeList').innerHTML = `
+                    <div class="card"><div class="card-body">
+                        <div class="empty-state">
+                            <i class="fas fa-check-circle" style="color:#059669"></i>
+                            <h5>No Offboarding Required</h5>
+                            <p>There are no deactivated or resigned employees with pending data to transfer.</p>
+                        </div>
+                    </div></div>`;
+                return;
+            }
+
+            let html = '<div class="card"><div class="card-header"><h5>Deactivated / Resigned Employees</h5><span class="badge bg-secondary">' + employees.length + ' employees</span></div><div class="card-body p-0">';
+            html += `<table id="tbl_employees"><thead><tr>`;
+            html += sortableHeader('tbl_employees', 'employee', 'Employee');
+            html += sortableHeader('tbl_employees', 'status', 'Status');
+            html += sortableHeader('tbl_employees', 'department', 'Department');
+            html += sortableHeader('tbl_employees', 'tasks', 'Tasks');
+            html += sortableHeader('tbl_employees', 'kras', 'KRAs');
+            html += sortableHeader('tbl_employees', 'leads', 'Leads');
+            html += sortableHeader('tbl_employees', 'total', 'Total');
+            html += `<th></th></tr></thead><tbody>`;
+
+            for (const emp of employees) {
+                const statusClass = emp.status === 'deactivated' ? 'status-deactivated' : 'status-resigned';
+                html += `<tr class="employee-list-card" onclick="openEmployeeDetail(${emp.id})">
+                    <td>
+                        <div class="fw-semibold">${emp.full_name}</div>
+                        <div class="text-muted" style="font-size:12px">${emp.emp_code}</div>
+                    </td>
+                    <td><span class="status-badge ${statusClass}">${emp.status}</span></td>
+                    <td>${emp.department || '-'}</td>
+                    <td><span class="badge-count ${emp.segments.tasks > 0 ? 'bg-warning text-dark' : 'bg-light text-muted'}">${emp.segments.tasks}</span></td>
+                    <td><span class="badge-count ${emp.segments.kra > 0 ? 'bg-info text-white' : 'bg-light text-muted'}">${emp.segments.kra}</span></td>
+                    <td><span class="badge-count ${emp.segments.leads > 0 ? 'bg-primary text-white' : 'bg-light text-muted'}">${emp.segments.leads}</span></td>
+                    <td><span class="badge-count ${emp.pending_items > 0 ? 'bg-danger text-white' : 'bg-success text-white'}">${emp.pending_items}</span></td>
+                    <td><button class="btn btn-sm btn-outline-primary"><i class="fas fa-arrow-right"></i></button></td>
+                </tr>`;
+            }
+            html += '</tbody></table></div></div>';
+            document.getElementById('employeeList').innerHTML = html;
+        }
+
+        async function openEmployeeDetail(employeeId) {
+            currentEmployeeId = employeeId;
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('detailView').style.display = 'block';
+
+            document.getElementById('segmentsContainer').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Loading data...</p></div>';
+
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/offboarding/${employeeId}/summary`);
+                if (!response.ok) throw new Error('Failed to load summary');
+                const data = await response.json();
+                currentSummary = data.summary;
+                renderDetail(data.summary);
+            } catch (e) {
+                console.error('Failed to load detail:', e);
+                document.getElementById('segmentsContainer').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Failed to load employee data</p></div>';
+            }
+        }
+
+        function renderDetail(summary) {
+            const emp = summary.employee;
+            const statusClass = emp.status === 'deactivated' ? 'status-deactivated' : 'status-resigned';
+            document.getElementById('detailEmployeeName').textContent = emp.full_name;
+            document.getElementById('detailEmployeeInfo').innerHTML = `${emp.emp_code} | <span class="status-badge ${statusClass}">${emp.status}</span> | ${emp.department || 'No Dept'} | ${emp.role || 'No Role'}`;
+
+            const segments = summary.segments;
+            const taskCount = (segments.tasks_primary?.count || 0) + (segments.tasks_secondary?.count || 0) + (segments.task_phases?.count || 0);
+            const kraCount = segments.kra_assignments?.count || 0;
+            const leadCount = (segments.leads_field_staff?.count || 0) + (segments.leads_telecaller?.count || 0) + (segments.leads_depends?.count || 0);
+
+            document.getElementById('summaryStats').innerHTML = `
+                <div class="col-md-3"><div class="summary-stat"><div class="number" style="color:#dc2626">${summary.total_pending}</div><div class="label">Total Pending Items</div></div></div>
+                <div class="col-md-3"><div class="summary-stat"><div class="number" style="color:#d97706">${taskCount}</div><div class="label">Tasks</div></div></div>
+                <div class="col-md-3"><div class="summary-stat"><div class="number" style="color:#2563eb">${kraCount}</div><div class="label">KRA Assignments</div></div></div>
+                <div class="col-md-3"><div class="summary-stat"><div class="number" style="color:#7c3aed">${leadCount}</div><div class="label">CRM Leads</div></div></div>`;
+
+            let segHtml = '';
+            const segmentOrder = ['tasks_primary', 'tasks_secondary', 'task_phases', 'kra_assignments', 'leads_field_staff', 'leads_telecaller', 'leads_depends'];
+            const segmentIcons = {
+                tasks_primary: 'fas fa-tasks',
+                tasks_secondary: 'fas fa-user-friends',
+                task_phases: 'fas fa-project-diagram',
+                kra_assignments: 'fas fa-chart-line',
+                leads_field_staff: 'fas fa-street-view',
+                leads_telecaller: 'fas fa-phone-alt',
+                leads_depends: 'fas fa-link'
+            };
+            const segmentColors = {
+                tasks_primary: '#d97706',
+                tasks_secondary: '#ea580c',
+                task_phases: '#c2410c',
+                kra_assignments: '#2563eb',
+                leads_field_staff: '#7c3aed',
+                leads_telecaller: '#0891b2',
+                leads_depends: '#4f46e5'
+            };
+
+            for (const key of segmentOrder) {
+                const seg = segments[key];
+                if (!seg) continue;
+                const icon = segmentIcons[key] || 'fas fa-folder';
+                const color = segmentColors[key] || '#6b7280';
+                const hasItems = seg.count > 0;
+
+                segHtml += `<div class="segment-card">
+                    <div class="segment-header" onclick="toggleSegment('${key}')">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="${icon}" style="color:${color}"></i>
+                            <h6>${seg.label}</h6>
+                            <span class="badge-count ${hasItems ? 'bg-danger text-white' : 'bg-light text-muted'}">${seg.count}</span>
+                            ${key === 'kra_assignments' && seg.future_instances ? `<span class="text-muted" style="font-size:11px">(${seg.future_instances} future instances)</span>` : ''}
+                        </div>
+                        <div class="d-flex gap-2 align-items-center">
+                            ${hasItems && seg.transferable ? `<button class="btn-transfer" onclick="event.stopPropagation(); openTransferModal('${key}')"><i class="fas fa-exchange-alt me-1"></i> Transfer</button>` : ''}
+                            <i class="fas fa-chevron-down text-muted" id="chevron_${key}"></i>
+                        </div>
+                    </div>
+                    <div class="segment-body" id="segment_${key}">
+                        ${renderSegmentItems(key, seg)}
+                    </div>
+                </div>`;
+            }
+
+            if (!segHtml) {
+                segHtml = `<div class="empty-state"><i class="fas fa-check-circle" style="color:#059669"></i><h5>All Clear</h5><p>No pending items to transfer for this employee.</p></div>`;
+            }
+
+            document.getElementById('segmentsContainer').innerHTML = segHtml;
+        }
+
+        const sortState = {};
+
+        function getDaysBadge(days) {
+            if (days === null || days === undefined) return '-';
+            const cls = days > 30 ? 'high' : days > 14 ? 'medium' : 'low';
+            return `<span class="days-badge ${cls}">${days}d</span>`;
+        }
+
+        function getPlanCount(count) {
+            const c = count || 0;
+            const cls = c === 0 ? 'zero' : 'active';
+            return `<span class="plan-count ${cls}"><i class="fas fa-calendar-check"></i> ${c}</span>`;
+        }
+
+        function sortableHeader(tableId, colKey, label) {
+            const state = sortState[tableId];
+            const isActive = state && state.col === colKey;
+            const dir = isActive ? state.dir : '';
+            const arrow = dir === 'asc' ? '&#9650;' : dir === 'desc' ? '&#9660;' : '&#9650;';
+            return `<th class="${isActive ? 'sort-active' : ''}" onclick="sortTable('${tableId}','${colKey}')">${label}<span class="sort-icon">${arrow}</span></th>`;
+        }
+
+        function sortTable(tableId, colKey) {
+            const prev = sortState[tableId];
+            let dir = 'asc';
+            if (prev && prev.col === colKey) {
+                dir = prev.dir === 'asc' ? 'desc' : 'asc';
+            }
+            sortState[tableId] = { col: colKey, dir };
+
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const colIndex = Array.from(table.querySelectorAll('thead th')).findIndex(th => {
+                return th.getAttribute('onclick') && th.getAttribute('onclick').includes("'" + colKey + "'");
+            });
+            if (colIndex < 0) return;
+
+            rows.sort((a, b) => {
+                let aVal = a.cells[colIndex]?.textContent?.trim() || '';
+                let bVal = b.cells[colIndex]?.textContent?.trim() || '';
+                const aNum = parseFloat(aVal.replace(/[^\d.-]/g, ''));
+                const bNum = parseFloat(bVal.replace(/[^\d.-]/g, ''));
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return dir === 'asc' ? aNum - bNum : bNum - aNum;
+                }
+                return dir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            });
+            rows.forEach(r => tbody.appendChild(r));
+
+            table.querySelectorAll('thead th').forEach(th => th.classList.remove('sort-active'));
+            const activeTh = table.querySelectorAll('thead th')[colIndex];
+            if (activeTh) {
+                activeTh.classList.add('sort-active');
+                const icon = activeTh.querySelector('.sort-icon');
+                if (icon) icon.innerHTML = dir === 'asc' ? '&#9650;' : '&#9660;';
+            }
+        }
+
+        function renderSegmentItems(key, seg) {
+            if (!seg.items || !seg.items.length) {
+                return '<div class="text-center py-3 text-muted" style="font-size:13px">No items in this segment</div>';
+            }
+
+            const tableId = 'tbl_' + key;
+
+            if (key.startsWith('tasks') || key === 'task_phases') {
+                let html = `<div class="segment-items"><table id="${tableId}"><thead><tr>`;
+                html += sortableHeader(tableId, 'code', 'Code');
+                html += sortableHeader(tableId, 'title', 'Title');
+                html += sortableHeader(tableId, 'days_pending', 'Days Pending');
+                html += sortableHeader(tableId, 'times_planned', 'Times Planned');
+                html += sortableHeader(tableId, 'status', 'Status');
+                html += sortableHeader(tableId, 'priority', 'Priority');
+                html += sortableHeader(tableId, 'due_date', 'Due Date');
+                html += '</tr></thead><tbody>';
+                for (const item of seg.items) {
+                    const pClass = item.priority === 'high' || item.priority === 'urgent' ? 'priority-high' : item.priority === 'medium' ? 'priority-medium' : 'priority-low';
+                    html += `<tr>
+                        <td>${item.task_code || '-'}</td>
+                        <td>${item.title || item.phase_name || '-'}</td>
+                        <td>${getDaysBadge(item.days_pending)}</td>
+                        <td>${getPlanCount(item.times_planned)}</td>
+                        <td><span class="badge bg-secondary">${item.status}</span></td>
+                        <td><span class="${pClass}">${item.priority || '-'}</span></td>
+                        <td>${item.due_date || '-'}</td>
+                    </tr>`;
+                }
+                html += '</tbody></table></div>';
+                return html;
+            }
+
+            if (key === 'kra_assignments') {
+                let html = `<div class="segment-items"><table id="${tableId}"><thead><tr>`;
+                html += sortableHeader(tableId, 'template', 'Template');
+                html += sortableHeader(tableId, 'from', 'Effective From');
+                html += sortableHeader(tableId, 'until', 'Effective Until');
+                html += sortableHeader(tableId, 'status', 'Status');
+                html += '</tr></thead><tbody>';
+                for (const item of seg.items) {
+                    html += `<tr>
+                        <td>${item.template_name}</td>
+                        <td>${item.effective_from || '-'}</td>
+                        <td>${item.effective_until || 'Ongoing'}</td>
+                        <td><span class="badge bg-info">${item.status}</span></td>
+                    </tr>`;
+                }
+                html += '</tbody></table></div>';
+                return html;
+            }
+
+            if (key.startsWith('leads')) {
+                let html = `<div class="segment-items"><table id="${tableId}"><thead><tr>`;
+                html += sortableHeader(tableId, 'name', 'Name');
+                html += sortableHeader(tableId, 'phone', 'Phone');
+                html += sortableHeader(tableId, 'status', 'Status');
+                html += sortableHeader(tableId, 'city', 'City');
+                html += sortableHeader(tableId, 'deal', 'Value');
+                html += '</tr></thead><tbody>';
+                for (const item of seg.items) {
+                    html += `<tr>
+                        <td>${item.name}</td>
+                        <td>${item.phone || '-'}</td>
+                        <td><span class="badge bg-secondary">${item.status}</span></td>
+                        <td>${item.city || '-'}</td>
+                        <td>${item.deal_value_total ? '₹' + item.deal_value_total.toLocaleString() : '-'}</td>
+                    </tr>`;
+                }
+                html += '</tbody></table></div>';
+                return html;
+            }
+
+            return '<div class="text-muted text-center py-2">Items loaded</div>';
+        }
+
+        function toggleSegment(key) {
+            const body = document.getElementById('segment_' + key);
+            const chevron = document.getElementById('chevron_' + key);
+            if (body.classList.contains('show')) {
+                body.classList.remove('show');
+                chevron.style.transform = 'rotate(0deg)';
+            } else {
+                body.classList.add('show');
+                chevron.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        function openTransferModal(segmentKey) {
+            pendingTransferSegments = [segmentKey];
+            const seg = currentSummary.segments[segmentKey];
+            document.getElementById('transferModalTitle').textContent = `Transfer: ${seg.label}`;
+            document.getElementById('transferSegmentInfo').innerHTML = `
+                <strong>${seg.count}</strong> items will be transferred from 
+                <strong>${currentSummary.employee.full_name}</strong> to the selected employee.
+                ${segmentKey === 'kra_assignments' ? '<br><em class="text-warning">Note: KRA assignments will be deactivated and future instances removed.</em>' : ''}
+            `;
+            populateTargetSelect();
+            new bootstrap.Modal(document.getElementById('transferModal')).show();
+        }
+
+        function openBulkTransferModal() {
+            if (!currentSummary || currentSummary.total_pending === 0) {
+                showToast('No items to transfer', 'warning');
+                return;
+            }
+            pendingTransferSegments = ['tasks_primary', 'tasks_secondary', 'task_phases', 'kra_assignments', 'leads_field_staff', 'leads_telecaller', 'leads_depends'];
+            document.getElementById('transferModalTitle').textContent = 'Bulk Transfer All Segments';
+            
+            const segs = currentSummary.segments;
+            let info = '<strong>All segments will be transferred:</strong><ul class="mb-0 mt-2">';
+            for (const key of pendingTransferSegments) {
+                if (segs[key] && segs[key].count > 0) {
+                    info += `<li>${segs[key].label}: <strong>${segs[key].count}</strong> items</li>`;
+                }
+            }
+            info += '</ul>';
+            document.getElementById('transferSegmentInfo').innerHTML = info;
+            populateTargetSelect();
+            new bootstrap.Modal(document.getElementById('transferModal')).show();
+        }
+
+        function populateTargetSelect() {
+            const select = document.getElementById('transferTargetSelect');
+            select.innerHTML = '<option value="">Select active employee...</option>';
+            for (const emp of activeEmployees) {
+                if (emp.id === currentEmployeeId) continue;
+                select.innerHTML += `<option value="${emp.emp_code}">${emp.full_name} (${emp.emp_code}) - ${emp.role_name || emp.department_name || ''}</option>`;
+            }
+        }
+
+        async function executeTransfer() {
+            const targetCode = document.getElementById('transferTargetSelect').value;
+            const reason = document.getElementById('transferReason').value;
+
+            if (!targetCode) {
+                showToast('Please select a target employee', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('confirmTransferBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Transferring...';
+
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/offboarding/${currentEmployeeId}/transfer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        target_employee_code: targetCode,
+                        segments: pendingTransferSegments,
+                        reason: reason || 'Employee offboarding transfer'
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Transfer failed');
+
+                bootstrap.Modal.getInstance(document.getElementById('transferModal')).hide();
+                showToast(data.message, 'success');
+
+                await openEmployeeDetail(currentEmployeeId);
+            } catch (e) {
+                showToast(e.message || 'Transfer failed', 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check me-1"></i> Confirm Transfer';
+            }
+        }
+
+        async function loadTransferHistory() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/offboarding/transfer-history`);
+                if (!response.ok) throw new Error('Failed to load history');
+                const data = await response.json();
+                renderHistory(data.history || []);
+            } catch (e) {
+                document.getElementById('historyContent').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Failed to load transfer history</p></div>';
+            }
+        }
+
+        function renderHistory(history) {
+            if (!history.length) {
+                document.getElementById('historyContent').innerHTML = '<div class="empty-state"><i class="fas fa-history"></i><p>No transfer history yet</p></div>';
+                return;
+            }
+
+            let html = '<table><thead><tr><th>Date</th><th>Source Employee</th><th>Target Employee</th><th>Segments</th><th>Reason</th></tr></thead><tbody>';
+            for (const h of history) {
+                const d = h.details || {};
+                let date = '-';
+                if (h.timestamp) {
+                    try {
+                        const dt = new Date(h.timestamp);
+                        if (!isNaN(dt.getTime())) {
+                            date = dt.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        }
+                    } catch(e) { date = '-'; }
+                }
+                const segments = (d.segments || []).join(', ');
+                html += `<tr>
+                    <td>${date}</td>
+                    <td><strong>${d.source_name || '-'}</strong><br><span class="text-muted">${d.source_employee || ''}</span></td>
+                    <td><strong>${d.target_name || '-'}</strong><br><span class="text-muted">${d.target_employee || ''}</span></td>
+                    <td style="font-size:12px">${segments}</td>
+                    <td>${d.reason || '-'}</td>
+                </tr>`;
+            }
+            html += '</tbody></table>';
+            document.getElementById('historyContent').innerHTML = html;
+        }
+
+        function showListView() {
+            document.getElementById('listView').style.display = 'block';
+            document.getElementById('detailView').style.display = 'none';
+            currentEmployeeId = null;
+            currentSummary = null;
+            loadOffboardingEmployees();
+        }
+
+        function showToast(message, type = 'info') {
+            const id = 'toast_' + Date.now();
+            const colors = { success: '#059669', danger: '#dc2626', warning: '#d97706', info: '#2563eb' };
+            const icons = { success: 'check-circle', danger: 'exclamation-circle', warning: 'exclamation-triangle', info: 'info-circle' };
+            document.getElementById('toastContainer').innerHTML += `
+                <div id="${id}" class="d-flex align-items-center gap-2 p-3 mb-2 rounded-3 shadow-sm" style="background:white;border-left:4px solid ${colors[type]};min-width:300px">
+                    <i class="fas fa-${icons[type]}" style="color:${colors[type]}"></i>
+                    <span style="font-size:13px">${message}</span>
+                </div>`;
+            setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, 4000);
+        }
+
+        init();
+    </script>
+</body>
+</html>

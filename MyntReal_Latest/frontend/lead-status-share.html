@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar Leads Status View — Myntreal</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;min-height:100vh;color:#1f2937}
+.top-bar{background:linear-gradient(135deg,#0d2137,#1a3a5c);padding:0 20px;height:58px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,.25)}
+.tb-logo-wrap{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.tb-logo{height:36px;object-fit:contain;display:block;filter:drop-shadow(0 1px 4px rgba(0,0,0,.3))}
+.tb-logo-vgk{height:32px}
+.tb-brand-fallback{font-size:13px;font-weight:800;color:white;letter-spacing:.06em}
+.tb-center{flex:1;display:flex;justify-content:center;align-items:center}
+.tb-partner-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
+.tb-partner-label{font-size:8.5px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.1em}
+.tb-divider{width:1px;height:32px;background:rgba(255,255,255,.2);margin:0 4px}
+.top-bar-expiry{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:5px 12px;color:white;font-size:12px}
+.top-bar-expiry.urgent{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.4)}
+#expiryCountdown{font-weight:700;font-size:13px}
+.share-footer{margin-top:36px;padding:22px 20px 28px;background:white;border-radius:12px;box-shadow:0 1px 8px rgba(0,0,0,.06);text-align:center}
+.share-footer-logos{display:flex;align-items:center;justify-content:center;gap:18px;margin-bottom:14px}
+.share-footer-logo{height:26px;object-fit:contain;opacity:.75}
+.share-footer-sep{color:#d1d5db;font-size:16px;font-weight:300}
+.share-footer-vendor-label{font-size:9.5px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.share-footer-vendor{font-size:14px;font-weight:800;color:#0f766e;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:7px}
+.share-footer-note{font-size:11px;color:#d1d5db;border-top:1px solid #f3f4f6;padding-top:10px;margin-top:4px}
+.container{max-width:980px;margin:0 auto;padding:20px 16px 40px}
+.meta-card{background:white;border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,.07);padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.meta-icon{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0f766e,#0d9488);display:flex;align-items:center;justify-content:center;color:white;font-size:17px;flex-shrink:0}
+.meta-info{flex:1;min-width:0}
+.meta-title{font-size:16px;font-weight:800;color:#0f766e;line-height:1.2}
+.meta-sub{font-size:12px;color:#6b7280;margin-top:4px}
+
+/* People section */
+.people-section{margin-top:10px;border-top:1px solid #f0f0f0;padding-top:10px}
+.people-title{font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.people-grid{display:flex;flex-wrap:wrap;gap:8px}
+.person-chip{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:5px 10px;min-width:0}
+.person-role{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9ca3af;white-space:nowrap}
+.person-name{font-size:11.5px;font-weight:600;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.person-icon{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;color:white;flex-shrink:0}
+.pi-guru{background:#7c3aed}.pi-zguru{background:#a855f7}.pi-adiguru{background:#6d28d9}
+.pi-source{background:#0891b2}.pi-handler{background:#0f766e}
+.pi-telecaller{background:#d97706}.pi-field{background:#dc2626}
+.support-tag{display:inline-flex;align-items:center;gap:2px;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-top:3px;white-space:nowrap}
+.support-yes{background:#d1fae5;color:#065f46}
+.support-no{background:#fee2e2;color:#991b1b}
+.support-pending{background:#f3f4f6;color:#9ca3af}
+
+/* Summary filter chips */
+.summary-section{background:white;border-radius:12px;box-shadow:0 1px 10px rgba(0,0,0,.06);padding:14px 16px;margin-bottom:14px}
+.summary-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.summary-row:last-child{margin-bottom:0}
+.summary-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;min-width:44px;flex-shrink:0}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid transparent;transition:all .15s;user-select:none;white-space:nowrap}
+.chip:hover{opacity:.85}
+.chip .chip-count{font-size:9.5px;background:rgba(0,0,0,.1);border-radius:10px;padding:1px 5px;font-weight:700}
+.chip-all{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+.chip-all.active{background:#0f766e;color:white;border-color:#0f766e}
+.chip-status-new{background:#dbeafe;color:#1e40af;border-color:#bfdbfe}
+.chip-status-contacted{background:#ede9fe;color:#6d28d9;border-color:#ddd6fe}
+.chip-status-proposal{background:#fef9c3;color:#854d0e;border-color:#fde68a}
+.chip-status-won{background:#d1fae5;color:#065f46;border-color:#a7f3d0}
+.chip-status-lost{background:#fee2e2;color:#991b1b;border-color:#fecaca}
+.chip-status-on_hold{background:#f3f4f6;color:#4b5563;border-color:#d1d5db}
+.chip-status-default{background:#f3f4f6;color:#6b7280;border-color:#e5e7eb}
+.chip-stage{background:#e0f2fe;color:#0369a1;border-color:#bae6fd}
+.chip.active{box-shadow:0 2px 8px rgba(0,0,0,.15);transform:translateY(-1px)}
+.chip-stage.active{background:#0369a1;color:white;border-color:#0369a1}
+.chip-status-new.active{background:#1e40af;color:white;border-color:#1e40af}
+.chip-status-contacted.active{background:#6d28d9;color:white;border-color:#6d28d9}
+.chip-status-proposal.active{background:#854d0e;color:white;border-color:#854d0e}
+.chip-status-won.active{background:#065f46;color:white;border-color:#065f46}
+.chip-status-lost.active{background:#991b1b;color:white;border-color:#991b1b}
+.chip-status-on_hold.active{background:#4b5563;color:white;border-color:#4b5563}
+.chip-status-default.active{background:#6b7280;color:white;border-color:#6b7280}
+.reset-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid #fca5a5;background:#fef2f2;color:#dc2626;transition:all .15s;user-select:none;white-space:nowrap}
+.reset-btn:hover{background:#fee2e2}
+.stage-select-wrap{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.stage-select{border:1.5px solid #bae6fd;border-radius:20px;padding:4px 28px 4px 12px;font-size:11px;font-weight:600;color:#0369a1;background:#e0f2fe url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%230369a1'/%3E%3C/svg%3E") no-repeat right 10px center;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none;max-width:260px;transition:border-color .15s}
+.stage-select:focus{border-color:#0369a1}
+.stage-select.has-value{background-color:#0369a1;color:white;border-color:#0369a1;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='white'/%3E%3C/svg%3E")}
+
+.leads-grid{display:flex;flex-direction:column;gap:14px}
+.lead-card{background:white;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;border-left:4px solid #0d9488}
+.lead-card.status-won{border-left-color:#22c55e}
+.lead-card.status-lost{border-left-color:#ef4444}
+.lead-card.status-pending{border-left-color:#f59e0b}
+.lead-card.status-contacted{border-left-color:#8b5cf6}
+.lead-card.status-proposal{border-left-color:#d97706}
+.lead-card-header{padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#f8fafc;border-bottom:1px solid #f0f0f0}
+.sno-badge{width:26px;height:26px;border-radius:50%;background:#e0f2fe;color:#0369a1;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lead-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#0f766e,#134e4a);display:flex;align-items:center;justify-content:center;color:white;font-size:14px;font-weight:800;flex-shrink:0}
+.lead-name{font-size:14px;font-weight:800;color:#1e3a5f;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lead-phone{font-size:12px;color:#374151;font-weight:600;white-space:nowrap}
+.lead-badges{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.badge.status-won{background:#d1fae5;color:#065f46}
+.badge.status-lost{background:#fee2e2;color:#991b1b}
+.badge.status-contacted{background:#ede9fe;color:#6d28d9}
+.badge.status-proposal{background:#fef9c3;color:#854d0e}
+.badge.status-default{background:#f3f4f6;color:#6b7280}
+.badge.pipeline{background:#e0f2fe;color:#0369a1}
+.badge.no-pipeline{background:#f9fafb;color:#9ca3af;font-style:italic}
+.lead-body{padding:14px 16px}
+.field-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:12px}
+.field-item{display:flex;flex-direction:column;gap:2px}
+.field-label{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:#9ca3af;font-weight:700}
+.field-value{font-size:12px;color:#1f2937;font-weight:500;word-break:break-word}
+.field-value.empty{color:#d1d5db;font-style:italic}
+.maps-link{display:inline-flex;align-items:center;gap:4px;color:#0369a1;font-size:11px;font-weight:600;text-decoration:none;background:#e0f2fe;padding:3px 8px;border-radius:6px;margin-top:2px}
+.maps-link:hover{background:#bae6fd}
+.comments-section{margin-top:10px;border-top:1px solid #f0f0f0;padding-top:10px}
+.comments-title{font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.comment-row{background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:8px 11px;margin-bottom:6px}
+.comment-meta{font-size:9px;color:#9ca3af;margin-bottom:3px}
+.comment-text{font-size:12px;color:#374151;line-height:1.5}
+.comment-latest{background:#f0fdf4;border-color:#bbf7d0}
+.no-comments{font-size:11.5px;color:#d1d5db;font-style:italic;padding:4px 0}
+.search-bar{background:white;border-radius:10px;box-shadow:0 1px 8px rgba(0,0,0,.06);padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.search-bar input{flex:1;border:none;outline:none;font-size:13px;color:#374151;background:transparent;min-width:0}
+.search-bar i{color:#9ca3af;font-size:14px}
+.count-bar{font-size:12px;color:#6b7280;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.spinner-wrap{text-align:center;padding:60px 20px;color:#9ca3af}
+.spinner-wrap i{font-size:32px;margin-bottom:12px;display:block}
+.expired-wrap{text-align:center;padding:60px 20px}
+.expired-wrap i{font-size:48px;color:#ef4444;margin-bottom:16px;display:block}
+.expired-wrap h2{font-size:16px;font-weight:700;color:#1f2937;margin-bottom:8px}
+.expired-wrap p{font-size:13px;color:#6b7280}
+.alert-box{border-radius:12px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px}
+.alert-box.error{background:#fef2f2;border:1px solid #fecaca}
+.alert-icon{font-size:18px;flex-shrink:0;margin-top:2px;color:#dc2626}
+.alert-text h3{font-size:13px;font-weight:700;margin-bottom:3px}
+.alert-text p{font-size:12px;color:#6b7280}
+.no-results{text-align:center;padding:40px 20px;color:#9ca3af}
+.no-results i{font-size:28px;display:block;margin-bottom:10px}
+.watermark{position:fixed;bottom:14px;right:14px;font-size:9.5px;color:#d1d5db;letter-spacing:.04em;pointer-events:none;user-select:none}
+@media(max-width:500px){.field-grid{grid-template-columns:1fr 1fr}.chip{font-size:10px;padding:3px 8px}}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="tb-logo-wrap">
+    <img src="/myntreal-logo.png" alt="Myntreal" class="tb-logo" onerror="this.style.display='none';document.getElementById('tbMnrFallback').style.display='block'">
+    <span id="tbMnrFallback" class="tb-brand-fallback" style="display:none">MYNTREAL</span>
+  </div>
+  <div class="tb-center">
+    <div class="top-bar-expiry" id="expiryBar" style="display:none">
+      <i class="fas fa-clock"></i>
+      <span>Expires in</span>
+      <span id="expiryCountdown">—</span>
+    </div>
+  </div>
+  <div class="tb-partner-wrap">
+    <span class="tb-partner-label">Associated Partner</span>
+    <img src="/vgk4u-logo-100.png" alt="VGK4U" class="tb-logo tb-logo-vgk" onerror="this.style.display='none';document.getElementById('tbVgkFallback').style.display='block'">
+    <span id="tbVgkFallback" class="tb-brand-fallback" style="display:none;color:#a78bfa">VGK4U</span>
+  </div>
+</div>
+
+<div class="container" id="appRoot">
+  <div class="spinner-wrap">
+    <i class="fas fa-spinner fa-spin"></i>
+    <p>Loading leads…</p>
+  </div>
+</div>
+
+<div class="watermark">Myntreal CRM &mdash; Confidential</div>
+
+<script>
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function fmtDate(d){if(!d)return'—';try{return new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}catch{return String(d).slice(0,10);}}
+function fieldVal(v){return v?`<span class="field-value">${esc(v)}</span>`:`<span class="field-value empty">—</span>`;}
+
+const STATUS_LABELS={
+  new:'New',contacted:'Contacted',proposal:'Proposal',won:'Won',lost:'Lost',
+  on_hold:'On Hold',waiting_for_bank_loan:'Waiting Loan',bank_loan_rejected:'Loan Rejected',
+  in_progress:'In Progress'
+};
+const PIPELINE_LABELS={
+  site_visit:'Site Visit',application_submitted:'App Submitted',loan_processing:'Loan Processing',
+  loan_sanctioned:'Loan Sanctioned',installation_completed:'Installed',
+  subsidy_applied:'Subsidy Applied',subsidy_received:'Subsidy Received',
+  net_metering:'Net Metering',bill_changed:'Bill Changed',completed:'Completed',
+  cancelled:'Cancelled'
+};
+
+let _allLeads=[];
+let _activeStatus=null;
+let _activeStage=null;
+let _searchQ='';
+
+function statusClass(s){
+  const sl=(s||'').toLowerCase();
+  if(sl==='won'||sl.includes('install')||sl.includes('complete'))return 'status-won';
+  if(sl==='lost'||sl.includes('cancel'))return 'status-lost';
+  if(sl==='contacted')return 'status-contacted';
+  if(sl==='proposal')return 'status-proposal';
+  if(sl.includes('pending')||sl.includes('review')||sl.includes('hold'))return 'status-pending';
+  return '';
+}
+
+function renderLead(l, sno){
+  const initials=(l.name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const sc=statusClass(l.status);
+  const statusLabel=STATUS_LABELS[l.status]||l.status||'';
+  const stageLabel=PIPELINE_LABELS[l.solar_pipeline_status]||l.solar_pipeline_status||'';
+  const statusBadge=statusLabel?`<span class="badge ${sc||'status-default'}">${esc(statusLabel)}</span>`:'';
+  const pipelineBadge=stageLabel?`<span class="badge pipeline"><i class="fas fa-tasks"></i> ${esc(stageLabel)}</span>`:'<span class="badge no-pipeline">No Stage</span>';
+
+  const addrParts=[l.address,l.city,l.state,l.pincode].filter(Boolean);
+  const addr=addrParts.join(', ');
+  // Only show Maps link when GPS coordinates are stored — no address-text fallback
+  const hasCoords=l.latitude&&l.longitude&&String(l.latitude).trim()&&String(l.longitude).trim();
+  const mapsUrl=hasCoords
+    ?`https://www.google.com/maps?q=${encodeURIComponent(String(l.latitude).trim())},${encodeURIComponent(String(l.longitude).trim())}`
+    :null;
+
+  const notes=l.notes||[];
+  let notesHTML='';
+  if(notes.length){
+    notesHTML=notes.slice(0,3).map((n,i)=>`
+      <div class="comment-row${i===0?' comment-latest':''}">
+        <div class="comment-meta">${n.created_at?new Date(n.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true}):'—'}</div>
+        <div class="comment-text">${esc(n.note||'')}</div>
+      </div>`).join('');
+  } else if(l.recent_comments){
+    notesHTML=`<div class="comment-row comment-latest"><div class="comment-text">${esc(l.recent_comments)}</div></div>`;
+  } else {
+    notesHTML=`<div class="no-comments">No comments recorded</div>`;
+  }
+
+  // Support tag helper: true=confirmed, false=declined, null=pending
+  function supportTag(val){
+    if(val===true) return '<span class="support-tag support-yes"><i class="fas fa-check"></i> Supported</span>';
+    if(val===false) return '<span class="support-tag support-no"><i class="fas fa-times"></i> Not Supported</span>';
+    return '<span class="support-tag support-pending">Pending</span>';
+  }
+
+  // People involved — only shown if name is present
+  // Order: Source → Guru → Extended → Adi Guru (support) → Telecaller → Handler → Field Staff
+  const people=[
+    {role:'Source',      name:l.source_ref_name||(l.source_ref_id?`${l.source_ref_type||''}:${l.source_ref_id}`:null), cls:'pi-source', icon:'fa-handshake', supported:null},
+    {role:'Senior',        name:l.guru_name,       cls:'pi-guru',       icon:'fa-star',             supported:l.guru_supported},
+    {role:'Extended',      name:l.z_guru_name,     cls:'pi-zguru',      icon:'fa-star-half-stroke', supported:l.z_guru_supported},
+    {role:'Adi Guru',    name:l.adi_guru_name,   cls:'pi-adiguru',    icon:'fa-shield-halved',    supported:l.adi_guru_supported},
+    {role:'Telecaller',  name:l.telecaller_name, cls:'pi-telecaller', icon:'fa-headset',          supported:l.telecaller_supported},
+    {role:'Handler',     name:l.handler_name,    cls:'pi-handler',    icon:'fa-user-tie',         supported:null},
+    {role:'Field Staff', name:l.field_staff_name,cls:'pi-field',      icon:'fa-person-walking',   supported:l.showroom_supported},
+  ].filter(p=>p.name);
+
+  const peopleHTML=people.length?`
+    <div class="people-section">
+      <div class="people-title"><i class="fas fa-users" style="color:#0d9488"></i> People Involved</div>
+      <div class="people-grid">
+        ${people.map(p=>`
+          <div class="person-chip">
+            <div class="person-icon ${p.cls}"><i class="fas ${p.icon}"></i></div>
+            <div>
+              <div class="person-role">${esc(p.role)}</div>
+              <div class="person-name">${esc(p.name)}</div>
+              ${p.supported!==null?supportTag(p.supported):''}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`:'';
+
+  const searchText=(l.name+' '+l.phone+' '+(l.pincode||'')+' '+(l.city||'')+' '+(l.state||'')+' '+(l.guru_name||'')+' '+(l.z_guru_name||'')+' '+(l.adi_guru_name||'')+' '+(l.source_ref_name||'')+' '+(l.handler_name||'')+' '+(l.telecaller_name||'')+' '+(l.field_staff_name||'')).toLowerCase();
+
+  return `<div class="lead-card ${sc}"
+    data-search="${esc(searchText)}"
+    data-status="${esc(l.status||'')}"
+    data-stage="${esc(l.solar_pipeline_status||'')}">
+    <div class="lead-card-header">
+      <div class="sno-badge">${sno}</div>
+      <div class="lead-avatar">${esc(initials)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="lead-name">${esc(l.name||'Unnamed Lead')}</div>
+        <div class="lead-phone"><i class="fas fa-phone" style="font-size:9px;margin-right:3px"></i>${esc(l.phone||'—')}</div>
+      </div>
+      <div class="lead-badges">${statusBadge}${pipelineBadge}</div>
+    </div>
+    <div class="lead-body">
+      <div class="field-grid">
+        <div class="field-item">
+          <div class="field-label">Address</div>
+          ${addr?`<span class="field-value">${esc(addr)}</span>`:`<span class="field-value empty">—</span>`}
+          ${mapsUrl?`<a href="${esc(mapsUrl)}" target="_blank" rel="noopener" class="maps-link"><i class="fas fa-map-marker-alt"></i> View on Map</a>`:''}
+        </div>
+        <div class="field-item"><div class="field-label">City</div>${fieldVal(l.city)}</div>
+        <div class="field-item"><div class="field-label">State</div>${fieldVal(l.state)}</div>
+        <div class="field-item"><div class="field-label">Pincode</div>${fieldVal(l.pincode)}</div>
+      </div>
+      ${peopleHTML}
+      <div class="comments-section">
+        <div class="comments-title"><i class="fas fa-comment-dots" style="color:#0d9488"></i> Recent Comments</div>
+        ${notesHTML}
+      </div>
+    </div>
+  </div>`;
+}
+
+function applyFilters(){
+  const sq=_searchQ.toLowerCase().trim();
+  let visible=0;
+  const cards=document.querySelectorAll('.lead-card');
+  cards.forEach(c=>{
+    const matchSearch=!sq||c.dataset.search.includes(sq);
+    const matchStatus=!_activeStatus||c.dataset.status===_activeStatus;
+    const matchStage=!_activeStage||c.dataset.stage===_activeStage;
+    const show=matchSearch&&matchStatus&&matchStage;
+    c.style.display=show?'':'none';
+    if(show)visible++;
+  });
+  const total=_allLeads.length;
+  const hasFilter=sq||_activeStatus||_activeStage;
+  document.getElementById('countBarText').textContent=hasFilter
+    ?`${visible} of ${total} lead(s) shown`
+    :`${total} lead(s)`;
+  updateChipActive();
+  const rb=document.getElementById('resetBtn');
+  if(rb)rb.style.display=hasFilter?'inline-flex':'none';
+}
+
+function updateChipActive(){
+  document.querySelectorAll('.chip[data-status-val]').forEach(c=>{
+    c.classList.toggle('active',c.dataset.statusVal===(_activeStatus||''));
+  });
+  document.querySelectorAll('.chip[data-stage-val]').forEach(c=>{
+    c.classList.toggle('active',c.dataset.stageVal===(_activeStage||''));
+  });
+}
+
+function filterByStatus(val){
+  _activeStatus=(_activeStatus===val)?null:val;
+  applyFilters();
+}
+function filterByStageSelect(val){
+  _activeStage=val||null;
+  const sel=document.getElementById('stageSelect');
+  if(sel){sel.classList.toggle('has-value',!!val);}
+  applyFilters();
+}
+function resetFilters(){
+  _activeStatus=null;_activeStage=null;_searchQ='';
+  const si=document.getElementById('liveSearch');
+  if(si)si.value='';
+  const sel=document.getElementById('stageSelect');
+  if(sel){sel.value='';sel.classList.remove('has-value');}
+  applyFilters();
+}
+
+function buildSummary(leads){
+  // Status counts
+  const statusCounts={};
+  const stageCounts={};
+  leads.forEach(l=>{
+    const s=l.status||'unknown';
+    statusCounts[s]=(statusCounts[s]||0)+1;
+    const p=l.solar_pipeline_status||'';
+    if(p){stageCounts[p]=(stageCounts[p]||0)+1;}
+  });
+
+  const statusOrder=['new','contacted','proposal','won','lost','on_hold','waiting_for_bank_loan','bank_loan_rejected','in_progress'];
+  const statusHtml=[
+    `<span class="chip chip-all active" data-status-val="" onclick="filterByStatus('')"><i class="fas fa-list"></i> All <span class="chip-count">${leads.length}</span></span>`,
+    ...Object.entries(statusCounts)
+      .sort((a,b)=>(statusOrder.indexOf(a[0])-statusOrder.indexOf(b[0]))||b[1]-a[1])
+      .map(([s,n])=>{
+        const sc=statusClass(s).replace('status-','');
+        const cls=`chip-status-${s in {'new':1,'contacted':1,'proposal':1,'won':1,'lost':1,'on_hold':1}?s:'default'}`;
+        const lbl=STATUS_LABELS[s]||s;
+        return `<span class="chip ${cls}" data-status-val="${esc(s)}" onclick="filterByStatus('${esc(s)}')">${esc(lbl)} <span class="chip-count">${n}</span></span>`;
+      })
+  ].join('');
+
+  const stageEntries=Object.entries(stageCounts).sort((a,b)=>b[1]-a[1]);
+  const stageSelectHtml=stageEntries.length?`
+    <div class="summary-row">
+      <span class="summary-label">Stage</span>
+      <div class="stage-select-wrap">
+        <select id="stageSelect" class="stage-select" onchange="filterByStageSelect(this.value)">
+          <option value="">All stages (${leads.length})</option>
+          ${stageEntries.map(([p,n])=>{
+            const lbl=PIPELINE_LABELS[p]||p;
+            return `<option value="${esc(p)}">${esc(lbl)} (${n})</option>`;
+          }).join('')}
+        </select>
+      </div>
+    </div>`:'';
+
+  return `
+    <div class="summary-section">
+      <div class="summary-row">
+        <span class="summary-label">Status</span>
+        ${statusHtml}
+        <span class="reset-btn" id="resetBtn" style="display:none" onclick="resetFilters()"><i class="fas fa-times"></i> Reset</span>
+      </div>
+      ${stageSelectHtml}
+    </div>`;
+}
+
+function renderPage(data){
+  _allLeads=data.data||[];
+  const expiresAt=new Date(data.expires_at);
+  startCountdown(expiresAt);
+
+  if(!_allLeads.length){
+    document.getElementById('appRoot').innerHTML=`<div class="expired-wrap"><i class="fas fa-inbox"></i><h2>No Leads</h2><p>This status view contains no leads.</p></div>`;
+    return;
+  }
+
+  const leadsHTML=_allLeads.map((l,i)=>renderLead(l,i+1)).join('');
+  const summaryHTML=buildSummary(_allLeads);
+
+  const vendorName = data.vendor_name || '';
+  const vendorFooterHTML = vendorName ? `
+    <div class="share-footer-vendor-label">Solar Vendor Partner</div>
+    <div class="share-footer-vendor"><i class="fas fa-store-alt"></i>${esc(vendorName)}</div>` : '';
+  const footerHTML = `
+    <div class="share-footer">
+      <div class="share-footer-logos">
+        <img src="/myntreal-logo.png" class="share-footer-logo" alt="Myntreal" onerror="this.style.display='none'">
+        <span class="share-footer-sep">&times;</span>
+        <img src="/vgk4u-logo-100.png" class="share-footer-logo" alt="VGK4U" onerror="this.style.display='none'">
+      </div>
+      ${vendorFooterHTML}
+      <div class="share-footer-note">Myntreal CRM &mdash; Confidential &middot; Solar Leads Status View &middot; Do not redistribute</div>
+    </div>`;
+
+  document.getElementById('appRoot').innerHTML=`
+    <div class="meta-card">
+      <div class="meta-icon"><i class="fas fa-share-nodes"></i></div>
+      <div class="meta-info">
+        <div class="meta-title">${esc(data.filter_label||'Solar Leads Status View')}</div>
+        <div class="meta-sub">Shared by <strong>${esc(data.created_by_name||'Myntreal Staff')}</strong> &middot; ${_allLeads.length} lead(s) &middot; Expires ${expiresAt.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true})}</div>
+      </div>
+    </div>
+    ${summaryHTML}
+    <div class="search-bar">
+      <i class="fas fa-search"></i>
+      <input type="text" id="liveSearch" placeholder="Search by name, phone, city, pincode…" oninput="_searchQ=this.value;applyFilters()">
+    </div>
+    <div class="count-bar"><i class="fas fa-list" style="color:#0d9488"></i><span id="countBarText">${_allLeads.length} lead(s)</span></div>
+    <div class="leads-grid" id="leadsGrid">${leadsHTML}</div>
+    <div id="noResults" class="no-results" style="display:none"><i class="fas fa-search"></i>No leads match the current filter. <a href="javascript:void(0)" onclick="resetFilters()" style="color:#0369a1">Reset filters</a></div>
+    ${footerHTML}
+  `;
+}
+
+function startCountdown(expiresAt){
+  const bar=document.getElementById('expiryBar');
+  const el=document.getElementById('expiryCountdown');
+  bar.style.display='flex';
+  function tick(){
+    const diff=expiresAt-new Date();
+    if(diff<=0){el.textContent='Expired';bar.classList.add('urgent');return;}
+    const h=Math.floor(diff/3600000);const m=Math.floor((diff%3600000)/60000);const s=Math.floor((diff%60000)/1000);
+    el.textContent=h>0?`${h}h ${m}m`:m>0?`${m}m ${s}s`:`${s}s`;
+    if(diff<600000)bar.classList.add('urgent');
+    setTimeout(tick,1000);
+  }
+  tick();
+}
+
+async function init(){
+  const params=new URLSearchParams(window.location.search);
+  const token=params.get('token');
+  if(!token){
+    document.getElementById('appRoot').innerHTML=`<div class="alert-box error"><i class="fas fa-exclamation-circle alert-icon"></i><div class="alert-text"><h3>No Token Provided</h3><p>This URL is missing the required token parameter.</p></div></div>`;
+    return;
+  }
+  try{
+    const r=await fetch(`/api/v1/crm/leads/status-view/${encodeURIComponent(token)}`);
+    if(r.status===410||r.status===404){
+      const d=await r.json().catch(()=>({}));
+      document.getElementById('appRoot').innerHTML=`<div class="expired-wrap"><i class="fas fa-lock"></i><h2>${r.status===410?'Link Expired':'Link Not Found'}</h2><p>${esc(d.detail||'This share link is no longer valid.')}</p></div>`;
+      return;
+    }
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const data=await r.json();
+    document.title=(data.filter_label||'Solar Leads Status View')+' — Myntreal';
+    renderPage(data);
+  }catch(e){
+    document.getElementById('appRoot').innerHTML=`<div class="alert-box error"><i class="fas fa-exclamation-circle alert-icon"></i><div class="alert-text"><h3>Failed to Load</h3><p>${esc(e.message)}</p></div></div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>

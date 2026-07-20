@@ -1,0 +1,11 @@
+#!/bin/bash
+echo "=== Current Deployment Configuration ==="
+echo ""
+echo "Backend Start Command:"
+echo "gunicorn app.main:app --bind 0.0.0.0:8000 --worker-class uvicorn.workers.UvicornWorker --workers 2"
+echo ""
+echo "Frontend Start Command:"
+echo "node static-server.js"
+echo ""
+echo "Issue: Frontend starts while backend is still starting up!"
+echo "Solution: Increase sleep time or add health check"

@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Start your free trial — VGK4U · MyntReal SFMS</title>
+<meta name="description" content="VGK4U by MyntReal — the all-in-one B2B SaaS for SFMS, CRM, Inventory, Accounts, Payroll and Field Force. 14-day free trial. No credit card.">
+<style>
+  :root{
+    --ink:#0f172a; --ink-2:#334155; --muted:#64748b; --line:#e2e8f0;
+    --bg:#f8fafc; --panel:#ffffff;
+    --brand-1:#4f46e5; --brand-2:#7c3aed; --brand-3:#0ea5e9;
+    --ok:#10b981; --warn:#f59e0b; --err:#ef4444;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--brand-1);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ── top nav ─────────────────────────────────────────────────── */
+  .nav{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.85);backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--line)}
+  .nav-inner{max-width:1200px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:18px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;color:var(--ink)}
+  .brand-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--brand-1),var(--brand-2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:13px;letter-spacing:.5px;box-shadow:0 2px 8px rgba(79,70,229,.35)}
+  .nav-links{display:flex;gap:18px;margin-left:auto;font-size:14px;color:var(--ink-2)}
+  .nav-links a{color:var(--ink-2)}
+  .nav-cta{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff!important;font-weight:600;font-size:13px}
+  .nav-cta:hover{text-decoration:none;filter:brightness(1.05)}
+
+  /* ── hero (gradient + signup form right) ─────────────────────── */
+  .hero{position:relative;overflow:hidden;background:radial-gradient(1200px 500px at 80% -10%,rgba(124,58,237,.20),transparent 60%),radial-gradient(900px 400px at 0% 0%,rgba(14,165,233,.18),transparent 55%),linear-gradient(180deg,#fafbff 0%,#f5f7fb 100%)}
+  .hero-inner{max-width:1200px;margin:0 auto;padding:64px 24px 72px;display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:start}
+  @media (max-width:920px){.hero-inner{grid-template-columns:1fr;padding:36px 18px 48px;gap:28px}}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border-radius:999px;background:rgba(79,70,229,.10);color:var(--brand-1);font-weight:600;font-size:12px;letter-spacing:.4px;text-transform:uppercase;border:1px solid rgba(79,70,229,.18)}
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--brand-1);box-shadow:0 0 0 4px rgba(79,70,229,.18)}
+  h1.hero-title{font-size:46px;line-height:1.07;margin:14px 0 14px;letter-spacing:-.02em;font-weight:800;color:var(--ink)}
+  h1 .grad{background:linear-gradient(135deg,var(--brand-1),var(--brand-2) 60%,var(--brand-3));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lede{font-size:17px;line-height:1.55;color:var(--ink-2);max-width:560px;margin:0 0 22px}
+  .hero-bullets{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;max-width:560px;margin:18px 0 26px}
+  .hero-bullets div{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink-2)}
+  .hero-bullets .ck{flex:0 0 22px;height:22px;border-radius:50%;background:rgba(16,185,129,.14);color:var(--ok);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;margin-top:1px}
+  .trust{display:flex;align-items:center;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+  .trust b{color:var(--ink);font-weight:700}
+
+  /* ── signup card ─────────────────────────────────────────────── */
+  .signup{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 26px 22px;box-shadow:0 20px 50px -20px rgba(15,23,42,.18),0 4px 12px rgba(15,23,42,.04)}
+  .signup h2{margin:0;font-size:22px;letter-spacing:-.01em}
+  .signup .sub{color:var(--muted);font-size:13px;margin:6px 0 18px}
+  .signup label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin:12px 0 4px}
+  .signup input,.signup select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:14px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+  .signup input:focus,.signup select:focus{outline:none;border-color:var(--brand-1);box-shadow:0 0 0 3px rgba(79,70,229,.18)}
+  .signup .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:520px){.signup .row2{grid-template-columns:1fr}}
+  .btn-cta{margin-top:18px;width:100%;padding:13px 16px;border:0;border-radius:10px;background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.2px;box-shadow:0 8px 22px -8px rgba(79,70,229,.55);transition:transform .12s,filter .12s}
+  .btn-cta:hover{filter:brightness(1.06)}
+  .btn-cta:active{transform:translateY(1px)}
+  .btn-cta:disabled{opacity:.65;cursor:not-allowed;filter:grayscale(.2)}
+  .signup .small{font-size:11.5px;color:var(--muted);margin-top:10px;text-align:center}
+  .err{margin-top:10px;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);color:#b91c1c;font-size:13px}
+  .ok-card{margin-top:14px;padding:16px;border-radius:10px;background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(14,165,233,.10));border:1px solid rgba(16,185,129,.30);color:#065f46;font-size:14px;line-height:1.5}
+  .ok-card code{background:rgba(255,255,255,.6);padding:2px 6px;border-radius:4px;font-size:13px}
+
+  /* ── section base ────────────────────────────────────────────── */
+  section{padding:64px 24px}
+  .container{max-width:1200px;margin:0 auto}
+  .section-head{text-align:center;margin-bottom:38px}
+  .section-head .pill{margin-bottom:12px}
+  .section-head h2{font-size:32px;margin:0 0 10px;letter-spacing:-.01em;font-weight:800}
+  .section-head p{color:var(--ink-2);font-size:16px;max-width:640px;margin:0 auto;line-height:1.55}
+
+  /* ── stats strip ─────────────────────────────────────────────── */
+  .stats{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 60%,#312e81 100%);color:#fff}
+  .stats .container{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center}
+  @media (max-width:760px){.stats .container{grid-template-columns:repeat(2,1fr)}}
+  .stat{padding:8px 0}
+  .stat .n{font-size:36px;font-weight:800;letter-spacing:-.02em;background:linear-gradient(135deg,#a5b4fc,#7dd3fc);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .l{font-size:13px;color:#cbd5e1;margin-top:4px;letter-spacing:.3px;text-transform:uppercase}
+
+  /* ── capability cards ────────────────────────────────────────── */
+  .grid-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media (max-width:920px){.grid-cards{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:600px){.grid-cards{grid-template-columns:1fr}}
+  .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;transition:transform .18s,box-shadow .18s,border-color .18s;overflow:hidden}
+  .card:hover{transform:translateY(-3px);box-shadow:0 18px 40px -22px rgba(15,23,42,.22);border-color:#cbd5e1}
+  .card .icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px;color:#fff;background:linear-gradient(135deg,var(--c1,#4f46e5),var(--c2,#7c3aed));box-shadow:0 8px 20px -8px var(--c1,#4f46e5)}
+  .card h3{font-size:17px;margin:0 0 6px;font-weight:700}
+  .card p{margin:0 0 12px;font-size:14px;line-height:1.55;color:var(--ink-2)}
+  .card .tag{display:inline-block;font-size:11.5px;font-weight:600;color:var(--muted);background:#f1f5f9;padding:3px 9px;border-radius:999px;margin-right:6px;margin-top:4px}
+
+  /* ── module catalog band ─────────────────────────────────────── */
+  .catalog{background:linear-gradient(180deg,#ffffff 0%,#f5f7fb 100%);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .catalog-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media (max-width:900px){.catalog-grid{grid-template-columns:repeat(3,1fr)}}
+  @media (max-width:600px){.catalog-grid{grid-template-columns:repeat(2,1fr)}}
+  .cat-tile{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;transition:border-color .12s,box-shadow .12s}
+  .cat-tile:hover{border-color:#a5b4fc;box-shadow:0 8px 24px -16px rgba(79,70,229,.4)}
+  .cat-tile .h{display:flex;align-items:center;gap:10px}
+  .cat-tile .b{width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,var(--c1,#4f46e5),var(--c2,#7c3aed))}
+  .cat-tile .name{font-weight:600;font-size:14px;color:var(--ink)}
+  .cat-tile .count{font-size:12px;color:var(--muted);margin-top:4px}
+  #cat-msg{text-align:center;color:var(--muted);font-size:13px;padding:18px}
+
+  /* ── how it works ────────────────────────────────────────────── */
+  .how{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;counter-reset:step}
+  @media (max-width:900px){.how{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:520px){.how{grid-template-columns:1fr}}
+  .step{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .step::before{counter-increment:step;content:counter(step,decimal-leading-zero);position:absolute;top:-14px;left:18px;background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff;font-weight:800;font-size:12px;padding:6px 10px;border-radius:8px;letter-spacing:.5px;box-shadow:0 6px 16px -6px rgba(79,70,229,.5)}
+  .step h4{margin:14px 0 6px;font-size:16px}
+  .step p{font-size:13.5px;color:var(--ink-2);line-height:1.55;margin:0}
+
+  /* ── pricing teaser ──────────────────────────────────────────── */
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media (max-width:820px){.price-grid{grid-template-columns:1fr}}
+  .price{background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;position:relative}
+  .price.featured{border:2px solid transparent;background:linear-gradient(#fff,#fff) padding-box,linear-gradient(135deg,var(--brand-1),var(--brand-2)) border-box;box-shadow:0 22px 40px -22px rgba(79,70,229,.35)}
+  .price .badge{position:absolute;top:-12px;right:18px;background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff;padding:5px 11px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.4px}
+  .price h3{font-size:18px;margin:0 0 6px;font-weight:700}
+  .price .tag{font-size:13px;color:var(--muted);margin:0 0 16px;min-height:38px}
+  .price .amount{font-size:34px;font-weight:800;letter-spacing:-.02em}
+  .price .amount small{font-size:14px;color:var(--muted);font-weight:500;letter-spacing:0}
+  .price ul{list-style:none;padding:0;margin:14px 0 0;font-size:14px}
+  .price li{padding:6px 0 6px 22px;position:relative;color:var(--ink-2)}
+  .price li::before{content:"";position:absolute;left:0;top:11px;width:12px;height:6px;border-left:2px solid var(--ok);border-bottom:2px solid var(--ok);transform:rotate(-45deg)}
+
+  /* ── FAQ ─────────────────────────────────────────────────────── */
+  .faq{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:820px){.faq{grid-template-columns:1fr}}
+  details{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px;transition:border-color .12s}
+  details[open]{border-color:#c7d2fe}
+  details summary{cursor:pointer;font-weight:600;font-size:15px;list-style:none;display:flex;justify-content:space-between;align-items:center;color:var(--ink)}
+  details summary::-webkit-details-marker{display:none}
+  details summary::after{content:"+";color:var(--brand-1);font-weight:700;font-size:18px;transition:transform .15s}
+  details[open] summary::after{transform:rotate(45deg)}
+  details p{font-size:14px;color:var(--ink-2);line-height:1.6;margin:10px 0 0}
+
+  /* ── final CTA strip ─────────────────────────────────────────── */
+  .cta-strip{background:linear-gradient(135deg,var(--brand-1) 0%,var(--brand-2) 50%,#3b82f6 100%);color:#fff;text-align:center;padding:56px 24px}
+  .cta-strip h2{font-size:30px;margin:0 0 8px;letter-spacing:-.01em}
+  .cta-strip p{margin:0 auto 18px;color:rgba(255,255,255,.88);max-width:560px;font-size:16px}
+  .cta-strip .btn-cta{background:#fff;color:var(--brand-1);box-shadow:0 12px 28px -12px rgba(0,0,0,.4);max-width:280px;margin:0 auto;display:block;text-decoration:none;text-align:center}
+  .cta-strip .btn-cta:hover{filter:none;background:#f1f5f9}
+
+  /* ── footer ──────────────────────────────────────────────────── */
+  footer{background:#0f172a;color:#94a3b8;padding:30px 24px;font-size:13px}
+  footer .container{display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;align-items:center}
+  footer a{color:#cbd5e1}
+</style>
+</head>
+<body>
+
+<!-- ─── nav ─── -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="#top">
+      <div class="brand-mark">VG</div>
+      VGK4U <span style="color:var(--muted);font-weight:500">· by MyntReal</span>
+    </a>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#catalog">Modules</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <a class="nav-cta" href="#signup">Start free trial →</a>
+  </div>
+</nav>
+
+<!-- ─── hero ─── -->
+<header class="hero" id="top">
+  <div class="hero-inner">
+    <div>
+      <span class="pill"><span class="dot"></span> 14-day free trial · No credit card</span>
+      <h1 class="hero-title">Run your <span class="grad">entire B2B operation</span> from one console.</h1>
+      <p class="lede">VGK4U is the all-in-one operations cockpit by MyntReal SFMS — from CRM and field-force management to inventory, accounts, payroll and tenant billing. Pick the modules you need, propagate changes in seconds, and reconcile every rupee with Tally/Zoho-grade invoicing.</p>
+
+      <div class="hero-bullets">
+        <div><span class="ck">✓</span> Module-level entitlements with pro-rata billing</div>
+        <div><span class="ck">✓</span> Multi-entity GST &amp; multi-currency invoicing</div>
+        <div><span class="ck">✓</span> Field force, attendance, beats, geo-tagging</div>
+        <div><span class="ck">✓</span> CRM, leads, business partners &amp; rewards</div>
+        <div><span class="ck">✓</span> Inventory, dispatch &amp; service tickets</div>
+        <div><span class="ck">✓</span> Role-based access &amp; full audit trail</div>
+      </div>
+
+      <div class="trust">
+        <span><b id="trust-mods">550+</b> modules</span>
+        <span>·</span>
+        <span><b id="trust-cats">60+</b> capability areas</span>
+        <span>·</span>
+        <span><b>Tally / Zoho</b> parity</span>
+        <span>·</span>
+        <span><b>SOC-friendly</b> audit log</span>
+      </div>
+    </div>
+
+    <!-- signup form -->
+    <div class="signup" id="signup">
+      <h2>Start your free trial</h2>
+      <p class="sub">Provisioned within 1 business day. Cancel anytime — your data is yours.</p>
+      <form id="f" autocomplete="on">
+        <label>Company name</label>
+        <input name="company_name" required minlength="2" maxlength="120" placeholder="Acme Industries Pvt Ltd"/>
+        <label>Your full name</label>
+        <input name="contact_name" required placeholder="Priya Sharma"/>
+        <label>Work email</label>
+        <input name="contact_email" required type="email" placeholder="priya@acme.in"/>
+        <div class="row2">
+          <div>
+            <label>Phone <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+            <input name="contact_phone" type="tel" placeholder="+91 98xxxxxxxx"/>
+          </div>
+          <div>
+            <label>Preferred currency</label>
+            <select name="billing_currency">
+              <option value="INR" selected>₹ INR — India</option>
+              <option value="USD">$ USD — International</option>
+            </select>
+          </div>
+        </div>
+        <button id="b" class="btn-cta" type="submit">Create my account →</button>
+        <div class="small">By continuing, you agree to MyntReal&rsquo;s Terms &amp; Privacy. We&rsquo;ll never share your data.</div>
+        <div id="msg"></div>
+      </form>
+    </div>
+  </div>
+</header>
+
+<!-- ─── stats ─── -->
+<section class="stats">
+  <div class="container">
+    <div class="stat"><div class="n" id="stat-mods">550+</div><div class="l">Pre-built modules</div></div>
+    <div class="stat"><div class="n">14&nbsp;days</div><div class="l">Free trial</div></div>
+    <div class="stat"><div class="n">2 mins</div><div class="l">Average setup</div></div>
+    <div class="stat"><div class="n">100%</div><div class="l">Audited mutations</div></div>
+  </div>
+</section>
+
+<!-- ─── features ─── -->
+<section id="features">
+  <div class="container">
+    <div class="section-head">
+      <span class="pill">Everything you need</span>
+      <h2>One platform. Every business function.</h2>
+      <p>Activate only the modules your team needs today. Add more as you grow — pro-rata billing handles the math automatically.</p>
+    </div>
+    <div class="grid-cards">
+      <div class="card" style="--c1:#4f46e5;--c2:#7c3aed">
+        <div class="icon">🎯</div>
+        <h3>CRM &amp; Leads</h3>
+        <p>Capture, qualify and convert leads with pipelines, automations and a 360° contact view tailored to B2B sales motions.</p>
+        <span class="tag">Pipelines</span><span class="tag">Quotations</span><span class="tag">Reminders</span>
+      </div>
+      <div class="card" style="--c1:#0ea5e9;--c2:#06b6d4">
+        <div class="icon">📍</div>
+        <h3>Field Force &amp; SFMS</h3>
+        <p>Beat plans, geo-tagged check-ins, daily attendance and route optimisation for traveling reps and on-ground teams.</p>
+        <span class="tag">Beats</span><span class="tag">Attendance</span><span class="tag">Geo-fence</span>
+      </div>
+      <div class="card" style="--c1:#10b981;--c2:#059669">
+        <div class="icon">📦</div>
+        <h3>Inventory &amp; Dispatch</h3>
+        <p>Stock by warehouse, batch &amp; serial, dispatch workflows and automatic reorder points across multiple locations.</p>
+        <span class="tag">Multi-warehouse</span><span class="tag">Batches</span><span class="tag">Reorder</span>
+      </div>
+      <div class="card" style="--c1:#f59e0b;--c2:#ea580c">
+        <div class="icon">🧾</div>
+        <h3>Accounts &amp; GST</h3>
+        <p>Tally / Zoho-parity invoicing with GSTIN, HSN/SAC, taxable amount, grand total and balance-due — across multiple legal entities.</p>
+        <span class="tag">Multi-entity</span><span class="tag">GST</span><span class="tag">Tally export</span>
+      </div>
+      <div class="card" style="--c1:#ec4899;--c2:#db2777">
+        <div class="icon">👥</div>
+        <h3>Payroll &amp; HR</h3>
+        <p>From attendance to payroll, with leave policies, statutory components and payslip generation — paperless, compliant.</p>
+        <span class="tag">Attendance→Pay</span><span class="tag">Leaves</span><span class="tag">Payslips</span>
+      </div>
+      <div class="card" style="--c1:#8b5cf6;--c2:#6366f1">
+        <div class="icon">🎫</div>
+        <h3>Service Tickets</h3>
+        <p>SLA-tracked support with assignment, escalations and customer-facing portals — keep promises and prove it.</p>
+        <span class="tag">SLA</span><span class="tag">Escalations</span><span class="tag">Customer portal</span>
+      </div>
+      <div class="card" style="--c1:#14b8a6;--c2:#0ea5e9">
+        <div class="icon">🤝</div>
+        <h3>Business Partners</h3>
+        <p>Channel partner onboarding, commissions, rewards, tier programs and a self-serve partner dashboard.</p>
+        <span class="tag">Partners</span><span class="tag">Rewards</span><span class="tag">Tiers</span>
+      </div>
+      <div class="card" style="--c1:#64748b;--c2:#334155">
+        <div class="icon">🛡️</div>
+        <h3>Admin &amp; Configuration</h3>
+        <p>Role-based access, multi-tenant isolation, full audit log of every mutation, and module-level entitlements per plan.</p>
+        <span class="tag">RBAC</span><span class="tag">Audit log</span><span class="tag">Multi-tenant</span>
+      </div>
+      <div class="card" style="--c1:#ef4444;--c2:#f97316">
+        <div class="icon">📊</div>
+        <h3>Dashboards</h3>
+        <p>Role-tuned dashboards for owners, managers and reps — KPIs, leaderboards, and drill-throughs into every transaction.</p>
+        <span class="tag">KPIs</span><span class="tag">Leaderboards</span><span class="tag">Drill-down</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── module catalog ─── -->
+<section id="catalog" class="catalog">
+  <div class="container">
+    <div class="section-head">
+      <span class="pill">Live module catalog</span>
+      <h2>Pick &amp; choose only what you need.</h2>
+      <p>Every plan is module-level. Turn capabilities on or off — your invoice updates automatically with pro-rata billing for the days remaining in your cycle.</p>
+    </div>
+    <div id="cat-grid" class="catalog-grid"></div>
+    <div id="cat-msg"></div>
+  </div>
+</section>
+
+<!-- ─── how it works ─── -->
+<section>
+  <div class="container">
+    <div class="section-head">
+      <span class="pill">How it works</span>
+      <h2>From signup to live in under a day.</h2>
+      <p>No long onboarding. No pushy sales. A super-admin provisions you, you pick your modules, and you&rsquo;re running.</p>
+    </div>
+    <div class="how">
+      <div class="step"><h4>Sign up</h4><p>Tell us your company, your name and how you&rsquo;d like to be billed. That&rsquo;s it.</p></div>
+      <div class="step"><h4>Get provisioned</h4><p>A super-admin reviews and provisions your tenant within 1 business day — usually faster.</p></div>
+      <div class="step"><h4>Pick your modules</h4><p>Choose modules in our category-grouped picker. Add or remove anytime.</p></div>
+      <div class="step"><h4>Go live</h4><p>Invite your team, import your data, and you&rsquo;re running. Pro-rata billing handles the math.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── pricing ─── -->
+<section id="pricing" style="background:linear-gradient(180deg,#fafbff,#f0f4ff);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="container">
+    <div class="section-head">
+      <span class="pill">Transparent pricing</span>
+      <h2>Pay only for the modules you turn on.</h2>
+      <p>No bloated bundles. Module-level pricing with per-seat and per-company units, multi-currency, and full Tally/Zoho-parity invoicing.</p>
+    </div>
+    <div class="price-grid">
+      <div class="price">
+        <h3>Starter</h3>
+        <p class="tag">Small teams getting their first SaaS process in place.</p>
+        <div class="amount">₹ Talk to us<small> /mo</small></div>
+        <ul>
+          <li>Up to 5 modules</li>
+          <li>Up to 5 staff seats</li>
+          <li>Email support, 1 business day</li>
+          <li>Monthly invoicing</li>
+        </ul>
+      </div>
+      <div class="price featured">
+        <span class="badge">Most popular</span>
+        <h3>Growth</h3>
+        <p class="tag">Multi-team businesses ready for one operations platform.</p>
+        <div class="amount">₹ Custom<small> · per module · per seat</small></div>
+        <ul>
+          <li>All capability areas available</li>
+          <li>Multi-entity GST + Tally/Zoho parity</li>
+          <li>Pro-rata adjustment invoices</li>
+          <li>Audit log + RBAC</li>
+          <li>Priority support</li>
+        </ul>
+      </div>
+      <div class="price">
+        <h3>Enterprise</h3>
+        <p class="tag">For tenants needing custom modules, SSO and SLAs.</p>
+        <div class="amount">Let&rsquo;s talk</div>
+        <ul>
+          <li>Custom modules &amp; integrations</li>
+          <li>Dedicated success manager</li>
+          <li>SSO + IP allowlist</li>
+          <li>Annual contract with free months</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── faq ─── -->
+<section id="faq">
+  <div class="container">
+    <div class="section-head">
+      <span class="pill">Frequently asked</span>
+      <h2>You probably want to know…</h2>
+    </div>
+    <div class="faq">
+      <details open>
+        <summary>Do I need a credit card for the trial?</summary>
+        <p>No. Sign up with your work email and we&rsquo;ll provision your tenant for 14 days, free. You can decide on a plan only after you&rsquo;ve seen it run.</p>
+      </details>
+      <details>
+        <summary>How does pro-rata billing work?</summary>
+        <p>When you add or remove a module mid-cycle, we issue a single adjustment invoice for the remaining days of the current period. Per-seat modules multiply by your staff seat count automatically.</p>
+      </details>
+      <details>
+        <summary>Can I run multiple legal entities?</summary>
+        <p>Yes. Each tenant can have multiple GST-registered legal entities under one umbrella, with a default issuing entity for invoices. Tally/Zoho parity is built in.</p>
+      </details>
+      <details>
+        <summary>What happens to my data if I leave?</summary>
+        <p>Your data is yours. We provide full data exports on request. Your tenant is archived, not deleted, when you cancel — restore it whenever you want.</p>
+      </details>
+      <details>
+        <summary>Do you support multi-currency?</summary>
+        <p>Yes. Pick INR or USD per subscription. Module pricing is dual-currency, with per-client overrides if you need them.</p>
+      </details>
+      <details>
+        <summary>Is my access to features tracked?</summary>
+        <p>Every B2B mutation — module change, plan edit, subscription update, invoice issue — lands in the audit log with actor, before / after and timestamp.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─── cta strip ─── -->
+<section class="cta-strip">
+  <h2>Ready to run your business from one console?</h2>
+  <p>Start your 14-day trial. Cancel anytime. No credit card. No pushy sales.</p>
+  <a href="#signup" class="btn-cta">Start free trial →</a>
+</section>
+
+<footer>
+  <div class="container">
+    <div>© <span id="yr"></span> MyntReal · VGK4U SaaS Console · DC_SAAS_CONSOLE_001</div>
+    <div><a href="#top">Back to top ↑</a></div>
+  </div>
+</footer>
+
+<script>
+document.getElementById('yr').textContent = new Date().getFullYear();
+
+// ── live module catalog (anonymous endpoint; falls back gracefully) ──
+(async () => {
+  const grid = document.getElementById('cat-grid');
+  const msg  = document.getElementById('cat-msg');
+  // Curated colour map for the most common capability areas — anything else
+  // gets the brand gradient.
+  const palette = {
+    'CRM & LEADS':         ['#4f46e5','#7c3aed'],
+    'SFMS':                ['#0ea5e9','#06b6d4'],
+    'Inventory':           ['#10b981','#059669'],
+    'ACCOUNTS':            ['#f59e0b','#ea580c'],
+    'Payroll':             ['#ec4899','#db2777'],
+    'SERVICE TICKETS':     ['#8b5cf6','#6366f1'],
+    'BUSINESS PARTNERS':   ['#14b8a6','#0ea5e9'],
+    'TASK MANAGEMENT':     ['#64748b','#334155'],
+    'STAFF DASHBOARD':     ['#3b82f6','#0ea5e9'],
+    'ATTENDANCE':          ['#06b6d4','#0ea5e9'],
+    'Earnings':            ['#22c55e','#10b981'],
+    'CONFIGURATION':       ['#475569','#334155'],
+    'MNR ADMIN':           ['#ef4444','#f97316'],
+    'MNR USER':            ['#a855f7','#8b5cf6'],
+    'VGK4U MEMBER':        ['#4f46e5','#7c3aed'],
+    'MYNT REAL':           ['#0ea5e9','#7c3aed'],
+  };
+  // Curated short descriptions
+  const blurb = {
+    'CRM & LEADS':       'Pipelines, lead capture, quotations',
+    'SFMS':              'Field force, beats, route plans',
+    'Inventory':         'Stock, batches, dispatch',
+    'ACCOUNTS':          'Invoicing, GST, multi-entity',
+    'Payroll':           'Attendance to payslip, statutory',
+    'SERVICE TICKETS':   'SLA-tracked support flows',
+    'BUSINESS PARTNERS': 'Channel, rewards, tiers',
+    'TASK MANAGEMENT':   'Day plans, assignments, follow-ups',
+    'STAFF DASHBOARD':   'Role-tuned KPIs and tools',
+    'ATTENDANCE':        'Check-in, leaves, regularisation',
+    'Earnings':          'Commissions, payouts',
+    'CONFIGURATION':     'Settings, preferences, defaults',
+    'MNR ADMIN':         'Tenant administration',
+    'MNR USER':          'End-user portal modules',
+    'VGK4U MEMBER':      'Member benefits & wallet',
+    'MYNT REAL':         'Real-estate verticals',
+  };
+  // Catalog snapshot (sourced from the live DB on 2026-05-03 — 550 active
+  // modules across 69 capability areas). The marketing page is anonymous
+  // so we render this client-side rather than fetching an auth-gated
+  // endpoint, keeping the network log clean.
+  const cats = [
+    {category:'MNR ADMIN', count:152},
+    {category:'CONFIGURATION', count:34},
+    {category:'MNR USER', count:32},
+    {category:'VGK4U MEMBER', count:26},
+    {category:'ACCOUNTS', count:16},
+    {category:'SFMS', count:15},
+    {category:'CRM & LEADS', count:15},
+    {category:'Inventory', count:15},
+    {category:'STAFF DASHBOARD', count:11},
+    {category:'Earnings', count:10},
+    {category:'BUSINESS PARTNERS', count:9},
+    {category:'MYNT REAL', count:9},
+    {category:'ATTENDANCE', count:8},
+    {category:'SERVICE TICKETS', count:8},
+    {category:'TASK MANAGEMENT', count:7},
+    {category:'Payroll', count:7},
+  ];
+  const TOTAL_MODS = 550;
+  const TOTAL_CATS = 69;
+  // Render
+  const filtered = cats
+    .filter(c => c.category && !/HIDDEN|^—|^_/i.test(c.category))
+    .sort((a,b) => (b.count||0)-(a.count||0))
+    .slice(0, 16);
+  grid.innerHTML = filtered.map(c => {
+    const [c1,c2] = palette[c.category] || ['#4f46e5','#7c3aed'];
+    const desc = blurb[c.category] || 'Capability area';
+    return `<div class="cat-tile" style="--c1:${c1};--c2:${c2}">
+      <div class="h"><div class="b"></div><div class="name">${escapeHtml(c.category)}</div></div>
+      <div class="count">${c.count} modules · ${escapeHtml(desc)}</div>
+    </div>`;
+  }).join('');
+  msg.textContent = `Showing ${filtered.length} of ${TOTAL_CATS} capability areas — ${TOTAL_MODS.toLocaleString('en-IN')} modules in the catalog.`;
+})();
+
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ── signup form submission (unchanged contract) ──
+document.getElementById('f').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const b = document.getElementById('b'); const m = document.getElementById('msg');
+  b.disabled = true; b.textContent = 'Creating your account…'; m.innerHTML = '';
+  const fd = Object.fromEntries(new FormData(ev.target));
+  try {
+    const r = await fetch('/api/v1/platform-b2b/signup', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(fd),
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || j.message || ('HTTP '+r.status));
+    m.innerHTML = `<div class="ok-card">
+      <b>Welcome aboard! 🎉</b><br>
+      Tenant: <code>${escapeHtml(j.client_code||'')}</code><br>
+      Trial ends: <b>${escapeHtml(j.trial_ends_on || '—')}</b><br>
+      Status: <b>${escapeHtml(j.status||'pending')}</b><br><br>
+      Your account manager will reach out shortly to provision your modules. Please keep an eye on your inbox.
+    </div>`;
+    b.style.display = 'none';
+    // disable inputs
+    ev.target.querySelectorAll('input,select').forEach(el => el.disabled = true);
+  } catch (e) {
+    m.innerHTML = `<div class="err">⚠ ${escapeHtml(e.message)}</div>`;
+    b.disabled = false; b.textContent = 'Create my account →';
+  }
+});
+
+// Smooth-scroll for in-page anchors
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', (e) => {
+    const id = a.getAttribute('href');
+    if (id.length > 1) {
+      const t = document.querySelector(id);
+      if (t) { e.preventDefault(); t.scrollIntoView({behavior:'smooth', block:'start'}); }
+    }
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP Staff Portal - My Leads</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/wa-lead-modal.js"></script>
+    <script src="/shared/crm_lead_editor.js?v=20260316"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 24px; }
+        .page-header-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px; padding: 24px; color: white; margin-bottom: 24px;
+        }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-card.green { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+        .stat-card.purple { background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%); color: white; }
+        .stat-card.pink { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; }
+        .stat-card.blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+        .stat-card.orange { background: linear-gradient(135deg, #f97316 0%, #f59e0b 100%); color: white; }
+        .stat-card h3 { font-size: 2rem; font-weight: bold; margin-bottom: 4px; }
+        .stat-card h6 { font-size: 0.875rem; margin: 0; opacity: 0.9; }
+        .card { border: none; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-radius: 12px; }
+        .card-body { padding: 20px; }
+        .main-tabs .nav-link { border: none; color: #6b7280; font-weight: 600; font-size: 15px; padding: 14px 24px; border-bottom: 3px solid transparent; border-radius: 0; }
+        .main-tabs .nav-link.active { color: #4f46e5; border-bottom: 3px solid #4f46e5; background: transparent; }
+        .main-tabs .nav-link:hover:not(.active) { color: #374151; background: #f9fafb; }
+        .sub-tabs .nav-link { border: none; color: #6b7280; font-weight: 500; padding: 10px 18px; }
+        .sub-tabs .nav-link.active { color: #4f46e5; border-bottom: 2px solid #4f46e5; background: transparent; }
+        .table th { background: #f9fafb; font-weight: 600; font-size: 12px; text-transform: uppercase; color: #6b7280; }
+        .badge { font-weight: 500; padding: 5px 10px; }
+        .member-lookup-box { background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0ea5e9; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        .selected-member-card { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; }
+        .member-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; flex-shrink: 0; }
+        .lookup-results { max-height: 200px; overflow-y: auto; position: absolute; z-index: 1050; width: 100%; background: white; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+    <div class="content-area">
+
+        <div class="page-header-card">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h3 class="mb-2"><i class="fas fa-user-friends me-3"></i>My Leads</h3>
+                    <p class="mb-0 opacity-90">Manage your MNR leads and view any member's leads</p>
+                </div>
+                <div>
+                    <button class="btn btn-light btn-sm me-2" onclick="showAddLeadModal()">
+                        <i class="fas fa-plus me-2"></i>Add Lead
+                    </button>
+                    <a href="/staff/dashboard" class="btn btn-outline-light btn-sm">
+                        <i class="fas fa-home me-2"></i>Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body p-0">
+                <ul class="nav main-tabs" id="mainTabNav">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="myLeadsMainTab" onclick="switchMainTab('my')">
+                            <i class="fas fa-user me-2"></i>My MNR Leads
+                        </button>
+                    </li>
+                    <li class="nav-item" id="memberLookupTabItem">
+                        <button class="nav-link" id="memberLookupMainTab" onclick="switchMainTab('lookup')">
+                            <i class="fas fa-search-plus me-2"></i>MNR Member Lookup
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="myLeadsMainContent">
+            <div class="stats-row">
+                <div class="stat-card green">
+                    <div class="mb-2"><i class="fas fa-briefcase fa-2x opacity-75"></i></div>
+                    <h3 id="myLeadsCount">0</h3>
+                    <h6>Leads</h6>
+                </div>
+                <div class="stat-card purple">
+                    <div class="mb-2"><i class="fas fa-user-check fa-2x opacity-75"></i></div>
+                    <h3 id="assignedLeadsCount">0</h3>
+                    <h6>Assigned to Me</h6>
+                </div>
+                <div class="stat-card pink" id="freshLeadsCard" style="display:none">
+                    <div class="mb-2"><i class="fas fa-seedling fa-2x opacity-75"></i></div>
+                    <h3 id="freshLeadsCount">0</h3>
+                    <h6>Fresh Leads</h6>
+                </div>
+                <div class="stat-card blue">
+                    <div class="mb-2"><i class="fas fa-trophy fa-2x opacity-75"></i></div>
+                    <h3 id="wonLeadsCount">0</h3>
+                    <h6>Won Deals</h6>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body p-0">
+                    <ul class="nav sub-tabs" id="leadsTabNav">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="assigned-leads-tab" onclick="loadLeads('assigned')">
+                                <i class="fas fa-user-check me-2"></i>Assigned Leads
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="my-leads-tab" onclick="loadLeads('my')">
+                                <i class="fas fa-briefcase me-2"></i>Leads
+                            </button>
+                        </li>
+                        <li class="nav-item" style="display:none">
+                            <button class="nav-link" id="fresh-leads-tab" onclick="loadLeads('fresh')">
+                                <i class="fas fa-seedling me-2"></i>Fresh Leads
+                            </button>
+                        </li>
+                        <!-- DC Protocol (Apr 2026): T004 — Team tab for managers (auto-shown on manager login) -->
+                        <li class="nav-item" id="team-leads-tab-li" style="display:none">
+                            <button class="nav-link" id="team-leads-tab" onclick="loadLeads('team')">
+                                <i class="fas fa-users me-2"></i>Team Leads
+                                <span id="teamLeadsCount" style="background:#ede9fe;color:#7c3aed;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700;margin-left:4px">0</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="leadSearch" placeholder="Search leads..." onkeyup="debounceSearch()">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter" onchange="loadLeads()">
+                        <option value="">All Status</option>
+                        <option value="new">New</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="interested">Interested</option>
+                        <option value="negotiation">Negotiation</option>
+                        <option value="processing">Processing</option>
+                        <option value="won">Won</option>
+                        <option value="lost">Lost</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="priorityFilter" onchange="loadLeads()">
+                        <option value="">All Priority</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" id="handlerTypeFilter" onchange="loadLeads()">
+                        <option value="">All Handler Types</option>
+                        <option value="VGK4U">VGK4U</option>
+                        <option value="Walk-In">Walk-In</option>
+                        <option value="Showroom">Showroom</option>
+                        <option value="Direct">Direct</option>
+                    </select>
+                </div>
+                <div class="col-md-2 text-end">
+                    <button class="btn btn-primary me-1" onclick="loadLeads()">
+                        <i class="fas fa-filter me-1"></i>Filter
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="resetAllFilters()">
+                        <i class="fas fa-undo me-1"></i>Reset
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="leadsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Lead</th>
+                                    <th>Contact</th>
+                                    <th>Category</th>
+                                    <th>Company</th>
+                                    <th>Handler Type</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Last Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTableBody">
+                                <tr><td colspan="9" class="text-center py-5">
+                                    <div class="spinner-border text-primary"></div>
+                                    <p class="mt-3 text-muted">Loading leads...</p>
+                                </td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav id="paginationNav" class="mt-3">
+                        <ul class="pagination justify-content-center" id="paginationList"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <div id="memberLookupMainContent" style="display:none">
+            <div class="member-lookup-box">
+                <h6 class="text-primary fw-bold mb-3"><i class="fas fa-search me-2"></i>Search MNR Member</h6>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">MNR ID or Name</label>
+                        <div class="position-relative">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="fas fa-user text-primary"></i></span>
+                                <input type="text" class="form-control" id="memberLookupSearch" placeholder="Type MNR ID or name..." oninput="onMemberLookupInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();doMemberLookupSearch();}">
+                                <button class="btn btn-primary" type="button" onclick="doMemberLookupSearch()"><i class="fas fa-search me-1"></i>Search</button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearMemberLookup()"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div id="memberLookupResults" class="lookup-results" style="display:none"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="memberStatusFilter" onchange="loadMemberLeads()">
+                            <option value="">All Status</option>
+                            <option value="new">New</option>
+                            <option value="contacted">Contacted</option>
+                            <option value="interested">Interested</option>
+                            <option value="negotiation">Negotiation</option>
+                            <option value="processing">Processing</option>
+                            <option value="won">Won</option>
+                            <option value="lost">Lost</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="memberLeadSearch" placeholder="Search leads..." oninput="debounceMemberSearch()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="selectedMemberCard" style="display:none">
+                <div class="selected-member-card">
+                    <div class="member-avatar" id="memberAvatarInitial">?</div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold fs-6" id="selectedMemberName">-</div>
+                        <div class="text-muted small" id="selectedMemberId">-</div>
+                        <div class="text-muted small" id="selectedMemberPhone">-</div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary" id="memberAssignedBadge">0 assigned</span>
+                        <span class="badge bg-success" id="memberLeadsBadge">0 leads</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-body p-0">
+                        <ul class="nav sub-tabs border-bottom px-3">
+                            <li class="nav-item">
+                                <button class="nav-link active" id="member-assigned-tab" onclick="switchMemberSegment('assigned')">
+                                    <i class="fas fa-user-check me-2"></i>Assigned Leads
+                                    <span class="badge bg-primary ms-1" id="memberAssignedBadgeTab">0</span>
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" id="member-my-tab" onclick="switchMemberSegment('my')">
+                                    <i class="fas fa-briefcase me-2"></i>Leads
+                                    <span class="badge bg-success ms-1" id="memberMyBadgeTab">0</span>
+                                </button>
+                            </li>
+                        </ul>
+                        <div class="p-3">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Lead</th>
+                                            <th>Contact</th>
+                                            <th>Category</th>
+                                            <th>Company</th>
+                                            <th>Status</th>
+                                            <th>Priority</th>
+                                            <th>Ground Source</th>
+                                            <th>Last Updated</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="memberLeadsTableBody">
+                                        <tr><td colspan="9" class="text-center py-4 text-muted">Select an MNR member above to view their leads</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <nav id="memberPaginationNav" class="mt-3">
+                                <ul class="pagination justify-content-center" id="memberPaginationList"></ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="memberLookupPlaceholder" class="text-center py-5">
+                <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                <p class="text-muted">Search for an MNR member above to view their leads</p>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <div class="modal fade" id="addLeadModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add New Lead</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addLeadForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Company <span class="text-danger">*</span></label>
+                                <select class="form-select" id="leadCompany" required onchange="onLeadCompanyChange()">
+                                    <option value="">Select Company</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Category</label>
+                                <select class="form-select" id="leadCategory">
+                                    <option value="">Select Category</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="leadName" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <input type="email" class="form-control" id="leadEmail">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone (Primary) <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" id="leadPhone" placeholder="10-digit phone" required>
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox" id="leadPhoneWhatsapp" checked>
+                                    <label class="form-check-label small" for="leadPhoneWhatsapp">WhatsApp Available</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone (Secondary)</label>
+                                <input type="tel" class="form-control" id="leadPhoneSecondary" placeholder="Alternate phone">
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox" id="leadPhoneSecondaryWhatsapp">
+                                    <label class="form-check-label small" for="leadPhoneSecondaryWhatsapp">WhatsApp Available</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Source</label>
+                                <select class="form-select" id="leadSource">
+                                    <option value="">Select Source</option>
+                                    <option value="referral">Referral</option>
+                                    <option value="website">Website</option>
+                                    <option value="social_media">Social Media</option>
+                                    <option value="walk_in">Walk-in</option>
+                                    <option value="exhibition">Exhibition</option>
+                                    <option value="advertisement">Advertisement</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Priority</label>
+                                <select class="form-select" id="leadPriority">
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="leadStatus">
+                                    <option value="new">New</option>
+                                    <option value="contacted">Contacted</option>
+                                    <option value="interested">Interested</option>
+                                    <option value="negotiation">Negotiation</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Next Follow-up Date</label>
+                                <input type="datetime-local" class="form-control" id="leadNextFollowup">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">PIN Code</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="leadPincode" placeholder="6-digit PIN" maxlength="6">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="lookupPincode()"><i class="fas fa-search"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Area / Locality</label>
+                                <input type="text" class="form-control" id="leadArea">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">City</label>
+                                <input type="text" class="form-control" id="leadCity">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">State</label>
+                                <input type="text" class="form-control" id="leadState">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Budget Min</label>
+                                <input type="number" class="form-control" id="leadBudgetMin" placeholder="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Budget Max</label>
+                                <input type="number" class="form-control" id="leadBudgetMax" placeholder="0">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Looking For</label>
+                                <textarea class="form-control" id="leadLookingFor" rows="2"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Description / Notes</label>
+                                <textarea class="form-control" id="leadDescription" rows="2"></textarea>
+                            </div>
+                            <div class="col-12 mt-3"><hr><h6 class="text-primary"><i class="fas fa-users me-2"></i>On Ground Team</h6></div>
+                            <div class="col-md-3">
+                                <label class="form-label">Ground Source <span class="text-muted small">(MNR / VGK / Partner)</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="addLeadMnrSearch" placeholder="Search MNR / VGK / Partner...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearAddLeadMnr()"><i class="fas fa-times"></i></button>
+                                </div>
+                                <input type="hidden" id="addLeadMnrId">
+                                <input type="hidden" id="addLeadMnrType">
+                                <div id="addLeadMnrResults" class="list-group mt-1" style="max-height:150px;overflow-y:auto;display:none;position:absolute;z-index:1050;width:90%;"></div>
+                                <div id="addLeadMnrSelected" class="mt-1"></div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Senior <span class="text-muted small">(Auto)</span></label>
+                                <input type="text" class="form-control bg-light" id="addLeadGuruDisplay" readonly placeholder="Auto from upline">
+                                <input type="hidden" id="addLeadGuruId">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Extended <span class="text-muted small">(Auto)</span></label>
+                                <input type="text" class="form-control bg-light" id="addLeadZGuruDisplay" readonly placeholder="Auto from Senior upline">
+                                <input type="hidden" id="addLeadZGuruId">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">On Ground Support <span class="text-muted small">(Search)</span></label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="addLeadAdiGuruSearch" placeholder="Search MNR / VGK / Partner...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearAddLeadAdiGuru()"><i class="fas fa-times"></i></button>
+                                </div>
+                                <input type="hidden" id="addLeadAdiGuruId">
+                                <div id="addLeadAdiGuruResults" class="list-group mt-1" style="max-height:150px;overflow-y:auto;display:none;position:absolute;z-index:1050;width:90%;"></div>
+                                <div id="addLeadAdiGuruSelected" class="mt-1"></div>
+                            </div>
+                            <!-- VGK Program Attribution — DC Protocol Mar 2026 -->
+                            <div class="col-12 mt-3"><hr><h6 style="color:#7c3aed"><i class="fas fa-sitemap me-2"></i>VGK Program Attribution</h6></div>
+                            <div class="col-md-4 d-flex align-items-center mt-1 mb-2">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="addLeadIsVgkProgram" onchange="toggleAddVgkSection(this.checked)" style="width:38px;height:20px;cursor:pointer">
+                                    <label class="form-check-label fw-semibold ms-1" for="addLeadIsVgkProgram" style="color:#7c3aed">VGK Program Deal</label>
+                                </div>
+                            </div>
+                            <div class="col-md-8" id="addVgkFieldSupportSection" style="display:none">
+                                <label class="form-label" style="font-size:12px;color:#6b7280;text-transform:uppercase;font-weight:700">VGK Field Support <span class="text-muted">(L3 Commission)</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background:#ede9fe;border-color:#ddd6fe"><i class="fas fa-user-check" style="color:#7c3aed"></i></span>
+                                    <input type="text" class="form-control" id="addLeadVgkFsSearch" placeholder="Search active VGK members…" oninput="searchAddVgkFs(this.value)" autocomplete="off" style="border-color:#ddd6fe">
+                                    <button class="btn" type="button" style="background:#ede9fe;border-color:#ddd6fe;color:#7c3aed" onclick="clearAddVgkFs()"><i class="fas fa-times"></i></button>
+                                </div>
+                                <input type="hidden" id="addLeadVgkFsId">
+                                <div id="addLeadVgkFsDropdown" style="position:absolute;z-index:1060;background:white;border:1px solid #ddd6fe;border-radius:8px;box-shadow:0 4px 12px rgba(124,58,237,.12);display:none;min-width:260px;max-height:150px;overflow-y:auto;margin-top:2px"></div>
+                                <div id="addLeadVgkFsSelected" class="mt-1" style="font-size:12px;color:#7c3aed;font-weight:600"></div>
+                            </div>
+
+                            <div class="col-12 mt-3"><hr><h6 class="text-success"><i class="fas fa-headset me-2"></i>Staff Assignment</h6></div>
+                            <div class="col-md-4">
+                                <label class="form-label">Tele Caller</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="addLeadTeleCallerSearch" placeholder="Search staff...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearAddLeadTeleCaller()"><i class="fas fa-times"></i></button>
+                                </div>
+                                <input type="hidden" id="addLeadTeleCallerId">
+                                <div id="addLeadTeleCallerResults" class="list-group mt-1" style="max-height:150px;overflow-y:auto;display:none;position:absolute;z-index:1050;width:90%;"></div>
+                                <div id="addLeadTeleCallerSelected" class="mt-1"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Field Staff</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="addLeadFieldStaffSearch" placeholder="Search staff...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearAddLeadFieldStaff()"><i class="fas fa-times"></i></button>
+                                </div>
+                                <input type="hidden" id="addLeadFieldStaffId">
+                                <div id="addLeadFieldStaffResults" class="list-group mt-1" style="max-height:150px;overflow-y:auto;display:none;position:absolute;z-index:1050;width:90%;"></div>
+                                <div id="addLeadFieldStaffSelected" class="mt-1"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Business Partner</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="addLeadPartnerSearch" placeholder="Search partner...">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="clearAddLeadPartner()"><i class="fas fa-times"></i></button>
+                                </div>
+                                <input type="hidden" id="addLeadPartnerId">
+                                <div id="addLeadPartnerResults" class="list-group mt-1" style="max-height:150px;overflow-y:auto;display:none;position:absolute;z-index:1050;width:90%;"></div>
+                                <div id="addLeadPartnerSelected" class="mt-1"></div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitNewLead()"><i class="fas fa-save me-2"></i>Save Lead</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="leadDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="leadDetailTitle">Lead Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="leadDetailBody">
+                    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="crmLeadEditorContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    let currentSegment = 'assigned';
+    let currentPage = 1;
+    let searchTimeout = null;
+    let memberSearchTimeout = null;
+    let memberLookupTimeout = null;
+    let currentMemberId = null;
+    let currentMemberPage = 1;
+    let currentMemberSegment = 'assigned';
+    let userCompanyId = null;
+    let userHierarchyLevel = 0;
+    let isStaffUser = true;
+
+    function getAuthFetchOptions(additionalHeaders = {}) {
+        return { credentials: 'include', headers: { ...additionalHeaders } };
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function getStatusBadge(status) {
+        const map = {
+            new: 'bg-secondary', contacted: 'bg-info', interested: 'bg-primary',
+            negotiation: 'bg-warning text-dark', processing: 'bg-purple', won: 'bg-success', lost: 'bg-danger'
+        };
+        const label = { processing: 'Processing', won: 'Won', lost: 'Lost', new: 'New', contacted: 'Contacted', interested: 'Interested', negotiation: 'Negotiation' };
+        const cls = map[status] || 'bg-secondary';
+        return `<span class="badge ${cls}" style="${status==='processing'?'background:#7c3aed!important':''}">${label[status] || status}</span>`;
+    }
+
+    function getPriorityBadge(priority) {
+        const map = { high: 'bg-danger', medium: 'bg-warning text-dark', low: 'bg-success' };
+        return `<span class="badge ${map[priority] || 'bg-secondary'}">${priority || '-'}</span>`;
+    }
+
+    function switchMainTab(tab) {
+        const myBtn = document.getElementById('myLeadsMainTab');
+        const lookupBtn = document.getElementById('memberLookupMainTab');
+        const myContent = document.getElementById('myLeadsMainContent');
+        const lookupContent = document.getElementById('memberLookupMainContent');
+        if (tab === 'my') {
+            myBtn.classList.add('active'); lookupBtn.classList.remove('active');
+            myContent.style.display = ''; lookupContent.style.display = 'none';
+        } else {
+            myBtn.classList.remove('active'); lookupBtn.classList.add('active');
+            myContent.style.display = 'none'; lookupContent.style.display = '';
+        }
+    }
+
+    function activateSubTab(segment) {
+        // DC Protocol (Apr 2026): T004 — include 'team' tab in sub-tab toggling
+        ['assigned','my','fresh','team'].forEach(s => {
+            const tabEl = document.getElementById(s === 'my' ? 'my-leads-tab' : s + '-leads-tab');
+            if (tabEl) tabEl.classList.toggle('active', s === segment);
+        });
+    }
+
+    async function initializePage() {
+        if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        if (typeof StaffHeader !== 'undefined') {
+            StaffHeader.inject('My Leads', 'fas fa-user-friends');
+            StaffHeader.init();
+        }
+        try {
+            const resp = await fetch('/api/v1/staff/auth/me', getAuthFetchOptions());
+            if (!resp.ok) { window.location.href = '/staff/login'; return; }
+            const data = await resp.json();
+            if (data.success && data.data) {
+                userCompanyId = data.data.base_company_id || null;
+                userHierarchyLevel = data.data.hierarchy_level || 0;
+                window._uleCompanyId = userCompanyId; // DC Protocol N004: expose for polling IIFE
+            }
+        } catch(e) {
+            console.error('[DC] Auth error:', e);
+        }
+        await loadCompanies();
+
+        // DC Protocol (Apr 2026): T004 — Auto-detect manager role and switch to team view
+        let isManager = false;
+        try {
+            const teamCheckResp = await fetch('/api/v1/crm/unified-my-leads?segment=team&role=mnr&per_page=1', getAuthFetchOptions());
+            const teamCheckData = await teamCheckResp.json();
+            if (teamCheckData.success) {
+                isManager = true;
+                const teamTabLi = document.getElementById('team-leads-tab-li');
+                if (teamTabLi) teamTabLi.style.display = '';
+                const teamCountEl = document.getElementById('teamLeadsCount');
+                if (teamCountEl) teamCountEl.textContent = teamCheckData.total || teamCheckData.pagination?.total || 0;
+            }
+        } catch(e) { /* not a manager or API unavailable */ }
+
+        if (isManager) {
+            loadLeads('team');
+        } else {
+            loadLeads('assigned');
+        }
+        updateLeadCounts();
+        initStaffSearchListeners();
+        initAddLeadMnrListeners();
+        initCRMLeadEditor();
+    }
+
+    function debounceSearch() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => loadLeads(), 300);
+    }
+
+    async function loadLeads(segment = null) {
+        if (segment) { currentSegment = segment; activateSubTab(segment); currentPage = 1; }
+        const params = new URLSearchParams({
+            segment: currentSegment,
+            role: 'mnr',
+            page: currentPage,
+            per_page: 20
+        });
+        const search = document.getElementById('leadSearch')?.value?.trim();
+        const status = document.getElementById('statusFilter')?.value;
+        const priority = document.getElementById('priorityFilter')?.value;
+        if (search) params.append('search', search);
+        if (status) params.append('status', status);
+        if (priority) params.append('priority', priority);
+        const handlerType = document.getElementById('handlerTypeFilter')?.value;
+        if (handlerType) params.append('handler_type', handlerType);
+
+        document.getElementById('leadsTableBody').innerHTML = `<tr><td colspan="9" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>`;
+        try {
+            const resp = await fetch(`/api/v1/crm/unified-my-leads?${params}`, getAuthFetchOptions());
+            const data = await resp.json();
+            if (data.success) {
+                renderLeadsTable(data.data || []);
+                renderPagination(data.pagination, 'paginationList', goToPage);
+            } else {
+                document.getElementById('leadsTableBody').innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${data.detail || 'Error loading leads'}</td></tr>`;
+            }
+        } catch(e) {
+            console.error('[DC] Load leads error:', e);
+            document.getElementById('leadsTableBody').innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">Error loading leads</td></tr>`;
+        }
+    }
+
+    function getHandlerTypeBadge(ht) {
+        const map = {
+            'VGK4U':    ['#f5f3ff','#7c3aed','fa-sitemap'],
+            'Walk-In':  ['#eff6ff','#1d4ed8','fa-walking'],
+            'Showroom': ['#f0fdf4','#166534','fa-store'],
+            'Direct':   ['#f9fafb','#374151','fa-user'],
+        };
+        const [bg, clr, icon] = map[ht] || ['#f9fafb','#6b7280','fa-question'];
+        return `<span style="background:${bg};color:${clr};border-radius:12px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap"><i class="fas ${icon} me-1"></i>${ht || 'Direct'}</span>`;
+    }
+
+    function renderLeadsTable(leads) {
+        const tbody = document.getElementById('leadsTableBody');
+        if (!leads.length) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted"><i class="fas fa-inbox fa-2x mb-3 d-block"></i>No leads found</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = leads.map(lead => `
+            <tr>
+                <td><div class="fw-semibold">${escapeHtml(lead.name)}</div><small class="text-muted">#${lead.id}</small></td>
+                <td><div>${escapeHtml(lead.phone || '-')}</div><small class="text-muted">${escapeHtml(lead.email || '')}</small></td>
+                <td><small>${escapeHtml(lead.category_name || '-')}</small></td>
+                <td><small>${escapeHtml(lead.company_name || '-')}</small></td>
+                <td>${getHandlerTypeBadge(lead.lead_handler_type || lead.handler_type_label || '')}</td>
+                <td>${getStatusBadge(lead.status)}</td>
+                <td>${getPriorityBadge(lead.priority)}</td>
+                <td><small class="text-muted">${lead.updated_at ? new Date(lead.updated_at).toLocaleDateString('en-IN') : '-'}</small></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="viewLead(${lead.id}, ${lead.company_id})" title="View"><i class="fas fa-eye"></i></button>
+                    <button class="btn btn-sm btn-outline-success" onclick="editLead(${lead.id}, ${lead.company_id})" title="Edit"><i class="fas fa-edit"></i></button>
+                    ${currentSegment === 'fresh' ? `<button class="btn btn-sm btn-outline-warning ms-1" onclick="claimLead(${lead.id})"><i class="fas fa-hand-paper me-1"></i>Claim</button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function renderPagination(pagination, listId, gotoFn) {
+        const list = document.getElementById(listId);
+        if (!list || !pagination || pagination.total_pages <= 1) { if(list) list.innerHTML = ''; return; }
+        const { page, total_pages } = pagination;
+        let html = '';
+        if (page > 1) html += `<li class="page-item"><a class="page-link" href="#" onclick="${gotoFn.name}(${page-1});return false;">«</a></li>`;
+        for (let i = Math.max(1, page-2); i <= Math.min(total_pages, page+2); i++) {
+            html += `<li class="page-item ${i===page?'active':''}"><a class="page-link" href="#" onclick="${gotoFn.name}(${i});return false;">${i}</a></li>`;
+        }
+        if (page < total_pages) html += `<li class="page-item"><a class="page-link" href="#" onclick="${gotoFn.name}(${page+1});return false;">»</a></li>`;
+        list.innerHTML = html;
+    }
+
+    function goToPage(page) { currentPage = page; loadLeads(); }
+    function goToMemberPage(page) { currentMemberPage = page; loadMemberLeads(); }
+
+    function resetAllFilters() {
+        document.getElementById('leadSearch').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('priorityFilter').value = '';
+        const htf = document.getElementById('handlerTypeFilter');
+        if (htf) htf.value = '';
+        loadLeads();
+    }
+
+    async function updateLeadCounts() {
+        try {
+            const [r1, r2, r3, r4] = await Promise.all([
+                fetch('/api/v1/crm/unified-my-leads?segment=my&role=mnr&page=1&per_page=1', getAuthFetchOptions()),
+                fetch('/api/v1/crm/unified-my-leads?segment=assigned&role=mnr&page=1&per_page=1', getAuthFetchOptions()),
+                fetch('/api/v1/crm/unified-my-leads?segment=fresh&role=mnr&page=1&per_page=1', getAuthFetchOptions()),
+                fetch('/api/v1/crm/unified-my-leads?segment=my&role=mnr&status=won&page=1&per_page=1', getAuthFetchOptions())
+            ]);
+            const [d1, d2, d3, d4] = await Promise.all([r1.json(), r2.json(), r3.json(), r4.json()]);
+            document.getElementById('myLeadsCount').textContent = d1.pagination?.total || 0;
+            document.getElementById('assignedLeadsCount').textContent = d2.pagination?.total || 0;
+            document.getElementById('freshLeadsCount').textContent = d3.pagination?.total || 0;
+            document.getElementById('wonLeadsCount').textContent = d4.pagination?.total || 0;
+        } catch(e) { console.error('[DC] Count error:', e); }
+    }
+
+    async function claimLead(leadId) {
+        if (!confirm('Claim this lead?')) return;
+        try {
+            const resp = await fetch(`/api/v1/crm/unified-my-leads/claim/${leadId}?role=mnr`, { method: 'POST', ...getAuthFetchOptions({'Content-Type':'application/json'}) });
+            const data = await resp.json();
+            if (data.success) { alert('Lead claimed!'); loadLeads('my'); updateLeadCounts(); }
+            else alert(data.detail || 'Error claiming lead');
+        } catch(e) { alert('Error claiming lead'); }
+    }
+
+    async function viewLead(leadId, companyId) {
+        if (!companyId) { alert('Lead company information missing.'); return; }
+        const modal = new bootstrap.Modal(document.getElementById('leadDetailModal'));
+        document.getElementById('leadDetailBody').innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
+        modal.show();
+        try {
+            const resp = await fetch(`/api/v1/crm/unified-my-leads/${leadId}/details?company_id=${companyId}&role=mnr`, getAuthFetchOptions());
+            const data = await resp.json();
+            if (data.success) {
+                const lead = data.data;
+                document.getElementById('leadDetailTitle').textContent = lead.name || 'Lead Details';
+                document.getElementById('leadDetailBody').innerHTML = `
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2">Contact Information</h6>
+                            <p><strong>Name:</strong> ${escapeHtml(lead.name || '-')}</p>
+                            <p><strong>Phone:</strong> ${escapeHtml(lead.phone || '-')}</p>
+                            <p><strong>Email:</strong> ${escapeHtml(lead.email || '-')}</p>
+                            <p><strong>City:</strong> ${escapeHtml(lead.city || '-')}</p>
+                            <p><strong>State:</strong> ${escapeHtml(lead.state || '-')}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2">Lead Details</h6>
+                            <p><strong>Status:</strong> ${getStatusBadge(lead.status)}</p>
+                            <p><strong>Priority:</strong> ${getPriorityBadge(lead.priority)}</p>
+                            <p><strong>Category:</strong> ${escapeHtml(lead.category_name || '-')}</p>
+                            <p><strong>Source:</strong> ${escapeHtml(lead.source || '-')}</p>
+                            <p><strong>Company:</strong> ${escapeHtml(lead.company_name || '-')}</p>
+                        </div>
+                        ${lead.description ? `<div class="col-12"><h6 class="border-bottom pb-2">Description</h6><p>${escapeHtml(lead.description)}</p></div>` : ''}
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2"><i class="fas fa-users me-2"></i>On Ground Team</h6>
+                            <div class="row">
+                                <div class="col-md-3"><strong>Ground Source:</strong><br>${escapeHtml(lead.source_ref_name || lead.mnr_handler_name || lead.mnr_handler_id || '-')}</div>
+                                <div class="col-md-3"><strong>Guru:</strong><br>${escapeHtml(lead.guru_name || lead.guru_id || '-')}</div>
+                                <div class="col-md-3"><strong>Extended:</strong><br>${escapeHtml(lead.z_guru_name || lead.z_guru_id || '-')}</div>
+                                <div class="col-md-3"><strong>On Ground Support:</strong><br>${escapeHtml(lead.field_support_ref_name || lead.adi_guru_name || lead.adi_guru_id || '-')}</div>
+                            </div>
+                        </div>
+                        ${lead.is_vgk_program ? `<div class="col-12"><div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 14px"><span style="color:#7c3aed;font-weight:700"><i class="fas fa-sitemap me-1"></i>VGK Program Deal</span>${lead.vgk_field_support_id ? ` &nbsp;|&nbsp; <strong>Field Support:</strong> ${escapeHtml(lead.vgk_field_support_name || lead.vgk_field_support_id)}` : ''}</div></div>` : ''}
+                        ${lead.phone ? `<div class="col-12"><button onclick="openLeadWAModal(${lead.id},'${escapeHtml((lead.phone||'').replace(/\D/g,'').slice(-10))}','${escapeHtml(lead.name||'')}',${lead.company_id||'null'})" style="background:#25D366;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;width:100%"><i class='fab fa-whatsapp me-2'></i>Send WhatsApp</button></div>` : ''}
+                    </div>`;
+            } else {
+                document.getElementById('leadDetailBody').innerHTML = `<div class="alert alert-danger">${data.detail || 'Error loading lead'}</div>`;
+            }
+        } catch(e) {
+            document.getElementById('leadDetailBody').innerHTML = `<div class="alert alert-danger">Error loading lead details</div>`;
+        }
+    }
+
+    function editLead(leadId, companyId) {
+        if (!companyId) { alert('Lead company information missing.'); return; }
+        if (window.crmLeadEditor) window.crmLeadEditor.openEditModal(leadId, companyId);
+        else alert('Lead editor not available. Please refresh.');
+    }
+
+    function initCRMLeadEditor() {
+        if (typeof CRMLeadEditor !== 'undefined') {
+            window.crmLeadEditor = new CRMLeadEditor({
+                containerId: 'crmLeadEditorContainer',
+                userRole: 'staff',
+                companyId: userCompanyId,
+                authOptions: { credentials: 'include' },
+                onSave: function() { loadLeads(); if (currentMemberId) loadMemberLeads(); }
+            });
+            window.crmLeadEditor.init();
+        } else {
+            setTimeout(initCRMLeadEditor, 500);
+        }
+    }
+
+    function onMemberLookupInput() {
+        clearTimeout(memberLookupTimeout);
+        const q = document.getElementById('memberLookupSearch').value.trim();
+        if (q.length < 2) { document.getElementById('memberLookupResults').style.display = 'none'; return; }
+        memberLookupTimeout = setTimeout(() => searchMemberLookup(q), 300);
+    }
+
+    async function doMemberLookupSearch() {
+        const q = document.getElementById('memberLookupSearch').value.trim();
+        if (!q) return;
+        document.getElementById('memberLookupResults').style.display = 'none';
+        try {
+            const resp = await fetch(`/api/v1/crm/unified-my-leads/search-mnr?q=${encodeURIComponent(q)}`, getAuthFetchOptions());
+            const data = await resp.json();
+            if (data.success && data.data.length > 0) {
+                const exact = data.data.find(u => u.id.toLowerCase() === q.toLowerCase());
+                const match = exact || data.data[0];
+                selectMemberForLookup(match.id, match.name || '', match.phone || '');
+            } else {
+                const resultsDiv = document.getElementById('memberLookupResults');
+                resultsDiv.innerHTML = '<div class="list-group-item text-muted py-2 px-3">No MNR member found</div>';
+                resultsDiv.style.display = 'block';
+            }
+        } catch(e) { console.error('[DC] Member lookup error:', e); }
+    }
+
+    async function searchMemberLookup(q) {
+        try {
+            const resp = await fetch(`/api/v1/crm/unified-my-leads/search-mnr?q=${encodeURIComponent(q)}`, getAuthFetchOptions());
+            const data = await resp.json();
+            const resultsDiv = document.getElementById('memberLookupResults');
+            if (data.success && data.data.length > 0) {
+                resultsDiv.innerHTML = data.data.map(u => `
+                    <button type="button" class="list-group-item list-group-item-action py-2 px-3" onclick="selectMemberForLookup('${u.id}', '${escapeHtml(u.name || '')}', '${escapeHtml(u.phone || '')}')">
+                        <strong>${u.id}</strong> — ${escapeHtml(u.name || '')}
+                        <span class="float-end text-muted small">${u.phone || ''}</span>
+                        ${!u.is_active ? '<span class="badge bg-secondary ms-1">Inactive</span>' : ''}
+                    </button>
+                `).join('');
+            } else {
+                resultsDiv.innerHTML = '<div class="list-group-item text-muted py-2 px-3">No MNR members found</div>';
+            }
+            resultsDiv.style.display = 'block';
+        } catch(e) { console.error('[DC] Member search error:', e); }
+    }
+
+    function selectMemberForLookup(mnrId, name, phone) {
+        currentMemberId = mnrId;
+        currentMemberPage = 1;
+        currentMemberSegment = 'assigned';
+        document.getElementById('memberLookupSearch').value = `${name} (${mnrId})`;
+        document.getElementById('memberLookupResults').style.display = 'none';
+        document.getElementById('selectedMemberName').textContent = name || mnrId;
+        document.getElementById('selectedMemberId').textContent = 'ID: ' + mnrId;
+        document.getElementById('selectedMemberPhone').textContent = phone || '';
+        document.getElementById('memberAvatarInitial').textContent = (name || mnrId).charAt(0).toUpperCase();
+        document.getElementById('selectedMemberCard').style.display = '';
+        document.getElementById('memberLookupPlaceholder').style.display = 'none';
+        document.getElementById('member-assigned-tab').classList.add('active');
+        document.getElementById('member-my-tab').classList.remove('active');
+        loadMemberLeadCounts();
+        loadMemberLeads();
+    }
+
+    function switchMemberSegment(segment) {
+        currentMemberSegment = segment;
+        currentMemberPage = 1;
+        document.getElementById('member-assigned-tab').classList.toggle('active', segment === 'assigned');
+        document.getElementById('member-my-tab').classList.toggle('active', segment === 'my');
+        loadMemberLeads();
+    }
+
+    function clearMemberLookup() {
+        currentMemberId = null;
+        currentMemberSegment = 'assigned';
+        document.getElementById('memberLookupSearch').value = '';
+        document.getElementById('memberLookupResults').style.display = 'none';
+        document.getElementById('selectedMemberCard').style.display = 'none';
+        document.getElementById('memberLookupPlaceholder').style.display = '';
+        document.getElementById('memberLeadsTableBody').innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">Select an MNR member above to view their leads</td></tr>';
+        document.getElementById('memberPaginationList').innerHTML = '';
+        document.getElementById('memberAssignedBadge').textContent = '0 assigned';
+        document.getElementById('memberLeadsBadge').textContent = '0 leads';
+        document.getElementById('memberAssignedBadgeTab').textContent = '0';
+        document.getElementById('memberMyBadgeTab').textContent = '0';
+    }
+
+    function debounceMemberSearch() {
+        clearTimeout(memberSearchTimeout);
+        memberSearchTimeout = setTimeout(() => { if (currentMemberId) loadMemberLeads(); }, 300);
+    }
+
+    async function loadMemberLeadCounts() {
+        if (!currentMemberId) return;
+        try {
+            const [r1, r2] = await Promise.all([
+                fetch(`/api/v1/crm/unified-my-leads?segment=assigned&target_user_id=${currentMemberId}&page=1&per_page=1`, getAuthFetchOptions()),
+                fetch(`/api/v1/crm/unified-my-leads?segment=my&target_user_id=${currentMemberId}&page=1&per_page=1`, getAuthFetchOptions())
+            ]);
+            const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+            const assignedTotal = d1.success ? (d1.pagination?.total || 0) : 0;
+            const myTotal = d2.success ? (d2.pagination?.total || 0) : 0;
+            document.getElementById('memberAssignedBadge').textContent = assignedTotal + ' assigned';
+            document.getElementById('memberLeadsBadge').textContent = myTotal + ' leads';
+            document.getElementById('memberAssignedBadgeTab').textContent = assignedTotal;
+            document.getElementById('memberMyBadgeTab').textContent = myTotal;
+        } catch(e) {}
+    }
+
+    async function loadMemberLeads() {
+        if (!currentMemberId) return;
+        const params = new URLSearchParams({
+            segment: currentMemberSegment,
+            target_user_id: currentMemberId,
+            page: currentMemberPage,
+            per_page: 20
+        });
+        const search = document.getElementById('memberLeadSearch')?.value?.trim();
+        const status = document.getElementById('memberStatusFilter')?.value;
+        if (search) params.append('search', search);
+        if (status) params.append('status', status);
+
+        document.getElementById('memberLeadsTableBody').innerHTML = `<tr><td colspan="9" class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>`;
+        try {
+            const resp = await fetch(`/api/v1/crm/unified-my-leads?${params}`, getAuthFetchOptions());
+            const data = await resp.json();
+            if (data.success) {
+                const leads = data.data || [];
+                renderMemberLeadsTable(leads);
+                renderPagination(data.pagination, 'memberPaginationList', goToMemberPage);
+            } else {
+                document.getElementById('memberLeadsTableBody').innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">${data.detail || 'Error loading leads'}</td></tr>`;
+            }
+        } catch(e) {
+            console.error('[DC] Member leads error:', e);
+            document.getElementById('memberLeadsTableBody').innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">Error loading leads</td></tr>`;
+        }
+    }
+
+    function renderMemberLeadsTable(leads) {
+        const tbody = document.getElementById('memberLeadsTableBody');
+        if (!leads.length) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted"><i class="fas fa-inbox fa-2x mb-3 d-block"></i>No leads found for this member</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = leads.map(lead => `
+            <tr>
+                <td><div class="fw-semibold">${escapeHtml(lead.name)}</div><small class="text-muted">#${lead.id}</small></td>
+                <td><div>${escapeHtml(lead.phone || '-')}</div><small class="text-muted">${escapeHtml(lead.email || '')}</small></td>
+                <td><small>${escapeHtml(lead.category_name || '-')}</small></td>
+                <td><small>${escapeHtml(lead.company_name || '-')}</small></td>
+                <td>${getStatusBadge(lead.status)}</td>
+                <td>${getPriorityBadge(lead.priority)}</td>
+                <td><small class="text-muted">${escapeHtml(lead.mnr_handler_name || lead.mnr_handler_id || '-')}</small></td>
+                <td><small class="text-muted">${lead.updated_at ? new Date(lead.updated_at).toLocaleDateString('en-IN') : '-'}</small></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="viewLead(${lead.id}, ${lead.company_id})" title="View"><i class="fas fa-eye"></i></button>
+                    <button class="btn btn-sm btn-outline-success" onclick="editLead(${lead.id}, ${lead.company_id})" title="Edit"><i class="fas fa-edit"></i></button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function showAddLeadModal() {
+        document.getElementById('addLeadForm').reset();
+        document.getElementById('addLeadMnrId').value = '';
+        document.getElementById('addLeadMnrType').value = '';
+        document.getElementById('addLeadMnrSelected').innerHTML = '';
+        document.getElementById('addLeadGuruId').value = '';
+        document.getElementById('addLeadGuruDisplay').value = '';
+        document.getElementById('addLeadZGuruId').value = '';
+        document.getElementById('addLeadZGuruDisplay').value = '';
+        document.getElementById('addLeadAdiGuruId').value = '';
+        document.getElementById('addLeadAdiGuruSelected').innerHTML = '';
+        document.getElementById('addLeadTeleCallerId').value = '';
+        document.getElementById('addLeadTeleCallerSelected').innerHTML = '';
+        document.getElementById('addLeadFieldStaffId').value = '';
+        document.getElementById('addLeadFieldStaffSelected').innerHTML = '';
+        document.getElementById('addLeadPartnerId').value = '';
+        document.getElementById('addLeadPartnerSelected').innerHTML = '';
+        await loadCompaniesForModal();
+        new bootstrap.Modal(document.getElementById('addLeadModal')).show();
+    }
+
+    async function loadCompanies() {
+        try {
+            const resp = await fetch('/api/v1/crm/unified-my-leads/search-mnr?q=a', getAuthFetchOptions());
+        } catch(e) {}
+    }
+
+    async function loadCompaniesForModal() {
+        try {
+            const resp = await fetch('/api/v1/staff/accounts/companies', getAuthFetchOptions());
+            const data = await resp.json();
+            const select = document.getElementById('leadCompany');
+            const companies = (data.companies || data.data || []).filter(c => c.is_active !== false);
+            if (companies.length) {
+                select.innerHTML = '<option value="">Select Company</option>' +
+                    companies.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+            } else {
+                select.innerHTML = '<option value="">No companies available</option>';
+            }
+        } catch(e) { console.error('[DC] Load companies error:', e); }
+    }
+
+    function onLeadCompanyChange() {
+        const companyId = document.getElementById('leadCompany').value;
+        if (companyId) loadCategories(parseInt(companyId));
+        else document.getElementById('leadCategory').innerHTML = '<option value="">Select Category</option>';
+    }
+
+    async function loadCategories(companyId) {
+        try {
+            let url = '/api/v1/crm/signup/categories';
+            if (companyId) url += `?company_id=${companyId}`;
+            const resp = await fetch(url, getAuthFetchOptions());
+            const data = await resp.json();
+            if (data.success) {
+                document.getElementById('leadCategory').innerHTML = '<option value="">Select Category</option>' +
+                    data.data.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+            }
+        } catch(e) {}
+    }
+
+    async function lookupPincode() {
+        const pin = document.getElementById('leadPincode').value.trim();
+        if (!pin || pin.length !== 6) { alert('Enter a valid 6-digit PIN'); return; }
+        try {
+            const resp = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+            const data = await resp.json();
+            if (data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
+                const po = data[0].PostOffice[0];
+                document.getElementById('leadCity').value = po.District || '';
+                document.getElementById('leadState').value = po.State || '';
+                document.getElementById('leadArea').value = po.Name || '';
+            } else alert('PIN code not found');
+        } catch(e) {}
+    }
+
+    async function submitNewLead() {
+        const name = document.getElementById('leadName').value.trim();
+        const phone = document.getElementById('leadPhone').value.trim();
+        const companyId = document.getElementById('leadCompany').value;
+        if (!companyId) { alert('Please select a Company'); return; }
+        if (!name || !phone) { alert('Please fill in Name and Phone'); return; }
+        try {
+            const payload = {
+                company_id: parseInt(companyId),
+                name, phone,
+                phone_primary_whatsapp: document.getElementById('leadPhoneWhatsapp').checked,
+                alternate_phone: document.getElementById('leadPhoneSecondary').value.trim() || null,
+                email: document.getElementById('leadEmail').value.trim() || null,
+                category_id: document.getElementById('leadCategory').value || null,
+                priority: document.getElementById('leadPriority').value,
+                status: document.getElementById('leadStatus').value,
+                source: document.getElementById('leadSource').value || null,
+                next_followup_date: document.getElementById('leadNextFollowup').value || null,
+                pincode: document.getElementById('leadPincode').value.trim() || null,
+                area: document.getElementById('leadArea').value.trim() || null,
+                city: document.getElementById('leadCity').value.trim() || null,
+                state: document.getElementById('leadState').value.trim() || null,
+                budget_min: parseInt(document.getElementById('leadBudgetMin').value) || null,
+                budget_max: parseInt(document.getElementById('leadBudgetMax').value) || null,
+                looking_for: document.getElementById('leadLookingFor').value.trim() || null,
+                description: document.getElementById('leadDescription').value.trim() || null,
+                mnr_handler_id: document.getElementById('addLeadMnrId').value || null,
+                guru_id: document.getElementById('addLeadGuruId').value || null,
+                z_guru_id: document.getElementById('addLeadZGuruId').value || null,
+                guru_name: (() => { const _t = document.getElementById('addLeadMnrType').value || ''; if (!['mnr','vgk'].includes(_t) && _t) { return (document.getElementById('addLeadGuruDisplay').value || '').replace(/\s*\[Partner\s*L[12]\]\s*$/i,'').replace(/\s*\([^)]*\)\s*$/,'').trim() || null; } return null; })(),
+                z_guru_name: (() => { const _t = document.getElementById('addLeadMnrType').value || ''; if (!['mnr','vgk'].includes(_t) && _t) { return (document.getElementById('addLeadZGuruDisplay').value || '').replace(/\s*\[Partner\s*L[12]\]\s*$/i,'').replace(/\s*\([^)]*\)\s*$/,'').trim() || null; } return null; })(),
+                adi_guru_id: document.getElementById('addLeadAdiGuruId').value || null,
+                source_ref_type: document.getElementById('addLeadMnrType').value || null,
+                source_ref_id: document.getElementById('addLeadMnrId').value || null,
+                source_ref_name: (document.getElementById('addLeadMnrSelected').querySelector('.badge')?.textContent?.trim().replace(/\s*\(.*\)\s*$/, '').trim()) || null,
+                field_support_ref_id: document.getElementById('addLeadAdiGuruId').value || null,
+                is_vgk_program: document.getElementById('addLeadIsVgkProgram').checked,
+                vgk_field_support_id: document.getElementById('addLeadVgkFsId').value || null
+            };
+            const tcId = document.getElementById('addLeadTeleCallerId').value;
+            const fsId = document.getElementById('addLeadFieldStaffId').value;
+            const pId = document.getElementById('addLeadPartnerId').value;
+            if (tcId) payload.telecaller_id = parseInt(tcId);
+            if (fsId) payload.field_staff_id = parseInt(fsId);
+            if (pId) payload.associated_partner_id = parseInt(pId);
+
+            const resp = await fetch('/api/v1/crm/unified-my-leads?role=mnr', {
+                method: 'POST',
+                ...getAuthFetchOptions({'Content-Type':'application/json'}),
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addLeadModal')).hide();
+                alert('Lead added successfully!');
+                loadLeads('my');
+                updateLeadCounts();
+            } else alert(data.detail || 'Error adding lead');
+        } catch(e) { alert('Error adding lead'); }
+    }
+
+    let addLeadMnrSearchTimeout = null;
+    let addLeadAdiGuruSearchTimeout = null;
+    let addLeadTeleCallerTimeout = null;
+    let addLeadFieldStaffTimeout = null;
+    let addLeadPartnerTimeout = null;
+
+    function initAddLeadMnrListeners() {
+        document.getElementById('addLeadMnrSearch').addEventListener('input', function() {
+            clearTimeout(addLeadMnrSearchTimeout);
+            const q = this.value.trim();
+            if (q.length < 2) { document.getElementById('addLeadMnrResults').style.display='none'; return; }
+            addLeadMnrSearchTimeout = setTimeout(() => searchAddLeadMnr(q), 300);
+        });
+        document.getElementById('addLeadAdiGuruSearch').addEventListener('input', function() {
+            clearTimeout(addLeadAdiGuruSearchTimeout);
+            const q = this.value.trim();
+            if (q.length < 2) { document.getElementById('addLeadAdiGuruResults').style.display='none'; return; }
+            addLeadAdiGuruSearchTimeout = setTimeout(() => searchAddLeadAdiGuru(q), 300);
+        });
+    }
+
+    async function searchAddLeadMnr(query) {
+        try {
+            const resp = await fetch(`/api/v1/crm/network-search?q=${encodeURIComponent(query)}&limit=10`, getAuthFetchOptions());
+            const data = await resp.json();
+            const resultsDiv = document.getElementById('addLeadMnrResults');
+            if (data.success && data.results && data.results.length > 0) {
+                const typeColors = { mnr: '#0d6efd', vgk: '#7c3aed', partner: '#198754' };
+                const typeLabels = { mnr: 'MNR', vgk: 'VGK', partner: 'Partner' };
+                resultsDiv.innerHTML = data.results.map(r => {
+                    const color = typeColors[r.type] || '#6c757d';
+                    const label = typeLabels[r.type] || r.type;
+                    const sponsorInfo = r.sponsor_name ? `<small class="text-muted"> ↳ ${r.sponsor_name}</small>` : '';
+                    return `<button type="button" class="list-group-item list-group-item-action py-2" onclick='selectAddLeadMnrMember(${JSON.stringify(r)})'>
+                        <span class="badge me-1" style="background:${color};font-size:10px">${label}</span>
+                        <strong>${escapeHtml(r.name||r.display||r.id)}</strong> <small class="text-muted">(${r.code||r.id})</small>${sponsorInfo}
+                    </button>`;
+                }).join('');
+            } else {
+                resultsDiv.innerHTML = '<div class="list-group-item text-muted py-2">No results found</div>';
+            }
+            resultsDiv.style.display = 'block';
+        } catch(e) {}
+    }
+
+    function selectAddLeadMnrMember(member) {
+        document.getElementById('addLeadMnrId').value = member.id;
+        document.getElementById('addLeadMnrType').value = member.type || '';
+        document.getElementById('addLeadMnrSearch').value = '';
+        document.getElementById('addLeadMnrResults').style.display = 'none';
+        document.getElementById('addLeadMnrSelected').innerHTML = `<span class="badge bg-success p-2">${escapeHtml(member.name || member.display || member.id)} (${member.code || member.id})</span>`;
+        if (member.type === 'partner') {
+            document.getElementById('addLeadGuruId').value = '';
+            document.getElementById('addLeadGuruDisplay').value = '';
+            document.getElementById('addLeadZGuruId').value = '';
+            document.getElementById('addLeadZGuruDisplay').value = '';
+        } else {
+            if (member.sponsor_id) {
+                document.getElementById('addLeadGuruId').value = member.sponsor_id;
+                document.getElementById('addLeadGuruDisplay').value = member.sponsor_name ? `${member.sponsor_name} (${member.sponsor_id})` : member.sponsor_id;
+            } else { document.getElementById('addLeadGuruId').value = ''; document.getElementById('addLeadGuruDisplay').value = ''; }
+            if (member.z_sponsor_id) {
+                document.getElementById('addLeadZGuruId').value = member.z_sponsor_id;
+                document.getElementById('addLeadZGuruDisplay').value = member.z_sponsor_name ? `${member.z_sponsor_name} (${member.z_sponsor_id})` : member.z_sponsor_id;
+            } else { document.getElementById('addLeadZGuruId').value = ''; document.getElementById('addLeadZGuruDisplay').value = ''; }
+        }
+    }
+
+    // Legacy compat
+    async function selectAddLeadMnr(id, name) { selectAddLeadMnrMember({ id, name, type: 'mnr', code: id, display: name }); }
+
+    async function searchAddLeadAdiGuru(query) {
+        try {
+            const resp = await fetch(`/api/v1/crm/network-search?q=${encodeURIComponent(query)}&limit=10`, getAuthFetchOptions());
+            const data = await resp.json();
+            const resultsDiv = document.getElementById('addLeadAdiGuruResults');
+            if (data.success && data.results && data.results.length > 0) {
+                const typeColors = { mnr: '#0d6efd', vgk: '#7c3aed', partner: '#198754' };
+                const typeLabels = { mnr: 'MNR', vgk: 'VGK', partner: 'Partner' };
+                resultsDiv.innerHTML = data.results.map(r => {
+                    const color = typeColors[r.type] || '#6c757d';
+                    const label = typeLabels[r.type] || r.type;
+                    return `<button type="button" class="list-group-item list-group-item-action py-2" onclick="selectAddLeadAdiGuru('${r.id}', '${(r.name||r.display||'').replace(/'/g,"\\'")}')">
+                        <span class="badge me-1" style="background:${color};font-size:10px">${label}</span>
+                        <strong>${escapeHtml(r.name||r.display||r.id)}</strong> <small class="text-muted">(${r.code||r.id})</small>
+                    </button>`;
+                }).join('');
+            } else {
+                resultsDiv.innerHTML = '<div class="list-group-item text-muted py-2">No results found</div>';
+            }
+            resultsDiv.style.display = 'block';
+        } catch(e) {}
+    }
+
+    function selectAddLeadAdiGuru(id, name) {
+        document.getElementById('addLeadAdiGuruId').value = id;
+        document.getElementById('addLeadAdiGuruSearch').value = '';
+        document.getElementById('addLeadAdiGuruResults').style.display = 'none';
+        document.getElementById('addLeadAdiGuruSelected').innerHTML = `<span class="badge bg-info p-2">${escapeHtml(name || id)}</span>`;
+    }
+
+    function clearAddLeadMnr() {
+        document.getElementById('addLeadMnrId').value = '';
+        document.getElementById('addLeadMnrType').value = '';
+        document.getElementById('addLeadMnrSearch').value = '';
+        document.getElementById('addLeadMnrResults').style.display = 'none';
+        document.getElementById('addLeadMnrSelected').innerHTML = '';
+        document.getElementById('addLeadGuruId').value = '';
+        document.getElementById('addLeadGuruDisplay').value = '';
+        document.getElementById('addLeadZGuruId').value = '';
+        document.getElementById('addLeadZGuruDisplay').value = '';
+    }
+    function clearAddLeadAdiGuru() {
+        document.getElementById('addLeadAdiGuruId').value = '';
+        document.getElementById('addLeadAdiGuruSearch').value = '';
+        document.getElementById('addLeadAdiGuruResults').style.display = 'none';
+        document.getElementById('addLeadAdiGuruSelected').innerHTML = '';
+    }
+    function clearAddLeadTeleCaller() {
+        document.getElementById('addLeadTeleCallerId').value = '';
+        document.getElementById('addLeadTeleCallerSearch').value = '';
+        document.getElementById('addLeadTeleCallerResults').style.display = 'none';
+        document.getElementById('addLeadTeleCallerSelected').innerHTML = '';
+    }
+    function clearAddLeadFieldStaff() {
+        document.getElementById('addLeadFieldStaffId').value = '';
+        document.getElementById('addLeadFieldStaffSearch').value = '';
+        document.getElementById('addLeadFieldStaffResults').style.display = 'none';
+        document.getElementById('addLeadFieldStaffSelected').innerHTML = '';
+    }
+    function clearAddLeadPartner() {
+        document.getElementById('addLeadPartnerId').value = '';
+        document.getElementById('addLeadPartnerSearch').value = '';
+        document.getElementById('addLeadPartnerResults').style.display = 'none';
+        document.getElementById('addLeadPartnerSelected').innerHTML = '';
+    }
+
+    function initStaffSearchListeners() {
+        const fields = [
+            { inputId: 'addLeadTeleCallerSearch', resultsId: 'addLeadTeleCallerResults', type: 'TeleCaller', timeout: null },
+            { inputId: 'addLeadFieldStaffSearch', resultsId: 'addLeadFieldStaffResults', type: 'FieldStaff', timeout: null },
+        ];
+        fields.forEach(f => {
+            document.getElementById(f.inputId)?.addEventListener('input', function() {
+                clearTimeout(f.timeout);
+                const q = this.value.trim();
+                if (q.length < 2) { document.getElementById(f.resultsId).style.display='none'; return; }
+                f.timeout = setTimeout(() => searchStaff(q, f.type), 300);
+            });
+        });
+        document.getElementById('addLeadPartnerSearch')?.addEventListener('input', function() {
+            clearTimeout(addLeadPartnerTimeout);
+            const q = this.value.trim();
+            if (q.length < 2) { document.getElementById('addLeadPartnerResults').style.display='none'; return; }
+            addLeadPartnerTimeout = setTimeout(() => searchPartner(q), 300);
+        });
+    }
+
+    async function searchStaff(query, type) {
+        try {
+            const resp = await fetch(`/api/v1/crm/unified-my-leads/search-staff?q=${encodeURIComponent(query)}`, getAuthFetchOptions());
+            const data = await resp.json();
+            const resultsDiv = document.getElementById(`addLead${type}Results`);
+            if (data.success && data.data.length > 0) {
+                resultsDiv.innerHTML = data.data.map(s => `
+                    <button type="button" class="list-group-item list-group-item-action py-2" onclick="selectStaff('${s.id}','${(s.name||'').replace(/'/g,"\\'")}','${s.emp_code||''}','${type}')">
+                        <strong>${escapeHtml(s.emp_code||'')}</strong> - ${escapeHtml(s.name||'')} <small class="text-muted">${escapeHtml(s.designation||'')}</small>
+                    </button>
+                `).join('');
+            } else resultsDiv.innerHTML = '<div class="list-group-item text-muted py-2">No staff found</div>';
+            resultsDiv.style.display = 'block';
+        } catch(e) {}
+    }
+
+    function selectStaff(id, name, empCode, type) {
+        document.getElementById(`addLead${type}Id`).value = id;
+        document.getElementById(`addLead${type}Search`).value = '';
+        document.getElementById(`addLead${type}Results`).style.display = 'none';
+        document.getElementById(`addLead${type}Selected`).innerHTML = `<span class="badge bg-success p-2"><i class="fas fa-user-tie me-1"></i>${escapeHtml(name||empCode)}</span>`;
+    }
+
+    async function searchPartner(query) {
+        try {
+            const resp = await fetch(`/api/v1/crm/unified-my-leads/search-partner?q=${encodeURIComponent(query)}`, getAuthFetchOptions());
+            const data = await resp.json();
+            const resultsDiv = document.getElementById('addLeadPartnerResults');
+            if (data.success && data.data.length > 0) {
+                resultsDiv.innerHTML = data.data.map(p => `
+                    <button type="button" class="list-group-item list-group-item-action py-2" onclick="selectPartner('${p.id}','${(p.name||'').replace(/'/g,"\\'")}','${p.code||''}')">
+                        <strong>${escapeHtml(p.code||'')}</strong> - ${escapeHtml(p.name||'')} <small class="text-muted">${escapeHtml(p.category||'')}</small>
+                    </button>
+                `).join('');
+            } else resultsDiv.innerHTML = '<div class="list-group-item text-muted py-2">No partners found</div>';
+            resultsDiv.style.display = 'block';
+        } catch(e) {}
+    }
+
+    function selectPartner(id, name, code) {
+        document.getElementById('addLeadPartnerId').value = id;
+        document.getElementById('addLeadPartnerSearch').value = '';
+        document.getElementById('addLeadPartnerResults').style.display = 'none';
+        document.getElementById('addLeadPartnerSelected').innerHTML = `<span class="badge bg-info p-2"><i class="fas fa-handshake me-1"></i>${escapeHtml(name||code)}</span>`;
+    }
+
+    // ── VGK Program Attribution helpers ────────────────────────────────
+    function toggleAddVgkSection(on) {
+        document.getElementById('addVgkFieldSupportSection').style.display = on ? '' : 'none';
+        if (!on) {
+            document.getElementById('addLeadVgkFsId').value = '';
+            document.getElementById('addLeadVgkFsSearch').value = '';
+            document.getElementById('addLeadVgkFsSelected').textContent = '';
+            document.getElementById('addLeadVgkFsDropdown').style.display = 'none';
+        }
+    }
+    let addVgkFsTimer = null;
+    async function searchAddVgkFs(q) {
+        const dd = document.getElementById('addLeadVgkFsDropdown');
+        clearTimeout(addVgkFsTimer);
+        if (!q || q.length < 2) { dd.style.display = 'none'; return; }
+        addVgkFsTimer = setTimeout(async () => {
+            try {
+                const resp = await staffFetch('/api/v1/vgk/members/search?q=' + encodeURIComponent(q));
+                const data = await resp.json();
+                if (!data.success || !data.data.length) { dd.style.display = 'none'; return; }
+                dd.innerHTML = data.data.map(m =>
+                    `<div style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;font-size:13px" onmousedown="selectAddVgkFs('${m.id}','${(m.partner_name||'').replace(/'/g,"\\'")}','${(m.partner_code||'').replace(/'/g,"\\'")}')">
+                        <strong>${m.partner_name}</strong> <span style="color:#7c3aed">${m.partner_code}</span>
+                    </div>`
+                ).join('');
+                dd.style.display = 'block';
+            } catch(e) { dd.style.display = 'none'; }
+        }, 280);
+    }
+    function selectAddVgkFs(id, name, code) {
+        document.getElementById('addLeadVgkFsId').value = id;
+        document.getElementById('addLeadVgkFsSearch').value = name + ' (' + code + ')';
+        document.getElementById('addLeadVgkFsSelected').textContent = name + ' (' + code + ')';
+        document.getElementById('addLeadVgkFsDropdown').style.display = 'none';
+    }
+    function clearAddVgkFs() {
+        document.getElementById('addLeadVgkFsId').value = '';
+        document.getElementById('addLeadVgkFsSearch').value = '';
+        document.getElementById('addLeadVgkFsSelected').textContent = '';
+        document.getElementById('addLeadVgkFsDropdown').style.display = 'none';
+    }
+    window.toggleAddVgkSection = toggleAddVgkSection;
+    window.searchAddVgkFs = searchAddVgkFs;
+    window.selectAddVgkFs = selectAddVgkFs;
+    window.clearAddVgkFs = clearAddVgkFs;
+    // ──────────────────────────────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/staff_header.js"></script>
+
+    <!-- DC Protocol N004: Unclaimed Lead Popup -->
+    <div id="ule_unclaimedToast" style="display:none;position:fixed;bottom:24px;right:24px;z-index:99999;max-width:340px;width:100%;"></div>
+
+    <script>
+    (function() {
+        const POLL_INTERVAL_MS = 30000;
+        let _seenIds = new Set();
+        let _pollTimer = null;
+        let _toastHideTimers = {};
+
+        function _auth() {
+            try {
+                const t = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token') || '';
+                return t ? { headers: { 'Authorization': 'Bearer ' + t } } : {};
+            } catch(e) { return {}; }
+        }
+
+        async function pollUnclaimed() {
+            try {
+                const cid = window._uleCompanyId;
+                if (!cid) return; // wait until company is loaded
+                const res = await fetch(`/api/v1/crm/unclaimed-leads?company_id=${cid}`, _auth());
+                if (!res.ok) return;
+                const d = await res.json();
+                if (!d.success || !Array.isArray(d.data)) return;
+                d.data.forEach(lead => {
+                    if (!_seenIds.has(lead.id)) {
+                        _seenIds.add(lead.id);
+                        showUnclaimedToast(lead);
+                    }
+                });
+            } catch(e) {}
+        }
+
+        function showUnclaimedToast(lead) {
+            const container = document.getElementById('ule_unclaimedToast');
+            if (!container) return;
+            container.style.display = 'block';
+
+            const card = document.createElement('div');
+            card.id = 'ule_uc_' + lead.id;
+            card.style.cssText = 'background:#fff;border:2px solid #f59e0b;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.18);padding:14px 16px;margin-top:10px;animation:ule_slideIn .35s ease;position:relative';
+
+            const age = lead.created_at ? (() => {
+                const diff = Math.round((Date.now() - new Date(lead.created_at + (lead.created_at.includes('Z') ? '' : 'Z')).getTime()) / 60000);
+                return diff < 1 ? 'just now' : diff + 'm ago';
+            })() : '';
+
+            card.innerHTML = `
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+                    <div style="flex:1;min-width:0">
+                        <div style="font-weight:700;color:#92400e;font-size:13px;margin-bottom:2px">
+                            <i class="fas fa-exclamation-circle me-1" style="color:#f59e0b"></i>New Unclaimed Lead
+                        </div>
+                        <div style="font-size:13px;font-weight:600;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(lead.name || 'Unknown')}</div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:2px">
+                            ${lead.category_name ? esc(lead.category_name) + ' &nbsp;·&nbsp; ' : ''}${age}
+                        </div>
+                    </div>
+                    <button onclick="dismissUnclaimedToast(${lead.id})" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1;padding:0;flex-shrink:0">×</button>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px">
+                    <button onclick="claimUnclaimedLead(${lead.id}, ${lead.company_id || 'null'})" id="ule_claimBtn_${lead.id}"
+                        style="flex:1;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-weight:700;font-size:12px;cursor:pointer">
+                        <i class="fas fa-hand-paper me-1"></i>Claim Lead
+                    </button>
+                    <button onclick="dismissUnclaimedToast(${lead.id})"
+                        style="padding:7px 12px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-weight:600;font-size:12px;cursor:pointer">
+                        Dismiss
+                    </button>
+                </div>`;
+            container.appendChild(card);
+
+            // Auto-dismiss after 60s
+            _toastHideTimers[lead.id] = setTimeout(() => dismissUnclaimedToast(lead.id), 60000);
+        }
+
+        window.dismissUnclaimedToast = function(leadId) {
+            clearTimeout(_toastHideTimers[leadId]);
+            const card = document.getElementById('ule_uc_' + leadId);
+            if (card) card.remove();
+            const container = document.getElementById('ule_unclaimedToast');
+            if (container && !container.querySelector('[id^="ule_uc_"]')) container.style.display = 'none';
+        };
+
+        window.claimUnclaimedLead = async function(leadId, companyId) {
+            const btn = document.getElementById('ule_claimBtn_' + leadId);
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Claiming…'; }
+            try {
+                const params = companyId ? `?company_id=${companyId}` : '';
+                const res = await fetch(`/api/v1/crm/leads/${leadId}/claim${params}`, { method: 'POST', ..._auth() });
+                const d = await res.json();
+                if (d.success) {
+                    const card = document.getElementById('ule_uc_' + leadId);
+                    if (card) {
+                        card.style.borderColor = '#10b981';
+                        card.innerHTML = `<div style="text-align:center;padding:8px 0;color:#059669;font-weight:700"><i class="fas fa-check-circle me-2"></i>Lead Claimed Successfully!</div>`;
+                        setTimeout(() => dismissUnclaimedToast(leadId), 2500);
+                    }
+                    if (typeof loadLeads === 'function') setTimeout(loadLeads, 1000);
+                } else {
+                    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-hand-paper me-1"></i>Claim Lead'; }
+                    alert(d.detail || 'Could not claim — already taken');
+                }
+            } catch(e) {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-hand-paper me-1"></i>Claim Lead'; }
+            }
+        };
+
+        function esc(str) { return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        // Start polling after page load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(pollUnclaimed, 5000); // first call after 5s
+            _pollTimer = setInterval(pollUnclaimed, POLL_INTERVAL_MS);
+        });
+    })();
+    </script>
+    <style>
+    @keyframes ule_slideIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    </style>
+</body>
+</html>

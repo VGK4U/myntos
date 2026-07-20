@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Banner API Test</title>
+</head>
+<body>
+    <h1>Testing Banner API</h1>
+    <button onclick="testAPI()">Test API Call</button>
+    <pre id="result"></pre>
+
+    <script>
+        function getSessionToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'sessionToken') {
+                    return value;
+                }
+            }
+            return null;
+        }
+
+        async function testAPI() {
+            const token = getSessionToken();
+            const resultEl = document.getElementById('result');
+            
+            resultEl.textContent = 'Session Token: ' + (token || 'NOT FOUND') + '\n\n';
+            
+            if (!token) {
+                resultEl.textContent += 'ERROR: No session token in cookies\n';
+                resultEl.textContent += 'Cookies: ' + document.cookie;
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/v1/rvz/banners/queue', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                resultEl.textContent += 'Response Status: ' + response.status + '\n\n';
+                
+                const data = await response.json();
+                resultEl.textContent += 'Response Data:\n' + JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                resultEl.textContent += 'ERROR: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

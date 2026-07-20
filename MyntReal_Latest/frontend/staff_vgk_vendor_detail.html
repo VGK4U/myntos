@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Detail — Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;background:#f0fdf4}
+        .main-content{padding:24px;max-width:1200px;margin-left:auto;margin-right:auto}
+        .page-header{background:linear-gradient(135deg,#064e3b,#059669);border-radius:14px;padding:24px 28px;color:#fff;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+        .page-header h1{font-size:20px;font-weight:800;margin-bottom:4px}
+        .tabs{display:flex;gap:0;background:#fff;border-radius:10px;border:1.5px solid #bbf7d0;overflow:hidden;margin-bottom:22px;flex-wrap:wrap}
+        .tab{padding:11px 16px;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border-right:1.5px solid #bbf7d0;transition:all .2s;text-align:center}
+        .tab:last-child{border-right:none}
+        .tab.active{background:#059669;color:#fff}
+        .tab:hover:not(.active){background:#f0fdf4}
+        .card{background:#fff;border-radius:12px;border:1.5px solid #d1fae5;padding:20px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        .card-title{font-size:14px;font-weight:700;color:#064e3b;margin-bottom:14px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+        .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px}
+        @media(max-width:700px){.info-grid{grid-template-columns:1fr 1fr}}
+        .info-item label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
+        .info-item .val{font-size:14px;font-weight:700;color:#111;margin-top:2px}
+        .info-item .val.green{color:#059669}
+        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+        .form-row.full{grid-template-columns:1fr}
+        .form-row.three{grid-template-columns:1fr 1fr 1fr}
+        .form-group label{font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;display:block}
+        .form-group input,.form-group select,.form-group textarea{width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 12px;font-size:13px;outline:none}
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#059669}
+        .btn-primary{background:#059669;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+        .btn-primary:hover{background:#047857}
+        .btn-outline{background:#fff;color:#059669;border:1.5px solid #059669;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+        .btn-outline:hover{background:#f0fdf4}
+        .btn-danger{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:600}
+        .btn-sm{padding:5px 12px;font-size:12px}
+        .btn-xs{padding:3px 10px;font-size:11px;border-radius:6px}
+        .badge{border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;display:inline-block}
+        .badge-active{background:#d1fae5;color:#065f46}
+        .badge-pending{background:#fef3c7;color:#92400e}
+        .badge-suspended{background:#fee2e2;color:#991b1b}
+        .badge-approved{background:#d1fae5;color:#065f46}
+        .badge-rejected{background:#fee2e2;color:#991b1b}
+        .kyc-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0fdf4;font-size:13px}
+        .kyc-row:last-child{border-bottom:none}
+        .prod-cat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0fdf4;font-size:13px}
+        .prod-cat-row:last-child{border-bottom:none}
+        .qr-box{text-align:center;padding:16px}
+        .qr-box img{max-width:180px;border:3px solid #d1fae5;border-radius:12px;padding:8px}
+        .qr-url{font-size:12px;color:#6b7280;word-break:break-all;margin-top:8px}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center}
+        .modal-overlay.show{display:flex}
+        .modal-box{background:#fff;border-radius:14px;padding:28px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+        .modal-title{font-size:16px;font-weight:800;color:#111;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center}
+        .alert{border-radius:8px;padding:12px 14px;font-size:13px;margin-bottom:12px}
+        .alert-success{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+        .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+        .alert-info{background:#dbeafe;color:#1e40af;border:1px solid #93c5fd}
+        .stat-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+        .stat-card{flex:1;min-width:130px;background:#fff;border-radius:12px;padding:16px 18px;border:1.5px solid #d1fae5}
+        .stat-card .label{font-size:11px;color:#6b7280;text-transform:uppercase;margin-bottom:6px}
+        .stat-card .value{font-size:22px;font-weight:800;color:#059669}
+        .form-section{font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.07em;margin:14px 0 10px;border-bottom:1px solid #d1fae5;padding-bottom:6px}
+        .mkt-row{display:flex;align-items:flex-start;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0fdf4;font-size:13px;gap:10px}
+        .mkt-row:last-child{border-bottom:none}
+        table{width:100%;border-collapse:collapse}
+        th{padding:10px 12px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;background:#f0fdf4;border-bottom:1.5px solid #d1fae5}
+        td{padding:10px 12px;font-size:13px;border-bottom:1px solid #f0fdf4}
+        .empty-state{padding:36px;text-align:center;color:#9ca3af;font-size:13px}
+        .upload-slot{border:2px dashed #d1fae5;border-radius:10px;padding:12px;margin-bottom:12px;background:#f9fffe}
+        .upload-slot.has-image{border-color:#059669;background:#f0fdf4}
+        .photo-preview{max-height:80px;border-radius:8px;margin-top:6px;display:none}
+        .kit-row{display:flex;gap:8px;align-items:flex-end}
+        .kit-row .form-group{flex:1;margin-bottom:0}
+        .btn-autofill{background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:7px;padding:7px 12px;font-size:12px;cursor:pointer;white-space:nowrap;height:36px;align-self:flex-end}
+        .btn-autofill:hover{background:#bae6fd}
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+    <div class="page-header" id="pageHeader">
+        <div>
+            <h1 id="phName">Loading…</h1>
+            <p id="phMeta"></p>
+        </div>
+        <div id="phActions"></div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('overview',this)"><i class="fas fa-info-circle me-1"></i>Overview</div>
+        <div class="tab" onclick="switchTab('kyc',this)"><i class="fas fa-id-card me-1"></i>KYC</div>
+        <div class="tab" onclick="switchTab('products',this)"><i class="fas fa-tags me-1"></i>Product Cats</div>
+        <div class="tab" onclick="switchTab('agreement',this)"><i class="fas fa-file-contract me-1"></i>Agreement</div>
+        <div class="tab" onclick="switchTab('portal',this)"><i class="fas fa-key me-1"></i>Portal Login</div>
+        <div class="tab" onclick="switchTab('marketplace',this)"><i class="fas fa-shopping-cart me-1"></i>Marketplace</div>
+        <div class="tab" onclick="switchTab('qr',this)"><i class="fas fa-qrcode me-1"></i>QR Code</div>
+    </div>
+
+    <!-- Overview -->
+    <div id="tab-overview">
+        <div class="stat-row">
+            <div class="stat-card"><div class="label">Total Transactions</div><div class="value" id="statTxns">—</div></div>
+            <div class="stat-card"><div class="label">Business Generated</div><div class="value" id="statBiz" style="color:#2563eb">—</div></div>
+            <div class="stat-card"><div class="label">Discount Given</div><div class="value" id="statDisc" style="color:#d97706">—</div></div>
+            <div class="stat-card"><div class="label">Flat Discount %</div><div class="value" id="statDiscPct">—</div></div>
+        </div>
+        <div class="card">
+            <div class="card-title"><span>Vendor Details</span><button class="btn-outline btn-sm" onclick="openEditModal()"><i class="fas fa-edit me-1"></i>Edit</button></div>
+            <div class="info-grid" id="vendorInfoGrid"></div>
+            <div style="margin-top:14px" id="vendorNotes"></div>
+        </div>
+        <div class="card" id="actionsCard">
+            <div class="card-title">Status Actions</div>
+            <div id="actionButtons"></div>
+        </div>
+    </div>
+
+    <!-- KYC -->
+    <div id="tab-kyc" style="display:none">
+        <div class="card">
+            <div class="card-title"><span>KYC Documents</span><button class="btn-primary" onclick="openAddKYC()"><i class="fas fa-plus"></i> Add Document</button></div>
+            <div id="kycList"><div class="empty-state">Loading…</div></div>
+        </div>
+    </div>
+
+    <!-- Product Categories -->
+    <div id="tab-products" style="display:none">
+        <div class="card">
+            <div class="card-title">
+                <span>Product Categories &amp; Discounts</span>
+                <button class="btn-primary" id="addCatBtn" onclick="openAddProdCat()" style="display:none"><i class="fas fa-plus"></i> Add Category</button>
+            </div>
+            <p style="font-size:12px;color:#6b7280;margin-bottom:14px">Each category has its own GST % and optional discount % override. <span id="catPrivNote" style="display:none;color:#d97706"><i class="fas fa-lock me-1"></i>Add/edit restricted to MR10001, Accounts dept, or EA role.</span></p>
+            <div id="prodCatList"><div class="empty-state">Loading…</div></div>
+        </div>
+    </div>
+
+    <!-- Agreement -->
+    <div id="tab-agreement" style="display:none">
+        <div class="card">
+            <div class="card-title"><span>T&C Agreement</span><button class="btn-primary" onclick="openNewAgreement()"><i class="fas fa-file-contract me-1"></i>New/Renew Agreement</button></div>
+            <div id="agreementInfo"></div>
+        </div>
+        <div class="card" style="background:#fffbeb;border-color:#fde68a">
+            <div class="card-title" style="color:#92400e"><i class="fas fa-exclamation-triangle me-2"></i>VGK Vendor Terms & Conditions — V1.0</div>
+            <div style="font-size:13px;color:#374151;line-height:1.8">
+                <ol style="padding-left:20px">
+                    <li>The vendor agrees to honour the stated discount % for all valid VGK member purchases.</li>
+                    <li>Discount % once agreed is binding and cannot be reduced without prior written notice of 30 days.</li>
+                    <li>Fraudulent submissions or denial of agreed discounts will be treated as breach of agreement and directed to legal proceedings.</li>
+                    <li>VGK4U / Lucky Enterprises retains the right to inspect purchase records to verify claims.</li>
+                    <li>Agreement is valid until the stated date or until cancelled by either party with 30 days notice.</li>
+                    <li>The vendor shall not discriminate between VGK members and regular customers for quality of service.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portal Login -->
+    <div id="tab-portal" style="display:none">
+        <div class="card">
+            <div class="card-title"><span>Vendor Portal Login</span></div>
+            <div id="portalInfo" style="margin-bottom:16px"></div>
+            <div class="form-row">
+                <div class="form-group"><label>Username (Phone/Email) *</label><input type="text" id="pl_username" placeholder="Phone number"></div>
+                <div class="form-group"><label>Password *</label><input type="password" id="pl_password" placeholder="Set a strong password"></div>
+            </div>
+            <div id="portalAlert"></div>
+            <button class="btn-primary" onclick="savePortalLogin()"><i class="fas fa-key me-1"></i>Set / Reset Login</button>
+        </div>
+    </div>
+
+    <!-- Marketplace -->
+    <div id="tab-marketplace" style="display:none">
+        <div class="card">
+            <div class="card-title"><span>Marketplace Products</span><button class="btn-primary" onclick="openAddMktProduct()"><i class="fas fa-plus"></i> Add Product</button></div>
+            <div id="mktProductList"><div class="empty-state">Loading…</div></div>
+        </div>
+    </div>
+
+    <!-- QR Code -->
+    <div id="tab-qr" style="display:none">
+        <div class="card">
+            <div class="card-title"><span>QR Code</span></div>
+            <div class="qr-box">
+                <img id="qrImg" src="" alt="QR Code">
+                <div class="qr-url" id="qrUrlDisplay"></div>
+                <div style="margin-top:12px;display:flex;gap:10px;justify-content:center">
+                    <button class="btn-primary" onclick="printQR()"><i class="fas fa-print me-1"></i>Print</button>
+                    <button class="btn-outline" onclick="copyQR()"><i class="fas fa-copy me-1"></i>Copy Link</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Vendor Modal -->
+<div class="modal-overlay" id="editVendorModal">
+    <div class="modal-box" style="width:600px">
+        <div class="modal-title"><span>Edit Vendor</span><button onclick="closeModal('editVendorModal')" style="background:none;border:none;font-size:20px;cursor:pointer">&times;</button></div>
+        <div id="editVendorAlert"></div>
+        <div class="form-section">Contact & Business</div>
+        <div class="form-row">
+            <div class="form-group"><label>Vendor Name</label><input type="text" id="ev_name"></div>
+            <div class="form-group"><label>Phone</label><input type="text" id="ev_phone"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>GST Number</label><input type="text" id="ev_gst"></div>
+            <div class="form-group"><label>PAN Number</label><input type="text" id="ev_pan"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Email</label><input type="text" id="ev_email"></div>
+            <div class="form-group"><label>WhatsApp</label><input type="text" id="ev_wa"></div>
+        </div>
+        <div class="form-section">Location</div>
+        <div class="form-row">
+            <div class="form-group"><label>Address</label><input type="text" id="ev_addr"></div>
+            <div class="form-group"><label>City</label><input type="text" id="ev_city"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>State</label><input type="text" id="ev_state"></div>
+            <div class="form-group"><label>Pincode</label><input type="text" id="ev_pin"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Flat Discount %</label><input type="number" id="ev_disc" step="0.5"></div>
+            <div class="form-group"><label>Map Link</label><input type="text" id="ev_map"></div>
+        </div>
+        <div class="form-row full"><div class="form-group"><label>Description</label><textarea id="ev_desc" rows="2"></textarea></div></div>
+        <div class="form-row full"><div class="form-group"><label>Logo URL</label><input type="url" id="ev_logo" placeholder="https://…/logo.png"></div></div>
+        <div class="form-row full"><div class="form-group"><label>Banner URL</label><input type="url" id="ev_banner" placeholder="https://…/banner.jpg"></div></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+            <button class="btn-outline" onclick="closeModal('editVendorModal')">Cancel</button>
+            <button class="btn-primary" onclick="saveEdit()"><i class="fas fa-save me-1"></i>Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add KYC Modal -->
+<div class="modal-overlay" id="addKYCModal">
+    <div class="modal-box">
+        <div class="modal-title"><span>Add KYC Document</span><button onclick="closeModal('addKYCModal')" style="background:none;border:none;font-size:20px;cursor:pointer">&times;</button></div>
+        <div id="addKYCAlert"></div>
+        <div class="form-group"><label>Document Type</label>
+            <select id="kyc_type">
+                <option value="AADHAR_FRONT">Aadhar Front</option>
+                <option value="AADHAR_BACK">Aadhar Back</option>
+                <option value="PAN">PAN Card</option>
+                <option value="GST_CERT">GST Certificate</option>
+                <option value="SHOP_PHOTO">Shop Photo</option>
+                <option value="OTHER">Other</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Label</label><input type="text" id="kyc_label" placeholder="e.g. Owner Aadhar"></div>
+        <div class="form-group"><label>Document Number</label><input type="text" id="kyc_number"></div>
+        <div class="form-group"><label>Document URL</label><input type="text" id="kyc_url" placeholder="https://drive.google.com/…"></div>
+        <div class="form-group"><label>Notes</label><textarea id="kyc_notes" rows="2"></textarea></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+            <button class="btn-outline" onclick="closeModal('addKYCModal')">Cancel</button>
+            <button class="btn-primary" onclick="saveKYC()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add Product Category Modal -->
+<div class="modal-overlay" id="addProdCatModal">
+    <div class="modal-box">
+        <div class="modal-title"><span>Add Product Category</span><button onclick="closeModal('addProdCatModal')" style="background:none;border:none;font-size:20px;cursor:pointer">&times;</button></div>
+        <div id="addProdCatAlert"></div>
+        <div class="form-row">
+            <div class="form-group"><label>Category Name *</label><input type="text" id="pc_name" placeholder="e.g. Sweets, Bakery"></div>
+            <div class="form-group"><label>Kit Prefix <span style="font-weight:400;color:#9ca3af">(2–4 letters, for kit code)</span></label><input type="text" id="pc_prefix" placeholder="e.g. SW, RC" maxlength="4" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>GST %</label><input type="number" id="pc_gst" step="0.5" min="0" value="0"></div>
+            <div class="form-group"><label>Discount % (blank = flat rate)</label><input type="number" id="pc_disc" step="0.5" min="0" placeholder="optional"></div>
+        </div>
+        <div class="form-group"><label>Description</label><textarea id="pc_desc" rows="2"></textarea></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+            <button class="btn-outline" onclick="closeModal('addProdCatModal')">Cancel</button>
+            <button class="btn-primary" onclick="saveProdCat()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- New Agreement Modal -->
+<div class="modal-overlay" id="agreementModal">
+    <div class="modal-box" style="width:560px">
+        <div class="modal-title"><span>New / Renew Agreement</span><button onclick="closeModal('agreementModal')" style="background:none;border:none;font-size:20px;cursor:pointer">&times;</button></div>
+        <div id="agreementAlert"></div>
+        <div class="alert alert-info" style="margin-bottom:14px">The vendor agrees to the VGK T&C (displayed on Agreement tab). This creates a digital record.</div>
+        <div class="form-row">
+            <div class="form-group"><label>Agreed Discount % *</label><input type="number" id="ag_disc" step="0.5" min="0" max="50"></div>
+            <div class="form-group"><label>Valid Till (blank = open-ended)</label><input type="date" id="ag_till"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Signed By (Name) *</label><input type="text" id="ag_sname"></div>
+            <div class="form-group"><label>Designation</label><input type="text" id="ag_sdesig"></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+            <button class="btn-outline" onclick="closeModal('agreementModal')">Cancel</button>
+            <button class="btn-primary" onclick="saveAgreement()"><i class="fas fa-file-contract me-1"></i>Record Agreement</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit Marketplace Product Modal -->
+<div class="modal-overlay" id="addMktModal">
+    <div class="modal-box" style="width:620px">
+        <div class="modal-title"><span id="mktModalTitle">Add Marketplace Product</span><button onclick="closeModal('addMktModal')" style="background:none;border:none;font-size:20px;cursor:pointer">&times;</button></div>
+        <div id="addMktAlert"></div>
+        <input type="hidden" id="mkt_edit_id">
+
+        <div class="form-section">Product Info</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Segment *</label>
+                <select id="mkt_seg"></select>
+            </div>
+            <div class="form-group">
+                <label>Stock Qty</label>
+                <input type="number" id="mkt_stock" min="0" step="1" value="0" placeholder="0">
+            </div>
+        </div>
+        <div class="form-row full">
+            <div class="form-group"><label>Product Name *</label><input type="text" id="mkt_name"></div>
+        </div>
+        <div class="form-section">Kit Code</div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Category Prefix (for kit)</label>
+                <select id="mkt_cat_prefix" onchange="clearKitIfPrefixChanged()">
+                    <option value="">— select prefix —</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Product Kit Code</label>
+                <div class="kit-row">
+                    <div class="form-group"><input type="text" id="mkt_kit" placeholder="e.g. SW250700001 or manual"></div>
+                    <button type="button" class="btn-autofill" onclick="autoFillKitCode()" title="Auto-generate from prefix"><i class="fas fa-magic me-1"></i>Auto</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">Pricing</div>
+        <div class="form-row three">
+            <div class="form-group">
+                <label>Price Excl. Tax (₹)</label>
+                <input type="number" id="mkt_price" step="0.01" min="0" oninput="calcPriceWithTax()">
+            </div>
+            <div class="form-group">
+                <label>GST %</label>
+                <input type="number" id="mkt_gst" step="0.5" min="0" value="0" oninput="calcPriceWithTax()">
+            </div>
+            <div class="form-group">
+                <label>Price With Tax (₹) <span style="font-weight:400;color:#059669;font-size:11px">auto-calc</span></label>
+                <input type="number" id="mkt_price_tax" step="0.01" min="0" style="background:#f0fdf4">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Discount %</label><input type="number" id="mkt_disc" step="0.5" value="0" min="0"></div>
+            <div class="form-group"><label>Display Order</label><input type="number" id="mkt_order" value="0" min="0"></div>
+        </div>
+
+        <div class="form-section">Description</div>
+        <div class="form-row full">
+            <div class="form-group"><textarea id="mkt_desc" rows="2" placeholder="Brief product description…"></textarea></div>
+        </div>
+
+        <div class="form-section">Photos (max 5 MB each)</div>
+        <div class="upload-slot" id="slot1_box">
+            <label style="font-size:12px;font-weight:600;color:#374151">Photo 1</label>
+            <input type="file" id="mkt_img1_file" accept="image/*" onchange="previewPhoto(this,'prev1','slot1_box')">
+            <input type="text" id="mkt_cap1" placeholder="Caption for Photo 1…" style="margin-top:6px;font-size:12px;padding:6px 10px">
+            <img id="prev1" class="photo-preview">
+        </div>
+        <div class="upload-slot" id="slot2_box">
+            <label style="font-size:12px;font-weight:600;color:#374151">Photo 2 <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+            <input type="file" id="mkt_img2_file" accept="image/*" onchange="previewPhoto(this,'prev2','slot2_box')">
+            <input type="text" id="mkt_cap2" placeholder="Caption for Photo 2…" style="margin-top:6px;font-size:12px;padding:6px 10px">
+            <img id="prev2" class="photo-preview">
+        </div>
+        <div class="upload-slot" id="slot3_box">
+            <label style="font-size:12px;font-weight:600;color:#374151">Photo 3 <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+            <input type="file" id="mkt_img3_file" accept="image/*" onchange="previewPhoto(this,'prev3','slot3_box')">
+            <input type="text" id="mkt_cap3" placeholder="Caption for Photo 3…" style="margin-top:6px;font-size:12px;padding:6px 10px">
+            <img id="prev3" class="photo-preview">
+        </div>
+
+        <div style="display:flex;gap:4px;align-items:center;margin-bottom:14px">
+            <input type="checkbox" id="mkt_featured" style="width:auto">
+            <label for="mkt_featured" style="font-size:13px;margin:0">Mark as Featured</label>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn-outline" onclick="closeModal('addMktModal')">Cancel</button>
+            <button class="btn-primary" id="mktSaveBtn" onclick="saveMktProduct()"><i class="fas fa-save me-1"></i>Save Product</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Product Modal -->
+<div class="modal-overlay" id="rejectProdModal">
+    <div class="modal-box" style="width:420px">
+        <div class="modal-title"><span>Reject Product</span><button onclick="closeModal('rejectProdModal')" style="background:none;border:none;font-size:20px;cursor:pointer">&times;</button></div>
+        <input type="hidden" id="reject_prod_id">
+        <div class="form-group"><label>Rejection Reason *</label><textarea id="reject_reason" rows="3" placeholder="Explain why the product is being rejected…"></textarea></div>
+        <div id="rejectAlert"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+            <button class="btn-outline" onclick="closeModal('rejectProdModal')">Cancel</button>
+            <button class="btn-danger" onclick="confirmReject()"><i class="fas fa-times me-1"></i>Reject</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '/api/v1';
+const vendorId = parseInt(window.location.pathname.split('/').pop());
+let vendor = {};
+
+function getToken() { return window.staffTokenManager ? window.staffTokenManager.getToken() : localStorage.getItem('staff_token'); }
+function headers() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() }; }
+function fmt(n) { return '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2}); }
+
+// DC-VGK-MKT-ENHANCE-001: privilege check
+function isPrivileged() {
+    const info = window.staffTokenManager ? window.staffTokenManager.getStaffInfo() : {};
+    const empCode = (info.emp_code || '').trim().toUpperCase();
+    const dept = (info.department || info.dept || '').trim().toLowerCase();
+    const role = (info.role_code || info.role || '').trim().toUpperCase();
+    return empCode === 'MR10001' || dept.includes('accounts') || role === 'EA';
+}
+
+async function init() {
+    await loadVendor();
+    // Show/hide privilege-gated elements
+    if (isPrivileged()) {
+        document.getElementById('addCatBtn').style.display = 'inline-flex';
+    } else {
+        document.getElementById('catPrivNote').style.display = 'inline';
+    }
+}
+
+async function loadVendor() {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}`, { headers: headers() });
+    if (!r.ok) { document.getElementById('phName').textContent = 'Vendor Not Found'; return; }
+    vendor = await r.json();
+    renderHeader();
+    renderOverview();
+}
+
+function renderHeader() {
+    document.getElementById('phName').textContent = vendor.vendor_name;
+    document.getElementById('phMeta').textContent = `${vendor.category_name||''} · ${vendor.city||''} ${vendor.pincode||''} · ${vendor.vendor_code}`;
+    const cls = vendor.status === 'ACTIVE' ? '#d1fae5' : vendor.status === 'PENDING' ? '#fef3c7' : '#fee2e2';
+    const tc = vendor.status === 'ACTIVE' ? '#065f46' : vendor.status === 'PENDING' ? '#92400e' : '#991b1b';
+    document.getElementById('phActions').innerHTML = `<span style="background:${cls};color:${tc};padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700">${vendor.status}</span>`;
+}
+
+function renderOverview() {
+    document.getElementById('statTxns').textContent = vendor.total_transactions || 0;
+    document.getElementById('statBiz').textContent = fmt(vendor.total_business_value);
+    document.getElementById('statDisc').textContent = fmt(vendor.total_discount_given);
+    document.getElementById('statDiscPct').textContent = (vendor.flat_discount_pct||0) + '%';
+    const grid = document.getElementById('vendorInfoGrid');
+    const fields = [
+        ['Vendor Code', vendor.vendor_code],['Category', vendor.category_name||'—'],
+        ['Phone', vendor.phone||'—'],['Email', vendor.email||'—'],
+        ['WhatsApp', vendor.whatsapp_number||'—'],['GST', vendor.gst_number||'—'],
+        ['PAN', vendor.pan_number||'—'],['City', vendor.city||'—'],
+        ['Pincode', vendor.pincode||'—'],['Established', vendor.established_year||'—'],
+        ['Marketplace', vendor.marketplace_opted ? '✅ Opted In' : 'Not opted'],
+        ['Discount', (vendor.flat_discount_pct||0) + '%'],
+    ];
+    grid.innerHTML = fields.map(([l,v]) => `<div class="info-item"><label>${l}</label><div class="val">${v}</div></div>`).join('');
+    document.getElementById('vendorNotes').innerHTML = vendor.notes ? `<div style="font-size:13px;color:#374151;border-top:1px solid #f0fdf4;padding-top:10px"><b>Notes:</b> ${vendor.notes}</div>` : '';
+    renderActionButtons();
+}
+
+function renderActionButtons() {
+    const el = document.getElementById('actionButtons');
+    let btns = '';
+    if (vendor.status === 'PENDING') btns += `<button class="btn-primary me-2" onclick="updateStatus('ACTIVE')"><i class="fas fa-check me-1"></i>Activate</button>`;
+    if (vendor.status === 'ACTIVE')  btns += `<button class="btn-danger me-2" onclick="updateStatus('SUSPENDED')"><i class="fas fa-pause me-1"></i>Suspend</button>`;
+    if (vendor.status === 'SUSPENDED') btns += `<button class="btn-primary me-2" onclick="updateStatus('ACTIVE')"><i class="fas fa-play me-1"></i>Re-Activate</button>`;
+    btns += `<label style="font-size:13px;font-weight:600;margin-left:8px">
+        <input type="checkbox" ${vendor.marketplace_opted ? 'checked' : ''} onchange="toggleMarketplace(this.checked)"> Marketplace Opted
+    </label>`;
+    el.innerHTML = btns;
+}
+
+async function updateStatus(s) {
+    if (!confirm(`Change vendor status to ${s}?`)) return;
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}`, {
+        method: 'PUT', headers: headers(), body: JSON.stringify({status: s})
+    });
+    if (r.ok) { await loadVendor(); } else alert('Update failed');
+}
+
+async function toggleMarketplace(val) {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}`, {
+        method: 'PUT', headers: headers(), body: JSON.stringify({marketplace_opted: val})
+    });
+    if (r.ok) { await loadVendor(); }
+}
+
+function switchTab(name, el) {
+    document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).style.display = 'block';
+    el.classList.add('active');
+    if (name === 'kyc') loadKYC();
+    if (name === 'products') loadProdCats();
+    if (name === 'agreement') loadAgreement();
+    if (name === 'portal') loadPortal();
+    if (name === 'marketplace') loadMktProducts();
+    if (name === 'qr') loadQR();
+}
+
+// ── Edit Vendor ─────────────────────────────────────────────────────────────
+function openEditModal() {
+    document.getElementById('ev_name').value = vendor.vendor_name || '';
+    document.getElementById('ev_phone').value = vendor.phone || '';
+    document.getElementById('ev_gst').value = vendor.gst_number || '';
+    document.getElementById('ev_pan').value = vendor.pan_number || '';
+    document.getElementById('ev_email').value = vendor.email || '';
+    document.getElementById('ev_wa').value = vendor.whatsapp_number || '';
+    document.getElementById('ev_addr').value = vendor.address_line1 || '';
+    document.getElementById('ev_city').value = vendor.city || '';
+    document.getElementById('ev_state').value = vendor.state || '';
+    document.getElementById('ev_pin').value = vendor.pincode || '';
+    document.getElementById('ev_disc').value = vendor.flat_discount_pct || 0;
+    document.getElementById('ev_map').value = vendor.map_link || '';
+    document.getElementById('ev_desc').value = vendor.shop_description || '';
+    document.getElementById('ev_logo').value = vendor.logo_url || '';
+    document.getElementById('ev_banner').value = vendor.banner_url || '';
+    document.getElementById('editVendorAlert').innerHTML = '';
+    openOverlay('editVendorModal');
+}
+
+async function saveEdit() {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({
+            vendor_name: document.getElementById('ev_name').value,
+            phone: document.getElementById('ev_phone').value,
+            gst_number: document.getElementById('ev_gst').value,
+            pan_number: document.getElementById('ev_pan').value,
+            email: document.getElementById('ev_email').value,
+            whatsapp_number: document.getElementById('ev_wa').value,
+            address_line1: document.getElementById('ev_addr').value,
+            city: document.getElementById('ev_city').value,
+            state: document.getElementById('ev_state').value,
+            pincode: document.getElementById('ev_pin').value,
+            flat_discount_pct: parseFloat(document.getElementById('ev_disc').value) || 0,
+            map_link: document.getElementById('ev_map').value,
+            shop_description: document.getElementById('ev_desc').value,
+            logo_url: document.getElementById('ev_logo').value,
+            banner_url: document.getElementById('ev_banner').value,
+        })
+    });
+    if (r.ok) { closeModal('editVendorModal'); await loadVendor(); }
+    else { const e = await r.json(); showAlert('editVendorAlert','error', e.detail || 'Save failed'); }
+}
+
+// ── KYC ────────────────────────────────────────────────────────────────────
+async function loadKYC() {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}/kyc`, { headers: headers() });
+    const list = document.getElementById('kycList');
+    if (!r.ok) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; return; }
+    const data = await r.json();
+    if (!data.length) { list.innerHTML = '<div class="empty-state">No KYC documents yet</div>'; return; }
+    list.innerHTML = data.map(d => `<div class="kyc-row">
+        <div>
+            <div style="font-weight:700">${d.doc_label||d.doc_type}</div>
+            <div style="font-size:11px;color:#6b7280">${d.doc_number||'—'} ${d.verified ? '✅ Verified' : ''}</div>
+        </div>
+        ${d.doc_url ? `<a href="${d.doc_url}" target="_blank" class="btn-outline btn-sm">View</a>` : ''}
+    </div>`).join('');
+}
+
+function openAddKYC() { document.getElementById('addKYCAlert').innerHTML = ''; openOverlay('addKYCModal'); }
+
+async function saveKYC() {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}/kyc`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({
+            doc_type: document.getElementById('kyc_type').value,
+            doc_label: document.getElementById('kyc_label').value,
+            doc_number: document.getElementById('kyc_number').value,
+            doc_url: document.getElementById('kyc_url').value,
+            notes: document.getElementById('kyc_notes').value,
+        })
+    });
+    if (r.ok) { closeModal('addKYCModal'); loadKYC(); }
+    else { const e = await r.json(); showAlert('addKYCAlert','error', e.detail || 'Save failed'); }
+}
+
+// ── Product Categories ──────────────────────────────────────────────────────
+async function loadProdCats() {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}`, { headers: headers() });
+    const list = document.getElementById('prodCatList');
+    if (!r.ok) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; return; }
+    const v = await r.json();
+    const cats = v.product_categories || [];
+    if (!cats.length) { list.innerHTML = '<div class="empty-state">No product categories yet</div>'; return; }
+    const priv = isPrivileged();
+    list.innerHTML = cats.map(c => `<div class="prod-cat-row">
+        <div>
+            <span style="font-weight:700">${c.category_name}</span>
+            ${c.category_prefix ? `<span style="margin-left:6px;font-size:11px;background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:10px">Prefix: ${c.category_prefix}</span>` : ''}
+            <span style="margin-left:6px;font-size:11px;color:#6b7280">GST: ${c.gst_pct}%${c.discount_pct != null ? ' | Disc: '+c.discount_pct+'%' : ''}</span>
+        </div>
+        ${priv ? `<button class="btn-outline btn-sm" onclick="deleteProdCat(${c.id},'${c.category_name.replace(/'/g,"\\'")}')">Remove</button>` : ''}
+    </div>`).join('');
+}
+
+function openAddProdCat() {
+    document.getElementById('addProdCatAlert').innerHTML = '';
+    document.getElementById('pc_name').value = '';
+    document.getElementById('pc_prefix').value = '';
+    document.getElementById('pc_gst').value = '0';
+    document.getElementById('pc_disc').value = '';
+    document.getElementById('pc_desc').value = '';
+    openOverlay('addProdCatModal');
+}
+
+async function saveProdCat() {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}/product-categories`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({
+            category_name: document.getElementById('pc_name').value,
+            category_prefix: document.getElementById('pc_prefix').value,
+            gst_pct: parseFloat(document.getElementById('pc_gst').value) || 0,
+            discount_pct: document.getElementById('pc_disc').value !== '' ? parseFloat(document.getElementById('pc_disc').value) : null,
+            description: document.getElementById('pc_desc').value,
+        })
+    });
+    if (r.ok) { closeModal('addProdCatModal'); loadProdCats(); }
+    else { const e = await r.json(); showAlert('addProdCatAlert','error', e.detail || 'Save failed'); }
+}
+
+async function deleteProdCat(id, name) {
+    if (!confirm(`Remove category "${name}"?`)) return;
+    const r = await fetch(`${API}/staff/vgk/vendors/product-categories/${id}`, { method: 'DELETE', headers: headers() });
+    if (r.ok) loadProdCats(); else alert('Delete failed');
+}
+
+// ── Agreement ───────────────────────────────────────────────────────────────
+async function loadAgreement() {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}`, { headers: headers() });
+    if (!r.ok) return;
+    const v = await r.json();
+    const ag = v.agreement;
+    const el = document.getElementById('agreementInfo');
+    if (!ag) { el.innerHTML = '<div class="empty-state">No agreement on record</div>'; return; }
+    el.innerHTML = `<div class="info-grid">
+        <div class="info-item"><label>Agreed Discount</label><div class="val green">${ag.agreed_discount_pct}%</div></div>
+        <div class="info-item"><label>Signed By</label><div class="val">${ag.signed_by_name||'—'}</div></div>
+        <div class="info-item"><label>Signed At</label><div class="val">${ag.signed_at ? new Date(ag.signed_at).toLocaleDateString('en-IN') : '—'}</div></div>
+        <div class="info-item"><label>Valid Till</label><div class="val">${ag.valid_till ? new Date(ag.valid_till).toLocaleDateString('en-IN') : 'Open-ended'}</div></div>
+        <div class="info-item"><label>Status</label><div class="val">${ag.is_current ? '✅ Current' : 'Superseded'}</div></div>
+    </div>`;
+}
+
+function openNewAgreement() { document.getElementById('agreementAlert').innerHTML = ''; openOverlay('agreementModal'); }
+
+async function saveAgreement() {
+    const disc = parseFloat(document.getElementById('ag_disc').value);
+    if (!disc || isNaN(disc)) { showAlert('agreementAlert','error','Agreed Discount % is required'); return; }
+    const name = document.getElementById('ag_sname').value.trim();
+    if (!name) { showAlert('agreementAlert','error','Signed By name is required'); return; }
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}/agreement`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({
+            agreed_discount_pct: disc,
+            valid_till: document.getElementById('ag_till').value || null,
+            signed_by_name: name,
+            signed_by_designation: document.getElementById('ag_sdesig').value,
+        })
+    });
+    if (r.ok) { closeModal('agreementModal'); loadAgreement(); }
+    else { const e = await r.json(); showAlert('agreementAlert','error', e.detail || 'Save failed'); }
+}
+
+// ── Portal Login ─────────────────────────────────────────────────────────────
+async function loadPortal() {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}/login-status`, { headers: headers() });
+    const el = document.getElementById('portalInfo');
+    if (r.ok) {
+        const d = await r.json();
+        el.innerHTML = d.has_login
+            ? `<div class="alert alert-success">Portal login exists. Username: <b>${d.username||'—'}</b></div>`
+            : `<div class="alert alert-info">No portal login set yet.</div>`;
+    }
+}
+
+async function savePortalLogin() {
+    const username = document.getElementById('pl_username').value.trim();
+    const password = document.getElementById('pl_password').value;
+    if (!username || !password) { showAlert('portalAlert','error','Username and password required'); return; }
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}/set-login`, {
+        method: 'POST', headers: headers(), body: JSON.stringify({username, password})
+    });
+    if (r.ok) { showAlert('portalAlert','success','Login set successfully'); loadPortal(); }
+    else { const e = await r.json(); showAlert('portalAlert','error', e.detail || 'Failed'); }
+}
+
+// ── Marketplace Products ─────────────────────────────────────────────────────
+async function loadMktProducts() {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}/marketplace-products`, { headers: headers() });
+    const list = document.getElementById('mktProductList');
+    if (!r.ok) { list.innerHTML = '<div class="empty-state">Failed to load</div>'; return; }
+    const prods = await r.json();
+    if (!prods.length) { list.innerHTML = '<div class="empty-state">No marketplace products yet. Click Add Product to start.</div>'; return; }
+    const priv = isPrivileged();
+    list.innerHTML = prods.map(p => {
+        const statusColor = p.approval_status === 'APPROVED' ? '#065f46' : p.approval_status === 'REJECTED' ? '#991b1b' : '#92400e';
+        const statusBg = p.approval_status === 'APPROVED' ? '#d1fae5' : p.approval_status === 'REJECTED' ? '#fee2e2' : '#fef3c7';
+        return `<div class="mkt-row">
+            <div style="flex:1">
+                <div style="font-weight:700">${p.product_name}</div>
+                <div style="font-size:11px;color:#6b7280;margin-top:2px">
+                    ${p.product_kit ? `<code style="margin-right:8px">${p.product_kit}</code>` : ''}
+                    ${p.segment_slug} · ₹${Number(p.price_with_tax||0).toFixed(2)}
+                    ${p.stock_qty !== null && p.stock_qty !== undefined ? `· Stock: ${p.stock_qty}` : ''}
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="background:${statusBg};color:${statusColor};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">${p.approval_status||'PENDING'}</span>
+                ${priv && p.approval_status !== 'APPROVED' ? `<button class="btn-primary btn-xs" onclick="approveProduct(${p.id})"><i class="fas fa-check me-1"></i>Approve</button>` : ''}
+                ${priv && p.approval_status !== 'REJECTED' ? `<button class="btn-danger btn-xs" onclick="openRejectProduct(${p.id})"><i class="fas fa-times me-1"></i>Reject</button>` : ''}
+                <button class="btn-outline btn-sm" onclick="deleteMktProduct(${p.id})"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── Add/Edit Marketplace Product ─────────────────────────────────────────────
+function buildSegmentOptions() {
+    // DC-VGK-MKT-ENHANCE-001: dynamic — vendor's product categories + global defaults
+    const sel = document.getElementById('mkt_seg');
+    const prefSel = document.getElementById('mkt_cat_prefix');
+    sel.innerHTML = '';
+    prefSel.innerHTML = '<option value="">— select prefix —</option>';
+    const cats = vendor.product_categories || [];
+    // Vendor's own product categories as segment options
+    cats.forEach(c => {
+        const slug = c.category_name.toLowerCase().replace(/\s+/g,'-');
+        sel.innerHTML += `<option value="${slug}">${c.category_name}</option>`;
+        if (c.category_prefix) {
+            prefSel.innerHTML += `<option value="${c.category_prefix}">${c.category_name} (${c.category_prefix})</option>`;
+        }
+    });
+    // Global fallback segments
+    const globals = [
+        {slug:'general',label:'General'},{slug:'sweet-shop',label:'Sweet Shop'},
+        {slug:'restaurant',label:'Restaurant'},{slug:'furniture',label:'Furniture'},
+        {slug:'gift-shop',label:'Gift Shop'},{slug:'ev-spares',label:'EV Spares'},
+        {slug:'real-dreams',label:'Real Dreams'},{slug:'pharmacy',label:'Pharmacy'},
+    ];
+    globals.forEach(g => {
+        if (!sel.querySelector(`option[value="${g.slug}"]`)) {
+            sel.innerHTML += `<option value="${g.slug}">${g.label}</option>`;
+        }
+    });
+}
+
+function calcPriceWithTax() {
+    const price = parseFloat(document.getElementById('mkt_price').value) || 0;
+    const gst = parseFloat(document.getElementById('mkt_gst').value) || 0;
+    if (price > 0) {
+        document.getElementById('mkt_price_tax').value = (price * (1 + gst / 100)).toFixed(2);
+    }
+}
+
+function clearKitIfPrefixChanged() {
+    document.getElementById('mkt_kit').value = '';
+}
+
+async function autoFillKitCode() {
+    const prefix = document.getElementById('mkt_cat_prefix').value;
+    if (!prefix) { alert('Select a category prefix first'); return; }
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}/next-kit-code?category_prefix=${encodeURIComponent(prefix)}`, { headers: headers() });
+    if (r.ok) {
+        const d = await r.json();
+        document.getElementById('mkt_kit').value = d.kit_code;
+    } else {
+        alert('Could not generate kit code');
+    }
+}
+
+function previewPhoto(input, prevId, boxId) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { alert('Max photo size is 5 MB'); input.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = document.getElementById(prevId);
+        img.src = e.target.result;
+        img.style.display = 'block';
+        document.getElementById(boxId).classList.add('has-image');
+    };
+    reader.readAsDataURL(file);
+}
+
+function openAddMktProduct() {
+    document.getElementById('mktModalTitle').textContent = 'Add Marketplace Product';
+    document.getElementById('mkt_edit_id').value = '';
+    document.getElementById('mkt_name').value = '';
+    document.getElementById('mkt_kit').value = '';
+    document.getElementById('mkt_price').value = '';
+    document.getElementById('mkt_gst').value = '0';
+    document.getElementById('mkt_price_tax').value = '';
+    document.getElementById('mkt_disc').value = '0';
+    document.getElementById('mkt_order').value = '0';
+    document.getElementById('mkt_stock').value = '0';
+    document.getElementById('mkt_desc').value = '';
+    document.getElementById('mkt_featured').checked = false;
+    document.getElementById('mkt_cap1').value = '';
+    document.getElementById('mkt_cap2').value = '';
+    document.getElementById('mkt_cap3').value = '';
+    ['mkt_img1_file','mkt_img2_file','mkt_img3_file'].forEach(id => document.getElementById(id).value = '');
+    ['prev1','prev2','prev3'].forEach(id => { const el = document.getElementById(id); el.src=''; el.style.display='none'; });
+    ['slot1_box','slot2_box','slot3_box'].forEach(id => document.getElementById(id).classList.remove('has-image'));
+    document.getElementById('addMktAlert').innerHTML = '';
+    buildSegmentOptions();
+    openOverlay('addMktModal');
+}
+
+async function saveMktProduct() {
+    const name = document.getElementById('mkt_name').value.trim();
+    if (!name) { showAlert('addMktAlert','error','Product Name is required'); return; }
+    const editId = document.getElementById('mkt_edit_id').value;
+    const body = {
+        segment_slug: document.getElementById('mkt_seg').value,
+        product_name: name,
+        product_kit: document.getElementById('mkt_kit').value.trim() || null,
+        description: document.getElementById('mkt_desc').value.trim() || null,
+        price_excl_tax: parseFloat(document.getElementById('mkt_price').value) || null,
+        gst_pct: parseFloat(document.getElementById('mkt_gst').value) || 0,
+        price_with_tax: parseFloat(document.getElementById('mkt_price_tax').value) || null,
+        discount_pct: parseFloat(document.getElementById('mkt_disc').value) || 0,
+        stock_qty: parseInt(document.getElementById('mkt_stock').value) || 0,
+        image_caption_1: document.getElementById('mkt_cap1').value.trim() || null,
+        image_caption_2: document.getElementById('mkt_cap2').value.trim() || null,
+        image_caption_3: document.getElementById('mkt_cap3').value.trim() || null,
+        display_order: parseInt(document.getElementById('mkt_order').value) || 0,
+        is_featured: document.getElementById('mkt_featured').checked,
+    };
+    const url = editId
+        ? `${API}/staff/vgk/vendors/marketplace-products/${editId}`
+        : `${API}/staff/vgk/vendors/${vendorId}/marketplace-products`;
+    const r = await fetch(url, {
+        method: editId ? 'PUT' : 'POST', headers: headers(), body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+        const e = await r.json();
+        showAlert('addMktAlert','error', e.detail || 'Save failed');
+        return;
+    }
+    const saved = await r.json();
+    const prodId = editId || saved.id;
+    // Upload photos for slots 1-3
+    const slots = [
+        { fileId:'mkt_img1_file', capId:'mkt_cap1', slot:1 },
+        { fileId:'mkt_img2_file', capId:'mkt_cap2', slot:2 },
+        { fileId:'mkt_img3_file', capId:'mkt_cap3', slot:3 },
+    ];
+    let uploadErr = null;
+    for (const s of slots) {
+        const fileEl = document.getElementById(s.fileId);
+        if (!fileEl.files || !fileEl.files[0]) continue;
+        const fd = new FormData();
+        fd.append('slot', s.slot);
+        fd.append('caption', document.getElementById(s.capId).value.trim());
+        fd.append('file', fileEl.files[0]);
+        const ur = await fetch(`${API}/staff/vgk/vendors/marketplace-products/${prodId}/upload-image`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + getToken() },
+            body: fd
+        });
+        if (!ur.ok) { const ue = await ur.json(); uploadErr = ue.detail || 'Photo upload failed'; break; }
+    }
+    if (uploadErr) { showAlert('addMktAlert','error', 'Product saved but photo upload failed: ' + uploadErr); return; }
+    closeModal('addMktModal');
+    loadMktProducts();
+}
+
+async function deleteMktProduct(id) {
+    if (!confirm('Delete this product?')) return;
+    const r = await fetch(`${API}/staff/vgk/vendors/marketplace-products/${id}`, { method: 'DELETE', headers: headers() });
+    if (r.ok) loadMktProducts(); else alert('Delete failed');
+}
+
+// ── Approve / Reject product ─────────────────────────────────────────────────
+async function approveProduct(id) {
+    if (!confirm('Approve this product? It will become visible to members.')) return;
+    const r = await fetch(`${API}/staff/vgk/vendors/marketplace-products/${id}/approve`, { method: 'POST', headers: headers() });
+    if (r.ok) loadMktProducts(); else { const e = await r.json(); alert(e.detail || 'Approval failed'); }
+}
+
+function openRejectProduct(id) {
+    document.getElementById('reject_prod_id').value = id;
+    document.getElementById('reject_reason').value = '';
+    document.getElementById('rejectAlert').innerHTML = '';
+    openOverlay('rejectProdModal');
+}
+
+async function confirmReject() {
+    const id = document.getElementById('reject_prod_id').value;
+    const reason = document.getElementById('reject_reason').value.trim();
+    if (!reason) { showAlert('rejectAlert','error','Please enter a rejection reason'); return; }
+    const r = await fetch(`${API}/staff/vgk/vendors/marketplace-products/${id}/reject`, {
+        method: 'POST', headers: headers(), body: JSON.stringify({rejection_reason: reason})
+    });
+    if (r.ok) { closeModal('rejectProdModal'); loadMktProducts(); }
+    else { const e = await r.json(); showAlert('rejectAlert','error', e.detail || 'Failed'); }
+}
+
+// ── QR Code ─────────────────────────────────────────────────────────────────
+async function loadQR() {
+    const r = await fetch(`${API}/staff/vgk/vendors/${vendorId}/qr`, { headers: headers() });
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('qrImg').src = `data:image/png;base64,${d.qr_b64}`;
+    document.getElementById('qrUrlDisplay').textContent = d.qr_url;
+}
+
+function printQR() { window.print(); }
+function copyQR() { navigator.clipboard.writeText(document.getElementById('qrUrlDisplay').textContent); alert('Link copied!'); }
+
+// ── Modal helpers ────────────────────────────────────────────────────────────
+function openOverlay(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function showAlert(elId, type, msg) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.innerHTML = `<div class="alert alert-${type === 'error' ? 'error' : 'success'}">${msg}</div>`;
+}
+
+// Bootstrap
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+
+// Load sidebar/header scripts if present
+if (typeof loadSidebar === 'function') loadSidebar();
+if (typeof loadHeader === 'function') loadHeader();
+</script>
+</body>
+</html>

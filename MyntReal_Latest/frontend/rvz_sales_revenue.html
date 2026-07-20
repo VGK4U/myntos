@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Revenue</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-weight: 600; font-size: 14px; color: #1f2937; }
+        .user-info-role { padding: 2px 8px; border-radius: 12px; background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 500; }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .card-body { padding: 24px; }
+        
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-card .label { color: #6b7280; font-size: 13px; margin-bottom: 8px; }
+        .stat-card .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .stat-card .count { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-top: none; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-validated { background: #dbeafe; color: #1e40af; }
+        .status-posted_to_ledger { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        
+        .filter-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filter-pill { padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid #d1d5db; background: white; color: #6b7280; transition: all 0.2s; }
+        .filter-pill:hover { border-color: #059669; color: #059669; }
+        .filter-pill.active { background: #059669; color: white; border-color: #059669; }
+        
+        .action-btn { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
+        .action-btn.validate { background: #dbeafe; color: #1e40af; }
+        .action-btn.validate:hover { background: #2563eb; color: white; }
+        .action-btn.post-ledger { background: #d1fae5; color: #065f46; }
+        .action-btn.post-ledger:hover { background: #059669; color: white; }
+        .action-btn.reject { background: #fee2e2; color: #991b1b; }
+        .action-btn.reject:hover { background: #dc2626; color: white; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        
+        .modal-content { border-radius: 12px; border: none; }
+        .modal-header.ledger-header { background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: white; border-bottom: none; padding: 16px 24px; border-radius: 12px 12px 0 0; }
+        .modal-header.reject-header { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: white; border-bottom: none; }
+        .modal-header .btn-close { filter: brightness(0) invert(1); }
+        
+        .type-badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; background: #e5e7eb; color: #374151; }
+        
+        .ledger-mode-card { border: 2px solid #e5e7eb; border-radius: 8px; padding: 16px; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; }
+        .ledger-mode-card:hover { border-color: #7c3aed; }
+        .ledger-mode-card.selected { border-color: #7c3aed; background: #f5f3ff; }
+        .ledger-mode-card .mode-title { font-weight: 600; color: #1f2937; margin-bottom: 4px; }
+        .ledger-mode-card .mode-desc { font-size: 13px; color: #6b7280; }
+        
+        .search-results { max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; margin-top: 8px; }
+        .search-result-item { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.2s; }
+        .search-result-item:hover { background: #f9fafb; }
+        .search-result-item.selected { background: #f5f3ff; border-left: 3px solid #7c3aed; }
+        .search-result-item:last-child { border-bottom: none; }
+        
+        .ledger-preview { background: #f9fafb; border-radius: 8px; padding: 16px; margin-top: 16px; }
+        .ledger-preview h6 { color: #6b7280; font-size: 12px; text-transform: uppercase; margin-bottom: 12px; }
+        .ledger-preview .preview-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+        .ledger-preview .preview-row:last-child { border-bottom: none; }
+        .ledger-preview .preview-label { color: #6b7280; }
+        .ledger-preview .preview-value { font-weight: 600; color: #1f2937; }
+    </style>
+</head>
+<body>
+    <div id="staffSidebar"></div>
+    
+    <div class="main-content" style="margin-left: 260px;">
+        <div class="top-header">
+            <div class="header-left">
+                <span class="page-title"><i class="fas fa-chart-line"></i> Sales Revenue</span>
+            </div>
+            <div class="header-right">
+                <div class="user-info-header">
+                    <div class="user-avatar-sm" id="userAvatarSmall">ST</div>
+                    <div class="user-info-details">
+                        <span class="user-info-name" id="userNameHeader">Staff User</span>
+                        <span class="user-info-role" id="userRoleHeader">Staff</span>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="StaffSidebar.logout()">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="page-banner">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                    <div>
+                        <h1><i class="fas fa-rupee-sign"></i> Sales Team Revenue</h1>
+                        <p>Track payment transactions from won deals - Finance validation & ledger posting</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="text-white me-2 mb-0" style="font-size: 14px;">Company:</label>
+                        <select id="companySelector" class="form-select form-select-sm" style="min-width: 200px; background: rgba(255,255,255,0.95);" onchange="onCompanyChange()">
+                            <option value="">Select Company</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="noCompanyMessage" class="alert alert-info" style="display: none;">
+                <i class="fas fa-info-circle me-2"></i>
+                Please select a company from the dropdown above to view revenue data.
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card" style="border-left: 4px solid #f59e0b;">
+                        <div class="label">Pending Validation</div>
+                        <div class="value text-warning" id="statPendingAmt">₹0</div>
+                        <div class="count"><span id="statPendingCount">0</span> transactions</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card" style="border-left: 4px solid #2563eb;">
+                        <div class="label">Validated (Pending Ledger)</div>
+                        <div class="value text-primary" id="statValidatedAmt">₹0</div>
+                        <div class="count"><span id="statValidatedCount">0</span> transactions</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card" style="border-left: 4px solid #059669;">
+                        <div class="label">Posted to Ledger</div>
+                        <div class="value text-success" id="statPostedAmt">₹0</div>
+                        <div class="count"><span id="statPostedCount">0</span> transactions</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card" style="border-left: 4px solid #7c3aed;">
+                        <div class="label">Total Revenue</div>
+                        <div class="value" style="color: #7c3aed;" id="statTotalRevenue">₹0</div>
+                        <div class="count">Validated + Posted</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header flex-column align-items-start">
+                    <div class="d-flex justify-content-between align-items-center w-100 mb-2">
+                        <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Payment Transactions</h5>
+                    </div>
+                    <div class="filter-pills">
+                        <span class="filter-pill active" data-status="all" onclick="setStatusFilter('all')">All</span>
+                        <span class="filter-pill" data-status="pending" onclick="setStatusFilter('pending')">
+                            <i class="fas fa-clock me-1"></i>Pending
+                        </span>
+                        <span class="filter-pill" data-status="validated" onclick="setStatusFilter('validated')">
+                            <i class="fas fa-check me-1"></i>Validated
+                        </span>
+                        <span class="filter-pill" data-status="posted_to_ledger" onclick="setStatusFilter('posted_to_ledger')">
+                            <i class="fas fa-book me-1"></i>Posted to Ledger
+                        </span>
+                        <span class="filter-pill" data-status="rejected" onclick="setStatusFilter('rejected')">
+                            <i class="fas fa-times-circle me-1"></i>Rejected
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Lead</th>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Type</th>
+                                    <th>Mode</th>
+                                    <th>Collected By</th>
+                                    <th>Receipt</th>
+                                    <th>Status</th>
+                                    <th id="actionsHeader" style="display: none;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsTableBody">
+                                <tr>
+                                    <td colspan="9">
+                                        <div class="empty-state">
+                                            <i class="fas fa-receipt"></i>
+                                            <p>No transactions found</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <nav aria-label="Transactions pagination">
+                <ul class="pagination justify-content-center" id="pagination"></ul>
+            </nav>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="ledgerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header ledger-header">
+                    <h5 class="modal-title"><i class="fas fa-book me-2"></i>Post to Ledger</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card mb-3" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0;">
+                        <div class="card-body p-3">
+                            <h6 class="mb-3" style="color: #475569;"><i class="fas fa-receipt me-2"></i>Transaction Details</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between border-bottom py-1">
+                                        <small class="text-muted">Lead</small>
+                                        <span class="fw-semibold" id="txnDetailLead">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between border-bottom py-1">
+                                        <small class="text-muted">Phone</small>
+                                        <span id="txnDetailPhone">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between border-bottom py-1">
+                                        <small class="text-muted">Date</small>
+                                        <span id="txnDetailDate">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between border-bottom py-1">
+                                        <small class="text-muted">Amount</small>
+                                        <span class="text-success fw-bold" id="txnDetailAmount">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between border-bottom py-1">
+                                        <small class="text-muted">Type</small>
+                                        <span id="txnDetailType">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between border-bottom py-1">
+                                        <small class="text-muted">Payment Mode</small>
+                                        <span id="txnDetailMode">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between border-bottom py-1">
+                                        <small class="text-muted">Reference #</small>
+                                        <span id="txnDetailRef">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex justify-content-between border-bottom py-1">
+                                        <small class="text-muted">Collected By</small>
+                                        <span id="txnDetailCollector">-</span>
+                                    </div>
+                                </div>
+                                <div class="col-12" id="txnDetailRemarksRow" style="display: none;">
+                                    <div class="d-flex justify-content-between py-1">
+                                        <small class="text-muted">Remarks</small>
+                                        <span id="txnDetailRemarks" class="text-end" style="max-width: 70%;">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="txnAttachmentSection" class="mt-3 pt-3 border-top" style="display: none;">
+                                <h6 class="mb-2" style="color: #475569;"><i class="fas fa-paperclip me-2"></i>Receipt/Attachment</h6>
+                                <div class="d-flex align-items-center gap-2">
+                                    <a href="#" id="txnAttachmentLink" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i> View
+                                    </a>
+                                    <a href="#" id="txnAttachmentDownload" download class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-download me-1"></i> Download
+                                    </a>
+                                    <span class="text-muted small" id="txnAttachmentName">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Ledger Company <span class="text-danger">*</span></label>
+                                <select class="form-select" id="ledgerCompanySelect" onchange="onLedgerCompanyChange()">
+                                    <option value="">Select Company for Ledger</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Finance Notes</label>
+                                <input type="text" class="form-control" id="ledgerFinanceNotes" placeholder="Optional notes...">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="ledgerModeSection" style="display: none;">
+                        <label class="form-label fw-semibold mb-3">Select Ledger Party <span class="text-danger">*</span></label>
+                        
+                        <div class="ledger-mode-card" data-mode="existing" onclick="selectLedgerMode('existing')">
+                            <div class="d-flex align-items-center">
+                                <input type="radio" name="ledgerMode" id="modeExisting" class="me-3">
+                                <div>
+                                    <div class="mode-title"><i class="fas fa-search me-2"></i>Use Existing Ledger</div>
+                                    <div class="mode-desc">Search and select from existing customer ledgers in this company</div>
+                                </div>
+                            </div>
+                            <div id="existingLedgerSearch" class="mt-3" style="display: none;">
+                                <input type="text" class="form-control" id="existingLedgerSearchInput" placeholder="Search existing ledgers..." oninput="searchExistingLedgers()">
+                                <div class="search-results" id="existingLedgerResults"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="ledger-mode-card" data-mode="new_from_lead" onclick="selectLedgerMode('new_from_lead')">
+                            <div class="d-flex align-items-center">
+                                <input type="radio" name="ledgerMode" id="modeNewLead" class="me-3">
+                                <div>
+                                    <div class="mode-title"><i class="fas fa-user me-2"></i>New Ledger from Lead</div>
+                                    <div class="mode-desc">Create a new customer ledger using a lead's name</div>
+                                </div>
+                            </div>
+                            <div id="newLeadSearch" class="mt-3" style="display: none;">
+                                <input type="text" class="form-control" id="newLeadSearchInput" placeholder="Search leads..." oninput="searchLeadsForLedger()">
+                                <div class="search-results" id="newLeadResults"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="ledger-mode-card" data-mode="new_custom" onclick="selectLedgerMode('new_custom')">
+                            <div class="d-flex align-items-center">
+                                <input type="radio" name="ledgerMode" id="modeNewCustom" class="me-3">
+                                <div>
+                                    <div class="mode-title"><i class="fas fa-plus-circle me-2"></i>New Custom Ledger</div>
+                                    <div class="mode-desc">Create a new customer ledger with a custom name</div>
+                                </div>
+                            </div>
+                            <div id="customNameInput" class="mt-3" style="display: none;">
+                                <input type="text" class="form-control" id="customLedgerName" placeholder="Enter custom party name...">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="ledger-preview" id="ledgerPreview" style="display: none;">
+                        <h6><i class="fas fa-eye me-2"></i>Ledger Entry Preview</h6>
+                        <div class="preview-row">
+                            <span class="preview-label">Company</span>
+                            <span class="preview-value" id="previewCompany">-</span>
+                        </div>
+                        <div class="preview-row">
+                            <span class="preview-label">Party Name</span>
+                            <span class="preview-value" id="previewParty">-</span>
+                        </div>
+                        <div class="preview-row">
+                            <span class="preview-label">Entry Type</span>
+                            <span class="preview-value text-success">CREDIT (Payment Received)</span>
+                        </div>
+                        <div class="preview-row">
+                            <span class="preview-label">Amount</span>
+                            <span class="preview-value text-success" id="previewAmount">₹0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="validateOnlyTransaction()" id="btnValidateOnly">
+                        <i class="fas fa-check me-1"></i> Validate Only
+                    </button>
+                    <button type="button" class="btn text-white" style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);" onclick="postToLedger()" id="btnPostLedger">
+                        <i class="fas fa-book me-1"></i> Post to Ledger
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="rejectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header reject-header">
+                    <h5 class="modal-title"><i class="fas fa-times-circle me-2"></i>Reject Transaction</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejectionReason" rows="3" placeholder="Please provide a reason for rejection..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmReject()">
+                        <i class="fas fa-times me-1"></i> Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const API_BASE = '/api/v1/crm';
+        let companyId = null;
+        let allCompanies = [];
+        let currentPage = 1;
+        let currentStatusFilter = 'all';
+        let pendingRejectTxn = null;
+        let pendingLedgerTxn = null;
+        let isFinanceUser = false;
+        let selectedLedgerMode = null;
+        let selectedExistingParty = null;
+        let selectedLeadForLedger = null;
+        
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const url = `${API_BASE}${endpoint}`;
+            const options = { method };
+            if (body) options.body = JSON.stringify(body);
+            
+            try {
+                return await staffFetchJson(url, options);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return null;
+                throw error;
+            }
+        }
+        
+        function showToast(message, type = 'info') {
+            const container = document.querySelector('.toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} border-0`;
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            container.appendChild(toast);
+            new bootstrap.Toast(toast, { delay: 4000 }).show();
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
+        
+        function formatCurrency(amount) {
+            if (!amount && amount !== 0) return '₹0';
+            const num = parseFloat(amount);
+            if (num >= 10000000) return '₹' + (num / 10000000).toFixed(2) + ' Cr';
+            if (num >= 100000) return '₹' + (num / 100000).toFixed(2) + ' L';
+            if (num >= 1000) return '₹' + (num / 1000).toFixed(1) + 'K';
+            return '₹' + num.toLocaleString('en-IN');
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'pending': 'status-pending',
+                'validated': 'status-validated',
+                'posted_to_ledger': 'status-posted_to_ledger',
+                'rejected': 'status-rejected'
+            };
+            return classes[status] || 'status-pending';
+        }
+        
+        function getStatusLabel(status) {
+            const labels = {
+                'pending': 'Pending',
+                'validated': 'Validated',
+                'posted_to_ledger': 'Posted to Ledger',
+                'rejected': 'Rejected'
+            };
+            return labels[status] || status;
+        }
+        
+        async function loadCompanies() {
+            try {
+                const data = await staffFetchJson('/api/v1/crm/my-companies');
+                if (data.success && data.companies) {
+                    allCompanies = data.companies;
+                    const select = document.getElementById('companySelector');
+                    select.innerHTML = '<option value="">All Companies</option>';
+                    data.companies.forEach(c => {
+                        select.innerHTML += `<option value="${c.id}">${c.company_name}</option>`;
+                    });
+                    
+                    document.getElementById('noCompanyMessage').style.display = 'none';
+                    loadDashboardStats();
+                    loadTransactionData();
+                }
+            } catch (error) {
+                console.error('Failed to load companies:', error);
+            }
+        }
+        
+        function onCompanyChange() {
+            const select = document.getElementById('companySelector');
+            companyId = select.value ? parseInt(select.value) : null;
+            
+            document.getElementById('noCompanyMessage').style.display = 'none';
+            loadDashboardStats();
+            loadTransactionData();
+        }
+        
+        async function loadDashboardStats() {
+            try {
+                const companyParam = companyId ? `company_id=${companyId}` : '';
+                const data = await apiCall(`/transactions/dashboard?${companyParam}`);
+                if (data && data.success) {
+                    const stats = data.data;
+                    document.getElementById('statPendingAmt').textContent = formatCurrency(stats.pending.amount);
+                    document.getElementById('statPendingCount').textContent = stats.pending.count;
+                    document.getElementById('statValidatedAmt').textContent = formatCurrency(stats.validated.amount);
+                    document.getElementById('statValidatedCount').textContent = stats.validated.count;
+                    document.getElementById('statPostedAmt').textContent = formatCurrency(stats.posted_to_ledger.amount);
+                    document.getElementById('statPostedCount').textContent = stats.posted_to_ledger.count;
+                    document.getElementById('statTotalRevenue').textContent = formatCurrency(stats.total_revenue);
+                }
+            } catch (error) {
+                console.error('Failed to load dashboard stats:', error);
+            }
+        }
+        
+        async function loadTransactionData() {
+            try {
+                const statusParam = currentStatusFilter !== 'all' ? `&status=${currentStatusFilter}` : '';
+                const companyParam = companyId ? `&company_id=${companyId}` : '';
+                const data = await apiCall(`/transactions/list?page=${currentPage}&page_size=20${statusParam}${companyParam}`);
+                
+                if (data && data.success) {
+                    renderTransactionsTable(data.data);
+                    renderPagination(data.pagination);
+                }
+            } catch (error) {
+                console.error('Failed to load transaction data:', error);
+                showToast('Failed to load transaction data', 'error');
+            }
+        }
+        
+        function renderTransactionsTable(transactions) {
+            const tbody = document.getElementById('transactionsTableBody');
+            const actionsHeader = document.getElementById('actionsHeader');
+            
+            if (!transactions || transactions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9">
+                            <div class="empty-state">
+                                <i class="fas fa-receipt"></i>
+                                <p>No transactions found</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                actionsHeader.style.display = 'none';
+                return;
+            }
+            
+            actionsHeader.style.display = isFinanceUser ? '' : 'none';
+            
+            tbody.innerHTML = transactions.map(txn => {
+                let actionButtons = '';
+                if (isFinanceUser) {
+                    if (txn.validation_status === 'pending') {
+                        actionButtons = `
+                            <td>
+                                <button class="action-btn post-ledger me-1" onclick="openLedgerModal(${JSON.stringify(txn).replace(/"/g, '&quot;')})">
+                                    <i class="fas fa-book"></i> Review
+                                </button>
+                                <button class="action-btn reject" onclick="openRejectModal(${JSON.stringify(txn).replace(/"/g, '&quot;')})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </td>
+                        `;
+                    } else if (txn.validation_status === 'validated') {
+                        actionButtons = `
+                            <td>
+                                <button class="action-btn post-ledger" onclick="openLedgerModal(${JSON.stringify(txn).replace(/"/g, '&quot;')})">
+                                    <i class="fas fa-book"></i> Post to Ledger
+                                </button>
+                            </td>
+                        `;
+                    } else {
+                        actionButtons = '<td>-</td>';
+                    }
+                }
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">${txn.lead_name || 'Unknown Lead'}</div>
+                            <small class="text-muted">${txn.lead_phone || '-'}</small>
+                        </td>
+                        <td>${formatDate(txn.transaction_date)}</td>
+                        <td class="fw-semibold text-success">₹${parseFloat(txn.amount || 0).toLocaleString('en-IN')}</td>
+                        <td><span class="type-badge">${txn.transaction_type}</span></td>
+                        <td>${(txn.payment_mode || '').toUpperCase()}</td>
+                        <td>${txn.collected_by_name || '-'}</td>
+                        <td>${txn.receipt_filename ? '<i class="fas fa-file-alt text-primary" title="Receipt uploaded"></i>' : '-'}</td>
+                        <td><span class="status-badge ${getStatusBadgeClass(txn.validation_status)}">${getStatusLabel(txn.validation_status)}</span></td>
+                        ${isFinanceUser ? actionButtons : ''}
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function renderPagination(pagination) {
+            if (!pagination || pagination.total_pages <= 1) {
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            const ul = document.getElementById('pagination');
+            let html = '';
+            
+            if (pagination.page > 1) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${pagination.page - 1}); return false;">Previous</a></li>`;
+            }
+            
+            for (let i = 1; i <= Math.min(pagination.total_pages, 10); i++) {
+                html += `<li class="page-item ${i === pagination.page ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a>
+                </li>`;
+            }
+            
+            if (pagination.page < pagination.total_pages) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${pagination.page + 1}); return false;">Next</a></li>`;
+            }
+            
+            ul.innerHTML = html;
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            loadTransactionData();
+        }
+        
+        function setStatusFilter(status) {
+            currentStatusFilter = status;
+            currentPage = 1;
+            
+            document.querySelectorAll('.filter-pill').forEach(pill => {
+                pill.classList.toggle('active', pill.dataset.status === status);
+            });
+            
+            loadTransactionData();
+        }
+        
+        function openLedgerModal(txn) {
+            pendingLedgerTxn = txn;
+            selectedLedgerMode = null;
+            selectedExistingParty = null;
+            selectedLeadForLedger = null;
+            
+            document.getElementById('txnDetailLead').textContent = txn.lead_name || 'Unknown';
+            document.getElementById('txnDetailPhone').textContent = txn.lead_phone || '-';
+            document.getElementById('txnDetailDate').textContent = formatDate(txn.transaction_date);
+            document.getElementById('txnDetailAmount').textContent = '₹' + parseFloat(txn.amount || 0).toLocaleString('en-IN');
+            document.getElementById('txnDetailType').textContent = (txn.transaction_type || '-').charAt(0).toUpperCase() + (txn.transaction_type || '').slice(1);
+            document.getElementById('txnDetailMode').textContent = (txn.payment_mode || '-').toUpperCase();
+            document.getElementById('txnDetailRef').textContent = txn.reference_number || '-';
+            document.getElementById('txnDetailCollector').textContent = txn.collected_by_name || '-';
+            
+            if (txn.remarks) {
+                document.getElementById('txnDetailRemarksRow').style.display = 'block';
+                document.getElementById('txnDetailRemarks').textContent = txn.remarks;
+            } else {
+                document.getElementById('txnDetailRemarksRow').style.display = 'none';
+            }
+            
+            const attachSection = document.getElementById('txnAttachmentSection');
+            if (txn.receipt_filename) {
+                attachSection.style.display = 'block';
+                const receiptUrl = `/storage/crm/transactions/${txn.id}/${txn.receipt_filename}`;
+                document.getElementById('txnAttachmentLink').href = receiptUrl;
+                document.getElementById('txnAttachmentDownload').href = receiptUrl;
+                document.getElementById('txnAttachmentName').textContent = txn.receipt_filename;
+            } else {
+                attachSection.style.display = 'none';
+            }
+            
+            const ledgerCompanySelect = document.getElementById('ledgerCompanySelect');
+            ledgerCompanySelect.innerHTML = '<option value="">Select Company for Ledger</option>';
+            allCompanies.forEach(c => {
+                const selected = txn.company_id == c.id ? 'selected' : '';
+                ledgerCompanySelect.innerHTML += `<option value="${c.id}" ${selected}>${c.company_name}</option>`;
+            });
+            
+            if (txn.company_id) {
+                onLedgerCompanyChange();
+            }
+            
+            document.getElementById('ledgerFinanceNotes').value = '';
+            document.getElementById('ledgerModeSection').style.display = txn.company_id ? 'block' : 'none';
+            document.getElementById('ledgerPreview').style.display = 'none';
+            document.getElementById('previewAmount').textContent = '₹' + parseFloat(txn.amount).toLocaleString('en-IN');
+            
+            document.querySelectorAll('.ledger-mode-card').forEach(card => card.classList.remove('selected'));
+            document.querySelectorAll('input[name="ledgerMode"]').forEach(radio => radio.checked = false);
+            document.getElementById('existingLedgerSearch').style.display = 'none';
+            document.getElementById('newLeadSearch').style.display = 'none';
+            document.getElementById('customNameInput').style.display = 'none';
+            document.getElementById('existingLedgerResults').innerHTML = '';
+            document.getElementById('newLeadResults').innerHTML = '';
+            document.getElementById('customLedgerName').value = '';
+            
+            document.getElementById('btnValidateOnly').style.display = txn.validation_status === 'pending' ? '' : 'none';
+            
+            new bootstrap.Modal(document.getElementById('ledgerModal')).show();
+        }
+        
+        function onLedgerCompanyChange() {
+            const ledgerCompanyId = document.getElementById('ledgerCompanySelect').value;
+            const modeSection = document.getElementById('ledgerModeSection');
+            
+            if (ledgerCompanyId) {
+                modeSection.style.display = 'block';
+                const company = allCompanies.find(c => c.id == ledgerCompanyId);
+                document.getElementById('previewCompany').textContent = company ? company.company_name : '-';
+            } else {
+                modeSection.style.display = 'none';
+                document.getElementById('ledgerPreview').style.display = 'none';
+            }
+        }
+        
+        function selectLedgerMode(mode) {
+            selectedLedgerMode = mode;
+            selectedExistingParty = null;
+            selectedLeadForLedger = null;
+            
+            document.querySelectorAll('.ledger-mode-card').forEach(card => {
+                card.classList.toggle('selected', card.dataset.mode === mode);
+            });
+            
+            document.getElementById('modeExisting').checked = mode === 'existing';
+            document.getElementById('modeNewLead').checked = mode === 'new_from_lead';
+            document.getElementById('modeNewCustom').checked = mode === 'new_custom';
+            
+            document.getElementById('existingLedgerSearch').style.display = mode === 'existing' ? 'block' : 'none';
+            document.getElementById('newLeadSearch').style.display = mode === 'new_from_lead' ? 'block' : 'none';
+            document.getElementById('customNameInput').style.display = mode === 'new_custom' ? 'block' : 'none';
+            
+            if (mode === 'new_custom') {
+                updatePreview();
+            } else {
+                document.getElementById('ledgerPreview').style.display = 'none';
+            }
+        }
+        
+        let searchDebounce = null;
+        
+        async function searchExistingLedgers() {
+            clearTimeout(searchDebounce);
+            const ledgerCompanyId = document.getElementById('ledgerCompanySelect').value;
+            const search = document.getElementById('existingLedgerSearchInput').value;
+            
+            searchDebounce = setTimeout(async () => {
+                if (!ledgerCompanyId) return;
+                
+                try {
+                    const data = await apiCall(`/transactions/search-ledgers?ledger_company_id=${ledgerCompanyId}&search=${encodeURIComponent(search)}`);
+                    if (data && data.success) {
+                        const container = document.getElementById('existingLedgerResults');
+                        if (data.data.length === 0) {
+                            container.innerHTML = '<div class="p-3 text-muted text-center">No existing ledgers found</div>';
+                        } else {
+                            container.innerHTML = data.data.map(ledger => `
+                                <div class="search-result-item" onclick="selectExistingLedger(${ledger.party_id}, '${ledger.party_name.replace(/'/g, "\\'")}')">
+                                    <div class="fw-semibold">${ledger.party_name}</div>
+                                    <small class="text-muted">Balance: ₹${parseFloat(ledger.current_balance).toLocaleString('en-IN')}</small>
+                                </div>
+                            `).join('');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Search failed:', error);
+                }
+            }, 300);
+        }
+        
+        function selectExistingLedger(partyId, partyName) {
+            selectedExistingParty = { party_id: partyId, party_name: partyName };
+            
+            document.querySelectorAll('#existingLedgerResults .search-result-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            updatePreview();
+        }
+        
+        async function searchLeadsForLedger() {
+            clearTimeout(searchDebounce);
+            const search = document.getElementById('newLeadSearchInput').value;
+            
+            searchDebounce = setTimeout(async () => {
+                try {
+                    const data = await apiCall(`/transactions/search-leads?company_id=${companyId}&search=${encodeURIComponent(search)}`);
+                    if (data && data.success) {
+                        const container = document.getElementById('newLeadResults');
+                        if (data.data.length === 0) {
+                            container.innerHTML = '<div class="p-3 text-muted text-center">No leads found</div>';
+                        } else {
+                            container.innerHTML = data.data.map(lead => `
+                                <div class="search-result-item" onclick="selectLeadForLedger(${lead.id}, '${lead.name.replace(/'/g, "\\'")}')">
+                                    <div class="fw-semibold">${lead.name}</div>
+                                    <small class="text-muted">${lead.phone || '-'}</small>
+                                </div>
+                            `).join('');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Search failed:', error);
+                }
+            }, 300);
+        }
+        
+        function selectLeadForLedger(leadId, leadName) {
+            selectedLeadForLedger = { id: leadId, name: leadName };
+            
+            document.querySelectorAll('#newLeadResults .search-result-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+            
+            updatePreview();
+        }
+        
+        function updatePreview() {
+            const preview = document.getElementById('ledgerPreview');
+            let partyName = '-';
+            
+            if (selectedLedgerMode === 'existing' && selectedExistingParty) {
+                partyName = selectedExistingParty.party_name;
+            } else if (selectedLedgerMode === 'new_from_lead' && selectedLeadForLedger) {
+                partyName = selectedLeadForLedger.name + ' (New Ledger)';
+            } else if (selectedLedgerMode === 'new_custom') {
+                const customName = document.getElementById('customLedgerName').value.trim();
+                partyName = customName ? customName + ' (New Ledger)' : 'Enter name above...';
+            }
+            
+            document.getElementById('previewParty').textContent = partyName;
+            preview.style.display = 'block';
+        }
+        
+        document.getElementById('customLedgerName').addEventListener('input', updatePreview);
+        
+        async function validateOnlyTransaction() {
+            if (!pendingLedgerTxn) return;
+            
+            const financeNotes = document.getElementById('ledgerFinanceNotes').value.trim();
+            const txnCompanyId = pendingLedgerTxn.company_id || companyId;
+            
+            try {
+                const companyParam = txnCompanyId ? `company_id=${txnCompanyId}` : '';
+                const data = await apiCall(`/transactions/${pendingLedgerTxn.id}/finance-review?${companyParam}`, 'PATCH', {
+                    action: 'validate',
+                    finance_notes: financeNotes || null
+                });
+                
+                if (data && data.success) {
+                    showToast('Transaction validated successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('ledgerModal')).hide();
+                    loadDashboardStats();
+                    loadTransactionData();
+                } else {
+                    showToast(data?.detail || 'Validation failed', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to validate transaction', 'error');
+            }
+        }
+        
+        async function postToLedger() {
+            if (!pendingLedgerTxn) return;
+            
+            const ledgerCompanyId = document.getElementById('ledgerCompanySelect').value;
+            if (!ledgerCompanyId) {
+                showToast('Please select a ledger company', 'error');
+                return;
+            }
+            
+            if (!selectedLedgerMode) {
+                showToast('Please select a ledger party option', 'error');
+                return;
+            }
+            
+            const payload = {
+                action: 'post_to_ledger',
+                ledger_company_id: parseInt(ledgerCompanyId),
+                ledger_mode: selectedLedgerMode,
+                finance_notes: document.getElementById('ledgerFinanceNotes').value.trim() || null
+            };
+            
+            if (selectedLedgerMode === 'existing') {
+                if (!selectedExistingParty) {
+                    showToast('Please select an existing ledger', 'error');
+                    return;
+                }
+                payload.existing_ledger_party_id = selectedExistingParty.party_id;
+                payload.existing_ledger_party_name = selectedExistingParty.party_name;
+            } else if (selectedLedgerMode === 'new_from_lead') {
+                if (!selectedLeadForLedger) {
+                    showToast('Please select a lead', 'error');
+                    return;
+                }
+                payload.new_ledger_lead_id = selectedLeadForLedger.id;
+            } else if (selectedLedgerMode === 'new_custom') {
+                const customName = document.getElementById('customLedgerName').value.trim();
+                if (!customName) {
+                    showToast('Please enter a custom party name', 'error');
+                    return;
+                }
+                payload.new_ledger_custom_name = customName;
+            }
+            
+            try {
+                const txnCompanyId = pendingLedgerTxn.company_id || companyId;
+                const companyParam = txnCompanyId ? `company_id=${txnCompanyId}` : '';
+                const data = await apiCall(`/transactions/${pendingLedgerTxn.id}/finance-review?${companyParam}`, 'PATCH', payload);
+                
+                if (data && data.success) {
+                    showToast(data.message || 'Posted to ledger successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('ledgerModal')).hide();
+                    loadDashboardStats();
+                    loadTransactionData();
+                } else {
+                    showToast(data?.detail || 'Failed to post to ledger', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to post to ledger', 'error');
+            }
+        }
+        
+        function openRejectModal(txn) {
+            pendingRejectTxn = txn;
+            document.getElementById('rejectionReason').value = '';
+            new bootstrap.Modal(document.getElementById('rejectModal')).show();
+        }
+        
+        async function confirmReject() {
+            if (!pendingRejectTxn) return;
+            
+            const reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                showToast('Please provide a rejection reason', 'error');
+                return;
+            }
+            
+            const txnCompanyId = pendingRejectTxn.company_id || companyId;
+            const companyParam = txnCompanyId ? `company_id=${txnCompanyId}` : '';
+            
+            try {
+                const data = await apiCall(`/transactions/${pendingRejectTxn.id}/finance-review?${companyParam}`, 'PATCH', {
+                    action: 'reject',
+                    rejection_reason: reason
+                });
+                
+                if (data && data.success) {
+                    showToast('Transaction rejected', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+                    loadDashboardStats();
+                    loadTransactionData();
+                } else {
+                    showToast(data?.detail || 'Failed to reject transaction', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to reject transaction', 'error');
+            }
+        }
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const nameEl = document.getElementById('userNameHeader');
+            const roleEl = document.getElementById('userRoleHeader');
+            const avatarEl = document.getElementById('userAvatarSmall');
+            
+            if (nameEl && userData.full_name) {
+                nameEl.textContent = userData.full_name;
+            }
+            if (roleEl && userData.staff_type) {
+                roleEl.textContent = userData.staff_type;
+                
+                const staffType = (userData.staff_type || '').toUpperCase();
+                isFinanceUser = staffType.includes('VGK') || staffType === 'EA' || 
+                               staffType.includes('FINANCE') || staffType.includes('ACCOUNT');
+            }
+            if (avatarEl && userData.full_name) {
+                const initials = userData.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                avatarEl.textContent = initials;
+            }
+        }
+        
+        async function init() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            updateHeaderUserInfo();
+            await loadCompanies();
+        }
+        
+        window.onCompanyChange = onCompanyChange;
+        window.setStatusFilter = setStatusFilter;
+        window.goToPage = goToPage;
+        window.openLedgerModal = openLedgerModal;
+        window.openRejectModal = openRejectModal;
+        window.confirmReject = confirmReject;
+        window.selectLedgerMode = selectLedgerMode;
+        window.selectExistingLedger = selectExistingLedger;
+        window.selectLeadForLedger = selectLeadForLedger;
+        window.validateOnlyTransaction = validateOnlyTransaction;
+        window.postToLedger = postToLedger;
+        window.onLedgerCompanyChange = onLedgerCompanyChange;
+        window.searchExistingLedgers = searchExistingLedgers;
+        window.searchLeadsForLedger = searchLeadsForLedger;
+        
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

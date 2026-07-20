@@ -1,0 +1,1429 @@
+{
+  "timestamp": "2025-10-17T19:37:54.950819",
+  "user_id": "BEV1800143",
+  "user_data": {
+    "profile": {
+      "success": true,
+      "message": "Profile retrieved successfully",
+      "data": {
+        "id": "BEV1800143",
+        "name": "B.RAMALAXMI",
+        "email": "None",
+        "mobile": "1234567890",
+        "user_type": "Member",
+        "registration_date": "2025-01-24T00:00:00",
+        "activation_date": "2025-10-11T00:00:00",
+        "coupon_status": "Activated",
+        "is_active": true,
+        "address": "",
+        "city": "None",
+        "state": "None",
+        "pincode": "",
+        "earning_wallet": 0.0,
+        "withdrawable_wallet": 0.0,
+        "upgrade_wallet_balance": 0.0,
+        "wallet_balance": 0.0,
+        "total_earnings": 0.0,
+        "kyc_status": "Pending",
+        "last_wallet_sync_at": null,
+        "sponsor_id": "",
+        "referrer_id": "BEV1800142",
+        "is_ved": false,
+        "package_type": "Platinum",
+        "package_points": 1.0,
+        "bank_name": "None"
+      },
+      "timestamp": "2025-10-17T19:37:53.646737"
+    },
+    "team_all": {
+      "success": true,
+      "message": "Team members retrieved (page 1/4)",
+      "data": {
+        "members": [
+          {
+            "bev_id": "BEV1800145",
+            "name": "Y.VASUDHA",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 1,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800186",
+            "name": "K.NOOKU NAIDU",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 1,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800298",
+            "name": "K.NOOKU NAIDU",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 2,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800303",
+            "name": "M.SIVA SANKAR",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 2,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800329",
+            "name": "REDDY.GANESH",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 2,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800337",
+            "name": "JAJULA.LAKSHMI",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 2,
+            "registration_date": "2025-01-25T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800299",
+            "name": "ESWARA PRASAD",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 3,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800300",
+            "name": "M.RAMA APPARAO",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 3,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800351",
+            "name": "LOKAVARAPU. VENKATARAMANA",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 3,
+            "registration_date": "2025-01-31T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800353",
+            "name": "NAKKA SATYANARAYANA",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 3,
+            "registration_date": "2025-01-31T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800357",
+            "name": "MALLA.APARNA",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 3,
+            "registration_date": "2025-02-03T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800407",
+            "name": "REDDY.VIJAY KUMAR",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 3,
+            "registration_date": "2025-02-08T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800434",
+            "name": "KALLA.LAKSHMI",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 3,
+            "registration_date": "2025-02-15T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800511",
+            "name": "GANESH.R",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 3,
+            "registration_date": "2025-02-27T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800301",
+            "name": "K.VIJAY KUMAR",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 4,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800302",
+            "name": "M.RAMA APPARAO",
+            "package": "Eligible",
+            "position": "Left",
+            "level": 4,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive"
+          },
+          {
+            "bev_id": "BEV1800325",
+            "name": "YERRINAAID",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 4,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800352",
+            "name": "LOKAVARAPU MANGA",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 4,
+            "registration_date": "2025-01-31T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800368",
+            "name": "UBBETI CHAKRAMMA",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 4,
+            "registration_date": "2025-02-05T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800379",
+            "name": "SAMIREDDILOVALAKSHMI",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 4,
+            "registration_date": "2025-02-07T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800410",
+            "name": "LAGUDU AYYAPPA SWAMI",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 4,
+            "registration_date": "2025-02-08T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800436",
+            "name": "KALLA.SRINUVASA RAO",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 4,
+            "registration_date": "2025-02-15T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800477",
+            "name": "RAMANAMMAK",
+            "package": "Eligible",
+            "position": "Left",
+            "level": 4,
+            "registration_date": "2025-02-26T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive"
+          },
+          {
+            "bev_id": "BEV1800489",
+            "name": "TOTA.NANAJI",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 4,
+            "registration_date": "2025-02-26T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800513",
+            "name": "TAMARANA SRINIVASA RAO",
+            "package": "Eligible",
+            "position": "Left",
+            "level": 4,
+            "registration_date": "2025-02-28T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive"
+          },
+          {
+            "bev_id": "BEV1800514",
+            "name": "KONATHALA.HIMASEKHAR",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 4,
+            "registration_date": "2025-02-28T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800520",
+            "name": "G.SREENIVAS",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 4,
+            "registration_date": "2025-02-28T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800543",
+            "name": "VARRI.ANJANEYULU",
+            "package": "Eligible",
+            "position": "Right",
+            "level": 4,
+            "registration_date": "2025-03-04T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive"
+          },
+          {
+            "bev_id": "BEV1800544",
+            "name": "CHINNI.R",
+            "package": "Eligible",
+            "position": "Right",
+            "level": 4,
+            "registration_date": "2025-03-04T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive"
+          },
+          {
+            "bev_id": "BEV1800589",
+            "name": "VELAGA.JAGANNADH",
+            "package": "Eligible",
+            "position": "Right",
+            "level": 4,
+            "registration_date": "2025-03-08T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive"
+          },
+          {
+            "bev_id": "BEV1800328",
+            "name": "S T NAIDU",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 5,
+            "registration_date": "2025-01-24T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800336",
+            "name": "B_V_K_HARISH",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 5,
+            "registration_date": "2025-01-25T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800354",
+            "name": "BAYYAPUREDDY RAJESWARI",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 5,
+            "registration_date": "2025-01-31T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800380",
+            "name": "JAJULAAMMAJI",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 5,
+            "registration_date": "2025-02-07T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800395",
+            "name": "LOCHARLA RAM PRASAD",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 5,
+            "registration_date": "2025-02-08T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800437",
+            "name": "CHITTA.YELLESWARI",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 5,
+            "registration_date": "2025-02-15T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800491",
+            "name": "LALAM.DORABABU",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 5,
+            "registration_date": "2025-02-26T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800516",
+            "name": "SURAPUREDDY.VENKATARAMANA",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 5,
+            "registration_date": "2025-02-28T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800526",
+            "name": "ROMOJU.LAXMANARAO",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 5,
+            "registration_date": "2025-02-28T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800527",
+            "name": "K.CH.SEKHAR",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 5,
+            "registration_date": "2025-03-01T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800545",
+            "name": "GANTA SURYANARAYANA",
+            "package": "Eligible",
+            "position": "Left",
+            "level": 5,
+            "registration_date": "2025-03-04T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive"
+          },
+          {
+            "bev_id": "BEV1800547",
+            "name": "MAKIREDDI.NAGESWARAO",
+            "package": "Eligible",
+            "position": "Left",
+            "level": 5,
+            "registration_date": "2025-03-04T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive"
+          },
+          {
+            "bev_id": "BEV1800550",
+            "name": "CH.GANGARAJU",
+            "package": "Platinum",
+            "position": "Right",
+            "level": 5,
+            "registration_date": "2025-03-04T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800563",
+            "name": "POTHU.RANGARAO",
+            "package": "Eligible",
+            "position": "Left",
+            "level": 5,
+            "registration_date": "2025-03-06T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive"
+          },
+          {
+            "bev_id": "BEV1800356",
+            "name": "KAKARLA BALA SRINIVAS",
+            "package": "Eligible",
+            "position": "Right",
+            "level": 6,
+            "registration_date": "2025-02-03T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive"
+          },
+          {
+            "bev_id": "BEV1800365",
+            "name": "POLUPARTHI.LAKSHMI",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 6,
+            "registration_date": "2025-02-04T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800367",
+            "name": "KALLA.SATYANARAYANA",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 6,
+            "registration_date": "2025-02-05T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800376",
+            "name": "S.MANGAVANI",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 6,
+            "registration_date": "2025-02-06T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800439",
+            "name": "CHITTHA.ESWARARAVU",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 6,
+            "registration_date": "2025-02-16T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          },
+          {
+            "bev_id": "BEV1800440",
+            "name": "UBBETI SUSEELA",
+            "package": "Platinum",
+            "position": "Left",
+            "level": 6,
+            "registration_date": "2025-02-17T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated"
+          }
+        ],
+        "total": 189,
+        "page": 1,
+        "page_size": 50,
+        "total_pages": 4
+      },
+      "timestamp": "2025-10-17T19:37:53.780818"
+    },
+    "team_ved": {
+      "success": true,
+      "message": "Ved members retrieved successfully",
+      "data": {
+        "ved_members": [
+          {
+            "bev_id": "BEV1800456",
+            "name": "PUDI.DEVI",
+            "package": "Platinum",
+            "registration_date": "2025-02-19T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated",
+            "ved_position": 3,
+            "is_ved_root": true,
+            "downline_count": 6,
+            "position": "Root",
+            "level": 0
+          },
+          {
+            "bev_id": "BEV1800509",
+            "name": "PUDI.DEVI",
+            "package": "Eligible",
+            "registration_date": "2025-02-27T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive",
+            "ved_position": 3,
+            "ved_root_id": "BEV1800456",
+            "ved_root_name": "PUDI.DEVI",
+            "is_ved_root": false,
+            "level": 1,
+            "position": "Left"
+          },
+          {
+            "bev_id": "BEV1800474",
+            "name": "THRINADH.PUDI",
+            "package": "Eligible",
+            "registration_date": "2025-02-21T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive",
+            "ved_position": 3,
+            "ved_root_id": "BEV1800456",
+            "ved_root_name": "PUDI.DEVI",
+            "is_ved_root": false,
+            "level": 1,
+            "position": "Right"
+          },
+          {
+            "bev_id": "BEV1800488",
+            "name": "KONAMANCHILLI SAI",
+            "package": "Platinum",
+            "registration_date": "2025-02-26T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated",
+            "ved_position": 3,
+            "ved_root_id": "BEV1800456",
+            "ved_root_name": "PUDI.DEVI",
+            "is_ved_root": false,
+            "level": 2,
+            "position": "Right"
+          },
+          {
+            "bev_id": "BEV1800546",
+            "name": "S.N.RAMESH",
+            "package": "Eligible",
+            "registration_date": "2025-03-04T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive",
+            "ved_position": 3,
+            "ved_root_id": "BEV1800456",
+            "ved_root_name": "PUDI.DEVI",
+            "is_ved_root": false,
+            "level": 2,
+            "position": "Left"
+          },
+          {
+            "bev_id": "BEV1800508",
+            "name": "V.D.S.PRASAD",
+            "package": "Platinum",
+            "registration_date": "2025-02-27T00:00:00",
+            "activation_date": "2025-10-11T00:00:00",
+            "status": "Active",
+            "coupon_status": "Activated",
+            "ved_position": 3,
+            "ved_root_id": "BEV1800456",
+            "ved_root_name": "PUDI.DEVI",
+            "is_ved_root": false,
+            "level": 3,
+            "position": "Right"
+          },
+          {
+            "bev_id": "BEV1800512",
+            "name": "MONDI.DURGAPRASAD",
+            "package": "Eligible",
+            "registration_date": "2025-02-28T00:00:00",
+            "activation_date": null,
+            "status": "Inactive",
+            "coupon_status": "Inactive",
+            "ved_position": 3,
+            "ved_root_id": "BEV1800456",
+            "ved_root_name": "PUDI.DEVI",
+            "is_ved_root": false,
+            "level": 4,
+            "position": "Right"
+          }
+        ],
+        "total": 7,
+        "is_ved": false,
+        "ved_owner": null
+      },
+      "timestamp": "2025-10-17T19:37:53.917540"
+    },
+    "earnings": {
+      "error": "User not found"
+    },
+    "awards": null
+  },
+  "admin_data": {
+    "team_all": {
+      "status": 200,
+      "data": {
+        "success": true,
+        "message": "Team members retrieved (page 1/4)",
+        "data": {
+          "members": [
+            {
+              "bev_id": "BEV1800145",
+              "name": "Y.VASUDHA",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 1,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800186",
+              "name": "K.NOOKU NAIDU",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 1,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800298",
+              "name": "K.NOOKU NAIDU",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 2,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800303",
+              "name": "M.SIVA SANKAR",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 2,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800329",
+              "name": "REDDY.GANESH",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 2,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800337",
+              "name": "JAJULA.LAKSHMI",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 2,
+              "registration_date": "2025-01-25T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800299",
+              "name": "ESWARA PRASAD",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 3,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800300",
+              "name": "M.RAMA APPARAO",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 3,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800351",
+              "name": "LOKAVARAPU. VENKATARAMANA",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 3,
+              "registration_date": "2025-01-31T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800353",
+              "name": "NAKKA SATYANARAYANA",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 3,
+              "registration_date": "2025-01-31T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800357",
+              "name": "MALLA.APARNA",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 3,
+              "registration_date": "2025-02-03T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800407",
+              "name": "REDDY.VIJAY KUMAR",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 3,
+              "registration_date": "2025-02-08T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800434",
+              "name": "KALLA.LAKSHMI",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 3,
+              "registration_date": "2025-02-15T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800511",
+              "name": "GANESH.R",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 3,
+              "registration_date": "2025-02-27T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800301",
+              "name": "K.VIJAY KUMAR",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 4,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800302",
+              "name": "M.RAMA APPARAO",
+              "package": "Eligible",
+              "position": "Left",
+              "level": 4,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": null,
+              "status": "Inactive",
+              "coupon_status": "Inactive"
+            },
+            {
+              "bev_id": "BEV1800325",
+              "name": "YERRINAAID",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 4,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800352",
+              "name": "LOKAVARAPU MANGA",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 4,
+              "registration_date": "2025-01-31T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800368",
+              "name": "UBBETI CHAKRAMMA",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 4,
+              "registration_date": "2025-02-05T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800379",
+              "name": "SAMIREDDILOVALAKSHMI",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 4,
+              "registration_date": "2025-02-07T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800410",
+              "name": "LAGUDU AYYAPPA SWAMI",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 4,
+              "registration_date": "2025-02-08T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800436",
+              "name": "KALLA.SRINUVASA RAO",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 4,
+              "registration_date": "2025-02-15T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800477",
+              "name": "RAMANAMMAK",
+              "package": "Eligible",
+              "position": "Left",
+              "level": 4,
+              "registration_date": "2025-02-26T00:00:00",
+              "activation_date": null,
+              "status": "Inactive",
+              "coupon_status": "Inactive"
+            },
+            {
+              "bev_id": "BEV1800489",
+              "name": "TOTA.NANAJI",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 4,
+              "registration_date": "2025-02-26T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800513",
+              "name": "TAMARANA SRINIVASA RAO",
+              "package": "Eligible",
+              "position": "Left",
+              "level": 4,
+              "registration_date": "2025-02-28T00:00:00",
+              "activation_date": null,
+              "status": "Inactive",
+              "coupon_status": "Inactive"
+            },
+            {
+              "bev_id": "BEV1800514",
+              "name": "KONATHALA.HIMASEKHAR",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 4,
+              "registration_date": "2025-02-28T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800520",
+              "name": "G.SREENIVAS",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 4,
+              "registration_date": "2025-02-28T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800543",
+              "name": "VARRI.ANJANEYULU",
+              "package": "Eligible",
+              "position": "Right",
+              "level": 4,
+              "registration_date": "2025-03-04T00:00:00",
+              "activation_date": null,
+              "status": "Inactive",
+              "coupon_status": "Inactive"
+            },
+            {
+              "bev_id": "BEV1800544",
+              "name": "CHINNI.R",
+              "package": "Eligible",
+              "position": "Right",
+              "level": 4,
+              "registration_date": "2025-03-04T00:00:00",
+              "activation_date": null,
+              "status": "Inactive",
+              "coupon_status": "Inactive"
+            },
+            {
+              "bev_id": "BEV1800589",
+              "name": "VELAGA.JAGANNADH",
+              "package": "Eligible",
+              "position": "Right",
+              "level": 4,
+              "registration_date": "2025-03-08T00:00:00",
+              "activation_date": null,
+              "status": "Inactive",
+              "coupon_status": "Inactive"
+            },
+            {
+              "bev_id": "BEV1800328",
+              "name": "S T NAIDU",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 5,
+              "registration_date": "2025-01-24T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800336",
+              "name": "B_V_K_HARISH",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 5,
+              "registration_date": "2025-01-25T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800354",
+              "name": "BAYYAPUREDDY RAJESWARI",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 5,
+              "registration_date": "2025-01-31T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800380",
+              "name": "JAJULAAMMAJI",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 5,
+              "registration_date": "2025-02-07T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800395",
+              "name": "LOCHARLA RAM PRASAD",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 5,
+              "registration_date": "2025-02-08T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800437",
+              "name": "CHITTA.YELLESWARI",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 5,
+              "registration_date": "2025-02-15T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800491",
+              "name": "LALAM.DORABABU",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 5,
+              "registration_date": "2025-02-26T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800516",
+              "name": "SURAPUREDDY.VENKATARAMANA",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 5,
+              "registration_date": "2025-02-28T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800526",
+              "name": "ROMOJU.LAXMANARAO",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 5,
+              "registration_date": "2025-02-28T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800527",
+              "name": "K.CH.SEKHAR",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 5,
+              "registration_date": "2025-03-01T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800545",
+              "name": "GANTA SURYANARAYANA",
+              "package": "Eligible",
+              "position": "Left",
+              "level": 5,
+              "registration_date": "2025-03-04T00:00:00",
+              "activation_date": null,
+              "status": "Inactive",
+              "coupon_status": "Inactive"
+            },
+            {
+              "bev_id": "BEV1800547",
+              "name": "MAKIREDDI.NAGESWARAO",
+              "package": "Eligible",
+              "position": "Left",
+              "level": 5,
+              "registration_date": "2025-03-04T00:00:00",
+              "activation_date": null,
+              "status": "Inactive",
+              "coupon_status": "Inactive"
+            },
+            {
+              "bev_id": "BEV1800550",
+              "name": "CH.GANGARAJU",
+              "package": "Platinum",
+              "position": "Right",
+              "level": 5,
+              "registration_date": "2025-03-04T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800563",
+              "name": "POTHU.RANGARAO",
+              "package": "Eligible",
+              "position": "Left",
+              "level": 5,
+              "registration_date": "2025-03-06T00:00:00",
+              "activation_date": null,
+              "status": "Inactive",
+              "coupon_status": "Inactive"
+            },
+            {
+              "bev_id": "BEV1800356",
+              "name": "KAKARLA BALA SRINIVAS",
+              "package": "Eligible",
+              "position": "Right",
+              "level": 6,
+              "registration_date": "2025-02-03T00:00:00",
+              "activation_date": null,
+              "status": "Inactive",
+              "coupon_status": "Inactive"
+            },
+            {
+              "bev_id": "BEV1800365",
+              "name": "POLUPARTHI.LAKSHMI",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 6,
+              "registration_date": "2025-02-04T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800367",
+              "name": "KALLA.SATYANARAYANA",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 6,
+              "registration_date": "2025-02-05T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800376",
+              "name": "S.MANGAVANI",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 6,
+              "registration_date": "2025-02-06T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800439",
+              "name": "CHITTHA.ESWARARAVU",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 6,
+              "registration_date": "2025-02-16T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            },
+            {
+              "bev_id": "BEV1800440",
+              "name": "UBBETI SUSEELA",
+              "package": "Platinum",
+              "position": "Left",
+              "level": 6,
+              "registration_date": "2025-02-17T00:00:00",
+              "activation_date": "2025-10-11T00:00:00",
+              "status": "Active",
+              "coupon_status": "Activated"
+            }
+          ],
+          "total": 189,
+          "page": 1,
+          "page_size": 50,
+          "total_pages": 4
+        },
+        "timestamp": "2025-10-17T19:37:54.469727"
+      }
+    },
+    "team_ved": {
+      "status": 200,
+      "data": {
+        "success": true,
+        "message": "No Ved members found",
+        "data": {
+          "ved_members": [],
+          "total": 0,
+          "is_ved": true,
+          "ved_owner": null
+        },
+        "timestamp": "2025-10-17T19:37:54.583362"
+      }
+    },
+    "team_info": {
+      "status": 200,
+      "data": {
+        "status": "success",
+        "data": {
+          "user_id": "BEV1800143",
+          "user_name": "B.RAMALAXMI",
+          "direct_referrals": [
+            {
+              "user_id": "BEV1800325",
+              "name": "YERRINAAID",
+              "full_name": "YERRINAAID",
+              "phone": "N/A",
+              "email": null,
+              "package": "Not Activated",
+              "package_type": "Not Activated",
+              "activation_date": "2025-10-11T00:00:00",
+              "is_active": true,
+              "status": "Active"
+            },
+            {
+              "user_id": "BEV1800186",
+              "name": "K.NOOKU NAIDU",
+              "full_name": "K.NOOKU NAIDU",
+              "phone": "N/A",
+              "email": "SNTRNANIBABU@GMAIL.COM",
+              "package": "Not Activated",
+              "package_type": "Not Activated",
+              "activation_date": "2025-10-11T00:00:00",
+              "is_active": true,
+              "status": "Active"
+            },
+            {
+              "user_id": "BEV1800456",
+              "name": "PUDI.DEVI",
+              "full_name": "PUDI.DEVI",
+              "phone": "N/A",
+              "email": "TRINADHDEVI58@GMAIL.COM",
+              "package": "Not Activated",
+              "package_type": "Not Activated",
+              "activation_date": "2025-10-11T00:00:00",
+              "is_active": true,
+              "status": "Active"
+            },
+            {
+              "user_id": "BEV1800826",
+              "name": "B.K.RAMA_RAO",
+              "full_name": "B.K.RAMA_RAO",
+              "phone": "N/A",
+              "email": "B.RAMARAO2025@GMAIL.COM",
+              "package": "Not Activated",
+              "package_type": "Not Activated",
+              "activation_date": null,
+              "is_active": false,
+              "status": "Inactive"
+            },
+            {
+              "user_id": "BEV1800598",
+              "name": "YERRINAAID B",
+              "full_name": "YERRINAAID B",
+              "phone": "N/A",
+              "email": "YERRINAIDUBANGARU@GMAIL.COM",
+              "package": "Not Activated",
+              "package_type": "Not Activated",
+              "activation_date": null,
+              "is_active": false,
+              "status": "Inactive"
+            }
+          ],
+          "direct_referrals_count": 5,
+          "binary_tree": {
+            "all": {
+              "left_count": 1,
+              "right_count": 1,
+              "total_count": 2,
+              "direct_referrals": 5
+            },
+            "active": {
+              "left_count": 1,
+              "right_count": 1,
+              "total_count": 2,
+              "direct_referrals": 5
+            }
+          },
+          "team_counts": {
+            "total_direct": 5,
+            "total_team": 2,
+            "active_team": 2
+          }
+        }
+      }
+    },
+    "earnings": {
+      "status": 200,
+      "data": {
+        "status": "success",
+        "data": {
+          "user_id": "BEV1800143",
+          "user_name": "B.RAMALAXMI",
+          "total_earnings": 0,
+          "earnings_by_type": {},
+          "wallets": {
+            "earning_wallet": 0.0,
+            "withdrawable_wallet": 0.0,
+            "total": 0.0
+          },
+          "recent_income": [],
+          "summary": {
+            "direct_referral": 0,
+            "matching_referral": 0,
+            "ved_income": 0,
+            "guru_dakshina": 0,
+            "field_allowance": 0,
+            "bonanza": 0
+          }
+        }
+      }
+    },
+    "awards": {
+      "status": 404,
+      "data": "{\"detail\":\"Not Found\"}"
+    }
+  },
+  "issues": [
+    "Awards API: Returns 404 instead of 200"
+  ]
+}

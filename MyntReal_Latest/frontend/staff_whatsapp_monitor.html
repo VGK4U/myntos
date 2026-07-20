@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mynt Real — WhatsApp Monitor</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<script src="/staff_header.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f3f4f6;min-height:100vh}
+.main-content{margin-left:280px;padding-top:88px;min-height:100vh;transition:margin-left 0.3s ease}
+@media(max-width:768px){.main-content{margin-left:0}}
+.content-area{padding:16px;max-width:1400px;margin:0 auto}
+.page-banner{border-radius:12px;padding:14px 20px;margin-bottom:12px;background:linear-gradient(135deg,#1a7a4a 0%,#25a368 100%);color:white;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.page-banner h1{font-size:16px;font-weight:700;margin:0}
+.page-banner p{opacity:.8;margin:0;font-size:11px}
+.wa-tabs{display:flex;gap:4px;background:white;border-radius:10px;padding:5px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:12px;flex-wrap:wrap}
+.wa-tab{padding:7px 16px;border-radius:8px;border:none;background:transparent;font-size:12px;font-weight:600;color:#6b7280;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap}
+.wa-tab:hover{background:#f3f4f6;color:#374151}
+.wa-tab.active{background:#1a7a4a;color:white}
+.wa-tab .tab-icon{font-size:13px}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+.card-box{background:white;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow:hidden;margin-bottom:12px}
+.card-hdr{padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.card-hdr h3{font-size:12.5px;font-weight:700;color:#1f2937;margin:0;display:flex;align-items:center;gap:6px}
+.card-body{padding:14px}
+.btn-outline-wa{background:white;color:#1a7a4a;border:1.5px solid #1a7a4a;padding:6px 14px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;text-decoration:none}
+.btn-outline-wa:hover{background:#f0faf4;color:#1a7a4a}
+.btn-sm-wa{padding:4px 10px;font-size:11px;border-radius:6px}
+.form-select{font-size:12px;border-radius:7px;border:1px solid #e5e7eb;padding:6px 9px}
+.form-select:focus{box-shadow:0 0 0 2px rgba(26,122,74,.15);border-color:#1a7a4a;outline:none}
+table.h-tbl{width:100%;border-collapse:collapse;font-size:11px}
+table.h-tbl th{background:#f8fafc;padding:7px 8px;text-align:left;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #e5e7eb}
+table.h-tbl td{padding:6px 8px;border-bottom:1px solid #f3f4f6;color:#374151;vertical-align:middle}
+table.h-tbl tr:hover td{background:#f9fafb}
+.no-data{text-align:center;color:#9ca3af;padding:30px;font-size:12px}
+.s-badge{display:inline-block;padding:2px 8px;border-radius:9px;font-size:10px;font-weight:700}
+.s-sent{background:#dbeafe;color:#1d4ed8}
+.s-delivered{background:#d1fae5;color:#065f46}
+.s-read{background:#ede9fe;color:#5b21b6}
+.s-failed{background:#fee2e2;color:#991b1b}
+.s-pending,.s-queued{background:#fef3c7;color:#92400e}
+.stat-card{background:white;border-radius:10px;padding:16px 20px;box-shadow:0 1px 3px rgba(0,0,0,.08);text-align:center}
+.stat-value{font-size:28px;font-weight:800;color:#1a7a4a;line-height:1}
+.stat-label{font-size:11px;font-weight:600;color:#6b7280;margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+.stat-red .stat-value{color:#dc2626}
+.stat-yellow .stat-value{color:#d97706}
+.delivery-bar-wrap{background:#f3f4f6;border-radius:20px;height:10px;overflow:hidden;margin-top:10px}
+.delivery-bar{height:100%;background:linear-gradient(90deg,#1a7a4a,#25a368);border-radius:20px;transition:width .6s ease}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:10px}
+.pager-row{font-size:11px;color:#6b7280;margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pager-btn{background:white;border:1px solid #e5e7eb;padding:3px 10px;border-radius:6px;font-size:11px;cursor:pointer;color:#374151}
+.pager-btn:hover:not([disabled]){border-color:#1a7a4a;color:#1a7a4a}
+.pager-btn[disabled]{opacity:.4;cursor:not-allowed}
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+<div class="content-area">
+
+  <!-- Banner -->
+  <div class="page-banner">
+    <div>
+      <h1><i class="fab fa-whatsapp" style="margin-right:6px"></i>WhatsApp Monitor</h1>
+      <p>My Messages · All Messages · Delivery Stats</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+      <a href="/staff/whatsapp-config" class="btn-outline-wa btn-sm-wa" style="color:white;border-color:rgba(255,255,255,.6);background:transparent">
+        <i class="fas fa-cog"></i> Config
+      </a>
+      <button class="btn-outline-wa btn-sm-wa" onclick="refreshCurrentTab()" style="color:white;border-color:rgba(255,255,255,.6);background:transparent">
+        <i class="fas fa-refresh"></i> Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="wa-tabs">
+    <button class="wa-tab active" onclick="switchTab('my')" id="tab-my">
+      <span class="tab-icon"><i class="fas fa-user"></i></span> My Messages
+    </button>
+    <button class="wa-tab" onclick="switchTab('all')" id="tab-all">
+      <span class="tab-icon"><i class="fas fa-list"></i></span> All Messages
+    </button>
+    <button class="wa-tab" onclick="switchTab('stats')" id="tab-stats">
+      <span class="tab-icon"><i class="fas fa-chart-bar"></i></span> Stats
+    </button>
+  </div>
+
+  <!-- ═══════════════════ TAB 1: MY MESSAGES ═══════════════════ -->
+  <div class="tab-pane active" id="pane-my">
+    <div class="card-box">
+      <div class="card-hdr">
+        <h3><i class="fas fa-user" style="color:#1a7a4a"></i> My WhatsApp Messages</h3>
+        <button class="btn-outline-wa btn-sm-wa" onclick="loadMyMessages()"><i class="fas fa-refresh"></i> Refresh</button>
+      </div>
+      <div class="card-body" style="padding:10px 14px">
+        <div style="overflow-x:auto">
+          <table class="h-tbl">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>To Number</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Message ID</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody id="myTbody">
+              <tr><td colspan="6" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ TAB 2: ALL MESSAGES ══════════════════ -->
+  <div class="tab-pane" id="pane-all">
+    <div class="card-box">
+      <div class="card-hdr">
+        <h3><i class="fas fa-list" style="color:#6b7280"></i> All WhatsApp Messages</h3>
+        <button class="btn-outline-wa btn-sm-wa" onclick="loadAllMessages()"><i class="fas fa-refresh"></i> Refresh</button>
+      </div>
+      <div class="card-body" style="padding:10px 14px">
+        <div class="filter-row">
+          <div>
+            <label style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:2px">Filter by Status</label>
+            <select class="form-select" id="statusFilter" onchange="resetAndLoadAll()" style="width:auto;min-width:140px">
+              <option value="">All Statuses</option>
+              <option value="sent">Sent</option>
+              <option value="delivered">Delivered</option>
+              <option value="read">Read</option>
+              <option value="failed">Failed</option>
+              <option value="queued">Queued</option>
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="h-tbl">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Phone</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Delivered At</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody id="allTbody">
+              <tr><td colspan="7" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pager-row" id="allPager"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ TAB 3: STATS ═════════════════════════ -->
+  <div class="tab-pane" id="pane-stats">
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-label">Total Sent</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="stat-value" id="statDelivered" style="color:#065f46">—</div>
+          <div class="stat-label">Delivered</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-red">
+          <div class="stat-value" id="statFailed">—</div>
+          <div class="stat-label">Failed</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card stat-yellow">
+          <div class="stat-value" id="statPending">—</div>
+          <div class="stat-label">Pending</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-box">
+      <div class="card-hdr">
+        <h3><i class="fas fa-chart-bar" style="color:#1a7a4a"></i> Delivery Rate</h3>
+        <button class="btn-outline-wa btn-sm-wa" onclick="loadStats()"><i class="fas fa-refresh"></i> Refresh</button>
+      </div>
+      <div class="card-body">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:600;color:#374151">Messages Delivered</span>
+          <span id="statRate" style="font-size:18px;font-weight:800;color:#1a7a4a">—</span>
+        </div>
+        <div class="delivery-bar-wrap">
+          <div class="delivery-bar" id="deliveryBar" style="width:0%"></div>
+        </div>
+        <div style="font-size:10.5px;color:#9ca3af;margin-top:6px">Delivery rate = delivered ÷ total sent × 100</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// DC Protocol: Token fallback — works for staff (localStorage staff_token)
+// AND MNR users (session_token cookie). Overrides staffFetchJson if no staff token found.
+(function() {
+  function getCookieValue(name) {
+    var match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+  var staffTok = (typeof localStorage !== 'undefined' && localStorage.getItem('staff_token')) || '';
+  if (!staffTok) {
+    var sessionTok = getCookieValue('session_token') || getCookieValue('session') || '';
+    if (sessionTok) {
+      window._waMonitorToken = sessionTok;
+      // Override staffFetchJson to use session token
+      window.staffFetchJson = async function(url, options) {
+        options = options || {};
+        var headers = Object.assign({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionTok }, options.headers || {});
+        var resp = await fetch(url, Object.assign({}, options, { headers: headers }));
+        if (!resp.ok) {
+          var err = await resp.json().catch(function() { return { detail: 'Request failed' }; });
+          throw new Error(typeof err.detail === 'string' ? err.detail : ('HTTP ' + resp.status));
+        }
+        return resp.json();
+      };
+    }
+  }
+})();
+
+var currentTab = 'my';
+var allOffset = 0;
+var allTotal = 0;
+var allLimit = 50;
+
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.wa-tab').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('pane-' + tab).classList.add('active');
+  currentTab = tab;
+  if (tab === 'my') loadMyMessages();
+  else if (tab === 'all') loadAllMessages();
+  else if (tab === 'stats') loadStats();
+}
+
+function refreshCurrentTab() { switchTab(currentTab); }
+
+function statusBadge(s) {
+  s = s || 'unknown';
+  var cls = 's-badge s-' + esc(s);
+  return '<span class="' + cls + '">' + esc(s.charAt(0).toUpperCase() + s.slice(1)) + '</span>';
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  try {
+    var d = new Date(ts.endsWith('Z') || ts.indexOf('+') !== -1 ? ts : ts + 'Z');
+    var IST = { timeZone: 'Asia/Kolkata' };
+    return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'2-digit', ...IST }) +
+      ' ' + d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true, ...IST }) + ' IST';
+  } catch(e) { return esc(ts); }
+}
+
+async function loadMyMessages() {
+  var tbody = document.getElementById('myTbody');
+  tbody.innerHTML = '<tr><td colspan="6" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+  try {
+    var data = await staffFetchJson('/api/v1/whatsapp/my-messages?limit=50');
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="no-data"><i class="fas fa-inbox"></i><br>No messages found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(function(m) {
+      return '<tr>' +
+        '<td style="white-space:nowrap">' + fmtTime(m.sent_at) + '</td>' +
+        '<td>' + esc(m.to_number || m.mobile_number || '—') + '</td>' +
+        '<td style="font-size:10px;color:#6b7280">' + esc(m.message_type || '—') + '</td>' +
+        '<td>' + statusBadge(m.current_status) + '</td>' +
+        '<td style="font-size:10px;color:#9ca3af;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(m.message_sid || '—') + '</td>' +
+        '<td style="font-size:10px;color:#dc2626">' + esc(m.error_message || '') + '</td>' +
+        '</tr>';
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" class="no-data" style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed to load messages</td></tr>';
+  }
+}
+
+function resetAndLoadAll() {
+  allOffset = 0;
+  loadAllMessages();
+}
+
+async function loadAllMessages() {
+  var tbody = document.getElementById('allTbody');
+  var statusFilter = document.getElementById('statusFilter').value;
+  tbody.innerHTML = '<tr><td colspan="7" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+  var url = '/api/v1/whatsapp/messages/all?limit=' + allLimit + '&offset=' + allOffset;
+  if (statusFilter) url += '&status_filter=' + encodeURIComponent(statusFilter);
+  try {
+    var data = await staffFetchJson(url);
+    allTotal = data.total || 0;
+    var msgs = data.messages || [];
+    if (msgs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="no-data"><i class="fas fa-inbox"></i><br>No messages found</td></tr>';
+    } else {
+      tbody.innerHTML = msgs.map(function(m) {
+        return '<tr>' +
+          '<td style="white-space:nowrap">' + fmtTime(m.sent_at) + '</td>' +
+          '<td>' + esc(m.mobile_number || '—') + '</td>' +
+          '<td>' + esc(m.user_name || '—') + '</td>' +
+          '<td style="font-size:10px;color:#6b7280">' + esc(m.message_type || '—') + '</td>' +
+          '<td>' + statusBadge(m.current_status) + '</td>' +
+          '<td style="white-space:nowrap">' + (m.delivered_at ? fmtTime(m.delivered_at) : '—') + '</td>' +
+          '<td style="font-size:10px;color:#dc2626">' + esc(m.error_message || '') + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+    renderPager();
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="7" class="no-data" style="color:#dc2626"><i class="fas fa-exclamation-triangle"></i> Failed to load messages</td></tr>';
+  }
+}
+
+function renderPager() {
+  var pager = document.getElementById('allPager');
+  var page = Math.floor(allOffset / allLimit) + 1;
+  var totalPages = Math.ceil(allTotal / allLimit) || 1;
+  var prevDisabled = allOffset === 0 ? 'disabled' : '';
+  var nextDisabled = allOffset + allLimit >= allTotal ? 'disabled' : '';
+  pager.innerHTML =
+    '<button class="pager-btn" onclick="goPrev()" ' + prevDisabled + '><i class="fas fa-chevron-left"></i></button>' +
+    '<span>Page ' + page + ' of ' + totalPages + ' (' + allTotal + ' total)</span>' +
+    '<button class="pager-btn" onclick="goNext()" ' + nextDisabled + '><i class="fas fa-chevron-right"></i></button>';
+}
+
+function goPrev() { if (allOffset > 0) { allOffset = Math.max(0, allOffset - allLimit); loadAllMessages(); } }
+function goNext() { if (allOffset + allLimit < allTotal) { allOffset += allLimit; loadAllMessages(); } }
+
+async function loadStats() {
+  document.getElementById('statTotal').textContent = '…';
+  document.getElementById('statDelivered').textContent = '…';
+  document.getElementById('statFailed').textContent = '…';
+  document.getElementById('statPending').textContent = '…';
+  document.getElementById('statRate').textContent = '…';
+  document.getElementById('deliveryBar').style.width = '0%';
+  try {
+    var data = await staffFetchJson('/api/v1/whatsapp/messages/stats');
+    document.getElementById('statTotal').textContent = (data.total_sent || 0).toLocaleString();
+    document.getElementById('statDelivered').textContent = (data.delivered || 0).toLocaleString();
+    document.getElementById('statFailed').textContent = (data.failed || 0).toLocaleString();
+    document.getElementById('statPending').textContent = (data.pending || 0).toLocaleString();
+    var rate = data.delivery_rate || 0;
+    document.getElementById('statRate').textContent = rate.toFixed(1) + '%';
+    document.getElementById('deliveryBar').style.width = Math.min(rate, 100) + '%';
+  } catch(e) {
+    document.getElementById('statTotal').textContent = 'Err';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+  if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('WhatsApp Monitor', 'fab fa-whatsapp'); StaffHeader.init(); }
+  loadMyMessages();
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+</body>
+</html>

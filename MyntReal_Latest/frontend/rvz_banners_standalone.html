@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banner & Communication Management - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #1e3a8a;
+            --secondary-color: #3b82f6;
+            --accent-color: #10b981;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .page-header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-header p {
+            color: #6b7280;
+            margin: 0;
+        }
+        
+        .banner-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .nav-pills .nav-link {
+            color: #6b7280;
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            margin-right: 0.5rem;
+            transition: all 0.3s;
+        }
+        
+        .nav-pills .nav-link.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-active { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-draft { background: #e5e7eb; color: #374151; }
+        
+        .table {
+            margin-top: 1.5rem;
+        }
+        
+        .table th {
+            background: #f3f4f6;
+            color: var(--primary-color);
+            font-weight: 600;
+            padding: 1rem;
+        }
+        
+        .table td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+        
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            margin-right: 0.25rem;
+        }
+        
+        .modal-content {
+            border-radius: 15px;
+            border: none;
+        }
+        
+        .modal-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 15px 15px 0 0;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25);
+        }
+        
+        .top-earner-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        .banner-preview {
+            border: 2px dashed #d1d5db;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .banner-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1><i class="bi bi-megaphone"></i> Banner & Communication Management</h1>
+                    <p>Manage TOP Performers banners, custom banners, image banners, popups, and communication templates</p>
+                </div>
+                <div>
+                    <a href="/admin/birthdays" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-cake2"></i> Birthdays
+                    </a>
+                    <a href="/admin/dashboard" class="btn btn-outline-primary">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="banner-card">
+            <ul class="nav nav-pills mb-4" id="bannerTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="top-performers-tab" data-bs-toggle="pill" data-bs-target="#top-performers" type="button">
+                        <i class="bi bi-trophy"></i> TOP Performers
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="custom-banner-tab" data-bs-toggle="pill" data-bs-target="#custom-banner" type="button">
+                        <i class="bi bi-card-text"></i> Custom Banners
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="image-banner-tab" data-bs-toggle="pill" data-bs-target="#image-banner" type="button">
+                        <i class="bi bi-image"></i> Image Banners
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="popup-tab" data-bs-toggle="pill" data-bs-target="#popup" type="button">
+                        <i class="bi bi-window"></i> Popup Messages
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="birthday-tab" data-bs-toggle="pill" data-bs-target="#birthday" type="button">
+                        <i class="bi bi-cake2"></i> Birthday Banner
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="bannerTabsContent">
+                <!-- TOP Performers Tab -->
+                <div class="tab-pane fade show active" id="top-performers" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>TOP 5 Performers Banner</h3>
+                        <button class="btn btn-primary" onclick="refreshTopPerformers()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                    
+                    <div id="topPerformersTable">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>User ID</th>
+                                    <th>Name</th>
+                                    <th>Total Earnings</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topPerformersBody">
+                                <tr>
+                                    <td colspan="6" class="text-center">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h4>Skipped Users</h4>
+                        <div id="skippedUsersTable">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Skipped By</th>
+                                        <th>Skipped Date</th>
+                                        <th>Reason</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="skippedUsersBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center">No skipped users</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Banners Tab -->
+                <div class="tab-pane fade" id="custom-banner" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Custom Text Banners</h3>
+                        <button class="btn btn-primary" onclick="showCreateCustomBanner()">
+                            <i class="bi bi-plus-circle"></i> Create Banner
+                        </button>
+                    </div>
+                    
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th onclick="sortCustomBanners('id')" style="cursor: pointer;">ID <i class="fas fa-sort"></i></th>
+                                <th onclick="sortCustomBanners('title')" style="cursor: pointer;">Title <i class="fas fa-sort"></i></th>
+                                <th onclick="sortCustomBanners('banner_type')" style="cursor: pointer;">Type <i class="fas fa-sort"></i></th>
+                                <th onclick="sortCustomBanners('priority')" style="cursor: pointer;">Priority <i class="fas fa-sort"></i></th>
+                                <th onclick="sortCustomBanners('start_date')" style="cursor: pointer;">Start Date <i class="fas fa-sort"></i></th>
+                                <th onclick="sortCustomBanners('pause_date')" style="cursor: pointer;">Pause Date <i class="fas fa-sort"></i></th>
+                                <th onclick="sortCustomBanners('stop_date')" style="cursor: pointer;">Stop Date <i class="fas fa-sort"></i></th>
+                                <th onclick="sortCustomBanners('status')" style="cursor: pointer;">Status <i class="fas fa-sort"></i></th>
+                                <th onclick="sortCustomBanners('created_by')" style="cursor: pointer;">Created By <i class="fas fa-sort"></i></th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customBannersBody">
+                            <tr>
+                                <td colspan="10" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Image Banners Tab -->
+                <div class="tab-pane fade" id="image-banner" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Image Banners</h3>
+                        <button class="btn btn-primary" onclick="showCreateImageBanner()">
+                            <i class="bi bi-plus-circle"></i> Create Banner
+                        </button>
+                    </div>
+                    
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th onclick="sortImageBanners('id')" style="cursor: pointer;">ID <i class="fas fa-sort"></i></th>
+                                <th onclick="sortImageBanners('title')" style="cursor: pointer;">Title <i class="fas fa-sort"></i></th>
+                                <th onclick="sortImageBanners('banner_type')" style="cursor: pointer;">Type <i class="fas fa-sort"></i></th>
+                                <th onclick="sortImageBanners('start_date')" style="cursor: pointer;">Start Date <i class="fas fa-sort"></i></th>
+                                <th onclick="sortImageBanners('pause_date')" style="cursor: pointer;">Pause Date <i class="fas fa-sort"></i></th>
+                                <th onclick="sortImageBanners('stop_date')" style="cursor: pointer;">Stop Date <i class="fas fa-sort"></i></th>
+                                <th onclick="sortImageBanners('status')" style="cursor: pointer;">Status <i class="fas fa-sort"></i></th>
+                                <th onclick="sortImageBanners('created_by')" style="cursor: pointer;">Created By <i class="fas fa-sort"></i></th>
+                                <th onclick="sortImageBanners('approved_by')" style="cursor: pointer;">Approved By <i class="fas fa-sort"></i></th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="imageBannersBody">
+                            <tr>
+                                <td colspan="10" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Popup Messages Tab -->
+                <div class="tab-pane fade" id="popup" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Popup Messages</h3>
+                        <button class="btn btn-primary" onclick="showCreatePopup()">
+                            <i class="bi bi-plus-circle"></i> Create Popup
+                        </button>
+                    </div>
+                    
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Target Page</th>
+                                <th>Status</th>
+                                <th>Created By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="popupsBody">
+                            <tr>
+                                <td colspan="6" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Birthday Banner Tab -->
+                <div class="tab-pane fade" id="birthday" role="tabpanel">
+                    <div class="mb-4">
+                        <h3><i class="bi bi-cake2"></i> Birthday Banner Management</h3>
+                        <p class="text-muted">Manage birthday messages and skipped users</p>
+                    </div>
+                    
+                    <!-- Today's Birthdays Preview -->
+                    <div class="card mb-4" style="background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);">
+                        <div class="card-body text-white">
+                            <h5 class="mb-3"><i class="bi bi-calendar-event"></i> Today's Birthdays</h5>
+                            <div id="todayBirthdaysPreview">
+                                <div class="text-center">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Birthday Messages Section -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-chat-quote"></i> Daily Birthday Messages</h5>
+                                <button class="btn btn-sm btn-primary" onclick="showAddMessageModal()">
+                                    <i class="bi bi-plus-circle"></i> Add Message
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">Messages rotate daily. Current message is highlighted.</p>
+                            <div id="birthdayMessagesTable">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Message Text</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="birthdayMessagesBody">
+                                        <tr>
+                                            <td colspan="4" class="text-center">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Skipped Birthday Users Section -->
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="bi bi-person-x"></i> Skipped Birthday Users</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">These users will not appear in the birthday banner</p>
+                            <div id="birthdaySkippedTable">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>User ID</th>
+                                            <th>Name</th>
+                                            <th>Skipped By</th>
+                                            <th>Skip Date</th>
+                                            <th>Reason</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="birthdaySkippedBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center">No skipped users</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Banner Modal -->
+    <div class="modal fade" id="customBannerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Custom Banner</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="customBannerForm">
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Content</label>
+                            <textarea class="form-control" name="content" rows="3" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Banner Type</label>
+                                <select class="form-select" name="banner_type">
+                                    <option value="announcement">Announcement</option>
+                                    <option value="promotion">Promotion</option>
+                                    <option value="alert">Alert</option>
+                                    <option value="info">Info</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Priority</label>
+                                <select class="form-select" name="priority">
+                                    <option value="1">High</option>
+                                    <option value="2" selected>Medium</option>
+                                    <option value="3">Low</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Background Color</label>
+                                <input type="color" class="form-control" name="background_color" value="#007bff">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Text Color</label>
+                                <input type="color" class="form-control" name="text_color" value="#ffffff">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitCustomBanner()">Create Banner</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup Message Modal -->
+    <div class="modal fade" id="popupModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Popup Message</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="popupForm">
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Content</label>
+                            <textarea class="form-control" name="content" rows="4" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Target Page</label>
+                                <select class="form-select" name="target_page" required>
+                                    <option value="After Login">After Login</option>
+                                    <option value="Dashboard">Dashboard</option>
+                                    <option value="PIN Activation">PIN Activation</option>
+                                    <option value="PIN Purchase">PIN Purchase</option>
+                                    <option value="Coupon Page">Coupon Page</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Popup Size</label>
+                                <select class="form-select" name="popup_size">
+                                    <option value="Small">Small</option>
+                                    <option value="Medium" selected>Medium</option>
+                                    <option value="Large">Large</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="Draft">Draft</option>
+                                <option value="Pending" selected>Pending (Send for Approval)</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitPopup()">Create Popup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Banner Modal -->
+    <div class="modal fade" id="imageBannerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Image Banner</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="imageBannerForm">
+                        <div class="mb-3">
+                            <label class="form-label">Title *</label>
+                            <input type="text" class="form-control" name="title" required minlength="3" maxlength="200">
+                        </div>
+                        
+                        <!-- Image Input Method Selection -->
+                        <div class="mb-3">
+                            <label class="form-label">Image Source *</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="imageMethod" id="imageMethodUpload" value="upload" checked autocomplete="off" onchange="toggleImageInput()">
+                                <label class="btn btn-outline-primary" for="imageMethodUpload">
+                                    <i class="bi bi-upload"></i> Upload File
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="imageMethod" id="imageMethodURL" value="url" autocomplete="off" onchange="toggleImageInput()">
+                                <label class="btn btn-outline-primary" for="imageMethodURL">
+                                    <i class="bi bi-link-45deg"></i> Image URL
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- File Upload Option -->
+                        <div class="mb-3" id="uploadSection">
+                            <label class="form-label">Upload Banner Image</label>
+                            <input type="file" class="form-control" id="bannerImageFile" accept="image/*">
+                            <small class="text-muted">Supported: JPG, PNG, GIF (Max 100 KB)</small>
+                            <div id="imagePreview" class="mt-2"></div>
+                        </div>
+
+                        <!-- URL Input Option -->
+                        <div class="mb-3 d-none" id="urlSection">
+                            <label class="form-label">Image URL</label>
+                            <input type="url" class="form-control" id="bannerImageURL" placeholder="https://example.com/banner.jpg">
+                            <small class="text-muted">Enter a direct link to the banner image</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Text Content (Optional)</label>
+                            <textarea class="form-control" name="text_content" rows="3" placeholder="Optional text content for the banner"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Banner Type *</label>
+                                <select class="form-select" name="banner_type" required>
+                                    <option value="announcement">Announcement</option>
+                                    <option value="promotion">Promotion</option>
+                                    <option value="alert">Alert</option>
+                                    <option value="info">Info</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Display Location</label>
+                                <select class="form-select" name="display_location">
+                                    <option value="dashboard" selected>Dashboard</option>
+                                    <option value="home">Home Page</option>
+                                    <option value="coupon">Coupon Page</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Display Order</label>
+                            <input type="number" class="form-control" name="display_order" value="0" min="0">
+                            <small class="text-muted">Lower numbers appear first (0 = highest priority)</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitImageBanner()">Create Banner</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+
+        console.log('[R Logs] RVZ Banners Standalone - Using staffFetch with DC Protocol');
+
+        // Load data on page load
+        $(document).ready(function() {
+            console.log('[R Logs] Page ready - Loading all banner data');
+            loadTopPerformers();
+            loadSkippedUsers();
+            loadCustomBanners();
+            loadImageBanners();
+            loadPopups();
+            loadTodayBirthdays();
+            loadBirthdayMessages();
+            loadBirthdaySkipped();
+        });
+
+        async function loadTopPerformers() {
+            console.log('[R Logs] Loading TOP Performers - DC Protocol enforced');
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/top-performers`);
+                console.log('[R Logs] TOP Performers data received:', data);
+                let html = '';
+                if (data.top_performers && Array.isArray(data.top_performers)) {
+                    data.top_performers.forEach(performer => {
+                        html += `
+                            <tr>
+                                <td><span class="top-earner-badge"><i class="bi bi-trophy"></i> #${performer.rank}</span></td>
+                                <td>${performer.user_id}</td>
+                                <td>${performer.name}</td>
+                                <td>₹${performer.total_earnings.toLocaleString()}</td>
+                                <td><span class="status-badge status-active">Active</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning action-btn" onclick="skipUser('${performer.user_id}')">
+                                        <i class="bi bi-eye-slash"></i> Skip
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+                $('#topPerformersBody').html(html || '<tr><td colspan="6" class="text-center">No data available</td></tr>');
+                console.log('[R Logs] TOP Performers rendered - ' + (data.top_performers?.length || 0) + ' items');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[R Logs] Error loading TOP performers:', error);
+                $('#topPerformersBody').html('<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>');
+            }
+        }
+
+        async function loadSkippedUsers() {
+            console.log('[R Logs] Loading Skipped Users - DC Protocol');
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/top-performers/skipped`);
+                console.log('[R Logs] Skipped users data:', data);
+                let html = '';
+                if (Array.isArray(data)) {
+                    data.forEach(user => {
+                        html += `
+                            <tr>
+                                <td>${user.user_id}</td>
+                                <td>${user.skipped_by}</td>
+                                <td>${new Date(user.skipped_date).toLocaleDateString()}</td>
+                                <td>${user.reason || 'N/A'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success action-btn" onclick="reactivateUser('${user.user_id}')">
+                                        <i class="bi bi-check-circle"></i> Reactivate
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+                $('#skippedUsersBody').html(html || '<tr><td colspan="5" class="text-center">No skipped users</td></tr>');
+                console.log('[R Logs] Skipped users rendered - ' + (Array.isArray(data) ? data.length : 0) + ' items');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[R Logs] Error loading skipped users:', error);
+                $('#skippedUsersBody').html('<tr><td colspan="5" class="text-center text-danger">Error loading data</td></tr>');
+            }
+        }
+
+        async function skipUser(userId) {
+            let reason = prompt('Enter reason for skipping this user from banner:');
+            if (!reason) return;
+
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/top-performers/skip`, {
+                    method: 'POST',
+                    body: JSON.stringify({ user_id: userId, skipped_by: 'ADMIN', reason: reason })
+                });
+                alert(data.message);
+                loadTopPerformers();
+                loadSkippedUsers();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error skipping user');
+            }
+        }
+
+        async function reactivateUser(userId) {
+            if (!confirm('Reactivate this user for TOP performers banner?')) return;
+
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/top-performers/reactivate/${userId}`, {
+                    method: 'POST'
+                });
+                alert(data.message);
+                loadTopPerformers();
+                loadSkippedUsers();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error reactivating user');
+            }
+        }
+
+        function refreshTopPerformers() {
+            loadTopPerformers();
+            loadSkippedUsers();
+        }
+
+        async function loadCustomBanners() {
+            console.log('[R Logs] Loading Custom Banners - DC Protocol');
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/custom`);
+                console.log('[R Logs] Custom banners data:', data);
+                let html = '';
+                const banners = Array.isArray(data) ? data : [];
+                banners.forEach(banner => {
+                    html += `
+                        <tr>
+                            <td>${banner.title}</td>
+                            <td>${banner.banner_type}</td>
+                            <td>Priority ${banner.priority}</td>
+                            <td><span class="status-badge ${banner.is_active ? 'status-active' : 'status-draft'}">${banner.is_active ? 'Active' : 'Inactive'}</span></td>
+                            <td>${banner.created_by}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info action-btn" onclick="toggleCustomBanner(${banner.id})">
+                                    <i class="bi bi-toggle-on"></i> Toggle
+                                </button>
+                                <button class="btn btn-sm btn-danger action-btn" onclick="deleteCustomBanner(${banner.id})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                $('#customBannersBody').html(html || '<tr><td colspan="6" class="text-center">No banners found</td></tr>');
+                console.log('[R Logs] Custom banners rendered - ' + banners.length + ' items');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[R Logs] Error loading custom banners:', error);
+                $('#customBannersBody').html('<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>');
+            }
+        }
+
+        async function loadImageBanners() {
+            console.log('[R Logs] Loading Image Banners - DC Protocol');
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/image`);
+                console.log('[R Logs] Image banners data:', data);
+                let html = '';
+                const banners = Array.isArray(data) ? data : [];
+                banners.forEach(banner => {
+                    html += `
+                        <tr>
+                            <td>${banner.title}</td>
+                            <td>${banner.banner_type}</td>
+                            <td><span class="status-badge status-${banner.status.toLowerCase()}">${banner.status}</span></td>
+                            <td>${banner.created_by}</td>
+                            <td>${banner.approved_by || 'N/A'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger action-btn" onclick="deleteImageBanner(${banner.id})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                $('#imageBannersBody').html(html || '<tr><td colspan="6" class="text-center">No banners found</td></tr>');
+                console.log('[R Logs] Image banners rendered - ' + banners.length + ' items');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[R Logs] Error loading image banners:', error);
+                $('#imageBannersBody').html('<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>');
+            }
+        }
+
+        async function loadPopups() {
+            console.log('[R Logs] Loading Popup Messages - DC Protocol');
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/popups`);
+                console.log('[R Logs] Popup data:', data);
+                let html = '';
+                const popups = Array.isArray(data) ? data : [];
+                popups.forEach(popup => {
+                    html += `
+                        <tr>
+                            <td>${popup.title}</td>
+                            <td>${popup.popup_type}</td>
+                            <td>${popup.target_page}</td>
+                            <td><span class="status-badge status-${popup.status.toLowerCase()}">${popup.status}</span></td>
+                            <td>${popup.created_by}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger action-btn" onclick="deletePopup(${popup.id})">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                $('#popupsBody').html(html || '<tr><td colspan="6" class="text-center">No popups found</td></tr>');
+                console.log('[R Logs] Popups rendered - ' + popups.length + ' items');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[R Logs] Error loading popups:', error);
+                $('#popupsBody').html('<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>');
+            }
+        }
+
+        function showCreateCustomBanner() {
+            $('#customBannerModal').modal('show');
+        }
+
+        async function submitCustomBanner() {
+            const formData = $('#customBannerForm').serializeArray();
+            const data = {};
+            formData.forEach(field => {
+                data[field.name] = field.value;
+            });
+            data.created_by = 'ADMIN';
+
+            try {
+                await staffFetchJson(`${API_BASE}/banners/custom`, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                alert('Custom banner created successfully!');
+                $('#customBannerModal').modal('hide');
+                loadCustomBanners();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error creating banner');
+            }
+        }
+
+        async function toggleCustomBanner(bannerId) {
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/custom/${bannerId}/toggle`, {
+                    method: 'POST'
+                });
+                alert(data.message);
+                loadCustomBanners();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error toggling banner');
+            }
+        }
+
+        async function deleteCustomBanner(bannerId) {
+            if (!confirm('Delete this banner?')) return;
+
+            try {
+                await staffFetchJson(`${API_BASE}/banners/custom/${bannerId}`, {
+                    method: 'DELETE'
+                });
+                alert('Banner deleted');
+                loadCustomBanners();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error deleting banner');
+            }
+        }
+
+        function showCreateImageBanner() {
+            $('#imageBannerModal').modal('show');
+            toggleImageInput(); // Initialize the correct view
+        }
+
+        function toggleImageInput() {
+            const method = $('input[name="imageMethod"]:checked').val();
+            if (method === 'upload') {
+                $('#uploadSection').removeClass('d-none');
+                $('#urlSection').addClass('d-none');
+            } else {
+                $('#uploadSection').addClass('d-none');
+                $('#urlSection').removeClass('d-none');
+            }
+        }
+
+        // Preview uploaded image
+        $('#imageBannerForm').on('change', '#bannerImageFile', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Check file size (100KB limit)
+                if (file.size > 100 * 1024) {
+                    alert('File size must be less than 100 KB');
+                    $(this).val('');
+                    return;
+                }
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#imagePreview').html(`
+                        <img src="${e.target.result}" class="img-fluid" style="max-height: 200px; border-radius: 8px;">
+                    `);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function submitImageBanner() {
+            const form = $('#imageBannerForm');
+            if (!form[0].checkValidity()) {
+                form[0].reportValidity();
+                return;
+            }
+
+            const method = $('input[name="imageMethod"]:checked').val();
+            const formData = form.serializeArray();
+            const data = {};
+            formData.forEach(field => {
+                data[field.name] = field.value;
+            });
+
+            // Add required fields
+            data.created_by = 'ADMIN';
+            data.display_order = parseInt(data.display_order) || 0;
+
+            // Handle image based on method
+            if (method === 'upload') {
+                const fileInput = $('#bannerImageFile')[0];
+                if (!fileInput.files || !fileInput.files[0]) {
+                    alert('Please select an image file');
+                    return;
+                }
+
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    // Store base64 image data
+                    data.image_content = e.target.result;
+                    sendImageBannerRequest(data, form);
+                };
+                
+                reader.readAsDataURL(file);
+            } else {
+                // URL method
+                const imageURL = $('#bannerImageURL').val();
+                if (!imageURL) {
+                    alert('Please enter an image URL');
+                    return;
+                }
+                data.image_content = imageURL;
+                sendImageBannerRequest(data, form);
+            }
+        }
+
+        async function sendImageBannerRequest(data, form) {
+            try {
+                await staffFetchJson(`${API_BASE}/banners/image`, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                alert('Image banner created successfully! Awaiting approval.');
+                $('#imageBannerModal').modal('hide');
+                form[0].reset();
+                $('#imagePreview').html('');
+                loadImageBanners();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error creating image banner: ' + (error.message || 'Please try again'));
+            }
+        }
+
+        async function deleteImageBanner(bannerId) {
+            if (!confirm('Delete this banner?')) return;
+
+            try {
+                await staffFetchJson(`${API_BASE}/banners/image/${bannerId}`, {
+                    method: 'DELETE'
+                });
+                alert('Banner deleted');
+                loadImageBanners();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error deleting banner');
+            }
+        }
+
+        function showCreatePopup() {
+            $('#popupModal').modal('show');
+        }
+
+        async function submitPopup() {
+            const formData = $('#popupForm').serializeArray();
+            const data = {};
+            formData.forEach(field => {
+                data[field.name] = field.value;
+            });
+            data.created_by = 'ADMIN';
+            data.popup_type = 'General';
+            data.background_color = '#007bff';
+            data.text_color = '#ffffff';
+            data.priority = 1;
+
+            try {
+                await staffFetchJson(`${API_BASE}/banners/popups`, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                alert('Popup created successfully!');
+                $('#popupModal').modal('hide');
+                loadPopups();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error creating popup');
+            }
+        }
+
+        async function deletePopup(popupId) {
+            if (!confirm('Delete this popup?')) return;
+
+            try {
+                await staffFetchJson(`${API_BASE}/banners/popups/${popupId}`, {
+                    method: 'DELETE'
+                });
+                alert('Popup deleted');
+                loadPopups();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error deleting popup');
+            }
+        }
+        
+        // ============================================
+        // BIRTHDAY BANNER FUNCTIONS
+        // ============================================
+        
+        async function loadTodayBirthdays() {
+            console.log('[R Logs] Loading Today Birthdays - DC Protocol');
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/birthday-today`);
+                console.log('[R Logs] Today birthdays data:', data);
+                if (data.has_birthdays && Array.isArray(data.users) && data.users.length > 0) {
+                    const preview = data.users.map(u => 
+                        `<span class="badge bg-light text-dark me-2 mb-2">${u.name} (${u.location})</span>`
+                    ).join('');
+                    $('#todayBirthdaysPreview').html(preview);
+                    console.log('[R Logs] Today birthdays rendered - ' + data.users.length + ' users');
+                } else {
+                    $('#todayBirthdaysPreview').html('<div class="text-center">No birthdays today</div>');
+                    console.log('[R Logs] Today birthdays - no birthdays');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[R Logs] Error loading today birthdays:', error);
+                $('#todayBirthdaysPreview').html('<div class="text-center text-danger">Error loading data</div>');
+            }
+        }
+        
+        async function loadBirthdayMessages() {
+            console.log('[R Logs] Loading Birthday Messages - DC Protocol');
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/birthday-messages`);
+                console.log('[R Logs] Birthday messages data:', data);
+                if (data.success && Array.isArray(data.messages) && data.messages.length > 0) {
+                    const today = new Date().toISOString().split('T')[0];
+                    const rows = data.messages.map((msg, idx) => {
+                        const isCurrent = msg.message_text === data.current_message;
+                        const rowClass = isCurrent ? 'table-warning' : '';
+                        const badge = msg.is_active 
+                            ? '<span class="status-badge status-active">Active</span>'
+                            : '<span class="status-badge status-draft">Inactive</span>';
+                        return `
+                            <tr class="${rowClass}">
+                                <td>${idx + 1}${isCurrent ? ' ⭐' : ''}</td>
+                                <td>${msg.message_text}</td>
+                                <td>${badge}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger action-btn" onclick="deleteBirthdayMessage(${msg.id})">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                    $('#birthdayMessagesBody').html(rows);
+                    console.log('[R Logs] Birthday messages rendered - ' + data.messages.length + ' messages');
+                } else {
+                    $('#birthdayMessagesBody').html('<tr><td colspan="4" class="text-center">No messages found</td></tr>');
+                    console.log('[R Logs] Birthday messages - no messages');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[R Logs] Error loading birthday messages:', error);
+                $('#birthdayMessagesBody').html('<tr><td colspan="4" class="text-center text-danger">Error loading data</td></tr>');
+            }
+        }
+        
+        async function loadBirthdaySkipped() {
+            console.log('[R Logs] Loading Birthday Skipped Users - DC Protocol');
+            try {
+                const data = await staffFetchJson(`${API_BASE}/banners/birthday-banner/skipped`);
+                console.log('[R Logs] Birthday skipped data:', data);
+                if (data.success && Array.isArray(data.skipped_users) && data.skipped_users.length > 0) {
+                    const rows = data.skipped_users.map(user => `
+                        <tr>
+                            <td>${user.user_id}</td>
+                            <td>${user.name}</td>
+                            <td>${user.skipped_by_name}</td>
+                            <td>${new Date(user.skipped_at).toLocaleDateString()}</td>
+                            <td>${user.reason || '-'}</td>
+                            <td>
+                                <button class="btn btn-sm btn-success action-btn" onclick="reactivateBirthdayUser('${user.user_id}')">
+                                    <i class="bi bi-check-circle"></i> Reactivate
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                    $('#birthdaySkippedBody').html(rows);
+                    console.log('[R Logs] Birthday skipped rendered - ' + data.skipped_users.length + ' users');
+                } else {
+                    $('#birthdaySkippedBody').html('<tr><td colspan="6" class="text-center">No skipped users</td></tr>');
+                    console.log('[R Logs] Birthday skipped - no users');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[R Logs] Error loading birthday skipped:', error);
+                $('#birthdaySkippedBody').html('<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>');
+            }
+        }
+        
+        async function skipBirthdayUser(userId) {
+            const reason = prompt('Enter reason for skipping this user from birthday banner:');
+            if (!reason) return;
+            
+            try {
+                await staffFetchJson(`${API_BASE}/banners/birthday-skip/${userId}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ reason: reason })
+                });
+                alert('User skipped from birthday banner');
+                loadBirthdaySkipped();
+                loadTodayBirthdays();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error: ' + (error.message || 'Failed to skip user'));
+            }
+        }
+        
+        async function reactivateBirthdayUser(userId) {
+            if (!confirm('Reactivate this user for birthday banner?')) return;
+            
+            try {
+                await staffFetchJson(`${API_BASE}/banners/birthday-reactivate/${userId}`, {
+                    method: 'POST'
+                });
+                alert('User reactivated for birthday banner');
+                loadBirthdaySkipped();
+                loadTodayBirthdays();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error: ' + (error.message || 'Failed to reactivate'));
+            }
+        }
+        
+        async function deleteBirthdayMessage(messageId) {
+            if (!confirm('Delete this birthday message?')) return;
+            
+            try {
+                await staffFetchJson(`${API_BASE}/banners/birthday-messages/${messageId}`, {
+                    method: 'DELETE'
+                });
+                alert('Message deleted');
+                loadBirthdayMessages();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error: ' + (error.message || 'Failed to delete'));
+            }
+        }
+        
+        async function showAddMessageModal() {
+            const text = prompt('Enter new birthday message:');
+            if (!text || text.trim() === '') return;
+            
+            try {
+                await staffFetchJson(`${API_BASE}/banners/birthday-messages`, {
+                    method: 'POST',
+                    body: JSON.stringify({ message_text: text })
+                });
+                alert('Birthday message added!');
+                loadBirthdayMessages();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Error: ' + (error.message || 'Failed to add message'));
+            }
+        }
+        
+        // Load birthday data when tab is clicked
+        $('#birthday-tab').on('click', function() {
+            loadTodayBirthdays();
+            loadBirthdayMessages();
+            loadBirthdaySkipped();
+        });
+    </script>
+</body>
+</html>

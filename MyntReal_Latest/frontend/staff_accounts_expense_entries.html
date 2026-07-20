@@ -1,0 +1,2859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Entries - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/expense-cat-picker.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .header-logo { height: 36px; width: auto; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .role-badge-supreme { background: #fef2f2; color: #dc2626; }
+        .role-badge-ea { background: #ede9fe; color: #7c3aed; }
+        .role-badge-default { background: #f3f4f6; color: #374151; }
+        
+        .content-area { padding: 24px; }
+        
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        
+        .filter-section { background: white; padding: 16px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #6b7280; }
+        .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 150px; }
+        
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-item { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-item .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .summary-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .summary-item.draft .value { color: #6b7280; }
+        .summary-item.submitted .value { color: #f59e0b; }
+        .summary-item.approved .value { color: #10b981; }
+        .summary-item.rejected .value { color: #ef4444; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        
+        .amount { font-weight: 600; font-family: monospace; }
+        .amount.negative { color: #ef4444; }
+        
+        .badge-status { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-draft { background: #e5e7eb; color: #4b5563; }
+        .badge-submitted { background: #fef3c7; color: #d97706; }
+        .badge-approved { background: #d1fae5; color: #059669; }
+        .badge-rejected { background: #fee2e2; color: #dc2626; }
+        .badge-paid { background: #ede9fe; color: #5b21b6; }
+        .badge-cat { background: #f0f9ff; color: #0369a1; font-size: 10px; padding: 2px 7px; border-radius: 10px; }
+        .dr-badge { display:inline-block; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:700; background:#fee2e2; color:#dc2626; margin-left:4px; }
+        .cr-badge { display:inline-block; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:700; background:#d1fae5; color:#059669; margin-left:4px; }
+        .badge-tally_confirmed { background: #d1fae5; color: #059669; }
+        .badge-tally_exception { background: #fef3c7; color: #d97706; }
+        .badge-tally_done { background: #ede9fe; color: #7c3aed; }
+        
+        .btn-action { padding: 5px 9px; border-radius: 5px; font-size: 11px; font-weight: 500; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; margin-right: 3px; }
+        .btn-submit { background: #fef3c7; color: #d97706; border-color: #fde68a; }
+        .btn-submit:hover { background: #d97706; color: white; }
+        .btn-approve { background: #d1fae5; color: #059669; border-color: #a7f3d0; }
+        .btn-approve:hover { background: #059669; color: white; }
+        .btn-reject { background: #fee2e2; color: #dc2626; border-color: #fecaca; }
+        .btn-reject:hover { background: #dc2626; color: white; }
+        .btn-edit { background: #dbeafe; color: #1d4ed8; border-color: #bfdbfe; }
+        .btn-edit:hover { background: #1d4ed8; color: white; }
+        .btn-view { background: #f3f4f6; color: #374151; border-color: #e5e7eb; }
+        .btn-view:hover { background: #374151; color: white; }
+        .btn-tally-confirm { background: #d1fae5; color: #065f46; border-color: #a7f3d0; }
+        .btn-tally-confirm:hover { background: #065f46; color: white; }
+        .btn-tally-exception { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+        .btn-tally-exception:hover { background: #92400e; color: white; }
+        .btn-tally-done { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+        .btn-tally-done:hover { background: #5b21b6; color: white; }
+        .btn-pay { background: #f0fdf4; color: #166534; border-color: #86efac; }
+        .btn-pay:hover { background: #166534; color: white; }
+        .btn-transfer { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+        .btn-transfer:hover { background: #0369a1; color: white; }
+
+        .fund-balance-card { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1px solid #86efac; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+        .fund-balance-card h4 { font-size: 13px; font-weight: 700; color: #14532d; margin-bottom: 10px; }
+        .balance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+        .balance-cell { text-align: center; background: white; border-radius: 8px; padding: 10px; border: 1px solid #bbf7d0; }
+        .balance-cell .val { font-size: 16px; font-weight: 700; }
+        .balance-cell .lbl { font-size: 10px; color: #6b7280; margin-top: 2px; }
+        .balance-cell .val.positive { color: #059669; }
+        .balance-cell .val.warn { color: #d97706; }
+        .balance-cell .val.danger { color: #dc2626; }
+        .balance-cell .val.neutral { color: #374151; }
+
+        .section-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .section-header-row h2 { font-size: 15px; font-weight: 700; color: #1f2937; margin: 0; }
+        .opening-bal-section { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+        
+        .btn-primary-custom { background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-primary-custom:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); color: white; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .empty-state h3 { font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+        .empty-state p { font-size: 14px; }
+        
+        .loading-spinner { display: flex; justify-content: center; align-items: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #ef4444; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.1); }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        
+        .fund-allocation-info { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-top: 8px; }
+        .fund-allocation-info .balance { font-weight: 600; color: #059669; }
+        
+        .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
+        .pagination button { padding: 8px 14px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; }
+        .pagination button:hover { background: #f9fafb; }
+        .pagination button.active { background: #ef4444; color: white; border-color: #ef4444; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+
+        /* ─── Quick Filter Pills ─── */
+        .qf-strip { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+        .qf-pill { padding:5px 14px; border-radius:20px; border:1px solid #d1d5db; background:#fff; font-size:12px; font-weight:600; color:#6b7280; cursor:pointer; transition:all .15s; white-space:nowrap; line-height:1.6; }
+        .qf-pill:hover { border-color:#ef4444; color:#ef4444; background:#fff5f5; }
+        .qf-pill.qf-active { background:#ef4444; color:#fff; border-color:#ef4444; }
+        .qf-custom-row { display:none; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; font-size:13px; }
+        .qf-custom-row input[type=date] { padding:5px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; }
+
+        /* ─── Clickable summary cards ─── */
+        .summary-item { cursor:pointer; transition:transform .15s,box-shadow .15s; }
+        .summary-item:hover { transform:translateY(-3px); box-shadow:0 6px 16px rgba(0,0,0,.12); }
+
+        /* ─── Team stat cards ─── */
+        .team-stat-strip { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-bottom:16px; }
+        .team-stat-card { background:#fff; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.1); padding:14px; text-align:center; cursor:pointer; transition:transform .15s,box-shadow .15s; }
+        .team-stat-card:hover { transform:translateY(-3px); box-shadow:0 6px 16px rgba(0,0,0,.12); }
+        .team-stat-card .tsv { font-size:22px; font-weight:700; }
+        .team-stat-card .tsl { font-size:11px; color:#6b7280; margin-top:3px; }
+
+        /* ─── Drilldown Modal ─── */
+        .dd-stat-row { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+        .dd-stat { background:#f9fafb; border-radius:8px; padding:10px 18px; text-align:center; flex:1; min-width:90px; border:1px solid #e5e7eb; }
+        .dd-stat .ddv { font-size:18px; font-weight:700; color:#1f2937; }
+        .dd-stat .ddl { font-size:11px; color:#6b7280; margin-top:2px; }
+        .dd-entry-row { border-bottom:1px solid #f3f4f6; }
+        .dd-expand-detail { background:#f8fafc; border-left:3px solid #e5e7eb; padding:8px 14px; font-size:12px; color:#374151; line-height:1.7; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-header">
+                <div>
+                    <h1>Expense Entries</h1>
+                    <p>Manage expenses with DRAFT, SUBMITTED, APPROVED workflow</p>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button class="btn btn-outline-info btn-sm" id="btnOpeningBal" style="display:none;" onclick="toggleOpeningBalSection()">
+                        <i class="fas fa-coins me-1"></i>Opening Balance
+                    </button>
+                    <a href="/staff/accounts/expense-categories" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-tags me-1"></i>Manage Categories
+                    </a>
+                    <button class="btn btn-outline-primary btn-sm" onclick="openTransferModal()">
+                        <i class="fas fa-exchange-alt me-1"></i>Transfer
+                    </button>
+                    <button class="btn-primary-custom" onclick="openCreateModal()">
+                        <i class="fas fa-plus me-2"></i>New Expense
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Bar -->
+            <div style="display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:20px;">
+                <button id="tabMyExpenses" onclick="switchExpenseTab('my')" style="padding:10px 20px;border:none;background:none;font-size:14px;font-weight:600;color:#ef4444;border-bottom:2px solid #ef4444;margin-bottom:-2px;cursor:pointer;">
+                    <i class="fas fa-receipt me-2"></i>My Expenses
+                </button>
+                <button id="tabMyTeam" onclick="switchExpenseTab('team')" style="padding:10px 20px;border:none;background:none;font-size:14px;font-weight:500;color:#6b7280;cursor:pointer;">
+                    <i class="fas fa-users me-2"></i>My Team
+                </button>
+                <button id="tabConsolidated" onclick="switchExpenseTab('consolidated')" style="display:none;padding:10px 20px;border:none;background:none;font-size:14px;font-weight:500;color:#6b7280;cursor:pointer;">
+                    <i class="fas fa-table me-2"></i>Consolidated
+                </button>
+            </div>
+
+            <!-- My Expenses section (default) -->
+            <div id="sectionMyExpenses">
+
+            <div id="fundBalanceCard" class="fund-balance-card" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <h4><i class="fas fa-wallet me-2"></i>My Fund Balance</h4>
+                    <button onclick="refreshMyBalance()" class="btn btn-sm btn-outline-success"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+                </div>
+                <div class="balance-grid" id="myBalanceGrid">
+                    <div class="balance-cell"><div class="val positive" id="balAvailable">—</div><div class="lbl">Available</div></div>
+                    <div class="balance-cell"><div class="val danger" id="balApproved">—</div><div class="lbl">Approved Expenses</div></div>
+                    <div class="balance-cell"><div class="val warn" id="balSubmitted">—</div><div class="lbl">Pending Submitted</div></div>
+                    <div class="balance-cell"><div class="val warn" id="balDraft">—</div><div class="lbl">Draft Expenses</div></div>
+                    <div class="balance-cell" style="border-color:#86efac;">
+                        <div class="val positive" id="balEffective">—</div>
+                        <div class="lbl">Effective Balance</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="openingBalSection" class="opening-bal-section" style="display:none;">
+                <div class="section-header-row">
+                    <h2><i class="fas fa-coins me-2 text-warning"></i>Set Opening Balance</h2>
+                    <button onclick="toggleOpeningBalSection()" class="btn btn-sm btn-outline-secondary"><i class="fas fa-times"></i></button>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;">
+                    <div class="form-group mb-0">
+                        <label>Employee</label>
+                        <select id="obEmployee" onchange="onObEmployeeChange()" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;width:100%;font-size:13px;">
+                            <option value="">Select Employee</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Company</label>
+                        <select id="obCompany" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;width:100%;font-size:13px;">
+                            <option value="">Select Company</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label>Opening Balance (₹) <span id="obExistingLabel" style="font-size:11px;color:#6b7280;"></span></label>
+                        <input type="number" id="obAmount" step="0.01" min="0" placeholder="0.00" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;width:100%;font-size:13px;">
+                    </div>
+                    <button class="btn btn-success" onclick="saveOpeningBalance()"><i class="fas fa-save me-1"></i>Save</button>
+                </div>
+                <!-- Fund balance summary for selected employee -->
+                <div id="obFundSummary" style="display:none;margin-top:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:13px;">
+                    <strong><i class="fas fa-wallet me-1 text-success"></i>Current Fund Balance:</strong>
+                    <span style="display:inline-flex;gap:18px;margin-left:10px;flex-wrap:wrap;">
+                        <span>Available: <strong id="obBalAvail" style="color:#059669;">—</strong></span>
+                        <span>Allocated: <strong id="obBalAlloc" style="color:#1e40af;">—</strong></span>
+                        <span>Approved Exp: <strong id="obBalApproved" style="color:#dc2626;">—</strong></span>
+                        <span>Effective: <strong id="obBalEffective" style="color:#7c3aed;">—</strong></span>
+                    </span>
+                </div>
+                <div id="obMessage" style="margin-top:8px;font-size:12px;"></div>
+            </div>
+            
+            <!-- DC_QF_MY_001: Quick date filter strip -->
+            <div class="qf-strip" id="qfStripMy">
+                <span style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;">Quick:</span>
+                <button class="qf-pill qf-active" data-tab="my" data-preset="overall" onclick="setQuickFilter('my','overall')">Overall</button>
+                <button class="qf-pill" data-tab="my" data-preset="today" onclick="setQuickFilter('my','today')">Today</button>
+                <button class="qf-pill" data-tab="my" data-preset="yesterday" onclick="setQuickFilter('my','yesterday')">Yesterday</button>
+                <button class="qf-pill" data-tab="my" data-preset="this_week" onclick="setQuickFilter('my','this_week')">This Week</button>
+                <button class="qf-pill" data-tab="my" data-preset="last_week" onclick="setQuickFilter('my','last_week')">Last Week</button>
+                <button class="qf-pill" data-tab="my" data-preset="custom" onclick="setQuickFilter('my','custom')">Custom ▾</button>
+            </div>
+
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>Status</label>
+                    <select id="filterStatus" onchange="loadExpenses()">
+                        <option value="">All Status</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="SUBMITTED">Submitted</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Company</label>
+                    <select id="filterCompany" onchange="loadExpenses()">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Category</label>
+                    <select id="filterCategory" onchange="loadExpenses()">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>From Date</label>
+                    <input type="date" id="filterFromDate" onchange="loadExpenses()">
+                </div>
+                <div class="filter-group">
+                    <label>To Date</label>
+                    <input type="date" id="filterToDate" onchange="loadExpenses()">
+                </div>
+            </div>
+            
+            <div class="summary-row">
+                <div class="summary-item draft" onclick="openDrilldown('Draft Expenses','DRAFT','my')" title="Click to view drafts">
+                    <div class="value" id="draftCount">0</div>
+                    <div class="label">Drafts <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
+                </div>
+                <div class="summary-item submitted" onclick="openDrilldown('Submitted Expenses','SUBMITTED','my')" title="Click to view submitted">
+                    <div class="value" id="submittedCount">0</div>
+                    <div class="label">Submitted <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
+                </div>
+                <div class="summary-item approved" onclick="openDrilldown('Approved Expenses','APPROVED','my')" title="Click to view approved">
+                    <div class="value" id="approvedCount">0</div>
+                    <div class="label">Approved <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
+                </div>
+                <div class="summary-item rejected" onclick="openDrilldown('Rejected Expenses','REJECTED','my')" title="Click to view rejected">
+                    <div class="value" id="rejectedCount">0</div>
+                    <div class="label">Rejected <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
+                </div>
+                <div class="summary-item" style="border-top:3px solid #7c3aed;" onclick="openDrilldown('Paid Expenses','APPROVED','my',true)" title="Click to view paid">
+                    <div class="value" id="paidCount" style="color:#7c3aed;">0</div>
+                    <div class="label">Paid <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
+                </div>
+                <div class="summary-item" onclick="openDrilldown('All Expenses','','my')" title="Click to view all">
+                    <div class="value" id="totalAmount">₹0</div>
+                    <div class="label">Total Approved <i class="fas fa-search-plus" style="font-size:9px;opacity:.5;"></i></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-list me-2"></i>Expense Records</span>
+                    <span class="text-muted" id="recordCount">0 records</span>
+                </div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
+                    <div id="tableContainer" style="display: none;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Company</th>
+                                        <th>Category</th>
+                                        <th>Ledger Cat</th>
+                                        <th>Description</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Tally</th>
+                                        <th>Fund Alloc</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenseTable">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="pagination"></div>
+                    </div>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-folder-open"></i>
+                        <h3>No Expense Entries Found</h3>
+                        <p>Create your first expense entry to get started</p>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /sectionMyExpenses -->
+
+        <!-- My Team Section -->
+        <div id="sectionMyTeam" style="display:none;">
+            <!-- DC_TEAM_BAL_001: Employee fund balance lookup — visible to accounts staff -->
+            <div id="teamBalLookupCard" style="display:none;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:14px 18px;margin-bottom:14px;">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <span style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;"><i class="fas fa-wallet me-1 text-primary"></i>Employee Balance:</span>
+                    <select id="teamBalEmpSelect" onchange="loadTeamEmployeeBalance()" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:200px;">
+                        <option value="">— Select Employee —</option>
+                    </select>
+                    <span id="teamBalResult" style="font-size:13px;color:#6b7280;flex:1;"></span>
+                </div>
+            </div>
+            <!-- DC_QF_TEAM_001: Quick date filter strip -->
+            <div class="qf-strip">
+                <span style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;">Quick:</span>
+                <button class="qf-pill qf-active" data-tab="team" data-preset="overall" onclick="setQuickFilter('team','overall')">Overall</button>
+                <button class="qf-pill" data-tab="team" data-preset="today" onclick="setQuickFilter('team','today')">Today</button>
+                <button class="qf-pill" data-tab="team" data-preset="yesterday" onclick="setQuickFilter('team','yesterday')">Yesterday</button>
+                <button class="qf-pill" data-tab="team" data-preset="this_week" onclick="setQuickFilter('team','this_week')">This Week</button>
+                <button class="qf-pill" data-tab="team" data-preset="last_week" onclick="setQuickFilter('team','last_week')">Last Week</button>
+                <button class="qf-pill" data-tab="team" data-preset="custom" onclick="setQuickFilter('team','custom')">Custom ▾</button>
+            </div>
+
+            <!-- DC_TEAM_STATS_001: Team summary stat cards -->
+            <div class="team-stat-strip" id="teamStatStrip">
+                <div class="team-stat-card" onclick="openDrilldown('Team — Draft','DRAFT','team')" style="border-top:3px solid #9ca3af;">
+                    <div class="tsv" style="color:#6b7280;" id="tsDraft">—</div><div class="tsl">Drafts</div>
+                </div>
+                <div class="team-stat-card" onclick="openDrilldown('Team — Submitted','SUBMITTED','team')" style="border-top:3px solid #f59e0b;">
+                    <div class="tsv" style="color:#d97706;" id="tsSubmitted">—</div><div class="tsl">Submitted</div>
+                </div>
+                <div class="team-stat-card" onclick="openDrilldown('Team — Approved','APPROVED','team')" style="border-top:3px solid #10b981;">
+                    <div class="tsv" style="color:#059669;" id="tsApproved">—</div><div class="tsl">Approved</div>
+                </div>
+                <div class="team-stat-card" onclick="openDrilldown('Team — Rejected','REJECTED','team')" style="border-top:3px solid #ef4444;">
+                    <div class="tsv" style="color:#dc2626;" id="tsRejected">—</div><div class="tsl">Rejected</div>
+                </div>
+                <div class="team-stat-card" onclick="openDrilldown('Team — All','','team')" style="border-top:3px solid #6366f1;">
+                    <div class="tsv" style="color:#6366f1;" id="tsTotal">—</div><div class="tsl">Total Entries</div>
+                </div>
+                <div class="team-stat-card" onclick="openDrilldown('Team — Approved Amount','APPROVED','team')" style="border-top:3px solid #059669;">
+                    <div class="tsv" style="color:#059669;font-size:16px;" id="tsTotalAmt">₹—</div><div class="tsl">Approved Amt</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span><i class="fas fa-users me-2"></i>Team Expense Entries</span>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <select id="teamFilterCompany" onchange="loadTeamExpenses(1)" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="">All Companies</option>
+                        </select>
+                        <select id="teamFilterStatus" onchange="loadTeamExpenses(1)" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="">All Status</option>
+                            <option value="DRAFT">Draft</option>
+                            <option value="SUBMITTED">Submitted</option>
+                            <option value="APPROVED">Approved</option>
+                            <option value="REJECTED">Rejected</option>
+                        </select>
+                        <select id="teamFilterEmployee" onchange="loadTeamExpenses(1)" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:160px;">
+                            <option value="">All Members</option>
+                        </select>
+                        <input type="date" id="teamFilterFrom" onchange="loadTeamExpenses(1)" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                        <input type="date" id="teamFilterTo" onchange="loadTeamExpenses(1)" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                        <button onclick="loadTeamExpenses(1)" class="btn btn-sm btn-outline-primary"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                </div>
+                <div class="card-body" style="padding:0;">
+                    <div id="teamLoadingState" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="teamTableContainer" style="display:none;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead><tr>
+                                    <th>ID</th><th>Date</th><th>Employee</th><th>Company</th>
+                                    <th>Category</th><th>Description</th><th style="text-align:right;">Amount (₹)</th>
+                                    <th>Status</th><th>Actions</th>
+                                </tr></thead>
+                                <tbody id="teamExpenseTable"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="teamPagination"></div>
+                    </div>
+                    <div id="teamEmptyState" class="empty-state" style="display:none;">
+                        <i class="fas fa-users"></i>
+                        <h3>No Team Expenses Found</h3>
+                        <p>Your team members' expenses will appear here</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DC-IE-DEST-FILTER-001: Income Received section — shown when a specific employee is selected -->
+            <div id="teamIncomeReceiptsSection" style="display:none;margin-top:24px;">
+                <div class="card" style="border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;">
+                    <div style="background:linear-gradient(90deg,#0c4a6e,#0891b2);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-hand-holding-usd" style="color:#bae6fd;font-size:18px;"></i>
+                            <span id="teamIncomeReceiptsTitle" style="color:#fff;font-weight:700;font-size:15px;">Cash Received (Income Entries)</span>
+                        </div>
+                        <span id="teamIncomeReceiptsBadge" style="background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;border-radius:12px;font-size:12px;">—</span>
+                    </div>
+                    <div id="teamIncomeReceiptsBody" style="padding:12px 16px;">
+                        <div style="text-align:center;padding:20px;color:#9ca3af;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /sectionMyTeam -->
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             DC_EXP_CONSOLIDATED_001 — Consolidated Expense Summary Tab
+             Visible to Accounts / VGK / EA only (set via JS on load)
+             ═══════════════════════════════════════════════════════════════ -->
+        <div id="sectionConsolidated" style="display:none;">
+
+            <!-- DC_QF_CONSO_001: Quick date filter strip -->
+            <div class="qf-strip">
+                <span style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-right:4px;">Quick:</span>
+                <button class="qf-pill qf-active" data-tab="consolidated" data-preset="overall" onclick="setQuickFilter('consolidated','overall')">Overall</button>
+                <button class="qf-pill" data-tab="consolidated" data-preset="today" onclick="setQuickFilter('consolidated','today')">Today</button>
+                <button class="qf-pill" data-tab="consolidated" data-preset="yesterday" onclick="setQuickFilter('consolidated','yesterday')">Yesterday</button>
+                <button class="qf-pill" data-tab="consolidated" data-preset="this_week" onclick="setQuickFilter('consolidated','this_week')">This Week</button>
+                <button class="qf-pill" data-tab="consolidated" data-preset="last_week" onclick="setQuickFilter('consolidated','last_week')">Last Week</button>
+                <button class="qf-pill" data-tab="consolidated" data-preset="custom" onclick="setQuickFilter('consolidated','custom')">Custom ▾</button>
+            </div>
+
+            <!-- Filters -->
+            <div style="background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:16px 20px;margin-bottom:16px;">
+                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+                    <div>
+                        <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">COMPANY</label>
+                        <select id="consoCompany" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:150px;">
+                            <option value="">All Companies</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">FROM DATE</label>
+                        <input type="date" id="consoFromDate" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">TO DATE</label>
+                        <input type="date" id="consoToDate" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px;">EMPLOYEE</label>
+                        <input type="text" id="consoSearch" placeholder="Search name or code..." style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:160px;">
+                    </div>
+                    <button onclick="loadConsolidatedSummary()" style="padding:8px 18px;background:#1e40af;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                        <i class="fas fa-sync-alt me-1"></i>Load / Refresh
+                    </button>
+                    <button onclick="exportConsolidatedCSV()" style="padding:8px 14px;background:#fff;color:#374151;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary stat cards -->
+            <div id="consoStats" style="display:none;background:linear-gradient(135deg,#1e3a8a,#2563eb);border-radius:12px;padding:16px 20px;margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;color:#fff;"></div>
+
+            <!-- Table wrapper -->
+            <div style="background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);overflow-x:auto;">
+                <div id="consoLoading" style="padding:48px;text-align:center;color:#9ca3af;display:none;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Loading consolidated data…
+                </div>
+                <div id="consoEmpty" style="padding:48px;text-align:center;color:#9ca3af;display:none;">
+                    <i class="fas fa-chart-bar fa-3x" style="margin-bottom:14px;display:block;"></i>
+                    Click <strong>Load / Refresh</strong> to view the summary
+                </div>
+                <table id="consoTable" style="display:none;width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="background:#f8fafc;border-bottom:2px solid #e5e7eb;">
+                            <th style="padding:10px 14px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;">#</th>
+                            <th style="padding:10px 14px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;">Employee</th>
+                            <th style="padding:10px 14px;text-align:left;font-weight:700;color:#374151;white-space:nowrap;">Dept / Role</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#1e40af;white-space:nowrap;">Fund Allocated</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;">Fund Balance</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#dc2626;white-space:nowrap;">Fund Used</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#0891b2;white-space:nowrap;">Cash Received (IN)</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#7c3aed;white-space:nowrap;">Cash Balance</th>
+                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#374151;white-space:nowrap;">Total Exp</th>
+                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#6b7280;white-space:nowrap;">Draft</th>
+                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#d97706;white-space:nowrap;">Submitted</th>
+                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#059669;white-space:nowrap;">Approved</th>
+                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#dc2626;white-space:nowrap;">Rejected</th>
+                            <th style="padding:10px 14px;text-align:center;font-weight:700;color:#7c3aed;white-space:nowrap;">Paid</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;">Approved Amt</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#dc2626;white-space:nowrap;">Rejected Amt</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#7c3aed;white-space:nowrap;">Paid Amt</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#6b7280;white-space:nowrap;">Draft Amt</th>
+                            <th style="padding:10px 14px;text-align:right;font-weight:700;color:#d97706;white-space:nowrap;">Submitted Amt</th>
+                        </tr>
+                    </thead>
+                    <tbody id="consoTableBody"></tbody>
+                    <tfoot id="consoTableFoot" style="background:#f0f9ff;border-top:2px solid #bfdbfe;font-weight:700;"></tfoot>
+                </table>
+            </div>
+
+        </div><!-- /sectionConsolidated -->
+
+    </div><!-- /content-area -->
+    </div><!-- /main-content -->
+
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle me-2"></i>New Expense Entry</h3>
+                <button class="modal-close" onclick="closeModal('createModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createForm">
+                    <!-- DC_EXP_BEHALF_001: On-behalf-of employee selector (privileged + managers only) -->
+                    <div class="form-group" id="formEmployeeGroup" style="display:none;">
+                        <label style="font-weight:700;color:#1e40af;"><i class="fas fa-user-tag me-1"></i>Expense For (Employee)</label>
+                        <input type="text" id="formEmpSearch" placeholder="Type name or code to search..." autocomplete="off"
+                            style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px 6px 0 0;width:100%;font-size:13px;box-sizing:border-box;border-bottom:none;"
+                            oninput="filterEmpDropdown(this.value)">
+                        <select id="formEmployee" size="5" onchange="reloadFundAllocationsForEmployee(this.value)"
+                            style="width:100%;border:1px solid #d1d5db;border-radius:0 0 6px 6px;font-size:13px;padding:4px;box-sizing:border-box;">
+                            <option value="">— Myself —</option>
+                        </select>
+                        <small style="color:#6b7280;font-size:11px;"><i class="fas fa-info-circle me-1"></i>Leave blank or select "— Myself —" to file for yourself</small>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Company *</label>
+                            <select id="formCompany" required>
+                                <option value="">Select Company</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Expense Date *</label>
+                            <input type="date" id="formDate" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Category *</label>
+                            <select id="formCategory" required>
+                                <option value="">Select Category</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sub-Category</label>
+                            <select id="formSubCategory">
+                                <option value="">Select Sub-Category</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount *</label>
+                        <input type="number" id="formAmount" step="0.01" min="0.01" required placeholder="Enter amount">
+                    </div>
+                    <div class="form-group">
+                        <label>Description *</label>
+                        <textarea id="formDescription" required placeholder="Enter expense description"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Fund Allocation (Optional)</label>
+                        <select id="formFundAllocation" onchange="showFundAllocationInfo()">
+                            <option value="">None - Pay from Company Funds</option>
+                        </select>
+                        <div id="fundAllocationInfo" class="fund-allocation-info" style="display: none;">
+                            <small>Available Balance: <span class="balance" id="fundBalance">0.00</span></small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Vendor / Party (Optional) <span id="vendorCrDrBadge"></span></label>
+                        <select id="formVendor" onchange="updateVendorCrDr()">
+                            <option value="">No Vendor</option>
+                        </select>
+                        <small style="color:#6b7280;font-size:11px;">Selecting a vendor = <span class="cr-badge">CR</span> (payable created on approval)</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Bank Ledger Category</label>
+                        <select id="formBankLedgerCategory" onchange="toggleCustomCategory()">
+                            <option value="">— None / General —</option>
+                            <option value="PURCHASE">Purchase</option>
+                            <option value="SALES">Sales</option>
+                            <option value="SALARY">Salary</option>
+                            <option value="EXPENSES">Expenses</option>
+                            <option value="CUSTOM">Custom</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="customCategoryGroup" style="display:none;">
+                        <label>Custom Category Name</label>
+                        <input type="text" id="formCustomCategory" placeholder="Enter category name" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Mode * <span class="cr-badge" style="font-size:9px;">CR — cash/bank leaves account on approval</span></label>
+                        <select id="formPaymentMode" required onchange="toggleBankAccountField()">
+                            <option value="">Select Payment Mode</option>
+                            <option value="CASH">Cash</option>
+                            <option value="BANK">Bank Transfer</option>
+                            <option value="UPI">UPI</option>
+                            <option value="CHEQUE">Cheque</option>
+                            <option value="NEFT">NEFT</option>
+                            <option value="RTGS">RTGS</option>
+                            <option value="DD">DD</option>
+                            <option value="CARD">Card</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="bankAccountGroup" style="display:none;">
+                        <label>Bank Account <span class="cr-badge" style="font-size:9px;">CR</span></label>
+                        <select id="formBankAccount">
+                            <option value="">Select Bank Account</option>
+                        </select>
+                        <small style="color:#6b7280;font-size:11px;">Bank account credited (money goes out) on approval</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Reference / Invoice Number</label>
+                        <input type="text" id="formReference" placeholder="Optional reference number">
+                    </div>
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;">
+                            <input type="checkbox" id="formShowInLedger" style="width:16px;height:16px;">
+                            Show in Ledger
+                        </label>
+                        <small style="color:#6b7280;font-size:11px;">Optional. When checked, this entry is posted to the transaction ledger. Can be changed anytime.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button type="button" class="btn btn-outline-primary" onclick="saveDraft()">
+                    <i class="fas fa-save me-1"></i>Save as Draft
+                </button>
+                <button type="button" class="btn-primary-custom" onclick="createAndSubmit()">
+                    <i class="fas fa-paper-plane me-1"></i>Submit for Approval
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="approveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-check-circle me-2 text-success"></i>Approve Expense</h3>
+                <button class="modal-close" onclick="closeModal('approveModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to approve this expense entry?</p>
+                <div class="alert alert-success mt-3">
+                    <strong>Expense ID:</strong> <span id="approveExpenseId"></span><br>
+                    <strong>Amount:</strong> <span id="approveAmount"></span><br>
+                    <strong>Description:</strong> <span id="approveDescription"></span>
+                </div>
+                <div class="form-group mt-3">
+                    <label>Approval Notes</label>
+                    <textarea id="approveNotes" placeholder="Optional approval notes"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('approveModal')">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="approveExpense()">
+                    <i class="fas fa-check me-1"></i>Approve
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="rejectModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-times-circle me-2 text-danger"></i>Reject Expense</h3>
+                <button class="modal-close" onclick="closeModal('rejectModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to reject this expense entry?</p>
+                <div class="alert alert-danger mt-3">
+                    <strong>Expense ID:</strong> <span id="rejectExpenseId"></span><br>
+                    <strong>Amount:</strong> <span id="rejectAmount"></span>
+                </div>
+                <div class="form-group mt-3">
+                    <label>Rejection Reason *</label>
+                    <textarea id="rejectReason" required placeholder="Please provide a reason for rejection"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('rejectModal')">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="rejectExpense()">
+                    <i class="fas fa-times me-1"></i>Reject
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pay / Mark Paid Modal -->
+    <div class="modal-overlay" id="payModal">
+        <div class="modal-content" style="max-width:500px">
+            <div class="modal-header">
+                <h3><i class="fas fa-money-bill-wave me-2 text-success"></i>Mark as Paid</h3>
+                <button class="modal-close" onclick="closeModal('payModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="font-size:13px;padding:10px 14px;border-radius:8px;margin-bottom:14px">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Marking as <strong>Paid</strong> will auto-approve the expense if it is still DRAFT or SUBMITTED.
+                </div>
+                <div style="background:#1e293b;border-radius:10px;padding:14px;margin-bottom:14px">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                        <span style="font-size:12px;color:#64748b">Expense #</span>
+                        <span id="payExpenseId" style="font-size:13px;color:#e2e8f0;font-weight:600"></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                        <span style="font-size:12px;color:#64748b">Amount</span>
+                        <span id="payAmount" style="font-size:16px;color:#10b981;font-weight:700"></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                        <span style="font-size:12px;color:#64748b">Description</span>
+                        <span id="payDescription" style="font-size:12px;color:#94a3b8;text-align:right;max-width:60%"></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between">
+                        <span style="font-size:12px;color:#64748b">Current Status</span>
+                        <span id="payStatus" style="font-size:12px;color:#f59e0b;font-weight:700"></span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Bank Account (Optional) <span class="cr-badge">CR — money goes out</span></label>
+                    <select id="payBankAccount">
+                        <option value="">— Select bank account —</option>
+                    </select>
+                    <small style="color:#6b7280;font-size:11px;">Select the account from which payment was made</small>
+                </div>
+                <div class="form-group">
+                    <label>UTR / Transaction Reference (Optional)</label>
+                    <input type="text" id="payUtr" placeholder="e.g. NEFT123456789, UPI ref..." maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label>Notes (Optional)</label>
+                    <textarea id="payNotes" rows="2" placeholder="Any payment notes..." style="resize:vertical"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('payModal')">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="payExpense()">
+                    <i class="fas fa-check me-1"></i>Confirm Payment
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let currentPage = 1;
+        let totalPages = 1;
+        let selectedExpense = null;
+        let fundAllocations = [];
+        let _expenseEmployees = [];   // DC_EXP_BEHALF_001: cached employee list for behalf-of selector
+        let _canCreateOnBehalf = false;
+        
+        let _activeExpenseTab = 'my';
+        let _teamPage = 1, _teamTotalPages = 1;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Expense Entries', 'fas fa-receipt');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            updateHeaderUserInfo();
+
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const hasFullAccess = ['VGK Mentor', 'VGK4U Supreme', 'VGK4U', 'Executive Assistant', 'EA', 'Executive Admin'].includes(userData.role_name)
+                || userData.emp_code === 'MR10001';
+            const hasAccountsAccess = hasFullAccess
+                || ['Accounts', 'Finance', 'VEA'].some(r => (userData.role_name || '').includes(r))
+                || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
+            window._hasAccountsAccess = hasAccountsAccess;
+            if (hasAccountsAccess) {
+                document.getElementById('btnOpeningBal').style.display = '';
+                document.getElementById('tabConsolidated').style.display = '';
+            }
+
+            document.getElementById('formDate').valueAsDate = new Date();
+            
+            await Promise.all([loadCompanies(), loadCategories(), loadVendors(), loadFundAllocations(), loadExpenseEmployees()]);
+            await loadExpenses();
+
+            // Auto-show fund balance card on load
+            balanceCardVisible = true;
+            document.getElementById('fundBalanceCard').style.display = 'block';
+            refreshMyBalance();
+        });
+
+        function switchExpenseTab(tab) {
+            _activeExpenseTab = tab;
+            const tabs = {
+                my:           document.getElementById('tabMyExpenses'),
+                team:         document.getElementById('tabMyTeam'),
+                consolidated: document.getElementById('tabConsolidated')
+            };
+            const secs = {
+                my:           document.getElementById('sectionMyExpenses'),
+                team:         document.getElementById('sectionMyTeam'),
+                consolidated: document.getElementById('sectionConsolidated')
+            };
+            Object.keys(tabs).forEach(k => {
+                if (!tabs[k]) return;
+                const active = k === tab;
+                tabs[k].style.color = active ? '#ef4444' : '#6b7280';
+                tabs[k].style.borderBottom = active ? '2px solid #ef4444' : 'none';
+                tabs[k].style.fontWeight = active ? '600' : '500';
+                tabs[k].style.marginBottom = active ? '-2px' : '0';
+            });
+            Object.keys(secs).forEach(k => {
+                if (!secs[k]) return;
+                secs[k].style.display = k === tab ? '' : 'none';
+            });
+            if (tab === 'team') { loadTeamExpenses(1); initTeamBalLookup(); }
+            if (tab === 'consolidated') { loadConsolidatedSummary(); }
+        }
+
+        async function loadTeamExpenses(page = 1) {
+            _teamPage = page;
+            document.getElementById('teamLoadingState').style.display = '';
+            document.getElementById('teamTableContainer').style.display = 'none';
+            document.getElementById('teamEmptyState').style.display = 'none';
+            const teamCo = document.getElementById('teamFilterCompany').value;
+            const status = document.getElementById('teamFilterStatus').value;
+            const from = document.getElementById('teamFilterFrom').value;
+            const to = document.getElementById('teamFilterTo').value;
+            const empFilter = document.getElementById('teamFilterEmployee')?.value;
+            let url = `${API_BASE}/expense-entries?team_view=true&page=${page}&page_size=30`;
+            if (teamCo) url += `&company_id=${teamCo}`;
+            if (status) url += `&status=${status}`;
+            if (empFilter) url += `&employee_id=${empFilter}`;
+            if (from) url += `&from_date=${from}`;
+            if (to) url += `&to_date=${to}`;
+            try {
+                const resp = await staffFetch(url);
+                const d = resp.ok ? await resp.json() : {};
+                const entries = d.entries || [];
+                _teamTotalPages = Math.ceil((d.total || 0) / 30) || 1;
+                document.getElementById('teamLoadingState').style.display = 'none';
+                if (!entries.length) {
+                    document.getElementById('teamEmptyState').style.display = '';
+                    document.getElementById('teamPagination').innerHTML = '';
+                    return;
+                }
+                const fmt = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                const statusBadge = s => {
+                    const cls = { DRAFT: 'warning', SUBMITTED: 'info', APPROVED: 'success', REJECTED: 'danger' }[s] || 'secondary';
+                    return `<span class="badge bg-${cls}">${s}</span>`;
+                };
+                // DC_TEAM_STATS_001: update team stat cards
+                const _ts = d.summary || {};
+                document.getElementById('tsDraft').textContent     = _ts.draft_count     ?? entries.filter(e=>e.status==='DRAFT').length;
+                document.getElementById('tsSubmitted').textContent = _ts.submitted_count ?? entries.filter(e=>e.status==='SUBMITTED').length;
+                document.getElementById('tsApproved').textContent  = _ts.approved_count  ?? entries.filter(e=>e.status==='APPROVED').length;
+                document.getElementById('tsRejected').textContent  = _ts.rejected_count  ?? entries.filter(e=>e.status==='REJECTED').length;
+                document.getElementById('tsTotal').textContent     = d.total || entries.length;
+                const _approvedAmt = _ts.total_approved_amount ?? entries.filter(e=>e.status==='APPROVED').reduce((s,e2)=>s+parseFloat(e2.amount||0),0);
+                document.getElementById('tsTotalAmt').textContent  = '₹' + Number(_approvedAmt).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0});
+
+                const tbody = document.getElementById('teamExpenseTable');
+                tbody.innerHTML = entries.map(e => `<tr>
+                    <td class="mono" style="color:#6366f1;">#${e.id}</td>
+                    <td style="white-space:nowrap;">${e.expense_date || '—'}</td>
+                    <td style="font-weight:600;">${e.created_by_name || e.employee_name || '—'}</td>
+                    <td>${e.company_name || '—'}</td>
+                    <td>${e.category_name || e.main_category_name || '—'}</td>
+                    <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(e.description||'').replace(/"/g,'')}">${e.description || '—'}</td>
+                    <td style="text-align:right;font-weight:700;">${fmt(e.amount)}</td>
+                    <td>${statusBadge(e.status)}</td>
+                    <td style="white-space:nowrap;">${getActionButtons(e)}</td>
+                </tr>`).join('');
+                document.getElementById('teamTableContainer').style.display = '';
+                renderTeamPagination();
+                // DC-IE-DEST-FILTER-001: Show income receipts section if filtering by a specific employee
+                const empSel = document.getElementById('teamFilterEmployee');
+                const empFilterVal = empSel ? empSel.value : '';
+                if (empFilterVal) {
+                    const empLabel = empSel.options[empSel.selectedIndex]?.text || 'Employee';
+                    loadTeamIncomeReceipts(empFilterVal, empLabel);
+                } else {
+                    document.getElementById('teamIncomeReceiptsSection').style.display = 'none';
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                document.getElementById('teamLoadingState').style.display = 'none';
+                document.getElementById('teamEmptyState').style.display = '';
+                console.error('Error loading team expenses:', e);
+            }
+        }
+
+        async function loadTeamIncomeReceipts(empId, empName) {
+            const section = document.getElementById('teamIncomeReceiptsSection');
+            section.style.display = '';
+            document.getElementById('teamIncomeReceiptsTitle').textContent = `Cash Received — ${empName || 'Employee'} (Income Entries)`;
+            document.getElementById('teamIncomeReceiptsBadge').textContent = '…';
+            document.getElementById('teamIncomeReceiptsBody').innerHTML =
+                '<div style="text-align:center;padding:20px;color:#9ca3af;"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+            try {
+                const resp = await staffFetch(`${API_BASE}/income-entries?destination_employee_id=${empId}&page_size=200&page=1`);
+                const d = resp.ok ? await resp.json() : {};
+                const entries = d.income_entries || d.entries || [];
+                const total   = d.total || entries.length;
+                const totalAmt = entries.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+                const fmtC = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+                document.getElementById('teamIncomeReceiptsBadge').textContent = `${total} receipt${total !== 1 ? 's' : ''}`;
+                if (!entries.length) {
+                    document.getElementById('teamIncomeReceiptsBody').innerHTML =
+                        '<p style="text-align:center;color:#9ca3af;padding:20px 0;">No cash receipts found for this employee</p>';
+                    return;
+                }
+                const stBadge = s => {
+                    const c = { CONFIRMED:'#d1fae5|#059669', PENDING:'#fef3c7|#d97706',
+                                 ESTIMATED:'#e0e7ff|#6366f1', TALLY_DONE:'#ede9fe|#7c3aed' }[s] || '#f3f4f6|#6b7280';
+                    const [bg, fg] = c.split('|');
+                    return `<span style="padding:2px 8px;border-radius:10px;font-size:10px;background:${bg};color:${fg};">${s}</span>`;
+                };
+                const rows = entries.map(e => `
+                    <tr style="border-bottom:1px solid #f3f4f6;">
+                        <td style="padding:8px 10px;color:#6366f1;font-family:monospace;font-size:12px;">${e.entry_number || '#'+e.id}</td>
+                        <td style="padding:8px 10px;font-size:12px;">${e.income_date || '—'}</td>
+                        <td style="padding:8px 10px;font-size:12px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(e.payer_name||'').replace(/"/g,'')}">${e.payer_name || '—'}</td>
+                        <td style="padding:8px 10px;font-size:12px;">${e.company_name || '—'}</td>
+                        <td style="padding:8px 10px;text-align:right;font-weight:700;">${fmtC(e.amount)}</td>
+                        <td style="padding:8px 10px;font-size:12px;">${e.payment_mode || '—'}</td>
+                        <td style="padding:8px 10px;">${stBadge(e.status)}</td>
+                    </tr>`).join('');
+                document.getElementById('teamIncomeReceiptsBody').innerHTML = `
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead>
+                            <tr style="background:#f0f9ff;border-bottom:2px solid #bae6fd;">
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#0891b2;text-transform:uppercase;">Entry#</th>
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#0891b2;text-transform:uppercase;">Date</th>
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#0891b2;text-transform:uppercase;">Payer</th>
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#0891b2;text-transform:uppercase;">Company</th>
+                                <th style="padding:8px 10px;text-align:right;font-size:11px;color:#0891b2;text-transform:uppercase;">Amount</th>
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#0891b2;text-transform:uppercase;">Mode</th>
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#0891b2;text-transform:uppercase;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                        <tfoot>
+                            <tr style="background:#f0f9ff;border-top:2px solid #bae6fd;">
+                                <td colspan="4" style="padding:8px 10px;font-weight:700;color:#0c4a6e;">TOTAL (${total})</td>
+                                <td style="padding:8px 10px;text-align:right;font-weight:700;color:#0891b2;">${fmtC(totalAmt)}</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>`;
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                document.getElementById('teamIncomeReceiptsBody').innerHTML =
+                    '<p style="text-align:center;color:#9ca3af;padding:20px;">Failed to load income receipts</p>';
+            }
+        }
+
+        function renderTeamPagination() {
+            const bar = document.getElementById('teamPagination');
+            if (_teamTotalPages <= 1) { bar.innerHTML = ''; return; }
+            let html = `<button onclick="loadTeamExpenses(${_teamPage - 1})" ${_teamPage <= 1 ? 'disabled' : ''}>← Prev</button>`;
+            const s = Math.max(1, _teamPage - 2), e = Math.min(_teamTotalPages, _teamPage + 2);
+            for (let p = s; p <= e; p++) html += `<button class="${p === _teamPage ? 'active' : ''}" onclick="loadTeamExpenses(${p})">${p}</button>`;
+            html += `<button onclick="loadTeamExpenses(${_teamPage + 1})" ${_teamPage >= _teamTotalPages ? 'disabled' : ''}>Next →</button>`;
+            bar.innerHTML = html;
+        }
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const name = userData.full_name || 'Staff Member';
+            const role = userData.role_name || 'Employee';
+            const empId = userData.emp_code || userData.employee_code || '-';
+            
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            
+            document.getElementById('headerUserInitials').textContent = initials;
+            document.getElementById('headerUserName').textContent = name;
+            document.getElementById('headerUserEmpId').textContent = empId;
+            
+            const roleEl = document.getElementById('headerUserRole');
+            roleEl.textContent = role;
+            
+            if (['VGK Mentor', 'VGK4U Supreme', 'VGK4U'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-supreme';
+            } else if (['Executive Assistant', 'EA', 'Executive Admin'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-ea';
+            } else {
+                roleEl.className = 'user-info-role role-badge-default';
+            }
+        }
+        
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch(`${API_BASE}/companies`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const companies = data.companies || [];
+                    
+                    ['filterCompany', 'formCompany', 'consoCompany', 'teamFilterCompany', 'transferCompany'].forEach(id => {
+                        const select = document.getElementById(id);
+                        if (!select) return;
+                        const firstOption = select.options[0];
+                        select.innerHTML = '';
+                        select.appendChild(firstOption);
+                        
+                        companies.forEach(company => {
+                            const option = document.createElement('option');
+                            option.value = company.id;
+                            option.textContent = company.company_name || company.name;
+                            select.appendChild(option);
+                        });
+                    });
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading companies:', e);
+            }
+        }
+        
+        async function loadCategories() {
+            try {
+                const response = await staffFetch(`${API_BASE}/expense-categories/main`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const categories = data.categories || [];
+                    
+                    // API returns main categories with nested sub_categories array
+                    const mainCats = categories.filter(c => c.is_active !== false);
+                    ['filterCategory', 'formCategory'].forEach(id => {
+                        const select = document.getElementById(id);
+                        const firstOption = select.options[0];
+                        select.innerHTML = '';
+                        select.appendChild(firstOption);
+                        
+                        mainCats.forEach(cat => {
+                            const option = document.createElement('option');
+                            option.value = cat.id;
+                            option.textContent = cat.name;
+                            // sub_categories is the nested array from the API response
+                            option.dataset.subs = JSON.stringify(cat.sub_categories || []);
+                            select.appendChild(option);
+                        });
+                    });
+                    
+                    document.getElementById('formCategory').addEventListener('change', function() {
+                        const selectedOption = this.options[this.selectedIndex];
+                        const subSelect = document.getElementById('formSubCategory');
+                        subSelect.innerHTML = '<option value="">Select Sub-Category</option>';
+                        
+                        if (selectedOption.dataset.subs) {
+                            const subs = JSON.parse(selectedOption.dataset.subs);
+                            subs.filter(s => s.is_active !== false).forEach(sub => {
+                                const option = document.createElement('option');
+                                option.value = sub.id;
+                                option.textContent = sub.name;
+                                subSelect.appendChild(option);
+                            });
+                        }
+                    });
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading categories:', e);
+            }
+        }
+        
+        async function loadVendors() {
+            try {
+                const response = await staffFetch(`${API_BASE}/vendors`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const vendors = data.vendors || [];
+                    const select = document.getElementById('formVendor');
+                    
+                    vendors.filter(v => v.is_active).forEach(vendor => {
+                        const option = document.createElement('option');
+                        option.value = vendor.id;
+                        option.textContent = vendor.vendor_name || vendor.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading vendors:', e);
+            }
+        }
+        
+        async function loadFundAllocations(targetEmpId) {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const empId = targetEmpId || userData.id;
+            try {
+                const response = await staffFetch(`${API_BASE}/fund-allocations?status=CONFIRMED&to_employee_id=${empId}&page_size=100`);
+                if (response.ok) {
+                    const data = await response.json();
+                    fundAllocations = data.allocations || [];
+                    const select = document.getElementById('formFundAllocation');
+                    // Keep the first "None" option, clear the rest
+                    while (select.options.length > 1) select.remove(1);
+                    
+                    fundAllocations.forEach(alloc => {
+                        const remainingBalance = alloc.balance_remaining ?? (alloc.amount - (alloc.balance_used || 0));
+                        if (remainingBalance > 0) {
+                            const option = document.createElement('option');
+                            option.value = alloc.id;
+                            option.textContent = `#${alloc.id} - ${alloc.company_name} (Balance: ${formatCurrency(remainingBalance)})`;
+                            option.dataset.balance = remainingBalance;
+                            select.appendChild(option);
+                        }
+                    });
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading fund allocations:', e);
+            }
+        }
+
+        function reloadFundAllocationsForEmployee(empId) {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const targetId = empId ? parseInt(empId) : userData.id;
+            document.getElementById('fundAllocationInfo').style.display = 'none';
+            loadFundAllocations(targetId);
+        }
+        
+        function showFundAllocationInfo() {
+            const select = document.getElementById('formFundAllocation');
+            const infoDiv = document.getElementById('fundAllocationInfo');
+            const balanceSpan = document.getElementById('fundBalance');
+            
+            if (select.value) {
+                const selectedOption = select.options[select.selectedIndex];
+                balanceSpan.textContent = formatCurrency(selectedOption.dataset.balance);
+                infoDiv.style.display = 'block';
+            } else {
+                infoDiv.style.display = 'none';
+            }
+        }
+        
+        async function loadExpenses() {
+            const params = new URLSearchParams({ page: currentPage, page_size: 20 });
+            
+            const status = document.getElementById('filterStatus').value;
+            const company = document.getElementById('filterCompany').value;
+            const category = document.getElementById('filterCategory').value;
+            const fromDate = document.getElementById('filterFromDate').value;
+            const toDate = document.getElementById('filterToDate').value;
+            
+            if (status) params.append('status', status);
+            if (company) params.append('company_id', company);
+            if (category) params.append('category_id', category);
+            if (fromDate) params.append('from_date', fromDate);
+            if (toDate) params.append('to_date', toDate);
+            
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/expense-entries?${params}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    renderExpenses(data);
+                    updateSummary(data.summary);
+                } else { showEmptyState(); }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading expenses:', e);
+                showEmptyState();
+            } finally {
+                document.getElementById('loadingState').style.display = 'none';
+            }
+        }
+        
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount || 0);
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        
+        function renderExpenses(data) {
+            const expenses = data.entries || [];
+            const tbody = document.getElementById('expenseTable');
+            
+            if (!expenses.length) {
+                showEmptyState();
+                return;
+            }
+            
+            document.getElementById('tableContainer').style.display = 'block';
+            document.getElementById('recordCount').textContent = `${data.total || expenses.length} records`;
+            
+            tbody.innerHTML = expenses.map(exp => {
+                const statusLabel = exp.is_paid
+                    ? `<span class="badge-status badge-approved">${exp.status}</span> <span class="badge-status badge-paid">PAID</span>`
+                    : `<span class="badge-status badge-${(exp.status||'').toLowerCase()}">${exp.status}</span>`;
+                const returnBadge = '';
+                const ledgerCatLabel = exp.bank_ledger_category
+                    ? `<span class="badge-cat">${exp.bank_ledger_category === 'CUSTOM' ? (exp.custom_category_name || 'CUSTOM') : exp.bank_ledger_category}</span>`
+                    : '<span style="color:#9ca3af;font-size:11px;">—</span>';
+                return `<tr>
+                    <td><code>${exp.id}</code></td>
+                    <td>${formatDate(exp.expense_date)}</td>
+                    <td>${exp.company_name || '-'}</td>
+                    <td>${exp.category_name || '-'}</td>
+                    <td>${ledgerCatLabel}</td>
+                    <td>${truncate(exp.narration || exp.description, 30)}${returnBadge}</td>
+                    <td class="amount negative">₹${formatCurrency(exp.amount)}</td>
+                    <td>${statusLabel}</td>
+                    <td>${exp.tally_status ? '<span class="badge-status badge-' + exp.tally_status.toLowerCase() + '">' + exp.tally_status.replace('_', ' ') + '</span>' : '<span style="color:#9ca3af;font-size:11px;">—</span>'}</td>
+                    <td>${exp.fund_allocation_id ? '#' + exp.fund_allocation_id : '-'}</td>
+                    <td>${getActionButtons(exp)}</td>
+                </tr>`;
+            }).join('');
+            
+            totalPages = Math.ceil((data.total || expenses.length) / 20) || 1;
+            renderPagination();
+        }
+        
+        function truncate(str, len) {
+            if (!str) return '-';
+            return str.length > len ? str.substring(0, len) + '...' : str;
+        }
+        
+        function getActionButtons(exp) {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const isCreator = exp.created_by_id === userData.id;
+            const hasFullAccess = ['VGK Mentor', 'VGK4U Supreme', 'VGK4U', 'Executive Assistant', 'EA', 'Executive Admin'].includes(userData.role_name)
+                || userData.emp_code === 'MR10001';
+            const hasAccountsAccess = hasFullAccess
+                || ['Accounts', 'Finance', 'VEA'].some(r => (userData.role_name || '').includes(r))
+                || ['accounts', 'finance'].some(d => (userData.department_name || '').toLowerCase().includes(d));
+
+            let buttons = `<button class="btn-action btn-view" onclick="viewExpense(${exp.id})" title="View"><i class="fas fa-eye"></i></button>`;
+
+            if (exp.status === 'DRAFT') {
+                if (isCreator || hasFullAccess) {
+                    buttons += ` <button class="btn-action btn-submit" onclick="submitExpense(${exp.id})" title="Submit for Approval"><i class="fas fa-paper-plane"></i></button>`;
+                }
+                if (isCreator || hasAccountsAccess) {
+                    buttons += ` <button class="btn-action btn-edit" onclick="openEditExpenseModal(${exp.id})" title="Edit"><i class="fas fa-edit"></i></button>`;
+                }
+            }
+
+            if (exp.status === 'SUBMITTED' && hasAccountsAccess) {
+                buttons += ` <button class="btn-action btn-approve" onclick="openApproveModal(${JSON.stringify(exp).replace(/"/g, '&quot;')})" title="Approve"><i class="fas fa-check"></i></button>`;
+                buttons += ` <button class="btn-action btn-reject" onclick="openRejectModal(${JSON.stringify(exp).replace(/"/g, '&quot;')})" title="Reject"><i class="fas fa-times"></i></button>`;
+            }
+
+            if (!exp.is_paid && (exp.status === 'DRAFT' || exp.status === 'SUBMITTED' || exp.status === 'APPROVED') && hasAccountsAccess) {
+                buttons += ` <button class="btn-action btn-pay" onclick="openPayModal(${JSON.stringify(exp).replace(/"/g, '&quot;')})" title="Mark as Paid (auto-approves)"><i class="fas fa-money-bill-wave"></i></button>`;
+            }
+
+            if (exp.status === 'APPROVED' && hasAccountsAccess) {
+                const tallyStatus = exp.tally_status || '';
+                if (tallyStatus !== 'SYNCED') {
+                    buttons += ` <button class="btn-action btn-tally-confirm" onclick="tallyAction(${exp.id},'confirm')" title="Tally Confirm"><i class="fas fa-check-double"></i></button>`;
+                    buttons += ` <button class="btn-action btn-tally-exception" onclick="tallyAction(${exp.id},'exception')" title="Tally Exception"><i class="fas fa-exclamation-triangle"></i></button>`;
+                    buttons += ` <button class="btn-action btn-tally-done" onclick="tallyAction(${exp.id},'tally_done')" title="Tally Done"><i class="fas fa-stamp"></i></button>`;
+                }
+            }
+
+            return buttons;
+        }
+        
+        function showEmptyState() {
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        }
+        
+        function updateSummary(summary) {
+            if (!summary) return;
+            document.getElementById('draftCount').textContent = summary.draft_count || 0;
+            document.getElementById('submittedCount').textContent = summary.submitted_count || 0;
+            document.getElementById('approvedCount').textContent = summary.approved_count || 0;
+            document.getElementById('rejectedCount').textContent = summary.rejected_count || 0;
+            document.getElementById('paidCount').textContent = summary.paid_count || 0;
+            document.getElementById('totalAmount').textContent = '₹' + formatCurrency(summary.total_approved_amount);
+        }
+        
+        function renderPagination() {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+                } else if (i === currentPage - 2 || i === currentPage + 2) {
+                    html += `<button disabled>...</button>`;
+                }
+            }
+            
+            html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>`;
+            
+            container.innerHTML = html;
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            loadExpenses();
+        }
+        
+        function openCreateModal() {
+            document.getElementById('createForm').reset();
+            document.getElementById('formDate').valueAsDate = new Date();
+            document.getElementById('fundAllocationInfo').style.display = 'none';
+            document.getElementById('bankAccountGroup').style.display = 'none';
+            document.getElementById('customCategoryGroup').style.display = 'none';
+            document.getElementById('vendorCrDrBadge').innerHTML = '';
+            // DC-RETURN-001: reset return toggle (guarded — elements not present on this page)
+            const isReturnEl = document.getElementById('formIsReturn');
+            if (isReturnEl) isReturnEl.checked = false;
+            const returnRefGroupEl = document.getElementById('expReturnRefGroup');
+            if (returnRefGroupEl) returnRefGroupEl.style.display = 'none';
+            // DC_EXP_BEHALF_001: Show employee selector for privileged users / managers with direct reports
+            document.getElementById('formEmployeeGroup').style.display = _canCreateOnBehalf ? 'block' : 'none';
+            // Reset type-to-search state
+            const empSearch = document.getElementById('formEmpSearch');
+            if (empSearch) { empSearch.value = ''; filterEmpDropdown(''); }
+            // Reset fund allocation to current user's allocations (form.reset resets formEmployee to "Myself")
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            loadFundAllocations(userData.id);
+            document.getElementById('createModal').classList.add('active');
+        }
+
+        async function loadExpenseEmployees() {
+            try {
+                // DC_EXP_BEHALF_001: Use dedicated endpoint — returns all (privileged) or direct reports (managers)
+                const r = await staffFetch(`${API_BASE}/expense-behalf-employees`);
+                if (!r.ok) return;
+                const d = await r.json();
+                const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const myId = userData.id;
+                // Cache full list; exclude self (self is always the "— Myself —" default option)
+                _expenseEmployees = (d.employees || []).filter(e => e.id !== myId);
+                if (_expenseEmployees.length === 0) { _canCreateOnBehalf = false; return; }
+                _canCreateOnBehalf = true;
+                _populateEmpSelect(_expenseEmployees);
+                // DC_TEAM_EMP_FILTER_001: Populate team-view member filter from same list
+                _populateTeamFilterEmployees(_expenseEmployees);
+                // Any user with at least one behalf employee gets the Consolidated tab
+                // (privileged users get all active staff; reporting managers get their direct reports)
+                const isPrivileged = (d.employees || []).length > 0;
+                if (isPrivileged) {
+                    const tabConso = document.getElementById('tabConsolidated');
+                    if (tabConso) tabConso.style.display = '';
+                    _populateConsoCompanies();
+                }
+            } catch(err) {
+                console.warn('DC_EXP_BEHALF_001: Could not load employee list', err);
+            }
+        }
+
+        function _populateTeamFilterEmployees(list) {
+            const sel = document.getElementById('teamFilterEmployee');
+            if (!sel) return;
+            const currentVal = sel.value;
+            sel.innerHTML = '<option value="">All Members</option>' +
+                list.map(e => {
+                    const dept = e.department ? ` · ${e.department}` : '';
+                    return `<option value="${e.id}">${e.full_name || '#'+e.id} (${e.emp_code || ''})${dept}</option>`;
+                }).join('');
+            if (currentVal) sel.value = currentVal;
+        }
+
+        function _populateEmpSelect(list) {
+            const sel = document.getElementById('formEmployee');
+            if (!sel) return;
+            sel.innerHTML = '<option value="">— Myself —</option>' +
+                list.map(e => {
+                    const dept = e.department ? ` · ${e.department}` : '';
+                    return `<option value="${e.id}">${e.full_name || '#'+e.id} (${e.emp_code || ''})${dept}</option>`;
+                }).join('');
+        }
+
+        function filterEmpDropdown(q) {
+            const lq = (q || '').toLowerCase().trim();
+            if (!lq) { _populateEmpSelect(_expenseEmployees); return; }
+            const filtered = _expenseEmployees.filter(e =>
+                (e.full_name || '').toLowerCase().includes(lq) ||
+                (e.emp_code  || '').toLowerCase().includes(lq) ||
+                (e.department || '').toLowerCase().includes(lq)
+            );
+            _populateEmpSelect(filtered);
+        }
+
+        function _populateConsoCompanies() {
+            // Reuse companies already loaded for the create form
+            const src = document.getElementById('formCompany');
+            const dst = document.getElementById('consoCompany');
+            if (!src || !dst) return;
+            dst.innerHTML = '<option value="">All Companies</option>' +
+                Array.from(src.options).filter(o => o.value).map(o =>
+                    `<option value="${o.value}">${o.text}</option>`
+                ).join('');
+        }
+
+        async function loadConsolidatedSummary() {
+            const company  = document.getElementById('consoCompany').value;
+            const from     = document.getElementById('consoFromDate').value;
+            const to       = document.getElementById('consoToDate').value;
+            const search   = document.getElementById('consoSearch').value.trim();
+
+            document.getElementById('consoLoading').style.display = 'block';
+            document.getElementById('consoTable').style.display   = 'none';
+            document.getElementById('consoEmpty').style.display   = 'none';
+            document.getElementById('consoStats').style.display   = 'none';
+
+            let url = `${API_BASE}/expense-consolidated?_=${Date.now()}`;
+            if (company) url += `&company_id=${company}`;
+            if (from)    url += `&from_date=${from}`;
+            if (to)      url += `&to_date=${to}`;
+            if (search)  url += `&search=${encodeURIComponent(search)}`;
+
+            try {
+                const r = await staffFetch(url);
+                document.getElementById('consoLoading').style.display = 'none';
+                if (!r.ok) { throw new Error(`HTTP ${r.status}`); }
+                const d = await r.json();
+                const rows = d.rows || [];
+
+                if (!rows.length) {
+                    document.getElementById('consoEmpty').style.display = 'block';
+                    document.getElementById('consoEmpty').innerHTML =
+                        '<i class="fas fa-inbox fa-3x" style="margin-bottom:14px;display:block;color:#d1d5db;"></i>No data found for the selected filters';
+                    return;
+                }
+
+                const fmt  = v => '₹' + Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+                const fmtN = v => Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+                // Totals row
+                const T = rows.reduce((acc, r) => {
+                    acc.fund_allocated       += r.fund_allocated;
+                    acc.fund_balance         += r.fund_balance;
+                    acc.fund_used            += r.fund_used;
+                    acc.fund_transferred_out += (r.fund_transferred_out || 0);
+                    acc.fund_transferred_in  += (r.fund_transferred_in  || 0);
+                    acc.cash_received        += (r.cash_received  || 0);
+                    acc.cash_balance         += (r.cash_balance   || 0);
+                    acc.total_expenses       += r.total_expenses;
+                    acc.draft_count          += r.draft_count;
+                    acc.submitted_count      += r.submitted_count;
+                    acc.approved_count       += r.approved_count;
+                    acc.rejected_count       += r.rejected_count;
+                    acc.paid_count           += r.paid_count;
+                    acc.approved_amount      += r.approved_amount;
+                    acc.rejected_amount      += r.rejected_amount;
+                    acc.paid_amount          += r.paid_amount;
+                    acc.draft_amount         += r.draft_amount;
+                    acc.submitted_amount     += r.submitted_amount;
+                    return acc;
+                }, {fund_allocated:0,fund_balance:0,fund_used:0,fund_transferred_out:0,fund_transferred_in:0,cash_received:0,cash_balance:0,total_expenses:0,draft_count:0,submitted_count:0,approved_count:0,rejected_count:0,paid_count:0,approved_amount:0,rejected_amount:0,paid_amount:0,draft_amount:0,submitted_amount:0});
+
+                // Stats bar
+                const statsEl = document.getElementById('consoStats');
+                statsEl.style.display = 'grid';
+                statsEl.innerHTML = [
+                    ['Employees', rows.length],
+                    ['Total Allocated', fmt(T.fund_allocated)],
+                    ['Total Balance',   fmt(T.fund_balance)],
+                    ['Cash Received (IN)', fmt(T.cash_received)],
+                    ['Cash Balance',    fmt(T.cash_balance)],
+                    ['Total Expenses',  T.total_expenses],
+                    ['Approved',        T.approved_count + ' · ' + fmt(T.approved_amount)],
+                    ['Paid',            T.paid_count + ' · ' + fmt(T.paid_amount)],
+                    ['Pending Review',  T.submitted_count + ' · ' + fmt(T.submitted_amount)],
+                ].map(([lbl, val]) =>
+                    `<div style="text-align:center;padding:6px 0;">
+                        <div style="font-size:16px;font-weight:700;">${val}</div>
+                        <div style="font-size:10px;opacity:.75;margin-top:2px;">${lbl}</div>
+                    </div>`
+                ).join('');
+
+                // Table rows
+                const badge = (val, bg, fg) =>
+                    `<span style="display:inline-block;min-width:30px;padding:2px 8px;border-radius:10px;font-size:12px;background:${bg};color:${fg};">${val}</span>`;
+
+                const tbody = document.getElementById('consoTableBody');
+                tbody.innerHTML = rows.map((row, idx) => `
+                    <tr data-emp-id="${row.employee_id}" data-emp-name="${(row.full_name||'').replace(/"/g,'&quot;')}"
+                        onclick="openIncomeReceiptsDrilldown(this.dataset.empId, this.dataset.empName)"
+                        title="Click to view cash receipts for ${(row.full_name||'').replace(/"/g,'&quot;')}"
+                        style="border-bottom:1px solid #f3f4f6;${idx%2===1?'background:#fafafa;':''}cursor:pointer;transition:background .15s;"
+                        onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${idx%2===1?'#fafafa':''}'"
+                    >
+                        <td style="padding:10px 14px;color:#9ca3af;font-size:12px;">${idx+1}</td>
+                        <td style="padding:10px 14px;">
+                            <div style="font-weight:700;color:#1e40af;">${row.full_name} <i class="fas fa-external-link-alt" style="font-size:10px;opacity:.5;"></i></div>
+                            <div style="font-size:11px;color:#9ca3af;">${row.emp_code}</div>
+                        </td>
+                        <td style="padding:10px 14px;">
+                            <div style="font-size:12px;color:#374151;">${row.department || '—'}</div>
+                            <div style="font-size:11px;color:#9ca3af;">${row.role || '—'}</div>
+                        </td>
+                        <td style="padding:10px 14px;text-align:right;font-weight:600;color:#1e40af;">${fmt(row.fund_allocated)}</td>
+                        <td style="padding:10px 14px;text-align:right;font-weight:700;color:${row.fund_balance >= 0 ? '#059669' : '#dc2626'};">
+                            ${fmt(row.fund_balance)}
+                            ${(row.fund_transferred_out > 0 || row.fund_transferred_in > 0) ? `<div style="font-size:10px;font-weight:400;margin-top:2px;color:#6b7280;">${row.fund_transferred_in > 0 ? '<span style="color:#059669;">↑'+fmt(row.fund_transferred_in)+'</span> ' : ''}${row.fund_transferred_out > 0 ? '<span style="color:#dc2626;">↓'+fmt(row.fund_transferred_out)+'</span>' : ''}</div>` : ''}
+                        </td>
+                        <td style="padding:10px 14px;text-align:right;color:#dc2626;">${fmt(row.fund_used)}</td>
+                        <td style="padding:10px 14px;text-align:right;font-weight:600;color:#0891b2;">
+                            ${fmt(row.cash_received)}
+                            ${row.cash_receipt_count > 0 ? `<div style="font-size:10px;font-weight:400;margin-top:2px;color:#6b7280;">${row.cash_receipt_count} receipt${row.cash_receipt_count>1?'s':''}</div>` : ''}
+                        </td>
+                        <td style="padding:10px 14px;text-align:right;font-weight:700;color:${(row.cash_balance||0) >= 0 ? '#7c3aed' : '#dc2626'};">${fmt(row.cash_balance||0)}</td>
+                        <td style="padding:10px 14px;text-align:center;font-weight:700;">${row.total_expenses}</td>
+                        <td style="padding:10px 14px;text-align:center;">${badge(row.draft_count,      '#f3f4f6','#6b7280')}</td>
+                        <td style="padding:10px 14px;text-align:center;">${badge(row.submitted_count,  '#fef3c7','#d97706')}</td>
+                        <td style="padding:10px 14px;text-align:center;">${badge(row.approved_count,   '#d1fae5','#059669')}</td>
+                        <td style="padding:10px 14px;text-align:center;">${badge(row.rejected_count,   '#fee2e2','#dc2626')}</td>
+                        <td style="padding:10px 14px;text-align:center;">${badge(row.paid_count,       '#ede9fe','#7c3aed')}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#059669;">${fmt(row.approved_amount)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#dc2626;">${fmt(row.rejected_amount)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#7c3aed;">${fmt(row.paid_amount)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#6b7280;">${fmt(row.draft_amount)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#d97706;">${fmt(row.submitted_amount)}</td>
+                    </tr>`).join('');
+
+                // Totals footer
+                document.getElementById('consoTableFoot').innerHTML = `
+                    <tr>
+                        <td style="padding:10px 14px;" colspan="3"><strong>TOTAL (${rows.length} employees)</strong></td>
+                        <td style="padding:10px 14px;text-align:right;color:#1e40af;">${fmt(T.fund_allocated)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#059669;">${fmt(T.fund_balance)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#dc2626;">${fmt(T.fund_used)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#0891b2;">${fmt(T.cash_received)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#7c3aed;">${fmt(T.cash_balance)}</td>
+                        <td style="padding:10px 14px;text-align:center;">${T.total_expenses}</td>
+                        <td style="padding:10px 14px;text-align:center;">${T.draft_count}</td>
+                        <td style="padding:10px 14px;text-align:center;">${T.submitted_count}</td>
+                        <td style="padding:10px 14px;text-align:center;">${T.approved_count}</td>
+                        <td style="padding:10px 14px;text-align:center;">${T.rejected_count}</td>
+                        <td style="padding:10px 14px;text-align:center;">${T.paid_count}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#059669;">${fmt(T.approved_amount)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#dc2626;">${fmt(T.rejected_amount)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#7c3aed;">${fmt(T.paid_amount)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#6b7280;">${fmt(T.draft_amount)}</td>
+                        <td style="padding:10px 14px;text-align:right;color:#d97706;">${fmt(T.submitted_amount)}</td>
+                    </tr>`;
+
+                document.getElementById('consoTable').style.display = 'table';
+
+            } catch(err) {
+                document.getElementById('consoLoading').style.display = 'none';
+                document.getElementById('consoEmpty').style.display = 'block';
+                document.getElementById('consoEmpty').innerHTML =
+                    '<i class="fas fa-exclamation-circle fa-2x" style="color:#ef4444;margin-bottom:12px;display:block;"></i>Failed to load — ' + (err.message || 'network error');
+            }
+        }
+
+        function exportConsolidatedCSV() {
+            const table = document.getElementById('consoTable');
+            if (!table || table.style.display === 'none') {
+                alert('Please load the data first before exporting.');
+                return;
+            }
+            const rows = [];
+            const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+            rows.push(headers.join(','));
+            table.querySelectorAll('tbody tr').forEach(tr => {
+                const cells = Array.from(tr.querySelectorAll('td')).map(td => {
+                    const t = td.textContent.trim().replace(/,/g, '').replace(/₹/g, '');
+                    return `"${t}"`;
+                });
+                rows.push(cells.join(','));
+            });
+            const tfoot = table.querySelector('tfoot tr');
+            if (tfoot) {
+                const cells = Array.from(tfoot.querySelectorAll('td')).map(td => `"${td.textContent.trim().replace(/,/g,'').replace(/₹/g,'')}"`);
+                rows.push(cells.join(','));
+            }
+            const blob = new Blob([rows.join('\n')], {type: 'text/csv'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `expense_consolidated_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+        }
+        
+        function openApproveModal(exp) {
+            selectedExpense = exp;
+            document.getElementById('approveExpenseId').textContent = exp.id;
+            document.getElementById('approveAmount').textContent = formatCurrency(exp.amount);
+            document.getElementById('approveDescription').textContent = exp.description;
+            document.getElementById('approveNotes').value = '';
+            document.getElementById('approveModal').classList.add('active');
+        }
+        
+        function openRejectModal(exp) {
+            selectedExpense = exp;
+            document.getElementById('rejectExpenseId').textContent = exp.id;
+            document.getElementById('rejectAmount').textContent = formatCurrency(exp.amount);
+            document.getElementById('rejectReason').value = '';
+            document.getElementById('rejectModal').classList.add('active');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+            selectedExpense = null;
+        }
+        
+        function getFormData() {
+            const fundAllocId = document.getElementById('formFundAllocation').value;
+            const bankLedgerCat = document.getElementById('formBankLedgerCategory').value;
+            const bankAccountId = document.getElementById('formBankAccount').value;
+            const onBehalfId = document.getElementById('formEmployee').value;
+            return {
+                company_id: parseInt(document.getElementById('formCompany').value),
+                expense_date: document.getElementById('formDate').value,
+                main_category_id: parseInt(document.getElementById('formCategory').value),
+                sub_category_id: document.getElementById('formSubCategory').value ? parseInt(document.getElementById('formSubCategory').value) : null,
+                amount: parseFloat(document.getElementById('formAmount').value),
+                narration: document.getElementById('formDescription').value,
+                payment_mode: document.getElementById('formPaymentMode').value,
+                fund_allocation_id: fundAllocId ? parseInt(fundAllocId) : null,
+                vendor_id: document.getElementById('formVendor').value ? parseInt(document.getElementById('formVendor').value) : null,
+                bill_number: document.getElementById('formReference').value || null,
+                bank_ledger_category: bankLedgerCat || null,
+                custom_category_name: bankLedgerCat === 'CUSTOM' ? (document.getElementById('formCustomCategory').value || null) : null,
+                bank_account_id: bankAccountId ? parseInt(bankAccountId) : null,
+                // DC_EXP_BEHALF_001: on-behalf-of employee (null = self)
+                on_behalf_of_employee_id: onBehalfId ? parseInt(onBehalfId) : null,
+                show_in_ledger: document.getElementById('formShowInLedger').checked,
+            };
+        }
+
+        function toggleBankAccountField() {
+            const mode = document.getElementById('formPaymentMode').value;
+            const showBank = ['BANK', 'NEFT', 'RTGS', 'CHEQUE', 'DD', 'UPI'].includes(mode);
+            document.getElementById('bankAccountGroup').style.display = showBank ? 'block' : 'none';
+            if (showBank) {
+                const companyId = document.getElementById('formCompany').value;
+                if (companyId) loadBankAccountsIntoForm(companyId);
+            }
+        }
+
+        function toggleCustomCategory() {
+            const cat = document.getElementById('formBankLedgerCategory').value;
+            document.getElementById('customCategoryGroup').style.display = cat === 'CUSTOM' ? 'block' : 'none';
+        }
+
+        function updateVendorCrDr() {
+            const vendorId = document.getElementById('formVendor').value;
+            const badge = document.getElementById('vendorCrDrBadge');
+            if (vendorId) {
+                badge.innerHTML = '<span class="cr-badge">CR Payable</span>';
+            } else {
+                badge.innerHTML = '';
+            }
+        }
+
+        async function loadBankAccountsIntoForm(companyId) {
+            if (!companyId) return;
+            try {
+                const r = await staffFetch(`${API_BASE}/companies/${companyId}/bank-accounts`);
+                if (!r.ok) return;
+                const d = await r.json();
+                const sel = document.getElementById('formBankAccount');
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="">Select Bank Account</option>';
+                (d.bank_accounts || []).filter(b => b.is_active).forEach(b => {
+                    const o = document.createElement('option');
+                    o.value = b.id;
+                    o.textContent = b.display_label || `${b.bank_name} — A/c ••${(b.account_number||'').slice(-4)} (${b.account_type})`;
+                    if (b.is_primary) o.textContent += ' ✓';
+                    sel.appendChild(o);
+                });
+                if (currentVal) sel.value = currentVal;
+            } catch (e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; }
+        }
+        
+        async function saveDraft() {
+            const data = getFormData();
+            data.status = 'DRAFT';
+            
+            if (!data.company_id || !data.main_category_id || !data.amount || !data.narration || !data.payment_mode) {
+                alert('Please fill in all required fields (Company, Category, Amount, Description, Payment Mode)');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/expense-entries`, { method: 'POST', body: JSON.stringify(data) });
+                if (response.ok) {
+                    closeModal('createModal');
+                    loadExpenses();
+                    alert('Expense saved as draft');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to save expense');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error saving expense:', e);
+                alert('Failed to save expense');
+            }
+        }
+        
+        async function createAndSubmit() {
+            const data = getFormData();
+            data.status = 'SUBMITTED';
+            
+            if (!data.company_id || !data.main_category_id || !data.amount || !data.narration || !data.payment_mode) {
+                alert('Please fill in all required fields (Company, Category, Amount, Description, Payment Mode)');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/expense-entries`, { method: 'POST', body: JSON.stringify(data) });
+                if (response.ok) {
+                    closeModal('createModal');
+                    loadExpenses();
+                    alert('Expense submitted for approval');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || error.message || 'Failed to submit expense');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error submitting expense:', e);
+                alert('Failed to submit expense');
+            }
+        }
+        
+        async function submitExpense(id) {
+            if (!confirm('Submit this expense for approval?')) return;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/expense-entries/${id}/submit`, { method: 'POST' });
+                if (response.ok) {
+                    loadExpenses();
+                    refreshMyBalance();
+                    alert('Expense submitted for approval');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to submit expense');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error submitting expense:', e);
+                alert('Failed to submit expense');
+            }
+        }
+        
+        async function approveExpense() {
+            if (!selectedExpense) return;
+            
+            const notes = document.getElementById('approveNotes').value;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/expense-entries/${selectedExpense.id}/approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'APPROVE', remarks: notes })
+                });
+                if (response.ok) {
+                    closeModal('approveModal');
+                    loadExpenses();
+                    refreshMyBalance();
+                    alert('Expense approved successfully');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to approve expense');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error approving expense:', e);
+                alert('Failed to approve expense');
+            }
+        }
+        
+        async function rejectExpense() {
+            if (!selectedExpense) return;
+            
+            const reason = document.getElementById('rejectReason').value;
+            
+            if (!reason.trim()) {
+                alert('Please provide a rejection reason');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/expense-entries/${selectedExpense.id}/approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'REJECT', remarks: reason })
+                });
+                if (response.ok) {
+                    closeModal('rejectModal');
+                    loadExpenses();
+                    refreshMyBalance();
+                    alert('Expense rejected');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to reject expense');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error rejecting expense:', e);
+                alert('Failed to reject expense');
+            }
+        }
+
+        function openPayModal(exp) {
+            selectedExpense = exp;
+            document.getElementById('payExpenseId').textContent = exp.id;
+            document.getElementById('payAmount').textContent = '₹' + formatCurrency(exp.amount);
+            document.getElementById('payDescription').textContent = exp.narration || exp.description || '-';
+            document.getElementById('payStatus').textContent = exp.status;
+            document.getElementById('payUtr').value = '';
+            document.getElementById('payNotes').value = '';
+            const bankSel = document.getElementById('payBankAccount');
+            bankSel.innerHTML = '<option value="">None</option>';
+            if (exp.company_id) {
+                staffFetch(`${API_BASE}/companies/${exp.company_id}/bank-accounts`).then(r => r.ok ? r.json() : {}).then(d => {
+                    (d.bank_accounts || []).filter(b => b.is_active).forEach(b => {
+                        const o = document.createElement('option');
+                        o.value = b.id;
+                        o.textContent = b.display_label || `${b.bank_name} — A/c ••${(b.account_number||'').slice(-4)} (${b.account_type})`;
+                        bankSel.appendChild(o);
+                    });
+                }).catch(() => {});
+            }
+            document.getElementById('payModal').classList.add('active');
+        }
+
+        async function payExpense() {
+            if (!selectedExpense) return;
+            const utr = document.getElementById('payUtr').value.trim();
+            const bankAccountId = document.getElementById('payBankAccount').value ? parseInt(document.getElementById('payBankAccount').value) : null;
+            const notes = document.getElementById('payNotes').value.trim();
+            try {
+                const response = await staffFetch(`${API_BASE}/expense-entries/${selectedExpense.id}/mark-paid`, {
+                    method: 'POST',
+                    body: JSON.stringify({ payment_utr: utr || null, bank_account_id: bankAccountId, notes: notes || null })
+                });
+                if (response.ok) {
+                    closeModal('payModal');
+                    loadExpenses();
+                    refreshMyBalance();
+                    alert('Expense marked as PAID and auto-approved');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to mark as paid');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error paying expense:', e);
+                alert('Failed to mark as paid');
+            }
+        }
+        
+        // ========== VIEW EXPENSE SLIDE-OVER ==========
+        async function viewExpense(id) {
+            const overlay = document.getElementById('viewExpOverlay');
+            const body    = document.getElementById('viewExpBody');
+            overlay.style.display = 'flex';
+            body.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Loading…</div>';
+            try {
+                const r = await staffFetch(`${API_BASE}/expense-entries/${id}`);
+                if (!r.ok) { body.innerHTML = '<div style="color:#dc2626;padding:20px;">Failed to load expense #' + id + '</div>'; return; }
+                const d  = await r.json();
+                const e  = d.expense_entry || d;
+                const fmtAmt = v => '₹' + Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2});
+                const statusColor = {DRAFT:'#6b7280',SUBMITTED:'#d97706',APPROVED:'#059669',REJECTED:'#dc2626',CANCELLED:'#9ca3af'}[e.status]||'#374151';
+                const tallyColor  = {NOT_SYNCED:'#9ca3af',SELECTED:'#2563eb',EXPORTED:'#d97706',SYNCED:'#059669',MISMATCH:'#dc2626',EXCLUDED:'#6b7280'}[e.tally_status||'NOT_SYNCED']||'#9ca3af';
+
+                const row = (label, val, full) => val
+                    ? `<div style="display:${full?'block':'grid'};grid-template-columns:1fr 1.5fr;gap:4px;padding:9px 0;border-bottom:1px solid #f3f4f6;">
+                        <span style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;">${label}</span>
+                        <span style="font-size:13px;color:#111827;">${val}</span>
+                       </div>`
+                    : '';
+
+                document.getElementById('viewExpTitle').textContent = `Expense #${e.entry_number || e.id}`;
+
+                body.innerHTML = `
+                    <!-- Status bar -->
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center;">
+                        <span style="background:${statusColor}22;color:${statusColor};padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;">${e.status}</span>
+                        ${e.is_paid ? '<span style="background:#ede9fe;color:#5b21b6;padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;">PAID</span>' : ''}
+                        ${e.tally_status && e.tally_status !== 'NOT_SYNCED' ? `<span style="background:${tallyColor}22;color:${tallyColor};padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;">TALLY: ${e.tally_status.replace('_',' ')}</span>` : ''}
+                    </div>
+
+                    <!-- Amount hero -->
+                    <div style="background:linear-gradient(135deg,#1e40af,#3b82f6);border-radius:12px;padding:18px 20px;margin-bottom:18px;color:#fff;display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-size:11px;opacity:.7;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Amount</div>
+                            <div style="font-size:26px;font-weight:700;">${fmtAmt(e.amount)}</div>
+                            ${Number(e.gst_amount||0)>0||Number(e.tds_amount||0)>0 ? `<div style="font-size:11px;opacity:.7;margin-top:4px;">
+                                Net: ${fmtAmt(e.net_amount)} &nbsp;|&nbsp; GST: ${fmtAmt(e.gst_amount)} &nbsp;|&nbsp; TDS: ${fmtAmt(e.tds_amount)}
+                            </div>` : ''}
+                        </div>
+                        <div style="text-align:right;font-size:13px;opacity:.85;">
+                            <div>${e.expense_date || '—'}</div>
+                            <div style="font-size:11px;margin-top:4px;">${e.payment_mode || '—'}</div>
+                        </div>
+                    </div>
+
+                    <!-- Core fields -->
+                    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:0 16px;margin-bottom:14px;">
+                        ${row('Entry No.', e.entry_number)}
+                        ${row('Company', e.company_name || e.company_id)}
+                        ${row('Category', e.category_name || e.main_category_id)}
+                        ${row('Sub-Category', e.sub_category_name || null)}
+                        ${row('Ledger Category', e.bank_ledger_category === 'CUSTOM' ? (e.custom_category_name || 'CUSTOM') : e.bank_ledger_category)}
+                        ${row('Narration', e.narration || e.description)}
+                        ${row('Payment Mode', e.payment_mode)}
+                        ${row('Payment Reference', e.payment_reference)}
+                        ${row('Bank Account', e.bank_account_name || (e.bank_account_id ? '#' + e.bank_account_id : null))}
+                    </div>
+
+                    <!-- Vendor / Bill -->
+                    ${(e.vendor_name || e.bill_number) ? `
+                    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:0 16px;margin-bottom:14px;">
+                        ${row('Vendor', e.vendor_name)}
+                        ${row('Vendor Contact', e.vendor_contact)}
+                        ${row('Bill Number', e.bill_number)}
+                        ${row('Bill Date', e.bill_date)}
+                        ${row('Bill Remarks', e.bill_remarks)}
+                    </div>` : ''}
+
+                    <!-- Payment details -->
+                    ${e.is_paid ? `
+                    <div style="background:#f5f3ff;border:1px solid #ede9fe;border-radius:10px;padding:0 16px;margin-bottom:14px;">
+                        ${row('Payment UTR', e.payment_utr)}
+                        ${row('Paid At', e.paid_at ? new Date(e.paid_at).toLocaleString('en-IN') : null)}
+                    </div>` : ''}
+
+                    <!-- Workflow -->
+                    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:0 16px;margin-bottom:14px;">
+                        ${row('Created By', e.created_by_name || e.created_by_id)}
+                        ${row('Approved By', e.approved_by_name || null)}
+                        ${row('Approved At', e.approved_at ? new Date(e.approved_at).toLocaleString('en-IN') : null)}
+                        ${row('Fund Allocation', e.fund_allocation_id ? '#' + e.fund_allocation_id : null)}
+                        ${row('Tally Voucher', e.tally_voucher_no)}
+                    </div>
+
+                    <!-- Show in Ledger toggle -->
+                    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">
+                        <label style="display:flex;align-items:center;gap:10px;font-weight:600;font-size:13px;cursor:pointer;margin:0;">
+                            <input type="checkbox" id="viewExpShowInLedger" ${e.show_in_ledger ? 'checked' : ''} onchange="toggleExpenseShowInLedger(${e.id}, this.checked)" style="width:16px;height:16px;">
+                            Show in Ledger
+                        </label>
+                        <small style="color:#6b7280;font-size:11px;">Optional — editable anytime</small>
+                    </div>
+
+                    <!-- Quick actions inside view panel -->
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;" id="viewExpActions"></div>
+                `;
+
+                // Inject quick-action buttons inside view panel
+                const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const isCreator = e.created_by_id === userData.id;
+                const hasFullAccess = ['VGK Mentor','VGK4U Supreme','VGK4U','Executive Assistant','EA','Executive Admin'].includes(userData.role_name);
+                const hasAccountsAccess = hasFullAccess || ['Accounts','Finance','VEA'].some(r => (userData.role_name||'').includes(r));
+                const actDiv = document.getElementById('viewExpActions');
+                if (e.status === 'DRAFT' && (isCreator || hasFullAccess)) {
+                    actDiv.innerHTML += `<button onclick="closeViewExp();openEditExpenseModal(${e.id})" style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-edit me-1"></i>Edit</button>`;
+                    actDiv.innerHTML += `<button onclick="closeViewExp();submitExpense(${e.id})" style="padding:8px 16px;background:#d97706;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-paper-plane me-1"></i>Submit</button>`;
+                }
+                if (e.status === 'SUBMITTED' && hasFullAccess) {
+                    actDiv.innerHTML += `<button onclick="closeViewExp();openApproveModal(${JSON.stringify(e).replace(/"/g,'&quot;')})" style="padding:8px 16px;background:#059669;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-check me-1"></i>Approve</button>`;
+                    actDiv.innerHTML += `<button onclick="closeViewExp();openRejectModal(${JSON.stringify(e).replace(/"/g,'&quot;')})" style="padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-times me-1"></i>Reject</button>`;
+                }
+                if (!e.is_paid && ['DRAFT','SUBMITTED','APPROVED'].includes(e.status) && hasAccountsAccess) {
+                    actDiv.innerHTML += `<button onclick="closeViewExp();openPayModal(${JSON.stringify(e).replace(/"/g,'&quot;')})" style="padding:8px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-money-bill-wave me-1"></i>Mark Paid</button>`;
+                }
+            } catch(err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') { overlay.style.display = 'none'; return; }
+                body.innerHTML = '<div style="color:#dc2626;padding:20px;">Error loading expense details</div>';
+            }
+        }
+
+        function closeViewExp() {
+            document.getElementById('viewExpOverlay').style.display = 'none';
+        }
+
+        async function toggleExpenseShowInLedger(id, checked) {
+            const cb = document.getElementById('viewExpShowInLedger');
+            try {
+                const r = await staffFetch(`${API_BASE}/expense-entries/${id}/show-in-ledger`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ show_in_ledger: checked })
+                });
+                if (!r.ok) {
+                    const err = await r.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to update Show in Ledger');
+                    if (cb) cb.checked = !checked;
+                    return;
+                }
+                loadExpenses();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to update Show in Ledger');
+                if (cb) cb.checked = !checked;
+            }
+        }
+
+        // ========== FUND BALANCE CARD ==========
+        let balanceCardVisible = false;
+        function toggleFundBalanceCard() {
+            balanceCardVisible = !balanceCardVisible;
+            document.getElementById('fundBalanceCard').style.display = balanceCardVisible ? 'block' : 'none';
+            if (balanceCardVisible) refreshMyBalance();
+        }
+
+        async function refreshMyBalance() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const empId = userData.id;
+            if (!empId) return;
+            try {
+                const r = await staffFetch(API_BASE + '/fund-ledger/' + empId + '/balance');
+                if (!r.ok) return;
+                const d = await r.json();
+                const b = d.balance_summary;
+                if (!b) return;
+                const fmt = v => '₹' + (v || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                document.getElementById('balAvailable').textContent = fmt(b.available_balance);
+                document.getElementById('balApproved').textContent = fmt(b.approved_expenses);
+                document.getElementById('balSubmitted').textContent = fmt(b.pending_submitted);
+                document.getElementById('balDraft').textContent = fmt(b.pending_draft);
+                document.getElementById('balEffective').textContent = fmt(b.effective_balance_after_submitted);
+            } catch(e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; }
+        }
+
+        // ========== OPENING BALANCE SECTION ==========
+        let obSectionVisible = false;
+        let obEmployeesLoaded = false;
+        let obCompaniesLoaded = false;
+
+        async function toggleOpeningBalSection() {
+            // DC_OB_TAB_001: OB section lives inside sectionMyExpenses — ensure My tab is active first
+            if (_activeExpenseTab !== 'my') switchExpenseTab('my');
+            obSectionVisible = !obSectionVisible;
+            document.getElementById('openingBalSection').style.display = obSectionVisible ? 'block' : 'none';
+            if (obSectionVisible) {
+                if (!obEmployeesLoaded) {
+                    // DC_EXP_BEHALF_001: Use accounts-specific endpoint (works for all roles incl. Accounts dept)
+                    const r = await staffFetch(API_BASE + '/expense-behalf-employees');
+                    if (r.ok) {
+                        const d = await r.json();
+                        const emps = d.employees || [];
+                        const sel = document.getElementById('obEmployee');
+                        sel.innerHTML = '<option value="">Select Employee</option>';
+                        emps.forEach(function(e) {
+                            const opt = document.createElement('option');
+                            opt.value = e.id;
+                            opt.textContent = (e.full_name || e.name || '') + ' (' + (e.emp_code || '') + ')';
+                            sel.appendChild(opt);
+                        });
+                        obEmployeesLoaded = true;
+                    }
+                }
+                if (!obCompaniesLoaded) {
+                    const r = await staffFetch(API_BASE + '/companies');
+                    if (r.ok) {
+                        const d = await r.json();
+                        const cos = d.companies || [];
+                        const sel = document.getElementById('obCompany');
+                        cos.forEach(function(c) {
+                            const opt = document.createElement('option');
+                            opt.value = c.id;
+                            opt.textContent = c.company_name || c.name;
+                            sel.appendChild(opt);
+                        });
+                        obCompaniesLoaded = true;
+                    }
+                }
+            }
+        }
+
+        // DC_OB_PREFILL_001: When an employee is selected, show their current fund balance
+        // and pre-fill any existing opening balance entry so it's clear this is an edit.
+        async function onObEmployeeChange() {
+            const empId = parseInt(document.getElementById('obEmployee').value);
+            const summaryEl = document.getElementById('obFundSummary');
+            const existingLbl = document.getElementById('obExistingLabel');
+            document.getElementById('obAmount').value = '';
+            existingLbl.textContent = '';
+            summaryEl.style.display = 'none';
+            if (!empId) return;
+
+            const fmt = v => '₹' + Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+            try {
+                const r = await staffFetch(API_BASE + '/fund-ledger/' + empId + '/balance');
+                if (!r.ok) return;
+                const d = await r.json();
+                const b = d.balance_summary || {};
+
+                // Show fund balance context
+                document.getElementById('obBalAvail').textContent    = fmt(b.available_balance);
+                document.getElementById('obBalAlloc').textContent    = fmt(b.total_received);
+                document.getElementById('obBalApproved').textContent = fmt(b.approved_expenses);
+                document.getElementById('obBalEffective').textContent = fmt(b.effective_balance_after_submitted);
+                summaryEl.style.display = '';
+
+                // Pre-fill opening balance if one already exists
+                if (d.opening_balance != null && d.opening_balance > 0) {
+                    document.getElementById('obAmount').value = d.opening_balance;
+                    existingLbl.textContent = '(existing: ' + fmt(d.opening_balance) + ' — editing)';
+                }
+            } catch(e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; }
+        }
+
+        async function saveOpeningBalance() {
+            const empId = parseInt(document.getElementById('obEmployee').value);
+            const compId = parseInt(document.getElementById('obCompany').value) || null;
+            const amount = parseFloat(document.getElementById('obAmount').value);
+            const msgEl = document.getElementById('obMessage');
+            if (!empId) { msgEl.innerHTML = '<span style="color:#dc2626;">Please select an employee.</span>'; return; }
+            if (!amount || amount <= 0) { msgEl.innerHTML = '<span style="color:#dc2626;">Please enter a valid amount.</span>'; return; }
+            try {
+                const r = await staffFetch(API_BASE + '/fund-ledger/opening-balance', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ employee_id: empId, company_id: compId, amount, ledger_type: 'EMPLOYEE' })
+                });
+                if (r.ok) {
+                    msgEl.innerHTML = '<span style="color:#059669;"><i class="fas fa-check-circle me-1"></i>Opening balance saved successfully.</span>';
+                    // Refresh the balance display
+                    await onObEmployeeChange();
+                } else {
+                    const err = await r.json().catch(() => ({}));
+                    msgEl.innerHTML = '<span style="color:#dc2626;">' + (err.detail || 'Failed to save opening balance') + '</span>';
+                }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                msgEl.innerHTML = '<span style="color:#dc2626;">Error saving opening balance.</span>';
+            }
+        }
+
+        // ========== TEAM EMPLOYEE BALANCE LOOKUP (DC_TEAM_BAL_001) ==========
+        let _teamBalEmpsLoaded = false;
+
+        async function initTeamBalLookup() {
+            if (!window._hasAccountsAccess) return;
+            const card = document.getElementById('teamBalLookupCard');
+            card.style.display = '';
+            if (_teamBalEmpsLoaded) return;
+            const r = await staffFetch(API_BASE + '/expense-behalf-employees');
+            if (!r.ok) return;
+            const d = await r.json();
+            const sel = document.getElementById('teamBalEmpSelect');
+            sel.innerHTML = '<option value="">— Select Employee —</option>';
+            (d.employees || []).forEach(e => {
+                const o = document.createElement('option');
+                o.value = e.id;
+                o.textContent = (e.full_name || e.name || '') + ' (' + (e.emp_code || '') + ')';
+                sel.appendChild(o);
+            });
+            _teamBalEmpsLoaded = true;
+        }
+
+        async function loadTeamEmployeeBalance() {
+            const empId = parseInt(document.getElementById('teamBalEmpSelect').value);
+            const resultEl = document.getElementById('teamBalResult');
+            if (!empId) { resultEl.innerHTML = ''; return; }
+            resultEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+            try {
+                const r = await staffFetch(API_BASE + '/fund-ledger/' + empId + '/balance');
+                if (!r.ok) { resultEl.innerHTML = '<span style="color:#dc2626;">Failed to load</span>'; return; }
+                const d = await r.json();
+                const b = d.balance_summary || {};
+                const fmt = v => '₹' + Number(v || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+                const ob = d.opening_balance != null ? ` &nbsp;|&nbsp; Opening Bal: <strong style="color:#7c3aed;">${fmt(d.opening_balance)}</strong>` : '';
+                resultEl.innerHTML = `
+                    <span style="display:inline-flex;gap:16px;flex-wrap:wrap;align-items:center;">
+                        <span>Available: <strong style="color:#059669;">${fmt(b.available_balance)}</strong></span>
+                        <span>Allocated: <strong style="color:#1e40af;">${fmt(b.total_received)}</strong></span>
+                        <span>Approved Exp: <strong style="color:#dc2626;">${fmt(b.approved_expenses)}</strong></span>
+                        <span>Pending: <strong style="color:#d97706;">${fmt(b.pending_submitted)}</strong></span>
+                        <span>Effective: <strong style="color:#7c3aed;">${fmt(b.effective_balance_after_submitted)}</strong></span>
+                        ${ob}
+                    </span>`;
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                resultEl.innerHTML = '<span style="color:#dc2626;">Error loading balance</span>';
+            }
+        }
+
+        // ========== TALLY ACTIONS ==========
+        async function tallyAction(id, action) {
+            const labels = { confirm: 'confirm tally', exception: 'mark as tally exception', tally_done: 'mark tally as done' };
+            if (!confirm('Are you sure you want to ' + labels[action] + ' this expense?')) return;
+            try {
+                const r = await staffFetch(API_BASE + '/expense-entries/' + id + '/tally-action', {
+                    method: 'PATCH',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ action })
+                });
+                if (r.ok) {
+                    loadExpenses();
+                } else {
+                    const err = await r.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to update tally status');
+                }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to update tally status');
+            }
+        }
+
+        // ========== EDIT EXPENSE MODAL ==========
+        let editExpenseId = null;
+
+        async function openEditExpenseModal(id) {
+            editExpenseId = id;
+            try {
+                const r = await staffFetch(API_BASE + '/expense-entries/' + id);
+                if (!r.ok) { alert('Failed to load expense'); return; }
+                const d = await r.json();
+                const exp = d.expense_entry || d;
+                document.getElementById('editExpId').textContent = '#' + exp.id;
+                document.getElementById('editExpStatus').textContent = exp.status || '-';
+                document.getElementById('editExpAmount').value = exp.amount || '';
+                document.getElementById('editExpNotes').value = exp.notes || exp.description || '';
+                document.getElementById('editExpModal').classList.add('active');
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to load expense details');
+            }
+        }
+
+        async function saveEditExpense() {
+            const amount = parseFloat(document.getElementById('editExpAmount').value);
+            const notes = document.getElementById('editExpNotes').value;
+            if (!amount || amount <= 0) { alert('Please enter a valid amount'); return; }
+            try {
+                const r = await staffFetch(API_BASE + '/expense-entries/' + editExpenseId + '/edit', {
+                    method: 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ amount, notes })
+                });
+                if (r.ok) {
+                    document.getElementById('editExpModal').classList.remove('active');
+                    loadExpenses();
+                } else {
+                    const err = await r.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to save changes');
+                }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to save changes');
+            }
+        }
+
+        // ═══════════════════════════════════════════════════
+        // DC_QF_001: Quick Date Filter Strip
+        // ═══════════════════════════════════════════════════
+        const _qfPreset = { my: 'overall', team: 'overall', consolidated: 'overall' };
+
+        function _getQFDates(preset) {
+            const today = new Date();
+            const fmt = d => d.toISOString().slice(0, 10);
+            if (preset === 'today') return { from: fmt(today), to: fmt(today) };
+            const yest = new Date(today); yest.setDate(today.getDate() - 1);
+            if (preset === 'yesterday') return { from: fmt(yest), to: fmt(yest) };
+            const dow = (today.getDay() + 6) % 7; // 0=Mon
+            const mon = new Date(today); mon.setDate(today.getDate() - dow);
+            if (preset === 'this_week') return { from: fmt(mon), to: fmt(today) };
+            const lsun = new Date(mon); lsun.setDate(mon.getDate() - 1);
+            const lmon = new Date(lsun); lmon.setDate(lsun.getDate() - 6);
+            if (preset === 'last_week') return { from: fmt(lmon), to: fmt(lsun) };
+            return { from: '', to: '' }; // overall / custom
+        }
+
+        function setQuickFilter(tab, preset) {
+            _qfPreset[tab] = preset;
+            // Update active pill for this tab
+            document.querySelectorAll(`.qf-pill[data-tab="${tab}"]`).forEach(b => {
+                b.classList.toggle('qf-active', b.dataset.preset === preset);
+            });
+            if (preset === 'custom') return; // user picks dates manually from existing pickers
+            const { from, to } = _getQFDates(preset);
+            if (tab === 'my') {
+                document.getElementById('filterFromDate').value = from;
+                document.getElementById('filterToDate').value = to;
+                loadExpenses();
+            } else if (tab === 'team') {
+                document.getElementById('teamFilterFrom').value = from;
+                document.getElementById('teamFilterTo').value = to;
+                loadTeamExpenses(1);
+            } else if (tab === 'consolidated') {
+                document.getElementById('consoFromDate').value = from;
+                document.getElementById('consoToDate').value = to;
+                loadConsolidatedSummary();
+            }
+        }
+
+        // ═══════════════════════════════════════════════════
+        // DC_DRILLDOWN_001: Stat Card Drilldown Modal
+        // ═══════════════════════════════════════════════════
+        function openDrilldown(title, statusFilter, tab, paidOnly) {
+            let fromDate = '', toDate = '', company = '';
+            if (tab === 'my') {
+                fromDate = document.getElementById('filterFromDate').value;
+                toDate   = document.getElementById('filterToDate').value;
+                company  = document.getElementById('filterCompany').value;
+            } else if (tab === 'team') {
+                fromDate = document.getElementById('teamFilterFrom').value;
+                toDate   = document.getElementById('teamFilterTo').value;
+                company  = document.getElementById('teamFilterCompany').value;
+            } else if (tab === 'consolidated') {
+                fromDate = document.getElementById('consoFromDate').value;
+                toDate   = document.getElementById('consoToDate').value;
+                company  = document.getElementById('consoCompany').value;
+            }
+
+            const params = new URLSearchParams({ page: 1, page_size: 200 });
+            if (statusFilter) params.append('status', statusFilter);
+            if (paidOnly) params.append('is_paid', 'true');
+            if (fromDate) params.append('from_date', fromDate);
+            if (toDate)   params.append('to_date', toDate);
+            if (company)  params.append('company_id', company);
+            if (tab === 'team') params.append('team_view', 'true');
+
+            document.getElementById('ddTitle').innerHTML = `<i class="fas fa-table me-2"></i>${title}`;
+            document.getElementById('ddStats').innerHTML = '<div class="dd-stat"><div class="ddv"><i class="fas fa-spinner fa-spin"></i></div><div class="ddl">Loading…</div></div>';
+            document.getElementById('ddContent').innerHTML = '';
+            document.getElementById('drilldownModal').classList.add('active');
+
+            staffFetch(`${API_BASE}/expense-entries?${params}`)
+                .then(r => r.ok ? r.json() : Promise.reject())
+                .then(d => {
+                    const entries = d.entries || [];
+                    const total   = d.total || entries.length;
+                    const totalAmt = entries.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+                    const approvedAmt = entries.filter(e => e.status === 'APPROVED').reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+                    const avgAmt = total ? totalAmt / total : 0;
+                    const today = new Date();
+
+                    document.getElementById('ddStats').innerHTML = `
+                        <div class="dd-stat"><div class="ddv">${total}</div><div class="ddl">Entries</div></div>
+                        <div class="dd-stat"><div class="ddv" style="color:#059669;">₹${formatCurrency(totalAmt)}</div><div class="ddl">Total Amount</div></div>
+                        <div class="dd-stat"><div class="ddv" style="color:#1e40af;">₹${formatCurrency(approvedAmt)}</div><div class="ddl">Approved Amt</div></div>
+                        <div class="dd-stat"><div class="ddv" style="color:#6b7280;">₹${formatCurrency(avgAmt)}</div><div class="ddl">Avg per Entry</div></div>
+                    `;
+                    if (!entries.length) {
+                        document.getElementById('ddContent').innerHTML = '<div style="text-align:center;padding:40px 0;color:#9ca3af;"><i class="fas fa-inbox fa-3x" style="margin-bottom:12px;display:block;"></i>No entries found for this filter</div>';
+                        return;
+                    }
+                    const rows = entries.map((e, i) => {
+                        const expDate  = new Date(e.expense_date || e.created_at);
+                        const ageMs    = today - expDate;
+                        const ageDays  = Math.floor(ageMs / 86400000);
+                        const ageLabel = ageDays === 0 ? 'Today' : ageDays === 1 ? '1 day ago' : `${ageDays}d ago`;
+                        const stCls    = { DRAFT:'badge-draft', SUBMITTED:'badge-submitted', APPROVED:'badge-approved', REJECTED:'badge-rejected' }[e.status] || '';
+                        const empName  = e.created_by_name || e.employee_name || '';
+                        return `
+                        <tr class="dd-entry-row" id="ddr_${i}">
+                            <td style="padding:10px 12px;color:#6366f1;font-family:monospace;white-space:nowrap;">#${e.id}</td>
+                            <td style="padding:10px 12px;white-space:nowrap;font-size:12px;">${formatDate(e.expense_date)}</td>
+                            ${empName ? `<td style="padding:10px 12px;font-size:12px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${empName}">${empName}</td>` : ''}
+                            <td style="padding:10px 12px;font-size:12px;">${e.company_name || '—'}</td>
+                            <td style="padding:10px 12px;font-size:12px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.category_name||''}">${e.category_name || e.main_category_name || '—'}</td>
+                            <td style="padding:10px 12px;text-align:right;font-weight:700;">₹${formatCurrency(e.amount)}</td>
+                            <td style="padding:10px 12px;text-align:center;"><span class="badge-status ${stCls}" style="font-size:10px;">${e.status}</span>${e.is_paid ? ' <span class="badge-status badge-paid" style="font-size:10px;">PAID</span>' : ''}</td>
+                            <td style="padding:10px 12px;text-align:center;font-size:11px;color:#9ca3af;white-space:nowrap;"><i class="fas fa-clock me-1"></i>${ageLabel}</td>
+                            <td style="padding:10px 12px;text-align:center;">
+                                <button onclick="toggleDDRow(${i})" id="ddbtn_${i}" style="background:none;border:1px solid #d1d5db;border-radius:4px;width:26px;height:26px;cursor:pointer;font-weight:700;font-size:14px;line-height:1;color:#374151;">+</button>
+                            </td>
+                        </tr>
+                        <tr id="ddexp_${i}" style="display:none;">
+                            <td colspan="9" style="padding:0;background:#f8fafc;">
+                                <div class="dd-expand-detail">
+                                    <strong>Description:</strong> ${e.description || '—'}<br>
+                                    ${e.vendor_name ? `<strong>Vendor:</strong> ${e.vendor_name}<br>` : ''}
+                                    ${e.allocation_number ? `<strong>Fund Allocation:</strong> <code>${e.allocation_number}</code><br>` : ''}
+                                    ${e.payment_mode ? `<strong>Payment Mode:</strong> ${e.payment_mode}<br>` : ''}
+                                    ${e.bank_ledger_category ? `<strong>Ledger Category:</strong> ${e.bank_ledger_category}<br>` : ''}
+                                    <strong>Expense Date:</strong> ${formatDate(e.expense_date)} &nbsp;•&nbsp;
+                                    <strong>Age:</strong> ${ageDays} day${ageDays !== 1 ? 's' : ''} ago
+                                    ${e.is_paid ? '<br><span style="color:#7c3aed;font-weight:600;"><i class="fas fa-check-circle me-1"></i>Payment has been recorded</span>' : ''}
+                                </div>
+                            </td>
+                        </tr>`;
+                    }).join('');
+
+                    const hasEmp = entries.some(e => e.created_by_name || e.employee_name);
+                    document.getElementById('ddContent').innerHTML = `
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                            <thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">
+                                <th style="padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;">ID</th>
+                                <th style="padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;">DATE</th>
+                                ${hasEmp ? '<th style="padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;">EMPLOYEE</th>' : ''}
+                                <th style="padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;">COMPANY</th>
+                                <th style="padding:8px 12px;text-align:left;font-size:11px;color:#6b7280;">CATEGORY</th>
+                                <th style="padding:8px 12px;text-align:right;font-size:11px;color:#6b7280;">AMOUNT</th>
+                                <th style="padding:8px 12px;text-align:center;font-size:11px;color:#6b7280;">STATUS</th>
+                                <th style="padding:8px 12px;text-align:center;font-size:11px;color:#6b7280;">AGE</th>
+                                <th style="padding:8px 12px;"></th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>`;
+                })
+                .catch(() => {
+                    document.getElementById('ddContent').innerHTML = '<p style="text-align:center;color:#9ca3af;padding:30px;">Failed to load entries</p>';
+                });
+        }
+
+        function toggleDDRow(i) {
+            const expRow = document.getElementById(`ddexp_${i}`);
+            const btn    = document.getElementById(`ddbtn_${i}`);
+            const open   = expRow.style.display !== 'none' && expRow.style.display !== '';
+            expRow.style.display = open ? 'none' : '';
+            btn.textContent = open ? '+' : '−';
+            btn.style.color = open ? '#374151' : '#ef4444';
+        }
+
+        function closeDrilldown() {
+            document.getElementById('drilldownModal').classList.remove('active');
+        }
+
+        // DC-IE-DEST-FILTER-001: Income receipts drilldown for a specific destination employee.
+        // Called from consolidated table row onclick and from My Team tab when employee selected.
+        async function openIncomeReceiptsDrilldown(empId, empName) {
+            if (!empId) return;
+            const title = `Cash Receipts — ${empName || 'Employee'}`;
+            document.getElementById('ddTitle').innerHTML =
+                `<i class="fas fa-hand-holding-usd me-2"></i>${title}`;
+            document.getElementById('ddStats').innerHTML =
+                '<div class="dd-stat"><div class="ddv"><i class="fas fa-spinner fa-spin"></i></div><div class="ddl">Loading…</div></div>';
+            document.getElementById('ddContent').innerHTML = '';
+            document.getElementById('drilldownModal').classList.add('active');
+
+            try {
+                const resp = await staffFetch(
+                    `${API_BASE}/income-entries?destination_employee_id=${empId}&page_size=200&page=1`
+                );
+                const d = resp.ok ? await resp.json() : {};
+                const entries = d.income_entries || d.entries || [];
+                const total   = d.total || entries.length;
+                const totalAmt = entries.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+                const confirmed = entries.filter(e => e.status === 'CONFIRMED').length;
+                const fmtC = n => '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+                document.getElementById('ddStats').innerHTML = `
+                    <div class="dd-stat"><div class="ddv">${total}</div><div class="ddl">Receipts</div></div>
+                    <div class="dd-stat"><div class="ddv" style="color:#0891b2;">${fmtC(totalAmt)}</div><div class="ddl">Total Cash IN</div></div>
+                    <div class="dd-stat"><div class="ddv" style="color:#059669;">${confirmed}</div><div class="ddl">Confirmed</div></div>
+                    <div class="dd-stat"><div class="ddv" style="color:#6b7280;">${total - confirmed}</div><div class="ddl">Pending/Other</div></div>
+                `;
+
+                if (!entries.length) {
+                    document.getElementById('ddContent').innerHTML =
+                        '<div style="text-align:center;padding:40px 0;color:#9ca3af;"><i class="fas fa-inbox fa-3x" style="margin-bottom:12px;display:block;"></i>No cash receipts found for this employee</div>';
+                    return;
+                }
+
+                const stBadge = s => {
+                    const c = { CONFIRMED:'#d1fae5|#059669', PENDING:'#fef3c7|#d97706',
+                                 ESTIMATED:'#e0e7ff|#6366f1', TALLY_DONE:'#ede9fe|#7c3aed',
+                                 ADJUSTMENT:'#fee2e2|#dc2626' }[s] || '#f3f4f6|#6b7280';
+                    const [bg, fg] = c.split('|');
+                    return `<span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;background:${bg};color:${fg};">${s}</span>`;
+                };
+                const modeIcon = m => ({ CASH:'💵', NEFT:'🏦', UPI:'📲', CHEQUE:'📝' }[m] || '💳');
+
+                const rows = entries.map((e, i) => `
+                    <tr style="border-bottom:1px solid #f3f4f6;">
+                        <td style="padding:8px 10px;color:#6366f1;font-family:monospace;font-size:12px;white-space:nowrap;">${e.entry_number || '#'+e.id}</td>
+                        <td style="padding:8px 10px;font-size:12px;white-space:nowrap;">${e.income_date || e.created_at?.slice(0,10) || '—'}</td>
+                        <td style="padding:8px 10px;font-size:12px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${(e.payer_name||'').replace(/"/g,'')}">${e.payer_name || '—'}</td>
+                        <td style="padding:8px 10px;font-size:12px;">${e.company_name || '—'}</td>
+                        <td style="padding:8px 10px;text-align:right;font-weight:700;">${fmtC(e.amount)}</td>
+                        <td style="padding:8px 10px;font-size:12px;text-align:center;">${modeIcon(e.payment_mode)} ${e.payment_mode || '—'}</td>
+                        <td style="padding:8px 10px;text-align:center;">${stBadge(e.status)}</td>
+                        <td style="padding:8px 10px;font-size:11px;color:#0891b2;white-space:nowrap;">Income Entries</td>
+                    </tr>`).join('');
+
+                document.getElementById('ddContent').innerHTML = `
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <thead>
+                            <tr style="background:#f8fafc;border-bottom:2px solid #e5e7eb;">
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;">Entry#</th>
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;">Date</th>
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;">Payer</th>
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;">Company</th>
+                                <th style="padding:8px 10px;text-align:right;font-size:11px;color:#6b7280;text-transform:uppercase;">Amount</th>
+                                <th style="padding:8px 10px;text-align:center;font-size:11px;color:#6b7280;text-transform:uppercase;">Mode</th>
+                                <th style="padding:8px 10px;text-align:center;font-size:11px;color:#6b7280;text-transform:uppercase;">Status</th>
+                                <th style="padding:8px 10px;text-align:left;font-size:11px;color:#6b7280;text-transform:uppercase;">Source</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                        <tfoot>
+                            <tr style="background:#f0f9ff;border-top:2px solid #bae6fd;">
+                                <td colspan="4" style="padding:8px 10px;font-weight:700;">TOTAL (${total} receipts)</td>
+                                <td style="padding:8px 10px;text-align:right;font-weight:700;color:#0891b2;">${fmtC(totalAmt)}</td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>`;
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                document.getElementById('ddContent').innerHTML =
+                    '<p style="text-align:center;color:#9ca3af;padding:30px;">Failed to load receipts</p>';
+            }
+        }
+
+        // Close drilldown on overlay click
+        document.getElementById('drilldownModal').addEventListener('click', function(e) {
+            if (e.target === this) closeDrilldown();
+        });
+
+        // ========== TRANSFER MODAL ==========
+        let transferEmployees = [];
+
+        async function openTransferModal() {
+            // DC_TRANSFER_EMP_001: Always reload — use accounts-aware endpoint
+            transferEmployees = [];
+            // Reset form
+            document.getElementById('transferCompany').value = '';
+            document.getElementById('transferFrom').innerHTML = '<option value="">Select Employee</option>';
+            document.getElementById('transferTo').innerHTML = '<option value="">Select Employee</option>';
+            document.getElementById('transferAmount').value = '';
+            document.getElementById('transferNotes').value = '';
+            document.getElementById('transferFromBalBox').style.display = 'none';
+            document.getElementById('transferFromBal').textContent = '₹0.00';
+            document.getElementById('transferMainCat').value = '';
+            document.getElementById('transferSubCat').value = '';
+            document.getElementById('transferSubCat').disabled = true;
+
+            const r = await staffFetch(API_BASE + '/expense-behalf-employees');
+            if (r.ok) {
+                const d = await r.json();
+                transferEmployees = d.employees || [];
+            }
+            // DC_TRANSFER_POP_001: Populate From/To immediately — do NOT wait for company selection
+            _populateTransferDropdowns();
+            // Load category picker
+            ExpCatPicker.init(
+                document.getElementById('transferMainCat'),
+                document.getElementById('transferSubCat')
+            );
+            document.getElementById('transferModal').classList.add('active');
+        }
+
+        function onTransferCatCreated(newCatId, mode) {
+            // Re-init picker so newly added category appears
+            ExpCatPicker.init(
+                document.getElementById('transferMainCat'),
+                document.getElementById('transferSubCat')
+            );
+        }
+
+        function _populateTransferDropdowns() {
+            // DC_TRANSFER_POP_001: Centralised — called on modal open AND on company change
+            ['transferFrom', 'transferTo'].forEach(function(id) {
+                const sel = document.getElementById(id);
+                const prev = sel.value;
+                sel.innerHTML = '<option value="">Select Employee</option>';
+                transferEmployees.forEach(function(e) {
+                    const opt = document.createElement('option');
+                    opt.value = e.id;
+                    opt.textContent = (e.full_name || e.name || '') + ' (' + (e.emp_code || '') + ')';
+                    sel.appendChild(opt);
+                });
+                if (prev) sel.value = prev; // restore selection if any
+            });
+        }
+
+        function onTransferCompanyChange() {
+            _populateTransferDropdowns();
+            document.getElementById('transferFromBalBox').style.display = 'none';
+        }
+
+        async function onTransferFromChange() {
+            const empId = parseInt(document.getElementById('transferFrom').value);
+            const companyId = document.getElementById('transferCompany').value;
+            const box = document.getElementById('transferFromBalBox');
+            const balEl = document.getElementById('transferFromBal');
+            if (!empId) { box.style.display = 'none'; return; }
+            balEl.textContent = '…';
+            box.style.display = 'block';
+            try {
+                let url = `${API_BASE}/fund-ledger/${empId}/balance`;
+                if (companyId) url += `?company_id=${companyId}`;
+                const r = await staffFetch(url);
+                if (r.ok) {
+                    const d = await r.json();
+                    const b = d.balance_summary || {};
+                    const bal = parseFloat(b.available_balance || 0);
+                    balEl.textContent = '₹' + bal.toLocaleString('en-IN', {minimumFractionDigits: 2});
+                    balEl.style.color = bal > 0 ? '#166534' : '#991b1b';
+                }
+            } catch(e) { balEl.textContent = '—'; }
+        }
+
+        async function saveTransfer() {
+            const companyId = parseInt(document.getElementById('transferCompany').value);
+            const fromId = parseInt(document.getElementById('transferFrom').value);
+            const toId = parseInt(document.getElementById('transferTo').value);
+            const amount = parseFloat(document.getElementById('transferAmount').value);
+            const purpose = document.getElementById('transferNotes').value;
+            const categoryId = parseInt(document.getElementById('transferSubCat').value) || null;
+            if (!companyId) { alert('Please select a company'); return; }
+            if (!fromId || !toId) { alert('Please select both employees'); return; }
+            if (fromId === toId) { alert('From and To employees must be different'); return; }
+            if (!amount || amount <= 0) { alert('Please enter a valid amount'); return; }
+            try {
+                const payload = { from_employee_id: fromId, to_employee_id: toId, company_id: companyId, amount, purpose };
+                if (categoryId) payload.category_id = categoryId;
+                const r = await staffFetch(API_BASE + '/fund-transfers', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if (r.ok) {
+                    document.getElementById('transferModal').classList.remove('active');
+                    alert('Transfer completed successfully');
+                    loadConsolidatedSummary();
+                } else {
+                    const err = await r.json().catch(() => ({}));
+                    alert(err.detail || 'Transfer failed');
+                }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Transfer failed');
+            }
+        }
+    </script>
+
+    <!-- ══ View Expense Slide-Over (DC-EXP-VIEW-001) ══ -->
+    <div id="viewExpOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2200;justify-content:flex-end;">
+        <div style="background:#fff;width:min(520px,100%);height:100%;overflow-y:auto;display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.2);">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#1e40af,#2563eb);padding:18px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1;">
+                <span id="viewExpTitle" style="color:#fff;font-size:15px;font-weight:700;"><i class="fas fa-receipt me-2"></i>Expense Detail</span>
+                <button onclick="closeViewExp()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;">✕</button>
+            </div>
+            <!-- Body -->
+            <div id="viewExpBody" style="padding:20px;flex:1;"></div>
+        </div>
+    </div>
+
+    <!-- Edit Expense Modal -->
+    <div class="modal-overlay" id="editExpModal">
+        <div class="modal-content" style="max-width:460px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit me-2"></i>Edit Expense <span id="editExpId" style="color:#6b7280;font-size:14px;"></span></h3>
+                <button class="modal-close" onclick="document.getElementById('editExpModal').classList.remove('active')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:#92400e;">
+                    <i class="fas fa-info-circle me-1"></i>Status: <strong id="editExpStatus"></strong>
+                </div>
+                <div class="form-group">
+                    <label>Amount (₹) *</label>
+                    <input type="number" id="editExpAmount" step="0.01" min="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Notes / Description</label>
+                    <textarea id="editExpNotes" placeholder="Reason for edit or updated description"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('editExpModal').classList.remove('active')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEditExpense()"><i class="fas fa-save me-1"></i>Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Drilldown Detail Modal (DC_DRILLDOWN_001) ═══ -->
+    <div class="modal-overlay" id="drilldownModal">
+        <div class="modal-content" style="max-width:820px;width:95%;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1e40af,#2563eb);border-radius:12px 12px 0 0;">
+                <h3 id="ddTitle" style="color:#fff;font-size:16px;"><i class="fas fa-table me-2"></i>Expense Detail</h3>
+                <button class="modal-close" style="color:#fff;" onclick="closeDrilldown()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding:16px 20px;max-height:75vh;overflow-y:auto;">
+                <div class="dd-stat-row" id="ddStats">
+                    <div class="dd-stat"><div class="ddv"><i class="fas fa-spinner fa-spin"></i></div><div class="ddl">Loading…</div></div>
+                </div>
+                <div id="ddContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Quick-Add Expense Category Modal (DC_CATPICKER_001) ═══ -->
+    <div class="modal-overlay" id="expCatQuickAddModal">
+        <div class="modal-content" style="max-width:420px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#059669,#047857);border-radius:12px 12px 0 0;">
+                <h3 style="color:#fff;font-size:15px;"><i class="fas fa-plus-circle me-2"></i>Add Expense Category</h3>
+                <button class="modal-close" style="color:#fff;" onclick="ExpCatPicker._closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Create</label>
+                    <select id="ecqaMode" onchange="ExpCatPicker._toggleEcqaMode()" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                        <option value="sub">Sub Category (under an existing Main)</option>
+                        <option value="main">New Main Category</option>
+                    </select>
+                </div>
+                <div id="ecqaMainGroup" style="display:none;">
+                    <div class="form-group">
+                        <label>Main Category Name *</label>
+                        <input type="text" id="ecqaMainName" placeholder="e.g., Vehicle Expenses" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                    </div>
+                </div>
+                <div id="ecqaSubGroup">
+                    <div class="form-group">
+                        <label>Under Main Category *</label>
+                        <select id="ecqaParentSel" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;"><option value="">— Select —</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Sub Category Name *</label>
+                        <input type="text" id="ecqaSubName" placeholder="e.g., Fuel Expenses" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="ExpCatPicker._closeModal()">Cancel</button>
+                <button class="btn btn-success" id="ecqaSaveBtn" onclick="ExpCatPicker.saveQuickAdd()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fund Transfer Modal -->
+    <div class="modal-overlay" id="transferModal">
+        <div class="modal-content" style="max-width:480px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-exchange-alt me-2"></i>Fund Transfer</h3>
+                <button class="modal-close" onclick="document.getElementById('transferModal').classList.remove('active')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Company *</label>
+                    <select id="transferCompany" onchange="onTransferCompanyChange()">
+                        <option value="">Select Company</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>From Employee *</label>
+                    <select id="transferFrom" onchange="onTransferFromChange()">
+                        <option value="">Select Employee</option>
+                    </select>
+                </div>
+                <div id="transferFromBalBox" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;">
+                    <span style="color:#15803d;font-weight:600;"><i class="fas fa-wallet me-1"></i>Available Balance: </span>
+                    <span id="transferFromBal" style="color:#166534;font-weight:700;font-size:15px;">₹0.00</span>
+                </div>
+                <div class="form-group">
+                    <label>To Employee *</label>
+                    <select id="transferTo">
+                        <option value="">Select Employee</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Amount (₹) *</label>
+                    <input type="number" id="transferAmount" step="0.01" min="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Category <small style="color:#6b7280;">(optional)</small> &nbsp;<a href="#" onclick="ExpCatPicker.openQuickAdd(onTransferCatCreated); return false;" style="font-size:11px;color:#059669;text-decoration:none;"><i class="fas fa-plus-circle"></i> Add Category</a></label>
+                    <select id="transferMainCat" style="margin-bottom:6px;width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;" onchange="ExpCatPicker.populateSub(this, document.getElementById('transferSubCat'))">
+                        <option value="">— Main Category —</option>
+                    </select>
+                    <select id="transferSubCat" disabled style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                        <option value="">— Sub Category (optional) —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes / Purpose</label>
+                    <textarea id="transferNotes" placeholder="Reason for transfer"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('transferModal').classList.remove('active')">Cancel</button>
+                <button class="btn btn-success" onclick="saveTransfer()"><i class="fas fa-exchange-alt me-1"></i>Transfer</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

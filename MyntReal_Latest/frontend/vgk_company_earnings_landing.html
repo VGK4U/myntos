@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Earnings - RVZ Supreme</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .dashboard-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        .header-title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 0;
+        }
+        .summary-cards-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+        .summary-card.profit {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+        .summary-card.revenue {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+        }
+        .summary-card.payout {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            color: white;
+        }
+        .summary-card.expense {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+        }
+        .summary-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .summary-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+            opacity: 0.95;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .breakdown-detail {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 10px;
+        }
+        .detail-cards-section {
+            margin-top: 40px;
+        }
+        .detail-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 5px solid transparent;
+        }
+        .detail-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        .detail-card.revenue-card {
+            border-left-color: #007bff;
+        }
+        .detail-card.revenue-card:hover {
+            background: linear-gradient(to right, rgba(0,123,255,0.05) 0%, white 100%);
+        }
+        .detail-card.payout-card {
+            border-left-color: #ffc107;
+        }
+        .detail-card.payout-card:hover {
+            background: linear-gradient(to right, rgba(255,193,7,0.05) 0%, white 100%);
+        }
+        .detail-card.expense-card {
+            border-left-color: #dc3545;
+        }
+        .detail-card.expense-card:hover {
+            background: linear-gradient(to right, rgba(220,53,69,0.05) 0%, white 100%);
+        }
+        .detail-card-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .detail-card-description {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+        .detail-card-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .view-details-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: opacity 0.3s ease;
+        }
+        .view-details-btn:hover {
+            opacity: 0.9;
+            color: white;
+        }
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 60px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="header-title"><img src="/public/vgk4u-logo-100.png" alt="VGK4U" style="height:28px;background:#fff;border-radius:5px;padding:2px 6px;margin-right:8px;vertical-align:middle;">💰 Company Earnings Dashboard</h1>
+                    <p class="text-muted mb-0">Financial Overview & Revenue Operations</p>
+                </div>
+                <div>
+                    <a href="/rvz" class="btn btn-outline-secondary">
+                        <i class="fas fa-home"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-white mt-3">Loading financial data...</p>
+        </div>
+
+        <!-- Summary Overview Cards -->
+        <div class="summary-cards-row" id="summaryCards">
+            <div class="summary-card profit">
+                <div class="summary-label">Net Profit</div>
+                <div class="summary-value" id="netProfit">₹0.00</div>
+                <div class="breakdown-detail">Revenue - Payouts - Expenses</div>
+            </div>
+            <div class="summary-card revenue">
+                <div class="summary-label">Total Revenue</div>
+                <div class="summary-value" id="totalRevenue">₹0.00</div>
+                <div class="breakdown-detail">Packages + Handling + Deductions</div>
+            </div>
+            <div class="summary-card payout">
+                <div class="summary-label">Total Payouts</div>
+                <div class="summary-value" id="totalPayouts">₹0.00</div>
+                <div class="breakdown-detail">Income + Pending</div>
+            </div>
+            <div class="summary-card expense">
+                <div class="summary-label">Total Expenses</div>
+                <div class="summary-value" id="totalExpenses">₹0.00</div>
+                <div class="breakdown-detail">Awards + Bonanza + Operations</div>
+            </div>
+        </div>
+
+        <!-- Detailed Pages Section -->
+        <div class="detail-cards-section">
+            <h3 class="text-white mb-4"><i class="fas fa-chart-line"></i> Revenue Operations</h3>
+            
+            <!-- Revenue Details Card -->
+            
+            <div class="detail-card revenue-card" onclick="location.href='/rvz/revenue-details'">
+                <div class="detail-card-title">
+                    <i class="fas fa-money-bill-wave text-primary"></i> Revenue Details
+                </div>
+                <div class="detail-card-description">
+                    View detailed breakdown of all revenue streams including Package Sales and Company Earnings (Ceiling Income)
+                </div>
+                <div class="detail-card-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="revPackageSales">₹0.00</div>
+                        <div class="stat-label">Package Sales</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="revCompanyEarnings">₹0.00</div>
+                        <div class="stat-label">Company Earnings</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="revAdminFee">₹0.00</div>
+                        <div class="stat-label">Admin Fee (8%)</div>
+                    </div>
+                </div>
+                <a href="/rvz/revenue-details" class="view-details-btn">
+                    <i class="fas fa-arrow-right"></i> View Revenue Details
+                </a>
+            </div>
+
+            <!-- Payout Details Card -->
+            <div class="detail-card payout-card" onclick="location.href='/rvz/payout-details'">
+                <div class="detail-card-title">
+                    <i class="fas fa-hand-holding-usd text-warning"></i> Payout Details
+                </div>
+                <div class="detail-card-description">
+                    View all income payouts to users with TDS deductions, status tracking, and pending payments
+                </div>
+                <div class="detail-card-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="payoutPaid">₹0.00</div>
+                        <div class="stat-label">Paid</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="payoutPending">₹0.00</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="payoutTDS">₹0.00</div>
+                        <div class="stat-label">TDS Deducted</div>
+                    </div>
+                </div>
+                <a href="/rvz/payout-details" class="view-details-btn">
+                    <i class="fas fa-arrow-right"></i> View Payout Details
+                </a>
+            </div>
+
+            <!-- Expense Details Card -->
+            <div class="detail-card expense-card" onclick="location.href='/rvz/expense-details'">
+                <div class="detail-card-title">
+                    <i class="fas fa-receipt text-danger"></i> Expense Details
+                </div>
+                <div class="detail-card-description">
+                    View all company expenses including Awards, Bonanza, Field Allowance, Training Claims, Mentorship Contribution Benefit, and TDS
+                </div>
+                <div class="detail-card-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="expensePaid">₹0.00</div>
+                        <div class="stat-label">Paid</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="expensePending">₹0.00</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="expenseGuruDakshina">₹0.00</div>
+                        <div class="stat-label">Mentorship Contribution Benefit</div>
+                    </div>
+                </div>
+                <a href="/rvz/expense-details" class="view-details-btn">
+                    <i class="fas fa-arrow-right"></i> View Expense Details
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1/company-earnings';
+
+        function formatCurrency(amount) {
+            return '₹' + parseFloat(amount || 0).toLocaleString('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        async function loadDashboardData() {
+            const loading = document.getElementById('loadingSpinner');
+            loading.style.display = 'block';
+
+            try {
+                const response = await fetch(`${API_BASE}/revenue-summary`, {
+                    credentials: 'include'
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const data = result.data || {};
+
+                // Update summary cards
+                document.getElementById('netProfit').textContent = formatCurrency(data.net_profit);
+                document.getElementById('totalRevenue').textContent = formatCurrency(data.total_revenue);
+                document.getElementById('totalPayouts').textContent = formatCurrency(data.total_payouts);
+                document.getElementById('totalExpenses').textContent = formatCurrency(data.total_expenses);
+
+                // Update revenue stats
+                document.getElementById('revPackageSales').textContent = formatCurrency(data.package_sales);
+                document.getElementById('revCompanyEarnings').textContent = formatCurrency(data.company_earnings);
+                document.getElementById('revAdminFee').textContent = formatCurrency(data.admin_fee);
+
+                // Update payout stats
+                document.getElementById('payoutPaid').textContent = formatCurrency(data.payouts_paid);
+                document.getElementById('payoutPending').textContent = formatCurrency(data.payouts_pending);
+                document.getElementById('payoutTDS').textContent = formatCurrency(data.tds_total);
+
+                // Update expense stats
+                document.getElementById('expensePaid').textContent = formatCurrency(data.expenses_paid);
+                document.getElementById('expensePending').textContent = formatCurrency(data.expenses_pending);
+                document.getElementById('expenseGuruDakshina').textContent = formatCurrency(data.guru_dakshina);
+
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                alert('Failed to load dashboard data. Please try again.');
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', loadDashboardData);
+    </script>
+</body>
+</html>

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Har Ghar Solar — Myntreal | Switch to Solar, Save Every Month</title>
+<meta name="description" content="Install solar with ₹0 upfront. Government subsidy + bank EMI available. Free site survey. Talk to a Myntreal Solar Expert today.">
+<link rel="icon" href="/mnr-logo.png" type="image/png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --brand-green:#0d7a4e;
+  --brand-green-dark:#095c3a;
+  --brand-amber:#f59e0b;
+  --brand-amber-dark:#d97706;
+  --brand-blue:#1d4ed8;
+  --text-dark:#111827;
+  --text-mid:#374151;
+  --text-soft:#6b7280;
+  --bg-light:#f9fafb;
+  --radius:14px;
+  --shadow:0 4px 24px rgba(0,0,0,0.10);
+}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;color:var(--text-dark);background:#fff;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+/* ── NAVBAR ── */
+.nav{display:flex;align-items:center;justify-content:space-between;padding:14px 20px;background:#fff;border-bottom:1px solid #e5e7eb;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo img{height:36px;width:auto}
+.nav-logo-text{display:flex;flex-direction:column;line-height:1.1}
+.nav-logo-name{font-size:1.05rem;font-weight:800;color:var(--brand-green)}
+.nav-logo-sub{font-size:0.6rem;font-weight:500;color:var(--text-soft);letter-spacing:0.04em;text-transform:uppercase}
+.nav-cta{background:var(--brand-amber);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:0.82rem;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background 0.2s}
+.nav-cta:hover{background:var(--brand-amber-dark)}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(135deg,#0d7a4e 0%,#095c3a 60%,#0a4a2e 100%);padding:36px 20px 40px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:url('/solar-creative-family.png') center/cover no-repeat;opacity:0.15}
+.hero-inner{position:relative;z-index:1}
+.hero-badge{display:inline-block;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.5);color:#fcd34d;font-size:0.7rem;font-weight:700;padding:5px 14px;border-radius:20px;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:16px}
+.hero h1{font-size:clamp(1.7rem,5vw,2.6rem);font-weight:900;color:#fff;line-height:1.15;margin-bottom:10px}
+.hero h1 span{color:var(--brand-amber)}
+.hero-sub{color:rgba(255,255,255,0.78);font-size:0.95rem;margin-bottom:28px}
+.hero-cards{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:28px}
+.hero-card{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);border-radius:10px;padding:12px 16px;text-align:center;flex:1;min-width:100px;max-width:140px}
+.hero-card-val{font-size:1.3rem;font-weight:900;color:var(--brand-amber)}
+.hero-card-label{font-size:0.68rem;color:rgba(255,255,255,0.75);margin-top:2px}
+.hero-btn{display:inline-block;background:var(--brand-amber);color:#fff;font-size:1rem;font-weight:800;padding:15px 36px;border-radius:12px;text-decoration:none;box-shadow:0 4px 20px rgba(245,158,11,0.5);transition:all 0.2s;cursor:pointer;border:none}
+.hero-btn:hover{background:var(--brand-amber-dark);transform:translateY(-1px)}
+.hero-note{color:rgba(255,255,255,0.5);font-size:0.68rem;margin-top:10px}
+
+/* ── TRUST STRIP ── */
+.trust-strip{background:#fff;border-bottom:1px solid #e5e7eb;padding:14px 20px;display:flex;gap:16px;overflow-x:auto;scrollbar-width:none;justify-content:center;flex-wrap:wrap}
+.trust-strip::-webkit-scrollbar{display:none}
+.trust-item{display:flex;align-items:center;gap:7px;font-size:0.78rem;font-weight:600;color:var(--text-mid);white-space:nowrap}
+.trust-item i{color:var(--brand-green);font-size:0.85rem}
+
+/* ── SECTION WRAPPER ── */
+.section{padding:40px 20px}
+.section-alt{background:var(--bg-light)}
+.section-title{font-size:1.35rem;font-weight:800;color:var(--text-dark);margin-bottom:6px;text-align:center}
+.section-sub{text-align:center;color:var(--text-soft);font-size:0.88rem;margin-bottom:28px}
+
+/* ── BILL VS EMI ── */
+.compare-box{background:linear-gradient(135deg,#fef3c7,#fffbeb);border:2px solid #fcd34d;border-radius:var(--radius);padding:24px 20px;max-width:460px;margin:0 auto 24px}
+.compare-row{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.compare-side{flex:1;text-align:center}
+.compare-side-label{font-size:0.7rem;font-weight:700;color:var(--text-soft);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px}
+.compare-side-val{font-size:1.8rem;font-weight:900}
+.compare-side-val.red{color:#dc2626}
+.compare-side-val.green{color:#16a34a}
+.compare-vs{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--brand-amber),var(--brand-amber-dark));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.85rem;flex-shrink:0}
+.compare-tags{display:flex;gap:8px;margin-top:18px;justify-content:center;flex-wrap:wrap}
+.compare-tag{display:flex;align-items:center;gap:6px;font-size:0.75rem;font-weight:600;color:var(--brand-green);background:#ecfdf5;border:1px solid #a7f3d0;border-radius:20px;padding:5px 12px}
+.compare-note{text-align:center;font-size:0.68rem;color:var(--text-soft);margin-top:10px}
+
+/* ── BENEFITS ── */
+.benefits-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:500px;margin:0 auto}
+.benefit-card{background:#fff;border:1px solid #e5e7eb;border-radius:var(--radius);padding:18px 14px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.benefit-icon{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:1.2rem}
+.benefit-title{font-size:0.85rem;font-weight:700;color:var(--text-dark);margin-bottom:4px}
+.benefit-desc{font-size:0.72rem;color:var(--text-soft)}
+
+/* ── HOW IT WORKS ── */
+.steps{display:flex;flex-direction:column;gap:0;max-width:460px;margin:0 auto}
+.step{display:flex;gap:16px;align-items:flex-start;padding-bottom:24px;position:relative}
+.step:not(:last-child)::after{content:'';position:absolute;left:20px;top:44px;bottom:0;width:2px;background:linear-gradient(to bottom,var(--brand-green),rgba(13,122,78,0.15))}
+.step-num{width:40px;height:40px;border-radius:50%;background:var(--brand-green);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;flex-shrink:0;position:relative;z-index:1}
+.step-content{padding-top:6px}
+.step-title{font-size:0.95rem;font-weight:700;color:var(--text-dark);margin-bottom:3px}
+.step-desc{font-size:0.8rem;color:var(--text-soft)}
+
+/* ── CREATIVES STRIP ── */
+.creatives-strip{display:flex;gap:12px;overflow-x:auto;padding:4px 20px 16px;scrollbar-width:none}
+.creatives-strip::-webkit-scrollbar{display:none}
+.creative-thumb{min-width:160px;border-radius:12px;overflow:hidden;box-shadow:var(--shadow);flex-shrink:0}
+.creative-thumb img{width:100%;height:220px;object-fit:cover;display:block}
+
+/* ── CONTACT FORM ── */
+.form-section{background:linear-gradient(135deg,#0d7a4e,#095c3a);padding:40px 20px}
+.form-section .section-title{color:#fff}
+.form-section .section-sub{color:rgba(255,255,255,0.7)}
+.form-box{background:#fff;border-radius:18px;padding:28px 22px;max-width:500px;margin:0 auto;box-shadow:0 8px 40px rgba(0,0,0,0.2)}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:0.8rem;font-weight:600;color:var(--text-mid);margin-bottom:6px}
+.form-label span.req{color:#dc2626;margin-left:2px}
+.form-control{width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:11px 14px;font-size:0.9rem;font-family:inherit;color:var(--text-dark);outline:none;transition:border-color 0.2s,box-shadow 0.2s;background:#fff}
+.form-control:focus{border-color:var(--brand-green);box-shadow:0 0 0 3px rgba(13,122,78,0.12)}
+.form-control.auto-filled{background:#ecfdf5;border-color:#86efac;color:var(--brand-green);font-weight:600}
+.form-control.error{border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,0.1)}
+.pin-row{display:flex;gap:10px}
+.pin-row .form-control{flex:1}
+.pin-status{font-size:0.72rem;margin-top:5px;min-height:16px;display:flex;align-items:center;gap:5px}
+.pin-status.loading{color:var(--brand-amber)}
+.pin-status.ok{color:#16a34a}
+.pin-status.err{color:#dc2626}
+.location-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.location-fields .form-control{font-size:0.8rem;padding:9px 10px;text-align:center}
+.location-label{font-size:0.65rem;color:var(--text-soft);text-align:center;margin-top:3px}
+.submit-btn{width:100%;background:linear-gradient(135deg,var(--brand-amber),var(--brand-amber-dark));color:#fff;border:none;border-radius:12px;padding:15px;font-size:1rem;font-weight:800;cursor:pointer;transition:all 0.2s;margin-top:6px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+.submit-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(245,158,11,0.5)}
+.submit-btn:disabled{opacity:0.6;cursor:not-allowed;transform:none}
+.form-note{text-align:center;font-size:0.7rem;color:var(--text-soft);margin-top:12px}
+.form-note a{color:var(--brand-green);text-decoration:none;font-weight:600}
+.success-box{display:none;text-align:center;padding:28px 16px}
+.success-box .success-icon{width:64px;height:64px;background:#ecfdf5;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:1.8rem;color:var(--brand-green)}
+.success-box h3{font-size:1.1rem;font-weight:800;color:var(--text-dark);margin-bottom:8px}
+.success-box p{font-size:0.85rem;color:var(--text-soft);margin-bottom:20px}
+.success-box .back-btn{background:var(--brand-green);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit}
+
+/* ── FOOTER ── */
+.footer{background:#0a1f13;color:rgba(255,255,255,0.65);padding:28px 20px;text-align:center}
+.footer-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:12px}
+.footer-logo img{height:30px;filter:brightness(0) invert(1);opacity:0.85}
+.footer-logo-text{font-size:1rem;font-weight:800;color:#fff}
+.footer-links{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.footer-links a{color:rgba(255,255,255,0.55);font-size:0.78rem;text-decoration:none}
+.footer-links a:hover{color:#fff}
+.footer-copy{font-size:0.7rem;color:rgba(255,255,255,0.35)}
+
+/* ── SEGMENT SELECT BADGE ── */
+.segment-badge{display:flex;align-items:center;gap:8px;background:var(--bg-light);border:1.5px solid #e5e7eb;border-radius:10px;padding:11px 14px;cursor:pointer;width:100%}
+.segment-badge-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:0.9rem;color:#fff;flex-shrink:0}
+.segment-badge-text{flex:1;text-align:left}
+.segment-badge-name{font-size:0.88rem;font-weight:700;color:var(--text-dark)}
+.segment-badge-sub{font-size:0.7rem;color:var(--text-soft)}
+.segment-badge .arrow{color:var(--text-soft);font-size:0.7rem}
+
+/* ── RESPONSIVE ── */
+@media(max-width:360px){
+  .compare-side-val{font-size:1.4rem}
+  .benefits-grid{grid-template-columns:1fr}
+  .location-fields{grid-template-columns:1fr;gap:8px}
+}
+@media(min-width:640px){
+  .hero{padding:60px 40px 60px}
+  .hero h1{font-size:2.8rem}
+  .benefits-grid{grid-template-columns:repeat(4,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/mnr-logo.png" alt="MNR">
+    <div class="nav-logo-text">
+      <span class="nav-logo-name">MYNTREAL</span>
+      <span class="nav-logo-sub">Redefining Future</span>
+    </div>
+  </a>
+  <a href="#contact-form" class="nav-cta">Get Free Quote</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge"><i class="fas fa-solar-panel" style="margin-right:6px"></i>Har Ghar Solar</div>
+    <h1>Tired of Power Cuts<br>&amp; <span>High Bills?</span><br>Switch to Solar.</h1>
+    <p class="hero-sub">Save money every month — ₹0 upfront with Govt subsidy &amp; bank EMI</p>
+    <div class="hero-cards">
+      <div class="hero-card">
+        <div class="hero-card-val">₹0</div>
+        <div class="hero-card-label">Upfront Cost</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-val">25+</div>
+        <div class="hero-card-label">Years Life</div>
+      </div>
+      <div class="hero-card">
+        <div class="hero-card-val">40%</div>
+        <div class="hero-card-label">Govt Subsidy</div>
+      </div>
+    </div>
+    <a href="#contact-form" class="hero-btn"><i class="fas fa-calendar-check" style="margin-right:8px"></i>Book Free Site Survey</a>
+    <p class="hero-note">*EMI &amp; subsidy subject to eligibility · Terms apply</p>
+  </div>
+</section>
+
+<!-- TRUST STRIP -->
+<div class="trust-strip">
+  <div class="trust-item"><i class="fas fa-check-circle"></i> Govt Subsidy Eligible</div>
+  <div class="trust-item"><i class="fas fa-university"></i> Easy Bank EMI</div>
+  <div class="trust-item"><i class="fas fa-clipboard-check"></i> Free Site Survey</div>
+  <div class="trust-item"><i class="fas fa-map-marker-alt"></i> Pan India</div>
+  <div class="trust-item"><i class="fas fa-headset"></i> Expert Support</div>
+</div>
+
+<!-- BILL VS EMI -->
+<section class="section">
+  <h2 class="section-title">Your Bill vs Solar EMI</h2>
+  <p class="section-sub">Solar is always the smarter choice</p>
+  <div class="compare-box">
+    <div class="compare-row">
+      <div class="compare-side">
+        <div class="compare-side-label"><i class="fas fa-file-invoice" style="margin-right:4px"></i>Monthly Bill</div>
+        <div class="compare-side-val red">₹5,200</div>
+      </div>
+      <div class="compare-vs">VS</div>
+      <div class="compare-side">
+        <div class="compare-side-label"><i class="fas fa-home" style="margin-right:4px"></i>Solar EMI</div>
+        <div class="compare-side-val green">₹2,100</div>
+      </div>
+    </div>
+    <div class="compare-tags">
+      <span class="compare-tag"><i class="fas fa-shield-alt"></i> Govt Subsidy</span>
+      <span class="compare-tag"><i class="fas fa-university"></i> Bank EMI</span>
+      <span class="compare-tag"><i class="fas fa-infinity"></i> Free Power</span>
+    </div>
+    <p class="compare-note">*Example figures. Actual savings depend on your usage &amp; eligibility.</p>
+  </div>
+  <div style="max-width:460px;margin:0 auto;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)">
+    <img src="/solar-creative-bill.png" alt="Bill vs Solar EMI" style="width:100%;display:block">
+  </div>
+</section>
+
+<!-- BENEFITS -->
+<section class="section section-alt">
+  <h2 class="section-title">Why Go Solar with Myntreal?</h2>
+  <p class="section-sub">Everything handled — from survey to installation</p>
+  <div class="benefits-grid">
+    <div class="benefit-card">
+      <div class="benefit-icon" style="background:#ecfdf5"><i class="fas fa-rupee-sign" style="color:var(--brand-green)"></i></div>
+      <div class="benefit-title">₹0 Upfront</div>
+      <div class="benefit-desc">Govt subsidy + bank loan covers the cost</div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-icon" style="background:#fffbeb"><i class="fas fa-solar-panel" style="color:var(--brand-amber)"></i></div>
+      <div class="benefit-title">Free Survey</div>
+      <div class="benefit-desc">Expert team visits your site at no charge</div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-icon" style="background:#eff6ff"><i class="fas fa-university" style="color:var(--brand-blue)"></i></div>
+      <div class="benefit-title">Easy EMI</div>
+      <div class="benefit-desc">Starting from ₹1,9XX/month via bank</div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-icon" style="background:#fdf2f8"><i class="fas fa-leaf" style="color:#9333ea"></i></div>
+      <div class="benefit-title">25 yr Life</div>
+      <div class="benefit-desc">Long-lasting panels with warranty support</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section">
+  <h2 class="section-title">How It Works</h2>
+  <p class="section-sub">Simple 3-step process to go solar</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Book a Free Site Survey</div>
+        <div class="step-desc">Fill the form below. Our expert contacts you within 24 hours to schedule a visit.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">Get Your Custom Design &amp; Quote</div>
+        <div class="step-desc">We design the right solar system for your home — size, subsidy, EMI plan, all in one report.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-title">Installation &amp; Go Live</div>
+        <div class="step-desc">Our certified team installs the panels. Start saving from day one.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CREATIVES STRIP -->
+<div style="background:var(--bg-light);padding:24px 0 0">
+  <p style="text-align:center;font-size:0.8rem;font-weight:600;color:var(--text-soft);margin-bottom:14px;padding:0 20px">Real families. Real savings. Real solar.</p>
+  <div class="creatives-strip">
+    <div class="creative-thumb"><img src="/solar-creative-family.png" alt="Family with solar"></div>
+    <div class="creative-thumb"><img src="/solar-creative-zero.png" alt="Zero upfront solar"></div>
+    <div class="creative-thumb"><img src="/solar-creative-dark.png" alt="No more power cuts"></div>
+    <div class="creative-thumb"><img src="/solar-creative-bill.png" alt="Bill vs EMI"></div>
+  </div>
+</div>
+
+<!-- CONTACT FORM -->
+<section class="form-section" id="contact-form">
+  <h2 class="section-title">Get a Free Quote</h2>
+  <p class="section-sub">Fill in your details — we'll call you within 24 hours</p>
+
+  <div class="form-box">
+    <!-- SUCCESS STATE -->
+    <div class="success-box" id="successBox">
+      <div class="success-icon"><i class="fas fa-check"></i></div>
+      <h3>Request Submitted!</h3>
+      <p>Thank you! Our expert will call you within <strong>24 hours</strong> to schedule your free site survey.</p>
+      <button class="back-btn" onclick="resetForm()"><i class="fas fa-arrow-left" style="margin-right:6px"></i>Submit Another</button>
+    </div>
+
+    <!-- FORM -->
+    <form id="leadForm" novalidate>
+      <!-- SEGMENT -->
+      <div class="form-group">
+        <label class="form-label">I'm interested in<span class="req">*</span></label>
+        <select class="form-control" id="segmentSelect" onchange="onSegmentChange()">
+          <option value="" disabled>— Select a service —</option>
+          <option value="Solar" data-cid="4" data-catid="19" data-color="#f59e0b" data-icon="fa-solar-panel">☀️ Solar Energy</option>
+          <option value="EV B2C" data-cid="3" data-catid="2" data-color="#3b82f6" data-icon="fa-motorcycle">🛵 EV for Individuals</option>
+          <option value="EV B2B" data-cid="3" data-catid="1" data-color="#10b981" data-icon="fa-truck">⚡ EV for Business (Fleet)</option>
+          <option value="EV Spares" data-cid="3" data-catid="5" data-color="#8b5cf6" data-icon="fa-cog">🔧 EV Spare Parts</option>
+          <option value="Insurance" data-cid="4" data-catid="17" data-color="#ef4444" data-icon="fa-shield-alt">🛡️ Insurance</option>
+          <option value="Real Dreams" data-cid="1" data-catid="35" data-color="#6366f1" data-icon="fa-home">🏠 Real Estate</option>
+          <option value="ETC Training" data-cid="2" data-catid="42" data-color="#06b6d4" data-icon="fa-chalkboard-teacher">🎓 EV Technician Training</option>
+        </select>
+      </div>
+
+      <!-- INTEREST (dynamic) -->
+      <div class="form-group" id="interestGroup" style="display:none">
+        <label class="form-label">What are you looking for?</label>
+        <select class="form-control" id="interestSelect">
+          <option value="">— Select interest —</option>
+        </select>
+      </div>
+
+      <!-- NAME -->
+      <div class="form-group">
+        <label class="form-label">Full Name<span class="req">*</span></label>
+        <input type="text" class="form-control" id="leadName" placeholder="Enter your full name" autocomplete="name">
+      </div>
+
+      <!-- MOBILE -->
+      <div class="form-group">
+        <label class="form-label">Mobile Number<span class="req">*</span></label>
+        <input type="tel" class="form-control" id="leadPhone" placeholder="10-digit mobile number" maxlength="10" autocomplete="tel" inputmode="numeric">
+      </div>
+
+      <!-- PIN CODE -->
+      <div class="form-group">
+        <label class="form-label">Pin Code<span class="req">*</span></label>
+        <input type="text" class="form-control" id="leadPincode" placeholder="6-digit pin code" maxlength="6" inputmode="numeric" oninput="onPincodeInput(this.value)">
+        <div class="pin-status" id="pinStatus"></div>
+      </div>
+
+      <!-- LOCATION (auto-filled) -->
+      <div class="form-group" id="locationGroup" style="display:none">
+        <label class="form-label">Location (auto-filled)</label>
+        <div class="location-fields">
+          <div>
+            <input type="text" class="form-control auto-filled" id="leadArea" placeholder="Area" readonly>
+            <div class="location-label">Area</div>
+          </div>
+          <div>
+            <input type="text" class="form-control auto-filled" id="leadCity" placeholder="City" readonly>
+            <div class="location-label">City</div>
+          </div>
+          <div>
+            <input type="text" class="form-control auto-filled" id="leadState" placeholder="State" readonly>
+            <div class="location-label">State</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMAIL -->
+      <div class="form-group">
+        <label class="form-label">Email <span style="color:var(--text-soft);font-weight:400">(optional)</span></label>
+        <input type="email" class="form-control" id="leadEmail" placeholder="your@email.com" autocomplete="email">
+      </div>
+
+      <!-- SUBMIT -->
+      <button type="submit" class="submit-btn" id="submitBtn">
+        <i class="fas fa-paper-plane"></i> Get Free Quote
+      </button>
+      <p class="form-note">By submitting, you agree to be contacted by our expert team. &nbsp;<a href="/">Privacy Policy</a></p>
+    </form>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-logo">
+    <img src="/mnr-logo.png" alt="MNR Logo">
+    <span class="footer-logo-text">MYNTREAL</span>
+  </div>
+  <div class="footer-links">
+    <a href="/">Home</a>
+    <a href="/login">Login</a>
+    <a href="#contact-form">Contact</a>
+  </div>
+  <p class="footer-copy">© 2025 Myntreal. All rights reserved. Solar installation subject to site eligibility &amp; government scheme terms.</p>
+</footer>
+
+<script>
+const SEGMENT_INTERESTS = {
+  'Solar': ['Residential Solar (Home)', 'Commercial Solar (Office/Shop)', 'Agriculture Solar', 'Check Subsidy Eligibility', 'Book Free Site Survey', 'EMI / Loan Options'],
+  'EV B2C': ['2-Wheeler Electric Vehicle', '3-Wheeler Electric Vehicle', 'Book Test Drive', 'EMI Options', 'Find Nearest Dealer'],
+  'EV B2B': ['Fleet EV Solutions', 'EV Charging Infrastructure', 'Bulk Purchase / Dealership', 'Franchise Partnership'],
+  'EV Spares': ['Battery Replacement', 'Motor / Controller', 'Charger & Accessories', 'Other EV Spare Parts'],
+  'Insurance': ['Life Insurance', 'Vehicle Insurance', 'Health Insurance', 'Business Insurance'],
+  'Real Dreams': ['Residential Plot', 'Agricultural Land', 'Commercial Property', 'Property Investment Info'],
+  'ETC Training': ['EV Technician Course', 'Training Centre Franchise', 'Certification Program', 'Course Fees & Schedule']
+};
+
+let _pincodeTimer = null;
+let _locationData  = { area: '', city: '', state: '' };
+
+function _getUrlParam(key) {
+  return new URLSearchParams(window.location.search).get(key) || '';
+}
+
+function onSegmentChange() {
+  const sel  = document.getElementById('segmentSelect');
+  const val  = sel.value;
+  const iSel = document.getElementById('interestSelect');
+  const iGrp = document.getElementById('interestGroup');
+
+  iSel.innerHTML = '<option value="">— Select interest —</option>';
+  const list = SEGMENT_INTERESTS[val] || [];
+  list.forEach(item => {
+    const o = document.createElement('option');
+    o.value = item; o.textContent = item;
+    iSel.appendChild(o);
+  });
+  iGrp.style.display = list.length ? '' : 'none';
+
+  // Update hero text context if Solar
+  const btn = document.getElementById('submitBtn');
+  if (val === 'Solar') {
+    btn.innerHTML = '<i class="fas fa-solar-panel"></i> Get Free Solar Quote';
+  } else if (val === 'Real Dreams') {
+    btn.innerHTML = '<i class="fas fa-home"></i> Get Property Info';
+  } else if (val.startsWith('EV')) {
+    btn.innerHTML = '<i class="fas fa-bolt"></i> Get EV Quote';
+  } else {
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Enquiry';
+  }
+}
+
+function onPincodeInput(val) {
+  clearTimeout(_pincodeTimer);
+  const status = document.getElementById('pinStatus');
+  const locGrp = document.getElementById('locationGroup');
+
+  if (val.length < 6) {
+    status.textContent = '';
+    locGrp.style.display = 'none';
+    _locationData = { area: '', city: '', state: '' };
+    return;
+  }
+  if (!/^\d{6}$/.test(val)) {
+    status.className = 'pin-status err';
+    status.innerHTML = '<i class="fas fa-times-circle"></i> Enter 6-digit pin code';
+    return;
+  }
+
+  status.className = 'pin-status loading';
+  status.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Looking up pin code…';
+
+  _pincodeTimer = setTimeout(() => _lookupPincode(val), 600);
+}
+
+async function _lookupPincode(pin) {
+  const status = document.getElementById('pinStatus');
+  const locGrp = document.getElementById('locationGroup');
+  try {
+    const res  = await fetch(`https://api.postalpincode.in/pincode/${pin}`, { signal: AbortSignal.timeout(8000) });
+    const data = await res.json();
+    if (data && data[0]?.Status === 'Success' && data[0].PostOffice?.length) {
+      const po = data[0].PostOffice[0];
+      _locationData = { area: po.Name || '', city: po.District || '', state: po.State || '' };
+      document.getElementById('leadArea').value  = _locationData.area;
+      document.getElementById('leadCity').value  = _locationData.city;
+      document.getElementById('leadState').value = _locationData.state;
+      locGrp.style.display = '';
+      status.className = 'pin-status ok';
+      status.innerHTML = `<i class="fas fa-check-circle"></i> ${_locationData.city}, ${_locationData.state}`;
+    } else {
+      _locationData = { area: '', city: '', state: '' };
+      locGrp.style.display = 'none';
+      status.className = 'pin-status err';
+      status.innerHTML = '<i class="fas fa-info-circle"></i> Pin code not found — please enter city manually below';
+      _showManualCity();
+    }
+  } catch {
+    _locationData = { area: '', city: '', state: '' };
+    locGrp.style.display = 'none';
+    status.className = 'pin-status err';
+    status.innerHTML = '<i class="fas fa-info-circle"></i> Lookup failed — please enter city manually below';
+    _showManualCity();
+  }
+}
+
+function _showManualCity() {
+  if (!document.getElementById('manualCityGroup')) {
+    const grp = document.createElement('div');
+    grp.className = 'form-group'; grp.id = 'manualCityGroup';
+    grp.innerHTML = `<label class="form-label">City / District</label><input type="text" class="form-control" id="manualCity" placeholder="Enter your city">`;
+    document.getElementById('leadEmail').closest('.form-group').before(grp);
+  }
+}
+
+function _validate() {
+  let ok = true;
+  const fields = [
+    { id: 'segmentSelect', msg: 'Please select a service' },
+    { id: 'leadName',      msg: 'Please enter your name (min 2 chars)',   check: v => v.trim().length >= 2 },
+    { id: 'leadPhone',     msg: 'Please enter a valid 10-digit mobile number', check: v => /^\d{10}$/.test(v.replace(/\D/g,'')) },
+    { id: 'leadPincode',   msg: 'Please enter a valid 6-digit pin code',  check: v => /^\d{6}$/.test(v.trim()) },
+  ];
+  fields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (!el) return;
+    const val = el.value;
+    const bad = f.check ? !f.check(val) : !val;
+    el.classList.toggle('error', bad);
+    if (bad) ok = false;
+  });
+  const email = document.getElementById('leadEmail').value.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    document.getElementById('leadEmail').classList.add('error');
+    ok = false;
+  } else {
+    document.getElementById('leadEmail').classList.remove('error');
+  }
+  return ok;
+}
+
+async function submitLead(e) {
+  e.preventDefault();
+  if (!_validate()) return;
+
+  const seg    = document.getElementById('segmentSelect');
+  const opt    = seg.options[seg.selectedIndex];
+  const cid    = parseInt(opt.getAttribute('data-cid'));
+  const catId  = parseInt(opt.getAttribute('data-catid'));
+  const catName= seg.value;
+
+  const rawSource = _getUrlParam('source') || 'Har Ghar Solar';
+  const sourceDet = `${rawSource} — /hargharsolar`;
+
+  const manualCity = (document.getElementById('manualCity')?.value || '').trim();
+
+  const payload = {
+    name:           document.getElementById('leadName').value.trim(),
+    phone:          document.getElementById('leadPhone').value.replace(/\D/g,''),
+    email:          document.getElementById('leadEmail').value.trim() || null,
+    category_id:    catId,
+    category_name:  catName,
+    source:         rawSource.slice(0, 100),
+    source_details: sourceDet,
+    looking_for:    document.getElementById('interestSelect').value || null,
+    pincode:        document.getElementById('leadPincode').value.trim(),
+    area:           _locationData.area || null,
+    city:           _locationData.city || manualCity || null,
+    state:          _locationData.state || null,
+  };
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
+
+  try {
+    const res = await fetch(`/api/v1/crm/leads/public?company_id=${cid}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      document.getElementById('leadForm').style.display = 'none';
+      document.getElementById('successBox').style.display = '';
+    } else {
+      throw new Error(data.detail || 'Submission failed');
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Try Again';
+    alert('Error: ' + (err.message || 'Something went wrong. Please try again.'));
+  }
+}
+
+function resetForm() {
+  document.getElementById('leadForm').reset();
+  document.getElementById('leadForm').style.display = '';
+  document.getElementById('successBox').style.display = 'none';
+  document.getElementById('locationGroup').style.display = 'none';
+  document.getElementById('interestGroup').style.display = 'none';
+  document.getElementById('pinStatus').textContent = '';
+  document.getElementById('manualCityGroup')?.remove();
+  _locationData = { area: '', city: '', state: '' };
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-paper-plane"></i> Get Free Quote';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── INIT ── //
+(function init() {
+  // Pre-select segment from URL param
+  const segParam = (_getUrlParam('segment') || 'Solar').trim();
+  const sel = document.getElementById('segmentSelect');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === segParam) {
+      sel.selectedIndex = i;
+      break;
+    }
+  }
+  if (sel.value) onSegmentChange();
+
+  // Attach form submit
+  document.getElementById('leadForm').addEventListener('submit', submitLead);
+
+  // Clear error on input
+  document.querySelectorAll('.form-control').forEach(el => {
+    el.addEventListener('input', () => el.classList.remove('error'));
+  });
+})();
+</script>
+</body>
+</html>

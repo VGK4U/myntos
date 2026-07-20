@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Portal — Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;min-height:100vh;background:linear-gradient(135deg,#064e3b 0%,#059669 50%,#34d399 100%);display:flex;align-items:center;justify-content:center;padding:20px}
+        .login-card{background:#fff;border-radius:20px;width:460px;max-width:100%;box-shadow:0 24px 60px rgba(0,0,0,.18);overflow:hidden}
+
+        /* Tabs */
+        .tab-bar{display:flex;border-bottom:2px solid #e5e7eb}
+        .tab-btn{flex:1;padding:14px 8px;font-size:13px;font-weight:700;border:none;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;letter-spacing:.2px}
+        .tab-btn.active{background:#fff;color:#059669;border-bottom:3px solid #059669;margin-bottom:-2px}
+        .tab-btn:not(.active){background:#f9fafb;color:#6b7280}
+        .tab-btn:not(.active):hover{background:#f0fdf4;color:#047857}
+        .tab-solar.active{color:#f59e0b;border-bottom-color:#f59e0b}
+
+        .tab-panel{display:none;padding:28px 36px 24px}
+        .tab-panel.active{display:block}
+
+        .brand{text-align:center;margin-bottom:22px}
+        .brand-logo{width:56px;height:56px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px}
+        .brand-logo-vgk{background:linear-gradient(135deg,#059669,#047857)}
+        .brand-logo-solar{background:linear-gradient(135deg,#f59e0b,#d97706)}
+        .brand-logo i{font-size:24px;color:#fff}
+        .brand h2{font-size:20px;font-weight:800;color:#111;margin-bottom:3px}
+        .brand p{font-size:12px;color:#6b7280}
+
+        .form-group{margin-bottom:16px}
+        .form-group label{display:block;font-size:11px;font-weight:700;color:#374151;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+        .input-wrap{position:relative}
+        .input-wrap i.ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:14px}
+        .form-group input{width:100%;border:1.5px solid #d1d5db;border-radius:10px;padding:11px 14px 11px 38px;font-size:14px;outline:none;transition:border-color .2s;background:#f9fafb}
+        .form-group input:focus{border-color:#059669;background:#fff}
+        .solar-input:focus{border-color:#f59e0b!important}
+
+        .btn-login{width:100%;color:#fff;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:4px}
+        .btn-vgk{background:linear-gradient(135deg,#059669,#047857)}
+        .btn-solar{background:linear-gradient(135deg,#f59e0b,#d97706)}
+        .btn-login:hover{opacity:.9}
+        .btn-login:disabled{opacity:.6;cursor:not-allowed}
+
+        .alert{border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:12px;text-align:center}
+        .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+        .alert-success{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+
+        .footer-links{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+        .footer-link{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:10px;text-decoration:none;font-size:12px;font-weight:700;transition:background .2s}
+        .fl-green{background:#f0fdf4;border:1.5px solid #6ee7b7;color:#047857}
+        .fl-gray{background:#f9fafb;border:1.5px solid #e5e7eb;color:#374151}
+        .footer-note{text-align:center;font-size:12px;color:#9ca3af;margin-top:12px}
+
+        /* Forgot Password Panel */
+        .fp-panel{display:none;margin-top:14px;border-radius:12px;padding:14px 16px}
+        .fp-panel-vgk{background:#f0fdf4;border:1.5px solid #6ee7b7}
+        .fp-panel-solar{background:#fffbeb;border:1.5px solid #fcd34d}
+        .fp-title{font-size:13px;font-weight:700;margin-bottom:12px}
+        .fp-title-vgk{color:#065f46}
+        .fp-title-solar{color:#92400e}
+        .fp-input{width:100%;padding:9px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;margin:5px 0 10px;box-sizing:border-box;background:#fff;color:#111}
+        .fp-btn-vgk{width:100%;padding:10px;background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+        .fp-btn-solar{width:100%;padding:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+        .fp-msg{margin-top:8px;font-size:13px;font-weight:600;text-align:center}
+        .forgot-link{background:none;border:none;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;margin-top:8px;display:block;text-align:center}
+        .forgot-link-vgk{color:#059669}
+        .forgot-link-solar{color:#d97706}
+        .hint{font-size:11px;color:#6b7280;margin-top:3px;background:#fff3cd;border-radius:6px;padding:6px 9px}
+    </style>
+</head>
+<body>
+<a href="/landing" onclick="event.preventDefault();sessionStorage.setItem('showLoginSelection','true');window.location.href='/landing';" style="position:fixed;top:16px;right:130px;z-index:9999;background:rgba(0,0,0,0.28);border:1.5px solid rgba(255,255,255,0.5);color:#fff;padding:9px 20px;border-radius:50px;font-size:0.82rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .25s ease;" onmouseover="this.style.background='rgba(0,0,0,0.42)'" onmouseout="this.style.background='rgba(0,0,0,0.28)'"><i class="fas fa-th"></i> All Logins</a>
+<a href="/hub" style="position:fixed;top:16px;right:20px;z-index:9999;background:rgba(0,0,0,0.28);border:1.5px solid rgba(255,255,255,0.5);color:#fff;padding:9px 20px;border-radius:50px;font-size:0.82rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .25s ease;" onmouseover="this.style.background='rgba(0,0,0,0.42)'" onmouseout="this.style.background='rgba(0,0,0,0.28)'"><i class="fas fa-home"></i> Home</a>
+
+<div class="login-card">
+    <!-- Tab bar -->
+    <div class="tab-bar">
+        <button class="tab-btn tab-vgk active" id="tabBtnVgk" onclick="switchTab('vgk')">
+            <i class="fas fa-store"></i> VGK Vendor
+        </button>
+        <button class="tab-btn tab-solar" id="tabBtnSolar" onclick="switchTab('solar')">
+            <i class="fas fa-solar-panel"></i> Solar Vendor
+        </button>
+    </div>
+
+    <!-- VGK Vendor Panel -->
+    <div class="tab-panel active" id="panelVgk">
+        <div class="brand">
+            <div class="brand-logo brand-logo-vgk"><i class="fas fa-store"></i></div>
+            <h2>VGK Vendor Portal</h2>
+            <p>VGK4U Marketplace Vendor Login</p>
+        </div>
+        <div id="vgkAlert"></div>
+        <div class="form-group">
+            <label>Username / Phone</label>
+            <div class="input-wrap">
+                <i class="ico fas fa-user"></i>
+                <input type="text" id="vgkUsername" placeholder="Phone number or email" autocomplete="username">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+                <i class="ico fas fa-lock"></i>
+                <input type="password" id="vgkPassword" placeholder="Enter password" autocomplete="current-password" onkeypress="if(event.key==='Enter')vgkLogin()">
+            </div>
+        </div>
+        <button class="btn-login btn-vgk" id="vgkLoginBtn" onclick="vgkLogin()">
+            <i class="fas fa-sign-in-alt" style="margin-right:7px"></i>Login to Vendor Portal
+        </button>
+        <button class="forgot-link forgot-link-vgk" onclick="toggleFP('vgkFP')">
+            <i class="fas fa-key" style="margin-right:4px"></i>Forgot Password?
+        </button>
+
+        <!-- VGK Forgot Password -->
+        <div class="fp-panel fp-panel-vgk" id="vgkFP">
+            <div class="fp-title fp-title-vgk"><i class="fas fa-shield-alt" style="margin-right:6px"></i>Reset via WhatsApp OTP</div>
+            <div id="vgkFP1">
+                <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Your Username / Phone</label>
+                <input class="fp-input" id="vgkFPUser" type="text" placeholder="Phone number or email">
+                <button class="fp-btn-vgk" onclick="vgkFPSend()"><i class="fas fa-paper-plane" style="margin-right:5px"></i>Send OTP to WhatsApp</button>
+            </div>
+            <div id="vgkFP2" style="display:none">
+                <div style="font-size:12px;color:#6b7280;margin-bottom:8px">OTP sent to your registered WhatsApp. Valid 10 minutes.</div>
+                <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">6-Digit OTP</label>
+                <input class="fp-input" id="vgkFPOtp" type="text" maxlength="6" placeholder="Enter OTP" style="font-size:18px;letter-spacing:6px;text-align:center">
+                <button class="fp-btn-vgk" onclick="vgkFPVerify()"><i class="fas fa-check" style="margin-right:5px"></i>Verify OTP</button>
+                <div style="text-align:center;margin-top:6px"><button type="button" onclick="vgkFPSend()" style="background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;text-decoration:underline">Resend OTP</button></div>
+            </div>
+            <div id="vgkFP3" style="display:none">
+                <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">New Password</label>
+                <input class="fp-input" id="vgkFPNew" type="password" placeholder="At least 6 characters">
+                <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Confirm Password</label>
+                <input class="fp-input" id="vgkFPConf" type="password" placeholder="Repeat password">
+                <button class="fp-btn-vgk" onclick="vgkFPReset()"><i class="fas fa-lock" style="margin-right:5px"></i>Reset Password</button>
+            </div>
+            <div class="fp-msg" id="vgkFPMsg"></div>
+        </div>
+
+        <div class="footer-links">
+            <a href="/landing" class="footer-link fl-green"><i class="fas fa-home"></i> Back to Home</a>
+            <a href="/landing" onclick="event.preventDefault();sessionStorage.setItem('showLoginSelection','true');window.location.href='/landing';" class="footer-link fl-gray"><i class="fas fa-sign-in-alt"></i> All Logins</a>
+        </div>
+        <div class="footer-note">Credentials issued by VGK4U administrator.</div>
+    </div>
+
+    <!-- Solar Vendor Panel -->
+    <div class="tab-panel" id="panelSolar">
+        <div class="brand">
+            <div class="brand-logo brand-logo-solar"><i class="fas fa-solar-panel"></i></div>
+            <h2>Solar Vendor Portal</h2>
+            <p>Har Ghar Solar — Vendor Login</p>
+        </div>
+        <div id="solarAlert"></div>
+        <div class="form-group">
+            <label>Partner / Vendor Code</label>
+            <div class="input-wrap">
+                <i class="ico fas fa-id-card"></i>
+                <input type="text" id="solarCode" class="solar-input" placeholder="e.g., SLR0001 or Mobile Number" autocomplete="username" style="text-transform:uppercase">
+            </div>
+            <div class="hint"><i class="fas fa-info-circle" style="margin-right:4px;color:#d97706"></i>Solar vendors: use your Vendor Code (e.g., SLR0001). Showroom staff: use your mobile number.</div>
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrap">
+                <i class="ico fas fa-lock"></i>
+                <input type="password" id="solarPassword" class="solar-input" placeholder="Enter password" autocomplete="current-password" onkeypress="if(event.key==='Enter')solarLogin()">
+            </div>
+        </div>
+        <button class="btn-login btn-solar" id="solarLoginBtn" onclick="solarLogin()">
+            <i class="fas fa-sign-in-alt" style="margin-right:7px"></i>Sign In — Solar Portal
+        </button>
+        <button class="forgot-link forgot-link-solar" onclick="toggleFP('solarFP')">
+            <i class="fas fa-key" style="margin-right:4px"></i>Forgot Password?
+        </button>
+
+        <!-- Solar Forgot Password -->
+        <div class="fp-panel fp-panel-solar" id="solarFP">
+            <div class="fp-title fp-title-solar"><i class="fas fa-shield-alt" style="margin-right:6px"></i>Reset via WhatsApp OTP</div>
+            <div id="solarFP1">
+                <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Your Vendor Code</label>
+                <input class="fp-input" id="solarFPUser" type="text" placeholder="e.g., SLR0001" style="text-transform:uppercase">
+                <div class="hint" style="margin-bottom:10px"><i class="fas fa-info-circle" style="margin-right:4px;color:#d97706"></i>OTP will be sent to the phone number registered with your vendor account.</div>
+                <button class="fp-btn-solar" onclick="solarFPSend()"><i class="fas fa-paper-plane" style="margin-right:5px"></i>Send OTP to WhatsApp</button>
+            </div>
+            <div id="solarFP2" style="display:none">
+                <div style="font-size:12px;color:#6b7280;margin-bottom:8px">OTP sent to your registered phone. Valid 10 minutes.</div>
+                <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">6-Digit OTP</label>
+                <input class="fp-input" id="solarFPOtp" type="text" maxlength="6" placeholder="Enter OTP" style="font-size:18px;letter-spacing:6px;text-align:center">
+                <button class="fp-btn-solar" onclick="solarFPVerify()"><i class="fas fa-check" style="margin-right:5px"></i>Verify OTP</button>
+                <div style="text-align:center;margin-top:6px"><button type="button" onclick="solarFPSend()" style="background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;text-decoration:underline">Resend OTP</button></div>
+            </div>
+            <div id="solarFP3" style="display:none">
+                <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">New Password</label>
+                <input class="fp-input" id="solarFPNew" type="password" placeholder="At least 6 characters">
+                <label style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Confirm Password</label>
+                <input class="fp-input" id="solarFPConf" type="password" placeholder="Repeat password">
+                <button class="fp-btn-solar" onclick="solarFPReset()"><i class="fas fa-lock" style="margin-right:5px"></i>Reset Password</button>
+            </div>
+            <div class="fp-msg" id="solarFPMsg"></div>
+        </div>
+
+        <div class="footer-links">
+            <a href="/landing" class="footer-link fl-green"><i class="fas fa-home"></i> Back to Home</a>
+            <a href="/landing" onclick="event.preventDefault();sessionStorage.setItem('showLoginSelection','true');window.location.href='/landing';" class="footer-link fl-gray"><i class="fas fa-sign-in-alt"></i> All Logins</a>
+        </div>
+        <div class="footer-note">Credentials issued by the Solar Vendor Administrator.</div>
+    </div>
+</div>
+
+<script>
+// ── Tab switching ────────────────────────────────────────────────────
+function switchTab(tab) {
+    document.getElementById('panelVgk').classList.toggle('active', tab === 'vgk');
+    document.getElementById('panelSolar').classList.toggle('active', tab === 'solar');
+    document.getElementById('tabBtnVgk').classList.toggle('active', tab === 'vgk');
+    document.getElementById('tabBtnSolar').classList.toggle('active', tab === 'solar');
+}
+
+function toggleFP(id) {
+    var el = document.getElementById(id);
+    el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+
+// ── VGK Vendor Login ─────────────────────────────────────────────────
+async function vgkLogin() {
+    var username = document.getElementById('vgkUsername').value.trim();
+    var password = document.getElementById('vgkPassword').value;
+    var alertBox = document.getElementById('vgkAlert');
+    var btn = document.getElementById('vgkLoginBtn');
+    if (!username || !password) {
+        alertBox.innerHTML = '<div class="alert alert-error">Username and password required.</div>';
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Logging in…';
+    try {
+        var r = await fetch('/api/v1/vendor/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({username, password})
+        });
+        var data = await r.json();
+        if (data.success && data.access_token) {
+            localStorage.setItem('vendor_token', data.access_token);
+            localStorage.setItem('vendor_info', JSON.stringify(data.vendor));
+            alertBox.innerHTML = '<div class="alert alert-success">Login successful! Redirecting…</div>';
+            setTimeout(() => window.location.href = '/vendor/portal', 700);
+        } else {
+            alertBox.innerHTML = '<div class="alert alert-error">' + (data.message || 'Invalid credentials.') + '</div>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt" style="margin-right:7px"></i>Login to Vendor Portal';
+        }
+    } catch(e) {
+        alertBox.innerHTML = '<div class="alert alert-error">Connection error. Please try again.</div>';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-in-alt" style="margin-right:7px"></i>Login to Vendor Portal';
+    }
+}
+
+// ── Solar Vendor Login ───────────────────────────────────────────────
+async function solarLogin() {
+    var code = document.getElementById('solarCode').value.trim().toUpperCase();
+    var password = document.getElementById('solarPassword').value;
+    var alertBox = document.getElementById('solarAlert');
+    var btn = document.getElementById('solarLoginBtn');
+    if (!code || !password) {
+        alertBox.innerHTML = '<div class="alert alert-error">Vendor code and password required.</div>';
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    try {
+        var r = await fetch('/api/v1/partner/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({partner_code: code, password: password})
+        });
+        var data = await r.json();
+        if (data.success && data.access_token) {
+            localStorage.setItem('partner_token', data.access_token);
+            localStorage.setItem('partner_info', JSON.stringify(data.partner));
+            document.cookie = 'partner_token=' + encodeURIComponent(data.access_token) + '; path=/; max-age=604800; SameSite=Lax';
+            alertBox.innerHTML = '<div class="alert alert-success">Login successful! Redirecting…</div>';
+            var dest = (data.partner && data.partner.category === 'VENDOR') ? '/partner/solar-vendor' : '/partner/dashboard';
+            setTimeout(() => window.location.href = dest, 800);
+        } else {
+            alertBox.innerHTML = '<div class="alert alert-error">' + (data.message || 'Invalid credentials.') + '</div>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt" style="margin-right:7px"></i>Sign In — Solar Portal';
+        }
+    } catch(e) {
+        alertBox.innerHTML = '<div class="alert alert-error">Connection error. Please try again.</div>';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-in-alt" style="margin-right:7px"></i>Sign In — Solar Portal';
+    }
+}
+
+// ── Auto-redirect if already logged in ──────────────────────────────
+(function() {
+    if (localStorage.getItem('vendor_token')) window.location.href = '/vendor/portal';
+})();
+
+// ── VGK Forgot Password ──────────────────────────────────────────────
+function vgkFPMsg(txt, c) { var e=document.getElementById('vgkFPMsg'); e.style.color=c||'#059669'; e.textContent=txt; }
+async function vgkFPSend() {
+    var uid = document.getElementById('vgkFPUser').value.trim();
+    if (!uid) { vgkFPMsg('Please enter your username or phone','#dc2626'); return; }
+    vgkFPMsg('Sending OTP…','#059669');
+    try {
+        var r = await fetch('/api/v1/password-reset/portal/vendor/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid})});
+        var d = await r.json();
+        if (d.success||r.ok) { document.getElementById('vgkFP1').style.display='none'; document.getElementById('vgkFP2').style.display='block'; vgkFPMsg('OTP sent! Check your WhatsApp.','#059669'); }
+        else { vgkFPMsg(d.detail||'Could not send OTP','#dc2626'); }
+    } catch(e){ vgkFPMsg('Network error. Try again.','#dc2626'); }
+}
+async function vgkFPVerify() {
+    var uid=document.getElementById('vgkFPUser').value.trim(), otp=document.getElementById('vgkFPOtp').value.trim();
+    if (otp.length!==6){ vgkFPMsg('Enter the 6-digit OTP','#dc2626'); return; }
+    vgkFPMsg('Verifying…','#059669');
+    try {
+        var r=await fetch('/api/v1/password-reset/portal/vendor/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid,otp_code:otp})});
+        var d=await r.json();
+        if(d.success){ document.getElementById('vgkFP2').style.display='none'; document.getElementById('vgkFP3').style.display='block'; vgkFPMsg('OTP verified! Set your new password.','#059669'); }
+        else{ vgkFPMsg(d.detail||'Invalid OTP','#dc2626'); }
+    } catch(e){ vgkFPMsg('Network error.','#dc2626'); }
+}
+async function vgkFPReset() {
+    var uid=document.getElementById('vgkFPUser').value.trim(), otp=document.getElementById('vgkFPOtp').value.trim(), np=document.getElementById('vgkFPNew').value, cp=document.getElementById('vgkFPConf').value;
+    if(np.length<6){ vgkFPMsg('Password must be at least 6 characters','#dc2626'); return; }
+    if(np!==cp){ vgkFPMsg('Passwords do not match','#dc2626'); return; }
+    vgkFPMsg('Resetting password…','#059669');
+    try {
+        var r=await fetch('/api/v1/password-reset/portal/vendor/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid,otp_code:otp,new_password:np})});
+        var d=await r.json();
+        if(d.success){ vgkFPMsg('✅ '+d.message,'#059669'); setTimeout(function(){ document.getElementById('vgkFP').style.display='none'; },3000); }
+        else{ vgkFPMsg(d.detail||'Reset failed','#dc2626'); }
+    } catch(e){ vgkFPMsg('Network error.','#dc2626'); }
+}
+
+// ── Solar Vendor Forgot Password ─────────────────────────────────────
+function solarFPMsg(txt, c) { var e=document.getElementById('solarFPMsg'); e.style.color=c||'#d97706'; e.textContent=txt; }
+async function solarFPSend() {
+    var uid=document.getElementById('solarFPUser').value.trim().toUpperCase();
+    if(!uid){ solarFPMsg('Please enter your Vendor Code','#dc2626'); return; }
+    solarFPMsg('Sending OTP…','#d97706');
+    try {
+        var r=await fetch('/api/v1/password-reset/portal/solar_vendor/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid})});
+        var d=await r.json();
+        if(d.success||r.ok){ document.getElementById('solarFP1').style.display='none'; document.getElementById('solarFP2').style.display='block'; solarFPMsg('OTP sent! Check your WhatsApp.','#059669'); }
+        else{ solarFPMsg(d.detail||'Could not send OTP','#dc2626'); }
+    } catch(e){ solarFPMsg('Network error. Try again.','#dc2626'); }
+}
+async function solarFPVerify() {
+    var uid=document.getElementById('solarFPUser').value.trim().toUpperCase(), otp=document.getElementById('solarFPOtp').value.trim();
+    if(otp.length!==6){ solarFPMsg('Enter the 6-digit OTP','#dc2626'); return; }
+    solarFPMsg('Verifying…','#d97706');
+    try {
+        var r=await fetch('/api/v1/password-reset/portal/solar_vendor/verify-otp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid,otp_code:otp})});
+        var d=await r.json();
+        if(d.success){ document.getElementById('solarFP2').style.display='none'; document.getElementById('solarFP3').style.display='block'; solarFPMsg('OTP verified! Set your new password.','#059669'); }
+        else{ solarFPMsg(d.detail||'Invalid OTP','#dc2626'); }
+    } catch(e){ solarFPMsg('Network error.','#dc2626'); }
+}
+async function solarFPReset() {
+    var uid=document.getElementById('solarFPUser').value.trim().toUpperCase(), otp=document.getElementById('solarFPOtp').value.trim(), np=document.getElementById('solarFPNew').value, cp=document.getElementById('solarFPConf').value;
+    if(np.length<6){ solarFPMsg('Password must be at least 6 characters','#dc2626'); return; }
+    if(np!==cp){ solarFPMsg('Passwords do not match','#dc2626'); return; }
+    solarFPMsg('Resetting password…','#d97706');
+    try {
+        var r=await fetch('/api/v1/password-reset/portal/solar_vendor/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:uid,otp_code:otp,new_password:np})});
+        var d=await r.json();
+        if(d.success){ solarFPMsg('✅ '+d.message,'#059669'); setTimeout(function(){ document.getElementById('solarFP').style.display='none'; },3000); }
+        else{ solarFPMsg(d.detail||'Reset failed','#dc2626'); }
+    } catch(e){ solarFPMsg('Network error.','#dc2626'); }
+}
+</script>
+</body>
+</html>

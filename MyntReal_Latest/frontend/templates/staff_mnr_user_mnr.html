@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNR — Earnings | Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="/public/css/dark-theme.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_header.js"></script>
+    <style>
+        body { background: #0f172a; min-height: 100vh; }
+        .main-content { margin-left: 260px; padding: 24px; transition: margin-left 0.3s ease; padding-top: 88px; }
+        body.sidebar-collapsed-mode .main-content { margin-left: 70px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0 !important; } }
+        .mnr-search-card { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 12px; }
+        .mnr-search-card .form-control { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; }
+        .nav-tabs { border-bottom: 1px solid rgba(255, 255, 255, 0.1); flex-wrap: nowrap; overflow-x: auto; }
+        .nav-tabs .nav-link { color: #adb5bd; border: none; border-bottom: 3px solid transparent; font-size: 0.85rem; padding: 10px 16px; white-space: nowrap; }
+        .nav-tabs .nav-link.active { color: #ffc107; border-bottom-color: #ffc107; background: transparent; }
+        .nav-tabs .nav-link:hover { color: #fff; }
+        .stat-card { background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 15px; text-align: center; }
+        .stat-value { font-size: 1.3rem; font-weight: 700; }
+        .earning-row { background: rgba(255, 255, 255, 0.03); padding: 12px 15px; margin-bottom: 6px; border-radius: 6px; border-left: 3px solid #ffc107; }
+        .table-dark-custom { --bs-table-bg: #1e293b; --bs-table-color: #1e293b; --bs-table-border-color: rgba(148,163,184,0.25); }
+        .table-dark-custom th { background: rgba(255, 193, 7, 0.15) !important; color: #ffc107 !important; font-weight: 600; }
+        .table-dark-custom td { background: #1e293b !important; color: #f1f5f9 !important; border-color: rgba(148,163,184,0.2) !important; }
+        .badge-status { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; }
+        .wallet-card { background: linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%); border-radius: 12px; padding: 20px; }
+    </style>
+</head>
+<body class="dark-theme">
+    <div id="staffSidebar"></div>
+    <div id="headerContainer"></div>
+
+    <main class="main-content" id="main-content">
+        <div class="container-fluid py-4">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-0"><i class="fas fa-coins me-2"></i>MNR — Earnings</h2>
+                    <p class="text-muted mb-0">View member income streams, wallet, and transactions</p>
+                </div>
+            </div>
+
+            <div class="mnr-search-card p-4 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <label class="form-label text-warning fw-bold"><i class="fas fa-search me-2"></i>Search MNR ID</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted">MNR</span>
+                            <input type="text" class="form-control" id="mnr-id-input" placeholder="Enter member ID" style="text-transform: uppercase;">
+                            <button class="btn btn-warning" type="button" id="search-btn"><i class="fas fa-search me-1"></i> Search</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="member-info" style="display: none;" class="p-3 bg-dark rounded">
+                            <h5 class="mb-0 text-white" id="member-name">-</h5>
+                            <small class="text-muted" id="member-id-display">-</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="content-area" style="display: none;">
+                <ul class="nav nav-tabs mb-4">
+                    <li class="nav-item"><a class="nav-link active" href="#" data-tab="earnings"><i class="fas fa-chart-pie me-1"></i>Summary</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-tab="direct"><i class="fas fa-arrow-right me-1"></i>Direct</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-tab="matching"><i class="fas fa-arrows-left-right me-1"></i>Group Performance Recognition</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-tab="ved"><i class="fas fa-layer-group me-1"></i>Ved</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-tab="guru"><i class="fas fa-om me-1"></i>Guru</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-tab="withdrawals"><i class="fas fa-money-bill-wave me-1"></i>Payout Requests</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-tab="points"><i class="fas fa-coins me-1"></i>MNR Points</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-tab="benefits"><i class="fas fa-bolt me-1"></i>EV Benefits</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-tab="wallet"><i class="fas fa-wallet me-1"></i>Wallet</a></li>
+                </ul>
+
+                <div class="row mb-4" id="summary-stats">
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value text-success" id="total-earned">₹0</div><div class="text-muted small">Total Earned</div></div></div>
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value text-info" id="direct-stat">₹0</div><div class="text-muted small">Direct</div></div></div>
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value text-warning" id="matching-stat">₹0</div><div class="text-muted small">Group Performance Recognition</div></div></div>
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value text-primary" id="ved-stat">₹0</div><div class="text-muted small">Ved</div></div></div>
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value text-danger" id="guru-stat">₹0</div><div class="text-muted small">Guru</div></div></div>
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value text-secondary" id="withdrawn-stat">₹0</div><div class="text-muted small">Withdrawn</div></div></div>
+                </div>
+
+                <div id="tab-content"></div>
+            </div>
+
+            <div id="no-member-message" class="text-center py-5">
+                <i class="fas fa-search fa-4x text-muted mb-4"></i>
+                <h4 class="text-muted">Enter an MNR ID to view earnings</h4>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260511a"></script>
+    <script>
+        let currentMnrId = null;
+        let currentTab = 'earnings';
+        let summaryData = null;
+        
+        // DC Protocol Feb 2026: Map database income types to rebranded display names
+        function getIncomeDisplayName(dbIncomeType) {
+            const rebrandMap = {
+                'Direct Referral': 'Direct Facilitation',
+                'Matching Referral': 'Group Performance Recognition',
+                'Ved Income': 'VED Leadership Recognition',
+                'Guru Dakshina': 'Mentorship Contribution Benefit'
+            };
+            return rebrandMap[dbIncomeType] || dbIncomeType;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            StaffSidebar.init();
+            StaffHeader.inject('MNR — Earnings', 'fas fa-coins');
+
+            document.getElementById('search-btn').addEventListener('click', searchMember);
+            document.getElementById('mnr-id-input').addEventListener('keypress', e => { if (e.key === 'Enter') searchMember(); });
+            
+            document.querySelectorAll('.nav-tabs .nav-link').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.nav-tabs .nav-link').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTab = this.dataset.tab;
+                    if (currentMnrId) loadTabData();
+                });
+            });
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const mnrParam = urlParams.get('mnr_id');
+            if (mnrParam) { document.getElementById('mnr-id-input').value = mnrParam; searchMember(); }
+        });
+
+        async function searchMember() {
+            let mnrId = document.getElementById('mnr-id-input').value.trim().toUpperCase();
+            if (!mnrId) return;
+            if (!mnrId.startsWith('MNR')) mnrId = 'MNR' + mnrId;
+            currentMnrId = mnrId;
+            
+            document.getElementById('member-info').style.display = 'block';
+            document.getElementById('member-id-display').textContent = mnrId;
+            document.getElementById('content-area').style.display = 'block';
+            document.getElementById('no-member-message').style.display = 'none';
+            
+            await loadSummary();
+            await loadTabData();
+        }
+
+        async function loadSummary() {
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/mnr/earnings-summary/${currentMnrId}`);
+                if (!response.ok) throw new Error('Failed to load summary');
+                const result = await response.json();
+                summaryData = result;
+                
+                document.getElementById('member-name').textContent = result.member_info?.name || currentMnrId;
+                
+                const earnings = result.data?.earnings || {};
+                const wallet = result.data?.wallet || {};
+                
+                document.getElementById('total-earned').textContent = '₹' + (earnings.total || 0).toLocaleString('en-IN');
+                document.getElementById('direct-stat').textContent = '₹' + (earnings.direct_referral || 0).toLocaleString('en-IN');
+                document.getElementById('matching-stat').textContent = '₹' + (earnings.matching_referral || 0).toLocaleString('en-IN');
+                document.getElementById('ved-stat').textContent = '₹' + (earnings.ved_income || 0).toLocaleString('en-IN');
+                document.getElementById('guru-stat').textContent = '₹' + (earnings.guru_dakshina || 0).toLocaleString('en-IN');
+                document.getElementById('withdrawn-stat').textContent = '₹' + (wallet.total_withdrawn || 0).toLocaleString('en-IN');
+            } catch (error) {
+                console.error('[DC-EARNINGS] Summary error:', error);
+            }
+        }
+
+        async function loadTabData() {
+            const content = document.getElementById('tab-content');
+            content.innerHTML = `<div class="text-center py-4"><div class="spinner-border text-warning"></div><p class="mt-2 text-muted">Loading...</p></div>`;
+            
+            const endpointMap = {
+                'earnings': `/api/v1/staff/mnr-user/mnr/earnings-summary/${currentMnrId}`,
+                'direct': `/api/v1/staff/mnr-user/mnr/earnings-summary/${currentMnrId}?income_type=direct`,
+                'matching': `/api/v1/staff/mnr-user/mnr/earnings-summary/${currentMnrId}?income_type=matching`,
+                'ved': `/api/v1/staff/mnr-user/mnr/earnings-summary/${currentMnrId}?income_type=ved`,
+                'guru': `/api/v1/staff/mnr-user/mnr/earnings-summary/${currentMnrId}?income_type=guru`,
+                'withdrawals': `/api/v1/staff/mnr-user/mnr/withdrawals/${currentMnrId}`,
+                'points': `/api/v1/staff/mnr-user/mnr/points/${currentMnrId}`,
+                'benefits': `/api/v1/staff/mnr-user/mnr/benefits/${currentMnrId}`,
+                'wallet': `/api/v1/staff/mnr-user/mnr/wallet/${currentMnrId}`
+            };
+            
+            try {
+                const response = await staffFetch(endpointMap[currentTab] || endpointMap['earnings']);
+                if (!response.ok) throw new Error('Failed to load data');
+                const result = await response.json();
+                
+                switch(currentTab) {
+                    case 'earnings': renderEarningsSummary(result); break;
+                    case 'direct':
+                    case 'matching':
+                    case 'ved':
+                    case 'guru': renderIncomeTransactions(result); break;
+                    case 'withdrawals': renderWithdrawals(result); break;
+                    case 'points': renderPoints(result); break;
+                    case 'benefits': renderBenefits(result); break;
+                    case 'wallet': renderWallet(result); break;
+                    default: content.innerHTML = '<div class="alert alert-info">Coming soon</div>';
+                }
+            } catch (error) {
+                content.innerHTML = `<div class="alert alert-danger">${escapeHTML(error.message)}</div>`;
+            }
+        }
+
+        function renderEarningsSummary(result) {
+            const earnings = result.data?.earnings || {};
+            const wallet = result.data?.wallet || {};
+            
+            document.getElementById('tab-content').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card bg-dark border-secondary">
+                            <div class="card-header bg-warning bg-opacity-10"><h6 class="mb-0 text-warning"><i class="fas fa-chart-bar me-2"></i>Income Breakdown</h6></div>
+                            <div class="card-body">
+                                <div class="earning-row d-flex justify-content-between"><span class="text-light">Direct Facilitation</span><span class="text-success fw-bold">₹${(earnings.direct_referral || 0).toLocaleString('en-IN')}</span></div>
+                                <div class="earning-row d-flex justify-content-between"><span class="text-light">Group Performance Recognition</span><span class="text-info fw-bold">₹${(earnings.matching_referral || 0).toLocaleString('en-IN')}</span></div>
+                                <div class="earning-row d-flex justify-content-between"><span class="text-light">VED Leadership Recognition</span><span class="text-primary fw-bold">₹${(earnings.ved_income || 0).toLocaleString('en-IN')}</span></div>
+                                <div class="earning-row d-flex justify-content-between"><span class="text-light">Mentorship Contribution Benefit</span><span class="text-danger fw-bold">₹${(earnings.guru_dakshina || 0).toLocaleString('en-IN')}</span></div>
+                                <hr class="border-secondary">
+                                <div class="earning-row d-flex justify-content-between"><span class="text-light fw-bold">Total Earned</span><span class="text-warning fw-bold fs-5">₹${(earnings.total || 0).toLocaleString('en-IN')}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4">
+                        <div class="card bg-dark border-secondary">
+                            <div class="card-header bg-info bg-opacity-10"><h6 class="mb-0 text-info"><i class="fas fa-wallet me-2"></i>Wallet Balances</h6></div>
+                            <div class="card-body">
+                                <div class="earning-row d-flex justify-content-between"><span class="text-light">Earning Wallet</span><span class="text-success fw-bold">₹${(wallet.earning_wallet || 0).toLocaleString('en-IN')}</span></div>
+                                <div class="earning-row d-flex justify-content-between"><span class="text-light">Withdrawable Wallet</span><span class="text-warning fw-bold">₹${(wallet.withdrawable_wallet || 0).toLocaleString('en-IN')}</span></div>
+                                <div class="earning-row d-flex justify-content-between"><span class="text-light">Upgrade Wallet</span><span class="text-info fw-bold">₹${(wallet.upgrade_wallet || 0).toLocaleString('en-IN')}</span></div>
+                                <hr class="border-secondary">
+                                <div class="earning-row d-flex justify-content-between"><span class="text-light fw-bold">Total Withdrawn</span><span class="text-secondary fw-bold">₹${(wallet.total_withdrawn || 0).toLocaleString('en-IN')}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function renderIncomeTransactions(result) {
+            const data = result.data || {};
+            const transactions = data.transactions || [];
+            const total = data.total_earned || 0;
+            const label = data.income_type_label || currentTab;
+            
+            let html = `
+                <div class="card bg-dark border-secondary mb-3">
+                    <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between">
+                        <h6 class="mb-0 text-warning"><i class="fas fa-list me-2"></i>${label} Transactions</h6>
+                        <span class="badge bg-success">Total: ₹${total.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div class="card-body p-0">`;
+            
+            if (transactions.length === 0) {
+                html += `<div class="text-center py-4 text-muted"><i class="fas fa-inbox fa-2x mb-2"></i><p>No transactions found</p></div>`;
+            } else {
+                html += `<div class="table-responsive"><table class="table table-dark-custom mb-0">
+                    <thead><tr><th>Date</th><th>From</th><th>Description</th><th>Amount</th><th>Status</th></tr></thead><tbody>`;
+                transactions.forEach(t => {
+                    const statusClass = t.status === 'Completed' ? 'success' : (t.status === 'Pending' ? 'warning' : 'secondary');
+                    html += `<tr>
+                        <td class="text-light">${t.created_at ? new Date(t.created_at).toLocaleDateString() : '-'}</td>
+                        <td class="text-light">${escapeHTML(t.from_user_name || t.from_user || '-')}</td>
+                        <td class="text-light">${escapeHTML(t.description || '-')}</td>
+                        <td class="text-success fw-bold">₹${(t.amount || 0).toLocaleString('en-IN')}</td>
+                        <td><span class="badge bg-${statusClass}">${t.status || '-'}</span></td>
+                    </tr>`;
+                });
+                html += `</tbody></table></div>`;
+            }
+            html += `</div></div>`;
+            document.getElementById('tab-content').innerHTML = html;
+        }
+
+        function renderWithdrawals(result) {
+            const withdrawals = result.data?.withdrawals || [];
+            let html = `<div class="card bg-dark border-secondary"><div class="card-header bg-success bg-opacity-10"><h6 class="mb-0 text-success"><i class="fas fa-money-bill-wave me-2"></i>Withdrawal History</h6></div><div class="card-body p-0">`;
+            
+            if (withdrawals.length === 0) {
+                html += `<div class="text-center py-4 text-muted"><i class="fas fa-inbox fa-2x mb-2"></i><p>No withdrawals found</p></div>`;
+            } else {
+                html += `<div class="table-responsive"><table class="table table-dark-custom mb-0"><thead><tr><th>Date</th><th>Amount</th><th>Deduction</th><th>Net Amount</th><th>Status</th></tr></thead><tbody>`;
+                withdrawals.forEach(w => {
+                    const statusClass = w.status === 'Approved' ? 'success' : (w.status === 'Pending' ? 'warning' : 'danger');
+                    html += `<tr>
+                        <td class="text-light">${w.request_date ? new Date(w.request_date).toLocaleDateString() : '-'}</td>
+                        <td class="text-light">₹${(w.amount || 0).toLocaleString('en-IN')}</td>
+                        <td class="text-danger">₹${(w.deduction || 0).toLocaleString('en-IN')}</td>
+                        <td class="text-success fw-bold">₹${(w.net_amount || 0).toLocaleString('en-IN')}</td>
+                        <td><span class="badge bg-${statusClass}">${w.status || '-'}</span></td>
+                    </tr>`;
+                });
+                html += `</tbody></table></div>`;
+            }
+            html += `</div></div>`;
+            document.getElementById('tab-content').innerHTML = html;
+        }
+
+        function renderPoints(result) {
+            const data = result.data || {};
+            const receiptNo = data.receipt_no || '';
+            const expiryDate = data.expiry_date ? new Date(data.expiry_date).toLocaleDateString() : '-';
+            const isCouponPaid = data.is_coupon_paid || false;
+            const packageName = data.package_name || 'Default';
+            
+            let receiptSection = '';
+            if (receiptNo) {
+                receiptSection = `
+                    <div class="col-md-12 mb-4">
+                        <div class="card bg-dark border-success">
+                            <div class="card-header bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 text-success"><i class="fas fa-file-invoice me-2"></i>Points Receipt</h6>
+                                <button class="btn btn-sm btn-outline-success" onclick="downloadPointsReceipt()">
+                                    <i class="fas fa-download me-1"></i>Download Receipt
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4"><span class="text-muted">Receipt No:</span><br><span class="text-success fw-bold fs-5">${receiptNo}</span></div>
+                                    <div class="col-md-4"><span class="text-muted">Package:</span><br><span class="text-warning fw-bold">${escapeHTML(packageName)}</span></div>
+                                    <div class="col-md-4"><span class="text-muted">Expiry Date:</span><br><span class="text-info fw-bold">${expiryDate}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            } else if (!isCouponPaid) {
+                receiptSection = `
+                    <div class="col-md-12 mb-4">
+                        <div class="alert alert-warning mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Receipt not available. Coupon payment required to generate receipt.
+                        </div>
+                    </div>`;
+            }
+            
+            document.getElementById('tab-content').innerHTML = `
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card"><div class="stat-value text-warning">${(data.total_points || data.initial_points || 0).toLocaleString()}</div><div class="text-muted">Total Points</div></div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card"><div class="stat-value text-success">${(data.total_credited || 0).toLocaleString()}</div><div class="text-muted">Credited</div></div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card"><div class="stat-value text-danger">${(data.total_consumed || data.used_points || 0).toLocaleString()}</div><div class="text-muted">Consumed</div></div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="stat-card"><div class="stat-value text-info">${(data.current_balance || data.available_points || 0).toLocaleString()}</div><div class="text-muted">Available</div></div>
+                    </div>
+                    ${receiptSection}
+                </div>`;
+        }
+        
+        function downloadPointsReceipt() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                alert('Please log in to download receipts.');
+                return;
+            }
+            fetch('/api/v1/receipt/membership-receipt/' + currentMnrId, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Failed to generate receipt');
+                return response.blob();
+            })
+            .then(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'MNR_Receipt_' + currentMnrId + '.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            })
+            .catch(function(error) {
+                console.error('Receipt download error:', error);
+                alert('Failed to download receipt. Member may not be activated or may be a Welcome Coupon member.');
+            });
+        }
+
+        function renderBenefits(result) {
+            const benefits = result.data?.benefits || [];
+            let html = `<div class="card bg-dark border-secondary"><div class="card-header bg-primary bg-opacity-10"><h6 class="mb-0 text-primary"><i class="fas fa-bolt me-2"></i>EV Benefits</h6></div><div class="card-body p-0">`;
+            
+            if (benefits.length === 0) {
+                html += `<div class="text-center py-4 text-muted"><i class="fas fa-car-battery fa-2x mb-2"></i><p>No EV benefits found</p></div>`;
+            } else {
+                html += `<div class="table-responsive"><table class="table table-dark-custom mb-0"><thead><tr><th>Benefit</th><th>Value</th><th>Status</th><th>Date</th></tr></thead><tbody>`;
+                benefits.forEach(b => {
+                    html += `<tr>
+                        <td class="text-light">${escapeHTML(b.benefit_name || b.name || '-')}</td>
+                        <td class="text-success">₹${(b.value || 0).toLocaleString('en-IN')}</td>
+                        <td><span class="badge bg-${b.status === 'claimed' ? 'success' : 'warning'}">${b.status || '-'}</span></td>
+                        <td class="text-light">${b.claimed_at ? new Date(b.claimed_at).toLocaleDateString() : '-'}</td>
+                    </tr>`;
+                });
+                html += `</tbody></table></div>`;
+            }
+            html += `</div></div>`;
+            document.getElementById('tab-content').innerHTML = html;
+        }
+
+        function renderWallet(result) {
+            const data = result.data || {};
+            const wallet = data.wallet || {};
+            const transactions = data.recent_transactions || [];
+            
+            let html = `
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-3">
+                        <div class="wallet-card"><div class="text-muted small mb-1">Earning Wallet</div><div class="fs-3 text-success fw-bold">₹${(wallet.earning_wallet || 0).toLocaleString('en-IN')}</div></div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="wallet-card"><div class="text-muted small mb-1">Withdrawable Wallet</div><div class="fs-3 text-warning fw-bold">₹${(wallet.withdrawable_wallet || 0).toLocaleString('en-IN')}</div></div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <div class="wallet-card"><div class="text-muted small mb-1">Upgrade Wallet</div><div class="fs-3 text-info fw-bold">₹${(wallet.upgrade_wallet || 0).toLocaleString('en-IN')}</div></div>
+                    </div>
+                </div>`;
+            
+            if (transactions.length > 0) {
+                html += `<div class="card bg-dark border-secondary"><div class="card-header"><h6 class="mb-0 text-white">Recent Transactions</h6></div><div class="card-body p-0">
+                    <div class="table-responsive"><table class="table table-dark-custom mb-0"><thead><tr><th>Date</th><th>Type</th><th>Amount</th></tr></thead><tbody>`;
+                transactions.forEach(t => {
+                    const txDate = t.created_at ? new Date(t.created_at).toLocaleDateString() : '-';
+                    const txType = t.transaction_type === 'withdrawal' ? 'Withdrawal' : (getIncomeDisplayName(t.income_type) || 'Credit');
+                    html += `<tr><td class="text-light">${txDate}</td><td class="text-light">${escapeHTML(txType)}</td><td class="text-success">₹${(t.amount || 0).toLocaleString('en-IN')}</td></tr>`;
+                });
+                html += `</tbody></table></div></div>`;
+            }
+            
+            document.getElementById('tab-content').innerHTML = html;
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

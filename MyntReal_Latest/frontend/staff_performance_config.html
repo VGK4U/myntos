@@ -1,0 +1,2407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performance Configuration & Report — MNR Staff</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+:root {
+  --accent: #3b82f6;
+  --accent-light: #eff6ff;
+  --green: #16a34a;
+  --green-light: #f0fdf4;
+  --red: #dc2626;
+  --red-light: #fef2f2;
+  --amber: #d97706;
+  --amber-light: #fffbeb;
+  --gold: #b45309;
+  --text: #1e293b;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --card: #ffffff;
+  --bg: #f1f5f9;
+  --header-bg: #ffffff;
+  --role-hdr: #f8fafc;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; font-size: 14px; }
+
+/* ── Page Header ── */
+.page-hdr { background: var(--header-bg); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.page-hdr h4 { font-weight: 700; color: var(--text); margin: 0; font-size: 1rem; }
+.back-btn { color: var(--muted); text-decoration: none; font-size: 0.82rem; display: flex; align-items: center; gap: 5px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; transition: all .15s; background: #fff; }
+.back-btn:hover { border-color: var(--accent); color: var(--accent); }
+.access-tag { margin-left: auto; font-size: 0.76rem; color: var(--muted); background: var(--accent-light); padding: 3px 10px; border-radius: 20px; border: 1px solid #bfdbfe; }
+
+/* ── Tabs ── */
+.tab-nav { background: #fff; border-bottom: 1px solid var(--border); display: flex; padding: 0 20px; gap: 2px; }
+.tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 11px 20px; font-size: 0.87rem; font-weight: 600; color: var(--muted); cursor: pointer; margin-bottom: -1px; transition: all .15s; }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-btn:hover:not(.active) { color: var(--text); }
+.tab-pane { display: none; padding: 20px 24px; }
+.tab-pane.active { display: block; }
+
+/* ── Cards ── */
+.card-box { background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+.card-hdr { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; border-radius: 10px 10px 0 0; background: #fafbfc; }
+.card-hdr h6 { font-weight: 700; color: var(--text); margin: 0; font-size: 0.88rem; }
+
+/* ── KPI Config Table ── */
+.kpi-tbl { width: 100%; border-collapse: collapse; }
+.kpi-tbl th { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; padding: 9px 12px; border-bottom: 1px solid var(--border); font-weight: 600; background: #f8fafc; white-space: nowrap; }
+.kpi-tbl td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 0.87rem; }
+.kpi-tbl tr:last-child td { border-bottom: none; }
+.kpi-tbl tr.row-disabled td { opacity: .45; }
+.kpi-tbl tr:hover td { background: #f8fafc; }
+.kpi-check { width: 17px; height: 17px; cursor: pointer; accent-color: var(--accent); }
+.kpi-name { font-weight: 600; color: var(--text); }
+.kpi-desc { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
+.num-inp { border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 5px 8px; font-size: 0.84rem; width: 88px; text-align: right; background: #fff; }
+.num-inp:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+.num-inp:disabled { opacity: .35; cursor: not-allowed; background: #f8fafc; }
+.unit-tag { font-size: 0.74rem; background: var(--accent-light); color: #1d4ed8; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+.wt-bar { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; display: flex; align-items: center; gap: 10px; }
+.wt-val { font-size: 1.35rem; font-weight: 800; transition: color .2s; }
+.wt-ok { color: var(--green); }
+.wt-warn { color: var(--amber); }
+.wt-err { color: var(--red); }
+.sub-row { background: var(--accent-light); border-top: 1px dashed var(--border); padding: 7px 12px 7px 40px; display: none; }
+.sub-row.show { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.sub-lbl { font-size: 0.78rem; color: var(--muted); }
+.btn-save { background: var(--accent); border: none; color: #fff; padding: 8px 22px; border-radius: 7px; font-weight: 700; font-size: 0.84rem; cursor: pointer; transition: opacity .15s; }
+.btn-save:hover { opacity: .85; }
+.btn-save:disabled { opacity: .4; cursor: not-allowed; }
+.info-note { font-size: 0.78rem; color: var(--muted); padding: 6px 16px 10px; display: flex; align-items: flex-start; gap: 6px; }
+
+/* ── Employee Targets Table ── */
+.emp-tbl-wrap { overflow: auto; max-height: calc(100vh - 195px); }
+.emp-tbl { width: 100%; border-collapse: collapse; }
+.emp-tbl th { font-size: 0.70rem; text-transform: uppercase; letter-spacing: .04em; padding: 7px 6px; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--muted); background: #f8fafc; white-space: nowrap; text-align: center; }
+.emp-tbl td { padding: 6px 6px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 0.83rem; text-align: center; }
+.emp-tbl tr.role-hdr-row td { background: #eff6ff; font-weight: 700; color: var(--accent); font-size: 0.77rem; text-transform: uppercase; letter-spacing: .06em; padding: 7px 10px; border-bottom: 1px solid #bfdbfe; }
+.emp-tbl tr:not(.role-hdr-row):hover td { background: #f8fafc; }
+/* ── Sticky header rows (top set by JS) ── */
+.emp-tbl thead th, .emp-tbl thead td { position: sticky; z-index: 5; }
+/* ── Bulk row in thead ── */
+.emp-tbl thead tr.bulk-row td, .emp-tbl thead tr.bulk-row th { background: linear-gradient(180deg,#eff6ff,#f8fafc); border-bottom: 2px solid var(--accent); }
+/* ── Freeze-column shadow on last frozen col ── */
+.emp-tbl .sc-last { box-shadow: 2px 0 6px -2px rgba(30,58,95,.18); }
+.emp-name-cell { font-weight: 600; color: var(--text); text-align:left; white-space:nowrap; }
+.emp-code-cell { font-size: 0.72rem; color: var(--muted); font-family: monospace; }
+/* KPI 3-col sub-headers */
+.kpi-main-hdr { font-weight:700; text-align:center; border-left:2px solid var(--accent); background:var(--accent-light); color:var(--accent); font-size:0.72rem; padding:7px 4px 3px; }
+.kpi-subhdr { font-size:0.63rem; font-weight:600; text-align:center; padding:3px 4px 6px; color:var(--muted); white-space:nowrap; }
+.kpi-subhdr.first { border-left:2px solid var(--accent); }
+.kpi-td-first { border-left:2px solid #e0eaff; padding-left:6px; }
+/* Per-cell inputs */
+.tgt-chk { width:15px; height:15px; accent-color:var(--accent); cursor:pointer; }
+.tgt-mini { border:1px solid var(--border); border-radius:4px; padding:3px 5px; font-size:0.78rem; width:58px; text-align:right; background:#fff; color:var(--text); }
+.tgt-mini:focus { outline:none; border-color:var(--accent); }
+.tgt-mini.custom-v { border-color:var(--accent); background:var(--accent-light); font-weight:600; }
+.tgt-mini.cf-v { border-color:#a855f7; background:#faf5ff; font-weight:600; }
+.tgt-mini:disabled { opacity:.35; cursor:not-allowed; background:#f8fafc; }
+/* Row checkbox */
+.emp-row-chk { width:15px; height:15px; accent-color:var(--accent); cursor:pointer; }
+/* Bulk apply row */
+.bulk-row td { background:linear-gradient(180deg,#eff6ff,#f8fafc); border-bottom:2px solid var(--accent); font-size:0.75rem; padding:5px 4px; }
+.bulk-lbl { font-size:0.72rem; font-weight:700; color:var(--accent); white-space:nowrap; }
+.bulk-mini { border:1px solid #93c5fd; border-radius:4px; padding:3px 5px; font-size:0.78rem; width:58px; text-align:right; background:#eff6ff; color:var(--text); }
+.bulk-mini:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px #bfdbfe; }
+/* Carry-forward banner */
+.cf-banner { background:#f5f3ff; border:1px solid #c4b5fd; border-radius:8px; padding:8px 14px; font-size:0.78rem; color:#6d28d9; display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+/* Total weight chip */
+.tw-chip { font-weight:800; font-size:0.83rem; white-space:nowrap; padding:2px 8px; border-radius:12px; display:inline-block; }
+.tw-ok  { background:var(--green-light); color:var(--green); }
+.tw-warn{ background:var(--amber-light); color:var(--amber); }
+.tw-err { background:var(--red-light); color:var(--red); }
+/* Dept pill */
+.dept-pill { font-size:0.72rem; background:#f1f5f9; padding:2px 8px; border-radius:10px; color:var(--muted); white-space:nowrap; }
+
+/* ── Filter Bar ── */
+.filter-bar { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.filter-bar label { font-size: 0.76rem; color: var(--muted); display: block; margin-bottom: 3px; font-weight: 600; }
+.filter-sel { border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 0.84rem; background: #fff; color: var(--text); }
+.filter-sel:focus { outline: none; border-color: var(--accent); }
+.btn-apply { background: var(--accent); border: none; color: #fff; padding: 7px 18px; border-radius: 7px; font-weight: 700; font-size: 0.84rem; cursor: pointer; }
+.btn-apply:hover { opacity: .85; }
+.btn-reset { background: #fff; border: 1px solid var(--border); color: var(--muted); padding: 7px 14px; border-radius: 7px; font-size: 0.84rem; cursor: pointer; }
+.btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Summary Strip ── */
+.summary-strip { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px; margin-bottom: 14px; display: none; }
+.summary-strip.show { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+.ss-item { display: flex; flex-direction: column; }
+.ss-lbl { font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.ss-val { font-size: 1.05rem; font-weight: 800; color: var(--text); }
+
+/* ── Report Table ── */
+.rpt-tbl-wrap { overflow-x: auto; }
+.rpt-tbl { width: 100%; border-collapse: collapse; min-width: 900px; }
+.rpt-tbl th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; padding: 9px 10px; border-bottom: 2px solid var(--border); font-weight: 600; color: var(--muted); background: #f8fafc; white-space: nowrap; text-align: center; }
+.rpt-tbl th:nth-child(2), .rpt-tbl th:nth-child(3) { text-align: left; }
+.rpt-tbl td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; font-size: 0.85rem; text-align: center; }
+.rpt-tbl td:nth-child(2), .rpt-tbl td:nth-child(3) { text-align: left; }
+.rpt-tbl tr.role-group-row td { background: #eff6ff; font-weight: 700; color: var(--accent); font-size: 0.78rem; padding: 7px 10px; border-top: 2px solid #bfdbfe; border-bottom: 1px solid #bfdbfe; letter-spacing: .05em; text-transform: uppercase; }
+.rpt-tbl tr:not(.role-group-row):hover td { background: #f8fafc; cursor: pointer; }
+
+/* ── Rank Badge ── */
+.rank-b { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-weight: 800; font-size: 0.78rem; }
+.rank-1 { background: linear-gradient(135deg,#f59e0b,#d97706); color: #fff; }
+.rank-2 { background: linear-gradient(135deg,#9ca3af,#6b7280); color: #fff; }
+.rank-3 { background: linear-gradient(135deg,#cd7f32,#a0522d); color: #fff; }
+.rank-n { background: #f1f5f9; color: var(--muted); }
+
+/* ── Score Chip ── */
+.sc { display: inline-flex; flex-direction: column; align-items: center; min-width: 56px; padding: 3px 6px; border-radius: 6px; font-size: 0.82rem; line-height: 1.3; }
+.sc .sc-pct { font-weight: 800; font-size: 0.88rem; }
+.sc .sc-actual { font-size: 0.68rem; color: inherit; opacity: .8; }
+.sc-green { background: var(--green-light); color: var(--green); border: 1px solid #bbf7d0; }
+.sc-amber { background: var(--amber-light); color: var(--amber); border: 1px solid #fde68a; }
+.sc-red { background: var(--red-light); color: var(--red); border: 1px solid #fecaca; }
+.sc-gold { background: linear-gradient(135deg,#fef3c7,#fde68a); color: var(--gold); border: 1px solid #fcd34d; }
+.sc-none { color: #cbd5e1; font-size: 0.8rem; }
+.overall-chip { font-size: 1rem; font-weight: 800; padding: 4px 10px; border-radius: 8px; }
+
+/* ── Dept Pill ── */
+.dept-pill { font-size: 0.72rem; background: #eff6ff; color: #1d4ed8; border-radius: 10px; padding: 2px 7px; font-weight: 600; }
+
+/* ── View Btn ── */
+.view-btn { background: var(--accent-light); border: 1px solid #bfdbfe; color: var(--accent); padding: 3px 10px; border-radius: 5px; font-size: 0.76rem; cursor: pointer; font-weight: 600; }
+.view-btn:hover { background: #dbeafe; }
+
+/* ── Loading / Empty ── */
+.loading-ring { display: inline-block; width: 22px; height: 22px; border: 3px solid #e2e8f0; border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-st { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-st i { font-size: 2.2rem; margin-bottom: 10px; display: block; opacity: .4; }
+
+/* ── Modal ── */
+.modal-ov { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 16px; opacity: 0; pointer-events: none; transition: opacity .2s; }
+.modal-ov.open { opacity: 1; pointer-events: all; }
+.modal-bx { background: #fff; border: 1px solid var(--border); border-radius: 12px; width: 100%; max-width: 660px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+.modal-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: #fff; z-index: 1; border-radius: 12px 12px 0 0; }
+.modal-head h5 { margin: 0; font-weight: 700; font-size: 0.95rem; color: var(--text); }
+.modal-close { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+.modal-close:hover { background: #f1f5f9; color: var(--text); }
+.modal-bd { padding: 18px; }
+.kd-row { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+.kd-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.kd-name { font-weight: 700; font-size: 0.88rem; color: var(--text); }
+.kd-wt { font-size: 0.75rem; color: var(--muted); background: #e2e8f0; padding: 2px 8px; border-radius: 10px; }
+.kd-custom-tgt { font-size: 0.72rem; background: var(--accent-light); color: var(--accent); border: 1px solid #bfdbfe; border-radius: 10px; padding: 1px 7px; margin-left: 6px; font-weight: 600; }
+.prog-wrap { height: 8px; background: #e2e8f0; border-radius: 8px; overflow: hidden; margin: 6px 0; }
+.prog-fill { height: 100%; border-radius: 8px; transition: width .6s ease; }
+.fill-green { background: linear-gradient(90deg,#059669,#10b981); }
+.fill-amber { background: linear-gradient(90deg,#d97706,#f59e0b); }
+.fill-red { background: linear-gradient(90deg,#dc2626,#ef4444); }
+.fill-gold { background: linear-gradient(90deg,#b45309,#f59e0b,#fbbf24); }
+.kd-nums { display: flex; align-items: center; justify-content: space-between; font-size: 0.78rem; color: var(--muted); }
+.bonus-badge { background: #fef3c7; border: 1px solid #fcd34d; color: var(--gold); font-size: 0.7rem; padding: 1px 7px; border-radius: 10px; font-weight: 700; margin-left: 6px; }
+
+/* ── Toast ── */
+.toast-stack { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 7px; }
+.t-msg { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; font-size: 0.84rem; box-shadow: 0 4px 20px rgba(0,0,0,.1); min-width: 220px; transition: opacity .3s; }
+.t-msg.success { border-left: 4px solid var(--green); }
+.t-msg.error { border-left: 4px solid var(--red); }
+.t-msg.info { border-left: 4px solid var(--accent); }
+
+/* ── Access Denied ── */
+.access-denied { text-align: center; padding: 60px 20px; color: var(--muted); }
+.access-denied i { font-size: 3rem; display: block; margin-bottom: 14px; color: var(--red); opacity: .6; }
+
+/* ── Layout ── */
+.main-content { min-height: 100vh; transition: margin-left .3s; }
+.content-area  { padding: 0; }
+
+/* ── Helpers ── */
+.fw7 { font-weight: 700; }
+.text-muted { color: var(--muted) !important; }
+</style>
+</head>
+<body>
+
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+
+<!-- Access Denied -->
+<div id="access-denied-msg" class="access-denied" style="display:none;">
+  <i class="fa fa-lock"></i>
+  <h5 style="color:var(--text);">Access Restricted</h5>
+  <p>This page is for VGK Mentor (MR10001) and Executive Assistant (EA) roles only.</p>
+</div>
+
+<!-- Main Content -->
+<div id="main-content" style="display:none;">
+
+  <!-- Tab Nav -->
+  <div class="tab-nav">
+    <button class="tab-btn active" id="tabbtn-targets" onclick="switchTab('targets')"><i class="fa fa-bullseye me-2"></i>Employee Targets</button>
+    <button class="tab-btn" id="tabbtn-report" onclick="switchTab('report')"><i class="fa fa-table me-2"></i>Performance Report</button>
+    <button class="tab-btn" id="tabbtn-incentive" onclick="switchTab('incentive')" style="display:none;"><i class="fa fa-gift me-2"></i>Incentive Config</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB 1: Employee Targets -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-targets" class="tab-pane active">
+    <div class="filter-bar">
+      <div>
+        <label>Month</label>
+        <select id="tgt-month" class="filter-sel" style="width:120px;">
+          <option value="0">All / Default</option>
+          <option value="1">January</option><option value="2">February</option>
+          <option value="3">March</option><option value="4">April</option>
+          <option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option>
+          <option value="9">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+      </div>
+      <div>
+        <label>Year</label>
+        <select id="tgt-year" class="filter-sel" style="width:90px;"></select>
+      </div>
+      <div>
+        <label>Company</label>
+        <select id="tgt-company" class="filter-sel" style="width:150px;">
+          <option value="">All Companies</option>
+        </select>
+      </div>
+      <div>
+        <label>Department</label>
+        <select id="tgt-dept" class="filter-sel" style="width:150px;">
+          <option value="">All Departments</option>
+        </select>
+      </div>
+      <button class="btn-apply" onclick="loadTargets()" style="align-self:flex-end;">
+        <i class="fa fa-search me-1"></i>Load
+      </button>
+      <div style="margin-left:auto;display:flex;align-items:flex-end;gap:10px;">
+        <span style="font-size:0.73rem;color:var(--muted);margin-bottom:10px;line-height:1.4;">
+          <span style="color:var(--accent);font-weight:700;">■</span> Custom &nbsp;
+          <span style="color:var(--muted);font-weight:700;">□</span> Global default
+        </span>
+        <button class="btn-apply" id="add-custom-kpi-btn" onclick="openAddCustomKpi()"
+          style="background:#7c3aed;color:#fff;border-color:#7c3aed;margin-bottom:0;">
+          <i class="fa fa-plus me-1"></i>Add Metric
+        </button>
+        <button class="btn-save" id="save-targets-btn" onclick="saveTargets()">
+          <i class="fa fa-save me-1"></i>Save All Targets
+        </button>
+      </div>
+    </div>
+
+    <div id="cf-banner" class="cf-banner" style="display:none;">
+      <i class="fa fa-magic"></i>
+      <span id="cf-banner-text">Pre-filled from previous month — save to confirm for this month.</span>
+    </div>
+
+    <div class="card-box">
+      <div class="card-hdr">
+        <h6><i class="fa fa-users me-2" style="color:var(--accent);"></i>Per-Employee KPI Targets</h6>
+        <span id="tgt-count" style="font-size:0.78rem;color:var(--muted);"></span>
+      </div>
+      <div class="emp-tbl-wrap">
+        <table class="emp-tbl" id="targets-table">
+          <thead id="tgt-thead">
+            <tr><th colspan="20" class="empty-st">Loading…</th></tr>
+          </thead>
+          <tbody id="tgt-tbody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB 3: Performance Report -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-report" class="tab-pane">
+    <div class="filter-bar">
+      <div>
+        <label>Month</label>
+        <select id="rpt-month" class="filter-sel" style="width:130px;">
+          <option value="1">January</option>
+          <option value="2">February</option>
+          <option value="3">March</option>
+          <option value="4">April</option>
+          <option value="5">May</option>
+          <option value="6">June</option>
+          <option value="7">July</option>
+          <option value="8">August</option>
+          <option value="9">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+      </div>
+      <div>
+        <label>Year</label>
+        <select id="rpt-year" class="filter-sel" style="width:100px;">
+        </select>
+      </div>
+      <div>
+        <label>Company</label>
+        <select id="rpt-company" class="filter-sel" style="width:155px;">
+          <option value="">All Companies</option>
+        </select>
+      </div>
+      <div>
+        <label>Department</label>
+        <select id="rpt-dept" class="filter-sel" style="width:155px;">
+          <option value="">All Departments</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:6px;">
+        <label style="margin-bottom:8px;display:flex;align-items:center;gap:5px;cursor:pointer;font-size:0.78rem;color:var(--muted);">
+          <input type="checkbox" id="rpt-include-self" style="accent-color:var(--accent);"> Include VGK Mentor
+        </label>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:8px;">
+        <button class="btn-apply" onclick="loadReport()"><i class="fa fa-play me-1"></i>Apply</button>
+        <button class="btn-reset" onclick="resetReport()"><i class="fa fa-undo me-1"></i>Reset</button>
+      </div>
+    </div>
+
+    <!-- Summary strip -->
+    <div class="summary-strip" id="rpt-summary">
+      <div class="ss-item"><div class="ss-lbl">Employees</div><div class="ss-val" id="ss-total">—</div></div>
+      <div class="ss-item"><div class="ss-lbl">Avg Score</div><div class="ss-val" id="ss-avg">—</div></div>
+      <div class="ss-item"><div class="ss-lbl">Top Performer</div><div class="ss-val" id="ss-top">—</div></div>
+      <div class="ss-item"><div class="ss-lbl">Period</div><div class="ss-val" id="ss-period">—</div></div>
+    </div>
+
+    <div class="card-box">
+      <div class="card-hdr">
+        <h6 id="rpt-title"><i class="fa fa-table me-2" style="color:var(--accent);"></i>Performance Report</h6>
+        <div id="rpt-loading" style="display:none;"><div class="loading-ring"></div></div>
+      </div>
+      <div class="rpt-tbl-wrap">
+        <table class="rpt-tbl">
+          <thead id="rpt-thead"></thead>
+          <tbody id="rpt-tbody">
+            <tr><td colspan="10" class="empty-st">
+              <i class="fa fa-chart-bar"></i>
+              Select month, year and click Apply to generate the report.
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- TAB 3: Incentive Config -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="tab-incentive" class="tab-pane">
+    <div class="filter-bar">
+      <div>
+        <label>Month</label>
+        <select id="inc-month" class="filter-sel" style="width:130px;">
+          <option value="1">January</option><option value="2">February</option>
+          <option value="3">March</option><option value="4">April</option>
+          <option value="5">May</option><option value="6">June</option>
+          <option value="7">July</option><option value="8">August</option>
+          <option value="9">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+      </div>
+      <div>
+        <label>Year</label>
+        <select id="inc-year" class="filter-sel" style="width:100px;"></select>
+      </div>
+      <div>
+        <label>Company</label>
+        <select id="inc-company" class="filter-sel" style="width:165px;">
+          <option value="0" selected>All Companies</option>
+          <option value="1">Real Dreams</option>
+          <option value="2">Zynova Mobility</option>
+          <option value="3">MNR Mega</option>
+          <option value="4">MyntReal LLP</option>
+          <option value="5">Mynt Real LLP</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:8px;">
+        <button class="btn-apply" onclick="applyIncentiveFilters()"><i class="fa fa-play me-1"></i>Apply</button>
+      </div>
+      <div id="inc-admin-add-btn" style="display:none;margin-left:auto;align-self:flex-end;">
+        <div style="display:flex;gap:8px;">
+          <button id="inc-copy-btn" onclick="copyToNextMonth()" style="padding:8px 16px;background:#0891b2;color:#fff;border:none;border-radius:6px;font-size:0.84rem;font-weight:600;cursor:pointer;">
+            <i class="fa fa-copy me-1"></i>Copy to Next Month
+          </button>
+          <button onclick="openIncentiveAddModal()" style="padding:8px 16px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:0.84rem;font-weight:600;cursor:pointer;">
+            <i class="fa fa-plus me-1"></i>Add Row
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Incentive Rates Config Table -->
+    <div class="card-box" style="margin-bottom:18px;">
+      <div class="card-hdr">
+        <h6><i class="fa fa-sliders-h me-2" style="color:#7c3aed;"></i>Incentive Rate Configuration</h6>
+        <div id="inc-loading" style="display:none;"><div class="loading-ring"></div></div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.84rem;" id="inc-config-table">
+          <thead>
+            <tr style="background:#f8f7ff;border-bottom:2px solid #e0d7ff;">
+              <th style="padding:10px 12px;text-align:left;font-weight:700;color:#4c1d95;">Category</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Min Target</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Self Source</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Company Leads</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#059669;">Direct Work</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Type</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Bonus Trigger</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:700;color:#4c1d95;">Multiplier</th>
+              <th id="inc-admin-col" style="padding:10px 12px;text-align:center;display:none;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inc-config-body">
+            <tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af;">Select month and click Apply</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Incentive Min Targets per Employee -->
+    <div class="card-box" id="inc-emp-tgt-box" style="margin-bottom:18px;display:none;">
+      <div class="card-hdr" style="flex-wrap:wrap;gap:8px;">
+        <h6 style="margin:0;"><i class="fa fa-user-check me-2" style="color:#059669;"></i>Incentive Min Targets per Employee</h6>
+        <span style="font-size:0.75rem;color:#6b7280;align-self:center;">Total leads (self+company+direct) must meet target before incentive is paid. Default: 2</span>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button id="inc-tgt-copy-btn" onclick="copyIncTargetsToNextMonth()"
+            style="padding:6px 14px;background:#0891b2;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;">
+            <i class="fa fa-copy me-1"></i>Copy to Next Month
+          </button>
+          <button onclick="saveIncEmpTargets()"
+            style="padding:6px 14px;background:#059669;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;">
+            <i class="fa fa-save me-1"></i>Save
+          </button>
+        </div>
+      </div>
+      <div style="overflow-x:auto;margin-top:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="inc-emp-tgt-table">
+          <thead id="inc-emp-tgt-thead">
+            <tr><th colspan="20" style="text-align:center;padding:20px;color:#9ca3af;">Apply filters and click Apply to load</th></tr>
+          </thead>
+          <tbody id="inc-emp-tgt-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Achievement Calculation -->
+    <div class="card-box">
+      <div class="card-hdr" style="flex-wrap:wrap;gap:8px;">
+        <h6 style="margin:0;"><i class="fa fa-trophy me-2" style="color:#d97706;"></i>Live Achievement &amp; Earnings</h6>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:0.78rem;font-weight:600;color:#6b7280;white-space:nowrap;">Employee</label>
+            <select id="ach-emp-filter" class="filter-sel" style="min-width:180px;font-size:0.8rem;"
+                    onchange="loadAchievements()">
+              <option value="">All Employees</option>
+            </select>
+          </div>
+          <button onclick="loadAchievements()" style="padding:5px 14px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;">
+            <i class="fa fa-sync me-1"></i>Refresh
+          </button>
+        </div>
+      </div>
+      <div id="inc-ach-info" style="font-size:0.8rem;color:#6b7280;padding:6px 0 10px;display:none;"></div>
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem;" id="inc-ach-table">
+          <thead>
+            <tr style="background:#fffbeb;border-bottom:2px solid #fde68a;">
+              <th style="padding:9px 12px;text-align:left;">Employee</th>
+              <th style="padding:9px 12px;text-align:center;">ETC Students</th>
+              <th style="padding:9px 12px;text-align:center;">Solar</th>
+              <th style="padding:9px 12px;text-align:center;">B2C</th>
+              <th style="padding:9px 12px;text-align:center;">B2B New</th>
+              <th style="padding:9px 12px;text-align:center;">B2B Exist.</th>
+              <th style="padding:9px 12px;text-align:center;">Insurance</th>
+              <th style="padding:9px 12px;text-align:right;font-weight:700;color:#92400e;">Total Earned</th>
+            </tr>
+          </thead>
+          <tbody id="inc-ach-body">
+            <tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af;"><div class="loading-ring"></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-content -->
+</div><!-- /outer main-content -->
+
+<!-- Incentive Edit Modal -->
+<div class="modal-ov" id="inc-modal" onclick="if(event.target===this)closeIncModal()">
+  <div class="modal-bx" style="max-width:520px;width:95%;">
+    <div class="modal-head">
+      <h5 id="inc-modal-title">Edit Incentive Config</h5>
+      <button class="modal-close" onclick="closeIncModal()"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="modal-bd" style="padding:20px;">
+      <input type="hidden" id="inc-edit-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div style="grid-column:1/-1;">
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Category (Signup Category)</label>
+          <select id="inc-edit-cat-select" class="filter-sel" style="width:100%;">
+            <option value="">-- Select Category --</option>
+          </select>
+          <div id="inc-edit-cat-display" style="display:none;padding:8px 10px;background:#f8f7ff;border:1px solid #c4b5fd;border-radius:6px;font-weight:600;color:#4c1d95;font-size:0.85rem;"></div>
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Min Target</label>
+          <input id="inc-edit-min-target" type="number" class="filter-sel" style="width:100%;" min="0" step="any">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Target Unit</label>
+          <select id="inc-edit-min-unit" class="filter-sel" style="width:100%;">
+            <option value="count">Count (units)</option>
+            <option value="amount">Amount (₹)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Incentive Type</label>
+          <select id="inc-edit-type" class="filter-sel" style="width:100%;">
+            <option value="percentage">Percentage (%)</option>
+            <option value="fixed_per_unit">Fixed per Unit (₹)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Self Source Rate</label>
+          <input id="inc-edit-rate-no" type="number" class="filter-sel" style="width:100%;" min="0" step="any">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Company Leads Rate</label>
+          <input id="inc-edit-rate-wi" type="number" class="filter-sel" style="width:100%;" min="0" step="any">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;color:#059669;">Direct Work Rate</label>
+          <input id="inc-edit-rate-dw" type="number" class="filter-sel" style="width:100%;border-color:#059669;" min="0" step="any" placeholder="0">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Bonus Trigger (optional)</label>
+          <input id="inc-edit-bonus-trig" type="number" class="filter-sel" style="width:100%;" min="0" step="any" placeholder="Leave blank for none">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px;">Bonus Multiplier</label>
+          <input id="inc-edit-bonus-mul" type="number" class="filter-sel" style="width:100%;" min="1" step="0.01" value="1.20">
+        </div>
+      </div>
+      <p id="inc-modal-err" style="color:#ef4444;font-size:0.8rem;min-height:16px;margin:0;"></p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+        <button onclick="closeIncModal()" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:0.88rem;">Cancel</button>
+        <button onclick="saveIncentiveRow()" style="padding:8px 18px;border:none;border-radius:6px;background:#7c3aed;color:#fff;cursor:pointer;font-size:0.88rem;font-weight:600;">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-ov" id="detail-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-bx">
+    <div class="modal-head">
+      <h5 id="modal-title">Performance Breakdown</h5>
+      <button class="modal-close" onclick="closeModal()"><i class="fa fa-times"></i></button>
+    </div>
+    <div class="modal-bd" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-stack" id="toast-stack"></div>
+
+<script src="/public/js/menu-master.js?v=20260503m"></script>
+<script>
+const API = '/api/v1';
+let configData = [];
+let targetData = { employees: [], config: [] };
+let reportData = [];
+let reportConfig = [];
+let _targetChanges = {};
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function getToken() {
+  return localStorage.getItem('staff_token') || getCookie('staff_token');
+}
+function getCookie(n) {
+  const v = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)');
+  return v ? v.pop() : '';
+}
+function authHdr() {
+  return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' };
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info', dur = 4000) {
+  const el = document.createElement('div');
+  el.className = 't-msg ' + type;
+  el.innerHTML = `<i class="fa fa-${type==='success'?'check-circle':type==='error'?'exclamation-circle':'info-circle'} me-2"></i>${escHtml(msg)}`;
+  document.getElementById('toast-stack').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, dur);
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+let _incAccessLevel = 'denied'; // 'admin' | 'read' | 'denied'
+
+function switchTab(tab) {
+  ['targets', 'report', 'incentive'].forEach(t => {
+    const btn = document.getElementById('tabbtn-' + t);
+    const pane = document.getElementById('tab-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+    if (pane) pane.classList.toggle('active', t === tab);
+  });
+  // Persist tab in URL hash so refresh stays on same tab
+  window.location.hash = tab;
+  if (tab === 'targets' && targetData.employees.length === 0) loadTargets();
+  if (tab === 'incentive') {
+    if (!document.getElementById('inc-config-body')._loaded) {
+      loadIncentiveConfig().then(() => Promise.all([loadAchievements(), loadIncEmpTargets()]));
+    } else {
+      const achLoaded = document.getElementById('inc-ach-body')._achLoaded;
+      if (!achLoaded) loadAchievements();
+      loadIncEmpTargets();
+    }
+  }
+}
+
+// ── Init year dropdowns (report + targets) ────────────────────────────────────
+function initYearDropdown() {
+  const now = new Date();
+  const curYear = now.getFullYear();
+  ['rpt-year', 'tgt-year', 'inc-year'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '';
+    if (id === 'tgt-year') {
+      const o0 = document.createElement('option');
+      o0.value = 0; o0.textContent = 'Default';
+      sel.appendChild(o0);
+    }
+    for (let y = curYear; y >= 2024; y--) {
+      const o = document.createElement('option');
+      o.value = y; o.textContent = y;
+      if (y === curYear) o.selected = true;
+      sel.appendChild(o);
+    }
+  });
+  const now2 = new Date();
+  document.getElementById('rpt-month').value = now2.getMonth() + 1;
+  document.getElementById('tgt-month').value = now2.getMonth() + 1;
+  document.getElementById('tgt-year').value = now2.getFullYear();
+  document.getElementById('inc-month').value = now2.getMonth() + 1;
+  document.getElementById('inc-year').value = now2.getFullYear();
+}
+
+// ── KPI Config ────────────────────────────────────────────────────────────────
+const KPI_DESCS = {
+  attendance:      'Working days present vs total working days in period',
+  day_plan:        'Daily plan tasks completed vs planned tasks',
+  kra:             'KRA daily instances marked completed vs total assigned',
+  timesheet:       'Days with timesheet submitted vs total working days',
+  talk_time:       'Average call duration per attended working day',
+  service_tickets: 'Service/repair tickets resolved within TAT',
+  crm_revenue:     'CRM transaction revenue collected in period',
+  procurement:     'Items received vs effective ordered (excl. cancelled)',
+};
+
+async function checkAccess() {
+  // Step 1: Try full admin access (VGK Mentor / EA / Key Leadership)
+  try {
+    const r = await fetch(`${API}/staff/performance/config`, { headers: authHdr() });
+    if (r.ok) {
+      const d = await r.json();
+      configData = d.config || [];
+      _incAccessLevel = 'admin';
+      // Show all tabs
+      document.getElementById('tabbtn-targets').style.display = '';
+      document.getElementById('tabbtn-report').style.display = '';
+      document.getElementById('tabbtn-incentive').style.display = '';
+      document.getElementById('main-content').style.display = '';
+      document.getElementById('access-denied-msg').style.display = 'none';
+      // Admin sees Add button + action column in incentive tab
+      const addBtn = document.getElementById('inc-admin-add-btn');
+      const adminCol = document.getElementById('inc-admin-col');
+      if (addBtn) addBtn.style.display = '';
+      if (adminCol) adminCol.style.display = '';
+      // Restore tab from URL hash (so refresh stays on same tab)
+      const _validTabs = ['targets', 'report', 'incentive'];
+      const _hashTab = (window.location.hash || '').replace('#', '').toLowerCase();
+      const _startTab = _validTabs.includes(_hashTab) ? _hashTab : 'targets';
+      switchTab(_startTab);
+      return;
+    }
+    if (r.status !== 403) throw new Error('Access check failed');
+  } catch(e) {
+    if (!e.message.includes('403') && !e.message.includes('Access check')) {
+      document.getElementById('access-denied-msg').style.display = '';
+      document.getElementById('access-denied-msg').querySelector('p').textContent = e.message;
+      return;
+    }
+  }
+
+  // Step 2: Try incentive-only access (Sales dept / managers with sales downline)
+  try {
+    const r2 = await fetch(`${API}/staff/incentive-config/access-check`, { headers: authHdr() });
+    if (r2.ok) {
+      const d2 = await r2.json();
+      _incAccessLevel = d2.access_level || 'denied';
+      if (_incAccessLevel !== 'denied') {
+        // Show only Incentive tab
+        document.getElementById('tabbtn-targets').style.display = 'none';
+        document.getElementById('tabbtn-report').style.display = 'none';
+        document.getElementById('tabbtn-incentive').style.display = '';
+        document.getElementById('main-content').style.display = '';
+        document.getElementById('access-denied-msg').style.display = 'none';
+        switchTab('incentive');
+        return;
+      }
+    }
+  } catch(e2) { /* fall through */ }
+
+  // Step 3: Denied
+  showAccessDenied();
+}
+
+function showAccessDenied() {
+  document.getElementById('access-denied-msg').style.display = '';
+  document.getElementById('main-content').style.display = 'none';
+}
+
+
+// ── Employee Targets ──────────────────────────────────────────────────────────
+let _tgtAllKpis = [];   // all 8 KPIs from config (shown as columns regardless of global enabled)
+let _tgtMonth = 0;
+let _tgtYear = 0;
+
+async function loadTargets() {
+  const month = parseInt(document.getElementById('tgt-month').value) || 0;
+  const year  = parseInt(document.getElementById('tgt-year').value)  || 0;
+  const co    = document.getElementById('tgt-company').value;
+  const dp    = document.getElementById('tgt-dept').value;
+  _tgtMonth = month; _tgtYear = year;
+
+  const params = [`month=${month}`, `year=${year}`];
+  if (co) params.push('company_id=' + co);
+  if (dp) params.push('department_id=' + dp);
+  const url = `${API}/staff/performance/employee-targets?` + params.join('&');
+
+  const totalCols = 3 + _tgtAllKpis.length * 3 || 27;
+  document.getElementById('tgt-thead').innerHTML =
+    `<tr><th colspan="${totalCols}" class="empty-st"><div class="loading-ring"></div></th></tr>`;
+  document.getElementById('tgt-tbody').innerHTML = '';
+
+  try {
+    const r = await fetch(url, { headers: authHdr() });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    const d = await r.json();
+    targetData = d;
+    _tgtAllKpis = d.config || [];
+    renderTargetTable(d);
+    tryCarryForward();
+  } catch(e) {
+    document.getElementById('tgt-thead').innerHTML =
+      `<tr><td colspan="27" class="empty-st"><i class="fa fa-exclamation-triangle me-2"></i>${escHtml(e.message)}</td></tr>`;
+  }
+}
+
+function renderTargetTable(d) {
+  const emps  = d.employees || [];
+  const kpis  = d.config    || [];
+  const totalCols = 5 + kpis.length * 3;  // ☑ + Employee + Dept + Role + Total Wt% + (3 cols × KPI)
+
+  const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('tgt-count').textContent =
+    `${emps.length} employee${emps.length !== 1 ? 's' : ''}` +
+    (_tgtMonth > 0 && _tgtYear > 0 ? ` — ${MONTHS[_tgtMonth]} ${_tgtYear}`
+      : _tgtMonth === 0 && _tgtYear === 0 ? ' — Global Defaults' : '');
+
+  // Hide carry-forward banner until we check
+  document.getElementById('cf-banner').style.display = 'none';
+
+  if (!emps.length) {
+    document.getElementById('tgt-thead').innerHTML =
+      `<tr><th colspan="${totalCols}" class="empty-st">No employees found for the selected filters.</th></tr>`;
+    document.getElementById('tgt-tbody').innerHTML = '';
+    return;
+  }
+
+  // ── 2-row thead ──────────────────────────────────────────────────────────────
+  const kpiMainHdrs = kpis.map(k => {
+    const delBtn = k.is_custom
+      ? `<button onclick="deleteCustomKpi('${k.kpi_code}',event)" title="Delete custom metric"
+           style="margin-left:5px;border:none;background:rgba(239,68,68,.15);color:#ef4444;
+                  border-radius:4px;cursor:pointer;font-size:0.65rem;padding:1px 5px;line-height:1.4;">✕</button>`
+      : '';
+    const custBadge = k.is_custom
+      ? `<span style="font-size:0.55rem;background:#ede9fe;color:#7c3aed;border-radius:6px;padding:1px 4px;margin-left:3px;font-weight:700;">Custom</span>`
+      : '';
+    return `<th colspan="3" class="kpi-main-hdr">${escHtml(k.kpi_label)}${custBadge}${delBtn}
+              <div style="font-size:0.6rem;font-weight:400;opacity:.8;">${escHtml(k.target_unit)}</div></th>`;
+  }).join('');
+  const kpiSubHdrs = kpis.map(() =>
+    `<th class="kpi-subhdr first">☑</th><th class="kpi-subhdr">Target</th><th class="kpi-subhdr">Wt%</th>`
+  ).join('');
+
+  document.getElementById('tgt-thead').innerHTML = `
+    <tr>
+      <th rowspan="2" style="text-align:center;min-width:32px;padding:4px;">
+        <input type="checkbox" class="emp-row-chk" id="select-all-chk" title="Select / Deselect All"
+          onchange="selectAllEmps(this)">
+      </th>
+      <th rowspan="2" style="text-align:left;min-width:150px;">Employee</th>
+      <th rowspan="2" style="text-align:left;min-width:80px;">Dept</th>
+      <th rowspan="2" style="text-align:left;min-width:110px;">Role</th>
+      <th rowspan="2" style="text-align:center;min-width:70px;">Total<br>Wt%</th>
+      ${kpiMainHdrs}
+    </tr>
+    <tr>${kpiSubHdrs}</tr>`;
+
+  // ── Bulk apply row ────────────────────────────────────────────────────────────
+  const bulkKpiCells = kpis.map(k => `
+    <td class="kpi-td-first" style="text-align:center;padding:4px 3px;">
+      <input type="checkbox" class="tgt-chk bulk-chk" data-kpi="${k.kpi_code}" data-field="enabled"
+        checked title="Apply enabled state to selected" onchange="onBulkChange(this)">
+    </td>
+    <td style="text-align:center;padding:4px 3px;">
+      <input type="number" class="bulk-mini" data-kpi="${k.kpi_code}" data-field="target"
+        placeholder="${k.target_value}" min="0" step="any"
+        title="Apply target to all selected employees" onchange="onBulkChange(this)">
+    </td>
+    <td style="text-align:center;padding:4px 3px;">
+      <input type="number" class="bulk-mini" data-kpi="${k.kpi_code}" data-field="weight"
+        placeholder="${k.weightage_pct}" min="0" max="100" step="0.5"
+        title="Apply weight to all selected employees" onchange="onBulkChange(this)">
+    </td>`
+  ).join('');
+  const bulkRow = `<tr class="bulk-row" title="Bulk apply to all selected employees">
+    <td style="text-align:center;">
+      <i class="fa fa-layer-group" style="color:var(--accent);font-size:0.85rem;" title="Bulk row"></i>
+    </td>
+    <td colspan="3" style="text-align:left;padding-left:8px;">
+      <span class="bulk-lbl"><i class="fa fa-arrow-down me-1"></i>Apply to Selected</span><br>
+      <span style="font-size:0.68rem;color:var(--muted);">Check employees ↓ then set values here</span>
+    </td>
+    <td></td>
+    ${bulkKpiCells}
+  </tr>`;
+
+  // ── Append bulk row to thead (so it freezes with the header rows) ────────────
+  document.getElementById('tgt-thead').insertAdjacentHTML('beforeend', bulkRow);
+
+  // ── Employee rows ─────────────────────────────────────────────────────────────
+  const rows = [];
+  emps.forEach(emp => {
+    const twId = `tw-${emp.employee_id}`;
+    const tw = emp.total_weight || 0;
+    const twClass = Math.abs(tw - 100) < 0.5 ? 'tw-ok' : tw > 0 ? 'tw-warn' : 'tw-err';
+
+    const kpiCells = kpis.map(k => {
+      const tgt      = (emp.kpi_targets || {})[k.kpi_code] || {};
+      const isEn     = tgt.is_enabled !== undefined ? tgt.is_enabled : k.is_enabled;
+      const tgtVal   = tgt.target_value !== undefined ? tgt.target_value : k.target_value;
+      const wtPct    = tgt.weightage_pct !== undefined ? tgt.weightage_pct : k.weightage_pct;
+      const isCustom = !!tgt.is_custom;
+      const cv       = isCustom ? 'custom-v' : '';
+
+      return `
+        <td class="kpi-td-first" style="text-align:center;padding:4px 3px;">
+          <input type="checkbox" class="tgt-chk ${cv}"
+            data-emp="${emp.employee_id}" data-kpi="${k.kpi_code}" data-field="enabled"
+            data-global-en="${k.is_enabled ? '1' : '0'}"
+            ${isEn ? 'checked' : ''}
+            onchange="onTgtChange(this)">
+        </td>
+        <td style="text-align:center;padding:4px 3px;">
+          <input type="number" class="tgt-mini ${cv}"
+            data-emp="${emp.employee_id}" data-kpi="${k.kpi_code}" data-field="target"
+            data-global="${k.target_value}"
+            value="${tgtVal}" min="0" step="any"
+            onchange="onTgtChange(this)">
+        </td>
+        <td style="text-align:center;padding:4px 3px;">
+          <input type="number" class="tgt-mini ${cv}"
+            data-emp="${emp.employee_id}" data-kpi="${k.kpi_code}" data-field="weight"
+            data-global="${k.weightage_pct}"
+            value="${wtPct}" min="0" max="100" step="0.5"
+            onchange="onTgtChange(this)">
+        </td>`;
+    }).join('');
+
+    rows.push(`<tr>
+      <td style="text-align:center;">
+        <input type="checkbox" class="emp-row-chk" data-emp="${emp.employee_id}"
+          onchange="onEmpRowCheck()">
+      </td>
+      <td>
+        <div class="emp-name-cell">${escHtml(emp.name)}</div>
+        <div class="emp-code-cell">${escHtml(emp.emp_code)}</div>
+      </td>
+      <td><span class="dept-pill">${escHtml(emp.department)}</span></td>
+      <td style="font-size:0.78rem;color:var(--muted);white-space:nowrap;">${escHtml(emp.role || '—')}</td>
+      <td style="text-align:center;"><span id="${twId}" class="tw-chip ${twClass}" title="${tw}% assigned">${tw}%</span></td>
+      ${kpiCells}
+    </tr>`);
+  });
+  document.getElementById('tgt-tbody').innerHTML = rows.join('');
+  requestAnimationFrame(_applyTblFreeze);
+}
+
+function _applyTblFreeze() {
+  const tbl = document.getElementById('targets-table');
+  if (!tbl) return;
+  const FREEZE = 5; // ☑ | Employee | Dept | Role | Total Wt%
+
+  // Step 1 — sticky top for all thead rows (compute after render for accurate heights)
+  const theadRows = Array.from(tbl.querySelectorAll('thead tr'));
+  let topOff = 0;
+  theadRows.forEach(tr => {
+    Array.from(tr.children).forEach(cell => { cell.style.top = topOff + 'px'; });
+    topOff += tr.getBoundingClientRect().height || 36;
+  });
+
+  // Step 2 — compute left offsets from a full employee row (5 individual cells, no colspan)
+  const empRow = tbl.querySelector('tbody tr');
+  if (!empRow || empRow.children.length < FREEZE) return;
+  const lefts = [];
+  let cumL = 0;
+  for (let i = 0; i < FREEZE; i++) {
+    lefts[i] = cumL;
+    cumL += empRow.children[i].getBoundingClientRect().width || 80;
+  }
+
+  const _pin = (cell, leftIdx, inHead, bgColor) => {
+    cell.style.position = 'sticky';
+    cell.style.left = lefts[leftIdx] + 'px';
+    cell.style.zIndex = inHead ? '12' : '2';
+    cell.style.background = cell.style.background || bgColor;
+    if (leftIdx === FREEZE - 1) cell.classList.add('sc-last');
+  };
+
+  // Step 3a — thead row 1: first 5 th (☑ through Total Wt%)
+  const tr1 = theadRows[0];
+  if (tr1) {
+    Array.from(tr1.children).slice(0, FREEZE).forEach((cell, i) => _pin(cell, i, true, '#f8fafc'));
+  }
+  // thead row 2 (kpiSubHdrs): all cells are in visual columns 5+, skip
+
+  // Step 3b — thead bulk row: 3 dom cells cover 5 visual columns
+  //   cell[0] → col 0  |  cell[1] (colspan=3) → col 1  |  cell[2] → col 4
+  const bulkEl = tbl.querySelector('thead tr.bulk-row');
+  if (bulkEl) {
+    const bc = Array.from(bulkEl.children);
+    [[0,0],[1,1],[2,4]].forEach(([domIdx, colIdx]) => {
+      if (bc[domIdx]) _pin(bc[domIdx], colIdx, true, 'linear-gradient(180deg,#eff6ff,#f8fafc)');
+    });
+  }
+
+  // Step 3c — tbody employee rows: first 5 td each
+  tbl.querySelectorAll('tbody tr').forEach(row => {
+    Array.from(row.children).slice(0, FREEZE).forEach((cell, i) => _pin(cell, i, false, '#fff'));
+  });
+}
+
+function onTgtChange(el) {
+  if (!el.dataset.emp) return;  // Ignore bulk row inputs
+  const empId = el.dataset.emp;
+  const kpi   = el.dataset.kpi;
+
+  // Enforce 100% cap when a weight field is changed
+  if (el.dataset.field === 'weight') {
+    const entered = parseFloat(el.value) || 0;
+    // Calculate total from all OTHER enabled KPIs (excluding this one)
+    let otherTotal = 0;
+    document.querySelectorAll(`[data-emp="${empId}"][data-field="enabled"]`).forEach(chk => {
+      if (chk.checked && chk.dataset.kpi !== kpi) {
+        const w = document.querySelector(`[data-emp="${empId}"][data-kpi="${chk.dataset.kpi}"][data-field="weight"]`);
+        otherTotal += parseFloat(w?.value || 0);
+      }
+    });
+    const maxAllowed = Math.max(0, 100 - otherTotal);
+    if (entered > maxAllowed + 0.05) {
+      el.value = maxAllowed.toFixed(1);
+      // Flash red border to signal capping
+      el.style.borderColor = 'var(--red)';
+      el.style.background  = 'var(--red-light)';
+      setTimeout(() => { el.style.borderColor = ''; el.style.background = ''; }, 1400);
+      toast(`Weight capped at ${maxAllowed.toFixed(1)}% — Total cannot exceed 100%`, 'error', 3000);
+    }
+  }
+
+  // Mark all 3 inputs in this KPI cell as custom
+  document.querySelectorAll(`[data-emp="${empId}"][data-kpi="${kpi}"]`)
+    .forEach(i => i.classList.add('custom-v'));
+
+  recalcTotalWeight(empId);
+}
+
+function recalcTotalWeight(empId) {
+  let total = 0;
+  document.querySelectorAll(`[data-emp="${empId}"][data-field="enabled"]`).forEach(chk => {
+    if (chk.checked) {
+      const w = document.querySelector(`[data-emp="${empId}"][data-kpi="${chk.dataset.kpi}"][data-field="weight"]`);
+      total += parseFloat(w?.value || 0);
+    }
+  });
+  total = Math.round(total * 10) / 10;
+  const chip = document.getElementById(`tw-${empId}`);
+  if (chip) {
+    const over = total > 100.5;
+    const ok   = Math.abs(total - 100) <= 0.5;
+    chip.textContent = total + '%';
+    chip.className   = 'tw-chip ' + (over ? 'tw-err' : ok ? 'tw-ok' : total > 0 ? 'tw-warn' : 'tw-err');
+    chip.title       = over ? '⚠ Total exceeds 100%' : ok ? '✓ Total = 100%' : `${total}% assigned`;
+  }
+  return total;
+}
+
+// ── Select All employees ────────────────────────────────────────────────────────
+function selectAllEmps(el) {
+  document.querySelectorAll('.emp-row-chk[data-emp]').forEach(chk => {
+    chk.checked = el.checked;
+  });
+}
+
+function onEmpRowCheck() {
+  const all   = document.querySelectorAll('.emp-row-chk[data-emp]');
+  const checked = document.querySelectorAll('.emp-row-chk[data-emp]:checked');
+  const allChk = document.getElementById('select-all-chk');
+  if (allChk) allChk.checked = all.length > 0 && checked.length === all.length;
+}
+
+// ── Bulk apply row — apply value to all selected employees ─────────────────────
+function onBulkChange(el) {
+  const kpi   = el.dataset.kpi;
+  const field = el.dataset.field;
+  const val   = field === 'enabled' ? el.checked : el.value;
+  if (val === '' || val === null || val === undefined) return;
+
+  const selected = document.querySelectorAll('.emp-row-chk[data-emp]:checked');
+  if (!selected.length) {
+    toast('Select at least one employee first (use the checkboxes on the left)', 'info', 3000);
+    return;
+  }
+
+  selected.forEach(chk => {
+    const empId = chk.dataset.emp;
+    const inp = document.querySelector(`[data-emp="${empId}"][data-kpi="${kpi}"][data-field="${field}"]`);
+    if (!inp) return;
+    if (field === 'enabled') {
+      inp.checked = el.checked;
+    } else {
+      // Clamp weight at 100% minus others
+      if (field === 'weight') {
+        let otherTotal = 0;
+        document.querySelectorAll(`[data-emp="${empId}"][data-field="enabled"]`).forEach(c => {
+          if (c.checked && c.dataset.kpi !== kpi) {
+            const w = document.querySelector(`[data-emp="${empId}"][data-kpi="${c.dataset.kpi}"][data-field="weight"]`);
+            otherTotal += parseFloat(w?.value || 0);
+          }
+        });
+        const maxAllowed = Math.max(0, 100 - otherTotal);
+        inp.value = Math.min(parseFloat(val) || 0, maxAllowed + 0.05 > parseFloat(val) ? parseFloat(val) : maxAllowed).toFixed(1);
+      } else {
+        inp.value = val;
+      }
+    }
+    // Mark as custom
+    document.querySelectorAll(`[data-emp="${empId}"][data-kpi="${kpi}"]`)
+      .forEach(i => { i.classList.add('custom-v'); i.classList.remove('cf-v'); });
+    recalcTotalWeight(empId);
+  });
+
+  toast(`Applied to ${selected.length} employee${selected.length !== 1 ? 's' : ''}`, 'success', 2000);
+}
+
+// ── Carry-forward from previous month ─────────────────────────────────────────
+async function tryCarryForward() {
+  if (_tgtMonth === 0 || _tgtYear === 0) return;  // Global defaults — skip
+  const data = targetData;
+  if (!data || !data.employees) return;
+
+  // Fetch previous month
+  let prevMonth = _tgtMonth - 1;
+  let prevYear  = _tgtYear;
+  if (prevMonth === 0) { prevMonth = 12; prevYear -= 1; }
+
+  const co = document.getElementById('tgt-company').value;
+  const dp = document.getElementById('tgt-dept').value;
+  const params = [`month=${prevMonth}`, `year=${prevYear}`];
+  if (co) params.push('company_id=' + co);
+  if (dp) params.push('department_id=' + dp);
+
+  try {
+    const r = await fetch(`${API}/staff/performance/employee-targets?` + params.join('&'),
+      { headers: authHdr() });
+    if (!r.ok) return;
+    const prevData = await r.json();
+    const prevEmps = prevData.employees || [];
+    if (!prevEmps.length) return;
+
+    let cfCount = 0;
+    const MONTHS = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+    prevEmps.forEach(prevEmp => {
+      const prevKpis = prevEmp.kpi_targets || {};
+      Object.entries(prevKpis).forEach(([kpiCode, prevTgt]) => {
+        if (!prevTgt.is_custom) return;  // Only carry forward actual custom values from prev month
+        const chk = document.querySelector(`[data-emp="${prevEmp.employee_id}"][data-kpi="${kpiCode}"][data-field="enabled"]`);
+        const tgt = document.querySelector(`[data-emp="${prevEmp.employee_id}"][data-kpi="${kpiCode}"][data-field="target"]`);
+        const wt  = document.querySelector(`[data-emp="${prevEmp.employee_id}"][data-kpi="${kpiCode}"][data-field="weight"]`);
+        if (!chk || !tgt || !wt) return;
+        // Only fill if currently showing global default (not already custom for this month)
+        if (!chk.classList.contains('custom-v')) {
+          if (chk) chk.checked = prevTgt.is_enabled;
+          if (tgt && prevTgt.target_value !== undefined) tgt.value = prevTgt.target_value;
+          if (wt  && prevTgt.weightage_pct !== undefined) wt.value  = prevTgt.weightage_pct;
+          [chk, tgt, wt].forEach(i => {
+            if (i) { i.classList.add('cf-v'); i.classList.remove('custom-v'); }
+          });
+          cfCount++;
+          recalcTotalWeight(prevEmp.employee_id);
+        }
+      });
+    });
+
+    if (cfCount > 0) {
+      const banner = document.getElementById('cf-banner');
+      document.getElementById('cf-banner-text').textContent =
+        `Pre-filled from ${MONTHS[prevMonth]} ${prevYear} (${cfCount} value${cfCount !== 1 ? 's' : ''} carried forward — purple). Click "Save All Targets" to confirm for ${MONTHS[_tgtMonth]} ${_tgtYear}.`;
+      banner.style.display = 'flex';
+    }
+  } catch(e) {
+    // Silently ignore carry-forward errors — not critical
+  }
+}
+
+async function saveTargets() {
+  const allTargets = [];
+  const empIds = new Set();
+  document.querySelectorAll('[data-field="target"]').forEach(inp => {
+    if (inp.dataset.emp) empIds.add(inp.dataset.emp);  // Exclude bulk row (no data-emp)
+  });
+
+  // ── Validate: warn if any employee exceeds 100% weight ────────────────────
+  const overLimit = [];
+  empIds.forEach(empId => {
+    const total = recalcTotalWeight(empId);
+    if (total > 100.5) {
+      const nameEl = document.querySelector(`[data-emp="${empId}"] .emp-name-cell`);
+      const name = nameEl ? nameEl.textContent.trim() : `Employee #${empId}`;
+      overLimit.push(`${name}: ${total}%`);
+    }
+  });
+  if (overLimit.length) {
+    const proceed = confirm(
+      `Warning: ${overLimit.length} employee${overLimit.length > 1 ? 's' : ''} have total weight > 100%:\n` +
+      overLimit.slice(0,5).join('\n') + (overLimit.length > 5 ? `\n…and ${overLimit.length-5} more` : '') +
+      '\n\nSave anyway?'
+    );
+    if (!proceed) return;
+  }
+
+  // ── Collect all target rows ─────────────────────────────────────────────────
+  empIds.forEach(empId => {
+    _tgtAllKpis.forEach(k => {
+      const kpi  = k.kpi_code;
+      const chk  = document.querySelector(`[data-emp="${empId}"][data-kpi="${kpi}"][data-field="enabled"]`);
+      const tgt  = document.querySelector(`[data-emp="${empId}"][data-kpi="${kpi}"][data-field="target"]`);
+      const wt   = document.querySelector(`[data-emp="${empId}"][data-kpi="${kpi}"][data-field="weight"]`);
+      if (!chk || !tgt || !wt) return;
+      allTargets.push({
+        employee_id:   parseInt(empId),
+        kpi_code:      kpi,
+        is_enabled:    chk.checked,
+        target_value:  parseFloat(tgt.value)  || 0,
+        weightage_pct: parseFloat(wt.value)   || 0,
+      });
+    });
+  });
+
+  if (!allTargets.length) { toast('No targets to save.', 'info'); return; }
+
+  const btn = document.getElementById('save-targets-btn');
+  btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Saving…';
+  try {
+    const r = await fetch(`${API}/staff/performance/employee-targets`, {
+      method: 'PUT',
+      headers: authHdr(),
+      body: JSON.stringify({ targets: allTargets, month: _tgtMonth, year: _tgtYear }),
+    });
+    if (!r.ok) { const err = await r.json(); throw new Error(err.detail || 'Save failed'); }
+    const d = await r.json();
+    toast(d.message || 'Targets saved!', 'success');
+    loadTargets();
+    loadAchievements();
+  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fa fa-save me-1"></i>Save All Targets'; }
+}
+
+// ── Performance Report ────────────────────────────────────────────────────────
+function resetReport() {
+  const now = new Date();
+  document.getElementById('rpt-month').value = now.getMonth() + 1;
+  document.getElementById('rpt-year').value = now.getFullYear();
+  document.getElementById('rpt-company').value = '';
+  document.getElementById('rpt-dept').value = '';
+  document.getElementById('rpt-include-self').checked = false;
+}
+
+function getMonthRange() {
+  const month = parseInt(document.getElementById('rpt-month').value);
+  const year  = parseInt(document.getElementById('rpt-year').value);
+  const from  = new Date(year, month - 1, 1);
+  const to    = new Date(year, month, 0);
+  const pad   = n => String(n).padStart(2, '0');
+  return {
+    from: `${from.getFullYear()}-${pad(from.getMonth()+1)}-${pad(from.getDate())}`,
+    to:   `${to.getFullYear()}-${pad(to.getMonth()+1)}-${pad(to.getDate())}`,
+    label: from.toLocaleString('en-IN', { month: 'long', year: 'numeric' }),
+  };
+}
+
+async function loadReport() {
+  const { from, to, label } = getMonthRange();
+  const company = document.getElementById('rpt-company').value;
+  const dept    = document.getElementById('rpt-dept').value;
+  const self    = document.getElementById('rpt-include-self').checked;
+
+  document.getElementById('rpt-loading').style.display = '';
+  document.getElementById('rpt-tbody').innerHTML =
+    '<tr><td colspan="20" class="empty-st"><div class="loading-ring"></div></td></tr>';
+  document.getElementById('rpt-thead').innerHTML = '';
+  document.getElementById('rpt-summary').classList.remove('show');
+
+  let url = `${API}/staff/performance/report?date_from=${from}&date_to=${to}&include_self=${self}`;
+  if (company) url += `&company_id=${company}`;
+  if (dept)    url += `&department_id=${dept}`;
+
+  try {
+    const r = await fetch(url, { headers: authHdr() });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    const d = await r.json();
+    reportData   = d.data || [];
+    reportConfig = d.config || [];
+
+    populateRptFilters(d.companies || [], d.departments || []);
+    renderReport(d, label);
+  } catch(e) {
+    toast('Report failed: ' + e.message, 'error');
+    document.getElementById('rpt-tbody').innerHTML =
+      `<tr><td colspan="20" class="empty-st"><i class="fa fa-exclamation-triangle"></i>${escHtml(e.message)}</td></tr>`;
+  } finally {
+    document.getElementById('rpt-loading').style.display = 'none';
+  }
+}
+
+function populateRptFilters(companies, depts) {
+  const coSel   = document.getElementById('rpt-company');
+  const deptSel = document.getElementById('rpt-dept');
+  const coVal   = coSel.value;
+  const deptVal = deptSel.value;
+  coSel.innerHTML   = '<option value="">All Companies</option>' +
+    companies.map(c => `<option value="${c.id}" ${c.id==coVal?'selected':''}>${escHtml(c.name)}</option>`).join('');
+  deptSel.innerHTML = '<option value="">All Departments</option>' +
+    depts.map(d => `<option value="${d.id}" ${d.id==deptVal?'selected':''}>${escHtml(d.name)}</option>`).join('');
+}
+
+const KPI_SHORT = {
+  attendance:'Attend.', day_plan:'Day Plan', kra:'KRA',
+  timesheet:'Timesheet', talk_time:'Talk Time', service_tickets:'Tickets',
+  crm_revenue:'Revenue', procurement:'Procu.'
+};
+const KPI_ICONS = {
+  attendance:'fa-calendar-check', day_plan:'fa-clipboard-list', kra:'fa-bullseye',
+  timesheet:'fa-clock', talk_time:'fa-phone', service_tickets:'fa-ticket-alt',
+  crm_revenue:'fa-rupee-sign', procurement:'fa-boxes'
+};
+
+function renderReport(d, label) {
+  const enabledKpis = (d.config || []).filter(c => c.is_enabled);
+  const data = d.data || [];
+
+  // Header
+  const thead = document.getElementById('rpt-thead');
+  thead.innerHTML = `<tr>
+    <th style="width:36px;">#</th>
+    <th style="text-align:left;min-width:160px;">Employee</th>
+    <th style="text-align:left;">Department</th>
+    <th style="text-align:center;">Days</th>
+    ${enabledKpis.map(k => `<th style="text-align:center;min-width:80px;">
+      <i class="fa ${KPI_ICONS[k.kpi_code]||'fa-chart-bar'} me-1" style="color:var(--accent);"></i>${KPI_SHORT[k.kpi_code]||k.kpi_label}
+      <br><span style="font-weight:400;font-size:0.66rem;color:var(--muted);">${k.weightage_pct}%</span>
+    </th>`).join('')}
+    <th style="text-align:center;min-width:90px;">Weighted Avg</th>
+    <th></th>
+  </tr>`;
+
+  const tbody = document.getElementById('rpt-tbody');
+
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="${5 + enabledKpis.length}" class="empty-st">
+      <i class="fa fa-users-slash"></i>No employees found for this period.</td></tr>`;
+    return;
+  }
+
+  // Group by role
+  const grouped = {};
+  data.forEach(emp => {
+    const role = emp.role || '—';
+    if (!grouped[role]) grouped[role] = [];
+    grouped[role].push(emp);
+  });
+
+  const rows = [];
+  const colSpan = 4 + enabledKpis.length + 2;
+
+  Object.keys(grouped).sort().forEach(role => {
+    const grpEmps = grouped[role];
+    const grpAvg = grpEmps.reduce((s, e) => s + e.overall_score, 0) / grpEmps.length;
+    rows.push(`<tr class="role-group-row">
+      <td colspan="${colSpan}">
+        <i class="fa fa-user-tag me-2"></i>${escHtml(role)}
+        <span style="margin-left:12px;font-size:0.72rem;font-weight:400;color:var(--muted);">${grpEmps.length} member${grpEmps.length!==1?'s':''} &nbsp;·&nbsp; Avg: ${grpAvg.toFixed(1)}%</span>
+      </td>
+    </tr>`);
+
+    // Sort within role by overall score desc
+    grpEmps.sort((a, b) => b.overall_score - a.overall_score);
+
+    grpEmps.forEach((emp, idx) => {
+      const globalRank = emp.rank;
+      const rankBadge = globalRank <= 3
+        ? `<span class="rank-b rank-${globalRank}">${globalRank}</span>`
+        : `<span class="rank-b rank-n">${globalRank}</span>`;
+
+      const kpiCells = enabledKpis.map(k => {
+        const ks = (emp.kpi_scores || {})[k.kpi_code];
+        if (!ks) return '<td style="text-align:center;"><span class="sc-none">—</span></td>';
+        const s = ks.score;
+        // Custom KPIs or manual metrics have no auto-score — show dash
+        if (s === null || s === undefined) {
+          return '<td style="text-align:center;"><span class="sc-none" title="Manual metric — no auto-score">—</span></td>';
+        }
+        const scCls = ks.bonus ? 'sc-gold' : s >= 80 ? 'sc-green' : s >= 50 ? 'sc-amber' : 'sc-red';
+        const _a = ks.actual;
+        const actualFmt = k.kpi_code === 'crm_revenue'
+          ? '₹' + formatNum(_a)
+          : k.kpi_code === 'talk_time'
+          ? (_a != null ? (+_a).toFixed(1) : '—') + 'm'
+          : (_a != null ? (+_a).toFixed(1) : '—') + (k.target_unit === '%' ? '%' : '');
+        const tgtFmt = k.kpi_code === 'crm_revenue'
+          ? '₹' + formatNum(ks.target)
+          : ks.target + (k.target_unit === '%' ? '%' : '');
+        const customMark = ks.is_custom_target ? '<i class="fa fa-star" style="color:var(--accent);font-size:.6rem;margin-left:2px;" title="Custom target"></i>' : '';
+        return `<td style="text-align:center;">
+          <span class="sc ${scCls}" title="Actual: ${actualFmt} / Target: ${tgtFmt}">
+            <span class="sc-pct">${(+s).toFixed(0)}%${ks.bonus ? '<i class="fa fa-star ms-1" style="font-size:.65rem;" title="Over-achievement!"></i>' : ''}</span>
+            <span class="sc-actual">${actualFmt}</span>
+          </span>${customMark}
+        </td>`;
+      }).join('');
+
+      const ov = emp.overall_score;
+      const ovCls = ov >= 100 ? 'sc-gold' : ov >= 80 ? 'sc-green' : ov >= 50 ? 'sc-amber' : 'sc-red';
+      const empIdx = data.indexOf(emp);
+
+      rows.push(`<tr onclick="showDetail(${empIdx})">
+        <td>${rankBadge}</td>
+        <td>
+          <div class="emp-name-cell">${escHtml(emp.name)}</div>
+          <div class="emp-code-cell">${escHtml(emp.emp_code)}</div>
+        </td>
+        <td><span class="dept-pill">${escHtml(emp.department)}</span></td>
+        <td style="text-align:center;font-weight:600;">${emp.days_present}</td>
+        ${kpiCells}
+        <td style="text-align:center;">
+          <span class="sc ${ovCls} overall-chip">${ov.toFixed(1)}%</span>
+        </td>
+        <td><button class="view-btn" onclick="event.stopPropagation();showDetail(${empIdx})"><i class="fa fa-eye me-1"></i>View</button></td>
+      </tr>`);
+    });
+  });
+
+  tbody.innerHTML = rows.join('');
+
+  // Summary strip
+  const avg = data.reduce((s, e) => s + e.overall_score, 0) / data.length;
+  const top = data[0];
+  document.getElementById('ss-total').textContent  = data.length;
+  document.getElementById('ss-avg').textContent    = avg.toFixed(1) + '%';
+  document.getElementById('ss-top').textContent    = top ? top.name : '—';
+  document.getElementById('ss-period').textContent = label;
+  document.getElementById('rpt-summary').classList.add('show');
+
+  const rptTitle = document.getElementById('rpt-title');
+  rptTitle.innerHTML = `<i class="fa fa-table me-2" style="color:var(--accent);"></i>Performance Report — ${escHtml(label)} — ${data.length} Employees`;
+}
+
+// ── Detail Modal ──────────────────────────────────────────────────────────────
+function showDetail(idx) {
+  const emp = reportData[idx];
+  if (!emp) return;
+  const enabledKpis = reportConfig.filter(c => c.is_enabled);
+
+  document.getElementById('modal-title').innerHTML =
+    `<i class="fa fa-user me-2" style="color:var(--accent);"></i>${escHtml(emp.name)} — Breakdown`;
+
+  let html = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px;">
+      <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+        <div style="font-size:0.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;">Weighted Score</div>
+        <div style="font-size:1.9rem;font-weight:800;color:${emp.overall_score>=80?'var(--green)':emp.overall_score>=50?'var(--amber)':'var(--red)'};">${emp.overall_score.toFixed(1)}%</div>
+      </div>
+      <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+        <div style="font-size:0.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;">Overall Rank</div>
+        <div style="font-size:1.9rem;font-weight:800;color:var(--text);">#${emp.rank}</div>
+      </div>
+      <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+        <div style="font-size:0.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;">Department</div>
+        <div style="font-size:0.9rem;font-weight:700;color:var(--text);">${escHtml(emp.department)}</div>
+        <div style="font-size:0.76rem;color:var(--muted);">${escHtml(emp.role)}</div>
+      </div>
+      <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 14px;">
+        <div style="font-size:0.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;">Days Present</div>
+        <div style="font-size:1.9rem;font-weight:800;color:var(--text);">${emp.days_present}</div>
+      </div>
+    </div>
+    <div style="font-size:0.76rem;color:var(--muted);text-transform:uppercase;font-weight:600;letter-spacing:.05em;margin-bottom:10px;">KPI Breakdown</div>
+  `;
+
+  enabledKpis.forEach(cfg => {
+    const ks = (emp.kpi_scores || {})[cfg.kpi_code];
+    if (!ks) return;
+    const s = ks.score;
+    if (s === null || s === undefined) return; // Custom/manual KPI — skip
+    const fillCls = ks.bonus ? 'fill-gold' : s >= 80 ? 'fill-green' : s >= 50 ? 'fill-amber' : 'fill-red';
+    const barW = Math.min(s, 120) / 1.2;
+    const icon = KPI_ICONS[cfg.kpi_code] || 'fa-chart-bar';
+    const disp = ks.display || {};
+
+    let detail = '';
+    if (cfg.kpi_code === 'attendance')      detail = `${disp.days_present||0} of ${disp.total_days||'?'} days`;
+    else if (cfg.kpi_code === 'kra')        detail = `${disp.completed||0} completed / ${disp.total||0} total`;
+    else if (cfg.kpi_code === 'timesheet')  detail = `${disp.days_submitted||0} of ${disp.total_days||'?'} days`;
+    else if (cfg.kpi_code === 'talk_time')  detail = `${disp.avg_min_per_day||0} min/day avg (${Math.floor((disp.total_seconds||0)/60)} min total)`;
+    else if (cfg.kpi_code === 'service_tickets') detail = `${disp.resolved||0} resolved / ${disp.total||0} total` + (disp.tat_pct!==undefined ? ` · TAT: ${disp.tat_pct}%`:'') + (disp.below_min_threshold?' ⚠ Below minimum threshold':'');
+    else if (cfg.kpi_code === 'crm_revenue') detail = `₹${formatNum(ks.actual)} collected / target ₹${formatNum(ks.target)}`;
+    else if (cfg.kpi_code === 'procurement') detail = `${disp.received_qty||0} received / ${disp.effective_qty||0} effective`;
+    else if (cfg.kpi_code === 'day_plan')   detail = `${disp.plans||0} plans submitted`;
+
+    const customTag = ks.is_custom_target ? `<span class="kd-custom-tgt"><i class="fa fa-star me-1"></i>Custom target: ${ks.target}</span>` : '';
+
+    html += `
+      <div class="kd-row">
+        <div class="kd-hdr">
+          <span class="kd-name"><i class="fa ${icon} me-2" style="color:var(--accent);"></i>${escHtml(cfg.kpi_label)}</span>
+          <div>
+            <span class="kd-wt">${cfg.weightage_pct}% weight</span>
+            ${customTag}
+            ${ks.bonus ? '<span class="bonus-badge"><i class="fa fa-star me-1"></i>+Bonus</span>' : ''}
+          </div>
+        </div>
+        <div class="prog-wrap">
+          <div class="prog-fill ${fillCls}" style="width:${barW}%;"></div>
+        </div>
+        <div class="kd-nums">
+          <span>${detail}</span>
+          <span style="font-weight:700;color:${ks.bonus?'var(--gold)':s>=80?'var(--green)':s>=50?'var(--amber)':'var(--red)'};">${s.toFixed(1)}% score</span>
+        </div>
+      </div>`;
+  });
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('detail-modal').classList.remove('open');
+}
+
+// ── Custom KPI Management ─────────────────────────────────────────────────────
+function openAddCustomKpi() {
+  document.getElementById('ckpi-label').value = '';
+  document.getElementById('ckpi-unit').value  = '%';
+  document.getElementById('ckpi-target').value = '80';
+  document.getElementById('ckpi-weight').value = '0';
+  document.getElementById('ckpi-enabled').checked = true;
+  document.getElementById('ckpi-error').textContent = '';
+  document.getElementById('custom-kpi-modal').style.display = 'flex';
+  document.getElementById('ckpi-label').focus();
+}
+
+function closeCustomKpiModal() {
+  document.getElementById('custom-kpi-modal').style.display = 'none';
+}
+
+async function saveCustomKpi() {
+  const label  = document.getElementById('ckpi-label').value.trim();
+  const unit   = document.getElementById('ckpi-unit').value.trim();
+  const target = parseFloat(document.getElementById('ckpi-target').value) || 0;
+  const weight = parseFloat(document.getElementById('ckpi-weight').value) || 0;
+  const enabled = document.getElementById('ckpi-enabled').checked;
+  const errEl = document.getElementById('ckpi-error');
+
+  if (!label) { errEl.textContent = 'Metric name is required.'; return; }
+  if (!unit)  { errEl.textContent = 'Unit is required (e.g. %, count, ₹/month).'; return; }
+
+  const btn = document.getElementById('ckpi-save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  errEl.textContent = '';
+
+  try {
+    const r = await fetch('/api/v1/staff/performance/config/custom', {
+      method: 'POST',
+      headers: { ...authHdr(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kpi_label: label, target_unit: unit, target_value: target, weightage_pct: weight, is_enabled: enabled }),
+    });
+    const d = await r.json();
+    if (!r.ok) { errEl.textContent = d.detail || 'Save failed'; return; }
+    toast(d.message || 'Custom metric added!', 'success');
+    closeCustomKpiModal();
+    loadTargets();
+  } catch(e) {
+    errEl.textContent = 'Error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Add Metric';
+  }
+}
+
+async function deleteCustomKpi(kpiCode, evt) {
+  if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+  if (!confirm('Delete this custom metric and all its employee target assignments? This cannot be undone.')) return;
+  try {
+    const r = await fetch('/api/v1/staff/performance/config/custom/' + encodeURIComponent(kpiCode), {
+      method: 'DELETE',
+      headers: authHdr(),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast(d.detail || 'Delete failed', 'error'); return; }
+    toast(d.message || 'Metric deleted', 'success');
+    loadTargets();
+  } catch(e) {
+    toast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function formatNum(n) {
+  if (!n) return '0';
+  if (n >= 10000000) return (n/10000000).toFixed(1) + 'Cr';
+  if (n >= 100000)   return (n/100000).toFixed(1) + 'L';
+  if (n >= 1000)     return (n/1000).toFixed(1) + 'K';
+  return Math.round(n).toLocaleString('en-IN');
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// INCENTIVE CONFIG FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const INC_CATEGORY_LABELS = {
+  solar:           'Solar',
+  ev_b2c:          'EV B2C',
+  ev_b2b:          'EV B2B',
+  ev_b2b_new:      'EV B2B - New',
+  ev_b2b_existing: 'EV B2B - Existing',
+  training:        'Training',
+  insurance:       'Insurance',
+  real_estate:     'Real Estate',
+  etc_students:    'ETC Students',
+};
+
+const INC_CATEGORY_UNIT_LABELS = {
+  training: 'students',
+};
+
+let _incConfigRows = [];
+let _signupCatsCache = {}; // keyed by company_id
+
+function deriveIncSlug(name) {
+  const n = (name || '').toLowerCase();
+  if (n.includes('solar')) return 'solar';
+  if (n.includes('ev') && n.includes('b2c')) return 'ev_b2c';
+  if (n.includes('ev') && n.includes('b2b')) return 'ev_b2b';
+  if (n.includes('training') || n.includes('etc')) return 'training';
+  if (n.includes('insurance')) return 'insurance';
+  if (n.includes('real') || n.includes('property') || n.includes('dream')) return 'real_estate';
+  return n.trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+}
+
+async function loadSignupCats(compId) {
+  if (_signupCatsCache[compId]) return _signupCatsCache[compId];
+  try {
+    const r = await fetch(`${API}/signup-categories/list?company_id=${compId}`, { headers: authHdr() });
+    const d = await r.json();
+    _signupCatsCache[compId] = d.categories || [];
+  } catch(e) {
+    _signupCatsCache[compId] = [];
+  }
+  return _signupCatsCache[compId];
+}
+
+function populateCatSelect(cats, selectedSlug) {
+  const sel = document.getElementById('inc-edit-cat-select');
+  sel.innerHTML = '<option value="">-- Select Category --</option>';
+  cats.forEach(c => {
+    const slug = deriveIncSlug(c.name);
+    const o = document.createElement('option');
+    o.value = slug;
+    o.dataset.label = c.name;
+    o.textContent = c.name;
+    if (selectedSlug && slug === selectedSlug) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+async function applyIncentiveFilters() {
+  await loadIncentiveConfig();
+  await Promise.all([loadAchievements(), loadIncEmpTargets()]);
+}
+
+async function loadIncentiveConfig() {
+  const month     = document.getElementById('inc-month').value;
+  const year      = document.getElementById('inc-year').value;
+  const rawCompId = document.getElementById('inc-company').value;
+  const compId    = rawCompId == '0' ? '1' : rawCompId;
+  const body   = document.getElementById('inc-config-body');
+  const spin   = document.getElementById('inc-loading');
+  body._loaded = false;
+  spin.style.display = '';
+  body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;"><div class="loading-ring"></div></td></tr>`;
+  try {
+    const r = await fetch(`${API}/staff/incentive-config?month=${month}&year=${year}&company_id=${compId}`, { headers: authHdr() });
+    if (!r.ok) throw new Error('Failed to load incentive config');
+    const d = await r.json();
+    _incConfigRows = d.config || [];
+    renderIncConfigTable(_incConfigRows);
+    body._loaded = true;
+    // Reset achievement loaded flag so it reloads on next trigger (don't wipe content)
+    const achBody = document.getElementById('inc-ach-body');
+    if (achBody) achBody._achLoaded = false;
+  } catch(e) {
+    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:#ef4444;">${escHtml(e.message)}</td></tr>`;
+    toast(e.message, 'error');
+  } finally {
+    spin.style.display = 'none';
+  }
+}
+
+function renderIncConfigTable(rows) {
+  const body = document.getElementById('inc-config-body');
+  const isAdmin = _incAccessLevel === 'admin';
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af;">No incentive config rows found for this period.</td></tr>`;
+    return;
+  }
+  body.innerHTML = rows.map(r => {
+    const slug  = r.category_slug || r.category || '';
+    const label = r.category_label || INC_CATEGORY_LABELS[slug] || slug;
+    const unitLabel = r.min_target_unit === 'amount' ? '₹' : (INC_CATEGORY_UNIT_LABELS[slug] || 'units');
+    const typeLabel = r.incentive_type === 'percentage' ? '%' : `₹/${INC_CATEGORY_UNIT_LABELS[slug] || 'unit'}`;
+    const rateNo    = r.incentive_rate_without_support ?? r.rate_no_support ?? 0;
+    const rateWi    = r.incentive_rate_with_support    ?? r.rate_with_support ?? 0;
+    const rateDw    = r.incentive_rate_direct_work ?? 0;
+    const bonusTrig = r.bonus_trigger_value != null ? fmtNum(r.bonus_trigger_value) : '—';
+    const bonusMul  = r.bonus_multiplier   != null ? `×${r.bonus_multiplier}` : '—';
+    const actionCell = isAdmin
+      ? `<td style="text-align:center;padding:8px 12px;">
+           <button onclick="openIncEditModal(${r.id})" style="padding:4px 10px;font-size:0.78rem;background:#ede9fe;color:#5b21b6;border:none;border-radius:4px;cursor:pointer;margin-right:4px;"><i class="fa fa-edit me-1"></i>Edit</button>
+           <button onclick="deleteIncentiveRow(${r.id},'${escHtml(label).replace(/'/g,"\\'")}')" style="padding:4px 10px;font-size:0.78rem;background:#fee2e2;color:#dc2626;border:none;border-radius:4px;cursor:pointer;"><i class="fa fa-trash me-1"></i>Delete</button>
+         </td>`
+      : '';
+    return `<tr style="border-bottom:1px solid #f3f0ff;">
+      <td style="padding:9px 12px;font-weight:600;color:#4c1d95;">${escHtml(label)}</td>
+      <td style="padding:9px 12px;text-align:center;">${fmtNum(r.min_target_value)} ${unitLabel}</td>
+      <td style="padding:9px 12px;text-align:center;">${fmtNum(rateNo)} ${typeLabel}</td>
+      <td style="padding:9px 12px;text-align:center;">${fmtNum(rateWi)} ${typeLabel}</td>
+      <td style="padding:9px 12px;text-align:center;color:#059669;font-weight:600;">${fmtNum(rateDw)} ${typeLabel}</td>
+      <td style="padding:9px 12px;text-align:center;">${escHtml(r.incentive_type === 'percentage' ? 'Percentage' : 'Fixed/Unit')}</td>
+      <td style="padding:9px 12px;text-align:center;">${bonusTrig}</td>
+      <td style="padding:9px 12px;text-align:center;">${bonusMul}</td>
+      ${actionCell}
+    </tr>`;
+  }).join('');
+}
+
+function fmtNum(v) {
+  if (v == null) return '—';
+  const n = parseFloat(v);
+  if (isNaN(n)) return '—';
+  return n.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+}
+
+// ── Incentive Edit Modal ───────────────────────────────────────────────────────
+function openIncEditModal(id) {
+  const row = _incConfigRows.find(r => r.id === id);
+  if (!row) return;
+  const slug  = row.category_slug || row.category || '';
+  const label = row.category_label || INC_CATEGORY_LABELS[slug] || slug;
+  document.getElementById('inc-edit-id').value         = row.id;
+  document.getElementById('inc-edit-min-target').value = row.min_target_value ?? '';
+  document.getElementById('inc-edit-min-unit').value   = row.min_target_unit  || 'count';
+  document.getElementById('inc-edit-type').value       = row.incentive_type   || 'percentage';
+  document.getElementById('inc-edit-rate-no').value    = (row.incentive_rate_without_support ?? row.rate_no_support) ?? '';
+  document.getElementById('inc-edit-rate-wi').value    = (row.incentive_rate_with_support    ?? row.rate_with_support) ?? '';
+  document.getElementById('inc-edit-rate-dw').value    = row.incentive_rate_direct_work ?? 0;
+  document.getElementById('inc-edit-bonus-trig').value = row.bonus_trigger_value ?? '';
+  document.getElementById('inc-edit-bonus-mul').value  = row.bonus_multiplier  ?? 1.20;
+  document.getElementById('inc-modal-err').textContent = '';
+  document.getElementById('inc-modal-title').textContent = 'Edit: ' + label;
+  // Edit mode: show read-only display, hide select
+  document.getElementById('inc-edit-cat-select').style.display = 'none';
+  const disp = document.getElementById('inc-edit-cat-display');
+  disp.style.display = '';
+  disp.textContent   = label;
+  disp.dataset.slug  = slug;
+  document.getElementById('inc-modal').classList.add('open');
+}
+
+async function openIncentiveAddModal() {
+  document.getElementById('inc-edit-id').value         = '';
+  document.getElementById('inc-edit-min-target').value = '';
+  document.getElementById('inc-edit-min-unit').value   = 'count';
+  document.getElementById('inc-edit-type').value       = 'percentage';
+  document.getElementById('inc-edit-rate-no').value    = '';
+  document.getElementById('inc-edit-rate-wi').value    = '';
+  document.getElementById('inc-edit-rate-dw').value    = 0;
+  document.getElementById('inc-edit-bonus-trig').value = '';
+  document.getElementById('inc-edit-bonus-mul').value  = 1.20;
+  document.getElementById('inc-modal-err').textContent = '';
+  document.getElementById('inc-modal-title').textContent = 'Add Incentive Config Row';
+  // Add mode: show select, hide display div
+  const sel  = document.getElementById('inc-edit-cat-select');
+  const disp = document.getElementById('inc-edit-cat-display');
+  sel.style.display  = '';
+  disp.style.display = 'none';
+  sel.innerHTML = '<option value="">Loading categories…</option>';
+  document.getElementById('inc-modal').classList.add('open');
+  // Load signup categories for selected company
+  const compId = document.getElementById('inc-company').value;
+  const cats   = await loadSignupCats(compId);
+  populateCatSelect(cats, '');
+}
+
+function closeIncModal() {
+  document.getElementById('inc-modal').classList.remove('open');
+}
+
+// ── Incentive Employee Targets (DC-INCENTIVE-EMP-TARGETS-001) ──────────────────
+let _incEmpTargets = {};   // { emp_id: { category_slug: {id, min_target} } }
+let _incEmpTgtEmps = [];   // [{id, name, emp_code}]
+const ACH_CATS_ORDERED = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','insurance'];
+
+async function loadIncEmpTargets() {
+  const month  = document.getElementById('inc-month').value;
+  const year   = document.getElementById('inc-year').value;
+  const rawCompId = document.getElementById('inc-company').value;
+  const compId = parseInt(rawCompId) || 0;
+  const box    = document.getElementById('inc-emp-tgt-box');
+  const thead  = document.getElementById('inc-emp-tgt-thead');
+  const tbody  = document.getElementById('inc-emp-tgt-tbody');
+  box.style.display = '';
+  thead.innerHTML = `<tr><th colspan="20" style="text-align:center;padding:16px;"><div class="loading-ring"></div></th></tr>`;
+  tbody.innerHTML = '';
+  try {
+    const r = await fetch(`${API}/staff/incentive-employee-targets?month=${month}&year=${year}&company_id=${compId}`, { headers: authHdr() });
+    if (!r.ok) throw new Error('Failed to load employee targets');
+    const d = await r.json();
+    _incEmpTargets = {};
+    _incEmpTgtEmps = d.employees || [];
+    (d.targets || []).forEach(row => {
+      if (!_incEmpTargets[row.employee_id]) _incEmpTargets[row.employee_id] = {};
+      _incEmpTargets[row.employee_id][row.category_slug] = { id: row.id, min_target: row.min_target };
+    });
+    renderIncEmpTargets();
+  } catch(e) {
+    thead.innerHTML = `<tr><th colspan="20" style="text-align:center;padding:16px;color:#ef4444;">${escHtml(e.message)}</th></tr>`;
+    tbody.innerHTML = '';
+  }
+}
+
+function renderIncEmpTargets() {
+  const thead = document.getElementById('inc-emp-tgt-thead');
+  const tbody = document.getElementById('inc-emp-tgt-tbody');
+  const slugLabels = { training:'Training', solar:'Solar', ev_b2c:'EV B2C', ev_b2b_new:'EV B2B New', ev_b2b_existing:'EV B2B Existing', insurance:'Insurance' };
+  // Header
+  let hCols = '<th style="padding:7px 10px;text-align:left;font-weight:700;background:#f8f7ff;color:#374151;border-bottom:2px solid #e0d7ff;white-space:nowrap;">Employee</th>';
+  ACH_CATS_ORDERED.forEach(slug => {
+    hCols += `<th style="padding:7px 10px;text-align:center;font-weight:700;background:#f8f7ff;color:#059669;border-bottom:2px solid #e0d7ff;font-size:0.78rem;white-space:nowrap;">${slugLabels[slug]||slug}</th>`;
+  });
+  thead.innerHTML = `<tr>${hCols}</tr>`;
+  // Body
+  if (!_incEmpTgtEmps.length) {
+    tbody.innerHTML = `<tr><td colspan="${1+ACH_CATS_ORDERED.length}" style="text-align:center;padding:16px;color:#9ca3af;">No employees found</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = _incEmpTgtEmps.map(emp => {
+    const empData = _incEmpTargets[emp.id] || {};
+    const slugCells = ACH_CATS_ORDERED.map(slug => {
+      const tgt = empData[slug] ? empData[slug].min_target : 2;
+      return `<td style="padding:4px 6px;text-align:center;">
+        <input type="number" min="0" step="1"
+          style="width:60px;text-align:center;border:1px solid #e0d7ff;border-radius:4px;padding:3px 4px;font-size:0.82rem;"
+          data-eid="${emp.id}" data-slug="${slug}"
+          value="${tgt}"
+          onchange="markIncTgtDirty(this)">
+      </td>`;
+    }).join('');
+    return `<tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:5px 10px;font-weight:600;color:#374151;white-space:nowrap;font-size:0.82rem;">${escHtml(emp.name)}<br><span style="color:#9ca3af;font-size:0.72rem;font-weight:400;">${escHtml(emp.emp_code||'')}</span></td>
+      ${slugCells}
+    </tr>`;
+  }).join('');
+}
+
+function markIncTgtDirty(input) {
+  input.style.borderColor = '#d97706';
+  input.style.background  = '#fffbeb';
+}
+
+async function saveIncEmpTargets() {
+  const month  = parseInt(document.getElementById('inc-month').value);
+  const year   = parseInt(document.getElementById('inc-year').value);
+  const rawCompId = document.getElementById('inc-company').value;
+  const compId = parseInt(rawCompId) || 0;
+  const inputs = document.querySelectorAll('#inc-emp-tgt-tbody input[data-eid]');
+  if (!inputs.length) { toast('Nothing to save', 'error'); return; }
+  const payloads = [];
+  inputs.forEach(inp => {
+    payloads.push({
+      employee_id: parseInt(inp.dataset.eid),
+      company_id:  compId,
+      month, year,
+      category_slug: inp.dataset.slug,
+      min_target: parseFloat(inp.value) || 0
+    });
+  });
+  try {
+    const r = await fetch(`${API}/staff/incentive-employee-targets/bulk-upsert`, {
+      method: 'POST', headers: authHdr(), body: JSON.stringify({ targets: payloads })
+    });
+    const d = await r.json();
+    if (!r.ok) { toast(d.detail || 'Save failed', 'error'); return; }
+    toast(`Saved ${d.saved || payloads.length} target(s)`, 'success');
+    inputs.forEach(inp => { inp.style.borderColor = ''; inp.style.background = ''; });
+    await loadIncEmpTargets();
+    loadAchievements();
+  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
+}
+
+async function copyIncTargetsToNextMonth() {
+  const month  = parseInt(document.getElementById('inc-month').value);
+  const year   = parseInt(document.getElementById('inc-year').value);
+  const rawCompId = document.getElementById('inc-company').value;
+  const compId = parseInt(rawCompId) || 0;
+  const btn    = document.getElementById('inc-tgt-copy-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Copying…';
+  try {
+    const r = await fetch(`${API}/staff/incentive-employee-targets/copy-to-next-month`, {
+      method: 'POST', headers: authHdr(), body: JSON.stringify({ month, year, company_id: compId })
+    });
+    const d = await r.json();
+    if (d.success) toast(d.message, 'success');
+    else toast(d.message || 'Copy failed', 'error');
+  } catch(e) { toast('Copy failed: ' + e.message, 'error'); }
+  finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-copy me-1"></i>Copy to Next Month';
+  }
+}
+// ── End Incentive Employee Targets ─────────────────────────────────────────────
+
+async function copyToNextMonth() {
+  const month  = parseInt(document.getElementById('inc-month').value);
+  const year   = parseInt(document.getElementById('inc-year').value);
+  const compId = parseInt(document.getElementById('inc-company').value) || 0;
+  const btn = document.getElementById('inc-copy-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa fa-spinner fa-spin me-1"></i>Copying…';
+  try {
+    const r = await fetch(`${API}/staff/incentive-config/copy-month`, {
+      method: 'POST',
+      headers: authHdr(),
+      body: JSON.stringify({ month, year, company_id: compId })
+    });
+    const d = await r.json();
+    if (d.success) {
+      toast(d.message, 'success');
+    } else {
+      toast(d.message || 'Copy failed', 'error');
+    }
+  } catch(e) {
+    toast('Copy failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa fa-copy me-1"></i>Copy to Next Month';
+  }
+}
+
+async function deleteIncentiveRow(id, label) {
+  if (!confirm(`Delete incentive row "${label}"?\nThis cannot be undone.`)) return;
+  try {
+    const r = await fetch(`${API}/staff/incentive-config/${id}`, {
+      method: 'DELETE', headers: authHdr()
+    });
+    if (!r.ok) { const d = await r.json(); toast(d.detail || 'Delete failed', 'error'); return; }
+    toast(`"${label}" deleted`, 'success');
+    loadIncentiveConfig();
+    loadAchievements();
+  } catch(e) { toast('Delete failed: ' + e.message, 'error'); }
+}
+
+async function saveIncentiveRow() {
+  const errEl   = document.getElementById('inc-modal-err');
+  errEl.textContent = '';
+  const id        = document.getElementById('inc-edit-id').value;
+  const isNewRow  = !id;
+  let catSlug, catLabel;
+  if (isNewRow) {
+    // Add mode — get from dropdown
+    const sel = document.getElementById('inc-edit-cat-select');
+    catSlug   = sel.value;
+    const opt = sel.options[sel.selectedIndex];
+    catLabel  = opt ? opt.dataset.label || opt.textContent : '';
+    if (!catSlug) { errEl.textContent = 'Please select a category.'; return; }
+  } else {
+    // Edit mode — get from display div (category unchanged)
+    const disp = document.getElementById('inc-edit-cat-display');
+    catSlug    = disp.dataset.slug || '';
+    catLabel   = disp.textContent  || '';
+  }
+  const payload = {
+    month:                         parseInt(document.getElementById('inc-month').value),
+    year:                          parseInt(document.getElementById('inc-year').value),
+    company_id:                    parseInt(document.getElementById('inc-company').value),
+    category_slug:                 catSlug,
+    category_label:                catLabel,
+    min_target_value:              parseFloat(document.getElementById('inc-edit-min-target').value) || 0,
+    min_target_unit:               document.getElementById('inc-edit-min-unit').value,
+    incentive_type:                document.getElementById('inc-edit-type').value,
+    incentive_rate_without_support: parseFloat(document.getElementById('inc-edit-rate-no').value) || 0,
+    incentive_rate_with_support:   parseFloat(document.getElementById('inc-edit-rate-wi').value) || 0,
+    incentive_rate_direct_work:    parseFloat(document.getElementById('inc-edit-rate-dw').value) || 0,
+    bonus_trigger_value:           document.getElementById('inc-edit-bonus-trig').value ? parseFloat(document.getElementById('inc-edit-bonus-trig').value) : null,
+    bonus_multiplier:              document.getElementById('inc-edit-bonus-mul').value  ? parseFloat(document.getElementById('inc-edit-bonus-mul').value) : 1.20,
+  };
+
+  const url    = isNewRow ? `${API}/staff/incentive-config` : `${API}/staff/incentive-config/${id}`;
+  const method = isNewRow ? 'POST' : 'PUT';
+  try {
+    const r = await fetch(url, { method, headers: authHdr(), body: JSON.stringify(payload) });
+    const d = await r.json();
+    if (!r.ok) { errEl.textContent = d.detail || 'Save failed'; return; }
+    toast(isNewRow ? 'Row added successfully' : 'Row updated successfully', 'success');
+    closeIncModal();
+    loadIncentiveConfig();
+    loadAchievements();
+  } catch(e) {
+    errEl.textContent = e.message;
+  }
+}
+
+// ── Achievement Calculation ────────────────────────────────────────────────────
+// Column order matches table headers: training, solar, ev_b2c, ev_b2b_new, ev_b2b_existing, insurance
+const ACH_CATS = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','insurance'];
+
+async function loadAchievements() {
+  const month   = document.getElementById('inc-month').value;
+  const year    = document.getElementById('inc-year').value;
+  const compId  = document.getElementById('inc-company').value;
+  const empId   = document.getElementById('ach-emp-filter').value;
+  const body    = document.getElementById('inc-ach-body');
+  const info    = document.getElementById('inc-ach-info');
+
+  body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;"><div class="loading-ring"></div></td></tr>`;
+  info.style.display = 'none';
+
+  try {
+    let url = `${API}/staff/incentive-achievements?month=${month}&year=${year}&company_id=${compId}`;
+    if (empId) url += `&employee_id=${empId}`;
+    else url += `&show_all=true`;
+    const r = await fetch(url, { headers: authHdr() });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed to load achievements'); }
+    const d = await r.json();
+    const employees = d.data || [];
+
+    // Populate employee filter dropdown (only on first load — All Employees call)
+    if (!empId) {
+      const sel = document.getElementById('ach-emp-filter');
+      const current = sel.value;
+      sel.innerHTML = '<option value="">All Employees</option>';
+      employees.forEach(emp => {
+        const o = document.createElement('option');
+        o.value = emp.employee_id || emp.id || '';
+        o.textContent = `${emp.name || emp.emp_code || ''}${emp.emp_code && emp.name ? ' (' + emp.emp_code + ')' : ''}`;
+        sel.appendChild(o);
+      });
+      if (current) sel.value = current;
+    }
+
+    renderAchievements(employees);
+    body._achLoaded = true;
+
+    const MONTHS = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+    const empLabel = empId ? (document.getElementById('ach-emp-filter').selectedOptions[0]?.text || '') : `${employees.length} employee(s)`;
+    info.textContent = `${MONTHS[parseInt(month)] || ''} ${year} · ${empLabel}`;
+    info.style.display = '';
+  } catch(e) {
+    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:#ef4444;">${escHtml(e.message)}</td></tr>`;
+    toast(e.message, 'error');
+  }
+}
+
+function renderAchievements(rows) {
+  const body = document.getElementById('inc-ach-body');
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:32px;color:#9ca3af;"><i class="fa fa-inbox fa-2x mb-2 d-block"></i>No achievement data found for this period.</td></tr>`;
+    return;
+  }
+  const UNIT = { training:'students', solar:'deals', ev_b2c:'deals', ev_b2b:'deals', ev_b2b_new:'deals', ev_b2b_existing:'deals', insurance:'₹', real_estate:'₹' };
+  const CAT_LABEL = { training:'ETC Students', solar:'Solar', ev_b2c:'B2C', ev_b2b:'B2B', ev_b2b_new:'B2B (New)', ev_b2b_existing:'B2B (Exist.)', insurance:'Insurance', real_estate:'Real Estate' };
+
+  let html = '';
+  rows.forEach((emp, idx) => {
+    const achMap = {};
+    (emp.categories || []).forEach(c => { achMap[c.slug] = c; });
+    const detailId = `ach-detail-${idx}`;
+
+    const catCells = ACH_CATS.map(cat => {
+      const a = achMap[cat];
+      if (!a) return `<td style="padding:8px 12px;text-align:center;color:#d1d5db;">—</td>`;
+      const earned   = a.incentive_earned != null ? '₹' + fmtNum(a.incentive_earned) : '—';
+      const unit     = UNIT[cat] || '';
+      const achVal   = a.achieved_value != null ? fmtNum(a.achieved_value) : '—';
+      const achStr   = unit === '₹' ? '₹' + achVal : achVal + (achVal !== '—' ? ' ' + unit : '');
+      const tick     = a.target_met ? ' <i class="fa fa-check-circle" style="color:#059669;font-size:10px;"></i>' : '';
+      const bonus    = a.bonus_applied ? ' <span style="font-size:0.68rem;background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px;vertical-align:middle;">BONUS</span>' : '';
+      const achColor = a.target_met ? '#059669' : '#6b7280';
+      const hasData  = (a.achieved_count > 0 || a.achieved_amount > 0);
+      const _month   = document.getElementById('inc-month').value;
+      const _year    = document.getElementById('inc-year').value;
+      const _compId  = parseInt(document.getElementById('inc-company').value) || 0;
+      const _empName = encodeURIComponent(emp.name || emp.emp_code || '');
+      const _catLbl  = encodeURIComponent(CAT_LABEL[cat] || cat);
+      const drillUrl = hasData
+        ? `/staff/incentive-source?employee_id=${emp.employee_id}&category_slug=${cat}&month=${_month}&year=${_year}&company_id=${_compId}&emp_name=${_empName}&cat_label=${_catLbl}`
+        : '';
+      const drillClick = hasData
+        ? `onclick="window.open('${drillUrl}','_blank');event.stopPropagation();" title="Click to see source leads"`
+        : '';
+      const drillStyle = hasData ? 'cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px;' : '';
+      return `<td style="padding:8px 12px;text-align:center;">
+        <div ${drillClick} style="font-weight:600;font-size:0.82rem;color:${achColor};${drillStyle}">${achStr}${tick}${bonus}</div>
+        <div style="font-size:0.75rem;color:#7c3aed;font-weight:600;">${earned}</div>
+      </td>`;
+    }).join('');
+
+    const total   = emp.total_incentive_earned != null ? '₹' + fmtNum(emp.total_incentive_earned) : '—';
+    const empName = escHtml(emp.name || emp.emp_code || '');
+    const empCode = emp.emp_code && emp.name ? `<div style="font-size:0.72rem;color:#9ca3af;">${escHtml(emp.emp_code)}</div>` : '';
+
+    // Build detail breakdown rows (only categories with any activity)
+    const activeCats = ACH_CATS.filter(cat => {
+      const a = achMap[cat];
+      return a && (a.achieved_count > 0 || a.achieved_amount > 0);
+    });
+    const detailRows = activeCats.map(cat => {
+      const a = achMap[cat];
+      const unit = UNIT[cat] || '';
+      // Self leads column
+      const selfCount = a.self_count || 0;
+      const selfAmt   = a.self_amount || 0;
+      const selfDisp  = selfCount > 0 || selfAmt > 0
+        ? (unit === '₹' ? '₹' + fmtNum(selfAmt) : fmtNum(selfCount) + ' ' + unit)
+        : '<span style="color:#d1d5db;">—</span>';
+      const selfInc = a.self_incentive > 0
+        ? `<span style="color:#7c3aed;font-weight:600;">₹${fmtNum(a.self_incentive)}</span>`
+        : '<span style="color:#d1d5db;">—</span>';
+      // Company leads column
+      const coCount = a.company_count || 0;
+      const coAmt   = a.company_amount || 0;
+      const coDisp  = coCount > 0 || coAmt > 0
+        ? (unit === '₹' ? '₹' + fmtNum(coAmt) : fmtNum(coCount) + ' ' + unit)
+        : '<span style="color:#d1d5db;">—</span>';
+      const coInc = a.company_incentive_base > 0
+        ? `<span style="color:#0891b2;font-weight:600;">₹${fmtNum(a.company_incentive_base)}</span>`
+        : '<span style="color:#d1d5db;">—</span>';
+      // Direct Work column
+      const dwCount = a.direct_count || 0;
+      const dwAmt   = a.direct_amount || 0;
+      const dwDisp  = dwCount > 0 || dwAmt > 0
+        ? (unit === '₹' ? '₹' + fmtNum(dwAmt) : fmtNum(dwCount) + ' ' + unit)
+        : '<span style="color:#d1d5db;">—</span>';
+      const dwInc = (a.direct_incentive_base || 0) > 0
+        ? `<span style="color:#059669;font-weight:600;">₹${fmtNum(a.direct_incentive_base)}</span>`
+        : '<span style="color:#d1d5db;">—</span>';
+      // Bonus — on company + direct combined
+      const bonusDisp = a.bonus_applied
+        ? `<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:3px;font-size:0.7rem;font-weight:700;">×${fmtNum(a.bonus_multiplier)}</span>`
+        : '<span style="color:#d1d5db;">—</span>';
+      // Target / eligibility
+      const minTgt   = a.min_target != null ? a.min_target : 2;
+      const achVal   = a.achieved_value != null ? a.achieved_value : (a.achieved_count || 0);
+      const gap      = a.gap != null ? a.gap : Math.max(0, minTgt - achVal);
+      const tgtMet   = a.target_met;
+      const eligBadge = tgtMet
+        ? `<span style="background:#d1fae5;color:#065f46;padding:2px 7px;border-radius:10px;font-size:0.68rem;font-weight:700;">✓ Eligible</span>`
+        : `<span style="background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:10px;font-size:0.68rem;font-weight:700;">⚠ ${fmtNum(gap)} more</span>`;
+      const rowBg = a.bonus_applied ? 'background:rgba(254,243,199,0.3);' : 'background:#fafafa;';
+      return `<tr style="${rowBg}border-bottom:1px solid #f3f4f6;">
+        <td style="padding:5px 10px;font-weight:600;color:#374151;">${CAT_LABEL[cat]||cat}</td>
+        <td style="padding:5px 10px;text-align:center;color:#7c3aed;">${selfDisp}</td>
+        <td style="padding:5px 10px;text-align:center;">${selfInc}</td>
+        <td style="padding:5px 10px;text-align:center;color:#0891b2;">${coDisp}</td>
+        <td style="padding:5px 10px;text-align:center;">${coInc}</td>
+        <td style="padding:5px 10px;text-align:center;color:#059669;">${dwDisp}</td>
+        <td style="padding:5px 10px;text-align:center;">${dwInc}</td>
+        <td style="padding:5px 10px;text-align:center;">${bonusDisp}</td>
+        <td style="padding:5px 10px;text-align:center;font-size:0.72rem;">
+          <div style="color:#6b7280;">Tgt: <b>${fmtNum(minTgt)}</b> | Got: <b>${fmtNum(achVal)}</b></div>
+          <div style="margin-top:2px;">${eligBadge}</div>
+        </td>
+        <td style="padding:5px 10px;text-align:right;font-weight:700;color:#7c3aed;">₹${fmtNum(a.incentive_earned)}</td>
+      </tr>`;
+    }).join('');
+
+    const noActivity = activeCats.length === 0
+      ? `<tr><td colspan="10" style="padding:10px;text-align:center;color:#9ca3af;font-style:italic;">No activity this period</td></tr>`
+      : '';
+
+    html += `<tr style="border-bottom:1px solid #fef3c7;cursor:pointer;" onclick="toggleAchDetail('${detailId}', this)">
+      <td style="padding:8px 12px;">
+        <span id="toggle-${detailId}" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#7c3aed;color:#fff;font-size:12px;font-weight:700;margin-right:7px;cursor:pointer;flex-shrink:0;">+</span>
+        <span style="font-weight:600;font-size:0.83rem;">${empName}</span>
+        ${empCode}
+      </td>
+      ${catCells}
+      <td style="padding:8px 12px;text-align:right;font-weight:700;color:#92400e;font-size:0.88rem;">${total}</td>
+    </tr>
+    <tr id="${detailId}" style="display:none;">
+      <td colspan="9" style="padding:0;background:#f8fafc;border-bottom:2px solid #e0e7ff;">
+        <div style="padding:10px 16px 12px 36px;">
+          <table style="width:100%;border-collapse:collapse;font-size:0.78rem;">
+            <thead>
+              <tr style="background:#e0e7ff;color:#3730a3;">
+                <th style="padding:5px 10px;text-align:left;">Category</th>
+                <th style="padding:5px 10px;text-align:center;color:#7c3aed;">Self Leads<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">flat rate</span></th>
+                <th style="padding:5px 10px;text-align:center;color:#7c3aed;">Self ₹</th>
+                <th style="padding:5px 10px;text-align:center;color:#0891b2;">Company Leads<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">has MNR/VGK4U ID</span></th>
+                <th style="padding:5px 10px;text-align:center;color:#0891b2;">Company ₹</th>
+                <th style="padding:5px 10px;text-align:center;color:#059669;">Direct Work<br><span style="font-size:0.68rem;font-weight:400;opacity:0.75">no MNR/VGK4U ID</span></th>
+                <th style="padding:5px 10px;text-align:center;color:#059669;">Direct ₹</th>
+                <th style="padding:5px 10px;text-align:center;">Bonus</th>
+                <th style="padding:5px 10px;text-align:center;">Target / Eligibility</th>
+                <th style="padding:5px 10px;text-align:right;">Final Incentive</th>
+              </tr>
+            </thead>
+            <tbody>${detailRows}${noActivity}</tbody>
+          </table>
+        </div>
+      </td>
+    </tr>`;
+  });
+  body.innerHTML = html;
+}
+
+async function openAchDrilldown(empId, catSlug, catLabel, empName) {
+  const month  = document.getElementById('inc-month').value;
+  const year   = document.getElementById('inc-year').value;
+  const compId = parseInt(document.getElementById('inc-company').value) || 0;
+  const panel  = document.getElementById('drill-panel');
+  const body   = document.getElementById('drill-body');
+  document.getElementById('drill-title').textContent    = 'Source · ' + catLabel;
+  document.getElementById('drill-employee').textContent = empName || '';
+  body.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;"><i class="fa fa-spinner fa-spin fa-2x"></i></div>';
+  panel.style.transform = 'translateX(0)';
+  document.getElementById('drill-overlay').style.display = 'block';
+  try {
+    let url = `${API}/staff/incentive-achievements/drilldown?month=${month}&year=${year}&employee_id=${empId}&category_slug=${catSlug}`;
+    if (compId) url += `&company_id=${compId}`;
+    const r = await fetch(url, { headers: authHdr() });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed'); }
+    const d = await r.json();
+    if (!d.success) throw new Error(d.message || 'Failed');
+    _renderDrilldown(d);
+  } catch(e) {
+    body.innerHTML = `<div style="color:#ef4444;padding:16px;">${escHtml(e.message)}</div>`;
+  }
+}
+function closeAchDrilldown() {
+  document.getElementById('drill-panel').style.transform = 'translateX(100%)';
+  document.getElementById('drill-overlay').style.display = 'none';
+}
+function _renderDrilldown(d) {
+  const body = document.getElementById('drill-body');
+  if (!d.data || !d.data.length) {
+    body.innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;font-style:italic;"><i class="fa fa-inbox fa-2x mb-2 d-block"></i>No source records found for this period.</div>';
+    return;
+  }
+  const MONTHS = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const subtitle = `${MONTHS[d.month]||''} ${d.year} · ${d.count} record(s)`;
+  document.getElementById('drill-subtitle').textContent = subtitle;
+  const rows = d.data.map(r => {
+    const roles   = (r.roles||[]).join(', ') || '—';
+    const typeBadge = r.lead_type === 'Self'
+      ? '<span style="background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:3px;font-size:0.68rem;font-weight:600;">Self</span>'
+      : r.lead_type === 'Direct'
+      ? '<span style="background:#dcfce7;color:#166534;padding:1px 5px;border-radius:3px;font-size:0.68rem;font-weight:600;">Direct</span>'
+      : '<span style="background:#e0e7ff;color:#3730a3;padding:1px 5px;border-radius:3px;font-size:0.68rem;font-weight:600;">Company</span>';
+    const dv = r.deal_value > 0 ? '₹' + fmtNum(r.deal_value) : '—';
+    const date = r.completion_date ? r.completion_date.slice(0,10) : '—';
+    const link = r.record_type === 'crm_lead'
+      ? `<a href="/crm_lead_detail?id=${r.id}" target="_blank" style="color:#7c3aed;font-size:0.7rem;white-space:nowrap;"><i class="fa fa-external-link-alt"></i> View</a>`
+      : `<span style="color:#059669;font-size:0.7rem;">ETC Direct</span>`;
+    return `<tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:7px 8px;font-weight:600;max-width:140px;" title="${escHtml(r.name||'')}">${escHtml(r.name||'—')}</td>
+      <td style="padding:7px 8px;color:#6b7280;font-size:0.78rem;">${escHtml(r.phone||'—')}</td>
+      <td style="padding:7px 8px;text-align:center;">${typeBadge}</td>
+      <td style="padding:7px 8px;color:#0891b2;font-size:0.78rem;">${escHtml(roles)}</td>
+      <td style="padding:7px 8px;text-align:right;color:#059669;font-weight:600;">${dv}</td>
+      <td style="padding:7px 8px;color:#6b7280;font-size:0.78rem;white-space:nowrap;">${date}</td>
+      <td style="padding:7px 8px;text-align:center;">${link}</td>
+    </tr>`;
+  }).join('');
+  body.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+    <thead>
+      <tr style="background:#f1f5f9;font-size:0.7rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0;z-index:1;">
+        <th style="padding:7px 8px;text-align:left;">Name</th>
+        <th style="padding:7px 8px;text-align:left;">Phone</th>
+        <th style="padding:7px 8px;text-align:center;">Type</th>
+        <th style="padding:7px 8px;text-align:left;">Role</th>
+        <th style="padding:7px 8px;text-align:right;">Deal Value</th>
+        <th style="padding:7px 8px;">Completed</th>
+        <th style="padding:7px 8px;text-align:center;">Link</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function toggleAchDetail(detailId, rowEl) {
+  const detail = document.getElementById(detailId);
+  const toggle = document.getElementById('toggle-' + detailId);
+  if (!detail) return;
+  const isOpen = detail.style.display !== 'none';
+  detail.style.display = isOpen ? 'none' : 'table-row';
+  if (toggle) {
+    toggle.textContent = isOpen ? '+' : '−';
+    toggle.style.background = isOpen ? '#7c3aed' : '#059669';
+  }
+  if (rowEl) rowEl.style.background = isOpen ? '' : '#faf5ff';
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+  if (typeof StaffHeader !== 'undefined') {
+    StaffHeader.inject('Performance Configuration & Report', 'fas fa-chart-line');
+    StaffHeader.init();
+  }
+  if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+  initYearDropdown();
+  checkAccess();
+});
+</script>
+<script src="/staff_sidebar.js"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+
+<!-- ── Add Custom KPI Modal ──────────────────────────────────────────────── -->
+<div id="custom-kpi-modal" style="display:none;position:fixed;inset:0;z-index:9000;
+     background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;width:420px;max-width:95vw;
+              box-shadow:0 8px 32px rgba(0,0,0,.18);position:relative;">
+    <button onclick="closeCustomKpiModal()" style="position:absolute;top:12px;right:16px;
+      border:none;background:none;font-size:1.3rem;cursor:pointer;color:#6b7280;">✕</button>
+    <h5 style="margin:0 0 18px;font-size:1rem;font-weight:700;color:#1e293b;">
+      <i class="fa fa-plus-circle me-2" style="color:#7c3aed;"></i>Add Custom Metric
+    </h5>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:4px;">
+          Metric Name <span style="color:#ef4444;">*</span>
+        </label>
+        <input id="ckpi-label" type="text" placeholder="e.g. Customer Satisfaction" maxlength="80"
+          style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:7px 10px;font-size:0.88rem;box-sizing:border-box;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:4px;">
+            Unit <span style="color:#ef4444;">*</span>
+          </label>
+          <input id="ckpi-unit" type="text" placeholder="e.g. %, count, ₹/month"
+            style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:7px 10px;font-size:0.88rem;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Default Target</label>
+          <input id="ckpi-target" type="number" min="0" step="any" value="80"
+            style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:7px 10px;font-size:0.88rem;box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center;">
+        <div>
+          <label style="font-size:0.8rem;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Default Wt%</label>
+          <input id="ckpi-weight" type="number" min="0" max="100" step="0.5" value="0"
+            style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:7px 10px;font-size:0.88rem;box-sizing:border-box;">
+        </div>
+        <div style="padding-top:18px;">
+          <label style="font-size:0.82rem;color:#374151;display:flex;align-items:center;gap:6px;cursor:pointer;">
+            <input id="ckpi-enabled" type="checkbox" checked style="width:15px;height:15px;">
+            Enabled by default
+          </label>
+        </div>
+      </div>
+      <p style="font-size:0.72rem;color:#6b7280;margin:0;background:#f8fafc;border-radius:6px;padding:8px 10px;">
+        <i class="fa fa-info-circle me-1" style="color:#7c3aed;"></i>
+        Custom metrics appear in the target grid for per-employee assignment. They are tracked separately
+        and excluded from automated score calculation in the performance report.
+      </p>
+      <p id="ckpi-error" style="color:#ef4444;font-size:0.8rem;margin:0;min-height:16px;"></p>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+      <button onclick="closeCustomKpiModal()"
+        style="padding:8px 18px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:0.88rem;color:#374151;">
+        Cancel
+      </button>
+      <button id="ckpi-save-btn" onclick="saveCustomKpi()"
+        style="padding:8px 18px;border:none;border-radius:6px;background:#7c3aed;color:#fff;cursor:pointer;font-size:0.88rem;font-weight:600;">
+        Add Metric
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Drilldown Source Panel ────────────────────────────────────────────── -->
+<div id="drill-overlay" onclick="closeAchDrilldown()"
+  style="display:none;position:fixed;inset:0;z-index:9499;background:rgba(0,0,0,.25);"></div>
+<div id="drill-panel"
+  style="position:fixed;top:0;right:0;width:600px;max-width:96vw;height:100vh;
+         background:#fff;box-shadow:-4px 0 28px rgba(0,0,0,.18);z-index:9500;
+         transform:translateX(100%);transition:transform .25s ease;
+         display:flex;flex-direction:column;">
+  <div style="padding:14px 18px;border-bottom:1px solid #e5e7eb;background:#f8fafc;display:flex;align-items:flex-start;gap:10px;">
+    <div style="flex:1;min-width:0;">
+      <div id="drill-title" style="font-weight:700;font-size:0.92rem;color:#1e293b;"></div>
+      <div id="drill-employee" style="font-size:0.78rem;color:#7c3aed;font-weight:600;margin-top:1px;"></div>
+      <div id="drill-subtitle" style="font-size:0.72rem;color:#9ca3af;margin-top:1px;"></div>
+    </div>
+    <button onclick="closeAchDrilldown()"
+      style="border:none;background:#f1f5f9;border-radius:6px;width:28px;height:28px;
+             font-size:1rem;cursor:pointer;color:#6b7280;flex-shrink:0;display:flex;
+             align-items:center;justify-content:center;">✕</button>
+  </div>
+  <div id="drill-body" style="flex:1;overflow-y:auto;padding:0;"></div>
+</div>
+
+</body>
+</html>

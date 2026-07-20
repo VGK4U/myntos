@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Promoter Management — Internal | MNR Staff</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh}
+.content-area{padding:20px 24px}
+/* ── Tab bar ── */
+.tab-bar{display:flex;gap:0;border-bottom:2px solid #e5e7eb;margin-bottom:20px}
+.tab-btn{padding:10px 22px;font-size:13px;font-weight:700;border:none;background:none;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;display:flex;align-items:center;gap:7px}
+.tab-btn.active{color:#0d9488;border-bottom-color:#0d9488}
+.tab-btn:hover:not(.active){color:#374151}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+/* ── Filters ── */
+.filter-bar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:flex-end}
+.filter-group{display:flex;flex-direction:column;gap:4px}
+.filter-label{font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase}
+.filter-input{padding:8px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:13px;min-width:150px;outline:none;transition:border-color .2s}
+.filter-input:focus{border-color:#0d9488;box-shadow:0 0 0 2px rgba(13,148,136,.1)}
+/* ── Table ── */
+.table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.07);overflow-x:auto;-webkit-overflow-scrolling:touch}
+.data-table{width:100%;border-collapse:collapse;font-size:13px}
+.data-table th{padding:11px 14px;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;background:#f9fafb;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+.data-table td{padding:11px 14px;border-bottom:1px solid #f3f4f6;color:#374151;vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:#f9fafb}
+/* ── Badges ── */
+.badge-status{padding:3px 10px;border-radius:50px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px}
+.badge-active{background:#dcfce7;color:#15803d}
+.badge-pending{background:#fef3c7;color:#b45309}
+.badge-paused{background:#dbeafe;color:#1d4ed8}
+.badge-inactive{background:#fee2e2;color:#b91c1c}
+.badge-paid{background:#ede9fe;color:#6d28d9}
+.badge-unpaid{background:#f1f5f9;color:#475569}
+/* ── Action btns ── */
+.action-btn{padding:5px 10px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:opacity .2s}
+.action-btn:hover{opacity:.8}
+.btn-teal{background:#ccfbf1;color:#0d9488}
+.btn-amber{background:#fef3c7;color:#92400e}
+.btn-green{background:#d1fae5;color:#065f46}
+.btn-red{background:#fee2e2;color:#b91c1c}
+.btn-whatsapp{background:#d1fae5;color:#065f46}
+/* ── Add button ── */
+.add-btn{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.add-btn:hover{opacity:.9}
+/* ── Dashboard cards ── */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
+.dash-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.07);border-left:4px solid #0d9488}
+.dash-num{font-size:28px;font-weight:900;color:#0d9488}
+.dash-label{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal-box{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.modal-header{padding:18px 24px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:800;color:#111827}
+.modal-close{background:none;border:none;font-size:18px;color:#6b7280;cursor:pointer;padding:4px}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid #e5e7eb;display:flex;gap:10px;justify-content:flex-end}
+/* ── Form ── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{margin-bottom:14px}
+.form-label-sm{font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;display:block}
+.form-control-sm{width:100%;padding:9px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;transition:border-color .2s}
+.form-control-sm:focus{border-color:#0d9488;box-shadow:0 0 0 2px rgba(13,148,136,.1)}
+.checkbox-row{display:flex;align-items:center;gap:8px;cursor:pointer}
+.checkbox-row input[type=checkbox]{width:16px;height:16px;accent-color:#0d9488;cursor:pointer}
+/* ── WhatsApp modal ── */
+.wa-preview{background:#e7fde1;border-radius:10px;padding:14px 16px;font-size:13px;line-height:1.6;white-space:pre-wrap;color:#0a3d00;font-family:monospace;max-height:300px;overflow-y:auto;border:1px solid #b7f5b2}
+.wa-lang-btn{padding:5px 12px;border-radius:6px;border:1.5px solid #d1d5db;background:#f9fafb;font-size:12px;font-weight:700;cursor:pointer;color:#374151;transition:all .15s}
+.wa-lang-btn.active{background:#25d366;color:#fff;border-color:#16a34a}
+/* ── Top stats charts ── */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-box{background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.chart-title{font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px}
+.bar-list{display:flex;flex-direction:column;gap:8px}
+.bar-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.bar-label{width:120px;flex-shrink:0;color:#374151;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-track{flex:1;background:#f3f4f6;border-radius:50px;height:8px;overflow:hidden}
+.bar-fill{height:100%;background:linear-gradient(90deg,#0d9488,#f59e0b);border-radius:50px;transition:width .4s}
+.bar-count{width:30px;text-align:right;color:#6b7280;font-weight:700}
+.platform-chips{display:flex;flex-wrap:wrap;gap:6px}
+.platform-chip{padding:4px 10px;border-radius:50px;font-size:11px;font-weight:700;background:#f1f5f9;color:#475569}
+.activity-table{width:100%;border-collapse:collapse;font-size:12px}
+.activity-table th{padding:8px 10px;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb}
+.activity-table td{padding:8px 10px;border-bottom:1px solid #f3f4f6;color:#374151}
+@media(max-width:640px){.form-row{grid-template-columns:1fr}.chart-row{grid-template-columns:1fr}.content-area{padding:12px}}
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+<div class="content-area">
+
+    <!-- Page header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+        <div>
+            <h2 style="font-size:20px;font-weight:800;color:#111827;margin-bottom:2px"><i class="fas fa-bullhorn" style="color:#0d9488;margin-right:8px"></i>Promoter Management</h2>
+            <p style="font-size:13px;color:#6b7280">Track influencers, referral codes, and performance — Internal use only (VGK Mentor &amp; EA)</p>
+        </div>
+        <button class="add-btn" onclick="openAddModal()"><i class="fas fa-plus"></i> Add Promoter</button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+        <button class="tab-btn active" id="tabList" onclick="switchTab('list')"><i class="fas fa-list"></i> Promoters</button>
+        <button class="tab-btn" id="tabDash" onclick="switchTab('dash')"><i class="fas fa-chart-bar"></i> Executive Dashboard</button>
+        <button class="tab-btn" id="tabMarket" onclick="switchTab('market')"><i class="fas fa-store"></i> Marketplace Products</button>
+    </div>
+
+    <!-- TAB 1: Promoters List -->
+    <div class="tab-pane active" id="paneList">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <span class="filter-label">Search</span>
+                <input class="filter-input" id="fSearch" placeholder="Name / Code / Phone…" oninput="loadList()">
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Status</span>
+                <select class="filter-input" id="fStatus" onchange="loadList()">
+                    <option value="">All</option>
+                    <option value="active">Active</option>
+                    <option value="pending">Pending</option>
+                    <option value="paused">Paused</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Account Type</span>
+                <select class="filter-input" id="fType" onchange="loadList()">
+                    <option value="">All</option>
+                    <option value="paid">Paid</option>
+                    <option value="unpaid">Unpaid</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">Platform</span>
+                <select class="filter-input" id="fPlatform" onchange="loadList()">
+                    <option value="">All Platforms</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="whatsapp">WhatsApp</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <span class="filter-label">VGK Member</span>
+                <select class="filter-input" id="fVGK" onchange="loadList()">
+                    <option value="">All</option>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                </select>
+            </div>
+            <button class="add-btn" style="align-self:flex-end;background:linear-gradient(135deg,#6366f1,#4f46e5)" onclick="loadList()"><i class="fas fa-sync-alt"></i></button>
+        </div>
+        <div style="font-size:13px;color:#6b7280;margin-bottom:10px">Showing <span id="listCount">—</span> promoters</div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Code</th>
+                        <th>Platforms</th>
+                        <th>Status</th>
+                        <th>Type</th>
+                        <th>VGK</th>
+                        <th>Target</th>
+                        <th>Bonus</th>
+                        <th>Referrals</th>
+                        <th>Promotions</th>
+                        <th>Phone</th>
+                        <th>Registered</th>
+                        <th>Reg. Via</th>
+                        <th>Last Signed</th>
+                        <th>NDA</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="listBody">
+                    <tr><td colspan="17" style="text-align:center;padding:32px;color:#9ca3af">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: Executive Dashboard -->
+    <div class="tab-pane" id="paneDash">
+        <!-- Promoter Summary Cards -->
+        <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px"><i class="fas fa-users" style="color:#0d9488;margin-right:5px"></i>Promoter Overview</div>
+        <div class="dash-grid" id="dashCards"></div>
+
+        <!-- Registration Source Breakdown -->
+        <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:16px"><i class="fas fa-door-open" style="color:#4338ca;margin-right:5px"></i>Registration Breakdown</div>
+        <div class="dash-grid" id="regSourceCards"></div>
+
+        <!-- Promotions Financial Summary -->
+        <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:16px"><i class="fas fa-handshake" style="color:#7c3aed;margin-right:5px"></i>Promotions & Deals Financial</div>
+        <div class="dash-grid" id="dealsCards"></div>
+
+        <!-- Charts Row -->
+        <div class="chart-row">
+            <div class="chart-box">
+                <div class="chart-title"><i class="fas fa-chart-bar" style="color:#0d9488;margin-right:6px"></i>Top Promoters by Referrals</div>
+                <div class="bar-list" id="topList"></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-title"><i class="fas fa-globe" style="color:#0d9488;margin-right:6px"></i>Referrals by Portal</div>
+                <div class="bar-list" id="portalList"></div>
+            </div>
+        </div>
+
+        <!-- Top Promoters by Value -->
+        <div class="chart-box" style="margin-bottom:16px" id="topDealsSection">
+            <div class="chart-title"><i class="fas fa-rupee-sign" style="color:#7c3aed;margin-right:6px"></i>Top Promoters by Value</div>
+            <div class="bar-list" id="topDealsList"></div>
+        </div>
+
+        <!-- VGK Target Progress -->
+        <div class="chart-box" style="margin-bottom:16px" id="vgkTargetSection">
+            <div class="chart-title"><i class="fas fa-bullseye" style="color:#f59e0b;margin-right:6px"></i>VGK Loyalty Target Progress</div>
+            <div id="vgkTargetList"></div>
+        </div>
+        <!-- Recent Activity -->
+        <div class="chart-box">
+            <div class="chart-title"><i class="fas fa-history" style="color:#0d9488;margin-right:6px"></i>Recent Referral Activity</div>
+            <table class="activity-table">
+                <thead><tr><th>Influencer</th><th>Portal</th><th>Type</th><th>Name</th><th>Phone</th><th>Date</th></tr></thead>
+                <tbody id="recentBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 3: Marketplace Products -->
+    <div class="tab-pane" id="paneMarket">
+        <!-- Header row -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+            <div>
+                <div style="font-weight:800;font-size:16px;color:#1e293b"><i class="fas fa-store" style="color:#0d9488;margin-right:8px"></i>Marketplace Products</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px">Products promoters can share via tracked referral links</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <input id="mktSearch" class="filter-input" placeholder="Search products…" oninput="renderMarket()" style="min-width:180px">
+                <select id="mktCatFilter" class="filter-input" onchange="renderMarket()" style="min-width:140px">
+                    <option value="">All Categories</option>
+                </select>
+                <select id="mktStatusFilter" class="filter-input" onchange="renderMarket()" style="min-width:120px">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+                <button class="add-btn" onclick="openAddProductModal()"><i class="fas fa-plus"></i> Add Product</button>
+            </div>
+        </div>
+
+        <!-- Stats strip -->
+        <div id="mktStats" style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap;font-size:12px;color:#64748b"></div>
+
+        <!-- Product grid -->
+        <div id="mktGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+            <div style="grid-column:1/-1;text-align:center;padding:60px;color:#94a3b8">
+                <i class="fas fa-spinner fa-spin" style="font-size:24px;display:block;margin-bottom:10px"></i>Loading products…
+            </div>
+        </div>
+    </div>
+
+</div><!-- /.content-area -->
+</div><!-- /.main-content -->
+
+<!-- ── Add/Edit Promoter Modal ── -->
+<div class="modal-overlay" id="promoterModal">
+<div class="modal-box">
+    <div class="modal-header">
+        <div class="modal-title" id="modalTitle">Add Promoter</div>
+        <button class="modal-close" onclick="closeModal('promoterModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+        <input type="hidden" id="editId">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label-sm">Full Name <span style="color:#ef4444">*</span></label>
+                <input class="form-control-sm" id="fName" placeholder="Promoter full name">
+            </div>
+            <div class="form-group">
+                <label class="form-label-sm">Phone <span style="color:#ef4444">*</span></label>
+                <input class="form-control-sm" id="fPhone" placeholder="10-digit mobile" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label-sm">Email</label>
+                <input class="form-control-sm" id="fEmail" placeholder="email@example.com" type="email">
+            </div>
+            <div class="form-group">
+                <label class="form-label-sm">Referral Code</label>
+                <input class="form-control-sm" id="fCode" placeholder="Auto-generated if blank" style="text-transform:uppercase">
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label-sm">Platforms</label>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px" id="platformChecks">
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" value="instagram" style="accent-color:#0d9488"> Instagram</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" value="youtube" style="accent-color:#0d9488"> YouTube</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" value="facebook" style="accent-color:#0d9488"> Facebook</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" value="whatsapp" style="accent-color:#0d9488"> WhatsApp</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" value="other" style="accent-color:#0d9488"> Other</label>
+            </div>
+        </div>
+        <!-- Social Media Profile Links + Followers -->
+        <div class="form-group" id="socialLinksSection">
+            <label class="form-label-sm" style="margin-bottom:8px">Social Media Profile Links &amp; Followers</label>
+            <div style="display:flex;flex-direction:column;gap:8px">
+                <div style="display:grid;grid-template-columns:90px 1fr 130px;align-items:center;gap:8px">
+                    <span style="font-size:12px;color:#6b7280"><i class="fab fa-instagram" style="color:#e1306c;margin-right:4px"></i>Instagram</span>
+                    <input class="form-control-sm" id="slInstagram" placeholder="https://instagram.com/yourusername">
+                    <input class="form-control-sm" id="slInstagramFc" type="number" min="0" placeholder="Followers" style="text-align:right">
+                </div>
+                <div style="display:grid;grid-template-columns:90px 1fr 130px;align-items:center;gap:8px">
+                    <span style="font-size:12px;color:#6b7280"><i class="fab fa-youtube" style="color:#ff0000;margin-right:4px"></i>YouTube</span>
+                    <input class="form-control-sm" id="slYoutube" placeholder="https://youtube.com/@channel">
+                    <input class="form-control-sm" id="slYoutubeFc" type="number" min="0" placeholder="Subscribers" style="text-align:right">
+                </div>
+                <div style="display:grid;grid-template-columns:90px 1fr 130px;align-items:center;gap:8px">
+                    <span style="font-size:12px;color:#6b7280"><i class="fab fa-facebook" style="color:#1877f2;margin-right:4px"></i>Facebook</span>
+                    <input class="form-control-sm" id="slFacebook" placeholder="https://facebook.com/page">
+                    <input class="form-control-sm" id="slFacebookFc" type="number" min="0" placeholder="Followers" style="text-align:right">
+                </div>
+                <div style="display:grid;grid-template-columns:90px 1fr 130px;align-items:center;gap:8px">
+                    <span style="font-size:12px;color:#6b7280"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:4px"></i>WhatsApp</span>
+                    <input class="form-control-sm" id="slWhatsapp" placeholder="https://wa.me/91XXXXXXXXXX">
+                    <input class="form-control-sm" id="slWhatsappFc" type="number" min="0" placeholder="Group Members" style="text-align:right">
+                </div>
+                <div style="display:grid;grid-template-columns:90px 1fr 130px;align-items:center;gap:8px">
+                    <span style="font-size:12px;color:#6b7280"><i class="fas fa-link" style="color:#6b7280;margin-right:4px"></i>Other</span>
+                    <input class="form-control-sm" id="slOther" placeholder="Any other link (website, etc.)">
+                    <input class="form-control-sm" id="slOtherFc" type="number" min="0" placeholder="Followers" style="text-align:right">
+                </div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:2px"><i class="fas fa-info-circle me-1"></i>Followers count can be updated by staff or by the promoter from their dashboard</div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label-sm">Account Type</label>
+                <select class="form-control-sm" id="fAccType">
+                    <option value="unpaid">Unpaid</option>
+                    <option value="paid">Paid</option>
+                </select>
+            </div>
+            <div class="form-group" id="statusGroup" style="display:none">
+                <label class="form-label-sm">Status</label>
+                <select class="form-control-sm" id="fStatusEdit">
+                    <option value="pending">Pending</option>
+                    <option value="active">Active</option>
+                    <option value="paused">Paused</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label-sm">Monthly Promotion Budget</label>
+            <select class="form-control-sm" id="fBudgetRange">
+                <option value="">— Not specified —</option>
+                <option value="Up to ₹1,000">Up to ₹1,000</option>
+                <option value="₹1,001–₹3,000">₹1,001 – ₹3,000</option>
+                <option value="₹3,001–₹5,000">₹3,001 – ₹5,000</option>
+                <option value="₹5,001–₹10,000">₹5,001 – ₹10,000</option>
+                <option value="Above ₹10,000">Above ₹10,000</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label-sm">Password <span id="pwHint" style="font-weight:400;text-transform:none;color:#6b7280;font-size:11px">(required for new promoter)</span></label>
+            <input class="form-control-sm" id="fPassword" type="password" placeholder="Set login password">
+        </div>
+        <div class="form-group" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px">
+            <label class="checkbox-row" style="margin-bottom:8px">
+                <input type="checkbox" id="fIsVGK" onchange="toggleVGKTarget()"> Register as VGK4U Loyalty Member (creates VGK membership automatically)
+            </label>
+            <div id="vgkTargetWrap" style="display:none;margin-top:6px">
+                <label class="form-label-sm">VGK Registration Target (minimum to auto-activate)</label>
+                <input class="form-control-sm" id="fVGKTarget" type="number" placeholder="e.g. 10" min="1">
+            </div>
+        </div>
+        <div class="form-group" style="background:#fdf4ff;border:1.5px solid #e9d5ff;border-radius:10px;padding:14px">
+            <label class="form-label-sm" style="color:#6d28d9"><i class="fas fa-gift me-1"></i>Signup Bonus Points</label>
+            <div style="font-size:11.5px;color:#7c3aed;margin-bottom:8px">When someone signs up using this promoter's referral code, these Discount Credit points will be automatically credited to the new member. Minimum 5,000 — default is 5,000.</div>
+            <input class="form-control-sm" id="fSignupBonus" type="number" placeholder="5000" min="5000" max="100000" value="5000" style="max-width:200px">
+        </div>
+        <div class="form-group">
+            <label class="form-label-sm">Notes</label>
+            <textarea class="form-control-sm" id="fNotes" rows="2" placeholder="Any additional notes…"></textarea>
+        </div>
+        <div class="alert alert-danger d-none" id="modalError" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i><span id="modalErrorMsg"></span>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('promoterModal')">Cancel</button>
+        <button class="btn btn-sm" id="saveBtn" onclick="savePromoter()" style="background:#0d9488;color:#fff;font-weight:700;min-width:100px">
+            <span id="saveBtnText"><i class="fas fa-save me-1"></i>Save</span>
+            <span id="saveBtnSpinner" style="display:none"><i class="fas fa-spinner fa-spin me-1"></i>Saving…</span>
+        </button>
+    </div>
+</div>
+</div>
+
+<!-- ── WhatsApp Share Modal ── -->
+<div class="modal-overlay" id="waModal">
+<div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+        <div class="modal-title"><i class="fab fa-whatsapp" style="color:#25d366;margin-right:8px"></i>Share Login via WhatsApp</div>
+        <button class="modal-close" onclick="closeModal('waModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+        <p style="font-size:13px;color:#6b7280;margin-bottom:10px">Select language and share the welcome message:</p>
+        <div style="display:flex;gap:6px;margin-bottom:12px" id="waLangTabs">
+            <button class="wa-lang-btn active" onclick="switchWALang('en',this)">🇬🇧 EN</button>
+            <button class="wa-lang-btn" onclick="switchWALang('hi',this)">🇮🇳 HI</button>
+            <button class="wa-lang-btn" onclick="switchWALang('te',this)">తె TE</button>
+            <button class="wa-lang-btn" onclick="switchWALang('ta',this)">த TA</button>
+        </div>
+        <div class="wa-preview" id="waPreview"></div>
+        <div style="margin-top:14px;font-size:12px;color:#6b7280">To: <strong id="waPhone">—</strong></div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="copyWAMsg()"><i class="fas fa-copy me-1"></i>Copy Message</button>
+        <button class="btn btn-sm" onclick="openWhatsApp()" style="background:#25d366;color:#fff;font-weight:700"><i class="fab fa-whatsapp me-1"></i>Open WhatsApp</button>
+    </div>
+</div>
+</div>
+
+<!-- ── Promotion Deals Modal ── -->
+<div class="modal-overlay" id="dealsModal" style="z-index:1100">
+<div class="modal-box" style="max-width:900px;width:95vw">
+    <div class="modal-header">
+        <div class="modal-title"><i class="fas fa-handshake" style="color:#6366f1;margin-right:8px"></i>Promotion Deals — <span id="dealsPromoterName" style="color:#0d9488"></span></div>
+        <button class="modal-close" onclick="closeModal('dealsModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" style="padding:0">
+        <input type="hidden" id="dealsInfluencerId">
+        <!-- Sub-form: Add / Edit deal -->
+        <div id="dealFormWrap" style="background:#f8fafc;border-bottom:1.5px solid #e5e7eb;padding:18px 20px;display:none">
+            <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:12px" id="dealFormTitle">Add Promotion Deal</div>
+            <input type="hidden" id="dealEditId">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
+                <div class="form-group" style="margin:0">
+                    <label class="form-label-sm">Date</label>
+                    <input class="form-control-sm" id="df_date" type="date">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label class="form-label-sm">Promotion Name</label>
+                    <input class="form-control-sm" id="df_name" placeholder="e.g. April Campaign">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label class="form-label-sm">Platform</label>
+                    <select class="form-control-sm" id="df_platform">
+                        <option value="">Select Platform</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="YouTube">YouTube</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label class="form-label-sm">Reach / Followers</label>
+                    <input class="form-control-sm" id="df_fc" type="number" min="0" placeholder="e.g. 50000" style="text-align:right">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label class="form-label-sm">Agreed Charge (₹)</label>
+                    <input class="form-control-sm" id="df_charge" type="number" min="0" step="0.01" placeholder="0.00" style="text-align:right">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label class="form-label-sm">Payment Status</label>
+                    <select class="form-control-sm" id="df_pstatus">
+                        <option value="pending">Pending</option>
+                        <option value="paid">Paid</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label class="form-label-sm">Amount Paid (₹)</label>
+                    <input class="form-control-sm" id="df_paid" type="number" min="0" step="0.01" placeholder="0.00" style="text-align:right">
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label class="form-label-sm">Payment Date</label>
+                    <input class="form-control-sm" id="df_pdate" type="date">
+                </div>
+            </div>
+            <div class="form-group" style="margin:10px 0 0">
+                <label class="form-label-sm">Payment / Tracking Details</label>
+                <textarea class="form-control-sm" id="df_pdetails" rows="2" placeholder="UTR no., bank details, tracking info…"></textarea>
+            </div>
+            <div class="form-group" style="margin:8px 0 0">
+                <label class="form-label-sm">Notes</label>
+                <input class="form-control-sm" id="df_notes" placeholder="Any additional notes">
+            </div>
+            <div class="alert alert-danger d-none" id="dealFormError" style="margin-top:8px;font-size:13px"><span id="dealFormErrorMsg"></span></div>
+            <div style="display:flex;gap:8px;margin-top:14px">
+                <button class="btn btn-secondary btn-sm" onclick="closeDealForm()">Cancel</button>
+                <button class="btn btn-sm" id="dealSaveBtn" onclick="saveDeal()" style="background:#6366f1;color:#fff;font-weight:700;min-width:110px">
+                    <span id="dealSaveBtnText"><i class="fas fa-save me-1"></i>Save Deal</span>
+                    <span id="dealSaveBtnSpinner" style="display:none"><i class="fas fa-spinner fa-spin"></i></span>
+                </button>
+            </div>
+        </div>
+        <!-- Deals table -->
+        <div style="padding:14px 20px 6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <div style="font-size:12px;color:#6b7280;display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+                <span><b id="dealsCount">—</b> deal(s)</span>
+                <span>Agreed: <span id="dealsTotalCharge" style="color:#0d9488;font-weight:700">—</span></span>
+                <span style="color:#ef4444">TDS 2%: <span id="dealsTotalTDS" style="font-weight:700">—</span></span>
+                <span style="color:#7c3aed">Net Payable: <span id="dealsTotalNet" style="font-weight:700">—</span></span>
+                <span style="color:#16a34a">Paid Out: <span id="dealsTotalPaid" style="font-weight:700">—</span></span>
+            </div>
+            <button class="btn btn-sm" onclick="openAddDealForm()" style="background:#6366f1;color:#fff;font-weight:700;font-size:12px"><i class="fas fa-plus me-1"></i>Add Deal</button>
+        </div>
+        <div style="overflow-x:auto;padding:0 4px 16px">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead>
+                    <tr style="background:#f1f5f9;text-transform:uppercase;font-size:10px;color:#6b7280;letter-spacing:.5px">
+                        <th style="padding:8px 10px;text-align:left">Date</th>
+                        <th style="padding:8px 10px;text-align:left">Promotion</th>
+                        <th style="padding:8px 10px;text-align:left">Platform</th>
+                        <th style="padding:8px 10px;text-align:right">Count</th>
+                        <th style="padding:8px 10px;text-align:right">Agreed</th>
+                        <th style="padding:8px 10px;text-align:right;color:#ef4444">TDS 2%</th>
+                        <th style="padding:8px 10px;text-align:right;color:#7c3aed">Net Pay</th>
+                        <th style="padding:8px 10px;text-align:center">Status</th>
+                        <th style="padding:8px 10px;text-align:right">Paid Out</th>
+                        <th style="padding:8px 10px;text-align:left">Payment Details</th>
+                        <th style="padding:8px 10px;text-align:left">Pay Date</th>
+                        <th style="padding:8px 10px;text-align:center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="dealsTableBody">
+                    <tr><td colspan="12" style="text-align:center;padding:32px;color:#9ca3af">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('dealsModal')">Close</button>
+    </div>
+</div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-overlay" id="resetPwModal">
+<div class="modal-box" style="max-width:400px">
+    <div class="modal-header">
+        <div class="modal-title"><i class="fas fa-key" style="color:#f59e0b;margin-right:8px"></i>Reset Password</div>
+        <button class="modal-close" onclick="closeModal('resetPwModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+        <input type="hidden" id="resetPwId">
+        <p style="font-size:13px;color:#374151;margin-bottom:14px">Set a new login password for: <strong id="resetPwName" style="color:#0d9488"></strong></p>
+        <div class="form-group">
+            <label class="form-label-sm">New Password <span style="color:#ef4444">*</span></label>
+            <input class="form-control-sm" id="resetPwInput" type="password" placeholder="Min 6 characters" oninput="document.getElementById('resetPwStrength').textContent=this.value.length>7?'Strong':this.value.length>4?'Medium':'Weak'">
+            <div id="resetPwStrength" style="font-size:11px;margin-top:4px;color:#6b7280"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label-sm">Confirm Password <span style="color:#ef4444">*</span></label>
+            <input class="form-control-sm" id="resetPwConfirm" type="password" placeholder="Re-enter new password">
+        </div>
+        <div class="alert alert-danger d-none" id="resetPwError" role="alert" style="font-size:13px">
+            <i class="fas fa-exclamation-circle me-2"></i><span id="resetPwErrorMsg"></span>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('resetPwModal')">Cancel</button>
+        <button class="btn btn-sm" id="resetPwBtn" onclick="confirmResetPassword()" style="background:#f59e0b;color:#fff;font-weight:700;min-width:120px">
+            <span id="resetPwBtnText"><i class="fas fa-key me-1"></i>Reset Password</span>
+            <span id="resetPwBtnSpinner" style="display:none"><i class="fas fa-spinner fa-spin"></i></span>
+        </button>
+    </div>
+</div>
+</div>
+
+<!-- ── Campaign Points Modal ── -->
+<div class="modal-overlay" id="campaignModal" onclick="if(event.target===this)closeModal('campaignModal')">
+<div class="modal-box" style="max-width:440px">
+    <div class="modal-header" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border-radius:16px 16px 0 0">
+        <div class="modal-title" style="color:#fff"><i class="fas fa-star me-2"></i>Award Campaign Points</div>
+        <button class="modal-close" onclick="closeModal('campaignModal')" style="color:#fff"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+        <div id="campaignPromoterInfo" style="background:#f5f3ff;border:1px solid #e9d5ff;border-radius:10px;padding:12px 16px;margin-bottom:20px">
+            <div style="font-weight:700;color:#4c1d95" id="campaignPromoterName">—</div>
+            <div style="font-size:12px;color:#6d28d9;margin-top:3px">VGK ID: <strong id="campaignVGKId">—</strong></div>
+        </div>
+        <div style="margin-bottom:14px">
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Campaign Name <span style="color:#ef4444">*</span></label>
+            <input type="text" id="campaignNameInput" class="form-control" placeholder="e.g. Diwali Promo 2026, Summer Drive..." maxlength="200">
+        </div>
+        <div style="margin-bottom:14px">
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Points to Award <span style="color:#ef4444">*</span> <span style="font-size:11px;font-weight:400;color:#6b7280">(Max 10,000 per award)</span></label>
+            <input type="number" id="campaignPointsInput" class="form-control" placeholder="Enter points (1 – 10,000)" min="1" max="10000" step="1">
+            <div style="font-size:11px;color:#7c3aed;margin-top:4px"><i class="fas fa-info-circle me-1"></i>1 VGK Point = ₹1 discount. Points appear in member's VGK ledger as <strong>Campaign Reward</strong>.</div>
+        </div>
+        <div style="margin-bottom:6px">
+            <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:5px">Additional Notes <span style="font-size:11px;font-weight:400;color:#6b7280">(optional)</span></label>
+            <textarea id="campaignNotesInput" class="form-control" rows="2" placeholder="e.g. Top performer — Q1 target achieved"></textarea>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('campaignModal')">Cancel</button>
+        <button class="btn btn-sm" id="campaignSubmitBtn" onclick="submitCampaignPoints()" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-weight:700;min-width:140px">
+            <span id="campaignSubmitText"><i class="fas fa-star me-1"></i>Award Points</span>
+            <span id="campaignSubmitSpinner" style="display:none"><i class="fas fa-spinner fa-spin"></i></span>
+        </button>
+    </div>
+</div>
+</div>
+
+<!-- ── View Details Modal ── -->
+<div class="modal-overlay" id="detailModal" onclick="if(event.target===this)closeModal('detailModal')">
+<div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+        <div class="modal-title"><i class="fas fa-id-card me-2" style="color:#0d9488"></i>Promoter Details</div>
+        <button class="modal-close" onclick="closeModal('detailModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" id="detailModalBody" style="padding:0"></div>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+let currentWAPhone = '';
+let currentWAMsg = '';
+let _waPromoterData = null;
+let _campaignInfluencerId = null;
+let _ndaMap = {};
+let _rowCache = {};
+
+// ── Social links helpers ──
+const _SL_META = {
+    instagram: {icon:'fab fa-instagram', color:'#e1306c', label:'IG'},
+    youtube:   {icon:'fab fa-youtube',   color:'#ff0000', label:'YT'},
+    facebook:  {icon:'fab fa-facebook',  color:'#1877f2', label:'FB'},
+    whatsapp:  {icon:'fab fa-whatsapp',  color:'#25d366', label:'WA'},
+    other:     {icon:'fas fa-link',      color:'#6b7280', label:'🔗'},
+};
+function _fmtFc(n) {
+    n = parseInt(n) || 0;
+    if (!n) return '';
+    if (n >= 1000000) return (n/1000000).toFixed(1).replace(/\.0$/,'') + 'M';
+    if (n >= 1000)    return (n/1000).toFixed(1).replace(/\.0$/,'') + 'K';
+    return String(n);
+}
+function socialBadges(slStr) {
+    if (!slStr) return '';
+    let obj = {};
+    try { obj = JSON.parse(slStr) || {}; } catch(e) { return ''; }
+    const parts = [];
+    for (const [key, val] of Object.entries(obj)) {
+        const m = _SL_META[key] || {icon:'fas fa-link', color:'#6b7280', label:key};
+        const fc = _fmtFc(typeof val === 'object' ? val.followers : 0);
+        const url = typeof val === 'object' ? val.url : (typeof val === 'string' ? val : '');
+        const badge = `<span style="display:inline-flex;align-items:center;gap:3px;background:#f1f5f9;border-radius:4px;padding:2px 6px;font-size:10px;white-space:nowrap">`
+            + `<i class="${m.icon}" style="color:${m.color}"></i>`
+            + (url ? `<a href="${url}" target="_blank" style="color:#374151;text-decoration:none">${m.label}</a>` : `<span style="color:#374151">${m.label}</span>`)
+            + (fc ? `<span style="color:#0d9488;font-weight:700">${fc}</span>` : '')
+            + `</span>`;
+        parts.push(badge);
+    }
+    return parts.length ? `<div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px">${parts.join('')}</div>` : '';
+}
+
+function _fmtINR(n) {
+    n = parseFloat(n) || 0;
+    if (!n) return '—';
+    return '₹' + n.toLocaleString('en-IN', {maximumFractionDigits:0});
+}
+function dealBadge(r) {
+    const cnt = parseInt(r.deal_count) || 0;
+    const total = parseFloat(r.deal_total) || 0;
+    const paid = parseFloat(r.deal_paid) || 0;
+    if (!cnt) return `<button onclick="openDealsModal(${r.id},'${r.name.replace(/'/g,"\\'")}')" style="background:none;border:1.5px dashed #d1d5db;border-radius:6px;padding:3px 10px;font-size:11px;color:#9ca3af;cursor:pointer"><i class="fas fa-plus"></i></button>`;
+    return `<button onclick="openDealsModal(${r.id},'${r.name.replace(/'/g,"\\'")}')" style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:6px;padding:4px 10px;font-size:11px;color:#1d4ed8;cursor:pointer;text-align:center;line-height:1.4">
+        <div style="font-weight:700">${cnt} deal${cnt>1?'s':''}</div>
+        <div style="font-size:10px;color:#16a34a">${_fmtINR(paid)} <span style="color:#9ca3af">/ ${_fmtINR(total)}</span></div>
+    </button>`;
+}
+
+// ── Deals Modal ──
+let _dealsInfluencerId = null;
+
+function openDealsModal(id, name) {
+    _dealsInfluencerId = id;
+    document.getElementById('dealsInfluencerId').value = id;
+    document.getElementById('dealsPromoterName').textContent = name;
+    closeDealForm();
+    document.getElementById('dealsModal').classList.add('open');
+    loadDeals();
+}
+
+async function loadDeals() {
+    const id = _dealsInfluencerId;
+    if (!id) return;
+    const tbody = document.getElementById('dealsTableBody');
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+    try {
+        const resp = await staffFetch(`/api/v1/promo/staff/deals?influencer_id=${id}`);
+        const data = await resp.json();
+        const TDS_RATE = 0.02;
+        if (!data.success || !data.items.length) {
+            tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:32px;color:#9ca3af">No deals yet — click "Add Deal" to record the first one.</td></tr>';
+            document.getElementById('dealsCount').textContent = '0';
+            ['dealsTotalCharge','dealsTotalTDS','dealsTotalNet','dealsTotalPaid'].forEach(id => document.getElementById(id).textContent = '—');
+            return;
+        }
+        let totalCharge = 0, totalPaid = 0;
+        data.items.forEach(d => { totalCharge += parseFloat(d.agreed_charge)||0; totalPaid += parseFloat(d.payment_amount)||0; });
+        const totalTDS = totalCharge * TDS_RATE;
+        const totalNet = totalCharge - totalTDS;
+        document.getElementById('dealsCount').textContent = data.items.length;
+        document.getElementById('dealsTotalCharge').textContent = _fmtINR(totalCharge);
+        document.getElementById('dealsTotalTDS').textContent = _fmtINR(totalTDS);
+        document.getElementById('dealsTotalNet').textContent = _fmtINR(totalNet);
+        document.getElementById('dealsTotalPaid').textContent = _fmtINR(totalPaid);
+        const statusColors = {paid:'#16a34a', pending:'#d97706', cancelled:'#ef4444'};
+        const statusBg = {paid:'#f0fdf4', pending:'#fffbeb', cancelled:'#fef2f2'};
+        tbody.innerHTML = data.items.map(d => {
+            const st = d.payment_status || 'pending';
+            const agreed = parseFloat(d.agreed_charge)||0;
+            const tds = agreed * TDS_RATE;
+            const net = agreed - tds;
+            const dealDate = d.deal_date ? new Date(d.deal_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+            const payDate = d.payment_date ? new Date(d.payment_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+            return `<tr style="border-bottom:1px solid #f1f5f9">
+                <td style="padding:9px 10px;font-size:12px;color:#6b7280;white-space:nowrap">${dealDate}</td>
+                <td style="padding:9px 10px;font-weight:600;color:#111827">${d.promotion_name||'—'}</td>
+                <td style="padding:9px 10px">${d.platform ? `<span style="background:#f1f5f9;padding:2px 8px;border-radius:4px;font-size:11px">${d.platform}</span>` : '—'}</td>
+                <td style="padding:9px 10px;text-align:right;color:#6b7280">${d.follower_count ? _fmtFc(d.follower_count) : '—'}</td>
+                <td style="padding:9px 10px;text-align:right;font-weight:600;color:#0d9488">${_fmtINR(agreed)}</td>
+                <td style="padding:9px 10px;text-align:right;color:#ef4444;font-size:11px">${_fmtINR(tds)}</td>
+                <td style="padding:9px 10px;text-align:right;font-weight:700;color:#7c3aed">${_fmtINR(net)}</td>
+                <td style="padding:9px 10px;text-align:center">
+                    <span style="background:${statusBg[st]};color:${statusColors[st]};padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;text-transform:capitalize">${st}</span>
+                </td>
+                <td style="padding:9px 10px;text-align:right;color:#16a34a;font-weight:600">${_fmtINR(parseFloat(d.payment_amount)||0)}</td>
+                <td style="padding:9px 10px;font-size:11px;color:#6b7280;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.payment_details||''}">${d.payment_details||'—'}</td>
+                <td style="padding:9px 10px;font-size:12px;color:#6b7280;white-space:nowrap">${payDate}</td>
+                <td style="padding:9px 10px;text-align:center">
+                    <div style="display:flex;gap:4px;justify-content:center">
+                        <button class="action-btn btn-teal" onclick='openEditDealForm(${JSON.stringify(d)})' title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn btn-red" onclick="deleteDeal(${d.id})" title="Delete"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:24px;color:#ef4444">Error loading deals.</td></tr>';
+    }
+}
+
+function openAddDealForm() {
+    document.getElementById('dealEditId').value = '';
+    document.getElementById('dealFormTitle').textContent = 'Add Promotion Deal';
+    document.getElementById('df_date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('df_name').value = '';
+    document.getElementById('df_platform').value = '';
+    document.getElementById('df_fc').value = '';
+    document.getElementById('df_charge').value = '';
+    document.getElementById('df_pstatus').value = 'pending';
+    document.getElementById('df_paid').value = '';
+    document.getElementById('df_pdate').value = '';
+    document.getElementById('df_pdetails').value = '';
+    document.getElementById('df_notes').value = '';
+    document.getElementById('dealFormError').classList.add('d-none');
+    document.getElementById('dealFormWrap').style.display = '';
+    document.getElementById('df_name').focus();
+}
+
+function openEditDealForm(d) {
+    document.getElementById('dealEditId').value = d.id;
+    document.getElementById('dealFormTitle').textContent = 'Edit Promotion Deal';
+    document.getElementById('df_date').value = d.deal_date ? d.deal_date.substring(0,10) : '';
+    document.getElementById('df_name').value = d.promotion_name || '';
+    document.getElementById('df_platform').value = d.platform || '';
+    document.getElementById('df_fc').value = d.follower_count || '';
+    document.getElementById('df_charge').value = d.agreed_charge || '';
+    document.getElementById('df_pstatus').value = d.payment_status || 'pending';
+    document.getElementById('df_paid').value = d.payment_amount || '';
+    document.getElementById('df_pdate').value = d.payment_date ? d.payment_date.substring(0,10) : '';
+    document.getElementById('df_pdetails').value = d.payment_details || '';
+    document.getElementById('df_notes').value = d.notes || '';
+    document.getElementById('dealFormError').classList.add('d-none');
+    document.getElementById('dealFormWrap').style.display = '';
+    document.getElementById('df_name').focus();
+}
+
+function closeDealForm() {
+    document.getElementById('dealFormWrap').style.display = 'none';
+    document.getElementById('dealFormError').classList.add('d-none');
+}
+
+async function saveDeal() {
+    const dealId = document.getElementById('dealEditId').value;
+    const isEdit = !!dealId;
+    const body = {
+        influencer_id: _dealsInfluencerId,
+        deal_date: document.getElementById('df_date').value || null,
+        promotion_name: document.getElementById('df_name').value.trim() || null,
+        platform: document.getElementById('df_platform').value || null,
+        follower_count: parseInt(document.getElementById('df_fc').value) || 0,
+        agreed_charge: parseFloat(document.getElementById('df_charge').value) || 0,
+        payment_status: document.getElementById('df_pstatus').value,
+        payment_amount: parseFloat(document.getElementById('df_paid').value) || 0,
+        payment_date: document.getElementById('df_pdate').value || null,
+        payment_details: document.getElementById('df_pdetails').value.trim() || null,
+        notes: document.getElementById('df_notes').value.trim() || null,
+    };
+    const showErr = msg => { document.getElementById('dealFormErrorMsg').textContent = msg; document.getElementById('dealFormError').classList.remove('d-none'); };
+    document.getElementById('dealFormError').classList.add('d-none');
+    const btn = document.getElementById('dealSaveBtn');
+    btn.disabled = true;
+    document.getElementById('dealSaveBtnText').style.display = 'none';
+    document.getElementById('dealSaveBtnSpinner').style.display = '';
+    try {
+        let resp;
+        if (isEdit) {
+            resp = await staffFetch(`/api/v1/promo/staff/deals/${dealId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        } else {
+            resp = await staffFetch('/api/v1/promo/staff/deals', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        }
+        const data = await resp.json();
+        if (!resp.ok) { showErr(data.detail || 'Failed to save deal.'); return; }
+        closeDealForm();
+        await loadDeals();
+        loadList(); // refresh main table to update deal count badge
+    } catch(e) { showErr('Network error. Please try again.'); }
+    finally {
+        btn.disabled = false;
+        document.getElementById('dealSaveBtnText').style.display = '';
+        document.getElementById('dealSaveBtnSpinner').style.display = 'none';
+    }
+}
+
+async function deleteDeal(dealId) {
+    if (!confirm('Delete this promotion deal? This cannot be undone.')) return;
+    try {
+        const resp = await staffFetch(`/api/v1/promo/staff/deals/${dealId}`, { method:'DELETE' });
+        if (resp.ok) { await loadDeals(); loadList(); }
+        else { alert('Failed to delete deal.'); }
+    } catch(e) { alert('Network error.'); }
+}
+
+const PORTAL_PATHS = { vgk: '/vgk/login', mnr_contact: '/contact', partner: '/partner/login' };
+const PORTAL_LABELS = { vgk: 'VGK', mnr_contact: 'MNR', partner: 'Partner' };
+const PORTAL_PILL_CLASS = { vgk: 'badge-active', mnr_contact: 'badge-pending', partner: 'badge-paused' };
+
+function statusBadge(s) {
+    const cls = ({active:'badge-active',pending:'badge-pending',paused:'badge-paused',inactive:'badge-inactive'})[s]||'badge-pending';
+    return `<span class="badge-status ${cls}">${s}</span>`;
+}
+function typeBadge(t) {
+    return `<span class="badge-status ${t==='paid'?'badge-paid':'badge-unpaid'}">${t}</span>`;
+}
+function switchTab(tab) {
+    document.getElementById('tabList').classList.toggle('active', tab==='list');
+    document.getElementById('tabDash').classList.toggle('active', tab==='dash');
+    document.getElementById('tabMarket').classList.toggle('active', tab==='market');
+    document.getElementById('paneList').classList.toggle('active', tab==='list');
+    document.getElementById('paneDash').classList.toggle('active', tab==='dash');
+    document.getElementById('paneMarket').classList.toggle('active', tab==='market');
+    if (tab === 'dash') loadDash();
+    if (tab === 'market' && !_mktLoaded) loadMarket();
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function toggleVGKTarget() {
+    document.getElementById('vgkTargetWrap').style.display = document.getElementById('fIsVGK').checked ? '' : 'none';
+}
+function getPlatforms() {
+    return Array.from(document.querySelectorAll('#platformChecks input:checked')).map(c => c.value).join(',');
+}
+function setPlatforms(str) {
+    const vals = (str || '').split(',').map(s=>s.trim().toLowerCase());
+    document.querySelectorAll('#platformChecks input').forEach(cb => {
+        cb.checked = vals.includes(cb.value);
+    });
+}
+function getSocialLinks() {
+    // Build nested {platform: {url, followers}} JSON
+    const platforms = [
+        {key:'instagram', urlId:'slInstagram', fcId:'slInstagramFc'},
+        {key:'youtube',   urlId:'slYoutube',   fcId:'slYoutubeFc'},
+        {key:'facebook',  urlId:'slFacebook',  fcId:'slFacebookFc'},
+        {key:'whatsapp',  urlId:'slWhatsapp',  fcId:'slWhatsappFc'},
+        {key:'other',     urlId:'slOther',     fcId:'slOtherFc'},
+    ];
+    const obj = {};
+    platforms.forEach(p => {
+        const url = document.getElementById(p.urlId).value.trim();
+        const fc = parseInt(document.getElementById(p.fcId).value) || 0;
+        if (url || fc) obj[p.key] = {url, followers: fc};
+    });
+    return Object.keys(obj).length ? JSON.stringify(obj) : null;
+}
+function setSocialLinks(jsonStr) {
+    let obj = {};
+    try { obj = JSON.parse(jsonStr || '{}') || {}; } catch(e) {}
+    const platforms = [
+        {key:'instagram', urlId:'slInstagram', fcId:'slInstagramFc'},
+        {key:'youtube',   urlId:'slYoutube',   fcId:'slYoutubeFc'},
+        {key:'facebook',  urlId:'slFacebook',  fcId:'slFacebookFc'},
+        {key:'whatsapp',  urlId:'slWhatsapp',  fcId:'slWhatsappFc'},
+        {key:'other',     urlId:'slOther',     fcId:'slOtherFc'},
+    ];
+    platforms.forEach(p => {
+        const data = obj[p.key] || {};
+        // Support both old string format and new {url, followers} format
+        if (typeof data === 'string') {
+            document.getElementById(p.urlId).value = data;
+            document.getElementById(p.fcId).value = '';
+        } else {
+            document.getElementById(p.urlId).value = data.url || '';
+            document.getElementById(p.fcId).value = data.followers || '';
+        }
+    });
+}
+
+// ── Load List ──
+async function loadList() {
+    const search = document.getElementById('fSearch').value.trim();
+    const status = document.getElementById('fStatus').value;
+    const type = document.getElementById('fType').value;
+    const platform = document.getElementById('fPlatform').value;
+    const vgk = document.getElementById('fVGK').value;
+    let url = '/api/v1/promo/staff/list?limit=200';
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (status) url += `&status=${status}`;
+    if (type) url += `&account_type=${type}`;
+    if (platform) url += `&platform=${platform}`;
+    if (vgk) url += `&is_vgk_member=${vgk}`;
+    const tbody = document.getElementById('listBody');
+    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+    try {
+        const [resp, ndaResp] = await Promise.all([
+            staffFetch(url),
+            staffFetch('/api/v1/promo/staff/promo/nda/summary').catch(() => null)
+        ]);
+        const data = await resp.json();
+        const ndaData = ndaResp ? await ndaResp.json().catch(() => ({})) : {};
+        _ndaMap = {};
+        (ndaData.promoters || []).forEach(p => { _ndaMap[p.id] = p; });
+        if (!data.success || !data.items.length) {
+            tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:32px;color:#9ca3af">No promoters found.</td></tr>';
+            document.getElementById('listCount').textContent = '0';
+            return;
+        }
+        document.getElementById('listCount').textContent = data.total;
+        _rowCache = {};
+        data.items.forEach(r => { _rowCache[r.id] = r; });
+        const origin = window.location.origin;
+        tbody.innerHTML = data.items.map((r, i) => `
+            <tr>
+                <td style="color:#9ca3af">${i+1}</td>
+                <td><strong style="color:#111827">${r.name}</strong>${r.vgk_member_id ? `<br><span style="font-size:10px;color:#6d28d9">VGK: ${r.vgk_member_id}</span>` : ''}${socialBadges(r.social_links)}</td>
+                <td><code style="background:#f1f5f9;padding:2px 7px;border-radius:4px;font-size:12px;font-weight:700;color:#0d9488">${r.referral_code}</code></td>
+                <td style="font-size:11px;color:#6b7280">${(r.platforms||'—').split(',').map(p=>`<span style="background:#f1f5f9;padding:2px 7px;border-radius:4px;margin-right:3px;display:inline-block">${p}</span>`).join('')}</td>
+                <td>${statusBadge(r.status)}</td>
+                <td>${typeBadge(r.account_type)}</td>
+                <td style="text-align:center">${r.is_vgk_member ? '<i class="fas fa-check-circle" style="color:#0d9488"></i>' : '<i class="fas fa-circle" style="color:#d1d5db;font-size:10px"></i>'}</td>
+                <td style="text-align:center;color:#6b7280">${r.vgk_registration_target || '—'}</td>
+                <td style="text-align:center">${r.signup_bonus_points > 0 ? `<span style="background:#fdf4ff;color:#7c3aed;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px"><i class="fas fa-gift me-1"></i>${Number(r.signup_bonus_points).toLocaleString()}</span>` : '<span style="color:#d1d5db;font-size:11px">—</span>'}</td>
+                <td style="text-align:center;font-weight:700;color:#0d9488">${r.total_referrals||0}</td>
+                <td style="text-align:center">${dealBadge(r)}</td>
+                <td style="color:#6b7280">${r.phone||'—'}</td>
+                <td style="font-size:11px;color:#6b7280;white-space:nowrap">${r.created_at ? new Date(r.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}) : '—'}</td>
+                <td style="text-align:center">${(() => { const src = r.signup_source || 'direct'; const map = {staff:{label:'Company',bg:'#e0e7ff',color:'#4338ca'},direct:{label:'Self',bg:'#d1fae5',color:'#065f46'},referral_link:{label:'Referral',bg:'#fef3c7',color:'#92400e'}}; const s = map[src]||{label:src,bg:'#f1f5f9',color:'#374151'}; return `<span style="background:${s.bg};color:${s.color};font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap">${s.label}</span>`; })()}</td>
+                <td style="font-size:11px;color:#6b7280;white-space:nowrap">${r.last_login ? new Date(r.last_login).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true}) : '<span style="color:#d1d5db">Never</span>'}</td>
+                <td style="text-align:center">${(() => { const n = _ndaMap[r.id]; if (!n) return '<span style="color:#94a3b8;font-size:11px">—</span>'; const cnt = n.accept_count||0; const color = cnt===0?'#ef4444':cnt>=3?'#22c55e':'#f59e0b'; return '<span style="font-size:11px;font-weight:700;color:'+color+'">' + cnt + '/3</span>'; })()}</td>
+                <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                        <button class="action-btn" style="background:#e0e7ff;color:#4338ca" onclick="openDetailModal(${r.id})" title="View Details"><i class="fas fa-eye"></i></button>
+                        <button class="action-btn btn-teal" onclick="openEditModal(${r.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn btn-whatsapp" onclick="openWAModal(${r.id},'${origin}')" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>
+                        <button class="action-btn" style="background:#f59e0b;color:#fff" onclick="openResetPwModal(${r.id})" title="Reset Password"><i class="fas fa-key"></i></button>
+                        ${r.is_vgk_member && r.vgk_member_id ? `<button class="action-btn" style="background:#fdf4ff;color:#7c3aed;border:1px solid #e9d5ff" onclick="openCampaignModal(${r.id})" title="Award Campaign Points"><i class="fas fa-star"></i></button>` : ''}
+                        ${r.status !== 'active' ? `<button class="action-btn btn-green" onclick="quickStatus(${r.id},'active')" title="Activate"><i class="fas fa-check"></i></button>` : ''}
+                        ${r.status !== 'paused' && r.status !== 'inactive' ? `<button class="action-btn btn-amber" onclick="quickStatus(${r.id},'paused')" title="Pause"><i class="fas fa-pause"></i></button>` : ''}
+                        ${r.status !== 'inactive' ? `<button class="action-btn btn-red" onclick="quickStatus(${r.id},'inactive')" title="Deactivate"><i class="fas fa-ban"></i></button>` : ''}
+                    </div>
+                </td>
+            </tr>`).join('');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:24px;color:#ef4444">Error loading data.</td></tr>';
+    }
+}
+
+async function quickStatus(id, status) {
+    if (!confirm(`Set promoter status to "${status}"?`)) return;
+    try {
+        await staffFetch(`/api/v1/promo/staff/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({status}) });
+        loadList();
+    } catch(e) { alert('Error updating status'); }
+}
+
+// ── Campaign Points ──────────────────────────────────────────────────────────
+function openCampaignModal(id) {
+    const r = _rowCache[id]; if (!r) return;
+    _campaignInfluencerId = r.id;
+    document.getElementById('campaignPromoterName').textContent = r.name;
+    document.getElementById('campaignVGKId').textContent = r.vgk_member_id;
+    document.getElementById('campaignNameInput').value = '';
+    document.getElementById('campaignPointsInput').value = '';
+    document.getElementById('campaignNotesInput').value = '';
+    document.getElementById('campaignSubmitBtn').disabled = false;
+    document.getElementById('campaignSubmitText').style.display = '';
+    document.getElementById('campaignSubmitSpinner').style.display = 'none';
+    document.getElementById('campaignModal').classList.add('open');
+    setTimeout(() => document.getElementById('campaignNameInput').focus(), 100);
+}
+
+async function submitCampaignPoints() {
+    const name = document.getElementById('campaignNameInput').value.trim();
+    const pts = parseInt(document.getElementById('campaignPointsInput').value, 10);
+    const notes = document.getElementById('campaignNotesInput').value.trim();
+    if (!name) { alert('Please enter a campaign name.'); return; }
+    if (!pts || pts < 1 || pts > 10000) { alert('Points must be between 1 and 10,000.'); return; }
+    const btn = document.getElementById('campaignSubmitBtn');
+    btn.disabled = true;
+    document.getElementById('campaignSubmitText').style.display = 'none';
+    document.getElementById('campaignSubmitSpinner').style.display = '';
+    try {
+        const data = await staffFetch('/api/v1/promo/staff/campaign-points', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ influencer_id: _campaignInfluencerId, points: pts, campaign_name: name, notes: notes || null })
+        });
+        closeModal('campaignModal');
+        const vgkId = document.getElementById('campaignVGKId').textContent;
+        const pname = document.getElementById('campaignPromoterName').textContent;
+        alert(`✅ ${pts.toLocaleString('en-IN')} campaign points awarded to ${pname} (${vgkId})!\nNew VGK Balance: ${(data.new_balance||0).toLocaleString('en-IN')} pts`);
+    } catch(e) {
+        btn.disabled = false;
+        document.getElementById('campaignSubmitText').style.display = '';
+        document.getElementById('campaignSubmitSpinner').style.display = 'none';
+        alert(e.message || 'Error awarding points. Please try again.');
+    }
+}
+
+// ── View Details ─────────────────────────────────────────────────────────────
+function openDetailModal(id) {
+    const r = _rowCache[id]; if (!r) return;
+    const ndaInfo = _ndaMap[r.id];
+    const ndaCnt = ndaInfo ? (ndaInfo.accept_count || 0) : null;
+    const ndaColor = ndaCnt === null ? '#94a3b8' : (ndaCnt === 0 ? '#ef4444' : ndaCnt >= 3 ? '#22c55e' : '#f59e0b');
+    const created = r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'}) : '—';
+    const socials = r.social_links ? Object.entries(typeof r.social_links === 'string' ? JSON.parse(r.social_links) : r.social_links)
+        .filter(([,v]) => v).map(([k,v]) => `<a href="${v}" target="_blank" style="color:#0d9488;font-size:12px">${k}</a>`).join(' · ') : '—';
+
+    const row = (icon, label, val) => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9">
+            <div style="width:28px;text-align:center;color:#6b7280;margin-top:1px"><i class="fas fa-${icon}"></i></div>
+            <div style="flex:1">
+                <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${label}</div>
+                <div style="font-weight:600;color:#111827;margin-top:2px">${val}</div>
+            </div>
+        </div>`;
+
+    let html = `<div style="padding:20px 24px">`;
+    // Header
+    html += `<div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+        <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0d9488,#0f766e);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:800">${(r.name||'?')[0].toUpperCase()}</div>
+        <div>
+            <div style="font-size:18px;font-weight:800;color:#111827">${r.name||'—'}</div>
+            <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
+                ${statusBadge(r.status)} ${typeBadge(r.account_type)}
+                ${r.is_vgk_member ? '<span style="background:#ede9fe;color:#6d28d9;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px"><i class="fas fa-check-circle me-1"></i>VGK Member</span>' : ''}
+            </div>
+        </div>
+    </div>`;
+    html += row('code', 'Referral Code', `<code style="background:#f0fdf4;color:#0d9488;padding:2px 8px;border-radius:5px;font-weight:800">${r.referral_code||'—'}</code>`);
+    html += row('phone', 'Phone', r.phone||'—');
+    html += row('envelope', 'Email', r.email||'—');
+    html += row('share-alt', 'Platforms', (r.platforms||'—').split(',').map(p=>`<span style="background:#f1f5f9;padding:2px 8px;border-radius:4px;margin-right:3px">${p.trim()}</span>`).join(''));
+    html += row('hashtag', 'Budget Range', r.budget_range||'—');
+    if (r.is_vgk_member && r.vgk_member_id) {
+        html += row('star', 'VGK Member ID', `<span style="color:#7c3aed;font-weight:700">${r.vgk_member_id}</span>`);
+        html += row('bullseye', 'VGK Target', r.vgk_registration_target||'—');
+    }
+    html += row('gift', 'Signup Bonus Points', r.signup_bonus_points > 0 ? `<span style="background:#fdf4ff;color:#7c3aed;font-weight:700;padding:2px 10px;border-radius:99px;font-size:12px"><i class="fas fa-gift me-1"></i>${Number(r.signup_bonus_points).toLocaleString()} pts per signup</span>` : '<span style="color:#9ca3af;font-size:12px">None</span>');
+    html += row('share-square', 'Total Referrals', r.total_referrals||0);
+    html += row('handshake', 'Total Deals', r.total_deals||0);
+    html += row('file-signature', 'NDA Accepted', ndaCnt === null ? '—' : `<span style="color:${ndaColor};font-weight:700">${ndaCnt}/3 versions</span>`);
+    html += row('calendar-alt', 'Joined', created);
+    if (socials !== '—') html += row('link', 'Social Links', socials);
+    if (r.notes) html += row('sticky-note', 'Notes', r.notes);
+    html += `</div>`;
+    // Footer action buttons
+    html += `<div style="padding:14px 24px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end">
+        <button class="action-btn btn-teal" onclick="closeModal('detailModal');openEditModal(${r.id})" style="padding:7px 14px;font-size:12px"><i class="fas fa-edit me-1"></i>Edit</button>
+        ${r.is_vgk_member && r.vgk_member_id ? `<button class="action-btn" style="background:#fdf4ff;color:#7c3aed;border:1px solid #e9d5ff;padding:7px 14px;font-size:12px" onclick="closeModal('detailModal');openCampaignModal(${r.id})"><i class="fas fa-star me-1"></i>Campaign Points</button>` : ''}
+    </div>`;
+    document.getElementById('detailModalBody').innerHTML = html;
+    document.getElementById('detailModal').classList.add('open');
+}
+
+function openResetPwModal(id) {
+    const r = _rowCache[id]; if (!r) return;
+    document.getElementById('resetPwId').value = id;
+    document.getElementById('resetPwName').textContent = r.name;
+    document.getElementById('resetPwInput').value = '';
+    document.getElementById('resetPwConfirm').value = '';
+    document.getElementById('resetPwStrength').textContent = '';
+    document.getElementById('resetPwError').classList.add('d-none');
+    document.getElementById('resetPwModal').classList.add('open');
+    setTimeout(() => document.getElementById('resetPwInput').focus(), 100);
+}
+
+async function confirmResetPassword() {
+    const id = document.getElementById('resetPwId').value;
+    const pw = document.getElementById('resetPwInput').value;
+    const pw2 = document.getElementById('resetPwConfirm').value;
+    const errEl = document.getElementById('resetPwError');
+    const showErr = msg => {
+        document.getElementById('resetPwErrorMsg').textContent = msg;
+        errEl.classList.remove('d-none');
+    };
+    errEl.classList.add('d-none');
+    if (!pw || pw.length < 6) { showErr('Password must be at least 6 characters.'); return; }
+    if (pw !== pw2) { showErr('Passwords do not match.'); return; }
+    const btn = document.getElementById('resetPwBtn');
+    btn.disabled = true;
+    document.getElementById('resetPwBtnText').style.display = 'none';
+    document.getElementById('resetPwBtnSpinner').style.display = '';
+    try {
+        const resp = await staffFetch(`/api/v1/promo/staff/${id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({new_password: pw})
+        });
+        const data = await resp.json();
+        if (!resp.ok) { showErr(data.detail || 'Failed to reset password.'); return; }
+        closeModal('resetPwModal');
+        // Show brief success feedback
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#065f46;color:#6ee7b7;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3)';
+        toast.innerHTML = '<i class="fas fa-check-circle me-2"></i>Password reset successfully!';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    } catch(e) { showErr('Network error. Please try again.'); }
+    finally {
+        btn.disabled = false;
+        document.getElementById('resetPwBtnText').style.display = '';
+        document.getElementById('resetPwBtnSpinner').style.display = 'none';
+    }
+}
+
+// ── Add Modal ──
+function openAddModal() {
+    document.getElementById('editId').value = '';
+    document.getElementById('modalTitle').textContent = 'Add Promoter';
+    document.getElementById('fName').value = '';
+    document.getElementById('fPhone').value = '';
+    document.getElementById('fEmail').value = '';
+    document.getElementById('fCode').value = '';
+    document.getElementById('fPassword').value = '';
+    document.getElementById('fAccType').value = 'unpaid';
+    document.getElementById('fBudgetRange').value = '';
+    document.getElementById('fIsVGK').checked = false;
+    document.getElementById('fVGKTarget').value = '';
+    document.getElementById('fSignupBonus').value = '';
+    document.getElementById('fNotes').value = '';
+    document.getElementById('vgkTargetWrap').style.display = 'none';
+    document.getElementById('statusGroup').style.display = 'none';
+    document.getElementById('pwHint').textContent = '(required for new promoter)';
+    setPlatforms('');
+    setSocialLinks('{}');
+    document.getElementById('modalError').classList.add('d-none');
+    document.getElementById('promoterModal').classList.add('open');
+}
+
+function openEditModal(id) {
+    const r = _rowCache[id]; if (!r) return;
+    document.getElementById('editId').value = r.id;
+    document.getElementById('modalTitle').textContent = 'Edit Promoter';
+    document.getElementById('fName').value = r.name || '';
+    document.getElementById('fPhone').value = r.phone || '';
+    document.getElementById('fEmail').value = r.email || '';
+    document.getElementById('fCode').value = r.referral_code || '';
+    document.getElementById('fPassword').value = '';
+    document.getElementById('fAccType').value = r.account_type || 'unpaid';
+    document.getElementById('fBudgetRange').value = r.budget_range || '';
+    document.getElementById('fStatusEdit').value = r.status || 'pending';
+    document.getElementById('fIsVGK').checked = r.is_vgk_member || false;
+    document.getElementById('fVGKTarget').value = r.vgk_registration_target || '';
+    document.getElementById('fSignupBonus').value = r.signup_bonus_points >= 5000 ? r.signup_bonus_points : 5000;
+    document.getElementById('fNotes').value = r.notes || '';
+    document.getElementById('vgkTargetWrap').style.display = r.is_vgk_member ? '' : 'none';
+    document.getElementById('statusGroup').style.display = '';
+    document.getElementById('pwHint').textContent = '(leave blank to keep current)';
+    setPlatforms(r.platforms || '');
+    setSocialLinks(r.social_links || '{}');
+    document.getElementById('modalError').classList.add('d-none');
+    document.getElementById('promoterModal').classList.add('open');
+}
+
+async function savePromoter() {
+    const id = document.getElementById('editId').value;
+    const isEdit = !!id;
+    const name = document.getElementById('fName').value.trim();
+    const phone = document.getElementById('fPhone').value.trim();
+    const email = document.getElementById('fEmail').value.trim();
+    const code = document.getElementById('fCode').value.trim();
+    const password = document.getElementById('fPassword').value;
+    const accType = document.getElementById('fAccType').value;
+    const isVGK = document.getElementById('fIsVGK').checked;
+    const vgkTarget = document.getElementById('fVGKTarget').value;
+    const signupBonus = document.getElementById('fSignupBonus').value;
+    const notes = document.getElementById('fNotes').value.trim();
+    const budgetRange = document.getElementById('fBudgetRange').value;
+    const platforms = getPlatforms();
+    const statusEdit = document.getElementById('fStatusEdit').value;
+    const err = msg => { document.getElementById('modalErrorMsg').textContent = msg; document.getElementById('modalError').classList.remove('d-none'); };
+    if (!name) { err('Full name is required.'); return; }
+    if (!phone) { err('Mobile number is required.'); return; }
+    if (!isEdit && !password) { err('Password is required for new promoters.'); return; }
+    const socialLinks = getSocialLinks();
+    document.getElementById('saveBtnText').style.display = 'none';
+    document.getElementById('saveBtnSpinner').style.display = '';
+    document.getElementById('saveBtn').disabled = true;
+    try {
+        let resp;
+        if (isEdit) {
+            const body = { name, phone, email, platforms, social_links: socialLinks, account_type: accType, status: statusEdit, is_vgk_member: isVGK, notes, budget_range: budgetRange || null, signup_bonus_points: signupBonus !== '' ? parseInt(signupBonus) : 0 };
+            if (code) body.referral_code = code;
+            if (vgkTarget) body.vgk_registration_target = parseInt(vgkTarget);
+            if (password) body.new_password = password;
+            resp = await staffFetch(`/api/v1/promo/staff/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        } else {
+            const body = { name, phone, email, platforms, social_links: socialLinks, account_type: accType, is_vgk_member: isVGK, notes, password, budget_range: budgetRange || null, signup_bonus_points: signupBonus !== '' ? parseInt(signupBonus) : 0 };
+            if (code) body.referral_code = code;
+            if (vgkTarget) body.vgk_registration_target = parseInt(vgkTarget);
+            resp = await staffFetch('/api/v1/promo/staff/create', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        }
+        const data = await resp.json();
+        if (!resp.ok) { err(data.detail || 'Failed to save promoter.'); return; }
+        closeModal('promoterModal');
+        loadList();
+        if (!isEdit && data.vgk_member_id) {
+            alert(`✅ Promoter added!\nReferral Code: ${data.referral_code}\nVGK Member ID: ${data.vgk_member_id}`);
+        }
+    } catch(e) { err('Network error. Please try again.'); }
+    finally {
+        document.getElementById('saveBtnText').style.display = '';
+        document.getElementById('saveBtnSpinner').style.display = 'none';
+        document.getElementById('saveBtn').disabled = false;
+    }
+}
+
+// ── WhatsApp Share ──
+let _waCurrentLang = 'en';
+let _waLinks = {};
+
+function _buildWAMsg(lang, r) {
+    const { vgkLink, offersLink, loginLink, loginId } = _waLinks;
+    const msgs = {
+        en: `🎉🎊 *Welcome to the VGK4U Promoter Program!* 🎊🎉
+
+✨ Dear ${r.name}, Congratulations! ✨
+
+You have been officially onboarded as a VGK4U Promoter. Start sharing and earning today! 🚀
+
+🔐 *Your Login Details:*
+🔑 Login ID: ${loginId}
+🔗 Promoter Portal: ${loginLink}
+
+📦 *Your Referral Code:* \`${r.referral_code}\`
+
+🎁 *VGK4U Loyalty Offers:* ${offersLink}
+
+🌟 *Your VGK4U Referral Link:*
+🔗 ${vgkLink}
+
+💡 Share this link with your audience and earn rewards for every successful signup!
+
+📞 For support, contact your VGK Mentor.
+
+— Team VGK4U | 📞 +91 858585 2738 | 🌐 vgk4u.com/hargharsolar`,
+
+        hi: `🎉🎊 *VGK4U प्रमोटर प्रोग्राम में आपका स्वागत है!* 🎊🎉
+
+✨ प्रिय ${r.name}, बधाई हो! ✨
+
+आपको आधिकारिक रूप से VGK4U प्रमोटर के रूप में शामिल किया गया है। आज से शेयर करें और कमाएं! 🚀
+
+🔐 *आपकी लॉगिन जानकारी:*
+🔑 लॉगिन ID: ${loginId}
+🔗 प्रमोटर पोर्टल: ${loginLink}
+
+📦 *आपका रेफरल कोड:* \`${r.referral_code}\`
+
+🎁 *VGK4U लॉयल्टी ऑफर:* ${offersLink}
+
+🌟 *आपका VGK4U रेफरल लिंक:*
+🔗 ${vgkLink}
+
+💡 इस लिंक को अपने दर्शकों के साथ शेयर करें और हर सफल साइनअप पर पुरस्कार कमाएं!
+
+📞 सहायता के लिए, अपने VGK मेंटर से संपर्क करें।
+
+— टीम VGK4U | 📞 +91 858585 2738 | 🌐 vgk4u.com/hargharsolar`,
+
+        te: `🎉🎊 *VGK4U ప్రమోటర్ ప్రోగ్రామ్‌కు స్వాగతం!* 🎊🎉
+
+✨ ప్రియమైన ${r.name}, అభినందనలు! ✨
+
+మీరు అధికారికంగా VGK4U ప్రమోటర్‌గా చేర్చబడ్డారు. ఈ రోజు నుండి షేర్ చేసి సంపాదించండి! 🚀
+
+🔐 *మీ లాగిన్ వివరాలు:*
+🔑 లాగిన్ ID: ${loginId}
+🔗 ప్రమోటర్ పోర్టల్: ${loginLink}
+
+📦 *మీ రెఫరల్ కోడ్:* \`${r.referral_code}\`
+
+🎁 *VGK4U లాయల్టీ ఆఫర్‌లు:* ${offersLink}
+
+🌟 *మీ VGK4U రెఫరల్ లింక్:*
+🔗 ${vgkLink}
+
+💡 ఈ లింక్‌ని మీ ప్రేక్షకులతో షేర్ చేయండి మరియు ప్రతి విజయవంతమైన సైన్‌అప్‌పై రివార్డులు సంపాదించండి!
+
+📞 సహాయం కోసం, మీ VGK మెంటర్‌ని సంప్రదించండి.
+
+— టీమ్ VGK4U | 📞 +91 858585 2738 | 🌐 vgk4u.com/hargharsolar`,
+
+        ta: `🎉🎊 *VGK4U ப்ரமோட்டர் புரோகிராமுக்கு வரவேற்கிறோம்!* 🎊🎉
+
+✨ அன்பான ${r.name}, வாழ்த்துகள்! ✨
+
+நீங்கள் அதிகாரப்பூர்வமாக VGK4U ப்ரமோட்டராக சேர்க்கப்பட்டுள்ளீர்கள். இன்றே பகிர்ந்து சம்பாதியுங்கள்! 🚀
+
+🔐 *உங்கள் உள்நுழைவு விவரங்கள்:*
+🔑 உள்நுழைவு ID: ${loginId}
+🔗 ப்ரமோட்டர் போர்டல்: ${loginLink}
+
+📦 *உங்கள் ரெஃபரல் குறியீடு:* \`${r.referral_code}\`
+
+🎁 *VGK4U லாயல்டி சலுகைகள்:* ${offersLink}
+
+🌟 *உங்கள் VGK4U ரெஃபரல் இணைப்பு:*
+🔗 ${vgkLink}
+
+💡 இந்த இணைப்பை உங்கள் பார்வையாளர்களுடன் பகிரவும், ஒவ்வொரு வெற்றிகரமான பதிவிற்கும் வெகுமதிகள் பெறவும்!
+
+📞 உதவிக்கு, உங்கள் VGK வழிகாட்டியை தொடர்பு கொள்ளவும்.
+
+— டீம் VGK4U | 📞 +91 858585 2738 | 🌐 vgk4u.com/hargharsolar`
+    };
+    return msgs[lang] || msgs['en'];
+}
+
+function switchWALang(lang, btn) {
+    _waCurrentLang = lang;
+    document.querySelectorAll('.wa-lang-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const msg = _buildWAMsg(lang, _waPromoterData);
+    currentWAMsg = msg;
+    document.getElementById('waPreview').textContent = msg;
+}
+
+function openWAModal(id, origin) {
+    const r = _rowCache[id]; if (!r) return;
+    _waPromoterData = r;
+    _waCurrentLang = 'en';
+    currentWAPhone = r.phone || '';
+    _waLinks = {
+        vgkLink: `${origin}/vgk/login?ref=${r.referral_code}`,
+        offersLink: `${origin}/voffers`,
+        loginLink: `${origin}/promo/login`,
+        loginId: r.email || r.phone || '(your registered email/phone)'
+    };
+    document.querySelectorAll('.wa-lang-btn').forEach((b, i) => b.classList.toggle('active', i===0));
+    const msg = _buildWAMsg('en', r);
+    currentWAMsg = msg;
+    document.getElementById('waPreview').textContent = msg;
+    document.getElementById('waPhone').textContent = currentWAPhone || 'Not set';
+    document.getElementById('waModal').classList.add('open');
+}
+
+function copyWAMsg() {
+    navigator.clipboard.writeText(currentWAMsg).then(() => alert('Message copied to clipboard!'));
+}
+
+function openWhatsApp() {
+    if (!currentWAPhone) { alert('No phone number available for this promoter.'); return; }
+    const phone = currentWAPhone.replace(/\D/g,'');
+    const intlPhone = phone.startsWith('91') ? phone : '91' + phone;
+    const encoded = encodeURIComponent(currentWAMsg);
+    window.open(`https://wa.me/${intlPhone}?text=${encoded}`, '_blank');
+}
+
+// ── Dashboard ──
+async function loadDash() {
+    try {
+        const resp = await staffFetch('/api/v1/promo/staff/stats');
+        const data = await resp.json();
+        if (!data.success) return;
+        const t = data.totals;
+        document.getElementById('dashCards').innerHTML = `
+            <div class="dash-card"><div class="dash-num">${t.total||0}</div><div class="dash-label">Total Promoters</div></div>
+            <div class="dash-card" style="border-color:#22c55e"><div class="dash-num" style="color:#15803d">${t.active||0}</div><div class="dash-label">Active</div></div>
+            <div class="dash-card" style="border-color:#f59e0b"><div class="dash-num" style="color:#b45309">${t.pending||0}</div><div class="dash-label">Pending</div></div>
+            <div class="dash-card" style="border-color:#6366f1"><div class="dash-num" style="color:#4f46e5">${t.paid||0}</div><div class="dash-label">Paid Type</div></div>
+            <div class="dash-card" style="border-color:#7c3aed"><div class="dash-num" style="color:#6d28d9">${t.vgk_members||0}</div><div class="dash-label">VGK Members</div></div>
+            <div class="dash-card" style="border-color:#64748b"><div class="dash-num" style="color:#475569">${data.events?.total_events||0}</div><div class="dash-label">Total Events</div></div>
+            <div class="dash-card" style="border-color:#64748b"><div class="dash-num" style="color:#475569">${data.events?.last_30d||0}</div><div class="dash-label">Last 30 Days</div></div>
+            <div class="dash-card" style="border-color:#64748b"><div class="dash-num" style="color:#475569">${data.events?.last_7d||0}</div><div class="dash-label">Last 7 Days</div></div>`;
+        // ── Registration Source Breakdown ──
+        const regMap = { staff: 0, direct: 0, referral_link: 0 };
+        (data.by_reg_source || []).forEach(r => { regMap[r.source] = parseInt(r.cnt)||0; });
+        const regTotal = Object.values(regMap).reduce((a, b) => a + b, 0) || 1;
+        document.getElementById('regSourceCards').innerHTML = `
+            <div class="dash-card" style="border-color:#4338ca">
+                <div class="dash-num" style="color:#4338ca">${regMap.staff}</div>
+                <div class="dash-label">Company Registered</div>
+                <div style="font-size:10px;color:#a5b4fc;margin-top:2px">${Math.round(regMap.staff/regTotal*100)}% of total</div>
+            </div>
+            <div class="dash-card" style="border-color:#0d9488">
+                <div class="dash-num" style="color:#0d9488">${regMap.direct}</div>
+                <div class="dash-label">Self Registered</div>
+                <div style="font-size:10px;color:#99f6e4;margin-top:2px">${Math.round(regMap.direct/regTotal*100)}% of total</div>
+            </div>
+            <div class="dash-card" style="border-color:#f59e0b">
+                <div class="dash-num" style="color:#b45309">${regMap.referral_link}</div>
+                <div class="dash-label">Via Referral Link</div>
+                <div style="font-size:10px;color:#fcd34d;margin-top:2px">${Math.round(regMap.referral_link/regTotal*100)}% of total</div>
+            </div>`;
+        // ── Deals Financial Cards ──
+        const da = data.deals_agg || {};
+        const agreedK = parseFloat(da.total_agreed)||0;
+        const paidK = parseFloat(da.total_paid)||0;
+        const pendingAmt = parseFloat(da.total_pending_amount)||0;
+        document.getElementById('dealsCards').innerHTML = `
+            <div class="dash-card" style="border-color:#7c3aed"><div class="dash-num" style="color:#6d28d9;font-size:22px">${da.total_deals||0}</div><div class="dash-label">Total Deals</div></div>
+            <div class="dash-card" style="border-color:#0d9488"><div class="dash-num" style="color:#0d9488;font-size:18px">${_fmtINR(agreedK)}</div><div class="dash-label">Total Agreed Value</div></div>
+            <div class="dash-card" style="border-color:#16a34a"><div class="dash-num" style="color:#15803d;font-size:18px">${_fmtINR(paidK)}</div><div class="dash-label">Total Paid Out</div></div>
+            <div class="dash-card" style="border-color:#f59e0b"><div class="dash-num" style="color:#b45309;font-size:18px">${_fmtINR(pendingAmt)}</div><div class="dash-label">Pending Payment</div></div>
+            <div class="dash-card" style="border-color:#22c55e"><div class="dash-num" style="color:#15803d;font-size:22px">${da.deals_paid||0}</div><div class="dash-label">Deals Paid</div></div>
+            <div class="dash-card" style="border-color:#f59e0b"><div class="dash-num" style="color:#b45309;font-size:22px">${da.deals_pending||0}</div><div class="dash-label">Deals Pending</div></div>`;
+        const maxTop = Math.max(...(data.top_influencers||[]).map(r => r.referrals||0), 1);
+        document.getElementById('topList').innerHTML = (data.top_influencers||[]).slice(0,8).map(r => `
+            <div class="bar-item">
+                <div class="bar-label" title="${r.name}">${r.name}</div>
+                <div class="bar-track"><div class="bar-fill" style="width:${Math.round(((r.referrals||0)/maxTop)*100)}%"></div></div>
+                <div class="bar-count">${r.referrals||0}</div>
+            </div>`).join('') || '<p style="font-size:12px;color:#9ca3af">No data yet</p>';
+        const maxPortal = Math.max(...(data.by_portal||[]).map(r => parseInt(r.cnt)||0), 1);
+        document.getElementById('portalList').innerHTML = (data.by_portal||[]).map(r => `
+            <div class="bar-item">
+                <div class="bar-label">${PORTAL_LABELS[r.portal]||r.portal}</div>
+                <div class="bar-track"><div class="bar-fill" style="width:${Math.round((parseInt(r.cnt)/maxPortal)*100)}%"></div></div>
+                <div class="bar-count">${r.cnt}</div>
+            </div>`).join('') || '<p style="font-size:12px;color:#9ca3af">No data yet</p>';
+        // ── Top Promoters by Deal Value ──
+        const topDeals = data.top_by_deals || [];
+        if (!topDeals.length) {
+            document.getElementById('topDealsSection').style.display = 'none';
+        } else {
+            const maxDealVal = Math.max(...topDeals.map(r => parseFloat(r.deal_total)||0), 1);
+            document.getElementById('topDealsList').innerHTML = topDeals.map(r => {
+                const total = parseFloat(r.deal_total)||0;
+                const paid = parseFloat(r.deal_paid)||0;
+                const pct = Math.round((total/maxDealVal)*100);
+                const paidPct = total > 0 ? Math.round((paid/total)*100) : 0;
+                return `<div class="bar-item" style="align-items:center">
+                    <div class="bar-label" title="${r.name}" style="min-width:120px">${r.name}<br><span style="font-size:10px;color:#9ca3af">${r.deal_count} deal${r.deal_count!=1?'s':''}</span></div>
+                    <div style="flex:1;position:relative;height:18px;background:#f1f5f9;border-radius:4px;overflow:hidden">
+                        <div style="position:absolute;left:0;top:0;height:100%;width:${pct}%;background:linear-gradient(90deg,#7c3aed,#0d9488);border-radius:4px;opacity:.7"></div>
+                        <div style="position:absolute;left:0;top:0;height:100%;width:${Math.round(pct*paidPct/100)}%;background:#16a34a;border-radius:4px;opacity:.85"></div>
+                    </div>
+                    <div style="min-width:120px;text-align:right;font-size:12px">
+                        <span style="font-weight:700;color:#0d9488">${_fmtINR(total)}</span>
+                        <span style="color:#9ca3af;margin:0 3px">/</span>
+                        <span style="color:#16a34a">${_fmtINR(paid)} paid</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        // VGK Target progress rows
+        const vgkInfs = (data.top_influencers||[]).filter(r => r.is_vgk_member || r.vgk_registration_target);
+        if (!vgkInfs.length) { document.getElementById('vgkTargetSection').style.display = 'none'; }
+        const recentRows = (data.recent_events||[]).map(r => `
+            <tr>
+                <td>${r.influencer_name||'—'}</td>
+                <td><span style="background:#f1f5f9;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">${PORTAL_LABELS[r.portal]||r.portal}</span></td>
+                <td style="text-transform:capitalize">${r.event_type}</td>
+                <td>${r.source_name||'—'}</td>
+                <td>${r.source_phone||'—'}</td>
+                <td>${r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN') : '—'}</td>
+            </tr>`).join('');
+        document.getElementById('recentBody').innerHTML = recentRows || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#9ca3af">No activity yet</td></tr>';
+    } catch(e) { console.error('Dash load error', e); }
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', async function() {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    StaffHeader.inject('Promoter Management', 'fas fa-bullhorn');
+    if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+    await loadList();
+});
+
+// ════════════════════════════════════════════════════════
+// MARKETPLACE PRODUCTS — DC Protocol Apr 2026
+// ════════════════════════════════════════════════════════
+let _mktLoaded = false;
+let _mktAllProducts = [];
+let _mktEditId = null;
+
+async function loadMarket() {
+    try {
+        const resp = await staffFetch('/api/v1/promo/staff/marketplace-products');
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.detail || 'Failed');
+        _mktAllProducts = data.items || [];
+        _mktLoaded = true;
+        // Populate category filter
+        const cats = [...new Set(_mktAllProducts.map(p => p.category).filter(Boolean))].sort();
+        const cf = document.getElementById('mktCatFilter');
+        cf.innerHTML = '<option value="">All Categories</option>' + cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        renderMarket();
+    } catch(e) {
+        document.getElementById('mktGrid').innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-circle"></i> Failed to load products: ${e.message}</div>`;
+    }
+}
+
+function renderMarket() {
+    const search = (document.getElementById('mktSearch')?.value || '').toLowerCase();
+    const cat = document.getElementById('mktCatFilter')?.value || '';
+    const st = document.getElementById('mktStatusFilter')?.value || '';
+    let items = _mktAllProducts.filter(p => {
+        if (cat && p.category !== cat) return false;
+        if (st === 'active' && !p.is_active) return false;
+        if (st === 'inactive' && p.is_active) return false;
+        if (search && !((p.title||'').toLowerCase().includes(search) || (p.description||'').toLowerCase().includes(search) || (p.category||'').toLowerCase().includes(search))) return false;
+        return true;
+    });
+    // Stats
+    const total = _mktAllProducts.length, active = _mktAllProducts.filter(p=>p.is_active).length;
+    const totalClicks = _mktAllProducts.reduce((s,p)=>s+(p.click_count||0),0);
+    document.getElementById('mktStats').innerHTML = `
+        <span><b style="color:#0d9488">${total}</b> total products</span>
+        <span>·</span><span><b style="color:#16a34a">${active}</b> active</span>
+        <span>·</span><span><b style="color:#f59e0b">${total-active}</b> inactive</span>
+        <span>·</span><span><b style="color:#6366f1">${totalClicks}</b> total tracked clicks</span>
+        <span>·</span><span style="color:#94a3b8">Showing <b style="color:#374151">${items.length}</b> result(s)</span>`;
+    if (!items.length) {
+        document.getElementById('mktGrid').innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:#94a3b8"><i class="fas fa-store" style="font-size:36px;display:block;margin-bottom:12px;opacity:.4"></i>No products match your filters.</div>`;
+        return;
+    }
+    document.getElementById('mktGrid').innerHTML = items.map(p => {
+        const img = (p.image_urls||[])[0];
+        const specs = p.specifications || {};
+        const specKeys = Object.keys(specs).slice(0, 3);
+        const domain = (() => { try { return new URL(p.product_link).hostname; } catch(e) { return p.product_link; } })();
+        return `<div style="background:#fff;border-radius:14px;box-shadow:0 1px 6px rgba(0,0,0,.07);border:1px solid #e2e8f0;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .2s" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)'" onmouseout="this.style.boxShadow='0 1px 6px rgba(0,0,0,.07)'">
+            ${img ? `<div style="height:160px;overflow:hidden;background:#f1f5f9"><img src="${img}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<div style=height:160px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#94a3b8><i class=fas fa-image style=font-size:36px></i></div>'"></div>` : `<div style="height:100px;background:linear-gradient(135deg,#f0fdf4,#eff6ff);display:flex;align-items:center;justify-content:center;color:#94a3b8"><i class="fas fa-store" style="font-size:36px"></i></div>`}
+            <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+                    <div style="font-weight:800;font-size:14px;color:#1e293b;line-height:1.3">${p.title}</div>
+                    <span style="padding:2px 8px;border-radius:50px;font-size:10px;font-weight:700;white-space:nowrap;${p.is_active?'background:#dcfce7;color:#15803d':'background:#fee2e2;color:#b91c1c'}">${p.is_active?'ACTIVE':'INACTIVE'}</span>
+                </div>
+                ${p.category ? `<div style="font-size:11px;color:#6366f1;font-weight:700;text-transform:uppercase;letter-spacing:.4px"><i class="fas fa-tag" style="margin-right:4px"></i>${p.category}</div>` : ''}
+                ${p.description ? `<div style="font-size:12px;color:#64748b;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${p.description}</div>` : ''}
+                ${specKeys.length ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:2px">${specKeys.map(k=>`<span style="background:#f1f5f9;border-radius:4px;padding:2px 6px;font-size:10px;color:#475569"><b>${k}:</b> ${specs[k]}</span>`).join('')}</div>` : ''}
+                <div style="margin-top:4px;font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:8px">
+                    <span><i class="fas fa-link" style="margin-right:3px"></i>${domain}</span>
+                    <span><i class="fas fa-mouse-pointer" style="margin-right:3px;color:#6366f1"></i><b style="color:#6366f1">${p.click_count||0}</b> clicks</span>
+                </div>
+            </div>
+            <div style="padding:10px 16px;border-top:1px solid #f1f5f9;display:flex;gap:8px;justify-content:flex-end">
+                <a href="${p.product_link}" target="_blank" class="action-btn btn-teal" title="View product"><i class="fas fa-external-link-alt"></i></a>
+                ${p.sample_link ? `<a href="${p.sample_link}" target="_blank" class="action-btn btn-amber" title="View sample"><i class="fas fa-flask"></i></a>` : ''}
+                <button class="action-btn btn-teal" onclick='openEditProductModal(${JSON.stringify(p).replace(/'/g,"&#39;")})' title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="action-btn btn-red" onclick="deleteProduct(${p.id})" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openAddProductModal() {
+    _mktEditId = null;
+    document.getElementById('productModalTitle').textContent = 'Add Marketplace Product';
+    document.getElementById('productSaveBtnText').textContent = 'Save Product';
+    ['fPTitle','fPCategory','fPDescription','fPProductLink','fPSampleLink','fPVideoUrl','fPNotes'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    document.getElementById('fPActive').checked = true;
+    document.getElementById('imgUrlsContainer').innerHTML = '';
+    document.getElementById('specsContainer').innerHTML = '';
+    addImageRow(); addSpecRow();
+    document.getElementById('productFormError').style.display='none';
+    document.getElementById('productModal').classList.add('open');
+}
+
+function openEditProductModal(p) {
+    _mktEditId = p.id;
+    document.getElementById('productModalTitle').textContent = 'Edit Marketplace Product';
+    document.getElementById('productSaveBtnText').textContent = 'Update Product';
+    document.getElementById('fPTitle').value = p.title || '';
+    document.getElementById('fPCategory').value = p.category || '';
+    document.getElementById('fPDescription').value = p.description || '';
+    document.getElementById('fPProductLink').value = p.product_link || '';
+    document.getElementById('fPSampleLink').value = p.sample_link || '';
+    document.getElementById('fPVideoUrl').value = p.video_url || '';
+    document.getElementById('fPNotes').value = p.notes || '';
+    document.getElementById('fPActive').checked = !!p.is_active;
+    // Images
+    document.getElementById('imgUrlsContainer').innerHTML = '';
+    const imgs = p.image_urls || [];
+    if (imgs.length) imgs.forEach(url => addImageRow(url));
+    else addImageRow();
+    // Specs
+    document.getElementById('specsContainer').innerHTML = '';
+    const specs = p.specifications || {};
+    const keys = Object.keys(specs);
+    if (keys.length) keys.forEach(k => addSpecRow(k, specs[k]));
+    else addSpecRow();
+    document.getElementById('productFormError').style.display='none';
+    document.getElementById('productModal').classList.add('open');
+}
+
+function addImageRow(url='') {
+    const container = document.getElementById('imgUrlsContainer');
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+    row.innerHTML = `<input type="url" placeholder="https://example.com/image.jpg" value="${url}" class="img-url-input pm-input" style="flex:1">
+        <button type="button" onclick="this.parentElement.remove()" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:7px;padding:7px 11px;font-size:12px;cursor:pointer;flex-shrink:0"><i class="fas fa-times"></i></button>`;
+    container.appendChild(row);
+}
+
+function addSpecRow(key='', val='') {
+    const container = document.getElementById('specsContainer');
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+    row.innerHTML = `<input type="text" placeholder="Property (e.g. Weight)" value="${key}" class="spec-key-input pm-input" style="flex:1">
+        <input type="text" placeholder="Value (e.g. 500g)" value="${val}" class="spec-val-input pm-input" style="flex:1">
+        <button type="button" onclick="this.parentElement.remove()" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:7px;padding:7px 11px;font-size:12px;cursor:pointer;flex-shrink:0"><i class="fas fa-times"></i></button>`;
+    container.appendChild(row);
+}
+
+function getImageUrls() {
+    return [...document.querySelectorAll('.img-url-input')].map(i=>i.value.trim()).filter(Boolean);
+}
+
+function getSpecifications() {
+    const specs = {};
+    const keys = [...document.querySelectorAll('.spec-key-input')];
+    const vals = [...document.querySelectorAll('.spec-val-input')];
+    keys.forEach((k,i)=>{ if(k.value.trim() && vals[i]?.value?.trim()) specs[k.value.trim()] = vals[i].value.trim(); });
+    return specs;
+}
+
+async function saveProduct() {
+    const title = document.getElementById('fPTitle').value.trim();
+    const productLink = document.getElementById('fPProductLink').value.trim();
+    if (!title) { showProductError('Product title is required.'); return; }
+    if (!productLink) { showProductError('Product link is required.'); return; }
+    try { new URL(productLink); } catch(e) { showProductError('Product link must be a valid URL.'); return; }
+    const btn = document.getElementById('productSaveBtn');
+    btn.disabled = true;
+    document.getElementById('productSaveBtnText').textContent = 'Saving…';
+    document.getElementById('productFormError').style.display='none';
+    const body = {
+        title,
+        category: document.getElementById('fPCategory').value.trim() || null,
+        description: document.getElementById('fPDescription').value.trim() || null,
+        product_link: productLink,
+        sample_link: document.getElementById('fPSampleLink').value.trim() || null,
+        video_url: document.getElementById('fPVideoUrl').value.trim() || null,
+        notes: document.getElementById('fPNotes').value.trim() || null,
+        is_active: document.getElementById('fPActive').checked,
+        image_urls: getImageUrls(),
+        specifications: getSpecifications(),
+    };
+    try {
+        const url = _mktEditId ? `/api/v1/promo/staff/marketplace-products/${_mktEditId}` : '/api/v1/promo/staff/marketplace-products';
+        const method = _mktEditId ? 'PUT' : 'POST';
+        const resp = await staffFetch(url, {method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.detail || 'Failed to save');
+        document.getElementById('productModal').classList.remove('open');
+        _mktLoaded = false;
+        await loadMarket();
+    } catch(e) {
+        showProductError(e.message || 'Failed to save product.');
+    } finally {
+        btn.disabled = false;
+        document.getElementById('productSaveBtnText').textContent = _mktEditId ? 'Update Product' : 'Save Product';
+    }
+}
+
+async function deleteProduct(id) {
+    if (!confirm('Delete this product? This will also remove all tracked click history for it.')) return;
+    try {
+        const resp = await staffFetch(`/api/v1/promo/staff/marketplace-products/${id}`, {method:'DELETE'});
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.detail || 'Failed');
+        _mktLoaded = false;
+        await loadMarket();
+    } catch(e) { alert('Delete failed: ' + e.message); }
+}
+
+function showProductError(msg) {
+    const el = document.getElementById('productFormError');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+</script>
+
+<!-- ── Marketplace Product Add/Edit Modal ── -->
+<style>
+#productModal .pm-header {
+    background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+    padding: 20px 24px;
+    border-radius: 14px 14px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+#productModal .pm-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+}
+#productModal .pm-header-title i {
+    background: rgba(255,255,255,0.18);
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+}
+#productModal .pm-close {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+#productModal .pm-close:hover { background: rgba(255,255,255,0.3); }
+#productModal .pm-section {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+#productModal .pm-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+#productModal .pm-section-label i { color: #0d9488; }
+#productModal .pm-field label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 4px;
+    display: block;
+}
+#productModal .pm-field label .req { color: #ef4444; margin-left: 2px; }
+#productModal .pm-field label .opt { color: #94a3b8; font-weight: 400; font-size: 10px; margin-left: 4px; }
+#productModal .pm-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 11px;
+    font-size: 13px;
+    color: #1e293b;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    font-family: inherit;
+}
+#productModal .pm-input:focus {
+    border-color: #0d9488;
+    box-shadow: 0 0 0 3px rgba(13,148,136,0.12);
+}
+#productModal .pm-input::placeholder { color: #cbd5e1; }
+#productModal textarea.pm-input {
+    resize: both;
+    min-height: 72px;
+    min-width: 100%;
+}
+#productModal .pm-hint {
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 3px;
+}
+#productModal .pm-active-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0fdf4;
+    border: 1.5px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: #15803d;
+    user-select: none;
+}
+#productModal .pm-active-pill input { display: none; }
+#productModal .pm-active-pill.inactive {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+</style>
+
+<div class="modal-overlay" id="productModal" onclick="if(event.target===this)this.classList.remove('open')">
+<div class="modal-box" style="max-width:780px;width:95vw;max-height:90vh;overflow-y:auto;padding:0;border-radius:14px">
+
+    <!-- Header -->
+    <div class="pm-header">
+        <div class="pm-header-title">
+            <i class="fas fa-store"></i>
+            <span id="productModalTitle">Add Marketplace Product</span>
+        </div>
+        <button class="pm-close" onclick="document.getElementById('productModal').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+
+        <!-- SECTION 1: Core Info -->
+        <div class="pm-section">
+            <div class="pm-section-label"><i class="fas fa-tag"></i> Product Info</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="pm-field">
+                    <label>Product Title <span class="req">*</span></label>
+                    <input class="pm-input" id="fPTitle" placeholder="e.g. Organic Honey 500g">
+                </div>
+                <div class="pm-field">
+                    <label>Category <span class="opt">(optional)</span></label>
+                    <input class="pm-input" id="fPCategory" placeholder="e.g. Health, Tech, Fashion">
+                </div>
+            </div>
+            <div class="pm-field" style="margin-top:10px">
+                <label>Description <span class="opt">(optional)</span></label>
+                <textarea class="pm-input" id="fPDescription" rows="3" placeholder="Describe the product — features, benefits, target audience…"></textarea>
+            </div>
+        </div>
+
+        <!-- SECTION 2: Links -->
+        <div class="pm-section">
+            <div class="pm-section-label"><i class="fas fa-link"></i> Links</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div class="pm-field">
+                    <label>Product Link <span class="req">*</span></label>
+                    <input class="pm-input" id="fPProductLink" type="url" placeholder="https://amazon.in/product/…">
+                    <div class="pm-hint"><i class="fas fa-info-circle"></i> Actual product page URL (any platform)</div>
+                </div>
+                <div class="pm-field">
+                    <label>Sample / Demo Link <span class="opt">(optional)</span></label>
+                    <input class="pm-input" id="fPSampleLink" type="url" placeholder="https://…">
+                </div>
+            </div>
+            <div class="pm-field" style="margin-top:10px">
+                <label>Promo Video URL <span class="opt">(optional)</span></label>
+                <input class="pm-input" id="fPVideoUrl" type="url" placeholder="YouTube, Drive, or direct video link">
+            </div>
+        </div>
+
+        <!-- SECTION 3: Media -->
+        <div class="pm-section">
+            <div class="pm-section-label" style="justify-content:space-between">
+                <span><i class="fas fa-images"></i> Product Images</span>
+                <button type="button" onclick="addImageRow()" style="background:#0d9488;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px"><i class="fas fa-plus"></i> Add Image</button>
+            </div>
+            <div id="imgUrlsContainer"></div>
+            <div class="pm-hint" style="margin-top:6px"><i class="fas fa-info-circle"></i> Paste direct image URLs (JPEG, PNG, WebP)</div>
+        </div>
+
+        <!-- SECTION 4: Specifications -->
+        <div class="pm-section">
+            <div class="pm-section-label" style="justify-content:space-between">
+                <span><i class="fas fa-list-ul"></i> Specifications</span>
+                <button type="button" onclick="addSpecRow()" style="background:#0d9488;color:#fff;border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px"><i class="fas fa-plus"></i> Add Row</button>
+            </div>
+            <div id="specsContainer"></div>
+            <div class="pm-hint" style="margin-top:6px"><i class="fas fa-info-circle"></i> Key → Value pairs, e.g. Weight → 500g</div>
+        </div>
+
+        <!-- SECTION 5: Notes & Status -->
+        <div class="pm-section">
+            <div class="pm-section-label"><i class="fas fa-cog"></i> Settings</div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center">
+                <div class="pm-field">
+                    <label>Internal Notes <span class="opt">(staff only)</span></label>
+                    <input class="pm-input" id="fPNotes" placeholder="Not visible to promoters">
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Status</label>
+                    <label class="pm-active-pill" id="fPActivePill" onclick="toggleProductActive()">
+                        <input type="checkbox" id="fPActive" checked>
+                        <i class="fas fa-check-circle"></i>
+                        <span id="fPActiveLabel">Active</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div id="productFormError" style="display:none;color:#ef4444;font-size:13px;background:#fef2f2;padding:10px 14px;border-radius:8px;border:1px solid #fca5a5"></div>
+
+        <!-- Footer Actions -->
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:4px;border-top:1px solid #e2e8f0">
+            <button onclick="document.getElementById('productModal').classList.remove('open')" style="background:#f1f5f9;border:1.5px solid #e2e8f0;color:#64748b;font-weight:600;font-size:13px;padding:9px 20px;border-radius:8px;cursor:pointer">Cancel</button>
+            <button id="productSaveBtn" onclick="saveProduct()" style="background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;font-weight:700;font-size:13px;padding:9px 24px;border-radius:8px;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(13,148,136,0.3)">
+                <i class="fas fa-save"></i>
+                <span id="productSaveBtnText">Save Product</span>
+            </button>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+function toggleProductActive() {
+    const cb = document.getElementById('fPActive');
+    const pill = document.getElementById('fPActivePill');
+    const lbl = document.getElementById('fPActiveLabel');
+    const icon = pill.querySelector('i');
+    cb.checked = !cb.checked;
+    if (cb.checked) {
+        pill.classList.remove('inactive');
+        lbl.textContent = 'Active';
+        icon.className = 'fas fa-check-circle';
+    } else {
+        pill.classList.add('inactive');
+        lbl.textContent = 'Inactive';
+        icon.className = 'fas fa-times-circle';
+    }
+}
+</script>
+
+</body>
+</html>

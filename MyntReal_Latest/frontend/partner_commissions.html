@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Reference Bonus - Partner Portal - Mynt Real LLP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/partner-token-manager.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; }
+        .dashboard-header {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+            color: white; padding: 30px; border-radius: 0 0 20px 20px; margin-bottom: 30px;
+        }
+        .welcome-text { font-size: 1.8rem; font-weight: 600; }
+        .stat-card {
+            background: white; border-radius: 15px; padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: 20px;
+            transition: transform 0.2s; text-align: center;
+        }
+        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card.pending { background: linear-gradient(135deg, #f57c00 0%, #ffb74d 100%); color: white; }
+        .stat-card.confirmed { background: linear-gradient(135deg, #2e7d32 0%, #66bb6a 100%); color: white; }
+        .stat-card.total { background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); color: white; }
+        .stat-value { font-size: 1.6rem; font-weight: 700; }
+        .stat-label { font-size: 0.9rem; opacity: 0.9; }
+        .card { border: none; border-radius: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+        .table th { font-weight: 600; color: #555; border-bottom: 2px solid #eee; }
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1001;
+            background: #1d4ed8; color: white; border: none; border-radius: 8px; padding: 10px 15px;
+        }
+        @media (max-width: 768px) { .mobile-menu-toggle { display: block; } }
+    </style>
+</head>
+<body>
+    <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+    <div id="sidebarContainer"></div>
+
+    <div class="partner-main-content">
+        <div class="dashboard-header">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <h1 class="welcome-text mb-1"><i class="fas fa-coins me-3"></i>My Reference Bonus</h1>
+                        <p class="mb-0 opacity-75">Track your commission earnings from sourced leads</p>
+                    </div>
+                    <div class="mt-2 mt-md-0">
+                        <a href="/partner/my-leads" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-users me-2"></i>My Leads
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container-fluid px-4">
+            <div class="row mb-4">
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-card total">
+                        <div class="mb-2"><i class="fas fa-coins fa-2x opacity-75"></i></div>
+                        <div class="stat-value" id="statTotal">₹0</div>
+                        <div class="stat-label">Total Reference Bonus</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-card pending">
+                        <div class="mb-2"><i class="fas fa-clock fa-2x opacity-75"></i></div>
+                        <div class="stat-value" id="statPending">₹0</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6 mb-3">
+                    <div class="stat-card confirmed">
+                        <div class="mb-2"><i class="fas fa-check-circle fa-2x opacity-75"></i></div>
+                        <div class="stat-value" id="statConfirmed">₹0</div>
+                        <div class="stat-label">Confirmed</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+                            <h6 class="mb-0 fw-bold"><i class="fas fa-coins me-2 text-warning"></i>Reference Bonus Entries</h6>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <select class="form-select form-select-sm" id="commLevel" onchange="loadCommissions(1)" style="width:130px">
+                                    <option value="">All Levels</option>
+                                    <option value="L1">L1 (Source)</option>
+                                </select>
+                                <select class="form-select form-select-sm" id="commStatus" onchange="loadCommissions(1)" style="width:130px">
+                                    <option value="">All Status</option>
+                                    <option value="PENDING">Pending</option>
+                                    <option value="CONFIRMED">Confirmed</option>
+                                    <option value="CANCELLED">Cancelled</option>
+                                </select>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="loadCommissions(1)">
+                                    <i class="fas fa-sync me-1"></i>Refresh
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="commLoading" class="text-center py-5">
+                                <div class="spinner-border text-purple" style="color:#1d4ed8;"></div>
+                                <p class="mt-3 text-muted">Loading commissions…</p>
+                            </div>
+                            <div id="commEmpty" class="text-center py-5 d-none">
+                                <i class="fas fa-coins fa-3x text-muted mb-3 d-block opacity-50"></i>
+                                <p class="text-muted mb-0">No commission entries found.</p>
+                                <small class="text-muted">Reference bonus is generated when your sourced leads have confirmed transactions.</small>
+                            </div>
+                            <div class="table-responsive d-none" id="commTableWrap">
+                                <table class="table table-hover align-middle mb-0" style="font-size:0.88rem">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Entry #</th>
+                                            <th>Date</th>
+                                            <th>Lead</th>
+                                            <th>Category</th>
+                                            <th class="text-end">Revenue (₹)</th>
+                                            <th class="text-center">Rate</th>
+                                            <th class="text-end">Commission (₹)</th>
+                                            <th class="text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="commTableBody"></tbody>
+                                </table>
+                            </div>
+                            <div class="px-3 py-2 border-top d-none" id="commPagWrap">
+                                <ul class="pagination pagination-sm mb-0 justify-content-end" id="commPagination"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/partner_sidebar.js"></script>
+    <script>
+        function getAuthFetchOptions() {
+            const token = localStorage.getItem('partner_token');
+            const partnerInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');
+            const headers = {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            };
+            if (partnerInfo.primary_company_id) headers['X-Company-ID'] = String(partnerInfo.primary_company_id);
+            return { headers };
+        }
+
+        function formatINR(val) {
+            return '₹' + parseFloat(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        }
+
+        async function loadCommissions(page) {
+            page = page || 1;
+            const level = document.getElementById('commLevel').value;
+            const status = document.getElementById('commStatus').value;
+            const params = new URLSearchParams({ page, per_page: 20 });
+            if (level) params.append('level', level);
+            if (status) params.append('status', status);
+
+            document.getElementById('commLoading').classList.remove('d-none');
+            document.getElementById('commEmpty').classList.add('d-none');
+            document.getElementById('commTableWrap').classList.add('d-none');
+            document.getElementById('commPagWrap').classList.add('d-none');
+
+            try {
+                const r = await fetch('/api/v1/partner/commissions?' + params, getAuthFetchOptions());
+                const data = await r.json();
+                document.getElementById('commLoading').classList.add('d-none');
+
+                const entries = data.entries || [];
+                if (entries.length === 0) {
+                    document.getElementById('commEmpty').classList.remove('d-none');
+                    return;
+                }
+
+                const statusStyles = { PENDING: 'warning', CONFIRMED: 'success', CANCELLED: 'danger' };
+                document.getElementById('commTableBody').innerHTML = entries.map(e => `
+                    <tr>
+                        <td><small class="fw-semibold text-primary">${e.entry_number || ''}</small></td>
+                        <td class="text-muted">${(e.created_at || '').slice(0, 10)}</td>
+                        <td>${e.lead_customer_name ? e.lead_customer_name : '<span class="text-muted">—</span>'}
+                            ${e.source_lead_id ? `<br><small class="text-muted">Lead #${e.source_lead_id}</small>` : ''}</td>
+                        <td class="text-muted">${e.category_name || '-'}</td>
+                        <td class="text-end">${formatINR(e.revenue_amount)}</td>
+                        <td class="text-center"><span class="badge bg-light text-dark border">${e.commission_pct}%</span></td>
+                        <td class="text-end fw-semibold text-success">${formatINR(e.commission_amount)}</td>
+                        <td class="text-center"><span class="badge text-bg-${statusStyles[e.status] || 'secondary'}">${e.status || ''}</span></td>
+                    </tr>
+                `).join('');
+
+                document.getElementById('commTableWrap').classList.remove('d-none');
+
+                const ul = document.getElementById('commPagination');
+                const totalPages = data.pages || 1;
+                if (totalPages > 1) {
+                    ul.innerHTML = '';
+                    for (let i = 1; i <= totalPages; i++) {
+                        const li = document.createElement('li');
+                        li.className = 'page-item' + (i === data.page ? ' active' : '');
+                        li.innerHTML = `<button class="page-link" onclick="loadCommissions(${i})">${i}</button>`;
+                        ul.appendChild(li);
+                    }
+                    document.getElementById('commPagWrap').classList.remove('d-none');
+                }
+
+                updateSummaryStats(entries);
+            } catch (err) {
+                document.getElementById('commLoading').classList.add('d-none');
+                document.getElementById('commEmpty').classList.remove('d-none');
+                document.getElementById('commEmpty').querySelector('p').textContent = 'Error loading commissions. Please refresh.';
+                console.error('[Partner-Comm]', err);
+            }
+        }
+
+        function updateSummaryStats(entries) {
+            let pending = 0, confirmed = 0;
+            entries.forEach(e => {
+                const amt = parseFloat(e.commission_amount || 0);
+                if (e.status === 'PENDING') pending += amt;
+                else if (e.status === 'CONFIRMED') confirmed += amt;
+            });
+            document.getElementById('statPending').textContent = formatINR(pending);
+            document.getElementById('statConfirmed').textContent = formatINR(confirmed);
+            document.getElementById('statTotal').textContent = formatINR(pending + confirmed);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCommissions(1);
+        });
+    </script>
+</body>
+</html>

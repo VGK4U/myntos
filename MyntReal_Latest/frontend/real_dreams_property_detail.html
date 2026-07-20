@@ -1,0 +1,2067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Details - Real Dreams</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2d5016;
+            --secondary-color: #4a7c23;
+            --accent-color: #f97316;
+            --bg-light: #f8fafc;
+            --text-dark: #1e293b;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+        }
+        .navbar-brand img {
+            height: 40px;
+        }
+        .property-header {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }
+        .property-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .property-location {
+            color: #64748b;
+            font-size: 1rem;
+        }
+        .property-location i {
+            color: var(--accent-color);
+        }
+        .property-price {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .property-code {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        .gallery-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }
+        .main-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+        }
+        .thumbnail-row {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            overflow-x: auto;
+        }
+        .thumbnail {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            flex-shrink: 0;
+        }
+        .thumbnail:hover, .thumbnail.active {
+            opacity: 1;
+            outline: 2px solid var(--primary-color);
+        }
+        .thumbnail-wrapper {
+            position: relative;
+            flex-shrink: 0;
+        }
+        .thumbnail-section-badge {
+            position: absolute;
+            bottom: 2px;
+            left: 2px;
+            background: rgba(59, 130, 246, 0.9);
+            color: white;
+            font-size: 8px;
+            padding: 1px 4px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            max-width: 65px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .main-image-wrapper {
+            position: relative;
+        }
+        .main-image-section-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(59, 130, 246, 0.95);
+            color: white;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .details-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 1.5rem;
+        }
+        .details-card h5 {
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-light);
+            border-radius: 8px;
+        }
+        .feature-item i {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+            width: 30px;
+            text-align: center;
+        }
+        .feature-item .label {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        .feature-item .value {
+            font-weight: 600;
+        }
+        .amenity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #e8f5e9;
+            color: var(--primary-color);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            margin: 0.25rem;
+        }
+        .amenity-badge i {
+            color: var(--secondary-color);
+        }
+        .contact-card {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: sticky;
+            top: 1rem;
+        }
+        .contact-card h5 {
+            color: white;
+            margin-bottom: 1rem;
+        }
+        .btn-inquiry {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .btn-inquiry:hover {
+            background: #ea580c;
+            color: white;
+        }
+        .btn-back {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .btn-back:hover {
+            color: var(--secondary-color);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .description-text {
+            white-space: pre-wrap;
+            line-height: 1.7;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .btn-action {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.875rem;
+        }
+        .btn-action:hover {
+            background: #f1f5f9;
+        }
+        .btn-action.saved {
+            background: #fef2f2;
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .btn-action.saved i {
+            color: #ef4444;
+        }
+        .share-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .share-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 0.5rem 0;
+            min-width: 180px;
+            display: none;
+            z-index: 100;
+        }
+        .share-menu.show {
+            display: block;
+        }
+        .share-menu a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
+            color: var(--text-dark);
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .share-menu a:hover {
+            background: #f1f5f9;
+        }
+        .star-rating {
+            display: flex;
+            gap: 0.25rem;
+            font-size: 1.5rem;
+        }
+        .star-rating i {
+            cursor: pointer;
+            color: #e2e8f0;
+            transition: color 0.2s;
+        }
+        .star-rating i.filled, .star-rating i:hover {
+            color: #f59e0b;
+        }
+        .star-rating-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .star-rating-display i {
+            color: #f59e0b;
+        }
+        .rating-summary {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 10px;
+        }
+        .rating-big {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        .rating-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+            border: 1px solid #e2e8f0;
+        }
+        .rating-stars {
+            color: #f59e0b;
+        }
+        .comment-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+            border: 1px solid #e2e8f0;
+        }
+        .comment-reply {
+            margin-left: 2rem;
+            border-left: 3px solid var(--primary-color);
+            padding-left: 1rem;
+        }
+        .comment-meta {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        .reply-form {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px dashed #e2e8f0;
+            display: none;
+        }
+        .reply-form.show {
+            display: block;
+        }
+        .sticky-header-wrapper {
+            position: sticky;
+            top: -1px;
+            z-index: 100;
+            background: white;
+            padding-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .sticky-header-wrapper.scrolled .property-header-banner {
+            box-shadow: 0 6px 20px rgba(45, 80, 22, 0.4);
+        }
+        .sticky-header-wrapper .mini-nav {
+            display: none;
+        }
+        .property-header-banner {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #3d6b1c 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(45, 80, 22, 0.3);
+        }
+        .property-header-banner .property-logo {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            background: white;
+            border-radius: 8px;
+            padding: 4px;
+        }
+        .property-header-banner h2 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .property-header-banner .location {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+        .property-header-banner .price-tag {
+            background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+        @media (max-width: 768px) {
+            .main-image {
+                height: 250px;
+            }
+            .property-title {
+                font-size: 1.25rem;
+            }
+            .property-price {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <script>
+        (function(){
+            const params = new URLSearchParams(window.location.search);
+            const fromMarketplace = params.get('from') === 'marketplace';
+            const cid = params.get('company_id');
+            if(fromMarketplace){
+                const backUrl = cid ? `/ecom?company_id=${cid}&segment=real-dreams` : '/ecom?segment=real-dreams';
+                document.addEventListener('DOMContentLoaded', function(){
+                    document.querySelectorAll('a[href="/real-dreams"]').forEach(function(el){
+                        el.href = backUrl;
+                    });
+                    const backBtn = document.getElementById('rdBackToListBtn');
+                    if(backBtn) backBtn.href = backUrl;
+                    const bar = document.getElementById('rdEcomBackBar');
+                    if(bar){ bar.style.display='flex'; bar.querySelector('a').href = backUrl; }
+                });
+                window._rdBackUrl = backUrl;
+            } else {
+                window._rdBackUrl = cid ? `/real-dreams?company_id=${cid}` : '/real-dreams';
+            }
+        })();
+    </script>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="/real-dreams">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="Real Dreams" style="height: 36px;" onerror="this.style.display='none'">
+                <span class="d-flex flex-column lh-1">
+                    <span class="fw-bold text-success" style="font-size: 1.1rem;">Real Dreams</span>
+                    <small class="text-muted" style="font-size: 0.65rem;">Powered by MyntReal</small>
+                </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/real-dreams"><i class="fas fa-home me-1"></i> All Properties</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login"><i class="fas fa-sign-in-alt me-1"></i> Login</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Back to EV Spares bar — shown only when arrived from /ecom -->
+    <div id="rdEcomBackBar" style="display:none;align-items:center;background:#1a3c1a;padding:8px 16px;gap:10px;position:sticky;top:0;z-index:1040;box-shadow:0 2px 4px rgba(0,0,0,.2);">
+        <a href="/ecom" style="color:#86efac;font-weight:600;font-size:0.9rem;text-decoration:none;display:flex;align-items:center;gap:6px;">
+            <i class="fas fa-arrow-left"></i> Back to EV Spares &amp; Real Dreams
+        </a>
+    </div>
+
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-lg-8">
+                <div id="stickyHeaderWrapper" class="sticky-header-wrapper">
+                    <div class="mini-nav">
+                        <a href="/real-dreams" class="brand-link">
+                            <img src="/assets/logos/myntreal_logo_new.png" alt="Real Dreams" onerror="this.style.display='none'">
+                            <span>Real Dreams</span>
+                        </a>
+                    </div>
+                    <div id="propertyHeaderBanner" class="property-header-banner">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <img id="bannerPropertyLogo" class="property-logo d-none" src="" alt="Property Logo" onerror="this.classList.add('d-none')">
+                                <div>
+                                    <h2 id="bannerPropertyTitle">Loading...</h2>
+                                    <div class="location">
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        <span id="bannerPropertyLocation">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="price-tag">
+                                <span id="bannerPropertyPrice">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="details-card mb-3">
+                    <h5><i class="fas fa-images me-2"></i>Gallery</h5>
+                    <div class="gallery-container" style="margin: -1.5rem; margin-top: 0; border-radius: 0 0 12px 12px;">
+                        <div class="main-image-wrapper position-relative">
+                            <img id="mainImage" class="main-image" src="" alt="Property Image">
+                            <span id="mainImageSection" class="main-image-section-badge d-none"></span>
+                        </div>
+                        <div id="thumbnailRow" class="thumbnail-row"></div>
+                    </div>
+                </div>
+
+                <div class="property-header">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                        <div>
+                            <h1 id="propertyTitle" class="property-title">Loading...</h1>
+                            <div id="propertyLocation" class="property-location">
+                                <i class="fas fa-map-marker-alt me-1"></i> <span>-</span>
+                            </div>
+                            <div id="propertyCode" class="property-code mt-2"></div>
+                        </div>
+                        <div class="text-end">
+                            <div id="propertyPrice" class="property-price">-</div>
+                            <div id="priceUnit" class="text-muted"></div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                        <div id="ratingDisplay" class="star-rating-display">
+                            <span class="text-muted small">Loading ratings...</span>
+                        </div>
+                        <div class="action-buttons">
+                            <button id="saveBtn" class="btn-action" onclick="toggleSaveProperty()">
+                                <i class="far fa-heart"></i> Save
+                            </button>
+                            <div class="share-dropdown">
+                                <button class="btn-action" onclick="toggleShareMenu()">
+                                    <i class="fas fa-share-alt"></i> Share
+                                </button>
+                                <div id="shareMenu" class="share-menu">
+                                    <a href="#" onclick="shareProperty('whatsapp')"><i class="fab fa-whatsapp text-success"></i> WhatsApp</a>
+                                    <a href="#" onclick="shareProperty('facebook')"><i class="fab fa-facebook text-primary"></i> Facebook</a>
+                                    <a href="#" onclick="shareProperty('twitter')"><i class="fab fa-twitter text-info"></i> Twitter</a>
+                                    <a href="#" onclick="shareProperty('linkedin')"><i class="fab fa-linkedin text-primary"></i> LinkedIn</a>
+                                    <a href="#" onclick="shareProperty('email')"><i class="fas fa-envelope text-secondary"></i> Email</a>
+                                    <a href="#" onclick="shareProperty('copy_link')"><i class="fas fa-link text-dark"></i> Copy Link</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="details-card">
+                    <h5><i class="fas fa-info-circle me-2"></i>Property Details</h5>
+                    <div id="featureGrid" class="feature-grid"></div>
+                </div>
+
+                <div class="details-card" id="configOptionsCard" style="display: none;">
+                    <h5><i class="fas fa-th-list me-2"></i>Configuration Options</h5>
+                    <div id="configOptionsTable" class="table-responsive"></div>
+                </div>
+
+                <div class="details-card" id="descriptionCard" style="display: none;">
+                    <h5><i class="fas fa-align-left me-2"></i>Description</h5>
+                    <div id="propertyDescription" class="description-text"></div>
+                </div>
+
+                <div class="details-card" id="amenitiesCard" style="display: none;">
+                    <h5><i class="fas fa-check-circle me-2"></i>Amenities</h5>
+                    <div id="amenitiesList"></div>
+                </div>
+
+                <div class="details-card" id="addressCard" style="display: none;">
+                    <h5><i class="fas fa-map me-2"></i>Location</h5>
+                    <div id="fullAddress"></div>
+                    <div id="mapContainer" class="mt-3">
+                        <div id="mapEmbed" class="rounded overflow-hidden" style="height: 280px; background: #e2e8f0;"></div>
+                        <div id="mapActions" class="mt-2 d-flex gap-2 flex-wrap" style="display: none !important;">
+                            <a id="directionsBtn" href="#" target="_blank" class="btn btn-primary btn-sm">
+                                <i class="fas fa-directions me-1"></i> Get Directions
+                            </a>
+                            <a id="viewMapBtn" href="#" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-external-link-alt me-1"></i> View on Google Maps
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="details-card" id="ratingsCard">
+                    <h5><i class="fas fa-star me-2"></i>Ratings & Reviews</h5>
+                    <div id="ratingSummary" class="rating-summary" style="display: none;">
+                        <div class="rating-big" id="avgRatingBig">0</div>
+                        <div>
+                            <div id="avgRatingStars" class="rating-stars"></div>
+                            <div class="text-muted small" id="totalRatingsText">0 ratings</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="mb-3">Rate this property</h6>
+                            <form id="ratingForm" onsubmit="return submitRating(event)">
+                                <div class="mb-3">
+                                    <div class="star-rating" id="ratingStars">
+                                        <i class="far fa-star text-muted" data-rating="1" onclick="setRating(1)" onmouseover="previewRating(1)" onmouseout="resetRatingPreview()"></i>
+                                        <i class="far fa-star text-muted" data-rating="2" onclick="setRating(2)" onmouseover="previewRating(2)" onmouseout="resetRatingPreview()"></i>
+                                        <i class="far fa-star text-muted" data-rating="3" onclick="setRating(3)" onmouseover="previewRating(3)" onmouseout="resetRatingPreview()"></i>
+                                        <i class="far fa-star text-muted" data-rating="4" onclick="setRating(4)" onmouseover="previewRating(4)" onmouseout="resetRatingPreview()"></i>
+                                        <i class="far fa-star text-muted" data-rating="5" onclick="setRating(5)" onmouseover="previewRating(5)" onmouseout="resetRatingPreview()"></i>
+                                    </div>
+                                    <input type="hidden" id="ratingValue" value="0">
+                                    <div class="invalid-feedback" id="ratingError" style="display: none;">Please select a rating</div>
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6">
+                                        <input type="text" class="form-control form-control-sm" id="ratingName" placeholder="Your Name" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="email" class="form-control form-control-sm" id="ratingEmail" placeholder="Email (Optional)">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary" id="submitRatingBtn">
+                                    <i class="fas fa-paper-plane me-1"></i> Submit Rating
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div id="ratingsList"></div>
+                    <div id="loadMoreRatings" class="text-center mt-2" style="display: none;">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadMoreRatings()">Load More Ratings</button>
+                    </div>
+                </div>
+
+                <div class="details-card" id="commentsCard">
+                    <h5><i class="fas fa-comments me-2"></i>Comments (<span id="totalCommentsCount">0</span>)</h5>
+                    
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6 class="mb-3">Leave a comment</h6>
+                            <form id="commentForm" onsubmit="return submitComment(event)">
+                                <div class="mb-3">
+                                    <textarea class="form-control" id="commentText" rows="3" placeholder="Write your comment..." required maxlength="2000"></textarea>
+                                    <div class="form-text"><span id="commentCharCount">0</span>/2000</div>
+                                </div>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control form-control-sm" id="commentName" placeholder="Your Name" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="email" class="form-control form-control-sm" id="commentEmail" placeholder="Email (Optional)">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="tel" class="form-control form-control-sm" id="commentPhone" placeholder="Phone (Optional)">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary" id="submitCommentBtn">
+                                    <i class="fas fa-paper-plane me-1"></i> Post Comment
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div id="commentsList"></div>
+                    <div id="loadMoreComments" class="text-center mt-2" style="display: none;">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadMoreComments()">Load More Comments</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <a href="/real-dreams" class="btn btn-outline-success w-100 mb-3">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Properties
+                </a>
+                
+                <div class="contact-card">
+                    <h5><i class="fas fa-phone-alt me-2"></i>Interested in this property?</h5>
+                    <p class="small opacity-75">Fill out the form below and we'll get back to you shortly.</p>
+                    
+                    <div id="contactDisplay" class="mb-3" style="display: none;">
+                        <div id="companyContactDisplay" class="p-3 rounded" style="display: none; background: #e8f5e9; border-left: 4px solid #4caf50;">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-building text-success me-2 fa-lg"></i>
+                                <div>
+                                    <small class="text-muted d-block">Company Hotline</small>
+                                    <a href="tel:+918585852738" class="fw-bold text-success text-decoration-none" style="font-size: 1.1rem;">+91 85 85 85 27 38</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="agentContactDisplay" class="p-3 rounded" style="display: none; background: #e3f2fd; border-left: 4px solid #2196f3;">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-user text-primary me-2 fa-lg"></i>
+                                <div>
+                                    <small class="text-muted d-block" id="agentNameLabel">Agent Contact</small>
+                                    <a href="#" id="agentPhoneLink" class="fw-bold text-primary text-decoration-none" style="font-size: 1.1rem;"></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form id="inquiryForm" onsubmit="return submitInquiry(event)">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="inquiryName" placeholder="Your Name" required>
+                            <div class="invalid-feedback">Please enter your name</div>
+                        </div>
+                        <div class="mb-3">
+                            <input type="tel" class="form-control" id="inquiryPhone" placeholder="Phone Number" required pattern="[0-9]{10}">
+                            <div class="invalid-feedback">Please enter a valid 10-digit phone number</div>
+                        </div>
+                        <div class="mb-3">
+                            <input type="email" class="form-control" id="inquiryEmail" placeholder="Email (Optional)">
+                        </div>
+                        <div class="mb-3">
+                            <textarea class="form-control" id="inquiryMessage" rows="3" placeholder="Your Message (Optional)"></textarea>
+                        </div>
+                        <button type="submit" class="btn-inquiry" id="submitBtn">
+                            <i class="fas fa-paper-plane me-1"></i> Send Inquiry
+                        </button>
+                    </form>
+                    
+                    <button id="callAgentBtn" class="btn btn-primary w-100 mt-3" style="display: none;" onclick="callProperty()">
+                        <i class="fas fa-phone-alt me-2"></i> Call Agent
+                    </button>
+                    
+                    <div id="inquirySuccess" class="alert alert-light mt-3" style="display: none;">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Thank you! We'll contact you soon.
+                    </div>
+                    
+                    <button onclick="scrollToTop()" class="btn btn-primary w-100 mt-3" style="color: white;">
+                        <i class="fas fa-arrow-up me-2"></i> Back to Top
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="stickyPropertyBanner" class="sticky-property-banner" style="display: none;">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <span id="stickyCategoryBadge" class="badge"></span>
+                    <strong id="stickyPropertyTitle" class="text-truncate" style="max-width: 250px;"></strong>
+                    <span id="stickyPropertyLocation" class="text-muted small d-none d-md-inline">
+                        <i class="fas fa-map-marker-alt text-danger me-1"></i><span></span>
+                    </span>
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                    <span id="stickyBedrooms" class="badge bg-light text-dark d-none d-md-inline-flex align-items-center gap-1">
+                        <i class="fas fa-bed text-primary"></i><span></span>
+                    </span>
+                    <span id="stickyArea" class="badge bg-light text-dark d-none d-md-inline-flex align-items-center gap-1">
+                        <i class="fas fa-vector-square text-primary"></i><span></span>
+                    </span>
+                    <span id="stickyFreeBike" class="badge bg-success d-none align-items-center gap-1">
+                        <i class="fas fa-bicycle"></i> Free Bike
+                    </span>
+                    <span id="stickyPropertyPrice" class="fw-bold text-success"></span>
+                    <button class="btn btn-success btn-sm" onclick="document.getElementById('inquiryName').focus(); document.getElementById('inquiryName').scrollIntoView({behavior: 'smooth', block: 'center'});">
+                        <i class="fas fa-envelope me-1"></i> Enquire
+                    </button>
+                    <button id="stickyCallBtn" class="btn btn-primary btn-sm" style="display: none;" onclick="callProperty()">
+                        <i class="fas fa-phone-alt me-1"></i> Call
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+            <p class="mt-3 text-muted">Loading property details...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1/real-dreams';
+        let propertyId = null;
+        let companyId = null;
+        let propertyData = null;
+
+        function getUrlParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        function getPropertyIdFromPath() {
+            const path = window.location.pathname;
+            const match = path.match(/\/real-dreams\/property\/(\d+)/);
+            return match ? parseInt(match[1]) : null;
+        }
+
+        async function init() {
+            propertyId = getPropertyIdFromPath();
+            const urlCompanyId = getUrlParam('company_id');
+            // DC Protocol: Validate company_id is a valid integer, not "null" or NaN
+            if (urlCompanyId && urlCompanyId !== 'null' && !isNaN(parseInt(urlCompanyId))) {
+                companyId = parseInt(urlCompanyId);
+            } else {
+                // Fallback to default company if company_id is missing, "null", or invalid
+                try {
+                    const defaultResponse = await fetch(`${API_BASE}/public/default-company`);
+                    const defaultData = await defaultResponse.json();
+                    if (defaultData.success && defaultData.company_id) {
+                        companyId = defaultData.company_id;
+                    }
+                } catch (e) {
+                    console.error('[DC-PROPERTY] Failed to get default company:', e);
+                }
+            }
+
+            if (!propertyId) {
+                document.getElementById('loadingOverlay').innerHTML = 
+                    '<div class="text-center text-danger"><i class="fas fa-exclamation-circle fa-3x mb-3"></i><h4>Property not found</h4></div>';
+                return;
+            }
+
+            await loadProperty();
+        }
+
+        async function loadProperty() {
+            try {
+                const response = await fetch(`${API_BASE}/public/properties/${propertyId}?company_id=${companyId}`);
+                
+                if (!response.ok) {
+                    throw new Error('Property not found');
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    propertyData = data.property;
+                    renderProperty(propertyData);
+                    updateStickyBanner();
+                }
+            } catch (error) {
+                console.error('Failed to load property:', error);
+                document.getElementById('loadingOverlay').innerHTML = 
+                    `<div class="text-center text-danger"><i class="fas fa-exclamation-circle fa-3x mb-3"></i><h4>Property not found or unavailable</h4><a href="${window._rdBackUrl||'/real-dreams'}" class="btn btn-primary mt-3">Browse Properties</a></div>`;
+                return;
+            }
+
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function renderProperty(prop) {
+            document.title = `${prop.title} - Real Dreams`;
+            
+            document.getElementById('propertyTitle').textContent = prop.title;
+            document.getElementById('propertyCode').textContent = `Property Code: ${prop.property_code}`;
+            
+            const locationParts = [prop.city, prop.state].filter(Boolean);
+            document.getElementById('propertyLocation').innerHTML = 
+                `<i class="fas fa-map-marker-alt me-1"></i> ${escapeHtml(locationParts.join(', ') || 'Location not specified')}`;
+            
+            document.getElementById('propertyPrice').textContent = formatPrice(prop.price);
+            if (prop.price_unit) {
+                document.getElementById('priceUnit').textContent = prop.price_unit;
+            }
+            
+            document.getElementById('bannerPropertyTitle').textContent = prop.title;
+            document.getElementById('bannerPropertyLocation').textContent = locationParts.join(', ') || 'Location not specified';
+            document.getElementById('bannerPropertyPrice').textContent = formatPrice(prop.price);
+            
+            if (prop.property_logo) {
+                const logoEl = document.getElementById('bannerPropertyLogo');
+                logoEl.src = prop.property_logo;
+                logoEl.classList.remove('d-none');
+            }
+            
+            renderGallery(prop.media || []);
+            renderFeatures(prop);
+            renderPropertyOptions(prop.property_options);
+            
+            if (prop.description) {
+                document.getElementById('descriptionCard').style.display = 'block';
+                document.getElementById('propertyDescription').textContent = prop.description;
+            }
+            
+            if (prop.amenities && prop.amenities.length > 0) {
+                document.getElementById('amenitiesCard').style.display = 'block';
+                renderAmenities(prop.amenities);
+            }
+            
+            if (prop.address || prop.city) {
+                document.getElementById('addressCard').style.display = 'block';
+                const addressParts = [prop.address, prop.city, prop.state, prop.pincode].filter(Boolean);
+                document.getElementById('fullAddress').innerHTML = 
+                    `<p class="mb-0"><i class="fas fa-map-marker-alt text-danger me-2"></i>${escapeHtml(addressParts.join(', '))}</p>`;
+                
+                renderMapSection(prop.google_maps_link, addressParts.join(', '));
+            }
+        }
+        
+        function renderMapSection(mapsLink, fullAddress) {
+            const mapEmbed = document.getElementById('mapEmbed');
+            const mapActions = document.getElementById('mapActions');
+            const directionsBtn = document.getElementById('directionsBtn');
+            const viewMapBtn = document.getElementById('viewMapBtn');
+            
+            if (!mapEmbed) return;
+            
+            let embedUrl = null;
+            let mapsUrl = null;
+            let directionsUrl = null;
+            
+            if (mapsLink && mapsLink.trim()) {
+                const cleanLink = mapsLink.trim();
+                
+                if (cleanLink.includes('maps.google.com') || cleanLink.includes('goo.gl/maps') || cleanLink.includes('google.com/maps')) {
+                    mapsUrl = cleanLink;
+                    
+                    const placeMatch = cleanLink.match(/place\/([^\/\?]+)/);
+                    const coordMatch = cleanLink.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+                    const qMatch = cleanLink.match(/[?&]q=([^&]+)/);
+                    
+                    let searchQuery = '';
+                    if (placeMatch) {
+                        searchQuery = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
+                    } else if (qMatch) {
+                        searchQuery = decodeURIComponent(qMatch[1].replace(/\+/g, ' '));
+                    } else if (coordMatch) {
+                        searchQuery = `${coordMatch[1]},${coordMatch[2]}`;
+                    } else if (fullAddress) {
+                        searchQuery = fullAddress;
+                    }
+                    
+                    if (searchQuery) {
+                        embedUrl = `https://www.google.com/maps?q=${encodeURIComponent(searchQuery)}&output=embed`;
+                        directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(searchQuery)}`;
+                    }
+                }
+            }
+            
+            if (!embedUrl && fullAddress) {
+                embedUrl = `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`;
+                directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fullAddress)}`;
+                mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(fullAddress)}`;
+            }
+            
+            if (embedUrl) {
+                mapEmbed.innerHTML = `<iframe 
+                    src="${embedUrl}" 
+                    width="100%" 
+                    height="280" 
+                    style="border:0; border-radius: 8px;" 
+                    allowfullscreen="" 
+                    loading="lazy" 
+                    referrerpolicy="no-referrer-when-downgrade">
+                </iframe>`;
+                
+                mapActions.style.cssText = 'display: flex !important;';
+                
+                if (directionsUrl) {
+                    directionsBtn.href = directionsUrl;
+                    directionsBtn.style.display = 'inline-flex';
+                } else {
+                    directionsBtn.style.display = 'none';
+                }
+                
+                if (mapsUrl) {
+                    viewMapBtn.href = mapsUrl;
+                    viewMapBtn.style.display = 'inline-flex';
+                } else {
+                    viewMapBtn.style.display = 'none';
+                }
+            } else {
+                mapEmbed.innerHTML = `<div class="p-4 text-center bg-light rounded h-100 d-flex flex-column justify-content-center align-items-center">
+                    <i class="fas fa-map-marker-alt fa-3x text-muted mb-2"></i>
+                    <p class="text-muted mb-0">Map location not available</p>
+                </div>`;
+                mapActions.style.cssText = 'display: none !important;';
+            }
+        }
+
+        let galleryImages = [];
+        let galleryMediaData = [];
+        let currentImageIndex = 0;
+        let lightboxOpen = false;
+
+        const GALLERY_SECTION_LABELS = {
+            'EXTERIOR': 'Exterior',
+            'INTERIOR': 'Interior', 
+            'LIVING_ROOM': 'Living',
+            'BEDROOM': 'Bedroom',
+            'KITCHEN': 'Kitchen',
+            'BATHROOM': 'Bath',
+            'BALCONY': 'Balcony',
+            'FLOOR_PLAN': 'Floor Plan',
+            'OTHER': 'Other'
+        };
+        
+        function renderGallery(media) {
+            const mainImage = document.getElementById('mainImage');
+            const thumbnailRow = document.getElementById('thumbnailRow');
+            const mainSectionBadge = document.getElementById('mainImageSection');
+            
+            const images = media.filter(m => m.media_type === 'IMAGE');
+            galleryImages = images.map(m => m.file_path);
+            galleryMediaData = images;
+            
+            if (images.length === 0) {
+                mainImage.src = '';
+                mainImage.style.display = 'flex';
+                mainImage.outerHTML = `<div class="main-image d-flex align-items-center justify-content-center">
+                    <i class="fas fa-home fa-5x text-muted"></i>
+                </div>`;
+                return;
+            }
+            
+            mainImage.src = images[0].file_path;
+            mainImage.alt = propertyData.title;
+            mainImage.style.cursor = 'pointer';
+            mainImage.onclick = () => openLightbox(0);
+            
+            updateMainImageSection(0);
+            
+            if (images.length > 1) {
+                thumbnailRow.innerHTML = images.map((img, idx) => {
+                    const sectionLabel = img.section && GALLERY_SECTION_LABELS[img.section] ? 
+                        `<span class="thumbnail-section-badge">${GALLERY_SECTION_LABELS[img.section]}</span>` : '';
+                    return `<div class="thumbnail-wrapper">
+                        <img src="${img.file_path}" class="thumbnail ${idx === 0 ? 'active' : ''}" 
+                             onclick="changeMainImage(${idx})" 
+                             alt="Thumbnail ${idx + 1}">
+                        ${sectionLabel}
+                    </div>`;
+                }).join('');
+            }
+            
+            renderVideoSection();
+        }
+        
+        function updateMainImageSection(index) {
+            const badge = document.getElementById('mainImageSection');
+            if (!badge || !galleryMediaData[index]) return;
+            
+            const section = galleryMediaData[index].section;
+            if (section && GALLERY_SECTION_LABELS[section]) {
+                badge.textContent = GALLERY_SECTION_LABELS[section];
+                badge.classList.remove('d-none');
+            } else {
+                badge.classList.add('d-none');
+            }
+        }
+
+        function renderVideoSection() {
+            const galleryContainer = document.querySelector('.gallery-container');
+            if (!galleryContainer || !propertyData) return;
+            
+            let videoHtml = '';
+            
+            // Check for video_url or uploaded_video_url
+            const videoUrl = propertyData.video_url || propertyData.uploaded_video_url;
+            if (videoUrl) {
+                videoHtml += `
+                    <div class="video-section mt-3">
+                        <h6 class="text-muted mb-2"><i class="fas fa-video me-2 text-primary"></i>Property Video</h6>
+                        <video controls playsinline muted class="w-100 rounded" style="max-height: 300px; background: #000;">
+                            <source src="${escapeHtml(videoUrl)}" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                `;
+            }
+            
+            // Check for YouTube links
+            if (propertyData.youtube_links && propertyData.youtube_links.length > 0) {
+                const youtubeEmbeds = propertyData.youtube_links.map(item => {
+                    const url = typeof item === 'string' ? item : (item?.url || '');
+                    const videoId = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([^&?/]+)/)?.[1];
+                    return videoId ? `
+                        <div class="col-md-6 mb-2">
+                            <div class="ratio ratio-16x9">
+                                <iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen class="rounded"></iframe>
+                            </div>
+                        </div>
+                    ` : '';
+                }).join('');
+                
+                if (youtubeEmbeds) {
+                    videoHtml += `
+                        <div class="youtube-section mt-3">
+                            <h6 class="text-muted mb-2"><i class="fab fa-youtube me-2 text-danger"></i>YouTube Videos</h6>
+                            <div class="row">${youtubeEmbeds}</div>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Check for brochure
+            if (propertyData.brochure_url) {
+                videoHtml += `
+                    <div class="brochure-section mt-3">
+                        <a href="${escapeHtml(propertyData.brochure_url)}" target="_blank" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-file-pdf me-2"></i>Download Brochure
+                        </a>
+                    </div>
+                `;
+            }
+            
+            // Remove existing video sections
+            const existingVideo = galleryContainer.parentElement.querySelector('.media-sections');
+            if (existingVideo) existingVideo.remove();
+            
+            if (videoHtml) {
+                const mediaDiv = document.createElement('div');
+                mediaDiv.className = 'media-sections';
+                mediaDiv.innerHTML = videoHtml;
+                galleryContainer.parentElement.insertBefore(mediaDiv, galleryContainer.nextSibling);
+            }
+        }
+
+        function changeMainImage(index) {
+            if (index < 0 || index >= galleryImages.length) return;
+            currentImageIndex = index;
+            document.getElementById('mainImage').src = galleryImages[index];
+            document.querySelectorAll('.thumbnail').forEach((t, i) => {
+                t.classList.toggle('active', i === index);
+            });
+            updateMainImageSection(index);
+        }
+
+        function openLightbox(index) {
+            if (galleryImages.length === 0) return;
+            currentImageIndex = index;
+            lightboxOpen = true;
+            
+            // Create lightbox if not exists
+            let lightbox = document.getElementById('imageLightbox');
+            if (!lightbox) {
+                lightbox = document.createElement('div');
+                lightbox.id = 'imageLightbox';
+                lightbox.innerHTML = `
+                    <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;">
+                        <button onclick="closeLightbox()" style="position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.9);border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:18px;z-index:10000;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button onclick="lightboxPrev()" style="position:absolute;left:20px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.9);border:none;width:50px;height:50px;border-radius:50%;cursor:pointer;font-size:20px;">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <img id="lightboxImage" style="max-width:90%;max-height:85%;object-fit:contain;">
+                        <button onclick="lightboxNext()" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.9);border:none;width:50px;height:50px;border-radius:50%;cursor:pointer;font-size:20px;">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <div id="lightboxCounter" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:8px 20px;border-radius:20px;"></div>
+                    </div>
+                `;
+                document.body.appendChild(lightbox);
+            }
+            
+            lightbox.style.display = 'block';
+            updateLightbox();
+        }
+
+        function updateLightbox() {
+            document.getElementById('lightboxImage').src = galleryImages[currentImageIndex];
+            document.getElementById('lightboxCounter').textContent = `${currentImageIndex + 1} / ${galleryImages.length}`;
+        }
+
+        function closeLightbox() {
+            lightboxOpen = false;
+            const lightbox = document.getElementById('imageLightbox');
+            if (lightbox) lightbox.style.display = 'none';
+        }
+
+        function lightboxPrev() {
+            currentImageIndex = (currentImageIndex - 1 + galleryImages.length) % galleryImages.length;
+            updateLightbox();
+        }
+
+        function lightboxNext() {
+            currentImageIndex = (currentImageIndex + 1) % galleryImages.length;
+            updateLightbox();
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (!lightboxOpen) return;
+            
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                lightboxPrev();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                lightboxNext();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeLightbox();
+            }
+        });
+
+        function renderFeatures(prop) {
+            const features = [];
+            const hidden = prop.hidden_fields || {};
+            
+            if (prop.property_type_name) {
+                features.push({ icon: 'fa-building', label: 'Type', value: prop.property_type_name });
+            }
+            if (prop.bedrooms && !hidden.bedrooms) {
+                features.push({ icon: 'fa-bed', label: 'Bedrooms', value: prop.bedrooms });
+            }
+            if (prop.bedroom_options && prop.bedroom_options.length > 0 && !hidden.bedroom_options) {
+                const bhkDisplay = prop.bedroom_options.map(opt => {
+                    if (typeof opt === 'object' && opt.bedrooms) {
+                        return `${opt.bedrooms} BHK`;
+                    }
+                    return opt;
+                }).join(', ');
+                features.push({ icon: 'fa-bed', label: 'BHK Options', value: bhkDisplay });
+            }
+            if (prop.bathrooms && !hidden.bathrooms) {
+                features.push({ icon: 'fa-bath', label: 'Bathrooms', value: prop.bathrooms });
+            }
+            if (prop.balconies && !hidden.balconies) {
+                features.push({ icon: 'fa-door-open', label: 'Balconies', value: prop.balconies });
+            }
+            if (prop.total_area && !hidden.total_area) {
+                const unit = prop.area_unit || 'SQ_FT';
+                const unitLabel = unit.replace('_', ' ').toLowerCase();
+                features.push({ icon: 'fa-ruler-combined', label: 'Total Area', value: `${prop.total_area} ${unitLabel}` });
+            }
+            if (prop.built_up_area && !hidden.built_up_area) {
+                features.push({ icon: 'fa-expand', label: 'Built-up Area', value: `${prop.built_up_area} sq ft` });
+            }
+            if (prop.carpet_area && !hidden.carpet_area) {
+                features.push({ icon: 'fa-vector-square', label: 'Carpet Area', value: `${prop.carpet_area} sq ft` });
+            }
+            if (prop.floors_display && !hidden.floors_display) {
+                features.push({ icon: 'fa-building', label: 'Floors', value: prop.floors_display });
+            }
+            if (prop.floor_number && !hidden.floor_number) {
+                features.push({ icon: 'fa-layer-group', label: 'Floor', value: prop.floor_number });
+            }
+            if (prop.total_floors && !hidden.total_floors) {
+                features.push({ icon: 'fa-building', label: 'Total Floors', value: prop.total_floors });
+            }
+            if (!hidden.facings) {
+                if (prop.facings && prop.facings.length > 0) {
+                    features.push({ icon: 'fa-compass', label: 'Facing', value: prop.facings.join(', ') });
+                } else if (prop.facing) {
+                    features.push({ icon: 'fa-compass', label: 'Facing', value: prop.facing });
+                }
+            }
+            if (prop.approach_road_size && !hidden.approach_road_size) {
+                features.push({ icon: 'fa-road', label: 'Approach Road', value: prop.approach_road_size });
+            }
+            if (prop.road_width && !hidden.road_width) {
+                features.push({ icon: 'fa-road', label: 'Road Width', value: prop.road_width });
+            }
+            if (prop.age_of_property && !hidden.age_of_property) {
+                features.push({ icon: 'fa-calendar', label: 'Age', value: prop.age_of_property });
+            }
+            if (prop.possession_status && !hidden.possession_status) {
+                const possessionLabels = {
+                    'READY': 'Ready to Move',
+                    'UNDER_CONSTRUCTION': 'Under Construction',
+                    'UPCOMING': 'Upcoming'
+                };
+                features.push({ icon: 'fa-key', label: 'Possession', value: possessionLabels[prop.possession_status] || prop.possession_status });
+            }
+            if (prop.rera_number && !hidden.rera_number) {
+                features.push({ icon: 'fa-certificate', label: 'RERA', value: prop.rera_number });
+            }
+            if (prop.booking_amount && !hidden.booking_amount) {
+                features.push({ icon: 'fa-hand-holding-usd', label: 'Booking', value: formatPrice(prop.booking_amount) });
+            }
+            if (prop.is_negotiable) {
+                features.push({ icon: 'fa-handshake', label: 'Negotiable', value: 'Yes' });
+            }
+            if (prop.bedroom_configurations && prop.bedroom_configurations.length > 0 && !hidden.bedroom_configurations) {
+                features.push({ icon: 'fa-th-large', label: 'Configs', value: prop.bedroom_configurations.join(', ') });
+            }
+            if (prop.furnishing) {
+                features.push({ icon: 'fa-couch', label: 'Furnishing', value: prop.furnishing });
+            }
+            if (prop.listing_type) {
+                features.push({ icon: 'fa-tag', label: 'For', value: prop.listing_type });
+            }
+            
+            document.getElementById('featureGrid').innerHTML = features.map(f => `
+                <div class="feature-item">
+                    <i class="fas ${f.icon}"></i>
+                    <div>
+                        <div class="label">${f.label}</div>
+                        <div class="value">${escapeHtml(String(f.value))}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderAmenities(amenities) {
+            const grouped = {};
+            amenities.forEach(a => {
+                if (!grouped[a.category]) grouped[a.category] = [];
+                grouped[a.category].push(a);
+            });
+            
+            let html = '';
+            for (const [category, items] of Object.entries(grouped)) {
+                html += `<div class="mb-3"><strong class="text-muted small">${category}</strong><div>`;
+                items.forEach(a => {
+                    html += `<span class="amenity-badge"><i class="${a.icon || 'fas fa-check'}"></i> ${escapeHtml(a.name)}</span>`;
+                });
+                html += '</div></div>';
+            }
+            
+            document.getElementById('amenitiesList').innerHTML = html;
+        }
+        
+        function renderPropertyOptions(options) {
+            const container = document.getElementById('configOptionsCard');
+            const tableDiv = document.getElementById('configOptionsTable');
+            
+            if (!options || options.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            
+            let html = '<table class="table table-sm table-bordered mb-0">';
+            html += '<thead class="table-light"><tr>';
+            html += '<th>BHK</th>';
+            html += '<th>Overall SFT</th>';
+            html += '<th>Carpet Area</th>';
+            html += '<th>Parking</th>';
+            html += '<th>Washrooms</th>';
+            html += '<th>Facing</th>';
+            html += '</tr></thead><tbody>';
+            
+            options.forEach(opt => {
+                const bedrooms = opt.bedrooms ? `${opt.bedrooms} BHK` : '-';
+                const overallSft = opt.overall_sft ? `${opt.overall_sft} sq ft` : '-';
+                const carpetArea = opt.carpet_area ? `${opt.carpet_area} sq ft` : '-';
+                const parking = [];
+                if (opt.parking_space_type) parking.push(opt.parking_space_type);
+                if (opt.parking_space_area) parking.push(`${opt.parking_space_area} sq ft`);
+                const parkingStr = parking.length > 0 ? parking.join(' - ') : '-';
+                const washrooms = opt.washrooms || '-';
+                const facings = opt.facings && opt.facings.length > 0 ? opt.facings.join(', ') : '-';
+                
+                html += `<tr>
+                    <td><strong>${escapeHtml(bedrooms)}</strong></td>
+                    <td>${escapeHtml(overallSft)}</td>
+                    <td>${escapeHtml(carpetArea)}</td>
+                    <td>${escapeHtml(parkingStr)}</td>
+                    <td>${escapeHtml(washrooms)}</td>
+                    <td>${escapeHtml(facings)}</td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table>';
+            tableDiv.innerHTML = html;
+        }
+
+        async function submitInquiry(event) {
+            event.preventDefault();
+            
+            const form = document.getElementById('inquiryForm');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                return false;
+            }
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending...';
+            
+            const inquiryData = {
+                name: document.getElementById('inquiryName').value.trim(),
+                phone: document.getElementById('inquiryPhone').value.trim(),
+                email: document.getElementById('inquiryEmail').value.trim() || null,
+                category_id: null,
+                category_name: 'Real Estate',
+                source: 'WEBSITE',
+                priority: 'MEDIUM',
+                notes: document.getElementById('inquiryMessage').value.trim() || null,
+                property_id: propertyId,
+                property_title: propertyData?.title || ''
+            };
+            
+            try {
+                const response = await fetch(`/api/v1/crm/leads/public?company_id=${companyId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(inquiryData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    form.style.display = 'none';
+                    document.getElementById('inquirySuccess').style.display = 'block';
+                } else {
+                    throw new Error(data.detail || 'Failed to submit inquiry');
+                }
+            } catch (error) {
+                console.error('Failed to submit inquiry:', error);
+                alert('Failed to submit inquiry. Please try again or contact us directly.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send Inquiry';
+            }
+            
+            return false;
+        }
+
+        function formatPrice(price) {
+            if (!price) return 'Price on Request';
+            if (price >= 10000000) {
+                return '\u20B9' + (price / 10000000).toFixed(2) + ' Cr';
+            } else if (price >= 100000) {
+                return '\u20B9' + (price / 100000).toFixed(2) + ' L';
+            }
+            return '\u20B9' + price.toLocaleString('en-IN');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ============================================================================
+        // UNIVERSAL ENGAGEMENT SYSTEM - Ratings, Comments, Shares, Saves
+        // ============================================================================
+        const ENGAGEMENT_API = '/api/v1/engagement';
+        const RATINGS_API = API_BASE;
+        let selectedRating = 0;
+        let isSaved = false;
+        let ratingsPage = 1;
+        let commentsPage = 1;
+
+        async function loadEngagementData() {
+            try {
+                const [ratingsRes, commentsRes] = await Promise.all([
+                    fetch(`${RATINGS_API}/public/properties/${propertyId}/ratings?company_id=${companyId}&page=1&per_page=5`),
+                    fetch(`${ENGAGEMENT_API}/public/property/${propertyId}/comments?company_id=${companyId}&page=1&per_page=10`)
+                ]);
+
+                const [ratings, comments] = await Promise.all([
+                    ratingsRes.json(),
+                    commentsRes.json()
+                ]);
+
+                if (ratings.success) {
+                    renderRatingDisplay({
+                        average_rating: ratings.average_rating,
+                        total_ratings: ratings.total_ratings
+                    });
+                    renderRatingsSection(ratings);
+                }
+                if (comments.success) {
+                    renderCommentsSection(comments);
+                }
+            } catch (error) {
+                console.error('Failed to load engagement data:', error);
+            }
+        }
+
+        function renderRatingDisplay(stats) {
+            const display = document.getElementById('ratingDisplay');
+            if (stats && stats.total_ratings > 0) {
+                const fullStars = Math.floor(stats.average_rating);
+                const halfStar = stats.average_rating - fullStars >= 0.5;
+                let starsHtml = '';
+                for (let i = 0; i < fullStars; i++) starsHtml += '<i class="fas fa-star text-warning"></i>';
+                if (halfStar) starsHtml += '<i class="fas fa-star-half-alt text-warning"></i>';
+                for (let i = 0; i < 5 - fullStars - (halfStar ? 1 : 0); i++) starsHtml += '<i class="far fa-star text-warning"></i>';
+                display.innerHTML = `${starsHtml} <span class="ms-2">${stats.average_rating}</span> <span class="text-muted">(${stats.total_ratings})</span>`;
+            } else {
+                display.innerHTML = '<span class="text-muted small">No ratings yet</span>';
+            }
+        }
+
+        function renderRatingsSection(data) {
+            const summaryEl = document.getElementById('ratingSummary');
+            const listEl = document.getElementById('ratingsList');
+            const loadMoreEl = document.getElementById('loadMoreRatings');
+
+            if (data.total_ratings > 0) {
+                summaryEl.style.display = 'flex';
+                document.getElementById('avgRatingBig').textContent = data.average_rating;
+                const fullStars = Math.floor(data.average_rating);
+                let starsHtml = '';
+                for (let i = 0; i < 5; i++) starsHtml += `<i class="${i < fullStars ? 'fas' : 'far'} fa-star text-warning"></i>`;
+                document.getElementById('avgRatingStars').innerHTML = starsHtml;
+                document.getElementById('totalRatingsText').textContent = `${data.total_ratings} ratings`;
+            }
+
+            if (data.ratings && data.ratings.length > 0) {
+                listEl.innerHTML = data.ratings.map(r => `
+                    <div class="rating-item p-2 border-bottom">
+                        <div class="d-flex justify-content-between">
+                            <strong><i class="fas fa-user-circle me-1 text-muted"></i>${escapeHtml(r.reviewer_name || r.rater_name || 'Anonymous')}</strong>
+                            <small class="text-muted">${new Date(r.created_at).toLocaleDateString('en-IN')}</small>
+                        </div>
+                        <div>${'<i class="fas fa-star text-warning"></i>'.repeat(r.rating)}${'<i class="far fa-star text-muted"></i>'.repeat(5 - r.rating)}</div>
+                    </div>
+                `).join('');
+
+                if (data.pagination && data.pagination.pages > 1) {
+                    loadMoreEl.style.display = 'block';
+                }
+            }
+        }
+
+        function renderCommentsSection(data) {
+            document.getElementById('totalCommentsCount').textContent = data.total_comments || 0;
+            const listEl = document.getElementById('commentsList');
+            
+            if (data.comments && data.comments.length > 0) {
+                listEl.innerHTML = data.comments.map(c => `
+                    <div class="comment-item p-2 border-bottom mb-2">
+                        <div class="d-flex justify-content-between">
+                            <strong><i class="fas fa-user-circle me-1 text-muted"></i>${escapeHtml(c.commenter_name)}</strong>
+                            <small class="text-muted">${new Date(c.created_at).toLocaleDateString('en-IN')}</small>
+                        </div>
+                        <p class="mb-1 mt-1">${escapeHtml(c.comment)}</p>
+                        ${c.replies && c.replies.length > 0 ? `
+                            <div class="ms-4 ps-3 border-start">
+                                ${c.replies.map(r => `
+                                    <div class="reply-item py-1">
+                                        <small><strong>${escapeHtml(r.commenter_name)}</strong>: ${escapeHtml(r.comment)}</small>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+            } else {
+                listEl.innerHTML = '<p class="text-muted text-center py-3">No comments yet. Be the first to comment!</p>';
+            }
+        }
+
+        function previewRating(value) {
+            const stars = document.querySelectorAll('#ratingStars i');
+            stars.forEach((star, idx) => {
+                star.className = idx < value ? 'fas fa-star text-warning' : 'far fa-star text-muted';
+            });
+        }
+
+        function resetRatingPreview() {
+            if (selectedRating === 0) {
+                const stars = document.querySelectorAll('#ratingStars i');
+                stars.forEach(star => {
+                    star.className = 'far fa-star text-muted';
+                });
+            } else {
+                setRating(selectedRating);
+            }
+        }
+
+        function setRating(value) {
+            selectedRating = value;
+            const stars = document.querySelectorAll('#ratingStars i');
+            stars.forEach((star, idx) => {
+                star.className = idx < value ? 'fas fa-star text-warning' : 'far fa-star text-muted';
+            });
+            document.getElementById('ratingValue').value = value;
+            document.getElementById('ratingError').style.display = 'none';
+        }
+
+        async function submitRating(event) {
+            event.preventDefault();
+            
+            if (selectedRating === 0) {
+                document.getElementById('ratingError').style.display = 'block';
+                return false;
+            }
+
+            const name = document.getElementById('ratingName').value.trim();
+            const email = document.getElementById('ratingEmail').value.trim();
+
+            if (!name) {
+                document.getElementById('ratingName').classList.add('is-invalid');
+                return false;
+            }
+
+            if (email && !validateEmail(email)) {
+                document.getElementById('ratingEmail').classList.add('is-invalid');
+                return false;
+            }
+
+            const btn = document.getElementById('submitRatingBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
+
+            try {
+                const response = await fetch(`${API_BASE}/public/properties/${propertyId}/ratings?company_id=${companyId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        rating: selectedRating,
+                        reviewer_name: name,
+                        reviewer_email: email || null
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Thank you for your rating!');
+                    selectedRating = 0;
+                    setRating(0);
+                    document.getElementById('ratingName').value = '';
+                    document.getElementById('ratingEmail').value = '';
+                    await loadEngagementData();
+                } else {
+                    throw new Error(data.detail || 'Failed to submit rating');
+                }
+            } catch (error) {
+                console.error('Rating error:', error);
+                alert('Failed to submit rating. Please try again.');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Submit Rating';
+            return false;
+        }
+
+        async function submitComment(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('commentName').value.trim();
+            const email = document.getElementById('commentEmail').value.trim();
+            const text = document.getElementById('commentText').value.trim();
+
+            let isValid = true;
+
+            if (!name) {
+                document.getElementById('commentName').classList.add('is-invalid');
+                isValid = false;
+            }
+
+            if (!text) {
+                document.getElementById('commentText').classList.add('is-invalid');
+                isValid = false;
+            }
+
+            if (email && !validateEmail(email)) {
+                document.getElementById('commentEmail').classList.add('is-invalid');
+                isValid = false;
+            }
+
+            if (!isValid) {
+                return false;
+            }
+
+            const btn = document.getElementById('submitCommentBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Posting...';
+
+            try {
+                const response = await fetch(`${ENGAGEMENT_API}/public/property/${propertyId}/comments?company_id=${companyId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        comment: text,
+                        commenter_name: name,
+                        commenter_email: email || null,
+                        commenter_type: 'public'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Comment posted successfully!');
+                    document.getElementById('commentName').value = '';
+                    document.getElementById('commentEmail').value = '';
+                    document.getElementById('commentText').value = '';
+                    await loadEngagementData();
+                } else {
+                    throw new Error(data.detail || 'Failed to post comment');
+                }
+            } catch (error) {
+                console.error('Comment error:', error);
+                alert('Failed to post comment. Please try again.');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Post Comment';
+            return false;
+        }
+
+        function toggleShareMenu() {
+            const menu = document.getElementById('shareMenu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        async function shareProperty(platform) {
+            document.getElementById('shareMenu').style.display = 'none';
+            
+            const url = encodeURIComponent(window.location.href);
+            const title = encodeURIComponent(propertyData?.title || 'Property');
+            let shareUrl = '';
+
+            switch (platform) {
+                case 'whatsapp':
+                    shareUrl = `https://wa.me/?text=${title}%20${url}`;
+                    break;
+                case 'facebook':
+                    shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+                    break;
+                case 'twitter':
+                    shareUrl = `https://twitter.com/intent/tweet?url=${url}&text=${title}`;
+                    break;
+                case 'linkedin':
+                    shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${url}`;
+                    break;
+                case 'email':
+                    shareUrl = `mailto:?subject=${title}&body=Check%20this%20property:%20${url}`;
+                    break;
+                case 'copy_link':
+                    try {
+                        await navigator.clipboard.writeText(window.location.href);
+                        alert('Link copied to clipboard!');
+                    } catch (e) {
+                        prompt('Copy this link:', window.location.href);
+                    }
+                    break;
+            }
+
+            try {
+                await fetch(`${ENGAGEMENT_API}/public/property/${propertyId}/share?company_id=${companyId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ platform: platform })
+                });
+            } catch (e) {
+                console.log('Share tracking failed:', e);
+            }
+
+            if (shareUrl) {
+                window.open(shareUrl, '_blank');
+            }
+            return false;
+        }
+
+        async function toggleSaveProperty() {
+            const btn = document.getElementById('saveBtn');
+            const saverId = localStorage.getItem('user_id') || `anon_${Date.now()}`;
+            localStorage.setItem('user_id', saverId);
+
+            try {
+                if (isSaved) {
+                    await fetch(`${ENGAGEMENT_API}/public/property/${propertyId}/save?company_id=${companyId}`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ saver_type: 'public', saver_id: saverId })
+                    });
+                    isSaved = false;
+                    btn.innerHTML = '<i class="far fa-heart"></i> Save';
+                } else {
+                    await fetch(`${ENGAGEMENT_API}/public/property/${propertyId}/save?company_id=${companyId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ saver_type: 'public', saver_id: saverId })
+                    });
+                    isSaved = true;
+                    btn.innerHTML = '<i class="fas fa-heart text-danger"></i> Saved';
+                }
+            } catch (e) {
+                console.error('Save toggle failed:', e);
+            }
+        }
+
+        async function checkIfSaved() {
+            const saverId = localStorage.getItem('user_id');
+            if (!saverId) return;
+            
+            try {
+                const response = await fetch(`${ENGAGEMENT_API}/public/property/${propertyId}/is-saved?company_id=${companyId}&saver_type=public&saver_id=${saverId}`);
+                const data = await response.json();
+                if (data.saved) {
+                    isSaved = true;
+                    document.getElementById('saveBtn').innerHTML = '<i class="fas fa-heart text-danger"></i> Saved';
+                }
+            } catch (e) {
+                console.log('Check saved failed:', e);
+            }
+        }
+
+        async function loadMoreRatings() {
+            ratingsPage++;
+            try {
+                const response = await fetch(`${RATINGS_API}/public/properties/${propertyId}/ratings?company_id=${companyId}&page=${ratingsPage}&per_page=5`);
+                const data = await response.json();
+                if (data.success && data.ratings.length > 0) {
+                    const listEl = document.getElementById('ratingsList');
+                    listEl.innerHTML += data.ratings.map(r => `
+                        <div class="rating-item p-2 border-bottom">
+                            <div class="d-flex justify-content-between">
+                                <strong><i class="fas fa-user-circle me-1 text-muted"></i>${escapeHtml(r.reviewer_name || r.rater_name || 'Anonymous')}</strong>
+                                <small class="text-muted">${new Date(r.created_at).toLocaleDateString('en-IN')}</small>
+                            </div>
+                            <div>${'<i class="fas fa-star text-warning"></i>'.repeat(r.rating)}${'<i class="far fa-star text-muted"></i>'.repeat(5 - r.rating)}</div>
+                        </div>
+                    `).join('');
+                    
+                    if (ratingsPage >= data.pagination.pages) {
+                        document.getElementById('loadMoreRatings').style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                console.error('Load more ratings failed:', e);
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.share-dropdown')) {
+                document.getElementById('shareMenu').style.display = 'none';
+            }
+        });
+
+        function validateEmail(email) {
+            if (!email) return true;
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        function setupFormValidation() {
+            const commentText = document.getElementById('commentText');
+            if (commentText) {
+                commentText.addEventListener('input', function() {
+                    const charCount = this.value.length;
+                    document.getElementById('commentCharCount').textContent = charCount;
+                    if (charCount > 2000) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
+
+            const ratingEmail = document.getElementById('ratingEmail');
+            if (ratingEmail) {
+                ratingEmail.addEventListener('blur', function() {
+                    if (this.value && !validateEmail(this.value)) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
+
+            const commentEmail = document.getElementById('commentEmail');
+            if (commentEmail) {
+                commentEmail.addEventListener('blur', function() {
+                    if (this.value && !validateEmail(this.value)) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
+
+            const ratingName = document.getElementById('ratingName');
+            if (ratingName) {
+                ratingName.addEventListener('blur', function() {
+                    if (!this.value.trim()) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
+
+            const commentName = document.getElementById('commentName');
+            if (commentName) {
+                commentName.addEventListener('blur', function() {
+                    if (!this.value.trim()) {
+                        this.classList.add('is-invalid');
+                    } else {
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
+        }
+
+        const originalInit = init;
+        init = async function() {
+            await originalInit();
+            setupFormValidation();
+            if (propertyId) {
+                await loadEngagementData();
+                await checkIfSaved();
+            }
+        };
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function handleScroll() {
+            const stickyWrapper = document.getElementById('stickyHeaderWrapper');
+            
+            if (!stickyWrapper) return;
+            
+            try {
+                if (window.scrollY > 60) {
+                    stickyWrapper.classList.add('scrolled');
+                } else {
+                    stickyWrapper.classList.remove('scrolled');
+                }
+            } catch (e) {
+                console.error('Scroll handler error:', e);
+            }
+        }
+        
+        function scrollToEnquiry() {
+            const contactCard = document.querySelector('.contact-card');
+            if (contactCard) {
+                contactCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const nameInput = document.getElementById('inquiryName');
+                if (nameInput) {
+                    setTimeout(() => nameInput.focus(), 500);
+                }
+            }
+        }
+
+        function updateStickyBanner() {
+            if (!propertyData) return;
+            
+            document.getElementById('stickyPropertyTitle').textContent = propertyData.title || 'Property';
+            
+            const locationEl = document.getElementById('stickyPropertyLocation');
+            const locationText = [propertyData.city, propertyData.state].filter(Boolean).join(', ');
+            if (locationText) {
+                locationEl.querySelector('span').textContent = locationText;
+                locationEl.classList.remove('d-none');
+            }
+            
+            document.getElementById('stickyPropertyPrice').textContent = formatPrice(propertyData.price);
+            
+            const categoryBadge = document.getElementById('stickyCategoryBadge');
+            if (propertyData.category) {
+                const categoryColors = {
+                    'Residential': 'bg-success',
+                    'Commercial': 'bg-primary',
+                    'Agricultural': 'bg-warning text-dark',
+                    'Industrial': 'bg-secondary',
+                    'Mixed Use': 'bg-info'
+                };
+                categoryBadge.className = `badge ${categoryColors[propertyData.category] || 'bg-secondary'}`;
+                categoryBadge.textContent = propertyData.category;
+            }
+            
+            const bedroomsEl = document.getElementById('stickyBedrooms');
+            if (propertyData.bedroom_config) {
+                bedroomsEl.querySelector('span').textContent = propertyData.bedroom_config;
+                bedroomsEl.classList.remove('d-none');
+                bedroomsEl.classList.add('d-md-inline-flex');
+            }
+            
+            const areaEl = document.getElementById('stickyArea');
+            if (propertyData.carpet_area || propertyData.built_up_area) {
+                const area = propertyData.carpet_area || propertyData.built_up_area;
+                areaEl.querySelector('span').textContent = `${area} sq.ft`;
+                areaEl.classList.remove('d-none');
+                areaEl.classList.add('d-md-inline-flex');
+            }
+            
+            const freeBikeEl = document.getElementById('stickyFreeBike');
+            if (propertyData.free_bike_offer) {
+                freeBikeEl.classList.remove('d-none');
+                freeBikeEl.classList.add('d-inline-flex');
+            }
+            
+            updateCallButtonVisibility();
+        }
+
+        function updateCallButtonVisibility() {
+            // Show call button if: show_company_contact is true OR has personal phone (and allowed)
+            const showCall = propertyData && (
+                propertyData.show_company_contact || 
+                (propertyData.contact_person_phone && 
+                    (!propertyData.hide_contact_number || (propertyData.hide_contact_number && propertyData.allow_hidden_call)))
+            );
+            
+            const stickyCallBtn = document.getElementById('stickyCallBtn');
+            const callAgentBtn = document.getElementById('callAgentBtn');
+            const contactDisplay = document.getElementById('contactDisplay');
+            const companyContactDisplay = document.getElementById('companyContactDisplay');
+            const agentContactDisplay = document.getElementById('agentContactDisplay');
+            
+            // Update button text based on contact type
+            const buttonText = propertyData.show_company_contact ? 'Call Company' : 'Call Agent';
+            
+            if (showCall) {
+                if (stickyCallBtn) {
+                    stickyCallBtn.style.display = 'inline-block';
+                    stickyCallBtn.innerHTML = `<i class="fas fa-phone-alt me-1"></i> ${propertyData.show_company_contact ? 'Call' : 'Call'}`;
+                }
+                if (callAgentBtn) {
+                    callAgentBtn.style.display = 'block';
+                    callAgentBtn.innerHTML = `<i class="fas fa-phone-alt me-2"></i> ${buttonText}`;
+                }
+            } else {
+                if (stickyCallBtn) stickyCallBtn.style.display = 'none';
+                if (callAgentBtn) callAgentBtn.style.display = 'none';
+            }
+            
+            // Update visible contact display
+            if (contactDisplay) {
+                if (propertyData.show_company_contact) {
+                    // Show company hotline
+                    contactDisplay.style.display = 'block';
+                    if (companyContactDisplay) companyContactDisplay.style.display = 'block';
+                    if (agentContactDisplay) agentContactDisplay.style.display = 'none';
+                } else if (propertyData.contact_person_phone && !propertyData.hide_contact_number) {
+                    // Show agent contact
+                    contactDisplay.style.display = 'block';
+                    if (companyContactDisplay) companyContactDisplay.style.display = 'none';
+                    if (agentContactDisplay) {
+                        agentContactDisplay.style.display = 'block';
+                        const agentPhoneLink = document.getElementById('agentPhoneLink');
+                        const agentNameLabel = document.getElementById('agentNameLabel');
+                        if (agentPhoneLink) {
+                            agentPhoneLink.href = `tel:${propertyData.contact_person_phone}`;
+                            agentPhoneLink.textContent = propertyData.contact_person_phone;
+                        }
+                        if (agentNameLabel && propertyData.contact_person_name) {
+                            agentNameLabel.textContent = propertyData.contact_person_name;
+                        }
+                    }
+                } else {
+                    // Hide contact display
+                    contactDisplay.style.display = 'none';
+                }
+            }
+        }
+
+        async function callProperty() {
+            if (!propertyId || !companyId) {
+                alert('Property information not available');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/properties/${propertyId}/call-info?company_id=${companyId}`);
+                const data = await response.json();
+                
+                if (response.ok && data.success && data.phone) {
+                    window.location.href = `tel:${data.phone}`;
+                } else {
+                    alert(data.detail || 'Unable to retrieve contact number');
+                }
+            } catch (error) {
+                console.error('Call error:', error);
+                alert('Contact calling not available');
+            }
+        }
+
+        window.addEventListener('scroll', handleScroll);
+
+        // Auto-scroll to enquiry form when ?enquire=1 is in the URL (from ecom rdOpenEnquiry)
+        (function(){
+            if(new URLSearchParams(window.location.search).get('enquire')==='1'){
+                const _origInit = init;
+                init = async function(){
+                    await _origInit();
+                    setTimeout(scrollToEnquiry, 800);
+                };
+            }
+        })();
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

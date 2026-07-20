@@ -1,0 +1,68 @@
+workflows:
+  android-workflow:
+    name: Android Build
+    max_build_duration: 20
+    instance_type: mac_mini_m2
+    environment:
+      java: 21
+      node: 20
+      vars:
+        GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - $HOME/.gradle/wrapper
+        - $HOME/.npm
+        - mobile/node_modules
+        - shared/journey-core/node_modules
+        - mobile/android/.gradle
+        - mobile/android/build
+        - mobile/android/app/build
+    scripts:
+      - name: Build journey-core
+        script: |
+          cd shared/journey-core
+          npm install --prefer-offline --no-audit --no-fund
+          npm run build
+      - name: Install mobile dependencies
+        script: |
+          cd mobile
+          npm ci --prefer-offline --no-audit --no-fund
+      - name: Build web assets
+        script: |
+          cd mobile
+          VITE_BASE_URL='/' npm run build
+      - name: Sync Capacitor
+        script: |
+          cd mobile
+          npx cap sync android --inline
+      - name: Set Android SDK
+        script: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > mobile/android/local.properties
+      - name: Build Android APK
+        script: |
+          set -e
+          cd mobile/android
+          chmod +x gradlew
+          echo "=== Starting Gradle Build ==="
+          ./gradlew assembleDebug --stacktrace --info
+          echo "=== Build Complete, Checking APK output ==="
+          APK_FILE=$(find app/build/outputs/apk/debug/ -name "*.apk" -type f | head -1)
+          if [ -n "$APK_FILE" ]; then
+            echo "SUCCESS: APK found at $APK_FILE"
+            ls -la "$APK_FILE"
+          else
+            echo "ERROR: No APK found"
+            find . -name "*.apk" -type f 2>/dev/null || true
+            ls -la app/build/outputs/ 2>/dev/null || echo "No outputs folder"
+            exit 1
+          fi
+    artifacts:
+      - mobile/android/app/build/outputs/apk/debug/*.apk
+    publishing:
+      email:
+        recipients:
+          - mentor2byz@gmail.com
+        notify:
+          success: true
+          failure: true

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EV Discount & Training - RVZ Earnings - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .discount-tier-card {
+            border: 2px solid;
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            transition: all 0.3s;
+            height: 100%;
+        }
+        .discount-tier-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .tier-mnr-exclusive {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        }
+        .tier-manthra {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        }
+        .tier-graphen {
+            border-color: #10b981;
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        }
+        .tier-amount {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        .example-calc {
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+    </style>
+<!-- [DC-T33] VGK4U audience tabs (auto-mount + jQuery audience injector) --><script src="/audience-tabs.js"></script></head>
+<body style="background: #f5f5f5;">
+    <nav class="navbar navbar-dark" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)">
+        <div class="container-fluid">
+            <span class="navbar-brand"><i class="fas fa-car-side"></i> EV Discount & Training - RVZ Earnings</span>
+            <a href="/admin/dashboard" class="btn btn-outline-light btn-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
+        </div>
+    </nav>
+    
+    <div class="container-fluid mt-4">
+        <!-- EV Discount Structure Card -->
+        <div class="card mb-4">
+            <div class="card-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                <h5 class="mb-0"><i class="fas fa-bolt"></i> EV Discount Structure - RVZ Earnings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="discount-tier-card tier-mnr-exclusive">
+                            <div class="mb-2"><i class="fas fa-star text-warning" style="font-size: 2rem;"></i></div>
+                            <h5 class="fw-bold text-dark">MNR Exclusive Models</h5>
+                            <div class="tier-amount text-warning">₹15,000</div>
+                            <small class="text-muted">Spot Discount (Maximum Cap)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="discount-tier-card tier-manthra">
+                            <div class="mb-2"><i class="fas fa-car text-primary" style="font-size: 2rem;"></i></div>
+                            <h5 class="fw-bold text-dark">Manthra EV Top Models</h5>
+                            <div class="tier-amount text-primary">₹7,500</div>
+                            <small class="text-muted">Can claim <strong>TWO times</strong></small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="discount-tier-card tier-graphen">
+                            <div class="mb-2"><i class="fas fa-battery-full text-success" style="font-size: 2rem;"></i></div>
+                            <h5 class="fw-bold text-dark">Graphen Models</h5>
+                            <div class="tier-amount text-success">₹1,000</div>
+                            <small class="text-muted">Discount Available</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Example Calculations -->
+                <h5 class="fw-bold mb-3"><i class="fas fa-calculator"></i> Example Calculations</h5>
+                
+                <div class="example-calc">
+                    <strong class="text-primary">Regular EV - Diamond Package:</strong>
+                    <div class="row mt-2">
+                        <div class="col-sm-4">EV Price: <strong>₹1,00,000</strong></div>
+                        <div class="col-sm-4">Total Discount: <strong>₹7,500</strong></div>
+                        <div class="col-sm-4">Final Price: <strong class="text-success">₹92,500</strong></div>
+                    </div>
+                </div>
+                
+                <div class="example-calc" style="border-left-color: #f59e0b;">
+                    <strong class="text-warning">Manthra EV - Diamond Package (5% bonus):</strong>
+                    <div class="mt-2">
+                        <div>Manthra EV Price: <strong>₹1,00,000</strong></div>
+                        <div>Available: Coupon ₹7,500 + Upgrade Wallet ₹7,500</div>
+                        <div>5% Bonus calculation example</div>
+                        <div class="alert alert-warning py-2 mt-2 mb-0">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Total Discount Applied: ₹15,000 ONLY</strong><br>
+                            <small>(System maximum cap - you cannot get more than ₹15,000 total)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="example-calc" style="border-left-color: #8b5cf6;">
+                    <strong style="color: #8b5cf6;">Platinum Package (15% bonus):</strong>
+                    <div class="mt-2">
+                        <div>Coupon: ₹15,000 + Upgrade Wallet: ₹10,000</div>
+                        <div>15% Bonus calculation</div>
+                        <div class="alert alert-info py-2 mt-2 mb-0">
+                            <i class="fas fa-info-circle"></i> <strong>Total Discount Applied: ₹15,000 (fixed maximum)</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Filter & Management -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-users"></i> EV Discount Management (User-wise)</h5>
+            </div>
+            <div class="card-body">
+                <div id="userFilterContainer" class="mb-4">
+                    <div class="alert alert-secondary">
+                        <i class="fas fa-spinner fa-spin"></i> Loading user filter...
+                    </div>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Select a user above to view and manage their EV discount redemptions.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        fetch('/components/user_filter.html')
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('userFilterContainer').innerHTML = html;
+            })
+            .catch(err => {
+                document.getElementById('userFilterContainer').innerHTML = '<div class="alert alert-danger">Failed to load user filter</div>';
+            });
+    </script>
+</body>
+</html>

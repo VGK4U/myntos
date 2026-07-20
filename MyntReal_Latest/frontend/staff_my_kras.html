@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My KRAs - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { flex: 1; overflow-y: auto; }
+        .content-area { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header-gradient { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 12px 12px 0 0 !important; padding: 16px 20px; border: none; }
+
+        .tab-btn { background: none; border: none; padding: 10px 24px; font-size: 15px; font-weight: 600; color: #6b7280; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-btn:hover { color: var(--primary); }
+        .tab-content-pane { display: none; }
+        .tab-content-pane.active { display: block; }
+
+        .summary-cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+        .summary-card { flex: 1; min-width: 120px; background: white; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid #e5e7eb; }
+        .summary-card .sc-icon { font-size: 20px; margin-bottom: 6px; }
+        .summary-card .sc-count { font-size: 24px; font-weight: 700; }
+        .summary-card .sc-label { font-size: 11px; color: #6b7280; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        .sc-total { border-left-color: var(--primary); }
+        .sc-total .sc-icon, .sc-total .sc-count { color: var(--primary); }
+        .sc-completed { border-left-color: var(--success); }
+        .sc-completed .sc-icon, .sc-completed .sc-count { color: var(--success); }
+        .sc-submitted { border-left-color: #4338ca; }
+        .sc-submitted .sc-icon, .sc-submitted .sc-count { color: #4338ca; }
+        .sc-pending { border-left-color: var(--warning); }
+        .sc-pending .sc-icon, .sc-pending .sc-count { color: var(--warning); }
+        .sc-in_progress { border-left-color: #0284c7; }
+        .sc-in_progress .sc-icon, .sc-in_progress .sc-count { color: #0284c7; }
+        .sc-partial { border-left-color: #f97316; }
+        .sc-partial .sc-icon, .sc-partial .sc-count { color: #f97316; }
+        .sc-skipped { border-left-color: var(--danger); }
+        .sc-skipped .sc-icon, .sc-skipped .sc-count { color: var(--danger); }
+        .sc-na { border-left-color: #9ca3af; }
+        .sc-na .sc-icon, .sc-na .sc-count { color: #9ca3af; }
+
+        .filters-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 20px; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #374151; }
+        .filter-group input, .filter-group select { border: 1px solid #d1d5db; border-radius: 8px; padding: 7px 10px; font-size: 13px; }
+        .filter-group input:focus, .filter-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); outline: none; }
+
+        .btn-load { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border: none; border-radius: 8px; padding: 8px 20px; font-weight: 600; font-size: 13px; cursor: pointer; }
+        .btn-load:hover { opacity: 0.9; }
+
+        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+        table.kra-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.kra-table th { background: #f8fafc; color: #1f2937; font-weight: 600; padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center; cursor: pointer; white-space: nowrap; user-select: none; }
+        table.kra-table th:hover { background: #eef2ff; }
+        table.kra-table th .sort-arrow { font-size: 10px; margin-left: 4px; color: #9ca3af; }
+        table.kra-table th.sorted .sort-arrow { color: var(--primary); }
+        table.kra-table td { padding: 10px 8px; border: 1px solid #e5e7eb; text-align: center; vertical-align: middle; }
+
+        .badge-status { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 11px; }
+        .badge-completed { background: #d1fae5; color: #059669; }
+        .badge-submitted { background: #c7d2fe; color: #4338ca; }
+        .badge-pending { background: #fef08a; color: #b45309; }
+        .badge-in_progress { background: #dbeafe; color: #0284c7; }
+        .badge-partial { background: #fed7aa; color: #b45309; }
+        .badge-skipped { background: #fee2e2; color: #dc2626; }
+        .badge-na { background: #f3f4f6; color: #9ca3af; border: 2px dashed #9ca3af; }
+
+        .badge-review-pending { background: #fef08a; color: #b45309; }
+        .badge-review-approved { background: #d1fae5; color: #059669; }
+        .badge-review-rejected { background: #fee2e2; color: #dc2626; }
+        .badge-review-edited { background: #dbeafe; color: #0284c7; }
+
+        .badge-overdue { background: #fee2e2; color: #dc2626; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 4px; }
+
+        .btn-sm-action { padding: 4px 10px; font-size: 11px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; }
+        .btn-update { background: #eef2ff; color: var(--primary); }
+        .btn-update:hover { background: #e0e7ff; }
+        .btn-submit { background: #d1fae5; color: #059669; }
+        .btn-submit:hover { background: #a7f3d0; }
+
+        .pagination-row { display: flex; justify-content: center; align-items: center; gap: 12px; padding: 16px 0; font-size: 13px; }
+        .pagination-row button { background: #eef2ff; color: var(--primary); border: none; border-radius: 6px; padding: 6px 14px; font-weight: 600; cursor: pointer; font-size: 12px; }
+        .pagination-row button:disabled { opacity: 0.4; cursor: default; }
+        .pagination-row span { color: #6b7280; }
+
+        .empty-state { text-align: center; padding: 40px; color: #9ca3af; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+        .modal-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 12px 12px 0 0; }
+        .modal-content { border-radius: 12px; border: none; }
+        .modal .form-label { font-weight: 500; color: #374151; font-size: 13px; }
+        .modal .form-control, .modal .form-select { border-radius: 8px; border: 1px solid #d1d5db; }
+        .modal .form-control:focus, .modal .form-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .btn-modal-save { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border: none; border-radius: 8px; padding: 10px 24px; font-weight: 600; }
+        .btn-modal-save:hover { opacity: 0.9; }
+
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast-msg { padding: 12px 20px; border-radius: 8px; color: white; font-size: 13px; font-weight: 500; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease; }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        .team-layout { display: flex; gap: 20px; }
+        .team-left { width: 30%; min-width: 260px; }
+        .team-right { width: 70%; flex: 1; }
+        .member-card { background: white; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; border: 2px solid transparent; box-shadow: 0 1px 2px rgba(0,0,0,0.06); transition: all 0.2s; }
+        .member-card:hover { border-color: #c7d2fe; }
+        .member-card.selected { border-color: var(--primary); background: #eef2ff; }
+        .member-card .mc-name { font-weight: 600; font-size: 14px; color: #1f2937; }
+        .member-card .mc-dept { font-size: 11px; color: #6b7280; }
+        .member-card .mc-stats { display: flex; gap: 10px; margin-top: 6px; font-size: 11px; }
+        .member-card .mc-perf { font-weight: 700; color: var(--primary); }
+        .member-search { width: 100%; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+        .member-search:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .team-members-list { max-height: 600px; overflow-y: auto; }
+
+        .kra-title-col { text-align: left !important; font-weight: 500; color: #1f2937; max-width: 200px; word-wrap: break-word; }
+        .notes-col { text-align: left !important; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #6b7280; }
+
+        @media (max-width: 768px) {
+            .content-area { padding: 12px; }
+            .summary-cards { gap: 8px; }
+            .summary-card { min-width: 90px; padding: 10px 6px; }
+            .summary-card .sc-count { font-size: 18px; }
+            .filters-row { flex-direction: column; gap: 8px; }
+            .filter-group { width: 100%; }
+            .filter-group input, .filter-group select { width: 100%; }
+            .table-container { font-size: 11px; }
+            table.kra-table th, table.kra-table td { padding: 6px 4px; }
+            .team-layout { flex-direction: column; }
+            .team-left, .team-right { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+            <div class="toast-container" id="toastContainer"></div>
+
+            <div style="display:flex; gap:0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px;">
+                <button class="tab-btn active" data-tab="myKrasTab" onclick="switchTab('myKrasTab')"><i class="fas fa-chart-line me-1"></i> My KRAs</button>
+                <button class="tab-btn" data-tab="teamTab" id="teamTabBtn" onclick="switchTab('teamTab')" style="display:none;"><i class="fas fa-users me-1"></i> Team</button>
+            </div>
+
+            <div class="tab-content-pane active" id="myKrasTab">
+                <div class="summary-cards" id="mySummaryCards"></div>
+                <div class="card">
+                    <div class="card-header-gradient">
+                        <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="filters-row">
+                            <div class="filter-group">
+                                <label>Date From</label>
+                                <input type="date" id="myDateFrom">
+                            </div>
+                            <div class="filter-group">
+                                <label>Date To <span style="font-size:10px;color:#999;">(auto +3 days)</span></label>
+                                <input type="date" id="myDateTo" readonly style="background:#f3f4f6;">
+                            </div>
+                            <div class="filter-group">
+                                <label>Status</label>
+                                <select id="myStatusFilter">
+                                    <option value="all">All</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="submitted">Submitted</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="partial">Partial</option>
+                                    <option value="skipped">Skipped</option>
+                                    <option value="na">NA</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label>Review Status</label>
+                                <select id="myReviewFilter">
+                                    <option value="all">All</option>
+                                    <option value="pending_review">Pending Review</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label>Search KRA</label>
+                                <input type="text" id="mySearchFilter" placeholder="Search KRA title...">
+                            </div>
+                            <div class="filter-group" style="justify-content:flex-end;">
+                                <label>&nbsp;</label>
+                                <button class="btn-load" onclick="loadMyKras()"><i class="fas fa-sync-alt me-1"></i> Load</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="kra-table" id="myKraTable">
+                                <thead>
+                                    <tr>
+                                        <th data-col="instance_date" onclick="sortMyTable('instance_date')">Date <span class="sort-arrow">▼</span></th>
+                                        <th data-col="title" onclick="sortMyTable('title')">KRA Title <span class="sort-arrow"></span></th>
+                                        <th data-col="kra_code" onclick="sortMyTable('kra_code')">KRA Code <span class="sort-arrow"></span></th>
+                                        <th data-col="frequency" onclick="sortMyTable('frequency')">Frequency <span class="sort-arrow"></span></th>
+                                        <th data-col="target_time" onclick="sortMyTable('target_time')">Target Time <span class="sort-arrow"></span></th>
+                                        <th data-col="completion_status" onclick="sortMyTable('completion_status')">Status <span class="sort-arrow"></span></th>
+                                        <th data-col="completed_at" onclick="sortMyTable('completed_at')">Completed At <span class="sort-arrow"></span></th>
+                                        <th data-col="manager_review_status" onclick="sortMyTable('manager_review_status')">Review Status <span class="sort-arrow"></span></th>
+                                        <th data-col="time_spent_minutes" onclick="sortMyTable('time_spent_minutes')">Time Spent <span class="sort-arrow"></span></th>
+                                        <th>Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="myKraBody"></tbody>
+                            </table>
+                        </div>
+                        <div class="pagination-row" id="myPagination"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-content-pane" id="teamTab">
+                <div class="team-layout">
+                    <div class="team-left">
+                        <input type="text" class="member-search" id="teamMemberSearch" placeholder="Search member..." oninput="filterTeamMembers()">
+                        <div class="team-member-filters" style="display:flex;gap:6px;margin-bottom:8px;">
+                            <select id="teamDeptFilter" onchange="filterTeamMembers()" style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;background:#fff;">
+                                <option value="all">All Departments</option>
+                            </select>
+                            <select id="teamTypeFilter" onchange="filterTeamMembers()" style="flex:1;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;background:#fff;">
+                                <option value="all">All Types</option>
+                            </select>
+                        </div>
+                        <div class="team-members-list" id="teamMembersList"></div>
+                    </div>
+                    <div class="team-right">
+                        <div class="summary-cards" id="teamSummaryCards"></div>
+                        <div class="card">
+                            <div class="card-header-gradient">
+                                <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Team Member KRA Filters</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="filters-row">
+                                    <div class="filter-group">
+                                        <label>Date From</label>
+                                        <input type="date" id="teamDateFrom">
+                                    </div>
+                                    <div class="filter-group">
+                                        <label>Date To</label>
+                                        <input type="date" id="teamDateTo">
+                                    </div>
+                                    <div class="filter-group">
+                                        <label>Status</label>
+                                        <select id="teamStatusFilter">
+                                            <option value="all">All</option>
+                                            <option value="pending">Pending</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="submitted">Submitted</option>
+                                            <option value="in_progress">In Progress</option>
+                                            <option value="partial">Partial</option>
+                                            <option value="skipped">Skipped</option>
+                                            <option value="na">NA</option>
+                                        </select>
+                                    </div>
+                                    <div class="filter-group">
+                                        <label>Review Status</label>
+                                        <select id="teamReviewFilter">
+                                            <option value="all">All</option>
+                                            <option value="pending_review">Pending Review</option>
+                                            <option value="approved">Approved</option>
+                                            <option value="rejected">Rejected</option>
+                                        </select>
+                                    </div>
+                                    <div class="filter-group">
+                                        <label>Search KRA</label>
+                                        <input type="text" id="teamSearchFilter" placeholder="Search KRA title...">
+                                    </div>
+                                    <div class="filter-group" style="justify-content:flex-end;">
+                                        <label>&nbsp;</label>
+                                        <button class="btn-load" onclick="loadTeamMemberKras()"><i class="fas fa-sync-alt me-1"></i> Load</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-body p-0">
+                                <div class="table-container">
+                                    <table class="kra-table" id="teamKraTable">
+                                        <thead>
+                                            <tr>
+                                                <th data-col="instance_date" onclick="sortTeamTable('instance_date')">Date <span class="sort-arrow">▼</span></th>
+                                                <th data-col="kra_title" onclick="sortTeamTable('kra_title')">KRA Title <span class="sort-arrow"></span></th>
+                                                <th data-col="kra_code" onclick="sortTeamTable('kra_code')">KRA Code <span class="sort-arrow"></span></th>
+                                                <th data-col="frequency" onclick="sortTeamTable('frequency')">Frequency <span class="sort-arrow"></span></th>
+                                                <th data-col="target_time" onclick="sortTeamTable('target_time')">Target Time <span class="sort-arrow"></span></th>
+                                                <th data-col="completion_status" onclick="sortTeamTable('completion_status')">Status <span class="sort-arrow"></span></th>
+                                                <th data-col="completed_at" onclick="sortTeamTable('completed_at')">Completed At <span class="sort-arrow"></span></th>
+                                                <th data-col="manager_review_status" onclick="sortTeamTable('manager_review_status')">Review Status <span class="sort-arrow"></span></th>
+                                                <th data-col="time_spent_minutes" onclick="sortTeamTable('time_spent_minutes')">Time Spent <span class="sort-arrow"></span></th>
+                                                <th>Notes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="teamKraBody"></tbody>
+                                    </table>
+                                </div>
+                                <div class="pagination-row" id="teamPagination"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="updateModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Update KRA Instance</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="updateInstanceId">
+                    <div class="mb-3">
+                        <label class="form-label">KRA Title</label>
+                        <input type="text" class="form-control" id="updateTitle" readonly style="background:#f3f4f6;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date</label>
+                        <input type="text" class="form-control" id="updateDate" readonly style="background:#f3f4f6;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="updateStatus">
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="partial">Partial</option>
+                            <option value="skipped">Skipped</option>
+                            <option value="na">NA / Exempted</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Completion %</label>
+                        <input type="number" class="form-control" id="updatePercentage" min="0" max="100" value="100">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Time Spent (minutes)</label>
+                        <input type="number" class="form-control" id="updateTimeSpent" min="0" max="1440" value="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Staff Notes</label>
+                        <textarea class="form-control" id="updateNotes" rows="3" maxlength="1000"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn-modal-save" onclick="saveUpdate()"><i class="fas fa-save me-1"></i> Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="submitModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-paper-plane me-2"></i>Submit for Manager Review</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="submitInstanceId">
+                    <div class="mb-3">
+                        <label class="form-label">KRA Title</label>
+                        <input type="text" class="form-control" id="submitTitle" readonly style="background:#f3f4f6;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date</label>
+                        <input type="text" class="form-control" id="submitDate" readonly style="background:#f3f4f6;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Self Rating (1-5)</label>
+                        <select class="form-select" id="submitRating">
+                            <option value="1">1 - Needs Improvement</option>
+                            <option value="2">2 - Below Average</option>
+                            <option value="3" selected>3 - Average</option>
+                            <option value="4">4 - Good</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Self Remarks</label>
+                        <textarea class="form-control" id="submitRemarks" rows="3" maxlength="1000"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Time Spent (minutes)</label>
+                        <input type="number" class="form-control" id="submitTimeSpent" min="0" max="1440" value="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn-modal-save" onclick="submitForReview()"><i class="fas fa-paper-plane me-1"></i> Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+
+    <script>
+    const API_BASE = '';
+    const PAGE_SIZE = 25;
+
+    let myKrasData = [];
+    let myFilteredData = [];
+    let myCurrentPage = 1;
+    let mySortCol = 'instance_date';
+    let mySortDir = 'desc';
+
+    let teamMembers = [];
+    let teamScope = 'team';
+    let selectedMemberId = null;
+    let teamKrasData = [];
+    let teamFilteredData = [];
+    let teamCurrentPage = 1;
+    let teamSortCol = 'instance_date';
+    let teamSortDir = 'asc';
+
+    function showToast(msg, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        const el = document.createElement('div');
+        el.className = 'toast-msg toast-' + type;
+        el.textContent = msg;
+        container.appendChild(el);
+        setTimeout(() => { el.remove(); }, 3500);
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr + 'T00:00:00');
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    }
+
+    function formatFrequency(f) {
+        if (!f) return '-';
+        const map = { daily: 'Daily', weekly: 'Weekly', every_n_days: 'Every N Days', selected_days: 'Selected Days', every_15_days: 'Every 15 Days', monthly: 'Monthly', custom: 'Custom', adhoc: 'Ad-hoc' };
+        return map[f] || f.charAt(0).toUpperCase() + f.slice(1);
+    }
+
+    function statusBadge(s, submittedAt) {
+        if (submittedAt) {
+            return '<span class="badge-status badge-submitted">Submitted</span>';
+        }
+        const map = { completed: 'badge-completed', pending: 'badge-pending', in_progress: 'badge-in_progress', partial: 'badge-partial', skipped: 'badge-skipped', na: 'badge-na' };
+        const labels = { completed: 'Completed', pending: 'Pending', in_progress: 'In Progress', partial: 'Partial', skipped: 'Skipped', na: 'NA' };
+        return '<span class="badge-status ' + (map[s] || 'badge-pending') + '">' + (labels[s] || s) + '</span>';
+    }
+
+    function reviewBadge(s) {
+        if (s === 'approved' || s === 'edited_by_manager') return '<span class="badge-status badge-review-approved">Approved ✓</span>';
+        if (s === 'rejected') return '<span class="badge-status badge-review-rejected">Rejected</span>';
+        if (s === 'pending_review') return '<span class="badge-status badge-review-pending">Pending Review</span>';
+        return '<span class="badge-status badge-review-pending">' + (s || 'Pending') + '</span>';
+    }
+
+    function truncate(str, len) {
+        if (!str) return '-';
+        return str.length > len ? str.substring(0, len) + '...' : str;
+    }
+
+    function setDateDefaults(fromId, toId) {
+        const today = new Date();
+        const fromEl = document.getElementById(fromId);
+        const toEl = document.getElementById(toId);
+        fromEl.value = today.toISOString().split('T')[0];
+        const to = new Date(today);
+        to.setDate(to.getDate() + 3);
+        toEl.value = to.toISOString().split('T')[0];
+        fromEl.addEventListener('change', function() {
+            const f = new Date(this.value);
+            f.setDate(f.getDate() + 3);
+            toEl.value = f.toISOString().split('T')[0];
+        });
+    }
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content-pane').forEach(p => p.classList.remove('active'));
+        document.querySelector('[data-tab="' + tabId + '"]').classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    function renderSummaryCards(containerId, data) {
+        const counts = { total: 0, completed: 0, submitted: 0, pending: 0, in_progress: 0, partial: 0, skipped: 0, na: 0 };
+        (data || []).forEach(k => {
+            counts.total++;
+            if (k.submitted_at) {
+                counts.submitted++;
+            } else {
+                const s = k.completion_status || 'pending';
+                if (counts[s] !== undefined) counts[s]++;
+            }
+        });
+        const cards = [
+            { key: 'total', label: 'Total', icon: 'fas fa-list-check', cls: 'sc-total' },
+            { key: 'completed', label: 'Completed', icon: 'fas fa-check-circle', cls: 'sc-completed' },
+            { key: 'submitted', label: 'Submitted', icon: 'fas fa-paper-plane', cls: 'sc-submitted' },
+            { key: 'pending', label: 'Pending', icon: 'fas fa-clock', cls: 'sc-pending' },
+            { key: 'in_progress', label: 'In Progress', icon: 'fas fa-spinner', cls: 'sc-in_progress' },
+            { key: 'partial', label: 'Partial', icon: 'fas fa-adjust', cls: 'sc-partial' },
+            { key: 'skipped', label: 'Skipped', icon: 'fas fa-forward', cls: 'sc-skipped' },
+            { key: 'na', label: 'NA/Exempted', icon: 'fas fa-ban', cls: 'sc-na' }
+        ];
+        document.getElementById(containerId).innerHTML = cards.map(c =>
+            '<div class="summary-card ' + c.cls + '">' +
+            '<div class="sc-icon"><i class="' + c.icon + '"></i></div>' +
+            '<div class="sc-count">' + counts[c.key] + '</div>' +
+            '<div class="sc-label">' + c.label + '</div></div>'
+        ).join('');
+    }
+
+    function applyFilters(data, statusId, reviewId, searchId) {
+        let filtered = [...data];
+        const statusVal = document.getElementById(statusId).value;
+        const reviewVal = document.getElementById(reviewId).value;
+        const searchVal = (document.getElementById(searchId).value || '').toLowerCase().trim();
+        if (statusVal === 'submitted') {
+            filtered = filtered.filter(k => !!k.submitted_at);
+        } else if (statusVal === 'completed') {
+            filtered = filtered.filter(k => k.completion_status === 'completed' && !k.submitted_at);
+        } else if (statusVal !== 'all') {
+            filtered = filtered.filter(k => k.completion_status === statusVal);
+        }
+        if (reviewVal !== 'all') {
+            if (reviewVal === 'approved') {
+                filtered = filtered.filter(k => k.manager_review_status === 'approved' || k.manager_review_status === 'edited_by_manager');
+            } else {
+                filtered = filtered.filter(k => k.manager_review_status === reviewVal);
+            }
+        }
+        if (searchVal) filtered = filtered.filter(k => ((k.title || k.kra_title || '')).toLowerCase().includes(searchVal));
+        return filtered;
+    }
+
+    function sortData(data, col, dir) {
+        const sorted = [...data];
+        sorted.sort((a, b) => {
+            let va = a[col], vb = b[col];
+            if (col === 'instance_date') {
+                const da = new Date(va || '1970-01-01'), db = new Date(vb || '1970-01-01');
+                if (da.getTime() === db.getTime()) {
+                    const pa = a.completion_status === 'pending' ? 0 : 1;
+                    const pb = b.completion_status === 'pending' ? 0 : 1;
+                    return pa - pb;
+                }
+                return dir === 'asc' ? da - db : db - da;
+            }
+            if (typeof va === 'number' && typeof vb === 'number') return dir === 'asc' ? va - vb : vb - va;
+            va = (va || '').toString().toLowerCase();
+            vb = (vb || '').toString().toLowerCase();
+            if (va < vb) return dir === 'asc' ? -1 : 1;
+            if (va > vb) return dir === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return sorted;
+    }
+
+    function updateSortHeaders(tableId, col, dir) {
+        const table = document.getElementById(tableId);
+        table.querySelectorAll('th').forEach(th => {
+            th.classList.remove('sorted');
+            const arrow = th.querySelector('.sort-arrow');
+            if (arrow) arrow.textContent = '';
+        });
+        const activeTh = table.querySelector('th[data-col="' + col + '"]');
+        if (activeTh) {
+            activeTh.classList.add('sorted');
+            const arrow = activeTh.querySelector('.sort-arrow');
+            if (arrow) arrow.textContent = dir === 'asc' ? '▲' : '▼';
+        }
+    }
+
+    function renderPagination(containerId, totalItems, currentPage, onPageChange) {
+        const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
+        const container = document.getElementById(containerId);
+        if (totalItems === 0) { container.innerHTML = ''; return; }
+        container.innerHTML =
+            '<button ' + (currentPage <= 1 ? 'disabled' : '') + ' onclick="' + onPageChange + '(' + (currentPage - 1) + ')">« Prev</button>' +
+            '<span>Page ' + currentPage + ' of ' + totalPages + '</span>' +
+            '<button ' + (currentPage >= totalPages ? 'disabled' : '') + ' onclick="' + onPageChange + '(' + (currentPage + 1) + ')">Next »</button>';
+    }
+
+    async function loadMyKras() {
+        try {
+            const dateFrom = document.getElementById('myDateFrom').value;
+            const dateTo = document.getElementById('myDateTo').value;
+            if (!dateFrom || !dateTo) { showToast('Please select date range', 'error'); return; }
+            let url = API_BASE + '/api/v1/staff/kra/my-kras?date_from=' + dateFrom + '&date_to=' + dateTo;
+            const response = await staffFetch(url, { headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' } });
+            const data = await response.json();
+            if (data.error === 'AUTH_EXPIRED') { window.location.href = '/staff/login'; return; }
+            myKrasData = data.kras || [];
+            renderSummaryCards('mySummaryCards', myKrasData);
+            myCurrentPage = 1;
+            renderMyKraTable();
+        } catch (e) {
+            console.error('loadMyKras error:', e);
+            showToast('Failed to load KRAs: ' + e.message, 'error');
+        }
+    }
+
+    function renderMyKraTable() {
+        myFilteredData = applyFilters(myKrasData, 'myStatusFilter', 'myReviewFilter', 'mySearchFilter');
+        const sorted = sortData(myFilteredData, mySortCol, mySortDir);
+        updateSortHeaders('myKraTable', mySortCol, mySortDir);
+        const start = (myCurrentPage - 1) * PAGE_SIZE;
+        const page = sorted.slice(start, start + PAGE_SIZE);
+        const tbody = document.getElementById('myKraBody');
+        if (page.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="11"><div class="empty-state"><i class="fas fa-inbox"></i><p>No KRAs found for selected filters</p></div></td></tr>';
+            document.getElementById('myPagination').innerHTML = '';
+            return;
+        }
+        tbody.innerHTML = page.map(k => {
+            const dateCell = formatDate(k.instance_date) + (k.is_late ? ' <span class="badge-overdue">OVERDUE</span>' : '');
+            const isSubmitted = !!k.submitted_at;
+            const canSubmit = !isSubmitted && k.completion_status !== 'pending';
+            const notes = k.self_remarks || k.staff_notes || '';
+            let actions = '';
+            if (!isSubmitted) {
+                actions += '<button class="btn-sm-action btn-update" onclick="openUpdateModal(' + k.id + ',\'' + escapeAttr(k.title) + '\',\'' + (k.instance_date || '') + '\',\'' + (k.completion_status || 'pending') + '\',' + (k.time_spent_minutes || 0) + ',\'' + escapeAttr(notes) + '\')"><i class="fas fa-edit"></i> Update</button>';
+            }
+            if (canSubmit) {
+                actions += ' <button class="btn-sm-action btn-submit" onclick="openSubmitModal(' + k.id + ',\'' + escapeAttr(k.title) + '\',\'' + (k.instance_date || '') + '\',' + (k.time_spent_minutes || 0) + ')"><i class="fas fa-paper-plane"></i> Submit</button>';
+            }
+            actions += ' <button onclick="mnrWaKra(\'' + escapeAttr(k.title||'') + '\',\'' + (k.instance_date||'') + '\',\'' + (k.completion_status||'pending') + '\')" style="background:#25D366;color:#fff;border:none;padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer;" title="Send WhatsApp"><i class="fab fa-whatsapp"></i></button>';
+            if (isSubmitted && k.manager_review_status === 'pending_review') {
+                actions += '<span style="color:#6b7280;font-size:11px;"><i class="fas fa-hourglass-half"></i> Under Review</span>';
+            }
+            var completedAtCell = '';
+            if (k.completed_at) {
+                var ca = new Date(k.completed_at);
+                completedAtCell = ca.toLocaleDateString('en-IN', {day:'2-digit',month:'short'}) + ' ' + ca.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',hour12:true});
+                if (k.is_delayed) completedAtCell = '<span class="badge-overdue">DELAYED</span> ' + completedAtCell;
+            } else {
+                completedAtCell = '<span class="text-muted">—</span>';
+            }
+            return '<tr>' +
+                '<td style="white-space:nowrap;">' + dateCell + '</td>' +
+                '<td class="kra-title-col">' + escapeAttr(k.title || '-') + '</td>' +
+                '<td>' + (k.kra_code || '-') + '</td>' +
+                '<td>' + formatFrequency(k.frequency) + '</td>' +
+                '<td>' + (k.target_time || '<span class="text-muted">—</span>') + '</td>' +
+                '<td>' + statusBadge(k.completion_status, k.submitted_at) + '</td>' +
+                '<td style="white-space:nowrap;">' + completedAtCell + '</td>' +
+                '<td>' + reviewBadge(k.manager_review_status) + '</td>' +
+                '<td>' + (k.time_spent_minutes || 0) + ' mins</td>' +
+                '<td class="notes-col" title="' + escapeAttr(notes) + '">' + truncate(notes, 50) + '</td>' +
+                '<td style="white-space:nowrap;">' + actions + '</td>' +
+                '</tr>';
+        }).join('');
+        renderPagination('myPagination', myFilteredData.length, myCurrentPage, 'goMyPage');
+    }
+
+    function goMyPage(p) { myCurrentPage = p; renderMyKraTable(); }
+
+    function sortMyTable(col) {
+        if (mySortCol === col) { mySortDir = mySortDir === 'asc' ? 'desc' : 'asc'; }
+        else { mySortCol = col; mySortDir = 'asc'; }
+        myCurrentPage = 1;
+        renderMyKraTable();
+    }
+
+    function escapeAttr(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function openUpdateModal(id, title, date, status, timeSpent, notes) {
+        document.getElementById('updateInstanceId').value = id;
+        document.getElementById('updateTitle').value = title;
+        document.getElementById('updateDate').value = formatDate(date);
+        document.getElementById('updateStatus').value = status;
+        document.getElementById('updatePercentage').value = status === 'completed' ? 100 : (status === 'pending' ? 0 : 50);
+        document.getElementById('updateTimeSpent').value = timeSpent || 0;
+        document.getElementById('updateNotes').value = notes || '';
+        new bootstrap.Modal(document.getElementById('updateModal')).show();
+    }
+
+    function openSubmitModal(id, title, date, timeSpent) {
+        document.getElementById('submitInstanceId').value = id;
+        document.getElementById('submitTitle').value = title;
+        document.getElementById('submitDate').value = formatDate(date);
+        document.getElementById('submitTimeSpent').value = timeSpent || 0;
+        document.getElementById('submitRating').value = '3';
+        document.getElementById('submitRemarks').value = '';
+        new bootstrap.Modal(document.getElementById('submitModal')).show();
+    }
+
+    async function saveUpdate() {
+        const id = document.getElementById('updateInstanceId').value;
+        const timeSpentVal = parseInt(document.getElementById('updateTimeSpent').value) || 0;
+        if (timeSpentVal < 1) {
+            showToast('Please enter at least 1 minute for time spent', 'error');
+            document.getElementById('updateTimeSpent').focus();
+            return;
+        }
+        const body = {
+            completion_status: document.getElementById('updateStatus').value,
+            completion_percentage: parseInt(document.getElementById('updatePercentage').value) || 0,
+            time_spent_minutes: timeSpentVal,
+            time_source: 'manual',
+            staff_notes: document.getElementById('updateNotes').value || null
+        };
+        try {
+            const response = await staffFetch(API_BASE + '/api/v1/staff/kra/instances/' + id, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+                body: JSON.stringify(body)
+            });
+            let resp = {};
+            try { resp = await response.json(); } catch(e) { resp = {}; }
+            if (resp.error === 'AUTH_EXPIRED') { window.location.href = '/staff/login'; return; }
+            if (response.ok) {
+                showToast('KRA updated successfully');
+                bootstrap.Modal.getInstance(document.getElementById('updateModal')).hide();
+                loadMyKras();
+            } else {
+                showToast(resp.detail || 'Failed to update KRA', 'error');
+            }
+        } catch (e) {
+            showToast('Error: ' + e.message, 'error');
+        }
+    }
+
+    async function submitForReview() {
+        const id = document.getElementById('submitInstanceId').value;
+        const submitTimeVal = parseInt(document.getElementById('submitTimeSpent').value) || 0;
+        if (submitTimeVal < 1) {
+            showToast('Please enter at least 1 minute for time spent before submitting', 'error');
+            document.getElementById('submitTimeSpent').focus();
+            return;
+        }
+        const body = {
+            self_rating: parseInt(document.getElementById('submitRating').value),
+            self_remarks: document.getElementById('submitRemarks').value || '',
+            time_spent_minutes: submitTimeVal
+        };
+        try {
+            const response = await staffFetch(API_BASE + '/api/v1/staff/kra/my-kras/' + id + '/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+                body: JSON.stringify(body)
+            });
+            let resp = {};
+            try { resp = await response.json(); } catch(e) { resp = {}; }
+            if (resp.error === 'AUTH_EXPIRED') { window.location.href = '/staff/login'; return; }
+            if (response.ok && resp.success !== false) {
+                showToast(resp.message || 'Submitted for review');
+                bootstrap.Modal.getInstance(document.getElementById('submitModal')).hide();
+                loadMyKras();
+            } else {
+                showToast(resp.detail || resp.message || 'Failed to submit', 'error');
+            }
+        } catch (e) {
+            showToast('Error: ' + e.message, 'error');
+        }
+    }
+
+    async function checkTeamAccess() {
+        try {
+            let response = await staffFetch(API_BASE + '/api/v1/staff/kra/team-summary?scope=all&date_from=' + document.getElementById('myDateFrom').value + '&date_to=' + document.getElementById('myDateTo').value, {
+                headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.error === 'AUTH_EXPIRED') { window.location.href = '/staff/login'; return; }
+                teamScope = data.scope || 'all';
+                teamMembers = data.summary || [];
+                document.getElementById('teamTabBtn').style.display = '';
+                populateTeamFilters();
+                renderTeamMembers();
+                return;
+            }
+            response = await staffFetch(API_BASE + '/api/v1/staff/kra/team-summary?scope=team&date_from=' + document.getElementById('myDateFrom').value + '&date_to=' + document.getElementById('myDateTo').value, {
+                headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data.error === 'AUTH_EXPIRED') { window.location.href = '/staff/login'; return; }
+                teamScope = data.scope || 'team';
+                teamMembers = data.summary || [];
+                document.getElementById('teamTabBtn').style.display = '';
+                populateTeamFilters();
+                renderTeamMembers();
+                return;
+            }
+            document.getElementById('teamTabBtn').style.display = 'none';
+        } catch (e) {
+            document.getElementById('teamTabBtn').style.display = 'none';
+        }
+    }
+
+    function populateTeamFilters() {
+        const depts = [...new Set(teamMembers.map(m => m.department).filter(Boolean))].sort();
+        const types = [...new Set(teamMembers.map(m => m.staff_type).filter(Boolean))].sort();
+        const deptSel = document.getElementById('teamDeptFilter');
+        const typeSel = document.getElementById('teamTypeFilter');
+        deptSel.innerHTML = '<option value="all">All Departments</option>' + depts.map(d => '<option value="' + d + '">' + d + '</option>').join('');
+        typeSel.innerHTML = '<option value="all">All Types</option>' + types.map(t => '<option value="' + t + '">' + t + '</option>').join('');
+    }
+
+    function renderTeamMembers() {
+        const search = (document.getElementById('teamMemberSearch').value || '').toLowerCase();
+        const deptVal = document.getElementById('teamDeptFilter').value;
+        const typeVal = document.getElementById('teamTypeFilter').value;
+        const filtered = teamMembers.filter(m => {
+            if (search && !(m.employee_name || '').toLowerCase().includes(search) && !(m.emp_code || '').toLowerCase().includes(search)) return false;
+            if (deptVal !== 'all' && m.department !== deptVal) return false;
+            if (typeVal !== 'all' && m.staff_type !== typeVal) return false;
+            return true;
+        });
+        const container = document.getElementById('teamMembersList');
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No team members found</p></div>';
+            return;
+        }
+        container.innerHTML = filtered.map(m =>
+            '<div class="member-card ' + (selectedMemberId === m.employee_id ? 'selected' : '') + '" onclick="selectTeamMember(\'' + m.employee_id + '\')">' +
+            '<div class="mc-name">' + (m.employee_name || 'Unknown') + '</div>' +
+            '<div class="mc-dept">' + (m.department || '-') + (m.staff_type ? ' <span style="opacity:0.7;font-size:11px;">(' + m.staff_type + ')</span>' : '') + '</div>' +
+            '<div class="mc-stats">' +
+            '<span class="mc-perf">' + (m.performance_percentage || 0) + '%</span>' +
+            '<span>Assigned: ' + (m.assigned_kras || 0) + '</span>' +
+            '<span>Done: ' + (m.completed_kras || 0) + '</span>' +
+            '</div></div>'
+        ).join('');
+    }
+
+    function filterTeamMembers() { renderTeamMembers(); }
+
+    async function selectTeamMember(empId) {
+        selectedMemberId = empId;
+        renderTeamMembers();
+        await loadTeamMemberKras();
+    }
+
+    async function loadTeamMemberKras() {
+        if (!selectedMemberId) {
+            document.getElementById('teamKraBody').innerHTML = '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-hand-pointer"></i><p>Select a team member to view their KRAs</p></div></td></tr>';
+            document.getElementById('teamPagination').innerHTML = '';
+            document.getElementById('teamSummaryCards').innerHTML = '';
+            return;
+        }
+        try {
+            const dateFrom = document.getElementById('teamDateFrom').value;
+            const dateTo = document.getElementById('teamDateTo').value;
+            let url = API_BASE + '/api/v1/staff/kra/instances?employee_id=' + selectedMemberId + '&date_from=' + dateFrom + '&date_to=' + dateTo;
+            const response = await staffFetch(url, { headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' } });
+            const data = await response.json();
+            if (data.error === 'AUTH_EXPIRED') { window.location.href = '/staff/login'; return; }
+            teamKrasData = data.instances || [];
+            renderSummaryCards('teamSummaryCards', teamKrasData);
+            teamCurrentPage = 1;
+            renderTeamKraTable();
+        } catch (e) {
+            console.error('loadTeamMemberKras error:', e);
+            showToast('Failed to load team member KRAs: ' + e.message, 'error');
+        }
+    }
+
+    function renderTeamKraTable() {
+        teamFilteredData = applyFilters(teamKrasData, 'teamStatusFilter', 'teamReviewFilter', 'teamSearchFilter');
+        const sorted = sortData(teamFilteredData, teamSortCol, teamSortDir);
+        updateSortHeaders('teamKraTable', teamSortCol, teamSortDir);
+        const start = (teamCurrentPage - 1) * PAGE_SIZE;
+        const page = sorted.slice(start, start + PAGE_SIZE);
+        const tbody = document.getElementById('teamKraBody');
+        if (page.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state"><i class="fas fa-inbox"></i><p>No KRAs found</p></div></td></tr>';
+            document.getElementById('teamPagination').innerHTML = '';
+            return;
+        }
+        tbody.innerHTML = page.map(k => {
+            const title = k.kra_title || k.title || '-';
+            var tcCell = '';
+            if (k.completed_at) {
+                var ca = new Date(k.completed_at);
+                tcCell = ca.toLocaleDateString('en-IN', {day:'2-digit',month:'short'}) + ' ' + ca.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',hour12:true});
+                if (k.is_delayed) tcCell = '<span class="badge-overdue">DELAYED</span> ' + tcCell;
+            } else {
+                tcCell = '<span class="text-muted">—</span>';
+            }
+            return '<tr>' +
+                '<td style="white-space:nowrap;">' + formatDate(k.instance_date) + '</td>' +
+                '<td class="kra-title-col">' + escapeAttr(title) + '</td>' +
+                '<td>' + (k.kra_code || '-') + '</td>' +
+                '<td>' + formatFrequency(k.frequency) + '</td>' +
+                '<td>' + (k.target_time || '<span class="text-muted">—</span>') + '</td>' +
+                '<td>' + statusBadge(k.completion_status, k.submitted_at) + '</td>' +
+                '<td style="white-space:nowrap;">' + tcCell + '</td>' +
+                '<td>' + reviewBadge(k.manager_review_status) + '</td>' +
+                '<td>' + (k.time_spent_minutes || 0) + ' mins</td>' +
+                '<td class="notes-col" title="' + escapeAttr(k.staff_notes || '') + '">' + truncate(k.staff_notes, 50) + '</td>' +
+                '</tr>';
+        }).join('');
+        renderPagination('teamPagination', teamFilteredData.length, teamCurrentPage, 'goTeamPage');
+    }
+
+    function goTeamPage(p) { teamCurrentPage = p; renderTeamKraTable(); }
+
+    function sortTeamTable(col) {
+        if (teamSortCol === col) { teamSortDir = teamSortDir === 'asc' ? 'desc' : 'asc'; }
+        else { teamSortCol = col; teamSortDir = 'asc'; }
+        teamCurrentPage = 1;
+        renderTeamKraTable();
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await StaffSidebar.init();
+        StaffHeader.inject('My KRAs', 'fas fa-chart-line');
+        setDateDefaults('myDateFrom', 'myDateTo');
+        (function() {
+            const today = new Date();
+            document.getElementById('teamDateFrom').value = today.toISOString().split('T')[0];
+            const teamTo = new Date(today);
+            teamTo.setDate(teamTo.getDate() + 2);
+            document.getElementById('teamDateTo').value = teamTo.toISOString().split('T')[0];
+        })();
+        await loadMyKras();
+        checkTeamAccess();
+    });
+
+    // ── DC_WA_TEMPLATES_SEED_001: Quick WhatsApp helpers ──────────────────────
+    function mnrWaOpen(phone, msg) {
+        let ph = (phone || '').replace(/\D/g, '');
+        if (!ph || ph.length < 10) {
+            ph = (window.prompt('Enter WhatsApp number (e.g. 919876543210):', '91') || '').replace(/\D/g, '');
+        }
+        if (!ph || ph.length < 10) return;
+        window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(msg), '_blank');
+    }
+    function mnrWaKra(title, date, status) {
+        const msg = '📊 *KRA Update*\n\nKRA: ' + title + '\nDate: ' + date + '\nStatus: ' + status.replace(/_/g,' ') + '\n\nPlease review and take action.';
+        mnrWaOpen('', msg);
+    }
+    </script>
+</body>
+</html>

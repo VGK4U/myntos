@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sandbox Test Environment Manager | MNR Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/shared/dc-theme.css">
+    <style>
+        .sandbox-header {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+        .config-card {
+            border: none;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            border-radius: 12px;
+        }
+        .status-badge {
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+        }
+        .test-account-row:hover {
+            background-color: #f8f9fa;
+        }
+        .sync-log-item {
+            border-left: 4px solid #28a745;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+        }
+        .sync-log-item.failed {
+            border-left-color: #dc3545;
+        }
+        .sync-log-item.in-progress {
+            border-left-color: #ffc107;
+        }
+        .activation-controls {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+        .test-url-box {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: monospace;
+        }
+        .role-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="d-flex">
+        <div id="sidebar-container"></div>
+        <div class="flex-grow-1">
+            <div id="header-container"></div>
+            <main class="p-4">
+                <div class="sandbox-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="mb-1"><i class="fas fa-flask me-2"></i>Sandbox Test Environment</h2>
+                            <p class="mb-0 opacity-75">Manage test accounts and sandbox configuration - VGK Mentor Access Only</p>
+                        </div>
+                        <div>
+                            <span id="sandbox-status-badge" class="badge bg-secondary status-badge">
+                                <i class="fas fa-circle me-1"></i>Loading...
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="nav nav-tabs mb-4" id="sandboxTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="config-tab" data-bs-toggle="tab" data-bs-target="#config-pane" type="button">
+                            <i class="fas fa-cog me-1"></i>Configuration
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="accounts-tab" data-bs-toggle="tab" data-bs-target="#accounts-pane" type="button">
+                            <i class="fas fa-users me-1"></i>Test Accounts
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="sync-tab" data-bs-toggle="tab" data-bs-target="#sync-pane" type="button">
+                            <i class="fas fa-sync me-1"></i>Data Sync
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs-pane" type="button">
+                            <i class="fas fa-history me-1"></i>Access Logs
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="sandboxTabContent">
+                    <div class="tab-pane fade show active" id="config-pane" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <div class="card config-card mb-4">
+                                    <div class="card-header bg-white">
+                                        <h5 class="mb-0"><i class="fas fa-toggle-on me-2 text-primary"></i>Sandbox Status</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-4">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="is_enabled">
+                                                    <label class="form-check-label" for="is_enabled">Sandbox Enabled</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="view_mode_enabled" checked>
+                                                    <label class="form-check-label" for="view_mode_enabled">View Mode (/test/view/)</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="form-check form-switch mb-3">
+                                                    <input class="form-check-input" type="checkbox" id="edit_mode_enabled" checked>
+                                                    <label class="form-check-label" for="edit_mode_enabled">Edit Mode (/test/edit/)</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card config-card mb-4">
+                                    <div class="card-header bg-white">
+                                        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2 text-success"></i>Activation Schedule</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Start Date & Time</label>
+                                                <input type="datetime-local" class="form-control" id="activation_start">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">End Date & Time</label>
+                                                <input type="datetime-local" class="form-control" id="activation_end">
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Daily Hours - Start (0-23)</label>
+                                                <input type="number" class="form-control" id="activation_hours_start" min="0" max="23" placeholder="e.g., 9">
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Daily Hours - End (0-23)</label>
+                                                <input type="number" class="form-control" id="activation_hours_end" min="0" max="23" placeholder="e.g., 18">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted mt-2 d-block">Leave empty for 24/7 access</small>
+                                    </div>
+                                </div>
+
+                                <div class="card config-card mb-4">
+                                    <div class="card-header bg-white">
+                                        <h5 class="mb-0"><i class="fas fa-redo me-2 text-warning"></i>Auto Reset</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <div class="col-md-4">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" id="auto_reset_enabled">
+                                                    <label class="form-check-label" for="auto_reset_enabled">Enable Auto Reset</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Frequency</label>
+                                                <select class="form-select" id="auto_reset_frequency">
+                                                    <option value="DAILY">Daily</option>
+                                                    <option value="WEEKLY">Weekly</option>
+                                                    <option value="MONTHLY">Monthly</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Time (HH:MM)</label>
+                                                <input type="time" class="form-control" id="auto_reset_time" value="00:00">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button class="btn btn-primary btn-lg" id="save-config-btn">
+                                    <i class="fas fa-save me-2"></i>Save Configuration
+                                </button>
+                            </div>
+
+                            <div class="col-lg-4">
+                                <div class="card config-card mb-4">
+                                    <div class="card-header bg-white">
+                                        <h5 class="mb-0"><i class="fas fa-link me-2 text-info"></i>Test URLs</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="test-url-box mb-3">
+                                            <strong>View Only Mode:</strong><br>
+                                            <a href="/test/view/landing" target="_blank">/test/view/landing</a><br>
+                                            <a href="/test/view/login" target="_blank">/test/view/login</a><br>
+                                            <a href="/test/view/staff/login" target="_blank">/test/view/staff/login</a><br>
+                                            <a href="/test/view/partner/login" target="_blank">/test/view/partner/login</a>
+                                        </div>
+                                        <div class="test-url-box">
+                                            <strong>Edit Mode:</strong><br>
+                                            <a href="/test/edit/landing" target="_blank">/test/edit/landing</a><br>
+                                            <a href="/test/edit/login" target="_blank">/test/edit/login</a><br>
+                                            <a href="/test/edit/staff/login" target="_blank">/test/edit/staff/login</a><br>
+                                            <a href="/test/edit/partner/login" target="_blank">/test/edit/partner/login</a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card config-card">
+                                    <div class="card-header bg-white">
+                                        <h5 class="mb-0"><i class="fas fa-info-circle me-2 text-secondary"></i>Last Sync Info</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="mb-1"><strong>Last Sync:</strong> <span id="last-sync-time">Never</span></p>
+                                        <p class="mb-1"><strong>By:</strong> <span id="last-sync-by">-</span></p>
+                                        <p class="mb-1"><strong>Tables:</strong> <span id="last-sync-tables">0</span></p>
+                                        <p class="mb-0"><strong>Rows:</strong> <span id="last-sync-rows">0</span></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="accounts-pane" role="tabpanel">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="d-flex gap-2">
+                                <select class="form-select" id="filter-account-type" style="width: 150px;">
+                                    <option value="">All Types</option>
+                                    <option value="STAFF">Staff</option>
+                                    <option value="MNR">MNR</option>
+                                    <option value="PARTNER">Partner</option>
+                                </select>
+                                <select class="form-select" id="filter-active" style="width: 150px;">
+                                    <option value="">All Status</option>
+                                    <option value="true">Active</option>
+                                    <option value="false">Inactive</option>
+                                </select>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-success" id="seed-accounts-btn">
+                                    <i class="fas fa-seedling me-1"></i>Seed Default Accounts
+                                </button>
+                                <button class="btn btn-primary" id="add-account-btn" data-bs-toggle="modal" data-bs-target="#accountModal">
+                                    <i class="fas fa-plus me-1"></i>Add Account
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card config-card">
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th><input type="checkbox" id="select-all-accounts"></th>
+                                                <th>Type</th>
+                                                <th>Role</th>
+                                                <th>Login ID</th>
+                                                <th>Display Name</th>
+                                                <th>Status</th>
+                                                <th>Activation</th>
+                                                <th>Last Login</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="accounts-table-body">
+                                            <tr><td colspan="9" class="text-center py-4">Loading...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 d-flex gap-2">
+                            <button class="btn btn-success btn-sm" id="bulk-activate-btn" disabled>
+                                <i class="fas fa-check me-1"></i>Activate Selected
+                            </button>
+                            <button class="btn btn-warning btn-sm" id="bulk-deactivate-btn" disabled>
+                                <i class="fas fa-times me-1"></i>Deactivate Selected
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="sync-pane" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card config-card mb-4">
+                                    <div class="card-header bg-white">
+                                        <h5 class="mb-0"><i class="fas fa-database me-2 text-primary"></i>Sync Production to Sandbox</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted">This will copy ALL data from production database to the testing schema. Existing sandbox data will be replaced.</p>
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            <strong>Warning:</strong> This operation may take several minutes for large databases.
+                                        </div>
+                                        <button class="btn btn-danger btn-lg" id="sync-now-btn">
+                                            <i class="fas fa-sync me-2"></i>Sync Now (Full Reset)
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="card config-card">
+                                    <div class="card-header bg-white">
+                                        <h5 class="mb-0"><i class="fas fa-history me-2 text-success"></i>Recent Sync History</h5>
+                                    </div>
+                                    <div class="card-body" id="sync-history-container">
+                                        <p class="text-muted">Loading sync history...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="logs-pane" role="tabpanel">
+                        <div class="card config-card">
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Sandbox Access Logs</h5>
+                                <button class="btn btn-outline-secondary btn-sm" id="refresh-logs-btn">
+                                    <i class="fas fa-refresh me-1"></i>Refresh
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead class="bg-light">
+                                            <tr>
+                                                <th>Time</th>
+                                                <th>Mode</th>
+                                                <th>Type</th>
+                                                <th>Login ID</th>
+                                                <th>Page</th>
+                                                <th>IP</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="access-logs-body">
+                                            <tr><td colspan="6" class="text-center py-4">Loading...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal fade" id="accountModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Add Test Account</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="account-form">
+                        <div class="mb-3">
+                            <label class="form-label">Account Type</label>
+                            <select class="form-select" id="new-account-type" required>
+                                <option value="STAFF">Staff</option>
+                                <option value="MNR">MNR</option>
+                                <option value="PARTNER">Partner</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <select class="form-select" id="new-account-role" required>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Login ID</label>
+                            <input type="text" class="form-control" id="new-login-id" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Display Name</label>
+                            <input type="text" class="form-control" id="new-display-name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" id="new-password" required minlength="8">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-account-btn">Create Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/shared/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const STAFF_ROLES = ['VGK4U', 'MANAGER', 'EMPLOYEE'];
+        const MNR_ROLES = ['RVZ ID', 'VGK ID', 'Admin', 'Super Admin', 'Finance Admin', 'USER'];
+        const PARTNER_ROLES = ['DISTRIBUTOR', 'DEALER', 'VENDOR', 'REAL_DREAM_PARTNER'];
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadConfiguration();
+            await loadTestAccounts();
+            await loadSyncHistory();
+            await loadAccessLogs();
+            setupEventListeners();
+        });
+
+        async function loadConfiguration() {
+            try {
+                const response = await staffFetch('/api/v1/staff/sandbox/configuration');
+                if (response.ok) {
+                    const config = await response.json();
+                    populateConfigForm(config);
+                    updateStatusBadge(config);
+                }
+            } catch (error) {
+                console.error('Failed to load configuration:', error);
+            }
+        }
+
+        function populateConfigForm(config) {
+            document.getElementById('is_enabled').checked = config.is_enabled;
+            document.getElementById('view_mode_enabled').checked = config.view_mode_enabled;
+            document.getElementById('edit_mode_enabled').checked = config.edit_mode_enabled;
+            
+            if (config.activation_start) {
+                document.getElementById('activation_start').value = config.activation_start.slice(0, 16);
+            }
+            if (config.activation_end) {
+                document.getElementById('activation_end').value = config.activation_end.slice(0, 16);
+            }
+            if (config.activation_hours_start !== null) {
+                document.getElementById('activation_hours_start').value = config.activation_hours_start;
+            }
+            if (config.activation_hours_end !== null) {
+                document.getElementById('activation_hours_end').value = config.activation_hours_end;
+            }
+            
+            document.getElementById('auto_reset_enabled').checked = config.auto_reset_enabled;
+            document.getElementById('auto_reset_frequency').value = config.auto_reset_frequency || 'DAILY';
+            document.getElementById('auto_reset_time').value = config.auto_reset_time || '00:00';
+            
+            document.getElementById('last-sync-time').textContent = config.last_sync_at ? new Date(config.last_sync_at).toLocaleString() : 'Never';
+            document.getElementById('last-sync-by').textContent = config.last_sync_by_name || '-';
+            document.getElementById('last-sync-tables').textContent = config.last_sync_tables_count || 0;
+            document.getElementById('last-sync-rows').textContent = config.last_sync_rows_count?.toLocaleString() || 0;
+        }
+
+        function updateStatusBadge(config) {
+            const badge = document.getElementById('sandbox-status-badge');
+            if (config.is_enabled) {
+                badge.className = 'badge bg-success status-badge';
+                badge.innerHTML = '<i class="fas fa-check-circle me-1"></i>Sandbox Active';
+            } else {
+                badge.className = 'badge bg-secondary status-badge';
+                badge.innerHTML = '<i class="fas fa-pause-circle me-1"></i>Sandbox Disabled';
+            }
+        }
+
+        async function loadTestAccounts() {
+            const typeFilter = document.getElementById('filter-account-type').value;
+            const activeFilter = document.getElementById('filter-active').value;
+            
+            let url = '/api/v1/staff/sandbox/test-accounts?';
+            if (typeFilter) url += `account_type=${typeFilter}&`;
+            if (activeFilter) url += `is_active=${activeFilter}`;
+            
+            try {
+                const response = await staffFetch(url);
+                if (response.ok) {
+                    const accounts = await response.json();
+                    renderAccountsTable(accounts);
+                }
+            } catch (error) {
+                console.error('Failed to load accounts:', error);
+            }
+        }
+
+        function renderAccountsTable(accounts) {
+            const tbody = document.getElementById('accounts-table-body');
+            if (accounts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No test accounts found. Click "Seed Default Accounts" to create them.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = accounts.map(acc => `
+                <tr class="test-account-row">
+                    <td><input type="checkbox" class="account-checkbox" value="${acc.id}"></td>
+                    <td><span class="badge bg-${acc.account_type === 'STAFF' ? 'primary' : acc.account_type === 'MNR' ? 'success' : 'warning'}">${acc.account_type}</span></td>
+                    <td><span class="badge bg-secondary role-badge">${acc.account_role}</span></td>
+                    <td><code>${acc.login_id}</code></td>
+                    <td>${acc.display_name}</td>
+                    <td>${acc.is_active ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>'}</td>
+                    <td>${acc.activation_start ? new Date(acc.activation_start).toLocaleDateString() : '-'} ${acc.activation_end ? '→ ' + new Date(acc.activation_end).toLocaleDateString() : ''}</td>
+                    <td>${acc.last_login_at ? new Date(acc.last_login_at).toLocaleString() : 'Never'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editAccount(${acc.id})"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAccount(${acc.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadSyncHistory() {
+            try {
+                const response = await staffFetch('/api/v1/staff/sandbox/sync-logs?limit=10');
+                if (response.ok) {
+                    const logs = await response.json();
+                    renderSyncHistory(logs);
+                }
+            } catch (error) {
+                console.error('Failed to load sync history:', error);
+            }
+        }
+
+        function renderSyncHistory(logs) {
+            const container = document.getElementById('sync-history-container');
+            if (logs.length === 0) {
+                container.innerHTML = '<p class="text-muted">No sync history yet.</p>';
+                return;
+            }
+            
+            container.innerHTML = logs.map(log => `
+                <div class="sync-log-item ${log.status.toLowerCase()}">
+                    <div class="d-flex justify-content-between">
+                        <strong>${log.sync_type} Sync</strong>
+                        <span class="badge bg-${log.status === 'COMPLETED' ? 'success' : log.status === 'FAILED' ? 'danger' : 'warning'}">${log.status}</span>
+                    </div>
+                    <small class="text-muted">${new Date(log.started_at).toLocaleString()} by ${log.triggered_by_name || 'System'}</small>
+                    <div class="mt-1">
+                        <small>${log.tables_synced} tables, ${log.rows_synced?.toLocaleString()} rows in ${log.duration_seconds}s</small>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadAccessLogs() {
+            try {
+                const response = await staffFetch('/api/v1/staff/sandbox/access-logs?limit=50');
+                if (response.ok) {
+                    const logs = await response.json();
+                    renderAccessLogs(logs);
+                }
+            } catch (error) {
+                console.error('Failed to load access logs:', error);
+            }
+        }
+
+        function renderAccessLogs(logs) {
+            const tbody = document.getElementById('access-logs-body');
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No access logs yet.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = logs.map(log => `
+                <tr>
+                    <td>${new Date(log.accessed_at).toLocaleString()}</td>
+                    <td><span class="badge bg-${log.access_mode === 'view' ? 'info' : 'warning'}">${log.access_mode}</span></td>
+                    <td>${log.account_type}</td>
+                    <td><code>${log.login_id}</code></td>
+                    <td>${log.page_accessed || '-'}</td>
+                    <td>${log.ip_address || '-'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function setupEventListeners() {
+            document.getElementById('save-config-btn').addEventListener('click', saveConfiguration);
+            document.getElementById('sync-now-btn').addEventListener('click', syncNow);
+            document.getElementById('seed-accounts-btn').addEventListener('click', seedAccounts);
+            document.getElementById('refresh-logs-btn').addEventListener('click', loadAccessLogs);
+            
+            document.getElementById('filter-account-type').addEventListener('change', loadTestAccounts);
+            document.getElementById('filter-active').addEventListener('change', loadTestAccounts);
+            
+            document.getElementById('new-account-type').addEventListener('change', updateRoleOptions);
+            updateRoleOptions();
+            
+            document.getElementById('save-account-btn').addEventListener('click', createAccount);
+            
+            document.getElementById('select-all-accounts').addEventListener('change', function() {
+                document.querySelectorAll('.account-checkbox').forEach(cb => cb.checked = this.checked);
+                updateBulkButtons();
+            });
+            
+            document.getElementById('accounts-table-body').addEventListener('change', function(e) {
+                if (e.target.classList.contains('account-checkbox')) {
+                    updateBulkButtons();
+                }
+            });
+            
+            document.getElementById('bulk-activate-btn').addEventListener('click', () => bulkUpdateAccounts(true));
+            document.getElementById('bulk-deactivate-btn').addEventListener('click', () => bulkUpdateAccounts(false));
+        }
+
+        function updateRoleOptions() {
+            const type = document.getElementById('new-account-type').value;
+            const roleSelect = document.getElementById('new-account-role');
+            const roles = type === 'STAFF' ? STAFF_ROLES : type === 'MNR' ? MNR_ROLES : PARTNER_ROLES;
+            roleSelect.innerHTML = roles.map(r => `<option value="${r}">${r}</option>`).join('');
+        }
+
+        function updateBulkButtons() {
+            const selected = document.querySelectorAll('.account-checkbox:checked').length;
+            document.getElementById('bulk-activate-btn').disabled = selected === 0;
+            document.getElementById('bulk-deactivate-btn').disabled = selected === 0;
+        }
+
+        async function saveConfiguration() {
+            const data = {
+                is_enabled: document.getElementById('is_enabled').checked,
+                view_mode_enabled: document.getElementById('view_mode_enabled').checked,
+                edit_mode_enabled: document.getElementById('edit_mode_enabled').checked,
+                activation_start: document.getElementById('activation_start').value || null,
+                activation_end: document.getElementById('activation_end').value || null,
+                activation_hours_start: document.getElementById('activation_hours_start').value ? parseInt(document.getElementById('activation_hours_start').value) : null,
+                activation_hours_end: document.getElementById('activation_hours_end').value ? parseInt(document.getElementById('activation_hours_end').value) : null,
+                auto_reset_enabled: document.getElementById('auto_reset_enabled').checked,
+                auto_reset_frequency: document.getElementById('auto_reset_frequency').value,
+                auto_reset_time: document.getElementById('auto_reset_time').value
+            };
+            
+            try {
+                const response = await staffFetch('/api/v1/staff/sandbox/configuration', {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    alert('Configuration saved successfully!');
+                    loadConfiguration();
+                } else {
+                    alert('Failed to save configuration');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                alert('Error saving configuration');
+            }
+        }
+
+        async function syncNow() {
+            if (!confirm('This will replace ALL sandbox data with production data. Continue?')) return;
+            
+            document.getElementById('sync-now-btn').disabled = true;
+            document.getElementById('sync-now-btn').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Syncing...';
+            
+            try {
+                const response = await staffFetch('/api/v1/staff/sandbox/sync', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({sync_type: 'FULL'})
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`Sync completed! ${result.tables_synced} tables, ${result.rows_synced} rows synced in ${result.duration_seconds}s`);
+                    loadConfiguration();
+                    loadSyncHistory();
+                } else {
+                    const error = await response.json();
+                    alert('Sync failed: ' + (error.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Sync error:', error);
+                alert('Error during sync');
+            } finally {
+                document.getElementById('sync-now-btn').disabled = false;
+                document.getElementById('sync-now-btn').innerHTML = '<i class="fas fa-sync me-2"></i>Sync Now (Full Reset)';
+            }
+        }
+
+        async function seedAccounts() {
+            if (!confirm('Create default test accounts for all roles?')) return;
+            
+            try {
+                const response = await staffFetch('/api/v1/staff/sandbox/seed-test-accounts', {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`Created ${result.created_count} accounts (skipped ${result.skipped_count} existing).\n\nDefault password: ${result.default_password}`);
+                    loadTestAccounts();
+                } else {
+                    alert('Failed to seed accounts');
+                }
+            } catch (error) {
+                console.error('Seed error:', error);
+                alert('Error seeding accounts');
+            }
+        }
+
+        async function createAccount() {
+            const saveBtn = document.getElementById('save-account-btn');
+            const editId = saveBtn.dataset.editId;
+            
+            const data = {
+                account_type: document.getElementById('new-account-type').value,
+                account_role: document.getElementById('new-account-role').value,
+                login_id: document.getElementById('new-login-id').value,
+                display_name: document.getElementById('new-display-name').value
+            };
+            
+            const password = document.getElementById('new-password').value;
+            if (password) {
+                data.password = password;
+            }
+            
+            try {
+                let url = '/api/v1/staff/sandbox/test-accounts';
+                let method = 'POST';
+                let successMsg = 'Account created successfully!';
+                
+                if (editId) {
+                    url = `/api/v1/staff/sandbox/test-accounts/${editId}`;
+                    method = 'PUT';
+                    successMsg = 'Account updated successfully!';
+                }
+                
+                const response = await staffFetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('accountModal')).hide();
+                    document.getElementById('account-form').reset();
+                    delete saveBtn.dataset.editId;
+                    saveBtn.textContent = 'Create Account';
+                    loadTestAccounts();
+                    alert(successMsg);
+                } else {
+                    const error = await response.json();
+                    alert('Failed: ' + (error.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                alert('Error saving account');
+            }
+        }
+
+        async function editAccount(id) {
+            try {
+                const response = await staffFetch(`/api/v1/staff/sandbox/test-accounts/${id}`);
+                if (!response.ok) {
+                    alert('Failed to load account details');
+                    return;
+                }
+                const account = await response.json();
+                
+                document.getElementById('new-account-type').value = account.account_type || 'STAFF';
+                updateRoleOptions();
+                document.getElementById('new-account-role').value = account.account_role || '';
+                document.getElementById('new-login-id').value = account.login_id || '';
+                document.getElementById('new-display-name').value = account.display_name || '';
+                document.getElementById('new-password').value = '';
+                
+                const modal = new bootstrap.Modal(document.getElementById('accountModal'));
+                modal.show();
+                
+                const saveBtn = document.getElementById('save-account-btn');
+                saveBtn.dataset.editId = id;
+                saveBtn.textContent = 'Update Account';
+                
+                document.getElementById('accountModal').addEventListener('hidden.bs.modal', function() {
+                    delete saveBtn.dataset.editId;
+                    saveBtn.textContent = 'Create Account';
+                    document.getElementById('account-form').reset();
+                }, { once: true });
+            } catch (error) {
+                console.error('Edit load error:', error);
+                alert('Error loading account');
+            }
+        }
+
+        async function deleteAccount(id) {
+            if (!confirm('Delete this test account?')) return;
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/sandbox/test-accounts/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadTestAccounts();
+                } else {
+                    alert('Failed to delete account');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+            }
+        }
+
+        async function bulkUpdateAccounts(activate) {
+            const ids = Array.from(document.querySelectorAll('.account-checkbox:checked')).map(cb => parseInt(cb.value));
+            if (ids.length === 0) return;
+            
+            try {
+                const response = await staffFetch('/api/v1/staff/sandbox/test-accounts/bulk-activate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({account_ids: ids, is_active: activate})
+                });
+                
+                if (response.ok) {
+                    loadTestAccounts();
+                    document.getElementById('select-all-accounts').checked = false;
+                }
+            } catch (error) {
+                console.error('Bulk update error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

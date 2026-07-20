@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Incentive Approvals - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        
+        .main-content { margin-left: 280px; padding-top: 0; min-height: 100vh; transition: margin-left 0.3s ease; padding-top: 88px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 24px; }
+        
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; height: 100%; }
+        .stat-card .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-card .label { color: #6b7280; font-size: 13px; margin-top: 4px; }
+        
+        .stat-yellow .icon { background: #fef3c7; color: #d97706; }
+        .stat-green .icon { background: #d1fae5; color: #059669; }
+        .stat-blue .icon { background: #dbeafe; color: #2563eb; }
+        .stat-red .icon { background: #fee2e2; color: #dc2626; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; }
+        .user-name { font-weight: 600; color: #1f2937; }
+        .user-id { font-size: 11px; color: #9ca3af; }
+        
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        
+        .system-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .system-myntreal { background: #fef3c7; color: #92400e; }
+        .system-zynova { background: #dbeafe; color: #1e40af; }
+        
+        .amount-badge { font-weight: 700; font-size: 15px; }
+        .amount-positive { color: #059669; }
+        
+        .filter-panel { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; }
+        .filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+        .filter-row .form-control, .filter-row .form-select { border-radius: 8px; }
+        
+        .btn-primary { background: #10b981; border: none; }
+        .btn-primary:hover { background: #059669; }
+        
+        .action-btn { padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; border: none; margin: 0 2px; }
+        .action-btn-approve { background: #d1fae5; color: #065f46; }
+        .action-btn-approve:hover { background: #a7f3d0; }
+        .action-btn-reject { background: #fee2e2; color: #991b1b; }
+        .action-btn-reject:hover { background: #fecaca; }
+        .action-btn-view { background: #e0e7ff; color: #3730a3; }
+        .action-btn-view:hover { background: #c7d2fe; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #d1fae5; color: #065f46; }
+
+        .loading-spinner { display: none; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #10b981; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; color: #10b981; }
+        
+        .tabs-container { margin-bottom: 24px; }
+        .nav-tabs { border-bottom: 2px solid #e5e7eb; }
+        .nav-tabs .nav-link { border: none; color: #6b7280; font-weight: 500; padding: 12px 24px; margin-bottom: -2px; }
+        .nav-tabs .nav-link:hover { color: #10b981; border: none; }
+        .nav-tabs .nav-link.active { color: #10b981; border: none; border-bottom: 2px solid #10b981; background: transparent; }
+        
+        .modal-header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+        .modal-header .btn-close { filter: invert(1); }
+        
+        .detail-row { display: flex; margin-bottom: 12px; }
+        .detail-label { font-weight: 600; color: #6b7280; width: 140px; flex-shrink: 0; }
+        .detail-value { color: #1f2937; }
+        
+        .pagination { margin: 20px 0 0 0; }
+        .page-link { color: #10b981; }
+        .page-item.active .page-link { background: #10b981; border-color: #10b981; }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-banner">
+                <h1><i class="fas fa-hand-holding-usd"></i> Incentive Approvals</h1>
+                <p>Review and approve MyntReal and VGK4U incentive requests</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card stat-yellow">
+                        <div class="icon"><i class="fas fa-clock"></i></div>
+                        <div class="value" id="statPending">--</div>
+                        <div class="label">Pending Approvals</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-green">
+                        <div class="icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="value" id="statApproved">--</div>
+                        <div class="label">Approved This Month</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-blue">
+                        <div class="icon"><i class="fas fa-rupee-sign"></i></div>
+                        <div class="value" id="statTotalAmount">--</div>
+                        <div class="label">Total Incentive Value</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-red">
+                        <div class="icon"><i class="fas fa-times-circle"></i></div>
+                        <div class="value" id="statRejected">--</div>
+                        <div class="label">Rejected This Month</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tabs-container">
+                <ul class="nav nav-tabs" id="incentiveTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" onclick="switchTab('all'); return false;">All Incentives</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="switchTab('myntreal'); return false;">MyntReal</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="switchTab('zynova'); return false;">VGK4U</a>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="filter-panel">
+                <div class="filter-row">
+                    <div class="flex-grow-1">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by MNR ID or name...">
+                    </div>
+                    <div>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">All Status</option>
+                            <option value="pending" selected>Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">All Categories</option>
+                            <option value="ev_b2c">EV B2C</option>
+                            <option value="ev_franchise">EV Franchise</option>
+                            <option value="solar">Solar</option>
+                            <option value="real_estate">Real Estate</option>
+                            <option value="insurance">Insurance</option>
+                            <option value="training">Training</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="loadIncentives()">
+                            <i class="fas fa-search me-2"></i>Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-list me-2"></i>Incentive Records</h5>
+                    <div class="loading-spinner" id="tableSpinner"></div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>System</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="text-center">Points Used</th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Date</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="incentivesTableBody">
+                                <tr>
+                                    <td colspan="8" class="text-center py-5">
+                                        <div class="empty-state">
+                                            <i class="fas fa-hand-holding-usd"></i>
+                                            <p>Loading incentives...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center" id="pagination"></ul>
+            </nav>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="detailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Incentive Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detailModalBody">
+                    <p class="text-center">Loading...</p>
+                </div>
+                <div class="modal-footer" id="detailModalFooter">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="rejectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-times-circle me-2"></i>Reject Incentive</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="rejectIncentiveId">
+                    <input type="hidden" id="rejectSystem">
+                    <div class="mb-3">
+                        <label class="form-label">Rejection Reason</label>
+                        <textarea class="form-control" id="rejectReason" rows="4" placeholder="Enter reason for rejection..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="submitRejection()">
+                        <i class="fas fa-times me-2"></i>Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script>
+        let currentPage = 1;
+        let currentTab = 'all';
+        const perPage = 20;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('Incentive Approvals', 'fas fa-hand-holding-usd');
+            updateHeaderInfo();
+            loadIncentives();
+        });
+        
+        function updateHeaderInfo() {
+            const staffData = JSON.parse(localStorage.getItem('staff_data') || sessionStorage.getItem('staff_data') || '{}');
+            if (staffData.name) {
+                document.getElementById('headerUserName').textContent = staffData.name;
+                document.getElementById('headerUserInitials').textContent = staffData.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            }
+            if (staffData.role_name) {
+                document.getElementById('headerUserRole').textContent = staffData.role_name;
+            }
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            currentPage = 1;
+            document.querySelectorAll('#incentiveTabs .nav-link').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            loadIncentives();
+        }
+        
+        async function loadIncentives() {
+            const spinner = document.getElementById('tableSpinner');
+            spinner.style.display = 'block';
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const status = document.getElementById('statusFilter').value;
+                const category = document.getElementById('categoryFilter').value;
+                const search = document.getElementById('searchInput').value;
+                
+                let allData = [];
+                
+                if (currentTab === 'all' || currentTab === 'myntreal') {
+                    let url = `/api/v1/myntreal/incentives/all?page=${currentPage}&per_page=${perPage}`;
+                    if (status) url += `&status=${status}`;
+                    if (category) url += `&category=${category}`;
+                    
+                    const response = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        (data.data || []).forEach(item => {
+                            item._system = 'myntreal';
+                            allData.push(item);
+                        });
+                    }
+                }
+                
+                if (currentTab === 'all' || currentTab === 'zynova') {
+                    let url = `/api/v1/myntreal/zynova/incentives/all?page=${currentPage}&per_page=${perPage}`;
+                    if (status) url += `&status=${status}`;
+                    
+                    const response = await fetch(url, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        (data.data || []).forEach(item => {
+                            item._system = 'zynova';
+                            allData.push(item);
+                        });
+                    }
+                }
+                
+                allData.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+                
+                renderTable(allData);
+                updateStats(allData);
+            } catch (error) {
+                console.error('Error loading incentives:', error);
+                document.getElementById('incentivesTableBody').innerHTML = `
+                    <tr><td colspan="8" class="text-center py-5">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>Failed to load incentives. Please try again.</p>
+                        </div>
+                    </td></tr>`;
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+        
+        function renderTable(data) {
+            const tbody = document.getElementById('incentivesTableBody');
+            
+            if (!data.length) {
+                tbody.innerHTML = `
+                    <tr><td colspan="8" class="text-center py-5">
+                        <div class="empty-state">
+                            <i class="fas fa-hand-holding-usd"></i>
+                            <p>No incentive records found</p>
+                        </div>
+                    </td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = data.map(item => {
+                const initials = (item.user_name || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                const systemClass = item._system === 'myntreal' ? 'system-myntreal' : 'system-zynova';
+                const systemLabel = item._system === 'myntreal' ? 'MyntReal' : 'VGK4U';
+                const statusClass = `status-${item.status || 'pending'}`;
+                const date = item.created_at ? new Date(item.created_at).toLocaleDateString('en-IN') : 'N/A';
+                const amount = item.incentive_amount || item.amount || 0;
+                const pointsUsed = item.points_consumed || 0;
+                const category = (item.category || item.lead_category || '-').replace(/_/g, ' ');
+                
+                const isPending = (item.status || 'pending') === 'pending';
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">${initials}</div>
+                                <div>
+                                    <div class="user-name">${item.user_name || 'Unknown'}</div>
+                                    <div class="user-id">MNR: ${item.mnr_id || item.user_id}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><span class="system-badge ${systemClass}">${systemLabel}</span></td>
+                        <td style="text-transform: capitalize;">${category}</td>
+                        <td class="text-end">
+                            <span class="amount-badge amount-positive">₹${amount.toLocaleString('en-IN')}</span>
+                        </td>
+                        <td class="text-center">${pointsUsed > 0 ? pointsUsed.toLocaleString('en-IN') : '-'}</td>
+                        <td class="text-center">
+                            <span class="status-badge ${statusClass}">${(item.status || 'pending').charAt(0).toUpperCase() + (item.status || 'pending').slice(1)}</span>
+                        </td>
+                        <td class="text-center">${date}</td>
+                        <td class="text-center">
+                            <button class="action-btn action-btn-view" onclick="viewDetails(${item.id}, '${item._system}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${isPending ? `
+                                <button class="action-btn action-btn-approve" onclick="approveIncentive(${item.id}, '${item._system}')">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="action-btn action-btn-reject" onclick="showRejectModal(${item.id}, '${item._system}')">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+        
+        function updateStats(data) {
+            const pending = data.filter(d => d.status === 'pending').length;
+            const approved = data.filter(d => d.status === 'approved').length;
+            const rejected = data.filter(d => d.status === 'rejected').length;
+            const total = data.reduce((sum, d) => sum + (d.incentive_amount || d.amount || 0), 0);
+            
+            document.getElementById('statPending').textContent = pending;
+            document.getElementById('statApproved').textContent = approved;
+            document.getElementById('statRejected').textContent = rejected;
+            document.getElementById('statTotalAmount').textContent = '₹' + total.toLocaleString('en-IN');
+        }
+        
+        async function viewDetails(id, system) {
+            const modal = new bootstrap.Modal(document.getElementById('detailModal'));
+            document.getElementById('detailModalBody').innerHTML = '<p class="text-center">Loading...</p>';
+            document.getElementById('detailModalFooter').innerHTML = '';
+            modal.show();
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const endpoint = system === 'myntreal' ? `/api/v1/myntreal/incentives/${id}` : `/api/v1/myntreal/zynova/incentives/${id}`;
+                
+                const response = await fetch(endpoint, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load details');
+                
+                const data = await response.json();
+                const item = data.data || data;
+                
+                document.getElementById('detailModalBody').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="detail-row"><span class="detail-label">User:</span><span class="detail-value">${item.user_name || 'N/A'}</span></div>
+                            <div class="detail-row"><span class="detail-label">MNR ID:</span><span class="detail-value">${item.mnr_id || item.user_id}</span></div>
+                            <div class="detail-row"><span class="detail-label">System:</span><span class="detail-value">${system.charAt(0).toUpperCase() + system.slice(1)}</span></div>
+                            <div class="detail-row"><span class="detail-label">Category:</span><span class="detail-value" style="text-transform: capitalize;">${(item.category || item.lead_category || '-').replace(/_/g, ' ')}</span></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-row"><span class="detail-label">Amount:</span><span class="detail-value text-success fw-bold">₹${(item.incentive_amount || item.amount || 0).toLocaleString('en-IN')}</span></div>
+                            <div class="detail-row"><span class="detail-label">Points Used:</span><span class="detail-value">${(item.points_consumed || 0).toLocaleString('en-IN')}</span></div>
+                            <div class="detail-row"><span class="detail-label">Status:</span><span class="detail-value"><span class="status-badge status-${item.status || 'pending'}">${(item.status || 'pending').charAt(0).toUpperCase() + (item.status || 'pending').slice(1)}</span></span></div>
+                            <div class="detail-row"><span class="detail-label">Created:</span><span class="detail-value">${item.created_at ? new Date(item.created_at).toLocaleString('en-IN') : 'N/A'}</span></div>
+                        </div>
+                    </div>
+                    ${item.transaction_id ? `<div class="detail-row mt-3"><span class="detail-label">Transaction ID:</span><span class="detail-value">${item.transaction_id}</span></div>` : ''}
+                    ${item.rejection_reason ? `<div class="alert alert-danger mt-3"><strong>Rejection Reason:</strong> ${item.rejection_reason}</div>` : ''}
+                `;
+                
+                if (item.status === 'pending') {
+                    document.getElementById('detailModalFooter').innerHTML = `
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-success" onclick="approveIncentive(${id}, '${system}')">
+                            <i class="fas fa-check me-2"></i>Approve
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="showRejectModal(${id}, '${system}')">
+                            <i class="fas fa-times me-2"></i>Reject
+                        </button>
+                    `;
+                } else {
+                    document.getElementById('detailModalFooter').innerHTML = `
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('detailModalBody').innerHTML = '<p class="text-center text-danger">Failed to load details</p>';
+            }
+        }
+        
+        async function approveIncentive(id, system) {
+            if (!confirm('Are you sure you want to approve this incentive?')) return;
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const endpoint = system === 'myntreal' 
+                    ? `/api/v1/myntreal/incentives/${id}/approve`
+                    : `/api/v1/myntreal/zynova/incentives/${id}/approve`;
+                
+                const response = await fetch(endpoint, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Failed to approve');
+                }
+                
+                alert('Incentive approved successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('detailModal'))?.hide();
+                loadIncentives();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        function showRejectModal(id, system) {
+            document.getElementById('rejectIncentiveId').value = id;
+            document.getElementById('rejectSystem').value = system;
+            document.getElementById('rejectReason').value = '';
+            bootstrap.Modal.getInstance(document.getElementById('detailModal'))?.hide();
+            new bootstrap.Modal(document.getElementById('rejectModal')).show();
+        }
+        
+        async function submitRejection() {
+            const id = document.getElementById('rejectIncentiveId').value;
+            const system = document.getElementById('rejectSystem').value;
+            const reason = document.getElementById('rejectReason').value;
+            
+            if (!reason) {
+                alert('Please enter a rejection reason');
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const endpoint = system === 'myntreal' 
+                    ? `/api/v1/myntreal/incentives/${id}/reject`
+                    : `/api/v1/myntreal/zynova/incentives/${id}/reject`;
+                
+                const response = await fetch(endpoint, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reason: reason })
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Failed to reject');
+                }
+                
+                bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+                alert('Incentive rejected.');
+                loadIncentives();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

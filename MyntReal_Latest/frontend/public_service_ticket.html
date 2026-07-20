@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Support Form — MyntReal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="/hub/style.css" rel="stylesheet">
+    <style>
+        :root { --mg: #2ECC71; --mgd: #27ae60; --ab: #2C3E50; }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Poppins',sans-serif; min-height:100vh; background:#f0f4f8; }
+        .sf-page-wrap { padding:110px 20px 80px; min-height:80vh; display:flex; justify-content:center; align-items:flex-start; }
+        .form-card { background:#fff; border-radius:20px; padding:40px; max-width:660px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.15); margin-top:40px; }
+        .form-header { text-align:center; margin-bottom:30px; }
+        .form-header img { height:50px; margin-bottom:15px; }
+        .form-header h1 { font-size:1.8rem; color:var(--ab); font-weight:700; }
+        .form-header p { color:#666; margin-top:5px; }
+        .form-group { margin-bottom:20px; }
+        .form-label { font-weight:600; color:var(--ab); margin-bottom:8px; display:block; }
+        .form-label .req { color:#e74c3c; }
+        .form-control, .form-select { border:2px solid #e0e0e0; border-radius:10px; padding:12px 15px; font-size:1rem; transition:border-color .3s; }
+        .form-control:focus, .form-select:focus { border-color:var(--mg); box-shadow:0 0 0 3px rgba(46,204,113,.1); outline:none; }
+        textarea.form-control { min-height:120px; resize:vertical; }
+        .submit-btn { width:100%; background:linear-gradient(135deg,var(--mg),var(--mgd)); color:#fff; border:none; padding:15px; border-radius:10px; font-size:1.1rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; transition:transform .3s,box-shadow .3s; }
+        .submit-btn:hover { transform:translateY(-2px); box-shadow:0 10px 30px rgba(46,204,113,.3); }
+        .submit-btn:disabled { background:#ccc; cursor:not-allowed; transform:none; }
+        .optional-section { background:#f8f9fa; border-radius:12px; padding:20px; margin-bottom:20px; }
+        .optional-section h3 { font-size:1rem; color:#666; margin-bottom:15px; display:flex; align-items:center; gap:8px; }
+        .error-msg { background:#fee; border:1px solid #f5c6cb; color:#721c24; padding:15px; border-radius:10px; margin-bottom:20px; display:none; }
+        .error-msg.show { display:block; }
+
+        /* ── Ticket type selector ── */
+        .ticket-type-selector { display:flex; gap:15px; }
+        .ticket-type-option { flex:1; display:flex; flex-direction:column; align-items:center; padding:20px 15px; border:2px solid #e0e0e0; border-radius:12px; cursor:pointer; transition:all .3s; text-align:center; }
+        .ticket-type-option input[type="radio"] { display:none; }
+        .ticket-type-option.selected { border-color:var(--mg); background:rgba(46,204,113,.08); }
+        .ticket-type-option .type-icon { font-size:28px; margin-bottom:8px; }
+        .ticket-type-option .type-label { font-weight:600; color:var(--ab); font-size:1rem; }
+        .ticket-type-option .type-desc { font-size:.75rem; color:#666; margin-top:4px; }
+        .ticket-type-option .type-tat { font-size:.75rem; color:var(--mg); font-weight:600; margin-top:8px; padding:4px 10px; background:rgba(46,204,113,.1); border-radius:12px; }
+        @media(max-width:500px){.ticket-type-selector{flex-direction:column}}
+
+        /* ── Spare catalog section ── */
+        .spare-catalog-section { background:#f0fdf4; border:2px solid #bbf7d0; border-radius:14px; padding:18px; margin-bottom:20px; }
+        .spare-catalog-section h4 { font-size:.95rem; font-weight:700; color:#166534; margin-bottom:12px; }
+
+        /* ── Discount ID field ── */
+        .pt-id-wrap { background:#fff; border:1.5px solid #bbf7d0; border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+        .pt-id-label { font-size:11px; font-weight:700; color:#166534; text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+        .pt-id-input-row { display:flex; gap:8px; align-items:center; }
+        .pt-id-input-row input { flex:1; border:1.5px solid #d1fae5; border-radius:8px; padding:7px 10px; font-size:13px; font-family:inherit; }
+        .pt-id-input-row input:focus { outline:none; border-color:var(--mg); }
+        .pt-id-verify-btn { background:var(--mg); color:#fff; border:none; border-radius:8px; padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .pt-id-verify-btn:disabled { background:#ccc; cursor:not-allowed; }
+        #ptIdStatus { font-size:12px; margin-top:6px; min-height:18px; }
+        .pt-id-ok { color:#166534; } .pt-id-err { color:#dc2626; }
+
+        /* ── Mode toggle ── */
+        .pt-mode-btn { font-size:12px; padding:5px 12px; border-radius:20px; border:1.5px solid #22c55e; background:transparent; cursor:pointer; font-weight:600; color:#16a34a; transition:all .2s; }
+        .pt-mode-btn.active { background:#22c55e; color:#fff; }
+
+        /* ── Catalog results ── */
+        .pt-results-wrap { position:relative; }
+        .pt-results-dropdown { border:1.5px solid #d1fae5; border-radius:10px; background:#fff; box-shadow:0 4px 16px rgba(0,0,0,.1); max-height:240px; overflow-y:auto; display:none; margin-top:4px; position:absolute; width:100%; z-index:50; }
+
+        /* ── Basket ── */
+        .pt-basket-outer { border:1.5px solid #bbf7d0; border-radius:10px; overflow:hidden; margin-top:10px; }
+        .pt-basket-hdr { background:#dcfce7; padding:7px 12px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#166534; }
+        .pt-basket-row { padding:10px 12px; border-bottom:1px solid #f0fdf4; }
+        .pt-basket-row:last-child { border-bottom:none; }
+        .pt-br-top { display:flex; align-items:center; gap:8px; }
+        .pt-br-img { width:36px; height:36px; object-fit:contain; border-radius:6px; flex-shrink:0; background:#f3f4f6; }
+        .pt-br-name { flex:1; min-width:0; }
+        .pt-br-name strong { font-size:13px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .pt-br-name small { font-size:11px; color:#6b7280; }
+        .pt-br-controls { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+        .pt-br-controls input[type=number] { width:46px; font-size:12px; text-align:center; border:1px solid #d1d5db; border-radius:4px; padding:3px 4px; }
+        .pt-br-btn { background:none; border:none; cursor:pointer; padding:0 2px; font-size:15px; }
+        .pt-br-pricing { display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:6px; padding-top:6px; border-top:1px dashed #d1fae5; font-size:11px; color:#374151; }
+        .pt-br-pricing span { white-space:nowrap; }
+        .pt-br-pricing .pt-lbl { color:#6b7280; }
+        .pt-br-pricing .pt-disc { color:#ef4444; }
+        .pt-br-pricing .pt-total { font-weight:700; color:#16a34a; font-size:12px; }
+        .pt-basket-totals { background:#f0fdf4; padding:10px 14px; border-top:2px solid #bbf7d0; font-size:12px; }
+        .pt-tot-row { display:flex; justify-content:space-between; padding:2px 0; color:#374151; }
+        .pt-tot-row.grand { font-weight:700; font-size:14px; color:#166534; padding-top:6px; border-top:1px solid #bbf7d0; margin-top:4px; }
+        .badge-cat { background:#dcfce7; color:#166534; font-size:10px; padding:1px 6px; border-radius:8px; margin-left:4px; }
+        .badge-cust { background:#f3f4f6; color:#6b7280; font-size:10px; padding:1px 6px; border-radius:8px; margin-left:4px; }
+
+        /* ── Success panel ── */
+        #successPanel { display:none; text-align:center; padding:10px 0; }
+        .success-icon { width:70px; height:70px; background:var(--mg); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; }
+        .success-icon i { font-size:2rem; color:#fff; }
+        .ticket-id-box { background:#e8f5e9; border:2px solid var(--mg); border-radius:10px; padding:12px 24px; display:inline-block; margin:12px 0; }
+        .ticket-id-box span { font-size:1.4rem; font-weight:700; color:var(--mgd); letter-spacing:1px; }
+        .pt-success-basket { text-align:left; margin:16px 0; border:1.5px solid #bbf7d0; border-radius:10px; overflow:hidden; }
+        .pt-success-basket table { width:100%; border-collapse:collapse; font-size:12px; }
+        .pt-success-basket thead th { background:#dcfce7; padding:7px 10px; font-weight:700; color:#166534; text-align:left; font-size:11px; }
+        .pt-success-basket tbody td { padding:7px 10px; border-bottom:1px solid #f0fdf4; vertical-align:top; }
+        .pt-success-basket tfoot td { padding:6px 10px; font-weight:600; background:#f0fdf4; font-size:12px; }
+        .pt-success-basket tfoot tr.grand td { font-weight:700; font-size:13px; color:#166534; border-top:2px solid #bbf7d0; }
+        .pt-action-btns { display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+        .pt-btn-print { background:linear-gradient(135deg,#6366f1,#4338ca); color:#fff; border:none; padding:12px 20px; border-radius:10px; font-size:.95rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+        .pt-btn-track { background:linear-gradient(135deg,var(--mg),var(--mgd)); color:#fff; border:none; padding:12px 20px; border-radius:10px; font-size:.95rem; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; }
+        .pt-btn-home { display:inline-flex; align-items:center; gap:6px; margin-top:4px; padding:10px 20px; border-radius:10px; color:var(--mgd); border:2px solid var(--mg); font-weight:600; text-decoration:none; font-size:.9rem; justify-content:center; }
+
+        /* ── Spec modal ── */
+        .spec-price-table { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+        .spec-price-table td { padding:5px 8px; border-bottom:1px solid #f3f4f6; }
+        .spec-price-table td:first-child { color:#6b7280; font-weight:500; }
+        .spec-price-table td:last-child { text-align:right; font-weight:600; }
+        .spec-price-table tr.final-row td { color:#16a34a; font-size:15px; border-top:2px solid #bbf7d0; }
+
+        @media(max-width:576px){ .form-card{padding:25px;margin:20px;} .form-header h1{font-size:1.5rem;} }
+
+        /* ── Print styles ── */
+        @media print {
+            body * { visibility:hidden !important; }
+            #ptPrintArea, #ptPrintArea * { visibility:visible !important; }
+            #ptPrintArea { position:fixed; top:0; left:0; width:100%; padding:30px; background:#fff; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══ HUB HEADER ══ -->
+<header id="header">
+  <div class="container nav">
+    <div class="menu-toggle" id="menuToggle">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="logo">
+      <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" class="site-logo">
+    </div>
+    <div class="right-group">
+      <nav id="navMenu">
+        <a href="/hub">Home</a>
+        <a href="/hub/about">About</a>
+        <a href="/hub/media">Media</a>
+        <div class="dropdown">
+          <a href="#" class="dropdown-trigger">Verticals <span class="dropdown-arrow">▾</span></a>
+          <div class="dropdown-menu">
+            <a href="/hub/manthra">⚡ Manthra EV</a>
+            <a href="/hub/hgs">☀️ Har Ghar Solar</a>
+            <a href="/hub/etc">🎓 EVolution Training</a>
+            <a href="/hub/realestate">🏡 VGK Real Dreams</a>
+            <a href="/hub/care">🛡️ VGK Care</a>
+          </div>
+        </div>
+        <a href="/hub/contact">Contact</a>
+        <a href="/careers">Careers</a>
+      </nav>
+      <div class="header-actions">
+        <a href="/landing" class="btn-login">Login</a>
+      </div>
+    </div>
+  </div>
+  <div class="nav-overlay" id="navOverlay"></div>
+</header>
+
+<!-- ══ PAGE CONTENT ══ -->
+<div class="sf-page-wrap">
+    <div class="form-card">
+        <div class="form-header">
+            <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal" style="height:52px;width:auto;">
+            <h1><i class="fas fa-headset"></i> Support Form</h1>
+            <p>Fill in the details below and we'll get back to you shortly</p>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <form id="serviceTicketForm">
+            <div class="form-group">
+                <label class="form-label">Service Category <span class="req">*</span></label>
+                <select class="form-select" id="verticalCategory" onchange="syncVerticalCategory(this.value)">
+                    <option value="general">🌐 General / Other</option>
+                    <option value="ev">⚡ Manthra EV (Electric Vehicles)</option>
+                    <option value="solar">☀️ Har Ghar Solar</option>
+                    <option value="etc">🎓 EVolution Training Centre</option>
+                    <option value="care">🛡️ VGK Care (Insurance)</option>
+                    <option value="realestate">🏠 VGK Real Dreams (Real Estate)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Your Name <span class="req">*</span></label>
+                <input type="text" class="form-control" id="customerName" required placeholder="Enter your full name" minlength="2">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Phone Number <span class="req">*</span></label>
+                <input type="tel" class="form-control" id="customerPhone" required placeholder="Enter your phone number" minlength="10" maxlength="15">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" class="form-control" id="customerEmail" placeholder="Enter your email (optional)">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Request Type <span class="req">*</span></label>
+                <div class="ticket-type-selector">
+                    <label class="ticket-type-option" data-type="others">
+                        <input type="radio" name="ticket_type" value="others">
+                        <span class="type-icon">💬</span>
+                        <span class="type-label">Others</span>
+                        <span class="type-desc">General Enquiry</span>
+                        <span class="type-tat">TAT: 48 hours</span>
+                    </label>
+                    <label class="ticket-type-option selected" data-type="technical">
+                        <input type="radio" name="ticket_type" value="technical" checked>
+                        <span class="type-icon">🔧</span>
+                        <span class="type-label">Technical</span>
+                        <span class="type-desc">Repair &amp; Service</span>
+                        <span class="type-tat">TAT: 24 hours</span>
+                    </label>
+                    <label class="ticket-type-option" data-type="spares">
+                        <input type="radio" name="ticket_type" value="spares">
+                        <span class="type-icon">🔩</span>
+                        <span class="type-label">Spare Parts</span>
+                        <span class="type-desc">Parts Replacement</span>
+                        <span class="type-tat">TAT: 48 hours</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Spare Catalog Section (visible only for Spare Parts) -->
+            <div class="spare-catalog-section" id="spareCatalogSection" style="display:none;">
+                <h4><i class="fas fa-cubes me-2"></i>Select Spare Parts <span style="font-weight:400;color:#4ade80;font-size:.8rem;">(Optional)</span></h4>
+
+                <!-- Discount ID field -->
+                <div class="pt-id-wrap">
+                    <div class="pt-id-label"><i class="fas fa-tag me-1"></i>Discount ID (MNR ID / ETC Student ID / Partner Code)</div>
+                    <div class="pt-id-input-row">
+                        <input type="text" id="ptDiscountIdInput" placeholder="e.g. MNR182345678 · VGK18080132 · DLAP0001" oninput="ptClearIdStatus()" onkeydown="if(event.key==='Enter'){event.preventDefault();ptValidateId();}">
+                        <button type="button" class="pt-id-verify-btn" id="ptVerifyBtn" onclick="ptValidateId()"><i class="fas fa-check-circle me-1"></i>Verify</button>
+                    </div>
+                    <div id="ptIdStatus"></div>
+                </div>
+
+                <!-- Mode toggle -->
+                <div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+                    <button type="button" class="pt-mode-btn active" id="ptModeCatalog" onclick="ptSwitchMode('catalog')"><i class="fas fa-search me-1"></i>Search Catalog</button>
+                    <button type="button" class="pt-mode-btn" id="ptModeManual" onclick="ptSwitchMode('manual')"><i class="fas fa-pen me-1"></i>Enter Manually</button>
+                </div>
+
+                <!-- Catalog search panel -->
+                <div id="ptCatalogPanel">
+                    <div class="pt-results-wrap">
+                        <div class="input-group">
+                            <span class="input-group-text" style="border-color:#bbf7d0;background:#f0fdf4;"><i class="fas fa-search text-success"></i></span>
+                            <input type="text" class="form-control" id="ptSearchInput" style="border-color:#bbf7d0;" placeholder="Search by part name, SKU or category…" oninput="ptDebouncedSearch()">
+                        </div>
+                        <div class="pt-results-dropdown" id="ptResultsDropdown"></div>
+                    </div>
+                </div>
+
+                <!-- Manual entry panel -->
+                <div id="ptManualPanel" style="display:none;">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-6"><input type="text" class="form-control form-control-sm" id="ptManualName" placeholder="Part name *" style="border-color:#bbf7d0;"></div>
+                        <div class="col-3"><input type="number" class="form-control form-control-sm" id="ptManualQty" value="1" min="1" placeholder="Qty" style="border-color:#bbf7d0;"></div>
+                        <div class="col-3"><button type="button" class="btn btn-sm btn-success w-100" onclick="ptAddManual()"><i class="fas fa-plus"></i> Add</button></div>
+                    </div>
+                </div>
+
+                <!-- Basket -->
+                <div id="ptBasket" class="mt-3"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Describe Your Issue <span class="req">*</span></label>
+                <textarea class="form-control" id="issueDescription" required placeholder="Please describe the issue in detail (minimum 10 characters)" minlength="10"></textarea>
+            </div>
+
+            <div class="optional-section">
+                <h3><i class="fas fa-motorcycle"></i> Product Details (Optional)</h3>
+                <div class="form-group">
+                    <label class="form-label">Product Name</label>
+                    <input type="text" class="form-control" id="productName" placeholder="e.g. VGK4U E-Scooter Pro">
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Serial Number</label>
+                            <input type="text" class="form-control" id="productSerial" placeholder="Product serial number">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">Model</label>
+                            <input type="text" class="form-control" id="productModel" placeholder="Product model">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top:14px;">
+                    <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:rgba(46,204,113,.08);border:1.5px solid #2ecc71;border-radius:8px;cursor:pointer;margin:0;">
+                        <input type="checkbox" id="warrantyCheck" style="width:18px;height:18px;cursor:pointer;" onchange="toggleWarrantySection(this)">
+                        <span style="font-weight:600;color:#166534;font-size:14px;"><i class="fas fa-shield-alt me-2"></i>This product is under warranty</span>
+                    </label>
+                </div>
+
+                <div id="warrantySection" style="display:none;margin-top:10px;border:1.5px solid #86efac;border-radius:10px;padding:16px;background:#f0fdf4;">
+                    <p style="font-size:12px;color:#166534;margin-bottom:12px;font-weight:600;"><i class="fas fa-info-circle me-1"></i>Please provide the vehicle warranty details below</p>
+                    <div class="form-group">
+                        <label class="form-label">Invoice / Purchase Receipt No.</label>
+                        <input type="text" class="form-control" id="wInvoiceNo" placeholder="Original purchase invoice number">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Date of Purchase</label>
+                                <input type="date" class="form-control" id="wSaleDate">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Vehicle Model</label>
+                                <input type="text" class="form-control" id="wModel" placeholder="e.g. EV Pro X1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Motor Number</label>
+                                <input type="text" class="form-control" id="wMotorNo" placeholder="Vehicle motor number">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Chassis Number</label>
+                                <input type="text" class="form-control" id="wChassisNo" placeholder="Vehicle chassis number">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Warranty Notes (Optional)</label>
+                        <textarea class="form-control" id="wNotes" placeholder="Any additional warranty information..." style="min-height:60px;"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Your Address</label>
+                <textarea class="form-control" id="customerAddress" placeholder="Enter your address (optional)" style="min-height:80px;"></textarea>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                <i class="fas fa-paper-plane"></i> Submit Service Request
+            </button>
+        </form>
+
+        <!-- Success panel (hidden until submit) -->
+        <div id="successPanel">
+            <div class="success-icon"><i class="fas fa-check"></i></div>
+            <h2 style="color:var(--ab);margin-bottom:8px;">Request Submitted!</h2>
+            <p style="color:#666;">Save your ticket ID — our team will contact you shortly.</p>
+            <div class="ticket-id-box"><span id="ticketIdDisplay">-</span></div>
+
+            <!-- Basket summary (only if spares) -->
+            <div id="ptSuccessBasket"></div>
+
+            <div class="pt-action-btns">
+                <button class="pt-btn-print" id="ptPrintBtn" onclick="ptPrintPO()" style="display:none;">
+                    <i class="fas fa-print"></i> Print / Download Parts List
+                </button>
+                <a id="ptTrackBtn" href="#" class="pt-btn-track" style="display:none;">
+                    <i class="fas fa-search-location"></i> Track Your Ticket
+                </a>
+                <a href="/hub" class="pt-btn-home" id="successBackLink"><i class="fas fa-home"></i> Back to Home</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══ HUB FOOTER ══ -->
+<footer class="site-footer">
+  <div class="container footer-grid">
+
+    <div class="footer-brand">
+      <img src="/hub/Assets/MyntWhite.png" alt="MyntReal">
+      <p>MyntReal integrates multiple high-growth industries into one scalable ecosystem including EV, Solar, Training, Insurance and Real Estate services.</p>
+      <div class="footer-social">
+        <a href="#"><i class="fa-solid fa-globe"></i></a>
+        <a href="https://www.facebook.com/profile.php?id=61587459178919"><i class="fa-brands fa-facebook-f"></i></a>
+        <a href="https://www.instagram.com/myntreal_hub/?hl=en"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.youtube.com/@Myntrealhub"><i class="fa-brands fa-youtube"></i></a>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <h4>Company</h4>
+      <a href="/hub">Home</a>
+      <a href="/hub/about">About</a>
+      <a href="/hub/media">Media</a>
+      <a href="/hub/verticals">Verticals</a>
+      <a href="/hub/contact">Contact</a>
+      <a href="/careers">Careers</a>
+    </div>
+
+    <div class="footer-links">
+      <h4>Our Verticals</h4>
+      <a href="/hub/manthra">Manthra EV</a>
+      <a href="/hub/hgs">Har Ghar Solar</a>
+      <a href="/hub/etc">EVolution Training</a>
+      <a href="/hub/care">VGK Care</a>
+      <a href="/hub/realestate">VGK Real Dreams</a>
+    </div>
+
+    <div class="footer-links">
+      <h4>Get Support</h4>
+      <a href="/service-request">Support Form</a>
+      <a href="/service-request?category=ev">Manthra EV Support</a>
+      <a href="/service-request?category=solar">Solar Support</a>
+      <a href="/service-request?category=etc">Training Support</a>
+      <a href="/service-request?category=care">VGK Care Support</a>
+      <a href="/service-request?category=realestate">Real Estate Support</a>
+    </div>
+
+    <div class="footer-links footer-contact">
+      <h4>Contact</h4>
+      <p>📍 Survey No. 156/1, Mainroad Saripalli</p>
+      <p>Pendurthi, Visakhapatnam — 531173</p>
+      <p>📞 +91 8585852738</p>
+      <p>✉ contact@myntreal.com</p>
+      <div class="footer-newsletter">
+        <h5>Get Updates</h5>
+        <div class="newsletter-box">
+          <input type="email" placeholder="Enter your email">
+          <button>Subscribe</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footer-divider"></div>
+  <div class="footer-bottom">
+    <div class="container footer-bottom-inner">
+      <p>© 2026 MyntReal. All rights reserved.</p>
+      <div class="footer-policy">
+        <a href="/privacy">Privacy Policy</a>
+        <a href="#">Terms</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Product Spec Modal -->
+<div class="modal fade" id="ptSpecModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius:16px;overflow:hidden;">
+            <div class="modal-header" style="background:#f0fdf4;border-bottom:2px solid #bbf7d0;">
+                <h5 class="modal-title" style="color:#166534;font-weight:700;"><i class="fas fa-cog me-2"></i>Product Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="ptSpecModalBody" style="padding:20px;"></div>
+            <div class="modal-footer" style="background:#f9fafb;border-top:1px solid #e5e7eb;">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="ptAddFromModalBtn" onclick="ptAddFromModal()">
+                    <i class="fas fa-cart-plus me-1"></i> Add to Basket
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden print area -->
+<div id="ptPrintArea" style="display:none;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── URL param init (VGK dashboard deep-link + category deep-link) ────────────
+(function() {
+    const q = new URLSearchParams(window.location.search);
+    // Handle ?category= deep-link (e.g. from footer links)
+    const catParam = q.get('category');
+    if (catParam) {
+        const catEl = document.getElementById('verticalCategory');
+        if (catEl) { catEl.value = catParam; }
+        // Defer syncVerticalCategory until function is defined
+        window._pendingCategory = catParam;
+    }
+    if (q.get('from') === 'vgk') {
+        const inFrame = window.top !== window;
+        const backUrl = '/vgk/dashboard';
+        const bl = document.getElementById('backLink');
+        if (bl) {
+            bl.innerHTML = '<i class="fas fa-arrow-left"></i> Back to Dashboard';
+            if (inFrame) {
+                bl.href = '#';
+                bl.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.top.postMessage({ type: 'vgk_ticket_close' }, '*');
+                });
+            } else {
+                bl.href = backUrl;
+            }
+        }
+        const sl = document.getElementById('successBackLink');
+        if (sl) {
+            sl.innerHTML = '<i class="fas fa-home"></i> Back to Dashboard';
+            if (inFrame) {
+                sl.href = '#';
+                sl.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    window.top.postMessage({ type: 'vgk_ticket_success' }, '*');
+                });
+            } else {
+                sl.href = backUrl;
+            }
+        }
+        // Pre-fill form fields
+        const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = decodeURIComponent(v); };
+        set('customerName',  q.get('name'));
+        set('customerPhone', q.get('phone'));
+        set('customerEmail', q.get('email'));
+    }
+})();
+
+// ── Warranty toggle ──────────────────────────────────────────────────────────
+function toggleWarrantySection(checkbox) {
+    document.getElementById('warrantySection').style.display = checkbox.checked ? '' : 'none';
+}
+
+// ── Ticket type selector ────────────────────────────────────────────────────
+function syncTicketType(value) {
+    document.querySelectorAll('.ticket-type-option').forEach(o => o.classList.remove('selected'));
+    const lbl = document.querySelector(`.ticket-type-option[data-type="${value}"]`);
+    if (lbl) lbl.classList.add('selected');
+    document.getElementById('spareCatalogSection').style.display = (value === 'spares') ? '' : 'none';
+}
+document.querySelectorAll('input[name="ticket_type"]').forEach(r => r.addEventListener('change', function() { syncTicketType(this.value); }));
+document.querySelectorAll('.ticket-type-option').forEach(opt => {
+    opt.addEventListener('click', function(e) {
+        if (e.target.tagName === 'INPUT') return;
+        const r = this.querySelector('input[type="radio"]');
+        if (r) { r.checked = true; syncTicketType(r.value); }
+    });
+});
+
+// ── Vertical category selector ──────────────────────────────────────────────
+function syncVerticalCategory(value) {
+    const isEV = (value === 'ev');
+    const isCareOrRE = (value === 'care' || value === 'realestate');
+
+    // Spares: EV only
+    const sparesOpt = document.querySelector('.ticket-type-option[data-type="spares"]');
+    if (sparesOpt) sparesOpt.style.display = isEV ? '' : 'none';
+
+    // Technical: hidden for Care and Real Estate
+    const techOpt = document.querySelector('.ticket-type-option[data-type="technical"]');
+    if (techOpt) techOpt.style.display = isCareOrRE ? 'none' : '';
+
+    // Default selection
+    if (isCareOrRE) {
+        const rOthers = document.querySelector('input[name="ticket_type"][value="others"]');
+        if (rOthers) { rOthers.checked = true; syncTicketType('others'); }
+    } else {
+        const rTech = document.querySelector('input[name="ticket_type"][value="technical"]');
+        if (rTech) { rTech.checked = true; syncTicketType('technical'); }
+    }
+}
+// Apply pending deep-link category after function is defined
+if (window._pendingCategory) { syncVerticalCategory(window._pendingCategory); delete window._pendingCategory; }
+
+// ── State ────────────────────────────────────────────────────────────────────
+let _pt_basket = [];
+let _pt_discountMode = null;
+let _pt_discountId = null;
+let _pt_discountLabel = '';
+let _pt_discountPct = 0;
+let _pt_searchTimer = null;
+let _pt_specIdx = null;
+
+// ── Discount ID validation ────────────────────────────────────────────────────
+function ptClearIdStatus() {
+    document.getElementById('ptIdStatus').innerHTML = '';
+    _pt_discountMode = null; _pt_discountId = null; _pt_discountLabel = ''; _pt_discountPct = 0;
+}
+
+function ptRemoveDiscount() {
+    _pt_discountMode = null; _pt_discountId = null; _pt_discountLabel = ''; _pt_discountPct = 0;
+    document.getElementById('ptDiscountIdInput').value = '';
+    document.getElementById('ptIdStatus').innerHTML = '';
+    ptRepriceBasket();
+    const q = (document.getElementById('ptSearchInput')?.value || '').trim();
+    if (q) ptSearch();
+}
+
+async function ptValidateId() {
+    const val = (document.getElementById('ptDiscountIdInput').value || '').trim();
+    const statusEl = document.getElementById('ptIdStatus');
+    const btn = document.getElementById('ptVerifyBtn');
+    if (!val) { statusEl.innerHTML = '<span class="pt-id-err"><i class="fas fa-exclamation-circle me-1"></i>Please enter an ID first.</span>'; return; }
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Verifying…';
+    statusEl.innerHTML = '';
+    try {
+        const r = await fetch(`/api/v1/marketplace/public/validate-discount-id?id=${encodeURIComponent(val)}`);
+        const d = await r.json();
+        if (d.valid) {
+            _pt_discountMode = d.discount_mode;
+            _pt_discountId = val;
+            _pt_discountLabel = d.label;
+            _pt_discountPct = d.discount_pct;
+            statusEl.innerHTML = `<span class="pt-id-ok" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span><i class="fas fa-check-circle me-1"></i><strong>${d.label}</strong>${d.name ? ' · ' + d.name : ''} · <strong>${d.discount_pct}% discount</strong> applied</span><button type="button" onclick="ptRemoveDiscount()" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fas fa-times me-1"></i>Remove</button></span>`;
+            // Re-price basket items with new discount
+            ptRepriceBasket();
+            const q = (document.getElementById('ptSearchInput')?.value || '').trim();
+            if (q) ptSearch();
+        } else {
+            _pt_discountMode = null; _pt_discountId = null; _pt_discountLabel = ''; _pt_discountPct = 0;
+            statusEl.innerHTML = `<span class="pt-id-err"><i class="fas fa-times-circle me-1"></i>${d.error}</span>`;
+        }
+    } catch(e) {
+        statusEl.innerHTML = '<span class="pt-id-err"><i class="fas fa-exclamation-triangle me-1"></i>Verification failed. Please try again.</span>';
+    } finally {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Verify';
+    }
+}
+
+function ptRepriceBasket() {
+    // Re-price all catalog items with current discount
+    _pt_basket = _pt_basket.map(item => {
+        if (item.is_custom) return item;
+        const dp = item.dealer_price || 0;
+        const disc_pct = _pt_discountPct;
+        const disc_amt = dp * (disc_pct / 100);
+        const net = dp - disc_amt;
+        const gst_pct = item.gst_percent || 18;
+        const gst_amt = net * (gst_pct / 100);
+        return { ...item,
+            discount_pct: disc_pct, discount_amount: round2(disc_amt),
+            net_before_tax: round2(net), gst_amount: round2(gst_amt),
+            unit_price: round2(net + gst_amt),
+            discount_mode: _pt_discountMode, discount_id: _pt_discountId
+        };
+    });
+    ptRenderBasket();
+}
+
+// ── Mode toggle ─────────────────────────────────────────────────────────────
+function ptSwitchMode(mode) {
+    document.getElementById('ptCatalogPanel').style.display = mode === 'catalog' ? '' : 'none';
+    document.getElementById('ptManualPanel').style.display  = mode === 'manual'  ? '' : 'none';
+    document.getElementById('ptModeCatalog').className = 'pt-mode-btn' + (mode === 'catalog' ? ' active' : '');
+    document.getElementById('ptModeManual').className  = 'pt-mode-btn' + (mode === 'manual'  ? ' active' : '');
+}
+
+// ── Catalog search ───────────────────────────────────────────────────────────
+function ptDebouncedSearch() { clearTimeout(_pt_searchTimer); _pt_searchTimer = setTimeout(ptSearch, 380); }
+
+async function ptSearch() {
+    const q = (document.getElementById('ptSearchInput')?.value || '').trim();
+    const el = document.getElementById('ptResultsDropdown');
+    if (!el) return;
+    if (!q) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.innerHTML = '<div style="padding:12px;text-align:center;color:#6b7280;font-size:13px;"><i class="fas fa-spinner fa-spin me-1"></i>Searching…</div>';
+    try {
+        const params = new URLSearchParams({ q, company_id: 1, limit: 30 });
+        if (_pt_discountMode) params.set('discount_mode', _pt_discountMode);
+        if (_pt_discountId) params.set('discount_id', _pt_discountId);
+        const r = await fetch(`/api/v1/marketplace/public/catalog-search?${params}`);
+        if (!r.ok) throw new Error('Search failed');
+        const results = await r.json();
+        if (!results?.length) {
+            el.innerHTML = `<div style="padding:12px;text-align:center;color:#6b7280;font-size:13px;">No parts found for "<strong>${escHtml(q)}</strong>".<br><span style="font-size:11px;">Try manual entry below.</span></div>`;
+            return;
+        }
+        window._pt_results = results;
+        el.innerHTML = results.map((item, idx) => {
+            const price = item.final_price || item.dealer_price || 0;
+            const pStr = fmtRs(price);
+            const dBadge = item.discount_pct > 0
+                ? `<span style="background:#fef3c7;color:#92400e;font-size:10px;padding:1px 5px;border-radius:8px;margin-left:4px;">${item.discount_pct}% OFF</span>`
+                : '';
+            const imgEl = item.image_url
+                ? `<img src="${item.image_url}" style="width:34px;height:34px;object-fit:contain;border-radius:5px;flex-shrink:0;" onerror="this.style.display='none'">`
+                : `<div style="width:34px;height:34px;background:#f3f4f6;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><i class="fas fa-cog" style="color:#d1d5db;font-size:12px;"></i></div>`;
+            const specLine2 = [item.specifications, item.color].filter(Boolean).join(' · ');
+            return `<div style="display:flex;align-items:center;gap:10px;padding:9px 13px;cursor:pointer;border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">
+                ${imgEl}
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(item.name)}</div>
+                    <div style="font-size:11px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(item.sku||'')}${item.category_name ? ' · '+escHtml(item.category_name) : ''}${item.brand ? ' · '+escHtml(item.brand) : ''}</div>
+                    ${specLine2 ? `<div style="font-size:10px;color:#0369a1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(specLine2)}</div>` : ''}
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                    <div style="text-align:right;">
+                        ${item.display_mrp && item.display_mrp > price ? `<div style="font-size:10px;color:#9ca3af;text-decoration:line-through;">MRP ${fmtRs(item.display_mrp)}</div>` : ''}
+                        <div style="font-weight:700;font-size:13px;color:#16a34a;">${pStr}${dBadge}</div>
+                        <div style="font-size:10px;color:#6b7280;">incl. GST ${item.gst_percent}%</div>
+                    </div>
+                    <button type="button" onclick="event.stopPropagation();ptShowSpec(${idx})" style="background:#e0f2fe;border:none;border-radius:6px;padding:4px 7px;cursor:pointer;color:#0369a1;font-size:11px;" title="View details"><i class="fas fa-info-circle"></i></button>
+                    <button type="button" onclick="ptPick(${idx})" style="background:#dcfce7;border:none;border-radius:6px;padding:4px 7px;cursor:pointer;color:#166534;font-size:11px;" title="Add to basket"><i class="fas fa-cart-plus"></i></button>
+                </div>
+            </div>`;
+        }).join('');
+    } catch(e) {
+        el.innerHTML = `<div style="padding:12px;color:#dc2626;font-size:13px;"><i class="fas fa-exclamation-triangle me-1"></i>${e.message}</div>`;
+    }
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.pt-results-wrap')) {
+        const el = document.getElementById('ptResultsDropdown');
+        if (el) el.style.display = 'none';
+    }
+});
+
+// ── Spec modal ────────────────────────────────────────────────────────────────
+function ptShowSpec(idx) {
+    const item = (window._pt_results || [])[idx];
+    if (!item) return;
+    _pt_specIdx = idx;
+    const body = document.getElementById('ptSpecModalBody');
+    const imgEl = item.image_url
+        ? `<img src="${item.image_url}" style="width:100%;max-height:200px;object-fit:contain;border-radius:10px;background:#f9fafb;padding:10px;margin-bottom:14px;" onerror="this.style.display='none'">`
+        : '';
+    const price = item.final_price || item.dealer_price || 0;
+    const rows = [
+        ['SKU / Code', item.sku],
+        ['Category', item.category_name],
+        ['Brand', item.brand],
+        ['Color', item.color],
+        ['Specifications', item.specifications],
+        ['HSN Code', item.hsn_code],
+    ].filter(r => r[1]).map(([l, v]) =>
+        `<tr><td style="color:#6b7280;width:40%;">${l}</td><td style="font-weight:500;">${escHtml(String(v))}</td></tr>`
+    ).join('');
+
+    const mrp         = item.display_mrp || item.dealer_price || 0;
+    const zynovaDisc  = item.mrp_discount_amount || 0;
+    const zynovaPct   = item.mrp_discount_pct || item.markup_percent || 0;
+    const idDisc      = item.discount_amount || 0;
+    const idPct       = item.discount_pct || 0;
+    const netAfterDisc= item.net_before_tax || item.dealer_price || 0;
+    const taxPct      = item.gst_percent || 18;
+    const taxAmt      = item.gst_amount || 0;
+    const finalP      = item.final_price || price;
+
+    const priceBreakdown = `
+        <tr><td style="color:#374151;font-weight:600;">Base Cost (MRP)</td><td style="font-weight:700;">${fmtRs(mrp)}</td></tr>
+        <tr><td style="color:#ef4444;">VGK4U Discount (${zynovaPct}%)</td><td style="color:#ef4444;font-weight:600;">− ${fmtRs(zynovaDisc)}</td></tr>
+        ${idDisc > 0 ? `<tr><td style="color:#ef4444;">${_pt_discountLabel || 'ID Discount'} (${idPct}%)</td><td style="color:#ef4444;font-weight:600;">− ${fmtRs(idDisc)}</td></tr>` : ''}
+        <tr><td style="color:#374151;">Price after Discount</td><td style="font-weight:600;">${fmtRs(netAfterDisc)}</td></tr>
+        <tr><td style="color:#6b7280;">Tax (GST ${taxPct}%)</td><td style="color:#6b7280;">+ ${fmtRs(taxAmt)}</td></tr>`;
+
+    body.innerHTML = `
+        ${imgEl}
+        <h6 style="font-weight:700;color:#166534;margin-bottom:12px;font-size:1rem;">${escHtml(item.name)}</h6>
+        <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:14px;">
+            ${rows}
+        </table>
+        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px;">
+            <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Pricing Breakdown</div>
+            <table class="spec-price-table">
+                ${priceBreakdown}
+                <tr class="final-row"><td>Total with Tax</td><td>${fmtRs(finalP)}</td></tr>
+            </table>
+        </div>`;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('ptSpecModal')).show();
+}
+
+function ptShowSpecFromBasket(basketIdx) {
+    const item = _pt_basket[basketIdx];
+    if (!item) return;
+    const body = document.getElementById('ptSpecModalBody');
+    const imgEl = item.image_url
+        ? `<img src="${item.image_url}" style="width:100%;max-height:180px;object-fit:contain;border-radius:10px;background:#f9fafb;padding:10px;margin-bottom:12px;" onerror="this.style.display='none'">`
+        : '';
+    const specRows = [
+        ['SKU / Code', item.code],
+        ['Category', item.category_name],
+        ['Brand', item.brand],
+        ['Color', item.color],
+        ['Specifications', item.specifications],
+        ['HSN Code', item.hsn_code],
+    ].filter(r => r[1]).map(([l, v]) =>
+        `<tr><td style="color:#6b7280;width:40%;">${l}</td><td style="font-weight:500;">${escHtml(String(v))}</td></tr>`
+    ).join('');
+    const bMrp         = item.display_mrp || item.dealer_price || 0;
+    const bZvDisc      = item.mrp_discount_amount || 0;
+    const bZvPct       = item.mrp_discount_pct || item.markup_percent || 0;
+    const bIdDisc      = item.discount_amount || 0;
+    const bIdPct       = item.discount_pct || 0;
+    const bNet         = item.net_before_tax || item.dealer_price || 0;
+    const bTaxPct      = item.gst_percent || item.gst_rate || 18;
+    const bTaxAmt      = item.gst_amount || 0;
+    const bFinal       = item.unit_price || item.final_price || 0;
+    const bBreakdown   = `
+        <tr><td style="color:#374151;font-weight:600;">Base Cost (MRP)</td><td style="font-weight:700;">${fmtRs(bMrp)}</td></tr>
+        <tr><td style="color:#ef4444;">VGK4U Discount (${bZvPct}%)</td><td style="color:#ef4444;font-weight:600;">− ${fmtRs(bZvDisc)}</td></tr>
+        ${bIdDisc > 0 ? `<tr><td style="color:#ef4444;">${_pt_discountLabel || item.discount_mode || 'ID Discount'} (${bIdPct}%)</td><td style="color:#ef4444;font-weight:600;">− ${fmtRs(bIdDisc)}</td></tr>` : ''}
+        <tr><td style="color:#374151;">Price after Discount</td><td style="font-weight:600;">${fmtRs(bNet)}</td></tr>
+        <tr><td style="color:#6b7280;">Tax (GST ${bTaxPct}%)</td><td style="color:#6b7280;">+ ${fmtRs(bTaxAmt)}</td></tr>`;
+    body.innerHTML = `
+        ${imgEl}
+        <h6 style="font-weight:700;color:#166534;margin-bottom:12px;font-size:1rem;">${escHtml(item.name)}</h6>
+        ${specRows ? `<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:14px;">${specRows}</table>` : ''}
+        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px;">
+            <div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Pricing Breakdown</div>
+            <table class="spec-price-table">
+                ${bBreakdown}
+                <tr class="final-row"><td>Total with Tax</td><td>${fmtRs(bFinal)}</td></tr>
+            </table>
+        </div>`;
+    // Hide "Add to Basket" in modal — item already in basket
+    const addBtn = document.getElementById('ptAddFromModalBtn');
+    if (addBtn) addBtn.style.display = 'none';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('ptSpecModal')).show();
+}
+
+function ptAddFromModal() {
+    if (_pt_specIdx !== null) ptPick(_pt_specIdx);
+    bootstrap.Modal.getInstance(document.getElementById('ptSpecModal'))?.hide();
+}
+
+// ── Pick item from results ───────────────────────────────────────────────────
+function ptPick(idx) {
+    const item = (window._pt_results || [])[idx];
+    if (!item) return;
+    const existing = _pt_basket.find(b => b.marketplace_spare_id === item.id);
+    if (existing) { existing.quantity++; ptRenderBasket(); ptHideDropdown(); return; }
+    _pt_basket.push({
+        marketplace_spare_id: item.id,
+        name: item.name,
+        code: item.sku || '',
+        brand: item.brand || '',
+        specifications: item.specifications || '',
+        color: item.color || '',
+        category_name: item.category_name || '',
+        image_url: item.image_url || '',
+        quantity: 1,
+        dealer_price: parseFloat(item.dealer_price || 0),
+        discount_pct: parseFloat(item.discount_pct || 0),
+        discount_amount: parseFloat(item.discount_amount || 0),
+        net_before_tax: parseFloat(item.net_before_tax || item.dealer_price || 0),
+        gst_percent: parseFloat(item.gst_percent || 18),
+        gst_amount: parseFloat(item.gst_amount || 0),
+        unit_price: parseFloat(item.final_price || item.dealer_price || 0),
+        gst_rate: parseFloat(item.gst_percent || 18),
+        hsn_code: item.hsn_code || null,
+        discount_mode: _pt_discountMode || null,
+        discount_id: _pt_discountId || null,
+        is_custom: false,
+    });
+    ptHideDropdown();
+    document.getElementById('ptSearchInput').value = '';
+    window._pt_results = [];
+    ptRenderBasket();
+}
+
+function ptHideDropdown() {
+    const el = document.getElementById('ptResultsDropdown');
+    if (el) el.style.display = 'none';
+}
+
+// ── Manual entry ─────────────────────────────────────────────────────────────
+function ptAddManual() {
+    const name = (document.getElementById('ptManualName')?.value || '').trim();
+    if (!name) { alert('Please enter a part name'); return; }
+    const qty = Math.max(1, parseInt(document.getElementById('ptManualQty')?.value || '1') || 1);
+    _pt_basket.push({
+        marketplace_spare_id: null, name, code: '', brand:'', specifications:'',
+        category_name:'', image_url:'', quantity: qty,
+        dealer_price: 0, discount_pct: 0, discount_amount: 0,
+        net_before_tax: 0, gst_percent: 18, gst_amount: 0, unit_price: 0, gst_rate: 18,
+        hsn_code: null, discount_mode: null, discount_id: null, is_custom: true,
+    });
+    document.getElementById('ptManualName').value = '';
+    document.getElementById('ptManualQty').value = '1';
+    ptRenderBasket();
+}
+
+// ── Basket render ─────────────────────────────────────────────────────────────
+function ptRenderBasket() {
+    const el = document.getElementById('ptBasket');
+    if (!el) return;
+    if (!_pt_basket.length) {
+        el.innerHTML = '<div style="text-align:center;color:#6b7280;font-size:13px;padding:10px 0;"><i class="fas fa-shopping-cart me-1"></i>No parts added yet</div>';
+        return;
+    }
+
+    let subtotalNet = 0, totalGst = 0, grandTotal = 0, totalDiscount = 0;
+    const rows = _pt_basket.map((item, i) => {
+        const lineNet  = item.is_custom ? 0 : item.net_before_tax  * item.quantity;
+        const lineGst  = item.is_custom ? 0 : item.gst_amount      * item.quantity;
+        const lineTotal= item.is_custom ? 0 : item.unit_price       * item.quantity;
+        const lineDisc = item.is_custom ? 0 : item.discount_amount  * item.quantity;
+        subtotalNet += lineNet; totalGst += lineGst; grandTotal += lineTotal; totalDiscount += lineDisc;
+        const badge = item.is_custom
+            ? '<span class="badge-cust">Custom</span>'
+            : '<span class="badge-cat">Catalog</span>';
+        const imgEl = item.image_url
+            ? `<img src="${item.image_url}" class="pt-br-img" onerror="this.style.display='none'">`
+            : `<div class="pt-br-img" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-cog" style="color:#d1d5db;"></i></div>`;
+        const pricingRow = !item.is_custom ? `<div class="pt-br-pricing">
+            <span><span class="pt-lbl">Dealer:</span> ${fmtRs(item.dealer_price)}</span>
+            ${item.discount_pct > 0 ? `<span class="pt-disc"><i class="fas fa-tag" style="font-size:9px;"></i> -${item.discount_pct}%: -${fmtRs(item.discount_amount)}</span>` : ''}
+            <span><span class="pt-lbl">Net:</span> ${fmtRs(item.net_before_tax)}</span>
+            <span><span class="pt-lbl">GST ${item.gst_percent}%:</span> +${fmtRs(item.gst_amount)}</span>
+            <span><span class="pt-lbl">Unit:</span> ${fmtRs(item.unit_price)}</span>
+            <span class="pt-total">Line Total: ${fmtRs(lineTotal)}</span>
+        </div>` : `<div class="pt-br-pricing"><span style="color:#6b7280;font-style:italic;font-size:11px;">Pricing will be confirmed on delivery</span></div>`;
+
+        const specLine = [item.specifications, item.color, item.brand].filter(Boolean).join(' · ');
+        return `<div class="pt-basket-row">
+            <div class="pt-br-top">
+                ${imgEl}
+                <div class="pt-br-name">
+                    <strong>${escHtml(item.name)}${badge}</strong>
+                    <small>${item.code ? escHtml(item.code) + ' · ' : ''}${escHtml(item.category_name)}</small>
+                    ${specLine ? `<small style="color:#0369a1;font-size:10px;">${escHtml(specLine)}</small>` : ''}
+                </div>
+                <div class="pt-br-controls">
+                    <input type="number" min="1" value="${item.quantity}"
+                        onchange="_pt_basket[${i}].quantity=Math.max(1,parseInt(this.value)||1);ptRenderBasket()">
+                    ${!item.is_custom ? `<button type="button" class="pt-br-btn" title="View spec" onclick="ptShowSpecFromBasket(${i})" style="color:#0369a1;font-size:13px;"><i class="fas fa-info-circle"></i></button>` : ''}
+                    <button type="button" class="pt-br-btn" style="color:#dc2626;" title="Remove"
+                        onclick="_pt_basket.splice(${i},1);ptRenderBasket()"><i class="fas fa-times-circle"></i></button>
+                </div>
+            </div>
+            ${pricingRow}
+        </div>`;
+    }).join('');
+
+    const discountRow = totalDiscount > 0
+        ? `<div class="pt-tot-row" style="color:#ef4444;"><span><i class="fas fa-tag me-1"></i>Total Discount${_pt_discountPct > 0 ? ' ('+_pt_discountPct+'%)' : ''}:</span><span>- ${fmtRs(totalDiscount)}</span></div>`
+        : '';
+    const totalsHtml = (grandTotal > 0) ? `<div class="pt-basket-totals">
+        <div class="pt-tot-row"><span>Items:</span><span>${_pt_basket.length}</span></div>
+        <div class="pt-tot-row"><span>Subtotal (Dealer Price):</span><span>${fmtRs(subtotalNet + totalDiscount)}</span></div>
+        ${discountRow}
+        <div class="pt-tot-row"><span>Subtotal (ex-GST):</span><span>${fmtRs(subtotalNet)}</span></div>
+        <div class="pt-tot-row"><span>Total GST:</span><span>${fmtRs(totalGst)}</span></div>
+        <div class="pt-tot-row grand"><span>Grand Total:</span><span>${fmtRs(grandTotal)}</span></div>
+    </div>` : '';
+
+    const basketActionsHtml = _pt_basket.length > 0 ? `<div style="display:flex;gap:8px;padding:10px 12px;background:#f9fafb;border-top:1px solid #e5e7eb;flex-wrap:wrap;">
+        <button type="button" onclick="ptPrintBasketQuotation()" style="flex:1;min-width:120px;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;"><i class="fas fa-print"></i> Print Quotation</button>
+        <button type="button" onclick="ptExportBasketCSV()" style="flex:1;min-width:120px;background:#0891b2;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;"><i class="fas fa-file-csv"></i> Export CSV</button>
+    </div>` : '';
+
+    el.innerHTML = `<div class="pt-basket-outer">
+        <div class="pt-basket-hdr"><i class="fas fa-list me-1"></i>Selected Parts (${_pt_basket.length})</div>
+        ${rows}
+        ${totalsHtml}
+        ${basketActionsHtml}
+    </div>`;
+}
+ptRenderBasket();
+
+// ── Basket quotation print ────────────────────────────────────────────────────
+function ptPrintBasketQuotation() {
+    let subDealer = 0, subDisc = 0, subNet = 0, subGst = 0, grand = 0;
+    const rows = _pt_basket.map((item, i) => {
+        const ld = item.is_custom ? 0 : item.dealer_price * item.quantity;
+        const ldisc = item.is_custom ? 0 : item.discount_amount * item.quantity;
+        const ln = item.is_custom ? 0 : item.net_before_tax * item.quantity;
+        const lg = item.is_custom ? 0 : item.gst_amount * item.quantity;
+        const lt = item.is_custom ? 0 : item.unit_price * item.quantity;
+        subDealer += ld; subDisc += ldisc; subNet += ln; subGst += lg; grand += lt;
+        const specCell = [item.specifications, item.color, item.brand].filter(Boolean).join(' · ');
+        return `<tr>
+            <td style="padding:7px 8px;border:1px solid #e5e7eb;">${i+1}</td>
+            <td style="padding:7px 8px;border:1px solid #e5e7eb;font-weight:600;">${escHtml(item.name)}${item.code ? '<br><small style="color:#6b7280;font-weight:400">'+escHtml(item.code)+'</small>' : ''}${specCell ? '<br><small style="color:#0369a1;font-size:10px;">'+escHtml(specCell)+'</small>' : ''}</td>
+            <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
+            <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.dealer_price > 0 ? fmtRs(item.dealer_price) : '—'}</td>
+            <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;color:#ef4444;">${item.discount_pct > 0 ? '-'+item.discount_pct+'% (-'+fmtRs(item.discount_amount)+')' : '—'}</td>
+            <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.net_before_tax > 0 ? fmtRs(item.net_before_tax) : '—'}</td>
+            <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.gst_percent > 0 ? item.gst_percent+'%' : '—'}</td>
+            <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#166534;">${lt > 0 ? fmtRs(lt) : '—'}</td>
+        </tr>`;
+    }).join('');
+    const now = new Date().toLocaleString('en-IN');
+    const discLabel = _pt_discountLabel ? ` · ${_pt_discountLabel} (${_pt_discountPct}% off)` : '';
+    document.getElementById('ptPrintArea').innerHTML = `<div style="font-family:Arial,sans-serif;max-width:760px;margin:0 auto;">
+        <div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #2ECC71;padding-bottom:14px;">
+            <div style="font-size:20px;font-weight:700;color:#2C3E50;">VGK4U — Spare Parts Quotation</div>
+            <div style="font-size:12px;color:#666;margin-top:4px;">Generated: ${now}${discLabel}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead><tr style="background:#f0fdf4;">
+                <th style="padding:8px;border:1px solid #d1fae5;">#</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:left;">Part / Specifications</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:center;">Qty</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Dealer Price</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Discount</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Net (ex-GST)</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:right;">GST%</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:right;font-weight:700;">Line Total</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+            ${grand > 0 ? `<tfoot>
+                ${subDisc > 0 ? `<tr><td colspan="7" style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">Total Discount</td><td style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;color:#ef4444;">- ${fmtRs(subDisc)}</td></tr>` : ''}
+                <tr><td colspan="7" style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">Subtotal (ex-GST)</td><td style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">${fmtRs(subNet)}</td></tr>
+                <tr><td colspan="7" style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">Total GST</td><td style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">${fmtRs(subGst)}</td></tr>
+                <tr style="background:#f0fdf4;font-weight:700;font-size:14px;"><td colspan="7" style="padding:8px;text-align:right;border:2px solid #bbf7d0;">Grand Total</td><td style="padding:8px;text-align:right;border:2px solid #bbf7d0;color:#166534;">${fmtRs(grand)}</td></tr>
+            </tfoot>` : ''}
+        </table>
+        <div style="margin-top:16px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:10px;">This is an indicative quotation. Final pricing will be confirmed at time of service. · VGK4U</div>
+    </div>`;
+    document.getElementById('ptPrintArea').style.display = 'block';
+    window.print();
+    setTimeout(() => { document.getElementById('ptPrintArea').style.display = 'none'; }, 600);
+}
+
+// ── Export basket to CSV ─────────────────────────────────────────────────────
+function ptExportBasketCSV() {
+    const lines = ['#,Part Name,SKU,Brand,Color,Specifications,Qty,Dealer Price,Discount %,Discount Amt,Net (ex-GST),GST %,GST Amt,Line Total'];
+    let grand = 0;
+    _pt_basket.forEach((item, i) => {
+        const lt = item.unit_price * item.quantity;
+        grand += lt;
+        const csvStr = v => `"${String(v||'').replace(/"/g,'""')}"`;
+        lines.push([
+            i+1, csvStr(item.name), item.code||'',
+            csvStr(item.brand), csvStr(item.color), csvStr(item.specifications),
+            item.quantity, item.dealer_price||0, item.discount_pct||0, item.discount_amount||0,
+            item.net_before_tax||0, item.gst_percent||0, item.gst_amount||0, lt
+        ].join(','));
+    });
+    if (grand > 0) lines.push(`,,,,,,,,,,,,,,Grand Total,${grand.toFixed(2)}`);
+    const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `zynova-spare-quotation-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+}
+
+// ── Form submission ────────────────────────────────────────────────────────────
+document.getElementById('serviceTicketForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById('submitBtn');
+    const errorEl = document.getElementById('errorMsg');
+    errorEl.classList.remove('show');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting…';
+
+    const ticketType = (document.querySelector('input[name="ticket_type"]:checked')?.value) || 'technical';
+    const payload = {
+        ticket_type: ticketType,
+        customer_name: document.getElementById('customerName').value.trim(),
+        customer_phone: document.getElementById('customerPhone').value.trim(),
+        customer_email: document.getElementById('customerEmail').value.trim() || null,
+        customer_address: document.getElementById('customerAddress').value.trim() || null,
+        issue_description: document.getElementById('issueDescription').value.trim(),
+        product_name: document.getElementById('productName').value.trim() || null,
+        product_serial: document.getElementById('productSerial').value.trim() || null,
+        product_model: document.getElementById('productModel').value.trim() || null,
+        issue_category: (function(){ const m={ev:'Manthra EV',solar:'Har Ghar Solar',etc:'EVolution Training',care:'VGK Care',realestate:'VGK Real Dreams',general:'General'}; const v=document.getElementById('verticalCategory')?.value||'general'; return m[v]||'General'; })(),
+    };
+    const isWarranty = document.getElementById('warrantyCheck').checked;
+    if (isWarranty) {
+        payload.warranty_status = 'under_warranty';
+        payload.warranty_invoice_number = document.getElementById('wInvoiceNo').value.trim() || null;
+        payload.warranty_sale_date = document.getElementById('wSaleDate').value || null;
+        payload.warranty_model = document.getElementById('wModel').value.trim() || null;
+        payload.warranty_motor_number = document.getElementById('wMotorNo').value.trim() || null;
+        payload.warranty_chassis_number = document.getElementById('wChassisNo').value.trim() || null;
+        payload.warranty_notes = document.getElementById('wNotes').value.trim() || null;
+    }
+    if (ticketType === 'spares' && _pt_basket.length > 0) {
+        payload.requested_parts = _pt_basket.map(item => ({
+            name: item.name,
+            code: item.code || null,
+            quantity: item.quantity,
+            marketplace_spare_id: item.marketplace_spare_id || null,
+            unit_price: item.unit_price || null,
+            gst_rate: item.gst_rate || item.gst_percent || 18,
+            gst_amount: item.gst_amount || null,
+            total_with_gst: item.unit_price ? item.unit_price * item.quantity : null,
+            hsn_code: item.hsn_code || null,
+            discount_mode: item.discount_mode || null,
+            catalog_price: item.dealer_price || null,
+            discount_pct: item.discount_pct || null,
+            discount_amount: item.discount_amount || null,
+            net_before_tax: item.net_before_tax || null,
+            is_custom: item.is_custom || false,
+        }));
+    }
+
+    try {
+        const resp = await fetch('/api/v1/tickets/service/public/create', {
+            method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.detail || 'Failed to submit');
+
+        // Store basket snapshot for success panel
+        const basketSnap = JSON.parse(JSON.stringify(_pt_basket));
+        const phone = payload.customer_phone;
+
+        // Show success panel
+        document.getElementById('serviceTicketForm').style.display = 'none';
+        document.getElementById('ticketIdDisplay').textContent = data.ticket_id;
+        renderSuccessBasket(basketSnap, data.ticket_id, phone);
+        document.getElementById('successPanel').style.display = 'block';
+        // Notify VGK dashboard parent frame on success (if embedded as iframe)
+        if (window.top !== window && new URLSearchParams(window.location.search).get('from') === 'vgk') {
+            window.top.postMessage({ type: 'vgk_ticket_success', ticket_id: data.ticket_id }, '*');
+        }
+
+    } catch(err) {
+        errorEl.textContent = err.message || 'Something went wrong. Please try again.';
+        errorEl.classList.add('show');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Service Request';
+    }
+});
+
+// ── Success basket + actions ──────────────────────────────────────────────────
+function renderSuccessBasket(basket, ticketId, phone) {
+    const trackBtn = document.getElementById('ptTrackBtn');
+    trackBtn.href = `/ticket-status/${encodeURIComponent(ticketId)}`;
+    trackBtn.style.display = 'flex';
+
+    const catalogItems = basket.filter(i => !i.is_custom && i.unit_price > 0);
+    const printBtn = document.getElementById('ptPrintBtn');
+
+    if (!basket.length) { document.getElementById('ptSuccessBasket').innerHTML = ''; return; }
+
+    printBtn.style.display = 'flex';
+
+    let subNet = 0, subGst = 0, grand = 0;
+    const tableRows = basket.map((item, i) => {
+        const lineTotal = item.unit_price * item.quantity;
+        subNet  += item.net_before_tax * item.quantity;
+        subGst  += item.gst_amount     * item.quantity;
+        grand   += lineTotal;
+        return `<tr>
+            <td>${i+1}</td>
+            <td><strong>${escHtml(item.name)}</strong>${item.code ? '<br><small style="color:#6b7280;">'+escHtml(item.code)+'</small>' : ''}</td>
+            <td style="text-align:center;">${item.quantity}</td>
+            <td style="text-align:right;">${item.unit_price > 0 ? fmtRs(item.unit_price) : '—'}</td>
+            <td style="text-align:right;font-weight:600;color:#166534;">${item.unit_price > 0 ? fmtRs(lineTotal) : '—'}</td>
+        </tr>`;
+    }).join('');
+
+    const footerRows = grand > 0 ? `
+        <tr><td colspan="4" style="text-align:right;">Subtotal (ex-GST)</td><td style="text-align:right;">${fmtRs(subNet)}</td></tr>
+        <tr><td colspan="4" style="text-align:right;">Total GST</td><td style="text-align:right;">${fmtRs(subGst)}</td></tr>
+        <tr class="grand"><td colspan="4" style="text-align:right;">Grand Total</td><td style="text-align:right;">${fmtRs(grand)}</td></tr>` : '';
+
+    document.getElementById('ptSuccessBasket').innerHTML = `<div class="pt-success-basket">
+        <table>
+            <thead><tr><th>#</th><th>Part</th><th>Qty</th><th style="text-align:right;">Unit</th><th style="text-align:right;">Total</th></tr></thead>
+            <tbody>${tableRows}</tbody>
+            ${grand > 0 ? `<tfoot>${footerRows}</tfoot>` : ''}
+        </table>
+    </div>`;
+
+    // Prepare print area
+    const now = new Date().toLocaleString('en-IN');
+    document.getElementById('ptPrintArea').innerHTML = `<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;">
+        <div style="text-align:center;margin-bottom:24px;border-bottom:2px solid #2ECC71;padding-bottom:16px;">
+            <div style="font-size:22px;font-weight:700;color:#2C3E50;">VGK4U — Spare Parts Request</div>
+            <div style="font-size:14px;color:#666;margin-top:4px;">Ticket ID: <strong>${ticketId}</strong> &nbsp;|&nbsp; ${now}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:#f0fdf4;">
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:left;">#</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:left;">Part Name</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:left;">SKU</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:center;">Qty</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Unit Price</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Discount</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Net</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:right;">GST</th>
+                <th style="padding:8px;border:1px solid #d1fae5;text-align:right;font-weight:700;">Line Total</th>
+            </tr></thead>
+            <tbody>${basket.map((item, i) => {
+                const lt = item.unit_price * item.quantity;
+                return `<tr>
+                    <td style="padding:7px 8px;border:1px solid #e5e7eb;">${i+1}</td>
+                    <td style="padding:7px 8px;border:1px solid #e5e7eb;font-weight:600;">${escHtml(item.name)}</td>
+                    <td style="padding:7px 8px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280;">${escHtml(item.code||'—')}</td>
+                    <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
+                    <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.dealer_price > 0 ? fmtRs(item.dealer_price) : '—'}</td>
+                    <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;color:#ef4444;">${item.discount_pct > 0 ? '-'+item.discount_pct+'%' : '—'}</td>
+                    <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.net_before_tax > 0 ? fmtRs(item.net_before_tax) : '—'}</td>
+                    <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.gst_percent > 0 ? item.gst_percent+'%' : '—'}</td>
+                    <td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#166534;">${lt > 0 ? fmtRs(lt) : '—'}</td>
+                </tr>`;
+            }).join('')}</tbody>
+            ${grand > 0 ? `<tfoot>
+                <tr><td colspan="8" style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">Subtotal (ex-GST)</td><td style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">${fmtRs(subNet)}</td></tr>
+                <tr><td colspan="8" style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">Total GST</td><td style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">${fmtRs(subGst)}</td></tr>
+                <tr style="background:#f0fdf4;font-weight:700;font-size:14px;"><td colspan="8" style="padding:8px;text-align:right;border:2px solid #bbf7d0;">Grand Total</td><td style="padding:8px;text-align:right;border:2px solid #bbf7d0;color:#166534;">${fmtRs(grand)}</td></tr>
+            </tfoot>` : ''}
+        </table>
+        ${_pt_discountLabel ? `<div style="margin-top:12px;font-size:12px;color:#6b7280;">Discount: ${_pt_discountLabel} · ID: ${_pt_discountId || 'N/A'}</div>` : ''}
+        <div style="margin-top:24px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:12px;">Generated from VGK4U Service Portal · ${now}</div>
+    </div>`;
+}
+
+function ptPrintPO() {
+    document.getElementById('ptPrintArea').style.display = 'block';
+    window.print();
+    setTimeout(() => { document.getElementById('ptPrintArea').style.display = 'none'; }, 500);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function round2(n) { return Math.round((n || 0) * 100) / 100; }
+function fmtRs(n) { return '₹' + (n || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Hub nav (mobile menu + header scroll shadow) ──────────────────────────────
+(function(){
+    const mt = document.getElementById('menuToggle');
+    const nm = document.getElementById('navMenu');
+    const ov = document.getElementById('navOverlay');
+    if (!mt) return;
+    mt.addEventListener('click', () => { mt.classList.toggle('active'); nm.classList.toggle('active'); ov.classList.toggle('active'); });
+    ov.addEventListener('click', () => { mt.classList.remove('active'); nm.classList.remove('active'); ov.classList.remove('active'); });
+    document.querySelectorAll('.dropdown-trigger').forEach(t => {
+        t.addEventListener('click', e => { if (window.innerWidth < 900) { e.preventDefault(); t.parentElement.classList.toggle('active'); } });
+    });
+    (function(){ var t; document.querySelectorAll('.dropdown').forEach(function(dd){ dd.addEventListener('mouseenter',function(){clearTimeout(t);}); dd.addEventListener('mouseleave',function(){dd.classList.add('active');t=setTimeout(function(){dd.classList.remove('active');},3000);}); }); })();
+    window.addEventListener('scroll', () => { const h = document.getElementById('header'); if (h) h.classList.toggle('scrolled', window.scrollY > 50); });
+})();
+</script>
+</body>
+</html>

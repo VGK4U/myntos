@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Announcements - Staff Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem 0;
+    }
+    .main-container {
+      display: flex;
+      gap: 1.5rem;
+    }
+    .filter-sidebar {
+      background: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+      width: 280px;
+      height: fit-content;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .announcements-panel {
+      flex: 1;
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    .announcement-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      transition: all 0.3s;
+    }
+    .announcement-card:hover {
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      transform: translateY(-2px);
+    }
+    .announcement-card.card-hidden {
+      border-color: #ffc107;
+      background-color: #fffdf5;
+    }
+    .announcement-card.card-deleted {
+      border-color: #dc3545;
+      background-color: #fff5f5;
+    }
+    .announcement-card.card-pending {
+      border-color: #17a2b8;
+      background-color: #f0fafc;
+    }
+    .announcement-card.card-rejected {
+      border-color: #6c757d;
+      background-color: #f8f9fa;
+    }
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+    .media-thumbnail {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .media-thumbnail:hover {
+      transform: scale(1.05);
+    }
+    .video-thumbnail {
+      position: relative;
+    }
+    .video-thumbnail::after {
+      content: '\f04b';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 32px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+    .load-more-btn {
+      width: 100%;
+      padding: 1rem;
+      margin-top: 1rem;
+    }
+    .rating-display {
+      color: #ffc107;
+      font-size: 0.9rem;
+      margin-right: 0.5rem;
+    }
+    .rating-display i {
+      margin-right: 2px;
+    }
+    .share-buttons {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .share-buttons .btn {
+      font-size: 0.85rem;
+      padding: 0.4rem 0.8rem;
+    }
+    .admin-details {
+      background: #f8f9fa;
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+    }
+    .admin-details .detail-item {
+      display: inline-block;
+      margin-right: 1.5rem;
+    }
+    .admin-details .detail-item i {
+      margin-right: 0.3rem;
+      color: #6c757d;
+    }
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+    }
+    @media (max-width: 768px) {
+      .main-container {
+        flex-direction: column;
+      }
+      .filter-sidebar {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid px-4">
+    <div class="main-container">
+      <div class="filter-sidebar">
+        <h5 class="mb-3"><i class="fas fa-filter me-2"></i>Filters</h5>
+        
+        <div class="mb-3">
+          <label class="form-label fw-bold">Category</label>
+          <select class="form-select" id="categoryFilter">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Status</label>
+          <select class="form-select" id="statusFilter">
+            <option value="">All Statuses</option>
+            <option value="approved">Approved (Visible)</option>
+            <option value="hidden">Hidden/Paused</option>
+            <option value="pending">Pending</option>
+            <option value="under_review">Under Review</option>
+            <option value="partially_approved">Partially Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="deleted">Deleted</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Date Range</label>
+          <input type="date" class="form-control mb-2" id="startDate" placeholder="Start Date">
+          <input type="date" class="form-control" id="endDate" placeholder="End Date">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">City/Location</label>
+          <input type="text" class="form-control" id="cityFilter" placeholder="e.g., Bangalore">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">User ID</label>
+          <input type="text" class="form-control" id="userIdFilter" placeholder="e.g., MNR1800143">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">User Name</label>
+          <input type="text" class="form-control" id="userNameFilter" placeholder="Search by name">
+        </div>
+
+        <button class="btn btn-primary w-100 mb-2" id="applyFilters">
+          <i class="fas fa-search me-1"></i>Apply Filters
+        </button>
+        <button class="btn btn-outline-secondary w-100" id="clearFilters">
+          <i class="fas fa-times me-1"></i>Clear Filters
+        </button>
+      </div>
+
+      <div class="announcements-panel">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2>📢 Community Updates</h2>
+          <div class="d-flex align-items-center gap-3">
+            <!-- DC Protocol (Jan 23, 2026): Add Announcement button for Supreme staff -->
+            <button class="btn btn-success" id="addAnnouncementBtn" style="display: none;" data-bs-toggle="modal" data-bs-target="#addAnnouncementModal">
+              <i class="fas fa-plus me-1"></i>Add Announcement
+            </button>
+            <div class="text-muted" id="announcementCount">0 announcements</div>
+          </div>
+        </div>
+
+        <div id="announcementsList"></div>
+
+        <button class="btn btn-outline-primary load-more-btn" id="loadMoreBtn" style="display: none;">
+          <i class="fas fa-chevron-down me-1"></i>Load More
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    if (typeof sessionToken !== 'undefined') {
+      sessionStorage.setItem('session_token', sessionToken);
+    }
+    window.currentStaffType = null;
+    window.currentEmpCode = null;
+    
+    // DC Protocol: Also check cookies for staff_token
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    }
+    
+    // Pre-detect staff type and emp_code from cookie/token
+    (function() {
+      try {
+        const token = sessionStorage.getItem('session_token') || 
+                     sessionStorage.getItem('staff_token') || 
+                     getCookie('staff_token') ||
+                     (typeof sessionToken !== 'undefined' ? sessionToken : null);
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          window.currentStaffType = payload.staff_type || payload.user_type || null;
+          window.currentEmpCode = payload.emp_code || null;
+          console.log('[DC-STAFF-TYPE] Pre-detected:', window.currentStaffType, 'Emp Code:', window.currentEmpCode);
+        }
+      } catch (e) {
+        console.warn('[DC-STAFF-TYPE] Pre-detection failed:', e);
+      }
+    })();
+  </script>
+  <script type="module">
+    import { feedbackApi, showToast, showSpinner, showEmptyState, formatDate, showMediaLightbox, escapeHTML } from '/shared/feedback/feedbackShared.js';
+
+    let allAnnouncements = [];
+    let displayedCount = 12;
+    const loadIncrement = 12;
+    let currentFilters = {};
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await detectStaffType();
+      await loadCategories();
+      await loadAnnouncements();
+    });
+
+    async function detectStaffType() {
+      try {
+        // DC Protocol: Check multiple token sources
+        const token = sessionStorage.getItem('session_token') || 
+                     sessionStorage.getItem('staff_token') ||
+                     (typeof sessionToken !== 'undefined' ? sessionToken : null);
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          window.currentStaffType = payload.staff_type || payload.user_type || null;
+          window.currentEmpCode = payload.emp_code || null;
+          console.log('[DC-STAFF-TYPE] Detected:', window.currentStaffType, 'Emp Code:', window.currentEmpCode);
+        } else {
+          console.warn('[DC-STAFF-TYPE] No token found in any source');
+        }
+      } catch (e) {
+        console.warn('[DC-STAFF-TYPE] Could not detect staff type:', e);
+      }
+    }
+
+    async function loadCategories() {
+      try {
+        const categories = await feedbackApi.getCategories();
+        const filterSelect = document.getElementById('categoryFilter');
+        const editSelect = document.getElementById('editCategory');
+        categories.forEach(cat => {
+          // Filter sidebar dropdown
+          const opt1 = document.createElement('option');
+          opt1.value = cat.id;
+          opt1.textContent = cat.category_name;
+          filterSelect.appendChild(opt1);
+          // Edit modal dropdown
+          if (editSelect) {
+            const opt2 = document.createElement('option');
+            opt2.value = cat.id;
+            opt2.textContent = cat.category_name;
+            editSelect.appendChild(opt2);
+          }
+        });
+        window._vgkCategories = categories;
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      }
+    }
+
+    async function loadAnnouncements(filters = {}) {
+      const container = document.getElementById('announcementsList');
+      showSpinner(container);
+
+      try {
+        currentFilters = filters;
+        // DC Protocol (Jan 24, 2026): Use staff MNR user endpoint with menu access check
+        // instead of admin-only /feedback/announcements/staff
+        const token = sessionStorage.getItem('session_token') || 
+                     sessionStorage.getItem('staff_token') ||
+                     (typeof sessionToken !== 'undefined' ? sessionToken : null);
+        const params = new URLSearchParams();
+        if (filters.category_id) params.append('category_id', filters.category_id);
+        if (filters.start_date) params.append('start_date', filters.start_date);
+        if (filters.end_date) params.append('end_date', filters.end_date);
+        if (filters.city) params.append('city', filters.city);
+        if (filters.user_id) params.append('user_id', filters.user_id);
+        if (filters.user_name) params.append('user_name', filters.user_name);
+        if (filters.status) params.append('status', filters.status);
+        if (filters.include_hidden) params.append('include_hidden', 'true');
+        if (filters.include_deleted) params.append('include_deleted', 'true');
+        if (filters.include_all_statuses) params.append('include_all_statuses', 'true');
+        
+        const res = await fetch(`/api/v1/staff/mnr-user/announcements/all?${params}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('[DC-STAFF-ANNOUNCE] Load failed:', res.status, errorText);
+          throw new Error(`Failed to load announcements: ${res.status}`);
+        }
+        
+        allAnnouncements = await res.json();
+        window.announcementsData = allAnnouncements;
+        displayedCount = loadIncrement;
+        renderAnnouncements();
+      } catch (error) {
+        console.error('Error loading announcements:', error);
+        showToast('Failed to load announcements', 'error');
+        container.innerHTML = '<div class="alert alert-danger">Failed to load announcements. Please try again.</div>';
+      }
+    }
+
+    function getCardClass(announcement) {
+      if (announcement.is_deleted) return 'card-deleted';
+      if (!announcement.is_visible) return 'card-hidden';
+      if (announcement.status === 'pending') return 'card-pending';
+      if (announcement.status === 'rejected') return 'card-rejected';
+      return '';
+    }
+
+    function getStatusBadge(announcement) {
+      if (announcement.is_deleted) return '<span class="badge bg-danger status-badge">Deleted</span>';
+      if (!announcement.is_visible) return '<span class="badge bg-warning text-dark status-badge">Hidden/Paused</span>';
+      if (announcement.status === 'pending') return '<span class="badge bg-info status-badge">Pending</span>';
+      if (announcement.status === 'under_review') return '<span class="badge bg-secondary status-badge">Under Review</span>';
+      if (announcement.status === 'partially_approved') return '<span class="badge bg-warning text-dark status-badge">Partially Approved</span>';
+      if (announcement.status === 'rejected') return '<span class="badge bg-dark status-badge">Rejected</span>';
+      return '<span class="badge bg-success status-badge">Approved</span>';
+    }
+
+    function renderAnnouncements() {
+      const container = document.getElementById('announcementsList');
+      const items = allAnnouncements.slice(0, displayedCount);
+      // DC Protocol: Check emp_code for VGK4U Supreme (MR10001) - this is the authoritative check
+      const empCode = (window.currentEmpCode || '').toUpperCase();
+      const staffType = (window.currentStaffType || '').toLowerCase();
+      const isVGK4USupreme = empCode === 'MR10001' || 
+                            staffType === 'rvz id' || 
+                            staffType.includes('admin');
+      console.log('[DC-DELETE-ACCESS] Emp Code:', empCode, 'Staff type:', window.currentStaffType, 'Can delete:', isVGK4USupreme);
+
+      document.getElementById('announcementCount').textContent = 
+        `${allAnnouncements.length} announcement${allAnnouncements.length !== 1 ? 's' : ''}`;
+
+      if (allAnnouncements.length === 0) {
+        showEmptyState(container, 'No announcements found', 'bullhorn');
+        document.getElementById('loadMoreBtn').style.display = 'none';
+        return;
+      }
+
+      container.innerHTML = items.map(announcement => {
+        const isHidden = !announcement.is_visible;
+        const isDeleted = announcement.is_deleted;
+        const categoryName = announcement.category ? announcement.category.category_name : 'General';
+        const cardClass = getCardClass(announcement);
+        const statusBadge = getStatusBadge(announcement);
+        
+        const mediaHtml = announcement.media && announcement.media.length > 0
+          ? `<div class="media-grid">
+               ${announcement.media.map((m, idx) => {
+                 const isVideo = m.media_type === 'video' || (m.file_type && m.file_type.startsWith('video/'));
+                 const safariVideoUrl = escapeHTML(m.file_path) + (m.file_path.includes('#') ? '' : '#t=0.001');
+                 return isVideo
+                   ? `<div class="video-thumbnail" onclick="openAnnouncementLightbox(${announcement.id}, ${idx})">
+                        <video class="media-thumbnail" src="${safariVideoUrl}" preload="metadata" muted playsinline></video>
+                      </div>`
+                   : `<img class="media-thumbnail" src="${escapeHTML(m.file_path)}" onclick="openAnnouncementLightbox(${announcement.id}, ${idx})">`;
+               }).join('')}
+             </div>`
+          : '';
+
+        const avgRating = announcement.average_rating || 0;
+        const totalRatings = announcement.total_ratings || 0;
+        const ratingStars = Array.from({length: 5}, (_, i) => {
+          if (i < Math.floor(avgRating)) {
+            return '<i class="fas fa-star"></i>';
+          } else if (i < avgRating) {
+            return '<i class="fas fa-star-half-alt"></i>';
+          } else {
+            return '<i class="far fa-star"></i>';
+          }
+        }).join('');
+
+        const _sReactRow = (() => {
+          return ['like','love','celebrate'].map(type => {
+            const emoji = type==='like'?'👍':type==='love'?'❤️':'🎉';
+            const myR = localStorage.getItem('mnrv_ann_react_'+announcement.id)||'';
+            const cnts = JSON.parse(localStorage.getItem('mnrv_ann_react_counts_'+announcement.id)||'{"like":0,"love":0,"celebrate":0}');
+            const active = myR===type; const cnt = cnts[type]||0;
+            return `<button onclick="mnrvReact(${announcement.id},'${type}')" style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;border:1px solid ${active?'#6366f1':'#e5e7eb'};background:${active?'#eef2ff':'transparent'};cursor:pointer;font-size:12px;" title="${type}">${emoji}${cnt>0?`<span style="font-size:10px;color:#6b7280;margin-left:2px">${cnt}</span>`:''}</button>`;
+          }).join('');
+        })();
+
+        let actionButtons = `
+          <div class="d-flex align-items-center gap-1 mb-2 flex-wrap" id="mnrvR_${announcement.id}">${_sReactRow}</div>
+          <a href="/public/announcement?id=${announcement.id}" target="_blank" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-eye me-1"></i>View
+          </a>
+          <button class="btn btn-sm btn-outline-primary copy-link-btn" data-announcement-id="${announcement.id}">
+            <i class="fas fa-link me-1"></i>Copy Link
+          </button>
+          <button class="btn btn-sm btn-success share-whatsapp-btn" data-announcement-id="${announcement.id}">
+            <i class="fab fa-whatsapp me-1"></i>Share
+          </button>
+        `;
+
+        if (!isDeleted) {
+          actionButtons += `
+            <button class="btn btn-sm ${isHidden ? 'btn-outline-success' : 'btn-warning'} toggle-visibility-btn" 
+                    data-announcement-id="${announcement.id}" 
+                    data-is-hidden="${isHidden}">
+              <i class="fas fa-${isHidden ? 'eye' : 'pause'}"></i>
+              ${isHidden ? 'Unhide' : 'Pause'}
+            </button>
+          `;
+        }
+
+        if (isDeleted) {
+          actionButtons += `
+            <button class="btn btn-sm btn-outline-success restore-btn" 
+                    data-announcement-id="${announcement.id}">
+              <i class="fas fa-undo me-1"></i>Restore
+            </button>
+          `;
+        }
+
+        if (!isDeleted) {
+          actionButtons += `
+            <button class="btn btn-sm btn-info edit-btn" 
+                    data-announcement-id="${announcement.id}">
+              <i class="fas fa-edit me-1"></i>Edit
+            </button>
+          `;
+        }
+
+        if (isVGK4USupreme && !isDeleted) {
+          actionButtons += `
+            <button class="btn btn-sm btn-danger delete-btn" 
+                    data-announcement-id="${announcement.id}">
+              <i class="fas fa-trash me-1"></i>Delete
+            </button>
+          `;
+        }
+
+        return `
+          <div class="announcement-card ${cardClass}" data-announcement-id="${announcement.id}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h4 class="mb-1">${escapeHTML(announcement.title)}</h4>
+                ${statusBadge}
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <div class="display-order-control" title="Display Order (lower = shown first)">
+                  <input type="number" class="form-control form-control-sm display-order-input" 
+                         style="width: 70px;" min="1" max="999"
+                         value="${announcement.display_order || ''}" 
+                         placeholder="#"
+                         data-announcement-id="${announcement.id}">
+                </div>
+                <span class="badge bg-primary">${escapeHTML(categoryName)}</span>
+              </div>
+            </div>
+            
+            <div class="admin-details">
+              <span class="detail-item">
+                <i class="fas fa-user"></i><strong>Posted By:</strong> ${escapeHTML(announcement.user_name || 'Unknown')}
+              </span>
+              <span class="detail-item">
+                <i class="fas fa-id-badge"></i><strong>User ID:</strong> ${escapeHTML(announcement.user_id || 'N/A')}
+              </span>
+              ${announcement.city ? `
+                <span class="detail-item">
+                  <i class="fas fa-map-marker-alt"></i><strong>Location:</strong> ${escapeHTML(announcement.city)}
+                </span>
+              ` : ''}
+            </div>
+
+            <p class="mb-3">${escapeHTML(announcement.description || '')}</p>
+            ${mediaHtml}
+            
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <div class="text-muted small">
+                <span><i class="fas fa-clock me-2"></i>${formatDate(announcement.approved_at || announcement.submitted_at)}</span>
+                <span class="ms-3"><i class="fas fa-eye me-1"></i>${announcement.views_count || 0} views</span>
+                <span class="ms-2"><i class="fas fa-share-alt me-1"></i>${announcement.shares_count || 0} shares</span>
+                ${(() => {
+                  const vt = announcement.visible_to || 'both';
+                  const labels = { mnr: 'MNR Only', vgk: 'VGK Only', both: 'MNR + VGK' };
+                  const colors = { mnr: 'primary', vgk: 'success', both: 'secondary' };
+                  return `<span class="ms-2 badge bg-${colors[vt] || 'secondary'}"><i class="fas fa-bullhorn me-1"></i>${labels[vt] || 'Both'}</span>`;
+                })()}
+              </div>
+              <div class="rating-display">
+                ${ratingStars}
+                <span class="text-muted">${avgRating.toFixed(1)} (${totalRatings})</span>
+              </div>
+            </div>
+
+            <div class="share-buttons">
+              ${actionButtons}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const loadMoreBtn = document.getElementById('loadMoreBtn');
+      loadMoreBtn.style.display = displayedCount < allAnnouncements.length ? 'block' : 'none';
+
+      attachEventListeners();
+    }
+
+    function attachEventListeners() {
+      // Display order change handler
+      document.querySelectorAll('.display-order-input').forEach(input => {
+        input.addEventListener('change', async (e) => {
+          const announcementId = parseInt(e.target.dataset.announcementId);
+          const newOrder = e.target.value ? parseInt(e.target.value) : null;
+          await updateDisplayOrder(announcementId, newOrder);
+        });
+      });
+
+      document.querySelectorAll('.toggle-visibility-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const announcementId = parseInt(e.currentTarget.dataset.announcementId);
+          const isHidden = e.currentTarget.dataset.isHidden === 'true';
+          await toggleVisibility(announcementId, isHidden);
+        });
+      });
+
+      document.querySelectorAll('.copy-link-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const announcementId = e.currentTarget.dataset.announcementId;
+          copyShareLink(announcementId);
+        });
+      });
+
+      document.querySelectorAll('.share-whatsapp-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const announcementId = e.currentTarget.dataset.announcementId;
+          shareOnWhatsApp(announcementId);
+        });
+      });
+
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const announcementId = parseInt(e.currentTarget.dataset.announcementId);
+          openDeleteModal(announcementId);
+        });
+      });
+
+      document.querySelectorAll('.restore-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const announcementId = parseInt(e.currentTarget.dataset.announcementId);
+          await restoreAnnouncement(announcementId);
+        });
+      });
+
+      document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const announcementId = parseInt(e.currentTarget.dataset.announcementId);
+          openEditModal(announcementId);
+        });
+      });
+    }
+
+    function openDeleteModal(announcementId) {
+      const announcement = allAnnouncements.find(a => a.id === announcementId);
+      if (!announcement) return;
+      
+      document.getElementById('deleteAnnouncementId').value = announcementId;
+      document.getElementById('deleteAnnouncementTitle').textContent = announcement.title;
+      document.getElementById('deleteConfirmText').value = '';
+      
+      const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+      modal.show();
+    }
+
+    window.confirmDelete = async function() {
+      const confirmText = document.getElementById('deleteConfirmText').value;
+      if (confirmText !== 'DELETE') {
+        showToast('Please type DELETE to confirm', 'error');
+        return;
+      }
+      
+      const announcementId = document.getElementById('deleteAnnouncementId').value;
+      const announcement = allAnnouncements.find(a => a.id === parseInt(announcementId));
+      
+      try {
+        await feedbackApi.hardDeleteAnnouncement(announcementId);
+        showToast(`Announcement "${announcement?.title}" permanently deleted`, 'success');
+        bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+        await loadAnnouncements(currentFilters);
+      } catch (error) {
+        console.error('Error deleting announcement:', error);
+        showToast('Failed to delete announcement. ' + (error.message || ''), 'error');
+      }
+    }
+
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.className = 'notification ' + type;
+      notification.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; z-index: 9999; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease;';
+      notification.style.background = type === 'success' ? '#2ECC71' : type === 'error' ? '#E74C3C' : '#3498DB';
+      notification.style.color = 'white';
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 3000);
+    }
+
+    async function updateDisplayOrder(announcementId, displayOrder) {
+      try {
+        const response = await fetch(`/api/v1/feedback/${announcementId}/display-order`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': 'Bearer ' + (sessionStorage.getItem('session_token') || sessionStorage.getItem('staff_token') || localStorage.getItem('staff_token') || ''),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ display_order: displayOrder })
+        });
+
+        if (response.ok) {
+          showNotification('Display order updated', 'success');
+          // Update local data
+          const announcement = allAnnouncements.find(a => a.id === announcementId);
+          if (announcement) {
+            announcement.display_order = displayOrder;
+          }
+        } else {
+          const error = await response.json();
+          showNotification(error.detail || 'Failed to update order', 'error');
+        }
+      } catch (err) {
+        console.error('Error updating display order:', err);
+        showNotification('Error updating display order', 'error');
+      }
+    }
+
+    async function toggleVisibility(announcementId, isHidden) {
+      try {
+        if (isHidden) {
+          await feedbackApi.unhideAnnouncement(announcementId);
+          showToast('Announcement unhidden successfully', 'success');
+        } else {
+          await feedbackApi.hideAnnouncement(announcementId);
+          showToast('Announcement paused/hidden successfully', 'success');
+        }
+        await loadAnnouncements(currentFilters);
+      } catch (error) {
+        console.error('Error toggling visibility:', error);
+        showToast('Failed to update announcement visibility', 'error');
+      }
+    }
+
+    async function restoreAnnouncement(announcementId) {
+      try {
+        await feedbackApi.restoreAnnouncement(announcementId);
+        showToast('Announcement restored successfully', 'success');
+        await loadAnnouncements(currentFilters);
+      } catch (error) {
+        console.error('Error restoring announcement:', error);
+        showToast('Failed to restore announcement. ' + (error.message || ''), 'error');
+      }
+    }
+
+    window.mnrvReact = function(annId, type) {
+      const rKey='mnrv_ann_react_'+annId, cKey='mnrv_ann_react_counts_'+annId;
+      const prev=localStorage.getItem(rKey)||'';
+      const counts=JSON.parse(localStorage.getItem(cKey)||'{"like":0,"love":0,"celebrate":0}');
+      if(prev===type){ localStorage.removeItem(rKey); counts[type]=Math.max(0,(counts[type]||0)-1); }
+      else { if(prev) counts[prev]=Math.max(0,(counts[prev]||0)-1); localStorage.setItem(rKey,type); counts[type]=(counts[type]||0)+1; }
+      localStorage.setItem(cKey,JSON.stringify(counts));
+      const row=document.getElementById('mnrvR_'+annId);
+      if(row){
+        const myR=localStorage.getItem(rKey)||''; const cnts=JSON.parse(localStorage.getItem(cKey)||'{"like":0,"love":0,"celebrate":0}');
+        row.innerHTML=['like','love','celebrate'].map(t=>{const em=t==='like'?'👍':t==='love'?'❤️':'🎉';const act=myR===t,cnt=cnts[t]||0;return `<button onclick="mnrvReact(${annId},'${t}')" style="display:inline-flex;align-items:center;gap:3px;padding:3px 9px;border-radius:20px;border:1px solid ${act?'#6366f1':'#e5e7eb'};background:${act?'#eef2ff':'transparent'};cursor:pointer;font-size:12px;" title="${t}">${em}${cnt>0?`<span style="font-size:10px;color:#6b7280;margin-left:2px">${cnt}</span>`:''}</button>`;}).join('');
+      }
+    };
+
+    function copyShareLink(announcementId) {
+      _openShareModal(announcementId);
+    }
+
+    function shareOnWhatsApp(announcementId) {
+      _openShareModal(announcementId);
+    }
+
+    function _openShareModal(announcementId) {
+      const ann = allAnnouncements.find(a => a.id === announcementId);
+      if (!ann) return;
+      trackShare(announcementId);
+      if (window.MyntShareModal) {
+        MyntShareModal.shareAnnouncement({
+          id:           ann.id,
+          title:        ann.title,
+          description:  ann.description || '',
+          categoryName: ann.category?.category_name || 'MNR Business Access Program',
+          userName:     ann.user_name || '',
+          city:         ann.city || '',
+        });
+      } else {
+        const url = `https://mnrteam.com/public/announcement?id=${announcementId}&shared=true`;
+        window.open('https://wa.me/?text=' + encodeURIComponent(ann.title + '\n\n' + url), '_blank');
+      }
+    }
+
+    async function trackShare(announcementId) {
+      try {
+        await feedbackApi.trackShare(announcementId);
+      } catch (error) {
+        console.error('Failed to track share:', error);
+      }
+    }
+
+    document.getElementById('loadMoreBtn').addEventListener('click', () => {
+      displayedCount += loadIncrement;
+      renderAnnouncements();
+    });
+
+    document.getElementById('applyFilters').addEventListener('click', () => {
+      const statusVal = document.getElementById('statusFilter').value;
+      const filters = {
+        category_id: document.getElementById('categoryFilter').value || undefined,
+        start_date: document.getElementById('startDate').value || undefined,
+        end_date: document.getElementById('endDate').value || undefined,
+        city: document.getElementById('cityFilter').value || undefined,
+        user_id: document.getElementById('userIdFilter').value || undefined,
+        user_name: document.getElementById('userNameFilter').value || undefined,
+        status: statusVal || undefined,
+        include_hidden: statusVal === 'hidden' || statusVal === '' ? true : undefined,
+        include_deleted: statusVal === 'deleted' ? true : undefined,
+        include_all_statuses: statusVal !== '' && statusVal !== 'approved' ? true : undefined
+      };
+      loadAnnouncements(filters);
+    });
+
+    document.getElementById('clearFilters').addEventListener('click', () => {
+      document.getElementById('categoryFilter').value = '';
+      document.getElementById('statusFilter').value = '';
+      document.getElementById('startDate').value = '';
+      document.getElementById('endDate').value = '';
+      document.getElementById('cityFilter').value = '';
+      document.getElementById('userIdFilter').value = '';
+      document.getElementById('userNameFilter').value = '';
+      loadAnnouncements();
+    });
+
+    window.openAnnouncementLightbox = function(announcementId, mediaIndex) {
+      const announcement = window.announcementsData?.find(a => a.id === announcementId);
+      if (!announcement || !announcement.media || announcement.media.length === 0) {
+        console.warn('[MNR Lightbox] Announcement or media not found');
+        return;
+      }
+
+      const mediaItems = announcement.media.map(m => ({
+        url: m.file_path,
+        file_type: m.file_type,
+        type: (m.media_type === 'video' || (m.file_type && m.file_type.startsWith('video/'))) ? 'video' : 'image',
+        title: announcement.title || 'Media'
+      }));
+
+      if (window.MNRLightbox && typeof window.MNRLightbox.open === 'function') {
+        window.MNRLightbox.open(mediaItems, mediaIndex || 0);
+      } else {
+        console.warn('[MNR Lightbox] Component not loaded');
+      }
+    }
+
+    let currentEditAnnouncement = null;
+
+    function openEditModal(announcementId) {
+      const announcement = allAnnouncements.find(a => a.id === announcementId);
+      if (!announcement) return;
+      
+      currentEditAnnouncement = announcement;
+      document.getElementById('editAnnouncementId').value = announcementId;
+      document.getElementById('editTitle').value = announcement.title || '';
+      document.getElementById('editDescription').value = announcement.description || '';
+      // Populate category dropdown
+      const editCategoryEl = document.getElementById('editCategory');
+      if (editCategoryEl) {
+        const catId = announcement.category_id || (announcement.category && announcement.category.id) || '';
+        editCategoryEl.value = catId ? String(catId) : '';
+      }
+      // Populate audience targeting dropdown
+      const editVisibleToEl = document.getElementById('editVisibleTo');
+      if (editVisibleToEl) editVisibleToEl.value = announcement.visible_to || 'both';
+      
+      const mediaGrid = document.getElementById('editMediaGrid');
+      const media = announcement.media || [];
+      
+      mediaGrid.innerHTML = media.map(m => {
+        const mediaUrl = m.file_path || m.url;
+        const isVideo = m.media_type === 'video' || m.file_type?.startsWith('video');
+        return `
+          <div class="edit-media-item position-relative" data-media-id="${m.id}" style="width: 120px; height: 120px;">
+            ${isVideo ? 
+              `<video src="${mediaUrl}" class="w-100 h-100" style="object-fit: cover; border-radius: 8px;"></video>
+               <i class="fas fa-play position-absolute" style="top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 24px;"></i>` :
+              `<img src="${mediaUrl}" class="w-100 h-100" style="object-fit: cover; border-radius: 8px;">`
+            }
+            <input type="checkbox" class="media-delete-checkbox position-absolute" data-media-id="${m.id}" 
+                   style="top: 5px; right: 5px; width: 20px; height: 20px; cursor: pointer;">
+            <span class="position-absolute badge bg-danger media-type-badge" style="bottom: 5px; left: 5px; font-size: 10px;">
+              ${isVideo ? 'VIDEO' : 'PHOTO'}
+            </span>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('editMediaCount').textContent = `${media.length} media files (min 3 required)`;
+      document.getElementById('deleteSelectedBtn').style.display = 'none';
+      
+      const modal = new bootstrap.Modal(document.getElementById('editModal'));
+      modal.show();
+    }
+
+    window.updateMediaSelection = function() {
+      const checkboxes = document.querySelectorAll('.media-delete-checkbox:checked');
+      const deleteBtn = document.getElementById('deleteSelectedBtn');
+      deleteBtn.style.display = checkboxes.length > 0 ? 'inline-block' : 'none';
+      deleteBtn.textContent = `Delete Selected (${checkboxes.length})`;
+    }
+
+    window.deleteSelectedMedia = async function() {
+      const checkboxes = document.querySelectorAll('.media-delete-checkbox:checked');
+      const mediaIds = Array.from(checkboxes).map(cb => parseInt(cb.dataset.mediaId));
+      const announcementId = document.getElementById('editAnnouncementId').value;
+      
+      const currentCount = currentEditAnnouncement?.media?.length || 0;
+      if (currentCount - mediaIds.length < 3) {
+        showToast('Cannot delete - minimum 3 media files required', 'error');
+        return;
+      }
+
+      const token = sessionStorage.getItem('session_token') || sessionStorage.getItem('staff_token') || localStorage.getItem('staff_token') || '';
+
+      for (const mediaId of mediaIds) {
+        try {
+          const response = await fetch(`/api/v1/staff/mnr-user/announcements/${announcementId}/media/${mediaId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!response.ok) throw new Error('Delete failed');
+        } catch (error) {
+          showToast(`Failed to delete media #${mediaId}`, 'error');
+          return;
+        }
+      }
+
+      showToast(`Deleted ${mediaIds.length} media files`, 'success');
+      await loadAnnouncements(currentFilters);
+      bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+    }
+
+    window.addMoreMedia = async function() {
+      const fileInput = document.getElementById('addMoreMediaInput');
+      const files = fileInput.files;
+      if (!files || files.length === 0) {
+        showToast('Please select files to add', 'warning');
+        return;
+      }
+
+      const announcementId = document.getElementById('editAnnouncementId').value;
+      const token = sessionStorage.getItem('session_token') || sessionStorage.getItem('staff_token') || localStorage.getItem('staff_token') || '';
+      
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+
+      try {
+        const response = await fetch(`/api/v1/staff/mnr-user/announcements/${announcementId}/media`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        
+        const data = await response.json();
+        if (response.ok && data.success) {
+          showToast(`Added ${data.data?.added_count || files.length} media files`, 'success');
+          await loadAnnouncements(currentFilters);
+          bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+        } else {
+          showToast(data.detail || 'Failed to add media', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to add media: ' + error.message, 'error');
+      }
+    }
+
+    window.saveEditChanges = async function() {
+      const announcementId = document.getElementById('editAnnouncementId').value;
+      const title = document.getElementById('editTitle').value.trim();
+      const description = document.getElementById('editDescription').value.trim();
+      
+      if (!title) {
+        showToast('Title is required', 'error');
+        return;
+      }
+
+      const token = sessionStorage.getItem('session_token') || sessionStorage.getItem('staff_token') || localStorage.getItem('staff_token') || '';
+      
+      const visibleTo = (document.getElementById('editVisibleTo')?.value || 'both');
+      const categoryId = document.getElementById('editCategory')?.value;
+
+      if (!categoryId) {
+        showToast('Please select a category', 'error');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('visible_to', visibleTo);
+      formData.append('category_id', categoryId);
+
+      try {
+        const response = await fetch(`/api/v1/staff/mnr-user/announcements/${announcementId}/edit`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        
+        const data = await response.json();
+        if (response.ok && data.success) {
+          showToast('Announcement updated successfully', 'success');
+          await loadAnnouncements(currentFilters);
+          bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+        } else {
+          showToast(data.detail || 'Failed to update', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to update: ' + error.message, 'error');
+      }
+    }
+  </script>
+
+  <div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-danger text-white">
+          <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Delete Announcement (Permanent)</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger">
+            <strong>Warning!</strong> This action will <strong>permanently delete</strong> the announcement and all its media. This cannot be undone.
+          </div>
+          <p><strong>Announcement:</strong> <span id="deleteAnnouncementTitle"></span></p>
+          <input type="hidden" id="deleteAnnouncementId">
+          
+          <div class="mb-3">
+            <label class="form-label">Type <strong>DELETE</strong> to confirm:</label>
+            <input type="text" class="form-control" id="deleteConfirmText" placeholder="Type DELETE">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" onclick="confirmDelete()">
+            <i class="fas fa-trash me-1"></i>Permanently Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DC Protocol (Jan 24, 2026): Edit Announcement Modal with Media Management -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-info text-white">
+          <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Announcement</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editAnnouncementId">
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">Title <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="editTitle" required placeholder="Enter title">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">Description</label>
+            <textarea class="form-control" id="editDescription" rows="3" placeholder="Enter description"></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Category <span class="text-danger">*</span></label>
+            <select class="form-select" id="editCategory">
+              <option value="">— Select Category —</option>
+            </select>
+            <div class="form-text text-muted"><i class="fas fa-tag me-1"></i>Change the category for this announcement.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Show Announcement To</label>
+            <select class="form-select" id="editVisibleTo">
+              <option value="both">Both MNR &amp; VGK</option>
+              <option value="mnr">MNR Only (Shoutout)</option>
+              <option value="vgk">VGK Only (Shoutout)</option>
+            </select>
+            <div class="form-text text-muted"><i class="fas fa-info-circle me-1"></i>Controls which platform audience will see this announcement.</div>
+          </div>
+
+          <hr>
+          
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <label class="form-label fw-bold mb-0">Media Files</label>
+              <span id="editMediaCount" class="text-muted small">0 media files</span>
+            </div>
+            <p class="text-muted small mb-2"><i class="fas fa-info-circle me-1"></i>Select media to delete (check boxes), or add more files below</p>
+            
+            <div id="editMediaGrid" class="d-flex flex-wrap gap-2 mb-3" onclick="updateMediaSelection()">
+            </div>
+            
+            <button type="button" class="btn btn-danger btn-sm" id="deleteSelectedBtn" style="display: none;" onclick="deleteSelectedMedia()">
+              <i class="fas fa-trash me-1"></i>Delete Selected
+            </button>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label fw-bold">Add More Media</label>
+            <div class="input-group">
+              <input type="file" class="form-control" id="addMoreMediaInput" multiple accept="image/*,video/*">
+              <button type="button" class="btn btn-success" onclick="addMoreMedia()">
+                <i class="fas fa-plus me-1"></i>Add
+              </button>
+            </div>
+            <small class="text-muted">Photos: max 10 total | Videos: max 3 minutes each</small>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveEditChanges()">
+            <i class="fas fa-save me-1"></i>Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/public/js/share-modal.js"></script>
+  <script src="/public/js/mnr-lightbox.js"></script>
+
+  <!-- DC Protocol (Jan 23, 2026): Add Announcement Modal for Supreme Staff -->
+  <div class="modal fade" id="addAnnouncementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-success text-white">
+          <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Add New Announcement</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="addAnnouncementForm">
+            <div class="mb-3">
+              <label class="form-label fw-bold">Title <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="annTitle" required placeholder="Enter announcement title">
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Description</label>
+              <textarea class="form-control" id="annDescription" rows="3" placeholder="Enter description (optional for media, required for text)"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Category <span class="text-danger">*</span></label>
+              <select class="form-select" id="annCategory" required>
+                <option value="">Select Category</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Show Announcement To</label>
+              <select class="form-select" id="annVisibleTo">
+                <option value="both">Both MNR &amp; VGK</option>
+                <option value="mnr">MNR Only (Shoutout)</option>
+                <option value="vgk">VGK Only (Shoutout)</option>
+              </select>
+              <div class="form-text text-muted"><i class="fas fa-info-circle me-1"></i>Controls which platform audience will see this announcement.</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">Submission Type <span class="text-danger">*</span></label>
+              <select class="form-select" id="annType" required>
+                <option value="photo">Photos (1-10 images)</option>
+                <option value="video">Videos (up to 3 minutes)</option>
+                <option value="text">Text Only</option>
+              </select>
+            </div>
+            <div class="mb-3" id="mediaUploadSection">
+              <label class="form-label fw-bold">Media Files</label>
+              <input type="file" class="form-control" id="annMedia" multiple accept="image/*,video/*">
+              <small class="text-muted">Photos: max 10 files | Videos: max 5 files, 3 mins each</small>
+            </div>
+            <div class="alert alert-info" id="supremeNote">
+              <i class="fas fa-bolt me-1"></i> <strong>Supreme Access:</strong> Your announcement will be immediately approved and visible.
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-success" id="submitAnnouncementBtn" onclick="submitStaffAnnouncement()">
+            <i class="fas fa-paper-plane me-1"></i>Create Announcement
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DC Protocol (Jan 23, 2026): Supreme Staff Add Announcement Feature
+    const SUPREME_TYPES = ['VGK4U_SUPREME', 'RVZ_SUPREME', 'VGK4U', 'VGK4U_EA'];
+    
+    // Show Add button if Supreme staff
+    document.addEventListener('DOMContentLoaded', function() {
+      const staffType = window.currentStaffType || '';
+      const isSupreme = SUPREME_TYPES.some(t => staffType.toUpperCase().includes(t.toUpperCase()));
+      
+      if (isSupreme) {
+        const addBtn = document.getElementById('addAnnouncementBtn');
+        if (addBtn) addBtn.style.display = 'inline-block';
+        console.log('[DC-SUPREME] Add Announcement button enabled for:', staffType);
+      }
+      
+      // Load categories for modal
+      loadModalCategories();
+      
+      // Toggle media section based on type
+      document.getElementById('annType').addEventListener('change', function() {
+        const mediaSection = document.getElementById('mediaUploadSection');
+        if (this.value === 'text') {
+          mediaSection.style.display = 'none';
+        } else {
+          mediaSection.style.display = 'block';
+          const accept = this.value === 'photo' ? 'image/*' : 'video/*';
+          document.getElementById('annMedia').accept = accept;
+        }
+      });
+    });
+    
+    async function loadModalCategories() {
+      try {
+        const response = await fetch('/api/v1/feedback/public/categories');
+        if (response.ok) {
+          const categories = await response.json();
+          const select = document.getElementById('annCategory');
+          categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.name;
+            select.appendChild(option);
+          });
+        }
+      } catch (e) {
+        console.error('Failed to load categories:', e);
+      }
+    }
+    
+    async function submitStaffAnnouncement() {
+      const btn = document.getElementById('submitAnnouncementBtn');
+      const originalText = btn.innerHTML;
+      
+      try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
+        
+        const title = document.getElementById('annTitle').value.trim();
+        const description = document.getElementById('annDescription').value.trim();
+        const categoryId = document.getElementById('annCategory').value;
+        const submissionType = document.getElementById('annType').value;
+        const files = document.getElementById('annMedia').files;
+        
+        if (!title) {
+          alert('Please enter a title');
+          return;
+        }
+        if (!categoryId) {
+          alert('Please select a category');
+          return;
+        }
+        if (submissionType === 'text' && description.length < 10) {
+          alert('Text announcements require at least 10 characters in description');
+          return;
+        }
+        if (submissionType !== 'text' && files.length === 0) {
+          alert('Please select at least one media file');
+          return;
+        }
+        
+        const annVisibleTo = document.getElementById('annVisibleTo')?.value || 'both';
+
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('description', description);
+        formData.append('category_id', categoryId);
+        formData.append('submission_type', submissionType);
+        formData.append('visible_to', annVisibleTo);
+        
+        if (submissionType !== 'text') {
+          for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+          }
+        }
+        
+        const token = sessionStorage.getItem('session_token') || 
+                     sessionStorage.getItem('staff_token') || 
+                     getCookie('staff_token');
+        
+        const response = await fetch('/api/v1/feedback/staff/submit', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token
+          },
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+          alert('Announcement created successfully!' + (result.auto_approved ? ' (Auto-approved)' : ''));
+          
+          // Close modal and refresh list
+          const modal = bootstrap.Modal.getInstance(document.getElementById('addAnnouncementModal'));
+          modal.hide();
+          
+          // Reset form
+          document.getElementById('addAnnouncementForm').reset();
+          
+          // Refresh announcements
+          loadAnnouncements();
+        } else {
+          alert('Error: ' + (result.detail || 'Failed to create announcement'));
+        }
+      } catch (e) {
+        console.error('Submit error:', e);
+        alert('Failed to create announcement: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    }
+  </script>
+</body>
+</html>

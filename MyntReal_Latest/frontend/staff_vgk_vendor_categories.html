@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGK Vendor Categories</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;background:#f8fafc;min-height:100vh}
+        .main-content{padding:28px}
+        .page-header{background:linear-gradient(135deg,#4c1d95,#7c3aed);border-radius:14px;padding:24px 28px;color:#fff;margin-bottom:26px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+        .page-header h1{font-size:22px;font-weight:800;margin:0}
+        .page-header p{font-size:13px;opacity:.85;margin:4px 0 0}
+        .card{background:#fff;border-radius:14px;border:1.5px solid #ede9fe;padding:22px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+        .card-title{font-size:14px;font-weight:700;color:#4c1d95;margin-bottom:16px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+        .btn-primary{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;border:none;border-radius:9px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:opacity .2s}
+        .btn-primary:hover{opacity:.88}
+        .btn-outline{background:#fff;color:#7c3aed;border:1.5px solid #7c3aed;border-radius:9px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer}
+        .btn-danger{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer}
+        .btn-sm{padding:5px 12px;font-size:12px}
+        .form-group{margin-bottom:14px}
+        .form-group label{font-size:12px;font-weight:600;color:#374151;margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.05em}
+        .form-group input,.form-group select,.form-group textarea{width:100%;border:1.5px solid #d1d5db;border-radius:9px;padding:10px 14px;font-size:14px;outline:none;background:#f9fafb;transition:border .2s}
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#7c3aed;background:#fff}
+        .alert{border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:14px}
+        .alert-success{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+        .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+        .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+        .cat-card{background:#fff;border:1.5px solid #ede9fe;border-radius:12px;padding:16px 18px;display:flex;align-items:flex-start;gap:14px;transition:box-shadow .2s}
+        .cat-card:hover{box-shadow:0 4px 16px rgba(109,40,217,.1)}
+        .cat-icon{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);display:flex;align-items:center;justify-content:center;font-size:18px;color:#7c3aed;flex-shrink:0}
+        .cat-name{font-size:14px;font-weight:700;color:#1f2937;margin-bottom:3px}
+        .cat-desc{font-size:12px;color:#6b7280;line-height:1.5}
+        .badge-active{background:#d1fae5;color:#065f46;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:700}
+        .badge-inactive{background:#f3f4f6;color:#6b7280;border-radius:12px;padding:2px 9px;font-size:11px;font-weight:700}
+        .cat-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center}
+        .modal-overlay.show{display:flex}
+        .modal-box{background:#fff;border-radius:16px;padding:24px;width:440px;max-width:95vw;max-height:90vh;overflow-y:auto}
+        .modal-title{font-size:16px;font-weight:800;color:#1f2937;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+        .icon-hint{font-size:12px;color:#6b7280;margin-top:4px}
+        .empty-state{text-align:center;padding:60px 20px;color:#9ca3af}
+        .empty-state i{font-size:48px;margin-bottom:14px;display:block;color:#c4b5fd}
+        .search-bar{display:flex;gap:12px;align-items:center;margin-bottom:20px}
+        .search-bar input{flex:1;border:1.5px solid #d1d5db;border-radius:10px;padding:10px 16px;font-size:14px;outline:none;background:#f9fafb}
+        .search-bar input:focus{border-color:#7c3aed;background:#fff}
+        table{width:100%;border-collapse:collapse}
+        th{padding:10px 14px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;background:#f5f3ff;border-bottom:2px solid #ede9fe}
+        td{padding:12px 14px;font-size:13px;color:#374151;border-bottom:1px solid #f5f3ff}
+        tr:hover td{background:#faf7ff}
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-tags me-2"></i>Vendor Category Master</h1>
+            <p>Manage the master list of vendor business categories shown in the directory and used for filtering.</p>
+        </div>
+        <button class="btn-primary" onclick="openAdd()" style="background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4)">
+            <i class="fas fa-plus"></i> Add Category
+        </button>
+    </div>
+
+    <div id="alertBox"></div>
+
+    <div class="card">
+        <div class="card-title">
+            <span><i class="fas fa-list me-2"></i>All Categories</span>
+            <span id="countBadge" style="font-size:12px;font-weight:600;color:#6b7280"></span>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search categories..." oninput="renderTable()">
+        </div>
+        <div style="overflow-x:auto">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Icon</th>
+                        <th>Category Name</th>
+                        <th>Description</th>
+                        <th>Vendors</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="catBody">
+                    <tr><td colspan="6" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit Modal -->
+<div class="modal-overlay" id="catModal">
+    <div class="modal-box">
+        <div class="modal-title">
+            <span id="modalTitle">Add Category</span>
+            <button onclick="closeModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280">&times;</button>
+        </div>
+        <div id="modalAlert"></div>
+        <div class="form-group">
+            <label>Category Name *</label>
+            <input type="text" id="f_name" placeholder="e.g. Electronics, Grocery, Auto Parts">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="f_desc" rows="2" placeholder="Brief description of this category"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Icon (FontAwesome class)</label>
+            <input type="text" id="f_icon" placeholder="fas fa-store">
+            <div class="icon-hint">Preview: <i id="iconPreview" class="fas fa-store" style="color:#7c3aed;margin-left:6px"></i></div>
+        </div>
+        <div class="form-group">
+            <label>Status</label>
+            <select id="f_active">
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+            <button class="btn-outline" onclick="closeModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveCategory()"><i class="fas fa-save me-1"></i>Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '/api/v1';
+let categories = [];
+let editId = null;
+
+function authHeaders() {
+    const token = localStorage.getItem('staff_token') || localStorage.getItem('token') || '';
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+}
+
+async function load() {
+    try {
+        const r = await fetch(`${API}/staff/vgk/vendors/categories`, { headers: authHeaders() });
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        const d = await r.json();
+        categories = Array.isArray(d) ? d : (d.data || d.categories || []);
+        renderTable();
+    } catch(e) {
+        document.getElementById('alertBox').innerHTML = `<div class="alert alert-error">Failed to load categories: ${e.message}</div>`;
+    }
+}
+
+function renderTable() {
+    const q = (document.getElementById('searchInput').value || '').toLowerCase();
+    const filtered = categories.filter(c => !q || c.category_name.toLowerCase().includes(q) || (c.description||'').toLowerCase().includes(q));
+    document.getElementById('countBadge').textContent = `${filtered.length} categories`;
+    const body = document.getElementById('catBody');
+    if (!filtered.length) {
+        body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fas fa-tags"></i>No categories found</div></td></tr>`;
+        return;
+    }
+    body.innerHTML = filtered.map(c => `
+        <tr>
+            <td><div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);display:flex;align-items:center;justify-content:center;font-size:15px;color:#7c3aed"><i class="${c.icon || 'fas fa-store'}"></i></div></td>
+            <td><strong>${esc(c.category_name)}</strong></td>
+            <td style="color:#6b7280;font-size:12px;max-width:200px">${esc(c.description || '—')}</td>
+            <td><span style="font-weight:700;color:#4c1d95">${c.vendor_count ?? '—'}</span></td>
+            <td>${c.is_active ? '<span class="badge-active">Active</span>' : '<span class="badge-inactive">Inactive</span>'}</td>
+            <td>
+                <button class="btn-outline btn-sm" onclick="openEdit(${c.id})"><i class="fas fa-edit me-1"></i>Edit</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function openAdd() {
+    editId = null;
+    document.getElementById('modalTitle').textContent = 'Add Category';
+    ['f_name','f_desc','f_icon'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f_icon').value = 'fas fa-store';
+    document.getElementById('f_active').value = 'true';
+    document.getElementById('iconPreview').className = 'fas fa-store';
+    document.getElementById('modalAlert').innerHTML = '';
+    document.getElementById('catModal').classList.add('show');
+}
+
+function openEdit(id) {
+    const c = categories.find(x => x.id === id);
+    if (!c) return;
+    editId = id;
+    document.getElementById('modalTitle').textContent = 'Edit Category';
+    document.getElementById('f_name').value = c.category_name || '';
+    document.getElementById('f_desc').value = c.description || '';
+    document.getElementById('f_icon').value = c.icon || 'fas fa-store';
+    document.getElementById('f_active').value = c.is_active ? 'true' : 'false';
+    document.getElementById('iconPreview').className = c.icon || 'fas fa-store';
+    document.getElementById('modalAlert').innerHTML = '';
+    document.getElementById('catModal').classList.add('show');
+}
+
+document.getElementById('f_icon').addEventListener('input', function() {
+    document.getElementById('iconPreview').className = this.value.trim() || 'fas fa-store';
+});
+
+function closeModal() {
+    document.getElementById('catModal').classList.remove('show');
+}
+
+async function saveCategory() {
+    const name = document.getElementById('f_name').value.trim();
+    if (!name) {
+        document.getElementById('modalAlert').innerHTML = '<div class="alert alert-error">Category name is required.</div>';
+        return;
+    }
+    const payload = {
+        category_name: name,
+        description: document.getElementById('f_desc').value.trim() || null,
+        icon: document.getElementById('f_icon').value.trim() || 'fas fa-store',
+        is_active: document.getElementById('f_active').value === 'true'
+    };
+    try {
+        let r;
+        if (editId) {
+            r = await fetch(`${API}/staff/vgk/vendors/categories/${editId}`, {
+                method: 'PUT', headers: authHeaders(), body: JSON.stringify(payload)
+            });
+        } else {
+            r = await fetch(`${API}/staff/vgk/vendors/categories`, {
+                method: 'POST', headers: authHeaders(), body: JSON.stringify(payload)
+            });
+        }
+        const d = await r.json();
+        if (r.ok && (d.success || d.id || d.category_name)) {
+            document.getElementById('alertBox').innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>${editId ? 'Category updated' : 'Category added'} successfully.</div>`;
+            closeModal();
+            load();
+            setTimeout(() => document.getElementById('alertBox').innerHTML = '', 3000);
+        } else {
+            document.getElementById('modalAlert').innerHTML = `<div class="alert alert-error">${d.detail || 'Save failed.'}</div>`;
+        }
+    } catch(e) {
+        document.getElementById('modalAlert').innerHTML = `<div class="alert alert-error">Connection error: ${e.message}</div>`;
+    }
+}
+
+function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await StaffSidebar.init();
+    StaffHeader.inject('Vendor Category Master', 'fas fa-tags');
+    await load();
+});
+</script>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+</body>
+</html>

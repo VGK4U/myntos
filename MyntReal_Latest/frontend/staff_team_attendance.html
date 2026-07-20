@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - In/Out Records - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 12px; }
+        .stat-icon.total { background: #e0e7ff; color: #4338ca; }
+        .stat-icon.present { background: #d1fae5; color: #059669; }
+        .stat-icon.absent { background: #fee2e2; color: #dc2626; }
+        .stat-icon.late { background: #fef3c7; color: #d97706; }
+        .stat-icon.wfh { background: #dbeafe; color: #2563eb; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-label { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 0; }
+        
+        .filters-bar { padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filters-bar select, .filters-bar input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .filters-bar input[type="date"] { min-width: 140px; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; border-top: none; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-present { background: #dcfce7; color: #166534; }
+        .badge-absent { background: #fee2e2; color: #991b1b; }
+        .badge-late { background: #fef3c7; color: #92400e; }
+        .badge-on-leave { background: #e0e7ff; color: #4338ca; }
+        .badge-half_day { background: #fef3c7; color: #92400e; }
+        .badge-office { background: #dbeafe; color: #1e40af; }
+        .badge-wfh { background: #d1fae5; color: #065f46; }
+        .badge-field { background: #fef3c7; color: #92400e; }
+        .badge-on-break { background: #fce7f3; color: #9d174d; }
+        
+        .employee-info { display: flex; align-items: center; gap: 12px; }
+        .employee-avatar { width: 40px; height: 40px; border-radius: 50%; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+        .employee-details { flex: 1; }
+        .employee-name { font-weight: 600; color: #1f2937; }
+        .employee-code { font-size: 12px; color: #6b7280; }
+        
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .status-dot.active { background: #10b981; }
+        .status-dot.break { background: #f59e0b; }
+        .status-dot.offline { background: #9ca3af; }
+        
+        .empty-state { text-align: center; padding: 40px 20px; color: #6b7280; }
+        .empty-state i { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+        
+        .btn-clockout { background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+        .btn-clockout:hover { background: #b91c1c; }
+        .btn-clockout:disabled { background: #9ca3af; cursor: not-allowed; }
+        
+        .late-indicator { color: #d97706; font-size: 11px; margin-left: 4px; }
+        
+        /* DC_BATTERY_002: Sortable column headers */
+        .sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+        .sortable:hover { background: #e5e7eb; }
+        .sortable i { margin-left: 4px; font-size: 10px; opacity: 0.5; }
+        .sortable.asc i, .sortable.desc i { opacity: 1; color: #4f46e5; }
+        
+        /* DC_BATTERY_002: Battery indicator styles */
+        .battery-indicator { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 500; }
+        .battery-indicator i { font-size: 14px; }
+        .battery-high { color: #16a34a; }
+        .battery-medium { color: #d97706; }
+        .battery-low { color: #dc2626; }
+        .battery-critical { color: #dc2626; animation: blink 1s infinite; }
+        .battery-na { color: #9ca3af; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+        
+        /* DC_PHOTO_VIEW_001: Attendance photo viewing styles */
+        .btn-view-photos { background: #6366f1; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-view-photos:hover { background: #4f46e5; }
+        .btn-view-photos:disabled { background: #9ca3af; cursor: not-allowed; }
+        .no-photos-badge { background: #f3f4f6; color: #6b7280; padding: 4px 10px; border-radius: 4px; font-size: 12px; }
+        .photo-preview-container { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .photo-preview-card { text-align: center; max-width: 280px; }
+        .photo-preview-card img { max-width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; border: 1px solid #e5e7eb; cursor: pointer; transition: transform 0.2s; }
+        .photo-preview-card img:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .photo-label { font-weight: 600; margin-bottom: 8px; color: #374151; }
+        .photo-time { font-size: 12px; color: #6b7280; margin-top: 6px; }
+        .photo-placeholder { background: #f9fafb; border: 2px dashed #d1d5db; border-radius: 8px; padding: 40px 20px; color: #9ca3af; }
+        .photo-fullscreen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+        .photo-fullscreen-overlay img { max-width: 95%; max-height: 95%; object-fit: contain; }
+        
+        /* DC_OFFICE_PROXIMITY_001: Away from office and location display styles */
+        .location-link { color: #4f46e5; text-decoration: none; cursor: pointer; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
+        .location-link:hover { text-decoration: underline; }
+        .location-coords { font-family: monospace; font-size: 11px; color: #6b7280; }
+        .location-area { font-size: 12px; color: #374151; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .location-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+        .location-badge.in-office { background: #d1fae5; color: #065f46; }
+        .location-badge.away { background: #fee2e2; color: #991b1b; }
+        .row-away-from-office { background-color: #fef2f2 !important; }
+        .row-away-from-office:hover { background-color: #fee2e2 !important; }
+        .away-indicator { color: #dc2626; font-weight: 600; font-size: 11px; display: flex; align-items: center; gap: 4px; }
+        .away-indicator i { font-size: 10px; }
+        .no-location { color: #9ca3af; font-size: 12px; font-style: italic; }
+        
+        @media (max-width: 768px) {
+            .filters-bar { flex-direction: column; align-items: stretch; }
+            .filters-bar select, .filters-bar input { width: 100%; }
+            .table-responsive { overflow-x: auto; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon total"><i class="fas fa-users"></i></div>
+                    <div class="stat-value" id="totalEmployees">0</div>
+                    <div class="stat-label">Total Team Members</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon present"><i class="fas fa-user-check"></i></div>
+                    <div class="stat-value" id="presentCount">0</div>
+                    <div class="stat-label">Present Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon absent"><i class="fas fa-user-times"></i></div>
+                    <div class="stat-value" id="absentCount">0</div>
+                    <div class="stat-label">Absent</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon late"><i class="fas fa-user-clock"></i></div>
+                    <div class="stat-value" id="lateCount">0</div>
+                    <div class="stat-label">Late Arrivals</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon wfh"><i class="fas fa-home"></i></div>
+                    <div class="stat-value" id="wfhCount">0</div>
+                    <div class="stat-label">Work From Home</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-calendar-day me-2"></i>Attendance Data</h5>
+                    <span id="dateDisplay" class="text-muted"></span>
+                </div>
+                <!-- DC_UNIVERSAL_FILTER_001: Universal Filter Container -->
+                <div id="universalFilterContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0;"></div>
+                
+                <!-- Fallback filters - shown if universal filter fails to load -->
+                <div id="fallbackFiltersContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0; display: flex;">
+                    <select id="fallbackDepartmentFilter" style="min-width: 160px;" onchange="loadTeamAttendance()">
+                        <option value="">All Departments</option>
+                    </select>
+                    <select id="fallbackStaffTypeFilter" style="min-width: 140px;" onchange="loadTeamAttendance()">
+                        <option value="">All Staff Types</option>
+                        <option value="MN_STAFF">MN Staff</option>
+                        <option value="MN_EMPLOYEE">MN Employee</option>
+                        <option value="FREELANCER">Freelancer</option>
+                        <option value="MYNT_REAL">Mynt Real</option>
+                    </select>
+                </div>
+                
+                <div class="filters-bar">
+                    <input type="date" id="dateFilter" onchange="loadTeamAttendance()" title="Select Date">
+                    <select id="statusFilter" onchange="loadTeamAttendance()">
+                        <option value="all">All Status</option>
+                        <option value="present">Present</option>
+                        <option value="absent">Absent</option>
+                        <option value="half_day">Half Day</option>
+                        <option value="on_leave">On Leave</option>
+                    </select>
+                    <select id="modeFilter" onchange="loadTeamAttendance()">
+                        <option value="all">All Modes</option>
+                        <option value="office">Office</option>
+                        <option value="wfh">Work From Home</option>
+                        <option value="field">Field Work</option>
+                    </select>
+                    <!-- DC_OFFICE_PROXIMITY_001: Away From Office Filter -->
+                    <select id="proximityFilter" onchange="loadTeamAttendance()">
+                        <option value="all">All Locations</option>
+                        <option value="in_office">In Office</option>
+                        <option value="away">Away From Office</option>
+                    </select>
+                    <input type="text" id="searchInput" placeholder="Search by name or ID..." onkeyup="debounceSearch()">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="loadTeamAttendance()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="attendanceTable">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name" onclick="sortTable('name')">Employee <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="status" onclick="sortTable('status')">Status <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="current_status" onclick="sortTable('current_status')">Current Status <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="battery" onclick="sortTable('battery')">Battery % <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="work_mode" onclick="sortTable('work_mode')">Work Mode <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="clock_in" onclick="sortTable('clock_in')">Clock In <i class="fas fa-sort"></i></th>
+                                    <th>In Location</th>
+                                    <th class="sortable" data-sort="clock_out" onclick="sortTable('clock_out')">Clock Out <i class="fas fa-sort"></i></th>
+                                    <th>Out Location</th>
+                                    <th class="sortable" data-sort="hours_worked" onclick="sortTable('hours_worked')">Hours Worked <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="break_time" onclick="sortTable('break_time')">Break Time <i class="fas fa-sort"></i></th>
+                                    <th id="actionHeader" style="display: none;">Action</th>
+                                    <th>Photos</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceTableBody">
+                                <tr>
+                                    <td colspan="13" class="text-center py-4">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DC_PHOTO_VIEW_001: Attendance Photo Viewing Modal -->
+    <div class="modal fade" id="attendancePhotoModal" tabindex="-1" aria-labelledby="attendancePhotoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="attendancePhotoModalLabel">
+                        <i class="fas fa-camera me-2"></i>Attendance Photos
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 text-center">
+                        <strong id="photoEmployeeName"></strong>
+                        <span class="text-muted" id="photoEmployeeCode"></span>
+                        <span class="text-muted ms-2" id="photoDate"></span>
+                    </div>
+                    <div class="photo-preview-container" id="photoPreviewContainer">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DC_PHOTO_VIEW_001: Fullscreen Photo Overlay -->
+    <div id="photoFullscreenOverlay" class="photo-fullscreen-overlay" style="display: none;" onclick="closeFullscreenPhoto()">
+        <img id="fullscreenPhotoImg" src="" alt="Full-size attendance photo">
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js?v=1764165148"></script>
+    <script src="/public/js/staff_universal_filter.js?v=1764165148"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        let searchTimeout = null;
+        let canAdminClockout = false;
+        const API_BASE = '/api/v1';
+        let universalFilter = null;
+        let universalFilterReady = false;
+        
+        function buildFilterPayload() {
+            const searchInput = document.getElementById('searchInput');
+            const searchText = searchInput ? searchInput.value : '';
+            
+            if (universalFilterReady && universalFilter && universalFilter.isReady && !universalFilter.initFailed) {
+                try {
+                    const filters = universalFilter.getFilters();
+                    filters.search = filters.search || searchText;
+                    return filters;
+                } catch (e) {
+                    console.warn('[DC] Error getting universal filter values:', e);
+                }
+            }
+            const fallbackDept = document.getElementById('fallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('fallbackStaffTypeFilter');
+            return {
+                company_id: null,
+                staff_type: fallbackStaff ? (fallbackStaff.value || null) : null,
+                department_id: fallbackDept ? (fallbackDept.value || null) : null,
+                employee_id: null,
+                employee: null,
+                search: searchText || null
+            };
+        }
+        
+        async function loadFallbackDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/departments`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('fallbackDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading fallback departments:', error);
+            }
+        }
+        
+        function hideFallbackFilters() {
+            const fallback = document.getElementById('fallbackFiltersContainer');
+            if (fallback) fallback.style.display = 'none';
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('In/Out Records - Admin', 'fas fa-users-cog');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateFilter').value = today;
+            
+            updateDateDisplay();
+            
+            loadFallbackDepartments();
+            
+            if (typeof DCUniversalFilter !== 'undefined') {
+                universalFilter = new DCUniversalFilter('universalFilterContainer', {
+                    showCompany: false,
+                    showStaffType: true,
+                    showDepartment: true,
+                    showEmployee: true,
+                    showSearch: false,
+                    pageKey: 'staff_team_attendance',
+                    onFilterChange: () => {
+                        if (universalFilterReady) loadTeamAttendance();
+                    }
+                });
+                
+                try {
+                    const success = await Promise.race([
+                        universalFilter.waitForReady(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                    ]);
+                    await new Promise(r => setTimeout(r, 50));
+                    if (success === true && 
+                        universalFilter.isReady === true && 
+                        universalFilter.initFailed === false &&
+                        document.getElementById('universalFilterContainer')?.children.length > 0) {
+                        universalFilterReady = true;
+                        hideFallbackFilters();
+                        console.log('[DC] Universal filter ready - using enhanced filters');
+                    } else {
+                        console.warn('[DC] Universal filter not fully ready, keeping fallback');
+                        universalFilterReady = false;
+                    }
+                } catch (e) {
+                    console.warn('[DC] Universal filter initialization failed or timed out, using fallback:', e);
+                    universalFilterReady = false;
+                }
+            } else {
+                console.warn('[DC] DCUniversalFilter not available - using fallback filters');
+            }
+            
+            await loadTeamAttendance();
+            
+            setInterval(loadTeamAttendance, 60000);
+        });
+        
+        function updateDateDisplay() {
+            const dateInput = document.getElementById('dateFilter').value;
+            const dateObj = new Date(dateInput + 'T00:00:00');
+            document.getElementById('dateDisplay').textContent = dateObj.toLocaleDateString('en-IN', {
+                weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+            });
+        }
+        
+        async function loadDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/departments`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('departmentFilter');
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading departments:', error);
+            }
+        }
+        
+        async function loadTeamAttendance() {
+            const dateFilter = document.getElementById('dateFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const mode = document.getElementById('modeFilter').value;
+            const proximity = document.getElementById('proximityFilter')?.value || 'all';
+            
+            const filters = buildFilterPayload();
+            const departmentId = filters.department_id || '';
+            const staffType = filters.staff_type || '';
+            const employeeId = filters.employee_id || '';
+            const search = filters.search || '';
+            
+            updateDateDisplay();
+            
+            let url = `${API_BASE}/staff/attendance/team?`;
+            if (dateFilter) url += `date_filter=${dateFilter}&`;
+            if (departmentId) url += `department_id=${departmentId}&`;
+            if (staffType) url += `staff_type=${staffType}&`;
+            if (employeeId) url += `employee_id=${employeeId}&`;
+            if (status !== 'all') url += `status=${status}&`;
+            if (mode !== 'all') url += `mode=${mode}&`;
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            // DC_OFFICE_PROXIMITY_001: Add proximity filter
+            if (proximity === 'away') url += `away_from_office=true&`;
+            if (proximity === 'in_office') url += `away_from_office=false&`;
+            
+            try {
+                const response = await staffFetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    canAdminClockout = data.can_admin_clockout || false;
+                    
+                    const actionHeader = document.getElementById('actionHeader');
+                    if (canAdminClockout) {
+                        actionHeader.style.display = '';
+                    } else {
+                        actionHeader.style.display = 'none';
+                    }
+                    
+                    updateStats(data.summary || {});
+                    currentMembers = data.members || [];
+                    renderTable(currentMembers);
+                } else {
+                    showError('Failed to load attendance data');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading attendance:', error);
+                showError('Error loading attendance data');
+            }
+        }
+        
+        function updateStats(summary) {
+            document.getElementById('totalEmployees').textContent = summary.total || 0;
+            document.getElementById('presentCount').textContent = summary.present || 0;
+            document.getElementById('absentCount').textContent = summary.absent || 0;
+            document.getElementById('lateCount').textContent = summary.late || 0;
+            document.getElementById('wfhCount').textContent = summary.wfh || 0;
+        }
+        
+        function renderTable(members) {
+            const tbody = document.getElementById('attendanceTableBody');
+            const colSpan = canAdminClockout ? 14 : 13;
+            
+            if (!members || members.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="${colSpan}" class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <p>No team members found</p>
+                    </td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = members.map(member => {
+                const initials = getInitials(member.name);
+                const statusBadge = getStatusBadge(member.attendance_status || member.status);
+                const currentStatusDisplay = formatCurrentStatus(member.current_status);
+                const statusDot = getStatusDot(member.current_status);
+                const modeBadge = member.work_mode ? `<span class="badge badge-${member.work_mode}">${capitalize(member.work_mode)}</span>` : '-';
+                const lateIndicator = member.is_late ? '<span class="late-indicator"><i class="fas fa-clock"></i> Late</span>' : '';
+                const batteryDisplay = formatBatteryDisplay(member.battery_percentage);
+                
+                // DC_OFFICE_PROXIMITY_001: Format location cells
+                const clockInLocationCell = formatLocationCell(member.clock_in_lat, member.clock_in_lng, member.clock_in_area_name, member.is_away_clock_in);
+                const clockOutLocationCell = formatLocationCell(member.clock_out_lat, member.clock_out_lng, member.clock_out_area_name, member.is_away_clock_out);
+                
+                // DC_OFFICE_PROXIMITY_001: Row class for away from office
+                const rowClass = member.is_away ? 'row-away-from-office' : '';
+                
+                let actionCell = '';
+                if (canAdminClockout) {
+                    if (member.can_clockout) {
+                        actionCell = `<td><button class="btn-clockout" onclick="adminClockout(${member.employee_id}, '${escapeHtml(member.name)}')"><i class="fas fa-sign-out-alt me-1"></i>Clock Out</button></td>`;
+                    } else {
+                        actionCell = '<td>-</td>';
+                    }
+                }
+                
+                const photoCell = formatPhotoCell(member);
+                
+                return `
+                    <tr class="${rowClass}">
+                        <td>
+                            <div class="employee-info">
+                                <div class="employee-avatar">${initials}</div>
+                                <div class="employee-details">
+                                    <div class="employee-name">${escapeHtml(member.name)}${lateIndicator}</div>
+                                    <div class="employee-code">${member.employee_code || ''} - ${member.designation || 'Staff'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            ${statusDot}
+                            <span>${currentStatusDisplay}</span>
+                        </td>
+                        <td>${batteryDisplay}</td>
+                        <td>${modeBadge}</td>
+                        <td>${member.clock_in ? formatTime(member.clock_in) : '-'}</td>
+                        <td>${clockInLocationCell}</td>
+                        <td>${member.clock_out ? formatTime(member.clock_out) : '-'}</td>
+                        <td>${clockOutLocationCell}</td>
+                        <td>${member.hours_worked ? formatHoursMinutes(member.hours_worked) : '-'}</td>
+                        <td>${member.break_minutes ? formatHoursMinutes(member.break_minutes) : '-'}</td>
+                        ${actionCell}
+                        ${photoCell}
+                    </tr>`;
+            }).join('');
+        }
+        
+        // DC_OFFICE_PROXIMITY_001: Format location cell with clickable map link
+        function formatLocationCell(lat, lng, areaName, isAway) {
+            if (!lat || !lng) {
+                return '<span class="no-location">No GPS</span>';
+            }
+            
+            const mapUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+            const badgeClass = isAway ? 'away' : 'in-office';
+            const badgeText = isAway ? 'Away' : 'Office';
+            const badgeIcon = isAway ? 'fa-exclamation-triangle' : 'fa-building';
+            
+            return `
+                <a href="${mapUrl}" target="_blank" class="location-link" title="Click to open in Google Maps">
+                    <span class="location-badge ${badgeClass}">
+                        <i class="fas ${badgeIcon}"></i> ${badgeText}
+                    </span>
+                    <span class="location-area" title="${areaName || ''}">${areaName || 'Unknown Area'}</span>
+                    <span class="location-coords">GPS: ${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
+                </a>`;
+        }
+        
+        async function adminClockout(employeeId, employeeName) {
+            if (!confirm(`Are you sure you want to clock out ${employeeName}?`)) {
+                return;
+            }
+            
+            const remarks = prompt('Enter remarks (optional):') || '';
+            const dateFilter = document.getElementById('dateFilter').value;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/attendance/admin-clockout/${employeeId}?date=${dateFilter}&remarks=${encodeURIComponent(remarks)}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`Successfully clocked out ${employeeName}`);
+                    await loadTeamAttendance();
+                } else {
+                    const error = await response.json();
+                    const errorMsg = error.detail || error.message || (error.errors && error.errors[0]) || 'Unknown error';
+                    console.error('[DC-ADMIN-CLOCKOUT] Error:', error);
+                    alert(`Failed: ${errorMsg}`);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC-ADMIN-CLOCKOUT] Exception:', error);
+                alert('Error performing clock out: Network or server error');
+            }
+        }
+        
+        function getStatusDot(status) {
+            switch (status) {
+                case 'active': return '<span class="status-dot active"></span>';
+                case 'on_break': return '<span class="status-dot break"></span>';
+                default: return '<span class="status-dot offline"></span>';
+            }
+        }
+        
+        function getStatusBadge(status) {
+            const badges = {
+                'present': 'present',
+                'absent': 'absent',
+                'late': 'late',
+                'on_leave': 'on-leave',
+                'half_day': 'half_day',
+                'PRESENT': 'present',
+                'ABSENT': 'absent',
+                'LATE': 'late',
+                'ON_LEAVE': 'on-leave',
+                'HALF_DAY': 'half_day',
+                'WFH': 'present'
+            };
+            const normalizedStatus = status ? status.toLowerCase() : 'absent';
+            const badgeClass = badges[status] || badges[normalizedStatus] || 'absent';
+            return `<span class="badge badge-${badgeClass}">${capitalize(normalizedStatus)}</span>`;
+        }
+        
+        function formatCurrentStatus(status) {
+            switch (status) {
+                case 'active': return 'Working';
+                case 'on_break': return 'On Break';
+                case 'clocked_out': return 'Clocked Out';
+                default: return 'Not Clocked In';
+            }
+        }
+        
+        function getInitials(name) {
+            if (!name) return '??';
+            return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        }
+        
+        function formatTime(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function formatHoursMinutes(minutes) {
+            if (!minutes || minutes === 0) return '-';
+            const hours = Math.floor(minutes / 60);
+            const mins = Math.round(minutes % 60);
+            return `${hours}:${mins.toString().padStart(2, '0')}`;
+        }
+        
+        function capitalize(str) {
+            return str ? str.charAt(0).toUpperCase() + str.slice(1).replace(/_/g, ' ') : '';
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(loadTeamAttendance, 300);
+        }
+        
+        function showError(message) {
+            const colSpan = canAdminClockout ? 11 : 10;
+            document.getElementById('attendanceTableBody').innerHTML = `
+                <tr><td colspan="${colSpan}" class="empty-state">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>${message}</p>
+                </td></tr>`;
+        }
+        
+        // DC_PHOTO_VIEW_001: Format photo cell for table
+        function formatPhotoCell(member) {
+            if (member.has_photos) {
+                const memberData = encodeURIComponent(JSON.stringify({
+                    name: member.name,
+                    employee_code: member.employee_code,
+                    clock_in_photo_url: member.clock_in_photo_url,
+                    clock_out_photo_url: member.clock_out_photo_url,
+                    clock_in_photo_time: member.clock_in_photo_time,
+                    clock_out_photo_time: member.clock_out_photo_time
+                }));
+                return `<td><button class="btn-view-photos" onclick="viewAttendancePhotos('${memberData}')"><i class="fas fa-camera"></i> View</button></td>`;
+            }
+            return '<td><span class="no-photos-badge">No Photos</span></td>';
+        }
+        
+        // DC_PHOTO_VIEW_001: View attendance photos in modal
+        function viewAttendancePhotos(memberDataEncoded) {
+            const member = JSON.parse(decodeURIComponent(memberDataEncoded));
+            
+            document.getElementById('photoEmployeeName').textContent = member.name || 'Employee';
+            document.getElementById('photoEmployeeCode').textContent = member.employee_code ? `(${member.employee_code})` : '';
+            document.getElementById('photoDate').textContent = document.getElementById('dateFilter').value 
+                ? new Date(document.getElementById('dateFilter').value + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+                : '';
+            
+            let photosHtml = '';
+            
+            const safeClockInUrl = member.clock_in_photo_url ? escapePhotoUrl(member.clock_in_photo_url) : null;
+            const safeClockOutUrl = member.clock_out_photo_url ? escapePhotoUrl(member.clock_out_photo_url) : null;
+            
+            if (member.clock_in_photo_url) {
+                photosHtml += `
+                    <div class="photo-preview-card">
+                        <div class="photo-label"><i class="fas fa-sign-in-alt text-success me-1"></i>Clock In Photo</div>
+                        <img src="${safeClockInUrl}" alt="Clock In Photo" class="photo-zoomable" data-photo-url="${safeClockInUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'photo-placeholder\\'><i class=\\'fas fa-image\\' style=\\'font-size: 24px;\\'></i><br>Photo unavailable</div>';">
+                        ${member.clock_in_photo_time ? `<div class="photo-time"><i class="fas fa-clock me-1"></i>${formatPhotoTime(member.clock_in_photo_time)}</div>` : ''}
+                    </div>`;
+            } else {
+                photosHtml += `
+                    <div class="photo-preview-card">
+                        <div class="photo-label"><i class="fas fa-sign-in-alt text-secondary me-1"></i>Clock In Photo</div>
+                        <div class="photo-placeholder"><i class="fas fa-camera-retro" style="font-size: 24px;"></i><br>Not captured</div>
+                    </div>`;
+            }
+            
+            if (member.clock_out_photo_url) {
+                photosHtml += `
+                    <div class="photo-preview-card">
+                        <div class="photo-label"><i class="fas fa-sign-out-alt text-danger me-1"></i>Clock Out Photo</div>
+                        <img src="${safeClockOutUrl}" alt="Clock Out Photo" class="photo-zoomable" data-photo-url="${safeClockOutUrl}" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'photo-placeholder\\'><i class=\\'fas fa-image\\' style=\\'font-size: 24px;\\'></i><br>Photo unavailable</div>';">
+                        ${member.clock_out_photo_time ? `<div class="photo-time"><i class="fas fa-clock me-1"></i>${formatPhotoTime(member.clock_out_photo_time)}</div>` : ''}
+                    </div>`;
+            } else {
+                photosHtml += `
+                    <div class="photo-preview-card">
+                        <div class="photo-label"><i class="fas fa-sign-out-alt text-secondary me-1"></i>Clock Out Photo</div>
+                        <div class="photo-placeholder"><i class="fas fa-camera-retro" style="font-size: 24px;"></i><br>Not captured yet</div>
+                    </div>`;
+            }
+            
+            document.getElementById('photoPreviewContainer').innerHTML = photosHtml;
+            
+            document.querySelectorAll('.photo-zoomable').forEach(img => {
+                img.addEventListener('click', function() {
+                    const photoUrl = this.getAttribute('data-photo-url');
+                    if (photoUrl) {
+                        openFullscreenPhoto(photoUrl);
+                    }
+                });
+            });
+            
+            const modal = new bootstrap.Modal(document.getElementById('attendancePhotoModal'));
+            modal.show();
+        }
+        
+        // DC_PHOTO_VIEW_001: Escape photo URL for safe HTML attribute embedding
+        function escapePhotoUrl(url) {
+            if (!url) return '';
+            return url.replace(/&/g, '&amp;')
+                      .replace(/'/g, '&#39;')
+                      .replace(/"/g, '&quot;')
+                      .replace(/</g, '&lt;')
+                      .replace(/>/g, '&gt;');
+        }
+        
+        // DC_PHOTO_VIEW_001: Format photo timestamp
+        function formatPhotoTime(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleString('en-IN', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                day: '2-digit',
+                month: 'short'
+            });
+        }
+        
+        // DC_PHOTO_VIEW_001: Open fullscreen photo overlay
+        function openFullscreenPhoto(photoUrl) {
+            const overlay = document.getElementById('photoFullscreenOverlay');
+            const img = document.getElementById('fullscreenPhotoImg');
+            img.src = photoUrl;
+            overlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // DC_PHOTO_VIEW_001: Close fullscreen photo overlay
+        function closeFullscreenPhoto() {
+            document.getElementById('photoFullscreenOverlay').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        
+        // DC_PHOTO_VIEW_001: Close fullscreen with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeFullscreenPhoto();
+            }
+        });
+        
+        // DC_BATTERY_002: Battery percentage display with color-coded indicators
+        function formatBatteryDisplay(percentage) {
+            if (percentage === null || percentage === undefined) {
+                return '<span class="battery-indicator battery-na"><i class="fas fa-battery-empty"></i> N/A</span>';
+            }
+            
+            let iconClass, colorClass;
+            if (percentage > 50) {
+                iconClass = 'fa-battery-full';
+                colorClass = 'battery-high';
+            } else if (percentage > 20) {
+                iconClass = 'fa-battery-half';
+                colorClass = 'battery-medium';
+            } else if (percentage > 10) {
+                iconClass = 'fa-battery-quarter';
+                colorClass = 'battery-low';
+            } else {
+                iconClass = 'fa-battery-empty';
+                colorClass = 'battery-critical';
+            }
+            
+            return `<span class="battery-indicator ${colorClass}"><i class="fas ${iconClass}"></i> ${percentage}%</span>`;
+        }
+        
+        // DC_BATTERY_002: Sorting functionality
+        let currentSort = { column: null, direction: 'asc' };
+        let currentMembers = [];
+        
+        function sortTable(column) {
+            const headers = document.querySelectorAll('.sortable');
+            headers.forEach(h => h.classList.remove('asc', 'desc'));
+            
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            
+            const header = document.querySelector(`[data-sort="${column}"]`);
+            if (header) {
+                header.classList.add(currentSort.direction);
+            }
+            
+            const sorted = [...currentMembers].sort((a, b) => {
+                let valA, valB;
+                
+                switch (column) {
+                    case 'name':
+                        valA = (a.name || '').toLowerCase();
+                        valB = (b.name || '').toLowerCase();
+                        break;
+                    case 'status':
+                        valA = (a.attendance_status || a.status || '').toLowerCase();
+                        valB = (b.attendance_status || b.status || '').toLowerCase();
+                        break;
+                    case 'current_status':
+                        valA = (a.current_status || '').toLowerCase();
+                        valB = (b.current_status || '').toLowerCase();
+                        break;
+                    case 'battery':
+                        valA = a.battery_percentage ?? -1;
+                        valB = b.battery_percentage ?? -1;
+                        break;
+                    case 'work_mode':
+                        valA = (a.work_mode || '').toLowerCase();
+                        valB = (b.work_mode || '').toLowerCase();
+                        break;
+                    case 'clock_in':
+                        valA = a.clock_in ? new Date(a.clock_in).getTime() : 0;
+                        valB = b.clock_in ? new Date(b.clock_in).getTime() : 0;
+                        break;
+                    case 'clock_out':
+                        valA = a.clock_out ? new Date(a.clock_out).getTime() : 0;
+                        valB = b.clock_out ? new Date(b.clock_out).getTime() : 0;
+                        break;
+                    case 'hours_worked':
+                        valA = a.hours_worked || 0;
+                        valB = b.hours_worked || 0;
+                        break;
+                    case 'break_time':
+                        valA = a.break_minutes || 0;
+                        valB = b.break_minutes || 0;
+                        break;
+                    default:
+                        valA = '';
+                        valB = '';
+                }
+                
+                if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            renderTable(sorted);
+        }
+    </script>
+</body>
+</html>

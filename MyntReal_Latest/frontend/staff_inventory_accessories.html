@@ -1,0 +1,3547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Stock Sheet — Vehicles &amp; Accessories</title>
+  <script>
+  (function(){try{var m=document.cookie.match(/(?:^|;\s*)staff_token=([^;]+)/);if(m&&m[1]){var t=decodeURIComponent(m[1]);if(t&&t!==localStorage.getItem('staff_token'))localStorage.setItem('staff_token',t);}}catch(e){}}());
+  </script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh;}
+    .content-area{padding:20px;}
+    .page-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:12px;}
+    .page-header h1{font-size:22px;font-weight:700;color:#1f2937;margin:0;}
+    .page-header p{font-size:13px;color:#6b7280;margin:3px 0 0;}
+    .card{background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);border:none;margin-bottom:18px;}
+    .card-header{background:transparent;border-bottom:1px solid #e5e7eb;padding:14px 18px;font-weight:600;color:#1f2937;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+    .card-body{padding:16px 18px;}
+
+    /* Top segment switcher */
+    .seg-bar{display:inline-flex;background:#f3f4f6;border-radius:10px;padding:4px;gap:4px;margin-bottom:18px;}
+    .seg-btn{padding:9px 24px;border:none;background:none;border-radius:8px;font-size:14px;font-weight:600;color:#6b7280;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px;}
+    .seg-btn.active{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);color:#1f2937;}
+    .seg-btn.vehicles.active{color:#1e3a5f;}
+    .seg-btn.battery.active{color:#059669;}
+    .seg-btn.charger.active{color:#7c3aed;}
+
+    /* Sub-category pill (Battery / Charger inside accessories section) */
+    .cat-segment{display:inline-flex;background:#f3f4f6;border-radius:10px;padding:4px;gap:4px;margin-bottom:18px;}
+    .cat-btn{padding:7px 22px;border:none;background:none;border-radius:8px;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;transition:all .2s;}
+    .cat-btn.active{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);}
+    .cat-btn.battery.active{color:#059669;}
+    .cat-btn.charger.active{color:#7c3aed;}
+
+    /* Tabs */
+    .tab-nav{display:flex;gap:4px;margin-bottom:18px;border-bottom:2px solid #e5e7eb;padding-bottom:0;}
+    .tab-btn{padding:9px 18px;border:none;background:none;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;}
+    .tab-btn.active{color:#059669;border-bottom-color:#059669;}
+    .tab-btn.charger-theme.active{color:#7c3aed;border-bottom-color:#7c3aed;}
+    .tab-btn:hover:not(.active){color:#374151;}
+    .tab-pane{display:none;}
+    .tab-pane.active{display:block;}
+
+    /* Sheet table */
+    .sheet-wrap{overflow-x:auto;border-radius:10px;border:1px solid #e5e7eb;}
+    .sheet-table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px;}
+    .sheet-table th{background:#1e3a5f;color:#fff;padding:8px 8px;text-align:center;white-space:nowrap;font-size:11px;font-weight:600;border:1px solid rgba(255,255,255,.15);}
+    .sheet-table th.th-left{text-align:left;}
+    .sheet-table th.th-sub{min-width:54px;}
+    .sheet-table td{padding:5px 6px;border:1px solid #e5e7eb;text-align:center;vertical-align:middle;}
+    .sheet-table td.td-left{text-align:left;}
+
+    /* Vehicle color rows */
+    .row-model>td{background:#dbeafe;font-weight:700;font-size:12px;color:#1e3a5f;}
+    .row-color>td{background:#f9fafb;}
+    .row-color:hover>td{background:#f0fdf4;}
+    .qty-cell{font-weight:600;font-family:monospace;color:#1f2937;}
+
+    /* Accessories rows */
+    .row-brand>td{background:#dbeafe;font-weight:700;font-size:12px;color:#1e3a5f;}
+    .row-brand.charger>td{background:#ede9fe;}
+    .row-spec>td{background:#f9fafb;}
+    .row-spec:hover>td{background:#f0fdf4;}
+    .row-spec.charger:hover>td{background:#fdf4ff;}
+    .row-subtype-header>td{background:#334155;color:#e2e8f0;font-size:11px;font-weight:700;letter-spacing:.06em;padding:6px 10px;text-transform:uppercase;}
+    .td-type{font-size:10px;color:#9ca3af;min-width:60px;max-width:60px;white-space:nowrap;}
+    .type-badge{display:inline-block;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:700;white-space:nowrap;}
+    .type-batt{background:#d1fae5;color:#065f46;}
+    .type-chgr{background:#ede9fe;color:#5b21b6;}
+
+    /* Shared row/cell */
+    .row-total>td{background:#1e3a5f;color:#fff;font-weight:700;}
+    .qty-zero{color:#d1d5db;}
+    .qty-pos{color:#059669;font-weight:700;}
+    .qty-neg{color:#dc2626;font-weight:700;}
+    .cell-editable{cursor:pointer;border-radius:4px;transition:background .15s;}
+    .cell-editable:hover{background:#fef3c7!important;}
+    .cell-add-hint{display:inline-flex;align-items:center;font-size:10px;color:#6366f1;opacity:.75;font-style:italic;white-space:nowrap;}
+    .cell-out-plan{background:rgba(99,102,241,.04);}
+    .cell-out-sold{background:rgba(239,68,68,.03);}
+    .cell-out-plan:hover,.cell-out-sold:hover{background:#fef3c7!important;}
+    .badge-in{background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;}
+    .badge-in.charger{background:#ede9fe;color:#5b21b6;}
+    .badge-plan{background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:10px;font-size:10px;}
+    .badge-sold{background:#f3f4f6;color:#374151;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;}
+    .th-group-in{background:#065f46!important;}
+    .th-group-in.charger{background:#5b21b6!important;}
+    .th-group-out{background:#1e40af!important;}
+    .th-sub{background:#374151!important;font-size:10px!important;}
+
+    /* Filter bar */
+    .filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .filter-bar select{padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;min-width:120px;}
+    .btn-primary-c{background:linear-gradient(135deg,#059669,#047857);border:none;color:#fff;padding:8px 18px;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;}
+    .btn-primary-c.charger{background:linear-gradient(135deg,#7c3aed,#5b21b6);}
+    .btn-primary-c:hover{opacity:.9;}
+    .btn-secondary-c{background:#f3f4f6;color:#374151;border:1px solid #d1d5db;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:13px;}
+    .btn-secondary-c:hover{background:#e5e7eb;}
+    .btn-sm-icon{border:none;background:none;cursor:pointer;padding:4px 6px;border-radius:5px;font-size:13px;}
+
+    /* Modals */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1050;align-items:center;justify-content:center;}
+    .modal-overlay.active{display:flex;}
+    .modal-box{background:#fff;border-radius:14px;padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,.25);}
+    .modal-box.wide{width:680px;}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+    .modal-title{font-size:16px;font-weight:700;color:#1f2937;}
+    .modal-close{border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280;}
+    .modal-close:hover{color:#374151;}
+    .form-label{font-size:13px;font-weight:600;color:#374151;margin-bottom:5px;display:block;}
+    .form-control-c{width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;}
+    .form-control-c:focus{outline:none;border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,.1);}
+    .form-row{margin-bottom:14px;}
+    .form-hint{font-size:11px;color:#9ca3af;margin-top:3px;}
+    .form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+    /* Typeahead */
+    .ta-wrap{position:relative;}
+    .ta-results{position:absolute;top:calc(100% + 2px);left:0;right:0;background:#fff;border:1px solid #d1d5db;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:3000;max-height:230px;overflow-y:auto;display:none;}
+    .ta-item{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:8px;}
+    .ta-item:hover{background:#f0fdf4;}
+    .ta-item:last-child{border-bottom:none;}
+    .ta-badge{font-size:10px;padding:1px 6px;border-radius:8px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+    .ta-vendor {background:#fef3c7;color:#92400e;}
+    .ta-staff  {background:#dbeafe;color:#1e40af;}
+    .ta-partner{background:#d1fae5;color:#065f46;}
+    .ta-company{background:#f3e8ff;color:#7c3aed;}
+    .ta-mnr    {background:#fee2e2;color:#dc2626;}
+    .ta-vgk    {background:#fdf2f8;color:#9d174d;}
+    .ta-selected{background:#f0fdf4;border:1px solid #6ee7b7;border-radius:6px;padding:6px 10px;font-size:12px;margin-top:5px;display:flex;align-items:center;gap:6px;}
+    .ta-clear{border:none;background:none;color:#9ca3af;cursor:pointer;font-size:14px;margin-left:auto;}
+    .ta-clear:hover{color:#dc2626;}
+
+    /* Admin list */
+    .admin-list{list-style:none;padding:0;margin:0;}
+    .admin-list-item{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;background:#f9fafb;}
+    .admin-list-item:hover{background:#f0fdf4;}
+    .color-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;background:#f3f4f6;font-size:11px;font-weight:600;margin:2px;cursor:pointer;}
+    .color-chip:hover{background:#d1fae5;}
+    .spec-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;background:#f3f4f6;font-size:11px;font-weight:600;margin:2px;cursor:pointer;}
+    .spec-chip:hover{background:#ede9fe;}
+    .badge-type{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:700;}
+    .badge-opening{background:#fef3c7;color:#92400e;}
+    .badge-purchase{background:#d1fae5;color:#065f46;}
+    .badge-purchase.charger{background:#ede9fe;color:#5b21b6;}
+    .badge-inactive{background:#f3f4f6;color:#9ca3af;}
+    .badge-sales{background:#fee2e2;color:#991b1b;}
+
+    /* Summary */
+    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px;}
+    .summary-card{background:#fff;padding:14px 16px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);text-align:center;}
+    .summary-card .val{font-size:22px;font-weight:700;color:#1f2937;}
+    .summary-card .lbl{font-size:11px;color:#6b7280;margin-top:3px;}
+    .summary-card.green .val{color:#059669;}
+    .summary-card.purple .val{color:#7c3aed;}
+    .summary-card.amber .val{color:#d97706;}
+    .summary-card.blue .val{color:#1d4ed8;}
+    .summary-card.red .val{color:#dc2626;}
+
+    /* Party breakdown */
+    .party-list{list-style:none;padding:0;margin:0;}
+    .party-list li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:12px;}
+    .party-list li:last-child{border-bottom:none;}
+
+    .spinner{display:inline-block;width:18px;height:18px;border:2px solid #e5e7eb;border-top-color:#059669;border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .loading-row td{text-align:center;padding:32px;color:#9ca3af;font-size:13px;}
+    .empty-state{text-align:center;padding:40px 20px;color:#9ca3af;}
+    .empty-state i{font-size:36px;margin-bottom:12px;color:#d1d5db;display:block;}
+
+    /* Dispatch Ledger */
+    .seg-btn.dispatch.active{color:#b45309;}
+    .disp-sub-bar{display:inline-flex;background:#fef3c7;border-radius:10px;padding:4px;gap:4px;margin-bottom:18px;}
+    .disp-sub-btn{padding:7px 22px;border:none;background:none;border-radius:8px;font-size:13px;font-weight:600;color:#92400e;cursor:pointer;transition:all .2s;}
+    .disp-sub-btn.active{background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12);color:#b45309;}
+    .disp-table{width:100%;border-collapse:collapse;font-size:12px;min-width:1100px;}
+    .disp-table th{background:#1e3a5f;color:#fff;padding:7px 8px;white-space:nowrap;font-size:11px;font-weight:600;border:1px solid rgba(255,255,255,.15);text-align:center;}
+    .disp-table td{padding:5px 7px;border:1px solid #e5e7eb;vertical-align:middle;text-align:center;font-size:12px;}
+    .disp-table td.td-left{text-align:left;}
+    .disp-table tr:hover td{background:#fefce8;}
+    .disp-row-ret td{background:#fee2e2!important;color:#991b1b;}
+    .disp-row-ret:hover td{background:#fecaca!important;}
+    .badge-dispatch{background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;}
+    .badge-dispatch.returned{background:#fee2e2;color:#991b1b;}
+    .badge-dispatch.warranty-ok{background:#d1fae5;color:#065f46;}
+    .badge-dispatch.warranty-exp{background:#fee2e2;color:#991b1b;}
+    .badge-dispatch.warranty-soon{background:#fef3c7;color:#92400e;}
+    .badge-dispatch.no-warranty{background:#f3f4f6;color:#6b7280;}
+    .badge-dispatch.pending{background:#dbeafe;color:#1e40af;}
+    .warranty-bar{height:4px;border-radius:2px;background:#e5e7eb;margin-top:3px;min-width:60px;}
+    .warranty-bar-fill{height:100%;border-radius:2px;background:#059669;}
+    .disp-act-btn{border:none;background:none;cursor:pointer;padding:3px 6px;border-radius:4px;font-size:12px;}
+    .disp-act-btn.edit{color:#1d4ed8;} .disp-act-btn.edit:hover{background:#dbeafe;}
+    .disp-act-btn.del{color:#dc2626;} .disp-act-btn.del:hover{background:#fee2e2;}
+    /* Inline editing */
+    td.disp-ie{cursor:text;position:relative;}
+    td.disp-ie:hover:not(.disp-ie-active){outline:1px dashed #d97706;background:#fffbeb!important;}
+    td.disp-ie-active{padding:0!important;}
+    td.disp-ie-active input,td.disp-ie-active select{width:100%;min-height:26px;border:2px solid #2563eb!important;background:#fff!important;padding:2px 5px;font-size:11px;border-radius:0;outline:none;box-sizing:border-box;}
+    /* Bulk add */
+    .bulk-qty-bar{display:flex;align-items:center;gap:10px;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:7px;padding:6px 12px;margin-bottom:10px;flex-wrap:wrap;}
+    .bulk-qty-bar label{font-weight:600;font-size:12px;color:#065f46;margin:0;white-space:nowrap;}
+    .bulk-qty-bar input[type=number]{width:60px;padding:3px 7px;border:1px solid #6ee7b7;border-radius:5px;font-weight:700;font-size:13px;color:#065f46;}
+    .bulk-qty-hint{font-size:11px;color:#6b7280;}
+    .bulk-rows-wrap{overflow-x:auto;max-height:220px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:6px;margin-top:6px;}
+    .bulk-rows-tbl{width:100%;border-collapse:collapse;font-size:11px;}
+    .bulk-rows-tbl th{background:#1e3a5f;color:#fff;padding:5px 6px;white-space:nowrap;font-weight:600;position:sticky;top:0;z-index:2;text-align:left;}
+    .bulk-rows-tbl td{border-bottom:1px solid #e5e7eb;padding:2px 3px;}
+    .bulk-rows-tbl td input,.bulk-rows-tbl td select{width:100%;border:1px solid #d1d5db;border-radius:3px;padding:2px 4px;font-size:11px;background:#fff;box-sizing:border-box;}
+    .btn-rm-row{border:none;background:none;cursor:pointer;color:#dc2626;font-size:15px;padding:1px 4px;line-height:1;}
+    .disp-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#065f46;color:#fff;padding:9px 22px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.25);pointer-events:none;animation:dtFadeIn .3s ease,dtFadeOut .4s ease 2.6s forwards;}
+    @keyframes dtFadeIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+    @keyframes dtFadeOut{to{opacity:0}}
+  </style>
+</head>
+<body>
+  <nav id="staffSidebar"></nav>
+  <div class="main-content">
+    <div id="headerContainer"></div>
+    <div class="content-area">
+
+      <div class="page-header">
+        <div>
+          <h1><i class="fas fa-boxes me-2" style="color:#059669"></i>Inventory Stock Sheet</h1>
+          <p>Vehicles · Battery · Charger — IN (purchase) and OUT (planned + sold)</p>
+        </div>
+        <button class="btn-secondary-c" onclick="refreshCurrent()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+      </div>
+
+      <!-- ══ TOP SEGMENT SWITCHER ══ -->
+      <div class="seg-bar">
+        <button class="seg-btn vehicles active" id="segBtnVehicles" onclick="switchSeg('vehicles')">
+          <i class="fas fa-car"></i> Vehicles
+        </button>
+        <button class="seg-btn battery" id="segBtnBattery" onclick="switchSeg('battery')">
+          <i class="fas fa-battery-three-quarters"></i> Battery
+        </button>
+        <button class="seg-btn charger" id="segBtnCharger" onclick="switchSeg('charger')">
+          <i class="fas fa-plug"></i> Charger
+        </button>
+        <button class="seg-btn dispatch" id="segBtnDispatch" onclick="switchSeg('dispatch')">
+          <i class="fas fa-truck"></i> Dispatch Ledger
+        </button>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════
+           SECTION: VEHICLES (Vehicle Color Sheet)
+      ══════════════════════════════════════════════════ -->
+      <div id="segVehicles">
+
+        <!-- Summary Cards -->
+        <div class="summary-grid">
+          <div class="summary-card"><div class="val" id="vcSumModels">—</div><div class="lbl">Models</div></div>
+          <div class="summary-card green"><div class="val" id="vcSumTotalIn">—</div><div class="lbl">Total In</div></div>
+          <div class="summary-card amber"><div class="val" id="vcSumTotalPlanned">—</div><div class="lbl">Planned Out</div></div>
+          <div class="summary-card blue"><div class="val" id="vcSumTotalSold">—</div><div class="lbl">Sold</div></div>
+          <div class="summary-card red"><div class="val" id="vcSumBalance">—</div><div class="lbl">Balance</div></div>
+        </div>
+
+        <!-- Tab Nav -->
+        <div class="tab-nav" id="vcTabNav">
+          <button class="tab-btn active" onclick="VC.switchTab('vcTabSheet',this)"><i class="fas fa-table me-1"></i>Color Sheet</button>
+          <button class="tab-btn" onclick="VC.switchTab('vcTabBatches',this)"><i class="fas fa-boxes me-1"></i>Batches</button>
+          <button class="tab-btn" onclick="VC.switchTab('vcTabAdmin',this)"><i class="fas fa-cog me-1"></i>Models &amp; Colors</button>
+        </div>
+
+        <!-- TAB: Color Sheet -->
+        <div class="tab-pane active" id="vcTabSheet">
+          <div class="card">
+            <div class="card-header">
+              <span>Color-Wise Register</span>
+              <div class="filter-bar">
+                <select id="vcFilterModel" onchange="VC.renderSheet()"><option value="">All Models</option></select>
+                <select id="vcFilterColor" onchange="VC.renderSheet()"><option value="">All Colors</option></select>
+                <select id="vcFilterAvail" onchange="VC.renderSheet()"><option value="">All Stock</option><option value="1">Available Only</option></select>
+                <select id="vcFilterCompany" onchange="VC.loadSheet()"><option value="">All Companies</option></select>
+                <span style="font-size:12px;color:#6b7280" id="vcSheetTs"></span>
+              </div>
+            </div>
+            <div class="card-body" style="padding:0;">
+              <div class="sheet-wrap">
+                <table class="sheet-table">
+                  <thead id="vcSheetHead"></thead>
+                  <tbody id="vcSheetBody">
+                    <tr class="loading-row"><td colspan="20"><span class="spinner"></span> Loading sheet…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Batches -->
+        <div class="tab-pane" id="vcTabBatches">
+          <div class="card">
+            <div class="card-header">
+              <span>Batches</span>
+              <button class="btn-primary-c" onclick="VC.openBatchModal()"><i class="fas fa-plus me-1"></i>Add Batch</button>
+            </div>
+            <div class="card-body">
+              <div id="vcBatchList"><div class="empty-state"><i class="fas fa-boxes"></i><p>Loading…</p></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Models & Colors -->
+        <div class="tab-pane" id="vcTabAdmin">
+          <div class="card">
+            <div class="card-header">
+              <span>Vehicle Models</span>
+              <button class="btn-primary-c" onclick="VC.openModelModal()"><i class="fas fa-plus me-1"></i>Add Model</button>
+            </div>
+            <div class="card-body">
+              <div id="vcModelList"><div class="empty-state"><i class="fas fa-car"></i><p>Loading…</p></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /segVehicles -->
+
+
+      <!-- ══════════════════════════════════════════════════
+           SECTION: ACCESSORIES (Battery & Charger Stock)
+      ══════════════════════════════════════════════════ -->
+      <div id="segAccessories" style="display:none;">
+
+        <!-- Sub-category pill -->
+        <div class="cat-segment">
+          <button class="cat-btn battery active" id="catBtnBattery" onclick="ACC.switchCategory('battery')">
+            <i class="fas fa-battery-three-quarters me-1"></i> Battery
+          </button>
+          <button class="cat-btn charger" id="catBtnCharger" onclick="ACC.switchCategory('charger')">
+            <i class="fas fa-plug me-1"></i> Charger
+          </button>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-grid">
+          <div class="summary-card"><div class="val" id="sumBrands">—</div><div class="lbl">Brands</div></div>
+          <div class="summary-card green"><div class="val" id="sumTotalIn">—</div><div class="lbl" id="sumInLabel">Total Batteries In</div></div>
+          <div class="summary-card amber"><div class="val" id="sumTotalPlanned">—</div><div class="lbl">Planned Out</div></div>
+          <div class="summary-card blue"><div class="val" id="sumTotalSold">—</div><div class="lbl">Sold</div></div>
+          <div class="summary-card red"><div class="val" id="sumBalance">—</div><div class="lbl">Balance</div></div>
+        </div>
+
+        <!-- Tab Nav -->
+        <div class="tab-nav" id="accTabNav">
+          <button class="tab-btn active" id="tbSheet" onclick="ACC.switchTab('tabSheet',this)"><i class="fas fa-table me-1"></i>Stock Sheet</button>
+          <button class="tab-btn" id="tbBatches" onclick="ACC.switchTab('tabBatches',this)"><i class="fas fa-boxes me-1"></i>Batches</button>
+          <button class="tab-btn" id="tbAdmin" onclick="ACC.switchTab('tabAdmin',this)"><i class="fas fa-cog me-1"></i>Brands &amp; Specs</button>
+        </div>
+
+        <!-- TAB: Stock Sheet -->
+        <div class="tab-pane active" id="tabSheet">
+          <div class="card">
+            <div class="card-header">
+              <span id="sheetCardTitle">Battery Stock Register</span>
+              <div class="filter-bar">
+                <select id="filterBrand" onchange="ACC.renderSheet()"><option value="">All Brands</option></select>
+                <select id="filterSpec" onchange="ACC.renderSheet()"><option value="">All Specs</option></select>
+                <select id="filterAvail" onchange="ACC.renderSheet()"><option value="">All Stock</option><option value="1">Available Only</option></select>
+                <select id="filterCompany" onchange="ACC.loadSheet()"><option value="">All Companies</option></select>
+                <span style="font-size:12px;color:#6b7280" id="sheetTs"></span>
+              </div>
+            </div>
+            <div class="card-body" style="padding:0;">
+              <div class="sheet-wrap">
+                <table class="sheet-table">
+                  <thead id="sheetHead"></thead>
+                  <tbody id="sheetBody">
+                    <tr class="loading-row"><td colspan="20"><span class="spinner"></span> Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Batches -->
+        <div class="tab-pane" id="tabBatches">
+          <div class="card">
+            <div class="card-header">
+              <span id="batchCardTitle">Battery Batches</span>
+              <button class="btn-primary-c" id="addBatchBtn" onclick="ACC.openBatchModal()"><i class="fas fa-plus me-1"></i>Add Batch</button>
+            </div>
+            <div class="card-body">
+              <div id="batchList"><div class="empty-state"><i class="fas fa-boxes"></i><p>Loading…</p></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Brands & Specs -->
+        <div class="tab-pane" id="tabAdmin">
+          <div class="card">
+            <div class="card-header">
+              <span id="adminCardTitle">Battery Brands</span>
+              <button class="btn-primary-c" id="addBrandBtn" onclick="ACC.openBrandModal()"><i class="fas fa-plus me-1"></i>Add Brand</button>
+            </div>
+            <div class="card-body">
+              <div id="brandList"><div class="empty-state"><i class="fas fa-tag"></i><p>Loading…</p></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /segAccessories -->
+
+
+      <!-- ══════════════════════════════════════════════════
+           SECTION: DISPATCH LEDGER (Battery / Vehicle / Charger)
+      ══════════════════════════════════════════════════ -->
+      <div id="segDispatch" style="display:none;">
+
+        <!-- Summary Cards -->
+        <div class="summary-grid" id="dispSummaryGrid">
+          <div class="summary-card amber"><div class="val" id="dspTotalDispatched">—</div><div class="lbl">Total Dispatched</div></div>
+          <div class="summary-card green"><div class="val" id="dspActiveWarranty">—</div><div class="lbl">Active Warranty</div></div>
+          <div class="summary-card red"><div class="val" id="dspExpiringSoon">—</div><div class="lbl">Expiring ≤30 Days</div></div>
+          <div class="summary-card blue"><div class="val" id="dspExpired">—</div><div class="lbl">Warranty Expired</div></div>
+          <div class="summary-card"><div class="val" id="dspReturned">—</div><div class="lbl">Returned</div></div>
+        </div>
+
+        <!-- Sub-tab bar -->
+        <div class="disp-sub-bar">
+          <button class="disp-sub-btn active" id="dspBtnBattery" onclick="DISP.switchSub('battery')">
+            <i class="fas fa-battery-three-quarters me-1"></i> Battery Dispatch <span id="dspBatBadge" style="display:none;background:#059669;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px;"></span>
+          </button>
+          <button class="disp-sub-btn" id="dspBtnVehicle" onclick="DISP.switchSub('vehicle')">
+            <i class="fas fa-car me-1"></i> Vehicle Dispatch <span id="dspVehBadge" style="display:none;background:#1d4ed8;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px;"></span>
+          </button>
+          <button class="disp-sub-btn" id="dspBtnCharger" onclick="DISP.switchSub('charger')">
+            <i class="fas fa-plug me-1"></i> Charger Dispatch <span id="dspChgBadge" style="display:none;background:#7c3aed;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:4px;"></span>
+          </button>
+        </div>
+
+        <!-- ── Battery Dispatch Sub-tab ── -->
+        <div id="dspSubBattery">
+          <div class="card">
+            <div class="card-header">
+              <span><i class="fas fa-battery-three-quarters me-2" style="color:#059669"></i>Battery Dispatch Ledger</span>
+              <div class="filter-bar">
+                <select id="dspBatFilterVendor" onchange="DISP.loadBattery()"><option value="">All Vendors</option></select>
+                <select id="dspBatFilterSpec" onchange="DISP.loadBattery()"><option value="">All Specs</option></select>
+                <select id="dspBatFilterStatus" onchange="DISP.loadBattery()">
+                  <option value="">All Status</option>
+                  <option value="Dispatched">Dispatched</option>
+                  <option value="Returned to vendor">Returned</option>
+                  <option value="In Stock">In Stock</option>
+                  <option value="__null__">No Status</option>
+                </select>
+                <input type="text" id="dspBatSearch" placeholder="Search owner / invoice…" style="padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;min-width:160px;" oninput="DISP.loadBattery()">
+                <button class="btn-primary-c" style="background:linear-gradient(135deg,#d97706,#b45309);" onclick="DISP.openBatModal()"><i class="fas fa-plus me-1"></i>Add Battery</button>
+              </div>
+            </div>
+            <div class="card-body" style="padding:0;">
+              <div class="sheet-wrap">
+                <table class="disp-table">
+                  <thead>
+                    <tr>
+                      <th style="width:36px">#</th>
+                      <th>Entry Date</th>
+                      <th>Vendor</th>
+                      <th>Vendor Inv</th>
+                      <th>Battery Spec</th>
+                      <th>Serial No</th>
+                      <th>Warranty</th>
+                      <th>Status</th>
+                      <th>Dispatch Date</th>
+                      <th>Month</th>
+                      <th>Vehicle No</th>
+                      <th>Invoice No</th>
+                      <th>Owner / Customer</th>
+                      <th>Location</th>
+                      <th>Warranty End</th>
+                      <th>Deliverable</th>
+                      <th>Comments</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dspBatBody">
+                    <tr class="loading-row"><td colspan="18"><span class="spinner"></span> Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Vehicle Dispatch Sub-tab ── -->
+        <div id="dspSubVehicle" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <span><i class="fas fa-car me-2" style="color:#1d4ed8"></i>Vehicle Dispatch Ledger</span>
+              <div class="filter-bar">
+                <select id="dspVehFilterVendor" onchange="DISP.loadVehicle()"><option value="">All Vendors</option></select>
+                <select id="dspVehFilterModel" onchange="DISP.loadVehicle()"><option value="">All Models</option></select>
+                <select id="dspVehFilterStatus" onchange="DISP.loadVehicle()">
+                  <option value="">All Status</option>
+                  <option value="Dispatched">Dispatched</option>
+                  <option value="Returned to vendor">Returned</option>
+                  <option value="In Stock">In Stock</option>
+                </select>
+                <input type="text" id="dspVehSearch" placeholder="Search chassis / customer…" style="padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;min-width:170px;" oninput="DISP.loadVehicle()">
+                <button class="btn-primary-c" style="background:linear-gradient(135deg,#1d4ed8,#1e3a5f);" onclick="DISP.openVehModal()"><i class="fas fa-plus me-1"></i>Add Vehicle</button>
+              </div>
+            </div>
+            <div class="card-body" style="padding:0;">
+              <div class="sheet-wrap">
+                <table class="disp-table">
+                  <thead>
+                    <tr>
+                      <th style="width:36px">#</th>
+                      <th>Vehicle No</th>
+                      <th>Vendor</th>
+                      <th>Vendor Inv</th>
+                      <th>Model</th>
+                      <th>Color</th>
+                      <th>Chassis No</th>
+                      <th>Motor No</th>
+                      <th>Status</th>
+                      <th>Dispatch Date</th>
+                      <th>Month</th>
+                      <th>Invoice No</th>
+                      <th>Customer</th>
+                      <th>Contact</th>
+                      <th>Battery Spec</th>
+                      <th>Battery Serial</th>
+                      <th>Charger No</th>
+                      <th>Address</th>
+                      <th>Return Date</th>
+                      <th>Comments</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dspVehBody">
+                    <tr class="loading-row"><td colspan="21"><span class="spinner"></span> Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Charger Dispatch Sub-tab ── -->
+        <div id="dspSubCharger" style="display:none;">
+          <div class="card">
+            <div class="card-header">
+              <span><i class="fas fa-plug me-2" style="color:#7c3aed"></i>Charger Dispatch Ledger</span>
+              <div class="filter-bar">
+                <select id="dspChgFilterVendor" onchange="DISP.loadCharger()"><option value="">All Vendors</option></select>
+                <select id="dspChgFilterSpec" onchange="DISP.loadCharger()"><option value="">All Specs</option></select>
+                <select id="dspChgFilterStatus" onchange="DISP.loadCharger()">
+                  <option value="">All Status</option>
+                  <option value="Dispatched">Dispatched</option>
+                  <option value="Returned to vendor">Returned</option>
+                  <option value="In Stock">In Stock</option>
+                </select>
+                <input type="text" id="dspChgSearch" placeholder="Search owner / invoice…" style="padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;min-width:160px;" oninput="DISP.loadCharger()">
+                <button class="btn-primary-c" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);" onclick="DISP.openChgModal()"><i class="fas fa-plus me-1"></i>Add Charger</button>
+              </div>
+            </div>
+            <div class="card-body" style="padding:0;">
+              <div class="sheet-wrap">
+                <table class="disp-table">
+                  <thead>
+                    <tr>
+                      <th style="width:36px">#</th>
+                      <th>Entry Date</th>
+                      <th>Vendor</th>
+                      <th>Vendor Inv</th>
+                      <th>Charger Spec</th>
+                      <th>Charger No</th>
+                      <th>Warranty</th>
+                      <th>Status</th>
+                      <th>Dispatch Date</th>
+                      <th>Month</th>
+                      <th>Vehicle No</th>
+                      <th>Invoice No</th>
+                      <th>Owner / Customer</th>
+                      <th>Location</th>
+                      <th>Warranty End</th>
+                      <th>Deliverable</th>
+                      <th>Notes</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dspChgBody">
+                    <tr class="loading-row"><td colspan="18"><span class="spinner"></span> Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /segDispatch -->
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       VEHICLE COLOR MODALS (vc prefix)
+  ══════════════════════════════════════════════════ -->
+
+  <!-- VC: IN Modal -->
+  <div class="modal-overlay" id="vcInModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="vcInModalTitle">Enter IN Quantity</div>
+        <button class="modal-close" onclick="closeModal('vcInModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Quantity (IN)</label>
+        <input type="number" id="vcInQty" min="0" class="form-control-c" placeholder="0">
+        <div class="form-hint" id="vcInCapHint"></div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Supplier / Party <span style="font-size:11px;font-weight:400;color:#9ca3af">(vendor, staff, partner, company)</span></label>
+        <div class="ta-wrap">
+          <input type="text" id="vcInPartyInput" class="form-control-c" placeholder="Type name or code to search…" autocomplete="off">
+          <div class="ta-results" id="vcInPartyResults"></div>
+        </div>
+        <div id="vcInPartySelected" style="display:none" class="ta-selected">
+          <span id="vcInPartySelectedText"></span>
+          <button class="ta-clear" onclick="VC.clearInParty()" title="Clear">&times;</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Company Tag <span style="font-size:11px;font-weight:400;color:#9ca3af">(for reporting)</span></label>
+        <select id="vcInCompanyTag" class="form-control-c"><option value="">— Untagged —</option></select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('vcInModal')">Cancel</button>
+        <button class="btn-primary-c" onclick="VC.saveInEntry()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VC: OUT Modal -->
+  <div class="modal-overlay" id="vcOutModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <div class="modal-title" id="vcOutModalTitle">OUT Entry — Planned / Sold</div>
+        <button class="modal-close" onclick="closeModal('vcOutModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Party (Buyer) <span style="font-size:11px;font-weight:400;color:#9ca3af">(partner, staff, MNR/VGK member)</span></label>
+        <div class="ta-wrap">
+          <input type="text" id="vcOutPartyInput" class="form-control-c" placeholder="Type name or code to search…" autocomplete="off">
+          <div class="ta-results" id="vcOutPartyResults"></div>
+        </div>
+        <div id="vcOutPartySelected" style="display:none" class="ta-selected">
+          <span id="vcOutPartySelectedText"></span>
+          <button class="ta-clear" onclick="VC.clearOutParty()" title="Clear">&times;</button>
+        </div>
+      </div>
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label">Planned Qty</label>
+          <input type="number" id="vcOutPlanned" min="0" class="form-control-c" placeholder="0">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Sold Qty</label>
+          <input type="number" id="vcOutSold" min="0" class="form-control-c" placeholder="0">
+        </div>
+      </div>
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label">Entry Date</label>
+          <input type="date" id="vcOutDate" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Company Tag <span style="font-size:11px;font-weight:400;color:#9ca3af">(reporting)</span></label>
+          <select id="vcOutCompanyTag" class="form-control-c"><option value="">— Untagged —</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notes</label>
+        <input type="text" id="vcOutNotes" class="form-control-c" placeholder="Optional notes" maxlength="200">
+      </div>
+      <div id="vcOutPartyBreakdown" style="margin-top:4px;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('vcOutModal')">Cancel</button>
+        <button class="btn-primary-c" onclick="VC.saveOutEntry()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VC: Batch Modal -->
+  <div class="modal-overlay" id="vcBatchModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="vcBatchModalTitle">Add Batch</div>
+        <button class="modal-close" onclick="closeModal('vcBatchModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Batch Label</label>
+        <input type="text" id="vcBatchLabel" class="form-control-c" placeholder="e.g. New 1 (01/06/2026)" maxlength="100">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Batch Date</label>
+        <input type="date" id="vcBatchDate" class="form-control-c">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Type</label>
+        <select id="vcBatchType" class="form-control-c" onchange="VC.togglePurchaseQty()">
+          <option value="purchase">Purchase Batch (IN)</option>
+          <option value="opening">Opening Balance (IN)</option>
+          <option value="sales">Sales Batch (OUT)</option>
+        </select>
+      </div>
+      <div class="form-row" id="vcPurchaseQtyRow">
+        <label class="form-label">Purchase Qty (cap)</label>
+        <input type="number" id="vcBatchPurchaseQty" min="0" class="form-control-c" placeholder="e.g. 40">
+        <div class="form-hint">Total vehicles purchased in this batch. Color entries cannot exceed this.</div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Ref / Invoice No</label>
+        <input type="text" id="vcBatchRef" class="form-control-c" placeholder="Optional PO/Invoice reference" maxlength="100">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('vcBatchModal')">Cancel</button>
+        <button class="btn-primary-c" onclick="VC.saveBatch()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VC: Model Modal -->
+  <div class="modal-overlay" id="vcModelModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="vcModelModalTitle">Add Model</div>
+        <button class="modal-close" onclick="closeModal('vcModelModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Model Name</label>
+        <input type="text" id="vcModelName" class="form-control-c" placeholder="e.g. GT PRO" maxlength="100">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Sort Order</label>
+        <input type="number" id="vcModelSort" class="form-control-c" value="0" min="0">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('vcModelModal')">Cancel</button>
+        <button class="btn-primary-c" onclick="VC.saveModel()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VC: Color Modal -->
+  <div class="modal-overlay" id="vcColorModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="vcColorModalTitle">Add Color</div>
+        <button class="modal-close" onclick="closeModal('vcColorModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Color Name</label>
+        <input type="text" id="vcColorName" class="form-control-c" placeholder="e.g. White" maxlength="50">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Sort Order</label>
+        <input type="number" id="vcColorSort" class="form-control-c" value="0" min="0">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('vcColorModal')">Cancel</button>
+        <button class="btn-primary-c" onclick="VC.saveColor()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       ACCESSORIES MODALS (original IDs)
+  ══════════════════════════════════════════════════ -->
+
+  <!-- ACC: IN Modal -->
+  <div class="modal-overlay" id="inModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="inModalTitle">Enter IN Quantity</div>
+        <button class="modal-close" onclick="closeModal('inModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Quantity (IN)</label>
+        <input type="number" id="inQty" min="0" class="form-control-c" placeholder="0">
+        <div class="form-hint" id="inCapHint"></div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Supplier / Party <span style="font-size:11px;font-weight:400;color:#9ca3af">(vendor, staff, partner, company)</span></label>
+        <div class="ta-wrap">
+          <input type="text" id="inPartyInput" class="form-control-c" placeholder="Type to search…" autocomplete="off">
+          <div class="ta-results" id="inPartyResults"></div>
+        </div>
+        <div id="inPartySelected" style="display:none" class="ta-selected">
+          <span id="inPartySelectedText"></span>
+          <button class="ta-clear" onclick="ACC.clearInParty()">&times;</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Company Tag</label>
+        <select id="inCompanyTag" class="form-control-c"><option value="">— Untagged —</option></select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('inModal')">Cancel</button>
+        <button class="btn-primary-c" id="inSaveBtn" onclick="ACC.saveInEntry()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACC: OUT Modal -->
+  <div class="modal-overlay" id="outModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <div class="modal-title" id="outModalTitle">OUT Entry</div>
+        <button class="modal-close" onclick="closeModal('outModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Party (Buyer) <span style="font-size:11px;font-weight:400;color:#9ca3af">(partner, staff, MNR/VGK member)</span></label>
+        <div class="ta-wrap">
+          <input type="text" id="outPartyInput" class="form-control-c" placeholder="Type to search…" autocomplete="off">
+          <div class="ta-results" id="outPartyResults"></div>
+        </div>
+        <div id="outPartySelected" style="display:none" class="ta-selected">
+          <span id="outPartySelectedText"></span>
+          <button class="ta-clear" onclick="ACC.clearOutParty()">&times;</button>
+        </div>
+      </div>
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label">Planned Qty</label>
+          <input type="number" id="outPlanned" min="0" class="form-control-c" placeholder="0">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Sold Qty</label>
+          <input type="number" id="outSold" min="0" class="form-control-c" placeholder="0">
+        </div>
+      </div>
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label">Entry Date</label>
+          <input type="date" id="outDate" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Company Tag</label>
+          <select id="outCompanyTag" class="form-control-c"><option value="">— Untagged —</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Notes</label>
+        <input type="text" id="outNotes" class="form-control-c" placeholder="Optional" maxlength="200">
+      </div>
+      <div id="outPartyBreakdown"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('outModal')">Cancel</button>
+        <button class="btn-primary-c" id="outSaveBtn" onclick="ACC.saveOutEntry()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACC: Batch Modal -->
+  <div class="modal-overlay" id="batchModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="batchModalTitle">Add Batch</div>
+        <button class="modal-close" onclick="closeModal('batchModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Batch Label</label>
+        <input type="text" id="batchLabel" class="form-control-c" placeholder="e.g. Stock 01/06/2026" maxlength="100">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Batch Date</label>
+        <input type="date" id="batchDate" class="form-control-c">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Type</label>
+        <select id="batchType" class="form-control-c" onchange="ACC.togglePurchaseQty()">
+          <option value="purchase">Purchase Batch (IN)</option>
+          <option value="opening">Opening Balance (IN)</option>
+          <option value="sales">Sales Batch (OUT)</option>
+        </select>
+      </div>
+      <div class="form-row" id="purchaseQtyRow">
+        <label class="form-label">Purchase Qty (cap)</label>
+        <input type="number" id="batchPurchaseQty" min="0" class="form-control-c" placeholder="e.g. 100">
+        <div class="form-hint">Total units purchased. Spec entries cannot exceed this cap.</div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Ref / Invoice No</label>
+        <input type="text" id="batchRef" class="form-control-c" placeholder="Optional" maxlength="100">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('batchModal')">Cancel</button>
+        <button class="btn-primary-c" id="batchSaveBtn" onclick="ACC.saveBatch()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACC: Brand Modal -->
+  <div class="modal-overlay" id="brandModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="brandModalTitle">Add Brand</div>
+        <button class="modal-close" onclick="closeModal('brandModal')">&times;</button>
+      </div>
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label">Category</label>
+          <select id="brandCategory" class="form-control-c">
+            <option value="battery">Battery</option>
+            <option value="charger">Charger</option>
+          </select>
+          <div class="form-hint">Which page this brand appears on</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Type <span style="font-size:11px;font-weight:400;color:#9ca3af">(sub-label in sheet)</span></label>
+          <select id="brandSubType" class="form-control-c">
+            <option value="Battery">Battery</option>
+            <option value="Charger">Charger</option>
+          </select>
+          <div class="form-hint">Shown as grouping column</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Brand / Series Name</label>
+        <input type="text" id="brandName" class="form-control-c" placeholder="e.g. LTM-SMART, ELYF, Vivek" maxlength="100">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Sort Order</label>
+        <input type="number" id="brandSort" class="form-control-c" value="0" min="0">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('brandModal')">Cancel</button>
+        <button class="btn-primary-c" id="brandSaveBtn" onclick="ACC.saveBrand()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACC: Spec Modal -->
+  <div class="modal-overlay" id="specModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="specModalTitle">Add Spec</div>
+        <button class="modal-close" onclick="closeModal('specModal')">&times;</button>
+      </div>
+      <div class="form-row">
+        <label class="form-label" id="specModalHint">Spec / Variant</label>
+        <input type="text" id="specName" class="form-control-c" placeholder="e.g. 48V30AH or 58V 6AMPS" maxlength="100">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Sort Order</label>
+        <input type="number" id="specSort" class="form-control-c" value="0" min="0">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('specModal')">Cancel</button>
+        <button class="btn-primary-c" onclick="ACC.saveSpec()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════
+       DISPATCH MODALS
+  ══════════════════════════════════════════════════ -->
+
+  <!-- Battery Dispatch Modal -->
+  <div class="modal-overlay" id="dispBatModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <div class="modal-title" id="dispBatModalTitle">Add Battery Dispatch</div>
+        <button class="modal-close" onclick="closeModal('dispBatModal')">&times;</button>
+      </div>
+      <div class="bulk-qty-bar" id="dspBatQtyBar" style="display:none;">
+        <label><i class="fas fa-layer-group me-1"></i>Qty</label>
+        <input type="number" id="dspBatQty" value="1" min="1" max="200" oninput="DISP._batQtyChange()">
+        <span class="bulk-qty-hint">Set &gt; 1 to add multiple units at once. Shared fields below apply to all rows.</span>
+      </div>
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label">Entry Date *</label>
+          <input type="date" id="dspBatEntryDate" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Vendor Code</label>
+          <input type="text" id="dspBatVendor" class="form-control-c" placeholder="EA / SK / RD / IN…" list="dspBatVendorList">
+          <datalist id="dspBatVendorList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Vendor Invoice No</label>
+          <input type="text" id="dspBatVendorInvoice" class="form-control-c" placeholder="Vendor's own invoice ref" list="dspBatInvoiceList">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Battery Spec *</label>
+          <input type="text" id="dspBatSpec" class="form-control-c" placeholder="60V 32AH LTM…" list="dspBatSpecList">
+          <datalist id="dspBatSpecList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Battery Serial No</label>
+          <input type="text" id="dspBatSerialNo" class="form-control-c" placeholder="Battery serial / unit ID">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Warranty (months)</label>
+          <input type="number" id="dspBatWarranty" class="form-control-c" placeholder="36" min="0">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Status</label>
+          <select id="dspBatStatus" class="form-control-c">
+            <option value="">— select —</option>
+            <option value="Dispatched">Dispatched</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Returned to vendor">Returned to vendor</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Dispatch Date</label>
+          <input type="date" id="dspBatDispatchDate" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Dispatch Month</label>
+          <input type="text" id="dspBatDispatchMonth" class="form-control-c" placeholder="Dec'25">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Assigned Vehicle No</label>
+          <input type="text" id="dspBatVehicleNo" class="form-control-c" list="dspBatVehicleNoList">
+          <datalist id="dspBatVehicleNoList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Sales Invoice No</label>
+          <input type="text" id="dspBatInvoiceNo" class="form-control-c" list="dspBatInvoiceList">
+          <datalist id="dspBatInvoiceList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Owner / Customer Name</label>
+          <input type="text" id="dspBatOwner" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Location</label>
+          <input type="text" id="dspBatLocation" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Warranty End Date</label>
+          <input type="date" id="dspBatWarrantyEnd" class="form-control-c">
+          <div class="form-hint">Auto-calculated from dispatch date + warranty months</div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Deliverable</label>
+          <select id="dspBatDeliverable" class="form-control-c">
+            <option value="">— select —</option>
+            <option value="Customer">Customer</option>
+            <option value="Bonanza">Bonanza</option>
+            <option value="Partner">Partner</option>
+          </select>
+        </div>
+        <div class="form-row" style="grid-column:1/-1;">
+          <label class="form-label">Comments</label>
+          <textarea id="dspBatComments" class="form-control-c" rows="2" placeholder="Optional notes…"></textarea>
+        </div>
+      </div>
+      <div id="dspBatBulkSection" style="display:none;margin-top:10px;">
+        <div style="font-size:12px;font-weight:600;color:#065f46;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+          <span>Per-unit details <small style="font-weight:400;color:#6b7280">(shared fields above apply to all)</small></span>
+          <button type="button" style="font-size:11px;color:#059669;border:1px dashed #6ee7b7;background:none;padding:2px 8px;border-radius:5px;cursor:pointer;" onclick="DISP._addBatRow()"><i class="fas fa-plus me-1"></i>Add Row</button>
+        </div>
+        <div class="bulk-rows-wrap"><table class="bulk-rows-tbl">
+          <thead><tr>
+            <th style="width:24px">#</th><th style="min-width:108px">Dispatch Date</th><th style="min-width:100px">Vehicle No</th>
+            <th style="min-width:100px">Invoice No</th><th style="min-width:130px">Owner / Customer</th>
+            <th style="min-width:100px">Location</th><th style="min-width:100px">Notes</th><th style="width:22px"></th>
+          </tr></thead>
+          <tbody id="dspBatRowsBody"></tbody>
+        </table></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('dispBatModal')">Cancel</button>
+        <button class="btn-primary-c" style="background:linear-gradient(135deg,#d97706,#b45309);" onclick="DISP.saveBat()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vehicle Dispatch Modal -->
+  <div class="modal-overlay" id="dispVehModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <div class="modal-title" id="dispVehModalTitle">Add Vehicle Dispatch</div>
+        <button class="modal-close" onclick="closeModal('dispVehModal')">&times;</button>
+      </div>
+      <div class="bulk-qty-bar" id="dspVehQtyBar" style="display:none;">
+        <label><i class="fas fa-layer-group me-1"></i>Qty</label>
+        <input type="number" id="dspVehQty" value="1" min="1" max="200" oninput="DISP._vehQtyChange()">
+        <span class="bulk-qty-hint">Set &gt; 1 to add multiple vehicles. Shared fields (Vendor/Model/Color/Status/Month/Battery Spec) apply to all rows.</span>
+      </div>
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label">Vehicle No (WB No)</label>
+          <input type="text" id="dspVehVehicleNo" class="form-control-c" placeholder="WB12250001">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Vendor Code</label>
+          <input type="text" id="dspVehVendor" class="form-control-c" placeholder="EA / SK / RD / IN…" list="dspVehVendorList">
+          <datalist id="dspVehVendorList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Vendor Invoice No</label>
+          <input type="text" id="dspVehVendorInvoice" class="form-control-c" placeholder="Vendor's own invoice ref" list="dspVehInvoiceList">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Vehicle Model</label>
+          <input type="text" id="dspVehModel" class="form-control-c" placeholder="GT Pro / Sweety Pro…" list="dspVehModelList">
+          <datalist id="dspVehModelList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Color</label>
+          <input type="text" id="dspVehColor" class="form-control-c" placeholder="Green / Blue / Red…">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Chassis No</label>
+          <input type="text" id="dspVehChassis" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Motor No</label>
+          <input type="text" id="dspVehMotor" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Status</label>
+          <select id="dspVehStatus" class="form-control-c">
+            <option value="">— select —</option>
+            <option value="Dispatched">Dispatched</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Returned to vendor">Returned to vendor</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Dispatch Date</label>
+          <input type="date" id="dspVehDispatchDate" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Dispatch Month</label>
+          <input type="text" id="dspVehDispatchMonth" class="form-control-c" placeholder="Dec'25">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Sales Invoice No</label>
+          <input type="text" id="dspVehInvoiceNo" class="form-control-c" list="dspVehInvoiceList">
+          <datalist id="dspVehInvoiceList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Customer Name</label>
+          <input type="text" id="dspVehCustomer" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Contact Number</label>
+          <input type="text" id="dspVehContact" class="form-control-c" placeholder="10-digit mobile">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Battery Spec</label>
+          <input type="text" id="dspVehBatSpec" class="form-control-c" placeholder="60V32AH" list="dspVehBatSpecList">
+          <datalist id="dspVehBatSpecList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Battery Serial No</label>
+          <input type="text" id="dspVehBatSerial" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Charger No</label>
+          <input type="text" id="dspVehChargerNo" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Return Date</label>
+          <input type="date" id="dspVehReturnDate" class="form-control-c">
+        </div>
+        <div class="form-row" style="grid-column:1/-1;">
+          <label class="form-label">Address / Destination</label>
+          <input type="text" id="dspVehAddress" class="form-control-c">
+        </div>
+        <div class="form-row" style="grid-column:1/-1;">
+          <label class="form-label">Comments</label>
+          <textarea id="dspVehComments" class="form-control-c" rows="2" placeholder="Optional notes…"></textarea>
+        </div>
+      </div>
+      <div id="dspVehBulkSection" style="display:none;margin-top:10px;">
+        <div style="font-size:12px;font-weight:600;color:#065f46;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+          <span>Per-vehicle details <small style="font-weight:400;color:#6b7280">(shared fields above apply to all)</small></span>
+          <button type="button" style="font-size:11px;color:#1d4ed8;border:1px dashed #bfdbfe;background:none;padding:2px 8px;border-radius:5px;cursor:pointer;" onclick="DISP._addVehRow()"><i class="fas fa-plus me-1"></i>Add Row</button>
+        </div>
+        <div class="bulk-rows-wrap"><table class="bulk-rows-tbl">
+          <thead><tr>
+            <th style="width:24px">#</th><th style="min-width:100px">Vehicle No</th><th style="min-width:120px">Chassis No</th>
+            <th style="min-width:120px">Motor No</th><th style="min-width:108px">Dispatch Date</th>
+            <th style="min-width:100px">Invoice No</th><th style="min-width:120px">Customer</th>
+            <th style="min-width:110px">Battery Serial</th><th style="min-width:100px">Charger No</th><th style="min-width:130px">Address</th><th style="width:22px"></th>
+          </tr></thead>
+          <tbody id="dspVehRowsBody"></tbody>
+        </table></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('dispVehModal')">Cancel</button>
+        <button class="btn-primary-c" style="background:linear-gradient(135deg,#1d4ed8,#1e3a5f);" onclick="DISP.saveVeh()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charger Dispatch Modal -->
+  <div class="modal-overlay" id="dispChgModal">
+    <div class="modal-box wide">
+      <div class="modal-header">
+        <div class="modal-title" id="dispChgModalTitle">Add Charger Dispatch</div>
+        <button class="modal-close" onclick="closeModal('dispChgModal')">&times;</button>
+      </div>
+      <div class="bulk-qty-bar" id="dspChgQtyBar" style="display:none;">
+        <label><i class="fas fa-layer-group me-1"></i>Qty</label>
+        <input type="number" id="dspChgQty" value="1" min="1" max="200" oninput="DISP._chgQtyChange()">
+        <span class="bulk-qty-hint">Set &gt; 1 to add multiple units. Shared fields below apply to all rows.</span>
+      </div>
+      <div class="form-grid2">
+        <div class="form-row">
+          <label class="form-label">Entry Date *</label>
+          <input type="date" id="dspChgEntryDate" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Vendor Code</label>
+          <input type="text" id="dspChgVendor" class="form-control-c" placeholder="EA / SK / RD / IN…" list="dspChgVendorList">
+          <datalist id="dspChgVendorList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Vendor Invoice No</label>
+          <input type="text" id="dspChgVendorInvoice" class="form-control-c" placeholder="Vendor's own invoice ref" list="dspChgInvoiceList">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Charger Spec *</label>
+          <input type="text" id="dspChgSpec" class="form-control-c" placeholder="60V 5A / 72V 10A…" list="dspChgSpecList">
+          <datalist id="dspChgSpecList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Charger Serial No</label>
+          <input type="text" id="dspChgChargerNo" class="form-control-c" placeholder="Charger serial / unit ID">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Warranty (months)</label>
+          <input type="number" id="dspChgWarranty" class="form-control-c" placeholder="12" min="0">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Status</label>
+          <select id="dspChgStatus" class="form-control-c">
+            <option value="">— select —</option>
+            <option value="Dispatched">Dispatched</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Returned to vendor">Returned to vendor</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Dispatch Date</label>
+          <input type="date" id="dspChgDispatchDate" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Dispatch Month</label>
+          <input type="text" id="dspChgDispatchMonth" class="form-control-c" placeholder="Dec'25">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Vehicle No</label>
+          <input type="text" id="dspChgVehicleNo" class="form-control-c" list="dspChgVehicleNoList">
+          <datalist id="dspChgVehicleNoList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Sales Invoice No</label>
+          <input type="text" id="dspChgInvoiceNo" class="form-control-c" list="dspChgInvoiceList">
+          <datalist id="dspChgInvoiceList"></datalist>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Owner / Customer Name</label>
+          <input type="text" id="dspChgOwner" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Location</label>
+          <input type="text" id="dspChgLocation" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Warranty End Date</label>
+          <input type="date" id="dspChgWarrantyEnd" class="form-control-c">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Deliverable</label>
+          <select id="dspChgDeliverable" class="form-control-c">
+            <option value="">— select —</option>
+            <option value="Customer">Customer</option>
+            <option value="Bonanza">Bonanza</option>
+            <option value="Partner">Partner</option>
+          </select>
+        </div>
+        <div class="form-row" style="grid-column:1/-1;">
+          <label class="form-label">Notes</label>
+          <textarea id="dspChgNotes" class="form-control-c" rows="2" placeholder="Optional notes…"></textarea>
+        </div>
+      </div>
+      <div id="dspChgBulkSection" style="display:none;margin-top:10px;">
+        <div style="font-size:12px;font-weight:600;color:#065f46;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+          <span>Per-unit details <small style="font-weight:400;color:#6b7280">(shared fields above apply to all)</small></span>
+          <button type="button" style="font-size:11px;color:#7c3aed;border:1px dashed #ddd6fe;background:none;padding:2px 8px;border-radius:5px;cursor:pointer;" onclick="DISP._addChgRow()"><i class="fas fa-plus me-1"></i>Add Row</button>
+        </div>
+        <div class="bulk-rows-wrap"><table class="bulk-rows-tbl">
+          <thead><tr>
+            <th style="width:24px">#</th><th style="min-width:108px">Dispatch Date</th><th style="min-width:100px">Vehicle No</th>
+            <th style="min-width:100px">Invoice No</th><th style="min-width:130px">Owner / Customer</th>
+            <th style="min-width:100px">Location</th><th style="min-width:100px">Notes</th><th style="width:22px"></th>
+          </tr></thead>
+          <tbody id="dspChgRowsBody"></tbody>
+        </table></div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn-secondary-c" onclick="closeModal('dispChgModal')">Cancel</button>
+        <button class="btn-primary-c" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);" onclick="DISP.saveChg()"><i class="fas fa-save me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/staff_sidebar.js?v=20260602c"></script>
+  <script src="/staff_header.js"></script>
+  <script>
+
+  // ══════════════════════════════════════════════════
+  // GLOBAL UTILITIES
+  // ══════════════════════════════════════════════════
+  function getToken(){ return localStorage.getItem('staff_token') || ''; }
+  function hdr(){ return {'Authorization':'Bearer '+getToken(),'Content-Type':'application/json'}; }
+
+  async function apiFetch(url, opts={}){
+    const res = await fetch(url, {...opts, headers:{...hdr(),...(opts.headers||{})}});
+    if(!res.ok){
+      const body = await res.json().catch(()=>null);
+      const msg  = body?.detail || body?.message || `HTTP ${res.status}`;
+      throw new Error(String(msg).substring(0,200));
+    }
+    return res.json();
+  }
+
+  function openModal(id){ document.getElementById(id).classList.add('active'); }
+  function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+
+  function escH(s){ const d=document.createElement('div'); d.textContent=String(s||''); return d.innerHTML; }
+  function escAttr(s){ return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+  let _taTimer = null;
+
+  function initTypeahead(inputId, resultsId, selectedId, selectedTextId, searchBase, side, onSelect){
+    const inp = document.getElementById(inputId);
+    const res = document.getElementById(resultsId);
+    if(!inp || !res) return;
+    const newInp = inp.cloneNode(true);
+    inp.parentNode.replaceChild(newInp, inp);
+    newInp.addEventListener('input', ()=>{
+      clearTimeout(_taTimer);
+      const q = newInp.value.trim();
+      if(q.length < 2){ res.style.display='none'; return; }
+      _taTimer = setTimeout(async()=>{
+        try{
+          const data = await apiFetch(`${searchBase}/parties/search?q=${encodeURIComponent(q)}&side=${side}`);
+          if(!data.length){
+            res.innerHTML = `<div class="ta-item" style="color:#9ca3af;cursor:default;font-style:italic">No results found for "${escH(q)}"</div>`;
+            res.style.display = 'block';
+            return;
+          }
+          res.innerHTML = data.map(p=>
+            `<div class="ta-item" data-id="${p.id||''}" data-code="${escAttr(p.code||'')}" data-name="${escAttr(p.name)}" data-type="${escAttr(p.type)}">
+               <span class="ta-badge ta-${p.type.toLowerCase()}">${escH(p.type)}</span>
+               <span>${p.code?escH(p.code)+' — ':''}${escH(p.name)}</span>
+             </div>`
+          ).join('');
+          res.querySelectorAll('.ta-item').forEach(el=>{
+            el.addEventListener('mousedown', e=>{
+              e.preventDefault();
+              const sel = {id:el.dataset.id?parseInt(el.dataset.id):null, code:el.dataset.code, name:el.dataset.name, type:el.dataset.type};
+              onSelect(sel);
+              newInp.value = '';
+              res.style.display = 'none';
+              const selDiv  = document.getElementById(selectedId);
+              const selText = document.getElementById(selectedTextId);
+              if(selDiv && selText){
+                selText.innerHTML = `<span class="ta-badge ta-${sel.type.toLowerCase()}">${escH(sel.type)}</span> ${sel.code?escH(sel.code)+' — ':''}${escH(sel.name)}`;
+                selDiv.style.display = 'flex';
+              }
+            });
+          });
+          res.style.display = 'block';
+        }catch(e){ res.style.display='none'; }
+      }, 280);
+    });
+    newInp.addEventListener('blur', ()=>{ setTimeout(()=>{ res.style.display='none'; }, 200); });
+  }
+
+  document.addEventListener('keydown', e=>{
+    if(e.key==='Escape') document.querySelectorAll('.modal-overlay.active').forEach(m=>m.classList.remove('active'));
+  });
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('active'); }));
+  });
+
+
+  // ══════════════════════════════════════════════════
+  // SEGMENT SWITCHING
+  // ══════════════════════════════════════════════════
+  let _seg = 'vehicles';
+  let _vcLoaded   = false;
+  let _accLoaded  = false;
+  let _dispLoaded = false;
+
+  function switchSeg(seg){
+    _seg = seg;
+    document.getElementById('segVehicles').style.display    = seg === 'vehicles' ? '' : 'none';
+    document.getElementById('segAccessories').style.display = (seg === 'battery' || seg === 'charger') ? '' : 'none';
+    document.getElementById('segDispatch').style.display    = seg === 'dispatch' ? '' : 'none';
+
+    ['segBtnVehicles','segBtnBattery','segBtnCharger','segBtnDispatch'].forEach(id=>{
+      document.getElementById(id).classList.remove('active');
+    });
+    const btnMap = {vehicles:'segBtnVehicles', battery:'segBtnBattery', charger:'segBtnCharger', dispatch:'segBtnDispatch'};
+    document.getElementById(btnMap[seg]).classList.add('active');
+
+    if(seg === 'vehicles'){
+      if(!_vcLoaded){ _vcLoaded = true; VC.loadAll(); }
+    } else if(seg === 'dispatch'){
+      if(!_dispLoaded){ _dispLoaded = true; DISP.loadAll(); }
+    } else {
+      if(!_accLoaded){ _accLoaded = true; ACC._cat = seg; ACC.loadAll(); }
+      else { ACC.switchCategory(seg); }
+    }
+  }
+
+  function refreshCurrent(){
+    if(_seg === 'vehicles') VC.loadAll();
+    else if(_seg === 'dispatch') DISP.loadAll();
+    else ACC.loadAll();
+  }
+
+
+  // ══════════════════════════════════════════════════
+  // VC — Vehicle Color Sheet
+  // ══════════════════════════════════════════════════
+  const VC = {
+    API: '/api/v1/staff/inventory/vehicle-color',
+    _sheet:    null,
+    _batches:  [],
+    _models:   [],
+    _companies:[],
+    _inCtx:    null,
+    _outCtx:   null,
+    _inParty:  null,
+    _outParty: null,
+    _editBatchId:   null,
+    _editModelId:   null,
+    _colorModelId:  null,
+    _colorModelName:'',
+    _editColorId:   null,
+
+    switchTab(id, btn){
+      document.querySelectorAll('#segVehicles .tab-pane').forEach(p=>p.classList.remove('active'));
+      document.querySelectorAll('#vcTabNav .tab-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      btn.classList.add('active');
+    },
+
+    async loadAll(){
+      await Promise.all([this.loadCompanies(), this.loadSheet(), this.loadBatches(), this.loadModelsAdmin()]);
+    },
+
+    async loadCompanies(){
+      try{
+        this._companies = await apiFetch(this.API+'/companies');
+        this.populateCompanySelects();
+      }catch(e){ console.warn('VC Companies:', e); }
+    },
+
+    populateCompanySelects(){
+      ['vcInCompanyTag','vcOutCompanyTag','vcFilterCompany'].forEach(id=>{
+        const sel = document.getElementById(id);
+        if(!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = id==='vcFilterCompany'
+          ? '<option value="">All Companies</option>'
+          : '<option value="">— Untagged —</option>';
+        this._companies.forEach(c=>{
+          sel.innerHTML += `<option value="${c.id}">${escH(c.code)} — ${escH(c.name)}</option>`;
+        });
+        sel.value = cur;
+      });
+    },
+
+    async loadSheet(){
+      try{
+        const cid = document.getElementById('vcFilterCompany').value;
+        const url = this.API+'/sheet'+(cid?'?company_id='+cid:'');
+        this._sheet = await apiFetch(url);
+        this.populateModelFilter();
+        this.populateColorFilter();
+        this.renderSheet();
+        this.updateSummaryCards();
+      }catch(e){
+        document.getElementById('vcSheetBody').innerHTML =
+          `<tr class="loading-row"><td colspan="30" style="color:#dc2626"><i class="fas fa-exclamation-triangle me-1"></i>${escH(e.message)}</td></tr>`;
+      }
+    },
+
+    populateModelFilter(){
+      const sel = document.getElementById('vcFilterModel');
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">All Models</option>';
+      (this._sheet?.models||[]).forEach(m=>{
+        sel.innerHTML += `<option value="${m.model_id}">${escH(m.model_name)}</option>`;
+      });
+      sel.value = cur;
+    },
+
+    populateColorFilter(){
+      const sel = document.getElementById('vcFilterColor');
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">All Colors</option>';
+      const seen = new Set();
+      (this._sheet?.models||[]).forEach(m=>m.colors.forEach(c=>{
+        if(!seen.has(c.color_name)){
+          seen.add(c.color_name);
+          sel.innerHTML += `<option value="${escH(c.color_name)}">${escH(c.color_name)}</option>`;
+        }
+      }));
+      sel.value = cur;
+    },
+
+    renderSheet(){
+      if(!this._sheet) return;
+      const filterMid   = document.getElementById('vcFilterModel').value;
+      const filterColor = document.getElementById('vcFilterColor').value;
+      const filterAvail = document.getElementById('vcFilterAvail').value;
+      const batches     = this._sheet.batches || [];
+      const outBatchSet = new Set(this._sheet.out_batch_ids || []);
+      const outBatches  = batches.filter(b=>outBatchSet.has(b.id));
+      const hasOut      = outBatches.length > 0;
+      const models      = (this._sheet.models||[]).filter(m=>!filterMid||String(m.model_id)===filterMid);
+
+      const thead = document.getElementById('vcSheetHead');
+      const inCols = batches.length + 1;
+      let h1 = `<tr>
+        <th class="th-left" rowspan="2" style="min-width:100px">Model</th>
+        <th class="th-left" rowspan="2" style="min-width:70px">Colour</th>
+        <th rowspan="2">Balance</th>
+        <th class="th-group-in" colspan="${inCols}">Vehicles IN</th>`;
+      if(hasOut){
+        h1 += `<th class="th-group-out" colspan="${outBatches.length*2+2}" style="border-left:3px solid #6366f1">Vehicles OUT</th>`;
+      }
+      h1 += `</tr>`;
+
+      let h2 = `<tr>`;
+      batches.forEach(b=>{
+        h2 += `<th class="th-sub" title="${escH(b.ref_no||'')}">${escH(b.batch_label)}<br><span style="font-size:9px;opacity:.7">${b.purchase_qty>0?'cap:'+b.purchase_qty:''}</span></th>`;
+      });
+      h2 += `<th class="th-sub">Total IN</th>`;
+      if(hasOut){
+        outBatches.forEach(b=>{
+          h2 += `<th class="th-sub" style="border-left:2px solid rgba(255,255,255,.2)">Plan<br><span style="font-size:9px">${escH(b.batch_label)}</span></th>`;
+          h2 += `<th class="th-sub">Sold</th>`;
+        });
+        h2 += `<th class="th-sub">Tot.Plan</th><th class="th-sub">Tot.Sold</th>`;
+      }
+      h2 += `</tr>`;
+      thead.innerHTML = h1 + h2;
+
+      const tbody = document.getElementById('vcSheetBody');
+      if(!models.length){
+        tbody.innerHTML = `<tr class="loading-row"><td colspan="30"><div class="empty-state"><i class="fas fa-palette"></i><p>No models found. Add models in the Models &amp; Colors tab.</p></div></td></tr>`;
+        return;
+      }
+
+      let grandTotalIn=0, grandTotalPlan=0, grandTotalSold=0;
+      let html = '';
+
+      models.forEach(m=>{
+        let modelTotalIn=0, modelTotalPlan=0, modelTotalSold=0;
+        let inByBatch={}, outByBatch={};
+        batches.forEach(b=>{inByBatch[b.id]=0; outByBatch[b.id]={planned:0,sold:0};});
+
+        const filteredColors = m.colors.filter(c=>{
+          if(filterColor && c.color_name!==filterColor) return false;
+          if(filterAvail==='1' && c.final_balance<=0) return false;
+          return true;
+        });
+        filteredColors.forEach(c=>{
+          modelTotalIn   += c.total_in;
+          modelTotalPlan += c.total_planned;
+          modelTotalSold += c.total_sold;
+          batches.forEach(b=>{
+            inByBatch[b.id]         += (c.in[String(b.id)]||0);
+            outByBatch[b.id].planned += (c.out[String(b.id)]?.planned||0);
+            outByBatch[b.id].sold    += (c.out[String(b.id)]?.sold||0);
+          });
+        });
+        if(!filteredColors.length) return;
+        grandTotalIn   += modelTotalIn;
+        grandTotalPlan += modelTotalPlan;
+        grandTotalSold += modelTotalSold;
+
+        const modelBalance = modelTotalIn - modelTotalPlan - modelTotalSold;
+        html += `<tr class="row-model">
+          <td class="td-left" colspan="2" style="font-size:13px">${escH(m.model_name)}</td>
+          <td>${this.qCell(modelBalance)}</td>`;
+        batches.forEach(b=>{ html += `<td>${this.qCell(inByBatch[b.id])}</td>`; });
+        html += `<td>${this.qCell(modelTotalIn)}</td>`;
+        if(hasOut){
+          outBatches.forEach(b=>{
+            html += `<td style="border-left:2px solid rgba(100,116,139,.3)">${this.qCell(outByBatch[b.id]?.planned||0)}</td>`;
+            html += `<td>${this.qCell(outByBatch[b.id]?.sold||0)}</td>`;
+          });
+          html += `<td>${this.qCell(modelTotalPlan)}</td><td>${this.qCell(modelTotalSold)}</td>`;
+        }
+        html += `</tr>`;
+
+        filteredColors.forEach(c=>{
+          html += `<tr class="row-color">
+            <td class="td-left" style="padding-left:18px;color:#6b7280;font-size:11px">${escH(m.model_name)}</td>
+            <td class="td-left" style="font-size:12px;font-weight:600">${escH(c.color_name)}</td>
+            <td>${this.qBal(c.final_balance)}</td>`;
+          batches.forEach(b=>{
+            const qty = c.in[String(b.id)]||0;
+            const isOpening = b.batch_type==='opening';
+            html += `<td class="cell-editable qty-cell" style="${isOpening?'border:1px dashed #d97706;':''}"
+                         onclick="VC.openInModal(${b.id},${m.model_id},${c.color_id},'${escAttr(m.model_name)}','${escAttr(c.color_name)}',${b.purchase_qty},'${escAttr(b.batch_label)}',${isOpening?1:0})"
+                         title="${isOpening?'Opening Balance — click to edit':'Click to edit IN qty'}">
+                         ${qty>0?`<span class="badge-in">${qty}</span>`:'<span class="qty-zero">—</span>'}
+                     </td>`;
+          });
+          html += `<td class="qty-cell" style="font-weight:700;color:#059669">${c.total_in||'—'}</td>`;
+          if(hasOut){
+            outBatches.forEach(b=>{
+              const od = c.out[String(b.id)]||{planned:0,sold:0,party_detail:[]};
+              const tip = (od.party_detail||[]).length>0
+                ? (od.party_detail||[]).map(p=>escH(p.party_name||'General')).join(', ')
+                : 'Click to add planned qty';
+              html += `<td class="cell-editable cell-out-plan" style="border-left:2px solid rgba(100,116,139,.2)"
+                           onclick="VC.openOutModal(${b.id},${m.model_id},${c.color_id},'${escAttr(m.model_name)}','${escAttr(c.color_name)}','${escAttr(b.batch_label)}')"
+                           title="${tip}">
+                           ${od.planned>0?`<span class="badge-plan">${od.planned}</span>`:'<span class="cell-add-hint"><i class="fas fa-pen" style="font-size:8px;opacity:.45;margin-right:2px"></i>Plan</span>'}
+                       </td>`;
+              html += `<td class="cell-editable cell-out-sold"
+                           onclick="VC.openOutModal(${b.id},${m.model_id},${c.color_id},'${escAttr(m.model_name)}','${escAttr(c.color_name)}','${escAttr(b.batch_label)}')"
+                           title="Click to add sold qty">
+                           ${od.sold>0?`<span class="badge-sold">${od.sold}</span>`:'<span class="cell-add-hint"><i class="fas fa-pen" style="font-size:8px;opacity:.45;margin-right:2px"></i>Sold</span>'}
+                       </td>`;
+            });
+            html += `<td style="color:#1d4ed8;font-weight:600">${c.total_planned||'—'}</td>`;
+            html += `<td style="color:#374151;font-weight:700">${c.total_sold||'—'}</td>`;
+          }
+          html += `</tr>`;
+        });
+      });
+
+      // Grand total
+      const grandBal = grandTotalIn - grandTotalPlan - grandTotalSold;
+      html += `<tr class="row-total"><td class="td-left" colspan="2">TOTAL</td><td>${grandBal}</td>`;
+      batches.forEach(b=>{
+        let bIn=0;
+        this._sheet.models.forEach(mo=>mo.colors.forEach(c=>bIn+=(c.in[String(b.id)]||0)));
+        html+=`<td>${bIn||'—'}</td>`;
+      });
+      html+=`<td>${grandTotalIn||'—'}</td>`;
+      if(hasOut){
+        outBatches.forEach(b=>{
+          let bPlan=0,bSold=0;
+          this._sheet.models.forEach(mo=>mo.colors.forEach(c=>{
+            bPlan+=(c.out[String(b.id)]?.planned||0);
+            bSold+=(c.out[String(b.id)]?.sold||0);
+          }));
+          html+=`<td style="border-left:2px solid rgba(255,255,255,.2)">${bPlan||'—'}</td><td>${bSold||'—'}</td>`;
+        });
+        html+=`<td>${grandTotalPlan||'—'}</td><td>${grandTotalSold||'—'}</td>`;
+      }
+      html+=`</tr>`;
+      tbody.innerHTML = html;
+      document.getElementById('vcSheetTs').textContent = 'Updated '+new Date().toLocaleTimeString();
+    },
+
+    qCell(n){ return n>0?`<span class="qty-pos">${n}</span>`:n<0?`<span class="qty-neg">${n}</span>`:`<span class="qty-zero">0</span>`; },
+    qBal(n) { return n>0?`<span class="qty-pos">${n}</span>`:n<0?`<span class="qty-neg">${n}</span>`:`<span style="color:#9ca3af">0</span>`; },
+
+    updateSummaryCards(){
+      if(!this._sheet) return;
+      const models = this._sheet.models||[];
+      let ti=0,tp=0,ts=0;
+      models.forEach(m=>m.colors.forEach(c=>{ti+=c.total_in;tp+=c.total_planned;ts+=c.total_sold;}));
+      document.getElementById('vcSumModels').textContent        = models.length;
+      document.getElementById('vcSumTotalIn').textContent       = ti;
+      document.getElementById('vcSumTotalPlanned').textContent  = tp;
+      document.getElementById('vcSumTotalSold').textContent     = ts;
+      document.getElementById('vcSumBalance').textContent       = ti-tp-ts;
+    },
+
+    clearInParty(){
+      this._inParty = null;
+      document.getElementById('vcInPartyInput').value = '';
+      document.getElementById('vcInPartySelected').style.display = 'none';
+    },
+    clearOutParty(){
+      this._outParty = null;
+      document.getElementById('vcOutPartyInput').value = '';
+      document.getElementById('vcOutPartySelected').style.display = 'none';
+    },
+
+    openInModal(batchId, modelId, colorId, modelName, colorName, cap, batchLabel, isOpening){
+      this._inCtx = {
+        batch_id:batchId, model_id:modelId, color_id:colorId,
+        batch:{purchase_qty:cap, batch_type:isOpening?'opening':'purchase', batch_label:batchLabel},
+        model_name:modelName, color_name:colorName
+      };
+      let curQty = 0;
+      if(this._sheet){
+        const m = this._sheet.models.find(x=>x.model_id===modelId);
+        if(m){ const c=m.colors.find(x=>x.color_id===colorId); if(c) curQty=c.in[String(batchId)]||0; }
+      }
+      document.getElementById('vcInModalTitle').textContent = `IN — ${modelName} / ${colorName}`;
+      document.getElementById('vcInQty').value = curQty;
+
+      if(!isOpening && cap>0){
+        let already=0;
+        if(this._sheet) this._sheet.models.forEach(mod=>mod.colors.forEach(c=>{
+          if(!(mod.model_id===modelId && c.color_id===colorId)) already+=(c.in[String(batchId)]||0);
+        }));
+        const rem = Math.max(0, cap-already);
+        document.getElementById('vcInCapHint').textContent = `Batch: ${batchLabel} | Cap: ${cap} | Remaining: ${rem}`;
+        document.getElementById('vcInQty').max = rem + curQty;
+      } else {
+        document.getElementById('vcInCapHint').textContent = isOpening
+          ? '⚠ Opening Balance — edit carefully, affects all balances'
+          : 'No cap set for this batch';
+        document.getElementById('vcInQty').removeAttribute('max');
+      }
+      this._inParty = null;
+      document.getElementById('vcInPartyInput').value = '';
+      document.getElementById('vcInPartySelected').style.display = 'none';
+      initTypeahead('vcInPartyInput','vcInPartyResults','vcInPartySelected','vcInPartySelectedText', this.API, 'in', p=>{ this._inParty=p; });
+      openModal('vcInModal');
+      setTimeout(()=>document.getElementById('vcInQty').focus(), 100);
+    },
+
+    async saveInEntry(){
+      if(!this._inCtx) return;
+      const qty = parseInt(document.getElementById('vcInQty').value)||0;
+      if(this._inCtx.batch.batch_type==='opening'){
+        if(!confirm(`⚠ You are editing the Opening Balance for:\n${this._inCtx.model_name} / ${this._inCtx.color_name}\n\nThis affects all balance calculations.\n\nProceed?`)) return;
+      }
+      const ctag = parseInt(document.getElementById('vcInCompanyTag').value)||null;
+      try{
+        await apiFetch(this.API+'/in', {method:'PUT', body:JSON.stringify({
+          batch_id:     this._inCtx.batch_id,
+          model_id:     this._inCtx.model_id,
+          color_id:     this._inCtx.color_id,
+          qty,
+          party_type:   this._inParty?.type  || null,
+          party_ref_id: this._inParty?.id    || null,
+          party_name:   this._inParty?.name  || null,
+          company_tag_id: ctag
+        })});
+        closeModal('vcInModal');
+        await this.loadSheet();
+      }catch(e){ alert('Save failed: '+e.message); }
+    },
+
+    openOutModal(batchId, modelId, colorId, modelName, colorName, batchLabel){
+      this._outCtx = {batch_id:batchId, model_id:modelId, color_id:colorId};
+      document.getElementById('vcOutModalTitle').textContent = `OUT — ${modelName} / ${colorName} / ${batchLabel}`;
+      document.getElementById('vcOutDate').value   = new Date().toISOString().slice(0,10);
+      document.getElementById('vcOutPlanned').value = '';
+      document.getElementById('vcOutSold').value    = '';
+      document.getElementById('vcOutNotes').value   = '';
+      this._outParty = null;
+      document.getElementById('vcOutPartyInput').value = '';
+      document.getElementById('vcOutPartySelected').style.display = 'none';
+      initTypeahead('vcOutPartyInput','vcOutPartyResults','vcOutPartySelected','vcOutPartySelectedText', this.API, 'out', p=>{ this._outParty=p; });
+
+      const m = this._sheet?.models.find(x=>x.model_id===modelId);
+      let breakdown = '';
+      if(m){
+        const c  = m.colors.find(x=>x.color_id===colorId);
+        const od = c?.out[String(batchId)];
+        if(od && (od.planned>0||od.sold>0)){
+          breakdown = `<div style="margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:8px;font-size:12px;">
+            <strong>Existing entries for this cell:</strong>
+            <ul class="party-list" style="margin-top:6px;">`;
+          (od.party_detail||[]).forEach(p=>{
+            const badge = p.party_type?`<span class="ta-badge ta-${(p.party_type||'').toLowerCase()}">${escH(p.party_type)}</span> `:'';
+            breakdown += `<li><span>${badge}${escH(p.party_name||'General')}</span><span><span class="badge-plan me-1">P:${p.planned}</span><span class="badge-sold">S:${p.sold}</span></span></li>`;
+          });
+          if(!(od.party_detail||[]).length)
+            breakdown += `<li><span>General</span><span><span class="badge-plan me-1">P:${od.planned}</span><span class="badge-sold">S:${od.sold}</span></span></li>`;
+          breakdown += `</ul></div>`;
+        }
+      }
+      document.getElementById('vcOutPartyBreakdown').innerHTML = breakdown;
+      openModal('vcOutModal');
+    },
+
+    async saveOutEntry(){
+      if(!this._outCtx) return;
+      const planned   = parseInt(document.getElementById('vcOutPlanned').value)||0;
+      const sold      = parseInt(document.getElementById('vcOutSold').value)||0;
+      const entryDate = document.getElementById('vcOutDate').value;
+      const notes     = document.getElementById('vcOutNotes').value.trim();
+      const ctag      = parseInt(document.getElementById('vcOutCompanyTag').value)||null;
+      try{
+        await apiFetch(this.API+'/out', {method:'PUT', body:JSON.stringify({
+          batch_id:     this._outCtx.batch_id,
+          model_id:     this._outCtx.model_id,
+          color_id:     this._outCtx.color_id,
+          party_type:   this._outParty?.type  || null,
+          party_ref_id: this._outParty?.id    || null,
+          party_name:   this._outParty?.name  || null,
+          company_tag_id: ctag,
+          planned_qty:  planned,
+          sold_qty:     sold,
+          entry_date:   entryDate||null,
+          notes:        notes||null
+        })});
+        closeModal('vcOutModal');
+        await this.loadSheet();
+      }catch(e){ alert('Save failed: '+e.message); }
+    },
+
+    async loadBatches(){
+      try{
+        this._batches = await apiFetch(this.API+'/batches?include_inactive=true');
+        this.renderBatchList();
+      }catch(e){ document.getElementById('vcBatchList').innerHTML=`<p style="color:#dc2626">${escH(e.message)}</p>`; }
+    },
+
+    renderBatchList(){
+      if(!this._batches.length){
+        document.getElementById('vcBatchList').innerHTML=`<div class="empty-state"><i class="fas fa-boxes"></i><p>No batches yet. Add a batch to start tracking.</p></div>`;
+        return;
+      }
+      const inBatches  = this._batches.filter(b=>b.batch_type!=='sales');
+      const outBatches = this._batches.filter(b=>b.batch_type==='sales');
+      const renderItem = b => {
+        const typeBadge = b.batch_type==='opening'
+          ? `<span class="badge-type badge-opening">Opening</span>`
+          : b.batch_type==='sales'
+          ? `<span class="badge-type badge-sales">Sales OUT</span>`
+          : `<span class="badge-type badge-purchase">Purchase${b.purchase_qty>0?' (cap:'+b.purchase_qty+')':''}</span>`;
+        return `<li class="admin-list-item" style="${!b.is_active?'opacity:.6':''}">
+          <div>
+            <strong>${escH(b.batch_label)}</strong> ${typeBadge}${!b.is_active?' <span class="badge-type badge-inactive">Inactive</span>':''}
+            <div style="font-size:11px;color:#6b7280;margin-top:3px">Date: ${b.batch_date}${b.ref_no?' | Ref: '+escH(b.ref_no):''}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-sm-icon" title="Edit" onclick="VC.editBatch(${b.id})" style="color:#1d4ed8"><i class="fas fa-pen"></i></button>
+            <button class="btn-sm-icon" onclick="VC.toggleBatch(${b.id},${b.is_active})" style="color:${b.is_active?'#dc2626':'#059669'}">
+              <i class="fas ${b.is_active?'fa-eye-slash':'fa-eye'}"></i></button>
+          </div>
+        </li>`;
+      };
+      let html='';
+      if(inBatches.length){
+        html+=`<div style="font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:.05em;padding:8px 0 4px;border-bottom:1px solid #e5e7eb;margin-bottom:6px"><i class="fas fa-arrow-down me-1"></i>IN Batches (Purchase / Opening)</div>`;
+        html+='<ul class="admin-list">'+inBatches.map(renderItem).join('')+'</ul>';
+      }
+      if(outBatches.length){
+        html+=`<div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.05em;padding:8px 0 4px;border-bottom:1px solid #fecaca;margin-top:12px;margin-bottom:6px"><i class="fas fa-arrow-up me-1"></i>OUT Batches (Sales)</div>`;
+        html+='<ul class="admin-list">'+outBatches.map(renderItem).join('')+'</ul>';
+      }
+      document.getElementById('vcBatchList').innerHTML=html;
+    },
+
+    openBatchModal(){
+      this._editBatchId=null;
+      document.getElementById('vcBatchModalTitle').textContent='Add Batch';
+      document.getElementById('vcBatchLabel').value='';
+      document.getElementById('vcBatchDate').value=new Date().toISOString().slice(0,10);
+      document.getElementById('vcBatchType').value='purchase';
+      document.getElementById('vcBatchPurchaseQty').value='';
+      document.getElementById('vcBatchRef').value='';
+      this.togglePurchaseQty();
+      openModal('vcBatchModal');
+    },
+
+    editBatch(id){
+      const b=this._batches.find(x=>x.id===id);
+      if(!b) return;
+      this._editBatchId=id;
+      document.getElementById('vcBatchModalTitle').textContent='Edit Batch';
+      document.getElementById('vcBatchLabel').value=b.batch_label;
+      document.getElementById('vcBatchDate').value=b.batch_date;
+      document.getElementById('vcBatchType').value=b.batch_type;
+      document.getElementById('vcBatchPurchaseQty').value=b.purchase_qty;
+      document.getElementById('vcBatchRef').value=b.ref_no||'';
+      this.togglePurchaseQty();
+      openModal('vcBatchModal');
+    },
+
+    togglePurchaseQty(){
+      const t=document.getElementById('vcBatchType').value;
+      document.getElementById('vcPurchaseQtyRow').style.display=(t==='opening'||t==='sales')?'none':'';
+    },
+
+    async saveBatch(){
+      const label=document.getElementById('vcBatchLabel').value.trim();
+      const dt=document.getElementById('vcBatchDate').value;
+      const bt=document.getElementById('vcBatchType').value;
+      const pq=parseInt(document.getElementById('vcBatchPurchaseQty').value)||0;
+      const ref=document.getElementById('vcBatchRef').value.trim();
+      if(!label||!dt){alert('Batch label and date are required.');return;}
+      try{
+        if(this._editBatchId){
+          await apiFetch(`${this.API}/batches/${this._editBatchId}`,{method:'PUT',body:JSON.stringify({batch_label:label,batch_date:dt,purchase_qty:pq,ref_no:ref||null})});
+        } else {
+          await apiFetch(this.API+'/batches',{method:'POST',body:JSON.stringify({batch_label:label,batch_date:dt,batch_type:bt,purchase_qty:pq,ref_no:ref||null})});
+          if(bt!=='opening'&&bt!=='sales'&&pq>0){
+            const items=Array.from({length:pq},()=>({status:'In Stock',comments:`Batch: ${label}`}));
+            try{
+              const r2=await apiFetch('/api/v1/staff/inventory/dispatch/vehicle/bulk',{method:'POST',body:JSON.stringify(items)});
+              if(typeof DISP!=='undefined'&&DISP._toast) DISP._toast(`✓ ${r2.created} vehicle unit${r2.created>1?'s':''} added to Dispatch Ledger`);
+            }catch(ee){console.warn('dispatch vehicle auto-create:',ee.message);}
+          }
+        }
+        closeModal('vcBatchModal');
+        await this.loadBatches();
+        await this.loadSheet();
+      }catch(e){alert('Save failed: '+e.message);}
+    },
+
+    async toggleBatch(id, isActive){
+      if(!confirm(`${isActive?'Deactivate':'Activate'} this batch?`)) return;
+      try{
+        await apiFetch(`${this.API}/batches/${id}`,{method:'PUT',body:JSON.stringify({is_active:!isActive})});
+        await this.loadBatches();
+        await this.loadSheet();
+      }catch(e){alert('Error: '+e.message);}
+    },
+
+    async loadModelsAdmin(){
+      try{
+        this._models = await apiFetch(this.API+'/models?include_inactive=true');
+        this.renderModelList();
+      }catch(e){ document.getElementById('vcModelList').innerHTML=`<p style="color:#dc2626">${escH(e.message)}</p>`; }
+    },
+
+    renderModelList(){
+      if(!this._models.length){
+        document.getElementById('vcModelList').innerHTML=`<div class="empty-state"><i class="fas fa-car"></i><p>No models yet.</p></div>`;
+        return;
+      }
+      let html='<ul class="admin-list">';
+      this._models.forEach(m=>{
+        const colors=(m.colors||[]);
+        const colorHtml = colors.length
+          ? colors.map(c=>`<span class="color-chip" onclick="VC.editColor(${c.id},'${escAttr(c.color_name)}','${escAttr(m.name)}')" title="Click to edit" style="${!c.is_active?'opacity:.4;text-decoration:line-through':''}">●&nbsp;${escH(c.color_name)}</span>`).join('')
+          : '<span style="font-size:11px;color:#9ca3af">No colors</span>';
+        html+=`<li class="admin-list-item" style="${!m.is_active?'opacity:.6':''}">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <strong>${escH(m.name)}</strong>
+              ${!m.is_active?'<span class="badge-type badge-inactive">Inactive</span>':''}
+            </div>
+            <div>${colorHtml}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;min-width:80px">
+            <button class="btn-sm-icon" title="Edit model" onclick="VC.editModel(${m.id},'${escAttr(m.name)}',${m.sort_order})" style="color:#1d4ed8"><i class="fas fa-pen"></i></button>
+            <button class="btn-sm-icon" title="Add color" onclick="VC.openColorModal(${m.id},'${escAttr(m.name)}')" style="color:#059669;font-size:11px"><i class="fas fa-plus"></i> Color</button>
+            <button class="btn-sm-icon" onclick="VC.toggleModel(${m.id},${m.is_active})" style="color:${m.is_active?'#dc2626':'#059669'}">
+              <i class="fas ${m.is_active?'fa-eye-slash':'fa-eye'}"></i></button>
+          </div>
+        </li>`;
+      });
+      document.getElementById('vcModelList').innerHTML=html+'</ul>';
+    },
+
+    openModelModal(){
+      this._editModelId=null;
+      document.getElementById('vcModelModalTitle').textContent='Add Model';
+      document.getElementById('vcModelName').value='';
+      document.getElementById('vcModelSort').value=0;
+      openModal('vcModelModal');
+    },
+
+    editModel(id, name, sort){
+      this._editModelId=id;
+      document.getElementById('vcModelModalTitle').textContent='Edit Model';
+      document.getElementById('vcModelName').value=name;
+      document.getElementById('vcModelSort').value=sort;
+      openModal('vcModelModal');
+    },
+
+    async saveModel(){
+      const name=document.getElementById('vcModelName').value.trim();
+      const sort=parseInt(document.getElementById('vcModelSort').value)||0;
+      if(!name){alert('Model name is required.');return;}
+      try{
+        if(this._editModelId){ await apiFetch(`${this.API}/models/${this._editModelId}`,{method:'PUT',body:JSON.stringify({name,sort_order:sort})}); }
+        else { await apiFetch(this.API+'/models',{method:'POST',body:JSON.stringify({name,sort_order:sort})}); }
+        closeModal('vcModelModal');
+        await this.loadModelsAdmin();
+        await this.loadSheet();
+      }catch(e){alert('Save failed: '+e.message);}
+    },
+
+    async toggleModel(id, isActive){
+      if(!confirm(`${isActive?'Deactivate':'Activate'} this model?`)) return;
+      try{
+        await apiFetch(`${this.API}/models/${id}`,{method:'PUT',body:JSON.stringify({is_active:!isActive})});
+        await this.loadModelsAdmin();
+        await this.loadSheet();
+      }catch(e){alert('Error: '+e.message);}
+    },
+
+    openColorModal(modelId, modelName){
+      this._colorModelId=modelId; this._colorModelName=modelName; this._editColorId=null;
+      document.getElementById('vcColorModalTitle').textContent='Add Color — '+modelName;
+      document.getElementById('vcColorName').value='';
+      document.getElementById('vcColorSort').value=0;
+      openModal('vcColorModal');
+    },
+
+    editColor(id, colorName, modelName){
+      this._editColorId=id;
+      document.getElementById('vcColorModalTitle').textContent='Edit Color — '+modelName;
+      document.getElementById('vcColorName').value=colorName;
+      document.getElementById('vcColorSort').value=0;
+      openModal('vcColorModal');
+    },
+
+    async saveColor(){
+      const name=document.getElementById('vcColorName').value.trim();
+      const sort=parseInt(document.getElementById('vcColorSort').value)||0;
+      if(!name){alert('Color name is required.');return;}
+      try{
+        if(this._editColorId){ await apiFetch(`${this.API}/colors/${this._editColorId}`,{method:'PUT',body:JSON.stringify({color_name:name,sort_order:sort})}); }
+        else { await apiFetch(`${this.API}/models/${this._colorModelId}/colors`,{method:'POST',body:JSON.stringify({color_name:name,sort_order:sort})}); }
+        closeModal('vcColorModal');
+        await this.loadModelsAdmin();
+        await this.loadSheet();
+      }catch(e){alert('Save failed: '+e.message);}
+    }
+  };
+
+
+  // ══════════════════════════════════════════════════
+  // ACC — Battery & Charger Stock
+  // ══════════════════════════════════════════════════
+  const ACC = {
+    API_BASE: '/api/v1/staff/inventory/accessories',
+    _cat:      'battery',
+    _sheet:    null,
+    _batches:  [],
+    _brands:   [],
+    _companies:[],
+    _inCtx:    null,
+    _outCtx:   null,
+    _inParty:  null,
+    _outParty: null,
+    _editBatchId:  null,
+    _editBrandId:  null,
+    _specBrandId:  null,
+    _specBrandName:'',
+    _editSpecId:   null,
+
+    API(){ return `${this.API_BASE}/${this._cat}`; },
+
+    switchTab(id, btn){
+      document.querySelectorAll('#segAccessories .tab-pane').forEach(p=>p.classList.remove('active'));
+      document.querySelectorAll('#accTabNav .tab-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      btn.classList.add('active');
+    },
+
+    async loadAll(){
+      await Promise.all([this.loadCompanies(), this.loadSheet(), this.loadBatches(), this.loadBrandsAdmin()]);
+    },
+
+    switchCategory(cat){
+      this._cat = cat;
+      const isChg = cat === 'charger';
+      document.getElementById('catBtnBattery').classList.toggle('active', cat==='battery');
+      document.getElementById('catBtnCharger').classList.toggle('active', cat==='charger');
+
+      document.querySelectorAll('#accTabNav .tab-btn').forEach(b=>{
+        b.classList.toggle('charger-theme', isChg);
+      });
+
+      document.getElementById('sheetCardTitle').textContent = (isChg?'Charger':'Battery')+' Stock Register';
+      document.getElementById('batchCardTitle').textContent = (isChg?'Charger':'Battery')+' Batches';
+      document.getElementById('adminCardTitle').textContent = (isChg?'Charger':'Battery')+' Brands';
+      document.getElementById('sumInLabel').textContent     = 'Total '+(isChg?'Chargers':'Batteries')+' In';
+
+      ['addBatchBtn','addBrandBtn','inSaveBtn','outSaveBtn','batchSaveBtn','brandSaveBtn'].forEach(id=>{
+        const el = document.getElementById(id);
+        if(el) el.classList.toggle('charger', isChg);
+      });
+
+      document.getElementById('specModalHint').textContent =
+        isChg ? 'Voltage + Amps spec (e.g. 58V 6AMPS)' : 'Voltage + AH spec (e.g. 48V30AH)';
+
+      this.loadSheet();
+      this.loadBatches();
+      this.loadBrandsAdmin();
+    },
+
+    async loadCompanies(){
+      try{
+        this._companies = await apiFetch(this.API_BASE+'/companies');
+        this.populateCompanySelects();
+      }catch(e){ console.warn('ACC Companies:', e); }
+    },
+
+    populateCompanySelects(){
+      ['inCompanyTag','outCompanyTag','filterCompany'].forEach(id=>{
+        const sel = document.getElementById(id);
+        if(!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = id==='filterCompany'?'<option value="">All Companies</option>':'<option value="">— Untagged —</option>';
+        this._companies.forEach(c=>{
+          sel.innerHTML += `<option value="${c.id}">${escH(c.code)} — ${escH(c.name)}</option>`;
+        });
+        sel.value = cur;
+      });
+    },
+
+    async loadSheet(){
+      try{
+        const cid = document.getElementById('filterCompany').value;
+        const url = this.API()+'/sheet'+(cid?'?company_id='+cid:'');
+        this._sheet = await apiFetch(url);
+        this.populateBrandFilter();
+        this.populateSpecFilter();
+        this.renderSheet();
+        this.updateSummary();
+      }catch(e){
+        document.getElementById('sheetBody').innerHTML =
+          `<tr class="loading-row"><td colspan="30" style="color:#dc2626"><i class="fas fa-exclamation-triangle me-1"></i>${escH(e.message)}</td></tr>`;
+      }
+    },
+
+    populateBrandFilter(){
+      const sel = document.getElementById('filterBrand');
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">All Brands</option>';
+      (this._sheet?.brands||[]).forEach(b=>{
+        sel.innerHTML += `<option value="${b.brand_id}">${escH(b.brand_name)}</option>`;
+      });
+      sel.value = cur;
+    },
+
+    populateSpecFilter(){
+      const sel = document.getElementById('filterSpec');
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">All Specs</option>';
+      const seen = new Set();
+      (this._sheet?.brands||[]).forEach(b=>b.specs.forEach(s=>{
+        if(!seen.has(s.spec_name)){
+          seen.add(s.spec_name);
+          sel.innerHTML += `<option value="${escH(s.spec_name)}">${escH(s.spec_name)}</option>`;
+        }
+      }));
+      sel.value = cur;
+    },
+
+    renderSheet(){
+      if(!this._sheet) return;
+      const isChg     = this._cat === 'charger';
+      const filterBid   = document.getElementById('filterBrand').value;
+      const filterSpec  = document.getElementById('filterSpec').value;
+      const filterAvail = document.getElementById('filterAvail').value;
+      const batches     = this._sheet.batches || [];
+      const outBatchSet= new Set(this._sheet.out_batch_ids || []);
+      const outBatches = batches.filter(b=>outBatchSet.has(b.id));
+      const hasOut     = outBatches.length > 0;
+      const brands     = (this._sheet.brands||[]).filter(b=>!filterBid||String(b.brand_id)===filterBid);
+
+      const thead    = document.getElementById('sheetHead');
+      const inClass  = isChg ? 'th-group-in charger' : 'th-group-in';
+      const badgeInClass = isChg ? 'badge-in charger' : 'badge-in';
+
+      let h1 = `<tr>
+        <th class="th-left" rowspan="2" style="min-width:60px;width:60px">Type</th>
+        <th class="th-left" rowspan="2" style="min-width:90px">Brand</th>
+        <th class="th-left" rowspan="2" style="min-width:80px">Spec</th>
+        <th rowspan="2">Balance</th>
+        <th class="${inClass}" colspan="${batches.length+1}">Stock IN</th>`;
+      if(hasOut){
+        h1 += `<th class="th-group-out" colspan="${outBatches.length*2+2}" style="border-left:3px solid #6366f1">Stock OUT</th>`;
+      }
+      h1 += `</tr>`;
+
+      let h2 = `<tr>`;
+      batches.forEach(b=>{
+        h2 += `<th class="th-sub" title="${escH(b.ref_no||'')}">${escH(b.batch_label)}<br><span style="font-size:9px;opacity:.7">${b.purchase_qty>0?'cap:'+b.purchase_qty:''}</span></th>`;
+      });
+      h2 += `<th class="th-sub">Total IN</th>`;
+      if(hasOut){
+        outBatches.forEach(b=>{
+          h2 += `<th class="th-sub" style="border-left:2px solid rgba(255,255,255,.2)">Plan<br><span style="font-size:9px">${escH(b.batch_label)}</span></th>`;
+          h2 += `<th class="th-sub">Sold</th>`;
+        });
+        h2 += `<th class="th-sub">Tot.Plan</th><th class="th-sub">Tot.Sold</th>`;
+      }
+      h2 += `</tr>`;
+      thead.innerHTML = h1+h2;
+
+      const tbody = document.getElementById('sheetBody');
+      if(!brands.length){
+        tbody.innerHTML = `<tr class="loading-row"><td colspan="30">
+          <div class="empty-state">
+            <i class="fas ${isChg?'fa-plug':'fa-battery-full'}"></i>
+            <p>No brands found. Add brands in the Brands &amp; Specs tab.</p>
+          </div></td></tr>`;
+        return;
+      }
+
+      let grandTotalIn=0, grandTotalPlan=0, grandTotalSold=0;
+      let html='';
+      const rowClass    = isChg ? 'row-brand charger' : 'row-brand';
+      const rowSpecClass= isChg ? 'row-spec charger'  : 'row-spec';
+      let _lastSubType  = null;
+      const totalCols   = 4 + batches.length + (hasOut ? outBatches.length*2+2 : 0);
+
+      brands.forEach(br=>{
+        let brandTotalIn=0, brandTotalPlan=0, brandTotalSold=0;
+        let inByBatch={}, outByBatch={};
+        batches.forEach(b=>{inByBatch[b.id]=0; outByBatch[b.id]={planned:0,sold:0};});
+
+        const filteredSpecs = br.specs.filter(s=>{
+          if(filterSpec && s.spec_name!==filterSpec) return false;
+          if(filterAvail==='1' && s.final_balance<=0) return false;
+          return true;
+        });
+        filteredSpecs.forEach(s=>{
+          brandTotalIn   += s.total_in;
+          brandTotalPlan += s.total_planned;
+          brandTotalSold += s.total_sold;
+          batches.forEach(b=>{
+            inByBatch[b.id]          += (s.in[String(b.id)]||0);
+            outByBatch[b.id].planned += (s.out[String(b.id)]?.planned||0);
+            outByBatch[b.id].sold    += (s.out[String(b.id)]?.sold||0);
+          });
+        });
+        if(!filteredSpecs.length) return;
+        grandTotalIn   += brandTotalIn;
+        grandTotalPlan += brandTotalPlan;
+        grandTotalSold += brandTotalSold;
+
+        const st = br.sub_type || '';
+        if(st && st !== _lastSubType){
+          _lastSubType = st;
+          const stIcon = st==='Battery' ? 'fa-battery-three-quarters' : 'fa-plug';
+          html += `<tr class="row-subtype-header"><td colspan="${totalCols}"><i class="fas ${stIcon} me-1"></i>${escH(st)}s</td></tr>`;
+        }
+
+        const typeBadge = st ? `<span class="type-badge ${st==='Battery'?'type-batt':'type-chgr'}">${escH(st)}</span>` : '';
+        const brandBal  = brandTotalIn - brandTotalPlan - brandTotalSold;
+        html += `<tr class="${rowClass}">
+          <td class="td-left">${typeBadge}</td>
+          <td class="td-left" colspan="2" style="font-size:13px">${escH(br.brand_name)}</td>
+          <td>${this.qCell(brandBal)}</td>`;
+        batches.forEach(b=>html+=`<td>${this.qCell(inByBatch[b.id])}</td>`);
+        html += `<td>${this.qCell(brandTotalIn)}</td>`;
+        if(hasOut){
+          outBatches.forEach(b=>{
+            html+=`<td style="border-left:2px solid rgba(100,116,139,.3)">${this.qCell(outByBatch[b.id]?.planned||0)}</td>`;
+            html+=`<td>${this.qCell(outByBatch[b.id]?.sold||0)}</td>`;
+          });
+          html+=`<td>${this.qCell(brandTotalPlan)}</td><td>${this.qCell(brandTotalSold)}</td>`;
+        }
+        html+=`</tr>`;
+
+        filteredSpecs.forEach(s=>{
+          html+=`<tr class="${rowSpecClass}">
+            <td class="td-type">${typeBadge}</td>
+            <td class="td-left" style="padding-left:18px;color:#6b7280;font-size:11px">${escH(br.brand_name)}</td>
+            <td class="td-left" style="font-size:12px;font-weight:600">${escH(s.spec_name)}</td>
+            <td>${this.qBal(s.final_balance)}</td>`;
+          batches.forEach(b=>{
+            const qty  = s.in[String(b.id)]||0;
+            const isOB = b.batch_type==='opening';
+            html+=`<td class="cell-editable" style="${isOB?'border:1px dashed #d97706;':''}"
+                       onclick="ACC.openInModal(${b.id},${br.brand_id},${s.spec_id},'${escAttr(br.brand_name)}','${escAttr(s.spec_name)}',${b.purchase_qty},'${escAttr(b.batch_label)}',${isOB?1:0})"
+                       title="${isOB?'Opening Balance':'Click to edit IN qty'}">
+                       ${qty>0?`<span class="${badgeInClass}">${qty}</span>`:'<span class="qty-zero">—</span>'}
+                   </td>`;
+          });
+          html+=`<td style="font-weight:700;color:${isChg?'#7c3aed':'#059669'}">${s.total_in||'—'}</td>`;
+          if(hasOut){
+            outBatches.forEach(b=>{
+              const od = s.out[String(b.id)]||{planned:0,sold:0,party_detail:[]};
+              html+=`<td class="cell-editable cell-out-plan" style="border-left:2px solid rgba(100,116,139,.2)"
+                         onclick="ACC.openOutModal(${b.id},${br.brand_id},${s.spec_id},'${escAttr(br.brand_name)}','${escAttr(s.spec_name)}','${escAttr(b.batch_label)}')"
+                         title="Click to add planned qty">
+                         ${od.planned>0?`<span class="badge-plan">${od.planned}</span>`:'<span class="cell-add-hint"><i class="fas fa-pen" style="font-size:8px;opacity:.45;margin-right:2px"></i>Plan</span>'}
+                     </td>`;
+              html+=`<td class="cell-editable cell-out-sold"
+                         onclick="ACC.openOutModal(${b.id},${br.brand_id},${s.spec_id},'${escAttr(br.brand_name)}','${escAttr(s.spec_name)}','${escAttr(b.batch_label)}')"
+                         title="Click to add sold qty">
+                         ${od.sold>0?`<span class="badge-sold">${od.sold}</span>`:'<span class="cell-add-hint"><i class="fas fa-pen" style="font-size:8px;opacity:.45;margin-right:2px"></i>Sold</span>'}
+                     </td>`;
+            });
+            html+=`<td style="color:#1d4ed8;font-weight:600">${s.total_planned||'—'}</td>`;
+            html+=`<td style="color:#374151;font-weight:700">${s.total_sold||'—'}</td>`;
+          }
+          html+=`</tr>`;
+        });
+      });
+
+      // Grand total
+      html+=`<tr class="row-total"><td class="td-left" colspan="3">TOTAL</td><td>${grandTotalIn-grandTotalPlan-grandTotalSold}</td>`;
+      batches.forEach(b=>{
+        let bIn=0;
+        this._sheet.brands.forEach(br=>br.specs.forEach(s=>bIn+=(s.in[String(b.id)]||0)));
+        html+=`<td>${bIn||'—'}</td>`;
+      });
+      html+=`<td>${grandTotalIn||'—'}</td>`;
+      if(hasOut){
+        outBatches.forEach(b=>{
+          let bPlan=0,bSold=0;
+          this._sheet.brands.forEach(br=>br.specs.forEach(s=>{
+            bPlan+=(s.out[String(b.id)]?.planned||0);
+            bSold+=(s.out[String(b.id)]?.sold||0);
+          }));
+          html+=`<td style="border-left:2px solid rgba(255,255,255,.2)">${bPlan||'—'}</td><td>${bSold||'—'}</td>`;
+        });
+        html+=`<td>${grandTotalPlan||'—'}</td><td>${grandTotalSold||'—'}</td>`;
+      }
+      html+=`</tr>`;
+      tbody.innerHTML = html;
+      document.getElementById('sheetTs').textContent = 'Updated '+new Date().toLocaleTimeString();
+    },
+
+    qCell(n){ return n>0?`<span class="qty-pos">${n}</span>`:n<0?`<span class="qty-neg">${n}</span>`:`<span class="qty-zero">0</span>`; },
+    qBal(n) { return n>0?`<span class="qty-pos">${n}</span>`:n<0?`<span class="qty-neg">${n}</span>`:`<span style="color:#9ca3af">0</span>`; },
+
+    updateSummary(){
+      if(!this._sheet) return;
+      let ti=0,tp=0,ts=0;
+      (this._sheet.brands||[]).forEach(b=>b.specs.forEach(s=>{ti+=s.total_in;tp+=s.total_planned;ts+=s.total_sold;}));
+      document.getElementById('sumBrands').textContent      = (this._sheet.brands||[]).length;
+      document.getElementById('sumTotalIn').textContent     = ti;
+      document.getElementById('sumTotalPlanned').textContent= tp;
+      document.getElementById('sumTotalSold').textContent   = ts;
+      document.getElementById('sumBalance').textContent     = ti-tp-ts;
+    },
+
+    clearInParty(){
+      this._inParty = null;
+      document.getElementById('inPartyInput').value = '';
+      document.getElementById('inPartySelected').style.display = 'none';
+    },
+    clearOutParty(){
+      this._outParty = null;
+      document.getElementById('outPartyInput').value = '';
+      document.getElementById('outPartySelected').style.display = 'none';
+    },
+
+    openInModal(batchId, brandId, specId, brandName, specName, cap, batchLabel, isOB){
+      this._inCtx = {batch_id:batchId, brand_id:brandId, spec_id:specId, cap, isOB, brand_name:brandName, spec_name:specName, batch_label:batchLabel};
+      let curQty = 0;
+      if(this._sheet){
+        const b = this._sheet.brands.find(x=>x.brand_id===brandId);
+        if(b){ const s=b.specs.find(x=>x.spec_id===specId); if(s) curQty=s.in[String(batchId)]||0; }
+      }
+      document.getElementById('inModalTitle').textContent = `IN — ${brandName} / ${specName}`;
+      document.getElementById('inQty').value = curQty;
+      if(!isOB && cap>0){
+        let already=0;
+        if(this._sheet) this._sheet.brands.forEach(br=>br.specs.forEach(s=>{
+          if(!(br.brand_id===brandId && s.spec_id===specId)) already+=(s.in[String(batchId)]||0);
+        }));
+        const rem = Math.max(0, cap-already);
+        document.getElementById('inCapHint').textContent = `Batch: ${batchLabel} | Cap: ${cap} | Remaining: ${rem}`;
+        document.getElementById('inQty').max = rem + curQty;
+      } else {
+        document.getElementById('inCapHint').textContent = isOB
+          ? '⚠ Opening Balance — edit carefully, affects all balances'
+          : 'No cap set for this batch';
+        document.getElementById('inQty').removeAttribute('max');
+      }
+      this._inParty = null;
+      document.getElementById('inPartyInput').value = '';
+      document.getElementById('inPartySelected').style.display = 'none';
+      initTypeahead('inPartyInput','inPartyResults','inPartySelected','inPartySelectedText', this.API_BASE, 'in', p=>{ this._inParty=p; });
+      openModal('inModal');
+      setTimeout(()=>document.getElementById('inQty').focus(), 100);
+    },
+
+    async saveInEntry(){
+      if(!this._inCtx) return;
+      const qty = parseInt(document.getElementById('inQty').value)||0;
+      if(this._inCtx.isOB){
+        if(!confirm(`⚠ You are editing the Opening Balance for:\n${this._inCtx.brand_name} / ${this._inCtx.spec_name}\n\nThis affects all balance calculations. Proceed?`)) return;
+      }
+      const ctag = parseInt(document.getElementById('inCompanyTag').value)||null;
+      try{
+        await apiFetch(this.API()+'/in', {method:'PUT', body:JSON.stringify({
+          batch_id:     this._inCtx.batch_id,
+          brand_id:     this._inCtx.brand_id,
+          spec_id:      this._inCtx.spec_id,
+          qty,
+          party_type:   this._inParty?.type  || null,
+          party_ref_id: this._inParty?.id    || null,
+          party_name:   this._inParty?.name  || null,
+          company_tag_id: ctag
+        })});
+        closeModal('inModal');
+        await this.loadSheet();
+      }catch(e){ alert('Save failed: '+e.message); }
+    },
+
+    openOutModal(batchId, brandId, specId, brandName, specName, batchLabel){
+      this._outCtx = {batch_id:batchId, brand_id:brandId, spec_id:specId};
+      document.getElementById('outModalTitle').textContent = `OUT — ${brandName} / ${specName} / ${batchLabel}`;
+      document.getElementById('outDate').value   = new Date().toISOString().slice(0,10);
+      document.getElementById('outPlanned').value = '';
+      document.getElementById('outSold').value    = '';
+      document.getElementById('outNotes').value   = '';
+      this._outParty = null;
+      document.getElementById('outPartyInput').value = '';
+      document.getElementById('outPartySelected').style.display = 'none';
+      initTypeahead('outPartyInput','outPartyResults','outPartySelected','outPartySelectedText', this.API_BASE, 'out', p=>{ this._outParty=p; });
+
+      let breakdown = '';
+      const br = this._sheet?.brands.find(x=>x.brand_id===brandId);
+      if(br){
+        const s  = br.specs.find(x=>x.spec_id===specId);
+        const od = s?.out[String(batchId)];
+        if(od && (od.planned>0||od.sold>0)){
+          breakdown = `<div style="margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:8px;font-size:12px;">
+            <strong>Existing entries for this cell:</strong>
+            <ul class="party-list" style="margin-top:6px;">`;
+          (od.party_detail||[]).forEach(p=>{
+            const badge = p.party_type?`<span class="ta-badge ta-${(p.party_type||'').toLowerCase()}">${escH(p.party_type)}</span> `:'';
+            breakdown += `<li><span>${badge}${escH(p.party_name||'General')}</span><span><span class="badge-plan me-1">P:${p.planned}</span><span class="badge-sold">S:${p.sold}</span></span></li>`;
+          });
+          if(!(od.party_detail||[]).length)
+            breakdown += `<li><span>General</span><span><span class="badge-plan me-1">P:${od.planned}</span><span class="badge-sold">S:${od.sold}</span></span></li>`;
+          breakdown += `</ul></div>`;
+        }
+      }
+      document.getElementById('outPartyBreakdown').innerHTML = breakdown;
+      openModal('outModal');
+    },
+
+    async saveOutEntry(){
+      if(!this._outCtx) return;
+      const planned   = parseInt(document.getElementById('outPlanned').value)||0;
+      const sold      = parseInt(document.getElementById('outSold').value)||0;
+      const entryDate = document.getElementById('outDate').value;
+      const notes     = document.getElementById('outNotes').value.trim();
+      const ctag      = parseInt(document.getElementById('outCompanyTag').value)||null;
+      try{
+        await apiFetch(this.API()+'/out', {method:'PUT', body:JSON.stringify({
+          batch_id:     this._outCtx.batch_id,
+          brand_id:     this._outCtx.brand_id,
+          spec_id:      this._outCtx.spec_id,
+          party_type:   this._outParty?.type  || null,
+          party_ref_id: this._outParty?.id    || null,
+          party_name:   this._outParty?.name  || null,
+          company_tag_id: ctag,
+          planned_qty:  planned,
+          sold_qty:     sold,
+          entry_date:   entryDate||null,
+          notes:        notes||null
+        })});
+        closeModal('outModal');
+        await this.loadSheet();
+      }catch(e){ alert('Save failed: '+e.message); }
+    },
+
+    async loadBatches(){
+      try{
+        this._batches = await apiFetch(this.API()+'/batches?include_inactive=true');
+        this.renderBatchList();
+      }catch(e){ document.getElementById('batchList').innerHTML=`<p style="color:#dc2626">${escH(e.message)}</p>`; }
+    },
+
+    renderBatchList(){
+      const isChg = this._cat==='charger';
+      if(!this._batches.length){
+        document.getElementById('batchList').innerHTML=`<div class="empty-state"><i class="fas fa-boxes"></i><p>No batches yet.</p></div>`;
+        return;
+      }
+      const inBatches  = this._batches.filter(b=>b.batch_type!=='sales');
+      const outBatches = this._batches.filter(b=>b.batch_type==='sales');
+      const renderItem = b => {
+        const typeBadge = b.batch_type==='opening'
+          ? `<span class="badge-type badge-opening">Opening</span>`
+          : b.batch_type==='sales'
+          ? `<span class="badge-type badge-sales">Sales OUT</span>`
+          : `<span class="badge-type badge-purchase${isChg?' charger':''}">Purchase${b.purchase_qty>0?' (cap:'+b.purchase_qty+')':''}</span>`;
+        return `<li class="admin-list-item" style="${!b.is_active?'opacity:.6':''}">
+          <div>
+            <strong>${escH(b.batch_label)}</strong> ${typeBadge}${!b.is_active?' <span class="badge-type badge-inactive">Inactive</span>':''}
+            <div style="font-size:11px;color:#6b7280;margin-top:3px">Date: ${b.batch_date}${b.ref_no?' | Ref: '+escH(b.ref_no):''}</div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-sm-icon" title="Edit" onclick="ACC.editBatch(${b.id})" style="color:#1d4ed8"><i class="fas fa-pen"></i></button>
+            <button class="btn-sm-icon" onclick="ACC.toggleBatch(${b.id},${b.is_active})" style="color:${b.is_active?'#dc2626':'#059669'}">
+              <i class="fas ${b.is_active?'fa-eye-slash':'fa-eye'}"></i></button>
+          </div>
+        </li>`;
+      };
+      let html='';
+      if(inBatches.length){
+        html+=`<div style="font-size:11px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:.05em;padding:8px 0 4px;border-bottom:1px solid #e5e7eb;margin-bottom:6px"><i class="fas fa-arrow-down me-1"></i>IN Batches (Purchase / Opening)</div>`;
+        html+='<ul class="admin-list">'+inBatches.map(renderItem).join('')+'</ul>';
+      }
+      if(outBatches.length){
+        html+=`<div style="font-size:11px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.05em;padding:8px 0 4px;border-bottom:1px solid #fecaca;margin-top:12px;margin-bottom:6px"><i class="fas fa-arrow-up me-1"></i>OUT Batches (Sales)</div>`;
+        html+='<ul class="admin-list">'+outBatches.map(renderItem).join('')+'</ul>';
+      }
+      document.getElementById('batchList').innerHTML=html;
+    },
+
+    openBatchModal(){
+      this._editBatchId=null;
+      document.getElementById('batchModalTitle').textContent='Add Batch';
+      document.getElementById('batchLabel').value='';
+      document.getElementById('batchDate').value=new Date().toISOString().slice(0,10);
+      document.getElementById('batchType').value='purchase';
+      document.getElementById('batchPurchaseQty').value='';
+      document.getElementById('batchRef').value='';
+      this.togglePurchaseQty();
+      openModal('batchModal');
+    },
+
+    editBatch(id){
+      const b=this._batches.find(x=>x.id===id);
+      if(!b) return;
+      this._editBatchId=id;
+      document.getElementById('batchModalTitle').textContent='Edit Batch';
+      document.getElementById('batchLabel').value=b.batch_label;
+      document.getElementById('batchDate').value=b.batch_date;
+      document.getElementById('batchType').value=b.batch_type;
+      document.getElementById('batchPurchaseQty').value=b.purchase_qty;
+      document.getElementById('batchRef').value=b.ref_no||'';
+      this.togglePurchaseQty();
+      openModal('batchModal');
+    },
+
+    togglePurchaseQty(){
+      const t=document.getElementById('batchType').value;
+      document.getElementById('purchaseQtyRow').style.display=(t==='opening'||t==='sales')?'none':'';
+    },
+
+    async saveBatch(){
+      const label=document.getElementById('batchLabel').value.trim();
+      const dt=document.getElementById('batchDate').value;
+      const bt=document.getElementById('batchType').value;
+      const pq=parseInt(document.getElementById('batchPurchaseQty').value)||0;
+      const ref=document.getElementById('batchRef').value.trim();
+      if(!label||!dt){alert('Label and date are required.');return;}
+      try{
+        if(this._editBatchId){ await apiFetch(`${this.API()}/batches/${this._editBatchId}`,{method:'PUT',body:JSON.stringify({batch_label:label,batch_date:dt,purchase_qty:pq,ref_no:ref||null})}); }
+        else{
+          await apiFetch(this.API()+'/batches',{method:'POST',body:JSON.stringify({batch_label:label,batch_date:dt,batch_type:bt,purchase_qty:pq,ref_no:ref||null})});
+          if(bt!=='opening'&&bt!=='sales'&&pq>0&&(this._cat==='battery'||this._cat==='charger')){
+            const dcat=this._cat;
+            const items=Array.from({length:pq},()=>({status:'In Stock',comments:`Batch: ${label}`}));
+            try{
+              const r2=await apiFetch(`/api/v1/staff/inventory/dispatch/${dcat}/bulk`,{method:'POST',body:JSON.stringify(items)});
+              if(typeof DISP!=='undefined'&&DISP._toast) DISP._toast(`✓ ${r2.created} ${dcat} unit${r2.created>1?'s':''} added to Dispatch Ledger`);
+            }catch(ee){console.warn('dispatch acc auto-create:',ee.message);}
+          }
+        }
+        closeModal('batchModal');
+        await this.loadBatches();
+        await this.loadSheet();
+      }catch(e){alert('Save failed: '+e.message);}
+    },
+
+    async toggleBatch(id, isActive){
+      if(!confirm(`${isActive?'Deactivate':'Activate'} this batch?`)) return;
+      try{
+        await apiFetch(`${this.API()}/batches/${id}`,{method:'PUT',body:JSON.stringify({is_active:!isActive})});
+        await this.loadBatches();
+        await this.loadSheet();
+      }catch(e){alert('Error: '+e.message);}
+    },
+
+    async loadBrandsAdmin(){
+      try{
+        this._brands = await apiFetch(this.API()+'/brands?include_inactive=true');
+        this.renderBrandList();
+      }catch(e){ document.getElementById('brandList').innerHTML=`<p style="color:#dc2626">${escH(e.message)}</p>`; }
+    },
+
+    renderBrandList(){
+      const isChg = this._cat==='charger';
+      if(!this._brands.length){
+        document.getElementById('brandList').innerHTML=`<div class="empty-state"><i class="fas ${isChg?'fa-plug':'fa-tag'}"></i><p>No brands yet. Click 'Add Brand' to start.</p></div>`;
+        return;
+      }
+      let html='<ul class="admin-list">';
+      this._brands.forEach(b=>{
+        const specs = (b.specs||[]);
+        const specsHtml = specs.length
+          ? specs.map(s=>`<span class="spec-chip" onclick="ACC.editSpec(${s.id},'${escAttr(s.spec_name)}','${escAttr(b.name)}')" style="${!s.is_active?'opacity:.4;text-decoration:line-through':''}">◆ ${escH(s.spec_name)}</span>`).join('')
+          : '<span style="font-size:11px;color:#9ca3af">No specs yet</span>';
+        html+=`<li class="admin-list-item" style="${!b.is_active?'opacity:.6':''}">
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <strong>${escH(b.name)}</strong>
+              ${b.sub_type?`<span class="type-badge ${b.sub_type==='Battery'?'type-batt':'type-chgr'}">${escH(b.sub_type)}</span>`:''}
+              ${!b.is_active?' <span class="badge-type badge-inactive">Inactive</span>':''}
+            </div>
+            <div>${specsHtml}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;min-width:90px">
+            <button class="btn-sm-icon" title="Edit brand" onclick="ACC.editBrand(${b.id},'${escAttr(b.name)}',${b.sort_order},'${escAttr(b.sub_type||'')}')" style="color:#1d4ed8"><i class="fas fa-pen"></i></button>
+            <button class="btn-sm-icon" title="Add spec" onclick="ACC.openSpecModal(${b.id},'${escAttr(b.name)}')" style="color:#059669;font-size:11px"><i class="fas fa-plus"></i> Spec</button>
+            <button class="btn-sm-icon" onclick="ACC.toggleBrand(${b.id},${b.is_active})" style="color:${b.is_active?'#dc2626':'#059669'}">
+              <i class="fas ${b.is_active?'fa-eye-slash':'fa-eye'}"></i></button>
+          </div>
+        </li>`;
+      });
+      document.getElementById('brandList').innerHTML=html+'</ul>';
+    },
+
+    openBrandModal(){
+      this._editBrandId=null;
+      document.getElementById('brandModalTitle').textContent='Add Brand';
+      document.getElementById('brandName').value='';
+      document.getElementById('brandSort').value=0;
+      document.getElementById('brandCategory').value=this._cat;
+      document.getElementById('brandSubType').value=this._cat==='charger'?'Charger':'Battery';
+      openModal('brandModal');
+    },
+
+    editBrand(id, name, sort, subType){
+      this._editBrandId=id;
+      document.getElementById('brandModalTitle').textContent='Edit Brand';
+      document.getElementById('brandName').value=name;
+      document.getElementById('brandSort').value=sort;
+      document.getElementById('brandCategory').value=this._cat;
+      document.getElementById('brandSubType').value=subType||(this._cat==='charger'?'Charger':'Battery');
+      openModal('brandModal');
+    },
+
+    async saveBrand(){
+      const name   =document.getElementById('brandName').value.trim();
+      const sort   =parseInt(document.getElementById('brandSort').value)||0;
+      const cat    =document.getElementById('brandCategory').value||this._cat;
+      const subType=document.getElementById('brandSubType').value||null;
+      if(!name){alert('Brand name is required.');return;}
+      const BASE = `${this.API_BASE}/${cat}`;
+      try{
+        if(this._editBrandId){ await apiFetch(`${BASE}/brands/${this._editBrandId}`,{method:'PUT',body:JSON.stringify({name,sort_order:sort,sub_type:subType})}); }
+        else{ await apiFetch(`${BASE}/brands`,{method:'POST',body:JSON.stringify({name,sort_order:sort,sub_type:subType})}); }
+        closeModal('brandModal');
+        await this.loadBrandsAdmin();
+        await this.loadSheet();
+      }catch(e){alert('Save failed: '+e.message);}
+    },
+
+    async toggleBrand(id, isActive){
+      if(!confirm(`${isActive?'Deactivate':'Activate'} this brand?`)) return;
+      try{
+        await apiFetch(`${this.API()}/brands/${id}`,{method:'PUT',body:JSON.stringify({is_active:!isActive})});
+        await this.loadBrandsAdmin();
+        await this.loadSheet();
+      }catch(e){alert('Error: '+e.message);}
+    },
+
+    openSpecModal(brandId, brandName){
+      this._specBrandId=brandId; this._specBrandName=brandName; this._editSpecId=null;
+      document.getElementById('specModalTitle').textContent=`Add Spec — ${brandName}`;
+      document.getElementById('specName').value='';
+      document.getElementById('specSort').value=0;
+      openModal('specModal');
+    },
+
+    editSpec(id, specName, brandName){
+      this._editSpecId=id;
+      document.getElementById('specModalTitle').textContent=`Edit Spec — ${brandName}`;
+      document.getElementById('specName').value=specName;
+      document.getElementById('specSort').value=0;
+      openModal('specModal');
+    },
+
+    async saveSpec(){
+      const name=document.getElementById('specName').value.trim();
+      const sort=parseInt(document.getElementById('specSort').value)||0;
+      if(!name){alert('Spec name is required.');return;}
+      try{
+        if(this._editSpecId){ await apiFetch(`${this.API()}/specs/${this._editSpecId}`,{method:'PUT',body:JSON.stringify({spec_name:name,sort_order:sort})}); }
+        else{ await apiFetch(`${this.API()}/brands/${this._specBrandId}/specs`,{method:'POST',body:JSON.stringify({spec_name:name,sort_order:sort})}); }
+        closeModal('specModal');
+        await this.loadBrandsAdmin();
+        await this.loadSheet();
+      }catch(e){alert('Save failed: '+e.message);}
+    }
+  };
+
+
+  // ══════════════════════════════════════════════════
+  // DISP — Dispatch Ledger (Battery / Vehicle / Charger)
+  // ══════════════════════════════════════════════════
+  const DISP = {
+    API: '/api/v1/staff/inventory/dispatch',
+    _sub: 'battery',
+    _batId: null,
+    _vehId: null,
+    _chgId: null,
+
+    switchSub(sub){
+      this._sub = sub;
+      ['battery','vehicle','charger'].forEach(s=>{
+        document.getElementById('dspSub'+s.charAt(0).toUpperCase()+s.slice(1)).style.display = s===sub?'':'none';
+        document.getElementById('dspBtn'+s.charAt(0).toUpperCase()+s.slice(1)).classList.toggle('active', s===sub);
+      });
+      if(sub==='battery') this.loadBattery();
+      else if(sub==='vehicle') this.loadVehicle();
+      else this.loadCharger();
+    },
+
+    async loadAll(){
+      await Promise.all([
+        this.loadLookups(),
+        this.loadBattery(),
+      ]);
+      this.loadSummary();
+      if(!this._ieInit){
+        this._ieInit = true;
+        ['dspBatBody','dspVehBody','dspChgBody'].forEach(id=>{
+          const el = document.getElementById(id);
+          if(el) el.addEventListener('click', e=>{
+            const td = e.target.closest('td.disp-ie');
+            if(td && !td.classList.contains('disp-ie-active')) DISP._ie(td);
+          });
+        });
+      }
+    },
+
+    async loadLookups(){
+      try{
+        const [vendors, bspecs, cspecs, vmodels, vnos, invnos] = await Promise.all([
+          apiFetch(this.API+'/lookup/vendors').catch(()=>[]),
+          apiFetch(this.API+'/lookup/battery-specs').catch(()=>[]),
+          apiFetch(this.API+'/lookup/charger-specs').catch(()=>[]),
+          apiFetch(this.API+'/lookup/vehicle-models').catch(()=>[]),
+          apiFetch(this.API+'/lookup/vehicle-nos').catch(()=>[]),
+          apiFetch(this.API+'/lookup/invoice-nos').catch(()=>[]),
+        ]);
+
+        const fillSel = (id, vals, allLabel='All Vendors')=>{
+          const el = document.getElementById(id); if(!el) return;
+          const cur = el.value;
+          el.innerHTML = `<option value="">${allLabel}</option>`+vals.map(v=>`<option value="${escH(v)}">${escH(v)}</option>`).join('');
+          el.value = cur;
+        };
+        const fillDL = (id, vals)=>{
+          const el = document.getElementById(id); if(!el) return;
+          el.innerHTML = vals.map(v=>`<option value="${escH(v)}">`).join('');
+        };
+
+        fillSel('dspBatFilterVendor', vendors);
+        fillSel('dspVehFilterVendor', vendors);
+        fillSel('dspChgFilterVendor', vendors);
+        fillSel('dspBatFilterSpec', bspecs, 'All Specs');
+        fillSel('dspChgFilterSpec', cspecs, 'All Specs');
+        fillSel('dspVehFilterModel', vmodels, 'All Models');
+
+        fillDL('dspBatVendorList', vendors);
+        fillDL('dspVehVendorList', vendors);
+        fillDL('dspChgVendorList', vendors);
+        fillDL('dspBatSpecList', bspecs);
+        fillDL('dspChgSpecList', cspecs);
+        fillDL('dspVehModelList', vmodels);
+        fillDL('dspVehBatSpecList', bspecs);
+        fillDL('dspBatVehicleNoList', vnos);
+        fillDL('dspVehVehicleNoList', vnos);
+        fillDL('dspChgVehicleNoList', vnos);
+        fillDL('dspBatInvoiceList', invnos);
+        fillDL('dspVehInvoiceList', invnos);
+        fillDL('dspChgInvoiceList', invnos);
+      }catch(e){ console.warn('DISP lookups:', e); }
+    },
+
+    async loadSummary(){
+      try{
+        const today = new Date();
+        const soon  = new Date(); soon.setDate(today.getDate()+30);
+        const [bats, vehs, chgs] = await Promise.all([
+          apiFetch(this.API+'/battery?limit=9999').catch(()=>({items:[]})),
+          apiFetch(this.API+'/vehicle?limit=9999').catch(()=>({items:[]})),
+          apiFetch(this.API+'/charger?limit=9999').catch(()=>({items:[]})),
+        ]);
+        const all = [...(bats.items||[]), ...(vehs.items||[]), ...(chgs.items||[])];
+        const dispatched = all.filter(r=>r.status==='Dispatched');
+        const returned   = all.filter(r=>r.status&&r.status.toLowerCase().includes('return')).length;
+
+        let activeW=0, expiringSoon=0, expired=0;
+        dispatched.forEach(r=>{
+          const we = r.warranty_end_date;
+          if(!we){ return; }
+          const wd = new Date(we);
+          if(wd < today) expired++;
+          else if(wd <= soon) expiringSoon++;
+          else activeW++;
+        });
+        document.getElementById('dspTotalDispatched').textContent = dispatched.length;
+        document.getElementById('dspActiveWarranty').textContent  = activeW;
+        document.getElementById('dspExpiringSoon').textContent    = expiringSoon;
+        document.getElementById('dspExpired').textContent         = expired;
+        document.getElementById('dspReturned').textContent        = returned;
+      }catch(e){ console.warn('DISP summary:', e); }
+    },
+
+    _wBadge(we){
+      if(!we) return '<span class="badge-dispatch no-warranty">No Date</span>';
+      const today = new Date(); today.setHours(0,0,0,0);
+      const soon  = new Date(); soon.setDate(today.getDate()+30);
+      const d = new Date(we);
+      if(d < today)  return `<span class="badge-dispatch warranty-exp">Expired</span><br><small style="font-size:10px;color:#9ca3af">${we}</small>`;
+      if(d <= soon)  return `<span class="badge-dispatch warranty-soon">Exp Soon</span><br><small style="font-size:10px;color:#9ca3af">${we}</small>`;
+      return `<span class="badge-dispatch warranty-ok">Active</span><br><small style="font-size:10px;color:#9ca3af">${we}</small>`;
+    },
+
+    _statusBadge(s){
+      if(!s) return '<span class="badge-dispatch pending">—</span>';
+      if(s.toLowerCase().includes('return')) return `<span class="badge-dispatch returned">${escH(s)}</span>`;
+      if(s==='In Stock') return `<span class="badge-dispatch" style="background:#d1fae5;color:#065f46;">${escH(s)}</span>`;
+      if(s==='Demo')     return `<span class="badge-dispatch" style="background:#ede9fe;color:#5b21b6;">${escH(s)}</span>`;
+      return `<span class="badge-dispatch">${escH(s)}</span>`;
+    },
+
+    // ─── Toast ─────────────────────────────────────
+    _toast(msg, type='success'){
+      let t = document.getElementById('_dspToast'); if(t) t.remove();
+      t = document.createElement('div'); t.id='_dspToast'; t.className='disp-toast';
+      t.style.background = type==='error'?'#991b1b':'#065f46';
+      t.textContent = msg; document.body.appendChild(t);
+      setTimeout(()=>{ if(t.parentNode) t.remove(); }, 3100);
+    },
+
+    // ─── Inline edit ───────────────────────────────
+    _ie(td){
+      const field = td.dataset.field, etype = td.dataset.etype, dtype = td.dataset.dtype||'text';
+      const tr = td.closest('tr[data-id]'); if(!tr) return;
+      const rowId = tr.dataset.id, original = td.innerHTML;
+      let curVal = td.textContent.trim().replace(/\s*mo$/,'');
+      if(curVal==='—') curVal='';
+      let inp;
+      if(dtype==='date'){
+        inp=document.createElement('input'); inp.type='date'; inp.value=curVal;
+      } else if(dtype==='number'){
+        inp=document.createElement('input'); inp.type='number'; inp.min='0'; inp.value=curVal;
+      } else if(dtype==='status'){
+        inp=document.createElement('select');
+        ['Dispatched','In Stock','Returned to vendor'].forEach(o=>{
+          const opt=document.createElement('option'); opt.value=o; opt.textContent=o;
+          if(o===curVal) opt.selected=true; inp.appendChild(opt);
+        });
+      } else if(dtype==='vstatus'){
+        inp=document.createElement('select');
+        ['Dispatched','In Stock','Returned to vendor','Demo'].forEach(o=>{
+          const opt=document.createElement('option'); opt.value=o; opt.textContent=o;
+          if(o===curVal) opt.selected=true; inp.appendChild(opt);
+        });
+      } else if(dtype==='dlv'){
+        inp=document.createElement('select');
+        ['','Customer','Bonanza','Partner'].forEach(o=>{
+          const opt=document.createElement('option'); opt.value=o; opt.textContent=o||'— select —';
+          if(o===curVal) opt.selected=true; inp.appendChild(opt);
+        });
+      } else {
+        inp=document.createElement('input'); inp.type='text'; inp.value=curVal;
+      }
+      td.classList.add('disp-ie-active'); td.innerHTML=''; td.appendChild(inp);
+      inp.focus(); if(inp.select) inp.select();
+      const apiType = etype==='bat'?'battery':etype==='veh'?'vehicle':'charger';
+      let saved=false;
+      const save = async()=>{
+        if(saved) return; saved=true;
+        const newVal = inp.value||null;
+        td.classList.remove('disp-ie-active');
+        try{
+          const resp = await apiFetch(`${this.API}/${apiType}/${rowId}`,{method:'PATCH',body:JSON.stringify({field,value:newVal})});
+          if(field==='vendor_code'){
+            td.innerHTML = `<span class="type-badge ta-vendor">${escH(newVal||'—')}</span>`;
+          } else if(dtype==='status'||dtype==='vstatus'){
+            td.innerHTML = this._statusBadge(newVal);
+          } else if(dtype==='dlv'){
+            td.innerHTML = escH(newVal||'—');
+          } else if(dtype==='number'){
+            td.innerHTML = newVal!=null?newVal+' mo':'—';
+          } else {
+            td.innerHTML = escH(newVal||'—');
+          }
+          if((field==='dispatch_date'||field==='warranty_months') && resp.warranty_end_date!==undefined){
+            const wbd = td.closest('tr')?.querySelector('[data-wbadge]');
+            if(wbd) wbd.innerHTML = this._wBadge(resp.warranty_end_date||null);
+          }
+        }catch(e){
+          this._toast('Save failed: '+e.message,'error');
+          td.innerHTML=original; td.classList.remove('disp-ie-active');
+        }
+      };
+      inp.addEventListener('blur',save);
+      inp.addEventListener('keydown',e=>{
+        if(e.key==='Enter'){e.preventDefault();inp.removeEventListener('blur',save);save();}
+        if(e.key==='Escape'){saved=true;inp.removeEventListener('blur',save);td.innerHTML=original;td.classList.remove('disp-ie-active');}
+      });
+    },
+
+    // ─── Battery bulk helpers ───────────────────────
+    _batQtyChange(){
+      const q=Math.max(1,parseInt(document.getElementById('dspBatQty').value)||1);
+      document.getElementById('dspBatQty').value=q;
+      const sec=document.getElementById('dspBatBulkSection');
+      if(q>1){
+        sec.style.display='';
+        const body=document.getElementById('dspBatRowsBody');
+        const cur=body.querySelectorAll('tr').length;
+        for(let i=cur;i<q;i++) body.insertAdjacentHTML('beforeend',this._batRowHtml(i+1));
+        while(body.querySelectorAll('tr').length>q) body.lastElementChild.remove();
+      } else { sec.style.display='none'; }
+    },
+    _batRowHtml(n){
+      return `<tr><td style="color:#9ca3af;text-align:center;font-size:11px;padding:3px;">${n}</td>
+        <td><input type="date" class="brDate"></td><td><input type="text" class="brVno" placeholder="Vehicle No"></td>
+        <td><input type="text" class="brInv" placeholder="Invoice No"></td><td><input type="text" class="brOwn" placeholder="Owner"></td>
+        <td><input type="text" class="brLoc" placeholder="Location"></td><td><input type="text" class="brNotes" placeholder="Notes"></td>
+        <td><button type="button" class="btn-rm-row" onclick="this.closest('tr').remove();document.getElementById('dspBatQty').value=document.getElementById('dspBatRowsBody').querySelectorAll('tr').length||1;">&#215;</button></td></tr>`;
+    },
+    _addBatRow(){
+      const b=document.getElementById('dspBatRowsBody');
+      b.insertAdjacentHTML('beforeend',this._batRowHtml(b.querySelectorAll('tr').length+1));
+      document.getElementById('dspBatQty').value=b.querySelectorAll('tr').length;
+    },
+    _hideBatBulk(){
+      const s=document.getElementById('dspBatBulkSection');
+      if(s){s.style.display='none';document.getElementById('dspBatRowsBody').innerHTML='';}
+    },
+    async _saveBatBulk(){
+      const shared={
+        entry_date:        document.getElementById('dspBatEntryDate').value||null,
+        vendor_code:       document.getElementById('dspBatVendor').value.trim()||null,
+        vendor_invoice_no: document.getElementById('dspBatVendorInvoice').value.trim()||null,
+        battery_spec:      document.getElementById('dspBatSpec').value.trim()||null,
+        battery_serial_no: document.getElementById('dspBatSerialNo').value.trim()||null,
+        warranty_months: document.getElementById('dspBatWarranty').value?parseInt(document.getElementById('dspBatWarranty').value):null,
+        status:          document.getElementById('dspBatStatus').value||null,
+        dispatch_month:  document.getElementById('dspBatDispatchMonth').value.trim()||null,
+        deliverable:     document.getElementById('dspBatDeliverable').value||null,
+      };
+      if(!shared.battery_spec){alert('Battery Spec is required.');return;}
+      const rows=[...document.getElementById('dspBatRowsBody').querySelectorAll('tr')];
+      if(!rows.length){alert('Add at least one row in the bulk section.');return;}
+      const items=rows.map(tr=>({...shared,
+        dispatch_date:       tr.querySelector('.brDate')?.value||null,
+        assigned_vehicle_no: tr.querySelector('.brVno')?.value.trim()||null,
+        sales_invoice_no:    tr.querySelector('.brInv')?.value.trim()||null,
+        owner_name:          tr.querySelector('.brOwn')?.value.trim()||null,
+        location:            tr.querySelector('.brLoc')?.value.trim()||null,
+        comments:            tr.querySelector('.brNotes')?.value.trim()||null,
+      }));
+      try{
+        const r=await apiFetch(this.API+'/battery/bulk',{method:'POST',body:JSON.stringify(items)});
+        closeModal('dispBatModal');
+        this._toast(`✓ ${r.created} battery record${r.created>1?'s':''} added`);
+        await this.loadBattery(); this.loadSummary();
+      }catch(e){alert('Bulk save failed: '+e.message);}
+    },
+
+    // ─── Vehicle bulk helpers ───────────────────────
+    _vehQtyChange(){
+      const q=Math.max(1,parseInt(document.getElementById('dspVehQty').value)||1);
+      document.getElementById('dspVehQty').value=q;
+      const sec=document.getElementById('dspVehBulkSection');
+      if(q>1){
+        sec.style.display='';
+        const body=document.getElementById('dspVehRowsBody');
+        const cur=body.querySelectorAll('tr').length;
+        for(let i=cur;i<q;i++) body.insertAdjacentHTML('beforeend',this._vehRowHtml(i+1));
+        while(body.querySelectorAll('tr').length>q) body.lastElementChild.remove();
+      } else { sec.style.display='none'; }
+    },
+    _vehRowHtml(n){
+      return `<tr><td style="color:#9ca3af;text-align:center;font-size:11px;padding:3px;">${n}</td>
+        <td><input type="text" class="vrVno" placeholder="WB No"></td><td><input type="text" class="vrChas" placeholder="Chassis No"></td>
+        <td><input type="text" class="vrMot" placeholder="Motor No"></td><td><input type="date" class="vrDate"></td>
+        <td><input type="text" class="vrInv" placeholder="Invoice No"></td><td><input type="text" class="vrCust" placeholder="Customer"></td>
+        <td><input type="text" class="vrBser" placeholder="Battery Serial"></td><td><input type="text" class="vrChrNo" placeholder="Charger No"></td>
+        <td><input type="text" class="vrAddr" placeholder="Address"></td>
+        <td><button type="button" class="btn-rm-row" onclick="this.closest('tr').remove();document.getElementById('dspVehQty').value=document.getElementById('dspVehRowsBody').querySelectorAll('tr').length||1;">&#215;</button></td></tr>`;
+    },
+    _addVehRow(){
+      const b=document.getElementById('dspVehRowsBody');
+      b.insertAdjacentHTML('beforeend',this._vehRowHtml(b.querySelectorAll('tr').length+1));
+      document.getElementById('dspVehQty').value=b.querySelectorAll('tr').length;
+    },
+    _hideVehBulk(){
+      const s=document.getElementById('dspVehBulkSection');
+      if(s){s.style.display='none';document.getElementById('dspVehRowsBody').innerHTML='';}
+    },
+    async _saveVehBulk(){
+      const shared={
+        vendor_code:       document.getElementById('dspVehVendor').value.trim()||null,
+        vendor_invoice_no: document.getElementById('dspVehVendorInvoice').value.trim()||null,
+        vehicle_model:     document.getElementById('dspVehModel').value.trim()||null,
+        vehicle_color: document.getElementById('dspVehColor').value.trim()||null,
+        status:        document.getElementById('dspVehStatus').value||null,
+        dispatch_month:document.getElementById('dspVehDispatchMonth').value.trim()||null,
+        battery_spec:  document.getElementById('dspVehBatSpec').value.trim()||null,
+      };
+      const rows=[...document.getElementById('dspVehRowsBody').querySelectorAll('tr')];
+      if(!rows.length){alert('Add at least one row in the bulk section.');return;}
+      const items=rows.map(tr=>({...shared,
+        vehicle_no:        tr.querySelector('.vrVno')?.value.trim()||null,
+        chassis_no:        tr.querySelector('.vrChas')?.value.trim()||null,
+        motor_no:          tr.querySelector('.vrMot')?.value.trim()||null,
+        dispatch_date:     tr.querySelector('.vrDate')?.value||null,
+        sales_invoice_no:  tr.querySelector('.vrInv')?.value.trim()||null,
+        customer_name:     tr.querySelector('.vrCust')?.value.trim()||null,
+        battery_serial_no: tr.querySelector('.vrBser')?.value.trim()||null,
+        charger_no:        tr.querySelector('.vrChrNo')?.value.trim()||null,
+        address:           tr.querySelector('.vrAddr')?.value.trim()||null,
+      }));
+      try{
+        const r=await apiFetch(this.API+'/vehicle/bulk',{method:'POST',body:JSON.stringify(items)});
+        closeModal('dispVehModal');
+        this._toast(`✓ ${r.created} vehicle record${r.created>1?'s':''} added`);
+        await this.loadVehicle(); this.loadSummary();
+      }catch(e){alert('Bulk save failed: '+e.message);}
+    },
+
+    // ─── Charger bulk helpers ───────────────────────
+    _chgQtyChange(){
+      const q=Math.max(1,parseInt(document.getElementById('dspChgQty').value)||1);
+      document.getElementById('dspChgQty').value=q;
+      const sec=document.getElementById('dspChgBulkSection');
+      if(q>1){
+        sec.style.display='';
+        const body=document.getElementById('dspChgRowsBody');
+        const cur=body.querySelectorAll('tr').length;
+        for(let i=cur;i<q;i++) body.insertAdjacentHTML('beforeend',this._chgRowHtml(i+1));
+        while(body.querySelectorAll('tr').length>q) body.lastElementChild.remove();
+      } else { sec.style.display='none'; }
+    },
+    _chgRowHtml(n){
+      return `<tr><td style="color:#9ca3af;text-align:center;font-size:11px;padding:3px;">${n}</td>
+        <td><input type="date" class="crDate"></td><td><input type="text" class="crVno" placeholder="Vehicle No"></td>
+        <td><input type="text" class="crInv" placeholder="Invoice No"></td><td><input type="text" class="crOwn" placeholder="Owner"></td>
+        <td><input type="text" class="crLoc" placeholder="Location"></td><td><input type="text" class="crNotes" placeholder="Notes"></td>
+        <td><button type="button" class="btn-rm-row" onclick="this.closest('tr').remove();document.getElementById('dspChgQty').value=document.getElementById('dspChgRowsBody').querySelectorAll('tr').length||1;">&#215;</button></td></tr>`;
+    },
+    _addChgRow(){
+      const b=document.getElementById('dspChgRowsBody');
+      b.insertAdjacentHTML('beforeend',this._chgRowHtml(b.querySelectorAll('tr').length+1));
+      document.getElementById('dspChgQty').value=b.querySelectorAll('tr').length;
+    },
+    _hideChgBulk(){
+      const s=document.getElementById('dspChgBulkSection');
+      if(s){s.style.display='none';document.getElementById('dspChgRowsBody').innerHTML='';}
+    },
+    async _saveChgBulk(){
+      const shared={
+        entry_date:        document.getElementById('dspChgEntryDate').value||null,
+        vendor_code:       document.getElementById('dspChgVendor').value.trim()||null,
+        vendor_invoice_no: document.getElementById('dspChgVendorInvoice').value.trim()||null,
+        charger_spec:      document.getElementById('dspChgSpec').value.trim()||null,
+        charger_no:        document.getElementById('dspChgChargerNo').value.trim()||null,
+        warranty_months: document.getElementById('dspChgWarranty').value?parseInt(document.getElementById('dspChgWarranty').value):null,
+        status:          document.getElementById('dspChgStatus').value||null,
+        dispatch_month:  document.getElementById('dspChgDispatchMonth').value.trim()||null,
+        deliverable:     document.getElementById('dspChgDeliverable').value||null,
+      };
+      if(!shared.charger_spec){alert('Charger Spec is required.');return;}
+      const rows=[...document.getElementById('dspChgRowsBody').querySelectorAll('tr')];
+      if(!rows.length){alert('Add at least one row in the bulk section.');return;}
+      const items=rows.map(tr=>({...shared,
+        dispatch_date:       tr.querySelector('.crDate')?.value||null,
+        assigned_vehicle_no: tr.querySelector('.crVno')?.value.trim()||null,
+        sales_invoice_no:    tr.querySelector('.crInv')?.value.trim()||null,
+        owner_name:          tr.querySelector('.crOwn')?.value.trim()||null,
+        location:            tr.querySelector('.crLoc')?.value.trim()||null,
+        comments:            tr.querySelector('.crNotes')?.value.trim()||null,
+      }));
+      try{
+        const r=await apiFetch(this.API+'/charger/bulk',{method:'POST',body:JSON.stringify(items)});
+        closeModal('dispChgModal');
+        this._toast(`✓ ${r.created} charger record${r.created>1?'s':''} added`);
+        await this.loadCharger(); this.loadSummary();
+      }catch(e){alert('Bulk save failed: '+e.message);}
+    },
+
+    // ─── Battery ───────────────────────────────────
+    async loadBattery(){
+      const body = document.getElementById('dspBatBody');
+      body.innerHTML = '<tr class="loading-row"><td colspan="18"><span class="spinner"></span> Loading…</td></tr>';
+      try{
+        const params = new URLSearchParams();
+        const v = document.getElementById('dspBatFilterVendor')?.value; if(v) params.set('vendor_code',v);
+        const s = document.getElementById('dspBatFilterSpec')?.value;   if(s) params.set('battery_spec',s);
+        const st= document.getElementById('dspBatFilterStatus')?.value; if(st && st!=='__null__') params.set('status',st);
+        const q = document.getElementById('dspBatSearch')?.value?.trim(); if(q) params.set('search',q);
+        params.set('limit','9999');
+        const data = await apiFetch(this.API+'/battery?'+params);
+        let rows = data.items || [];
+        const stFilter = document.getElementById('dspBatFilterStatus')?.value;
+        if(stFilter==='__null__') rows = rows.filter(r=>!r.status);
+        const badge = document.getElementById('dspBatBadge');
+        if(badge){ badge.textContent = rows.length; badge.style.display = rows.length ? '' : 'none'; }
+        if(!rows.length){
+          body.innerHTML = '<tr><td colspan="18" class="empty-state"><i class="fas fa-battery-quarter" style="font-size:28px;display:block;margin-bottom:8px;"></i>No battery dispatch records found</td></tr>';
+          return;
+        }
+        body.innerHTML = rows.map((r,i)=>{
+          const isRet = r.status?.toLowerCase().includes('return');
+          return `<tr class="${isRet?'disp-row-ret':''}" data-id="${r.id}">
+            <td style="color:#9ca3af;font-size:11px;">${i+1}</td>
+            <td class="disp-ie" data-etype="bat" data-field="entry_date" data-dtype="date">${r.entry_date||'—'}</td>
+            <td class="disp-ie" data-etype="bat" data-field="vendor_code" data-dtype="text"><span class="type-badge ta-vendor">${escH(r.vendor_code||'—')}</span></td>
+            <td class="disp-ie" data-etype="bat" data-field="vendor_invoice_no" data-dtype="text" style="font-size:11px;">${escH(r.vendor_invoice_no||'—')}</td>
+            <td class="disp-ie td-left" data-etype="bat" data-field="battery_spec" data-dtype="text" style="font-weight:600;">${escH(r.battery_spec||'—')}</td>
+            <td class="disp-ie" data-etype="bat" data-field="battery_serial_no" data-dtype="text" style="font-size:10px;font-family:monospace;">${escH(r.battery_serial_no||'—')}</td>
+            <td class="disp-ie" data-etype="bat" data-field="warranty_months" data-dtype="number">${r.warranty_months!=null?r.warranty_months+' mo':'—'}</td>
+            <td class="disp-ie" data-etype="bat" data-field="status" data-dtype="status">${this._statusBadge(r.status)}</td>
+            <td class="disp-ie" data-etype="bat" data-field="dispatch_date" data-dtype="date">${r.dispatch_date||'—'}</td>
+            <td class="disp-ie" data-etype="bat" data-field="dispatch_month" data-dtype="text" style="font-size:11px;color:#6b7280;">${escH(r.dispatch_month||'—')}</td>
+            <td class="disp-ie" data-etype="bat" data-field="assigned_vehicle_no" data-dtype="text" style="font-size:11px;">${escH(r.assigned_vehicle_no||'—')}</td>
+            <td class="disp-ie" data-etype="bat" data-field="sales_invoice_no" data-dtype="text" style="font-size:11px;">${escH(r.sales_invoice_no||'—')}</td>
+            <td class="disp-ie td-left" data-etype="bat" data-field="owner_name" data-dtype="text">${escH(r.owner_name||'—')}</td>
+            <td class="disp-ie" data-etype="bat" data-field="location" data-dtype="text" style="font-size:11px;">${escH(r.location||'—')}</td>
+            <td data-wbadge="1">${this._wBadge(r.warranty_end_date)}</td>
+            <td class="disp-ie" data-etype="bat" data-field="deliverable" data-dtype="dlv" style="font-size:11px;">${escH(r.deliverable||'—')}</td>
+            <td class="disp-ie td-left" data-etype="bat" data-field="comments" data-dtype="text" style="font-size:11px;">${escH(r.comments||'—')}</td>
+            <td style="white-space:nowrap;">
+              <button class="disp-act-btn edit" onclick="DISP.openBatModal(${r.id})" title="Edit"><i class="fas fa-pen"></i></button>
+              <button class="disp-act-btn del" onclick="DISP.deleteBat(${r.id})" title="Delete"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>`;
+        }).join('');
+      }catch(e){
+        body.innerHTML = `<tr><td colspan="18" class="empty-state" style="color:#dc2626;">Error: ${escH(e.message)}</td></tr>`;
+      }
+    },
+
+    async openBatModal(id=null){
+      this._batId = id;
+      document.getElementById('dispBatModalTitle').textContent = id ? 'Edit Battery Dispatch' : 'Add Battery Dispatch';
+      const today = new Date().toISOString().slice(0,10);
+      const qtyBar = document.getElementById('dspBatQtyBar');
+      if(qtyBar) qtyBar.style.display = id ? 'none' : '';
+      if(!id) { document.getElementById('dspBatQty').value='1'; this._hideBatBulk(); }
+      else this._hideBatBulk();
+      if(!id){
+        ['dspBatEntryDate','dspBatDispatchDate','dspBatWarrantyEnd'].forEach(f=>document.getElementById(f).value='');
+        document.getElementById('dspBatEntryDate').value = today;
+        ['dspBatVendor','dspBatVendorInvoice','dspBatSpec','dspBatSerialNo','dspBatDispatchMonth','dspBatVehicleNo','dspBatInvoiceNo','dspBatOwner','dspBatLocation','dspBatComments'].forEach(f=>document.getElementById(f).value='');
+        document.getElementById('dspBatWarranty').value='';
+        document.getElementById('dspBatStatus').value='Dispatched';
+        document.getElementById('dspBatDeliverable').value='Customer';
+      } else {
+        try{
+          const r = await apiFetch(this.API+'/battery/'+id);
+          document.getElementById('dspBatEntryDate').value     = r.entry_date||'';
+          document.getElementById('dspBatVendor').value        = r.vendor_code||'';
+          document.getElementById('dspBatVendorInvoice').value = r.vendor_invoice_no||'';
+          document.getElementById('dspBatSpec').value          = r.battery_spec||'';
+          document.getElementById('dspBatSerialNo').value      = r.battery_serial_no||'';
+          document.getElementById('dspBatWarranty').value      = r.warranty_months!=null?r.warranty_months:'';
+          document.getElementById('dspBatStatus').value        = r.status||'';
+          document.getElementById('dspBatDispatchDate').value  = r.dispatch_date||'';
+          document.getElementById('dspBatDispatchMonth').value = r.dispatch_month||'';
+          document.getElementById('dspBatVehicleNo').value     = r.assigned_vehicle_no||'';
+          document.getElementById('dspBatInvoiceNo').value     = r.sales_invoice_no||'';
+          document.getElementById('dspBatOwner').value         = r.owner_name||'';
+          document.getElementById('dspBatLocation').value      = r.location||'';
+          document.getElementById('dspBatWarrantyEnd').value   = r.warranty_end_date||'';
+          document.getElementById('dspBatDeliverable').value   = r.deliverable||'';
+          document.getElementById('dspBatComments').value      = r.comments||'';
+        }catch(e){ alert('Load failed: '+e.message); return; }
+      }
+      this._setupBatAutoCalc();
+      openModal('dispBatModal');
+    },
+
+    _setupBatAutoCalc(){
+      const dd = document.getElementById('dspBatDispatchDate');
+      const wm = document.getElementById('dspBatWarranty');
+      const we = document.getElementById('dspBatWarrantyEnd');
+      const calc = ()=>{
+        if(dd.value && wm.value){
+          const d = new Date(dd.value);
+          d.setMonth(d.getMonth()+parseInt(wm.value));
+          we.value = d.toISOString().slice(0,10);
+        }
+      };
+      dd.onchange = calc; wm.onchange = calc;
+    },
+
+    async saveBat(){
+      if(!this._batId){
+        const q=parseInt(document.getElementById('dspBatQty')?.value)||1;
+        const sec=document.getElementById('dspBatBulkSection');
+        if(q>1 && sec && sec.style.display!=='none') return this._saveBatBulk();
+      }
+      const payload = {
+        entry_date:          document.getElementById('dspBatEntryDate').value     || null,
+        vendor_code:         document.getElementById('dspBatVendor').value.trim() || null,
+        vendor_invoice_no:   document.getElementById('dspBatVendorInvoice').value.trim() || null,
+        battery_spec:        document.getElementById('dspBatSpec').value.trim()   || null,
+        battery_serial_no:   document.getElementById('dspBatSerialNo').value.trim() || null,
+        warranty_months:     document.getElementById('dspBatWarranty').value ? parseInt(document.getElementById('dspBatWarranty').value) : null,
+        status:              document.getElementById('dspBatStatus').value         || null,
+        dispatch_date:       document.getElementById('dspBatDispatchDate').value  || null,
+        dispatch_month:      document.getElementById('dspBatDispatchMonth').value.trim() || null,
+        assigned_vehicle_no: document.getElementById('dspBatVehicleNo').value.trim() || null,
+        sales_invoice_no:    document.getElementById('dspBatInvoiceNo').value.trim() || null,
+        owner_name:          document.getElementById('dspBatOwner').value.trim()  || null,
+        location:            document.getElementById('dspBatLocation').value.trim() || null,
+        warranty_end_date:   document.getElementById('dspBatWarrantyEnd').value   || null,
+        deliverable:         document.getElementById('dspBatDeliverable').value   || null,
+        comments:            document.getElementById('dspBatComments').value.trim() || null,
+      };
+      if(!payload.entry_date || !payload.battery_spec){ alert('Entry Date and Battery Spec are required.'); return; }
+      try{
+        if(this._batId){
+          await apiFetch(this.API+'/battery/'+this._batId, {method:'PUT', body:JSON.stringify(payload)});
+        } else {
+          await apiFetch(this.API+'/battery', {method:'POST', body:JSON.stringify(payload)});
+        }
+        closeModal('dispBatModal');
+        await this.loadBattery();
+        this.loadSummary();
+      }catch(e){ alert('Save failed: '+e.message); }
+    },
+
+    async deleteBat(id){
+      if(!confirm('Delete this battery dispatch record?')) return;
+      try{
+        await apiFetch(this.API+'/battery/'+id, {method:'DELETE'});
+        await this.loadBattery();
+        this.loadSummary();
+      }catch(e){ alert('Delete failed: '+e.message); }
+    },
+
+    // ─── Vehicle ───────────────────────────────────
+    async loadVehicle(){
+      const body = document.getElementById('dspVehBody');
+      body.innerHTML = '<tr class="loading-row"><td colspan="21"><span class="spinner"></span> Loading…</td></tr>';
+      try{
+        const params = new URLSearchParams();
+        const v = document.getElementById('dspVehFilterVendor')?.value; if(v) params.set('vendor_code',v);
+        const m = document.getElementById('dspVehFilterModel')?.value;  if(m) params.set('vehicle_model',m);
+        const st= document.getElementById('dspVehFilterStatus')?.value; if(st) params.set('status',st);
+        const q = document.getElementById('dspVehSearch')?.value?.trim(); if(q) params.set('search',q);
+        params.set('limit','9999');
+        const data = await apiFetch(this.API+'/vehicle?'+params);
+        const rows = data.items || [];
+        const vbadge = document.getElementById('dspVehBadge');
+        if(vbadge){ vbadge.textContent = rows.length; vbadge.style.display = rows.length ? '' : 'none'; }
+        if(!rows.length){
+          body.innerHTML = '<tr><td colspan="21" class="empty-state"><i class="fas fa-car" style="font-size:28px;display:block;margin-bottom:8px;"></i>No vehicle dispatch records found</td></tr>';
+          return;
+        }
+        body.innerHTML = rows.map((r,i)=>{
+          const isRet = r.status?.toLowerCase().includes('return');
+          return `<tr class="${isRet?'disp-row-ret':''}" data-id="${r.id}">
+            <td style="color:#9ca3af;font-size:11px;">${i+1}</td>
+            <td class="disp-ie" data-etype="veh" data-field="vehicle_no" data-dtype="text" style="font-size:11px;font-weight:600;">${escH(r.vehicle_no||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="vendor_code" data-dtype="text"><span class="type-badge ta-vendor">${escH(r.vendor_code||'—')}</span></td>
+            <td class="disp-ie" data-etype="veh" data-field="vendor_invoice_no" data-dtype="text" style="font-size:11px;">${escH(r.vendor_invoice_no||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="vehicle_model" data-dtype="text" style="font-weight:600;">${escH(r.vehicle_model||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="vehicle_color" data-dtype="text">${escH(r.vehicle_color||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="chassis_no" data-dtype="text" style="font-size:10px;font-family:monospace;">${escH(r.chassis_no||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="motor_no" data-dtype="text" style="font-size:10px;font-family:monospace;">${escH(r.motor_no||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="status" data-dtype="vstatus">${this._statusBadge(r.status)}</td>
+            <td class="disp-ie" data-etype="veh" data-field="dispatch_date" data-dtype="date">${r.dispatch_date||'—'}</td>
+            <td class="disp-ie" data-etype="veh" data-field="dispatch_month" data-dtype="text" style="font-size:11px;color:#6b7280;">${escH(r.dispatch_month||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="sales_invoice_no" data-dtype="text" style="font-size:11px;">${escH(r.sales_invoice_no||'—')}</td>
+            <td class="disp-ie td-left" data-etype="veh" data-field="customer_name" data-dtype="text">${escH(r.customer_name||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="contact_number" data-dtype="text" style="font-size:11px;">${escH(r.contact_number||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="battery_spec" data-dtype="text" style="font-size:11px;">${escH(r.battery_spec||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="battery_serial_no" data-dtype="text" style="font-size:10px;font-family:monospace;">${escH(r.battery_serial_no||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="charger_no" data-dtype="text" style="font-size:11px;">${escH(r.charger_no||'—')}</td>
+            <td class="disp-ie td-left" data-etype="veh" data-field="address" data-dtype="text" style="font-size:11px;">${escH(r.address||'—')}</td>
+            <td class="disp-ie" data-etype="veh" data-field="return_date" data-dtype="date" style="font-size:11px;color:#dc2626;">${r.return_date||'—'}</td>
+            <td class="disp-ie td-left" data-etype="veh" data-field="comments" data-dtype="text" style="font-size:11px;">${escH(r.comments||'—')}</td>
+            <td style="white-space:nowrap;">
+              <button class="disp-act-btn edit" onclick="DISP.openVehModal(${r.id})" title="Edit"><i class="fas fa-pen"></i></button>
+              <button class="disp-act-btn del" onclick="DISP.deleteVeh(${r.id})" title="Delete"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>`;
+        }).join('');
+      }catch(e){
+        body.innerHTML = `<tr><td colspan="21" class="empty-state" style="color:#dc2626;">Error: ${escH(e.message)}</td></tr>`;
+      }
+    },
+
+    async openVehModal(id=null){
+      this._vehId = id;
+      document.getElementById('dispVehModalTitle').textContent = id ? 'Edit Vehicle Dispatch' : 'Add Vehicle Dispatch';
+      const qtyBarV = document.getElementById('dspVehQtyBar');
+      if(qtyBarV) qtyBarV.style.display = id ? 'none' : '';
+      if(!id) { document.getElementById('dspVehQty').value='1'; this._hideVehBulk(); }
+      else this._hideVehBulk();
+      if(!id){
+        ['dspVehVehicleNo','dspVehVendor','dspVehVendorInvoice','dspVehModel','dspVehColor','dspVehChassis','dspVehMotor',
+         'dspVehDispatchMonth','dspVehInvoiceNo','dspVehCustomer','dspVehContact','dspVehBatSpec',
+         'dspVehBatSerial','dspVehChargerNo','dspVehAddress','dspVehComments'].forEach(f=>document.getElementById(f).value='');
+        document.getElementById('dspVehDispatchDate').value='';
+        document.getElementById('dspVehReturnDate').value='';
+        document.getElementById('dspVehStatus').value='Dispatched';
+      } else {
+        try{
+          const r = await apiFetch(this.API+'/vehicle/'+id);
+          document.getElementById('dspVehVehicleNo').value    = r.vehicle_no||'';
+          document.getElementById('dspVehVendor').value        = r.vendor_code||'';
+          document.getElementById('dspVehVendorInvoice').value= r.vendor_invoice_no||'';
+          document.getElementById('dspVehModel').value        = r.vehicle_model||'';
+          document.getElementById('dspVehColor').value        = r.vehicle_color||'';
+          document.getElementById('dspVehChassis').value      = r.chassis_no||'';
+          document.getElementById('dspVehMotor').value        = r.motor_no||'';
+          document.getElementById('dspVehStatus').value       = r.status||'';
+          document.getElementById('dspVehDispatchDate').value = r.dispatch_date||'';
+          document.getElementById('dspVehDispatchMonth').value= r.dispatch_month||'';
+          document.getElementById('dspVehInvoiceNo').value    = r.sales_invoice_no||'';
+          document.getElementById('dspVehCustomer').value     = r.customer_name||'';
+          document.getElementById('dspVehContact').value      = r.contact_number||'';
+          document.getElementById('dspVehBatSpec').value      = r.battery_spec||'';
+          document.getElementById('dspVehBatSerial').value    = r.battery_serial_no||'';
+          document.getElementById('dspVehChargerNo').value    = r.charger_no||'';
+          document.getElementById('dspVehAddress').value      = r.address||'';
+          document.getElementById('dspVehReturnDate').value   = r.return_date||'';
+          document.getElementById('dspVehComments').value     = r.comments||'';
+        }catch(e){ alert('Load failed: '+e.message); return; }
+      }
+      openModal('dispVehModal');
+    },
+
+    async saveVeh(){
+      if(!this._vehId){
+        const q=parseInt(document.getElementById('dspVehQty')?.value)||1;
+        const sec=document.getElementById('dspVehBulkSection');
+        if(q>1 && sec && sec.style.display!=='none') return this._saveVehBulk();
+      }
+      const payload = {
+        vehicle_no:        document.getElementById('dspVehVehicleNo').value.trim() || null,
+        vendor_code:       document.getElementById('dspVehVendor').value.trim()    || null,
+        vendor_invoice_no: document.getElementById('dspVehVendorInvoice').value.trim() || null,
+        vehicle_model:    document.getElementById('dspVehModel').value.trim()     || null,
+        vehicle_color:    document.getElementById('dspVehColor').value.trim()     || null,
+        chassis_no:       document.getElementById('dspVehChassis').value.trim()   || null,
+        motor_no:         document.getElementById('dspVehMotor').value.trim()     || null,
+        status:           document.getElementById('dspVehStatus').value           || null,
+        dispatch_date:    document.getElementById('dspVehDispatchDate').value     || null,
+        dispatch_month:   document.getElementById('dspVehDispatchMonth').value.trim() || null,
+        sales_invoice_no: document.getElementById('dspVehInvoiceNo').value.trim() || null,
+        customer_name:    document.getElementById('dspVehCustomer').value.trim()  || null,
+        contact_number:   document.getElementById('dspVehContact').value.trim()   || null,
+        battery_spec:     document.getElementById('dspVehBatSpec').value.trim()   || null,
+        battery_serial_no:document.getElementById('dspVehBatSerial').value.trim() || null,
+        charger_no:       document.getElementById('dspVehChargerNo').value.trim() || null,
+        address:          document.getElementById('dspVehAddress').value.trim()   || null,
+        return_date:      document.getElementById('dspVehReturnDate').value       || null,
+        comments:         document.getElementById('dspVehComments').value.trim()  || null,
+      };
+      try{
+        if(this._vehId){
+          await apiFetch(this.API+'/vehicle/'+this._vehId, {method:'PUT', body:JSON.stringify(payload)});
+        } else {
+          await apiFetch(this.API+'/vehicle', {method:'POST', body:JSON.stringify(payload)});
+        }
+        closeModal('dispVehModal');
+        await this.loadVehicle();
+        this.loadSummary();
+      }catch(e){ alert('Save failed: '+e.message); }
+    },
+
+    async deleteVeh(id){
+      if(!confirm('Delete this vehicle dispatch record?')) return;
+      try{
+        await apiFetch(this.API+'/vehicle/'+id, {method:'DELETE'});
+        await this.loadVehicle();
+        this.loadSummary();
+      }catch(e){ alert('Delete failed: '+e.message); }
+    },
+
+    // ─── Charger ───────────────────────────────────
+    async loadCharger(){
+      const body = document.getElementById('dspChgBody');
+      body.innerHTML = '<tr class="loading-row"><td colspan="18"><span class="spinner"></span> Loading…</td></tr>';
+      try{
+        const params = new URLSearchParams();
+        const v = document.getElementById('dspChgFilterVendor')?.value; if(v) params.set('vendor_code',v);
+        const s = document.getElementById('dspChgFilterSpec')?.value;   if(s) params.set('charger_spec',s);
+        const st= document.getElementById('dspChgFilterStatus')?.value; if(st) params.set('status',st);
+        const q = document.getElementById('dspChgSearch')?.value?.trim(); if(q) params.set('search',q);
+        params.set('limit','9999');
+        const data = await apiFetch(this.API+'/charger?'+params);
+        const rows = data.items || [];
+        const cbadge = document.getElementById('dspChgBadge');
+        if(cbadge){ cbadge.textContent = rows.length; cbadge.style.display = rows.length ? '' : 'none'; }
+        if(!rows.length){
+          body.innerHTML = '<tr><td colspan="18" class="empty-state"><i class="fas fa-plug" style="font-size:28px;display:block;margin-bottom:8px;color:#7c3aed;"></i>No charger dispatch records yet. Add one to get started.</td></tr>';
+          return;
+        }
+        body.innerHTML = rows.map((r,i)=>{
+          const isRet = r.status?.toLowerCase().includes('return');
+          return `<tr class="${isRet?'disp-row-ret':''}" data-id="${r.id}">
+            <td style="color:#9ca3af;font-size:11px;">${i+1}</td>
+            <td class="disp-ie" data-etype="chg" data-field="entry_date" data-dtype="date">${r.entry_date||'—'}</td>
+            <td class="disp-ie" data-etype="chg" data-field="vendor_code" data-dtype="text"><span class="type-badge ta-vendor">${escH(r.vendor_code||'—')}</span></td>
+            <td class="disp-ie" data-etype="chg" data-field="vendor_invoice_no" data-dtype="text" style="font-size:11px;">${escH(r.vendor_invoice_no||'—')}</td>
+            <td class="disp-ie td-left" data-etype="chg" data-field="charger_spec" data-dtype="text" style="font-weight:600;">${escH(r.charger_spec||'—')}</td>
+            <td class="disp-ie" data-etype="chg" data-field="charger_no" data-dtype="text" style="font-size:10px;font-family:monospace;">${escH(r.charger_no||'—')}</td>
+            <td class="disp-ie" data-etype="chg" data-field="warranty_months" data-dtype="number">${r.warranty_months!=null?r.warranty_months+' mo':'—'}</td>
+            <td class="disp-ie" data-etype="chg" data-field="status" data-dtype="status">${this._statusBadge(r.status)}</td>
+            <td class="disp-ie" data-etype="chg" data-field="dispatch_date" data-dtype="date">${r.dispatch_date||'—'}</td>
+            <td class="disp-ie" data-etype="chg" data-field="dispatch_month" data-dtype="text" style="font-size:11px;color:#6b7280;">${escH(r.dispatch_month||'—')}</td>
+            <td class="disp-ie" data-etype="chg" data-field="assigned_vehicle_no" data-dtype="text" style="font-size:11px;">${escH(r.assigned_vehicle_no||'—')}</td>
+            <td class="disp-ie" data-etype="chg" data-field="sales_invoice_no" data-dtype="text" style="font-size:11px;">${escH(r.sales_invoice_no||'—')}</td>
+            <td class="disp-ie td-left" data-etype="chg" data-field="owner_name" data-dtype="text">${escH(r.owner_name||'—')}</td>
+            <td class="disp-ie" data-etype="chg" data-field="location" data-dtype="text" style="font-size:11px;">${escH(r.location||'—')}</td>
+            <td data-wbadge="1">${this._wBadge(r.warranty_end_date)}</td>
+            <td class="disp-ie" data-etype="chg" data-field="deliverable" data-dtype="dlv" style="font-size:11px;">${escH(r.deliverable||'—')}</td>
+            <td class="disp-ie td-left" data-etype="chg" data-field="comments" data-dtype="text" style="font-size:11px;">${escH(r.comments||'—')}</td>
+            <td style="white-space:nowrap;">
+              <button class="disp-act-btn edit" onclick="DISP.openChgModal(${r.id})" title="Edit"><i class="fas fa-pen"></i></button>
+              <button class="disp-act-btn del" onclick="DISP.deleteChg(${r.id})" title="Delete"><i class="fas fa-trash"></i></button>
+            </td>
+          </tr>`;
+        }).join('');
+      }catch(e){
+        body.innerHTML = `<tr><td colspan="18" class="empty-state" style="color:#dc2626;">Error: ${escH(e.message)}</td></tr>`;
+      }
+    },
+
+    async openChgModal(id=null){
+      this._chgId = id;
+      document.getElementById('dispChgModalTitle').textContent = id ? 'Edit Charger Dispatch' : 'Add Charger Dispatch';
+      const today = new Date().toISOString().slice(0,10);
+      const qtyBarC = document.getElementById('dspChgQtyBar');
+      if(qtyBarC) qtyBarC.style.display = id ? 'none' : '';
+      if(!id) { document.getElementById('dspChgQty').value='1'; this._hideChgBulk(); }
+      else this._hideChgBulk();
+      if(!id){
+        ['dspChgEntryDate','dspChgDispatchDate','dspChgWarrantyEnd'].forEach(f=>document.getElementById(f).value='');
+        document.getElementById('dspChgEntryDate').value = today;
+        ['dspChgVendor','dspChgVendorInvoice','dspChgSpec','dspChgChargerNo','dspChgDispatchMonth','dspChgVehicleNo','dspChgInvoiceNo','dspChgOwner','dspChgLocation','dspChgNotes'].forEach(f=>document.getElementById(f).value='');
+        document.getElementById('dspChgWarranty').value='';
+        document.getElementById('dspChgStatus').value='Dispatched';
+        document.getElementById('dspChgDeliverable').value='Customer';
+      } else {
+        try{
+          const r = await apiFetch(this.API+'/charger/'+id);
+          document.getElementById('dspChgEntryDate').value      = r.entry_date||'';
+          document.getElementById('dspChgVendor').value         = r.vendor_code||'';
+          document.getElementById('dspChgVendorInvoice').value  = r.vendor_invoice_no||'';
+          document.getElementById('dspChgSpec').value           = r.charger_spec||'';
+          document.getElementById('dspChgChargerNo').value      = r.charger_no||'';
+          document.getElementById('dspChgWarranty').value       = r.warranty_months!=null?r.warranty_months:'';
+          document.getElementById('dspChgStatus').value         = r.status||'';
+          document.getElementById('dspChgDispatchDate').value   = r.dispatch_date||'';
+          document.getElementById('dspChgDispatchMonth').value  = r.dispatch_month||'';
+          document.getElementById('dspChgVehicleNo').value      = r.assigned_vehicle_no||'';
+          document.getElementById('dspChgInvoiceNo').value      = r.sales_invoice_no||'';
+          document.getElementById('dspChgOwner').value          = r.owner_name||'';
+          document.getElementById('dspChgLocation').value       = r.location||'';
+          document.getElementById('dspChgWarrantyEnd').value    = r.warranty_end_date||'';
+          document.getElementById('dspChgDeliverable').value    = r.deliverable||'';
+          document.getElementById('dspChgNotes').value          = r.comments||'';
+        }catch(e){ alert('Load failed: '+e.message); return; }
+      }
+      this._setupChgAutoCalc();
+      openModal('dispChgModal');
+    },
+
+    _setupChgAutoCalc(){
+      const dd = document.getElementById('dspChgDispatchDate');
+      const wm = document.getElementById('dspChgWarranty');
+      const we = document.getElementById('dspChgWarrantyEnd');
+      const calc = ()=>{
+        if(dd.value && wm.value){
+          const d = new Date(dd.value);
+          d.setMonth(d.getMonth()+parseInt(wm.value));
+          we.value = d.toISOString().slice(0,10);
+        }
+      };
+      dd.onchange = calc; wm.onchange = calc;
+    },
+
+    async saveChg(){
+      if(!this._chgId){
+        const q=parseInt(document.getElementById('dspChgQty')?.value)||1;
+        const sec=document.getElementById('dspChgBulkSection');
+        if(q>1 && sec && sec.style.display!=='none') return this._saveChgBulk();
+      }
+      const payload = {
+        entry_date:          document.getElementById('dspChgEntryDate').value     || null,
+        vendor_code:         document.getElementById('dspChgVendor').value.trim() || null,
+        vendor_invoice_no:   document.getElementById('dspChgVendorInvoice').value.trim() || null,
+        charger_spec:        document.getElementById('dspChgSpec').value.trim()   || null,
+        charger_no:          document.getElementById('dspChgChargerNo').value.trim() || null,
+        warranty_months:     document.getElementById('dspChgWarranty').value ? parseInt(document.getElementById('dspChgWarranty').value) : null,
+        status:              document.getElementById('dspChgStatus').value         || null,
+        dispatch_date:       document.getElementById('dspChgDispatchDate').value  || null,
+        dispatch_month:      document.getElementById('dspChgDispatchMonth').value.trim() || null,
+        assigned_vehicle_no: document.getElementById('dspChgVehicleNo').value.trim() || null,
+        sales_invoice_no:    document.getElementById('dspChgInvoiceNo').value.trim() || null,
+        owner_name:          document.getElementById('dspChgOwner').value.trim()  || null,
+        location:            document.getElementById('dspChgLocation').value.trim() || null,
+        warranty_end_date:   document.getElementById('dspChgWarrantyEnd').value   || null,
+        deliverable:         document.getElementById('dspChgDeliverable').value   || null,
+        comments:            document.getElementById('dspChgNotes').value.trim()  || null,
+      };
+      if(!payload.entry_date || !payload.charger_spec){ alert('Entry Date and Charger Spec are required.'); return; }
+      try{
+        if(this._chgId){
+          await apiFetch(this.API+'/charger/'+this._chgId, {method:'PUT', body:JSON.stringify(payload)});
+        } else {
+          await apiFetch(this.API+'/charger', {method:'POST', body:JSON.stringify(payload)});
+        }
+        closeModal('dispChgModal');
+        await this.loadCharger();
+        this.loadSummary();
+      }catch(e){ alert('Save failed: '+e.message); }
+    },
+
+    async deleteChg(id){
+      if(!confirm('Delete this charger dispatch record?')) return;
+      try{
+        await apiFetch(this.API+'/charger/'+id, {method:'DELETE'});
+        await this.loadCharger();
+        this.loadSummary();
+      }catch(e){ alert('Delete failed: '+e.message); }
+    },
+  };
+
+
+  // ══════════════════════════════════════════════════
+  // INIT
+  // ══════════════════════════════════════════════════
+  async function init(){
+    try{
+      if(typeof StaffSidebar!=='undefined') await StaffSidebar.init();
+      if(typeof StaffHeader!=='undefined') StaffHeader.inject('Inventory Stock Sheet','fas fa-boxes');
+      if(typeof StaffBackButton!=='undefined') StaffBackButton.init();
+    }catch(e){ console.warn('Sidebar init:', e); }
+    switchSeg('vehicles');
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

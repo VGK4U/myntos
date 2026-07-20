@@ -1,0 +1,258 @@
+<div class="container-fluid p-4">
+
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);">
+                <div class="card-body text-white p-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h3 class="mb-1"><i class="fas fa-coins me-3" style="color:#f59e0b"></i>My Commissions</h3>
+                            <p class="mb-0 opacity-75" style="font-size:0.9rem">Referral commissions earned on CRM lead transactions</p>
+                        </div>
+                        <a href="/dashboard" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-home me-2"></i>Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white text-center p-3">
+                    <div class="mb-2"><i class="fas fa-wallet fa-2x opacity-75"></i></div>
+                    <h3 class="mb-1 fw-bold" id="summaryGross">₹0</h3>
+                    <small class="opacity-80">Total Earned</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <div class="card-body text-white text-center p-3">
+                    <div class="mb-2"><i class="fas fa-check-circle fa-2x opacity-75"></i></div>
+                    <h3 class="mb-1 fw-bold" id="summaryConfirmed">₹0</h3>
+                    <small class="opacity-80">Confirmed</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);">
+                <div class="card-body text-white text-center p-3">
+                    <div class="mb-2"><i class="fas fa-clock fa-2x opacity-75"></i></div>
+                    <h3 class="mb-1 fw-bold" id="summaryPending">₹0</h3>
+                    <small class="opacity-80">Pending</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="card-body text-white text-center p-3">
+                    <div class="mb-2"><i class="fas fa-list-ol fa-2x opacity-75"></i></div>
+                    <h3 class="mb-1 fw-bold" id="summaryPendingCount">0</h3>
+                    <small class="opacity-80">Pending Entries</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters + Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-0 pt-3 pb-0">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <ul class="nav nav-tabs border-0 mb-0" id="commStatusTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="tab-all" onclick="setFilter('')">All</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-pending" onclick="setFilter('PENDING')">
+                            <span class="badge bg-warning text-dark me-1" style="font-size:0.7rem" id="badgePending">0</span>Pending
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-confirmed" onclick="setFilter('CONFIRMED')">Confirmed</button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-cancelled" onclick="setFilter('CANCELLED')">Cancelled</button>
+                    </li>
+                </ul>
+                <div class="d-flex gap-2 align-items-center">
+                    <select class="form-select form-select-sm" id="levelFilter" onchange="loadCommissions(1)" style="width:130px">
+                        <option value="">All Levels</option>
+                        <option value="L1">L1 (Source)</option>
+                        <option value="guru">Senior</option>
+                        <option value="L4">L4 (Support)</option>
+                    </select>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="loadCommissions(1)">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div id="loadingState" class="text-center py-5 d-none">
+                <div class="spinner-border text-primary" style="width:2rem;height:2rem"></div>
+                <p class="mt-2 text-muted">Loading commissions…</p>
+            </div>
+            <div id="emptyState" class="text-center py-5 d-none">
+                <i class="fas fa-coins fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No commission entries found.</p>
+                <p class="text-muted small">Commissions are created automatically when a lead transaction you sourced is validated.</p>
+            </div>
+            <div class="table-responsive" id="tableWrap">
+                <table class="table table-hover align-middle mb-0" style="font-size:0.88rem">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Entry #</th>
+                            <th>Date</th>
+                            <th>Lead</th>
+                            <th>Category</th>
+                            <th>Level</th>
+                            <th class="text-end">Revenue</th>
+                            <th class="text-center">Rate</th>
+                            <th class="text-end">Commission</th>
+                            <th class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="commTable"></tbody>
+                </table>
+            </div>
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center px-3 py-2 border-top" id="paginationBar">
+                <small class="text-muted" id="paginationInfo"></small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0" id="paginationList"></ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.level-badge-L1   { background: #0d6efd; color:#fff; }
+.level-badge-guru { background: #6f42c1; color:#fff; }
+.level-badge-L4   { background: #0dcaf0; color:#212529; }
+.status-badge-PENDING   { background: #fff3cd; color:#856404; border:1px solid #ffc107; }
+.status-badge-CONFIRMED { background: #d1e7dd; color:#0a3622; border:1px solid #198754; }
+.status-badge-CANCELLED { background: #f8d7da; color:#58151c; border:1px solid #dc3545; }
+.nav-tabs .nav-link { border:none; border-bottom:2px solid transparent; color:#6c757d; padding:0.4rem 1rem; }
+.nav-tabs .nav-link.active { border-bottom:2px solid #0d6efd; color:#0d6efd; font-weight:600; background:none; }
+</style>
+
+<script>
+(function() {
+    const API = (window.API_BASE_URL || '') + '/api/v1';
+    let currentStatus = '';
+    let currentPage = 1;
+
+    function fmt(val) {
+        const n = parseFloat(val) || 0;
+        return '₹' + n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function levelBadge(level) {
+        const cls = `level-badge-${level}`;
+        const label = level === 'guru' ? 'Senior' : level;
+        return `<span class="badge ${cls}" style="font-size:0.78rem;padding:3px 8px">${label}</span>`;
+    }
+
+    function statusBadge(status) {
+        const cls = `status-badge-${status}`;
+        const icons = { PENDING: 'clock', CONFIRMED: 'check-circle', CANCELLED: 'times-circle' };
+        return `<span class="badge ${cls}" style="font-size:0.78rem;padding:3px 8px"><i class="fas fa-${icons[status]||'circle'} me-1"></i>${status}</span>`;
+    }
+
+    window.setFilter = function(status) {
+        currentStatus = status;
+        currentPage = 1;
+        document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.remove('active'));
+        const tabMap = { '': 'all', 'PENDING': 'pending', 'CONFIRMED': 'confirmed', 'CANCELLED': 'cancelled' };
+        const el = document.getElementById('tab-' + (tabMap[status] || 'all'));
+        if (el) el.classList.add('active');
+        loadCommissions(1);
+    };
+
+    window.loadCommissions = function(page) {
+        page = page || currentPage;
+        currentPage = page;
+        const level = document.getElementById('levelFilter').value;
+        const params = new URLSearchParams({ page, per_page: 20 });
+        if (currentStatus) params.append('status', currentStatus);
+        if (level) params.append('level', level);
+
+        document.getElementById('loadingState').classList.remove('d-none');
+        document.getElementById('tableWrap').style.opacity = '0.4';
+        document.getElementById('emptyState').classList.add('d-none');
+
+        fetch(`${API}/mnr/my-commissions?${params}`, { credentials: 'include' })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('loadingState').classList.add('d-none');
+                document.getElementById('tableWrap').style.opacity = '1';
+
+                if (data.summary) {
+                    document.getElementById('summaryGross').textContent = fmt(data.summary.total_gross);
+                    document.getElementById('summaryConfirmed').textContent = fmt(data.summary.total_confirmed);
+                    document.getElementById('summaryPending').textContent = fmt(data.summary.total_pending);
+                    document.getElementById('summaryPendingCount').textContent = data.summary.pending_count || 0;
+                    document.getElementById('badgePending').textContent = data.summary.pending_count || 0;
+                }
+
+                const rows = data.entries || [];
+                if (rows.length === 0) {
+                    document.getElementById('tableWrap').style.display = 'none';
+                    document.getElementById('paginationBar').style.display = 'none';
+                    document.getElementById('emptyState').classList.remove('d-none');
+                    return;
+                }
+                document.getElementById('tableWrap').style.display = '';
+                document.getElementById('paginationBar').style.display = '';
+
+                const tbody = document.getElementById('commTable');
+                tbody.innerHTML = rows.map(r => `
+                    <tr>
+                        <td><span class="fw-semibold text-primary" style="font-size:0.82rem">${r.entry_number || '-'}</span></td>
+                        <td class="text-muted">${r.created_at ? r.created_at.slice(0,10) : '-'}</td>
+                        <td>
+                            ${r.lead_customer_name ? `<span class="fw-medium">${r.lead_customer_name}</span>` : '<span class="text-muted">—</span>'}
+                            ${r.source_lead_id ? `<br><small class="text-muted">Lead #${r.source_lead_id}</small>` : ''}
+                        </td>
+                        <td class="text-muted">${r.category_name || '-'}</td>
+                        <td>${levelBadge(r.level)}</td>
+                        <td class="text-end">${fmt(r.revenue_amount)}</td>
+                        <td class="text-center"><span class="badge bg-light text-dark border">${r.commission_pct}%</span></td>
+                        <td class="text-end fw-semibold text-success">${fmt(r.commission_amount)}</td>
+                        <td class="text-center">${statusBadge(r.status)}</td>
+                    </tr>
+                `).join('');
+
+                renderPagination(data.page, data.pages, data.total, rows.length);
+            })
+            .catch(err => {
+                document.getElementById('loadingState').classList.add('d-none');
+                document.getElementById('tableWrap').style.opacity = '1';
+                console.error('[Commissions] Load error:', err);
+            });
+    };
+
+    function renderPagination(page, pages, total, count) {
+        const start = (page - 1) * 20 + 1;
+        const end = start + count - 1;
+        document.getElementById('paginationInfo').textContent = `Showing ${start}–${end} of ${total} entries`;
+
+        const ul = document.getElementById('paginationList');
+        ul.innerHTML = '';
+        for (let i = 1; i <= pages; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item${i === page ? ' active' : ''}`;
+            li.innerHTML = `<button class="page-link" onclick="loadCommissions(${i})">${i}</button>`;
+            ul.appendChild(li);
+        }
+    }
+
+    loadCommissions(1);
+})();
+</script>

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capital Account - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 13px; color: #6b7280; margin: 3px 0 0 0; }
+
+        .filter-bar { background: white; padding: 14px 18px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-group select, .filter-group input { padding: 7px 11px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 150px; background: white; }
+        .period-group { display: flex; flex-direction: column; gap: 4px; }
+        .period-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .period-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+        .period-btn { padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; background: white; color: #374151; transition: all 0.15s; }
+        .period-btn:hover { background: #f3f4f6; }
+        .period-btn.active { background: #7c3aed; color: white; border-color: #7c3aed; }
+        .btn-apply { background: #7c3aed; color: white; border: none; padding: 7px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .btn-apply:hover { background: #6d28d9; }
+        .btn-reset { background: white; color: #6b7280; border: 1px solid #d1d5db; padding: 7px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+
+        .context-banner { background: #ede9fe; border: 1px solid #c4b5fd; border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; font-size: 12px; color: #5b21b6; display: none; align-items: center; gap: 8px; }
+        .context-banner.show { display: flex; }
+
+        .acct-note { background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px; padding: 10px 16px; margin-bottom: 20px; font-size: 12px; color: #6d28d9; display: flex; gap: 10px; align-items: flex-start; }
+        .acct-note i { margin-top: 1px; flex-shrink: 0; }
+
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .summary-card { background: white; padding: 18px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .summary-card .lbl { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; margin-bottom: 6px; }
+        .summary-card .val { font-size: 22px; font-weight: 700; color: #1f2937; }
+        .summary-card .sub { font-size: 11px; color: #9ca3af; margin-top: 3px; }
+        .summary-card.total .val { color: #7c3aed; }
+        .summary-card.owners .val { color: #2563eb; }
+        .summary-card.reserves .val { color: #059669; }
+        .summary-card.other .val { color: #d97706; }
+
+        .tabs-bar { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+        .tab-btn { padding: 10px 22px; border: none; background: none; font-size: 14px; font-weight: 500; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; white-space: nowrap; }
+        .tab-btn.active { color: #7c3aed; border-bottom-color: #7c3aed; font-weight: 600; }
+        .tab-btn:hover:not(.active) { color: #374151; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: none; margin-bottom: 20px; }
+        .card-header { border-bottom: 1px solid #e5e7eb; padding: 14px 18px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .card-body { padding: 0; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+        .data-table th.num { text-align: right; }
+        .data-table td { padding: 11px 14px; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .data-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: #fafafa; }
+        .data-table .total-row td { font-weight: 700; background: #f9fafb; border-top: 2px solid #e5e7eb; }
+        .data-table .co-header td { background: #ede9fe; color: #5b21b6; font-weight: 700; font-size: 12px; padding: 8px 14px; }
+        .data-table .sub-row td { padding-left: 28px; }
+
+        .c-purple { color: #7c3aed; }
+        .c-blue   { color: #2563eb; }
+        .c-green  { color: #059669; }
+        .c-red    { color: #dc2626; }
+        .c-grey   { color: #6b7280; }
+
+        .ledger-badge { background: #ede9fe; color: #5b21b6; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; font-family: monospace; }
+        .no-activity { color: #9ca3af; font-style: italic; font-size: 12px; }
+        .txn-type-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .txn-cr { background: #d1fae5; color: #059669; }
+        .txn-dr { background: #fee2e2; color: #dc2626; }
+
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #7c3aed; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { text-align: center; padding: 50px 20px; color: #6b7280; }
+        .empty-state i { font-size: 42px; margin-bottom: 12px; color: #d1d5db; display: block; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+    <div class="content-area">
+
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-coins me-2" style="color:#7c3aed"></i>Capital Account</h1>
+                <p>Owner's Capital, Reserves &amp; Surplus — Opening Balance + Period Activity = Closing Balance</p>
+            </div>
+        </div>
+
+        <div class="context-banner" id="ctxBanner">
+            <i class="fas fa-link"></i>
+            <span id="ctxText">Filtered from Consolidated Balance Sheet</span>
+            <button onclick="clearCtx()" style="margin-left:auto;background:none;border:none;color:#5b21b6;cursor:pointer;font-size:12px;">&#10005; Clear filter</button>
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="filterCompany"><option value="0">All Companies</option></select>
+            </div>
+            <div class="period-group">
+                <label>Period</label>
+                <div class="period-btns">
+                    <button class="period-btn" onclick="setPeriod('month',this)">This Month</button>
+                    <button class="period-btn" onclick="setPeriod('quarter',this)">This Quarter</button>
+                    <button class="period-btn active" onclick="setPeriod('fy',this)">This FY</button>
+                    <button class="period-btn" onclick="setPeriod('overall',this)">Overall</button>
+                    <button class="period-btn" onclick="setPeriod('custom',this)">Custom</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>From Date</label>
+                <input type="date" id="filterFrom">
+            </div>
+            <div class="filter-group">
+                <label>To Date</label>
+                <input type="date" id="filterTo">
+            </div>
+            <button class="btn-apply" onclick="applyFilters()"><i class="fas fa-search me-1"></i>Apply</button>
+            <button class="btn-reset" onclick="resetFilters()">Reset</button>
+        </div>
+
+        <div class="acct-note">
+            <i class="fas fa-info-circle"></i>
+            <div>
+                <strong>Standard Accounting:</strong> Capital is a <em>credit-nature</em> account.
+                Closing Balance = Opening Balance + Capital Introduced (Credit) &minus; Drawings / Losses (Debit).
+                A positive closing balance means net capital in the business.
+            </div>
+        </div>
+
+        <div class="summary-cards">
+            <div class="summary-card total">
+                <div class="lbl">Total Capital</div>
+                <div class="val" id="cardTotal">&#8377;0</div>
+                <div class="sub">All companies combined</div>
+            </div>
+            <div class="summary-card owners">
+                <div class="lbl">Owner's Capital</div>
+                <div class="val" id="cardOwners">&#8377;0</div>
+                <div class="sub">Direct capital contributions</div>
+            </div>
+            <div class="summary-card reserves">
+                <div class="lbl">Reserves &amp; Surplus</div>
+                <div class="val" id="cardReserves">&#8377;0</div>
+                <div class="sub">Retained earnings &amp; reserves</div>
+            </div>
+            <div class="summary-card other">
+                <div class="lbl">Other Capital A/c</div>
+                <div class="val" id="cardOther">&#8377;0</div>
+                <div class="sub">Capital Account entries</div>
+            </div>
+        </div>
+
+        <div class="tabs-bar">
+            <button class="tab-btn active" id="tabSummary" onclick="switchTab('summary')">
+                <i class="fas fa-building me-1"></i>Company-wise Breakdown
+            </button>
+            <button class="tab-btn" id="tabTxns" onclick="switchTab('txns')">
+                <i class="fas fa-list-alt me-1"></i>Transaction History
+            </button>
+        </div>
+
+        <!-- TAB 1: Company-wise summary -->
+        <div class="tab-pane active" id="paneSummary">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-coins me-2" style="color:#7c3aed"></i>Capital Ledger — Company-wise</span>
+                    <span class="text-muted" style="font-size:12px;font-weight:400" id="summaryInfo"></span>
+                </div>
+                <div class="card-body">
+                    <div id="summaryLoading" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="summaryTable" style="display:none;overflow-x:auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Ledger</th>
+                                    <th>Code</th>
+                                    <th class="num" style="background:#f0f9ff;color:#0369a1;">Opening Balance</th>
+                                    <th class="num" style="background:#fef2f2;color:#dc2626;">Period Debit<br><small style="font-weight:400">(Drawings/Losses)</small></th>
+                                    <th class="num" style="background:#f0fdf4;color:#059669;">Period Credit<br><small style="font-weight:400">(Capital Added)</small></th>
+                                    <th class="num" style="background:#faf5ff;color:#7c3aed;">Closing Balance</th>
+                                    <th class="num">Entries</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="summaryEmpty" style="display:none" class="empty-state">
+                        <i class="fas fa-coins"></i>
+                        <h4>No Capital Account Data</h4>
+                        <p>No capital ledgers found for the selected company</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Transaction History -->
+        <div class="tab-pane" id="paneTxns">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-list-alt me-2" style="color:#7c3aed"></i>Capital Account — Transaction History</span>
+                    <span class="text-muted" style="font-size:12px;font-weight:400" id="txnCount">0 entries</span>
+                </div>
+                <div class="card-body">
+                    <div id="txnLoading" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="txnTable" style="display:none;overflow-x:auto">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Date</th>
+                                <th>Company</th>
+                                <th>Ledger</th>
+                                <th>Type</th>
+                                <th>Voucher / Ref</th>
+                                <th>Narration / Particulars</th>
+                                <th class="num" style="color:#dc2626;">Debit</th>
+                                <th class="num" style="color:#059669;">Credit</th>
+                            </tr></thead>
+                            <tbody id="txnBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="txnEmpty" style="display:none" class="empty-state">
+                        <i class="fas fa-list-alt"></i>
+                        <h4>No Transactions Found</h4>
+                        <p>No capital account entries in the selected period</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+    const API = '/api/v1/staff/accounts';
+    const _up  = new URLSearchParams(window.location.search);
+
+    let _ctxCo   = _up.get('company_id') || '0';
+    let _ctxAsOn = _up.get('as_on') || _up.get('date_to') || _up.get('to_date') || '';
+    let _ctxFrom = _up.get('from_date') || _up.get('date_from') || '';
+    let _activeTab = 'summary';
+    let _txnLoaded = false;
+
+    const R = n => {
+        const v = parseFloat(n) || 0;
+        const abs = Math.abs(v);
+        const str = '&#8377;' + abs.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return v < 0 ? '<span class="c-red">(' + str + ')</span>' : str;
+    };
+    const fmt_date = d => d instanceof Date ? d.toISOString().slice(0,10) : (d ? String(d).slice(0,10) : '');
+    function fyStart()      { const t=new Date(); const y=t.getMonth()>=3?t.getFullYear():t.getFullYear()-1; return new Date(y,3,1); }
+    function monthStart()   { const t=new Date(); return new Date(t.getFullYear(),t.getMonth(),1); }
+    function quarterStart() { const t=new Date(); const qm=[0,0,0,3,3,3,6,6,6,9,9,9][t.getMonth()]; return new Date(t.getFullYear(),qm,1); }
+    function today()        { return new Date(); }
+    function getFrom() { return document.getElementById('filterFrom').value; }
+    function getTo()   { return document.getElementById('filterTo').value; }
+    function getCo()   { return document.getElementById('filterCompany').value || '0'; }
+
+    function switchTab(t) {
+        _activeTab = t;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab' + (t === 'summary' ? 'Summary' : 'Txns')).classList.add('active');
+        document.getElementById('pane' + (t === 'summary' ? 'Summary' : 'Txns')).classList.add('active');
+        if (t === 'txns' && !_txnLoaded) loadTxns();
+    }
+
+    function setPeriod(p, btn) {
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        const to = fmt_date(today());
+        if      (p === 'month')   { document.getElementById('filterFrom').value = fmt_date(monthStart());   document.getElementById('filterTo').value = to; }
+        else if (p === 'quarter') { document.getElementById('filterFrom').value = fmt_date(quarterStart()); document.getElementById('filterTo').value = to; }
+        else if (p === 'fy')      { document.getElementById('filterFrom').value = fmt_date(fyStart());      document.getElementById('filterTo').value = to; }
+        else if (p === 'overall') { document.getElementById('filterFrom').value = '';                       document.getElementById('filterTo').value = to; }
+        if (p !== 'custom') applyFilters();
+    }
+
+    async function loadCompanies() {
+        try {
+            const r = await staffFetch(`${API}/companies`);
+            const d = await r.json();
+            const sel = document.getElementById('filterCompany');
+            (d.companies || []).forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id;
+                o.textContent = c.company_name || c.name;
+                sel.appendChild(o);
+            });
+            if (_ctxCo && _ctxCo !== '0') sel.value = _ctxCo;
+        } catch(e) { console.error('Company load error', e); }
+    }
+
+    function initContext() {
+        if (_ctxAsOn || _ctxCo !== '0') {
+            document.getElementById('ctxBanner').classList.add('show');
+            const parts = [];
+            if (_ctxCo && _ctxCo !== '0') parts.push('Company ID: ' + _ctxCo);
+            if (_ctxAsOn) parts.push('As on: ' + _ctxAsOn);
+            document.getElementById('ctxText').textContent = 'Filtered from Consolidated Balance Sheet — ' + parts.join(', ');
+        }
+        if (_ctxFrom) document.getElementById('filterFrom').value = _ctxFrom;
+        if (_ctxAsOn) document.getElementById('filterTo').value = _ctxAsOn;
+    }
+
+    function clearCtx() {
+        _ctxCo = '0'; _ctxAsOn = ''; _ctxFrom = '';
+        document.getElementById('ctxBanner').classList.remove('show');
+        document.getElementById('filterCompany').value = '0';
+        history.replaceState({}, '', window.location.pathname);
+    }
+
+    function buildUrl(endpoint) {
+        const p = new URLSearchParams();
+        const co = getCo(); if (co && co !== '0') p.set('company_id', co);
+        const f = getFrom(); if (f) p.set('from_date', f);
+        const t = getTo();   if (t) p.set('to_date', t);
+        return `${API}/${endpoint}?${p.toString()}`;
+    }
+
+    async function loadSummary() {
+        document.getElementById('summaryLoading').style.display = 'flex';
+        document.getElementById('summaryTable').style.display = 'none';
+        document.getElementById('summaryEmpty').style.display = 'none';
+
+        try {
+            const r = await staffFetch(buildUrl('capital-summary'));
+            const d = await r.json();
+            if (!d.success) throw new Error(d.detail || 'Load failed');
+
+            const cos = d.companies || [];
+
+            let totalCapital = 0, totalOwners = 0, totalReserves = 0, totalOther = 0;
+            cos.forEach(co => {
+                (co.ledgers || []).forEach(l => {
+                    const v = parseFloat(l.closing_balance) || 0;
+                    totalCapital += v;
+                    const nm = l.ledger_name.toLowerCase();
+                    if (nm.includes("owner")) totalOwners += v;
+                    else if (nm.includes("reserve")) totalReserves += v;
+                    else totalOther += v;
+                });
+            });
+
+            document.getElementById('cardTotal').innerHTML    = R(totalCapital);
+            document.getElementById('cardOwners').innerHTML   = R(totalOwners);
+            document.getElementById('cardReserves').innerHTML = R(totalReserves);
+            document.getElementById('cardOther').innerHTML    = R(totalOther);
+
+            const tbody = document.getElementById('summaryBody');
+            tbody.innerHTML = '';
+
+            let anyData = false;
+            cos.forEach(co => {
+                const ledgers = co.ledgers || [];
+                if (!ledgers.length) return;
+                anyData = true;
+
+                const coTr = document.createElement('tr');
+                coTr.className = 'co-header';
+                coTr.innerHTML = `<td colspan="7"><i class="fas fa-building me-1"></i>${co.company_name}</td>`;
+                tbody.appendChild(coTr);
+
+                let coTotal = 0;
+                ledgers.forEach(l => {
+                    const closing = parseFloat(l.closing_balance) || 0;
+                    coTotal += closing;
+                    const tr = document.createElement('tr');
+                    tr.className = 'sub-row';
+                    const noActivity = parseFloat(l.period_debit) === 0 && parseFloat(l.period_credit) === 0;
+                    tr.innerHTML = `
+                        <td><strong>${l.ledger_name}</strong><br><small class="c-grey">${l.parent_group || ''}</small></td>
+                        <td><span class="ledger-badge">${l.account_code || '—'}</span></td>
+                        <td class="num" style="color:#0369a1;">${R(l.opening_balance)}</td>
+                        <td class="num c-red">${parseFloat(l.period_debit) > 0 ? R(l.period_debit) : '<span class="no-activity">—</span>'}</td>
+                        <td class="num c-green">${parseFloat(l.period_credit) > 0 ? R(l.period_credit) : '<span class="no-activity">—</span>'}</td>
+                        <td class="num c-purple"><strong>${R(l.closing_balance)}</strong></td>
+                        <td class="num">${l.txn_count > 0 ? l.txn_count : '<span class="no-activity">—</span>'}</td>`;
+                    tbody.appendChild(tr);
+                });
+
+                const totalTr = document.createElement('tr');
+                totalTr.className = 'total-row';
+                totalTr.innerHTML = `<td colspan="5" style="text-align:right;padding-right:14px;">Total Capital — ${co.company_name}</td><td class="num c-purple">${R(coTotal)}</td><td></td>`;
+                tbody.appendChild(totalTr);
+            });
+
+            if (!anyData) {
+                document.getElementById('summaryEmpty').style.display = 'block';
+            } else {
+                document.getElementById('summaryTable').style.display = 'block';
+                document.getElementById('summaryInfo').textContent = `${cos.length} ${cos.length === 1 ? 'company' : 'companies'}`;
+            }
+        } catch(e) {
+            document.getElementById('summaryEmpty').style.display = 'block';
+            document.getElementById('summaryEmpty').innerHTML = `<i class="fas fa-exclamation-triangle"></i><h4>Error</h4><p>${e.message}</p>`;
+        } finally {
+            document.getElementById('summaryLoading').style.display = 'none';
+        }
+    }
+
+    async function loadTxns() {
+        _txnLoaded = true;
+        document.getElementById('txnLoading').style.display = 'flex';
+        document.getElementById('txnTable').style.display = 'none';
+        document.getElementById('txnEmpty').style.display = 'none';
+
+        try {
+            const r = await staffFetch(buildUrl('capital-transactions'));
+            const d = await r.json();
+            if (!d.success) throw new Error(d.detail || 'Load failed');
+
+            const txns = d.transactions || [];
+            document.getElementById('txnCount').textContent = `${txns.length} entries`;
+
+            const tbody = document.getElementById('txnBody');
+            tbody.innerHTML = '';
+
+            if (!txns.length) {
+                document.getElementById('txnEmpty').style.display = 'block';
+                return;
+            }
+
+            txns.forEach(t => {
+                const tr = document.createElement('tr');
+                const isCredit = t.entry_type === 'CREDIT';
+                const ref = [t.voucher_type, t.reference_number].filter(Boolean).join(' / ') || '—';
+                const narr = t.narration || t.particulars || '—';
+                tr.innerHTML = `
+                    <td style="white-space:nowrap;">${t.date}</td>
+                    <td style="white-space:nowrap;font-size:12px;">${t.company_name}</td>
+                    <td>${t.account_name}</td>
+                    <td><span class="txn-type-badge ${isCredit ? 'txn-cr' : 'txn-dr'}">${t.entry_type}</span></td>
+                    <td style="font-size:12px;color:#6b7280;">${ref}</td>
+                    <td style="font-size:12px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${narr}">${narr}</td>
+                    <td class="num c-red">${parseFloat(t.debit) > 0 ? R(t.debit) : '—'}</td>
+                    <td class="num c-green">${parseFloat(t.credit) > 0 ? R(t.credit) : '—'}</td>`;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('txnTable').style.display = 'block';
+        } catch(e) {
+            document.getElementById('txnEmpty').style.display = 'block';
+            document.getElementById('txnEmpty').innerHTML = `<i class="fas fa-exclamation-triangle"></i><h4>Error</h4><p>${e.message}</p>`;
+        } finally {
+            document.getElementById('txnLoading').style.display = 'none';
+        }
+    }
+
+    function applyFilters() {
+        _txnLoaded = false;
+        loadSummary();
+        if (_activeTab === 'txns') loadTxns();
+    }
+
+    function resetFilters() {
+        document.getElementById('filterCompany').value = '0';
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        setPeriod('fy', document.querySelector('.period-btn:nth-child(3)'));
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        StaffSidebar.init();
+        StaffHeader.inject('Capital Account', 'fas fa-coins');
+        StaffBackButton.init();
+        await loadCompanies();
+        initContext();
+        setPeriod('fy', document.querySelector('.period-btn:nth-child(3)'));
+    });
+    </script>
+</body>
+</html>

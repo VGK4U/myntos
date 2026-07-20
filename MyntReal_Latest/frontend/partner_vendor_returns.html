@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Returns - DC_INTAKE_001</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .top-header { height: 64px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .page-title { font-size: 18px; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .user-info-header { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .user-info-header .user-avatar-sm { width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; transition: all 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .stat-card.active { box-shadow: 0 0 0 2px #10b981; }
+        .stat-card .stat-value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .stat-card .stat-label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .stat-card.pending { border-left: 4px solid #f59e0b; }
+        .stat-card.acknowledged { border-left: 4px solid #10b981; }
+        .stat-card.dispatched { border-left: 4px solid #3b82f6; }
+        .stat-card.received { border-left: 4px solid #8b5cf6; }
+        .stat-card.resolved { border-left: 4px solid #6b7280; }
+        .stat-card.total { border-left: 4px solid #6366f1; }
+        .return-table { width: 100%; border-collapse: collapse; }
+        .return-table th, .return-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        .return-table th { background: #f9fafb; font-weight: 600; font-size: 12px; text-transform: uppercase; color: #6b7280; }
+        .return-table tr:hover { background: #f9fafb; }
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .status-created, .status-notified { background: #fef3c7; color: #b45309; }
+        .status-acknowledged { background: #d1fae5; color: #059669; }
+        .status-dispatched { background: #dbeafe; color: #1d4ed8; }
+        .status-received_by_vendor { background: #ede9fe; color: #7c3aed; }
+        .status-resolved { background: #e5e7eb; color: #374151; }
+        .status-disputed { background: #fee2e2; color: #dc2626; }
+        .filter-section { background: white; border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #6b7280; }
+        .filter-group select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 150px; }
+        .filter-group select:focus { outline: none; border-color: #10b981; }
+        .btn-filter { background: #f3f4f6; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+        .btn-filter:hover { background: #e5e7eb; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #10b981; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        .main-content { margin-left: 260px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        .header-logo { height: 36px; width: auto; }
+        .header-divider { width: 1px; height: 32px; background: #e5e7eb; margin: 0 8px; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; border: none; margin-right: 4px; }
+        .btn-view { background: #dbeafe; color: #1d4ed8; }
+        .btn-acknowledge { background: #d1fae5; color: #059669; }
+        .btn-confirm { background: #ede9fe; color: #7c3aed; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; background: white; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; resize: vertical; }
+        .form-group textarea:focus { outline: none; border-color: #10b981; }
+        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .detail-item { background: #f9fafb; padding: 12px; border-radius: 8px; }
+        .detail-item .label { font-size: 11px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
+        .detail-item .value { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .items-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        .items-table th, .items-table td { padding: 10px 12px; border: 1px solid #e5e7eb; font-size: 13px; }
+        .items-table th { background: #f9fafb; font-weight: 600; text-align: left; }
+        .deadline-warning { color: #dc2626; font-weight: 600; }
+        .deadline-ok { color: #059669; }
+        .pending-value { font-size: 14px; color: #b45309; font-weight: 600; background: #fef3c7; padding: 8px 16px; border-radius: 8px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div id="sidebarContainer"></div>
+    <div class="top-header">
+        <div class="header-left">
+            <img src="/public/mnr-logo.png" alt="MNR" class="header-logo" onerror="this.style.display='none'">
+            <div class="header-divider"></div>
+            <div class="page-title">
+                <i class="fas fa-undo-alt"></i>
+                My Returns
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="user-info-header">
+                <div class="user-avatar-sm" id="userAvatar">V</div>
+                <div>
+                    <div style="font-size: 14px; font-weight: 600;" id="partnerName">Vendor</div>
+                    <div style="font-size: 12px; color: #6b7280;" id="partnerCode">Loading...</div>
+                </div>
+            </div>
+            <a href="javascript:history.back()" style="background:#f3f4f6;border:1px solid #d1d5db;color:#374151;padding:7px 14px;border-radius:8px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;margin-right:8px;"><i class="fas fa-arrow-left"></i> Back</a>
+            <button class="btn-logout" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="content-area">
+            <div class="page-header">
+                <div>
+                    <h1>Vendor Return Requests</h1>
+                    <p>View and respond to return requests from the company</p>
+                </div>
+                <div class="pending-value" id="pendingValue">Pending Value: Loading...</div>
+            </div>
+
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card pending" data-filter="" onclick="filterByStatus('')">
+                    <div class="stat-value" id="statTotal">-</div>
+                    <div class="stat-label">Total Returns</div>
+                </div>
+                <div class="stat-card pending" data-filter="pending" onclick="filterByStatus('pending')">
+                    <div class="stat-value" id="statPending">-</div>
+                    <div class="stat-label">Pending Action</div>
+                </div>
+                <div class="stat-card acknowledged" data-filter="acknowledged" onclick="filterByStatus('acknowledged')">
+                    <div class="stat-value" id="statAcknowledged">-</div>
+                    <div class="stat-label">Acknowledged</div>
+                </div>
+                <div class="stat-card dispatched" data-filter="dispatched" onclick="filterByStatus('dispatched')">
+                    <div class="stat-value" id="statDispatched">-</div>
+                    <div class="stat-label">Dispatched</div>
+                </div>
+                <div class="stat-card received" data-filter="received_by_vendor" onclick="filterByStatus('received_by_vendor')">
+                    <div class="stat-value" id="statReceived">-</div>
+                    <div class="stat-label">Received</div>
+                </div>
+                <div class="stat-card resolved" data-filter="resolved" onclick="filterByStatus('resolved')">
+                    <div class="stat-value" id="statResolved">-</div>
+                    <div class="stat-label">Resolved</div>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select id="statusFilter" onchange="loadReturns()">
+                            <option value="">All Statuses</option>
+                            <option value="created">Created</option>
+                            <option value="notified">Notified</option>
+                            <option value="acknowledged">Acknowledged</option>
+                            <option value="dispatched">Dispatched</option>
+                            <option value="received_by_vendor">Received</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="disputed">Disputed</option>
+                        </select>
+                    </div>
+                    <button class="btn-filter" onclick="loadReturns()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span>Return Requests</span>
+                    <span id="tableCount" style="font-size: 13px; color: #6b7280;">0 records</span>
+                </div>
+                <div class="card-body" id="tableContainer">
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Return Request Details</h3>
+                <button class="modal-close" onclick="closeModal('detailModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+            </div>
+            <div class="modal-footer" id="modalFooter">
+                <button class="btn-filter" onclick="closeModal('detailModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="acknowledgeModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Acknowledge Return Request</h3>
+                <button class="modal-close" onclick="closeModal('acknowledgeModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px;">Request: <strong id="ackRequestNumber"></strong></p>
+                <div style="background: #d1fae5; border: 1px solid #10b981; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <i class="fas fa-check-circle" style="color: #059669;"></i>
+                    <span style="color: #065f46; font-size: 13px;">
+                        By acknowledging, you confirm this return request is valid and you will accept the returned items.
+                    </span>
+                </div>
+                <div class="form-group">
+                    <label>Your Remarks (Optional)</label>
+                    <textarea id="ackRemarks" rows="3" placeholder="Enter any remarks or comments..."></textarea>
+                </div>
+                <p style="color: #6b7280; font-size: 12px; margin-top: 12px;">
+                    <i class="fas fa-info-circle"></i> If you have concerns about this return, use the <strong>Dispute</strong> button instead.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-filter" onclick="closeModal('acknowledgeModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="submitAcknowledge()">
+                    <i class="fas fa-check"></i> Acknowledge
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirmReceiptModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Confirm Receipt of Returned Items</h3>
+                <button class="modal-close" onclick="closeModal('confirmReceiptModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px;">Request: <strong id="confirmRequestNumber"></strong></p>
+                <div class="form-group">
+                    <label>Receipt Notes (Optional)</label>
+                    <textarea id="confirmNotes" rows="3" placeholder="Enter any notes about the received items..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-filter" onclick="closeModal('confirmReceiptModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="submitConfirmReceipt()">
+                    <i class="fas fa-check-double"></i> Confirm Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="disputeModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>Dispute Return Request</h3>
+                <button class="modal-close" onclick="closeModal('disputeModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 16px;">Request: <strong id="disputeRequestNumber"></strong></p>
+                <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                    <i class="fas fa-exclamation-triangle" style="color: #d97706;"></i>
+                    <span style="color: #92400e; font-size: 13px;">
+                        Disputing a return will notify our team to review and resolve the issue.
+                    </span>
+                </div>
+                <div class="form-group">
+                    <label>Dispute Reason <span style="color: #ef4444;">*</span></label>
+                    <textarea id="disputeReason" rows="4" placeholder="Please explain why you are disputing this return request (minimum 10 characters)..." required></textarea>
+                    <small style="color: #6b7280; display: block; margin-top: 4px;">
+                        Be specific about the issue (e.g., item condition, quantity mismatch, wrong items, etc.)
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-filter" onclick="closeModal('disputeModal')">Cancel</button>
+                <button class="btn-danger" onclick="submitDispute()" style="background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                    <i class="fas fa-times-circle"></i> Submit Dispute
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/partner_sidebar.js"></script>
+    <script>
+        const API_BASE = '/api/v1/partner';
+        let currentReturnId = null;
+        let allReturns = [];
+
+        function getToken() {
+            return localStorage.getItem('partner_token');
+        }
+
+        function getHeaders() {
+            const token = getToken();
+            const partnerInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            if (partnerInfo.primary_company_id) headers['X-Company-ID'] = String(partnerInfo.primary_company_id);
+            return headers;
+        }
+
+        function logout() {
+            localStorage.removeItem('partner_token');
+            localStorage.removeItem('partner_info');
+            window.location.href = '/partner/login';
+        }
+
+        async function init() {
+            const token = getToken();
+            if (!token) {
+                window.location.href = '/partner/login';
+                return;
+            }
+
+            initPartnerSidebar('sidebarContainer');
+
+            const partnerInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');
+            document.getElementById('partnerName').textContent = partnerInfo.partner_name || 'Vendor';
+            document.getElementById('partnerCode').textContent = partnerInfo.partner_code || '';
+            document.getElementById('userAvatar').textContent = (partnerInfo.partner_name || 'V')[0].toUpperCase();
+
+            await Promise.all([loadSummary(), loadReturns()]);
+        }
+
+        async function loadSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/returns/summary`, { headers: getHeaders() });
+                if (!response.ok) {
+                    if (response.status === 401) { logout(); return; }
+                    throw new Error('Failed to load summary');
+                }
+                const result = await response.json();
+                if (result.success) {
+                    const data = result.data;
+                    document.getElementById('statTotal').textContent = data.total;
+                    document.getElementById('statPending').textContent = data.pending_action;
+                    document.getElementById('statAcknowledged').textContent = data.acknowledged;
+                    document.getElementById('statDispatched').textContent = data.dispatched;
+                    document.getElementById('statReceived').textContent = data.received;
+                    document.getElementById('statResolved').textContent = data.resolved;
+                    document.getElementById('pendingValue').textContent = `Pending Value: ${formatCurrency(data.pending_value)}`;
+                }
+            } catch (error) {
+                console.error('[DC] Summary load error:', error);
+            }
+        }
+
+        async function loadReturns() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const container = document.getElementById('tableContainer');
+            container.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+
+            try {
+                let url = `${API_BASE}/returns/my-returns?page=1&page_size=100`;
+                if (statusFilter) url += `&status_filter=${statusFilter}`;
+
+                const response = await fetch(url, { headers: getHeaders() });
+                if (!response.ok) {
+                    if (response.status === 401) { logout(); return; }
+                    throw new Error('Failed to load returns');
+                }
+                const result = await response.json();
+                if (result.success) {
+                    allReturns = result.data;
+                    renderTable(allReturns);
+                    document.getElementById('tableCount').textContent = `${result.total} records`;
+                }
+            } catch (error) {
+                console.error('[DC] Load returns error:', error);
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error loading returns</p></div>';
+            }
+        }
+
+        function filterByStatus(status) {
+            document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
+            if (status) {
+                document.querySelector(`.stat-card[data-filter="${status}"]`)?.classList.add('active');
+                if (status === 'pending') {
+                    document.getElementById('statusFilter').value = 'notified';
+                } else {
+                    document.getElementById('statusFilter').value = status;
+                }
+            } else {
+                document.getElementById('statusFilter').value = '';
+            }
+            loadReturns();
+        }
+
+        function renderTable(returns) {
+            const container = document.getElementById('tableContainer');
+            if (!returns || returns.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No return requests found</p></div>';
+                return;
+            }
+
+            let html = `<table class="return-table">
+                <thead>
+                    <tr>
+                        <th>Request #</th>
+                        <th>Type</th>
+                        <th>Items</th>
+                        <th>Value</th>
+                        <th>Status</th>
+                        <th>Deadline</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            returns.forEach(r => {
+                const deadlineClass = r.vendor_response_deadline && new Date(r.vendor_response_deadline) < new Date() ? 'deadline-warning' : 'deadline-ok';
+                html += `<tr>
+                    <td><strong>${r.request_number}</strong></td>
+                    <td>${r.request_type}</td>
+                    <td>${r.total_items} items (${r.total_qty} qty)</td>
+                    <td>${formatCurrency(r.total_value)}</td>
+                    <td><span class="status-badge status-${r.status.toLowerCase()}">${r.status}</span></td>
+                    <td class="${deadlineClass}">${r.vendor_response_deadline ? formatDate(r.vendor_response_deadline) : '-'}</td>
+                    <td>${formatDate(r.created_at)}</td>
+                    <td>
+                        <button class="btn-sm btn-view" onclick="viewDetails(${r.id})">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        ${canAcknowledge(r) ? `<button class="btn-sm btn-acknowledge" onclick="openAcknowledge(${r.id}, '${r.request_number}')" title="Acknowledge"><i class="fas fa-check"></i></button>` : ''}
+                        ${canDispute(r) ? `<button class="btn-sm" onclick="openDispute(${r.id}, '${r.request_number}')" title="Dispute" style="background: #fef3c7; color: #d97706;"><i class="fas fa-times-circle"></i></button>` : ''}
+                        ${canConfirmReceipt(r) ? `<button class="btn-sm btn-confirm" onclick="openConfirmReceipt(${r.id}, '${r.request_number}')" title="Confirm Receipt"><i class="fas fa-check-double"></i></button>` : ''}
+                    </td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        function canAcknowledge(r) {
+            return ['CREATED', 'NOTIFIED'].includes(r.status);
+        }
+
+        function canDispute(r) {
+            return ['CREATED', 'NOTIFIED'].includes(r.status);
+        }
+
+        function canConfirmReceipt(r) {
+            return ['DISPATCHED', 'ACKNOWLEDGED'].includes(r.status);
+        }
+
+        function openDispute(returnId, requestNumber) {
+            currentReturnId = returnId;
+            document.getElementById('disputeRequestNumber').textContent = requestNumber;
+            document.getElementById('disputeReason').value = '';
+            document.getElementById('disputeModal').classList.add('active');
+        }
+
+        async function submitDispute() {
+            const reason = document.getElementById('disputeReason').value.trim();
+            if (reason.length < 10) {
+                alert('Please provide a dispute reason with at least 10 characters.');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/returns/my-returns/${currentReturnId}/dispute`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ reason: reason })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    closeModal('disputeModal');
+                    await Promise.all([loadSummary(), loadReturns()]);
+                    alert(result.message);
+                } else {
+                    alert(result.detail || 'Failed to submit dispute');
+                }
+            } catch (error) {
+                console.error('[DC] Dispute error:', error);
+                alert('Error submitting dispute. Please try again.');
+            }
+        }
+
+        async function viewDetails(returnId) {
+            currentReturnId = returnId;
+            try {
+                const response = await fetch(`${API_BASE}/returns/my-returns/${returnId}`, { headers: getHeaders() });
+                if (!response.ok) throw new Error('Failed to load details');
+                const result = await response.json();
+                if (result.success) {
+                    renderDetailModal(result.data);
+                    document.getElementById('detailModal').classList.add('active');
+                }
+            } catch (error) {
+                console.error('[DC] View details error:', error);
+                alert('Error loading return details');
+            }
+        }
+
+        function renderDetailModal(data) {
+            document.getElementById('modalTitle').textContent = `Return Request: ${data.request_number}`;
+            
+            let html = `<div class="detail-grid">
+                <div class="detail-item">
+                    <div class="label">Request Type</div>
+                    <div class="value">${data.request_type}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="label">Status</div>
+                    <div class="value"><span class="status-badge status-${data.status.toLowerCase()}">${data.status}</span></div>
+                </div>
+                <div class="detail-item">
+                    <div class="label">Total Items</div>
+                    <div class="value">${data.total_items} items (${data.total_qty} qty)</div>
+                </div>
+                <div class="detail-item">
+                    <div class="label">Total Value</div>
+                    <div class="value">${formatCurrency(data.total_value)}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="label">Response Deadline</div>
+                    <div class="value">${data.vendor_response_deadline ? formatDate(data.vendor_response_deadline) : 'Not set'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="label">Created</div>
+                    <div class="value">${formatDate(data.created_at)}</div>
+                </div>
+            </div>`;
+
+            if (data.vendor_acknowledged_at) {
+                html += `<div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="label">Acknowledged At</div>
+                        <div class="value">${formatDate(data.vendor_acknowledged_at)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="label">Vendor Remarks</div>
+                        <div class="value">${data.vendor_remarks || '-'}</div>
+                    </div>
+                </div>`;
+            }
+
+            if (data.dispatch_date) {
+                html += `<div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="label">Dispatch Date</div>
+                        <div class="value">${formatDate(data.dispatch_date)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="label">Courier</div>
+                        <div class="value">${data.dispatch_courier || '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="label">Tracking Number</div>
+                        <div class="value">${data.dispatch_tracking_number || '-'}</div>
+                    </div>
+                </div>`;
+            }
+
+            if (data.credit_note_number) {
+                html += `<div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="label">Credit Note #</div>
+                        <div class="value">${data.credit_note_number}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="label">Credit Note Date</div>
+                        <div class="value">${formatDate(data.credit_note_date)}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="label">Credit Amount</div>
+                        <div class="value">${formatCurrency(data.credit_note_amount)}</div>
+                    </div>
+                </div>`;
+            }
+
+            if (data.items && data.items.length > 0) {
+                html += `<h5 style="margin: 20px 0 12px 0; font-size: 16px; font-weight: 600;">Return Items</h5>
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Item Code</th>
+                            <th>Item Name</th>
+                            <th>Qty</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                data.items.forEach(item => {
+                    html += `<tr>
+                        <td>${item.item_code || '-'}</td>
+                        <td>${item.item_name}</td>
+                        <td>${item.qty}</td>
+                        <td>${formatCurrency(item.unit_price)}</td>
+                        <td>${formatCurrency(item.total_price)}</td>
+                        <td>${item.reason || '-'}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+            }
+
+            document.getElementById('modalBody').innerHTML = html;
+
+            let footerHtml = '<button class="btn-filter" onclick="closeModal(\'detailModal\')">Close</button>';
+            if (canAcknowledge(data)) {
+                footerHtml += `<button class="btn-primary-custom" onclick="closeModal('detailModal'); openAcknowledge(${data.id}, '${data.request_number}')"><i class="fas fa-check"></i> Acknowledge</button>`;
+            }
+            if (canDispute(data)) {
+                footerHtml += `<button style="background: #fef3c7; color: #d97706; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-left: 8px;" onclick="closeModal('detailModal'); openDispute(${data.id}, '${data.request_number}')"><i class="fas fa-times-circle"></i> Dispute</button>`;
+            }
+            if (canConfirmReceipt(data)) {
+                footerHtml += `<button class="btn-primary-custom" onclick="closeModal('detailModal'); openConfirmReceipt(${data.id}, '${data.request_number}')"><i class="fas fa-check-double"></i> Confirm Receipt</button>`;
+            }
+            document.getElementById('modalFooter').innerHTML = footerHtml;
+        }
+
+        function openAcknowledge(returnId, requestNumber) {
+            currentReturnId = returnId;
+            document.getElementById('ackRequestNumber').textContent = requestNumber;
+            document.getElementById('ackRemarks').value = '';
+            document.getElementById('acknowledgeModal').classList.add('active');
+        }
+
+        async function submitAcknowledge() {
+            const remarks = document.getElementById('ackRemarks').value.trim();
+
+            try {
+                const response = await fetch(`${API_BASE}/returns/my-returns/${currentReturnId}/acknowledge`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ remarks: remarks, accept: true })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    closeModal('acknowledgeModal');
+                    alert(result.message);
+                    await Promise.all([loadSummary(), loadReturns()]);
+                } else {
+                    alert(result.detail || result.message || 'Error acknowledging return');
+                }
+            } catch (error) {
+                console.error('[DC] Acknowledge error:', error);
+                alert('Error submitting acknowledgment');
+            }
+        }
+
+        function openConfirmReceipt(returnId, requestNumber) {
+            currentReturnId = returnId;
+            document.getElementById('confirmRequestNumber').textContent = requestNumber;
+            document.getElementById('confirmNotes').value = '';
+            document.getElementById('confirmReceiptModal').classList.add('active');
+        }
+
+        async function submitConfirmReceipt() {
+            const notes = document.getElementById('confirmNotes').value.trim();
+
+            try {
+                const response = await fetch(`${API_BASE}/returns/my-returns/${currentReturnId}/confirm-receipt`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ notes })
+                });
+                const result = await response.json();
+                if (result.success) {
+                    closeModal('confirmReceiptModal');
+                    alert(result.message);
+                    await Promise.all([loadSummary(), loadReturns()]);
+                } else {
+                    alert(result.detail || result.message || 'Error confirming receipt');
+                }
+            } catch (error) {
+                console.error('[DC] Confirm receipt error:', error);
+                alert('Error confirming receipt');
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function formatCurrency(value) {
+            if (value === null || value === undefined) return '-';
+            return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

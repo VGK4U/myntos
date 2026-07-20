@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGK4U Members - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        
+        .main-content { margin-left: 280px; padding-top: 0; min-height: 100vh; transition: margin-left 0.3s ease; padding-top: 88px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 24px; }
+        
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; height: 100%; }
+        .stat-card .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-card .label { color: #6b7280; font-size: 13px; margin-top: 4px; }
+        
+        .stat-purple .icon { background: #ede9fe; color: #7c3aed; }
+        .stat-blue .icon { background: #dbeafe; color: #2563eb; }
+        .stat-green .icon { background: #d1fae5; color: #059669; }
+        .stat-gold .icon { background: #fef3c7; color: #d97706; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; }
+        .user-name { font-weight: 600; color: #1f2937 !important; }
+        .user-id { font-size: 11px; color: #4b5563 !important; }
+        
+        .role-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: capitalize; }
+        .role-promoter { background: #f3f4f6; color: #6b7280; }
+        .role-team_leader { background: #dbeafe; color: #1e40af; }
+        .role-zonal_manager { background: #ede9fe; color: #7c3aed; }
+        .role-director { background: #fef3c7; color: #92400e; }
+        
+        .revenue-badge { font-weight: 700; }
+        .revenue-positive { color: #059669; }
+        
+        .filter-panel { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; }
+        .filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+        .filter-row .form-control, .filter-row .form-select { border-radius: 8px; }
+        
+        .btn-primary { background: #6366f1; border: none; }
+        .btn-primary:hover { background: #4f46e5; }
+        .btn-outline-primary { color: #6366f1; border-color: #6366f1; }
+        .btn-outline-primary:hover { background: #6366f1; color: white; }
+        
+        .action-btn { padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; border: none; margin: 0 2px; }
+        .action-btn-promote { background: #d1fae5; color: #065f46; }
+        .action-btn-promote:hover { background: #a7f3d0; }
+        .action-btn-view { background: #e0e7ff; color: #3730a3; }
+        .action-btn-view:hover { background: #c7d2fe; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ede9fe; color: #7c3aed; }
+
+        .loading-spinner { display: none; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; color: #6366f1; }
+        
+        .modal-header { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; }
+        .modal-header .btn-close { filter: invert(1); }
+        
+        .progress { height: 8px; border-radius: 4px; }
+        .progress-bar { background: linear-gradient(90deg, #6366f1, #4f46e5); }
+        
+        .promotion-target { font-size: 11px; color: #6b7280; margin-top: 4px; }
+        
+        .pagination { margin: 20px 0 0 0; }
+        .page-link { color: #6366f1; }
+        .page-item.active .page-link { background: #6366f1; border-color: #6366f1; }
+        
+        .view-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+        .view-toggle .btn { padding: 8px 20px; border-radius: 8px; font-weight: 500; }
+        .view-toggle .btn.active { background: #6366f1; color: white; border-color: #6366f1; }
+        .view-toggle .btn:not(.active) { background: white; color: #6b7280; border: 1px solid #e5e7eb; }
+        
+        .hierarchy-container { display: none; }
+        .hierarchy-container.active { display: block; }
+        .list-container { display: block; }
+        .list-container.hidden { display: none; }
+        
+        .tree-view { padding: 20px; }
+        .tree-node { margin-left: 0; }
+        .tree-node .tree-children { margin-left: 32px; border-left: 2px solid #e5e7eb; padding-left: 16px; }
+        .tree-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin: 8px 0; background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: all 0.2s; }
+        .tree-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateX(4px); }
+        .tree-item .tree-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; color: white; }
+        .tree-item .tree-info { flex: 1; }
+        .tree-item .tree-name { font-weight: 600; color: #1f2937; font-size: 14px; }
+        .tree-item .tree-id { font-size: 11px; color: #6b7280; }
+        .tree-item .tree-revenue { font-size: 12px; color: #059669; font-weight: 600; }
+        .tree-item .tree-team-count { font-size: 11px; color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 10px; }
+        
+        .role-director .tree-avatar { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .role-zonal_manager .tree-avatar { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .role-team_leader .tree-avatar { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .role-promoter .tree-avatar { background: linear-gradient(135deg, #6b7280, #4b5563); }
+        
+        .tree-level-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+        .level-1 { background: #fef3c7; color: #92400e; }
+        .level-2 { background: #ede9fe; color: #7c3aed; }
+        .level-3 { background: #dbeafe; color: #1e40af; }
+        .level-4 { background: #f3f4f6; color: #6b7280; }
+        
+        .collapse-btn { background: none; border: none; padding: 4px 8px; cursor: pointer; color: #6b7280; font-size: 12px; }
+        .collapse-btn:hover { color: #4f46e5; }
+        
+        .income-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .income-pending { background: #fef3c7; color: #92400e; }
+        .income-approved { background: #d1fae5; color: #065f46; }
+        .income-disbursed { background: #dbeafe; color: #1e40af; }
+        .income-total { background: #f3f4f6; color: #374151; font-weight: 700; }
+        
+        .expand-btn { background: #f3f4f6; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; color: #6366f1; }
+        .expand-btn:hover { background: #e5e7eb; }
+        
+        .transaction-row { display: none; background: #f9fafb; }
+        .transaction-row.show { display: table-row; }
+        .transaction-details { padding: 16px; }
+        .transaction-table { width: 100%; font-size: 12px; }
+        .transaction-table th { background: #e5e7eb; padding: 8px 12px; text-align: left; font-weight: 600; }
+        .transaction-table td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+        .transaction-table .status-pending { color: #d97706; }
+        .transaction-table .status-approved { color: #059669; }
+        .transaction-table .status-disbursed { color: #2563eb; }
+        
+        .status-section { margin-bottom: 16px; }
+        .status-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .status-header.pending-header { background: #fef3c7; color: #92400e; }
+        .status-header.approved-header { background: #d1fae5; color: #065f46; }
+        .status-header.disbursed-header { background: #dbeafe; color: #1e40af; }
+        .status-transactions { margin-top: 8px; display: none; }
+        .status-transactions.show { display: block; }
+        
+        .income-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+        
+        .promotion-progress { min-width: 100px; }
+        .promotion-progress .progress { margin-bottom: 2px; }
+        .promotion-progress small { font-size: 10px; white-space: nowrap; }
+        
+        .hierarchy-table-header {
+            display: flex; align-items: center; gap: 0;
+            background: #f9fafb; border-bottom: 2px solid #e5e7eb;
+            padding: 12px 16px; font-size: 12px; font-weight: 600;
+            color: #6b7280; text-transform: uppercase; position: sticky; top: 0; z-index: 10;
+        }
+        .hierarchy-row {
+            display: flex; align-items: center; gap: 0;
+            padding: 10px 16px; border-bottom: 1px solid #f3f4f6;
+            transition: background 0.15s;
+        }
+        .hierarchy-row:hover { background: #f9fafb; }
+        .hierarchy-col { display: flex; align-items: center; }
+        .hierarchy-col-member { flex: 2; min-width: 200px; gap: 8px; }
+        .hierarchy-col-role { flex: 1; min-width: 100px; justify-content: center; }
+        .hierarchy-col-revenue { flex: 1; min-width: 90px; justify-content: flex-end; font-weight: 600; font-size: 13px; }
+        .hierarchy-col-progress { flex: 1; min-width: 100px; flex-direction: column; align-items: flex-start; }
+        .hierarchy-col-income { flex: 1; min-width: 80px; justify-content: flex-end; }
+        .hierarchy-col-actions { flex: 0 0 80px; justify-content: center; gap: 4px; }
+        
+        .tree-toggle-btn { background: none; border: none; padding: 4px 6px; cursor: pointer; color: #6b7280; font-size: 11px; }
+        .tree-toggle-btn:hover { color: #4f46e5; }
+        .tree-toggle-spacer { width: 24px; display: inline-block; }
+        .tree-avatar-sm { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 11px; color: white; flex-shrink: 0; }
+        .tree-member-info { display: flex; flex-direction: column; }
+        .tree-member-info .tree-name { font-weight: 600; color: #1f2937; font-size: 13px; }
+        .tree-member-info .tree-id { font-size: 10px; color: #6b7280; }
+        
+        .role-director .tree-avatar-sm, .hierarchy-row.role-director .tree-avatar-sm { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .role-zonal_manager .tree-avatar-sm, .hierarchy-row.role-zonal_manager .tree-avatar-sm { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .role-team_leader .tree-avatar-sm, .hierarchy-row.role-team_leader .tree-avatar-sm { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .role-promoter .tree-avatar-sm, .hierarchy-row.role-promoter .tree-avatar-sm { background: linear-gradient(135deg, #6b7280, #4b5563); }
+        
+        .tree-view { padding: 0; overflow-x: auto; }
+        .tree-node .tree-children { margin-left: 0; padding-left: 0; border-left: none; display: block; }
+        .tree-node .tree-children.collapsed { display: none; }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-banner">
+                <h1><i class="fas fa-sitemap"></i> VGK4U Members</h1>
+                <p>Manage VGK4U hierarchy - Promoters, Team Leaders, Zonal Managers, and Directors</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card stat-purple">
+                        <div class="icon"><i class="fas fa-users"></i></div>
+                        <div class="value" id="statPromoters">--</div>
+                        <div class="label">Promoters</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-blue">
+                        <div class="icon"><i class="fas fa-user-tie"></i></div>
+                        <div class="value" id="statTeamLeaders">--</div>
+                        <div class="label">Team Leaders</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-green">
+                        <div class="icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div class="value" id="statZonalManagers">--</div>
+                        <div class="label">Zonal Managers</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-gold">
+                        <div class="icon"><i class="fas fa-crown"></i></div>
+                        <div class="value" id="statDirectors">--</div>
+                        <div class="label">Directors</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="view-toggle">
+                <button class="btn active" id="listViewBtn" onclick="switchView('list')">
+                    <i class="fas fa-list me-2"></i>List View
+                </button>
+                <button class="btn" id="hierarchyViewBtn" onclick="switchView('hierarchy')">
+                    <i class="fas fa-sitemap me-2"></i>Hierarchy View
+                </button>
+            </div>
+            
+            <div class="filter-panel" id="filterPanel">
+                <div class="filter-row">
+                    <div class="flex-grow-1">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by name or MNR ID...">
+                    </div>
+                    <div>
+                        <select class="form-select" id="roleFilter">
+                            <option value="">All Roles</option>
+                            <option value="promoter">Promoter</option>
+                            <option value="team_leader">Team Leader</option>
+                            <option value="zonal_manager">Zonal Manager</option>
+                            <option value="director">Director</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="loadMembers()">
+                            <i class="fas fa-search me-2"></i>Search
+                        </button>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-primary" onclick="showAddMemberModal()">
+                            <i class="fas fa-plus me-2"></i>Add Member
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="list-container" id="listContainer">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-list me-2"></i>Member Directory</h5>
+                    <div class="loading-spinner" id="tableSpinner"></div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30px;"></th>
+                                    <th>Member</th>
+                                    <th class="text-center">Segment Roles</th>
+                                    <th class="text-end">Self Revenue</th>
+                                    <th class="text-end">Team Revenue</th>
+                                    <th class="text-center" style="min-width:150px;">Promotion Progress</th>
+                                    <th class="text-end">Pending</th>
+                                    <th class="text-end">Approved</th>
+                                    <th class="text-end">Disbursed</th>
+                                    <th class="text-end">Total Income</th>
+                                    <th class="text-center">Joined</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="membersTableBody">
+                                <tr>
+                                    <td colspan="12" class="text-center py-5">
+                                        <div class="empty-state">
+                                            <i class="fas fa-sitemap"></i>
+                                            <p>Loading members...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center" id="pagination"></ul>
+            </nav>
+            </div>
+            
+            <div class="hierarchy-container" id="hierarchyContainer">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-sitemap me-2"></i>Team Hierarchy</h5>
+                        <div class="loading-spinner" id="hierarchySpinner"></div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="hierarchy-table-header">
+                            <div class="hierarchy-col hierarchy-col-member">Member</div>
+                            <div class="hierarchy-col hierarchy-col-role">Segment Roles</div>
+                            <div class="hierarchy-col hierarchy-col-revenue">Self Revenue</div>
+                            <div class="hierarchy-col hierarchy-col-revenue">Team Revenue</div>
+                            <div class="hierarchy-col hierarchy-col-progress">Promotion</div>
+                            <div class="hierarchy-col hierarchy-col-income">Pending</div>
+                            <div class="hierarchy-col hierarchy-col-income">Approved</div>
+                            <div class="hierarchy-col hierarchy-col-income">Disbursed</div>
+                            <div class="hierarchy-col hierarchy-col-income">Total</div>
+                            <div class="hierarchy-col hierarchy-col-actions">Actions</div>
+                        </div>
+                        <div class="tree-view" id="hierarchyTree">
+                            <div class="empty-state">
+                                <i class="fas fa-sitemap"></i>
+                                <p>Loading hierarchy...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="addMemberModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add VGK4U Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">User ID (MNR)</label>
+                        <input type="text" class="form-control" id="addUserId" placeholder="e.g., MNR1800143" pattern="MNR\d+" style="text-transform: uppercase;">
+                        <small class="text-muted">Enter full MNR ID like MNR1800143</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Initial Role</label>
+                        <select class="form-select" id="addRole">
+                            <option value="promoter">Promoter</option>
+                            <option value="team_leader">Team Leader</option>
+                            <option value="zonal_manager">Zonal Manager</option>
+                            <option value="director">Director</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Parent Member ID (Optional)</label>
+                        <input type="number" class="form-control" id="addParentId" placeholder="Enter parent VGK4U member ID">
+                        <small class="text-muted">Leave empty if no sponsor</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitAddMember()">
+                        <i class="fas fa-check me-2"></i>Add Member
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="promoteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-arrow-up me-2"></i>Promote Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="promoteMemberId">
+                    <div class="mb-3">
+                        <label class="form-label">Member</label>
+                        <input type="text" class="form-control" id="promoteMemberName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Current Role</label>
+                        <input type="text" class="form-control" id="promoteCurrentRole" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Promote To</label>
+                        <select class="form-select" id="promoteNewRole">
+                            <option value="team_leader">Team Leader</option>
+                            <option value="zonal_manager">Zonal Manager</option>
+                            <option value="director">Director</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="submitPromotion()">
+                        <i class="fas fa-arrow-up me-2"></i>Promote
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="viewMemberModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user me-2"></i>Member Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="viewMemberContent">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 text-muted">Loading member details...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-warning" id="viewEditBtn" onclick="openEditFromView()">
+                        <i class="fas fa-edit me-2"></i>Edit
+                    </button>
+                    <button type="button" class="btn btn-danger" id="viewStatusBtn" onclick="openStatusFromView()">
+                        <i class="fas fa-toggle-off me-2"></i>Change Status
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editMemberModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                    <h5 class="modal-title text-white"><i class="fas fa-edit me-2"></i>Edit Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editMemberId">
+                    <div class="mb-3">
+                        <label class="form-label">Member Name</label>
+                        <input type="text" class="form-control" id="editMemberName" readonly>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Real Estate Role</label>
+                            <select class="form-select" id="editRealEstateRole">
+                                <option value="promoter">ZR Promoter</option>
+                                <option value="team_leader">ZR Team Leader</option>
+                                <option value="zonal_manager">ZR Zonal Manager</option>
+                                <option value="director">ZR Director</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Insurance Role</label>
+                            <select class="form-select" id="editInsuranceRole">
+                                <option value="promoter">ZC Promoter</option>
+                                <option value="team_leader">ZC Team Leader</option>
+                                <option value="zonal_manager">ZC Zonal Manager</option>
+                                <option value="director">ZC Director</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Real Estate Sponsor ID</label>
+                            <input type="number" class="form-control" id="editRealEstateUpline" placeholder="Member ID">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Insurance Sponsor ID</label>
+                            <input type="number" class="form-control" id="editInsuranceUpline" placeholder="Member ID">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="submitEditMember()">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="statusChangeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" id="statusModalHeader">
+                    <h5 class="modal-title" id="statusModalTitle"><i class="fas fa-toggle-on me-2"></i>Change Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="statusMemberId">
+                    <input type="hidden" id="statusNewValue">
+                    <div class="mb-3">
+                        <label class="form-label">Member</label>
+                        <input type="text" class="form-control" id="statusMemberName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Current Status</label>
+                        <input type="text" class="form-control" id="statusCurrentValue" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="statusReason" rows="3" minlength="10" maxlength="500" placeholder="Enter reason for status change (10-500 characters)..." required></textarea>
+                        <div class="form-text"><span id="reasonCharCount">0</span>/500 characters (min 10)</div>
+                    </div>
+                    <div class="alert alert-warning" id="statusWarning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="statusWarningText">Warning: Deactivating a member will hold their income calculations but they will not be disbursed.</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn" id="statusSubmitBtn" onclick="submitStatusChange()">
+                        <i class="fas fa-check me-2"></i>Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script>
+        let currentPage = 1;
+        const perPage = 20;
+        
+        const PROMOTION_TARGETS = {
+            promoter: { target: 100000, next: 'Team Leader', label: '₹1L self revenue' },
+            team_leader: { target: 500000, next: 'Zonal Manager', label: '₹5L self+team revenue' },
+            zonal_manager: { target: 1000000, next: 'Director', label: '₹10L self+team revenue' },
+            director: { target: null, next: null, label: 'Highest rank achieved' }
+        };
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('VGK4U Members', 'fas fa-sitemap');
+            updateHeaderInfo();
+            loadMembers();
+        });
+        
+        function updateHeaderInfo() {
+            const staffData = JSON.parse(localStorage.getItem('staff_data') || sessionStorage.getItem('staff_data') || '{}');
+            if (staffData.name) {
+                document.getElementById('headerUserName').textContent = staffData.name;
+                document.getElementById('headerUserInitials').textContent = staffData.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            }
+            if (staffData.role_name) {
+                document.getElementById('headerUserRole').textContent = staffData.role_name;
+            }
+        }
+        
+        async function loadMembers() {
+            const spinner = document.getElementById('tableSpinner');
+            spinner.style.display = 'block';
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const role = document.getElementById('roleFilter').value;
+                const category = document.getElementById('categoryFilter').value;
+                const search = document.getElementById('searchInput').value;
+                
+                let url = `/api/v1/myntreal/zynova/members?page=${currentPage}&per_page=${perPage}&include_transactions=true`;
+                if (role) url += `&role=${role}`;
+                if (category) url += `&category=${encodeURIComponent(category)}`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load members');
+                
+                const data = await response.json();
+                renderTable(data.data || []);
+                updateStats(data.data || []);
+                
+                if (data.filters && data.filters.categories) {
+                    populateCategoryFilter(data.filters.categories);
+                }
+            } catch (error) {
+                console.error('Error loading members:', error);
+                document.getElementById('membersTableBody').innerHTML = `
+                    <tr><td colspan="12" class="text-center py-5">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>Failed to load members. Please try again.</p>
+                        </div>
+                    </td></tr>`;
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+        
+        function populateCategoryFilter(categories) {
+            const select = document.getElementById('categoryFilter');
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">All Categories</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                if (cat === currentValue) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+        
+        function renderTable(data) {
+            const tbody = document.getElementById('membersTableBody');
+            
+            if (!data.length) {
+                tbody.innerHTML = `
+                    <tr><td colspan="12" class="text-center py-5">
+                        <div class="empty-state">
+                            <i class="fas fa-sitemap"></i>
+                            <p>No VGK4U members found</p>
+                        </div>
+                    </td></tr>`;
+                return;
+            }
+            
+            let html = '';
+            data.forEach((item, idx) => {
+                const initials = (item.user_name || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                const reRoleClass = `role-${item.real_estate_role || item.role}`;
+                const insRoleClass = `role-${item.insurance_role || item.role}`;
+                const reRoleDisplay = item.real_estate_role_display || `ZR ${(item.real_estate_role || item.role || 'promoter').replace(/_/g, ' ')}`;
+                const insRoleDisplay = item.insurance_role_display || `ZC ${(item.insurance_role || item.role || 'promoter').replace(/_/g, ' ')}`;
+                const joinedDate = item.joined_at ? new Date(item.joined_at).toLocaleDateString('en-IN') : 'N/A';
+                
+                const selfRevenue = item.total_revenue || 0;
+                const teamRevenue = item.team_revenue || 0;
+                const incomePending = item.income_pending || 0;
+                const incomeApproved = item.income_approved || 0;
+                const incomeDisbursed = item.income_disbursed || 0;
+                const incomeTotal = item.income_total || 0;
+                
+                const promotion = getPromotionProgress(item.real_estate_role || item.role, selfRevenue, teamRevenue);
+                
+                const hasTransactions = item.transactions && (
+                    (item.transactions.pending && item.transactions.pending.length) ||
+                    (item.transactions.approved && item.transactions.approved.length) ||
+                    (item.transactions.disbursed && item.transactions.disbursed.length)
+                );
+                
+                const canPromote = item.role !== 'director';
+                const rowId = `row-${item.id}`;
+                
+                html += `
+                    <tr>
+                        <td class="text-center">
+                            ${hasTransactions ? `<button class="expand-btn" onclick="toggleTransactions('${rowId}')"><i class="fas fa-plus" id="icon-${rowId}"></i></button>` : ''}
+                        </td>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">${initials}</div>
+                                <div>
+                                    <div class="user-name">${item.user_name || 'Unknown'}</div>
+                                    <div class="user-id">MNR: ${item.user_id}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <div class="d-flex flex-column gap-1 align-items-center">
+                                <span class="role-badge ${reRoleClass}" title="VGK Real Dreams">${reRoleDisplay}</span>
+                                <span class="role-badge ${insRoleClass}" title="VGK Care">${insRoleDisplay}</span>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <span class="text-success fw-bold">₹${formatAmount(selfRevenue)}</span>
+                        </td>
+                        <td class="text-end">
+                            <span class="text-info fw-bold">₹${formatAmount(teamRevenue)}</span>
+                        </td>
+                        <td>
+                            <div class="promotion-progress">
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar ${promotion.barClass}" role="progressbar" style="width: ${promotion.percent}%"></div>
+                                </div>
+                                <small class="text-muted">${promotion.label}</small>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <span class="income-badge income-pending">₹${formatAmount(incomePending)}</span>
+                            <div class="text-muted" style="font-size:10px;">${item.transaction_counts?.pending || 0} txn</div>
+                        </td>
+                        <td class="text-end">
+                            <span class="income-badge income-approved">₹${formatAmount(incomeApproved)}</span>
+                            <div class="text-muted" style="font-size:10px;">${item.transaction_counts?.approved || 0} txn</div>
+                        </td>
+                        <td class="text-end">
+                            <span class="income-badge income-disbursed">₹${formatAmount(incomeDisbursed)}</span>
+                            <div class="text-muted" style="font-size:10px;">${item.transaction_counts?.disbursed || 0} txn</div>
+                        </td>
+                        <td class="text-end">
+                            <span class="income-badge income-total">₹${formatAmount(incomeTotal)}</span>
+                        </td>
+                        <td class="text-center">${joinedDate}</td>
+                        <td class="text-center">
+                            <button class="action-btn action-btn-view" onclick="viewMember(${item.id})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${canPromote ? `
+                                <button class="action-btn action-btn-promote" onclick="showPromoteModal(${item.id}, '${item.user_name || 'Member'}', '${item.role}')">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>`;
+                
+                if (hasTransactions) {
+                    html += `
+                    <tr class="transaction-row" id="${rowId}">
+                        <td colspan="12">
+                            <div class="transaction-details">
+                                ${renderTransactionSection('pending', 'Pending', item.transactions.pending || [], incomePending)}
+                                ${renderTransactionSection('approved', 'Approved', item.transactions.approved || [], incomeApproved)}
+                                ${renderTransactionSection('disbursed', 'Disbursed', item.transactions.disbursed || [], incomeDisbursed)}
+                            </div>
+                        </td>
+                    </tr>`;
+                }
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
+        function formatAmount(amount) {
+            if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
+            if (amount >= 1000) return (amount / 1000).toFixed(1) + 'K';
+            return amount.toLocaleString('en-IN');
+        }
+        
+        function getPromotionProgress(role, selfRevenue, teamRevenue) {
+            const targets = PROMOTION_TARGETS[role];
+            if (!targets || !targets.target) {
+                return { percent: 100, label: 'Max rank', barClass: 'bg-success' };
+            }
+            
+            let currentValue = selfRevenue;
+            if (role === 'team_leader' || role === 'zonal_manager') {
+                currentValue = selfRevenue + teamRevenue;
+            }
+            
+            const percent = Math.min(100, Math.round((currentValue / targets.target) * 100));
+            let barClass = 'bg-warning';
+            if (percent >= 100) barClass = 'bg-success';
+            else if (percent >= 50) barClass = 'bg-info';
+            
+            return {
+                percent,
+                label: `${percent}% to ${targets.next}`,
+                barClass
+            };
+        }
+        
+        function renderTransactionSection(status, label, transactions, total) {
+            if (!transactions.length) return '';
+            
+            const sectionId = `section-${status}-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+            
+            return `
+                <div class="status-section">
+                    <div class="status-header ${status}-header" onclick="toggleStatusSection('${sectionId}')">
+                        <i class="fas fa-chevron-right" id="icon-${sectionId}"></i>
+                        <span>${label}</span>
+                        <span class="ms-auto">₹${total.toLocaleString('en-IN')} (${transactions.length} transactions)</span>
+                    </div>
+                    <div class="status-transactions" id="${sectionId}">
+                        <table class="transaction-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Category</th>
+                                    <th>Revenue</th>
+                                    <th>Incentive</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${transactions.map(txn => `
+                                    <tr>
+                                        <td>#${txn.id}</td>
+                                        <td>${(txn.category || 'N/A').replace(/_/g, ' ')}</td>
+                                        <td>₹${(txn.revenue_amount || 0).toLocaleString('en-IN')}</td>
+                                        <td class="status-${status}"><strong>₹${(txn.incentive_amount || 0).toLocaleString('en-IN')}</strong></td>
+                                        <td>${txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-IN') : 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        }
+        
+        function toggleTransactions(rowId) {
+            const row = document.getElementById(rowId);
+            const icon = document.getElementById('icon-' + rowId);
+            if (row.classList.contains('show')) {
+                row.classList.remove('show');
+                icon.classList.remove('fa-minus');
+                icon.classList.add('fa-plus');
+            } else {
+                row.classList.add('show');
+                icon.classList.remove('fa-plus');
+                icon.classList.add('fa-minus');
+            }
+        }
+        
+        function toggleStatusSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const icon = document.getElementById('icon-' + sectionId);
+            if (section.classList.contains('show')) {
+                section.classList.remove('show');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                section.classList.add('show');
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+        
+        function updateStats(data) {
+            const counts = { promoter: 0, team_leader: 0, zonal_manager: 0, director: 0 };
+            data.forEach(d => {
+                if (counts.hasOwnProperty(d.role)) counts[d.role]++;
+            });
+            
+            document.getElementById('statPromoters').textContent = counts.promoter;
+            document.getElementById('statTeamLeaders').textContent = counts.team_leader;
+            document.getElementById('statZonalManagers').textContent = counts.zonal_manager;
+            document.getElementById('statDirectors').textContent = counts.director;
+        }
+        
+        function showAddMemberModal() {
+            document.getElementById('addUserId').value = '';
+            document.getElementById('addRole').value = 'promoter';
+            document.getElementById('addParentId').value = '';
+            new bootstrap.Modal(document.getElementById('addMemberModal')).show();
+        }
+        
+        async function submitAddMember() {
+            let userId = document.getElementById('addUserId').value.trim().toUpperCase();
+            const role = document.getElementById('addRole').value;
+            const parentId = document.getElementById('addParentId').value;
+            
+            if (!userId) {
+                alert('Please enter a user ID');
+                return;
+            }
+            
+            if (!userId.startsWith('MNR')) {
+                userId = 'MNR' + userId;
+            }
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch('/api/v1/myntreal/zynova/members', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        role: role,
+                        parent_id: parentId ? parseInt(parentId) : null
+                    })
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Failed to add member');
+                }
+                
+                bootstrap.Modal.getInstance(document.getElementById('addMemberModal')).hide();
+                alert('VGK4U member added successfully!');
+                loadMembers();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        function showPromoteModal(memberId, memberName, currentRole) {
+            document.getElementById('promoteMemberId').value = memberId;
+            document.getElementById('promoteMemberName').value = memberName;
+            document.getElementById('promoteCurrentRole').value = currentRole.replace(/_/g, ' ');
+            
+            const select = document.getElementById('promoteNewRole');
+            select.innerHTML = '';
+            
+            const roles = ['team_leader', 'zonal_manager', 'director'];
+            const roleIndex = roles.indexOf(currentRole);
+            
+            roles.slice(roleIndex + 1).forEach(role => {
+                const option = document.createElement('option');
+                option.value = role;
+                option.textContent = role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                select.appendChild(option);
+            });
+            
+            new bootstrap.Modal(document.getElementById('promoteModal')).show();
+        }
+        
+        async function submitPromotion() {
+            const memberId = document.getElementById('promoteMemberId').value;
+            const newRole = document.getElementById('promoteNewRole').value;
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch(`/api/v1/myntreal/zynova/members/${memberId}/promote`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ new_role: newRole })
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Failed to promote member');
+                }
+                
+                bootstrap.Modal.getInstance(document.getElementById('promoteModal')).hide();
+                alert('Member promoted successfully!');
+                loadMembers();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        let currentViewMember = null;
+        
+        async function viewMember(memberId) {
+            const modal = new bootstrap.Modal(document.getElementById('viewMemberModal'));
+            const content = document.getElementById('viewMemberContent');
+            content.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Loading member details...</p>
+                </div>`;
+            modal.show();
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch(`/api/v1/myntreal/zynova/members/${memberId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load member details');
+                
+                const result = await response.json();
+                const member = result.data;
+                currentViewMember = member;
+                
+                const initials = (member.user_name || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                const statusBadge = member.is_active 
+                    ? '<span class="badge bg-success">Active</span>'
+                    : '<span class="badge bg-danger">Deactivated</span>';
+                
+                const re = member.real_estate || {};
+                const ins = member.insurance || {};
+                const reEarnings = re.earnings || {};
+                const insEarnings = ins.earnings || {};
+                
+                currentViewMember.real_estate_role = re.role;
+                currentViewMember.insurance_role = ins.role;
+                currentViewMember.real_estate_upline_id = re.upline?.id || '';
+                currentViewMember.insurance_upline_id = ins.upline?.id || '';
+                
+                content.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-4 text-center border-end">
+                            <div class="tree-avatar-sm mx-auto mb-3" style="width:64px;height:64px;font-size:24px;background:linear-gradient(135deg, #6366f1, #4f46e5);">${initials}</div>
+                            <h5 class="mb-1">${member.user_name || 'Unknown'}</h5>
+                            <p class="text-muted mb-2">${member.user_id || '-'}</p>
+                            ${statusBadge}
+                            <hr>
+                            <div class="text-start small">
+                                <p><strong>Joined:</strong> ${member.joined_at ? new Date(member.joined_at).toLocaleDateString('en-IN') : '-'}</p>
+                                ${member.deactivation_date ? `<p class="text-danger"><strong>Deactivated:</strong> ${new Date(member.deactivation_date).toLocaleDateString('en-IN')}</p>` : ''}
+                                ${member.deactivation_reason ? `<p class="text-danger"><strong>Reason:</strong> ${member.deactivation_reason}</p>` : ''}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <h6 class="text-primary mb-3"><i class="fas fa-building me-2"></i>VGK Real Dreams (Real Estate)</h6>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body py-2">
+                                            <small class="text-muted">Role</small>
+                                            <p class="mb-0 fw-bold">${re.role_display || re.role || '-'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body py-2">
+                                            <small class="text-muted">Revenue</small>
+                                            <p class="mb-0 fw-bold text-success">₹${(re.self_revenue || 0).toLocaleString('en-IN')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-4"><small class="text-muted">Team Revenue:</small> <strong>₹${(re.team_revenue || 0).toLocaleString('en-IN')}</strong></div>
+                                <div class="col-4"><small class="text-muted">Team Count:</small> <strong>${re.team_count || 0}</strong></div>
+                                <div class="col-4"><small class="text-muted">Sponsor:</small> <strong>${re.upline?.name || re.upline?.id || '-'}</strong></div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <h6 class="text-info mb-3"><i class="fas fa-shield-alt me-2"></i>VGK Care (Insurance)</h6>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body py-2">
+                                            <small class="text-muted">Role</small>
+                                            <p class="mb-0 fw-bold">${ins.role_display || ins.role || '-'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body py-2">
+                                            <small class="text-muted">Revenue</small>
+                                            <p class="mb-0 fw-bold text-success">₹${(ins.self_revenue || 0).toLocaleString('en-IN')}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-4"><small class="text-muted">Team Revenue:</small> <strong>₹${(ins.team_revenue || 0).toLocaleString('en-IN')}</strong></div>
+                                <div class="col-4"><small class="text-muted">Team Count:</small> <strong>${ins.team_count || 0}</strong></div>
+                                <div class="col-4"><small class="text-muted">Sponsor:</small> <strong>${ins.upline?.name || ins.upline?.id || '-'}</strong></div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <h6 class="mb-3"><i class="fas fa-money-bill-wave me-2"></i>Income Summary</h6>
+                            <div class="row">
+                                <div class="col-3 text-center">
+                                    <div class="income-badge income-pending w-100 py-2">Pending</div>
+                                    <strong>₹${((reEarnings.pending || 0) + (insEarnings.pending || 0)).toLocaleString('en-IN')}</strong>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <div class="income-badge income-approved w-100 py-2">Approved</div>
+                                    <strong>₹${((reEarnings.approved || 0) + (insEarnings.approved || 0)).toLocaleString('en-IN')}</strong>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <div class="income-badge income-disbursed w-100 py-2">Disbursed</div>
+                                    <strong>₹${((reEarnings.disbursed || 0) + (insEarnings.disbursed || 0)).toLocaleString('en-IN')}</strong>
+                                </div>
+                                <div class="col-3 text-center">
+                                    <div class="income-badge income-total w-100 py-2">Total</div>
+                                    <strong>₹${((reEarnings.pending || 0) + (reEarnings.approved || 0) + (reEarnings.disbursed || 0) + (insEarnings.pending || 0) + (insEarnings.approved || 0) + (insEarnings.disbursed || 0)).toLocaleString('en-IN')}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                
+                const statusBtn = document.getElementById('viewStatusBtn');
+                if (member.is_active) {
+                    statusBtn.innerHTML = '<i class="fas fa-toggle-off me-2"></i>Deactivate';
+                    statusBtn.className = 'btn btn-danger';
+                } else {
+                    statusBtn.innerHTML = '<i class="fas fa-toggle-on me-2"></i>Activate';
+                    statusBtn.className = 'btn btn-success';
+                }
+                
+            } catch (error) {
+                console.error('Error loading member:', error);
+                content.innerHTML = `
+                    <div class="text-center py-4 text-danger">
+                        <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
+                        <p>Failed to load member details. Please try again.</p>
+                    </div>`;
+            }
+        }
+        
+        function openEditFromView() {
+            if (!currentViewMember) return;
+            bootstrap.Modal.getInstance(document.getElementById('viewMemberModal')).hide();
+            setTimeout(() => showEditModal(currentViewMember.id, currentViewMember), 300);
+        }
+        
+        function openStatusFromView() {
+            if (!currentViewMember) return;
+            bootstrap.Modal.getInstance(document.getElementById('viewMemberModal')).hide();
+            setTimeout(() => showStatusModal(currentViewMember.id, currentViewMember.user_name, currentViewMember.is_active), 300);
+        }
+        
+        function showEditModal(memberId, memberData) {
+            document.getElementById('editMemberId').value = memberId;
+            document.getElementById('editMemberName').value = memberData?.user_name || 'Member #' + memberId;
+            document.getElementById('editRealEstateRole').value = memberData?.real_estate_role || 'promoter';
+            document.getElementById('editInsuranceRole').value = memberData?.insurance_role || 'promoter';
+            document.getElementById('editRealEstateUpline').value = memberData?.real_estate_upline_id || '';
+            document.getElementById('editInsuranceUpline').value = memberData?.insurance_upline_id || '';
+            new bootstrap.Modal(document.getElementById('editMemberModal')).show();
+        }
+        
+        async function submitEditMember() {
+            const memberId = document.getElementById('editMemberId').value;
+            const payload = {
+                real_estate_role: document.getElementById('editRealEstateRole').value,
+                insurance_role: document.getElementById('editInsuranceRole').value,
+                real_estate_upline_id: parseInt(document.getElementById('editRealEstateUpline').value) || 0,
+                insurance_upline_id: parseInt(document.getElementById('editInsuranceUpline').value) || 0
+            };
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch(`/api/v1/myntreal/zynova/members/${memberId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Failed to update member');
+                }
+                
+                bootstrap.Modal.getInstance(document.getElementById('editMemberModal')).hide();
+                alert(result.message || 'Member updated successfully!');
+                loadMembers();
+                if (currentView === 'hierarchy') loadHierarchy();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        function showStatusModal(memberId, memberName, isActive) {
+            document.getElementById('statusMemberId').value = memberId;
+            document.getElementById('statusMemberName').value = memberName || 'Member #' + memberId;
+            document.getElementById('statusNewValue').value = isActive ? 'false' : 'true';
+            document.getElementById('statusCurrentValue').value = isActive ? 'Active' : 'Deactivated';
+            document.getElementById('statusReason').value = '';
+            document.getElementById('reasonCharCount').textContent = '0';
+            
+            const header = document.getElementById('statusModalHeader');
+            const title = document.getElementById('statusModalTitle');
+            const btn = document.getElementById('statusSubmitBtn');
+            const warning = document.getElementById('statusWarning');
+            const warningText = document.getElementById('statusWarningText');
+            
+            if (isActive) {
+                header.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                title.innerHTML = '<i class="fas fa-toggle-off me-2"></i>Deactivate Member';
+                btn.className = 'btn btn-danger';
+                btn.innerHTML = '<i class="fas fa-times me-2"></i>Deactivate';
+                warning.className = 'alert alert-danger';
+                warningText.textContent = 'Warning: Deactivating a member will hold their income calculations - they will not be disbursed until reactivated.';
+            } else {
+                header.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
+                title.innerHTML = '<i class="fas fa-toggle-on me-2"></i>Activate Member';
+                btn.className = 'btn btn-success';
+                btn.innerHTML = '<i class="fas fa-check me-2"></i>Activate';
+                warning.className = 'alert alert-success';
+                warningText.textContent = 'This will reactivate the member and resume normal income disbursement processing.';
+            }
+            
+            new bootstrap.Modal(document.getElementById('statusChangeModal')).show();
+        }
+        
+        document.getElementById('statusReason').addEventListener('input', function() {
+            document.getElementById('reasonCharCount').textContent = this.value.length;
+        });
+        
+        async function submitStatusChange() {
+            const memberId = document.getElementById('statusMemberId').value;
+            const newStatus = document.getElementById('statusNewValue').value === 'true';
+            const reason = document.getElementById('statusReason').value.trim();
+            
+            if (reason.length < 10) {
+                alert('Please enter a reason with at least 10 characters.');
+                return;
+            }
+            
+            if (reason.length > 500) {
+                alert('Reason cannot exceed 500 characters.');
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch(`/api/v1/myntreal/zynova/members/${memberId}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        is_active: newStatus,
+                        reason: reason
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.detail || 'Failed to change status');
+                }
+                
+                bootstrap.Modal.getInstance(document.getElementById('statusChangeModal')).hide();
+                alert(result.message || 'Status changed successfully!');
+                loadMembers();
+                if (currentView === 'hierarchy') loadHierarchy();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        let currentView = 'list';
+        
+        function switchView(view) {
+            currentView = view;
+            
+            document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+            document.getElementById('hierarchyViewBtn').classList.toggle('active', view === 'hierarchy');
+            
+            document.getElementById('listContainer').classList.toggle('hidden', view !== 'list');
+            document.getElementById('hierarchyContainer').classList.toggle('active', view === 'hierarchy');
+            document.getElementById('filterPanel').style.display = view === 'list' ? 'block' : 'none';
+            
+            if (view === 'hierarchy') {
+                loadHierarchy();
+            }
+        }
+        
+        async function loadHierarchy() {
+            const spinner = document.getElementById('hierarchySpinner');
+            const treeContainer = document.getElementById('hierarchyTree');
+            spinner.style.display = 'block';
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch('/api/v1/myntreal/zynova/members/hierarchy', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load hierarchy');
+                
+                const result = await response.json();
+                const hierarchy = result.data?.hierarchy || [];
+                
+                if (result.data?.stats) {
+                    document.getElementById('statPromoters').textContent = result.data.stats.promoter || 0;
+                    document.getElementById('statTeamLeaders').textContent = result.data.stats.team_leader || 0;
+                    document.getElementById('statZonalManagers').textContent = result.data.stats.zonal_manager || 0;
+                    document.getElementById('statDirectors').textContent = result.data.stats.director || 0;
+                }
+                
+                if (!hierarchy.length) {
+                    treeContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-sitemap"></i>
+                            <p>No hierarchy data found</p>
+                        </div>`;
+                    return;
+                }
+                
+                treeContainer.innerHTML = renderHierarchyTree(hierarchy, 1);
+            } catch (error) {
+                console.error('Error loading hierarchy:', error);
+                treeContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Failed to load hierarchy. Please try again.</p>
+                    </div>`;
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+        
+        function renderHierarchyTree(nodes, level) {
+            if (!nodes || !nodes.length) return '';
+            
+            return nodes.map(node => {
+                const initials = (node.user_name || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                const roleLabel = (node.role || 'member').replace(/_/g, ' ');
+                const childrenCount = node.children?.length || 0;
+                const hasChildren = childrenCount > 0;
+                const nodeId = `node-${node.id}`;
+                
+                const roleIcons = {
+                    director: '👑',
+                    zonal_manager: '📍',
+                    team_leader: '👔',
+                    promoter: '👤'
+                };
+                
+                const selfRevenue = node.total_revenue || 0;
+                const teamRevenue = node.team_revenue || 0;
+                const incomePending = node.income_pending || 0;
+                const incomeApproved = node.income_approved || 0;
+                const incomeDisbursed = node.income_disbursed || 0;
+                const incomeTotal = node.income_total || 0;
+                
+                const promotion = getPromotionProgress(node.role, selfRevenue, teamRevenue);
+                const canPromote = node.role !== 'director';
+                const indentPx = (level - 1) * 24;
+                
+                return `
+                    <div class="tree-node">
+                        <div class="hierarchy-row role-${node.role}">
+                            <div class="hierarchy-col hierarchy-col-member" style="padding-left: ${indentPx}px;">
+                                ${hasChildren ? `<button class="tree-toggle-btn" onclick="toggleChildren('${nodeId}')"><i class="fas fa-chevron-down" id="icon-${nodeId}"></i></button>` : '<span class="tree-toggle-spacer"></span>'}
+                                <div class="tree-avatar-sm">${initials}</div>
+                                <div class="tree-member-info">
+                                    <div class="tree-name">${roleIcons[node.role] || '👤'} ${node.user_name || 'Unknown'}</div>
+                                    <div class="tree-id">${node.user_id}${hasChildren ? ` (${childrenCount})` : ''}</div>
+                                </div>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-role">
+                                <span class="role-badge role-${node.role}">${roleLabel}</span>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-revenue text-success">₹${formatAmount(selfRevenue)}</div>
+                            <div class="hierarchy-col hierarchy-col-revenue text-info">₹${formatAmount(teamRevenue)}</div>
+                            <div class="hierarchy-col hierarchy-col-progress">
+                                <div class="progress" style="height:6px;width:80px;">
+                                    <div class="progress-bar ${promotion.barClass}" style="width:${promotion.percent}%"></div>
+                                </div>
+                                <small class="text-muted">${promotion.label}</small>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-income">
+                                <span class="income-badge income-pending">₹${formatAmount(incomePending)}</span>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-income">
+                                <span class="income-badge income-approved">₹${formatAmount(incomeApproved)}</span>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-income">
+                                <span class="income-badge income-disbursed">₹${formatAmount(incomeDisbursed)}</span>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-income">
+                                <span class="income-badge income-total">₹${formatAmount(incomeTotal)}</span>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-actions">
+                                <button class="action-btn action-btn-view" onclick="viewMember(${node.id})"><i class="fas fa-eye"></i></button>
+                                ${canPromote ? `<button class="action-btn action-btn-promote" onclick="showPromoteModal(${node.id}, '${node.user_name || 'Member'}', '${node.role}')"><i class="fas fa-arrow-up"></i></button>` : ''}
+                            </div>
+                        </div>
+                        ${hasChildren ? `<div class="tree-children" id="${nodeId}">${renderHierarchyTree(node.children, level + 1)}</div>` : ''}
+                    </div>`;
+            }).join('');
+        }
+        
+        function toggleChildren(nodeId) {
+            const children = document.getElementById(nodeId);
+            const icon = document.getElementById('icon-' + nodeId);
+            if (!children || !icon) return;
+            
+            const isCollapsed = children.classList.contains('collapsed');
+            if (isCollapsed) {
+                children.classList.remove('collapsed');
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                children.classList.add('collapsed');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            }
+        }
+    </script>
+</body>
+</html>

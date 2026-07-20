@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pending Announcements - Admin Panel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      min-height: 100vh;
+      padding: 2rem 0;
+    }
+    .main-container {
+      display: flex;
+      gap: 1.5rem;
+      height: calc(100vh - 4rem);
+    }
+    .queue-panel {
+      background: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+      width: 400px;
+      overflow-y: auto;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .detail-panel {
+      flex: 1;
+      background: white;
+      border-radius: 15px;
+      padding: 2rem;
+      overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    .queue-item {
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .queue-item:hover {
+      border-color: #007bff;
+      background: #f8f9fa;
+    }
+    .queue-item.active {
+      border-color: #007bff;
+      background: #e7f1ff;
+    }
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+    .media-thumbnail {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .media-thumbnail:hover {
+      transform: scale(1.05);
+    }
+    .video-thumbnail {
+      position: relative;
+    }
+    .video-thumbnail::after {
+      content: '\f04b';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 32px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      pointer-events: none;
+    }
+    .media-card {
+      position: relative;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 8px;
+      background: white;
+      transition: all 0.3s;
+    }
+    .media-card.approved {
+      border-color: #28a745;
+      background: #f0f9f4;
+    }
+    .media-card.rejected {
+      border-color: #dc3545;
+      background: #fdf0f1;
+    }
+    .media-status-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      z-index: 10;
+    }
+    .media-status-badge.pending {
+      background: #ffc107;
+      color: #000;
+    }
+    .media-status-badge.approved {
+      background: #28a745;
+      color: white;
+    }
+    .media-status-badge.rejected {
+      background: #dc3545;
+      color: white;
+    }
+    .media-actions {
+      display: flex;
+      gap: 5px;
+      margin-top: 8px;
+    }
+    .submission-status-summary {
+      background: #f8f9fa;
+      border-left: 4px solid #007bff;
+      padding: 12px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .empty-detail {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #aaa;
+    }
+    @media (max-width: 992px) {
+      .main-container {
+        flex-direction: column;
+        height: auto;
+      }
+      .queue-panel {
+        width: 100%;
+        max-height: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-fluid px-4">
+    <div class="main-container">
+      <!-- Queue Panel -->
+      <div class="queue-panel">
+        <h5 class="mb-3"><i class="fas fa-inbox me-2"></i>Pending Queue</h5>
+        <div id="queueList"></div>
+      </div>
+
+      <!-- Detail Panel -->
+      <div class="detail-panel">
+        <div id="detailContent" class="empty-detail">
+          <i class="fas fa-hand-pointer fa-4x mb-3"></i>
+          <p class="fs-5">Select a submission from the queue to review</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comment Modal -->
+  <div class="modal fade" id="commentModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="commentModalTitle">Add Comment</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <textarea class="form-control" id="commentText" rows="4" placeholder="Enter your comment (optional for approval, required for rejection)"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmCommentBtn">Confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Editor Modal -->
+  <div class="modal fade" id="imageEditorModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="fas fa-magic me-2"></i>Edit Image</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-8">
+              <div class="text-center mb-3">
+                <canvas id="imageEditorCanvas" style="max-width:100%; border:2px solid #ddd; border-radius:8px;"></canvas>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card">
+                <div class="card-body">
+                  <h6 class="mb-3"><i class="fas fa-sliders-h me-2"></i>Adjustments</h6>
+                  
+                  <div class="mb-3">
+                    <label class="form-label">Brightness</label>
+                    <input type="range" class="form-range" id="brightnessSlider" min="-100" max="100" value="0">
+                    <small class="text-muted" id="brightnessValue">0</small>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label">Contrast</label>
+                    <input type="range" class="form-range" id="contrastSlider" min="-100" max="100" value="0">
+                    <small class="text-muted" id="contrastValue">0</small>
+                  </div>
+
+                  <div class="mb-3">
+                    <label class="form-label">Filter</label>
+                    <select class="form-select" id="filterSelect">
+                      <option value="none">None</option>
+                      <option value="grayscale">Grayscale</option>
+                      <option value="sepia">Sepia</option>
+                      <option value="vintage">Vintage</option>
+                    </select>
+                  </div>
+
+                  <hr>
+
+                  <h6 class="mb-3"><i class="fas fa-crop me-2"></i>Crop Image</h6>
+                  
+                  <div class="mb-3">
+                    <label class="form-label">Aspect Ratio</label>
+                    <select class="form-select" id="cropAspectRatio">
+                      <option value="free">Free</option>
+                      <option value="1">Square (1:1)</option>
+                      <option value="1.7778">Landscape (16:9)</option>
+                      <option value="0.8">Portrait (4:5)</option>
+                    </select>
+                  </div>
+
+                  <button class="btn btn-outline-info w-100 mb-2" id="startCrop">
+                    <i class="fas fa-crop me-2"></i>Start Crop
+                  </button>
+
+                  <div id="cropActions" style="display:none;">
+                    <button class="btn btn-success w-100 mb-2" id="applyCrop">
+                      <i class="fas fa-check me-2"></i>Apply Crop
+                    </button>
+                    <button class="btn btn-warning w-100 mb-2" id="cancelCrop">
+                      <i class="fas fa-times me-2"></i>Cancel Crop
+                    </button>
+                  </div>
+
+                  <hr>
+
+                  <h6 class="mb-3"><i class="fas fa-image me-2"></i>Logo/Watermark</h6>
+                  
+                  <div class="mb-3">
+                    <label class="btn btn-outline-primary w-100">
+                      <i class="fas fa-upload me-2"></i>Upload Logo
+                      <input type="file" id="logoUpload" style="display:none;" accept="image/*">
+                    </label>
+                  </div>
+
+                  <button class="btn btn-outline-danger w-100 mb-3" id="removeLogo" style="display:none;">
+                    <i class="fas fa-times me-2"></i>Remove Logo
+                  </button>
+
+                  <small class="text-muted d-block mb-3">
+                    <i class="fas fa-info-circle"></i> Drag logo on canvas to reposition
+                  </small>
+
+                  <hr>
+
+                  <button class="btn btn-outline-secondary w-100 mb-2" id="resetEdits">
+                    <i class="fas fa-undo me-2"></i>Reset All
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="saveEditedImage">
+            <i class="fas fa-save me-2"></i>Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Inject sessionToken into sessionStorage for module access
+    if (typeof sessionToken !== 'undefined') {
+      sessionStorage.setItem('session_token', sessionToken);
+    }
+  </script>
+  <script type="module">
+    import { feedbackApi, showToast, showSpinner, showEmptyState, formatDate, showMediaLightbox } from '/shared/feedback/feedbackShared.js';
+    import { ImageEditor } from '/shared/feedback/imageEditor.js';
+
+    let pendingSubmissions = [];
+    let selectedSubmission = null;
+    let pendingAction = null;
+    let currentImageEditor = null;
+    let currentEditingMedia = null;
+
+    // Load pending submissions on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadPendingSubmissions();
+      initializeEventListeners();
+    });
+
+    async function loadPendingSubmissions() {
+      const queueContainer = document.getElementById('queueList');
+      showSpinner(queueContainer);
+
+      try {
+        pendingSubmissions = await feedbackApi.getPendingSubmissions();
+        renderQueue();
+      } catch (error) {
+        console.error('Error loading pending submissions:', error);
+        showToast('Failed to load pending submissions', 'error');
+        queueContainer.innerHTML = '<div class="alert alert-danger">Failed to load pending submissions.</div>';
+      }
+    }
+
+    async function reloadCurrentSubmission() {
+      if (!selectedSubmission) return;
+      
+      try {
+        pendingSubmissions = await feedbackApi.getPendingSubmissions();
+        
+        selectedSubmission = pendingSubmissions.find(s => s.id === selectedSubmission.id);
+        
+        renderQueue();
+        if (selectedSubmission) {
+          renderDetail();
+        }
+      } catch (error) {
+        console.error('Error reloading submission:', error);
+      }
+    }
+
+    function renderQueue() {
+      const container = document.getElementById('queueList');
+
+      if (pendingSubmissions.length === 0) {
+        showEmptyState(container, 'No pending submissions', 'check-circle');
+        return;
+      }
+
+      container.innerHTML = pendingSubmissions.map(submission => `
+        <div class="queue-item" data-id="${submission.id}" onclick="selectSubmission(${submission.id})">
+          <div class="fw-bold mb-1">${submission.title}</div>
+          <div class="text-muted small">
+            <i class="fas fa-user me-1"></i>${submission.user_name || 'User #' + submission.user_id}
+          </div>
+          <div class="text-muted small">
+            <i class="fas fa-clock me-1"></i>${formatDate(submission.submitted_at || submission.created_at)}
+          </div>
+          ${submission.media && submission.media.length > 0 
+            ? `<div class="text-primary small mt-1">
+                 <i class="fas fa-paperclip me-1"></i>${submission.media.length} file(s)
+               </div>`
+            : ''}
+        </div>
+      `).join('');
+
+      // Make selectSubmission available globally
+      window.selectSubmission = (id) => {
+        selectedSubmission = pendingSubmissions.find(s => s.id === id);
+        if (selectedSubmission) {
+          renderDetail();
+          // Highlight selected item
+          document.querySelectorAll('.queue-item').forEach(item => {
+            item.classList.toggle('active', item.dataset.id == id);
+          });
+        }
+      };
+    }
+
+    function renderDetail() {
+      if (!selectedSubmission) return;
+
+      const container = document.getElementById('detailContent');
+      // Calculate media status summary
+      const approvedCount = selectedSubmission.media?.filter(m => m.media_status === 'approved').length || 0;
+      const rejectedCount = selectedSubmission.media?.filter(m => m.media_status === 'rejected').length || 0;
+      const pendingCount = selectedSubmission.media?.filter(m => m.media_status === 'pending').length || 0;
+      const totalCount = selectedSubmission.media?.length || 0;
+
+      const mediaHtml = selectedSubmission.media && selectedSubmission.media.length > 0
+        ? `<div class="media-grid">
+             ${selectedSubmission.media.map((m, idx) => {
+               const statusClass = m.media_status || 'pending';
+               const isApproved = statusClass === 'approved';
+               const isRejected = statusClass === 'rejected';
+               const isPending = statusClass === 'pending';
+               
+               return `<div class="media-card ${statusClass}">
+                 <div class="media-status-badge ${statusClass}">
+                   ${statusClass}
+                 </div>
+                 ${m.media_type === 'video'
+                   ? `<div class="video-thumbnail" onclick="viewMedia()">
+                        <video class="media-thumbnail" src="${m.file_path + (m.file_path.includes('#') ? '' : '#t=0.001')}" preload="metadata" muted playsinline></video>
+                      </div>`
+                   : `<img class="media-thumbnail" src="${m.file_path}" onclick="viewMedia()">`
+                 }
+                 <div class="media-actions">
+                   ${isPending ? `
+                     <button class="btn btn-sm btn-success flex-fill" 
+                             onclick="approveMedia(${m.id})">
+                       <i class="fas fa-check"></i> Approve
+                     </button>
+                     <button class="btn btn-sm btn-danger flex-fill" 
+                             onclick="rejectMedia(${m.id})">
+                       <i class="fas fa-times"></i> Reject
+                     </button>
+                     ${m.media_type === 'photo' ? `
+                       <button class="btn btn-sm btn-primary" 
+                               onclick="editImage(${m.id}, '${m.file_path}')"
+                               title="Edit Image">
+                         <i class="fas fa-magic"></i>
+                       </button>
+                     ` : ''}
+                   ` : `
+                     <button class="btn btn-sm btn-secondary flex-fill" 
+                             onclick="resetMediaDecision(${m.id})"
+                             title="Reset to pending">
+                       <i class="fas fa-undo"></i> Reset
+                     </button>
+                   `}
+                 </div>
+                 ${m.decision_comment ? `
+                   <div class="mt-2 small text-muted">
+                     <i class="fas fa-comment"></i> ${m.decision_comment}
+                   </div>
+                 ` : ''}
+               </div>`;
+             }).join('')}
+           </div>`
+        : '';
+
+      container.innerHTML = `
+        <div class="mb-4">
+          <h3 class="mb-3">${selectedSubmission.title}</h3>
+          <div class="d-flex gap-3 mb-3 text-muted">
+            <span><i class="fas fa-tag me-1"></i>${selectedSubmission.category?.category_name || 'General'}</span>
+            <span><i class="fas fa-user me-1"></i>${selectedSubmission.user_name || 'User #' + selectedSubmission.user_id}</span>
+            <span><i class="fas fa-clock me-1"></i>${formatDate(selectedSubmission.submitted_at || selectedSubmission.created_at)}</span>
+          </div>
+        </div>
+
+        ${totalCount > 0 ? `
+          <div class="submission-status-summary">
+            <h6 class="mb-2"><i class="fas fa-chart-pie me-2"></i>Media Approval Status</h6>
+            <div class="d-flex gap-3">
+              <span class="badge bg-success">${approvedCount} Approved</span>
+              <span class="badge bg-danger">${rejectedCount} Rejected</span>
+              <span class="badge bg-warning text-dark">${pendingCount} Pending</span>
+              <span class="badge bg-secondary">${totalCount} Total</span>
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="mb-4">
+          <h5>Description</h5>
+          <p>${selectedSubmission.description || 'No description provided'}</p>
+        </div>
+
+        ${mediaHtml ? `
+          <div class="mb-4">
+            <h5>Attachments - Individual Approval</h5>
+            <p class="text-muted small mb-3">
+              <i class="fas fa-info-circle"></i> Approve or reject each photo/video individually
+            </p>
+            ${mediaHtml}
+          </div>
+        ` : ''}
+
+        <div class="d-flex gap-2 mt-4">
+          ${pendingCount > 0 ? `
+            <button class="btn btn-success flex-fill" onclick="approveAllPending()">
+              <i class="fas fa-check-double me-1"></i>Approve All Pending (${pendingCount})
+            </button>
+            <button class="btn btn-danger flex-fill" onclick="rejectAllPending()">
+              <i class="fas fa-times-circle me-1"></i>Reject All Pending (${pendingCount})
+            </button>
+          ` : `
+            <div class="mb-3 alert alert-info text-center">
+              <i class="fas fa-info-circle me-2"></i>
+              All media has been reviewed. Ready for final decision.
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-success btn-lg flex-fill" onclick="finalApproveSubmission()">
+                <i class="fas fa-check-circle me-2"></i>Approve Submission
+              </button>
+              <button class="btn btn-danger btn-lg flex-fill" onclick="finalRejectSubmission()">
+                <i class="fas fa-times-circle me-2"></i>Reject Submission
+              </button>
+            </div>
+          `}
+        </div>
+      `;
+
+      // Make handlers available globally
+      window.handleApprove = () => {
+        pendingAction = 'approve';
+        document.getElementById('commentModalTitle').textContent = 'Approve Submission (Optional Comment)';
+        const modal = new bootstrap.Modal(document.getElementById('commentModal'));
+        modal.show();
+      };
+
+      window.handleReject = () => {
+        pendingAction = 'reject';
+        document.getElementById('commentModalTitle').textContent = 'Reject Submission (Comment Required)';
+        const modal = new bootstrap.Modal(document.getElementById('commentModal'));
+        modal.show();
+      };
+
+      window.viewMedia = () => {
+        if (selectedSubmission && selectedSubmission.media && selectedSubmission.media.length > 0) {
+          showMediaLightbox(selectedSubmission.media);
+        }
+      };
+
+      window.editImage = async (mediaId, imagePath) => {
+        currentEditingMedia = selectedSubmission.media.find(m => m.id === mediaId);
+        if (!currentEditingMedia) return;
+
+        const modal = new bootstrap.Modal(document.getElementById('imageEditorModal'));
+        modal.show();
+
+        try {
+          currentImageEditor = new ImageEditor(imagePath, async (blob) => {
+            // Will be called when save is clicked
+          });
+          
+          await currentImageEditor.init('imageEditorCanvas');
+          
+          const brightnessSlider = document.getElementById('brightnessSlider');
+          const contrastSlider = document.getElementById('contrastSlider');
+          const filterSelect = document.getElementById('filterSelect');
+          const startCropBtn = document.getElementById('startCrop');
+          const cropActions = document.getElementById('cropActions');
+          
+          brightnessSlider.value = 0;
+          contrastSlider.value = 0;
+          filterSelect.value = 'none';
+          document.getElementById('brightnessValue').textContent = '0';
+          document.getElementById('contrastValue').textContent = '0';
+          
+          setupImageEditorControls();
+          
+          currentImageEditor.enableCropMode(NaN);
+          startCropBtn.style.display = 'none';
+          cropActions.style.display = 'block';
+          showToast('Drag to select crop area', 'info');
+        } catch (error) {
+          console.error('Error initializing image editor:', error);
+          showToast('Failed to load image editor', 'error');
+          modal.hide();
+        }
+      };
+
+      // Individual media approval functions
+      window.approveMedia = async (mediaId) => {
+        if (!confirm('Approve this media file?')) return;
+        
+        try {
+          showToast('Approving media...', 'info');
+          const token = feedbackApi.getSessionToken ? feedbackApi.getSessionToken() : sessionStorage.getItem('session_token');
+          
+          const res = await fetch(`/api/v1/feedback/media/approve/${mediaId}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: ''
+          });
+          
+          if (!res.ok) throw new Error('Failed to approve media');
+          
+          const result = await res.json();
+          showToast(result.message || 'Media approved successfully', 'success');
+          
+          await reloadCurrentSubmission();
+          renderDetail();
+        } catch (error) {
+          console.error('Error approving media:', error);
+          showToast(error.message || 'Failed to approve media', 'error');
+        }
+      };
+
+      window.rejectMedia = async (mediaId) => {
+        const comment = prompt('Enter reason for rejection (required):');
+        if (!comment || !comment.trim()) {
+          showToast('Rejection comment is required', 'warning');
+          return;
+        }
+        
+        try {
+          showToast('Rejecting media...', 'info');
+          const token = feedbackApi.getSessionToken ? feedbackApi.getSessionToken() : sessionStorage.getItem('session_token');
+          
+          const formData = new URLSearchParams();
+          formData.append('comment', comment.trim());
+          
+          const res = await fetch(`/api/v1/feedback/media/reject/${mediaId}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+          });
+          
+          if (!res.ok) throw new Error('Failed to reject media');
+          
+          const result = await res.json();
+          showToast(result.message || 'Media rejected successfully', 'success');
+          
+          await reloadCurrentSubmission();
+          renderDetail();
+        } catch (error) {
+          console.error('Error rejecting media:', error);
+          showToast(error.message || 'Failed to reject media', 'error');
+        }
+      };
+
+      window.resetMediaDecision = async (mediaId) => {
+        showToast('Reset feature not yet implemented', 'info');
+      };
+
+      window.approveAllPending = async () => {
+        if (!selectedSubmission) return;
+        
+        const pendingMedia = selectedSubmission.media.filter(m => m.media_status === 'pending');
+        if (pendingMedia.length === 0) return;
+        
+        if (!confirm(`Approve all ${pendingMedia.length} pending media files?`)) return;
+        
+        try {
+          showToast(`Approving ${pendingMedia.length} media files...`, 'info');
+          
+          for (const media of pendingMedia) {
+            await window.approveMedia(media.id);
+          }
+          
+          showToast('All pending media approved successfully', 'success');
+        } catch (error) {
+          console.error('Error approving all media:', error);
+          showToast('Failed to approve all media', 'error');
+        }
+      };
+
+      window.rejectAllPending = async () => {
+        if (!selectedSubmission) return;
+        
+        const pendingMedia = selectedSubmission.media.filter(m => m.media_status === 'pending');
+        if (pendingMedia.length === 0) return;
+        
+        const comment = prompt(`Enter reason for rejecting all ${pendingMedia.length} pending media files (required):`);
+        if (!comment || !comment.trim()) {
+          showToast('Rejection comment is required', 'warning');
+          return;
+        }
+        
+        try {
+          showToast(`Rejecting ${pendingMedia.length} media files...`, 'info');
+          const token = feedbackApi.getSessionToken ? feedbackApi.getSessionToken() : sessionStorage.getItem('session_token');
+          
+          for (const media of pendingMedia) {
+            const formData = new URLSearchParams();
+            formData.append('comment', comment.trim());
+            
+            await fetch(`/api/v1/feedback/media/reject/${media.id}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+              },
+              body: formData.toString()
+            });
+          }
+          
+          showToast('All pending media rejected successfully', 'success');
+          await reloadCurrentSubmission();
+          renderDetail();
+        } catch (error) {
+          console.error('Error rejecting all media:', error);
+          showToast('Failed to reject all media', 'error');
+        }
+      };
+
+      window.finalApproveSubmission = async () => {
+        if (!selectedSubmission) return;
+        
+        if (!confirm('Approve this submission and make it visible as an announcement?')) return;
+        
+        try {
+          showToast('Approving submission...', 'info');
+          const token = feedbackApi.getSessionToken ? feedbackApi.getSessionToken() : sessionStorage.getItem('session_token');
+          
+          const res = await fetch(`/api/v1/feedback/approve/${selectedSubmission.id}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || 'Failed to approve submission');
+          }
+          
+          const result = await res.json();
+          showToast(result.message || 'Submission approved successfully!', 'success');
+          
+          await loadPendingSubmissions();
+          selectedSubmission = null;
+          document.getElementById('detailContent').innerHTML = `
+            <div class="empty-detail">
+              <i class="fas fa-check-circle fa-4x mb-3 text-success"></i>
+              <p class="fs-5">Submission approved! Select another from the queue.</p>
+            </div>
+          `;
+        } catch (error) {
+          console.error('Error approving submission:', error);
+          showToast(error.message || 'Failed to approve submission', 'error');
+        }
+      };
+
+      window.finalRejectSubmission = async () => {
+        if (!selectedSubmission) return;
+        
+        const comment = prompt('Enter reason for rejecting this submission (required):');
+        if (!comment || !comment.trim()) {
+          showToast('Rejection comment is required', 'warning');
+          return;
+        }
+        
+        try {
+          showToast('Rejecting submission...', 'info');
+          const token = feedbackApi.getSessionToken ? feedbackApi.getSessionToken() : sessionStorage.getItem('session_token');
+          
+          const formData = new URLSearchParams();
+          formData.append('comment', comment.trim());
+          
+          const res = await fetch(`/api/v1/feedback/reject/${selectedSubmission.id}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
+          });
+          
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.detail || 'Failed to reject submission');
+          }
+          
+          const result = await res.json();
+          showToast(result.message || 'Submission rejected', 'success');
+          
+          await loadPendingSubmissions();
+          selectedSubmission = null;
+          document.getElementById('detailContent').innerHTML = `
+            <div class="empty-detail">
+              <i class="fas fa-times-circle fa-4x mb-3 text-danger"></i>
+              <p class="fs-5">Submission rejected. Select another from the queue.</p>
+            </div>
+          `;
+        } catch (error) {
+          console.error('Error rejecting submission:', error);
+          showToast(error.message || 'Failed to reject submission', 'error');
+        }
+      };
+    }
+
+    function setupImageEditorControls() {
+      const brightnessSlider = document.getElementById('brightnessSlider');
+      const contrastSlider = document.getElementById('contrastSlider');
+      const filterSelect = document.getElementById('filterSelect');
+      const cropAspectRatio = document.getElementById('cropAspectRatio');
+      const startCropBtn = document.getElementById('startCrop');
+      const applyCropBtn = document.getElementById('applyCrop');
+      const cancelCropBtn = document.getElementById('cancelCrop');
+      const cropActions = document.getElementById('cropActions');
+      const logoUpload = document.getElementById('logoUpload');
+      const removeLogo = document.getElementById('removeLogo');
+      const resetEdits = document.getElementById('resetEdits');
+
+      brightnessSlider.value = 0;
+      contrastSlider.value = 0;
+      filterSelect.value = 'none';
+
+      brightnessSlider.oninput = (e) => {
+        currentImageEditor.setBrightness(e.target.value);
+        document.getElementById('brightnessValue').textContent = e.target.value;
+      };
+
+      contrastSlider.oninput = (e) => {
+        currentImageEditor.setContrast(e.target.value);
+        document.getElementById('contrastValue').textContent = e.target.value;
+      };
+
+      filterSelect.onchange = (e) => {
+        currentImageEditor.setFilter(e.target.value);
+      };
+
+      startCropBtn.onclick = () => {
+        const aspectValue = cropAspectRatio.value;
+        const aspectRatio = aspectValue === 'free' ? NaN : parseFloat(aspectValue);
+        
+        currentImageEditor.enableCropMode(aspectRatio);
+        startCropBtn.style.display = 'none';
+        cropActions.style.display = 'block';
+        showToast('Crop mode enabled - drag to select area', 'info');
+      };
+
+      applyCropBtn.onclick = () => {
+        currentImageEditor.applyCrop(() => {
+          brightnessSlider.value = 0;
+          contrastSlider.value = 0;
+          filterSelect.value = 'none';
+          document.getElementById('brightnessValue').textContent = '0';
+          document.getElementById('contrastValue').textContent = '0';
+          
+          startCropBtn.style.display = 'block';
+          cropActions.style.display = 'none';
+          showToast('Crop applied successfully', 'success');
+        });
+      };
+
+      cancelCropBtn.onclick = () => {
+        currentImageEditor.cancelCrop();
+        startCropBtn.style.display = 'block';
+        cropActions.style.display = 'none';
+        showToast('Crop cancelled', 'info');
+      };
+
+      logoUpload.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          try {
+            await currentImageEditor.uploadLogo(file);
+            removeLogo.style.display = 'block';
+            showToast('Logo added - drag to reposition', 'success');
+          } catch (error) {
+            showToast('Failed to load logo', 'error');
+          }
+        }
+      };
+
+      removeLogo.onclick = () => {
+        currentImageEditor.removeLogo();
+        removeLogo.style.display = 'none';
+        logoUpload.value = '';
+      };
+
+      resetEdits.onclick = () => {
+        currentImageEditor.reset();
+        brightnessSlider.value = 0;
+        contrastSlider.value = 0;
+        filterSelect.value = 'none';
+        document.getElementById('brightnessValue').textContent = '0';
+        document.getElementById('contrastValue').textContent = '0';
+        removeLogo.style.display = 'none';
+        logoUpload.value = '';
+        startCropBtn.style.display = 'block';
+        cropActions.style.display = 'none';
+      };
+    }
+
+    function initializeEventListeners() {
+      const imageEditorModal = document.getElementById('imageEditorModal');
+      if (imageEditorModal) {
+        imageEditorModal.addEventListener('hidden.bs.modal', () => {
+          if (currentImageEditor && currentImageEditor.isCropMode) {
+            currentImageEditor.cancelCrop();
+            const startCropBtn = document.getElementById('startCrop');
+            const cropActions = document.getElementById('cropActions');
+            if (startCropBtn) startCropBtn.style.display = 'block';
+            if (cropActions) cropActions.style.display = 'none';
+          }
+        });
+      }
+
+      const saveEditedImageBtn = document.getElementById('saveEditedImage');
+      if (saveEditedImageBtn) {
+        saveEditedImageBtn.addEventListener('click', async () => {
+          if (!currentImageEditor || !currentEditingMedia) return;
+
+          try {
+            showToast('Saving edited image...', 'info');
+            
+            const blob = await currentImageEditor.getEditedImageBlob();
+            const metadata = currentImageEditor.getEditMetadata();
+            
+            const formData = new FormData();
+            formData.append('file', blob, 'edited_image.jpg');
+            formData.append('edit_metadata', JSON.stringify(metadata));
+
+            const res = await fetch(`/api/v1/feedback/media/replace/${currentEditingMedia.id}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${feedbackApi.getSessionToken ? feedbackApi.getSessionToken() : sessionStorage.getItem('session_token')}`
+              },
+              body: formData
+            });
+
+            if (!res.ok) throw new Error('Failed to save edited image');
+
+            showToast('Image saved successfully!', 'success');
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('imageEditorModal'));
+            modal.hide();
+
+            await reloadCurrentSubmission();
+          } catch (error) {
+            console.error('Error saving edited image:', error);
+            showToast('Failed to save edited image', 'error');
+          }
+        });
+      }
+
+      const confirmCommentBtn = document.getElementById('confirmCommentBtn');
+      if (confirmCommentBtn) {
+        confirmCommentBtn.addEventListener('click', async () => {
+          const comment = document.getElementById('commentText').value.trim();
+
+          if (pendingAction === 'reject' && !comment) {
+            showToast('Comment is required for rejection', 'error');
+            return;
+          }
+
+          try {
+            if (pendingAction === 'approve') {
+              await feedbackApi.approveSubmission(selectedSubmission.id, comment);
+              showToast('Submission approved successfully', 'success');
+            } else if (pendingAction === 'reject') {
+              await feedbackApi.rejectSubmission(selectedSubmission.id, comment);
+              showToast('Submission rejected successfully', 'success');
+            }
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('commentModal'));
+            modal.hide();
+
+            document.getElementById('commentText').value = '';
+
+            await loadPendingSubmissions();
+            
+            document.getElementById('detailContent').innerHTML = `
+              <div class="empty-detail">
+                <i class="fas fa-hand-pointer fa-4x mb-3"></i>
+                <p class="fs-5">Select a submission from the queue to review</p>
+              </div>
+            `;
+            selectedSubmission = null;
+          } catch (error) {
+            console.error('Error processing submission:', error);
+            showToast(error.message || 'Failed to process submission', 'error');
+          }
+        });
+      }
+    }
+
+    // Render media edit grid
+    function renderMediaEditGrid() {
+      const grid = document.getElementById('mediaEditGrid');
+      if (!selectedSubmission || !selectedSubmission.media || selectedSubmission.media.length === 0) {
+        grid.innerHTML = '<div class="col-12 text-center text-muted">No media files</div>';
+        return;
+      }
+
+      // DC Protocol: Safari-compatible video with preload and time fragment for first frame
+      grid.innerHTML = selectedSubmission.media.map((media, index) => `
+        <div class="col-md-4" id="media-${media.id}">
+          <div class="card">
+            <div class="card-body text-center">
+              ${media.media_type === 'video' 
+                ? `<video src="${media.file_path + (media.file_path.includes('#') ? '' : '#t=0.001')}" class="w-100 mb-2" controls playsinline muted preload="metadata" style="max-height:200px;"></video>`
+                : `<img src="${media.file_path}" class="w-100 mb-2" style="max-height:200px;object-fit:cover;">`
+              }
+              <div class="btn-group w-100">
+                <label class="btn btn-sm btn-primary">
+                  <i class="fas fa-exchange-alt"></i> Replace
+                  <input type="file" data-media-id="${media.id}" class="replace-media-input" style="display:none;" accept="${selectedSubmission.submission_type === 'video' ? 'video/*' : 'image/*'}">
+                </label>
+                <button class="btn btn-sm btn-danger delete-media-btn" data-media-id="${media.id}">
+                  <i class="fas fa-trash"></i> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Attach event listeners
+      attachMediaEditListeners();
+    }
+
+    // Attach event listeners for media edit buttons
+    function attachMediaEditListeners() {
+      // Replace media
+      document.querySelectorAll('.replace-media-input').forEach(input => {
+        input.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const mediaId = parseInt(e.target.dataset.mediaId);
+          try {
+            showToast('Replacing media file...', 'info');
+            await feedbackApi.replaceMedia(mediaId, file);
+            showToast('Media file replaced successfully', 'success');
+            
+            // Reload submission and refresh edit grid
+            await reloadCurrentSubmission();
+            renderMediaEditGrid();
+          } catch (error) {
+            console.error('Error replacing media:', error);
+            showToast('Failed to replace media file', 'error');
+          }
+        });
+      });
+
+      // Delete media
+      document.querySelectorAll('.delete-media-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const mediaId = parseInt(e.target.dataset.mediaId);
+          
+          if (!confirm('Are you sure you want to delete this media file?')) return;
+
+          try {
+            await feedbackApi.deleteMedia(mediaId);
+            showToast('Media file deleted successfully', 'success');
+            
+            // Reload submission and refresh edit grid
+            await reloadCurrentSubmission();
+            renderMediaEditGrid();
+            
+            // Update add media button visibility
+            const currentCount = selectedSubmission.media.length;
+            const canAdd = (selectedSubmission.submission_type === 'video' && currentCount < 1) ||
+                           (selectedSubmission.submission_type === 'photo' && currentCount < 5);
+            document.getElementById('addMediaSection').style.display = canAdd ? 'block' : 'none';
+          } catch (error) {
+            console.error('Error deleting media:', error);
+            showToast(error.message || 'Failed to delete media file', 'error');
+          }
+        });
+      });
+    }
+  </script>
+  <!-- [DC-T34] VGK4U audience tabs (auto-mount + jQuery audience injector) -->
+  <script src="/audience-tabs.js"></script>
+</body>
+</html>

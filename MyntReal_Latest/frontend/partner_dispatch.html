@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dispatch Management - DC_PARTNER_001</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .top-header { height: 64px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .page-title { font-size: 18px; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-card .stat-value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-card .stat-label { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        .stat-card.pending { border-left: 4px solid #f59e0b; }
+        .stat-card.transit { border-left: 4px solid #3b82f6; }
+        .stat-card.delivered { border-left: 4px solid #10b981; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .dispatch-table { width: 100%; border-collapse: collapse; }
+        .dispatch-table th, .dispatch-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        .dispatch-table th { background: #f9fafb; font-weight: 600; font-size: 12px; text-transform: uppercase; color: #6b7280; }
+        .dispatch-table tr:hover { background: #f9fafb; }
+        .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-ready { background: #d1fae5; color: #059669; }
+        .status-transit { background: #dbeafe; color: #1d4ed8; }
+        .status-delivered { background: #dcfce7; color: #166534; }
+        .btn-dispatch { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+        .btn-dispatch:hover { background: #059669; }
+        .filter-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-bar input, .filter-bar select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 150px; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #10b981; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        .header-divider { width: 1px; height: 32px; background: #e5e7eb; margin: 0 8px; }
+        .user-info-header { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .user-info-header .user-avatar-sm { width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        @media (max-width: 768px) { .dispatch-table { display: block; overflow-x: auto; } }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div class="top-header">
+            <div class="header-left">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" class="header-logo" onerror="this.style.display='none'">
+                <div class="header-divider"></div>
+                <h1 class="page-title"><i class="fas fa-truck text-success"></i>Dispatch Management</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info-header" id="headerUserInfo">
+                    <div class="user-avatar-sm" id="headerUserInitials">--</div>
+                    <div class="user-info-details">
+                        <span class="user-info-name" id="headerUserName">Loading...</span>
+                        <div class="user-info-meta"><span class="user-info-role" id="headerUserRole">-</span></div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="StaffSidebar.logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="page-header">
+                <div><h1>Dispatch Management</h1><p>Warehouse dispatch operations and delivery tracking</p></div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card pending"><div class="stat-value" id="readyCount">0</div><div class="stat-label">Ready for Dispatch</div></div>
+                <div class="stat-card transit"><div class="stat-value" id="transitCount">0</div><div class="stat-label">In Transit</div></div>
+                <div class="stat-card delivered"><div class="stat-value" id="deliveredCount">0</div><div class="stat-label">Delivered Today</div></div>
+            </div>
+            
+            <div class="filter-bar">
+                <input type="text" id="searchInput" placeholder="Search order/invoice..." onkeyup="filterDispatch()">
+                <select id="statusFilter" onchange="filterDispatch()">
+                    <option value="">All Status</option>
+                    <option value="READY_TO_DISPATCH">Ready to Dispatch</option>
+                    <option value="DISPATCHED">Dispatched</option>
+                    <option value="IN_TRANSIT">In Transit</option>
+                    <option value="DELIVERED">Delivered</option>
+                </select>
+            </div>
+            
+            <div class="card">
+                <div class="card-header"><span><i class="fas fa-truck me-2"></i>Dispatch Queue</span></div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="tableContainer" style="display: none; overflow-x: auto;">
+                        <table class="dispatch-table">
+                            <thead>
+                                <tr>
+                                    <th>Order #</th>
+                                    <th>Invoice #</th>
+                                    <th>Partner</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dispatchTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-truck"></i><h3>No Orders to Dispatch</h3><p>All orders have been processed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="dispatchModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-truck me-2"></i>Dispatch Order</h3><button class="modal-close" onclick="closeModal()">&times;</button></div>
+            <div class="modal-body">
+                <form id="dispatchForm">
+                    <div class="form-group"><label>Transporter/Courier</label><input type="text" id="transporter" placeholder="Transporter name"></div>
+                    <div class="form-group"><label>Tracking Number</label><input type="text" id="trackingNumber" placeholder="AWB/Tracking number"></div>
+                    <div class="form-group"><label>Vehicle Number</label><input type="text" id="vehicleNumber" placeholder="Vehicle registration"></div>
+                    <div class="form-group"><label>Driver Contact</label><input type="text" id="driverContact" placeholder="Driver phone number"></div>
+                    <div class="form-group"><label>Dispatch Notes</label><textarea id="dispatchNotes" rows="2" placeholder="Additional notes"></textarea></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn-dispatch" onclick="confirmDispatch()"><i class="fas fa-truck me-1"></i>Confirm Dispatch</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let allOrders = [];
+        let allPartners = [];
+        let currentOrderId = null;
+        const API_BASE = '/api/v1/partner';
+        
+        function getAuthToken() { return localStorage.getItem('staff_token'); }
+        
+        async function loadData() {
+            try {
+                const partnersRes = await fetch(API_BASE + '/partners', { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
+                if (partnersRes.ok) {
+                    const data = await partnersRes.json();
+                    allPartners = data.data || [];
+                }
+                loadDispatchQueue();
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        async function loadDispatchQueue() {
+            try {
+                document.getElementById('loadingState').style.display = 'flex';
+                document.getElementById('tableContainer').style.display = 'none';
+                
+                const response = await fetch(`${API_BASE}/orders/dispatch-queue`, { headers: { 'Authorization': `Bearer ${getAuthToken()}` } });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    allOrders = result.data || [];
+                    updateStats();
+                    renderTable(allOrders);
+                } else {
+                    allOrders = [];
+                    renderTable([]);
+                }
+            } catch (error) {
+                console.error('Error loading dispatch queue:', error);
+                renderTable([]);
+            }
+        }
+        
+        function updateStats() {
+            const ready = allOrders.filter(o => o.status === 'READY_TO_DISPATCH').length;
+            const transit = allOrders.filter(o => ['DISPATCHED', 'IN_TRANSIT'].includes(o.status)).length;
+            const delivered = allOrders.filter(o => o.status === 'DELIVERED').length;
+            document.getElementById('readyCount').textContent = ready;
+            document.getElementById('transitCount').textContent = transit;
+            document.getElementById('deliveredCount').textContent = delivered;
+        }
+        
+        function renderTable(orders) {
+            document.getElementById('loadingState').style.display = 'none';
+            const tbody = document.getElementById('dispatchTableBody');
+            
+            if (orders.length === 0) {
+                document.getElementById('tableContainer').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('tableContainer').style.display = 'block';
+            
+            tbody.innerHTML = orders.map(o => {
+                const partner = allPartners.find(p => p.id === o.partner_id);
+                const statusClass = getStatusClass(o.status);
+                const canDispatch = o.status === 'READY_TO_DISPATCH';
+                return `
+                    <tr>
+                        <td><strong>${o.order_number}</strong></td>
+                        <td>${o.invoice_number || '-'}</td>
+                        <td>${partner ? partner.partner_name : 'Unknown'}</td>
+                        <td>₹${(o.grand_total || 0).toLocaleString()}</td>
+                        <td><span class="status-badge ${statusClass}">${formatStatus(o.status)}</span></td>
+                        <td>
+                            ${canDispatch ? `<button class="btn-dispatch" onclick="openDispatchModal(${o.id})"><i class="fas fa-truck me-1"></i>Dispatch</button>` : 
+                            o.status === 'DISPATCHED' ? `<button class="btn btn-sm btn-outline-success" onclick="markDelivered(${o.id})"><i class="fas fa-check me-1"></i>Mark Delivered</button>` : '-'}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function getStatusClass(status) {
+            const map = { 'READY_TO_DISPATCH': 'status-ready', 'DISPATCHED': 'status-transit', 'IN_TRANSIT': 'status-transit', 'DELIVERED': 'status-delivered' };
+            return map[status] || 'status-ready';
+        }
+        
+        function formatStatus(status) { return status.replace(/_/g, ' '); }
+        
+        function filterDispatch() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+            
+            let filtered = allOrders.filter(o => {
+                const matchSearch = !search || o.order_number.toLowerCase().includes(search) || (o.invoice_number && o.invoice_number.toLowerCase().includes(search));
+                const matchStatus = !status || o.status === status;
+                return matchSearch && matchStatus;
+            });
+            
+            renderTable(filtered);
+        }
+        
+        function openDispatchModal(orderId) {
+            currentOrderId = orderId;
+            document.getElementById('dispatchForm').reset();
+            document.getElementById('dispatchModal').classList.add('active');
+        }
+        
+        function closeModal() { document.getElementById('dispatchModal').classList.remove('active'); currentOrderId = null; }
+        
+        async function confirmDispatch() {
+            if (!currentOrderId) return;
+            
+            const data = {
+                transporter: document.getElementById('transporter').value || null,
+                tracking_number: document.getElementById('trackingNumber').value || null,
+                vehicle_number: document.getElementById('vehicleNumber').value || null,
+                driver_contact: document.getElementById('driverContact').value || null,
+                notes: document.getElementById('dispatchNotes').value || null
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/orders/${currentOrderId}/dispatch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getAuthToken()}` },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    closeModal();
+                    loadDispatchQueue();
+                    alert('Order dispatched successfully!');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Dispatch failed'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        async function markDelivered(orderId) {
+            if (!confirm('Mark this order as delivered?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/orders/${orderId}/deliver`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                
+                if (response.ok) {
+                    loadDispatchQueue();
+                    alert('Order marked as delivered!');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Update failed'));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => { StaffSidebar.init(); loadData(); });
+    </script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Benefit Analytics - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        
+        .analytics-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .analytics-header {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 15px 15px 0 0;
+        }
+        
+        .metric-box {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        
+        .metric-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 24px;
+            color: white;
+        }
+        
+        .benefit-breakdown {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .referral-income-row {
+            border-left: 4px solid #3b82f6;
+            background: white;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
+        }
+    </style>
+<!-- [DC-T33] VGK4U audience tabs (auto-mount + jQuery audience injector) --><script src="/audience-tabs.js"></script></head>
+<body>
+    <div class="container">
+        <!-- System Overview -->
+        <div class="analytics-card">
+            <div class="analytics-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2 class="mb-0"><i class="bi bi-graph-up"></i> EV Benefit System Analytics</h2>
+                        <p class="mb-0 mt-2 opacity-90">Comprehensive ROI & Benefit Tracking</p>
+                    </div>
+                    <a href="/admin/dashboard" class="btn btn-light">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="metric-box">
+                            <div class="metric-icon" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                <i class="bi bi-gift"></i>
+                            </div>
+                            <h3 id="totalBenefits">0</h3>
+                            <p class="mb-0 text-muted">Total Benefits</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-box">
+                            <div class="metric-icon" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                                <i class="bi bi-cash-coin"></i>
+                            </div>
+                            <h3 id="totalDiscountGiven">₹0</h3>
+                            <p class="mb-0 text-muted">Total Discount Given</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-box">
+                            <div class="metric-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                                <i class="bi bi-wallet2"></i>
+                            </div>
+                            <h3 id="totalCashbackGiven">₹0</h3>
+                            <p class="mb-0 text-muted">Total Cashback</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-box">
+                            <div class="metric-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                                <i class="bi bi-people"></i>
+                            </div>
+                            <h3 id="totalReferralCommission">₹0</h3>
+                            <p class="mb-0 text-muted">Referral Commission</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benefit Type Distribution -->
+        <div class="analytics-card">
+            <div class="analytics-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <h4 class="mb-0"><i class="bi bi-pie-chart"></i> Benefit Type Distribution</h4>
+            </div>
+            <div class="card-body">
+                <div id="benefitDistribution">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Referral Income Analytics -->
+        <div class="analytics-card">
+            <div class="analytics-header" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                <h4 class="mb-0"><i class="bi bi-cash-stack"></i> Referral Income Analytics</h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="text-center p-3 bg-warning bg-opacity-25 rounded">
+                            <h5 id="pendingCommission">₹0</h5>
+                            <small>Pending Commission</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 bg-primary bg-opacity-25 rounded">
+                            <h5 id="approvedCommission">₹0</h5>
+                            <small>Approved (Not Paid)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 bg-success bg-opacity-25 rounded">
+                            <h5 id="paidCommission">₹0</h5>
+                            <small>Total Paid</small>
+                        </div>
+                    </div>
+                </div>
+                <div id="referralDistribution">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Franchise Analytics -->
+        <div class="analytics-card">
+            <div class="analytics-header" style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);">
+                <h4 class="mb-0"><i class="bi bi-building"></i> Franchise Purchase Analytics</h4>
+            </div>
+            <div class="card-body">
+                <div id="franchiseAnalytics">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Fleet Order Analytics -->
+        <div class="analytics-card">
+            <div class="analytics-header" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+                <h4 class="mb-0"><i class="bi bi-truck"></i> Fleet Order Analytics</h4>
+            </div>
+            <div class="card-body">
+                <div id="fleetAnalytics">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Pending Approvals -->
+        <div class="analytics-card">
+            <div class="analytics-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <h4 class="mb-0"><i class="bi bi-clock-history"></i> Pending Approvals</h4>
+            </div>
+            <div class="card-body">
+                <div id="pendingApprovals">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE_URL = '';  // Use relative URLs - frontend proxies to backend
+        const authToken = localStorage.getItem('authToken');
+
+        $(document).ready(function() {
+            if (!authToken) {
+                alert('Admin login required');
+                window.location.href = '/login';
+                return;
+            }
+            loadAnalytics();
+            loadFranchiseAnalytics();
+            loadFleetAnalytics();
+        });
+
+        function loadAnalytics() {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/ev-discount/admin/benefit-analytics`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    // Update main metrics
+                    $('#totalBenefits').text(data.total_benefits || 0);
+                    $('#totalDiscountGiven').text('₹' + (data.total_discount_given || 0).toLocaleString());
+                    $('#totalCashbackGiven').text('₹' + (data.total_cashback_given || 0).toLocaleString());
+                    $('#totalReferralCommission').text('₹' + (data.total_referral_commission || 0).toLocaleString());
+                    
+                    // Benefit distribution
+                    let benefitHtml = '';
+                    if (data.benefit_distribution) {
+                        Object.entries(data.benefit_distribution).forEach(([type, count]) => {
+                            benefitHtml += `
+                                <div class="benefit-breakdown">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>${type.replace('_', ' ')}</strong>
+                                        </div>
+                                        <div>
+                                            <span class="badge bg-primary">${count} uses</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    $('#benefitDistribution').html(benefitHtml || '<p class="text-muted">No benefits used yet</p>');
+                    
+                    // Referral distribution
+                    let referralHtml = '';
+                    if (data.referral_distribution) {
+                        Object.entries(data.referral_distribution).forEach(([type, info]) => {
+                            referralHtml += `
+                                <div class="referral-income-row">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0">${type} Referrals</h6>
+                                            <small class="text-muted">${info.count} transactions</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <h5 class="mb-0">₹${info.total.toLocaleString()}</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    $('#referralDistribution').html(referralHtml || '<p class="text-muted">No referral income yet</p>');
+                    
+                    $('#pendingCommission').text('₹' + (data.pending_commission || 0).toLocaleString());
+                }
+            });
+        }
+
+        function loadFranchiseAnalytics() {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/ev-discount/admin/franchise-purchases`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    let html = '<div class="table-responsive"><table class="table"><thead><tr><th>Code</th><th>Franchisee</th><th>Vehicles</th><th>Amount</th><th>Tier</th><th>Commission</th><th>Status</th></tr></thead><tbody>';
+                    
+                    if (data.franchise_purchases && data.franchise_purchases.length > 0) {
+                        data.franchise_purchases.forEach(p => {
+                            const statusClass = p.status === 'Approved' ? 'success' : p.status === 'Pending' ? 'warning' : 'secondary';
+                            html += `
+                                <tr>
+                                    <td><code>${p.franchise_code}</code></td>
+                                    <td>${p.franchisee_user_id}</td>
+                                    <td>${p.vehicle_count} units</td>
+                                    <td>₹${p.total_amount.toLocaleString()}</td>
+                                    <td><span class="badge bg-info">${p.commission_tier}</span></td>
+                                    <td><strong>₹${p.total_commission.toLocaleString()}</strong></td>
+                                    <td><span class="badge bg-${statusClass}">${p.status}</span></td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        html += '<tr><td colspan="7" class="text-center text-muted">No franchise purchases yet</td></tr>';
+                    }
+                    
+                    html += '</tbody></table></div>';
+                    $('#franchiseAnalytics').html(html);
+                }
+            });
+        }
+
+        function loadFleetAnalytics() {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/ev-discount/admin/fleet-orders`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    let html = '<div class="table-responsive"><table class="table"><thead><tr><th>Order #</th><th>Company</th><th>Quantity</th><th>Value</th><th>Tier</th><th>Commission Pool</th><th>Status</th></tr></thead><tbody>';
+                    
+                    if (data.fleet_orders && data.fleet_orders.length > 0) {
+                        data.fleet_orders.forEach(o => {
+                            const statusClass = o.status === 'Approved' ? 'success' : o.status === 'Pending' ? 'warning' : 'secondary';
+                            html += `
+                                <tr>
+                                    <td><code>${o.fleet_order_number}</code></td>
+                                    <td>${o.company_name}</td>
+                                    <td>${o.quantity} units</td>
+                                    <td>₹${o.final_order_value.toLocaleString()}</td>
+                                    <td><span class="badge bg-info">${o.tier_level}</span></td>
+                                    <td><strong>₹${o.total_commission_pool.toLocaleString()}</strong></td>
+                                    <td><span class="badge bg-${statusClass}">${o.status}</span></td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        html += '<tr><td colspan="7" class="text-center text-muted">No fleet orders yet</td></tr>';
+                    }
+                    
+                    html += '</tbody></table></div>';
+                    $('#fleetAnalytics').html(html);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP - My KYC</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; max-width: 1200px; margin: 0 auto; }
+        
+        .status-banner {
+            padding: 16px 20px; border-radius: 12px; margin-bottom: 24px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .status-pending { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; }
+        .status-submitted { background: #dbeafe; border: 1px solid #3b82f6; color: #1e40af; }
+        .status-approved { background: #d1fae5; border: 1px solid #10b981; color: #065f46; }
+        .status-rejected { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 12px 12px 0 0 !important; padding: 16px 20px; border: none; }
+        .card-header h5 { margin: 0; font-weight: 600; font-size: 16px; }
+        .card-body { padding: 24px; }
+        
+        .form-label { font-weight: 500; color: #374151; margin-bottom: 6px; font-size: 13px; }
+        .form-label .required { color: #dc2626; }
+        .form-control, .form-select { border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+        .form-control:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .form-control:disabled, .form-select:disabled { background: #f9fafb; }
+        
+        .profile-photo-container { text-align: center; margin-bottom: 20px; }
+        .profile-photo { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid #e5e7eb; }
+        .profile-photo-placeholder { width: 120px; height: 120px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+        .profile-photo-placeholder i { font-size: 48px; color: #9ca3af; }
+        
+        .section-divider { border-top: 2px dashed #e5e7eb; margin: 24px 0; }
+        
+        .form-check-input:checked { background-color: #6366f1; border-color: #6366f1; }
+        
+        .btn-primary { background: #6366f1; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 500; }
+        .btn-primary:hover { background: #4f46e5; }
+        .btn-secondary { background: #6b7280; border: none; padding: 12px 24px; border-radius: 8px; }
+        
+        .nav-tabs { border-bottom: 2px solid #e5e7eb; margin-bottom: 24px; }
+        .nav-tabs .nav-link { border: none; color: #6b7280; font-weight: 500; padding: 12px 20px; margin-right: 8px; }
+        .nav-tabs .nav-link.active { color: #6366f1; border-bottom: 3px solid #6366f1; background: transparent; }
+        .nav-tabs .nav-link:hover { color: #4f46e5; }
+        
+        .rejection-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin-top: 12px; }
+        .rejection-box strong { color: #991b1b; }
+        
+        .employee-info { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+        .employee-info-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0f2fe; }
+        .employee-info-item:last-child { border-bottom: none; }
+        .employee-info-label { color: #0369a1; font-size: 13px; }
+        .employee-info-value { color: #0c4a6e; font-weight: 600; }
+        
+        .upload-card {
+            background: #f8fafc;
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .upload-card:hover { border-color: #6366f1; background: #f0f0ff; }
+        .upload-card.uploaded { border-style: solid; border-color: #10b981; background: #f0fdf4; }
+        .upload-card .upload-icon { font-size: 32px; color: #9ca3af; margin-bottom: 8px; }
+        .upload-card.uploaded .upload-icon { color: #10b981; }
+        .upload-card .upload-label { font-weight: 600; color: #374151; margin-bottom: 4px; }
+        .upload-card .upload-status { font-size: 12px; color: #6b7280; margin-bottom: 12px; }
+        .upload-card.uploaded .upload-status { color: #059669; }
+        .upload-card .upload-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .upload-card .upload-actions .btn { padding: 6px 12px; font-size: 12px; }
+        .upload-card.uploading { opacity: 0.7; pointer-events: none; }
+        .upload-card.uploading .upload-icon::before { content: "\\f110"; animation: fa-spin 1s infinite linear; }
+        
+        .document-preview-modal .modal-body { text-align: center; }
+        .document-preview-modal img { max-width: 100%; max-height: 70vh; border-radius: 8px; }
+        .document-preview-modal iframe { width: 100%; height: 70vh; border: none; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div id="statusBanner"></div>
+            
+            <div class="employee-info" id="employeeInfo" style="display: none;">
+                <h6 class="mb-3"><i class="fas fa-user-tie me-2"></i>Employee Information</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="employee-info-item">
+                            <span class="employee-info-label">Employee ID</span>
+                            <span class="employee-info-value" id="empId"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="employee-info-item">
+                            <span class="employee-info-label">Full Name</span>
+                            <span class="employee-info-value" id="empName"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="employee-info-item">
+                            <span class="employee-info-label">KYC Status</span>
+                            <span class="employee-info-value" id="empKycStatus"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <ul class="nav nav-tabs" id="kycTabs">
+                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#personalTab"><i class="fas fa-user me-2"></i>Personal</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#educationTab"><i class="fas fa-graduation-cap me-2"></i>Education</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#addressTab"><i class="fas fa-map-marker-alt me-2"></i>Address</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#documentsTab"><i class="fas fa-id-badge me-2"></i>Documents</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#bankTab"><i class="fas fa-university me-2"></i>Bank</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#emergencyTab"><i class="fas fa-phone-alt me-2"></i>Emergency</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#nomineeTab"><i class="fas fa-user-friends me-2"></i>Nominee</a></li>
+            </ul>
+            
+            <form id="kycForm">
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="personalTab">
+                        <div class="card">
+                            <div class="card-header"><h5><i class="fas fa-user me-2"></i>Personal Details</h5></div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Father's Name <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="fatherName" placeholder="Enter father's full name" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Mother's Name <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="motherName" placeholder="Enter mother's full name" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Spouse Name</label>
+                                        <input type="text" class="form-control" id="spouseName" placeholder="Enter spouse name (if married)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Date of Birth <span class="required">*</span></label>
+                                        <input type="date" class="form-control" id="dateOfBirth" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Gender <span class="required">*</span></label>
+                                        <select class="form-select" id="gender" required>
+                                            <option value="">Select Gender</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Blood Group</label>
+                                        <select class="form-select" id="bloodGroup">
+                                            <option value="">Select Blood Group</option>
+                                            <option value="A+">A+</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B+">B+</option>
+                                            <option value="B-">B-</option>
+                                            <option value="AB+">AB+</option>
+                                            <option value="AB-">AB-</option>
+                                            <option value="O+">O+</option>
+                                            <option value="O-">O-</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Marital Status</label>
+                                        <select class="form-select" id="maritalStatus">
+                                            <option value="">Select Status</option>
+                                            <option value="Single">Single</option>
+                                            <option value="Married">Married</option>
+                                            <option value="Divorced">Divorced</option>
+                                            <option value="Widowed">Widowed</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nationality</label>
+                                        <input type="text" class="form-control" id="nationality" value="Indian" placeholder="Nationality">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Religion</label>
+                                        <select class="form-select" id="religion">
+                                            <option value="">Select Religion</option>
+                                            <option value="Hindu">Hindu</option>
+                                            <option value="Muslim">Muslim</option>
+                                            <option value="Christian">Christian</option>
+                                            <option value="Sikh">Sikh</option>
+                                            <option value="Buddhist">Buddhist</option>
+                                            <option value="Jain">Jain</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="educationTab">
+                        <div class="card">
+                            <div class="card-header"><h5><i class="fas fa-graduation-cap me-2"></i>Educational Qualification</h5></div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Highest Qualification</label>
+                                        <select class="form-select" id="highestQualification">
+                                            <option value="">Select Qualification</option>
+                                            <option value="10th">10th Standard</option>
+                                            <option value="12th">12th Standard</option>
+                                            <option value="Diploma">Diploma</option>
+                                            <option value="Graduate">Graduate (B.A/B.Sc/B.Com)</option>
+                                            <option value="B.Tech/B.E">B.Tech / B.E</option>
+                                            <option value="BBA">BBA</option>
+                                            <option value="BCA">BCA</option>
+                                            <option value="MBA">MBA</option>
+                                            <option value="MCA">MCA</option>
+                                            <option value="M.Tech/M.E">M.Tech / M.E</option>
+                                            <option value="Post Graduate">Post Graduate (M.A/M.Sc/M.Com)</option>
+                                            <option value="PhD">PhD</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Specialization</label>
+                                        <input type="text" class="form-control" id="specialization" placeholder="e.g., Computer Science, Marketing">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Institution Name</label>
+                                        <input type="text" class="form-control" id="institutionName" placeholder="University/College name">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Year of Passing</label>
+                                        <input type="number" class="form-control" id="yearOfPassing" placeholder="e.g., 2020" min="1970" max="2030">
+                                    </div>
+                                </div>
+                                
+                                <div class="section-divider"></div>
+                                <h6 class="mb-3"><i class="fas fa-briefcase me-2"></i>Previous Employment</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Previous Company</label>
+                                        <input type="text" class="form-control" id="previousCompany" placeholder="Last employer name">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Previous Designation</label>
+                                        <input type="text" class="form-control" id="previousDesignation" placeholder="Last job title">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Experience (Years)</label>
+                                        <input type="number" class="form-control" id="previousExperienceYears" placeholder="Total years" min="0" max="50">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="addressTab">
+                        <div class="card">
+                            <div class="card-header"><h5><i class="fas fa-home me-2"></i>Permanent Address</h5></div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Address Line 1 <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="permanentAddressLine1" placeholder="House/Flat No., Building Name" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Address Line 2</label>
+                                        <input type="text" class="form-control" id="permanentAddressLine2" placeholder="Street, Area, Landmark">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">City <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="permanentCity" placeholder="City" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">State <span class="required">*</span></label>
+                                        <select class="form-select" id="permanentState" required>
+                                            <option value="">Select State</option>
+                                            <option value="Andhra Pradesh">Andhra Pradesh</option>
+                                            <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                                            <option value="Assam">Assam</option>
+                                            <option value="Bihar">Bihar</option>
+                                            <option value="Chhattisgarh">Chhattisgarh</option>
+                                            <option value="Goa">Goa</option>
+                                            <option value="Gujarat">Gujarat</option>
+                                            <option value="Haryana">Haryana</option>
+                                            <option value="Himachal Pradesh">Himachal Pradesh</option>
+                                            <option value="Jharkhand">Jharkhand</option>
+                                            <option value="Karnataka">Karnataka</option>
+                                            <option value="Kerala">Kerala</option>
+                                            <option value="Madhya Pradesh">Madhya Pradesh</option>
+                                            <option value="Maharashtra">Maharashtra</option>
+                                            <option value="Manipur">Manipur</option>
+                                            <option value="Meghalaya">Meghalaya</option>
+                                            <option value="Mizoram">Mizoram</option>
+                                            <option value="Nagaland">Nagaland</option>
+                                            <option value="Odisha">Odisha</option>
+                                            <option value="Punjab">Punjab</option>
+                                            <option value="Rajasthan">Rajasthan</option>
+                                            <option value="Sikkim">Sikkim</option>
+                                            <option value="Tamil Nadu">Tamil Nadu</option>
+                                            <option value="Telangana">Telangana</option>
+                                            <option value="Tripura">Tripura</option>
+                                            <option value="Uttar Pradesh">Uttar Pradesh</option>
+                                            <option value="Uttarakhand">Uttarakhand</option>
+                                            <option value="West Bengal">West Bengal</option>
+                                            <option value="Delhi">Delhi</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Pincode <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="permanentPincode" placeholder="Pincode" maxlength="6" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Country</label>
+                                        <input type="text" class="form-control" id="permanentCountry" value="India">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header"><h5><i class="fas fa-map-marker-alt me-2"></i>Current Address</h5></div>
+                            <div class="card-body">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="sameAsPermanent" onchange="copyPermanentAddress()">
+                                    <label class="form-check-label" for="sameAsPermanent">Same as Permanent Address</label>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Address Line 1</label>
+                                        <input type="text" class="form-control" id="currentAddressLine1" placeholder="House/Flat No., Building Name">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Address Line 2</label>
+                                        <input type="text" class="form-control" id="currentAddressLine2" placeholder="Street, Area, Landmark">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">City</label>
+                                        <input type="text" class="form-control" id="currentCity" placeholder="City">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">State</label>
+                                        <select class="form-select" id="currentState">
+                                            <option value="">Select State</option>
+                                            <option value="Andhra Pradesh">Andhra Pradesh</option>
+                                            <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+                                            <option value="Assam">Assam</option>
+                                            <option value="Bihar">Bihar</option>
+                                            <option value="Chhattisgarh">Chhattisgarh</option>
+                                            <option value="Goa">Goa</option>
+                                            <option value="Gujarat">Gujarat</option>
+                                            <option value="Haryana">Haryana</option>
+                                            <option value="Himachal Pradesh">Himachal Pradesh</option>
+                                            <option value="Jharkhand">Jharkhand</option>
+                                            <option value="Karnataka">Karnataka</option>
+                                            <option value="Kerala">Kerala</option>
+                                            <option value="Madhya Pradesh">Madhya Pradesh</option>
+                                            <option value="Maharashtra">Maharashtra</option>
+                                            <option value="Manipur">Manipur</option>
+                                            <option value="Meghalaya">Meghalaya</option>
+                                            <option value="Mizoram">Mizoram</option>
+                                            <option value="Nagaland">Nagaland</option>
+                                            <option value="Odisha">Odisha</option>
+                                            <option value="Punjab">Punjab</option>
+                                            <option value="Rajasthan">Rajasthan</option>
+                                            <option value="Sikkim">Sikkim</option>
+                                            <option value="Tamil Nadu">Tamil Nadu</option>
+                                            <option value="Telangana">Telangana</option>
+                                            <option value="Tripura">Tripura</option>
+                                            <option value="Uttar Pradesh">Uttar Pradesh</option>
+                                            <option value="Uttarakhand">Uttarakhand</option>
+                                            <option value="West Bengal">West Bengal</option>
+                                            <option value="Delhi">Delhi</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Pincode</label>
+                                        <input type="text" class="form-control" id="currentPincode" placeholder="Pincode" maxlength="6">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Country</label>
+                                        <input type="text" class="form-control" id="currentCountry" value="India">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="documentsTab">
+                        <div class="card">
+                            <div class="card-header"><h5><i class="fas fa-id-badge me-2"></i>Identity Documents</h5></div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Aadhar Number <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="aadharNumber" placeholder="XXXX XXXX XXXX" maxlength="12" required>
+                                        <small class="text-muted">12-digit Aadhar number</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">PAN Number <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="panNumber" placeholder="AAAAA0000A" maxlength="10" style="text-transform: uppercase;" required>
+                                        <small class="text-muted">10-character PAN (e.g., ABCDE1234F)</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Voter ID</label>
+                                        <input type="text" class="form-control" id="voterId" placeholder="Voter ID Number">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Passport Number</label>
+                                        <input type="text" class="form-control" id="passportNumber" placeholder="Passport number">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Passport Expiry</label>
+                                        <input type="date" class="form-control" id="passportExpiry">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Driving License Number</label>
+                                        <input type="text" class="form-control" id="drivingLicense" placeholder="DL number">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">DL Expiry Date</label>
+                                        <input type="date" class="form-control" id="dlExpiry">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header"><h5><i class="fas fa-cloud-upload-alt me-2"></i>Upload Documents</h5></div>
+                            <div class="card-body">
+                                <div class="alert alert-info mb-4">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>File Requirements:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Profile Photo & Passport Photo: Max 500 KB, Formats: JPG, PNG</li>
+                                        <li>KYC Documents: Max 1 MB, Formats: JPG, PNG, PDF</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="row g-4" id="documentUploadGrid">
+                                    <div class="col-md-6">
+                                        <div class="upload-card" data-doc-type="profile_photo">
+                                            <div class="upload-icon"><i class="fas fa-user-circle"></i></div>
+                                            <div class="upload-label">Profile Photo</div>
+                                            <div class="upload-status" id="status_profile_photo">Not Uploaded</div>
+                                            <input type="file" class="doc-upload-input" id="upload_profile_photo" accept=".jpg,.jpeg,.png" data-doc-type="profile_photo" style="display:none;">
+                                            <div class="upload-actions">
+                                                <button type="button" class="btn btn-sm btn-outline-primary upload-btn" onclick="document.getElementById('upload_profile_photo').click()">
+                                                    <i class="fas fa-upload me-1"></i>Upload
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-info view-btn" id="view_profile_photo" style="display:none;" onclick="viewDocument('profile_photo')">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-btn" id="delete_profile_photo" style="display:none;" onclick="deleteDocument('profile_photo')">
+                                                    <i class="fas fa-trash me-1"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="upload-card" data-doc-type="passport_photo">
+                                            <div class="upload-icon"><i class="fas fa-passport"></i></div>
+                                            <div class="upload-label">Passport Photo</div>
+                                            <div class="upload-status" id="status_passport_photo">Not Uploaded</div>
+                                            <input type="file" class="doc-upload-input" id="upload_passport_photo" accept=".jpg,.jpeg,.png" data-doc-type="passport_photo" style="display:none;">
+                                            <div class="upload-actions">
+                                                <button type="button" class="btn btn-sm btn-outline-primary upload-btn" onclick="document.getElementById('upload_passport_photo').click()">
+                                                    <i class="fas fa-upload me-1"></i>Upload
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-info view-btn" id="view_passport_photo" style="display:none;" onclick="viewDocument('passport_photo')">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-btn" id="delete_passport_photo" style="display:none;" onclick="deleteDocument('passport_photo')">
+                                                    <i class="fas fa-trash me-1"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="upload-card" data-doc-type="aadhaar_front">
+                                            <div class="upload-icon"><i class="fas fa-id-card"></i></div>
+                                            <div class="upload-label">Aadhaar Front</div>
+                                            <div class="upload-status" id="status_aadhaar_front">Not Uploaded</div>
+                                            <input type="file" class="doc-upload-input" id="upload_aadhaar_front" accept=".jpg,.jpeg,.png,.pdf" data-doc-type="aadhaar_front" style="display:none;">
+                                            <div class="upload-actions">
+                                                <button type="button" class="btn btn-sm btn-outline-primary upload-btn" onclick="document.getElementById('upload_aadhaar_front').click()">
+                                                    <i class="fas fa-upload me-1"></i>Upload
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-info view-btn" id="view_aadhaar_front" style="display:none;" onclick="viewDocument('aadhaar_front')">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-btn" id="delete_aadhaar_front" style="display:none;" onclick="deleteDocument('aadhaar_front')">
+                                                    <i class="fas fa-trash me-1"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="upload-card" data-doc-type="aadhaar_back">
+                                            <div class="upload-icon"><i class="fas fa-id-card-alt"></i></div>
+                                            <div class="upload-label">Aadhaar Back</div>
+                                            <div class="upload-status" id="status_aadhaar_back">Not Uploaded</div>
+                                            <input type="file" class="doc-upload-input" id="upload_aadhaar_back" accept=".jpg,.jpeg,.png,.pdf" data-doc-type="aadhaar_back" style="display:none;">
+                                            <div class="upload-actions">
+                                                <button type="button" class="btn btn-sm btn-outline-primary upload-btn" onclick="document.getElementById('upload_aadhaar_back').click()">
+                                                    <i class="fas fa-upload me-1"></i>Upload
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-info view-btn" id="view_aadhaar_back" style="display:none;" onclick="viewDocument('aadhaar_back')">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-btn" id="delete_aadhaar_back" style="display:none;" onclick="deleteDocument('aadhaar_back')">
+                                                    <i class="fas fa-trash me-1"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="upload-card" data-doc-type="pan_card">
+                                            <div class="upload-icon"><i class="fas fa-credit-card"></i></div>
+                                            <div class="upload-label">PAN Card</div>
+                                            <div class="upload-status" id="status_pan_card">Not Uploaded</div>
+                                            <input type="file" class="doc-upload-input" id="upload_pan_card" accept=".jpg,.jpeg,.png,.pdf" data-doc-type="pan_card" style="display:none;">
+                                            <div class="upload-actions">
+                                                <button type="button" class="btn btn-sm btn-outline-primary upload-btn" onclick="document.getElementById('upload_pan_card').click()">
+                                                    <i class="fas fa-upload me-1"></i>Upload
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-info view-btn" id="view_pan_card" style="display:none;" onclick="viewDocument('pan_card')">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-btn" id="delete_pan_card" style="display:none;" onclick="deleteDocument('pan_card')">
+                                                    <i class="fas fa-trash me-1"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="upload-card" data-doc-type="bank_passbook">
+                                            <div class="upload-icon"><i class="fas fa-book"></i></div>
+                                            <div class="upload-label">Bank Passbook/Statement</div>
+                                            <div class="upload-status" id="status_bank_passbook">Not Uploaded</div>
+                                            <input type="file" class="doc-upload-input" id="upload_bank_passbook" accept=".jpg,.jpeg,.png,.pdf" data-doc-type="bank_passbook" style="display:none;">
+                                            <div class="upload-actions">
+                                                <button type="button" class="btn btn-sm btn-outline-primary upload-btn" onclick="document.getElementById('upload_bank_passbook').click()">
+                                                    <i class="fas fa-upload me-1"></i>Upload
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-info view-btn" id="view_bank_passbook" style="display:none;" onclick="viewDocument('bank_passbook')">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-btn" id="delete_bank_passbook" style="display:none;" onclick="deleteDocument('bank_passbook')">
+                                                    <i class="fas fa-trash me-1"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="upload-card" data-doc-type="cancelled_cheque">
+                                            <div class="upload-icon"><i class="fas fa-money-check-alt"></i></div>
+                                            <div class="upload-label">Cancelled Cheque</div>
+                                            <div class="upload-status" id="status_cancelled_cheque">Not Uploaded</div>
+                                            <input type="file" class="doc-upload-input" id="upload_cancelled_cheque" accept=".jpg,.jpeg,.png,.pdf" data-doc-type="cancelled_cheque" style="display:none;">
+                                            <div class="upload-actions">
+                                                <button type="button" class="btn btn-sm btn-outline-primary upload-btn" onclick="document.getElementById('upload_cancelled_cheque').click()">
+                                                    <i class="fas fa-upload me-1"></i>Upload
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-info view-btn" id="view_cancelled_cheque" style="display:none;" onclick="viewDocument('cancelled_cheque')">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger delete-btn" id="delete_cancelled_cheque" style="display:none;" onclick="deleteDocument('cancelled_cheque')">
+                                                    <i class="fas fa-trash me-1"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="bankTab">
+                        <div class="card">
+                            <div class="card-header"><h5><i class="fas fa-university me-2"></i>Bank Account Details</h5></div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Account Holder Name <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="bankAccountHolder" placeholder="Name as per bank records" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Bank Name <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="bankName" placeholder="e.g., State Bank of India" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Account Number <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="accountNumber" placeholder="Bank account number" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">IFSC Code <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="ifscCode" placeholder="SBIN0001234" maxlength="11" style="text-transform: uppercase;" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Branch Name</label>
+                                        <input type="text" class="form-control" id="bankBranch" placeholder="Branch name">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Account Type</label>
+                                        <select class="form-select" id="accountType">
+                                            <option value="">Select Type</option>
+                                            <option value="Savings">Savings</option>
+                                            <option value="Current">Current</option>
+                                            <option value="Salary">Salary</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">UPI ID</label>
+                                        <input type="text" class="form-control" id="upiId" placeholder="yourname@upi">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="emergencyTab">
+                        <div class="card">
+                            <div class="card-header"><h5><i class="fas fa-phone-alt me-2"></i>Emergency Contact</h5></div>
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Contact Name <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="emergencyName" placeholder="Emergency contact name" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Contact Phone <span class="required">*</span></label>
+                                        <input type="text" class="form-control" id="emergencyPhone" placeholder="10-digit mobile" maxlength="10" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Relationship <span class="required">*</span></label>
+                                        <select class="form-select" id="emergencyRelation" required>
+                                            <option value="">Select Relation</option>
+                                            <option value="Father">Father</option>
+                                            <option value="Mother">Mother</option>
+                                            <option value="Spouse">Spouse</option>
+                                            <option value="Brother">Brother</option>
+                                            <option value="Sister">Sister</option>
+                                            <option value="Friend">Friend</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Contact Address</label>
+                                        <textarea class="form-control" id="emergencyAddress" rows="2" placeholder="Emergency contact's address"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="nomineeTab">
+                        <div class="card">
+                            <div class="card-header"><h5><i class="fas fa-user-friends me-2"></i>Nominee Details</h5></div>
+                            <div class="card-body">
+                                <p class="text-muted mb-4">Nominee is the person who will receive benefits in case of any unfortunate event.</p>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Nominee Name</label>
+                                        <input type="text" class="form-control" id="nomineeName" placeholder="Full name of nominee">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Relationship</label>
+                                        <select class="form-select" id="nomineeRelationship">
+                                            <option value="">Select Relation</option>
+                                            <option value="Father">Father</option>
+                                            <option value="Mother">Mother</option>
+                                            <option value="Spouse">Spouse</option>
+                                            <option value="Son">Son</option>
+                                            <option value="Daughter">Daughter</option>
+                                            <option value="Brother">Brother</option>
+                                            <option value="Sister">Sister</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Date of Birth</label>
+                                        <input type="date" class="form-control" id="nomineeDob">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nominee Phone</label>
+                                        <input type="text" class="form-control" id="nomineePhone" placeholder="10-digit mobile" maxlength="10">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nominee Address</label>
+                                        <textarea class="form-control" id="nomineeAddress" rows="2" placeholder="Nominee's address"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between gap-3 mb-4">
+                    <button type="button" class="btn btn-secondary" onclick="window.history.back()">
+                        <i class="fas fa-arrow-left me-2"></i>Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-paper-plane me-2"></i>Submit KYC for Approval
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="modal fade document-preview-modal" id="documentPreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="previewModalTitle">Document Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="previewModalBody">
+                </div>
+                <div class="modal-footer">
+                    <a href="#" id="previewDownloadLink" class="btn btn-primary" target="_blank">
+                        <i class="fas fa-download me-2"></i>Download
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let currentKyc = null;
+        let currentEmployee = null;
+        let uploadedDocuments = {};
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('My KYC', 'fas fa-id-card');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            await loadMyKYC();
+            await loadUploadedDocuments();
+            initDocumentUploadHandlers();
+        });
+        
+        async function loadUploadedDocuments() {
+            try {
+                const response = await staffFetch('/api/v1/staff/kyc/documents');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    uploadedDocuments = {};
+                    
+                    if (data.documents) {
+                        data.documents.forEach(doc => {
+                            uploadedDocuments[doc.type] = doc;
+                            updateDocumentCard(doc.type, doc);
+                        });
+                    }
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading documents:', error);
+            }
+        }
+        
+        function updateDocumentCard(docType, docInfo) {
+            const card = document.querySelector(`.upload-card[data-doc-type="${docType}"]`);
+            const statusEl = document.getElementById(`status_${docType}`);
+            const viewBtn = document.getElementById(`view_${docType}`);
+            const deleteBtn = document.getElementById(`delete_${docType}`);
+            
+            if (card && docInfo) {
+                card.classList.add('uploaded');
+                const sizeKB = (docInfo.file_size / 1024).toFixed(1);
+                statusEl.innerHTML = `<i class="fas fa-check-circle me-1"></i>Uploaded (${sizeKB} KB)`;
+                viewBtn.style.display = 'inline-block';
+                
+                if (currentEmployee?.kyc_status !== 'approved') {
+                    deleteBtn.style.display = 'inline-block';
+                }
+            } else if (card) {
+                card.classList.remove('uploaded');
+                statusEl.textContent = 'Not Uploaded';
+                viewBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';
+            }
+        }
+        
+        function initDocumentUploadHandlers() {
+            document.querySelectorAll('.doc-upload-input').forEach(input => {
+                input.addEventListener('change', async function(e) {
+                    const file = e.target.files[0];
+                    const docType = this.dataset.docType;
+                    
+                    if (file) {
+                        await uploadDocument(docType, file);
+                    }
+                    
+                    this.value = '';
+                });
+            });
+        }
+        
+        async function uploadDocument(docType, file) {
+            const card = document.querySelector(`.upload-card[data-doc-type="${docType}"]`);
+            const statusEl = document.getElementById(`status_${docType}`);
+            
+            const maxSize = docType === 'profile_photo' ? 500 * 1024 : 1024 * 1024;
+            if (file.size > maxSize) {
+                const maxKB = maxSize / 1024;
+                alert(`File too large. Maximum size: ${maxKB} KB`);
+                return;
+            }
+            
+            card.classList.add('uploading');
+            statusEl.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('document_type', docType);
+                formData.append('file', file);
+                
+                const response = await staffFetch('/api/v1/staff/kyc/upload-document', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    uploadedDocuments[docType] = result.document;
+                    updateDocumentCard(docType, result.document);
+                    card.classList.remove('uploading');
+                } else {
+                    throw new Error(result.detail || 'Upload failed');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Upload error:', error);
+                card.classList.remove('uploading');
+                statusEl.textContent = 'Upload failed';
+                alert(error.message || 'Failed to upload document');
+            }
+        }
+        
+        async function viewDocument(docType) {
+            const doc = uploadedDocuments[docType];
+            if (!doc) return;
+            
+            const url = doc.url;
+            
+            const modal = new bootstrap.Modal(document.getElementById('documentPreviewModal'));
+            const title = document.getElementById('previewModalTitle');
+            const body = document.getElementById('previewModalBody');
+            const downloadLink = document.getElementById('previewDownloadLink');
+            
+            title.textContent = doc.label || docType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            downloadLink.href = '#';
+            downloadLink.onclick = function(e) {
+                e.preventDefault();
+                downloadDocumentWithAuth(url, docType);
+            };
+            
+            body.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading document...</p></div>';
+            modal.show();
+            
+            try {
+                const response = await staffFetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                
+                if (doc.file_format === 'pdf') {
+                    body.innerHTML = `<iframe src="${blobUrl}" style="width:100%;height:70vh;border:none;"></iframe>`;
+                } else {
+                    body.innerHTML = `<img src="${blobUrl}" alt="${docType}" style="max-width:100%;max-height:70vh;display:block;margin:0 auto;">`;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading document:', error);
+                body.innerHTML = `<div class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle fa-3x mb-3"></i><p>Failed to load document</p><small>${error.message}</small></div>`;
+            }
+        }
+        
+        async function downloadDocumentWithAuth(url, filename) {
+            try {
+                const response = await staffFetch(url);
+                if (!response.ok) throw new Error('Download failed');
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Failed to download: ' + error.message);
+            }
+        }
+        
+        async function deleteDocument(docType) {
+            if (!confirm('Are you sure you want to delete this document?')) {
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/kyc/document/${docType}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    delete uploadedDocuments[docType];
+                    updateDocumentCard(docType, null);
+                } else {
+                    throw new Error(result.detail || 'Delete failed');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Delete error:', error);
+                alert(error.message || 'Failed to delete document');
+            }
+        }
+        
+        async function loadMyKYC() {
+            try {
+                const response = await staffFetch('/api/v1/staff/kyc/my');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentKyc = data.kyc;
+                    currentEmployee = data.employee;
+                    
+                    if (currentEmployee) {
+                        document.getElementById('employeeInfo').style.display = 'block';
+                        document.getElementById('empId').textContent = currentEmployee.emp_code || '-';
+                        document.getElementById('empName').textContent = currentEmployee.full_name || '-';
+                        document.getElementById('empKycStatus').textContent = (currentEmployee.kyc_status || 'pending').toUpperCase();
+                    }
+                    
+                    updateStatusBanner(currentEmployee?.kyc_status || 'pending', currentKyc?.rejection_reason);
+                    
+                    if (currentKyc) {
+                        populateForm(currentKyc);
+                    }
+                    
+                    if (currentEmployee?.kyc_status === 'approved') {
+                        disableForm();
+                    }
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading KYC:', error);
+            }
+        }
+        
+        function updateStatusBanner(status, rejectionReason) {
+            const banner = document.getElementById('statusBanner');
+            let html = '';
+            
+            switch(status) {
+                case 'pending':
+                    html = `<div class="status-banner status-pending">
+                        <i class="fas fa-clock fa-lg"></i>
+                        <div>
+                            <strong>KYC Not Submitted</strong>
+                            <p class="mb-0">Please fill in all your details and submit for approval.</p>
+                        </div>
+                    </div>`;
+                    break;
+                case 'submitted':
+                    html = `<div class="status-banner status-submitted">
+                        <i class="fas fa-hourglass-half fa-lg"></i>
+                        <div>
+                            <strong>KYC Under Review</strong>
+                            <p class="mb-0">Your KYC has been submitted and is pending approval from Key Leadership.</p>
+                        </div>
+                    </div>`;
+                    break;
+                case 'approved':
+                    html = `<div class="status-banner status-approved d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fas fa-check-circle fa-lg"></i>
+                            <div>
+                                <strong>KYC Approved</strong>
+                                <p class="mb-0">Your KYC has been verified and approved. You can edit and resubmit if needed.</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-warning btn-sm" onclick="enableEditMode()">
+                            <i class="fas fa-edit me-1"></i>Edit KYC
+                        </button>
+                    </div>`;
+                    break;
+                case 'rejected':
+                    html = `<div class="status-banner status-rejected">
+                        <i class="fas fa-times-circle fa-lg"></i>
+                        <div>
+                            <strong>KYC Rejected</strong>
+                            <p class="mb-0">Please review the feedback and resubmit with corrections.</p>
+                            ${rejectionReason ? `<div class="rejection-box mt-2"><strong>Reason:</strong> ${rejectionReason}</div>` : ''}
+                        </div>
+                    </div>`;
+                    break;
+            }
+            
+            banner.innerHTML = html;
+        }
+        
+        function populateForm(kyc) {
+            // Personal
+            document.getElementById('fatherName').value = kyc.father_name || '';
+            document.getElementById('motherName').value = kyc.mother_name || '';
+            document.getElementById('spouseName').value = kyc.spouse_name || '';
+            document.getElementById('dateOfBirth').value = kyc.date_of_birth || '';
+            document.getElementById('gender').value = kyc.gender || '';
+            document.getElementById('bloodGroup').value = kyc.blood_group || '';
+            document.getElementById('maritalStatus').value = kyc.marital_status || '';
+            document.getElementById('nationality').value = kyc.nationality || 'Indian';
+            document.getElementById('religion').value = kyc.religion || '';
+            
+            // Education
+            document.getElementById('highestQualification').value = kyc.highest_qualification || '';
+            document.getElementById('specialization').value = kyc.specialization || '';
+            document.getElementById('institutionName').value = kyc.institution_name || '';
+            document.getElementById('yearOfPassing').value = kyc.year_of_passing || '';
+            document.getElementById('previousCompany').value = kyc.previous_company || '';
+            document.getElementById('previousDesignation').value = kyc.previous_designation || '';
+            document.getElementById('previousExperienceYears').value = kyc.previous_experience_years || '';
+            
+            // Permanent Address
+            document.getElementById('permanentAddressLine1').value = kyc.permanent_address_line1 || kyc.permanent_address || '';
+            document.getElementById('permanentAddressLine2').value = kyc.permanent_address_line2 || '';
+            document.getElementById('permanentCity').value = kyc.permanent_city || kyc.city || '';
+            document.getElementById('permanentState').value = kyc.permanent_state || kyc.state || '';
+            document.getElementById('permanentPincode').value = kyc.permanent_pincode || kyc.pincode || '';
+            document.getElementById('permanentCountry').value = kyc.permanent_country || 'India';
+            
+            // Current Address
+            document.getElementById('sameAsPermanent').checked = kyc.same_as_permanent || false;
+            document.getElementById('currentAddressLine1').value = kyc.current_address_line1 || kyc.current_address || '';
+            document.getElementById('currentAddressLine2').value = kyc.current_address_line2 || '';
+            document.getElementById('currentCity').value = kyc.current_city || '';
+            document.getElementById('currentState').value = kyc.current_state || '';
+            document.getElementById('currentPincode').value = kyc.current_pincode || '';
+            document.getElementById('currentCountry').value = kyc.current_country || 'India';
+            
+            // Documents
+            document.getElementById('aadharNumber').value = kyc.aadhar_number || '';
+            document.getElementById('panNumber').value = kyc.pan_number || '';
+            document.getElementById('voterId').value = kyc.voter_id || '';
+            document.getElementById('passportNumber').value = kyc.passport_number || '';
+            document.getElementById('passportExpiry').value = kyc.passport_expiry || '';
+            document.getElementById('drivingLicense').value = kyc.driving_license || '';
+            document.getElementById('dlExpiry').value = kyc.dl_expiry || '';
+            
+            // Bank
+            document.getElementById('bankAccountHolder').value = kyc.bank_account_holder || '';
+            document.getElementById('bankName').value = kyc.bank_name || '';
+            document.getElementById('accountNumber').value = kyc.account_number || '';
+            document.getElementById('ifscCode').value = kyc.ifsc_code || '';
+            document.getElementById('bankBranch').value = kyc.bank_branch || '';
+            document.getElementById('accountType').value = kyc.account_type || '';
+            document.getElementById('upiId').value = kyc.upi_id || '';
+            
+            // Emergency
+            document.getElementById('emergencyName').value = kyc.emergency_contact_name || '';
+            document.getElementById('emergencyPhone').value = kyc.emergency_contact_phone || '';
+            document.getElementById('emergencyRelation').value = kyc.emergency_contact_relation || '';
+            document.getElementById('emergencyAddress').value = kyc.emergency_contact_address || '';
+            
+            // Nominee
+            document.getElementById('nomineeName').value = kyc.nominee_name || '';
+            document.getElementById('nomineeRelationship').value = kyc.nominee_relationship || '';
+            document.getElementById('nomineeDob').value = kyc.nominee_dob || '';
+            document.getElementById('nomineePhone').value = kyc.nominee_phone || '';
+            document.getElementById('nomineeAddress').value = kyc.nominee_address || '';
+        }
+        
+        function copyPermanentAddress() {
+            const same = document.getElementById('sameAsPermanent').checked;
+            if (same) {
+                document.getElementById('currentAddressLine1').value = document.getElementById('permanentAddressLine1').value;
+                document.getElementById('currentAddressLine2').value = document.getElementById('permanentAddressLine2').value;
+                document.getElementById('currentCity').value = document.getElementById('permanentCity').value;
+                document.getElementById('currentState').value = document.getElementById('permanentState').value;
+                document.getElementById('currentPincode').value = document.getElementById('permanentPincode').value;
+                document.getElementById('currentCountry').value = document.getElementById('permanentCountry').value;
+            }
+        }
+        
+        let isEditMode = false;
+        
+        function disableForm() {
+            const inputs = document.querySelectorAll('#kycForm input, #kycForm select, #kycForm textarea');
+            inputs.forEach(input => input.disabled = true);
+            document.getElementById('submitBtn').style.display = 'none';
+            
+            // Also hide document delete buttons
+            document.querySelectorAll('[id^="delete_"]').forEach(btn => btn.style.display = 'none');
+        }
+        
+        function enableEditMode() {
+            isEditMode = true;
+            
+            // Enable all form fields
+            const inputs = document.querySelectorAll('#kycForm input, #kycForm select, #kycForm textarea');
+            inputs.forEach(input => input.disabled = false);
+            
+            // Show submit button with updated text
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.style.display = 'inline-flex';
+            submitBtn.innerHTML = '<i class="fas fa-redo me-2"></i>Resubmit KYC for Approval';
+            
+            // Show document delete buttons
+            Object.keys(uploadedDocuments).forEach(docType => {
+                const deleteBtn = document.getElementById(`delete_${docType}`);
+                if (deleteBtn) deleteBtn.style.display = 'inline-block';
+            });
+            
+            // Update status banner to show editing mode
+            const banner = document.getElementById('statusBanner');
+            banner.innerHTML = `<div class="status-banner status-pending">
+                <i class="fas fa-edit fa-lg"></i>
+                <div>
+                    <strong>Editing Approved KYC</strong>
+                    <p class="mb-0">You are editing your previously approved KYC. After saving, it will be resubmitted for approval.</p>
+                </div>
+            </div>`;
+            
+            // Scroll to form
+            document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            alert('Edit mode enabled. Make your changes and click "Resubmit KYC for Approval" when done.');
+        }
+        
+        document.getElementById('kycForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const data = {
+                // Personal
+                father_name: document.getElementById('fatherName').value || null,
+                mother_name: document.getElementById('motherName').value || null,
+                spouse_name: document.getElementById('spouseName').value || null,
+                date_of_birth: document.getElementById('dateOfBirth').value || null,
+                gender: document.getElementById('gender').value || null,
+                blood_group: document.getElementById('bloodGroup').value || null,
+                marital_status: document.getElementById('maritalStatus').value || null,
+                nationality: document.getElementById('nationality').value || null,
+                religion: document.getElementById('religion').value || null,
+                
+                // Education
+                highest_qualification: document.getElementById('highestQualification').value || null,
+                specialization: document.getElementById('specialization').value || null,
+                institution_name: document.getElementById('institutionName').value || null,
+                year_of_passing: parseInt(document.getElementById('yearOfPassing').value) || null,
+                previous_company: document.getElementById('previousCompany').value || null,
+                previous_designation: document.getElementById('previousDesignation').value || null,
+                previous_experience_years: parseInt(document.getElementById('previousExperienceYears').value) || null,
+                
+                // Permanent Address
+                permanent_address_line1: document.getElementById('permanentAddressLine1').value || null,
+                permanent_address_line2: document.getElementById('permanentAddressLine2').value || null,
+                permanent_city: document.getElementById('permanentCity').value || null,
+                permanent_state: document.getElementById('permanentState').value || null,
+                permanent_pincode: document.getElementById('permanentPincode').value || null,
+                permanent_country: document.getElementById('permanentCountry').value || null,
+                
+                // Current Address
+                same_as_permanent: document.getElementById('sameAsPermanent').checked,
+                current_address_line1: document.getElementById('currentAddressLine1').value || null,
+                current_address_line2: document.getElementById('currentAddressLine2').value || null,
+                current_city: document.getElementById('currentCity').value || null,
+                current_state: document.getElementById('currentState').value || null,
+                current_pincode: document.getElementById('currentPincode').value || null,
+                current_country: document.getElementById('currentCountry').value || null,
+                
+                // Documents
+                aadhar_number: document.getElementById('aadharNumber').value || null,
+                pan_number: document.getElementById('panNumber').value?.toUpperCase() || null,
+                voter_id: document.getElementById('voterId').value || null,
+                passport_number: document.getElementById('passportNumber').value || null,
+                passport_expiry: document.getElementById('passportExpiry').value || null,
+                driving_license: document.getElementById('drivingLicense').value || null,
+                dl_expiry: document.getElementById('dlExpiry').value || null,
+                
+                // Bank
+                bank_account_holder: document.getElementById('bankAccountHolder').value || null,
+                bank_name: document.getElementById('bankName').value || null,
+                account_number: document.getElementById('accountNumber').value || null,
+                ifsc_code: document.getElementById('ifscCode').value?.toUpperCase() || null,
+                bank_branch: document.getElementById('bankBranch').value || null,
+                account_type: document.getElementById('accountType').value || null,
+                upi_id: document.getElementById('upiId').value || null,
+                
+                // Emergency
+                emergency_contact_name: document.getElementById('emergencyName').value || null,
+                emergency_contact_phone: document.getElementById('emergencyPhone').value || null,
+                emergency_contact_relation: document.getElementById('emergencyRelation').value || null,
+                emergency_contact_address: document.getElementById('emergencyAddress').value || null,
+                
+                // Nominee
+                nominee_name: document.getElementById('nomineeName').value || null,
+                nominee_relationship: document.getElementById('nomineeRelationship').value || null,
+                nominee_dob: document.getElementById('nomineeDob').value || null,
+                nominee_phone: document.getElementById('nomineePhone').value || null,
+                nominee_address: document.getElementById('nomineeAddress').value || null
+            };
+            
+            try {
+                const response = await staffFetch('/api/v1/staff/kyc/my', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const message = isEditMode 
+                        ? 'KYC resubmitted successfully! Your changes will be reviewed for approval.'
+                        : 'KYC submitted successfully! Pending approval from Key Leadership.';
+                    alert(message);
+                    isEditMode = false;
+                    await loadMyKYC();
+                } else {
+                    alert(result.detail || 'Failed to submit KYC');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error submitting KYC:', error);
+                alert('Error submitting KYC');
+            }
+        });
+    </script>
+</body>
+</html>

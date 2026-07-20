@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 Finance Completion (Final Step) - RVZ Supreme - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        
+        /* Header - Gold/Amber theme for RVZ ID */
+        .top-header { 
+            position: fixed; top: 0; left: 0; right: 0; height: 60px; 
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); 
+            color: white; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+            display: flex !important; align-items: center; padding: 0 20px; justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .hamburger { cursor: pointer; font-size: 24px; }
+        .header-logo { font-size: 20px; font-weight: bold; }
+        .header-right { display: flex; align-items: center; gap: 15px; }
+        .user-name-display {
+            display: flex !important; align-items: center; gap: 8px;
+            color: white; padding: 8px 16px; background: rgba(255,255,255,0.15);
+            border-radius: 20px; font-weight: 500; margin-right: 5px;
+        }
+        .user-name-display i { font-size: 18px; }
+        .user-name-display span { font-size: 14px; }
+        .profile-dropdown { position: relative; }
+        .profile-btn { 
+            background: rgba(255,255,255,0.2); border: none; color: white; 
+            padding: 8px 15px; border-radius: 8px; cursor: pointer; display: flex; 
+            align-items: center; gap: 8px;
+        }
+        .profile-btn:hover { background: rgba(255,255,255,0.3); }
+        .dropdown-menu-custom { 
+            position: absolute; top: 50px; right: 0; background: white; 
+            min-width: 200px; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); 
+            display: none; z-index: 1001;
+        }
+        .dropdown-menu-custom.show { display: block; }
+        .dropdown-item-custom { 
+            padding: 12px 20px; color: #333; text-decoration: none; 
+            display: flex !important; align-items: center; gap: 10px; border-bottom: 1px solid #eee;
+        }
+        .dropdown-item-custom:hover { background: #f8f9fa; }
+        .dropdown-item-custom:last-child { border-bottom: none; }
+        
+        /* Sidebar */
+        .sidebar { 
+            position: fixed; top: 60px; left: 0; width: 260px; height: calc(100vh - 60px); 
+            background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.05); 
+            overflow-y: auto !important; transition: transform 0.3s; z-index: 999;
+        }
+        .sidebar.collapsed { transform: translateX(-100%); }
+        .sidebar-menu { list-style: none; padding: 10px 0; }
+        .sidebar-item { margin: 2px 0; }
+        .sidebar-link { 
+            display: flex !important; align-items: center; gap: 12px; padding: 12px 20px; 
+            color: #555; text-decoration: none; transition: all 0.3s;
+        }
+        .sidebar-link:hover, .sidebar-link.active { 
+            background: linear-gradient(90deg, #d97706 0%, #f59e0b 100%); 
+            color: white; border-left: 4px solid #b45309;
+        }
+        .sidebar-link i { width: 20px; text-align: center; }
+        
+        /* Collapsible Menu Groups */
+        .menu-group-header {
+            display: flex !important; align-items: center; justify-content: space-between;
+            padding: 12px 20px; color: #555; cursor: pointer;
+            transition: all 0.3s; font-weight: 500;
+        }
+        .menu-group-header:hover { background: #f8f9fa; }
+        .menu-group-header i { color: #d97706; font-size: 14px; }
+        .menu-parent-header i.fa-chevron-down,
+        .menu-parent-header i.fa-chevron-up { color: white; font-size: 14px; }
+        .menu-group-items {
+            list-style: none !important; 
+            padding-left: 0 !important; 
+            max-height: 0 !important;
+            overflow: hidden !important; 
+            transition: max-height 0.3s ease !important;
+            visibility: hidden !important;
+            display: block !important;
+        }
+        .menu-group-items.expanded { 
+            max-height: none !important; 
+            visibility: visible !important;
+        }
+        .menu-group-items .sidebar-link {
+            padding-left: 52px; font-size: 14px;
+        }
+        
+        /* Parent Menu Styles (for nested groups like User Menus) */
+        .menu-parent-header {
+            display: flex !important; align-items: center; justify-content: space-between;
+            padding: 12px 20px; color: white; font-weight: 700; cursor: pointer;
+            transition: all 0.3s; background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px;
+        }
+        .menu-parent-header:hover { 
+            background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .menu-parent-header i { width: 20px; text-align: center; }
+        .menu-parent-items {
+            list-style: none !important;
+            padding: 0 !important;
+            max-height: 0 !important;
+            overflow: hidden !important;
+            transition: max-height 0.3s ease !important;
+            visibility: hidden !important;
+            display: block !important;
+            background: #fafafa;
+        }
+        .menu-parent-items.expanded {
+            max-height: none !important;
+            visibility: visible !important;
+        }
+        .menu-parent-items .menu-group-header {
+            padding-left: 30px;
+            background: #f3f4f6;
+            border-left: 3px solid #d97706;
+        }
+        .menu-parent-items .menu-group-header:hover {
+            background: #e5e7eb;
+        }
+        .menu-parent-items .menu-group-items .sidebar-link {
+            padding-left: 62px;
+        }
+        
+        /* Main Content */
+        .main-content { 
+            margin-left: 260px; margin-top: 60px; padding: 30px; 
+            min-height: calc(100vh - 60px); transition: margin-left 0.3s;
+        }
+        .main-content.expanded { margin-left: 0; }
+
+        /* Filters */
+        .filter-panel {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Statistics Cards */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--rvz-orange);
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        /* Tabs */
+        .custom-tabs {
+            background: white;
+            border-radius: 12px 12px 0 0;
+            padding: 0;
+            margin-bottom: 0;
+        }
+
+        .custom-tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .custom-tab.active {
+            color: var(--rvz-orange);
+            border-bottom-color: var(--rvz-orange);
+        }
+
+        .custom-tab:hover {
+            background: rgba(249, 115, 22, 0.1);
+        }
+
+        /* Table */
+        .table-container {
+            background: white;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .data-table {
+            width: 100%;
+            margin: 0;
+        }
+
+        .data-table thead {
+            background: #f8fafc;
+        }
+
+        .data-table th {
+            padding: 1rem;
+            font-weight: 600;
+            color: #1e293b;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Expandable Row */
+        .expand-btn {
+            background: var(--rvz-orange);
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .expand-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .expand-btn.expanded {
+            transform: rotate(45deg);
+        }
+
+        .expanded-row {
+            display: none;
+            background: #fef3c7;
+        }
+
+        .expanded-row.show {
+            display: table-row;
+        }
+
+        .nested-table {
+            width: 100%;
+            margin: 1rem 0;
+        }
+
+        .nested-table thead {
+            background: #fbbf24;
+        }
+
+        .nested-table th {
+            padding: 0.75rem;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .nested-table td {
+            padding: 0.75rem;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #fde68a;
+        }
+
+        /* Breakup Display */
+        .breakup-box {
+            background: #f1f5f9;
+            padding: 0.5rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .breakup-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.25rem 0;
+        }
+
+        .breakup-total {
+            font-weight: bold;
+            border-top: 2px solid #94a3b8;
+            padding-top: 0.25rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Badges */
+        .package-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .package-bronze { background: #cd7f32; color: white; }
+        .package-silver { background: #c0c0c0; color: #333; }
+        .package-gold { background: #ffd700; color: #333; }
+        .package-platinum { background: #e5e4e2; color: #333; }
+
+        .status-completed { background: #10b981; color: white; }
+        .status-pending { background: #fbbf24; color: #333; }
+        .status-verified { background: #3b82f6; color: white; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--rvz-orange);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Pagination */
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+            gap: 1rem;
+        }
+
+        .pagination-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: var(--rvz-orange);
+            color: white;
+            border-color: var(--rvz-orange);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            font-weight: 500;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <div class="top-header">
+        <div class="header-left">
+            <div class="hamburger" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </div>
+            <div class="header-logo"><img src="/public/vgk4u-logo-100.png" alt="VGK4U" style="height:28px;background:#fff;border-radius:5px;padding:2px 6px;margin-right:8px;vertical-align:middle;">RVZ - Finance Completion (Final Step)</div>
+        </div>
+        <div class="header-right">
+            <div class="user-name-display" id="headerUserName">
+                <i class="fas fa-shield-alt"></i>
+                <span id="displayName">Loading...</span>
+            </div>
+            <div class="profile-dropdown">
+                <button class="profile-btn" onclick="toggleProfileMenu()">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>RVZ ID</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="dropdown-menu-custom" id="profileMenu">
+                    <a href="/rvz/dashboard" class="dropdown-item-custom">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a href="/user/change-password" class="dropdown-item-custom">
+                        <i class="fas fa-key"></i> Change Password
+                    </a>
+                    <a href="/logout" class="dropdown-item-custom">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="staffSidebar"></div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <!-- Page Title -->
+        <div style="padding: 20px; background: white; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h4 style="margin: 0; color: #d97706;"><i class="fas fa-money-check-alt"></i> 💰 Finance Completion (Final Step)</h4>
+            <p style="margin: 8px 0 0 0; color: #666; font-size: 14px;">Process Super Admin Verified incomes → Mark as Completed → Credit wallets → Auto-create withdrawals</p>
+            <div style="margin-top: 12px; padding: 12px; background: #fffbeb; border-left: 4px solid #d97706; border-radius: 4px;">
+                <strong>WVV Workflow - Stage 3:</strong> Admin Verified → Super Admin Verified → <strong style="color: #d97706;">Finance Completion (YOU ARE HERE)</strong> → Accounts Paid ✅
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-panel" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h6 style="margin-bottom: 15px; color: #d97706;"><i class="fas fa-filter"></i> Filters</h6>
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label">Date Range</label>
+                    <select id="dateFilter" class="form-select">
+                        <option value="7">Last 7 Days</option>
+                        <option value="30" selected>Last 30 Days</option>
+                        <option value="90">Last 90 Days</option>
+                        <option value="180">Last 6 Months</option>
+                        <option value="365">Last Year</option>
+                        <option value="all">All Time</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="Super Admin Verified" selected>💰 Work Queue (Pending Finance)</option>
+                        <option value="Completed">✅ History (Paid to Bank)</option>
+                        <option value="all">📋 All Status</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Income Type</label>
+                    <select id="incomeTypeFilter" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="Direct Facilitation">Direct Facilitation</option>
+                        <option value="Group Performance Recognition">Group Performance Recognition</option>
+                        <option value="VED Leadership Recognition">VED Leadership Recognition</option>
+                        <option value="Mentorship Contribution Benefit">Mentorship Contribution Benefit</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Package</label>
+                    <select id="packageFilter" class="form-select">
+                        <option value="">All Packages</option>
+                        <option value="Plus">Plus</option>
+                        <option value="Deluxe">Deluxe</option>
+                        <option value="Premium">Premium</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">User ID</label>
+                    <input type="text" id="userIdFilter" class="form-control" placeholder="Search User ID">
+                </div>
+                <div class="col-md-2" style="display: flex; align-items: flex-end;">
+                    <button class="btn btn-primary w-100" onclick="applyFilters()" style="background: #d97706; border: none;">
+                        <i class="fas fa-search"></i> Apply
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2">
+                <button class="btn btn-secondary btn-sm" onclick="clearFilters()">
+                    <i class="fas fa-redo"></i> Reset All Filters
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="font-size: 32px;">💰</div>
+                        <div>
+                            <div style="font-size: 24px; font-weight: bold; color: #d97706;" id="statTotalIncomes">0</div>
+                            <div style="color: #666; font-size: 14px;">Total Incomes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="font-size: 32px;">👥</div>
+                        <div>
+                            <div style="font-size: 24px; font-weight: bold; color: #d97706;" id="statTotalUsers">0</div>
+                            <div style="color: #666; font-size: 14px;">Total Users</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="font-size: 32px;">₹</div>
+                        <div>
+                            <div style="font-size: 24px; font-weight: bold; color: #d97706;" id="statTotalAmount">₹0</div>
+                            <div style="color: #666; font-size: 14px;">Total Amount</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="font-size: 32px;">✅</div>
+                        <div>
+                            <div style="font-size: 24px; font-weight: bold; color: #d97706;" id="statSelected">0</div>
+                            <div style="color: #666; font-size: 14px;">Selected</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h6 style="margin: 0; color: #d97706;"><i class="fas fa-list"></i> Super Admin Verified Incomes</h6>
+                <button class="btn btn-success" id="processBtn" onclick="processSelectedPayments()" disabled>
+                    <i class="fas fa-check-circle"></i> Process Payment (<span id="selectedCount">0</span>)
+                </button>
+            </div>
+            <div id="tableContent" class="table-responsive">
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Loading incomes...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const API_BASE = '/api/v1';
+        let authToken = localStorage.getItem('authToken');
+        let currentTab = 'user-wise';
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentData = [];
+
+        // Initialize
+        $(document).ready(function() {
+            console.log('🚀 Finance Completion Page Loaded');
+            console.log('🔐 Auth Token:', authToken ? 'Present' : 'MISSING');
+            loadUserProfile();
+            loadIncomeRecords();
+        });
+
+        // Load user profile using RVZ hybrid authentication endpoint
+        function loadUserProfile() {
+            $.ajax({
+                url: `${API_BASE}/auth/me-hybrid`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    if (data && data.display_name) {
+                        $('#displayName').text(data.display_name);
+                    } else if (data && data.name) {
+                        $('#displayName').text(data.name);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        window.location.href = '/login';
+                    } else {
+                        console.error('Failed to load RVZ profile:', xhr.status);
+                        $('#displayName').text('RVZ Admin');
+                    }
+                }
+            });
+        }
+
+        // Toggle functions
+        function toggleSidebar() {
+            $('#sidebar').toggleClass('collapsed');
+            $('#mainContent').toggleClass('expanded');
+        }
+
+        function toggleMenuGroup(groupId) {
+            $(`#${groupId}-items`).toggleClass('expanded');
+            $(`#${groupId}-chevron`).toggleClass('fa-chevron-up fa-chevron-down');
+        }
+
+        function toggleMenuParent(parentId) {
+            const items = $(`#${parentId}-items`);
+            const chevron = $(`#${parentId}-chevron`);
+            items.toggleClass('expanded');
+            chevron.toggleClass('fa-chevron-up fa-chevron-down');
+            
+            // If collapsing parent, also collapse all child groups
+            if (!items.hasClass('expanded')) {
+                items.find('.menu-group-items').removeClass('expanded');
+                items.find('.menu-group-header i[id$="-chevron"]').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+            }
+        }
+
+        function toggleProfileMenu() {
+            $('#profileMenu').toggleClass('show');
+            $('#profileMenu').toggleClass('show');
+        }
+
+        // Finance-specific state
+        let selectedIncomeIds = new Set();
+        let allIncomes = [];
+
+        // Apply filters and load data
+        function applyFilters() {
+            currentPage = 1;
+            loadIncomeRecords();
+        }
+
+        // Clear all filters
+        function clearFilters() {
+            document.getElementById('dateFilter').value = '30';
+            document.getElementById('statusFilter').value = 'Super Admin Verified';  // Default to work queue
+            document.getElementById('userIdFilter').value = '';
+            document.getElementById('incomeTypeFilter').value = '';
+            document.getElementById('packageFilter').value = '';
+            loadIncomeRecords();
+        }
+
+        // Load income records with filters - BOTH Super Admin Verified AND Completed (RVZ Approved)
+        function loadIncomeRecords() {
+            console.log('📥 Loading Finance Completion incomes (both pathways)...');
+            const dateFilter = document.getElementById('dateFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const userIdFilter = document.getElementById('userIdFilter').value.trim();
+
+            // Build base URL with filters
+            let dateParam = '';
+            if (dateFilter !== 'all') {
+                const daysAgo = new Date();
+                daysAgo.setDate(daysAgo.getDate() - parseInt(dateFilter));
+                dateParam = `&from_date=${daysAgo.toISOString().split('T')[0]}`;
+            }
+            
+            let userParam = userIdFilter ? `&user_id=${userIdFilter}` : '';
+
+            // Determine which statuses to fetch based on filter
+            let requests = [];
+            
+            if (statusFilter === 'all' || statusFilter === 'Super Admin Verified') {
+                const url1 = `${API_BASE}/income-verification/admin/pending-incomes?status_filter=Super Admin Verified${dateParam}${userParam}`;
+                requests.push($.ajax({ url: url1, headers: { 'Authorization': `Bearer ${authToken}` } }));
+            }
+            
+            if (statusFilter === 'all' || statusFilter === 'Completed') {
+                const url2 = `${API_BASE}/income-verification/admin/pending-incomes?status_filter=Completed${dateParam}${userParam}`;
+                requests.push($.ajax({ url: url2, headers: { 'Authorization': `Bearer ${authToken}` } }));
+            }
+
+            console.log(`🔗 Fetching ${statusFilter === 'all' ? 'both approval pathways' : statusFilter + ' incomes'}...`);
+
+            // Fetch all requested statuses
+            Promise.all(requests).then(function(responses) {
+                allIncomes = [];
+                responses.forEach(response => {
+                    if (response.data) {
+                        allIncomes = allIncomes.concat(response.data);
+                    }
+                });
+                
+                // Apply client-side filters
+                allIncomes = applyClientSideFilters(allIncomes);
+                
+                console.log('📦 Total incomes loaded:', allIncomes.length);
+                
+                renderTable();
+                updateStatistics();
+            }).catch(function(error) {
+                console.error('❌ Error loading incomes:', error);
+                $('#tableContent').html(`
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #dc3545;"></i>
+                        <h5 class="mt-3">Error Loading Incomes</h5>
+                        <p>Failed to load income records. Please try again.</p>
+                    </div>
+                `);
+            });
+        }
+
+        // Apply client-side filters (type, package)
+        function applyClientSideFilters(incomes) {
+            const incomeTypeFilter = document.getElementById('incomeTypeFilter').value;
+            const packageFilter = document.getElementById('packageFilter').value;
+            
+            let filtered = incomes;
+            
+            if (incomeTypeFilter) {
+                filtered = filtered.filter(inc => inc.income_type === incomeTypeFilter);
+            }
+            
+            if (packageFilter) {
+                filtered = filtered.filter(inc => inc.package_type === packageFilter);
+            }
+            
+            return filtered;
+        }
+
+        // Aggregate incomes by user_id + business_date (one transaction per user per day)
+        function aggregateUserWise(incomes) {
+            const aggregated = {};
+            
+            incomes.forEach(income => {
+                const key = `${income.user_id}_${income.business_date}`;
+                
+                if (!aggregated[key]) {
+                    aggregated[key] = {
+                        user_id: income.user_id,
+                        user_name: income.user_name,
+                        business_date: income.business_date,
+                        package_type: income.package_type,
+                        verification_status: income.verification_status,
+                        gross_amount: 0,
+                        net_amount: 0,
+                        details: [],
+                        income_ids: []
+                    };
+                }
+                
+                aggregated[key].gross_amount += parseFloat(income.gross_amount || 0);
+                aggregated[key].net_amount += parseFloat(income.net_amount || 0);
+                aggregated[key].details.push({
+                    income_type: income.income_type,
+                    gross_amount: parseFloat(income.gross_amount || 0),
+                    net_amount: parseFloat(income.net_amount || 0)
+                });
+                aggregated[key].income_ids.push(income.id);
+            });
+            
+            return Object.values(aggregated);
+        }
+
+        // View income details in modal
+        function viewIncomeDetails(incomeId) {
+            const income = allIncomes.find(inc => inc.id == incomeId);
+            if (!income) {
+                alert('Income not found');
+                return;
+            }
+            
+            const statusBadge = income.verification_status === 'Completed' 
+                ? '<span class="badge" style="background: #10b981;">✅ RVZ Approved</span>'
+                : '<span class="badge" style="background: #f59e0b;">⏳ Pending Finance</span>';
+            
+            const detailsHTML = `
+                <div style="padding: 20px;">
+                    <h5 style="color: #d97706; margin-bottom: 20px;">Income Details</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>User ID:</strong><br>${income.user_id || 'N/A'}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>User Name:</strong><br>${income.user_name || 'N/A'}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>Income Type:</strong><br>${income.income_type || 'N/A'}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Package:</strong><br>${income.package_type || 'N/A'}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>Business Date:</strong><br>${formatDate(income.business_date)}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Status:</strong><br>${statusBadge}
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <strong>Gross Amount:</strong><br>
+                            <span style="font-size: 20px; color: #059669;">₹${parseFloat(income.gross_amount || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Deductions (12%):</strong><br>
+                            <span style="font-size: 20px; color: #dc2626;">₹${(parseFloat(income.gross_amount || 0) * 0.12).toFixed(2)}</span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <strong>Net Amount:</strong><br>
+                            <span style="font-size: 24px; font-weight: bold; color: #d97706;">₹${parseFloat(income.net_amount || 0).toFixed(2)}</span>
+                        </div>
+                    </div>
+                    
+                    ${income.notes ? `<hr><div class="mb-3"><strong>Notes:</strong><br>${income.notes}</div>` : ''}
+                    
+                    <div style="margin-top: 20px; text-align: right;">
+                        <button class="btn btn-secondary" onclick="closeIncomeModal()">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            // Create/show modal
+            let modal = document.getElementById('incomeDetailsModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'incomeDetailsModal';
+                modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;';
+                document.body.appendChild(modal);
+            }
+            
+            modal.innerHTML = `
+                <div style="background: white; border-radius: 12px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                    ${detailsHTML}
+                </div>
+            `;
+            modal.style.display = 'flex';
+        }
+
+        function closeIncomeModal() {
+            const modal = document.getElementById('incomeDetailsModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Render table with user-wise aggregation
+        function renderTable() {
+            if (allIncomes.length === 0) {
+                $('#tableContent').html(`
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-inbox" style="font-size: 48px; color: #d97706;"></i>
+                        <h5 class="mt-3">No Income Records Found</h5>
+                        <p>No incomes match your current filters.</p>
+                    </div>
+                `);
+                return;
+            }
+
+            // Aggregate by user + date
+            const aggregatedRecords = aggregateUserWise(allIncomes);
+            console.log('📊 Aggregated records:', aggregatedRecords.length, 'user-day transactions');
+
+            let tableHTML = `
+                <table class="table table-hover" id="incomeTable">
+                    <thead style="background: #fffbeb;">
+                        <tr>
+                            <th style="width: 50px;">
+                                <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll()">
+                            </th>
+                            <th style="width: 50px;"></th>
+                            <th>User ID</th>
+                            <th>Name</th>
+                            <th>Income Date</th>
+                            <th>Package</th>
+                            <th>Gross Amount</th>
+                            <th>Deductions (12%)</th>
+                            <th>Net Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            aggregatedRecords.forEach((record, index) => {
+                const grossAmount = record.gross_amount;
+                const deductions = grossAmount * 0.12;
+                const netAmount = record.net_amount;
+                const status = record.verification_status || 'Unknown';
+                const isCompleted = status === 'Completed';
+                const rowId = `row_${index}`;
+                
+                // Check if all incomes in this group are selected
+                const allSelected = record.income_ids.every(id => selectedIncomeIds.has(id));
+                
+                // Status badge styling
+                let statusBadge = '';
+                if (status === 'Super Admin Verified') {
+                    statusBadge = '<span class="badge" style="background: #f59e0b; color: white;">⏳ Pending Finance</span>';
+                } else if (status === 'Completed') {
+                    statusBadge = '<span class="badge" style="background: #10b981; color: white;">✅ RVZ Approved</span>';
+                } else {
+                    statusBadge = `<span class="badge bg-secondary">${status}</span>`;
+                }
+
+                // Main aggregated row
+                tableHTML += `
+                    <tr id="${rowId}" style="${isCompleted ? 'background: #f0fdf4;' : ''}" class="user-row">
+                        <td>
+                            <input type="checkbox" class="form-check-input user-checkbox" 
+                                data-income-ids='${JSON.stringify(record.income_ids)}'
+                                ${allSelected ? 'checked' : ''}
+                                ${isCompleted ? 'disabled title="Already processed by RVZ"' : ''}
+                                onchange="toggleUserSelection(this)">
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-link expand-btn" onclick="toggleDetails('${rowId}')" title="View breakdown by type">
+                                <i class="fas fa-plus-circle" style="color: #d97706; font-size: 18px;"></i>
+                            </button>
+                        </td>
+                        <td><strong>${record.user_id || 'N/A'}</strong></td>
+                        <td>${record.user_name || 'N/A'}</td>
+                        <td>${formatDate(record.business_date)}</td>
+                        <td>${record.package_type || 'N/A'}</td>
+                        <td>₹${grossAmount.toFixed(2)}</td>
+                        <td>₹${deductions.toFixed(2)}</td>
+                        <td><strong style="color: #d97706;">₹${netAmount.toFixed(2)}</strong></td>
+                        <td>${statusBadge}</td>
+                    </tr>
+                `;
+
+                // Details row (hidden by default)
+                tableHTML += `
+                    <tr id="${rowId}_details" class="details-row" style="display: none; background: #fffbeb;">
+                        <td colspan="10" style="padding: 20px;">
+                            <div style="margin-left: 40px;">
+                                <h6 style="color: #d97706; margin-bottom: 15px;"><i class="fas fa-list"></i> Income Type Breakdown</h6>
+                                <table class="table table-sm table-bordered" style="max-width: 600px;">
+                                    <thead style="background: #fef3c7;">
+                                        <tr>
+                                            <th>Income Type</th>
+                                            <th>Gross Amount</th>
+                                            <th>Deductions (12%)</th>
+                                            <th>Net Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                `;
+
+                // Add detail rows for each income type
+                record.details.forEach(detail => {
+                    const detailDeductions = detail.gross_amount * 0.12;
+                    tableHTML += `
+                        <tr>
+                            <td><strong>${detail.income_type}</strong></td>
+                            <td>₹${detail.gross_amount.toFixed(2)}</td>
+                            <td>₹${detailDeductions.toFixed(2)}</td>
+                            <td>₹${detail.net_amount.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+
+                tableHTML += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            $('#tableContent').html(tableHTML);
+        }
+
+        // Toggle expand/collapse for details
+        function toggleDetails(rowId) {
+            const detailsRow = document.getElementById(rowId + '_details');
+            const btn = document.querySelector(`#${rowId} .expand-btn i`);
+            
+            if (detailsRow.style.display === 'none') {
+                detailsRow.style.display = 'table-row';
+                btn.classList.remove('fa-plus-circle');
+                btn.classList.add('fa-minus-circle');
+            } else {
+                detailsRow.style.display = 'none';
+                btn.classList.remove('fa-minus-circle');
+                btn.classList.add('fa-plus-circle');
+            }
+        }
+
+        // Toggle selection for user group
+        function toggleUserSelection(checkbox) {
+            const incomeIds = JSON.parse(checkbox.dataset.incomeIds);
+            const isChecked = checkbox.checked;
+            
+            incomeIds.forEach(id => {
+                if (isChecked) {
+                    selectedIncomeIds.add(id);
+                } else {
+                    selectedIncomeIds.delete(id);
+                }
+            });
+            
+            updateSelectionUI();
+        }
+
+        // Toggle select all
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            const checkboxes = document.querySelectorAll('.user-checkbox:not(:disabled)');
+            
+            if (selectAll) {
+                allIncomes.forEach(income => selectedIncomeIds.add(income.id));
+                checkboxes.forEach(cb => cb.checked = true);
+            } else {
+                selectedIncomeIds.clear();
+                checkboxes.forEach(cb => cb.checked = false);
+            }
+            updateSelectionUI();
+        }
+
+        // Toggle individual selection
+        function toggleSelection(incomeId) {
+            if (selectedIncomeIds.has(incomeId)) {
+                selectedIncomeIds.delete(incomeId);
+            } else {
+                selectedIncomeIds.add(incomeId);
+            }
+            updateSelectionUI();
+        }
+
+        // Update selection UI
+        function updateSelectionUI() {
+            const count = selectedIncomeIds.size;
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('statSelected').textContent = count;
+            document.getElementById('processBtn').disabled = count === 0;
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const aggregatedRecords = aggregateUserWise(allIncomes);
+            const totalTransactions = aggregatedRecords.length;
+            const uniqueUsers = new Set(allIncomes.map(i => i.user_id)).size;
+            const totalAmount = allIncomes.reduce((sum, i) => sum + parseFloat(i.net_amount || 0), 0);
+
+            document.getElementById('statTotalIncomes').textContent = totalTransactions;
+            document.getElementById('statTotalUsers').textContent = uniqueUsers;
+            document.getElementById('statTotalAmount').textContent = '₹' + totalAmount.toFixed(2);
+        }
+
+        // Process selected payments
+        function processSelectedPayments() {
+            if (selectedIncomeIds.size === 0) {
+                alert('Please select at least one income to process');
+                return;
+            }
+
+            // Calculate total net amount for validation
+            const selectedIncomes = allIncomes.filter(inc => selectedIncomeIds.has(inc.id));
+            const totalNetAmount = selectedIncomes.reduce((sum, inc) => sum + parseFloat(inc.net_amount || 0), 0);
+
+            // VALIDATION: Check minimum withdrawal amount (₹1,000)
+            if (totalNetAmount < 1000) {
+                alert(
+                    `❌ MINIMUM AMOUNT NOT MET\n\n` +
+                    `Total Amount: ₹${totalNetAmount.toFixed(2)}\n` +
+                    `Minimum Required: ₹1,000.00\n\n` +
+                    `Payments below ₹1,000 will be held until the user accumulates enough income.\n` +
+                    `This transaction will be marked as "On Hold" instead of creating a withdrawal request.`
+                );
+                return;
+            }
+
+            const confirmation = confirm(
+                `Are you sure you want to process ${selectedIncomeIds.size} income(s)?\n\n` +
+                `Total Amount: ₹${totalNetAmount.toFixed(2)}\n\n` +
+                `This will:\n` +
+                `✅ Mark incomes as "Completed"\n` +
+                `✅ Credit user wallets in real-time\n` +
+                `✅ Auto-create withdrawal requests\n\n` +
+                `This action cannot be undone.`
+            );
+
+            if (!confirmation) return;
+
+            const processBtn = document.getElementById('processBtn');
+            processBtn.disabled = true;
+            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            $.ajax({
+                url: `${API_BASE}/income-verification/finance-admin/process-payment`,
+                method: 'POST',
+                contentType: 'application/json',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                data: JSON.stringify({
+                    pending_income_ids: Array.from(selectedIncomeIds)
+                }),
+                success: function(response) {
+                    console.log('✅ Payment processed successfully:', response);
+                    alert(`✅ Success!\n\n${response.message || 'Payments processed successfully'}\n\nProcessed: ${response.processed_count || selectedIncomeIds.size} incomes`);
+                    
+                    // Clear selection and reload
+                    selectedIncomeIds.clear();
+                    loadIncomeRecords();
+                },
+                error: function(xhr) {
+                    console.error('❌ Error processing payment:', xhr);
+                    let errorMsg = 'Failed to process payments. Please try again.';
+                    if (xhr.responseJSON && xhr.responseJSON.detail) {
+                        errorMsg = xhr.responseJSON.detail;
+                    }
+                    alert('❌ Error:\n\n' + errorMsg);
+                    
+                    // Re-enable button
+                    processBtn.disabled = false;
+                    processBtn.innerHTML = '<i class="fas fa-check-circle"></i> Process Payment (<span id="selectedCount">' + selectedIncomeIds.size + '</span>)';
+                }
+            });
+        }
+
+        // Helper: Format date
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        // Close profile menu when clicking outside
+        $(document).click(function(e) {
+            if (!$(e.target).closest('.profile-dropdown').length) {
+                $('#profileMenu').removeClass('show');
+            }
+        });
+
+        // Initialize on document ready
+        $(document).ready(function() {
+            console.log('🚀 Finance Completion Page Loaded');
+            if (typeof StaffSidebar !== 'undefined') StaffSidebar.init();
+            loadUserProfile();
+            loadIncomeRecords();
+        });
+    </script>
+    
+</body>
+</html>

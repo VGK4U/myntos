@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNR — Members | Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .main-content { margin-left: 250px; padding: 20px; transition: margin-left 0.3s; padding-top: 88px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        .mnr-search-card { background: #fff; border: 1px solid #dee2e6; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .view-tabs { margin-bottom: 20px; }
+        .view-tabs .nav-link { color: #6c757d; font-weight: 500; border-radius: 8px 8px 0 0; }
+        .view-tabs .nav-link.active { background: #0d6efd; color: white; }
+        .binary-tree-wrapper {
+          padding: 40px 20px;
+          overflow: auto;
+          background: #f8f9fa;
+          border-radius: 12px;
+          touch-action: manipulation;
+          -webkit-overflow-scrolling: touch;
+          min-height: 500px;
+          width: 100%;
+          text-align: center;
+        }
+        .binary-tree {
+          display: inline-flex;
+          flex-direction: column;
+          align-items: center;
+          min-width: max-content;
+          position: relative;
+          transition: transform 0.3s ease;
+          transform-origin: top center;
+        }
+        .tree-level { display: flex; justify-content: center; gap: 60px; margin: 40px 0; position: relative; }
+        .tree-level-0 { gap: 0; }
+        .tree-level-1 { gap: 60px; }
+        .tree-level-2 { gap: 60px; }
+        .tree-level-3 { gap: 60px; }
+        .tree-level-4 { gap: 40px; }
+        .sibling-pair { display: flex; gap: 120px; position: relative; }
+        .sibling-pair::before { content: ''; position: absolute; top: -20px; left: 50%; width: calc(100% - 160px); height: 2px; background: #000; transform: translateX(-50%); }
+        .tree-level-1 .sibling-pair { gap: 300px; }
+        .tree-level-2 .sibling-pair { gap: 120px; }
+        .tree-level-3 .sibling-pair { gap: 80px; }
+        .tree-level-4 .sibling-pair { gap: 50px; }
+        .tree-node { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s; position: relative; min-width: 100px; }
+        .tree-node:hover { transform: translateY(-3px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .tree-node.empty { opacity: 0.4; cursor: default; }
+        .tree-node.empty:hover { transform: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .person-avatar { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 3px solid; position: relative; }
+        .person-avatar.active { background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #059669; }
+        .person-avatar.inactive { background: linear-gradient(135deg, #f87171 0%, #ef4444 100%); border-color: #dc2626; }
+        .person-avatar.empty { background: #e5e7eb; border-color: #9ca3af; color: #6b7280; }
+        .person-avatar.root { width: 60px; height: 60px; font-size: 28px; }
+        .node-mnr-id { font-size: 11px; font-weight: 600; color: #374151; white-space: nowrap; }
+        .node-name { font-size: 10px; color: #6b7280; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .member-count-badges { display: flex; gap: 8px; margin-bottom: 6px; }
+        .member-badge { background: #059669; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tree-node::before { content: ''; position: absolute; top: -40px; left: 50%; width: 3px; height: 40px; background: #000; z-index: 2; }
+        .tree-level-0 .tree-node::before { display: none; }
+        .tree-node::after { content: ''; position: absolute; top: -40px; height: 3px; background: #000; }
+        .tree-node.left-child::after { left: 50%; width: 100px; }
+        .tree-node.right-child::after { right: 50%; width: 100px; }
+        .member-list-card { background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .member-row { padding: 15px; border-bottom: 1px solid #e9ecef; transition: background 0.2s; }
+        .member-row:hover { background: #f8f9fa; }
+        .member-row:last-child { border-bottom: none; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-badge.active { background: #d1fae5; color: #059669; }
+        .status-badge.inactive { background: #fee2e2; color: #dc2626; }
+        .package-badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #e0e7ff; color: #4338ca; }
+        .level-badge { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 10px; }
+        .table thead th[onclick] { user-select: none; white-space: nowrap; }
+        .table thead th[onclick]:hover { background: #e9ecef; }
+    
+        </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <div id="staffSidebar"></div>
+
+        <div id="headerContainer"></div>
+
+    <main class="main-content" id="main-content">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h4 class="mb-0"><i class="fas fa-users text-primary me-2"></i>Team Members</h4>
+                    <div id="breadcrumb" class="text-muted small mt-1">Enter MNR ID to view team</div>
+                </div>
+                <div class="d-flex gap-2" id="pictureViewControls" style="display: none !important;">
+                    <button id="backToMyTreeBtn" class="btn btn-sm btn-secondary" onclick="backToMyTree()" style="display: none;">🏠 My Picture View</button>
+                    <div class="btn-group" role="group">
+                        <button id="zoomOutBtn" class="btn btn-sm btn-outline-secondary" onclick="zoomOut()">➖</button>
+                        <button id="zoomResetBtn" class="btn btn-sm btn-outline-secondary" onclick="resetZoom()"><span id="zoomLevel">100%</span></button>
+                        <button id="zoomInBtn" class="btn btn-sm btn-outline-secondary" onclick="zoomIn()">➕</button>
+                    </div>
+                    <button id="refreshBtn" class="btn btn-sm btn-primary" onclick="refreshTree()">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <div class="mnr-search-card p-3 mb-3">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text">MNR</span>
+                            <input type="text" class="form-control" id="mnrIdInput" placeholder="Enter MNR ID (e.g., 1800143)" style="text-transform: uppercase;">
+                            <button class="btn btn-primary" onclick="searchMnrUser()"><i class="fas fa-search me-1"></i> Search</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6" id="memberInfoDisplay" style="display: none;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div>
+                                <strong id="memberName" class="text-dark">-</strong>
+                                <span class="text-muted small ms-2" id="memberIdBadge">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="nav nav-tabs view-tabs" id="viewTabs">
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/mnr-user/members/all" data-view="all"><i class="fas fa-users me-1"></i> All Members</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/mnr-user/members/picture" data-view="picture"><i class="fas fa-sitemap me-1"></i> Picture View</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/mnr-user/members/direct" data-view="direct"><i class="fas fa-user-plus me-1"></i> Direct Facilitations</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/staff/mnr-user/members/ved" data-view="ved"><i class="fas fa-project-diagram me-1"></i> Ved Team</a>
+                </li>
+            </ul>
+
+            <div class="card" style="background: #f8f9fa; border: none;">
+                <div class="card-body" style="overflow: auto; max-height: 80vh;">
+                    <div id="contentContainer" class="text-center">
+                        <div class="py-5">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Enter an MNR ID to view their team</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_sidebar.js"></script>
+    
+    <script>
+        const TREE_LEVELS = 5;
+        let currentMnrId = null;
+        let initialMnrId = null;
+        let currentZoom = 1.0;
+        let currentView = 'all';
+        const ZOOM_STEP = 0.2;
+        const MIN_ZOOM = 0.3;
+        const MAX_ZOOM = 3.0;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            StaffSidebar.init();
+            StaffHeader.inject('MNR — Members', 'fas fa-users');
+
+            const path = window.location.pathname;
+            if (path.includes('/direct')) currentView = 'direct';
+            else if (path.includes('/ved')) currentView = 'ved';
+            else if (path.includes('/picture')) currentView = 'picture';
+            else currentView = 'all';
+            
+            document.querySelectorAll('#viewTabs .nav-link').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.dataset.view === currentView) tab.classList.add('active');
+            });
+            
+            document.getElementById('pictureViewControls').style.display = currentView === 'picture' ? 'flex' : 'none';
+            
+            document.querySelectorAll('#viewTabs .nav-link').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const newView = this.dataset.view;
+                    const mnrParam = currentMnrId ? `?mnr_id=${currentMnrId}` : '';
+                    window.location.href = this.href + mnrParam;
+                });
+            });
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const mnrParam = urlParams.get('mnr_id') || urlParams.get('user_id');
+            if (mnrParam) {
+                let mnrId = mnrParam.toUpperCase();
+                if (!mnrId.startsWith('MNR')) mnrId = 'MNR' + mnrId;
+                document.getElementById('mnrIdInput').value = mnrId.replace('MNR', '');
+                currentMnrId = mnrId;
+                initialMnrId = mnrId;
+                loadViewContent();
+            }
+            
+            document.getElementById('mnrIdInput').addEventListener('keypress', e => { if (e.key === 'Enter') searchMnrUser(); });
+            updateZoomDisplay();
+        });
+
+        function searchMnrUser() {
+            let mnrId = document.getElementById('mnrIdInput').value.trim().toUpperCase();
+            if (!mnrId) { alert('Please enter an MNR ID'); return; }
+            if (!mnrId.startsWith('MNR')) mnrId = 'MNR' + mnrId;
+            const pattern = /^MNR[0-9]{7,9}$/;
+            if (!pattern.test(mnrId)) { alert('Invalid MNR ID format'); return; }
+            initialMnrId = mnrId;
+            currentMnrId = mnrId;
+            document.getElementById('backToMyTreeBtn').style.display = 'none';
+            loadViewContent();
+            const url = new URL(window.location.href);
+            url.searchParams.set('mnr_id', mnrId);
+            window.history.replaceState({}, '', url.toString());
+        }
+
+        async function loadViewContent() {
+            console.log('[DC-STAFF-MEMBERS] Loading view:', currentView, 'for:', currentMnrId);
+            document.getElementById('memberInfoDisplay').style.display = 'block';
+            document.getElementById('memberIdBadge').textContent = currentMnrId;
+            
+            switch (currentView) {
+                case 'all':
+                    document.getElementById('pictureViewControls').style.display = 'none';
+                    await loadAllMembers();
+                    break;
+                case 'picture':
+                    document.getElementById('pictureViewControls').style.display = 'flex';
+                    await loadBinaryTree(currentMnrId);
+                    break;
+                case 'direct':
+                    document.getElementById('pictureViewControls').style.display = 'none';
+                    await loadDirectReferrals();
+                    break;
+                case 'ved':
+                    document.getElementById('pictureViewControls').style.display = 'none';
+                    await loadVedTeam();
+                    break;
+            }
+        }
+
+        let currentDirectSort = { field: '', dir: 'asc' };
+        let currentVedSort = { field: '', dir: 'asc' };
+        let currentAllSort = { field: '', dir: 'asc' };
+
+        function sortData(data, field, dir) {
+            if (!field) return data;
+            return [...data].sort((a, b) => {
+                let valA, valB;
+                switch (field) {
+                    case 'name':
+                        valA = (a.name || a.user_name || '').toLowerCase();
+                        valB = (b.name || b.user_name || '').toLowerCase();
+                        break;
+                    case 'mnr_id':
+                        valA = parseInt((a.id || a.mnr_id || a.user_id || '').replace(/\D/g, '')) || 0;
+                        valB = parseInt((b.id || b.mnr_id || b.user_id || '').replace(/\D/g, '')) || 0;
+                        return dir === 'asc' ? valA - valB : valB - valA;
+                    case 'group':
+                        valA = a.side === 'left' ? 'A' : (a.side === 'right' ? 'B' : 'Z');
+                        valB = b.side === 'left' ? 'A' : (b.side === 'right' ? 'B' : 'Z');
+                        break;
+                    case 'package':
+                        valA = (a.package_type || '').toLowerCase();
+                        valB = (b.package_type || '').toLowerCase();
+                        break;
+                    case 'reg_date':
+                        valA = a.registration_date || '';
+                        valB = b.registration_date || '';
+                        break;
+                    case 'activation_date':
+                        valA = a.activated_at || '';
+                        valB = b.activated_at || '';
+                        break;
+                    case 'status':
+                        valA = a.activated_at ? 'activated' : 'not_activated';
+                        valB = b.activated_at ? 'activated' : 'not_activated';
+                        break;
+                    case 'level':
+                        valA = parseInt(a.level || a.tree_level) || 0;
+                        valB = parseInt(b.level || b.tree_level) || 0;
+                        return dir === 'asc' ? valA - valB : valB - valA;
+                    case 'sponsor':
+                        valA = (a.referrer_id || a.sponsor_id || '');
+                        valB = (b.referrer_id || b.sponsor_id || '');
+                        break;
+                    default:
+                        return 0;
+                }
+                if (valA < valB) return dir === 'asc' ? -1 : 1;
+                if (valA > valB) return dir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        function getSortIcon(sortState, field) {
+            if (sortState.field !== field) return '<i class="fas fa-sort text-muted ms-1" style="font-size:10px"></i>';
+            return sortState.dir === 'asc' 
+                ? '<i class="fas fa-sort-up text-primary ms-1" style="font-size:10px"></i>' 
+                : '<i class="fas fa-sort-down text-primary ms-1" style="font-size:10px"></i>';
+        }
+
+        function toggleSort(sortState, field) {
+            if (sortState.field === field) {
+                sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState.field = field;
+                sortState.dir = 'asc';
+            }
+        }
+
+        let directReferralsCache = [];
+        
+        async function loadDirectReferrals() {
+            const container = document.getElementById('contentContainer');
+            container.innerHTML = `<div class="py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Loading direct referrals...</p></div>`;
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/members/${currentMnrId}?view=direct`);
+                if (!response.ok) throw new Error('Failed to load direct referrals');
+                const data = await response.json();
+                
+                directReferralsCache = data.data?.members || data.referrals || [];
+                document.getElementById('memberName').textContent = data.data?.member_info?.name || currentMnrId;
+                renderDirectReferralsWithFilters(directReferralsCache);
+            } catch (error) {
+                console.error('[DC-STAFF] Error:', error);
+                container.innerHTML = `<div class="alert alert-danger">${escapeHTML(error.message)}</div>`;
+            }
+        }
+        
+        function renderDirectReferralsWithFilters(referrals) {
+            const container = document.getElementById('contentContainer');
+            const filterCardHtml = `
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Options</h6>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Name</label>
+                                <input type="text" class="form-control form-control-sm" id="filterDirectName" placeholder="Search name">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Status</label>
+                                <select class="form-select form-select-sm" id="filterDirectStatus">
+                                    <option value="">All Status</option>
+                                    <option value="activated">Activated</option>
+                                    <option value="not_activated">Not Activated</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Package</label>
+                                <select class="form-select form-select-sm" id="filterDirectPackage">
+                                    <option value="">All Packages</option>
+                                    <option value="Diamond">Diamond</option>
+                                    <option value="Platinum">Platinum</option>
+                                    <option value="Star">Star</option>
+                                    <option value="Loyal">Loyal</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Start Date</label>
+                                <input type="date" class="form-control form-control-sm" id="filterDirectStartDate">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">End Date</label>
+                                <input type="date" class="form-control form-control-sm" id="filterDirectEndDate">
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-primary btn-sm w-100" onclick="applyDirectFilter()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearDirectFilter()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="directReferralsTableContainer"></div>
+            `;
+            container.innerHTML = filterCardHtml;
+            renderDirectReferralsTable(referrals);
+        }
+        
+        function renderDirectReferralsTable(referrals) {
+            const tableContainer = document.getElementById('directReferralsTableContainer');
+            if (!referrals || referrals.length === 0) {
+                tableContainer.innerHTML = `<div class="py-5 text-center">
+                    <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Direct Facilitations Found</h5>
+                    <p class="text-muted">No referrals match the current filter criteria.</p>
+                </div>`;
+                return;
+            }
+            
+            let html = `<div class="member-list-card">
+                <div class="p-3 bg-success text-white rounded-top d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Direct Facilitations</h5>
+                    <span class="badge bg-light text-success">${referrals.length} referrals</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="cursor:pointer" onclick="sortDirectCol('mnr_id')">MNR ID ${getSortIcon(currentDirectSort,'mnr_id')}</th>
+                                <th style="cursor:pointer" onclick="sortDirectCol('name')">Name ${getSortIcon(currentDirectSort,'name')}</th>
+                                <th style="cursor:pointer" onclick="sortDirectCol('group')">Group ${getSortIcon(currentDirectSort,'group')}</th>
+                                <th style="cursor:pointer" onclick="sortDirectCol('package')">Package ${getSortIcon(currentDirectSort,'package')}</th>
+                                <th>Mobile</th>
+                                <th style="cursor:pointer" onclick="sortDirectCol('reg_date')">Reg Date ${getSortIcon(currentDirectSort,'reg_date')}</th>
+                                <th style="cursor:pointer" onclick="sortDirectCol('activation_date')">Activation Date ${getSortIcon(currentDirectSort,'activation_date')}</th>
+                                <th style="cursor:pointer" onclick="sortDirectCol('status')">Status ${getSortIcon(currentDirectSort,'status')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            
+            referrals.forEach(ref => {
+                const isActivated = !!ref.activated_at;
+                const statusClass = isActivated ? 'active' : 'inactive';
+                const statusText = isActivated ? 'Activated' : 'Not Activated';
+                const regDate = ref.registration_date ? formatDate(ref.registration_date) : '-';
+                const activationDate = ref.activated_at ? formatDate(ref.activated_at) : '-';
+                const groupLabel = ref.side === 'left' ? 'Group A' : (ref.side === 'right' ? 'Group B' : '-');
+                const groupClass = ref.side === 'left' ? 'text-info' : (ref.side === 'right' ? 'text-warning' : '');
+                
+                html += `<tr class="member-row">
+                    <td><strong class="text-primary">${escapeHTML(ref.id || ref.mnr_id || ref.user_id)}</strong></td>
+                    <td>${escapeHTML(ref.name || ref.user_name || '-')}</td>
+                    <td><strong class="${groupClass}">${groupLabel}</strong></td>
+                    <td><span class="package-badge">${escapeHTML(ref.package_type || 'N/A')}</span></td>
+                    <td>${escapeHTML(ref.mobile || '-')}</td>
+                    <td>${regDate}</td>
+                    <td>${activationDate}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table></div></div>';
+            tableContainer.innerHTML = html;
+        }
+        
+        function applyDirectFilter() {
+            const nameFilter = (document.getElementById('filterDirectName')?.value || '').toLowerCase().trim();
+            const statusFilter = document.getElementById('filterDirectStatus')?.value || '';
+            const packageFilter = (document.getElementById('filterDirectPackage')?.value || '').toLowerCase();
+            const startDate = document.getElementById('filterDirectStartDate')?.value || '';
+            const endDate = document.getElementById('filterDirectEndDate')?.value || '';
+            
+            let filtered = directReferralsCache.filter(ref => {
+                const refName = (ref.name || ref.user_name || '').toLowerCase();
+                const isActivated = !!ref.activated_at;
+                const refStatus = isActivated ? 'activated' : 'not_activated';
+                const refPackage = (ref.package_type || '').toLowerCase();
+                const refRegDate = (ref.activated_at || ref.registration_date || '').split('T')[0];
+                
+                if (nameFilter && !refName.includes(nameFilter)) return false;
+                if (statusFilter && refStatus !== statusFilter) return false;
+                if (packageFilter && refPackage !== packageFilter) return false;
+                if (startDate && refRegDate && refRegDate < startDate) return false;
+                if (endDate && refRegDate && refRegDate > endDate) return false;
+                
+                return true;
+            });
+            
+            const sorted = sortData(filtered, currentDirectSort.field, currentDirectSort.dir);
+            renderDirectReferralsTable(sorted);
+        }
+        
+        function clearDirectFilter() {
+            document.getElementById('filterDirectName').value = '';
+            document.getElementById('filterDirectStatus').value = '';
+            document.getElementById('filterDirectPackage').value = '';
+            document.getElementById('filterDirectStartDate').value = '';
+            document.getElementById('filterDirectEndDate').value = '';
+            renderDirectReferralsTable(directReferralsCache);
+        }
+
+        function sortDirectCol(field) {
+            toggleSort(currentDirectSort, field);
+            applyDirectFilter();
+        }
+
+        let vedTeamCache = [];
+        
+        async function loadVedTeam() {
+            const container = document.getElementById('contentContainer');
+            container.innerHTML = `<div class="py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Loading Ved team members...</p></div>`;
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/members/ved/${currentMnrId}`);
+                if (!response.ok) throw new Error('Failed to load Ved team members');
+                const data = await response.json();
+                
+                vedTeamCache = data.data?.members || data.members || [];
+                document.getElementById('memberName').textContent = data.data?.member_info?.name || data.member_info?.name || currentMnrId;
+                renderVedTeamWithFilters(vedTeamCache);
+            } catch (error) {
+                console.error('[DC-STAFF] Error:', error);
+                container.innerHTML = `<div class="alert alert-danger">${escapeHTML(error.message)}</div>`;
+            }
+        }
+        
+        function renderVedTeamWithFilters(members) {
+            const container = document.getElementById('contentContainer');
+            const filterCardHtml = `
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Options</h6>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Name</label>
+                                <input type="text" class="form-control form-control-sm" id="filterVedName" placeholder="Search name">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Status</label>
+                                <select class="form-select form-select-sm" id="filterVedStatus">
+                                    <option value="">All Status</option>
+                                    <option value="activated">Activated</option>
+                                    <option value="not_activated">Not Activated</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Package</label>
+                                <select class="form-select form-select-sm" id="filterVedPackage">
+                                    <option value="">All Packages</option>
+                                    <option value="Diamond">Diamond</option>
+                                    <option value="Platinum">Platinum</option>
+                                    <option value="Star">Star</option>
+                                    <option value="Loyal">Loyal</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Start Date</label>
+                                <input type="date" class="form-control form-control-sm" id="filterVedStartDate">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">End Date</label>
+                                <input type="date" class="form-control form-control-sm" id="filterVedEndDate">
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-primary btn-sm w-100" onclick="applyVedFilter()">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <div class="col-md-1">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearVedFilter()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="vedTeamTableContainer"></div>
+            `;
+            container.innerHTML = filterCardHtml;
+            renderVedTeamTable(members);
+        }
+        
+        function renderVedTeamTable(members) {
+            const tableContainer = document.getElementById('vedTeamTableContainer');
+            if (!members || members.length === 0) {
+                tableContainer.innerHTML = `<div class="py-5 text-center">
+                    <i class="fas fa-users-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Ved Team Members Found</h5>
+                    <p class="text-muted">No Ved team members match the current filter criteria.</p>
+                </div>`;
+                return;
+            }
+            
+            let html = `<div class="member-list-card">
+                <div class="p-3 bg-info text-white rounded-top d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-project-diagram me-2"></i>Ved Team</h5>
+                    <span class="badge bg-light text-info">${members.length} members</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="cursor:pointer" onclick="sortVedCol('mnr_id')">MNR ID ${getSortIcon(currentVedSort,'mnr_id')}</th>
+                                <th style="cursor:pointer" onclick="sortVedCol('name')">Name ${getSortIcon(currentVedSort,'name')}</th>
+                                <th style="cursor:pointer" onclick="sortVedCol('group')">Group ${getSortIcon(currentVedSort,'group')}</th>
+                                <th>Mobile</th>
+                                <th style="cursor:pointer" onclick="sortVedCol('package')">Package ${getSortIcon(currentVedSort,'package')}</th>
+                                <th>Ved Status</th>
+                                <th style="cursor:pointer" onclick="sortVedCol('reg_date')">Reg Date ${getSortIcon(currentVedSort,'reg_date')}</th>
+                                <th style="cursor:pointer" onclick="sortVedCol('activation_date')">Activation Date ${getSortIcon(currentVedSort,'activation_date')}</th>
+                                <th style="cursor:pointer" onclick="sortVedCol('status')">Status ${getSortIcon(currentVedSort,'status')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            
+            members.forEach(member => {
+                const isActivated = !!member.activated_at;
+                const statusClass = isActivated ? 'active' : 'inactive';
+                const statusText = isActivated ? 'Activated' : 'Not Activated';
+                const regDate = member.registration_date ? formatDate(member.registration_date) : '-';
+                const activationDate = member.activated_at ? formatDate(member.activated_at) : '-';
+                const groupLabel = member.side === 'left' ? 'Group A' : (member.side === 'right' ? 'Group B' : '-');
+                const groupClass = member.side === 'left' ? 'text-info' : (member.side === 'right' ? 'text-warning' : '');
+                
+                html += `<tr class="member-row">
+                    <td><strong class="text-primary">${escapeHTML(member.id || member.mnr_id || member.user_id)}</strong></td>
+                    <td>${escapeHTML(member.name || member.user_name || '-')}</td>
+                    <td><strong class="${groupClass}">${groupLabel}</strong></td>
+                    <td>${escapeHTML(member.mobile || '-')}</td>
+                    <td><span class="package-badge">${escapeHTML(member.package_type || 'N/A')}</span></td>
+                    <td><span class="badge bg-success">${escapeHTML(member.ved_status || 'Active')}</span></td>
+                    <td>${regDate}</td>
+                    <td>${activationDate}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table></div></div>';
+            tableContainer.innerHTML = html;
+        }
+
+        function sortVedCol(field) {
+            toggleSort(currentVedSort, field);
+            applyVedFilter();
+        }
+        
+        function applyVedFilter() {
+            const nameFilter = (document.getElementById('filterVedName')?.value || '').toLowerCase().trim();
+            const statusFilter = document.getElementById('filterVedStatus')?.value || '';
+            const packageFilter = (document.getElementById('filterVedPackage')?.value || '').toLowerCase();
+            const startDate = document.getElementById('filterVedStartDate')?.value || '';
+            const endDate = document.getElementById('filterVedEndDate')?.value || '';
+            
+            let filtered = vedTeamCache.filter(member => {
+                const memberName = (member.name || member.user_name || '').toLowerCase();
+                const isActivated = !!member.activated_at;
+                const memberStatus = isActivated ? 'activated' : 'not_activated';
+                const memberPackage = (member.package_type || '').toLowerCase();
+                const memberJoinedAt = member.joined_at ? member.joined_at.split('T')[0] : '';
+                
+                if (nameFilter && !memberName.includes(nameFilter)) return false;
+                if (statusFilter && memberStatus !== statusFilter) return false;
+                if (packageFilter && memberPackage !== packageFilter) return false;
+                if (startDate && memberJoinedAt && memberJoinedAt < startDate) return false;
+                if (endDate && memberJoinedAt && memberJoinedAt > endDate) return false;
+                
+                return true;
+            });
+            
+            const sorted = sortData(filtered, currentVedSort.field, currentVedSort.dir);
+            renderVedTeamTable(sorted);
+        }
+        
+        function clearVedFilter() {
+            document.getElementById('filterVedName').value = '';
+            document.getElementById('filterVedStatus').value = '';
+            document.getElementById('filterVedPackage').value = '';
+            document.getElementById('filterVedStartDate').value = '';
+            document.getElementById('filterVedEndDate').value = '';
+            renderVedTeamTable(vedTeamCache);
+        }
+
+        let allMembersCache = [];
+        
+        async function loadAllMembers() {
+            const container = document.getElementById('contentContainer');
+            container.innerHTML = `<div class="py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Loading all members...</p></div>`;
+            
+            try {
+                let allMembers = [];
+                let page = 1;
+                let totalPages = 1;
+                let memberName = currentMnrId;
+                const perPage = 100;
+                
+                do {
+                    container.innerHTML = `<div class="py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Loading members (page ${page}/${totalPages})...</p></div>`;
+                    const response = await staffFetch(`/api/v1/staff/mnr-user/members/${currentMnrId}?view=all&page=${page}&per_page=${perPage}`);
+                    if (!response.ok) throw new Error('Failed to load all members');
+                    const data = await response.json();
+                    
+                    const members = data.data?.members || data.members || [];
+                    allMembers = allMembers.concat(members);
+                    
+                    if (page === 1) {
+                        memberName = data.data?.member_info?.name || currentMnrId;
+                        const pagination = data.data?.pagination;
+                        if (pagination) {
+                            totalPages = pagination.total_pages || 1;
+                        }
+                    }
+                    page++;
+                } while (page <= totalPages);
+                
+                allMembersCache = allMembers;
+                document.getElementById('memberName').textContent = memberName;
+                renderAllMembersWithFilters(allMembersCache);
+            } catch (error) {
+                console.error('[DC-STAFF] Error:', error);
+                container.innerHTML = `<div class="alert alert-danger">${escapeHTML(error.message)}</div>`;
+            }
+        }
+        
+        function renderAllMembersWithFilters(members) {
+            const container = document.getElementById('contentContainer');
+            const filterCardHtml = `
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Options</h6>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Name</label>
+                                <input type="text" class="form-control form-control-sm" id="filterName" placeholder="Search name">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Status</label>
+                                <select class="form-select form-select-sm" id="filterStatus">
+                                    <option value="">All Status</option>
+                                    <option value="activated">Activated</option>
+                                    <option value="not_activated">Not Activated</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Package</label>
+                                <select class="form-select form-select-sm" id="filterPackage">
+                                    <option value="">All Packages</option>
+                                    <option value="Diamond">Diamond</option>
+                                    <option value="Platinum">Platinum</option>
+                                    <option value="Star">Star</option>
+                                    <option value="Loyal">Loyal</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Group</label>
+                                <select class="form-select form-select-sm" id="filterPosition">
+                                    <option value="">All Groups</option>
+                                    <option value="left">Group A</option>
+                                    <option value="right">Group B</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Level</label>
+                                <select class="form-select form-select-sm" id="filterLevel">
+                                    <option value="">All Levels</option>
+                                    <option value="1">Level 1</option>
+                                    <option value="2">Level 2</option>
+                                    <option value="3">Level 3</option>
+                                    <option value="4">Level 4</option>
+                                    <option value="5">Level 5</option>
+                                    <option value="6">Level 6</option>
+                                    <option value="7">Level 7</option>
+                                    <option value="8">Level 8</option>
+                                    <option value="9">Level 9</option>
+                                    <option value="10">Level 10+</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary btn-sm w-100" onclick="applyAllMembersFilter()">
+                                    <i class="fas fa-search me-1"></i>Apply
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Referrer ID</label>
+                                <input type="text" class="form-control form-control-sm" id="filterReferrerId" placeholder="MNR18XXXXX">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">Start Date</label>
+                                <input type="date" class="form-control form-control-sm" id="filterStartDate">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1">End Date</label>
+                                <input type="date" class="form-control form-control-sm" id="filterEndDate">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-secondary btn-sm w-100" onclick="clearAllMembersFilter()">
+                                    <i class="fas fa-times me-1"></i>Clear
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="allMembersTableContainer"></div>
+            `;
+            container.innerHTML = filterCardHtml;
+            renderAllMembersTable(members);
+        }
+        
+        function renderAllMembersTable(members) {
+            const tableContainer = document.getElementById('allMembersTableContainer');
+            if (!members || members.length === 0) {
+                tableContainer.innerHTML = `<div class="py-5 text-center">
+                    <i class="fas fa-users-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Team Members Found</h5>
+                    <p class="text-muted">No members match the current filter criteria.</p>
+                </div>`;
+                return;
+            }
+            
+            let html = `<div class="member-list-card">
+                <div class="p-3 bg-primary text-white rounded-top d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>All Team Members</h5>
+                    <span class="badge bg-light text-primary">${members.length} members</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="cursor:pointer" onclick="sortAllCol('mnr_id')">MNR ID ${getSortIcon(currentAllSort,'mnr_id')}</th>
+                                <th style="cursor:pointer" onclick="sortAllCol('name')">Name ${getSortIcon(currentAllSort,'name')}</th>
+                                <th style="cursor:pointer" onclick="sortAllCol('group')">Group ${getSortIcon(currentAllSort,'group')}</th>
+                                <th style="cursor:pointer" onclick="sortAllCol('level')">Level ${getSortIcon(currentAllSort,'level')}</th>
+                                <th style="cursor:pointer" onclick="sortAllCol('package')">Package ${getSortIcon(currentAllSort,'package')}</th>
+                                <th style="cursor:pointer" onclick="sortAllCol('sponsor')">Sponsor ${getSortIcon(currentAllSort,'sponsor')}</th>
+                                <th style="cursor:pointer" onclick="sortAllCol('reg_date')">Reg Date ${getSortIcon(currentAllSort,'reg_date')}</th>
+                                <th style="cursor:pointer" onclick="sortAllCol('activation_date')">Activation Date ${getSortIcon(currentAllSort,'activation_date')}</th>
+                                <th style="cursor:pointer" onclick="sortAllCol('status')">Status ${getSortIcon(currentAllSort,'status')}</th>
+                                <th>Coupons</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            
+            members.forEach(member => {
+                const isActivated = !!member.activated_at;
+                const statusClass = isActivated ? 'active' : 'inactive';
+                const statusText = isActivated ? 'Activated' : 'Not Activated';
+                const regDate = member.registration_date ? formatDate(member.registration_date) : '-';
+                const activationDate = member.activated_at ? formatDate(member.activated_at) : '-';
+                const level = member.level || member.tree_level || '-';
+                const groupLabel = member.side === 'left' ? 'Group A' : (member.side === 'right' ? 'Group B' : '-');
+                const groupClass = member.side === 'left' ? 'text-info' : (member.side === 'right' ? 'text-warning' : '');
+                
+                const memberId = escapeHTML(member.id || member.mnr_id || member.user_id || '');
+                html += `<tr class="member-row">
+                    <td><strong class="text-primary">${memberId}</strong></td>
+                    <td>${escapeHTML(member.name || member.user_name || '-')}</td>
+                    <td><strong class="${groupClass}">${groupLabel}</strong></td>
+                    <td>${level}</td>
+                    <td><span class="package-badge">${escapeHTML(member.package_type || 'N/A')}</span></td>
+                    <td>${escapeHTML(member.referrer_id || member.sponsor_id || '-')}</td>
+                    <td>${regDate}</td>
+                    <td>${activationDate}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    <td><a href="/staff/mnr-user/coupons/available?mnr_id=${memberId}" title="View Coupons" style="color:#ffc107;font-size:13px;"><i class="fas fa-ticket-alt me-1"></i><span style="font-size:11px;">Coupons</span></a></td>
+                </tr>`;
+            });
+            
+            html += '</tbody></table></div></div>';
+            tableContainer.innerHTML = html;
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            try {
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            } catch (e) {
+                return dateStr;
+            }
+        }
+        
+        function applyAllMembersFilter() {
+            const nameFilter = (document.getElementById('filterName')?.value || '').toLowerCase().trim();
+            const statusFilter = document.getElementById('filterStatus')?.value || '';
+            const packageFilter = (document.getElementById('filterPackage')?.value || '').toLowerCase();
+            const positionFilter = document.getElementById('filterPosition')?.value || '';
+            const levelFilter = document.getElementById('filterLevel')?.value || '';
+            const referrerFilter = (document.getElementById('filterReferrerId')?.value || '').toUpperCase().trim();
+            const startDate = document.getElementById('filterStartDate')?.value || '';
+            const endDate = document.getElementById('filterEndDate')?.value || '';
+            
+            let filtered = allMembersCache.filter(member => {
+                const memberName = (member.name || member.user_name || '').toLowerCase();
+                const isActivated = !!member.activated_at;
+                const memberStatus = isActivated ? 'activated' : 'not_activated';
+                const memberPackage = (member.package_type || '').toLowerCase();
+                const memberPosition = (member.side || '').toLowerCase();
+                const memberLevel = parseInt(member.level) || 0;
+                const memberReferrer = (member.referrer_id || member.sponsor_id || '').toUpperCase();
+                const memberRegDate = member.registration_date ? member.registration_date.split('T')[0] : '';
+                
+                if (nameFilter && !memberName.includes(nameFilter)) return false;
+                if (statusFilter && memberStatus !== statusFilter) return false;
+                if (packageFilter && memberPackage !== packageFilter) return false;
+                if (positionFilter && memberPosition !== positionFilter) return false;
+                if (levelFilter) {
+                    const filterLevelNum = parseInt(levelFilter);
+                    if (levelFilter === '10') {
+                        if (memberLevel < 10) return false;
+                    } else if (memberLevel !== filterLevelNum) {
+                        return false;
+                    }
+                }
+                if (referrerFilter && !memberReferrer.includes(referrerFilter)) return false;
+                if (startDate && memberRegDate && memberRegDate < startDate) return false;
+                if (endDate && memberRegDate && memberRegDate > endDate) return false;
+                
+                return true;
+            });
+            
+            const sorted = sortData(filtered, currentAllSort.field, currentAllSort.dir);
+            renderAllMembersTable(sorted);
+        }
+        
+        function clearAllMembersFilter() {
+            document.getElementById('filterName').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterPackage').value = '';
+            document.getElementById('filterPosition').value = '';
+            document.getElementById('filterLevel').value = '';
+            document.getElementById('filterReferrerId').value = '';
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            renderAllMembersTable(allMembersCache);
+        }
+
+        function sortAllCol(field) {
+            toggleSort(currentAllSort, field);
+            applyAllMembersFilter();
+        }
+
+        function navigateToUser(userId) {
+            currentMnrId = userId;
+            const isMyTree = (userId === initialMnrId);
+            document.getElementById('backToMyTreeBtn').style.display = isMyTree ? 'none' : 'inline-block';
+            loadViewContent();
+            const url = new URL(window.location.href);
+            url.searchParams.set('mnr_id', userId);
+            window.history.replaceState({}, '', url.toString());
+        }
+
+        function backToMyTree() {
+            if (initialMnrId) {
+                currentMnrId = initialMnrId;
+                document.getElementById('backToMyTreeBtn').style.display = 'none';
+                loadViewContent();
+                const url = new URL(window.location.href);
+                url.searchParams.set('mnr_id', initialMnrId);
+                window.history.replaceState({}, '', url.toString());
+            }
+        }
+
+        function refreshTree() {
+            if (currentMnrId) loadViewContent();
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        async function loadBinaryTree(rootUserId) {
+            console.log('[DC-STAFF-TREE] Loading tree for:', rootUserId);
+            document.getElementById('contentContainer').innerHTML = `
+                <div class="py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2">Loading tree for ${escapeHTML(rootUserId)}...</p>
+                </div>`;
+            
+            try {
+                const response = await staffFetch(`/api/v1/team/user/${rootUserId}/binary-tree?levels=${TREE_LEVELS}`);
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || `HTTP ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('[DC-STAFF-TREE] API Response:', data);
+                
+                if (data.success && data.tree_data) {
+                    const treeHTML = buildTreeHTML(data.tree_data, rootUserId);
+                    document.getElementById('contentContainer').innerHTML = treeHTML;
+                    document.getElementById('breadcrumb').textContent = `Viewing: ${data.tree_data.binary_tree?.user_name || 'Unknown'} (${rootUserId})`;
+                    document.getElementById('memberName').textContent = data.tree_data.binary_tree?.user_name || 'Unknown';
+                    
+                    document.querySelectorAll('.tree-node[data-user-id]').forEach(node => {
+                        node.addEventListener('click', () => {
+                            const userId = node.getAttribute('data-user-id');
+                            if (userId && !node.classList.contains('empty') && userId !== currentMnrId) {
+                                navigateToUser(userId);
+                            }
+                        });
+                    });
+                    updateZoom(currentZoom);
+                } else {
+                    document.getElementById('contentContainer').innerHTML = `<div class="alert alert-warning">No tree data found for ${rootUserId}</div>`;
+                }
+            } catch (error) {
+                console.error('[DC-STAFF-TREE] Error:', error);
+                document.getElementById('contentContainer').innerHTML = `<div class="alert alert-danger">${escapeHTML(error.message)}</div>`;
+            }
+        }
+
+        function buildTreeHTML(apiData, rootUserId) {
+            const tree = apiData.binary_tree;
+            const stats = apiData.team_statistics || {};
+            const leftTotal = stats.left_count || 0;
+            const rightTotal = stats.right_count || 0;
+
+            const levels = [];
+            for (let i = 0; i < TREE_LEVELS; i++) levels.push([]);
+
+            function processNode(node, level, position) {
+                if (level >= TREE_LEVELS) return;
+                const nodeData = node ? {
+                    id: node.user_id || node.mnr_id,
+                    name: node.user_name || node.name || 'Unknown',
+                    gender: node.gender || null,
+                    active: !!node.activation_date || node.is_active,
+                    position: position,
+                    isRoot: level === 0
+                } : { id: null, name: 'Empty', gender: null, active: false, position: position, isEmpty: true };
+                levels[level].push(nodeData);
+                if (level < TREE_LEVELS - 1) {
+                    if (node && node.children) {
+                        processNode(node.children.left, level + 1, 'left');
+                        processNode(node.children.right, level + 1, 'right');
+                    } else {
+                        processNode(null, level + 1, 'left');
+                        processNode(null, level + 1, 'right');
+                    }
+                }
+            }
+            processNode(tree, 0, 'root');
+
+            let html = '<div class="binary-tree-wrapper"><div class="binary-tree">';
+            levels.forEach((levelNodes, levelIndex) => {
+                if (levelNodes.length === 0) return;
+                html += `<div class="tree-level tree-level-${levelIndex}">`;
+                if (levelIndex === 0) {
+                    const node = levelNodes[0];
+                    const statusClass = node.isEmpty ? 'empty' : (node.active ? 'active' : 'inactive');
+                    const dataAttr = node.id ? ` data-user-id="${escapeHTML(node.id)}"` : '';
+                    html += `<div class="tree-node"${dataAttr}>`;
+                    html += `<div class="member-count-badges"><span class="member-badge">Group A: ${leftTotal}</span><span class="member-badge">Group B: ${rightTotal}</span></div>`;
+                    html += `<div class="person-avatar ${statusClass} root">${getAvatar(node)}</div>`;
+                    html += `<div class="node-mnr-id">${escapeHTML(node.id || 'Empty')}</div>`;
+                    if (!node.isEmpty) html += `<div class="node-name">${escapeHTML(node.name)}</div>`;
+                    html += '</div>';
+                } else {
+                    for (let i = 0; i < levelNodes.length; i += 2) {
+                        const leftNode = levelNodes[i];
+                        const rightNode = levelNodes[i + 1];
+                        html += '<div class="sibling-pair">';
+                        html += renderNode(leftNode, 'left');
+                        html += renderNode(rightNode, 'right');
+                        html += '</div>';
+                    }
+                }
+                html += '</div>';
+            });
+            html += '</div></div>';
+            return html;
+        }
+
+        function getAvatar(node) {
+            if (node.isEmpty) return '<i class="fas fa-plus text-muted"></i>';
+            if (node.gender === 'Male') return '👨';
+            if (node.gender === 'Female') return '👩';
+            return '🧑';
+        }
+
+        function renderNode(node, position) {
+            const statusClass = node.isEmpty ? 'empty' : (node.active ? 'active' : 'inactive');
+            const posClass = position === 'left' ? 'left-child' : 'right-child';
+            const dataAttr = node.id ? ` data-user-id="${escapeHTML(node.id)}"` : '';
+            let html = `<div class="tree-node ${posClass} ${node.isEmpty ? 'empty' : ''}"${dataAttr}>`;
+            html += `<div class="person-avatar ${statusClass}">${getAvatar(node)}</div>`;
+            html += `<div class="node-mnr-id">${escapeHTML(node.id || 'Empty')}</div>`;
+            if (!node.isEmpty) html += `<div class="node-name">${escapeHTML(node.name)}</div>`;
+            html += '</div>';
+            return html;
+        }
+
+        function updateZoom(newZoom) {
+            currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+            const tree = document.querySelector('.binary-tree');
+            if (tree) {
+                tree.style.transform = `scale(${currentZoom})`;
+                tree.style.transformOrigin = 'top center';
+                tree.style.transition = 'transform 0.3s ease';
+            }
+            document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%';
+            document.getElementById('zoomOutBtn').disabled = (currentZoom <= MIN_ZOOM);
+            document.getElementById('zoomInBtn').disabled = (currentZoom >= MAX_ZOOM);
+        }
+        function updateZoomDisplay() { document.getElementById('zoomLevel').textContent = Math.round(currentZoom * 100) + '%'; }
+        window.zoomIn = () => updateZoom(currentZoom + ZOOM_STEP);
+        window.zoomOut = () => updateZoom(currentZoom - ZOOM_STEP);
+        window.resetZoom = () => updateZoom(1.0);
+    </script>
+</body>
+</html>

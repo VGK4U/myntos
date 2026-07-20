@@ -1,0 +1,2811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Income Entries - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 24px; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+
+        .tab-nav { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; overflow-x: auto; }
+        .tab-btn { padding: 10px 20px; border: none; background: transparent; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+        .tab-btn:hover { color: #374151; background: #f9fafb; }
+        .tab-btn.active { color: #059669; border-bottom-color: #059669; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .filter-section { background: white; padding: 14px 18px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 3px; }
+        .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-group select, .filter-group input { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 130px; }
+
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .summary-card { background: white; border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center; }
+        .summary-card .value { font-size: 20px; font-weight: 700; color: #1f2937; }
+        .summary-card .label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+        .card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: none; margin-bottom: 16px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 14px 18px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th { text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; cursor: pointer; user-select: none; }
+        .data-table th:hover { background: #f0fdf4; color: #059669; }
+        .data-table th .sort-icon { margin-left: 4px; font-size: 10px; opacity: 0.4; }
+        .data-table th.sorted .sort-icon { opacity: 1; color: #059669; }
+        .data-table td { padding: 10px 12px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .table-container { overflow-x: auto; }
+
+        .amount { font-weight: 600; font-family: 'Courier New', monospace; }
+        .amount.positive { color: #059669; }
+
+        .badge-status { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; display: inline-block; }
+        .badge-pending { background: #fef3c7; color: #d97706; }
+        .badge-confirmed { background: #d1fae5; color: #059669; }
+        .badge-exception_tally { background: #fce7f3; color: #db2777; }
+        .badge-adjustment { background: #dbeafe; color: #2563eb; }
+        .badge-tally_done { background: #e0e7ff; color: #4338ca; }
+        .badge-rejected { background: #fee2e2; color: #dc2626; }
+        .badge-crm { background: #ede9fe; color: #7c3aed; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+        .btn-reject { border-color: #dc2626; color: #dc2626; }
+        .btn-reject:hover { background: #dc2626; color: white; }
+        tr.row-rejected td { opacity: 0.55; }
+        tr.row-rejected td.amount { text-decoration: line-through; }
+        tr.row-estimated td { background: #fffbeb; }
+        tr.row-estimated td:first-child { border-left: 3px solid #f59e0b; }
+        .badge-txn-type { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+        .badge-advance { background: #fef3c7; color: #92400e; }
+        .badge-partial { background: #dbeafe; color: #1e40af; }
+        .badge-final { background: #d1fae5; color: #065f46; }
+        .badge-other { background: #f3f4f6; color: #374151; }
+
+        .btn-action { padding: 4px 10px; border: 1px solid #d1d5db; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: 500; background: white; margin: 1px; transition: all 0.15s; }
+        .btn-confirm { border-color: #059669; color: #059669; }
+        .btn-confirm:hover { background: #059669; color: white; }
+        .btn-exception { border-color: #db2777; color: #db2777; }
+        .btn-exception:hover { background: #db2777; color: white; }
+        .btn-adjustment { border-color: #2563eb; color: #2563eb; }
+        .btn-adjustment:hover { background: #2563eb; color: white; }
+        .btn-tally { border-color: #4338ca; color: #4338ca; }
+        .btn-tally:hover { background: #4338ca; color: white; }
+        .btn-revert { border-color: #d97706; color: #d97706; }
+        .btn-revert:hover { background: #d97706; color: white; }
+        .btn-edit { border-color: #0284c7; color: #0284c7; }
+        .btn-edit:hover { background: #0284c7; color: white; }
+        .dest-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+        .dest-company { background: #dbeafe; color: #1e40af; }
+        .dest-employee { background: #d1fae5; color: #065f46; }
+        .dest-none { background: #f3f4f6; color: #9ca3af; }
+        .balance-info-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px; margin-top: 8px; }
+        .balance-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 2px 0; }
+        .balance-row .label { color: #6b7280; }
+        .balance-row .value { font-weight: 600; font-family: monospace; }
+        .balance-row .value.positive { color: #059669; }
+        .balance-row .value.warn { color: #d97706; }
+        .balance-row .value.danger { color: #dc2626; }
+        .section-divider { border: none; border-top: 1px solid #e5e7eb; margin: 14px 0; }
+
+        .btn-primary-custom { background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 8px 18px; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 13px; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); }
+
+        .empty-state { text-align: center; padding: 50px 20px; color: #6b7280; }
+        .empty-state i { font-size: 40px; margin-bottom: 12px; color: #d1d5db; }
+        .empty-state h3 { font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .loading-spinner { display: flex; justify-content: center; align-items: center; padding: 40px; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #10b981; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .grouped-section { margin-bottom: 12px; }
+        .grouped-header { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.15s; }
+        .grouped-header:hover { background: #f0fdf4; }
+        .grouped-header .group-title { font-weight: 600; font-size: 14px; color: #1f2937; }
+        .grouped-header .group-stats { display: flex; gap: 16px; font-size: 12px; color: #6b7280; }
+        .grouped-header .group-stats span { font-weight: 600; }
+        .grouped-body { display: none; padding: 8px 0; }
+        .grouped-body.expanded { display: block; }
+        .group-chevron { transition: transform 0.2s; color: #9ca3af; }
+        .group-chevron.rotated { transform: rotate(90deg); }
+
+        .view-btn { padding: 4px 10px; border: 1px solid #6366f1; color: #6366f1; border-radius: 5px; cursor: pointer; font-size: 11px; font-weight: 500; background: white; }
+        .view-btn:hover { background: #6366f1; color: white; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 18px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 16px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 22px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 18px; }
+        .modal-footer { padding: 14px 18px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 10px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+        .date-group-card { background: white; border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+        .date-group-header { background: #f0fdf4; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #e5e7eb; }
+        .date-group-header:hover { background: #dcfce7; }
+        .date-group-header .date-label { font-weight: 700; font-size: 14px; color: #1f2937; }
+        .date-group-header .date-stats { display: flex; gap: 14px; font-size: 12px; color: #6b7280; }
+        .date-group-body { display: none; }
+        .date-group-body.expanded { display: block; }
+
+        /* DC-ESTIMATIONS-001 */
+        .badge-estimated { background: #fef3c7; color: #b45309; }
+        .btn-estimate { border-color: #d97706; color: #d97706; }
+        .btn-estimate:hover { background: #d97706; color: white; }
+        .est-sub-nav { display: flex; gap: 0; border-bottom: 1px solid #e5e7eb; margin-bottom: 16px; }
+        .est-sub-btn { padding: 8px 16px; border: none; background: transparent; font-size: 12px; font-weight: 600; color: #6b7280; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+        .est-sub-btn:hover { color: #374151; }
+        .est-sub-btn.active { color: #b45309; border-bottom-color: #b45309; }
+        .est-sub-content { display: none; }
+        .est-sub-content.active { display: block; }
+        .est-summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .est-card { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; text-align: center; }
+        .est-card .val { font-size: 20px; font-weight: 700; }
+        .est-card .lbl { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .est-card.in .val { color: #059669; }
+        .est-card.out .val { color: #dc2626; }
+        .est-card.pmt .val { color: #7c3aed; }
+        .est-card.net .val { color: #1f2937; }
+        .confirm-choice { display: flex; gap: 14px; margin: 16px 0; }
+        .confirm-choice label { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 10px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+        .confirm-choice label:hover { border-color: #059669; background: #f0fdf4; }
+        .confirm-choice input[type=radio]:checked + label,
+        .confirm-choice label:has(input[type=radio]:checked) { border-color: #059669; background: #d1fae5; color: #065f46; }
+        .confirm-choice label i { font-size: 24px; }
+        .confirm-choice input[type=radio] { display: none; }
+        .conf-section { display: none; }
+        .conf-section.active { display: block; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+    <div class="content-area">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <div>
+                <h1 style="font-size: 22px; font-weight: 700; color: #1f2937; margin: 0;">Income Entries</h1>
+                <p style="font-size: 13px; color: #6b7280; margin: 3px 0 0 0;">SFMS income tracking with CRM auto-sync</p>
+            </div>
+            <button class="btn-primary-custom" onclick="openCreateModal()">
+                <i class="fas fa-plus me-1"></i>New Income Entry
+            </button>
+        </div>
+
+        <div class="summary-cards" id="summaryCards">
+            <div class="summary-card"><div class="value" id="sumTotal">0</div><div class="label">Total Entries</div></div>
+            <div class="summary-card"><div class="value" id="sumAmount">&#8377;0</div><div class="label">Active Amount</div></div>
+            <div class="summary-card"><div class="value" id="sumPending">0</div><div class="label">Pending</div></div>
+            <div class="summary-card"><div class="value" id="sumConfirmed">0</div><div class="label">Confirmed</div></div>
+            <div class="summary-card"><div class="value" id="sumTallyDone">0</div><div class="label">Tally Done</div></div>
+            <div class="summary-card"><div class="value" id="sumRejected" style="color:#dc2626;">0</div><div class="label">Rejected</div></div>
+            <div class="summary-card"><div class="value" id="sumEstimated" style="color:#b45309;">0</div><div class="label">Estimated</div></div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group">
+                <label>Status</label>
+                <select id="filterStatus" onchange="applyFilters()">
+                    <option value="">All Status</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="EXCEPTION_TALLY">Exception for Tally</option>
+                    <option value="ADJUSTMENT">Adjustment</option>
+                    <option value="TALLY_DONE">Tally Entry Done</option>
+                    <option value="ESTIMATED">Estimated</option>
+                    <option value="REJECTED">Rejected</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="filterCompany" onchange="onCompanyFilterChange()">
+                    <option value="">All Companies</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Category</label>
+                <select id="filterCategory" onchange="applyFilters()">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Payment Mode</label>
+                <select id="filterPaymentMode" onchange="applyFilters()">
+                    <option value="">All Modes</option>
+                    <option value="UPI">UPI</option>
+                    <option value="CASH">Cash</option>
+                    <option value="NEFT">NEFT</option>
+                    <option value="RTGS">RTGS</option>
+                    <option value="CHEQUE">Cheque</option>
+                    <option value="CARD">Card</option>
+                    <option value="BANK">Bank</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Payment Type</label>
+                <select id="filterPaymentType" onchange="applyFilters()">
+                    <option value="">All Types</option>
+                    <option value="BANK">Bank</option>
+                    <option value="CASH">Cash</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Txn Type</label>
+                <select id="filterTxnType" onchange="applyFilters()">
+                    <option value="">All Types</option>
+                    <option value="advance">Advance</option>
+                    <option value="partial">Partial</option>
+                    <option value="final">Final</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Source</label>
+                <select id="filterSource" onchange="applyFilters()">
+                    <option value="">All</option>
+                    <option value="crm">CRM Auto-Sync</option>
+                    <option value="manual">Manual Entry</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Destination Type</label>
+                <select id="filterDestType" onchange="applyFilters()">
+                    <option value="">All Destinations</option>
+                    <option value="UNASSIGNED">Unassigned</option>
+                    <option value="EMPLOYEE">Employee</option>
+                    <option value="COMPANY_ACCOUNT">Company Account</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Destination</label>
+                <input type="text" id="filterDestSearch" placeholder="Name, emp code, company…" oninput="debounceDestSearch()" onkeyup="debounceDestSearch()" style="min-width:160px">
+            </div>
+            <div class="filter-group">
+                <label>From Date</label>
+                <input type="date" id="filterFromDate" onchange="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label>To Date</label>
+                <input type="date" id="filterToDate" onchange="applyFilters()">
+            </div>
+            <div class="filter-group">
+                <label>Search</label>
+                <input type="text" id="filterSearch" placeholder="Entry #, Name, City, Amount, Reference, Narration..." oninput="debounceSearch()" onkeyup="debounceSearch()">
+            </div>
+        </div>
+
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="transactions" onclick="switchTab('transactions')"><i class="fas fa-exchange-alt me-1"></i>Transaction Wise</button>
+            <button class="tab-btn" data-tab="dateWise" onclick="switchTab('dateWise')"><i class="fas fa-calendar-alt me-1"></i>Date Wise</button>
+            <button class="tab-btn" data-tab="customerWise" onclick="switchTab('customerWise')"><i class="fas fa-user me-1"></i>Customer Wise</button>
+            <button class="tab-btn" data-tab="leadOwner" onclick="switchTab('leadOwner')"><i class="fas fa-user-tie me-1"></i>Lead Owner Wise</button>
+            <button class="tab-btn" data-tab="employee" onclick="switchTab('employee')"><i class="fas fa-id-badge me-1"></i>Employee Wise</button>
+            <button class="tab-btn" data-tab="location" onclick="switchTab('location')"><i class="fas fa-map-marker-alt me-1"></i>Location Wise</button>
+            <button class="tab-btn" data-tab="estimations" onclick="switchTab('estimations')" style="color:#b45309;"><i class="fas fa-calculator me-1"></i>Estimations</button>
+            <button class="tab-btn" data-tab="solarvendor" onclick="switchTab('solarvendor')" style="color:#0369a1;"><i class="fas fa-solar-panel me-1"></i>Solar Vendor Ledger</button>
+            <button class="tab-btn" data-tab="execDash" onclick="switchTab('execDash')" style="color:#7c3aed;"><i class="fas fa-chart-pie me-1"></i>Executive Dashboard</button>
+        </div>
+
+        <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+
+        <div id="tab-transactions" class="tab-content active"></div>
+        <div id="tab-dateWise" class="tab-content"></div>
+        <div id="tab-customerWise" class="tab-content"></div>
+        <div id="tab-leadOwner" class="tab-content"></div>
+        <div id="tab-employee" class="tab-content"></div>
+        <div id="tab-location" class="tab-content"></div>
+        <div id="tab-solarvendor" class="tab-content"></div>
+        <div id="tab-execDash" class="tab-content"></div>
+        <div id="tab-estimations" class="tab-content">
+            <div class="est-sub-nav">
+                <button class="est-sub-btn active" data-esttab="in" onclick="switchEstSubTab('in')"><i class="fas fa-arrow-down me-1" style="color:#059669;"></i>IN Estimates</button>
+                <button class="est-sub-btn" data-esttab="out" onclick="switchEstSubTab('out')"><i class="fas fa-arrow-up me-1" style="color:#dc2626;"></i>OUT Planning</button>
+                <button class="est-sub-btn" data-esttab="payments" onclick="switchEstSubTab('payments')"><i class="fas fa-credit-card me-1" style="color:#7c3aed;"></i>Payments</button>
+                <button class="est-sub-btn" data-esttab="stock" onclick="switchEstSubTab('stock')"><i class="fas fa-boxes me-1" style="color:#0284c7;"></i>Stock Movement</button>
+                <button class="est-sub-btn" data-esttab="executive" onclick="switchEstSubTab('executive')"><i class="fas fa-chart-pie me-1" style="color:#b45309;"></i>Executive Summary</button>
+            </div>
+            <div id="est-sub-in" class="est-sub-content active"></div>
+            <div id="est-sub-out" class="est-sub-content"></div>
+            <div id="est-sub-payments" class="est-sub-content"></div>
+            <div id="est-sub-stock" class="est-sub-content"></div>
+            <div id="est-sub-executive" class="est-sub-content"></div>
+        </div>
+    </div>
+    </div>
+
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle me-2"></i>New Income Entry</h3>
+                <button class="modal-close" onclick="closeModal('createModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Company *</label>
+                            <select id="formCompany" required onchange="loadFormCategories()"><option value="">Select Company</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Income Date *</label>
+                            <input type="date" id="formDate" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Source Type *</label>
+                            <select id="formSourceType" required><option value="">Select Source</option></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Revenue Category</label>
+                            <select id="formCategory"><option value="">None</option></select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Amount *</label>
+                            <input type="number" id="formAmount" step="0.01" min="0.01" required placeholder="Amount">
+                        </div>
+                        <div class="form-group">
+                            <label>Payment Mode *</label>
+                            <select id="formPaymentMode" required>
+                                <option value="CASH">Cash</option>
+                                <option value="UPI">UPI</option>
+                                <option value="NEFT">NEFT</option>
+                                <option value="RTGS">RTGS</option>
+                                <option value="BANK">Bank Transfer</option>
+                                <option value="CHEQUE">Cheque</option>
+                                <option value="CARD">Card</option>
+                                <option value="DD">Demand Draft</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Payment Type</label>
+                            <select id="formPaymentType">
+                                <option value="">Not specified</option>
+                                <option value="BANK">Bank</option>
+                                <option value="CASH">Cash</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Payer Name</label>
+                            <input type="text" id="formPayer" placeholder="Name of payer">
+                        </div>
+                        <div class="form-group">
+                            <label>Payment Reference</label>
+                            <input type="text" id="formPayRef" placeholder="Txn/Cheque No.">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Narration</label>
+                        <textarea id="formNarration" placeholder="Description / notes" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;">
+                            <input type="checkbox" id="formShowInLedger" style="width:16px;height:16px;">
+                            Show in Ledger
+                        </label>
+                        <small style="color:#6b7280;font-size:11px;">Optional. When checked, this entry is posted to the transaction ledger. Can be changed anytime.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="createIncome()" id="btnCreateIncome"><i class="fas fa-save me-1"></i>Create Entry</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="viewDetailModal">
+        <div class="modal-content" style="max-width: 850px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-list-alt me-2"></i><span id="viewDetailTitle">Transactions</span></h3>
+                <button class="modal-close" onclick="closeModal('viewDetailModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="viewDetailBody"></div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let companiesCache = [];
+        let allIncomes = [];
+        let filteredIncomes = [];
+        let currentTab = 'transactions';
+        let currentSort = { field: 'income_date', order: 'desc' };
+        let searchTimer = null;
+        let destSearchTimer = null;
+        let currentUserData = null;
+
+        const STATUS_MAP = {
+            'PENDING': { label: 'Pending', cls: 'pending' },
+            'CONFIRMED': { label: 'Confirmed', cls: 'confirmed' },
+            'ESTIMATED': { label: 'Estimated', cls: 'estimated' },
+            'EXCEPTION_TALLY': { label: 'Exception for Tally', cls: 'exception_tally' },
+            'ADJUSTMENT': { label: 'Adjustment', cls: 'adjustment' },
+            'TALLY_DONE': { label: 'Tally Entry Done', cls: 'tally_done' },
+            'REJECTED': { label: 'Rejected', cls: 'rejected' }
+        };
+
+        // DC-ESTIMATIONS-001: estimation state
+        let estimationCompanyId = null;
+        let currentEstSubTab = 'in';
+        let estInEntries = [];
+        let estOutRecords = [];
+        let estPayments = [];
+        let estStock = [];
+        let estSummary = null;
+        let bankAccountsCache = {};
+
+        function canRejectEntries() {
+            if (!currentUserData) return false;
+            const role = (currentUserData.emp_role_code || currentUserData.role_code || '').toLowerCase();
+            const designation = (currentUserData.designation || '').toUpperCase();
+            const allowedRoles = new Set(['vgk4u', 'ea', 'accounts', 'executive_assistant', 'executive assistant']);
+            return allowedRoles.has(role) || designation.includes('MENTOR');
+        }
+
+        function canDeleteEntries() {
+            if (!currentUserData) return false;
+            const role = (currentUserData.emp_role_code || currentUserData.role_code || '').toLowerCase();
+            return role === 'vgk4u' || role === 'ea' || role === 'executive_assistant';
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('Income Entries', 'fas fa-file-invoice-dollar'); StaffHeader.init(); }
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            document.getElementById('formDate').valueAsDate = new Date();
+            try {
+                const meR = await staffFetch('/api/v1/staff/auth/me');
+                if (meR.ok) currentUserData = await meR.json();
+            } catch(e) {}
+            await Promise.all([loadCompanies(), loadSourceTypes(), loadFilterCategories('')]);
+            await loadIncomes();
+        });
+
+        async function loadCompanies() {
+            try {
+                const r = await staffFetch(`${API_BASE}/companies`);
+                if (r.ok) {
+                    const data = await r.json();
+                    companiesCache = data.companies || [];
+                    ['filterCompany', 'formCompany'].forEach(id => {
+                        const sel = document.getElementById(id);
+                        companiesCache.forEach(c => {
+                            const o = document.createElement('option');
+                            o.value = c.id; o.textContent = c.company_name || c.name;
+                            sel.appendChild(o);
+                        });
+                    });
+                }
+            } catch (e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') console.error(e); }
+        }
+
+        async function loadSourceTypes() {
+            try {
+                const r = await staffFetch(`${API_BASE}/income-sources`);
+                if (r.ok) {
+                    const data = await r.json();
+                    const sel = document.getElementById('formSourceType');
+                    (data.source_types || data.income_source_types || data.sources || []).forEach(s => {
+                        const o = document.createElement('option');
+                        o.value = s.id; o.textContent = s.source_name || s.name;
+                        sel.appendChild(o);
+                    });
+                }
+            } catch (e) { console.error('Error loading source types:', e); }
+        }
+
+        async function loadFormCategories() {
+            const companyId = document.getElementById('formCompany').value;
+            const sel = document.getElementById('formCategory');
+            sel.innerHTML = '<option value="">None</option>';
+            if (!companyId) return;
+            try {
+                const r = await staffFetch(`${API_BASE}/revenue-categories?company_id=${companyId}&active_only=true`);
+                if (r.ok) {
+                    const data = await r.json();
+                    (data.categories || []).forEach(c => {
+                        const o = document.createElement('option');
+                        o.value = c.id; o.textContent = c.category_name;
+                        sel.appendChild(o);
+                    });
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function loadIncomes() {
+            document.getElementById('loadingState').style.display = 'flex';
+            document.querySelectorAll('.tab-content').forEach(t => { if (t.id !== 'tab-estimations' && t.id !== 'tab-solarvendor') t.innerHTML = ''; });
+            try {
+                const search = document.getElementById('filterSearch').value.trim();
+                const params = new URLSearchParams({ page: 1, page_size: 500 });
+                const status = document.getElementById('filterStatus').value;
+                const company = document.getElementById('filterCompany').value;
+                const mode = document.getElementById('filterPaymentMode').value;
+                const txnType = document.getElementById('filterTxnType').value;
+                const source = document.getElementById('filterSource').value;
+                const dateFrom = document.getElementById('filterFromDate').value;
+                const dateTo = document.getElementById('filterToDate').value;
+                if (status) params.append('status', status);
+                if (company) params.append('company_id', company);
+                if (mode) params.append('payment_mode', mode);
+                if (txnType) params.append('transaction_type', txnType);
+                if (source) params.append('source', source);
+                if (dateFrom) params.append('date_from', dateFrom);
+                if (dateTo) params.append('date_to', dateTo);
+                if (search) params.append('search', search);
+
+                const catName = document.getElementById('filterCategory').value;
+                if (catName) params.append('category_name', catName);
+                const r = await staffFetch(`${API_BASE}/income-entries?${params}`);
+                if (r.ok) {
+                    const data = await r.json();
+                    allIncomes = data.incomes || data.income_entries || [];
+                    filteredIncomes = [...allIncomes];
+                    const payTypeFilter = document.getElementById('filterPaymentType').value;
+                    if (payTypeFilter) {
+                        filteredIncomes = filteredIncomes.filter(i => i.payment_type === payTypeFilter);
+                    }
+                    const destTypeFilter = document.getElementById('filterDestType').value;
+                    if (destTypeFilter) {
+                        if (destTypeFilter === 'UNASSIGNED') {
+                            filteredIncomes = filteredIncomes.filter(i => !i.destination_type);
+                        } else {
+                            filteredIncomes = filteredIncomes.filter(i => i.destination_type === destTypeFilter);
+                        }
+                    }
+                    const destSearchVal = (document.getElementById('filterDestSearch').value || '').trim().toLowerCase();
+                    if (destSearchVal) {
+                        filteredIncomes = filteredIncomes.filter(i => {
+                            const en = (i.destination_employee_name || '').toLowerCase();
+                            const ec = (i.destination_employee_emp_code || '').toLowerCase();
+                            const cn = (i.destination_company_name || '').toLowerCase();
+                            return en.includes(destSearchVal) || ec.includes(destSearchVal) || cn.includes(destSearchVal);
+                        });
+                    }
+                    sortData();
+                    renderAll();
+                } else if (r.status === 403) {
+                    const el = document.getElementById('incomeTableContainer');
+                    if (el) el.innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><h3>Access Restricted</h3><p>Your account does not have permission to view income entries. Contact your administrator to verify your department assignment.</p></div>';
+                    allIncomes = []; filteredIncomes = [];
+                } else { allIncomes = []; filteredIncomes = []; renderAll(); }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                allIncomes = []; filteredIncomes = []; renderAll();
+            }
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        function applyFilters() { loadIncomes(); }
+        function debounceSearch() { clearTimeout(searchTimer); searchTimer = setTimeout(loadIncomes, 400); }
+        function debounceDestSearch() { clearTimeout(destSearchTimer); destSearchTimer = setTimeout(loadIncomes, 400); }
+
+        async function loadFilterCategories(companyId) {
+            const catSel = document.getElementById('filterCategory');
+            const prevVal = catSel.value;
+            catSel.innerHTML = '<option value="">All Categories</option>';
+            try {
+                let names = [];
+                if (companyId) {
+                    const r = await staffFetch(`${API_BASE}/revenue-categories?company_id=${companyId}&active_only=true`);
+                    if (r.ok) {
+                        const data = await r.json();
+                        names = [...new Set((data.categories || []).map(c => c.category_name).filter(Boolean))];
+                    }
+                } else {
+                    const r = await staffFetch(`${API_BASE}/revenue-categories/all-names?active_only=true`);
+                    if (r.ok) {
+                        const data = await r.json();
+                        names = data.names || [];
+                    }
+                }
+                names.forEach(name => {
+                    const o = document.createElement('option');
+                    o.value = name; o.textContent = name;
+                    catSel.appendChild(o);
+                });
+                if (prevVal && [...catSel.options].some(o => o.value === prevVal)) catSel.value = prevVal;
+            } catch (e) { console.error(e); }
+        }
+
+        async function onCompanyFilterChange() {
+            const companyId = document.getElementById('filterCompany').value;
+            await loadFilterCategories(companyId);
+            applyFilters();
+        }
+
+        function sortData() {
+            const f = currentSort.field;
+            const rev = currentSort.order === 'desc';
+            filteredIncomes.sort((a, b) => {
+                let va = a[f], vb = b[f];
+                if (va == null) va = '';
+                if (vb == null) vb = '';
+                if (typeof va === 'number' && typeof vb === 'number') return rev ? vb - va : va - vb;
+                va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+                return rev ? vb.localeCompare(va) : va.localeCompare(vb);
+            });
+        }
+
+        function setSort(field) {
+            if (currentSort.field === field) currentSort.order = currentSort.order === 'desc' ? 'asc' : 'desc';
+            else { currentSort.field = field; currentSort.order = 'desc'; }
+            sortData();
+            renderAll();
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            if (tab === 'solarvendor') { renderSolarVendorLedger(); return; }
+            if (tab === 'execDash') { renderExecutiveDashboard(); return; }
+            renderAll();
+        }
+
+        // Returns filteredIncomes excluding ESTIMATED unless user explicitly filters by ESTIMATED
+        function getViewableIncomes() {
+            return document.getElementById('filterStatus').value === 'ESTIMATED'
+                ? filteredIncomes
+                : filteredIncomes.filter(i => i.status !== 'ESTIMATED');
+        }
+
+        function renderAll() {
+            renderSummary();
+            if (currentTab === 'transactions') renderTransactions();
+            else if (currentTab === 'dateWise') renderDateWise();
+            else if (currentTab === 'customerWise') renderCustomerWise();
+            else if (currentTab === 'leadOwner') renderLeadOwner();
+            else if (currentTab === 'employee') renderEmployee();
+            else if (currentTab === 'location') renderLocation();
+            else if (currentTab === 'estimations') renderEstimationsTab();
+            else if (currentTab === 'execDash') renderExecutiveDashboard();
+            // solarvendor has its own flow — not driven by filteredIncomes
+        }
+
+        function fmt(amt) { return '\u20B9' + new Intl.NumberFormat('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amt || 0); }
+        function fmtD(d) { return d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'; }
+        function statusBadge(s, confType) {
+            if (s === 'CONFIRMED') {
+                const label = confType === 'ESTIMATED' ? 'Estimated ✓' : 'Confirmed ✓';
+                const cls   = confType === 'ESTIMATED' ? 'estimated'  : 'confirmed';
+                return '<span class="badge-status badge-' + cls + '" title="Confirmed as ' + label + '">' + label + '</span>';
+            }
+            const m = STATUS_MAP[s] || { label: s, cls: 'pending' };
+            return '<span class="badge-status badge-' + m.cls + '">' + m.label + '</span>';
+        }
+        function txnTypeBadge(t) {
+            if (!t) return '-';
+            return '<span class="badge-txn-type badge-' + t + '">' + t.charAt(0).toUpperCase()+t.slice(1) + '</span>';
+        }
+        function sortIcon(field) {
+            const active = currentSort.field === field;
+            const icon = active ? (currentSort.order === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort';
+            return '<i class="fas ' + icon + ' sort-icon"></i>';
+        }
+
+        function renderSummary() {
+            const d = filteredIncomes;
+            const active = d.filter(i => i.status !== 'REJECTED' && i.status !== 'ESTIMATED');
+            document.getElementById('sumTotal').textContent = d.length;
+            document.getElementById('sumAmount').textContent = fmt(active.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0));
+            document.getElementById('sumPending').textContent = d.filter(i => i.status === 'PENDING').length;
+            document.getElementById('sumConfirmed').textContent = d.filter(i => i.status === 'CONFIRMED').length;
+            document.getElementById('sumTallyDone').textContent = d.filter(i => i.status === 'TALLY_DONE').length;
+            document.getElementById('sumRejected').textContent = d.filter(i => i.status === 'REJECTED').length;
+            document.getElementById('sumEstimated').textContent = d.filter(i => i.status === 'ESTIMATED').length;
+        }
+
+        function destBadge(inc) {
+            if (!inc.destination_type) return '<span class="dest-badge dest-none"><i class="fas fa-question"></i> Unassigned</span>';
+            if (inc.destination_type === 'COMPANY_ACCOUNT') {
+                const cname = inc.destination_company_name || 'Company';
+                return '<span class="dest-badge dest-company"><i class="fas fa-building"></i> ' + cname + '</span>';
+            }
+            const ename = inc.destination_employee_name
+                ? (inc.destination_employee_name + (inc.destination_employee_emp_code ? ' (' + inc.destination_employee_emp_code + ')' : ''))
+                : 'Employee';
+            return '<span class="dest-badge dest-employee"><i class="fas fa-user"></i> ' + ename + '</span>';
+        }
+
+        function statusActions(inc) {
+            const s = inc.status;
+            if (s === 'REJECTED') {
+                return '<span style="color:#9ca3af;font-size:11px;"><i class="fas fa-ban me-1"></i>Rejected</span>';
+            }
+            let btns = '<button class="btn-action btn-edit" onclick="openEditModal('+inc.id+')" title="Edit destination & details"><i class="fas fa-pencil-alt"></i></button> ';
+            if (s === 'PENDING') {
+                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm</button>';
+                btns += '<button class="btn-action btn-exception" onclick="updateStatus('+inc.id+',\'EXCEPTION_TALLY\')">Exception</button>';
+                btns += '<button class="btn-action btn-adjustment" onclick="updateStatus('+inc.id+',\'ADJUSTMENT\')">Adjust</button>';
+            } else if (s === 'ESTIMATED') {
+                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm Now</button>';
+                btns += '<button class="btn-action btn-revert" onclick="updateStatus('+inc.id+',\'PENDING\')">Revert</button>';
+            } else if (s === 'CONFIRMED') {
+                btns += '<button class="btn-action btn-tally" onclick="updateStatus('+inc.id+',\'TALLY_DONE\')">Tally Done</button>';
+                btns += '<button class="btn-action btn-exception" onclick="updateStatus('+inc.id+',\'EXCEPTION_TALLY\')">Exception</button>';
+            } else if (s === 'EXCEPTION_TALLY') {
+                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm</button>';
+                btns += '<button class="btn-action btn-tally" onclick="updateStatus('+inc.id+',\'TALLY_DONE\')">Tally Done</button>';
+                btns += '<button class="btn-action btn-revert" onclick="updateStatus('+inc.id+',\'PENDING\')">Revert</button>';
+            } else if (s === 'ADJUSTMENT') {
+                btns += '<button class="btn-action btn-confirm" onclick="openConfirmModal('+inc.id+')">Confirm</button>';
+                btns += '<button class="btn-action btn-tally" onclick="updateStatus('+inc.id+',\'TALLY_DONE\')">Tally Done</button>';
+                btns += '<button class="btn-action btn-revert" onclick="updateStatus('+inc.id+',\'PENDING\')">Revert</button>';
+            } else if (s === 'TALLY_DONE') {
+                btns += '<button class="btn-action btn-exception" onclick="updateStatus('+inc.id+',\'EXCEPTION_TALLY\')">Exception</button>';
+                btns += '<button class="btn-action btn-adjustment" onclick="updateStatus('+inc.id+',\'ADJUSTMENT\')">Adjust</button>';
+            }
+            if (canRejectEntries()) {
+                const safeEntry = (inc.entry_number || inc.id).toString().replace(/'/g, "\\'");
+                const safePayer = (inc.lead_name || inc.payer_name || '-').toString().replace(/'/g, "\\'");
+                btns += '<button class="btn-action btn-reject" onclick="rejectIncome('+inc.id+',\''+safeEntry+'\','+parseFloat(inc.amount||0)+',\''+safePayer+'\')" title="Reject this entry"><i class="fas fa-times-circle"></i> Reject</button>';
+            }
+            if (canDeleteEntries()) {
+                const safeEntry2 = (inc.entry_number || inc.id).toString().replace(/'/g, "\\'");
+                btns += '<button class="btn-action" style="border-color:#dc2626;color:#dc2626;background:white;" onmouseover="this.style.background=\'#dc2626\';this.style.color=\'white\';" onmouseout="this.style.background=\'white\';this.style.color=\'#dc2626\';" onclick="deleteIncome('+inc.id+',\''+safeEntry2+'\')" title="Delete this entry"><i class="fas fa-trash-alt"></i> Delete</button>';
+            }
+            return btns;
+        }
+
+        async function rejectIncome(id, entryNumber, amount, payer) {
+            const collectedBy = (filteredIncomes.find(i => i.id === id) || {}).collected_by_name || '';
+            const msg = 'Reject income entry ' + entryNumber + ' for ' + fmt(amount) + (payer !== '-' ? ' from ' + payer : '') + '?\n\nThis will:\n• Exclude it from ALL income totals and financial reports\n• Remove it from' + (collectedBy ? ' ' + collectedBy + "'s" : '') + ' performance KPIs\n• Mark the linked CRM transaction as rejected\n\nThis action cannot be undone.';
+            if (!confirm(msg)) return;
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/' + id + '/reject', { method: 'POST' });
+                const data = await r.json();
+                if (data.success) {
+                    const entry = allIncomes.find(i => i.id === id);
+                    if (entry) entry.status = 'REJECTED';
+                    filteredIncomes = [...allIncomes];
+                    const pf = document.getElementById('filterPaymentType').value;
+                    if (pf) filteredIncomes = filteredIncomes.filter(i => i.payment_type === pf);
+                    sortData();
+                    renderAll();
+                    alert('Entry ' + entryNumber + ' rejected successfully.');
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to reject entry'));
+                }
+            } catch(e) {
+                if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') alert('Error rejecting entry. Please try again.');
+            }
+        }
+
+        async function deleteIncome(id, entryNumber) {
+            const inc = filteredIncomes.find(i => i.id === id) || {};
+            const msg = 'Delete income entry ' + entryNumber + ' for ' + fmt(inc.amount || 0) + '?\n\nThis entry will be removed from the list. The data is preserved for audit purposes.\n\nThis action cannot be undone.';
+            if (!confirm(msg)) return;
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/' + id, { method: 'DELETE' });
+                const data = await r.json();
+                if (data.success) {
+                    allIncomes = allIncomes.filter(i => i.id !== id);
+                    filteredIncomes = filteredIncomes.filter(i => i.id !== id);
+                    renderAll();
+                    alert('Entry ' + entryNumber + ' deleted successfully.');
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to delete entry'));
+                }
+            } catch(e) {
+                if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') alert('Error deleting entry. Please try again.');
+            }
+        }
+
+        function thSort(f, label) {
+            return '<th class="' + (currentSort.field===f?'sorted':'') + '" onclick="setSort(\'' + f + '\')">' + label + ' ' + sortIcon(f) + '</th>';
+        }
+
+        function renderTransactions() {
+            const el = document.getElementById('tab-transactions');
+            // DC-IE-TXN-ALL-001: Show ALL entries including ESTIMATED in Transaction Wise.
+            // ESTIMATED entries are additionally shown in the Estimations tab for confirmation workflow.
+            // Other tabs (Date Wise, Customer Wise, etc.) continue to use getViewableIncomes() which
+            // excludes ESTIMATED (they are not yet real revenue).
+            const viewable = filteredIncomes;
+            if (!viewable.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><h3>No Income Entries Found</h3><p>Create your first income entry or wait for CRM auto-sync</p></div>'; return; }
+
+            const estimatedCount = viewable.filter(i => i.status === 'ESTIMATED').length;
+
+            // Helper: build "Owner" cell content with context label
+            function ownerCell(inc) {
+                if (!inc.lead_owner_name) return '<span style="color:#9ca3af;font-size:10px;">-</span>';
+                const catName = (inc.revenue_category_name || inc.income_source_name || '').toLowerCase();
+                const isServiceTicket = catName.includes('service ticket') || catName.includes('spare');
+                const prefix = isServiceTicket
+                    ? '<span style="color:#6b7280;font-size:9px;display:block;line-height:1.2;">Raised by</span>'
+                    : '<span style="color:#6b7280;font-size:9px;display:block;line-height:1.2;">Assigned to</span>';
+                return prefix + '<small>' + inc.lead_owner_name + '</small>';
+            }
+
+            let rows = '';
+            viewable.forEach(function(inc) {
+                const isRejected = inc.status === 'REJECTED';
+                const isEstimated = inc.status === 'ESTIMATED';
+                const crmBadge = inc.crm_transaction_id ? '<span class="badge-crm"><i class="fas fa-link me-1"></i>#'+inc.crm_transaction_id+'</span>' : '<span style="color:#9ca3af;font-size:10px;">Manual</span>';
+                const dealBadge = inc.deal_code ? '<code style="font-size:10px;background:#d1fae5;color:#059669;padding:1px 5px;border-radius:3px;">'+inc.deal_code+'</code>' : '<span style="color:#9ca3af;font-size:10px;">-</span>';
+                const catBadge = inc.revenue_category_name
+                    ? '<span class="badge bg-info text-dark" style="font-size:10px;">'+inc.revenue_category_name+'</span>'
+                    : (inc.income_source_name ? '<span class="badge bg-secondary text-white" style="font-size:10px;">'+inc.income_source_name+'</span>' : '-');
+                const updStaff = inc.updated_by_name ? (inc.updated_by_emp_code ? inc.updated_by_name + ' (' + inc.updated_by_emp_code + ')' : inc.updated_by_name) : '-';
+                rows += '<tr class="'+(isRejected ? 'row-rejected' : isEstimated ? 'row-estimated' : '')+'">' +
+                    '<td><code style="font-size:11px;">'+(inc.entry_number || inc.id)+'</code></td>' +
+                    '<td style="white-space:nowrap;">'+fmtD(inc.income_date)+'</td>' +
+                    '<td><small>'+(inc.company_name || '-')+'</small></td>' +
+                    '<td>'+catBadge+'</td>' +
+                    '<td>'+dealBadge+'</td>' +
+                    '<td>'+(inc.lead_name || inc.payer_name || '-')+'</td>' +
+                    '<td><small>'+(inc.lead_city || inc.payer_city || '-')+'</small></td>' +
+                    '<td class="amount positive">'+fmt(inc.amount)+'</td>' +
+                    '<td><small>'+(inc.payment_mode || '-')+'</small></td>' +
+                    '<td>'+(inc.payment_type ? '<span class="badge bg-secondary" style="font-size:10px;">'+inc.payment_type+'</span>' : '<span style="color:#9ca3af;font-size:10px;">-</span>')+'</td>' +
+                    '<td>'+txnTypeBadge(inc.transaction_type)+'</td>' +
+                    '<td><small>'+(inc.collected_by_name || '-')+'</small></td>' +
+                    '<td>'+ownerCell(inc)+'</td>' +
+                    '<td><small style="color:#7c3aed;">'+updStaff+'</small></td>' +
+                    '<td>'+statusBadge(inc.status, inc.confirmation_type)+'</td>' +
+                    '<td>'+crmBadge+'</td>' +
+                    '<td>'+destBadge(inc)+'</td>' +
+                    '<td style="text-align:center;"><input type="checkbox" title="Show in Ledger" '+(inc.show_in_ledger ? 'checked' : '')+' onchange="toggleIncomeShowInLedger('+inc.id+', this.checked)" style="width:15px;height:15px;cursor:pointer;"></td>' +
+                    '<td style="white-space:nowrap;">'+statusActions(inc)+'</td>' +
+                '</tr>';
+            });
+
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-list me-2"></i>All Transactions</span><span style="color:#6b7280; font-size:13px;">'+viewable.length+' records'+(estimatedCount > 0 ? ' <span style="font-size:11px;color:#b45309;"><i class="fas fa-calculator me-1"></i>'+estimatedCount+' estimated (also in Estimations tab)</span>' : '')+'</span></div><div class="table-container"><table class="data-table"><thead><tr>' +
+                thSort('entry_number','Entry #') +
+                thSort('income_date','Date') +
+                thSort('company_name','Company') +
+                thSort('revenue_category_name','Category') +
+                thSort('deal_code','Deal #') +
+                thSort('lead_name','Customer') +
+                thSort('lead_city','City') +
+                thSort('amount','Amount') +
+                thSort('payment_mode','Mode') +
+                thSort('payment_type','Pay Type') +
+                thSort('transaction_type','Type') +
+                thSort('collected_by_name','Collected By') +
+                thSort('lead_owner_name','Owner') +
+                thSort('updated_by_name','Staff Updated') +
+                thSort('status','Status') +
+                '<th>CRM</th><th>Destination</th><th>Ledger</th><th>Actions</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        async function toggleIncomeShowInLedger(id, checked) {
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/' + id + '/show-in-ledger', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ show_in_ledger: checked })
+                });
+                if (!r.ok) {
+                    const err = await r.json().catch(() => ({}));
+                    alert(err.message || err.detail || 'Failed to update Show in Ledger');
+                }
+                loadIncomes();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to update Show in Ledger');
+                loadIncomes();
+            }
+        }
+
+        function renderDateWise() {
+            const el = document.getElementById('tab-dateWise');
+            const groups = {};
+            getViewableIncomes().forEach(function(inc) {
+                const dateKey = inc.income_date || 'Unknown';
+                if (!groups[dateKey]) groups[dateKey] = [];
+                groups[dateKey].push(inc);
+            });
+
+            const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+            if (!sortedDates.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><h3>No Data</h3></div>'; return; }
+
+            let html = '';
+            sortedDates.forEach(function(dateKey, idx) {
+                const items = groups[dateKey];
+                const total = items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+                const pending = items.filter(i => i.status === 'PENDING').length;
+                const confirmed = items.filter(i => i.status === 'CONFIRMED').length;
+                const tallyDone = items.filter(i => i.status === 'TALLY_DONE').length;
+                const gid = 'dg_' + idx;
+                const expanded = idx === 0 ? ' expanded' : '';
+                const rotated = idx === 0 ? ' rotated' : '';
+
+                let tableRows = '';
+                items.sort((a,b) => (b.id || 0) - (a.id || 0)).forEach(function(i) {
+                    const dc = i.deal_code ? '<code style="font-size:10px;background:#d1fae5;color:#059669;padding:1px 4px;border-radius:3px;">'+i.deal_code+'</code>' : '-';
+                    tableRows += '<tr>' +
+                        '<td><code style="font-size:11px;">'+(i.entry_number || i.id)+'</code></td>' +
+                        '<td>'+dc+'</td>' +
+                        '<td>'+(i.lead_name || i.payer_name || '-')+'</td>' +
+                        '<td><small>'+(i.lead_city || i.payer_city || '-')+'</small></td>' +
+                        '<td class="amount positive">'+fmt(i.amount)+'</td>' +
+                        '<td><small>'+(i.payment_mode || '-')+'</small></td>' +
+                        '<td>'+txnTypeBadge(i.transaction_type)+'</td>' +
+                        '<td><small>'+(i.collected_by_name || '-')+'</small></td>' +
+                        '<td>'+statusBadge(i.status, i.confirmation_type)+'</td>' +
+                        '<td style="white-space:nowrap;">'+statusActions(i)+'</td>' +
+                    '</tr>';
+                });
+
+                html += '<div class="date-group-card">' +
+                    '<div class="date-group-header" onclick="toggleDateGroup(\''+gid+'\')">' +
+                        '<div><i class="fas fa-chevron-right group-chevron'+rotated+'" id="chev_'+gid+'"></i> <span class="date-label"><i class="fas fa-calendar me-2" style="color:#059669;"></i>'+fmtD(dateKey)+'</span></div>' +
+                        '<div class="date-stats">' +
+                            '<span>'+items.length+' txns</span>' +
+                            '<span class="amount positive">'+fmt(total)+'</span>' +
+                            '<span style="color:#d97706;">'+pending+' Pending</span>' +
+                            '<span style="color:#059669;">'+confirmed+' Confirmed</span>' +
+                            '<span style="color:#4338ca;">'+tallyDone+' Tally Done</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="date-group-body'+expanded+'" id="'+gid+'">' +
+                        '<table class="data-table"><thead><tr>' +
+                            '<th>Entry #</th><th>Deal #</th><th>Customer</th><th>City</th><th>Amount</th><th>Mode</th><th>Type</th><th>Collected By</th><th>Status</th><th>Actions</th>' +
+                        '</tr></thead><tbody>' + tableRows + '</tbody></table>' +
+                    '</div>' +
+                '</div>';
+            });
+            el.innerHTML = html;
+        }
+
+        function renderCustomerWise() {
+            const el = document.getElementById('tab-customerWise');
+            const groups = {};
+            getViewableIncomes().forEach(function(inc) {
+                const key = inc.lead_name || inc.payer_name || 'Unknown';
+                if (!groups[key]) groups[key] = { items: [], city: inc.lead_city || inc.payer_city || '-', phone: inc.lead_phone || '-' };
+                groups[key].items.push(inc);
+            });
+
+            if (!Object.keys(groups).length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><h3>No Data</h3></div>'; return; }
+
+            let rows = '';
+            Object.entries(groups).sort((a,b) => b[1].items.reduce((s,i)=>s+(parseFloat(i.amount)||0),0) - a[1].items.reduce((s,i)=>s+(parseFloat(i.amount)||0),0)).forEach(function(entry) {
+                const name = entry[0]; const g = entry[1];
+                const total = g.items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+                const pending = g.items.filter(i => i.status === 'PENDING').length;
+                const confirmed = g.items.filter(i => i.status === 'CONFIRMED').length;
+                const tallyDone = g.items.filter(i => i.status === 'TALLY_DONE').length;
+                rows += '<tr>' +
+                    '<td><strong>'+name+'</strong></td>' +
+                    '<td><small>'+g.city+'</small></td>' +
+                    '<td>'+g.items.length+'</td>' +
+                    '<td class="amount positive">'+fmt(total)+'</td>' +
+                    '<td><span style="color:#d97706;font-weight:600;">'+pending+'</span></td>' +
+                    '<td><span style="color:#059669;font-weight:600;">'+confirmed+'</span></td>' +
+                    '<td><span style="color:#4338ca;font-weight:600;">'+tallyDone+'</span></td>' +
+                    '<td><button class="view-btn" onclick="viewCustomerTxns(\''+name.replace(/'/g, "\\'")+'\')""><i class="fas fa-eye me-1"></i>View</button></td>' +
+                '</tr>';
+            });
+
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-users me-2"></i>Customer Summary</span></div><div class="table-container"><table class="data-table"><thead><tr>' +
+                '<th>Customer Name</th><th>City</th><th>Transactions</th><th>Total Amount</th><th>Pending</th><th>Confirmed</th><th>Tally Done</th><th>Action</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        function viewCustomerTxns(name) {
+            const items = getViewableIncomes().filter(function(i) { return (i.lead_name || i.payer_name || 'Unknown') === name; });
+            showDetailModal('Customer: ' + name, items);
+        }
+
+        function renderLeadOwner() {
+            const el = document.getElementById('tab-leadOwner');
+            const groups = {};
+            getViewableIncomes().forEach(function(inc) {
+                const key = inc.lead_owner_name || 'Unassigned';
+                if (!groups[key]) groups[key] = { items: [], empCode: inc.lead_owner_emp_code || '-', id: inc.lead_owner_id };
+                groups[key].items.push(inc);
+            });
+
+            if (!Object.keys(groups).length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><h3>No Data</h3></div>'; return; }
+
+            let rows = '';
+            Object.entries(groups).forEach(function(entry) {
+                const name = entry[0]; const g = entry[1];
+                const total = g.items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+                rows += '<tr>' +
+                    '<td><strong>'+name+'</strong></td>' +
+                    '<td><code>'+g.empCode+'</code></td>' +
+                    '<td>'+g.items.length+'</td>' +
+                    '<td class="amount positive">'+fmt(total)+'</td>' +
+                    '<td><span style="color:#d97706;font-weight:600;">'+g.items.filter(function(i){return i.status==='PENDING'}).length+'</span></td>' +
+                    '<td><span style="color:#059669;font-weight:600;">'+g.items.filter(function(i){return i.status==='CONFIRMED'}).length+'</span></td>' +
+                    '<td><span style="color:#4338ca;font-weight:600;">'+g.items.filter(function(i){return i.status==='TALLY_DONE'}).length+'</span></td>' +
+                    '<td><button class="view-btn" onclick="viewLeadOwnerTxns(\''+name.replace(/'/g, "\\'")+'\')""><i class="fas fa-eye me-1"></i>View</button></td>' +
+                '</tr>';
+            });
+
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-user-tie me-2"></i>Lead Owner Summary</span></div><div class="table-container"><table class="data-table"><thead><tr>' +
+                '<th>Lead Owner</th><th>Emp Code</th><th>Transactions</th><th>Total Amount</th><th>Pending</th><th>Confirmed</th><th>Tally Done</th><th>Action</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        function viewLeadOwnerTxns(name) {
+            const items = getViewableIncomes().filter(function(i) { return (i.lead_owner_name || 'Unassigned') === name; });
+            showDetailModal('Lead Owner: ' + name, items);
+        }
+
+        function showDetailModal(title, items) {
+            document.getElementById('viewDetailTitle').textContent = title;
+            const body = document.getElementById('viewDetailBody');
+            const total = items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+
+            let tableRows = '';
+            items.sort((a,b) => new Date(b.income_date) - new Date(a.income_date)).forEach(function(i) {
+                const dc = i.deal_code ? '<code style="font-size:10px;background:#d1fae5;color:#059669;padding:1px 4px;border-radius:3px;">'+i.deal_code+'</code>' : '-';
+                tableRows += '<tr>' +
+                    '<td style="white-space:nowrap;">'+fmtD(i.income_date)+'</td>' +
+                    '<td>'+dc+'</td>' +
+                    '<td>'+(i.lead_name || i.payer_name || '-')+'<br><small style="color:#6b7280;">'+(i.lead_city || i.payer_city || '-')+'</small></td>' +
+                    '<td class="amount positive">'+fmt(i.amount)+'</td>' +
+                    '<td><small>'+(i.payment_mode || '-')+'</small></td>' +
+                    '<td>'+txnTypeBadge(i.transaction_type)+'</td>' +
+                    '<td>'+statusBadge(i.status, i.confirmation_type)+'</td>' +
+                    '<td style="white-space:nowrap;">'+statusActions(i)+'</td>' +
+                    '<td><code style="font-size:10px;">'+(i.entry_number || '')+'</code></td>' +
+                '</tr>';
+            });
+
+            body.innerHTML = '<div style="margin-bottom:12px;font-size:13px;color:#6b7280;">'+items.length+' transactions | Total: <strong class="amount positive">'+fmt(total)+'</strong></div>' +
+                '<div class="table-container"><table class="data-table"><thead><tr><th>Date</th><th>Deal #</th><th>Customer</th><th>Amount</th><th>Mode</th><th>Type</th><th>Status</th><th>Actions</th><th>Entry #</th></tr></thead><tbody>' +
+                tableRows + '</tbody></table></div>';
+            document.getElementById('viewDetailModal').classList.add('active');
+        }
+
+        function renderEmployee() {
+            const el = document.getElementById('tab-employee');
+            const groups = {};
+            getViewableIncomes().forEach(function(inc) {
+                const key = inc.collected_by_name
+                    || (inc.destination_type === 'EMPLOYEE' && inc.destination_employee_name ? inc.destination_employee_name : null)
+                    || 'Unknown';
+                const empCode = inc.collected_by_emp_code
+                    || (inc.destination_type === 'EMPLOYEE' && inc.destination_employee_emp_code ? inc.destination_employee_emp_code : null)
+                    || '-';
+                if (!groups[key]) groups[key] = { items: [], empCode };
+                groups[key].items.push(inc);
+            });
+
+            if (!Object.keys(groups).length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><h3>No Data</h3></div>'; return; }
+
+            let rows = '';
+            Object.entries(groups).forEach(function(entry) {
+                const name = entry[0]; const g = entry[1];
+                const total = g.items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+                rows += '<tr>' +
+                    '<td><strong>'+name+'</strong></td>' +
+                    '<td><code>'+g.empCode+'</code></td>' +
+                    '<td>'+g.items.length+'</td>' +
+                    '<td class="amount positive">'+fmt(total)+'</td>' +
+                    '<td><span style="color:#d97706;font-weight:600;">'+g.items.filter(function(i){return i.status==='PENDING'}).length+'</span></td>' +
+                    '<td><span style="color:#059669;font-weight:600;">'+g.items.filter(function(i){return i.status==='CONFIRMED'}).length+'</span></td>' +
+                    '<td><span style="color:#4338ca;font-weight:600;">'+g.items.filter(function(i){return i.status==='TALLY_DONE'}).length+'</span></td>' +
+                '</tr>';
+            });
+
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-id-badge me-2"></i>Employee Collection Summary</span></div><div class="table-container"><table class="data-table"><thead><tr>' +
+                '<th>Employee Name</th><th>Emp Code</th><th>Collections</th><th>Total Collected</th><th>Pending</th><th>Confirmed</th><th>Tally Done</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        function renderLocation() {
+            const el = document.getElementById('tab-location');
+            const groups = {};
+            getViewableIncomes().forEach(function(inc) {
+                const city = inc.lead_city || inc.payer_city || 'Unknown';
+                const state = inc.lead_state || inc.payer_state || '';
+                const key = state ? city + ', ' + state : city;
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(inc);
+            });
+
+            if (!Object.keys(groups).length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><h3>No Data</h3></div>'; return; }
+
+            let rows = '';
+            Object.entries(groups).sort((a,b) => b[1].length - a[1].length).forEach(function(entry) {
+                const loc = entry[0]; const items = entry[1];
+                const total = items.reduce((s, i) => s + (parseFloat(i.amount) || 0), 0);
+                rows += '<tr>' +
+                    '<td><strong><i class="fas fa-map-pin me-1" style="color:#6b7280;"></i>'+loc+'</strong></td>' +
+                    '<td>'+items.length+'</td>' +
+                    '<td class="amount positive">'+fmt(total)+'</td>' +
+                    '<td><span style="color:#d97706;font-weight:600;">'+items.filter(function(i){return i.status==='PENDING'}).length+'</span></td>' +
+                    '<td><span style="color:#059669;font-weight:600;">'+items.filter(function(i){return i.status==='CONFIRMED'}).length+'</span></td>' +
+                    '<td><span style="color:#4338ca;font-weight:600;">'+items.filter(function(i){return i.status==='TALLY_DONE'}).length+'</span></td>' +
+                '</tr>';
+            });
+
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-map-marker-alt me-2"></i>Location Summary</span></div><div class="table-container"><table class="data-table"><thead><tr>' +
+                '<th>Location</th><th>Transactions</th><th>Total Amount</th><th>Pending</th><th>Confirmed</th><th>Tally Done</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        // ── Executive Dashboard ────────────────────────────────────────────────
+        let _edPeriod = 'month';      // active quick-select
+        let _edFrom   = '';           // custom date from
+        let _edTo     = '';           // custom date to
+        let _edSortField = {};        // per-section sort state
+        let _edSortDir   = {};
+
+        function _edFilterData() {
+            const today = new Date(); today.setHours(0,0,0,0);
+            let from, to;
+            if (_edPeriod === 'ftd') {
+                from = new Date(today); to = new Date(today);
+            } else if (_edPeriod === 'week') {
+                from = new Date(today); from.setDate(today.getDate() - today.getDay());
+                to = new Date(today);
+            } else if (_edPeriod === 'month') {
+                from = new Date(today.getFullYear(), today.getMonth(), 1);
+                to = new Date(today);
+            } else if (_edPeriod === 'fy') {
+                const m = today.getMonth();
+                from = new Date(m >= 3 ? today.getFullYear() : today.getFullYear()-1, 3, 1);
+                to = new Date(today);
+            } else if (_edPeriod === 'custom' && _edFrom && _edTo) {
+                from = new Date(_edFrom); to = new Date(_edTo);
+            } else {
+                return allIncomes.filter(i => !i.is_deleted);
+            }
+            to.setHours(23,59,59,999);
+            return allIncomes.filter(i => {
+                if (i.is_deleted) return false;
+                const d = new Date(i.income_date || i.created_at);
+                return d >= from && d <= to;
+            });
+        }
+
+        function _edSort(section, field, arr) {
+            const dir = (_edSortField[section] === field && _edSortDir[section] === 'asc') ? 'desc' : 'asc';
+            _edSortField[section] = field; _edSortDir[section] = dir;
+            arr.sort((a,b) => {
+                let va = a[field], vb = b[field];
+                if (typeof va === 'number') return dir === 'asc' ? va-vb : vb-va;
+                return dir === 'asc' ? String(va||'').localeCompare(String(vb||'')) : String(vb||'').localeCompare(String(va||''));
+            });
+            renderExecutiveDashboard();
+        }
+
+        function _edSortIcon(section, field) {
+            if (_edSortField[section] !== field) return '<i class="fas fa-sort" style="opacity:.3;font-size:10px;"></i>';
+            return _edSortDir[section] === 'asc'
+                ? '<i class="fas fa-sort-up" style="color:#7c3aed;font-size:10px;"></i>'
+                : '<i class="fas fa-sort-down" style="color:#7c3aed;font-size:10px;"></i>';
+        }
+
+        function _edTh(section, field, label) {
+            return `<th style="cursor:pointer;user-select:none;" onclick="_edSort('${section}','${field}',_edLastGroups['${section}'])">${label} ${_edSortIcon(section,field)}</th>`;
+        }
+
+        const _edLastGroups = {};  // persists sorted arrays between calls
+
+        function renderExecutiveDashboard() {
+            const el = document.getElementById('tab-execDash');
+            const data = _edFilterData();
+            const active = data.filter(i => i.status !== 'REJECTED');
+
+            // ── KPI totals ─────────────────────────────────────────
+            const totalAmt   = active.reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
+            const confirmedAmt = active.filter(i=>i.status==='CONFIRMED').reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
+            const pendingAmt = active.filter(i=>i.status==='PENDING').reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
+            const estimatedAmt= active.filter(i=>i.status==='ESTIMATED').reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
+            const tallyAmt   = active.filter(i=>i.status==='TALLY_DONE').reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
+            const cashAmt    = active.filter(i=>(i.payment_mode||'').toUpperCase()==='CASH').reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
+            const bankAmt    = active.filter(i=>(i.payment_mode||'').toUpperCase()!=='CASH').reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
+
+            // ── Period quick-select ────────────────────────────────
+            const periods = [
+                ['ftd','FTD'],['week','This Week'],['month','This Month'],['fy','This FY'],['all','Overall'],['custom','Custom Range']
+            ];
+            const periodBtns = periods.map(([k,l])=>`<button onclick="_edPeriod='${k}';renderExecutiveDashboard()" style="padding:5px 13px;border-radius:20px;border:1.5px solid ${_edPeriod===k?'#7c3aed':'#e5e7eb'};background:${_edPeriod===k?'#7c3aed':'white'};color:${_edPeriod===k?'white':'#374151'};font-size:12px;font-weight:600;cursor:pointer;">${l}</button>`).join('');
+            const customRow = _edPeriod==='custom' ? `<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+                <label style="font-size:12px;color:#6b7280;">From:</label>
+                <input type="date" value="${_edFrom}" onchange="_edFrom=this.value;renderExecutiveDashboard()" style="border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;font-size:12px;">
+                <label style="font-size:12px;color:#6b7280;">To:</label>
+                <input type="date" value="${_edTo}" onchange="_edTo=this.value;renderExecutiveDashboard()" style="border:1px solid #e5e7eb;border-radius:6px;padding:4px 8px;font-size:12px;">
+            </div>` : '';
+
+            // ── KPI cards ──────────────────────────────────────────
+            const kpiCard = (label, val, count, color, icon) =>
+                `<div style="background:white;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.08);min-width:140px;flex:1;">
+                    <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;"><i class="fas ${icon} me-1"></i>${label}</div>
+                    <div style="font-size:20px;font-weight:800;color:${color};">${fmt(val)}</div>
+                    <div style="font-size:11px;color:#9ca3af;margin-top:2px;">${count} entries</div>
+                </div>`;
+
+            const kpis = `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+                ${kpiCard('Total Collected', totalAmt, active.length, '#111827', 'fa-coins')}
+                ${kpiCard('Confirmed ✓', confirmedAmt, active.filter(i=>i.status==='CONFIRMED').length, '#059669', 'fa-check-circle')}
+                ${kpiCard('Pending', pendingAmt, active.filter(i=>i.status==='PENDING').length, '#d97706', 'fa-clock')}
+                ${kpiCard('Estimated', estimatedAmt, active.filter(i=>i.status==='ESTIMATED').length, '#b45309', 'fa-calculator')}
+                ${kpiCard('Tally Done', tallyAmt, active.filter(i=>i.status==='TALLY_DONE').length, '#4338ca', 'fa-check-double')}
+                ${kpiCard('Cash In', cashAmt, active.filter(i=>(i.payment_mode||'').toUpperCase()==='CASH').length, '#0369a1', 'fa-money-bill-wave')}
+                ${kpiCard('Bank / UPI', bankAmt, active.filter(i=>(i.payment_mode||'').toUpperCase()!=='CASH').length, '#7c3aed', 'fa-university')}
+            </div>`;
+
+            // ── Helper: group by key ───────────────────────────────
+            function groupBy(arr, keyFn) {
+                const m = {};
+                arr.forEach(i => {
+                    const k = keyFn(i) || 'Unknown';
+                    if (!m[k]) m[k] = [];
+                    m[k].push(i);
+                });
+                return Object.entries(m).map(([key, items]) => ({
+                    key,
+                    count: items.length,
+                    total: items.reduce((s,i)=>s+(parseFloat(i.amount)||0),0),
+                    confirmed: items.filter(i=>i.status==='CONFIRMED').length,
+                    confirmedAmt: items.filter(i=>i.status==='CONFIRMED').reduce((s,i)=>s+(parseFloat(i.amount)||0),0),
+                    pending: items.filter(i=>i.status==='PENDING').length,
+                    pendingAmt: items.filter(i=>i.status==='PENDING').reduce((s,i)=>s+(parseFloat(i.amount)||0),0),
+                    tally: items.filter(i=>i.status==='TALLY_DONE').length,
+                    tallyAmt: items.filter(i=>i.status==='TALLY_DONE').reduce((s,i)=>s+(parseFloat(i.amount)||0),0),
+                    estimated: items.filter(i=>i.status==='ESTIMATED').length,
+                    estimatedAmt: items.filter(i=>i.status==='ESTIMATED').reduce((s,i)=>s+(parseFloat(i.amount)||0),0),
+                    cash: items.filter(i=>(i.payment_mode||'').toUpperCase()==='CASH').reduce((s,i)=>s+(parseFloat(i.amount)||0),0),
+                    bank: items.filter(i=>(i.payment_mode||'').toUpperCase()!=='CASH').reduce((s,i)=>s+(parseFloat(i.amount)||0),0),
+                }));
+            }
+
+            function sectionTable(secId, title, icon, color, rows, headers) {
+                if (!_edLastGroups[secId]) _edLastGroups[secId] = rows;
+                else {
+                    // merge sort state — re-apply last sort
+                    const sf = _edSortField[secId];
+                    if (sf) {
+                        const dir = _edSortDir[secId];
+                        rows.sort((a,b)=>{
+                            let va=a[sf],vb=b[sf];
+                            if (typeof va==='number') return dir==='asc'?va-vb:vb-va;
+                            return dir==='asc'?String(va||'').localeCompare(String(vb||'')):String(vb||'').localeCompare(String(va||''));
+                        });
+                    }
+                    _edLastGroups[secId] = rows;
+                }
+                if (!rows.length) return `<div style="background:white;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08);padding:20px;margin-bottom:16px;"><div style="font-size:13px;font-weight:700;color:${color};margin-bottom:10px;"><i class="fas ${icon} me-2"></i>${title}</div><p style="color:#9ca3af;font-size:12px;">No data for selected period.</p></div>`;
+                const thStyle = 'padding:8px 10px;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer;user-select:none;';
+                const tdStyle = 'padding:8px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;';
+                const bodyRows = rows.map(r => headers.map(h => {
+                    const v = r[h.field];
+                    if (h.type === 'amt') return `<td style="${tdStyle}text-align:right;font-weight:700;color:#059669;">${fmt(v)}</td>`;
+                    if (h.type === 'num') return `<td style="${tdStyle}text-align:center;">${v}</td>`;
+                    if (h.type === 'pct') return `<td style="${tdStyle}text-align:center;"><span style="background:#f3f4f6;padding:2px 6px;border-radius:10px;font-size:11px;">${totalAmt>0?((v/totalAmt)*100).toFixed(1):'0'}%</span></td>`;
+                    if (h.type === 'bar') {
+                        const pct = totalAmt>0?Math.min(100,(v/totalAmt)*100):0;
+                        return `<td style="${tdStyle}min-width:80px;"><div style="background:#e5e7eb;border-radius:4px;height:6px;"><div style="background:${color};border-radius:4px;height:6px;width:${pct.toFixed(1)}%;"></div></div></td>`;
+                    }
+                    return `<td style="${tdStyle}font-weight:600;">${v||'—'}</td>`;
+                }).join('')).map(r => `<tr style="transition:background .1s;" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">${r}</tr>`).join('');
+                const headRow = headers.map(h => `<th style="${thStyle}" onclick="_edSort('${secId}','${h.field}',_edLastGroups['${secId}'])">${h.label} ${_edSortIcon(secId,h.field)}</th>`).join('');
+                return `<div style="background:white;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08);padding:20px;margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div style="font-size:13px;font-weight:700;color:${color};"><i class="fas ${icon} me-2"></i>${title}</div>
+                        <span style="font-size:11px;color:#9ca3af;">${rows.length} rows · click any header to sort</span>
+                    </div>
+                    <div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
+                        <thead><tr>${headRow}</tr></thead>
+                        <tbody>${bodyRows}</tbody>
+                    </table></div></div>`;
+            }
+
+            // ── 1. Employee-wise ───────────────────────────────────
+            const empRows = groupBy(active, i=>i.collected_by_name||'Unassigned').sort((a,b)=>b.total-a.total);
+            _edLastGroups['emp'] = empRows;
+            const empSec = sectionTable('emp','Employee-wise Collection','fa-id-badge','#059669', empRows, [
+                {field:'key',label:'Employee',type:'str'},
+                {field:'count',label:'Entries',type:'num'},
+                {field:'total',label:'Total Collected',type:'amt'},
+                {field:'confirmedAmt',label:'Confirmed ✓',type:'amt'},
+                {field:'pendingAmt',label:'Pending',type:'amt'},
+                {field:'estimatedAmt',label:'Estimated',type:'amt'},
+                {field:'tallyAmt',label:'Tally Done',type:'amt'},
+                {field:'total',label:'Share',type:'pct'},
+                {field:'total',label:'Visual',type:'bar'},
+            ]);
+
+            // ── 2. Payment Mode (Cash / Bank / UPI etc.) ───────────
+            const modeRows = groupBy(active, i=>(i.payment_mode||'UNKNOWN').toUpperCase()).sort((a,b)=>b.total-a.total);
+            _edLastGroups['mode'] = modeRows;
+            const modeSec = sectionTable('mode','Cash & Bank Breakdown','fa-money-bill-wave','#0369a1', modeRows, [
+                {field:'key',label:'Payment Mode',type:'str'},
+                {field:'count',label:'Entries',type:'num'},
+                {field:'total',label:'Total Amount',type:'amt'},
+                {field:'confirmedAmt',label:'Confirmed ✓',type:'amt'},
+                {field:'pendingAmt',label:'Pending',type:'amt'},
+                {field:'total',label:'Share',type:'pct'},
+                {field:'total',label:'Visual',type:'bar'},
+            ]);
+
+            // ── 3. Company / Segment-wise ──────────────────────────
+            const compRows = groupBy(active, i=>i.company_name||'Unknown Company').sort((a,b)=>b.total-a.total);
+            _edLastGroups['comp'] = compRows;
+            const compSec = sectionTable('comp','Company / Segment Wise','fa-building','#7c3aed', compRows, [
+                {field:'key',label:'Company',type:'str'},
+                {field:'count',label:'Entries',type:'num'},
+                {field:'total',label:'Total Collected',type:'amt'},
+                {field:'confirmedAmt',label:'Confirmed ✓',type:'amt'},
+                {field:'pendingAmt',label:'Pending',type:'amt'},
+                {field:'estimatedAmt',label:'Estimated',type:'amt'},
+                {field:'tallyAmt',label:'Tally Done',type:'amt'},
+                {field:'cash',label:'Cash',type:'amt'},
+                {field:'bank',label:'Bank/UPI',type:'amt'},
+                {field:'total',label:'Share',type:'pct'},
+            ]);
+
+            // ── 4. Revenue Category-wise ───────────────────────────
+            const catRows = groupBy(active, i=>i.revenue_category_name||i.income_source_name||'Uncategorised').sort((a,b)=>b.total-a.total);
+            _edLastGroups['cat'] = catRows;
+            const catSec = sectionTable('cat','Revenue Category Wise','fa-tags','#d97706', catRows, [
+                {field:'key',label:'Category',type:'str'},
+                {field:'count',label:'Entries',type:'num'},
+                {field:'total',label:'Total Amount',type:'amt'},
+                {field:'confirmedAmt',label:'Confirmed ✓',type:'amt'},
+                {field:'pendingAmt',label:'Pending',type:'amt'},
+                {field:'total',label:'Share',type:'pct'},
+                {field:'total',label:'Visual',type:'bar'},
+            ]);
+
+            // ── 5. Status Distribution ─────────────────────────────
+            const statRows = groupBy(active, i=>i.status||'UNKNOWN').sort((a,b)=>b.total-a.total);
+            _edLastGroups['stat'] = statRows;
+            const statSec = sectionTable('stat','Status Distribution','fa-chart-pie','#dc2626', statRows, [
+                {field:'key',label:'Status',type:'str'},
+                {field:'count',label:'Count',type:'num'},
+                {field:'total',label:'Amount',type:'amt'},
+                {field:'total',label:'Share',type:'pct'},
+                {field:'total',label:'Visual',type:'bar'},
+            ]);
+
+            // ── 6. Lead-owner wise ─────────────────────────────────
+            const ownerRows = groupBy(active, i=>i.lead_owner_name||'Direct / Manual').sort((a,b)=>b.total-a.total);
+            _edLastGroups['owner'] = ownerRows;
+            const ownerSec = sectionTable('owner','Lead-Owner Wise','fa-user-tie','#4338ca', ownerRows, [
+                {field:'key',label:'Lead Owner',type:'str'},
+                {field:'count',label:'Entries',type:'num'},
+                {field:'total',label:'Total Collected',type:'amt'},
+                {field:'confirmedAmt',label:'Confirmed ✓',type:'amt'},
+                {field:'pendingAmt',label:'Pending',type:'amt'},
+                {field:'total',label:'Share',type:'pct'},
+                {field:'total',label:'Visual',type:'bar'},
+            ]);
+
+            // ── 7. Reference / Source Type ─────────────────────────
+            const refRows = groupBy(active, i=>i.reference_type||'Manual').sort((a,b)=>b.total-a.total);
+            _edLastGroups['ref'] = refRows;
+            const refSec = sectionTable('ref','Source / Reference Type','fa-link','#0891b2', refRows, [
+                {field:'key',label:'Source Type',type:'str'},
+                {field:'count',label:'Entries',type:'num'},
+                {field:'total',label:'Total Amount',type:'amt'},
+                {field:'total',label:'Share',type:'pct'},
+            ]);
+
+            el.innerHTML = `
+            <div style="padding:4px 0 16px;">
+                <!-- Period selector -->
+                <div style="background:white;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08);padding:16px 20px;margin-bottom:16px;">
+                    <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;"><i class="fas fa-calendar me-1"></i>Period</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">${periodBtns}</div>
+                    ${customRow}
+                    <div style="margin-top:10px;font-size:11px;color:#9ca3af;">Showing <strong style="color:#374151;">${active.length}</strong> entries · <strong style="color:#374151;">${fmt(totalAmt)}</strong> total</div>
+                </div>
+                <!-- KPI cards -->
+                ${kpis}
+                <!-- Two-col layout for the sections -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div style="grid-column:1/-1;">${empSec}</div>
+                    ${modeSec}
+                    ${compSec}
+                    <div style="grid-column:1/-1;">${catSec}</div>
+                    ${statSec}
+                    ${ownerSec}
+                    <div style="grid-column:1/-1;">${refSec}</div>
+                </div>
+            </div>`;
+        }
+
+        function toggleDateGroup(gid) {
+            const body = document.getElementById(gid);
+            const chev = document.getElementById('chev_' + gid);
+            body.classList.toggle('expanded');
+            if (chev) chev.classList.toggle('rotated');
+        }
+
+        async function updateStatus(id, newStatus) {
+            const labels = { CONFIRMED: 'Confirm', EXCEPTION_TALLY: 'mark as Exception for Tally', ADJUSTMENT: 'mark as Adjustment', TALLY_DONE: 'mark as Tally Entry Done', PENDING: 'Revert to Pending' };
+            if (!confirm('Are you sure you want to ' + (labels[newStatus] || newStatus) + ' this entry?')) return;
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/' + id + '/status', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (r.ok) {
+                    closeModal('viewDetailModal');
+                    loadIncomes();
+                } else {
+                    const err = await r.json().catch(() => ({}));
+                    alert(err.detail || err.message || 'Failed to update status');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to update status');
+            }
+        }
+
+        // ========== DC-ESTIMATIONS-001: CONFIRM MODAL ==========
+        let confirmingEntryId = null;
+        let confirmingEntry = null;
+
+        let solarVendorsCache = [];
+
+        async function loadSolarVendors() {
+            if (solarVendorsCache.length) return;
+            try {
+                const r = await staffFetch('/api/v1/crm/solar-vendors');
+                if (r.ok) { const d = await r.json(); solarVendorsCache = d.vendors || []; }
+            } catch(e) { solarVendorsCache = []; }
+        }
+
+        function isSolarEntry(entry) {
+            // Solar entries are linked to a lead that has a solar vendor
+            return !!(entry && entry.lead_id);
+        }
+
+        /* ─── Solar Vendor Ledger tab ────────────────────────────────── */
+        let _svlPage = 1;
+
+        async function renderSolarVendorLedger(page) {
+            _svlPage = page || 1;
+            // Capture current filter values BEFORE rebuilding HTML (they get wiped)
+            const _prevVid = document.getElementById('svlVendor')?.value || '';
+            const _prevDir = document.getElementById('svlDir')?.value   || '';
+            const _prevFr  = document.getElementById('svlFrom')?.value  || '';
+            const _prevTo  = document.getElementById('svlTo')?.value    || '';
+
+            const tabEl = document.getElementById('tab-solarvendor');
+            tabEl.innerHTML = `
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:16px;">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:11px;font-weight:600;color:#6b7280;">Solar Vendor</label>
+                    <select id="svlVendor" onchange="renderSolarVendorLedger(1)" style="padding:7px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;min-width:180px;">
+                        <option value="">All Vendors</option>
+                    </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:11px;font-weight:600;color:#6b7280;">Direction</label>
+                    <select id="svlDir" onchange="renderSolarVendorLedger(1)" style="padding:7px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+                        <option value="">All</option>
+                        <option value="RECEIVED">Received (Customer → MNR)</option>
+                        <option value="RETURNED">Returned (Vendor → MNR)</option>
+                    </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:11px;font-weight:600;color:#6b7280;">From</label>
+                    <input type="date" id="svlFrom" onchange="renderSolarVendorLedger(1)" style="padding:7px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:11px;font-weight:600;color:#6b7280;">To</label>
+                    <input type="date" id="svlTo" onchange="renderSolarVendorLedger(1)" style="padding:7px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+                </div>
+                <button onclick="renderSolarVendorLedger(1)" style="padding:8px 14px;background:#6366f1;border:none;color:#fff;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+                <button onclick="openSvlReturnModal()" style="padding:8px 14px;background:#059669;border:none;color:#fff;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;"><i class="fas fa-plus me-1"></i>Record Return</button>
+                <button onclick="exportSvlStatement()" style="padding:8px 14px;background:#0369a1;border:none;color:#fff;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;"><i class="fas fa-file-download me-1"></i>Export Statement</button>
+            </div>
+            <div id="svlSummaryRow" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;"></div>
+            <div id="svlTableWrap"><div style="padding:30px;text-align:center;color:#9ca3af;"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div></div>
+            <div id="svlPagWrap" style="margin-top:12px;text-align:center;"></div>`;
+
+            // populate vendor dropdown then restore saved selection
+            await loadSolarVendors();
+            const vSel = document.getElementById('svlVendor');
+            if (vSel && vSel.options.length === 1) {
+                solarVendorsCache.forEach(v => {
+                    const o = document.createElement('option');
+                    o.value = v.id; o.textContent = v.vendor_name + (v.vendor_code ? ' (' + v.vendor_code + ')' : '');
+                    vSel.appendChild(o);
+                });
+            }
+            // Restore filter values that were wiped by innerHTML rebuild
+            if (_prevVid && vSel) vSel.value = _prevVid;
+            if (_prevDir) { const s = document.getElementById('svlDir'); if (s) s.value = _prevDir; }
+            if (_prevFr)  { const s = document.getElementById('svlFrom'); if (s) s.value = _prevFr; }
+            if (_prevTo)  { const s = document.getElementById('svlTo');  if (s) s.value = _prevTo; }
+
+            // fetch data
+            try {
+                const params = new URLSearchParams({ page: _svlPage, page_size: 30 });
+                const vid = document.getElementById('svlVendor')?.value;
+                const dir = document.getElementById('svlDir')?.value;
+                const fr  = document.getElementById('svlFrom')?.value;
+                const to  = document.getElementById('svlTo')?.value;
+                if (vid) params.append('vendor_id', vid);
+                if (dir) params.append('direction', dir);
+                if (fr)  params.append('date_from', fr);
+                if (to)  params.append('date_to', to);
+                const r = await staffFetch(`${API_BASE}/solar-vendor-ledger?${params}`);
+                if (!r.ok) throw new Error(await r.text());
+                const d = await r.json();
+                _renderSvlSummary(d.summary || {});
+                _renderSvlTable(d.rows || []);
+                _renderSvlPagination(d.total || 0, d.page || 1, d.page_size || 30);
+            } catch(e) {
+                document.getElementById('svlTableWrap').innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626;"><i class="fas fa-exclamation-circle me-1"></i>${e.message}</div>`;
+            }
+        }
+
+        function _renderSvlSummary(s) {
+            const el = document.getElementById('svlSummaryRow');
+            if (!el) return;
+            const fmt2 = a => '₹' + new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}).format(a||0);
+            el.innerHTML = `
+                <div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;padding:14px 18px;">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#065f46;letter-spacing:.4px;margin-bottom:4px;"><i class="fas fa-arrow-down me-1"></i>Total Received</div>
+                    <div style="font-size:20px;font-weight:800;color:#059669;">${fmt2(s.total_received)}</div>
+                    <div style="font-size:11px;color:#6b7280;margin-top:2px;">${s.count_received||0} entries</div>
+                </div>
+                <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:14px 18px;">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#92400e;letter-spacing:.4px;margin-bottom:4px;"><i class="fas fa-arrow-up me-1"></i>Total Returned</div>
+                    <div style="font-size:20px;font-weight:800;color:#b45309;">${fmt2(s.total_returned)}</div>
+                    <div style="font-size:11px;color:#6b7280;margin-top:2px;">${s.count_returned||0} entries</div>
+                </div>
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px 18px;">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1e40af;letter-spacing:.4px;margin-bottom:4px;"><i class="fas fa-balance-scale me-1"></i>Balance Due from Vendor</div>
+                    <div style="font-size:20px;font-weight:800;color:#1d4ed8;">${fmt2(s.balance)}</div>
+                </div>`;
+        }
+
+        function _renderSvlTable(rows) {
+            const el = document.getElementById('svlTableWrap');
+            if (!el) return;
+            if (!rows.length) { el.innerHTML = '<div style="padding:30px;text-align:center;color:#9ca3af;"><i class="fas fa-inbox me-2"></i>No entries found</div>'; return; }
+            const fmt2 = a => a ? '₹' + new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}).format(a) : '—';
+            const fmtD2 = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '-';
+            let html = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead>
+                  <tr style="background:#1e293b;color:#fff;">
+                    <th colspan="9" style="padding:8px 12px;text-align:left;font-size:12px;font-weight:700;letter-spacing:.4px;">
+                      <i class="fas fa-file-invoice me-1"></i>TRANSACTION STATEMENT — Solar Vendor Ledger
+                    </th>
+                  </tr>
+                  <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                    <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;white-space:nowrap;">Date</th>
+                    <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Vendor</th>
+                    <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Customer</th>
+                    <th style="padding:10px 12px;text-align:right;font-weight:700;color:#059669;white-space:nowrap;">DR (Received)</th>
+                    <th style="padding:10px 12px;text-align:right;font-weight:700;color:#b45309;white-space:nowrap;">CR (Returned)</th>
+                    <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Mode</th>
+                    <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">UTR/Ref</th>
+                    <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Notes</th>
+                    <th style="padding:10px 12px;text-align:center;font-weight:600;color:#374151;">Actions</th>
+                  </tr>
+                </thead><tbody>`;
+            rows.forEach(row => {
+                const isRec = row.direction === 'RECEIVED';
+                const drAmt = isRec  ? fmt2(row.amount) : '<span style="color:#d1d5db;">—</span>';
+                const crAmt = !isRec ? fmt2(row.amount) : '<span style="color:#d1d5db;">—</span>';
+                html += `<tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:9px 12px;color:#374151;white-space:nowrap;">${fmtD2(row.transaction_date)}</td>
+                    <td style="padding:9px 12px;color:#1f2937;font-weight:500;">${row.vendor_name||'—'}</td>
+                    <td style="padding:9px 12px;color:#6b7280;">${row.customer_name||'—'}</td>
+                    <td style="padding:9px 12px;text-align:right;font-weight:700;color:#059669;">${drAmt}</td>
+                    <td style="padding:9px 12px;text-align:right;font-weight:700;color:#b45309;">${crAmt}</td>
+                    <td style="padding:9px 12px;color:#6b7280;">${row.payment_mode||'—'}</td>
+                    <td style="padding:9px 12px;color:#6b7280;font-size:12px;">${row.utr_reference||'—'}</td>
+                    <td style="padding:9px 12px;color:#6b7280;font-size:12px;">${(() => { const parts=[]; if(row.utr_reference) parts.push(`<span style="font-weight:600;color:#4f46e5;background:#ede9fe;border-radius:4px;padding:1px 5px;font-size:11px;">UTR: ${row.utr_reference}</span>`); if(row.notes) parts.push(`<span>${row.notes}</span>`); return parts.length ? parts.join(' <span style="color:#d1d5db;">|</span> ') : '—'; })()}</td>
+                    <td style="padding:9px 12px;text-align:center;white-space:nowrap;">
+                        <button onclick="openSvlEditModal(${JSON.stringify(row).replace(/"/g,'&quot;')})" style="background:none;border:none;color:#6366f1;cursor:pointer;font-size:14px;padding:2px 6px;" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                        ${!isRec ? `<button onclick="deleteSvlRow(${row.id})" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;padding:2px 6px;" title="Delete"><i class="fas fa-trash"></i></button>` : ''}
+                    </td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            el.innerHTML = html;
+        }
+
+        async function exportSvlStatement() {
+            try {
+                const vid = document.getElementById('svlVendor')?.value;
+                const dir = document.getElementById('svlDir')?.value;
+                const fr  = document.getElementById('svlFrom')?.value;
+                const to  = document.getElementById('svlTo')?.value;
+
+                // paginate through all pages (backend max page_size=500)
+                let allRows = [], summary = {}, curPage = 1, totalPages = 1;
+                do {
+                    const params = new URLSearchParams({ page: curPage, page_size: 500 });
+                    if (vid) params.append('vendor_id', vid);
+                    if (dir) params.append('direction', dir);
+                    if (fr)  params.append('date_from', fr);
+                    if (to)  params.append('date_to', to);
+                    const r = await staffFetch(`${API_BASE}/solar-vendor-ledger?${params}`);
+                    if (!r.ok) throw new Error(await r.text());
+                    const d = await r.json();
+                    allRows = allRows.concat(d.rows || []);
+                    if (curPage === 1) summary = d.summary || {};
+                    totalPages = Math.ceil((d.total || 0) / 500) || 1;
+                    curPage++;
+                } while (curPage <= totalPages);
+
+                const rows = allRows;
+                if (!rows.length) { alert('No entries to export.'); return; }
+
+                const vendorName = vid
+                    ? (solarVendorsCache.find(v => String(v.id) === String(vid))?.vendor_name
+                       || rows[0]?.vendor_name
+                       || 'All Vendors')
+                    : 'All Vendors';
+                const generatedOn = new Date().toLocaleDateString('en-IN', {day:'2-digit', month:'long', year:'numeric'});
+                const fmtD  = dt => dt ? new Date(dt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+                const fmtAmt = n  => n != null && n !== '' ? '₹' + Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}) : '';
+
+                let tableRows = '';
+                rows.forEach(row => {
+                    const isRec = row.direction === 'RECEIVED';
+                    const dr = isRec  ? `<td class="amt dr">${fmtAmt(row.amount)}</td><td class="amt"></td>` : `<td class="amt"></td><td class="amt cr">${fmtAmt(row.amount)}</td>`;
+                    tableRows += `<tr>
+                        <td>${fmtD(row.transaction_date)}</td>
+                        <td>${row.vendor_name || '—'}</td>
+                        <td>${row.customer_name || '—'}</td>
+                        ${dr}
+                        <td>${row.payment_mode || '—'}</td>
+                        <td>${row.utr_reference || '—'}</td>
+                        <td>${[row.utr_reference ? 'UTR: '+row.utr_reference : '', row.notes || ''].filter(Boolean).join(' | ') || '—'}</td>
+                    </tr>`;
+                });
+
+                const fmtSum = n => '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+                const periodLabel = (fr || to) ? `${fr ? fmtD(fr) : 'Beginning'} – ${to ? fmtD(to) : 'Today'}` : 'All Dates';
+
+                const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+                <title>Cash Transaction Records — ${vendorName}</title>
+                <style>
+                  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+                  body { font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; margin: 0; padding: 20px; background: #fff; }
+                  .letterhead { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 3px solid #0369a1; padding-bottom: 12px; margin-bottom: 16px; }
+                  .brand-name { font-size: 22px; font-weight: 800; color: #0369a1; letter-spacing: -0.5px; }
+                  .brand-sub  { font-size: 11px; color: #475569; margin-top: 2px; }
+                  .stmt-title { text-align: right; }
+                  .stmt-title h2 { margin: 0; font-size: 15px; font-weight: 700; color: #1e293b; }
+                  .stmt-title p  { margin: 3px 0 0; font-size: 11px; color: #475569; }
+                  .meta-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; background: #f1f5f9 !important; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px 16px; margin-bottom: 16px; }
+                  .meta-item label { font-size: 9px; text-transform: uppercase; letter-spacing: .6px; color: #475569; font-weight: 700; display: block; margin-bottom: 3px; }
+                  .meta-item span  { font-size: 13px; font-weight: 700; color: #0f172a; }
+                  table { width: 100%; border-collapse: collapse; font-size: 11px; border: 1px solid #cbd5e1; }
+                  thead tr { background: #1e293b !important; }
+                  thead th { padding: 9px 10px; text-align: left; font-weight: 700; white-space: nowrap; color: #ffffff !important; border-right: 1px solid #334155; }
+                  thead th.amt { text-align: right; }
+                  tbody tr { border-bottom: 1px solid #e2e8f0; }
+                  tbody tr:nth-child(even) { background: #f8fafc !important; }
+                  td { padding: 7px 10px; vertical-align: top; color: #1a1a1a; border-right: 1px solid #e2e8f0; }
+                  td.amt { text-align: right; font-weight: 600; white-space: nowrap; }
+                  td.dr  { color: #166534 !important; font-weight: 700; }
+                  td.cr  { color: #92400e !important; font-weight: 700; }
+                  .summary-row { margin-top: 16px; display: flex; gap: 12px; justify-content: flex-end; }
+                  .sum-box { border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px 16px; text-align: right; min-width: 170px; background: #f8fafc !important; }
+                  .sum-box label { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: #475569; font-weight: 700; display: block; margin-bottom: 4px; }
+                  .sum-box span  { font-size: 15px; font-weight: 800; }
+                  .sum-box.dr-box { background: #f0fdf4 !important; border-color: #86efac; }
+                  .sum-box.dr-box span { color: #166534 !important; }
+                  .sum-box.cr-box { background: #fffbeb !important; border-color: #fcd34d; }
+                  .sum-box.cr-box span { color: #92400e !important; }
+                  .sum-box.bl-box { background: #eff6ff !important; border-color: #93c5fd; }
+                  .sum-box.bl-box span { color: #1d4ed8 !important; }
+                  .footer { margin-top: 24px; border-top: 1px solid #cbd5e1; padding-top: 8px; font-size: 10px; color: #475569; text-align: center; }
+                  @media print { body { padding: 10px; } @page { margin: 15mm; size: A4 landscape; } }
+                </style></head><body>
+                <div class="letterhead">
+                  <div>
+                    <div class="brand-name">Myntreal</div>
+                    <div class="brand-sub">SFMS — Smart Financial Management System</div>
+                  </div>
+                  <div class="stmt-title">
+                    <h2>Cash Transaction Records</h2>
+                    <p>Generated on: ${generatedOn}</p>
+                  </div>
+                </div>
+                <div class="meta-grid">
+                  <div class="meta-item"><label>Vendor</label><span>${vendorName}</span></div>
+                  <div class="meta-item"><label>Period</label><span>${periodLabel}</span></div>
+                  <div class="meta-item"><label>Total Entries</label><span>${rows.length}</span></div>
+                </div>
+                <table>
+                  <thead><tr>
+                    <th>Date</th><th>Vendor</th><th>Customer</th>
+                    <th class="amt">DR (Received)</th><th class="amt">CR (Returned)</th>
+                    <th>Mode</th><th>UTR / Ref</th><th>Notes</th>
+                  </tr></thead>
+                  <tbody>${tableRows}</tbody>
+                </table>
+                <div class="summary-row">
+                  <div class="sum-box dr-box"><label>Total DR (Received)</label><span>${fmtSum(summary.total_received)}</span></div>
+                  <div class="sum-box cr-box"><label>Total CR (Returned)</label><span>${fmtSum(summary.total_returned)}</span></div>
+                  <div class="sum-box bl-box"><label>Balance Due from Vendor</label><span>${fmtSum(summary.balance)}</span></div>
+                </div>
+                <div style="margin-top:18px;padding:10px 14px;background:#fefce8 !important;border:1px solid #fde68a;border-radius:6px;font-size:10px;color:#78350f;line-height:1.6;">
+                  <strong>⚠ Important Note:</strong> This document reflects cash transaction records only (payments received from customers and returns from vendors). It is <em>not</em> a formal ledger or invoice. For the actual vendor ledger, outstanding balances, and invoice-wise reconciliation, please refer to the respective Ledger Master and Purchase Invoice records maintained in Myntreal SFMS.
+                </div>
+                <div class="footer">Myntreal SFMS &nbsp;|&nbsp; Cash Transaction Records &nbsp;|&nbsp; Printed: ${generatedOn} &nbsp;|&nbsp; Confidential</div>
+                <script>window.onload = function(){ window.print(); }<\/script>
+                </body></html>`;
+
+                const win = window.open('', '_blank');
+                if (!win) { alert('Pop-up blocked. Please allow pop-ups for this site and try again.'); return; }
+                win.document.write(html);
+                win.document.close();
+            } catch(e) { alert('Export failed: ' + e.message); }
+        }
+
+        function _renderSvlPagination(total, page, pageSize) {
+            const el = document.getElementById('svlPagWrap');
+            if (!el) return;
+            const totalPages = Math.ceil(total / pageSize);
+            if (totalPages <= 1) { el.innerHTML = `<span style="font-size:12px;color:#9ca3af;">${total} entries</span>`; return; }
+            let html = `<span style="font-size:12px;color:#9ca3af;margin-right:8px;">${total} entries</span>`;
+            if (page > 1) html += `<button onclick="renderSolarVendorLedger(${page-1})" style="margin:0 3px;padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;">‹ Prev</button>`;
+            html += `<span style="margin:0 8px;font-size:12px;color:#374151;">Page ${page} of ${totalPages}</span>`;
+            if (page < totalPages) html += `<button onclick="renderSolarVendorLedger(${page+1})" style="margin:0 3px;padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;">Next ›</button>`;
+            el.innerHTML = html;
+        }
+
+        async function deleteSvlRow(rowId) {
+            if (!confirm('Delete this return entry?')) return;
+            try {
+                const r = await staffFetch(`${API_BASE}/solar-vendor-ledger/${rowId}`, { method: 'DELETE' });
+                if (!r.ok) throw new Error(await r.text());
+                renderSolarVendorLedger(_svlPage);
+            } catch(e) { alert('Delete failed: ' + e.message); }
+        }
+
+        let _svlEditId = null;
+        function openSvlEditModal(row) {
+            _svlEditId = row.id;
+            document.getElementById('svlEditDate').value     = row.transaction_date ? row.transaction_date.slice(0,10) : '';
+            document.getElementById('svlEditCustomer').value = row.customer_name  || '';
+            document.getElementById('svlEditMode').value     = row.payment_mode   || '';
+            document.getElementById('svlEditUtr').value      = row.utr_reference  || '';
+            document.getElementById('svlEditNotes').value    = row.notes          || '';
+            const label = row.direction === 'RECEIVED'
+                ? '<i class="fas fa-arrow-down me-1" style="color:#059669;"></i>DR (Received)'
+                : '<i class="fas fa-arrow-up me-1" style="color:#b45309;"></i>CR (Returned)';
+            document.getElementById('svlEditTypeLabel').innerHTML = label;
+            document.getElementById('svlEditModal').style.display = 'flex';
+        }
+        function closeSvlEditModal() { document.getElementById('svlEditModal').style.display = 'none'; _svlEditId = null; }
+
+        async function submitSvlEdit() {
+            if (!_svlEditId) return;
+            const date = document.getElementById('svlEditDate').value;
+            if (!date) { alert('Date is required.'); return; }
+            const payload = {
+                transaction_date: date,
+                customer_name:    document.getElementById('svlEditCustomer').value.trim() || null,
+                payment_mode:     document.getElementById('svlEditMode').value             || null,
+                utr_reference:    document.getElementById('svlEditUtr').value.trim()      || null,
+                notes:            document.getElementById('svlEditNotes').value.trim()    || null,
+            };
+            try {
+                const r = await staffFetch(`${API_BASE}/solar-vendor-ledger/${_svlEditId}`,
+                    { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                if (!r.ok) throw new Error(await r.text());
+                closeSvlEditModal();
+                renderSolarVendorLedger(_svlPage);
+            } catch(e) { alert('Save failed: ' + e.message); }
+        }
+
+        function openSvlReturnModal() {
+            document.getElementById('svlRetDate').value = new Date().toISOString().slice(0,10);
+            document.getElementById('svlRetAmount').value = '';
+            document.getElementById('svlRetCustomer').value = '';
+            document.getElementById('svlRetMode').value = '';
+            document.getElementById('svlRetUtr').value = '';
+            document.getElementById('svlRetNotes').value = '';
+            const sel = document.getElementById('svlRetVendor');
+            sel.innerHTML = '<option value="">— Select Vendor —</option>';
+            solarVendorsCache.forEach(v => {
+                const o = document.createElement('option');
+                o.value = v.id; o.textContent = v.vendor_name + (v.vendor_code ? ' (' + v.vendor_code + ')' : '');
+                sel.appendChild(o);
+            });
+            // pre-select if filter is active
+            const filterVid = document.getElementById('svlVendor')?.value;
+            if (filterVid) sel.value = filterVid;
+            document.getElementById('svlReturnModal').style.display = 'flex';
+        }
+
+        function closeSvlReturnModal() { document.getElementById('svlReturnModal').style.display = 'none'; }
+
+        async function submitSvlReturn() {
+            const vendorId = document.getElementById('svlRetVendor').value;
+            const date     = document.getElementById('svlRetDate').value;
+            const amount   = parseFloat(document.getElementById('svlRetAmount').value);
+            if (!vendorId) { alert('Please select a solar vendor.'); return; }
+            if (!date)     { alert('Please enter a date.'); return; }
+            if (!amount || amount <= 0) { alert('Please enter a valid amount.'); return; }
+            const payload = {
+                solar_vendor_id: parseInt(vendorId),
+                transaction_date: date,
+                amount,
+                customer_name:  document.getElementById('svlRetCustomer').value.trim() || null,
+                payment_mode:   document.getElementById('svlRetMode').value || null,
+                utr_reference:  document.getElementById('svlRetUtr').value.trim() || null,
+                notes:          document.getElementById('svlRetNotes').value.trim() || null
+            };
+            try {
+                const r = await staffFetch(`${API_BASE}/solar-vendor-ledger/return`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                if (!r.ok) throw new Error(await r.text());
+                closeSvlReturnModal();
+                renderSolarVendorLedger(1);
+            } catch(e) { alert('Save failed: ' + e.message); }
+        }
+
+        async function openConfirmModal(id) {
+            confirmingEntryId = id;
+            confirmingEntry = filteredIncomes.find(i => i.id === id) || allIncomes.find(i => i.id === id) || {};
+            document.getElementById('confEntryNum').textContent = confirmingEntry.entry_number || id;
+            document.getElementById('confAmount').textContent = fmt(confirmingEntry.amount);
+            document.getElementById('confDate').textContent = fmtD(confirmingEntry.income_date);
+            document.getElementById('confPayer').value = confirmingEntry.payer_name || '';
+            document.getElementById('confMode').textContent = confirmingEntry.payment_mode || '-';
+
+            // Populate company (company_id override) dropdown
+            const compSel = document.getElementById('confCompanySelect');
+            compSel.innerHTML = '';
+            companiesCache.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id;
+                o.textContent = c.company_name || c.name;
+                compSel.appendChild(o);
+            });
+            compSel.value = confirmingEntry.company_id || '';
+
+            // Load solar vendors
+            await loadSolarVendors();
+            const svSel = document.getElementById('confSolarVendorSel');
+            svSel.innerHTML = '<option value="">— Select Solar Vendor —</option>';
+            solarVendorsCache.forEach(v => {
+                const o = document.createElement('option');
+                o.value = v.id;
+                o.textContent = v.vendor_name + (v.vendor_code ? ' (' + v.vendor_code + ')' : '');
+                svSel.appendChild(o);
+            });
+            // Pre-select existing solar vendor
+            if (confirmingEntry.solar_vendor_id) svSel.value = confirmingEntry.solar_vendor_id;
+
+            // Populate destination company dropdown (reuse editAllCompanies cache)
+            if (!editAllCompanies.length) {
+                try {
+                    const cr = await staffFetch(API_BASE + '/companies');
+                    if (cr.ok) { const cd = await cr.json(); editAllCompanies = cd.companies || cd.data || []; }
+                } catch(e) {}
+            }
+            const destComp = document.getElementById('confDestCompanySel');
+            destComp.innerHTML = '<option value="">Select Company Account</option>';
+            editAllCompanies.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id;
+                o.textContent = c.company_name + (c.bank_name ? ' — ' + c.bank_name : '');
+                if (confirmingEntry.destination_company_id === c.id) o.selected = true;
+                destComp.appendChild(o);
+            });
+
+            // Populate destination employee dropdown (reuse editAllEmployees cache)
+            if (!editAllEmployees.length) {
+                try {
+                    const er = await staffFetch('/api/v1/staff/tasks/assignable-employees?limit=500');
+                    if (er.ok) { const ed = await er.json(); editAllEmployees = ed.employees || []; }
+                } catch(e) {}
+            }
+            const destEmp = document.getElementById('confDestEmployeeSel');
+            destEmp.innerHTML = '<option value="">Select Employee</option>';
+            editAllEmployees.forEach(e => {
+                const o = document.createElement('option');
+                o.value = e.id;
+                o.textContent = (e.full_name || '') + ' (' + (e.employee_code || '') + ')';
+                if (confirmingEntry.destination_employee_id === e.id) o.selected = true;
+                destEmp.appendChild(o);
+            });
+
+            // Pre-select destination type
+            const existingDest = confirmingEntry.destination_type || '';
+            document.querySelectorAll('input[name="confDestType"]').forEach(r => {
+                r.checked = r.value === existingDest;
+            });
+            onConfDestTypeChange();
+
+            // Load balance if employee already assigned
+            if (existingDest === 'EMPLOYEE' && confirmingEntry.destination_employee_id) {
+                loadConfEmployeeBalance(confirmingEntry.destination_employee_id);
+            }
+
+            // Load bank accounts for the selected company
+            await loadConfBankAccounts();
+            // Pre-select existing bank account
+            if (confirmingEntry.bank_account_id) {
+                document.getElementById('confBankSel').value = confirmingEntry.bank_account_id;
+            }
+
+            document.getElementById('confirmModal').classList.add('active');
+        }
+
+        async function loadConfBankAccounts() {
+            const compId = parseInt(document.getElementById('confCompanySelect').value);
+            const sel = document.getElementById('confBankSel');
+            sel.innerHTML = '<option value="">Auto-resolve from payment mode</option>';
+            if (!compId) return;
+            if (!bankAccountsCache[compId]) {
+                try {
+                    const r = await staffFetch(`${API_BASE}/ledger-masters/bank-accounts?company_id=${compId}`);
+                    if (r.ok) { const d = await r.json(); bankAccountsCache[compId] = d.accounts || []; }
+                    else bankAccountsCache[compId] = [];
+                } catch(e) { bankAccountsCache[compId] = []; }
+            }
+            (bankAccountsCache[compId] || []).forEach(a => {
+                const o = document.createElement('option');
+                o.value = a.id; o.dataset.name = a.account_name;
+                o.textContent = a.account_name + ' (' + a.account_type + ')';
+                sel.appendChild(o);
+            });
+        }
+
+        async function onConfCompanyChange() { await loadConfBankAccounts(); }
+
+        function onConfDestTypeChange() {
+            const val = document.querySelector('input[name="confDestType"]:checked')?.value || '';
+            document.getElementById('confDestCompanyRow').style.display  = val === 'COMPANY_ACCOUNT' ? 'block' : 'none';
+            document.getElementById('confDestEmployeeRow').style.display = val === 'EMPLOYEE'        ? 'block' : 'none';
+            document.getElementById('confDestSolarRow').style.display    = val === 'SOLAR_VENDOR'    ? 'block' : 'none';
+            if (val !== 'EMPLOYEE') document.getElementById('confEmpBalanceBox').style.display = 'none';
+        }
+
+        async function loadConfEmployeeBalance(empId) {
+            if (!empId) { document.getElementById('confEmpBalanceBox').style.display = 'none'; return; }
+            try {
+                const r = await staffFetch(API_BASE + '/fund-ledger/' + empId + '/balance');
+                if (!r.ok) return;
+                const d = await r.json();
+                const b = d.balance_summary;
+                if (!b) return;
+                const prevBal  = parseFloat(b.available_balance) || 0;
+                const txnAmt   = parseFloat(confirmingEntry.amount) || 0;
+                const afterBal = prevBal + txnAmt;
+                document.getElementById('confEmpBalName').textContent  = (d.employee_name || 'Employee') + ' — Fund Balance';
+                document.getElementById('confBalPrev').textContent     = fmt(prevBal);
+                document.getElementById('confBalTxn').textContent      = '+\u20b9' + txnAmt.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+                document.getElementById('confBalAfter').textContent    = fmt(afterBal);
+                document.getElementById('confEmpBalanceBox').style.display = 'block';
+            } catch(e) {}
+        }
+
+        async function submitConfirmModal() {
+            const destType = document.querySelector('input[name="confDestType"]:checked')?.value || '';
+
+            // Validate destination selections
+            if (destType === 'COMPANY_ACCOUNT' && !document.getElementById('confDestCompanySel').value) {
+                alert('Please select a Company Account'); return;
+            }
+            if (destType === 'EMPLOYEE' && !document.getElementById('confDestEmployeeSel').value) {
+                alert('Please select an Employee'); return;
+            }
+            if (destType === 'SOLAR_VENDOR' && !document.getElementById('confSolarVendorSel').value) {
+                alert('Please select a Solar Vendor'); return;
+            }
+
+            const selComp = document.getElementById('confCompanySelect');
+            const payload = {
+                status: 'CONFIRMED',
+                confirmation_type: 'TAXED',
+                company_id: selComp.value ? parseInt(selComp.value) : null,
+                destination_type: destType || null
+            };
+
+            // Destination-specific fields
+            if (destType === 'COMPANY_ACCOUNT') {
+                payload.destination_company_id = parseInt(document.getElementById('confDestCompanySel').value) || null;
+            } else if (destType === 'EMPLOYEE') {
+                payload.destination_employee_id = parseInt(document.getElementById('confDestEmployeeSel').value) || null;
+            } else if (destType === 'SOLAR_VENDOR') {
+                payload.solar_vendor_id = parseInt(document.getElementById('confSolarVendorSel').value) || null;
+            }
+
+            // Bank account override
+            const bankSel = document.getElementById('confBankSel');
+            const bankOpt = bankSel.options[bankSel.selectedIndex];
+            if (bankSel.value) {
+                payload.bank_account_id   = parseInt(bankSel.value);
+                payload.bank_account_name = bankOpt?.dataset?.name || null;
+            }
+
+            // Payer name override
+            const payer = document.getElementById('confPayer').value.trim();
+            if (payer) payload.payer_name = payer;
+
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/' + confirmingEntryId + '/status', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (r.ok) {
+                    closeModal('confirmModal');
+                    closeModal('viewDetailModal');
+                    loadIncomes();
+                } else {
+                    const err = await r.json().catch(() => ({}));
+                    alert(err.detail || err.message || 'Failed to confirm entry');
+                }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to confirm entry');
+            }
+        }
+
+        // ========== DC-ESTIMATIONS-001: ESTIMATIONS TAB ==========
+        function switchEstSubTab(tab) {
+            currentEstSubTab = tab;
+            document.querySelectorAll('.est-sub-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector(`[data-esttab="${tab}"]`).classList.add('active');
+            document.querySelectorAll('.est-sub-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`est-sub-${tab}`).classList.add('active');
+            renderEstSubTab(tab);
+        }
+
+        async function renderEstimationsTab() {
+            estimationCompanyId = document.getElementById('filterCompany').value || null;
+            // Defensively rebuild inner structure if it was wiped by loadIncomes
+            const tabEl = document.getElementById('tab-estimations');
+            if (tabEl && !document.getElementById('est-sub-in')) {
+                tabEl.innerHTML =
+                    '<div class="est-sub-nav">' +
+                        '<button class="est-sub-btn active" data-esttab="in" onclick="switchEstSubTab(\'in\')"><i class="fas fa-arrow-down me-1" style="color:#059669;"></i>IN Estimates</button>' +
+                        '<button class="est-sub-btn" data-esttab="out" onclick="switchEstSubTab(\'out\')"><i class="fas fa-arrow-up me-1" style="color:#dc2626;"></i>OUT Planning</button>' +
+                        '<button class="est-sub-btn" data-esttab="payments" onclick="switchEstSubTab(\'payments\')"><i class="fas fa-credit-card me-1" style="color:#7c3aed;"></i>Payments</button>' +
+                        '<button class="est-sub-btn" data-esttab="stock" onclick="switchEstSubTab(\'stock\')"><i class="fas fa-boxes me-1" style="color:#0284c7;"></i>Stock Movement</button>' +
+                        '<button class="est-sub-btn" data-esttab="executive" onclick="switchEstSubTab(\'executive\')"><i class="fas fa-chart-pie me-1" style="color:#b45309;"></i>Executive Summary</button>' +
+                    '</div>' +
+                    '<div id="est-sub-in" class="est-sub-content active"></div>' +
+                    '<div id="est-sub-out" class="est-sub-content"></div>' +
+                    '<div id="est-sub-payments" class="est-sub-content"></div>' +
+                    '<div id="est-sub-stock" class="est-sub-content"></div>' +
+                    '<div id="est-sub-executive" class="est-sub-content"></div>';
+                // Restore active sub-tab highlight
+                const activeBtn = tabEl.querySelector(`[data-esttab="${currentEstSubTab}"]`);
+                if (activeBtn) {
+                    tabEl.querySelectorAll('.est-sub-btn').forEach(b => b.classList.remove('active'));
+                    activeBtn.classList.add('active');
+                    const activePane = document.getElementById(`est-sub-${currentEstSubTab}`);
+                    if (activePane) {
+                        tabEl.querySelectorAll('.est-sub-content').forEach(c => c.classList.remove('active'));
+                        activePane.classList.add('active');
+                    }
+                }
+            }
+            // Show loading state immediately (synchronous) before async data fetch
+            const loadingHtml = '<div style="padding:32px;text-align:center;color:#b45309;"><i class="fas fa-spinner fa-spin me-2"></i>Loading estimation data...</div>';
+            ['est-sub-in','est-sub-out','est-sub-payments','est-sub-stock','est-sub-executive'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.classList.contains('active')) el.innerHTML = loadingHtml;
+            });
+            await loadEstimationData();
+            renderEstSubTab(currentEstSubTab);
+        }
+
+        async function loadEstimationData() {
+            try {
+                const cq = estimationCompanyId ? `?company_id=${estimationCompanyId}` : '';
+                const [rIn, rOut, rStock, rSummary] = await Promise.all([
+                    staffFetch(`${API_BASE}/income-entries/estimations${cq}`),
+                    staffFetch(`${API_BASE}/income-entries/estimations/out${cq}`),
+                    staffFetch(`${API_BASE}/income-entries/estimations/stock${cq}`),
+                    staffFetch(`${API_BASE}/income-entries/estimations/executive-summary${cq}`)
+                ]);
+                if (rIn.ok)      { const d = await rIn.json();      estInEntries = d.entries || []; }
+                if (rOut.ok)     { const d = await rOut.json();     estOutRecords = d.records || []; }
+                if (rStock.ok)   { const d = await rStock.json();   estStock = d.stock_movements || []; }
+                if (rSummary.ok) { const d = await rSummary.json(); estSummary = d.summary || null; }
+                // payments: aggregate across all IN entries
+                estPayments = [];
+                for (const e of estInEntries.slice(0, 30)) {
+                    try {
+                        const rp = await staffFetch(`${API_BASE}/income-entries/${e.id}/estimation-payments`);
+                        if (rp.ok) { const dp = await rp.json(); (dp.payments || []).forEach(p => { p._entry_number = e.entry_number; estPayments.push(p); }); }
+                    } catch(pe) {}
+                }
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') console.error(e); }
+        }
+
+        function renderEstSubTab(tab) {
+            if (tab === 'in') renderEstIn();
+            else if (tab === 'out') renderEstOut();
+            else if (tab === 'payments') renderEstPayments();
+            else if (tab === 'stock') renderEstStock();
+            else if (tab === 'executive') renderEstExecutive();
+        }
+
+        function renderEstIn() {
+            const el = document.getElementById('est-sub-in');
+            if (!estInEntries.length) {
+                const compFilter = document.getElementById('filterCompany');
+                const hasCompanyFilter = compFilter && compFilter.value;
+                const hint = hasCompanyFilter
+                    ? 'No estimated entries for the selected company. Select <b>All Companies</b> in the filter above to see all estimations.'
+                    : 'Create an income entry and set its status to <b>Estimated</b> to see it here.';
+                el.innerHTML = '<div class="empty-state"><i class="fas fa-folder-open"></i><h3>No Estimated Entries</h3><p>' + hint + '</p></div>';
+                return;
+            }
+            const total = estInEntries.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+            let rows = '';
+            estInEntries.forEach(function(e) {
+                rows += '<tr>' +
+                    '<td><code style="font-size:11px;">' + (e.entry_number || e.id) + '</code></td>' +
+                    '<td>' + fmtD(e.income_date) + '</td>' +
+                    '<td><small>' + (e.company_name || '-') + '</small></td>' +
+                    '<td>' + (e.payer_name || '-') + '</td>' +
+                    '<td class="amount positive">' + fmt(e.amount) + '</td>' +
+                    '<td><small>' + (e.payment_mode || '-') + '</small></td>' +
+                    '<td style="white-space:nowrap;">' +
+                        '<button class="btn-action btn-confirm" onclick="openConfirmModal(' + e.id + ')"><i class="fas fa-check me-1"></i>Confirm</button> ' +
+                        '<button class="btn-action btn-revert" onclick="updateStatus(' + e.id + ',\'PENDING\')">Revert</button>' +
+                    '</td>' +
+                '</tr>';
+            });
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-arrow-down me-2" style="color:#059669;"></i>IN Estimates (' + estInEntries.length + ')</span><span class="amount positive">' + fmt(total) + ' total</span></div>' +
+                '<div class="table-container"><table class="data-table"><thead><tr><th>Entry #</th><th>Date</th><th>Company</th><th>Payer</th><th>Amount</th><th>Mode</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        let editingOutId = null;
+        function renderEstOut() {
+            const el = document.getElementById('est-sub-out');
+            const total = estOutRecords.reduce((s, r) => s + (parseFloat(r.estimated_amount) || 0), 0);
+            let rows = '';
+            estOutRecords.forEach(function(r) {
+                rows += '<tr>' +
+                    '<td>' + fmtD(r.entry_date) + '</td>' +
+                    '<td>' + r.description + '</td>' +
+                    '<td>' + (r.party_name || '-') + '</td>' +
+                    '<td>' + (r.account_name || '-') + '</td>' +
+                    '<td class="amount" style="color:#dc2626;">' + fmt(r.estimated_amount) + '</td>' +
+                    '<td><span class="badge bg-secondary" style="font-size:10px;">' + (r.status || 'PENDING') + '</span></td>' +
+                    '<td style="white-space:nowrap;">' +
+                        '<button class="btn-action btn-edit" onclick="editOutRecord(' + r.id + ')"><i class="fas fa-pencil-alt"></i></button> ' +
+                        '<button class="btn-action" style="border-color:#dc2626;color:#dc2626;" onclick="deleteOutRecord(' + r.id + ')"><i class="fas fa-trash-alt"></i></button>' +
+                    '</td>' +
+                '</tr>';
+            });
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-arrow-up me-2" style="color:#dc2626;"></i>OUT Planning (' + estOutRecords.length + ')</span>' +
+                '<div style="display:flex;gap:8px;align-items:center;"><span class="amount" style="color:#dc2626;">' + fmt(total) + ' planned</span><button class="btn-action btn-confirm" onclick="openOutModal()"><i class="fas fa-plus me-1"></i>Add OUT Record</button></div></div>' +
+                '<div class="table-container"><table class="data-table"><thead><tr><th>Date</th><th>Description</th><th>Party</th><th>Account</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        function renderEstPayments() {
+            const el = document.getElementById('est-sub-payments');
+            if (!estPayments.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-credit-card"></i><h3>No Payments Recorded</h3><p>Add payments against estimated income entries</p></div>'; return; }
+            const total = estPayments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+            let rows = '';
+            estPayments.forEach(function(p) {
+                rows += '<tr>' +
+                    '<td><code style="font-size:10px;">' + (p._entry_number || p.income_entry_id) + '</code></td>' +
+                    '<td>' + fmtD(p.payment_date) + '</td>' +
+                    '<td class="amount positive">' + fmt(p.amount) + '</td>' +
+                    '<td><small>' + (p.payment_mode || '-') + '</small></td>' +
+                    '<td>' + (p.party_name || '-') + '</td>' +
+                    '<td>' + (p.account_received || '-') + '</td>' +
+                    '<td>' + (p.notes || '-') + '</td>' +
+                    '<td><button class="btn-action" style="border-color:#dc2626;color:#dc2626;" onclick="deleteEstPayment(' + p.income_entry_id + ',' + p.id + ')"><i class="fas fa-trash-alt"></i></button></td>' +
+                '</tr>';
+            });
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-credit-card me-2" style="color:#7c3aed;"></i>Estimate Payments (' + estPayments.length + ')</span><span class="amount positive">' + fmt(total) + ' total</span></div>' +
+                '<div class="table-container"><table class="data-table"><thead><tr><th>Entry #</th><th>Date</th><th>Amount</th><th>Mode</th><th>Party</th><th>Account</th><th>Notes</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        function renderEstStock() {
+            const el = document.getElementById('est-sub-stock');
+            if (!estStock.length) { el.innerHTML = '<div class="empty-state"><i class="fas fa-boxes"></i><h3>No Estimate Stock Movements</h3><p>Appears when estimated entries have linked spare items</p></div>'; return; }
+            let rows = '';
+            estStock.forEach(function(s) {
+                rows += '<tr>' +
+                    '<td>' + fmtD(s.transaction_date) + '</td>' +
+                    '<td>' + (s.item_name || '-') + '</td>' +
+                    '<td><code style="font-size:10px;">' + (s.item_code || '-') + '</code></td>' +
+                    '<td style="color:#dc2626;font-weight:600;">' + (s.quantity_out || 0) + '</td>' +
+                    '<td><code style="font-size:10px;">' + (s.reference_number || '-') + '</code></td>' +
+                    '<td><span style="background:#fef3c7;color:#b45309;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;">Estimate</span></td>' +
+                '</tr>';
+            });
+            el.innerHTML = '<div class="card"><div class="card-header"><span><i class="fas fa-boxes me-2" style="color:#0284c7;"></i>Estimate Stock Movements (' + estStock.length + ')</span><span style="font-size:12px;color:#6b7280;">Soft deductions — not reflected in real stock</span></div>' +
+                '<div class="table-container"><table class="data-table"><thead><tr><th>Date</th><th>Item</th><th>Code</th><th>Qty Out</th><th>Reference</th><th>Type</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+        }
+
+        function renderEstExecutive() {
+            const el = document.getElementById('est-sub-executive');
+            const s = estSummary || { in_estimates: {count:0,total:0}, out_estimates: {count:0,total:0}, payments: {count:0,total:0}, net_estimated: 0 };
+            el.innerHTML = '<div class="est-summary-row">' +
+                '<div class="est-card in"><div class="val">' + fmt(s.in_estimates.total) + '</div><div class="lbl">IN Estimated Income (' + s.in_estimates.count + ' entries)</div></div>' +
+                '<div class="est-card out"><div class="val">' + fmt(s.out_estimates.total) + '</div><div class="lbl">OUT Planned Spend (' + s.out_estimates.count + ' records)</div></div>' +
+                '<div class="est-card pmt"><div class="val">' + fmt(s.payments.total) + '</div><div class="lbl">Payments Collected (' + s.payments.count + ')</div></div>' +
+                '<div class="est-card net"><div class="val" style="color:' + (s.net_estimated >= 0 ? '#059669' : '#dc2626') + ';">' + fmt(Math.abs(s.net_estimated)) + '</div><div class="lbl">Net Estimated Cash ' + (s.net_estimated >= 0 ? '(Surplus)' : '(Deficit)') + '</div></div>' +
+                '</div>' +
+                '<div class="card"><div class="card-header"><span><i class="fas fa-info-circle me-2" style="color:#6b7280;"></i>About This Tab</span></div><div class="card-body" style="padding:16px;font-size:13px;color:#374151;line-height:1.7;">' +
+                '<p><strong>IN Estimates</strong> = Income entries that are in estimation phase. They are excluded from confirmed revenue totals until moved to CONFIRMED (Taxed).</p>' +
+                '<p><strong>OUT Planning</strong> = Informational outgoing expense estimates. These have <em>zero ledger impact</em> — they are for planning visibility only.</p>' +
+                '<p><strong>Payments</strong> = Payments collected against estimated entries — recorded for tracking, not posted to ledger.</p>' +
+                '<p><strong>Stock Movement</strong> = Soft stock deductions for spare parts linked to estimated service tickets. Excluded from real stock balance calculations.</p>' +
+                '</div></div>';
+        }
+
+        // OUT record modal helpers
+        function openOutModal(id) {
+            editingOutId = id || null;
+            const rec = id ? estOutRecords.find(r => r.id === id) : null;
+            document.getElementById('outRecDate').value = rec ? rec.entry_date : new Date().toISOString().split('T')[0];
+            document.getElementById('outRecDesc').value = rec ? rec.description : '';
+            document.getElementById('outRecAmt').value = rec ? rec.estimated_amount : '';
+            document.getElementById('outRecParty').value = rec ? (rec.party_name || '') : '';
+            document.getElementById('outRecAcct').value = rec ? (rec.account_name || '') : '';
+            document.getElementById('outRecNotes').value = rec ? (rec.notes || '') : '';
+            document.getElementById('outModalTitle').textContent = id ? 'Edit OUT Record' : 'Add OUT Planning Record';
+            document.getElementById('outRecModal').classList.add('active');
+        }
+
+        function editOutRecord(id) { openOutModal(id); }
+
+        async function saveOutRecord() {
+            const compId = estimationCompanyId || document.getElementById('filterCompany').value;
+            if (!compId) { alert('Please select a company first (use the Company filter)'); return; }
+            const payload = {
+                company_id: parseInt(compId),
+                entry_date: document.getElementById('outRecDate').value,
+                description: document.getElementById('outRecDesc').value.trim(),
+                estimated_amount: parseFloat(document.getElementById('outRecAmt').value) || 0,
+                party_name: document.getElementById('outRecParty').value.trim() || null,
+                account_name: document.getElementById('outRecAcct').value.trim() || null,
+                notes: document.getElementById('outRecNotes').value.trim() || null,
+            };
+            if (!payload.description || !payload.entry_date) { alert('Description and date are required'); return; }
+            try {
+                const url = editingOutId ? `${API_BASE}/income-entries/estimations/out/${editingOutId}` : `${API_BASE}/income-entries/estimations/out`;
+                const method = editingOutId ? 'PUT' : 'POST';
+                const r = await staffFetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (r.ok) { closeModal('outRecModal'); await renderEstimationsTab(); }
+                else { const err = await r.json().catch(() => ({})); alert(err.detail || 'Failed to save record'); }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to save record');
+            }
+        }
+
+        async function deleteOutRecord(id) {
+            if (!confirm('Delete this OUT planning record?')) return;
+            try {
+                const r = await staffFetch(`${API_BASE}/income-entries/estimations/out/${id}`, { method: 'DELETE' });
+                if (r.ok) await renderEstimationsTab();
+                else { const err = await r.json().catch(() => ({})); alert(err.detail || 'Failed to delete'); }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to delete record');
+            }
+        }
+
+        async function deleteEstPayment(entryId, paymentId) {
+            if (!confirm('Delete this payment record?')) return;
+            try {
+                const r = await staffFetch(`${API_BASE}/income-entries/${entryId}/estimation-payments/${paymentId}`, { method: 'DELETE' });
+                if (r.ok) await renderEstimationsTab();
+                else { const err = await r.json().catch(() => ({})); alert(err.detail || 'Failed to delete'); }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to delete payment');
+            }
+        }
+
+        // ========== EDIT DESTINATION MODAL ==========
+        let editingEntryId = null;
+        let editAllCompanies = [];
+        let editAllEmployees = [];
+
+        async function openEditModal(id) {
+            editingEntryId = id;
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/' + id);
+                if (!r.ok) { alert('Failed to load entry'); return; }
+                const d = await r.json();
+                const entry = d.income_entry || d;
+
+                document.getElementById('editEntryNum').textContent = entry.entry_number || id;
+                document.getElementById('editAmount').textContent = fmt(entry.amount);
+                document.getElementById('editDate').textContent = fmtD(entry.income_date);
+                document.getElementById('editPayMode').textContent = entry.payment_mode || '-';
+                document.getElementById('editStatus').textContent = entry.status || '-';
+
+                // Load companies if not cached
+                if (!editAllCompanies.length) {
+                    const cr = await staffFetch(API_BASE + '/companies');
+                    if (cr.ok) { const cd = await cr.json(); editAllCompanies = cd.companies || cd.data || []; }
+                }
+                const compSel = document.getElementById('editDestCompany');
+                compSel.innerHTML = '<option value="">Select Company Account</option>';
+                editAllCompanies.forEach(function(c) {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = c.company_name + (c.bank_name ? ' — ' + c.bank_name : '');
+                    if (entry.destination_company_id === c.id) opt.selected = true;
+                    compSel.appendChild(opt);
+                });
+
+                // Load employees if not cached
+                if (!editAllEmployees.length) {
+                    const er = await staffFetch('/api/v1/staff/tasks/assignable-employees?limit=500');
+                    if (er.ok) { const ed = await er.json(); editAllEmployees = ed.employees || []; }
+                }
+                const empSel = document.getElementById('editDestEmployee');
+                empSel.innerHTML = '<option value="">Select Employee</option>';
+                editAllEmployees.forEach(function(e) {
+                    const opt = document.createElement('option');
+                    opt.value = e.id;
+                    opt.textContent = (e.full_name || '') + ' (' + (e.employee_code || '') + ')';
+                    if (entry.destination_employee_id === e.id) opt.selected = true;
+                    empSel.appendChild(opt);
+                });
+
+                // Set destination type
+                const destType = entry.destination_type || '';
+                document.querySelector('input[name="editDestType"][value="COMPANY_ACCOUNT"]').checked = destType === 'COMPANY_ACCOUNT';
+                document.querySelector('input[name="editDestType"][value="EMPLOYEE"]').checked = destType === 'EMPLOYEE';
+                document.querySelector('input[name="editDestType"][value=""]').checked = !destType;
+                onEditDestTypeChange();
+
+                if (destType === 'EMPLOYEE' && entry.destination_employee_id) {
+                    loadDestEmployeeBalance(entry.destination_employee_id, entry.company_id);
+                }
+
+                document.getElementById('editDestModal').classList.add('active');
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to load entry details');
+            }
+        }
+
+        function onEditDestTypeChange() {
+            const val = document.querySelector('input[name="editDestType"]:checked')?.value || '';
+            document.getElementById('editDestCompanyRow').style.display = val === 'COMPANY_ACCOUNT' ? 'block' : 'none';
+            document.getElementById('editDestEmployeeRow').style.display = val === 'EMPLOYEE' ? 'block' : 'none';
+            document.getElementById('editBalanceBox').style.display = 'none';
+        }
+
+        async function loadDestEmployeeBalance(empId, compId) {
+            if (!empId) { document.getElementById('editBalanceBox').style.display = 'none'; return; }
+            try {
+                const r = await staffFetch(API_BASE + '/fund-ledger/' + empId + '/balance' + (compId ? '?company_id=' + compId : ''));
+                if (!r.ok) return;
+                const d = await r.json();
+                const b = d.balance_summary;
+                if (!b) return;
+                const box = document.getElementById('editBalanceBox');
+                document.getElementById('editEmpName').textContent = d.employee_name || 'Employee';
+                document.getElementById('editBalAvail').textContent = fmt(b.available_balance);
+                document.getElementById('editBalApproved').textContent = fmt(b.approved_expenses);
+                document.getElementById('editBalSubmitted').textContent = fmt(b.pending_submitted);
+                document.getElementById('editBalDraft').textContent = fmt(b.pending_draft);
+                document.getElementById('editBalEffective').textContent = fmt(b.effective_balance_after_submitted);
+                box.style.display = 'block';
+            } catch(e) {}
+        }
+
+        async function saveEditEntry() {
+            const destType = document.querySelector('input[name="editDestType"]:checked')?.value || null;
+            const destCompId = destType === 'COMPANY_ACCOUNT' ? (parseInt(document.getElementById('editDestCompany').value) || null) : null;
+            const destEmpId = destType === 'EMPLOYEE' ? (parseInt(document.getElementById('editDestEmployee').value) || null) : null;
+
+            if (destType === 'COMPANY_ACCOUNT' && !destCompId) { alert('Please select a company account'); return; }
+            if (destType === 'EMPLOYEE' && !destEmpId) { alert('Please select an employee'); return; }
+
+            const payload = {};
+            if (destType !== null) { payload.destination_type = destType || null; }
+            if (destCompId !== null) payload.destination_company_id = destCompId;
+            if (destEmpId !== null) payload.destination_employee_id = destEmpId;
+
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries/' + editingEntryId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (r.ok) {
+                    closeModal('editDestModal');
+                    loadIncomes();
+                } else {
+                    const err = await r.json().catch(() => ({}));
+                    alert(err.detail || err.message || 'Failed to save');
+                }
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to save changes');
+            }
+        }
+
+        function openCreateModal() {
+            document.getElementById('createForm').reset();
+            document.getElementById('formDate').valueAsDate = new Date();
+            document.getElementById('formCategory').innerHTML = '<option value="">None</option>';
+            document.getElementById('createModal').classList.add('active');
+        }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        async function createIncome() {
+            const data = {
+                company_id: parseInt(document.getElementById('formCompany').value),
+                income_date: document.getElementById('formDate').value,
+                income_source_id: parseInt(document.getElementById('formSourceType').value) || null,
+                amount: parseFloat(document.getElementById('formAmount').value),
+                payment_mode: document.getElementById('formPaymentMode').value,
+                payment_type: document.getElementById('formPaymentType').value || null,
+                payer_name: document.getElementById('formPayer').value.trim() || null,
+                payment_reference: document.getElementById('formPayRef').value.trim() || null,
+                narration: document.getElementById('formNarration').value.trim() || null,
+                revenue_category_id: parseInt(document.getElementById('formCategory').value) || null,
+                show_in_ledger: document.getElementById('formShowInLedger').checked,
+            };
+            if (!data.company_id || !data.amount || !data.income_date || !data.income_source_id) { alert('Please fill all required fields'); return; }
+            try {
+                const r = await staffFetch(API_BASE + '/income-entries', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (r.ok) {
+                    closeModal('createModal');
+                    loadIncomes();
+                    alert('Income entry created');
+                } else if (r.status === 409) {
+                    const err = await r.json().catch(() => ({}));
+                    const dupRef = err.duplicate_entry ? ` (Existing: ${err.duplicate_entry})` : '';
+                    alert(`⚠️ Duplicate Entry Blocked${dupRef}\n\n${err.message || 'A similar entry already exists for this customer, amount, date and payment mode.'}\n\nIf this is a genuinely separate collection, please adjust the date or amount before saving.`);
+                } else {
+                    const err = await r.json().catch(() => ({}));
+                    alert(err.message || err.detail || 'Failed to create');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                alert('Failed to create income entry');
+            }
+        }
+    </script>
+
+    <!-- DC-DEST-AT-CONFIRM-001: Confirm Income Entry Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-container" style="max-width:520px; max-height:92vh; overflow-y:auto; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-check-circle me-2" style="color:#059669;"></i>Confirm Income Entry</h5>
+                <button class="modal-close" onclick="closeModal('confirmModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Summary strip -->
+                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:14px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">ENTRY #</div><div style="font-weight:700;color:#1f2937;" id="confEntryNum">-</div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">AMOUNT</div><div style="font-weight:700;color:#059669;" id="confAmount">-</div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">DATE</div><div style="font-size:13px;" id="confDate">-</div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">PAYMENT MODE</div><div style="font-size:13px;" id="confMode">-</div></div>
+                    <div style="grid-column:1/-1;"><div style="font-size:10px;color:#6b7280;font-weight:600;">COMPANY</div><select id="confCompanySelect" onchange="onConfCompanyChange()" style="width:100%;padding:6px 10px;font-size:13px;font-weight:600;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#1f2937;"></select></div>
+                </div>
+
+                <!-- Destination Type -->
+                <div class="form-group" style="margin-bottom:10px;">
+                    <label style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px;display:block;">Destination Type</label>
+                    <div style="display:flex;gap:14px;flex-wrap:wrap;">
+                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;font-weight:500;">
+                            <input type="radio" name="confDestType" value="" onchange="onConfDestTypeChange()"> Unassigned
+                        </label>
+                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;font-weight:500;">
+                            <input type="radio" name="confDestType" value="COMPANY_ACCOUNT" onchange="onConfDestTypeChange()">
+                            <i class="fas fa-building" style="color:#1d4ed8;"></i> Company Account
+                        </label>
+                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;font-weight:500;">
+                            <input type="radio" name="confDestType" value="EMPLOYEE" onchange="onConfDestTypeChange()">
+                            <i class="fas fa-user" style="color:#059669;"></i> Employee Fund
+                        </label>
+                        <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px;font-weight:500;">
+                            <input type="radio" name="confDestType" value="SOLAR_VENDOR" onchange="onConfDestTypeChange()">
+                            <i class="fas fa-solar-panel" style="color:#f59e0b;"></i> Solar Vendor
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Company Account row -->
+                <div id="confDestCompanyRow" style="display:none;">
+                    <div class="form-group">
+                        <label>Company Account</label>
+                        <select id="confDestCompanySel">
+                            <option value="">Select Company Account</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Employee Fund row -->
+                <div id="confDestEmployeeRow" style="display:none;">
+                    <div class="form-group">
+                        <label>Employee</label>
+                        <select id="confDestEmployeeSel" onchange="loadConfEmployeeBalance(this.value)">
+                            <option value="">Select Employee</option>
+                        </select>
+                    </div>
+                    <div id="confEmpBalanceBox" style="display:none;" class="balance-info-box">
+                        <div style="font-size:11px;font-weight:700;color:#065f46;margin-bottom:8px;" id="confEmpBalName">Employee Fund Balance</div>
+                        <div class="balance-row"><span class="label">Previous Balance</span><span class="value positive" id="confBalPrev">-</span></div>
+                        <div class="balance-row"><span class="label">This Transaction</span><span class="value positive" id="confBalTxn" style="color:#2563eb;">-</span></div>
+                        <hr style="margin:6px 0; border-color:#bbf7d0;">
+                        <div class="balance-row"><span class="label" style="font-weight:600;">Balance After</span><span class="value positive" id="confBalAfter" style="font-weight:700;">-</span></div>
+                    </div>
+                </div>
+
+                <!-- Solar Vendor row -->
+                <div id="confDestSolarRow" style="display:none;">
+                    <div class="form-group">
+                        <label><i class="fas fa-solar-panel me-1" style="color:#f59e0b;"></i>Solar Vendor</label>
+                        <select id="confSolarVendorSel">
+                            <option value="">— Select Solar Vendor —</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr style="border-color:#e5e7eb; margin:10px 0;">
+                <div class="form-group">
+                    <label>Bank / Cash Account <small style="color:#6b7280;">(Optional — overrides auto-resolved account)</small></label>
+                    <select id="confBankSel">
+                        <option value="">Auto-resolve from payment mode</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Payer Name <small style="color:#6b7280;">(Optional — override for party ledger)</small></label>
+                    <input type="text" id="confPayer" placeholder="Payer / customer name">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('confirmModal')">Cancel</button>
+                <button class="btn btn-success" onclick="submitConfirmModal()"><i class="fas fa-check me-1"></i>Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DC-ESTIMATIONS-001: OUT Record Modal -->
+    <div class="modal-overlay" id="outRecModal">
+        <div class="modal-container" style="max-width:480px; max-height:90vh; overflow-y:auto; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+            <div class="modal-header">
+                <h5 class="modal-title" id="outModalTitle"><i class="fas fa-arrow-up me-2" style="color:#dc2626;"></i>Add OUT Planning Record</h5>
+                <button class="modal-close" onclick="closeModal('outRecModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Date *</label>
+                        <input type="date" id="outRecDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount *</label>
+                        <input type="number" id="outRecAmt" step="0.01" min="0" placeholder="Estimated amount">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description *</label>
+                    <input type="text" id="outRecDesc" placeholder="e.g. Spare parts procurement, travel etc.">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Party Name</label>
+                        <input type="text" id="outRecParty" placeholder="Vendor / payee">
+                    </div>
+                    <div class="form-group">
+                        <label>Account</label>
+                        <input type="text" id="outRecAcct" placeholder="Account name">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="outRecNotes" rows="2" placeholder="Additional notes"></textarea>
+                </div>
+                <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px; font-size:12px; color:#991b1b;">
+                    <i class="fas fa-info-circle me-1"></i> OUT records are <strong>informational only</strong>. They have no ledger impact and do not affect financial statements.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('outRecModal')">Cancel</button>
+                <button class="btn btn-danger" onclick="saveOutRecord()"><i class="fas fa-save me-1"></i>Save Record</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Destination Modal -->
+    <div class="modal-overlay" id="editDestModal">
+        <div class="modal-container" style="max-width:520px; max-height:90vh; overflow-y:auto; background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-pencil-alt me-2"></i>Edit Income Entry</h5>
+                <button class="modal-close" onclick="closeModal('editDestModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:14px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">ENTRY #</div><div style="font-weight:700;color:#1f2937;" id="editEntryNum"></div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">AMOUNT</div><div style="font-weight:700;color:#059669;" id="editAmount"></div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">DATE</div><div style="font-size:13px;" id="editDate"></div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">MODE</div><div style="font-size:13px;" id="editPayMode"></div></div>
+                    <div><div style="font-size:10px;color:#6b7280;font-weight:600;">STATUS</div><div style="font-size:13px;" id="editStatus"></div></div>
+                </div>
+
+                <hr class="section-divider">
+
+                <div class="form-group">
+                    <label>Destination Type</label>
+                    <div style="display:flex; gap:16px; margin-top:6px; flex-wrap:wrap;">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500;">
+                            <input type="radio" name="editDestType" value="" onchange="onEditDestTypeChange()"> Unassigned
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500;">
+                            <input type="radio" name="editDestType" value="COMPANY_ACCOUNT" onchange="onEditDestTypeChange()">
+                            <i class="fas fa-building" style="color:#1d4ed8;"></i> Company Account
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:500;">
+                            <input type="radio" name="editDestType" value="EMPLOYEE" onchange="onEditDestTypeChange()">
+                            <i class="fas fa-user" style="color:#059669;"></i> Employee Fund
+                        </label>
+                    </div>
+                </div>
+
+                <div id="editDestCompanyRow" style="display:none;">
+                    <div class="form-group">
+                        <label>Company Account</label>
+                        <select id="editDestCompany">
+                            <option value="">Select Company Account</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="editDestEmployeeRow" style="display:none;">
+                    <div class="form-group">
+                        <label>Employee</label>
+                        <select id="editDestEmployee" onchange="loadDestEmployeeBalance(this.value, null)">
+                            <option value="">Select Employee</option>
+                        </select>
+                    </div>
+                    <div id="editBalanceBox" style="display:none;" class="balance-info-box">
+                        <div style="font-size:11px;font-weight:700;color:#065f46;margin-bottom:8px;" id="editEmpName">Employee Fund Balance</div>
+                        <div class="balance-row"><span class="label">Available Balance</span><span class="value positive" id="editBalAvail">-</span></div>
+                        <div class="balance-row"><span class="label">Approved Expenses</span><span class="value danger" id="editBalApproved">-</span></div>
+                        <div class="balance-row"><span class="label">Pending (Submitted)</span><span class="value warn" id="editBalSubmitted">-</span></div>
+                        <div class="balance-row"><span class="label">Draft Expenses</span><span class="value warn" id="editBalDraft">-</span></div>
+                        <hr style="margin:6px 0; border-color:#bbf7d0;">
+                        <div class="balance-row"><span class="label" style="font-weight:600;">Effective Balance</span><span class="value positive" id="editBalEffective">-</span></div>
+                        <div style="font-size:10px;color:#6b7280;margin-top:4px;">Effective = Available − Approved − Submitted expenses</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editDestModal')">Cancel</button>
+                <button class="btn btn-success" onclick="saveEditEntry()"><i class="fas fa-save me-1"></i>Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+<!-- Solar Vendor Ledger — Edit Entry Modal -->
+<div id="svlEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1200;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:12px;padding:28px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <h5 style="margin:0;font-size:15px;font-weight:700;color:#1f2937;"><i class="fas fa-pencil-alt me-2" style="color:#6366f1;"></i>Edit Entry &nbsp;<span id="svlEditTypeLabel" style="font-size:12px;font-weight:500;color:#6b7280;"></span></h5>
+            <button onclick="closeSvlEditModal()" style="background:none;border:none;font-size:20px;color:#6b7280;cursor:pointer;">&times;</button>
+        </div>
+        <div style="display:grid;gap:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Date *</label>
+                    <input type="date" id="svlEditDate" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Payment Mode</label>
+                    <select id="svlEditMode" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+                        <option value="">— Select —</option>
+                        <option value="BANK">Bank Transfer</option>
+                        <option value="UPI">UPI</option>
+                        <option value="CASH">Cash</option>
+                        <option value="CHEQUE">Cheque</option>
+                        <option value="NEFT">NEFT</option>
+                        <option value="RTGS">RTGS</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Customer Name</label>
+                <input type="text" id="svlEditCustomer" placeholder="Customer name (optional)" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">UTR / Reference</label>
+                <input type="text" id="svlEditUtr" placeholder="UTR or reference number" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Notes / Comments</label>
+                <textarea id="svlEditNotes" rows="3" placeholder="Any notes or comments…" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;resize:vertical;"></textarea>
+            </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+            <button onclick="closeSvlEditModal()" style="padding:9px 18px;border:1px solid #d1d5db;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">Cancel</button>
+            <button onclick="submitSvlEdit()" style="padding:9px 18px;background:#6366f1;border:none;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-save me-1"></i> Save Changes</button>
+        </div>
+    </div>
+</div>
+
+<!-- Solar Vendor Ledger — Record Return Modal -->
+<div id="svlReturnModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1200;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:12px;padding:28px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <h5 style="margin:0;font-size:15px;font-weight:700;color:#1f2937;"><i class="fas fa-undo me-2" style="color:#f59e0b;"></i>Record Vendor Return Payment</h5>
+            <button onclick="closeSvlReturnModal()" style="background:none;border:none;font-size:20px;color:#6b7280;cursor:pointer;">&times;</button>
+        </div>
+        <div style="display:grid;gap:12px;">
+            <div>
+                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Solar Vendor *</label>
+                <select id="svlRetVendor" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;"></select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Date *</label>
+                    <input type="date" id="svlRetDate" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Amount (₹) *</label>
+                    <input type="number" id="svlRetAmount" min="0.01" step="0.01" placeholder="0.00" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+                </div>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Customer Name</label>
+                <input type="text" id="svlRetCustomer" placeholder="Customer name (optional)" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Payment Mode</label>
+                    <select id="svlRetMode" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+                        <option value="">— Select —</option>
+                        <option value="BANK">Bank Transfer</option>
+                        <option value="UPI">UPI</option>
+                        <option value="CASH">Cash</option>
+                        <option value="CHEQUE">Cheque</option>
+                        <option value="NEFT">NEFT</option>
+                        <option value="RTGS">RTGS</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">UTR / Reference</label>
+                    <input type="text" id="svlRetUtr" placeholder="UTR or ref number" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;">
+                </div>
+            </div>
+            <div>
+                <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Notes</label>
+                <textarea id="svlRetNotes" rows="2" placeholder="Any notes…" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:7px;resize:vertical;"></textarea>
+            </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+            <button onclick="closeSvlReturnModal()" style="padding:9px 18px;border:1px solid #d1d5db;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">Cancel</button>
+            <button onclick="submitSvlReturn()" style="padding:9px 18px;background:#059669;border:none;color:#fff;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;"><i class="fas fa-save me-1"></i> Save Return</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

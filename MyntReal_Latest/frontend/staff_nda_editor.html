@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - NDA Editor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; max-width: 1200px; margin: 0 auto; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 24px; }
+        
+        .form-label { font-weight: 500; color: #374151; margin-bottom: 8px; }
+        .form-control, .form-select { border-radius: 8px; border: 1px solid #d1d5db; padding: 10px 14px; }
+        .form-control:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        
+        .editor-container { border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; }
+        .editor-toolbar { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 8px 12px; display: flex; gap: 4px; flex-wrap: wrap; }
+        .editor-toolbar button { background: white; border: 1px solid #d1d5db; border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 14px; }
+        .editor-toolbar button:hover { background: #f3f4f6; }
+        .editor-toolbar button.active { background: #6366f1; color: white; border-color: #6366f1; }
+        
+        #contentEditor { min-height: 400px; padding: 16px; border: none; outline: none; font-size: 14px; line-height: 1.6; }
+        #contentEditor h4, #contentEditor h5 { color: #1f2937; margin-top: 16px; }
+        #contentEditor p { color: #4b5563; margin-bottom: 12px; }
+        #contentEditor ol, #contentEditor ul { padding-left: 24px; color: #4b5563; }
+        
+        .placeholder-info { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+        .placeholder-info h6 { color: #0369a1; margin-bottom: 12px; }
+        .placeholder-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .placeholder-tag { background: #e0f2fe; color: #0369a1; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-family: monospace; cursor: pointer; }
+        .placeholder-tag:hover { background: #bae6fd; }
+        
+        .btn-action { padding: 10px 24px; border-radius: 8px; font-weight: 500; }
+        
+        .upload-area { border: 2px dashed #d1d5db; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .upload-area:hover { border-color: #6366f1; background: #f9fafb; }
+        .upload-area i { font-size: 48px; color: #9ca3af; margin-bottom: 16px; }
+        .upload-area p { color: #6b7280; margin: 0; }
+        
+        .preview-mode { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: none; }
+        .preview-mode.active { display: flex; align-items: center; justify-content: space-between; }
+        
+        .version-badge { background: #e0e7ff; color: #4f46e5; padding: 4px 12px; border-radius: 6px; font-weight: 600; }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle me-2"></i>NDA Details</h5>
+                </div>
+                <div class="card-body">
+                    <!-- DC-AGREEMENT-TYPE-001: Document type selector (Jun 2026) -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Document Type <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-4 p-3 rounded" style="background: #f9fafb; border: 1px solid #e5e7eb;" id="docTypeSelector">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="documentType" id="docTypeNDA" value="NDA" checked>
+                                <label class="form-check-label" for="docTypeNDA">
+                                    <span style="background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">NDA</span>
+                                    <span class="ms-1">Non-Disclosure Agreement</span>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="documentType" id="docTypeEmployment" value="EMPLOYMENT">
+                                <label class="form-check-label" for="docTypeEmployment">
+                                    <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">EA</span>
+                                    <span class="ms-1">Employment Agreement</span>
+                                </label>
+                            </div>
+                        </div>
+                        <small class="text-muted">Each type has its own version sequence (NDA: 1.0, 1.1… | EA: 1.0, 1.1…). Cannot be changed after creation.</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="ndaTitle" 
+                                    placeholder="e.g., Non-Disclosure and Leadership Confidentiality Agreement">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <input type="text" class="form-control" id="ndaStatus" value="Draft" readonly 
+                                    style="background: #fef3c7; color: #92400e; font-weight: 500;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- DC Protocol: Staff Type Selection (Dec 04, 2025) -->
+                    <div class="mb-3">
+                        <label class="form-label">Applicable Staff Types <span class="text-danger">*</span></label>
+                        <div class="staff-type-selection" style="display: flex; gap: 16px; flex-wrap: wrap; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="staffTypeMnStaff" value="MN_STAFF">
+                                <label class="form-check-label" for="staffTypeMnStaff">
+                                    <span style="background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 12px;">MN Staff</span>
+                                    <small class="text-muted ms-1">(MN10001+)</small>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="staffTypeFreelancer" value="FREELANCER">
+                                <label class="form-check-label" for="staffTypeFreelancer">
+                                    <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 12px;">Freelancer</span>
+                                    <small class="text-muted ms-1">(FL10001+)</small>
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="staffTypeMyntReal" value="MYNT_REAL">
+                                <label class="form-check-label" for="staffTypeMyntReal">
+                                    <span style="background: #f3e8ff; color: #7c3aed; padding: 2px 8px; border-radius: 4px; font-size: 12px;">Mynt Staff</span>
+                                    <small class="text-muted ms-1">(MR10001+)</small>
+                                </label>
+                            </div>
+                            <!-- DC Protocol: Legacy MN_EMPLOYEE - hidden but preserved for existing NDAs -->
+                            <div class="form-check" id="mnEmployeeContainer" style="display: none;">
+                                <input class="form-check-input" type="checkbox" id="staffTypeMnEmployee" value="MN_EMPLOYEE">
+                                <label class="form-check-label" for="staffTypeMnEmployee">
+                                    <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px; font-size: 12px;">MN Employee</span>
+                                    <small class="text-muted ms-1">(Legacy)</small>
+                                </label>
+                            </div>
+                        </div>
+                        <small class="text-muted">Select which staff types this NDA applies to. NDA will only be shown to selected staff types on login.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Admin Notes (Optional)</label>
+                        <textarea class="form-control" id="ndaNotes" rows="2" 
+                            placeholder="Internal notes about this version..."></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-file-alt me-2"></i>NDA Content</h5>
+                    <div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="togglePreview()">
+                            <i class="fas fa-eye me-1"></i>Preview
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="document.getElementById('pdfUpload').click()">
+                            <i class="fas fa-file-pdf me-1"></i>Upload PDF
+                        </button>
+                        <input type="file" id="pdfUpload" accept=".pdf" style="display: none;" onchange="handlePdfUpload(event)">
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="placeholder-info">
+                        <h6><i class="fas fa-code me-2"></i>Dynamic Placeholders (Click to insert)</h6>
+                        <p class="small text-muted mb-2">These will be replaced with actual values when displayed to employees:</p>
+                        <div class="placeholder-list">
+                            <span class="placeholder-tag" onclick="insertPlaceholder('{{current_date}}')">{{current_date}}</span>
+                            <span class="placeholder-tag" onclick="insertPlaceholder('{{employee_name}}')">{{employee_name}}</span>
+                            <span class="placeholder-tag" onclick="insertPlaceholder('{{employee_code}}')">{{employee_code}}</span>
+                            <span class="placeholder-tag" onclick="insertPlaceholder('{{employee_designation}}')">{{employee_designation}}</span>
+                            <span class="placeholder-tag" onclick="insertPlaceholder('{{company_name}}')">{{company_name}}</span>
+                            <span class="placeholder-tag" onclick="insertPlaceholder('{{company_address}}')">{{company_address}}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-mode" id="previewMode">
+                        <span><i class="fas fa-eye me-2"></i>Preview Mode - Click Edit to make changes</span>
+                        <button class="btn btn-sm btn-primary" onclick="togglePreview()">Edit</button>
+                    </div>
+                    
+                    <div class="editor-container">
+                        <div class="editor-toolbar" id="editorToolbar">
+                            <button onclick="execCmd('bold')" title="Bold"><i class="fas fa-bold"></i></button>
+                            <button onclick="execCmd('italic')" title="Italic"><i class="fas fa-italic"></i></button>
+                            <button onclick="execCmd('underline')" title="Underline"><i class="fas fa-underline"></i></button>
+                            <button onclick="execCmd('insertOrderedList')" title="Numbered List"><i class="fas fa-list-ol"></i></button>
+                            <button onclick="execCmd('insertUnorderedList')" title="Bullet List"><i class="fas fa-list-ul"></i></button>
+                            <button onclick="execCmd('formatBlock', '<h4>')" title="Heading">H4</button>
+                            <button onclick="execCmd('formatBlock', '<h5>')" title="Subheading">H5</button>
+                            <button onclick="execCmd('formatBlock', '<p>')" title="Paragraph">P</button>
+                            <button onclick="execCmd('justifyLeft')" title="Align Left"><i class="fas fa-align-left"></i></button>
+                            <button onclick="execCmd('justifyCenter')" title="Align Center"><i class="fas fa-align-center"></i></button>
+                            <button onclick="insertLogo()" title="Insert Logo"><i class="fas fa-image"></i> Logo</button>
+                        </div>
+                        <div id="contentEditor" contenteditable="true"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="/staff_nda_versions.html" class="btn btn-outline-secondary btn-action">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </a>
+                <div>
+                    <button class="btn btn-primary btn-action" onclick="saveNda()">
+                        <i class="fas fa-save me-1"></i><span id="saveButtonText">Save Draft</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        let editMode = false;
+        let versionId = null;
+        let isPreview = false;
+        
+        const DEFAULT_CONTENT = `
+<div style="text-align: center; margin-bottom: 24px;">
+    <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" style="max-width: 200px; margin-bottom: 16px;">
+    <h4 style="color: #1f2937; margin-bottom: 8px;">NON-DISCLOSURE AND LEADERSHIP CONFIDENTIALITY AGREEMENT</h4>
+    <p style="color: #6b7280;">(For Directors, C-Suite & Senior Leadership Roles)</p>
+</div>
+
+<p>This Non-Disclosure and Leadership Confidentiality Agreement ("Agreement") is made and entered into on this <strong>{{current_date}}</strong> ("Effective Date"), by and between:</p>
+
+<p><strong>Company Name:</strong> {{company_name}}<br>
+<strong>Address:</strong> {{company_address}}</p>
+<p>(Hereinafter referred to as the "Company")</p>
+
+<p><strong>AND</strong></p>
+
+<p><strong>Leader/Executive Name:</strong> {{employee_name}}<br>
+<strong>Employee Code:</strong> {{employee_code}}<br>
+<strong>Designation:</strong> {{employee_designation}}</p>
+<p>(Hereinafter referred to as the "Leader")</p>
+
+<p>This Agreement outlines the Leader's responsibilities in safeguarding confidential information, strategic assets, intellectual property, and business integrity. As a senior executive entrusted with high-level access, the Leader agrees to uphold the highest standards of confidentiality, professionalism, governance, and ethical conduct. These obligations remain in force during the term of the association and indefinitely thereafter.</p>
+
+<h5>1. Confidentiality Obligations</h5>
+<p>The Leader shall maintain strict confidentiality regarding all business, operational, financial, strategic, legal, technical, client, partner, vendor, board-level, and internal communications irrespective of whether marked "confidential."</p>
+<p>Disclosure of confidential information to any internal or external party—including colleagues, teams, advisors, or partners—requires prior written authorization from the Company.</p>
+<p>The Leader acknowledges that any form of informal conversation, casual sharing, or unintended disclosure may constitute a breach.</p>
+<p>All confidential materials must be handled with high discretion, securely stored, and used solely for the purpose of fulfilling leadership duties.</p>
+
+<h5>2. Data Security, Governance & Compliance</h5>
+<p>The Leader shall comply with all Company IT, cybersecurity, governance, encryption, and data-protection frameworks.</p>
+<p>Under no circumstances shall Company information be stored, transmitted, or accessed via unauthorized devices, personal emails, non-approved applications, or external cloud platforms.</p>
+<p>No external storage devices, unapproved tools, or third-party software may be connected to Company systems.</p>
+<p>Physical documents, drafts, and confidential records must be secured and disposed of only through Company-approved secure processes.</p>
+
+<h5>3. Use of Devices & Digital Assets</h5>
+<p>All official work must be conducted on Company-authorized devices, accounts, and systems only.</p>
+<p>Personal devices—including phones, tablets, laptops, cloud accounts, and messaging apps—must not be used to store, access, copy, transfer, screenshot, or distribute Company information.</p>
+<p>Violation of device-usage protocol shall be considered a serious governance breach.</p>
+
+<h5>4. Intellectual Property & Strategic Ownership</h5>
+<p>All intellectual property—including inventions, strategies, frameworks, methodologies, designs, models, systems, content, and any work created during the Leader's association—shall exclusively and irrevocably belong to the Company.</p>
+<p>The Leader permanently waives any claims to ownership, authorship, royalties, or usage rights.</p>
+<p>Internal strategies, frameworks, business plans, templates, and playbooks must not be replicated, re-used, or shared outside the Company.</p>
+
+<h5>5. Professional Conduct, Leadership Standards & Reputation</h5>
+<p>The Leader shall uphold the Company's reputation and act in the best interest of the Company at all times.</p>
+<p>The Leader shall avoid any behavior, communication, or representation—internal or external—that may harm the Company's credibility, reputation, clients, culture, or relationships.</p>
+<p>Public communication, statements, and external engagements related to the Company require prior authorization.</p>
+
+<h5>6. Conflict of Interest & Competitive Activities</h5>
+<p>The Leader shall not engage in competitive business, advisory work, consultancy, freelance activity, or board participation—directly or indirectly—that conflicts with the Company's business interests.</p>
+<p>Any potential or perceived conflict of interest must be disclosed immediately in writing.</p>
+
+<h5>7. Monitoring, Audit Rights & Compliance Oversight</h5>
+<p>The Company reserves full rights to monitor digital activity, system access logs, email communications, downloads, uploads, and device logs to ensure compliance.</p>
+<p>The Leader agrees to periodic compliance audits, data-security audits, governance checks, and device inspections by the Company or authorized auditors.</p>
+
+<h5>8. Incident Reporting & Obligations</h5>
+<p>The Leader must promptly report any suspicious activity, unauthorized access attempt, unusual data request, system anomaly, security breach, or lost/stolen device.</p>
+<p>Failure to report incidents is considered an independent breach of this Agreement.</p>
+
+<h5>9. Collateral Damage & Infrastructure Protection Clause</h5>
+<p>In the event of any direct or indirect impact, damage, disruption, or compromise to the Company's systems, infrastructure, networks, or digital environment—whether caused intentionally, unintentionally, through oversight, authorization error, negligence, or policy deviation—the Leader shall be fully responsible for all resulting losses, damages, recovery expenses, or corrective measures.</p>
+<p>The Company reserves the right to recover such damages to ensure operational continuity and system integrity.</p>
+
+<h5>10. Liability, Remedies & Executive Accountability</h5>
+<p>Any breach of confidentiality, misuse of information, or violation of any clause in this Agreement may result in immediate withdrawal of access, termination of association, financial penalties, civil action, and criminal proceedings if applicable.</p>
+<p>The Company may seek injunctive relief, monetary damages, and legal remedies for unauthorized disclosure.</p>
+<p>The Leader acknowledges that breaches may cause irreparable harm, entitling the Company to urgent court-ordered action.</p>
+<p>Any dispute arising under this Agreement shall be subject to the exclusive jurisdiction of the courts located in Kothavalasa, Vizianagaram.</p>
+
+<h5>11. Exit, Separation & Post-Engagement Responsibilities</h5>
+<p>Upon completion or termination of the Leader's association, all Company property—including documents, laptops, devices, access credentials, and digital materials—must be returned immediately.</p>
+<p>The Leader must permanently delete all Company information from any personal or external storage.</p>
+<p>A written certification confirming that no copies, backups, cached data, or residual information remain in possession must be submitted.</p>
+<p>Confidentiality obligations continue perpetually, irrespective of termination.</p>
+<p>For a period of 36 months following separation from the Company, the Employee/leader shall not, directly or indirectly, engage in or be associated with any business or organization that competes with or is related to the Company's operations, including through relatives, affiliates, or third parties.</p>
+
+<h5>12. Final Governance Provisions</h5>
+<p>This Agreement supersedes all prior confidentiality or IP agreements between the parties.</p>
+<p>No amendment shall be valid unless approved in writing by the Company.</p>
+<p>The Leader affirms complete understanding and agrees that lack of awareness of obligations will not serve as a defense for non-compliance.</p>
+<p>Any dispute arising from this Agreement shall be governed exclusively by the jurisdiction selected by the Company.</p>
+
+<hr style="margin: 32px 0;">
+
+<h5>ACCEPTANCE</h5>
+<p>By clicking "I Accept" below, I acknowledge that I have read, understood, and agree to be bound by all terms and conditions set forth in this Non-Disclosure and Leadership Confidentiality Agreement.</p>
+
+<div style="margin-top: 24px;">
+<p><strong>Employee Name:</strong> {{employee_name}}<br>
+<strong>Employee Code:</strong> {{employee_code}}<br>
+<strong>Designation:</strong> {{employee_designation}}<br>
+<strong>Date:</strong> {{current_date}}</p>
+</div>
+`;
+        
+        function execCmd(command, value = null) {
+            document.execCommand(command, false, value);
+            document.getElementById('contentEditor').focus();
+        }
+        
+        function insertPlaceholder(placeholder) {
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0);
+            const textNode = document.createTextNode(placeholder);
+            range.insertNode(textNode);
+            range.setStartAfter(textNode);
+            range.setEndAfter(textNode);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+        
+        function insertLogo() {
+            const logoHtml = '<img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" style="max-width: 200px; display: block; margin: 0 auto 16px;">';
+            document.execCommand('insertHTML', false, logoHtml);
+        }
+        
+        function togglePreview() {
+            isPreview = !isPreview;
+            const editor = document.getElementById('contentEditor');
+            const toolbar = document.getElementById('editorToolbar');
+            const previewMode = document.getElementById('previewMode');
+            
+            if (isPreview) {
+                editor.contentEditable = 'false';
+                toolbar.style.display = 'none';
+                previewMode.classList.add('active');
+            } else {
+                editor.contentEditable = 'true';
+                toolbar.style.display = 'flex';
+                previewMode.classList.remove('active');
+            }
+        }
+        
+        async function handlePdfUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (file.type !== 'application/pdf') {
+                alert('Please upload a PDF file');
+                return;
+            }
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                let textContent = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const text = await page.getTextContent();
+                    const pageText = text.items.map(item => item.str).join(' ');
+                    textContent += pageText + '\n\n';
+                }
+                
+                const htmlContent = textContent
+                    .split('\n\n')
+                    .filter(p => p.trim())
+                    .map(p => `<p>${p.trim()}</p>`)
+                    .join('\n');
+                
+                document.getElementById('contentEditor').innerHTML = htmlContent;
+                alert('PDF content extracted. Please review and format as needed.');
+                
+            } catch (error) {
+                console.error('PDF parsing error:', error);
+                alert('Error parsing PDF. Please try a different file or enter content manually.');
+            }
+        }
+        
+        async function loadVersion(id) {
+            try {
+                const response = await staffFetch(`/api/v1/staff/nda/versions/${id}`);
+                
+                if (!response.ok) throw new Error('Failed to load version');
+                
+                const data = await response.json();
+                const v = data.data;
+                
+                document.getElementById('ndaTitle').value = v.title;
+                document.getElementById('ndaNotes').value = v.notes || '';
+                document.getElementById('contentEditor').innerHTML = v.content_html;
+                document.getElementById('ndaStatus').value = v.status.charAt(0).toUpperCase() + v.status.slice(1);
+                document.getElementById('pageTitle').textContent = `Edit v${v.version_number}`;
+                document.getElementById('versionBadge').textContent = `v${v.version_number}`;
+                document.getElementById('versionBadge').style.display = 'inline';
+                document.getElementById('saveButtonText').textContent = 'Save Changes';
+                
+                // DC-AGREEMENT-TYPE-001: Set document type radio (disable once set — can't change type on existing record)
+                const docType = v.document_type || 'NDA';
+                const docTypeRadio = document.getElementById(docType === 'EMPLOYMENT' ? 'docTypeEmployment' : 'docTypeNDA');
+                if (docTypeRadio) docTypeRadio.checked = true;
+                document.querySelectorAll('input[name="documentType"]').forEach(r => r.disabled = true);
+                
+                if (v.applicable_staff_types && Array.isArray(v.applicable_staff_types)) {
+                    setStaffTypeCheckboxes(v.applicable_staff_types);
+                } else {
+                    setStaffTypeCheckboxes(['MN_STAFF', 'FREELANCER', 'MYNT_REAL']);
+                }
+                
+                if (v.status !== 'draft') {
+                    document.getElementById('ndaTitle').disabled = true;
+                    document.getElementById('ndaNotes').disabled = true;
+                    document.getElementById('contentEditor').contentEditable = 'false';
+                    document.getElementById('editorToolbar').style.display = 'none';
+                    document.querySelectorAll('.staff-type-selection input').forEach(cb => cb.disabled = true);
+                    alert('This version is ' + v.status + ' and cannot be edited. Create a copy to make changes.');
+                }
+                
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error:', error);
+                alert('Error loading version');
+                window.location.href = '/staff/nda-versions';
+            }
+        }
+        
+        // DC Protocol: Get selected staff types (Dec 04, 2025 - 3 active + 1 legacy)
+        function getSelectedStaffTypes() {
+            const types = [];
+            if (document.getElementById('staffTypeMnStaff').checked) types.push('MN_STAFF');
+            if (document.getElementById('staffTypeFreelancer').checked) types.push('FREELANCER');
+            if (document.getElementById('staffTypeMyntReal').checked) types.push('MYNT_REAL');
+            // Include legacy MN_EMPLOYEE if checked (for existing NDAs)
+            if (document.getElementById('staffTypeMnEmployee').checked) types.push('MN_EMPLOYEE');
+            return types;
+        }
+        
+        // DC Protocol: Set staff type checkboxes from array (Dec 04, 2025 - 3 active + 1 legacy)
+        function setStaffTypeCheckboxes(types) {
+            document.getElementById('staffTypeMnStaff').checked = types.includes('MN_STAFF');
+            document.getElementById('staffTypeFreelancer').checked = types.includes('FREELANCER');
+            document.getElementById('staffTypeMyntReal').checked = types.includes('MYNT_REAL');
+            // Handle legacy MN_EMPLOYEE - show container if it exists in the data
+            const hasMnEmployee = types.includes('MN_EMPLOYEE');
+            document.getElementById('staffTypeMnEmployee').checked = hasMnEmployee;
+            if (hasMnEmployee) {
+                document.getElementById('mnEmployeeContainer').style.display = 'block';
+            }
+        }
+        
+        async function saveNda() {
+            const title = document.getElementById('ndaTitle').value.trim();
+            const notes = document.getElementById('ndaNotes').value.trim();
+            const contentHtml = document.getElementById('contentEditor').innerHTML;
+            
+            if (!title) {
+                alert('Please enter a title');
+                return;
+            }
+            
+            if (!contentHtml || contentHtml === '<br>' || contentHtml === '<p><br></p>') {
+                alert('Please enter NDA content');
+                return;
+            }
+            
+            const applicableStaffTypes = getSelectedStaffTypes();
+            if (applicableStaffTypes.length === 0) {
+                alert('Please select at least one staff type that this NDA applies to');
+                return;
+            }
+            
+            const documentType = document.querySelector('input[name="documentType"]:checked')?.value || 'NDA';
+            
+            const payload = {
+                title: title,
+                content_html: contentHtml,
+                applicable_staff_types: applicableStaffTypes,
+                notes: notes || null,
+                document_type: documentType
+            };
+            
+            try {
+                let url = '/api/v1/staff/nda/versions';
+                let method = 'POST';
+                
+                if (versionId) {
+                    url = `/api/v1/staff/nda/versions/${versionId}`;
+                    method = 'PUT';
+                }
+                
+                const response = await staffFetch(url, {
+                    method: method,
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    window.location.href = '/staff/nda-versions';
+                } else {
+                    alert(data.detail || 'Failed to save NDA');
+                }
+                
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error:', error);
+                alert('Error saving NDA');
+            }
+        }
+        
+    </script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            await StaffSidebar.init();
+            StaffHeader.inject('NDA Editor', 'fas fa-edit');
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            versionId = urlParams.get('id');
+            
+            if (versionId) {
+                editMode = true;
+                loadVersion(versionId);
+            } else {
+                document.getElementById('contentEditor').innerHTML = DEFAULT_CONTENT;
+                // DC Protocol: Default all staff types selected for new version (Dec 04, 2025 - 3 active types)
+                setStaffTypeCheckboxes(['MN_STAFF', 'FREELANCER', 'MYNT_REAL']);
+                
+                // DC-AGREEMENT-TYPE-001: Pre-select doc type from URL param (e.g. ?doc_type=EMPLOYMENT)
+                const docTypeParam = urlParams.get('doc_type') || 'NDA';
+                if (docTypeParam === 'EMPLOYMENT') {
+                    document.getElementById('docTypeEmployment').checked = true;
+                } else {
+                    document.getElementById('docTypeNDA').checked = true;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

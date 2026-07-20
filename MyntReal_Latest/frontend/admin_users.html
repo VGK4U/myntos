@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - MNR Business Access Program Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-card { border-left: 4px solid #667eea; transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .user-table { background: white; border-radius: 10px; overflow: hidden; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 500; }
+        .status-active { background-color: #d1fae5; color: #065f46; }
+        .status-inactive { background-color: #fee2e2; color: #991b1b; }
+        .action-btn { margin: 1px; padding: 4px 8px; font-size: 0.75rem; }
+        .filter-card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+        .search-input { border-radius: 25px; padding: 10px 20px; }
+        .table th { font-size: 0.8rem; white-space: nowrap; }
+        .table td { font-size: 0.8rem; vertical-align: middle; }
+        .table-responsive { max-height: 70vh; overflow-y: auto; }
+        .sortable { cursor: pointer; }
+        .sortable:hover { background-color: #e9ecef; }
+        .sort-icon { margin-left: 5px; }
+        .modal-xl-custom { max-width: 90%; }
+        .summary-card { border-left: 3px solid #667eea; margin-bottom: 15px; }
+        .summary-label { font-size: 0.75rem; color: #6c757d; }
+        .summary-value { font-size: 1rem; font-weight: 600; }
+        .nav-tabs .nav-link.active { background-color: #667eea; color: white; }
+        .referrer-link { color: #667eea; text-decoration: none; cursor: pointer; }
+        .referrer-link:hover { text-decoration: underline; }
+        .phone-reveal-btn { 
+            color: #0d6efd !important; 
+            font-size: 1rem !important; 
+            line-height: 1; 
+            vertical-align: middle;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+        }
+        .phone-reveal-btn:hover { color: #0a58ca !important; cursor: pointer; }
+        .phone-reveal-btn i, .phone-reveal-btn::before { 
+            font-size: 0.9rem !important; 
+            display: inline-block !important;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-people-fill"></i> User Management
+            </span>
+            <div>
+                <span class="text-white me-3" id="adminName">Loading...</span>
+                <a href="/admin/dashboard" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <button onclick="logout()" class="btn btn-outline-light btn-sm ms-2">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- DC Protocol (Dec 29, 2025): Enhanced stat cards - Row 1: Core counts -->
+        <div class="row mb-3">
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Total Users</h6>
+                        <h4 id="totalUsers" class="mb-0">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Activated</h6>
+                        <h4 id="activeUsers" class="mb-0 text-success">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Not Activated</h6>
+                        <h4 id="inactiveUsers" class="mb-0 text-danger">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">This Month</h6>
+                        <h4 id="monthUsers" class="mb-0">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100" style="border-left-color: #28a745;">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Added (3 days)</h6>
+                        <h4 id="addedLast3Days" class="mb-0 text-success">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100" style="border-left-color: #17a2b8;">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Activated (3 days)</h6>
+                        <h4 id="activatedLast3Days" class="mb-0 text-info">0</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- DC Protocol: Row 2 - Package & Points stats -->
+        <div class="row mb-3">
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100" style="border-left-color: #ffc107;">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Platinum</h6>
+                        <h4 id="platinumCount" class="mb-0" style="color: #b8860b;">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100" style="border-left-color: #6c757d;">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Diamond</h6>
+                        <h4 id="diamondCount" class="mb-0 text-secondary">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100" style="border-left-color: #6f42c1;">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Total Points</h6>
+                        <h4 id="totalPoints" class="mb-0 text-primary">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100" style="border-left-color: #20c997;">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Allocated</h6>
+                        <h4 id="totalAllocated" class="mb-0" style="color: #20c997;">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100" style="border-left-color: #fd7e14;">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Utilized</h6>
+                        <h4 id="totalUtilized" class="mb-0" style="color: #fd7e14;">0</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="card stat-card h-100" style="border-left-color: #198754;">
+                    <div class="card-body py-2">
+                        <h6 class="text-muted small mb-1">Unutilized</h6>
+                        <h4 id="unutilizedPoints" class="mb-0 text-success">0</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-card">
+            <!-- DC Protocol (Dec 29, 2025): Enhanced filters with date range -->
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label small">Search</label>
+                    <input type="text" id="searchInput" class="form-control search-input form-control-sm" placeholder="MNR ID, Name, Email, Phone...">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small">Status</label>
+                    <select id="statusFilter" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="active">Activated</option>
+                        <option value="inactive">Not Activated</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small">User Type</label>
+                    <select id="userTypeFilter" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="USER">User</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Super Admin">Super Admin</option>
+                        <option value="Finance Admin">Finance Admin</option>
+                        <option value="RVZ ID">RVZ ID</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small">Package</label>
+                    <select id="packageFilter" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="Platinum">Platinum</option>
+                        <option value="Diamond">Diamond</option>
+                        <option value="Star/Loyal">Star/Loyal</option>
+                        <option value="Eligible">Eligible</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Referrer ID</label>
+                    <input type="text" id="referrerFilter" class="form-control form-control-sm" placeholder="Enter MNR ID">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small">Ved Owner</label>
+                    <select id="vedOwnerFilter" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="yes">Yes</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small">Ved Head</label>
+                    <select id="vedHeadFilter" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="yes">Yes</option>
+                    </select>
+                </div>
+            </div>
+            <!-- DC Protocol: Date Range Filters Row -->
+            <div class="row g-2 align-items-end mt-2">
+                <div class="col-md-2">
+                    <label class="form-label small">Register From</label>
+                    <input type="date" id="dateFrom" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Register To</label>
+                    <input type="date" id="dateTo" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Activated From</label>
+                    <input type="date" id="activationDateFrom" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small">Activated To</label>
+                    <input type="date" id="activationDateTo" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-4 d-flex gap-2 align-items-end">
+                    <button onclick="loadUsers()" class="btn btn-primary btn-sm">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                    <button onclick="resetFilters()" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x-circle"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="user-table">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 table-sm">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th class="sortable" data-sort="id" onclick="sortByColumn('id')">MNR ID <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th class="sortable" data-sort="name" onclick="sortByColumn('name')">Name <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th>Phone</th>
+                            <th class="sortable" data-sort="status" onclick="sortByColumn('status')">Status <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th>Group</th>
+                            <th class="sortable" data-sort="registration_date" onclick="sortByColumn('registration_date')">Register Date <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th class="sortable" data-sort="activation_date" onclick="sortByColumn('activation_date')">Activation Date <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th class="sortable" data-sort="package" onclick="sortByColumn('package')">Package <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th>Referrer</th>
+                            <th class="sortable" data-sort="total_referrals" onclick="sortByColumn('total_referrals')">Referrals <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th class="sortable" data-sort="active_referrals" onclick="sortByColumn('active_referrals')">Active Referrals <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th class="sortable" data-sort="total_earning" onclick="sortByColumn('total_earning')">Total Earning <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th class="sortable" data-sort="pending_withdrawals" onclick="sortByColumn('pending_withdrawals')">Pending W/D <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th class="sortable" data-sort="points_balance" onclick="sortByColumn('points_balance')">Points <i class="bi bi-arrow-down-up sort-icon"></i></th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                        <tr>
+                            <td colspan="15" class="text-center py-5">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div id="paginationInfo" class="text-muted">Showing 0 of 0 users</div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+            </nav>
+        </div>
+    </div>
+
+    <div class="modal fade" id="userSummaryModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-xl-custom">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-person-badge"></i> User Complete Summary</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="userSummaryContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2">Loading user summary...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="lifecycleModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-xl-custom">
+            <div class="modal-content" style="background: #ffffff;">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-clipboard2-check"></i> Member Lifecycle View</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="lifecycleContent" style="background: #ffffff;">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-success" role="status"></div>
+                        <p class="mt-2">Loading lifecycle data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editStatusModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update User Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editUserId">
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select id="editUserStatus" class="form-select">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                            <option value="Suspended">Suspended</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason (Optional)</label>
+                        <textarea id="editStatusReason" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateUserStatus()">Update Status</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="resetPasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-key"></i> Reset Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="resetPasswordUserId">
+                    <p>Reset password for user: <strong id="resetPasswordUserName"></strong></p>
+                    <div id="resetStatusMsg" style="display:none;padding:10px;margin-bottom:10px;border-radius:5px;"></div>
+                    <div class="mb-3">
+                        <label class="form-label">New Password</label>
+                        <div class="input-group">
+                            <input type="password" id="newPassword" class="form-control" placeholder="Enter new password">
+                            <button class="btn btn-outline-secondary" type="button" id="togglePwdBtn">
+                                <i class="bi bi-eye" id="passwordToggleIcon"></i>
+                            </button>
+                        </div>
+                        <small class="text-muted">Minimum 6 characters</small>
+                    </div>
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="genPwdBtn">
+                            <i class="bi bi-magic"></i> Generate Password
+                        </button>
+                    </div>
+                    <hr>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold"><i class="bi bi-clock-history"></i> Temporary Password (1 Hour)</label>
+                        <p class="text-muted small mb-2">Generate a standard temporary password that works alongside the user's existing password for 1 hour.</p>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-info btn-sm" id="genTempPwdBtn">
+                                <i class="bi bi-shield-lock"></i> Generate Temp Password
+                            </button>
+                            <span id="tempPasswordDisplay" class="d-none">
+                                <span class="input-group input-group-sm" style="width: auto;">
+                                    <input type="password" id="tempPasswordValue" class="form-control form-control-sm" readonly style="width: 120px;">
+                                    <button class="btn btn-outline-secondary btn-sm" type="button" id="toggleTempPwdBtn">
+                                        <i class="bi bi-eye" id="tempPasswordToggleIcon"></i>
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm" type="button" id="copyTempPwdBtn" title="Copy">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </span>
+                                <small class="text-success d-block mt-1" id="tempPasswordExpiry"></small>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="resetPwdSubmitBtn">
+                        <span id="resetPwdBtnText">Reset Password</span>
+                        <span id="resetPwdSpinner" style="display:none;" class="spinner-border spinner-border-sm ms-1"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        function _resetShowStatus(msg, isError) {
+            var el = document.getElementById('resetStatusMsg');
+            if (!el) return;
+            el.style.display = 'block';
+            el.style.background = isError ? '#f8d7da' : '#d1e7dd';
+            el.style.color = isError ? '#842029' : '#0f5132';
+            el.textContent = msg;
+        }
+
+        function _resetClearStatus() {
+            var el = document.getElementById('resetStatusMsg');
+            if (el) el.style.display = 'none';
+        }
+
+        window.openResetPassword = function(userId, userName) {
+            document.getElementById('resetPasswordUserId').value = userId;
+            document.getElementById('resetPasswordUserName').textContent = userName + ' (' + userId + ')';
+            document.getElementById('newPassword').value = '';
+            _resetClearStatus();
+            var tpd = document.getElementById('tempPasswordDisplay');
+            if (tpd) tpd.classList.add('d-none');
+            var modal = document.getElementById('resetPasswordModal');
+            var bsModal = bootstrap.Modal.getInstance(modal) || new bootstrap.Modal(modal);
+            bsModal.show();
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var resetBtn = document.getElementById('resetPwdSubmitBtn');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', function() {
+                    var userId = document.getElementById('resetPasswordUserId').value;
+                    var newPassword = document.getElementById('newPassword').value;
+                    _resetClearStatus();
+
+                    if (!userId) { _resetShowStatus('No user selected', true); return; }
+                    if (!newPassword || newPassword.length < 6) { _resetShowStatus('Password must be at least 6 characters', true); return; }
+
+                    var btnText = document.getElementById('resetPwdBtnText');
+                    var spinner = document.getElementById('resetPwdSpinner');
+                    resetBtn.disabled = true;
+                    if (btnText) btnText.textContent = 'Resetting...';
+                    if (spinner) spinner.style.display = 'inline-block';
+
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/staff/api/reset-user-password', true);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.onload = function() {
+                        resetBtn.disabled = false;
+                        if (btnText) btnText.textContent = 'Reset Password';
+                        if (spinner) spinner.style.display = 'none';
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            _resetShowStatus('Password reset successfully! New password: ' + newPassword, false);
+                            alert('Password reset successfully! New password: ' + newPassword);
+                        } else {
+                            var errMsg = 'Failed to reset password';
+                            try {
+                                var resp = JSON.parse(xhr.responseText);
+                                errMsg = resp.detail || resp.error || resp.detail?.error || errMsg;
+                            } catch(e) {}
+                            _resetShowStatus('Error: ' + errMsg, true);
+                        }
+                    };
+                    xhr.onerror = function() {
+                        resetBtn.disabled = false;
+                        if (btnText) btnText.textContent = 'Reset Password';
+                        if (spinner) spinner.style.display = 'none';
+                        _resetShowStatus('Network error - please try again', true);
+                    };
+                    xhr.send(JSON.stringify({ user_id: userId, new_password: newPassword }));
+                });
+            }
+
+            var genPwdBtn = document.getElementById('genPwdBtn');
+            if (genPwdBtn) {
+                genPwdBtn.addEventListener('click', function() {
+                    var chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+                    var pwd = '';
+                    for (var i = 0; i < 12; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+                    document.getElementById('newPassword').value = pwd;
+                });
+            }
+
+            var togglePwdBtn = document.getElementById('togglePwdBtn');
+            if (togglePwdBtn) {
+                togglePwdBtn.addEventListener('click', function() {
+                    var input = document.getElementById('newPassword');
+                    var icon = document.getElementById('passwordToggleIcon');
+                    if (input.type === 'password') { input.type = 'text'; icon.className = 'bi bi-eye-slash'; }
+                    else { input.type = 'password'; icon.className = 'bi bi-eye'; }
+                });
+            }
+
+            var genTempBtn = document.getElementById('genTempPwdBtn');
+            if (genTempBtn) {
+                genTempBtn.addEventListener('click', function() {
+                    var userId = document.getElementById('resetPasswordUserId').value;
+                    if (!userId) { alert('No user selected'); return; }
+                    genTempBtn.disabled = true;
+                    genTempBtn.textContent = 'Generating...';
+                    var xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/staff/api/generate-temp-password', true);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.onload = function() {
+                        genTempBtn.disabled = false;
+                        genTempBtn.innerHTML = '<i class="bi bi-shield-lock"></i> Generate Temp Password';
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            try {
+                                var resp = JSON.parse(xhr.responseText);
+                                if (resp.data) {
+                                    var tpv = document.getElementById('tempPasswordValue');
+                                    if (tpv) { tpv.value = resp.data.temp_password; tpv.type = 'password'; }
+                                    var tpe = document.getElementById('tempPasswordExpiry');
+                                    if (tpe) tpe.textContent = 'Valid until: ' + new Date(resp.data.expires_at).toLocaleString();
+                                    var tpd = document.getElementById('tempPasswordDisplay');
+                                    if (tpd) tpd.classList.remove('d-none');
+                                    alert('Temporary password generated: ' + resp.data.temp_password);
+                                }
+                            } catch(e) { alert('Error parsing response'); }
+                        } else {
+                            var errMsg = 'Failed';
+                            try { errMsg = JSON.parse(xhr.responseText).detail || errMsg; } catch(e) {}
+                            alert('Error: ' + errMsg);
+                        }
+                    };
+                    xhr.onerror = function() {
+                        genTempBtn.disabled = false;
+                        genTempBtn.innerHTML = '<i class="bi bi-shield-lock"></i> Generate Temp Password';
+                        alert('Network error');
+                    };
+                    xhr.send(JSON.stringify({ user_id: userId }));
+                });
+            }
+
+            var toggleTempBtn = document.getElementById('toggleTempPwdBtn');
+            if (toggleTempBtn) {
+                toggleTempBtn.addEventListener('click', function() {
+                    var input = document.getElementById('tempPasswordValue');
+                    var icon = document.getElementById('tempPasswordToggleIcon');
+                    if (input.type === 'password') { input.type = 'text'; icon.className = 'bi bi-eye-slash'; }
+                    else { input.type = 'password'; icon.className = 'bi bi-eye'; }
+                });
+            }
+
+            var copyTempBtn = document.getElementById('copyTempPwdBtn');
+            if (copyTempBtn) {
+                copyTempBtn.addEventListener('click', function() {
+                    var pwd = document.getElementById('tempPasswordValue').value;
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(pwd).then(function() { alert('Copied!'); });
+                    }
+                });
+            }
+        });
+    })();
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="/public/js/admin-id-utils.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let authToken = localStorage.getItem('authToken');
+        let currentPage = 1;
+        let totalPages = 1;
+
+        $(document).ready(function() {
+            // DC Protocol: Skip loadAdminInfo and hide navbar on Staff MNR pages
+            if (window.location.pathname.startsWith('/staff/mnr/')) {
+                $('nav.navbar').hide();
+            } else {
+                loadAdminInfo();
+            }
+            loadUsers();
+            
+            $('#searchInput').on('keypress', function(e) {
+                if (e.which === 13) loadUsers();
+            });
+            $('#referrerFilter').on('keypress', function(e) {
+                if (e.which === 13) loadUsers();
+            });
+        });
+
+        function loadAdminInfo() {
+            $.ajax({
+                url: `${API_BASE}/users/profile`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    if (data.success && data.user) {
+                        $('#adminName').text(data.user.name);
+                    }
+                }
+            });
+        }
+
+        function loadUsers(page = 1) {
+            currentPage = page;
+            const params = new URLSearchParams({ page: page, limit: 50 });
+
+            const search = $('#searchInput').val();
+            const statusFilter = $('#statusFilter').val();
+            const userTypeFilter = $('#userTypeFilter').val();
+            const packageFilter = $('#packageFilter').val();
+            const referrerFilter = $('#referrerFilter').val();
+            const vedOwnerFilter = $('#vedOwnerFilter').val();
+            const vedHeadFilter = $('#vedHeadFilter').val();
+            const dateFrom = $('#dateFrom').val();
+            const dateTo = $('#dateTo').val();
+            const activationDateFrom = $('#activationDateFrom').val();
+            const activationDateTo = $('#activationDateTo').val();
+
+            if (search) params.append('search', search);
+            if (statusFilter) params.append('status_filter', statusFilter);
+            if (userTypeFilter) params.append('user_type', userTypeFilter);
+            if (packageFilter) params.append('package_filter', packageFilter);
+            if (referrerFilter) params.append('referrer_filter', referrerFilter);
+            if (vedOwnerFilter) params.append('ved_owner_filter', vedOwnerFilter);
+            if (vedHeadFilter) params.append('ved_head_filter', vedHeadFilter);
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+            if (activationDateFrom) params.append('activation_date_from', activationDateFrom);
+            if (activationDateTo) params.append('activation_date_to', activationDateTo);
+            params.append('sort_by', currentSortBy);
+            params.append('sort_order', currentSortOrder);
+
+            $('#usersTableBody').html(`
+                <tr><td colspan="16" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                </td></tr>
+            `);
+
+            $.ajax({
+                url: `${API_BASE}/admin/users?${params.toString()}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    if (response.success) {
+                        renderUsers(response.data.users);
+                        updatePagination(response.data);
+                        updateStatistics(response.data);
+                        if (response.data.available_packages) {
+                            updatePackageFilter(response.data.available_packages);
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    $('#usersTableBody').html(`
+                        <tr><td colspan="16" class="text-center text-danger py-4">
+                            <i class="bi bi-exclamation-triangle"></i> ${xhr.responseJSON?.detail?.error || xhr.responseJSON?.detail || 'Error loading users'}
+                        </td></tr>
+                    `);
+                }
+            });
+        }
+
+        function updatePackageFilter(packages) {
+            const current = $('#packageFilter').val();
+            let options = '<option value="">All</option>';
+            packages.forEach(pkg => {
+                const selected = pkg === current ? 'selected' : '';
+                options += `<option value="${pkg}" ${selected}>${pkg}</option>`;
+            });
+            $('#packageFilter').html(options);
+        }
+
+        function renderUsers(users) {
+            if (!users || users.length === 0) {
+                $('#usersTableBody').html(`
+                    <tr><td colspan="16" class="text-center text-muted py-4">
+                        <i class="bi bi-inbox"></i> No users found
+                    </td></tr>
+                `);
+                return;
+            }
+            
+            // Debug: Log first user's phone data
+            if (users.length > 0) {
+                console.log('[DEBUG] First user phone data:', users[0].id, 'phone:', users[0].phone, 'typeof:', typeof users[0].phone);
+            }
+
+            const html = users.map(user => {
+                const referrerDisplay = user.referrer_id ? 
+                    `<span class="referrer-link" onclick="filterByReferrer('${user.referrer_id}')" title="${user.referrer_name || user.referrer_id}">
+                        ${user.referrer_id}${user.referrer_name ? `<br><small class="text-muted">${user.referrer_name}</small>` : ''}
+                    </span>` : 
+                    '-';
+                
+                const maskedPhone = user.phone ? maskPhone(user.phone) : '-';
+                const phoneId = 'phone-' + user.id.replace(/[^a-zA-Z0-9]/g, '');
+                
+                const isActivated = !!user.activation_date;
+                const statusClass = isActivated ? 'active' : 'inactive';
+                const statusText = isActivated ? 'Activated' : 'Not Activated';
+                const groupLabel = user.side === 'left' ? 'Group A' : (user.side === 'right' ? 'Group B' : '-');
+                const groupClass = user.side === 'left' ? 'text-info' : (user.side === 'right' ? 'text-warning' : '');
+                
+                return `
+                <tr>
+                    <td><strong>${user.id}</strong></td>
+                    <td>${user.name || '-'}</td>
+                    <td class="text-nowrap">
+                        <span id="${phoneId}-text">${maskedPhone}</span>
+                        ${user.phone ? '<button class="btn btn-sm p-0 ms-2 phone-reveal-btn" onclick="revealPhone(\'' + phoneId + '\', \'' + escapeHtml(user.phone) + '\')" title="Click to reveal number" id="' + phoneId + '-btn">👁</button>' : ''}
+                    </td>
+                    <td><span class="status-badge status-${statusClass}">${statusText}</span></td>
+                    <td><strong class="${groupClass}">${groupLabel}</strong></td>
+                    <td>${user.registration_date || '-'}</td>
+                    <td>${user.activation_date || '-'}</td>
+                    <td><span class="badge bg-secondary">${user.package || 'N/A'}</span></td>
+                    <td>${referrerDisplay}</td>
+                    <td class="text-center"><span class="badge bg-primary">${user.total_referrals || 0}</span></td>
+                    <td class="text-center"><span class="badge bg-success">${user.active_referrals || 0}</span></td>
+                    <td class="text-end text-success">${formatCurrency(user.total_earning || 0)}</td>
+                    <td class="text-end text-warning">${formatCurrency(user.pending_withdrawals || 0)}</td>
+                    <td class="text-end">${formatNumber(user.points_balance || 0)}</td>
+                    <td class="text-nowrap">
+                        <button class="btn btn-sm btn-primary action-btn" onclick="viewUserSummary('${user.id}')" title="View Details">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success action-btn" onclick="viewLifecycle('${user.id}')" title="Lifecycle View">
+                            <i class="bi bi-clipboard2-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning action-btn" onclick="openResetPassword('${user.id}', '${user.name}')" title="Reset Password">
+                            <i class="bi bi-key"></i>
+                        </button>
+                        <button class="btn btn-sm btn-secondary action-btn" onclick="openEditStatus('${user.id}', '${user.status}')" title="Edit Status">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </td>
+                </tr>
+            `}).join('');
+            
+            $('#usersTableBody').html(html);
+        }
+
+        function formatCurrency(amount) {
+            return '₹' + parseFloat(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+
+        function formatNumber(num) {
+            return parseFloat(num || 0).toLocaleString('en-IN');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, function(m) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m];
+            });
+        }
+
+        function maskPhone(phone) {
+            if (!phone || phone.length < 4) return phone || '-';
+            return phone.slice(0, 2) + '****' + phone.slice(-2);
+        }
+
+        function maskEmail(email) {
+            if (!email || !email.includes('@')) return email || '-';
+            const [name, domain] = email.split('@');
+            if (name.length <= 2) return name[0] + '***@' + domain;
+            return name.slice(0, 2) + '***' + name.slice(-1) + '@' + domain;
+        }
+
+        function revealSummaryField(field, value) {
+            const textEl = document.getElementById('summary-' + field + '-text');
+            const iconEl = document.getElementById('summary-' + field + '-icon');
+            
+            if (!textEl || !iconEl) return;
+            
+            const copyBtn = `<button class="btn btn-link btn-sm p-0 ms-1 text-primary" onclick="copyToClipboard('${value}')" title="Copy">
+                <i class="bi bi-clipboard"></i>
+            </button>`;
+            
+            textEl.innerHTML = value + copyBtn;
+            iconEl.classList.remove('bi-eye');
+            iconEl.classList.add('bi-eye-slash');
+            
+            setTimeout(() => {
+                textEl.textContent = field === 'phone' ? maskPhone(value) : maskEmail(value);
+                iconEl.classList.remove('bi-eye-slash');
+                iconEl.classList.add('bi-eye');
+            }, 3000);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied to clipboard!', 'success');
+            }).catch(() => {
+                showToast('Copy failed', 'danger');
+            });
+        }
+
+        function revealPhone(phoneId, fullPhone) {
+            const textEl = document.getElementById(phoneId + '-text');
+            const btnEl = document.getElementById(phoneId + '-btn');
+            
+            if (!textEl) return;
+            
+            textEl.innerHTML = `${fullPhone} 
+                <button class="btn btn-link btn-sm p-0 ms-1 text-primary" onclick="copyPhone('${fullPhone}')" title="Copy">📋</button>
+                <a href="tel:${fullPhone}" class="btn btn-link btn-sm p-0 ms-1 text-success" title="Call">📞</a>
+                <a href="sms:${fullPhone}" class="btn btn-link btn-sm p-0 ms-1 text-info" title="Message">💬</a>`;
+            
+            if (btnEl) btnEl.textContent = '👁‍🗨';
+            
+            setTimeout(() => {
+                textEl.textContent = maskPhone(fullPhone);
+                if (btnEl) btnEl.textContent = '👁';
+            }, 3000);
+        }
+
+        function copyPhone(phone) {
+            navigator.clipboard.writeText(phone).then(() => {
+                showToast('Phone number copied!', 'success');
+            }).catch(() => {
+                showToast('Copy failed', 'danger');
+            });
+        }
+
+        function showToast(message, type = 'info') {
+            const toastHtml = `<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+                <div class="toast show bg-${type} text-white">
+                    <div class="toast-body">${message}</div>
+                </div>
+            </div>`;
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = toastHtml;
+            document.body.appendChild(wrapper);
+            setTimeout(() => wrapper.remove(), 2000);
+        }
+
+        let currentSortBy = 'registration_date';
+        let currentSortOrder = 'desc';
+
+        function sortByColumn(column) {
+            if (currentSortBy === column) {
+                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortBy = column;
+                currentSortOrder = 'desc';
+            }
+            
+            updateSortIcons(column, currentSortOrder);
+            loadUsers();
+        }
+
+        function updateSortIcons(activeColumn, order) {
+            $('th.sortable i.sort-icon').removeClass('bi-arrow-up bi-arrow-down').addClass('bi-arrow-down-up');
+            const activeHeader = $(`th.sortable[data-sort="${activeColumn}"] i.sort-icon`);
+            activeHeader.removeClass('bi-arrow-down-up');
+            activeHeader.addClass(order === 'asc' ? 'bi-arrow-up' : 'bi-arrow-down');
+        }
+
+        function filterByReferrer(referrerId) {
+            $('#referrerFilter').val(referrerId);
+            loadUsers();
+        }
+
+        function updateStatistics(data) {
+            $('#totalUsers').text(formatNumber(data.total || 0));
+            if (data.stats) {
+                $('#activeUsers').text(formatNumber(data.stats.active_count || 0));
+                $('#inactiveUsers').text(formatNumber(data.stats.inactive_count || 0));
+                $('#monthUsers').text(formatNumber(data.stats.this_month_count || 0));
+                $('#addedLast3Days').text(formatNumber(data.stats.added_last_3_days || 0));
+                $('#activatedLast3Days').text(formatNumber(data.stats.activated_last_3_days || 0));
+                $('#platinumCount').text(formatNumber(data.stats.platinum_count || 0));
+                $('#diamondCount').text(formatNumber(data.stats.diamond_count || 0));
+                $('#totalPoints').text(formatNumber(data.stats.total_points || 0));
+                $('#totalAllocated').text(formatNumber(data.stats.total_allocated || 0));
+                $('#totalUtilized').text(formatNumber(data.stats.total_utilized || 0));
+                $('#unutilizedPoints').text(formatNumber(data.stats.unutilized_points || 0));
+            } else {
+                const activeCount = data.users.filter(u => !!u.activation_date).length;
+                const inactiveCount = data.users.filter(u => !u.activation_date).length;
+                $('#activeUsers').text(activeCount);
+                $('#inactiveUsers').text(inactiveCount);
+            }
+        }
+
+        function updatePagination(data) {
+            totalPages = Math.ceil(data.total / data.limit);
+            $('#paginationInfo').text(`Showing ${data.users.length} of ${data.total} users`);
+            
+            let paginationHTML = '';
+            if (currentPage > 1) {
+                paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadUsers(${currentPage - 1}); return false;">Prev</a></li>`;
+            }
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                const active = i === currentPage ? 'active' : '';
+                paginationHTML += `<li class="page-item ${active}"><a class="page-link" href="#" onclick="loadUsers(${i}); return false;">${i}</a></li>`;
+            }
+            if (currentPage < totalPages) {
+                paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadUsers(${currentPage + 1}); return false;">Next</a></li>`;
+            }
+            $('#pagination').html(paginationHTML);
+        }
+
+        async function viewUserSummary(userId) {
+            var summaryModal = document.getElementById('userSummaryModal');
+            var bsModal = bootstrap.Modal.getInstance(summaryModal) || new bootstrap.Modal(summaryModal);
+            bsModal.show();
+            document.getElementById('userSummaryContent').innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Loading...</p></div>';
+            try {
+                const resp = await fetch(`${API_BASE}/admin/users/${userId}/summary`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const result = await resp.json();
+                if (resp.ok && result.success) {
+                    renderUserSummary(result.data);
+                } else {
+                    document.getElementById('userSummaryContent').innerHTML = '<div class="alert alert-danger">' + (result?.detail?.error || 'Error loading user summary') + '</div>';
+                }
+            } catch (err) {
+                document.getElementById('userSummaryContent').innerHTML = '<div class="alert alert-danger">Error loading user summary: ' + err.message + '</div>';
+            }
+        }
+
+        function renderUserSummary(data) {
+            const u = data.user;
+            const income = data.income;
+            const wallet = data.wallet;
+            const zynova = data.zynova;
+            const points = data.mnr_points;
+            const network = data.network;
+            const withdrawals = data.withdrawals;
+            
+            const html = `
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <h6 class="text-primary"><i class="bi bi-person"></i> Personal Information</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">MNR ID</p>
+                                        <p class="summary-value">${u.id}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Name</p>
+                                        <p class="summary-value">${u.name}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Phone</p>
+                                        <p class="summary-value">
+                                            <span id="summary-phone-text">${u.phone ? maskPhone(u.phone) : '-'}</span>
+                                            ${u.phone ? `
+                                            <button class="btn btn-link btn-sm p-0 ms-1" onclick="revealSummaryField('phone', '${u.phone}')" title="Show">
+                                                <i class="bi bi-eye" id="summary-phone-icon"></i>
+                                            </button>` : ''}
+                                        </p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Email</p>
+                                        <p class="summary-value">
+                                            <span id="summary-email-text">${u.email ? maskEmail(u.email) : '-'}</span>
+                                            ${u.email ? `
+                                            <button class="btn btn-link btn-sm p-0 ms-1" onclick="revealSummaryField('email', '${u.email}')" title="Show">
+                                                <i class="bi bi-eye" id="summary-email-icon"></i>
+                                            </button>` : ''}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <h6 class="text-primary"><i class="bi bi-gear"></i> Account Information</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Status</p>
+                                        <p class="summary-value"><span class="status-badge status-${u.activation_date ? 'active' : 'inactive'}">${u.activation_date ? 'Activated' : 'Not Activated'}</span></p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Group</p>
+                                        <p class="summary-value"><strong class="${u.side === 'left' ? 'text-info' : (u.side === 'right' ? 'text-warning' : '')}">${u.side === 'left' ? 'Group A' : (u.side === 'right' ? 'Group B' : '-')}</strong></p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Package</p>
+                                        <p class="summary-value">${u.package}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Registration</p>
+                                        <p class="summary-value">${u.registration_date || '-'}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Activation</p>
+                                        <p class="summary-value">${u.activation_date || '-'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <h6 class="text-success"><i class="bi bi-wallet2"></i> Wallet Balance</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Current Balance</p>
+                                        <p class="summary-value text-success">${formatCurrency(wallet.current_balance)}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Earning Wallet</p>
+                                        <p class="summary-value">${formatCurrency(wallet.earning_wallet)}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Withdrawable</p>
+                                        <p class="summary-value">${formatCurrency(wallet.withdrawable_wallet)}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Upgrade Wallet</p>
+                                        <p class="summary-value">${formatCurrency(wallet.upgrade_wallet)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <h6 class="text-info"><i class="bi bi-currency-rupee"></i> Income Summary</h6>
+                                <p class="summary-label mb-0">Total Income</p>
+                                <p class="summary-value text-success mb-2">${formatCurrency(income.total_income)}</p>
+                                <small>
+                                    Direct: ${formatCurrency(income.breakdown['Direct Facilitation'] || 0)}<br>
+                                    Matching: ${formatCurrency(income.breakdown['Group Performance Recognition'] || 0)}<br>
+                                    Ved: ${formatCurrency(income.breakdown['Ved'] || 0)}<br>
+                                    Mentorship Contribution Benefit: ${formatCurrency(income.breakdown['Mentorship Contribution Benefit'] || 0)}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <h6 class="text-warning"><i class="bi bi-arrow-down-circle"></i> Withdrawals</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Pending</p>
+                                        <p class="summary-value text-warning">${formatCurrency(withdrawals.pending_amount)}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Completed</p>
+                                        <p class="summary-value text-success">${formatCurrency(withdrawals.completed_amount)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <h6 class="text-primary"><i class="bi bi-diagram-3"></i> Referral Tree</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Referrer</p>
+                                        <p class="summary-value">${data.referrer?.id || 'Self Signup'}</p>
+                                        <small class="text-muted">${data.referrer?.name || ''}</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Direct Facilitations</p>
+                                        <p class="summary-value">${network?.direct_referrals_count || 0}</p>
+                                    </div>
+                                    <div class="col-12 mt-2">
+                                        <p class="summary-label mb-0">Ved Team Count</p>
+                                        <p class="summary-value">${network?.ved_team_count || 0}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card summary-card">
+                            <div class="card-body">
+                                <h6 class="text-danger"><i class="bi bi-award"></i> MNR Points</h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Current Balance</p>
+                                        <p class="summary-value">${formatNumber(points.current_balance)}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Consumed</p>
+                                        <p class="summary-value">${formatNumber(points.total_consumed)}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Receipt No</p>
+                                        <p class="summary-value">${points.receipt_no || '-'}</p>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="summary-label mb-0">Expiry Date</p>
+                                        <p class="summary-value">${points.expiry_date || '-'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card summary-card" style="border-left-color: #28a745;">
+                            <div class="card-body">
+                                <h6 class="text-success"><i class="bi bi-building"></i> VGK Real Dreams (Real Estate)</h6>
+                                ${zynova ? `
+                                    <div class="row">
+                                        <div class="col-4">
+                                            <p class="summary-label mb-0">Status</p>
+                                            <p class="summary-value"><span class="badge bg-success">Enrolled</span></p>
+                                        </div>
+                                        <div class="col-4">
+                                            <p class="summary-label mb-0">Role</p>
+                                            <p class="summary-value">${zynova.real_estate?.role || 'Promoter'}</p>
+                                        </div>
+                                        <div class="col-4">
+                                            <p class="summary-label mb-0">Revenue</p>
+                                            <p class="summary-value text-success">${formatCurrency(zynova.real_estate?.revenue_total || 0)}</p>
+                                        </div>
+                                        <div class="col-6 mt-2">
+                                            <p class="summary-label mb-0">Team Revenue</p>
+                                            <p class="summary-value">${formatCurrency(zynova.real_estate?.team_revenue || 0)}</p>
+                                        </div>
+                                        <div class="col-6 mt-2">
+                                            <p class="summary-label mb-0">Promoted At</p>
+                                            <p class="summary-value">${zynova.real_estate?.promoted_at || '-'}</p>
+                                        </div>
+                                    </div>
+                                ` : '<p class="text-muted"><span class="badge bg-secondary">Not Enrolled</span></p>'}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card summary-card" style="border-left-color: #17a2b8;">
+                            <div class="card-body">
+                                <h6 class="text-info"><i class="bi bi-shield-check"></i> VGK Care (Insurance)</h6>
+                                ${zynova ? `
+                                    <div class="row">
+                                        <div class="col-4">
+                                            <p class="summary-label mb-0">Status</p>
+                                            <p class="summary-value"><span class="badge bg-info">Enrolled</span></p>
+                                        </div>
+                                        <div class="col-4">
+                                            <p class="summary-label mb-0">Role</p>
+                                            <p class="summary-value">${zynova.insurance?.role || 'Promoter'}</p>
+                                        </div>
+                                        <div class="col-4">
+                                            <p class="summary-label mb-0">Revenue</p>
+                                            <p class="summary-value text-info">${formatCurrency(zynova.insurance?.revenue_total || 0)}</p>
+                                        </div>
+                                        <div class="col-6 mt-2">
+                                            <p class="summary-label mb-0">Team Revenue</p>
+                                            <p class="summary-value">${formatCurrency(zynova.insurance?.team_revenue || 0)}</p>
+                                        </div>
+                                        <div class="col-6 mt-2">
+                                            <p class="summary-label mb-0">Promoted At</p>
+                                            <p class="summary-value">${zynova.insurance?.promoted_at || '-'}</p>
+                                        </div>
+                                    </div>
+                                ` : '<p class="text-muted"><span class="badge bg-secondary">Not Enrolled</span></p>'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${network.direct_referrals && network.direct_referrals.length > 0 ? `
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="bi bi-people"></i> Direct Facilitations (${network.direct_referrals_count})</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0">
+                            <thead>
+                                <tr><th>MNR ID</th><th>Name</th><th>Status</th><th>Package</th><th>Activation</th></tr>
+                            </thead>
+                            <tbody>
+                                ${network.direct_referrals.map(r => `
+                                    <tr>
+                                        <td>${r.id}</td>
+                                        <td>${r.name}</td>
+                                        <td><span class="status-badge status-${r.activation_date ? 'active' : 'inactive'}">${r.activation_date ? 'Activated' : 'Not Activated'}</span></td>
+                                        <td>${r.package}</td>
+                                        <td>${r.activation_date || '-'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            $('#userSummaryContent').html(html);
+        }
+
+        function openEditStatus(userId, currentStatus) {
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUserStatus').value = currentStatus;
+            document.getElementById('editStatusReason').value = '';
+            var editModal = document.getElementById('editStatusModal');
+            var bsModal = bootstrap.Modal.getInstance(editModal) || new bootstrap.Modal(editModal);
+            bsModal.show();
+        }
+
+        async function updateUserStatus() {
+            const userId = document.getElementById('editUserId').value;
+            const newStatus = document.getElementById('editUserStatus').value;
+            const reason = document.getElementById('editStatusReason').value;
+            try {
+                const resp = await fetch(`${API_BASE}/admin/users/${userId}/update-status`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus, reason: reason })
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    var editModal = document.getElementById('editStatusModal');
+                    var bsModal = bootstrap.Modal.getInstance(editModal); if (bsModal) bsModal.hide();
+                    alert('User status updated successfully!');
+                    loadUsers(currentPage);
+                } else {
+                    alert('Error: ' + (data?.detail || 'Failed to update status'));
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        function resetFilters() {
+            var ids = ['searchInput','statusFilter','userTypeFilter','packageFilter','referrerFilter','vedOwnerFilter','vedHeadFilter','dateFrom','dateTo','activationDateFrom','activationDateTo'];
+            ids.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = ''; });
+            currentSortBy = 'registration_date';
+            currentSortOrder = 'desc';
+            updateSortIcons('registration_date', 'desc');
+            loadUsers(1);
+        }
+
+        function exportUsers() {
+            alert('Export feature coming soon!');
+        }
+
+        async function viewLifecycle(userId) {
+            var lcModal = document.getElementById('lifecycleModal');
+            var bsModal = bootstrap.Modal.getInstance(lcModal) || new bootstrap.Modal(lcModal);
+            bsModal.show();
+            document.getElementById('lifecycleContent').innerHTML = '<div class="text-center py-5"><div class="spinner-border text-success"></div><p class="mt-2">Loading lifecycle data...</p></div>';
+            try {
+                const resp = await fetch(`${API_BASE}/staff/member-lifecycle/trackers/${userId}/detailed-view`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const result = await resp.json();
+                if (resp.ok && result.success) {
+                    renderLifecycleView(result);
+                } else {
+                    document.getElementById('lifecycleContent').innerHTML = '<div class="alert alert-danger">' + (result?.detail || 'Error loading lifecycle data') + '</div>';
+                }
+            } catch (err) {
+                document.getElementById('lifecycleContent').innerHTML = '<div class="alert alert-danger">Error: ' + err.message + '</div>';
+            }
+        }
+
+        function renderLifecycleView(data) {
+            const u = data.user || {};
+            const ref = data.referrer;
+            const stats = data.referral_stats || { total_referrals: 0, active_referrals: 0, inactive_referrals: 0 };
+            const gp = data.group_performance || { group_a: { total: 0, active: 0, fresh_points: 0 }, group_b: { total: 0, active: 0, fresh_points: 0 } };
+            const awards = data.awards || { direct: [], matching: [], direct_achieved: 0, matching_achieved: 0 };
+            const bonanza = data.bonanza || { claims: [], total_claims: 0 };
+            const ins = data.insurance;
+            const lc = data.lifecycle;
+
+            const stageStatusBadge = function(status) {
+                const map = {
+                    'COMPLETED': '<span class="badge bg-success">Completed</span>',
+                    'IN_PROGRESS': '<span class="badge bg-warning text-dark">In Progress</span>',
+                    'PENDING': '<span class="badge bg-secondary">Pending</span>',
+                    'NOT_APPLICABLE': '<span class="badge bg-dark">N/A</span>'
+                };
+                return map[status] || '<span class="badge bg-secondary">' + (status || 'Pending') + '</span>';
+            };
+
+            const fmtDate = function(d) {
+                if (!d) return '-';
+                try { return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
+                catch(e) { return d; }
+            };
+
+            const fmtCur = function(v) {
+                return '₹' + parseFloat(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            };
+
+            let stagesHtml = '';
+            if (lc && lc.stages) {
+                const stageOrder = ['welcome_call', 'login_shared', 'kyc', 'bank_details', 'insurance', 'points_explained', 'package_activation', 'coupon_delivery', 'congrats_call'];
+                const stageIcons = {
+                    'welcome_call': 'bi-telephone', 'login_shared': 'bi-box-arrow-in-right', 'kyc': 'bi-shield-check',
+                    'bank_details': 'bi-bank', 'insurance': 'bi-heart-pulse', 'points_explained': 'bi-star',
+                    'package_activation': 'bi-lightning', 'coupon_delivery': 'bi-ticket-perforated', 'congrats_call': 'bi-trophy'
+                };
+                stageOrder.forEach(function(key) {
+                    const s = lc.stages[key];
+                    if (!s) return;
+                    const icon = stageIcons[key] || 'bi-circle';
+                    const statusColor = s.status === 'COMPLETED' ? 'border-success' : (s.status === 'IN_PROGRESS' ? 'border-warning' : 'border-secondary');
+                    stagesHtml += `
+                        <div class="col-md-4 col-sm-6 mb-3">
+                            <div class="card h-100 border-start border-3 ${statusColor}" style="background: #f8f9fa;">
+                                <div class="card-body py-2 px-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-dark"><i class="bi ${icon} me-1"></i> ${s.label}</span>
+                                        ${stageStatusBadge(s.status)}
+                                    </div>
+                                    ${s.updated_at ? '<small class="text-secondary d-block mt-1">' + fmtDate(s.updated_at) + (s.updated_by ? ' by ' + s.updated_by : '') + '</small>' : ''}
+                                    ${s.notes ? '<small class="d-block mt-1" style="color:#0d6efd;"><i class="bi bi-chat-left-text me-1"></i>' + s.notes + '</small>' : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                });
+            } else {
+                stagesHtml = '<div class="col-12"><div class="alert alert-info mb-0">No lifecycle tracker found for this member.</div></div>';
+            }
+
+            let directAwardsHtml = '';
+            if (awards.direct && awards.direct.length > 0) {
+                awards.direct.forEach(function(a) {
+                    const cls = (a.status !== 'Pending' && a.status !== null) ? 'text-success' : 'text-muted';
+                    directAwardsHtml += '<tr><td>' + a.tier_name + '</td><td>' + (a.required || '-') + '</td><td class="' + cls + '">' + (a.status || 'Pending') + '</td><td>' + fmtDate(a.achievement_date) + '</td></tr>';
+                });
+            } else {
+                directAwardsHtml = '<tr><td colspan="4" class="text-muted text-center">No direct awards</td></tr>';
+            }
+
+            let matchingAwardsHtml = '';
+            if (awards.matching && awards.matching.length > 0) {
+                awards.matching.forEach(function(a) {
+                    const cls = (a.status !== 'Pending' && a.status !== null) ? 'text-success' : 'text-muted';
+                    matchingAwardsHtml += '<tr><td>' + a.tier_name + '</td><td>' + (a.required || '-') + '</td><td class="' + cls + '">' + (a.status || 'Pending') + '</td><td>' + fmtDate(a.achievement_date) + '</td></tr>';
+                });
+            } else {
+                matchingAwardsHtml = '<tr><td colspan="4" class="text-muted text-center">No matching awards</td></tr>';
+            }
+
+            let bonanzaHtml = '';
+            if (bonanza.claims && bonanza.claims.length > 0) {
+                bonanza.claims.forEach(function(b) {
+                    bonanzaHtml += '<tr><td>' + (b.bonanza_name || 'Bonanza') + '</td><td>' + (b.status || '-') + '</td><td>' + fmtDate(b.claimed_at) + '</td></tr>';
+                });
+            } else {
+                bonanzaHtml = '<tr><td colspan="3" class="text-muted text-center">No bonanza claims</td></tr>';
+            }
+
+            const html = `
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card" style="background: #f8f9fa;">
+                            <div class="card-body">
+                                <h6 class="mb-3" style="color:#198754;"><i class="bi bi-person-badge"></i> Member Profile</h6>
+                                <div class="row text-dark">
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">MNR ID</small><strong>${u.id}</strong></div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Name</small><strong>${u.name || '-'}</strong></div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Package</small><span class="badge bg-info">${u.package_type || '-'}</span></div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Package Points</small><strong>${parseFloat(u.package_points || 0).toLocaleString('en-IN')}</strong></div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Registration</small>${fmtDate(u.registration_date)}</div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Activation</small>${fmtDate(u.activation_date)}</div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">KYC</small><span class="badge ${u.kyc_status === 'Approved' ? 'bg-success' : 'bg-warning text-dark'}">${u.kyc_status || 'Pending'}</span></div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Coupon</small><span class="badge ${u.coupon_status === 'Delivered' ? 'bg-success' : 'bg-warning text-dark'}">${u.coupon_status || 'Pending'}</span></div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Account Status</small><span class="badge bg-primary">${u.account_status || '-'}</span></div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Ved Owner</small>${u.ved_owner_id ? '<a href="/staff_income_trigger.html?tab=ved-tracker&mnr_id=' + u.ved_owner_id + '" class="text-decoration-none"><strong style="color:#f59e0b;">' + u.ved_owner_id + '</strong></a>' + (u.ved_owner_name ? '<br><small class="text-muted">' + u.ved_owner_name + '</small>' : '') : '<span class="text-secondary">-</span>'}</div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Coupon Type</small>
+                                        ${u.is_ved ? '<span class="badge bg-danger me-1">Ved</span>' : ''}
+                                        ${u.is_welcome_coupon ? '<span class="badge bg-info me-1">Welcome</span>' : ''}
+                                        ${u.is_red_coupon ? '<span class="badge bg-danger me-1">Red</span>' : ''}
+                                        ${!u.is_ved && !u.is_welcome_coupon && !u.is_red_coupon ? '<span class="text-secondary">Standard</span>' : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-3" style="background: #f8f9fa;">
+                            <div class="card-body text-dark">
+                                <h6 class="mb-3" style="color:#0d6efd;"><i class="bi bi-wallet2"></i> Wallet & Referrer</h6>
+                                <div class="row">
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Earning Wallet</small><strong style="color:#198754;">${fmtCur(u.wallet_balance)}</strong></div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Upgrade Wallet</small><strong style="color:#cc8800;">${fmtCur(u.upgrade_wallet_balance)}</strong></div>
+                                </div>
+                                <hr class="my-2">
+                                <div class="row">
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Referrer ID</small><strong>${ref ? ref.id : '-'}</strong></div>
+                                    <div class="col-6 mb-2"><small class="text-secondary d-block">Referrer Name</small>${ref ? ref.name : '-'}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card" style="background: #f8f9fa;">
+                            <div class="card-body text-dark">
+                                <h6 class="mb-3" style="color:#0d6efd;"><i class="bi bi-people"></i> Referral Stats</h6>
+                                <div class="row text-center">
+                                    <div class="col-4"><small class="text-secondary d-block">Total</small><strong class="fs-5">${stats.total_referrals}</strong></div>
+                                    <div class="col-4"><small class="text-secondary d-block">Active</small><strong class="fs-5" style="color:#198754;">${stats.active_referrals}</strong></div>
+                                    <div class="col-4"><small class="text-secondary d-block">Inactive</small><strong class="fs-5" style="color:#dc3545;">${stats.inactive_referrals}</strong></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card" style="background: #e8f4fd;">
+                            <div class="card-body text-dark">
+                                <h6 class="mb-2" style="color:#0d6efd;"><i class="bi bi-diagram-3"></i> Group A Performance</h6>
+                                <div class="row text-center">
+                                    <div class="col-4"><small class="text-secondary">Total</small><div class="fw-bold">${gp.group_a.total}</div></div>
+                                    <div class="col-4"><small class="text-secondary">Active</small><div class="fw-bold" style="color:#198754;">${gp.group_a.active}</div></div>
+                                    <div class="col-4"><small class="text-secondary">Fresh Pts</small><div class="fw-bold" style="color:#0d6efd;">${parseFloat(gp.group_a.fresh_points).toLocaleString('en-IN')}</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card" style="background: #fff8e1;">
+                            <div class="card-body text-dark">
+                                <h6 class="mb-2" style="color:#cc8800;"><i class="bi bi-diagram-3"></i> Group B Performance</h6>
+                                <div class="row text-center">
+                                    <div class="col-4"><small class="text-secondary">Total</small><div class="fw-bold">${gp.group_b.total}</div></div>
+                                    <div class="col-4"><small class="text-secondary">Active</small><div class="fw-bold" style="color:#198754;">${gp.group_b.active}</div></div>
+                                    <div class="col-4"><small class="text-secondary">Fresh Pts</small><div class="fw-bold" style="color:#0d6efd;">${parseFloat(gp.group_b.fresh_points).toLocaleString('en-IN')}</div></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3" style="background: #f0faf0;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="mb-0" style="color:#198754;"><i class="bi bi-clipboard2-check"></i> Lifecycle Stages</h6>
+                            ${lc ? '<span class="badge bg-success">' + (lc.overall_progress || 0) + '% Complete</span>' : ''}
+                        </div>
+                        ${lc ? '<div class="progress mb-3" style="height: 6px;"><div class="progress-bar bg-success" style="width: ' + (lc.overall_progress || 0) + '%;"></div></div>' : ''}
+                        <div class="row">${stagesHtml}</div>
+                    </div>
+                </div>
+
+                <div class="card mb-3" style="background: #f8f9fa;">
+                    <div class="card-body text-dark">
+                        <h6 class="mb-2" style="color:#cc8800;"><i class="bi bi-heart-pulse"></i> Insurance</h6>
+                        ${ins ? '<div class="row"><div class="col-md-3 mb-2"><small class="text-secondary d-block">Status</small><span class="badge ' + (ins.status === 'Active' ? 'bg-success' : 'bg-warning text-dark') + '">' + (ins.status || '-') + '</span></div><div class="col-md-3 mb-2"><small class="text-secondary d-block">Policy No.</small>' + (ins.policy_number || '-') + '</div><div class="col-md-3 mb-2"><small class="text-secondary d-block">Insured Amount</small><strong>' + fmtCur(ins.insured_amount) + '</strong></div><div class="col-md-3 mb-2"><small class="text-secondary d-block">Expiry</small>' + fmtDate(ins.expiry_date) + '</div></div>' : '<p class="text-secondary mb-0">No insurance record found.</p>'}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card" style="background: #f8f9fa;">
+                            <div class="card-body">
+                                <h6 class="mb-2" style="color:#0d6efd;"><i class="bi bi-trophy"></i> Direct Awards <span class="badge bg-primary ms-1">${awards.direct_achieved} achieved</span></h6>
+                                <div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr><th>Tier</th><th>Required</th><th>Status</th><th>Date</th></tr></thead><tbody>${directAwardsHtml}</tbody></table></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card" style="background: #f8f9fa;">
+                            <div class="card-body">
+                                <h6 class="mb-2" style="color:#0d6efd;"><i class="bi bi-trophy"></i> Matching Awards <span class="badge bg-info ms-1">${awards.matching_achieved} achieved</span></h6>
+                                <div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr><th>Tier</th><th>Required</th><th>Status</th><th>Date</th></tr></thead><tbody>${matchingAwardsHtml}</tbody></table></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3" style="background: #f8f9fa;">
+                    <div class="card-body">
+                        <h6 class="mb-2" style="color:#dc3545;"><i class="bi bi-gift"></i> Bonanza Claims <span class="badge bg-danger ms-1">${bonanza.total_claims}</span></h6>
+                        <div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr><th>Bonanza</th><th>Status</th><th>Claimed</th></tr></thead><tbody>${bonanzaHtml}</tbody></table></div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('lifecycleContent').innerHTML = html;
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>

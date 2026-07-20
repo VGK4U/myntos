@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Details - RVZ Supreme</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .page-container {
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .header-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
+        }
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 0;
+        }
+        .breadcrumb {
+            background: transparent;
+            padding: 0;
+            margin: 8px 0 0 0;
+        }
+        .breadcrumb-item a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .breadcrumb-item.active {
+            color: #764ba2;
+        }
+        .filter-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+        .filter-section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        .btn-rvz-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .btn-rvz-primary:hover {
+            opacity: 0.9;
+            color: white;
+        }
+        .subtotal-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .subtotal-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+        .subtotal-card.paid {
+            border-left-color: #28a745;
+        }
+        .subtotal-card.pending {
+            border-left-color: #ffc107;
+        }
+        .subtotal-card.total {
+            border-left-color: #dc3545;
+            background: linear-gradient(135deg, rgba(220,53,69,0.1) 0%, rgba(255,193,7,0.1) 100%);
+        }
+        .subtotal-label {
+            font-size: 0.85rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .subtotal-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .subtotal-card.paid .subtotal-value {
+            color: #28a745;
+        }
+        .subtotal-card.pending .subtotal-value {
+            color: #ffc107;
+        }
+        .subtotal-card.total .subtotal-value {
+            color: #dc3545;
+        }
+        .subtotal-count {
+            font-size: 0.75rem;
+            color: #999;
+        }
+        .data-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .loading-spinner {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(102, 126, 234, 0.05);
+        }
+        .table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            border: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .badge {
+            padding: 6px 12px;
+            font-size: 0.75rem;
+        }
+        
+        /* Date Group Row Styles */
+        .date-group-row {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            font-weight: 600;
+            cursor: pointer;
+            border-left: 4px solid #667eea;
+        }
+        .date-group-row:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+        }
+        .date-group-row td {
+            padding: 15px !important;
+            vertical-align: middle;
+        }
+        .expand-icon {
+            transition: transform 0.3s ease;
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+        }
+        .expand-icon.expanded {
+            transform: rotate(90deg);
+        }
+        
+        /* Detail Row Styles */
+        .detail-row {
+            display: none;
+            background-color: #f8f9fa;
+        }
+        .detail-row.show {
+            display: table-row;
+        }
+        .detail-row td {
+            padding-left: 50px !important;
+            border-left: 3px solid #dee2e6;
+        }
+        .category-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .category-badge.award {
+            background-color: #007bff;
+            color: white;
+        }
+        .category-badge.bonanza {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .category-badge.field {
+            background-color: #28a745;
+            color: white;
+        }
+        .category-badge.training {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .category-badge.other {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        /* Type Row Styles (clickable category rows) */
+        .type-row {
+            cursor: pointer;
+        }
+        .type-row:hover {
+            background-color: rgba(102, 126, 234, 0.08);
+        }
+        .category-badge {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .category-badge:hover {
+            transform: scale(1.05);
+        }
+        
+        /* User Row Styles (third level) */
+        .user-row {
+            display: none;
+            background-color: #fafbfc;
+        }
+        .user-row.show {
+            display: table-row;
+        }
+        .user-row td {
+            padding-left: 80px !important;
+            border-left: 3px dotted #ced4da;
+            font-size: 0.9rem;
+        }
+        .user-id-badge {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <!-- Header -->
+        <div class="header-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="page-title"><img src="/public/vgk4u-logo-100.png" alt="VGK4U" style="height:28px;background:#fff;border-radius:5px;padding:2px 6px;margin-right:8px;vertical-align:middle;"><i class="fas fa-receipt"></i> Expense Details</h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/rvz"><i class="fas fa-home"></i> RVZ Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="/rvz/company-earnings">Company Earnings</a></li>
+                            <li class="breadcrumb-item active">Expense Details</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <a href="/rvz/company-earnings" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-card">
+            <div class="filter-section-title"><i class="fas fa-filter"></i> Filters & Actions</div>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">
+                        <i class="fas fa-calendar-alt"></i> From Date
+                    </label>
+                    <input type="date" class="form-control" id="fromDate">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">
+                        <i class="fas fa-calendar-alt"></i> To Date
+                    </label>
+                    <input type="date" class="form-control" id="toDate">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">
+                        <i class="fas fa-filter"></i> Category
+                    </label>
+                    <select class="form-select" id="categoryFilter">
+                        <option value="">All Categories</option>
+                        <option value="Award">Award</option>
+                        <option value="Bonanza">Bonanza</option>
+                        <option value="Field Allowance">Field Allowance</option>
+                        <option value="Training Claims">Training Claims</option>
+                        <option value="Operations">Operations</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-rvz-primary w-100" onclick="loadData()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-secondary w-100" onclick="clearFilters()">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-success w-100" onclick="exportToCSV()">
+                        <i class="fas fa-file-csv"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Loading Spinner -->
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-white mt-3">Loading expense data...</p>
+        </div>
+
+        <!-- Data Table -->
+        <div class="data-card" id="dataCard" style="display: none;">
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs mb-3" id="viewTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="date-tab" data-bs-toggle="tab" data-bs-target="#date-view" type="button" role="tab" onclick="switchView('date')">
+                        <i class="fas fa-calendar-alt"></i> Date-wise View
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="user-tab" data-bs-toggle="tab" data-bs-target="#user-view" type="button" role="tab" onclick="switchView('user')">
+                        <i class="fas fa-users"></i> User-wise View
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="viewTabContent">
+                <!-- Date-wise View -->
+                <div class="tab-pane fade show active" id="date-view" role="tabpanel">
+                    <!-- SECTION 1: Status Breakdown -->
+                    <h6 class="text-muted mb-2" style="font-size: 0.9rem; font-weight: 600;">
+                        <i class="fas fa-check-circle"></i> Status Breakdown
+                    </h6>
+                    <div class="subtotal-cards mb-3">
+                        <div class="subtotal-card" style="border-left-color: #28a745;">
+                            <div class="subtotal-label">Paid Expenses</div>
+                            <div class="subtotal-value" id="totalPaidDate">₹0.00</div>
+                            <div class="subtotal-count">Approved & disbursed</div>
+                        </div>
+                        <div class="subtotal-card" style="border-left-color: #ffc107;">
+                            <div class="subtotal-label">Pending Expenses</div>
+                            <div class="subtotal-value" id="totalPendingDate">₹0.00</div>
+                            <div class="subtotal-count">Awaiting approval</div>
+                        </div>
+                        <div class="subtotal-card total">
+                            <div class="subtotal-label">Grand Total</div>
+                            <div class="subtotal-value" id="grandTotalDate">₹0.00</div>
+                            <div class="subtotal-count">All expenses combined</div>
+                        </div>
+                    </div>
+                    
+                    <!-- SECTION 2: Dynamic Category Breakdown -->
+                    <h6 class="text-muted mb-2" style="font-size: 0.9rem; font-weight: 600;">
+                        <i class="fas fa-chart-pie"></i> Category-wise Breakdown
+                    </h6>
+                    <div class="subtotal-cards mb-3" id="categorySubtotalsDate">
+                        <!-- Dynamic cards rendered from category_breakdown array -->
+                    </div>
+                    <div class="table-title">
+                        <i class="fas fa-table"></i> Expense Transactions (Grouped by Date)
+                        <span class="float-end text-muted" style="font-size: 0.85rem;" id="recordCount">0 records</span>
+                    </div>
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i> Click <strong>+</strong> on date to expand categories → Click <strong>+</strong> on category to view users | Click column headers to sort
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th style="cursor: pointer;" onclick="sortDateView('date')">
+                                        Date <i class="fas fa-sort" id="sort-icon-date"></i>
+                                    </th>
+                                    <th style="cursor: pointer;" onclick="sortDateView('status')">
+                                        Status <i class="fas fa-sort" id="sort-icon-status"></i>
+                                    </th>
+                                    <th style="cursor: pointer;" onclick="sortDateView('count')">
+                                        Count <i class="fas fa-sort" id="sort-icon-count"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" onclick="sortDateView('amount')">
+                                        Amount (₹) <i class="fas fa-sort" id="sort-icon-amount"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-info" id="paginationInfo"></div>
+                </div>
+
+                <!-- User-wise View -->
+                <div class="tab-pane fade" id="user-view" role="tabpanel">
+                    <!-- SECTION 1: Status Breakdown -->
+                    <h6 class="text-muted mb-2" style="font-size: 0.9rem; font-weight: 600;">
+                        <i class="fas fa-check-circle"></i> Status Breakdown
+                    </h6>
+                    <div class="subtotal-cards mb-3">
+                        <div class="subtotal-card" style="border-left-color: #28a745;">
+                            <div class="subtotal-label">Paid Expenses</div>
+                            <div class="subtotal-value" id="totalPaidUser">₹0.00</div>
+                            <div class="subtotal-count">Approved & disbursed</div>
+                        </div>
+                        <div class="subtotal-card" style="border-left-color: #ffc107;">
+                            <div class="subtotal-label">Pending Expenses</div>
+                            <div class="subtotal-value" id="totalPendingUser">₹0.00</div>
+                            <div class="subtotal-count">Awaiting approval</div>
+                        </div>
+                        <div class="subtotal-card total">
+                            <div class="subtotal-label">Grand Total</div>
+                            <div class="subtotal-value" id="grandTotalUser">₹0.00</div>
+                            <div class="subtotal-count">All expenses combined</div>
+                        </div>
+                    </div>
+                    
+                    <!-- SECTION 2: Dynamic Category Breakdown -->
+                    <h6 class="text-muted mb-2" style="font-size: 0.9rem; font-weight: 600;">
+                        <i class="fas fa-chart-pie"></i> Category-wise Breakdown
+                    </h6>
+                    <div class="subtotal-cards mb-3" id="categorySubtotalsUser">
+                        <!-- Dynamic cards rendered from category_breakdown array -->
+                    </div>
+                    <div class="table-title">
+                        <i class="fas fa-table"></i> Expense Transactions (Grouped by User)
+                        <span class="float-end text-muted" style="font-size: 0.85rem;" id="recordCountUser">0 records</span>
+                    </div>
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i> Click <strong>+</strong> on user to expand categories → Click <strong>+</strong> on category to view dates | Click column headers to sort
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th style="cursor: pointer;" onclick="sortUserView('user')">
+                                        User <i class="fas fa-sort" id="sort-user-icon-user"></i>
+                                    </th>
+                                    <th style="cursor: pointer;" onclick="sortUserView('count')">
+                                        Count <i class="fas fa-sort" id="sort-user-icon-count"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" onclick="sortUserView('paid')">
+                                        Paid (₹) <i class="fas fa-sort" id="sort-user-icon-paid"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" onclick="sortUserView('pending')">
+                                        Pending (₹) <i class="fas fa-sort" id="sort-user-icon-pending"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" onclick="sortUserView('total')">
+                                        Total (₹) <i class="fas fa-sort" id="sort-user-icon-total"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-info" id="paginationInfoUser"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="data-card empty-state" id="emptyState" style="display: none;">
+            <i class="fas fa-inbox"></i>
+            <h4>No Data Available</h4>
+            <p class="text-muted">Apply filters and click Refresh to load expense data</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1/company-earnings';
+        let currentData = [];
+        let groupedData = {};
+
+        function formatCurrency(amount) {
+            return '₹' + Number(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr || dateStr === 'Pending') return dateStr;
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN', { 
+                day: '2-digit', 
+                month: 'short', 
+                year: 'numeric' 
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('fromDate').value = '';
+            document.getElementById('toDate').value = '';
+            document.getElementById('categoryFilter').value = '';
+            loadData();
+        }
+
+        async function loadData() {
+            const loading = document.getElementById('loadingSpinner');
+            const dataCard = document.getElementById('dataCard');
+            const emptyState = document.getElementById('emptyState');
+
+            loading.style.display = 'block';
+            dataCard.style.display = 'none';
+            emptyState.style.display = 'none';
+
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            const categoryFilter = document.getElementById('categoryFilter').value;
+
+            try {
+                let url = `${API_BASE}/expense-details?limit=1000`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+
+                const response = await fetch(url, { credentials: 'include' });
+
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message || 'Failed to load data');
+                }
+
+                // Filter out Mentorship Contribution Benefit (now shown in Payout Details)
+                currentData = (result.data || []).filter(item => item.category !== 'Mentorship Contribution Benefit');
+
+                // Apply category filter if selected
+                if (categoryFilter) {
+                    currentData = currentData.filter(item => item.category === categoryFilter);
+                }
+
+                if (currentData.length === 0) {
+                    emptyState.style.display = 'block';
+                } else {
+                    groupDataByDate();
+                    renderGroupedTable();
+                    renderSubtotals(result.summary);
+                    dataCard.style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Failed to load expense data. Please try again.');
+                emptyState.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        function groupDataByDate() {
+            groupedData = {};
+            
+            currentData.forEach(item => {
+                const date = item.expense_date;
+                if (!groupedData[date]) {
+                    groupedData[date] = {
+                        date: date,
+                        items: [],
+                        totalCount: 0,
+                        totalAmount: 0,
+                        status: item.status
+                    };
+                }
+                
+                groupedData[date].items.push(item);
+                groupedData[date].totalCount += item.count;
+                groupedData[date].totalAmount += item.amount;
+            });
+        }
+
+        function toggleDateGroup(date) {
+            const detailRows = document.querySelectorAll(`.detail-${date.replace(/[^a-zA-Z0-9]/g, '')}`);
+            const icon = document.getElementById(`icon-${date.replace(/[^a-zA-Z0-9]/g, '')}`);
+            
+            detailRows.forEach(row => {
+                row.classList.toggle('show');
+            });
+            
+            icon.classList.toggle('expanded');
+        }
+
+        function getCategoryBadgeClass(category) {
+            if (category.includes('Award')) return 'award';
+            if (category.includes('Bonanza')) return 'bonanza';
+            if (category.includes('Field')) return 'field';
+            if (category.includes('Training')) return 'training';
+            return 'other';
+        }
+
+        async function toggleTypeGroup(date, category, typeRowId) {
+            const userRowsClass = `user-${typeRowId}`;
+            const userRows = document.querySelectorAll(`.${userRowsClass}`);
+            const icon = document.getElementById(`icon-type-${typeRowId}`);
+            
+            // Check if date is valid (not "Pending" or null)
+            if (!date || date === 'Pending' || date === 'null' || date === 'undefined') {
+                alert(`Cannot load user details: No valid transaction date available for this ${category} expense.`);
+                return;
+            }
+            
+            if (userRows.length > 0) {
+                // Already loaded, just toggle visibility
+                userRows.forEach(row => row.classList.toggle('show'));
+                if (icon) icon.classList.toggle('expanded');
+            } else {
+                // Load user details from API
+                await loadUserDetails(date, category, typeRowId);
+                if (icon) icon.classList.add('expanded');
+            }
+        }
+
+        async function loadUserDetails(date, category, typeRowId) {
+            try {
+                const url = `${API_BASE}/expense-user-details?transaction_date=${date}&category=${encodeURIComponent(category)}`;
+                const response = await fetch(url, { credentials: 'include' });
+                
+                if (!response.ok) {
+                    console.error('Failed to load user details');
+                    return;
+                }
+                
+                const result = await response.json();
+                if (!result.success || !result.data || result.data.length === 0) {
+                    alert(`No user details available for ${category} on ${formatDate(date)}`);
+                    return;
+                }
+                
+                // Find the type row and insert user rows after it
+                const typeRow = document.getElementById(typeRowId);
+                if (!typeRow) return;
+                
+                const tbody = typeRow.parentElement;
+                let insertAfter = typeRow;
+                
+                // Create user rows
+                result.data.forEach(user => {
+                    const userRow = document.createElement('tr');
+                    userRow.className = `user-row user-${typeRowId} show`;
+                    
+                    userRow.innerHTML = `
+                        <td></td>
+                        <td>
+                            <span class="user-id-badge">${user.user_id}</span>
+                            <span class="ms-2">${user.user_name}</span>
+                        </td>
+                        <td><span class="badge bg-secondary" style="font-size: 0.7rem;">${user.status || '-'}</span></td>
+                        <td>1</td>
+                        <td class="text-end">${formatCurrency(user.amount)}</td>
+                    `;
+                    
+                    tbody.insertBefore(userRow, insertAfter.nextSibling);
+                    insertAfter = userRow;
+                });
+                
+            } catch (error) {
+                console.error('Error loading user details:', error);
+                alert('Failed to load user details. Please try again.');
+            }
+        }
+
+        function renderGroupedTable() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+            
+            const dates = Object.keys(groupedData).sort((a, b) => {
+                if (a === 'Pending') return 1;
+                if (b === 'Pending') return -1;
+                return new Date(b) - new Date(a);
+            });
+            
+            let totalRecords = 0;
+            dates.forEach(date => {
+                const group = groupedData[date];
+                const dateId = date.replace(/[^a-zA-Z0-9]/g, '');
+                totalRecords += group.items.length;
+                
+                const statusBadge = group.status === 'approved' 
+                    ? '<span class="badge bg-success">Paid</span>' 
+                    : '<span class="badge bg-warning">Pending</span>';
+                
+                // Date group row
+                const groupRow = document.createElement('tr');
+                groupRow.className = 'date-group-row';
+                groupRow.onclick = () => toggleDateGroup(date);
+                groupRow.innerHTML = `
+                    <td><i class="fas fa-plus expand-icon" id="icon-${dateId}"></i></td>
+                    <td><strong>${formatDate(date)}</strong></td>
+                    <td>${statusBadge}</td>
+                    <td><span class="badge bg-primary">${group.totalCount}</span></td>
+                    <td class="text-end"><strong>${formatCurrency(group.totalAmount)}</strong></td>
+                `;
+                tbody.appendChild(groupRow);
+                
+                // Detail rows (category rows)
+                group.items.forEach((item, index) => {
+                    const detailRow = document.createElement('tr');
+                    const typeRowId = `type-${dateId}-${index}`;
+                    detailRow.className = `detail-row detail-${dateId} type-row`;
+                    detailRow.id = typeRowId;
+                    
+                    const badgeClass = getCategoryBadgeClass(item.category);
+                    const itemStatusBadge = item.status === 'approved' 
+                        ? '<span class="badge bg-success">Paid</span>' 
+                        : '<span class="badge bg-warning">Pending</span>';
+                    
+                    detailRow.innerHTML = `
+                        <td><i class="fas fa-plus expand-icon" id="icon-type-${typeRowId}" style="font-size: 0.8rem; color: #667eea;"></i></td>
+                        <td>
+                            <span class="category-badge ${badgeClass}" title="Click to view users">${item.category}</span>
+                            <div class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">${item.description}</div>
+                        </td>
+                        <td>${itemStatusBadge}</td>
+                        <td>${item.count}</td>
+                        <td class="text-end">${formatCurrency(item.amount)}</td>
+                    `;
+                    
+                    // Add click handler for category badge
+                    detailRow.onclick = (e) => {
+                        e.stopPropagation();
+                        toggleTypeGroup(date, item.category, typeRowId);
+                    };
+                    
+                    tbody.appendChild(detailRow);
+                });
+            });
+            
+            document.getElementById('recordCount').textContent = `${dates.length} date${dates.length !== 1 ? 's' : ''} (${totalRecords} expense records)`;
+        }
+
+        // Helper function to format category labels dynamically
+        function formatCategoryLabel(categoryKey) {
+            const labels = {
+                'award': { label: 'Awards', icon: 'fas fa-trophy', color: '#e74c3c' },
+                'awards': { label: 'Awards', icon: 'fas fa-trophy', color: '#e74c3c' },
+                'tds': { label: 'TDS (2%)', icon: 'fas fa-receipt', color: '#f39c12' },
+                'field_allowance': { label: 'Field Allowance', icon: 'fas fa-briefcase', color: '#9b59b6' },
+                'training_claims': { label: 'Training Claims', icon: 'fas fa-graduation-cap', color: '#3498db' },
+                'bonanza': { label: 'Bonanza', icon: 'fas fa-gift', color: '#e67e22' }
+            };
+            return labels[categoryKey] || { label: categoryKey, icon: 'fas fa-dollar-sign', color: '#667eea' };
+        }
+
+        // Helper function to render dynamic category cards
+        function renderCategoryCards(categoryBreakdown, containerId, countLabel = 'transactions') {
+            const container = document.getElementById(containerId);
+            if (!container) {
+                console.error(`⚠️ Container ${containerId} not found`);
+                return;
+            }
+            
+            console.log(`🔍 Rendering category cards in ${containerId}:`, categoryBreakdown);
+            
+            if (!categoryBreakdown || categoryBreakdown.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center mb-0" style="font-size: 0.9rem;">No category data available</p>';
+                return;
+            }
+            
+            let html = '';
+            categoryBreakdown.forEach(cat => {
+                const meta = formatCategoryLabel(cat.category);
+                const count = cat.count || cat.user_count || 0;
+                
+                html += `
+                    <div class="subtotal-card" style="border-left-color: ${meta.color};">
+                        <div class="subtotal-label">
+                            <i class="${meta.icon}"></i> ${meta.label}
+                        </div>
+                        <div class="subtotal-value">${formatCurrency(cat.amount)}</div>
+                        <div class="subtotal-count">${count} ${countLabel}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            console.log(`✅ Rendered ${categoryBreakdown.length} category cards in ${containerId}`);
+        }
+
+        function renderSubtotals(summary) {
+            console.log('🔍 Expense Summary Received:', summary);
+            
+            if (!summary) return;
+            
+            const totalPaid = summary.total_paid || 0;
+            const totalPending = summary.total_pending || 0;
+            const grandTotal = summary.grand_total || 0;
+            
+            // SECTION 1: Status Breakdown
+            document.getElementById('totalPaidDate').textContent = formatCurrency(totalPaid);
+            document.getElementById('totalPendingDate').textContent = formatCurrency(totalPending);
+            document.getElementById('grandTotalDate').textContent = formatCurrency(grandTotal);
+            
+            // SECTION 2: Dynamic Category Breakdown
+            const categoryBreakdown = summary.category_breakdown || [];
+            console.log('🔍 Category Breakdown:', categoryBreakdown);
+            renderCategoryCards(categoryBreakdown, 'categorySubtotalsDate', 'transactions');
+        }
+
+        function renderUserSubtotals(totals) {
+            console.log('🔍 Expense User Totals Received:', totals);
+            
+            if (!totals) return;
+            
+            const totalPaid = totals.total_paid || 0;
+            const totalPending = totals.total_pending || 0;
+            const grandTotal = totals.grand_total || 0;
+            
+            // SECTION 1: Status Breakdown
+            document.getElementById('totalPaidUser').textContent = formatCurrency(totalPaid);
+            document.getElementById('totalPendingUser').textContent = formatCurrency(totalPending);
+            document.getElementById('grandTotalUser').textContent = formatCurrency(grandTotal);
+            
+            // SECTION 2: Dynamic Category Breakdown
+            const categoryBreakdown = totals.category_breakdown || [];
+            console.log('🔍 Category Breakdown (User view):', categoryBreakdown);
+            renderCategoryCards(categoryBreakdown, 'categorySubtotalsUser', 'users');
+        }
+
+        function exportToCSV() {
+            if (currentData.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            let csv = 'Date,Category,Description,Status,Count,Amount\n';
+            
+            const dates = Object.keys(groupedData).sort((a, b) => {
+                if (a === 'Pending') return 1;
+                if (b === 'Pending') return -1;
+                return new Date(b) - new Date(a);
+            });
+            
+            dates.forEach(date => {
+                const group = groupedData[date];
+                group.items.forEach(item => {
+                    csv += `${formatDate(date)},"${item.category}","${item.description}","${item.status}",${item.count},${item.amount}\n`;
+                });
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `expense_details_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Tab View Switching & User-wise Views
+        let currentView = 'date';
+        let userWiseData = [];
+        let dateSortOrder = {};
+        let userSortOrder = {};
+
+        function switchView(view) {
+            currentView = view;
+            if (view === 'user') {
+                loadUserWiseData();
+            }
+        }
+
+        async function loadUserWiseData() {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            try {
+                let url = `${API_BASE}/expense-by-user?limit=1000`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+
+                const response = await fetch(url, { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load user-wise data');
+
+                const result = await response.json();
+                userWiseData = result.data || [];
+                renderUserSubtotals(result.totals);
+                renderUserWiseTable();
+            } catch (error) {
+                console.error('Error loading user-wise data:', error);
+                alert('Failed to load user-wise data');
+            }
+        }
+
+        function renderUserWiseTable() {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+
+            if (userWiseData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No data available</td></tr>';
+                return;
+            }
+
+            userWiseData.forEach((user, index) => {
+                const userId = user.user_id.replace(/[^a-zA-Z0-9]/g, '');
+                const userRowId = `user-${userId}-${index}`;
+
+                const userRow = document.createElement('tr');
+                userRow.className = 'date-group-row';
+                userRow.id = userRowId;
+                userRow.onclick = () => toggleUserGroup(user.user_id, userRowId);
+
+                userRow.innerHTML = `
+                    <td><i class="fas fa-plus expand-icon" id="icon-${userRowId}"></i></td>
+                    <td>
+                        <strong>${user.user_name}</strong>
+                        <div class="text-muted" style="font-size: 0.85rem;">${user.user_id}</div>
+                    </td>
+                    <td>${user.transaction_count}</td>
+                    <td class="text-end">${formatCurrency(user.paid_amount)}</td>
+                    <td class="text-end">${formatCurrency(user.pending_amount)}</td>
+                    <td class="text-end">${formatCurrency(user.total_amount)}</td>
+                `;
+
+                tbody.appendChild(userRow);
+            });
+
+            document.getElementById('recordCountUser').textContent = `${userWiseData.length} user${userWiseData.length !== 1 ? 's' : ''}`;
+        }
+
+        async function toggleUserGroup(userId, userRowId) {
+            const sourceRowsClass = `source-${userRowId}`;
+            const sourceRows = document.querySelectorAll(`.${sourceRowsClass}`);
+            const icon = document.getElementById(`icon-${userRowId}`);
+
+            if (sourceRows.length > 0) {
+                sourceRows.forEach(row => row.classList.toggle('show'));
+                icon.classList.toggle('expanded');
+            } else {
+                await loadCategoriesForUser(userId, userRowId);
+                icon.classList.add('expanded');
+            }
+        }
+
+        async function loadCategoriesForUser(userId, userRowId) {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            try {
+                let url = `${API_BASE}/expense-sources-for-user?user_id=${userId}`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+
+                const response = await fetch(url, { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load categories');
+
+                const result = await response.json();
+                if (!result.success || !result.data) return;
+
+                const userRow = document.getElementById(userRowId);
+                const tbody = userRow.parentElement;
+                let insertAfter = userRow;
+
+                result.data.forEach((category, index) => {
+                    const categoryRowId = `category-${userRowId}-${index}`;
+                    const categoryRow = document.createElement('tr');
+                    categoryRow.className = `source-detail-row source-${userRowId} type-row show`;
+                    categoryRow.id = categoryRowId;
+
+                    const categoryBadgeClass = getCategoryBadgeClass(category.category);
+
+                    categoryRow.innerHTML = `
+                        <td><i class="fas fa-plus expand-icon" id="icon-${categoryRowId}" style="font-size: 0.8rem; color: #667eea;"></i></td>
+                        <td><span class="category-badge ${categoryBadgeClass}">${category.category}</span></td>
+                        <td>${category.count}</td>
+                        <td class="text-end">${formatCurrency(category.paid_amount)}</td>
+                        <td class="text-end">${formatCurrency(category.pending_amount)}</td>
+                        <td class="text-end">${formatCurrency(category.total_amount)}</td>
+                    `;
+
+                    categoryRow.onclick = (e) => {
+                        e.stopPropagation();
+                        toggleUserCategoryGroup(userId, category.category, categoryRowId);
+                    };
+
+                    insertAfter.insertAdjacentElement('afterend', categoryRow);
+                    insertAfter = categoryRow;
+                });
+            } catch (error) {
+                console.error('Error loading categories for user:', error);
+            }
+        }
+
+        async function toggleUserCategoryGroup(userId, category, categoryRowId) {
+            const dateRowsClass = `date-${categoryRowId}`;
+            const dateRows = document.querySelectorAll(`.${dateRowsClass}`);
+            const icon = document.getElementById(`icon-${categoryRowId}`);
+
+            if (dateRows.length > 0) {
+                dateRows.forEach(row => row.classList.toggle('show'));
+                icon.classList.toggle('expanded');
+            } else {
+                await loadDatesForUserCategory(userId, category, categoryRowId);
+                icon.classList.add('expanded');
+            }
+        }
+
+        async function loadDatesForUserCategory(userId, category, categoryRowId) {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            try {
+                let url = `${API_BASE}/expense-dates-for-user-source?user_id=${userId}&category=${encodeURIComponent(category)}`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+
+                const response = await fetch(url, { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load dates');
+
+                const result = await response.json();
+                if (!result.success || !result.data) return;
+
+                const categoryRow = document.getElementById(categoryRowId);
+                const tbody = categoryRow.parentElement;
+                let insertAfter = categoryRow;
+
+                result.data.forEach((dateItem, index) => {
+                    const dateRow = document.createElement('tr');
+                    dateRow.className = `user-row date-${categoryRowId} show`;
+
+                    dateRow.innerHTML = `
+                        <td></td>
+                        <td>${formatDate(dateItem.transaction_date)}</td>
+                        <td>${dateItem.count}</td>
+                        <td class="text-end">${formatCurrency(dateItem.paid_amount)}</td>
+                        <td class="text-end">${formatCurrency(dateItem.pending_amount)}</td>
+                        <td class="text-end">${formatCurrency(dateItem.total_amount)}</td>
+                    `;
+
+                    insertAfter.insertAdjacentElement('afterend', dateRow);
+                    insertAfter = dateRow;
+                });
+            } catch (error) {
+                console.error('Error loading dates for user category:', error);
+            }
+        }
+
+        // Sorting Functions
+        function sortDateView(column) {
+            const currentOrder = dateSortOrder[column] || 'none';
+            let newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+            dateSortOrder = { [column]: newOrder };
+
+            const dates = Object.keys(groupedData);
+            dates.sort((a, b) => {
+                if (column === 'date') {
+                    if (a === 'Pending') return 1;
+                    if (b === 'Pending') return -1;
+                    return newOrder === 'asc' ? new Date(a) - new Date(b) : new Date(b) - new Date(a);
+                } else if (column === 'count') {
+                    const countA = groupedData[a].totalCount;
+                    const countB = groupedData[b].totalCount;
+                    return newOrder === 'asc' ? countA - countB : countB - countA;
+                } else if (column === 'amount') {
+                    const amtA = groupedData[a].totalAmount;
+                    const amtB = groupedData[b].totalAmount;
+                    return newOrder === 'asc' ? amtA - amtB : amtB - amtA;
+                }
+                return 0;
+            });
+
+            const sortedGroupedData = {};
+            dates.forEach(date => { sortedGroupedData[date] = groupedData[date]; });
+            groupedData = sortedGroupedData;
+
+            updateSortIcons('date', column, newOrder);
+            renderGroupedTable();
+        }
+
+        function sortUserView(column) {
+            const currentOrder = userSortOrder[column] || 'none';
+            let newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+            userSortOrder = { [column]: newOrder };
+
+            userWiseData.sort((a, b) => {
+                if (column === 'user') {
+                    return newOrder === 'asc' ? a.user_name.localeCompare(b.user_name) : b.user_name.localeCompare(a.user_name);
+                } else if (column === 'count') {
+                    return newOrder === 'asc' ? a.transaction_count - b.transaction_count : b.transaction_count - a.transaction_count;
+                } else if (column === 'paid') {
+                    return newOrder === 'asc' ? a.paid_amount - b.paid_amount : b.paid_amount - a.paid_amount;
+                } else if (column === 'pending') {
+                    return newOrder === 'asc' ? a.pending_amount - b.pending_amount : b.pending_amount - a.pending_amount;
+                } else if (column === 'total') {
+                    return newOrder === 'asc' ? a.total_amount - b.total_amount : b.total_amount - a.total_amount;
+                }
+                return 0;
+            });
+
+            updateSortIcons('user', column, newOrder);
+            renderUserWiseTable();
+        }
+
+        function updateSortIcons(view, column, order) {
+            const prefix = view === 'date' ? 'sort-icon-' : 'sort-user-icon-';
+            ['date', 'status', 'count', 'amount', 'user', 'paid', 'pending', 'total'].forEach(col => {
+                const icon = document.getElementById(`${prefix}${col}`);
+                if (icon) {
+                    icon.className = col === column && order !== 'none'
+                        ? `fas fa-sort-${order === 'asc' ? 'up' : 'down'}`
+                        : 'fas fa-sort';
+                }
+            });
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+        });
+    </script>
+</body>
+</html>

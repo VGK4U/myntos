@@ -1,0 +1,1317 @@
+submit changes button doesnt work - - <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KYC Management - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .status-tabs { margin-bottom: 20px; }
+        .status-tabs .btn { margin-right: 10px; border-radius: 20px; }
+        .user-row { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .badge-pending { background: #fbbf24; color: #78350f; }
+        .badge-approved { background: #10b981; color: white; }
+        .badge-rejected { background: #ef4444; color: white; }
+        .field-approval { padding: 10px; margin: 5px 0; background: #f9fafb; border-radius: 6px; transition: all 0.3s ease; }
+        .field-approval.approved-field { background: #d1fae5; border-left: 4px solid #10b981; }
+        .field-approval.rejected-field { background: #fee2e2; border-left: 4px solid #ef4444; }
+        .field-approval.pending-field { background: #fef3c7; border-left: 4px solid #f59e0b; }
+        .field-name { font-weight: 600; color: #374151; }
+        .field-value { color: #6b7280; }
+        .verification-badge { display: inline-block; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 50%; margin-left: 10px; }
+        .verified { background: #10b981; color: white; }
+        .not-verified { background: #ef4444; color: white; }
+        .pending { background: #f59e0b; color: white; }
+        /* DC Protocol Feb 2026: Sortable table header */
+        .table-header { background: #374151; color: white; padding: 12px 15px; margin-bottom: 10px; border-radius: 8px; font-weight: 600; }
+        .sortable-col { cursor: pointer; user-select: none; transition: background 0.2s; }
+        .sortable-col:hover { background: #4b5563; border-radius: 4px; }
+        .sort-icon { margin-left: 5px; opacity: 0.5; }
+        .sort-icon.active { opacity: 1; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1"><i class="bi bi-shield-check"></i> KYC Management (DC Protocol)</span>
+            <div>
+                <span class="text-white me-3" id="adminInfo">Loading...</span>
+                <a href="/admin/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Status Filter Tabs -->
+        <div class="status-tabs">
+            <button class="btn btn-primary" onclick="filterByStatus('All')">All Users</button>
+            <button class="btn btn-warning" onclick="filterByStatus('Pending')">Pending</button>
+            <button class="btn btn-success" onclick="filterByStatus('Approved')">Approved</button>
+            <button class="btn btn-danger" onclick="filterByStatus('Rejected')">Rejected</button>
+        </div>
+
+        <!-- Search Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h6 class="card-title">Search & Filter</h6>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">User ID</label>
+                        <input type="text" class="form-control" id="searchUserId" placeholder="MNR1823XXXX">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" class="form-control" id="searchName" placeholder="Enter name">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="searchPhone" placeholder="Enter phone">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Package Type</label>
+                        <select class="form-select" id="packageFilter">
+                            <option value="All">All Packages</option>
+                            <option value="Platinum">Platinum</option>
+                            <option value="Diamond">Diamond</option>
+                            <option value="Blue/Loyal">Blue/Loyal</option>
+                            <option value="Eligible">Eligible</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button class="btn btn-primary w-100" onclick="applyFilters()">Search</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User List -->
+        <div id="userList">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading users...</p>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <nav id="paginationContainer" style="display: none;">
+            <ul class="pagination justify-content-center" id="pagination"></ul>
+        </nav>
+    </div>
+
+    <!-- User Profile Modal (Granular Approval) -->
+    <div class="modal fade" id="profileModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Complete User Profile - Granular KYC Approval</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="profileModalContent"></div>
+                <!-- DC Protocol Feb 2026: Upload Progress Bar -->
+                <div id="uploadProgressContainer" class="w-100 mb-3" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span id="uploadProgressLabel" class="text-muted small">Uploading...</span>
+                        <span id="uploadProgressPercent" class="text-muted small">0%</span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-outline-danger" id="cancelEditBtn" onclick="toggleEditMode()" style="display: none;">
+                        <i class="bi bi-x-circle"></i> Cancel Edit
+                    </button>
+                    <button type="button" class="btn btn-warning" id="editBtn" onclick="toggleEditMode()">
+                        <i class="bi bi-pencil"></i> Edit Details
+                    </button>
+                    <button type="button" class="btn btn-primary" id="saveBtn" onclick="saveUserKYC()" style="display: none;">
+                        <i class="bi bi-check2"></i> Submit Changes
+                    </button>
+                    <!-- DC Protocol Feb 2026: Role-based buttons -->
+                    <button type="button" class="btn btn-info btn-lg" id="validateBtn" onclick="validateAllFields()" style="display: none;">
+                        <i class="bi bi-check-square"></i> Validate All Fields
+                    </button>
+                    <button type="button" class="btn btn-success btn-lg" id="approveBtn" onclick="approveAllFields()" style="display: none;">
+                        <i class="bi bi-check-circle"></i> Approve All Fields
+                    </button>
+                    <button type="button" class="btn btn-success btn-lg" id="finalApproveBtn" onclick="finalApproveKYC()" style="display: none;">
+                        <i class="bi bi-patch-check-fill"></i> Final Approval (Step 2)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let authToken = localStorage.getItem('authToken');
+        let currentFilter = 'All';
+        let currentPage = 1;
+        let currentUser = null;  // Currently selected user for modal
+        let usersDataMap = {};  // Store users by ID (avoid inline JSON serialization issues)
+        // DC Protocol Feb 2026: Sorting state
+        let currentSort = { column: 'submitted_at', direction: 'desc' };
+        let allUsersData = [];  // Store all users for client-side sorting
+        // DC Protocol Feb 2026: Staff role for button visibility
+        let staffRole = { can_approve: false, can_validate: true, approval_level: 'validation' };
+
+        $(document).ready(function() {
+            // DC Protocol: Skip loadAdminInfo on Staff MNR pages (staff sidebar already shows identity)
+            if (!window.location.pathname.startsWith('/staff/mnr/')) {
+                loadAdminInfo();
+            }
+            // DC Protocol Feb 2026: Load staff role for button visibility
+            loadStaffRole();
+            loadUsers(currentFilter, currentPage);
+        });
+        
+        // DC Protocol Feb 2026: Load staff role for button visibility
+        function loadStaffRole() {
+            $.ajax({
+                url: `${API_BASE}/admin/kyc/staff-role`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        staffRole = response.data;
+                        console.log('[DC] Staff role loaded:', staffRole);
+                    }
+                },
+                error: function(xhr) {
+                    console.warn('[DC] Could not load staff role, using default validation mode');
+                }
+            });
+        }
+
+        function loadAdminInfo() {
+            $.ajax({
+                url: `${API_BASE}/users/profile`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    if (data.success && data.user) {
+                        $('#adminInfo').text(`${data.user.name} (${data.user.user_type})`);
+                    }
+                }
+            });
+        }
+
+        function filterByStatus(status) {
+            currentFilter = status;
+            currentPage = 1;
+            loadUsers(status, 1);
+        }
+
+        function applyFilters() {
+            currentPage = 1;
+            loadUsers(currentFilter, 1);
+        }
+
+        function loadUsers(statusFilter, page) {
+            const params = new URLSearchParams({
+                status_filter: statusFilter,
+                page: page,
+                per_page: 20
+            });
+
+            // Add search filters if present
+            const searchUserId = $('#searchUserId').val().trim();
+            const searchName = $('#searchName').val().trim();
+            const searchPhone = $('#searchPhone').val().trim();
+            const packageFilter = $('#packageFilter').val();
+
+            if (searchUserId) params.append('search_user_id', searchUserId);
+            if (searchName) params.append('search_name', searchName);
+            if (searchPhone) params.append('search_phone', searchPhone);
+            if (packageFilter && packageFilter !== 'All') params.append('package_filter', packageFilter);
+
+            $.ajax({
+                url: `${API_BASE}/admin/kyc/all-users?${params.toString()}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        renderUsers(response.data.users);
+                        renderPagination(response.data.pagination);
+                    }
+                },
+                error: function(xhr) {
+                    $('#userList').html(`<div class="alert alert-danger">Error: ${xhr.responseJSON?.detail || 'Failed to load users'}</div>`);
+                }
+            });
+        }
+
+        function renderUsers(users) {
+            if (!users || users.length === 0) {
+                $('#userList').html('<div class="alert alert-info">No users found</div>');
+                return;
+            }
+
+            // Store users in map and array
+            usersDataMap = {};
+            allUsersData = users;
+            users.forEach(user => {
+                usersDataMap[user.user_id] = user;
+            });
+
+            // DC Protocol Feb 2026: Sort users based on current sort settings
+            const sortedUsers = sortUsers(users, currentSort.column, currentSort.direction);
+
+            // Render table header with sort options
+            const headerHtml = `
+                <div class="table-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 sortable-col" onclick="sortByColumn('user_id')">
+                            User ID / Name ${getSortIcon('user_id')}
+                        </div>
+                        <div class="col-md-1 sortable-col" onclick="sortByColumn('phone')">
+                            Phone ${getSortIcon('phone')}
+                        </div>
+                        <div class="col-md-2 sortable-col" onclick="sortByColumn('kyc_status')">
+                            KYC Status ${getSortIcon('kyc_status')}
+                        </div>
+                        <div class="col-md-2 sortable-col" onclick="sortByColumn('bank_details_status')">
+                            Bank Status ${getSortIcon('bank_details_status')}
+                        </div>
+                        <div class="col-md-2 sortable-col" onclick="sortByColumn('submitted_at')">
+                            Submitted ${getSortIcon('submitted_at')}
+                        </div>
+                        <div class="col-md-2 sortable-col" onclick="sortByColumn('final_approval_at')">
+                            Final Approval ${getSortIcon('final_approval_at')}
+                        </div>
+                        <div class="col-md-1">
+                            Action
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const rowsHtml = sortedUsers.map(user => {
+                // Calculate final approval date (when all fields are approved)
+                const finalApprovalDate = getFinalApprovalDate(user);
+                
+                return `
+                <div class="user-row">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            <strong>${user.user_id}</strong><br>
+                            <small class="text-muted">${user.name || 'N/A'}</small>
+                        </div>
+                        <div class="col-md-1">
+                            <small>${user.phone || 'N/A'}</small>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="badge ${user.kyc_status === 'Approved' ? 'badge-approved' : user.kyc_status === 'Rejected' ? 'badge-rejected' : 'badge-pending'}">
+                                ${user.kyc_status}
+                            </span>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="badge ${user.bank_details_status === 'Approved' ? 'badge-approved' : user.bank_details_status === 'Rejected' ? 'badge-rejected' : 'badge-pending'}">
+                                ${user.bank_details_status}
+                            </span>
+                        </div>
+                        <div class="col-md-2">
+                            <small>${user.submitted_at ? new Date(user.submitted_at).toLocaleDateString() : 'N/A'}</small>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="${finalApprovalDate === 'Pending' ? 'text-muted' : finalApprovalDate === 'Pending from Accounts' ? 'text-warning fw-bold' : finalApprovalDate === 'Partially Validated' ? 'text-info' : 'text-success fw-bold'}">${finalApprovalDate}</small>
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-primary btn-sm" onclick="viewProfile('${user.user_id}')">
+                                <i class="bi bi-eye"></i> View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+
+            $('#userList').html(headerHtml + rowsHtml);
+        }
+        
+        // DC Protocol Feb 2026: Get final approval date (latest of all verified_at dates if fully approved)
+        function getFinalApprovalDate(user) {
+            if (user.kyc_status !== 'Approved' || user.bank_details_status !== 'Approved') {
+                const allValidated = [
+                    user.aadhaar_validated, user.pan_validated, user.document_validated,
+                    user.account_holder_validated, user.account_number_validated,
+                    user.ifsc_validated, user.bank_name_validated, user.branch_validated
+                ].every(v => v);
+                if (allValidated) {
+                    return 'Pending from Accounts';
+                }
+                const someValidated = [
+                    user.aadhaar_validated, user.pan_validated, user.document_validated,
+                    user.account_holder_validated, user.account_number_validated,
+                    user.ifsc_validated, user.bank_name_validated, user.branch_validated
+                ].some(v => v);
+                if (someValidated) {
+                    return 'Partially Validated';
+                }
+                return 'Pending';
+            }
+            
+            // Get all approval timestamps
+            const timestamps = [
+                user.aadhaar_verified_at,
+                user.pan_verified_at,
+                user.document_verified_at,
+                user.account_holder_verified_at,
+                user.account_number_verified_at,
+                user.ifsc_verified_at,
+                user.bank_name_verified_at,
+                user.branch_verified_at
+            ].filter(t => t);
+            
+            if (timestamps.length === 0) return 'Pending';
+            
+            // Find the latest timestamp (final approval)
+            const latestDate = timestamps.reduce((latest, current) => {
+                return new Date(current) > new Date(latest) ? current : latest;
+            });
+            
+            return new Date(latestDate).toLocaleDateString();
+        }
+        
+        // DC Protocol Feb 2026: Sort users by column
+        function sortUsers(users, column, direction) {
+            return [...users].sort((a, b) => {
+                let valA, valB;
+                
+                // Special handling for computed final_approval_at column
+                if (column === 'final_approval_at') {
+                    valA = getFinalApprovalTimestamp(a);
+                    valB = getFinalApprovalTimestamp(b);
+                    
+                    // Non-approved users (timestamp=0) always go to bottom regardless of sort direction
+                    if (valA === 0 && valB !== 0) return 1;  // A goes to bottom
+                    if (valB === 0 && valA !== 0) return -1; // B goes to bottom
+                    if (valA === 0 && valB === 0) return 0;  // Both pending, keep order
+                    
+                    // Both have timestamps - normal sort
+                    if (valA < valB) return direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return direction === 'asc' ? 1 : -1;
+                    return 0;
+                } else {
+                    valA = a[column] || '';
+                    valB = b[column] || '';
+                    
+                    // Handle date columns
+                    if (column === 'submitted_at') {
+                        valA = valA ? new Date(valA).getTime() : 0;
+                        valB = valB ? new Date(valB).getTime() : 0;
+                    }
+                }
+                
+                // String comparison for other columns
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                
+                if (valA < valB) return direction === 'asc' ? -1 : 1;
+                if (valA > valB) return direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        
+        // DC Protocol Feb 2026: Get final approval timestamp for sorting (returns numeric timestamp)
+        function getFinalApprovalTimestamp(user) {
+            // Not fully approved = sort to bottom (return 0)
+            if (user.kyc_status !== 'Approved' || user.bank_details_status !== 'Approved') {
+                return 0;
+            }
+            
+            // Get all approval timestamps
+            const timestamps = [
+                user.aadhaar_verified_at,
+                user.pan_verified_at,
+                user.document_verified_at,
+                user.account_holder_verified_at,
+                user.account_number_verified_at,
+                user.ifsc_verified_at,
+                user.bank_name_verified_at,
+                user.branch_verified_at
+            ].filter(t => t).map(t => new Date(t).getTime());
+            
+            if (timestamps.length === 0) return 0;
+            
+            // Return the latest timestamp (final approval time)
+            return Math.max(...timestamps);
+        }
+        
+        // DC Protocol Feb 2026: Handle column sort click
+        function sortByColumn(column) {
+            if (currentSort.column === column) {
+                // Toggle direction
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            // Re-render with new sort
+            renderUsers(allUsersData);
+        }
+        
+        // DC Protocol Feb 2026: Get sort icon for column header
+        function getSortIcon(column) {
+            if (currentSort.column !== column) {
+                return '<i class="bi bi-chevron-expand sort-icon"></i>';
+            }
+            const icon = currentSort.direction === 'asc' ? 'bi-chevron-up' : 'bi-chevron-down';
+            return `<i class="bi ${icon} sort-icon active"></i>`;
+        }
+
+        function renderPagination(pagination) {
+            if (!pagination || pagination.total_pages <= 1) {
+                $('#paginationContainer').hide();
+                return;
+            }
+
+            $('#paginationContainer').show();
+            let html = '';
+
+            for (let i = 1; i <= pagination.total_pages; i++) {
+                html += `<li class="page-item ${i === pagination.page ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="loadUsers('${currentFilter}', ${i}); return false;">${i}</a>
+                </li>`;
+            }
+
+            $('#pagination').html(html);
+        }
+
+        function viewProfile(userId) {
+            const user = usersDataMap[userId];
+            if (!user) {
+                alert('Error: User data not found');
+                return;
+            }
+
+            currentUser = user;
+
+            // Build granular profile modal (DC Protocol - all data from user table)
+            const modalContent = `
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> User Information</h6>
+                        <div class="row mb-3">
+                            <div class="col-md-4"><strong>User ID:</strong> ${user.user_id}</div>
+                            <div class="col-md-4"><strong>Name:</strong> ${user.name}</div>
+                            <div class="col-md-4"><strong>Phone:</strong> ${user.phone || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Profile Completeness Section (NEW) -->
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="mb-3">
+                            <i class="bi bi-clipboard-check"></i> Profile Completeness
+                        </h6>
+                        <div class="alert ${user.profile_complete ? 'alert-success' : 'alert-warning'}" role="alert">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    ${user.profile_complete ? 
+                                        '<i class="bi bi-check-circle-fill"></i> <strong>Profile Complete</strong>' : 
+                                        '<i class="bi bi-exclamation-triangle-fill"></i> <strong>Profile Incomplete</strong>'}
+                                </div>
+                                <div>
+                                    <span class="badge bg-${user.profile_completion_percentage === 100 ? 'success' : 'warning'} fs-6">
+                                        ${user.profile_completion_percentage}% Complete
+                                    </span>
+                                </div>
+                            </div>
+                            ${!user.profile_complete ? `
+                                <div class="mt-3">
+                                    <strong>Missing Fields:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        ${user.missing_profile_fields.map(field => 
+                                            `<li>${field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</li>`
+                                        ).join('')}
+                                    </ul>
+                                    <div class="alert alert-danger mt-3 mb-0">
+                                        <i class="bi bi-shield-exclamation"></i> <strong>Important:</strong> KYC cannot be approved until profile is 100% complete. 
+                                        All required fields (including <strong>actual_date_of_birth</strong>) must be filled.
+                                    </div>
+                                </div>
+                            ` : `
+                                <div class="mt-2">
+                                    <i class="bi bi-check"></i> All required profile fields are filled. You can now proceed with field verification.
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-success mb-3"><i class="bi bi-shield-check"></i> KYC Details (Individual Approvals)</h6>
+                    </div>
+
+                    ${renderFieldApproval('Aadhaar Number', user.aadhaar_number || 'Not Provided', 'aadhaar_verified', user.aadhaar_verified, user.aadhaar_verified_by, user.aadhaar_verified_at, 'aadhaar', user.has_aadhaar_document)}
+                    ${renderFieldApproval('PAN Number', user.pan_number || 'Not Provided', 'pan_verified', user.pan_verified, user.pan_verified_by, user.pan_verified_at, 'pan', user.has_pan_document)}
+                    ${renderFieldApproval('Document Upload', 'Submitted', 'document_verified', user.document_verified, user.document_verified_by, user.document_verified_at, null, false)}
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-info mb-3"><i class="bi bi-bank"></i> Bank Details (Individual Approvals)</h6>
+                    </div>
+
+                    ${renderFieldApproval('Account Holder', user.account_holder_name || 'Not Provided', 'account_holder_verified', user.account_holder_verified, user.account_holder_verified_by, user.account_holder_verified_at, 'bank', user.has_bank_document)}
+                    ${renderFieldApproval('Account Number', user.account_number || 'Not Provided', 'account_number_verified', user.account_number_verified, user.account_number_verified_by, user.account_number_verified_at, null, false)}
+                    ${renderFieldApproval('IFSC Code', user.ifsc_code || 'Not Provided', 'ifsc_verified', user.ifsc_verified, user.ifsc_verified_by, user.ifsc_verified_at, null, false)}
+                    ${renderFieldApproval('Bank Name', user.bank_name || 'Not Provided', 'bank_name_verified', user.bank_name_verified, user.bank_name_verified_by, user.bank_name_verified_at, null, false)}
+                    ${renderFieldApproval('Branch', user.branch_name || 'Not Provided', 'branch_verified', user.branch_verified, user.branch_verified_by, user.branch_verified_at, null, false)}
+                </div>
+            `;
+
+            $('#profileModalContent').html(modalContent);
+            
+            // DC Protocol Feb 2026: Show role-based buttons (after modal content is set)
+            updateRoleBasedButtons();
+            
+            $('#profileModal').modal('show');
+        }
+        
+        // DC Protocol Feb 2026: Update button visibility based on staff role
+        function updateRoleBasedButtons() {
+            document.getElementById('editBtn').style.display = 'inline-block';
+            document.getElementById('cancelEditBtn').style.display = 'none';
+            document.getElementById('saveBtn').style.display = 'none';
+            
+            document.getElementById('validateBtn').style.display = 'inline-block';
+            
+            if (staffRole.can_approve) {
+                document.getElementById('approveBtn').style.display = 'inline-block';
+                const allFieldsValidated = currentUser && [
+                    currentUser.aadhaar_validated, currentUser.pan_validated, currentUser.document_validated,
+                    currentUser.account_holder_validated, currentUser.account_number_validated,
+                    currentUser.ifsc_validated, currentUser.bank_name_validated, currentUser.branch_validated
+                ].every(v => v);
+                const notYetApproved = currentUser && (currentUser.kyc_status !== 'Approved' || currentUser.bank_details_status !== 'Approved');
+                if (allFieldsValidated && notYetApproved) {
+                    document.getElementById('finalApproveBtn').style.display = 'inline-block';
+                } else {
+                    document.getElementById('finalApproveBtn').style.display = 'none';
+                }
+            } else {
+                document.getElementById('approveBtn').style.display = 'none';
+                document.getElementById('finalApproveBtn').style.display = 'none';
+            }
+        }
+
+        function renderFieldApproval(fieldLabel, fieldValue, fieldName, isVerified, approvedBy, approvedAt, documentType, hasDocument) {
+            // DC Protocol Feb 2026: Get validation status for this field
+            const validatedFieldName = fieldName.replace('_verified', '_validated');
+            const isValidated = currentUser[validatedFieldName] || false;
+            const validatedBy = currentUser[validatedFieldName + '_by'] || null;
+            const validatedAt = currentUser[validatedFieldName + '_at'] || null;
+            
+            // DC Protocol Feb 2026: Visual states - Approved (green), Rejected (red), Validated (blue), Pending (yellow)
+            let fieldState = 'pending-field';  // Default: never reviewed
+            let statusBadge = '<span class="verification-badge pending"><i class="bi bi-hourglass"></i></span>';
+            let statusText = 'Pending Review';
+            
+            if (isVerified === true) {
+                fieldState = 'approved-field';
+                statusBadge = '<span class="verification-badge verified"><i class="bi bi-check"></i></span>';
+                statusText = 'Approved';
+            } else if (isVerified === false && approvedBy) {
+                // Explicitly rejected (has a reviewer but not verified)
+                fieldState = 'rejected-field';
+                statusBadge = '<span class="verification-badge not-verified"><i class="bi bi-x"></i></span>';
+                statusText = 'Rejected';
+            } else if (isValidated === true) {
+                // Validated by staff, waiting for approval
+                fieldState = 'pending-field';  // Keep yellow but show validated badge
+                statusBadge = '<span class="verification-badge" style="background:#3b82f6;color:white;"><i class="bi bi-check-square"></i></span>';
+                statusText = 'Validated (Pending Approval)';
+            }
+
+            // Validation tracking info
+            let validationInfo = '';
+            if (isValidated && validatedBy && !isVerified) {
+                const timestamp = validatedAt ? new Date(validatedAt).toLocaleString() : 'Unknown';
+                validationInfo = `<small class="d-block mt-1 text-info">
+                    <i class="bi bi-check-square text-info"></i> Validated by: ${validatedBy} at ${timestamp}
+                </small>`;
+            }
+            
+            // Approval/Rejection tracking info
+            let approvalInfo = '';
+            if (approvedBy) {
+                const timestamp = approvedAt ? new Date(approvedAt).toLocaleString() : 'Unknown';
+                const actionLabel = isVerified ? 'Approved' : 'Rejected';
+                const iconClass = isVerified ? 'bi-person-check text-success' : 'bi-person-x text-danger';
+                approvalInfo = `<small class="d-block mt-1 ${isVerified ? 'text-success' : 'text-danger'}">
+                    <i class="bi ${iconClass}"></i> ${actionLabel} by: ${approvedBy} at ${timestamp}
+                </small>`;
+            }
+
+            // View Document button (only show if document type exists and user has uploaded)
+            let documentButton = '';
+            if (documentType && hasDocument) {
+                // DC Protocol Feb 2026: For Aadhaar, show separate Front and Back buttons
+                if (documentType === 'aadhaar') {
+                    documentButton = `
+                        <button class="btn btn-info btn-sm ms-1" onclick="viewDocument('aadhaar_front')">
+                            <i class="bi bi-file-earmark-text"></i> Front
+                        </button>
+                        <button class="btn btn-info btn-sm ms-1" onclick="viewDocument('aadhaar_back')">
+                            <i class="bi bi-file-earmark-text"></i> Back
+                        </button>
+                    `;
+                } else {
+                    documentButton = `
+                        <button class="btn btn-info btn-sm ms-1" onclick="viewDocument('${documentType}')">
+                            <i class="bi bi-file-earmark-text"></i> View Document
+                        </button>
+                    `;
+                }
+            }
+
+            // DC Protocol Feb 2026: 2-Level Approval Workflow
+            // Level 1: Validate (all staff with page access)
+            // Level 2: Approve (only VGK4U/Accounts, requires validation first)
+            let actionButtons = '';
+            
+            // Validate button - ALL staff can see and use
+            const validateBtnClass = isValidated ? 'btn-outline-info' : 'btn-info';
+            const validateBtnText = isValidated ? 'Re-validate' : 'Validate';
+            actionButtons += `
+                <button class="btn ${validateBtnClass} btn-sm" onclick="validateField('${fieldName}', true)">
+                    <i class="bi bi-check-square"></i> ${validateBtnText}
+                </button>
+            `;
+            
+            // Approve/Reject buttons - Only VGK4U/Accounts can see
+            // Disabled until field is validated
+            if (staffRole.can_approve) {
+                const canApproveNow = isValidated && !isVerified;
+                const approveDisabled = !canApproveNow ? 'disabled' : '';
+                const approveTitle = !isValidated ? 'Must validate first' : (isVerified ? 'Already approved' : 'Approve this field');
+                
+                actionButtons += `
+                    <button class="btn ${isVerified ? 'btn-outline-success' : 'btn-success'} btn-sm ms-1" 
+                            onclick="approveField('${fieldName}', true)" ${approveDisabled} title="${approveTitle}">
+                        <i class="bi bi-check"></i> Approve
+                    </button>
+                    <button class="btn ${fieldState === 'rejected-field' ? 'btn-outline-danger' : 'btn-danger'} btn-sm ms-1" 
+                            onclick="approveField('${fieldName}', false)" ${approveDisabled} title="${approveTitle}">
+                        <i class="bi bi-x"></i> Reject
+                    </button>
+                `;
+            }
+
+            return `
+                <div class="col-12 mb-2">
+                    <div class="field-approval ${fieldState}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <span class="field-name">${fieldLabel}:</span> 
+                                <span class="field-value">${fieldValue}</span>
+                                ${statusBadge}
+                                ${validationInfo}
+                                ${approvalInfo}
+                            </div>
+                            <div>
+                                ${documentButton}
+                                ${actionButtons}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function approveField(fieldName, approved) {
+            if (!currentUser) return;
+
+            $.ajax({
+                url: `${API_BASE}/admin/kyc/approve-field/${currentUser.user_id}`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    field_name: fieldName,
+                    approved: approved
+                }),
+                success: function(response) {
+                    // DC Protocol Feb 2026: Fetch fresh user data then refresh modal
+                    refreshUserAndModal(currentUser.user_id);
+                },
+                error: function(xhr) {
+                    alert('Error: ' + (xhr.responseJSON?.detail || 'Failed to update field'));
+                }
+            });
+        }
+        
+        // DC Protocol Feb 2026: Fetch fresh user data and refresh modal immediately
+        function refreshUserAndModal(userId) {
+            $.ajax({
+                url: `${API_BASE}/admin/kyc/users/${userId}`,
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(freshUser) {
+                    // Update cache with fresh data
+                    usersDataMap[userId] = freshUser;
+                    currentUser = freshUser;
+                    // Re-render modal with fresh data
+                    viewProfile(userId);
+                    // Also refresh list in background
+                    loadUsers(currentFilter, currentPage);
+                },
+                error: function(xhr) {
+                    console.error('Failed to refresh user data:', xhr);
+                    // Fallback to full reload
+                    loadUsers(currentFilter, currentPage);
+                }
+            });
+        }
+
+        function approveAllFields() {
+            if (!currentUser) return;
+
+            if (!confirm('Approve ALL KYC and Bank fields for this user?')) return;
+
+            $.ajax({
+                url: `${API_BASE}/admin/kyc/approve-all-fields/${currentUser.user_id}`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                success: function(response) {
+                    // DC Protocol Feb 2026: Fetch fresh user data then refresh modal
+                    refreshUserAndModal(currentUser.user_id);
+                },
+                error: function(xhr) {
+                    alert('Error: ' + (xhr.responseJSON?.detail || 'Failed to approve all fields'));
+                }
+            });
+        }
+
+        async function viewDocument(documentType) {
+            if (!currentUser) return;
+
+            try {
+                // DC Protocol: Fetch document from kyc_document table with auth token
+                const url = `${API_BASE}/admin/kyc/view-document/${currentUser.user_id}/${documentType}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(`Error: ${error.detail || 'Failed to load document'}`);
+                    return;
+                }
+
+                // Get the file as a blob
+                const blob = await response.blob();
+                
+                // Get filename from Content-Disposition header or use default
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = `${documentType}_document`;
+                if (contentDisposition) {
+                    const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+
+                // Create blob URL and open in new tab
+                const blobUrl = URL.createObjectURL(blob);
+                const newWindow = window.open(blobUrl, '_blank');
+                
+                // Clean up blob URL after window loads
+                if (newWindow) {
+                    newWindow.onload = () => {
+                        setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+                    };
+                }
+            } catch (error) {
+                console.error('Error viewing document:', error);
+                alert('Failed to load document. Please try again.');
+            }
+        }
+
+        let isEditMode = false;
+
+        function toggleEditMode() {
+            if (!currentUser) return;
+            
+            isEditMode = !isEditMode;
+            
+            if (isEditMode) {
+                // Switch to edit mode - hide normal buttons, show edit buttons
+                document.getElementById('editBtn').style.display = 'none';
+                document.getElementById('cancelEditBtn').style.display = 'inline-block';
+                document.getElementById('saveBtn').style.display = 'inline-block';
+                document.getElementById('approveBtn').style.display = 'none';
+                document.getElementById('validateBtn').style.display = 'none';
+                document.getElementById('finalApproveBtn').style.display = 'none';
+                
+                // DC Protocol Feb 2026: Enhanced edit form with ALL fields and document uploads
+                const editableFields = [
+                    // KYC Details
+                    { id: 'edit-aadhaar', label: 'Aadhaar Number', value: currentUser.aadhaar_number || '', field: 'aadhaar_number', maxlen: 12, section: 'kyc' },
+                    { id: 'edit-pan', label: 'PAN Number', value: currentUser.pan_number || '', field: 'pan_number', maxlen: 10, section: 'kyc' },
+                    // Personal Details
+                    { id: 'edit-phone', label: 'Phone Number', value: currentUser.phone || currentUser.phone_number || '', field: 'phone_number', section: 'personal' },
+                    { id: 'edit-email', label: 'Email', value: currentUser.email || '', field: 'email', type: 'email', section: 'personal' },
+                    { id: 'edit-gender', label: 'Gender', value: currentUser.gender || '', field: 'gender', section: 'personal', inputType: 'select', options: ['Male', 'Female', 'Other'] },
+                    { id: 'edit-dob-actual', label: 'Date of Birth (Actual)', value: currentUser.actual_date_of_birth || '', field: 'actual_date_of_birth', type: 'date', section: 'personal' },
+                    { id: 'edit-dob-certificate', label: 'Date of Birth (As Per Certificate)', value: currentUser.dob_as_per_certificate || currentUser.date_of_birth_certificate || currentUser.dob_certificate || '', field: 'date_of_birth_certificate', type: 'date', section: 'personal' },
+                    // Address Details
+                    { id: 'edit-address1', label: 'Address Line 1', value: currentUser.address_line1 || '', field: 'address_line1', section: 'address' },
+                    { id: 'edit-address2', label: 'Address Line 2', value: currentUser.address_line2 || '', field: 'address_line2', section: 'address' },
+                    { id: 'edit-city', label: 'City', value: currentUser.city || '', field: 'city', section: 'address' },
+                    { id: 'edit-state', label: 'State', value: currentUser.state || '', field: 'state', section: 'address' },
+                    { id: 'edit-postal', label: 'Postal Code', value: currentUser.postal_code || '', field: 'postal_code', maxlen: 6, section: 'address' },
+                    { id: 'edit-country', label: 'Country', value: currentUser.country || 'India', field: 'country', section: 'address' },
+                    // Bank Details
+                    { id: 'edit-bank-name', label: 'Bank Name', value: currentUser.bank_name || '', field: 'bank_name', section: 'bank' },
+                    { id: 'edit-account-holder', label: 'Account Holder', value: currentUser.account_holder_name || currentUser.bank_account_holder || '', field: 'bank_account_holder', section: 'bank' },
+                    { id: 'edit-account-number', label: 'Account Number', value: currentUser.account_number || currentUser.bank_account_number || '', field: 'bank_account_number', section: 'bank' },
+                    { id: 'edit-ifsc', label: 'IFSC Code', value: currentUser.ifsc_code || currentUser.bank_ifsc_code || '', field: 'bank_ifsc_code', section: 'bank' },
+                    { id: 'edit-branch', label: 'Branch Name', value: currentUser.branch_name || currentUser.bank_branch_name || '', field: 'bank_branch_name', section: 'bank' }
+                ];
+                
+                let editFormHtml = `
+                    <div class="alert alert-warning mb-3">
+                        <i class="bi bi-pencil-square"></i> <strong>Edit Mode:</strong> 
+                        Modify user details and upload documents below. Click Submit Changes when done.
+                    </div>
+                    
+                    <!-- KYC Details Section -->
+                    <h6 class="text-success mb-3"><i class="bi bi-shield-check"></i> KYC Details</h6>
+                    <div class="row g-3 mb-4">
+                `;
+                
+                editableFields.filter(f => f.section === 'kyc').forEach(f => {
+                    const maxlen = f.maxlen ? `maxlength="${f.maxlen}"` : '';
+                    const type = f.type || 'text';
+                    editFormHtml += `
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>${f.label}</strong></label>
+                            <input type="${type}" class="form-control" id="${f.id}" data-field="${f.field}" value="${f.value}" ${maxlen}>
+                        </div>
+                    `;
+                });
+                
+                editFormHtml += `
+                    </div>
+                    
+                    <!-- Document Upload Section -->
+                    <h6 class="text-primary mb-3"><i class="bi bi-file-earmark-arrow-up"></i> Document Uploads (Replace Existing)</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Aadhaar Front</strong> ${currentUser.has_aadhaar_document ? '<span class="badge bg-success">Uploaded</span>' : '<span class="badge bg-secondary">Not Uploaded</span>'}</label>
+                            <input type="file" class="form-control" id="doc-aadhaar-front" data-doctype="aadhar_front" accept="image/*,.pdf">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Aadhaar Back</strong> ${currentUser.has_aadhaar_document ? '<span class="badge bg-success">Uploaded</span>' : '<span class="badge bg-secondary">Not Uploaded</span>'}</label>
+                            <input type="file" class="form-control" id="doc-aadhaar-back" data-doctype="aadhar_back" accept="image/*,.pdf">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>PAN Card</strong> ${currentUser.has_pan_document ? '<span class="badge bg-success">Uploaded</span>' : '<span class="badge bg-secondary">Not Uploaded</span>'}</label>
+                            <input type="file" class="form-control" id="doc-pan" data-doctype="pan_card" accept="image/*,.pdf">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Bank Passbook/Statement</strong> ${currentUser.has_bank_document ? '<span class="badge bg-success">Uploaded</span>' : '<span class="badge bg-secondary">Not Uploaded</span>'}</label>
+                            <input type="file" class="form-control" id="doc-bank" data-doctype="bank_passbook" accept="image/*,.pdf">
+                        </div>
+                    </div>
+                    
+                    <!-- Personal Details Section -->
+                    <h6 class="text-info mb-3"><i class="bi bi-person"></i> Personal Details</h6>
+                    <div class="row g-3 mb-4">
+                `;
+                
+                editableFields.filter(f => f.section === 'personal').forEach(f => {
+                    const maxlen = f.maxlen ? `maxlength="${f.maxlen}"` : '';
+                    const type = f.type || 'text';
+                    
+                    if (f.inputType === 'select' && f.options) {
+                        // Render dropdown for Gender
+                        const optionsHtml = f.options.map(opt => 
+                            `<option value="${opt}" ${f.value === opt ? 'selected' : ''}>${opt}</option>`
+                        ).join('');
+                        editFormHtml += `
+                            <div class="col-md-4">
+                                <label class="form-label"><strong>${f.label}</strong></label>
+                                <select class="form-select" id="${f.id}" data-field="${f.field}">
+                                    <option value="">Select ${f.label}</option>
+                                    ${optionsHtml}
+                                </select>
+                            </div>
+                        `;
+                    } else {
+                        editFormHtml += `
+                            <div class="col-md-4">
+                                <label class="form-label"><strong>${f.label}</strong></label>
+                                <input type="${type}" class="form-control" id="${f.id}" data-field="${f.field}" value="${f.value}" ${maxlen}>
+                            </div>
+                        `;
+                    }
+                });
+                
+                editFormHtml += `
+                    </div>
+                    
+                    <!-- Address Section -->
+                    <h6 class="text-secondary mb-3"><i class="bi bi-geo-alt"></i> Address Details</h6>
+                    <div class="row g-3 mb-4">
+                `;
+                
+                editableFields.filter(f => f.section === 'address').forEach(f => {
+                    const maxlen = f.maxlen ? `maxlength="${f.maxlen}"` : '';
+                    const type = f.type || 'text';
+                    const colWidth = f.field === 'address_line1' || f.field === 'address_line2' ? 'col-md-6' : 'col-md-4';
+                    editFormHtml += `
+                        <div class="${colWidth}">
+                            <label class="form-label"><strong>${f.label}</strong></label>
+                            <input type="${type}" class="form-control" id="${f.id}" data-field="${f.field}" value="${f.value}" ${maxlen}>
+                        </div>
+                    `;
+                });
+                
+                editFormHtml += `
+                    </div>
+                    
+                    <!-- Bank Details Section -->
+                    <h6 class="text-warning mb-3"><i class="bi bi-bank"></i> Bank Details</h6>
+                    <div class="row g-3">
+                `;
+                
+                editableFields.filter(f => f.section === 'bank').forEach(f => {
+                    const maxlen = f.maxlen ? `maxlength="${f.maxlen}"` : '';
+                    const type = f.type || 'text';
+                    editFormHtml += `
+                        <div class="col-md-4">
+                            <label class="form-label"><strong>${f.label}</strong></label>
+                            <input type="${type}" class="form-control" id="${f.id}" data-field="${f.field}" value="${f.value}" ${maxlen}>
+                        </div>
+                    `;
+                });
+                
+                editFormHtml += '</div>';
+                
+                document.getElementById('profileModalContent').innerHTML = editFormHtml;
+            } else {
+                // Cancel edit mode - reload original view
+                isEditMode = false;
+                viewProfile(currentUser.user_id);
+            }
+        }
+
+        async function saveUserKYC() {
+            if (!currentUser) return;
+            
+            // DC Protocol Feb 2026: Collect text field changes (includes input AND select elements)
+            const updateData = {};
+            document.querySelectorAll('#profileModalContent [data-field]').forEach(element => {
+                const field = element.dataset.field;
+                const value = element.value.trim();
+                if (value) {
+                    updateData[field] = value;
+                }
+            });
+            
+            // DC Protocol Feb 2026: Collect document uploads with 5MB size validation
+            const docUploads = [];
+            const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB limit for KYC documents
+            let sizeError = null;
+            
+            document.querySelectorAll('#profileModalContent input[data-doctype]').forEach(input => {
+                if (input.files && input.files.length > 0) {
+                    const file = input.files[0];
+                    if (file.size > MAX_FILE_SIZE) {
+                        sizeError = `File "${file.name}" (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds 5MB limit. Please upload a smaller file.`;
+                    } else {
+                        docUploads.push({
+                            doctype: input.dataset.doctype,
+                            file: file
+                        });
+                    }
+                }
+            });
+            
+            if (sizeError) {
+                alert(sizeError);
+                return;
+            }
+            
+            if (Object.keys(updateData).length === 0 && docUploads.length === 0) {
+                alert('No changes to save. Please modify at least one field or upload a document.');
+                return;
+            }
+            
+            try {
+                let success = true;
+                let errorMessage = '';
+                
+                // Step 1: Save text field changes
+                if (Object.keys(updateData).length > 0) {
+                    const response = await fetch(`${API_BASE}/admin/kyc/update-user/${currentUser.user_id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updateData)
+                    });
+                    
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        success = false;
+                        errorMessage = data.detail || 'Failed to update user data';
+                    }
+                }
+                
+                // Step 2: Upload documents with progress tracking
+                if (docUploads.length > 0) {
+                    const progressContainer = document.getElementById('uploadProgressContainer');
+                    const progressBar = document.getElementById('uploadProgressBar');
+                    const progressLabel = document.getElementById('uploadProgressLabel');
+                    const progressPercent = document.getElementById('uploadProgressPercent');
+                    const saveBtn = document.getElementById('saveBtn');
+                    
+                    progressContainer.style.display = 'block';
+                    saveBtn.disabled = true;
+                    
+                    for (let i = 0; i < docUploads.length; i++) {
+                        const doc = docUploads[i];
+                        const docLabel = doc.doctype.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                        progressLabel.textContent = `Uploading ${docLabel} (${i + 1}/${docUploads.length})...`;
+                        
+                        let uploadSuccess = false;
+                        let retryCount = 0;
+                        const maxRetries = 3;
+                        
+                        while (!uploadSuccess && retryCount < maxRetries) {
+                            try {
+                                console.log(`[DC-KYC-UPLOAD] Uploading ${doc.doctype} (attempt ${retryCount + 1}/${maxRetries})`);
+                                
+                                // Use XMLHttpRequest for progress tracking
+                                const result = await new Promise((resolve, reject) => {
+                                    const xhr = new XMLHttpRequest();
+                                    const formData = new FormData();
+                                    formData.append('file', doc.file);
+                                    formData.append('document_type', doc.doctype);
+                                    
+                                    xhr.upload.addEventListener('progress', (e) => {
+                                        if (e.lengthComputable) {
+                                            const percent = Math.round((e.loaded / e.total) * 100);
+                                            progressBar.style.width = percent + '%';
+                                            progressBar.setAttribute('aria-valuenow', percent);
+                                            progressPercent.textContent = percent + '%';
+                                        }
+                                    });
+                                    
+                                    xhr.addEventListener('load', () => {
+                                        resolve({ status: xhr.status, response: xhr.responseText });
+                                    });
+                                    
+                                    xhr.addEventListener('error', () => reject(new Error('Network error')));
+                                    xhr.addEventListener('timeout', () => reject(new Error('Upload timeout')));
+                                    
+                                    xhr.open('POST', `${API_BASE}/admin/kyc/upload-document/${currentUser.user_id}`);
+                                    xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+                                    xhr.timeout = 120000; // 2 minute timeout
+                                    xhr.send(formData);
+                                });
+                                
+                                if (result.status >= 200 && result.status < 300) {
+                                    uploadSuccess = true;
+                                    console.log(`[DC-KYC-UPLOAD] ${doc.doctype} uploaded successfully`);
+                                    progressBar.classList.remove('bg-danger');
+                                    progressBar.classList.add('bg-success');
+                                } else if (result.status === 502 || result.status === 503 || result.status === 504) {
+                                    retryCount++;
+                                    console.warn(`[DC-KYC-UPLOAD] Backend unavailable (${result.status}), retry ${retryCount}/${maxRetries}`);
+                                    progressLabel.textContent = `Retrying ${docLabel} (${retryCount}/${maxRetries})...`;
+                                    if (retryCount < maxRetries) {
+                                        await new Promise(r => setTimeout(r, 1000 * retryCount));
+                                    }
+                                } else {
+                                    const docError = JSON.parse(result.response || '{}');
+                                    console.error(`[DC-KYC-UPLOAD] Failed ${doc.doctype}:`, docError);
+                                    errorMessage += ` Failed to upload ${doc.doctype}: ${docError.detail || 'Unknown error'}.`;
+                                    progressBar.classList.add('bg-danger');
+                                    break;
+                                }
+                            } catch (networkError) {
+                                retryCount++;
+                                console.error(`[DC-KYC-UPLOAD] Network error (attempt ${retryCount}):`, networkError);
+                                progressLabel.textContent = `Retrying ${docLabel} (${retryCount}/${maxRetries})...`;
+                                if (retryCount < maxRetries) {
+                                    await new Promise(r => setTimeout(r, 1000 * retryCount));
+                                } else {
+                                    errorMessage += ` Network error uploading ${doc.doctype}.`;
+                                    progressBar.classList.add('bg-danger');
+                                }
+                            }
+                        }
+                        
+                        if (!uploadSuccess && retryCount >= maxRetries) {
+                            errorMessage += ` Upload ${doc.doctype} failed after ${maxRetries} attempts.`;
+                        }
+                        
+                        // Reset progress for next file
+                        if (i < docUploads.length - 1) {
+                            progressBar.style.width = '0%';
+                            progressBar.classList.remove('bg-success', 'bg-danger');
+                        }
+                    }
+                    
+                    // Hide progress after completion
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                        progressBar.style.width = '0%';
+                        progressBar.classList.remove('bg-success', 'bg-danger');
+                        saveBtn.disabled = false;
+                    }, 1500);
+                }
+                
+                if (success && !errorMessage) {
+                    alert('User KYC data and documents updated successfully!');
+                } else if (success && errorMessage) {
+                    alert('Data saved but some documents failed: ' + errorMessage);
+                } else {
+                    alert('Error: ' + errorMessage);
+                    return;
+                }
+                
+                isEditMode = false;
+                refreshUserAndModal(currentUser.user_id);
+            } catch (error) {
+                console.error('Error saving user KYC:', error);
+                alert('Failed to save changes. Please try again.');
+            }
+        }
+        
+        // DC Protocol Feb 2026: Validate all fields (first-level check by staff)
+        function validateAllFields() {
+            if (!currentUser) return;
+            
+            if (!confirm('Validate ALL KYC and Bank fields for this user? This marks them as checked by staff and ready for Accounts approval.')) return;
+            
+            // Validate all 8 fields
+            const fields = [
+                'aadhaar_verified', 'pan_verified', 'document_verified',
+                'account_holder_verified', 'account_number_verified',
+                'ifsc_verified', 'bank_name_verified', 'branch_verified'
+            ];
+            
+            let completedCount = 0;
+            const totalFields = fields.length;
+            
+            fields.forEach(fieldName => {
+                $.ajax({
+                    url: `${API_BASE}/admin/kyc/validate-field/${currentUser.user_id}`,
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    data: JSON.stringify({
+                        field_name: fieldName,
+                        approved: true
+                    }),
+                    success: function(response) {
+                        completedCount++;
+                        if (completedCount === totalFields) {
+                            alert('All fields validated successfully! Ready for Accounts approval.');
+                            refreshUserAndModal(currentUser.user_id);
+                        }
+                    },
+                    error: function(xhr) {
+                        completedCount++;
+                        console.error(`Failed to validate ${fieldName}:`, xhr);
+                        if (completedCount === totalFields) {
+                            alert('Some fields may have failed to validate. Please try again.');
+                            refreshUserAndModal(currentUser.user_id);
+                        }
+                    }
+                });
+            });
+        }
+        
+        function finalApproveKYC() {
+            if (!currentUser) return;
+            
+            const allValidated = [
+                currentUser.aadhaar_validated, currentUser.pan_validated, currentUser.document_validated,
+                currentUser.account_holder_validated, currentUser.account_number_validated,
+                currentUser.ifsc_validated, currentUser.bank_name_validated, currentUser.branch_validated
+            ].every(v => v);
+            
+            if (!allValidated) {
+                alert('All fields must be validated by staff before Final Approval can be granted.');
+                return;
+            }
+            
+            if (!confirm('Grant FINAL APPROVAL for this user\'s KYC and Bank details?\n\nThis will mark KYC Status and Bank Details Status as "Approved" and complete the 2-step verification process.')) return;
+            
+            $.ajax({
+                url: `${API_BASE}/admin/kyc/approve-all-fields/${currentUser.user_id}`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                success: function(response) {
+                    alert('Final Approval granted successfully! KYC and Bank details are now fully approved.');
+                    refreshUserAndModal(currentUser.user_id);
+                },
+                error: function(xhr) {
+                    alert('Error: ' + (xhr.responseJSON?.detail || 'Failed to grant final approval. You may not have Accounts/VGK permissions.'));
+                }
+            });
+        }
+        
+        // DC Protocol Feb 2026: Per-field validation (for individual field buttons)
+        function validateField(fieldName, validated) {
+            if (!currentUser) return;
+
+            $.ajax({
+                url: `${API_BASE}/admin/kyc/validate-field/${currentUser.user_id}`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({
+                    field_name: fieldName,
+                    approved: validated
+                }),
+                success: function(response) {
+                    refreshUserAndModal(currentUser.user_id);
+                },
+                error: function(xhr) {
+                    alert('Error: ' + (xhr.responseJSON?.detail || 'Failed to validate field'));
+                }
+            });
+        }
+    </script>
+    <!-- [DC-T34] VGK4U audience tabs (auto-mount + jQuery audience injector) -->
+    <script src="/audience-tabs.js"></script>
+</body>
+</html>

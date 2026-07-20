@@ -1,0 +1,676 @@
+{
+  "phases": [
+    {
+      "phase": 1,
+      "description": "VGK4U Supreme Admin Login",
+      "tests": [
+        {
+          "test": "Staff Login Page Load",
+          "phase": "Phase 1: VGK4U Supreme Admin Login",
+          "status": "PASS",
+          "message": "http://localhost:5000/staff/login",
+          "timestamp": "2025-12-21T04:01:34.600575"
+        },
+        {
+          "test": "Login Form Elements",
+          "phase": "Phase 1: VGK4U Supreme Admin Login",
+          "status": "PASS",
+          "message": "All form elements found",
+          "timestamp": "2025-12-21T04:01:34.674831"
+        },
+        {
+          "test": "Credentials Entry",
+          "phase": "Phase 1: VGK4U Supreme Admin Login",
+          "status": "PASS",
+          "message": "Employee ID: STF-TEST-VGK",
+          "timestamp": "2025-12-21T04:01:35.144511"
+        },
+        {
+          "test": "VGK4U Login Success",
+          "phase": "Phase 1: VGK4U Supreme Admin Login",
+          "status": "PASS",
+          "message": "Redirected to http://localhost:5000/staff/dashboard",
+          "timestamp": "2025-12-21T04:01:39.376276"
+        }
+      ]
+    },
+    {
+      "phase": 2,
+      "description": "Menu Access Configuration Page",
+      "tests": [
+        {
+          "test": "Menu Access Page Navigation",
+          "phase": "Phase 2: Menu Access Configuration Page",
+          "status": "PASS",
+          "message": "http://localhost:5000/rvz/menu-access-config",
+          "timestamp": "2025-12-21T04:01:43.487340"
+        },
+        {
+          "test": "Page Title Verification",
+          "phase": "Phase 2: Menu Access Configuration Page",
+          "status": "PASS",
+          "message": "Page content found",
+          "timestamp": "2025-12-21T04:01:43.753829"
+        },
+        {
+          "test": "Company Dropdown",
+          "phase": "Phase 2: Menu Access Configuration Page",
+          "status": "PASS",
+          "message": "Dropdown found",
+          "timestamp": "2025-12-21T04:01:46.773996"
+        },
+        {
+          "test": "Company Selection",
+          "phase": "Phase 2: Menu Access Configuration Page",
+          "status": "PASS",
+          "message": "Selected: MNR Energy Pvt Ltd",
+          "timestamp": "2025-12-21T04:01:49.988091"
+        },
+        {
+          "test": "Matrix Table Load",
+          "phase": "Phase 2: Menu Access Configuration Page",
+          "status": "PASS",
+          "message": "Matrix table rendered",
+          "timestamp": "2025-12-21T04:01:50.008254"
+        }
+      ]
+    },
+    {
+      "phase": 3,
+      "description": "Column Alignment Verification",
+      "tests": [
+        {
+          "test": "SELECT ALL Cells",
+          "phase": "Phase 3: Column Alignment Verification",
+          "status": "PASS",
+          "message": "Found 124 checkbox cells",
+          "timestamp": "2025-12-21T04:01:50.051534"
+        },
+        {
+          "test": "Category View/Edit Toggles",
+          "phase": "Phase 3: Column Alignment Verification",
+          "status": "PASS",
+          "message": "Both View and Edit checkboxes found",
+          "timestamp": "2025-12-21T04:01:50.121963"
+        },
+        {
+          "test": "Data Row Checkboxes",
+          "phase": "Phase 3: Column Alignment Verification",
+          "status": "PASS",
+          "message": "View: 31, Edit: 31",
+          "timestamp": "2025-12-21T04:01:50.240709"
+        },
+        {
+          "test": "Row Toggle Buttons",
+          "phase": "Phase 3: Column Alignment Verification",
+          "status": "PASS",
+          "message": "V buttons: 173, E buttons: 173",
+          "timestamp": "2025-12-21T04:01:50.341780"
+        }
+      ]
+    },
+    {
+      "phase": 4,
+      "description": "Category Toggle Testing",
+      "tests": [
+        {
+          "test": "Category View Toggles Found",
+          "phase": "Phase 4: Category Toggle Testing",
+          "status": "PASS",
+          "message": "Found 899 view toggles",
+          "timestamp": "2025-12-21T04:01:50.573659"
+        },
+        {
+          "test": "Category Edit Toggles Found",
+          "phase": "Phase 4: Category Toggle Testing",
+          "status": "PASS",
+          "message": "Found 899 edit toggles",
+          "timestamp": "2025-12-21T04:01:50.573804"
+        },
+        {
+          "test": "Category View Toggle Click",
+          "phase": "Phase 4: Category Toggle Testing",
+          "status": "PASS",
+          "message": "State changed: False \u2192 True",
+          "timestamp": "2025-12-21T04:01:52.167547"
+        },
+        {
+          "test": "Category Edit Toggle Click",
+          "phase": "Phase 4: Category Toggle Testing",
+          "status": "PASS",
+          "message": "State changed: False \u2192 True",
+          "timestamp": "2025-12-21T04:01:54.284241"
+        },
+        {
+          "test": "Changes Badge",
+          "phase": "Phase 4: Category Toggle Testing",
+          "status": "PASS",
+          "message": "Changes count: 7",
+          "timestamp": "2025-12-21T04:01:54.869130"
+        }
+      ]
+    },
+    {
+      "phase": 5,
+      "description": "Row-wise Selection Testing (V/E Buttons)",
+      "tests": [
+        {
+          "test": "View Row Buttons Found",
+          "phase": "Phase 5: Row-wise Selection Testing (V/E Buttons)",
+          "status": "PASS",
+          "message": "Found 173 V buttons",
+          "timestamp": "2025-12-21T04:01:54.933245"
+        },
+        {
+          "test": "Edit Row Buttons Found",
+          "phase": "Phase 5: Row-wise Selection Testing (V/E Buttons)",
+          "status": "PASS",
+          "message": "Found 173 E buttons",
+          "timestamp": "2025-12-21T04:01:54.933331"
+        },
+        {
+          "test": "View Row Button Click",
+          "phase": "Phase 5: Row-wise Selection Testing (V/E Buttons)",
+          "status": "PASS",
+          "message": "Clicked V for menu 1",
+          "timestamp": "2025-12-21T04:01:57.110705"
+        },
+        {
+          "test": "Edit Row Button Click",
+          "phase": "Phase 5: Row-wise Selection Testing (V/E Buttons)",
+          "status": "PASS",
+          "message": "Clicked E for menu 1",
+          "timestamp": "2025-12-21T04:02:00.414855"
+        },
+        {
+          "test": "Toast Notification",
+          "phase": "Phase 5: Row-wise Selection Testing (V/E Buttons)",
+          "status": "PASS",
+          "message": "Found 3 toast elements",
+          "timestamp": "2025-12-21T04:02:01.549169"
+        }
+      ]
+    },
+    {
+      "phase": 6,
+      "description": "View/Edit Dependency Rules Testing",
+      "tests": [
+        {
+          "test": "Dependency Test Setup",
+          "phase": "Phase 6: View/Edit Dependency Rules Testing",
+          "status": "PASS",
+          "message": "Testing emp=37, menu=1",
+          "timestamp": "2025-12-21T04:02:02.425441"
+        },
+        {
+          "test": "Edit ON \u2192 View ON",
+          "phase": "Phase 6: View/Edit Dependency Rules Testing",
+          "status": "PASS",
+          "message": "View was enabled when Edit was enabled",
+          "timestamp": "2025-12-21T04:02:03.411781"
+        },
+        {
+          "test": "View OFF \u2192 Edit OFF",
+          "phase": "Phase 6: View/Edit Dependency Rules Testing",
+          "status": "PASS",
+          "message": "Edit was disabled when View was disabled",
+          "timestamp": "2025-12-21T04:02:04.023774"
+        },
+        {
+          "test": "Edit OFF \u2192 View unchanged",
+          "phase": "Phase 6: View/Edit Dependency Rules Testing",
+          "status": "PASS",
+          "message": "View remained ON when Edit was disabled",
+          "timestamp": "2025-12-21T04:02:05.335476"
+        }
+      ]
+    },
+    {
+      "phase": 7,
+      "description": "Save Permission Changes",
+      "tests": [
+        {
+          "test": "Pending Changes Check",
+          "phase": "Phase 7: Save Permission Changes",
+          "status": "PASS",
+          "message": "26 pending changes",
+          "timestamp": "2025-12-21T04:02:05.387231"
+        },
+        {
+          "test": "Save Button Visible",
+          "phase": "Phase 7: Save Permission Changes",
+          "status": "PASS",
+          "message": "Save button is visible",
+          "timestamp": "2025-12-21T04:02:05.429179"
+        },
+        {
+          "test": "Save Button Click",
+          "phase": "Phase 7: Save Permission Changes",
+          "status": "PASS",
+          "message": "Save button clicked",
+          "timestamp": "2025-12-21T04:02:08.458012"
+        },
+        {
+          "test": "Save Success",
+          "phase": "Phase 7: Save Permission Changes",
+          "status": "PASS",
+          "message": "Changes saved successfully",
+          "timestamp": "2025-12-21T04:02:08.535519"
+        }
+      ]
+    },
+    {
+      "phase": 8,
+      "description": "Employee Menu Access Verification",
+      "tests": [
+        {
+          "test": "VGK4U Logout",
+          "phase": "Phase 8: Employee Menu Access Verification",
+          "status": "PASS",
+          "message": "Logged out and cookies cleared",
+          "timestamp": "2025-12-21T04:02:11.870575"
+        },
+        {
+          "test": "Employee Login",
+          "phase": "Phase 8: Employee Menu Access Verification",
+          "status": "SKIP",
+          "message": "Employee login failed - may not have test account",
+          "timestamp": "2025-12-21T04:02:24.824916"
+        }
+      ]
+    },
+    {
+      "phase": 9,
+      "description": "Partner/Vendor Menu Access Verification",
+      "tests": [
+        {
+          "test": "Session Clear",
+          "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+          "status": "PASS",
+          "message": "Session cleared",
+          "timestamp": "2025-12-21T04:02:26.136372"
+        },
+        {
+          "test": "Partner Login Page",
+          "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+          "status": "PASS",
+          "message": "http://localhost:5000/partner/login",
+          "timestamp": "2025-12-21T04:02:28.366655"
+        },
+        {
+          "test": "Partner Login Form",
+          "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+          "status": "PASS",
+          "message": "Login form elements found",
+          "timestamp": "2025-12-21T04:02:28.409853"
+        },
+        {
+          "test": "Vendor Login",
+          "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+          "status": "PASS",
+          "message": "Logged in as STF-VENDOR-001",
+          "timestamp": "2025-12-21T04:02:32.120112"
+        },
+        {
+          "test": "Vendor Sidebar Menus",
+          "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+          "status": "SKIP",
+          "message": "No visible menu items",
+          "timestamp": "2025-12-21T04:02:42.165781"
+        },
+        {
+          "test": "Staff Access Restricted",
+          "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+          "status": "FAIL",
+          "message": "Message: invalid session id: session deleted as the browser has closed the connection\nfrom disconnected: Unable to receive message from renderer\n  (Session info: chrome=138.0.7204.100); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception\nStacktrace:\n#0 0x55691ebe354e base::debug::StackTrace::StackTrace()\n#1 0x55691e66b736 Status::Status()\n#2 0x55691e653f45 DevToolsClientImpl::ProcessNextMessage()\n#3 0x55691e653cc5 DevToolsClientImpl::ProcessNextMessage()\n#4 0x55691e651f16 DevToolsClientImpl::SendCommandInternal()\n#5 0x55691e6523c4 DevToolsClientImpl::SendCommandAndGetResultWithTimeout()\n#6 0x55691e667107 NavigationTracker::IsPendingNavigation()\n#7 0x55691e679fef WebViewImpl::IsNotPendingNavigation()\n#8 0x55691e68062b base::internal::Invoker<>::Run()\n#9 0x55691e652a4f DevToolsClientImpl::HandleEventsUntil()\n#10 0x55691e67955d WebViewImpl::WaitForPendingNavigations()\n#11 0x55691e7050b2 ExecuteWindowCommand()\n#12 0x55691e6e23b3 base::internal::Invoker<>::Run()\n#13 0x55691e6adb31 _ZN12_GLOBAL__N_136ExecuteSessionCommandOnSessionThreadEPKcRKNSt4__Cr12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEERKN4base17RepeatingCallbackIF6StatusP7SessionRKNSB_9DictValueEPNS2_10unique_ptrINSB_5ValueENS2_14default_deleteISK_EEEEEEEbbSI_13scoped_refptrINSB_22SingleThreadTaskRunnerEERKNSC_IFvRKSD_SN_SA_bEEE.c2d79fcaf9d3f4de329075124162d84e\n#14 0x55691e6ae841 base::internal::Invoker<>::RunOnce()\n#15 0x55691ebb1241 base::TaskAnnotator::RunTaskImpl()\n#16 0x55691ebb4781 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWorkImpl()\n#17 0x55691ebb41d8 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#18 0x55691ebb4c25 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#19 0x55691eb9d4db base::MessagePumpDefault::Run()\n#20 0x55691ebb4ff9 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::Run()\n#21 0x55691eb86bf5 base::RunLoop::Run()\n#22 0x55691ebd1858 base::Thread::Run()\n#23 0x55691ebd1a7d base::Thread::ThreadMain()\n#24 0x55691ebe28ec _ZN4base12_GLOBAL__N_110ThreadFuncEPv.a67435033112019129ad5c28ddc47327\n#25 0x7f431873cea3 start_thread\n",
+          "timestamp": "2025-12-21T04:02:46.813316"
+        }
+      ]
+    },
+    {
+      "phase": 10,
+      "description": "Console/Network Error Monitoring",
+      "tests": [
+        {
+          "test": "Return to Menu Access",
+          "phase": "Phase 10: Console/Network Error Monitoring",
+          "status": "FAIL",
+          "message": "Message: invalid session id; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception\nStacktrace:\n#0 0x55691ebe354e base::debug::StackTrace::StackTrace()\n#1 0x55691e66b5ef Status::Status()\n#2 0x55691e6ad3e1 ExecuteSessionCommand()\n#3 0x55691e6e2506 base::internal::Invoker<>::Run()\n#4 0x55691e6dce5f HttpHandler::HandleCommand()\n#5 0x55691e6dc51f HttpHandler::Handle()\n#6 0x55691e636238 base::internal::Invoker<>::RunOnce()\n#7 0x55691ebb1241 base::TaskAnnotator::RunTaskImpl()\n#8 0x55691ebb4781 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWorkImpl()\n#9 0x55691ebb41d8 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#10 0x55691ebb4c25 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#11 0x55691eb9d4db base::MessagePumpDefault::Run()\n#12 0x55691ebb4ff9 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::Run()\n#13 0x55691eb86bf5 base::RunLoop::Run()\n#14 0x55691e633d3e (anonymous namespace)::RunServer()\n#15 0x55691e6332fa main\n#16 0x7f43186cf47e __libc_start_call_main\n",
+          "timestamp": "2025-12-21T04:02:47.438498"
+        },
+        {
+          "test": "Console Error Check",
+          "phase": "Phase 10: Console/Network Error Monitoring",
+          "status": "PASS",
+          "message": "No console errors",
+          "timestamp": "2025-12-21T04:02:47.841274"
+        },
+        {
+          "test": "Network Error Check",
+          "phase": "Phase 10: Console/Network Error Monitoring",
+          "status": "PASS",
+          "message": "No network errors",
+          "timestamp": "2025-12-21T04:02:48.256776"
+        },
+        {
+          "test": "Final State Check",
+          "phase": "Phase 10: Console/Network Error Monitoring",
+          "status": "FAIL",
+          "message": "Message: invalid session id; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception\nStacktrace:\n#0 0x55691ebe354e base::debug::StackTrace::StackTrace()\n#1 0x55691e66b5ef Status::Status()\n#2 0x55691e6ad3e1 ExecuteSessionCommand()\n#3 0x55691e6e2506 base::internal::Invoker<>::Run()\n#4 0x55691e6dce5f HttpHandler::HandleCommand()\n#5 0x55691e6dc51f HttpHandler::Handle()\n#6 0x55691e636238 base::internal::Invoker<>::RunOnce()\n#7 0x55691ebb1241 base::TaskAnnotator::RunTaskImpl()\n#8 0x55691ebb4781 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWorkImpl()\n#9 0x55691ebb41d8 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#10 0x55691ebb4c25 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#11 0x55691eb9d4db base::MessagePumpDefault::Run()\n#12 0x55691ebb4ff9 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::Run()\n#13 0x55691eb86bf5 base::RunLoop::Run()\n#14 0x55691e633d3e (anonymous namespace)::RunServer()\n#15 0x55691e6332fa main\n#16 0x7f43186cf47e __libc_start_call_main\n",
+          "timestamp": "2025-12-21T04:02:48.654660"
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "test": "Staff Login Page Load",
+      "phase": "Phase 1: VGK4U Supreme Admin Login",
+      "status": "PASS",
+      "message": "http://localhost:5000/staff/login",
+      "timestamp": "2025-12-21T04:01:34.600575"
+    },
+    {
+      "test": "Login Form Elements",
+      "phase": "Phase 1: VGK4U Supreme Admin Login",
+      "status": "PASS",
+      "message": "All form elements found",
+      "timestamp": "2025-12-21T04:01:34.674831"
+    },
+    {
+      "test": "Credentials Entry",
+      "phase": "Phase 1: VGK4U Supreme Admin Login",
+      "status": "PASS",
+      "message": "Employee ID: STF-TEST-VGK",
+      "timestamp": "2025-12-21T04:01:35.144511"
+    },
+    {
+      "test": "VGK4U Login Success",
+      "phase": "Phase 1: VGK4U Supreme Admin Login",
+      "status": "PASS",
+      "message": "Redirected to http://localhost:5000/staff/dashboard",
+      "timestamp": "2025-12-21T04:01:39.376276"
+    },
+    {
+      "test": "Menu Access Page Navigation",
+      "phase": "Phase 2: Menu Access Configuration Page",
+      "status": "PASS",
+      "message": "http://localhost:5000/rvz/menu-access-config",
+      "timestamp": "2025-12-21T04:01:43.487340"
+    },
+    {
+      "test": "Page Title Verification",
+      "phase": "Phase 2: Menu Access Configuration Page",
+      "status": "PASS",
+      "message": "Page content found",
+      "timestamp": "2025-12-21T04:01:43.753829"
+    },
+    {
+      "test": "Company Dropdown",
+      "phase": "Phase 2: Menu Access Configuration Page",
+      "status": "PASS",
+      "message": "Dropdown found",
+      "timestamp": "2025-12-21T04:01:46.773996"
+    },
+    {
+      "test": "Company Selection",
+      "phase": "Phase 2: Menu Access Configuration Page",
+      "status": "PASS",
+      "message": "Selected: MNR Energy Pvt Ltd",
+      "timestamp": "2025-12-21T04:01:49.988091"
+    },
+    {
+      "test": "Matrix Table Load",
+      "phase": "Phase 2: Menu Access Configuration Page",
+      "status": "PASS",
+      "message": "Matrix table rendered",
+      "timestamp": "2025-12-21T04:01:50.008254"
+    },
+    {
+      "test": "SELECT ALL Cells",
+      "phase": "Phase 3: Column Alignment Verification",
+      "status": "PASS",
+      "message": "Found 124 checkbox cells",
+      "timestamp": "2025-12-21T04:01:50.051534"
+    },
+    {
+      "test": "Category View/Edit Toggles",
+      "phase": "Phase 3: Column Alignment Verification",
+      "status": "PASS",
+      "message": "Both View and Edit checkboxes found",
+      "timestamp": "2025-12-21T04:01:50.121963"
+    },
+    {
+      "test": "Data Row Checkboxes",
+      "phase": "Phase 3: Column Alignment Verification",
+      "status": "PASS",
+      "message": "View: 31, Edit: 31",
+      "timestamp": "2025-12-21T04:01:50.240709"
+    },
+    {
+      "test": "Row Toggle Buttons",
+      "phase": "Phase 3: Column Alignment Verification",
+      "status": "PASS",
+      "message": "V buttons: 173, E buttons: 173",
+      "timestamp": "2025-12-21T04:01:50.341780"
+    },
+    {
+      "test": "Category View Toggles Found",
+      "phase": "Phase 4: Category Toggle Testing",
+      "status": "PASS",
+      "message": "Found 899 view toggles",
+      "timestamp": "2025-12-21T04:01:50.573659"
+    },
+    {
+      "test": "Category Edit Toggles Found",
+      "phase": "Phase 4: Category Toggle Testing",
+      "status": "PASS",
+      "message": "Found 899 edit toggles",
+      "timestamp": "2025-12-21T04:01:50.573804"
+    },
+    {
+      "test": "Category View Toggle Click",
+      "phase": "Phase 4: Category Toggle Testing",
+      "status": "PASS",
+      "message": "State changed: False \u2192 True",
+      "timestamp": "2025-12-21T04:01:52.167547"
+    },
+    {
+      "test": "Category Edit Toggle Click",
+      "phase": "Phase 4: Category Toggle Testing",
+      "status": "PASS",
+      "message": "State changed: False \u2192 True",
+      "timestamp": "2025-12-21T04:01:54.284241"
+    },
+    {
+      "test": "Changes Badge",
+      "phase": "Phase 4: Category Toggle Testing",
+      "status": "PASS",
+      "message": "Changes count: 7",
+      "timestamp": "2025-12-21T04:01:54.869130"
+    },
+    {
+      "test": "View Row Buttons Found",
+      "phase": "Phase 5: Row-wise Selection Testing (V/E Buttons)",
+      "status": "PASS",
+      "message": "Found 173 V buttons",
+      "timestamp": "2025-12-21T04:01:54.933245"
+    },
+    {
+      "test": "Edit Row Buttons Found",
+      "phase": "Phase 5: Row-wise Selection Testing (V/E Buttons)",
+      "status": "PASS",
+      "message": "Found 173 E buttons",
+      "timestamp": "2025-12-21T04:01:54.933331"
+    },
+    {
+      "test": "View Row Button Click",
+      "phase": "Phase 5: Row-wise Selection Testing (V/E Buttons)",
+      "status": "PASS",
+      "message": "Clicked V for menu 1",
+      "timestamp": "2025-12-21T04:01:57.110705"
+    },
+    {
+      "test": "Edit Row Button Click",
+      "phase": "Phase 5: Row-wise Selection Testing (V/E Buttons)",
+      "status": "PASS",
+      "message": "Clicked E for menu 1",
+      "timestamp": "2025-12-21T04:02:00.414855"
+    },
+    {
+      "test": "Toast Notification",
+      "phase": "Phase 5: Row-wise Selection Testing (V/E Buttons)",
+      "status": "PASS",
+      "message": "Found 3 toast elements",
+      "timestamp": "2025-12-21T04:02:01.549169"
+    },
+    {
+      "test": "Dependency Test Setup",
+      "phase": "Phase 6: View/Edit Dependency Rules Testing",
+      "status": "PASS",
+      "message": "Testing emp=37, menu=1",
+      "timestamp": "2025-12-21T04:02:02.425441"
+    },
+    {
+      "test": "Edit ON \u2192 View ON",
+      "phase": "Phase 6: View/Edit Dependency Rules Testing",
+      "status": "PASS",
+      "message": "View was enabled when Edit was enabled",
+      "timestamp": "2025-12-21T04:02:03.411781"
+    },
+    {
+      "test": "View OFF \u2192 Edit OFF",
+      "phase": "Phase 6: View/Edit Dependency Rules Testing",
+      "status": "PASS",
+      "message": "Edit was disabled when View was disabled",
+      "timestamp": "2025-12-21T04:02:04.023774"
+    },
+    {
+      "test": "Edit OFF \u2192 View unchanged",
+      "phase": "Phase 6: View/Edit Dependency Rules Testing",
+      "status": "PASS",
+      "message": "View remained ON when Edit was disabled",
+      "timestamp": "2025-12-21T04:02:05.335476"
+    },
+    {
+      "test": "Pending Changes Check",
+      "phase": "Phase 7: Save Permission Changes",
+      "status": "PASS",
+      "message": "26 pending changes",
+      "timestamp": "2025-12-21T04:02:05.387231"
+    },
+    {
+      "test": "Save Button Visible",
+      "phase": "Phase 7: Save Permission Changes",
+      "status": "PASS",
+      "message": "Save button is visible",
+      "timestamp": "2025-12-21T04:02:05.429179"
+    },
+    {
+      "test": "Save Button Click",
+      "phase": "Phase 7: Save Permission Changes",
+      "status": "PASS",
+      "message": "Save button clicked",
+      "timestamp": "2025-12-21T04:02:08.458012"
+    },
+    {
+      "test": "Save Success",
+      "phase": "Phase 7: Save Permission Changes",
+      "status": "PASS",
+      "message": "Changes saved successfully",
+      "timestamp": "2025-12-21T04:02:08.535519"
+    },
+    {
+      "test": "VGK4U Logout",
+      "phase": "Phase 8: Employee Menu Access Verification",
+      "status": "PASS",
+      "message": "Logged out and cookies cleared",
+      "timestamp": "2025-12-21T04:02:11.870575"
+    },
+    {
+      "test": "Employee Login",
+      "phase": "Phase 8: Employee Menu Access Verification",
+      "status": "SKIP",
+      "message": "Employee login failed - may not have test account",
+      "timestamp": "2025-12-21T04:02:24.824916"
+    },
+    {
+      "test": "Session Clear",
+      "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+      "status": "PASS",
+      "message": "Session cleared",
+      "timestamp": "2025-12-21T04:02:26.136372"
+    },
+    {
+      "test": "Partner Login Page",
+      "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+      "status": "PASS",
+      "message": "http://localhost:5000/partner/login",
+      "timestamp": "2025-12-21T04:02:28.366655"
+    },
+    {
+      "test": "Partner Login Form",
+      "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+      "status": "PASS",
+      "message": "Login form elements found",
+      "timestamp": "2025-12-21T04:02:28.409853"
+    },
+    {
+      "test": "Vendor Login",
+      "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+      "status": "PASS",
+      "message": "Logged in as STF-VENDOR-001",
+      "timestamp": "2025-12-21T04:02:32.120112"
+    },
+    {
+      "test": "Vendor Sidebar Menus",
+      "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+      "status": "SKIP",
+      "message": "No visible menu items",
+      "timestamp": "2025-12-21T04:02:42.165781"
+    },
+    {
+      "test": "Staff Access Restricted",
+      "phase": "Phase 9: Partner/Vendor Menu Access Verification",
+      "status": "FAIL",
+      "message": "Message: invalid session id: session deleted as the browser has closed the connection\nfrom disconnected: Unable to receive message from renderer\n  (Session info: chrome=138.0.7204.100); For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception\nStacktrace:\n#0 0x55691ebe354e base::debug::StackTrace::StackTrace()\n#1 0x55691e66b736 Status::Status()\n#2 0x55691e653f45 DevToolsClientImpl::ProcessNextMessage()\n#3 0x55691e653cc5 DevToolsClientImpl::ProcessNextMessage()\n#4 0x55691e651f16 DevToolsClientImpl::SendCommandInternal()\n#5 0x55691e6523c4 DevToolsClientImpl::SendCommandAndGetResultWithTimeout()\n#6 0x55691e667107 NavigationTracker::IsPendingNavigation()\n#7 0x55691e679fef WebViewImpl::IsNotPendingNavigation()\n#8 0x55691e68062b base::internal::Invoker<>::Run()\n#9 0x55691e652a4f DevToolsClientImpl::HandleEventsUntil()\n#10 0x55691e67955d WebViewImpl::WaitForPendingNavigations()\n#11 0x55691e7050b2 ExecuteWindowCommand()\n#12 0x55691e6e23b3 base::internal::Invoker<>::Run()\n#13 0x55691e6adb31 _ZN12_GLOBAL__N_136ExecuteSessionCommandOnSessionThreadEPKcRKNSt4__Cr12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEERKN4base17RepeatingCallbackIF6StatusP7SessionRKNSB_9DictValueEPNS2_10unique_ptrINSB_5ValueENS2_14default_deleteISK_EEEEEEEbbSI_13scoped_refptrINSB_22SingleThreadTaskRunnerEERKNSC_IFvRKSD_SN_SA_bEEE.c2d79fcaf9d3f4de329075124162d84e\n#14 0x55691e6ae841 base::internal::Invoker<>::RunOnce()\n#15 0x55691ebb1241 base::TaskAnnotator::RunTaskImpl()\n#16 0x55691ebb4781 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWorkImpl()\n#17 0x55691ebb41d8 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#18 0x55691ebb4c25 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#19 0x55691eb9d4db base::MessagePumpDefault::Run()\n#20 0x55691ebb4ff9 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::Run()\n#21 0x55691eb86bf5 base::RunLoop::Run()\n#22 0x55691ebd1858 base::Thread::Run()\n#23 0x55691ebd1a7d base::Thread::ThreadMain()\n#24 0x55691ebe28ec _ZN4base12_GLOBAL__N_110ThreadFuncEPv.a67435033112019129ad5c28ddc47327\n#25 0x7f431873cea3 start_thread\n",
+      "timestamp": "2025-12-21T04:02:46.813316"
+    },
+    {
+      "test": "Return to Menu Access",
+      "phase": "Phase 10: Console/Network Error Monitoring",
+      "status": "FAIL",
+      "message": "Message: invalid session id; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception\nStacktrace:\n#0 0x55691ebe354e base::debug::StackTrace::StackTrace()\n#1 0x55691e66b5ef Status::Status()\n#2 0x55691e6ad3e1 ExecuteSessionCommand()\n#3 0x55691e6e2506 base::internal::Invoker<>::Run()\n#4 0x55691e6dce5f HttpHandler::HandleCommand()\n#5 0x55691e6dc51f HttpHandler::Handle()\n#6 0x55691e636238 base::internal::Invoker<>::RunOnce()\n#7 0x55691ebb1241 base::TaskAnnotator::RunTaskImpl()\n#8 0x55691ebb4781 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWorkImpl()\n#9 0x55691ebb41d8 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#10 0x55691ebb4c25 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#11 0x55691eb9d4db base::MessagePumpDefault::Run()\n#12 0x55691ebb4ff9 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::Run()\n#13 0x55691eb86bf5 base::RunLoop::Run()\n#14 0x55691e633d3e (anonymous namespace)::RunServer()\n#15 0x55691e6332fa main\n#16 0x7f43186cf47e __libc_start_call_main\n",
+      "timestamp": "2025-12-21T04:02:47.438498"
+    },
+    {
+      "test": "Console Error Check",
+      "phase": "Phase 10: Console/Network Error Monitoring",
+      "status": "PASS",
+      "message": "No console errors",
+      "timestamp": "2025-12-21T04:02:47.841274"
+    },
+    {
+      "test": "Network Error Check",
+      "phase": "Phase 10: Console/Network Error Monitoring",
+      "status": "PASS",
+      "message": "No network errors",
+      "timestamp": "2025-12-21T04:02:48.256776"
+    },
+    {
+      "test": "Final State Check",
+      "phase": "Phase 10: Console/Network Error Monitoring",
+      "status": "FAIL",
+      "message": "Message: invalid session id; For documentation on this error, please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception\nStacktrace:\n#0 0x55691ebe354e base::debug::StackTrace::StackTrace()\n#1 0x55691e66b5ef Status::Status()\n#2 0x55691e6ad3e1 ExecuteSessionCommand()\n#3 0x55691e6e2506 base::internal::Invoker<>::Run()\n#4 0x55691e6dce5f HttpHandler::HandleCommand()\n#5 0x55691e6dc51f HttpHandler::Handle()\n#6 0x55691e636238 base::internal::Invoker<>::RunOnce()\n#7 0x55691ebb1241 base::TaskAnnotator::RunTaskImpl()\n#8 0x55691ebb4781 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWorkImpl()\n#9 0x55691ebb41d8 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#10 0x55691ebb4c25 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::DoWork()\n#11 0x55691eb9d4db base::MessagePumpDefault::Run()\n#12 0x55691ebb4ff9 base::sequence_manager::internal::ThreadControllerWithMessagePumpImpl::Run()\n#13 0x55691eb86bf5 base::RunLoop::Run()\n#14 0x55691e633d3e (anonymous namespace)::RunServer()\n#15 0x55691e6332fa main\n#16 0x7f43186cf47e __libc_start_call_main\n",
+      "timestamp": "2025-12-21T04:02:48.654660"
+    }
+  ],
+  "console_errors": [],
+  "network_errors": [],
+  "summary": {
+    "total": 43,
+    "passed": 38,
+    "failed": 3,
+    "skipped": 2
+  }
+}

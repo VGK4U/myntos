@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Registry Manager - Mynt Real LLP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 20px; max-width: 1400px; margin: 0 auto; }
+        .page-banner {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; color: white;
+        }
+        .page-banner h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
+        .page-banner p { opacity: 0.8; margin: 0; font-size: 13px; }
+        .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .stat-card {
+            background: white; border-radius: 10px; padding: 14px 18px; flex: 1; min-width: 100px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid #7c3aed;
+        }
+        .stat-card.green { border-left-color: #10b981; }
+        .stat-card.red { border-left-color: #ef4444; }
+        .stat-card.blue { border-left-color: #3b82f6; }
+        .stat-card.orange { border-left-color: #f59e0b; }
+        .stat-card.purple { border-left-color: #8b5cf6; }
+        .stat-card.teal { border-left-color: #14b8a6; }
+        .stat-card .stat-value { font-size: 22px; font-weight: 700; color: #1f2937; }
+        .stat-card .stat-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .tabs-container { margin-bottom: 16px; }
+        .primary-tabs { border-bottom: 2px solid #e5e7eb; margin-bottom: 0; }
+        .primary-tabs .nav-link {
+            color: #6b7280; font-weight: 600; font-size: 14px; padding: 10px 20px;
+            border: none; border-bottom: 3px solid transparent; background: transparent; cursor: pointer;
+        }
+        .primary-tabs .nav-link:hover { color: #7c3aed; border-bottom-color: rgba(124,58,237,0.3); }
+        .primary-tabs .nav-link.active { color: #7c3aed; border-bottom-color: #7c3aed; background: transparent; }
+        .primary-tabs .nav-link .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; font-weight: 600; }
+
+        .group-pills { display: flex; gap: 6px; padding: 10px 0; flex-wrap: wrap; }
+        .group-pill {
+            padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
+            cursor: pointer; border: 2px solid transparent; transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .group-pill:hover { transform: translateY(-1px); }
+        .group-pill.pill-all { background: #f3f4f6; color: #374151; border-color: #d1d5db; }
+        .group-pill.pill-all.active { background: #374151; color: white; border-color: #374151; }
+        .group-pill.pill-staff { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+        .group-pill.pill-staff.active { background: #1e40af; color: white; border-color: #1e40af; }
+        .group-pill.pill-mnr-member { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+        .group-pill.pill-mnr-member.active { background: #065f46; color: white; border-color: #065f46; }
+        .group-pill.pill-mnr-admin { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+        .group-pill.pill-mnr-admin.active { background: #92400e; color: white; border-color: #92400e; }
+        .group-pill .pill-count { font-size: 10px; background: rgba(0,0,0,0.1); padding: 1px 6px; border-radius: 8px; }
+        .group-pill.active .pill-count { background: rgba(255,255,255,0.25); }
+
+        .filter-bar {
+            background: white; border-radius: 10px; padding: 14px 18px; margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+        }
+        .filter-bar .form-control, .filter-bar .form-select { font-size: 13px; max-width: 200px; }
+        .section-card {
+            background: white; border-radius: 10px; margin-bottom: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden;
+        }
+        .section-header {
+            padding: 12px 18px; cursor: pointer; display: flex; justify-content: space-between;
+            align-items: center; background: #fafbfc; border-bottom: 1px solid #e5e7eb;
+            transition: background 0.2s; user-select: none;
+        }
+        .section-header:hover { background: #f0f1f3; }
+        .section-header .section-title {
+            font-weight: 600; font-size: 14px; color: #1f2937;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .section-header .section-title i.chevron { transition: transform 0.3s; font-size: 12px; color: #9ca3af; }
+        .section-header .section-title i.chevron.collapsed { transform: rotate(-90deg); }
+        .section-header .section-badges { display: flex; gap: 6px; align-items: center; }
+        .section-header .badge-count { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+        .badge-active { background: #d1fae5; color: #065f46; }
+        .badge-inactive { background: #fee2e2; color: #991b1b; }
+        .badge-total { background: #e0e7ff; color: #3730a3; }
+        .badge-group-staff { background: #dbeafe; color: #1e40af; }
+        .badge-group-member { background: #d1fae5; color: #065f46; }
+        .badge-group-admin { background: #fef3c7; color: #92400e; }
+        .section-body { padding: 0; }
+        .page-row {
+            display: flex; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f3f4f6;
+            transition: background 0.15s; gap: 12px;
+        }
+        .page-row:hover { background: #fafbfc; }
+        .page-row.inactive { opacity: 0.55; }
+        .page-row.sortable-ghost { opacity: 0.4; background: #ede9fe; }
+        .page-row.sortable-chosen { background: #f5f3ff; box-shadow: 0 2px 8px rgba(124,58,237,0.2); }
+        .drag-handle {
+            cursor: grab; color: #cbd5e1; font-size: 14px; padding: 4px;
+            transition: color 0.2s; flex-shrink: 0;
+        }
+        .drag-handle:hover { color: #7c3aed; }
+        .drag-handle:active { cursor: grabbing; }
+        .page-info { flex: 1; min-width: 0; }
+        .page-name { font-weight: 500; font-size: 13px; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .page-route { font-size: 11px; color: #9ca3af; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .page-meta { display: flex; gap: 4px; flex-shrink: 0; flex-wrap: wrap; }
+        .meta-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+        .meta-staff { background: #dbeafe; color: #1e40af; }
+        .meta-partner { background: #fef3c7; color: #92400e; }
+        .meta-shared { background: #d1fae5; color: #065f46; }
+        .meta-mnr { background: #ede9fe; color: #5b21b6; }
+        .meta-discovered { background: #e0e7ff; color: #3730a3; }
+        .meta-static { background: #f3f4f6; color: #6b7280; }
+        .toggle-col { flex-shrink: 0; }
+        .section-badge-order { font-size: 10px; color: #9ca3af; font-weight: 400; margin-left: 4px; }
+        .bulk-bar {
+            background: #7c3aed; color: white; border-radius: 10px; padding: 12px 18px;
+            margin-bottom: 16px; display: none; justify-content: space-between; align-items: center;
+        }
+        .bulk-bar.show { display: flex; }
+        .bulk-bar .bulk-info { font-weight: 600; }
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.8);
+            display: flex; align-items: center; justify-content: center; z-index: 999;
+        }
+        .empty-state { text-align: center; padding: 40px; color: #9ca3af; }
+        .move-toast {
+            position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+            background: #1e293b; color: white; padding: 10px 20px; border-radius: 8px;
+            font-size: 13px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            display: none; animation: fadeInUp 0.3s ease;
+        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        @media (max-width: 768px) {
+            .content-area { padding: 12px; }
+            .filter-bar .form-control, .filter-bar .form-select { max-width: 100%; }
+            .page-meta { display: none; }
+            .stats-row { gap: 6px; }
+            .stat-card { min-width: 80px; padding: 10px 12px; }
+            .stat-card .stat-value { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
+    </div>
+
+    <div class="content-area">
+        <div class="page-banner">
+            <h1><i class="fas fa-layer-group"></i> Page Registry Manager</h1>
+            <p>Master control for all system pages. Toggle ON/OFF to control visibility. Drag pages to move between sections.</p>
+        </div>
+
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card"><div class="stat-value" id="statTotal">-</div><div class="stat-label">Total Pages</div></div>
+            <div class="stat-card green"><div class="stat-value" id="statActive">-</div><div class="stat-label">Active</div></div>
+            <div class="stat-card red"><div class="stat-value" id="statInactive">-</div><div class="stat-label">Hidden</div></div>
+            <div class="stat-card blue"><div class="stat-value" id="statStaff">-</div><div class="stat-label">Staff Pages</div></div>
+            <div class="stat-card teal"><div class="stat-value" id="statMember">-</div><div class="stat-label">MNR Member</div></div>
+            <div class="stat-card orange"><div class="stat-value" id="statAdmin">-</div><div class="stat-label">MNR Admin</div></div>
+        </div>
+
+        <div class="tabs-container">
+            <ul class="nav primary-tabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" onclick="switchTab('active')" id="tabActive">
+                        <i class="fas fa-check-circle me-1" style="color:#10b981;"></i>Active Pages
+                        <span class="badge bg-success" id="tabActiveCount">0</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="switchTab('hidden')" id="tabHidden">
+                        <i class="fas fa-eye-slash me-1" style="color:#ef4444;"></i>Hidden Pages
+                        <span class="badge bg-danger" id="tabHiddenCount">0</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="group-pills" id="groupPills">
+                <div class="group-pill pill-all active" onclick="switchGroup('all')" data-group="all">
+                    <i class="fas fa-th-large"></i> All Groups <span class="pill-count" id="pillAllCount">0</span>
+                </div>
+                <div class="group-pill pill-staff" onclick="switchGroup('staff')" data-group="staff">
+                    <i class="fas fa-user-tie"></i> Staff Pages <span class="pill-count" id="pillStaffCount">0</span>
+                </div>
+                <div class="group-pill pill-mnr-member" onclick="switchGroup('mnr_member')" data-group="mnr_member">
+                    <i class="fas fa-users"></i> MNR Member <span class="pill-count" id="pillMemberCount">0</span>
+                </div>
+                <div class="group-pill pill-mnr-admin" onclick="switchGroup('mnr_admin')" data-group="mnr_admin">
+                    <i class="fas fa-user-shield"></i> MNR Admin <span class="pill-count" id="pillAdminCount">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <div style="display:flex;gap:8px;align-items:center;flex:1;min-width:200px;">
+                <i class="fas fa-search" style="color:#9ca3af;"></i>
+                <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search pages by name, route, or code..." style="max-width:300px;">
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <select class="form-select form-select-sm" id="audienceFilter" onchange="applyFilters()" style="max-width:130px;">
+                    <option value="all">All Audience</option>
+                    <option value="staff">Staff</option>
+                    <option value="partner">Partner</option>
+                    <option value="shared">Shared</option>
+                </select>
+                <select class="form-select form-select-sm" id="typeFilter" onchange="applyFilters()" style="max-width:130px;">
+                    <option value="all">All Types</option>
+                    <option value="STAFF">Staff Type</option>
+                    <option value="MNR">MNR Type</option>
+                </select>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="collapseAll()" title="Collapse All"><i class="fas fa-compress-alt"></i></button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="expandAll()" title="Expand All"><i class="fas fa-expand-alt"></i></button>
+            </div>
+        </div>
+
+        <div class="bulk-bar" id="bulkBar">
+            <div class="bulk-info"><span id="bulkCount">0</span></div>
+            <div class="bulk-actions">
+                <button class="btn btn-sm btn-light" onclick="bulkActivateSection()"><i class="fas fa-check me-1"></i>Activate All</button>
+                <button class="btn btn-sm btn-outline-light" onclick="bulkDeactivateSection()"><i class="fas fa-times me-1"></i>Deactivate All</button>
+                <button class="btn btn-sm btn-outline-light" onclick="closeBulkBar()"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+
+        <div id="sectionsContainer"></div>
+        <div id="emptyState" class="empty-state" style="display:none;">
+            <i class="fas fa-search" style="font-size:40px;margin-bottom:12px;"></i>
+            <p>No pages match your filters</p>
+        </div>
+    </div>
+
+    <div class="move-toast" id="moveToast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allData = null;
+        let currentTab = 'active';
+        let currentGroup = 'all';
+        let currentFilters = { audience: 'all', type: 'all', search: '' };
+        let selectedSectionForBulk = null;
+        let sortableInstances = [];
+
+        const API_BASE = '/api/v1/staff/menu-settings';
+
+        function getAuthHeaders() {
+            const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+            return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+        }
+
+        async function loadData() {
+            try {
+                const resp = await fetch(`${API_BASE}/page-registry/all`, { headers: getAuthHeaders() });
+                if (resp.status === 403) {
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    document.getElementById('sectionsContainer').innerHTML = '<div class="empty-state"><i class="fas fa-lock" style="font-size:40px;margin-bottom:12px;color:#ef4444;"></i><p>Access Denied. VGK4U and EA only.</p></div>';
+                    return;
+                }
+                const data = await resp.json();
+                if (!data.success) throw new Error(data.detail || 'Failed to load');
+                allData = data;
+                renderAll();
+            } catch (err) {
+                console.error('[DC-PAGE-REGISTRY] Load error:', err);
+                document.getElementById('sectionsContainer').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle" style="font-size:40px;margin-bottom:12px;color:#ef4444;"></i><p>Failed to load page registry</p></div>';
+            }
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function renderAll() {
+            if (!allData) return;
+            renderStats();
+            updateGroupPillCounts();
+            renderSections();
+        }
+
+        function renderStats() {
+            const s = allData.stats;
+            const gc = s.group_counts || { staff: {active:0,inactive:0}, mnr_member: {active:0,inactive:0}, mnr_admin: {active:0,inactive:0} };
+            document.getElementById('statTotal').textContent = s.total_pages;
+            document.getElementById('statActive').textContent = s.active_pages;
+            document.getElementById('statInactive').textContent = s.inactive_pages;
+            document.getElementById('statStaff').textContent = (gc.staff.active + gc.staff.inactive);
+            document.getElementById('statMember').textContent = (gc.mnr_member.active + gc.mnr_member.inactive);
+            document.getElementById('statAdmin').textContent = (gc.mnr_admin.active + gc.mnr_admin.inactive);
+            document.getElementById('tabActiveCount').textContent = s.active_pages;
+            document.getElementById('tabHiddenCount').textContent = s.inactive_pages;
+        }
+
+        function updateGroupPillCounts() {
+            if (!allData) return;
+            const isActive = currentTab === 'active';
+            let staffCount = 0, memberCount = 0, adminCount = 0, totalCount = 0;
+
+            for (const section of allData.sections) {
+                for (const p of section.pages) {
+                    if (isActive && !p.is_active) continue;
+                    if (!isActive && p.is_active) continue;
+                    totalCount++;
+                    const g = p.menu_group || section.menu_group || 'staff';
+                    if (g === 'staff') staffCount++;
+                    else if (g === 'mnr_member') memberCount++;
+                    else if (g === 'mnr_admin') adminCount++;
+                }
+            }
+            document.getElementById('pillAllCount').textContent = totalCount;
+            document.getElementById('pillStaffCount').textContent = staffCount;
+            document.getElementById('pillMemberCount').textContent = memberCount;
+            document.getElementById('pillAdminCount').textContent = adminCount;
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tabActive').classList.toggle('active', tab === 'active');
+            document.getElementById('tabHidden').classList.toggle('active', tab === 'hidden');
+            updateGroupPillCounts();
+            renderSections();
+        }
+
+        function switchGroup(group) {
+            currentGroup = group;
+            document.querySelectorAll('.group-pill').forEach(p => {
+                p.classList.toggle('active', p.dataset.group === group);
+            });
+            renderSections();
+        }
+
+        function getFilteredSections() {
+            if (!allData) return [];
+            const isActive = currentTab === 'active';
+            const result = [];
+
+            for (const section of allData.sections) {
+                if (currentGroup !== 'all') {
+                    const sectionGroup = section.menu_group || 'staff';
+                    if (sectionGroup !== currentGroup) continue;
+                }
+
+                const filtered = section.pages.filter(p => {
+                    if (isActive && !p.is_active) return false;
+                    if (!isActive && p.is_active) return false;
+                    if (currentGroup !== 'all') {
+                        const pageGroup = p.menu_group || section.menu_group || 'staff';
+                        if (pageGroup !== currentGroup) return false;
+                    }
+                    if (currentFilters.audience !== 'all' && p.audience_scope !== currentFilters.audience) return false;
+                    if (currentFilters.type !== 'all' && p.menu_type !== currentFilters.type) return false;
+                    if (currentFilters.search) {
+                        const q = currentFilters.search.toLowerCase();
+                        const match = (p.menu_name || '').toLowerCase().includes(q) ||
+                            (p.route_path || '').toLowerCase().includes(q) ||
+                            (p.menu_code || '').toLowerCase().includes(q) ||
+                            (p.menu_description || '').toLowerCase().includes(q);
+                        if (!match) return false;
+                    }
+                    return true;
+                });
+                if (filtered.length > 0) {
+                    result.push({ ...section, filteredPages: filtered });
+                }
+            }
+            return result;
+        }
+
+        function getGroupBadgeClass(group) {
+            if (group === 'staff') return 'badge-group-staff';
+            if (group === 'mnr_member') return 'badge-group-member';
+            if (group === 'mnr_admin') return 'badge-group-admin';
+            return 'badge-total';
+        }
+        function getGroupLabel(group) {
+            if (group === 'staff') return 'Staff';
+            if (group === 'mnr_member') return 'MNR Member';
+            if (group === 'mnr_admin') return 'MNR Admin';
+            return '';
+        }
+        function getGroupIcon(group) {
+            if (group === 'staff') return 'fa-user-tie';
+            if (group === 'mnr_member') return 'fa-users';
+            if (group === 'mnr_admin') return 'fa-user-shield';
+            return 'fa-folder-open';
+        }
+
+        function renderSections() {
+            sortableInstances.forEach(s => s.destroy());
+            sortableInstances = [];
+
+            const container = document.getElementById('sectionsContainer');
+            const sections = getFilteredSections();
+            let html = '';
+
+            for (const section of sections) {
+                const sectionId = 'sec_' + section.section_code.replace(/[^a-zA-Z0-9_]/g, '_');
+                const count = section.filteredPages.length;
+                const group = section.menu_group || 'staff';
+                const groupBadge = getGroupBadgeClass(group);
+                const groupLabel = getGroupLabel(group);
+                const groupIcon = getGroupIcon(group);
+
+                html += `<div class="section-card" data-section="${section.section_code}" id="card_${sectionId}">`;
+                html += `<div class="section-header" onclick="toggleSection('${sectionId}')" data-section-code="${section.section_code}" data-section-title="${section.section_title}" data-section-order="${section.section_order}">`;
+                html += `<div class="section-title">`;
+                html += `<i class="fas fa-chevron-down chevron" id="chev_${sectionId}"></i>`;
+                html += `<i class="fas ${groupIcon}" style="color:#7c3aed;"></i> ${section.section_title}`;
+                html += `<span class="section-badge-order">#${section.section_order}</span>`;
+                html += `</div>`;
+                html += `<div class="section-badges">`;
+                html += `<span class="badge-count ${groupBadge}">${groupLabel}</span>`;
+                html += `<span class="badge-count badge-total">${count} pages</span>`;
+                html += `<button class="btn btn-sm btn-outline-primary" style="font-size:10px;padding:1px 8px;margin-left:4px;" onclick="event.stopPropagation();selectSectionBulk('${section.section_code}')" title="Bulk actions"><i class="fas fa-ellipsis-h"></i></button>`;
+                html += `</div></div>`;
+
+                html += `<div class="section-body collapse show" id="body_${sectionId}">`;
+                html += `<div class="sortable-list" data-section-code="${section.section_code}" id="list_${sectionId}">`;
+                for (const page of section.filteredPages) {
+                    html += renderPageRow(page, group);
+                }
+                html += `</div></div></div>`;
+            }
+
+            container.innerHTML = html;
+            document.getElementById('emptyState').style.display = sections.length === 0 ? 'block' : 'none';
+            initSortable();
+        }
+
+        function renderPageRow(page, sectionGroup) {
+            const audienceCls = page.audience_scope === 'partner' ? 'meta-partner' : (page.audience_scope === 'shared' ? 'meta-shared' : 'meta-staff');
+            const typeCls = page.menu_type === 'MNR' ? 'meta-mnr' : 'meta-staff';
+            const pageGroup = page.menu_group || sectionGroup || 'staff';
+            const groupBadge = getGroupBadgeClass(pageGroup);
+            const groupLabel = getGroupLabel(pageGroup);
+
+            let html = `<div class="page-row ${page.is_active ? '' : 'inactive'}" id="row_${page.id}" data-id="${page.id}" data-menu-code="${page.menu_code}">`;
+            html += `<div class="drag-handle" title="Drag to move to another section"><i class="fas fa-grip-vertical"></i></div>`;
+            html += `<div class="page-info">`;
+            html += `<div class="page-name" title="${page.menu_code}">${page.menu_name}</div>`;
+            html += `<div class="page-route" title="${page.route_path}">${page.route_path || '-'}</div>`;
+            html += `</div>`;
+            html += `<div class="page-meta">`;
+            if (currentGroup === 'all') {
+                html += `<span class="meta-badge ${groupBadge}">${groupLabel}</span>`;
+            }
+            html += `<span class="meta-badge ${audienceCls}">${page.audience_scope || 'staff'}</span>`;
+            html += `<span class="meta-badge ${typeCls}">${page.menu_type || 'STAFF'}</span>`;
+            html += `</div>`;
+            html += `<div class="toggle-col">`;
+            html += `<div class="form-check form-switch">`;
+            html += `<input class="form-check-input" type="checkbox" role="switch" id="toggle_${page.id}" ${page.is_active ? 'checked' : ''} onchange="togglePage(${page.id}, this)" style="cursor:pointer;">`;
+            html += `</div></div>`;
+            html += `</div>`;
+            return html;
+        }
+
+        function initSortable() {
+            document.querySelectorAll('.sortable-list').forEach(list => {
+                const instance = new Sortable(list, {
+                    group: 'pages',
+                    handle: '.drag-handle',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: async function(evt) {
+                        if (evt.from === evt.to) return;
+                        const pageId = parseInt(evt.item.dataset.id);
+                        const newSectionCode = evt.to.dataset.sectionCode;
+                        const newHeader = evt.to.closest('.section-card').querySelector('.section-header');
+                        const newSectionTitle = newHeader.dataset.sectionTitle;
+                        const newSectionOrder = parseInt(newHeader.dataset.sectionOrder);
+                        await movePageToSection(pageId, newSectionCode, newSectionTitle, newSectionOrder);
+                    }
+                });
+                sortableInstances.push(instance);
+            });
+        }
+
+        async function movePageToSection(pageId, sectionCode, sectionTitle, sectionOrder) {
+            try {
+                const resp = await fetch(`${API_BASE}/page-registry/${pageId}/move-section`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        sidebar_section: sectionCode,
+                        sidebar_section_title: sectionTitle,
+                        sidebar_section_order: sectionOrder
+                    })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showToast(`Moved to "${sectionTitle}"`);
+                    await loadData();
+                } else {
+                    showToast('Move failed: ' + (data.detail || 'Unknown error'));
+                    renderSections();
+                }
+            } catch (err) {
+                console.error('[DC-PAGE-REGISTRY] Move error:', err);
+                showToast('Move failed');
+                renderSections();
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('moveToast');
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => { toast.style.display = 'none'; }, 2500);
+        }
+
+        function applyFilters() {
+            currentFilters.audience = document.getElementById('audienceFilter').value;
+            currentFilters.type = document.getElementById('typeFilter').value;
+            currentFilters.search = document.getElementById('searchInput').value.trim();
+            if (allData) renderSections();
+        }
+
+        function toggleSection(sectionId) {
+            const body = document.getElementById('body_' + sectionId);
+            const chev = document.getElementById('chev_' + sectionId);
+            if (body.classList.contains('show')) {
+                body.classList.remove('show');
+                chev.classList.add('collapsed');
+            } else {
+                body.classList.add('show');
+                chev.classList.remove('collapsed');
+            }
+        }
+
+        function collapseAll() {
+            document.querySelectorAll('.section-body').forEach(b => b.classList.remove('show'));
+            document.querySelectorAll('.chevron').forEach(c => c.classList.add('collapsed'));
+        }
+
+        function expandAll() {
+            document.querySelectorAll('.section-body').forEach(b => b.classList.add('show'));
+            document.querySelectorAll('.chevron').forEach(c => c.classList.remove('collapsed'));
+        }
+
+        async function togglePage(registryId, checkbox) {
+            const wasChecked = !checkbox.checked;
+            try {
+                const resp = await fetch(`${API_BASE}/page-registry/${registryId}/toggle`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders()
+                });
+                const data = await resp.json();
+                if (!data.success) {
+                    checkbox.checked = wasChecked;
+                    alert(data.detail || 'Toggle failed');
+                    return;
+                }
+                if (allData) {
+                    for (const section of allData.sections) {
+                        const page = section.pages.find(p => p.id === registryId);
+                        if (page) {
+                            page.is_active = data.is_active;
+                            section.active_count = section.pages.filter(p => p.is_active).length;
+                            section.inactive_count = section.pages.filter(p => !p.is_active).length;
+                            break;
+                        }
+                    }
+                    allData.stats.active_pages = allData.sections.reduce((s, sec) => s + sec.active_count, 0);
+                    allData.stats.inactive_pages = allData.sections.reduce((s, sec) => s + sec.inactive_count, 0);
+                    renderAll();
+                }
+            } catch (err) {
+                console.error('[DC-PAGE-REGISTRY] Toggle error:', err);
+                checkbox.checked = wasChecked;
+                alert('Failed to toggle page');
+            }
+        }
+
+        function selectSectionBulk(sectionCode) {
+            selectedSectionForBulk = sectionCode;
+            const section = allData.sections.find(s => s.section_code === sectionCode);
+            document.getElementById('bulkCount').textContent = section ? section.section_title : sectionCode;
+            document.getElementById('bulkBar').classList.add('show');
+        }
+
+        function closeBulkBar() {
+            document.getElementById('bulkBar').classList.remove('show');
+            selectedSectionForBulk = null;
+        }
+
+        async function bulkActivateSection() { await doBulkToggle('activate'); }
+        async function bulkDeactivateSection() { await doBulkToggle('deactivate'); }
+
+        async function doBulkToggle(action) {
+            if (!selectedSectionForBulk || !allData) return;
+            const section = allData.sections.find(s => s.section_code === selectedSectionForBulk);
+            if (!section) return;
+            const ids = section.pages.map(p => p.id);
+            if (ids.length === 0) return;
+            const msg = `${action === 'activate' ? 'Activate' : 'Deactivate'} all ${ids.length} pages in "${section.section_title}"?`;
+            if (!confirm(msg)) return;
+            try {
+                const resp = await fetch(`${API_BASE}/page-registry/bulk-toggle`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ action: action, registry_ids: ids })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    closeBulkBar();
+                    await loadData();
+                } else {
+                    alert(data.detail || 'Bulk toggle failed');
+                }
+            } catch (err) {
+                console.error('[DC-PAGE-REGISTRY] Bulk toggle error:', err);
+                alert('Bulk toggle failed');
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', function() {
+            clearTimeout(this._debounce);
+            this._debounce = setTimeout(applyFilters, 250);
+        });
+
+        loadData();
+    </script>
+</body>
+</html>

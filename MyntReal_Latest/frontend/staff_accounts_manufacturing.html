@@ -1,0 +1,1654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manufacturing Orders - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-item { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-item .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .summary-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .amount { font-weight: 600; font-family: monospace; }
+        .status-planned { background: #e5e7eb; color: #374151; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-approved { background: #dbeafe; color: #2563eb; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-in_progress { background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-completed { background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-cancelled { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-partially_completed { background: #fce7f3; color: #db2777; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .priority-urgent { color: #dc2626; font-weight: 600; }
+        .priority-high { color: #d97706; font-weight: 600; }
+        .priority-normal { color: #374151; }
+        .priority-low { color: #6b7280; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; background: white; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        
+        .btn-action { padding: 4px 8px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; margin-right: 4px; }
+        .btn-view { background: #dbeafe; color: #2563eb; }
+        .btn-start { background: #d1fae5; color: #059669; }
+        .btn-complete { background: #fef3c7; color: #d97706; }
+        .btn-cancel { background: #fee2e2; color: #dc2626; }
+        .btn-edit { background: #fef3c7; color: #d97706; }
+        .btn-delete { background: #fce7f3; color: #be185d; }
+        .filter-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-row select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .stock-check { background: #f9fafb; padding: 16px; border-radius: 8px; margin-top: 16px; }
+        .stock-ok { color: #059669; }
+        .stock-shortage { color: #dc2626; }
+        .sortable { cursor: pointer; user-select: none; position: relative; }
+        .sortable:hover { background: #f3f4f6; }
+        .sortable::after { content: ''; display: inline-block; margin-left: 6px; opacity: 0.3; }
+        .sortable.asc::after { content: '▲'; opacity: 1; }
+        .sortable.desc::after { content: '▼'; opacity: 1; }
+        .validation-error { border-color: #ef4444 !important; }
+        .error-msg { color: #ef4444; font-size: 11px; margin-top: 4px; display: none; }
+        
+        .btn-material-status { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; }
+        .material-ready { background: #d1fae5; color: #059669; }
+        .material-partial { background: #fef3c7; color: #d97706; }
+        .material-missing { background: #fee2e2; color: #dc2626; }
+        .material-unknown { background: #e5e7eb; color: #6b7280; }
+        .btn-material-status:hover { opacity: 0.85; transform: scale(1.02); }
+        
+        .material-modal { max-width: 700px; }
+        .material-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+        .material-summary-item { padding: 12px; border-radius: 8px; text-align: center; }
+        .material-summary-item.ready { background: #d1fae5; }
+        .material-summary-item.partial { background: #fef3c7; }
+        .material-summary-item.shortage { background: #fee2e2; }
+        .material-summary-item .value { font-size: 20px; font-weight: 700; }
+        .material-summary-item .label { font-size: 11px; color: #6b7280; margin-top: 4px; }
+        
+        .material-table th, .material-table td { padding: 10px 12px; font-size: 13px; }
+        .material-table .shortage-cell { font-weight: 600; }
+        .material-table .status-ok { color: #059669; }
+        .material-table .status-short { color: #dc2626; }
+        
+        .btn-create-procurement { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-create-procurement:hover { opacity: 0.9; }
+        .btn-refresh { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .btn-refresh:hover { background: #e5e7eb; }
+        
+        .last-checked { font-size: 11px; color: #9ca3af; margin-left: 12px; }
+
+        /* Procurement Shortage Tab */
+        .mfg-tabs { display: flex; gap: 0; margin-bottom: 20px; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .mfg-tab { flex: 1; padding: 13px 20px; text-align: center; font-weight: 600; font-size: 14px; cursor: pointer; border-bottom: 3px solid transparent; color: #6b7280; transition: all 0.2s; }
+        .mfg-tab:hover { background: #f9fafb; }
+        .mfg-tab.active { color: #6d28d9; border-bottom-color: #6d28d9; background: white; }
+        .mfg-tab-content { display: none; }
+        .mfg-tab-content.active { display: block; }
+        .shortage-badge { display: inline-block; background: #ede9fe; color: #6d28d9; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; margin: 2px 3px 2px 0; line-height: 1.6; white-space: nowrap; }
+        .shortage-badge-qty { font-size: 10px; color: #9ca3af; margin-left: 2px; }
+        .btn-proc-create { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+        .btn-proc-create:hover { opacity: 0.9; }
+        .shortage-count-chip { background: #fee2e2; color: #dc2626; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 20px; margin-left: 8px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-header">
+                <div><h1>Manufacturing Orders</h1><p>Create and track production orders</p></div>
+                <button class="btn-primary-custom" onclick="openCreateModal()"><i class="fas fa-plus me-2"></i>New Order</button>
+            </div>
+            
+            <div class="summary-row">
+                <div class="summary-item">
+                    <div class="value" id="totalOrders">0</div>
+                    <div class="label">Total Orders</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value" id="inProgressOrders">0</div>
+                    <div class="label">In Progress</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value" id="completedOrders">0</div>
+                    <div class="label">Completed</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value" id="plannedOrders">0</div>
+                    <div class="label">Planned</div>
+                </div>
+            </div>
+            
+            <!-- Page-level tabs: Orders | Procurement Needed -->
+            <div class="mfg-tabs">
+                <div class="mfg-tab active" id="mfgTabOrders" onclick="switchMfgTab('orders')"><i class="fas fa-industry me-2"></i>Manufacturing Orders</div>
+                <div class="mfg-tab" id="mfgTabShortages" onclick="switchMfgTab('shortages')"><i class="fas fa-exclamation-triangle me-2"></i>Procurement Needed <span class="shortage-count-chip" id="mfgShortageChip" style="display:none"></span></div>
+            </div>
+
+            <!-- Orders tab content -->
+            <div class="mfg-tab-content active" id="mfgContentOrders">
+            <div class="filter-row">
+                <select id="filterCompany" onchange="loadOrders()"><option value="">All Companies</option></select>
+                <select id="filterStatus" onchange="loadOrders()">
+                    <option value="">All Statuses</option>
+                    <option value="PLANNED">Planned</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="PARTIALLY_COMPLETED">Partial</option>
+                    <option value="CANCELLED">Cancelled</option>
+                </select>
+                <select id="filterPriority" onchange="loadOrders()">
+                    <option value="">All Priorities</option>
+                    <option value="URGENT">Urgent</option>
+                    <option value="HIGH">High</option>
+                    <option value="NORMAL">Normal</option>
+                    <option value="LOW">Low</option>
+                </select>
+                <select id="filterMonth" onchange="applyClientFilters()">
+                    <option value="">All Months</option>
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+                <select id="filterYear" onchange="applyClientFilters()">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+            
+            <div class="card">
+                <div class="card-header"><span><i class="fas fa-industry me-2"></i>Orders</span><span class="text-muted" id="recordCount">0 orders</span></div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="tableContainer" style="display: none;">
+                        <div class="table-container">
+                            <table class="data-table" id="mfgDataTable">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" data-sort="order_number" onclick="sortTable('order_number')">Order #</th>
+                                        <th class="sortable" data-sort="created_at" onclick="sortTable('created_at')">Date</th>
+                                        <th class="sortable" data-sort="created_at" onclick="sortTable('created_at')">Month</th>
+                                        <th class="sortable" data-sort="finished_product_name" onclick="sortTable('finished_product_name')">Product</th>
+                                        <th class="sortable" data-sort="company_name" onclick="sortTable('company_name')">Company</th>
+                                        <th class="sortable" data-sort="planned_qty" onclick="sortTable('planned_qty')">Qty</th>
+                                        <th class="sortable" data-sort="priority" onclick="sortTable('priority')">Priority</th>
+                                        <th class="sortable" data-sort="estimated_cost" onclick="sortTable('estimated_cost')">Est. Cost</th>
+                                        <th class="sortable" data-sort="status" onclick="sortTable('status')">Status</th>
+                                        <th>Material</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="orderTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-industry"></i><h3>No Orders Found</h3><p>Create a manufacturing order to start production</p>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /mfgContentOrders -->
+
+            <!-- Procurement Needed tab content -->
+            <div class="mfg-tab-content" id="mfgContentShortages">
+                <div style="background:white;border-radius:10px;padding:14px 20px;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;">
+                    <div style="display:flex;flex-direction:column;gap:4px;min-width:180px;">
+                        <label style="font-size:12px;font-weight:600;color:#6b7280;">Company</label>
+                        <select id="shortageCompanyFilter" onchange="loadMfgShortages()" style="padding:8px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;">
+                            <option value="">All Companies</option>
+                        </select>
+                    </div>
+                    <button onclick="loadMfgShortages()" style="padding:8px 16px;background:#6d28d9;color:white;border:none;border-radius:6px;font-weight:600;font-size:14px;cursor:pointer;">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                    <a href="/staff/inventory/procurement" style="padding:8px 16px;background:#dbeafe;color:#2563eb;border:none;border-radius:6px;font-weight:600;font-size:14px;cursor:pointer;text-decoration:none;">
+                        <i class="fas fa-external-link-alt me-1"></i>Full Procurement Page
+                    </a>
+                </div>
+
+                <div id="mfgShortageLoading" class="loading-spinner"><div class="spinner"></div></div>
+
+                <div id="mfgShortageTable" style="display:none;">
+                    <div style="background:white;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.1);overflow:hidden;">
+                        <div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+                            <span style="font-weight:600;color:#1f2937;font-size:15px;"><i class="fas fa-exclamation-triangle me-2" style="color:#d97706;"></i>Components with Shortage — Active Orders</span>
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <span class="text-muted" id="mfgShortageCount" style="font-size:13px;"></span>
+                                <button class="btn-proc-create" onclick="createProcurementFromAllShortages()"><i class="fas fa-shopping-cart me-1"></i>Create Procurement Request</button>
+                            </div>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="data-table" style="width:100%;border-collapse:collapse;">
+                                <thead>
+                                    <tr>
+                                        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb;"><input type="checkbox" id="selectAllShortages" onchange="toggleAllShortages(this)"></th>
+                                        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Code</th>
+                                        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Component</th>
+                                        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb;text-align:right;">Required</th>
+                                        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb;text-align:right;">Available</th>
+                                        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb;text-align:right;">Shortage</th>
+                                        <th style="padding:12px 16px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb;">Manufacturing Orders</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mfgShortageBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="mfgShortageEmpty" class="empty-state" style="display:none;">
+                    <i class="fas fa-check-circle" style="color:#10b981;"></i>
+                    <h3>No Material Shortages</h3>
+                    <p>All active manufacturing orders have sufficient stock</p>
+                </div>
+            </div><!-- /mfgContentShortages -->
+        </div><!-- /content-area -->
+    </div><!-- /main-content -->
+
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-plus-circle me-2"></i>New Manufacturing Order</h3><button class="modal-close" onclick="closeModal('createModal')">&times;</button></div>
+            <div class="modal-body">
+                <form id="createForm" onsubmit="return false;">
+                    <div class="form-row">
+                        <div class="form-group"><label>Company *</label><select id="formCompany" required onchange="loadBOMs()"></select></div>
+                        <div class="form-group"><label>BOM *</label><select id="formBOM" required onchange="checkStock()"></select></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Quantity *</label><input type="number" id="formQty" required min="1" step="0.01" value="1" onchange="checkStock()"></div>
+                        <div class="form-group"><label>Priority</label><select id="formPriority"><option value="NORMAL">Normal</option><option value="LOW">Low</option><option value="HIGH">High</option><option value="URGENT">Urgent</option></select></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Planned Start</label><input type="date" id="formStartDate"></div>
+                        <div class="form-group"><label>Planned End</label><input type="date" id="formEndDate"></div>
+                    </div>
+                    <div class="form-group"><label>Notes</label><textarea id="formNotes" rows="2" placeholder="Additional notes"></textarea></div>
+                    <div id="stockCheckResult" class="stock-check" style="display:none;"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" id="btnCreateOrder" onclick="createOrder()"><i class="fas fa-save me-1"></i>Create Order</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-eye me-2"></i>Order Details</h3><button class="modal-close" onclick="closeModal('viewModal')">&times;</button></div>
+            <div class="modal-body" id="viewModalContent"></div>
+            <div class="modal-footer" id="viewModalFooter">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('viewModal')">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="completeModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-check-circle me-2"></i>Complete Order</h3><button class="modal-close" onclick="closeModal('completeModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>Actual Quantity Produced *</label><input type="number" id="completeActualQty" min="0" step="0.01" required></div>
+                <div class="form-group"><label>Rejected Quantity</label><input type="number" id="completeRejectedQty" min="0" step="0.01" value="0"></div>
+                <div class="form-group"><label>Remarks</label><textarea id="completeRemarks" rows="2"></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('completeModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="submitComplete()"><i class="fas fa-check me-1"></i>Complete</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="materialStatusModal">
+        <div class="modal-content material-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-boxes me-2"></i>Material Status - <span id="materialStatusOrderNumber"></span></h3>
+                <button class="modal-close" onclick="closeModal('materialStatusModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="materialStatusLoading" class="loading-spinner"><div class="spinner"></div></div>
+                <div id="materialStatusContent" style="display: none;">
+                    <div class="material-summary">
+                        <div class="material-summary-item ready">
+                            <div class="value" id="readyComponentsCount">0</div>
+                            <div class="label">Ready Components</div>
+                        </div>
+                        <div class="material-summary-item partial">
+                            <div class="value" id="shortageComponentsCount">0</div>
+                            <div class="label">Shortage Components</div>
+                        </div>
+                        <div class="material-summary-item shortage">
+                            <div class="value" id="canManufactureStatus">-</div>
+                            <div class="label">Can Manufacture</div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table material-table">
+                            <thead>
+                                <tr>
+                                    <th>Component</th>
+                                    <th>Code</th>
+                                    <th style="text-align: right;">Required</th>
+                                    <th style="text-align: right;">Available</th>
+                                    <th style="text-align: right;">Shortage</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="materialStatusTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div style="display: flex; align-items: center; margin-top: 12px;">
+                        <span class="last-checked" id="lastMaterialCheck"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-refresh" onclick="refreshMaterialStatus()" id="btnRefreshMaterial">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('materialStatusModal')">Close</button>
+                <button type="button" class="btn-create-procurement" id="btnCreateProcurement" onclick="createProcurementFromShortage()" style="display: none;">
+                    <i class="fas fa-shopping-cart me-1"></i>Create Procurement Request
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-edit me-2"></i>Edit Order</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+            <div class="modal-body">
+                <form id="editForm" onsubmit="return false;">
+                    <input type="hidden" id="editOrderId">
+                    <div class="form-row">
+                        <div class="form-group"><label>Company</label><input type="text" id="editFormCompanyDisplay" readonly disabled style="background: #f3f4f6;"></div>
+                        <div class="form-group"><label>BOM / Product</label><input type="text" id="editFormBOMDisplay" readonly disabled style="background: #f3f4f6;"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Quantity *</label><input type="number" id="editFormQty" min="0.01" step="0.01" required><span class="error-msg" id="editQtyError">Quantity must be greater than 0</span></div>
+                        <div class="form-group"><label>Priority</label><select id="editFormPriority"><option value="NORMAL">Normal</option><option value="LOW">Low</option><option value="HIGH">High</option><option value="URGENT">Urgent</option></select></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Planned Start</label><input type="date" id="editFormStartDate"></div>
+                        <div class="form-group"><label>Planned End</label><input type="date" id="editFormEndDate"></div>
+                    </div>
+                    <div class="form-group"><label>Notes</label><textarea id="editFormNotes" rows="2" placeholder="Additional notes"></textarea></div>
+                    
+                    <div style="border-top: 1px solid #e5e7eb; margin-top: 20px; padding-top: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h5 style="margin: 0;"><i class="fas fa-cubes me-2"></i>Materials</h5>
+                            <button type="button" class="btn-add-component" id="btnAddMaterial" onclick="openAddMaterialModal()" style="background: #e5e7eb; color: #374151; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;"><i class="fas fa-plus me-1"></i>Add Extra Material</button>
+                        </div>
+                        <div id="editMaterialsContainer">
+                            <div class="loading-spinner" id="editMaterialsLoading"><div class="spinner" style="width: 24px; height: 24px;"></div></div>
+                        </div>
+                        <div id="editMaterialsInfo" class="text-muted" style="font-size: 12px; margin-top: 8px;"></div>
+                    </div>
+                    
+                    <div class="alert alert-info" style="font-size: 12px; padding: 10px; margin-top: 16px; border-radius: 6px; background: #dbeafe; border: 1px solid #3b82f6;">
+                        <i class="fas fa-info-circle me-1"></i>Company and BOM cannot be changed. You can add extra materials beyond the original BOM.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="updateOrder()"><i class="fas fa-save me-1"></i>Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="materialModal" style="z-index: 1100;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="materialModalTitle"><i class="fas fa-cube me-2"></i>Add Extra Material</h3>
+                <button class="modal-close" onclick="closeModal('materialModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="materialForm" onsubmit="return false;">
+                    <input type="hidden" id="matFormLineId">
+                    <input type="hidden" id="matFormMode" value="add">
+                    <div class="form-group">
+                        <label>Component *</label>
+                        <select id="matFormItem" required></select>
+                        <span class="error-msg" id="matItemError">Select a component</span>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Planned Qty *</label>
+                            <input type="number" id="matFormQty" min="0.01" step="0.01" value="1" required>
+                            <span class="error-msg" id="matQtyError">Quantity must be greater than 0</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <select id="matFormUnit">
+                                <option value="PCS">Pieces</option>
+                                <option value="KG">Kilograms</option>
+                                <option value="SET">Sets</option>
+                                <option value="UNIT">Units</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="matFormNotes" rows="2" placeholder="Reason for adding this extra material..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('materialModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="saveMaterial()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="removeMaterialModal" style="z-index: 1100;">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-trash-alt me-2" style="color: #dc2626;"></i>Remove Extra Material</h3>
+                <button class="modal-close" onclick="closeModal('removeMaterialModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="removeMatLineId">
+                <p>Are you sure you want to remove this extra material?</p>
+                <div class="alert" style="background: #fef3c7; border: 1px solid #f59e0b; padding: 10px; border-radius: 6px; font-size: 12px;">
+                    <strong>Material:</strong> <span id="removeMaterialName"></span>
+                </div>
+                <div class="form-group" style="margin-top: 12px;">
+                    <label style="font-size: 13px; font-weight: 600;">Reason for Removal</label>
+                    <textarea id="removeMatReason" rows="2" placeholder="Optional reason for removal..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 6px;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('removeMaterialModal')">Cancel</button>
+                <button type="button" style="background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;" onclick="confirmRemoveMaterial()"><i class="fas fa-trash-alt me-1"></i>Remove</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let companies = [];
+        let boms = [];
+        let currentOrderId = null;
+        let currentOrderStatus = null;
+        let allOrders = [];
+        let currentSortKey = 'order_number';
+        let currentSortDir = 'asc';
+        let currentOrderData = null;
+        let editOrderCompanyId = null;
+        let editOrderStockItems = [];
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Manufacturing Orders', 'fas fa-industry'); if (typeof StaffHeader !== 'undefined') StaffHeader.init(); if (typeof StaffBackButton !== 'undefined') StaffBackButton.init(); updateHeaderUserInfo();
+            await loadDropdowns();
+            await loadOrders();
+        });
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            document.getElementById('headerUserInitials').textContent = (userData.full_name || 'SM').split(' ').map(n => n[0]).join('').substring(0, 2);
+            document.getElementById('headerUserName').textContent = userData.full_name || 'Staff Member';
+            document.getElementById('headerUserEmpId').textContent = userData.emp_code || '-';
+            document.getElementById('headerUserRole').textContent = userData.role_name || 'Employee';
+        }
+        
+        function formatCurrency(amt) { return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2 }).format(amt || 0); }
+        const _MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        function fmtOrderDate(dtStr) {
+            if (!dtStr) return '-';
+            const d = new Date(dtStr);
+            if (isNaN(d)) return '-';
+            return `${String(d.getDate()).padStart(2,'0')} ${_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+        }
+        function fmtOrderMonth(dtStr) {
+            if (!dtStr) return '-';
+            const d = new Date(dtStr);
+            if (isNaN(d)) return '-';
+            return `${_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+        }
+        function populateYearFilter(orders) {
+            const sel = document.getElementById('filterYear');
+            const cur = sel.value;
+            const years = [...new Set(orders.map(o => { if (!o.created_at) return null; const d = new Date(o.created_at); return isNaN(d) ? null : d.getFullYear(); }).filter(Boolean))].sort((a,b)=>b-a);
+            sel.innerHTML = '<option value="">All Years</option>' + years.map(y => `<option value="${y}"${String(y)===cur?'selected':''}>${y}</option>`).join('');
+        }
+        function applyClientFilters() { sortAndRenderOrders(); }
+        
+        async function loadDropdowns() {
+            try {
+                const compRes = await staffFetch(`${API_BASE}/companies`);
+                if (compRes.ok) {
+                    const data = await compRes.json();
+                    companies = data.companies || [];
+                    const filterSel = document.getElementById('filterCompany');
+                    const formSel = document.getElementById('formCompany');
+                    const shortageSel = document.getElementById('shortageCompanyFilter');
+                    formSel.innerHTML = '<option value="">Select Company</option>';
+                    companies.forEach(c => {
+                        filterSel.innerHTML += `<option value="${c.id}">${c.company_name}</option>`;
+                        formSel.innerHTML += `<option value="${c.id}">${c.company_name}</option>`;
+                        shortageSel.innerHTML += `<option value="${c.id}">${c.company_name}</option>`;
+                    });
+                    // Pre-load shortage count badge silently
+                    loadMfgShortagesBadge();
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Failed to load companies', e);
+            }
+        }
+        
+        async function loadBOMs() {
+            const companyId = document.getElementById('formCompany').value;
+            const bomSel = document.getElementById('formBOM');
+            bomSel.innerHTML = '<option value="">Select BOM</option>';
+            if (!companyId) return;
+            
+            try {
+                const res = await staffFetch(`${API_BASE}/bom?company_id=${companyId}&page_size=100`);
+                if (res.ok) {
+                    const data = await res.json();
+                    boms = data.boms || [];
+                    if (boms.length === 0) {
+                        bomSel.innerHTML = '<option value="">No approved BOMs for this company</option>';
+                        return;
+                    }
+                    boms.forEach(b => {
+                        const statusLabel = b.status === 'APPROVED' ? '' : ` [${b.status.replace('_', ' ')}]`;
+                        bomSel.innerHTML += `<option value="${b.id}">${b.bom_name} (${b.finished_product_name})${statusLabel}</option>`;
+                    });
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    bomSel.innerHTML = `<option value="">Error loading BOMs${errData.message ? ': ' + errData.message : ''}</option>`;
+                    console.error('BOM load failed', res.status, errData);
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Failed to load BOMs', e);
+                bomSel.innerHTML = '<option value="">Error loading BOMs — check console</option>';
+            }
+        }
+        
+        async function checkStock() {
+            const bomId = document.getElementById('formBOM').value;
+            const companyId = document.getElementById('formCompany').value;
+            const qty = document.getElementById('formQty').value;
+            const resultDiv = document.getElementById('stockCheckResult');
+            
+            if (!bomId || !companyId || !qty) { resultDiv.style.display = 'none'; return; }
+            
+            try {
+                const res = await staffFetch(`${API_BASE}/manufacturing/check-stock?bom_id=${bomId}&company_id=${companyId}&planned_qty=${qty}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    window._mfgHasShortage = !data.can_manufacture;
+                    let html = data.can_manufacture
+                        ? `<strong><span class="stock-ok"><i class="fas fa-check-circle me-1"></i>Stock Available</span></strong>`
+                        : `<strong><span class="stock-shortage"><i class="fas fa-exclamation-triangle me-1"></i>Stock Shortage</span></strong><div style="font-size:11px;color:#f59e0b;margin-top:6px"><i class="fas fa-info-circle me-1"></i>You can still create a PLANNED order — stock is consumed only when you Start manufacturing.</div>`;
+                    html += '<table class="data-table mt-2" style="font-size:12px;"><thead><tr><th>Component</th><th>Required</th><th>Available</th><th>Status</th></tr></thead><tbody>';
+                    data.components.forEach(c => {
+                        html += `<tr><td>${c.component_name}</td><td>${c.required_qty}</td><td>${c.available_qty}</td><td>${c.is_sufficient ? '<span class="stock-ok">OK</span>' : '<span class="stock-shortage">Short: '+c.shortage_qty+'</span>'}</td></tr>`;
+                    });
+                    html += '</tbody></table>';
+                    resultDiv.innerHTML = html;
+                    resultDiv.style.display = 'block';
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                resultDiv.style.display = 'none';
+            }
+        }
+        
+        async function loadOrders() {
+            const token = localStorage.getItem('staff_token');
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            const companyId = document.getElementById('filterCompany').value;
+            const status = document.getElementById('filterStatus').value;
+            const priority = document.getElementById('filterPriority').value;
+            
+            let url = `${API_BASE}/manufacturing?page=1&page_size=50`;
+            if (companyId) url += `&company_id=${companyId}`;
+            if (status) url += `&status=${status}`;
+            if (priority) url += `&priority=${priority}`;
+            
+            try {
+                const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (response.ok) {
+                    const data = await response.json();
+                    allOrders = data.orders || [];
+                    populateYearFilter(allOrders);
+                    sortAndRenderOrders();
+                    updateSummary(allOrders);
+                } else { showEmptyState(); }
+            } catch (e) { console.error('[DC-MFG] Load error:', e); showEmptyState(); }
+            document.getElementById('loadingState').style.display = 'none';
+        }
+        
+        function sortTable(key) {
+            if (currentSortKey === key) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortKey = key;
+                currentSortDir = 'asc';
+            }
+            document.querySelectorAll('.sortable').forEach(th => th.classList.remove('asc', 'desc'));
+            document.querySelector(`th[data-sort="${key}"]`)?.classList.add(currentSortDir);
+            sortAndRenderOrders();
+        }
+        
+        function sortAndRenderOrders() {
+            const filterMonth = document.getElementById('filterMonth')?.value || '';
+            const filterYear  = document.getElementById('filterYear')?.value  || '';
+            let filtered = allOrders;
+            if (filterMonth || filterYear) {
+                filtered = allOrders.filter(o => {
+                    if (!o.created_at) return false;
+                    const d = new Date(o.created_at);
+                    if (isNaN(d)) return false;
+                    if (filterMonth && (d.getMonth() + 1) !== parseInt(filterMonth)) return false;
+                    if (filterYear  && d.getFullYear()     !== parseInt(filterYear))  return false;
+                    return true;
+                });
+            }
+            const sorted = [...filtered].sort((a, b) => {
+                let aVal = a[currentSortKey] || '';
+                let bVal = b[currentSortKey] || '';
+                if (['estimated_cost', 'planned_qty'].includes(currentSortKey)) {
+                    aVal = parseFloat(aVal) || 0;
+                    bVal = parseFloat(bVal) || 0;
+                } else {
+                    aVal = String(aVal).toLowerCase();
+                    bVal = String(bVal).toLowerCase();
+                }
+                if (aVal < bVal) return currentSortDir === 'asc' ? -1 : 1;
+                if (aVal > bVal) return currentSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+            renderOrders(sorted);
+        }
+        
+        function renderOrders(orders) {
+            const tbody = document.getElementById('orderTable');
+            if (!orders.length) { showEmptyState(); return; }
+            document.getElementById('tableContainer').style.display = 'block';
+            document.getElementById('recordCount').textContent = `${orders.length} orders`;
+            tbody.innerHTML = orders.map(o => `
+                <tr>
+                    <td><code>${o.order_number}</code></td>
+                    <td style="white-space:nowrap;font-size:13px">${fmtOrderDate(o.created_at)}</td>
+                    <td style="white-space:nowrap;font-size:13px">${fmtOrderMonth(o.created_at)}</td>
+                    <td><strong>${o.finished_product_name || '-'}</strong></td>
+                    <td>${o.company_name || '-'}</td>
+                    <td>${o.planned_qty} ${o.unit_of_measure}</td>
+                    <td><span class="priority-${o.priority.toLowerCase()}">${o.priority}</span></td>
+                    <td class="amount">${formatCurrency(o.estimated_cost)}</td>
+                    <td><span class="status-${o.status.toLowerCase()}">${o.status.replace('_', ' ')}</span></td>
+                    <td>
+                        ${['PLANNED', 'APPROVED', 'IN_PROGRESS'].includes(o.status) ? 
+                            `<button class="btn-material-status material-${(o.material_status || 'UNKNOWN').toLowerCase()}" 
+                                onclick="viewMaterialStatus(${o.id}, '${o.order_number}')" title="View Material Status">
+                                <i class="fas fa-${getMaterialIcon(o.material_status)} me-1"></i>${getMaterialStatusLabel(o.material_status)}
+                            </button>` : 
+                            '<span class="text-muted">-</span>'}
+                    </td>
+                    <td>
+                        <button class="btn-action btn-view" onclick="viewOrder(${o.id})" title="View"><i class="fas fa-eye"></i></button>
+                        <button class="btn-action btn-edit" onclick="openEditModal(${o.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                        ${o.status === 'PLANNED' || o.status === 'APPROVED' ? `<button class="btn-action btn-start" onclick="startOrder(${o.id})" title="Start"><i class="fas fa-play"></i></button>` : ''}
+                        ${o.status === 'IN_PROGRESS' ? `<button class="btn-action btn-complete" onclick="openCompleteModal(${o.id}, ${o.planned_qty})" title="Complete"><i class="fas fa-check"></i></button>` : ''}
+                        ${['PLANNED', 'APPROVED', 'IN_PROGRESS'].includes(o.status) ? `<button class="btn-action btn-cancel" onclick="cancelOrder(${o.id})" title="Cancel"><i class="fas fa-times"></i></button>` : ''}
+                        ${['PLANNED', 'CANCELLED'].includes(o.status) ? `<button class="btn-action btn-delete" onclick="deleteOrder(${o.id}, '${o.order_number}')" title="Delete"><i class="fas fa-trash-alt"></i></button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function getMaterialIcon(status) {
+            switch(status) {
+                case 'READY': return 'check-circle';
+                case 'PARTIAL': return 'exclamation-triangle';
+                case 'MISSING': return 'times-circle';
+                default: return 'question-circle';
+            }
+        }
+        
+        function getMaterialStatusLabel(status) {
+            switch(status) {
+                case 'READY': return 'Ready';
+                case 'PARTIAL': return 'Partial';
+                case 'MISSING': return 'Missing';
+                default: return 'Check';
+            }
+        }
+        
+        let currentMaterialOrderId = null;
+        let currentMaterialData = null;
+        
+        async function viewMaterialStatus(orderId, orderNumber) {
+            currentMaterialOrderId = orderId;
+            document.getElementById('materialStatusOrderNumber').textContent = orderNumber;
+            document.getElementById('materialStatusModal').classList.add('active');
+            document.getElementById('materialStatusLoading').style.display = 'flex';
+            document.getElementById('materialStatusContent').style.display = 'none';
+            document.getElementById('btnCreateProcurement').style.display = 'none';
+            
+            // DC Protocol: Get company_id from order for mandatory segregation
+            const order = allOrders.find(o => o.id === orderId);
+            const companyId = order ? order.company_id : null;
+            if (!companyId) {
+                alert('DC Protocol Error: Company ID not found for this order');
+                closeModal('materialStatusModal');
+                return;
+            }
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch(`${API_BASE}/manufacturing/${orderId}/material-status?company_id=${companyId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentMaterialData = data;
+                    renderMaterialStatus(data);
+                } else {
+                    const errData = await response.json();
+                    alert(errData.message || errData.detail || 'Failed to load material status');
+                    closeModal('materialStatusModal');
+                }
+            } catch (e) {
+                console.error('[DC-MFG] Material status error:', e);
+                alert('Failed to load material status');
+                closeModal('materialStatusModal');
+            }
+        }
+        
+        function renderMaterialStatus(data) {
+            document.getElementById('materialStatusLoading').style.display = 'none';
+            document.getElementById('materialStatusContent').style.display = 'block';
+            
+            document.getElementById('readyComponentsCount').textContent = data.ready_components || 0;
+            document.getElementById('shortageComponentsCount').textContent = data.shortage_components || 0;
+            document.getElementById('canManufactureStatus').textContent = data.can_manufacture ? 'Yes' : 'No';
+            
+            const tbody = document.getElementById('materialStatusTableBody');
+            tbody.innerHTML = (data.components || []).map(c => `
+                <tr>
+                    <td><strong>${c.component_name || '-'}</strong></td>
+                    <td><code>${c.component_code || '-'}</code></td>
+                    <td style="text-align: right;">${formatNumber(c.required_qty)}</td>
+                    <td style="text-align: right;">${formatNumber(c.available_qty)}</td>
+                    <td style="text-align: right;" class="shortage-cell ${c.shortage_qty > 0 ? 'status-short' : ''}">${formatNumber(c.shortage_qty)}</td>
+                    <td>${c.is_sufficient ? '<span class="status-ok"><i class="fas fa-check-circle me-1"></i>OK</span>' : '<span class="status-short"><i class="fas fa-exclamation-triangle me-1"></i>Short</span>'}</td>
+                </tr>
+            `).join('');
+            
+            if (data.last_checked_at) {
+                const lastChecked = new Date(data.last_checked_at);
+                document.getElementById('lastMaterialCheck').textContent = `Last checked: ${lastChecked.toLocaleString('en-IN')}`;
+            } else {
+                document.getElementById('lastMaterialCheck').textContent = '';
+            }
+            
+            if (data.shortage_components > 0) {
+                document.getElementById('btnCreateProcurement').style.display = 'inline-block';
+            } else {
+                document.getElementById('btnCreateProcurement').style.display = 'none';
+            }
+        }
+        
+        function formatNumber(val) {
+            if (val === null || val === undefined) return '0';
+            const num = parseFloat(val);
+            if (isNaN(num)) return '0';
+            return num.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        }
+        
+        async function refreshMaterialStatus() {
+            if (!currentMaterialOrderId) return;
+            
+            // DC Protocol: Get company_id from order for mandatory segregation
+            const order = allOrders.find(o => o.id === currentMaterialOrderId);
+            const companyId = order ? order.company_id : null;
+            if (!companyId) {
+                alert('DC Protocol Error: Company ID not found for this order');
+                return;
+            }
+            
+            const btn = document.getElementById('btnRefreshMaterial');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch(`${API_BASE}/manufacturing/${currentMaterialOrderId}/material-status/refresh?company_id=${companyId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentMaterialData = data;
+                    renderMaterialStatus(data);
+                    loadOrders();
+                } else {
+                    const errData = await response.json();
+                    alert(errData.message || errData.detail || 'Failed to refresh');
+                }
+            } catch (e) {
+                console.error('[DC-MFG] Refresh error:', e);
+                alert('Failed to refresh material status');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Refresh';
+            }
+        }
+        
+        async function createProcurementFromShortage() {
+            if (!currentMaterialData || !currentMaterialData.components) return;
+            
+            const shortages = currentMaterialData.components.filter(c => !c.is_sufficient);
+            if (shortages.length === 0) {
+                alert('No shortages to procure');
+                return;
+            }
+            
+            const order = allOrders.find(o => o.id === currentMaterialOrderId);
+            if (!order) {
+                alert('Order not found');
+                return;
+            }
+            
+            if (!confirm(`Create procurement request for ${shortages.length} component(s) with shortage?`)) return;
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const lineItems = shortages.map(c => ({
+                    component_id: c.component_id,
+                    required_qty: c.required_qty,
+                    available_qty: c.available_qty,
+                    shortage_qty: c.shortage_qty,
+                    unit_of_measure: 'PCS',
+                    source_order_ids: [{ type: 'MANUFACTURING', order_id: currentMaterialOrderId, order_number: order.order_number }]
+                }));
+                
+                const response = await fetch(`${API_BASE}/procurement/requirements`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        company_id: order.company_id,
+                        source_type: 'MANUFACTURING',
+                        priority: order.priority || 'NORMAL',
+                        notes: `Procurement for Manufacturing Order ${order.order_number}`,
+                        line_items: lineItems
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(`Procurement request ${data.requirement?.requirement_number || ''} created successfully!`);
+                    closeModal('materialStatusModal');
+                } else {
+                    const errData = await response.json();
+                    alert(errData.message || errData.detail || 'Failed to create procurement request');
+                }
+            } catch (e) {
+                console.error('[DC-MFG] Procurement error:', e);
+                alert('Failed to create procurement request');
+            }
+        }
+        
+        function updateSummary(orders) {
+            document.getElementById('totalOrders').textContent = orders.length;
+            document.getElementById('inProgressOrders').textContent = orders.filter(o => o.status === 'IN_PROGRESS').length;
+            document.getElementById('completedOrders').textContent = orders.filter(o => o.status === 'COMPLETED' || o.status === 'PARTIALLY_COMPLETED').length;
+            document.getElementById('plannedOrders').textContent = orders.filter(o => o.status === 'PLANNED' || o.status === 'APPROVED').length;
+        }
+
+        // ── Silent badge preload (runs on page init) ──────────────────────────
+        async function loadMfgShortagesBadge() {
+            try {
+                const token = localStorage.getItem('staff_token');
+                const res = await fetch(`${API_BASE}/procurement/aggregated-shortages`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const count = (data.shortages || []).length;
+                const chip = document.getElementById('mfgShortageChip');
+                if (count > 0) { chip.textContent = count; chip.style.display = 'inline-block'; }
+            } catch(e) { /* silent */ }
+        }
+
+        // ── Manufacturing Page Tab Switching ──────────────────────────────────
+        function switchMfgTab(tab) {
+            document.getElementById('mfgTabOrders').classList.toggle('active', tab === 'orders');
+            document.getElementById('mfgTabShortages').classList.toggle('active', tab === 'shortages');
+            document.getElementById('mfgContentOrders').classList.toggle('active', tab === 'orders');
+            document.getElementById('mfgContentShortages').classList.toggle('active', tab === 'shortages');
+            if (tab === 'shortages') loadMfgShortages();
+        }
+
+        // ── Manufacturing Shortage Tab ────────────────────────────────────────
+        let mfgShortageData = [];
+        let selectedShortageIdx = [];
+
+        async function loadMfgShortages() {
+            const token = localStorage.getItem('staff_token');
+            const companyId = document.getElementById('shortageCompanyFilter').value;
+            document.getElementById('mfgShortageLoading').style.display = 'flex';
+            document.getElementById('mfgShortageTable').style.display = 'none';
+            document.getElementById('mfgShortageEmpty').style.display = 'none';
+
+            let url = `${API_BASE}/procurement/aggregated-shortages`;
+            if (companyId) url += `?company_id=${companyId}`;
+
+            try {
+                const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                mfgShortageData = data.shortages || [];
+                renderMfgShortages(mfgShortageData);
+
+                // update badge chip on the tab
+                const chip = document.getElementById('mfgShortageChip');
+                if (mfgShortageData.length > 0) {
+                    chip.textContent = mfgShortageData.length;
+                    chip.style.display = 'inline-block';
+                } else {
+                    chip.style.display = 'none';
+                }
+            } catch(e) {
+                console.error('[DC-MFG-SHORTAGE]', e);
+                document.getElementById('mfgShortageEmpty').style.display = 'block';
+            }
+            document.getElementById('mfgShortageLoading').style.display = 'none';
+        }
+
+        function renderMfgShortages(shortages) {
+            selectedShortageIdx = [];
+            if (!shortages.length) {
+                document.getElementById('mfgShortageEmpty').style.display = 'block';
+                document.getElementById('mfgShortageTable').style.display = 'none';
+                return;
+            }
+            document.getElementById('mfgShortageTable').style.display = 'block';
+            document.getElementById('mfgShortageCount').textContent = `${shortages.length} component(s) short`;
+
+            const tbody = document.getElementById('mfgShortageBody');
+            tbody.innerHTML = shortages.map((s, idx) => {
+                const orderBadges = (s.source_orders || []).map(o =>
+                    `<span class="shortage-badge">${o.order_number}<span class="shortage-badge-qty"> -${Number(o.shortage_qty).toFixed(0)}</span></span>`
+                ).join('');
+                const shortageColor = s.total_shortage > 10 ? '#dc2626' : '#d97706';
+                return `<tr>
+                    <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;">
+                        <input type="checkbox" data-idx="${idx}" onchange="toggleShortageItem(${idx},this.checked)">
+                    </td>
+                    <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;"><code style="font-size:12px;background:#f3f4f6;padding:2px 6px;border-radius:4px;">${s.component_code}</code></td>
+                    <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;font-weight:600;color:#1f2937;">${s.component_name}</td>
+                    <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:monospace;">${Number(s.total_required).toFixed(2)}</td>
+                    <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:monospace;color:#059669;">${Number(s.available_qty).toFixed(2)}</td>
+                    <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;text-align:right;font-family:monospace;font-weight:700;color:${shortageColor};">${Number(s.total_shortage).toFixed(2)}</td>
+                    <td style="padding:12px 16px;border-bottom:1px solid #f3f4f6;">${orderBadges}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function toggleShortageItem(idx, checked) {
+            if (checked) { if (!selectedShortageIdx.includes(idx)) selectedShortageIdx.push(idx); }
+            else { selectedShortageIdx = selectedShortageIdx.filter(i => i !== idx); }
+        }
+
+        function toggleAllShortages(cb) {
+            document.querySelectorAll('#mfgShortageBody input[type="checkbox"]').forEach((el, idx) => {
+                el.checked = cb.checked;
+                toggleShortageItem(idx, cb.checked);
+            });
+        }
+
+        async function createProcurementFromAllShortages() {
+            const toCreate = selectedShortageIdx.length > 0
+                ? selectedShortageIdx.map(i => mfgShortageData[i])
+                : mfgShortageData;
+
+            if (!toCreate.length) { alert('No shortage items to create procurement for.'); return; }
+
+            // Group by company_id
+            const byCompany = {};
+            toCreate.forEach(s => {
+                if (!byCompany[s.company_id]) byCompany[s.company_id] = [];
+                byCompany[s.company_id].push(s);
+            });
+
+            const companyIds = Object.keys(byCompany);
+            if (!confirm(`Create ${companyIds.length} procurement requirement(s) for ${toCreate.length} component(s) across ${companyIds.length} company/companies?`)) return;
+
+            const token = localStorage.getItem('staff_token');
+            let created = 0;
+            try {
+                for (const companyId of companyIds) {
+                    const items = byCompany[companyId];
+                    const lineItems = items.map(s => ({
+                        component_id: s.component_id,
+                        required_qty: s.total_shortage,
+                        available_qty: s.available_qty,
+                        shortage_qty: s.total_shortage,
+                        unit_of_measure: 'PCS',
+                        source_order_ids: (s.source_orders || []).map(o => ({
+                            type: o.type,
+                            order_id: o.order_id,
+                            order_number: o.order_number
+                        }))
+                    }));
+                    const res = await fetch(`${API_BASE}/procurement/requirements`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            company_id: parseInt(companyId),
+                            source_type: 'MANUFACTURING',
+                            priority: 'NORMAL',
+                            notes: `Aggregated procurement from Manufacturing Shortages tab — ${items.length} component(s)`,
+                            line_items: lineItems
+                        })
+                    });
+                    if (res.ok) created++;
+                }
+                alert(`✅ Created ${created} procurement requirement(s). View them at the full Procurement page.`);
+                selectedShortageIdx = [];
+                loadMfgShortages();
+            } catch(e) {
+                console.error('[DC-MFG-SHORTAGE] Procurement create error:', e);
+                alert('Failed to create procurement requirement. Please try again.');
+            }
+        }
+        
+        function showEmptyState() { document.getElementById('tableContainer').style.display = 'none'; document.getElementById('emptyState').style.display = 'block'; }
+        
+        function openCreateModal() {
+            document.getElementById('createForm').reset();
+            document.getElementById('formBOM').innerHTML = '<option value="">Select BOM</option>';
+            document.getElementById('stockCheckResult').style.display = 'none';
+            document.getElementById('btnCreateOrder').disabled = false;
+            window._mfgHasShortage = false;
+            document.getElementById('createModal').classList.add('active');
+        }
+        
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        
+        async function createOrder() {
+            const token = localStorage.getItem('staff_token');
+            const data = {
+                company_id: parseInt(document.getElementById('formCompany').value),
+                bom_id: parseInt(document.getElementById('formBOM').value),
+                planned_qty: parseFloat(document.getElementById('formQty').value),
+                priority: document.getElementById('formPriority').value,
+                planned_start_date: document.getElementById('formStartDate').value || null,
+                planned_end_date: document.getElementById('formEndDate').value || null,
+                notes: document.getElementById('formNotes').value || null
+            };
+            
+            if (!data.company_id || !data.bom_id || !data.planned_qty) { alert('Fill required fields'); return; }
+            if (window._mfgHasShortage) {
+                const ok = confirm('⚠️ Stock shortage detected for one or more components.\n\nThe order will be created as PLANNED status. You will need to procure the missing stock before starting production.\n\nCreate order anyway?');
+                if (!ok) return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/manufacturing`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) { closeModal('createModal'); loadOrders(); alert('Order created'); }
+                else { const err = await response.json(); alert(err.message || err.detail || 'Failed to create'); }
+            } catch (e) { alert('Failed to create order'); }
+        }
+        
+        async function viewOrder(orderId) {
+            const token = localStorage.getItem('staff_token');
+            currentOrderId = orderId;
+            try {
+                const response = await fetch(`${API_BASE}/manufacturing/${orderId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (response.ok) {
+                    const order = await response.json();
+                    currentOrderStatus = order.status;
+                    let html = `
+                        <div class="mb-3"><strong>Order #:</strong> <code>${order.order_number}</code></div>
+                        <div class="mb-3"><strong>Product:</strong> ${order.finished_product_name || '-'}</div>
+                        <div class="mb-3"><strong>BOM:</strong> ${order.bom_name || '-'}</div>
+                        <div class="mb-3"><strong>Planned Qty:</strong> ${order.planned_qty} ${order.unit_of_measure}</div>
+                        <div class="mb-3"><strong>Actual Qty:</strong> ${order.actual_qty}</div>
+                        <div class="mb-3"><strong>Priority:</strong> <span class="priority-${order.priority.toLowerCase()}">${order.priority}</span></div>
+                        <div class="mb-3"><strong>Est. Cost:</strong> ${formatCurrency(order.estimated_cost)}</div>
+                        <div class="mb-3"><strong>Actual Cost:</strong> ${formatCurrency(order.actual_cost)}</div>
+                        <div class="mb-3"><strong>Status:</strong> <span class="status-${order.status.toLowerCase()}">${order.status}</span></div>
+                    `;
+                    if (order.line_items && order.line_items.length) {
+                        html += '<h5 class="mt-4 mb-3"><i class="fas fa-cubes me-2"></i>Components Consumed</h5>';
+                        html += '<table class="data-table"><thead><tr><th>Component</th><th>Planned</th><th>Consumed</th><th>Status</th></tr></thead><tbody>';
+                        order.line_items.forEach(l => {
+                            html += `<tr><td>${l.component_name || '-'}</td><td>${l.planned_qty}</td><td>${l.actual_qty_consumed}</td><td><span class="status-${l.status.toLowerCase()}">${l.status}</span></td></tr>`;
+                        });
+                        html += '</tbody></table>';
+                    }
+                    document.getElementById('viewModalContent').innerHTML = html;
+                    document.getElementById('viewModal').classList.add('active');
+                }
+            } catch (e) { alert('Failed to load order details'); }
+        }
+        
+        async function startOrder(orderId) {
+            if (!confirm('Start manufacturing? This will consume components from stock.')) return;
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/manufacturing/${orderId}/start`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (response.ok) { loadOrders(); alert('Manufacturing started'); }
+                else { const err = await response.json(); alert(err.message || err.detail || 'Failed to start'); }
+            } catch (e) { alert('Failed to start manufacturing'); }
+        }
+        
+        function openCompleteModal(orderId, plannedQty) {
+            currentOrderId = orderId;
+            document.getElementById('completeActualQty').value = plannedQty;
+            document.getElementById('completeRejectedQty').value = 0;
+            document.getElementById('completeRemarks').value = '';
+            document.getElementById('completeModal').classList.add('active');
+        }
+        
+        async function submitComplete() {
+            const token = localStorage.getItem('staff_token');
+            const data = {
+                actual_qty: parseFloat(document.getElementById('completeActualQty').value),
+                rejected_qty: parseFloat(document.getElementById('completeRejectedQty').value) || 0,
+                remarks: document.getElementById('completeRemarks').value || null
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/manufacturing/${currentOrderId}/complete`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) { closeModal('completeModal'); loadOrders(); alert('Order completed'); }
+                else { const err = await response.json(); alert(err.message || err.detail || 'Failed to complete'); }
+            } catch (e) { alert('Failed to complete order'); }
+        }
+        
+        async function cancelOrder(orderId) {
+            const reason = prompt('Enter cancellation reason:');
+            if (!reason) return;
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/manufacturing/${orderId}/cancel`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reason })
+                });
+                if (response.ok) { loadOrders(); alert('Order cancelled'); }
+                else { const err = await response.json(); alert(err.message || err.detail || 'Failed to cancel'); }
+            } catch (e) { alert('Failed to cancel order'); }
+        }
+
+        async function deleteOrder(orderId, orderNumber) {
+            if (!confirm(`Delete order ${orderNumber}?\n\nThis is permanent and cannot be undone.`)) return;
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/manufacturing/${orderId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    loadOrders();
+                    alert(`Order ${orderNumber} deleted.`);
+                } else {
+                    const err = await response.json();
+                    alert(err.message || err.detail || 'Failed to delete order');
+                }
+            } catch (e) { alert('Failed to delete order'); }
+        }
+        
+        async function openEditModal(orderId) {
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/manufacturing/${orderId}`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (response.ok) {
+                    const order = await response.json();
+                    const editableStatuses = ['PLANNED', 'APPROVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+                    const canEdit = editableStatuses.includes(order.status);
+                    if (!canEdit) {
+                        alert('This order cannot be edited.');
+                        return;
+                    }
+                    
+                    currentOrderData = order;
+                    currentOrderId = order.id;
+                    currentOrderStatus = order.status;
+                    editOrderCompanyId = order.company_id;
+                    
+                    document.getElementById('editOrderId').value = order.id;
+                    document.getElementById('editFormCompanyDisplay').value = order.company_name || '-';
+                    document.getElementById('editFormBOMDisplay').value = `${order.bom_name || '-'} (${order.finished_product_name || '-'})`;
+                    document.getElementById('editFormQty').value = order.planned_qty;
+                    document.getElementById('editFormPriority').value = order.priority;
+                    document.getElementById('editFormStartDate').value = order.planned_start_date ? order.planned_start_date.split('T')[0] : '';
+                    document.getElementById('editFormEndDate').value = order.planned_end_date ? order.planned_end_date.split('T')[0] : '';
+                    document.getElementById('editFormNotes').value = order.notes || '';
+                    
+                    const isInProgress = order.status === 'IN_PROGRESS';
+                    const isApproved = order.status === 'APPROVED';
+                    const isNotesOnly = ['COMPLETED', 'CANCELLED'].includes(order.status);
+                    
+                    document.getElementById('editFormQty').disabled = isInProgress || isNotesOnly;
+                    document.getElementById('editFormPriority').disabled = isInProgress || isNotesOnly;
+                    document.getElementById('editFormStartDate').disabled = isInProgress || isNotesOnly;
+                    document.getElementById('editFormEndDate').disabled = isInProgress || isNotesOnly;
+                    
+                    let statusWarning = document.getElementById('editStatusWarning');
+                    if (!statusWarning) {
+                        statusWarning = document.createElement('div');
+                        statusWarning.id = 'editStatusWarning';
+                        statusWarning.style.cssText = 'padding: 10px; border-radius: 6px; margin-bottom: 16px; font-size: 12px;';
+                        document.getElementById('editForm').insertBefore(statusWarning, document.getElementById('editForm').firstChild);
+                    }
+                    
+                    if (isApproved) {
+                        statusWarning.style.display = 'block';
+                        statusWarning.style.background = '#fef3c7';
+                        statusWarning.style.border = '1px solid #f59e0b';
+                        statusWarning.innerHTML = '<i class="fas fa-exclamation-triangle me-1" style="color: #f59e0b;"></i><strong>Re-approval Required:</strong> Editing this APPROVED order will change its status to PENDING_APPROVAL and require re-approval.';
+                    } else if (isInProgress) {
+                        statusWarning.style.display = 'block';
+                        statusWarning.style.background = '#dbeafe';
+                        statusWarning.style.border = '1px solid #3b82f6';
+                        statusWarning.innerHTML = '<i class="fas fa-info-circle me-1" style="color: #3b82f6;"></i><strong>Production In Progress:</strong> Only additional materials can be added. Core order fields are locked.';
+                    } else if (isNotesOnly) {
+                        statusWarning.style.display = 'block';
+                        statusWarning.style.background = '#f3f4f6';
+                        statusWarning.style.border = '1px solid #9ca3af';
+                        statusWarning.innerHTML = `<i class="fas fa-lock me-1" style="color: #6b7280;"></i><strong>${order.status} Order:</strong> Only the Notes field can be edited. All other fields are locked.`;
+                    } else {
+                        statusWarning.style.display = 'none';
+                    }
+                    
+                    const canAddMaterial = ['PLANNED', 'APPROVED', 'IN_PROGRESS'].includes(order.status);
+                    document.getElementById('btnAddMaterial').style.display = canAddMaterial ? 'inline-block' : 'none';
+                    
+                    document.getElementById('editMaterialsContainer').innerHTML = '<div class="loading-spinner" id="editMaterialsLoading"><div class="spinner" style="width: 24px; height: 24px;"></div></div>';
+                    document.getElementById('editMaterialsInfo').textContent = '';
+                    
+                    clearEditValidation();
+                    document.getElementById('editModal').classList.add('active');
+                    
+                    await loadEditOrderStockItems(order.company_id);
+                    renderEditMaterials(order.line_items);
+                }
+            } catch (e) { 
+                console.error('[DC-MFG] Edit load error:', e);
+                alert('Failed to load order details'); 
+            }
+        }
+        
+        function clearEditValidation() {
+            document.getElementById('editFormQty').classList.remove('validation-error');
+            document.getElementById('editQtyError').style.display = 'none';
+        }
+        
+        function validateEditForm() {
+            let valid = true;
+            clearEditValidation();
+            const qty = parseFloat(document.getElementById('editFormQty').value);
+            if (!qty || qty <= 0) {
+                document.getElementById('editFormQty').classList.add('validation-error');
+                document.getElementById('editQtyError').style.display = 'block';
+                valid = false;
+            }
+            return valid;
+        }
+        
+        async function updateOrder() {
+            if (!validateEditForm()) return;
+            const token = localStorage.getItem('staff_token');
+            const orderId = document.getElementById('editOrderId').value;
+            const data = {
+                planned_qty: parseFloat(document.getElementById('editFormQty').value),
+                priority: document.getElementById('editFormPriority').value,
+                planned_start_date: document.getElementById('editFormStartDate').value || null,
+                planned_end_date: document.getElementById('editFormEndDate').value || null,
+                notes: document.getElementById('editFormNotes').value || null
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/manufacturing/${orderId}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    closeModal('editModal');
+                    loadOrders();
+                    alert('Order updated successfully');
+                } else {
+                    const err = await response.json();
+                    alert(err.message || err.detail || 'Failed to update order');
+                }
+            } catch (e) { alert('Failed to update order'); }
+        }
+        
+        async function loadEditOrderStockItems(companyId) {
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/stock-items?company_id=${companyId}&page_size=100`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    editOrderStockItems = data.stock_items || [];
+                } else if (response.status === 422) {
+                    console.error('[DC-MFG] Validation error loading stock items - using empty list');
+                    editOrderStockItems = [];
+                } else {
+                    console.error('[DC-MFG] Failed to load stock items:', response.status);
+                    editOrderStockItems = [];
+                }
+            } catch (e) {
+                console.error('[DC-MFG] Failed to load stock items', e);
+                editOrderStockItems = [];
+            }
+        }
+        
+        function renderEditMaterials(lineItems) {
+            const container = document.getElementById('editMaterialsContainer');
+            
+            if (!lineItems || lineItems.length === 0) {
+                container.innerHTML = '<p class="text-muted">No materials in this order</p>';
+                return;
+            }
+            
+            const canEdit = ['PLANNED', 'APPROVED', 'IN_PROGRESS'].includes(currentOrderStatus);
+            const canRemove = ['PLANNED', 'APPROVED'].includes(currentOrderStatus);
+            
+            let html = '<table class="data-table" style="font-size: 13px;"><thead><tr><th>Material</th><th>Qty</th><th>Status</th><th>Type</th>';
+            if (canEdit) html += '<th style="width: 80px;">Actions</th>';
+            html += '</tr></thead><tbody>';
+            
+            lineItems.forEach(l => {
+                const isAdditional = l.is_additional;
+                const typeBadge = isAdditional 
+                    ? '<span style="background: #dbeafe; color: #2563eb; padding: 2px 6px; border-radius: 10px; font-size: 10px;">EXTRA</span>'
+                    : '<span style="background: #e5e7eb; color: #374151; padding: 2px 6px; border-radius: 10px; font-size: 10px;">BOM</span>';
+                
+                html += `
+                    <tr>
+                        <td>${l.component_name || '-'} <span style="color: #9ca3af; font-size: 11px;">(${l.component_code || '-'})</span></td>
+                        <td>${l.planned_qty} ${l.unit_of_measure || 'PCS'}</td>
+                        <td><span class="status-${(l.status || 'pending').toLowerCase()}">${l.status || 'PENDING'}</span></td>
+                        <td>${typeBadge}</td>
+                `;
+                
+                if (canEdit) {
+                    html += '<td>';
+                    if (l.status === 'PENDING') {
+                        html += `<button class="btn-action btn-edit" onclick="openEditMaterialModal(${l.id})" title="Edit"><i class="fas fa-edit"></i></button>`;
+                    }
+                    if (canRemove && isAdditional) {
+                        html += `<button class="btn-action" style="background: #fee2e2; color: #dc2626;" onclick="openRemoveMaterialModal(${l.id})" title="Remove"><i class="fas fa-trash-alt"></i></button>`;
+                    }
+                    html += '</td>';
+                }
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+            
+            const bomCount = lineItems.filter(l => !l.is_additional).length;
+            const extraCount = lineItems.filter(l => l.is_additional).length;
+            document.getElementById('editMaterialsInfo').textContent = `${bomCount} BOM materials + ${extraCount} extra materials = ${lineItems.length} total`;
+        }
+        
+        function openAddMaterialModal() {
+            if (!currentOrderData) return;
+            
+            document.getElementById('materialModalTitle').innerHTML = '<i class="fas fa-cube me-2"></i>Add Extra Material';
+            document.getElementById('matFormMode').value = 'add';
+            document.getElementById('matFormLineId').value = '';
+            document.getElementById('matFormQty').value = '1';
+            document.getElementById('matFormUnit').value = 'PCS';
+            document.getElementById('matFormNotes').value = '';
+            
+            const existingIds = (currentOrderData.line_items || []).map(l => l.component_id);
+            const availableItems = editOrderStockItems.filter(s => !existingIds.includes(s.id));
+            
+            const select = document.getElementById('matFormItem');
+            select.innerHTML = '<option value="">-- Select Material --</option>';
+            select.disabled = false;
+            if (availableItems.length === 0) {
+                select.innerHTML = '<option value="">No available materials</option>';
+            } else {
+                availableItems.forEach(s => {
+                    select.innerHTML += `<option value="${s.id}">${s.item_name} (${s.item_code || 'N/A'})</option>`;
+                });
+            }
+            
+            clearMaterialModalErrors();
+            document.getElementById('materialModal').classList.add('active');
+        }
+        
+        function openEditMaterialModal(lineId) {
+            if (!currentOrderData) return;
+            
+            const line = currentOrderData.line_items.find(l => l.id === lineId);
+            if (!line) { alert('Material not found'); return; }
+            
+            document.getElementById('materialModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Material';
+            document.getElementById('matFormMode').value = 'edit';
+            document.getElementById('matFormLineId').value = lineId;
+            document.getElementById('matFormQty').value = line.planned_qty;
+            document.getElementById('matFormUnit').value = line.unit_of_measure || 'PCS';
+            document.getElementById('matFormNotes').value = line.notes || '';
+            
+            const select = document.getElementById('matFormItem');
+            select.innerHTML = `<option value="${line.component_id}">${line.component_name} (${line.component_code || 'N/A'})</option>`;
+            select.disabled = true;
+            
+            clearMaterialModalErrors();
+            document.getElementById('materialModal').classList.add('active');
+        }
+        
+        function openRemoveMaterialModal(lineId) {
+            if (!currentOrderData) return;
+            
+            const line = currentOrderData.line_items.find(l => l.id === lineId);
+            if (!line) { alert('Material not found'); return; }
+            
+            if (!line.is_additional) {
+                alert('Cannot remove BOM-originated materials. Only extra materials can be removed.');
+                return;
+            }
+            
+            document.getElementById('removeMatLineId').value = lineId;
+            document.getElementById('removeMaterialName').textContent = `${line.component_name} (${line.component_code || 'N/A'}) - Qty: ${line.planned_qty}`;
+            document.getElementById('removeMatReason').value = '';
+            document.getElementById('removeMaterialModal').classList.add('active');
+        }
+        
+        function clearMaterialModalErrors() {
+            document.querySelectorAll('#materialForm .validation-error').forEach(el => el.classList.remove('validation-error'));
+            document.querySelectorAll('#materialForm .error-msg').forEach(el => el.style.display = 'none');
+        }
+        
+        function validateMaterialForm() {
+            clearMaterialModalErrors();
+            let isValid = true;
+            const mode = document.getElementById('matFormMode').value;
+            const itemId = document.getElementById('matFormItem').value;
+            const qty = parseFloat(document.getElementById('matFormQty').value);
+            
+            if (mode === 'add' && !itemId) {
+                document.getElementById('matFormItem').classList.add('validation-error');
+                document.getElementById('matItemError').style.display = 'block';
+                isValid = false;
+            }
+            if (!qty || qty <= 0) {
+                document.getElementById('matFormQty').classList.add('validation-error');
+                document.getElementById('matQtyError').style.display = 'block';
+                isValid = false;
+            }
+            return isValid;
+        }
+        
+        async function saveMaterial() {
+            if (!validateMaterialForm()) return;
+            
+            const token = localStorage.getItem('staff_token');
+            const mode = document.getElementById('matFormMode').value;
+            const lineId = document.getElementById('matFormLineId').value;
+            const orderId = currentOrderData.id;
+            
+            const componentId = parseInt(document.getElementById('matFormItem').value);
+            const qty = parseFloat(document.getElementById('matFormQty').value);
+            const uom = document.getElementById('matFormUnit').value;
+            const notes = document.getElementById('matFormNotes').value.trim();
+            
+            try {
+                let response;
+                if (mode === 'add') {
+                    response = await fetch(`${API_BASE}/manufacturing/${orderId}/line-items`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            component_id: componentId,
+                            planned_qty: qty,
+                            unit_of_measure: uom,
+                            notes: notes || null
+                        })
+                    });
+                } else {
+                    response = await fetch(`${API_BASE}/manufacturing/line-items/${lineId}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            planned_qty: qty,
+                            unit_of_measure: uom,
+                            notes: notes || null
+                        })
+                    });
+                }
+                
+                if (response.ok) {
+                    closeModal('materialModal');
+                    await refreshOrderData(orderId);
+                    alert(`Material ${mode === 'add' ? 'added' : 'updated'} successfully`);
+                } else {
+                    const err = await response.json();
+                    alert(err.detail || `Failed to ${mode} material`);
+                }
+            } catch (e) {
+                console.error('[DC-MFG] Material save error:', e);
+                alert(`Failed to ${mode} material`);
+            }
+        }
+        
+        async function confirmRemoveMaterial() {
+            const token = localStorage.getItem('staff_token');
+            const lineId = document.getElementById('removeMatLineId').value;
+            const reason = document.getElementById('removeMatReason').value.trim();
+            const orderId = currentOrderData.id;
+            
+            try {
+                let url = `${API_BASE}/manufacturing/line-items/${lineId}`;
+                if (reason) url += `?reason=${encodeURIComponent(reason)}`;
+                
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    closeModal('removeMaterialModal');
+                    await refreshOrderData(orderId);
+                    alert('Material removed successfully');
+                } else {
+                    const err = await response.json();
+                    alert(err.message || err.detail || 'Failed to remove material');
+                }
+            } catch (e) {
+                console.error('[DC-MFG] Material remove error:', e);
+                alert('Failed to remove material');
+            }
+        }
+        
+        async function refreshOrderData(orderId) {
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/manufacturing/${orderId}`, { 
+                    headers: { 'Authorization': `Bearer ${token}` } 
+                });
+                if (response.ok) {
+                    currentOrderData = await response.json();
+                    renderEditMaterials(currentOrderData.line_items);
+                }
+            } catch (e) {
+                console.error('[DC-MFG] Failed to refresh order data', e);
+            }
+        }
+    </script>
+</body>
+</html>

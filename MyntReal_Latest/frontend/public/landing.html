@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal - Redefining Future</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --green: #2ECC71;
+            --green-mid: #27ae60;
+            --green-dark: #1e8c4a;
+            --green-deeper: #166638;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255,255,255,0.82);
+            --text-muted: rgba(255,255,255,0.55);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(160deg, #2ECC71 0%, #27ae60 55%, #1e8c4a 100%);
+            overflow-x: hidden;
+            color: var(--text-primary);
+        }
+
+        /* ─── Dot-grid texture overlay ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(0,0,0,0.10) 1px, transparent 1px);
+            background-size: 26px 26px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 320px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ─── Main container ─── */
+        .main-container { position: relative; z-index: 1; }
+
+        /* ─── NAVBAR ─── */
+        .top-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 48px;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            background: rgba(30,140,74,0.55);
+            backdrop-filter: blur(14px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .nav-brand img {
+            height: 36px;
+            filter: brightness(1.05);
+        }
+        .nav-brand-divider {
+            width: 1px;
+            height: 28px;
+            background: rgba(255,255,255,0.35);
+            margin: 0 6px;
+            flex-shrink: 0;
+        }
+        .nav-vgk-logo {
+            height: 32px;
+            filter: brightness(1.05);
+            object-fit: contain;
+        }
+        .nav-brand-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1;
+        }
+        .nav-brand-name {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 1.5px;
+        }
+        .nav-brand-tag {
+            font-size: 0.55rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.75);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .nav-login-btn {
+            background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+            border: 1.5px solid rgba(147,197,253,0.5);
+            color: #fff;
+            padding: 10px 28px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 18px rgba(29,78,216,0.55);
+            transition: all 0.25s ease;
+            letter-spacing: 0.3px;
+        }
+        .nav-login-btn:hover {
+            background: linear-gradient(135deg, #1d4ed8, #3730a3);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(29,78,216,0.7);
+        }
+        .nav-home-btn {
+            background: transparent;
+            border: 1.5px solid rgba(255,255,255,0.5);
+            color: #fff;
+            padding: 10px 22px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            letter-spacing: 0.3px;
+        }
+        .nav-home-btn:hover {
+            background: rgba(255,255,255,0.15);
+            border-color: rgba(255,255,255,0.8);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* ─── HERO ─── */
+        .hero-section {
+            text-align: center;
+            padding: 36px 24px 28px;
+        }
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg,#1e3a8a,#1d4ed8);
+            border: 1.5px solid rgba(147,197,253,0.5);
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            padding: 6px 18px;
+            border-radius: 50px;
+            margin-bottom: 16px;
+            box-shadow: 0 3px 14px rgba(29,78,216,0.5);
+        }
+        .hero-headline {
+            font-size: clamp(1.8rem, 4vw, 2.9rem);
+            font-weight: 800;
+            line-height: 1.2;
+            color: #fff;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+        .hero-headline .accent {
+            background: linear-gradient(135deg, #fff 30%, #d1fae5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hero-sub {
+            font-size: 0.92rem;
+            color: rgba(255,255,255,0.82);
+            max-width: 480px;
+            margin: 0 auto 22px;
+            line-height: 1.65;
+            font-weight: 400;
+        }
+        .hero-badges {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 0;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 16px;
+            border-radius: 50px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            border: 1.5px solid rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+        .hero-badge.green { border-color: rgba(255,255,255,0.55); }
+        .hero-badge.blue  { border-color: rgba(255,255,255,0.45); }
+        .hero-badge.amber { border-color: rgba(255,255,255,0.45); }
+
+        /* ─── STATS BAR ─── */
+        .stats-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            padding: 16px 48px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.02);
+            flex-wrap: wrap;
+        }
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 32px;
+            border-right: 1px solid rgba(255,255,255,0.07);
+        }
+        .stat-item:last-child { border-right: none; }
+        .stat-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        .stat-text { display: flex; flex-direction: column; line-height: 1.2; }
+        .stat-value { font-size: 1rem; font-weight: 800; color: #fff; }
+        .stat-label { font-size: 0.58rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+
+        /* ─── HERO SEPARATOR ─── */
+        .hero-separator {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            margin: 0 48px;
+        }
+
+        /* ─── MAIN BODY ─── */
+        .main-body {
+            display: grid;
+            grid-template-columns: 1fr 390px;
+            gap: 32px;
+            padding: 36px 48px 56px;
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        /* ─── LEFT: OFFERINGS ─── */
+        .offerings-col {}
+        .col-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .col-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+            border: 1.5px solid rgba(147,197,253,0.4);
+            color: #fff;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            padding: 5px 14px;
+            border-radius: 50px;
+            box-shadow: 0 3px 12px rgba(29,78,216,0.4);
+        }
+        .col-label::before { display: none; }
+
+        .offering-list { list-style: none; padding: 0; }
+
+        .offering-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 15px 18px;
+            margin-bottom: 10px;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            background: rgba(255,255,255,0.18);
+            border: 1.5px solid rgba(255,255,255,0.55);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+        }
+        .offering-item:hover {
+            background: rgba(255,255,255,0.28);
+            transform: translateX(4px);
+            border-color: rgba(255,255,255,0.8);
+            box-shadow: 0 6px 22px rgba(0,0,0,0.18);
+        }
+        .offering-item.has-link {
+            background: rgba(255,255,255,0.18);
+            border: 1.5px solid rgba(255,255,255,0.55);
+        }
+        .offering-item.has-link:hover {
+            background: rgba(255,255,255,0.28);
+            box-shadow: 0 6px 22px rgba(0,0,0,0.18);
+        }
+        .offering-item.coming-soon {
+            background: rgba(255,255,255,0.10);
+            border: 1.5px solid rgba(255,255,255,0.35);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            opacity: 0.85;
+        }
+        .offering-item.coming-soon:hover { opacity: 1; background: rgba(255,255,255,0.18); }
+
+        .offering-icon {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            border-radius: 11px;
+            flex-shrink: 0;
+        }
+        .offering-icon img { max-width: 100%; max-height: 100%; }
+
+        .offering-text {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #fff;
+        }
+        .offering-sub {
+            font-size: 0.61rem;
+            color: rgba(255,255,255,0.6);
+            margin-top: 2px;
+            font-weight: 400;
+            letter-spacing: 0.01em;
+        }
+        .offering-badge { margin-left: auto; font-size: 0.9rem; color: rgba(255,255,255,0.6); }
+
+        /* ─── RIGHT: ANNOUNCEMENTS ─── */
+        .announcements-col {}
+        .announce-card {
+            background: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 16px;
+            overflow: hidden;
+            position: sticky;
+            top: 72px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+        }
+        .announce-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 18px 13px;
+            border-bottom: 1px solid #f3f4f6;
+            background: #fff9f5;
+        }
+        .announce-icon {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #f97316, #f59e0b);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .announce-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #374151;
+        }
+        .announce-live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22c55e;
+            margin-left: auto;
+            box-shadow: 0 0 6px rgba(34,197,94,0.6);
+            animation: pulseDot 2s infinite;
+        }
+        @keyframes pulseDot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.7); }
+        }
+        .announce-body {
+            padding: 14px;
+            background: #f9fafb;
+        }
+
+        /* Announcement carousel content */
+        #landingCarouselContent {
+            background: #ffffff !important;
+            border-radius: 10px !important;
+            border-left: 3px solid #f97316 !important;
+            border: 1px solid #f3f4f6 !important;
+            min-height: 200px;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.06) !important;
+        }
+
+        /* ─── FOOTER ─── */
+        .page-footer {
+            padding: 28px 48px 24px;
+            border-top: 1px solid rgba(255,255,255,0.15);
+            background: rgba(0,0,0,0.14);
+        }
+        .footer-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .footer-brand img { height: 36px; }
+        .footer-brand-text { display: flex; flex-direction: column; line-height: 1.2; }
+        .footer-brand-name { font-size: 1rem; font-weight: 800; color: #fff; letter-spacing: 1px; }
+        .footer-brand-tag { font-size: 0.62rem; color: rgba(255,255,255,0.55); }
+        .footer-links {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .footer-link {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.75);
+            text-decoration: none;
+            padding: 5px 12px;
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.08);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .footer-link:hover { background: rgba(255,255,255,0.16); color: #fff; }
+        .footer-bottom {
+            max-width: 1280px;
+            margin: 16px auto 0;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .footer-copy { font-size: 0.63rem; color: rgba(255,255,255,0.45); }
+        .footer-badges { display: flex; gap: 6px; }
+        .footer-badge {
+            font-size: 0.55rem;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 20px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        /* ─── LOGIN SELECTION PAGE ─── */
+        .login-selection-page {
+            display: none;
+            min-height: 100vh;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: calc(72px + 40px) 24px 60px;
+            position: relative;
+        }
+        .login-selection-page.active { display: flex; }
+        .main-landing.hidden { display: none; }
+
+        .back-btn {
+            position: absolute;
+            top: calc(72px + 16px);
+            left: 40px;
+            background: rgba(0,0,0,0.28);
+            border: 1.5px solid rgba(255,255,255,0.5);
+            padding: 9px 20px;
+            border-radius: 50px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fff;
+            transition: all 0.25s ease;
+        }
+        .back-btn:hover { background: rgba(0,0,0,0.42); transform: translateX(-4px); }
+        .home-btn {
+            position: absolute;
+            top: calc(72px + 16px);
+            right: 40px;
+            background: rgba(0,0,0,0.28);
+            border: 1.5px solid rgba(255,255,255,0.5);
+            padding: 9px 20px;
+            border-radius: 50px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #fff;
+            text-decoration: none;
+            transition: all 0.25s ease;
+        }
+        .home-btn:hover { background: rgba(0,0,0,0.42); color: #fff; transform: translateX(4px); }
+
+        .welcome-title {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        .welcome-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+            border: none;
+            border-radius: 50px;
+            padding: 7px 20px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            color: #fff;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+            box-shadow: 0 4px 14px rgba(30,58,138,0.45);
+        }
+        .welcome-title h2 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: -0.5px;
+            line-height: 1.15;
+            margin: 0;
+        }
+        .welcome-title h2 span { color: #d1fae5; }
+        .welcome-subtitle {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.7);
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        .login-cards-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 18px;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        .login-card {
+            border-radius: 22px;
+            padding: 36px 24px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            transition: all 0.28s cubic-bezier(0.34,1.56,0.64,1);
+            cursor: pointer;
+            width: 230px;
+            position: relative;
+            overflow: hidden;
+            border: 1.5px solid rgba(255,255,255,0.12);
+        }
+        .login-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 60%);
+            pointer-events: none;
+        }
+        .login-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 24px 48px rgba(0,0,0,0.35);
+            border-color: rgba(255,255,255,0.25);
+        }
+        .login-card.blue   { background: linear-gradient(160deg, #1e3a8a 0%, #1d4ed8 100%); }
+        .login-card.indigo { background: linear-gradient(160deg, #3730a3 0%, #4f46e5 100%); }
+        .login-card.vgk    { background: linear-gradient(160deg, #3b0764 0%, #7c3aed 100%); border-color: rgba(196,181,253,0.25); }
+        .login-card.vgk .login-card-icon-wrap { background: rgba(255,255,255,0.15); box-shadow: 0 4px 16px rgba(124,58,237,0.5); }
+        .login-card.vgk .login-card-btn { background: linear-gradient(135deg, #f59e0b, #d97706); box-shadow: 0 4px 16px rgba(245,158,11,0.4); }
+        .login-card.green  { background: linear-gradient(160deg, #064e3b 0%, #059669 100%); border-color: rgba(110,231,183,0.25); }
+        .login-card.green .login-card-icon-wrap { background: rgba(255,255,255,0.15); box-shadow: 0 4px 16px rgba(5,150,105,0.4); }
+        .login-card.vgk .loyalty-tag {
+            display: inline-block;
+            background: rgba(251,191,36,.18);
+            border: 1px solid rgba(251,191,36,.4);
+            border-radius: 20px;
+            padding: 2px 10px;
+            font-size: 10px;
+            font-weight: 800;
+            color: #fbbf24;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .login-card-icon-wrap {
+            width: 76px;
+            height: 76px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 2rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+        .login-card.blue  .login-card-icon-wrap { background: rgba(255,255,255,0.15); box-shadow: 0 4px 16px rgba(29,78,216,0.4); }
+        .login-card.indigo .login-card-icon-wrap { background: rgba(255,255,255,0.15); box-shadow: 0 4px 16px rgba(79,70,229,0.4); }
+
+        .login-card-title {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .login-card-desc {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+            font-weight: 500;
+            margin-bottom: 24px;
+            text-align: center;
+            line-height: 1.4;
+        }
+        .login-card-btn {
+            background: linear-gradient(135deg, #2ECC71, #27ae60);
+            color: #fff;
+            border: none;
+            padding: 10px 28px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            transition: all 0.22s ease;
+            box-shadow: 0 4px 16px rgba(46,204,113,0.4);
+            width: 100%;
+            justify-content: center;
+        }
+        .login-card-btn:hover { opacity: 0.92; transform: scale(1.03); }
+
+        @media (max-width: 640px) {
+            .login-card { width: 100%; max-width: 340px; }
+            .welcome-title h2 { font-size: 1.8rem; }
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 1024px) {
+            .main-body { grid-template-columns: 1fr 340px; padding: 24px 32px 40px; }
+            .stat-item { padding: 6px 20px; }
+        }
+        @media (max-width: 900px) {
+            .top-nav { padding: 12px 20px; }
+            .main-body { grid-template-columns: 1fr; padding: 20px 20px 40px; gap: 20px; }
+            .hero-section { padding: 28px 20px 20px; }
+            .stats-bar { padding: 12px 20px; gap: 0; }
+            .stat-item { padding: 6px 16px; }
+            .page-footer { padding: 14px 20px; }
+            .announce-card { position: static; }
+        }
+        @media (max-width: 640px) {
+            .hero-headline { font-size: 1.7rem; }
+            .hero-sub { font-size: 0.85rem; }
+            .stats-bar { gap: 4px; }
+            .stat-item { border-right: none; padding: 6px 14px; }
+            .stat-value { font-size: 0.88rem; }
+            .login-card { min-width: 200px; padding: 20px 22px; }
+            .back-btn { top: 14px; left: 14px; padding: 8px 16px; font-size: 0.8rem; }
+        }
+
+        /* ─── EXISTING UTILITY STYLES (kept for JS compat) ─── */
+        .announcements-carousel { display: none; }
+        .announcements-carousel.has-announcements { display: none; }
+        .external-link-indicator { font-size: 0.75rem; color: var(--text-muted); }
+        .franchise-image { display: none; }
+
+        /* ── MyntReal Hub Header ── */
+        #mnr-hub-header{position:fixed;top:0;width:100%;z-index:2000;background:rgba(240,245,255,0.97);backdrop-filter:blur(14px);transition:.35s ease;border-bottom:1px solid rgba(0,0,80,0.08);}
+        #mnr-hub-header.scrolled{box-shadow:0 12px 35px rgba(0,0,0,.08);background:rgba(255,255,255,0.97);}
+        #mnr-hub-header .hub-nav{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;position:relative;width:90%;max-width:1600px;margin:auto;}
+        #mnr-hub-header .hub-site-logo{height:clamp(48px,5vw,72px);width:auto;transition:.3s;}
+        #mnr-hub-header .hub-certification{position:absolute;left:50%;transform:translateX(-50%);font-size:14px;font-weight:600;color:#f7f7f9;white-space:nowrap;padding:7px 40px;border-radius:20px;background:linear-gradient(135deg,#02156e,#033a83,#02156e);border:1px solid rgba(14,89,218,.5);animation:isoGlowH 1.3s ease-in-out infinite;}
+        @keyframes isoGlowH{0%{box-shadow:0 0 0 rgba(10,84,244,.8);transform:translateX(-50%) scale(1);}50%{box-shadow:3px 3px 25px rgba(15,127,231,.87);transform:translateX(-50%) scale(1.05);}100%{box-shadow:0 0 0 rgba(37,100,235,.9);transform:translateX(-50%) scale(1);}}
+        #mnr-hub-header .hub-right{display:flex;align-items:center;gap:20px;}
+        #mnr-hub-header .hub-navlinks{display:flex;align-items:center;gap:28px;}
+        #mnr-hub-header .hub-navlinks a{text-decoration:none;color:#1f2937;font-weight:500;font-size:14px;position:relative;transition:.3s;}
+        #mnr-hub-header .hub-navlinks a:hover{color:#2563eb;}
+        #mnr-hub-header .hub-navlinks a::after{content:"";position:absolute;bottom:-5px;left:0;height:2px;width:0;background:linear-gradient(90deg,#2563eb,#60a5fa);transition:.35s;border-radius:2px;}
+        #mnr-hub-header .hub-navlinks a:hover::after{width:100%;}
+        #mnr-hub-header .hub-dropdown{position:relative;}
+        #mnr-hub-header .hub-dropdown-trigger{display:flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;color:#1f2937;font-weight:500;font-size:14px;background:none;border:none;font-family:inherit;transition:.3s;}
+        #mnr-hub-header .hub-dropdown-trigger:hover{color:#2563eb;}
+        #mnr-hub-header .hub-dropdown-menu{position:absolute;top:36px;left:0;background:white;border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.1);padding:12px;width:210px;display:none;flex-direction:column;gap:4px;border:1px solid rgba(0,0,0,.05);z-index:100;}
+        #mnr-hub-header .hub-dropdown-menu a{display:block;padding:8px 10px;border-radius:8px;text-decoration:none;color:#1f2937;font-size:14px;transition:.25s;}
+        #mnr-hub-header .hub-dropdown-menu a:hover{background:#f1f5f9;transform:translateX(4px);}
+        #mnr-hub-header .hub-dropdown:hover .hub-dropdown-menu{display:flex;}
+        #mnr-hub-header .hub-dropdown.active .hub-dropdown-menu{display:flex;}
+        #mnr-hub-header .hub-btn-login{padding:8px 20px;background:linear-gradient(135deg,#111a2f,#2563eb);color:white;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600;transition:.35s;box-shadow:0 6px 18px rgba(37,99,235,.25);}
+        #mnr-hub-header .hub-btn-login:hover{transform:translateY(-3px);box-shadow:0 10px 25px rgba(37,99,235,.35);}
+        #mnr-hub-header .hub-menu-toggle{display:none;flex-direction:column;cursor:pointer;z-index:1200;}
+        #mnr-hub-header .hub-menu-toggle span{width:26px;height:3px;background:#111;margin:2px 0;border-radius:5px;transition:.3s;}
+        .hub-nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:.3s;z-index:1900;}
+        .hub-nav-overlay.active{opacity:1;pointer-events:auto;}
+        .hub-content-pad{padding-top:72px;}
+        @media(max-width:998px){
+        #mnr-hub-header .hub-nav{display:grid;grid-template-columns:auto 1fr auto;padding:10px 16px;}
+        #mnr-hub-header .hub-menu-toggle{display:flex;justify-self:start;}
+        #mnr-hub-header .hub-logo-wrap{justify-self:center;}
+        #mnr-hub-header .hub-right{justify-self:end;}
+        #mnr-hub-header .hub-certification{display:none;}
+        #mnr-hub-header .hub-navlinks{position:fixed;top:70px;left:-100%;width:80%;height:calc(100vh - 70px);background:white;flex-direction:column;align-items:flex-start;padding:30px;transition:.4s cubic-bezier(0.77,0,0.175,1);z-index:1950;box-shadow:10px 0 40px rgba(0,0,0,.1);overflow-y:auto;}
+        #mnr-hub-header .hub-navlinks.active{left:0;}
+        #mnr-hub-header .hub-navlinks a{margin:12px 0;font-size:18px;}
+        #mnr-hub-header .hub-dropdown-menu{position:relative;box-shadow:none;display:none;width:100%;}
+        #mnr-hub-header .hub-dropdown.active .hub-dropdown-menu{display:flex;}
+        #mnr-hub-header .hub-dropdown-trigger{font-size:18px;margin:12px 0;}
+        }
+        @media(max-width:480px){
+        #mnr-hub-header .hub-btn-login{padding:6px 12px;font-size:12px;}
+        }
+
+        /* ── MyntReal Hub Footer ── */
+        .mnr-site-footer{background:#0f172a;color:#cbd5f5;padding-top:90px;font-size:14px;}
+        .mnr-footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1.5fr;gap:60px;padding-bottom:70px;width:90%;max-width:1600px;margin:auto;}
+        .mnr-footer-brand img{height:50px;margin-bottom:10px;filter:drop-shadow(0 0 4px rgba(255,255,255,.8)) brightness(1.15);}
+        .mnr-footer-brand p{line-height:1.8;max-width:320px;color:#94a3b8;}
+        .mnr-footer-social{margin-top:25px;display:flex;gap:12px;}
+        .mnr-footer-social a{width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:#1e293b;border-radius:10px;color:white;font-size:15px;transition:all .3s ease;text-decoration:none;}
+        .mnr-footer-social a:hover{background:#2563eb;transform:translateY(-5px);box-shadow:0 10px 25px rgba(37,99,235,.3);}
+        .mnr-footer-links h4{font-size:15px;margin-bottom:18px;color:white;letter-spacing:.5px;}
+        .mnr-footer-links a{display:block;margin-bottom:10px;color:#94a3b8;text-decoration:none;transition:.3s;}
+        .mnr-footer-links a:hover{color:white;transform:translateX(6px);}
+        .mnr-footer-contact p{margin-bottom:10px;color:#94a3b8;}
+        .mnr-footer-newsletter{margin-top:25px;}
+        .mnr-footer-newsletter h5{font-size:14px;margin-bottom:10px;color:white;}
+        .mnr-newsletter-box{display:flex;background:#1e293b;border-radius:10px;overflow:hidden;}
+        .mnr-newsletter-box input{flex:1;border:none;background:transparent;padding:12px;color:white;outline:none;font-size:14px;}
+        .mnr-newsletter-box button{background:#34d399;border:none;padding:12px 18px;cursor:pointer;font-weight:600;transition:.3s;}
+        .mnr-newsletter-box button:hover{background:#10b981;}
+        .mnr-footer-divider{height:1px;background:linear-gradient(to right,transparent,#1e293b,transparent);}
+        .mnr-footer-bottom{padding:25px 0;}
+        .mnr-footer-bottom-inner{display:flex;justify-content:space-between;align-items:center;width:90%;max-width:1600px;margin:auto;}
+        .mnr-footer-policy a{color:#94a3b8;margin-left:20px;text-decoration:none;transition:.3s;}
+        .mnr-footer-policy a:hover{color:white;}
+        @media(max-width:992px){.mnr-footer-grid{grid-template-columns:1fr 1fr;gap:40px;}}
+        @media(max-width:600px){.mnr-site-footer{padding-top:70px;}.mnr-footer-grid{grid-template-columns:1fr;gap:35px;text-align:center;}.mnr-footer-brand p{margin:auto;}.mnr-footer-social{justify-content:center;}.mnr-footer-links a{text-align:center;}.mnr-newsletter-box{flex-direction:column;}.mnr-newsletter-box input{text-align:center;}.mnr-newsletter-box button{width:100%;}.mnr-footer-bottom-inner{flex-direction:column;gap:12px;text-align:center;}}
+    </style>
+    <script src="/public/js/mnr-lightbox.js"></script>
+    <script src="/public/js/share-modal.js"></script>
+</head>
+<body>
+    <!-- HUB HEADER — always visible -->
+    <header id="mnr-hub-header">
+      <div class="hub-nav">
+        <div class="hub-menu-toggle" id="hubMenuToggle">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="hub-logo-wrap">
+          <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" class="hub-site-logo">
+        </div>
+        <div class="hub-right">
+          <div class="hub-navlinks" id="hubNavMenu">
+            <a href="/hub">Home</a>
+            <a href="/hub/about">About</a>
+            <a href="/hub/media">Media</a>
+            <div class="hub-dropdown">
+              <button class="hub-dropdown-trigger">Verticals ▾</button>
+              <div class="hub-dropdown-menu">
+                <a href="/hub/manthra">⚡ Manthra EV</a>
+                <a href="/hub/hgs">☀️ Har Ghar Solar</a>
+                <a href="/hub/etc">🎓 EVolution Training</a>
+                <a href="/hub/realestate">🏡 VGK Real Dreams</a>
+                <a href="/hub/care">🛡️ VGK Care</a>
+              </div>
+            </div>
+            <a href="/hub/contact">Contact</a>
+            <a href="/careers">Careers</a>
+          </div>
+          <button class="hub-btn-login" onclick="showLoginSelection()" style="border:none;cursor:pointer;font-family:inherit">Login</button>
+        </div>
+      </div>
+    </header>
+    <div class="hub-nav-overlay" id="hubNavOverlay"></div>
+
+    <div class="main-container">
+
+        <!-- ══ MAIN LANDING ══ -->
+        <div class="main-landing" id="mainLanding">
+
+            <!-- HERO -->
+            <section class="hero-section" style="padding-top:calc(72px + 36px)">
+                <div class="hero-eyebrow">
+                    <i class="fas fa-bolt"></i> India's Fastest Growing &amp; Best Business Access Program
+                </div>
+                <h1 class="hero-headline">
+                    Start a new journey<br>with <span class="accent">MyntReal</span>
+                </h1>
+                <p class="hero-sub">
+                    One platform for EV Spares, Real Estate, Insurance, and more — powered by a nationwide network of MyntReal members.
+                </p>
+                <div class="hero-badges">
+                    <span class="hero-badge" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border:1.5px solid rgba(147,197,253,0.5);color:#fff;box-shadow:0 3px 12px rgba(29,78,216,0.45);"><i class="fas fa-users"></i> 1 Program · 5 Benefits</span>
+                    <span class="hero-badge" style="background:linear-gradient(135deg,#3730a3,#4f46e5);border:1.5px solid rgba(199,210,254,0.5);color:#fff;box-shadow:0 3px 12px rgba(79,70,229,0.45);"><i class="fas fa-shield-alt"></i> Genuine Products</span>
+                    <span class="hero-badge" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border:1.5px solid rgba(147,197,253,0.5);color:#fff;box-shadow:0 3px 12px rgba(29,78,216,0.45);"><i class="fas fa-map-marker-alt"></i> Pan India Team</span>
+                </div>
+            </section>
+
+            <div class="hero-separator"></div>
+
+            <!-- MAIN BODY -->
+            <div class="main-body">
+
+                <!-- LEFT: OFFERINGS -->
+                <div class="offerings-col">
+                    <div class="col-header">
+                        <div class="col-label"><i class="fas fa-th-large" style="color:var(--green);margin-right:4px;"></i> What We Offer</div>
+                    </div>
+
+                    <ul class="offering-list">
+
+                        <!-- VGK4U EV Spares — Dark Blue -->
+                        <li class="offering-item has-link" onclick="navigateTo('/marketplace')" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-color:rgba(147,197,253,0.35);box-shadow:0 4px 18px rgba(29,78,216,0.45);">
+                            <div class="offering-icon" style="background:linear-gradient(135deg,#059669,#065f46);box-shadow:0 3px 12px rgba(5,150,105,0.45);">
+                                <i class="fas fa-bolt" style="color:#fff;"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="offering-text">VGK4U EV Spares Marketplace</div>
+                                <div class="offering-sub">Best Quality · Best Prices · Genuine Parts</div>
+                            </div>
+                            <span style="background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;font-size:0.57rem;font-weight:800;padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(249,115,22,0.4);">SHOP NOW</span>
+                        </li>
+
+                        <!-- Manthra EV — Dark Indigo -->
+                        <li class="offering-item has-link" onclick="navigateTo('https://manthraev.com', true)" style="background:linear-gradient(135deg,#3730a3,#4f46e5);border-color:rgba(199,210,254,0.35);box-shadow:0 4px 18px rgba(79,70,229,0.45);">
+                            <div class="offering-icon" style="background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 3px 10px rgba(249,115,22,0.35);">
+                                <i class="fas fa-motorcycle" style="color:#fff;"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="offering-text">Manthra EV's and Franchise</div>
+                                <div class="offering-sub">EV 2-wheelers &amp; Franchise Opportunities</div>
+                            </div>
+                            <span style="background:linear-gradient(135deg,#f97316,#f59e0b);color:#fff;font-size:0.57rem;font-weight:800;padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(249,115,22,0.4);">VISIT <i class="fas fa-external-link-alt" style="font-size:0.45rem;"></i></span>
+                        </li>
+
+                        <!-- Real Estate — Dark Blue -->
+                        <li class="offering-item has-link" onclick="navigateTo('/real-dreams-marketplace')" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-color:rgba(147,197,253,0.35);box-shadow:0 4px 18px rgba(29,78,216,0.45);">
+                            <div class="offering-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);box-shadow:0 3px 10px rgba(59,130,246,0.35);">
+                                <i class="fas fa-building" style="color:#fff;"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="offering-text">Real Estate Income</div>
+                                <div class="offering-sub">Properties · Plots · Real Dream Investments</div>
+                            </div>
+                            <span style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-size:0.57rem;font-weight:800;padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(59,130,246,0.4);">EXPLORE →</span>
+                        </li>
+
+                        <!-- Insurance — Dark Indigo -->
+                        <li class="offering-item has-link" onclick="navigateTo('https://partner.bajajcapitalinsurance.com', true)" style="background:linear-gradient(135deg,#3730a3,#4f46e5);border-color:rgba(199,210,254,0.35);box-shadow:0 4px 18px rgba(79,70,229,0.45);">
+                            <div class="offering-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);box-shadow:0 3px 10px rgba(139,92,246,0.35);">
+                                <i class="fas fa-umbrella" style="color:#fff;"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="offering-text">Insurance Options</div>
+                                <div class="offering-sub">Life · Vehicle · Health Insurance Plans</div>
+                            </div>
+                            <span style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;font-size:0.57rem;font-weight:800;padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(139,92,246,0.4);">VIEW <i class="fas fa-external-link-alt" style="font-size:0.45rem;"></i></span>
+                        </li>
+
+                        <!-- Solar — Dark Blue -->
+                        <li class="offering-item has-link" onclick="navigateTo('/hargharsolar')" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-color:rgba(147,197,253,0.35);box-shadow:0 4px 18px rgba(29,78,216,0.45);">
+                            <div class="offering-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 3px 10px rgba(245,158,11,0.3);">
+                                <i class="fas fa-solar-panel" style="color:#fff;"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="offering-text">Solar Association</div>
+                                <div class="offering-sub">Solar Panels &amp; Green Energy Solutions</div>
+                            </div>
+                            <span style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:0.57rem;font-weight:800;padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(245,158,11,0.4);">EXPLORE <i class="fas fa-external-link-alt" style="font-size:0.45rem;"></i></span>
+                        </li>
+
+                        <!-- EV Training — Dark Indigo -->
+                        <li class="offering-item coming-soon" onclick="showComingSoon('EV Training Franchise')" style="background:linear-gradient(135deg,#3730a3,#4f46e5);border-color:rgba(199,210,254,0.35);box-shadow:0 4px 18px rgba(79,70,229,0.45);">
+                            <div class="offering-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2);box-shadow:0 3px 10px rgba(6,182,212,0.3);">
+                                <i class="fas fa-chalkboard-teacher" style="color:#fff;"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="offering-text">EV Training Franchise</div>
+                                <div class="offering-sub">Certified EV Technician Training Centres</div>
+                            </div>
+                            <span style="background:linear-gradient(135deg,#06b6d4,#0891b2);color:#fff;font-size:0.55rem;font-weight:800;padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(6,182,212,0.4);">COMING SOON</span>
+                        </li>
+
+                        <!-- Service Request — Dark Blue -->
+                        <li class="offering-item has-link" onclick="navigateTo('/service-request')" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8);border-color:rgba(147,197,253,0.35);box-shadow:0 4px 18px rgba(29,78,216,0.45);">
+                            <div class="offering-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626);box-shadow:0 3px 10px rgba(239,68,68,0.35);">
+                                <i class="fas fa-tools" style="color:#fff;"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="offering-text">Raise Service Request</div>
+                                <div class="offering-sub">EV Repair · Maintenance · Support Tickets</div>
+                            </div>
+                            <span style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:0.57rem;font-weight:800;padding:5px 11px;border-radius:20px;white-space:nowrap;box-shadow:0 2px 8px rgba(239,68,68,0.4);">REQUEST →</span>
+                        </li>
+
+                    </ul>
+                </div>
+
+                <!-- RIGHT: ANNOUNCEMENTS -->
+                <div class="announcements-col">
+                    <div class="col-header">
+                        <div class="col-label" style="background:linear-gradient(135deg,#3730a3,#4f46e5);border-color:rgba(199,210,254,0.4);box-shadow:0 3px 12px rgba(79,70,229,0.4);"><i class="fas fa-bullhorn"></i> Public Announcements</div>
+                    </div>
+
+                    <div class="announce-card">
+                        <div class="announce-header">
+                            <div class="announce-icon"><i class="fas fa-bullhorn"></i></div>
+                            <div>
+                                <div class="announce-title">Recent Announcements</div>
+                            </div>
+                            <div class="announce-live-dot" title="Live updates"></div>
+                        </div>
+                        <div class="announce-body">
+                            <div id="landingAnnouncementsContainer">
+                                <div id="landingAnnouncementsLoading" style="display: block; text-align: center; color: rgba(255,255,255,0.45); padding: 1.5rem 1rem; font-size: 0.85rem;">
+                                    <i class="fas fa-spinner fa-spin" style="color: #f97316;"></i> Loading announcements...
+                                </div>
+
+                                <div id="landingAnnouncementsCarousel" style="display: none;">
+                                    <div id="landingCarouselContent" style="background: rgba(249,250,251,0.97); border-radius: 10px; padding: 1rem; border-left: 3px solid #f97316; min-height: 220px;">
+                                    </div>
+
+                                    <div id="landingCarouselControls" style="display: none; align-items: center; justify-content: space-between; margin-top: 0.75rem; padding: 0 0.25rem;">
+                                        <button onclick="landingPrevAnnouncement()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #f97316; cursor: pointer; border-radius: 8px; padding: 0.3rem 0.6rem; font-size: 1rem;">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </button>
+                                        <div id="landingCarouselIndicators" style="display: flex; gap: 0.5rem; align-items: center;"></div>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                            <button id="landingPlayPauseBtn" onclick="landingToggleCarousel()" style="background: #f97316; border: none; color: white; cursor: pointer; border-radius: 6px; padding: 0.3rem 0.65rem; font-size: 0.8rem;">
+                                                <i class="fas fa-pause"></i>
+                                            </button>
+                                            <button onclick="landingNextAnnouncement()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #f97316; cursor: pointer; border-radius: 8px; padding: 0.3rem 0.6rem; font-size: 1rem;">
+                                                <i class="fas fa-chevron-right"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="landingNoAnnouncements" style="display: none; text-align: center; color: rgba(255,255,255,0.35); padding: 1.5rem 1rem; font-size: 0.82rem;">
+                                    <i class="fas fa-info-circle"></i> No public announcements at this time
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Hidden legacy elements for JS compat -->
+            <div id="announcementsCarousel" class="announcements-carousel">
+                <div id="announcementSlides"></div>
+                <div id="announcementDots"></div>
+            </div>
+            <div class="franchise-image" style="display:none;"></div>
+
+        </div><!-- /main-landing -->
+
+        <!-- ══ LOGIN SELECTION PAGE ══ -->
+        <div class="login-selection-page" id="loginSelection">
+            <button class="back-btn" onclick="showMainLanding()">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+            <a href="/hub" class="home-btn">
+                <i class="fas fa-home"></i> Home
+            </a>
+
+            <div class="welcome-title">
+                <div class="welcome-eyebrow"><i class="fas fa-lock"></i> Select Your Portal</div>
+                <h2>Welcome to <span>MyntReal</span></h2>
+                <div class="welcome-subtitle">Choose your access type to continue</div>
+            </div>
+
+            <div class="login-cards-container">
+                <div class="login-card blue" onclick="navigateToLogin('staff')">
+                    <div class="login-card-icon-wrap"><i class="fas fa-user-tie"></i></div>
+                    <div class="login-card-title">Staff</div>
+                    <div class="login-card-desc">Internal Team<br>& Admin Access</div>
+                    <button class="login-card-btn">Login <i class="fas fa-arrow-right"></i></button>
+                </div>
+
+                <div class="login-card indigo" onclick="navigateToLogin('partner')">
+                    <div class="login-card-icon-wrap"><i class="fas fa-handshake"></i></div>
+                    <div class="login-card-title">Partner</div>
+                    <div class="login-card-desc">Official Business<br>Partners Portal</div>
+                    <button class="login-card-btn">Login <i class="fas fa-arrow-right"></i></button>
+                </div>
+
+                <div class="login-card blue" onclick="navigateToLogin('mnr')">
+                    <div class="login-card-icon-wrap"><i class="fas fa-users"></i></div>
+                    <div class="login-card-title">MNR Member</div>
+                    <div class="login-card-desc">MNR</div>
+                    <button class="login-card-btn">Login <i class="fas fa-arrow-right"></i></button>
+                </div>
+
+                <div class="login-card vgk" onclick="navigateToLogin('vgk')">
+                    <div class="login-card-icon-wrap"><i class="fas fa-crown"></i></div>
+                    <div class="loyalty-tag">⭐ Loyalty Program</div>
+                    <div class="login-card-title">VGK4U</div>
+                    <div class="login-card-desc">Loyalty Points &amp; Referral<br>Bonus Program</div>
+                    <button class="login-card-btn">Join / Login <i class="fas fa-arrow-right"></i></button>
+                </div>
+
+                <div class="login-card green" onclick="navigateToLogin('vendor')">
+                    <div class="login-card-icon-wrap"><i class="fas fa-store"></i></div>
+                    <div class="login-card-title">Vendor</div>
+                    <div class="login-card-desc">Supplier &amp; Vendor<br>Partner Portal</div>
+                    <button class="login-card-btn">Login <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div style="margin-top: 56px; display: flex; align-items: center; gap: 12px; opacity:0.75;">
+                <div>
+                    <div style="font-size: 0.85rem; font-weight: 800; color: #fff; letter-spacing: 1px;">MYNTREAL</div>
+                    <div style="font-size: 0.6rem; color: rgba(255,255,255,0.55);">Redefining Future</div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /main-container -->
+
+    <!-- HUB FOOTER — always visible -->
+    <footer class="mnr-site-footer">
+      <div class="mnr-footer-grid">
+        <div class="mnr-footer-brand">
+          <img src="/hub/Assets/Mynt White.png" alt="MyntReal">
+          <p>MyntReal integrates multiple high-growth industries into one scalable ecosystem including EV, Solar, Training, Insurance and Real Estate services.</p>
+          <div class="mnr-footer-social">
+            <a href="#"><i class="fa-solid fa-globe"></i></a>
+            <a href="https://www.facebook.com/profile.php?id=61587459178919"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="https://www.instagram.com/myntreal_hub/?hl=en"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://www.youtube.com/@Myntrealhub"><i class="fa-brands fa-youtube"></i></a>
+          </div>
+        </div>
+        <div class="mnr-footer-links">
+          <h4>Company</h4>
+          <a href="/hub">Home</a>
+          <a href="/hub/about">About</a>
+          <a href="/hub/media">Media</a>
+          <a href="/hub/verticals">Verticals</a>
+          <a href="/hub/contact">Contact</a>
+          <a href="/careers">Careers</a>
+        </div>
+        <div class="mnr-footer-links">
+          <h4>Our Verticals</h4>
+          <a href="/hub/manthra">Manthra EV</a>
+          <a href="/hub/hgs">Har Ghar Solar</a>
+          <a href="/hub/etc">EVolution Training</a>
+          <a href="/hub/care">VGK Care</a>
+          <a href="/hub/realestate">VGK Real Dreams</a>
+        </div>
+        <div class="mnr-footer-links mnr-footer-contact">
+          <h4>Contact</h4>
+          <p>📍 Survey No. 156/1, Mainroad Saripalli</p>
+          <p>Pendurthi, Visakhapatnam — 531173</p>
+          <p>📞 +91 8585852738</p>
+          <p>✉ contact@myntreal.com</p>
+          <div class="mnr-footer-newsletter">
+            <h5>Get Updates</h5>
+            <div class="mnr-newsletter-box">
+              <input type="email" placeholder="Enter your email">
+              <button>Subscribe</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mnr-footer-divider"></div>
+      <div class="mnr-footer-bottom">
+        <div class="mnr-footer-bottom-inner">
+          <p>© 2026 MyntReal. All rights reserved.</p>
+          <div class="mnr-footer-policy">
+            <a href="/privacy">Privacy Policy</a>
+            <a href="#">Terms</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Coming Soon Modal -->
+    <div class="modal fade" id="comingSoonModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:16px;border:none;background:#0d1528;border:1px solid rgba(255,255,255,0.1);">
+                <div class="modal-body text-center p-5">
+                    <div style="width:64px;height:64px;background:linear-gradient(135deg,rgba(46,204,113,0.2),rgba(46,204,113,0.05));border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:1rem;border:1px solid rgba(46,204,113,0.2);">
+                        <i class="fas fa-rocket" style="font-size:1.5rem;color:var(--green);"></i>
+                    </div>
+                    <h4 class="mb-2" id="comingSoonTitle" style="color:#fff;">Coming Soon!</h4>
+                    <p style="color:rgba(255,255,255,0.55);" id="comingSoonMessage">This feature is under development.</p>
+                    <button type="button" class="btn px-5 mt-2" data-bs-dismiss="modal" style="background:linear-gradient(135deg,var(--green),var(--green-dark));color:#fff;border:none;border-radius:50px;font-weight:700;padding:10px 32px;">Got it!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        /* ── Hub Header Mobile Menu ── */
+        (function(){
+          var toggle = document.getElementById('hubMenuToggle');
+          var nav = document.getElementById('hubNavMenu');
+          var overlay = document.getElementById('hubNavOverlay');
+          if(toggle && nav && overlay){
+            toggle.addEventListener('click', function(){
+              nav.classList.toggle('active');
+              overlay.classList.toggle('active');
+            });
+            overlay.addEventListener('click', function(){
+              nav.classList.remove('active');
+              overlay.classList.remove('active');
+            });
+            document.querySelectorAll('#mnr-hub-header .hub-dropdown-trigger').forEach(function(btn){
+              btn.addEventListener('click', function(e){
+                if(window.innerWidth < 998){
+                  e.preventDefault();
+                  btn.parentElement.classList.toggle('active');
+                }
+              });
+            });
+            window.addEventListener('scroll', function(){
+              document.getElementById('mnr-hub-header').classList.toggle('scrolled', window.scrollY > 50);
+            });
+          }
+        })();
+
+        let currentAnnouncementIndex = 0;
+        let announcementsData = [];
+        let announcementInterval = null;
+
+        function showLoginSelection() {
+            document.getElementById('mainLanding').classList.add('hidden');
+            document.getElementById('loginSelection').classList.add('active');
+        }
+
+        function showMainLanding() {
+            document.getElementById('mainLanding').classList.remove('hidden');
+            document.getElementById('loginSelection').classList.remove('active');
+        }
+
+        // Always show login portal selection first when arriving at /landing
+        document.addEventListener('DOMContentLoaded', function() { showLoginSelection(); });
+
+        // Legacy: sessionStorage flag (kept for compatibility)
+        if (sessionStorage.getItem('showLoginSelection') === 'true') {
+            sessionStorage.removeItem('showLoginSelection');
+        }
+
+        function navigateTo(url, isExternal = false) {
+            if (isExternal) { window.open(url, '_blank'); }
+            else { window.location.href = url; }
+        }
+
+        function navigateToLogin(type) {
+            const loginUrls = { 'staff': '/staff/login', 'partner': '/partner/login', 'mnr': '/login', 'vgk': '/vgk/login', 'vendor': '/vendor/login' };
+            const url = loginUrls[type];
+            if (url) window.location.href = url;
+        }
+
+        function showComingSoon(feature) {
+            document.getElementById('comingSoonTitle').textContent = feature;
+            document.getElementById('comingSoonMessage').textContent = `${feature} is coming soon. Stay tuned for updates!`;
+            new bootstrap.Modal(document.getElementById('comingSoonModal')).show();
+        }
+
+        // ── ANNOUNCEMENTS ─────────────────────────────────────────────────────────
+        let landingAnnouncements = [];
+        let landingCurrentIndex = 0;
+        let landingCarouselInterval = null;
+        let landingIsCarouselPaused = false;
+
+        async function landingFetchWithRetry(url, options = {}, maxRetries = 6, baseDelay = 1500) {
+            const loadingEl = document.getElementById('landingAnnouncementsLoading');
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok || response.status < 500) return response;
+                    console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${url} (status: ${response.status})`);
+                    if (i === 0 && loadingEl) loadingEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#f97316;"></i> Backend starting up, please wait...';
+                } catch (error) {
+                    console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${url}: ${error.message}`);
+                    if (i === 0 && loadingEl) loadingEl.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:#f97316;"></i> Backend starting up, please wait...';
+                }
+                if (i < maxRetries - 1) await new Promise(resolve => setTimeout(resolve, baseDelay * (i + 1)));
+            }
+            throw new Error('Failed after ' + maxRetries + ' retries');
+        }
+
+        async function loadLandingAnnouncements() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const companyId = urlParams.get('company_id');
+                let apiUrl = '/api/v1/feedback/public/announcements?limit=10';
+                if (companyId) apiUrl += '&company_id=' + encodeURIComponent(companyId);
+
+                const response = await landingFetchWithRetry(apiUrl);
+                const data = await response.json();
+                const loadingEl = document.getElementById('landingAnnouncementsLoading');
+                const carouselEl = document.getElementById('landingAnnouncementsCarousel');
+                const noAnnouncementsEl = document.getElementById('landingNoAnnouncements');
+
+                loadingEl.style.display = 'none';
+                const items = Array.isArray(data) ? data : (data?.data || []);
+                console.log('📢 Landing: Loaded announcements:', items.length);
+
+                if (items.length > 0) {
+                    landingAnnouncements = items;
+                    carouselEl.style.display = 'block';
+                    try { landingShowAnnouncement(0); console.log('✅ landingShowAnnouncement(0) SUCCESS'); }
+                    catch (e) { console.error('❌ landingShowAnnouncement(0) FAILED:', e); }
+                    if (landingAnnouncements.length >= 1) {
+                        document.getElementById('landingCarouselControls').style.display = 'flex';
+                        if (landingAnnouncements.length > 1) landingStartCarousel();
+                    }
+                } else {
+                    if (noAnnouncementsEl) noAnnouncementsEl.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('❌ Error loading announcements:', error);
+                const loadingEl = document.getElementById('landingAnnouncementsLoading');
+                if (loadingEl) {
+                    loadingEl.style.display = 'block';
+                    loadingEl.innerHTML = '<span style="color: #ef4444; font-size:0.8rem;"><i class="fas fa-exclamation-circle"></i> Unable to load. <a href="javascript:void(0)" onclick="loadLandingAnnouncements()" style="color: #60a5fa; text-decoration: underline;">Retry</a></span>';
+                }
+            }
+        }
+
+        function landingAttachVideoListeners() {
+            const videos = document.querySelectorAll('#landingCarouselContent video');
+            videos.forEach(video => {
+                video.removeEventListener('play', landingOnVideoPlay);
+                video.removeEventListener('pause', landingOnVideoPause);
+                video.removeEventListener('ended', landingOnVideoEnded);
+                video.addEventListener('play', landingOnVideoPlay);
+                video.addEventListener('pause', landingOnVideoPause);
+                video.addEventListener('ended', landingOnVideoEnded);
+            });
+        }
+
+        function landingOnVideoPlay() { landingIsCarouselPaused = true; const b = document.getElementById('landingPlayPauseBtn'); if (b) b.innerHTML = '<i class="fas fa-play"></i>'; }
+        function landingOnVideoPause() { landingIsCarouselPaused = true; }
+        function landingOnVideoEnded() { landingIsCarouselPaused = false; const b = document.getElementById('landingPlayPauseBtn'); if (b) b.innerHTML = '<i class="fas fa-pause"></i>'; }
+
+        function landingShowAnnouncement(index) {
+            if (!landingAnnouncements || landingAnnouncements.length === 0) return;
+            landingCurrentIndex = index;
+            const announcement = landingAnnouncements[landingCurrentIndex];
+            const carouselContent = document.getElementById('landingCarouselContent');
+            const carouselIndicators = document.getElementById('landingCarouselIndicators');
+
+            let mediaHTML = '';
+            if (announcement.media && announcement.media.length > 0) {
+                const randomIndex = Math.floor(Math.random() * announcement.media.length);
+                const media = announcement.media[randomIndex];
+                const mediaUrl = media.file_path.startsWith('http') ? media.file_path : media.file_path;
+                const isImage = media.file_type && media.file_type.startsWith('image/');
+                const isVideo = media.file_type && media.file_type.startsWith('video/');
+                const mediaCount = announcement.media.length;
+                const mediaCountBadge = mediaCount > 1 ? '<span style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem;"><i class="fas fa-images"></i> ' + mediaCount + '</span>' : '';
+                if (isImage) {
+                    mediaHTML = '<div style="margin-bottom: 0.75rem; position: relative; cursor: zoom-in;" class="landing-announcement-media" data-announcement-index="' + landingCurrentIndex + '" data-announcement-id="' + announcement.id + '" onclick="landingOpenLightbox(\'' + announcement.id + '\', ' + randomIndex + ')">' +
+                        '<img src="' + mediaUrl + '" alt="' + escapeHtml(announcement.title) + '" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 0.5rem; transition: transform 0.2s;" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22400%22 height=%22200%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%239ca3af%22%3EImage unavailable%3C/text%3E%3C/svg%3E\';">' +
+                        mediaCountBadge + '</div>';
+                } else if (isVideo) {
+                    const expandButton = '<button class="landing-video-expand-btn" onclick="event.stopPropagation(); landingOpenLightbox(\'' + announcement.id + '\', ' + randomIndex + ')" style="position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.7); color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 0.7rem; cursor: pointer; z-index: 5; display: flex; align-items: center; gap: 4px;" title="Fullscreen"><i class="fas fa-expand"></i> Expand</button>';
+                    const safariVideoUrl = mediaUrl + (mediaUrl.includes('#') ? '' : '#t=0.001');
+                    const videoMimeType = media.file_type || 'video/mp4';
+                    mediaHTML = '<div style="margin-bottom: 0.75rem; position: relative; cursor: pointer;" class="landing-announcement-media" data-announcement-index="' + landingCurrentIndex + '" data-announcement-id="' + announcement.id + '">' +
+                        '<video controls playsinline muted preload="metadata" style="width: 100%; max-height: 200px; border-radius: 0.5rem; background: #000;" onloadedmetadata="this.play().catch(function(e){console.log(\'Autoplay blocked:\',e)})">' +
+                        '<source src="' + safariVideoUrl + '" type="' + videoMimeType + '">Your browser does not support video.</video>' +
+                        expandButton + mediaCountBadge + '</div>';
+                }
+            } else if (announcement.submission_type === 'text') {
+                mediaHTML = '<div style="margin-bottom: 0.75rem; background: linear-gradient(135deg, #fef3c7, #fde68a); padding: 1rem; text-align: center; border-radius: 0.5rem; border: 2px dashed #f59e0b;"><i class="fas fa-file-alt" style="font-size: 2rem; color: #f97316; margin-bottom: 0.25rem;"></i><div style="font-size: 0.75rem; color: #92400e; font-weight: 600;">TEXT ANNOUNCEMENT</div></div>';
+            }
+
+            const date = new Date(announcement.approved_at || announcement.updated_at || announcement.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const title = escapeHtml(announcement.title || 'Announcement');
+            const desc = escapeHtml(announcement.description || '');
+            const shortDesc = desc.substring(0, 120) + (desc.length > 120 ? '...' : '');
+            const categoryBadge = announcement.category && announcement.category.name ?
+                '<span style="display: inline-block; font-size: 0.75rem; padding: 0.25rem 0.5rem; background: #fef3c7; color: #92400e; border-radius: 0.25rem; margin-top: 0.5rem;">' + escapeHtml(announcement.category.name) + '</span>' : '';
+
+            let ratingStars = '';
+            if (announcement.average_rating > 0) {
+                ratingStars += '<div style="display: flex; align-items: center; gap: 0.25rem;"><span style="color: #fbbf24; font-size: 0.875rem;">' + '★'.repeat(Math.round(announcement.average_rating)) + '☆'.repeat(5 - Math.round(announcement.average_rating)) + '</span><span style="font-size: 0.75rem; color: #6b7280;">(' + (announcement.total_ratings || 0) + ')</span></div>';
+            }
+            ratingStars += '<div style="display: flex; align-items: center; gap: 0.5rem; margin-top: ' + (announcement.average_rating > 0 ? '0.25rem' : '0') + ';"><span style="font-size: 0.75rem; color: #6b7280; font-weight: 500;">Rate:</span><div id="landingRatingStars_' + announcement.id + '" style="display: flex; gap: 0.25rem;">';
+            for (let i = 1; i <= 5; i++) {
+                ratingStars += '<i class="far fa-star" data-rating="' + i + '" data-announcement-id="' + announcement.id + '" onmouseover="landingHighlightStars(this, ' + i + ')" onmouseout="landingResetStars(' + announcement.id + ')" onclick="landingOpenRatingLogin(' + announcement.id + ', ' + i + ')" style="color: #d1d5db; font-size: 1rem; cursor: pointer; transition: color 0.2s;"></i>';
+            }
+            ratingStars += '</div></div>';
+
+            const viewButton = '<button onclick="landingViewAnnouncement(' + announcement.id + ')" style="background: white; border: 1px solid #d1d5db; padding: 0.35rem 0.75rem; border-radius: 0.25rem; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="fas fa-eye"></i> View</button>';
+            const _safeStr = s => (s || '').replace(/'/g, "\\'").replace(/\n/g,'');
+            const shareButton = '<button onclick="landingShareAnnouncement(' + announcement.id + ', \'' + _safeStr(escapeHtml(announcement.title)) + '\', \'' + _safeStr(escapeHtml(announcement.user_name || '')) + '\', \'' + _safeStr(escapeHtml(announcement.user_id || '')) + '\', \'' + _safeStr(escapeHtml(announcement.city || '')) + '\', \'' + _safeStr(escapeHtml((announcement.description || '').substring(0,100))) + '\')" style="background: white; border: 1px solid #d1d5db; padding: 0.35rem 0.75rem; border-radius: 0.25rem; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;"><i class="fas fa-share-alt"></i> Share' + (announcement.shares_count > 0 ? ' (' + announcement.shares_count + ')' : '') + '</button>';
+
+            const uploaderName = announcement.user_name || 'Unknown';
+            const uploaderCity = announcement.city ? announcement.city : '';
+            const uploaderInfo = uploaderCity ?
+                '<span style="font-size: 0.7rem; color: #6b7280; display: block; margin-bottom: 0.25rem;"><i class="fas fa-user" style="margin-right: 0.25rem; color: #9ca3af;"></i>' + escapeHtml(uploaderName) + ' <i class="fas fa-map-marker-alt" style="margin-left: 0.5rem; margin-right: 0.25rem; color: #9ca3af;"></i>' + escapeHtml(uploaderCity) + '</span>' :
+                '<span style="font-size: 0.7rem; color: #6b7280; display: block; margin-bottom: 0.25rem;"><i class="fas fa-user" style="margin-right: 0.25rem; color: #9ca3af;"></i>' + escapeHtml(uploaderName) + '</span>';
+
+            carouselContent.innerHTML = mediaHTML +
+                '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.25rem;">' +
+                '<h4 style="font-size: 0.9rem; font-weight: 600; color: #1f2937; margin: 0;">' + title + '</h4>' +
+                '<span style="font-size: 0.75rem; color: #6b7280; white-space: nowrap; margin-left: 0.5rem;">' + date + '</span></div>' +
+                uploaderInfo +
+                '<p style="font-size: 0.8rem; color: #4b5563; margin: 0 0 0.75rem 0; line-height: 1.4;">' + shortDesc + '</p>' +
+                categoryBadge +
+                '<div style="margin-top: 0.75rem;">' + ratingStars + '</div>' +
+                '<div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">' + viewButton + shareButton + '</div>';
+
+            landingAttachVideoListeners();
+
+            let indicatorsHTML = '';
+            for (let i = 0; i < landingAnnouncements.length; i++) {
+                const isActive = i === landingCurrentIndex;
+                indicatorsHTML += '<button onclick="landingGoToAnnouncement(' + i + ')" style="width: ' + (isActive ? '24px' : '8px') + '; height: 8px; border-radius: 4px; border: none; background: ' + (isActive ? '#f97316' : '#d1d5db') + '; cursor: pointer; transition: all 0.3s;"></button>';
+            }
+            carouselIndicators.innerHTML = indicatorsHTML;
+        }
+
+        function landingNextAnnouncement() { landingCurrentIndex = (landingCurrentIndex + 1) % landingAnnouncements.length; landingShowAnnouncement(landingCurrentIndex); }
+        function landingPrevAnnouncement() { landingCurrentIndex = (landingCurrentIndex - 1 + landingAnnouncements.length) % landingAnnouncements.length; landingShowAnnouncement(landingCurrentIndex); }
+        function landingStartCarousel() { if (landingCarouselInterval) clearInterval(landingCarouselInterval); landingCarouselInterval = setInterval(() => { if (!landingIsCarouselPaused) landingNextAnnouncement(); }, 5000); }
+        function landingToggleCarousel() { landingIsCarouselPaused = !landingIsCarouselPaused; const b = document.getElementById('landingPlayPauseBtn'); b.innerHTML = landingIsCarouselPaused ? '<i class="fas fa-play"></i>' : '<i class="fas fa-pause"></i>'; }
+        function landingGoToAnnouncement(index) { landingShowAnnouncement(index); }
+
+        function landingHighlightStars(element, rating) {
+            try {
+                const announcementId = element.getAttribute('data-announcement-id');
+                const container = document.getElementById('landingRatingStars_' + announcementId);
+                if (!container) return;
+                Array.from(container.querySelectorAll('i')).forEach((star, index) => {
+                    if (star && star.style) {
+                        star.style.setProperty('color', index < rating ? '#f59e0b' : '#d1d5db');
+                        star.classList.toggle('far', index >= rating);
+                        star.classList.toggle('fas', index < rating);
+                    }
+                });
+            } catch (e) {}
+        }
+
+        function landingResetStars(announcementId) {
+            try {
+                const container = document.getElementById('landingRatingStars_' + announcementId);
+                if (!container) return;
+                Array.from(container.querySelectorAll('i')).forEach(star => {
+                    if (star && star.style) { star.style.setProperty('color', '#d1d5db'); star.classList.remove('fas'); star.classList.add('far'); }
+                });
+            } catch (e) {}
+        }
+
+        function landingOpenRatingLogin(announcementId, rating) {
+            const modal = document.createElement('div');
+            modal.id = 'landingRatingLoginModal';
+            modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;';
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = 'background: white; border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);';
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) starsHtml += '<i class="' + (i <= rating ? 'fas' : 'far') + ' fa-star" style="color: ' + (i <= rating ? '#f59e0b' : '#d1d5db') + '; font-size: 1.25rem; margin: 0 2px;"></i>';
+            const announcement = landingAnnouncements.find(a => a.id === announcementId);
+            const announcementTitle = announcement ? announcement.title : 'Announcement';
+            modalContent.innerHTML =
+                '<div style="text-align: center; margin-bottom: 1rem;">' +
+                '<div style="width: 60px; height: 60px; background: linear-gradient(135deg, #2ECC71 0%, #27ae60 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.75rem;">' +
+                '<i class="fas fa-star" style="font-size: 1.5rem; color: white;"></i></div>' +
+                '<h3 style="font-size: 1.15rem; font-weight: 600; color: #1f2937; margin: 0 0 0.25rem 0;">Rate This Announcement</h3>' +
+                '<p style="color: #6b7280; font-size: 0.85rem; margin: 0;">Login with your MyntReal ID to submit rating</p></div>' +
+                '<div style="text-align: center; margin-bottom: 1rem; padding: 0.75rem; background: #fef3c7; border-radius: 0.5rem;">' +
+                '<span style="font-size: 0.85rem; color: #92400e;">Your Rating: </span>' + starsHtml + '</div>' +
+                '<form id="landingRatingLoginForm" style="display: flex; flex-direction: column; gap: 0.875rem;">' +
+                '<div id="landingLoginError" style="display: none; padding: 0.75rem; background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; color: #dc2626; font-size: 0.85rem; text-align: center;"></div>' +
+                '<div><label style="display: block; font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">MyntReal ID <span style="color: #dc2626;">*</span></label>' +
+                '<input type="text" id="landingMnrId" placeholder="Enter your MyntReal ID" autocomplete="username" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.95rem; outline: none;" onfocus="this.style.borderColor=\'#2ECC71\'" onblur="this.style.borderColor=\'#d1d5db\'">' +
+                '<span id="landingMnrIdError" style="display: none; color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem;"></span></div>' +
+                '<div><label style="display: block; font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Password <span style="color: #dc2626;">*</span></label>' +
+                '<div style="position: relative;">' +
+                '<input type="password" id="landingPassword" placeholder="Enter your password" autocomplete="current-password" style="width: 100%; padding: 0.75rem; padding-right: 2.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.95rem; outline: none;" onfocus="this.style.borderColor=\'#2ECC71\'" onblur="this.style.borderColor=\'#d1d5db\'">' +
+                '<button type="button" id="landingTogglePassword" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #6b7280; padding: 0;">' +
+                '<i class="fas fa-eye" id="landingPasswordIcon"></i></button></div>' +
+                '<span id="landingPasswordError" style="display: none; color: #dc2626; font-size: 0.75rem; margin-top: 0.25rem;"></span></div>' +
+                '<button type="submit" id="landingSubmitRatingBtn" style="width: 100%; padding: 0.875rem; border: none; background: linear-gradient(135deg, #2ECC71 0%, #27ae60 100%); color: white; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(46,204,113,0.4);">' +
+                '<i class="fas fa-sign-in-alt"></i> Login & Rate (' + rating + ' Stars)</button>' +
+                '<button type="button" id="landingCancelRatingBtn" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; background: #f3f4f6; color: #374151; border-radius: 0.5rem; font-size: 0.95rem; font-weight: 500; cursor: pointer;">Cancel</button>' +
+                '</form>';
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+
+            document.getElementById('landingCancelRatingBtn').onclick = () => modal.remove();
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+            document.getElementById('landingTogglePassword').addEventListener('click', () => {
+                const pwd = document.getElementById('landingPassword');
+                const icon = document.getElementById('landingPasswordIcon');
+                if (pwd.type === 'password') { pwd.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+                else { pwd.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+            });
+
+            document.getElementById('landingRatingLoginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const mnrId = document.getElementById('landingMnrId').value.trim();
+                const password = document.getElementById('landingPassword').value;
+                const errorEl = document.getElementById('landingLoginError');
+                const submitBtn = document.getElementById('landingSubmitRatingBtn');
+
+                if (!mnrId) { document.getElementById('landingMnrIdError').textContent = 'MyntReal ID is required'; document.getElementById('landingMnrIdError').style.display = 'block'; return; }
+                if (!password) { document.getElementById('landingPasswordError').textContent = 'Password is required'; document.getElementById('landingPasswordError').style.display = 'block'; return; }
+
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+
+                try {
+                    const loginResponse = await fetch('/api/v1/auth/login', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: mnrId, password: password })
+                    });
+                    const loginData = await loginResponse.json();
+                    if (!loginResponse.ok) throw new Error(loginData.detail || 'Login failed');
+
+                    const token = loginData.access_token;
+                    const ratingResponse = await fetch('/api/v1/feedback/' + announcementId + '/rate', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                        body: JSON.stringify({ rating: rating })
+                    });
+                    const ratingData = await ratingResponse.json();
+                    if (!ratingResponse.ok) throw new Error(ratingData.detail || 'Rating failed');
+
+                    modal.remove();
+                    loadLandingAnnouncements();
+                } catch (err) {
+                    errorEl.textContent = err.message || 'An error occurred. Please try again.';
+                    errorEl.style.display = 'block';
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login & Rate (' + rating + ' Stars)';
+                }
+            });
+        }
+
+        function landingOpenLightbox(announcementId, mediaIndex) {
+            const announcement = landingAnnouncements.find(a => String(a.id) === String(announcementId));
+            if (!announcement || !announcement.media || announcement.media.length === 0) return;
+            const mediaItems = announcement.media.map(function(m) {
+                return {
+                    url: m.file_path,
+                    file_type: m.file_type,
+                    type: (m.media_type === 'video' || (m.file_type && m.file_type.startsWith('video/'))) ? 'video' : 'image',
+                    title: announcement.title || 'Media'
+                };
+            });
+            if (typeof MNRLightbox !== 'undefined' && typeof MNRLightbox.open === 'function') {
+                MNRLightbox.open(mediaItems, mediaIndex || 0);
+            }
+        }
+
+        function landingViewAnnouncement(announcementId) {
+            const announcement = landingAnnouncements.find(a => String(a.id) === String(announcementId));
+            if (!announcement) return;
+            if (typeof MNRLightbox !== 'undefined' && announcement.media && announcement.media.length > 0) {
+                const mediaItems = announcement.media.map(function(m) {
+                    return {
+                        url: m.file_path,
+                        file_type: m.file_type,
+                        type: (m.media_type === 'video' || (m.file_type && m.file_type.startsWith('video/'))) ? 'video' : 'image',
+                        title: announcement.title || 'Media'
+                    };
+                });
+                MNRLightbox.open(mediaItems, 0);
+            } else {
+                const viewModal = document.createElement('div');
+                viewModal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 1rem;';
+                const content = document.createElement('div');
+                content.style.cssText = 'background: white; border-radius: 1rem; padding: 1.5rem; max-width: 500px; width: 100%; max-height: 80vh; overflow-y: auto;';
+                content.innerHTML = '<h3 style="font-size: 1.1rem; color: #1f2937; margin-bottom: 1rem;">' + escapeHtml(announcement.title) + '</h3>' +
+                    '<p style="color: #4b5563; line-height: 1.6;">' + escapeHtml(announcement.description || '') + '</p>' +
+                    '<button onclick="this.closest(\'div\').parentElement.parentElement.remove()" style="margin-top: 1rem; padding: 0.6rem 1.5rem; background: #2ECC71; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">Close</button>';
+                viewModal.appendChild(content);
+                document.body.appendChild(viewModal);
+                viewModal.addEventListener('click', (e) => { if (e.target === viewModal) viewModal.remove(); });
+            }
+        }
+
+        function landingShareAnnouncement(announcementId, title, userName, userId, city, description) {
+            // DC Protocol (Mar 2026): Rich share message with member signature
+            const pubUrl = window.location.origin + '/public/announcement?id=' + announcementId + '&shared=true';
+            const desc = (description && description.trim() && description.trim().toLowerCase() !== (title || '').trim().toLowerCase())
+                ? description
+                : '';
+            const memberLine = [
+                userName ? '👤 ' + userName : '',
+                city ? '📍 ' + city : '',
+            ].filter(Boolean).join(' · ');
+            const msgLines = [
+                '🏠 *MyntReal*',
+                '',
+                '*' + (title || 'Announcement') + '*',
+                desc || null,
+                '',
+                memberLine || null,
+                '',
+                '👁 View: ' + pubUrl,
+                '',
+                'Regards,',
+                'Myntreal',
+            ].filter(l => l !== null);
+            const richText = msgLines.join('\n');
+
+            if (typeof MyntShareModal !== 'undefined' && MyntShareModal.show) {
+                MyntShareModal.show({
+                    type: 'announcement',
+                    title: title || 'Announcement',
+                    url: pubUrl,
+                    text: richText,
+                    subtitle: memberLine || '',
+                });
+            } else if (navigator.share) {
+                navigator.share({ title: title || 'Announcement', url: pubUrl, text: richText }).catch(console.error);
+            } else {
+                window.open('https://wa.me/?text=' + encodeURIComponent(richText), '_blank');
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { loadLandingAnnouncements(); });
+    </script>
+</body>
+</html>

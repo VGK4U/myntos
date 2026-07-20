@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Recovery Center - RVZ Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        body { background: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .recovery-zone { border: 2px solid #28a745; background: #f0fff4; border-radius: 10px; padding: 20px; }
+        .restore-btn { background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
+        .restore-btn:hover { background: #218838; }
+        .timeline-item { border-left: 3px solid #007bff; padding-left: 20px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/rvz/dashboard">
+                <i class="bi bi-arrow-clockwise"></i> RVZ Data Recovery Center
+            </a>
+            <div class="d-flex align-items-center">
+                <a href="/rvz/dashboard" class="btn btn-light btn-sm me-3">
+                    <i class="bi bi-house-fill me-2"></i>Dashboard
+                </a>
+                <span class="text-white" id="vgkName">RVZ ID</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- Stats Summary -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stat-card text-center">
+                    <h2 id="totalDeleted" class="text-primary">0</h2>
+                    <p class="mb-0">Total Deleted Items</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card text-center">
+                    <h2 id="deletedBonanzas" class="text-warning">0</h2>
+                    <p class="mb-0">Deleted Bonanzas</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card text-center">
+                    <h2 id="deletedUsers" class="text-danger">0</h2>
+                    <p class="mb-0">Deleted Users</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Restore by Timestamp -->
+        <div class="recovery-zone mb-4">
+            <h4 class="text-success mb-3"><i class="bi bi-clock-history me-2"></i>Point-in-Time Recovery</h4>
+            <p>Restore all data deleted after a specific date/time</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="datetime-local" class="form-control" id="recoveryTimestamp">
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-success" onclick="showBulkRestoreModal()">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Restore All After This Time
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deleted Bonanzas -->
+        <div class="recovery-zone mb-4">
+            <h4 class="text-warning mb-3"><i class="bi bi-trophy me-2"></i>Deleted Bonanzas</h4>
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Deleted At</th>
+                        <th>Deleted By</th>
+                        <th>Reason</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="deletedBonanzasList">
+                    <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Audit Trail -->
+        <div class="recovery-zone">
+            <h4 class="text-info mb-3"><i class="bi bi-file-text me-2"></i>Recent Audit Trail</h4>
+            <div id="auditTrail">Loading...</div>
+        </div>
+
+        <!-- Go to Delete Management -->
+        <div class="text-center my-4">
+            <a href="/admin_delete_management.html" class="btn btn-danger btn-lg">
+                <i class="bi bi-trash me-2"></i>Go to Delete Management
+            </a>
+        </div>
+    </div>
+
+    <!-- Restore Modal (Single Item) -->
+    <div class="modal fade" id="restoreModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="bi bi-arrow-counterclockwise me-2"></i>Confirm Restore</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <strong>Recovery:</strong> This will restore the deleted item to active status.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Item to Restore:</strong></label>
+                        <p id="restoreItemName" class="text-success fw-bold"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label for="restorePassword" class="form-label">RVZ Secondary Password:</label>
+                        <input type="password" class="form-control" id="restorePassword" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="confirmRestore()">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Confirm Restore
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Restore Modal -->
+    <div class="modal fade" id="bulkRestoreModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>Bulk Restore Confirmation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> This will restore ALL items deleted after the selected timestamp.
+                    </div>
+                    <p id="bulkRestoreTimestamp"></p>
+                    <div class="mb-3">
+                        <label for="bulkRestorePassword" class="form-label">RVZ Secondary Password:</label>
+                        <input type="password" class="form-control" id="bulkRestorePassword" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="confirmBulkRestore()">
+                        <i class="bi bi-arrow-counterclockwise me-2"></i>Restore All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let restoreItemId = null;
+        let restoreItemType = null;
+
+        // Load deleted data
+        async function loadDeletedData() {
+            try {
+                const response = await fetch('/api/v1/rvz/recovery/deleted-data');
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update stats with safe defaults
+                    const summary = data.summary || {};
+                    document.getElementById('totalDeleted').textContent = summary.total_deleted_items || 0;
+                    document.getElementById('deletedBonanzas').textContent = summary.total_deleted_bonanzas || 0;
+                    document.getElementById('deletedUsers').textContent = summary.total_deleted_users || 0;
+                    
+                    // Load deleted bonanzas with safe array handling
+                    const tbody = document.getElementById('deletedBonanzasList');
+                    const deletedData = data.deleted_data || {};
+                    const bonanzas = Array.isArray(deletedData.bonanzas) ? deletedData.bonanzas : [];
+                    if (bonanzas.length > 0) {
+                        tbody.innerHTML = bonanzas.map(b => `
+                            <tr>
+                                <td>${b.id}</td>
+                                <td>${b.name}</td>
+                                <td>${new Date(b.deleted_at).toLocaleString()}</td>
+                                <td>${b.deleted_by}</td>
+                                <td>${b.deletion_reason}</td>
+                                <td>
+                                    <button class="restore-btn" onclick="showRestoreModal(${b.id}, '${b.type}', '${b.name}')">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Restore
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No deleted items found</td></tr>';
+                    }
+                    
+                    // Load audit trail with safe array handling
+                    const auditDiv = document.getElementById('auditTrail');
+                    const auditTrail = Array.isArray(data.audit_trail) ? data.audit_trail : [];
+                    if (auditTrail.length > 0) {
+                        auditDiv.innerHTML = auditTrail.slice(0, 10).map(log => `
+                            <div class="timeline-item">
+                                <small class="text-muted">${new Date(log.timestamp).toLocaleString()}</small>
+                                <p class="mb-1"><strong>${log.action}</strong> - ${log.entity_type} #${log.entity_id}</p>
+                                <p class="mb-0 small">By: ${log.actor} | IP: ${log.ip_address || 'N/A'}</p>
+                            </div>
+                        `).join('');
+                    } else {
+                        auditDiv.innerHTML = '<p class="text-muted">No audit logs found</p>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading deleted data:', error);
+                alert('Error loading data. Please refresh the page.');
+            }
+        }
+
+        function showRestoreModal(id, type, name) {
+            restoreItemId = id;
+            restoreItemType = type;
+            document.getElementById('restoreItemName').textContent = name;
+            document.getElementById('restorePassword').value = '';
+            new bootstrap.Modal(document.getElementById('restoreModal')).show();
+        }
+
+        function showBulkRestoreModal() {
+            const timestamp = document.getElementById('recoveryTimestamp').value;
+            if (!timestamp) {
+                alert('Please select a date and time');
+                return;
+            }
+            document.getElementById('bulkRestoreTimestamp').textContent = `Restore all items deleted after: ${new Date(timestamp).toLocaleString()}`;
+            document.getElementById('bulkRestorePassword').value = '';
+            new bootstrap.Modal(document.getElementById('bulkRestoreModal')).show();
+        }
+
+        async function confirmRestore() {
+            const password = document.getElementById('restorePassword').value;
+            
+            if (!password) {
+                alert('Secondary password is required');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/rvz/recovery/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secondary_password: password,
+                        entity_type: restoreItemType,
+                        entity_id: restoreItemId
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(result.message || 'Item restored successfully');
+                    bootstrap.Modal.getInstance(document.getElementById('restoreModal')).hide();
+                    loadDeletedData();
+                } else {
+                    alert(result.detail || 'Restore failed');
+                }
+            } catch (error) {
+                console.error('Error restoring:', error);
+                alert('Error restoring item. Please try again.');
+            }
+        }
+
+        async function confirmBulkRestore() {
+            const timestamp = document.getElementById('recoveryTimestamp').value;
+            const password = document.getElementById('bulkRestorePassword').value;
+            
+            if (!password) {
+                alert('Secondary password is required');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/rvz/recovery/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        secondary_password: password,
+                        entity_type: 'ALL',
+                        timestamp: new Date(timestamp).toISOString()
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(result.message || 'Items restored successfully');
+                    bootstrap.Modal.getInstance(document.getElementById('bulkRestoreModal')).hide();
+                    loadDeletedData();
+                } else {
+                    alert(result.detail || 'Bulk restore failed');
+                }
+            } catch (error) {
+                console.error('Error bulk restoring:', error);
+                alert('Error restoring items. Please try again.');
+            }
+        }
+
+        // Load data on page load
+        loadDeletedData();
+    </script>
+</body>
+</html>

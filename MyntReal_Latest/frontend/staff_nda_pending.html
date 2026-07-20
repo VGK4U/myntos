@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - Pending Agreement Acceptances</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; }
+
+        .doc-type-switcher { display: flex; gap: 8px; margin-bottom: 20px; }
+        .doc-type-btn { padding: 9px 20px; border-radius: 8px; border: 1.5px solid #d1d5db; background: white; color: #374151; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.18s; display: flex; align-items: center; gap: 7px; }
+        .doc-type-btn:hover { border-color: #6366f1; color: #4338ca; }
+        .doc-type-btn.active-nda { background: #1e3a8a; border-color: #1e3a8a; color: white; }
+        .doc-type-btn.active-employment { background: #065f46; border-color: #065f46; color: white; }
+
+        .alert-banner { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fcd34d; border-radius: 12px; padding: 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px; }
+        .alert-banner i { font-size: 32px; color: #d97706; }
+        .alert-banner-content h5 { color: #92400e; margin-bottom: 4px; }
+        .alert-banner-content p { color: #a16207; margin: 0; font-size: 14px; }
+
+        .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .summary-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-value { font-size: 32px; font-weight: 700; }
+        .summary-label { font-size: 14px; color: #6b7280; margin-top: 4px; }
+        .summary-card.total .summary-value { color: #2563eb; }
+        .summary-card.accepted .summary-value { color: #059669; }
+        .summary-card.pending .summary-value { color: #dc2626; }
+
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 0; }
+
+        .filters-bar { padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filters-bar select, .filters-bar input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 150px; }
+
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-top: none; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-pending { background: #fee2e2; color: #dc2626; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-state.success i { color: #059669; opacity: 1; }
+
+        .employee-info { display: flex; align-items: center; gap: 12px; }
+        .employee-avatar { width: 40px; height: 40px; border-radius: 50%; background: #fee2e2; display: flex; align-items: center; justify-content: center; color: #dc2626; font-weight: 600; }
+        .employee-details .name { font-weight: 500; color: #1f2937; }
+        .employee-details .code { font-size: 12px; color: #6b7280; }
+
+        .info-box { border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+        .info-box h6 { margin-bottom: 8px; }
+        .info-box p { margin: 0; font-size: 14px; }
+        .info-box.nda { background: #f0f9ff; border: 1px solid #bae6fd; }
+        .info-box.nda h6 { color: #0369a1; }
+        .info-box.nda p { color: #0c4a6e; }
+        .info-box.employment { background: #f0fdf4; border: 1px solid #a7f3d0; }
+        .info-box.employment h6 { color: #065f46; }
+        .info-box.employment p { color: #064e3b; }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+
+        <div class="doc-type-switcher">
+            <button id="btnNDA" class="doc-type-btn active-nda" onclick="switchDocType('NDA')">
+                <i class="fas fa-file-contract"></i> NDA
+            </button>
+            <button id="btnEMPLOYMENT" class="doc-type-btn" onclick="switchDocType('EMPLOYMENT')">
+                <i class="fas fa-file-signature"></i> Employment Agreement
+            </button>
+        </div>
+
+        <div class="alert-banner" id="alertBanner" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div class="alert-banner-content">
+                <h5 id="alertTitle">Pending Acceptances</h5>
+                <p id="alertMessage"></p>
+            </div>
+        </div>
+
+        <div class="info-box nda" id="infoBox">
+            <h6 id="infoBoxTitle"><i class="fas fa-file-contract me-2"></i>Active NDA Version</h6>
+            <p id="activeNdaInfo">Loading...</p>
+        </div>
+
+        <div class="summary-cards">
+            <div class="summary-card total">
+                <div class="summary-value" id="totalEmployees">0</div>
+                <div class="summary-label">Total Active Employees</div>
+            </div>
+            <div class="summary-card accepted">
+                <div class="summary-value" id="acceptedCount">0</div>
+                <div class="summary-label">Accepted</div>
+            </div>
+            <div class="summary-card pending">
+                <div class="summary-value" id="pendingCount">0</div>
+                <div class="summary-label">Pending</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 id="tableTitle"><i class="fas fa-users me-2"></i>Employees Pending Acceptance</h5>
+            </div>
+            <div class="filters-bar">
+                <select id="roleFilter" onchange="loadPending()">
+                    <option value="">All Roles</option>
+                </select>
+                <select id="departmentFilter" onchange="loadPending()">
+                    <option value="">All Departments</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="Search employee..." onkeyup="debounceSearch()">
+                <button class="btn btn-outline-secondary btn-sm" onclick="clearFilters()">
+                    <i class="fas fa-times me-1"></i>Clear
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Reporting Manager</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="spinner-border text-primary" role="status"></div>
+                                    <p class="mt-2 text-muted">Loading...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <nav class="mt-3">
+            <ul class="pagination justify-content-center" id="pagination"></ul>
+        </nav>
+    </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allPending = [];
+        let currentPage = 1;
+        let totalPages = 1;
+        let searchTimeout = null;
+        let filters = { roles: [], departments: [] };
+        let activeNda = null;
+        let currentDocType = 'NDA';
+
+        const DOC_LABELS = {
+            NDA: 'NDA',
+            EMPLOYMENT: 'Employment Agreement'
+        };
+        const DOC_ICONS = {
+            NDA: 'fas fa-file-contract',
+            EMPLOYMENT: 'fas fa-file-signature'
+        };
+
+        function switchDocType(docType) {
+            currentDocType = docType;
+            const isEmp = docType === 'EMPLOYMENT';
+
+            document.getElementById('btnNDA').className = 'doc-type-btn' + (docType === 'NDA' ? ' active-nda' : '');
+            document.getElementById('btnEMPLOYMENT').className = 'doc-type-btn' + (isEmp ? ' active-employment' : '');
+
+            const infoBox = document.getElementById('infoBox');
+            infoBox.className = 'info-box ' + (isEmp ? 'employment' : 'nda');
+            document.getElementById('infoBoxTitle').innerHTML =
+                `<i class="${DOC_ICONS[docType]} me-2"></i>Active ${DOC_LABELS[docType]} Version`;
+            document.getElementById('tableTitle').innerHTML =
+                `<i class="fas fa-users me-2"></i>Employees Pending ${DOC_LABELS[docType]} Acceptance`;
+
+            document.getElementById('roleFilter').innerHTML = '<option value="">All Roles</option>';
+            document.getElementById('departmentFilter').innerHTML = '<option value="">All Departments</option>';
+            filters = { roles: [], departments: [] };
+
+            loadPending(1);
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        }
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => loadPending(), 300);
+        }
+
+        function clearFilters() {
+            document.getElementById('roleFilter').value = '';
+            document.getElementById('departmentFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            loadPending();
+        }
+
+        async function loadPending(page = 1) {
+            currentPage = page;
+            const label = DOC_LABELS[currentDocType];
+
+            try {
+                const params = new URLSearchParams({ page, limit: 50, document_type: currentDocType });
+
+                const roleId = document.getElementById('roleFilter').value;
+                const deptId = document.getElementById('departmentFilter').value;
+                const search = document.getElementById('searchInput').value;
+
+                if (roleId) params.append('role_id', roleId);
+                if (deptId) params.append('department_id', deptId);
+                if (search) params.append('search', search);
+
+                const response = await staffFetch(`/api/v1/staff/nda/pending?${params}`);
+
+                if (!response.ok) throw new Error('Failed to load data');
+
+                const data = await response.json();
+                allPending = data.data;
+                totalPages = data.pagination.pages;
+                filters = data.filters;
+                activeNda = data.active_nda;
+
+                document.getElementById('totalEmployees').textContent = data.stats.total_employees;
+                document.getElementById('acceptedCount').textContent = data.stats.accepted;
+                document.getElementById('pendingCount').textContent = data.stats.pending;
+
+                if (activeNda) {
+                    document.getElementById('activeNdaInfo').innerHTML = `
+                        <strong>v${activeNda.version_number}</strong> — ${activeNda.title}
+                        <br><small>Activated: ${activeNda.activated_at ? new Date(activeNda.activated_at).toLocaleDateString('en-IN') : 'N/A'}</small>
+                    `;
+                } else {
+                    document.getElementById('activeNdaInfo').innerHTML =
+                        `<span class="text-warning">No active ${label} version found.</span>`;
+                }
+
+                if (data.stats.pending > 0) {
+                    document.getElementById('alertBanner').style.display = 'flex';
+                    document.getElementById('alertTitle').textContent =
+                        `${data.stats.pending} Pending ${label} Acceptance${data.stats.pending > 1 ? 's' : ''}`;
+                    document.getElementById('alertMessage').textContent =
+                        `${data.stats.pending} of ${data.stats.total_employees} employees have not yet accepted the active ${label}.`;
+                } else {
+                    document.getElementById('alertBanner').style.display = 'none';
+                }
+
+                populateFilters();
+                renderTable();
+                renderPagination();
+
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error:', error);
+                document.getElementById('pendingTableBody').innerHTML = `
+                    <tr><td colspan="5" class="text-center text-danger py-4">
+                        <i class="fas fa-exclamation-circle me-2"></i>Error loading data
+                    </td></tr>
+                `;
+            }
+        }
+
+        function populateFilters() {
+            const roleSelect = document.getElementById('roleFilter');
+            const deptSelect = document.getElementById('departmentFilter');
+
+            const currentRole = roleSelect.value;
+            const currentDept = deptSelect.value;
+
+            if (filters.roles && roleSelect.options.length <= 1) {
+                filters.roles.forEach(r => roleSelect.add(new Option(r.name, r.id)));
+            }
+            if (filters.departments && deptSelect.options.length <= 1) {
+                filters.departments.forEach(d => deptSelect.add(new Option(d.name, d.id)));
+            }
+
+            roleSelect.value = currentRole;
+            deptSelect.value = currentDept;
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('pendingTableBody');
+            const label = DOC_LABELS[currentDocType];
+
+            if (!activeNda) {
+                tbody.innerHTML = `
+                    <tr><td colspan="5">
+                        <div class="empty-state success">
+                            <i class="fas fa-check-circle"></i>
+                            <p>No active ${label} version. No acceptance required.</p>
+                        </div>
+                    </td></tr>
+                `;
+                return;
+            }
+
+            if (allPending.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="5">
+                        <div class="empty-state success">
+                            <i class="fas fa-check-circle"></i>
+                            <p>All employees have accepted the ${label}!</p>
+                        </div>
+                    </td></tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = allPending.map(e => `
+                <tr>
+                    <td>
+                        <div class="employee-info">
+                            <div class="employee-avatar">${getInitials(e.full_name)}</div>
+                            <div class="employee-details">
+                                <div class="name">${e.full_name}</div>
+                                <div class="code">${e.emp_code}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${e.role_name || '-'}</td>
+                    <td>${e.department_name || '-'}</td>
+                    <td>${e.reporting_manager_name || '-'}</td>
+                    <td><span class="badge badge-pending"><i class="fas fa-clock me-1"></i>Pending</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderPagination() {
+            const pagination = document.getElementById('pagination');
+            if (totalPages <= 1) { pagination.innerHTML = ''; return; }
+
+            let html = `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadPending(${currentPage - 1});return false;">Previous</a>
+            </li>`;
+            for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+                html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="loadPending(${i});return false;">${i}</a>
+                </li>`;
+            }
+            html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadPending(${currentPage + 1});return false;">Next</a>
+            </li>`;
+            pagination.innerHTML = html;
+        }
+    </script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('staff_token');
+            if (!token) { window.location.href = '/staff/login'; return; }
+
+            const urlDocType = new URLSearchParams(window.location.search).get('doc_type');
+            if (urlDocType === 'EMPLOYMENT') switchDocType('EMPLOYMENT');
+
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Pending Agreement Acceptances', 'fas fa-user-clock');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            loadPending();
+        });
+    </script>
+</body>
+</html>

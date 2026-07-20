@@ -1,0 +1,1689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Center Tracking - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .content-area { padding: 24px; }
+        @media (max-width: 768px) { .content-area { padding: 16px; } }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .btn-secondary-custom { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .tabs { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+        .tab { padding: 12px 24px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; font-weight: 500; color: #6b7280; transition: all 0.2s; }
+        .tab:hover { color: #f59e0b; }
+        .tab.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-item { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-item .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .summary-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .summary-item.received .value { color: #3b82f6; }
+        .summary-item.diagnosed .value { color: #8b5cf6; }
+        .summary-item.escalated .value { color: #f59e0b; }
+        .summary-item.completed .value { color: #10b981; }
+        .summary-item.replacement .value { color: #ef4444; }
+        .filter-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+        .filter-row select, .filter-row input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 150px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+        .data-table td { padding: 12px 14px; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .data-table tr:hover { background: #f9fafb; }
+        .badge-status { padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .badge-REGISTERED, .badge-RECEIVED { background: #dbeafe; color: #1d4ed8; }
+        .badge-DIAGNOSIS_PENDING, .badge-DIAGNOSIS_IN_PROGRESS { background: #e0e7ff; color: #4f46e5; }
+        .badge-DIAGNOSED { background: #ede9fe; color: #7c3aed; }
+        .badge-REPAIR_IN_PROGRESS { background: #fef3c7; color: #b45309; }
+        .badge-REPAIRED { background: #d1fae5; color: #059669; }
+        .badge-REPLACEMENT_PENDING { background: #fee2e2; color: #b91c1c; }
+        .badge-REPLACEMENT_ISSUED { background: #a7f3d0; color: #047857; }
+        .badge-ESCALATED { background: #fef3c7; color: #d97706; }
+        .badge-RETURNED_TO_CUSTOMER { background: #ecfdf5; color: #059669; }
+        .badge-CLOSED { background: #f3f4f6; color: #6b7280; }
+        .badge-CANCELLED { background: #fee2e2; color: #6b7280; }
+        .badge-DISPATCHED { background: #fef3c7; color: #d97706; }
+        .badge-WITH_VENDOR { background: #fee2e2; color: #dc2626; }
+        .ticket-badge { background: #dbeafe; color: #1d4ed8; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .btn-action { padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; margin-right: 3px; white-space: nowrap; }
+        .btn-view { background: #f3f4f6; color: #374151; }
+        .btn-view:hover { background: #374151; color: white; }
+        .btn-diagnose { background: #e0e7ff; color: #4f46e5; }
+        .btn-diagnose:hover { background: #4f46e5; color: white; }
+        .btn-escalate { background: #fef3c7; color: #d97706; }
+        .btn-escalate:hover { background: #d97706; color: white; }
+        .btn-replace { background: #fee2e2; color: #b91c1c; }
+        .btn-replace:hover { background: #b91c1c; color: white; }
+        .btn-vendor { background: #fef3c7; color: #92400e; }
+        .btn-vendor:hover { background: #92400e; color: white; }
+        .btn-receive { background: #d1fae5; color: #059669; }
+        .btn-receive:hover { background: #059669; color: white; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #6b7280; }
+        .empty-state i { font-size: 40px; margin-bottom: 12px; color: #d1d5db; display: block; }
+        .spinner-cell { text-align: center; padding: 40px; }
+        .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid #e5e7eb; border-top-color: #f59e0b; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 760px; width: 95%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; background: white; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .purpose-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .purpose-option { border: 2px solid #e5e7eb; border-radius: 8px; padding: 12px; cursor: pointer; text-align: center; transition: all 0.2s; }
+        .purpose-option:hover { border-color: #f59e0b; background: #fffbeb; }
+        .purpose-option.selected { border-color: #f59e0b; background: #fffbeb; }
+        .purpose-option input[type=radio] { display: none; }
+        .purpose-option i { font-size: 20px; margin-bottom: 6px; display: block; color: #6b7280; }
+        .purpose-option.selected i { color: #d97706; }
+        .purpose-option .purpose-label { font-size: 12px; font-weight: 600; color: #374151; }
+        .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 0 0 6px 6px; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .autocomplete-item { padding: 10px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f3f4f6; }
+        .autocomplete-item:hover { background: #f9fafb; }
+        .autocomplete-item .ac-sub { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .autocomplete-wrapper { position: relative; }
+        .section-divider { border-top: 1px solid #e5e7eb; margin: 16px 0; padding-top: 16px; }
+        .section-label { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+        .alert-info-sm { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 14px; font-size: 13px; color: #1d4ed8; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content" id="mainContent">
+        <div id="headerContainer"></div>
+
+        <div class="content-area">
+            <div class="page-header">
+                <div>
+                    <h1>Service Center Item Tracking</h1>
+                    <p>Track items from receipt through diagnosis, repair, replacement, and vendor escalation</p>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <a href="/staff/inventory/vendor-returns?tab=serviceReturns" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-tools"></i> Service Repairs Tracker</a>
+                    <button class="btn-primary-custom" onclick="openCreateModal()">
+                        <i class="fas fa-plus me-1"></i> New Receipt
+                    </button>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="receipts" onclick="switchTab('receipts')">
+                    <i class="fas fa-inbox me-1"></i> Receipts
+                </div>
+                <div class="tab" data-tab="dispatches" onclick="switchTab('dispatches')">
+                    <i class="fas fa-truck me-1"></i> Dispatches
+                </div>
+                <div class="tab" data-tab="vendorRepairs" onclick="switchTab('vendorRepairs')">
+                    <i class="fas fa-tools me-1"></i> Sent to Vendor (Repair)
+                </div>
+                <div class="tab" data-tab="givenOut" onclick="switchTab('givenOut')">
+                    <i class="fas fa-hand-holding-box me-1"></i> Given Out
+                </div>
+            </div>
+
+            <!-- RECEIPTS TAB -->
+            <div id="tab-receipts">
+                <div class="summary-row">
+                    <div class="summary-item received"><div class="value" id="statRegistered">—</div><div class="label">Registered</div></div>
+                    <div class="summary-item diagnosed"><div class="value" id="statDiagnosed">—</div><div class="label">Diagnosed</div></div>
+                    <div class="summary-item replacement"><div class="value" id="statReplacement">—</div><div class="label">Replacement</div></div>
+                    <div class="summary-item escalated"><div class="value" id="statEscalated">—</div><div class="label">Escalated</div></div>
+                    <div class="summary-item completed"><div class="value" id="statCompleted">—</div><div class="label">Completed</div></div>
+                </div>
+
+                <div class="filter-row">
+                    <select id="filterCompany" onchange="loadReceipts()">
+                        <option value="">All Companies</option>
+                    </select>
+                    <select id="filterStatus" onchange="loadReceipts()">
+                        <option value="">All Statuses</option>
+                        <option value="REGISTERED">Registered</option>
+                        <option value="DIAGNOSED">Diagnosed</option>
+                        <option value="REPLACEMENT_PENDING">Replacement Pending</option>
+                        <option value="REPLACEMENT_ISSUED">Replacement Issued</option>
+                        <option value="ESCALATED">Escalated</option>
+                        <option value="REPAIR_IN_PROGRESS">Repair In Progress</option>
+                        <option value="REPAIRED">Repaired</option>
+                        <option value="RETURNED_TO_CUSTOMER">Returned to Customer</option>
+                        <option value="CLOSED">Closed</option>
+                    </select>
+                    <input type="text" id="filterTicket" placeholder="Filter by Ticket #..." onkeyup="debounceLoadReceipts()" style="min-width:180px;">
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-inbox me-1"></i> Item Receipts</span>
+                        <span class="text-muted" id="receiptCount" style="font-size:13px;">—</span>
+                    </div>
+                    <div class="card-body" style="padding:0;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Receipt #</th>
+                                        <th>Ticket #</th>
+                                        <th>Item</th>
+                                        <th>Serial</th>
+                                        <th>Customer</th>
+                                        <th>Status</th>
+                                        <th>Received</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="receiptsBody">
+                                    <tr><td colspan="8" class="spinner-cell"><div class="spinner"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DISPATCHES TAB -->
+            <div id="tab-dispatches" style="display:none;">
+                <div class="filter-row">
+                    <select id="filterDispatchStatus" onchange="loadDispatches()">
+                        <option value="">All Statuses</option>
+                        <option value="DISPATCHED">Dispatched</option>
+                        <option value="RECEIVED">Received at Destination</option>
+                    </select>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-truck me-1"></i> Dispatches</span>
+                        <span class="text-muted" id="dispatchCount" style="font-size:13px;">—</span>
+                    </div>
+                    <div class="card-body" style="padding:0;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Dispatch #</th>
+                                        <th>Receipt #</th>
+                                        <th>Destination</th>
+                                        <th>Status</th>
+                                        <th>Dispatched</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dispatchesBody">
+                                    <tr><td colspan="6" class="spinner-cell"><div class="spinner"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VENDOR REPAIRS TAB -->
+            <div id="tab-vendorRepairs" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+                    <div class="alert-info-sm" style="margin:0;flex:1;">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Items escalated to external vendor for repair — from service center receipts and service ticket spare requests.
+                    </div>
+                    <a href="/staff/inventory/vendor-returns?tab=serviceReturns" style="background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><i class="fas fa-tools"></i> Manage in Vendor Returns</a>
+                </div>
+                <div class="filter-row">
+                    <select id="filterVrCompany" onchange="loadVendorRepairs()">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-tools me-1"></i> Items with Vendor (Repair)</span>
+                        <span class="text-muted" id="vrCount" style="font-size:13px;">—</span>
+                    </div>
+                    <div class="card-body" style="padding:0;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Receipt #</th>
+                                        <th>Ticket #</th>
+                                        <th>Item</th>
+                                        <th>Serial</th>
+                                        <th>Service Center</th>
+                                        <th>Customer</th>
+                                        <th>Reason</th>
+                                        <th>Escalated On</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vrBody">
+                                    <tr><td colspan="9" class="spinner-cell"><div class="spinner"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GIVEN OUT TAB -->
+            <div id="tab-givenOut" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                        <select id="goFilterStatus" onchange="loadGivenOut()" style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="ALL">All Statuses</option>
+                            <option value="GIVEN_OUT">Given Out</option>
+                            <option value="RETURNED">Returned</option>
+                            <option value="BILLED">Billed</option>
+                            <option value="EXCHANGED">Exchanged</option>
+                            <option value="WRITTEN_OFF">Written Off</option>
+                        </select>
+                        <select id="goFilterRecipient" onchange="loadGivenOut()" style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="ALL">All Recipients</option>
+                            <option value="CUSTOMER">Customer</option>
+                            <option value="PARTNER">Partner</option>
+                        </select>
+                        <select id="goFilterPurpose" onchange="loadGivenOut()" style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="ALL">All Purposes</option>
+                            <option value="LOAN">Loan</option>
+                            <option value="DEMO">Demo</option>
+                            <option value="EXCHANGE">Exchange</option>
+                            <option value="TRIAL">Trial</option>
+                        </select>
+                        <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;">
+                            <input type="checkbox" id="goFilterOverdue" onchange="loadGivenOut()" style="cursor:pointer;"> Overdue only
+                        </label>
+                        <input type="date" id="goFilterDateFrom" onchange="loadGivenOut()" style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;" placeholder="From date">
+                        <input type="date" id="goFilterDateTo" onchange="loadGivenOut()" style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;" placeholder="To date">
+                        <input type="text" id="goFilterSearch" oninput="debounceGoSearch()" placeholder="Search name / item / ref..." style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;min-width:200px;">
+                    </div>
+                    <button onclick="openGivenOutModal()" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white;border:none;padding:9px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                        <i class="fas fa-hand-holding-box me-1"></i> Give Out Item
+                    </button>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-hand-holding-box me-1"></i> Items Given Out</span>
+                        <span class="text-muted" id="goCount" style="font-size:13px;">—</span>
+                    </div>
+                    <div class="card-body" style="padding:0;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="toggleGoSort('given_out_number')" style="cursor:pointer;">Ref # <i class="fas fa-sort" style="font-size:10px;opacity:.5;"></i></th>
+                                        <th onclick="toggleGoSort('given_at')" style="cursor:pointer;">Date Given <i class="fas fa-sort" style="font-size:10px;opacity:.5;"></i></th>
+                                        <th onclick="toggleGoSort('recipient_name')" style="cursor:pointer;">Recipient <i class="fas fa-sort" style="font-size:10px;opacity:.5;"></i></th>
+                                        <th onclick="toggleGoSort('item_name')" style="cursor:pointer;">Item <i class="fas fa-sort" style="font-size:10px;opacity:.5;"></i></th>
+                                        <th>Serial #</th>
+                                        <th>Qty</th>
+                                        <th>Purpose</th>
+                                        <th onclick="toggleGoSort('expected_return_date')" style="cursor:pointer;">Expected Return <i class="fas fa-sort" style="font-size:10px;opacity:.5;"></i></th>
+                                        <th onclick="toggleGoSort('status')" style="cursor:pointer;">Status <i class="fas fa-sort" style="font-size:10px;opacity:.5;"></i></th>
+                                        <th>Ticket #</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="goBody">
+                                    <tr><td colspan="11" class="spinner-cell"><div class="spinner"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="goPagination" style="padding:10px 14px;border-top:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#6b7280;"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- GIVEN OUT CREATE MODAL -->
+    <div class="modal-overlay" id="goModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+        <div class="modal-content" style="background:white;border-radius:12px;width:95%;max-width:600px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="margin:0;font-size:17px;font-weight:700;"><i class="fas fa-hand-holding-box me-2" style="color:#0ea5e9;"></i>Give Out Item</h3>
+                <button onclick="closeGivenOutModal()" style="background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;">&times;</button>
+            </div>
+            <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Company *</label>
+                        <select id="goCompanySelect" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="">Select Company</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Service Center *</label>
+                        <select id="goPartnerSelect" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="">Select Service Center</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Recipient Type *</label>
+                        <select id="goRecipientType" onchange="toggleGoPartnerSearch()" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="CUSTOMER">Customer</option>
+                            <option value="PARTNER">Partner</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="goPartnerSearchWrap" style="display:none;">
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Search Partner</label>
+                    <div style="position:relative;">
+                        <input id="goPartnerSearch" type="text" placeholder="Type partner name..." oninput="debounceGoPartner()" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                        <input type="hidden" id="goPartnerId">
+                        <div id="goPartnerDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #d1d5db;border-radius:6px;max-height:160px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Recipient Name *</label>
+                        <input id="goRecipientName" type="text" placeholder="Full name" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Contact Number *</label>
+                        <input id="goRecipientContact" type="tel" placeholder="Phone number" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Recipient Email</label>
+                    <input id="goRecipientEmail" type="email" placeholder="email@example.com" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Item *</label>
+                    <div style="position:relative;">
+                        <input id="goItemSearch" type="text" placeholder="Search stock items..." oninput="debounceGoItem()" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                        <input type="hidden" id="goItemId">
+                        <input type="hidden" id="goItemName">
+                        <input type="hidden" id="goItemCode">
+                        <div id="goItemDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #d1d5db;border-radius:6px;max-height:160px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Serial #</label>
+                        <input id="goSerial" type="text" placeholder="Optional" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Quantity</label>
+                        <input id="goQty" type="number" value="1" min="1" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Purpose *</label>
+                        <select id="goPurpose" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="LOAN">Loan</option>
+                            <option value="DEMO">Demo</option>
+                            <option value="EXCHANGE">Exchange</option>
+                            <option value="TRIAL">Trial</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Expected Return Date</label>
+                        <input id="goExpectedReturn" type="date" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Link Service Ticket ID</label>
+                        <input id="goTicketId" type="number" placeholder="Optional ticket ID" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Notes</label>
+                    <textarea id="goNotes" rows="2" placeholder="Any additional notes..." style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;"></textarea>
+                </div>
+                <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:6px;padding:10px 14px;font-size:12px;color:#92400e;">
+                    <i class="fas fa-info-circle me-1"></i> Stock will be deducted immediately upon saving. It will be restored when marked as Returned or Exchanged.
+                </div>
+            </div>
+            <div style="padding:16px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px;">
+                <button onclick="closeGivenOutModal()" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;padding:10px 20px;border-radius:6px;font-size:14px;cursor:pointer;">Cancel</button>
+                <button id="goSubmitBtn" onclick="submitGivenOut()" style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:white;border:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Confirm Give Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GIVEN OUT ACTION MODAL (Return / Bill / Exchange / Write Off) -->
+    <div class="modal-overlay" id="goActionModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+        <div class="modal-content" style="background:white;border-radius:12px;width:95%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;">
+                <h3 id="goActionTitle" style="margin:0;font-size:17px;font-weight:700;"></h3>
+                <button onclick="closeGoActionModal()" style="background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;">&times;</button>
+            </div>
+            <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+                <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:10px 14px;font-size:13px;color:#0369a1;" id="goActionRef"></div>
+
+                <!-- RETURN fields -->
+                <div id="goActionReturnFields" style="display:none;flex-direction:column;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Item Condition on Return</label>
+                        <select id="goReturnCondition" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="GOOD">Good</option>
+                            <option value="MINOR_DAMAGE">Minor Damage</option>
+                            <option value="DEFECTIVE">Defective</option>
+                            <option value="DAMAGED">Damaged</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- BILL fields -->
+                <div id="goActionBillFields" style="display:none;flex-direction:column;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Search Sales Invoice</label>
+                        <div style="position:relative;">
+                            <input id="goActionInvoiceSearch" type="text" placeholder="Search invoice number..." oninput="debounceGoInvoice()" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                            <div id="goInvoiceDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #d1d5db;border-radius:6px;max-height:160px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Or Manual Invoice Reference</label>
+                        <input id="goActionInvoiceRef" type="text" placeholder="e.g. INV-2026-001" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;">
+                    </div>
+                </div>
+
+                <!-- EXCHANGE fields -->
+                <div id="goActionExchangeFields" style="display:none;flex-direction:column;gap:12px;">
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Returned Item goes back as</label>
+                        <select id="goExchangeReturnType" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="NORMAL_STOCK">Normal Stock (returned in good/reusable condition)</option>
+                            <option value="DEFECTIVE">Defective Pool (damaged/for repair)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Returned Item Condition</label>
+                        <select id="goExchangeCondition" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="DEFECTIVE">Defective</option>
+                            <option value="DAMAGED">Damaged</option>
+                            <option value="MINOR_DAMAGE">Minor Damage</option>
+                            <option value="GOOD">Good</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- WRITE OFF fields -->
+                <div id="goActionWriteOffFields" style="display:none;">
+                    <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;font-size:12px;color:#991b1b;margin-bottom:10px;">
+                        <i class="fas fa-exclamation-triangle me-1"></i> This item will be permanently written off. Stock will NOT be restored.
+                    </div>
+                </div>
+
+                <!-- Shared notes -->
+                <div>
+                    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Notes</label>
+                    <textarea id="goActionNotes" rows="2" placeholder="Reason / notes..." style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;"></textarea>
+                </div>
+            </div>
+            <div style="padding:16px 24px;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:10px;">
+                <button onclick="closeGoActionModal()" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;padding:10px 20px;border-radius:6px;font-size:14px;cursor:pointer;">Cancel</button>
+                <button id="goActionSubmitBtn" onclick="submitGoAction()" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;padding:10px 24px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CREATE RECEIPT MODAL -->
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle me-2 text-warning"></i>New Item Receipt</h3>
+                <button class="modal-close" onclick="closeModal('createModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Purpose -->
+                <div class="form-group">
+                    <label>Purpose <span style="color:#ef4444">*</span></label>
+                    <div class="purpose-grid">
+                        <label class="purpose-option selected" id="po-repair">
+                            <input type="radio" name="purpose" value="FOR_REPAIR" checked>
+                            <i class="fas fa-wrench"></i>
+                            <span class="purpose-label">For Repair</span>
+                        </label>
+                        <label class="purpose-option" id="po-replacement">
+                            <input type="radio" name="purpose" value="FOR_REPLACEMENT">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span class="purpose-label">For Replacement</span>
+                        </label>
+                        <label class="purpose-option" id="po-vendor">
+                            <input type="radio" name="purpose" value="VENDOR_REPAIR">
+                            <i class="fas fa-truck"></i>
+                            <span class="purpose-label">Send to Vendor (Repair)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="section-divider">
+                    <div class="section-label">Link to Service Ticket (Optional)</div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <div class="autocomplete-wrapper">
+                            <input type="text" id="ticketSearch" placeholder="Search by ticket # or customer name..." oninput="searchTickets(this.value)" autocomplete="off">
+                            <div class="autocomplete-list" id="ticketList" style="display:none;"></div>
+                        </div>
+                        <div id="selectedTicketBadge" style="margin-top:8px;display:none;">
+                            <span class="ticket-badge" id="selectedTicketLabel"></span>
+                            <button type="button" onclick="clearTicket()" style="background:none;border:none;color:#6b7280;cursor:pointer;margin-left:6px;font-size:12px;"><i class="fas fa-times"></i> Clear</button>
+                        </div>
+                        <input type="hidden" id="selectedTicketId">
+                        <input type="hidden" id="selectedTicketPartnerId">
+                    </div>
+                </div>
+
+                <div class="section-divider">
+                    <div class="section-label">Item Details</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Company <span style="color:#ef4444">*</span></label>
+                            <select id="createCompany" required>
+                                <option value="">Select Company</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Service Center <span style="color:#ef4444">*</span></label>
+                            <select id="createPartner" required>
+                                <option value="">Select Service Center</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Stock Item <span style="color:#ef4444">*</span></label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="itemSearch" placeholder="Search item by name or code..." oninput="searchItems(this.value)" autocomplete="off">
+                                <div class="autocomplete-list" id="itemList" style="display:none;"></div>
+                            </div>
+                            <input type="hidden" id="createStockItemId">
+                            <input type="hidden" id="createStockItemCode">
+                        </div>
+                        <div class="form-group">
+                            <label>Serial Number</label>
+                            <input type="text" id="createSerial" placeholder="Enter serial number">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-divider">
+                    <div class="section-label">Customer Info</div>
+                    <div class="form-row">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Customer Name</label>
+                            <input type="text" id="createCustomerName" placeholder="Customer name">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Customer Phone</label>
+                            <input type="text" id="createCustomerPhone" placeholder="Phone number">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-divider">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Issue / Notes</label>
+                        <textarea id="createIssue" placeholder="Describe the issue or notes for this receipt..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary-custom" onclick="closeModal('createModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="submitReceipt()">
+                    <i class="fas fa-plus me-1"></i> Create Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGNOSE MODAL -->
+    <div class="modal-overlay" id="diagnoseModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-stethoscope me-2 text-primary"></i>Submit Diagnosis</h3>
+                <button class="modal-close" onclick="closeModal('diagnoseModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="diagnoseInfo"></div>
+                <div class="form-group">
+                    <label>Diagnosis Result</label>
+                    <select id="diagnosisResult">
+                        <option value="REPAIRABLE">Repairable at Service Center</option>
+                        <option value="NEEDS_ESCALATION">Needs Vendor Escalation</option>
+                        <option value="REPLACE">Needs Replacement</option>
+                        <option value="NO_FAULT">No Fault Found</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Recommended Action</label>
+                    <select id="recommendedAction">
+                        <option value="REPAIR_LOCAL">Repair Locally</option>
+                        <option value="SEND_TO_VENDOR">Send to Vendor</option>
+                        <option value="SEND_TO_HEAD_OFFICE">Send to Head Office</option>
+                        <option value="REPLACE_UNDER_WARRANTY">Replace Under Warranty</option>
+                        <option value="RETURN_TO_CUSTOMER">Return to Customer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Diagnosis Notes</label>
+                    <textarea id="diagnosisNotes" placeholder="Detailed diagnosis notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary-custom" onclick="closeModal('diagnoseModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="submitDiagnosis()">
+                    <i class="fas fa-clipboard-check me-1"></i> Submit Diagnosis
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ISSUE REPLACEMENT MODAL -->
+    <div class="modal-overlay" id="replaceModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-exchange-alt me-2 text-danger"></i>Issue Replacement</h3>
+                <button class="modal-close" onclick="closeModal('replaceModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert-info-sm">
+                    Issuing a replacement will <strong>deduct 1 unit</strong> from the selected item's stock ledger.
+                </div>
+                <div id="replaceReceiptInfo" class="mb-3"></div>
+                <div class="form-group">
+                    <label>Replacement Stock Item <span style="color:#ef4444">*</span></label>
+                    <div class="autocomplete-wrapper">
+                        <input type="text" id="replaceItemSearch" placeholder="Search replacement item..." oninput="searchReplaceItems(this.value)" autocomplete="off">
+                        <div class="autocomplete-list" id="replaceItemList" style="display:none;"></div>
+                    </div>
+                    <input type="hidden" id="replaceItemId">
+                    <div id="replaceItemSelected" style="margin-top:6px;font-size:13px;color:#059669;display:none;"><i class="fas fa-check-circle me-1"></i><span id="replaceItemName"></span></div>
+                </div>
+                <div class="form-group">
+                    <label>Replacement Serial Number</label>
+                    <input type="text" id="replaceSerial" placeholder="Serial number of replacement unit">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary-custom" onclick="closeModal('replaceModal')">Cancel</button>
+                <button class="btn-replace" onclick="submitReplacement()">
+                    <i class="fas fa-exchange-alt me-1"></i> Issue Replacement & Deduct Stock
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ESCALATE MODAL -->
+    <div class="modal-overlay" id="escalateModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-arrow-up me-2 text-warning"></i>Escalate Item</h3>
+                <button class="modal-close" onclick="closeModal('escalateModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Destination</label>
+                    <select id="escalateDestination" onchange="toggleVendorSelect()">
+                        <option value="HEAD_OFFICE">Head Office</option>
+                        <option value="VENDOR">Vendor</option>
+                    </select>
+                </div>
+                <div class="form-group" id="vendorSelectGroup" style="display:none;">
+                    <label>Select Vendor</label>
+                    <select id="escalateVendor">
+                        <option value="">Select Vendor</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Reason for Escalation</label>
+                    <textarea id="escalateReason" placeholder="Why is this being escalated..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Courier Details (Optional)</label>
+                    <input type="text" id="escalateCourier" placeholder="Courier name and tracking number">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary-custom" onclick="closeModal('escalateModal')">Cancel</button>
+                <button class="btn-escalate" onclick="submitEscalation()">
+                    <i class="fas fa-arrow-up me-1"></i> Escalate
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        const TOKEN = () => localStorage.getItem('staff_token') || localStorage.getItem('token');
+        const HEADERS = () => ({ 'Authorization': `Bearer ${TOKEN()}`, 'Content-Type': 'application/json' });
+
+        let currentUser = null;
+        let currentReceiptId = null;
+        let allItems = [];
+        let ticketSearchTimeout = null;
+        let receiptLoadTimeout = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Service Center Tracking', 'fas fa-tools');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            await loadCurrentUser();
+            await Promise.all([loadCompanies(), loadPartners(), loadVendors()]);
+            loadReceipts();
+
+            // Purpose toggle
+            document.querySelectorAll('input[name="purpose"]').forEach(r => {
+                r.addEventListener('change', () => {
+                    document.querySelectorAll('.purpose-option').forEach(o => o.classList.remove('selected'));
+                    r.closest('.purpose-option').classList.add('selected');
+                });
+            });
+        });
+
+        async function loadCurrentUser() {
+            try {
+                const res = await fetch(`${API_BASE}/staff/auth/me`, { headers: HEADERS() });
+                if (res.ok) currentUser = await res.json();
+            } catch (e) { console.error('Auth error:', e); }
+        }
+
+        async function loadCompanies() {
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/companies`, { headers: HEADERS() });
+                if (res.ok) {
+                    const data = await res.json();
+                    const companies = data.companies || [];
+                    ['filterCompany', 'createCompany', 'filterVrCompany', 'goCompanySelect'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                        companies.forEach(c => {
+                            const opt = document.createElement('option');
+                            opt.value = c.id;
+                            opt.textContent = c.company_name || c.name;
+                            el.appendChild(opt);
+                        });
+                    });
+                }
+            } catch (e) { console.error('loadCompanies:', e); }
+        }
+
+        async function loadPartners() {
+            try {
+                const res = await fetch(`${API_BASE}/tickets/partners`, { headers: HEADERS() });
+                if (res.ok) {
+                    const partners = await res.json();
+                    const list = Array.isArray(partners) ? partners : (partners.items || []);
+                    ['createPartner', 'goPartnerSelect'].forEach(id => {
+                        const sel = document.getElementById(id);
+                        if (!sel) return;
+                        list.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.partner_name || p.business_name || `Partner #${p.id}`;
+                            sel.appendChild(opt);
+                        });
+                    });
+                }
+            } catch (e) { console.error('loadPartners:', e); }
+        }
+
+        async function loadVendors() {
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/vendors?page_size=100`, { headers: HEADERS() });
+                if (res.ok) {
+                    const data = await res.json();
+                    const sel = document.getElementById('escalateVendor');
+                    (data.data?.items || data.items || []).forEach(v => {
+                        const opt = document.createElement('option');
+                        opt.value = v.id;
+                        opt.textContent = v.vendor_name;
+                        sel.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error('loadVendors:', e); }
+        }
+
+        // ── TICKET SEARCH AUTOCOMPLETE ─────────────────────────────────────────
+        async function searchTickets(q) {
+            clearTimeout(ticketSearchTimeout);
+            if (q.length < 2) { document.getElementById('ticketList').style.display = 'none'; return; }
+            ticketSearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/ticket-search?q=${encodeURIComponent(q)}`, { headers: HEADERS() });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    renderTicketList(data.data || []);
+                } catch (e) { console.error('searchTickets:', e); }
+            }, 280);
+        }
+
+        function renderTicketList(tickets) {
+            const list = document.getElementById('ticketList');
+            if (tickets.length === 0) { list.style.display = 'none'; return; }
+            list.innerHTML = tickets.map(t => `
+                <div class="autocomplete-item" onclick="selectTicket(${t.id}, '${t.ticket_id}', '${(t.customer_name||'').replace(/'/g,"\\'")}', ${t.partner_id||'null'})">
+                    <strong>${t.ticket_id}</strong> — ${t.customer_name || 'No name'}
+                    <div class="ac-sub">${t.issue_category || ''} · ${formatStatus(t.sub_status)}</div>
+                </div>
+            `).join('');
+            list.style.display = 'block';
+        }
+
+        function selectTicket(id, ticketId, customerName, partnerId) {
+            document.getElementById('selectedTicketId').value = id;
+            document.getElementById('selectedTicketPartnerId').value = partnerId || '';
+            document.getElementById('selectedTicketLabel').textContent = `${ticketId} — ${customerName}`;
+            document.getElementById('selectedTicketBadge').style.display = 'block';
+            document.getElementById('ticketSearch').value = '';
+            document.getElementById('ticketList').style.display = 'none';
+            // Auto-fill customer name
+            if (customerName) document.getElementById('createCustomerName').value = customerName;
+            // Auto-select partner if available
+            if (partnerId) {
+                const sel = document.getElementById('createPartner');
+                const opt = sel.querySelector(`option[value="${partnerId}"]`);
+                if (opt) sel.value = partnerId;
+            }
+        }
+
+        function clearTicket() {
+            document.getElementById('selectedTicketId').value = '';
+            document.getElementById('selectedTicketPartnerId').value = '';
+            document.getElementById('selectedTicketBadge').style.display = 'none';
+            document.getElementById('selectedTicketLabel').textContent = '';
+            document.getElementById('ticketSearch').value = '';
+        }
+
+        // ── ITEM SEARCH AUTOCOMPLETE ───────────────────────────────────────────
+        let itemSearchTimeout = null;
+        async function searchItems(q) {
+            clearTimeout(itemSearchTimeout);
+            if (q.length < 2) { document.getElementById('itemList').style.display = 'none'; return; }
+            itemSearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/staff/accounts/stock-items?search=${encodeURIComponent(q)}&page_size=15`, { headers: HEADERS() });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    renderItemList(data.data?.items || data.items || [], 'itemList', selectItem);
+                } catch (e) { console.error('searchItems:', e); }
+            }, 250);
+        }
+
+        function renderItemList(items, listId, selectFn) {
+            const list = document.getElementById(listId);
+            if (items.length === 0) { list.style.display = 'none'; return; }
+            list.innerHTML = items.map(i => `
+                <div class="autocomplete-item" onclick="${selectFn.name}(${i.id}, '${(i.item_name||'').replace(/'/g,"\\'")}', '${(i.item_code||'').replace(/'/g,"\\'")}')">
+                    <strong>${i.item_name}</strong>
+                    <div class="ac-sub">${i.item_code || ''}</div>
+                </div>
+            `).join('');
+            list.style.display = 'block';
+        }
+
+        function selectItem(id, name, code) {
+            document.getElementById('createStockItemId').value = id;
+            document.getElementById('createStockItemCode').value = code;
+            document.getElementById('itemSearch').value = name;
+            document.getElementById('itemList').style.display = 'none';
+        }
+
+        // Replacement item search
+        let replaceSearchTimeout = null;
+        async function searchReplaceItems(q) {
+            clearTimeout(replaceSearchTimeout);
+            if (q.length < 2) { document.getElementById('replaceItemList').style.display = 'none'; return; }
+            replaceSearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/staff/accounts/stock-items?search=${encodeURIComponent(q)}&page_size=15`, { headers: HEADERS() });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    renderItemList(data.data?.items || data.items || [], 'replaceItemList', selectReplaceItem);
+                } catch (e) { console.error('searchReplaceItems:', e); }
+            }, 250);
+        }
+
+        function selectReplaceItem(id, name, code) {
+            document.getElementById('replaceItemId').value = id;
+            document.getElementById('replaceItemSearch').value = name;
+            document.getElementById('replaceItemList').style.display = 'none';
+            document.getElementById('replaceItemName').textContent = name;
+            document.getElementById('replaceItemSelected').style.display = 'block';
+        }
+
+        // Close autocompletes on outside click
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.autocomplete-wrapper')) {
+                document.querySelectorAll('.autocomplete-list').forEach(l => l.style.display = 'none');
+            }
+        });
+
+        // ── TAB SWITCHING ─────────────────────────────────────────────────────
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+            ['receipts', 'dispatches', 'vendorRepairs', 'givenOut'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                if (el) el.style.display = t === tab ? 'block' : 'none';
+            });
+            if (tab === 'dispatches') loadDispatches();
+            if (tab === 'vendorRepairs') loadVendorRepairs();
+            if (tab === 'givenOut') loadGivenOut();
+        }
+
+        // ── LOAD RECEIPTS ─────────────────────────────────────────────────────
+        function debounceLoadReceipts() {
+            clearTimeout(receiptLoadTimeout);
+            receiptLoadTimeout = setTimeout(loadReceipts, 350);
+        }
+
+        async function loadReceipts() {
+            const tbody = document.getElementById('receiptsBody');
+            tbody.innerHTML = `<tr><td colspan="8" class="spinner-cell"><div class="spinner"></div></td></tr>`;
+            try {
+                const params = new URLSearchParams();
+                const companyId = document.getElementById('filterCompany').value;
+                const status = document.getElementById('filterStatus').value;
+                const ticketSearch = document.getElementById('filterTicket').value.trim();
+                if (companyId) params.append('company_id', companyId);
+                if (status) params.append('status', status);
+                if (ticketSearch) params.append('ticket_search', ticketSearch);
+
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/receipts?${params}`, { headers: HEADERS() });
+                if (!res.ok) throw new Error('Failed to load');
+                const data = await res.json();
+                const receipts = data.data?.items || [];
+                const total = data.data?.total || 0;
+
+                document.getElementById('receiptCount').textContent = `${total} receipt${total !== 1 ? 's' : ''}`;
+
+                // Summary
+                const countByStatus = {};
+                receipts.forEach(r => { countByStatus[r.status] = (countByStatus[r.status]||0)+1; });
+                document.getElementById('statRegistered').textContent = countByStatus['REGISTERED'] || 0;
+                document.getElementById('statDiagnosed').textContent = countByStatus['DIAGNOSED'] || 0;
+                document.getElementById('statReplacement').textContent = (countByStatus['REPLACEMENT_PENDING']||0) + (countByStatus['REPLACEMENT_ISSUED']||0);
+                document.getElementById('statEscalated').textContent = countByStatus['ESCALATED'] || 0;
+                document.getElementById('statCompleted').textContent = (countByStatus['RETURNED_TO_CUSTOMER']||0) + (countByStatus['CLOSED']||0);
+
+                if (receipts.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><i class="fas fa-inbox"></i><p>No receipts found</p></td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = receipts.map(r => `
+                    <tr>
+                        <td>
+                            <strong style="font-size:12px;">${r.receipt_number || '--'}</strong>
+                            ${r.is_ticket_spare ? `<span style="background:#ede9fe;color:#6d28d9;font-size:10px;padding:1px 5px;border-radius:4px;font-weight:600;margin-left:4px;">CUST SPARE</span>` : ''}
+                        </td>
+                        <td>${r.ticket_ref ? `<span class="ticket-badge">${r.ticket_ref}</span>` : '<span style="color:#9ca3af;font-size:12px;">—</span>'}</td>
+                        <td>
+                            <div style="font-weight:600;">${r.stock_item_name || '--'}</div>
+                            ${r.stock_item_code ? `<div style="font-size:11px;color:#6b7280;">${r.stock_item_code}</div>` : ''}
+                        </td>
+                        <td style="font-size:12px;">${r.serial_number || '—'}</td>
+                        <td>${r.customer_name || '—'}</td>
+                        <td><span class="badge-status badge-${r.status}">${formatStatusLabel(r.status)}</span></td>
+                        <td style="font-size:12px;">${formatDate(r.received_at)}</td>
+                        <td style="white-space:nowrap;">
+                            ${!r.is_ticket_spare && r.status === 'REGISTERED' ? `<button class="btn-action btn-diagnose" onclick="openDiagnoseModal(${r.id})" title="Diagnose"><i class="fas fa-stethoscope"></i></button>` : ''}
+                            ${!r.is_ticket_spare && (r.status === 'DIAGNOSED' || r.status === 'REPLACEMENT_PENDING') ? `<button class="btn-action btn-replace" onclick="openReplaceModal(${r.id}, '${(r.receipt_number||'').replace(/'/g,"\\'")}', '${(r.stock_item_name||'').replace(/'/g,"\\'")}', ${r.replacement_item_id||'null'})" title="Issue Replacement"><i class="fas fa-exchange-alt"></i></button>` : ''}
+                            ${!r.is_ticket_spare && r.status === 'DIAGNOSED' ? `<button class="btn-action btn-escalate" onclick="openEscalateModal(${r.id})" title="Escalate to Vendor"><i class="fas fa-arrow-up"></i></button>` : ''}
+                            ${r.replacement_issued_at ? `<span style="font-size:11px;color:#059669;"><i class="fas fa-check-circle me-1"></i>Issued</span>` : ''}
+                            ${r.is_ticket_spare && r.ticket_ref ? `<a href="/staff/service-queue" style="background:#e0e7ff;color:#3730a3;border:none;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;text-decoration:none;display:inline-block;" title="Open Ticket"><i class="fas fa-ticket-alt me-1"></i>${r.ticket_ref}</a>` : ''}
+                            <button onclick="mnrWaSvcReceipt('${(r.customer_phone||'').replace(/'/g,'')}','${(r.customer_name||'Customer').replace(/'/g,'')}','${(r.ticket_ref||r.receipt_number||'').replace(/'/g,'')}','${r.status||''}')" style="background:#25D366;color:#fff;border:none;padding:2px 7px;border-radius:4px;cursor:pointer;font-size:12px;" title="Send WhatsApp to Customer"><i class="fab fa-whatsapp"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('loadReceipts:', e);
+                tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error loading receipts</p></td></tr>`;
+            }
+        }
+
+        // ── LOAD DISPATCHES ───────────────────────────────────────────────────
+        async function loadDispatches() {
+            const tbody = document.getElementById('dispatchesBody');
+            tbody.innerHTML = `<tr><td colspan="6" class="spinner-cell"><div class="spinner"></div></td></tr>`;
+            try {
+                const params = new URLSearchParams();
+                const status = document.getElementById('filterDispatchStatus').value;
+                if (status) params.append('status', status);
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/dispatches?${params}`, { headers: HEADERS() });
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                const dispatches = data.data?.items || [];
+                document.getElementById('dispatchCount').textContent = `${dispatches.length} dispatch${dispatches.length !== 1 ? 'es' : ''}`;
+                if (dispatches.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><i class="fas fa-truck"></i><p>No dispatches found</p></td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = dispatches.map(d => `
+                    <tr>
+                        <td><strong style="font-size:12px;">${d.dispatch_number||'--'}</strong></td>
+                        <td style="font-size:12px;">${d.receipt_number||'--'}</td>
+                        <td>${d.destination_type||'--'}</td>
+                        <td><span class="badge-status badge-${d.status}">${d.status}</span></td>
+                        <td style="font-size:12px;">${formatDate(d.dispatched_at)}</td>
+                        <td>${d.status==='DISPATCHED'?`<button class="btn-action btn-receive" onclick="confirmReceive(${d.id})" title="Confirm Receipt"><i class="fas fa-check"></i></button>`:''}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error loading dispatches</p></td></tr>`;
+            }
+        }
+
+        // ── LOAD VENDOR REPAIRS ───────────────────────────────────────────────
+        async function loadVendorRepairs() {
+            const tbody = document.getElementById('vrBody');
+            tbody.innerHTML = `<tr><td colspan="9" class="spinner-cell"><div class="spinner"></div></td></tr>`;
+            try {
+                const params = new URLSearchParams();
+                const companyId = document.getElementById('filterVrCompany').value;
+                if (companyId) params.append('company_id', companyId);
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/vendor-repairs?${params}`, { headers: HEADERS() });
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                const items = data.data || [];
+                document.getElementById('vrCount').textContent = `${data.total||items.length} item${items.length!==1?'s':''}`;
+                if (items.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><i class="fas fa-tools"></i><p>No items sent to vendor for repair</p></td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = items.map(r => `
+                    <tr>
+                        <td><strong style="font-size:12px;">${r.receipt_number||'--'}</strong></td>
+                        <td>${r.ticket_ref?`<span class="ticket-badge">${r.ticket_ref}</span>`:'<span style="color:#9ca3af;font-size:12px;">—</span>'}</td>
+                        <td>
+                            <div style="font-weight:600;">${r.item_name||'--'}</div>
+                            ${r.item_code?`<div style="font-size:11px;color:#6b7280;">${r.item_code}</div>`:''}
+                        </td>
+                        <td style="font-size:12px;">${r.serial_number||'—'}</td>
+                        <td style="font-size:12px;">${r.service_center_name||'—'}</td>
+                        <td>${r.customer_name||'—'}</td>
+                        <td style="font-size:12px;max-width:160px;">${r.escalation_reason||'—'}</td>
+                        <td style="font-size:12px;">${formatDate(r.escalation_date)}</td>
+                        <td><span class="badge-status badge-${r.receipt_status}">${formatStatusLabel(r.receipt_status)}</span></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('loadVendorRepairs:', e);
+                tbody.innerHTML = `<tr><td colspan="9" class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error loading vendor repairs</p></td></tr>`;
+            }
+        }
+
+        // ── CREATE RECEIPT ────────────────────────────────────────────────────
+        function openCreateModal() {
+            document.getElementById('ticketSearch').value = '';
+            document.getElementById('selectedTicketId').value = '';
+            document.getElementById('selectedTicketPartnerId').value = '';
+            document.getElementById('selectedTicketBadge').style.display = 'none';
+            document.getElementById('itemSearch').value = '';
+            document.getElementById('createStockItemId').value = '';
+            document.getElementById('createSerial').value = '';
+            document.getElementById('createCustomerName').value = '';
+            document.getElementById('createCustomerPhone').value = '';
+            document.getElementById('createIssue').value = '';
+            // Reset purpose
+            document.querySelector('input[name="purpose"][value="FOR_REPAIR"]').checked = true;
+            document.querySelectorAll('.purpose-option').forEach(o => o.classList.remove('selected'));
+            document.getElementById('po-repair').classList.add('selected');
+            openModal('createModal');
+        }
+
+        async function submitReceipt() {
+            const purpose = document.querySelector('input[name="purpose"]:checked')?.value || 'FOR_REPAIR';
+            const companyId = parseInt(document.getElementById('createCompany').value);
+            const partnerId = parseInt(document.getElementById('createPartner').value) || null;
+            const stockItemId = parseInt(document.getElementById('createStockItemId').value) || null;
+
+            if (!companyId) { showToast('Please select a company', 'error'); return; }
+            if (!partnerId) { showToast('Please select a service center', 'error'); return; }
+            if (!stockItemId) { showToast('Please select a stock item', 'error'); return; }
+
+            const payload = {
+                company_id: companyId,
+                partner_id: partnerId,
+                stock_item_id: stockItemId,
+                item_code: document.getElementById('createStockItemCode').value || null,
+                serial_number: document.getElementById('createSerial').value || null,
+                customer_name: document.getElementById('createCustomerName').value || null,
+                customer_phone: document.getElementById('createCustomerPhone').value || null,
+                issue_description: document.getElementById('createIssue').value || null,
+                purpose: purpose,
+                ticket_id: parseInt(document.getElementById('selectedTicketId').value) || null,
+                notes: document.getElementById('createIssue').value || null
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/receipts`, {
+                    method: 'POST', headers: HEADERS(), body: JSON.stringify(payload)
+                });
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+                const result = await res.json();
+                closeModal('createModal');
+                showToast(`Receipt ${result.data?.receipt_number || ''} created (${result.data?.purpose || purpose})`, 'success');
+                loadReceipts();
+                if (purpose === 'VENDOR_REPAIR') switchTab('vendorRepairs');
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        // ── DIAGNOSE ──────────────────────────────────────────────────────────
+        function openDiagnoseModal(receiptId) {
+            currentReceiptId = receiptId;
+            document.getElementById('diagnosisResult').value = 'REPAIRABLE';
+            document.getElementById('recommendedAction').value = 'REPAIR_LOCAL';
+            document.getElementById('diagnosisNotes').value = '';
+            openModal('diagnoseModal');
+        }
+
+        async function submitDiagnosis() {
+            const payload = {
+                diagnosis_result: { result: document.getElementById('diagnosisResult').value },
+                recommended_action: document.getElementById('recommendedAction').value,
+                diagnosis_notes: document.getElementById('diagnosisNotes').value
+            };
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/receipts/${currentReceiptId}/diagnose`, {
+                    method: 'POST', headers: HEADERS(), body: JSON.stringify(payload)
+                });
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+                closeModal('diagnoseModal');
+                showToast('Diagnosis submitted', 'success');
+                loadReceipts();
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        // ── ISSUE REPLACEMENT ─────────────────────────────────────────────────
+        function openReplaceModal(receiptId, receiptNumber, itemName, existingReplacementId) {
+            currentReceiptId = receiptId;
+            document.getElementById('replaceItemSearch').value = '';
+            document.getElementById('replaceItemId').value = existingReplacementId || '';
+            document.getElementById('replaceSerial').value = '';
+            document.getElementById('replaceItemSelected').style.display = 'none';
+            document.getElementById('replaceReceiptInfo').innerHTML = `
+                <div style="background:#f9fafb;border-radius:6px;padding:12px;font-size:13px;">
+                    <strong>Receipt:</strong> ${receiptNumber} &nbsp;|&nbsp; <strong>Item:</strong> ${itemName}
+                </div>
+            `;
+            openModal('replaceModal');
+        }
+
+        async function submitReplacement() {
+            const replacementItemId = parseInt(document.getElementById('replaceItemId').value) || null;
+            const replacementSerial = document.getElementById('replaceSerial').value || null;
+            if (!replacementItemId) { showToast('Please select a replacement item', 'error'); return; }
+
+            if (!confirm('Issue replacement and deduct 1 unit from stock? This cannot be undone.')) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/receipts/${currentReceiptId}/issue-replacement`, {
+                    method: 'POST', headers: HEADERS(),
+                    body: JSON.stringify({ replacement_item_id: replacementItemId, replacement_serial_number: replacementSerial })
+                });
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+                closeModal('replaceModal');
+                showToast('Replacement issued and stock deducted', 'success');
+                loadReceipts();
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        // ── ESCALATE ──────────────────────────────────────────────────────────
+        function openEscalateModal(receiptId) {
+            currentReceiptId = receiptId;
+            document.getElementById('escalateDestination').value = 'HEAD_OFFICE';
+            document.getElementById('escalateReason').value = '';
+            document.getElementById('escalateCourier').value = '';
+            toggleVendorSelect();
+            openModal('escalateModal');
+        }
+
+        function toggleVendorSelect() {
+            const dest = document.getElementById('escalateDestination').value;
+            document.getElementById('vendorSelectGroup').style.display = dest === 'VENDOR' ? 'block' : 'none';
+        }
+
+        async function submitEscalation() {
+            const payload = {
+                destination_type: document.getElementById('escalateDestination').value,
+                vendor_id: parseInt(document.getElementById('escalateVendor').value) || null,
+                reason: document.getElementById('escalateReason').value,
+                courier_details: { info: document.getElementById('escalateCourier').value }
+            };
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/receipts/${currentReceiptId}/escalate`, {
+                    method: 'POST', headers: HEADERS(), body: JSON.stringify(payload)
+                });
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+                closeModal('escalateModal');
+                showToast('Item escalated successfully', 'success');
+                loadReceipts();
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        // ── DISPATCHES ────────────────────────────────────────────────────────
+        async function confirmReceive(dispatchId) {
+            if (!confirm('Confirm receipt at destination?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/dispatches/${dispatchId}/receive`, {
+                    method: 'POST', headers: HEADERS(), body: JSON.stringify({ notes: 'Received at destination' })
+                });
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+                showToast('Receipt confirmed', 'success');
+                loadDispatches();
+            } catch (e) { showToast(e.message, 'error'); }
+        }
+
+        // ── HELPERS ───────────────────────────────────────────────────────────
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        function formatDate(d) {
+            if (!d) return '—';
+            return new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function formatStatus(s) {
+            const m = { new:'New', acknowledged:'Acknowledged', diagnosing:'Diagnosing', awaiting_spares:'Awaiting Spares', ready_for_work:'Ready', work_complete:'Work Complete', closed:'Closed' };
+            return m[s] || s || '—';
+        }
+
+        function formatStatusLabel(s) {
+            const m = {
+                REGISTERED:'Registered', DIAGNOSIS_PENDING:'Pending Diagnosis', DIAGNOSIS_IN_PROGRESS:'Diagnosing',
+                DIAGNOSED:'Diagnosed', REPAIR_IN_PROGRESS:'Repairing', REPAIRED:'Repaired',
+                REPLACEMENT_PENDING:'Replacement Pending', REPLACEMENT_ISSUED:'Replacement Issued',
+                ESCALATED:'Escalated', RETURNED_TO_CUSTOMER:'Returned', CLOSED:'Closed', CANCELLED:'Cancelled',
+                RECEIVED:'Received', DISPATCHED:'Dispatched', WITH_VENDOR:'With Vendor'
+            };
+            return m[s] || s || '—';
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.style.cssText = `position:fixed;bottom:24px;right:24px;background:${type==='success'?'#059669':'#dc2626'};color:white;padding:12px 20px;border-radius:8px;z-index:9999;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.2);max-width:360px;`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // DC_SERVICE_003: Given Out Tab
+        // ═══════════════════════════════════════════════════════════════════
+        let goPage = 1, goSortBy = 'given_at', goSortDir = 'desc', goSearchTimeout = null;
+
+        function debounceGoSearch() {
+            clearTimeout(goSearchTimeout);
+            goSearchTimeout = setTimeout(loadGivenOut, 350);
+        }
+
+        function toggleGoSort(col) {
+            if (goSortBy === col) goSortDir = goSortDir === 'asc' ? 'desc' : 'asc';
+            else { goSortBy = col; goSortDir = 'desc'; }
+            goPage = 1;
+            loadGivenOut();
+        }
+
+        async function loadGivenOut() {
+            const body = document.getElementById('goBody');
+            body.innerHTML = '<tr><td colspan="11" class="spinner-cell"><div class="spinner"></div></td></tr>';
+            try {
+                const params = new URLSearchParams();
+                const status = document.getElementById('goFilterStatus')?.value || 'ALL';
+                const recipient = document.getElementById('goFilterRecipient')?.value || 'ALL';
+                const purpose = document.getElementById('goFilterPurpose')?.value || 'ALL';
+                const overdue = document.getElementById('goFilterOverdue')?.checked;
+                const dateFrom = document.getElementById('goFilterDateFrom')?.value;
+                const dateTo = document.getElementById('goFilterDateTo')?.value;
+                const search = document.getElementById('goFilterSearch')?.value?.trim();
+                if (status && status !== 'ALL') params.set('status', status);
+                if (recipient && recipient !== 'ALL') params.set('recipient_type', recipient);
+                if (purpose && purpose !== 'ALL') params.set('purpose', purpose);
+                if (overdue) params.set('overdue_only', 'true');
+                if (dateFrom) params.set('date_from', dateFrom);
+                if (dateTo) params.set('date_to', dateTo);
+                if (search) params.set('search', search);
+                params.set('sort_by', goSortBy);
+                params.set('sort_dir', goSortDir);
+                params.set('page', goPage);
+                params.set('page_size', 20);
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/given-out?${params}`, { headers: HEADERS() });
+                const data = await res.json();
+                const items = data.items || [];
+                document.getElementById('goCount').textContent = `${data.total || 0} records`;
+                if (!items.length) {
+                    body.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:#9ca3af;font-size:13px;">No records found</td></tr>';
+                } else {
+                    body.innerHTML = items.map(r => {
+                        const statusBadge = goStatusBadge(r.status, r.overdue, r.days_overdue);
+                        const purposeBadge = `<span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">${r.purpose}</span>`;
+                        const recipientBadge = `<span style="background:${r.recipient_type==='PARTNER'?'#fef3c7':'#f0fdf4'};color:${r.recipient_type==='PARTNER'?'#92400e':'#166534'};padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;">${r.recipient_type}</span>`;
+                        const rowStyle = r.overdue ? 'background:#fff7ed;' : '';
+                        const actions = goRowActions(r);
+                        const ticketCell = r.service_ticket_id ? `<span style="font-size:12px;color:#0284c7;">#${r.service_ticket_id}</span>` : '<span style="color:#d1d5db;">—</span>';
+                        return `<tr style="${rowStyle}">
+                            <td style="font-family:monospace;font-size:12px;">${r.given_out_number}</td>
+                            <td style="font-size:12px;">${r.given_at ? r.given_at.slice(0,10) : '—'}</td>
+                            <td><div style="font-size:13px;font-weight:500;">${r.recipient_name}</div><div style="margin-top:2px;">${recipientBadge}</div>${r.recipient_contact?`<div style="font-size:11px;color:#6b7280;margin-top:1px;">${r.recipient_contact}</div>`:''}</td>
+                            <td><div style="font-size:13px;">${r.item_name}</div>${r.item_code?`<div style="font-size:11px;color:#9ca3af;">${r.item_code}</div>`:''}</td>
+                            <td style="font-family:monospace;font-size:12px;">${r.serial_number||'—'}</td>
+                            <td style="text-align:center;">${r.quantity}</td>
+                            <td>${purposeBadge}</td>
+                            <td>${r.expected_return_date ? `<div style="font-size:12px;">${r.expected_return_date}</div>${r.overdue?`<div style="font-size:11px;color:#dc2626;font-weight:600;">${r.days_overdue}d overdue</div>`:''}` : '<span style="color:#d1d5db;">—</span>'}</td>
+                            <td>${statusBadge}</td>
+                            <td>${ticketCell}</td>
+                            <td>${actions}</td>
+                        </tr>`;
+                    }).join('');
+                }
+                // Pagination
+                const pag = document.getElementById('goPagination');
+                if (data.total_pages > 1) {
+                    pag.innerHTML = `<span>Page ${goPage} of ${data.total_pages}</span><div style="display:flex;gap:6px;">${goPage>1?`<button onclick="goPage--;loadGivenOut();" style="padding:4px 10px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer;font-size:12px;">Prev</button>`:''}${goPage<data.total_pages?`<button onclick="goPage++;loadGivenOut();" style="padding:4px 10px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer;font-size:12px;">Next</button>`:''}</div>`;
+                } else { pag.innerHTML = ''; }
+            } catch(e) {
+                document.getElementById('goBody').innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:#dc2626;">Failed to load records</td></tr>';
+            }
+        }
+
+        function goStatusBadge(status, overdue, daysOverdue) {
+            const map = {
+                'GIVEN_OUT': ['#fff7ed','#c2410c','Given Out'],
+                'RETURNED': ['#f0fdf4','#166534','Returned'],
+                'BILLED': ['#eff6ff','#1d4ed8','Billed'],
+                'EXCHANGED': ['#faf5ff','#7c3aed','Exchanged'],
+                'WRITTEN_OFF': ['#f9fafb','#6b7280','Written Off'],
+            };
+            const [bg, color, label] = map[status] || ['#f3f4f6','#374151', status];
+            let badge = `<span style="background:${bg};color:${color};padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700;">${label}</span>`;
+            if (overdue) badge += ` <span style="background:#fef2f2;color:#dc2626;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;">OVERDUE</span>`;
+            return badge;
+        }
+
+        function goRowActions(r) {
+            if (r.status !== 'GIVEN_OUT') {
+                const detail = r.returned_at ? `Closed: ${r.returned_at.slice(0,10)}` : (r.invoice_reference || r.invoice_number || '');
+                return `<span style="font-size:11px;color:#9ca3af;">${detail}</span>`;
+            }
+            const btns = [];
+            btns.push(`<button onclick="openGoActionModal(${r.id},'RETURN','${r.given_out_number.replace(/'/g,"\\'")}','${r.item_name.replace(/'/g,"\\'")}','${r.recipient_name.replace(/'/g,"\\'")}')" style="background:#059669;color:white;border:none;padding:4px 9px;border-radius:4px;font-size:11px;cursor:pointer;" title="Mark Returned">Return</button>`);
+            btns.push(`<button onclick="openGoActionModal(${r.id},'BILL','${r.given_out_number.replace(/'/g,"\\'")}','${r.item_name.replace(/'/g,"\\'")}','${r.recipient_name.replace(/'/g,"\\'")}')" style="background:#2563eb;color:white;border:none;padding:4px 9px;border-radius:4px;font-size:11px;cursor:pointer;" title="Mark Billed">Bill</button>`);
+            btns.push(`<button onclick="openGoActionModal(${r.id},'EXCHANGE','${r.given_out_number.replace(/'/g,"\\'")}','${r.item_name.replace(/'/g,"\\'")}','${r.recipient_name.replace(/'/g,"\\'")}')" style="background:#7c3aed;color:white;border:none;padding:4px 9px;border-radius:4px;font-size:11px;cursor:pointer;" title="Mark Exchanged">Exchange</button>`);
+            btns.push(`<button onclick="openGoActionModal(${r.id},'WRITE_OFF','${r.given_out_number.replace(/'/g,"\\'")}','${r.item_name.replace(/'/g,"\\'")}','${r.recipient_name.replace(/'/g,"\\'")}')" style="background:#6b7280;color:white;border:none;padding:4px 9px;border-radius:4px;font-size:11px;cursor:pointer;" title="Write Off">Write Off</button>`);
+            if (r.recipient_contact) btns.push(`<button onclick="sendGoReminder(${r.id})" style="background:#f59e0b;color:white;border:none;padding:4px 9px;border-radius:4px;font-size:11px;cursor:pointer;" title="Send WhatsApp Reminder">Remind</button>`);
+            return `<div style="display:flex;gap:4px;flex-wrap:wrap;">${btns.join('')}</div>`;
+        }
+
+        // ── GIVEN OUT CREATE MODAL ────────────────────────────────────────
+        let goItemSearchTimeout = null, goPartnerSearchTimeout = null, goInvoiceSearchTimeout = null;
+        let goSelectedItemId = null, goSelectedPartnerId = null, goSelectedInvoiceId = null;
+
+        function openGivenOutModal() {
+            document.getElementById('goModal').style.display = 'flex';
+            document.getElementById('goCompanySelect').value = '';
+            document.getElementById('goPartnerSelect').value = '';
+            document.getElementById('goRecipientType').value = 'CUSTOMER';
+            toggleGoPartnerSearch();
+            document.getElementById('goRecipientName').value = '';
+            document.getElementById('goRecipientContact').value = '';
+            document.getElementById('goRecipientEmail').value = '';
+            document.getElementById('goItemSearch').value = '';
+            document.getElementById('goItemId').value = '';
+            document.getElementById('goItemName').value = '';
+            document.getElementById('goItemCode').value = '';
+            document.getElementById('goSerial').value = '';
+            document.getElementById('goQty').value = '1';
+            document.getElementById('goPurpose').value = 'LOAN';
+            document.getElementById('goExpectedReturn').value = '';
+            document.getElementById('goTicketId').value = '';
+            document.getElementById('goNotes').value = '';
+            if (document.getElementById('goPartnerSearch')) document.getElementById('goPartnerSearch').value = '';
+            goSelectedItemId = null; goSelectedPartnerId = null;
+        }
+
+        function closeGivenOutModal() {
+            document.getElementById('goModal').style.display = 'none';
+        }
+
+        function toggleGoPartnerSearch() {
+            const type = document.getElementById('goRecipientType').value;
+            document.getElementById('goPartnerSearchWrap').style.display = type === 'PARTNER' ? 'block' : 'none';
+        }
+
+        function debounceGoItem() {
+            clearTimeout(goItemSearchTimeout);
+            goItemSearchTimeout = setTimeout(searchGoItem, 300);
+        }
+
+        async function searchGoItem() {
+            const q = document.getElementById('goItemSearch').value.trim();
+            const drop = document.getElementById('goItemDrop');
+            if (q.length < 2) { drop.style.display = 'none'; return; }
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/stock-items?search=${encodeURIComponent(q)}&page_size=10&include_summary=false`, { headers: HEADERS() });
+                const data = await res.json();
+                const items = data.stock_items || data.data?.items || data.items || [];
+                if (!items.length) { drop.innerHTML = '<div style="padding:8px 12px;font-size:13px;color:#9ca3af;">No items found</div>'; drop.style.display = 'block'; return; }
+                drop.innerHTML = items.map(i => `<div onclick="selectGoItem(${i.id},'${(i.item_name||'').replace(/'/g,"\\'")}','${(i.item_code||'').replace(/'/g,"\\'")}',${i.selling_price||i.effective_selling_rate||0})" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='white'">${i.item_name} ${i.item_code?`<span style="color:#9ca3af;font-size:11px;">(${i.item_code})</span>`:''}</div>`).join('');
+                drop.style.display = 'block';
+            } catch(e) { console.error('searchGoItem:', e); drop.style.display = 'none'; }
+        }
+
+        function selectGoItem(id, name, code, rate) {
+            goSelectedItemId = id;
+            document.getElementById('goItemId').value = id;
+            document.getElementById('goItemName').value = name;
+            document.getElementById('goItemCode').value = code;
+            document.getElementById('goItemSearch').value = name;
+            document.getElementById('goItemDrop').style.display = 'none';
+        }
+
+        function debounceGoPartner() {
+            clearTimeout(goPartnerSearchTimeout);
+            goPartnerSearchTimeout = setTimeout(searchGoPartner, 300);
+        }
+
+        async function searchGoPartner() {
+            const q = document.getElementById('goPartnerSearch').value.trim();
+            const drop = document.getElementById('goPartnerDrop');
+            if (q.length < 2) { drop.style.display = 'none'; return; }
+            try {
+                const res = await fetch(`${API_BASE}/tickets/partners?search=${encodeURIComponent(q)}&page_size=20`, { headers: HEADERS() });
+                const data = await res.json();
+                const list = Array.isArray(data) ? data : (data.data || data.partners || []);
+                if (!list.length) { drop.style.display = 'none'; return; }
+                drop.innerHTML = list.slice(0,10).map(p => `<div onclick="selectGoPartner(${p.id},'${(p.partner_name||'').replace(/'/g,"\\'")}','${(p.phone||'').replace(/'/g,"\\'")}','${(p.email||'').replace(/'/g,"\\'")}','${(p.service_center_id||p.id)}','${(p.partner_name||'').replace(/'/g,"\\'")}')" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">${p.partner_name}</div>`).join('');
+                drop.style.display = 'block';
+            } catch(e) { drop.style.display = 'none'; }
+        }
+
+        function selectGoPartner(id, name, phone, email, scId, scName) {
+            goSelectedPartnerId = id;
+            document.getElementById('goPartnerId').value = id;
+            document.getElementById('goRecipientName').value = name;
+            document.getElementById('goRecipientContact').value = phone || '';
+            document.getElementById('goRecipientEmail').value = email || '';
+            document.getElementById('goPartnerSearch').value = name;
+            document.getElementById('goPartnerDrop').style.display = 'none';
+        }
+
+        async function submitGivenOut() {
+            const companyId = document.getElementById('goCompanySelect').value;
+            const serviceCenterId = document.getElementById('goPartnerSelect').value;
+            const recipientName = document.getElementById('goRecipientName').value.trim();
+            const itemName = document.getElementById('goItemName').value.trim() || document.getElementById('goItemSearch').value.trim();
+            const recipientContact = document.getElementById('goRecipientContact').value.trim();
+            if (!serviceCenterId) { showToast('Please select a service center', 'error'); return; }
+            if (!recipientName) { showToast('Recipient name is required', 'error'); return; }
+            if (!recipientContact) { showToast('Contact number is required', 'error'); return; }
+            if (!itemName) { showToast('Item name is required', 'error'); return; }
+            const payload = {
+                company_id: companyId ? parseInt(companyId) : null,
+                service_center_id: parseInt(serviceCenterId),
+                recipient_type: document.getElementById('goRecipientType').value,
+                recipient_name: recipientName,
+                recipient_contact: recipientContact,
+                recipient_email: document.getElementById('goRecipientEmail').value.trim() || null,
+                recipient_partner_id: goSelectedPartnerId || null,
+                item_id: goSelectedItemId || null,
+                item_name: itemName,
+                item_code: document.getElementById('goItemCode').value.trim() || null,
+                serial_number: document.getElementById('goSerial').value.trim() || null,
+                quantity: parseFloat(document.getElementById('goQty').value) || 1,
+                purpose: document.getElementById('goPurpose').value,
+                expected_return_date: document.getElementById('goExpectedReturn').value || null,
+                service_ticket_id: document.getElementById('goTicketId').value ? parseInt(document.getElementById('goTicketId').value) : null,
+                notes: document.getElementById('goNotes').value.trim() || null,
+            };
+            const btn = document.getElementById('goSubmitBtn');
+            btn.disabled = true; btn.textContent = 'Saving...';
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/given-out`, {
+                    method: 'POST', headers: { ...HEADERS(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+                closeGivenOutModal();
+                showToast('Item given out recorded. Stock deducted.');
+                loadGivenOut();
+            } catch(e) {
+                showToast(e.message || 'Failed to save', 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Confirm Give Out';
+            }
+        }
+
+        // ── ACTION MODAL (Return / Bill / Exchange / Write Off) ───────────
+        let goActionRecordId = null, goCurrentAction = null;
+
+        function openGoActionModal(id, action, ref, itemName, recipientName) {
+            goActionRecordId = id; goCurrentAction = action;
+            document.getElementById('goActionModal').style.display = 'flex';
+            document.getElementById('goActionTitle').textContent = {
+                RETURN: 'Mark as Returned', BILL: 'Mark as Billed',
+                EXCHANGE: 'Mark as Exchanged', WRITE_OFF: 'Write Off'
+            }[action] || action;
+            document.getElementById('goActionRef').textContent = `${ref} — ${itemName} (${recipientName})`;
+            document.getElementById('goActionReturnFields').style.display = action === 'RETURN' ? 'block' : 'none';
+            document.getElementById('goActionBillFields').style.display = action === 'BILL' ? 'block' : 'none';
+            document.getElementById('goActionExchangeFields').style.display = action === 'EXCHANGE' ? 'block' : 'none';
+            document.getElementById('goActionWriteOffFields').style.display = action === 'WRITE_OFF' ? 'block' : 'none';
+            document.getElementById('goActionNotes').value = '';
+            goSelectedInvoiceId = null;
+            if (document.getElementById('goActionInvoiceSearch')) document.getElementById('goActionInvoiceSearch').value = '';
+        }
+
+        function closeGoActionModal() {
+            document.getElementById('goActionModal').style.display = 'none';
+            goActionRecordId = null; goCurrentAction = null;
+        }
+
+        function debounceGoInvoice() {
+            clearTimeout(goInvoiceSearchTimeout);
+            goInvoiceSearchTimeout = setTimeout(searchGoInvoice, 300);
+        }
+
+        async function searchGoInvoice() {
+            const q = document.getElementById('goActionInvoiceSearch')?.value?.trim();
+            const drop = document.getElementById('goInvoiceDrop');
+            if (!q || q.length < 2) { if(drop) drop.style.display = 'none'; return; }
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/given-out/invoice-search?q=${encodeURIComponent(q)}`, { headers: HEADERS() });
+                const data = await res.json();
+                if (!data.length) { if(drop) drop.style.display = 'none'; return; }
+                drop.innerHTML = data.map(inv => `<div onclick="selectGoInvoice(${inv.id},'${inv.invoice_number.replace(/'/g,"\\'")}','${(inv.customer_name||'').replace(/'/g,"\\'")}',${inv.grand_total})" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">${inv.invoice_number} — ${inv.customer_name} <span style="color:#6b7280;font-size:11px;">₹${inv.grand_total}</span></div>`).join('');
+                drop.style.display = 'block';
+            } catch(e) { if(drop) drop.style.display = 'none'; }
+        }
+
+        function selectGoInvoice(id, number, customer, total) {
+            goSelectedInvoiceId = id;
+            document.getElementById('goActionInvoiceSearch').value = `${number} — ${customer}`;
+            document.getElementById('goInvoiceDrop').style.display = 'none';
+        }
+
+        async function submitGoAction() {
+            if (!goActionRecordId || !goCurrentAction) return;
+            const notes = document.getElementById('goActionNotes').value.trim();
+            let payload = { action: goCurrentAction };
+
+            if (goCurrentAction === 'RETURN') {
+                payload.return_notes = notes;
+                payload.return_item_condition = document.getElementById('goReturnCondition')?.value || 'GOOD';
+            } else if (goCurrentAction === 'BILL') {
+                payload.invoice_reference = document.getElementById('goActionInvoiceRef')?.value?.trim() || null;
+                payload.sales_invoice_id = goSelectedInvoiceId || null;
+                if (!payload.invoice_reference && !payload.sales_invoice_id) {
+                    showToast('Please provide an invoice reference or select an invoice', 'error'); return;
+                }
+            } else if (goCurrentAction === 'EXCHANGE') {
+                payload.exchange_return_type = document.getElementById('goExchangeReturnType')?.value || 'NORMAL_STOCK';
+                payload.return_notes = notes;
+                payload.return_item_condition = document.getElementById('goExchangeCondition')?.value || 'DEFECTIVE';
+            } else if (goCurrentAction === 'WRITE_OFF') {
+                if (!notes) { showToast('Please enter a reason for write-off', 'error'); return; }
+                payload.notes = notes;
+            }
+
+            const btn = document.getElementById('goActionSubmitBtn');
+            btn.disabled = true; btn.textContent = 'Saving...';
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/given-out/${goActionRecordId}/status`, {
+                    method: 'PATCH', headers: { ...HEADERS(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+                const actionLabel = (goCurrentAction || '').replace('_',' ');
+                closeGoActionModal();
+                showToast(`Status updated: ${actionLabel}`);
+                loadGivenOut();
+            } catch(e) {
+                showToast(e.message || 'Failed to update', 'error');
+            } finally {
+                btn.disabled = false; btn.textContent = 'Confirm';
+            }
+        }
+
+        async function sendGoReminder(id) {
+            if (!confirm('Send WhatsApp overdue reminder to recipient?')) return;
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/service-center-tracking/given-out/${id}/status`, {
+                    method: 'PATCH', headers: { ...HEADERS(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'REMIND' })
+                });
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Failed'); }
+                showToast('Reminder sent successfully');
+                loadGivenOut();
+            } catch(e) {
+                showToast(e.message || 'Failed to send reminder', 'error');
+            }
+        }
+
+        // ── DC_WA_TEMPLATES_SEED_001: Quick WhatsApp helpers ──────────────────
+        function mnrWaOpen(phone, msg) {
+            let ph = (phone || '').replace(/\D/g, '');
+            if (!ph || ph.length < 10) {
+                ph = (window.prompt('WhatsApp number (e.g. 919876543210):', '91') || '').replace(/\D/g, '');
+            }
+            if (!ph || ph.length < 10) return;
+            window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(msg), '_blank');
+        }
+        function mnrWaSvcReceipt(phone, customerName, ref, status) {
+            const msg = '🔧 *Service Update*\n\nDear ' + (customerName || 'Customer') + ',\n\nYour service item (Ref: ' + (ref || '—') + ') status: *' + (status || '').replace(/_/g,' ') + '*.\n\nFor queries, contact MNR Service Center.';
+            mnrWaOpen(phone, msg);
+        }
+    </script>
+</body>
+</html>

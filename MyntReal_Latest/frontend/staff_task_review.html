@@ -1,0 +1,2121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP - Task Reviews</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        
+        /* DC-PHASE1: Badge color classes for task status and review status */
+        .badge-warning { background-color: #fef08a !important; color: #b45309 !important; }
+        .badge-info { background-color: #dbeafe !important; color: #0284c7 !important; }
+        .badge-success { background-color: #d1fae5 !important; color: #059669 !important; }
+        .badge-danger { background-color: #fee2e2 !important; color: #dc2626 !important; }
+        .badge-secondary { background-color: #f3f4f6 !important; color: #6b7280 !important; border: 1px solid #d1d5db; }
+
+        .content-area { padding: 24px; max-width: 1400px; margin: 0 auto; }
+        
+        .authority-note { background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+        .authority-note i { color: #f59e0b; font-size: 20px; }
+        .authority-note-text { color: #92400e; font-size: 13px; }
+        .authority-note-text strong { color: #b45309; }
+        
+        .stats-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .stat-pill { background: white; border-radius: 8px; padding: 12px 20px; display: flex; align-items: center; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-pill i { font-size: 16px; }
+        .stat-pill.pending i { color: #f59e0b; }
+        .stat-pill.approved i { color: #10b981; }
+        .stat-pill.rejected i { color: #ef4444; }
+        .stat-pill .stat-num { font-weight: 700; font-size: 18px; color: #1f2937; }
+        .stat-pill .stat-label { font-size: 13px; color: #6b7280; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 12px 12px 0 0 !important; padding: 16px 20px; border: none; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .card-header h5 { margin: 0; font-weight: 600; font-size: 16px; }
+        .card-body { padding: 24px; }
+        
+        .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; }
+        .filter-bar .form-control, .filter-bar .form-select { max-width: 180px; border-radius: 8px; font-size: 13px; }
+        
+        .filters-bar { padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filters-bar select, .filters-bar input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        
+        .bulk-actions { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; }
+        .bulk-actions.hidden { display: none; }
+        .bulk-actions .selected-count { font-weight: 600; color: #6366f1; }
+        
+        .task-table { width: 100%; }
+        .task-table th { background: #f8fafc; font-weight: 600; font-size: 12px; color: #374151; padding: 12px 16px; text-align: left; border-bottom: 2px solid #e5e7eb; text-transform: uppercase; }
+        .task-table td { padding: 16px; border-bottom: 1px solid #f3f4f6; font-size: 14px; vertical-align: middle; }
+        .task-table tr:hover { background: #f9fafb; }
+        .task-table .checkbox-cell { width: 40px; }
+        
+        .employee-cell { display: flex; align-items: center; gap: 10px; }
+        .employee-avatar { width: 32px; height: 32px; border-radius: 50%; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+        .employee-info { display: flex; flex-direction: column; }
+        .employee-name { font-weight: 500; color: #1f2937; }
+        .employee-id { font-size: 11px; color: #6b7280; }
+        
+        .badge { padding: 4px 10px; border-radius: 6px; font-weight: 500; font-size: 11px; }
+        .badge-submitted { background: #dbeafe; color: #1e40af; }
+        .badge-completed { background: #d1fae5; color: #065f46; }
+        .badge-high { background: #fee2e2; color: #991b1b; }
+        .badge-medium { background: #fef3c7; color: #92400e; }
+        .badge-low { background: #d1fae5; color: #065f46; }
+        
+        .progress-mini { width: 80px; height: 18px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+        .progress-mini-bar { height: 100%; background: #6366f1; }
+        .progress-text { font-size: 11px; color: #6b7280; margin-left: 4px; }
+        
+        .authority-badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .authority-assigner { background: #eef2ff; color: #4f46e5; }
+        .authority-manager { background: #d1fae5; color: #047857; }
+        
+        .action-buttons { display: flex; gap: 8px; }
+        .btn-action { padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-approve { background: #d1fae5; color: #065f46; }
+        .btn-approve:hover { background: #a7f3d0; }
+        .btn-edit { background: #fef3c7; color: #92400e; }
+        .btn-edit:hover { background: #fde68a; }
+        .btn-reject { background: #fee2e2; color: #991b1b; }
+        .btn-reject:hover { background: #fecaca; }
+        .btn-view { background: #f3f4f6; color: #374151; }
+        .btn-view:hover { background: #e5e7eb; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        
+        .modal-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 12px 12px 0 0; }
+        .modal-content { border-radius: 12px; border: none; }
+        .form-label { font-weight: 500; color: #374151; font-size: 13px; }
+        .form-control, .form-select { border-radius: 8px; border: 1px solid #d1d5db; }
+        .form-control:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        
+        .detail-row { display: flex; gap: 16px; margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; }
+        .detail-label { font-weight: 500; color: #6b7280; min-width: 120px; font-size: 13px; }
+        .detail-value { color: #1f2937; flex: 1; }
+        
+        .notes-display { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; margin-top: 8px; font-size: 13px; color: #0c4a6e; }
+        
+        .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
+        .page-btn { padding: 8px 14px; border: 1px solid #e5e7eb; background: white; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .page-btn:hover { background: #f3f4f6; }
+        .page-btn.active { background: #6366f1; color: white; border-color: #6366f1; }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .employee-search-results { max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; background: white; position: absolute; z-index: 1050; width: 100%; }
+        .employee-search-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #e5e7eb; }
+        .employee-search-item:hover { background: #f3f4f6; }
+        .employee-search-item:last-child { border-bottom: none; }
+        .selected-assignees { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .selected-assignee { background: #e0e7ff; color: #4338ca; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .selected-assignee.primary { background: #4f46e5; color: white; }
+        .selected-assignee .remove-btn { cursor: pointer; opacity: 0.7; }
+        .selected-assignee .remove-btn:hover { opacity: 1; }
+        .char-counter { font-size: 12px; color: #6b7280; text-align: right; margin-top: 4px; }
+        .char-counter.warning { color: #d97706; }
+        .char-counter.error { color: #dc2626; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { font-weight: 600; color: #374151; margin-bottom: 6px; display: block; }
+        .file-preview { display: flex; flex-direction: column; gap: 8px; }
+        .file-preview-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between; }
+        .file-preview-info { display: flex; align-items: center; gap: 12px; flex: 1; }
+        .file-preview-icon { width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .file-preview-icon.image { background: #dbeafe; color: #2563eb; }
+        .file-preview-icon.document { background: #fee2e2; color: #dc2626; }
+        .file-preview-details { flex: 1; }
+        .file-preview-name { font-weight: 500; font-size: 14px; color: #1f2937; display: block; }
+        .file-preview-size { font-size: 12px; color: #6b7280; }
+        .file-preview-size.error { color: #dc2626; font-weight: 600; }
+        .upload-progress-container { margin-top: 12px; display: none; }
+        .upload-progress-container.active { display: block; }
+        .upload-progress-bar { width: 100%; height: 24px; background: #e5e7eb; border-radius: 12px; overflow: hidden; position: relative; }
+        .upload-progress-fill { height: 100%; background: linear-gradient(90deg, #4f46e5, #8b5cf6); transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; }
+        .upload-progress-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 12px; font-weight: 600; color: #374151; z-index: 1; }
+        .upload-progress-file { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        .phase-item.phase-confirmed { background: linear-gradient(135deg, #f0fdf4 0%, #fff 100%); border-color: #86efac; }
+        .phase-confirmed-title { color: #166534; }
+        .phase-confirmed-details { color: #6b7280; }
+        .search-result-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #e5e7eb; }
+        .search-result-item:hover { background: #f3f4f6; }
+        .search-result-item:last-child { border-bottom: none; }
+
+        th[data-sort-field] { user-select: none; }
+        th[data-sort-field]:hover { background: #e5e7eb !important; }
+
+        @media (max-width: 768px) {
+            .content-area { padding: 12px; }
+            .stats-row { gap: 8px; }
+            .stat-pill { padding: 8px 12px; }
+            .stat-pill .stat-num { font-size: 16px; }
+            .stat-pill .stat-label { font-size: 11px; }
+            .filters-bar { padding: 10px 12px; gap: 8px; }
+            .filters-bar select, .filters-bar input { padding: 6px 8px; font-size: 12px; min-width: 0; flex: 1 1 calc(50% - 4px); }
+            .filter-bar { gap: 8px; }
+            .filter-bar .form-control, .filter-bar .form-select { max-width: 100%; flex: 1 1 calc(50% - 4px); font-size: 12px; }
+            .card-header { padding: 12px 14px; }
+            .card-header h5 { font-size: 14px; }
+            .card-body { padding: 12px; }
+            .task-table th { font-size: 10px; padding: 8px 6px; white-space: nowrap; }
+            .task-table td { padding: 10px 6px; font-size: 12px; }
+            .action-buttons { flex-direction: column; gap: 4px; }
+            .btn-action { padding: 6px 10px; font-size: 11px; min-height: 36px; min-width: 36px; display: inline-flex; align-items: center; justify-content: center; }
+            .employee-cell { gap: 6px; }
+            .employee-avatar { width: 24px; height: 24px; font-size: 10px; }
+            .employee-name { font-size: 12px; }
+            .employee-id { font-size: 10px; }
+            .badge { font-size: 10px; padding: 2px 6px; }
+            .progress-mini { width: 50px; height: 14px; }
+            .bulk-actions { flex-wrap: wrap; padding: 8px 10px; gap: 8px; }
+            .detail-row { flex-direction: column; gap: 4px; padding: 8px; }
+            .detail-label { min-width: auto; font-size: 12px; }
+            .detail-value { font-size: 12px; }
+            .modal-dialog { margin: 8px; max-width: calc(100vw - 16px); }
+            .modal-dialog.modal-lg { max-width: calc(100vw - 16px); }
+            .modal-body { padding: 16px; max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            .modal-content { border-radius: 8px; }
+            .authority-note { flex-direction: column; text-align: center; padding: 10px; }
+        }
+    </style>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="authority-note">
+                <i class="fas fa-user-shield"></i>
+                <div class="authority-note-text">
+                    <strong>Dual Authority:</strong> You can review tasks where you are either the task assigner OR the reporting manager of the assignee.
+                </div>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-pill pending">
+                    <i class="fas fa-hourglass-half"></i>
+                    <span class="stat-num" id="statPending">0</span>
+                    <span class="stat-label">Pending Review</span>
+                </div>
+                <div class="stat-pill approved">
+                    <i class="fas fa-check-circle"></i>
+                    <span class="stat-num" id="statApproved">0</span>
+                    <span class="stat-label">Approved Today</span>
+                </div>
+                <div class="stat-pill rejected">
+                    <i class="fas fa-times-circle"></i>
+                    <span class="stat-num" id="statRejected">0</span>
+                    <span class="stat-label">Rejected Today</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-clipboard-list me-2"></i>Tasks Pending Review</h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm" onclick="openCreateTaskModal()">
+                            <i class="fas fa-plus me-1"></i>Create Task
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="toggleFilters()" style="border-radius: 6px;">
+                            <i class="fas fa-filter me-1"></i>Filters
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- DC_UNIVERSAL_FILTER_001: Universal Filter Container -->
+                <div id="universalFilterContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0;"></div>
+                
+                <!-- Fallback filters - shown if universal filter fails to load -->
+                <div id="fallbackFiltersContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0; display: flex;">
+                    <select id="fallbackDepartmentFilter" style="min-width: 160px;" onchange="loadPendingTasks()">
+                        <option value="">All Departments</option>
+                    </select>
+                    <select id="fallbackStaffTypeFilter" style="min-width: 140px;" onchange="loadPendingTasks()">
+                        <option value="">All Staff Types</option>
+                        <option value="MN_STAFF">MN Staff</option>
+                        <option value="MN_EMPLOYEE">MN Employee</option>
+                        <option value="FREELANCER">Freelancer</option>
+                        <option value="MYNT_REAL">Mynt Real</option>
+                    </select>
+                    <input type="text" id="fallbackEmployeeSearch" class="form-control" style="min-width: 200px;" placeholder="Search employee..." oninput="debounceEmployeeSearch()">
+                </div>
+                
+                <div id="filterPanel" style="padding: 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: none;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+                        <!-- Date Range -->
+                        <div>
+                            <label class="form-label"><i class="fas fa-calendar me-2"></i>Due Date Range</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="date" class="form-control" id="filterDueDateFrom" style="flex: 1;">
+                                <input type="date" class="form-control" id="filterDueDateTo" style="flex: 1;">
+                            </div>
+                        </div>
+                        
+                        <!-- Task Status -->
+                        <div>
+                            <label class="form-label"><i class="fas fa-tasks me-2"></i>Task Status</label>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <label><input type="checkbox" class="task-status-filter" value="pending"> Pending</label>
+                                <label><input type="checkbox" class="task-status-filter" value="in_progress"> In Progress</label>
+                                <label><input type="checkbox" class="task-status-filter" value="completed"> Completed</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Review Status -->
+                        <div>
+                            <label class="form-label"><i class="fas fa-check-double me-2"></i>Review Status</label>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <label><input type="checkbox" class="review-status-filter" value="pending_review"> Pending Review</label>
+                                <label><input type="checkbox" class="review-status-filter" value="approved"> Approved</label>
+                                <label><input type="checkbox" class="review-status-filter" value="edited_by_manager"> Edited by Manager</label>
+                                <label><input type="checkbox" class="review-status-filter" value="rejected"> Rejected</label>
+                            </div>
+                        </div>
+                        
+                        <!-- Priority -->
+                        <div>
+                            <label class="form-label"><i class="fas fa-flag me-2"></i>Priority</label>
+                            <select class="form-select" id="filterPriority">
+                                <option value="">All Priorities</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Category -->
+                        <div>
+                            <label class="form-label"><i class="fas fa-folder me-2"></i>Category</label>
+                            <select class="form-select" id="filterCategory">
+                                <option value="">All Categories</option>
+                                <option value="general">General</option>
+                                <option value="operational">Operational</option>
+                                <option value="project">Project</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Progress Range -->
+                        <div>
+                            <label class="form-label"><i class="fas fa-percentage me-2"></i>Progress (%)</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="number" class="form-control" id="filterProgressMin" placeholder="Min" min="0" max="100" style="flex: 1;">
+                                <span>-</span>
+                                <input type="number" class="form-control" id="filterProgressMax" placeholder="Max" min="0" max="100" style="flex: 1;">
+                            </div>
+                        </div>
+                        
+                        <!-- Hours -->
+                        <div>
+                            <label class="form-label"><i class="fas fa-hourglass me-2"></i>Actual Hours</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="number" class="form-control" id="filterHoursMin" placeholder="Min" min="0" step="0.5" style="flex: 1;">
+                                <span>-</span>
+                                <input type="number" class="form-control" id="filterHoursMax" placeholder="Max" min="0" step="0.5" style="flex: 1;">
+                            </div>
+                        </div>
+                        
+                        <!-- Search -->
+                        <div>
+                            <label class="form-label"><i class="fas fa-search me-2"></i>Search Employee</label>
+                            <input type="text" class="form-control" id="filterSearch" placeholder="Employee name or ID...">
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 8px; margin-top: 16px;">
+                        <button class="btn btn-sm btn-primary" onclick="applyFilters()">
+                            <i class="fas fa-filter me-1"></i>Apply Filters
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="resetFilters()">
+                            <i class="fas fa-redo me-1"></i>Reset
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="bulk-actions hidden" id="bulkActions">
+                        <span class="selected-count"><span id="selectedCount">0</span> selected</span>
+                        <button class="btn btn-sm btn-success" onclick="bulkApprove()">
+                            <i class="fas fa-check-double me-1"></i>Bulk Approve
+                        </button>
+                        <button class="btn btn-sm btn-secondary" onclick="clearSelection()">Clear</button>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="task-table">
+                            <thead>
+                                <tr>
+                                    <th class="checkbox-cell"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                                    <th data-sort-field="employee_name" onclick="sortTasks('employee_name')" style="cursor:pointer;">Employee <i class="fas fa-sort"></i></th>
+                                    <th data-sort-field="title" onclick="sortTasks('title')" style="cursor:pointer;">Task Title <i class="fas fa-sort"></i></th>
+                                    <th data-sort-field="priority" onclick="sortTasks('priority')" style="cursor:pointer;">Priority <i class="fas fa-sort"></i></th>
+                                    <th data-sort-field="status" onclick="sortTasks('status')" style="cursor:pointer;">Task Status <i class="fas fa-sort"></i></th>
+                                    <th data-sort-field="progress" onclick="sortTasks('progress')" style="cursor:pointer;">Progress & Hours <i class="fas fa-sort"></i></th>
+                                    <th data-sort-field="manager_review_status" onclick="sortTasks('manager_review_status')" style="cursor:pointer;">Review Status <i class="fas fa-sort"></i></th>
+                                    <th data-sort-field="due_date" onclick="sortTasks('due_date')" style="cursor:pointer;">Due Date <i class="fas fa-sort"></i></th>
+                                    <th data-sort-field="manager_review_date" onclick="sortTasks('manager_review_date')" style="cursor:pointer;">Review Date <i class="fas fa-sort"></i></th>
+                                    <th data-sort-field="phases_completed" onclick="sortTasks('phases_completed')" style="cursor:pointer;">Subtasks <i class="fas fa-sort"></i></th>
+                                    <th data-sort-field="pending_days" onclick="sortTasks('pending_days')" style="cursor:pointer;">Pending Days <i class="fas fa-sort"></i></th>
+                                    <th style="width: 200px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="taskTableBody">
+                                <tr>
+                                    <td colspan="12">
+                                        <div class="empty-state">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <p>Loading tasks...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="taskDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-tasks me-2"></i>Task Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="taskDetailContent"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="editApproveModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit & Approve Task</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editTaskId">
+                    <div class="mb-3">
+                        <label class="form-label">Manager Notes</label>
+                        <textarea class="form-control" id="editManagerNotes" rows="3" placeholder="Add your notes or corrections..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Manager Rating (Optional)</label>
+                        <select class="form-select" id="editManagerRating">
+                            <option value="">No rating</option>
+                            <option value="1">1 - Needs Improvement</option>
+                            <option value="2">2 - Below Expectations</option>
+                            <option value="3">3 - Meets Expectations</option>
+                            <option value="4">4 - Exceeds Expectations</option>
+                            <option value="5">5 - Outstanding</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="submitEditApprove()">
+                        <i class="fas fa-check me-1"></i>Edit & Approve
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="rejectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                    <h5 class="modal-title"><i class="fas fa-times-circle me-2"></i>Reject Task</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="rejectTaskId">
+                    <div class="mb-3">
+                        <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejectReason" rows="3" placeholder="Please provide a reason for rejection..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="submitReject()">
+                        <i class="fas fa-times me-1"></i>Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="createTaskModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Create New Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createTaskForm">
+                        <div class="form-group">
+                            <label>Task Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="taskTitle" maxlength="200" required>
+                            <div class="char-counter"><span id="titleCharCount">0</span>/200</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea class="form-control" id="taskDescription" rows="4" maxlength="2000"></textarea>
+                            <div class="char-counter"><span id="descCharCount">0</span>/2000</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Priority <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="taskPriority" required>
+                                        <option value="low">Low</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="critical">Critical</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Category <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="taskCategory" required>
+                                        <option value="development">Development</option>
+                                        <option value="support">Support</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="meeting">Meeting</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Due Date <span class="text-danger">*</span></label>
+                                    <input type="datetime-local" class="form-control" id="taskDueDate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Estimated Hours</label>
+                                    <input type="number" class="form-control" id="taskEstimatedHours" min="0" step="0.5" placeholder="e.g., 4">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="assignToSelfCheckbox" onchange="toggleSelfAssignment()">
+                                <label class="form-check-label" for="assignToSelfCheckbox">
+                                    <i class="fas fa-user-check me-1"></i>Assign to Me
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group" id="primaryAssigneeSection">
+                            <label>Primary Assignee <span class="text-danger">*</span> (1 required)</label>
+                            <input type="text" class="form-control" id="primaryAssigneeSearch" placeholder="Search employee by name or ID...">
+                            <div class="employee-search-results" id="primarySearchResults" style="display: none;"></div>
+                            <div class="selected-assignees" id="primaryAssigneeSelected"></div>
+                        </div>
+                        <div class="form-group" id="assignerSection" style="display: none;">
+                            <label>Assigned By <span class="text-danger">*</span></label>
+                            <select class="form-select" id="assignerChoice" onchange="toggleAssignerSearch()">
+                                <option value="self" selected>Self</option>
+                                <option value="other">Someone Else</option>
+                            </select>
+                            <div id="customAssignerSearchBox" style="display: none; margin-top: 10px;">
+                                <input type="text" class="form-control" id="customAssignerSearch" placeholder="Search employee by name or ID...">
+                                <div class="employee-search-results" id="customAssignerSearchResults" style="display: none;"></div>
+                                <div class="selected-assignees" id="customAssignerSelected"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Secondary Assignees (max 2)</label>
+                            <input type="text" class="form-control" id="secondaryAssigneeSearch" placeholder="Search employee by name or ID...">
+                            <div class="employee-search-results" id="secondarySearchResults" style="display: none;"></div>
+                            <div class="selected-assignees" id="secondaryAssigneesSelected"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Tags (comma separated)</label>
+                            <input type="text" class="form-control" id="taskTags" placeholder="e.g., urgent, frontend, bug-fix">
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label><i class="fas fa-phone-alt me-1 text-info"></i>Contact Mobile Number</label>
+                                    <input type="tel" class="form-control" id="taskContactPhone" maxlength="20" placeholder="e.g., 9876543210">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label><i class="fas fa-user me-1 text-info"></i>Contact Person Name <small class="text-muted">(Optional)</small></label>
+                                    <input type="text" class="form-control" id="taskContactPerson" maxlength="128" placeholder="e.g., Mr. Sharma">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group mt-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="enablePhasesCheckbox" onchange="togglePhasesSection()">
+                                <label class="form-check-label" for="enablePhasesCheckbox">
+                                    <i class="fas fa-layer-group me-1"></i>Multi-Stage Task (Add Phases)
+                                </label>
+                            </div>
+                        </div>
+                        <div id="phasesSection" style="display: none;">
+                            <div class="card border-info mb-3">
+                                <div class="card-header bg-info text-white py-2">
+                                    <i class="fas fa-tasks me-2"></i>Task Phases
+                                    <small class="float-end">Each phase creates a sub-task for the assigned person</small>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div id="phasesContainer"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-info w-100" onclick="addPhase()">
+                                        <i class="fas fa-plus me-1"></i>Add Phase
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-paperclip me-1"></i>Attachments (Optional)
+                                <small class="text-muted">Max 2 files. Images/Documents: up to 5MB (images auto-compressed to <500KB). Allowed: Images (JPEG, PNG, GIF), Documents (PDF, DOC, XLS, PPT, TXT)</small>
+                            </label>
+                            <input type="file" class="form-control" id="taskAttachments" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onchange="previewFiles()">
+                            <div id="filePreview" class="file-preview mt-2"></div>
+                            <div id="createTaskUploadProgress" class="upload-progress-container">
+                                <div class="upload-progress-bar">
+                                    <div class="upload-progress-fill" id="createTaskProgressFill" style="width: 0%"></div>
+                                    <div class="upload-progress-text" id="createTaskProgressText">0%</div>
+                                </div>
+                                <div class="upload-progress-file" id="createTaskProgressFile"></div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="createTaskBtn" onclick="createTask()">
+                        <i class="fas fa-plus me-1"></i>Create Task
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff_universal_filter.js?v=1764165148"></script>
+    <script>
+        const API_BASE = '';  // DC Protocol (Jan 1, 2026): Use proxy for all requests
+        let allTasks = [];
+        let currentUser = null;
+        let selectedTasks = new Set();
+        let currentPage = 1;
+        const pageSize = 20;
+        let universalFilter = null;
+        let universalFilterReady = false;
+        let sortField = null;
+        let sortDirection = 'asc';
+        let allEmployees = [];
+        let selectedPrimaryAssignee = null;
+        let selectedSecondaryAssignees = [];
+        let selectedCustomAssigner = null;
+        let taskPhases = [];
+        let phaseAssigneeSearchTimeouts = {};
+        let totalAvailableEmployees = 0;
+        let searchDebounceTimer = null;
+        let currentSearchToken = 0;
+        
+        let employeeSearchTimeout = null;
+        function debounceEmployeeSearch() {
+            clearTimeout(employeeSearchTimeout);
+            employeeSearchTimeout = setTimeout(() => {
+                loadPendingTasks();
+            }, 500);
+        }
+        
+        function buildFilterPayload() {
+            const searchInput = document.getElementById('filterSearch');
+            const searchText = searchInput ? searchInput.value : '';
+            const fallbackEmployeeSearch = document.getElementById('fallbackEmployeeSearch');
+            const fallbackSearchText = fallbackEmployeeSearch ? fallbackEmployeeSearch.value : '';
+            
+            if (universalFilterReady && universalFilter && universalFilter.isReady && !universalFilter.initFailed) {
+                try {
+                    const filters = universalFilter.getFilters();
+                    filters.search = filters.search || searchText || fallbackSearchText;
+                    return filters;
+                } catch (e) {
+                    console.warn('[DC] Error getting universal filter values:', e);
+                }
+            }
+            const fallbackDept = document.getElementById('fallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('fallbackStaffTypeFilter');
+            return {
+                company_id: null,
+                staff_type: fallbackStaff ? (fallbackStaff.value || null) : null,
+                department_id: fallbackDept ? (fallbackDept.value || null) : null,
+                employee_id: null,
+                employee: null,
+                search: searchText || fallbackSearchText || null
+            };
+        }
+        
+        async function loadFallbackDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/departments`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('fallbackDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading fallback departments:', error);
+            }
+        }
+        
+        function hideFallbackFilters() {
+            const fallback = document.getElementById('fallbackFiltersContainer');
+            if (fallback) fallback.style.display = 'none';
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('Task Reviews', 'fas fa-tasks');
+            currentUser = StaffSidebar.userData;
+            if (currentUser) {
+                updateHeaderInfo();
+            }
+            
+            loadFallbackDepartments();
+            
+            if (typeof DCUniversalFilter !== 'undefined') {
+                universalFilter = new DCUniversalFilter('universalFilterContainer', {
+                    showCompany: false,
+                    showStaffType: true,
+                    showDepartment: true,
+                    showEmployee: true,
+                    showSearch: false,
+                    pageKey: 'staff_task_review',
+                    onFilterChange: () => {
+                        if (universalFilterReady) loadPendingTasks();
+                    }
+                });
+                
+                try {
+                    const success = await Promise.race([
+                        universalFilter.waitForReady(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                    ]);
+                    await new Promise(r => setTimeout(r, 50));
+                    if (success === true && 
+                        universalFilter.isReady === true && 
+                        universalFilter.initFailed === false &&
+                        document.getElementById('universalFilterContainer')?.children.length > 0) {
+                        universalFilterReady = true;
+                        hideFallbackFilters();
+                        console.log('[DC] Universal filter ready - using enhanced filters');
+                    } else {
+                        console.warn('[DC] Universal filter not fully ready, keeping fallback');
+                        universalFilterReady = false;
+                    }
+                } catch (e) {
+                    console.warn('[DC] Universal filter initialization failed or timed out, using fallback:', e);
+                    universalFilterReady = false;
+                }
+            } else {
+                console.warn('[DC] DCUniversalFilter not available - using fallback filters');
+            }
+            
+            await loadEmployees();
+            
+            if (currentUser) {
+                await loadPendingTasks();
+            }
+            
+            setupCharCounters();
+            setupAssigneeSearch();
+            
+            document.getElementById('filterSearch').addEventListener('input', debounce(filterTasks, 300));
+            document.getElementById('filterPriority').addEventListener('change', filterTasks);
+            document.getElementById('filterCategory').addEventListener('change', filterTasks);
+            document.querySelectorAll('.task-status-filter').forEach(cb => cb.addEventListener('change', filterTasks));
+            document.querySelectorAll('.review-status-filter').forEach(cb => cb.addEventListener('change', filterTasks));
+            document.getElementById('filterDueDateFrom').addEventListener('change', filterTasks);
+            document.getElementById('filterDueDateTo').addEventListener('change', filterTasks);
+            document.getElementById('filterProgressMin').addEventListener('change', filterTasks);
+            document.getElementById('filterProgressMax').addEventListener('change', filterTasks);
+            document.getElementById('filterHoursMin').addEventListener('change', filterTasks);
+            document.getElementById('filterHoursMax').addEventListener('change', filterTasks);
+        });
+        
+        function updateHeaderInfo() {
+            if (!currentUser) return;
+            const initials = (currentUser.first_name?.[0] || '') + (currentUser.last_name?.[0] || '');
+            document.getElementById('headerUserInitials').textContent = initials || '--';
+            document.getElementById('headerUserName').textContent = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Staff';
+            document.getElementById('headerUserRole').textContent = currentUser.role_name || 'Staff';
+            document.getElementById('headerUserEmpId').textContent = currentUser.employee_id || '';
+        }
+        
+        async function loadPendingTasks() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/tasks/manager-review/pending`);
+                
+                if (!response.ok) throw new Error('Failed to load tasks');
+                
+                const data = await response.json();
+                allTasks = data.pending_tasks || [];
+                updateStats(data);
+                renderTasks(allTasks);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading tasks:', error);
+                document.getElementById('taskTableBody').innerHTML = `
+                    <tr><td colspan="12">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>Failed to load tasks. Please try again.</p>
+                        </div>
+                    </td></tr>`;
+            }
+        }
+        
+        function updateStats(data) {
+            document.getElementById('statPending').textContent = data.pending_count || allTasks.length;
+            document.getElementById('statApproved').textContent = data.approved_today || 0;
+            document.getElementById('statRejected').textContent = data.rejected_today || 0;
+        }
+        
+        // DC-PHASE2: Toggle filter panel
+        function toggleFilters() {
+            console.log('[DC-FILTER-TOGGLE]', { timestamp: Date.now() });
+            const filterPanel = document.getElementById('filterPanel');
+            filterPanel.style.display = filterPanel.style.display === 'none' ? 'grid' : 'none';
+        }
+        
+        // DC-PHASE2: Apply all selected filters
+        function applyFilters() {
+            console.log('[DC-FILTER-APPLY-START]', { timestamp: Date.now() });
+            filterTasks();
+            console.log('[DC-FILTER-APPLY-END]', { totalFiltered: allTasks.length, timestamp: Date.now() });
+        }
+        
+        // DC-PHASE2: Reset all filters
+        function resetFilters() {
+            console.log('[DC-FILTER-RESET-START]', { timestamp: Date.now() });
+            document.getElementById('filterDueDateFrom').value = '';
+            document.getElementById('filterDueDateTo').value = '';
+            document.getElementById('filterSearch').value = '';
+            document.getElementById('filterPriority').value = '';
+            document.getElementById('filterCategory').value = '';
+            document.getElementById('filterProgressMin').value = '';
+            document.getElementById('filterProgressMax').value = '';
+            document.getElementById('filterHoursMin').value = '';
+            document.getElementById('filterHoursMax').value = '';
+            document.querySelectorAll('.task-status-filter').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.review-status-filter').forEach(cb => cb.checked = false);
+            currentPage = 1;
+            renderTasks(allTasks);
+            console.log('[DC-FILTER-RESET-END]', { timestamp: Date.now() });
+        }
+        
+        function filterTasks() {
+            console.log('[DC-FILTER-EXEC-START]', { timestamp: Date.now() });
+            
+            const search = document.getElementById('filterSearch').value.toLowerCase();
+            const priority = document.getElementById('filterPriority').value;
+            const category = document.getElementById('filterCategory').value;
+            const dueDateFrom = document.getElementById('filterDueDateFrom').value;
+            const dueDateTo = document.getElementById('filterDueDateTo').value;
+            const progressMin = parseInt(document.getElementById('filterProgressMin').value) || 0;
+            const progressMax = parseInt(document.getElementById('filterProgressMax').value) || 100;
+            const hoursMin = parseFloat(document.getElementById('filterHoursMin').value) || 0;
+            const hoursMax = parseFloat(document.getElementById('filterHoursMax').value) || 999;
+            
+            const taskStatuses = Array.from(document.querySelectorAll('.task-status-filter:checked')).map(cb => cb.value);
+            const reviewStatuses = Array.from(document.querySelectorAll('.review-status-filter:checked')).map(cb => cb.value);
+            
+            let filtered = allTasks;
+            
+            if (search) {
+                filtered = filtered.filter(t => 
+                    (t.primary_assignee_name || t.employee_name || '').toLowerCase().includes(search) ||
+                    (t.title || '').toLowerCase().includes(search)
+                );
+            }
+            if (priority) filtered = filtered.filter(t => t.priority === priority);
+            if (category) filtered = filtered.filter(t => t.category === category);
+            
+            if (taskStatuses.length > 0) {
+                filtered = filtered.filter(t => taskStatuses.includes(t.status));
+            }
+            if (reviewStatuses.length > 0) {
+                filtered = filtered.filter(t => reviewStatuses.includes(t.manager_review_status));
+            }
+            
+            if (dueDateFrom) {
+                filtered = filtered.filter(t => {
+                    const dueDate = new Date(t.due_date);
+                    return dueDate >= new Date(dueDateFrom);
+                });
+            }
+            if (dueDateTo) {
+                filtered = filtered.filter(t => {
+                    const dueDate = new Date(t.due_date);
+                    return dueDate <= new Date(dueDateTo);
+                });
+            }
+            
+            filtered = filtered.filter(t => {
+                const progress = t.progress || 0;
+                return progress >= progressMin && progress <= progressMax;
+            });
+            
+            filtered = filtered.filter(t => {
+                const hours = t.actual_hours || 0;
+                return hours >= hoursMin && hours <= hoursMax;
+            });
+            
+            currentPage = 1;
+            renderTasks(filtered);
+            console.log('[DC-FILTER-EXEC-END]', { itemsMatched: filtered.length, timestamp: Date.now() });
+        }
+        
+        // DC-PHASE2: Render task status with color-coded badge
+        function renderTaskStatus(status) {
+            console.log('[DC-RENDER-TASK-STATUS-START]', { status, timestamp: Date.now() });
+            const statusMap = {
+                'pending': { label: 'Pending', class: 'warning', icon: 'hourglass-half' },
+                'in_progress': { label: 'In Progress', class: 'info', icon: 'spinner' },
+                'completed': { label: 'Completed', class: 'success', icon: 'check-circle' },
+                'partial': { label: 'Partial', class: 'warning', icon: 'exclamation-circle' }
+            };
+            const config = statusMap[status] || { label: status, class: 'secondary', icon: 'question-circle' };
+            const html = `<span class="badge badge-${config.class}" style="display:inline-block; padding:0.5rem 0.75rem;"><i class="fas fa-${config.icon} me-1"></i>${config.label}</span>`;
+            console.log('[DC-RENDER-TASK-STATUS-END]', { status, config, htmlGenerated: html.substring(0, 80) });
+            return html;
+        }
+        
+        // DC-PHASE2: Render manager review status with color-coded badge
+        function renderManagerReviewStatus(status) {
+            console.log('[DC-RENDER-MANAGER-REVIEW-STATUS-START]', { status, timestamp: Date.now() });
+            const statusMap = {
+                'pending_review': { label: 'Pending Review', class: 'warning', icon: 'hourglass-half' },
+                'approved': { label: 'Approved', class: 'success', icon: 'check-circle' },
+                'edited_by_manager': { label: 'Approved (Edited)', class: 'info', icon: 'edit' },
+                'rejected': { label: 'Rejected', class: 'danger', icon: 'times-circle' }
+            };
+            const config = statusMap[status] || { label: status, class: 'secondary', icon: 'question-circle' };
+            const html = `<span class="badge badge-${config.class}" style="display:inline-block; padding:0.5rem 0.75rem;"><i class="fas fa-${config.icon} me-1"></i>${config.label}</span>`;
+            console.log('[DC-RENDER-MANAGER-REVIEW-STATUS-END]', { status, config, htmlGenerated: html.substring(0, 80) });
+            return html;
+        }
+        
+        function renderTasks(tasks) {
+            console.log('[DC-RENDER-TASKS-START]', { totalTasks: tasks.length, timestamp: Date.now() });
+            const tbody = document.getElementById('taskTableBody');
+            const start = (currentPage - 1) * pageSize;
+            const paginatedTasks = tasks.slice(start, start + pageSize);
+            
+            if (!tasks || tasks.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="12">
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-check"></i>
+                            <p>No tasks pending review</p>
+                        </div>
+                    </td></tr>`;
+                document.getElementById('pagination').innerHTML = '';
+                console.log('[DC-RENDER-TASKS-END]', { status: 'empty', timestamp: Date.now() });
+                return;
+            }
+            
+            tbody.innerHTML = paginatedTasks.map(task => {
+                const employeeName = task.primary_assignee_name || task.employee_name || 'Unknown';
+                const employeeId = task.primary_assignee_id || task.employee_id || '';
+                const progress = task.progress || 0;
+                const actualHours = task.actual_hours || 0;
+                const estimatedHours = task.estimated_hours || 0;
+                const managerReviewDate = task.manager_review_date ? formatDate(task.manager_review_date) : '-';
+                const dueDate = task.due_date ? formatDate(task.due_date) : '-';
+                
+                return `
+                <tr style="cursor:pointer;" onclick="viewTask(${task.id})">
+                    <td class="checkbox-cell" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="task-checkbox" value="${task.id}" 
+                            ${selectedTasks.has(task.id) ? 'checked' : ''} 
+                            onchange="toggleTaskSelection(${task.id})">
+                    </td>
+                    <td>
+                        <div class="employee-cell">
+                            <div class="employee-avatar">${getInitials(employeeName)}</div>
+                            <div class="employee-info">
+                                <span class="employee-name">${escapeHtml(employeeName)}</span>
+                                <span class="employee-id">${escapeHtml(employeeId)}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td><strong>${escapeHtml(task.title)}</strong></td>
+                    <td><span class="badge badge-${task.priority}">${task.priority || 'medium'}</span></td>
+                    <td>${renderTaskStatus(task.status || 'pending')}</td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <div class="progress-mini">
+                                <div class="progress-mini-bar" style="width: ${progress}%;"></div>
+                            </div>
+                            <span class="progress-text">${progress}% / ${actualHours}h</span>
+                        </div>
+                    </td>
+                    <td>${renderManagerReviewStatus(task.manager_review_status || 'pending_review')}</td>
+                    <td>${dueDate}</td>
+                    <td>${managerReviewDate}</td>
+                    <td class="text-center">
+                        ${task.phases_count > 0 ? `<span class="badge bg-info">${task.phases_completed || 0}/${task.phases_count}</span>` : '<span class="text-muted">—</span>'}
+                    </td>
+                    <td class="text-center">
+                        ${(task.status !== 'completed' && task.status !== 'cancelled' && task.created_at) ? `<span class="${calcPendingDays(task) > 7 ? 'text-danger fw-bold' : 'text-muted'}">${calcPendingDays(task)}d</span>` : '<span class="text-muted">—</span>'}
+                    </td>
+                    <td onclick="event.stopPropagation()">
+                        <div class="action-buttons">
+                            <button class="btn-action btn-view" onclick="viewTask(${task.id})" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-action btn-approve" onclick="approveTask(${task.id})" title="Approve">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn-action btn-edit" onclick="openEditModal(${task.id})" title="Edit & Approve">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action btn-reject" onclick="openRejectModal(${task.id})" title="Reject">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;}).join('');
+            
+            renderPagination(tasks.length);
+            updateBulkActionsVisibility();
+            console.log('[DC-RENDER-TASKS-END]', { rowsRendered: paginatedTasks.length, timestamp: Date.now() });
+        }
+        
+        function sortTasks(field) {
+            if (sortField === field) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortField = field;
+                sortDirection = 'asc';
+            }
+            
+            const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+            const statusOrder = { pending: 1, in_progress: 2, on_hold: 3, under_review: 4, completed: 5, cancelled: 6 };
+            
+            allTasks.sort((a, b) => {
+                let aVal, bVal;
+                
+                if (field === 'priority') {
+                    aVal = priorityOrder[a.priority] || 0;
+                    bVal = priorityOrder[b.priority] || 0;
+                } else if (field === 'status') {
+                    aVal = statusOrder[a.status] || 0;
+                    bVal = statusOrder[b.status] || 0;
+                } else if (field === 'pending_days') {
+                    aVal = calcPendingDays(a);
+                    bVal = calcPendingDays(b);
+                } else if (field === 'phases_completed') {
+                    aVal = (a.phases_completed || 0);
+                    bVal = (b.phases_completed || 0);
+                } else if (field === 'progress') {
+                    aVal = a.progress || 0;
+                    bVal = b.progress || 0;
+                } else if (field === 'due_date' || field === 'created_at' || field === 'manager_review_date') {
+                    aVal = a[field] ? new Date(a[field]).getTime() : 0;
+                    bVal = b[field] ? new Date(b[field]).getTime() : 0;
+                } else if (field === 'employee_name') {
+                    aVal = (a.primary_assignee_name || '').toLowerCase();
+                    bVal = (b.primary_assignee_name || '').toLowerCase();
+                } else if (field === 'manager_review_status') {
+                    aVal = (a.manager_review_status || '').toLowerCase();
+                    bVal = (b.manager_review_status || '').toLowerCase();
+                } else {
+                    aVal = (a[field] || '').toString().toLowerCase();
+                    bVal = (b[field] || '').toString().toLowerCase();
+                }
+                
+                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            updateSortIndicators(field);
+            renderTasks(allTasks);
+        }
+
+        function updateSortIndicators(activeField) {
+            document.querySelectorAll('th[data-sort-field]').forEach(th => {
+                const icon = th.querySelector('i.fas');
+                if (!icon) return;
+                if (th.dataset.sortField === activeField) {
+                    icon.className = sortDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                } else {
+                    icon.className = 'fas fa-sort';
+                }
+            });
+        }
+
+        function calcPendingDays(task) {
+            if (task.status === 'completed' || task.status === 'cancelled') return -1;
+            if (!task.created_at) return 0;
+            const created = new Date(task.created_at);
+            const now = new Date();
+            return Math.floor((now - created) / (1000 * 60 * 60 * 24));
+        }
+        
+        function renderPagination(totalItems) {
+            const totalPages = Math.ceil(totalItems / pageSize);
+            if (totalPages <= 1) {
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            let html = `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span style="padding: 8px;">...</span>`;
+                }
+            }
+            
+            html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+            
+            document.getElementById('pagination').innerHTML = html;
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            filterTasks();
+        }
+        
+        function toggleSelectAll() {
+            const checked = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.task-checkbox').forEach(cb => {
+                cb.checked = checked;
+                const taskId = parseInt(cb.value);
+                if (checked) selectedTasks.add(taskId);
+                else selectedTasks.delete(taskId);
+            });
+            updateBulkActionsVisibility();
+        }
+        
+        function toggleTaskSelection(taskId) {
+            if (selectedTasks.has(taskId)) selectedTasks.delete(taskId);
+            else selectedTasks.add(taskId);
+            updateBulkActionsVisibility();
+        }
+        
+        function updateBulkActionsVisibility() {
+            const bulkActions = document.getElementById('bulkActions');
+            const selectedCount = document.getElementById('selectedCount');
+            if (selectedTasks.size > 0) {
+                bulkActions.classList.remove('hidden');
+                selectedCount.textContent = selectedTasks.size;
+            } else {
+                bulkActions.classList.add('hidden');
+            }
+        }
+        
+        function clearSelection() {
+            selectedTasks.clear();
+            document.querySelectorAll('.task-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('selectAll').checked = false;
+            updateBulkActionsVisibility();
+        }
+        
+        async function viewTask(taskId) {
+            try {
+                const task = allTasks.find(t => t.id === taskId);
+                if (!task) throw new Error('Task not found in loaded data');
+                
+                document.getElementById('taskDetailContent').innerHTML = `
+                    <div class="detail-row">
+                        <span class="detail-label">Title</span>
+                        <span class="detail-value"><strong>${escapeHtml(task.title)}</strong></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Description</span>
+                        <span class="detail-value">${escapeHtml(task.description || '-')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Employee</span>
+                        <span class="detail-value">${escapeHtml(task.employee_name || '-')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Priority</span>
+                        <span class="detail-value"><span class="badge badge-${task.priority}">${task.priority}</span></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Due Date</span>
+                        <span class="detail-value">${task.due_date ? formatDate(task.due_date) : '-'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Time Logged</span>
+                        <span class="detail-value">${task.time_logged_minutes ? `${task.time_logged_minutes} minutes` : '-'}</span>
+                    </div>
+                    ${task.completion_notes ? `
+                        <div class="mt-3">
+                            <strong>Completion Notes:</strong>
+                            <div class="notes-display">${escapeHtml(task.completion_notes)}</div>
+                        </div>
+                    ` : ''}
+                `;
+                
+                new bootstrap.Modal(document.getElementById('taskDetailModal')).show();
+            } catch (error) {
+                console.error('Error loading task:', error);
+                alert('Failed to load task details');
+            }
+        }
+        
+        async function approveTask(taskId) {
+            if (!confirm('Approve this task?')) return;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/tasks/manager-review/approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({ task_id: taskId })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to approve task');
+                }
+                
+                await loadPendingTasks();
+                alert('Task approved successfully');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error approving task:', error);
+                alert(error.message || 'Failed to approve task');
+            }
+        }
+        
+        function openEditModal(taskId) {
+            document.getElementById('editTaskId').value = taskId;
+            document.getElementById('editManagerNotes').value = '';
+            document.getElementById('editManagerRating').value = '';
+            new bootstrap.Modal(document.getElementById('editApproveModal')).show();
+        }
+        
+        async function submitEditApprove() {
+            const taskId = document.getElementById('editTaskId').value;
+            const notes = document.getElementById('editManagerNotes').value.trim();
+            const rating = document.getElementById('editManagerRating').value;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/tasks/manager-review/edit-approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        task_id: parseInt(taskId),
+                        manager_notes: notes || null,
+                        manager_rating: rating ? parseInt(rating) : null
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to edit task');
+                }
+                
+                document.activeElement?.blur();
+                bootstrap.Modal.getInstance(document.getElementById('editApproveModal')).hide();
+                await loadPendingTasks();
+                alert('Task edited and approved successfully');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error editing task:', error);
+                alert(error.message || 'Failed to edit task');
+            }
+        }
+        
+        function openRejectModal(taskId) {
+            document.getElementById('rejectTaskId').value = taskId;
+            document.getElementById('rejectReason').value = '';
+            new bootstrap.Modal(document.getElementById('rejectModal')).show();
+        }
+        
+        async function submitReject() {
+            const taskId = document.getElementById('rejectTaskId').value;
+            const reason = document.getElementById('rejectReason').value.trim();
+            
+            if (!reason) {
+                alert('Please provide a rejection reason');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/tasks/manager-review/reject`, {
+                    method: 'POST',
+                    body: JSON.stringify({ task_id: parseInt(taskId), rejection_reason: reason })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to reject task');
+                }
+                
+                document.activeElement?.blur();
+                bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+                await loadPendingTasks();
+                alert('Task rejected');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error rejecting task:', error);
+                alert(error.message || 'Failed to reject task');
+            }
+        }
+        
+        async function bulkApprove() {
+            if (selectedTasks.size === 0) return;
+            if (!confirm(`Approve ${selectedTasks.size} selected tasks?`)) return;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/tasks/manager-review/bulk-approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({ task_ids: Array.from(selectedTasks) })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to bulk approve');
+                }
+                
+                const result = await response.json();
+                clearSelection();
+                await loadPendingTasks();
+                alert(`Successfully approved ${result.approved_count} tasks`);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error bulk approving:', error);
+                alert(error.message || 'Failed to bulk approve tasks');
+            }
+        }
+        
+        function getInitials(name) {
+            if (!name) return '??';
+            return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => { clearTimeout(timeout); func(...args); };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        async function loadEmployees() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/tasks/assignable-employees`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allEmployees = data.employees || [];
+                    totalAvailableEmployees = data.total_available || allEmployees.length;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading assignable employees:', error);
+            }
+        }
+        
+        function togglePhasesSection() {
+            const checkbox = document.getElementById('enablePhasesCheckbox');
+            const section = document.getElementById('phasesSection');
+            section.style.display = checkbox.checked ? 'block' : 'none';
+            if (!checkbox.checked) {
+                taskPhases = [];
+                document.getElementById('phasesContainer').innerHTML = '';
+            }
+        }
+        
+        function addPhase() {
+            const phaseNumber = taskPhases.length + 1;
+            const phaseId = `phase_${Date.now()}`;
+            
+            const phaseData = {
+                id: phaseId,
+                phase_number: phaseNumber,
+                phase_title: '',
+                phase_description: '',
+                phase_assignee_id: null,
+                phase_assignee: null,
+                target_date: null,
+                contact_phone: null,
+                contact_person_name: null,
+                confirmed: false
+            };
+            taskPhases.push(phaseData);
+            
+            const container = document.getElementById('phasesContainer');
+            const phaseHtml = `
+                <div class="phase-item border rounded p-2 mb-2" id="${phaseId}" data-phase-number="${phaseNumber}">
+                    <div class="phase-editing-state" id="phaseEditing_${phaseId}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-info">Phase ${phaseNumber}</span>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-success btn-sm" id="phaseConfirmBtn_${phaseId}" 
+                                    onclick="confirmPhase('${phaseId}')" style="display: none;" title="Save Phase">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removePhase('${phaseId}')" title="Remove Phase">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control form-control-sm" 
+                                    id="phaseTitle_${phaseId}"
+                                    placeholder="Phase Title *" 
+                                    onchange="updatePhaseField('${phaseId}', 'phase_title', this.value); checkPhaseConfirmable('${phaseId}')"
+                                    oninput="updatePhaseField('${phaseId}', 'phase_title', this.value); checkPhaseConfirmable('${phaseId}')"
+                                    required>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="date" class="form-control form-control-sm" 
+                                    id="phaseTargetDate_${phaseId}"
+                                    placeholder="Target Date"
+                                    onchange="updatePhaseField('${phaseId}', 'target_date', this.value)">
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-12">
+                                <div class="position-relative">
+                                    <input type="text" class="form-control form-control-sm" 
+                                        id="phaseAssigneeSearch_${phaseId}"
+                                        placeholder="Search assignee by name or ID... *"
+                                        oninput="searchPhaseAssignee('${phaseId}', this.value)">
+                                    <div class="employee-search-results" id="phaseSearchResults_${phaseId}" style="display: none;"></div>
+                                    <div class="selected-assignees mt-1" id="phaseAssigneeSelected_${phaseId}"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-12">
+                                <textarea class="form-control form-control-sm" rows="1" 
+                                    id="phaseDescription_${phaseId}"
+                                    placeholder="Phase description (optional)"
+                                    onchange="updatePhaseField('${phaseId}', 'phase_description', this.value)"></textarea>
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-md-6">
+                                <input type="tel" class="form-control form-control-sm" 
+                                    id="phaseContactPhone_${phaseId}"
+                                    placeholder="Contact mobile number"
+                                    maxlength="20"
+                                    onchange="updatePhaseField('${phaseId}', 'contact_phone', this.value)">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control form-control-sm" 
+                                    id="phaseContactPerson_${phaseId}"
+                                    placeholder="Contact person name (optional)"
+                                    maxlength="128"
+                                    onchange="updatePhaseField('${phaseId}', 'contact_person_name', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="phase-confirmed-state" id="phaseConfirmed_${phaseId}" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-success"><i class="fas fa-check me-1"></i>Phase ${phaseNumber}</span>
+                                <span class="phase-confirmed-title fw-bold" id="phaseConfirmedTitle_${phaseId}"></span>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="editPhase('${phaseId}')" title="Edit Phase">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removePhase('${phaseId}')" title="Remove Phase">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="phase-confirmed-details mt-1 small text-muted">
+                            <span id="phaseConfirmedAssignee_${phaseId}"></span>
+                            <span id="phaseConfirmedDate_${phaseId}"></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', phaseHtml);
+        }
+        
+        function checkPhaseConfirmable(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            const confirmBtn = document.getElementById(`phaseConfirmBtn_${phaseId}`);
+            
+            if (phase && confirmBtn) {
+                const isValid = phase.phase_title && phase.phase_title.trim() && phase.phase_assignee_id;
+                confirmBtn.style.display = isValid ? 'inline-block' : 'none';
+            }
+        }
+        
+        function confirmPhase(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (!phase) return;
+            
+            if (!phase.phase_title || !phase.phase_title.trim()) {
+                alert('Please enter a phase title');
+                return;
+            }
+            if (!phase.phase_assignee_id) {
+                alert('Please select an assignee for this phase');
+                return;
+            }
+            
+            phase.confirmed = true;
+            
+            document.getElementById(`phaseConfirmedTitle_${phaseId}`).textContent = phase.phase_title;
+            document.getElementById(`phaseConfirmedAssignee_${phaseId}`).innerHTML = 
+                `<i class="fas fa-user me-1"></i>${escapeHtml(phase.phase_assignee?.full_name || 'Unknown')}`;
+            document.getElementById(`phaseConfirmedDate_${phaseId}`).innerHTML = 
+                phase.target_date ? ` | <i class="fas fa-calendar me-1"></i>${phase.target_date}` : '';
+            
+            document.getElementById(`phaseEditing_${phaseId}`).style.display = 'none';
+            document.getElementById(`phaseConfirmed_${phaseId}`).style.display = 'block';
+            
+            const phaseEl = document.getElementById(phaseId);
+            phaseEl.classList.add('phase-confirmed');
+        }
+        
+        function editPhase(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (!phase) return;
+            
+            phase.confirmed = false;
+            
+            document.getElementById(`phaseEditing_${phaseId}`).style.display = 'block';
+            document.getElementById(`phaseConfirmed_${phaseId}`).style.display = 'none';
+            
+            checkPhaseConfirmable(phaseId);
+            
+            const phaseEl = document.getElementById(phaseId);
+            phaseEl.classList.remove('phase-confirmed');
+        }
+        
+        function removePhase(phaseId) {
+            const index = taskPhases.findIndex(p => p.id === phaseId);
+            if (index > -1) {
+                taskPhases.splice(index, 1);
+                document.getElementById(phaseId).remove();
+                renumberPhases();
+            }
+        }
+        
+        function renumberPhases() {
+            taskPhases.forEach((phase, index) => {
+                phase.phase_number = index + 1;
+                const el = document.getElementById(phase.id);
+                if (el) {
+                    el.querySelector('.badge').textContent = `Phase ${index + 1}`;
+                    el.dataset.phaseNumber = index + 1;
+                }
+            });
+        }
+        
+        function updatePhaseField(phaseId, field, value) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (phase) {
+                phase[field] = value || null;
+            }
+        }
+        
+        async function searchPhaseAssignee(phaseId, query) {
+            clearTimeout(phaseAssigneeSearchTimeouts[phaseId]);
+            const resultsDiv = document.getElementById(`phaseSearchResults_${phaseId}`);
+            
+            if (!query || query.length < 2) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            
+            phaseAssigneeSearchTimeouts[phaseId] = setTimeout(async () => {
+                try {
+                    const response = await staffFetch(`${API_BASE}/api/v1/staff/tasks/assignable-employees?search=${encodeURIComponent(query)}&limit=10`);
+                    if (!response.ok) return;
+                    
+                    const data = await response.json();
+                    const employees = data.employees || [];
+                    
+                    if (employees.length === 0) {
+                        resultsDiv.innerHTML = '<div class="search-result-item text-muted">No employees found</div>';
+                    } else {
+                        resultsDiv.innerHTML = employees.map(emp => `
+                            <div class="search-result-item" onclick="selectPhaseAssignee('${phaseId}', ${JSON.stringify({
+                                id: emp.id,
+                                full_name: emp.full_name,
+                                emp_code: emp.employee_code,
+                                department_name: emp.department || 'No Dept'
+                            }).replace(/"/g, '&quot;')})">
+                                <strong>${escapeHtml(emp.full_name)}</strong>
+                                <small class="text-muted">${escapeHtml(emp.employee_code)} - ${escapeHtml(emp.department || 'No Dept')}</small>
+                            </div>
+                        `).join('');
+                    }
+                    resultsDiv.style.display = 'block';
+                } catch (error) {
+                    console.error('Error searching phase assignee:', error);
+                }
+            }, 300);
+        }
+        
+        function selectPhaseAssignee(phaseId, employee) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (phase) {
+                phase.phase_assignee_id = employee.id;
+                phase.phase_assignee = employee;
+            }
+            
+            document.getElementById(`phaseAssigneeSearch_${phaseId}`).value = '';
+            document.getElementById(`phaseSearchResults_${phaseId}`).style.display = 'none';
+            document.getElementById(`phaseAssigneeSelected_${phaseId}`).innerHTML = `
+                <span class="badge bg-primary me-1">
+                    ${escapeHtml(employee.full_name)} (${escapeHtml(employee.emp_code)})
+                    <i class="fas fa-times ms-1" style="cursor: pointer;" onclick="clearPhaseAssignee('${phaseId}')"></i>
+                </span>
+            `;
+            
+            checkPhaseConfirmable(phaseId);
+        }
+        
+        function clearPhaseAssignee(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (phase) {
+                phase.phase_assignee_id = null;
+                phase.phase_assignee = null;
+            }
+            document.getElementById(`phaseAssigneeSelected_${phaseId}`).innerHTML = '';
+            
+            checkPhaseConfirmable(phaseId);
+        }
+        
+        function getValidPhases() {
+            return taskPhases.filter(p => p.phase_title && p.phase_assignee_id);
+        }
+        
+        function resetPhases() {
+            taskPhases = [];
+            document.getElementById('phasesContainer').innerHTML = '';
+            document.getElementById('enablePhasesCheckbox').checked = false;
+            document.getElementById('phasesSection').style.display = 'none';
+        }
+        
+        function openCreateTaskModal() {
+            document.getElementById('createTaskForm').reset();
+            selectedPrimaryAssignee = null;
+            selectedSecondaryAssignees = [];
+            selectedCustomAssigner = null;
+            document.getElementById('primaryAssigneeSelected').innerHTML = '';
+            document.getElementById('secondaryAssigneesSelected').innerHTML = '';
+            document.getElementById('customAssignerSelected').innerHTML = '';
+            
+            document.getElementById('assignToSelfCheckbox').checked = false;
+            document.getElementById('primaryAssigneeSection').style.display = 'block';
+            document.getElementById('assignerSection').style.display = 'none';
+            document.getElementById('assignerChoice').value = 'self';
+            document.getElementById('customAssignerSearchBox').style.display = 'none';
+            
+            resetPhases();
+            
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(17, 0, 0, 0);
+            document.getElementById('taskDueDate').value = tomorrow.toISOString().slice(0, 16);
+            
+            new bootstrap.Modal(document.getElementById('createTaskModal')).show();
+        }
+        
+        function previewFiles() {
+            const fileInput = document.getElementById('taskAttachments');
+            const preview = document.getElementById('filePreview');
+            const files = Array.from(fileInput.files);
+            
+            if (files.length > 2) {
+                alert('Maximum 2 files allowed. Only first 2 files will be used.');
+                const dt = new DataTransfer();
+                files.slice(0, 2).forEach(file => dt.items.add(file));
+                fileInput.files = dt.files;
+                return previewFiles();
+            }
+            
+            preview.innerHTML = '';
+            files.forEach((file, index) => {
+                const isImage = file.type.startsWith('image/');
+                const sizeKB = (file.size / 1024).toFixed(2);
+                const maxSize = 5 * 1024 * 1024;
+                const sizeExceeded = file.size > maxSize;
+                
+                preview.innerHTML += `
+                    <div class="file-preview-item">
+                        <div class="file-preview-info">
+                            <div class="file-preview-icon ${isImage ? 'image' : 'document'}">
+                                <i class="fas fa-${isImage ? 'image' : 'file-alt'}"></i>
+                            </div>
+                            <div class="file-preview-details">
+                                <span class="file-preview-name">${escapeHtml(file.name)}</span>
+                                <span class="file-preview-size ${sizeExceeded ? 'error' : ''}">
+                                    ${sizeKB} KB ${sizeExceeded ? '(Exceeds 5MB limit!)' : (isImage && file.size > 512000 ? '(will be compressed)' : '')}
+                                </span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFileFromPreview(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        }
+        
+        function removeFileFromPreview(index) {
+            const fileInput = document.getElementById('taskAttachments');
+            const dt = new DataTransfer();
+            const files = Array.from(fileInput.files);
+            files.splice(index, 1);
+            files.forEach(file => dt.items.add(file));
+            fileInput.files = dt.files;
+            previewFiles();
+        }
+
+        async function createTask() {
+            if (!selectedPrimaryAssignee) {
+                alert('Please select a primary assignee');
+                return;
+            }
+            
+            const title = document.getElementById('taskTitle').value.trim();
+            if (!title) {
+                alert('Please enter a task title');
+                return;
+            }
+            
+            const isSelfAssigned = document.getElementById('assignToSelfCheckbox').checked;
+            if (isSelfAssigned) {
+                const assignerChoice = document.getElementById('assignerChoice').value;
+                if (assignerChoice === 'other' && !selectedCustomAssigner) {
+                    alert('Please select an assigner when choosing "Someone Else"');
+                    return;
+                }
+            }
+            
+            const fileInput = document.getElementById('taskAttachments');
+            const files = Array.from(fileInput.files);
+            
+            for (const file of files) {
+                const isImage = file.type.startsWith('image/');
+                const maxSize = 5 * 1024 * 1024;
+                
+                if (file.size > maxSize) {
+                    alert(`File "${file.name}" exceeds 5MB limit. ${isImage ? 'Images will be auto-compressed after upload.' : ''}`);
+                    return;
+                }
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            const createBtn = document.getElementById('createTaskBtn');
+            createBtn.disabled = true;
+            createBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
+            
+            let customAssignerId = null;
+            
+            if (isSelfAssigned) {
+                const assignerChoice = document.getElementById('assignerChoice').value;
+                if (assignerChoice === 'other' && selectedCustomAssigner) {
+                    customAssignerId = selectedCustomAssigner.id;
+                }
+            }
+            
+            const taskData = {
+                title: title,
+                description: document.getElementById('taskDescription').value.trim(),
+                priority: document.getElementById('taskPriority').value,
+                category: document.getElementById('taskCategory').value,
+                due_date: document.getElementById('taskDueDate').value,
+                estimated_hours: parseFloat(document.getElementById('taskEstimatedHours').value) || null,
+                primary_assignee_id: selectedPrimaryAssignee.id,
+                secondary_assignee_ids: selectedSecondaryAssignees.map(e => e.id),
+                tags: document.getElementById('taskTags').value.split(',').map(t => t.trim()).filter(t => t),
+                contact_phone: document.getElementById('taskContactPhone').value.trim() || null,
+                contact_person_name: document.getElementById('taskContactPerson').value.trim() || null
+            };
+            
+            if (customAssignerId) {
+                taskData.custom_assigner_id = customAssignerId;
+            } else {
+                taskData.custom_assigner_id = null;
+            }
+            
+            const enablePhases = document.getElementById('enablePhasesCheckbox').checked;
+            if (enablePhases) {
+                const validPhases = getValidPhases();
+                if (validPhases.length > 0) {
+                    taskData.phases = validPhases.map(p => ({
+                        phase_number: p.phase_number,
+                        phase_title: p.phase_title,
+                        phase_description: p.phase_description || null,
+                        phase_assignee_id: p.phase_assignee_id,
+                        target_date: p.target_date || null,
+                        contact_phone: p.contact_phone || null,
+                        contact_person_name: p.contact_person_name || null
+                    }));
+                } else if (taskPhases.length > 0) {
+                    alert('Please complete all phase fields (Title and Assignee required) or disable phases');
+                    createBtn.disabled = false;
+                    createBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Create Task';
+                    return;
+                }
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/tasks/`, {
+                    method: 'POST',
+                    body: JSON.stringify(taskData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const taskId = result.task.id;
+                    
+                    if (files.length > 0) {
+                        createBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading files...';
+                        const progressContainer = document.getElementById('createTaskUploadProgress');
+                        const progressFill = document.getElementById('createTaskProgressFill');
+                        const progressText = document.getElementById('createTaskProgressText');
+                        const progressFile = document.getElementById('createTaskProgressFile');
+                        
+                        progressContainer.classList.add('active');
+                        
+                        for (let i = 0; i < files.length; i++) {
+                            try {
+                                await uploadFileWithProgress(
+                                    `${API_BASE}/api/v1/staff/tasks/${taskId}/attachments`,
+                                    files[i],
+                                    (percent, filename) => {
+                                        progressFill.style.width = `${percent}%`;
+                                        progressText.textContent = `${percent}%`;
+                                        progressFile.textContent = `Uploading ${i + 1}/${files.length}: ${filename}`;
+                                    }
+                                );
+                            } catch (error) {
+                                alert(`Failed to upload ${files[i].name}: ${error.message}`);
+                            }
+                        }
+                        
+                        progressContainer.classList.remove('active');
+                        progressFill.style.width = '0%';
+                        progressText.textContent = '0%';
+                        progressFile.textContent = '';
+                    }
+                    
+                    document.activeElement?.blur();
+                    bootstrap.Modal.getInstance(document.getElementById('createTaskModal')).hide();
+                    loadPendingTasks();
+                    
+                    const phasesMsg = taskData.phases ? ` with ${taskData.phases.length} phase(s)` : '';
+                    alert('Task created successfully' + phasesMsg + (files.length > 0 ? ' and attachments!' : '!'));
+                    
+                    document.getElementById('createTaskForm').reset();
+                    document.getElementById('filePreview').innerHTML = '';
+                    resetPhases();
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to create task');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error creating task:', error);
+                alert('Error creating task');
+            } finally {
+                createBtn.disabled = false;
+                createBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Create Task';
+            }
+        }
+        
+        function setupCharCounters() {
+            document.getElementById('taskTitle').addEventListener('input', function() {
+                const count = this.value.length;
+                const counter = document.getElementById('titleCharCount');
+                counter.textContent = count;
+                counter.parentElement.className = 'char-counter' + (count > 180 ? ' warning' : '') + (count >= 200 ? ' error' : '');
+            });
+            
+            document.getElementById('taskDescription').addEventListener('input', function() {
+                const count = this.value.length;
+                const counter = document.getElementById('descCharCount');
+                counter.textContent = count;
+                counter.parentElement.className = 'char-counter' + (count > 1800 ? ' warning' : '') + (count >= 2000 ? ' error' : '');
+            });
+        }
+        
+        function setupAssigneeSearch() {
+            const primaryInput = document.getElementById('primaryAssigneeSearch');
+            const secondaryInput = document.getElementById('secondaryAssigneeSearch');
+            const customAssignerInput = document.getElementById('customAssignerSearch');
+            
+            primaryInput.addEventListener('input', () => searchAssignees('primary'));
+            secondaryInput.addEventListener('input', () => searchAssignees('secondary'));
+            customAssignerInput.addEventListener('input', () => searchAssignees('customAssigner'));
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#primaryAssigneeSearch') && !e.target.closest('#primarySearchResults')) {
+                    document.getElementById('primarySearchResults').style.display = 'none';
+                }
+                if (!e.target.closest('#secondaryAssigneeSearch') && !e.target.closest('#secondarySearchResults')) {
+                    document.getElementById('secondarySearchResults').style.display = 'none';
+                }
+                if (!e.target.closest('#customAssignerSearch') && !e.target.closest('#customAssignerSearchResults')) {
+                    document.getElementById('customAssignerSearchResults').style.display = 'none';
+                }
+            });
+        }
+        
+        async function searchAssignees(type) {
+            let input, results;
+            
+            if (type === 'customAssigner') {
+                input = document.getElementById('customAssignerSearch');
+                results = document.getElementById('customAssignerSearchResults');
+            } else {
+                input = document.getElementById(type === 'primary' ? 'primaryAssigneeSearch' : 'secondaryAssigneeSearch');
+                results = document.getElementById(type === 'primary' ? 'primarySearchResults' : 'secondarySearchResults');
+            }
+            
+            const query = input.value.toLowerCase().trim();
+            
+            if (query.length < 2) {
+                results.style.display = 'none';
+                return;
+            }
+            
+            const excludeIds = type === 'secondary' 
+                ? [selectedPrimaryAssignee?.id, ...selectedSecondaryAssignees.map(e => e.id)].filter(Boolean)
+                : type === 'customAssigner'
+                ? []
+                : selectedSecondaryAssignees.map(e => e.id);
+            
+            let filtered = allEmployees.filter(emp => 
+                !excludeIds.includes(emp.id) &&
+                (emp.full_name?.toLowerCase().includes(query) || 
+                 emp.employee_code?.toLowerCase().includes(query))
+            ).slice(0, 10);
+            
+            const hasUncachedEmployees = totalAvailableEmployees > allEmployees.length;
+            
+            if (hasUncachedEmployees) {
+                if (filtered.length > 0) {
+                    renderEmployeeResults(filtered, results, type);
+                } else {
+                    results.innerHTML = '<div class="employee-search-item text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Searching...</div>';
+                    results.style.display = 'block';
+                }
+                
+                const thisSearchToken = ++currentSearchToken;
+                
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(async () => {
+                    try {
+                        const response = await staffFetch(`${API_BASE}/api/v1/staff/tasks/assignable-employees?search=${encodeURIComponent(query)}&limit=50`);
+                        
+                        if (thisSearchToken !== currentSearchToken) return;
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            const serverResults = (data.employees || []).filter(emp => !excludeIds.includes(emp.id));
+                            
+                            mergeEmployeesToCache(data.employees || []);
+                            
+                            const mergedFiltered = allEmployees.filter(emp => 
+                                !excludeIds.includes(emp.id) &&
+                                (emp.full_name?.toLowerCase().includes(query) || 
+                                 emp.employee_code?.toLowerCase().includes(query))
+                            ).slice(0, 10);
+                            
+                            renderEmployeeResults(mergedFiltered, results, type);
+                        }
+                    } catch (error) {
+                        if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                        console.error('Server search failed:', error);
+                    }
+                }, 300);
+                return;
+            }
+            
+            renderEmployeeResults(filtered, results, type);
+        }
+        
+        function mergeEmployeesToCache(newEmployees) {
+            const existingIds = new Set(allEmployees.map(e => e.id));
+            newEmployees.forEach(emp => {
+                if (!existingIds.has(emp.id)) {
+                    allEmployees.push(emp);
+                    existingIds.add(emp.id);
+                }
+            });
+        }
+        
+        function renderEmployeeResults(filtered, results, type) {
+            if (filtered.length === 0) {
+                results.innerHTML = '<div class="employee-search-item text-muted">No employees found</div>';
+            } else {
+                const functionName = type === 'customAssigner' ? 'selectCustomAssigner' : 'selectAssignee';
+                const args = type === 'customAssigner' ? '' : `'${type}', `;
+                
+                results.innerHTML = filtered.map(emp => `
+                    <div class="employee-search-item" onclick="${functionName}(${args}${JSON.stringify(emp).replace(/"/g, '&quot;')})">
+                        <strong>${escapeHtml(emp.full_name)}</strong>
+                        <br><small class="text-muted">${emp.employee_code} - ${emp.role_name || emp.designation || 'Staff'}</small>
+                    </div>
+                `).join('');
+            }
+            results.style.display = 'block';
+        }
+        
+        function selectAssignee(type, emp) {
+            if (type === 'primary') {
+                selectedPrimaryAssignee = emp;
+                document.getElementById('primaryAssigneeSearch').value = '';
+                document.getElementById('primarySearchResults').style.display = 'none';
+                document.getElementById('primaryAssigneeSelected').innerHTML = `
+                    <div class="selected-assignee primary">
+                        ${escapeHtml(emp.full_name)} (${emp.employee_code})
+                        <span class="remove-btn" onclick="removePrimaryAssignee()"><i class="fas fa-times"></i></span>
+                    </div>`;
+            } else {
+                if (selectedSecondaryAssignees.length >= 2) {
+                    alert('Maximum 2 secondary assignees allowed');
+                    return;
+                }
+                selectedSecondaryAssignees.push(emp);
+                document.getElementById('secondaryAssigneeSearch').value = '';
+                document.getElementById('secondarySearchResults').style.display = 'none';
+                renderSecondaryAssignees();
+            }
+        }
+        
+        function removePrimaryAssignee() {
+            selectedPrimaryAssignee = null;
+            document.getElementById('primaryAssigneeSelected').innerHTML = '';
+        }
+        
+        function removeSecondaryAssignee(index) {
+            selectedSecondaryAssignees.splice(index, 1);
+            renderSecondaryAssignees();
+        }
+        
+        function renderSecondaryAssignees() {
+            document.getElementById('secondaryAssigneesSelected').innerHTML = selectedSecondaryAssignees.map((emp, i) => `
+                <div class="selected-assignee">
+                    ${escapeHtml(emp.full_name)} (${emp.employee_code})
+                    <span class="remove-btn" onclick="removeSecondaryAssignee(${i})"><i class="fas fa-times"></i></span>
+                </div>
+            `).join('');
+        }
+        
+        function toggleSelfAssignment() {
+            const checkbox = document.getElementById('assignToSelfCheckbox');
+            const primarySection = document.getElementById('primaryAssigneeSection');
+            const assignerSection = document.getElementById('assignerSection');
+            
+            if (checkbox.checked) {
+                primarySection.style.display = 'none';
+                assignerSection.style.display = 'block';
+                
+                selectedPrimaryAssignee = {
+                    id: currentUser.id,
+                    full_name: currentUser.full_name,
+                    employee_code: currentUser.emp_code
+                };
+                
+                selectedCustomAssigner = null;
+                document.getElementById('assignerChoice').value = 'self';
+                document.getElementById('customAssignerSearchBox').style.display = 'none';
+            } else {
+                primarySection.style.display = 'block';
+                assignerSection.style.display = 'none';
+                
+                selectedPrimaryAssignee = null;
+                selectedCustomAssigner = null;
+                document.getElementById('primaryAssigneeSelected').innerHTML = '';
+            }
+        }
+        
+        function toggleAssignerSearch() {
+            const choice = document.getElementById('assignerChoice').value;
+            const searchBox = document.getElementById('customAssignerSearchBox');
+            
+            if (choice === 'other') {
+                searchBox.style.display = 'block';
+                selectedCustomAssigner = null;
+                document.getElementById('customAssignerSelected').innerHTML = '';
+            } else {
+                searchBox.style.display = 'none';
+                selectedCustomAssigner = null;
+            }
+        }
+        
+        function selectCustomAssigner(emp) {
+            selectedCustomAssigner = emp;
+            document.getElementById('customAssignerSearch').value = '';
+            document.getElementById('customAssignerSearchResults').style.display = 'none';
+            document.getElementById('customAssignerSelected').innerHTML = `
+                <div class="selected-assignee primary">
+                    ${escapeHtml(emp.full_name)} (${emp.employee_code})
+                    <span class="remove-btn" onclick="removeCustomAssigner()"><i class="fas fa-times"></i></span>
+                </div>`;
+        }
+        
+        function removeCustomAssigner() {
+            selectedCustomAssigner = null;
+            document.getElementById('customAssignerSelected').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

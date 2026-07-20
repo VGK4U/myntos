@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Vendors — SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .content-area { padding: 20px 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .page-header-text h1 { font-size: 22px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header-text p { font-size: 13px; color: #6b7280; margin: 3px 0 0; }
+        .btn-add { background: linear-gradient(135deg, #0f766e, #0d9488); border: none; color: white; padding: 9px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-add:hover { opacity: .9; }
+        .filter-bar { background: white; padding: 14px 18px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filter-bar input { padding: 7px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 220px; }
+        .filter-bar input:focus { outline: none; border-color: #0f766e; box-shadow: 0 0 0 2px rgba(15,118,110,.1); }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: none; }
+        .card-header { padding: 14px 18px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+        .card-header h5 { font-size: 14px; font-weight: 700; color: #1f2937; margin: 0; }
+        .card-count { font-size: 12px; color: #6b7280; background: #f3f4f6; padding: 3px 10px; border-radius: 10px; }
+        .tbl { width: 100%; border-collapse: collapse; }
+        .tbl th { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; padding: 10px 14px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; text-align: left; }
+        .tbl td { padding: 12px 14px; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+        .tbl tr:hover td { background: #fafafa; }
+        .badge-mnre { background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 600; }
+        .badge-no { background: #f3f4f6; color: #9ca3af; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 600; }
+        .btn-sm-edit { padding: 4px 10px; border: none; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-sm-edit { background: #eff6ff; color: #2563eb; }
+        .btn-sm-edit:hover { background: #dbeafe; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #9ca3af; }
+        .empty-state i { font-size: 40px; margin-bottom: 12px; color: #d1d5db; display: block; }
+        .spinner-wrap { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #0f766e; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        /* Modal */
+        .m-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: flex-start; justify-content: center; z-index: 1000; padding: 30px 15px; overflow-y: auto; }
+        .m-overlay.open { display: flex; }
+        .m-box { background: white; border-radius: 14px; width: 100%; max-width: 680px; margin: auto; box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden; }
+        .m-head { background: linear-gradient(135deg, #0f766e, #0d4f4c); padding: 16px 20px; color: white; display: flex; justify-content: space-between; align-items: flex-start; }
+        .m-head h4 { margin: 0; font-size: 15px; font-weight: 700; }
+        .m-head p { margin: 3px 0 0; font-size: 11.5px; opacity: .75; }
+        .m-close { background: rgba(255,255,255,.2); border: none; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+        .m-close:hover { background: rgba(255,255,255,.35); }
+        .m-body { padding: 20px; max-height: 70vh; overflow-y: auto; }
+        .m-foot { padding: 14px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 10px; background: #f8fafc; }
+        .m-tabs { display: flex; border-bottom: 1px solid #e5e7eb; margin-bottom: 18px; }
+        .m-tab { padding: 9px 16px; font-size: 12.5px; font-weight: 600; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; }
+        .m-tab.active { color: #0f766e; border-bottom-color: #0f766e; }
+        .m-tab-pane { display: none; }
+        .m-tab-pane.active { display: block; }
+        .fg { margin-bottom: 14px; }
+        .fg label { font-size: 12px; font-weight: 600; color: #374151; display: block; margin-bottom: 5px; }
+        .fg input, .fg select, .fg textarea { width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+        .fg input:focus, .fg select:focus, .fg textarea:focus { outline: none; border-color: #0f766e; box-shadow: 0 0 0 2px rgba(15,118,110,.1); }
+        .fg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .fg-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        .section-hdr { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+        .section-hdr i { color: #0f766e; }
+        .toggle-wrap { display: flex; align-items: center; gap: 8px; }
+        .toggle-wrap label { font-size: 13px; color: #374151; font-weight: 500; }
+        .stamp-preview { width: 100px; height: 100px; border: 2px dashed #d1d5db; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 11px; cursor: pointer; overflow: hidden; }
+        .stamp-preview img { width: 100%; height: 100%; object-fit: contain; }
+        .btn-upload-img { padding: 5px 12px; border: 1px solid #0f766e; border-radius: 5px; background: #f0fdf9; color: #0f766e; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all .15s; }
+        .btn-upload-img:hover { background: #ccfbf1; }
+        .btn-cancel { padding: 8px 18px; border: 1px solid #d1d5db; border-radius: 6px; background: white; font-size: 13px; cursor: pointer; font-weight: 500; }
+        .btn-save { padding: 8px 22px; border: none; border-radius: 6px; background: #0f766e; color: white; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-save:hover { background: #0d6b63; }
+        /* Toast */
+        .toast-wrap { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; color: white; box-shadow: 0 4px 12px rgba(0,0,0,.15); animation: slideIn .2s ease; }
+        .toast.success { background: #059669; }
+        .toast.error { background: #dc2626; }
+        .toast.info { background: #2563eb; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
+</head>
+<body>
+<script src="/public/js/staff-token-manager.js?v=1"></script>
+<script src="/public/js/staff-fetch.js?v=1"></script>
+
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+<div id="headerContainer"></div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+function showToast(msg, type='info', dur=3500){
+  const w=document.getElementById('toastWrap');
+  const el=document.createElement('div');
+  el.className='toast '+type;el.textContent=msg;
+  w.appendChild(el);
+  setTimeout(()=>el.remove(), dur);
+}
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+</script>
+
+<script>
+// ── Solar Vendors Page ────────────────────────────────────────────────────────
+let _vendors=[], _filteredVendors=[], _editVendorId=null, _modalTab='basic';
+
+async function loadVendors(){
+  document.getElementById('vendorTableWrap').innerHTML='<div class="spinner-wrap"><div class="spinner"></div></div>';
+  try{
+    const r=await staffFetch('/api/v1/crm/solar-vendors');
+    const d=r.ok?await r.json():{vendors:[]};
+    _vendors=d.vendors||[];
+    applyFilter();
+  }catch(e){
+    document.getElementById('vendorTableWrap').innerHTML='<div class="empty-state"><i class="fas fa-exclamation-circle"></i>Failed to load vendors</div>';
+  }
+}
+
+function applyFilter(){
+  const q=(document.getElementById('searchInput')?.value||'').toLowerCase();
+  _filteredVendors=_vendors.filter(v=>
+    !q||v.vendor_name.toLowerCase().includes(q)||v.vendor_code.toLowerCase().includes(q)||(v.city||'').toLowerCase().includes(q)
+  );
+  renderTable();
+}
+
+function renderTable(){
+  const wrap=document.getElementById('vendorTableWrap');
+  document.getElementById('vendorCount').textContent=_filteredVendors.length+' vendor'+(+(_filteredVendors.length!==1)?'s':'');
+  if(!_filteredVendors.length){
+    wrap.innerHTML='<div class="empty-state"><i class="fas fa-building"></i><div>No solar vendors found</div><div style="font-size:12px;margin-top:6px">Add your first solar vendor using the button above</div></div>';
+    return;
+  }
+  const rows=_filteredVendors.map(v=>`
+    <tr>
+      <td>
+        <div style="font-weight:600;color:#111827">${esc(v.vendor_name)}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px">${esc(v.vendor_code)}</div>
+      </td>
+      <td>
+        <div>${esc(v.phone||'—')}</div>
+        <div style="font-size:11px;color:#6b7280">${esc(v.email||'')}</div>
+      </td>
+      <td>${esc(v.city||'')}<span style="color:#9ca3af;font-size:11px">${v.state?' / '+v.state:''}</span></td>
+      <td>${v.gst_number?'<code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px">'+esc(v.gst_number)+'</code>':'<span style="color:#9ca3af">—</span>'}</td>
+      <td>
+        ${v.mnre_empanelled?'<span class="badge-mnre"><i class="fas fa-check-circle"></i> Empanelled</span>':'<span class="badge-no">Not empanelled</span>'}
+        ${v.mnre_reg_no?'<div style="font-size:10.5px;color:#6b7280;margin-top:3px">Reg: '+esc(v.mnre_reg_no)+'</div>':''}
+      </td>
+      <td>
+        <div style="font-size:11.5px">${esc(v.bank_name||'—')}</div>
+        <div style="font-size:10.5px;color:#6b7280">${v.account_number?'A/C: '+esc(v.account_number)+'':''}</div>
+        <div style="font-size:10.5px;color:#6b7280">${v.ifsc_code?'IFSC: '+esc(v.ifsc_code)+'':''}</div>
+      </td>
+      <td style="white-space:nowrap">
+        <button class="btn-sm-edit" onclick="openEditVendor(${v.id})"><i class="fas fa-edit"></i> Edit</button>
+        <button class="btn-sm-edit" onclick="openResetPwd(${v.id},'${esc(v.vendor_code)}','${esc(v.vendor_name)}')" style="margin-top:4px;background:#fff7ed;color:#c2410c;border-color:#fed7aa"><i class="fas fa-key"></i> Reset Pwd</button>
+      </td>
+    </tr>
+  `).join('');
+  wrap.innerHTML=`
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr>
+          <th>Vendor</th><th>Contact</th><th>Location</th><th>GSTIN</th><th>MNRE</th><th>Bank</th><th>Action</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function openAddVendor(){
+  _editVendorId=null;
+  clearForm();
+  document.getElementById('modalTitle').textContent='Add Solar Vendor';
+  switchModalTab('basic');
+  document.getElementById('vendorModal').classList.add('open');
+}
+
+function openEditVendor(id){
+  _editVendorId=id;
+  const v=_vendors.find(x=>x.id===id);
+  if(!v)return;
+  fillForm(v);
+  document.getElementById('modalTitle').textContent='Edit — '+v.vendor_name;
+  switchModalTab('basic');
+  document.getElementById('vendorModal').classList.add('open');
+}
+
+function closeModal(){document.getElementById('vendorModal').classList.remove('open');}
+
+function switchModalTab(tab){
+  _modalTab=tab;
+  document.querySelectorAll('.m-tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===tab));
+  document.querySelectorAll('.m-tab-pane').forEach(p=>p.classList.toggle('active',p.id==='tp_'+tab));
+}
+
+function _setImgPreview(imgId, placeholderId, url){
+  const img=document.getElementById(imgId);
+  const ph=document.getElementById(placeholderId);
+  if(url){
+    img.src=url; img.style.display='block'; ph.style.display='none';
+  } else {
+    img.src=''; img.style.display='none'; ph.style.display='flex';
+  }
+}
+
+function _showUploadControls(isEdit){
+  document.getElementById('stampSigUploadNote').style.display=isEdit?'none':'block';
+  document.getElementById('stampUploadBtn').style.display=isEdit?'inline-flex':'none';
+  document.getElementById('repSigUploadBtn').style.display=isEdit?'inline-flex':'none';
+  document.getElementById('sigUploadBtn').style.display=isEdit?'inline-flex':'none';
+}
+
+function clearForm(){
+  ['vmName','vmCode','vmGstin','vmPhone','vmEmail','vmAddress','vmCity','vmState','vmPincode',
+   'vmBankName','vmBankBranch','vmAccNo','vmIfsc','vmAccHolder',
+   'vmMnreReg','vmStampUrl','vmRepSigUrl','vmTechSigUrl'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('vmMnre').checked=false;
+  _setImgPreview('stampPreviewImg','stampPreviewPlaceholder','');
+  _setImgPreview('repSigPreviewImg','repSigPreviewPlaceholder','');
+  _setImgPreview('sigPreviewImg','sigPreviewPlaceholder','');
+  _showUploadControls(false);
+}
+
+function fillForm(v){
+  document.getElementById('vmName').value=v.vendor_name||'';
+  document.getElementById('vmCode').value=v.vendor_code||'';
+  document.getElementById('vmGstin').value=v.gst_number||'';
+  document.getElementById('vmPhone').value=v.phone||'';
+  document.getElementById('vmEmail').value=v.email||'';
+  document.getElementById('vmAddress').value=v.address||'';
+  document.getElementById('vmCity').value=v.city||'';
+  document.getElementById('vmState').value=v.state||'';
+  document.getElementById('vmPincode').value=v.pincode||'';
+  document.getElementById('vmBankName').value=v.bank_name||'';
+  document.getElementById('vmBankBranch').value=v.bank_branch||'';
+  document.getElementById('vmAccNo').value=v.account_number||'';
+  document.getElementById('vmIfsc').value=v.ifsc_code||'';
+  document.getElementById('vmAccHolder').value=v.account_holder_name||'';
+  document.getElementById('vmMnre').checked=!!v.mnre_empanelled;
+  document.getElementById('vmMnreReg').value=v.mnre_reg_no||'';
+  document.getElementById('vmStampUrl').value=v.stamp_image_url||'';
+  document.getElementById('vmRepSigUrl').value=v.rep_signature_url||'';
+  document.getElementById('vmTechSigUrl').value=v.tech_signature_url||'';
+  _setImgPreview('stampPreviewImg','stampPreviewPlaceholder',v.stamp_image_url||'');
+  _setImgPreview('repSigPreviewImg','repSigPreviewPlaceholder',v.rep_signature_url||'');
+  _setImgPreview('sigPreviewImg','sigPreviewPlaceholder',v.tech_signature_url||'');
+  _showUploadControls(true);
+}
+
+async function uploadVendorImage(type, inputEl){
+  if(!_editVendorId){showToast('Save the vendor first to upload images','error');return;}
+  const file=inputEl.files[0];
+  if(!file){return;}
+  const spinnerId=type==='stamp'?'stampUploadSpinner':type==='rep-signature'?'repSigUploadSpinner':'sigUploadSpinner';
+  const btnId=type==='stamp'?'stampUploadBtn':type==='rep-signature'?'repSigUploadBtn':'sigUploadBtn';
+  document.getElementById(spinnerId).style.display='inline-flex';
+  document.getElementById(btnId).style.display='none';
+  try{
+    const formData=new FormData();
+    formData.append('file',file);
+    const endpoint=`/api/v1/staff/accounts/vendors/${_editVendorId}/${type}`;
+    const r=await staffFetch(endpoint,{method:'POST',body:formData});
+    const d=await r.json();
+    if(r.ok && d.success){
+      const url=d.image_url;
+      if(type==='stamp'){
+        document.getElementById('vmStampUrl').value=url;
+        _setImgPreview('stampPreviewImg','stampPreviewPlaceholder',url);
+        showToast('Stamp uploaded! Click Save Vendor to confirm.','success');
+      } else if(type==='rep-signature'){
+        document.getElementById('vmRepSigUrl').value=url;
+        _setImgPreview('repSigPreviewImg','repSigPreviewPlaceholder',url);
+        showToast('Representative signature uploaded! Click Save Vendor to confirm.','success');
+      } else {
+        document.getElementById('vmTechSigUrl').value=url;
+        _setImgPreview('sigPreviewImg','sigPreviewPlaceholder',url);
+        showToast('Technician signature uploaded! Click Save Vendor to confirm.','success');
+      }
+    } else {
+      showToast(d.message||'Upload failed','error');
+    }
+  }catch(e){
+    showToast('Upload error: '+e.message,'error');
+  }finally{
+    document.getElementById(spinnerId).style.display='none';
+    document.getElementById(btnId).style.display='inline-flex';
+    inputEl.value='';
+  }
+}
+
+function getFormData(){
+  return {
+    vendor_name:        (document.getElementById('vmName').value||'').trim(),
+    vendor_code:        (document.getElementById('vmCode').value||'').trim().toUpperCase(),
+    vendor_type:        'SOLAR',
+    gst_number:         (document.getElementById('vmGstin').value||'').trim(),
+    applicable_companies: ['ALL'],
+    phone:              (document.getElementById('vmPhone').value||'').trim(),
+    email:              (document.getElementById('vmEmail').value||'').trim(),
+    address:            (document.getElementById('vmAddress').value||'').trim(),
+    city:               (document.getElementById('vmCity').value||'').trim(),
+    state:              (document.getElementById('vmState').value||'').trim(),
+    pincode:            (document.getElementById('vmPincode').value||'').trim(),
+    bank_name:          (document.getElementById('vmBankName').value||'').trim(),
+    bank_branch:        (document.getElementById('vmBankBranch').value||'').trim(),
+    account_number:     (document.getElementById('vmAccNo').value||'').trim(),
+    ifsc_code:          (document.getElementById('vmIfsc').value||'').trim(),
+    account_holder_name:(document.getElementById('vmAccHolder').value||'').trim(),
+    mnre_empanelled:    document.getElementById('vmMnre').checked,
+    mnre_reg_no:        (document.getElementById('vmMnreReg').value||'').trim(),
+    stamp_image_url:    (document.getElementById('vmStampUrl').value||'').trim(),
+    rep_signature_url:  (document.getElementById('vmRepSigUrl').value||'').trim(),
+    tech_signature_url: (document.getElementById('vmTechSigUrl').value||'').trim(),
+  };
+}
+
+async function saveVendor(){
+  const data=getFormData();
+  if(!data.vendor_name){showToast('Vendor name is required','error');return;}
+  if(!data.vendor_code){showToast('Vendor code is required','error');return;}
+  const saveBtn=document.getElementById('saveBtn');
+  saveBtn.disabled=true;saveBtn.textContent='Saving...';
+  try{
+    const url=_editVendorId?'/api/v1/staff/accounts/vendors/'+_editVendorId:'/api/v1/staff/accounts/vendors';
+    const method=_editVendorId?'PUT':'POST';
+    const r=await staffFetch(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const d=r.ok?await r.json():{};
+    if(r.ok&&(d.success||d.id||d.vendor)){
+      showToast(_editVendorId?'Vendor updated successfully':'Vendor added successfully','success');
+      closeModal();
+      await loadVendors();
+    }else{
+      showToast(d.detail||'Save failed','error');
+    }
+  }catch(e){showToast('Error: '+e.message,'error');}
+  finally{saveBtn.disabled=false;saveBtn.textContent='Save Vendor';}
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  loadVendors();
+  document.getElementById('searchInput')?.addEventListener('input', applyFilter);
+});
+</script>
+
+<!-- Page content injected by layout loader -->
+<script>
+(async()=>{
+  if(typeof loadLayout==='function'){
+    await loadLayout('Solar Vendors','MYNT_REAL');
+  }
+  const main=document.querySelector('.main-content')||document.querySelector('#app-layout');
+  if(!main)return;
+  main.innerHTML+=`
+  <div class="content-area">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1><i class="fas fa-building" style="color:#0f766e;margin-right:8px"></i>Solar Vendors</h1>
+        <p>Manage solar installation vendors for document generation (Quotations, Annexure, Certificates)</p>
+      </div>
+      <button class="btn-add" onclick="openAddVendor()"><i class="fas fa-plus"></i> Add Solar Vendor</button>
+    </div>
+    <div class="filter-bar">
+      <input id="searchInput" type="text" placeholder="Search vendor name, code, city...">
+      <span id="vendorCount" style="font-size:12px;color:#6b7280;margin-left:auto">—</span>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <h5><i class="fas fa-solar-panel" style="color:#0f766e;margin-right:6px"></i>Solar Vendor Directory</h5>
+        <span class="card-count" id="vendorCount2"></span>
+      </div>
+      <div id="vendorTableWrap">
+        <div class="spinner-wrap"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+  `;
+  loadVendors();
+})();
+</script>
+
+</div><!-- /main-content -->
+
+<!-- Vendor Modal -->
+<div class="m-overlay" id="vendorModal" onclick="if(event.target===this)closeModal()">
+  <div class="m-box">
+    <div class="m-head">
+      <div>
+        <h4><i class="fas fa-building" style="margin-right:6px"></i><span id="modalTitle">Add Solar Vendor</span></h4>
+        <p>Fill in vendor details used in solar document generation</p>
+      </div>
+      <button class="m-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="m-tabs">
+      <div class="m-tab active" data-tab="basic" onclick="switchModalTab('basic')"><i class="fas fa-info-circle" style="margin-right:5px"></i>Basic Info</div>
+      <div class="m-tab" data-tab="bank" onclick="switchModalTab('bank')"><i class="fas fa-university" style="margin-right:5px"></i>Bank Details</div>
+      <div class="m-tab" data-tab="solar" onclick="switchModalTab('solar')"><i class="fas fa-solar-panel" style="margin-right:5px"></i>Solar / MNRE</div>
+    </div>
+    <div class="m-body">
+      <!-- Basic Info Tab -->
+      <div class="m-tab-pane active" id="tp_basic">
+        <div class="fg-row">
+          <div class="fg">
+            <label>Vendor Name <span style="color:#ef4444">*</span></label>
+            <input id="vmName" type="text" placeholder="e.g. Har Ghar Solar Energy Pvt Ltd">
+          </div>
+          <div class="fg">
+            <label>Vendor Code <span style="color:#ef4444">*</span></label>
+            <input id="vmCode" type="text" placeholder="e.g. HGS001" style="text-transform:uppercase">
+          </div>
+        </div>
+        <div class="fg">
+          <label>GSTIN</label>
+          <input id="vmGstin" type="text" placeholder="27AABCX1234A1Z5" style="text-transform:uppercase">
+        </div>
+        <div class="fg-row">
+          <div class="fg">
+            <label>Phone</label>
+            <input id="vmPhone" type="tel" placeholder="+91 99999 99999">
+          </div>
+          <div class="fg">
+            <label>Email</label>
+            <input id="vmEmail" type="email" placeholder="vendor@example.com">
+          </div>
+        </div>
+        <div class="fg">
+          <label>Address</label>
+          <textarea id="vmAddress" rows="2" placeholder="Full address including door/plot number"></textarea>
+        </div>
+        <div class="fg-row">
+          <div class="fg">
+            <label>City</label>
+            <input id="vmCity" type="text" placeholder="e.g. Hyderabad">
+          </div>
+          <div class="fg">
+            <label>State</label>
+            <input id="vmState" type="text" placeholder="e.g. Telangana">
+          </div>
+        </div>
+        <div class="fg">
+          <label>Pincode <span style="font-weight:400;color:#9ca3af;font-size:11px">(required for Annexure IV)</span></label>
+          <input id="vmPincode" type="text" placeholder="e.g. 500001" maxlength="10">
+        </div>
+      </div>
+      <!-- Bank Details Tab -->
+      <div class="m-tab-pane" id="tp_bank">
+        <div class="section-hdr"><i class="fas fa-university"></i> Bank Account Details</div>
+        <div class="fg">
+          <label>Account Holder Name</label>
+          <input id="vmAccHolder" type="text" placeholder="Name as per bank records">
+        </div>
+        <div class="fg-row">
+          <div class="fg">
+            <label>Bank Name</label>
+            <input id="vmBankName" type="text" placeholder="e.g. State Bank of India">
+          </div>
+          <div class="fg">
+            <label>Branch</label>
+            <input id="vmBankBranch" type="text" placeholder="e.g. Ameerpet Branch">
+          </div>
+        </div>
+        <div class="fg-row">
+          <div class="fg">
+            <label>Account Number</label>
+            <input id="vmAccNo" type="text" placeholder="Account number">
+          </div>
+          <div class="fg">
+            <label>IFSC Code</label>
+            <input id="vmIfsc" type="text" placeholder="e.g. SBIN0007087" style="text-transform:uppercase">
+          </div>
+        </div>
+      </div>
+      <!-- Solar / MNRE Tab -->
+      <div class="m-tab-pane" id="tp_solar">
+        <div class="section-hdr"><i class="fas fa-solar-panel"></i> MNRE Registration</div>
+        <div class="fg toggle-wrap">
+          <input type="checkbox" id="vmMnre" style="width:18px;height:18px;cursor:pointer">
+          <label for="vmMnre">MNRE Empanelled Vendor</label>
+        </div>
+        <div class="fg">
+          <label>MNRE Registration Number</label>
+          <input id="vmMnreReg" type="text" placeholder="e.g. MNRE/EMP/2024/XXXXXX">
+        </div>
+        <div class="section-hdr" style="margin-top:8px"><i class="fas fa-stamp"></i> Vendor Stamp &amp; Signatures</div>
+        <div id="stampSigUploadNote" style="display:none;background:#fef9c3;border:1px solid #fde68a;border-radius:6px;padding:8px 12px;font-size:11.5px;color:#92400e;margin-bottom:12px">
+          <i class="fas fa-info-circle" style="margin-right:5px"></i>Save the vendor first, then re-open to upload stamp &amp; signature images.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;align-items:flex-start">
+          <!-- Stamp -->
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px">Company Stamp <span style="font-weight:400;color:#9ca3af;font-size:10.5px">(PNG/JPG)</span></label>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div id="stampPreviewWrap" style="width:100%;height:85px;border:2px dashed #d1d5db;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f9fafb">
+                <img id="stampPreviewImg" src="" style="display:none;width:100%;height:100%;object-fit:contain">
+                <span id="stampPreviewPlaceholder" style="font-size:10.5px;color:#9ca3af;text-align:center;padding:6px"><i class="fas fa-stamp" style="font-size:20px;display:block;margin-bottom:3px;color:#d1d5db"></i>No stamp</span>
+              </div>
+              <input id="vmStampUrl" type="hidden">
+              <input id="vmStampFileInput" type="file" accept="image/*" style="display:none" onchange="uploadVendorImage('stamp',this)">
+              <button type="button" id="stampUploadBtn" class="btn-upload-img" onclick="document.getElementById('vmStampFileInput').click()" style="display:none;width:100%;justify-content:center">
+                <i class="fas fa-upload"></i> Upload
+              </button>
+              <span id="stampUploadSpinner" style="display:none;font-size:11px;color:#0f766e;text-align:center"><i class="fas fa-spinner fa-spin"></i> Uploading…</span>
+            </div>
+          </div>
+          <!-- Representative Signature -->
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px">Rep. Signature <span style="font-weight:400;color:#9ca3af;font-size:10.5px">(authorised)</span></label>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div id="repSigPreviewWrap" style="width:100%;height:85px;border:2px dashed #d1d5db;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f9fafb">
+                <img id="repSigPreviewImg" src="" style="display:none;width:100%;height:100%;object-fit:contain">
+                <span id="repSigPreviewPlaceholder" style="font-size:10.5px;color:#9ca3af;text-align:center;padding:6px"><i class="fas fa-user-tie" style="font-size:20px;display:block;margin-bottom:3px;color:#d1d5db"></i>No sig</span>
+              </div>
+              <input id="vmRepSigUrl" type="hidden">
+              <input id="vmRepSigFileInput" type="file" accept="image/*" style="display:none" onchange="uploadVendorImage('rep-signature',this)">
+              <button type="button" id="repSigUploadBtn" class="btn-upload-img" onclick="document.getElementById('vmRepSigFileInput').click()" style="display:none;width:100%;justify-content:center">
+                <i class="fas fa-upload"></i> Upload
+              </button>
+              <span id="repSigUploadSpinner" style="display:none;font-size:11px;color:#0f766e;text-align:center"><i class="fas fa-spinner fa-spin"></i> Uploading…</span>
+            </div>
+          </div>
+          <!-- Technician Signature -->
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px">Tech. Signature <span style="font-weight:400;color:#9ca3af;font-size:10.5px">(site engineer)</span></label>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div id="sigPreviewWrap" style="width:100%;height:85px;border:2px dashed #d1d5db;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#f9fafb">
+                <img id="sigPreviewImg" src="" style="display:none;width:100%;height:100%;object-fit:contain">
+                <span id="sigPreviewPlaceholder" style="font-size:10.5px;color:#9ca3af;text-align:center;padding:6px"><i class="fas fa-signature" style="font-size:20px;display:block;margin-bottom:3px;color:#d1d5db"></i>No sig</span>
+              </div>
+              <input id="vmTechSigUrl" type="hidden">
+              <input id="vmSigFileInput" type="file" accept="image/*" style="display:none" onchange="uploadVendorImage('signature',this)">
+              <button type="button" id="sigUploadBtn" class="btn-upload-img" onclick="document.getElementById('vmSigFileInput').click()" style="display:none;width:100%;justify-content:center">
+                <i class="fas fa-upload"></i> Upload
+              </button>
+              <span id="sigUploadSpinner" style="display:none;font-size:11px;color:#0f766e;text-align:center"><i class="fas fa-spinner fa-spin"></i> Uploading…</span>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:11px;color:#9ca3af;margin-top:10px"><b>Stamp</b> = company rubber stamp &nbsp;|&nbsp; <b>Rep. Signature</b> = authorised signatory (appears on all Vendor Signature blocks) &nbsp;|&nbsp; <b>Tech. Signature</b> = site engineer (Commissioning Report only)</p>
+      </div>
+    </div>
+    <div class="m-foot">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" id="saveBtn" onclick="saveVendor()">Save Vendor</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Reset Password Modal ══ -->
+<div id="resetPwdModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;width:min(400px,92vw);box-shadow:0 20px 60px rgba(0,0,0,.3);padding:24px 26px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#1f2937"><i class="fas fa-key me-2" style="color:#c2410c"></i>Reset Portal Password</div>
+        <div id="rpmVendorLabel" style="font-size:12px;color:#6b7280;margin-top:2px"></div>
+      </div>
+      <button onclick="closeResetPwd()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6b7280">&times;</button>
+    </div>
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:16px">
+      <i class="fas fa-info-circle me-1"></i>This will update the vendor's login password for the Partner Portal immediately.
+    </div>
+    <label style="font-size:12px;font-weight:600;color:#374151">New Password</label>
+    <div style="position:relative;margin-top:6px;margin-bottom:14px">
+      <input id="rpmNewPwd" type="password" placeholder="Min 4 characters" autocomplete="new-password"
+        style="width:100%;padding:10px 40px 10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box">
+      <button type="button" onclick="document.getElementById('rpmNewPwd').type==='password'?(document.getElementById('rpmNewPwd').type='text'):(document.getElementById('rpmNewPwd').type='password')"
+        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9ca3af;font-size:15px"><i class="fas fa-eye"></i></button>
+    </div>
+    <div id="rpmMsg" style="font-size:12px;font-weight:600;min-height:18px;text-align:center;margin-bottom:12px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeResetPwd()" style="flex:1;padding:10px;background:#f3f4f6;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;color:#374151">Cancel</button>
+      <button id="rpmSaveBtn" onclick="doResetPwd()" style="flex:1;padding:10px;background:#c2410c;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Reset Password</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+// ── Reset Password Modal ────────────────────────────────────────────────────
+let _rpmVendorId = null;
+function openResetPwd(vendorId, vendorCode, vendorName) {
+  _rpmVendorId = vendorId;
+  document.getElementById('rpmVendorLabel').textContent = `${vendorName} (${vendorCode})`;
+  document.getElementById('rpmNewPwd').value = '';
+  document.getElementById('rpmMsg').textContent = '';
+  document.getElementById('rpmSaveBtn').disabled = false;
+  const m = document.getElementById('resetPwdModal');
+  m.style.display = 'flex';
+  setTimeout(() => document.getElementById('rpmNewPwd').focus(), 80);
+}
+function closeResetPwd() {
+  document.getElementById('resetPwdModal').style.display = 'none';
+}
+document.getElementById('resetPwdModal')?.addEventListener('click', function(e){
+  if (e.target === this) closeResetPwd();
+});
+async function doResetPwd() {
+  const pwd = document.getElementById('rpmNewPwd').value.trim();
+  const msg = document.getElementById('rpmMsg');
+  const btn = document.getElementById('rpmSaveBtn');
+  if (!pwd || pwd.length < 4) { msg.style.color='#dc2626'; msg.textContent='Password must be at least 4 characters.'; return; }
+  btn.disabled = true;
+  msg.style.color = '#6b7280';
+  msg.textContent = 'Updating…';
+  try {
+    const r = await staffFetch(`/api/v1/crm/solar-vendors/${_rpmVendorId}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_password: pwd })
+    });
+    const d = await r.json();
+    if (r.ok && d.success) {
+      msg.style.color = '#059669';
+      msg.textContent = '✓ ' + d.message;
+      setTimeout(closeResetPwd, 1800);
+      showToast(d.message, 'success');
+    } else {
+      msg.style.color = '#dc2626';
+      msg.textContent = d.detail || 'Failed to reset password.';
+      btn.disabled = false;
+    }
+  } catch(e) {
+    msg.style.color = '#dc2626';
+    msg.textContent = 'Error: ' + e.message;
+    btn.disabled = false;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    if (typeof StaffHeader !== 'undefined') StaffHeader.inject('Solar Vendors', 'fas fa-solar-panel');
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+});
+</script>
+</body>
+</html>

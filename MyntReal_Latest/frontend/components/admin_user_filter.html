@@ -1,0 +1,310 @@
+<!-- 
+    Reusable User Filter Component for Admin Pages
+    Include this in any admin page that needs member-wise filtering
+-->
+<div class="card mb-3" id="userFilterComponent">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <!-- User Search with Autocomplete -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold">🔍 Search Member</label>
+                <input 
+                    type="text" 
+                    class="form-control" 
+                    id="userSearchInput" 
+                    placeholder="Type MNR ID or Name..."
+                    autocomplete="off"
+                >
+                <div id="autocompleteResults" class="list-group position-absolute w-auto" style="z-index:1000; display:none; max-height:300px; overflow-y:auto;"></div>
+                <input type="hidden" id="selectedUserId" value="">
+            </div>
+
+            <!-- Records Per Page -->
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Records/Page</label>
+                <select class="form-select" id="recordsPerPage">
+                    <option value="20" selected>20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+
+            <!-- Filter Actions -->
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100" id="applyFilterBtn">
+                    <i class="bi bi-funnel"></i> Apply Filter
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-secondary w-100" id="clearFilterBtn">
+                    <i class="bi bi-x-circle"></i> Clear Filter
+                </button>
+            </div>
+        </div>
+
+        <!-- Selected User Display -->
+        <div id="selectedUserDisplay" class="mt-3" style="display:none;">
+            <div class="alert alert-info mb-0">
+                <strong>Filtered by:</strong> <span id="selectedUserInfo"></span>
+                <button class="btn-close float-end" onclick="clearUserFilter()"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination Component -->
+<div id="paginationComponent" class="d-flex justify-content-between align-items-center mt-3">
+    <div id="paginationInfo" class="text-muted">
+        Showing <span id="showingFrom">0</span> to <span id="showingTo">0</span> of <span id="totalRecords">0</span> records
+    </div>
+    <nav>
+        <ul class="pagination mb-0" id="paginationButtons"></ul>
+    </nav>
+</div>
+
+<script src="/public/js/admin-id-utils.js"></script>
+<script>
+// User Filter Component JavaScript
+const UserFilter = {
+    API_BASE: '/api/v1',
+    authToken: localStorage.getItem('authToken'),
+    currentPage: 1,
+    perPage: 20,
+    selectedUser: null,
+    totalRecords: 0,
+    
+    init() {
+        this.attachEventListeners();
+        this.perPage = parseInt($('#recordsPerPage').val()) || 20;
+    },
+    
+    attachEventListeners() {
+        const self = this;
+        
+        // Autocomplete search
+        let searchTimeout;
+        $('#userSearchInput').on('input', function() {
+            clearTimeout(searchTimeout);
+            const query = $(this).val().trim();
+            
+            if (query.length < 2) {
+                $('#autocompleteResults').hide().empty();
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => self.searchUsers(query), 300);
+        });
+        
+        // Click outside to close autocomplete
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#userSearchInput, #autocompleteResults').length) {
+                $('#autocompleteResults').hide();
+            }
+        });
+        
+        // Apply filter
+        $('#applyFilterBtn').on('click', () => this.applyFilter());
+        
+        // Clear filter
+        $('#clearFilterBtn').on('click', () => this.clearFilter());
+        
+        // Records per page change
+        $('#recordsPerPage').on('change', function() {
+            self.perPage = parseInt($(this).val());
+            self.currentPage = 1;
+            self.applyFilter();
+        });
+    },
+    
+    searchUsers(query) {
+        const self = this;
+        
+        $.ajax({
+            url: `${this.API_BASE}/admin/users/autocomplete`,
+            headers: {'Authorization': `Bearer ${this.authToken}`},
+            data: { query: query, limit: 10 },
+            success: function(response) {
+                const users = response.data?.users || [];
+                self.renderAutocomplete(users);
+            },
+            error: function(xhr) {
+                console.error('Autocomplete error:', xhr);
+                $('#autocompleteResults').hide().empty();
+            }
+        });
+    },
+    
+    renderAutocomplete(users) {
+        const $results = $('#autocompleteResults').empty();
+        
+        if (users.length === 0) {
+            $results.html('<div class="list-group-item text-muted">No users found</div>').show();
+            return;
+        }
+        
+        users.forEach(user => {
+            const $item = $(`
+                <a href="#" class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <strong>${user.mnr_id}</strong> - ${user.name}
+                        </div>
+                        <small class="text-muted">${user.package}</small>
+                    </div>
+                </a>
+            `);
+            
+            $item.on('click', (e) => {
+                e.preventDefault();
+                this.selectUser(user);
+            });
+            
+            $results.append($item);
+        });
+        
+        $results.show();
+    },
+    
+    selectUser(user) {
+        this.selectedUser = user;
+        const normalizedId = normalizeAdminUserId(user.mnr_id);
+        $('#selectedUserId').val(normalizedId);
+        $('#userSearchInput').val(`${normalizedId} - ${user.name}`);
+        $('#selectedUserInfo').text(`${normalizedId} - ${user.name} (${user.package})`);
+        $('#selectedUserDisplay').show();
+        $('#autocompleteResults').hide();
+    },
+    
+    applyFilter() {
+        this.currentPage = 1;
+        if (typeof loadFilteredData === 'function') {
+            loadFilteredData(this.getFilterParams());
+        }
+    },
+    
+    clearFilter() {
+        this.selectedUser = null;
+        this.currentPage = 1;
+        $('#selectedUserId').val('');
+        $('#userSearchInput').val('');
+        $('#selectedUserDisplay').hide();
+        $('#recordsPerPage').val('20');
+        this.perPage = 20;
+        
+        if (typeof loadFilteredData === 'function') {
+            loadFilteredData(this.getFilterParams());
+        }
+    },
+    
+    getFilterParams() {
+        const rawUserId = $('#selectedUserId').val();
+        return {
+            user_id: rawUserId ? normalizeAdminUserId(rawUserId) : null,
+            page: this.currentPage,
+            per_page: this.perPage
+        };
+    },
+    
+    updatePagination(total, currentPage, perPage) {
+        this.totalRecords = total;
+        this.currentPage = currentPage;
+        this.perPage = perPage;
+        
+        const totalPages = Math.ceil(total / perPage);
+        const from = total > 0 ? ((currentPage - 1) * perPage) + 1 : 0;
+        const to = Math.min(currentPage * perPage, total);
+        
+        $('#showingFrom').text(from);
+        $('#showingTo').text(to);
+        $('#totalRecords').text(total);
+        
+        this.renderPaginationButtons(totalPages);
+    },
+    
+    renderPaginationButtons(totalPages) {
+        const $pagination = $('#paginationButtons').empty();
+        const currentPage = this.currentPage;
+        
+        if (totalPages <= 1) {
+            return;
+        }
+        
+        // Previous button
+        $pagination.append(`
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="UserFilter.goToPage(${currentPage - 1}); return false;">Previous</a>
+            </li>
+        `);
+        
+        // Page numbers (show max 7 buttons)
+        let startPage = Math.max(1, currentPage - 3);
+        let endPage = Math.min(totalPages, currentPage + 3);
+        
+        if (startPage > 1) {
+            $pagination.append(`<li class="page-item"><a class="page-link" href="#" onclick="UserFilter.goToPage(1); return false;">1</a></li>`);
+            if (startPage > 2) {
+                $pagination.append(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
+            }
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            $pagination.append(`
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="UserFilter.goToPage(${i}); return false;">${i}</a>
+                </li>
+            `);
+        }
+        
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                $pagination.append(`<li class="page-item disabled"><span class="page-link">...</span></li>`);
+            }
+            $pagination.append(`<li class="page-item"><a class="page-link" href="#" onclick="UserFilter.goToPage(${totalPages}); return false;">${totalPages}</a></li>`);
+        }
+        
+        // Next button
+        $pagination.append(`
+            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="UserFilter.goToPage(${currentPage + 1}); return false;">Next</a>
+            </li>
+        `);
+    },
+    
+    goToPage(page) {
+        if (page < 1 || page > Math.ceil(this.totalRecords / this.perPage)) {
+            return;
+        }
+        this.currentPage = page;
+        this.applyFilter();
+    }
+};
+
+// Global function for clearing filter
+function clearUserFilter() {
+    UserFilter.clearFilter();
+}
+
+// Initialize on document ready
+$(document).ready(function() {
+    UserFilter.init();
+});
+</script>
+
+<style>
+#autocompleteResults {
+    max-width: 400px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-radius: 0.25rem;
+    margin-top: 2px;
+}
+
+#autocompleteResults .list-group-item {
+    cursor: pointer;
+    border-left: 3px solid transparent;
+}
+
+#autocompleteResults .list-group-item:hover {
+    background-color: #f8f9fa;
+    border-left-color: #667eea;
+}
+</style>

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Leads - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        
+        .main-content { margin-left: 280px; padding-top: 0; min-height: 100vh; transition: margin-left 0.3s ease; padding-top: 88px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-body { padding: 24px; }
+        
+        .filter-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: center; }
+        .filter-row label { font-weight: 500; font-size: 14px; color: #374151; }
+        .filter-row .form-select, .filter-row .form-control { border-radius: 8px; font-size: 14px; }
+        
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; display: inline-block; }
+        .status-new { background: #dbeafe; color: #1e40af; }
+        .status-contacted { background: #e0f2fe; color: #0369a1; }
+        .status-qualified { background: #cffafe; color: #0e7490; }
+        .status-proposal { background: #fef3c7; color: #92400e; }
+        .status-interested { background: #fce7f3; color: #9d174d; }
+        .status-loan_process { background: #fef9c3; color: #854d0e; }
+        .status-won { background: #d1fae5; color: #065f46; }
+        .status-completed { background: #a7f3d0; color: #064e3b; }
+        .status-lost { background: #fee2e2; color: #991b1b; }
+        .status-on_hold { background: #f3f4f6; color: #4b5563; }
+        
+        .priority-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .priority-normal { background: #f3f4f6; color: #6b7280; }
+        .priority-medium { background: #dbeafe; color: #1e40af; }
+        .priority-high { background: #fef3c7; color: #92400e; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 11px; text-transform: uppercase; padding: 8px 10px; background: #f9fafb; position: sticky; top: 0; z-index: 2; }
+        .table td { padding: 6px 10px; vertical-align: middle; color: #374151; font-size: 12px; line-height: 1.4; }
+        .table tbody tr:hover { background: #f9fafb; cursor: pointer; }
+        
+        .lead-name { font-weight: 600; color: #1f2937; }
+        .lead-contact { font-size: 12px; color: #6b7280; }
+        
+        .handler-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #ede9fe; color: #7c3aed; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; color: #6366f1; }
+        
+        .btn-primary { background: #6366f1; border: none; }
+        .btn-primary:hover { background: #4f46e5; }
+        
+        .access-denied { text-align: center; padding: 80px 20px; }
+        .access-denied i { font-size: 64px; color: #ef4444; margin-bottom: 20px; }
+        .access-denied h3 { color: #1f2937; margin-bottom: 8px; }
+        .access-denied p { color: #6b7280; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ede9fe; color: #7c3aed; }
+
+        .comment-preview { font-size: 12px; color: #6b7280; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div id="accessDenied" class="access-denied" style="display: none;">
+                <i class="fas fa-lock"></i>
+                <h3>Access Restricted</h3>
+                <p>This page is only available to team leaders with direct reports.</p>
+                <a href="/staff/crm/dashboard" class="btn btn-primary mt-3">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+            
+            <div id="mainContent" style="display: none;">
+                <div class="page-banner">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                        <div>
+                            <h1><i class="fas fa-users"></i> Team Leads</h1>
+                            <p>View and manage leads assigned to your team members</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="text-white me-2 mb-0" style="font-size: 14px;">Company:</label>
+                            <select id="companySelector" class="form-select" style="min-width: 200px;" onchange="onCompanyChange()">
+                                <option value="">Select Company</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filters</h5>
+                            <div id="bulkEditToggle" style="display: none;">
+                                <button class="btn btn-sm btn-outline-primary" onclick="toggleBulkEdit()">
+                                    <i class="fas fa-edit me-1"></i><span id="bulkEditBtnText">Bulk Edit</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="filter-row">
+                            <div>
+                                <label class="form-label mb-1">Team Member</label>
+                                <select class="form-select" id="filterHandler" onchange="loadLeads()">
+                                    <option value="">All Team Members</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label mb-1">Employee Status</label>
+                                <select class="form-select" id="filterEmployeeStatus" onchange="refreshTeamMembers()">
+                                    <option value="">Active + With Leads</option>
+                                    <option value="active">Active Only</option>
+                                    <option value="resigned">Resigned Only</option>
+                                    <option value="all">All Employees</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label mb-1">Status</label>
+                                <select class="form-select" id="filterStatus" onchange="loadLeads()">
+                                    <option value="">All Status</option>
+                                    <option value="new">New</option>
+                                    <option value="contacted">Contacted</option>
+                                    <option value="not_answered">Not Answered</option>
+                                    <option value="interested">Interested</option>
+                                    <option value="qualified">Qualified</option>
+                                    <option value="proposal">Proposal</option>
+                                    <option value="loan_process">Loan Process</option>
+                                    <option value="on_hold">On Hold</option>
+                                    <option value="won">Won</option>
+                                    <option value="processing">Processing</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="lost">Lost</option>
+                                    <option value="closed">Closed (Won+Lost)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label mb-1">Priority</label>
+                                <select class="form-select" id="filterPriority" onchange="loadLeads()">
+                                    <option value="">All Priority</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="normal">Normal</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label mb-1">Next Follow-up From</label>
+                                <input type="date" class="form-control" id="filterNextFollowupFrom" onchange="loadLeads()">
+                            </div>
+                            <div>
+                                <label class="form-label mb-1">Next Follow-up To</label>
+                                <input type="date" class="form-control" id="filterNextFollowupTo" onchange="loadLeads()">
+                            </div>
+                            <div>
+                                <label class="form-label mb-1">Recent Comments</label>
+                                <select class="form-select" id="filterRecentComments" onchange="loadLeads()">
+                                    <option value="">Any</option>
+                                    <option value="true">With Recent Comments (7 days)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label mb-1">Search</label>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Name, phone, pincode..." onkeyup="debounceSearch()">
+                            </div>
+                            <div class="d-flex align-items-end gap-2">
+                                <button class="btn btn-primary" onclick="loadLeads()">
+                                    <i class="fas fa-filter me-1"></i>Filter
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="resetFilters()">
+                                    <i class="fas fa-undo me-1"></i>Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="bulkActionBar" class="bg-primary text-white p-3" style="display: none;">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="checkbox" id="selectAllLeads" class="form-check-input" onchange="toggleSelectAll()">
+                                <span><strong id="selectedCount">0</strong> leads selected</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <select class="form-select form-select-sm" id="bulkAssignee" style="min-width: 180px;">
+                                    <option value="">Reassign to...</option>
+                                </select>
+                                <select class="form-select form-select-sm" id="bulkStatus" style="min-width: 120px;">
+                                    <option value="">Set Status...</option>
+                                    <option value="new">New</option>
+                                    <option value="contacted">Contacted</option>
+                                    <option value="not_answered">Not Answered</option>
+                                    <option value="interested">Interested</option>
+                                    <option value="qualified">Qualified</option>
+                                    <option value="proposal">Proposal</option>
+                                    <option value="loan_process">Loan Process</option>
+                                    <option value="on_hold">On Hold</option>
+                                    <option value="won">Won</option>
+                                    <option value="processing">Processing</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="lost">Lost</option>
+                                </select>
+                                <select class="form-select form-select-sm" id="bulkPriority" style="min-width: 120px;">
+                                    <option value="">Set Priority...</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="normal">Normal</option>
+                                </select>
+                                <button class="btn btn-light btn-sm" onclick="applyBulkUpdate()">
+                                    <i class="fas fa-check me-1"></i>Apply
+                                </button>
+                                <button class="btn btn-outline-light btn-sm" onclick="toggleBulkEdit()">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body p-0">
+                        <div id="leadsTableContainer">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th id="checkboxHeader" style="display: none; width: 40px;"></th>
+                                        <th>Lead</th>
+                                        <th>Assigned To</th>
+                                        <th>Category</th>
+                                        <th>Status</th>
+                                        <th>Priority</th>
+                                        <th>Next Followup</th>
+                                        <th>Last Comment</th>
+                                        <th>Updated</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leadsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="emptyState" class="empty-state" style="display: none;">
+                            <i class="fas fa-inbox"></i>
+                            <h5>No Team Leads Found</h5>
+                            <p>No leads match your current filters.</p>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white border-top" id="paginationContainer" style="display: none;">
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0 justify-content-center" id="paginationList"></ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <div id="crmLeadEditorContainer"></div>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/shared/crm_lead_editor.js?v=20260316"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script>
+        let companyId = null;
+        let companiesList = [];
+        let isLeader = false;
+        let isAdmin = false;
+        let teamMembers = [];
+        let currentPage = 1;
+        let searchTimeout = null;
+        let bulkEditMode = false;
+        let selectedLeads = new Set();
+        let currentLeads = [];
+        
+        const API_BASE = '/api/v1/crm';
+        
+        function effectiveCompanyId() {
+            if (companyId === 'all') return companiesList.length > 0 ? companiesList[0].id : null;
+            return companyId;
+        }
+        
+        async function apiCall(endpoint, method = 'GET', body = null) {
+            const cid = effectiveCompanyId();
+            const url = `${API_BASE}${endpoint}${endpoint.includes('?') ? '&' : '?'}company_id=${cid}`;
+            const options = { method, headers: {} };
+            if (body) {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(body);
+            }
+            return await staffFetchJson(url, options);
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            await StaffSidebar.init();
+            StaffHeader.inject('Team Leads', 'fas fa-users');
+            await loadCompanies();
+        });
+        
+        async function loadCompanies() {
+            try {
+                const data = await staffFetchJson('/api/v1/crm/my-companies');
+                if (data && data.companies) {
+                    companiesList = data.companies.filter(c => c.is_active !== false);
+                    const selector = document.getElementById('companySelector');
+                    selector.innerHTML = '<option value="">Select Company</option>';
+                    if (companiesList.length > 1) {
+                        selector.innerHTML += '<option value="all">📊 All Companies</option>';
+                    }
+                    companiesList.forEach(comp => {
+                        selector.innerHTML += `<option value="${comp.id}">${comp.company_name} (${comp.company_code})</option>`;
+                    });
+                    if (companiesList.length === 1) {
+                        selector.value = companiesList[0].id;
+                        companyId = companiesList[0].id;
+                        onCompanyChange();
+                    } else if (companiesList.length > 1) {
+                        selector.value = 'all';
+                        companyId = 'all';
+                        onCompanyChange();
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load companies:', error);
+                showToast('Failed to load companies', 'error');
+            }
+        }
+        
+        async function onCompanyChange() {
+            companyId = document.getElementById('companySelector').value;
+            if (!companyId) return;
+            await checkAccess();
+        }
+        
+        async function checkAccess() {
+            try {
+                const employeeStatus = document.getElementById('filterEmployeeStatus')?.value || '';
+                const data = await apiCall(`/assignment-options${employeeStatus ? `?employee_status=${employeeStatus}` : ''}`);
+                console.log('[DC-DEBUG] assignment-options response:', JSON.stringify(data));
+                if (data.success) {
+                    isLeader = data.data.is_leader;
+                    isAdmin = data.data.is_admin === true;
+                    console.log('[DC-DEBUG] isAdmin:', isAdmin, 'isLeader:', isLeader, 'raw is_admin:', data.data.is_admin, 'staff_type:', data.data.current_user?.staff_type);
+                    teamMembers = data.data.team_members || [];
+                    
+                    const accessDenied = document.getElementById('accessDenied');
+                    const mainContent = document.getElementById('mainContent');
+                    
+                    if (!isLeader) {
+                        accessDenied.style.display = 'block';
+                        mainContent.style.display = 'none';
+                        return;
+                    }
+                    
+                    accessDenied.style.display = 'none';
+                    mainContent.style.display = 'block';
+                    
+                    if (isAdmin) {
+                        document.getElementById('bulkEditToggle').style.display = 'block';
+                    }
+                    
+                    updateUserHeader(data.data.current_user);
+                    populateTeamMemberFilter();
+                    populateBulkAssigneeDropdown();
+                    loadLeads();
+                }
+            } catch (error) {
+                console.error('Failed to check access:', error);
+            }
+        }
+        
+        async function refreshTeamMembers() {
+            const employeeStatus = document.getElementById('filterEmployeeStatus').value;
+            try {
+                const data = await apiCall(`/assignment-options${employeeStatus ? `?employee_status=${employeeStatus}` : ''}`);
+                if (data.success) {
+                    teamMembers = data.data.team_members || [];
+                    populateTeamMemberFilter();
+                    populateBulkAssigneeDropdown();
+                    loadLeads();
+                }
+            } catch (error) {
+                console.error('Failed to refresh team members:', error);
+            }
+        }
+        
+        function updateUserHeader(user) {
+            if (user) {
+                const initials = user.name.split(' ').map(n => n[0]).join('').substring(0, 2);
+                document.getElementById('headerUserInitials').textContent = initials.toUpperCase();
+                document.getElementById('headerUserName').textContent = user.name;
+            }
+        }
+        
+        function populateTeamMemberFilter() {
+            const select = document.getElementById('filterHandler');
+            select.innerHTML = '<option value="">All Team Members</option>';
+            teamMembers.forEach(member => {
+                const displayName = member.display_name || member.name;
+                const statusClass = member.status === 'resigned' ? 'text-muted' : '';
+                select.innerHTML += `<option value="${member.employee_id}" class="${statusClass}">${displayName} (${member.employee_id})</option>`;
+            });
+        }
+        
+        function populateBulkAssigneeDropdown() {
+            const select = document.getElementById('bulkAssignee');
+            select.innerHTML = '<option value="">Reassign to...</option>';
+            teamMembers.filter(m => m.is_active !== false && m.status !== 'resigned').forEach(member => {
+                select.innerHTML += `<option value="${member.employee_id}">${member.name} (${member.employee_id})</option>`;
+            });
+        }
+        
+        function toggleBulkEdit() {
+            bulkEditMode = !bulkEditMode;
+            selectedLeads.clear();
+            updateSelectedCount();
+            
+            const checkboxHeader = document.getElementById('checkboxHeader');
+            const bulkActionBar = document.getElementById('bulkActionBar');
+            const btnText = document.getElementById('bulkEditBtnText');
+            
+            if (bulkEditMode) {
+                checkboxHeader.style.display = 'table-cell';
+                bulkActionBar.style.display = 'block';
+                btnText.textContent = 'Exit Bulk Edit';
+                document.querySelectorAll('.lead-checkbox-cell').forEach(c => c.style.display = 'table-cell');
+            } else {
+                checkboxHeader.style.display = 'none';
+                bulkActionBar.style.display = 'none';
+                btnText.textContent = 'Bulk Edit';
+                document.querySelectorAll('.lead-checkbox-cell').forEach(c => c.style.display = 'none');
+                document.getElementById('selectAllLeads').checked = false;
+            }
+        }
+        
+        function toggleLeadSelection(leadId, checkbox) {
+            if (checkbox.checked) {
+                selectedLeads.add(leadId);
+            } else {
+                selectedLeads.delete(leadId);
+            }
+            updateSelectedCount();
+        }
+        
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAllLeads').checked;
+            document.querySelectorAll('.lead-checkbox').forEach(cb => {
+                cb.checked = selectAll;
+                const leadId = parseInt(cb.dataset.leadId);
+                if (selectAll) {
+                    selectedLeads.add(leadId);
+                } else {
+                    selectedLeads.delete(leadId);
+                }
+            });
+            updateSelectedCount();
+        }
+        
+        function updateSelectedCount() {
+            document.getElementById('selectedCount').textContent = selectedLeads.size;
+        }
+        
+        async function applyBulkUpdate() {
+            if (selectedLeads.size === 0) {
+                showToast('Please select at least one lead', 'warning');
+                return;
+            }
+            
+            const newHandler = document.getElementById('bulkAssignee').value;
+            const newStatus = document.getElementById('bulkStatus').value;
+            const newPriority = document.getElementById('bulkPriority').value;
+            
+            if (!newHandler && !newStatus && !newPriority) {
+                showToast('Please select an action to apply', 'warning');
+                return;
+            }
+            
+            const payload = {
+                lead_ids: Array.from(selectedLeads)
+            };
+            if (newHandler) payload.new_handler_id = newHandler;
+            if (newStatus) payload.status = newStatus;
+            if (newPriority) payload.priority = newPriority;
+            
+            try {
+                const result = await apiCall('/leads/bulk-update', 'POST', payload);
+                if (result.success) {
+                    showToast(`Successfully updated ${result.data.updated_count} leads`, 'success');
+                    toggleBulkEdit();
+                    loadLeads();
+                } else {
+                    showToast(result.detail || 'Failed to update leads', 'error');
+                }
+            } catch (error) {
+                console.error('Bulk update failed:', error);
+                showToast('Failed to apply bulk update', 'error');
+            }
+        }
+        
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => loadLeads(), 300);
+        }
+        
+        function resetFilters() {
+            document.getElementById('filterHandler').value = '';
+            document.getElementById('filterEmployeeStatus').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterPriority').value = '';
+            document.getElementById('filterNextFollowupFrom').value = '';
+            document.getElementById('filterNextFollowupTo').value = '';
+            document.getElementById('filterRecentComments').value = '';
+            document.getElementById('searchInput').value = '';
+            refreshTeamMembers();
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} position-fixed`;
+            toast.style.cssText = 'top: 100px; right: 20px; z-index: 9999; min-width: 250px;';
+            toast.innerHTML = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        
+        async function loadLeads(page = 1) {
+            if (!companyId) return;
+            currentPage = page;
+            
+            const handler = document.getElementById('filterHandler').value;
+            const status = document.getElementById('filterStatus').value;
+            const priority = document.getElementById('filterPriority').value;
+            const nextFrom = document.getElementById('filterNextFollowupFrom').value;
+            const nextTo = document.getElementById('filterNextFollowupTo').value;
+            const recentComments = document.getElementById('filterRecentComments').value;
+            const search = document.getElementById('searchInput').value;
+            
+            function buildEndpoint(pg) {
+                let ep = `/my-leads?scope=team&page=${pg}&per_page=20`;
+                if (status) ep += `&status=${status}`;
+                if (priority) ep += `&priority=${priority}`;
+                if (search) ep += `&search=${encodeURIComponent(search)}`;
+                if (nextFrom) ep += `&next_followup_from=${nextFrom}T00:00:00`;
+                if (nextTo) ep += `&next_followup_to=${nextTo}T23:59:59`;
+                if (recentComments === 'true') ep += `&has_recent_comments=true`;
+                return ep;
+            }
+            
+            try {
+                let leads = [];
+                let pagination = null;
+                
+                if (companyId === 'all' && companiesList.length > 0) {
+                    const results = await Promise.all(companiesList.map(async comp => {
+                        try {
+                            const url = `${API_BASE}/my-leads?scope=team&page=1&per_page=100${status ? '&status='+status : ''}${priority ? '&priority='+priority : ''}${search ? '&search='+encodeURIComponent(search) : ''}${nextFrom ? '&next_followup_from='+nextFrom+'T00:00:00' : ''}${nextTo ? '&next_followup_to='+nextTo+'T23:59:59' : ''}${recentComments === 'true' ? '&has_recent_comments=true' : ''}&company_id=${comp.id}`;
+                            return await staffFetchJson(url);
+                        } catch(e) { return null; }
+                    }));
+                    results.forEach(r => { if (r && r.success) leads = leads.concat(r.data || []); });
+                    pagination = { page: 1, total_pages: 1, total: leads.length };
+                } else {
+                    const data = await apiCall(buildEndpoint(page));
+                    if (data.success) { leads = data.data || []; pagination = data.pagination; }
+                }
+                
+                if (handler) leads = leads.filter(l => l.handler_id === handler);
+                renderLeadsTable(leads);
+                if (pagination) renderPagination(pagination);
+            } catch (error) {
+                console.error('Failed to load leads:', error);
+            }
+        }
+        
+        function renderLeadsTable(leads) {
+            const tbody = document.getElementById('leadsTableBody');
+            const emptyState = document.getElementById('emptyState');
+            const tableContainer = document.getElementById('leadsTableContainer');
+            currentLeads = leads;
+            
+            if (leads.length === 0) {
+                tableContainer.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            tableContainer.style.display = 'block';
+            emptyState.style.display = 'none';
+            
+            tbody.innerHTML = leads.map(lead => `
+                <tr style="cursor:pointer;" onclick="openLeadEditor(${lead.id}, ${lead.company_id || companyId}, event)">
+                    <td class="lead-checkbox-cell" style="display: ${bulkEditMode ? 'table-cell' : 'none'};" onclick="event.stopPropagation();">
+                        <input type="checkbox" class="form-check-input lead-checkbox" data-lead-id="${lead.id}" 
+                            ${selectedLeads.has(lead.id) ? 'checked' : ''} 
+                            onchange="toggleLeadSelection(${lead.id}, this)">
+                    </td>
+                    <td>
+                        <div class="lead-name">${escapeHtml(lead.name)}</div>
+                        <div class="lead-contact" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+                            <span>${lead.phone || ''}</span>
+                            ${lead.phone ? `<button onclick="event.stopPropagation();openLeadWAModal(${lead.id},'${lead.phone.replace(/\D/g,'').slice(-10)}','${escapeHtml(lead.name)}',null)" title="Send WhatsApp" style="background:#25D366;color:white;border:none;border-radius:5px;padding:2px 6px;font-size:10px;cursor:pointer;display:inline-flex;align-items:center;gap:3px"><i class="fab fa-whatsapp"></i> WA</button>` : ''}
+                            ${lead.email ? `<span style="color:#9ca3af">| ${lead.email}</span>` : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="handler-badge">
+                            <i class="fas fa-user"></i>
+                            ${lead.handler_name || lead.handler_id}
+                        </span>
+                    </td>
+                    <td>${lead.category_name || '-'}</td>
+                    <td><span class="status-badge status-${lead.status}">${formatStatus(lead.status)}</span></td>
+                    <td><span class="priority-badge priority-${lead.priority}">${lead.priority}</span></td>
+                    <td>${lead.next_followup_date ? formatDate(lead.next_followup_date) : '-'}</td>
+                    <td>
+                        <div class="comment-preview" title="${lead.latest_comment ? escapeHtml(lead.latest_comment.note) : ''}">
+                            ${lead.latest_comment ? escapeHtml(lead.latest_comment.note) : '-'}
+                        </div>
+                    </td>
+                    <td>${formatDate(lead.updated_at)}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function renderPagination(pagination) {
+            const container = document.getElementById('paginationContainer');
+            const list = document.getElementById('paginationList');
+            
+            if (!pagination || pagination.pages <= 1) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            let html = '';
+            
+            html += `<li class="page-item ${pagination.page === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadLeads(${pagination.page - 1}); return false;">Prev</a>
+            </li>`;
+            
+            for (let i = 1; i <= Math.min(pagination.pages, 5); i++) {
+                html += `<li class="page-item ${i === pagination.page ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="loadLeads(${i}); return false;">${i}</a>
+                </li>`;
+            }
+            
+            html += `<li class="page-item ${pagination.page === pagination.pages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="loadLeads(${pagination.page + 1}); return false;">Next</a>
+            </li>`;
+            
+            list.innerHTML = html;
+        }
+        
+        function formatStatus(status) {
+            return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+        }
+        
+        function openLeadEditor(leadId, leadCid, event) {
+            if (event) event.stopPropagation();
+            if (!window.crmLeadEditor) {
+                if (typeof CRMLeadEditor !== 'undefined') {
+                    window.crmLeadEditor = new CRMLeadEditor({
+                        containerId: 'crmLeadEditorContainer',
+                        userRole: 'staff',
+                        companyId: companyId,
+                        authOptions: { credentials: 'include' },
+                        onSave: function() { loadLeads(); }
+                    });
+                    window.crmLeadEditor.init();
+                } else {
+                    alert('Lead editor not available. Please refresh.');
+                    return;
+                }
+            }
+            window.crmLeadEditor.openEditModal(leadId, leadCid);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+    </script>
+    <script src="/public/js/wa-lead-modal.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,398 @@
+<div class="container-fluid p-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <div class="card-body text-white p-4">
+                    <div class="d-flex justify-content-between align-items-center"><div><h3 class="mb-2"><i class="fas fa-user-plus me-3"></i>Direct Facilitation Earnings</h3>
+                    <p class="mb-0 opacity-90">Track earnings from your direct referral activations (₹3,000 per Platinum, ₹1,500 per Diamond)</p></div><a href="/dashboard" class="btn btn-light btn-sm"><i class="fas fa-home me-2"></i>Go to Dashboard</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards Row 1 - Main Overview (3 Cards) -->
+    <div class="row mb-3">
+        <div class="col-lg-4 col-md-4 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <div class="card-body text-white text-center p-4">
+                    <div class="mb-2"><i class="fas fa-coins fa-3x opacity-75"></i></div>
+                    <h2 class="mb-1 fw-bold" id="totalEarned">₹0</h2>
+                    <h6 class="mb-0 fw-bold">Total Earned (NET)</h6>
+                    <small class="opacity-75">After All Deductions</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-4 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%);">
+                <div class="card-body text-white text-center p-4">
+                    <div class="mb-2"><i class="fas fa-hourglass-half fa-3x opacity-75"></i></div>
+                    <h2 class="mb-1 fw-bold" id="overallPending">₹0</h2>
+                    <h6 class="mb-0 fw-bold">Pending Verification</h6>
+                    <small class="opacity-75">Admin + Finance Pending</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-4 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="card-body text-white text-center p-4">
+                    <div class="mb-2"><i class="fas fa-university fa-3x opacity-75"></i></div>
+                    <h2 class="mb-1 fw-bold" id="totalPaid">₹0</h2>
+                    <h6 class="mb-0 fw-bold">Paid to Bank</h6>
+                    <small class="opacity-75">Payment Completed</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards Row 2 - Pending Breakdown (2 Cards) -->
+    <div class="row mb-4">
+        <div class="col-lg-6 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <div class="card-body text-white text-center p-3">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <div class="me-3"><i class="fas fa-clock fa-2x opacity-75"></i></div>
+                        <div>
+                            <h3 class="mb-0 fw-bold" id="adminPending">₹0</h3>
+                            <h6 class="mb-0">Admin Pending</h6>
+                            <small class="opacity-75">Awaiting Verification</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="card-body text-white text-center p-3">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <div class="me-3"><i class="fas fa-file-invoice-dollar fa-2x opacity-75"></i></div>
+                        <div>
+                            <h3 class="mb-0 fw-bold" id="financePending">₹0</h3>
+                            <h6 class="mb-0">Finance Pending</h6>
+                            <small class="opacity-75">Ready for Payment</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Direct Facilitation Information -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>About Direct Facilitation</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row">
+                        <div class="col-md-4 mb-3 text-center">
+                            <div class="feature-box p-3">
+                                <i class="fas fa-money-bill-wave fa-3x text-success mb-3"></i>
+                                <h6 class="fw-bold">Earn Per Activation</h6>
+                                <p class="small text-muted mb-0">₹3,000 per Platinum activation<br>₹1,500 per Diamond activation</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3 text-center">
+                            <div class="feature-box p-3">
+                                <i class="fas fa-calculator fa-3x text-success mb-3"></i>
+                                <h6 class="fw-bold">Deductions Applied</h6>
+                                <p class="small text-muted mb-0">10% total: Admin (8%) + TDS (2%)<br>Plus 2% Mentorship Contribution Benefit if eligible</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3 text-center">
+                            <div class="feature-box p-3">
+                                <i class="fas fa-user-check fa-3x text-success mb-3"></i>
+                                <h6 class="fw-bold">When You Earn</h6>
+                                <p class="small text-muted mb-0">When your direct referral activates their package</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters & Transaction History -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Direct Facilitation History (Activation-wise)</h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Filters Row -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label fw-bold small"><i class="fas fa-calendar-alt me-2"></i>Start Date</label>
+                            <input type="date" class="form-control" id="filterStartDate" placeholder="From">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label fw-bold small"><i class="fas fa-calendar-check me-2"></i>End Date</label>
+                            <input type="date" class="form-control" id="filterEndDate" placeholder="To">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label fw-bold small"><i class="fas fa-filter me-2"></i>Status</label>
+                            <select class="form-select" id="filterStatus">
+                                <option value="">All Status</option>
+                                <option value="Pending">Pending Validation</option>
+                                <option value="Staff Validated">Staff Validated</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2 d-flex align-items-end">
+                            <button class="btn btn-success w-100" onclick="loadTransactions()">
+                                <i class="fas fa-search me-2"></i>Apply Filters
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Transaction Table Container -->
+                    <div id="transactionTableContainer">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <h5 class="text-muted">Loading your direct referral earnings...</h5>
+                            <p class="text-muted small">Please wait while we fetch your data</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load Direct Facilitation transactions
+async function loadTransactions() {
+    const startDate = document.getElementById('filterStartDate').value;
+    const endDate = document.getElementById('filterEndDate').value;
+    const status = document.getElementById('filterStatus').value;
+    
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (status) params.append('verification_status', status);
+    
+    const container = document.getElementById('transactionTableContainer');
+    container.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-success mb-3" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5 class="text-muted">Fetching direct referral earnings...</h5>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch(`/api/v1/financial-operations/income/${window.currentUserId || 'me'}/direct-referral-transactions?${params}`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('✅ Direct Facilitation API Response:', result);
+        
+        if (result.success && result.data) {
+            const data = result.data;
+            const transactions = data.transactions || [];
+            
+            // Calculate summary from transactions
+            let totalEarned = 0;
+            let totalPaid = 0;
+            let totalPending = 0;
+            let adminPending = 0;
+            let financePending = 0;
+            
+            transactions.forEach(t => {
+                const amount = t.total_amount || 0;
+                // Direct referral: deduct 10% (admin + TDS) for NET
+                const netAmount = amount * 0.90;
+                totalEarned += netAmount;
+                totalPaid += netAmount; // All are paid (from historical data)
+            });
+            
+            document.getElementById('totalEarned').textContent = formatCurrency(totalEarned);
+            document.getElementById('totalPaid').textContent = formatCurrency(totalPaid);
+            document.getElementById('overallPending').textContent = formatCurrency(totalPending);
+            document.getElementById('adminPending').textContent = formatCurrency(adminPending);
+            document.getElementById('financePending').textContent = formatCurrency(financePending);
+            
+            console.log('📊 Direct Facilitation Summary:', {totalEarned, totalPaid, totalPending, adminPending, financePending});
+            
+            // Build transaction table
+            if (transactions.length > 0) {
+                let html = `
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white;">
+                                <tr>
+                                    <th class="py-3"><i class="fas fa-calendar me-2"></i>Activation Date</th>
+                                    <th class="py-3"><i class="fas fa-user me-2"></i>Referred User</th>
+                                    <th class="text-center py-3"><i class="fas fa-check-circle me-2"></i>Activations</th>
+                                    <th class="text-end py-3"><i class="fas fa-coins me-2"></i>GROSS</th>
+                                    <th class="text-end py-3"><i class="fas fa-minus-circle me-2"></i>Admin & TDS</th>
+                                    <th class="text-end py-3"><i class="fas fa-rupee-sign me-2"></i>NET (90%)</th>
+                                    <th class="text-center py-3"><i class="fas fa-info-circle me-2"></i>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                transactions.forEach(t => {
+                    const grossAmount = t.total_amount || 0;
+                    const deductions = grossAmount * 0.10; // 10% = 8% Admin + 2% TDS
+                    const netAmount = grossAmount * 0.90;
+                    
+                    html += '<tr>';
+                    html += `<td class="py-3"><strong class="text-success fs-6">${t.from_date}</strong></td>`;
+                    html += `<td class="py-3"><div class="text-primary fw-bold">${t.referred_user_id || 'N/A'}</div><div class="small text-muted">${t.referred_user_name || ''}</div></td>`;
+                    html += `<td class="text-center py-3"><span class="badge bg-success">1 activation</span></td>`;
+                    html += `<td class="text-end text-dark py-3 fw-bold">₹${grossAmount.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>`;
+                    html += `<td class="text-end text-danger py-3">- ₹${deductions.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</td>`;
+                    html += `<td class="text-end py-3"><strong class="text-success fs-5">₹${netAmount.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</strong></td>`;
+                    const displayStatus = t.display_status || (t.is_paid ? 'Cleared' : 'Pending Validation');
+                    let statusBadge = '';
+                    if (displayStatus === 'Cleared') {
+                        statusBadge = '<span class="badge bg-success px-3 py-2"><i class="fas fa-check-circle me-1"></i>Cleared</span>';
+                    } else if (displayStatus === 'Completed') {
+                        statusBadge = '<span class="badge bg-success px-3 py-2"><i class="fas fa-check-circle me-1"></i>Completed</span>';
+                    } else if (displayStatus === 'Staff Validated') {
+                        statusBadge = '<span class="badge bg-info px-3 py-2"><i class="fas fa-user-check me-1"></i>Staff Validated</span>';
+                    } else {
+                        statusBadge = '<span class="badge bg-warning text-dark px-3 py-2"><i class="fas fa-clock me-1"></i>Pending Validation</span>';
+                    }
+                    html += `<td class="text-center py-3">${statusBadge}</td>`;
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table></div>';
+                
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-5x text-muted mb-4"></i>
+                        <h4 class="text-muted">No Direct Facilitation Earnings Found</h4>
+                        <p class="text-muted">You haven't earned any direct referral income yet. Invite friends to join and activate to start earning!</p>
+                        <button class="btn btn-outline-success mt-3" onclick="clearFilters()">
+                            <i class="fas fa-redo me-2"></i>Clear Filters
+                        </button>
+                    </div>
+                `;
+            }
+        } else {
+            throw new Error(result.message || 'Failed to load data');
+        }
+    } catch (error) {
+        console.error('❌ Error loading direct referral earnings:', error);
+        container.innerHTML = `
+            <div class="alert alert-danger text-center py-5">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                <h5 class="mb-2">Error Loading Data</h5>
+                <p class="mb-3">${error.message}</p>
+                <button class="btn btn-success" onclick="loadTransactions()">
+                    <i class="fas fa-redo me-2"></i>Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Helper functions
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount || 0);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+    });
+}
+
+function clearFilters() {
+    document.getElementById('filterStartDate').value = '';
+    document.getElementById('filterEndDate').value = '';
+    document.getElementById('filterStatus').value = '';
+    loadTransactions();
+}
+
+// Load transactions on page load
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎯 Direct Facilitation page loaded - fetching transactions...');
+    loadTransactions();
+});
+</script>
+
+<style>
+.feature-box {
+    transition: transform 0.3s;
+}
+
+.feature-box:hover {
+    transform: translateY(-5px);
+}
+
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.table thead th {
+    border: none;
+    font-weight: 600;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s;
+}
+
+.table tbody tr:hover {
+    background-color: #d1fae5;
+}
+
+.btn {
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+/* ── Mobile table: fix iOS overflow scroll ── */
+html { overflow-x: hidden; }
+body { overflow-x: visible !important; }
+@media (max-width: 639px) {
+    .table-responsive { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+    .table-responsive table, .table-responsive .table { min-width: max-content; }
+    .table-responsive th { padding: 7px 8px !important; font-size: 10px !important; white-space: nowrap; }
+    .table-responsive td { padding: 7px 8px !important; font-size: 11px !important; }
+}
+</style>

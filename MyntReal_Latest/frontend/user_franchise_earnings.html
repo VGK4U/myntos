@@ -1,0 +1,183 @@
+<style>
+    .franchise-page .page-banner {
+        background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+        border-radius: 16px; padding: 28px; margin-bottom: 24px; color: white;
+    }
+    .franchise-page .page-banner h1 { font-size: 26px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+    .franchise-page .page-banner p { opacity: 0.9; margin: 0; font-size: 15px; }
+    
+    .franchise-page .income-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 28px; }
+    
+    .franchise-page .income-card {
+        background: white; border-radius: 16px; padding: 28px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 5px solid #7c3aed;
+    }
+    .franchise-page .income-card .icon {
+        width: 64px; height: 64px; border-radius: 16px;
+        display: flex; align-items: center; justify-content: center;
+        margin-bottom: 16px; font-size: 28px;
+        background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #7c3aed;
+    }
+    .franchise-page .income-card h3 { font-size: 20px; font-weight: 700; color: #1f2937; margin-bottom: 8px; }
+    .franchise-page .income-card .rate { font-size: 36px; font-weight: 800; color: #7c3aed; margin-bottom: 8px; }
+    .franchise-page .income-card .description { color: #6b7280; font-size: 14px; line-height: 1.6; }
+    
+    .franchise-page .terms-section {
+        background: white; border-radius: 16px; padding: 28px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px;
+    }
+    .franchise-page .terms-section h4 { 
+        font-size: 18px; font-weight: 600; color: #1f2937; 
+        margin-bottom: 20px; display: flex; align-items: center; gap: 10px;
+    }
+    
+    .franchise-page .terms-list { list-style: none; padding: 0; margin: 0; }
+    .franchise-page .terms-list li {
+        padding: 16px 20px; margin-bottom: 12px; border-radius: 12px;
+        background: #f9fafb; border-left: 4px solid #10b981;
+        display: flex; align-items: flex-start; gap: 12px;
+    }
+    .franchise-page .terms-list li i { color: #10b981; margin-top: 3px; }
+    .franchise-page .terms-list li span { color: #374151; font-size: 14px; line-height: 1.6; }
+    
+    .franchise-page .warning-box {
+        background: #fef3c7; border-left: 4px solid #f59e0b;
+        padding: 20px 24px; border-radius: 12px; margin-bottom: 24px;
+    }
+    .franchise-page .warning-box h5 { color: #92400e; margin-bottom: 12px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    .franchise-page .warning-box ul { margin: 0; padding-left: 20px; color: #92400e; font-size: 14px; }
+    .franchise-page .warning-box li { margin-bottom: 6px; }
+    
+    .franchise-page .cta-section {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        border-radius: 16px; padding: 32px; text-align: center;
+    }
+    .franchise-page .cta-section h5 { color: #1e40af; margin-bottom: 12px; font-weight: 600; font-size: 18px; }
+    .franchise-page .cta-section p { color: #1e3a8a; font-size: 14px; margin-bottom: 20px; }
+    
+    .franchise-page .btn-lead {
+        background: linear-gradient(135deg, #7c3aed, #5b21b6);
+        border: none; color: white; border-radius: 12px; padding: 14px 36px;
+        font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 10px;
+        text-decoration: none; transition: all 0.2s;
+    }
+    .franchise-page .btn-lead:hover { background: linear-gradient(135deg, #6d28d9, #4c1d95); color: white; transform: translateY(-2px); }
+    
+    .franchise-page .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .franchise-page .info-item {
+        background: #f0fdf4; border-radius: 12px; padding: 20px;
+        text-align: center; border: 1px solid #bbf7d0;
+    }
+    .franchise-page .info-item .value { font-size: 24px; font-weight: 700; color: #059669; margin-bottom: 4px; }
+    .franchise-page .info-item .label { color: #065f46; font-size: 13px; }
+</style>
+
+<div class="franchise-page">
+    <div class="page-banner">
+        <h1><i class="fas fa-store"></i> Franchise Earnings</h1>
+        <p>Earn income by referring franchise opportunities - Get 2% on setup and 1% lifetime on ongoing revenue</p>
+    </div>
+    
+    <div class="income-cards">
+        <div class="income-card">
+            <div class="icon"><i class="fas fa-rocket"></i></div>
+            <h3>Initial Setup Referral Bonus</h3>
+            <div class="rate">2%</div>
+            <div class="description">
+                Earn <strong>2% referral bonus</strong> on the initial franchise setup amount when your referred franchise partner completes their setup and begins operations.
+            </div>
+        </div>
+        
+        <div class="income-card">
+            <div class="icon"><i class="fas fa-sync-alt"></i></div>
+            <h3>Lifetime Revenue Share</h3>
+            <div class="rate">1%</div>
+            <div class="description">
+                Earn <strong>1% lifetime referral bonus</strong> on all subsequent invoices and billing from the franchise, as long as you follow the terms and conditions.
+            </div>
+        </div>
+    </div>
+    
+    <div class="terms-section">
+        <h4><i class="fas fa-clipboard-check text-success"></i> Terms & Conditions for Lifetime Income</h4>
+        <ul class="terms-list">
+            <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Franchise must order a <strong>minimum of 5 units</strong> in any consecutive 2 months to qualify you for the lifetime referral bonus.</span>
+            </li>
+            <li>
+                <i class="fas fa-check-circle"></i>
+                <span><strong>Regular coordination</strong> with the franchise partner is mandatory to maintain your referral status.</span>
+            </li>
+            <li>
+                <i class="fas fa-check-circle"></i>
+                <span><strong>Showroom engagement</strong> - Active participation in showroom activities and customer interactions.</span>
+            </li>
+            <li>
+                <i class="fas fa-check-circle"></i>
+                <span><strong>Promotions support</strong> - Assist in promotional activities and business initiatives.</span>
+            </li>
+            <li>
+                <i class="fas fa-check-circle"></i>
+                <span>Maintain <strong>active MNR membership</strong> status throughout the earning period.</span>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="warning-box">
+        <h5><i class="fas fa-exclamation-triangle"></i> Important Charges & Compliance</h5>
+        <ul>
+            <li><strong>1 Point = 1 Rupee</strong> (Points are equivalent to INR value)</li>
+            <li><strong>2% TDS</strong> applicable on all eligible earnings</li>
+            <li><strong>8% Admin Charges</strong> applicable as per company policy</li>
+            <li>Referral bonus is subject to franchise compliance and order fulfillment</li>
+        </ul>
+    </div>
+    
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="value" id="totalFranchiseLeads">0</div>
+            <div class="label">Your Franchise Leads</div>
+        </div>
+        <div class="info-item">
+            <div class="value" id="activeFranchises">0</div>
+            <div class="label">Active Franchises</div>
+        </div>
+        <div class="info-item">
+            <div class="value" id="totalEarnings">₹0</div>
+            <div class="label">Total Franchise Earnings</div>
+        </div>
+    </div>
+    
+    <div class="cta-section">
+        <h5><i class="fas fa-user-plus me-2"></i> Refer a Franchise Partner</h5>
+        <p>Know someone interested in starting an EV franchise? Add them as a lead and start earning!</p>
+        <a href="/user/my-leads?category=franchise" class="btn-lead">
+            <i class="fas fa-plus-circle"></i> Add Franchise Lead
+        </a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    
+    try {
+        const response = await fetch('/api/v1/leads/my-leads?category=franchise', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const leads = data.leads || [];
+            document.getElementById('totalFranchiseLeads').textContent = leads.length;
+            
+            const activeCount = leads.filter(l => l.status === 'converted' || l.status === 'active').length;
+            document.getElementById('activeFranchises').textContent = activeCount;
+        }
+    } catch (error) {
+        console.log('Unable to fetch franchise data:', error);
+    }
+});
+</script>

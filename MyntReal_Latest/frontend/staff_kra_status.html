@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP - KRA Status</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 12px 12px 0 0 !important; padding: 16px 20px; border: none; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .card-header h5 { margin: 0; font-weight: 600; font-size: 16px; }
+        .card-body { padding: 24px; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        
+        .info-banner { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+        .info-banner i { color: #0369a1; font-size: 20px; }
+        .info-banner-text { color: #0c4a6e; font-size: 13px; }
+
+        .filter-panel { padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-group .form-control, .filter-group .form-select { max-width: 200px; font-size: 13px; }
+        
+        .kra-table { width: 100%; }
+        .kra-table th { 
+            background: #f8fafc; font-weight: 600; font-size: 12px; color: #374151; 
+            padding: 12px 16px; text-align: left; border-bottom: 2px solid #e5e7eb; 
+            text-transform: uppercase; cursor: pointer; white-space: nowrap;
+            user-select: none;
+        }
+        .kra-table th:hover { background: #f1f5f9; }
+        .kra-table th .sort-icon { margin-left: 6px; color: #9ca3af; }
+        .kra-table th.sorted-asc .sort-icon, .kra-table th.sorted-desc .sort-icon { color: #6366f1; }
+        .kra-table td { padding: 14px 16px; border-bottom: 1px solid #f3f4f6; font-size: 14px; vertical-align: middle; }
+        .kra-table tr:hover { background: #f9fafb; }
+        .kra-table .checkbox-cell { width: 40px; }
+        
+        .badge { padding: 4px 10px; border-radius: 6px; font-weight: 500; font-size: 11px; }
+        .badge-daily { background: #fee2e2; color: #991b1b; }
+        .badge-selected_days { background: #fce7f3; color: #9d174d; }
+        .badge-custom { background: #f3e8ff; color: #7c3aed; }
+        .badge-every_n_days { background: #cffafe; color: #0e7490; }
+        .badge-every_15_days { background: #fef9c3; color: #a16207; }
+        .badge-monthly { background: #d1fae5; color: #065f46; }
+        .badge-adhoc { background: #f3f4f6; color: #374151; }
+        .badge-warning { background-color: #fef08a !important; color: #b45309 !important; }
+        .badge-info { background-color: #dbeafe !important; color: #0284c7 !important; }
+        .badge-success { background-color: #d1fae5 !important; color: #059669 !important; }
+        .badge-danger { background-color: #fee2e2 !important; color: #dc2626 !important; }
+        .badge-secondary { background-color: #f3f4f6 !important; color: #6b7280 !important; border: 1px solid #d1d5db; }
+        .badge-submitted { background: #dbeafe; color: #1e40af; }
+        .badge-weekly { background: #fef3c7; color: #92400e; }
+        .badge-quarterly { background: #e0e7ff; color: #4338ca; }
+        .badge-bi_weekly { background: #fef3c7; color: #b45309; }
+        .badge-half_yearly { background: #cffafe; color: #0e7490; }
+        .badge-yearly { background: #ecfccb; color: #4d7c0f; }
+        
+        .metric-green { color: #059669; font-weight: 600; }
+        .metric-red { color: #dc2626; font-weight: 600; }
+        .metric-blue { color: #2563eb; font-weight: 600; }
+        .metric-orange { color: #d97706; font-weight: 600; }
+        
+        .pct-bar { display: flex; align-items: center; gap: 8px; }
+        .pct-bar-fill { height: 8px; border-radius: 4px; background: #e5e7eb; flex: 1; max-width: 80px; overflow: hidden; }
+        .pct-bar-inner { height: 100%; border-radius: 4px; transition: width 0.3s; }
+        
+        .btn-view { background: #6366f1; color: white; border: none; padding: 6px 14px; font-size: 12px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-view:hover { background: #4f46e5; color: white; }
+        
+        .modal-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 12px 12px 0 0; }
+        .modal-content { border-radius: 12px; border: none; }
+        
+        .staff-detail-table { width: 100%; }
+        .staff-detail-table th { background: #f8fafc; font-weight: 600; font-size: 11px; color: #374151; padding: 10px 12px; text-align: left; border-bottom: 2px solid #e5e7eb; text-transform: uppercase; cursor: pointer; white-space: nowrap; user-select: none; }
+        .staff-detail-table th:hover { background: #f1f5f9; }
+        .staff-detail-table th .sort-icon { margin-left: 4px; color: #9ca3af; }
+        .staff-detail-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; vertical-align: middle; }
+        .staff-detail-table tr:hover { background: #f9fafb; }
+        
+        .status-completed { color: #059669; font-weight: 600; }
+        .status-pending { color: #d97706; font-weight: 600; }
+        .status-in_progress { color: #2563eb; font-weight: 600; }
+        .status-delayed { color: #dc2626; font-weight: 600; }
+        .status-ontime { color: #059669; font-weight: 600; }
+
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-card { background: white; border-radius: 10px; padding: 16px; border: 1px solid #e5e7eb; text-align: center; }
+        .summary-card .value { font-size: 28px; font-weight: 700; }
+        .summary-card .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+
+        .authority-note { background: #d1fae5; border: 1px solid #34d399; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+        .authority-note i { color: #059669; font-size: 20px; }
+        .authority-note-text { color: #065f46; font-size: 13px; }
+        .authority-note-text strong { color: #047857; }
+
+        .stats-row { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+        .stat-pill { background: white; border-radius: 8px; padding: 12px 20px; display: flex; align-items: center; gap: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-pill i { font-size: 16px; }
+        .stat-pill.pending i { color: #f59e0b; }
+        .stat-pill.approved i { color: #10b981; }
+        .stat-pill.rejected i { color: #ef4444; }
+        .stat-pill .stat-num { font-weight: 700; font-size: 18px; color: #1f2937; }
+        .stat-pill .stat-label { font-size: 13px; color: #6b7280; }
+
+        .bulk-actions { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; }
+        .bulk-actions.hidden { display: none; }
+        .bulk-actions .selected-count { font-weight: 600; color: #10b981; }
+
+        .employee-cell { display: flex; align-items: center; gap: 10px; }
+        .employee-avatar { width: 32px; height: 32px; border-radius: 50%; background: #10b981; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+        .employee-info { display: flex; flex-direction: column; }
+        .employee-name { font-weight: 500; color: #1f2937; }
+        .employee-id { font-size: 11px; color: #6b7280; }
+
+        .rating-stars { display: flex; gap: 2px; }
+        .rating-stars i { color: #fbbf24; font-size: 12px; }
+        .rating-stars i.empty { color: #e5e7eb; }
+
+        .action-buttons { display: flex; gap: 8px; }
+        .btn-action { padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-approve { background: #d1fae5; color: #065f46; }
+        .btn-approve:hover { background: #a7f3d0; }
+        .btn-edit { background: #fef3c7; color: #92400e; }
+        .btn-edit:hover { background: #fde68a; }
+        .btn-reject { background: #fee2e2; color: #991b1b; }
+        .btn-reject:hover { background: #fecaca; }
+        .action-buttons .btn-view { background: #f3f4f6; color: #374151; padding: 6px 12px; font-size: 12px; }
+        .action-buttons .btn-view:hover { background: #e5e7eb; color: #374151; }
+
+        .detail-row { display: flex; gap: 16px; margin-bottom: 12px; padding: 12px; background: #f8fafc; border-radius: 8px; }
+        .detail-label { font-weight: 500; color: #6b7280; min-width: 120px; font-size: 13px; }
+        .detail-value { color: #1f2937; flex: 1; }
+
+        .notes-display { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin-top: 8px; font-size: 13px; color: #166534; }
+
+        .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
+        .page-btn { padding: 8px 14px; border: 1px solid #e5e7eb; background: white; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .page-btn:hover { background: #f3f4f6; }
+        .page-btn.active { background: #10b981; color: white; border-color: #10b981; }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .form-label { font-weight: 500; color: #374151; font-size: 13px; }
+        .form-control:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+
+        #reviewsPane .card-header { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
+        #teamSummaryPane .card-header { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
+        #kraDetailModal .modal-header, #editApproveModal .modal-header { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
+
+        #reviewsPane .kra-table th.sorted-asc .sort-icon, #reviewsPane .kra-table th.sorted-desc .sort-icon { color: #10b981; }
+        #reviewsPane .form-control:focus, #reviewsPane .form-select:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+
+        #matrixPane .card-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+        .matrix-table-wrap { overflow-x: auto; }
+        .matrix-table { border-collapse: collapse; width: max-content; min-width: 100%; }
+        .matrix-table th { background: #f8fafc; font-size: 12px; font-weight: 600; color: #374151; padding: 10px 14px; border-bottom: 2px solid #e5e7eb; white-space: nowrap; text-align: center; }
+        .matrix-table th.kra-col { text-align: left; }
+        .matrix-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; vertical-align: middle; white-space: nowrap; text-align: center; }
+        .matrix-table td.kra-col { text-align: left; }
+        .matrix-table tr:hover td { background: #f9fafb; }
+        .matrix-table .sticky-col-1 { position: sticky; left: 0; z-index: 2; min-width: 44px; max-width: 44px; width: 44px; }
+        .matrix-table .sticky-col-2 { position: sticky; left: 44px; z-index: 2; min-width: 190px; max-width: 190px; border-right: 2px solid #e5e7eb; }
+        .matrix-table thead .sticky-col-1, .matrix-table thead .sticky-col-2 { background: #f8fafc; z-index: 3; }
+        .matrix-table tbody .sticky-col-1, .matrix-table tbody .sticky-col-2 { background: white; }
+        .matrix-table tbody tr:hover .sticky-col-1, .matrix-table tbody tr:hover .sticky-col-2 { background: #f9fafb; }
+        .matrix-status { display: inline-block; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .matrix-status.completed { background: #d1fae5; color: #059669; }
+        .matrix-status.in_progress { background: #dbeafe; color: #1e40af; }
+        .matrix-status.pending { background: #fef9c3; color: #92400e; }
+        .matrix-status.delayed { background: #fee2e2; color: #dc2626; }
+        .matrix-status.partial { background: #fce7f3; color: #9d174d; }
+        .matrix-status.na, .matrix-status.skipped { background: #f3f4f6; color: #6b7280; }
+        .matrix-emp-header { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+        .matrix-emp-header.search-highlight { background: #fef9c3; border-radius: 4px; padding: 1px 3px; }
+
+        /* Toast notifications */
+        #dcToastContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .dc-toast { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,0.15); pointer-events: all; min-width: 260px; max-width: 380px; animation: toastIn 0.25s ease; }
+        .dc-toast.success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .dc-toast.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .dc-toast.info    { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+        .dc-toast.warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .dc-toast i { font-size: 16px; flex-shrink: 0; }
+        .dc-toast .dc-toast-msg { flex: 1; }
+        .dc-toast .dc-toast-close { cursor: pointer; opacity: 0.6; font-size: 14px; flex-shrink: 0; }
+        .dc-toast .dc-toast-close:hover { opacity: 1; }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div id="dcToastContainer"></div>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="info-banner">
+            <i class="fas fa-chart-bar"></i>
+            <div class="info-banner-text">
+                KRA Status Dashboard shows aggregated completion metrics for all KRAs. Use filters to narrow by date range, department, or reporting manager. Click "View" to see individual staff details.
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs mb-3" id="kraMainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="matrix-tab" data-bs-toggle="tab" data-bs-target="#matrixPane" type="button" role="tab">
+                    <i class="fas fa-th me-2"></i>Matrix View
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="status-tab" data-bs-toggle="tab" data-bs-target="#statusPane" type="button" role="tab">
+                    <i class="fas fa-chart-bar me-2"></i>KRA Status
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviewsPane" type="button" role="tab">
+                    <i class="fas fa-clipboard-list me-2"></i>KRA Reviews
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="team-summary-tab" data-bs-toggle="tab" data-bs-target="#teamSummaryPane" type="button" role="tab">
+                    <i class="fas fa-users me-2"></i>Team Summary
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="kraMainTabsContent">
+
+            <div class="tab-pane fade show active" id="matrixPane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
+                        <h5><i class="fas fa-th me-2"></i>KRA Matrix View</h5>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <input type="date" id="matrixDateFrom" class="form-control form-control-sm" style="max-width: 140px; background: rgba(255,255,255,0.9);">
+                            <span style="color: rgba(255,255,255,0.8); font-size: 13px;">to</span>
+                            <input type="date" id="matrixDateTo" class="form-control form-control-sm" style="max-width: 140px; background: rgba(255,255,255,0.9);">
+                            <select id="matrixStaffType" class="form-select form-select-sm" style="max-width: 150px; background: rgba(255,255,255,0.9);" onchange="loadMatrixView()">
+                                <option value="">All Staff Types</option>
+                                <option value="MN_STAFF">MN Staff</option>
+                                <option value="MN_EMPLOYEE">MN Employee</option>
+                                <option value="FREELANCER">Freelancer</option>
+                                <option value="MYNT_REAL">Mynt Real</option>
+                            </select>
+                            <input type="text" id="matrixEmpSearch" class="form-control form-control-sm" style="max-width: 160px; background: rgba(255,255,255,0.9);" placeholder="Highlight employee..." oninput="applyMatrixHighlight()">
+                            <button class="btn btn-sm btn-light" onclick="loadMatrixView()" style="border-radius: 6px; font-weight: 600;">
+                                <i class="fas fa-sync-alt me-1"></i>Apply
+                            </button>
+                        </div>
+                    </div>
+                    <div id="matrixTableContainer" style="overflow-x: auto; min-height: 120px;">
+                        <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading matrix...</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="statusPane" role="tabpanel">
+                <div class="summary-cards" id="summaryCards" style="display: none;">
+                    <div class="summary-card">
+                        <div class="value metric-blue" id="totalKras">0</div>
+                        <div class="label">Total KRAs</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="value metric-green" id="totalCompleted">0</div>
+                        <div class="label">Total Completed</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="value" id="totalOnTime" style="color: #059669;">0</div>
+                        <div class="label">Completed On Time</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="value metric-red" id="totalDelayed">0</div>
+                        <div class="label">Delayed</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="value metric-orange" id="overallPct">0%</div>
+                        <div class="label">Overall Completion</div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-bar me-2"></i>KRA Status Dashboard</h5>
+                    </div>
+                    
+                    <div class="filter-panel">
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label>Date From</label>
+                                <input type="date" class="form-control" id="filterDateFrom">
+                            </div>
+                            <div class="filter-group">
+                                <label>Date To</label>
+                                <input type="date" class="form-control" id="filterDateTo">
+                            </div>
+                            <div class="filter-group">
+                                <label>Department</label>
+                                <select class="form-select" id="filterDepartment">
+                                    <option value="">All Departments</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label>Reporting Manager</label>
+                                <select class="form-select" id="filterManager">
+                                    <option value="">All Managers</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label>Employee Type</label>
+                                <select class="form-select" id="filterStaffType">
+                                    <option value="">All Types</option>
+                                    <option value="MN_STAFF">MN Staff</option>
+                                    <option value="MN_EMPLOYEE">MN Employee</option>
+                                    <option value="FREELANCER">Freelancer</option>
+                                    <option value="MYNT_REAL">Mynt Real</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label>Employee Search</label>
+                                <input type="text" class="form-control" id="filterEmpSearch" placeholder="Name or code..." style="max-width: 180px;">
+                            </div>
+                            <div class="filter-group" style="justify-content: flex-end;">
+                                <label>&nbsp;</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="btn btn-primary btn-sm" onclick="loadDashboard()" style="border-radius: 6px;">
+                                        <i class="fas fa-search me-1"></i>Apply
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()" style="border-radius: 6px;">
+                                        <i class="fas fa-redo me-1"></i>Reset
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body" style="padding: 0;">
+                        <div class="table-responsive">
+                            <table class="kra-table" id="statusKraTable">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable('sno')" data-field="sno">S.No. <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('title')" data-field="title">KRA Title <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('frequency')" data-field="frequency">Frequency <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('assigned_staff')" data-field="assigned_staff">Assigned Staff <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('completed_staff')" data-field="completed_staff">Completed <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('completed_in_time')" data-field="completed_in_time">On Time <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('delayed')" data-field="delayed">Delayed <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('pct_completed')" data-field="pct_completed">% Completed <i class="fas fa-sort sort-icon"></i></th>
+                                        <th style="cursor: default;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboardTableBody">
+                                    <tr>
+                                        <td colspan="9">
+                                            <div class="empty-state">
+                                                <i class="fas fa-spinner fa-spin"></i>
+                                                <p>Loading KRA status...</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="reviewsPane" role="tabpanel">
+                <div class="authority-note">
+                    <i class="fas fa-user-shield"></i>
+                    <div class="authority-note-text">
+                        <strong>Single Authority:</strong> You can only review KRAs for employees who report directly to you (via hierarchy). Only approved/edited KRAs count for performance.
+                    </div>
+                </div>
+                
+                <div class="stats-row">
+                    <div class="stat-pill pending">
+                        <i class="fas fa-hourglass-half"></i>
+                        <span class="stat-num" id="statPending">0</span>
+                        <span class="stat-label">Pending Review</span>
+                    </div>
+                    <div class="stat-pill approved">
+                        <i class="fas fa-check-circle"></i>
+                        <span class="stat-num" id="statApproved">0</span>
+                        <span class="stat-label">Approved</span>
+                    </div>
+                    <div class="stat-pill rejected">
+                        <i class="fas fa-times-circle"></i>
+                        <span class="stat-num" id="statRejected">0</span>
+                        <span class="stat-label">Rejected</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-clipboard-list me-2"></i>KRAs Review Dashboard</h5>
+                        <button class="btn btn-sm btn-light" onclick="toggleReviewFilters()" style="border-radius: 6px;">
+                            <i class="fas fa-filter me-1"></i>Filters
+                        </button>
+                    </div>
+                    
+                    <div id="reviewUniversalFilterContainer" style="padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;"></div>
+                    
+                    <div id="reviewFallbackFiltersContainer" style="padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                        <select id="reviewFallbackDepartmentFilter" class="form-select" style="max-width: 180px;" onchange="applyReviewFilters()">
+                            <option value="">All Departments</option>
+                        </select>
+                        <select id="reviewFallbackStaffTypeFilter" class="form-select" style="max-width: 160px;" onchange="applyReviewFilters()">
+                            <option value="">All Staff Types</option>
+                            <option value="MN_STAFF">MN Staff</option>
+                            <option value="MN_EMPLOYEE">MN Employee</option>
+                            <option value="FREELANCER">Freelancer</option>
+                            <option value="MYNT_REAL">Mynt Real</option>
+                        </select>
+                        <input type="text" id="reviewFallbackEmployeeSearch" class="form-control" style="max-width: 200px;" placeholder="Search employee..." onkeyup="debounceReviewEmployeeSearch()">
+                    </div>
+                    
+                    <div id="reviewFilterPanel" style="padding: 20px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; display: none;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+                            <div>
+                                <label class="form-label"><i class="fas fa-calendar me-2"></i>Date Range</label>
+                                <input type="date" class="form-control" id="reviewFilterDateFrom" onchange="applyReviewFilters()">
+                                <input type="date" class="form-control mt-2" id="reviewFilterDateTo" onchange="applyReviewFilters()" placeholder="To Date">
+                            </div>
+                            
+                            <div>
+                                <label class="form-label"><i class="fas fa-check-square me-2"></i>Completion Status</label>
+                                <div style="max-height: 150px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px;">
+                                    <div><label><input type="checkbox" class="status-checkbox" value="pending" onchange="applyReviewFilters()"> Pending</label></div>
+                                    <div><label><input type="checkbox" class="status-checkbox" value="in_progress" onchange="applyReviewFilters()"> In Progress</label></div>
+                                    <div><label><input type="checkbox" class="status-checkbox" value="completed" onchange="applyReviewFilters()"> Completed</label></div>
+                                    <div><label><input type="checkbox" class="status-checkbox" value="partial" onchange="applyReviewFilters()"> Partial</label></div>
+                                    <div><label><input type="checkbox" class="status-checkbox" value="skipped" onchange="applyReviewFilters()"> Skipped</label></div>
+                                    <div><label><input type="checkbox" class="status-checkbox" value="na" onchange="applyReviewFilters()"> NA</label></div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="form-label"><i class="fas fa-user-check me-2"></i>Review Status</label>
+                                <div style="max-height: 150px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 6px; padding: 8px;">
+                                    <div><label><input type="checkbox" class="review-status-checkbox" value="pending_review" onchange="applyReviewFilters()"> Pending</label></div>
+                                    <div><label><input type="checkbox" class="review-status-checkbox" value="approved" onchange="applyReviewFilters()"> Approved</label></div>
+                                    <div><label><input type="checkbox" class="review-status-checkbox" value="edited_by_manager" onchange="applyReviewFilters()"> Edited & Approved</label></div>
+                                    <div><label><input type="checkbox" class="review-status-checkbox" value="rejected" onchange="applyReviewFilters()"> Rejected</label></div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="form-label"><i class="fas fa-repeat me-2"></i>Frequency</label>
+                                <select class="form-select" id="reviewFilterFrequency" onchange="applyReviewFilters()">
+                                    <option value="">All Frequencies</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="bi_weekly">Bi-Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="quarterly">Quarterly</option>
+                                    <option value="half_yearly">Half-Yearly</option>
+                                    <option value="yearly">Yearly</option>
+                                    <option value="selected_days">Selected Days</option>
+                                    <option value="custom">Custom</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 12px; display: flex; gap: 8px;">
+                            <button class="btn btn-sm btn-success" onclick="applyReviewFilters()"><i class="fas fa-search me-1"></i>Apply</button>
+                            <button class="btn btn-sm btn-secondary" onclick="resetReviewFilters()"><i class="fas fa-redo me-1"></i>Reset</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="bulk-actions hidden" id="bulkActions">
+                            <span class="selected-count"><span id="selectedCount">0</span> selected</span>
+                            <button class="btn btn-sm btn-success" onclick="bulkApprove()">
+                                <i class="fas fa-check-double me-1"></i>Bulk Approve
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="clearSelection()">Clear</button>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="kra-table" id="reviewKraTable">
+                                <thead>
+                                    <tr>
+                                        <th class="checkbox-cell" style="cursor: default;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
+                                        <th onclick="sortKras('employee_name')" data-review-field="employee_name">Employee <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortKras('title')" data-review-field="title">KRA Title <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortKras('frequency')" data-review-field="frequency">Frequency <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortKras('target_time')" data-review-field="target_time">Target Time <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortKras('self_rating')" data-review-field="self_rating">Self Rating <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortKras('instance_date')" data-review-field="instance_date">KRA Date <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortKras('completed_at')" data-review-field="completed_at">Completed At <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortKras('updated_at')" data-review-field="updated_at">Updated <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortKras('time_spent_minutes')" data-review-field="time_spent_minutes">Time Utilized <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortKras('completion_status')" data-review-field="completion_status">Employee Status <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortKras('manager_review_status')" data-review-field="manager_review_status">Review Status <i class="fas fa-sort sort-icon"></i></th>
+                                        <th style="width: 200px; cursor: default;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="kraTableBody">
+                                    <tr>
+                                        <td colspan="13">
+                                            <div class="empty-state">
+                                                <i class="fas fa-clipboard-check"></i>
+                                                <p>Click "KRA Reviews" tab to load data</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="pagination" id="pagination"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="teamSummaryPane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-bar me-2"></i>Team KRA Performance Summary</h5>
+                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                            <select id="summaryScope" class="form-select form-select-sm" style="width: auto;" onchange="loadTeamSummary()">
+                                <option value="self">My Performance</option>
+                                <option value="team" id="teamScopeOption">Team Performance</option>
+                                <option value="all" id="allScopeOption" style="display: none;">All Performance</option>
+                            </select>
+                            <select id="summaryDepartment" class="form-select form-select-sm" style="width: auto; min-width: 140px;" onchange="onSummaryDeptChange()">
+                                <option value="">All Departments</option>
+                            </select>
+                            <select id="summaryEmployee" class="form-select form-select-sm" style="width: auto; min-width: 160px;" onchange="loadTeamSummary()">
+                                <option value="">All Employees</option>
+                            </select>
+                            <input type="date" id="summaryDateFrom" class="form-control form-control-sm" style="width: auto;" onchange="loadTeamSummary()">
+                            <input type="date" id="summaryDateTo" class="form-control form-control-sm" style="width: auto;" onchange="loadTeamSummary()">
+                            <button class="btn btn-sm btn-light" onclick="loadTeamSummary()" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearSummaryFilters()" title="Clear Filters"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="kra-table" id="summaryTable">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortSummary('employee_name')" style="cursor: pointer;">Employee <i class="fas fa-sort"></i></th>
+                                        <th onclick="sortSummary('department')" style="cursor: pointer;">Department <i class="fas fa-sort"></i></th>
+                                        <th onclick="sortSummary('assigned_kras')" style="cursor: pointer;">Assigned <i class="fas fa-sort"></i></th>
+                                        <th onclick="sortSummary('completed_kras')" style="cursor: pointer;">Completed <i class="fas fa-sort"></i></th>
+                                        <th onclick="sortSummary('not_completed')" style="cursor: pointer;">Not Completed <i class="fas fa-sort"></i></th>
+                                        <th onclick="sortSummary('approved')" style="cursor: pointer;">Approved <i class="fas fa-sort"></i></th>
+                                        <th onclick="sortSummary('pending_review')" style="cursor: pointer;">Awaiting <i class="fas fa-sort"></i></th>
+                                        <th onclick="sortSummary('rejected')" style="cursor: pointer;">Rejected <i class="fas fa-sort"></i></th>
+                                        <th onclick="sortSummary('performance_percentage')" style="cursor: pointer;">Performance <i class="fas fa-sort"></i></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="summaryTableBody">
+                                    <tr>
+                                        <td colspan="9">
+                                            <div class="empty-state">
+                                                <i class="fas fa-chart-bar"></i>
+                                                <p>Click "Team Summary" tab to load data</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div class="modal fade" id="staffDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-users me-2"></i>Staff KRA Detail</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+                    <div id="staffDetailInfo" style="margin-bottom: 16px;"></div>
+                    <div class="table-responsive">
+                        <table class="staff-detail-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortDetailTable('sno')" data-detail-field="sno">S.No. <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortDetailTable('employee_name')" data-detail-field="employee_name">Staff Name <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortDetailTable('emp_code')" data-detail-field="emp_code">Emp Code <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortDetailTable('instance_date')" data-detail-field="instance_date">Date <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortDetailTable('completion_status')" data-detail-field="completion_status">Status <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortDetailTable('timing')" data-detail-field="timing">Timing <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortDetailTable('completed_at')" data-detail-field="completed_at">Completed At <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortDetailTable('time_spent_minutes')" data-detail-field="time_spent_minutes">Time Spent <i class="fas fa-sort sort-icon"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="staffDetailBody">
+                                <tr><td colspan="8" class="text-center text-muted">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="kraDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-bullseye me-2"></i>KRA Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="kraDetailContent"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editApproveModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit & Approve KRA</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editKraId">
+                    <div class="mb-3">
+                        <label class="form-label">Manager Notes</label>
+                        <textarea class="form-control" id="editManagerNotes" rows="3" placeholder="Add your notes, feedback or corrections..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Manager Rating</label>
+                        <select class="form-select" id="editManagerRating">
+                            <option value="">No rating</option>
+                            <option value="1">1 - Needs Improvement</option>
+                            <option value="2">2 - Below Expectations</option>
+                            <option value="3">3 - Meets Expectations</option>
+                            <option value="4">4 - Exceeds Expectations</option>
+                            <option value="5">5 - Outstanding</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" onclick="submitEditApprove()">
+                        <i class="fas fa-check me-1"></i>Edit & Approve
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="rejectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                    <h5 class="modal-title"><i class="fas fa-times-circle me-2"></i>Reject KRA</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="rejectKraId">
+                    <div class="mb-3">
+                        <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejectReason" rows="3" placeholder="Please provide a reason for rejection..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="submitReject()">
+                        <i class="fas fa-times me-1"></i>Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff_universal_filter.js?v=1764165148"></script>
+    <script>
+        const API_BASE = '';
+        let currentUser = null;
+        let dashboardData = [];
+        let sortField = 'title';
+        let sortAsc = true;
+        let detailData = [];
+        let detailSortField = 'employee_name';
+        let detailSortAsc = true;
+
+        let allKras = [];
+        let selectedKras = new Set();
+        let currentPage = 1;
+        const pageSize = 20;
+        let filterPanel = null;
+        let universalFilter = null;
+        let universalFilterReady = false;
+        let employeeSearchTimeout = null;
+        let kraSortField = 'instance_date';
+        let kraSortAsc = false;
+        let summaryData = [];
+        let summarySortField = 'performance_percentage';
+        let summarySortAsc = false;
+        let summaryLoaded = false;
+        let summaryEmployees = [];
+        let reviewsLoaded = false;
+        let statusLoaded = false;
+        let matrixLoaded = false;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('KRA Status', 'fas fa-chart-bar');
+            currentUser = StaffSidebar.userData;
+            if (currentUser) {
+                setDefaultDates();
+                const todayStr = new Date().toISOString().split('T')[0];
+                document.getElementById('matrixDateFrom').value = todayStr;
+                document.getElementById('matrixDateTo').value = todayStr;
+                Promise.all([loadDepartments(), loadManagers()]);
+                await loadMatrixView();
+            }
+
+            const statusTab = document.getElementById('status-tab');
+            statusTab.addEventListener('shown.bs.tab', () => {
+                if (!statusLoaded && currentUser) {
+                    loadDashboard();
+                    statusLoaded = true;
+                }
+            });
+
+            filterPanel = document.getElementById('reviewFilterPanel');
+
+            loadReviewFallbackDepartments();
+
+            if (typeof DCUniversalFilter !== 'undefined') {
+                universalFilter = new DCUniversalFilter('reviewUniversalFilterContainer', {
+                    showCompany: false,
+                    showStaffType: true,
+                    showDepartment: true,
+                    showEmployee: true,
+                    showSearch: false,
+                    pageKey: 'staff_kra_review',
+                    onFilterChange: () => {
+                        if (universalFilterReady) applyReviewFilters();
+                    }
+                });
+                
+                try {
+                    const success = await Promise.race([
+                        universalFilter.waitForReady(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                    ]);
+                    await new Promise(r => setTimeout(r, 50));
+                    if (success === true && 
+                        universalFilter.isReady === true && 
+                        universalFilter.initFailed === false &&
+                        document.getElementById('reviewUniversalFilterContainer')?.children.length > 0) {
+                        universalFilterReady = true;
+                        hideReviewFallbackFilters();
+                    } else {
+                        universalFilterReady = false;
+                    }
+                } catch (e) {
+                    universalFilterReady = false;
+                }
+            }
+
+            const reviewsTab = document.getElementById('reviews-tab');
+            reviewsTab.addEventListener('shown.bs.tab', () => {
+                if (!reviewsLoaded && currentUser) {
+                    loadPendingKras();
+                    reviewsLoaded = true;
+                }
+            });
+
+            const summaryTab = document.getElementById('team-summary-tab');
+            summaryTab.addEventListener('shown.bs.tab', () => {
+                if (!summaryLoaded && currentUser) {
+                    loadTeamSummary();
+                }
+            });
+
+            const hash = window.location.hash;
+            if (hash === '#reviews') {
+                const tab = new bootstrap.Tab(reviewsTab);
+                tab.show();
+            } else if (hash === '#summary') {
+                const tab = new bootstrap.Tab(summaryTab);
+                tab.show();
+            }
+        });
+        
+        function showToast(message, type = 'success', duration = 4000) {
+            const iconMap = { success: 'fa-check-circle', error: 'fa-times-circle', info: 'fa-info-circle', warning: 'fa-exclamation-triangle' };
+            const container = document.getElementById('dcToastContainer');
+            const toast = document.createElement('div');
+            toast.className = `dc-toast ${type}`;
+            toast.innerHTML = `<i class="fas ${iconMap[type] || iconMap.info}"></i><span class="dc-toast-msg">${escapeHtml(message)}</span><span class="dc-toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></span>`;
+            container.appendChild(toast);
+            setTimeout(() => { if (toast.parentElement) toast.remove(); }, duration);
+        }
+
+        function setDefaultDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('filterDateFrom').value = today;
+            document.getElementById('filterDateTo').value = today;
+        }
+
+        function applyMatrixHighlight() {
+            const search = (document.getElementById('matrixEmpSearch').value || '').toLowerCase().trim();
+            document.querySelectorAll('.matrix-emp-header').forEach(el => {
+                const name = (el.getAttribute('title') || '').toLowerCase();
+                if (search && name.includes(search)) {
+                    el.classList.add('search-highlight');
+                } else {
+                    el.classList.remove('search-highlight');
+                }
+            });
+        }
+
+        async function loadMatrixView() {
+            const dateFrom   = document.getElementById('matrixDateFrom').value;
+            const dateTo     = document.getElementById('matrixDateTo').value;
+            const staffType  = document.getElementById('matrixStaffType').value;
+            const empSearch  = (document.getElementById('matrixEmpSearch').value || '').toLowerCase().trim();
+            const container  = document.getElementById('matrixTableContainer');
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Building matrix...</p></div>';
+
+            try {
+                let kraUrl = `${API_BASE}/api/v1/staff/kra/status-dashboard?`;
+                if (dateFrom) kraUrl += `date_from=${dateFrom}&`;
+                if (dateTo)   kraUrl += `date_to=${dateTo}&`;
+
+                const kraRes = await staffFetch(kraUrl);
+                if (!kraRes.ok) throw new Error('Failed to load KRAs');
+                const kraData = await kraRes.json();
+                const kras = kraData.kras || [];
+
+                if (kras.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-th"></i><p>No KRA data for the selected date range</p></div>';
+                    return;
+                }
+
+                const staffResults = await Promise.all(kras.map(kra => {
+                    let url = `${API_BASE}/api/v1/staff/kra/status-dashboard/${kra.template_id}/staff?`;
+                    if (dateFrom)  url += `date_from=${dateFrom}&`;
+                    if (dateTo)    url += `date_to=${dateTo}&`;
+                    if (staffType) url += `staff_type=${staffType}&`;
+                    return staffFetch(url).then(r => r.ok ? r.json() : { staff: [] }).catch(() => ({ staff: [] }));
+                }));
+
+                const empMap = {};
+                staffResults.forEach(res => {
+                    (res.staff || []).forEach(s => {
+                        if (!empMap[s.emp_code]) {
+                            empMap[s.emp_code] = { name: s.employee_name || s.emp_code, code: s.emp_code, staffType: s.staff_type || '' };
+                        }
+                    });
+                });
+
+                let employees = Object.values(empMap).sort((a, b) => a.name.localeCompare(b.name));
+
+                if (staffType) {
+                    employees = employees.filter(e => !e.staffType || e.staffType === staffType);
+                }
+
+                if (employees.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-users-slash"></i><p>No employee data found for this date range / filter</p></div>';
+                    return;
+                }
+
+                const STATUS_PRIORITY = { completed: 6, in_progress: 5, partial: 4, pending: 3, delayed: 2, skipped: 1, na: 1 };
+                const STATUS_LABEL    = { completed: 'Completed', in_progress: 'In Progress', partial: 'Partial', pending: 'Pending', delayed: 'Delayed', skipped: 'Skipped', na: 'N/A' };
+
+                const matrixRows = kras.map((kra, idx) => {
+                    const staffArr = staffResults[idx]?.staff || [];
+                    const empStatus = {};
+                    staffArr.forEach(s => {
+                        if (!employees.find(e => e.code === s.emp_code)) return;
+                        const cur    = empStatus[s.emp_code];
+                        const curPri = cur ? (STATUS_PRIORITY[cur] || 0) : -1;
+                        const newPri = STATUS_PRIORITY[s.completion_status] || 0;
+                        if (newPri > curPri) empStatus[s.emp_code] = s.completion_status;
+                    });
+                    return { kra, empStatus };
+                });
+
+                const shortName = name => {
+                    const parts = (name || '').trim().split(' ');
+                    return parts.length > 1 ? parts[0] + ' ' + parts[parts.length - 1] : parts[0];
+                };
+
+                let html = `<div class="matrix-table-wrap"><table class="matrix-table">
+                    <thead><tr>
+                        <th class="sticky-col-1 kra-col">#</th>
+                        <th class="sticky-col-2 kra-col">KRA Details</th>
+                        ${employees.map(e => {
+                            const isMatch = empSearch && (e.name.toLowerCase().includes(empSearch) || e.code.toLowerCase().includes(empSearch));
+                            return `
+                            <th>
+                                <div class="matrix-emp-header${isMatch ? ' search-highlight' : ''}" title="${escapeHtml(e.name)}">${escapeHtml(shortName(e.name))}</div>
+                                <div style="font-size:10px;color:#9ca3af;margin-top:2px;">${escapeHtml(e.code)}</div>
+                            </th>`;
+                        }).join('')}
+                    </tr></thead>
+                    <tbody>
+                    ${matrixRows.map((row, idx) => `
+                        <tr>
+                            <td class="sticky-col-1 kra-col" style="color:#6b7280;font-weight:700;">${idx + 1}</td>
+                            <td class="sticky-col-2 kra-col">
+                                <div style="font-weight:600;font-size:13px;">${escapeHtml(row.kra.title)}</div>
+                                <div style="font-size:11px;color:#9ca3af;">${escapeHtml(row.kra.kra_code || '')}</div>
+                            </td>
+                            ${employees.map(e => {
+                                const st = row.empStatus[e.code];
+                                if (!st) return `<td><span style="color:#d1d5db;font-size:16px;">—</span></td>`;
+                                return `<td><span class="matrix-status ${st}">${STATUS_LABEL[st] || st}</span></td>`;
+                            }).join('')}
+                        </tr>`).join('')}
+                    </tbody>
+                </table></div>`;
+
+                container.innerHTML = html;
+                matrixLoaded = true;
+
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC-MATRIX]', error);
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Failed to load matrix view</p></div>';
+            }
+        }
+
+        async function loadDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/departments`);
+                if (!response.ok) return;
+                const data = await response.json();
+                const departments = Array.isArray(data) ? data : (data.departments || data.data || []);
+                const select = document.getElementById('filterDepartment');
+                departments.forEach(dept => {
+                    const option = document.createElement('option');
+                    option.value = dept.id;
+                    option.textContent = dept.name || dept.department_name || `Dept ${dept.id}`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.warn('[DC] Failed to load departments:', error);
+            }
+        }
+        
+        async function loadManagers() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/employees?status=active`);
+                if (!response.ok) return;
+                const data = await response.json();
+                const employees = data.employees || [];
+                const select = document.getElementById('filterManager');
+                employees.forEach(emp => {
+                    const option = document.createElement('option');
+                    option.value = emp.id;
+                    option.textContent = `${emp.first_name || ''} ${emp.last_name || ''}`.trim() + ` (${emp.emp_code})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.warn('[DC] Failed to load managers:', error);
+            }
+        }
+        
+        async function loadDashboard() {
+            const dateFrom     = document.getElementById('filterDateFrom').value;
+            const dateTo       = document.getElementById('filterDateTo').value;
+            const departmentId = document.getElementById('filterDepartment').value;
+            const managerId    = document.getElementById('filterManager').value;
+            const staffType    = document.getElementById('filterStaffType').value;
+            const empSearch    = (document.getElementById('filterEmpSearch').value || '').trim();
+            
+            let url = `${API_BASE}/api/v1/staff/kra/status-dashboard?`;
+            if (dateFrom)     url += `date_from=${dateFrom}&`;
+            if (dateTo)       url += `date_to=${dateTo}&`;
+            if (departmentId) url += `department_id=${departmentId}&`;
+            if (managerId)    url += `reporting_manager_id=${managerId}&`;
+            if (staffType)    url += `staff_type=${staffType}&`;
+            if (empSearch)    url += `search=${encodeURIComponent(empSearch)}&`;
+            
+            const tbody = document.getElementById('dashboardTableBody');
+            tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading...</p></div></td></tr>`;
+            
+            try {
+                const response = await staffFetch(url);
+                if (!response.ok) throw new Error('Failed to load KRA status');
+                
+                const data = await response.json();
+                dashboardData = data.kras || [];
+                
+                updateSummaryCards();
+                sortAndRender();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading dashboard:', error);
+                tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Failed to load KRA status</p></div></td></tr>`;
+            }
+        }
+        
+        function updateSummaryCards() {
+            const cards = document.getElementById('summaryCards');
+            if (dashboardData.length === 0) {
+                cards.style.display = 'none';
+                return;
+            }
+            cards.style.display = 'grid';
+            
+            let totalCompleted = 0, totalOnTime = 0, totalDelayed = 0, totalInstances = 0;
+            dashboardData.forEach(k => {
+                totalCompleted += k.completed_staff || 0;
+                totalOnTime += k.completed_in_time || 0;
+                totalDelayed += k.delayed || 0;
+                totalInstances += k.total_instances || 0;
+            });
+            
+            document.getElementById('totalKras').textContent = dashboardData.length;
+            document.getElementById('totalCompleted').textContent = totalCompleted;
+            document.getElementById('totalOnTime').textContent = totalOnTime;
+            document.getElementById('totalDelayed').textContent = totalDelayed;
+            const overallPct = totalInstances > 0 ? Math.round(totalCompleted / totalInstances * 100) : 0;
+            document.getElementById('overallPct').textContent = overallPct + '%';
+        }
+        
+        function resetFilters() {
+            setDefaultDates();
+            document.getElementById('filterDepartment').value = '';
+            document.getElementById('filterManager').value = '';
+            document.getElementById('filterStaffType').value = '';
+            document.getElementById('filterEmpSearch').value = '';
+            loadDashboard();
+        }
+        
+        function sortTable(field) {
+            const headers = document.querySelectorAll('#statusKraTable th');
+            headers.forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                const icon = th.querySelector('.sort-icon');
+                if (icon) icon.className = 'fas fa-sort sort-icon';
+            });
+            
+            if (sortField === field) {
+                sortAsc = !sortAsc;
+            } else {
+                sortField = field;
+                sortAsc = true;
+            }
+            
+            const currentTh = document.querySelector(`#statusKraTable th[data-field="${field}"]`);
+            if (currentTh) {
+                currentTh.classList.add(sortAsc ? 'sorted-asc' : 'sorted-desc');
+                const icon = currentTh.querySelector('.sort-icon');
+                if (icon) icon.className = `fas fa-sort-${sortAsc ? 'up' : 'down'} sort-icon`;
+            }
+            
+            sortAndRender();
+        }
+        
+        function sortAndRender() {
+            dashboardData.sort((a, b) => {
+                let valA, valB;
+                if (sortField === 'sno') return 0;
+                else if (sortField === 'title') { valA = (a.title || '').toLowerCase(); valB = (b.title || '').toLowerCase(); }
+                else if (sortField === 'frequency') { valA = a.frequency || ''; valB = b.frequency || ''; }
+                else if (sortField === 'assigned_staff') { valA = a.assigned_staff || 0; valB = b.assigned_staff || 0; }
+                else if (sortField === 'completed_staff') { valA = a.completed_staff || 0; valB = b.completed_staff || 0; }
+                else if (sortField === 'completed_in_time') { valA = a.completed_in_time || 0; valB = b.completed_in_time || 0; }
+                else if (sortField === 'delayed') { valA = a.delayed || 0; valB = b.delayed || 0; }
+                else if (sortField === 'pct_completed') { valA = a.pct_completed || 0; valB = b.pct_completed || 0; }
+                else { valA = a[sortField] || ''; valB = b[sortField] || ''; }
+                
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+            
+            renderDashboard();
+        }
+        
+        function renderDashboard() {
+            const tbody = document.getElementById('dashboardTableBody');
+            
+            if (!dashboardData || dashboardData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fas fa-chart-bar"></i><p>No KRA data found for the selected filters</p></div></td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = dashboardData.map((kra, index) => {
+                const pct = kra.pct_completed || 0;
+                let pctColor = '#ef4444';
+                if (pct >= 80) pctColor = '#059669';
+                else if (pct >= 50) pctColor = '#d97706';
+                
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>
+                            <div>
+                                <strong>${escapeHtml(kra.title)}</strong>
+                                <div style="font-size: 11px; color: #6b7280;">${escapeHtml(kra.kra_code)}</div>
+                            </div>
+                        </td>
+                        <td><span class="badge badge-${kra.frequency || 'daily'}">${formatFrequency(kra.frequency)}</span></td>
+                        <td class="metric-blue">${kra.assigned_staff || 0}</td>
+                        <td class="metric-green">${kra.completed_staff || 0}</td>
+                        <td style="color: #059669; font-weight: 600;">${kra.completed_in_time || 0}</td>
+                        <td class="metric-red">${kra.delayed || 0}</td>
+                        <td>
+                            <div class="pct-bar">
+                                <div class="pct-bar-fill">
+                                    <div class="pct-bar-inner" style="width: ${pct}%; background: ${pctColor};"></div>
+                                </div>
+                                <span style="font-weight: 600; color: ${pctColor}; font-size: 13px;">${pct}%</span>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn-view" onclick="viewStaffDetail(${kra.template_id}, '${escapeHtml(kra.title)}', '${escapeHtml(kra.kra_code)}')">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        async function viewStaffDetail(templateId, title, kraCode) {
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+            const departmentId = document.getElementById('filterDepartment').value;
+            const managerId = document.getElementById('filterManager').value;
+            
+            let url = `${API_BASE}/api/v1/staff/kra/status-dashboard/${templateId}/staff?`;
+            if (dateFrom) url += `date_from=${dateFrom}&`;
+            if (dateTo) url += `date_to=${dateTo}&`;
+            if (departmentId) url += `department_id=${departmentId}&`;
+            if (managerId) url += `reporting_manager_id=${managerId}&`;
+            
+            document.getElementById('staffDetailInfo').innerHTML = `
+                <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; font-size: 13px;">
+                    <strong>${escapeHtml(title)}</strong> (${escapeHtml(kraCode)})
+                    <span style="margin-left: 12px; color: #6b7280;">Date: ${dateFrom || 'Today'} to ${dateTo || 'Today'}</span>
+                </div>
+            `;
+            document.getElementById('staffDetailBody').innerHTML = '<tr><td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin me-2"></i>Loading...</td></tr>';
+            
+            new bootstrap.Modal(document.getElementById('staffDetailModal')).show();
+            
+            try {
+                const response = await staffFetch(url);
+                if (!response.ok) throw new Error('Failed to load staff detail');
+                
+                const data = await response.json();
+                detailData = data.staff || [];
+                detailSortField = 'employee_name';
+                detailSortAsc = true;
+                sortAndRenderDetail();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading staff detail:', error);
+                document.getElementById('staffDetailBody').innerHTML = '<tr><td colspan="8" class="text-center text-danger">Failed to load staff details</td></tr>';
+            }
+        }
+        
+        function sortDetailTable(field) {
+            const headers = document.querySelectorAll('.staff-detail-table th');
+            headers.forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                const icon = th.querySelector('.sort-icon');
+                if (icon) icon.className = 'fas fa-sort sort-icon';
+            });
+            
+            if (detailSortField === field) {
+                detailSortAsc = !detailSortAsc;
+            } else {
+                detailSortField = field;
+                detailSortAsc = true;
+            }
+            
+            const currentTh = document.querySelector(`th[data-detail-field="${field}"]`);
+            if (currentTh) {
+                currentTh.classList.add(detailSortAsc ? 'sorted-asc' : 'sorted-desc');
+                const icon = currentTh.querySelector('.sort-icon');
+                if (icon) icon.className = `fas fa-sort-${detailSortAsc ? 'up' : 'down'} sort-icon`;
+            }
+            
+            sortAndRenderDetail();
+        }
+        
+        function sortAndRenderDetail() {
+            detailData.sort((a, b) => {
+                let valA, valB;
+                if (detailSortField === 'sno') return 0;
+                else if (detailSortField === 'employee_name') { valA = (a.employee_name || '').toLowerCase(); valB = (b.employee_name || '').toLowerCase(); }
+                else if (detailSortField === 'emp_code') { valA = a.emp_code || ''; valB = b.emp_code || ''; }
+                else if (detailSortField === 'instance_date') { valA = a.instance_date || ''; valB = b.instance_date || ''; }
+                else if (detailSortField === 'completion_status') { valA = a.completion_status || ''; valB = b.completion_status || ''; }
+                else if (detailSortField === 'timing') { valA = a.timing || ''; valB = b.timing || ''; }
+                else if (detailSortField === 'completed_at') { valA = a.completed_at || ''; valB = b.completed_at || ''; }
+                else if (detailSortField === 'time_spent_minutes') { valA = a.time_spent_minutes || 0; valB = b.time_spent_minutes || 0; }
+                else { valA = a[detailSortField] || ''; valB = b[detailSortField] || ''; }
+                
+                if (valA < valB) return detailSortAsc ? -1 : 1;
+                if (valA > valB) return detailSortAsc ? 1 : -1;
+                return 0;
+            });
+            
+            renderStaffDetail();
+        }
+        
+        function renderStaffDetail() {
+            const tbody = document.getElementById('staffDetailBody');
+            
+            if (!detailData || detailData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No staff data found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = detailData.map((staff, index) => {
+                const statusClass = staff.completion_status === 'completed' ? 'status-completed' 
+                    : staff.completion_status === 'in_progress' ? 'status-in_progress' 
+                    : 'status-pending';
+                
+                const timingClass = staff.timing === 'Delayed' ? 'status-delayed' 
+                    : staff.timing === 'On Time' ? 'status-ontime' 
+                    : 'status-pending';
+                
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><strong>${escapeHtml(staff.employee_name)}</strong></td>
+                        <td>${escapeHtml(staff.emp_code)}</td>
+                        <td>${formatDate(staff.instance_date)}</td>
+                        <td><span class="${statusClass}">${formatStatus(staff.completion_status)}</span></td>
+                        <td><span class="${timingClass}">${staff.timing || '—'}</span></td>
+                        <td>${staff.completed_at ? formatDateTime(staff.completed_at) : '—'}</td>
+                        <td>${staff.time_spent_minutes ? staff.time_spent_minutes + ' min' : '—'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function formatFrequency(freq) {
+            const map = {
+                'daily': 'Daily', 'weekly': 'Weekly', 'bi_weekly': 'Bi-Weekly',
+                'monthly': 'Monthly', 'quarterly': 'Quarterly', 'half_yearly': 'Half-Yearly',
+                'yearly': 'Yearly', 'every_n_days': 'Every N Days', 'every_15_days': 'Every 15 Days',
+                'selected_days': 'Selected Days', 'custom': 'Custom', 'adhoc': 'Ad-hoc'
+            };
+            return map[freq] || freq || 'Daily';
+        }
+        
+        function formatStatus(status) {
+            const map = { 'completed': 'Completed', 'pending': 'Pending', 'in_progress': 'In Progress', 'partial': 'Partial', 'skipped': 'Skipped', 'na': 'N/A' };
+            return map[status] || status || '—';
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '—';
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        
+        function formatDateTime(dtStr) {
+            if (!dtStr) return '—';
+            return new Date(dtStr).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function buildFilterPayload() {
+            const fallbackSearch = document.getElementById('reviewFallbackEmployeeSearch');
+            const searchText = fallbackSearch ? fallbackSearch.value : '';
+            
+            if (universalFilterReady && universalFilter && universalFilter.isReady && !universalFilter.initFailed) {
+                try {
+                    const filters = universalFilter.getFilters();
+                    filters.search = filters.search || searchText;
+                    return filters;
+                } catch (e) {
+                    console.warn('[DC] Error getting universal filter values:', e);
+                }
+            }
+            const fallbackDept = document.getElementById('reviewFallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('reviewFallbackStaffTypeFilter');
+            return {
+                company_id: null,
+                staff_type: fallbackStaff ? (fallbackStaff.value || null) : null,
+                department_id: fallbackDept ? (fallbackDept.value || null) : null,
+                employee_id: null,
+                employee: null,
+                search: searchText || null
+            };
+        }
+
+        async function loadReviewFallbackDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/departments`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('reviewFallbackDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading fallback departments:', error);
+            }
+        }
+
+        function hideReviewFallbackFilters() {
+            const fallback = document.getElementById('reviewFallbackFiltersContainer');
+            if (fallback) fallback.style.display = 'none';
+        }
+
+        function debounceReviewEmployeeSearch() {
+            if (employeeSearchTimeout) clearTimeout(employeeSearchTimeout);
+            employeeSearchTimeout = setTimeout(() => {
+                applyReviewFilters();
+            }, 300);
+        }
+
+        function toggleReviewFilters() {
+            if (filterPanel.style.display === 'none') {
+                filterPanel.style.display = 'block';
+            } else {
+                filterPanel.style.display = 'none';
+            }
+        }
+
+        async function loadPendingKras() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/kra/manager-review/pending`);
+                
+                if (!response.ok) throw new Error('Failed to load KRAs');
+                
+                const data = await response.json();
+                
+                if (data.no_review_access) {
+                    updateReviewStats(data);
+                    document.getElementById('kraTableBody').innerHTML = `
+                        <tr><td colspan="13">
+                            <div class="empty-state">
+                                <i class="fas fa-users" style="color: #9ca3af;"></i>
+                                <p>No team members assigned for review.</p>
+                                <small style="color: #9ca3af;">KRA reviews are available when you have team members reporting to you.</small>
+                            </div>
+                        </td></tr>`;
+                    return;
+                }
+                
+                allKras = data.pending_kras || [];
+                
+                updateReviewStats(data);
+                renderKras(allKras);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading KRAs:', error);
+                document.getElementById('kraTableBody').innerHTML = `
+                    <tr><td colspan="13">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>Failed to load KRAs. Please try again.</p>
+                        </div>
+                    </td></tr>`;
+            }
+        }
+
+        function updateReviewStats(data) {
+            document.getElementById('statPending').textContent = data.pending_count || 0;
+            document.getElementById('statApproved').textContent = data.approved_today || 0;
+            document.getElementById('statRejected').textContent = data.rejected_today || 0;
+        }
+
+        async function applyReviewFilters() {
+            try {
+                const dateFrom = document.getElementById('reviewFilterDateFrom').value;
+                const dateTo = document.getElementById('reviewFilterDateTo').value;
+                const frequency = document.getElementById('reviewFilterFrequency').value;
+                
+                const completionStatuses = Array.from(document.querySelectorAll('.status-checkbox:checked'))
+                    .map(cb => cb.value).join(',');
+                const reviewStatuses = Array.from(document.querySelectorAll('.review-status-checkbox:checked'))
+                    .map(cb => cb.value).join(',');
+                
+                const filters = buildFilterPayload();
+                
+                let url = `${API_BASE}/api/v1/staff/kra/manager-review/pending?`;
+                if (dateFrom) url += `date_from=${dateFrom}&`;
+                if (dateTo) url += `date_to=${dateTo}&`;
+                if (frequency) url += `frequency=${frequency}&`;
+                if (completionStatuses) url += `completion_status=${completionStatuses}&`;
+                if (reviewStatuses) url += `manager_review_status=${reviewStatuses}&`;
+                if (filters.department_id) url += `department_id=${filters.department_id}&`;
+                if (filters.staff_type) url += `staff_type=${filters.staff_type}&`;
+                if (filters.employee_id) url += `employee_id=${filters.employee_id}&`;
+                if (filters.search) url += `search=${encodeURIComponent(filters.search)}&`;
+                
+                const response = await staffFetch(url);
+                
+                if (!response.ok) throw new Error('Failed to apply filters');
+                
+                const data = await response.json();
+                allKras = data.pending_kras || [];
+                updateReviewStats(data);
+                currentPage = 1;
+                renderKras(allKras);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error applying filters:', error);
+                showToast('Failed to apply filters', 'error');
+            }
+        }
+
+        function sortKras(field) {
+            const headers = document.querySelectorAll('#reviewKraTable thead th[data-review-field]');
+            headers.forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                const icon = th.querySelector('.sort-icon');
+                if (icon) icon.className = 'fas fa-sort sort-icon';
+            });
+            
+            if (kraSortField === field) {
+                kraSortAsc = !kraSortAsc;
+            } else {
+                kraSortField = field;
+                kraSortAsc = true;
+            }
+            
+            const currentTh = document.querySelector(`#reviewKraTable th[data-review-field="${field}"]`);
+            if (currentTh) {
+                currentTh.classList.add(kraSortAsc ? 'sorted-asc' : 'sorted-desc');
+                const icon = currentTh.querySelector('.sort-icon');
+                if (icon) icon.className = `fas fa-sort-${kraSortAsc ? 'up' : 'down'} sort-icon`;
+            }
+            
+            allKras.sort((a, b) => {
+                let valA, valB;
+                
+                if (field === 'employee_name') {
+                    valA = (a.employee_name || '').toLowerCase();
+                    valB = (b.employee_name || '').toLowerCase();
+                } else if (field === 'title') {
+                    valA = (a.title || '').toLowerCase();
+                    valB = (b.title || '').toLowerCase();
+                } else if (field === 'instance_date' || field === 'updated_at') {
+                    valA = new Date(a[field] || 0).getTime();
+                    valB = new Date(b[field] || 0).getTime();
+                } else if (field === 'self_rating' || field === 'time_spent_minutes') {
+                    valA = a[field] || 0;
+                    valB = b[field] || 0;
+                } else {
+                    valA = (a[field] || '').toString().toLowerCase();
+                    valB = (b[field] || '').toString().toLowerCase();
+                }
+                
+                if (valA < valB) return kraSortAsc ? -1 : 1;
+                if (valA > valB) return kraSortAsc ? 1 : -1;
+                return 0;
+            });
+            
+            currentPage = 1;
+            renderKras(allKras);
+        }
+
+        function resetReviewFilters() {
+            document.getElementById('reviewFilterDateFrom').value = '';
+            document.getElementById('reviewFilterDateTo').value = '';
+            document.getElementById('reviewFilterFrequency').value = '';
+            document.querySelectorAll('.status-checkbox, .review-status-checkbox').forEach(cb => cb.checked = false);
+            
+            const fallbackDept = document.getElementById('reviewFallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('reviewFallbackStaffTypeFilter');
+            const fallbackSearch = document.getElementById('reviewFallbackEmployeeSearch');
+            if (fallbackDept) fallbackDept.value = '';
+            if (fallbackStaff) fallbackStaff.value = '';
+            if (fallbackSearch) fallbackSearch.value = '';
+            
+            if (universalFilterReady && universalFilter && typeof universalFilter.clearFilters === 'function') {
+                universalFilter.clearFilters();
+            }
+            
+            loadPendingKras();
+        }
+
+        function renderKras(kras) {
+            const tbody = document.getElementById('kraTableBody');
+            const start = (currentPage - 1) * pageSize;
+            const paginatedKras = kras.slice(start, start + pageSize);
+            
+            if (!kras || kras.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="13">
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-check"></i>
+                            <p>No KRAs matching the selected filters</p>
+                        </div>
+                    </td></tr>`;
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            tbody.innerHTML = paginatedKras.map(kra => `
+                <tr>
+                    <td class="checkbox-cell">
+                        <input type="checkbox" class="kra-checkbox" value="${kra.id}" 
+                            ${selectedKras.has(kra.id) ? 'checked' : ''} 
+                            onchange="toggleKraSelection(${kra.id})">
+                    </td>
+                    <td>
+                        <div class="employee-cell">
+                            <div class="employee-avatar">${getInitials(kra.employee_name)}</div>
+                            <div class="employee-info">
+                                <span class="employee-name">${escapeHtml(kra.employee_name || 'Unknown')}</span>
+                                <span class="employee-id">${escapeHtml(kra.employee_id || '')}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td><strong>${escapeHtml(kra.title)}</strong></td>
+                    <td><span class="badge badge-${kra.frequency || 'secondary'}">${formatFrequency(kra.frequency)}</span></td>
+                    <td>${kra.target_time || '<span style="color:#9ca3af;">—</span>'}</td>
+                    <td>${renderRating(kra.self_rating)}</td>
+                    <td><small>${kra.instance_date ? formatDate(kra.instance_date) : '-'}</small></td>
+                    <td><small>${kra.completed_at ? formatCompletedAt(kra.completed_at, kra.is_delayed) : '<span style="color:#9ca3af;">—</span>'}</small></td>
+                    <td><small>${kra.updated_at ? formatDate(kra.updated_at) : '-'}</small></td>
+                    <td><small>${formatTimeUtilized(kra.time_spent_minutes)}</small></td>
+                    <td>${renderCompletionStatus(kra.completion_status, kra.submitted_at)}</td>
+                    <td>${renderReviewStatus(kra.manager_review_status)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-action btn-view" onclick="viewKra(${kra.id})" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${kra.submitted_at ? `
+                            <button class="btn-action btn-approve" onclick="approveKra(${kra.id})" title="Approve">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn-action btn-edit" onclick="openEditModal(${kra.id})" title="Edit & Approve">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action btn-reject" onclick="openRejectModal(${kra.id})" title="Reject">
+                                <i class="fas fa-times"></i>
+                            </button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            renderPagination(kras.length);
+            updateBulkActionsVisibility();
+        }
+
+        function renderRating(rating) {
+            if (!rating) return '<span style="color: #9ca3af;">-</span>';
+            let stars = '';
+            for (let i = 1; i <= 5; i++) {
+                stars += `<i class="fas fa-star ${i <= rating ? '' : 'empty'}"></i>`;
+            }
+            return `<div class="rating-stars">${stars}</div>`;
+        }
+
+        function renderCompletionStatus(status, submittedAt) {
+            if (submittedAt) {
+                return `<span class="badge badge-primary" style="display:inline-block; padding:0.5rem 0.75rem; background:#c7d2fe; color:#4338ca;"><i class="fas fa-paper-plane me-1"></i>Submitted</span>`;
+            }
+            const statusMap = {
+                'pending': { label: 'Pending', class: 'warning', icon: 'hourglass-half' },
+                'in_progress': { label: 'In Progress', class: 'info', icon: 'spinner' },
+                'completed': { label: 'Completed', class: 'success', icon: 'check-circle' },
+                'partial': { label: 'Partial', class: 'warning', icon: 'exclamation-circle' },
+                'skipped': { label: 'Skipped', class: 'danger', icon: 'times-circle' },
+                'na': { label: 'N/A (Exempted)', class: 'secondary', icon: 'ban' }
+            };
+            const config = statusMap[status] || { label: status, class: 'secondary', icon: 'question-circle' };
+            return `<span class="badge badge-${config.class}" style="display:inline-block; padding:0.5rem 0.75rem;"><i class="fas fa-${config.icon} me-1"></i>${config.label}</span>`;
+        }
+
+        function renderReviewStatus(status) {
+            const statusMap = {
+                'pending_review': { label: 'Pending Review', class: 'warning', icon: 'hourglass-half' },
+                'approved': { label: 'Approved', class: 'success', icon: 'check-circle' },
+                'edited_by_manager': { label: 'Approved (Edited)', class: 'info', icon: 'edit' },
+                'rejected': { label: 'Rejected', class: 'danger', icon: 'times-circle' }
+            };
+            const config = statusMap[status] || { label: status, class: 'secondary', icon: 'question-circle' };
+            return `<span class="badge badge-${config.class}" style="display:inline-block; padding:0.5rem 0.75rem;"><i class="fas fa-${config.icon} me-1"></i>${config.label}</span>`;
+        }
+
+        function renderPagination(totalItems) {
+            const totalPages = Math.ceil(totalItems / pageSize);
+            if (totalPages <= 1) {
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            let html = `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span style="padding: 8px;">...</span>`;
+                }
+            }
+            
+            html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+            
+            document.getElementById('pagination').innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            renderKras(allKras);
+        }
+
+        function toggleSelectAll() {
+            const checked = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.kra-checkbox').forEach(cb => {
+                cb.checked = checked;
+                const kraId = parseInt(cb.value);
+                if (checked) selectedKras.add(kraId);
+                else selectedKras.delete(kraId);
+            });
+            updateBulkActionsVisibility();
+        }
+
+        function toggleKraSelection(kraId) {
+            if (selectedKras.has(kraId)) selectedKras.delete(kraId);
+            else selectedKras.add(kraId);
+            updateBulkActionsVisibility();
+        }
+
+        function updateBulkActionsVisibility() {
+            const bulkActions = document.getElementById('bulkActions');
+            const selectedCount = document.getElementById('selectedCount');
+            if (selectedKras.size > 0) {
+                bulkActions.classList.remove('hidden');
+                selectedCount.textContent = selectedKras.size;
+            } else {
+                bulkActions.classList.add('hidden');
+            }
+        }
+
+        function clearSelection() {
+            selectedKras.clear();
+            document.querySelectorAll('.kra-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('selectAll').checked = false;
+            updateBulkActionsVisibility();
+        }
+
+        async function viewKra(kraId) {
+            try {
+                const kra = allKras.find(k => k.id === kraId);
+                if (!kra) throw new Error('KRA not found in loaded data');
+                
+                document.getElementById('kraDetailContent').innerHTML = `
+                    <div class="detail-row">
+                        <span class="detail-label">Title</span>
+                        <span class="detail-value"><strong>${escapeHtml(kra.title)}</strong></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Description</span>
+                        <span class="detail-value">${escapeHtml(kra.description || '-')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Employee</span>
+                        <span class="detail-value">${escapeHtml(kra.employee_name || '-')}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Frequency</span>
+                        <span class="detail-value"><span class="badge badge-${kra.frequency || 'secondary'}">${formatFrequency(kra.frequency)}</span></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Due Date</span>
+                        <span class="detail-value">${kra.due_date ? formatDate(kra.due_date) : '-'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Self Rating</span>
+                        <span class="detail-value">${kra.self_rating ? `${kra.self_rating}/5` : '-'}</span>
+                    </div>
+                    ${kra.progress_notes ? `
+                        <div class="mt-3">
+                            <strong>Progress Notes:</strong>
+                            <div class="notes-display">${escapeHtml(kra.progress_notes)}</div>
+                        </div>
+                    ` : ''}
+                `;
+                
+                new bootstrap.Modal(document.getElementById('kraDetailModal')).show();
+            } catch (error) {
+                console.error('Error loading KRA:', error);
+                showToast('Failed to load KRA details', 'error');
+            }
+        }
+
+        async function approveKra(kraId) {
+            if (!confirm('Approve this KRA?')) return;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/kra/manager-review/approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({ instance_id: kraId })
+                });
+                
+                if (!response.ok) {
+                    const errData = await response.json();
+                    const detail = errData.detail || 'Failed to approve KRA';
+                    const isAlreadyReviewed = detail.toLowerCase().includes('cannot approve') || detail.toLowerCase().includes('status:');
+                    showToast(detail, isAlreadyReviewed ? 'warning' : 'error');
+                    return;
+                }
+                
+                await loadPendingKras();
+                showToast('KRA approved successfully', 'success');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error approving KRA:', error);
+                showToast(error.message || 'Failed to approve KRA', 'error');
+            }
+        }
+
+        function openEditModal(kraId) {
+            document.getElementById('editKraId').value = kraId;
+            document.getElementById('editManagerNotes').value = '';
+            document.getElementById('editManagerRating').value = '';
+            new bootstrap.Modal(document.getElementById('editApproveModal')).show();
+        }
+
+        async function submitEditApprove() {
+            const kraId = document.getElementById('editKraId').value;
+            const notes = document.getElementById('editManagerNotes').value.trim();
+            const rating = document.getElementById('editManagerRating').value;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/kra/manager-review/edit-approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        instance_id: parseInt(kraId),
+                        manager_notes: notes || null,
+                        manager_rating: rating ? parseInt(rating) : null
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errData = await response.json();
+                    const detail = errData.detail || 'Failed to edit KRA';
+                    const isAlreadyReviewed = detail.toLowerCase().includes('cannot') || detail.toLowerCase().includes('status:');
+                    showToast(detail, isAlreadyReviewed ? 'warning' : 'error');
+                    return;
+                }
+                
+                document.activeElement?.blur();
+                bootstrap.Modal.getInstance(document.getElementById('editApproveModal')).hide();
+                await loadPendingKras();
+                showToast('KRA edited and approved successfully', 'success');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error editing KRA:', error);
+                showToast(error.message || 'Failed to edit KRA', 'error');
+            }
+        }
+
+        function openRejectModal(kraId) {
+            document.getElementById('rejectKraId').value = kraId;
+            document.getElementById('rejectReason').value = '';
+            new bootstrap.Modal(document.getElementById('rejectModal')).show();
+        }
+
+        async function submitReject() {
+            const kraId = document.getElementById('rejectKraId').value;
+            const reason = document.getElementById('rejectReason').value.trim();
+            
+            if (!reason) {
+                showToast('Please provide a rejection reason', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/kra/manager-review/reject`, {
+                    method: 'POST',
+                    body: JSON.stringify({ instance_id: parseInt(kraId), rejection_reason: reason })
+                });
+                
+                if (!response.ok) {
+                    const errData = await response.json();
+                    const detail = errData.detail || 'Failed to reject KRA';
+                    const isAlreadyReviewed = detail.toLowerCase().includes('cannot reject') || detail.toLowerCase().includes('status:');
+                    showToast(detail, isAlreadyReviewed ? 'warning' : 'error');
+                    return;
+                }
+                
+                document.activeElement?.blur();
+                bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+                await loadPendingKras();
+                showToast('KRA rejected successfully', 'info');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error rejecting KRA:', error);
+                showToast(error.message || 'Failed to reject KRA', 'error');
+            }
+        }
+
+        async function bulkApprove() {
+            if (selectedKras.size === 0) return;
+            if (!confirm(`Approve ${selectedKras.size} selected KRAs?`)) return;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/kra/manager-review/bulk-approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({ kra_ids: Array.from(selectedKras) })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to bulk approve');
+                }
+                
+                const result = await response.json();
+                clearSelection();
+                await loadPendingKras();
+                showToast(`Successfully approved ${result.approved_count} KRAs`, 'success');
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error bulk approving:', error);
+                showToast(error.message || 'Failed to bulk approve KRAs', 'error');
+            }
+        }
+
+        function getInitials(name) {
+            if (!name) return '??';
+            return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        }
+
+        function formatCompletedAt(completedAt, isDelayed) {
+            if (!completedAt) return '<span style="color:#9ca3af;">—</span>';
+            var ca = new Date(completedAt);
+            var txt = ca.toLocaleDateString('en-IN', {day:'2-digit',month:'short'}) + ' ' + ca.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',hour12:true});
+            if (isDelayed) txt = '<span style="background:#fef2f2;color:#dc2626;padding:2px 6px;border-radius:4px;font-size:0.7rem;font-weight:600;">DELAYED</span> ' + txt;
+            return txt;
+        }
+
+        function formatTimeUtilized(minutes) {
+            if (!minutes || minutes === 0) return '-';
+            if (minutes < 60) return `${minutes} min`;
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            if (mins === 0) return `${hours}h`;
+            return `${hours}h ${mins}m`;
+        }
+
+        function initSummaryDates() {
+            const today = new Date();
+            const startDate = new Date(today);
+            startDate.setDate(startDate.getDate() - 30);
+            document.getElementById('summaryDateFrom').value = startDate.toISOString().split('T')[0];
+            document.getElementById('summaryDateTo').value = today.toISOString().split('T')[0];
+        }
+
+        function updateScopeOptions() {
+            const roleHierarchy = currentUser?.role?.hierarchy_level || 0;
+            const roleName = currentUser?.role_name || '';
+            const isVgk = roleHierarchy >= 150 || 
+                          roleName === 'Key Leadership' || 
+                          roleName === 'Executive Assistant';
+            const isManager = currentUser?.has_direct_reports === true;
+            
+            document.getElementById('teamScopeOption').style.display = isManager || isVgk ? '' : 'none';
+            document.getElementById('allScopeOption').style.display = isVgk ? '' : 'none';
+        }
+
+        async function loadSummaryDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/departments`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('summaryDepartment');
+                    select.innerHTML = '<option value="">All Departments</option>';
+                    (data.departments || data || []).forEach(dept => {
+                        select.innerHTML += `<option value="${dept.id}">${escapeHtml(dept.name)}</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading summary departments:', e);
+            }
+        }
+
+        async function loadSummaryEmployees(departmentId = '') {
+            try {
+                let url = `${API_BASE}/api/v1/staff/tasks/assignable-employees`;
+                if (departmentId) url += `?department_id=${departmentId}`;
+                
+                const response = await staffFetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    summaryEmployees = data.employees || data || [];
+                    const select = document.getElementById('summaryEmployee');
+                    select.innerHTML = '<option value="">All Employees</option>';
+                    summaryEmployees.forEach(emp => {
+                        select.innerHTML += `<option value="${emp.id}">${escapeHtml(emp.full_name || emp.name)} (${emp.employee_id || ''})</option>`;
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading summary employees:', e);
+            }
+        }
+
+        function onSummaryDeptChange() {
+            const deptId = document.getElementById('summaryDepartment').value;
+            loadSummaryEmployees(deptId);
+            loadTeamSummary();
+        }
+
+        function clearSummaryFilters() {
+            document.getElementById('summaryScope').value = 'self';
+            document.getElementById('summaryDepartment').value = '';
+            document.getElementById('summaryEmployee').value = '';
+            initSummaryDates();
+            loadSummaryEmployees();
+            loadTeamSummary();
+        }
+
+        async function loadTeamSummary() {
+            if (!summaryLoaded) {
+                initSummaryDates();
+                updateScopeOptions();
+                await loadSummaryDepartments();
+                await loadSummaryEmployees();
+                summaryLoaded = true;
+            }
+            
+            const scope = document.getElementById('summaryScope').value;
+            const dateFrom = document.getElementById('summaryDateFrom').value;
+            const dateTo = document.getElementById('summaryDateTo').value;
+            const departmentId = document.getElementById('summaryDepartment').value;
+            const employeeId = document.getElementById('summaryEmployee').value;
+            
+            const tbody = document.getElementById('summaryTableBody');
+            tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading summary...</p></div></td></tr>`;
+            
+            try {
+                let url = `${API_BASE}/api/v1/staff/kra/team-summary?scope=${scope}`;
+                if (dateFrom) url += `&date_from=${dateFrom}`;
+                if (dateTo) url += `&date_to=${dateTo}`;
+                if (departmentId) url += `&department_id=${departmentId}`;
+                if (employeeId) url += `&employee_id=${employeeId}`;
+                
+                const response = await staffFetch(url);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to load summary');
+                }
+                
+                const data = await response.json();
+                summaryData = data.summary || [];
+                renderSummaryTable();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading team summary:', error);
+                tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>${error.message}</p></div></td></tr>`;
+            }
+        }
+
+        function sortSummary(field) {
+            if (summarySortField === field) {
+                summarySortAsc = !summarySortAsc;
+            } else {
+                summarySortField = field;
+                summarySortAsc = true;
+            }
+            
+            summaryData.sort((a, b) => {
+                let valA = a[field];
+                let valB = b[field];
+                if (typeof valA === 'string') valA = valA?.toLowerCase() || '';
+                if (typeof valB === 'string') valB = valB?.toLowerCase() || '';
+                if (valA < valB) return summarySortAsc ? -1 : 1;
+                if (valA > valB) return summarySortAsc ? 1 : -1;
+                return 0;
+            });
+            
+            renderSummaryTable();
+        }
+
+        function renderSummaryTable() {
+            const tbody = document.getElementById('summaryTableBody');
+            
+            if (!summaryData || summaryData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><i class="fas fa-users"></i><p>No data available for the selected filters</p></div></td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = summaryData.map(emp => {
+                const perfColor = emp.performance_percentage >= 80 ? '#10b981' : 
+                                  emp.performance_percentage >= 50 ? '#f59e0b' : '#ef4444';
+                return `
+                    <tr>
+                        <td>
+                            <div class="employee-cell">
+                                <div class="employee-avatar">${getInitials(emp.employee_name)}</div>
+                                <span class="employee-name">${escapeHtml(emp.employee_name)}</span>
+                            </div>
+                        </td>
+                        <td>${escapeHtml(emp.department || '-')}</td>
+                        <td><span class="badge bg-secondary">${emp.assigned_kras}</span></td>
+                        <td><span class="badge bg-success">${emp.completed_kras}</span></td>
+                        <td><span class="badge bg-warning text-dark">${emp.not_completed}</span></td>
+                        <td><span class="badge bg-primary">${emp.approved}</span></td>
+                        <td><span class="badge bg-info">${emp.pending_review}</span></td>
+                        <td><span class="badge bg-danger">${emp.rejected}</span></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="flex: 1; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden;">
+                                    <div style="height: 100%; width: ${emp.performance_percentage}%; background: ${perfColor};"></div>
+                                </div>
+                                <span style="font-weight: 600; color: ${perfColor};">${emp.performance_percentage}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>

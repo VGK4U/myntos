@@ -1,0 +1,550 @@
+<div class="mb-3 text-end"><a href="/dashboard" class="btn btn-primary btn-sm"><i class="fas fa-home me-2"></i>Go to Dashboard</a></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Purchase Benefits Coupons - MNR Business Access Program Discount Coupon</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 1.5rem;
+        }
+        
+        .ev-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .ev-card:hover {
+            box-shadow: 0 5px 20px rgba(16, 185, 129, 0.3);
+            transform: translateY(-3px);
+        }
+        
+        .btn-redeem {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            color: white;
+            border-radius: 8px;
+        }
+        
+        .coupon-badge {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        .stats-box {
+            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .discount-tier-card {
+            border: 2px solid;
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .discount-tier-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .tier-mnr-exclusive {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        }
+        
+        .tier-manthra {
+            border-color: #3b82f6;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        }
+        
+        .tier-graphen {
+            border-color: #10b981;
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        }
+        
+        .tier-amount {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        
+        .example-calc {
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+        /* ── Mobile table: fix iOS overflow scroll ── */
+        html { overflow-x: hidden; }
+        body { overflow-x: visible !important; }
+        @media (max-width: 639px) {
+            .table-responsive { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+            .table-responsive table, .table-responsive .table { min-width: max-content; }
+            .table-responsive th { padding: 7px 8px !important; font-size: 10px !important; white-space: nowrap; }
+            .table-responsive td { padding: 7px 8px !important; font-size: 11px !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- EV Discount Structure Card -->
+        <div class="card mb-4">
+            <div class="card-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <h4 class="mb-0"><i class="bi bi-lightning-charge-fill"></i> EV Discount Structure - RVZ Earnings</h4>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="discount-tier-card tier-mnr-exclusive">
+                            <div class="mb-2"><i class="bi bi-star-fill text-warning" style="font-size: 2rem;"></i></div>
+                            <h5 class="fw-bold text-dark">MNR Exclusive Models</h5>
+                            <div class="tier-amount text-warning">₹15,000</div>
+                            <small class="text-muted">Spot Discount (Maximum Cap)</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="discount-tier-card tier-manthra">
+                            <div class="mb-2"><i class="bi bi-car-front-fill text-primary" style="font-size: 2rem;"></i></div>
+                            <h5 class="fw-bold text-dark">Manthra EV Top Models</h5>
+                            <div class="tier-amount text-primary">₹7,500</div>
+                            <small class="text-muted">Can claim <strong>TWO times</strong></small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="discount-tier-card tier-graphen">
+                            <div class="mb-2"><i class="bi bi-battery-charging text-success" style="font-size: 2rem;"></i></div>
+                            <h5 class="fw-bold text-dark">Graphen Models</h5>
+                            <div class="tier-amount text-success">₹1,000</div>
+                            <small class="text-muted">Discount Available</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Example Calculations -->
+                <h5 class="fw-bold mb-3"><i class="bi bi-calculator"></i> Example Calculations</h5>
+                
+                <div class="example-calc">
+                    <strong class="text-primary">Regular EV - Diamond Package:</strong>
+                    <div class="row mt-2">
+                        <div class="col-sm-4">EV Price: <strong>₹1,00,000</strong></div>
+                        <div class="col-sm-4">Total Discount: <strong>₹7,500</strong></div>
+                        <div class="col-sm-4">Final Price: <strong class="text-success">₹92,500</strong></div>
+                    </div>
+                </div>
+                
+                <div class="example-calc" style="border-left-color: #f59e0b;">
+                    <strong class="text-warning">Manthra EV - Diamond Package (5% bonus):</strong>
+                    <div class="mt-2">
+                        <div>Manthra EV Price: <strong>₹1,00,000</strong></div>
+                        <div>Available: Coupon ₹7,500 + Upgrade Wallet ₹7,500</div>
+                        <div>5% Bonus calculation example</div>
+                        <div class="alert alert-warning py-2 mt-2 mb-0">
+                            <i class="bi bi-exclamation-triangle"></i> <strong>Total Discount Applied: ₹15,000 ONLY</strong><br>
+                            <small>(System maximum cap - you cannot get more than ₹15,000 total)</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="example-calc" style="border-left-color: #8b5cf6;">
+                    <strong style="color: #8b5cf6;">Platinum Package (15% bonus):</strong>
+                    <div class="mt-2">
+                        <div>Coupon: ₹15,000 + Upgrade Wallet: ₹10,000</div>
+                        <div>15% Bonus calculation</div>
+                        <div class="alert alert-info py-2 mt-2 mb-0">
+                            <i class="bi bi-info-circle"></i> <strong>Total Discount Applied: ₹15,000 (fixed maximum)</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main EV Discount Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0"><i class="bi bi-car-front"></i> EV Discount Coupons</h2>
+                    <span class="coupon-badge" id="availableCoupons">0 Coupons Available</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stats-box">
+                            <h3 id="totalRedemptions">0</h3>
+                            <small>Total Redemptions</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-box" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <h3 id="pendingRedemptions">0</h3>
+                            <small>Pending Approval</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-box" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                            <h3 id="approvedRedemptions">0</h3>
+                            <small>Approved</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-box" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                            <h3 id="totalDiscount">₹0</h3>
+                            <small>Total Discount</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-4" id="evTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#evModels">EV Purchase</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#training">Training Courses</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#myRedemptions">My Redemptions</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- EV Models Tab -->
+                    <div class="tab-pane fade show active" id="evModels">
+                        <h5 class="mb-3">Available Electric Vehicles</h5>
+                        <div class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle"></i> <strong>Discount Tiers:</strong> 
+                            MNR Exclusive (₹15,000) | Manthra EV Top Models (₹7,500 x 2) | Graphen Models (₹1,000)
+                        </div>
+                        <div id="evModelsContainer">
+                            <p class="text-center">Loading EV models...</p>
+                        </div>
+                    </div>
+
+                    <!-- Training Tab -->
+                    <div class="tab-pane fade" id="training">
+                        <h5 class="mb-3">Training Course Discount - Skill Hub</h5>
+                        <div class="alert alert-info">
+                            <strong><i class="bi bi-info-circle"></i> Training Benefit:</strong>
+                            Get <strong>₹7,500 discount</strong> on all Skill Hub courses priced above ₹20,000
+                        </div>
+                        <div id="trainingCoursesContainer">
+                            <p class="text-center">Loading training courses...</p>
+                        </div>
+                    </div>
+
+                    <!-- My Redemptions Tab -->
+                    <div class="tab-pane fade" id="myRedemptions">
+                        <h5 class="mb-3">Redemption History</h5>
+                        <div id="redemptionsContainer">
+                            <p class="text-center">Loading redemptions...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Redeem Modal -->
+    <div class="modal fade" id="redeemModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                    <h5 class="modal-title">Redeem Coupon</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="redeemForm">
+                        <input type="hidden" id="redemptionType">
+                        <input type="hidden" id="itemName">
+                        <input type="hidden" id="itemPrice">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Select Coupon</label>
+                            <select class="form-select" id="couponSelect" required>
+                                <option value="">Choose coupon...</option>
+                            </select>
+                        </div>
+                        
+                        <div id="evDetails" style="display: none;">
+                            <div class="alert alert-success">
+                                <strong>EV Model:</strong> <span id="selectedEV"></span><br>
+                                <strong>Price:</strong> ₹<span id="evPrice"></span><br>
+                                <strong>Discount:</strong> ₹<span id="evDiscount"></span><br>
+                                <strong>Final Price:</strong> ₹<span id="evFinal"></span>
+                            </div>
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i> <strong>Maximum Discount Cap: ₹15,000</strong>
+                            </div>
+                        </div>
+                        
+                        <div id="trainingDetails" style="display: none;">
+                            <div class="alert alert-success">
+                                <strong>Course:</strong> <span id="selectedCourse"></span><br>
+                                <strong>Course Fee:</strong> ₹<span id="courseFee"></span><br>
+                                <strong>MNR Discount:</strong> ₹7,500
+                            </div>
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle"></i> <strong>Note:</strong> Discount applies only on courses above ₹20,000
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-redeem" onclick="submitRedemption()">
+                        <i class="bi bi-check-circle"></i> Confirm Redemption
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE_URL = '';
+        let authToken = localStorage.getItem('authToken');
+
+        $(document).ready(function() {
+            if (!authToken) {
+                alert('Please login first');
+                window.location.href = '/login';
+                return;
+            }
+            loadStats();
+            loadEVModels();
+            loadTrainingCourses();
+            loadMyRedemptions();
+        });
+
+        function loadStats() {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/ev-discount/my-stats`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    $('#totalRedemptions').text(data.total_redemptions);
+                    $('#pendingRedemptions').text(data.pending_redemptions);
+                    $('#approvedRedemptions').text(data.approved_redemptions);
+                    $('#totalDiscount').text('₹' + data.total_discount_received.toLocaleString());
+                    $('#availableCoupons').text(data.available_coupons + ' Coupons Available');
+                },
+                error: function(err) {
+                    console.error('Error loading stats:', err);
+                }
+            });
+        }
+
+        function loadEVModels() {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/ev-discount/ev-models`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(evModels) {
+                    let html = '';
+                    if (evModels.length === 0) {
+                        html = '<p class="text-muted text-center">No EV models available</p>';
+                    } else {
+                        evModels.forEach(ev => {
+                            let tierBadge = '';
+                            let tierClass = '';
+                            if (ev.category && ev.category.toLowerCase().includes('mnr exclusive')) {
+                                tierBadge = '<span class="badge bg-warning text-dark">MNR Exclusive - ₹15,000</span>';
+                                tierClass = 'border-warning';
+                            } else if (ev.category && ev.category.toLowerCase().includes('manthra')) {
+                                tierBadge = '<span class="badge bg-primary">Manthra EV - ₹7,500 (2x)</span>';
+                                tierClass = 'border-primary';
+                            } else if (ev.category && ev.category.toLowerCase().includes('graphen')) {
+                                tierBadge = '<span class="badge bg-success">Graphen - ₹1,000</span>';
+                                tierClass = 'border-success';
+                            }
+                            html += `
+                                <div class="ev-card ${tierClass}">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-8">
+                                            <h5>${ev.model}</h5>
+                                            <p class="mb-1"><strong>Price:</strong> ₹${ev.price.toLocaleString()}</p>
+                                            <p class="mb-1"><strong>Category:</strong> ${ev.category || 'N/A'} ${tierBadge}</p>
+                                            ${ev.discount_rate > 0 ? `<span class="badge bg-info">Extra ${ev.discount_rate}% discount for Star/Loyal users</span>` : ''}
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <button class="btn btn-redeem" onclick="showRedeemModal('ev', '${ev.model}', ${ev.price})">
+                                                <i class="bi bi-gift"></i> Redeem Coupon
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    $('#evModelsContainer').html(html);
+                }
+            });
+        }
+
+        function loadTrainingCourses() {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/ev-discount/training-courses`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(courses) {
+                    let html = '';
+                    if (courses.length === 0) {
+                        html = '<p class="text-muted text-center">No training courses available</p>';
+                    } else {
+                        courses.forEach(course => {
+                            const cashback = course.course_fee * (course.max_discount_percentage / 100);
+                            html += `
+                                <div class="ev-card">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-8">
+                                            <h5>${course.course_name}</h5>
+                                            <p class="mb-1"><strong>Course Fee:</strong> ₹${parseFloat(course.course_fee).toLocaleString()}</p>
+                                            <p class="mb-1"><strong>Cashback:</strong> ₹${cashback.toLocaleString()} (${course.max_discount_percentage}%)</p>
+                                            <p class="mb-0 text-muted"><small>${course.duration || ''} ${course.mode ? '| ' + course.mode : ''}</small></p>
+                                        </div>
+                                        <div class="col-md-4 text-end">
+                                            <button class="btn btn-redeem" onclick="showRedeemModal('training', '${course.course_name}', ${course.course_fee}, ${course.max_discount_percentage})">
+                                                <i class="bi bi-book"></i> Redeem for Training
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                    $('#trainingCoursesContainer').html(html);
+                }
+            });
+        }
+
+        function loadMyRedemptions() {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/ev-discount/my-redemptions`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(redemptions) {
+                    let html = '';
+                    if (redemptions.length === 0) {
+                        html = '<p class="text-muted text-center">No redemptions yet</p>';
+                    } else {
+                        html = '<div class="table-responsive"><table class="table"><thead><tr><th>Request ID</th><th>Type</th><th>Item</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>';
+                        redemptions.forEach(r => {
+                            const statusClass = r.status === 'Approved' ? 'success' : r.status === 'Rejected' ? 'danger' : 'warning';
+                            html += `
+                                <tr>
+                                    <td>${r.request_id}</td>
+                                    <td><span class="badge bg-info">${r.redemption_type.toUpperCase()}</span></td>
+                                    <td>${r.ev_model}</td>
+                                    <td>₹${parseFloat(r.redemption_amount).toLocaleString()}</td>
+                                    <td><span class="badge bg-${statusClass}">${r.status}</span></td>
+                                    <td>${new Date(r.request_date).toLocaleDateString()}</td>
+                                </tr>
+                            `;
+                        });
+                        html += '</tbody></table></div>';
+                    }
+                    $('#redemptionsContainer').html(html);
+                }
+            });
+        }
+
+        function showRedeemModal(type, name, price, discountPct = 20) {
+            $('#redemptionType').val(type);
+            $('#itemName').val(name);
+            $('#itemPrice').val(price);
+            
+            $('#couponSelect').html('<option value="">Select your coupon...</option><option value="SAMPLE15K">₹15,000 Coupon</option>');
+            
+            if (type === 'ev') {
+                $('#evDetails').show();
+                $('#trainingDetails').hide();
+                $('#selectedEV').text(name);
+                $('#evPrice').text(price.toLocaleString());
+                let discount = Math.min(15000, price);
+                $('#evDiscount').text(discount.toLocaleString());
+                $('#evFinal').text((price - discount).toLocaleString());
+            } else {
+                $('#evDetails').hide();
+                $('#trainingDetails').show();
+                $('#selectedCourse').text(name);
+                $('#courseFee').text(price.toLocaleString());
+                const cashback = price * (discountPct / 100);
+                $('#cashbackAmount').text(cashback.toLocaleString());
+            }
+            
+            $('#redeemModal').modal('show');
+        }
+
+        function submitRedemption() {
+            const type = $('#redemptionType').val();
+            const coupon = $('#couponSelect').val();
+            const itemName = $('#itemName').val();
+            const price = parseFloat($('#itemPrice').val());
+            
+            if (!coupon) {
+                alert('Please select a coupon');
+                return;
+            }
+            
+            const data = {
+                coupon_code: coupon,
+                ev_model: itemName,
+                redemption_type: type
+            };
+            
+            if (type === 'training') {
+                data.course_name = itemName;
+                data.course_fee = price;
+            }
+            
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/ev-discount/redeem`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function(response) {
+                    alert('Redemption request submitted successfully! Request ID: ' + response.request_id);
+                    $('#redeemModal').modal('hide');
+                    loadStats();
+                    loadMyRedemptions();
+                },
+                error: function(err) {
+                    alert('Error: ' + (err.responseJSON?.detail || 'Failed to submit redemption'));
+                }
+            });
+        }
+    </script>
+</body>
+</html>

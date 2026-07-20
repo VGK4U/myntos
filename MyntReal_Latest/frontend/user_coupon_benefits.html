@@ -1,0 +1,344 @@
+<style>
+    .benefits-page .page-banner {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        border-radius: 16px; padding: 24px; margin-bottom: 24px; color: white;
+    }
+    .benefits-page .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+    .benefits-page .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+    
+    .benefits-page .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    
+    .benefits-page .summary-card {
+        background: white; border-radius: 16px; padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;
+    }
+    .benefits-page .summary-card .icon {
+        width: 56px; height: 56px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 16px; font-size: 24px;
+    }
+    .benefits-page .summary-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+    .benefits-page .summary-card .label { color: #6b7280; font-size: 13px; margin-top: 4px; }
+    
+    .benefits-page .card-green .icon { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
+    .benefits-page .card-blue .icon { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #2563eb; }
+    .benefits-page .card-purple .icon { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #7c3aed; }
+    .benefits-page .card-gold .icon { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
+    
+    .benefits-page .card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: none; margin-bottom: 24px; }
+    .benefits-page .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 20px 24px; }
+    .benefits-page .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 10px; }
+    .benefits-page .card-body { padding: 24px; }
+    
+    .benefits-page .benefit-item {
+        border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 16px;
+        transition: all 0.2s; background: #fafafa;
+    }
+    .benefits-page .benefit-item:hover { border-color: #059669; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.1); }
+    
+    .benefits-page .benefit-number {
+        width: 32px; height: 32px; border-radius: 50%;
+        background: linear-gradient(135deg, #059669, #047857);
+        color: white; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 14px; flex-shrink: 0;
+    }
+    .benefits-page .benefit-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .benefits-page .benefit-title { font-weight: 600; color: #1f2937; font-size: 16px; flex: 1; }
+    .benefits-page .benefit-details { margin-left: 44px; }
+    .benefits-page .benefit-details ul { margin: 0; padding-left: 20px; color: #4b5563; font-size: 14px; }
+    .benefits-page .benefit-details li { margin-bottom: 6px; }
+    
+    .benefits-page .benefit-footer { 
+        margin-left: 44px; margin-top: 12px; padding-top: 12px; 
+        border-top: 1px dashed #e5e7eb; 
+    }
+    
+    .benefits-page .btn-add-lead {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border: none; color: white; border-radius: 8px; padding: 8px 16px;
+        font-weight: 600; font-size: 13px; display: inline-flex; align-items: center; gap: 6px;
+        text-decoration: none; transition: all 0.2s;
+    }
+    .benefits-page .btn-add-lead:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); color: white; transform: translateY(-1px); }
+    
+    .benefits-page .charges-section {
+        background: #fef3c7; border-left: 4px solid #f59e0b;
+        padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;
+    }
+    .benefits-page .charges-section h6 { color: #92400e; margin-bottom: 10px; font-weight: 600; }
+    .benefits-page .charges-section ul { margin: 0; padding-left: 20px; color: #92400e; font-size: 14px; }
+    
+    .benefits-page .post-utilisation {
+        background: #ede9fe; border-left: 4px solid #7c3aed;
+        padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;
+    }
+    .benefits-page .post-utilisation h6 { color: #5b21b6; margin-bottom: 10px; font-weight: 600; }
+    .benefits-page .post-utilisation p { margin: 0; color: #6b21a8; font-size: 14px; }
+    
+    .benefits-page .lead-section {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        border-radius: 12px; padding: 24px; text-align: center;
+    }
+    .benefits-page .lead-section h6 { color: #1e40af; margin-bottom: 12px; font-weight: 600; }
+    .benefits-page .lead-section p { color: #1e3a8a; font-size: 14px; margin-bottom: 16px; }
+    
+    .benefits-page .btn-lead {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        border: none; color: white; border-radius: 10px; padding: 12px 32px;
+        font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .benefits-page .btn-lead:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); color: white; }
+    
+    .benefits-page .zynova-tag {
+        display: inline-block; padding: 4px 10px; border-radius: 6px;
+        font-size: 11px; font-weight: 600; background: #dbeafe; color: #1e40af;
+    }
+</style>
+
+<div class="benefits-page">
+    <div class="page-banner">
+        <h1>🎁 Coupon Utilisation Benefits</h1>
+        <p>Maximize your MNR Business Access Program value with 30,000 points across 7 benefit types</p>
+    </div>
+    
+    <div style="background: #dbeafe; border-left: 4px solid #2563eb; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;">
+        <h6 style="color: #1e40af; margin-bottom: 10px; font-weight: 600;"><i class="fas fa-coins"></i> Your Coupon Points: 30,000</h6>
+        <p style="color: #1e3a8a; font-size: 14px; margin-bottom: 8px;">
+            <strong>One Program. Multiple Everyday Benefits.</strong> Your coupon points can be used across any segment.
+        </p>
+        <p style="color: #1e40af; font-size: 13px; margin: 0;">
+            <i class="fas fa-info-circle me-1"></i> <strong>Segment Cap:</strong> Maximum 15,000 points can be utilized per segment (EV, Real Estate, Insurance).
+        </p>
+    </div>
+    
+    <div style="background: #fef9c3; border-left: 4px solid #eab308; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;">
+        <h6 style="color: #854d0e; margin-bottom: 10px; font-weight: 600;"><i class="fas fa-video"></i> Feedback Video and Photos Requirement</h6>
+        <p style="color: #854d0e; margin-bottom: 10px; font-size: 14px;">
+            <strong>After points utilization for additional referral bonus or earnings:</strong> It is mandatory to share feedback videos and photos.
+        </p>
+        <p style="color: #713f12; font-size: 13px; margin-bottom: 8px;"><strong>Eligible Engagement Activities:</strong></p>
+        <ul style="color: #854d0e; font-size: 13px; margin: 0; padding-left: 20px;">
+            <li>Reels (video content)</li>
+            <li>WhatsApp Status sharing</li>
+            <li>Social Media posts</li>
+            <li>Sharing & Ratings in Announcement sections</li>
+            <li>Engaging with teams</li>
+            <li>Attending Zoom calls</li>
+        </ul>
+        <p style="color: #713f12; font-size: 12px; margin-top: 12px; font-style: italic;">
+            <i class="fas fa-info-circle me-1"></i> Please note: Submitted feedback videos and photos may be publicly displayed on our platforms for promotional and community engagement purposes. By sharing your content, you acknowledge and consent to this use.
+        </p>
+    </div>
+    
+    <div class="summary-cards">
+        <div class="summary-card card-green">
+            <div class="icon"><i class="fas fa-check-circle"></i></div>
+            <div class="value" id="totalBenefitsUsed">0 pts</div>
+            <div class="label">Total Benefits Used</div>
+        </div>
+        <div class="summary-card card-blue">
+            <div class="icon"><i class="fas fa-tags"></i></div>
+            <div class="value" id="totalDiscounts">0 pts</div>
+            <div class="label">Total Discounts</div>
+        </div>
+        <div class="summary-card card-purple">
+            <div class="icon"><i class="fas fa-undo"></i></div>
+            <div class="value" id="totalCashback">0 pts</div>
+            <div class="label">Total Cashback</div>
+        </div>
+        <div class="summary-card card-gold">
+            <div class="icon"><i class="fas fa-hand-holding-usd"></i></div>
+            <div class="value" id="referralIncome">0 pts</div>
+            <div class="label">Referral Income</div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-list-alt text-success me-2"></i> Available Benefit Types</h5>
+        </div>
+        <div class="card-body">
+            <div class="benefit-item">
+                <div class="benefit-header">
+                    <div class="benefit-number">1</div>
+                    <div class="benefit-title">Points Redemption – Manthra EV Vehicles</div>
+                </div>
+                <div class="benefit-details">
+                    <ul>
+                        <li>Redeem points only on Manthra EV vehicles</li>
+                        <li>Capping: <strong>7,500 points</strong> per vehicle</li>
+                        <li>Maximum: <strong>2 redemptions</strong> allowed</li>
+                        <li>Exclusive M99 users: Maximum withdrawal up to <strong>15,000 points</strong></li>
+                        <li>Graphene or 1 year LFP battery: <strong>1,000 points</strong> redemption</li>
+                    </ul>
+                </div>
+                <div class="benefit-footer">
+                    <a href="/user/my-leads?category=ev_vehicle" class="btn-add-lead">
+                        <i class="fas fa-plus-circle"></i> Add EV Lead
+                    </a>
+                </div>
+            </div>
+            
+            <div class="benefit-item">
+                <div class="benefit-header">
+                    <div class="benefit-number">2</div>
+                    <div class="benefit-title">Solar Benefit (Points Claim)</div>
+                </div>
+                <div class="benefit-details">
+                    <ul>
+                        <li>Claim up to <strong>15,000 points</strong> (segment cap applies)</li>
+                        <li>Applicable on minimum <strong>3 KW</strong> Solar installation</li>
+                    </ul>
+                </div>
+                <div class="benefit-footer">
+                    <a href="/user/my-leads?category=solar" class="btn-add-lead">
+                        <i class="fas fa-plus-circle"></i> Add Solar Lead
+                    </a>
+                </div>
+            </div>
+            
+            <div class="benefit-item">
+                <div class="benefit-header">
+                    <div class="benefit-number">3</div>
+                    <div class="benefit-title">Franchise Setup Benefit</div>
+                </div>
+                <div class="benefit-details">
+                    <ul>
+                        <li><strong>2%</strong> commission on initial franchise income</li>
+                        <li><strong>1%</strong> commission on subsequent invoices</li>
+                        <li>Applicable only if franchise orders minimum <strong>5 units</strong> in any consecutive 2 months</li>
+                        <li>Regular coordination, showroom engagement, and promotions are mandatory</li>
+                    </ul>
+                </div>
+                <div class="benefit-footer">
+                    <a href="/user/my-leads?category=franchise" class="btn-add-lead">
+                        <i class="fas fa-plus-circle"></i> Add Franchise Lead
+                    </a>
+                </div>
+            </div>
+            
+            <div class="benefit-item">
+                <div class="benefit-header">
+                    <div class="benefit-number">4</div>
+                    <div class="benefit-title">EV Spares Benefit</div>
+                </div>
+                <div class="benefit-details">
+                    <ul>
+                        <li>Earn <strong>5%</strong> equivalent points on eligible EV spare parts purchases</li>
+                    </ul>
+                </div>
+                <div class="benefit-footer">
+                    <a href="/user/my-leads?category=ev_spares" class="btn-add-lead">
+                        <i class="fas fa-plus-circle"></i> Add Spares Lead
+                    </a>
+                </div>
+            </div>
+            
+            <div class="benefit-item">
+                <div class="benefit-header">
+                    <div class="benefit-number">5</div>
+                    <div class="benefit-title">Training Referral Benefit</div>
+                </div>
+                <div class="benefit-details">
+                    <ul>
+                        <li>Maximum <strong>7,500 points</strong> claimable</li>
+                        <li>Maximum: <strong>2 times</strong> allowed</li>
+                    </ul>
+                </div>
+                <div class="benefit-footer">
+                    <a href="/user/my-leads?category=training" class="btn-add-lead">
+                        <i class="fas fa-plus-circle"></i> Add Training Lead
+                    </a>
+                </div>
+            </div>
+            
+            <div class="benefit-item">
+                <div class="benefit-header">
+                    <div class="benefit-number">6</div>
+                    <div class="benefit-title">VGK Care – Insurance Benefit</div>
+                    <span class="zynova-tag">Part of VGK4U</span>
+                </div>
+                <div class="benefit-details">
+                    <ul>
+                        <li>Insurance earnings will be part of VGK4U income</li>
+                        <li>Commission as per insurance and company policy</li>
+                    </ul>
+                </div>
+                <div class="benefit-footer">
+                    <a href="/user/my-leads?category=insurance" class="btn-add-lead">
+                        <i class="fas fa-plus-circle"></i> Add Insurance Lead
+                    </a>
+                </div>
+            </div>
+            
+            <div class="benefit-item">
+                <div class="benefit-header">
+                    <div class="benefit-number">7</div>
+                    <div class="benefit-title">VGK Real Dreams</div>
+                    <span class="zynova-tag">Part of VGK4U</span>
+                </div>
+                <div class="benefit-details">
+                    <ul>
+                        <li>Included under VGK4U earnings</li>
+                        <li>Eligible for real estate–linked referral income</li>
+                    </ul>
+                </div>
+                <div class="benefit-footer">
+                    <a href="/user/my-leads?category=real_estate" class="btn-add-lead">
+                        <i class="fas fa-plus-circle"></i> Add Real Estate Lead
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="charges-section">
+        <h6><i class="fas fa-percent me-2"></i>Charges & Compliance</h6>
+        <ul>
+            <li><strong>1 Point = 1 Rupee</strong> (Points are equivalent to INR value)</li>
+            <li><strong>2% TDS</strong> applicable on all eligible earnings</li>
+            <li><strong>8% Admin Charges</strong> applicable as per policy</li>
+            <li>Charges apply on all eligible earnings as per company policy</li>
+        </ul>
+    </div>
+    
+    <div class="post-utilisation">
+        <h6><i class="fas fa-info-circle me-2"></i>Post Points Utilisation Rule</h6>
+        <p>After full points utilisation, other income streams will activate based on individual segment eligibility and respective company terms & conditions. All earnings are subject to individual company rules.</p>
+    </div>
+    
+    <div class="lead-section">
+        <h6><i class="fas fa-rocket me-2"></i>Start Earning – Lead Generation</h6>
+        <p>To begin earning, add leads and track your referral progress</p>
+        <a href="/user/my-leads" class="btn btn-lead">
+            <i class="fas fa-list"></i> View All My Leads
+        </a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadBenefitsSummary();
+    });
+    
+    async function loadBenefitsSummary() {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            
+            const response = await fetch('/api/v1/users/me/points-summary', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('totalBenefitsUsed').textContent = (data.total_consumed || 0).toLocaleString('en-IN') + ' pts';
+                document.getElementById('totalDiscounts').textContent = (data.total_discounts || 0).toLocaleString('en-IN') + ' pts';
+                document.getElementById('totalCashback').textContent = (data.total_cashback || 0).toLocaleString('en-IN') + ' pts';
+                document.getElementById('referralIncome').textContent = (data.referral_income || 0).toLocaleString('en-IN') + ' pts';
+            }
+        } catch (error) {
+            console.log('Benefits summary load skipped:', error);
+        }
+    }
+</script>

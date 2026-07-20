@@ -1,0 +1,130 @@
+modules = ["python3", "nodejs-20", "python-3.11", "postgresql-16"]
+
+[packager]
+ignoredPaths = [".git", "node_modules", ".cache", ".local", ".pythonlibs"]
+
+[agent]
+expertMode = true
+integrations = ["flask_google_oauth:1.0.0", "replitmail:1.0.0", "twilio_send_message:1.0.0", "javascript_object_storage:2.0.0"]
+
+[nix]
+channel = "stable-25_05"
+packages = ["ffmpeg", "file", "freetype", "glibcLocales", "jq", "lcms2", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "openssl", "pkg-config", "sqlite", "tcl", "tk", "zlib", "glib", "photofield", "mailutils"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "FastAPI Backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Frontend Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Mobile App Watcher"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "vgk4u_parity"
+
+[[workflows.workflow]]
+name = "FastAPI Backend"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"uvicorn app.main\" 2>/dev/null || true; sleep 0.5; while true; do (cd backend && python3.11 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1) || true; echo \"[DC] Backend exited - restarting in 3s...\"; sleep 3; done"
+waitForPort = 8000
+
+[[workflows.workflow]]
+name = "Frontend Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pkill -f \"node server.js\" 2>/dev/null || true; sleep 1; while true; do (cd frontend && node server.js); echo \"[DC] Frontend exited - restarting in 3s...\"; sleep 3; done"
+waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Mobile App Watcher"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "while true; do (cd mobile && ./node_modules/.bin/vite build --watch --outDir ../frontend/public/mobile) || true; echo \"[DC] Mobile watcher exited - restarting in 5s...\"; sleep 5; done"
+
+[[workflows.workflow]]
+name = "vgk4u_parity"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python3.11 backend/tests/test_vgk4u_phase1_infra.py"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[deployment]
+deploymentTarget = "vm"
+run = ["bash", "start.sh"]
+build = ["bash", "build.sh"]
+
+[objectStorage]
+defaultBucketID = "replit-objstore-45f92fb0-cc1a-499b-a84e-bc9f7f4017ab"
+
+[userenv]
+
+[userenv.shared]
+TEST_STAFF_EMPLOYEE_ID = "PW-STAFF-001"
+TEST_STAFF_PASSWORD = "PwStaff@2024"
+TEST_RVZ_STAFF_ID = "PW-RVZ-001"
+TEST_RVZ_STAFF_PASSWORD = "PwRvz@2024"
+TEST_RVZ_USERNAME = "MNRPW001"
+TEST_RVZ_PASSWORD = "PwTest@2024"
+TEST_SUPERADMIN_USERNAME = "MNRPW002"
+TEST_SUPERADMIN_PASSWORD = "PwTest@2024"
+TEST_FINANCE_USERNAME = "MNRPW003"
+TEST_FINANCE_PASSWORD = "PwTest@2024"
+TEST_ADMIN_USERNAME = "MNRPW004"
+TEST_ADMIN_PASSWORD = "PwTest@2024"
+TEST_USER_MNR_ID = "MNRPW005"
+TEST_USER_PASSWORD = "PwTest@2024"
+PLAYWRIGHT_TEST_PASSWORD = "PwTest@2024"
+WHATSAPP_SANDBOX_MODE = "false"
+WHATSAPP_NUMBER = "+15557099810"
+MYOPERATOR_API_COMPANY_ID = "698c722ae2411959"
+MYOPERATOR_COMPANY_ID = "4"
+MYOPERATOR_VIRTUAL_NUMBER = "2269470537"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
+
+[[ports]]
+localPort = 23636
+externalPort = 3000
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 30000

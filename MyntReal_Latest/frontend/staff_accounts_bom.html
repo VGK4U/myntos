@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill of Materials - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-item { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-item .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .summary-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .amount { font-weight: 600; font-family: monospace; }
+        .status-draft { background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-approved { background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-pending { background: #dbeafe; color: #2563eb; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-pending-approval { background: #dbeafe; color: #2563eb; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-rejected { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 760px; width: 100%; max-height: 92vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; background: white; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .components-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+        .comp-row { display: grid; grid-template-columns: 1fr 90px 80px 110px 36px; gap: 8px; align-items: start; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+        .comp-row-header { display: grid; grid-template-columns: 1fr 90px 80px 110px 36px; gap: 8px; padding: 0 10px; margin-bottom: 4px; }
+        .comp-row-header span { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .btn-remove { background: #ef4444; color: white; border: none; padding: 6px 8px; border-radius: 4px; cursor: pointer; height: 36px; align-self: center; }
+        .btn-add-component { background: #e5e7eb; color: #374151; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-top: 8px; }
+        .btn-add-component:hover { background: #d1d5db; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        .btn-action { padding: 4px 8px; font-size: 12px; border-radius: 4px; border: none; cursor: pointer; margin-right: 4px; }
+        .btn-view { background: #dbeafe; color: #2563eb; }
+        .btn-edit { background: #fef3c7; color: #d97706; }
+        .btn-approve { background: #d1fae5; color: #059669; }
+        .btn-copy { background: #f3f4f6; color: #374151; }
+        .filter-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-row select, .filter-row input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .sortable { cursor: pointer; user-select: none; position: relative; }
+        .sortable:hover { background: #f3f4f6; }
+        .sortable::after { content: ''; display: inline-block; margin-left: 6px; opacity: 0.3; }
+        .sortable.asc::after { content: '▲'; opacity: 1; }
+        .sortable.desc::after { content: '▼'; opacity: 1; }
+        .validation-error { border-color: #ef4444 !important; }
+        .error-msg { color: #ef4444; font-size: 11px; margin-top: 4px; display: none; }
+
+        /* ── Searchable Select ─────────────────────────────── */
+        .ss-wrap { position: relative; }
+        .ss-input { width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; outline: none; box-sizing: border-box; }
+        .ss-input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 2px rgba(139,92,246,0.15); }
+        .ss-dropdown { display: none; position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 600; background: white; border: 1px solid #d1d5db; border-radius: 8px; max-height: 280px; overflow-y: auto; box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+        .ss-item { padding: 9px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; line-height: 1.4; }
+        .ss-item:last-child { border-bottom: none; }
+        .ss-item:hover { background: #f5f3ff; }
+        .ss-item-name { font-size: 13px; font-weight: 600; color: #1f2937; }
+        .ss-item-code { font-size: 11px; color: #7c3aed; font-weight: 600; margin-left: 6px; }
+        .ss-item-spec { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .ss-item-meta { display: flex; gap: 8px; margin-top: 3px; flex-wrap: wrap; }
+        .ss-badge { font-size: 10px; background: #f3f4f6; color: #374151; padding: 1px 6px; border-radius: 10px; }
+        .ss-price { font-size: 11px; color: #059669; font-weight: 700; }
+        .ss-uom { font-size: 11px; color: #6b7280; }
+        .ss-no-result { padding: 14px; text-align: center; color: #9ca3af; font-size: 13px; }
+        .ss-selected-info { margin-top: 6px; padding: 8px 10px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; font-size: 12px; display: none; }
+        .ss-selected-info .si-row { display: flex; gap: 16px; flex-wrap: wrap; }
+        .ss-selected-info .si-item { }
+        .ss-selected-info .si-label { color: #6b7280; }
+        .ss-selected-info .si-val { font-weight: 600; color: #1f2937; }
+        .ss-selected-info .si-price { font-weight: 700; color: #059669; }
+
+        /* ── Running cost total ────────────────────────────── */
+        .cost-total-bar { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 10px 14px; margin-top: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .cost-total-bar .label { color: #374151; font-weight: 500; }
+        .cost-total-bar .value { font-weight: 700; color: #059669; font-size: 16px; font-family: monospace; }
+
+        /* ── Component unit price display ──────────────────── */
+        .comp-price-display { font-size: 11px; color: #059669; font-weight: 600; margin-top: 3px; }
+        .comp-cost-display { font-size: 12px; font-weight: 700; color: #1f2937; font-family: monospace; }
+        .comp-qty-input, .comp-wastage-input { width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-header">
+                <div><h1>Bill of Materials</h1><p>Create and manage product recipes with components</p></div>
+                <button class="btn-primary-custom" onclick="openCreateModal()"><i class="fas fa-plus me-2"></i>Create BOM</button>
+            </div>
+            
+            <div class="summary-row">
+                <div class="summary-item"><div class="value" id="totalBoms">0</div><div class="label">Total BOMs</div></div>
+                <div class="summary-item"><div class="value" id="approvedBoms">0</div><div class="label">Approved</div></div>
+                <div class="summary-item"><div class="value" id="draftBoms">0</div><div class="label">Drafts</div></div>
+            </div>
+            
+            <div class="filter-row">
+                <select id="filterCompany" onchange="loadBOMs()"><option value="">All Companies</option></select>
+                <select id="filterStatus" onchange="loadBOMs()">
+                    <option value="">All Statuses</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="PENDING_APPROVAL">Pending</option>
+                    <option value="REJECTED">Rejected</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="Search BOM..." onkeyup="debounceSearch()">
+            </div>
+            
+            <div class="card">
+                <div class="card-header"><span><i class="fas fa-sitemap me-2"></i>BOMs</span><span class="text-muted" id="recordCount">0 records</span></div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="tableContainer" style="display: none;">
+                        <div class="table-container">
+                            <table class="data-table" id="bomDataTable">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" data-sort="bom_code" onclick="sortTable('bom_code')">BOM Code</th>
+                                        <th class="sortable" data-sort="bom_name" onclick="sortTable('bom_name')">Name</th>
+                                        <th class="sortable" data-sort="finished_product_name" onclick="sortTable('finished_product_name')">Product</th>
+                                        <th class="sortable" data-sort="company_name" onclick="sortTable('company_name')">Company</th>
+                                        <th class="sortable" data-sort="estimated_cost" onclick="sortTable('estimated_cost')">Est. Cost</th>
+                                        <th class="sortable" data-sort="status" onclick="sortTable('status')">Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bomTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-sitemap"></i><h3>No BOMs Found</h3><p>Create your first Bill of Materials</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ── Create BOM Modal ───────────────────────────────────────── -->
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus-circle me-2"></i>Create BOM</h3>
+                <button class="modal-close" onclick="closeModal('createModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createForm" onsubmit="return false;">
+                    <div class="form-group">
+                        <label>BOM Name *</label>
+                        <input type="text" id="formName" required placeholder="e.g., Electric Scooter Assembly">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Company *</label>
+                            <select id="formCompany" required onchange="onFormCompanyChange()"></select>
+                        </div>
+                        <div class="form-group">
+                            <label style="display:flex;align-items:center;justify-content:space-between;">
+                                Finished Product *
+                                <button type="button" id="btnRefreshItems" onclick="refreshStockItems()" title="Reload items (use after creating a new stock item)" style="font-size:11px;padding:2px 8px;border:1px solid #d1d5db;border-radius:4px;background:#f9fafb;cursor:pointer;display:none;">↺ Refresh Items</button>
+                            </label>
+                            <div id="formProductWrap">
+                                <input class="ss-input" placeholder="Select company first" disabled style="background:#f9fafb;">
+                            </div>
+                            <input type="hidden" id="formProductId">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Standard Qty</label>
+                            <input type="number" id="formQty" value="1" min="1" step="0.01" onchange="updateRunningTotal()">
+                        </div>
+                        <div class="form-group">
+                            <label>Unit</label>
+                            <select id="formUnit">
+                                <option value="PCS">Pieces</option>
+                                <option value="KG">Kilograms</option>
+                                <option value="SET">Sets</option>
+                                <option value="UNIT">Units</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Effective From</label><input type="date" id="formEffFrom"></div>
+                        <div class="form-group"><label>Effective To</label><input type="date" id="formEffTo"></div>
+                    </div>
+                    <div class="form-group"><label>Est. Time (hours)</label><input type="number" id="formTime" step="0.5" min="0"></div>
+                    <div class="form-group"><label>Notes</label><textarea id="formNotes" rows="2" placeholder="Additional notes"></textarea></div>
+                    
+                    <div class="components-section">
+                        <h5><i class="fas fa-cubes me-2"></i>Components</h5>
+                        <p style="font-size:12px;color:#6b7280;margin:4px 0 12px;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            BOM cost = sum of (component purchase rate × qty × (1 + wastage%)). Type to search items — spec, category &amp; price shown in results.
+                        </p>
+                        <div class="comp-row-header">
+                            <span>Component</span><span>Qty</span><span>Wastage %</span><span>Line Cost</span><span></span>
+                        </div>
+                        <div id="componentsContainer"></div>
+                        <button type="button" class="btn-add-component" onclick="addComponentRow()">
+                            <i class="fas fa-plus me-1"></i>Add Component
+                        </button>
+                        <div class="cost-total-bar" id="costTotalBar" style="display:none;">
+                            <span class="label"><i class="fas fa-calculator me-1"></i>Estimated BOM Cost</span>
+                            <span class="value" id="costTotalValue">₹0.00</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="createBOM()"><i class="fas fa-save me-1"></i>Create BOM</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ── View Modal ─────────────────────────────────────────────── -->
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-eye me-2"></i>BOM Details</h3><button class="modal-close" onclick="closeModal('viewModal')">&times;</button></div>
+            <div class="modal-body" id="viewModalContent"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('viewModal')">Close</button>
+                <button type="button" class="btn-approve btn-action" id="btnApprove" style="display:none;" onclick="approveBOM()"><i class="fas fa-check me-1"></i>Approve</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ── Edit Modal ─────────────────────────────────────────────── -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-edit me-2"></i>Edit BOM</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+            <div class="modal-body">
+                <form id="editForm" onsubmit="return false;">
+                    <input type="hidden" id="editBomId">
+                    <input type="hidden" id="editBomStatus">
+                    <div id="reapprovalAlert" class="alert" style="display:none; font-size: 12px; padding: 10px; margin-bottom: 16px; border-radius: 6px; background: #dbeafe; border: 1px solid #3b82f6; color: #1e40af;">
+                        <i class="fas fa-exclamation-circle me-1"></i><strong>Re-approval Required:</strong> This BOM is currently APPROVED. Saving changes will push it to PENDING APPROVAL status for re-approval.
+                    </div>
+                    <div class="form-group" id="changeReasonGroup" style="display:none;">
+                        <label>Reason for Change *</label>
+                        <textarea id="editFormChangeReason" rows="2" placeholder="Explain why this approved BOM needs to be changed..." maxlength="500"></textarea>
+                        <span class="error-msg" id="editChangeReasonError">Please provide a reason for changing an approved BOM</span>
+                    </div>
+                    <div class="form-group"><label>BOM Name *</label><input type="text" id="editFormName" required placeholder="e.g., Electric Scooter Assembly"><span class="error-msg" id="editNameError">BOM Name is required</span></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Company</label><input type="text" id="editFormCompanyDisplay" readonly disabled style="background: #f3f4f6;"></div>
+                        <div class="form-group"><label>Finished Product</label><input type="text" id="editFormProductDisplay" readonly disabled style="background: #f3f4f6;"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Standard Qty</label><input type="number" id="editFormQty" min="0.01" step="0.01"><span class="error-msg" id="editQtyError">Quantity must be greater than 0</span></div>
+                        <div class="form-group"><label>Unit</label><select id="editFormUnit"><option value="PCS">Pieces</option><option value="KG">Kilograms</option><option value="SET">Sets</option><option value="UNIT">Units</option></select></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Effective From</label><input type="date" id="editFormEffFrom"></div>
+                        <div class="form-group"><label>Effective To</label><input type="date" id="editFormEffTo"></div>
+                    </div>
+                    <div class="form-group"><label>Est. Time (hours)</label><input type="number" id="editFormTime" step="0.5" min="0"></div>
+                    <div class="form-group"><label>Notes</label><textarea id="editFormNotes" rows="2" placeholder="Additional notes"></textarea></div>
+                    
+                    <div class="components-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h5 style="margin: 0;"><i class="fas fa-cubes me-2"></i>Components</h5>
+                            <button type="button" class="btn-add-component" onclick="openAddComponentModal()"><i class="fas fa-plus me-1"></i>Add Component</button>
+                        </div>
+                        <div id="editComponentsContainer">
+                            <div class="loading-spinner" id="editComponentsLoading"><div class="spinner" style="width: 24px; height: 24px;"></div></div>
+                        </div>
+                        <div id="editComponentsInfo" class="text-muted" style="font-size: 12px; margin-top: 8px;"></div>
+                    </div>
+                    
+                    <div class="alert alert-info" style="font-size: 12px; padding: 10px; margin-top: 16px; border-radius: 6px; background: #dbeafe; border: 1px solid #3b82f6;">
+                        <i class="fas fa-info-circle me-1"></i>Note: Company and Product cannot be changed. Component changes on APPROVED BOMs trigger re-approval.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" id="btnSaveBOM" onclick="updateBOM()"><i class="fas fa-save me-1"></i>Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ── Add/Edit Component Modal (Edit mode) ───────────────────── -->
+    <div class="modal-overlay" id="componentModal" style="z-index: 1100;">
+        <div class="modal-content" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 id="componentModalTitle"><i class="fas fa-cube me-2"></i>Add Component</h3>
+                <button class="modal-close" onclick="closeModal('componentModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="componentForm" onsubmit="return false;">
+                    <input type="hidden" id="compFormLineId">
+                    <input type="hidden" id="compFormMode" value="add">
+                    <div class="form-group">
+                        <label>Component *</label>
+                        <div id="compFormItemWrap"></div>
+                        <input type="hidden" id="compFormItemId">
+                        <span class="error-msg" id="compItemError">Select a component</span>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Quantity *</label>
+                            <input type="number" id="compFormQty" min="0.01" step="0.01" value="1" required>
+                            <span class="error-msg" id="compQtyError">Quantity must be greater than 0</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Wastage %</label>
+                            <input type="number" id="compFormWastage" min="0" max="100" step="0.1" value="0">
+                        </div>
+                    </div>
+                    <div id="compChangeReasonGroup" style="display: none;">
+                        <div class="form-group">
+                            <label>Reason for Change *</label>
+                            <textarea id="compFormReason" rows="2" placeholder="Explain why this component needs to be added/changed..."></textarea>
+                            <span class="error-msg" id="compReasonError">Please provide a reason for changing an approved BOM</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('componentModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="saveComponent()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ── Remove Component Modal ─────────────────────────────────── -->
+    <div class="modal-overlay" id="removeComponentModal" style="z-index: 1100;">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-trash-alt me-2" style="color: #dc2626;"></i>Remove Component</h3>
+                <button class="modal-close" onclick="closeModal('removeComponentModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="removeLineId">
+                <p>Are you sure you want to remove this component?</p>
+                <div class="alert" style="background: #fef3c7; border: 1px solid #f59e0b; padding: 10px; border-radius: 6px; font-size: 12px;">
+                    <strong>Component:</strong> <span id="removeComponentName"></span>
+                </div>
+                <div id="removeReasonGroup" style="display: none; margin-top: 12px;">
+                    <label style="font-size: 13px; font-weight: 600;">Reason for Removal *</label>
+                    <textarea id="removeReason" rows="2" placeholder="Explain why this component is being removed..." style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-top: 6px;"></textarea>
+                    <span class="error-msg" id="removeReasonError">Please provide a reason</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('removeComponentModal')">Cancel</button>
+                <button type="button" style="background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;" onclick="confirmRemoveComponent()"><i class="fas fa-trash-alt me-1"></i>Remove</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let companies = [];
+        let stockItems = [];       // full item objects for current company
+        let stockItemMap = {};     // id -> item object for fast lookup
+        let filteredStockItems = [];
+        let currentBomId = null;
+        let searchTimer = null;
+        let selectedFormCompanyId = null;
+        let allBoms = [];
+        let currentSortKey = 'bom_code';
+        let currentSortDir = 'asc';
+        let currentBomData = null;
+        let editBomCompanyId = null;
+        let editStockItems = [];
+        let editStockItemMap = {};
+        let compRowCounter = 0;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Bill of Materials', 'fas fa-sitemap');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            updateHeaderUserInfo();
+            await loadDropdowns();
+            await loadBOMs();
+        });
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const initEl = document.getElementById('headerUserInitials');
+            if (initEl) initEl.textContent = (userData.full_name || 'SM').split(' ').map(n => n[0]).join('').substring(0, 2);
+            const nameEl = document.getElementById('headerUserName');
+            if (nameEl) nameEl.textContent = userData.full_name || 'Staff Member';
+            const empEl = document.getElementById('headerUserEmpId');
+            if (empEl) empEl.textContent = userData.emp_code || '-';
+            const roleEl = document.getElementById('headerUserRole');
+            if (roleEl) roleEl.textContent = userData.role_name || 'Employee';
+        }
+        
+        function formatCurrency(amt) {
+            return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2 }).format(parseFloat(amt) || 0);
+        }
+        
+        // ─── Searchable Select ──────────────────────────────────────────────────
+        // Creates a type-and-search dropdown inside `wrapEl` from `items` array.
+        // Shows: item_name, item_code, item_category, specification, purchase_rate, unit_of_measure
+        // Returns { getValue(), getItem(), reset() }
+        function createSearchableSelect(wrapEl, items, placeholder, onSelect) {
+            wrapEl.innerHTML = `
+                <div class="ss-wrap">
+                    <input type="text" class="ss-input" placeholder="${placeholder}" autocomplete="off">
+                    <div class="ss-dropdown"></div>
+                    <div class="ss-selected-info">
+                        <div class="si-row" id="siRow_${wrapEl.id || Math.random()}"></div>
+                    </div>
+                </div>
+            `;
+            
+            const ssInput    = wrapEl.querySelector('.ss-input');
+            const ssDropdown = wrapEl.querySelector('.ss-dropdown');
+            const ssInfo     = wrapEl.querySelector('.ss-selected-info');
+            
+            let selectedItem = null;
+
+            function renderDropdown(query) {
+                const q = (query || '').toLowerCase().trim();
+                const filtered = items.filter(s =>
+                    !q ||
+                    s.item_name.toLowerCase().includes(q) ||
+                    (s.item_code || '').toLowerCase().includes(q) ||
+                    (s.specification || '').toLowerCase().includes(q) ||
+                    (s.item_category || '').toLowerCase().includes(q) ||
+                    (s.brand || '').toLowerCase().includes(q)
+                ).slice(0, 60);
+
+                if (!filtered.length) {
+                    ssDropdown.innerHTML = `<div class="ss-no-result"><i class="fas fa-search me-1"></i>${q ? 'No items matching "'+q+'"' : 'No items available'}</div>`;
+                } else {
+                    ssDropdown.innerHTML = filtered.map(s => {
+                        const price = parseFloat(s.purchase_rate || 0);
+                        const spec  = s.specification ? s.specification.slice(0, 80) + (s.specification.length > 80 ? '…' : '') : '';
+                        return `<div class="ss-item" data-id="${s.id}">
+                            <span class="ss-item-name">${escHtml(s.item_name)}</span>
+                            <span class="ss-item-code">[${escHtml(s.item_code || '')}]</span>
+                            ${spec ? `<div class="ss-item-spec">${escHtml(spec)}</div>` : ''}
+                            <div class="ss-item-meta">
+                                <span class="ss-badge">${escHtml(s.item_category || '')}</span>
+                                <span class="ss-price">₹${formatCurrency(price)}/unit</span>
+                                <span class="ss-uom">${escHtml(s.unit_of_measure || 'PCS')}</span>
+                                ${s.brand ? `<span class="ss-badge">${escHtml(s.brand)}</span>` : ''}
+                            </div>
+                        </div>`;
+                    }).join('');
+                    
+                    ssDropdown.querySelectorAll('.ss-item').forEach(el => {
+                        el.addEventListener('click', () => {
+                            const id = parseInt(el.dataset.id);
+                            const item = items.find(s => s.id === id);
+                            if (!item) return;
+                            selectItem(item);
+                        });
+                    });
+                }
+                ssDropdown.style.display = 'block';
+            }
+            
+            function selectItem(item) {
+                selectedItem = item;
+                ssInput.value = `${item.item_name} [${item.item_code || ''}]`;
+                ssDropdown.style.display = 'none';
+                
+                const price = parseFloat(item.purchase_rate || 0);
+                const spec  = item.specification || '-';
+                ssInfo.querySelector('[id^=siRow_]').innerHTML = `
+                    <span class="si-item"><span class="si-label">Code: </span><span class="si-val">${escHtml(item.item_code || '-')}</span></span>
+                    <span class="si-item"><span class="si-label">Category: </span><span class="si-val">${escHtml(item.item_category || '-')}</span></span>
+                    <span class="si-item"><span class="si-label">UoM: </span><span class="si-val">${escHtml(item.unit_of_measure || 'PCS')}</span></span>
+                    <span class="si-item"><span class="si-label">Purchase Rate: </span><span class="si-price">₹${formatCurrency(price)}</span></span>
+                    ${spec !== '-' ? `<div style="width:100%;margin-top:3px;"><span class="si-label">Spec: </span><span class="si-val" style="font-size:11px;">${escHtml(spec.slice(0, 120))}</span></div>` : ''}
+                `;
+                ssInfo.style.display = 'block';
+                
+                if (onSelect) onSelect(item);
+            }
+            
+            ssInput.addEventListener('focus', () => renderDropdown(ssInput.value));
+            ssInput.addEventListener('input', () => {
+                selectedItem = null;
+                ssInfo.style.display = 'none';
+                renderDropdown(ssInput.value);
+                if (onSelect) onSelect(null);
+            });
+            
+            document.addEventListener('click', function ssClose(e) {
+                if (!wrapEl.contains(e.target)) ssDropdown.style.display = 'none';
+            });
+            
+            return {
+                getValue: () => selectedItem ? selectedItem.id : null,
+                getItem:  () => selectedItem,
+                reset: () => {
+                    selectedItem = null;
+                    ssInput.value = '';
+                    ssInfo.style.display = 'none';
+                    ssDropdown.style.display = 'none';
+                },
+                setItems: (newItems) => {
+                    items = newItems;
+                    selectedItem = null;
+                    ssInput.value = '';
+                    ssInfo.style.display = 'none';
+                    ssDropdown.style.display = 'none';
+                },
+                setValue: (item) => { if (item) selectItem(item); else { selectedItem = null; ssInput.value = ''; ssInfo.style.display = 'none'; } }
+            };
+        }
+
+        // DC_BOM_LIVE_SEARCH_001: Server-side live component search — no page-size cap, all item types.
+        // `getCompanyId` may be a function () => id  or a plain id value.
+        // `initialItem` (optional) pre-fills the control in edit mode.
+        function createLiveComponentSearch(wrapEl, getCompanyId, placeholder, onSelect, initialItem) {
+            const siRowId = `siRow_lcs_${Math.random().toString(36).slice(2, 8)}`;
+            wrapEl.innerHTML = `
+                <div class="ss-wrap">
+                    <input type="text" class="ss-input" placeholder="${placeholder}" autocomplete="off">
+                    <div class="ss-dropdown"></div>
+                    <div class="ss-selected-info">
+                        <div class="si-row" id="${siRowId}"></div>
+                    </div>
+                </div>
+            `;
+            const ssInput    = wrapEl.querySelector('.ss-input');
+            const ssDropdown = wrapEl.querySelector('.ss-dropdown');
+            const ssInfo     = wrapEl.querySelector('.ss-selected-info');
+            let selectedItem = null;
+            let debTimer     = null;
+            const _cache     = {};
+
+            function renderItemHtml(s) {
+                const price = parseFloat(s.purchase_rate || 0);
+                const spec  = s.specification ? s.specification.slice(0, 80) + (s.specification.length > 80 ? '…' : '') : '';
+                return `<div class="ss-item" data-id="${s.id}">
+                    <span class="ss-item-name">${escHtml(s.item_name)}</span>
+                    <span class="ss-item-code">[${escHtml(s.item_code || '')}]</span>
+                    ${spec ? `<div class="ss-item-spec">${escHtml(spec)}</div>` : ''}
+                    <div class="ss-item-meta">
+                        <span class="ss-badge">${escHtml(s.item_category || '')}</span>
+                        <span class="ss-price">₹${formatCurrency(price)}/unit</span>
+                        <span class="ss-uom">${escHtml(s.unit_of_measure || 'PCS')}</span>
+                        ${s.brand ? `<span class="ss-badge">${escHtml(s.brand)}</span>` : ''}
+                    </div>
+                </div>`;
+            }
+
+            function selectItem(item) {
+                selectedItem = item;
+                ssInput.value = `${item.item_name} [${item.item_code || ''}]`;
+                ssDropdown.style.display = 'none';
+                const el = document.getElementById(siRowId);
+                if (el) {
+                    const price = parseFloat(item.purchase_rate || 0);
+                    const spec  = item.specification || '-';
+                    el.innerHTML = `
+                        <span class="si-item"><span class="si-label">Code: </span><span class="si-val">${escHtml(item.item_code || '-')}</span></span>
+                        <span class="si-item"><span class="si-label">Category: </span><span class="si-val">${escHtml(item.item_category || '-')}</span></span>
+                        <span class="si-item"><span class="si-label">UoM: </span><span class="si-val">${escHtml(item.unit_of_measure || 'PCS')}</span></span>
+                        <span class="si-item"><span class="si-label">Rate: </span><span class="si-price">₹${formatCurrency(price)}</span></span>
+                        ${spec !== '-' ? `<div style="width:100%;margin-top:3px;"><span class="si-label">Spec: </span><span class="si-val" style="font-size:11px;">${escHtml(spec.slice(0, 120))}</span></div>` : ''}
+                    `;
+                }
+                ssInfo.style.display = 'block';
+                // Register in global maps so saveComponent/updateCompRowCost can find the item
+                if (typeof editStockItemMap !== 'undefined') editStockItemMap[item.id] = item;
+                if (typeof stockItemMap     !== 'undefined') stockItemMap[item.id]     = item;
+                if (onSelect) onSelect(item);
+            }
+
+            async function doSearch(q) {
+                const cid = typeof getCompanyId === 'function' ? getCompanyId() : getCompanyId;
+                if (!cid) {
+                    ssDropdown.innerHTML = `<div class="ss-no-result">Select a company first</div>`;
+                    ssDropdown.style.display = 'block';
+                    return;
+                }
+                const ck = `${cid}||${q}`;
+                let results = _cache[ck];
+                if (!results) {
+                    ssDropdown.innerHTML = `<div class="ss-no-result"><i class="fas fa-spinner fa-spin me-1"></i>Searching…</div>`;
+                    ssDropdown.style.display = 'block';
+                    try {
+                        const url = q
+                            ? `${API_BASE}/stock-items?company_id=${cid}&search=${encodeURIComponent(q)}&page_size=50&include_summary=false`
+                            : `${API_BASE}/stock-items?company_id=${cid}&page_size=30&include_summary=false`;
+                        const res = await staffFetch(url);
+                        if (!res.ok) return;
+                        const data = await res.json();
+                        results = data.stock_items || [];
+                        _cache[ck] = results;
+                    } catch (e) {
+                        if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                        ssDropdown.innerHTML = `<div class="ss-no-result">Search failed</div>`;
+                        return;
+                    }
+                }
+                if (!results.length) {
+                    ssDropdown.innerHTML = `<div class="ss-no-result"><i class="fas fa-search me-1"></i>No items${q ? ` matching "${escHtml(q)}"` : ''}</div>`;
+                } else {
+                    ssDropdown.innerHTML = results.map(renderItemHtml).join('');
+                    ssDropdown.querySelectorAll('.ss-item').forEach(el => {
+                        el.addEventListener('click', () => {
+                            const item = results.find(s => s.id === parseInt(el.dataset.id));
+                            if (item) selectItem(item);
+                        });
+                    });
+                }
+                ssDropdown.style.display = 'block';
+            }
+
+            ssInput.addEventListener('focus', () => { if (!selectedItem) doSearch(ssInput.value.trim()); });
+            ssInput.addEventListener('input', () => {
+                selectedItem = null;
+                ssInfo.style.display = 'none';
+                if (onSelect) onSelect(null);
+                clearTimeout(debTimer);
+                debTimer = setTimeout(() => doSearch(ssInput.value.trim()), 300);
+            });
+            document.addEventListener('click', function lcsClose(e) {
+                if (!wrapEl.contains(e.target)) ssDropdown.style.display = 'none';
+            });
+
+            if (initialItem) setTimeout(() => selectItem(initialItem), 0);
+
+            return {
+                getValue: () => selectedItem ? selectedItem.id : null,
+                getItem:  () => selectedItem,
+                reset:    () => { selectedItem = null; ssInput.value = ''; ssInfo.style.display = 'none'; ssDropdown.style.display = 'none'; },
+                setValue: (item) => { if (item) selectItem(item); else { selectedItem = null; ssInput.value = ''; ssInfo.style.display = 'none'; } }
+            };
+        }
+
+        function escHtml(str) {
+            return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        
+        // ─── Dropdowns ──────────────────────────────────────────────────────────
+        async function loadDropdowns() {
+            try {
+                const compRes = await staffFetch(`${API_BASE}/companies`);
+                if (compRes.ok) {
+                    const data = await compRes.json();
+                    companies = data.companies || [];
+                    const filterSel = document.getElementById('filterCompany');
+                    const formSel   = document.getElementById('formCompany');
+                    formSel.innerHTML = '<option value="">-- Select Company --</option>';
+                    companies.forEach(c => {
+                        filterSel.innerHTML += `<option value="${c.id}">${c.company_name}</option>`;
+                        formSel.innerHTML   += `<option value="${c.id}">${c.company_name}</option>`;
+                    });
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-BOM] Failed to load companies', e);
+            }
+        }
+        
+        let formProductSS = null; // searchable select instance for finished product
+
+        async function onFormCompanyChange() {
+            const companyId = document.getElementById('formCompany').value;
+            selectedFormCompanyId = companyId ? parseInt(companyId) : null;
+            
+            document.getElementById('componentsContainer').innerHTML = '';
+            document.getElementById('formProductId').value = '';
+            document.getElementById('costTotalBar').style.display = 'none';
+            document.getElementById('costTotalValue').textContent = '₹0.00';
+
+            const prodWrap = document.getElementById('formProductWrap');
+            
+            if (!companyId) {
+                prodWrap.innerHTML = `<input class="ss-input" placeholder="Select company first" disabled style="background:#f9fafb;">`;
+                formProductSS = null;
+                stockItems = [];
+                filteredStockItems = [];
+                stockItemMap = {};
+                return;
+            }
+            
+            prodWrap.innerHTML = `<input class="ss-input" placeholder="Loading items…" disabled style="background:#f9fafb;">`;
+            
+            try {
+                const stockRes = await staffFetch(`${API_BASE}/stock-items?company_id=${companyId}&page_size=2000&include_summary=false`);
+                if (stockRes.ok) {
+                    const data = await stockRes.json();
+                    stockItems = data.stock_items || [];
+                    filteredStockItems = stockItems;
+                    stockItemMap = {};
+                    stockItems.forEach(s => { stockItemMap[s.id] = s; });
+                    
+                    console.log(`[DC-BOM] Loaded ${stockItems.length} items for company ${companyId}`);
+                    
+                    // Init searchable select for finished product
+                    formProductSS = createSearchableSelect(
+                        prodWrap,
+                        stockItems,
+                        `Search product… (${stockItems.length} available)`,
+                        (item) => {
+                            document.getElementById('formProductId').value = item ? item.id : '';
+                        }
+                    );
+                    
+                    // Auto-add first component row
+                    addComponentRow();
+                    // Show refresh button so user can reload after creating new stock items
+                    const refreshBtn = document.getElementById('btnRefreshItems');
+                    if (refreshBtn) refreshBtn.style.display = 'inline-block';
+                } else {
+                    prodWrap.innerHTML = `<input class="ss-input" placeholder="Failed to load products" disabled style="background:#fff0f0;border-color:#fca5a5;">`;
+                    stockItems = []; filteredStockItems = []; stockItemMap = {};
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-BOM] Failed to load stock items', e);
+                prodWrap.innerHTML = `<input class="ss-input" placeholder="Error loading products" disabled style="background:#fff0f0;border-color:#fca5a5;">`;
+            }
+        }
+
+        async function refreshStockItems() {
+            const companyId = document.getElementById('formCompany').value;
+            if (!companyId) return;
+            const btn = document.getElementById('btnRefreshItems');
+            if (btn) { btn.textContent = '↺ Loading…'; btn.disabled = true; }
+            try {
+                const stockRes = await staffFetch(`${API_BASE}/stock-items?company_id=${companyId}&page_size=2000&include_summary=false`);
+                if (stockRes.ok) {
+                    const data = await stockRes.json();
+                    stockItems = data.stock_items || [];
+                    filteredStockItems = stockItems;
+                    stockItemMap = {};
+                    stockItems.forEach(s => { stockItemMap[s.id] = s; });
+                    // Rebuild the finished-product searchable select
+                    const prodWrap = document.getElementById('formProductWrap');
+                    const currentProductId = document.getElementById('formProductId').value;
+                    formProductSS = createSearchableSelect(
+                        prodWrap,
+                        stockItems,
+                        `Search product… (${stockItems.length} available)`,
+                        (item) => { document.getElementById('formProductId').value = item ? item.id : ''; }
+                    );
+                    // Restore previously selected product if still valid
+                    if (currentProductId) {
+                        const still = stockItems.find(s => s.id == currentProductId);
+                        if (still && formProductSS && formProductSS.setValue) formProductSS.setValue(still);
+                    }
+                    // Component rows use DC_BOM_LIVE_SEARCH_001 (server-side) — no rebuild needed.
+                    if (btn) { btn.textContent = `↺ ${stockItems.length} items`; btn.style.color = '#059669'; }
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-BOM] refreshStockItems failed', e);
+            } finally {
+                if (btn) { btn.disabled = false; setTimeout(() => { if (btn) { btn.textContent = '↺ Refresh Items'; btn.style.color = ''; } }, 3000); }
+            }
+        }
+        
+        // ─── Component Rows (Create Form) ───────────────────────────────────────
+        function addComponentRow() {
+            if (!selectedFormCompanyId) {
+                alert('Please select a company first');
+                return;
+            }
+            // DC_BOM_LIVE_SEARCH_001: components use server-side live search — no pre-loaded
+            // stockItems required. Guard removed; the search widget fetches on demand.
+            
+            const container  = document.getElementById('componentsContainer');
+            const rowId      = `compRow_${compRowCounter++}`;
+            const searchWrapId = `ssWrap_${rowId}`;
+            
+            const rowEl = document.createElement('div');
+            rowEl.className = 'comp-row';
+            rowEl.id = rowId;
+            rowEl.dataset.itemId    = '';
+            rowEl.dataset.unitPrice = '0';
+            rowEl.innerHTML = `
+                <div>
+                    <div id="${searchWrapId}"></div>
+                </div>
+                <div>
+                    <input type="number" class="comp-qty-input" value="1" min="0.01" step="0.01"
+                           placeholder="Qty" onchange="updateCompRowCost('${rowId}')">
+                </div>
+                <div>
+                    <input type="number" class="comp-wastage-input" value="0" min="0" max="100" step="0.1"
+                           placeholder="%" onchange="updateCompRowCost('${rowId}')">
+                </div>
+                <div style="display:flex;flex-direction:column;justify-content:center;">
+                    <div class="comp-cost-display" id="cost_${rowId}">₹0.00</div>
+                    <div class="comp-price-display" id="price_${rowId}"></div>
+                </div>
+                <button type="button" class="btn-remove" onclick="removeCompRow('${rowId}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            container.appendChild(rowEl);
+            
+            // DC_BOM_LIVE_SEARCH_001: live server-side search — no pre-loaded list cap
+            const ssWrap = document.getElementById(searchWrapId);
+            createLiveComponentSearch(
+                ssWrap,
+                () => selectedFormCompanyId,
+                'Type to search component…',
+                (item) => {
+                    if (item) {
+                        rowEl.dataset.itemId    = item.id;
+                        rowEl.dataset.unitPrice = item.purchase_rate || 0;
+                        document.getElementById(`price_${rowId}`).textContent =
+                            `₹${formatCurrency(item.purchase_rate || 0)}/unit`;
+                    } else {
+                        rowEl.dataset.itemId    = '';
+                        rowEl.dataset.unitPrice = '0';
+                        document.getElementById(`price_${rowId}`).textContent = '';
+                    }
+                    updateCompRowCost(rowId);
+                }
+            );
+            
+            updateRunningTotal();
+            document.getElementById('costTotalBar').style.display = 'flex';
+        }
+        
+        function updateCompRowCost(rowId) {
+            const rowEl    = document.getElementById(rowId);
+            if (!rowEl) return;
+            const qty      = parseFloat(rowEl.querySelector('.comp-qty-input').value) || 0;
+            const wastage  = parseFloat(rowEl.querySelector('.comp-wastage-input').value) || 0;
+            const price    = parseFloat(rowEl.dataset.unitPrice) || 0;
+            const stdQty   = parseFloat(document.getElementById('formQty').value) || 1;
+            const lineCost = price * qty * (1 + wastage / 100) * stdQty;
+            document.getElementById(`cost_${rowId}`).textContent = `₹${formatCurrency(lineCost)}`;
+            updateRunningTotal();
+        }
+        
+        function removeCompRow(rowId) {
+            const el = document.getElementById(rowId);
+            if (el) el.remove();
+            updateRunningTotal();
+        }
+        
+        function updateRunningTotal() {
+            const rows = document.querySelectorAll('#componentsContainer .comp-row');
+            const stdQty = parseFloat(document.getElementById('formQty').value) || 1;
+            let total = 0;
+            rows.forEach(rowEl => {
+                const qty     = parseFloat(rowEl.querySelector('.comp-qty-input')?.value) || 0;
+                const wastage = parseFloat(rowEl.querySelector('.comp-wastage-input')?.value) || 0;
+                const price   = parseFloat(rowEl.dataset.unitPrice) || 0;
+                total += price * qty * (1 + wastage / 100) * stdQty;
+            });
+            document.getElementById('costTotalValue').textContent = `₹${formatCurrency(total)}`;
+            const bar = document.getElementById('costTotalBar');
+            if (bar) bar.style.display = rows.length ? 'flex' : 'none';
+        }
+        
+        // ─── BOM List ───────────────────────────────────────────────────────────
+        function debounceSearch() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => loadBOMs(), 300);
+        }
+        
+        async function loadBOMs() {
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            const companyId = document.getElementById('filterCompany').value;
+            const statusVal = document.getElementById('filterStatus').value;
+            const search    = document.getElementById('searchInput').value;
+            
+            let url = `${API_BASE}/bom?page=1&page_size=50`;
+            if (companyId) url += `&company_id=${companyId}`;
+            if (statusVal) url += `&status=${statusVal}`;
+            if (search)    url += `&search=${encodeURIComponent(search)}`;
+            
+            try {
+                const response = await staffFetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    allBoms = data.boms || [];
+                    sortAndRenderBOMs();
+                    updateSummary(allBoms);
+                } else { showEmptyState(); }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-BOM] Load error:', e); showEmptyState();
+            }
+            document.getElementById('loadingState').style.display = 'none';
+        }
+        
+        function sortTable(key) {
+            if (currentSortKey === key) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortKey = key;
+                currentSortDir = 'asc';
+            }
+            document.querySelectorAll('.sortable').forEach(th => th.classList.remove('asc', 'desc'));
+            document.querySelector(`th[data-sort="${key}"]`)?.classList.add(currentSortDir);
+            sortAndRenderBOMs();
+        }
+        
+        function sortAndRenderBOMs() {
+            const sorted = [...allBoms].sort((a, b) => {
+                let aVal = a[currentSortKey] || '';
+                let bVal = b[currentSortKey] || '';
+                if (currentSortKey === 'estimated_cost') {
+                    aVal = parseFloat(aVal) || 0;
+                    bVal = parseFloat(bVal) || 0;
+                } else {
+                    aVal = String(aVal).toLowerCase();
+                    bVal = String(bVal).toLowerCase();
+                }
+                if (aVal < bVal) return currentSortDir === 'asc' ? -1 : 1;
+                if (aVal > bVal) return currentSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+            renderBOMs(sorted);
+        }
+        
+        function renderBOMs(boms) {
+            const tbody = document.getElementById('bomTable');
+            if (!boms.length) { showEmptyState(); return; }
+            document.getElementById('tableContainer').style.display = 'block';
+            document.getElementById('recordCount').textContent = `${boms.length} records`;
+            tbody.innerHTML = boms.map(b => {
+                const canEdit = ['DRAFT', 'APPROVED', 'PENDING_APPROVAL'].includes(b.status);
+                return `
+                <tr>
+                    <td><code>${b.bom_code}</code></td>
+                    <td><strong>${b.bom_name}</strong></td>
+                    <td>${b.finished_product_name || '-'}</td>
+                    <td>${b.company_name || '-'}</td>
+                    <td class="amount">₹${formatCurrency(b.estimated_cost)}</td>
+                    <td><span class="status-${b.status.toLowerCase().replace('_', '-')}">${b.status.replace('_', ' ')}</span></td>
+                    <td>
+                        <button class="btn-action btn-view" onclick="viewBOM(${b.id})" title="View"><i class="fas fa-eye"></i></button>
+                        ${canEdit ? `<button class="btn-action btn-edit" onclick="openEditModal(${b.id})" title="Edit"><i class="fas fa-edit"></i></button>` : ''}
+                        <button class="btn-action btn-copy" onclick="copyBOM(${b.id})" title="Copy"><i class="fas fa-copy"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function updateSummary(boms) {
+            document.getElementById('totalBoms').textContent   = boms.length;
+            document.getElementById('approvedBoms').textContent = boms.filter(b => b.status === 'APPROVED').length;
+            document.getElementById('draftBoms').textContent   = boms.filter(b => b.status === 'DRAFT').length;
+        }
+        
+        function showEmptyState() {
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        }
+        
+        // ─── Create Modal ───────────────────────────────────────────────────────
+        function openCreateModal() {
+            document.getElementById('createForm').reset();
+            document.getElementById('componentsContainer').innerHTML = '';
+            document.getElementById('formProductId').value = '';
+            document.getElementById('formProductWrap').innerHTML =
+                `<input class="ss-input" placeholder="Select company first" disabled style="background:#f9fafb;">`;
+            document.getElementById('costTotalBar').style.display = 'none';
+            document.getElementById('costTotalValue').textContent = '₹0.00';
+            formProductSS = null;
+            stockItems = []; filteredStockItems = []; stockItemMap = {};
+            selectedFormCompanyId = null;
+            compRowCounter = 0;
+            document.getElementById('createModal').classList.add('active');
+        }
+        
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        
+        async function createBOM() {
+            const name      = (document.getElementById('formName').value || '').trim();
+            const companyId = parseInt(document.getElementById('formCompany').value);
+            const productId = parseInt(document.getElementById('formProductId').value);
+            
+            if (!name) { alert('BOM Name is required'); return; }
+            if (!companyId || isNaN(companyId)) { alert('Please select a company'); return; }
+            if (!productId || isNaN(productId)) { alert('Please select a finished product'); return; }
+            
+            // Collect component rows
+            const components = [];
+            const usedIds    = new Set();
+            let duplicateFound = false;
+            
+            document.querySelectorAll('#componentsContainer .comp-row').forEach((rowEl, idx) => {
+                const itemId = parseInt(rowEl.dataset.itemId);
+                const qty    = parseFloat(rowEl.querySelector('.comp-qty-input')?.value);
+                const wastage = parseFloat(rowEl.querySelector('.comp-wastage-input')?.value) || 0;
+                
+                if (!itemId || isNaN(itemId)) return; // skip unselected rows
+                
+                if (usedIds.has(itemId)) {
+                    duplicateFound = true;
+                    return;
+                }
+                usedIds.add(itemId);
+                
+                if (!qty || qty <= 0) { alert(`Row ${idx + 1}: quantity must be greater than 0`); return; }
+                if (wastage < 0 || wastage > 100) { alert(`Row ${idx + 1}: wastage % must be between 0 and 100`); return; }
+                
+                components.push({
+                    component_id: itemId,
+                    quantity_required: qty,
+                    wastage_pct: wastage,
+                    unit_of_measure: stockItemMap[itemId]?.unit_of_measure || 'PCS',
+                    sequence_order: components.length + 1
+                });
+            });
+            
+            if (duplicateFound) {
+                alert('Duplicate components found — each component can only appear once in a BOM. Please remove duplicates and try again.');
+                return;
+            }
+            if (!components.length) {
+                alert('Add at least one component before creating the BOM');
+                return;
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            const data = {
+                bom_name:            name,
+                company_id:          companyId,
+                finished_product_id: productId,
+                standard_qty:        parseFloat(document.getElementById('formQty').value) || 1,
+                unit_of_measure:     document.getElementById('formUnit').value,
+                effective_from:      document.getElementById('formEffFrom').value || null,
+                effective_to:        document.getElementById('formEffTo').value || null,
+                estimated_time_hours: parseFloat(document.getElementById('formTime').value) || null,
+                notes:               document.getElementById('formNotes').value || null,
+                line_items:          components
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/bom`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    closeModal('createModal');
+                    loadBOMs();
+                    alert('BOM created successfully');
+                } else {
+                    const err = await response.json();
+                    // Show the specific validation detail if available
+                    const msg = err.message || 'Failed to create BOM';
+                    const detail = err.detail || (err.errors ? err.errors.join('; ') : '');
+                    alert(msg + (detail ? `\n\nDetail: ${detail}` : ''));
+                }
+            } catch (e) {
+                alert('Network error — failed to create BOM');
+            }
+        }
+        
+        // ─── View Modal ─────────────────────────────────────────────────────────
+        async function viewBOM(bomId) {
+            const token = localStorage.getItem('staff_token');
+            currentBomId = bomId;
+            try {
+                const response = await fetch(`${API_BASE}/bom/${bomId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const bom = await response.json();
+                    let html = `
+                        <div class="mb-3"><strong>BOM Code:</strong> <code>${bom.bom_code}</code></div>
+                        <div class="mb-3"><strong>Name:</strong> ${bom.bom_name}</div>
+                        <div class="mb-3"><strong>Product:</strong> ${bom.finished_product_name || '-'} (${bom.finished_product_code || '-'})</div>
+                        <div class="mb-3"><strong>Company:</strong> ${bom.company_name || '-'}</div>
+                        <div class="mb-3"><strong>Std Qty:</strong> ${bom.standard_qty} ${bom.unit_of_measure}</div>
+                        <div class="mb-3"><strong>Est. Cost:</strong> <span style="font-weight:700;color:#059669;">₹${formatCurrency(bom.estimated_cost)}</span></div>
+                        <div class="mb-3"><strong>Status:</strong> <span class="status-${bom.status.toLowerCase()}">${bom.status}</span></div>
+                        <h5 class="mt-4 mb-3"><i class="fas fa-cubes me-2"></i>Components</h5>
+                    `;
+                    if (bom.line_items && bom.line_items.length) {
+                        html += '<table class="data-table"><thead><tr><th>Component</th><th>Code</th><th>Qty</th><th>Wastage</th><th>Unit Rate</th><th>Line Cost</th></tr></thead><tbody>';
+                        bom.line_items.forEach(l => {
+                            html += `<tr>
+                                <td>${l.component_name || '-'}</td>
+                                <td><code style="font-size:11px;">${l.component_code || '-'}</code></td>
+                                <td>${l.quantity_required} ${l.unit_of_measure}</td>
+                                <td>${l.wastage_pct}%</td>
+                                <td class="amount">₹${formatCurrency(l.unit_cost)}</td>
+                                <td class="amount">₹${formatCurrency(l.total_cost)}</td>
+                            </tr>`;
+                        });
+                        html += '</tbody></table>';
+                    } else { html += '<p class="text-muted">No components</p>'; }
+                    
+                    html += `
+                        <div class="cost-total-bar" style="margin-top:12px;">
+                            <span class="label"><i class="fas fa-calculator me-1"></i>Total BOM Cost (purchase rates × qty × wastage)</span>
+                            <span class="value">₹${formatCurrency(bom.estimated_cost)}</span>
+                        </div>
+                        <p style="font-size:11px;color:#6b7280;margin-top:6px;">Cost uses each component's purchase rate. Set the finished product's selling rate separately with your markup.</p>
+                    `;
+                    
+                    document.getElementById('viewModalContent').innerHTML = html;
+                    document.getElementById('btnApprove').style.display =
+                        (bom.status === 'DRAFT' || bom.status === 'PENDING_APPROVAL') ? 'inline-block' : 'none';
+                    document.getElementById('viewModal').classList.add('active');
+                }
+            } catch (e) { alert('Failed to load BOM details'); }
+        }
+        
+        async function approveBOM() {
+            if (!currentBomId) return;
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/bom/${currentBomId}/approval`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'approve' })
+                });
+                if (response.ok) { closeModal('viewModal'); loadBOMs(); alert('BOM approved'); }
+                else { const err = await response.json(); alert(err.message || err.detail || 'Failed to approve'); }
+            } catch (e) { alert('Failed to approve BOM'); }
+        }
+        
+        async function copyBOM(bomId) {
+            const token = localStorage.getItem('staff_token');
+            if (!confirm('Create a copy of this BOM?')) return;
+            try {
+                const response = await fetch(`${API_BASE}/bom/${bomId}/copy`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (response.ok) { loadBOMs(); alert('BOM copied successfully'); }
+                else { const err = await response.json(); alert(err.message || err.detail || 'Failed to copy'); }
+            } catch (e) { alert('Failed to copy BOM'); }
+        }
+        
+        // ─── Edit Modal ─────────────────────────────────────────────────────────
+        async function loadEditStockItems(_companyId) {
+            // DC_BOM_LIVE_SEARCH_001: edit-mode component modals use createLiveComponentSearch
+            // (server-side search) — no bulk pre-load needed.  This stub kept so call-sites
+            // don't need updating; editStockItemMap is populated from currentBomData.line_items
+            // for pre-fill of existing rows.
+            editStockItems = [];
+            editStockItemMap = {};
+            if (currentBomData && currentBomData.line_items) {
+                currentBomData.line_items.forEach(l => {
+                    editStockItemMap[l.component_id] = {
+                        id: l.component_id,
+                        item_name: l.component_name,
+                        item_code: l.component_code,
+                        unit_of_measure: l.unit_of_measure,
+                        purchase_rate: l.unit_cost
+                    };
+                });
+            }
+        }
+        
+        async function openEditModal(bomId) {
+            const token = localStorage.getItem('staff_token');
+            currentBomId = bomId;
+            try {
+                const response = await fetch(`${API_BASE}/bom/${bomId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    const bom = await response.json();
+                    if (bom.status === 'REJECTED') {
+                        alert('REJECTED BOMs cannot be edited. Please use Copy to create a new version.');
+                        return;
+                    }
+                    
+                    currentBomData  = bom;
+                    editBomCompanyId = bom.company_id;
+                    
+                    document.getElementById('editBomId').value             = bom.id;
+                    document.getElementById('editBomStatus').value         = bom.status;
+                    document.getElementById('editFormName').value          = bom.bom_name || '';
+                    document.getElementById('editFormCompanyDisplay').value = bom.company_name || '-';
+                    document.getElementById('editFormProductDisplay').value = `${bom.finished_product_name || '-'} (${bom.finished_product_code || '-'})`;
+                    document.getElementById('editFormQty').value           = parseFloat(bom.standard_qty) || 1;
+                    document.getElementById('editFormUnit').value          = bom.unit_of_measure || 'PCS';
+                    document.getElementById('editFormEffFrom').value       = bom.effective_from ? bom.effective_from.split('T')[0] : '';
+                    document.getElementById('editFormEffTo').value         = bom.effective_to ? bom.effective_to.split('T')[0] : '';
+                    document.getElementById('editFormTime').value          = bom.estimated_time_hours || '';
+                    document.getElementById('editFormNotes').value         = bom.notes || '';
+                    document.getElementById('editFormChangeReason').value  = '';
+                    
+                    const isApproved = bom.status === 'APPROVED';
+                    document.getElementById('reapprovalAlert').style.display    = isApproved ? 'block' : 'none';
+                    document.getElementById('changeReasonGroup').style.display  = isApproved ? 'block' : 'none';
+                    document.getElementById('btnSaveBOM').innerHTML = isApproved
+                        ? '<i class="fas fa-paper-plane me-1"></i>Save & Request Re-approval'
+                        : '<i class="fas fa-save me-1"></i>Save Changes';
+                    
+                    document.getElementById('editComponentsContainer').innerHTML =
+                        '<div class="loading-spinner" id="editComponentsLoading"><div class="spinner" style="width: 24px; height: 24px;"></div></div>';
+                    document.getElementById('editComponentsInfo').textContent = '';
+                    
+                    clearValidationErrors();
+                    document.getElementById('editModal').classList.add('active');
+                    
+                    await loadEditStockItems(bom.company_id);
+                    renderEditComponents(bom.line_items);
+                } else {
+                    alert('Failed to load BOM details');
+                }
+            } catch (e) {
+                console.error('[DC-BOM] Edit load error:', e);
+                alert('Failed to load BOM details');
+            }
+        }
+        
+        function renderEditComponents(lineItems) {
+            const container = document.getElementById('editComponentsContainer');
+            if (!lineItems || !lineItems.length) {
+                container.innerHTML = '<p class="text-muted" style="padding: 10px;">No components. Click Add Component to add.</p>';
+                document.getElementById('editComponentsInfo').textContent = '';
+                return;
+            }
+            
+            container.innerHTML = `
+                <table class="data-table" style="font-size:13px;">
+                    <thead><tr>
+                        <th>Component</th><th>Code</th><th>Qty</th><th>Wastage</th><th>Unit Rate</th><th>Cost</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody>
+                        ${lineItems.map(l => `
+                        <tr>
+                            <td><strong>${l.component_name || '-'}</strong></td>
+                            <td><code style="font-size:11px;">${l.component_code || '-'}</code></td>
+                            <td>${l.quantity_required} ${l.unit_of_measure}</td>
+                            <td>${l.wastage_pct}%</td>
+                            <td class="amount">₹${formatCurrency(l.unit_cost)}</td>
+                            <td class="amount">₹${formatCurrency(l.total_cost)}</td>
+                            <td>
+                                <button class="btn-action btn-edit" onclick="openEditComponentModal(${l.id}, ${l.component_id}, ${l.quantity_required}, ${l.wastage_pct})" title="Edit"><i class="fas fa-edit"></i></button>
+                                <button class="btn-action" style="background:#fee2e2;color:#dc2626;" onclick="openRemoveComponentModal(${l.id}, '${(l.component_name || '').replace(/'/g,"\\'")}')"><i class="fas fa-trash-alt"></i></button>
+                            </td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('editComponentsInfo').textContent =
+                `${lineItems.length} component${lineItems.length !== 1 ? 's' : ''} — Est. Cost: ₹${formatCurrency(lineItems.reduce((s, l) => s + parseFloat(l.total_cost || 0), 0))}`;
+        }
+        
+        function clearValidationErrors() {
+            document.querySelectorAll('.validation-error').forEach(el => el.classList.remove('validation-error'));
+            document.querySelectorAll('.error-msg').forEach(el => el.style.display = 'none');
+        }
+        
+        function validateEditForm() {
+            clearValidationErrors();
+            let isValid = true;
+            const name   = document.getElementById('editFormName').value.trim();
+            const qty    = parseFloat(document.getElementById('editFormQty').value);
+            const st     = document.getElementById('editBomStatus').value;
+            const reason = document.getElementById('editFormChangeReason').value.trim();
+            
+            if (!name) {
+                document.getElementById('editFormName').classList.add('validation-error');
+                document.getElementById('editNameError').style.display = 'block';
+                isValid = false;
+            }
+            if (!qty || qty <= 0) {
+                document.getElementById('editFormQty').classList.add('validation-error');
+                document.getElementById('editQtyError').style.display = 'block';
+                isValid = false;
+            }
+            if (st === 'APPROVED' && !reason) {
+                document.getElementById('editFormChangeReason').classList.add('validation-error');
+                document.getElementById('editChangeReasonError').style.display = 'block';
+                isValid = false;
+            }
+            return isValid;
+        }
+        
+        async function updateBOM() {
+            if (!validateEditForm()) return;
+            
+            const token    = localStorage.getItem('staff_token');
+            const bomId    = document.getElementById('editBomId').value;
+            const isApproved = document.getElementById('editBomStatus').value === 'APPROVED';
+            
+            const data = {
+                bom_name:             document.getElementById('editFormName').value.trim(),
+                standard_qty:         parseFloat(document.getElementById('editFormQty').value) || 1,
+                unit_of_measure:      document.getElementById('editFormUnit').value,
+                effective_from:       document.getElementById('editFormEffFrom').value || null,
+                effective_to:         document.getElementById('editFormEffTo').value || null,
+                estimated_time_hours: parseFloat(document.getElementById('editFormTime').value) || null,
+                notes:                document.getElementById('editFormNotes').value || null
+            };
+            if (isApproved) data.change_reason = document.getElementById('editFormChangeReason').value.trim();
+            
+            try {
+                const response = await fetch(`${API_BASE}/bom/${bomId}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (response.ok) {
+                    closeModal('editModal');
+                    loadBOMs();
+                    alert(isApproved
+                        ? 'BOM updated and pushed for re-approval. Status changed to PENDING APPROVAL.'
+                        : 'BOM updated successfully');
+                } else {
+                    const err = await response.json();
+                    const msg    = err.message || 'Failed to update BOM';
+                    const detail = err.detail || (err.errors ? err.errors.join('; ') : '');
+                    alert(msg + (detail ? `\n\nDetail: ${detail}` : ''));
+                }
+            } catch (e) { alert('Failed to update BOM'); }
+        }
+        
+        // ─── Add / Edit Component Modal (Edit mode) ─────────────────────────────
+        let compSS = null; // searchable select for component modal
+
+        function openAddComponentModal() {
+            document.getElementById('componentModalTitle').innerHTML = '<i class="fas fa-cube me-2"></i>Add Component';
+            document.getElementById('compFormLineId').value  = '';
+            document.getElementById('compFormMode').value    = 'add';
+            document.getElementById('compFormItemId').value  = '';
+            document.getElementById('compFormQty').value     = '1';
+            document.getElementById('compFormWastage').value = '0';
+            document.getElementById('compFormReason').value  = '';
+            document.getElementById('compChangeReasonGroup').style.display =
+                currentBomData?.status === 'APPROVED' ? 'block' : 'none';
+            
+            const wrap = document.getElementById('compFormItemWrap');
+            // DC_BOM_LIVE_SEARCH_001: server-side live search for all item types
+            compSS = createLiveComponentSearch(
+                wrap,
+                () => editBomCompanyId,
+                'Type to search component…',
+                (item) => { document.getElementById('compFormItemId').value = item ? item.id : ''; }
+            );
+
+            clearValidationErrors();
+            document.getElementById('componentModal').classList.add('active');
+        }
+
+        function openEditComponentModal(lineId, componentId, qty, wastage) {
+            document.getElementById('componentModalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Component';
+            document.getElementById('compFormLineId').value  = lineId;
+            document.getElementById('compFormMode').value    = 'edit';
+            document.getElementById('compFormItemId').value  = componentId;
+            document.getElementById('compFormQty').value     = qty;
+            document.getElementById('compFormWastage').value = wastage;
+            document.getElementById('compFormReason').value  = '';
+            document.getElementById('compChangeReasonGroup').style.display =
+                currentBomData?.status === 'APPROVED' ? 'block' : 'none';
+
+            const wrap = document.getElementById('compFormItemWrap');
+            // DC_BOM_LIVE_SEARCH_001: pre-fill from editStockItemMap if available (page_size=2000 covers most),
+            // otherwise user can type to search — server returns any item regardless of map presence.
+            const existingItem = editStockItemMap[componentId] || null;
+            compSS = createLiveComponentSearch(
+                wrap,
+                () => editBomCompanyId,
+                'Type to search component…',
+                (item) => { document.getElementById('compFormItemId').value = item ? item.id : ''; },
+                existingItem
+            );
+            
+            clearValidationErrors();
+            document.getElementById('componentModal').classList.add('active');
+        }
+        
+        async function saveComponent() {
+            const mode       = document.getElementById('compFormMode').value;
+            const lineId     = document.getElementById('compFormLineId').value;
+            const componentId = parseInt(document.getElementById('compFormItemId').value);
+            const qty        = parseFloat(document.getElementById('compFormQty').value);
+            const wastage    = parseFloat(document.getElementById('compFormWastage').value) || 0;
+            const reason     = document.getElementById('compFormReason').value.trim();
+            const isApproved = currentBomData?.status === 'APPROVED';
+            
+            if (!componentId || isNaN(componentId)) {
+                document.getElementById('compItemError').style.display = 'block';
+                return;
+            }
+            if (!qty || qty <= 0) {
+                document.getElementById('compQtyError').style.display = 'block';
+                return;
+            }
+            if (wastage < 0 || wastage > 100) {
+                alert('Wastage % must be between 0 and 100');
+                return;
+            }
+            if (isApproved && !reason) {
+                document.getElementById('compReasonError').style.display = 'block';
+                return;
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            
+            try {
+                let response;
+                if (mode === 'add') {
+                    response = await fetch(`${API_BASE}/bom/${currentBomId}/line-items`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            component_id:      componentId,
+                            quantity_required: qty,
+                            wastage_pct:       wastage,
+                            unit_of_measure:   editStockItemMap[componentId]?.unit_of_measure || 'PCS',
+                            sequence_order:    1,
+                            change_reason:     reason || null
+                        })
+                    });
+                } else {
+                    response = await fetch(`${API_BASE}/bom/line-items/${lineId}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            quantity_required: qty,
+                            wastage_pct:       wastage,
+                            change_reason:     reason || null
+                        })
+                    });
+                }
+                
+                if (response.ok) {
+                    closeModal('componentModal');
+                    // Reload BOM to get fresh components
+                    const bomRes = await fetch(`${API_BASE}/bom/${currentBomId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (bomRes.ok) {
+                        const bom = await bomRes.json();
+                        currentBomData = bom;
+                        renderEditComponents(bom.line_items);
+                        document.getElementById('editBomStatus').value = bom.status;
+                    }
+                    loadBOMs();
+                } else {
+                    const err = await response.json();
+                    const msg    = err.message || 'Failed to save component';
+                    const detail = err.detail || (err.errors ? err.errors.join('; ') : '');
+                    alert(msg + (detail ? `\n\nDetail: ${detail}` : ''));
+                }
+            } catch (e) { alert('Failed to save component'); }
+        }
+        
+        function openRemoveComponentModal(lineId, componentName) {
+            document.getElementById('removeLineId').value = lineId;
+            document.getElementById('removeComponentName').textContent = componentName;
+            document.getElementById('removeReason').value = '';
+            document.getElementById('removeReasonGroup').style.display =
+                currentBomData?.status === 'APPROVED' ? 'block' : 'none';
+            document.getElementById('removeComponentModal').classList.add('active');
+        }
+        
+        async function confirmRemoveComponent() {
+            const lineId   = document.getElementById('removeLineId').value;
+            const reason   = document.getElementById('removeReason').value.trim();
+            const isApproved = currentBomData?.status === 'APPROVED';
+            
+            if (isApproved && !reason) {
+                document.getElementById('removeReasonError').style.display = 'block';
+                return;
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/bom/line-items/${lineId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ change_reason: reason || null })
+                });
+                
+                if (response.ok) {
+                    closeModal('removeComponentModal');
+                    const bomRes = await fetch(`${API_BASE}/bom/${currentBomId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (bomRes.ok) {
+                        const bom = await bomRes.json();
+                        currentBomData = bom;
+                        renderEditComponents(bom.line_items);
+                        document.getElementById('editBomStatus').value = bom.status;
+                    }
+                    loadBOMs();
+                } else {
+                    const err = await response.json();
+                    const msg    = err.message || 'Failed to remove component';
+                    const detail = err.detail || (err.errors ? err.errors.join('; ') : '');
+                    alert(msg + (detail ? `\n\nDetail: ${detail}` : ''));
+                }
+            } catch (e) { alert('Failed to remove component'); }
+        }
+    </script>
+</body>
+</html>

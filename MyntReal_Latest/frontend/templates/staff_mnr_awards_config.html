@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Awards Configuration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-primary: #1a1d21;
+            --bg-secondary: #22262a;
+            --bg-card: #2a2e33;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a5ab;
+            --accent-green: #4ade80;
+            --accent-blue: #3b82f6;
+            --accent-gold: #f59e0b;
+            --border-color: #3a3f44;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            min-height: 100vh;
+        }
+        .page-header {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 1.5rem;
+        }
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .page-title i { color: var(--accent-gold); }
+        .nav-tabs-custom {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 4px;
+            display: inline-flex;
+            gap: 4px;
+        }
+        .nav-tabs-custom .nav-link {
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .nav-tabs-custom .nav-link:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+        .nav-tabs-custom .nav-link.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+        .config-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .config-card-header {
+            background: var(--bg-secondary);
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .config-card-header h5 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .config-table {
+            width: 100%;
+            margin: 0;
+        }
+        .config-table th {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .config-table td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+        .config-table tbody tr:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        .tier-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            background: linear-gradient(135deg, var(--accent-gold), #d97706);
+            color: white;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .price-range {
+            font-size: 0.85rem;
+            color: var(--accent-green);
+        }
+        .btn-edit {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .btn-edit:hover {
+            background: #2563eb;
+            color: white;
+            transform: translateY(-1px);
+        }
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+        }
+        .modal-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .modal-title { color: var(--text-primary); }
+        .btn-close { filter: invert(1); }
+        .form-label {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .form-control, .form-select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.6rem 0.875rem;
+        }
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-secondary);
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        .form-control::placeholder { color: var(--text-secondary); }
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+        }
+        .alert-info-custom {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--text-primary);
+            border-radius: 8px;
+        }
+        .stat-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+        .stat-badge .value {
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-cogs"></i>
+            Awards Configuration
+        </h1>
+        <p class="text-secondary mb-0 mt-1" style="font-size: 0.875rem;">Manage award tiers, price ranges, and requirements</p>
+    </div>
+
+    <div class="container-fluid py-4">
+        <ul class="nav nav-tabs-custom mb-4" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link active" id="direct-tab" data-bs-toggle="tab" data-bs-target="#direct-pane" type="button">
+                    <i class="fas fa-handshake me-1"></i> Direct Facilitations
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="matching-tab" data-bs-toggle="tab" data-bs-target="#matching-pane" type="button">
+                    <i class="fas fa-users me-1"></i> Group Performance Recognitions
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="bonanza-tab" data-bs-toggle="tab" data-bs-target="#bonanza-pane" type="button">
+                    <i class="fas fa-gift me-1"></i> Bonanza Campaigns
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="direct-pane">
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <h5><i class="fas fa-trophy text-warning me-2"></i>Referral Award Tiers</h5>
+                        <div class="stat-badge">
+                            <span>Total Tiers:</span>
+                            <span class="value" id="directTierCount">-</span>
+                        </div>
+                    </div>
+                    <div id="directTiersContainer">
+                        <div class="loading-spinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="matching-pane">
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <h5><i class="fas fa-network-wired text-info me-2"></i>Group Performance Recognition Award Tiers</h5>
+                        <div class="stat-badge">
+                            <span>Total Tiers:</span>
+                            <span class="value" id="matchingTierCount">-</span>
+                        </div>
+                    </div>
+                    <div id="matchingTiersContainer">
+                        <div class="loading-spinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="bonanza-pane">
+                <div class="config-card">
+                    <div class="config-card-header">
+                        <h5><i class="fas fa-star text-success me-2"></i>Bonanza Campaigns</h5>
+                        <button class="btn btn-success btn-sm" onclick="showCreateBonanzaModal()">
+                            <i class="fas fa-plus me-1"></i> Create Bonanza
+                        </button>
+                    </div>
+                    <div id="bonanzaContainer">
+                        <div class="loading-spinner">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editTierModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Award Tier</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="editAchievedWarning" class="alert alert-warning" style="display:none;"></div>
+                    <form id="editTierForm">
+                        <input type="hidden" id="editTierId">
+                        <input type="hidden" id="editTierType">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Award Name</label>
+                                <input type="text" class="form-control" id="editAwardName" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Required Count</label>
+                                <input type="number" class="form-control" id="editRequiredCount" min="1">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Cumulative Required</label>
+                                <input type="number" class="form-control" id="editCumulativeRequired" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Award Description</label>
+                                <textarea class="form-control" id="editAwardDescription" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Price Range From (₹)</label>
+                                <input type="number" class="form-control" id="editPriceFrom" step="0.01">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Price Range To (₹)</label>
+                                <input type="number" class="form-control" id="editPriceTo" step="0.01">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Actual Price (₹)</label>
+                                <input type="number" class="form-control" id="editActualPrice" step="0.01">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Update Reason (for audit)</label>
+                                <input type="text" class="form-control" id="editUpdateReason" placeholder="Reason for this change..." required>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveTierChanges()">
+                        <i class="fas fa-save me-1"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editBonanzaModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="background: #1e2a3a; color: #e0e0e0;">
+                <div class="modal-header" style="border-bottom: 1px solid #2d3e50;">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Bonanza Campaign</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editBonanzaId">
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Campaign Name</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="editBonanzaName">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Start Date</label>
+                            <input type="datetime-local" class="form-control bg-dark text-light border-secondary" id="editBonanzaStart">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">End Date</label>
+                            <input type="datetime-local" class="form-control bg-dark text-light border-secondary" id="editBonanzaEnd">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Criteria Type</label>
+                            <select class="form-select bg-dark text-light border-secondary" id="editBonanzaCriteria">
+                                <option value="direct_referral">Direct Facilitation</option>
+                                <option value="group_performance">Group Performance</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Target Requirement</label>
+                            <input type="number" class="form-control bg-dark text-light border-secondary" id="editBonanzaTarget">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Reward Type</label>
+                            <select class="form-select bg-dark text-light border-secondary" id="editBonanzaRewardType" onchange="toggleBonanzaRewardFields()">
+                                <option value="monetary">Monetary</option>
+                                <option value="non_monetary">Non-Monetary</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="editRewardAmountGroup">
+                            <label class="form-label">Reward Amount (₹)</label>
+                            <input type="number" step="0.01" class="form-control bg-dark text-light border-secondary" id="editBonanzaRewardAmount">
+                        </div>
+                        <div class="col-md-4" id="editRewardTextGroup">
+                            <label class="form-label">Reward Description</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="editBonanzaRewardText">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Award Name</label>
+                            <input type="text" class="form-control bg-dark text-light border-secondary" id="editBonanzaAwardName">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Max Winners</label>
+                            <input type="number" class="form-control bg-dark text-light border-secondary" id="editBonanzaMaxWinners">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Total Budget (₹)</label>
+                            <input type="number" step="0.01" class="form-control bg-dark text-light border-secondary" id="editBonanzaBudget">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Price Range From (₹)</label>
+                            <input type="number" step="0.01" class="form-control bg-dark text-light border-secondary" id="editBonanzaPriceFrom">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Price Range To (₹)</label>
+                            <input type="number" step="0.01" class="form-control bg-dark text-light border-secondary" id="editBonanzaPriceTo">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Actual Price (₹)</label>
+                            <input type="number" step="0.01" class="form-control bg-dark text-light border-secondary" id="editBonanzaActualPrice" readonly style="opacity: 0.7;">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select class="form-select bg-dark text-light border-secondary" id="editBonanzaStatus">
+                                <option value="draft">Draft</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="active">Active</option>
+                                <option value="cancelled">Cancelled</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Reduced Target</label>
+                            <input type="number" class="form-control bg-dark text-light border-secondary" id="editBonanzaReducedTarget" placeholder="Optional reduced target">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Update Reason</label>
+                        <textarea class="form-control bg-dark text-light border-secondary" id="editBonanzaReason" rows="2" placeholder="Reason for changes (required)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid #2d3e50;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveBonanzaChanges()">
+                        <i class="fas fa-save me-1"></i> Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1/rvz/awards-config';
+        const authToken = localStorage.getItem('authToken') || '';
+
+        async function fetchWithAuth(url, options = {}) {
+            const headers = {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+            const response = await fetch(url, { ...options, headers });
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+                throw new Error(error.detail || 'Request failed');
+            }
+            return response.json();
+        }
+
+        function formatCurrency(amount) {
+            if (!amount && amount !== 0) return '-';
+            return '₹' + Number(amount).toLocaleString('en-IN');
+        }
+
+        async function loadDirectTiers() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/direct-tiers`);
+                const tiers = response.data || response.tiers || [];
+                document.getElementById('directTierCount').textContent = tiers.length;
+                
+                if (tiers.length === 0) {
+                    document.getElementById('directTiersContainer').innerHTML = `
+                        <div class="alert alert-info-custom m-3">
+                            <i class="fas fa-info-circle me-2"></i>No direct award tiers configured.
+                        </div>`;
+                    return;
+                }
+
+                const html = `
+                    <table class="config-table">
+                        <thead>
+                            <tr>
+                                <th>Tier</th>
+                                <th>Award Name</th>
+                                <th>Item Name</th>
+                                <th>Required Count</th>
+                                <th>Cumulative Required</th>
+                                <th>Achieved</th>
+                                <th>Pending</th>
+                                <th>Completed/Cleared</th>
+                                <th>Price Range</th>
+                                <th>Actual Price</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tiers.map((tier, idx) => `
+                                <tr>
+                                    <td><span class="tier-badge"><i class="fas fa-medal"></i> Tier ${idx + 1}</span></td>
+                                    <td><strong>${tier.award_name || '-'}</strong></td>
+                                    <td style="color: #a0a5ab;">${tier.award_item_name || tier.award_description || '-'}</td>
+                                    <td>${tier.referral_count || 0}</td>
+                                    <td><strong>${tier.cumulative_required || 0}</strong></td>
+                                    <td>${(tier.achievers_count || 0) > 0 ? '<span class="badge bg-success">' + tier.achievers_count + ' users</span>' : '<span class="badge bg-secondary">0</span>'}</td>
+                                    <td>${(tier.pending_count || 0) > 0 ? '<span class="badge bg-warning text-dark">' + tier.pending_count + '</span>' : '<span class="badge bg-secondary">0</span>'}</td>
+                                    <td>${(tier.completed_count || 0) > 0 ? '<span class="badge bg-info">' + tier.completed_count + '</span>' : '<span class="badge bg-secondary">0</span>'}</td>
+                                    <td class="price-range">${formatCurrency(tier.price_range_from)} - ${formatCurrency(tier.price_range_to)}</td>
+                                    <td><strong>${formatCurrency(tier.actual_price)}</strong></td>
+                                    <td>
+                                        <button class="btn-edit" onclick="editTier(${tier.id}, 'direct', ${JSON.stringify(tier).replace(/"/g, '&quot;')})">
+                                            <i class="fas fa-edit me-1"></i> Edit
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+                document.getElementById('directTiersContainer').innerHTML = html;
+            } catch (error) {
+                document.getElementById('directTiersContainer').innerHTML = `
+                    <div class="alert alert-danger m-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Error loading direct tiers: ${error.message}
+                    </div>`;
+            }
+        }
+
+        async function loadMatchingTiers() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/matching-tiers`);
+                const tiers = response.data || response.tiers || [];
+                document.getElementById('matchingTierCount').textContent = tiers.length;
+                
+                if (tiers.length === 0) {
+                    document.getElementById('matchingTiersContainer').innerHTML = `
+                        <div class="alert alert-info-custom m-3">
+                            <i class="fas fa-info-circle me-2"></i>No matching award tiers configured.
+                        </div>`;
+                    return;
+                }
+
+                const html = `
+                    <table class="config-table">
+                        <thead>
+                            <tr>
+                                <th>Tier</th>
+                                <th>Award Name</th>
+                                <th>Item Name</th>
+                                <th>Required Count</th>
+                                <th>Cumulative Required</th>
+                                <th>Achieved</th>
+                                <th>Pending</th>
+                                <th>Completed/Cleared</th>
+                                <th>Price Range</th>
+                                <th>Actual Price</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tiers.map((tier, idx) => `
+                                <tr>
+                                    <td><span class="tier-badge" style="background: linear-gradient(135deg, #3b82f6, #2563eb)"><i class="fas fa-medal"></i> Tier ${idx + 1}</span></td>
+                                    <td><strong>${tier.award_name || '-'}</strong></td>
+                                    <td style="color: #a0a5ab;">${tier.award_item_name || tier.award_description || '-'}</td>
+                                    <td>${tier.match_count?.toLocaleString() || 0}</td>
+                                    <td><strong>${tier.cumulative_required?.toLocaleString() || 0}</strong></td>
+                                    <td>${(tier.achievers_count || 0) > 0 ? '<span class="badge bg-success">' + tier.achievers_count + ' users</span>' : '<span class="badge bg-secondary">0</span>'}</td>
+                                    <td>${(tier.pending_count || 0) > 0 ? '<span class="badge bg-warning text-dark">' + tier.pending_count + '</span>' : '<span class="badge bg-secondary">0</span>'}</td>
+                                    <td>${(tier.completed_count || 0) > 0 ? '<span class="badge bg-info">' + tier.completed_count + '</span>' : '<span class="badge bg-secondary">0</span>'}</td>
+                                    <td class="price-range">${formatCurrency(tier.price_range_from)} - ${formatCurrency(tier.price_range_to)}</td>
+                                    <td><strong>${formatCurrency(tier.actual_price)}</strong></td>
+                                    <td>
+                                        <button class="btn-edit" onclick="editTier(${tier.id}, 'matching', ${JSON.stringify(tier).replace(/"/g, '&quot;')})">
+                                            <i class="fas fa-edit me-1"></i> Edit
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>`;
+                document.getElementById('matchingTiersContainer').innerHTML = html;
+            } catch (error) {
+                document.getElementById('matchingTiersContainer').innerHTML = `
+                    <div class="alert alert-danger m-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Error loading matching tiers: ${error.message}
+                    </div>`;
+            }
+        }
+
+        async function loadBonanzas() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/bonanzas`);
+                const bonanzas = response.data || response.bonanzas || [];
+                _cacheBonanzas(bonanzas);
+                
+                if (bonanzas.length === 0) {
+                    document.getElementById('bonanzaContainer').innerHTML = `
+                        <div class="alert alert-info-custom m-3">
+                            <i class="fas fa-info-circle me-2"></i>No bonanza campaigns configured. Click "Create Bonanza" to add one.
+                        </div>`;
+                    return;
+                }
+
+                const html = `
+                    <table class="config-table">
+                        <thead>
+                            <tr>
+                                <th>Campaign Name</th>
+                                <th>Period</th>
+                                <th>Criteria</th>
+                                <th>Target</th>
+                                <th>Reward</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${bonanzas.map(b => {
+                                const now = new Date();
+                                const start = new Date(b.start_date);
+                                const end = new Date(b.end_date);
+                                let status = b.status || 'Upcoming';
+                                let statusClass = 'bg-info';
+                                if (status === 'approved' || status === 'active' || (now >= start && now <= end)) { statusClass = 'bg-success'; }
+                                else if (status === 'cancelled') { statusClass = 'bg-danger'; }
+                                else if (status === 'completed' || now > end) { statusClass = 'bg-secondary'; }
+                                else if (status === 'draft' || status === 'pending') { statusClass = 'bg-warning text-dark'; }
+                                
+                                return `
+                                <tr>
+                                    <td><strong>${b.name}</strong></td>
+                                    <td style="font-size: 0.8rem;">${new Date(b.start_date).toLocaleDateString()} - ${new Date(b.end_date).toLocaleDateString()}</td>
+                                    <td>${b.criteria_type === 'direct_referral' ? 'Direct Facilitation' : 'Group Performance'}</td>
+                                    <td>${b.target_requirement?.toLocaleString() || '-'}</td>
+                                    <td>${b.is_monetary ? formatCurrency(b.reward_amount) : (b.reward_text || b.award_name || '-')}</td>
+                                    <td><span class="badge ${statusClass}">${status.charAt(0).toUpperCase() + status.slice(1)}</span></td>
+                                    <td>
+                                        <button class="btn-edit" onclick="editBonanza(${b.id})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>`;
+                document.getElementById('bonanzaContainer').innerHTML = html;
+            } catch (error) {
+                document.getElementById('bonanzaContainer').innerHTML = `
+                    <div class="alert alert-danger m-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Error loading bonanzas: ${error.message}
+                    </div>`;
+            }
+        }
+
+        function editTier(id, type, tier) {
+            document.getElementById('editTierId').value = id;
+            document.getElementById('editTierType').value = type;
+            document.getElementById('editAwardName').value = tier.award_name || '';
+            document.getElementById('editAwardDescription').value = tier.award_description || '';
+            const reqCount = type === 'direct' ? (tier.referral_count || 0) : (tier.match_count || 0);
+            document.getElementById('editRequiredCount').value = reqCount;
+            document.getElementById('editCumulativeRequired').value = tier.cumulative_required || 0;
+            document.getElementById('editPriceFrom').value = tier.price_range_from || '';
+            document.getElementById('editPriceTo').value = tier.price_range_to || '';
+            document.getElementById('editActualPrice').value = tier.actual_price || '';
+            document.getElementById('editUpdateReason').value = '';
+
+            document.getElementById('editRequiredCount').dataset.originalValue = reqCount;
+            document.getElementById('editCumulativeRequired').dataset.originalValue = tier.cumulative_required || 0;
+
+            const achCount = tier.achievers_count || 0;
+            const warningEl = document.getElementById('editAchievedWarning');
+            if (achCount > 0) {
+                warningEl.innerHTML = '<i class="fas fa-shield-alt me-1"></i><strong>' + achCount + ' user(s) already achieved this tier.</strong> Their existing progress records are preserved. Changes only affect future/pending targets.';
+                warningEl.style.display = 'block';
+            } else {
+                warningEl.style.display = 'none';
+            }
+
+            new bootstrap.Modal(document.getElementById('editTierModal')).show();
+        }
+
+        async function saveTierChanges() {
+            const id = document.getElementById('editTierId').value;
+            const type = document.getElementById('editTierType').value;
+            const endpoint = type === 'direct' ? 'direct-tiers' : 'matching-tiers';
+
+            const reqCountEl = document.getElementById('editRequiredCount');
+            const cumReqEl = document.getElementById('editCumulativeRequired');
+            const newReqCount = parseInt(reqCountEl.value) || 0;
+            const origReqCount = parseInt(reqCountEl.dataset.originalValue) || 0;
+            let cumRequired = parseInt(cumReqEl.value) || 0;
+
+            if (newReqCount !== origReqCount) {
+                const diff = newReqCount - origReqCount;
+                const origCum = parseInt(cumReqEl.dataset.originalValue) || 0;
+                cumRequired = origCum + diff;
+                if (cumRequired < 1) cumRequired = 1;
+            }
+
+            const payload = {
+                award_name: document.getElementById('editAwardName').value,
+                award_description: document.getElementById('editAwardDescription').value,
+                cumulative_required: cumRequired,
+                required_count: newReqCount,
+                price_range_from: parseFloat(document.getElementById('editPriceFrom').value) || null,
+                price_range_to: parseFloat(document.getElementById('editPriceTo').value) || null,
+                actual_price: parseFloat(document.getElementById('editActualPrice').value) || null,
+                update_reason: document.getElementById('editUpdateReason').value
+            };
+
+            try {
+                const resp = await fetchWithAuth(`${API_BASE}/${endpoint}/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+
+                bootstrap.Modal.getInstance(document.getElementById('editTierModal')).hide();
+
+                let msg = 'Award tier updated successfully!';
+                if (resp && resp.cascade_applied) {
+                    msg += '\n\nCascade applied: All subsequent tiers have been adjusted accordingly.';
+                }
+                if (resp && resp.achieved_count > 0) {
+                    msg += '\n\nNote: ' + resp.achieved_count + ' user(s) already achieved this tier - their records are preserved.';
+                }
+                alert(msg);
+
+                if (type === 'direct') loadDirectTiers();
+                else loadMatchingTiers();
+            } catch (error) {
+                alert('Error updating tier: ' + error.message);
+            }
+        }
+
+        let _bonanzaCache = {};
+
+        function _cacheBonanzas(bonanzas) {
+            _bonanzaCache = {};
+            bonanzas.forEach(b => { _bonanzaCache[b.id] = b; });
+        }
+
+        function toLocalDatetimeStr(isoStr) {
+            if (!isoStr) return '';
+            const d = new Date(isoStr);
+            const pad = n => String(n).padStart(2, '0');
+            return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        }
+
+        function toggleBonanzaRewardFields() {
+            const rt = document.getElementById('editBonanzaRewardType').value;
+            document.getElementById('editRewardAmountGroup').style.display = rt === 'monetary' ? '' : 'none';
+            document.getElementById('editRewardTextGroup').style.display = rt === 'non_monetary' ? '' : 'none';
+        }
+
+        function editBonanza(id) {
+            const b = _bonanzaCache[id];
+            if (!b) { alert('Bonanza data not found. Please refresh the page.'); return; }
+
+            document.getElementById('editBonanzaId').value = b.id;
+            document.getElementById('editBonanzaName').value = b.name || '';
+            document.getElementById('editBonanzaStart').value = toLocalDatetimeStr(b.start_date);
+            document.getElementById('editBonanzaEnd').value = toLocalDatetimeStr(b.end_date);
+            document.getElementById('editBonanzaCriteria').value = b.criteria_type || 'direct_referral';
+            document.getElementById('editBonanzaTarget').value = b.target_requirement || '';
+            document.getElementById('editBonanzaRewardType').value = b.is_monetary ? 'monetary' : 'non_monetary';
+            document.getElementById('editBonanzaRewardAmount').value = b.reward_amount || '';
+            document.getElementById('editBonanzaRewardText').value = b.reward_text || '';
+            document.getElementById('editBonanzaAwardName').value = b.award_name || '';
+            document.getElementById('editBonanzaMaxWinners').value = b.max_winners || '';
+            document.getElementById('editBonanzaBudget').value = b.total_budget || '';
+            document.getElementById('editBonanzaPriceFrom').value = b.price_range_from || '';
+            document.getElementById('editBonanzaPriceTo').value = b.price_range_to || '';
+            document.getElementById('editBonanzaActualPrice').value = b.actual_price || '';
+            document.getElementById('editBonanzaStatus').value = b.status || 'draft';
+            document.getElementById('editBonanzaReducedTarget').value = b.reduced_target || '';
+            document.getElementById('editBonanzaReason').value = '';
+
+            toggleBonanzaRewardFields();
+            new bootstrap.Modal(document.getElementById('editBonanzaModal')).show();
+        }
+
+        async function saveBonanzaChanges() {
+            const reason = document.getElementById('editBonanzaReason').value.trim();
+            if (!reason) { alert('Please provide a reason for the update.'); return; }
+
+            const id = document.getElementById('editBonanzaId').value;
+            const rewardType = document.getElementById('editBonanzaRewardType').value;
+            const payload = {
+                name: document.getElementById('editBonanzaName').value,
+                start_date: new Date(document.getElementById('editBonanzaStart').value).toISOString(),
+                end_date: new Date(document.getElementById('editBonanzaEnd').value).toISOString(),
+                criteria_type: document.getElementById('editBonanzaCriteria').value,
+                target_requirement: parseInt(document.getElementById('editBonanzaTarget').value) || null,
+                reward_type: rewardType,
+                is_monetary: rewardType === 'monetary',
+                reward_amount: parseFloat(document.getElementById('editBonanzaRewardAmount').value) || null,
+                reward_text: document.getElementById('editBonanzaRewardText').value || null,
+                award_name: document.getElementById('editBonanzaAwardName').value || null,
+                max_winners: parseInt(document.getElementById('editBonanzaMaxWinners').value) || null,
+                total_budget: parseFloat(document.getElementById('editBonanzaBudget').value) || null,
+                price_range_from: parseFloat(document.getElementById('editBonanzaPriceFrom').value) || null,
+                price_range_to: parseFloat(document.getElementById('editBonanzaPriceTo').value) || null,
+                status: document.getElementById('editBonanzaStatus').value,
+                reduced_target: parseInt(document.getElementById('editBonanzaReducedTarget').value) || null,
+                update_reason: reason
+            };
+
+            try {
+                await fetchWithAuth(`${API_BASE}/bonanzas/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+                bootstrap.Modal.getInstance(document.getElementById('editBonanzaModal')).hide();
+                alert('Bonanza campaign updated successfully!');
+                loadBonanzas();
+            } catch (error) {
+                alert('Error updating bonanza: ' + error.message);
+            }
+        }
+
+        function showCreateBonanzaModal() {
+            alert('Bonanza creation modal - To be implemented based on your requirements');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDirectTiers();
+            loadMatchingTiers();
+            loadBonanzas();
+        });
+    </script>
+</body>
+</html>

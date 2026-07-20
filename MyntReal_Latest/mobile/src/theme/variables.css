@@ -1,0 +1,830 @@
+/**
+ * MNR Reference Mobile Theme
+ * DC Protocol: DC_MOBILE_THEME_001
+ * Matches MyntReal branding
+ */
+
+:root {
+  /* Primary Colors - MyntReal Branding */
+  --primary: #10b981;
+  --primary-dark: #059669;
+  --primary-light: #34d399;
+  
+  /* Secondary Colors */
+  --secondary: #3b82f6;
+  --secondary-dark: #2563eb;
+  
+  /* Background Colors */
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-tertiary: #1e2a45;
+  --bg-card: #0f3460;
+  --bg-surface: #1e3a5f;
+  
+  /* Text Colors */
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  /* Status Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+  
+  /* Accuracy Quality Colors */
+  --accuracy-high: #10b981;
+  --accuracy-medium: #3b82f6;
+  --accuracy-low: #f59e0b;
+  --accuracy-weak: #ef4444;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 50%;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
+  
+  /* Font */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Utility Classes */
+.text-primary { color: var(--primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-success { color: var(--success); }
+.text-warning { color: var(--warning); }
+.text-danger { color: var(--danger); }
+
+.bg-primary { background: var(--bg-primary); }
+.bg-secondary { background: var(--bg-secondary); }
+.bg-card { background: var(--bg-card); }
+
+/* Button Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-primary:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  color: white;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-lg {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  font-size: var(--font-size-lg);
+  border-radius: var(--radius-lg);
+}
+
+.btn-full {
+  width: 100%;
+}
+
+/* Card Styles */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Input Styles */
+.input-group {
+  margin-bottom: var(--spacing-sm);
+}
+
+.input-label {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.input {
+  width: 100%;
+  padding: var(--spacing-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--bg-surface);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--font-size-md);
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+/* Status Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.badge-success {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: var(--warning);
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+}
+
+.badge-info {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--info);
+}
+
+/* Portrait Lock — JS-controlled only (see DC_ORIENT_JS_001 in main.ts)
+   DC_ORIENT_CSS_001: NO CSS media query for orientation — the @media (orientation:landscape)
+   rule was removed because:
+   1. Capacitor WebView misfires orientation:landscape on portrait devices during init
+   2. The CSS rule caused the overlay to appear permanently on some Samsung/Xiaomi phones
+   3. Android portrait lock (android:screenOrientation="portrait") already handles native
+   JS detection in main.ts is authoritative — it skips native platform entirely */
+.landscape-warning {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  /* DC_ORIENT_BG_001: Hardcoded — NOT var(--bg-primary). Theme class may not be applied
+     yet when this overlay needs to show, causing transparent background and visible
+     splash content bleeding through. */
+  background: #1a1a2e;
+  z-index: 99999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+
+.landscape-warning .rotate-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  animation: rotatePhone 2s ease-in-out infinite;
+}
+
+@keyframes rotatePhone {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-20deg); }
+  75% { transform: rotate(20deg); }
+}
+
+.landscape-warning h2 {
+  color: var(--text-primary);
+  font-size: 20px;
+  margin: 0 0 10px;
+}
+
+.landscape-warning p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* DC_THEME_001: Light Theme Overrides — Global (all pages) */
+body.light-theme {
+  --bg-primary: #f8f9fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e2e8f0;
+  --bg-card: #ffffff;
+  --bg-surface: #f1f5f9;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+  color: #1e293b;
+}
+
+body.light-theme .page-container,
+body.light-theme [class*="-page"],
+body.light-theme [class*="-container"] {
+  background: var(--bg-primary) !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .card,
+body.light-theme .stat-card,
+body.light-theme .summary-card,
+body.light-theme .metric-card,
+body.light-theme .info-card,
+body.light-theme .list-card,
+body.light-theme .task-card,
+body.light-theme .kra-card,
+body.light-theme .employee-card,
+body.light-theme .filters-card,
+body.light-theme .status-card,
+body.light-theme .time-breakdown,
+body.light-theme .work-mode-selector,
+body.light-theme .requirements-card,
+body.light-theme .phase-card,
+body.light-theme .detail-section {
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .page-header,
+body.light-theme .dashboard-header,
+body.light-theme [class*="-header"] {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+body.light-theme h1, body.light-theme h2, body.light-theme h3,
+body.light-theme h4, body.light-theme h5, body.light-theme h6,
+body.light-theme .page-title,
+body.light-theme .section-title,
+body.light-theme .detail-section-title,
+body.light-theme .card-title,
+body.light-theme .modal-title,
+body.light-theme .stat-value,
+body.light-theme .user-name,
+body.light-theme .employee-name,
+body.light-theme .kra-title,
+body.light-theme .task-title,
+body.light-theme .breakdown-value,
+body.light-theme .detail-value {
+  color: #1e293b !important;
+}
+
+body.light-theme p,
+body.light-theme span,
+body.light-theme label,
+body.light-theme .stat-label,
+body.light-theme .detail-label,
+body.light-theme .breakdown-label,
+body.light-theme .form-group label,
+body.light-theme .work-mode-label,
+body.light-theme .status-text,
+body.light-theme .user-role,
+body.light-theme .employee-role,
+body.light-theme .kra-description,
+body.light-theme .kra-meta,
+body.light-theme .kra-code,
+body.light-theme .modal-desc,
+body.light-theme .toggle-label,
+body.light-theme .section-header,
+body.light-theme .list-section-header,
+body.light-theme .clock-time,
+body.light-theme .last-seen,
+body.light-theme .req-text,
+body.light-theme .task-inline-detail,
+body.light-theme .kra-inline-detail,
+body.light-theme .emp-details,
+body.light-theme .filter-label {
+  color: #475569 !important;
+}
+
+body.light-theme .text-muted,
+body.light-theme .no-results,
+body.light-theme .no-selection,
+body.light-theme .empty-state,
+body.light-theme .empty-team-state,
+body.light-theme .char-counter,
+body.light-theme .file-hint,
+body.light-theme .file-preview-size,
+body.light-theme .app-version-badge {
+  color: #94a3b8 !important;
+}
+
+body.light-theme .input,
+body.light-theme .form-input,
+body.light-theme .form-textarea,
+body.light-theme .form-select,
+body.light-theme .form-control,
+body.light-theme .filter-select,
+body.light-theme .search-input,
+body.light-theme .date-input-group input,
+body.light-theme select,
+body.light-theme textarea,
+body.light-theme input[type="text"],
+body.light-theme input[type="date"],
+body.light-theme input[type="number"],
+body.light-theme input[type="email"],
+body.light-theme input[type="password"],
+body.light-theme input[type="search"],
+body.light-theme input[type="tel"] {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .form-input:focus,
+body.light-theme .form-textarea:focus,
+body.light-theme .form-select:focus,
+body.light-theme .filter-select:focus,
+body.light-theme .search-input:focus,
+body.light-theme .input:focus,
+body.light-theme input:focus,
+body.light-theme textarea:focus,
+body.light-theme select:focus {
+  border-color: #6366f1 !important;
+  background: #ffffff !important;
+}
+
+body.light-theme .form-input::placeholder,
+body.light-theme .form-textarea::placeholder,
+body.light-theme .search-input::placeholder,
+body.light-theme .input::placeholder,
+body.light-theme input::placeholder,
+body.light-theme textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+body.light-theme .form-select option,
+body.light-theme .filter-select option,
+body.light-theme select option {
+  background: #ffffff !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .form-section {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .modal-content,
+body.light-theme .modal-body,
+body.light-theme .modal-header,
+body.light-theme .modal-footer {
+  background: #ffffff !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .modal-close {
+  color: #64748b !important;
+}
+
+body.light-theme .tab-bar,
+body.light-theme .tab-nav {
+  background: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .tab-btn,
+body.light-theme .filter-tab {
+  color: #64748b !important;
+}
+
+body.light-theme .tab-btn.active,
+body.light-theme .filter-tab.active {
+  color: #6366f1 !important;
+  border-color: #6366f1 !important;
+}
+
+body.light-theme .menu-item,
+body.light-theme .drawer-menu-item {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .menu-item:active,
+body.light-theme .drawer-menu-item:active {
+  background: #f1f5f9 !important;
+}
+
+body.light-theme .btn-secondary {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+body.light-theme .btn-outline {
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+body.light-theme .btn-outline:hover {
+  border-color: #6366f1 !important;
+  color: #6366f1 !important;
+}
+
+body.light-theme .upload-area {
+  border-color: #cbd5e1 !important;
+  color: #64748b !important;
+}
+
+body.light-theme .upload-area:hover {
+  border-color: #6366f1 !important;
+  color: #6366f1 !important;
+}
+
+body.light-theme .file-preview-item {
+  background: #f1f5f9 !important;
+}
+
+body.light-theme .file-preview-name,
+body.light-theme .emp-name {
+  color: #1e293b !important;
+}
+
+body.light-theme .employee-search-results {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme .employee-result {
+  border-bottom-color: #f1f5f9 !important;
+}
+
+body.light-theme .employee-result:hover {
+  background: #eef2ff !important;
+}
+
+body.light-theme .toggle-switch {
+  background: #cbd5e1 !important;
+}
+
+body.light-theme .table-container,
+body.light-theme .data-table {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .data-table th {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+}
+
+body.light-theme .data-table td {
+  color: #1e293b !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+body.light-theme .data-table tr:hover {
+  background: #f8fafc !important;
+}
+
+body.light-theme .stats-grid,
+body.light-theme .stats-row,
+body.light-theme .detail-grid,
+body.light-theme .detail-row {
+  color: #1e293b !important;
+}
+
+body.light-theme .filter-section,
+body.light-theme .filters-section,
+body.light-theme .filter-group,
+body.light-theme .filter-row,
+body.light-theme .date-filter-row {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .filter-actions .btn {
+  color: #475569 !important;
+}
+
+body.light-theme .loading-state {
+  color: #64748b !important;
+}
+
+body.light-theme .inline-footer {
+  background: #ffffff !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .selfie-preview {
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .hamburger-btn,
+body.light-theme .header-btn {
+  color: #475569 !important;
+}
+
+body.light-theme .gps-status,
+body.light-theme .battery-status {
+  color: #475569 !important;
+}
+
+body.light-theme .progress-bar {
+  background: #e2e8f0 !important;
+}
+
+body.light-theme .day-completed-notice {
+  color: #475569 !important;
+}
+
+body.light-theme .work-mode-btn {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .work-mode-btn.active {
+  background: #eef2ff !important;
+  color: #4f46e5 !important;
+  border-color: #6366f1 !important;
+}
+
+body.light-theme .status-indicator {
+  color: #1e293b !important;
+}
+
+body.light-theme .req-header {
+  color: #1e293b !important;
+}
+
+body.light-theme .side-drawer {
+  background: #ffffff !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .side-drawer-header {
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+body.light-theme .drawer-overlay {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+body.light-theme .stat-card.active {
+  border-color: #4f46e5 !important;
+  background: #eef2ff !important;
+}
+
+body.light-theme .task-card:hover {
+  background: #f8fafc !important;
+}
+
+body.light-theme .task-card.expanded {
+  background: #eef2ff !important;
+  border-color: #4f46e5 !important;
+}
+
+body.light-theme .task-summary-label,
+body.light-theme .progress-label,
+body.light-theme .status-control label {
+  color: #64748b !important;
+}
+
+body.light-theme .task-summary-value {
+  color: #1e293b !important;
+}
+
+body.light-theme .task-inline-detail {
+  background: #ffffff !important;
+  border-color: #4f46e5 !important;
+}
+
+body.light-theme .detail-description {
+  color: #334155 !important;
+  background: #f1f5f9 !important;
+}
+
+body.light-theme .progress-control {
+  background: #f1f5f9 !important;
+}
+
+body.light-theme .attachment-item,
+body.light-theme .comment-item {
+  background: #f1f5f9 !important;
+}
+
+body.light-theme .attachment-name,
+body.light-theme .comment-author {
+  color: #1e293b !important;
+}
+
+body.light-theme .comment-time {
+  color: #94a3b8 !important;
+}
+
+body.light-theme .comment-text {
+  color: #334155 !important;
+}
+
+body.light-theme .add-comment textarea {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #1e293b !important;
+}
+
+body.light-theme .filter-item label {
+  color: #475569 !important;
+}
+
+body.light-theme .expand-icon {
+  color: #94a3b8 !important;
+}
+
+body.light-theme .subtasks-summary {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0;
+}
+
+body.light-theme .subtasks-header h4 {
+  color: #1e293b !important;
+}
+
+body.light-theme .subtask-mini-item {
+  background: #f1f5f9 !important;
+}
+
+body.light-theme .subtask-check {
+  color: #94a3b8 !important;
+}
+
+body.light-theme .subtask-check.done {
+  color: #10b981 !important;
+}
+
+body.light-theme .subtask-mini-title {
+  color: #334155 !important;
+}
+
+body.light-theme .subtask-mini-title.done {
+  color: #94a3b8 !important;
+}
+
+body.light-theme .subtask-progress-row {
+  color: #475569 !important;
+}
+
+body.light-theme .progress-bar-sm,
+body.light-theme .progress-bar-xs,
+body.light-theme .progress-bar-lg {
+  background: #e2e8f0 !important;
+}
+
+body.light-theme .phases-count {
+  color: #1e293b !important;
+}
+
+body.light-theme .phases-progress {
+  color: #475569 !important;
+}
+
+body.light-theme .phase-content {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0;
+}
+
+body.light-theme .phase-name {
+  color: #1e293b !important;
+}
+
+body.light-theme .phase-description {
+  color: #475569 !important;
+}
+
+body.light-theme .phase-meta {
+  color: #64748b !important;
+}
+
+body.light-theme .phase-indicator {
+  background: #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+body.light-theme .phase-item.completed .phase-indicator {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme .phase-item.in_progress .phase-indicator {
+  background: #3b82f6 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme .phase-item.overdue .phase-indicator {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme .phase-item.on_hold .phase-indicator {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+}
+
+body.light-theme .phase-item.cancelled .phase-indicator {
+  background: #94a3b8 !important;
+  color: #ffffff !important;
+}
+
+body.light-theme .btn-icon-sm {
+  color: #64748b !important;
+}
+
+body.light-theme .btn-icon-sm:hover {
+  background: #f1f5f9 !important;
+  color: #3b82f6 !important;
+}
+
+body.light-theme .empty-hint {
+  color: #94a3b8 !important;
+}
+
+body.light-theme .view-all-hint {
+  color: #64748b !important;
+}
+
+body.light-theme .child-progress-label {
+  color: #475569 !important;
+}
+
+/* Ensure dark theme is default */
+body.dark-theme {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-tertiary: #1e2a45;
+  --bg-card: #0f3460;
+  --bg-surface: #1e3a5f;
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}

@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyntReal SOLAR Vendor Partner Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1f2937;min-height:100vh}
+    /* ─── Header ─── */
+    .sv-header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.25);position:sticky;top:0;z-index:100}
+    .sv-header .brand{display:flex;align-items:center;gap:12px}
+    .sv-header .brand-logo{width:34px;height:34px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center}
+    .sv-header .brand-logo img{width:26px;height:26px;object-fit:contain}
+    .sv-header .brand-text{font-size:16px;font-weight:700;letter-spacing:.3px}
+    .sv-header .brand-sub{font-size:11px;opacity:.75;margin-top:1px}
+    .sv-header .hdr-right{display:flex;align-items:center;gap:16px}
+    .sv-header .vendor-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600}
+    .sv-logout{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;transition:.2s}
+    .sv-logout:hover{background:rgba(255,255,255,.2)}
+    /* ─── Nav Tabs ─── */
+    .sv-nav{background:#fff;border-bottom:1px solid #e5e7eb;padding:0 24px;display:flex;gap:4px}
+    .sv-nav-btn{padding:12px 18px;font-size:13px;font-weight:500;color:#6b7280;cursor:pointer;border:none;background:transparent;border-bottom:3px solid transparent;transition:.2s}
+    .sv-nav-btn.active{color:#2563eb;border-bottom-color:#2563eb;font-weight:600}
+    .sv-nav-btn:hover:not(.active){color:#374151}
+    /* ─── Main ─── */
+    .sv-main{max-width:1400px;margin:0 auto;padding:24px}
+    /* ─── Stats Grid ─── */
+    .sv-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+    @media(max-width:900px){.sv-stats{grid-template-columns:repeat(3,1fr)}}
+    @media(max-width:640px){.sv-stats{grid-template-columns:repeat(2,1fr)}}
+    .sv-stat-card{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.07);border-left:4px solid #e5e7eb;cursor:pointer;transition:box-shadow .2s;display:flex;align-items:center;gap:12px}
+    .sv-stat-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.12)}
+    .sv-stat-card.total{border-left-color:#2563eb}
+    .sv-stat-card.pending{border-left-color:#f59e0b}
+    .sv-stat-card.completed{border-left-color:#16a34a}
+    .sv-stat-card.final{border-left-color:#7c3aed}
+    .sv-stat-card.cancelled{border-left-color:#dc2626}
+    .sv-stat-icon{font-size:22px;opacity:.8;flex-shrink:0}
+    .sv-stat-body{min-width:0}
+    .sv-stat-val{font-size:26px;font-weight:800;line-height:1;margin-bottom:2px}
+    .sv-stat-lbl{font-size:11px;color:#6b7280;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .stat-total .sv-stat-icon{color:#2563eb}
+    .stat-pending .sv-stat-icon{color:#f59e0b}
+    .stat-completed .sv-stat-icon{color:#16a34a}
+    .stat-final .sv-stat-icon{color:#7c3aed}
+    .stat-cancelled .sv-stat-icon{color:#dc2626}
+    /* ─── Revenue Cards ─── */
+    .sv-rev-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+    @media(max-width:900px){.sv-rev-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:640px){.sv-rev-grid{grid-template-columns:1fr 1fr}}
+    .sv-rev-card{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);border-radius:10px;padding:16px;color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.25)}
+    .sv-rev-card.green{background:linear-gradient(135deg,#064e3b,#059669)}
+    .sv-rev-card.amber{background:linear-gradient(135deg,#78350f,#d97706)}
+    .sv-rev-card.slate{background:linear-gradient(135deg,#1e293b,#475569)}
+    .sv-rev-lbl{font-size:10.5px;opacity:.8;font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+    .sv-rev-val{font-size:20px;font-weight:800;line-height:1}
+    .sv-rev-sub{font-size:10.5px;opacity:.65;margin-top:4px}
+    /* ─── Pipeline Breakdown ─── */
+    .sv-pipeline-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:16px}
+    .sv-pipe-card{background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .sv-pipe-stage{font-size:12px;font-weight:600;color:#374151}
+    .sv-pipe-count{background:#2563eb;color:#fff;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;flex-shrink:0}
+    .sv-pipe-val{font-size:11px;color:#6b7280;margin-top:2px}
+    /* ─── Section Card ─── */
+    .sv-section{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);overflow:hidden}
+    .sv-section-hdr{padding:16px 20px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .sv-section-title{font-size:15px;font-weight:700;color:#1e3a5f}
+    /* ─── Search / Filter bar ─── */
+    .sv-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .sv-search{border:1px solid #d1d5db;border-radius:8px;padding:7px 12px;font-size:13px;min-width:220px;outline:none;transition:.2s}
+    .sv-search:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+    .sv-select{border:1px solid #d1d5db;border-radius:8px;padding:7px 10px;font-size:12px;outline:none;background:#fff;cursor:pointer}
+    .sv-btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+    .sv-btn-primary{background:#2563eb;color:#fff}
+    .sv-btn-primary:hover{background:#1d4ed8}
+    .sv-btn-ghost{background:#f3f4f6;color:#374151}
+    .sv-btn-ghost:hover{background:#e5e7eb}
+    /* ─── Table ─── */
+    .sv-table-wrap{overflow-x:auto}
+    table.sv-table{width:100%;border-collapse:collapse;font-size:12.5px}
+    table.sv-table th{padding:10px 12px;background:#f8fafc;font-weight:700;color:#374151;text-align:left;white-space:nowrap;border-bottom:2px solid #e5e7eb;position:sticky;top:0}
+    table.sv-table td{padding:10px 12px;border-bottom:1px solid #f3f4f6;vertical-align:top}
+    table.sv-table tr:hover td{background:#f8fafc}
+    .no-data{text-align:center;padding:40px;color:#9ca3af}
+    /* ─── Badges ─── */
+    .vs-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap}
+    .vs-pending{background:#fffbeb;color:#b45309}
+    .vs-completed{background:#f0fdf4;color:#15803d}
+    .vs-final{background:#eff6ff;color:#1d4ed8}
+    .vs-cancelled{background:#fef2f2;color:#dc2626}
+    .status-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;text-transform:capitalize;background:#f3f4f6;color:#374151}
+    .pipeline-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;text-transform:capitalize;background:#dbeafe;color:#1d4ed8}
+    /* ─── Pagination ─── */
+    .sv-pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-top:1px solid #f3f4f6;flex-wrap:wrap;gap:8px}
+    .sv-page-info{font-size:12px;color:#6b7280}
+    .sv-page-btns{display:flex;gap:4px}
+    .sv-page-btn{padding:5px 10px;border:1px solid #e5e7eb;border-radius:6px;font-size:12px;cursor:pointer;background:#fff;transition:.2s}
+    .sv-page-btn:hover:not(:disabled){background:#f3f4f6}
+    .sv-page-btn:disabled{opacity:.4;cursor:default}
+    .sv-page-btn.active{background:#2563eb;color:#fff;border-color:#2563eb}
+    /* ─── Profile ─── */
+    .sv-profile-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0}
+    .sv-profile-row{padding:13px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #f3f4f6}
+    .sv-profile-row:last-child{border-bottom:none}
+    .sv-profile-icon{width:32px;height:32px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#2563eb;font-size:13px;flex-shrink:0}
+    .sv-profile-label{font-size:11px;color:#9ca3af;margin-bottom:2px}
+    .sv-profile-val{font-size:13px;font-weight:600;color:#1f2937}
+    /* ─── Loading / Toast ─── */
+    #sv-toast{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+    .sv-toast-item{padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,.15);animation:svSlideIn .25s ease}
+    .sv-toast-success{background:#fff;border-left:4px solid #16a34a;color:#15803d}
+    .sv-toast-error{background:#fff;border-left:4px solid #dc2626;color:#dc2626}
+    @keyframes svSlideIn{from{transform:translateX(60px);opacity:0}to{transform:translateX(0);opacity:1}}
+    /* ─── Responsive ─── */
+    @media(max-width:640px){
+      .sv-main{padding:16px}
+      .sv-stats{grid-template-columns:repeat(2,1fr)}
+      .sv-header .vendor-pill{display:none}
+    }
+    .tab-panel{display:none}.tab-panel.active{display:block}
+  </style>
+</head>
+<body>
+
+<!-- ══════════ HEADER ══════════ -->
+<header class="sv-header">
+  <div class="brand">
+    <div class="brand-logo" id="svHeaderLogoWrap">
+      <img id="svHeaderLogoImg" src="" alt="" style="display:none;width:34px;height:34px;object-fit:contain;border-radius:6px">
+      <img id="svHeaderDefaultLogo" src="/assets/logos/myntreal_logo_new.png" style="height:32px;object-fit:contain" onerror="this.style.display='none'">
+    </div>
+    <div>
+      <div class="brand-text">MyntReal SOLAR Vendor Partner Portal</div>
+      <div class="brand-sub" id="svVendorCode">Loading…</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <span class="vendor-pill" id="svVendorName">—</span>
+    <button class="sv-logout" onclick="svLogout()"><i class="fas fa-sign-out-alt me-1"></i> Logout</button>
+  </div>
+</header>
+
+<!-- ══════════ NAV TABS ══════════ -->
+<nav class="sv-nav">
+  <button class="sv-nav-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
+    <i class="fas fa-chart-bar me-1"></i> Dashboard
+  </button>
+  <button class="sv-nav-btn" data-tab="leads" onclick="switchTab('leads')">
+    <i class="fas fa-list me-1"></i> My Leads
+  </button>
+  <button class="sv-nav-btn" data-tab="profile" onclick="switchTab('profile')">
+    <i class="fas fa-user me-1"></i> Profile
+  </button>
+  <button class="sv-nav-btn" data-tab="ledger" onclick="switchTab('ledger')">
+    <i class="fas fa-book me-1"></i> My Ledger
+  </button>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main class="sv-main">
+
+  <!-- ── DASHBOARD TAB ── -->
+  <div class="tab-panel active" id="tab-dashboard">
+
+    <!-- Status Cards (compact, horizontal icon) -->
+    <div class="sv-stats" id="statsGrid">
+      <div class="sv-stat-card total stat-total" onclick="filterByVendorStatus('')">
+        <div class="sv-stat-icon"><i class="fas fa-solar-panel"></i></div>
+        <div class="sv-stat-body">
+          <div class="sv-stat-val" id="statTotal">—</div>
+          <div class="sv-stat-lbl">Total Leads</div>
+        </div>
+      </div>
+      <div class="sv-stat-card pending stat-pending" onclick="filterByVendorStatus('Pending')">
+        <div class="sv-stat-icon"><i class="fas fa-clock"></i></div>
+        <div class="sv-stat-body">
+          <div class="sv-stat-val" id="statPending">—</div>
+          <div class="sv-stat-lbl">Pending</div>
+        </div>
+      </div>
+      <div class="sv-stat-card completed stat-completed" onclick="filterByVendorStatus('Completed')">
+        <div class="sv-stat-icon"><i class="fas fa-check-circle"></i></div>
+        <div class="sv-stat-body">
+          <div class="sv-stat-val" id="statCompleted">—</div>
+          <div class="sv-stat-lbl">Completed</div>
+        </div>
+      </div>
+      <div class="sv-stat-card final stat-final" onclick="filterByVendorStatus('Final Invoice Completed')">
+        <div class="sv-stat-icon"><i class="fas fa-file-invoice"></i></div>
+        <div class="sv-stat-body">
+          <div class="sv-stat-val" id="statFinal">—</div>
+          <div class="sv-stat-lbl">Final Invoice</div>
+        </div>
+      </div>
+      <div class="sv-stat-card cancelled stat-cancelled" onclick="filterByVendorStatus('Cancelled')">
+        <div class="sv-stat-icon"><i class="fas fa-times-circle"></i></div>
+        <div class="sv-stat-body">
+          <div class="sv-stat-val" id="statCancelled">—</div>
+          <div class="sv-stat-lbl">Cancelled</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Revenue / Deal Value Cards -->
+    <div class="sv-rev-grid">
+      <div class="sv-rev-card">
+        <div class="sv-rev-lbl"><i class="fas fa-rupee-sign me-1"></i>Total Deal Value</div>
+        <div class="sv-rev-val" id="revTotal">—</div>
+        <div class="sv-rev-sub">Across all assigned leads</div>
+      </div>
+      <div class="sv-rev-card green">
+        <div class="sv-rev-lbl"><i class="fas fa-check me-1"></i>Amount Received</div>
+        <div class="sv-rev-val" id="revReceived">—</div>
+        <div class="sv-rev-sub">Payments collected</div>
+      </div>
+      <div class="sv-rev-card amber">
+        <div class="sv-rev-lbl"><i class="fas fa-hourglass-half me-1"></i>Balance Pending</div>
+        <div class="sv-rev-val" id="revBalance">—</div>
+        <div class="sv-rev-sub">Outstanding amount</div>
+      </div>
+      <div class="sv-rev-card slate">
+        <div class="sv-rev-lbl"><i class="fas fa-bolt me-1"></i>Total kW Capacity</div>
+        <div class="sv-rev-val" id="revKw">—</div>
+        <div class="sv-rev-sub">Aggregate project size</div>
+      </div>
+    </div>
+
+    <!-- Deal Value by Status -->
+    <div class="sv-section" style="margin-bottom:16px">
+      <div class="sv-section-hdr">
+        <span class="sv-section-title"><i class="fas fa-chart-bar me-2" style="color:#2563eb"></i>Deal Value Breakup by Status</span>
+      </div>
+      <div id="dvByStatus" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0">
+        <div class="sv-profile-row"><div class="sv-profile-icon" style="background:#dbeafe;color:#1d4ed8"><i class="fas fa-clock"></i></div><div><div class="sv-profile-label">Pending</div><div class="sv-profile-val" id="dvPending">—</div></div></div>
+        <div class="sv-profile-row"><div class="sv-profile-icon" style="background:#dcfce7;color:#15803d"><i class="fas fa-check-circle"></i></div><div><div class="sv-profile-label">Completed</div><div class="sv-profile-val" id="dvCompleted">—</div></div></div>
+        <div class="sv-profile-row"><div class="sv-profile-icon" style="background:#ede9fe;color:#7c3aed"><i class="fas fa-file-invoice"></i></div><div><div class="sv-profile-label">Final Invoice</div><div class="sv-profile-val" id="dvFinal">—</div></div></div>
+        <div class="sv-profile-row"><div class="sv-profile-icon" style="background:#fee2e2;color:#dc2626"><i class="fas fa-times-circle"></i></div><div><div class="sv-profile-label">Cancelled</div><div class="sv-profile-val" id="dvCancelled">—</div></div></div>
+      </div>
+    </div>
+
+    <!-- Pipeline Stage Breakdown -->
+    <div class="sv-section">
+      <div class="sv-section-hdr">
+        <span class="sv-section-title"><i class="fas fa-stream me-2" style="color:#f59e0b"></i>Pipeline Stage Breakdown</span>
+        <span id="pipelineRefreshNote" style="font-size:11px;color:#9ca3af">Click a stage to filter leads</span>
+      </div>
+      <div class="sv-pipeline-grid" id="pipelineGrid">
+        <div style="grid-column:1/-1;text-align:center;padding:24px;color:#9ca3af;font-size:13px"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LEADS TAB ── -->
+  <div class="tab-panel" id="tab-leads">
+    <div class="sv-section">
+      <!-- Section header with count badge -->
+      <div class="sv-section-hdr" style="flex-wrap:wrap;gap:8px 0;padding-bottom:10px">
+        <span class="sv-section-title">
+          <i class="fas fa-solar-panel me-2" style="color:#f59e0b"></i>Assigned Solar Leads
+          <span id="svLeadsCountBadge" style="background:#2563eb;color:#fff;font-size:11px;font-weight:700;padding:2px 10px;border-radius:12px;margin-left:8px;vertical-align:middle">—</span>
+        </span>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="sv-btn sv-btn-ghost" onclick="resetLeadsFilter()"><i class="fas fa-undo me-1"></i>Reset</button>
+          <button class="sv-btn sv-btn-primary" onclick="loadLeads(1)"><i class="fas fa-sync me-1"></i>Refresh</button>
+        </div>
+      </div>
+      <!-- Filter row 1: search + vendor status + pipeline stage -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 8px;border-bottom:1px solid #f3f4f6">
+        <input class="sv-search" id="svSearch" type="text" placeholder="Search by name or phone…" oninput="scheduleSearch()" style="flex:1;min-width:180px;max-width:260px">
+        <select class="sv-select" id="svVendorStatusFilter" onchange="loadLeads(1)" style="min-width:155px">
+          <option value="">All Vendor Status</option>
+          <option value="Pending">Pending</option>
+          <option value="Completed">Completed</option>
+          <option value="Final Invoice Completed">Final Invoice Completed</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+        <select class="sv-select" id="svPipelineFilter" onchange="loadLeads(1)" style="min-width:175px">
+          <option value="">All Pipeline Stages</option>
+          <option value="documents_pending">Documents Pending</option>
+          <option value="application_submitted">Application Submitted</option>
+          <option value="pending_with_bank">Pending with Bank</option>
+          <option value="loan_rejected">Loan Rejected</option>
+          <option value="documents_issue">Documents Issue</option>
+          <option value="load_extension">Load Extension</option>
+          <option value="electricity_bill_change">Electricity Bill Change</option>
+          <option value="installation_pending">Installation Pending</option>
+          <option value="net_meter_pending">Net Meter Pending</option>
+          <option value="balance_pending">Balance Pending</option>
+          <option value="subsidy_pending">Subsidy Pending</option>
+          <option value="subsidy_cleared">Subsidy Cleared</option>
+          <option value="bank_loan_completed">Bank Loan Completed</option>
+          <option value="completed">Completed</option>
+          <option value="not_interested">Not Interested</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="different_vendor">Different Vendor</option>
+        </select>
+      </div>
+      <!-- Filter row 2: pincode, loan bank, bank entry, co-applicant -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 16px 10px;border-bottom:1px solid #f3f4f6;background:#fafafa">
+        <input class="sv-search" id="svPincodeFilter" type="text" placeholder="Filter by Pincode…" oninput="scheduleSearch()" style="width:140px">
+        <input class="sv-search" id="svLoanBankFilter" type="text" placeholder="Filter by Loan Bank…" oninput="scheduleSearch()" style="width:160px">
+        <select class="sv-select" id="svBankEntryFilter" onchange="loadLeads(1)" style="width:150px">
+          <option value="">Bank Entry: All</option>
+          <option value="yes">Bank Entry: Yes</option>
+          <option value="no">Bank Entry: No</option>
+        </select>
+        <select class="sv-select" id="svCoApplicantFilter" onchange="loadLeads(1)" style="width:165px">
+          <option value="">Co-Applicant: All</option>
+          <option value="yes">Has Co-Applicant</option>
+          <option value="no">No Co-Applicant</option>
+        </select>
+        <select class="sv-select" id="svPerPageSelect" onchange="loadLeads(1)" style="width:110px">
+          <option value="25">25 / page</option>
+          <option value="50" selected>50 / page</option>
+          <option value="100">100 / page</option>
+        </select>
+      </div>
+      <div class="sv-table-wrap">
+        <table class="sv-table">
+          <thead>
+            <tr>
+              <th style="min-width:44px">#</th>
+              <th style="min-width:45px">App No</th>
+              <th style="min-width:120px">Name</th>
+              <th style="min-width:100px">Phone</th>
+              <th style="min-width:70px">Pincode</th>
+              <th style="min-width:140px">Pipeline Stage</th>
+              <th style="min-width:120px">Vendor Status</th>
+              <th style="min-width:70px">KW Size</th>
+              <th style="min-width:110px">Monthly Income</th>
+              <th style="min-width:120px">Loan Bank</th>
+              <th style="min-width:80px">Bank Entry</th>
+              <th style="min-width:80px">Statement</th>
+              <th style="min-width:105px">Material Date</th>
+              <th style="min-width:105px">Install Date</th>
+              <th style="min-width:140px">Co-Applicant</th>
+              <th style="min-width:100px">Deal Value</th>
+              <th style="min-width:105px">Next Followup</th>
+              <th style="min-width:105px">Accepted Date</th>
+              <th style="min-width:60px">Docs</th>
+            </tr>
+          </thead>
+          <tbody id="svLeadsBody">
+            <tr><td colspan="19" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sv-pagination" id="svPagination" style="display:none">
+        <span class="sv-page-info" id="svPageInfo"></span>
+        <div class="sv-page-btns" id="svPageBtns"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROFILE TAB ── -->
+  <div class="tab-panel" id="tab-profile">
+    <div class="sv-section">
+      <div class="sv-section-hdr">
+        <span class="sv-section-title"><i class="fas fa-user-circle me-2" style="color:#2563eb"></i>Vendor Profile</span>
+        <button onclick="openChangePwdModal()" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:7px 16px;font-size:12.5px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:6px"><i class="fas fa-key" style="color:#f59e0b"></i> Change Password</button>
+      </div>
+      <div class="sv-profile-grid" id="svProfileGrid">
+        <div class="sv-profile-row">
+          <div class="sv-profile-icon"><i class="fas fa-building"></i></div>
+          <div><div class="sv-profile-label">Vendor Name</div><div class="sv-profile-val" id="pVendorName">—</div></div>
+        </div>
+        <div class="sv-profile-row">
+          <div class="sv-profile-icon"><i class="fas fa-barcode"></i></div>
+          <div><div class="sv-profile-label">Vendor Code</div><div class="sv-profile-val" id="pVendorCode">—</div></div>
+        </div>
+        <div class="sv-profile-row">
+          <div class="sv-profile-icon"><i class="fas fa-tag"></i></div>
+          <div><div class="sv-profile-label">Category</div><div class="sv-profile-val">Solar Vendor</div></div>
+        </div>
+        <div class="sv-profile-row">
+          <div class="sv-profile-icon"><i class="fas fa-map-marker-alt"></i></div>
+          <div><div class="sv-profile-label">City</div><div class="sv-profile-val" id="pCity">—</div></div>
+        </div>
+        <div class="sv-profile-row">
+          <div class="sv-profile-icon"><i class="fas fa-phone"></i></div>
+          <div><div class="sv-profile-label">Contact Phone</div><div class="sv-profile-val" id="pPhone">—</div></div>
+        </div>
+        <div class="sv-profile-row">
+          <div class="sv-profile-icon"><i class="fas fa-envelope"></i></div>
+          <div><div class="sv-profile-label">Email</div><div class="sv-profile-val" id="pEmail">—</div></div>
+        </div>
+        <div class="sv-profile-row">
+          <div class="sv-profile-icon"><i class="fas fa-solar-panel"></i></div>
+          <div><div class="sv-profile-label">Total Leads Assigned</div><div class="sv-profile-val" id="pTotalLeads">—</div></div>
+        </div>
+        <div class="sv-profile-row">
+          <div class="sv-profile-icon"><i class="fas fa-info-circle"></i></div>
+          <div><div class="sv-profile-label">Portal Access</div><div class="sv-profile-val" style="color:#16a34a"><i class="fas fa-check-circle me-1"></i>Active</div></div>
+        </div>
+        <div class="sv-profile-row">
+          <div class="sv-profile-icon"><i class="fas fa-university"></i></div>
+          <div><div class="sv-profile-label">Bank</div><div class="sv-profile-val" id="pBank">—</div></div>
+        </div>
+        <div class="sv-profile-row">
+          <div class="sv-profile-icon"><i class="fas fa-id-card"></i></div>
+          <div><div class="sv-profile-label">GST Number</div><div class="sv-profile-val" id="pGst">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stamps, Signatures & Logo -->
+    <div class="sv-section" style="margin-top:18px">
+      <div class="sv-section-hdr">
+        <span class="sv-section-title"><i class="fas fa-stamp me-2" style="color:#7c3aed"></i>Logo, Stamps &amp; Signatures</span>
+        <span style="font-size:11.5px;color:#6b7280">Used in quotations, invoices &amp; annexures &middot; JPG/PNG/WEBP &middot; Max 3MB</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:#f3f4f6">
+
+        <!-- Logo -->
+        <div style="background:#fff;padding:20px;text-align:center">
+          <div style="font-size:11px;color:#7c3aed;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px"><i class="fas fa-image me-1"></i>Company Logo</div>
+          <div id="svLogoPreview" style="width:120px;height:90px;border:2px dashed #d1d5db;border-radius:10px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:#fafafa;overflow:hidden;cursor:pointer" onclick="document.getElementById('svLogoInput').click()">
+            <img id="svLogoImg" src="" alt="" style="display:none;max-width:100%;max-height:100%;object-fit:contain">
+            <div id="svLogoPlaceholder" style="color:#9ca3af;font-size:11px;text-align:center;padding:8px"><i class="fas fa-cloud-upload-alt" style="font-size:22px;display:block;margin-bottom:4px;color:#c4b5fd"></i>Click to upload</div>
+          </div>
+          <input type="file" id="svLogoInput" accept="image/*" style="display:none" onchange="handleMediaUpload('logo',this)">
+          <button onclick="document.getElementById('svLogoInput').click()" id="svLogoBtn" style="background:#ede9fe;color:#7c3aed;border:none;border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:600;cursor:pointer;width:100%"><i class="fas fa-upload me-1"></i>Upload Logo</button>
+          <div id="svLogoStatus" style="font-size:10.5px;color:#6b7280;margin-top:6px;min-height:14px"></div>
+        </div>
+
+        <!-- Stamp -->
+        <div style="background:#fff;padding:20px;text-align:center">
+          <div style="font-size:11px;color:#2563eb;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px"><i class="fas fa-stamp me-1"></i>Company Stamp</div>
+          <div id="svStampPreview" style="width:120px;height:90px;border:2px dashed #d1d5db;border-radius:10px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:#fafafa;overflow:hidden;cursor:pointer" onclick="document.getElementById('svStampInput').click()">
+            <img id="svStampImg" src="" alt="" style="display:none;max-width:100%;max-height:100%;object-fit:contain">
+            <div id="svStampPlaceholder" style="color:#9ca3af;font-size:11px;text-align:center;padding:8px"><i class="fas fa-cloud-upload-alt" style="font-size:22px;display:block;margin-bottom:4px;color:#93c5fd"></i>Click to upload</div>
+          </div>
+          <input type="file" id="svStampInput" accept="image/*" style="display:none" onchange="handleMediaUpload('stamp',this)">
+          <button onclick="document.getElementById('svStampInput').click()" id="svStampBtn" style="background:#dbeafe;color:#1d4ed8;border:none;border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:600;cursor:pointer;width:100%"><i class="fas fa-upload me-1"></i>Upload Stamp</button>
+          <div id="svStampStatus" style="font-size:10.5px;color:#6b7280;margin-top:6px;min-height:14px"></div>
+        </div>
+
+        <!-- Authorised Signature -->
+        <div style="background:#fff;padding:20px;text-align:center">
+          <div style="font-size:11px;color:#059669;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px"><i class="fas fa-signature me-1"></i>Authorised Signature</div>
+          <div id="svRepSigPreview" style="width:120px;height:90px;border:2px dashed #d1d5db;border-radius:10px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:#fafafa;overflow:hidden;cursor:pointer" onclick="document.getElementById('svRepSigInput').click()">
+            <img id="svRepSigImg" src="" alt="" style="display:none;max-width:100%;max-height:100%;object-fit:contain">
+            <div id="svRepSigPlaceholder" style="color:#9ca3af;font-size:11px;text-align:center;padding:8px"><i class="fas fa-cloud-upload-alt" style="font-size:22px;display:block;margin-bottom:4px;color:#6ee7b7"></i>Click to upload</div>
+          </div>
+          <input type="file" id="svRepSigInput" accept="image/*" style="display:none" onchange="handleMediaUpload('rep_sig',this)">
+          <button onclick="document.getElementById('svRepSigInput').click()" id="svRepSigBtn" style="background:#d1fae5;color:#065f46;border:none;border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:600;cursor:pointer;width:100%"><i class="fas fa-upload me-1"></i>Upload Signature</button>
+          <div id="svRepSigStatus" style="font-size:10.5px;color:#6b7280;margin-top:6px;min-height:14px"></div>
+        </div>
+
+        <!-- Technician Signature -->
+        <div style="background:#fff;padding:20px;text-align:center">
+          <div style="font-size:11px;color:#d97706;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px"><i class="fas fa-hard-hat me-1"></i>Technician Signature</div>
+          <div id="svTechSigPreview" style="width:120px;height:90px;border:2px dashed #d1d5db;border-radius:10px;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;background:#fafafa;overflow:hidden;cursor:pointer" onclick="document.getElementById('svTechSigInput').click()">
+            <img id="svTechSigImg" src="" alt="" style="display:none;max-width:100%;max-height:100%;object-fit:contain">
+            <div id="svTechSigPlaceholder" style="color:#9ca3af;font-size:11px;text-align:center;padding:8px"><i class="fas fa-cloud-upload-alt" style="font-size:22px;display:block;margin-bottom:4px;color:#fcd34d"></i>Click to upload</div>
+          </div>
+          <input type="file" id="svTechSigInput" accept="image/*" style="display:none" onchange="handleMediaUpload('tech_sig',this)">
+          <button onclick="document.getElementById('svTechSigInput').click()" id="svTechSigBtn" style="background:#fef3c7;color:#92400e;border:none;border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:600;cursor:pointer;width:100%"><i class="fas fa-upload me-1"></i>Upload Signature</button>
+          <div id="svTechSigStatus" style="font-size:10.5px;color:#6b7280;margin-top:6px;min-height:14px"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<!-- ── Change Password Modal ── -->
+<div id="svChangePwdModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;width:380px;max-width:95vw;padding:28px 28px 22px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <h3 style="margin:0;font-size:16px;font-weight:700;color:#1f2937"><i class="fas fa-key me-2" style="color:#f59e0b"></i>Change Password</h3>
+      <button onclick="closeChangePwdModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280">&times;</button>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Current Password</label>
+      <input type="password" id="svOldPwd" placeholder="Enter current password" style="width:100%;padding:9px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13.5px;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">New Password</label>
+      <input type="password" id="svNewPwd" placeholder="Min. 6 characters" style="width:100%;padding:9px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13.5px;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:5px">Confirm New Password</label>
+      <input type="password" id="svConfirmPwd" placeholder="Re-enter new password" style="width:100%;padding:9px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13.5px;box-sizing:border-box">
+    </div>
+    <div id="svPwdErr" style="display:none;color:#dc2626;font-size:12px;margin-bottom:12px;padding:8px 12px;background:#fef2f2;border-radius:6px"></div>
+    <div style="display:flex;gap:10px">
+      <button onclick="closeChangePwdModal()" style="flex:1;padding:9px;border:1.5px solid #d1d5db;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;color:#374151">Cancel</button>
+      <button onclick="submitChangePwd()" id="svPwdSubmitBtn" style="flex:1;padding:9px;border:none;border-radius:8px;background:#2563eb;color:#fff;font-size:13px;font-weight:700;cursor:pointer">Update Password</button>
+    </div>
+  </div>
+</div>
+
+  <!-- ── LEDGER TAB ── -->
+  <div class="tab-panel" id="tab-ledger">
+    <div class="sv-section">
+      <div class="sv-section-hdr">
+        <span class="sv-section-title"><i class="fas fa-book me-2" style="color:#2563eb"></i>My Ledger</span>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="svlFilterDir" onchange="loadVendorLedger(1)" style="padding:6px 10px;font-size:12px;border:1px solid #d1d5db;border-radius:7px;">
+            <option value="">All Transactions</option>
+            <option value="RECEIVED">Received from Customer</option>
+            <option value="RETURNED">Returned to MNR</option>
+          </select>
+          <button onclick="loadVendorLedger(1)" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:#1d4ed8;cursor:pointer;"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;" id="svLedgerSummary">
+        <div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#065f46;letter-spacing:.4px;margin-bottom:3px;"><i class="fas fa-arrow-down me-1"></i>Total Received</div>
+          <div style="font-size:18px;font-weight:800;color:#059669;" id="svLedgReceived">—</div>
+        </div>
+        <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#92400e;letter-spacing:.4px;margin-bottom:3px;"><i class="fas fa-arrow-up me-1"></i>Total Returned</div>
+          <div style="font-size:18px;font-weight:800;color:#b45309;" id="svLedgReturned">—</div>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1e40af;letter-spacing:.4px;margin-bottom:3px;"><i class="fas fa-balance-scale me-1"></i>Balance Due</div>
+          <div style="font-size:18px;font-weight:800;color:#1d4ed8;" id="svLedgBalance">—</div>
+        </div>
+      </div>
+
+      <div id="svLedgerBody" style="min-height:80px;">
+        <div style="padding:24px;text-align:center;color:#9ca3af;"><i class="fas fa-spinner fa-spin me-2"></i>Loading ledger…</div>
+      </div>
+      <div id="svLedgerPag" style="margin-top:10px;text-align:center;"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ══════════ DOCS MODAL ══════════ -->
+<div id="svDocsModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;width:min(560px,95vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="padding:18px 20px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#1f2937"><i class="fas fa-folder-open me-2" style="color:#2563eb"></i>Documents</div>
+        <div id="svDocsLeadName" style="font-size:12px;color:#6b7280;margin-top:2px"></div>
+      </div>
+      <button onclick="closeDocs()" style="background:#f3f4f6;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#6b7280">&times;</button>
+    </div>
+    <div id="svDocsBody" style="padding:20px;overflow-y:auto;flex:1;min-height:120px">
+      <div style="text-align:center;color:#9ca3af;padding:30px"><i class="fas fa-spinner fa-spin"></i> Loading documents…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div id="sv-toast"></div>
+
+<script>
+  const API = '/api/v1/partner';
+  let _currentPage = 1;
+  let _totalPages = 1;
+  let _searchTimer = null;
+  let _partnerInfo = {};
+
+  // ── Auth ──────────────────────────────────────────────────────────────
+  function getToken() { return localStorage.getItem('partner_token'); }
+  function authHeaders() { return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+  async function apiFetch(path, opts={}) {
+    const r = await fetch(path, { ...opts, headers: { ...authHeaders(), ...(opts.headers||{}) } });
+    if (r.status === 401) { svLogout(); throw new Error('Session expired'); }
+    return r;
+  }
+
+  // ── Toast ─────────────────────────────────────────────────────────────
+  function showToast(msg, type='success') {
+    const t = document.getElementById('sv-toast');
+    const d = document.createElement('div');
+    d.className = `sv-toast-item sv-toast-${type}`;
+    d.textContent = msg;
+    t.appendChild(d);
+    setTimeout(() => d.remove(), 3500);
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────
+  function esc(s) { if(!s)return''; const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+  function fmtDate(d) { if(!d)return'—'; const dt=new Date(d); return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'}); }
+  function fmtINR(n) { if(n==null||n==='')return'—'; return '₹'+parseFloat(n).toLocaleString('en-IN',{maximumFractionDigits:0}); }
+  function boolBadge(v) { if(v===null||v===undefined)return'<span style="color:#9ca3af">—</span>'; return v?'<span style="color:#16a34a;font-weight:600">Yes</span>':'<span style="color:#dc2626;font-weight:600">No</span>'; }
+
+  const PIPELINE_LABELS = {
+    'documents_pending':'Docs Pending','application_submitted':'App Submitted','pending_with_bank':'With Bank',
+    'loan_rejected':'Loan Rejected','documents_issue':'Docs Issue','load_extension':'Load Ext.',
+    'electricity_bill_change':'Bill Change','installation_pending':'Install Pending','net_meter_pending':'Net Meter',
+    'balance_pending':'Bal. Pending','subsidy_pending':'Subsidy Pending','completed':'Completed','not_interested':'Not Interested',
+    'cancelled':'Cancelled','different_vendor':'Diff. Vendor','bank_loan_completed':'Loan Completed',
+    'subsidy_cleared':'Subsidy Cleared','installed':'Installed'
+  };
+
+  function vsBadgeClass(vs) {
+    if(vs==='Pending') return 'vs-pending';
+    if(vs==='Completed') return 'vs-completed';
+    if(vs==='Final Invoice Completed') return 'vs-final';
+    if(vs==='Cancelled') return 'vs-cancelled';
+    return 'vs-pending';
+  }
+
+  async function init() {
+    const token = getToken();
+    if (!token) { window.location.href = '/partner/login'; return; }
+    _partnerInfo = JSON.parse(localStorage.getItem('partner_info') || '{}');
+    // Guard: only VENDOR category allowed here
+    if (_partnerInfo.category && _partnerInfo.category !== 'VENDOR') {
+      window.location.href = '/partner/dashboard'; return;
+    }
+    // Compute real vendor code: strip SV- prefix from partner_code if present
+    const _rawCode = _partnerInfo.partner_code || '';
+    const _vendorCode = _rawCode.startsWith('SV-') ? _rawCode.slice(3) : _rawCode;
+    document.getElementById('svVendorName').textContent = _partnerInfo.partner_name || _partnerInfo.vendor_name || '—';
+    document.getElementById('svVendorCode').textContent = _vendorCode || 'Solar Vendor';
+    // Profile tab — initial fill from localStorage (overwritten by loadProfile API)
+    document.getElementById('pVendorName').textContent = _partnerInfo.partner_name || _partnerInfo.vendor_name || '—';
+    document.getElementById('pVendorCode').textContent = _vendorCode || '—';
+    document.getElementById('pCity').textContent = _partnerInfo.city || '—';
+    document.getElementById('pPhone').textContent = _partnerInfo.phone || '—';
+    document.getElementById('pEmail').textContent = _partnerInfo.email || '—';
+    await loadStats();
+    // Background: fetch vendor logo for header (non-blocking)
+    apiFetch(`${API}/solar-vendor/profile`)
+      .then(r => r.json())
+      .then(d => { if (d.data && d.data.vendor_logo_url) _setHeaderLogo(d.data.vendor_logo_url); })
+      .catch(() => {});
+  }
+
+  let _profileLoaded = false;
+  async function loadProfile() {
+    if (_profileLoaded) return;
+    try {
+      const r = await apiFetch(`${API}/solar-vendor/profile`);
+      if (!r.ok) return;
+      const d = (await r.json()).data || {};
+      _profileLoaded = true;
+      if (d.vendor_code) document.getElementById('pVendorCode').textContent = d.vendor_code;
+      if (d.vendor_name) document.getElementById('pVendorName').textContent = d.vendor_name;
+      if (d.city) document.getElementById('pCity').textContent = d.city;
+      if (d.phone) document.getElementById('pPhone').textContent = d.phone;
+      if (d.email) document.getElementById('pEmail').textContent = d.email;
+      if (d.bank_name) document.getElementById('pBank').textContent = d.bank_name + (d.ifsc_code ? ` (${d.ifsc_code})` : '');
+      if (d.gst_number) document.getElementById('pGst').textContent = d.gst_number;
+      // Populate upload card previews with existing images
+      _setMediaPreview('logo',    d.vendor_logo_url);
+      _setHeaderLogo(d.vendor_logo_url);
+      _setMediaPreview('stamp',   d.stamp_image_url);
+      _setMediaPreview('rep_sig', d.rep_signature_url);
+      _setMediaPreview('tech_sig',d.tech_signature_url);
+    } catch(e) { /* non-blocking */ }
+  }
+
+  // ── Media upload card helpers ──────────────────────────────────────────
+  const _MEDIA_IDS = {
+    logo:    {img:'svLogoImg',    ph:'svLogoPlaceholder',    btn:'svLogoBtn',    status:'svLogoStatus'},
+    stamp:   {img:'svStampImg',   ph:'svStampPlaceholder',   btn:'svStampBtn',   status:'svStampStatus'},
+    rep_sig: {img:'svRepSigImg',  ph:'svRepSigPlaceholder',  btn:'svRepSigBtn',  status:'svRepSigStatus'},
+    tech_sig:{img:'svTechSigImg', ph:'svTechSigPlaceholder', btn:'svTechSigBtn', status:'svTechSigStatus'},
+  };
+
+  function _setHeaderLogo(url) {
+    if (!url) return;
+    const img = document.getElementById('svHeaderLogoImg');
+    const def = document.getElementById('svHeaderDefaultLogo');
+    if (!img) return;
+    img.src = url;
+    img.style.display = 'block';
+    if (def) def.style.display = 'none';
+  }
+
+  function _setMediaPreview(type, url) {
+    const ids = _MEDIA_IDS[type]; if (!ids || !url) return;
+    const img = document.getElementById(ids.img);
+    const ph  = document.getElementById(ids.ph);
+    if (img && ph) { img.src = url; img.style.display = 'block'; ph.style.display = 'none'; }
+    const st = document.getElementById(ids.status);
+    if (st) { st.style.color='#16a34a'; st.textContent = '✓ Uploaded'; }
+  }
+
+  async function handleMediaUpload(type, input) {
+    const file = input.files[0]; if (!file) return;
+    const ids = _MEDIA_IDS[type];
+    const btn = document.getElementById(ids.btn);
+    const st  = document.getElementById(ids.status);
+    btn.disabled = true; btn.textContent = 'Uploading…';
+    st.style.color = '#6b7280'; st.textContent = 'Uploading…';
+
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = e => {
+      _setMediaPreview(type, e.target.result);
+      if (type === 'logo') _setHeaderLogo(e.target.result);
+    };
+    reader.readAsDataURL(file);
+
+    try {
+      const fd = new FormData();
+      fd.append('media_type', type);
+      fd.append('file', file);
+      const r = await fetch(`${API}/solar-vendor/upload-media`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + getToken() },
+        body: fd
+      });
+      const d = await r.json();
+      if (r.ok && d.success) {
+        _setMediaPreview(type, d.url);
+        if (type === 'logo') _setHeaderLogo(d.url);
+        st.style.color = '#16a34a'; st.textContent = '✓ Saved successfully';
+        showToast('Image uploaded and saved', 'success');
+        _profileLoaded = false; // reset so it refreshes next time
+      } else {
+        st.style.color = '#dc2626'; st.textContent = d.detail || 'Upload failed';
+        showToast(d.detail || 'Upload failed', 'error');
+      }
+    } catch(e) {
+      st.style.color = '#dc2626'; st.textContent = 'Upload error';
+      showToast('Upload error: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      const labels = {logo:'Upload Logo', stamp:'Upload Stamp', rep_sig:'Upload Signature', tech_sig:'Upload Signature'};
+      btn.innerHTML = `<i class="fas fa-upload me-1"></i>${labels[type]}`;
+      input.value = '';
+    }
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.sv-nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    if (tab === 'leads' && document.getElementById('svLeadsBody').children[0]?.children[0]?.textContent.includes('Loading')) {
+      loadLeads(1);
+    }
+    if (tab === 'profile') loadProfile();
+    if (tab === 'ledger')  loadVendorLedger(1);
+  }
+
+  // ── Password Change ────────────────────────────────────────────────────
+  function openChangePwdModal() {
+    document.getElementById('svOldPwd').value = '';
+    document.getElementById('svNewPwd').value = '';
+    document.getElementById('svConfirmPwd').value = '';
+    document.getElementById('svPwdErr').style.display = 'none';
+    document.getElementById('svPwdSubmitBtn').disabled = false;
+    document.getElementById('svPwdSubmitBtn').textContent = 'Update Password';
+    document.getElementById('svChangePwdModal').style.display = 'flex';
+  }
+  function closeChangePwdModal() {
+    document.getElementById('svChangePwdModal').style.display = 'none';
+  }
+  async function submitChangePwd() {
+    const oldPwd = document.getElementById('svOldPwd').value.trim();
+    const newPwd = document.getElementById('svNewPwd').value.trim();
+    const confirmPwd = document.getElementById('svConfirmPwd').value.trim();
+    const errEl = document.getElementById('svPwdErr');
+    errEl.style.display = 'none';
+    if (!oldPwd || !newPwd || !confirmPwd) { errEl.textContent = 'All fields are required'; errEl.style.display = 'block'; return; }
+    if (newPwd.length < 6) { errEl.textContent = 'New password must be at least 6 characters'; errEl.style.display = 'block'; return; }
+    if (newPwd !== confirmPwd) { errEl.textContent = 'New passwords do not match'; errEl.style.display = 'block'; return; }
+    const btn = document.getElementById('svPwdSubmitBtn');
+    btn.disabled = true; btn.textContent = 'Updating…';
+    try {
+      const r = await apiFetch(`${API}/solar-vendor/change-password`, {
+        method: 'POST', body: JSON.stringify({ old_password: oldPwd, new_password: newPwd })
+      });
+      const d = await r.json();
+      if (r.ok && d.success) {
+        closeChangePwdModal();
+        showToast('Password updated successfully', 'success');
+      } else {
+        errEl.textContent = d.detail || d.message || 'Failed to update password';
+        errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Update Password';
+      }
+    } catch(e) {
+      errEl.textContent = 'Error: ' + e.message;
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Update Password';
+    }
+  }
+  // Close modal on backdrop click
+  document.getElementById('svChangePwdModal').addEventListener('click', function(e) {
+    if (e.target === this) closeChangePwdModal();
+  });
+
+  // ── Stats ─────────────────────────────────────────────────────────────
+  function fmtRevINR(v) {
+    if (!v || v === 0) return '₹0';
+    if (v >= 10000000) return '₹' + (v / 10000000).toFixed(2) + ' Cr';
+    if (v >= 100000)   return '₹' + (v / 100000).toFixed(2) + ' L';
+    if (v >= 1000)     return '₹' + (v / 1000).toFixed(1) + 'K';
+    return '₹' + v.toFixed(0);
+  }
+
+  async function loadStats() {
+    try {
+      const r = await apiFetch(`${API}/solar-vendor/stats`);
+      if (!r.ok) { showToast('Could not load stats', 'error'); return; }
+      const d = await r.json();
+
+      // ── Status counts ──────────────────────────────────────────────────
+      document.getElementById('statTotal').textContent     = d.total_leads ?? '0';
+      const bvs = d.by_vendor_status || {};
+      document.getElementById('statPending').textContent   = bvs['Pending'] ?? '0';
+      document.getElementById('statCompleted').textContent = bvs['Completed'] ?? '0';
+      document.getElementById('statFinal').textContent     = bvs['Final Invoice Completed'] ?? '0';
+      document.getElementById('statCancelled').textContent = bvs['Cancelled'] ?? '0';
+      document.getElementById('pTotalLeads').textContent   = d.total_leads ?? '0';
+
+      // ── Revenue / Deal Value Cards ─────────────────────────────────────
+      document.getElementById('revTotal').textContent    = fmtRevINR(d.total_deal_value || 0);
+      document.getElementById('revReceived').textContent = fmtRevINR(d.total_deal_received || 0);
+      document.getElementById('revBalance').textContent  = fmtRevINR(d.total_deal_balance || 0);
+      const kw = d.total_kw || 0;
+      document.getElementById('revKw').textContent = kw > 0 ? kw.toFixed(1) + ' kW' : '0 kW';
+
+      // ── Deal Value by Status ───────────────────────────────────────────
+      const dvs = d.deal_value_by_status || {};
+      document.getElementById('dvPending').textContent   = fmtRevINR(dvs['Pending'] || 0);
+      document.getElementById('dvCompleted').textContent = fmtRevINR(dvs['Completed'] || 0);
+      document.getElementById('dvFinal').textContent     = fmtRevINR(dvs['Final Invoice Completed'] || 0);
+      document.getElementById('dvCancelled').textContent = fmtRevINR(dvs['Cancelled'] || 0);
+
+      // ── Pipeline Stage Breakdown ───────────────────────────────────────
+      const byPipeline    = d.by_pipeline || {};
+      const dvByPipeline  = d.deal_value_by_pipeline || {};
+      renderPipelineGrid(byPipeline, dvByPipeline);
+
+    } catch(e) { showToast('Stats error: ' + e.message, 'error'); }
+  }
+
+  function renderPipelineGrid(byPipeline, dvByPipeline) {
+    const grid = document.getElementById('pipelineGrid');
+    if (!grid) return;
+    const entries = Object.entries(byPipeline).sort((a, b) => b[1] - a[1]);
+    if (!entries.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:#9ca3af;font-size:13px"><i class="fas fa-inbox me-2"></i>No pipeline data yet</div>';
+      return;
+    }
+    grid.innerHTML = entries.map(([stage, count]) => {
+      const label = PIPELINE_LABELS[stage] || stage.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+      const dv    = dvByPipeline[stage] || 0;
+      const dvStr = dv > 0 ? fmtRevINR(dv) : '';
+      return `<div class="sv-pipe-card" onclick="filterByPipeline('${stage}')" style="cursor:pointer" title="Click to filter leads">
+        <div style="min-width:0">
+          <div class="sv-pipe-stage">${esc(label)}</div>
+          ${dvStr ? `<div class="sv-pipe-val">${dvStr}</div>` : ''}
+        </div>
+        <div class="sv-pipe-count">${count}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function filterByPipeline(stage) {
+    switchTab('leads');
+    const sel = document.getElementById('svPipelineFilter');
+    if (sel) { sel.value = stage; loadLeads(1); }
+  }
+
+  // ── Leads ─────────────────────────────────────────────────────────────
+  async function loadLeads(page) {
+    _currentPage = page || 1;
+    const tbody = document.getElementById('svLeadsBody');
+    tbody.innerHTML = '<tr><td colspan="19" class="no-data"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+
+    const search    = document.getElementById('svSearch')?.value?.trim() || '';
+    const vsf       = document.getElementById('svVendorStatusFilter')?.value || '';
+    const psf       = document.getElementById('svPipelineFilter')?.value || '';
+    const pincode   = document.getElementById('svPincodeFilter')?.value?.trim() || '';
+    const loanBank  = document.getElementById('svLoanBankFilter')?.value?.trim() || '';
+    const bankEntry = document.getElementById('svBankEntryFilter')?.value || '';
+    const coApp     = document.getElementById('svCoApplicantFilter')?.value || '';
+    const perPage   = document.getElementById('svPerPageSelect')?.value || 50;
+
+    const params = new URLSearchParams({ page: _currentPage, per_page: perPage });
+    if (search)    params.set('search', search);
+    if (vsf)       params.set('vendor_status_filter', vsf);
+    if (psf)       params.set('pipeline_stage', psf);
+    if (pincode)   params.set('pincode', pincode);
+    if (loanBank)  params.set('loan_bank', loanBank);
+    if (bankEntry) params.set('bank_entry', bankEntry);
+    if (coApp)     params.set('has_co_applicant', coApp);
+
+    try {
+      const r = await apiFetch(`${API}/solar-vendor/leads?${params}`);
+      if (!r.ok) { const e=await r.json().catch(()=>{}); tbody.innerHTML=`<tr><td colspan="19" class="no-data" style="color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>${esc(e?.detail||'Failed to load leads')}</td></tr>`; return; }
+      const d = await r.json();
+      const leads = d.data || [];
+      _totalPages = d.pages || 1;
+      // Update count badge
+      const badge = document.getElementById('svLeadsCountBadge');
+      if (badge) badge.textContent = d.total ?? 0;
+      renderLeads(leads, d.total || 0, d);
+      renderPagination(d);
+    } catch(e) { tbody.innerHTML = `<tr><td colspan="19" class="no-data" style="color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>${esc(e.message)}</td></tr>`; }
+  }
+
+  function renderLeads(leads, total, d) {
+    const tbody = document.getElementById('svLeadsBody');
+    if (!leads.length) {
+      tbody.innerHTML = `<tr><td colspan="19" class="no-data"><i class="fas fa-inbox me-2"></i>No leads found matching the current filters</td></tr>`;
+      return;
+    }
+    const offset = (_currentPage - 1) * (parseInt(document.getElementById('svPerPageSelect')?.value)||50);
+    tbody.innerHTML = leads.map((l,i) => {
+      const vsClass = vsBadgeClass(l.vendor_status);
+      const sps = l.solar_pipeline_status;
+      const income = l.monthly_income != null
+        ? fmtINR(l.monthly_income)
+        : (l.regular_income_available != null
+            ? (l.regular_income_available ? '<span style="color:#16a34a;font-size:11px">✓ Has Income</span>' : '<span style="color:#dc2626;font-size:11px">✗ No Income</span>')
+            : '—');
+      return `<tr>
+        <td style="color:#9ca3af;font-size:11px;text-align:center">${offset+i+1}</td>
+        <td style="font-size:11px;color:#6b7280;text-align:center">${esc(l.application_no||'—')}</td>
+        <td style="font-weight:600">${esc(l.name||'—')}</td>
+        <td style="font-family:monospace;color:#374151;font-size:12px">${esc(l.phone||'—')}</td>
+        <td style="font-size:12px">${esc(l.pincode||'—')}</td>
+        <td>${sps?`<span class="pipeline-badge">${esc(PIPELINE_LABELS[sps]||sps)}</span>`:'<span style="color:#9ca3af;font-size:10px">—</span>'}</td>
+        <td><span class="vs-badge ${vsClass}">${esc(l.vendor_status||'Pending')}</span></td>
+        <td style="text-align:center">${l.kw_size?`<strong>${esc(String(l.kw_size))}</strong><span style="font-size:10px;color:#6b7280"> kW</span>`:'—'}</td>
+        <td style="font-size:11.5px">${income}</td>
+        <td style="font-size:11.5px">${esc(l.loan_bank||'—')}</td>
+        <td style="text-align:center">${boolBadge(l.bank_entry_updated)}</td>
+        <td style="text-align:center">${boolBadge(l.bank_statement_available)}</td>
+        <td style="white-space:nowrap;font-size:11.5px">${fmtDate(l.material_reach_date)}</td>
+        <td style="white-space:nowrap;font-size:11.5px">${fmtDate(l.installation_date)}</td>
+        <td style="font-size:11px">${l.co_applicant_name?`<div style="font-weight:600">${esc(l.co_applicant_name)}</div><div style="color:#9ca3af;font-size:10.5px">${esc(l.co_applicant_phone||'')}</div>`:'<span style="color:#d1d5db">—</span>'}</td>
+        <td style="text-align:right;white-space:nowrap">${l.deal_value_total?fmtINR(l.deal_value_total):'—'}</td>
+        <td style="white-space:nowrap;font-size:11.5px">${fmtDate(l.next_followup_date)}</td>
+        <td style="white-space:nowrap;font-size:11.5px">${fmtDate(l.accepted_date)}</td>
+        <td style="text-align:center">
+          <button onclick="openDocs(${l.id},'${esc(l.name||'').replace(/'/g,"\\'")}')"
+            title="View Documents"
+            style="background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;border-radius:7px;padding:5px 9px;font-size:11px;cursor:pointer;white-space:nowrap">
+            <i class="fas fa-file-alt"></i>
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderPagination(d) {
+    const pg = document.getElementById('svPagination');
+    const info = document.getElementById('svPageInfo');
+    const btns = document.getElementById('svPageBtns');
+    const total = d.total || 0;
+    const pp = d.per_page || 30;
+    const pages = d.pages || 1;
+    const page = d.page || 1;
+    pg.style.display = 'flex';
+    const from = (page-1)*pp+1, to = Math.min(page*pp, total);
+    info.textContent = total ? `Showing ${from}–${to} of ${total}` : 'No results';
+    let html = '';
+    const maxBtn = 7;
+    html += `<button class="sv-page-btn" onclick="loadLeads(${page-1})" ${page<=1?'disabled':''}>‹ Prev</button>`;
+    let start = Math.max(1, page-3), end = Math.min(pages, start+maxBtn-1);
+    if(end-start<maxBtn-1) start=Math.max(1, end-maxBtn+1);
+    for(let p=start;p<=end;p++) html+=`<button class="sv-page-btn${p===page?' active':''}" onclick="loadLeads(${p})">${p}</button>`;
+    html += `<button class="sv-page-btn" onclick="loadLeads(${page+1})" ${page>=pages?'disabled':''}>Next ›</button>`;
+    btns.innerHTML = html;
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function filterByVendorStatus(vs) {
+    document.getElementById('svVendorStatusFilter').value = vs;
+    switchTab('leads');
+    loadLeads(1);
+  }
+
+  function scheduleSearch() {
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(() => loadLeads(1), 400);
+  }
+
+  function resetLeadsFilter() {
+    ['svSearch','svPincodeFilter','svLoanBankFilter'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    ['svVendorStatusFilter','svPipelineFilter','svBankEntryFilter','svCoApplicantFilter'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    const pp = document.getElementById('svPerPageSelect'); if(pp) pp.value='50';
+    loadLeads(1);
+  }
+
+  // ── Docs Modal ────────────────────────────────────────────────────────
+  const _DOC_ICONS = {
+    quotation:'fa-file-invoice',invoice:'fa-file-invoice-dollar',
+    annexure:'fa-paperclip',sanction:'fa-stamp',certificate:'fa-certificate',
+    agreement:'fa-handshake',photo:'fa-image',other:'fa-file-alt'
+  };
+  const _DOC_CAT_LABELS = { consumer:'Customer Doc', generated:'Generated Doc', vendor:'Vendor Doc' };
+
+  async function openDocs(leadId, leadName) {
+    const modal = document.getElementById('svDocsModal');
+    const body  = document.getElementById('svDocsBody');
+    document.getElementById('svDocsLeadName').textContent = leadName ? `Lead: ${leadName}` : `Lead #${leadId}`;
+    modal.style.display = 'flex';
+    body.innerHTML = '<div style="text-align:center;color:#9ca3af;padding:30px"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+    try {
+      const r = await apiFetch(`${API}/solar-vendor/leads/${leadId}/docs`);
+      const d = await r.json();
+      if (!r.ok) { body.innerHTML = `<div style="text-align:center;color:#dc2626;padding:20px">${esc(d.detail||'Could not load documents')}</div>`; return; }
+      const docs = d.docs || [];
+      if (!docs.length) {
+        body.innerHTML = '<div style="text-align:center;padding:30px"><div style="font-size:36px;margin-bottom:10px">📂</div><div style="color:#6b7280;font-size:14px">No documents generated yet for this lead.</div></div>';
+        return;
+      }
+      // Group by category
+      const groups = {};
+      docs.forEach(doc => { const g = doc.doc_category||'other'; if(!groups[g]) groups[g]=[]; groups[g].push(doc); });
+      body.innerHTML = Object.entries(groups).map(([cat, items]) => `
+        <div style="margin-bottom:16px">
+          <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#9ca3af;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid #f3f4f6">${esc(_DOC_CAT_LABELS[cat]||cat)}</div>
+          ${items.map(doc => {
+            const icon = _DOC_ICONS[doc.doc_type] || 'fa-file-alt';
+            const sizeKB = doc.file_size ? `${Math.round(doc.file_size/1024)} KB` : '';
+            const dt = doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit'}) : '';
+            return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:9px;margin-bottom:7px;background:#f9fafb">
+              <div style="width:36px;height:36px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#2563eb"><i class="fas ${icon}"></i></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600;color:#1f2937">${esc(doc.doc_label||doc.doc_type)}</div>
+                <div style="font-size:11px;color:#9ca3af">${doc.doc_number?`#${esc(doc.doc_number)} · `:''}${sizeKB}${dt?' · '+dt:''}</div>
+              </div>
+              ${doc.view_url ? `<a href="${esc(doc.view_url)}" target="_blank" rel="noopener"
+                style="background:#2563eb;color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap">
+                <i class="fas fa-download me-1"></i>View
+              </a>` : '<span style="font-size:11px;color:#9ca3af">No file</span>'}
+            </div>`;
+          }).join('')}
+        </div>`).join('');
+    } catch(e) {
+      body.innerHTML = `<div style="text-align:center;color:#dc2626;padding:20px">Error loading documents: ${esc(e.message)}</div>`;
+    }
+  }
+
+  function closeDocs() {
+    document.getElementById('svDocsModal').style.display = 'none';
+  }
+  document.getElementById('svDocsModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDocs();
+  });
+
+  function svLogout() {
+    localStorage.removeItem('partner_token');
+    localStorage.removeItem('partner_info');
+    document.cookie = 'partner_token=; path=/; max-age=0';
+    window.location.href = '/partner/login';
+  }
+
+  // ── Vendor Ledger ─────────────────────────────────────────────────────
+  let _vLedgPage = 1;
+
+  async function loadVendorLedger(page) {
+    _vLedgPage = page || 1;
+    const body = document.getElementById('svLedgerBody');
+    if (body) body.innerHTML = '<div style="padding:24px;text-align:center;color:#9ca3af;"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div>';
+    try {
+      const dir = document.getElementById('svlFilterDir')?.value || '';
+      const params = new URLSearchParams({ page: _vLedgPage, page_size: 20 });
+      if (dir) params.append('direction', dir);
+      const r = await fetch(`${API}/solar-vendor/ledger?${params}`, { headers: authHeaders() });
+      if (!r.ok) throw new Error(await r.text());
+      const d = await r.json();
+      _renderVLedgSummary(d.summary || {});
+      _renderVLedgTable(d.rows || []);
+      _renderVLedgPag(d.total || 0, d.page || 1, d.page_size || 20);
+    } catch(e) {
+      if (body) body.innerHTML = `<div style="padding:20px;text-align:center;color:#dc2626;"><i class="fas fa-exclamation-circle me-1"></i>${e.message}</div>`;
+    }
+  }
+
+  function _fmtMoney(a) { return '₹' + new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}).format(a||0); }
+  function _fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'; }
+
+  function _renderVLedgSummary(s) {
+    const el = id => document.getElementById(id);
+    if (el('svLedgReceived')) el('svLedgReceived').textContent = _fmtMoney(s.total_received);
+    if (el('svLedgReturned')) el('svLedgReturned').textContent = _fmtMoney(s.total_returned);
+    if (el('svLedgBalance'))  el('svLedgBalance').textContent  = _fmtMoney(s.balance);
+  }
+
+  function _renderVLedgTable(rows) {
+    const el = document.getElementById('svLedgerBody');
+    if (!el) return;
+    if (!rows.length) { el.innerHTML = '<div style="padding:30px;text-align:center;color:#9ca3af;"><i class="fas fa-inbox me-2"></i>No transactions yet</div>'; return; }
+    let html = `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+        <th style="padding:9px 12px;text-align:left;font-weight:600;color:#374151;">Date</th>
+        <th style="padding:9px 12px;text-align:left;font-weight:600;color:#374151;">Type</th>
+        <th style="padding:9px 12px;text-align:left;font-weight:600;color:#374151;">Customer</th>
+        <th style="padding:9px 12px;text-align:right;font-weight:600;color:#374151;">Amount</th>
+        <th style="padding:9px 12px;text-align:left;font-weight:600;color:#374151;">Mode</th>
+        <th style="padding:9px 12px;text-align:left;font-weight:600;color:#374151;">UTR / Ref</th>
+        <th style="padding:9px 12px;text-align:left;font-weight:600;color:#374151;">Notes</th>
+      </tr></thead><tbody>`;
+    rows.forEach(row => {
+      const isRec = row.direction === 'RECEIVED';
+      const badge = isRec
+        ? '<span style="background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">↓ Received</span>'
+        : '<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">↑ Returned</span>';
+      html += `<tr style="border-bottom:1px solid #f1f5f9;">
+        <td style="padding:8px 12px;color:#374151;">${_fmtDate(row.transaction_date)}</td>
+        <td style="padding:8px 12px;">${badge}</td>
+        <td style="padding:8px 12px;color:#6b7280;">${row.customer_name||'—'}</td>
+        <td style="padding:8px 12px;text-align:right;font-weight:700;color:${isRec?'#059669':'#b45309'};">${_fmtMoney(row.amount)}</td>
+        <td style="padding:8px 12px;color:#6b7280;">${row.payment_mode||'—'}</td>
+        <td style="padding:8px 12px;color:#6b7280;font-size:12px;">${row.utr_reference||'—'}</td>
+        <td style="padding:8px 12px;color:#6b7280;font-size:12px;">${row.notes||'—'}</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    el.innerHTML = html;
+  }
+
+  function _renderVLedgPag(total, page, pageSize) {
+    const el = document.getElementById('svLedgerPag');
+    if (!el) return;
+    const pages = Math.ceil(total / pageSize);
+    if (pages <= 1) { el.innerHTML = `<span style="font-size:12px;color:#9ca3af;">${total} entries</span>`; return; }
+    let html = `<span style="font-size:12px;color:#9ca3af;margin-right:8px;">${total} entries</span>`;
+    if (page > 1) html += `<button onclick="loadVendorLedger(${page-1})" style="margin:0 3px;padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;">‹ Prev</button>`;
+    html += `<span style="margin:0 8px;font-size:12px;color:#374151;">Page ${page} of ${pages}</span>`;
+    if (page < pages) html += `<button onclick="loadVendorLedger(${page+1})" style="margin:0 3px;padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:12px;">Next ›</button>`;
+    el.innerHTML = html;
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────
+  init();
+</script>
+</body>
+</html>

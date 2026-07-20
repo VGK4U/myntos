@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Birthday Management - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #1e3a8a;
+            --secondary-color: #3b82f6;
+            --accent-color: #ec4899;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .page-header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .page-header h1 i {
+            color: var(--accent-color);
+        }
+        
+        .page-header p {
+            color: #6b7280;
+            margin: 0;
+        }
+        
+        .content-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .nav-pills .nav-link {
+            color: #6b7280;
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            margin-right: 0.5rem;
+            transition: all 0.3s;
+        }
+        
+        .nav-pills .nav-link.active {
+            background: var(--accent-color);
+            color: white;
+        }
+        
+        .birthday-card {
+            border: 2px solid #f3f4f6;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .birthday-card:hover {
+            border-color: var(--accent-color);
+            box-shadow: 0 4px 12px rgba(236, 72, 153, 0.2);
+        }
+        
+        .birthday-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--accent-color);
+        }
+        
+        .birthday-initials {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            border: 3px solid var(--accent-color);
+        }
+        
+        .birthday-info {
+            flex: 1;
+        }
+        
+        .birthday-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 0.25rem;
+        }
+        
+        .birthday-details {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+        
+        .birthday-date {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .filter-summary {
+            background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .filter-summary h3 {
+            margin: 0;
+            font-size: 2.5rem;
+        }
+        
+        .filter-summary p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        
+        .btn-primary {
+            background: var(--accent-color);
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: #db2777;
+            transform: translateY(-2px);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1><i class="bi bi-cake2-fill"></i> Birthday Management</h1>
+                    <p>Track and celebrate member birthdays</p>
+                </div>
+                <div>
+                    <a href="/admin/banners-management" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-card-text"></i> Banner Management
+                    </a>
+                    <a href="/admin/dashboard" class="btn btn-outline-primary">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <ul class="nav nav-pills mb-4" id="birthdayTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="today-tab" data-bs-toggle="pill" data-bs-target="#today" type="button">
+                        <i class="bi bi-calendar-check"></i> Today
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="yesterday-tab" data-bs-toggle="pill" data-bs-target="#yesterday" type="button">
+                        <i class="bi bi-calendar-minus"></i> Yesterday
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tomorrow-tab" data-bs-toggle="pill" data-bs-target="#tomorrow" type="button">
+                        <i class="bi bi-calendar-plus"></i> Tomorrow
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="week-tab" data-bs-toggle="pill" data-bs-target="#week" type="button">
+                        <i class="bi bi-calendar-week"></i> Next 7 Days
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="birthdayTabsContent">
+                <!-- Today Tab -->
+                <div class="tab-pane fade show active" id="today" role="tabpanel">
+                    <div class="filter-summary">
+                        <h3 id="todayCount">0</h3>
+                        <p>Birthdays Today</p>
+                    </div>
+                    <div id="todayList"></div>
+                </div>
+
+                <!-- Yesterday Tab -->
+                <div class="tab-pane fade" id="yesterday" role="tabpanel">
+                    <div class="filter-summary">
+                        <h3 id="yesterdayCount">0</h3>
+                        <p>Birthdays Yesterday</p>
+                    </div>
+                    <div id="yesterdayList"></div>
+                </div>
+
+                <!-- Tomorrow Tab -->
+                <div class="tab-pane fade" id="tomorrow" role="tabpanel">
+                    <div class="filter-summary">
+                        <h3 id="tomorrowCount">0</h3>
+                        <p>Birthdays Tomorrow</p>
+                    </div>
+                    <div id="tomorrowList"></div>
+                </div>
+
+                <!-- Next 7 Days Tab -->
+                <div class="tab-pane fade" id="week" role="tabpanel">
+                    <div class="filter-summary">
+                        <h3 id="weekCount">0</h3>
+                        <p>Birthdays in Next 7 Days</p>
+                    </div>
+                    <div id="weekList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let authToken = localStorage.getItem('authToken');
+
+        // Check authentication
+        if (!authToken) {
+            window.location.href = '/login';
+        }
+
+        // Render birthday user card (DC Protocol - all data from user table)
+        function renderBirthdayCard(user) {
+            const initials = user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            const photoHtml = `<div class="birthday-initials">${initials}</div>`;
+            
+            return `
+                <div class="birthday-card">
+                    ${photoHtml}
+                    <div class="birthday-info">
+                        <div class="birthday-name">
+                            <i class="bi bi-cake2"></i> ${user.name}
+                        </div>
+                        <div class="birthday-details">
+                            <i class="bi bi-geo-alt"></i> ${user.location} | 
+                            <i class="bi bi-hash"></i> ${user.user_id}
+                        </div>
+                    </div>
+                    <div>
+                        <span class="birthday-date">
+                            <i class="bi bi-calendar-event"></i> ${formatBirthday(user.birthday_date)}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function formatBirthday(date) {
+            const d = new Date(date);
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function renderEmptyState(message) {
+            return `
+                <div class="empty-state">
+                    <i class="bi bi-calendar-x"></i>
+                    <h5>${message}</h5>
+                </div>
+            `;
+        }
+
+        // Load birthdays for a specific filter
+        function loadBirthdays(filter) {
+            const endpoints = {
+                'today': '/banners/admin/birthdays/today',
+                'yesterday': '/banners/admin/birthdays/yesterday',
+                'tomorrow': '/banners/admin/birthdays/tomorrow',
+                'week': '/banners/admin/birthdays/next-7-days'
+            };
+
+            // Task #33 — VGK4U Member Parity: append ?audience= from the global tab strip
+            const audience = (window.AudienceTabs && window.AudienceTabs.current()) || 'mnr';
+            const url = `${API_BASE}${endpoints[filter]}?audience=${encodeURIComponent(audience)}`;
+
+            $.ajax({
+                url: url,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    const users = data.users || [];
+                    $(`#${filter}Count`).text(users.length);
+                    
+                    if (users.length > 0) {
+                        const html = users.map(user => renderBirthdayCard(user)).join('');
+                        $(`#${filter}List`).html(html);
+                    } else {
+                        const audLabel = audience === 'vgk4u' ? ' (VGK4U Members)' : '';
+                        $(`#${filter}List`).html(renderEmptyState(`No birthdays ${filter === 'week' ? 'in the next 7 days' : filter}${audLabel}`));
+                    }
+                },
+                error: function(err) {
+                    console.error(`Failed to load ${filter} birthdays:`, err);
+                    $(`#${filter}List`).html(renderEmptyState('Error loading birthdays'));
+                }
+            });
+        }
+
+        function loadAllBirthdays() {
+            loadBirthdays('today');
+            loadBirthdays('yesterday');
+            loadBirthdays('tomorrow');
+            loadBirthdays('week');
+        }
+
+        // Load all filters on page load
+        $(document).ready(function() {
+            // Mount the reusable MNR | VGK4U audience tab strip (Task #33 Phase 1)
+            if (window.AudienceTabs && typeof window.AudienceTabs.mount === 'function') {
+                window.AudienceTabs.mount({
+                    container: 'audienceTabsHost',
+                    defaultAudience: 'mnr',
+                    page: 'admin_birthdays',
+                    onChange: function () { loadAllBirthdays(); },
+                });
+            }
+            loadAllBirthdays();
+        });
+
+        // Also refetch whenever the audience changes via any route
+        window.addEventListener('audience:changed', loadAllBirthdays);
+
+        // Refresh when tab is clicked
+        $('button[data-bs-toggle="pill"]').on('shown.bs.tab', function (e) {
+            const filter = e.target.id.replace('-tab', '');
+            loadBirthdays(filter);
+        });
+    </script>
+    <!-- Task #33 — VGK4U Member Parity Phase 1: reusable MNR | VGK4U tab strip -->
+    <script src="/audience-tabs.js"></script>
+</body>
+</html>

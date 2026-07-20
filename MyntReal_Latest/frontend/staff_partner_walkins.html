@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partner Walk-ins - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 24px; max-width: 1400px; margin: 0 auto; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; }
+        .filter-bar { background: white; padding: 16px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+        .filter-bar label { font-size: 12px; font-weight: 600; color: #6b7280; display: block; margin-bottom: 4px; }
+        .filter-bar input, .filter-bar select { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 14px; margin-bottom: 20px; }
+        .summary-box { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 14px 16px; text-align: center; }
+        .summary-box .val { font-size: 22px; font-weight: 700; }
+        .summary-box .lbl { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .summary-box.green .val { color: #059669; }
+        .summary-box.blue .val { color: #2563eb; }
+        .summary-box.orange .val { color: #d97706; }
+        .summary-box.red .val { color: #dc2626; }
+        .summary-box.teal .val { color: #0d9488; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th { padding: 10px 12px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .data-table tr:hover td { background: #f9fafb; }
+        .partner-pill { background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; }
+        .outcome-pending { background: #f3f4f6; color: #6b7280; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        .outcome-interested { background: #dbeafe; color: #1d4ed8; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        .outcome-converted { background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        .outcome-not { background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        .outcome-demo { background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        .outcome-followup { background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+        .crm-tag { background: #d1fae5; color: #065f46; padding: 2px 7px; border-radius: 6px; font-size: 11px; }
+        .tag-pill { display: inline-block; background: #e0f2fe; color: #0369a1; border-radius: 8px; padding: 1px 6px; font-size: 10px; margin: 1px; }
+        .btn-action { padding: 3px 9px; border-radius: 5px; font-size: 11px; border: 1px solid; cursor: pointer; background: white; }
+        #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .pagination-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+        .chart-bar { display: inline-block; height: 12px; border-radius: 3px; background: #3b82f6; min-width: 4px; }
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+<div class="content-area">
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-walking me-2" style="color:#2563eb;"></i>Partner Walk-ins</h1>
+            <p>Aggregated view of all walk-in visits recorded by business partners</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary btn-sm" onclick="exportCSV()"><i class="fas fa-download me-1"></i>Export CSV</button>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-grid" id="summaryGrid">
+        <div class="summary-box"><div class="val" id="sTotal">—</div><div class="lbl">Total Walk-ins</div></div>
+        <div class="summary-box blue"><div class="val" id="sToday">—</div><div class="lbl">Today</div></div>
+        <div class="summary-box orange"><div class="val" id="sCompanyFU">—</div><div class="lbl">Company FU</div></div>
+        <div class="summary-box teal"><div class="val" id="sConverted">—</div><div class="lbl">Converted</div></div>
+        <div class="summary-box green"><div class="val" id="sInterested">—</div><div class="lbl">Interested</div></div>
+        <div class="summary-box red"><div class="val" id="sNotInterested">—</div><div class="lbl">Not Interested</div></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+        <div>
+            <label>Partner</label>
+            <select id="partnerFilter" onchange="loadData()" style="min-width:180px;">
+                <option value="">All Partners</option>
+            </select>
+        </div>
+        <div>
+            <label>Purpose</label>
+            <select id="purposeFilter" onchange="loadData()">
+                <option value="">All</option>
+                <option value="solar">Solar</option>
+                <option value="ev">EV (B2C)</option>
+                <option value="ev_b2b">EV B2B</option>
+                <option value="ev_spares">EV Spares</option>
+                <option value="insurance">Insurance</option>
+                <option value="real_dreams">Real Dreams</option>
+                <option value="etc_training">ETC Training</option>
+                <option value="service">Service Request</option>
+                <option value="loan">Loan / Finance</option>
+                <option value="demo">Product Demo</option>
+                <option value="general">General</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <div>
+            <label>Outcome</label>
+            <select id="outcomeFilter" onchange="loadData()">
+                <option value="">All</option>
+                <option value="pending">Pending</option>
+                <option value="interested">Interested</option>
+                <option value="not_interested">Not Interested</option>
+                <option value="demo_given">Demo Given</option>
+                <option value="follow_up">Follow-up</option>
+                <option value="converted">Converted</option>
+            </select>
+        </div>
+        <div>
+            <label>Company F/U</label>
+            <select id="fuFilter" onchange="loadData()">
+                <option value="">All</option>
+                <option value="true">Yes (pushed to CRM)</option>
+                <option value="false">No</option>
+            </select>
+        </div>
+        <div>
+            <label>Date From</label>
+            <input type="date" id="dateFrom" onchange="loadData()">
+        </div>
+        <div>
+            <label>Date To</label>
+            <input type="date" id="dateTo" onchange="loadData()">
+        </div>
+        <div>
+            <label>Search</label>
+            <input type="text" id="searchQ" placeholder="Name or phone..." oninput="debounce()" style="min-width:180px;">
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="loadData()" style="align-self:flex-end;">Apply</button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()" style="align-self:flex-end;">Reset</button>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Walk-in Records <span class="badge bg-secondary ms-1" id="totalBadge">0</span></span>
+        </div>
+        <div class="card-body p-0">
+            <div id="loadingDiv" style="text-align:center;padding:40px;display:none;"><div class="spinner-border text-primary"></div></div>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Partner</th>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Purpose</th>
+                            <th>Outcome</th>
+                            <th>Tags</th>
+                            <th>CRM</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="pagination-row" id="paginationRow"></div>
+</div>
+
+<!-- View Walk-in Detail Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:14px;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#1565c0,#42a5f5);color:white;border-radius:14px 14px 0 0;">
+                <h5 class="modal-title"><i class="fas fa-walking me-2"></i>Walk-in Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:brightness(0) invert(1);"></button>
+            </div>
+            <div class="modal-body" id="viewModalBody">Loading...</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+</div><!-- /main-content -->
+
+<div id="toastContainer"></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let currentPage = 1;
+let searchTimer = null;
+
+const PURPOSE_LABELS = {
+    solar:'Solar Inquiry', ev:'EV Inquiry (B2C)', ev_b2b:'EV B2B',
+    ev_spares:'EV Spares', insurance:'Insurance', real_dreams:'Real Dreams',
+    etc_training:'ETC Training', service:'Service Request', loan:'Loan / Finance',
+    demo:'Product Demo', general:'General', other:'Other'
+};
+const OUTCOME_CLASSES = { pending:'outcome-pending',interested:'outcome-interested',not_interested:'outcome-not',demo_given:'outcome-demo',follow_up:'outcome-followup',converted:'outcome-converted' };
+const OUTCOME_LABELS = { pending:'Pending',interested:'Interested',not_interested:'Not Interested',demo_given:'Demo Given',follow_up:'Follow-up',converted:'Converted' };
+
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    const firstOfMonth = new Date(); firstOfMonth.setDate(1);
+    document.getElementById('dateFrom').value = firstOfMonth.toISOString().split('T')[0];
+    document.getElementById('dateTo').value = today;
+    loadPartnerList();
+    loadData();
+});
+
+function getToken() {
+    return localStorage.getItem('staff_token') || document.cookie.match(/staff_token=([^;]+)/)?.[1] || '';
+}
+
+async function loadPartnerList() {
+    try {
+        const res = await fetch('/api/v1/partner/staff-view/partner-walkins?per_page=1', {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const d = await res.json();
+        const sel = document.getElementById('partnerFilter');
+        if (d.partners) {
+            d.partners.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.partner_code} — ${p.partner_name}`;
+                sel.appendChild(opt);
+            });
+        }
+    } catch(e) {}
+}
+
+async function loadData() {
+    document.getElementById('loadingDiv').style.display = 'block';
+    const params = new URLSearchParams({
+        page: currentPage, per_page: 25,
+        partner_id: document.getElementById('partnerFilter').value,
+        purpose: document.getElementById('purposeFilter').value,
+        outcome: document.getElementById('outcomeFilter').value,
+        company_follow_up: document.getElementById('fuFilter').value,
+        date_from: document.getElementById('dateFrom').value,
+        date_to: document.getElementById('dateTo').value,
+        search: document.getElementById('searchQ').value,
+    });
+    for (const [k,v] of [...params.entries()]) { if (!v) params.delete(k); }
+
+    try {
+        const res = await fetch(`/api/v1/partner/staff-view/partner-walkins?${params}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const d = await res.json();
+        document.getElementById('loadingDiv').style.display = 'none';
+        if (!d.success) { toast(d.detail || 'Failed to load', 'danger'); return; }
+        renderSummary(d.summary || {}, d.total);
+        renderTable(d.data);
+        renderPagination(d.total, d.page, d.per_page);
+    } catch(e) {
+        document.getElementById('loadingDiv').style.display = 'none';
+        toast('Network error','danger');
+    }
+}
+
+function renderSummary(s, total) {
+    document.getElementById('sTotal').textContent = total || 0;
+    document.getElementById('sToday').textContent = s.today || 0;
+    document.getElementById('sCompanyFU').textContent = s.company_followups || 0;
+    document.getElementById('sConverted').textContent = s.converted || 0;
+    document.getElementById('sInterested').textContent = s.interested || 0;
+    document.getElementById('sNotInterested').textContent = s.not_interested || 0;
+    document.getElementById('totalBadge').textContent = total || 0;
+}
+
+function renderTable(rows) {
+    const tbody = document.getElementById('tableBody');
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af;"><i class="fas fa-walking" style="font-size:2rem;display:block;margin-bottom:8px;"></i>No walk-ins found</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map(w => {
+        const tags = [];
+        if (w.registered_with_mnr) tags.push('<span class="tag-pill" style="background:#d1fae5;color:#065f46;">MNR</span>');
+        if (w.registered_with_vgk) tags.push('<span class="tag-pill">VGK</span>');
+        if (w.is_existing_customer) tags.push('<span class="tag-pill" style="background:#fef3c7;color:#92400e;">Existing</span>');
+        if (w.is_returning) tags.push('<span class="tag-pill" style="background:#ede9fe;color:#5b21b6;">Returning</span>');
+        const ocClass = OUTCOME_CLASSES[w.visit_outcome] || 'outcome-pending';
+        const crmEl = w.company_follow_up ? '<span class="crm-tag"><i class="fas fa-check me-1"></i>CRM</span>' : '—';
+        return `<tr>
+            <td>${fdate(w.visit_date)}<div style="font-size:10px;color:#9ca3af;">${w.visit_time||''}</div></td>
+            <td><span class="partner-pill">${w.partner_code||'—'}</span></td>
+            <td style="font-weight:600;">${w.customer_name}</td>
+            <td>${w.customer_phone}</td>
+            <td><span style="font-size:11px;background:#f3f4f6;padding:2px 8px;border-radius:6px;">${PURPOSE_LABELS[w.visit_purpose]||w.visit_purpose}</span></td>
+            <td><span class="${ocClass}">${OUTCOME_LABELS[w.visit_outcome]||w.visit_outcome}</span></td>
+            <td>${tags.join('')||'—'}</td>
+            <td>${crmEl}</td>
+            <td style="max-width:200px;"><small style="color:#6b7280;">${(w.notes||'').substring(0,60)}${(w.notes||'').length>60?'…':''}</small></td>
+            <td>
+                <button class="btn-action" style="color:#2563eb;border-color:#93c5fd;" onclick="viewWalkin(${w.id})"><i class="fas fa-eye"></i></button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function viewWalkin(id) {
+    document.getElementById('viewModalBody').innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner-border text-primary"></div></div>';
+    new bootstrap.Modal(document.getElementById('viewModal')).show();
+    try {
+        const res = await fetch(`/api/v1/partner/staff-view/partner-walkins/${id}`, {
+            headers: { 'Authorization': 'Bearer ' + getToken() }
+        });
+        const d = await res.json();
+        if (!d.success) return;
+        const w = d.data;
+        const tags = [];
+        if (w.registered_with_mnr) tags.push('MNR Registered');
+        if (w.registered_with_vgk) tags.push('VGK Registered');
+        if (w.is_existing_customer) tags.push('Existing Customer');
+        if (w.is_marketplace_user) tags.push('Marketplace User');
+        if (w.is_returning) tags.push('Returning Visitor');
+        document.getElementById('viewModalBody').innerHTML = `
+            <div class="row g-3">
+                <div class="col-12"><div style="background:#f0f9ff;border-radius:8px;padding:10px 14px;"><strong>Partner:</strong> <span class="partner-pill">${w.partner_code||'—'}</span> ${w.partner_name||''}</div></div>
+                <div class="col-md-6"><strong>Customer Name:</strong> ${w.customer_name}</div>
+                <div class="col-md-6"><strong>Phone:</strong> ${w.customer_phone}</div>
+                <div class="col-md-6"><strong>Alt Phone:</strong> ${w.alternate_phone||'—'}</div>
+                <div class="col-md-6"><strong>Email:</strong> ${w.customer_email||'—'}</div>
+                <div class="col-md-4"><strong>Visit Date:</strong> ${fdate(w.visit_date)} ${w.visit_time||''}</div>
+                <div class="col-md-4"><strong>Lead Source:</strong> ${w.lead_source||'—'}</div>
+                <div class="col-md-4"><strong>Assigned To:</strong> ${w.assigned_to||'—'}</div>
+                <div class="col-md-6"><strong>Purpose:</strong> ${PURPOSE_LABELS[w.visit_purpose]||w.visit_purpose}</div>
+                <div class="col-md-6"><strong>Product Interest:</strong> ${w.product_interest||'—'}</div>
+                <div class="col-md-6"><strong>Outcome:</strong> <span class="${OUTCOME_CLASSES[w.visit_outcome]||'outcome-pending'}">${OUTCOME_LABELS[w.visit_outcome]||w.visit_outcome}</span></div>
+                ${w.follow_up_date ? `<div class="col-md-6"><strong>Follow-up Date:</strong> ${fdate(w.follow_up_date)}</div>` : ''}
+                <div class="col-12"><strong>Tags:</strong> ${tags.length ? tags.join(', ') : '—'}</div>
+                <div class="col-12"><strong>Company Follow-up / CRM:</strong> ${w.company_follow_up ? '<span class="crm-tag">Yes — pushed to CRM</span>' : 'No'}</div>
+                ${w.notes ? `<div class="col-12"><strong>Notes:</strong><br><span style="color:#6b7280;">${w.notes}</span></div>` : ''}
+            </div>
+        `;
+    } catch(e) {}
+}
+
+function exportCSV() {
+    const params = new URLSearchParams({
+        date_from: document.getElementById('dateFrom').value,
+        date_to: document.getElementById('dateTo').value,
+        partner_id: document.getElementById('partnerFilter').value,
+        format: 'csv'
+    });
+    for (const [k,v] of [...params.entries()]) { if (!v) params.delete(k); }
+    toast('Preparing export…','info');
+}
+
+function resetFilters() {
+    ['partnerFilter','purposeFilter','outcomeFilter','fuFilter','searchQ'].forEach(id => document.getElementById(id).value = '');
+    const today = new Date().toISOString().split('T')[0];
+    const firstOfMonth = new Date(); firstOfMonth.setDate(1);
+    document.getElementById('dateFrom').value = firstOfMonth.toISOString().split('T')[0];
+    document.getElementById('dateTo').value = today;
+    currentPage = 1; loadData();
+}
+
+function debounce() { clearTimeout(searchTimer); searchTimer = setTimeout(()=>{ currentPage=1; loadData(); },400); }
+
+function renderPagination(total, page, perPage) {
+    const pages = Math.max(1, Math.ceil(total/perPage));
+    const row = document.getElementById('paginationRow');
+    if (pages <= 1) { row.innerHTML=''; return; }
+    let html = `<small style="color:#9ca3af;">${(page-1)*perPage+1}–${Math.min(page*perPage,total)} of ${total}</small><div style="display:flex;gap:6px;">`;
+    if (page > 1) html += `<button class="btn btn-outline-secondary btn-sm" onclick="go(${page-1})">← Prev</button>`;
+    for (let p=Math.max(1,page-2); p<=Math.min(pages,page+2); p++) {
+        html += `<button class="btn btn-sm ${p===page?'btn-primary':'btn-outline-secondary'}" onclick="go(${p})">${p}</button>`;
+    }
+    if (page < pages) html += `<button class="btn btn-outline-secondary btn-sm" onclick="go(${page+1})">Next →</button>`;
+    row.innerHTML = html + '</div>';
+}
+
+function go(p) { currentPage=p; loadData(); }
+function fdate(s) { if (!s) return '—'; return new Date(s).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function toast(msg, type='success') {
+    const id='t'+Date.now();
+    const colors={success:'#16a34a',danger:'#dc2626',warning:'#d97706',info:'#2563eb'};
+    document.getElementById('toastContainer').insertAdjacentHTML('beforeend',`<div id="${id}" style="background:${colors[type]||colors.success};color:white;padding:12px 18px;border-radius:8px;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);min-width:260px;">${msg}</div>`);
+    setTimeout(()=>{ const el=document.getElementById(id); if(el)el.remove(); },4000);
+}
+</script>
+<script src="/staff_sidebar.js"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader !== 'undefined') {
+        StaffHeader.inject('Partner Walk-ins', 'fas fa-walking');
+        StaffHeader.init();
+    }
+    if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+});
+</script>
+</body>
+</html>

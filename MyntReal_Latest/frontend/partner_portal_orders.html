@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders | Partner Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #0f0f1a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .partner-main-content { margin-left: 260px; min-height: 100vh; padding: 30px; }
+        .page-header { background: linear-gradient(135deg, #065f46, #047857); border-radius: 12px; padding: 24px 28px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .page-header h1 { margin: 0; font-size: 1.6rem; font-weight: 700; color: #fff; }
+        .btn-back { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s; }
+        .btn-back:hover { background: rgba(255,255,255,0.25); color: #fff; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: #1a1a2e; border: 1px solid #374151; border-radius: 10px; padding: 16px; text-align: center; }
+        .stat-card .num { font-size: 1.8rem; font-weight: 700; color: #10b981; }
+        .stat-card .lbl { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+        .card { background: #1a1a2e; border: 1px solid #374151; border-radius: 12px; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #2d2d44; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .card-header h5 { margin: 0; color: #10b981; font-weight: 600; }
+        .card-body { padding: 20px; }
+        .table { color: #e2e8f0; }
+        .table thead th { border-bottom: 1px solid #374151; color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 10px 12px; }
+        .table td { border-bottom: 1px solid #1f2937; padding: 12px; vertical-align: middle; }
+        .table tbody tr:hover { background: #232340; }
+        .badge-status { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .s-DRAFT                { background: #374151; color: #9ca3af; }
+        .s-PI_GENERATED         { background: #fef3c7; color: #92400e; }
+        .s-PENDING_APPROVAL     { background: #fde68a; color: #78350f; }
+        .s-APPROVED             { background: #dbeafe; color: #1e40af; }
+        .s-PAYMENT_PENDING      { background: #ffedd5; color: #9a3412; }
+        .s-PAYMENT_CONFIRMED    { background: #d1fae5; color: #065f46; }
+        .s-ROUTED_TO_PRODUCTION { background: #ede9fe; color: #5b21b6; }
+        .s-ROUTED_TO_PROCUREMENT{ background: #ede9fe; color: #5b21b6; }
+        .s-IN_MANUFACTURING     { background: #cffafe; color: #155e75; }
+        .s-PROCUREMENT_IN_PROGRESS { background: #cffafe; color: #155e75; }
+        .s-READY_TO_DISPATCH    { background: #d1fae5; color: #065f46; }
+        .s-DISPATCHED           { background: #ede9fe; color: #5b21b6; }
+        .s-IN_TRANSIT           { background: #ede9fe; color: #5b21b6; }
+        .s-DELIVERED            { background: #d1fae5; color: #059669; }
+        .s-CANCELLED            { background: #fee2e2; color: #991b1b; }
+        .s-REJECTED             { background: #fee2e2; color: #991b1b; }
+        .s-CLOSED               { background: #374151; color: #9ca3af; }
+        .filter-row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-row select, .filter-row input { background: #0f0f1a; border: 1px solid #374151; color: #e2e8f0; border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #374151; }
+        .pagination-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+        .btn-pg { background: #1a1a2e; border: 1px solid #374151; color: #e2e8f0; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .btn-pg:hover:not(:disabled) { background: #232340; }
+        .btn-pg:disabled { opacity: 0.4; cursor: not-allowed; }
+        @media (max-width: 768px) { .partner-main-content { margin-left: 0; } }
+    </style>
+</head>
+<body>
+    <div id="sidebarContainer"></div>
+    <div class="partner-main-content">
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-shopping-cart me-2"></i>My Orders</h1>
+                <p class="mb-0 mt-1" style="color:rgba(255,255,255,0.75);font-size:14px">All orders placed under your account</p>
+            </div>
+            <a href="javascript:history.back()" class="btn-back"><i class="fas fa-arrow-left"></i> Back</a>
+        </div>
+
+        <div class="stats-row" id="statsRow">
+            <div class="stat-card"><div class="num" id="statTotal">—</div><div class="lbl">Total Orders</div></div>
+            <div class="stat-card"><div class="num" id="statPending" style="color:#f59e0b">—</div><div class="lbl">Pending / In-Progress</div></div>
+            <div class="stat-card"><div class="num" id="statApproved" style="color:#3b82f6">—</div><div class="lbl">Approved</div></div>
+            <div class="stat-card"><div class="num" id="statDelivered" style="color:#10b981">—</div><div class="lbl">Delivered</div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Order History</h5>
+                <div class="filter-row">
+                    <select id="statusFilter" onchange="loadOrders(1)">
+                        <option value="">All Statuses</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="PI_GENERATED">PI Generated</option>
+                        <option value="PENDING_APPROVAL">Pending Approval</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="PAYMENT_PENDING">Payment Pending</option>
+                        <option value="PAYMENT_CONFIRMED">Payment Confirmed</option>
+                        <option value="ROUTED_TO_PRODUCTION">Routed to Production</option>
+                        <option value="ROUTED_TO_PROCUREMENT">Routed to Procurement</option>
+                        <option value="IN_MANUFACTURING">In Manufacturing</option>
+                        <option value="READY_TO_DISPATCH">Ready to Dispatch</option>
+                        <option value="DISPATCHED">Dispatched</option>
+                        <option value="IN_TRANSIT">In Transit</option>
+                        <option value="DELIVERED">Delivered</option>
+                        <option value="CANCELLED">Cancelled</option>
+                        <option value="CLOSED">Closed</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body">
+                <div id="ordersBody">
+                    <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading orders…</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PARTNER_BASE = '/api/v1/partner';
+        let currentPage = 1;
+        function partnerAuthHdrs() {
+            const t = localStorage.getItem('partner_token');
+            const pi = JSON.parse(localStorage.getItem('partner_info') || '{}');
+            const h = t ? { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' } : {};
+            if (pi.primary_company_id) h['X-Company-ID'] = String(pi.primary_company_id);
+            return h;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('partner_token');
+            if (!token) { window.location.href = '/partner/login'; return; }
+            initPartnerSidebar('sidebarContainer');
+            loadOrders(1);
+            loadStats();
+        });
+
+        async function loadStats() {
+            try {
+                const r = await fetch(`${PARTNER_BASE}/auth/my-orders?limit=200`, { headers: partnerAuthHdrs() });
+                if (!r.ok) return;
+                const d = await r.json();
+                if (!d.success) return;
+                const all = d.orders || [];
+                const PENDING_STATUSES = ['DRAFT','PI_GENERATED','PENDING_APPROVAL','PAYMENT_PENDING','PAYMENT_CONFIRMED',
+                    'ROUTED_TO_PRODUCTION','ROUTED_TO_PROCUREMENT','IN_MANUFACTURING','PROCUREMENT_IN_PROGRESS','READY_TO_DISPATCH','DISPATCHED','IN_TRANSIT'];
+                document.getElementById('statTotal').textContent = d.total || all.length;
+                document.getElementById('statPending').textContent = all.filter(o => PENDING_STATUSES.includes(o.status)).length;
+                document.getElementById('statApproved').textContent = all.filter(o => o.status === 'APPROVED').length;
+                document.getElementById('statDelivered').textContent = all.filter(o => o.status === 'DELIVERED').length;
+            } catch(e) {}
+        }
+
+        async function loadOrders(page) {
+            currentPage = page || 1;
+            const status = document.getElementById('statusFilter').value;
+            let url = `${PARTNER_BASE}/auth/my-orders?page=${currentPage}&limit=15`;
+            if (status) url += `&status=${status}`;
+            document.getElementById('ordersBody').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading…</p></div>';
+            try {
+                const r = await fetch(url, { headers: partnerAuthHdrs() });
+                if (r.status === 401) { window.location.href = '/partner/login'; return; }
+                if (r.status === 403) {
+                    document.getElementById('ordersBody').innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><p>Access restricted. Contact your administrator.</p></div>';
+                    return;
+                }
+                const d = await r.json();
+                if (!d.success || !d.orders || !d.orders.length) {
+                    document.getElementById('ordersBody').innerHTML = '<div class="empty-state"><i class="fas fa-shopping-cart"></i><p>No orders found.</p></div>';
+                    return;
+                }
+                renderOrders(d.orders, d.total, d.page, d.pages);
+            } catch(e) {
+                document.getElementById('ordersBody').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error loading orders. Please refresh.</p></div>';
+            }
+        }
+
+        function renderOrders(orders, total, page, pages) {
+            let rows = orders.map(o => {
+                const stat = o.status || 'DRAFT';
+                const dt = o.order_date ? new Date(o.order_date).toLocaleDateString('en-IN') : '—';
+                const amt = o.grand_total ? '₹' + parseFloat(o.grand_total).toLocaleString('en-IN') : '—';
+                const label = stat.replace(/_/g, ' ');
+                return `<tr>
+                    <td><strong style="color:#10b981">${o.order_number}</strong></td>
+                    <td>${dt}</td>
+                    <td>${amt}</td>
+                    <td><span class="badge-status s-${stat}">${label}</span></td>
+                    <td style="color:#9ca3af;font-size:12px">${o.pi_number || '—'}</td>
+                </tr>`;
+            }).join('');
+
+            const pagination = `<div class="pagination-row">
+                <span style="color:#9ca3af;font-size:13px">Page ${page} of ${pages} (${total} orders)</span>
+                <div style="display:flex;gap:8px">
+                    <button class="btn-pg" onclick="loadOrders(${page - 1})" ${page <= 1 ? 'disabled' : ''}>← Prev</button>
+                    <button class="btn-pg" onclick="loadOrders(${page + 1})" ${page >= pages ? 'disabled' : ''}>Next →</button>
+                </div>
+            </div>`;
+
+            document.getElementById('ordersBody').innerHTML = `
+                <div style="overflow-x:auto">
+                    <table class="table table-hover mb-0">
+                        <thead><tr>
+                            <th>Order #</th><th>Date</th><th>Amount</th><th>Status</th><th>PI Number</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+                ${pagination}`;
+        }
+    </script>
+    <script src="/partner_sidebar.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sales Team Report — Staff Portal</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh;}
+.main-content{margin-left:280px;padding-top:88px;min-height:100vh;transition:margin-left .3s;}
+@media(max-width:768px){.main-content{margin-left:0;}}
+.content-area{padding:20px;}
+.page-banner{background:linear-gradient(135deg,#1d4ed8 0%,#1e3a8a 100%);border-radius:12px;padding:22px 24px;margin-bottom:20px;color:#fff;}
+.page-banner h1{font-size:22px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:10px;}
+.page-banner p{opacity:.85;margin:0;font-size:13px;}
+.filter-bar{background:#fff;border-radius:10px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:18px;}
+.filter-bar .fg{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
+.filter-bar label{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:3px;}
+.filter-bar .form-control,.filter-bar .form-select{font-size:13px;padding:6px 10px;border-radius:6px;min-width:130px;border:1px solid #e5e7eb;}
+.filter-bar .form-control:focus,.filter-bar .form-select:focus{border-color:#1d4ed8;box-shadow:0 0 0 3px rgba(29,78,216,.1);}
+.mode-toggle{display:flex;gap:0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;}
+.mode-btn{padding:7px 18px;border:none;background:#fff;color:#6b7280;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+.mode-btn.active{background:#1d4ed8;color:#fff;}
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.07);text-align:center;}
+.stat-card .val{font-size:22px;font-weight:700;color:#1f2937;}
+.stat-card .lbl{color:#6b7280;font-size:10px;margin-top:2px;text-transform:uppercase;font-weight:600;}
+.stat-card.cl-blue{border-left:3px solid #1d4ed8;}
+.stat-card.cl-teal{border-left:3px solid #0f766e;}
+.stat-card.cl-amber{border-left:3px solid #d97706;}
+.stat-card.cl-grn{border-left:3px solid #059669;}
+.stat-card.cl-purple{border-left:3px solid #7c3aed;}
+.stat-card.cl-red{border-left:3px solid #dc2626;}
+.card-wrap{background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.07);overflow:hidden;margin-bottom:18px;}
+.card-hdr{padding:12px 16px;border-bottom:1px solid #f3f4f6;font-weight:700;font-size:13px;color:#1a2e4a;display:flex;align-items:center;justify-content:space-between;}
+table.dt{width:100%;border-collapse:collapse;font-size:13px;}
+table.dt th{padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb;}
+table.dt td{padding:9px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle;}
+table.dt tr:last-child td{border-bottom:none;}
+table.dt tr:hover td{background:#eff6ff;}
+.expandable-row{display:none;}
+.expandable-row.open{display:table-row;}
+.expand-inner{padding:12px 16px;background:#f8faff;border-top:1px dashed #bfdbfe;}
+.score-pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:700;}
+.score-exc{background:#d1fae5;color:#065f46;}
+.score-good{background:#dbeafe;color:#1e40af;}
+.score-avg{background:#fef3c7;color:#92400e;}
+.score-poor{background:#fee2e2;color:#991b1b;}
+.score-na{background:#f3f4f6;color:#9ca3af;}
+.mini-table{width:100%;border-collapse:collapse;font-size:12px;}
+.mini-table th{padding:5px 8px;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;background:#e8f0fe;border:1px solid #dbeafe;}
+.mini-table td{padding:5px 8px;border:1px solid #e5e7eb;}
+.q-section{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-top:10px;}
+.q-section .q-hdr{font-size:12px;font-weight:700;color:#065f46;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+.cat-bar{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.cat-bar .lbl{font-size:11px;color:#374151;min-width:120px;font-weight:600;}
+.cat-bar .bar-wrap{flex:1;background:#e5e7eb;border-radius:4px;height:8px;overflow:hidden;}
+.cat-bar .bar-fill{height:8px;border-radius:4px;}
+.cat-bar .sc{font-size:11px;font-weight:700;min-width:30px;text-align:right;}
+.badge-status{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;}
+.badge-pending{background:#fef3c7;color:#92400e;}
+.badge-reviewed{background:#d1fae5;color:#065f46;}
+.empty-state{text-align:center;padding:40px;color:#9ca3af;font-size:14px;}
+.empty-state i{font-size:32px;margin-bottom:10px;display:block;}
+.spinner-wrap{text-align:center;padding:40px;}
+.btn-share{background:#f0fdf4;color:#065f46;border:1px solid #86efac;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;}
+.btn-share:hover{background:#d1fae5;}
+.btn-generate{background:#1d4ed8;color:#fff;border:none;border-radius:8px;padding:7px 18px;font-size:13px;font-weight:700;cursor:pointer;}
+.btn-generate:hover{background:#1e40af;}
+.btn-generate:disabled{opacity:.6;cursor:not-allowed;}
+.print-only{display:none;}
+@media print{
+  .filter-bar,.tab-row,.page-banner p,.btn-share,.btn-generate,.no-print{display:none !important;}
+  .main-content{margin:0 !important;padding:0 !important;}
+  .content-area{padding:10px !important;}
+  .print-only{display:block !important;}
+}
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+<div class="content-area">
+
+<div class="page-banner">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+    <div>
+      <h1><i class="fas fa-chart-bar"></i> Sales Team Report</h1>
+      <p>Daily &amp; range-based call activity, lead interactions, and quality audit overview for the sales team.</p>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn-share" onclick="shareReport()"><i class="fas fa-share-alt"></i>Share</button>
+      <button class="btn-share" onclick="window.print()" style="background:#dbeafe;color:#1e40af;border-color:#bfdbfe;"><i class="fas fa-print"></i>Print</button>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <div class="fg">
+    <div>
+      <label>Mode</label>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeDay" onclick="setMode('day')"><i class="fas fa-calendar-day me-1"></i>Day</button>
+        <button class="mode-btn" id="modeRange" onclick="setMode('range')"><i class="fas fa-calendar-alt me-1"></i>Range</button>
+      </div>
+    </div>
+    <div id="dayPickerWrap">
+      <label>Date</label>
+      <input type="date" id="dayDate" class="form-control" style="min-width:150px;">
+    </div>
+    <div id="rangePickerWrap" style="display:none;display:flex;gap:8px;">
+      <div>
+        <label>From</label>
+        <input type="date" id="rangeFrom" class="form-control" style="min-width:140px;">
+      </div>
+      <div>
+        <label>To</label>
+        <input type="date" id="rangeTo" class="form-control" style="min-width:140px;">
+      </div>
+    </div>
+    <div>
+      <label>Executive</label>
+      <select id="filterExec" class="form-select" style="min-width:160px;">
+        <option value="">All Executives</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:flex-end;">
+      <button class="btn-generate" id="generateBtn" onclick="loadReport()">
+        <i class="fas fa-sync me-1"></i>Generate Report
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="stat-cards" id="summaryCards">
+  <div class="stat-card cl-blue"><div class="val">—</div><div class="lbl">Executives</div></div>
+  <div class="stat-card cl-teal"><div class="val">—</div><div class="lbl">Total Calls</div></div>
+  <div class="stat-card cl-purple"><div class="val">—</div><div class="lbl">Leads Touched</div></div>
+  <div class="stat-card cl-amber"><div class="val">—</div><div class="lbl">Quality Sampled</div></div>
+  <div class="stat-card cl-grn"><div class="val">—</div><div class="lbl">Reviews Completed</div></div>
+  <div class="stat-card cl-teal"><div class="val">—</div><div class="lbl">Avg Quality Score</div></div>
+</div>
+
+<!-- Executive Table -->
+<div class="card-wrap">
+  <div class="card-hdr">
+    <span><i class="fas fa-users me-1" style="color:#1d4ed8;"></i>Executive Breakdown</span>
+    <span id="reportDateLabel" style="font-size:11px;color:#6b7280;font-weight:400;"></span>
+  </div>
+  <div id="execTableWrap">
+    <div class="empty-state"><i class="fas fa-chart-bar"></i>Select date/range and click Generate Report to view data.</div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API = '/api/v1';
+let _cid = null;
+let currentMode = 'day';
+let reportData = null;
+
+function _addCid(url) { return _cid ? (url.includes('?') ? url + '&company_id=' + _cid : url + '?company_id=' + _cid) : url; }
+
+function toast(msg, type='success') {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:20px;right:20px;z-index:9999;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;color:#fff;background:${type==='success'?'#059669':type==='error'?'#dc2626':'#1d4ed8'};box-shadow:0 4px 12px rgba(0,0,0,.2);`;
+  t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3000);
+}
+
+function scoreLabel(s) {
+  if (!s && s !== 0) return '<span class="score-pill score-na">N/A</span>';
+  const n = parseFloat(s);
+  if (n >= 4.5) return `<span class="score-pill score-exc">${n.toFixed(1)}</span>`;
+  if (n >= 3.5) return `<span class="score-pill score-good">${n.toFixed(1)}</span>`;
+  if (n >= 2.5) return `<span class="score-pill score-avg">${n.toFixed(1)}</span>`;
+  return `<span class="score-pill score-poor">${n.toFixed(1)}</span>`;
+}
+
+function barColor(s) {
+  if (!s) return '#d1d5db';
+  if (s >= 4.5) return '#059669';
+  if (s >= 3.5) return '#0f766e';
+  if (s >= 2.5) return '#d97706';
+  return '#dc2626';
+}
+
+function fmtDur(sec) {
+  if (!sec) return '—';
+  const m = Math.floor(sec/60), s = sec%60;
+  return m ? `${m}m${s?` ${s}s`:''}` : `${sec}s`;
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('modeDay').classList.toggle('active', mode==='day');
+  document.getElementById('modeRange').classList.toggle('active', mode==='range');
+  document.getElementById('dayPickerWrap').style.display = mode==='day' ? '' : 'none';
+  document.getElementById('rangePickerWrap').style.display = mode==='range' ? 'flex' : 'none';
+}
+
+function initDates() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('dayDate').value = today;
+  const past7 = new Date(); past7.setDate(past7.getDate() - 6);
+  document.getElementById('rangeFrom').value = past7.toISOString().split('T')[0];
+  document.getElementById('rangeTo').value = today;
+  // Read URL params
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('mode') === 'range') setMode('range');
+  if (p.get('date')) document.getElementById('dayDate').value = p.get('date');
+  if (p.get('from')) document.getElementById('rangeFrom').value = p.get('from');
+  if (p.get('to')) document.getElementById('rangeTo').value = p.get('to');
+  if (p.get('exec')) document.getElementById('filterExec').value = p.get('exec');
+}
+
+async function loadReport() {
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading…';
+  document.getElementById('execTableWrap').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-primary"></div></div>';
+
+  try {
+    let url;
+    if (currentMode === 'day') {
+      const d = document.getElementById('dayDate').value;
+      const exec = document.getElementById('filterExec').value;
+      url = _addCid(`${API}/call-quality/day-report?report_date=${d}`);
+      if (exec) url += `&staff_id=${exec}`;
+      document.getElementById('reportDateLabel').textContent = `Day: ${d}`;
+    } else {
+      const df = document.getElementById('rangeFrom').value;
+      const dt = document.getElementById('rangeTo').value;
+      const exec = document.getElementById('filterExec').value;
+      url = _addCid(`${API}/call-quality/range-report?date_from=${df}&date_to=${dt}`);
+      if (exec) url += `&staff_id=${exec}`;
+      document.getElementById('reportDateLabel').textContent = `${df} → ${dt}`;
+    }
+
+    const res = await staffFetch(url);
+    if (!res.ok) throw new Error('Failed to load report');
+    reportData = await res.json();
+    renderSummary(reportData.summary);
+    renderExecTable(reportData.executives, currentMode);
+    populateExecFilter(reportData.executives);
+  } catch(e) {
+    document.getElementById('execTableWrap').innerHTML = `<div class="empty-state text-danger"><i class="fas fa-exclamation-circle"></i>${e.message}</div>`;
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync me-1"></i>Generate Report';
+  }
+}
+
+function renderSummary(s) {
+  const cards = document.getElementById('summaryCards');
+  cards.innerHTML = `
+    <div class="stat-card cl-blue"><div class="val">${s.total_executives}</div><div class="lbl">Executives</div></div>
+    <div class="stat-card cl-teal"><div class="val">${s.total_calls}</div><div class="lbl">Total Calls</div></div>
+    <div class="stat-card cl-purple"><div class="val">${s.total_leads_touched}</div><div class="lbl">Leads Touched</div></div>
+    <div class="stat-card cl-amber"><div class="val">${s.quality_sampled}</div><div class="lbl">Quality Sampled</div></div>
+    <div class="stat-card cl-grn"><div class="val">${s.quality_reviewed !== undefined ? s.quality_reviewed : '—'}</div><div class="lbl">Reviews Done</div></div>
+    <div class="stat-card cl-teal"><div class="val">${s.avg_quality_score ? s.avg_quality_score.toFixed(1) : '—'}</div><div class="lbl">Avg Quality Score</div></div>`;
+}
+
+function renderExecTable(execs, mode) {
+  if (!execs || !execs.length) {
+    document.getElementById('execTableWrap').innerHTML = '<div class="empty-state"><i class="fas fa-users"></i>No data for the selected period. Ensure call logs are synced from mobile.</div>';
+    return;
+  }
+  let html = `<div style="overflow-x:auto;"><table class="dt"><thead><tr>
+    <th></th>
+    <th>Executive</th>
+    <th>Total Calls</th>
+    <th>Outgoing</th>
+    <th>Incoming</th>
+    <th>Missed</th>
+    <th>Leads Touched</th>
+    <th>Avg Duration</th>
+    <th>Sampled</th>
+    <th>Reviewed</th>
+    <th>Avg Score</th>
+  </tr></thead><tbody>`;
+
+  execs.forEach((e, idx) => {
+    const q = e.quality;
+    const c = e.calls;
+    html += `<tr class="exec-main-row" onclick="toggleExpand(${idx})" style="cursor:pointer;">
+      <td><i id="expandIcon_${idx}" class="fas fa-chevron-right" style="font-size:10px;color:#9ca3af;transition:transform .2s;"></i></td>
+      <td>
+        <div style="font-weight:700;font-size:13px;">${e.staff_name}</div>
+        <div style="font-size:10px;color:#6b7280;">${e.emp_code || ''} ${e.role ? '· '+e.role : ''}</div>
+      </td>
+      <td><span style="font-weight:700;font-size:15px;">${c.total}</span></td>
+      <td><span style="color:#059669;font-weight:600;">${c.outgoing}</span></td>
+      <td><span style="color:#1d4ed8;font-weight:600;">${c.incoming}</span></td>
+      <td><span style="color:${c.missed>0?'#dc2626':'#6b7280'};font-weight:600;">${c.missed}</span></td>
+      <td><span style="font-weight:600;color:#7c3aed;">${e.leads_touched}</span></td>
+      <td style="font-size:12px;">${fmtDur(c.avg_duration_seconds)}</td>
+      <td>${q.sampled}</td>
+      <td>
+        <span style="color:${q.reviewed > 0 ? '#059669' : '#9ca3af'};font-weight:600;">${q.reviewed !== undefined ? q.reviewed : '—'}</span>
+        ${q.pending !== undefined && q.pending > 0 ? `<span style="color:#d97706;font-size:10px;"> (${q.pending} pending)</span>` : ''}
+      </td>
+      <td>${scoreLabel(q.avg_score)}</td>
+    </tr>
+    <tr id="expand_${idx}" class="expandable-row">
+      <td colspan="11">
+        <div class="expand-inner">
+          ${renderExecDetail(e, mode)}
+        </div>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('execTableWrap').innerHTML = html;
+}
+
+function renderExecDetail(e, mode) {
+  let html = '';
+  const c = e.calls;
+  const q = e.quality;
+
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:8px;"><i class="fas fa-phone me-1" style="color:#0f766e;"></i>Call Summary</div>
+      <table class="mini-table">
+        <tr><th>Type</th><th>Count</th></tr>
+        <tr><td>Outgoing</td><td style="font-weight:700;color:#059669;">${c.outgoing}</td></tr>
+        <tr><td>Incoming</td><td style="font-weight:700;color:#1d4ed8;">${c.incoming}</td></tr>
+        <tr><td>Missed</td><td style="font-weight:700;color:#dc2626;">${c.missed}</td></tr>
+        <tr><td>Total Duration</td><td style="font-weight:600;">${fmtDur(c.total_duration_seconds)}</td></tr>
+        <tr><td>Avg Call Duration</td><td style="font-weight:600;">${fmtDur(c.avg_duration_seconds)}</td></tr>
+      </table>
+    </div>
+    <div class="q-section">
+      <div class="q-hdr"><i class="fas fa-clipboard-check"></i>Call Quality</div>
+      <table class="mini-table" style="margin-bottom:8px;">
+        <tr><th>Sampled</th><th>Reviewed</th><th>Pending</th><th>Avg Score</th></tr>
+        <tr>
+          <td style="font-weight:700;">${q.sampled}</td>
+          <td style="font-weight:700;color:#059669;">${q.reviewed !== undefined ? q.reviewed : '—'}</td>
+          <td style="font-weight:700;color:${q.pending > 0 ? '#d97706':'#6b7280'};">${q.pending !== undefined ? q.pending : '—'}</td>
+          <td>${scoreLabel(q.avg_score)}</td>
+        </tr>
+      </table>
+      ${q.sampled === 0 ? '<div style="font-size:11px;color:#9ca3af;font-style:italic;">No calls sampled yet for this period.</div>' : ''}
+    </div>
+  </div>`;
+
+  // Range mode: daily breakdown
+  if (mode === 'range' && e.daily && e.daily.length) {
+    html += `<div style="margin-top:14px;">
+      <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:8px;"><i class="fas fa-calendar-alt me-1" style="color:#1d4ed8;"></i>Daily Breakdown</div>
+      <div style="overflow-x:auto;"><table class="mini-table">
+        <tr><th>Date</th><th>Calls</th><th>Outgoing</th><th>Duration</th><th>Leads</th><th>Sampled</th><th>Reviewed</th><th>Avg Score</th></tr>
+        ${e.daily.map(d => `<tr>
+          <td style="font-weight:600;">${d.date}</td>
+          <td style="font-weight:700;">${d.calls}</td>
+          <td style="color:#059669;font-weight:600;">${d.outgoing}</td>
+          <td>${fmtDur(d.duration)}</td>
+          <td style="color:#7c3aed;font-weight:600;">${d.leads_touched}</td>
+          <td>${d.quality_sampled}</td>
+          <td style="color:#059669;font-weight:600;">${d.quality_reviewed}</td>
+          <td>${scoreLabel(d.avg_score)}</td>
+        </tr>`).join('')}
+      </table></div>
+    </div>`;
+  }
+
+  return html;
+}
+
+let expandedRows = new Set();
+function toggleExpand(idx) {
+  const row = document.getElementById(`expand_${idx}`);
+  const icon = document.getElementById(`expandIcon_${idx}`);
+  if (expandedRows.has(idx)) {
+    row.classList.remove('open');
+    icon.style.transform = 'rotate(0deg)';
+    expandedRows.delete(idx);
+  } else {
+    row.classList.add('open');
+    icon.style.transform = 'rotate(90deg)';
+    expandedRows.add(idx);
+  }
+}
+
+function populateExecFilter(execs) {
+  const sel = document.getElementById('filterExec');
+  const existing = new Set([...sel.options].map(o => o.value));
+  execs.forEach(e => {
+    if (!existing.has(String(e.staff_id))) {
+      const opt = document.createElement('option');
+      opt.value = e.staff_id;
+      opt.textContent = `${e.staff_name}${e.emp_code ? ' ('+e.emp_code+')' : ''}`;
+      sel.appendChild(opt);
+      existing.add(String(e.staff_id));
+    }
+  });
+}
+
+function shareReport() {
+  const mode = currentMode;
+  const params = new URLSearchParams({ mode });
+  if (mode === 'day') {
+    params.set('date', document.getElementById('dayDate').value);
+  } else {
+    params.set('from', document.getElementById('rangeFrom').value);
+    params.set('to', document.getElementById('rangeTo').value);
+  }
+  const exec = document.getElementById('filterExec').value;
+  if (exec) params.set('exec', exec);
+  const shareUrl = `${window.location.origin}/staff/crm/sales-report?${params.toString()}`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(shareUrl).then(() => toast('Report link copied!', 'success'));
+  } else {
+    window.prompt('Copy this link:', shareUrl);
+  }
+}
+
+// ── Load staff employees for executive filter ────────────────────────────────
+async function loadExecFilter() {
+  try {
+    const res = await staffFetch(`${API}/staff/tasks/analytics/employees-for-filter?limit=100`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const sel = document.getElementById('filterExec');
+    (data.employees || []).forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id;
+      opt.textContent = `${e.full_name}${e.emp_code ? ' (' + e.emp_code + ')' : ''}`;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.warn('[SR] Failed to load exec filter:', e.message); }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await StaffSidebar.init();
+  StaffHeader.inject('Sales Team Report', 'fas fa-chart-bar');
+  const ud = StaffSidebar.userData || {};
+  const _FA_ROLES = new Set(['vgk4u','hr','accounts','key_leadership','leadership_role','team_leader','manager']);
+  const _isFullAccess = StaffSidebar.allowedMenuPaths === '*' || _FA_ROLES.has((ud.user_role_code || '').toLowerCase());
+  _cid = _isFullAccess ? null : (ud.base_company_id || (ud.employee && ud.employee.base_company_id) || null);
+
+  initDates();
+  await loadExecFilter();
+
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('date') || p.get('from')) loadReport();
+});
+</script>
+<script src="/staff_sidebar.js"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+</body>
+</html>

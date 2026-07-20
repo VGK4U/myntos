@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Global Configuration - Super Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+      .vgk4u-card{border-left:4px solid #0ea5e9;background:#f0f9ff;border-radius:10px;padding:16px;margin-top:18px}
+      .vgk4u-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px;margin-top:10px}
+      .vgk4u-grid .form-check{background:#fff;border:1px solid #e0f2fe;border-radius:8px;padding:8px 10px 8px 36px;margin:0;font-size:13px}
+      .vgk4u-card h6{color:#0c4a6e;font-weight:800;margin:0;font-size:14px;text-transform:uppercase;letter-spacing:.04em}
+      .vgk4u-card .muted{font-size:12px;color:#475569;margin-top:4px}
+      .vgk4u-actions{display:flex;gap:8px;margin-top:10px}
+      .btn-mini{font-size:12px;padding:3px 10px}
+    </style>
+</head>
+<body style="background:#f8f9fa">
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid"><span class="navbar-brand"><i class="bi bi-gear-fill"></i> Global Configuration</span><a href="/superadmin/dashboard" class="btn btn-outline-light btn-sm">Admin Dashboard</a></div>
+    </nav>
+    <div class="container mt-4">
+        <div class="card"><div class="card-body">
+            <form id="configForm">
+                <div class="row"><div class="col-md-6 mb-3"><label>System Name</label><input type="text" class="form-control" id="system_name" required></div>
+                <div class="col-md-6 mb-3"><label>Company Name</label><input type="text" class="form-control" id="company_name" required></div></div>
+                <div class="row"><div class="col-md-6 mb-3"><label>Support Email</label><input type="email" class="form-control" id="support_email"></div>
+                <div class="col-md-6 mb-3"><label>Support Phone</label><input type="text" class="form-control" id="support_phone"></div></div>
+                <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="maintenance_mode"><label>Maintenance Mode</label></div>
+
+                <!-- Task #33 — VGK4U Member Parity Phase 1 Toggles -->
+                <div class="vgk4u-card">
+                  <h6><i class="bi bi-toggles2"></i> VGK4U Member Modules (Phase 1 — Read-Only)</h6>
+                  <div class="muted">Each toggle controls whether the corresponding VGK4U-Members tab returns data on the matching staff admin page. Default: <strong>ON</strong>. Switching a toggle off hides VGK4U rows but keeps the existing MNR Members tab unaffected.</div>
+                  <div class="vgk4u-grid" id="vgk4u_toggles"></div>
+                  <div class="vgk4u-actions">
+                    <button type="button" class="btn btn-outline-success btn-mini" onclick="vgk4uBulk(true)"><i class="bi bi-check2-all"></i> Enable All</button>
+                    <button type="button" class="btn btn-outline-danger btn-mini" onclick="vgk4uBulk(false)"><i class="bi bi-x-circle"></i> Disable All</button>
+                  </div>
+                </div>
+
+                <!-- Task #46 — VGK4U Member Parity Phase 2 Toggles (Write-Flow Modules, Zero-Default-Access) -->
+                <div class="vgk4u-card" style="border-left-color:#f59e0b;background:#fffbeb">
+                  <h6 style="color:#78350f"><i class="bi bi-pencil-square"></i> VGK4U Member Modules (Phase 2 — Write-Flow)</h6>
+                  <div class="muted">Each toggle controls a member-facing write surface (feedback, KYC, bank, settings, etc.). Default: <strong>OFF</strong> (Zero-Default-Access). When OFF, the matching <code>/vgk/*</code> page shows a "Module Disabled" overlay to members. Each change is recorded in the audit log.</div>
+                  <div class="vgk4u-grid" id="vgk4u_phase2_toggles"></div>
+                  <div class="vgk4u-actions">
+                    <button type="button" class="btn btn-outline-success btn-mini" onclick="vgk4uPhase2Bulk(true)"><i class="bi bi-check2-all"></i> Enable All</button>
+                    <button type="button" class="btn btn-outline-danger btn-mini" onclick="vgk4uPhase2Bulk(false)"><i class="bi bi-x-circle"></i> Disable All</button>
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-3">Update Configuration</button>
+            </form>
+        </div></div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE='/api/v1';let authToken=localStorage.getItem('authToken');
+        const VGK4U_FLAGS=[
+          ['birthdays_vgk4u_enabled','Birthdays'],
+          ['top_earners_vgk4u_enabled','Top Earners'],
+          ['awards_vgk4u_enabled','Awards'],
+          ['daywise_income_vgk4u_enabled','Daywise Income'],
+          ['income_types_vgk4u_enabled','Income Types'],
+          ['direct_summary_vgk4u_enabled','Direct (L1) Summary'],
+          ['matching_summary_vgk4u_enabled','Matching (L2) Summary'],
+          ['guru_summary_vgk4u_enabled','Senior (L3) Summary'],
+          ['ved_summary_vgk4u_enabled','VED (L4) Summary'],
+          ['ev_benefits_vgk4u_enabled','EV Benefits'],
+          ['ev_discount_vgk4u_enabled','EV Discount'],
+          ['franchise_earnings_vgk4u_enabled','Franchise Earnings'],
+          ['insurance_vgk4u_enabled','Insurance'],
+          ['training_vgk4u_enabled','Training'],
+          ['coupon_benefits_vgk4u_enabled','Coupon Benefits'],
+          ['my_submissions_vgk4u_enabled','My Submissions'],
+        ];
+        // Phase-2 write-flow toggles (Task #46) — Zero-Default-Access (default OFF).
+        // Render uses === true (not !== false) so missing/undefined defaults to unchecked.
+        const VGK4U_PHASE2_FLAGS=[
+          ['feedback_vgk4u_enabled','Feedback'],
+          ['announcements_vgk4u_enabled','Announcements'],
+          ['kyc_vgk4u_enabled','KYC Documents'],
+          ['bank_vgk4u_enabled','Bank Details'],
+          ['profile_edit_vgk4u_enabled','Profile Edit'],
+          ['settings_vgk4u_enabled','Member Settings'],
+          ['coupon_transfer_vgk4u_enabled','Coupon Transfer'],
+        ];
+        function renderToggles(cfg){
+          const html=VGK4U_FLAGS.map(([key,label])=>{
+            const checked=(cfg && cfg[key]!==false)?'checked':'';
+            return `<div class="form-check"><input class="form-check-input vgk4u-toggle" type="checkbox" id="${key}" ${checked}><label class="form-check-label" for="${key}">${label}</label></div>`;
+          }).join('');
+          document.getElementById('vgk4u_toggles').innerHTML=html;
+          // Phase-2 — strict-true default-OFF semantics.
+          const html2=VGK4U_PHASE2_FLAGS.map(([key,label])=>{
+            const checked=(cfg && cfg[key]===true)?'checked':'';
+            return `<div class="form-check"><input class="form-check-input vgk4u-phase2-toggle" type="checkbox" id="${key}" ${checked}><label class="form-check-label" for="${key}">${label}</label></div>`;
+          }).join('');
+          document.getElementById('vgk4u_phase2_toggles').innerHTML=html2;
+        }
+        function vgk4uBulk(state){document.querySelectorAll('.vgk4u-toggle').forEach(el=>{el.checked=state})}
+        function vgk4uPhase2Bulk(state){document.querySelectorAll('.vgk4u-phase2-toggle').forEach(el=>{el.checked=state})}
+        $.ajax({url:`${API_BASE}/super-admin/config/global`,headers:{'Authorization':`Bearer ${authToken}`},
+        success:r=>{if(r.success){const c=r.config||{};$('#system_name').val(c.system_name);$('#company_name').val(c.company_name);
+        $('#support_email').val(c.support_email);$('#support_phone').val(c.support_phone);$('#maintenance_mode').prop('checked',c.maintenance_mode);renderToggles(c)}else{renderToggles({})}},
+        error:()=>{renderToggles({})}});
+        $('#configForm').on('submit',function(e){e.preventDefault();
+            const payload={system_name:$('#system_name').val(),company_name:$('#company_name').val(),
+              support_email:$('#support_email').val(),support_phone:$('#support_phone').val(),maintenance_mode:$('#maintenance_mode').is(':checked')};
+            VGK4U_FLAGS.forEach(([k])=>{payload[k]=document.getElementById(k).checked});
+            VGK4U_PHASE2_FLAGS.forEach(([k])=>{payload[k]=document.getElementById(k).checked});
+            $.ajax({url:`${API_BASE}/super-admin/config/global`,method:'PUT',headers:{'Authorization':`Bearer ${authToken}`,'Content-Type':'application/json'},
+            data:JSON.stringify(payload),
+            success:()=>alert('✅ Configuration updated (incl. VGK4U Phase 1 + Phase 2 module toggles)!'),error:()=>alert('❌ Failed')});
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+        
+        <!-- Background Location Service for continuous GPS tracking -->
+        <service
+            android:name=".plugins.BackgroundLocationService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location"
+            android:stopWithTask="false" />
+        
+        <!-- Boot Receiver to restart tracking after device reboot -->
+        <receiver
+            android:name=".plugins.BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+    <!-- Permissions -->
+
+    <!-- Network -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- GPS Location Permissions (DC_MOBILE_GPS_001) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Background/Foreground Service for Live Tracking -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- Wake Lock for Continuous GPS Tracking -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- Boot Completed for auto-restart tracking after reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Camera Permissions for Selfie Capture -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Storage Permissions for Photo/File Access -->
+    <!-- DC_PERMISSION_FIX_001: Removed maxSdkVersion to let Capacitor Camera plugin handle permission logic -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+
+    <!-- Call Log & Phone State Permissions (DC_CALL_TRACKING_PERM_001) -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+
+    <!-- Contacts Permission (DC_CONTACTS_PERM_001) - for enriching call logs with contact names -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- Hardware Feature Declarations (graceful degradation) -->
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
+</manifest>

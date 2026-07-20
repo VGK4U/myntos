@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Promoter NDA Editor — MyntReal LLP</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh}
+.content-area{padding:20px 24px}
+@media(max-width:640px){.content-area{padding:12px}}
+
+.page-header{margin-bottom:20px}
+.page-title{font-size:22px;font-weight:800;color:#111827;margin-bottom:2px;display:flex;align-items:center;gap:10px}
+.page-sub{color:#6b7280;font-size:13px}
+.perm-badge{display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:20px;padding:3px 12px;font-size:11px;font-weight:700}
+
+.editor-grid{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start}
+@media(max-width:900px){.editor-grid{grid-template-columns:1fr}}
+
+.card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);overflow:hidden}
+.card-head{padding:13px 18px;border-bottom:1px solid #f1f5f9;font-weight:700;font-size:14px;color:#111827;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-body{padding:16px 18px}
+
+.ver-item{padding:11px 13px;border-bottom:1px solid #f8fafc;cursor:pointer;border-radius:8px;margin-bottom:3px;transition:background .15s;border-left:3px solid transparent}
+.ver-item:hover{background:#f8fafc}
+.ver-item.selected{background:#ede9fe;border-left-color:#6366f1}
+.ver-num{font-weight:700;font-size:13px;color:#111827}
+.ver-sub{font-size:11px;color:#94a3b8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+
+.badge-draft{background:#fef3c7;color:#92400e;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
+.badge-active{background:#dcfce7;color:#166534;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
+.badge-inactive{background:#f1f5f9;color:#94a3b8;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
+
+.btn-pri{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-pri:hover{opacity:.88}
+.btn-success{background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-success:hover{opacity:.88}
+.btn-outline{background:#fff;color:#6366f1;border:1.5px solid #6366f1;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-outline:hover{background:#ede9fe}
+.btn-link{background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;padding:0}
+
+.form-label{font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px}
+.form-input{width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;color:#111827;font-family:inherit}
+.form-input:focus{outline:none;border-color:#6366f1}
+textarea.form-input{font-family:monospace;resize:vertical;line-height:1.7}
+
+.alert-info{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;border-radius:8px;padding:11px 14px;font-size:13px;margin-bottom:14px}
+.alert-warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:8px;padding:11px 14px;font-size:13px;margin-bottom:14px}
+.alert-danger{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:8px;padding:11px 14px;font-size:13px}
+.alert-success{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;border-radius:8px;padding:11px 14px;font-size:13px}
+
+.preview-box{border:1px solid #e2e8f0;border-radius:10px;padding:18px 22px;background:#fdfdfd;max-height:380px;overflow-y:auto;font-size:13.5px;line-height:1.8;color:#1e293b}
+.preview-box h2,h3{margin:12px 0 6px}
+.empty-state{text-align:center;padding:56px 20px;color:#94a3b8}
+.empty-state i{font-size:38px;display:block;margin-bottom:12px;color:#e2e8f0}
+
+#msgBar{display:none;margin-bottom:14px;border-radius:8px;padding:11px 14px;font-size:13px}
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+<div class="content-area">
+
+  <div class="page-header">
+    <div class="page-title">
+      <i class="fas fa-file-contract" style="color:#6366f1"></i>
+      Promoter NDA Editor
+      <span class="perm-badge"><i class="fas fa-shield-alt me-1"></i>VGK Mentor &amp; EA Only</span>
+    </div>
+    <div class="page-sub">Draft, edit, and activate Promoter Agreement versions. Activating a version requires all promoters to re-accept on their next login.</div>
+  </div>
+
+  <div id="msgBar"></div>
+
+  <div class="editor-grid">
+    <!-- Left: version list -->
+    <div>
+      <div class="card">
+        <div class="card-head">
+          All Versions
+          <button class="btn-pri" style="padding:6px 13px;font-size:12px" onclick="showNewForm()"><i class="fas fa-plus me-1"></i>New Draft</button>
+        </div>
+        <div style="padding:12px;min-height:80px" id="versionList">
+          <div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: editor -->
+    <div>
+      <!-- NEW DRAFT FORM -->
+      <div class="card" id="newFormCard" style="display:none">
+        <div class="card-head">Create New Draft Version</div>
+        <div class="card-body">
+          <div class="alert-info"><i class="fas fa-info-circle me-1"></i>New draft won't be shown to promoters until you activate it.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <div><label class="form-label">Version Number</label><input type="text" class="form-input" id="newVer" placeholder="e.g. 1.1"></div>
+            <div><label class="form-label">Title</label><input type="text" class="form-input" id="newTitle" placeholder="Promoter Agreement — MyntReal LLP"></div>
+          </div>
+          <div style="margin-bottom:12px"><label class="form-label">Internal Notes</label><input type="text" class="form-input" id="newNotes" placeholder="e.g. Added DPDP clause"></div>
+          <div style="margin-bottom:12px"><label class="form-label">Agreement Content (HTML)</label><textarea class="form-input" id="newContent" rows="14" placeholder="Paste full HTML content…"></textarea></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <button class="btn-pri" onclick="createDraft()"><i class="fas fa-save me-1"></i>Save Draft</button>
+            <button class="btn-outline" onclick="previewNew()"><i class="fas fa-eye me-1"></i>Preview</button>
+            <button class="btn-link" onclick="document.getElementById('newFormCard').style.display='none'">Cancel</button>
+          </div>
+          <div id="previewNewWrap" style="display:none;margin-top:16px">
+            <label class="form-label">Preview</label>
+            <div class="preview-box" id="previewNewBox"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EDIT FORM -->
+      <div class="card" id="editFormCard" style="display:none">
+        <div class="card-head">
+          <span>Version <span id="editVerLabel"></span></span>
+          <span id="editStatusBadge"></span>
+        </div>
+        <div class="card-body">
+          <div id="loadingVer" style="text-align:center;padding:30px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Loading content…</div>
+          <div id="editFormInner" style="display:none">
+            <div class="alert-warn" id="editOnlyDraftWarn" style="display:none"><i class="fas fa-lock me-1"></i>This version is <strong>Active or Inactive</strong> — content is read-only. Only drafts can be edited.</div>
+            <div style="margin-bottom:12px"><label class="form-label">Title</label><input type="text" class="form-input" id="editTitle"></div>
+            <div style="margin-bottom:12px"><label class="form-label">Internal Notes</label><input type="text" class="form-input" id="editNotes"></div>
+            <div style="margin-bottom:12px"><label class="form-label">Agreement Content (HTML)</label><textarea class="form-input" id="editContent" rows="14"></textarea></div>
+            <div id="editActions" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+              <button class="btn-pri" onclick="saveDraftEdit()"><i class="fas fa-save me-1"></i>Save Changes</button>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+              <button class="btn-outline" onclick="previewEdit()"><i class="fas fa-eye me-1"></i>Preview</button>
+              <button class="btn-outline" style="color:#059669;border-color:#16a34a" onclick="copyToNewDraft()"><i class="fas fa-copy me-1"></i>Copy to New Draft</button>
+            </div>
+            <div id="activateSection" style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9;display:none">
+              <div class="alert-warn" style="margin-bottom:12px"><i class="fas fa-exclamation-triangle me-1"></i><strong>Activating this version</strong> will deactivate the current active version and require <strong>all promoters</strong> to accept it on their next login.</div>
+              <button class="btn-success" onclick="activateVersion()"><i class="fas fa-check-circle me-2"></i>Activate This Version</button>
+            </div>
+            <div id="previewEditWrap" style="display:none;margin-top:16px">
+              <label class="form-label">Preview</label>
+              <div class="preview-box" id="previewEditBox"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMPTY STATE -->
+      <div id="emptyState" class="empty-state" style="background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.07)">
+        <i class="fas fa-file-contract"></i>
+        Select a version from the left to view or edit, or create a new draft.
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+let selectedId = null;
+let allVersions = [];
+
+function showMsg(text, type='success') {
+  const el = document.getElementById('msgBar');
+  el.className = type === 'success' ? 'alert-success' : type === 'danger' ? 'alert-danger' : 'alert-warn';
+  el.innerHTML = text; el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+async function loadVersions() {
+  const d = await staffFetch('/api/v1/promo/staff/promo/nda/versions').then(r=>r.json()).catch(()=>({}));
+  allVersions = d.versions || [];
+  const list = document.getElementById('versionList');
+  if (!allVersions.length) {
+    list.innerHTML = '<div style="padding:12px;color:#94a3b8;font-size:13px">No versions yet. Create a new draft.</div>';
+    return;
+  }
+  list.innerHTML = allVersions.map(v => `
+    <div class="ver-item ${selectedId===v.id?'selected':''}" onclick="selectVersion(${v.id})">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <span class="ver-num">v${v.version_number}</span>
+        <span class="badge-${v.status}">${v.status.toUpperCase()}</span>
+      </div>
+      <div class="ver-sub">${v.title}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px">${v.created_at ? new Date(v.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : ''}</div>
+    </div>
+  `).join('');
+}
+
+async function selectVersion(id) {
+  selectedId = id;
+  document.getElementById('newFormCard').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('editFormCard').style.display = 'block';
+  document.getElementById('loadingVer').style.display = 'block';
+  document.getElementById('editFormInner').style.display = 'none';
+  document.getElementById('previewEditWrap').style.display = 'none';
+  // Refresh list to highlight
+  await loadVersions();
+  // Fetch full version including content_html
+  const r = await staffFetch(`/api/v1/promo/staff/promo/nda/${id}`);
+  const ver = await r.json();
+  if (!r.ok) { showMsg('<i class="fas fa-times-circle me-1"></i>Failed to load version content.', 'danger'); return; }
+
+  document.getElementById('loadingVer').style.display = 'none';
+  document.getElementById('editFormInner').style.display = 'block';
+  document.getElementById('editVerLabel').textContent = ver.version_number;
+  document.getElementById('editStatusBadge').innerHTML = `<span class="badge-${ver.status}">${ver.status.toUpperCase()}</span>`;
+
+  const isDraft = ver.status === 'draft';
+  document.getElementById('editTitle').value = ver.title || '';
+  document.getElementById('editTitle').disabled = !isDraft;
+  document.getElementById('editNotes').value = ver.notes || '';
+  document.getElementById('editNotes').disabled = !isDraft;
+  document.getElementById('editContent').value = ver.content_html || '';
+  document.getElementById('editContent').disabled = !isDraft;
+  document.getElementById('editActions').style.display = isDraft ? 'flex' : 'none';
+  document.getElementById('editOnlyDraftWarn').style.display = isDraft ? 'none' : 'block';
+  document.getElementById('activateSection').style.display = isDraft ? 'block' : 'none';
+}
+
+function showNewForm() {
+  selectedId = null;
+  document.getElementById('newFormCard').style.display = 'block';
+  document.getElementById('editFormCard').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'none';
+}
+function previewNew() {
+  document.getElementById('previewNewBox').innerHTML = document.getElementById('newContent').value;
+  document.getElementById('previewNewWrap').style.display = 'block';
+}
+function previewEdit() {
+  document.getElementById('previewEditBox').innerHTML = document.getElementById('editContent').value;
+  document.getElementById('previewEditWrap').style.display = 'block';
+  document.getElementById('previewEditWrap').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function copyToNewDraft() {
+  const content = document.getElementById('editContent').value;
+  const title = document.getElementById('editTitle').value;
+  const verLabel = document.getElementById('editVerLabel').textContent;
+  // Pre-fill the new draft form with the current version's content
+  document.getElementById('newContent').value = content;
+  document.getElementById('newTitle').value = title;
+  document.getElementById('newNotes').value = `Based on v${verLabel} — add your changes here`;
+  document.getElementById('newVer').value = '';
+  // Switch to new draft form
+  selectedId = null;
+  document.getElementById('newFormCard').style.display = 'block';
+  document.getElementById('editFormCard').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('newFormCard').scrollIntoView({behavior:'smooth'});
+}
+
+async function createDraft() {
+  const ver = document.getElementById('newVer').value.trim();
+  const title = document.getElementById('newTitle').value.trim();
+  const content = document.getElementById('newContent').value.trim();
+  const notes = document.getElementById('newNotes').value.trim();
+  if (!ver || !title || !content) { showMsg('<i class="fas fa-exclamation-circle me-1"></i>Version number, title, and content are required.', 'danger'); return; }
+  const r = await staffFetch('/api/v1/promo/staff/promo/nda/draft', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({version_number:ver, title, content_html:content, notes})
+  });
+  const d = await r.json();
+  if (r.ok) {
+    showMsg(`<i class="fas fa-check-circle me-1"></i>Draft v${ver} created.`);
+    document.getElementById('newFormCard').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+    await loadVersions();
+  } else { showMsg(`<i class="fas fa-times-circle me-1"></i>${d.detail || 'Failed to create draft'}`, 'danger'); }
+}
+
+async function saveDraftEdit() {
+  if (!selectedId) return;
+  const body = {
+    title: document.getElementById('editTitle').value.trim(),
+    content_html: document.getElementById('editContent').value.trim(),
+    notes: document.getElementById('editNotes').value.trim()
+  };
+  const r = await staffFetch(`/api/v1/promo/staff/promo/nda/${selectedId}`, {
+    method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  if (r.ok) { showMsg('<i class="fas fa-check-circle me-1"></i>Draft saved successfully.'); await loadVersions(); }
+  else { showMsg(`<i class="fas fa-times-circle me-1"></i>${d.detail || 'Save failed'}`, 'danger'); }
+}
+
+async function activateVersion() {
+  if (!selectedId) return;
+  if (!confirm('Activate this NDA version? All promoters will be required to accept it on their next login.')) return;
+  const r = await staffFetch(`/api/v1/promo/staff/promo/nda/${selectedId}/activate`, {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'
+  });
+  const d = await r.json();
+  if (r.ok) {
+    showMsg(`<i class="fas fa-check-circle me-1"></i>${d.message || 'Version activated successfully.'}`);
+    selectedId = null;
+    await loadVersions();
+    document.getElementById('editFormCard').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+  } else { showMsg(`<i class="fas fa-times-circle me-1"></i>${d.detail || 'Activation failed'}`, 'danger'); }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+  StaffHeader.inject('Promoter NDA Editor', 'fas fa-file-contract');
+  if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+  await loadVersions();
+});
+</script>
+</body>
+</html>

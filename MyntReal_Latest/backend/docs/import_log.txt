@@ -1,0 +1,134 @@
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1965, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 921, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedColumn: column "user_id" does not exist
+LINE 1: DELETE FROM placement WHERE user_id = 'BEV00000000'
+                                    ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/backend/import_users_from_excel.py", line 115, in import_users_from_excel
+    deleted_count = delete_non_protected_users(session)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/backend/import_users_from_excel.py", line 73, in delete_non_protected_users
+    session.execute(text("DELETE FROM placement WHERE user_id = :uid"), {"uid": user_id})
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2262, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2153, in _execute_internal
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1412, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1635, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1844, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1984, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2339, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1965, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 921, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column "user_id" does not exist
+LINE 1: DELETE FROM placement WHERE user_id = 'BEV00000000'
+                                    ^
+
+[SQL: DELETE FROM placement WHERE user_id = %(uid)s]
+[parameters: {'uid': 'BEV00000000'}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+================================================================================
+IMPORTING USERS FROM EXCEL
+================================================================================
+
+🗑️  Deleting 909 non-protected users...
+
+❌ Import failed: (psycopg2.errors.UndefinedColumn) column "user_id" does not exist
+LINE 1: DELETE FROM placement WHERE user_id = 'BEV00000000'
+                                    ^
+
+[SQL: DELETE FROM placement WHERE user_id = %(uid)s]
+[parameters: {'uid': 'BEV00000000'}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+✅ ALL DONE!
+Traceback (most recent call last):
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1965, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 921, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UndefinedColumn: column "user_id" does not exist
+LINE 1: DELETE FROM referral_income WHERE user_id = 'BEV00000000'
+                                          ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/workspace/backend/import_users_from_excel.py", line 118, in import_users_from_excel
+    deleted_count = delete_non_protected_users(session)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/backend/import_users_from_excel.py", line 79, in delete_non_protected_users
+    session.execute(text("DELETE FROM referral_income WHERE user_id = :uid"), {"uid": user_id})
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2262, in execute
+    return self._execute_internal(
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/orm/session.py", line 2153, in _execute_internal
+    result = conn.execute(
+             ^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1412, in execute
+    return meth(
+           ^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 516, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1635, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1844, in _execute_context
+    return self._exec_single_context(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1984, in _exec_single_context
+    self._handle_dbapi_exception(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2339, in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1965, in _exec_single_context
+    self.dialect.do_execute(
+  File "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 921, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.ProgrammingError: (psycopg2.errors.UndefinedColumn) column "user_id" does not exist
+LINE 1: DELETE FROM referral_income WHERE user_id = 'BEV00000000'
+                                          ^
+
+[SQL: DELETE FROM referral_income WHERE user_id = %(uid)s]
+[parameters: {'uid': 'BEV00000000'}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+================================================================================
+IMPORTING USERS FROM EXCEL
+================================================================================
+
+🗑️  Deleting 909 non-protected users...
+
+❌ Import failed: (psycopg2.errors.UndefinedColumn) column "user_id" does not exist
+LINE 1: DELETE FROM referral_income WHERE user_id = 'BEV00000000'
+                                          ^
+
+[SQL: DELETE FROM referral_income WHERE user_id = %(uid)s]
+[parameters: {'uid': 'BEV00000000'}]
+(Background on this error at: https://sqlalche.me/e/20/f405)
+
+✅ ALL DONE!

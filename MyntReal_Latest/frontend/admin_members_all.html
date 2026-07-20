@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Connections - MNR Business Access Program Reference System</title>
+<!-- [DC-T33] VGK4U audience tabs (auto-mount + jQuery audience injector) --><script src="/audience-tabs.js"></script></head>
+<body>
+    <div class="container-fluid mt-4">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>👥 All Connections</h2>
+                <p class="text-muted mb-0">View all members (sponsor-wise)</p>
+            </div>
+        <a href="/admin/dashboard" class="btn btn-primary btn-sm">
+                <i class="fas fa-home me-2"></i>Go to Dashboard
+            </a>
+            </div>
+
+        <!-- User Filter Component -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-filter"></i> Filter by User ID
+            </div>
+            <div class="card-body">
+                <form id="userFilterForm" class="row g-3">
+                    <div class="col-md-8">
+                        <label for="userIdInput" class="form-label">Enter User ID (MNR ID)</label>
+                        <input type="text" class="form-control" id="userIdInput" 
+                               placeholder="e.g., MNR1800143" 
+                               pattern="MNR[0-9]{7,9}">
+                        <div class="form-text">Leave empty to view your own data</div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" id="applyFilterBtn" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Apply Filter
+                        </button>
+                    </div>
+                </form>
+                <div id="filterInfo" class="mt-3" style="display: none;">
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i> 
+                        Showing data for: <strong id="filteredUserId"></strong>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="clearUserFilter()">
+                            <i class="fas fa-times"></i> Clear Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Filters (matching user pages) -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <i class="fas fa-sliders-h"></i> Advanced Filters
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="startDateFilter">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="endDateFilter">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Package</label>
+                        <select class="form-select" id="packageFilter">
+                            <option value="">All</option>
+                            <option value="Platinum">Platinum</option>
+                            <option value="Diamond">Diamond</option>
+                            <option value="Blue">Blue</option>
+                            <option value="Loyal">Loyal</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">All</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Coupon Status</label>
+                        <select class="form-select" id="couponFilter">
+                            <option value="">All</option>
+                            <option value="Purchased">Purchased</option>
+                            <option value="Assigned">Assigned</option>
+                            <option value="Activated">Activated</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Referrer ID</label>
+                        <input type="text" class="form-control" id="referrerIdFilter" placeholder="MNR1800XXX">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Ved Owner ID</label>
+                        <input type="text" class="form-control" id="vedOwnerIdFilter" placeholder="MNR1800XXX">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-outline-secondary w-100" onclick="resetAdvancedFilters()">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading members data...</p>
+        </div>
+
+        <!-- Members Table -->
+        <div id="membersTable" style="display: none;">
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list"></i> Team Members
+                        <span id="memberCount" class="badge bg-light text-dark float-end">0</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>MNR ID</th>
+                                    <th>Name</th>
+                                    <th>Package</th>
+                                    <th>Status</th>
+                                    <th>Join Date</th>
+                                    <th>Sponsor ID</th>
+                                    <th>Ved Owner</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="membersTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Data State -->
+        <div id="noDataState" style="display: none;" class="text-center py-5">
+            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No Members Found</h4>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" style="display: none;" class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorMessage">An error occurred while loading data.</span>
+        </div>
+    </div>
+
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let filteredUserId = urlParams.get('user_id');
+
+        // Initialize filter if user_id is in URL
+        if (filteredUserId) {
+            const normalized = normalizeAdminUserId(filteredUserId);
+            document.getElementById('userIdInput').value = normalized;
+            document.getElementById('filteredUserId').textContent = normalized;
+            filteredUserId = normalized;
+            document.getElementById('filterInfo').style.display = 'block';
+        }
+
+        // Handle filter form submission
+        document.getElementById('userFilterForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const userId = normalizeAdminUserId(document.getElementById('userIdInput').value);
+            const currentUrl = new URL(window.location.href);
+            if (userId) {
+                currentUrl.searchParams.set('user_id', userId);
+            } else {
+                currentUrl.searchParams.delete('user_id');
+            }
+            window.location.href = currentUrl.toString();
+        });
+
+        function clearUserFilter() {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.delete('user_id');
+            window.location.href = currentUrl.toString();
+        }
+
+        // Advanced filter handlers
+        function resetAdvancedFilters() {
+            document.getElementById('startDateFilter').value = '';
+            document.getElementById('endDateFilter').value = '';
+            document.getElementById('packageFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('couponFilter').value = '';
+            document.getElementById('referrerIdFilter').value = '';
+            document.getElementById('vedOwnerIdFilter').value = '';
+            loadMembersData();
+        }
+        
+        // Apply filters when changed
+        ['startDateFilter', 'endDateFilter', 'packageFilter', 'statusFilter', 'couponFilter', 'referrerIdFilter', 'vedOwnerIdFilter'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', loadMembersData);
+        });
+
+        // Fetch members data - CALLS SAME ENDPOINT AS USER PAGE
+        async function loadMembersData() {
+            const userId = filteredUserId || window.currentUserId;
+            
+            if (!userId) {
+                hideLoading();
+                document.getElementById('noDataState').innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-filter fa-4x text-primary mb-3"></i>
+                        <h4>Select a User to View Members</h4>
+                        <p class="text-muted">Please use the filter above to enter an MNR ID.</p>
+                    </div>
+                `;
+                document.getElementById('noDataState').style.display = 'block';
+                return;
+            }
+
+            try {
+                showLoading();
+                
+                // Build query params - SAME AS USER PAGE
+                const params = new URLSearchParams();
+                params.append('user_id', userId);
+                
+                const startDate = document.getElementById('startDateFilter')?.value;
+                const endDate = document.getElementById('endDateFilter')?.value;
+                const pkg = document.getElementById('packageFilter')?.value;
+                const status = document.getElementById('statusFilter')?.value;
+                const coupon = document.getElementById('couponFilter')?.value;
+                const referrerId = document.getElementById('referrerIdFilter')?.value;
+                const vedOwnerId = document.getElementById('vedOwnerIdFilter')?.value;
+                
+                if (startDate) params.append('start_date', startDate);
+                if (endDate) params.append('end_date', endDate);
+                if (pkg) params.append('package', pkg);
+                if (status) params.append('status_filter', status);
+                if (coupon) params.append('coupon_status', coupon);
+                if (referrerId) params.append('referrer_id', referrerId);
+                if (vedOwnerId) params.append('ved_owner_id', vedOwnerId);
+
+                // CALL SAME ENDPOINT AS USER PAGE
+                const response = await fetch(`${window.BACKEND_URL || ''}/users/team/all-members?${params.toString()}`, {
+                    headers: { 'Authorization': `Bearer ${window.sessionToken}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: Unable to load data`);
+                }
+
+                const result = await response.json();
+                
+                // API returns {success: true, data: {members: [...], total: 189}}
+                if (result.success && result.data && result.data.members) {
+                    displayMembers(result.data.members);
+                    document.getElementById('memberCount').textContent = result.data.total || result.data.members.length;
+                } else {
+                    showNoData();
+                }
+            } catch (error) {
+                console.error('Error loading members:', error);
+                showError(error.message);
+            }
+        }
+
+        function displayMembers(members) {
+            const tbody = document.getElementById('membersTableBody');
+            const memberCount = document.getElementById('memberCount');
+            
+            if (members.length === 0) {
+                showNoData();
+                return;
+            }
+
+            memberCount.textContent = members.length;
+            
+            tbody.innerHTML = members.map(member => `
+                <tr>
+                    <td><strong>${escapeHTML(member.mnr_id || member.user_id || member.id || 'N/A')}</strong></td>
+                    <td>${escapeHTML(member.name || member.full_name || 'N/A')}</td>
+                    <td>
+                        <span class="badge bg-info">
+                            ${escapeHTML(member.package || member.package_type || 'Not Activated')}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge ${member.is_active || member.activation_date ? 'bg-success' : 'bg-secondary'}">
+                            ${member.is_active || member.activation_date ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td>${formatDate(member.activation_date || member.join_date)}</td>
+                    <td>${escapeHTML(member.referrer_id || 'N/A')}</td>
+                    <td>
+                        ${member.ved_owner_name 
+                            ? `<span class="badge bg-warning text-dark">${escapeHTML(member.ved_owner_name)}</span>` 
+                            : '<span class="text-muted">N/A</span>'}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('${escapeJS(member.mnr_id || member.user_id || member.id)}')">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            hideLoading();
+            document.getElementById('membersTable').style.display = 'block';
+        }
+
+        function showLoading() {
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('membersTable').style.display = 'none';
+            document.getElementById('noDataState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        function showNoData() {
+            hideLoading();
+            document.getElementById('noDataState').style.display = 'block';
+        }
+
+        function showError(message) {
+            hideLoading();
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').style.display = 'block';
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN');
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function escapeJS(str) {
+            if (!str) return '';
+            return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        function viewDetails(userId) {
+            window.location.href = `/admin/members/all?user_id=${userId}`;
+        }
+
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', loadMembersData);
+    </script>
+</body>
+</html>

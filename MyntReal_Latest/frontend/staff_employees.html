@@ -1,0 +1,2468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP Staff Portal - Employee Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f3f4f6; 
+            min-height: 100vh;
+        }
+
+        .content-area { padding: 24px; }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: none;
+        }
+        
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-header h5 {
+            margin: 0;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .card-body { padding: 0; }
+        
+        .filters-bar {
+            padding: 16px 20px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .filters-bar input, .filters-bar select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .filters-bar input { flex: 1; min-width: 200px; }
+        
+        .table { margin: 0; }
+        .table th {
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 12px;
+            text-transform: uppercase;
+            padding: 12px 16px;
+            border-top: none;
+            background: #f9fafb;
+        }
+        .table td {
+            padding: 14px 16px;
+            vertical-align: middle;
+            color: #374151;
+            font-size: 14px;
+        }
+        
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-active { background: #dcfce7; color: #166534; }
+        .badge-inactive { background: #fee2e2; color: #991b1b; }
+        .badge-deactivated { background: #fef3c7; color: #92400e; }
+        .badge-resigned { background: #6b7280; color: #ffffff; }
+        
+        .btn-primary {
+            background: #6366f1;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+        .btn-primary:hover { background: #4f46e5; }
+        
+        .btn-sm {
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+        
+        .action-btns {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .modal-content { border-radius: 12px; }
+        .modal-header {
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 20px;
+        }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; }
+        
+        .form-label { font-weight: 500; color: #374151; margin-bottom: 6px; }
+        .form-control, .form-select {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .emp-sort-th {
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .emp-sort-th:hover { background: rgba(13,110,253,.06); }
+        .emp-sort-icon { font-size: 11px; opacity: .7; }
+
+        /* ===== STICKY HEADER ===== */
+        .table-scroll-wrap {
+            overflow-y: auto;
+            max-height: 560px;
+        }
+        .table-scroll-wrap thead th {
+            position: sticky;
+            top: 0;
+            z-index: 4;
+            background: #f9fafb;
+            box-shadow: 0 1px 0 #e5e7eb;
+        }
+
+        /* ===== EXECUTIVE DASHBOARD ===== */
+        .exec-dashboard { margin-bottom: 20px; }
+        .kpi-card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-left: 4px solid transparent;
+            transition: transform .15s;
+        }
+        .kpi-card:hover { transform: translateY(-2px); }
+        .kpi-card.kpi-total   { border-color: #6366f1; }
+        .kpi-card.kpi-active  { border-color: #10b981; }
+        .kpi-card.kpi-inactive{ border-color: #f59e0b; }
+        .kpi-card.kpi-deact   { border-color: #ef4444; }
+        .kpi-card.kpi-resigned{ border-color: #6b7280; }
+        .kpi-card.kpi-depts   { border-color: #8b5cf6; }
+        .kpi-card.kpi-root    { border-color: #0ea5e9; }
+        .kpi-icon {
+            width: 44px; height: 44px; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
+        }
+        .kpi-total  .kpi-icon { background:#ede9fe; color:#6366f1; }
+        .kpi-active  .kpi-icon { background:#dcfce7; color:#10b981; }
+        .kpi-inactive .kpi-icon { background:#fef3c7; color:#f59e0b; }
+        .kpi-deact  .kpi-icon { background:#fee2e2; color:#ef4444; }
+        .kpi-resigned .kpi-icon { background:#f3f4f6; color:#6b7280; }
+        .kpi-depts  .kpi-icon { background:#ede9fe; color:#8b5cf6; }
+        .kpi-root   .kpi-icon { background:#e0f2fe; color:#0ea5e9; }
+        .kpi-label { font-size: 12px; color: #6b7280; font-weight: 500; }
+        .kpi-value { font-size: 26px; font-weight: 700; color: #111827; line-height: 1.1; }
+        .kpi-sub   { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+        /* ===== TREE VIEW ===== */
+        #treeViewContainer { padding: 20px; }
+        .tree-search-bar {
+            display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .tree-search-bar input {
+            padding: 8px 12px; border: 1px solid #d1d5db;
+            border-radius: 8px; font-size: 14px; flex: 1; max-width: 320px;
+        }
+        .tree-filter-toggle {
+            display: flex; gap: 0; border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden;
+        }
+        .tree-filter-btn {
+            padding: 6px 14px; border: none; background: white;
+            font-size: 13px; color: #6b7280; cursor: pointer; transition: all .15s;
+            border-right: 1px solid #d1d5db;
+        }
+        .tree-filter-btn:last-child { border-right: none; }
+        .tree-filter-btn.active { background: #6366f1; color: white; }
+        .tree-filter-btn:hover:not(.active) { background: #f3f4f6; }
+        .tree-legend {
+            display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+        }
+        .tree-legend-item {
+            display: flex; align-items: center; gap: 5px;
+            font-size: 12px; color: #6b7280;
+        }
+        .tree-legend-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+        }
+
+        /* ===== INDENTED TREE ORG CHART ===== */
+        .org-chart { overflow-x: auto; overflow-y: auto; padding: 4px 8px 20px; }
+        /* Root-level nodes stack vertically */
+        .org-level {
+            display: flex; flex-direction: column; align-items: flex-start;
+            gap: 10px;
+        }
+        /* Each node: card on top, children indented below */
+        .org-node-wrap {
+            display: flex; flex-direction: column; align-items: flex-start;
+            position: relative;
+        }
+        /* No connecting line from parent card — rail handles it */
+        .org-node-wrap.has-children > .org-card-area::after { display: none; }
+        .org-card-area {
+            display: flex; flex-direction: row; align-items: center;
+            position: relative;
+        }
+        /* Children: indented below parent with a vertical connecting rail */
+        .org-children-wrap {
+            display: flex; flex-direction: column; align-items: flex-start;
+            margin-left: 28px;
+            border-left: 2px solid #d1d5db;
+            padding-top: 4px;
+            padding-bottom: 4px;
+        }
+        .org-children-row {
+            display: flex; flex-direction: column; align-items: flex-start;
+            gap: 8px; position: relative; padding: 0;
+        }
+        /* Each child: short horizontal branch from rail to card */
+        .org-child-col {
+            display: flex; flex-direction: row; align-items: flex-start;
+            position: relative;
+        }
+        /* Horizontal branch line (connects vertical rail to the child card) */
+        .org-child-col > .org-connector-v {
+            width: 18px; height: 2px; background: #d1d5db;
+            flex-shrink: 0; margin-top: 22px;
+        }
+        .tree-card {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 8px 14px; border-radius: 10px; border: 1px solid #e5e7eb;
+            background: white; box-shadow: 0 1px 2px rgba(0,0,0,.06);
+            cursor: pointer; transition: all .15s; min-width: 200px; max-width: 240px;
+            position: relative; user-select: none;
+        }
+        .tree-card:hover { border-color: #6366f1; box-shadow: 0 2px 8px rgba(99,102,241,.15); }
+        .tree-card.tc-active  { border-left: 3px solid #10b981; }
+        .tree-card.tc-inactive{ border-left: 3px solid #f59e0b; }
+        .tree-card.tc-deactivated { border-left: 3px solid #ef4444; }
+        .tree-card.tc-resigned{ border-left: 3px solid #6b7280; }
+        .tree-card.tc-highlighted { background: #fef9c3; border-color: #facc15; }
+        .tree-avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 13px; flex-shrink: 0; color: white;
+        }
+        .tree-name { font-weight: 600; font-size: 13px; color: #111827; }
+        .tree-meta { font-size: 11px; color: #6b7280; }
+        .tree-code { font-size: 11px; color: #9ca3af; font-family: monospace; }
+        .tree-toggle {
+            width: 20px; height: 20px; border-radius: 50%;
+            background: #e5e7eb; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; color: #374151; flex-shrink: 0;
+            transition: background .15s;
+        }
+        .tree-toggle:hover { background: #d1d5db; }
+        .tree-badge {
+            font-size: 10px; padding: 2px 7px; border-radius: 10px;
+            background: #e0e7ff; color: #4338ca; font-weight: 600; flex-shrink: 0;
+        }
+        .tree-empty { text-align: center; padding: 40px; color: #9ca3af; }
+        .tree-focus-btn {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: #f3f4f6; border: 1px solid #e5e7eb; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 10px; color: #6366f1; flex-shrink: 0;
+            transition: all .15s; margin-left: 2px;
+        }
+        .tree-focus-btn:hover { background: #e0e7ff; border-color: #6366f1; }
+        .tree-focus-bar {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 14px; margin-bottom: 12px;
+            background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 8px;
+            font-size: 13px; color: #4338ca;
+        }
+        .tree-focus-bar button {
+            padding: 4px 12px; border: 1px solid #6366f1; background: white;
+            border-radius: 6px; font-size: 12px; color: #6366f1; cursor: pointer;
+            transition: all .15s;
+        }
+        .tree-focus-bar button:hover { background: #6366f1; color: white; }
+
+        /* View toggle buttons */
+        .view-toggle-btn {
+            padding: 6px 14px; border: 1px solid #d1d5db;
+            background: white; border-radius: 6px; cursor: pointer;
+            font-size: 13px; color: #6b7280; transition: all .15s;
+        }
+        .view-toggle-btn.active {
+            background: #6366f1; color: white; border-color: #6366f1;
+        }
+        .view-toggle-btn:hover:not(.active) { background: #f3f4f6; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+
+        <!-- ===== EXECUTIVE DASHBOARD ===== -->
+        <div class="exec-dashboard" id="execDashboard">
+            <div class="row g-3">
+                <div class="col-6 col-sm-4 col-md-3 col-xl">
+                    <div class="kpi-card kpi-total">
+                        <div class="kpi-icon"><i class="fas fa-users"></i></div>
+                        <div>
+                            <div class="kpi-label">Total Employees</div>
+                            <div class="kpi-value" id="kpiTotal">—</div>
+                            <div class="kpi-sub" id="kpiTotalSub">Loading…</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-md-3 col-xl">
+                    <div class="kpi-card kpi-active">
+                        <div class="kpi-icon"><i class="fas fa-user-check"></i></div>
+                        <div>
+                            <div class="kpi-label">Active</div>
+                            <div class="kpi-value" id="kpiActive">—</div>
+                            <div class="kpi-sub" id="kpiActivePct">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-md-3 col-xl">
+                    <div class="kpi-card kpi-inactive">
+                        <div class="kpi-icon"><i class="fas fa-user-clock"></i></div>
+                        <div>
+                            <div class="kpi-label">Inactive</div>
+                            <div class="kpi-value" id="kpiInactive">—</div>
+                            <div class="kpi-sub">Pending activation</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-md-3 col-xl">
+                    <div class="kpi-card kpi-deact">
+                        <div class="kpi-icon"><i class="fas fa-user-times"></i></div>
+                        <div>
+                            <div class="kpi-label">Deactivated</div>
+                            <div class="kpi-value" id="kpiDeact">—</div>
+                            <div class="kpi-sub">On hold</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-md-3 col-xl">
+                    <div class="kpi-card kpi-resigned">
+                        <div class="kpi-icon"><i class="fas fa-user-slash"></i></div>
+                        <div>
+                            <div class="kpi-label">Resigned</div>
+                            <div class="kpi-value" id="kpiResigned">—</div>
+                            <div class="kpi-sub">Permanent exit</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-md-3 col-xl">
+                    <div class="kpi-card kpi-depts">
+                        <div class="kpi-icon"><i class="fas fa-sitemap"></i></div>
+                        <div>
+                            <div class="kpi-label">Departments</div>
+                            <div class="kpi-value" id="kpiDepts">—</div>
+                            <div class="kpi-sub" id="kpiTopDept">—</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-sm-4 col-md-3 col-xl">
+                    <div class="kpi-card kpi-root">
+                        <div class="kpi-icon"><i class="fas fa-crown"></i></div>
+                        <div>
+                            <div class="kpi-label">Top-Level Managers</div>
+                            <div class="kpi-value" id="kpiRoot">—</div>
+                            <div class="kpi-sub">No reporting manager</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-users me-2"></i>All Employees</h5>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <button class="view-toggle-btn active" id="btnListView" onclick="switchView('list')">
+                            <i class="fas fa-list me-1"></i>List
+                        </button>
+                        <button class="view-toggle-btn" id="btnTreeView" onclick="switchView('tree')">
+                            <i class="fas fa-sitemap me-1"></i>Tree
+                        </button>
+                        <button class="btn btn-primary" onclick="openAddModal()">
+                            <i class="fas fa-plus me-2"></i>Add Employee
+                        </button>
+                    </div>
+                </div>
+                <!-- DC_UNIVERSAL_FILTER_001: Universal Filter Container -->
+                <div id="universalFilterContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0;"></div>
+                
+                <!-- Fallback filters - shown if universal filter fails to load -->
+                <div id="fallbackFiltersContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0; display: flex;">
+                    <select id="fallbackDepartmentFilter" style="min-width: 160px;" onchange="filterEmployees()">
+                        <option value="">All Departments</option>
+                    </select>
+                    <select id="fallbackStaffTypeFilter" style="min-width: 140px;" onchange="filterEmployees()">
+                        <option value="">All Staff Types</option>
+                        <option value="MN_STAFF">MN Staff</option>
+                        <option value="MN_EMPLOYEE">MN Employee</option>
+                        <option value="FREELANCER">Freelancer</option>
+                        <option value="MYNT_REAL">Mynt Real</option>
+                    </select>
+                    <input type="text" id="fallbackEmployeeSearch" class="form-control" style="min-width: 200px;" placeholder="Search employee..." oninput="debounceEmployeeSearch()">
+                </div>
+                
+                <div class="filters-bar">
+                    <input type="text" id="searchInput" placeholder="Search by name, email, or code..." onkeyup="filterEmployees()">
+                    <select id="roleFilter" onchange="filterEmployees()">
+                        <option value="">All Roles</option>
+                    </select>
+                    <select id="deptFilter" onchange="filterEmployees()">
+                        <option value="">All Departments</option>
+                    </select>
+                    <!-- DC_STAFF_TYPE_FILTER_001: Staff Type filter dropdown -->
+                    <select id="staffTypeFilter" onchange="filterEmployees()" title="Filter by Staff Type">
+                        <option value="">All Staff Types</option>
+                        <option value="MN_STAFF">MN Staff</option>
+                        <option value="MN_EMPLOYEE">MN Employee</option>
+                        <option value="FREELANCER">Freelancer</option>
+                        <option value="MYNT_REAL">Mynt Real</option>
+                    </select>
+                    <select id="statusFilter" onchange="filterEmployees()">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="deactivated">Deactivated</option>
+                        <option value="resigned">Resigned</option>
+                    </select>
+                </div>
+                <!-- LIST VIEW -->
+                <div id="listViewContainer">
+                <div class="card-body">
+                    <div class="table-responsive table-scroll-wrap">
+                        <table class="table">
+                            <thead>
+                                <tr id="empTableHead">
+                                    <th class="emp-sort-th" onclick="sortByCol('employee_code')" title="Sort by Employee ID">Employee ID <span class="emp-sort-icon" data-col="employee_code"></span></th>
+                                    <th class="emp-sort-th" onclick="sortByCol('full_name')" title="Sort by Name">Name <span class="emp-sort-icon" data-col="full_name"></span></th>
+                                    <th class="emp-sort-th" onclick="sortByCol('email')" title="Sort by Email">Email <span class="emp-sort-icon" data-col="email"></span></th>
+                                    <th class="emp-sort-th" onclick="sortByCol('role_name')" title="Sort by Role">Role <span class="emp-sort-icon" data-col="role_name"></span></th>
+                                    <th class="emp-sort-th" onclick="sortByCol('base_company_name')" title="Sort by Base Company">Base Company <span class="emp-sort-icon" data-col="base_company_name"></span></th>
+                                    <th>Assigned Companies</th>
+                                    <th class="emp-sort-th" onclick="sortByCol('department_name')" title="Sort by Department">Department <span class="emp-sort-icon" data-col="department_name"></span></th>
+                                    <th class="emp-sort-th" onclick="sortByCol('reporting_manager_name')" title="Sort by Reports To">Reports To <span class="emp-sort-icon" data-col="reporting_manager_name"></span></th>
+                                    <th class="emp-sort-th" onclick="sortByCol('status')" title="Sort by Status">Status <span class="emp-sort-icon" data-col="status"></span></th>
+                                    <th>Status Control</th>
+                                    <th>Password Reset</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employeesTable">
+                                <tr>
+                                    <td colspan="12">
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                </div>
+
+                <!-- TREE VIEW -->
+                <div id="treeViewContainer" style="display:none;">
+                    <div class="tree-search-bar">
+                        <input type="text" id="treeSearchInput" placeholder="Search employee in tree…" oninput="renderTree()">
+                        <div class="tree-filter-toggle">
+                            <button class="tree-filter-btn active" id="treeFilterAll" onclick="setTreeFilter('all')">All Team</button>
+                            <button class="tree-filter-btn" id="treeFilterActive" onclick="setTreeFilter('active')">Only Active</button>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="expandAllTree()">
+                            <i class="fas fa-expand-alt me-1"></i>Expand All
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="collapseAllTree()">
+                            <i class="fas fa-compress-alt me-1"></i>Collapse All
+                        </button>
+                    </div>
+                    <div class="tree-legend">
+                        <div class="tree-legend-item"><div class="tree-legend-dot" style="background:#10b981;"></div> Active</div>
+                        <div class="tree-legend-item"><div class="tree-legend-dot" style="background:#f59e0b;"></div> Inactive</div>
+                        <div class="tree-legend-item"><div class="tree-legend-dot" style="background:#ef4444;"></div> Deactivated</div>
+                        <div class="tree-legend-item"><div class="tree-legend-dot" style="background:#6b7280;"></div> Resigned</div>
+                    </div>
+                    <div id="treeContent">
+                        <div class="tree-empty"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="employeeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Add Employee</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="employeeForm">
+                        <input type="hidden" id="employeeId">
+                        <div class="row g-3">
+                            <div class="col-md-2">
+                                <label class="form-label">Title</label>
+                                <select class="form-select" id="salutation">
+                                    <option value="">-</option>
+                                    <option value="Mr.">Mr.</option>
+                                    <option value="Mrs.">Mrs.</option>
+                                    <option value="Ms.">Ms.</option>
+                                    <option value="Dr.">Dr.</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">First Name *</label>
+                                <input type="text" class="form-control" id="firstName" required>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">Last Name *</label>
+                                <input type="text" class="form-control" id="lastName" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email (optional)</label>
+                                <input type="email" class="form-control" id="email">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-control" id="phone">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Staff Type *</label>
+                                <select class="form-select" id="staffType" required>
+                                    <option value="MN_STAFF">MN Staff (MN ID)</option>
+                                    <option value="FREELANCER">Freelancer (FL ID)</option>
+                                    <option value="MYNT_REAL">Mynt Staff (MR ID)</option>
+                                </select>
+                                <small class="text-muted">MN Staff: MN10001+ | Freelancer: FL10001+ | Mynt Staff: MR10001+</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Role *</label>
+                                <select class="form-select" id="roleId" required></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Primary Department</label>
+                                <select class="form-select" id="departmentId"></select>
+                                <small class="text-muted">Main department for employee</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Additional Departments</label>
+                                <div id="additionalDepartmentsContainer" style="max-height: 120px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px;">
+                                    <div id="additionalDepartmentsLoading" class="text-muted text-center py-2">
+                                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                                        <span class="ms-2">Loading...</span>
+                                    </div>
+                                </div>
+                                <small class="text-muted"><span id="selectedDepartmentsCount">0</span> additional departments</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Designation</label>
+                                <input type="text" class="form-control" id="designation">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date of Joining *</label>
+                                <input type="date" class="form-control" id="dateOfJoining" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Reporting Manager</label>
+                                <select class="form-select" id="reportingManagerId">
+                                    <option value="">No Reporting Manager</option>
+                                </select>
+                            </div>
+                            <!-- DC Protocol (Jan 2026): Employee ID Edit (VGK4U only) -->
+                            <div class="col-12" id="empCodeEditSection" style="display: none;">
+                                <div class="alert alert-warning mb-0">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>VGK4U Supreme:</strong> You can edit Employee ID below.
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Employee ID</label>
+                                        <input type="text" class="form-control" id="empCode" placeholder="e.g., MN10005">
+                                        <small class="text-muted">MN for Staff, FL for Freelancer, MR for Mynt Real</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12" id="empCodeInfoSection">
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Employee ID</strong> and <strong>Password</strong> are auto-generated.<br>
+                                    Default password = Employee ID (requires change on first login).
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Address</label>
+                                <textarea class="form-control" id="address" rows="2"></textarea>
+                            </div>
+                            
+                            <!-- DC Protocol (Jan 2026): Employment Type Section -->
+                            <div class="col-12 mt-3" id="employmentTypeSection">
+                                <hr class="my-2">
+                                <label class="form-label">
+                                    <i class="fas fa-user-clock me-1"></i>Employment Status
+                                </label>
+                                <small class="text-muted d-block mb-2">
+                                    Track probation period and confirmation status.
+                                </small>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">Employment Type</label>
+                                        <select class="form-select" id="employmentType">
+                                            <option value="probation">Probation</option>
+                                            <option value="confirmed">Confirmed</option>
+                                            <option value="extended_probation">Extended Probation</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Probation Period</label>
+                                        <select class="form-select" id="probationPeriodMonths">
+                                            <option value="3">3 Months</option>
+                                            <option value="6" selected>6 Months</option>
+                                            <option value="9">9 Months</option>
+                                            <option value="12">12 Months</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Probation End Date</label>
+                                        <input type="date" class="form-control" id="probationEndDate">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Confirmation Date</label>
+                                        <input type="date" class="form-control" id="confirmationDate">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Extension Count</label>
+                                        <input type="number" class="form-control" id="probationExtensionCount" min="0" value="0" readonly>
+                                    </div>
+                                    <div class="col-md-4 d-flex align-items-end">
+                                        <button type="button" class="btn btn-outline-warning w-100" onclick="extendProbation()">
+                                            <i class="fas fa-clock me-1"></i>Extend Probation
+                                        </button>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Probation Notes</label>
+                                        <textarea class="form-control" id="probationNotes" rows="2" placeholder="Notes about probation, extensions, or confirmation..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- DC Protocol (Feb 2026): Call Tracking (Quality Test) -->
+                            <div class="col-12 mt-3" id="callTrackingSection">
+                                <hr class="my-2">
+                                <div class="form-check form-switch d-flex align-items-center gap-2">
+                                    <input class="form-check-input" type="checkbox" id="callTrackingEnabled" role="switch"
+                                           onchange="autoSaveCallTracking(this)">
+                                    <label class="form-check-label" for="callTrackingEnabled">
+                                        <i class="fas fa-phone-alt me-1"></i><strong>Quality Test to be Tracked</strong>
+                                    </label>
+                                    <span id="callTrackingSaveStatus" style="font-size:12px;font-weight:500;"></span>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    When enabled, this employee's call history will be synced and tracked from their device for quality monitoring and CRM matching.
+                                    <strong style="color:#0ea5e9;">Changes save immediately.</strong>
+                                </small>
+                            </div>
+                            
+                            <!-- DC Protocol (Mar 2026): Team Tag Assignment -->
+                            <div class="col-12 mt-3" id="teamTagSection">
+                                <hr class="my-2">
+                                <label class="form-label">
+                                    <i class="fas fa-layer-group me-1"></i><strong>Team Assignment</strong>
+                                </label>
+                                <select class="form-select" id="teamTag" style="max-width:280px;">
+                                    <option value="">-- No Team --</option>
+                                    <option value="team_a">Team A</option>
+                                    <option value="team_b">Team B</option>
+                                    <option value="team_c">Team C</option>
+                                </select>
+                                <small class="text-muted d-block mt-1">
+                                    Assign to a team for compliance tracking. Used by Key Leadership for team-wise performance monitoring.
+                                </small>
+                            </div>
+
+                            <!-- DC Protocol (Dec 15, 2025): Company Assignment Section -->
+                            <div class="col-12 mt-3" id="companyAssignmentSection">
+                                <hr class="my-2">
+                                <label class="form-label">
+                                    <i class="fas fa-building me-1"></i>Company Assignment
+                                </label>
+                                <small class="text-muted d-block mb-2">
+                                    Assign base company (HR/ownership) and data working companies (multi-company access like Accounts).
+                                </small>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Base Company</label>
+                                        <select class="form-select" id="baseCompanyId">
+                                            <option value="">-- Select Base Company --</option>
+                                        </select>
+                                        <small class="text-muted">Primary/home company for HR purposes</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Data Working Companies</label>
+                                        <div id="dataCompaniesContainer" style="max-height: 150px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px;">
+                                            <div id="dataCompaniesLoading" class="text-muted text-center py-2">
+                                                <div class="spinner-border spinner-border-sm" role="status"></div>
+                                                <span class="ms-2">Loading companies...</span>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted"><span id="selectedCompaniesCount">0</span> companies selected</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- [DC-PARTNER-CONTACTS-001] Link staff to partner showroom for dual login -->
+                            <div class="col-12 mt-3">
+                                <hr class="my-2">
+                                <label class="form-label"><i class="fas fa-store me-1"></i>Linked Partner Showroom <small class="text-muted">(for portal login)</small></label>
+                                <select class="form-select" id="linkedPartnerId">
+                                    <option value="">-- None (no showroom link) --</option>
+                                </select>
+                                <small class="text-muted">When set, this staff member can log into that partner's portal using their mobile number + password.</small>
+                            </div>
+
+                            <!-- DC Protocol (Dec 06, 2025): Module Assignment Section -->
+                            <div class="col-12 mt-3" id="moduleAssignmentSection">
+                                <hr class="my-2">
+                                <label class="form-label">
+                                    <i class="fas fa-puzzle-piece me-1"></i>System Module Access
+                                </label>
+                                <small class="text-muted d-block mb-2">
+                                    Select which system modules this employee can access. Leave unchecked for no access.
+                                </small>
+                                <div id="moduleLoadingSpinner" class="text-center py-3" style="display: none;">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <span class="ms-2 text-muted">Loading modules...</span>
+                                </div>
+                                <div id="moduleCategoryContainer" style="max-height: 300px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;">
+                                    <!-- Module checkboxes will be inserted here by category -->
+                                </div>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <small class="text-muted"><span id="selectedModulesCount">0</span> modules selected</small>
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="selectAllModules()">Select All</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearAllModules()">Clear All</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEmployee()">Save Employee</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DC: Delete Employee Modal (VGK Supreme Only) -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Delete Employee</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <strong>Warning!</strong> This action will delete the employee and all related data.
+                    </div>
+                    <p><strong>Employee:</strong> <span id="deleteEmpName"></span></p>
+                    <p><strong>Employee ID:</strong> <span id="deleteEmpCode"></span></p>
+                    <input type="hidden" id="deleteEmpId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Delete Type:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="deleteType" id="softDelete" value="soft" checked>
+                            <label class="form-check-label" for="softDelete">
+                                <strong>Soft Delete</strong> - Can be restored later
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="deleteType" id="hardDelete" value="hard">
+                            <label class="form-check-label text-danger" for="hardDelete">
+                                <strong>Hard Delete</strong> - Permanent removal (cannot be undone)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Type <strong>DELETE</strong> to confirm:</label>
+                        <input type="text" class="form-control" id="deleteConfirmText" placeholder="Type DELETE">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDelete()" id="confirmDeleteBtn">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- DC: Status Change Modal (Dec 2025) -->
+    <div class="modal fade" id="statusChangeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header" id="statusModalHeader">
+                    <h5 class="modal-title" id="statusModalTitle">Change Employee Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert" id="statusModalAlert"></div>
+                    <p><strong>Employee:</strong> <span id="statusEmpName"></span></p>
+                    <p><strong>Employee ID:</strong> <span id="statusEmpCode"></span></p>
+                    <p><strong>Current Status:</strong> <span id="statusEmpCurrent" class="badge"></span></p>
+                    <input type="hidden" id="statusEmpId">
+                    <input type="hidden" id="statusAction">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Status Change <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="statusReason" rows="3" placeholder="Enter reason (minimum 10 characters)" required></textarea>
+                        <small class="text-muted">Please provide a detailed reason for this status change.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Additional Notes (Optional)</label>
+                        <textarea class="form-control" id="statusNotes" rows="2" placeholder="Any additional notes..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Type <strong>CONFIRM</strong> to proceed:</label>
+                        <input type="text" class="form-control" id="statusConfirmText" placeholder="Type CONFIRM">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn" id="statusConfirmBtn" onclick="confirmStatusChange()">
+                        <i class="fas fa-check me-1"></i>Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff_universal_filter.js?v=1764165148"></script>
+    <script>
+        let allEmployees = [];
+        let allRoles = [];
+        let allDepartments = [];
+        let empSort = { col: 'employee_code', dir: 'asc' };
+        let allModules = [];  // DC Protocol (Dec 06, 2025): Module catalog cache
+        let modulesByCategory = {};  // DC: Modules grouped by category
+        let allCompanies = [];  // DC Protocol (Dec 15, 2025): Company catalog cache
+        let modal;
+        let deleteModal;  // DC: Delete modal instance
+        let statusChangeModal;  // DC: Status change modal instance (Dec 2025)
+        let currentUserRole = null;  // DC: Store current user role for permission checks
+        let currentUserRoleCode = null;  // DC Protocol (Jan 2026): Store role code for VGK4U checks
+        
+        // DC_UNIVERSAL_FILTER_001: Universal filter variables
+        let universalFilter = null;
+        let universalFilterReady = false;
+        const API_BASE = '/api/v1';
+        
+        // DC: Role-based access control constants
+        const ADD_EDIT_ROLES = ["vgk4u", "hr", "ea"];  // VGK4U Supreme, HR and EA can add/edit employees
+        const PASSWORD_RESET_ROLES = ["vgk4u", "key_leadership", "hr", "ea"];  // DC: Roles that can reset employee passwords
+        const DELETE_ROLES = ["vgk4u"];  // DC: Only VGK Supreme can delete employees
+        const STATUS_CHANGE_ROLES = ["vgk4u", "key_leadership", "hr", "ea"];  // DC: Roles that can deactivate/reactivate employees (Dec 2025)
+        const PROTECTED_EMPLOYEE_CODES = ["MR10001"];  // DC: Protected employees that cannot be deactivated/resigned
+        let currentUserId = null;  // DC: Store current user ID for self-reset check
+        let currentUserHierarchyLevel = 0;  // DC: Store current user hierarchy level for can_manage check
+        
+        // DC_UNIVERSAL_FILTER_001: Build filter payload from universal filter or fallback
+        function buildFilterPayload() {
+            const searchInput = document.getElementById('searchInput');
+            const searchText = searchInput ? searchInput.value : '';
+            
+            if (universalFilterReady && universalFilter && universalFilter.isReady && !universalFilter.initFailed) {
+                try {
+                    const filters = universalFilter.getFilters();
+                    filters.search = filters.search || searchText;
+                    return filters;
+                } catch (e) {
+                    console.warn('[DC] Error getting universal filter values:', e);
+                }
+            }
+            const fallbackDept = document.getElementById('fallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('fallbackStaffTypeFilter');
+            const fallbackEmployee = document.getElementById('fallbackEmployeeSearch');
+            return {
+                company_id: null,
+                staff_type: fallbackStaff ? (fallbackStaff.value || null) : null,
+                department_id: fallbackDept ? (fallbackDept.value || null) : null,
+                employee_id: null,
+                employee: fallbackEmployee ? (fallbackEmployee.value || null) : null,
+                search: searchText || null
+            };
+        }
+        
+        // DC_UNIVERSAL_FILTER_001: Load departments for fallback filter
+        async function loadFallbackDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/departments`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('fallbackDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading fallback departments:', error);
+            }
+        }
+        
+        // DC_UNIVERSAL_FILTER_001: Hide fallback filters when universal filter is ready
+        function hideFallbackFilters() {
+            const fallback = document.getElementById('fallbackFiltersContainer');
+            if (fallback) fallback.style.display = 'none';
+        }
+        
+        let employeeSearchTimeout = null;
+        function debounceEmployeeSearch() {
+            if (employeeSearchTimeout) clearTimeout(employeeSearchTimeout);
+            employeeSearchTimeout = setTimeout(() => {
+                filterEmployees();
+            }, 300);
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Employee Management', 'fas fa-users');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            modal = new bootstrap.Modal(document.getElementById('employeeModal'));
+            deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            statusChangeModal = new bootstrap.Modal(document.getElementById('statusChangeModal'));
+            
+            // DC Protocol: WCAG 2.1 AA Accessibility Fix - Proper aria-hidden management
+            // Prevents "Blocked aria-hidden on element with focused descendant" warning
+            // Uses 'hidden.bs.modal' (NOT 'hide.bs.modal') to ensure focus has fully transitioned
+            const deleteModalEl = document.getElementById('deleteModal');
+            const statusChangeModalEl = document.getElementById('statusChangeModal');
+            const employeeModalEl = document.getElementById('employeeModal');
+            
+            // Fix aria-hidden for all modals (DC: Focus management)
+            [deleteModalEl, statusChangeModalEl, employeeModalEl].forEach(modalEl => {
+                if (modalEl) {
+                    // When modal is fully shown - remove aria-hidden so screen readers can access content
+                    modalEl.addEventListener('shown.bs.modal', function() {
+                        this.removeAttribute('aria-hidden');
+                    });
+                    // When modal is FULLY hidden (not during hide) - restore aria-hidden safely
+                    // 'hidden.bs.modal' fires AFTER focus has moved, preventing the warning
+                    modalEl.addEventListener('hidden.bs.modal', function() {
+                        this.setAttribute('aria-hidden', 'true');
+                    });
+                }
+            });
+            
+            // DC: Get current user role, ID, and hierarchy level from localStorage (set during login)
+            const userDataStr = localStorage.getItem('staff_user');
+            if (userDataStr) {
+                const userData = JSON.parse(userDataStr);
+                currentUserRole = userData.role_code || userData.role?.role_code;
+                currentUserRoleCode = (userData.role_code || userData.role?.role_code || '').toLowerCase();  // DC Protocol (Jan 2026)
+                currentUserId = userData.id;  // DC: Store for self-reset check
+                currentUserHierarchyLevel = userData.hierarchy_level || userData.role?.hierarchy_level || 0;  // DC: Store for can_manage check
+            }
+            
+            // DC: Hide Add button if not HR
+            applyRoleBasedUI();
+            
+            // DC_UNIVERSAL_FILTER_001: Load fallback departments first
+            loadFallbackDepartments();
+            
+            // DC_UNIVERSAL_FILTER_001: Initialize universal filter
+            if (typeof DCUniversalFilter !== 'undefined') {
+                universalFilter = new DCUniversalFilter('universalFilterContainer', {
+                    showCompany: false,
+                    showStaffType: true,
+                    showDepartment: true,
+                    showEmployee: true,
+                    showSearch: false,
+                    pageKey: 'staff_employees',
+                    onFilterChange: () => {
+                        if (universalFilterReady) filterEmployees();
+                    }
+                });
+                
+                try {
+                    const success = await Promise.race([
+                        universalFilter.waitForReady(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                    ]);
+                    await new Promise(r => setTimeout(r, 50));
+                    if (success === true && 
+                        universalFilter.isReady === true && 
+                        universalFilter.initFailed === false &&
+                        document.getElementById('universalFilterContainer')?.children.length > 0) {
+                        universalFilterReady = true;
+                        hideFallbackFilters();
+                        console.log('[DC] Universal filter ready - using enhanced filters');
+                    } else {
+                        console.warn('[DC] Universal filter not fully ready, keeping fallback');
+                        universalFilterReady = false;
+                    }
+                } catch (e) {
+                    console.warn('[DC] Universal filter initialization failed or timed out, using fallback:', e);
+                    universalFilterReady = false;
+                }
+            } else {
+                console.warn('[DC] DCUniversalFilter not available - using fallback filters');
+            }
+            
+            await loadRoles();
+            await loadDepartments();
+            await loadEmployees();
+        });
+        
+        function applyRoleBasedUI() {
+            // DC: VGK4U Supreme and HR can add employees
+            const addBtn = document.querySelector('.card-header .btn-primary');
+            if (addBtn && !ADD_EDIT_ROLES.includes(currentUserRole)) {
+                addBtn.style.display = 'none';
+            }
+        }
+        
+        function canEditEmployees() {
+            // DC: VGK4U Supreme and HR can edit employees
+            return ADD_EDIT_ROLES.includes(currentUserRole);
+        }
+        
+        function canResetPasswords() {
+            // DC: VGK4U, Key Leadership, HR, and EA can reset passwords
+            return PASSWORD_RESET_ROLES.includes(currentUserRole);
+        }
+        
+        function canResetPasswordFor(emp) {
+            // DC: Check if current user can reset password for this employee
+            // Allow if: (1) resetting own password, OR
+            //           (2) user is in PASSWORD_RESET_ROLES AND has higher hierarchy level
+            if (emp.id === currentUserId) return true;  // Self-reset always allowed
+            
+            if (!PASSWORD_RESET_ROLES.includes(currentUserRole)) return false;
+            
+            // DC: Check hierarchy level - can only reset password for lower hierarchy employees
+            const empHierarchyLevel = emp.role?.hierarchy_level || emp.hierarchy_level || 0;
+            return currentUserHierarchyLevel > empHierarchyLevel;
+        }
+        
+        function canDeleteEmployees() {
+            // DC: Only VGK Supreme can delete employees
+            return DELETE_ROLES.includes(currentUserRole);
+        }
+        
+        function canDeleteEmployee(emp) {
+            // DC: Check if current user can delete this employee
+            // Cannot delete: (1) MR10001 (protected admin), (2) yourself
+            if (emp.employee_code === "MR10001") return false;
+            if (emp.id === currentUserId) return false;
+            return canDeleteEmployees();
+        }
+        
+        // DC: Status change permission functions (Dec 2025)
+        function canChangeEmployeeStatus() {
+            return STATUS_CHANGE_ROLES.includes(currentUserRole);
+        }
+        
+        function canChangeStatusFor(emp) {
+            // Protected employees cannot have status changed
+            if (PROTECTED_EMPLOYEE_CODES.includes(emp.employee_code)) return false;
+            // Cannot change own status
+            if (emp.id === currentUserId) return false;
+            // Must have status change role
+            if (!STATUS_CHANGE_ROLES.includes(currentUserRole)) return false;
+            // Check hierarchy level - can only change status for lower hierarchy employees
+            const empHierarchyLevel = emp.role?.hierarchy_level || emp.hierarchy_level || 0;
+            return currentUserHierarchyLevel > empHierarchyLevel;
+        }
+        
+        function getStatusBadgeClass(status) {
+            switch(status) {
+                case 'active': return 'badge-active';
+                case 'inactive': return 'badge-inactive';
+                case 'deactivated': return 'badge-deactivated';
+                case 'resigned': return 'badge-resigned';
+                default: return 'badge-inactive';
+            }
+        }
+        
+        function getStatusLabel(status) {
+            switch(status) {
+                case 'active': return 'Active';
+                case 'inactive': return 'Inactive';
+                case 'deactivated': return 'Deactivated';
+                case 'resigned': return 'Resigned';
+                default: return status || 'Unknown';
+            }
+        }
+        
+        function formatAssignedCompanies(dataCompanies) {
+            if (!dataCompanies || !Array.isArray(dataCompanies) || dataCompanies.length === 0) {
+                return '-';
+            }
+            // Show company names or IDs as badges
+            return dataCompanies.map(company => {
+                const name = company.company_name || company.name || `ID: ${company.company_id || company.id || company}`;
+                return `<span class="badge bg-secondary me-1">${name}</span>`;
+            }).join('');
+        }
+        
+        async function loadRoles() {
+            try {
+                const response = await staffFetch('/api/v1/staff/roles');
+                if (response.ok) {
+                    const data = await response.json();
+                    allRoles = data.roles || data || [];
+                    const roleSelect = document.getElementById('roleId');
+                    const roleFilter = document.getElementById('roleFilter');
+                    roleSelect.innerHTML = '<option value="">Select Role</option>';
+                    allRoles.forEach(role => {
+                        roleSelect.innerHTML += `<option value="${role.id}">${role.role_name || role.name}</option>`;
+                        roleFilter.innerHTML += `<option value="${role.id}">${role.role_name || role.name}</option>`;
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading roles:', error);
+            }
+        }
+        
+        async function loadDepartments() {
+            try {
+                const response = await staffFetch('/api/v1/staff/departments');
+                if (response.ok) {
+                    const data = await response.json();
+                    allDepartments = data.departments || data || [];
+                    const deptSelect = document.getElementById('departmentId');
+                    const deptFilter = document.getElementById('deptFilter');
+                    deptSelect.innerHTML = '<option value="">No Department</option>';
+                    allDepartments.forEach(dept => {
+                        deptSelect.innerHTML += `<option value="${dept.id}">${dept.name}</option>`;
+                        deptFilter.innerHTML += `<option value="${dept.id}">${dept.name}</option>`;
+                    });
+                    // Populate additional departments checkboxes
+                    renderAdditionalDepartmentsCheckboxes();
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading departments:', error);
+            }
+        }
+        
+        // DC Protocol (Dec 21, 2025): Render additional departments checkboxes
+        function renderAdditionalDepartmentsCheckboxes(selectedData = []) {
+            const container = document.getElementById('additionalDepartmentsContainer');
+            
+            // DC: Handle both array of IDs and array of objects
+            const selectedIds = (selectedData || []).map(item => {
+                if (typeof item === 'object' && item !== null) {
+                    return parseInt(item.department_id || item.id);
+                }
+                return parseInt(item);
+            });
+            const selectedSet = new Set(selectedIds);
+            
+            if (allDepartments.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center py-2">No departments available</div>';
+                updateSelectedDepartmentsCount();
+                return;
+            }
+            
+            let html = '';
+            allDepartments.forEach(dept => {
+                const isChecked = selectedSet.has(dept.id) ? 'checked' : '';
+                html += `
+                    <div style="display: flex; align-items: center; padding: 4px 0;">
+                        <input type="checkbox" class="additional-dept-checkbox" 
+                            value="${dept.id}" id="additionalDept_${dept.id}" ${isChecked}
+                            onchange="updateSelectedDepartmentsCount()"
+                            style="width: 16px; height: 16px; margin-right: 8px; cursor: pointer;">
+                        <label for="additionalDept_${dept.id}" style="cursor: pointer; margin: 0; font-size: 13px;">
+                            ${dept.name}
+                        </label>
+                    </div>`;
+            });
+            container.innerHTML = html;
+            updateSelectedDepartmentsCount();
+        }
+        
+        function updateSelectedDepartmentsCount() {
+            const checkboxes = document.querySelectorAll('.additional-dept-checkbox:checked');
+            document.getElementById('selectedDepartmentsCount').textContent = checkboxes.length;
+        }
+        
+        function getSelectedAdditionalDepartments() {
+            const checkboxes = document.querySelectorAll('.additional-dept-checkbox:checked');
+            return Array.from(checkboxes).map(cb => parseInt(cb.value));
+        }
+        
+        // DC Protocol (Dec 06, 2025): Module Management Functions
+        async function loadModuleCatalog() {
+            const container = document.getElementById('moduleCategoryContainer');
+            const spinner = document.getElementById('moduleLoadingSpinner');
+            
+            // Show spinner
+            spinner.style.display = 'block';
+            container.innerHTML = '';
+            
+            try {
+                const response = await staffFetch('/api/v1/staff/modules/master');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    allModules = data.modules || [];
+                    modulesByCategory = data.by_category || {};
+                    renderModuleCheckboxes();
+                } else if (response.status === 403) {
+                    // User doesn't have access to module management
+                    container.innerHTML = '<div class="text-muted text-center py-3"><i class="fas fa-lock me-2"></i>Module assignment not available for your role</div>';
+                } else {
+                    container.innerHTML = '<div class="text-danger text-center py-3">Error loading modules</div>';
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading modules:', error);
+                container.innerHTML = '<div class="text-danger text-center py-3">Error loading modules</div>';
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+        
+        function renderModuleCheckboxes(selectedModuleIds = []) {
+            const container = document.getElementById('moduleCategoryContainer');
+            const selectedSet = new Set(selectedModuleIds);
+            
+            if (Object.keys(modulesByCategory).length === 0) {
+                container.innerHTML = '<div class="text-muted text-center py-3">No modules available</div>';
+                return;
+            }
+            
+            const categoryLabels = {
+                'core': { label: 'Core Modules', icon: 'fa-home', color: '#6366f1' },
+                'hr': { label: 'HR & Administration', icon: 'fa-users-cog', color: '#10b981' },
+                'admin': { label: 'Admin Tools', icon: 'fa-cogs', color: '#f59e0b' },
+                'accounts': { label: 'Accounts & Finance', icon: 'fa-calculator', color: '#3b82f6' },
+                'manufacturing': { label: 'Manufacturing & Inventory', icon: 'fa-industry', color: '#8b5cf6' },
+                'partners': { label: 'Partner Management', icon: 'fa-handshake', color: '#ec4899' }
+            };
+            
+            let html = '';
+            for (const [category, modules] of Object.entries(modulesByCategory)) {
+                const catInfo = categoryLabels[category] || { label: category, icon: 'fa-folder', color: '#6b7280' };
+                html += `
+                    <div class="module-category mb-3">
+                        <div class="d-flex align-items-center mb-2" style="cursor: pointer;" onclick="toggleCategory('${category}')">
+                            <i class="fas ${catInfo.icon} me-2" style="color: ${catInfo.color}"></i>
+                            <strong>${catInfo.label}</strong>
+                            <span class="badge bg-secondary ms-2">${modules.length}</span>
+                            <i class="fas fa-chevron-down ms-auto category-chevron" id="chevron-${category}"></i>
+                        </div>
+                        <div class="category-modules ps-4" id="cat-${category}">
+                            ${modules.map(m => `
+                                <div class="form-check">
+                                    <input class="form-check-input module-checkbox" type="checkbox" 
+                                           id="mod-${m.id}" value="${m.id}" 
+                                           ${selectedSet.has(m.id) ? 'checked' : ''}
+                                           onchange="updateModuleCount()">
+                                    <label class="form-check-label" for="mod-${m.id}">
+                                        ${m.module_name}
+                                        <small class="text-muted">(${m.module_key})</small>
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+            updateModuleCount();
+        }
+        
+        function toggleCategory(category) {
+            const container = document.getElementById('cat-' + category);
+            const chevron = document.getElementById('chevron-' + category);
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                chevron.classList.remove('fa-chevron-right');
+                chevron.classList.add('fa-chevron-down');
+            } else {
+                container.style.display = 'none';
+                chevron.classList.remove('fa-chevron-down');
+                chevron.classList.add('fa-chevron-right');
+            }
+        }
+        
+        function getSelectedModuleIds() {
+            const checkboxes = document.querySelectorAll('.module-checkbox:checked');
+            return Array.from(checkboxes).map(cb => parseInt(cb.value));
+        }
+        
+        function updateModuleCount() {
+            const count = document.querySelectorAll('.module-checkbox:checked').length;
+            document.getElementById('selectedModulesCount').textContent = count;
+        }
+        
+        function selectAllModules() {
+            document.querySelectorAll('.module-checkbox').forEach(cb => cb.checked = true);
+            updateModuleCount();
+        }
+        
+        function clearAllModules() {
+            document.querySelectorAll('.module-checkbox').forEach(cb => cb.checked = false);
+            updateModuleCount();
+        }
+        
+        async function loadEmployeeModules(employeeId) {
+            try {
+                const response = await staffFetch(`/api/v1/staff/employees/${employeeId}/modules`);
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.module_ids || [];
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return [];
+                console.error('Error loading employee modules:', error);
+            }
+            return [];
+        }
+        
+        // DC Protocol (Dec 15, 2025): Load companies for assignment
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/accounts/companies`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allCompanies = data.companies || data || [];
+                    // Populate base company dropdown
+                    const baseCompanySelect = document.getElementById('baseCompanyId');
+                    baseCompanySelect.innerHTML = '<option value="">-- Select Base Company --</option>';
+                    allCompanies.forEach(company => {
+                        const option = document.createElement('option');
+                        option.value = company.id;
+                        option.textContent = `${company.company_code} - ${company.company_name}`;
+                        baseCompanySelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading companies:', error);
+            }
+        }
+        
+        // DC Protocol (Dec 15, 2025): Render data company checkboxes
+        function renderDataCompanyCheckboxes(selectedData) {
+            const container = document.getElementById('dataCompaniesContainer');
+            if (!container) return;
+            
+            if (allCompanies.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center py-2">No companies available</div>';
+                return;
+            }
+            
+            // DC: Handle both array of IDs and array of objects
+            const selectedIds = (selectedData || []).map(item => {
+                if (typeof item === 'object' && item !== null) {
+                    return parseInt(item.company_id || item.id);
+                }
+                return parseInt(item);
+            });
+            
+            container.innerHTML = allCompanies.map(company => `
+                <div style="display: flex; align-items: center; padding: 4px 0;">
+                    <input type="checkbox" class="data-company-checkbox" 
+                           value="${company.id}" id="dataCompany_${company.id}"
+                           ${selectedIds.includes(company.id) ? 'checked' : ''}
+                           onchange="updateSelectedCompaniesCount()"
+                           style="width: 16px; height: 16px; margin-right: 8px; cursor: pointer;">
+                    <label for="dataCompany_${company.id}" style="cursor: pointer; margin: 0; font-size: 13px;">
+                        ${company.company_code} - ${company.company_name}
+                    </label>
+                </div>
+            `).join('');
+            
+            updateSelectedCompaniesCount();
+        }
+        
+        // DC Protocol (Dec 15, 2025): Get selected data company IDs
+        function getSelectedDataCompanyIds() {
+            const checkboxes = document.querySelectorAll('.data-company-checkbox:checked');
+            return Array.from(checkboxes).map(cb => parseInt(cb.value));
+        }
+        
+        // DC Protocol (Dec 15, 2025): Update selected companies count
+        function updateSelectedCompaniesCount() {
+            const count = document.querySelectorAll('.data-company-checkbox:checked').length;
+            const countEl = document.getElementById('selectedCompaniesCount');
+            if (countEl) countEl.textContent = count;
+        }
+        
+        async function loadEmployees() {
+            try {
+                const response = await staffFetch('/api/v1/staff/employees');
+                if (response.ok) {
+                    const data = await response.json();
+                    allEmployees = data.employees || data || [];
+                    updateSortIcons();
+                    renderEmployees(applyEmpSort(allEmployees));
+                    populateReportingManagerDropdown();
+                    updateExecDashboard();
+                    if (currentView === 'tree') renderTree();
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading employees:', error);
+                document.getElementById('employeesTable').innerHTML = `
+                    <tr><td colspan="8" class="text-center py-4 text-danger">Error loading employees</td></tr>
+                `;
+            }
+        }
+        
+        function populateReportingManagerDropdown() {
+            const managerSelect = document.getElementById('reportingManagerId');
+            managerSelect.innerHTML = '<option value="">No Reporting Manager</option>';
+            allEmployees
+                .filter(emp => emp.is_active)
+                .forEach(emp => {
+                    managerSelect.innerHTML += `<option value="${emp.id}">${emp.full_name} (${emp.employee_code})</option>`;
+                });
+        }
+        
+        function renderEmployees(employees) {
+            const tbody = document.getElementById('employeesTable');
+            if (employees.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="12">
+                        <div class="empty-state">
+                            <i class="fas fa-users"></i>
+                            <p>No employees found</p>
+                        </div>
+                    </td></tr>
+                `;
+                return;
+            }
+            
+            const showActions = canEditEmployees();
+            
+            tbody.innerHTML = employees.map(emp => {
+                const canReset = canResetPasswordFor(emp);
+                const canDelete = canDeleteEmployee(emp);
+                const canStatusChange = canChangeStatusFor(emp);
+                const isSelf = emp.id === currentUserId;
+                const empStatus = emp.status || (emp.is_active ? 'active' : 'inactive');
+                const statusBadgeClass = getStatusBadgeClass(empStatus);
+                const statusLabel = getStatusLabel(empStatus);
+                
+                // Determine which status control buttons to show
+                let statusControlButtons = '';
+                if (canStatusChange) {
+                    if (empStatus === 'active' || empStatus === 'inactive') {
+                        // Can deactivate or mark resigned
+                        statusControlButtons = `
+                            <button class="btn btn-outline-warning btn-sm" onclick="openStatusModal(${emp.id}, '${emp.employee_code}', '${emp.full_name.replace(/'/g, "\\'")}', '${empStatus}', 'deactivate')" title="Deactivate Employee">
+                                <i class="fas fa-pause-circle"></i>
+                            </button>
+                            <button class="btn btn-outline-dark btn-sm" onclick="openStatusModal(${emp.id}, '${emp.employee_code}', '${emp.full_name.replace(/'/g, "\\'")}', '${empStatus}', 'resigned')" title="Mark as Resigned (Permanent)">
+                                <i class="fas fa-user-slash"></i>
+                            </button>
+                        `;
+                    } else if (empStatus === 'deactivated') {
+                        // Can reactivate or mark resigned
+                        statusControlButtons = `
+                            <button class="btn btn-outline-success btn-sm" onclick="openStatusModal(${emp.id}, '${emp.employee_code}', '${emp.full_name.replace(/'/g, "\\'")}', '${empStatus}', 'reactivate')" title="Reactivate Employee">
+                                <i class="fas fa-play-circle"></i>
+                            </button>
+                            <button class="btn btn-outline-dark btn-sm" onclick="openStatusModal(${emp.id}, '${emp.employee_code}', '${emp.full_name.replace(/'/g, "\\'")}', '${empStatus}', 'resigned')" title="Mark as Resigned (Permanent)">
+                                <i class="fas fa-user-slash"></i>
+                            </button>
+                        `;
+                    } else if (empStatus === 'resigned') {
+                        // Resigned is permanent - no actions available
+                        statusControlButtons = '<span class="text-muted small">Permanent</span>';
+                    }
+                } else {
+                    statusControlButtons = '<span class="text-muted">-</span>';
+                }
+                
+                return `
+                <tr>
+                    <td><strong>${emp.employee_code || '-'}</strong></td>
+                    <td>${emp.full_name}</td>
+                    <td>${emp.email || '-'}</td>
+                    <td>${emp.role_name || '-'}</td>
+                    <td>${emp.base_company_name || '-'}</td>
+                    <td>${formatAssignedCompanies(emp.data_companies)}</td>
+                    <td>${emp.department_name || '-'}</td>
+                    <td>${emp.reporting_manager_name || '-'}</td>
+                    <td>
+                        <span class="badge ${statusBadgeClass}">
+                            ${statusLabel}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            ${statusControlButtons}
+                        </div>
+                    </td>
+                    <td>
+                        ${canReset ? `
+                        <button class="btn btn-outline-warning btn-sm" 
+                                onclick="resetPassword(${emp.id}, '${emp.employee_code}', '${emp.full_name.replace(/'/g, "\\'")}', ${isSelf})" 
+                                title="${isSelf ? 'Reset Your Password' : 'Reset Password'}">
+                            <i class="fas fa-key"></i>
+                            ${isSelf ? '<small class="ms-1">Self</small>' : ''}
+                        </button>
+                        ` : '<span class="text-muted">-</span>'}
+                    </td>
+                    <td>
+                        ${showActions ? `
+                        <div class="action-btns">
+                            <button class="btn btn-outline-primary btn-sm" onclick="editEmployee(${emp.id})" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            ${canDelete ? `
+                            <button class="btn btn-danger btn-sm" onclick="openDeleteModal(${emp.id}, '${emp.employee_code}', '${emp.full_name.replace(/'/g, "\\'")}')" title="Delete Employee">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            ` : ''}
+                        </div>
+                        ` : '<span class="text-muted">View Only</span>'}
+                    </td>
+                </tr>
+            `}).join('');
+        }
+        
+        function filterEmployees() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const roleId = document.getElementById('roleFilter').value;
+            const deptId = document.getElementById('deptFilter').value;
+            const staffType = document.getElementById('staffTypeFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            
+            let filtered = allEmployees.filter(emp => {
+                const matchSearch = !search || 
+                    emp.full_name.toLowerCase().includes(search) ||
+                    (emp.email && emp.email.toLowerCase().includes(search)) ||
+                    (emp.employee_code && emp.employee_code.toLowerCase().includes(search));
+                const matchRole = !roleId || emp.role_id == roleId;
+                const matchDept = !deptId || emp.department_id == deptId;
+                
+                // DC_STAFF_TYPE_FILTER_001: Staff Type filter (Dec 05, 2025)
+                const matchStaffType = !staffType || emp.staff_type === staffType;
+                
+                // DC: Enhanced status filtering (Dec 2025)
+                const empStatus = emp.status || (emp.is_active ? 'active' : 'inactive');
+                const matchStatus = !status || empStatus === status;
+                
+                return matchSearch && matchRole && matchDept && matchStaffType && matchStatus;
+            });
+            
+            const sorted = applyEmpSort(filtered);
+            renderEmployees(sorted);
+        }
+
+        function sortByCol(col) {
+            if (empSort.col === col) {
+                empSort.dir = empSort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                empSort.col = col;
+                empSort.dir = 'asc';
+            }
+            updateSortIcons();
+            filterEmployees();
+        }
+
+        function applyEmpSort(list) {
+            const col = empSort.col;
+            const dir = empSort.dir === 'asc' ? 1 : -1;
+            return [...list].sort((a, b) => {
+                let av = a[col] || '';
+                let bv = b[col] || '';
+                // Numeric sort for employee_code (MR10031 → numeric part)
+                if (col === 'employee_code') {
+                    const an = parseInt((av+'').replace(/\D/g,'')) || 0;
+                    const bn = parseInt((bv+'').replace(/\D/g,'')) || 0;
+                    return (an - bn) * dir;
+                }
+                // status: active first by default
+                if (col === 'status') {
+                    const order = {active:0, inactive:1, resigned:2, terminated:3};
+                    const ao = order[av] ?? 9;
+                    const bo = order[bv] ?? 9;
+                    if (ao !== bo) return (ao - bo) * dir;
+                }
+                av = (av+'').toLowerCase();
+                bv = (bv+'').toLowerCase();
+                return av < bv ? -dir : av > bv ? dir : 0;
+            });
+        }
+
+        /* ===================================================
+           EXECUTIVE DASHBOARD
+        =================================================== */
+        function updateExecDashboard() {
+            const employees = allEmployees;
+            const total = employees.length;
+            const active   = employees.filter(e => (e.status || (e.is_active ? 'active' : 'inactive')) === 'active').length;
+            const inactive = employees.filter(e => (e.status || (e.is_active ? 'active' : 'inactive')) === 'inactive').length;
+            const deact    = employees.filter(e => (e.status || '') === 'deactivated').length;
+            const resigned = employees.filter(e => (e.status || '') === 'resigned').length;
+            const roots    = employees.filter(e => !e.reporting_manager_id && !e.reports_to_id).length;
+
+            const deptCounts = {};
+            employees.forEach(e => {
+                const d = e.department_name || 'Unassigned';
+                deptCounts[d] = (deptCounts[d] || 0) + 1;
+            });
+            const uniqueDepts = Object.keys(deptCounts).filter(d => d !== 'Unassigned').length;
+            const topDept = Object.entries(deptCounts).sort((a,b) => b[1]-a[1])[0];
+
+            document.getElementById('kpiTotal').textContent    = total;
+            document.getElementById('kpiTotalSub').textContent = total === 1 ? '1 employee' : total + ' employees';
+            document.getElementById('kpiActive').textContent   = active;
+            document.getElementById('kpiActivePct').textContent = total > 0 ? Math.round(active/total*100) + '% of total' : '—';
+            document.getElementById('kpiInactive').textContent  = inactive;
+            document.getElementById('kpiDeact').textContent     = deact;
+            document.getElementById('kpiResigned').textContent  = resigned;
+            document.getElementById('kpiDepts').textContent     = uniqueDepts;
+            document.getElementById('kpiTopDept').textContent   = topDept ? topDept[0] + ' (' + topDept[1] + ')' : '—';
+            document.getElementById('kpiRoot').textContent      = roots;
+        }
+
+        /* ===================================================
+           VIEW SWITCHER (List / Tree)
+        =================================================== */
+        let currentView = 'list';
+        function switchView(view) {
+            currentView = view;
+            const isTree = view === 'tree';
+            document.getElementById('listViewContainer').style.display = isTree ? 'none' : '';
+            document.getElementById('treeViewContainer').style.display = isTree ? '' : 'none';
+            // Hide/show filters bar (not needed in tree view)
+            document.querySelectorAll('.filters-bar').forEach(el => {
+                el.style.display = isTree ? 'none' : '';
+            });
+            document.getElementById('universalFilterContainer').style.display = isTree ? 'none' : '';
+            document.getElementById('fallbackFiltersContainer').style.display = isTree ? 'none' : '';
+            document.getElementById('btnListView').classList.toggle('active', !isTree);
+            document.getElementById('btnTreeView').classList.toggle('active', isTree);
+            if (isTree) renderTree();
+        }
+
+        /* ===================================================
+           TREE VIEW
+        =================================================== */
+        const AVATAR_COLORS = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#0ea5e9','#ec4899','#14b8a6'];
+        function avatarColor(name) {
+            let h = 0;
+            for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xFFFFFFFF;
+            return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+        }
+        function avatarInitials(name) {
+            const parts = (name || '?').trim().split(/\s+/);
+            return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+        }
+
+        let treeExpandState = {};   // nodeId -> true=expanded, false=collapsed
+        let treeActiveFilter = 'all'; // 'all' | 'active'
+        let treeFocusedEmployeeId = null; // id of employee to show subtree from
+
+        function setTreeFilter(filter) {
+            treeActiveFilter = filter;
+            document.getElementById('treeFilterAll').classList.toggle('active', filter === 'all');
+            document.getElementById('treeFilterActive').classList.toggle('active', filter === 'active');
+            treeExpandState = {};
+            renderTree();
+        }
+
+        function focusTreeOnEmployee(empId, event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            treeFocusedEmployeeId = empId;
+            treeExpandState = {};
+            renderTree();
+        }
+
+        function clearTreeFocus() {
+            treeFocusedEmployeeId = null;
+            treeExpandState = {};
+            renderTree();
+        }
+
+        function renderTree() {
+            const search = (document.getElementById('treeSearchInput')?.value || '').toLowerCase().trim();
+            const content = document.getElementById('treeContent');
+            if (!allEmployees.length) {
+                content.innerHTML = '<div class="tree-empty"><i class="fas fa-users fa-2x mb-2"></i><p>No employees loaded</p></div>';
+                return;
+            }
+
+            // Build id map from full list (needed for ancestor lookup)
+            const byIdFull = {};
+            allEmployees.forEach(e => { byIdFull[e.id] = e; });
+
+            // Apply active filter: start with full list, then if 'active' filter find active employees
+            // and include their ancestor managers for context
+            let visibleEmployees;
+            if (treeActiveFilter === 'active') {
+                const activeSet = new Set();
+                allEmployees.forEach(e => {
+                    const st = e.status || (e.is_active ? 'active' : 'inactive');
+                    if (st === 'active') {
+                        activeSet.add(e.id);
+                        // Walk up ancestors and include them
+                        let mgr = e.reporting_manager_id || e.reports_to_id;
+                        while (mgr && byIdFull[mgr]) {
+                            activeSet.add(mgr);
+                            const p = byIdFull[mgr];
+                            mgr = p.reporting_manager_id || p.reports_to_id;
+                        }
+                    }
+                });
+                visibleEmployees = allEmployees.filter(e => activeSet.has(e.id));
+            } else {
+                visibleEmployees = allEmployees;
+            }
+
+            // Build id map from visible employees
+            const byId = {};
+            visibleEmployees.forEach(e => { byId[e.id] = e; });
+
+            // Find IDs matching search (within visible set)
+            let matchIds = new Set();
+            if (search) {
+                visibleEmployees.forEach(e => {
+                    if ((e.full_name||'').toLowerCase().includes(search) ||
+                        (e.employee_code||'').toLowerCase().includes(search) ||
+                        (e.role_name||'').toLowerCase().includes(search) ||
+                        (e.department_name||'').toLowerCase().includes(search)) {
+                        matchIds.add(e.id);
+                        // Include ancestors
+                        let mgr = e.reporting_manager_id || e.reports_to_id;
+                        while (mgr && byId[mgr]) {
+                            matchIds.add(mgr);
+                            const p = byId[mgr];
+                            mgr = p.reporting_manager_id || p.reports_to_id;
+                        }
+                    }
+                });
+            }
+
+            // Build children map from visible employees only
+            const children = {};
+            visibleEmployees.forEach(e => {
+                const mgr = (e.reporting_manager_id || e.reports_to_id) || null;
+                // Only link to manager if manager is also visible
+                const effectiveMgr = (mgr && byId[mgr]) ? mgr : null;
+                if (!children[effectiveMgr]) children[effectiveMgr] = [];
+                children[effectiveMgr].push(e);
+            });
+
+            // Sort children by name
+            Object.values(children).forEach(arr => arr.sort((a,b) => (a.full_name||'').localeCompare(b.full_name||'')));
+
+            // Roots = employees with no visible manager
+            const roots = children[null] || [];
+            // Deduplicate roots
+            const seenRoots = new Set();
+            const dedupRoots = roots.filter(e => { if (seenRoots.has(e.id)) return false; seenRoots.add(e.id); return true; });
+
+            if (search && matchIds.size === 0) {
+                content.innerHTML = '<div class="tree-empty"><i class="fas fa-search fa-2x mb-2"></i><p>No employees match your search</p></div>';
+                return;
+            }
+
+            // Build left-to-right org chart HTML recursively
+            function buildOrgNode(emp, depth) {
+                if (search && !matchIds.has(emp.id)) return '';
+                const childList = (children[emp.id] || []).filter(c => !search || matchIds.has(c.id));
+                const hasChildren = childList.length > 0;
+                const nodeId = 'tnode_' + emp.id;
+                if (!(nodeId in treeExpandState)) treeExpandState[nodeId] = depth < 2;
+                const expanded = treeExpandState[nodeId];
+                const empStatus = emp.status || (emp.is_active ? 'active' : 'inactive');
+                const highlighted = search && (emp.full_name||'').toLowerCase().includes(search);
+                const color = avatarColor(emp.full_name || '?');
+                const initials = avatarInitials(emp.full_name || '?');
+
+                const toggleBtn = hasChildren
+                    ? `<button class="tree-toggle" onclick="toggleTreeNode('${nodeId}', event)">${expanded ? '−' : '+'}</button>`
+                    : `<span style="width:20px;display:inline-block;"></span>`;
+
+                const focusBtn = hasChildren
+                    ? `<button class="tree-focus-btn" title="View subtree from ${emp.full_name}" onclick="focusTreeOnEmployee(${emp.id}, event)"><i class="fas fa-sitemap" style="font-size:9px;"></i></button>`
+                    : '';
+
+                const cardHTML = `
+                    <div class="tree-card tc-${empStatus}${highlighted ? ' tc-highlighted' : ''}" onclick="editEmployee(${emp.id})">
+                        ${toggleBtn}
+                        <div class="tree-avatar" style="background:${color}">${initials}</div>
+                        <div style="min-width:0; flex:1;">
+                            <div class="tree-name">${emp.full_name}</div>
+                            <div class="tree-meta">${emp.role_name || '—'} · ${emp.department_name || '—'}</div>
+                            <div class="tree-code">${emp.employee_code || ''}</div>
+                        </div>
+                        ${hasChildren ? `<span class="tree-badge">${childList.length}</span>` : ''}
+                        ${focusBtn}
+                    </div>`;
+
+                let childrenHTML = '';
+                if (hasChildren) {
+                    const childCols = childList.map(c => {
+                        const childContent = buildOrgNode(c, depth + 1);
+                        return childContent ? `<div class="org-child-col"><div class="org-connector-v"></div>${childContent}</div>` : '';
+                    }).join('');
+                    const singleClass = childList.length === 1 ? ' single-child' : '';
+                    childrenHTML = `
+                        <div class="org-children-wrap" id="${nodeId}_children"${!expanded ? ' style="display:none;"' : ''}>
+                            <div class="org-children-row${singleClass}">${childCols}</div>
+                        </div>`;
+                }
+
+                return `<div class="org-node-wrap${hasChildren ? ' has-children' : ''}">
+                    <div class="org-card-area">${cardHTML}</div>
+                    ${childrenHTML}
+                </div>`;
+            }
+
+            let focusBar = '';
+            let treeRoots = dedupRoots;
+            if (treeFocusedEmployeeId && byId[treeFocusedEmployeeId]) {
+                const focusEmp = byId[treeFocusedEmployeeId];
+                treeRoots = [focusEmp];
+                focusBar = `<div class="tree-focus-bar">
+                    <i class="fas fa-sitemap"></i>
+                    <span>Viewing subtree from <strong>${focusEmp.full_name}</strong></span>
+                    <button onclick="clearTreeFocus()"><i class="fas fa-times me-1"></i>Back to Full Tree</button>
+                </div>`;
+            } else if (treeFocusedEmployeeId) {
+                treeFocusedEmployeeId = null;
+            }
+
+            const html = treeRoots.length
+                ? `${focusBar}<div class="org-chart"><div class="org-level">${treeRoots.map(r => buildOrgNode(r, 0)).join('')}</div></div>`
+                : '<div class="tree-empty"><i class="fas fa-users fa-2x mb-2"></i><p>No top-level managers found</p></div>';
+            content.innerHTML = html;
+        }
+
+        function toggleTreeNode(nodeId, event) {
+            event.stopPropagation();
+            treeExpandState[nodeId] = !treeExpandState[nodeId];
+            const childrenEl = document.getElementById(nodeId + '_children');
+            if (childrenEl) childrenEl.style.display = treeExpandState[nodeId] ? '' : 'none';
+            const btn = event.target;
+            btn.textContent = treeExpandState[nodeId] ? '−' : '+';
+        }
+
+        function expandAllTree() {
+            Object.keys(treeExpandState).forEach(k => { treeExpandState[k] = true; });
+            renderTree();
+        }
+        function collapseAllTree() {
+            Object.keys(treeExpandState).forEach(k => { treeExpandState[k] = false; });
+            renderTree();
+        }
+
+        function updateSortIcons() {
+            document.querySelectorAll('.emp-sort-icon').forEach(el => {
+                const col = el.dataset.col;
+                if (col === empSort.col) {
+                    el.textContent = empSort.dir === 'asc' ? ' ↑' : ' ↓';
+                    el.style.color = '#0d6efd';
+                    el.style.fontWeight = '700';
+                } else {
+                    el.textContent = ' ↕';
+                    el.style.color = '#adb5bd';
+                    el.style.fontWeight = '400';
+                }
+            });
+        }
+
+        async function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Employee';
+            document.getElementById('employeeForm').reset();
+            document.getElementById('employeeId').value = '';
+            document.getElementById('salutation').value = '';
+            document.getElementById('firstName').value = '';
+            document.getElementById('lastName').value = '';
+            document.getElementById('staffType').value = 'MN_STAFF';  // DC: Default to MN Staff (Dec 04, 2025)
+            document.getElementById('staffType').disabled = false;  // DC: Enable for new employees
+            document.getElementById('reportingManagerId').value = '';
+            document.getElementById('baseCompanyId').value = '';  // DC Protocol (Dec 15, 2025)
+            
+            // DC Protocol (Dec 15, 2025): Load companies for assignment
+            await loadCompanies();
+            renderDataCompanyCheckboxes([]);  // No pre-selected companies for new employees
+            
+            // DC Protocol (Dec 21, 2025): Reset additional departments checkboxes
+            renderAdditionalDepartmentsCheckboxes([]);  // No pre-selected departments for new employees
+            
+            // DC Protocol (Dec 06, 2025): Load module catalog for new employee (no selections)
+            await loadModuleCatalog();
+            renderModuleCheckboxes([]);  // No pre-selected modules for new employees
+            
+            modal.show();
+        }
+        
+        async function autoSaveCallTracking(checkbox) {
+            const empId = document.getElementById('employeeId').value;
+            if (!empId) return;
+            const statusEl = document.getElementById('callTrackingSaveStatus');
+            const enabled = checkbox.checked;
+            checkbox.disabled = true;
+            statusEl.innerHTML = '<span style="color:#6b7280;">Saving…</span>';
+            try {
+                const resp = await staffFetch(`/api/v1/call-tracking/staff/${empId}/toggle-tracking`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled })
+                });
+                const result = await resp.json();
+                if (resp.ok && result.success) {
+                    const savedLabel = enabled
+                        ? '<span style="color:#059669;font-weight:700;background:#dcfce7;padding:2px 8px;border-radius:4px;">✓ SAVED — Enabled</span>'
+                        : '<span style="color:#6b7280;font-weight:700;background:#f3f4f6;padding:2px 8px;border-radius:4px;">✓ SAVED — Disabled</span>';
+                    statusEl.innerHTML = savedLabel;
+                    const emp = allEmployees.find(e => e.id === parseInt(empId));
+                    if (emp) emp.call_tracking_enabled = enabled;
+                    // Keep locked for 3s to prevent accidental double-click reversal
+                    setTimeout(() => {
+                        checkbox.disabled = false;
+                        setTimeout(() => { if (statusEl) statusEl.innerHTML = ''; }, 1500);
+                    }, 3000);
+                } else {
+                    checkbox.checked = !enabled;
+                    statusEl.innerHTML = '<span style="color:#dc2626;">✗ Save failed — try again</span>';
+                    checkbox.disabled = false;
+                    setTimeout(() => { if (statusEl) statusEl.innerHTML = ''; }, 4000);
+                }
+            } catch {
+                checkbox.checked = !enabled;
+                statusEl.innerHTML = '<span style="color:#dc2626;">✗ Error — try again</span>';
+                checkbox.disabled = false;
+                setTimeout(() => { if (statusEl) statusEl.innerHTML = ''; }, 4000);
+            }
+        }
+
+        async function editEmployee(id) {
+            const emp = allEmployees.find(e => e.id === id);
+            if (!emp) return;
+            
+            document.getElementById('modalTitle').textContent = 'Edit Employee';
+            document.getElementById('employeeId').value = emp.id;
+            document.getElementById('salutation').value = emp.salutation || '';
+            document.getElementById('firstName').value = emp.first_name || '';
+            document.getElementById('lastName').value = emp.last_name || '';
+            document.getElementById('email').value = emp.email || '';
+            document.getElementById('phone').value = emp.phone || '';
+            document.getElementById('staffType').value = emp.staff_type || 'MYNT_REAL';  // DC: Handle staff type
+            document.getElementById('roleId').value = emp.role_id || '';
+            document.getElementById('departmentId').value = emp.department_id || '';
+            document.getElementById('designation').value = emp.designation || '';
+            document.getElementById('dateOfJoining').value = emp.date_of_joining || '';
+            document.getElementById('reportingManagerId').value = emp.reporting_manager_id || '';
+            document.getElementById('address').value = emp.address || '';
+            
+            // DC Protocol (Jan 2026): Show emp_code edit section for VGK4U Supreme only
+            const isVGK4U = currentUserRoleCode === 'vgk4u';
+            document.getElementById('empCodeEditSection').style.display = isVGK4U ? 'block' : 'none';
+            document.getElementById('empCodeInfoSection').style.display = isVGK4U ? 'none' : 'block';
+            if (isVGK4U) {
+                document.getElementById('empCode').value = emp.emp_code || '';
+                document.getElementById('staffType').disabled = false;  // VGK4U can change staff type
+            } else {
+                document.getElementById('staffType').disabled = true;  // DC: Disable for non-VGK4U
+            }
+            
+            // DC Protocol (Jan 2026): Set employment type fields
+            document.getElementById('employmentType').value = emp.employment_type || 'probation';
+            document.getElementById('probationPeriodMonths').value = emp.probation_period_months || 6;
+            document.getElementById('probationEndDate').value = emp.probation_end_date || '';
+            document.getElementById('confirmationDate').value = emp.confirmation_date || '';
+            document.getElementById('probationExtensionCount').value = emp.probation_extension_count || 0;
+            document.getElementById('probationNotes').value = emp.probation_notes || '';
+            document.getElementById('callTrackingEnabled').checked = emp.call_tracking_enabled || false;
+            document.getElementById('teamTag').value = emp.team_tag || '';
+            
+            // DC Protocol (Dec 15, 2025): Load companies and set employee's current selections
+            await loadCompanies();
+            document.getElementById('baseCompanyId').value = emp.base_company_id || '';
+            renderDataCompanyCheckboxes(emp.data_companies || []);
+            
+            // DC Protocol (Dec 21, 2025): Load additional departments
+            renderAdditionalDepartmentsCheckboxes(emp.additional_departments || []);
+            
+            // DC Protocol (Dec 06, 2025): Load module catalog and employee's current modules
+            await loadModuleCatalog();
+            const employeeModuleIds = await loadEmployeeModules(id);
+            renderModuleCheckboxes(employeeModuleIds);
+
+            // [DC-PARTNER-CONTACTS-001] Load partners for linked showroom dropdown
+            await loadPartnersForLink(emp.linked_partner_id || null);
+            
+            modal.show();
+        }
+
+        async function loadPartnersForLink(currentLinkedId) {
+            const sel = document.getElementById('linkedPartnerId');
+            sel.innerHTML = '<option value="">-- None (no showroom link) --</option>';
+            try {
+                const res = await staffFetch('/api/v1/partner/partners?limit=200');
+                if (!res.ok) return;
+                const data = await res.json();
+                (data.data || []).forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = `${p.partner_name} (${p.partner_code})`;
+                    if (currentLinkedId && p.id == currentLinkedId) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            } catch (e) { /* non-fatal */ }
+        }
+        
+        async function saveEmployee() {
+            const id = document.getElementById('employeeId').value;
+            const isEdit = !!id;
+            
+            const emailValue = document.getElementById('email').value;
+            const reportingManagerValue = document.getElementById('reportingManagerId').value;
+            const salutation = document.getElementById('salutation').value;
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const fullName = [salutation, firstName, lastName].filter(Boolean).join(' ');
+            
+            const staffType = document.getElementById('staffType').value;
+            
+            // DC Protocol (Dec 06, 2025): Get selected module IDs
+            const selectedModuleIds = getSelectedModuleIds();
+            
+            // DC Protocol (Jan 2026): Get emp_code if VGK4U editing
+            const empCodeValue = document.getElementById('empCode')?.value?.trim();
+            const isVGK4U = currentUserRoleCode === 'vgk4u';
+            
+            const data = {
+                salutation: salutation || null,
+                first_name: firstName,
+                last_name: lastName,
+                full_name: fullName,
+                email: emailValue || null,  // Email is optional
+                phone: document.getElementById('phone').value || null,
+                role_id: parseInt(document.getElementById('roleId').value),
+                department_id: document.getElementById('departmentId').value ? parseInt(document.getElementById('departmentId').value) : null,
+                designation: document.getElementById('designation').value || null,
+                date_of_joining: document.getElementById('dateOfJoining').value || null,
+                reporting_manager_id: reportingManagerValue ? parseInt(reportingManagerValue) : null,
+                address: document.getElementById('address').value || null,
+                module_ids: selectedModuleIds,  // DC Protocol: Module assignment
+                // DC Protocol (Dec 15, 2025): Company assignment
+                base_company_id: document.getElementById('baseCompanyId').value ? parseInt(document.getElementById('baseCompanyId').value) : null,
+                data_companies: getSelectedDataCompanyIds(),
+                // DC Protocol (Dec 21, 2025): Multi-department assignment
+                additional_departments: getSelectedAdditionalDepartments(),
+                // DC Protocol (Jan 2026): Employment Type fields
+                employment_type: document.getElementById('employmentType').value || 'probation',
+                probation_period_months: parseInt(document.getElementById('probationPeriodMonths').value) || 6,
+                probation_end_date: document.getElementById('probationEndDate').value || null,
+                confirmation_date: document.getElementById('confirmationDate').value || null,
+                probation_notes: document.getElementById('probationNotes').value || null,
+                call_tracking_enabled: document.getElementById('callTrackingEnabled').checked,
+                team_tag: document.getElementById('teamTag').value || null,
+                // [DC-PARTNER-CONTACTS-001] Linked partner showroom for dual portal login
+                linked_partner_id: document.getElementById('linkedPartnerId').value ? parseInt(document.getElementById('linkedPartnerId').value) : null,
+            };
+            
+            // DC Protocol (Jan 2026): Include emp_code and staff_type only if VGK4U
+            if (isVGK4U) {
+                data.staff_type = staffType;
+                if (isEdit && empCodeValue) {
+                    data.emp_code = empCodeValue;
+                }
+            }
+            
+            try {
+                const url = isEdit ? `/api/v1/staff/employees/${id}` : '/api/v1/staff/employees/';
+                const method = isEdit ? 'PUT' : 'POST';
+                
+                const response = await staffFetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    modal.hide();
+                    await loadEmployees();
+                    if (!isEdit && result.credentials) {
+                        // DC: Staff type labels (Dec 04, 2025 - 3 active + 1 legacy)
+                        const staffLabels = {
+                            'MN_STAFF': 'MN Staff',
+                            'FREELANCER': 'Freelancer',
+                            'MYNT_REAL': 'Mynt Staff',
+                            'MN_EMPLOYEE': 'MN Employee'  // Legacy - kept for existing records
+                        };
+                        const staffLabel = staffLabels[result.credentials.staff_type] || 'Staff';
+                        alert(`${staffLabel} created successfully!\n\nEmployee ID: ${result.credentials.employee_id}\nDefault Password: ${result.credentials.default_password}\n\nNote: Password change required on first login.`);
+                    } else {
+                        alert(isEdit ? 'Employee updated successfully!' : 'Employee added successfully!');
+                    }
+                } else {
+                    alert(result.detail || 'Failed to save employee');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error saving employee:', error);
+                alert('Error saving employee');
+            }
+        }
+        
+        // DC Protocol (Jan 2026): Extend probation period
+        function extendProbation() {
+            const empType = document.getElementById('employmentType');
+            const extCount = document.getElementById('probationExtensionCount');
+            const notes = document.getElementById('probationNotes');
+            const probEndDate = document.getElementById('probationEndDate');
+            
+            if (empType.value === 'confirmed') {
+                alert('Cannot extend probation for a confirmed employee.');
+                return;
+            }
+            
+            // Increment extension count
+            const currentCount = parseInt(extCount.value) || 0;
+            extCount.value = currentCount + 1;
+            
+            // Set to extended probation
+            empType.value = 'extended_probation';
+            
+            // Extend end date by 3 months if set
+            if (probEndDate.value) {
+                const endDate = new Date(probEndDate.value);
+                endDate.setMonth(endDate.getMonth() + 3);
+                probEndDate.value = endDate.toISOString().split('T')[0];
+            }
+            
+            // Add note
+            const today = new Date().toLocaleDateString();
+            const existingNotes = notes.value ? notes.value + '\n' : '';
+            notes.value = existingNotes + `[${today}] Probation extended (Extension #${currentCount + 1})`;
+            
+            alert(`Probation extended. This is extension #${currentCount + 1}.\nDon't forget to save the employee to apply changes.`);
+        }
+        
+        async function toggleStatus(id, currentStatus) {
+            if (!confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this employee?`)) return;
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/employees/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ is_active: !currentStatus })
+                });
+                
+                if (response.ok) {
+                    await loadEmployees();
+                } else {
+                    alert('Failed to update status');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error updating status:', error);
+            }
+        }
+        
+        async function resetPassword(empId, empCode, empName, isSelf) {
+            const confirmMsg = isSelf 
+                ? `Are you sure you want to reset YOUR OWN password?\n\nYour new password will be: ${empCode}\n\nYou will need to change it on next login.`
+                : `Are you sure you want to reset password for:\n\nEmployee: ${empName}\nID: ${empCode}\n\nNew password will be set to: ${empCode}`;
+            
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/employees/${empId}/reset-password`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const successMsg = isSelf
+                        ? `Your password has been reset successfully!\n\nNew Password: ${result.credentials?.new_password || empCode}\n\nPlease log out and log in with your new password. You will be required to change it on first login.`
+                        : `Password reset successful!\n\nEmployee: ${empName}\nEmployee ID: ${empCode}\nNew Password: ${result.credentials?.new_password || empCode}\n\nThe employee must change their password on next login.`;
+                    
+                    alert(successMsg);
+                    
+                    if (isSelf) {
+                        if (confirm('Do you want to log out now to use your new password?')) {
+                            localStorage.removeItem('staff_token');
+                            localStorage.removeItem('staff_user');
+                            window.location.href = '/staff/login';
+                        }
+                    }
+                } else {
+                    alert(result.detail || 'Failed to reset password');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error resetting password:', error);
+                alert('Error resetting password. Please try again.');
+            }
+        }
+        
+        // DC: Delete Employee Functions (VGK Supreme Only)
+        function openDeleteModal(empId, empCode, empName) {
+            document.getElementById('deleteEmpId').value = empId;
+            document.getElementById('deleteEmpCode').textContent = empCode;
+            document.getElementById('deleteEmpName').textContent = empName;
+            document.getElementById('deleteConfirmText').value = '';
+            document.getElementById('softDelete').checked = true;
+            deleteModal.show();
+        }
+        
+        async function confirmDelete() {
+            const confirmText = document.getElementById('deleteConfirmText').value;
+            if (confirmText !== 'DELETE') {
+                alert('Please type DELETE to confirm');
+                return;
+            }
+            
+            const empId = document.getElementById('deleteEmpId').value;
+            const empCode = document.getElementById('deleteEmpCode').textContent;
+            const empName = document.getElementById('deleteEmpName').textContent;
+            const deleteType = document.querySelector('input[name="deleteType"]:checked').value;
+            
+            const endpoint = deleteType === 'hard' 
+                ? `/api/v1/staff/employees/${empId}/hard`
+                : `/api/v1/staff/employees/${empId}/soft`;
+            
+            try {
+                const response = await staffFetch(endpoint, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // DC Protocol: Move focus away before hiding modal (WCAG 2.1 AA compliance)
+                    document.getElementById('deleteConfirmText').focus();
+                    deleteModal.hide();
+                    const typeLabel = deleteType === 'hard' ? 'permanently deleted' : 'soft deleted (can be restored)';
+                    alert(`Employee ${empCode} (${empName}) has been ${typeLabel}.`);
+                    await loadEmployees();
+                } else {
+                    // DC: Handle structured error response for blocking dependencies
+                    let errorMsg = 'Failed to delete employee';
+                    if (result.detail) {
+                        if (typeof result.detail === 'object' && result.detail.message) {
+                            errorMsg = result.detail.message;
+                            if (result.detail.blocking_dependencies) {
+                                errorMsg += '\n\n' + result.detail.blocking_dependencies.join('\n');
+                            }
+                            if (result.detail.recommendation) {
+                                errorMsg += '\n\n' + result.detail.recommendation;
+                            }
+                        } else {
+                            errorMsg = result.detail;
+                        }
+                    }
+                    alert(errorMsg);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error deleting employee:', error);
+                alert('Error deleting employee. Please try again.');
+            }
+        }
+        
+        // DC: Status Change Functions (Dec 2025)
+        function openStatusModal(empId, empCode, empName, currentStatus, action) {
+            document.getElementById('statusEmpId').value = empId;
+            document.getElementById('statusEmpCode').textContent = empCode;
+            document.getElementById('statusEmpName').textContent = empName;
+            document.getElementById('statusAction').value = action;
+            document.getElementById('statusReason').value = '';
+            document.getElementById('statusNotes').value = '';
+            document.getElementById('statusConfirmText').value = '';
+            
+            // Set current status badge
+            const statusBadge = document.getElementById('statusEmpCurrent');
+            statusBadge.textContent = getStatusLabel(currentStatus);
+            statusBadge.className = 'badge ' + getStatusBadgeClass(currentStatus);
+            
+            // Configure modal based on action
+            const header = document.getElementById('statusModalHeader');
+            const title = document.getElementById('statusModalTitle');
+            const alert = document.getElementById('statusModalAlert');
+            const confirmBtn = document.getElementById('statusConfirmBtn');
+            
+            if (action === 'deactivate') {
+                header.className = 'modal-header bg-warning';
+                title.innerHTML = '<i class="fas fa-pause-circle me-2"></i>Deactivate Employee';
+                alert.className = 'alert alert-warning';
+                alert.innerHTML = '<strong>Temporary Suspension:</strong> This will block the employee from logging in and pause all tracking systems. This action can be reversed by reactivating the employee.';
+                confirmBtn.className = 'btn btn-warning';
+                confirmBtn.innerHTML = '<i class="fas fa-pause-circle me-1"></i>Deactivate';
+            } else if (action === 'resigned') {
+                header.className = 'modal-header bg-dark text-white';
+                title.innerHTML = '<i class="fas fa-user-slash me-2"></i>Mark as Resigned (PERMANENT)';
+                alert.className = 'alert alert-danger';
+                alert.innerHTML = '<strong>PERMANENT ACTION:</strong> This will permanently block the employee from logging in. <strong class="text-danger">THIS CANNOT BE REVERSED.</strong> Use this only for employees who have officially resigned or been terminated.';
+                confirmBtn.className = 'btn btn-dark';
+                confirmBtn.innerHTML = '<i class="fas fa-user-slash me-1"></i>Mark Resigned';
+            } else if (action === 'reactivate') {
+                header.className = 'modal-header bg-success text-white';
+                title.innerHTML = '<i class="fas fa-play-circle me-2"></i>Reactivate Employee';
+                alert.className = 'alert alert-success';
+                alert.innerHTML = '<strong>Restore Access:</strong> This will restore the employee\'s login access and reactivate all tracking systems.';
+                confirmBtn.className = 'btn btn-success';
+                confirmBtn.innerHTML = '<i class="fas fa-play-circle me-1"></i>Reactivate';
+            }
+            
+            statusChangeModal.show();
+        }
+        
+        async function confirmStatusChange() {
+            const reason = document.getElementById('statusReason').value.trim();
+            const notes = document.getElementById('statusNotes').value.trim();
+            const confirmText = document.getElementById('statusConfirmText').value.trim();
+            const empId = document.getElementById('statusEmpId').value;
+            const empCode = document.getElementById('statusEmpCode').textContent;
+            const empName = document.getElementById('statusEmpName').textContent;
+            const action = document.getElementById('statusAction').value;
+            
+            // Validate
+            if (reason.length < 10) {
+                alert('Please provide a reason with at least 10 characters.');
+                document.getElementById('statusReason').focus();
+                return;
+            }
+            
+            if (confirmText !== 'CONFIRM') {
+                alert('Please type CONFIRM to proceed with this action.');
+                document.getElementById('statusConfirmText').focus();
+                return;
+            }
+            
+            // Determine endpoint based on action
+            let endpoint;
+            if (action === 'deactivate') {
+                endpoint = `/api/v1/staff/employees/${empId}/deactivate`;
+            } else if (action === 'resigned') {
+                endpoint = `/api/v1/staff/employees/${empId}/resigned`;
+            } else if (action === 'reactivate') {
+                endpoint = `/api/v1/staff/employees/${empId}/reactivate`;
+            }
+            
+            try {
+                const response = await staffFetch(endpoint, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reason: reason,
+                        notes: notes || null,
+                        confirm_text: 'CONFIRM'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusChangeModal.hide();
+                    
+                    let successMsg;
+                    if (action === 'deactivate') {
+                        successMsg = `Employee ${empCode} (${empName}) has been DEACTIVATED.\n\nThey will no longer be able to log in until reactivated.\n\nWould you like to transfer their pending data (tasks, leads, KRAs) to another employee?`;
+                        if (confirm(successMsg)) {
+                            window.location.href = '/staff/offboarding';
+                            return;
+                        }
+                    } else if (action === 'resigned') {
+                        successMsg = `Employee ${empCode} (${empName}) has been marked as RESIGNED.\n\nThis is a PERMANENT status and cannot be reversed.\n\nWould you like to transfer their pending data (tasks, leads, KRAs) to another employee?`;
+                        if (confirm(successMsg)) {
+                            window.location.href = '/staff/offboarding';
+                            return;
+                        }
+                    } else if (action === 'reactivate') {
+                        successMsg = `Employee ${empCode} (${empName}) has been REACTIVATED.\n\nThey can now log in again.`;
+                        alert(successMsg);
+                    }
+                    
+                    await loadEmployees();
+                } else {
+                    alert(result.detail || `Failed to ${action} employee`);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error(`Error ${action}ing employee:`, error);
+                alert(`Error ${action}ing employee. Please try again.`);
+            }
+        }
+    </script>
+</body>
+</html>

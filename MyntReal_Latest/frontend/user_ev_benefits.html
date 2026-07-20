@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Purchase Benefits - MNR Business Access Program Discount Coupon</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        
+        .benefit-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+        
+        .benefit-header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .benefit-type-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .benefit-type-card:hover {
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+            transform: translateY(-3px);
+            border-color: #10b981;
+        }
+        
+        .benefit-type-card.active {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .benefit-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+        }
+        
+        .stats-box {
+            background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .badge-benefit {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        
+        .terms-section {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+        }
+        
+        .btn-benefit {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            color: white;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+        }
+        
+        .btn-benefit:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+        }
+        /* ── Mobile table: fix iOS overflow scroll ── */
+        html { overflow-x: hidden; }
+        body { overflow-x: visible !important; }
+        @media (max-width: 639px) {
+            .table-responsive { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+            .table-responsive table, .table-responsive .table { min-width: max-content; }
+            .table-responsive th { padding: 7px 8px !important; font-size: 10px !important; white-space: nowrap; }
+            .table-responsive td { padding: 7px 8px !important; font-size: 11px !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main Benefits Dashboard -->
+        <div class="benefit-card">
+            <div class="benefit-header">
+                <div>
+                    <h2 class="mb-0"><i class="bi bi-gift"></i> EV Purchase Benefits</h2>
+                    <p class="mb-0 mt-2 opacity-90">6 Ways to Maximize Your Coupon Value</p>
+                </div>
+                <div>
+                    <a href="/dashboard" class="btn btn-light me-2">
+                        <i class="bi bi-house-fill me-2"></i>Dashboard
+                    </a>
+                    <button class="btn btn-light" onclick="showBenefitGuide()">
+                        <i class="bi bi-info-circle"></i> Benefit Guide
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <!-- Overall Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stats-box">
+                            <h3 id="totalBenefitsCount">0</h3>
+                            <small>Total Benefits Used</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-box" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <h3 id="totalDiscountReceived">₹0</h3>
+                            <small>Total Discounts</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-box" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                            <h3 id="totalCashbackReceived">₹0</h3>
+                            <small>Total Cashback</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-box" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                            <h3 id="totalReferralIncome">₹0</h3>
+                            <small>Referral Income</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- All 6 Benefit Types -->
+                <h4 class="mb-3">Available Benefit Types</h4>
+                
+                <!-- 1. EV Purchase Discount (includes Model Discounts) -->
+                <div class="benefit-type-card" onclick="showBenefitDetails('ev_discount')">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="benefit-icon"><i class="bi bi-car-front"></i></div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-1">1. EV Purchase Discount</h5>
+                            <p class="mb-1 text-muted">Coupon-based discount + Premium bonus on Manthra EV series</p>
+                            <span class="badge-benefit bg-success">Coupon Value Discount</span>
+                            <span class="badge-benefit bg-warning text-dark ms-2">MNR: ₹15K | Manthra: ₹7.5K×2 | Graphen: ₹1K</span>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-benefit btn-sm">View Details →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Training Cashback -->
+                <div class="benefit-type-card" onclick="showBenefitDetails('training_cashback')">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="benefit-icon" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);"><i class="bi bi-book"></i></div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-1">2. Training Course Discount</h5>
+                            <p class="mb-1 text-muted">₹7,500 discount on Skill Hub courses above ₹20,000</p>
+                            <span class="badge-benefit bg-primary">Flat ₹7,500 Off</span>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-benefit btn-sm" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">View Details →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Referral Opportunity -->
+                <div class="benefit-type-card" onclick="showBenefitDetails('referral_opportunity')">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="benefit-icon" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);"><i class="bi bi-people"></i></div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-1">3. Referral Income Opportunity</h5>
+                            <p class="mb-1 text-muted">Earn when your network purchases EVs (only after coupon fully utilized)</p>
+                            <span class="badge-benefit bg-purple" style="background: #8b5cf6;">EV: Graphen 3% | LFP 5%</span>
+                            <span class="badge-benefit bg-warning text-dark ms-2"><i class="bi bi-exclamation-circle"></i> After Coupon Utilized</span>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-benefit btn-sm" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">View Details →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Franchise Referral -->
+                <div class="benefit-type-card" onclick="showBenefitDetails('franchise_referral')">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="benefit-icon" style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);"><i class="bi bi-building"></i></div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-1">4. Franchise Purchase Income</h5>
+                            <p class="mb-1 text-muted">Commission on franchise/bulk purchases in your network</p>
+                            <span class="badge-benefit" style="background: #14b8a6; color: white;">Initial: 2% | Future Billing: 1%</span>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-benefit btn-sm" style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);">View Details →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Insurance Referral -->
+                <div class="benefit-type-card" onclick="showBenefitDetails('insurance_referral')">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="benefit-icon" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);"><i class="bi bi-shield-check"></i></div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-1">5. Insurance Referral Income</h5>
+                            <p class="mb-1 text-muted">Admin-configurable commission on vehicle insurance sales</p>
+                            <span class="badge-benefit" style="background: #ec4899; color: white;">5%-25% of Premium Amount</span>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-benefit btn-sm" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);">View Details →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. Fleet Referral -->
+                <div class="benefit-type-card" onclick="showBenefitDetails('fleet_referral')">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="benefit-icon" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);"><i class="bi bi-truck"></i></div>
+                        </div>
+                        <div class="col-md-8">
+                            <h5 class="mb-1">6. Fleet Order Commission</h5>
+                            <p class="mb-1 text-muted">Simplified enterprise/bulk order commission</p>
+                            <span class="badge-benefit" style="background: #06b6d4; color: white;">Initial: 2% | Monthly: 1%</span>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <button class="btn btn-benefit btn-sm" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">View Details →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Referral Income Summary -->
+        <div class="benefit-card">
+            <div class="benefit-header" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                <h4 class="mb-0"><i class="bi bi-cash-stack"></i> My Referral Income</h4>
+            </div>
+            <div class="card-body">
+                <div id="referralIncomeContainer">
+                    <p class="text-center text-muted">Loading referral income...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Benefit Details Modal -->
+    <div class="modal fade" id="benefitDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                    <h5 class="modal-title" id="benefitModalTitle">Benefit Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="benefitModalBody">
+                    <!-- Dynamic content -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-benefit" id="benefitActionBtn">Take Action</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE_URL_URL = '';  // Use relative URLs - frontend proxies to backend
+        const authToken = localStorage.getItem('authToken');
+
+        $(document).ready(function() {
+            if (!authToken) {
+                alert('Please login first');
+                window.location.href = '/login';
+                return;
+            }
+            loadBenefitSummary();
+            loadReferralIncome();
+        });
+
+        function loadBenefitSummary() {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/ev-discount/my-benefits`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    $('#totalBenefitsCount').text(data.total_benefits_count || 0);
+                    $('#totalDiscountReceived').text('₹' + (data.total_discount_received || 0).toLocaleString());
+                    $('#totalCashbackReceived').text('₹' + (data.total_cashback_received || 0).toLocaleString());
+                    $('#totalReferralIncome').text('₹' + (data.total_referral_income || 0).toLocaleString());
+                },
+                error: function(err) {
+                    console.error('Error loading benefits:', err);
+                }
+            });
+        }
+
+        function loadReferralIncome() {
+            $.ajax({
+                url: `${API_BASE_URL}/api/v1/ev-discount/my-referral-income`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    let html = '<div class="table-responsive"><table class="table"><thead><tr><th>Code</th><th>Type</th><th>Purchaser</th><th>Amount</th><th>Commission</th><th>Status</th><th>Date</th></tr></thead><tbody>';
+                    
+                    if (data.referral_incomes && data.referral_incomes.length > 0) {
+                        data.referral_incomes.forEach(inc => {
+                            const statusClass = inc.status === 'Paid' ? 'success' : inc.status === 'Approved' ? 'primary' : 'warning';
+                            html += `
+                                <tr>
+                                    <td><code>${inc.referral_code}</code></td>
+                                    <td><span class="badge bg-info">${inc.referral_type}</span></td>
+                                    <td>${inc.purchaser_id}</td>
+                                    <td>₹${inc.purchase_amount.toLocaleString()}</td>
+                                    <td><strong>₹${inc.commission_amount.toLocaleString()}</strong> (${inc.commission_rate}%)</td>
+                                    <td><span class="badge bg-${statusClass}">${inc.status}</span></td>
+                                    <td>${new Date(inc.earned_date).toLocaleDateString()}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        html += '<tr><td colspan="7" class="text-center text-muted">No referral income yet</td></tr>';
+                    }
+                    
+                    html += '</tbody></table></div>';
+                    
+                    if (data.total_count > 0) {
+                        html += `
+                            <div class="row mt-3">
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-light rounded">
+                                        <strong>Total</strong><br>₹${data.total_commission.toLocaleString()}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-warning bg-opacity-25 rounded">
+                                        <strong>Pending</strong><br>₹${data.pending_commission.toLocaleString()}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-primary bg-opacity-25 rounded">
+                                        <strong>Approved</strong><br>₹${data.approved_commission.toLocaleString()}
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center p-2 bg-success bg-opacity-25 rounded">
+                                        <strong>Paid</strong><br>₹${data.paid_commission.toLocaleString()}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    $('#referralIncomeContainer').html(html);
+                }
+            });
+        }
+
+        function showBenefitDetails(benefitType) {
+            const benefitInfo = {
+                'ev_discount': {
+                    title: 'EV Purchase Discount - RVZ Earnings',
+                    terms: `
+                        <div class="terms-section">
+                            <h6><i class="bi bi-check-circle text-success"></i> Eligibility</h6>
+                            <ul>
+                                <li>Active Platinum or Diamond package holder</li>
+                                <li>At least one activated coupon</li>
+                            </ul>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-cash-coin text-warning"></i> Package Tiers</h6>
+                            <ul>
+                                <li>Platinum Package: ₹15,000 coupon value</li>
+                                <li>Diamond Package: ₹7,500 coupon value</li>
+                            </ul>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-car-front text-primary"></i> EV Model Discount Structure</h6>
+                            <ul>
+                                <li><strong>MNR Exclusive Models:</strong> ₹15,000 spot discount (Maximum Cap)</li>
+                                <li><strong>Manthra EV Top Models:</strong> ₹7,500 discount (Can claim TWO times)</li>
+                                <li><strong>Graphen Models:</strong> ₹1,000 discount</li>
+                                <li><strong>⚠️ MAXIMUM DISCOUNT:</strong> Total discount capped at ₹15,000 (including coupon value + upgrade wallet)</li>
+                            </ul>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-calculator text-primary"></i> Example Calculation</h6>
+                            <p><strong>Regular EV - Diamond Package:</strong><br>
+                            EV Price: ₹1,00,000<br>
+                            Total Discount: ₹7,500<br>
+                            <strong>Final Price:</strong> ₹92,500</p>
+                            <p><strong>Manthra EV - Diamond Package (5% bonus):</strong><br>
+                            Manthra EV Price: ₹1,00,000<br>
+                            Available: Coupon ₹7,500 + Upgrade Wallet ₹7,500<br>
+                            5% Bonus calculation example<br>
+                            <strong>Total Discount Applied: ₹15,000 ONLY</strong><br>
+                            <em>(System maximum cap - you cannot get more than ₹15,000 total)</em></p>
+                            <p><strong>Platinum Package (15% bonus):</strong><br>
+                            Coupon: ₹15,000 + Upgrade Wallet: ₹10,000<br>
+                            15% Bonus calculation<br>
+                            <strong>Total Discount Applied: ₹15,000</strong> (fixed maximum)</p>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-info-circle text-primary"></i> How It Works</h6>
+                            <ol>
+                                <li>Select your EV model (MNR Exclusive / Manthra EV / Graphen)</li>
+                                <li>Choose applicable coupon</li>
+                                <li>Submit redemption request</li>
+                                <li>Admin approval (24-48 hours)</li>
+                                <li>Discount applied based on model category</li>
+                            </ol>
+                        </div>
+                    `,
+                    action: 'Redeem for EV Purchase',
+                    actionLink: '/user/ev-discount?session=' + authToken
+                },
+                'training_cashback': {
+                    title: 'Training Course Discount - Skill Hub',
+                    terms: `
+                        <div class="terms-section">
+                            <h6><i class="bi bi-mortarboard text-primary"></i> Discount Terms</h6>
+                            <ul>
+                                <li><strong>Flat ₹7,500 discount</strong> on Skill Hub courses</li>
+                                <li>Applicable on courses priced <strong>above ₹20,000</strong></li>
+                                <li>Discount applied at enrollment</li>
+                            </ul>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-check-circle text-success"></i> Eligibility</h6>
+                            <ul>
+                                <li>Active MNR member with valid coupon</li>
+                                <li>Course must be from Skill Hub platform</li>
+                                <li>Course fee must exceed ₹20,000</li>
+                            </ul>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-calculator text-warning"></i> Example</h6>
+                            <p><strong>Skill Hub Course:</strong><br>
+                            Course Fee: ₹25,000<br>
+                            MNR Member Discount: ₹7,500<br>
+                            <strong>You Pay:</strong> ₹17,500</p>
+                            <p><strong>Another Example:</strong><br>
+                            Course Fee: ₹50,000<br>
+                            MNR Member Discount: ₹7,500<br>
+                            <strong>You Pay:</strong> ₹42,500</p>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-info-circle text-primary"></i> How It Works</h6>
+                            <ol>
+                                <li>Browse Skill Hub courses (above ₹20,000)</li>
+                                <li>Select your preferred course</li>
+                                <li>Apply MNR member discount at checkout</li>
+                                <li>₹7,500 deducted from course fee</li>
+                            </ol>
+                        </div>
+                    `,
+                    action: 'Browse Training Courses',
+                    actionLink: '/user/ev-discount?session=' + authToken + '#training'
+                },
+                'referral_opportunity': {
+                    title: 'Referral Income Opportunity',
+                    terms: `
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> <strong>Important:</strong> This benefit is applicable ONLY AFTER you have completely utilized your coupon balance for EV purchase.
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-check-circle text-success"></i> Eligibility</h6>
+                            <ul>
+                                <li>Coupon balance must be fully utilized (₹0 remaining)</li>
+                                <li>Only after your own EV purchase is complete</li>
+                                <li>Then you can start earning from your network's purchases</li>
+                            </ul>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-battery-charging text-success"></i> EV Purchase Commission (Battery Type Based)</h6>
+                            <ul>
+                                <li><strong>Graphen Battery Vehicles:</strong> 3% commission</li>
+                                <li><strong>LFP Battery Vehicles:</strong> 5% commission</li>
+                                <li>Commission applies to any vehicle your network purchases</li>
+                            </ul>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-calculator text-primary"></i> EV Commission Examples</h6>
+                            <p><strong>Graphen Battery Vehicle:</strong><br>
+                            Vehicle Price: ₹1,00,000<br>
+                            <strong>Your Commission (3%):</strong> ₹3,000</p>
+                            <p><strong>LFP Battery Vehicle:</strong><br>
+                            Vehicle Price: ₹1,00,000<br>
+                            <strong>Your Commission (5%):</strong> ₹5,000</p>
+                        </div>
+                    `,
+                    action: 'View My Referral Income',
+                    actionLink: '#referralIncomeContainer'
+                },
+                'franchise_referral': {
+                    title: 'Franchise Purchase Income',
+                    terms: `
+                        <div class="terms-section">
+                            <h6><i class="bi bi-building text-teal"></i> Simplified Commission Structure</h6>
+                            <ul>
+                                <li><strong>Initial Investment:</strong> 2% commission on initial investment amount</li>
+                                <li><strong>Future Billings:</strong> 1% commission on future billing amounts</li>
+                                <li><strong>Requirement:</strong> Minimum 5 vehicles every 2 months for future billing commissions</li>
+                            </ul>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-cash-stack text-success"></i> Income Example</h6>
+                            <p><strong>Initial Investment:</strong><br>
+                            20 vehicles @ ₹1,00,000 each = ₹20,00,000<br>
+                            <strong>Your Commission (2%):</strong> ₹40,000</p>
+                            <p><strong>Future Billing:</strong><br>
+                            10 vehicles @ ₹1,00,000 each = ₹10,00,000<br>
+                            <strong>Your Commission (1%):</strong> ₹10,000</p>
+                        </div>
+                    `,
+                    action: 'Create Franchise Order',
+                    actionLink: '#franchiseSection'
+                },
+                'insurance_referral': {
+                    title: 'Insurance Referral Income',
+                    terms: `
+                        <div class="terms-section">
+                            <h6><i class="bi bi-shield-check text-pink"></i> Insurance Commission</h6>
+                            <ul>
+                                <li><strong>Admin-Configurable Rate:</strong> 5%-25% commission based on policy type</li>
+                                <li>Applies to comprehensive and third-party policies</li>
+                                <li>Annual renewal commissions</li>
+                                <li>Commission percentage set by admin per policy</li>
+                            </ul>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-repeat text-warning"></i> Recurring Income Example</h6>
+                            <p><strong>Standard Policy (5%):</strong><br>
+                            Customer Premium: ₹50,000/year<br>
+                            <strong>Your Commission:</strong> ₹2,500/year</p>
+                            <p><strong>Premium Policy (25%):</strong><br>
+                            Customer Premium: ₹1,00,000/year<br>
+                            <strong>Your Commission:</strong> ₹25,000/year</p>
+                        </div>
+                    `,
+                    action: 'Create Insurance Policy',
+                    actionLink: '#insuranceSection'
+                },
+                'fleet_referral': {
+                    title: 'Fleet Order Commission',
+                    terms: `
+                        <div class="terms-section">
+                            <h6><i class="bi bi-truck text-cyan"></i> Simplified Fleet Commission</h6>
+                            <ul>
+                                <li><strong>Initial Investment:</strong> 2% commission on investment amount</li>
+                                <li><strong>Monthly Payout:</strong> 1% commission on monthly investor income</li>
+                            </ul>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-calculator text-success"></i> Income Example</h6>
+                            <p><strong>Initial Investment:</strong><br>
+                            100 vehicles @ ₹1,00,000 = ₹1,00,00,000<br>
+                            <strong>Your Commission (2%):</strong> ₹2,00,000</p>
+                            <p><strong>Monthly Payout:</strong><br>
+                            Investor Monthly Income: ₹2,00,000<br>
+                            <strong>Your Commission (1%):</strong> ₹2,000/month</p>
+                        </div>
+                        <div class="terms-section">
+                            <h6><i class="bi bi-info-circle text-primary"></i> Note</h6>
+                            <p>Referral split system removed. Single referrer receives full commission.</p>
+                        </div>
+                    `,
+                    action: 'Create Fleet Order',
+                    actionLink: '#fleetSection'
+                }
+            };
+
+            const info = benefitInfo[benefitType];
+            $('#benefitModalTitle').text(info.title);
+            $('#benefitModalBody').html(info.terms);
+            $('#benefitActionBtn').text(info.action).off('click').on('click', function() {
+                if (info.actionLink.startsWith('#')) {
+                    $('#benefitDetailsModal').modal('hide');
+                    $(info.actionLink)[0].scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    window.location.href = info.actionLink;
+                }
+            });
+            $('#benefitDetailsModal').modal('show');
+        }
+
+        function showBenefitGuide() {
+            $('#benefitModalTitle').text('Complete EV Benefit Guide');
+            $('#benefitModalBody').html(`
+                <div class="terms-section">
+                    <h6><i class="bi bi-lightbulb text-warning"></i> Maximize Your Benefits</h6>
+                    <p>Your package unlocks 6 powerful benefits. Here's how to use them all:</p>
+                </div>
+                <ol>
+                    <li><strong>EV Discount:</strong> Base coupon discount + discount based on model category</li>
+                    <li><strong>Training Cashback:</strong> Enroll in courses, get 20% back</li>
+                    <li><strong>Referral Income:</strong> EV purchases Graphen 3% or LFP 5% (after using coupon)</li>
+                    <li><strong>Franchise Income:</strong> 2% initial + 1% future billing</li>
+                    <li><strong>Insurance Income:</strong> 5-25% recurring commission</li>
+                    <li><strong>Fleet Income:</strong> 2% initial + 1% monthly</li>
+                </ol>
+                <div class="alert alert-success mt-3">
+                    <strong><i class="bi bi-trophy"></i> Pro Tip:</strong> You can combine multiple benefits! Use EV discount for your purchase, earn referral income when others buy, and get recurring insurance commissions.
+                </div>
+            `);
+            $('#benefitActionBtn').text('Got It!').off('click').on('click', function() {
+                $('#benefitDetailsModal').modal('hide');
+            });
+            $('#benefitDetailsModal').modal('show');
+        }
+    </script>
+</body>
+</html>

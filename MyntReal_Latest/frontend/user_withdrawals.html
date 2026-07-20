@@ -1,0 +1,544 @@
+<div class="container-fluid p-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="card-body text-white p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-2">💸 Earnings & Payment Tracking</h3>
+                            <p class="mb-0 opacity-90">Track your earnings journey from income generation to bank payment</p>
+                        </div>
+                        <a href="/dashboard" class="btn btn-light btn-sm">
+                            <i class="fas fa-home me-2"></i>Go to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-3" id="kycWarningContainer" style="display: none;">
+        <div class="col-12">
+            <div class="alert alert-warning alert-dismissible fade show border-0 shadow-sm" role="alert">
+                <div class="d-flex align-items-start">
+                    <div class="me-3">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="alert-heading mb-2">
+                            <strong>⚠️ KYC Verification Required</strong>
+                        </h5>
+                        <p class="mb-2" id="kycWarningMessage">
+                            Your account needs verification before withdrawals can be processed.
+                        </p>
+                        <hr>
+                        <p class="mb-0">
+                            <a href="/profile-edit?section=kyc" class="btn btn-warning btn-sm me-2">
+                                <i class="fas fa-id-card me-1"></i>Complete KYC Now
+                            </a>
+                            <a href="/profile-edit?section=bank" class="btn btn-outline-warning btn-sm">
+                                <i class="fas fa-university me-1"></i>Update Bank Details
+                            </a>
+                        </p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-lg-6 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <div class="card-body text-white text-center p-4">
+                    <div class="mb-2"><i class="fas fa-coins fa-3x opacity-75"></i></div>
+                    <h2 class="mb-1 fw-bold" id="totalEarned">₹0</h2>
+                    <h6 class="mb-0 fw-bold">Total Income Generated</h6>
+                    <small class="opacity-75">NET amount (after deductions)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="card-body text-white text-center p-4">
+                    <div class="mb-2"><i class="fas fa-university fa-3x opacity-75"></i></div>
+                    <h2 class="mb-1 fw-bold" id="totalPaid">₹0</h2>
+                    <h6 class="mb-0 fw-bold">Paid to Bank</h6>
+                    <small class="opacity-75">Payment Completed</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <div class="card-body text-white text-center p-3">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <div class="me-3"><i class="fas fa-clock fa-2x opacity-75"></i></div>
+                        <div>
+                            <h3 class="mb-0 fw-bold" id="staffPending">₹0</h3>
+                            <h6 class="mb-0">Pending Validation</h6>
+                            <small class="opacity-75">Awaiting Staff Review</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="card-body text-white text-center p-3">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <div class="me-3"><i class="fas fa-user-check fa-2x opacity-75"></i></div>
+                        <div>
+                            <h3 class="mb-0 fw-bold" id="approvalPending">₹0</h3>
+                            <h6 class="mb-0">Staff Validated</h6>
+                            <small class="opacity-75">Validated, Awaiting Payment</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm" style="background: linear-gradient(135deg, #fc5c7d 0%, #6a82fb 100%);">
+                <div class="card-body text-white text-center p-3">
+                    <div class="d-flex align-items-center justify-content-center">
+                        <div class="me-3"><i class="fas fa-times-circle fa-2x opacity-75"></i></div>
+                        <div>
+                            <h3 class="mb-0 fw-bold" id="rejectedIncomes">₹0</h3>
+                            <h6 class="mb-0">Rejected</h6>
+                            <small class="opacity-75">Not Approved</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-route me-2"></i>Payment Lifecycle Journey</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row text-center">
+                        <div class="col-md-4 mb-3">
+                            <div class="lifecycle-step">
+                                <div class="step-icon bg-success text-white mb-3">
+                                    <i class="fas fa-coins fa-2x"></i>
+                                </div>
+                                <h6 class="fw-bold">1. Income Generated</h6>
+                                <p class="small text-muted mb-0">Calculated daily at 12:00 AM IST</p>
+                                <p class="small text-muted">Status: <strong>Pending Validation</strong></p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="lifecycle-step">
+                                <div class="step-icon bg-warning text-white mb-3">
+                                    <i class="fas fa-user-check fa-2x"></i>
+                                </div>
+                                <h6 class="fw-bold">2. Staff Validation</h6>
+                                <p class="small text-muted mb-0">Status: <strong>Staff Validated</strong></p>
+                                <p class="small text-muted">Staff reviews & validates income</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="lifecycle-step">
+                                <div class="step-icon bg-info text-white mb-3">
+                                    <i class="fas fa-check-double fa-2x"></i>
+                                </div>
+                                <h6 class="fw-bold">3. Approved & Paid</h6>
+                                <p class="small text-muted mb-0">Status: <strong>Completed</strong></p>
+                                <p class="small text-muted">Approved and credited to your account</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mb-0 mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>How it works:</strong> Your income is calculated daily, then goes through validation before payment: 
+                        <strong>Pending Validation</strong> → <strong>Staff Validated</strong> → <strong>Completed</strong>. 
+                        Records before 12 Feb 2026 are shown as <strong>Cleared</strong> (auto-approved).
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Date-Wise Income History</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row mb-4">
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label fw-bold small"><i class="fas fa-calendar-alt me-2"></i>Start Date</label>
+                            <input type="date" class="form-control" id="filterStartDate" placeholder="From">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label fw-bold small"><i class="fas fa-calendar-check me-2"></i>End Date</label>
+                            <input type="date" class="form-control" id="filterEndDate" placeholder="To">
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label class="form-label fw-bold small"><i class="fas fa-filter me-2"></i>Payment Status</label>
+                            <select class="form-select" id="filterStatus">
+                                <option value="">All Status</option>
+                                <option value="Pending">⏳ Pending Validation</option>
+                                <option value="Staff Validated">✅ Staff Validated</option>
+                                <option value="Completed">💰 Completed (Paid)</option>
+                                <option value="Rejected">❌ Rejected</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2 d-flex align-items-end gap-2">
+                            <button class="btn btn-primary flex-fill" onclick="loadTransactions()">
+                                <i class="fas fa-search me-1"></i>Apply
+                            </button>
+                            <button class="btn btn-success flex-fill" onclick="clearFilters()">
+                                <i class="fas fa-sync me-1"></i>Show All
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="transactionTableContainer">
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <h5 class="text-muted">Loading your income history...</h5>
+                            <p class="text-muted small">Please wait while we fetch your data</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getIncomeDisplayName(dbIncomeType) {
+    const rebrandMap = {
+        'Direct Referral': 'Direct Facilitation',
+        'Matching Referral': 'Group Performance Recognition',
+        'Ved Income': 'VED Leadership Recognition',
+        'Guru Dakshina': 'Mentorship Contribution Benefit'
+    };
+    return rebrandMap[dbIncomeType] || dbIncomeType;
+}
+
+async function checkKYCStatus() {
+    try {
+        const response = await fetch('/api/v1/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${sessionToken}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const kycStatus = data.kyc_status || 'Pending';
+            const bankStatus = data.bank_details_status || 'Not Submitted';
+            
+            if (kycStatus !== 'Approved' || bankStatus !== 'Approved') {
+                const warningContainer = document.getElementById('kycWarningContainer');
+                const warningMessage = document.getElementById('kycWarningMessage');
+                
+                let message = '';
+                if (kycStatus !== 'Approved' && bankStatus !== 'Approved') {
+                    message = `<strong>KYC Status:</strong> ${kycStatus} | <strong>Bank Status:</strong> ${bankStatus}<br>You cannot process withdrawals until both KYC and bank details are approved.`;
+                } else if (kycStatus !== 'Approved') {
+                    message = `<strong>KYC Status:</strong> ${kycStatus}<br>Complete your KYC verification to enable withdrawals.`;
+                } else {
+                    message = `<strong>Bank Status:</strong> ${bankStatus}<br>Submit your bank details for approval to enable withdrawals.`;
+                }
+                
+                warningMessage.innerHTML = message;
+                warningContainer.style.display = 'block';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking KYC status:', error);
+    }
+}
+
+async function loadTransactions() {
+    const startDate = document.getElementById('filterStartDate').value;
+    const endDate = document.getElementById('filterEndDate').value;
+    const status = document.getElementById('filterStatus').value;
+    
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (status) params.append('verification_status', status);
+    
+    const container = document.getElementById('transactionTableContainer');
+    container.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5 class="text-muted">Fetching your income history...</h5>
+        </div>
+    `;
+    
+    try {
+        const summaryResponse = await fetch(`/api/v1/withdrawals/income-transactions?${params}`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${sessionToken}`
+            }
+        });
+        
+        if (!summaryResponse.ok) {
+            throw new Error(`HTTP ${summaryResponse.status}: ${summaryResponse.statusText}`);
+        }
+        
+        const result = await summaryResponse.json();
+        
+        if (result.success && result.data) {
+            const data = result.data;
+            const summary = data.summary;
+            
+            document.getElementById('totalEarned').textContent = formatCurrency(summary.total_earned || 0);
+            document.getElementById('totalPaid').textContent = formatCurrency(summary.completed || 0);
+            document.getElementById('staffPending').textContent = formatCurrency(summary.pending_validation || 0);
+            document.getElementById('approvalPending').textContent = formatCurrency(summary.staff_validated || 0);
+            document.getElementById('rejectedIncomes').textContent = formatCurrency(summary.rejected || 0);
+            
+            const segments = data.segments || [];
+            
+            if (segments.length > 0) {
+                const dayMap = {};
+                segments.forEach(seg => {
+                    const txns = seg.transactions || [];
+                    txns.forEach(t => {
+                        const dateKey = t.business_date || 'unknown';
+                        if (!dayMap[dateKey]) {
+                            dayMap[dateKey] = { business_date: dateKey, gross_amount: 0, admin_deduction: 0, tds_deduction: 0, gurudakshina_deduction: 0, net_amount: 0, statuses: new Set() };
+                        }
+                        dayMap[dateKey].gross_amount += (t.gross_amount || 0);
+                        dayMap[dateKey].admin_deduction += (t.admin_deduction || 0);
+                        dayMap[dateKey].tds_deduction += (t.tds_deduction || 0);
+                        dayMap[dateKey].gurudakshina_deduction += (t.gurudakshina_deduction || 0);
+                        dayMap[dateKey].net_amount += (t.net_amount || 0);
+                        if (t.verification_status) dayMap[dateKey].statuses.add(t.verification_status);
+                    });
+                });
+                
+                const dayRows = Object.values(dayMap).sort((a, b) => b.business_date.localeCompare(a.business_date));
+                
+                const totalGross = dayRows.reduce((s, r) => s + r.gross_amount, 0);
+                const totalAdmin = dayRows.reduce((s, r) => s + r.admin_deduction, 0);
+                const totalTds = dayRows.reduce((s, r) => s + r.tds_deduction, 0);
+                const totalGuru = dayRows.reduce((s, r) => s + r.gurudakshina_deduction, 0);
+                const totalNet = dayRows.reduce((s, r) => s + r.net_amount, 0);
+                
+                const STAFF_WORKFLOW_CUTOFF = '2026-02-12';
+                
+                let rowsHtml = '';
+                dayRows.forEach(r => {
+                    const statusArr = Array.from(r.statuses);
+                    const isPreCutoff = r.business_date < STAFF_WORKFLOW_CUTOFF;
+                    const displayStatuses = statusArr.map(s => {
+                        if (isPreCutoff && s === 'Completed') return 'Cleared';
+                        return s;
+                    });
+                    let statusBadge;
+                    if (displayStatuses.length === 1) {
+                        statusBadge = getIncomeStatusBadge(displayStatuses[0]);
+                    } else {
+                        statusBadge = displayStatuses.map(s => getIncomeStatusBadge(s)).join(' ');
+                    }
+                    rowsHtml += `<tr>`;
+                    rowsHtml += `<td class="py-2 ps-3"><strong>${formatDate(r.business_date)}</strong></td>`;
+                    rowsHtml += `<td class="text-end py-2 text-muted">₹${r.gross_amount.toLocaleString('en-IN')}</td>`;
+                    rowsHtml += `<td class="text-end py-2 text-danger">-₹${r.admin_deduction.toLocaleString('en-IN')}</td>`;
+                    rowsHtml += `<td class="text-end py-2 text-danger">-₹${r.tds_deduction.toLocaleString('en-IN')}</td>`;
+                    rowsHtml += `<td class="text-end py-2 text-warning">-₹${r.gurudakshina_deduction.toLocaleString('en-IN')}</td>`;
+                    rowsHtml += `<td class="text-end py-2"><strong class="text-success">₹${r.net_amount.toLocaleString('en-IN')}</strong></td>`;
+                    rowsHtml += `<td class="text-center py-2">${statusBadge}</td>`;
+                    rowsHtml += `</tr>`;
+                });
+                
+                let html = `
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header py-3 text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Day-Wise Cumulative Income</h6>
+                            <div>
+                                <span class="badge bg-light text-dark me-2">Gross: ₹${totalGross.toLocaleString('en-IN')}</span>
+                                <span class="badge bg-dark">NET: ₹${totalNet.toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="py-2 ps-3"><small>Date</small></th>
+                                            <th class="text-end py-2"><small>Gross</small></th>
+                                            <th class="text-end py-2"><small>Admin (8%)</small></th>
+                                            <th class="text-end py-2"><small>TDS (2%)</small></th>
+                                            <th class="text-end py-2"><small>Contribution (2%)</small></th>
+                                            <th class="text-end py-2"><small><strong>NET</strong></small></th>
+                                            <th class="text-center py-2"><small>Status</small></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${rowsHtml}</tbody>
+                                    <tfoot>
+                                        <tr style="background: rgba(102, 126, 234, 0.08); font-weight: bold;">
+                                            <td class="py-2 ps-3">TOTAL (${dayRows.length} days)</td>
+                                            <td class="text-end py-2">₹${totalGross.toLocaleString('en-IN')}</td>
+                                            <td class="text-end py-2 text-danger">-₹${totalAdmin.toLocaleString('en-IN')}</td>
+                                            <td class="text-end py-2 text-danger">-₹${totalTds.toLocaleString('en-IN')}</td>
+                                            <td class="text-end py-2 text-warning">-₹${totalGuru.toLocaleString('en-IN')}</td>
+                                            <td class="text-end py-2 text-success">₹${totalNet.toLocaleString('en-IN')}</td>
+                                            <td class="text-center py-2">-</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>`;
+                
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-5x text-muted mb-4"></i>
+                        <h4 class="text-muted">No Income Records Found</h4>
+                        <p class="text-muted">No income has been generated yet. Income is calculated daily at midnight.</p>
+                    </div>
+                `;
+            }
+        } else {
+            throw new Error(result.message || 'Failed to load data');
+        }
+    } catch (error) {
+        console.error('Error loading transactions:', error);
+        container.innerHTML = `
+            <div class="alert alert-danger text-center py-5">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                <h5 class="mb-2">Error Loading Data</h5>
+                <p class="mb-3">${error.message}</p>
+                <button class="btn btn-primary" onclick="loadTransactions()">
+                    <i class="fas fa-redo me-2"></i>Retry
+                </button>
+            </div>
+        `;
+    }
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    }).format(amount || 0);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+    });
+}
+
+function getIncomeStatusBadge(status) {
+    const badges = {
+        'Pending': '<span class="badge px-3 py-2" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); font-size: 0.85rem;"><i class="fas fa-clock me-1"></i>Pending Validation</span>',
+        'Staff Validated': '<span class="badge px-3 py-2" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); font-size: 0.85rem;"><i class="fas fa-user-check me-1"></i>Staff Validated</span>',
+        'Admin Verified': '<span class="badge px-3 py-2" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); font-size: 0.85rem;"><i class="fas fa-check me-1"></i>Verified</span>',
+        'Super Admin Verified': '<span class="badge px-3 py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-size: 0.85rem;"><i class="fas fa-check-double me-1"></i>Approved</span>',
+        'Completed': '<span class="badge px-3 py-2" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); font-size: 0.85rem;"><i class="fas fa-check-circle me-1"></i>Completed</span>',
+        'Cleared': '<span class="badge px-3 py-2" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: #1a1a2e; font-size: 0.85rem;"><i class="fas fa-check me-1"></i>Cleared</span>',
+        'Rejected': '<span class="badge px-3 py-2" style="background: linear-gradient(135deg, #fc5c7d 0%, #6a82fb 100%); font-size: 0.85rem;"><i class="fas fa-times me-1"></i>Rejected</span>'
+    };
+    return badges[status] || `<span class="badge bg-secondary px-3 py-2" style="font-size: 0.85rem;">${status}</span>`;
+}
+
+function clearFilters() {
+    document.getElementById('filterStartDate').value = '';
+    document.getElementById('filterEndDate').value = '';
+    document.getElementById('filterStatus').value = '';
+    loadTransactions();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    checkKYCStatus();
+    loadTransactions();
+});
+</script>
+
+<style>
+.lifecycle-step {
+    padding: 1rem;
+    transition: transform 0.3s;
+}
+
+.lifecycle-step:hover {
+    transform: translateY(-5px);
+}
+
+.step-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.table thead th {
+    border: none;
+    font-weight: 600;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.btn {
+    transition: all 0.2s;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+/* ── Mobile table: fix iOS overflow scroll ── */
+html { overflow-x: hidden; }
+body { overflow-x: visible !important; }
+@media (max-width: 639px) {
+    .table-responsive { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+    .table-responsive table, .table-responsive .table { min-width: max-content; }
+    .table-responsive th { padding: 7px 8px !important; font-size: 10px !important; white-space: nowrap; }
+    .table-responsive td { padding: 7px 8px !important; font-size: 11px !important; }
+}
+</style>

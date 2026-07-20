@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raise Service Ticket - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 280px; min-height: 100vh; transition: margin-left 0.3s ease; padding-top: 0; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        .content-area { margin-left: 260px; margin-top: 64px; min-height: calc(100vh - 64px); padding: 24px; transition: margin-left 0.3s ease; }
+        body.sidebar-collapsed-mode .content-area { margin-left: 70px; }
+        @media (max-width: 768px) { .content-area { margin-left: 0; margin-top: 56px; } }
+        .content-inner { max-width: 960px; margin: 0 auto; }
+        .page-banner { background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white; }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 24px; }
+        .form-label { font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-control, .form-select { border-radius: 8px; border: 1px solid #e5e7eb; padding: 10px 14px; }
+        .form-control:focus, .form-select:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+        .btn-submit { background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; padding: 12px 32px; font-weight: 600; border-radius: 8px; color: white; font-size: 15px; }
+        .btn-submit:hover { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; }
+        .btn-submit:disabled { background: #9ca3af; cursor: not-allowed; color: white; }
+        .file-upload-zone { border: 2px dashed #e5e7eb; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .file-upload-zone:hover, .file-upload-zone.dragover { border-color: #10b981; background: rgba(16, 185, 129, 0.05); }
+        .file-preview { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+        .file-item { position: relative; background: #f3f4f6; border-radius: 8px; padding: 8px; display: flex; align-items: center; gap: 8px; max-width: 200px; }
+        .file-item .remove-btn { position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; }
+        .file-thumbnail { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+        .file-name { font-size: 12px; color: #374151; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+        .upload-progress { margin-top: 16px; display: none; }
+        .progress-item { margin-bottom: 8px; }
+        .progress-item .progress { height: 6px; }
+        .partner-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; }
+        .partner-item:hover { background: #f3f4f6; }
+        .partner-item:last-child { border-bottom: none; }
+        .partner-name { font-weight: 500; color: #1f2937; }
+        .partner-info { font-size: 12px; color: #6b7280; }
+        .badge-dealer { background: #3b82f6; }
+        .badge-distributor { background: #8b5cf6; }
+        .badge-vendor { background: #f59e0b; }
+        .badge-service-center { background: #10b981; }
+
+        /* ── Ticket type cards ── */
+        .ticket-type-selector { display: flex; gap: 15px; }
+        .ticket-type-option { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 18px 12px; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; transition: all .25s; text-align: center; }
+        .ticket-type-option input[type="radio"] { display: none; }
+        .ticket-type-option.selected { border-color: #10b981; background: rgba(16,185,129,.08); }
+        .ticket-type-option .type-icon { font-size: 26px; margin-bottom: 6px; }
+        .ticket-type-option .type-label { font-weight: 600; color: #1f2937; font-size: .95rem; }
+        .ticket-type-option .type-desc { font-size: .72rem; color: #6b7280; margin-top: 3px; }
+        .ticket-type-option .type-tat { font-size: .72rem; color: #10b981; font-weight: 600; margin-top: 6px; padding: 3px 9px; background: rgba(16,185,129,.1); border-radius: 12px; }
+        @media(max-width:576px){ .ticket-type-selector { flex-direction: column; } }
+
+        /* ── Spare catalog section ── */
+        .spare-catalog-section { background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 14px; padding: 18px; margin-bottom: 0; }
+        .spare-catalog-section h4 { font-size: .95rem; font-weight: 700; color: #166534; margin-bottom: 12px; }
+        .pt-id-wrap { background: #fff; border: 1.5px solid #bbf7d0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+        .pt-id-label { font-size: 11px; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+        .pt-id-input-row { display: flex; gap: 8px; align-items: center; }
+        .pt-id-input-row input { flex: 1; border: 1.5px solid #d1fae5; border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit; }
+        .pt-id-input-row input:focus { outline: none; border-color: #10b981; }
+        .pt-id-verify-btn { background: #10b981; color: #fff; border: none; border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        .pt-id-verify-btn:disabled { background: #9ca3af; cursor: not-allowed; }
+        #ptIdStatus { font-size: 12px; margin-top: 6px; min-height: 18px; }
+        .pt-id-ok { color: #166534; } .pt-id-err { color: #dc2626; }
+        .pt-mode-btn { font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1.5px solid #10b981; background: transparent; cursor: pointer; font-weight: 600; color: #059669; transition: all .2s; }
+        .pt-mode-btn.active { background: #10b981; color: #fff; }
+        .pt-results-wrap { position: relative; }
+        .pt-results-dropdown { border: 1.5px solid #d1fae5; border-radius: 10px; background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.1); max-height: 240px; overflow-y: auto; display: none; margin-top: 4px; position: absolute; width: 100%; z-index: 50; }
+        .pt-basket-outer { border: 1.5px solid #bbf7d0; border-radius: 10px; overflow: hidden; margin-top: 10px; }
+        .pt-basket-hdr { background: #dcfce7; padding: 7px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #166534; }
+        .pt-basket-row { padding: 10px 12px; border-bottom: 1px solid #f0fdf4; }
+        .pt-basket-row:last-child { border-bottom: none; }
+        .pt-br-top { display: flex; align-items: center; gap: 8px; }
+        .pt-br-img { width: 36px; height: 36px; object-fit: contain; border-radius: 6px; flex-shrink: 0; background: #f3f4f6; }
+        .pt-br-name { flex: 1; min-width: 0; }
+        .pt-br-name strong { font-size: 13px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pt-br-name small { font-size: 11px; color: #6b7280; }
+        .pt-br-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .pt-br-controls input[type=number] { width: 46px; font-size: 12px; text-align: center; border: 1px solid #d1d5db; border-radius: 4px; padding: 3px 4px; }
+        .pt-br-btn { background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 15px; }
+        .pt-br-pricing { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #d1fae5; font-size: 11px; color: #374151; }
+        .pt-br-pricing span { white-space: nowrap; }
+        .pt-br-pricing .pt-lbl { color: #6b7280; }
+        .pt-br-pricing .pt-disc { color: #ef4444; }
+        .pt-br-pricing .pt-total { font-weight: 700; color: #16a34a; font-size: 12px; }
+        .pt-basket-totals { background: #f0fdf4; padding: 10px 14px; border-top: 2px solid #bbf7d0; font-size: 12px; }
+        .pt-tot-row { display: flex; justify-content: space-between; padding: 2px 0; color: #374151; }
+        .pt-tot-row.grand { font-weight: 700; font-size: 14px; color: #166534; padding-top: 6px; border-top: 1px solid #bbf7d0; margin-top: 4px; }
+        .badge-cat { background: #dcfce7; color: #166534; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 4px; }
+        .badge-cust { background: #f3f4f6; color: #6b7280; font-size: 10px; padding: 1px 6px; border-radius: 8px; margin-left: 4px; }
+
+        /* ── Warranty section ── */
+        .warranty-toggle-label { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: rgba(16,185,129,.08); border: 1.5px solid #10b981; border-radius: 8px; cursor: pointer; margin: 0; }
+        .warranty-detail-section { display: none; margin-top: 10px; border: 1.5px solid #86efac; border-radius: 10px; padding: 16px; background: #f0fdf4; }
+
+        /* ── Success panel ── */
+        #successPanel { display: none; }
+        .success-icon { width: 70px; height: 70px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+        .success-icon i { font-size: 2rem; color: #fff; }
+        .ticket-id-box { background: #e8f5e9; border: 2px solid #10b981; border-radius: 10px; padding: 12px 24px; display: inline-block; margin: 12px 0; }
+        .ticket-id-box span { font-size: 1.4rem; font-weight: 700; color: #059669; letter-spacing: 1px; }
+        .pt-success-basket { text-align: left; margin: 16px 0; border: 1.5px solid #bbf7d0; border-radius: 10px; overflow: hidden; }
+        .pt-success-basket table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .pt-success-basket thead th { background: #dcfce7; padding: 7px 10px; font-weight: 700; color: #166534; text-align: left; font-size: 11px; }
+        .pt-success-basket tbody td { padding: 7px 10px; border-bottom: 1px solid #f0fdf4; vertical-align: top; }
+        .pt-success-basket tfoot td { padding: 6px 10px; font-weight: 600; background: #f0fdf4; font-size: 12px; }
+        .pt-success-basket tfoot tr.grand td { font-weight: 700; font-size: 13px; color: #166534; border-top: 2px solid #bbf7d0; }
+
+        /* ── Spec modal ── */
+        .spec-price-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+        .spec-price-table td { padding: 5px 8px; border-bottom: 1px solid #f3f4f6; }
+        .spec-price-table td:first-child { color: #6b7280; font-weight: 500; }
+        .spec-price-table td:last-child { text-align: right; font-weight: 600; }
+        .spec-price-table tr.final-row td { color: #16a34a; font-size: 15px; border-top: 2px solid #bbf7d0; }
+
+        @media print {
+            body * { visibility: hidden !important; }
+            #ptPrintArea, #ptPrintArea * { visibility: visible !important; }
+            #ptPrintArea { position: fixed; top: 0; left: 0; width: 100%; padding: 30px; background: #fff; }
+        }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <div id="staffSidebar"></div>
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="page-banner">
+            <h1><i class="fas fa-ticket-alt"></i> Create New Service Ticket</h1>
+            <p>Enter customer and product details to create a new EV service ticket.</p>
+        </div>
+
+        <!-- ═══ FORM ═══ -->
+        <form id="ticketForm">
+
+            <!-- Customer Information -->
+            <div class="card">
+                <div class="card-header"><h5><i class="fas fa-user me-2"></i>Customer Information</h5></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Customer Name *</label>
+                            <input type="text" class="form-control" id="customerName" required placeholder="Full name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Phone Number *</label>
+                            <input type="tel" class="form-control" id="customerPhone" required placeholder="10-digit mobile">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="customerEmail" placeholder="Optional">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Business Partner</label>
+                            <div class="position-relative">
+                                <input type="text" class="form-control" id="partnerSearch" placeholder="Search by name, code, or phone..." autocomplete="off">
+                                <input type="hidden" id="partnerId" value="">
+                                <div id="partnerDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #e5e7eb;border-radius:8px;max-height:250px;overflow-y:auto;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+                            </div>
+                            <div id="selectedPartner" class="mt-2" style="display:none;">
+                                <span class="badge bg-success" id="partnerBadge"></span>
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="clearPartner()"><i class="fas fa-times"></i> Clear</button>
+                            </div>
+                            <small class="text-muted">Leave empty for Direct Customer</small>
+                        </div>
+                        <div class="col-12 mb-1">
+                            <label class="form-label">Address</label>
+                            <textarea class="form-control" id="customerAddress" rows="2" placeholder="Customer address (optional)"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Request Type -->
+            <div class="card">
+                <div class="card-header"><h5><i class="fas fa-tags me-2"></i>Request Type *</h5></div>
+                <div class="card-body">
+                    <div class="ticket-type-selector">
+                        <label class="ticket-type-option selected" data-type="technical">
+                            <input type="radio" name="ticket_type" value="technical" checked>
+                            <span class="type-icon">🔧</span>
+                            <span class="type-label">Technical</span>
+                            <span class="type-desc">Repair &amp; Service</span>
+                            <span class="type-tat">TAT: 24 hours</span>
+                        </label>
+                        <label class="ticket-type-option" data-type="spares">
+                            <input type="radio" name="ticket_type" value="spares">
+                            <span class="type-icon">🔩</span>
+                            <span class="type-label">Spare Parts</span>
+                            <span class="type-desc">Parts Replacement</span>
+                            <span class="type-tat">TAT: 48 hours</span>
+                        </label>
+                        <label class="ticket-type-option" data-type="general">
+                            <input type="radio" name="ticket_type" value="general">
+                            <span class="type-icon">📋</span>
+                            <span class="type-label">General</span>
+                            <span class="type-desc">Query / Other</span>
+                            <span class="type-tat">TAT: 48 hours</span>
+                        </label>
+                    </div>
+
+                    <!-- Spare Catalog (visible only for Spare Parts) -->
+                    <div class="spare-catalog-section mt-4" id="spareCatalogSection" style="display:none;">
+                        <h4><i class="fas fa-cubes me-2"></i>Select Spare Parts <span style="font-weight:400;color:#4ade80;font-size:.8rem;">(Optional)</span></h4>
+
+                        <div class="pt-id-wrap">
+                            <div class="pt-id-label"><i class="fas fa-tag me-1"></i>Discount ID (MNR ID / ETC Student ID / Partner Code)</div>
+                            <div class="pt-id-input-row">
+                                <input type="text" id="ptDiscountIdInput" placeholder="e.g. MNR182345678 · VGK18080132 · DLAP0001" oninput="ptClearIdStatus()" onkeydown="if(event.key==='Enter'){event.preventDefault();ptValidateId();}">
+                                <button type="button" class="pt-id-verify-btn" id="ptVerifyBtn" onclick="ptValidateId()"><i class="fas fa-check-circle me-1"></i>Verify</button>
+                            </div>
+                            <div id="ptIdStatus"></div>
+                        </div>
+
+                        <div class="mb-3 d-flex gap-2 align-items-center flex-wrap">
+                            <button type="button" class="pt-mode-btn active" id="ptModeCatalog" onclick="ptSwitchMode('catalog')"><i class="fas fa-search me-1"></i>Search Catalog</button>
+                            <button type="button" class="pt-mode-btn" id="ptModeManual" onclick="ptSwitchMode('manual')"><i class="fas fa-pen me-1"></i>Enter Manually</button>
+                        </div>
+
+                        <div id="ptCatalogPanel">
+                            <div class="pt-results-wrap">
+                                <div class="input-group">
+                                    <span class="input-group-text" style="border-color:#bbf7d0;background:#f0fdf4;"><i class="fas fa-search text-success"></i></span>
+                                    <input type="text" class="form-control" id="ptSearchInput" style="border-color:#bbf7d0;" placeholder="Search by part name, SKU or category…" oninput="ptDebouncedSearch()">
+                                </div>
+                                <div class="pt-results-dropdown" id="ptResultsDropdown"></div>
+                            </div>
+                        </div>
+
+                        <div id="ptManualPanel" style="display:none;">
+                            <div class="row g-2 align-items-end">
+                                <div class="col-6"><input type="text" class="form-control form-control-sm" id="ptManualName" placeholder="Part name *" style="border-color:#bbf7d0;"></div>
+                                <div class="col-3"><input type="number" class="form-control form-control-sm" id="ptManualQty" value="1" min="1" placeholder="Qty" style="border-color:#bbf7d0;"></div>
+                                <div class="col-3"><button type="button" class="btn btn-sm btn-success w-100" onclick="ptAddManual()"><i class="fas fa-plus"></i> Add</button></div>
+                            </div>
+                        </div>
+
+                        <div id="ptBasket" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Issue Details -->
+            <div class="card">
+                <div class="card-header"><h5><i class="fas fa-exclamation-circle me-2"></i>Issue Details</h5></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Issue Category *</label>
+                            <select class="form-select" id="issueCategory" required>
+                                <option value="">Select Category...</option>
+                                <option value="Battery Issue">Battery Issue</option>
+                                <option value="Motor Problem">Motor Problem</option>
+                                <option value="Controller Fault">Controller Fault</option>
+                                <option value="Electrical Issue">Electrical Issue</option>
+                                <option value="Charging Problem">Charging Problem</option>
+                                <option value="Brake System">Brake System</option>
+                                <option value="Tire/Wheel">Tire/Wheel</option>
+                                <option value="Body Damage">Body Damage</option>
+                                <option value="Spare Parts">Spare Parts</option>
+                                <option value="General Service">General Service</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Priority *</label>
+                            <select class="form-select" id="priority" required>
+                                <option value="Medium">Medium</option>
+                                <option value="Low">Low</option>
+                                <option value="High">High</option>
+                                <option value="Critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="col-12 mb-1">
+                            <label class="form-label">Issue Description *</label>
+                            <textarea class="form-control" id="issueDescription" rows="4" required placeholder="Describe the issue in detail (minimum 10 characters)" minlength="10"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Information -->
+            <div class="card">
+                <div class="card-header"><h5><i class="fas fa-motorcycle me-2"></i>Product Information <span style="font-size:12px;font-weight:400;color:#6b7280;">(Optional)</span></h5></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Product Name</label>
+                            <input type="text" class="form-control" id="productName" placeholder="e.g. VGK4U E-Scooter Pro">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Serial Number</label>
+                            <input type="text" class="form-control" id="productSerial" placeholder="Vehicle serial / chassis">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Model</label>
+                            <input type="text" class="form-control" id="productModel" placeholder="e.g. EV Pro X1">
+                        </div>
+                    </div>
+
+                    <!-- Warranty Toggle -->
+                    <div class="mb-2">
+                        <label class="warranty-toggle-label">
+                            <input type="checkbox" id="warrantyCheck" style="width:18px;height:18px;cursor:pointer;" onchange="toggleWarrantySection(this)">
+                            <span style="font-weight:600;color:#166534;font-size:14px;"><i class="fas fa-shield-alt me-2"></i>This product is under warranty</span>
+                        </label>
+                    </div>
+                    <div class="warranty-detail-section" id="warrantySection">
+                        <p style="font-size:12px;color:#166534;margin-bottom:12px;font-weight:600;"><i class="fas fa-info-circle me-1"></i>Please provide the warranty details below</p>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Invoice / Purchase Receipt No.</label>
+                                <input type="text" class="form-control" id="wInvoiceNo" placeholder="Original purchase invoice number">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date of Purchase</label>
+                                <input type="date" class="form-control" id="wSaleDate">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Vehicle Model</label>
+                                <input type="text" class="form-control" id="wModel" placeholder="e.g. EV Pro X1">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Motor Number</label>
+                                <input type="text" class="form-control" id="wMotorNo" placeholder="Vehicle motor number">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Chassis Number</label>
+                                <input type="text" class="form-control" id="wChassisNo" placeholder="Vehicle chassis number">
+                            </div>
+                            <div class="col-12 mb-1">
+                                <label class="form-label">Warranty Notes <span style="font-weight:400;color:#6b7280;">(Optional)</span></label>
+                                <textarea class="form-control" id="wNotes" placeholder="Additional warranty information..." rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attachments -->
+            <div class="card">
+                <div class="card-header"><h5><i class="fas fa-paperclip me-2"></i>Attachments <span style="font-size:12px;font-weight:400;color:#6b7280;">(Optional)</span></h5></div>
+                <div class="card-body">
+                    <div class="file-upload-zone" id="uploadZone">
+                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                        <p class="mb-1">Click or drag files here to upload</p>
+                        <p style="font-size:12px;color:#6b7280;margin:0;">Max 5 photos (5MB each) + Max 2 videos (20MB each)</p>
+                        <input type="file" id="fileInput" multiple accept="image/*,video/*" style="display:none;">
+                    </div>
+                    <div class="file-preview" id="filePreview"></div>
+                    <div class="upload-progress" id="uploadProgress"></div>
+                </div>
+            </div>
+
+            <!-- Error banner -->
+            <div id="errorBanner" style="display:none;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:14px 18px;border-radius:10px;margin-bottom:18px;font-size:14px;"></div>
+
+            <div class="text-end mb-4">
+                <button type="button" class="btn btn-secondary me-2" onclick="history.back()">Cancel</button>
+                <button type="submit" class="btn btn-submit" id="submitBtn">
+                    <i class="fas fa-plus me-2"></i>Create Ticket
+                </button>
+            </div>
+        </form>
+
+        <!-- ═══ SUCCESS PANEL ═══ -->
+        <div id="successPanel" class="card">
+            <div class="card-body text-center py-5">
+                <div class="success-icon"><i class="fas fa-check"></i></div>
+                <h3 style="color:#1f2937;margin-bottom:6px;">Ticket Created!</h3>
+                <p style="color:#6b7280;">The service ticket has been raised successfully.</p>
+                <div class="ticket-id-box"><span id="ticketIdDisplay">—</span></div>
+                <div id="ptSuccessBasket"></div>
+                <div class="d-flex gap-3 justify-content-center mt-4 flex-wrap">
+                    <button class="btn btn-success px-4" onclick="window.location.href='/staff/service-tickets/queue'">
+                        <i class="fas fa-list me-2"></i>View Service Queue
+                    </button>
+                    <button class="btn btn-outline-success px-4" id="ptPrintBtn" onclick="ptPrintPO()" style="display:none;">
+                        <i class="fas fa-print me-2"></i>Print Parts List
+                    </button>
+                    <button class="btn btn-outline-secondary px-4" onclick="resetForm()">
+                        <i class="fas fa-plus me-2"></i>Create Another
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Spec Modal -->
+    <div class="modal fade" id="ptSpecModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content" style="border-radius:16px;overflow:hidden;">
+                <div class="modal-header" style="background:#f0fdf4;border-bottom:2px solid #bbf7d0;">
+                    <h5 class="modal-title" style="color:#166534;font-weight:700;"><i class="fas fa-cog me-2"></i>Product Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="ptSpecModalBody" style="padding:20px;"></div>
+                <div class="modal-footer" style="background:#f9fafb;border-top:1px solid #e5e7eb;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" id="ptAddFromModalBtn" onclick="ptAddFromModal()">
+                        <i class="fas fa-cart-plus me-1"></i>Add to Basket
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden print area -->
+    <div id="ptPrintArea" style="display:none;"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script>
+    // ── Init ─────────────────────────────────────────────────────────────────
+    let allPartners = [];
+    let selectedFiles = [];
+    const MAX_PHOTOS = 5, MAX_VIDEOS = 2;
+    const MAX_PHOTO_SIZE = 5 * 1024 * 1024, MAX_VIDEO_SIZE = 20 * 1024 * 1024;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        StaffHeader.inject('Raise Service Ticket', 'fas fa-plus-circle');
+        loadPartners();
+        initPartnerSearch();
+        initFileUpload();
+        ptRenderBasket();
+    });
+
+    function _authHeader() {
+        const tok = localStorage.getItem('staff_token') || localStorage.getItem('token');
+        return tok ? { 'Authorization': `Bearer ${tok}` } : {};
+    }
+
+    // ── Ticket type cards ───────────────────────────────────────────────────
+    function syncTicketType(value) {
+        document.querySelectorAll('.ticket-type-option').forEach(o => o.classList.remove('selected'));
+        const lbl = document.querySelector(`.ticket-type-option[data-type="${value}"]`);
+        if (lbl) lbl.classList.add('selected');
+        document.getElementById('spareCatalogSection').style.display = (value === 'spares') ? '' : 'none';
+    }
+    document.querySelectorAll('input[name="ticket_type"]').forEach(r => r.addEventListener('change', function() { syncTicketType(this.value); }));
+    document.querySelectorAll('.ticket-type-option').forEach(opt => {
+        opt.addEventListener('click', function(e) {
+            if (e.target.tagName === 'INPUT') return;
+            const r = this.querySelector('input[type="radio"]');
+            if (r) { r.checked = true; syncTicketType(r.value); }
+        });
+    });
+
+    // ── Warranty toggle ──────────────────────────────────────────────────────
+    function toggleWarrantySection(checkbox) {
+        document.getElementById('warrantySection').style.display = checkbox.checked ? '' : 'none';
+    }
+
+    // ── Partner search ───────────────────────────────────────────────────────
+    async function loadPartners() {
+        try {
+            const r = await fetch('/api/v1/tickets/partners', { headers: _authHeader() });
+            if (r.ok) allPartners = await r.json();
+        } catch(e) {}
+    }
+
+    function initPartnerSearch() {
+        const inp = document.getElementById('partnerSearch');
+        const dd  = document.getElementById('partnerDropdown');
+        let t;
+        inp.addEventListener('input', e => { clearTimeout(t); t = setTimeout(() => searchPartners(e.target.value), 300); });
+        inp.addEventListener('focus', () => { if (inp.value.length >= 1 || allPartners.length > 0) searchPartners(inp.value); });
+        document.addEventListener('click', e => { if (!e.target.closest('#partnerSearch') && !e.target.closest('#partnerDropdown')) dd.style.display = 'none'; });
+    }
+
+    async function searchPartners(term) {
+        const dd = document.getElementById('partnerDropdown');
+        let filtered = term
+            ? allPartners.filter(p =>
+                p.partner_name.toLowerCase().includes(term.toLowerCase()) ||
+                p.partner_code?.toLowerCase().includes(term.toLowerCase()) ||
+                p.phone?.toLowerCase().includes(term.toLowerCase()))
+            : allPartners;
+        if (filtered.length === 0 && term) {
+            try {
+                const r = await fetch(`/api/v1/tickets/partners?search=${encodeURIComponent(term)}`, { headers: _authHeader() });
+                if (r.ok) filtered = await r.json();
+            } catch(e) {}
+        }
+        dd.innerHTML = filtered.slice(0, 20).map(p => `
+            <div class="partner-item" onclick="selectPartner(${p.id},'${p.partner_name.replace(/'/g,"\\'")}','${p.category}','${p.category_label||p.category}')">
+                <div><div class="partner-name">${p.partner_name}</div><div class="partner-info">${p.partner_code||''} ${p.city?'| '+p.city:''}</div></div>
+                <span class="badge badge-${p.category.toLowerCase().replace('_','-')}">${p.category_label||p.category}</span>
+            </div>`).join('') || '<div class="p-3 text-muted">No partners found</div>';
+        dd.style.display = 'block';
+    }
+
+    function selectPartner(id, name, category, label) {
+        document.getElementById('partnerId').value = id;
+        document.getElementById('partnerSearch').value = name;
+        document.getElementById('partnerDropdown').style.display = 'none';
+        document.getElementById('selectedPartner').style.display = 'block';
+        document.getElementById('partnerBadge').textContent = `${name} (${label})`;
+        document.getElementById('partnerBadge').className = `badge badge-${category.toLowerCase().replace('_','-')}`;
+    }
+
+    function clearPartner() {
+        document.getElementById('partnerId').value = '';
+        document.getElementById('partnerSearch').value = '';
+        document.getElementById('selectedPartner').style.display = 'none';
+    }
+
+    // ── Spare catalog — discount ID ──────────────────────────────────────────
+    let _pt_basket = [];
+    let _pt_discountMode = null, _pt_discountId = null, _pt_discountLabel = '', _pt_discountPct = 0;
+    let _pt_searchTimer = null, _pt_specIdx = null;
+
+    function ptClearIdStatus() {
+        document.getElementById('ptIdStatus').innerHTML = '';
+        _pt_discountMode = null; _pt_discountId = null; _pt_discountLabel = ''; _pt_discountPct = 0;
+    }
+
+    function ptRemoveDiscount() {
+        _pt_discountMode = null; _pt_discountId = null; _pt_discountLabel = ''; _pt_discountPct = 0;
+        document.getElementById('ptDiscountIdInput').value = '';
+        document.getElementById('ptIdStatus').innerHTML = '';
+        ptRepriceBasket();
+        const q = (document.getElementById('ptSearchInput')?.value || '').trim();
+        if (q) ptSearch();
+    }
+
+    async function ptValidateId() {
+        const val = (document.getElementById('ptDiscountIdInput').value || '').trim();
+        const statusEl = document.getElementById('ptIdStatus');
+        const btn = document.getElementById('ptVerifyBtn');
+        if (!val) { statusEl.innerHTML = '<span class="pt-id-err"><i class="fas fa-exclamation-circle me-1"></i>Please enter an ID first.</span>'; return; }
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Verifying…';
+        statusEl.innerHTML = '';
+        try {
+            const r = await fetch(`/api/v1/marketplace/public/validate-discount-id?id=${encodeURIComponent(val)}`);
+            const d = await r.json();
+            if (d.valid) {
+                _pt_discountMode = d.discount_mode; _pt_discountId = val; _pt_discountLabel = d.label; _pt_discountPct = d.discount_pct;
+                statusEl.innerHTML = `<span class="pt-id-ok" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span><i class="fas fa-check-circle me-1"></i><strong>${d.label}</strong>${d.name ? ' · '+d.name : ''} · <strong>${d.discount_pct}% discount</strong> applied</span><button type="button" onclick="ptRemoveDiscount()" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;cursor:pointer;"><i class="fas fa-times me-1"></i>Remove</button></span>`;
+                ptRepriceBasket();
+                const q = (document.getElementById('ptSearchInput')?.value || '').trim();
+                if (q) ptSearch();
+            } else {
+                _pt_discountMode = null; _pt_discountId = null; _pt_discountLabel = ''; _pt_discountPct = 0;
+                statusEl.innerHTML = `<span class="pt-id-err"><i class="fas fa-times-circle me-1"></i>${d.error}</span>`;
+            }
+        } catch(e) {
+            statusEl.innerHTML = '<span class="pt-id-err"><i class="fas fa-exclamation-triangle me-1"></i>Verification failed. Please try again.</span>';
+        } finally {
+            btn.disabled = false; btn.innerHTML = '<i class="fas fa-check-circle me-1"></i>Verify';
+        }
+    }
+
+    function ptRepriceBasket() {
+        _pt_basket = _pt_basket.map(item => {
+            if (item.is_custom) return item;
+            const dp = item.dealer_price || 0;
+            const disc_amt = dp * (_pt_discountPct / 100);
+            const net = dp - disc_amt;
+            const gst_pct = item.gst_percent || 18;
+            const gst_amt = net * (gst_pct / 100);
+            return { ...item, discount_pct: _pt_discountPct, discount_amount: round2(disc_amt), net_before_tax: round2(net), gst_amount: round2(gst_amt), unit_price: round2(net + gst_amt), discount_mode: _pt_discountMode, discount_id: _pt_discountId };
+        });
+        ptRenderBasket();
+    }
+
+    // ── Mode toggle ──────────────────────────────────────────────────────────
+    function ptSwitchMode(mode) {
+        document.getElementById('ptCatalogPanel').style.display = mode === 'catalog' ? '' : 'none';
+        document.getElementById('ptManualPanel').style.display  = mode === 'manual'  ? '' : 'none';
+        document.getElementById('ptModeCatalog').className = 'pt-mode-btn' + (mode === 'catalog' ? ' active' : '');
+        document.getElementById('ptModeManual').className  = 'pt-mode-btn' + (mode === 'manual'  ? ' active' : '');
+    }
+
+    // ── Catalog search ───────────────────────────────────────────────────────
+    function ptDebouncedSearch() { clearTimeout(_pt_searchTimer); _pt_searchTimer = setTimeout(ptSearch, 380); }
+
+    async function ptSearch() {
+        const q = (document.getElementById('ptSearchInput')?.value || '').trim();
+        const el = document.getElementById('ptResultsDropdown');
+        if (!el) return;
+        if (!q) { el.style.display = 'none'; return; }
+        el.style.display = 'block';
+        el.innerHTML = '<div style="padding:12px;text-align:center;color:#6b7280;font-size:13px;"><i class="fas fa-spinner fa-spin me-1"></i>Searching…</div>';
+        try {
+            const params = new URLSearchParams({ q, company_id: 1, limit: 30 });
+            if (_pt_discountMode) params.set('discount_mode', _pt_discountMode);
+            if (_pt_discountId) params.set('discount_id', _pt_discountId);
+            const r = await fetch(`/api/v1/marketplace/public/catalog-search?${params}`);
+            if (!r.ok) throw new Error('Search failed');
+            const results = await r.json();
+            if (!results?.length) {
+                el.innerHTML = `<div style="padding:12px;text-align:center;color:#6b7280;font-size:13px;">No parts found for "<strong>${escHtml(q)}</strong>".<br><span style="font-size:11px;">Try manual entry.</span></div>`;
+                return;
+            }
+            window._pt_results = results;
+            el.innerHTML = results.map((item, idx) => {
+                const price = item.final_price || item.dealer_price || 0;
+                const dBadge = item.discount_pct > 0 ? `<span style="background:#fef3c7;color:#92400e;font-size:10px;padding:1px 5px;border-radius:8px;margin-left:4px;">${item.discount_pct}% OFF</span>` : '';
+                const imgEl = item.image_url
+                    ? `<img src="${item.image_url}" style="width:34px;height:34px;object-fit:contain;border-radius:5px;flex-shrink:0;" onerror="this.style.display='none'">`
+                    : `<div style="width:34px;height:34px;background:#f3f4f6;border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;"><i class="fas fa-cog" style="color:#d1d5db;font-size:12px;"></i></div>`;
+                const specLine2 = [item.specifications, item.color].filter(Boolean).join(' · ');
+                return `<div style="display:flex;align-items:center;gap:10px;padding:9px 13px;cursor:pointer;border-bottom:1px solid #f3f4f6;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background=''">
+                    ${imgEl}
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(item.name)}</div>
+                        <div style="font-size:11px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(item.sku||'')}${item.category_name?' · '+escHtml(item.category_name):''}${item.brand?' · '+escHtml(item.brand):''}</div>
+                        ${specLine2 ? `<div style="font-size:10px;color:#0369a1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(specLine2)}</div>` : ''}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                        <div style="text-align:right;">
+                            ${item.display_mrp && item.display_mrp > price ? `<div style="font-size:10px;color:#9ca3af;text-decoration:line-through;">MRP ${fmtRs(item.display_mrp)}</div>` : ''}
+                            <div style="font-weight:700;font-size:13px;color:#16a34a;">${fmtRs(price)}${dBadge}</div>
+                            <div style="font-size:10px;color:#6b7280;">incl. GST ${item.gst_percent}%</div>
+                        </div>
+                        <button type="button" onclick="event.stopPropagation();ptShowSpec(${idx})" style="background:#e0f2fe;border:none;border-radius:6px;padding:4px 7px;cursor:pointer;color:#0369a1;font-size:11px;" title="View details"><i class="fas fa-info-circle"></i></button>
+                        <button type="button" onclick="ptPick(${idx})" style="background:#dcfce7;border:none;border-radius:6px;padding:4px 7px;cursor:pointer;color:#166534;font-size:11px;" title="Add to basket"><i class="fas fa-cart-plus"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+        } catch(e) {
+            el.innerHTML = `<div style="padding:12px;color:#dc2626;font-size:13px;"><i class="fas fa-exclamation-triangle me-1"></i>${e.message}</div>`;
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.pt-results-wrap')) {
+            const el = document.getElementById('ptResultsDropdown');
+            if (el) el.style.display = 'none';
+        }
+    });
+
+    // ── Spec modal ───────────────────────────────────────────────────────────
+    function ptShowSpec(idx) {
+        const item = (window._pt_results || [])[idx];
+        if (!item) return;
+        _pt_specIdx = idx;
+        const body = document.getElementById('ptSpecModalBody');
+        const imgEl = item.image_url ? `<img src="${item.image_url}" style="width:100%;max-height:200px;object-fit:contain;border-radius:10px;background:#f9fafb;padding:10px;margin-bottom:14px;" onerror="this.style.display='none'">` : '';
+        const price = item.final_price || item.dealer_price || 0;
+        const rows = [['SKU / Code',item.sku],['Category',item.category_name],['Brand',item.brand],['Color',item.color],['Specifications',item.specifications],['HSN Code',item.hsn_code]].filter(r=>r[1]).map(([l,v])=>`<tr><td style="color:#6b7280;width:40%;">${l}</td><td style="font-weight:500;">${escHtml(String(v))}</td></tr>`).join('');
+        const mrp=item.display_mrp||item.dealer_price||0,zynovaDisc=item.mrp_discount_amount||0,zynovaPct=item.mrp_discount_pct||item.markup_percent||0,idDisc=item.discount_amount||0,idPct=item.discount_pct||0,netAfterDisc=item.net_before_tax||item.dealer_price||0,taxPct=item.gst_percent||18,taxAmt=item.gst_amount||0,finalP=item.final_price||price;
+        body.innerHTML = `${imgEl}<h6 style="font-weight:700;color:#166534;margin-bottom:12px;font-size:1rem;">${escHtml(item.name)}</h6>${rows?`<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:14px;">${rows}</table>`:''}<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px;"><div style="font-size:11px;font-weight:700;color:#166534;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">Pricing Breakdown</div><table class="spec-price-table"><tr><td style="color:#374151;font-weight:600;">Base Cost (MRP)</td><td style="font-weight:700;">${fmtRs(mrp)}</td></tr><tr><td style="color:#ef4444;">VGK4U Discount (${zynovaPct}%)</td><td style="color:#ef4444;font-weight:600;">− ${fmtRs(zynovaDisc)}</td></tr>${idDisc>0?`<tr><td style="color:#ef4444;">${_pt_discountLabel||'ID Discount'} (${idPct}%)</td><td style="color:#ef4444;font-weight:600;">− ${fmtRs(idDisc)}</td></tr>`:''}<tr><td style="color:#374151;">Price after Discount</td><td style="font-weight:600;">${fmtRs(netAfterDisc)}</td></tr><tr><td style="color:#6b7280;">Tax (GST ${taxPct}%)</td><td style="color:#6b7280;">+ ${fmtRs(taxAmt)}</td></tr><tr class="final-row"><td>Total with Tax</td><td>${fmtRs(finalP)}</td></tr></table></div>`;
+        document.getElementById('ptAddFromModalBtn').style.display = '';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('ptSpecModal')).show();
+    }
+
+    function ptShowSpecFromBasket(basketIdx) {
+        const item = _pt_basket[basketIdx];
+        if (!item) return;
+        const body = document.getElementById('ptSpecModalBody');
+        const imgEl = item.image_url ? `<img src="${item.image_url}" style="width:100%;max-height:180px;object-fit:contain;border-radius:10px;background:#f9fafb;padding:10px;margin-bottom:12px;" onerror="this.style.display='none'">` : '';
+        const specRows = [['SKU/Code',item.code],['Category',item.category_name],['Brand',item.brand],['Color',item.color],['Specifications',item.specifications]].filter(r=>r[1]).map(([l,v])=>`<tr><td style="color:#6b7280;width:40%;">${l}</td><td style="font-weight:500;">${escHtml(String(v))}</td></tr>`).join('');
+        const bMrp=item.display_mrp||item.dealer_price||0,bZvPct=item.markup_percent||0,bZvDisc=item.mrp_discount_amount||0,bIdPct=item.discount_pct||0,bIdDisc=item.discount_amount||0,bNet=item.net_before_tax||0,bTaxPct=item.gst_percent||18,bTaxAmt=item.gst_amount||0,bFinal=item.unit_price||0;
+        body.innerHTML = `${imgEl}<h6 style="font-weight:700;color:#166534;margin-bottom:12px;font-size:1rem;">${escHtml(item.name)}</h6>${specRows?`<table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:14px;">${specRows}</table>`:''}<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px;"><table class="spec-price-table"><tr><td>Base Cost (MRP)</td><td>${fmtRs(bMrp)}</td></tr><tr><td style="color:#ef4444;">VGK4U Discount (${bZvPct}%)</td><td style="color:#ef4444;">− ${fmtRs(bZvDisc)}</td></tr>${bIdDisc>0?`<tr><td style="color:#ef4444;">${_pt_discountLabel||item.discount_mode||'ID Discount'} (${bIdPct}%)</td><td style="color:#ef4444;">− ${fmtRs(bIdDisc)}</td></tr>`:''}<tr><td>Price after Discount</td><td>${fmtRs(bNet)}</td></tr><tr><td style="color:#6b7280;">Tax (GST ${bTaxPct}%)</td><td style="color:#6b7280;">+ ${fmtRs(bTaxAmt)}</td></tr><tr class="final-row"><td>Total with Tax</td><td>${fmtRs(bFinal)}</td></tr></table></div>`;
+        document.getElementById('ptAddFromModalBtn').style.display = 'none';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('ptSpecModal')).show();
+    }
+
+    function ptAddFromModal() {
+        if (_pt_specIdx !== null) ptPick(_pt_specIdx);
+        bootstrap.Modal.getInstance(document.getElementById('ptSpecModal'))?.hide();
+    }
+
+    // ── Pick + Manual ─────────────────────────────────────────────────────────
+    function ptPick(idx) {
+        const item = (window._pt_results || [])[idx];
+        if (!item) return;
+        const existing = _pt_basket.find(b => b.marketplace_spare_id === item.id);
+        if (existing) { existing.quantity++; ptRenderBasket(); ptHideDropdown(); return; }
+        _pt_basket.push({
+            marketplace_spare_id: item.id, name: item.name, code: item.sku || '', brand: item.brand || '',
+            specifications: item.specifications || '', color: item.color || '', category_name: item.category_name || '',
+            image_url: item.image_url || '', quantity: 1, dealer_price: parseFloat(item.dealer_price || 0),
+            display_mrp: parseFloat(item.display_mrp || item.dealer_price || 0),
+            mrp_discount_amount: parseFloat(item.mrp_discount_amount || 0),
+            markup_percent: parseFloat(item.markup_percent || 0),
+            discount_pct: parseFloat(item.discount_pct || 0), discount_amount: parseFloat(item.discount_amount || 0),
+            net_before_tax: parseFloat(item.net_before_tax || item.dealer_price || 0),
+            gst_percent: parseFloat(item.gst_percent || 18), gst_amount: parseFloat(item.gst_amount || 0),
+            unit_price: parseFloat(item.final_price || item.dealer_price || 0), gst_rate: parseFloat(item.gst_percent || 18),
+            hsn_code: item.hsn_code || null, discount_mode: _pt_discountMode || null, discount_id: _pt_discountId || null, is_custom: false,
+        });
+        ptHideDropdown();
+        document.getElementById('ptSearchInput').value = '';
+        window._pt_results = [];
+        ptRenderBasket();
+    }
+
+    function ptHideDropdown() { const el = document.getElementById('ptResultsDropdown'); if (el) el.style.display = 'none'; }
+
+    function ptAddManual() {
+        const name = (document.getElementById('ptManualName')?.value || '').trim();
+        if (!name) { alert('Please enter a part name'); return; }
+        const qty = Math.max(1, parseInt(document.getElementById('ptManualQty')?.value || '1') || 1);
+        _pt_basket.push({
+            marketplace_spare_id: null, name, code: '', brand: '', specifications: '', category_name: '', image_url: '',
+            quantity: qty, dealer_price: 0, discount_pct: 0, discount_amount: 0, net_before_tax: 0,
+            gst_percent: 18, gst_amount: 0, unit_price: 0, gst_rate: 18, hsn_code: null,
+            discount_mode: null, discount_id: null, is_custom: true,
+        });
+        document.getElementById('ptManualName').value = '';
+        document.getElementById('ptManualQty').value = '1';
+        ptRenderBasket();
+    }
+
+    // ── Basket render ─────────────────────────────────────────────────────────
+    function ptRenderBasket() {
+        const el = document.getElementById('ptBasket');
+        if (!el) return;
+        if (!_pt_basket.length) {
+            el.innerHTML = '<div style="text-align:center;color:#6b7280;font-size:13px;padding:10px 0;"><i class="fas fa-shopping-cart me-1"></i>No parts added yet</div>';
+            return;
+        }
+        let subtotalNet = 0, totalGst = 0, grandTotal = 0, totalDiscount = 0;
+        const rows = _pt_basket.map((item, i) => {
+            const lineNet = item.is_custom ? 0 : item.net_before_tax * item.quantity;
+            const lineGst = item.is_custom ? 0 : item.gst_amount * item.quantity;
+            const lineTotal = item.is_custom ? 0 : item.unit_price * item.quantity;
+            const lineDisc = item.is_custom ? 0 : item.discount_amount * item.quantity;
+            subtotalNet += lineNet; totalGst += lineGst; grandTotal += lineTotal; totalDiscount += lineDisc;
+            const badge = item.is_custom ? '<span class="badge-cust">Custom</span>' : '<span class="badge-cat">Catalog</span>';
+            const imgEl = item.image_url
+                ? `<img src="${item.image_url}" class="pt-br-img" onerror="this.style.display='none'">`
+                : `<div class="pt-br-img" style="display:flex;align-items:center;justify-content:center;"><i class="fas fa-cog" style="color:#d1d5db;"></i></div>`;
+            const specLine = [item.specifications, item.color, item.brand].filter(Boolean).join(' · ');
+            const pricingRow = !item.is_custom ? `<div class="pt-br-pricing">
+                <span><span class="pt-lbl">Dealer:</span> ${fmtRs(item.dealer_price)}</span>
+                ${item.discount_pct > 0 ? `<span class="pt-disc"><i class="fas fa-tag" style="font-size:9px;"></i> -${item.discount_pct}%: -${fmtRs(item.discount_amount)}</span>` : ''}
+                <span><span class="pt-lbl">Net:</span> ${fmtRs(item.net_before_tax)}</span>
+                <span><span class="pt-lbl">GST ${item.gst_percent}%:</span> +${fmtRs(item.gst_amount)}</span>
+                <span class="pt-total">Line Total: ${fmtRs(lineTotal)}</span>
+            </div>` : `<div class="pt-br-pricing"><span style="color:#6b7280;font-style:italic;font-size:11px;">Pricing confirmed at service</span></div>`;
+            return `<div class="pt-basket-row">
+                <div class="pt-br-top">
+                    ${imgEl}
+                    <div class="pt-br-name">
+                        <strong>${escHtml(item.name)}${badge}</strong>
+                        <small>${item.code ? escHtml(item.code)+' · ' : ''}${escHtml(item.category_name)}</small>
+                        ${specLine ? `<small style="color:#0369a1;font-size:10px;">${escHtml(specLine)}</small>` : ''}
+                    </div>
+                    <div class="pt-br-controls">
+                        <input type="number" min="1" value="${item.quantity}" onchange="_pt_basket[${i}].quantity=Math.max(1,parseInt(this.value)||1);ptRenderBasket()">
+                        ${!item.is_custom ? `<button type="button" class="pt-br-btn" title="View spec" onclick="ptShowSpecFromBasket(${i})" style="color:#0369a1;font-size:13px;"><i class="fas fa-info-circle"></i></button>` : ''}
+                        <button type="button" class="pt-br-btn" style="color:#dc2626;" title="Remove" onclick="_pt_basket.splice(${i},1);ptRenderBasket()"><i class="fas fa-times-circle"></i></button>
+                    </div>
+                </div>
+                ${pricingRow}
+            </div>`;
+        }).join('');
+
+        const discountRow = totalDiscount > 0
+            ? `<div class="pt-tot-row" style="color:#ef4444;"><span><i class="fas fa-tag me-1"></i>Total Discount${_pt_discountPct>0?' ('+_pt_discountPct+'%)':''}:</span><span>- ${fmtRs(totalDiscount)}</span></div>` : '';
+        const totalsHtml = grandTotal > 0 ? `<div class="pt-basket-totals">
+            <div class="pt-tot-row"><span>Items:</span><span>${_pt_basket.length}</span></div>
+            ${discountRow}
+            <div class="pt-tot-row"><span>Subtotal (ex-GST):</span><span>${fmtRs(subtotalNet)}</span></div>
+            <div class="pt-tot-row"><span>Total GST:</span><span>${fmtRs(totalGst)}</span></div>
+            <div class="pt-tot-row grand"><span>Grand Total (incl. GST):</span><span>${fmtRs(grandTotal)}</span></div>
+        </div>` : '';
+
+        const actionsHtml = _pt_basket.length > 0 ? `<div style="display:flex;gap:8px;padding:10px 12px;background:#f9fafb;border-top:1px solid #e5e7eb;flex-wrap:wrap;">
+            <button type="button" onclick="ptPrintBasketQuotation()" style="flex:1;min-width:120px;background:#6366f1;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;"><i class="fas fa-print"></i> Print Quotation</button>
+            <button type="button" onclick="ptExportBasketCSV()" style="flex:1;min-width:120px;background:#0891b2;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;"><i class="fas fa-file-csv"></i> Export CSV</button>
+        </div>` : '';
+
+        el.innerHTML = `<div class="pt-basket-outer">
+            <div class="pt-basket-hdr"><i class="fas fa-list me-1"></i>Selected Parts (${_pt_basket.length})</div>
+            ${rows}${totalsHtml}${actionsHtml}
+        </div>`;
+    }
+    ptRenderBasket();
+
+    // ── Print / Export ────────────────────────────────────────────────────────
+    function ptPrintBasketQuotation() {
+        let subDealer=0,subDisc=0,subNet=0,subGst=0,grand=0;
+        const rows=_pt_basket.map((item,i)=>{const ld=item.is_custom?0:item.dealer_price*item.quantity,ldisc=item.is_custom?0:item.discount_amount*item.quantity,ln=item.is_custom?0:item.net_before_tax*item.quantity,lg=item.is_custom?0:item.gst_amount*item.quantity,lt=item.is_custom?0:item.unit_price*item.quantity;subDealer+=ld;subDisc+=ldisc;subNet+=ln;subGst+=lg;grand+=lt;const specCell=[item.specifications,item.color,item.brand].filter(Boolean).join(' · ');return`<tr><td style="padding:7px 8px;border:1px solid #e5e7eb;">${i+1}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;font-weight:600;">${escHtml(item.name)}${item.code?'<br><small style="color:#6b7280;font-weight:400">'+escHtml(item.code)+'</small>':''}${specCell?'<br><small style="color:#0369a1;font-size:10px;">'+escHtml(specCell)+'</small>':''}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.dealer_price>0?fmtRs(item.dealer_price):'—'}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;color:#ef4444;">${item.discount_pct>0?'-'+item.discount_pct+'% (-'+fmtRs(item.discount_amount)+')':'—'}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.net_before_tax>0?fmtRs(item.net_before_tax):'—'}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.gst_percent>0?item.gst_percent+'%':'—'}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#166534;">${lt>0?fmtRs(lt):'—'}</td></tr>`;}).join('');
+        const now=new Date().toLocaleString('en-IN'),discLabel=_pt_discountLabel?` · ${_pt_discountLabel} (${_pt_discountPct}% off)`:'';
+        document.getElementById('ptPrintArea').innerHTML=`<div style="font-family:Arial,sans-serif;max-width:760px;margin:0 auto;"><div style="text-align:center;margin-bottom:20px;border-bottom:2px solid #10b981;padding-bottom:14px;"><div style="font-size:20px;font-weight:700;color:#1f2937;">VGK4U EV — Spare Parts Quotation</div><div style="font-size:12px;color:#666;margin-top:4px;">Generated: ${now}${discLabel}</div></div><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#f0fdf4;"><th style="padding:8px;border:1px solid #d1fae5;">#</th><th style="padding:8px;border:1px solid #d1fae5;text-align:left;">Part / Specifications</th><th style="padding:8px;border:1px solid #d1fae5;text-align:center;">Qty</th><th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Dealer Price</th><th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Discount</th><th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Net (ex-GST)</th><th style="padding:8px;border:1px solid #d1fae5;text-align:right;">GST%</th><th style="padding:8px;border:1px solid #d1fae5;text-align:right;font-weight:700;">Line Total</th></tr></thead><tbody>${rows}</tbody>${grand>0?`<tfoot>${subDisc>0?`<tr><td colspan="7" style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">Total Discount</td><td style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;color:#ef4444;">- ${fmtRs(subDisc)}</td></tr>`:''}<tr><td colspan="7" style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">Subtotal (ex-GST)</td><td style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">${fmtRs(subNet)}</td></tr><tr><td colspan="7" style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">Total GST</td><td style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">${fmtRs(subGst)}</td></tr><tr style="background:#f0fdf4;font-weight:700;font-size:14px;"><td colspan="7" style="padding:8px;text-align:right;border:2px solid #bbf7d0;">Grand Total</td><td style="padding:8px;text-align:right;border:2px solid #bbf7d0;color:#166534;">${fmtRs(grand)}</td></tr></tfoot>`:''}</table><div style="margin-top:16px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:10px;">Indicative quotation — final pricing confirmed at service. · VGK4U EV</div></div>`;
+        document.getElementById('ptPrintArea').style.display='block';
+        window.print();
+        setTimeout(()=>{document.getElementById('ptPrintArea').style.display='none';},600);
+    }
+
+    function ptExportBasketCSV() {
+        const lines=['#,Part Name,SKU,Brand,Color,Specifications,Qty,Dealer Price,Discount %,Discount Amt,Net (ex-GST),GST %,GST Amt,Line Total'];
+        let grand=0;
+        _pt_basket.forEach((item,i)=>{const lt=item.unit_price*item.quantity;grand+=lt;const csvStr=v=>`"${String(v||'').replace(/"/g,'""')}"`;lines.push([i+1,csvStr(item.name),item.code||'',csvStr(item.brand),csvStr(item.color),csvStr(item.specifications),item.quantity,item.dealer_price||0,item.discount_pct||0,item.discount_amount||0,item.net_before_tax||0,item.gst_percent||0,item.gst_amount||0,lt].join(','));});
+        if(grand>0)lines.push(`,,,,,,,,,,,,,,Grand Total,${grand.toFixed(2)}`);
+        const blob=new Blob([lines.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`zynova-spare-quotation-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+    }
+
+    // ── File attachments ─────────────────────────────────────────────────────
+    function initFileUpload() {
+        const zone = document.getElementById('uploadZone');
+        const input = document.getElementById('fileInput');
+        zone.addEventListener('click', () => input.click());
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+        zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+        zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+        input.addEventListener('change', () => handleFiles(input.files));
+    }
+
+    function getFileType(file) {
+        if (file.type.startsWith('image/')) return 'image';
+        if (file.type.startsWith('video/')) return 'video';
+        const ext = file.name.toLowerCase().split('.').pop();
+        if (['jpg','jpeg','png','gif','webp','bmp','heic','heif'].includes(ext)) return 'image';
+        if (['mp4','mov','avi','mkv','webm','m4v','3gp'].includes(ext)) return 'video';
+        return null;
+    }
+
+    function handleFiles(files) {
+        for (const file of files) {
+            const ft = getFileType(file);
+            if (!ft) { alert(`${file.name}: Only images and videos allowed`); continue; }
+            if (ft === 'image') {
+                if (selectedFiles.filter(f => getFileType(f) === 'image').length >= MAX_PHOTOS) { alert(`Max ${MAX_PHOTOS} photos allowed`); continue; }
+                if (file.size > MAX_PHOTO_SIZE) { alert(`${file.name}: Photo must be under 5MB`); continue; }
+            }
+            if (ft === 'video') {
+                if (selectedFiles.filter(f => getFileType(f) === 'video').length >= MAX_VIDEOS) { alert(`Max ${MAX_VIDEOS} videos allowed`); continue; }
+                if (file.size > MAX_VIDEO_SIZE) { alert(`${file.name}: Video must be under 20MB`); continue; }
+            }
+            selectedFiles.push(file);
+        }
+        renderFilePreview();
+    }
+
+    function renderFilePreview() {
+        const preview = document.getElementById('filePreview');
+        preview.innerHTML = '';
+        selectedFiles.forEach((file, idx) => {
+            const ft = getFileType(file);
+            const item = document.createElement('div');
+            item.className = 'file-item';
+            item.innerHTML = ft === 'image'
+                ? `<img src="${URL.createObjectURL(file)}" class="file-thumbnail"><span class="file-name" title="${file.name}">${file.name}</span><button type="button" class="remove-btn" onclick="removeFile(${idx})"><i class="fas fa-times"></i></button>`
+                : `<i class="fas fa-video fa-2x text-muted"></i><span class="file-name" title="${file.name}">${file.name}</span><button type="button" class="remove-btn" onclick="removeFile(${idx})"><i class="fas fa-times"></i></button>`;
+            preview.appendChild(item);
+        });
+    }
+
+    function removeFile(idx) { selectedFiles.splice(idx, 1); renderFilePreview(); }
+
+    async function uploadAttachments(ticketId) {
+        const progressDiv = document.getElementById('uploadProgress');
+        progressDiv.style.display = 'block';
+        let successCount = 0;
+        for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            const item = document.createElement('div');
+            item.className = 'progress-item';
+            item.innerHTML = `<small>${file.name}</small><div class="progress"><div class="progress-bar bg-success" style="width:0%"></div></div>`;
+            progressDiv.appendChild(item);
+            const bar = item.querySelector('.progress-bar');
+            try {
+                const fd = new FormData(); fd.append('attachment', file);
+                const r = await fetch(`/api/v1/tickets/${ticketId}/upload-attachment`, { method: 'POST', headers: _authHeader(), body: fd });
+                if (r.ok) { bar.style.width = '100%'; successCount++; }
+                else { bar.classList.replace('bg-success', 'bg-danger'); bar.style.width = '100%'; }
+            } catch(e) { bar.classList.replace('bg-success', 'bg-danger'); bar.style.width = '100%'; }
+        }
+        return successCount;
+    }
+
+    // ── Form submission ───────────────────────────────────────────────────────
+    document.getElementById('ticketForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById('submitBtn');
+        const errorBanner = document.getElementById('errorBanner');
+        errorBanner.style.display = 'none';
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating…';
+
+        const ticketType = document.querySelector('input[name="ticket_type"]:checked')?.value || 'technical';
+
+        const payload = {
+            ticket_type: ticketType,
+            customer_name: document.getElementById('customerName').value.trim(),
+            customer_phone: document.getElementById('customerPhone').value.trim(),
+            customer_email: document.getElementById('customerEmail').value.trim() || null,
+            customer_address: document.getElementById('customerAddress').value.trim() || null,
+            partner_id: document.getElementById('partnerId').value || null,
+            product_name: document.getElementById('productName').value.trim() || null,
+            product_serial: document.getElementById('productSerial').value.trim() || null,
+            product_model: document.getElementById('productModel').value.trim() || null,
+            issue_category: document.getElementById('issueCategory').value,
+            priority: document.getElementById('priority').value,
+            issue_description: document.getElementById('issueDescription').value.trim(),
+            source_channel: 'staff_portal',
+            spares_required: ticketType === 'spares',
+        };
+
+        // Warranty
+        if (document.getElementById('warrantyCheck').checked) {
+            payload.warranty_status = 'under_warranty';
+            payload.warranty_invoice_number = document.getElementById('wInvoiceNo').value.trim() || null;
+            payload.warranty_sale_date = document.getElementById('wSaleDate').value || null;
+            payload.warranty_model = document.getElementById('wModel').value.trim() || null;
+            payload.warranty_motor_number = document.getElementById('wMotorNo').value.trim() || null;
+            payload.warranty_chassis_number = document.getElementById('wChassisNo').value.trim() || null;
+            payload.warranty_notes = document.getElementById('wNotes').value.trim() || null;
+        }
+
+        // Spare basket
+        if (ticketType === 'spares' && _pt_basket.length > 0) {
+            payload.requested_parts = _pt_basket.map(item => ({
+                name: item.name, code: item.code || null, quantity: item.quantity,
+                marketplace_spare_id: item.marketplace_spare_id || null,
+                unit_price: item.unit_price || null, gst_rate: item.gst_rate || item.gst_percent || 18,
+                gst_amount: item.gst_amount || null,
+                total_with_gst: item.unit_price ? item.unit_price * item.quantity : null,
+                hsn_code: item.hsn_code || null, discount_mode: item.discount_mode || null,
+                catalog_price: item.dealer_price || null, discount_pct: item.discount_pct || null,
+                discount_amount: item.discount_amount || null, net_before_tax: item.net_before_tax || null,
+                is_custom: item.is_custom || false,
+            }));
+        }
+
+        try {
+            const resp = await fetch('/api/v1/tickets/service/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ..._authHeader() },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.detail || 'Failed to create ticket');
+
+            // Upload attachments if any
+            if (selectedFiles.length > 0) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading…';
+                await uploadAttachments(data.id || data.ticket_id);
+            }
+
+            // Success panel
+            const basketSnap = JSON.parse(JSON.stringify(_pt_basket));
+            document.getElementById('ticketIdDisplay').textContent = data.ticket_id || data.id;
+            renderSuccessBasket(basketSnap);
+            document.getElementById('ticketForm').style.display = 'none';
+            document.getElementById('successPanel').style.display = 'block';
+
+        } catch(err) {
+            errorBanner.textContent = err.message || 'Something went wrong. Please try again.';
+            errorBanner.style.display = 'block';
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-plus me-2"></i>Create Ticket';
+        }
+    });
+
+    // ── Success basket ────────────────────────────────────────────────────────
+    function renderSuccessBasket(basket) {
+        if (!basket.length) { document.getElementById('ptSuccessBasket').innerHTML = ''; return; }
+        const printBtn = document.getElementById('ptPrintBtn');
+        let subNet = 0, subGst = 0, grand = 0;
+        const tableRows = basket.map((item, i) => {
+            const lineTotal = item.unit_price * item.quantity;
+            subNet += item.net_before_tax * item.quantity;
+            subGst += item.gst_amount * item.quantity;
+            grand  += lineTotal;
+            return `<tr>
+                <td>${i+1}</td>
+                <td><strong>${escHtml(item.name)}</strong>${item.code?'<br><small style="color:#6b7280;">'+escHtml(item.code)+'</small>':''}</td>
+                <td style="text-align:center;">${item.quantity}</td>
+                <td style="text-align:right;">${item.unit_price > 0 ? fmtRs(item.unit_price) : '—'}</td>
+                <td style="text-align:right;font-weight:600;color:#166534;">${item.unit_price > 0 ? fmtRs(lineTotal) : '—'}</td>
+            </tr>`;
+        }).join('');
+        const footerRows = grand > 0 ? `
+            <tr><td colspan="4" style="text-align:right;">Subtotal (ex-GST)</td><td style="text-align:right;">${fmtRs(subNet)}</td></tr>
+            <tr><td colspan="4" style="text-align:right;">Total GST</td><td style="text-align:right;">${fmtRs(subGst)}</td></tr>
+            <tr class="grand"><td colspan="4" style="text-align:right;">Grand Total</td><td style="text-align:right;">${fmtRs(grand)}</td></tr>` : '';
+        document.getElementById('ptSuccessBasket').innerHTML = `<div class="pt-success-basket">
+            <table>
+                <thead><tr><th>#</th><th>Part</th><th>Qty</th><th style="text-align:right;">Unit</th><th style="text-align:right;">Total</th></tr></thead>
+                <tbody>${tableRows}</tbody>
+                ${grand > 0 ? `<tfoot>${footerRows}</tfoot>` : ''}
+            </table>
+        </div>`;
+        if (grand > 0) {
+            printBtn.style.display = 'inline-flex';
+            const now = new Date().toLocaleString('en-IN');
+            const ticketId = document.getElementById('ticketIdDisplay').textContent;
+            document.getElementById('ptPrintArea').innerHTML = `<div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;"><div style="text-align:center;margin-bottom:24px;border-bottom:2px solid #10b981;padding-bottom:16px;"><div style="font-size:22px;font-weight:700;color:#1f2937;">VGK4U EV — Spare Parts Request</div><div style="font-size:14px;color:#666;margin-top:4px;">Ticket ID: <strong>${ticketId}</strong> &nbsp;|&nbsp; ${now}</div></div><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#f0fdf4;"><th style="padding:8px;border:1px solid #d1fae5;text-align:left;">#</th><th style="padding:8px;border:1px solid #d1fae5;text-align:left;">Part Name</th><th style="padding:8px;border:1px solid #d1fae5;text-align:center;">Qty</th><th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Unit Price</th><th style="padding:8px;border:1px solid #d1fae5;text-align:right;">Net</th><th style="padding:8px;border:1px solid #d1fae5;text-align:right;">GST</th><th style="padding:8px;border:1px solid #d1fae5;text-align:right;font-weight:700;">Line Total</th></tr></thead><tbody>${basket.map((item,i)=>{const lt=item.unit_price*item.quantity;return`<tr><td style="padding:7px 8px;border:1px solid #e5e7eb;">${i+1}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;font-weight:600;">${escHtml(item.name)}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:center;">${item.quantity}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.dealer_price>0?fmtRs(item.dealer_price):'—'}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.net_before_tax>0?fmtRs(item.net_before_tax):'—'}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;">${item.gst_percent>0?item.gst_percent+'%':'—'}</td><td style="padding:7px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#166534;">${lt>0?fmtRs(lt):'—'}</td></tr>`;}).join('')}</tbody>${grand>0?`<tfoot><tr><td colspan="6" style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">Subtotal (ex-GST)</td><td style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">${fmtRs(subNet)}</td></tr><tr><td colspan="6" style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">Total GST</td><td style="padding:6px 8px;text-align:right;border:1px solid #e5e7eb;">${fmtRs(subGst)}</td></tr><tr style="background:#f0fdf4;font-weight:700;font-size:14px;"><td colspan="6" style="padding:8px;text-align:right;border:2px solid #bbf7d0;">Grand Total</td><td style="padding:8px;text-align:right;border:2px solid #bbf7d0;color:#166534;">${fmtRs(grand)}</td></tr></tfoot>`:''}</table><div style="margin-top:24px;font-size:11px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:12px;">Generated from VGK4U EV Staff Portal · ${now}</div></div>`;
+        }
+    }
+
+    function ptPrintPO() {
+        document.getElementById('ptPrintArea').style.display = 'block';
+        window.print();
+        setTimeout(() => { document.getElementById('ptPrintArea').style.display = 'none'; }, 500);
+    }
+
+    function resetForm() {
+        document.getElementById('ticketForm').reset();
+        document.getElementById('ticketForm').style.display = 'block';
+        document.getElementById('successPanel').style.display = 'none';
+        document.getElementById('errorBanner').style.display = 'none';
+        document.getElementById('filePreview').innerHTML = '';
+        document.getElementById('uploadProgress').innerHTML = '';
+        document.getElementById('uploadProgress').style.display = 'none';
+        document.getElementById('spareCatalogSection').style.display = 'none';
+        document.getElementById('warrantySection').style.display = 'none';
+        document.getElementById('selectedPartner').style.display = 'none';
+        document.getElementById('partnerId').value = '';
+        document.getElementById('ptBasket').innerHTML = '';
+        document.querySelectorAll('.ticket-type-option').forEach(o => o.classList.remove('selected'));
+        document.querySelector('.ticket-type-option[data-type="technical"]').classList.add('selected');
+        selectedFiles = [];
+        _pt_basket = [];
+        _pt_discountMode = null; _pt_discountId = null; _pt_discountLabel = ''; _pt_discountPct = 0;
+        ptRenderBasket();
+        document.getElementById('submitBtn').disabled = false;
+        document.getElementById('submitBtn').innerHTML = '<i class="fas fa-plus me-2"></i>Create Ticket';
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function round2(n) { return Math.round((n || 0) * 100) / 100; }
+    function fmtRs(n) { return '₹' + (n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    </script>
+</body>
+</html>

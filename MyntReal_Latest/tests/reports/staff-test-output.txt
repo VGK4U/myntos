@@ -1,0 +1,25 @@
+
+Running 62 tests using 1 worker
+
+=== Starting Staff Role E2E Tests ===
+Testing 61 staff pages
+  ✓   1 [chromium] › tests/e2e/02-staff-pages.spec.js:13:3 › Staff Role - All Staff Pages E2E Test › Staff Login Test (2.3s)
+Testing Staff Page: Staff Dashboard
+  ✓   2 [chromium] › tests/e2e/02-staff-pages.spec.js:27:5 › Staff Role - All Staff Pages E2E Test › Staff Dashboard (/staff/dashboard) (1.0m)
+Testing Staff Page: My Attendance
+  ✓   3 [chromium] › tests/e2e/02-staff-pages.spec.js:27:5 › Staff Role - All Staff Pages E2E Test › My Attendance (/staff/my-attendance) (1.0m)
+Testing Staff Page: My Journeys
+  ✓   4 [chromium] › tests/e2e/02-staff-pages.spec.js:27:5 › Staff Role - All Staff Pages E2E Test › My Journeys (/staff/my-journeys) (1.0m)
+Testing Staff Page: My Timesheet
+  ✓   5 [chromium] › tests/e2e/02-staff-pages.spec.js:27:5 › Staff Role - All Staff Pages E2E Test › My Timesheet (/staff/my-timesheet) (1.0m)
+Testing Staff Page: My KRAs
+  ✓   6 [chromium] › tests/e2e/02-staff-pages.spec.js:27:5 › Staff Role - All Staff Pages E2E Test › My KRAs (/staff/my-kras) (1.0m)
+Testing Staff Page: My Location History
+  ✓   7 [chromium] › tests/e2e/02-staff-pages.spec.js:27:5 › Staff Role - All Staff Pages E2E Test › My Location History (/staff/my-location-history) (1.0m)
+Testing Staff Page: My KYC
+  ✓   8 [chromium] › tests/e2e/02-staff-pages.spec.js:27:5 › Staff Role - All Staff Pages E2E Test › My KYC (/staff/my-kyc) (1.0m)
+Testing Staff Page: Tasks Assigned To Me
+  ✓   9 [chromium] › tests/e2e/02-staff-pages.spec.js:27:5 › Staff Role - All Staff Pages E2E Test › Tasks Assigned To Me (/staff/tasks/assigned-to-me) (1.0m)
+Testing Staff Page: Tasks Assigned By Me
+  ✓  10 [chromium] › tests/e2e/02-staff-pages.spec.js:27:5 › Staff Role - All Staff Pages E2E Test › Tasks Assigned By Me (/staff/tasks/assigned-by-me) (1.0m)
+Testing Staff Page: Staff Settings

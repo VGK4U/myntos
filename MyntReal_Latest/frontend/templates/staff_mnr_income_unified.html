@@ -1,0 +1,2159 @@
+<div class="main-content" id="mainContent">
+    <div class="page-header">
+        <h1><i class="fas fa-coins"></i> Unified Income Management</h1>
+        <p>View, Verify, Approve, and Process all MNR incomes from a single page</p>
+    </div>
+
+    <div class="income-tabs" style="display:flex;gap:0;margin-bottom:12px;border-bottom:2px solid #334155;">
+        <button class="income-tab active" id="tabRecords" onclick="switchTab('records')">
+            <i class="fas fa-list"></i> Income Records
+        </button>
+        <button class="income-tab" id="tabUserView" onclick="switchTab('userView')">
+            <i class="fas fa-users"></i> User View
+        </button>
+        <button class="income-tab" id="tabTdsTracking" onclick="switchTab('tdsTracking')">
+            <i class="fas fa-landmark"></i> TDS Tracking
+        </button>
+    </div>
+
+    <div id="tabRecordsContent">
+    <div class="filter-panel">
+        <h6 class="mb-3"><i class="fas fa-filter"></i> Filters</h6>
+        <div class="filter-row">
+            <div>
+                <label class="form-label">Status</label>
+                <select id="statusFilter" class="form-select">
+                    <option value="all">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Staff Validated">Staff Validated</option>
+                    <option value="Completed">Completed</option>
+                    <option value="Cleared">Cleared (Pre-12 Feb)</option>
+                </select>
+            </div>
+            <div>
+                <label class="form-label">From Date</label>
+                <input type="date" id="fromDate" class="form-control">
+            </div>
+            <div>
+                <label class="form-label">To Date</label>
+                <input type="date" id="toDate" class="form-control">
+            </div>
+            <div>
+                <label class="form-label">User ID</label>
+                <input type="text" id="userIdFilter" class="form-control" placeholder="e.g., MNR123456">
+            </div>
+            <div>
+                <label class="form-label">Income Type</label>
+                <select id="incomeTypeFilter" class="form-select">
+                    <option value="all">All Types (Clubbed)</option>
+                    <option value="Direct Facilitation">Direct Facilitation</option>
+                    <option value="Group Performance Recognition">Group Performance Recognition</option>
+                    <option value="VED Leadership Recognition">VED Leadership Recognition</option>
+                    <option value="Mentorship Contribution Benefit">Mentorship Contribution Benefit</option>
+                </select>
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-rvz-primary" onclick="loadIncomes()">
+                <i class="fas fa-search"></i> Apply Filters
+            </button>
+            <button class="btn btn-rvz-secondary" onclick="resetFilters()">
+                <i class="fas fa-redo"></i> Reset
+            </button>
+        </div>
+    </div>
+
+    <div class="stats-row" id="statsRow" style="display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:16px;">
+        <div class="stat-card stat-summary">
+            <div class="stat-value" id="statTotalGross">&#8377;0</div>
+            <div class="stat-label">Total Gross</div>
+        </div>
+        <div class="stat-card stat-summary">
+            <div class="stat-value" id="statTotalNet">&#8377;0</div>
+            <div class="stat-label">Total Net</div>
+        </div>
+        <div class="stat-card stat-summary" style="border-color:#f97316;">
+            <div class="stat-value" id="statOverallPending" style="color:#f97316;">0</div>
+            <div class="stat-label">Overall Pending</div>
+            <div class="stat-amount" id="statOverallPendingAmt" style="font-size:0.75rem;color:#f97316;margin-top:2px;">&#8377;0</div>
+        </div>
+        <div class="stat-card" onclick="filterByStatus('Pending')" style="cursor:pointer">
+            <div class="stat-value" id="statPending">0</div>
+            <div class="stat-label">Pending</div>
+            <div class="stat-amount" id="statPendingAmt" style="font-size:0.75rem;color:#fbbf24;margin-top:2px;">&#8377;0</div>
+        </div>
+        <div class="stat-card" onclick="filterByStatus('Staff Validated')" style="cursor:pointer">
+            <div class="stat-value" id="statStaffValidated">0</div>
+            <div class="stat-label">Validated</div>
+            <div class="stat-amount" id="statStaffValidatedAmt" style="font-size:0.75rem;color:#60a5fa;margin-top:2px;">&#8377;0</div>
+        </div>
+        <div class="stat-card" onclick="filterByStatus('Completed')" style="cursor:pointer">
+            <div class="stat-value" id="statCompleted">0</div>
+            <div class="stat-label">Completed</div>
+            <div class="stat-amount" id="statCompletedAmt" style="font-size:0.75rem;color:#a78bfa;margin-top:2px;">&#8377;0</div>
+        </div>
+        <div class="stat-card" onclick="filterByStatus('Cleared')" style="cursor:pointer;border-color:#22c55e;">
+            <div class="stat-value" id="statCleared" style="color:#22c55e;">0</div>
+            <div class="stat-label">Cleared</div>
+            <div class="stat-amount" id="statClearedAmt" style="font-size:0.75rem;color:#22c55e;margin-top:2px;">&#8377;0</div>
+        </div>
+        <div class="stat-card stat-summary">
+            <div class="stat-value" id="statRecordCount">0</div>
+            <div class="stat-label">Total Rows</div>
+        </div>
+    </div>
+
+    <div class="action-bar d-flex gap-2 mb-3" id="actionBar" style="display:none !important">
+        <button class="btn btn-warning" onclick="performAction('validate')" id="btnValidate" disabled>
+            <i class="fas fa-check"></i> Validate (<span id="countValidate">0</span>)
+        </button>
+        <button class="btn btn-success" onclick="performAction('approve')" id="btnApprove" disabled>
+            <i class="fas fa-check-double"></i> Approve & Pay (<span id="countApprove">0</span>)
+        </button>
+        <button class="btn btn-outline-secondary ms-auto" onclick="selectAll()">
+            <i class="fas fa-check-square"></i> Select All Visible
+        </button>
+        <button class="btn btn-outline-secondary" onclick="deselectAll()">
+            <i class="fas fa-square"></i> Deselect All
+        </button>
+    </div>
+
+    <div class="table-container">
+        <div class="table-header">
+            <h5><i class="fas fa-list"></i> Income Records (<span id="totalCount">0</span>)</h5>
+            <span id="modeIndicator" class="badge bg-info" style="font-size:11px;"></span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover" id="incomesTable">
+                <thead>
+                    <tr>
+                        <th style="width:40px"><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)"></th>
+                        <th style="width:70px">Rec #</th>
+                        <th>Member Details</th>
+                        <th style="text-align:right">Gross (&#8377;)</th>
+                        <th style="text-align:right">Net (&#8377;)</th>
+                        <th style="text-align:center">Date</th>
+                        <th style="text-align:center">KYC</th>
+                        <th style="text-align:center">Key Elig.</th>
+                        <th style="text-align:center">Group Eligibility</th>
+                        <th>Validation</th>
+                        <th>Approval</th>
+                        <th style="text-align:center">Status</th>
+                        <th style="text-align:center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="incomesTableBody">
+                    <tr><td colspan="13" class="text-center py-4">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination-controls d-flex justify-content-between align-items-center mt-3">
+            <div>
+                Showing <span id="showingFrom">0</span>-<span id="showingTo">0</span> of <span id="totalRecords">0</span>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" onclick="previousPage()" id="btnPrev" disabled>
+                    <i class="fas fa-chevron-left"></i> Previous
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" id="btnNext" disabled>
+                    Next <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div id="tabUserViewContent" style="display:none;">
+        <div class="filter-panel">
+            <h6 class="mb-3"><i class="fas fa-filter"></i> Filters</h6>
+            <div class="filter-row">
+                <div>
+                    <label class="form-label">Status</label>
+                    <select id="uvStatusFilter" class="form-select">
+                        <option value="all">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Staff Validated">Staff Validated</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cleared">Cleared (Pre-12 Feb)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">From Date</label>
+                    <input type="date" id="uvFromDate" class="form-control">
+                </div>
+                <div>
+                    <label class="form-label">To Date</label>
+                    <input type="date" id="uvToDate" class="form-control">
+                </div>
+                <div>
+                    <label class="form-label">User ID</label>
+                    <input type="text" id="uvUserIdFilter" class="form-control" placeholder="e.g., MNR123456">
+                </div>
+                <div>
+                    <label class="form-label">Income Type</label>
+                    <select id="uvIncomeTypeFilter" class="form-select">
+                        <option value="all">All Types</option>
+                        <option value="Direct Facilitation">Direct Facilitation</option>
+                        <option value="Group Performance Recognition">Group Performance Recognition</option>
+                        <option value="VED Leadership Recognition">VED Leadership Recognition</option>
+                        <option value="Mentorship Contribution Benefit">Mentorship Contribution Benefit</option>
+                    </select>
+                </div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <button class="btn btn-rvz-primary" onclick="loadUserView()">
+                    <i class="fas fa-search"></i> Apply Filters
+                </button>
+                <button class="btn btn-rvz-secondary" onclick="resetUserViewFilters()">
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+            </div>
+        </div>
+
+        <div class="stats-row" id="uvStatsRow" style="display:grid;grid-template-columns:repeat(8,1fr);gap:8px;margin-bottom:16px;">
+            <div class="stat-card stat-summary">
+                <div class="stat-value" id="uvStatTotalGross">&#8377;0</div>
+                <div class="stat-label">Total Gross</div>
+            </div>
+            <div class="stat-card stat-summary">
+                <div class="stat-value" id="uvStatTotalNet">&#8377;0</div>
+                <div class="stat-label">Total Net</div>
+            </div>
+            <div class="stat-card stat-summary" style="border-color:#f97316;">
+                <div class="stat-value" id="uvStatOverallPending" style="color:#f97316;">0</div>
+                <div class="stat-label">Overall Pending</div>
+                <div class="stat-amount" id="uvStatOverallPendingAmt" style="font-size:0.75rem;color:#f97316;margin-top:2px;">&#8377;0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="uvStatPending">0</div>
+                <div class="stat-label">Pending</div>
+                <div class="stat-amount" id="uvStatPendingAmt" style="font-size:0.75rem;color:#fbbf24;margin-top:2px;">&#8377;0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="uvStatValidated">0</div>
+                <div class="stat-label">Validated</div>
+                <div class="stat-amount" id="uvStatValidatedAmt" style="font-size:0.75rem;color:#60a5fa;margin-top:2px;">&#8377;0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="uvStatCompleted">0</div>
+                <div class="stat-label">Completed</div>
+                <div class="stat-amount" id="uvStatCompletedAmt" style="font-size:0.75rem;color:#a78bfa;margin-top:2px;">&#8377;0</div>
+            </div>
+            <div class="stat-card" style="border-color:#22c55e;">
+                <div class="stat-value" id="uvStatCleared" style="color:#22c55e;">0</div>
+                <div class="stat-label">Cleared</div>
+                <div class="stat-amount" id="uvStatClearedAmt" style="font-size:0.75rem;color:#22c55e;margin-top:2px;">&#8377;0</div>
+            </div>
+            <div class="stat-card stat-summary">
+                <div class="stat-value" id="uvStatUserCount">0</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <h5><i class="fas fa-users"></i> User-Wise Income (<span id="uvTotalCount">0</span>)</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover" id="userViewTable">
+                    <thead>
+                        <tr>
+                            <th style="cursor:pointer" onclick="sortUserView('user_id')"># <i class="fas fa-sort" id="sortIcon_user_id"></i></th>
+                            <th style="cursor:pointer" onclick="sortUserView('user_name')">Member Details <i class="fas fa-sort" id="sortIcon_user_name"></i></th>
+                            <th style="text-align:right;cursor:pointer" onclick="sortUserView('total_gross')">Gross Earned (&#8377;) <i class="fas fa-sort" id="sortIcon_total_gross"></i></th>
+                            <th style="text-align:right;cursor:pointer" onclick="sortUserView('total_net')">Net Earned (&#8377;) <i class="fas fa-sort" id="sortIcon_total_net"></i></th>
+                            <th style="text-align:right;cursor:pointer" onclick="sortUserView('cleared_amount')">Cleared (&#8377;) <i class="fas fa-sort" id="sortIcon_cleared_amount"></i></th>
+                            <th style="text-align:right;cursor:pointer" onclick="sortUserView('pending_amount')">Pending (&#8377;) <i class="fas fa-sort" id="sortIcon_pending_amount"></i></th>
+                            <th style="text-align:center;cursor:pointer" onclick="sortUserView('total_records')">Records <i class="fas fa-sort" id="sortIcon_total_records"></i></th>
+                            <th style="text-align:center">Income Types</th>
+                            <th style="text-align:center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userViewTableBody">
+                        <tr><td colspan="9" class="text-center py-4">Select filters and click Apply</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination-controls d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    Showing <span id="uvShowingFrom">0</span>-<span id="uvShowingTo">0</span> of <span id="uvTotalRecords">0</span> users
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="uvPreviousPage()" id="uvBtnPrev" disabled>
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="uvNextPage()" id="uvBtnNext" disabled>
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tabTdsTrackingContent" style="display:none;">
+        <div class="row g-2 mb-3">
+            <div class="col-lg col-md-4 col-sm-4 col-6">
+                <div class="stat-card" style="border-left: 3px solid #6366f1;">
+                    <div class="icon" style="background:#e0e7ff;color:#4f46e5;"><i class="fas fa-users"></i></div>
+                    <div class="value" style="color:#4f46e5;" id="tdsStatUsers">--</div>
+                    <div class="label">Total Users</div>
+                </div>
+            </div>
+            <div class="col-lg col-md-4 col-sm-4 col-6">
+                <div class="stat-card stat-green">
+                    <div class="icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="value" id="tdsStatGross">--</div>
+                    <div class="label">Total Gross</div>
+                </div>
+            </div>
+            <div class="col-lg col-md-4 col-sm-4 col-6">
+                <div class="stat-card stat-orange">
+                    <div class="icon"><i class="fas fa-percentage"></i></div>
+                    <div class="value" id="tdsStatAdmin">--</div>
+                    <div class="label">Admin Charge (8%)</div>
+                </div>
+            </div>
+            <div class="col-lg col-md-4 col-sm-4 col-6">
+                <div class="stat-card stat-red">
+                    <div class="icon"><i class="fas fa-landmark"></i></div>
+                    <div class="value" id="tdsStatTds">--</div>
+                    <div class="label">TDS (2%)</div>
+                </div>
+            </div>
+            <div class="col-lg col-md-4 col-sm-4 col-6">
+                <div class="stat-card stat-blue">
+                    <div class="icon"><i class="fas fa-om"></i></div>
+                    <div class="value" id="tdsStatGuru">--</div>
+                    <div class="label">Guru Dakshina (2%)</div>
+                </div>
+            </div>
+            <div class="col-lg col-md-4 col-sm-4 col-6">
+                <div class="stat-card" style="border-left: 3px solid #059669;">
+                    <div class="icon" style="background:#d1fae5;color:#059669;"><i class="fas fa-wallet"></i></div>
+                    <div class="value" style="color:#059669;" id="tdsStatNet">--</div>
+                    <div class="label">Net to Members</div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-2 mb-4">
+            <div class="col-md-4 col-sm-4 col-6">
+                <div class="stat-card" style="border-left: 3px solid #eab308;">
+                    <div class="icon" style="background:#fef9c3;color:#ca8a04;"><i class="fas fa-clock"></i></div>
+                    <div class="value" style="color:#ca8a04;" id="tdsStatPending">--</div>
+                    <div class="label">Pending TDS</div>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-4 col-6">
+                <div class="stat-card" style="border-left: 3px solid #22c55e;">
+                    <div class="icon" style="background:#dcfce7;color:#16a34a;"><i class="fas fa-check-circle"></i></div>
+                    <div class="value" style="color:#16a34a;" id="tdsStatCompleted">--</div>
+                    <div class="label">Completed TDS</div>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-4 col-6">
+                <div class="stat-card" style="border-left: 3px solid #8b5cf6;">
+                    <div class="icon" style="background:#ede9fe;color:#7c3aed;"><i class="fas fa-exclamation-circle"></i></div>
+                    <div class="value" style="color:#7c3aed;" id="tdsStatException">--</div>
+                    <div class="label">Exception TDS</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-panel">
+            <div class="filter-row">
+                <div class="flex-grow-1">
+                    <input type="text" class="form-control" id="tdsSearchInput" placeholder="Search by MNR ID or name...">
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:12px;">Status</label>
+                    <select class="form-select form-select-sm" id="tdsStatusFilter" style="min-width:120px;">
+                        <option value="All">All</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Exception">Exception</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:12px;">From Date</label>
+                    <input type="date" class="form-control form-control-sm" id="tdsFromDate">
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:12px;">To Date</label>
+                    <input type="date" class="form-control form-control-sm" id="tdsToDate">
+                </div>
+                <div>
+                    <button class="btn btn-primary" onclick="loadTdsData()">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+                <div>
+                    <button class="btn btn-outline-secondary" onclick="clearTdsFilters()">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-landmark me-2"></i>User-wise Income & TDS Breakup</h5>
+                <div class="loading-spinner" id="tdsTableSpinner"></div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="cursor:pointer;" onclick="sortTdsTable('user_id')">MNR ID <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th style="cursor:pointer;" onclick="sortTdsTable('user_name')">User Name <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th class="text-end" style="cursor:pointer;" onclick="sortTdsTable('total_gross')">Gross (&#8377;) <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th class="text-end" style="cursor:pointer;" onclick="sortTdsTable('total_admin')">Admin 8% (&#8377;) <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th class="text-end" style="cursor:pointer;" onclick="sortTdsTable('total_tds')">TDS 2% (&#8377;) <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th class="text-end" style="cursor:pointer;" onclick="sortTdsTable('total_guru')">Guru D. 2% (&#8377;) <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th class="text-end" style="cursor:pointer;" onclick="sortTdsTable('total_net')">Net 88% (&#8377;) <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th class="text-end" style="cursor:pointer;background:#dcfce7;" onclick="sortTdsTable('tds_cleared')">Cleared TDS (&#8377;) <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th class="text-end" style="cursor:pointer;background:#fef3c7;" onclick="sortTdsTable('tds_pending')">Pending TDS (&#8377;) <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th class="text-end" style="cursor:pointer;background:#ede9fe;" onclick="sortTdsTable('tds_exception')">Exception (&#8377;) <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th class="text-center" style="cursor:pointer;" onclick="sortTdsTable('tds_status')">Status <i class="fas fa-sort" style="font-size:10px;opacity:0.5;"></i></th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tdsTableBody">
+                            <tr>
+                                <td colspan="13" class="text-center py-5">
+                                    <div class="empty-state">
+                                        <i class="fas fa-landmark"></i>
+                                        <p>Click tab to load TDS data...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <nav aria-label="TDS pagination">
+            <ul class="pagination justify-content-center" id="tdsPagination"></ul>
+        </nav>
+    </div>
+</div>
+
+<div class="modal fade" id="tdsDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); color: white;">
+                <h5 class="modal-title" id="tdsDetailTitle"><i class="fas fa-landmark me-2"></i>Date-wise Breakup</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="tdsDetailBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Loading details...</p>
+                </div>
+            </div>
+            <div class="modal-footer" id="tdsDetailFooter" style="display:none;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.income-tab {
+    padding: 10px 24px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+.income-tab:hover { color: #e2e8f0; }
+.income-tab.active {
+    color: #60a5fa;
+    border-bottom-color: #60a5fa;
+    background: rgba(96, 165, 250, 0.05);
+}
+.filter-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+}
+.filter-panel h6 { font-size: 0.8rem; margin-bottom: 0.5rem !important; }
+.filter-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.filter-row .form-label { font-size: 0.7rem; margin-bottom: 0.2rem; }
+.filter-row .form-control, .filter-row .form-select { font-size: 0.8rem; padding: 0.3rem 0.5rem; }
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.stats-row-7 { grid-template-columns: repeat(7, 1fr); }
+.stat-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+.stat-card:hover { transform: translateY(-2px); border-color: #60a5fa; }
+.stat-card.stat-summary { background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%); border-color: #4ade80; }
+.stat-value { font-size: 1.1rem; font-weight: 700; color: #ffffff; }
+.stat-label { font-size: 0.7rem; color: #94a3b8; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .value { font-size: 1.1rem; font-weight: 700; color: #ffffff; }
+.stat-card .label { font-size: 0.7rem; color: #94a3b8; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card .icon { width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 0.4rem; font-size: 0.85rem; }
+.filter-panel .form-label { color: #94a3b8; }
+.filter-panel .form-control, .filter-panel .form-select { background: #1e293b; color: #e2e8f0; border-color: #475569; }
+.filter-panel .form-control::placeholder { color: #64748b; }
+.table-container {
+    background: var(--card-bg);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+}
+.table-header { margin-bottom: 0.5rem; }
+.table-header h5 { font-size: 0.9rem; }
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.table { color: var(--text-primary); }
+.table thead th { border-bottom: 2px solid var(--border-subtle); color: var(--text-secondary); font-weight: 600; }
+.table tbody tr:hover { background: rgba(255,255,255,0.02); }
+.badge-pending { background: #ffc107; color: #000; }
+.badge-admin-verified { background: #17a2b8; }
+.badge-super-admin-verified { background: #28a745; }
+.badge-completed { background: #6c757d; }
+.badge-cleared { background: #22c55e; color: #fff; }
+.action-bar { background: var(--card-bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); }
+.btn-action { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+.record-count-badge { background: #334155; color: #94a3b8; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; }
+.income-types-pills { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 3px; }
+.income-type-pill { font-size: 9px; padding: 1px 5px; border-radius: 3px; white-space: nowrap; }
+.pill-direct { background: #d1fae5; color: #065f46; font-weight: 600; }
+.pill-matching { background: #dbeafe; color: #1e3a8a; font-weight: 600; }
+.pill-ved { background: #ede9fe; color: #4c1d95; font-weight: 600; }
+.pill-guru { background: #ffedd5; color: #7c2d12; font-weight: 600; }
+
+@media (max-width: 768px) {
+    .income-tabs {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        gap: 0 !important;
+        white-space: nowrap;
+    }
+    .income-tab {
+        padding: 8px 14px !important;
+        font-size: 0.75rem !important;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .income-tab i { display: none; }
+
+    .filter-panel { padding: 0.5rem 0.75rem !important; }
+    .filter-row {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+    }
+    .filter-row .form-label { font-size: 0.65rem !important; }
+    .filter-row .form-control,
+    .filter-row .form-select { font-size: 0.75rem !important; padding: 0.25rem 0.4rem !important; }
+    .filter-panel .d-flex.gap-2 { flex-wrap: wrap !important; }
+    .filter-panel .btn { font-size: 0.75rem !important; padding: 0.3rem 0.6rem !important; }
+
+    .stats-row,
+    #statsRow,
+    #uvStatsRow {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 6px !important;
+        margin-bottom: 10px !important;
+    }
+    .stat-card { padding: 0.5rem 0.4rem !important; }
+    .stat-value { font-size: 0.85rem !important; }
+    .stat-label { font-size: 0.6rem !important; letter-spacing: 0 !important; }
+    .stat-amount { font-size: 0.65rem !important; }
+    .stat-card .value { font-size: 0.85rem !important; }
+    .stat-card .label { font-size: 0.6rem !important; }
+    .stat-card .icon { width: 24px !important; height: 24px !important; font-size: 0.7rem !important; margin-bottom: 0.2rem !important; }
+
+    .table-container { padding: 0.5rem !important; }
+    .table-header { flex-wrap: wrap !important; gap: 4px !important; }
+    .table-header h5 { font-size: 0.8rem !important; }
+
+    .action-bar {
+        padding: 0.5rem !important;
+        flex-wrap: wrap !important;
+        gap: 4px !important;
+    }
+    .action-bar .btn { font-size: 0.7rem !important; padding: 0.25rem 0.5rem !important; }
+
+    #incomesTable thead { display: none !important; }
+    #incomesTable tbody tr {
+        display: block !important;
+        border: 1px solid var(--border-subtle, #334155) !important;
+        border-radius: 8px !important;
+        margin-bottom: 8px !important;
+        padding: 10px !important;
+        background: var(--card-bg, #1e293b) !important;
+    }
+    #incomesTable tbody td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 4px 0 !important;
+        border: none !important;
+        text-align: right !important;
+        font-size: 0.8rem !important;
+        min-height: auto !important;
+    }
+    #incomesTable tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #94a3b8;
+        font-size: 0.7rem;
+        text-align: left;
+        margin-right: 8px;
+        flex-shrink: 0;
+        text-transform: uppercase;
+    }
+    #incomesTable tbody td:nth-child(1) { justify-content: flex-start !important; }
+    #incomesTable tbody td:nth-child(1)::before { content: none; }
+    #incomesTable tbody td:nth-child(3) {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        border-bottom: 1px solid rgba(148,163,184,0.15) !important;
+        padding-bottom: 6px !important;
+        margin-bottom: 4px !important;
+    }
+    #incomesTable tbody td:nth-child(3)::before { content: none; }
+
+    #userViewTable .table-responsive,
+    #tabTdsTrackingContent .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    #userViewTable {
+        min-width: 750px !important;
+    }
+    #tabTdsTrackingContent .table {
+        min-width: 900px !important;
+    }
+    #userViewTable th,
+    #userViewTable td {
+        white-space: nowrap !important;
+        font-size: 0.75rem !important;
+        padding: 6px 5px !important;
+    }
+    #tabTdsTrackingContent .table th,
+    #tabTdsTrackingContent .table td {
+        white-space: nowrap !important;
+        font-size: 0.75rem !important;
+        padding: 6px 5px !important;
+    }
+
+    .pagination-controls {
+        flex-direction: column !important;
+        gap: 8px !important;
+        font-size: 0.8rem !important;
+    }
+    .pagination-controls .btn { font-size: 0.75rem !important; }
+
+    #incomeDetailModal > div {
+        max-width: 95vw !important;
+        margin: 10px !important;
+    }
+    #incomeDetailModal > div > div:nth-child(2) > div:first-child {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+    #incomeDetailModal table {
+        font-size: 11px !important;
+    }
+    #incomeDetailModal table th,
+    #incomeDetailModal table td {
+        padding: 6px 4px !important;
+        font-size: 11px !important;
+    }
+    #incomeDetailModal h4 { font-size: 14px !important; }
+    #incomeDetailModal p { font-size: 11px !important; }
+
+    #tabTdsTrackingContent .row.g-2 {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    #tabTdsTrackingContent .stat-card .value { font-size: 0.8rem !important; }
+    #tabTdsTrackingContent .stat-card .label { font-size: 0.6rem !important; }
+}
+
+@media (max-width: 480px) {
+    .income-tab { padding: 6px 10px !important; font-size: 0.7rem !important; }
+    .filter-row { grid-template-columns: 1fr !important; }
+    .stats-row,
+    #statsRow,
+    #uvStatsRow {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .stat-value { font-size: 0.75rem !important; }
+    #incomesTable tbody td { font-size: 0.75rem !important; }
+    #incomesTable tbody td::before { font-size: 0.65rem !important; }
+
+    #incomeDetailModal > div > div:nth-child(2) > div:first-child {
+        grid-template-columns: 1fr 1fr !important;
+    }
+    #incomeDetailModal > div > div:first-child {
+        flex-direction: column !important;
+        gap: 6px !important;
+        padding: 12px 15px !important;
+    }
+    #incomeDetailModal > div > div:first-child h4 { font-size: 13px !important; }
+}
+</style>
+
+<script>
+let currentPage = 0;
+const pageSize = 50;
+let allIncomes = [];
+let selectedRowKeys = new Set();
+let staffRole = { can_validate: true, can_approve: false };
+let currentMode = 'clubbed';
+let keyEligibilityMap = {};
+
+function getKeyEligBadge(userId) {
+    const isElig = keyEligibilityMap[userId];
+    if (isElig === true) return '<span class="badge bg-success" style="font-size:0.7rem;">Eligible</span>';
+    if (isElig === false) return '<span class="badge bg-danger" style="font-size:0.7rem;">Not Eligible</span>';
+    return '<span class="badge bg-secondary" style="font-size:0.7rem;">\u2014</span>';
+}
+
+const SEGMENT_COLORS = {
+    'Direct Referral': { bg: '#065f46', border: '#34d399', icon: 'fa-user-plus', label: 'Direct Facilitation', pill: 'pill-direct' },
+    'Matching Referral': { bg: '#1e3a5f', border: '#60a5fa', icon: 'fa-exchange-alt', label: 'Group Performance Recognition', pill: 'pill-matching' },
+    'Ved Income': { bg: '#4c1d95', border: '#a78bfa', icon: 'fa-sitemap', label: 'VED Leadership Recognition', pill: 'pill-ved' },
+    'Guru Dakshina': { bg: '#7c2d12', border: '#fb923c', icon: 'fa-hands-helping', label: 'Mentorship Contribution Benefit', pill: 'pill-guru' }
+};
+
+function getIncomeDisplayName(dbIncomeType) {
+    const rebrandMap = {
+        'Direct Referral': 'Direct Facilitation',
+        'Matching Referral': 'Group Performance Recognition',
+        'Ved Income': 'VED Leadership Recognition',
+        'Guru Dakshina': 'Mentorship Contribution Benefit'
+    };
+    return rebrandMap[dbIncomeType] || dbIncomeType;
+}
+
+function getIncomeTypePill(displayType) {
+    const pillMap = {
+        'Direct Facilitation': 'pill-direct',
+        'Group Performance Recognition': 'pill-matching',
+        'VED Leadership Recognition': 'pill-ved',
+        'Mentorship Contribution Benefit': 'pill-guru'
+    };
+    const cls = pillMap[displayType] || '';
+    return `<span class="income-type-pill ${cls}">${displayType}</span>`;
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    document.getElementById('fromDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+    document.getElementById('toDate').value = today.toISOString().split('T')[0];
+    await loadStaffRole();
+    loadIncomes();
+});
+
+async function loadStaffRole() {
+    try {
+        const response = await fetch('/api/v1/income-verification/staff/role', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}` }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            staffRole = data.data || { can_validate: true, can_approve: false };
+            updateButtonVisibility();
+        }
+    } catch (error) {
+        console.error('Failed to load staff role:', error);
+    }
+}
+
+function updateButtonVisibility() {
+    const btnApprove = document.getElementById('btnApprove');
+    if (btnApprove) {
+        btnApprove.style.display = staffRole.can_approve ? 'inline-block' : 'none';
+    }
+}
+
+async function loadIncomes() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const fromDate = document.getElementById('fromDate').value;
+    const toDate = document.getElementById('toDate').value;
+    const userId = document.getElementById('userIdFilter').value.trim();
+    const incomeType = document.getElementById('incomeTypeFilter').value;
+    
+    let url = `/api/v1/income-verification/staff/pending-incomes?`;
+    if (statusFilter && statusFilter !== 'all') url += `status_filter=${encodeURIComponent(statusFilter)}&`;
+    if (fromDate) url += `from_date=${fromDate}&`;
+    if (toDate) url += `to_date=${toDate}&`;
+    if (userId) url += `user_id=${userId}&`;
+    if (incomeType && incomeType !== 'all') url += `income_type=${encodeURIComponent(incomeType)}&`;
+    
+    try {
+        document.getElementById('incomesTableBody').innerHTML = '<tr><td colspan="13" class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+        
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load incomes');
+        
+        const data = await response.json();
+        allIncomes = data.data || [];
+        currentMode = data.mode || 'clubbed';
+        
+        const modeInd = document.getElementById('modeIndicator');
+        if (modeInd) {
+            modeInd.textContent = currentMode === 'clubbed' ? 'Consolidated View' : 'Individual View';
+            modeInd.className = currentMode === 'clubbed' ? 'badge bg-info' : 'badge bg-warning text-dark';
+        }
+        
+        const userIds = [...new Set(allIncomes.map(i => i.user_id).filter(Boolean))];
+        if (userIds.length > 0) {
+            try {
+                const keyRes = await fetch('/api/v1/auth/key-eligibility-bulk', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_ids: userIds })
+                });
+                if (keyRes.ok) { const kd = await keyRes.json(); keyEligibilityMap = kd.data || {}; }
+            } catch(e) {}
+        }
+        
+        updateStats(data.stats || {});
+        renderTable();
+        updatePagination(data.count, allIncomes.length);
+        updateActionBar();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('incomesTableBody').innerHTML = `<tr><td colspan="13" class="text-center py-4 text-danger">Error: ${error.message}</td></tr>`;
+    }
+}
+
+function updateStats(stats) {
+    document.getElementById('statTotalGross').textContent = '\u20B9' + (stats.total_gross || 0).toLocaleString();
+    document.getElementById('statTotalNet').textContent = '\u20B9' + (stats.total_net || 0).toLocaleString();
+    document.getElementById('statRecordCount').textContent = ((stats.pending || 0) + (stats.staff_validated || 0) + (stats.completed || 0) + (stats.cleared || 0)).toLocaleString();
+    
+    document.getElementById('statOverallPending').textContent = (stats.overall_pending_users || 0) + ' users';
+    document.getElementById('statOverallPendingAmt').textContent = '\u20B9' + (stats.overall_pending_amount || 0).toLocaleString();
+    
+    document.getElementById('statPending').textContent = (stats.pending_users || 0) + ' users';
+    document.getElementById('statPendingAmt').textContent = '\u20B9' + (stats.pending_amount || 0).toLocaleString();
+    document.getElementById('statStaffValidated').textContent = (stats.validated_users || 0) + ' users';
+    document.getElementById('statStaffValidatedAmt').textContent = '\u20B9' + (stats.staff_validated_amount || 0).toLocaleString();
+    document.getElementById('statCompleted').textContent = (stats.completed_users || 0) + ' users';
+    document.getElementById('statCompletedAmt').textContent = '\u20B9' + (stats.completed_amount || 0).toLocaleString();
+    document.getElementById('statCleared').textContent = (stats.cleared_users || 0) + ' users';
+    document.getElementById('statClearedAmt').textContent = '\u20B9' + (stats.cleared_amount || 0).toLocaleString();
+}
+
+function getRowKey(inc) {
+    return inc.user_id + '|' + inc.business_date;
+}
+
+function getAllIdsForRow(inc) {
+    return inc.income_ids || [inc.id];
+}
+
+function renderTable() {
+    const tbody = document.getElementById('incomesTableBody');
+    
+    if (!allIncomes.length) {
+        tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4">No income records found</td></tr>';
+        return;
+    }
+    
+    const start = currentPage * pageSize;
+    const end = Math.min(start + pageSize, allIncomes.length);
+    const pageData = allIncomes.slice(start, end);
+    
+    tbody.innerHTML = pageData.map(inc => {
+        const rowKey = getRowKey(inc);
+        const isSelected = selectedRowKeys.has(rowKey);
+        const isClubbedRow = inc.is_clubbed !== false;
+        const recordCount = inc.record_count || 1;
+        
+        let memberCol = `<strong style="color:var(--accent-color)">${inc.user_id}</strong><br><small style="color:#94a3b8">${inc.user_name || '-'}</small>`;
+        
+        if (isClubbedRow && inc.income_types && inc.income_types.length > 0) {
+            memberCol += `<div class="income-types-pills">${inc.income_types.map(t => getIncomeTypePill(t)).join('')}</div>`;
+        } else if (inc.display_income_type) {
+            memberCol += `<div class="income-types-pills">${getIncomeTypePill(inc.display_income_type)}</div>`;
+        }
+        
+        let recCol = isClubbedRow && recordCount > 1
+            ? `<small class="text-muted">${recordCount} rec</small>`
+            : `<small class="text-muted">#${inc.id}</small>`;
+        
+        return `
+        <tr data-rowkey="${rowKey}" data-status="${inc.verification_status}">
+            <td data-label=""><input type="checkbox" class="income-checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelection('${rowKey}')"></td>
+            <td data-label="Rec #">${recCol}</td>
+            <td data-label="">${memberCol}</td>
+            <td data-label="Gross" style="text-align:right;color:#4ade80;font-weight:600">\u20B9${inc.gross_amount.toLocaleString()}</td>
+            <td data-label="Net" style="text-align:right"><strong style="color:#818cf8">\u20B9${inc.net_amount.toLocaleString()}</strong></td>
+            <td data-label="Date" style="text-align:center"><small>${formatDate(inc.business_date)}</small></td>
+            <td data-label="KYC" style="text-align:center">${getKycBadge(inc.kyc_status)}</td>
+            <td data-label="Key Elig." style="text-align:center">${getKeyEligBadge(inc.user_id)}</td>
+            <td data-label="Group" style="text-align:center">${getGroupEligibilityBadge(inc.group_eligibility)}</td>
+            <td data-label="Validation">
+                ${inc.validated_by ? `<small class="text-warning">${inc.validated_by}</small><br><small class="text-muted">${formatDateTime(inc.validated_at)}</small>` : '<small class="text-muted">-</small>'}
+            </td>
+            <td data-label="Approval">
+                ${inc.approved_by ? `<small class="text-success">${inc.approved_by}</small><br><small class="text-muted">${formatDateTime(inc.approved_at)}</small>` : '<small class="text-muted">-</small>'}
+            </td>
+            <td data-label="Status" style="text-align:center">${getStatusBadge(inc.verification_status)}</td>
+            <td data-label="Actions" style="text-align:center">${getActionButtons(inc)}</td>
+        </tr>`;
+    }).join('');
+}
+
+function getKycBadge(status) {
+    const badges = {
+        'Approved': '<span class="badge bg-success">Approved</span>',
+        'Submitted': '<span class="badge bg-warning text-dark">Submitted</span>',
+        'Pending': '<span class="badge bg-danger">Pending</span>'
+    };
+    return badges[status] || `<span class="badge bg-secondary">${status || 'Unknown'}</span>`;
+}
+
+function getGroupEligibilityBadge(status) {
+    const badges = {
+        'Yes': '<span class="badge bg-success" title="Both Groups Active"><i class="fas fa-check-circle"></i> Yes</span>',
+        'No': '<span class="badge bg-danger" title="Both Groups Missing"><i class="fas fa-times-circle"></i> No</span>',
+        'Group A Missing': '<span class="badge bg-warning text-dark" title="Group A Missing"><i class="fas fa-exclamation-triangle"></i> A Missing</span>',
+        'Group B Missing': '<span class="badge bg-warning text-dark" title="Group B Missing"><i class="fas fa-exclamation-triangle"></i> B Missing</span>'
+    };
+    return badges[status] || `<span class="badge bg-secondary">${status || 'Unknown'}</span>`;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatDateTime(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'Pending': '<span class="badge badge-pending">Pending</span>',
+        'Staff Validated': '<span class="badge badge-admin-verified">Staff Validated</span>',
+        'Completed': '<span class="badge badge-completed">Completed</span>',
+        'Cleared': '<span class="badge badge-cleared"><i class="fas fa-check-circle"></i> Cleared</span>'
+    };
+    return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+}
+
+function getActionButtons(inc) {
+    const status = inc.verification_status;
+    let buttons = [];
+    const allIds = getAllIdsForRow(inc);
+    const idsJson = JSON.stringify(allIds);
+    
+    buttons.push(`<button class="btn btn-sm btn-info btn-action" onclick='showIncomeDetail("${inc.user_id}", "${inc.user_name}", "${inc.business_date}")' title="View Income Breakdown"><i class="fas fa-eye"></i></button>`);
+    
+    if (status === 'Pending') {
+        buttons.push(`<button class="btn btn-sm btn-warning btn-action" onclick='performSingleAction(${idsJson}, "validate")'><i class="fas fa-check"></i></button>`);
+    }
+    
+    if (staffRole.can_approve) {
+        if (status === 'Staff Validated') {
+            buttons.push(`<button class="btn btn-sm btn-success btn-action" onclick='performSingleAction(${idsJson}, "approve")'><i class="fas fa-check-double"></i></button>`);
+        } else if (status === 'Pending') {
+            buttons.push(`<button class="btn btn-sm btn-outline-secondary btn-action" disabled title="Must validate first"><i class="fas fa-check-double"></i></button>`);
+        }
+    }
+    
+    if (status === 'Completed' || status === 'Cleared') {
+        buttons.push(`<span class="text-success"><i class="fas fa-check-circle"></i> Paid</span>`);
+    }
+    
+    return buttons.length ? buttons.join(' ') : '<span class="text-muted">-</span>';
+}
+
+function toggleSelection(rowKey) {
+    if (selectedRowKeys.has(rowKey)) {
+        selectedRowKeys.delete(rowKey);
+    } else {
+        selectedRowKeys.add(rowKey);
+    }
+    renderTable();
+    updateActionBar();
+}
+
+function selectAll() {
+    allIncomes.forEach(inc => selectedRowKeys.add(getRowKey(inc)));
+    renderTable();
+    updateActionBar();
+}
+
+function deselectAll() {
+    selectedRowKeys.clear();
+    renderTable();
+    updateActionBar();
+}
+
+function toggleSelectAll(checkbox) {
+    if (checkbox.checked) selectAll();
+    else deselectAll();
+}
+
+function updateActionBar() {
+    const bar = document.getElementById('actionBar');
+    bar.style.display = selectedRowKeys.size > 0 ? 'flex' : 'none';
+    
+    let validateCount = 0, approveCount = 0;
+    
+    allIncomes.forEach(inc => {
+        const rowKey = getRowKey(inc);
+        if (selectedRowKeys.has(rowKey)) {
+            if (inc.verification_status === 'Pending') validateCount++;
+            if (inc.verification_status === 'Staff Validated') approveCount++;
+        }
+    });
+    
+    document.getElementById('countValidate').textContent = validateCount;
+    document.getElementById('countApprove').textContent = approveCount;
+    
+    document.getElementById('btnValidate').disabled = validateCount === 0;
+    document.getElementById('btnApprove').disabled = approveCount === 0;
+}
+
+function getSelectedIncomeIds(action) {
+    const ids = [];
+    allIncomes.forEach(inc => {
+        const rowKey = getRowKey(inc);
+        if (selectedRowKeys.has(rowKey)) {
+            const targetStatus = action === 'validate' ? 'Pending' : 'Staff Validated';
+            if (inc.verification_status === targetStatus) {
+                const allIds = getAllIdsForRow(inc);
+                ids.push(...allIds);
+            }
+        }
+    });
+    return ids;
+}
+
+async function performAction(action) {
+    const ids = getSelectedIncomeIds(action);
+    if (!ids.length) return;
+    const actionLabels = { validate: 'Validate', approve: 'Approve & Pay' };
+    showActionModal(action, ids, actionLabels[action]);
+}
+
+function showActionModal(action, ids, actionLabel) {
+    const existingModal = document.getElementById('actionModal');
+    if (existingModal) existingModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.id = 'actionModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+        <div style="background:#1a1a2e;border-radius:12px;max-width:500px;width:90%;padding:0;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="background:${action === 'approve' ? '#28a745' : '#ffc107'};color:${action === 'approve' ? 'white' : '#000'};padding:20px;border-radius:12px 12px 0 0;text-align:center;">
+                <i class="fas fa-${action === 'approve' ? 'check-double' : 'check'}" style="font-size:36px;margin-bottom:8px;"></i>
+                <h4 style="margin:0;">${actionLabel} ${ids.length} Record(s)</h4>
+            </div>
+            <div style="padding:25px;">
+                <div style="margin-bottom:15px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:5px;">Transaction Reference (Optional)</label>
+                    <input type="text" id="actionTxnRef" style="width:100%;padding:10px;border:1px solid #334155;border-radius:8px;background:#0f172a;color:white;font-size:14px;" placeholder="e.g., TXN-2026-001">
+                </div>
+                <div style="margin-bottom:20px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:5px;">Comments (Optional)</label>
+                    <textarea id="actionComments" rows="3" style="width:100%;padding:10px;border:1px solid #334155;border-radius:8px;background:#0f172a;color:white;font-size:14px;resize:vertical;" placeholder="Add any notes or comments..."></textarea>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button onclick="document.getElementById('actionModal').remove()" style="padding:10px 20px;border:1px solid #334155;border-radius:8px;background:transparent;color:#94a3b8;cursor:pointer;">Cancel</button>
+                    <button id="confirmActionBtn" onclick="submitAction('${action}', ${JSON.stringify(ids)})" style="padding:10px 25px;border:none;border-radius:8px;background:${action === 'approve' ? '#28a745' : '#ffc107'};color:${action === 'approve' ? 'white' : '#000'};cursor:pointer;font-weight:600;">
+                        <i class="fas fa-${action === 'approve' ? 'check-double' : 'check'}"></i> Confirm ${actionLabel}
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+}
+
+async function submitAction(action, ids) {
+    const txnRef = document.getElementById('actionTxnRef').value.trim();
+    const comments = document.getElementById('actionComments').value.trim();
+    
+    const endpoint = action === 'validate' ? '/api/v1/income-verification/staff/validate' : '/api/v1/income-verification/staff/approve';
+    
+    const body = { pending_income_ids: ids };
+    if (txnRef) body.transaction_reference = txnRef;
+    if (comments) body.comments = comments;
+    
+    try {
+        const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(body)
+        });
+        
+        const result = await response.json();
+        
+        document.getElementById('actionModal').remove();
+        
+        if (result.success) {
+            showToast(result.message, 'success');
+            selectedRowKeys.clear();
+            loadIncomes();
+        } else {
+            showToast(result.detail || 'Action failed', 'error');
+        }
+    } catch (error) {
+        showToast('Error: ' + error.message, 'error');
+    }
+}
+
+async function performSingleAction(ids, action) {
+    if (action === 'approve') {
+        const inc = allIncomes.find(i => {
+            const rowIds = getAllIdsForRow(i);
+            return rowIds.some(rid => ids.includes(rid));
+        });
+        if (inc && inc.kyc_status !== 'Approved') {
+            console.warn(`[KYC-INFO] Processing payment for non-KYC user ${inc.user_id} (${inc.user_name}). KYC Status: ${inc.kyc_status}`);
+        }
+    }
+    const actionLabels = { validate: 'Validate', approve: 'Approve & Pay' };
+    showActionModal(action, ids, actionLabels[action]);
+}
+
+function showKycErrorModal(message) {
+    const existingModal = document.getElementById('kycErrorModal');
+    if (existingModal) existingModal.remove();
+    
+    const modal = document.createElement('div');
+    modal.id = 'kycErrorModal';
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML = `
+        <div style="background:white;border-radius:12px;max-width:500px;width:90%;padding:0;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="background:#dc3545;color:white;padding:20px;border-radius:12px 12px 0 0;text-align:center;">
+                <i class="fas fa-exclamation-triangle" style="font-size:48px;margin-bottom:10px;"></i>
+                <h3 style="margin:0;font-size:20px;">KYC Approval Required</h3>
+            </div>
+            <div style="padding:25px;text-align:center;">
+                <p style="font-size:16px;color:#333;line-height:1.6;margin-bottom:20px;">${message}</p>
+                <button onclick="document.getElementById('kycErrorModal').remove()" style="background:#dc3545;color:white;border:none;padding:12px 30px;border-radius:8px;font-size:16px;cursor:pointer;">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+}
+
+function filterByStatus(status) {
+    document.getElementById('statusFilter').value = status;
+    currentPage = 0;
+    loadIncomes();
+}
+
+function resetFilters() {
+    document.getElementById('statusFilter').value = 'all';
+    document.getElementById('incomeTypeFilter').value = 'all';
+    document.getElementById('userIdFilter').value = '';
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    document.getElementById('fromDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+    document.getElementById('toDate').value = today.toISOString().split('T')[0];
+    currentPage = 0;
+    loadIncomes();
+}
+
+function updatePagination(total, showing) {
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('totalRecords').textContent = total;
+    document.getElementById('showingFrom').textContent = total > 0 ? currentPage * pageSize + 1 : 0;
+    document.getElementById('showingTo').textContent = Math.min((currentPage + 1) * pageSize, total);
+    
+    document.getElementById('btnPrev').disabled = currentPage === 0;
+    document.getElementById('btnNext').disabled = (currentPage + 1) * pageSize >= total;
+}
+
+function previousPage() { currentPage--; renderTable(); updatePagination(allIncomes.length, allIncomes.length); }
+function nextPage() { currentPage++; renderTable(); updatePagination(allIncomes.length, allIncomes.length); }
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.innerHTML = message;
+    toast.style.cssText = 'position:fixed;top:20px;right:20px;padding:1rem 1.5rem;border-radius:8px;z-index:9999;color:#fff;max-width:400px;background:' + (type === 'success' ? '#28a745' : '#dc3545');
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 4000);
+}
+
+async function showIncomeDetail(userId, userName, businessDate) {
+    const existingModal = document.getElementById('incomeDetailModal');
+    if (existingModal) existingModal.remove();
+    
+    const loadingModal = document.createElement('div');
+    loadingModal.id = 'incomeDetailModal';
+    loadingModal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    loadingModal.innerHTML = `<div style="background:#1a1a2e;padding:40px;border-radius:16px;text-align:center;">
+        <div class="spinner-border text-primary" style="width:50px;height:50px;"></div>
+        <div style="color:white;margin-top:15px;">Loading income details...</div>
+    </div>`;
+    document.body.appendChild(loadingModal);
+    
+    try {
+        const response = await fetch(`/api/v1/income-verification/staff/income-detail/${userId}/${businessDate}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to fetch income details');
+        const data = await response.json();
+        
+        loadingModal.remove();
+        
+        const summaryRows = (data.segment_summary || []).map(seg => {
+            const colors = SEGMENT_COLORS[seg.income_type] || { bg: '#1e293b', border: '#64748b', icon: 'fa-coins' };
+            return `
+            <tr style="border-bottom:1px solid #374151;">
+                <td style="padding:10px 12px;color:white;font-size:13px;"><i class="fas ${colors.icon}" style="color:${colors.border};margin-right:6px;"></i>${seg.display_income_type}</td>
+                <td style="padding:10px 8px;color:#86efac;font-size:13px;text-align:right;">\u20B9${seg.gross_amount.toLocaleString()}</td>
+                <td style="padding:10px 8px;color:#f87171;font-size:13px;text-align:right;">\u20B9${seg.admin_deduction.toLocaleString()}</td>
+                <td style="padding:10px 8px;color:#f87171;font-size:13px;text-align:right;">\u20B9${seg.tds_deduction.toLocaleString()}</td>
+                <td style="padding:10px 8px;color:#fbbf24;font-size:13px;text-align:right;">\u20B9${seg.gurudakshina_deduction.toLocaleString()}</td>
+                <td style="padding:10px 8px;color:white;font-size:13px;text-align:right;font-weight:600;">\u20B9${seg.net_amount.toLocaleString()}</td>
+            </tr>`;
+        }).join('');
+        const summaryTable = `
+        <div style="background:#16213e;border-radius:12px;overflow:hidden;border:1px solid #33415530;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#0f172a;">
+                        <th style="padding:10px 12px;color:#94a3b8;font-size:11px;text-align:left;text-transform:uppercase;">Income Type</th>
+                        <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:right;text-transform:uppercase;">Gross</th>
+                        <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:right;text-transform:uppercase;">Admin 8%</th>
+                        <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:right;text-transform:uppercase;">TDS 2%</th>
+                        <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:right;text-transform:uppercase;">Guru 2%</th>
+                        <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:right;text-transform:uppercase;">Net</th>
+                    </tr>
+                </thead>
+                <tbody>${summaryRows}</tbody>
+                <tfoot>
+                    <tr style="background:#0f172a;border-top:2px solid #374151;">
+                        <td style="padding:12px 12px;color:white;font-weight:700;font-size:13px;">TOTAL</td>
+                        <td style="padding:12px 8px;color:#86efac;font-weight:700;font-size:13px;text-align:right;">\u20B9${data.total_gross.toLocaleString()}</td>
+                        <td colspan="3" style="padding:12px 8px;color:#f87171;font-weight:700;font-size:13px;text-align:right;">\u20B9${data.total_deductions.toLocaleString()}</td>
+                        <td style="padding:12px 8px;color:white;font-weight:700;font-size:13px;text-align:right;">\u20B9${data.total_net.toLocaleString()}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>`;
+        
+        const segmentTables = (data.segments || []).map(seg => {
+            const colors = SEGMENT_COLORS[seg.income_type] || { bg: '#1e293b', border: '#64748b', icon: 'fa-coins' };
+            const contributors = seg.contributors || [];
+            
+            const isMatching = seg.income_type === 'Matching Referral';
+            
+            const rows = contributors.map((c, idx) => {
+                let sourceCol;
+                if (isMatching && c.partner_user_id) {
+                    const lAct = c.activation_date ? `<span style="color:#64748b;font-size:10px;"> (${formatDate(c.activation_date)})</span>` : '';
+                    const rAct = c.partner_activation_date ? `<span style="color:#64748b;font-size:10px;"> (${formatDate(c.partner_activation_date)})</span>` : '';
+                    sourceCol = `
+                        <div style="margin-bottom:3px;">
+                            <strong>${c.source_user_id}</strong> - ${c.source_user_name || ''}
+                            <span style="color:#64748b;font-size:10px;"> (Group A)</span>${lAct}
+                        </div>
+                        <div style="color:#a5b4fc;">
+                            <strong>${c.partner_user_id}</strong> - ${c.partner_user_name || ''}
+                            <span style="color:#64748b;font-size:10px;"> (Group B)</span>${rAct}
+                        </div>`;
+                } else {
+                    const actDate = c.activation_date ? `<br><small style="color:#a5b4fc;">Activated: ${formatDate(c.activation_date)}</small>` : '';
+                    sourceCol = `<strong>${c.source_user_id || 'N/A'}</strong><br><small style="color:#94a3b8;">${c.source_user_name || ''}</small>${actDate}`;
+                }
+                
+                return `
+                <tr style="border-bottom:1px solid #374151;">
+                    <td style="padding:10px 8px;color:#64748b;font-size:12px;">${idx + 1}</td>
+                    <td style="padding:10px 8px;color:white;font-size:12px;">${sourceCol}</td>
+                    <td style="padding:10px 8px;color:#86efac;font-size:12px;text-align:right;">\u20B9${(c.gross_amount || 0).toLocaleString()}</td>
+                    <td style="padding:10px 8px;color:#f87171;font-size:12px;text-align:right;">\u20B9${(c.admin_deduction || 0).toLocaleString()}</td>
+                    <td style="padding:10px 8px;color:#f87171;font-size:12px;text-align:right;">\u20B9${(c.tds_deduction || 0).toLocaleString()}</td>
+                    <td style="padding:10px 8px;color:#fbbf24;font-size:12px;text-align:right;">\u20B9${(c.guru_deduction || 0).toLocaleString()}</td>
+                    <td style="padding:10px 8px;color:white;font-size:12px;text-align:right;font-weight:600;">\u20B9${(c.net_amount || 0).toLocaleString()}</td>
+                </tr>`;
+            }).join('');
+            
+            return `
+            <div style="background:#16213e;border-radius:12px;overflow:hidden;margin-bottom:15px;border:1px solid ${colors.border}30;">
+                <div style="padding:12px 15px;background:${colors.bg};border-bottom:1px solid ${colors.border}50;display:flex;align-items:center;gap:8px;">
+                    <i class="fas ${colors.icon}" style="color:${colors.border};"></i>
+                    <strong style="color:white;font-size:14px;">${seg.display_income_type}</strong>
+                    <span style="color:#94a3b8;font-size:12px;margin-left:auto;">${contributors.length} contributor(s) | Net: \u20B9${seg.net_amount.toLocaleString()}</span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#0f172a;">
+                                <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:left;">#</th>
+                                <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:left;">Source User</th>
+                                <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:right;">Gross</th>
+                                <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:right;">Admin 8%</th>
+                                <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:right;">TDS 2%</th>
+                                <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:right;">Guru 2%</th>
+                                <th style="padding:10px 8px;color:#94a3b8;font-size:11px;text-align:right;">Net</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                        <tfoot>
+                            <tr style="background:#0f172a;border-top:2px solid #374151;">
+                                <td colspan="2" style="padding:12px 8px;color:white;font-weight:700;font-size:13px;">TOTAL</td>
+                                <td style="padding:12px 8px;color:#86efac;font-weight:700;font-size:13px;text-align:right;">\u20B9${seg.gross_amount.toLocaleString()}</td>
+                                <td style="padding:12px 8px;color:#f87171;font-weight:700;font-size:13px;text-align:right;">\u20B9${seg.admin_deduction.toLocaleString()}</td>
+                                <td style="padding:12px 8px;color:#f87171;font-weight:700;font-size:13px;text-align:right;">\u20B9${seg.tds_deduction.toLocaleString()}</td>
+                                <td style="padding:12px 8px;color:#fbbf24;font-weight:700;font-size:13px;text-align:right;">\u20B9${seg.gurudakshina_deduction.toLocaleString()}</td>
+                                <td style="padding:12px 8px;color:white;font-weight:700;font-size:13px;text-align:right;">\u20B9${seg.net_amount.toLocaleString()}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>`;
+        }).join('');
+        
+        const kycAlert = `
+        <div style="background:${data.kyc_status === 'Approved' ? '#16213e' : '#7f1d1d'};padding:12px 15px;border-radius:8px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <span style="color:#94a3b8;font-size:12px;">KYC Status:</span>
+                <span style="margin-left:8px;">${getKycBadge(data.kyc_status)}</span>
+            </div>
+            ${data.kyc_status !== 'Approved' ? '<span style="color:#fbbf24;font-size:12px;"><i class="fas fa-info-circle"></i> KYC pending - payment allowed for authorized staff</span>' : '<span style="color:#86efac;font-size:12px;"><i class="fas fa-check-circle"></i> Ready for approval</span>'}
+        </div>`;
+        
+        const modal = document.createElement('div');
+        modal.id = 'incomeDetailModal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML = `
+            <div style="background:#1a1a2e;border-radius:16px;max-width:1100px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.5);">
+                <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:18px 25px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <h4 style="margin:0;font-size:18px;"><i class="fas fa-chart-pie"></i> Income Breakdown - Segmented View</h4>
+                        <p style="margin:4px 0 0 0;opacity:0.9;font-size:13px;">${data.user_id} - ${data.user_name} | Date: ${formatDate(data.business_date)} | Status: ${data.verification_status}</p>
+                    </div>
+                    <button onclick="document.getElementById('incomeDetailModal').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;">x</button>
+                </div>
+                
+                <div style="padding:20px;">
+                    <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:12px;margin-bottom:20px;">
+                        <div style="background:#16213e;padding:15px;border-radius:10px;text-align:center;">
+                            <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;">Total Gross</div>
+                            <div style="color:#86efac;font-size:22px;font-weight:700;margin-top:4px;">\u20B9${data.total_gross.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#16213e;padding:15px;border-radius:10px;text-align:center;">
+                            <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;">Total Deductions</div>
+                            <div style="color:#f87171;font-size:22px;font-weight:700;margin-top:4px;">\u20B9${data.total_deductions.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#16213e;padding:15px;border-radius:10px;text-align:center;">
+                            <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;">Total Net</div>
+                            <div style="color:white;font-size:22px;font-weight:700;margin-top:4px;">\u20B9${data.total_net.toLocaleString()}</div>
+                        </div>
+                        <div style="background:#16213e;padding:15px;border-radius:10px;text-align:center;">
+                            <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;">Income Types</div>
+                            <div style="color:#a5b4fc;font-size:22px;font-weight:700;margin-top:4px;">${(data.segment_summary || []).length}</div>
+                        </div>
+                    </div>
+                    
+                    <h6 style="color:#fbbf24;font-size:13px;text-transform:uppercase;margin-bottom:12px;"><i class="fas fa-layer-group"></i> Segment-Wise Summary</h6>
+                    <div style="margin-bottom:20px;">
+                        ${summaryTable}
+                    </div>
+                    
+                    ${kycAlert}
+                    
+                    <h6 style="color:#fbbf24;font-size:13px;text-transform:uppercase;margin-bottom:12px;"><i class="fas fa-user-friends"></i> Individual Contributors by Income Type</h6>
+                    ${segmentTables}
+                </div>
+                
+                <div style="padding:12px 25px 20px;text-align:center;border-top:1px solid #374151;">
+                    <button onclick="document.getElementById('incomeDetailModal').remove()" style="background:#4f46e5;color:white;border:none;padding:12px 40px;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    } catch (error) {
+        console.error('Error loading income detail:', error);
+        const m = document.getElementById('incomeDetailModal');
+        if (m) m.remove();
+        showToast('Failed to load income details: ' + error.message, 'error');
+    }
+}
+
+let activeTab = 'records';
+let tdsDataLoaded = false;
+function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById('tabRecords').classList.toggle('active', tab === 'records');
+    document.getElementById('tabUserView').classList.toggle('active', tab === 'userView');
+    document.getElementById('tabTdsTracking').classList.toggle('active', tab === 'tdsTracking');
+    document.getElementById('tabRecordsContent').style.display = tab === 'records' ? '' : 'none';
+    document.getElementById('tabUserViewContent').style.display = tab === 'userView' ? '' : 'none';
+    document.getElementById('tabTdsTrackingContent').style.display = tab === 'tdsTracking' ? '' : 'none';
+    if (tab === 'userView' && uvAllUsers.length === 0) {
+        initUserViewDates();
+        loadUserView();
+    }
+    if (tab === 'tdsTracking' && !tdsDataLoaded) {
+        tdsDataLoaded = true;
+        loadTdsData();
+    }
+}
+
+let uvAllUsers = [];
+let uvCurrentPage = 0;
+const uvPageSize = 50;
+let uvSortField = 'total_net';
+let uvSortDir = 'desc';
+
+function initUserViewDates() {
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    const uvFrom = document.getElementById('uvFromDate');
+    const uvTo = document.getElementById('uvToDate');
+    if (uvFrom && !uvFrom.value) uvFrom.value = thirtyDaysAgo.toISOString().split('T')[0];
+    if (uvTo && !uvTo.value) uvTo.value = today.toISOString().split('T')[0];
+}
+
+async function loadUserView() {
+    const statusFilter = document.getElementById('uvStatusFilter').value;
+    const fromDate = document.getElementById('uvFromDate').value;
+    const toDate = document.getElementById('uvToDate').value;
+    const userId = document.getElementById('uvUserIdFilter').value.trim();
+    const incomeType = document.getElementById('uvIncomeTypeFilter').value;
+
+    let url = '/api/v1/income-verification/staff/user-wise-income-summary?';
+    if (statusFilter && statusFilter !== 'all') url += `status_filter=${encodeURIComponent(statusFilter)}&`;
+    if (fromDate) url += `from_date=${fromDate}&`;
+    if (toDate) url += `to_date=${toDate}&`;
+    if (userId) url += `user_id=${userId}&`;
+    if (incomeType && incomeType !== 'all') url += `income_type=${encodeURIComponent(incomeType)}&`;
+
+    try {
+        document.getElementById('userViewTableBody').innerHTML = '<tr><td colspan="9" class="text-center py-4"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}` }
+        });
+        if (!response.ok) throw new Error('Failed to load user-wise data');
+        const data = await response.json();
+        uvAllUsers = data.data || [];
+        updateUvStats(data.stats || {});
+        sortUserViewData();
+        renderUserViewTable();
+        updateUvPagination();
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('userViewTableBody').innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">Error: ${error.message}</td></tr>`;
+    }
+}
+
+function updateUvStats(stats) {
+    document.getElementById('uvStatTotalGross').textContent = '\u20B9' + (stats.total_gross || 0).toLocaleString();
+    document.getElementById('uvStatTotalNet').textContent = '\u20B9' + (stats.total_net || 0).toLocaleString();
+    document.getElementById('uvStatUserCount').textContent = (stats.total_users || 0).toLocaleString();
+    document.getElementById('uvStatOverallPending').textContent = (stats.overall_pending_users || 0) + ' users';
+    document.getElementById('uvStatOverallPendingAmt').textContent = '\u20B9' + (stats.overall_pending_amount || 0).toLocaleString();
+    document.getElementById('uvStatPending').textContent = (stats.pending_users || 0) + ' users';
+    document.getElementById('uvStatPendingAmt').textContent = '\u20B9' + (stats.pending_amount || 0).toLocaleString();
+    document.getElementById('uvStatValidated').textContent = (stats.validated_users || 0) + ' users';
+    document.getElementById('uvStatValidatedAmt').textContent = '\u20B9' + (stats.validated_amount || 0).toLocaleString();
+    document.getElementById('uvStatCompleted').textContent = (stats.completed_users || 0) + ' users';
+    document.getElementById('uvStatCompletedAmt').textContent = '\u20B9' + (stats.completed_amount || 0).toLocaleString();
+    document.getElementById('uvStatCleared').textContent = (stats.cleared_users || 0) + ' users';
+    document.getElementById('uvStatClearedAmt').textContent = '\u20B9' + (stats.cleared_amount || 0).toLocaleString();
+}
+
+function sortUserView(field) {
+    if (uvSortField === field) {
+        uvSortDir = uvSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        uvSortField = field;
+        uvSortDir = 'desc';
+    }
+    uvCurrentPage = 0;
+    sortUserViewData();
+    renderUserViewTable();
+    updateUvPagination();
+    updateSortIcons();
+}
+
+function sortUserViewData() {
+    uvAllUsers.sort((a, b) => {
+        let va = a[uvSortField];
+        let vb = b[uvSortField];
+        if (va == null) va = typeof vb === 'string' ? '' : 0;
+        if (vb == null) vb = typeof va === 'string' ? '' : 0;
+        if (typeof va === 'string') va = va.toLowerCase();
+        if (typeof vb === 'string') vb = vb.toLowerCase();
+        if (va < vb) return uvSortDir === 'asc' ? -1 : 1;
+        if (va > vb) return uvSortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+}
+
+function updateSortIcons() {
+    const fields = ['user_id', 'user_name', 'total_gross', 'total_net', 'cleared_amount', 'pending_amount', 'total_records'];
+    fields.forEach(f => {
+        const icon = document.getElementById('sortIcon_' + f);
+        if (icon) {
+            if (f === uvSortField) {
+                icon.className = uvSortDir === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                icon.style.color = '#60a5fa';
+            } else {
+                icon.className = 'fas fa-sort';
+                icon.style.color = '';
+            }
+        }
+    });
+}
+
+function renderUserViewTable() {
+    const tbody = document.getElementById('userViewTableBody');
+    if (!uvAllUsers.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4">No users found matching filters</td></tr>';
+        return;
+    }
+    const start = uvCurrentPage * uvPageSize;
+    const end = Math.min(start + uvPageSize, uvAllUsers.length);
+    const pageData = uvAllUsers.slice(start, end);
+
+    tbody.innerHTML = pageData.map((u, idx) => {
+        const typePills = (u.income_types || []).map(t => getIncomeTypePill(t)).join('');
+        const pendingTotal = (u.pending_amount || 0) + (u.validated_amount || 0);
+        return `
+        <tr>
+            <td style="color:#64748b;font-size:12px;">${start + idx + 1}</td>
+            <td>
+                <strong style="color:var(--accent-color)">${u.user_id}</strong><br>
+                <small style="color:#94a3b8">${u.user_name || '-'}</small>
+            </td>
+            <td style="text-align:right;color:#4ade80;font-weight:600">\u20B9${(u.total_gross || 0).toLocaleString()}</td>
+            <td style="text-align:right"><strong style="color:#818cf8">\u20B9${(u.total_net || 0).toLocaleString()}</strong></td>
+            <td style="text-align:right;color:#22c55e;font-weight:600">\u20B9${(u.cleared_amount || 0).toLocaleString()}</td>
+            <td style="text-align:right;color:#f97316;font-weight:600">\u20B9${pendingTotal.toLocaleString()}</td>
+            <td style="text-align:center"><span class="badge bg-secondary">${u.total_records}</span></td>
+            <td style="text-align:center"><div class="income-types-pills" style="justify-content:center;">${typePills}</div></td>
+            <td style="text-align:center">
+                <button class="btn btn-sm btn-info btn-action" onclick='showUserDatewiseDetail("${u.user_id}", "${u.user_name}")' title="View Date-wise Breakdown">
+                    <i class="fas fa-eye"></i> View
+                </button>
+            </td>
+        </tr>`;
+    }).join('');
+    document.getElementById('uvTotalCount').textContent = uvAllUsers.length;
+}
+
+function updateUvPagination() {
+    const total = uvAllUsers.length;
+    document.getElementById('uvTotalRecords').textContent = total;
+    document.getElementById('uvShowingFrom').textContent = total > 0 ? uvCurrentPage * uvPageSize + 1 : 0;
+    document.getElementById('uvShowingTo').textContent = Math.min((uvCurrentPage + 1) * uvPageSize, total);
+    document.getElementById('uvBtnPrev').disabled = uvCurrentPage === 0;
+    document.getElementById('uvBtnNext').disabled = (uvCurrentPage + 1) * uvPageSize >= total;
+}
+
+function uvPreviousPage() { uvCurrentPage--; renderUserViewTable(); updateUvPagination(); }
+function uvNextPage() { uvCurrentPage++; renderUserViewTable(); updateUvPagination(); }
+
+function resetUserViewFilters() {
+    document.getElementById('uvStatusFilter').value = 'all';
+    document.getElementById('uvIncomeTypeFilter').value = 'all';
+    document.getElementById('uvUserIdFilter').value = '';
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    document.getElementById('uvFromDate').value = thirtyDaysAgo.toISOString().split('T')[0];
+    document.getElementById('uvToDate').value = today.toISOString().split('T')[0];
+    uvCurrentPage = 0;
+    loadUserView();
+}
+
+async function showUserDatewiseDetail(userId, userName) {
+    const existingModal = document.getElementById('userDatewiseModal');
+    if (existingModal) existingModal.remove();
+
+    const loadingModal = document.createElement('div');
+    loadingModal.id = 'userDatewiseModal';
+    loadingModal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    loadingModal.innerHTML = `<div style="background:#1a1a2e;padding:40px;border-radius:16px;text-align:center;">
+        <div class="spinner-border text-primary" style="width:50px;height:50px;"></div>
+        <div style="color:white;margin-top:15px;">Loading date-wise income...</div>
+    </div>`;
+    document.body.appendChild(loadingModal);
+
+    try {
+        const fromDate = document.getElementById('uvFromDate').value;
+        const toDate = document.getElementById('uvToDate').value;
+        const incomeType = document.getElementById('uvIncomeTypeFilter').value;
+
+        let url = `/api/v1/income-verification/staff/user-income-datewise/${userId}?`;
+        if (fromDate) url += `from_date=${fromDate}&`;
+        if (toDate) url += `to_date=${toDate}&`;
+        if (incomeType && incomeType !== 'all') url += `income_type=${encodeURIComponent(incomeType)}&`;
+
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}` }
+        });
+        if (!response.ok) throw new Error('Failed to load date-wise data');
+        const data = await response.json();
+        loadingModal.remove();
+
+        const types = data.income_types || [];
+        const typeColors = {
+            'Direct Facilitation': '#34d399',
+            'Group Performance Recognition': '#60a5fa',
+            'VED Leadership Recognition': '#a78bfa',
+            'Mentorship Contribution Benefit': '#fb923c'
+        };
+        const typeShort = {
+            'Direct Facilitation': 'DBF',
+            'Group Performance Recognition': 'GPR',
+            'VED Leadership Recognition': 'VLR',
+            'Mentorship Contribution Benefit': 'MCB'
+        };
+
+        const summaryCards = `
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;">
+            <div style="background:#16213e;padding:14px;border-radius:10px;text-align:center;">
+                <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;">Total Gross</div>
+                <div style="color:#86efac;font-size:20px;font-weight:700;margin-top:4px;">\u20B9${(data.summary.total_gross || 0).toLocaleString()}</div>
+            </div>
+            <div style="background:#16213e;padding:14px;border-radius:10px;text-align:center;">
+                <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;">Total Deductions</div>
+                <div style="color:#f87171;font-size:20px;font-weight:700;margin-top:4px;">\u20B9${(data.summary.total_deductions || 0).toLocaleString()}</div>
+            </div>
+            <div style="background:#16213e;padding:14px;border-radius:10px;text-align:center;">
+                <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;">Total Net</div>
+                <div style="color:white;font-size:20px;font-weight:700;margin-top:4px;">\u20B9${(data.summary.total_net || 0).toLocaleString()}</div>
+            </div>
+            <div style="background:#16213e;padding:14px;border-radius:10px;text-align:center;">
+                <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;">Income Dates</div>
+                <div style="color:#a5b4fc;font-size:20px;font-weight:700;margin-top:4px;">${data.summary.total_dates || 0}</div>
+            </div>
+            <div style="background:#16213e;padding:14px;border-radius:10px;text-align:center;">
+                <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;">Total Records</div>
+                <div style="color:#fbbf24;font-size:20px;font-weight:700;margin-top:4px;">${data.summary.total_records || 0}</div>
+            </div>
+        </div>`;
+
+        const typeHeaders = types.map(t => {
+            const color = typeColors[t] || '#94a3b8';
+            const short = typeShort[t] || t.substring(0, 3);
+            return `<th colspan="3" style="text-align:center;color:${color};font-size:10px;text-transform:uppercase;border-bottom:2px solid ${color}40;padding:8px 4px;">${short}<br><span style="font-size:8px;color:#64748b;">${t}</span></th>`;
+        }).join('');
+
+        const subHeaders = types.map(t => {
+            const color = typeColors[t] || '#94a3b8';
+            return `
+                <th style="text-align:right;color:#86efac;font-size:9px;padding:4px;border-bottom:1px solid #334155;">Gross</th>
+                <th style="text-align:right;color:#f87171;font-size:9px;padding:4px;border-bottom:1px solid #334155;">Ded.</th>
+                <th style="text-align:right;color:${color};font-size:9px;padding:4px;border-bottom:1px solid #334155;">Net</th>`;
+        }).join('');
+
+        const dateRows = (data.date_rows || []).map(row => {
+            const typeCols = types.map(t => {
+                const tc = row.types[t] || { gross: 0, deductions: 0, net: 0 };
+                const hasData = tc.gross > 0 || tc.net > 0;
+                return `
+                    <td style="text-align:right;color:${hasData ? '#86efac' : '#334155'};font-size:12px;padding:6px 4px;">${hasData ? '\u20B9' + tc.gross.toLocaleString() : '-'}</td>
+                    <td style="text-align:right;color:${hasData ? '#f87171' : '#334155'};font-size:12px;padding:6px 4px;">${hasData ? '\u20B9' + tc.deductions.toLocaleString() : '-'}</td>
+                    <td style="text-align:right;color:${hasData ? 'white' : '#334155'};font-size:12px;padding:6px 4px;font-weight:${hasData ? '600' : '400'};">${hasData ? '\u20B9' + tc.net.toLocaleString() : '-'}</td>`;
+            }).join('');
+
+            return `<tr style="border-bottom:1px solid #1e293b;">
+                <td style="padding:6px 8px;color:white;font-size:12px;white-space:nowrap;">${formatDate(row.date)}</td>
+                ${typeCols}
+                <td style="text-align:right;color:#86efac;font-size:12px;padding:6px 4px;font-weight:600;">\u20B9${(row.sub_total_gross || 0).toLocaleString()}</td>
+                <td style="text-align:right;color:#f87171;font-size:12px;padding:6px 4px;font-weight:600;">\u20B9${(row.sub_total_deductions || 0).toLocaleString()}</td>
+                <td style="text-align:right;color:white;font-size:12px;padding:6px 4px;font-weight:700;">\u20B9${(row.sub_total_net || 0).toLocaleString()}</td>
+                <td style="text-align:center;padding:6px 4px;">${getStatusBadge(row.status)}</td>
+                <td style="text-align:center;padding:6px 4px;"><button class="btn btn-sm btn-info" onclick="showIncomeDetail('${data.user_id}', '${(data.user_name || '').replace(/'/g, "\\'")}', '${row.date}')" title="View Income Breakdown" style="padding:3px 8px;"><i class="fas fa-eye"></i></button></td>
+            </tr>`;
+        }).join('');
+
+        const footerTypeCols = types.map(t => {
+            const tt = (data.type_totals || []).find(x => x.type === t) || { gross: 0, deductions: 0, net: 0 };
+            return `
+                <td style="text-align:right;color:#86efac;font-size:12px;padding:8px 4px;font-weight:700;">\u20B9${(tt.gross || 0).toLocaleString()}</td>
+                <td style="text-align:right;color:#f87171;font-size:12px;padding:8px 4px;font-weight:700;">\u20B9${(tt.deductions || 0).toLocaleString()}</td>
+                <td style="text-align:right;color:white;font-size:12px;padding:8px 4px;font-weight:700;">\u20B9${(tt.net || 0).toLocaleString()}</td>`;
+        }).join('');
+
+        const modal = document.createElement('div');
+        modal.id = 'userDatewiseModal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML = `
+            <div style="background:#1a1a2e;border-radius:16px;max-width:1300px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 25px 80px rgba(0,0,0,0.5);">
+                <div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;padding:18px 25px;border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1;">
+                    <div>
+                        <h4 style="margin:0;font-size:18px;"><i class="fas fa-calendar-alt"></i> Date-wise Income Status</h4>
+                        <p style="margin:4px 0 0 0;opacity:0.9;font-size:13px;">${data.user_id} - ${data.user_name}</p>
+                    </div>
+                    <button onclick="document.getElementById('userDatewiseModal').remove()" style="background:rgba(255,255,255,0.2);border:none;color:white;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;">x</button>
+                </div>
+                <div style="padding:20px;">
+                    ${summaryCards}
+                    <div style="background:#16213e;border-radius:12px;overflow:hidden;border:1px solid #33415530;">
+                        <div style="overflow-x:auto;">
+                            <table style="width:100%;border-collapse:collapse;min-width:800px;">
+                                <thead>
+                                    <tr style="background:#0f172a;">
+                                        <th rowspan="2" style="padding:8px;color:#94a3b8;font-size:11px;text-align:left;vertical-align:bottom;border-bottom:1px solid #334155;">Date</th>
+                                        ${typeHeaders}
+                                        <th colspan="3" style="text-align:center;color:#fbbf24;font-size:10px;text-transform:uppercase;border-bottom:2px solid #fbbf2440;padding:8px 4px;">SUB TOTAL</th>
+                                        <th rowspan="2" style="padding:8px;color:#94a3b8;font-size:11px;text-align:center;vertical-align:bottom;border-bottom:1px solid #334155;">Status</th>
+                                        <th rowspan="2" style="padding:8px;color:#94a3b8;font-size:11px;text-align:center;vertical-align:bottom;border-bottom:1px solid #334155;">Action</th>
+                                    </tr>
+                                    <tr style="background:#0f172a;">
+                                        ${subHeaders}
+                                        <th style="text-align:right;color:#86efac;font-size:9px;padding:4px;border-bottom:1px solid #334155;">Gross</th>
+                                        <th style="text-align:right;color:#f87171;font-size:9px;padding:4px;border-bottom:1px solid #334155;">Ded.</th>
+                                        <th style="text-align:right;color:#fbbf24;font-size:9px;padding:4px;border-bottom:1px solid #334155;">Net</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${dateRows}</tbody>
+                                <tfoot>
+                                    <tr style="background:#0f172a;border-top:2px solid #374151;">
+                                        <td style="padding:10px 8px;color:white;font-weight:700;font-size:13px;">GRAND TOTAL</td>
+                                        ${footerTypeCols}
+                                        <td style="text-align:right;color:#86efac;font-size:13px;padding:8px 4px;font-weight:700;">\u20B9${(data.summary.total_gross || 0).toLocaleString()}</td>
+                                        <td style="text-align:right;color:#f87171;font-size:13px;padding:8px 4px;font-weight:700;">\u20B9${(data.summary.total_deductions || 0).toLocaleString()}</td>
+                                        <td style="text-align:right;color:white;font-size:13px;padding:8px 4px;font-weight:700;">\u20B9${(data.summary.total_net || 0).toLocaleString()}</td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding:12px 25px 20px;text-align:center;border-top:1px solid #374151;">
+                    <button onclick="document.getElementById('userDatewiseModal').remove()" style="background:#4f46e5;color:white;border:none;padding:12px 40px;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    } catch (error) {
+        console.error('Error loading date-wise detail:', error);
+        const m = document.getElementById('userDatewiseModal');
+        if (m) m.remove();
+        showToast('Failed to load date-wise details: ' + error.message, 'error');
+    }
+}
+
+let tdsUserData = [];
+let tdsCurrentPage = 1;
+const tdsPerPage = 20;
+let tdsSortCol = 'total_gross';
+let tdsSortDir = 'desc';
+
+function tdsFmtINR(val) {
+    return '\u20B9' + Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function tdsEscHtml(str) {
+    if (!str) return '-';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function tdsBadge(status) {
+    const map = {
+        'Pending': '<span class="badge" style="background:#fef3c7;color:#92400e;font-size:11px;">Pending</span>',
+        'Completed': '<span class="badge" style="background:#dcfce7;color:#166534;font-size:11px;">Completed</span>',
+        'Exception': '<span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:11px;">Exception</span>'
+    };
+    return map[status] || map['Pending'];
+}
+
+function sortTdsTable(col) {
+    if (tdsSortCol === col) {
+        tdsSortDir = tdsSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        tdsSortCol = col;
+        tdsSortDir = (col === 'user_id' || col === 'user_name' || col === 'tds_status') ? 'asc' : 'desc';
+    }
+    const numCols = ['total_gross', 'total_admin', 'total_tds', 'total_guru', 'total_net', 'record_count', 'tds_cleared', 'tds_pending', 'tds_exception'];
+    tdsUserData.sort((a, b) => {
+        let va = a[col], vb = b[col];
+        if (numCols.includes(col)) {
+            va = Number(va || 0); vb = Number(vb || 0);
+        } else {
+            va = (va || '').toString().toLowerCase();
+            vb = (vb || '').toString().toLowerCase();
+        }
+        if (va < vb) return tdsSortDir === 'asc' ? -1 : 1;
+        if (va > vb) return tdsSortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+    tdsCurrentPage = 1;
+    renderTdsTable();
+}
+
+async function loadTdsData() {
+    const spinner = document.getElementById('tdsTableSpinner');
+    if (spinner) spinner.style.display = 'inline-block';
+
+    try {
+        const token = localStorage.getItem('staff_token');
+        const search = document.getElementById('tdsSearchInput')?.value?.trim() || '';
+        const fromDate = document.getElementById('tdsFromDate')?.value || '';
+        const toDate = document.getElementById('tdsToDate')?.value || '';
+        const statusFilter = document.getElementById('tdsStatusFilter')?.value || 'All';
+
+        let dateParams = '';
+        if (fromDate) dateParams += `&from_date=${fromDate}`;
+        if (toDate) dateParams += `&to_date=${toDate}`;
+
+        let summaryUrl = '/api/v1/tds-tracking/summary?' + dateParams.replace(/^&/, '');
+        let userUrl = '/api/v1/tds-tracking/user-summary?page=1&per_page=200' + dateParams;
+        if (search) userUrl += `&search=${encodeURIComponent(search)}`;
+        if (statusFilter && statusFilter !== 'All') userUrl += `&status_filter=${statusFilter}`;
+
+        const [summaryRes, userRes] = await Promise.all([
+            fetch(summaryUrl, { headers: { 'Authorization': `Bearer ${token}` } }),
+            fetch(userUrl, { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
+
+        const summaryData = await summaryRes.json();
+        const userData = await userRes.json();
+
+        if (summaryData.success) {
+            const s = summaryData.summary;
+            document.getElementById('tdsStatUsers').textContent = s.total_users || 0;
+            document.getElementById('tdsStatGross').textContent = tdsFmtINR(s.total_gross);
+            document.getElementById('tdsStatAdmin').textContent = tdsFmtINR(s.total_admin);
+            document.getElementById('tdsStatTds').textContent = tdsFmtINR(s.total_tds);
+            document.getElementById('tdsStatGuru').textContent = tdsFmtINR(s.total_guru);
+            document.getElementById('tdsStatNet').textContent = tdsFmtINR(s.total_net);
+            document.getElementById('tdsStatPending').textContent = s.tds_pending || 0;
+            document.getElementById('tdsStatCompleted').textContent = s.tds_completed || 0;
+            document.getElementById('tdsStatException').textContent = s.tds_exception || 0;
+        }
+
+        if (userData.success) {
+            tdsUserData = userData.users || [];
+        } else {
+            throw new Error(userData.detail || 'Failed to load user data');
+        }
+
+        tdsCurrentPage = 1;
+        renderTdsTable();
+    } catch (error) {
+        console.error('TDS load error:', error);
+        document.getElementById('tdsTableBody').innerHTML =
+            '<tr><td colspan="13" class="text-center text-danger py-3">Error loading data: ' + error.message + '</td></tr>';
+    }
+
+    if (spinner) spinner.style.display = 'none';
+}
+
+function renderTdsTable() {
+    const tbody = document.getElementById('tdsTableBody');
+    const start = (tdsCurrentPage - 1) * tdsPerPage;
+    const pageData = tdsUserData.slice(start, start + tdsPerPage);
+
+    if (pageData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="13" class="text-center py-5"><div class="empty-state"><i class="fas fa-landmark" style="font-size:2rem;margin-bottom:8px;"></i><p>No income records found</p></div></td></tr>';
+        document.getElementById('tdsPagination').innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    pageData.forEach(r => {
+        const safeId = tdsEscHtml(r.user_id);
+        const safeName = tdsEscHtml(r.user_name);
+        const status = r.tds_status || 'Pending';
+        const tdsAmt = Number(r.total_tds || 0);
+        const clearedTds = status === 'Completed' ? tdsAmt : 0;
+        const pendingTds = status === 'Pending' ? tdsAmt : 0;
+        const exceptionTds = status === 'Exception' ? tdsAmt : 0;
+        r.tds_cleared = clearedTds;
+        r.tds_pending = pendingTds;
+        r.tds_exception = exceptionTds;
+        html += `<tr>
+            <td><strong>${safeId}</strong></td>
+            <td>${safeName}</td>
+            <td class="text-end" style="font-weight:600;color:#059669;">${tdsFmtINR(r.total_gross)}</td>
+            <td class="text-end" style="color:#d97706;">${tdsFmtINR(r.total_admin)}</td>
+            <td class="text-end" style="font-weight:600;color:#dc2626;">${tdsFmtINR(r.total_tds)}</td>
+            <td class="text-end" style="color:#2563eb;">${tdsFmtINR(r.total_guru)}</td>
+            <td class="text-end" style="font-weight:600;color:#059669;">${tdsFmtINR(r.total_net)}</td>
+            <td class="text-end" style="font-weight:600;color:#166534;background:#f0fdf4;">${clearedTds > 0 ? tdsFmtINR(clearedTds) : '-'}</td>
+            <td class="text-end" style="font-weight:600;color:#92400e;background:#fefce8;">${pendingTds > 0 ? tdsFmtINR(pendingTds) : '-'}</td>
+            <td class="text-end" style="font-weight:600;color:#5b21b6;background:#f5f3ff;">${exceptionTds > 0 ? tdsFmtINR(exceptionTds) : '-'}</td>
+            <td class="text-center">${tdsBadge(status)}</td>
+            <td class="text-center">
+                <button class="action-btn action-btn-view" onclick="viewTdsDetail('${tdsEscHtml(r.user_id)}', '${tdsEscHtml((r.user_name || '').replace(/'/g, ''))}')">
+                    <i class="fas fa-eye me-1"></i>View
+                </button>
+            </td>
+        </tr>`;
+    });
+
+    tbody.innerHTML = html;
+    renderTdsPagination();
+}
+
+function renderTdsPagination() {
+    const pagination = document.getElementById('tdsPagination');
+    const totalPages = Math.ceil(tdsUserData.length / tdsPerPage);
+
+    if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+
+    let html = `<li class="page-item ${tdsCurrentPage === 1 ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="changeTdsPage(${tdsCurrentPage - 1}); return false;">Prev</a>
+    </li>`;
+
+    for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+        html += `<li class="page-item ${i === tdsCurrentPage ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="changeTdsPage(${i}); return false;">${i}</a>
+        </li>`;
+    }
+
+    html += `<li class="page-item ${tdsCurrentPage === totalPages ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="changeTdsPage(${tdsCurrentPage + 1}); return false;">Next</a>
+    </li>`;
+
+    pagination.innerHTML = html;
+}
+
+function changeTdsPage(page) {
+    const totalPages = Math.ceil(tdsUserData.length / tdsPerPage);
+    if (page < 1 || page > totalPages) return;
+    tdsCurrentPage = page;
+    renderTdsTable();
+}
+
+let _tdsDetailUserId = '';
+let _tdsDetailUserName = '';
+
+async function viewTdsDetail(userId, userName) {
+    _tdsDetailUserId = userId;
+    _tdsDetailUserName = userName;
+    const modal = new bootstrap.Modal(document.getElementById('tdsDetailModal'));
+    document.getElementById('tdsDetailTitle').innerHTML =
+        `<i class="fas fa-landmark me-2"></i>Date-wise Breakup \u2014 ${tdsEscHtml(userName)} (${tdsEscHtml(userId)})`;
+    document.getElementById('tdsDetailBody').innerHTML =
+        '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Loading details...</p></div>';
+    document.getElementById('tdsDetailFooter').style.display = 'none';
+    document.getElementById('tdsDetailFooter').innerHTML = '';
+    modal.show();
+
+    try {
+        const token = localStorage.getItem('staff_token');
+        const fromDate = document.getElementById('tdsFromDate')?.value || '';
+        const toDate = document.getElementById('tdsToDate')?.value || '';
+        let detailUrl = `/api/v1/tds-tracking/user-detail/${userId}`;
+        let dParams = [];
+        if (fromDate) dParams.push(`from_date=${fromDate}`);
+        if (toDate) dParams.push(`to_date=${toDate}`);
+        if (dParams.length) detailUrl += '?' + dParams.join('&');
+
+        const response = await fetch(detailUrl, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+
+        if (!data.success) throw new Error(data.detail || 'Failed to load details');
+
+        const records = data.records || [];
+        const totals = data.totals || {};
+        const tdsStatus = data.tds_status || 'Pending';
+        const canAction = data.can_action || false;
+
+        if (records.length === 0) {
+            document.getElementById('tdsDetailBody').innerHTML =
+                '<div class="text-center py-5"><i class="fas fa-info-circle" style="font-size:2rem;color:#6b7280;"></i><p class="mt-2 text-muted">No income records found for this user (from 12 Feb 2026 onwards).</p></div>';
+            return;
+        }
+
+        let statusInfo = '';
+        if (data.tds_marked_by) {
+            const markedDate = data.tds_marked_at ? new Date(data.tds_marked_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+            statusInfo = `<div class="mt-2" style="font-size:11px;color:#6b7280;">Marked by: ${tdsEscHtml(data.tds_marked_by)} on ${markedDate}</div>`;
+        }
+        if (data.tds_notes) {
+            statusInfo += `<div style="font-size:11px;color:#6b7280;">Notes: ${tdsEscHtml(data.tds_notes)}</div>`;
+        }
+
+        let dHtml = `
+            <div class="mb-3 p-3" style="background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span style="font-size:12px;font-weight:600;color:#374151;">Current Status: ${tdsBadge(tdsStatus)}</span>
+                </div>
+                ${statusInfo}
+                <div class="row text-center mt-2">
+                    <div class="col"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;">Gross</div><div style="font-size:16px;font-weight:700;color:#059669;">${tdsFmtINR(totals.gross)}</div></div>
+                    <div class="col"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;">Admin 8%</div><div style="font-size:16px;font-weight:700;color:#d97706;">${tdsFmtINR(totals.admin)}</div></div>
+                    <div class="col"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;">TDS 2%</div><div style="font-size:16px;font-weight:700;color:#dc2626;">${tdsFmtINR(totals.tds)}</div></div>
+                    <div class="col"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;">Guru D. 2%</div><div style="font-size:16px;font-weight:700;color:#2563eb;">${tdsFmtINR(totals.guru)}</div></div>
+                    <div class="col"><div style="font-size:11px;color:#6b7280;text-transform:uppercase;">Net 88%</div><div style="font-size:16px;font-weight:700;color:#059669;">${tdsFmtINR(totals.net)}</div></div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th class="text-center">Txns</th>
+                            <th class="text-end">Gross (&#8377;)</th>
+                            <th class="text-end">Admin 8% (&#8377;)</th>
+                            <th class="text-end">TDS 2% (&#8377;)</th>
+                            <th class="text-end">Guru D. 2% (&#8377;)</th>
+                            <th class="text-end">Net 88% (&#8377;)</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+        records.forEach(r => {
+            const dateStr = r.date !== '-' ? new Date(r.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+            dHtml += `<tr>
+                <td style="white-space:nowrap;font-weight:600;">${dateStr}</td>
+                <td class="text-center">${r.txn_count}</td>
+                <td class="text-end" style="color:#059669;font-weight:600;">${tdsFmtINR(r.gross)}</td>
+                <td class="text-end" style="color:#d97706;">${tdsFmtINR(r.admin)}</td>
+                <td class="text-end" style="color:#dc2626;font-weight:600;">${tdsFmtINR(r.tds)}</td>
+                <td class="text-end" style="color:#2563eb;">${tdsFmtINR(r.guru)}</td>
+                <td class="text-end" style="color:#059669;font-weight:600;">${tdsFmtINR(r.net)}</td>
+            </tr>`;
+        });
+
+        dHtml += `</tbody>
+                <tfoot style="background:#f9fafb;border-top:2px solid #e5e7eb;">
+                    <tr>
+                        <td style="font-weight:700;">TOTAL</td>
+                        <td class="text-center" style="font-weight:700;">${records.reduce((s, r) => s + r.txn_count, 0)}</td>
+                        <td class="text-end" style="font-weight:700;color:#059669;">${tdsFmtINR(totals.gross)}</td>
+                        <td class="text-end" style="font-weight:700;color:#d97706;">${tdsFmtINR(totals.admin)}</td>
+                        <td class="text-end" style="font-weight:700;color:#dc2626;">${tdsFmtINR(totals.tds)}</td>
+                        <td class="text-end" style="font-weight:700;color:#2563eb;">${tdsFmtINR(totals.guru)}</td>
+                        <td class="text-end" style="font-weight:700;color:#059669;">${tdsFmtINR(totals.net)}</td>
+                    </tr>
+                </tfoot>
+            </table></div>`;
+
+        document.getElementById('tdsDetailBody').innerHTML = dHtml;
+
+        if (canAction) {
+            const footer = document.getElementById('tdsDetailFooter');
+            let footerHtml = '<div class="d-flex gap-2 w-100 align-items-center">';
+            footerHtml += '<input type="text" class="form-control form-control-sm" id="tdsStatusNotes" placeholder="Notes (optional)" style="max-width:250px;">';
+
+            if (tdsStatus !== 'Completed') {
+                footerHtml += `<button class="btn btn-success btn-sm" onclick="markTdsUserStatus('${tdsEscHtml(userId)}', 'Completed')"><i class="fas fa-check me-1"></i>Mark Completed</button>`;
+            }
+            if (tdsStatus !== 'Exception') {
+                footerHtml += `<button class="btn btn-sm" style="background:#7c3aed;color:white;" onclick="markTdsUserStatus('${tdsEscHtml(userId)}', 'Exception')"><i class="fas fa-exclamation-circle me-1"></i>Mark Exception</button>`;
+            }
+            if (tdsStatus !== 'Pending') {
+                footerHtml += `<button class="btn btn-warning btn-sm" onclick="markTdsUserStatus('${tdsEscHtml(userId)}', 'Pending')"><i class="fas fa-undo me-1"></i>Revert to Pending</button>`;
+            }
+            footerHtml += '</div>';
+            footer.innerHTML = footerHtml;
+            footer.style.display = 'flex';
+        }
+    } catch (error) {
+        console.error('TDS detail error:', error);
+        document.getElementById('tdsDetailBody').innerHTML =
+            '<div class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle" style="font-size:2rem;"></i><p class="mt-2">Error: ' + error.message + '</p></div>';
+    }
+}
+
+async function markTdsUserStatus(userId, status) {
+    const labels = { 'Completed': 'TDS Filed/Completed', 'Exception': 'Exception (No TDS Filing)', 'Pending': 'Pending' };
+    if (!confirm(`Mark this user as "${labels[status]}"?`)) return;
+
+    try {
+        const token = localStorage.getItem('staff_token');
+        const notes = document.getElementById('tdsStatusNotes')?.value?.trim() || '';
+
+        const response = await fetch(`/api/v1/tds-tracking/mark-status/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status, notes: notes || null })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            alert(`TDS status updated to "${status}" successfully!`);
+            const modalEl = document.getElementById('tdsDetailModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            loadTdsData();
+        } else {
+            alert('Error: ' + (data.detail || 'Failed to update status'));
+        }
+    } catch (error) {
+        console.error('TDS status update error:', error);
+        alert('Error updating TDS status. Please try again.');
+    }
+}
+
+function clearTdsFilters() {
+    document.getElementById('tdsSearchInput').value = '';
+    document.getElementById('tdsFromDate').value = '';
+    document.getElementById('tdsToDate').value = '';
+    document.getElementById('tdsStatusFilter').value = 'All';
+    tdsDataLoaded = false;
+    loadTdsData();
+    tdsDataLoaded = true;
+}
+</script>

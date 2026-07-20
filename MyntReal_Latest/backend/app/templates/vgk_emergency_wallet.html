@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Wallet - VGK Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --vgk-primary: #d97706;
+            --vgk-secondary: #f59e0b;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--vgk-primary), var(--vgk-secondary));
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .user-info-card {
+            background: #f0fdf4;
+            border: 2px solid #10b981;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .wallet-display {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 10px 0;
+        }
+        
+        .adjustment-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .adjustment-card.add {
+            border-left: 4px solid #10b981;
+        }
+        
+        .adjustment-card.deduct {
+            border-left: 4px solid #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-wallet"></i> Emergency Wallet Management</h2>
+                    <p class="mb-0">Manual wallet adjustments for user accounts</p>
+                </div>
+                <div>
+                    <button class="btn btn-light" onclick="window.history.back()">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-card">
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Critical Operation:</strong> Emergency wallet adjustments bypass normal income flows. Use only for error corrections or emergency situations. All adjustments are logged and audited.
+            </div>
+
+            <!-- User Search -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-search"></i> Step 1: Find User</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <input type="text" class="form-control form-control-lg" id="targetUserId" placeholder="Enter MNR ID (e.g., MNR1800001)">
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary btn-lg w-100" onclick="checkUser()">
+                                <i class="fas fa-search"></i> Search User
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Information (Hidden by default) -->
+            <div id="userInfoSection" style="display: none;">
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-user-check"></i> User Found</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="user-info-card">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <h6>User Details</h6>
+                                    <p class="mb-1"><strong>ID:</strong> <span id="userDisplayId"></span></p>
+                                    <p class="mb-1"><strong>Name:</strong> <span id="userDisplayName"></span></p>
+                                    <p class="mb-0"><strong>Status:</strong> <span id="userDisplayStatus"></span></p>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Earning Wallet</h6>
+                                    <div class="wallet-display">
+                                        <h3 class="mb-0">₹<span id="earningWallet">0</span></h3>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Withdrawable Wallet</h6>
+                                    <div class="wallet-display">
+                                        <h3 class="mb-0">₹<span id="withdrawableWallet">0</span></h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Adjustment Form -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="fas fa-edit"></i> Step 2: Make Adjustment</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Wallet Type</label>
+                                <select class="form-select" id="walletType" required>
+                                    <option value="earning_wallet">Earning Wallet</option>
+                                    <option value="withdrawable_wallet">Withdrawable Wallet</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Adjustment Type</label>
+                                <select class="form-select" id="adjustmentType" required>
+                                    <option value="add">Add Money (+)</option>
+                                    <option value="deduct">Deduct Money (-)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Amount (₹)</label>
+                                <input type="number" class="form-control" id="amount" placeholder="Enter amount" min="1" max="100000" required>
+                                <small class="text-muted">Maximum: ₹100,000</small>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Reason (Minimum 10 characters)</label>
+                                <textarea class="form-control" id="reason" rows="3" placeholder="Explain the reason for this adjustment..." required></textarea>
+                            </div>
+                            <div class="col-md-12">
+                                <button class="btn btn-danger btn-lg w-100" onclick="performAdjustment()">
+                                    <i class="fas fa-exclamation-circle"></i> Perform Emergency Adjustment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Adjustments -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> Recent Emergency Adjustments</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_adjustments %}
+                        {% for adj in recent_adjustments[:10] %}
+                        <div class="adjustment-card {% if adj.amount > 0 %}add{% else %}deduct{% endif %}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ adj.user_id }}</strong>
+                                    <p class="mb-1">{{ adj.description }}</p>
+                                    <small class="text-muted">{{ adj.transaction_date.strftime('%Y-%m-%d %H:%M') }}</small>
+                                </div>
+                                <div class="text-end">
+                                    {% if adj.amount > 0 %}
+                                    <span class="badge bg-success">+₹{{ "%.2f"|format(adj.amount) }}</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">-₹{{ "%.2f"|format(-adj.amount) }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted text-center">No recent emergency adjustments found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        async function checkUser() {
+            const userId = document.getElementById('targetUserId').value.trim();
+            
+            if (!userId) {
+                alert('Please enter a MNR ID');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('target_user_id', userId);
+
+                const response = await fetch('/api/v1/vgk/emergency-wallet/check-user', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('userDisplayId').textContent = result.user.id;
+                    document.getElementById('userDisplayName').textContent = result.user.name;
+                    document.getElementById('userDisplayStatus').textContent = result.user.status;
+                    document.getElementById('earningWallet').textContent = result.user.earning_wallet.toLocaleString();
+                    document.getElementById('withdrawableWallet').textContent = result.user.withdrawable_wallet.toLocaleString();
+                    
+                    document.getElementById('userInfoSection').style.display = 'block';
+                } else {
+                    alert('❌ Error: ' + result.message);
+                    document.getElementById('userInfoSection').style.display = 'none';
+                }
+            } catch (error) {
+                alert('❌ Error searching for user');
+                console.error(error);
+            }
+        }
+
+        async function performAdjustment() {
+            const targetUserId = document.getElementById('targetUserId').value.trim();
+            const walletType = document.getElementById('walletType').value;
+            const adjustmentType = document.getElementById('adjustmentType').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const reason = document.getElementById('reason').value.trim();
+
+            if (!targetUserId || !amount || !reason) {
+                alert('Please fill all required fields');
+                return;
+            }
+
+            if (reason.length < 10) {
+                alert('Reason must be at least 10 characters long');
+                return;
+            }
+
+            const confirmMsg = `⚠️ CRITICAL OPERATION ⚠️\n\n` +
+                `User: ${targetUserId}\n` +
+                `Wallet: ${walletType.replace('_', ' ')}\n` +
+                `Action: ${adjustmentType === 'add' ? 'ADD' : 'DEDUCT'}\n` +
+                `Amount: ₹${amount.toLocaleString()}\n` +
+                `Reason: ${reason}\n\n` +
+                `This action is irreversible and will be logged.\n\n` +
+                `Type 'CONFIRM' to proceed:`;
+
+            const userInput = prompt(confirmMsg);
+            if (userInput !== 'CONFIRM') {
+                alert('Operation cancelled');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('user_id', '{{ user_id }}');
+                formData.append('target_user_id', targetUserId);
+                formData.append('wallet_type', walletType);
+                formData.append('adjustment_type', adjustmentType);
+                formData.append('amount', amount);
+                formData.append('reason', reason);
+
+                const response = await fetch('/api/v1/vgk/emergency-wallet/adjust', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Wallet adjusted successfully!\n\n' + result.message);
+                    location.reload();
+                } else {
+                    alert('❌ Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Error performing adjustment');
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

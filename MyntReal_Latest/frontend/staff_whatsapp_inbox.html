@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>WhatsApp Inbox — MyntReal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#111827}
+    .page-wrap{display:flex;flex-direction:column;min-height:100vh}
+    .content{flex:1;padding:20px;max-width:1100px;margin:0 auto;width:100%}
+
+    /* Toolbar */
+    .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+    .toolbar h2{font-size:18px;font-weight:700;color:#075e54;flex:1;min-width:160px}
+    .badge-unread{background:#dc2626;color:#fff;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:700;display:none}
+    .btn{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:.15s}
+    .btn-green{background:#25d366;color:#fff}
+    .btn-gray{background:#6b7280;color:#fff}
+    .btn-outline{background:#fff;color:#374151;border:1px solid #d1d5db}
+    .btn:hover{opacity:.88}
+    .search-box{padding:7px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;width:200px;outline:none}
+    .filter-check{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;user-select:none}
+
+    /* Inbox list */
+    .inbox-wrap{background:#fff;border-radius:14px;box-shadow:0 1px 6px rgba(0,0,0,.08);overflow:hidden}
+    .inbox-header{display:grid;grid-template-columns:36px 140px 1fr 110px 80px 90px;gap:10px;padding:10px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:11.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
+    .inbox-row{display:grid;grid-template-columns:36px 140px 1fr 110px 80px 90px;gap:10px;padding:12px 16px;border-bottom:1px solid #f3f4f6;align-items:center;transition:.12s;cursor:pointer}
+    .inbox-row:last-child{border-bottom:none}
+    .inbox-row:hover{background:#f0fdf4}
+    .inbox-row.unread{background:#f0fdf4;font-weight:600}
+    .inbox-row.unread .msg-body{color:#111827;font-weight:600}
+    .unread-dot{width:10px;height:10px;background:#25d366;border-radius:50%;flex-shrink:0}
+    .read-dot{width:10px;height:10px;background:#d1d5db;border-radius:50%;flex-shrink:0}
+    .phone-cell{font-family:monospace;font-size:12.5px;color:#374151;font-weight:600}
+    .msg-body{font-size:13px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .time-cell{font-size:11.5px;color:#9ca3af}
+    .lead-chip{display:inline-block;background:#ede9fe;color:#6d28d9;border-radius:999px;padding:2px 8px;font-size:11px;font-weight:600;white-space:nowrap}
+    .no-lead{color:#d1d5db;font-size:11px}
+    .type-chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;color:#374151}
+    .empty-state{padding:60px 20px;text-align:center;color:#9ca3af;font-size:14px}
+    .empty-state i{font-size:36px;margin-bottom:10px;display:block;color:#d1d5db}
+
+    /* Pagination */
+    .pagination{display:flex;align-items:center;gap:8px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap}
+    .pagination span{font-size:13px;color:#6b7280}
+    .pagination button{padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:#374151}
+    .pagination button:disabled{opacity:.4;cursor:default}
+
+    /* Reply Modal */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px}
+    .modal-overlay.open{display:flex}
+    .modal-box{background:#fff;border-radius:16px;width:100%;max-width:520px;box-shadow:0 8px 40px rgba(0,0,0,.18);overflow:hidden}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-bottom:1px solid #a7f3d0}
+    .modal-head h4{font-size:15px;font-weight:700;color:#065f46}
+    .modal-body{padding:18px}
+    .msg-bubble{background:#f0fdf4;border:1px solid #a7f3d0;border-radius:10px;padding:12px 14px;font-size:13px;color:#111827;white-space:pre-wrap;line-height:1.6;margin-bottom:14px;max-height:120px;overflow-y:auto}
+    .reply-label{font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:6px;display:block}
+    textarea.reply-input{width:100%;border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;min-height:80px;outline:none;line-height:1.6}
+    textarea.reply-input:focus{border-color:#25d366;box-shadow:0 0 0 2px #bbf7d0}
+    .modal-foot{padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #f3f4f6}
+    .char-count{font-size:11px;color:#9ca3af;text-align:right;margin-top:4px}
+    .detail-grid{display:grid;grid-template-columns:90px 1fr;gap:4px 8px;font-size:12.5px;margin-bottom:14px}
+    .detail-label{color:#6b7280;font-weight:600}
+    .detail-val{color:#111827}
+
+    /* Toast */
+    #toast{position:fixed;bottom:24px;right:24px;background:#1f2937;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;display:none;max-width:300px}
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <div id="sidebar-container"></div>
+  <div class="content">
+    <div class="toolbar">
+      <i class="fab fa-whatsapp" style="font-size:22px;color:#25d366"></i>
+      <h2>WhatsApp Inbox <span class="badge-unread" id="unreadBadge">0</span></h2>
+      <input type="text" class="search-box" id="searchPhone" placeholder="Search phone..." oninput="debounceLoad()">
+      <label class="filter-check">
+        <input type="checkbox" id="unreadOnly" onchange="loadInbox(1)"> Unread only
+      </label>
+      <button class="btn btn-outline" onclick="loadInbox(1)"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+      <button class="btn btn-gray" onclick="markAllRead()"><i class="fas fa-check-double me-1"></i>Mark All Read</button>
+    </div>
+
+    <div class="inbox-wrap">
+      <div class="inbox-header">
+        <div></div>
+        <div>Phone</div>
+        <div>Message</div>
+        <div>Received</div>
+        <div>Type</div>
+        <div>Lead</div>
+      </div>
+      <div id="inboxBody">
+        <div class="empty-state"><i class="fab fa-whatsapp"></i>Loading messages...</div>
+      </div>
+    </div>
+
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- Reply Modal -->
+<div class="modal-overlay" id="replyModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h4><i class="fab fa-whatsapp me-2"></i>Reply on WhatsApp</h4>
+      <button onclick="closeReply()" style="background:none;border:none;font-size:18px;cursor:pointer"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-grid">
+        <span class="detail-label">From</span><span class="detail-val" id="rm-phone"></span>
+        <span class="detail-label">Name</span><span class="detail-val" id="rm-name"></span>
+        <span class="detail-label">Received</span><span class="detail-val" id="rm-time"></span>
+      </div>
+      <div class="msg-bubble" id="rm-body"></div>
+      <label class="reply-label">Your Reply (within 24h window only)</label>
+      <textarea class="reply-input" id="rm-reply" maxlength="1024" placeholder="Type your reply..." oninput="updateCharCount()"></textarea>
+      <div class="char-count"><span id="charCount">0</span>/1024</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-outline" onclick="closeReply()">Cancel</button>
+      <button class="btn btn-green" id="sendReplyBtn" onclick="sendReply()"><i class="fab fa-whatsapp me-1"></i>Send Reply</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="/js/staff-sidebar.js"></script>
+<script src="/js/staff-header.js"></script>
+<script>
+const API = '/api/v1';
+let currentPage = 1;
+let activeInboxId = null;
+let _debounce = null;
+
+function debounceLoad() {
+  clearTimeout(_debounce);
+  _debounce = setTimeout(() => loadInbox(1), 400);
+}
+
+async function staffFetch(url, opts = {}) {
+  const token = localStorage.getItem('staff_token');
+  opts.headers = { ...(opts.headers || {}), 'Authorization': `Bearer ${token}` };
+  return fetch(url, opts);
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'error' ? '#dc2626' : '#065f46';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+function _fmt(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = now - d;
+  if (diff < 60000) return 'Just now';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+  return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+
+function _typeIcon(type) {
+  const icons = { text:'💬', image:'🖼️', video:'🎥', audio:'🎵', document:'📄', sticker:'😀', interactive:'🔘' };
+  return `<span class="type-chip">${icons[type] || '💬'} ${type}</span>`;
+}
+
+async function loadUnreadCount() {
+  try {
+    const d = await staffFetch(API + '/whatsapp/inbox/unread-count');
+    const badge = document.getElementById('unreadBadge');
+    if (d.unread > 0) { badge.textContent = d.unread; badge.style.display = 'inline'; }
+    else badge.style.display = 'none';
+  } catch {}
+}
+
+async function loadInbox(page = 1) {
+  currentPage = page;
+  const phone = document.getElementById('searchPhone').value.trim();
+  const unreadOnly = document.getElementById('unreadOnly').checked;
+  let url = `${API}/whatsapp/inbox?page=${page}&page_size=25`;
+  if (unreadOnly) url += '&unread_only=true';
+  if (phone) url += `&phone=${encodeURIComponent(phone)}`;
+
+  const body = document.getElementById('inboxBody');
+  body.innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><br>Loading...</div>';
+
+  try {
+    const d = await staffFetch(url);
+    if (!d.success || !d.data.length) {
+      body.innerHTML = '<div class="empty-state"><i class="fab fa-whatsapp"></i>No messages found</div>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+    body.innerHTML = d.data.map(m => `
+      <div class="inbox-row ${m.is_read ? '' : 'unread'}" onclick="openReply(${m.id})">
+        <div>${m.is_read ? '<div class="read-dot"></div>' : '<div class="unread-dot"></div>'}</div>
+        <div class="phone-cell">${m.from_phone || '—'}<br><span style="font-size:11px;font-weight:400;color:#9ca3af">${m.from_name || ''}</span></div>
+        <div class="msg-body">${_escHtml(m.body_text || (m.media_url ? '[Media]' : '—'))}</div>
+        <div class="time-cell">${_fmt(m.received_at)}</div>
+        <div>${_typeIcon(m.message_type)}</div>
+        <div>${m.lead_id ? `<span class="lead-chip">#${m.lead_id}</span>` : '<span class="no-lead">No lead</span>'}</div>
+      </div>
+    `).join('');
+
+    // Pagination
+    const totalPages = Math.ceil(d.total / 25);
+    document.getElementById('pagination').innerHTML = totalPages <= 1 ? '' : `
+      <span>${d.total} messages</span>
+      <button onclick="loadInbox(${page-1})" ${page<=1?'disabled':''}>← Prev</button>
+      <span>Page ${page} of ${totalPages}</span>
+      <button onclick="loadInbox(${page+1})" ${page>=totalPages?'disabled':''}>Next →</button>
+    `;
+    loadUnreadCount();
+  } catch(e) {
+    body.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-triangle"></i><br>Failed to load inbox</div>';
+  }
+}
+
+function _escHtml(t) {
+  return (t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Store messages for modal
+let _msgCache = {};
+async function openReply(id) {
+  // Fetch details if not cached
+  let msg = _msgCache[id];
+  if (!msg) {
+    try {
+      const d = await staffFetch(`${API}/whatsapp/inbox?page=1&page_size=100`);
+      (d.data || []).forEach(m => _msgCache[m.id] = m);
+      msg = _msgCache[id];
+    } catch {}
+  }
+  if (!msg) { showToast('Message not found', 'error'); return; }
+
+  activeInboxId = id;
+  document.getElementById('rm-phone').textContent = msg.from_phone || '—';
+  document.getElementById('rm-name').textContent  = msg.from_name  || '—';
+  document.getElementById('rm-time').textContent  = _fmt(msg.received_at);
+  document.getElementById('rm-body').textContent  = msg.body_text || (msg.media_url ? '[Media message]' : '—');
+  document.getElementById('rm-reply').value = '';
+  document.getElementById('charCount').textContent = '0';
+  document.getElementById('replyModal').classList.add('open');
+
+  // Mark as read
+  if (!msg.is_read) {
+    staffFetch(`${API}/whatsapp/inbox/${id}/read`, { method: 'PATCH' }).catch(() => {});
+    if (_msgCache[id]) _msgCache[id].is_read = true;
+  }
+}
+
+function closeReply() {
+  document.getElementById('replyModal').classList.remove('open');
+  activeInboxId = null;
+  loadInbox(currentPage);
+}
+
+function updateCharCount() {
+  document.getElementById('charCount').textContent = document.getElementById('rm-reply').value.length;
+}
+
+async function sendReply() {
+  if (!activeInboxId) return;
+  const text = document.getElementById('rm-reply').value.trim();
+  if (!text) { showToast('Please type a reply', 'error'); return; }
+
+  const btn = document.getElementById('sendReplyBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Sending...';
+
+  try {
+    const r = await staffFetch(`${API}/whatsapp/inbox/${activeInboxId}/reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast('Reply sent!', 'success');
+      closeReply();
+    } else {
+      showToast(d.detail || 'Failed to send reply', 'error');
+    }
+  } catch(e) {
+    showToast('Error sending reply', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fab fa-whatsapp me-1"></i>Send Reply';
+  }
+}
+
+async function markAllRead() {
+  try {
+    await staffFetch(`${API}/whatsapp/inbox/mark-all-read`, { method: 'PATCH' });
+    showToast('All messages marked as read');
+    _msgCache = {};
+    loadInbox(currentPage);
+  } catch { showToast('Failed', 'error'); }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await StaffSidebar.init();
+  StaffHeader.inject('WhatsApp Inbox', 'fab fa-whatsapp');
+  loadInbox(1);
+  // Auto-refresh every 60 seconds
+  setInterval(() => { loadUnreadCount(); }, 60000);
+});
+</script>
+</body>
+</html>

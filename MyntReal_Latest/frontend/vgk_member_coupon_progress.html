@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coupon Progress — VGK4U Member</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+  body { background:#f6f9fc; font-family:'Segoe UI', Roboto, sans-serif; }
+  .vgk-hero { background:linear-gradient(135deg, #10b981, #10b981cc); color:#fff; padding:24px 20px; border-radius:0 0 18px 18px; margin-bottom:20px; }
+  .vgk-hero h1 { font-size:22px; font-weight:800; margin:0; }
+  .vgk-hero p  { opacity:0.9; margin:4px 0 0; font-size:13px; }
+  .back-link { color:#fff; text-decoration:none; opacity:0.85; font-size:13px; }
+  .back-link:hover { opacity:1; color:#fff; }
+</style>
+</head>
+<body>
+  <div class="vgk-hero">
+    <div style="max-width:760px;margin:0 auto">
+      <a href="/vgk/dashboard" class="back-link"><i class="fas fa-arrow-left me-2"></i>Back to Dashboard</a>
+      <h1 class="mt-2"><i class="fas fa-chart-line me-2"></i>Coupon Progress</h1>
+      <p>Track your points balance and ledger history.</p>
+      <div style="margin-top:8px;font-size:11px;opacity:0.7"><i class="fas fa-shield-alt me-1"></i>VGK4U Members · Audience-aware · DC Protocol IST</div>
+    </div>
+  </div>
+  <main class="container" style="padding-bottom:60px">
+    
+      <div id="cpBalance" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:14px;padding:20px;max-width:640px;margin:0 auto 20px;text-align:center">
+        <div style="font-size:13px;opacity:.85">Current Balance</div>
+        <div id="cpBalVal" style="font-size:36px;font-weight:800">—</div>
+      </div>
+      <h5 style="max-width:640px;margin:0 auto 12px">Recent Ledger</h5>
+      <div id="cpLedger" style="max-width:640px;margin:0 auto"></div>
+  </main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function(){
+  
+      const $ = (s) => document.querySelector(s);
+      async function load() {
+        const r = await fetch('/api/v1/vgk-member/coupons/progress?audience=vgk4u', { credentials: 'include' });
+        if (!r.ok) { $('#cpLedger').innerHTML='<div class="alert alert-warning">Module disabled or unauthorized.</div>'; return; }
+        const d = await r.json();
+        $('#cpBalVal').textContent = d.balance || 0;
+        $('#cpLedger').innerHTML = (d.ledger || []).map(x => `
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between">
+            <div>
+              <div style="font-weight:600">${x.reason_code || '—'}</div>
+              <small class="text-muted">${x.description || ''} · ${new Date(x.created_at).toLocaleString('en-IN')}</small>
+            </div>
+            <div style="font-weight:700;color:${x.points >= 0 ? '#10b981' : '#dc2626'}">${x.points >= 0 ? '+' : ''}${x.points}</div>
+          </div>`).join('') || '<div class="text-muted">No activity yet.</div>';
+      }
+      load();
+})();
+</script>
+</body>
+</html>

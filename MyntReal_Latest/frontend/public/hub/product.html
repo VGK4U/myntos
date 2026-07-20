@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manthra EV Products — Electric Scooters & Vehicles | MyntReal</title>
+<!-- ═══ SEO ══════════════════════════════════════════════════════════════════ -->
+<meta name="description" content="Explore the Manthra EV product lineup by MyntReal — premium electric scooters engineered for modern urban mobility. Book a test ride and experience the future of clean transport.">
+<meta name="keywords" content="Manthra EV product, electric scooter buy India, MyntReal EV model, electric vehicle specifications, EV test ride, Manthra scooter price">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://www.myntreal.com/hub/product">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MyntReal">
+<meta property="og:url" content="https://www.myntreal.com/hub/product">
+<meta property="og:title" content="Manthra EV Products — Electric Scooters & Vehicles | MyntReal">
+<meta property="og:description" content="Explore the Manthra EV product lineup — premium electric scooters engineered for modern urban mobility. Book your test ride today.">
+<meta property="og:image" content="https://www.myntreal.com/hub/Assets/Manthra_1.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@MyntReal">
+<meta name="twitter:title" content="Manthra EV Products — Electric Scooters & Vehicles | MyntReal">
+<meta name="twitter:description" content="Explore Manthra EV's premium electric scooters. Book a test ride today.">
+<meta name="twitter:image" content="https://www.myntreal.com/hub/Assets/Manthra_1.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Manthra EV Products",
+  "url": "https://www.myntreal.com/hub/product",
+  "description": "Manthra EV product lineup — premium electric scooters for modern urban mobility by MyntReal.",
+  "isPartOf": {"@type": "WebSite", "name": "MyntReal", "url": "https://www.myntreal.com"}
+}
+</script>
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="/hub/product.css">
+</head>
+
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-overlay"></div>
+
+  <div class="hero-content reveal">
+    <h1 id="title"></h1>
+    <p class="hero-sub">Electric Mobility, Reinvented</p>
+    <div class="hero-cta">
+      <button class="btn-primary">Book Now</button>
+      <button class="btn-outline">Explore Specs</button>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCT -->
+<section class="product-showcase reveal">
+  <img id="heroImage" class="main-bike">
+</section>
+
+<!-- QUICK SPECS -->
+<section class="quick-specs reveal">
+  <div class="container spec-row" id="quickSpecs"></div>
+</section>
+
+<!-- FEATURE -->
+<section class="feature reveal">
+  <div class="container feature-grid">
+    <div>
+      <h2>Precision Electric Performance</h2>
+      <p>Engineered for power, efficiency and durability.</p>
+    </div>
+    <img id="feature1">
+  </div>
+</section>
+
+<!-- SPECS -->
+<section class="full-specs reveal">
+  <div class="container">
+    <h2 class="section-title">Specifications</h2>
+    <div id="specGrid" class="spec-grid"></div>
+  </div>
+</section>
+
+<!-- GALLERY -->
+<section class="gallery reveal">
+  <div class="container">
+    <h2 class="section-title">Gallery</h2>
+    <div id="galleryGrid" class="gallery-grid"></div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container footer-grid">
+    <div>
+      <h3>Mantra EV</h3>
+      <p>Driving the future of electric mobility.</p>
+    </div>
+    <div>
+      <h4>Models</h4>
+      <a href="#">GT Pro</a>
+      <a href="#">Power Plus</a>
+      <a href="#">Sweety Pro</a>
+    </div>
+    <div>
+      <h4>Company</h4>
+      <a href="#">About</a>
+      <a href="#">Contact</a>
+    </div>
+  </div>
+  <div class="footer-bottom">© 2026 Mantra EV</div>
+</footer>
+
+
+
+
+<script>
+
+    
+/* DATA */
+const data={
+gt:{
+title:"GT Pro",
+hero:"Assets/4-Photoroom.png",
+images:["Assets/4-Photoroom.png","Assets/4-Photoroom.png"],
+specs:[
+{name:"Top Speed",value:"75 km/h"},
+{name:"Range",value:"120 km"},
+{name:"Battery",value:"Lithium"},
+{name:"Charging",value:"4 hrs"}
+]
+}
+};
+
+const m=data.gt;
+
+document.getElementById("title").innerText=m.title;
+document.getElementById("heroImage").src=m.hero;
+document.getElementById("feature1").src=m.images[0];
+
+/* QUICK SPECS */
+let quick="";
+m.specs.forEach(s=>{
+quick+=`<div class="spec-item"><h3>${s.value}</h3><p>${s.name}</p></div>`;
+});
+document.getElementById("quickSpecs").innerHTML=quick;
+
+/* SPECS */
+let specs="";
+m.specs.forEach(s=>{
+specs+=`<div class="spec-box"><h3>${s.value}</h3><p>${s.name}</p></div>`;
+});
+document.getElementById("specGrid").innerHTML=specs;
+
+/* GALLERY */
+let gallery="";
+m.images.forEach(img=>{
+gallery+=`<img src="${img}">`;
+});
+document.getElementById("galleryGrid").innerHTML=gallery;
+
+/* SCROLL REVEAL */
+const reveals=document.querySelectorAll(".reveal");
+
+function revealOnScroll(){
+reveals.forEach(el=>{
+const top=el.getBoundingClientRect().top;
+if(top < window.innerHeight - 100){
+el.classList.add("active");
+}
+});
+}
+
+window.addEventListener("scroll",revealOnScroll);
+revealOnScroll();
+</script>
+</body>
+</html>

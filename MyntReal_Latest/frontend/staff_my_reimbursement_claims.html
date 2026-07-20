@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Reimbursement Claims - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .header-logo { height: 36px; width: auto; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { font-size: 12px; color: #6b7280; }
+        
+        .content-area { padding: 24px; max-width: 1400px; margin: 0 auto; }
+        
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        
+        .filter-section { background: white; padding: 16px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #6b7280; }
+        .filter-group select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 180px; }
+        
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-item { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-item .value { font-size: 24px; font-weight: 700; }
+        .summary-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .summary-item.draft .value { color: #6b7280; }
+        .summary-item.submitted .value { color: #f59e0b; }
+        .summary-item.approved .value { color: #10b981; }
+        .summary-item.settled .value { color: #3b82f6; }
+        .summary-item.rejected .value { color: #ef4444; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        
+        .amount { font-weight: 600; font-family: monospace; }
+        
+        .badge-status { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-draft { background: #e5e7eb; color: #4b5563; }
+        .badge-submitted { background: #fef3c7; color: #d97706; }
+        .badge-manager_approved { background: #dbeafe; color: #1d4ed8; }
+        .badge-finance_approved { background: #d1fae5; color: #059669; }
+        .badge-settled { background: #c7d2fe; color: #4f46e5; }
+        .badge-rejected { background: #fee2e2; color: #dc2626; }
+        
+        .btn-action { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; margin-right: 4px; }
+        .btn-view { background: #f3f4f6; color: #374151; }
+        .btn-view:hover { background: #374151; color: white; }
+        .btn-edit { background: #dbeafe; color: #1d4ed8; }
+        .btn-edit:hover { background: #1d4ed8; color: white; }
+        .btn-submit { background: #fef3c7; color: #d97706; }
+        .btn-submit:hover { background: #d97706; color: white; }
+        .btn-withdraw { background: #fee2e2; color: #dc2626; }
+        .btn-withdraw:hover { background: #dc2626; color: white; }
+        
+        .btn-primary-custom { background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .btn-primary-custom:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); color: white; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        
+        .loading-spinner { display: flex; justify-content: center; align-items: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #10b981; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } }
+        
+        .items-section { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-top: 16px; }
+        .items-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .items-header h4 { font-size: 14px; font-weight: 600; color: #374151; margin: 0; }
+        .item-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 6px; margin-bottom: 8px; align-items: center; }
+        .item-row .item-desc { font-size: 14px; font-weight: 500; }
+        .item-row .item-amount { font-family: monospace; font-weight: 600; }
+        .item-row .item-date { font-size: 12px; color: #6b7280; }
+        .btn-remove-item { background: #fee2e2; color: #dc2626; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+        
+        .claim-total { display: flex; justify-content: flex-end; padding: 16px; background: #f0fdf4; border-radius: 8px; margin-top: 16px; }
+        .claim-total span { font-size: 16px; font-weight: 600; color: #059669; }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        
+        .file-upload-area { border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: #f9fafb; }
+        .file-upload-area:hover { border-color: #10b981; background: #f0fdf4; }
+        .file-upload-area.has-file { border-color: #10b981; background: #f0fdf4; border-style: solid; }
+        .file-preview-item { display: flex; align-items: center; gap: 12px; padding: 8px; }
+        .btn-remove-file { background: #fee2e2; color: #dc2626; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
+        .btn-remove-file:hover { background: #dc2626; color: white; }
+        .progress-bar-container { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.3s; width: 0%; }
+        .form-errors { background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; padding: 12px; color: #dc2626; font-size: 14px; margin-top: 12px; }
+        .form-errors ul { margin: 0; padding-left: 16px; }
+        
+        .travel-section { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .travel-section h5 { font-size: 14px; font-weight: 600; color: #0369a1; margin-bottom: 12px; }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-receipt me-2"></i>My Reimbursement Claims</h1>
+                <p class="text-muted mb-0">Submit and track your expense reimbursement claims</p>
+            </div>
+            <button class="btn-primary-custom" onclick="openCreateModal()">
+                <i class="fas fa-plus me-2"></i>New Claim
+            </button>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="companyFilter" onchange="loadClaims()">
+                    <option value="">Select Company</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select id="statusFilter" onchange="loadClaims()">
+                    <option value="">All Status</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="SUBMITTED">Submitted</option>
+                    <option value="MANAGER_APPROVED">Manager Approved</option>
+                    <option value="FINANCE_APPROVED">Finance Approved</option>
+                    <option value="SETTLED">Settled</option>
+                    <option value="REJECTED">Rejected</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="summary-row" id="summaryRow">
+            <div class="summary-item draft"><div class="value" id="draftCount">0</div><div class="label">Draft</div></div>
+            <div class="summary-item submitted"><div class="value" id="submittedCount">0</div><div class="label">Submitted</div></div>
+            <div class="summary-item approved"><div class="value" id="approvedCount">0</div><div class="label">Approved</div></div>
+            <div class="summary-item settled"><div class="value" id="settledCount">0</div><div class="label">Settled</div></div>
+            <div class="summary-item rejected"><div class="value" id="rejectedCount">0</div><div class="label">Rejected</div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span>Claims List</span>
+                <span class="text-muted" id="claimsCount">0 claims</span>
+            </div>
+            <div class="card-body">
+                <div class="loading-spinner" id="loadingSpinner">
+                    <div class="spinner"></div>
+                </div>
+                <div class="table-container" id="claimsTable" style="display: none;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Claim #</th>
+                                <th>Title</th>
+                                <th>Period</th>
+                                <th>Items</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="claimsBody"></tbody>
+                    </table>
+                </div>
+                <div class="empty-state" id="emptyState" style="display: none;">
+                    <i class="fas fa-receipt"></i>
+                    <h3>No claims found</h3>
+                    <p>Create your first reimbursement claim to get started</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 id="modalTitle"><i class="fas fa-plus me-2"></i>New Reimbursement Claim</h3>
+                <button class="modal-close" onclick="closeCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="claimForm">
+                    <input type="hidden" id="claimId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Company *</label>
+                            <select id="claimCompany" required>
+                                <option value="">Select Company</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Claim Title *</label>
+                            <input type="text" id="claimTitle" required minlength="5" maxlength="200" placeholder="e.g., December Travel Expenses">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="claimDescription" rows="2" placeholder="Brief description of the claim..."></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Period From</label>
+                            <input type="date" id="claimPeriodFrom">
+                        </div>
+                        <div class="form-group">
+                            <label>Period To</label>
+                            <input type="date" id="claimPeriodTo">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="isTravelClaim" onchange="toggleTravelSection()"> This is a travel/journey claim
+                        </label>
+                    </div>
+                    
+                    <div class="travel-section" id="travelSection" style="display: none;">
+                        <h5><i class="fas fa-car me-2"></i>Travel Details</h5>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Travel Mode</label>
+                                <select id="travelMode">
+                                    <option value="">Select Mode</option>
+                                    <option value="BIKE">Bike</option>
+                                    <option value="CAR">Car</option>
+                                    <option value="AUTO">Auto</option>
+                                    <option value="BUS">Bus</option>
+                                    <option value="TRAIN">Train</option>
+                                    <option value="FLIGHT">Flight</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Distance (km)</label>
+                                <input type="number" id="distanceKm" step="0.1" placeholder="0.0">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>From Location</label>
+                                <input type="text" id="travelFrom" placeholder="Starting point">
+                            </div>
+                            <div class="form-group">
+                                <label>To Location</label>
+                                <input type="text" id="travelTo" placeholder="Destination">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr style="margin: 20px 0; border-color: #374151;">
+                    
+                    <div class="expense-section">
+                        <h5 style="color: #10b981; margin-bottom: 15px;"><i class="fas fa-receipt me-2"></i>Expense Details</h5>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Category *</label>
+                                <select id="claimMainCategory" required onchange="loadClaimSubCategories()">
+                                    <option value="">Select Category</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Sub Category</label>
+                                <select id="claimSubCategory">
+                                    <option value="">Select Sub Category</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Expense Date *</label>
+                                <input type="date" id="claimExpenseDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Amount (₹) *</label>
+                                <input type="number" id="claimAmount" required step="0.01" min="0.01" max="100000" placeholder="0.00">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Vendor Name</label>
+                                <input type="text" id="claimVendor" placeholder="Who did you pay?">
+                            </div>
+                            <div class="form-group">
+                                <label>Bill Number</label>
+                                <input type="text" id="claimBillNumber" placeholder="Invoice/Receipt number">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="claimGstApplicable" onchange="toggleClaimGst()"> GST Applicable
+                            </label>
+                        </div>
+                        
+                        <div class="form-group" id="claimGstGroup" style="display: none;">
+                            <label>GST Amount (₹)</label>
+                            <input type="number" id="claimGstAmount" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Bill/Receipt Attachment</label>
+                            <div class="file-upload-area" id="claimBillUploadArea" onclick="document.getElementById('claimBillFile').click()" ondragover="handleDragOver(event)" ondrop="handleClaimFileDrop(event)" ondragleave="handleDragLeave(event)">
+                                <input type="file" id="claimBillFile" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" style="display: none;" onchange="handleClaimBillFileSelect(event)">
+                                <div id="claimBillPlaceholder">
+                                    <i class="fas fa-cloud-upload-alt" style="font-size: 24px; color: #9ca3af; margin-bottom: 8px;"></i>
+                                    <p style="margin: 0; color: #6b7280; font-size: 14px;">Click or drag to upload bill/receipt</p>
+                                    <small style="color: #9ca3af;">JPG, PNG, GIF, WebP, PDF (Max 5MB)</small>
+                                </div>
+                                <div id="claimFilePreview" style="display: none;">
+                                    <div class="file-preview-item">
+                                        <i class="fas fa-file-image" id="claimFileIcon" style="font-size: 20px; color: #10b981;"></i>
+                                        <span id="claimFileName" style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                                        <button type="button" class="btn-remove-file" onclick="removeClaimBillFile(event)"><i class="fas fa-times"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="claimUploadProgress" style="display: none; margin-top: 8px;">
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" id="claimProgressBar"></div>
+                                </div>
+                                <small id="claimUploadStatus" style="color: #6b7280;">Uploading...</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="claimFormErrors" class="form-errors" style="display: none;"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Cancel</button>
+                <button type="button" class="btn btn-success" id="saveClaimBtn" onclick="saveClaim()">
+                    <i class="fas fa-save me-1"></i>Save as Draft
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-eye me-2"></i>Claim Details</h3>
+                <button class="modal-close" onclick="closeViewModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="viewModalBody">
+            </div>
+            <div class="modal-footer" id="viewModalFooter">
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="addItemModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-plus me-2"></i>Add Expense Item</h3>
+                <button class="modal-close" onclick="closeAddItemModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="itemForm">
+                    <input type="hidden" id="itemClaimId">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Main Category</label>
+                            <select id="itemMainCategory" onchange="loadSubCategories()">
+                                <option value="">Select Category</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sub Category</label>
+                            <select id="itemSubCategory">
+                                <option value="">Select Sub Category</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Description *</label>
+                        <input type="text" id="itemDescription" required placeholder="What was this expense for?">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Expense Date *</label>
+                            <input type="date" id="itemExpenseDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Amount (₹) *</label>
+                            <input type="number" id="itemAmount" required step="0.01" min="0.01" placeholder="0.00">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Vendor Name</label>
+                            <input type="text" id="itemVendor" placeholder="Who did you pay?">
+                        </div>
+                        <div class="form-group">
+                            <label>Bill Number</label>
+                            <input type="text" id="itemBillNumber" placeholder="Invoice/Receipt number">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="itemGstApplicable" onchange="toggleGst()"> GST Applicable
+                        </label>
+                    </div>
+                    
+                    <div class="form-group" id="gstAmountGroup" style="display: none;">
+                        <label>GST Amount (₹)</label>
+                        <input type="number" id="itemGstAmount" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Bill/Receipt Attachment</label>
+                        <div class="file-upload-area" id="billUploadArea" onclick="document.getElementById('itemBillFile').click()">
+                            <input type="file" id="itemBillFile" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf" style="display: none;" onchange="handleBillFileSelect(event)">
+                            <div id="billUploadPlaceholder">
+                                <i class="fas fa-cloud-upload-alt" style="font-size: 24px; color: #9ca3af; margin-bottom: 8px;"></i>
+                                <p style="margin: 0; color: #6b7280; font-size: 14px;">Click to upload bill/receipt</p>
+                                <small style="color: #9ca3af;">JPG, PNG, GIF, WebP, PDF (Max 5MB)</small>
+                            </div>
+                            <div id="billFilePreview" style="display: none;">
+                                <div class="file-preview-item">
+                                    <i class="fas fa-file-image" id="billFileIcon" style="font-size: 20px; color: #10b981;"></i>
+                                    <span id="billFileName" style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+                                    <button type="button" class="btn-remove-file" onclick="removeBillFile(event)"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="billUploadProgress" style="display: none; margin-top: 8px;">
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" id="billProgressBar"></div>
+                            </div>
+                            <small id="billUploadStatus" style="color: #6b7280;">Uploading...</small>
+                        </div>
+                    </div>
+                    
+                    <div id="itemFormErrors" class="form-errors" style="display: none;"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddItemModal()">Cancel</button>
+                <button type="button" class="btn btn-success" id="saveItemBtn" onclick="saveItem()">
+                    <i class="fas fa-plus me-1"></i>Add Item
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let staffUser = null;
+        let companies = [];
+        let categories = [];
+        let currentClaims = [];
+        let selectedBillFile = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initPage();
+        });
+        
+        function handleBillFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const maxSize = 5 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert('File size exceeds 5MB limit. Please select a smaller file.');
+                event.target.value = '';
+                return;
+            }
+            
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Invalid file type. Please upload JPG, PNG, GIF, WebP or PDF.');
+                event.target.value = '';
+                return;
+            }
+            
+            selectedBillFile = file;
+            
+            document.getElementById('billUploadPlaceholder').style.display = 'none';
+            document.getElementById('billFilePreview').style.display = 'block';
+            document.getElementById('billFileName').textContent = file.name;
+            document.getElementById('billUploadArea').classList.add('has-file');
+            
+            const isPdf = file.type === 'application/pdf';
+            document.getElementById('billFileIcon').className = isPdf ? 'fas fa-file-pdf' : 'fas fa-file-image';
+            document.getElementById('billFileIcon').style.color = isPdf ? '#dc2626' : '#10b981';
+        }
+        
+        function removeBillFile(event) {
+            event.stopPropagation();
+            selectedBillFile = null;
+            document.getElementById('itemBillFile').value = '';
+            document.getElementById('billUploadPlaceholder').style.display = 'block';
+            document.getElementById('billFilePreview').style.display = 'none';
+            document.getElementById('billUploadArea').classList.remove('has-file');
+        }
+        
+        async function uploadBillFile(claimId, itemId) {
+            if (!selectedBillFile) return null;
+            
+            const formData = new FormData();
+            formData.append('file', selectedBillFile);
+            
+            document.getElementById('billUploadProgress').style.display = 'block';
+            document.getElementById('billUploadStatus').textContent = 'Uploading bill...';
+            document.getElementById('billProgressBar').style.width = '30%';
+            document.getElementById('billProgressBar').classList.remove('bg-danger');
+            document.getElementById('billProgressBar').classList.add('bg-primary');
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/reimbursements/claims/${claimId}/items/${itemId}/upload-bill`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {}
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    document.getElementById('billProgressBar').style.width = '100%';
+                    document.getElementById('billProgressBar').classList.remove('bg-primary');
+                    document.getElementById('billProgressBar').classList.add('bg-success');
+                    document.getElementById('billUploadStatus').textContent = 'Bill uploaded successfully!';
+                    return data.file_path;
+                } else {
+                    document.getElementById('billProgressBar').style.width = '100%';
+                    document.getElementById('billProgressBar').classList.remove('bg-primary');
+                    document.getElementById('billProgressBar').classList.add('bg-danger');
+                    const errorMsg = data.detail || 'Upload failed';
+                    document.getElementById('billUploadStatus').textContent = errorMsg;
+                    console.error('[DC] Bill upload failed:', errorMsg);
+                    alert('Bill upload failed: ' + errorMsg);
+                    return null;
+                }
+            } catch (error) {
+                document.getElementById('billProgressBar').style.width = '100%';
+                document.getElementById('billProgressBar').classList.remove('bg-primary');
+                document.getElementById('billProgressBar').classList.add('bg-danger');
+                document.getElementById('billUploadStatus').textContent = 'Upload failed: ' + error.message;
+                console.error('[DC] Bill upload error:', error);
+                alert('Bill upload failed: ' + error.message);
+                return null;
+            }
+        }
+        
+        function validateItemForm() {
+            const errors = [];
+            const description = document.getElementById('itemDescription').value.trim();
+            const expenseDate = document.getElementById('itemExpenseDate').value;
+            const amount = parseFloat(document.getElementById('itemAmount').value);
+            
+            if (!description || description.length < 3) {
+                errors.push('Description must be at least 3 characters');
+            }
+            if (description.length > 500) {
+                errors.push('Description cannot exceed 500 characters');
+            }
+            if (!expenseDate) {
+                errors.push('Expense date is required');
+            } else {
+                const today = new Date();
+                const selectedDate = new Date(expenseDate);
+                if (selectedDate > today) {
+                    errors.push('Expense date cannot be in the future');
+                }
+            }
+            if (isNaN(amount) || amount <= 0) {
+                errors.push('Amount must be greater than 0');
+            }
+            if (amount > 100000) {
+                errors.push('Amount cannot exceed ₹1,00,000 per item');
+            }
+            
+            const gstApplicable = document.getElementById('itemGstApplicable').checked;
+            if (gstApplicable) {
+                const gstAmount = parseFloat(document.getElementById('itemGstAmount').value) || 0;
+                if (gstAmount < 0) {
+                    errors.push('GST amount cannot be negative');
+                }
+                if (gstAmount > amount * 0.28) {
+                    errors.push('GST amount seems too high (max 28% of amount)');
+                }
+            }
+            
+            return errors;
+        }
+        
+        function showFormErrors(errors) {
+            const errorDiv = document.getElementById('itemFormErrors');
+            if (errors.length === 0) {
+                errorDiv.style.display = 'none';
+                return;
+            }
+            errorDiv.innerHTML = '<strong>Please fix the following:</strong><ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+            errorDiv.style.display = 'block';
+        }
+        
+        function resetItemForm() {
+            document.getElementById('itemForm').reset();
+            document.getElementById('gstAmountGroup').style.display = 'none';
+            document.getElementById('itemFormErrors').style.display = 'none';
+            document.getElementById('billUploadProgress').style.display = 'none';
+            selectedBillFile = null;
+            document.getElementById('billUploadPlaceholder').style.display = 'block';
+            document.getElementById('billFilePreview').style.display = 'none';
+            document.getElementById('billUploadArea').classList.remove('has-file');
+        }
+        
+        async function initPage() {
+            staffUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const token = localStorage.getItem('staff_token');
+            
+            if (!token || !staffUser.id) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('My Reimbursement Claims', 'fas fa-receipt');
+            
+            await loadCompanies();
+            await loadCategories();
+        }
+        
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch('/api/v1/staff/reimbursements/my-assigned-companies');
+                
+                const data = await response.json();
+                if (data.success) {
+                    companies = data.companies;
+                    const filterSelect = document.getElementById('companyFilter');
+                    const formSelect = document.getElementById('claimCompany');
+                    
+                    companies.forEach(c => {
+                        filterSelect.innerHTML += `<option value="${c.id}">${c.company_name}</option>`;
+                        formSelect.innerHTML += `<option value="${c.id}">${c.company_name}</option>`;
+                    });
+                    
+                    if (companies.length > 0) {
+                        filterSelect.value = companies[0].id;
+                        loadClaims();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading companies:', error);
+            }
+        }
+        
+        async function loadCategories() {
+            try {
+                const response = await staffFetch('/api/v1/staff/reimbursements/expense-categories');
+                
+                const data = await response.json();
+                if (data.success) {
+                    categories = data.categories;
+                    const mainCatSelect = document.getElementById('itemMainCategory');
+                    const claimCatSelect = document.getElementById('claimMainCategory');
+                    categories.forEach(c => {
+                        mainCatSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                        claimCatSelect.innerHTML += `<option value="${c.id}">${c.name}</option>`;
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+        
+        function loadSubCategories() {
+            const mainCatId = parseInt(document.getElementById('itemMainCategory').value);
+            const subCatSelect = document.getElementById('itemSubCategory');
+            subCatSelect.innerHTML = '<option value="">Select Sub Category</option>';
+            
+            if (mainCatId) {
+                const mainCat = categories.find(c => c.id === mainCatId);
+                if (mainCat && mainCat.sub_categories) {
+                    mainCat.sub_categories.forEach(sc => {
+                        subCatSelect.innerHTML += `<option value="${sc.id}">${sc.name}</option>`;
+                    });
+                }
+            }
+        }
+        
+        function loadClaimSubCategories() {
+            const mainCatId = parseInt(document.getElementById('claimMainCategory').value);
+            const subCatSelect = document.getElementById('claimSubCategory');
+            subCatSelect.innerHTML = '<option value="">Select Sub Category</option>';
+            
+            if (mainCatId) {
+                const mainCat = categories.find(c => c.id === mainCatId);
+                if (mainCat && mainCat.sub_categories) {
+                    mainCat.sub_categories.forEach(sc => {
+                        subCatSelect.innerHTML += `<option value="${sc.id}">${sc.name}</option>`;
+                    });
+                }
+            }
+        }
+        
+        function toggleClaimGst() {
+            const gstGroup = document.getElementById('claimGstGroup');
+            gstGroup.style.display = document.getElementById('claimGstApplicable').checked ? 'block' : 'none';
+        }
+        
+        let selectedClaimBillFile = null;
+        let uploadedClaimBillPath = null;
+        
+        function handleClaimBillFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            processClaimBillFile(file);
+        }
+        
+        function handleClaimFileDrop(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const area = document.getElementById('claimBillUploadArea');
+            area.classList.remove('drag-over');
+            
+            const file = event.dataTransfer.files[0];
+            if (file) processClaimBillFile(file);
+        }
+        
+        function processClaimBillFile(file) {
+            const maxSize = 5 * 1024 * 1024;
+            if (file.size > maxSize) {
+                alert('File too large. Maximum 5MB allowed.');
+                return;
+            }
+            
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+            if (!allowedTypes.includes(file.type)) {
+                alert('Invalid file type. Allowed: JPG, PNG, GIF, WebP, PDF');
+                return;
+            }
+            
+            selectedClaimBillFile = file;
+            uploadedClaimBillPath = null;
+            
+            document.getElementById('claimBillPlaceholder').style.display = 'none';
+            document.getElementById('claimFilePreview').style.display = 'block';
+            document.getElementById('claimFileName').textContent = file.name;
+            
+            const icon = document.getElementById('claimFileIcon');
+            if (file.type === 'application/pdf') {
+                icon.className = 'fas fa-file-pdf';
+                icon.style.color = '#ef4444';
+            } else {
+                icon.className = 'fas fa-file-image';
+                icon.style.color = '#10b981';
+            }
+            
+            document.getElementById('claimBillUploadArea').classList.add('has-file');
+        }
+        
+        function removeClaimBillFile(event) {
+            event.stopPropagation();
+            selectedClaimBillFile = null;
+            uploadedClaimBillPath = null;
+            document.getElementById('claimBillFile').value = '';
+            document.getElementById('claimBillPlaceholder').style.display = 'block';
+            document.getElementById('claimFilePreview').style.display = 'none';
+            document.getElementById('claimBillUploadArea').classList.remove('has-file');
+            document.getElementById('claimUploadProgress').style.display = 'none';
+        }
+        
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.add('drag-over');
+        }
+        
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.classList.remove('drag-over');
+        }
+        
+        async function uploadClaimBillFile(claimId) {
+            if (!selectedClaimBillFile) return null;
+            
+            const formData = new FormData();
+            formData.append('file', selectedClaimBillFile);
+            formData.append('claim_id', claimId);
+            
+            document.getElementById('claimUploadProgress').style.display = 'block';
+            document.getElementById('claimProgressBar').style.width = '0%';
+            document.getElementById('claimUploadStatus').textContent = 'Uploading...';
+            
+            try {
+                document.getElementById('claimProgressBar').style.width = '50%';
+                
+                const response = await staffFetch('/api/v1/staff/reimbursements/upload-bill', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    document.getElementById('claimProgressBar').style.width = '100%';
+                    document.getElementById('claimUploadStatus').textContent = 'Uploaded!';
+                    return data.file_path;
+                } else {
+                    document.getElementById('claimUploadStatus').textContent = data.detail || 'Upload failed';
+                    return null;
+                }
+            } catch (error) {
+                document.getElementById('claimUploadStatus').textContent = 'Upload failed: ' + error.message;
+                return null;
+            }
+        }
+        
+        function validateClaimForm() {
+            const errors = [];
+            const company = document.getElementById('claimCompany').value;
+            const title = document.getElementById('claimTitle').value.trim();
+            const category = document.getElementById('claimMainCategory').value;
+            const expenseDate = document.getElementById('claimExpenseDate').value;
+            const amount = parseFloat(document.getElementById('claimAmount').value);
+            
+            if (!company) errors.push('Company is required');
+            if (!title || title.length < 5) errors.push('Claim title must be at least 5 characters');
+            if (!category) errors.push('Expense category is required');
+            if (!expenseDate) {
+                errors.push('Expense date is required');
+            } else {
+                const today = new Date();
+                const selectedDate = new Date(expenseDate);
+                if (selectedDate > today) errors.push('Expense date cannot be in the future');
+            }
+            if (isNaN(amount) || amount <= 0) errors.push('Amount must be greater than 0');
+            if (amount > 100000) errors.push('Amount cannot exceed ₹1,00,000');
+            
+            const gstApplicable = document.getElementById('claimGstApplicable').checked;
+            if (gstApplicable) {
+                const gstAmount = parseFloat(document.getElementById('claimGstAmount').value) || 0;
+                if (gstAmount < 0) errors.push('GST amount cannot be negative');
+                if (gstAmount > amount * 0.28) errors.push('GST amount seems too high (max 28% of amount)');
+            }
+            
+            return errors;
+        }
+        
+        function showClaimFormErrors(errors) {
+            const errorDiv = document.getElementById('claimFormErrors');
+            if (errors.length === 0) {
+                errorDiv.style.display = 'none';
+                return;
+            }
+            errorDiv.innerHTML = '<strong>Please fix the following:</strong><ul>' + errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+            errorDiv.style.display = 'block';
+        }
+        
+        async function loadClaims() {
+            const companyId = document.getElementById('companyFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            
+            if (!companyId) {
+                return;
+            }
+            
+            document.getElementById('loadingSpinner').style.display = 'flex';
+            document.getElementById('claimsTable').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            try {
+                let url = `/api/v1/staff/reimbursements/my-claims?company_id=${companyId}`;
+                if (status) url += `&status=${status}`;
+                
+                const response = await staffFetch(url);
+                
+                const data = await response.json();
+                document.getElementById('loadingSpinner').style.display = 'none';
+                
+                if (data.success) {
+                    currentClaims = data.claims;
+                    renderClaims(data.claims);
+                    updateSummary(data.claims);
+                    document.getElementById('claimsCount').textContent = `${data.total} claims`;
+                }
+            } catch (error) {
+                console.error('Error loading claims:', error);
+                document.getElementById('loadingSpinner').style.display = 'none';
+            }
+        }
+        
+        function renderClaims(claims) {
+            const tbody = document.getElementById('claimsBody');
+            tbody.innerHTML = '';
+            
+            if (claims.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('claimsTable').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('claimsTable').style.display = 'block';
+            
+            claims.forEach(claim => {
+                const period = claim.claim_period_from && claim.claim_period_to 
+                    ? `${formatDate(claim.claim_period_from)} - ${formatDate(claim.claim_period_to)}`
+                    : '-';
+                
+                let actions = `<button class="btn-action btn-view" onclick="viewClaim(${claim.id})"><i class="fas fa-eye"></i></button>`;
+                
+                if (claim.status === 'DRAFT') {
+                    actions += `<button class="btn-action btn-edit" onclick="editClaim(${claim.id})"><i class="fas fa-edit"></i></button>`;
+                    actions += `<button class="btn-action btn-submit" onclick="submitClaim(${claim.id})"><i class="fas fa-paper-plane"></i></button>`;
+                } else if (claim.status === 'SUBMITTED') {
+                    actions += `<button class="btn-action btn-withdraw" onclick="withdrawClaim(${claim.id})"><i class="fas fa-undo"></i></button>`;
+                }
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${claim.claim_number}</strong></td>
+                        <td>${escapeHtml(claim.claim_title)}</td>
+                        <td>${period}</td>
+                        <td>${claim.item_count} items</td>
+                        <td class="amount">₹${formatNumber(claim.total_amount)}</td>
+                        <td><span class="badge-status badge-${claim.status.toLowerCase()}">${formatStatus(claim.status)}</span></td>
+                        <td>${formatDate(claim.created_at)}</td>
+                        <td>${actions}</td>
+                    </tr>
+                `;
+            });
+        }
+        
+        function updateSummary(claims) {
+            const counts = { DRAFT: 0, SUBMITTED: 0, MANAGER_APPROVED: 0, FINANCE_APPROVED: 0, SETTLED: 0, REJECTED: 0 };
+            claims.forEach(c => { if (counts.hasOwnProperty(c.status)) counts[c.status]++; });
+            
+            document.getElementById('draftCount').textContent = counts.DRAFT;
+            document.getElementById('submittedCount').textContent = counts.SUBMITTED;
+            document.getElementById('approvedCount').textContent = counts.MANAGER_APPROVED + counts.FINANCE_APPROVED;
+            document.getElementById('settledCount').textContent = counts.SETTLED;
+            document.getElementById('rejectedCount').textContent = counts.REJECTED;
+        }
+        
+        function openCreateModal() {
+            document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus me-2"></i>New Reimbursement Claim';
+            document.getElementById('claimForm').reset();
+            document.getElementById('claimId').value = '';
+            document.getElementById('travelSection').style.display = 'none';
+            
+            const companyId = document.getElementById('companyFilter').value;
+            if (companyId) {
+                document.getElementById('claimCompany').value = companyId;
+            }
+            
+            document.getElementById('createModal').classList.add('active');
+        }
+        
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('active');
+        }
+        
+        function toggleTravelSection() {
+            const isTravel = document.getElementById('isTravelClaim').checked;
+            document.getElementById('travelSection').style.display = isTravel ? 'block' : 'none';
+        }
+        
+        function toggleGst() {
+            const gstApplicable = document.getElementById('itemGstApplicable').checked;
+            document.getElementById('gstAmountGroup').style.display = gstApplicable ? 'block' : 'none';
+        }
+        
+        async function saveClaim() {
+            const errors = validateClaimForm();
+            if (errors.length > 0) {
+                showClaimFormErrors(errors);
+                return;
+            }
+            showClaimFormErrors([]);
+            
+            const companyId = document.getElementById('claimCompany').value;
+            const title = document.getElementById('claimTitle').value.trim();
+            const mainCategoryId = document.getElementById('claimMainCategory').value;
+            const subCategoryId = document.getElementById('claimSubCategory').value;
+            const expenseDate = document.getElementById('claimExpenseDate').value;
+            const amount = parseFloat(document.getElementById('claimAmount').value);
+            const vendor = document.getElementById('claimVendor').value.trim();
+            const billNumber = document.getElementById('claimBillNumber').value.trim();
+            const gstApplicable = document.getElementById('claimGstApplicable').checked;
+            const gstAmount = gstApplicable ? parseFloat(document.getElementById('claimGstAmount').value) || 0 : 0;
+            
+            const saveBtn = document.getElementById('saveClaimBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+            
+            try {
+                const claimData = {
+                    company_id: parseInt(companyId),
+                    claim_title: title,
+                    claim_description: document.getElementById('claimDescription').value.trim() || null,
+                    claim_period_from: document.getElementById('claimPeriodFrom').value || null,
+                    claim_period_to: document.getElementById('claimPeriodTo').value || null,
+                    is_travel_claim: document.getElementById('isTravelClaim').checked,
+                    travel_mode: document.getElementById('travelMode').value || null,
+                    travel_from: document.getElementById('travelFrom').value.trim() || null,
+                    travel_to: document.getElementById('travelTo').value.trim() || null,
+                    distance_km: parseFloat(document.getElementById('distanceKm').value) || null,
+                    items: []
+                };
+                
+                const response = await staffFetch('/api/v1/staff/reimbursements/claims', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(claimData)
+                });
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    alert(data.detail || 'Error creating claim');
+                    return;
+                }
+                
+                const claimId = data.claim.id;
+                
+                let billPath = null;
+                if (selectedClaimBillFile) {
+                    billPath = await uploadClaimBillFile(claimId);
+                }
+                
+                const itemData = {
+                    main_category_id: parseInt(mainCategoryId),
+                    sub_category_id: subCategoryId ? parseInt(subCategoryId) : null,
+                    description: title,
+                    expense_date: expenseDate,
+                    amount: amount,
+                    vendor_name: vendor || null,
+                    bill_number: billNumber || null,
+                    gst_applicable: gstApplicable,
+                    gst_amount: gstAmount,
+                    bill_path: billPath
+                };
+                
+                const itemResponse = await staffFetch(`/api/v1/staff/reimbursements/claims/${claimId}/items`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(itemData)
+                });
+                
+                const itemResult = await itemResponse.json();
+                
+                if (itemResult.success) {
+                    closeCreateModal();
+                    resetClaimForm();
+                    loadClaims();
+                    alert('Claim created with expense item successfully!');
+                } else {
+                    alert('Claim created but failed to add expense item: ' + (itemResult.detail || 'Unknown error'));
+                    closeCreateModal();
+                    loadClaims();
+                }
+            } catch (error) {
+                console.error('Error saving claim:', error);
+                alert('Error saving claim: ' + error.message);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save as Draft';
+            }
+        }
+        
+        function resetClaimForm() {
+            document.getElementById('claimForm').reset();
+            document.getElementById('claimGstGroup').style.display = 'none';
+            document.getElementById('claimFormErrors').style.display = 'none';
+            document.getElementById('claimUploadProgress').style.display = 'none';
+            selectedClaimBillFile = null;
+            uploadedClaimBillPath = null;
+            document.getElementById('claimBillPlaceholder').style.display = 'block';
+            document.getElementById('claimFilePreview').style.display = 'none';
+            document.getElementById('claimBillUploadArea').classList.remove('has-file');
+            document.getElementById('travelSection').style.display = 'none';
+            document.getElementById('claimSubCategory').innerHTML = '<option value="">Select Sub Category</option>';
+        }
+        
+        async function viewClaim(claimId) {
+            try {
+                const response = await staffFetch(`/api/v1/staff/reimbursements/claims/${claimId}`);
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderClaimDetails(data.claim);
+                    document.getElementById('viewModal').classList.add('active');
+                }
+            } catch (error) {
+                console.error('Error loading claim:', error);
+            }
+        }
+        
+        function renderClaimDetails(claim) {
+            let itemsHtml = '';
+            if (claim.items && claim.items.length > 0) {
+                itemsHtml = `
+                    <table class="data-table" style="margin-top: 16px;">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Category</th>
+                                <th>Vendor</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${claim.items.map(item => `
+                                <tr>
+                                    <td>${formatDate(item.expense_date)}</td>
+                                    <td>${escapeHtml(item.description)}</td>
+                                    <td>${item.sub_category_name || item.main_category_name || '-'}</td>
+                                    <td>${item.vendor_name || '-'}</td>
+                                    <td class="amount">₹${formatNumber(item.net_amount)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+            
+            document.getElementById('viewModalBody').innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                    <div><strong>Claim Number:</strong> ${claim.claim_number}</div>
+                    <div><strong>Status:</strong> <span class="badge-status badge-${claim.status.toLowerCase()}">${formatStatus(claim.status)}</span></div>
+                    <div><strong>Company:</strong> ${claim.company_name}</div>
+                    <div><strong>Total Amount:</strong> <span class="amount">₹${formatNumber(claim.total_amount)}</span></div>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <strong>Title:</strong> ${escapeHtml(claim.claim_title)}
+                </div>
+                ${claim.claim_description ? `<div style="margin-bottom: 16px;"><strong>Description:</strong> ${escapeHtml(claim.claim_description)}</div>` : ''}
+                ${claim.is_travel_claim ? `
+                    <div style="background: #f0f9ff; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                        <strong>Travel Details:</strong> ${claim.travel_mode || '-'} | ${claim.travel_from || '-'} to ${claim.travel_to || '-'} | ${claim.distance_km || 0} km
+                    </div>
+                ` : ''}
+                <h5 style="margin-top: 20px;">Expense Items (${claim.items?.length || 0})</h5>
+                ${itemsHtml || '<p class="text-muted">No items added yet</p>'}
+            `;
+            
+            let footerHtml = '<button class="btn btn-secondary" onclick="closeViewModal()">Close</button>';
+            
+            if (claim.status === 'DRAFT') {
+                footerHtml += `<button class="btn btn-primary" onclick="closeViewModal(); openAddItemModal(${claim.id})"><i class="fas fa-plus me-1"></i>Add Item</button>`;
+                footerHtml += `<button class="btn btn-warning" onclick="closeViewModal(); submitClaim(${claim.id})"><i class="fas fa-paper-plane me-1"></i>Submit</button>`;
+            }
+            
+            document.getElementById('viewModalFooter').innerHTML = footerHtml;
+        }
+        
+        function closeViewModal() {
+            document.getElementById('viewModal').classList.remove('active');
+        }
+        
+        function openAddItemModal(claimId) {
+            resetItemForm();
+            document.getElementById('itemClaimId').value = claimId;
+            document.getElementById('itemSubCategory').innerHTML = '<option value="">Select Sub Category</option>';
+            document.getElementById('addItemModal').classList.add('active');
+        }
+        
+        function closeAddItemModal() {
+            document.getElementById('addItemModal').classList.remove('active');
+        }
+        
+        async function saveItem() {
+            const errors = validateItemForm();
+            if (errors.length > 0) {
+                showFormErrors(errors);
+                return;
+            }
+            showFormErrors([]);
+            
+            const claimId = document.getElementById('itemClaimId').value;
+            const description = document.getElementById('itemDescription').value.trim();
+            const expenseDate = document.getElementById('itemExpenseDate').value;
+            const amount = parseFloat(document.getElementById('itemAmount').value);
+            
+            const saveBtn = document.getElementById('saveItemBtn');
+            const originalText = saveBtn.innerHTML;
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+            
+            const itemData = {
+                main_category_id: parseInt(document.getElementById('itemMainCategory').value) || null,
+                sub_category_id: parseInt(document.getElementById('itemSubCategory').value) || null,
+                description: description,
+                expense_date: expenseDate,
+                amount: amount,
+                vendor_name: document.getElementById('itemVendor').value.trim() || null,
+                bill_number: document.getElementById('itemBillNumber').value.trim() || null,
+                gst_applicable: document.getElementById('itemGstApplicable').checked,
+                gst_amount: parseFloat(document.getElementById('itemGstAmount').value) || 0
+            };
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/reimbursements/claims/${claimId}/items`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(itemData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (selectedBillFile && data.item && data.item.id) {
+                        await uploadBillFile(claimId, data.item.id);
+                    }
+                    
+                    resetItemForm();
+                    closeAddItemModal();
+                    loadClaims();
+                    viewClaim(claimId);
+                } else {
+                    showFormErrors([data.detail || 'Error adding item']);
+                }
+            } catch (error) {
+                console.error('Error adding item:', error);
+                showFormErrors(['Error adding item: ' + error.message]);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalText;
+            }
+        }
+        
+        async function submitClaim(claimId) {
+            if (!confirm('Are you sure you want to submit this claim for approval?')) return;
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/reimbursements/claims/${claimId}/submit`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Claim submitted for approval');
+                    loadClaims();
+                } else {
+                    alert(data.detail || 'Error submitting claim');
+                }
+            } catch (error) {
+                console.error('Error submitting claim:', error);
+                alert('Error submitting claim');
+            }
+        }
+        
+        async function withdrawClaim(claimId) {
+            if (!confirm('Are you sure you want to withdraw this claim?')) return;
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/reimbursements/claims/${claimId}/withdraw`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('Claim withdrawn successfully');
+                    loadClaims();
+                } else {
+                    alert(data.detail || 'Error withdrawing claim');
+                }
+            } catch (error) {
+                console.error('Error withdrawing claim:', error);
+            }
+        }
+        
+        function editClaim(claimId) {
+            viewClaim(claimId);
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        
+        function formatNumber(num) {
+            return (num || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        
+        function formatStatus(status) {
+            const statusMap = {
+                'DRAFT': 'Draft',
+                'SUBMITTED': 'Submitted',
+                'MANAGER_APPROVED': 'Manager Approved',
+                'FINANCE_APPROVED': 'Finance Approved',
+                'SETTLED': 'Settled',
+                'REJECTED': 'Rejected',
+                'CANCELLED': 'Cancelled'
+            };
+            return statusMap[status] || status;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function logout() {
+            localStorage.removeItem('staff_token');
+            localStorage.removeItem('staff_user');
+            window.location.href = '/staff/login';
+        }
+    </script>
+    </div>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+</body>
+</html>

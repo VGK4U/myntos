@@ -1,0 +1,268 @@
+/* DC_MOBILE_RESPONSIVE: Universal mobile-responsive styles for all pages */
+/* Injected automatically by server.js into every HTML page */
+
+/* ============ SMALL PHONES (≤576px) ============ */
+@media (max-width: 576px) {
+    /* Content area: reduce padding */
+    .content-area { padding: 8px !important; }
+    .main-content { padding: 0 !important; }
+
+    /* Stat cards: compact 2-col grid */
+    .stats-grid { 
+        grid-template-columns: repeat(2, 1fr) !important; 
+        gap: 6px !important; 
+        margin-bottom: 10px !important; 
+    }
+    .stat-card { 
+        padding: 8px 10px !important; 
+        border-radius: 8px !important; 
+        margin-bottom: 0 !important;
+    }
+    .stat-header { margin-bottom: 2px !important; }
+    .stat-value { font-size: 18px !important; }
+    .stat-label { font-size: 10px !important; margin-top: 1px !important; }
+    .stat-icon { 
+        width: 28px !important; height: 28px !important; 
+        border-radius: 6px !important; font-size: 13px !important; 
+    }
+    .stat-number { font-size: 18px !important; }
+    .stat-title { font-size: 10px !important; }
+
+    /* Cards: compact */
+    .card { margin-bottom: 10px !important; }
+    .card-header { padding: 8px 10px !important; }
+    .card-header h5, .card-header h6, .card-header .h5, .card-header .h6 { 
+        font-size: 13px !important; margin-bottom: 0 !important; 
+    }
+    .card-body { padding: 8px !important; }
+    .card-title { font-size: 13px !important; }
+    .card-text { font-size: 12px !important; }
+
+    /* Tables: horizontal scroll for wide tables */
+    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 0.5rem; width: 100%; }
+    /* Do NOT force width:100% — that collapses multi-column tables instead of scrolling them */
+    .table-responsive > .table { width: auto; min-width: max-content; }
+    .table th, .table td {
+        padding: 5px 6px !important;
+        font-size: 11px !important;
+        text-align: center;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+    }
+    .table th:first-child, .table td:first-child { text-align: left; }
+    .table thead th { font-size: 10px !important; }
+
+    /* VGK dashboard: tighten section-card and tab-content on small screens */
+    .section-card { padding: 12px 10px !important; }
+    .tab-content   { padding: 8px 6px 32px !important; }
+
+    /* Override overflow:hidden on common table-container wrapper classes
+       so tables can still scroll horizontally on mobile */
+    .breakdown-table, .card-wrap, .data-table, .directory-table,
+    .user-table, .table-wrap, .table-container {
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+    }
+
+    /* Nav tabs / pill tabs / custom tabs */
+    .nav-tabs, .nav-pills { flex-wrap: nowrap !important; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .nav-tabs .nav-link, .nav-pills .nav-link {
+        padding: 6px 8px !important; font-size: 11px !important; white-space: nowrap;
+    }
+    .nav-tabs .nav-link i, .nav-pills .nav-link i { display: none; }
+    .tab-content { padding: 8px !important; }
+
+    /* Custom tab headers (non-bootstrap) */
+    .tab-headers { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap !important; }
+    .tab-header { padding: 8px 6px !important; font-size: 11px !important; white-space: nowrap; min-width: 0; }
+    .tab-header i { display: none; }
+
+    /* Section headings */
+    .content-area h4, .content-area h5, .content-area h6 { 
+        font-size: 12px !important; margin-bottom: 6px !important; 
+    }
+    .content-area h4 i, .content-area h5 i, .content-area h6 i { font-size: 11px !important; }
+    .section-title { font-size: 13px !important; }
+
+    /* Filters compact */
+    .filters-card { padding: 8px 10px !important; }
+    .filters-row, .filter-row { gap: 6px !important; flex-wrap: wrap !important; }
+    .filters-row select, .filters-row input, .filter-row select, .filter-row input { 
+        padding: 5px 8px !important; font-size: 12px !important; 
+    }
+    .filter-group { flex: 1 1 45% !important; min-width: 0 !important; }
+    .filter-label { font-size: 11px !important; }
+    .filters-title { font-size: 12px !important; }
+    .filters-bar { padding: 6px 8px !important; flex-wrap: wrap !important; gap: 6px !important; }
+    .filters-bar select, .filters-bar input { 
+        min-width: unset !important; flex: 1 1 45% !important; font-size: 12px !important; 
+    }
+
+    /* Badges smaller */
+    .badge { padding: 2px 6px !important; font-size: 10px !important; }
+
+    /* Buttons compact */
+    .btn-sm { padding: 4px 8px !important; font-size: 11px !important; }
+    .btn-group-sm > .btn { padding: 3px 6px !important; font-size: 10px !important; }
+
+    /* Forms compact */
+    .form-control, .form-select { font-size: 12px !important; padding: 6px 8px !important; }
+    .form-label, label { font-size: 12px !important; }
+    .form-check-label { font-size: 11px !important; }
+    .input-group-text { font-size: 11px !important; padding: 4px 8px !important; }
+
+    /* Modals responsive */
+    .modal-dialog { margin: 8px !important; max-width: calc(100vw - 16px) !important; }
+    .modal-header { padding: 8px 12px !important; }
+    .modal-header .modal-title { font-size: 14px !important; }
+    .modal-body { padding: 10px !important; }
+    .modal-footer { padding: 8px 10px !important; }
+
+    /* Charts compact */
+    .charts-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
+    .chart-container { height: 200px !important; }
+
+    /* Empty state compact */
+    .empty-state { padding: 20px 10px !important; }
+    .empty-state i { font-size: 32px !important; margin-bottom: 8px !important; }
+    .empty-state h5 { font-size: 14px !important; }
+    .empty-state p { font-size: 12px !important; }
+
+    /* Expandable/sub tables */
+    .expandable-table thead th { padding: 6px 4px !important; font-size: 10px !important; }
+    .expandable-table tbody td { padding: 6px 4px !important; font-size: 11px !important; }
+    .expanded-content { padding: 8px 10px !important; }
+    .sub-table thead th { padding: 4px 6px !important; font-size: 10px !important; }
+    .sub-table tbody td { padding: 6px !important; font-size: 11px !important; }
+
+    /* Manager/info badges */
+    .manager-badge, .info-badge { font-size: 10px !important; padding: 3px 8px !important; }
+
+    /* Pagination compact */
+    .pagination { gap: 2px !important; }
+    .page-link { padding: 4px 8px !important; font-size: 11px !important; }
+
+    /* Alerts compact */
+    .alert { padding: 8px 10px !important; font-size: 12px !important; margin-bottom: 8px !important; }
+
+    /* Search bars */
+    .search-box, .search-container, .search-input { 
+        font-size: 12px !important; 
+    }
+
+    /* Action buttons in tables */
+    .action-btn, .btn-action { padding: 3px 6px !important; font-size: 10px !important; }
+
+    /* Summary rows */
+    .summary-card { padding: 8px !important; }
+    .summary-value { font-size: 16px !important; }
+    .summary-label { font-size: 10px !important; }
+
+    /* Spacing overrides */
+    .mb-4 { margin-bottom: 10px !important; }
+    .mb-3 { margin-bottom: 8px !important; }
+    .mt-4 { margin-top: 10px !important; }
+    .mt-3 { margin-top: 8px !important; }
+    .p-4 { padding: 10px !important; }
+    .p-3 { padding: 8px !important; }
+    .gap-3 { gap: 8px !important; }
+    .gap-4 { gap: 10px !important; }
+
+    /* Grid layouts */
+    .row > [class*="col-md-"], .row > [class*="col-lg-"] {
+        padding-left: 4px !important; padding-right: 4px !important;
+    }
+
+    /* Data display items */
+    .data-label, .detail-label { font-size: 10px !important; }
+    .data-value, .detail-value { font-size: 12px !important; }
+
+    /* Timeline items */
+    .timeline-item { padding: 6px 8px !important; font-size: 12px !important; }
+
+    /* Abbreviated table headers */
+    .th-full { display: none !important; }
+    .th-short { display: inline !important; }
+
+    /* Dropdown menus */
+    .dropdown-item { font-size: 12px !important; padding: 4px 10px !important; }
+    .dropdown-menu { min-width: unset !important; }
+
+    /* Toast/notification */
+    .toast { font-size: 12px !important; }
+
+    /* List groups */
+    .list-group-item { padding: 6px 10px !important; font-size: 12px !important; }
+
+    /* Accordion */
+    .accordion-button { padding: 8px 10px !important; font-size: 12px !important; }
+    .accordion-body { padding: 8px 10px !important; font-size: 12px !important; }
+
+    /* Progress bars */
+    .progress { height: 6px !important; }
+
+    /* Breadcrumb */
+    .breadcrumb { font-size: 11px !important; margin-bottom: 8px !important; }
+    .breadcrumb-item { font-size: 11px !important; }
+
+    /* Page headers */
+    .page-title, .page-header h4, .page-header h3 { font-size: 14px !important; }
+    .page-subtitle { font-size: 11px !important; }
+}
+
+/* ============ TABLETS (577px - 768px) ============ */
+@media (min-width: 577px) and (max-width: 768px) {
+    .content-area { padding: 12px !important; }
+
+    .stats-grid { 
+        grid-template-columns: repeat(3, 1fr) !important; 
+        gap: 8px !important; margin-bottom: 14px !important; 
+    }
+    .stat-card { padding: 12px !important; }
+    .stat-value { font-size: 22px !important; }
+    .stat-label { font-size: 11px !important; }
+    .stat-icon { width: 32px !important; height: 32px !important; font-size: 14px !important; }
+    .stat-number { font-size: 22px !important; }
+    .stat-title { font-size: 11px !important; }
+
+    .card-header { padding: 10px 12px !important; }
+    .card-body { padding: 10px !important; }
+    .card-header h5, .card-header h6 { font-size: 14px !important; }
+
+    .table th, .table td {
+        padding: 6px 5px !important; font-size: 12px !important;
+        text-align: center; white-space: nowrap !important;
+    }
+    .table th:first-child, .table td:first-child { text-align: left; }
+    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+    .table-responsive > .table { width: auto; min-width: max-content; }
+    .section-card { padding: 14px 12px !important; }
+
+    .breakdown-table, .card-wrap, .data-table, .directory-table,
+    .user-table, .table-wrap, .table-container {
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+    }
+
+    .nav-tabs .nav-link, .nav-pills .nav-link { padding: 8px 10px !important; font-size: 12px !important; }
+    .tab-header { padding: 10px 8px !important; font-size: 12px !important; }
+    .tab-content { padding: 12px !important; }
+
+    .charts-grid { grid-template-columns: 1fr !important; }
+    .chart-container { height: 240px !important; }
+
+    .filter-group { flex: 1 1 30% !important; min-width: 0 !important; }
+
+    .badge { font-size: 11px !important; }
+    .btn-sm { font-size: 12px !important; }
+    .form-control, .form-select { font-size: 13px !important; }
+
+    .modal-body { padding: 12px !important; }
+
+    .empty-state { padding: 30px 15px !important; }
+    .empty-state h5 { font-size: 15px !important; }
+}
+
+/* ============ DEFAULT: full headers ============ */
+.th-full { display: inline; }
+.th-short { display: none; }

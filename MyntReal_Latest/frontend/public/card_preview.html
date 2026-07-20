@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VGK4U Earner Card — Layout Preview</title>
+<style>
+  body { margin: 0; background: #111; display: flex; flex-direction: column; align-items: center; padding: 20px; font-family: sans-serif; color: #fff; }
+  h2 { color: #d4af37; margin-bottom: 8px; }
+  p  { color: #aaa; font-size: 13px; margin-bottom: 20px; }
+  .wrap { width: 540px; }
+  /* ── Card shell ── */
+  .card {
+    width: 540px; height: 540px;
+    background: linear-gradient(160deg, #0a1b3e 0%, #0f2d5a 60%, #071530 100%);
+    border: 3px solid #d4af37;
+    box-shadow: inset 0 0 0 1px rgba(212,175,55,.3), 0 0 40px rgba(212,175,55,.15);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  /* confetti dots (decorative top) */
+  .confetti { position:absolute; top:0; left:0; width:100%; height:130px; pointer-events:none; overflow:hidden; }
+  .confetti span { position:absolute; display:block; width:4px; border-radius:1px; opacity:.7; }
+
+  /* ── S1 Logo ── */
+  .s-logo { margin-top: 12px; height: 40px; display:flex; align-items:center; justify-content:center; }
+  .s-logo img { height: 40px; }
+  .s-logo-text { font-size:26px; font-weight:900; color:#d4af37; letter-spacing:2px; }
+
+  /* ── S2 Congratulations ── */
+  .s-cong { font-size: 27px; font-weight:700; color:#f0c850; margin-top:4px;
+            text-shadow: 1px 1px 0 #000; font-family: Georgia, serif; }
+
+  /* ── S3 Badge pill ── */
+  .s-badge {
+    margin-top: 4px;
+    background: rgba(0,0,30,.85); border: 1px solid #d4af37; border-radius: 20px;
+    padding: 3px 18px; font-size: 10px; font-weight:700; color:#f0c850;
+    letter-spacing: 1.5px;
+  }
+
+  /* ── S4 Stars ── */
+  .s-stars { font-size:13px; color:#d4af37; margin-top:3px; letter-spacing:4px; }
+
+  /* ── S5 Photo circle ── */
+  .s-photo-wrap {
+    margin-top: 6px;
+    width: 110px; height: 110px; position: relative;
+  }
+  .s-photo-glow {
+    position:absolute; inset:-10px;
+    border-radius:50%;
+    background: radial-gradient(circle, rgba(212,175,55,.5) 0%, transparent 70%);
+    filter: blur(6px);
+  }
+  .s-photo-ring {
+    position:absolute; inset:-4px;
+    border-radius:50%;
+    background: #d4af37;
+  }
+  .s-photo-sep {
+    position:absolute; inset:-1px;
+    border-radius:50%;
+    background: rgba(255,255,255,.15);
+  }
+  .s-photo-inner {
+    position:absolute; inset:0;
+    border-radius:50%;
+    overflow:hidden;
+    background: #d4af37;
+    display:flex; align-items:center; justify-content:center;
+    z-index:2;
+  }
+  .s-photo-inner img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+  /* Placeholder: gold circle with navy initials */
+  .s-avatar-initials {
+    width:100%; height:100%;
+    background: linear-gradient(135deg, #f0c850, #d4af37);
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size: 38px; font-weight:900; color:#0a1b3e;
+    letter-spacing:-1px;
+  }
+
+  /* ── S6 Name ── */
+  .s-name { margin-top:6px; font-size:17px; font-weight:700; color:#f0c850;
+            text-shadow:1px 1px 0 #000; text-align:center; max-width:460px; letter-spacing:.5px; }
+
+  /* ── S7 Designation ── */
+  .s-desg { font-size:9px; color:rgba(255,255,255,.75); margin-top:1px; text-align:center; }
+
+  /* ── S8 Separator ── */
+  .s-sep { width:80%; height:1px; background:rgba(212,175,55,.4); margin:5px 0; }
+
+  /* ── S9 Info strip ── */
+  .s-info {
+    width:calc(100% - 30px); background:rgba(0,0,40,.7);
+    border:1px solid rgba(212,175,55,.5); border-radius:6px;
+    display:grid; grid-template-columns:1fr 1fr 1fr;
+    padding:5px 0; margin-top:0px;
+  }
+  .s-info-cell { padding:3px 8px; border-left:1px solid rgba(212,175,55,.3); }
+  .s-info-cell:first-child { border-left:none; }
+  .s-info-lbl { font-size:8px; font-weight:700; color:#d4af37; text-transform:uppercase; }
+  .s-info-val { font-size:11px; color:#fff; margin-top:1px; }
+
+  /* ── S10 Earnings ── */
+  .s-earn {
+    width:calc(100% - 30px); background:rgba(0,8,55,.85);
+    border:2px solid #d4af37; border-radius:6px;
+    display:grid; grid-template-columns:1fr 1fr;
+    margin-top:5px;
+  }
+  .s-earn-cell { padding:6px 10px; position:relative; }
+  .s-earn-cell + .s-earn-cell::before {
+    content:''; position:absolute; left:0; top:6px; bottom:6px;
+    width:2px; background:#d4af37;
+  }
+  .s-earn-lbl { font-size:8px; font-weight:700; color:rgba(255,255,255,.8); text-transform:uppercase; }
+  .s-earn-val { font-size:22px; font-weight:900; color:#f0c850; line-height:1.1; margin-top:1px; }
+  .s-earn-cell:last-child .s-earn-val { color:#d4af37; }
+
+  /* ── S11 Rewarded banner ── */
+  .s-reward {
+    width:calc(100% - 30px); background:rgba(160,120,30,.9);
+    border:2px solid #d4af37; border-radius:6px;
+    text-align:center; padding:5px 0; margin-top:5px;
+    font-size:12px; font-weight:700; color:#ffffdc; letter-spacing:.5px;
+  }
+
+  /* ── S12 Recognition ── */
+  .s-recog { font-size:8px; color:rgba(255,255,255,.55); text-align:center;
+             max-width:460px; margin-top:3px; }
+
+  /* ── S13 Gold footer ── */
+  .s-footer {
+    width:100%; background:#d4af37; text-align:center;
+    font-size:13px; font-weight:900; color:#0a1b3e;
+    padding:7px 0; margin-top:4px; letter-spacing:1px;
+  }
+
+  /* ── S14 Icons row ── */
+  .s-icons {
+    width:100%; display:grid; grid-template-columns:1fr 1fr 1fr;
+    text-align:center; padding:4px 0;
+  }
+  .s-icon-cell { font-size:9px; font-weight:700; color:#fff; border-left:1px solid rgba(212,175,55,.4); padding:3px 0; }
+  .s-icon-cell:first-child { border-left:none; }
+  .s-icon-cell span { display:block; font-size:14px; margin-top:2px; color:#d4af37; }
+
+  /* ── S15 Bottom quote ── */
+  .s-quote { font-size:11px; color:rgba(240,200,80,.92); text-align:center;
+             padding:4px 16px 8px; font-style:italic; font-weight:600; letter-spacing:.02em; }
+
+  /* placeholder data */
+  .ph { color:#88bbff; font-style:italic; }
+</style>
+</head>
+<body>
+<h2>VGK4U Earner Card — Layout Preview</h2>
+<p>Placeholders shown in <span style="color:#88bbff;font-style:italic">blue italic</span>. Live card pulls real data from DB.</p>
+<div class="wrap">
+  <div class="card">
+
+    <!-- S1: Logo -->
+    <div class="s-logo">
+      <img src="/public/vgk4u-logo.png" onerror="this.parentNode.innerHTML='<span class=s-logo-text>VGK4U</span>'" alt="VGK4U">
+    </div>
+
+    <!-- S2: Congratulations -->
+    <div class="s-cong">Congratulations!</div>
+
+    <!-- S3: Badge -->
+    <div class="s-badge">✦ &nbsp;ACHIEVEMENT UNLOCKED&nbsp; ✦</div>
+
+    <!-- S4: Stars -->
+    <div class="s-stars">★ &nbsp; ★ &nbsp; ★ &nbsp; ★ &nbsp; ★</div>
+
+    <!-- S5: Photo circle -->
+    <div class="s-photo-wrap">
+      <div class="s-photo-glow"></div>
+      <div class="s-photo-ring"></div>
+      <div class="s-photo-sep"></div>
+      <div class="s-photo-inner">
+        <!-- If KYC photo exists: <img src="{{PHOTO_URL}}"> -->
+        <!-- Placeholder: gold circle with initials -->
+        <div class="s-avatar-initials">HC</div>
+        <!-- Replace "HC" with first letters of {{PARTNER_NAME}} -->
+      </div>
+    </div>
+
+    <!-- S6: Name -->
+    <div class="s-name"><span class="ph">{{PARTNER_NAME}}</span></div>
+
+    <!-- S7: Designation -->
+    <div class="s-desg"><span class="ph">{{DESIGNATION}}</span></div>
+
+    <!-- S8: Separator -->
+    <div class="s-sep"></div>
+
+    <!-- S9: Info strip -->
+    <div class="s-info">
+      <div class="s-info-cell">
+        <div class="s-info-lbl">NAME</div>
+        <div class="s-info-val"><span class="ph">{{PARTNER_NAME}}</span></div>
+      </div>
+      <div class="s-info-cell">
+        <div class="s-info-lbl">VGK ID</div>
+        <div class="s-info-val"><span class="ph">{{PARTNER_CODE}}</span></div>
+      </div>
+      <div class="s-info-cell">
+        <div class="s-info-lbl"><span class="ph">LOCATION / ROLE</span></div>
+        <div class="s-info-val"><span class="ph">{{LOCATION}}</span></div>
+      </div>
+    </div>
+
+    <!-- S10: Earnings -->
+    <div class="s-earn">
+      <div class="s-earn-cell">
+        <div class="s-earn-lbl">AMOUNT EARNED</div>
+        <div class="s-earn-val"><span class="ph">{{GROSS_AMOUNT}}</span></div>
+      </div>
+      <div class="s-earn-cell">
+        <div class="s-earn-lbl">LIFETIME EARNINGS</div>
+        <div class="s-earn-val"><span class="ph">{{OVERALL_EARNINGS}}</span></div>
+      </div>
+    </div>
+
+    <!-- S11: Rewarded banner -->
+    <div class="s-reward">🏆 &nbsp; REWARDED WITH CASH REWARD &nbsp; 🏆</div>
+
+    <!-- S12: Recognition -->
+    <div class="s-recog"><span class="ph">{{PARTNER_NAME}}</span> — recognized for outstanding dedication to VGK4U</div>
+
+    <!-- S13: Gold footer -->
+    <div class="s-footer">TOGETHER,&nbsp; WE ACHIEVE MORE!</div>
+
+    <!-- S14: Icons row -->
+    <div class="s-icons">
+      <div class="s-icon-cell">ONE TEAM <span>👥</span></div>
+      <div class="s-icon-cell">ONE VISION <span>🎯</span></div>
+      <div class="s-icon-cell">ONE SUCCESS <span>🏆</span></div>
+    </div>
+
+    <!-- S15: Bottom quote -->
+    <div class="s-quote">"Your commitment inspires us all and drives our mission forward."</div>
+
+  </div><!-- .card -->
+
+  <div style="margin-top:24px;padding:16px;background:#1a1a2e;border-radius:8px;font-size:13px;line-height:1.8;">
+    <div style="color:#d4af37;font-weight:700;margin-bottom:8px;">Placeholder Reference</div>
+    <div><code style="color:#88bbff">{{PARTNER_NAME}}</code> — e.g. hemachandradigarla</div>
+    <div><code style="color:#88bbff">{{PARTNER_CODE}}</code> — e.g. VGK07108722</div>
+    <div><code style="color:#88bbff">{{DESIGNATION}}</code> — e.g. Channel Partner</div>
+    <div><code style="color:#88bbff">{{LOCATION}}</code> — city or state (fallback: role)</div>
+    <div><code style="color:#88bbff">{{GROSS_AMOUNT}}</code> — e.g. ₹1,000 (this payment)</div>
+    <div><code style="color:#88bbff">{{OVERALL_EARNINGS}}</code> — e.g. ₹1,000 (SUM of all PAID entries)</div>
+    <div><code style="color:#88bbff">{{PHOTO_URL}}</code> — KYC photo; falls back to gold initials avatar</div>
+    <div style="margin-top:10px;color:#aaa;font-size:11px;">Avatar placeholder = gold circle with 2-letter initials in dark navy. Always visible regardless of background.</div>
+  </div>
+
+  <div style="margin-top:16px;text-align:center;">
+    <a href="/earner_card_preview.png" target="_blank"
+       style="background:#d4af37;color:#000;padding:10px 28px;border-radius:6px;
+              font-weight:700;text-decoration:none;font-size:14px;">
+      View Generated PNG Card →
+    </a>
+  </div>
+</div>
+</body>
+</html>

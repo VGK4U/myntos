@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - MNR System Guide</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; color: #1f2937; }
+        .guide-header { background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 50%, #533483 100%); color: white; padding: 32px 0 28px; }
+        .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .header-logos { display: flex; align-items: center; gap: 16px; }
+        .header-logos img { height: 44px; object-fit: contain; }
+        .header-logos .logo-divider { width: 1px; height: 36px; background: rgba(255,255,255,0.25); }
+        .header-back { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; padding: 6px 14px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; transition: all 0.2s; }
+        .header-back:hover { color: white; border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.08); }
+        .header-nav { display: flex; align-items: center; gap: 8px; }
+        .logout-btn { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,180,180,0.8); background: transparent; border: 1px solid rgba(255,100,100,0.25); border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+        .logout-btn:hover { color: #fca5a5; border-color: rgba(255,100,100,0.6); background: rgba(220,38,38,0.12); }
+        .guide-title-row { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+        .guide-header h1 { font-size: 1.75rem; font-weight: 700; margin: 0; }
+        .guide-header .tagline { font-size: 0.95rem; opacity: 0.8; margin-top: 4px; }
+        .guide-header .stats-row { display: flex; gap: 24px; margin-top: 10px; font-size: 0.85rem; opacity: 0.7; }
+        .search-wrap { position: relative; width: 320px; max-width: 100%; }
+        .search-wrap input { width: 100%; padding: 10px 14px 10px 40px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; background: rgba(255,255,255,0.1); color: white; font-size: 14px; outline: none; transition: all 0.2s; }
+        .search-wrap input::placeholder { color: rgba(255,255,255,0.5); }
+        .search-wrap input:focus { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.15); box-shadow: 0 0 0 3px rgba(255,255,255,0.08); }
+        .search-wrap .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.5); font-size: 14px; }
+        .search-wrap .search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.5); font-size: 14px; cursor: pointer; display: none; background: none; border: none; padding: 4px; }
+        .search-wrap .search-clear:hover { color: white; }
+        .search-results-dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: white; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); max-height: 360px; overflow-y: auto; z-index: 200; display: none; }
+        .search-results-dropdown.active { display: block; }
+        .sr-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.15s; display: flex; align-items: flex-start; gap: 10px; }
+        .sr-item:last-child { border-bottom: none; }
+        .sr-item:hover { background: #f5f0ff; }
+        .sr-item .sr-icon { flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: white; margin-top: 2px; }
+        .sr-item .sr-text { flex: 1; }
+        .sr-item .sr-title { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .sr-item .sr-title mark { background: #e9d5ff; color: #1f2937; border-radius: 2px; padding: 0 2px; }
+        .sr-item .sr-section { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .sr-empty { padding: 24px 16px; text-align: center; color: #9ca3af; font-size: 14px; }
+        .sr-count { padding: 8px 16px; font-size: 11px; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #f3f4f6; }
+
+        .guide-container { padding: 0 24px; }
+        .page-layout { display: flex; align-items: flex-start; }
+        .left-sidebar { width: 232px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; background: #fff; border-right: 1px solid #e5e7eb; box-shadow: 2px 0 8px rgba(0,0,0,0.04); z-index: 50; scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
+        .left-sidebar::-webkit-scrollbar { width: 4px; }
+        .left-sidebar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .sidebar-hdr { padding: 12px 16px 8px; border-bottom: 1px solid #f3f4f6; }
+        .sidebar-hdr p { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #9ca3af; margin: 0; }
+        .sidebar-nav { padding: 4px 0 24px; }
+        .sidebar-item { display: flex; align-items: center; gap: 8px; padding: 7px 14px; color: #4b5563; text-decoration: none; font-size: 0.8rem; font-weight: 500; cursor: pointer; border-left: 3px solid transparent; transition: all 0.15s; line-height: 1.3; }
+        .sidebar-item:hover { color: #7c3aed; background: #faf5ff; border-left-color: #ddd6fe; }
+        .sidebar-item.active { color: #7c3aed; background: #f5f0ff; border-left-color: #7c3aed; font-weight: 600; }
+        .sidebar-item i.si-ico { width: 15px; text-align: center; font-size: 0.75rem; flex-shrink: 0; }
+        .sidebar-item .si-cnt { margin-left: auto; font-size: 0.68rem; background: #f3f4f6; color: #6b7280; padding: 1px 5px; border-radius: 8px; flex-shrink: 0; }
+        .sidebar-item.active .si-cnt { background: #ede9fe; color: #7c3aed; }
+        .main-content { flex: 1; min-width: 0; overflow: hidden; }
+        .section { padding: 36px 0; border-bottom: 1px solid #e5e7eb; }
+        .section:last-child { border-bottom: none; }
+        .section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; color: #1f2937; display: flex; align-items: center; gap: 10px; }
+        .section h2 .tab-num { background: #7c3aed; color: white; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+        .section .subtitle { color: #6b7280; font-size: 0.95rem; margin-bottom: 20px; }
+        .section h3 { font-size: 1.05rem; font-weight: 600; margin: 24px 0 10px; color: #374151; display: flex; align-items: center; gap: 8px; }
+        .section h3 i { color: #6b7280; font-size: 0.9rem; }
+        .page-card { background: white; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid #7c3aed; }
+        .page-card.has-guide { border-left-color: #059669; }
+        .page-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; cursor: pointer; }
+        .page-card-header .pc-icon { width: 36px; height: 36px; border-radius: 8px; background: #f5f0ff; display: flex; align-items: center; justify-content: center; color: #7c3aed; font-size: 16px; flex-shrink: 0; }
+        .page-card.has-guide .pc-icon { background: #ecfdf5; color: #059669; }
+        .page-card-header h4 { margin: 0; font-size: 1rem; font-weight: 600; color: #1f2937; flex: 1; }
+        .page-card-header .pc-toggle { color: #9ca3af; font-size: 14px; transition: transform 0.2s; }
+        .page-card-header .pc-toggle.open { transform: rotate(180deg); }
+        .page-card .pc-route { font-size: 0.8rem; color: #9ca3af; margin-bottom: 8px; font-family: monospace; }
+        .page-card .pc-purpose { font-size: 0.9rem; color: #4b5563; line-height: 1.6; margin-bottom: 12px; }
+        .page-card .pc-access { font-size: 0.85rem; color: #6b7280; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .page-card .pc-access i { color: #7c3aed; }
+        .pc-detail { display: none; }
+        .pc-detail.open { display: block; }
+        .pc-detail-section { margin-bottom: 16px; }
+        .pc-detail-section h5 { font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .pc-detail-section h5 i { color: #7c3aed; font-size: 0.8rem; }
+        .info-card { background: #f9fafb; border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; }
+        .info-card p, .info-card li { font-size: 0.88rem; color: #4b5563; line-height: 1.65; }
+        .info-card ul { padding-left: 18px; margin: 6px 0 0; }
+        .info-card li { margin-bottom: 3px; }
+        .column-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.88rem; }
+        .column-table th { background: #f3f4f6; padding: 8px 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; }
+        .column-table td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; color: #4b5563; vertical-align: top; }
+        .column-table tr:hover td { background: #fafbfc; }
+        .badge-sample { padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; display: inline-block; margin: 2px; }
+        .steps-list { counter-reset: steps; list-style: none; padding: 0; }
+        .steps-list li { counter-increment: steps; padding: 10px 14px 10px 46px; position: relative; font-size: 0.88rem; color: #4b5563; line-height: 1.55; margin-bottom: 6px; background: #f9fafb; border-radius: 8px; }
+        .steps-list li::before { content: counter(steps); position: absolute; left: 12px; top: 10px; background: #7c3aed; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+        .tip-card { background: #ecfdf5; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; border-left: 3px solid #059669; }
+        .tip-card p { font-size: 0.88rem; color: #065f46; margin: 0; }
+        .mistake-card { background: #fef2f2; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; border-left: 3px solid #dc2626; }
+        .mistake-card p { font-size: 0.88rem; color: #991b1b; margin: 0; }
+        .loading-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .loading-state i { font-size: 2rem; color: #7c3aed; margin-bottom: 16px; }
+        .error-state { text-align: center; padding: 60px 20px; color: #dc2626; }
+
+        .workflow-banner { background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%); border: 1px solid #ddd6fe; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px; }
+        .workflow-banner h3 { color: #5b21b6; font-size: 1.1rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .workflow-banner h3 i { font-size: 1rem; }
+        .workflow-banner .wf-steps { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+        .workflow-banner .wf-step { background: white; border: 1px solid #ddd6fe; border-radius: 8px; padding: 8px 14px; font-size: 0.82rem; color: #5b21b6; font-weight: 500; white-space: nowrap; }
+        .workflow-banner .wf-arrow { color: #a78bfa; font-size: 16px; margin: 0 4px; }
+
+        @media (max-width: 768px) {
+            .search-wrap { width: 100%; }
+            .guide-title-row { flex-direction: column; align-items: flex-start; }
+            .header-logos img { height: 36px; }
+            .guide-header h1 { font-size: 1.3rem; }
+            .left-sidebar { display: none; }
+            .page-card { padding: 16px; }
+            .workflow-banner .wf-steps { flex-direction: column; gap: 4px; }
+            .workflow-banner .wf-arrow { transform: rotate(90deg); }
+        }
+        .print-btn { position: fixed; bottom: 24px; right: 24px; background: #7c3aed; color: white; border: none; width: 48px; height: 48px; border-radius: 50%; box-shadow: 0 4px 12px rgba(124,58,237,0.4); cursor: pointer; font-size: 18px; z-index: 50; display: flex; align-items: center; justify-content: center; }
+        .print-btn:hover { background: #6d28d9; }
+        .highlight-flash { animation: flashHighlight 2s ease-out; }
+        @keyframes flashHighlight { 0% { background: #e9d5ff; box-shadow: 0 0 0 4px #e9d5ff; } 100% { background: white; box-shadow: none; } }
+        @media print {
+            .left-sidebar, .print-btn, .header-back, .search-wrap, .search-results-dropdown { display: none !important; }
+            .section { page-break-inside: avoid; }
+            body { background: white; }
+            .guide-header { background: #1a1a2e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .pc-detail { display: block !important; }
+        }
+
+        .login-overlay { position: fixed; inset: 0; background: rgba(10,5,25,0.97); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+        .login-overlay.hidden { display: none !important; }
+        .login-card { background: #1a1028; border: 1px solid #2d2244; border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 380px; box-shadow: 0 25px 60px rgba(0,0,0,0.7); }
+        .login-logos { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; }
+        .login-logos img { height: 38px; object-fit: contain; }
+        .login-logos .ldiv { width: 1px; height: 30px; background: rgba(255,255,255,0.2); }
+        .login-heading { text-align: center; font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+        .login-sub { text-align: center; font-size: 0.82rem; color: #6b5b95; margin-bottom: 28px; }
+        .lf-group { margin-bottom: 16px; }
+        .lf-group label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #a3a0b8; margin-bottom: 6px; }
+        .lf-group input { width: 100%; padding: 10px 14px; background: #0f0a1a; border: 1px solid #2d2244; border-radius: 8px; color: #f1f5f9; font-size: 0.95rem; font-family: inherit; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        .lf-group input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+        .login-btn { width: 100%; padding: 11px; background: #7c3aed; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; margin-top: 8px; font-family: inherit; }
+        .login-btn:hover { opacity: 0.88; }
+        .login-error { color: #ef4444; font-size: 0.82rem; text-align: center; margin-top: 12px; display: none; }
+        .login-error.show { display: block; }
+        .login-footer { text-align: center; font-size: 0.72rem; color: #4a3f6b; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <div class="login-logos">
+                <img src="/public/mnr-logo.png" alt="MNR" onerror="this.style.display='none'">
+                <div class="ldiv"></div>
+                <img src="/public/myntreal-logo.png" alt="Myntreal" onerror="this.style.display='none'">
+            </div>
+            <div class="login-heading">MNR System Guide</div>
+            <div class="login-sub">Restricted access — authorised personnel only</div>
+            <form id="loginForm" onsubmit="handleLogin(event)" autocomplete="off">
+                <div class="lf-group">
+                    <label>Member ID</label>
+                    <input type="text" id="loginUser" placeholder="e.g. MR10001" required>
+                </div>
+                <div class="lf-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPass" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="login-btn">Access Document</button>
+                <div class="login-error" id="loginError">Invalid credentials. Please try again.</div>
+            </form>
+            <div class="login-footer">MyntReal LLP &mdash; Confidential Internal Document</div>
+        </div>
+    </div>
+
+    <div class="guide-header">
+        <div class="guide-container">
+            <div class="header-top">
+                <div class="header-logos">
+                    <img src="/public/mnr-logo.png" alt="MNR Logo">
+                    <div class="logo-divider"></div>
+                    <img src="/public/myntreal-logo.png" alt="MyntReal Logo">
+                </div>
+                <div class="header-nav">
+                    <a href="/staff/dashboard" class="header-back"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+                    <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                </div>
+            </div>
+            <div class="guide-title-row">
+                <div>
+                    <h1><i class="fas fa-book-reader me-2"></i>MNR System Guide</h1>
+                    <div class="tagline">Complete training reference for MNR membership, income, and business workflows</div>
+                    <div class="stats-row" id="guideStats"></div>
+                </div>
+                <div class="search-wrap">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="guideSearchInput" placeholder="Search... (e.g. withdrawal, PIN, income, KYC)" autocomplete="off">
+                    <button class="search-clear" id="searchClearBtn"><i class="fas fa-times"></i></button>
+                    <div class="search-results-dropdown" id="searchDropdown"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-layout">
+        <aside class="left-sidebar" id="leftSidebar">
+            <div class="sidebar-hdr"><p>Sections</p></div>
+            <div class="sidebar-nav" id="navInner"></div>
+        </aside>
+        <div class="main-content">
+            <div class="guide-container" id="guideContent">
+                <div class="loading-state" id="loadingState">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading MNR guide content...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="print-btn" onclick="window.print()" title="Print Guide">
+        <i class="fas fa-print"></i>
+    </button>
+
+    <script>
+    let guideData = null;
+    let searchIndex = [];
+
+    var KEY_WORKFLOWS = [
+        {
+            title: "Member Activation Workflow",
+            steps: ["Register", "Buy PIN", "Payment Verified", "PIN Generated", "Use PIN", "Account Active"]
+        },
+        {
+            title: "KYC & Bank Approval Flow",
+            steps: ["Upload Documents", "Staff Validates", "Admin Approves", "Wallet Syncs", "Withdrawals Enabled"]
+        },
+        {
+            title: "Income Calculation Pipeline",
+            steps: ["Member Activates", "Income Calculated", "Daily Auto-Approval", "Credited to Wallet"]
+        },
+        {
+            title: "Withdrawal Processing Chain",
+            steps: ["Auto-Generated (7AM)", "Admin Verified", "Super Admin Approved", "Finance Payout", "Bank Transfer"]
+        },
+        {
+            title: "Award Lifecycle",
+            steps: ["Nominated", "Verified", "Approved", "Ordered", "Dispatched", "Delivered"]
+        }
+    ];
+
+    async function loadGuide() {
+        try {
+            var resp = await fetch('/api/v1/mnr/guide/pages');
+            if (!resp.ok) throw new Error('Failed to load guide');
+            guideData = await resp.json();
+            renderNav();
+            renderSections();
+            buildSearchIndex();
+            document.getElementById('guideStats').textContent =
+                guideData.total_sections + ' sections | ' + guideData.total_pages + ' pages documented';
+        } catch (err) {
+            document.getElementById('guideContent').innerHTML =
+                '<div class="error-state"><i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:16px;"></i><p>Could not load MNR guide. Please refresh the page.</p></div>';
+        }
+    }
+
+    function renderNav() {
+        var nav = document.getElementById('navInner');
+        nav.innerHTML = '';
+        guideData.sections.forEach(function(sec, i) {
+            var a = document.createElement('div');
+            a.className = 'sidebar-item' + (i === 0 ? ' active' : '');
+            a.innerHTML = '<i class="' + sec.icon + ' si-ico"></i><span style="flex:1">' + sec.title + '</span><span class="si-cnt">' + sec.pages.length + '</span>';
+            a.onclick = function() {
+                document.getElementById('sec-' + sec.id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                nav.querySelectorAll('.sidebar-item').forEach(function(x) { x.classList.remove('active'); });
+                a.classList.add('active');
+            };
+            nav.appendChild(a);
+        });
+        setupScrollSpy();
+    }
+
+    function setupScrollSpy() {
+        var sections = guideData.sections.map(function(s) { return document.getElementById('sec-' + s.id); }).filter(Boolean);
+        var items = document.querySelectorAll('#navInner .sidebar-item');
+        var observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    var idx = sections.indexOf(entry.target);
+                    if (idx >= 0) {
+                        items.forEach(function(x) { x.classList.remove('active'); });
+                        if (items[idx]) {
+                            items[idx].classList.add('active');
+                            items[idx].scrollIntoView({ block: 'nearest' });
+                        }
+                    }
+                }
+            });
+        }, { rootMargin: '-10% 0px -80% 0px' });
+        sections.forEach(function(s) { observer.observe(s); });
+    }
+
+    function renderSections() {
+        var container = document.getElementById('guideContent');
+        container.innerHTML = '';
+
+        var wfSection = document.createElement('div');
+        wfSection.className = 'section';
+        wfSection.innerHTML = '<h2><span class="tab-num"><i class="fas fa-project-diagram" style="font-size:14px;"></i></span> Key Business Workflows</h2>' +
+            '<p class="subtitle">Core MNR workflows showing the end-to-end flow of key operations</p>';
+        KEY_WORKFLOWS.forEach(function(wf) {
+            var banner = document.createElement('div');
+            banner.className = 'workflow-banner';
+            var stepsHtml = '';
+            wf.steps.forEach(function(step, i) {
+                if (i > 0) stepsHtml += '<span class="wf-arrow"><i class="fas fa-arrow-right"></i></span>';
+                stepsHtml += '<span class="wf-step">' + escHtml(step) + '</span>';
+            });
+            banner.innerHTML = '<h3><i class="fas fa-route"></i> ' + escHtml(wf.title) + '</h3><div class="wf-steps">' + stepsHtml + '</div>';
+            wfSection.appendChild(banner);
+        });
+        container.appendChild(wfSection);
+
+        guideData.sections.forEach(function(sec, sIdx) {
+            var div = document.createElement('div');
+            div.className = 'section';
+            div.id = 'sec-' + sec.id;
+            div.innerHTML = '<h2><span class="tab-num">' + (sIdx + 1) + '</span> ' + escHtml(sec.title) + '</h2>' +
+                '<p class="subtitle">' + escHtml(sec.description) + '</p>';
+
+            sec.pages.forEach(function(page, pIdx) {
+                div.appendChild(renderPageCard(page, sec, sIdx + '-' + pIdx));
+            });
+            container.appendChild(div);
+        });
+    }
+
+    function renderPageCard(page, section, uid) {
+        var g = page.guide;
+        var hasGuide = g.purpose || g.usage_flow.length > 0;
+        var card = document.createElement('div');
+        card.className = 'page-card' + (hasGuide ? ' has-guide' : '');
+        card.setAttribute('data-searchable', 'true');
+        card.id = 'page-' + page.menu_code;
+
+        var headerHtml = '<div class="page-card-header" onclick="togglePageDetail(\'' + uid + '\')">' +
+            '<div class="pc-icon"><i class="' + page.menu_icon + '"></i></div>' +
+            '<h4>' + escHtml(page.menu_name) + '</h4>' +
+            (hasGuide ? '<i class="fas fa-chevron-down pc-toggle" id="toggle-' + uid + '"></i>' : '') +
+            '</div>';
+
+        var bodyHtml = '';
+        if (g.purpose) {
+            bodyHtml += '<p class="pc-purpose">' + escHtml(g.purpose) + '</p>';
+        }
+        if (g.who_can_access) {
+            bodyHtml += '<div class="pc-access"><i class="fas fa-lock"></i> <strong>Access:</strong> ' + escHtml(g.who_can_access) + '</div>';
+        }
+
+        var detailHtml = '';
+        if (hasGuide) {
+            detailHtml = '<div class="pc-detail" id="detail-' + uid + '">';
+
+            if (g.main_sections && g.main_sections.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-th-large"></i> Main Components</h5>';
+                detailHtml += '<div class="info-card"><ul>';
+                g.main_sections.forEach(function(s) {
+                    detailHtml += '<li><strong>' + escHtml(s.name) + '</strong> - ' + escHtml(s.description) + '</li>';
+                });
+                detailHtml += '</ul></div></div>';
+            }
+
+            if (g.usage_flow && g.usage_flow.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-shoe-prints"></i> Step-by-Step Workflow</h5>';
+                detailHtml += '<ol class="steps-list">';
+                g.usage_flow.forEach(function(step) {
+                    detailHtml += '<li>' + escHtml(step) + '</li>';
+                });
+                detailHtml += '</ol></div>';
+            }
+
+            if (g.fields && g.fields.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-list-alt"></i> Field Explanations</h5>';
+                detailHtml += '<table class="column-table"><tr><th>Field</th><th>What It Means</th></tr>';
+                g.fields.forEach(function(f) {
+                    detailHtml += '<tr><td><strong>' + escHtml(f.name) + '</strong></td><td>' + escHtml(f.description) + '</td></tr>';
+                });
+                detailHtml += '</table></div>';
+            }
+
+            if (g.statuses && g.statuses.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-info-circle"></i> Status Lifecycle</h5>';
+                detailHtml += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
+                g.statuses.forEach(function(s) {
+                    detailHtml += '<span class="badge-sample" style="background:' + s.color + ';color:' + getContrastColor(s.color) + ';">' + escHtml(s.status) + '</span>';
+                });
+                detailHtml += '</div>';
+                detailHtml += '<div class="info-card"><ul>';
+                g.statuses.forEach(function(s) {
+                    detailHtml += '<li><strong>' + escHtml(s.status) + '</strong> - ' + escHtml(s.meaning) + '</li>';
+                });
+                detailHtml += '</ul></div></div>';
+            }
+
+            if (g.tips && g.tips.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-lightbulb"></i> Best Practices & Approval Rules</h5>';
+                g.tips.forEach(function(t) {
+                    detailHtml += '<div class="tip-card"><p><i class="fas fa-check-circle me-1"></i> ' + escHtml(t) + '</p></div>';
+                });
+                detailHtml += '</div>';
+            }
+
+            if (g.common_mistakes && g.common_mistakes.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-exclamation-triangle"></i> Mistakes to Avoid</h5>';
+                g.common_mistakes.forEach(function(m) {
+                    detailHtml += '<div class="mistake-card"><p><i class="fas fa-times-circle me-1"></i> ' + escHtml(m) + '</p></div>';
+                });
+                detailHtml += '</div>';
+            }
+
+            detailHtml += '</div>';
+        }
+
+        card.innerHTML = headerHtml + bodyHtml + detailHtml;
+        return card;
+    }
+
+    function togglePageDetail(uid) {
+        var det = document.getElementById('detail-' + uid);
+        var tog = document.getElementById('toggle-' + uid);
+        if (!det || !tog) return;
+        det.classList.toggle('open');
+        tog.classList.toggle('open');
+    }
+
+    function buildSearchIndex() {
+        searchIndex = [];
+        if (!guideData) return;
+        guideData.sections.forEach(function(sec) {
+            sec.pages.forEach(function(page) {
+                var g = page.guide;
+                var text = page.menu_name + ' ' + (g.purpose || '') + ' ' + (g.who_can_access || '');
+                if (g.fields) g.fields.forEach(function(f) { text += ' ' + f.name + ' ' + f.description; });
+                if (g.statuses) g.statuses.forEach(function(s) { text += ' ' + s.status + ' ' + s.meaning; });
+                if (g.tips) g.tips.forEach(function(t) { text += ' ' + t; });
+                if (g.usage_flow) g.usage_flow.forEach(function(u) { text += ' ' + u; });
+                if (g.main_sections) g.main_sections.forEach(function(s) { text += ' ' + s.name + ' ' + s.description; });
+                if (g.common_mistakes) g.common_mistakes.forEach(function(m) { text += ' ' + m; });
+                searchIndex.push({
+                    title: page.menu_name,
+                    text: text.toLowerCase(),
+                    section: sec.title,
+                    icon: page.menu_icon,
+                    code: page.menu_code
+                });
+            });
+        });
+    }
+
+    var searchInput = document.getElementById('guideSearchInput');
+    var clearBtn = document.getElementById('searchClearBtn');
+    var dropdown = document.getElementById('searchDropdown');
+    var searchTimeout = null;
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(handleSearch, 200);
+    });
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { clearSearch(); }
+    });
+    clearBtn.addEventListener('click', clearSearch);
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-wrap')) dropdown.classList.remove('active');
+    });
+
+    function handleSearch() {
+        var q = searchInput.value.trim().toLowerCase();
+        clearBtn.style.display = q ? 'block' : 'none';
+        if (!q || q.length < 2) { dropdown.classList.remove('active'); return; }
+        var terms = q.split(/\s+/);
+        var results = searchIndex.filter(function(item) {
+            return terms.every(function(t) { return item.text.includes(t); });
+        });
+        if (results.length === 0) {
+            dropdown.innerHTML = '<div class="sr-empty">No pages found for "' + escHtml(q) + '"</div>';
+        } else {
+            var html = '<div class="sr-count">' + results.length + ' page' + (results.length !== 1 ? 's' : '') + ' found</div>';
+            results.slice(0, 20).forEach(function(r) {
+                var titleHtml = highlightMatch(r.title, terms);
+                html += '<div class="sr-item" onclick="goToPage(\'' + r.code + '\')">' +
+                    '<div class="sr-icon" style="background:#7c3aed;"><i class="' + r.icon + '"></i></div>' +
+                    '<div class="sr-text"><div class="sr-title">' + titleHtml + '</div>' +
+                    '<div class="sr-section">' + escHtml(r.section) + '</div></div></div>';
+            });
+            dropdown.innerHTML = html;
+        }
+        dropdown.classList.add('active');
+    }
+
+    function clearSearch() {
+        searchInput.value = '';
+        clearBtn.style.display = 'none';
+        dropdown.classList.remove('active');
+    }
+
+    function goToPage(code) {
+        dropdown.classList.remove('active');
+        clearSearch();
+        var el = document.getElementById('page-' + code);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('highlight-flash');
+        setTimeout(function() { el.classList.remove('highlight-flash'); }, 2500);
+        var uid = findUid(code);
+        if (uid) {
+            var det = document.getElementById('detail-' + uid);
+            var tog = document.getElementById('toggle-' + uid);
+            if (det && !det.classList.contains('open')) {
+                det.classList.add('open');
+                if (tog) tog.classList.add('open');
+            }
+        }
+    }
+
+    function findUid(code) {
+        if (!guideData) return null;
+        for (var s = 0; s < guideData.sections.length; s++) {
+            for (var p = 0; p < guideData.sections[s].pages.length; p++) {
+                if (guideData.sections[s].pages[p].menu_code === code) return (s + '-' + p);
+            }
+        }
+        return null;
+    }
+
+    function highlightMatch(text, terms) {
+        var result = escHtml(text);
+        terms.forEach(function(t) {
+            var regex = new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+            result = result.replace(regex, '<mark>$1</mark>');
+        });
+        return result;
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function getContrastColor(hex) {
+        if (!hex) return '#000';
+        hex = hex.replace('#', '');
+        if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+        var r = parseInt(hex.substr(0,2), 16);
+        var g = parseInt(hex.substr(2,2), 16);
+        var b = parseInt(hex.substr(4,2), 16);
+        var luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.5 ? '#1f2937' : '#ffffff';
+    }
+
+    var AUTH_PAGE_KEY = 'mnrguide';
+    var AUTH_CREDS = [
+        { user: 'MR10001', pass: 'Mnrguide', canPrint: false },
+        { user: 'MR10002', pass: 'MR10001', canPrint: true }
+    ];
+
+    function initAuth() {
+        var stored = sessionStorage.getItem('mnr_doc_' + AUTH_PAGE_KEY);
+        if (stored) {
+            try {
+                var d = JSON.parse(stored);
+                var cred = AUTH_CREDS.find(function(c) { return c.user === d.u && c.pass === d.p; });
+                if (cred) { applyDocPermissions(cred.canPrint); document.getElementById('loginOverlay').classList.add('hidden'); loadGuide(); return; }
+            } catch(e) {}
+        }
+    }
+
+    function handleLogin(e) {
+        e.preventDefault();
+        var user = document.getElementById('loginUser').value.trim();
+        var pass = document.getElementById('loginPass').value;
+        var cred = AUTH_CREDS.find(function(c) { return c.user === user && c.pass === pass; });
+        if (cred) {
+            sessionStorage.setItem('mnr_doc_' + AUTH_PAGE_KEY, JSON.stringify({ u: user, p: pass }));
+            document.getElementById('loginOverlay').classList.add('hidden');
+            applyDocPermissions(cred.canPrint);
+            loadGuide();
+        } else {
+            document.getElementById('loginError').classList.add('show');
+            document.getElementById('loginPass').value = '';
+        }
+    }
+
+    function applyDocPermissions(canPrint) {
+        if (!canPrint) {
+            var btn = document.querySelector('.print-btn');
+            if (btn) btn.style.display = 'none';
+            var s = document.createElement('style');
+            s.textContent = '@media print { body { display: none !important; } }';
+            document.head.appendChild(s);
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); e.stopPropagation(); }
+            }, true);
+        }
+    }
+
+    function doLogout() {
+        sessionStorage.removeItem('mnr_doc_' + AUTH_PAGE_KEY);
+        location.reload();
+    }
+
+    initAuth();
+    </script>
+</body>
+</html>

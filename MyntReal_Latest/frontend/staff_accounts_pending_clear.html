@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pending to Clear - Accounts</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/menu-master.js?v=20260503m"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .page-header h1 { font-size: 22px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 13px; color: #6b7280; margin: 4px 0 0 0; }
+
+        .due-notice { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 16px;
+                      font-size: 13px; color: #92400e; font-weight: 600; margin-bottom: 18px;
+                      display: flex; align-items: center; gap: 8px; }
+
+        .filter-bar { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+                      padding: 14px 18px; margin-bottom: 20px; display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-group select, .filter-group input { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 130px; }
+
+        .summary-cards { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+        .s-card { background: #fff; border-radius: 10px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); min-width: 150px; flex: 1; }
+        .s-card .val { font-size: 22px; font-weight: 700; color: #1f2937; }
+        .s-card .lbl { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .s-card.pending .val { color: #dc2626; }
+        .s-card.cleared .val { color: #059669; }
+        .s-card.inprog  .val { color: #d97706; }
+
+        .section-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 24px; }
+        .section-header { padding: 14px 18px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .section-title { font-size: 15px; font-weight: 600; color: #1f2937; margin: 0; }
+        .section-count { font-size: 12px; color: #6b7280; }
+
+        .table-wrap { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        .data-table th { padding: 10px 12px; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+        .data-table th.sortable { cursor: pointer; user-select: none; position: relative; padding-right: 18px; }
+        .data-table th.sortable:hover { background: #f3f4f6; }
+        .data-table th.sortable::after { content: '\f0dc'; font-family: 'Font Awesome 6 Free'; font-weight: 900; font-size: 8px; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); opacity: 0.3; }
+        .data-table th.sort-asc::after { content: '\f0de'; opacity: 1; color: #6366f1; }
+        .data-table th.sort-desc::after { content: '\f0dd'; opacity: 1; color: #6366f1; }
+        .data-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; color: #374151; vertical-align: middle; }
+        .data-table tbody tr:hover { background: #f9fafb; }
+        .data-table tfoot td { font-weight: 700; background: #f3f4f6; border-top: 2px solid #e5e7eb; padding: 10px 12px; font-size: 13px; }
+
+        .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .badge-inprog  { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .badge-pending { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .badge-cleared { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .badge-approved { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .badge-default { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+
+        .btn-clear { background: #059669; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-clear:hover { background: #047857; }
+        .btn-clear:disabled { background: #9ca3af; cursor: not-allowed; }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #9ca3af; }
+        .empty-state i { font-size: 36px; margin-bottom: 10px; display: block; }
+        .empty-state p { font-size: 14px; }
+
+        .amt { font-weight: 600; color: #7c3aed; }
+        .amt-zero { color: #d1d5db; }
+
+        .source-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; white-space: nowrap; }
+        .src-incentive  { background: #fef3c7; color: #92400e; }
+        .src-expense    { background: #eff6ff; color: #1d4ed8; }
+        .src-journey    { background: #f0fdf4; color: #15803d; }
+        .src-field_work { background: #fdf4ff; color: #7e22ce; }
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+
+<div class="main-content" id="main-layout">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-file-invoice-dollar me-2" style="color:#6366f1;"></i>Pending to Clear</h1>
+                <p>All outgoing obligations — incentive payouts &amp; staff expenses requiring clearance</p>
+            </div>
+        </div>
+
+        <div class="due-notice" id="dueNotice">
+            <i class="fas fa-calendar-check"></i>
+            <span id="dueNoticeText">Incentive &amp; expense clearance due: 15th of the following month</span>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Month</label>
+                <select id="fMonth">
+                    <option value="1">January</option><option value="2">February</option>
+                    <option value="3">March</option><option value="4">April</option>
+                    <option value="5">May</option><option value="6">June</option>
+                    <option value="7">July</option><option value="8">August</option>
+                    <option value="9">September</option><option value="10">October</option>
+                    <option value="11">November</option><option value="12">December</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Year</label>
+                <select id="fYear"></select>
+            </div>
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="fCompany"><option value="">All Companies</option></select>
+            </div>
+            <div class="filter-group">
+                <label>Employee</label>
+                <select id="fEmployee"><option value="">All Employees</option></select>
+            </div>
+            <div class="filter-group">
+                <label>Type</label>
+                <select id="fType">
+                    <option value="">All Types</option>
+                    <option value="incentive">Incentive</option>
+                    <option value="expense">Expense</option>
+                    <option value="journey">Journey</option>
+                    <option value="field_work">Field Work</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Status</label>
+                <select id="fStatus">
+                    <option value="">All Statuses</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="pending">Pending</option>
+                    <option value="cleared">Cleared</option>
+                </select>
+            </div>
+            <div class="filter-group" style="margin-left:auto;">
+                <label>&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-primary" onclick="loadAll()"><i class="fas fa-sync me-1"></i>Load</button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="resetFilters()"><i class="fas fa-undo me-1"></i>Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary cards -->
+        <div class="summary-cards">
+            <div class="s-card inprog">
+                <div class="val" id="sumInProgress">—</div>
+                <div class="lbl"><i class="fas fa-clock me-1"></i>In Progress</div>
+            </div>
+            <div class="s-card pending">
+                <div class="val" id="sumPending">—</div>
+                <div class="lbl"><i class="fas fa-hourglass-half me-1"></i>Pending Clearance</div>
+            </div>
+            <div class="s-card cleared">
+                <div class="val" id="sumCleared">—</div>
+                <div class="lbl"><i class="fas fa-check-circle me-1"></i>Cleared</div>
+            </div>
+            <div class="s-card" style="">
+                <div class="val" id="sumTotalAmt">—</div>
+                <div class="lbl"><i class="fas fa-rupee-sign me-1"></i>Total Pending Amount</div>
+            </div>
+        </div>
+
+        <!-- Unified Clearance Table -->
+        <div class="section-card">
+            <div class="section-header">
+                <h5 class="section-title"><i class="fas fa-layer-group me-2" style="color:#6366f1;"></i>All Pending Obligations</h5>
+                <span class="section-count" id="unifiedCount"></span>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table" id="unifiedTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-col="row_type">Type</th>
+                            <th class="sortable" data-col="entry_date">Date / Period</th>
+                            <th class="sortable" data-col="employee_name">Employee</th>
+                            <th class="sortable" data-col="emp_code">Emp Code</th>
+                            <th class="sortable" data-col="category">Category</th>
+                            <th>Description</th>
+                            <th class="sortable text-end" data-col="amount">Amount</th>
+                            <th class="sortable" data-col="status">Status</th>
+                            <th>Ref / Due Date</th>
+                            <th id="unifiedActionsHeader">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unifiedTbody"></tbody>
+                    <tfoot id="unifiedTfoot"></tfoot>
+                </table>
+                <div id="unifiedEmpty" class="empty-state" style="display:none;">
+                    <i class="fas fa-layer-group"></i><p>No records found. Adjust filters and click Load.</p>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- .content-area -->
+
+    <!-- Footer -->
+    <div style="text-align:center;padding:16px 24px;font-size:12px;color:#9ca3af;border-top:1px solid #e5e7eb;background:#fff;margin-top:8px;">
+        Pending to Clear &mdash; MyntReal SFMS &mdash; Clearance due 15th of following month
+    </div>
+</div><!-- #main-layout -->
+
+<!-- Mark Cleared Modal -->
+<div id="clearModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:14px;padding:28px;max-width:420px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,.2);">
+        <h5 style="font-size:16px;font-weight:700;color:#1f2937;margin:0 0 12px;">Mark as Cleared</h5>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">Confirm payout clearance for <strong id="clearEmpName"></strong> — <span id="clearPeriod"></span></p>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Notes (optional)</label>
+            <textarea id="clearNotes" rows="2" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;resize:none;" placeholder="Payment reference, bank details…"></textarea>
+        </div>
+        <div id="clearModalErr" style="color:#dc2626;font-size:12px;margin-bottom:10px;"></div>
+        <div class="d-flex gap-2 justify-content-end">
+            <button class="btn btn-sm btn-outline-secondary" onclick="closeClearModal()">Cancel</button>
+            <button class="btn btn-sm" style="background:#059669;color:#fff;font-weight:600;" onclick="confirmClear()"><i class="fas fa-check me-1"></i>Confirm Clear</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script>
+    const API = '/api/v1';
+    const MO_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+    const MO_ABBR  = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const SLUGS    = ['solar','ev_b2c','ev_b2b','training','insurance','real_estate'];
+    const SLUG_LBL = { solar:'Solar', ev_b2c:'EV B2C', ev_b2b:'EV B2B', training:'Training', insurance:'Insurance', real_estate:'Real Estate' };
+
+    let _payoutData   = [];
+    let _expenseData  = [];
+    let _allData      = [];
+    let _canClear     = false;
+    let _currentUser  = null;
+    let _clearTarget  = null;
+    let _sortUnified  = { col: 'entry_date', dir: -1 };
+
+    function authHdr() {
+        const t = localStorage.getItem('staff_token');
+        return t ? { 'Authorization': `Bearer ${t}`, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
+    }
+
+    async function apiFetch(url, opts = {}) {
+        if (!opts.headers) opts.headers = authHdr();
+        const r = await fetch(url, opts);
+        return r.json();
+    }
+
+    function toast(msg, type = 'success') {
+        const el = document.createElement('div');
+        el.style.cssText = `position:fixed;top:20px;right:20px;z-index:99999;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;color:#fff;
+            background:${type === 'success' ? '#059669' : '#dc2626'};box-shadow:0 4px 12px rgba(0,0,0,.15);`;
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+    }
+
+    // ── Init ────────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+        try { if (typeof StaffSidebar !== 'undefined' && StaffSidebar.init) await StaffSidebar.init(); } catch(e) {}
+        try { if (typeof StaffHeader !== 'undefined' && StaffHeader.inject) StaffHeader.inject('Pending to Clear', 'fas fa-file-invoice-dollar'); } catch(e) {}
+
+        initFilters();
+
+        try {
+            const me = await apiFetch(`${API}/staff/auth/me`);
+            if (me && me.employee) {
+                _currentUser = me.employee;
+                _canClear = canUserClear(_currentUser);
+            }
+        } catch(e) {}
+
+        // Populate companies — keep "All Companies" as first option
+        try {
+            const cd = await apiFetch(`${API}/staff/accounts/companies`);
+            const companies = cd.success ? (cd.companies || cd.data?.companies || []) : [];
+            const sel = document.getElementById('fCompany');
+            sel.innerHTML = '<option value="">All Companies</option>';
+            companies.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id; o.textContent = c.company_name || c.name;
+                sel.appendChild(o);
+            });
+        } catch(e) {}
+
+        // Populate employees
+        try {
+            const ed = await apiFetch(`${API}/staff/employees/list?page_size=500`);
+            const emps = ed.success ? (ed.employees || ed.data || []) : [];
+            const sel = document.getElementById('fEmployee');
+            emps.forEach(e => {
+                const o = document.createElement('option');
+                o.value = e.id; o.textContent = `${e.full_name || e.emp_code} (${e.emp_code})`;
+                sel.appendChild(o);
+            });
+        } catch(e) {}
+
+        if (!_canClear && document.getElementById('unifiedActionsHeader'))
+            document.getElementById('unifiedActionsHeader').style.display = 'none';
+
+        // Attach sort listeners for unified table
+        attachSortListeners('unifiedTable', _sortUnified, () => renderUnified());
+
+        loadAll();
+    });
+
+    function initFilters() {
+        const now = new Date();
+        document.getElementById('fMonth').value = now.getMonth() + 1;
+        const yrSel = document.getElementById('fYear');
+        yrSel.innerHTML = '';
+        for (let y = now.getFullYear(); y >= 2024; y--) {
+            const o = document.createElement('option');
+            o.value = y; o.textContent = y;
+            if (y === now.getFullYear()) o.selected = true;
+            yrSel.appendChild(o);
+        }
+        // Update due notice
+        updateDueNotice();
+    }
+
+    function updateDueNotice() {
+        const mo = parseInt(document.getElementById('fMonth').value) || (new Date().getMonth()+1);
+        const yr = parseInt(document.getElementById('fYear').value)  || new Date().getFullYear();
+        const nextMo = mo === 12 ? 1 : mo + 1;
+        const nextYr = mo === 12 ? yr + 1 : yr;
+        document.getElementById('dueNoticeText').textContent =
+            `Incentive & expense clearance due: 15 ${MO_ABBR[nextMo]} ${nextYr}  |  For period: ${MO_NAMES[mo]} ${yr}`;
+    }
+
+    document.getElementById('fMonth').addEventListener('change', updateDueNotice);
+    document.getElementById('fYear').addEventListener('change', updateDueNotice);
+    // Type filter re-renders in-memory without reloading from API
+    document.getElementById('fType').addEventListener('change', renderUnified);
+
+    function resetFilters() {
+        const now = new Date();
+        document.getElementById('fMonth').value    = now.getMonth() + 1;
+        document.getElementById('fYear').value     = now.getFullYear();
+        document.getElementById('fCompany').value  = '';
+        document.getElementById('fEmployee').value = '';
+        document.getElementById('fType').value     = '';
+        document.getElementById('fStatus').value   = '';
+        updateDueNotice();
+        loadAll();
+    }
+
+    function canUserClear(emp) {
+        if (!emp) return false;
+        const ec  = (emp.emp_code || '').toUpperCase();
+        const rn  = (emp.role_name || emp.role || '').toLowerCase();
+        const rc  = (emp.role_code || '').toLowerCase();
+        return ec === 'MR10001' || rn.includes('account') || rc.includes('account') ||
+               rn.includes(' hr') || rn === 'hr' || rc.includes('hr') ||
+               rn.includes('vgk mentor') || rc.includes('vgk_mentor') ||
+               ec.startsWith('MR') && (rn.includes('admin') || rc.includes('admin'));
+    }
+
+    // ── Load Data ────────────────────────────────────────────────────────────
+    async function loadAll() {
+        const month       = parseInt(document.getElementById('fMonth').value);
+        const year        = parseInt(document.getElementById('fYear').value);
+        const company_id  = document.getElementById('fCompany').value;   // '' = all companies
+        const employee_id = document.getElementById('fEmployee').value;
+        const status      = document.getElementById('fStatus').value;
+
+        // Show loading state on unified table
+        const tbody = document.getElementById('unifiedTbody');
+        tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Loading…</td></tr>';
+
+        await Promise.all([
+            loadPayouts(month, year, company_id, employee_id, status),
+            loadExpenses(month, year, company_id, employee_id, status),
+        ]);
+        // Merge both datasets with a row_type tag for filtering
+        _allData = [
+            ..._payoutData.map(r => ({ ...r, row_type: 'incentive' })),
+            ..._expenseData.map(r => ({ ...r, row_type: r.source_type || 'expense' })),
+        ];
+        updateSummaryCards();
+        renderUnified();
+    }
+
+    async function loadPayouts(month, year, company_id, employee_id, status) {
+        try {
+            let url = `${API}/staff/incentive-payouts/list?month=${month}&year=${year}`;
+            if (company_id)  url += `&company_id=${company_id}`;
+            if (employee_id) url += `&employee_id=${employee_id}`;
+            if (status)      url += `&status=${status}`;
+
+            const d = await apiFetch(url);
+            if (!d.success) { _payoutData = []; return; }
+
+            // Fetch achievement details to fill category breakdown for tooltip
+            let achMap = {};
+            try {
+                let achUrl = `${API}/staff/incentive-achievements?month=${month}&year=${year}`;
+                if (company_id) achUrl += `&company_id=${company_id}`;
+                const achD = await apiFetch(achUrl);
+                if (achD.success) (achD.data || []).forEach(r => {
+                    const slugMap = {};
+                    (r.categories || []).forEach(c => slugMap[c.slug] = c.incentive_earned);
+                    achMap[r.employee_id] = { slugMap, name: r.name, emp_code: r.emp_code };
+                });
+            } catch(e) {}
+
+            _payoutData = (d.data || []).map(row => {
+                const ach = achMap[row.employee_id] || {};
+                // Build breakdown tooltip
+                const breakdown = SLUGS.map(s => {
+                    const v = parseFloat(ach.slugMap?.[s] || 0);
+                    return v > 0 ? `${SLUG_LBL[s]}: ₹${v.toLocaleString('en-IN')}` : null;
+                }).filter(Boolean).join(' | ') || '';
+                return { ...row, ...ach.slugMap, breakdown };
+            });
+        } catch(e) {
+            _payoutData = [];
+        }
+    }
+
+    async function loadExpenses(month, year, company_id, employee_id, status) {
+        try {
+            let url = `${API}/staff/outgoing-expenses?month=${month}&year=${year}`;
+            if (company_id)  url += `&company_id=${company_id}`;
+            if (employee_id) url += `&employee_id=${employee_id}`;
+            if (status)      url += `&status=${status}`;
+            const d = await apiFetch(url);
+            _expenseData = d.success ? (d.data || []) : [];
+        } catch(e) {
+            _expenseData = [];
+        }
+    }
+
+    // ── Unified Render ────────────────────────────────────────────────────────
+    function renderUnified() {
+        const tbody = document.getElementById('unifiedTbody');
+        const tfoot = document.getElementById('unifiedTfoot');
+        const empty = document.getElementById('unifiedEmpty');
+
+        const mo  = parseInt(document.getElementById('fMonth').value);
+        const yr  = parseInt(document.getElementById('fYear').value);
+        const typeFilter = document.getElementById('fType').value;
+
+        // Apply Type filter on _allData
+        let rows = typeFilter ? _allData.filter(r => r.row_type === typeFilter) : [..._allData];
+        rows = sortData(rows, _sortUnified);
+
+        document.getElementById('unifiedCount').textContent =
+            `${rows.length} record${rows.length !== 1 ? 's' : ''}`;
+
+        if (!rows.length) {
+            tbody.innerHTML = '';
+            tfoot.innerHTML = '';
+            empty.style.display = '';
+            return;
+        }
+        empty.style.display = 'none';
+
+        const TYPE_CFG = {
+            incentive:  { label: 'Incentive',  cls: 'src-incentive',  icon: 'fa-trophy' },
+            expense:    { label: 'Expense',     cls: 'src-expense',    icon: 'fa-receipt' },
+            journey:    { label: 'Journey',     cls: 'src-journey',    icon: 'fa-route' },
+            field_work: { label: 'Field Work',  cls: 'src-field_work', icon: 'fa-hard-hat' },
+        };
+
+        let grandTotal = 0;
+        let html = '';
+
+        rows.forEach(r => {
+            const type = r.row_type || 'expense';
+            const cfg  = TYPE_CFG[type] || { label: type, cls: 'src-expense', icon: 'fa-circle' };
+            const typeBadge = `<span class="source-tag ${cfg.cls}"><i class="fas ${cfg.icon} me-1"></i>${cfg.label}</span>`;
+
+            let datePeriod, category, description, amount, statusBadgeHtml, refDue, actionCell;
+
+            if (type === 'incentive') {
+                datePeriod  = `${MO_NAMES[r.month] || mo} ${r.year || yr}`;
+                category    = 'Incentive Payout';
+                description = r.breakdown
+                    ? `<span title="${escHtml(r.breakdown)}" style="cursor:help;text-decoration:underline dotted;font-size:11px;">Category breakdown ℹ</span>`
+                    : '—';
+                amount      = parseFloat(r.total_incentive || 0);
+                statusBadgeHtml = statusBadge(r.payout_status);
+                refDue      = `<span style="font-size:11px;color:#065f46;font-weight:500;">${escHtml(r.due_date_label || '—')}</span>`;
+                actionCell  = _canClear && r.payout_status !== 'cleared'
+                    ? `<button class="btn-clear" onclick="openClearModal(${r.id},'${escHtml(r.employee_name || '')}','${MO_NAMES[mo]} ${yr}')"><i class="fas fa-check"></i>Clear</button>`
+                    : (r.payout_status === 'cleared'
+                        ? `<span style="font-size:11px;color:#059669;font-weight:600;"><i class="fas fa-check-circle me-1"></i>Done</span>`
+                        : '—');
+            } else {
+                datePeriod  = r.entry_date || '—';
+                category    = escHtml(r.category || '—');
+                description = `<span style="font-size:11px;color:#6b7280;">${escHtml(r.description || '—')}</span>`;
+                amount      = parseFloat(r.amount || 0);
+                statusBadgeHtml = expStatusBadge(r.status);
+                const ref   = [r.payment_mode, r.reference_no].filter(Boolean).join(' · ');
+                refDue      = `<span style="font-size:11px;color:#6b7280;">${escHtml(ref || '—')}</span>`;
+                actionCell  = '—';
+            }
+
+            grandTotal += amount;
+
+            html += `<tr>
+                <td>${typeBadge}</td>
+                <td style="white-space:nowrap;font-size:12px;">${datePeriod}</td>
+                <td style="font-weight:600;">${escHtml(r.employee_name || '—')}</td>
+                <td style="font-size:12px;color:#6b7280;">${escHtml(r.emp_code || '—')}</td>
+                <td>${category}</td>
+                <td>${description}</td>
+                <td class="text-end">${amtFmt(amount)}</td>
+                <td>${statusBadgeHtml}</td>
+                <td>${refDue}</td>
+                <td>${actionCell}</td>
+            </tr>`;
+        });
+
+        tbody.innerHTML = html;
+        tfoot.innerHTML = `<tr>
+            <td colspan="6" class="text-start" style="font-weight:600;">TOTAL (${rows.length} records)</td>
+            <td class="text-end" style="font-weight:700;color:#6366f1;">${amtFmt(grandTotal)}</td>
+            <td colspan="3"></td>
+        </tr>`;
+    }
+
+    // ── Summary Cards ─────────────────────────────────────────────────────────
+    function updateSummaryCards() {
+        let inProg = 0, pend = 0, cleared = 0, totalPending = 0;
+        _payoutData.forEach(r => {
+            if (r.payout_status === 'in_progress') { inProg++; totalPending += parseFloat(r.total_incentive || 0); }
+            else if (r.payout_status === 'pending') { pend++;   totalPending += parseFloat(r.total_incentive || 0); }
+            else if (r.payout_status === 'cleared') { cleared++; }
+        });
+        _expenseData.forEach(r => {
+            const st = (r.status || '').toLowerCase();
+            if (!st.includes('clear') && !st.includes('approv')) totalPending += parseFloat(r.amount || 0);
+        });
+        document.getElementById('sumInProgress').textContent = inProg;
+        document.getElementById('sumPending').textContent    = pend;
+        document.getElementById('sumCleared').textContent    = cleared;
+        document.getElementById('sumTotalAmt').textContent   = '₹' + totalPending.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+
+    // ── Clear Payout Modal ────────────────────────────────────────────────────
+    function openClearModal(id, empName, period) {
+        _clearTarget = id;
+        document.getElementById('clearEmpName').textContent = empName;
+        document.getElementById('clearPeriod').textContent  = period;
+        document.getElementById('clearNotes').value = '';
+        document.getElementById('clearModalErr').textContent = '';
+        document.getElementById('clearModal').style.display = 'flex';
+    }
+    function closeClearModal() { document.getElementById('clearModal').style.display = 'none'; _clearTarget = null; }
+
+    async function confirmClear() {
+        if (!_clearTarget) return;
+        const notes = document.getElementById('clearNotes').value.trim();
+        const errEl = document.getElementById('clearModalErr');
+        errEl.textContent = '';
+        try {
+            const r = await apiFetch(`${API}/staff/incentive-payouts/${_clearTarget}/mark-cleared`, {
+                method: 'PUT',
+                headers: authHdr(),
+                body: JSON.stringify({ notes }),
+            });
+            if (!r.success) { errEl.textContent = r.detail || 'Failed to clear.'; return; }
+            toast('Payout marked as cleared successfully!', 'success');
+            closeClearModal();
+            loadAll();
+        } catch(e) {
+            errEl.textContent = e.message;
+        }
+    }
+
+    // ── Sorting ──────────────────────────────────────────────────────────────
+    function attachSortListeners(tableId, sortState, renderFn) {
+        const ths = document.querySelectorAll(`#${tableId} th.sortable`);
+        ths.forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.dataset.col;
+                if (sortState.col === col) { sortState.dir *= -1; }
+                else { sortState.col = col; sortState.dir = 1; }
+                ths.forEach(t => t.classList.remove('sort-asc','sort-desc'));
+                th.classList.add(sortState.dir === 1 ? 'sort-asc' : 'sort-desc');
+                renderFn();
+            });
+        });
+    }
+
+    function sortData(arr, sortState) {
+        return arr.sort((a, b) => {
+            let va = a[sortState.col] ?? ''; let vb = b[sortState.col] ?? '';
+            if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * sortState.dir;
+            return String(va).localeCompare(String(vb)) * sortState.dir;
+        });
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function amtFmt(val) {
+        const n = parseFloat(val || 0);
+        if (!n) return '<span class="amt-zero">—</span>';
+        return `<span class="amt">₹${n.toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0})}</span>`;
+    }
+
+    function escHtml(s) {
+        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function statusBadge(status) {
+        const cfg = {
+            in_progress: ['badge-inprog',  'fa-clock',         'In Progress'],
+            pending:     ['badge-pending',  'fa-hourglass-half','Pending'],
+            cleared:     ['badge-cleared',  'fa-check-circle',  'Cleared'],
+        };
+        const [cls, icon, lbl] = cfg[status] || ['badge-default','fa-question','Unknown'];
+        return `<span class="status-badge ${cls}"><i class="fas ${icon}"></i>${lbl}</span>`;
+    }
+
+    function expStatusBadge(status) {
+        if (!status) return '<span class="status-badge badge-default">—</span>';
+        const s = status.toLowerCase();
+        if (s.includes('approv') || s.includes('clear') || s === 'completed') return `<span class="status-badge badge-cleared"><i class="fas fa-check-circle"></i>${status}</span>`;
+        if (s.includes('pending') || s === 'in_progress') return `<span class="status-badge badge-pending"><i class="fas fa-hourglass-half"></i>${status}</span>`;
+        return `<span class="status-badge badge-default">${status}</span>`;
+    }
+</script>
+</body>
+</html>

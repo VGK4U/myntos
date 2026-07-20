@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Dashboard - RVZ Supreme</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container-fluid {
+            max-width: 1600px;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+        .nav-tabs .nav-link {
+            color: #6b7280;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-weight: 600;
+        }
+        .nav-tabs .nav-link.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: transparent;
+        }
+        .filter-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .table-responsive {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .btn-tally-update {
+            background: #10b981;
+            color: white;
+            border: none;
+        }
+        .btn-tally-update:hover {
+            background: #059669;
+            color: white;
+        }
+        .badge-updated {
+            background: #10b981;
+        }
+        .badge-pending {
+            background: #f59e0b;
+        }
+        .badge-collected {
+            background: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="mb-1"><img src="/public/vgk4u-logo-100.png" alt="VGK4U" style="height:28px;background:#fff;border-radius:5px;padding:2px 6px;margin-right:8px;vertical-align:middle;"><i class="fas fa-file-invoice-dollar me-2"></i>Compliance Dashboard</h1>
+                        <p class="text-muted mb-0">TDS, GST, Handling Charges & Company Earnings Tracking</p>
+                    </div>
+                    <a href="/rvz/dashboard" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="card">
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-4" id="complianceTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="tds-tab" data-bs-toggle="tab" data-bs-target="#tds" type="button">
+                            <i class="fas fa-percent me-1"></i>TDS Calculator
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="gst-tab" data-bs-toggle="tab" data-bs-target="#gst" type="button">
+                            <i class="fas fa-receipt me-1"></i>GST Calculator
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="handling-tab" data-bs-toggle="tab" data-bs-target="#handling" type="button">
+                            <i class="fas fa-hand-holding-usd me-1"></i>Handling Charges
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="earnings-tab" data-bs-toggle="tab" data-bs-target="#earnings" type="button">
+                            <i class="fas fa-chart-line me-1"></i>Company Earnings
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="expenseMgmtLink">
+                            <i class="fas fa-money-bill-wave me-1"></i>Expense Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="expenseCategoriesLink">
+                            <i class="fas fa-folder-tree me-1"></i>Expense Categories
+                        </a>
+                    </li>
+                </ul>
+                <script>
+                    // Set expense management links dynamically
+                    const userId = new URLSearchParams(window.location.search).get('user_id');
+                    document.getElementById('expenseMgmtLink').href = `/rvz/expenses-management?user_id=${userId}`;
+                    document.getElementById('expenseCategoriesLink').href = `/rvz/expense-categories?user_id=${userId}`;
+                </script>
+
+                <div class="tab-content" id="complianceTabContent">
+                    <!-- TDS Tab -->
+                    <div class="tab-pane fade show active" id="tds" role="tabpanel">
+                        <!-- Summary Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-label">Total Records</div>
+                                    <div class="stat-value text-primary" id="tdsRecordsCount">0</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-label">Total TDS</div>
+                                    <div class="stat-value text-danger" id="tdsTotalAmount">₹0.00</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-label">Updated in Tally</div>
+                                    <div class="stat-value text-success" id="tdsUpdatedCount">0</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-label">Pending Tally</div>
+                                    <div class="stat-value text-warning" id="tdsPendingCount">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="filter-card">
+                            <div class="row g-2">
+                                <div class="col-md-2">
+                                    <input type="date" class="form-control form-control-sm" id="tdsFromDate" placeholder="From Date">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="date" class="form-control form-control-sm" id="tdsToDate" placeholder="To Date">
+                                </div>
+                                <div class="col-md-2">
+                                    <select class="form-select form-select-sm" id="tdsTallyStatus">
+                                        <option value="">All Tally Status</option>
+                                        <option value="UPDATED">Updated</option>
+                                        <option value="NOT_UPDATED">Not Updated</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <select class="form-select form-select-sm" id="tdsPaymentStatus">
+                                        <option value="">All Payment Status</option>
+                                        <option value="PAID">Paid</option>
+                                        <option value="PENDING">Pending</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-primary btn-sm w-100" onclick="loadTDSRecords()">
+                                        <i class="fas fa-filter me-1"></i>Apply Filters
+                                    </button>
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-success btn-sm w-100" onclick="bulkUpdateTallyStatus('tds')">
+                                        <i class="fas fa-check-double me-1"></i>Bulk Tally Update
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered bg-white">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><input type="checkbox" id="tdsSelectAll"></th>
+                                        <th>User</th>
+                                        <th>Gross Payout</th>
+                                        <th>TDS (2%)</th>
+                                        <th>Net Paid</th>
+                                        <th>Date</th>
+                                        <th>Tally Status</th>
+                                        <th>Payment Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tdsTableBody">
+                                    <tr><td colspan="9" class="text-center">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- GST Tab -->
+                    <div class="tab-pane fade" id="gst" role="tabpanel">
+                        <!-- Summary Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-label">Total Records</div>
+                                    <div class="stat-value text-primary" id="gstRecordsCount">0</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-label">Total GST (18%)</div>
+                                    <div class="stat-value text-danger" id="gstTotalAmount">₹0.00</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-label">Collected</div>
+                                    <div class="stat-value text-success" id="gstCollectedCount">0</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div class="stat-label">Pending Collection</div>
+                                    <div class="stat-value text-warning" id="gstPendingCount">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="filter-card">
+                            <div class="row g-2">
+                                <div class="col-md-2">
+                                    <input type="date" class="form-control form-control-sm" id="gstFromDate">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="date" class="form-control form-control-sm" id="gstToDate">
+                                </div>
+                                <div class="col-md-2">
+                                    <select class="form-select form-select-sm" id="gstAwardType">
+                                        <option value="">All Award Types</option>
+                                        <option value="Direct Award">Direct Award</option>
+                                        <option value="Matching Award">Matching Award</option>
+                                        <option value="Bonanza">Bonanza</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <select class="form-select form-select-sm" id="gstCollectionStatus">
+                                        <option value="">All Collection Status</option>
+                                        <option value="COLLECTED">Collected</option>
+                                        <option value="PENDING">Pending</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-primary btn-sm w-100" onclick="loadGSTRecords()">
+                                        <i class="fas fa-filter me-1"></i>Apply Filters
+                                    </button>
+                                </div>
+                                <div class="col-md-2">
+                                    <button class="btn btn-info btn-sm w-100" onclick="bulkUpdateCollectionStatus('gst')">
+                                        <i class="fas fa-check-circle me-1"></i>Bulk Collection
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered bg-white">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><input type="checkbox" id="gstSelectAll"></th>
+                                        <th>Invoice ID</th>
+                                        <th>Award Type</th>
+                                        <th>User</th>
+                                        <th>Handling Charges</th>
+                                        <th>GST (18%)</th>
+                                        <th>Total</th>
+                                        <th>Date</th>
+                                        <th>Collection</th>
+                                        <th>Tally</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gstTableBody">
+                                    <tr><td colspan="11" class="text-center">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Handling Charges Tab -->
+                    <div class="tab-pane fade" id="handling" role="tabpanel">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            This tab shows the same data as GST Calculator with focus on handling charges collection tracking.
+                        </div>
+                        <!-- Same structure as GST -->
+                        <div id="handlingContent"></div>
+                    </div>
+
+                    <!-- Company Earnings Tab (RVZ Only) -->
+                    <div class="tab-pane fade" id="earnings" role="tabpanel">
+                        <!-- Summary Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="stat-card">
+                                    <div class="stat-label">Total Company Earnings</div>
+                                    <div class="stat-value text-success" id="earningsTotalAmount">₹0.00</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card">
+                                    <div class="stat-label">Total Records</div>
+                                    <div class="stat-value text-primary" id="earningsRecordsCount">0</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stat-card">
+                                    <div class="stat-label">Total Excess Amount</div>
+                                    <div class="stat-value text-warning" id="earningsExcessAmount">₹0.00</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="filter-card">
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <input type="date" class="form-control form-control-sm" id="earningsFromDate">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="date" class="form-control form-control-sm" id="earningsToDate">
+                                </div>
+                                <div class="col-md-3">
+                                    <select class="form-select form-select-sm" id="earningsIncomeType">
+                                        <option value="">All Income Types</option>
+                                        <option value="Award Processing">Award Processing</option>
+                                        <option value="Handling Charges">Handling Charges</option>
+                                        <option value="VED Leadership Recognition">VED Leadership Recognition</option>
+                                        <option value="Group Performance Recognition">Group Performance Recognition</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-primary btn-sm w-100" onclick="loadCompanyEarnings()">
+                                        <i class="fas fa-filter me-1"></i>Apply Filters
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover table-bordered bg-white">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Income Type</th>
+                                        <th>Original Amount</th>
+                                        <th>Excess Amount</th>
+                                        <th>Net Earnings</th>
+                                        <th>Description</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="earningsTableBody">
+                                    <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        const authToken = localStorage.getItem('authToken');
+        const selectedTDS = new Set();
+        const selectedGST = new Set();
+
+        // Load TDS Records
+        async function loadTDSRecords(page = 1) {
+            try {
+                const fromDate = document.getElementById('tdsFromDate').value;
+                const toDate = document.getElementById('tdsToDate').value;
+                const tallyStatus = document.getElementById('tdsTallyStatus').value;
+                const paymentStatus = document.getElementById('tdsPaymentStatus').value;
+
+                let url = `${API_BASE}/compliance/tds?page=${page}&limit=50`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+                if (tallyStatus) url += `&tally_status=${tallyStatus}`;
+                if (paymentStatus) url += `&payment_status=${paymentStatus}`;
+
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Session expired. Please login again.');
+                        localStorage.removeItem('authToken');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update summary cards
+                    document.getElementById('tdsRecordsCount').textContent = data.summary.total_records;
+                    document.getElementById('tdsTotalAmount').textContent = `₹${Number(data.summary.total_tds).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    document.getElementById('tdsUpdatedCount').textContent = data.summary.tally_updated_count;
+                    document.getElementById('tdsPendingCount').textContent = data.summary.tally_pending_count;
+
+                    // Populate table
+                    const tbody = document.getElementById('tdsTableBody');
+                    if (data.records.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No records found</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = data.records.map(r => `
+                        <tr>
+                            <td><input type="checkbox" class="tds-checkbox" value="${r.id}"></td>
+                            <td>${r.username}<br><small class="text-muted">${r.user_id}</small></td>
+                            <td>₹${Number(r.gross_payout_amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>₹${Number(r.tds_deducted).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>₹${Number(r.net_amount_paid).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>${new Date(r.transaction_date).toLocaleDateString()}</td>
+                            <td>
+                                <select class="form-select form-select-sm ${r.tally_status === 'UPDATED' ? 'bg-success text-white' : 'bg-warning'}" 
+                                        onchange="updateTallyStatus(${r.id}, 'tds', this.value)" 
+                                        ${r.tally_status === 'UPDATED' ? 'disabled' : ''}>
+                                    <option value="PENDING" ${r.tally_status !== 'UPDATED' ? 'selected' : ''}>Pending</option>
+                                    <option value="UPDATED" ${r.tally_status === 'UPDATED' ? 'selected' : ''}>Updated</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm ${r.payment_status === 'PAID' ? 'bg-success text-white' : 'bg-warning'}" 
+                                        onchange="updatePaymentStatus(${r.id}, this.value)" 
+                                        ${r.payment_status === 'PAID' ? 'disabled' : ''}>
+                                    <option value="PENDING" ${r.payment_status !== 'PAID' ? 'selected' : ''}>Pending</option>
+                                    <option value="PAID" ${r.payment_status === 'PAID' ? 'selected' : ''}>Paid</option>
+                                </select>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading TDS records:', error);
+                alert('Failed to load TDS records');
+            }
+        }
+
+        // Load GST Records
+        async function loadGSTRecords(page = 1) {
+            try {
+                const fromDate = document.getElementById('gstFromDate').value;
+                const toDate = document.getElementById('gstToDate').value;
+                const awardType = document.getElementById('gstAwardType').value;
+                const collectionStatus = document.getElementById('gstCollectionStatus').value;
+
+                let url = `${API_BASE}/compliance/gst?page=${page}&limit=50`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+                if (awardType) url += `&award_type=${encodeURIComponent(awardType)}`;
+                if (collectionStatus) url += `&collection_status=${collectionStatus}`;
+
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Session expired. Please login again.');
+                        localStorage.removeItem('authToken');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update summary cards
+                    document.getElementById('gstRecordsCount').textContent = data.summary.total_records;
+                    document.getElementById('gstTotalAmount').textContent = `₹${Number(data.summary.total_gst).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    document.getElementById('gstCollectedCount').textContent = data.summary.collected_count;
+                    document.getElementById('gstPendingCount').textContent = data.summary.collection_pending_count;
+
+                    // Populate table
+                    const tbody = document.getElementById('gstTableBody');
+                    if (data.records.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="10" class="text-center">No records found</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = data.records.map(r => `
+                        <tr>
+                            <td><input type="checkbox" class="gst-checkbox" value="${r.id}"></td>
+                            <td><small>${r.invoice_id}</small></td>
+                            <td><span class="badge bg-info">${r.award_type}</span></td>
+                            <td>${r.username}<br><small class="text-muted">${r.user_id}</small></td>
+                            <td>₹${Number(r.handling_charges).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>₹${Number(r.gst_amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>₹${Number(r.total_amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>${new Date(r.transaction_date).toLocaleDateString()}</td>
+                            <td>
+                                <select class="form-select form-select-sm ${r.collection_status === 'COLLECTED' ? 'bg-info text-white' : 'bg-warning'}" 
+                                        onchange="updateCollectionStatus(${r.id}, this.value)" 
+                                        ${r.collection_status === 'COLLECTED' ? 'disabled' : ''}>
+                                    <option value="PENDING" ${r.collection_status !== 'COLLECTED' ? 'selected' : ''}>Pending</option>
+                                    <option value="COLLECTED" ${r.collection_status === 'COLLECTED' ? 'selected' : ''}>Collected</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select form-select-sm ${r.tally_status === 'UPDATED' ? 'bg-success text-white' : 'bg-warning'}" 
+                                        onchange="updateTallyStatus(${r.id}, 'gst', this.value)" 
+                                        ${r.tally_status === 'UPDATED' ? 'disabled' : ''}>
+                                    <option value="PENDING" ${r.tally_status !== 'UPDATED' ? 'selected' : ''}>Pending</option>
+                                    <option value="UPDATED" ${r.tally_status === 'UPDATED' ? 'selected' : ''}>Updated</option>
+                                </select>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading GST records:', error);
+                alert('Failed to load GST records');
+            }
+        }
+
+        // Load Company Earnings
+        async function loadCompanyEarnings(page = 1) {
+            try {
+                const fromDate = document.getElementById('earningsFromDate').value;
+                const toDate = document.getElementById('earningsToDate').value;
+                const incomeType = document.getElementById('earningsIncomeType').value;
+
+                let url = `${API_BASE}/compliance/company-earnings?page=${page}&limit=50`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+                if (incomeType) url += `&income_type=${encodeURIComponent(incomeType)}`;
+
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        alert('Session expired. Please login again.');
+                        localStorage.removeItem('authToken');
+                        window.location.href = '/login';
+                        return;
+                    }
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update summary cards
+                    document.getElementById('earningsRecordsCount').textContent = data.summary.total_records;
+                    document.getElementById('earningsTotalAmount').textContent = `₹${Number(data.summary.total_net_earnings).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    document.getElementById('earningsExcessAmount').textContent = `₹${Number(data.summary.total_excess_amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+                    // Populate table
+                    const tbody = document.getElementById('earningsTableBody');
+                    if (data.records.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center">No records found</td></tr>';
+                        return;
+                    }
+
+                    tbody.innerHTML = data.records.map(r => `
+                        <tr>
+                            <td>${r.username}<br><small class="text-muted">${r.user_id}</small></td>
+                            <td><span class="badge bg-primary">${r.income_type}</span></td>
+                            <td>₹${Number(r.original_amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>₹${Number(r.excess_amount).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>₹${Number(r.net_company_earnings).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td><small>${r.description || 'N/A'}</small></td>
+                            <td>${new Date(r.timestamp).toLocaleDateString()}</td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading company earnings:', error);
+                alert('Failed to load company earnings');
+            }
+        }
+
+        // Update Tally Status
+        async function updateTallyStatus(recordId, type, value) {
+            try {
+                const response = await fetch(`${API_BASE}/compliance/${recordId}/tally-status?status=${value}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Tally status updated!');
+                    if (type === 'tds') loadTDSRecords();
+                    else loadGSTRecords();
+                }
+            } catch (error) {
+                alert('❌ Failed to update Tally status');
+            }
+        }
+
+        // Update Payment Status
+        async function updatePaymentStatus(recordId, value) {
+            try {
+                const response = await fetch(`${API_BASE}/compliance/${recordId}/payment-status?status=${value}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Payment status updated!');
+                    loadTDSRecords();
+                }
+            } catch (error) {
+                alert('❌ Failed to update payment status');
+            }
+        }
+
+        // Update Collection Status
+        async function updateCollectionStatus(recordId, value) {
+            try {
+                const response = await fetch(`${API_BASE}/compliance/${recordId}/collection-status?status=${value}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Collection status updated!');
+                    loadGSTRecords();
+                }
+            } catch (error) {
+                alert('❌ Failed to update collection status');
+            }
+        }
+
+        // Bulk Update Tally Status
+        async function bulkUpdateTallyStatus(type) {
+            const checkboxes = document.querySelectorAll(`.${type}-checkbox:checked`);
+            const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            if (ids.length === 0) {
+                alert('Please select at least one record');
+                return;
+            }
+
+            if (!confirm(`Mark ${ids.length} records as "Updated in Tally"?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/compliance/bulk-tally-update?status=UPDATED`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ record_ids: ids })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert(`✅ ${data.updated_count} records updated!`);
+                    if (type === 'tds') loadTDSRecords();
+                    else loadGSTRecords();
+                }
+            } catch (error) {
+                alert('❌ Failed to bulk update');
+            }
+        }
+
+        // Bulk Update Collection Status
+        async function bulkUpdateCollectionStatus(type) {
+            const checkboxes = document.querySelectorAll(`.${type}-checkbox:checked`);
+            const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+            
+            if (ids.length === 0) {
+                alert('Please select at least one record');
+                return;
+            }
+
+            if (!confirm(`Mark ${ids.length} records as "Collected"?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/compliance/bulk-collection-update?status=COLLECTED`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ record_ids: ids })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert(`✅ ${data.updated_count} records marked as collected!`);
+                    loadGSTRecords();
+                }
+            } catch (error) {
+                alert('❌ Failed to bulk update collection status');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTDSRecords();
+            
+            // Tab change handlers
+            document.getElementById('gst-tab').addEventListener('click', () => loadGSTRecords());
+            document.getElementById('earnings-tab').addEventListener('click', () => loadCompanyEarnings());
+        });
+    </script>
+</body>
+</html>

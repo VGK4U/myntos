@@ -1,0 +1,24 @@
+# Mobile node_modules — app is already compiled to frontend/public/mobile/ by the watcher
+mobile/node_modules/
+mobile/android/
+mobile/.gradle/
+
+# Backend uploaded/stored files — served from object storage or local disk at runtime
+backend/uploads/
+backend/storage/
+backend/uploaded_files/
+
+# Test artifacts — never needed in production
+frontend/tests/
+frontend/playwright-report/
+backend/tests/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+.pytest_cache/
+
+# Dev / editor artifacts
+.local/
+**/.DS_Store

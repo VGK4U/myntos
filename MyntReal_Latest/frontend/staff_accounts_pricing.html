@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing Configuration - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .filter-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-row select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 250px; }
+        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .pricing-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; transition: all 0.2s; }
+        .pricing-card:hover { border-color: #6366f1; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); }
+        .pricing-card h3 { font-size: 16px; font-weight: 600; color: #1f2937; margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px; }
+        .pricing-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+        .pricing-row:last-child { border-bottom: none; }
+        .pricing-label { font-size: 13px; color: #6b7280; }
+        .pricing-value { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .pricing-value.rate { color: #059669; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-section { background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .form-section h4 { font-size: 14px; font-weight: 600; color: #374151; margin: 0 0 12px 0; }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        
+        .calculator-section { background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 1px solid #bae6fd; border-radius: 12px; padding: 20px; margin-top: 24px; }
+        .calculator-section h3 { font-size: 16px; font-weight: 600; color: #0369a1; margin: 0 0 16px 0; }
+        .calc-form { display: grid; grid-template-columns: repeat(3, 1fr) auto; gap: 12px; align-items: end; }
+        .calc-result { background: white; border-radius: 8px; padding: 16px; margin-top: 16px; display: none; }
+        .calc-result.active { display: block; }
+        .result-row { display: flex; justify-content: space-between; padding: 8px 0; }
+        .result-label { color: #6b7280; }
+        .result-value { font-weight: 600; color: #1f2937; }
+        .result-value.total { font-size: 18px; color: #059669; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-header">
+                <div><h1>Pricing Configuration</h1><p>Manage tax rates and pricing settings for each company</p></div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-cog me-2"></i>Company Pricing</span>
+                </div>
+                <div class="card-body">
+                    <div class="filter-row">
+                        <select id="filterCompany" onchange="loadPricing()">
+                            <option value="">Select a Company</option>
+                        </select>
+                    </div>
+                    
+                    <div id="loadingState" class="loading-spinner" style="display: none;"><div class="spinner"></div></div>
+                    
+                    <div id="pricingContent" style="display: none;">
+                        <div class="pricing-grid">
+                            <div class="pricing-card">
+                                <h3><i class="fas fa-percent text-success"></i>Tax Rates</h3>
+                                <div class="pricing-row">
+                                    <span class="pricing-label">Default CGST Rate</span>
+                                    <span class="pricing-value rate" id="cgstRate">0%</span>
+                                </div>
+                                <div class="pricing-row">
+                                    <span class="pricing-label">Default SGST Rate</span>
+                                    <span class="pricing-value rate" id="sgstRate">0%</span>
+                                </div>
+                                <div class="pricing-row">
+                                    <span class="pricing-label">Default IGST Rate</span>
+                                    <span class="pricing-value rate" id="igstRate">0%</span>
+                                </div>
+                                <div class="pricing-row">
+                                    <span class="pricing-label">TDS Rate</span>
+                                    <span class="pricing-value rate" id="tdsRate">0%</span>
+                                </div>
+                            </div>
+                            
+                            <div class="pricing-card">
+                                <h3><i class="fas fa-sliders-h text-primary"></i>Pricing Settings</h3>
+                                <div class="pricing-row">
+                                    <span class="pricing-label">Currency</span>
+                                    <span class="pricing-value" id="currency">INR</span>
+                                </div>
+                                <div class="pricing-row">
+                                    <span class="pricing-label">Decimal Places</span>
+                                    <span class="pricing-value" id="decimalPlaces">2</span>
+                                </div>
+                                <div class="pricing-row">
+                                    <span class="pricing-label">Rounding Method</span>
+                                    <span class="pricing-value" id="roundingMethod">-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="pricing-card">
+                                <h3><i class="fas fa-info-circle text-info"></i>Configuration Info</h3>
+                                <div class="pricing-row">
+                                    <span class="pricing-label">Config ID</span>
+                                    <span class="pricing-value" id="configId">-</span>
+                                </div>
+                                <div class="pricing-row">
+                                    <span class="pricing-label">Last Updated</span>
+                                    <span class="pricing-value" id="lastUpdated">-</span>
+                                </div>
+                                <div class="pricing-row">
+                                    <span class="pricing-label">Status</span>
+                                    <span class="pricing-value" id="status">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: right; margin-top: 20px;">
+                            <button class="btn-primary-custom" onclick="openEditModal()"><i class="fas fa-edit me-2"></i>Edit Configuration</button>
+                        </div>
+                    </div>
+                    
+                    <div id="emptyState" class="empty-state">
+                        <i class="fas fa-tags"></i>
+                        <h3>Select a Company</h3>
+                        <p>Choose a company from the dropdown to view and manage its pricing configuration</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="calculator-section" id="calculatorSection" style="display: none;">
+                <h3><i class="fas fa-calculator me-2"></i>Price Calculator</h3>
+                <div class="calc-form">
+                    <div class="form-group" style="margin: 0;">
+                        <label>Base Amount</label>
+                        <input type="number" id="calcBaseAmount" placeholder="Enter amount" step="0.01">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label>Quantity</label>
+                        <input type="number" id="calcQuantity" value="1" min="1">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label>Tax Type</label>
+                        <select id="calcTaxType">
+                            <option value="GST">GST (CGST + SGST)</option>
+                            <option value="IGST">IGST</option>
+                            <option value="NONE">No Tax</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary-custom" onclick="calculatePrice()"><i class="fas fa-calculator me-1"></i>Calculate</button>
+                </div>
+                <div class="calc-result" id="calcResult">
+                    <div class="result-row">
+                        <span class="result-label">Subtotal</span>
+                        <span class="result-value" id="resultSubtotal">₹0.00</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Tax Amount</span>
+                        <span class="result-value" id="resultTax">₹0.00</span>
+                    </div>
+                    <div class="result-row" style="border-top: 2px solid #e5e7eb; padding-top: 12px; margin-top: 8px;">
+                        <span class="result-label"><strong>Grand Total</strong></span>
+                        <span class="result-value total" id="resultTotal">₹0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit me-2"></i>Edit Pricing Configuration</h3>
+                <button class="modal-close" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="editConfigId">
+                    
+                    <div class="form-section">
+                        <h4><i class="fas fa-percent me-2"></i>Tax Rates</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Default CGST Rate (%)</label>
+                                <input type="number" id="editCgst" step="0.01" min="0" max="50">
+                            </div>
+                            <div class="form-group">
+                                <label>Default SGST Rate (%)</label>
+                                <input type="number" id="editSgst" step="0.01" min="0" max="50">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Default IGST Rate (%)</label>
+                                <input type="number" id="editIgst" step="0.01" min="0" max="50">
+                            </div>
+                            <div class="form-group">
+                                <label>TDS Rate (%)</label>
+                                <input type="number" id="editTds" step="0.01" min="0" max="50">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <h4><i class="fas fa-sliders-h me-2"></i>Pricing Settings</h4>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Currency</label>
+                                <select id="editCurrency">
+                                    <option value="INR">INR (Indian Rupee)</option>
+                                    <option value="USD">USD (US Dollar)</option>
+                                    <option value="EUR">EUR (Euro)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Decimal Places</label>
+                                <select id="editDecimals">
+                                    <option value="0">0</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Rounding Method</label>
+                            <select id="editRounding">
+                                <option value="ROUND">Round (Normal)</option>
+                                <option value="FLOOR">Floor (Round Down)</option>
+                                <option value="CEIL">Ceil (Round Up)</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="updatePricing()"><i class="fas fa-save me-1"></i>Save Changes</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let currentConfig = null;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('Pricing Configuration', 'fas fa-tags');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            await loadCompanies();
+        });
+        
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch(`${API_BASE}/companies`);
+                const data = await response.json();
+                if (data.success && data.companies) {
+                    const select = document.getElementById('filterCompany');
+                    data.companies.forEach(c => {
+                        select.innerHTML += `<option value="${c.id}">${c.company_name}</option>`;
+                    });
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading companies:', e);
+            }
+        }
+        
+        async function loadPricing() {
+            const companyId = document.getElementById('filterCompany').value;
+            const loadingState = document.getElementById('loadingState');
+            const pricingContent = document.getElementById('pricingContent');
+            const emptyState = document.getElementById('emptyState');
+            const calculatorSection = document.getElementById('calculatorSection');
+            
+            if (!companyId) {
+                pricingContent.style.display = 'none';
+                calculatorSection.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            loadingState.style.display = 'flex';
+            pricingContent.style.display = 'none';
+            emptyState.style.display = 'none';
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/pricing-config/${companyId}`);
+                const data = await response.json();
+                loadingState.style.display = 'none';
+                
+                if (data.success && data.config) {
+                    currentConfig = data.config;
+                    
+                    document.getElementById('cgstRate').textContent = `${currentConfig.default_cgst_rate || 0}%`;
+                    document.getElementById('sgstRate').textContent = `${currentConfig.default_sgst_rate || 0}%`;
+                    document.getElementById('igstRate').textContent = `${currentConfig.default_igst_rate || 0}%`;
+                    document.getElementById('tdsRate').textContent = `${currentConfig.tds_rate || 0}%`;
+                    document.getElementById('currency').textContent = currentConfig.currency || 'INR';
+                    document.getElementById('decimalPlaces').textContent = currentConfig.decimal_places || 2;
+                    document.getElementById('roundingMethod').textContent = currentConfig.rounding_method || 'ROUND';
+                    document.getElementById('configId').textContent = currentConfig.id;
+                    document.getElementById('lastUpdated').textContent = currentConfig.updated_at ? new Date(currentConfig.updated_at).toLocaleDateString() : '-';
+                    document.getElementById('status').textContent = currentConfig.is_active ? 'Active' : 'Inactive';
+                    
+                    pricingContent.style.display = 'block';
+                    calculatorSection.style.display = 'block';
+                } else {
+                    emptyState.innerHTML = `<i class="fas fa-exclamation-circle"></i><h3>No Configuration Found</h3><p>This company does not have a pricing configuration yet.</p>`;
+                    emptyState.style.display = 'block';
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading pricing:', e);
+                loadingState.style.display = 'none';
+                emptyState.innerHTML = `<i class="fas fa-exclamation-triangle"></i><h3>Error Loading Configuration</h3><p>Please try again later.</p>`;
+                emptyState.style.display = 'block';
+            }
+        }
+        
+        function openEditModal() {
+            if (!currentConfig) return;
+            
+            document.getElementById('editConfigId').value = currentConfig.id;
+            document.getElementById('editCgst').value = currentConfig.default_cgst_rate || 0;
+            document.getElementById('editSgst').value = currentConfig.default_sgst_rate || 0;
+            document.getElementById('editIgst').value = currentConfig.default_igst_rate || 0;
+            document.getElementById('editTds').value = currentConfig.tds_rate || 0;
+            document.getElementById('editCurrency').value = currentConfig.currency || 'INR';
+            document.getElementById('editDecimals').value = currentConfig.decimal_places || 2;
+            document.getElementById('editRounding').value = currentConfig.rounding_method || 'ROUND';
+            
+            document.getElementById('editModal').classList.add('active');
+        }
+        
+        async function updatePricing() {
+            const configId = document.getElementById('editConfigId').value;
+            
+            const updateData = {
+                default_cgst_rate: parseFloat(document.getElementById('editCgst').value) || 0,
+                default_sgst_rate: parseFloat(document.getElementById('editSgst').value) || 0,
+                default_igst_rate: parseFloat(document.getElementById('editIgst').value) || 0,
+                tds_rate: parseFloat(document.getElementById('editTds').value) || 0,
+                currency: document.getElementById('editCurrency').value,
+                decimal_places: parseInt(document.getElementById('editDecimals').value) || 2,
+                rounding_method: document.getElementById('editRounding').value
+            };
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/pricing-config/${configId}`, { method: 'PUT', body: JSON.stringify(updateData) });
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    closeModal('editModal');
+                    await loadPricing();
+                    alert('Pricing configuration updated successfully');
+                } else {
+                    alert(data.detail || data.message || 'Failed to update pricing');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error updating pricing:', e);
+                alert('Failed to update pricing configuration');
+            }
+        }
+        
+        function calculatePrice() {
+            if (!currentConfig) return;
+            
+            const baseAmount = parseFloat(document.getElementById('calcBaseAmount').value) || 0;
+            const quantity = parseInt(document.getElementById('calcQuantity').value) || 1;
+            const taxType = document.getElementById('calcTaxType').value;
+            
+            const subtotal = baseAmount * quantity;
+            let taxAmount = 0;
+            
+            if (taxType === 'GST') {
+                const cgst = (currentConfig.default_cgst_rate || 0) / 100;
+                const sgst = (currentConfig.default_sgst_rate || 0) / 100;
+                taxAmount = subtotal * (cgst + sgst);
+            } else if (taxType === 'IGST') {
+                const igst = (currentConfig.default_igst_rate || 0) / 100;
+                taxAmount = subtotal * igst;
+            }
+            
+            const grandTotal = subtotal + taxAmount;
+            const decimals = currentConfig.decimal_places || 2;
+            
+            document.getElementById('resultSubtotal').textContent = `₹${subtotal.toFixed(decimals)}`;
+            document.getElementById('resultTax').textContent = `₹${taxAmount.toFixed(decimals)}`;
+            document.getElementById('resultTotal').textContent = `₹${grandTotal.toFixed(decimals)}`;
+            document.getElementById('calcResult').classList.add('active');
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+    </script>
+</body>
+</html>

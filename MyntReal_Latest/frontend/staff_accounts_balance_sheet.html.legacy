@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balance Sheet Dashboard - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f3f4f6; 
+            min-height: 100vh;
+        }
+
+        .header-logo { height: 36px; width: auto; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        
+        .role-badge-supreme { background: #fef2f2; color: #dc2626; }
+        .role-badge-ea { background: #ede9fe; color: #7c3aed; }
+        .role-badge-default { background: #f3f4f6; color: #374151; }
+        
+        .content-area { padding: 24px; }
+        
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        
+        .filter-section {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #6b7280; }
+        .filter-group select, .filter-group input { 
+            padding: 8px 12px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 6px; 
+            font-size: 14px;
+            min-width: 150px;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .summary-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid;
+        }
+        
+        .summary-card.income { border-left-color: #10b981; }
+        .summary-card.expense { border-left-color: #ef4444; }
+        .summary-card.receivable { border-left-color: #3b82f6; }
+        .summary-card.payable { border-left-color: #f59e0b; }
+        .summary-card.stock { border-left-color: #8b5cf6; }
+        .summary-card.net { border-left-color: #059669; }
+        
+        .summary-card .icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            margin-bottom: 16px;
+        }
+        
+        .summary-card.income .icon { background: linear-gradient(135deg, #10b981, #059669); }
+        .summary-card.expense .icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .summary-card.receivable .icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .summary-card.payable .icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .summary-card.stock .icon { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+        .summary-card.net .icon { background: linear-gradient(135deg, #059669, #047857); }
+        
+        .summary-card .value { font-size: 28px; font-weight: 700; color: #1f2937; margin: 0; }
+        .summary-card .label { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .summary-card .change { font-size: 12px; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
+        .summary-card .change.positive { color: #10b981; }
+        .summary-card .change.negative { color: #ef4444; }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 20px;
+            font-weight: 600;
+            color: #1f2937;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-body { padding: 20px; }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+        
+        .table-container { overflow-x: auto; }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .data-table th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .data-table td {
+            padding: 14px 16px;
+            font-size: 14px;
+            color: #374151;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .data-table tr:hover { background: #f9fafb; }
+        
+        .amount { font-weight: 600; font-family: monospace; }
+        .amount.positive { color: #10b981; }
+        .amount.negative { color: #ef4444; }
+        
+        .badge-status {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .badge-approved { background: #d1fae5; color: #059669; }
+        .badge-pending { background: #fef3c7; color: #d97706; }
+        .badge-draft { background: #e5e7eb; color: #4b5563; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+        
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .empty-state h3 { font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+        .empty-state p { font-size: 14px; }
+        
+        .btn-primary-custom {
+            background: linear-gradient(135deg, #059669, #047857);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn-primary-custom:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+            color: white;
+        }
+        
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #059669;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        @media (max-width: 1024px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        
+        .alert-card {
+            background: white;
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-left: 4px solid;
+            margin-bottom: 8px;
+        }
+        
+        .alert-card.warning { border-left-color: #f59e0b; background: #fffbeb; }
+        .alert-card.danger { border-left-color: #ef4444; background: #fef2f2; }
+        .alert-card.info { border-left-color: #3b82f6; background: #eff6ff; }
+        
+        .alert-card i { font-size: 18px; }
+        .alert-card.warning i { color: #f59e0b; }
+        .alert-card.danger i { color: #ef4444; }
+        .alert-card.info i { color: #3b82f6; }
+        
+        .alert-card .content { flex: 1; }
+        .alert-card .title { font-weight: 600; font-size: 13px; color: #374151; }
+        .alert-card .desc { font-size: 12px; color: #6b7280; }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+
+        /* Tab Navigation */
+        .tab-nav-bar {
+            display: flex;
+            gap: 4px;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .tab-nav-btn {
+            padding: 9px 20px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-nav-btn:hover { background: #f3f4f6; color: #374151; }
+        .tab-nav-btn.active { background: linear-gradient(135deg, #059669, #047857); color: white; }
+
+        /* Consolidated Table */
+        .co-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .co-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1400px; }
+        .co-table th, .co-table td { padding: 10px 12px; border: 1px solid #e5e7eb; white-space: nowrap; }
+        .co-table thead tr.sec-header th {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: white;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+        }
+        .co-table thead tr.sec-header .th-company { background: #374151; }
+        .co-table thead tr.sec-header .th-sec-a { background: #1d4ed8; }
+        .co-table thead tr.sec-header .th-sec-b { background: #065f46; }
+        .co-table thead tr.sec-header .th-sec-c { background: #92400e; }
+        .co-table thead tr.col-header th {
+            background: #f9fafb;
+            font-size: 11px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            text-align: right;
+        }
+        .co-table thead tr.col-header th:first-child,
+        .co-table thead tr.col-header th:nth-child(2) { text-align: left; }
+        .co-table tbody td { font-size: 13px; color: #374151; }
+        .co-table tbody td.co-name { font-weight: 600; color: #1f2937; }
+        .co-table tbody td.co-period { color: #6b7280; font-size: 12px; }
+        .co-table tbody td.num { text-align: right; font-family: 'Courier New', monospace; }
+        .co-table tbody td.num.pos { color: #059669; font-weight: 600; }
+        .co-table tbody td.num.neg { color: #dc2626; font-weight: 600; }
+        .co-table tbody td.num.bal { font-weight: 700; }
+        .co-table tbody tr.totals-row { background: #eff6ff; font-weight: 700; }
+        .co-table tbody tr.totals-row td { border-top: 2px solid #bfdbfe; color: #1e40af; }
+        .co-table tbody tr:hover { background: #f9fafb; }
+        .co-table tbody tr.totals-row:hover { background: #dbeafe; }
+
+        .co-gst-note { font-size: 10px; color: #9ca3af; display: block; }
+
+        .co-filter-section {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .co-filter-section .filter-group select[multiple] {
+            min-width: 200px;
+            height: 80px;
+        }
+
+        /* ── Day-wise Comparison Table ─────────────────────────── */
+        .dw-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .dw-table { border-collapse: collapse; font-size: 12px; }
+        .dw-table th, .dw-table td { padding: 7px 11px; border: 1px solid #e5e7eb; white-space: nowrap; }
+
+        /* ── Fixed column widths (required so sticky left offsets are predictable) ── */
+        .dw-table th:nth-child(1), .dw-table td.dw-company-cell, .dw-table td.dw-all-co-cell { width: 115px; min-width: 115px; }
+        .dw-table th:nth-child(2), .dw-table td.dw-sec-cell    { width: 140px; min-width: 140px; }
+        .dw-table th:nth-child(3), .dw-table td.dw-metric      { width: 160px; min-width: 160px; }
+        .dw-table th:nth-child(4), .dw-table td.col-overall-td { width: 130px; min-width: 130px; }
+
+        /* ── Sticky frozen columns (first 4) ── */
+        .dw-table th:nth-child(1),
+        .dw-table td.dw-company-cell,
+        .dw-table td.dw-all-co-cell        { position: sticky; left: 0;     z-index: 3; }
+        .dw-table th:nth-child(2),
+        .dw-table td.dw-sec-cell,
+        .dw-table td.dw-co-overview-label  { position: sticky; left: 115px; z-index: 3; }
+        .dw-table th:nth-child(3),
+        .dw-table td.dw-metric             { position: sticky; left: 255px; z-index: 3; background: #fff; }
+        .dw-table th:nth-child(4),
+        .dw-table td.col-overall-td        { position: sticky; left: 415px; z-index: 2;
+                                             box-shadow: 3px 0 6px -2px rgba(0,0,0,0.18); }
+        /* Header cells must sit above body stickies when scrolling vertically */
+        .dw-table thead th   { z-index: 5; }
+        .dw-table thead th:nth-child(1) { z-index: 6; }
+
+        /* ── Column headers ── */
+        .dw-table thead th { background: #f3f4f6; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; }
+        .dw-table thead th.dw-th-left  { text-align: left; }
+        .dw-table thead th.col-overall-hdr { background: #fef3c7; color: #78350f; }
+        .dw-table thead th.col-day-hdr   { background: #374151; color: #fff; min-width: 100px; }
+        .dw-table thead th.col-delta-hdr { background: #6b7280; color: #fff; min-width: 85px; }
+
+        /* ── Body left-side cells ── */
+        .dw-table td.dw-company-cell {
+            background: #1e293b; color: #fff; font-weight: 700; font-size: 12px;
+            text-transform: uppercase; letter-spacing: 0.6px;
+            vertical-align: middle; text-align: center;
+        }
+        .dw-table td.dw-sec-cell {
+            font-size: 10px; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px; color: #fff; vertical-align: middle;
+            text-align: center; padding: 6px 8px;
+        }
+        .dw-table td.dw-sec-a { background: #1d4ed8; }
+        .dw-table td.dw-sec-b { background: #065f46; }
+        .dw-table td.dw-sec-c { background: #92400e; }
+        /* Overview-label: colspan=2 cell in the Company Overview row */
+        .dw-table td.dw-co-overview-label { background: #f0fdf4; min-width: 300px; width: 300px; }
+        .dw-table td.dw-metric  { font-size: 12px; color: #4b5563; }
+
+        /* ── Highlighted rows (yellow) ── */
+        .dw-table tr.dw-hl td { background: #fef9c3 !important; font-weight: 700; color: #1f2937; }
+        /* Preserve sticky-cell colours inside highlighted rows */
+        .dw-table tr.dw-hl td.dw-company-cell,
+        .dw-table tr.dw-hl td.dw-all-co-cell { background: inherit !important; }
+        .dw-table tr.dw-hl td.dw-sec-cell    { background: inherit !important; }
+        .dw-table tr.dw-hl td.dw-metric      { background: #fef9c3 !important; }
+        .dw-table tr.dw-hl td.col-overall-td { background: #fef9c3 !important; }
+
+        /* ── Numeric data cells ── */
+        .dw-table td.num { text-align: right; font-family: 'Courier New', monospace; font-size: 12px; }
+        .dw-table td.num.pos { color: #059669; }
+        .dw-table td.num.neg { color: #dc2626; }
+        .dw-table td.num.bal { font-weight: 700; }
+        .dw-table td.col-overall-td { background: #fffbeb; font-weight: 600; }
+        .dw-table td.delta-pos  { color: #059669; font-weight: 600; }
+        .dw-table td.delta-neg  { color: #dc2626; font-weight: 600; }
+        .dw-table td.delta-zero { color: #d1d5db; text-align: center; }
+
+        /* ── Hover — exclude company/section/all-co cells so their bg colour stays visible ── */
+        .dw-table tbody tr:hover td:not(.dw-company-cell):not(.dw-all-co-cell):not(.dw-sec-cell) { background: #f0f4f8; }
+        .dw-table tbody tr:hover td.dw-metric     { background: #e8edf2; }
+        .dw-table tbody tr:hover td.col-overall-td { background: #fef3c7; }
+        .dw-table tbody tr.dw-hl:hover td:not(.dw-company-cell):not(.dw-all-co-cell):not(.dw-sec-cell) { background: #fef08a !important; }
+        .dw-table tbody tr.dw-hl:hover td.col-overall-td { background: #fde68a !important; }
+
+        /* ── Company Overview rows ── */
+        .dw-table tr.dw-co-overview td { background: #f0fdf4; font-weight: 700; color: #065f46; border-top: 2px solid #bbf7d0; }
+        .dw-table tr.dw-co-overview td.dw-metric      { background: #f0fdf4; }
+        .dw-table tr.dw-co-overview td.col-overall-td { background: #d1fae5; }
+        .dw-table tr.dw-co-overview td.num  { color: #065f46; }
+        .dw-table tr.dw-co-overview td.delta-pos { color: #059669; }
+        .dw-table tr.dw-co-overview td.delta-neg { color: #dc2626; }
+        /* Hover on overview row — company cell stays coloured */
+        .dw-table tr.dw-co-overview:hover td:not(.dw-company-cell):not(.dw-all-co-cell) { background: #bbf7d0 !important; }
+        .dw-table tr.dw-co-overview:hover td.col-overall-td { background: #6ee7b7 !important; }
+
+        /* ── ALL COMPANIES rows ── */
+        .dw-table tr.dw-all-co-row td { background: #fafafa; }
+        .dw-table tr.dw-all-co-row td.dw-metric      { background: #fafafa; }
+        .dw-table tr.dw-all-co-row td.col-overall-td { background: #fffbeb; }
+        .dw-table td.dw-all-co-cell { background: #0f172a; color: #fff; font-weight: 800; font-size: 11px; letter-spacing: 0.8px; }
+        .dw-table tr.dw-all-co-row.dw-hl td:not(.dw-all-co-cell):not(.dw-sec-cell) { background: #fef9c3 !important; color: #1f2937; }
+        .dw-table tr.dw-all-co-row.dw-hl td.dw-all-co-cell { background: #0f172a !important; color: #fff; }
+        .dw-table tr.dw-all-co-row.dw-hl td.dw-sec-cell    { background: inherit !important; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-header">
+                <div>
+                    <h1>Balance Sheet Dashboard</h1>
+                    <p>Multi-period financial overview with income, expenses, and receivables/payables</p>
+                </div>
+                <div>
+                    <button class="btn-primary-custom" onclick="exportReport()">
+                        <i class="fas fa-download me-2"></i>Export Report
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="tab-nav-bar">
+                <button id="tabBtnDashboard" class="tab-nav-btn active" onclick="switchTab('dashboard')">
+                    <i class="fas fa-chart-pie me-2"></i>Dashboard
+                </button>
+                <button id="tabBtnConsolidated" class="tab-nav-btn" onclick="switchTab('consolidated')">
+                    <i class="fas fa-table me-2"></i>Consolidated Overview
+                </button>
+                <button id="tabBtnDaywise" class="tab-nav-btn" onclick="switchTab('daywise')">
+                    <i class="fas fa-calendar-week me-2"></i>Day-wise Comparison
+                </button>
+            </div>
+
+            <!-- Dashboard Tab Panel -->
+            <div id="tabPanelDashboard">
+
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>Company</label>
+                    <select id="filterCompany" onchange="loadBalanceSheet()">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                <div class="filter-group" id="periodGroup">
+                    <label>Period Type</label>
+                    <select id="filterPeriod" onchange="loadBalanceSheet()">
+                        <option value="" selected>As on Date (All Time)</option>
+                        <option value="DAILY">Daily</option>
+                        <option value="MONTHLY">Monthly</option>
+                        <option value="QUARTERLY">Quarterly</option>
+                        <option value="YEARLY">Yearly</option>
+                    </select>
+                </div>
+                <div class="filter-group" id="dateGroup" style="display:none;">
+                    <label>Date</label>
+                    <input type="date" id="filterDate" onchange="loadBalanceSheet()">
+                </div>
+                <div class="filter-group">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-outline-secondary" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <div id="loadingState" class="loading-spinner" style="display: none;">
+                <div class="spinner"></div>
+            </div>
+            
+            <div id="dashboardContent" style="display: none;">
+                <div class="summary-cards">
+                    <div class="summary-card income">
+                        <div class="icon"><i class="fas fa-arrow-down"></i></div>
+                        <p class="value" id="totalIncome">0.00</p>
+                        <p class="label">Total Income (Approved)</p>
+                        <div class="change positive" id="incomeChange">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>0% from last period</span>
+                        </div>
+                    </div>
+                    <div class="summary-card expense">
+                        <div class="icon"><i class="fas fa-arrow-up"></i></div>
+                        <p class="value" id="totalExpense">0.00</p>
+                        <p class="label">Total Expenses (Approved)</p>
+                        <div class="change negative" id="expenseChange">
+                            <i class="fas fa-arrow-up"></i>
+                            <span>0% from last period</span>
+                        </div>
+                    </div>
+                    <div class="summary-card receivable">
+                        <div class="icon"><i class="fas fa-hand-holding-usd"></i></div>
+                        <p class="value" id="totalReceivables">0.00</p>
+                        <p class="label">Total Receivables</p>
+                    </div>
+                    <div class="summary-card payable">
+                        <div class="icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                        <p class="value" id="totalPayables">0.00</p>
+                        <p class="label">Total Payables</p>
+                    </div>
+                    <div class="summary-card stock">
+                        <div class="icon"><i class="fas fa-boxes"></i></div>
+                        <p class="value" id="stockValuation">0.00</p>
+                        <p class="label">Stock Valuation</p>
+                    </div>
+                    <div class="summary-card net">
+                        <div class="icon"><i class="fas fa-balance-scale"></i></div>
+                        <p class="value" id="netPosition">0.00</p>
+                        <p class="label">Net Position</p>
+                    </div>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <span><i class="fas fa-chart-line me-2"></i>Income vs Expenses Trend</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="trendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span><i class="fas fa-exclamation-triangle me-2"></i>Alerts & Notifications</span>
+                        </div>
+                        <div class="card-body" id="alertsContainer">
+                            <div class="empty-state">
+                                <i class="fas fa-check-circle"></i>
+                                <h3>All Clear</h3>
+                                <p>No pending alerts at this time</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-header">
+                            <span><i class="fas fa-arrow-down me-2 text-success"></i>Income by Category</span>
+                            <a href="/staff/accounts/income-entries" class="btn btn-sm btn-outline-success">View All</a>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Category</th>
+                                            <th>Amount</th>
+                                            <th>Count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="incomeCategoryTable">
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <span><i class="fas fa-arrow-up me-2 text-danger"></i>Expenses by Category</span>
+                            <a href="/staff/accounts/expense-entries" class="btn btn-sm btn-outline-danger">View All</a>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Category</th>
+                                            <th>Amount</th>
+                                            <th>Count</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="expenseCategoryTable">
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-users me-2"></i>Party Ledger Summary</span>
+                        <div>
+                            <a href="/staff/accounts/vendors" class="btn btn-sm btn-outline-primary me-2">Vendors</a>
+                            <a href="/staff/accounts/fund-allocations" class="btn btn-sm btn-outline-primary">Fund Allocations</a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Party Name</th>
+                                        <th>Type</th>
+                                        <th>Opening Balance</th>
+                                        <th>Debits</th>
+                                        <th>Credits</th>
+                                        <th>Closing Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="partyLedgerTable">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div><!-- end tabPanelDashboard -->
+
+            <!-- Consolidated Overview Tab Panel -->
+            <div id="tabPanelConsolidated" style="display:none;">
+
+                <div class="co-filter-section">
+                    <div class="filter-group">
+                        <label>Companies</label>
+                        <select id="coFilterCompany" multiple onchange="loadConsolidated()" title="Hold Ctrl/Cmd to select multiple">
+                            <option value="">All Companies</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>View Mode</label>
+                        <select id="coViewMode" onchange="onCoViewModeChange()">
+                            <option value="OVERALL" selected>Overall (Aggregate)</option>
+                            <option value="MONTHLY">Monthly</option>
+                            <option value="QUARTERLY">Quarterly</option>
+                            <option value="YEARLY">Yearly</option>
+                            <option value="DAILY">Daily</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Date Range</label>
+                        <select id="coDatePreset" onchange="onCoDatePresetChange()">
+                            <option value="overall">Overall (All Time)</option>
+                            <option value="today">Today</option>
+                            <option value="yesterday">Yesterday</option>
+                            <option value="this_week">This Week</option>
+                            <option value="this_month">This Month</option>
+                            <option value="this_year" selected>This Year (Apr 1)</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" id="coDateFromGroup" style="display:none;">
+                        <label>From</label>
+                        <input type="date" id="coDateFrom" onchange="loadConsolidated()">
+                    </div>
+                    <div class="filter-group" id="coDateToGroup" style="display:none;">
+                        <label>To</label>
+                        <input type="date" id="coDateTo" onchange="loadConsolidated()">
+                    </div>
+                    <div class="filter-group">
+                        <label>Sort By</label>
+                        <select id="coSortBy" onchange="loadConsolidated()">
+                            <option value="company_name">Company Name</option>
+                            <option value="balance">Balance (High→Low)</option>
+                            <option value="income">Income (High→Low)</option>
+                            <option value="expense">Expense (High→Low)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-outline-secondary" onclick="loadConsolidated()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                    <div class="filter-group ms-auto">
+                        <label>&nbsp;</label>
+                        <button class="btn-primary-custom" onclick="exportConsolidated()">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                    </div>
+                </div>
+
+                <div id="coLoadingState" class="loading-spinner" style="display:none;">
+                    <div class="spinner"></div>
+                </div>
+
+                <div id="coContent">
+                    <div class="card">
+                        <div class="card-header">
+                            <span><i class="fas fa-table me-2"></i>Consolidated Financial Overview</span>
+                            <span id="coViewLabel" class="badge bg-secondary fs-6">Overall</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="co-table-wrap">
+                                <table class="co-table" id="coTable">
+                                    <thead>
+                                        <tr class="sec-header">
+                                            <th class="th-company" colspan="2">Company / Period</th>
+                                            <th class="th-sec-a" colspan="6">Section A &mdash; Overall Balances</th>
+                                            <th class="th-sec-b" colspan="6">Section B &mdash; Cash Flow</th>
+                                            <th class="th-sec-c" colspan="4">Section C &mdash; Liabilities &amp; Assets</th>
+                                        </tr>
+                                        <tr class="col-header">
+                                            <th>Company</th>
+                                            <th>Period</th>
+                                            <th>Opening</th>
+                                            <th>Expense</th>
+                                            <th>Income</th>
+                                            <th>Stock In<br><span class="co-gst-note">Taxable + GST</span></th>
+                                            <th>Stock Out<br><span class="co-gst-note">Taxable + GST</span></th>
+                                            <th>Balance A</th>
+                                            <th>Opening</th>
+                                            <th>Cash In</th>
+                                            <th>Cash Out</th>
+                                            <th>Bank In</th>
+                                            <th>Bank Out</th>
+                                            <th>Balance B</th>
+                                            <th>Opening</th>
+                                            <th>Yet to Receive</th>
+                                            <th>Yet to Pay</th>
+                                            <th>Balance C</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="coTableBody">
+                                        <tr><td colspan="18" class="text-center text-muted py-4">Select filters and click Refresh to load data.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- end tabPanelConsolidated -->
+
+            <!-- Day-wise Comparison Tab Panel -->
+            <div id="tabPanelDaywise" style="display:none;">
+                <div class="co-filter-section">
+                    <div class="filter-group">
+                        <label>Companies</label>
+                        <select id="dwFilterCompany" multiple onchange="loadDaywise()" title="Hold Ctrl/Cmd to select multiple">
+                            <option value="">All Companies</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Date Range</label>
+                        <select id="dwDatePreset" onchange="onDwDatePresetChange()">
+                            <option value="last10" selected>Last 10 Days</option>
+                            <option value="last7">Last 7 Days</option>
+                            <option value="today">Today</option>
+                            <option value="yesterday">Yesterday</option>
+                            <option value="this_week">This Week</option>
+                            <option value="this_month">This Month</option>
+                            <option value="this_year">This Year (Apr 1)</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <div class="filter-group" id="dwDateFromGroup" style="display:none;">
+                        <label>From</label>
+                        <input type="date" id="dwDateFrom" onchange="loadDaywise()">
+                    </div>
+                    <div class="filter-group" id="dwDateToGroup" style="display:none;">
+                        <label>To</label>
+                        <input type="date" id="dwDateTo" onchange="loadDaywise()">
+                    </div>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-outline-secondary" onclick="loadDaywise()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                    <div class="filter-group ms-auto">
+                        <label>&nbsp;</label>
+                        <button class="btn-primary-custom" onclick="exportDaywise()">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                    </div>
+                </div>
+
+                <div id="dwLoadingState" class="loading-spinner" style="display:none;">
+                    <div class="spinner"></div>
+                </div>
+
+                <div id="dwContent">
+                    <div class="card">
+                        <div class="card-header">
+                            <span><i class="fas fa-calendar-week me-2"></i>Day-wise Balance Comparison</span>
+                            <span id="dwRangeLabel" class="badge bg-secondary fs-6">Last 10 Days</span>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="dw-table-wrap">
+                                <table class="dw-table" id="dwTable">
+                                    <thead id="dwTableHead"></thead>
+                                    <tbody id="dwTableBody">
+                                        <tr><td colspan="20" class="text-center text-muted py-4">Select filters and click Refresh to load data.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- end tabPanelDaywise -->
+
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260502b"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        let trendChart = null;
+        const API_BASE = '/api/v1/staff/accounts';
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Balance Sheet Dashboard', 'fas fa-chart-pie');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            updateHeaderUserInfo();
+            
+            document.getElementById('filterDate').valueAsDate = new Date();
+            
+            await loadCompanies();
+            await loadBalanceSheet();
+        });
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const name = userData.full_name || 'Staff Member';
+            const role = userData.role_name || 'Employee';
+            const empId = userData.emp_code || userData.employee_code || '-';
+            
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            
+            document.getElementById('headerUserInitials').textContent = initials;
+            document.getElementById('headerUserName').textContent = name;
+            document.getElementById('headerUserEmpId').textContent = empId;
+            
+            const roleEl = document.getElementById('headerUserRole');
+            roleEl.textContent = role;
+            
+            if (['VGK Mentor', 'VGK4U Supreme', 'VGK4U'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-supreme';
+            } else if (['Executive Assistant', 'EA', 'Executive Admin'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-ea';
+            } else {
+                roleEl.className = 'user-info-role role-badge-default';
+            }
+        }
+        
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch(`${API_BASE}/companies`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const companies = data.companies || [];
+                    const select = document.getElementById('filterCompany');
+                    const coSelect = document.getElementById('coFilterCompany');
+                    const dwSelect = document.getElementById('dwFilterCompany');
+                    
+                    companies.forEach(company => {
+                        const name = company.company_name || company.name || 'Unknown';
+                        const opt1 = document.createElement('option');
+                        opt1.value = company.id;
+                        opt1.textContent = name;
+                        select.appendChild(opt1);
+
+                        const opt2 = document.createElement('option');
+                        opt2.value = company.id;
+                        opt2.textContent = name;
+                        coSelect.appendChild(opt2);
+
+                        const opt3 = document.createElement('option');
+                        opt3.value = company.id;
+                        opt3.textContent = name;
+                        dwSelect.appendChild(opt3);
+                    });
+                    
+                    select.value = '';
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading companies:', e);
+            }
+        }
+        
+        async function loadBalanceSheet() {
+            const companyId = document.getElementById('filterCompany').value;
+            const periodType = document.getElementById('filterPeriod').value;
+            const date = document.getElementById('filterDate').value;
+            
+            const dateGroup = document.getElementById('dateGroup');
+            if (dateGroup) dateGroup.style.display = periodType ? 'flex' : 'none';
+            
+            const useAggregate = !periodType || !companyId;
+            
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('dashboardContent').style.display = 'none';
+            
+            try {
+                let bsResponse, partyResponse;
+                
+                if (useAggregate) {
+                    const aggParams = new URLSearchParams();
+                    if (companyId) aggParams.append('company_id', companyId);
+                    [bsResponse, partyResponse] = await Promise.all([
+                        staffFetch(`${API_BASE}/balance-sheet/aggregate${aggParams.toString() ? '?' + aggParams : ''}`),
+                        staffFetch(`${API_BASE}/party-ledger/balances${companyId ? '?company_id=' + companyId : ''}`)
+                    ]);
+                } else {
+                    const params = new URLSearchParams({ period_type: periodType, period_date: date });
+                    [bsResponse, partyResponse] = await Promise.all([
+                        staffFetch(`${API_BASE}/balance-sheet/${companyId}?${params}`),
+                        staffFetch(`${API_BASE}/party-ledger/balances?company_id=${companyId}`)
+                    ]);
+                }
+                
+                if (bsResponse.ok) {
+                    const data = await bsResponse.json();
+                    
+                    let parties = data.party_balances || [];
+                    if (!parties.length && partyResponse && partyResponse.ok) {
+                        const partyData = await partyResponse.json();
+                        parties = (partyData.balances || []).map(b => ({
+                            party_name: b.party_name,
+                            party_type: b.party_type,
+                            opening_balance: 0,
+                            total_debits: parseFloat(b.total_debit || 0),
+                            total_credits: parseFloat(b.total_credit || 0),
+                            closing_balance: parseFloat(b.balance || 0)
+                        }));
+                    } else {
+                        parties = parties.map(b => ({
+                            party_name: b.party_name,
+                            party_type: b.party_type,
+                            opening_balance: 0,
+                            total_debits: parseFloat(b.total_debit || 0),
+                            total_credits: parseFloat(b.total_credit || 0),
+                            closing_balance: parseFloat(b.balance || 0)
+                        }));
+                    }
+                    
+                    renderDashboard(data, parties);
+                } else { renderEmptyDashboard(); }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading balance sheet:', e);
+                renderEmptyDashboard();
+            } finally {
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+            }
+        }
+        
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-IN', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(amount || 0);
+        }
+        
+        function renderDashboard(data, parties = []) {
+            const summary = data.summary || data;
+            document.getElementById('totalIncome').textContent = formatCurrency(summary.total_income);
+            document.getElementById('totalExpense').textContent = formatCurrency(summary.total_expense);
+            document.getElementById('totalReceivables').textContent = formatCurrency(summary.total_receivables);
+            document.getElementById('totalPayables').textContent = formatCurrency(summary.total_payables);
+            document.getElementById('stockValuation').textContent = formatCurrency(summary.total_stock_value);
+            document.getElementById('netPosition').textContent = formatCurrency(summary.net_balance);
+            
+            if (data.trend_data && data.trend_data.length > 1) {
+                const latest = parseFloat(data.trend_data[0]?.total_income || 0);
+                const previous = parseFloat(data.trend_data[1]?.total_income || 0);
+                const incomeChange = previous > 0 ? ((latest - previous) / previous) * 100 : 0;
+                updateIncomeChange(incomeChange);
+                
+                const latestExp = parseFloat(data.trend_data[0]?.total_expense || 0);
+                const prevExp = parseFloat(data.trend_data[1]?.total_expense || 0);
+                const expenseChange = prevExp > 0 ? ((latestExp - prevExp) / prevExp) * 100 : 0;
+                updateExpenseChange(expenseChange);
+            }
+            
+            renderAlerts(data.alerts || []);
+            renderIncomeCategories(summary.income_by_source || {});
+            renderExpenseCategories(summary.expense_by_category || {});
+            renderPartyLedger(parties);
+            renderTrendChart(data.trend_data || []);
+        }
+        
+        function updateIncomeChange(change) {
+            const el = document.getElementById('incomeChange');
+            const pct = Math.abs(change || 0).toFixed(1);
+            const isPositive = (change || 0) >= 0;
+            el.className = `change ${isPositive ? 'positive' : 'negative'}`;
+            el.innerHTML = `<i class="fas fa-arrow-${isPositive ? 'up' : 'down'}"></i><span>${pct}% from last period</span>`;
+        }
+        
+        function updateExpenseChange(change) {
+            const el = document.getElementById('expenseChange');
+            const pct = Math.abs(change || 0).toFixed(1);
+            const isNegative = (change || 0) >= 0;
+            el.className = `change ${isNegative ? 'negative' : 'positive'}`;
+            el.innerHTML = `<i class="fas fa-arrow-${isNegative ? 'up' : 'down'}"></i><span>${pct}% from last period</span>`;
+        }
+        
+        function renderAlerts(alerts) {
+            const container = document.getElementById('alertsContainer');
+            
+            if (!alerts.length) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>All Clear</h3>
+                        <p>No pending alerts at this time</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = alerts.map(alert => `
+                <div class="alert-card ${alert.severity || 'info'}">
+                    <i class="fas ${getAlertIcon(alert.type)}"></i>
+                    <div class="content">
+                        <div class="title">${alert.title}</div>
+                        <div class="desc">${alert.message}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function getAlertIcon(type) {
+            const icons = {
+                'PENDING_APPROVAL': 'fa-clock',
+                'LOW_BALANCE': 'fa-exclamation-triangle',
+                'OVERDUE': 'fa-calendar-times',
+                'HIGH_EXPENSE': 'fa-chart-line'
+            };
+            return icons[type] || 'fa-info-circle';
+        }
+        
+        function renderIncomeCategories(categories) {
+            const tbody = document.getElementById('incomeCategoryTable');
+            
+            if (!categories.length) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No income data for this period</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = categories.map(cat => `
+                <tr>
+                    <td>${cat.category_name}</td>
+                    <td class="amount positive">${formatCurrency(cat.total_amount)}</td>
+                    <td>${cat.entry_count}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function renderExpenseCategories(categories) {
+            const tbody = document.getElementById('expenseCategoryTable');
+            
+            if (!categories.length) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">No expense data for this period</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = categories.map(cat => `
+                <tr>
+                    <td>${cat.category_name}</td>
+                    <td class="amount negative">${formatCurrency(cat.total_amount)}</td>
+                    <td>${cat.entry_count}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function renderPartyLedger(parties) {
+            const tbody = document.getElementById('partyLedgerTable');
+            
+            if (!parties.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No party ledger data available</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = parties.slice(0, 10).map(party => `
+                <tr>
+                    <td>${party.party_name}</td>
+                    <td><span class="badge-status ${party.party_type === 'VENDOR' ? 'badge-pending' : 'badge-approved'}">${party.party_type}</span></td>
+                    <td class="amount">${formatCurrency(party.opening_balance)}</td>
+                    <td class="amount">${formatCurrency(party.total_debits)}</td>
+                    <td class="amount">${formatCurrency(party.total_credits)}</td>
+                    <td class="amount ${party.closing_balance >= 0 ? 'positive' : 'negative'}">${formatCurrency(party.closing_balance)}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function renderTrendChart(trendData) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (trendChart) {
+                trendChart.destroy();
+            }
+            
+            const labels = trendData.labels || ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+            const incomeData = trendData.income || [0, 0, 0, 0];
+            const expenseData = trendData.expenses || [0, 0, 0, 0];
+            
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: incomeData,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Expenses',
+                            data: expenseData,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderEmptyDashboard() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('dashboardContent').style.display = 'block';
+            
+            document.getElementById('totalIncome').textContent = '0.00';
+            document.getElementById('totalExpense').textContent = '0.00';
+            document.getElementById('totalReceivables').textContent = '0.00';
+            document.getElementById('totalPayables').textContent = '0.00';
+            document.getElementById('stockValuation').textContent = '0.00';
+            document.getElementById('netPosition').textContent = '0.00';
+            
+            document.getElementById('incomeCategoryTable').innerHTML = '<tr><td colspan="3" class="text-center text-muted">No data available</td></tr>';
+            document.getElementById('expenseCategoryTable').innerHTML = '<tr><td colspan="3" class="text-center text-muted">No data available</td></tr>';
+            document.getElementById('partyLedgerTable').innerHTML = '<tr><td colspan="6" class="text-center text-muted">No data available</td></tr>';
+            
+            renderTrendChart({});
+        }
+        
+        function refreshData() {
+            loadBalanceSheet();
+        }
+        
+        function exportReport() {
+            const token = localStorage.getItem('staff_token');
+            const companyId = document.getElementById('filterCompany').value;
+            const periodType = document.getElementById('filterPeriod').value;
+            const date = document.getElementById('filterDate').value;
+            
+            const params = new URLSearchParams({
+                period_type: periodType,
+                date: date,
+                format: 'pdf'
+            });
+            
+            if (companyId) params.append('company_id', companyId);
+            
+            window.open(`${API_BASE}/balance-sheet/export?${params}&token=${token}`, '_blank');
+        }
+
+        // ─── Tab Switching ────────────────────────────────────────────────────
+        function switchTab(tab) {
+            document.getElementById('tabPanelDashboard').style.display = tab === 'dashboard' ? '' : 'none';
+            document.getElementById('tabPanelConsolidated').style.display = tab === 'consolidated' ? '' : 'none';
+            document.getElementById('tabPanelDaywise').style.display = tab === 'daywise' ? '' : 'none';
+            document.getElementById('tabBtnDashboard').classList.toggle('active', tab === 'dashboard');
+            document.getElementById('tabBtnConsolidated').classList.toggle('active', tab === 'consolidated');
+            document.getElementById('tabBtnDaywise').classList.toggle('active', tab === 'daywise');
+            if (tab === 'consolidated' && document.getElementById('coTableBody').textContent.includes('Select filters')) {
+                loadConsolidated();
+            }
+            if (tab === 'daywise' && document.getElementById('dwTableBody').textContent.includes('Select filters')) {
+                loadDaywise();
+            }
+        }
+
+        // ─── Consolidated Overview ────────────────────────────────────────────
+        function onCoViewModeChange() {
+            const mode = document.getElementById('coViewMode').value;
+            const label = document.getElementById('coViewLabel');
+            const labels = { OVERALL: 'Overall', MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', YEARLY: 'Yearly', DAILY: 'Daily' };
+            if (label) label.textContent = labels[mode] || mode;
+            loadConsolidated();
+        }
+
+        function onCoDatePresetChange() {
+            const preset = document.getElementById('coDatePreset').value;
+            const isCustom = preset === 'custom';
+            document.getElementById('coDateFromGroup').style.display = isCustom ? '' : 'none';
+            document.getElementById('coDateToGroup').style.display = isCustom ? '' : 'none';
+            if (isCustom && !document.getElementById('coDateFrom').value) {
+                const { dateFrom, dateTo } = getCoDateRange();
+                document.getElementById('coDateFrom').value = dateFrom || '';
+                document.getElementById('coDateTo').value = dateTo || '';
+            }
+            loadConsolidated();
+        }
+
+        function getCoDateRange() {
+            const preset = document.getElementById('coDatePreset').value;
+            const today = new Date();
+            const fmt = d => d.toISOString().slice(0, 10);
+
+            if (preset === 'overall') return { dateFrom: '', dateTo: '' };
+
+            if (preset === 'today') {
+                const s = fmt(today);
+                return { dateFrom: s, dateTo: s };
+            }
+            if (preset === 'yesterday') {
+                const y = new Date(today); y.setDate(y.getDate() - 1);
+                const s = fmt(y);
+                return { dateFrom: s, dateTo: s };
+            }
+            if (preset === 'this_week') {
+                const mon = new Date(today);
+                const day = mon.getDay() || 7;           // 1=Mon … 7=Sun
+                mon.setDate(mon.getDate() - (day - 1));  // back to Monday
+                return { dateFrom: fmt(mon), dateTo: fmt(today) };
+            }
+            if (preset === 'this_month') {
+                const from = new Date(today.getFullYear(), today.getMonth(), 1);
+                return { dateFrom: fmt(from), dateTo: fmt(today) };
+            }
+            if (preset === 'this_year') {
+                // Indian Financial Year: April 1 → March 31
+                const m = today.getMonth(); // 0=Jan … 3=Apr
+                const yr = m >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+                const from = new Date(yr, 3, 1);         // April 1
+                return { dateFrom: fmt(from), dateTo: fmt(today) };
+            }
+            if (preset === 'custom') {
+                return {
+                    dateFrom: document.getElementById('coDateFrom').value,
+                    dateTo: document.getElementById('coDateTo').value
+                };
+            }
+            return { dateFrom: '', dateTo: '' };
+        }
+
+        async function loadConsolidated() {
+            const viewMode = document.getElementById('coViewMode').value;
+            const { dateFrom, dateTo } = getCoDateRange();
+            const sortBy = document.getElementById('coSortBy').value;
+            
+            const coSelect = document.getElementById('coFilterCompany');
+            const selectedOptions = Array.from(coSelect.selectedOptions).map(o => o.value).filter(v => v);
+
+            const params = new URLSearchParams({ period_type: viewMode, sort_by: sortBy });
+            selectedOptions.forEach(id => params.append('company_id', id));
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+
+            document.getElementById('coLoadingState').style.display = 'flex';
+            document.getElementById('coContent').style.opacity = '0.4';
+
+            try {
+                const resp = await staffFetch(`${API_BASE}/consolidated-overview?${params}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    renderConsolidatedTable(data);
+                } else {
+                    document.getElementById('coTableBody').innerHTML =
+                        '<tr><td colspan="18" class="text-center text-danger py-4">Failed to load data. Please try again.</td></tr>';
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Consolidated overview error:', e);
+                document.getElementById('coTableBody').innerHTML =
+                    '<tr><td colspan="18" class="text-center text-danger py-4">Error loading data.</td></tr>';
+            } finally {
+                document.getElementById('coLoadingState').style.display = 'none';
+                document.getElementById('coContent').style.opacity = '1';
+            }
+        }
+
+        function coFmt(val) {
+            return new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val || 0);
+        }
+
+        function coNumTd(val, extraClass = '') {
+            const v = parseFloat(val || 0);
+            const cls = v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+            return `<td class="num ${cls} ${extraClass}">${coFmt(v)}</td>`;
+        }
+
+        function coBalTd(val) {
+            return coNumTd(val, 'bal');
+        }
+
+        function coStockTd(taxable, gst) {
+            const t = parseFloat(taxable || 0), g = parseFloat(gst || 0);
+            return `<td class="num">${coFmt(t)}<span class="co-gst-note">GST: ${coFmt(g)}</span></td>`;
+        }
+
+        function coRowHtml(row, isTotals = false) {
+            const a = row.section_a || {};
+            const b = row.section_b || {};
+            const c = row.section_c || {};
+            const trClass = isTotals ? 'totals-row' : '';
+            const nameCell = isTotals
+                ? `<td class="co-name" colspan="2"><i class="fas fa-sigma me-1"></i>Total — All Companies</td>`
+                : `<td class="co-name">${row.company_name || ''}</td><td class="co-period">${row.period_label || ''}</td>`;
+            return `<tr class="${trClass}">
+                ${nameCell}
+                ${coNumTd(a.opening)}
+                ${coNumTd(a.expense)}
+                ${coNumTd(a.income)}
+                ${coStockTd(a.stock_in_taxable, a.stock_in_gst)}
+                ${coStockTd(a.stock_out_taxable, a.stock_out_gst)}
+                ${coBalTd(a.balance)}
+                ${coNumTd(b.opening)}
+                ${coNumTd(b.cash_in)}
+                ${coNumTd(b.cash_out)}
+                ${coNumTd(b.bank_in)}
+                ${coNumTd(b.bank_out)}
+                ${coBalTd(b.balance)}
+                ${coNumTd(c.opening)}
+                ${coNumTd(c.yet_to_receive)}
+                ${coNumTd(c.yet_to_pay)}
+                ${coBalTd(c.balance)}
+            </tr>`;
+        }
+
+        function renderConsolidatedTable(data) {
+            const rows = data.rows || [];
+            const totals = data.totals || {};
+            const tbody = document.getElementById('coTableBody');
+
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="18" class="text-center text-muted py-4">No data found for the selected filters.</td></tr>';
+                return;
+            }
+
+            const totalsHtml = coRowHtml({ section_a: totals.section_a, section_b: totals.section_b, section_c: totals.section_c }, true);
+            const rowsHtml = rows.map(r => coRowHtml(r)).join('');
+            tbody.innerHTML = totalsHtml + rowsHtml;
+        }
+
+        // ─── Day-wise Comparison ──────────────────────────────────────────────
+
+        const DW_SECTIONS = [
+            {
+                key: 'section_a', label: 'Section A — Overall Balances', cls: 'dw-sec-a',
+                metrics: [
+                    { key: 'opening',   label: 'Opening',           hl: true  },
+                    { key: 'expense',   label: 'Expense',           hl: false },
+                    { key: 'income',    label: 'Income',            hl: false },
+                    { key: 'stock_in',  label: 'Stock In (Purchase)', hl: false },
+                    { key: 'stock_out', label: 'Stock Out (Sale)',  hl: false },
+                    { key: 'balance',   label: 'Balance',           hl: true  },
+                ]
+            },
+            {
+                key: 'section_b', label: 'Section B — Cash Flow', cls: 'dw-sec-b',
+                metrics: [
+                    { key: 'opening',  label: 'Opening',  hl: true  },
+                    { key: 'cash_in',  label: 'Cash In',  hl: false },
+                    { key: 'cash_out', label: 'Cash Out', hl: false },
+                    { key: 'bank_in',  label: 'Bank In',  hl: false },
+                    { key: 'bank_out', label: 'Bank Out', hl: false },
+                    { key: 'balance',  label: 'Balance',  hl: true  },
+                ]
+            },
+            {
+                key: 'section_c', label: 'Section C — Liabilities & Assets', cls: 'dw-sec-c',
+                metrics: [
+                    { key: 'opening',        label: 'Opening',        hl: true  },
+                    { key: 'yet_to_receive', label: 'Yet to Receive', hl: false },
+                    { key: 'yet_to_pay',     label: 'Yet to Pay',     hl: false },
+                    { key: 'balance',        label: 'Balance',        hl: true  },
+                ]
+            }
+        ];
+
+        const DW_TOTAL_METRICS = DW_SECTIONS.reduce((s, sec) => s + sec.metrics.length, 0); // 16
+        // DW_TOTAL_METRICS + 1 (overview row) rows per company block
+        const DW_ROWS_PER_CO  = DW_TOTAL_METRICS + 1;
+
+        // Distinct colors per company (bg, border)
+        const DW_CO_PALETTE = [
+            { bg: '#1e3a8a', text: '#bfdbfe' }, // Deep Blue
+            { bg: '#6b21a8', text: '#e9d5ff' }, // Purple
+            { bg: '#9d174d', text: '#fce7f3' }, // Crimson
+            { bg: '#065f46', text: '#a7f3d0' }, // Dark Green
+            { bg: '#92400e', text: '#fde68a' }, // Amber
+            { bg: '#1e293b', text: '#cbd5e1' }, // Slate
+            { bg: '#1e3a5f', text: '#bae6fd' }, // Steel Blue
+            { bg: '#4c1d95', text: '#ddd6fe' }, // Violet
+        ];
+
+        function dwGetVal(sectionData, metricKey) {
+            if (!sectionData) return 0;
+            if (metricKey === 'stock_in')
+                return parseFloat(sectionData.stock_in_taxable || 0) + parseFloat(sectionData.stock_in_gst || 0);
+            if (metricKey === 'stock_out')
+                return parseFloat(sectionData.stock_out_taxable || 0) + parseFloat(sectionData.stock_out_gst || 0);
+            return parseFloat(sectionData[metricKey] || 0);
+        }
+
+        // Sum a metric across all companies for a given day
+        function dwAggDay(allCoDailyMap, dt, secKey, mKey) {
+            return Object.values(allCoDailyMap).reduce((sum, cdm) => {
+                const row = (cdm[dt] || {});
+                return sum + dwGetVal(row[secKey], mKey);
+            }, 0);
+        }
+
+        function getDwDateRange() {
+            const preset = document.getElementById('dwDatePreset').value;
+            const today = new Date();
+            const fmt = d => d.toISOString().slice(0, 10);
+            const daysAgo = n => { const d = new Date(today); d.setDate(d.getDate() - n); return fmt(d); };
+
+            if (preset === 'today')     { const s = fmt(today); return { dateFrom: s, dateTo: s }; }
+            if (preset === 'yesterday') { const s = daysAgo(1); return { dateFrom: s, dateTo: s }; }
+            if (preset === 'last7')  return { dateFrom: daysAgo(6),  dateTo: fmt(today) };
+            if (preset === 'last10') return { dateFrom: daysAgo(9),  dateTo: fmt(today) };
+            if (preset === 'this_week') {
+                const mon = new Date(today);
+                const day = mon.getDay() || 7;
+                mon.setDate(mon.getDate() - (day - 1));
+                return { dateFrom: fmt(mon), dateTo: fmt(today) };
+            }
+            if (preset === 'this_month') {
+                return { dateFrom: fmt(new Date(today.getFullYear(), today.getMonth(), 1)), dateTo: fmt(today) };
+            }
+            if (preset === 'this_year') {
+                const m = today.getMonth();
+                const yr = m >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+                return { dateFrom: fmt(new Date(yr, 3, 1)), dateTo: fmt(today) };
+            }
+            if (preset === 'custom') {
+                return {
+                    dateFrom: document.getElementById('dwDateFrom').value,
+                    dateTo:   document.getElementById('dwDateTo').value
+                };
+            }
+            return { dateFrom: daysAgo(9), dateTo: fmt(today) };
+        }
+
+        function onDwDatePresetChange() {
+            const isCustom = document.getElementById('dwDatePreset').value === 'custom';
+            document.getElementById('dwDateFromGroup').style.display = isCustom ? '' : 'none';
+            document.getElementById('dwDateToGroup').style.display   = isCustom ? '' : 'none';
+            if (isCustom && !document.getElementById('dwDateFrom').value) {
+                const { dateFrom, dateTo } = getDwDateRange();
+                document.getElementById('dwDateFrom').value = dateFrom || '';
+                document.getElementById('dwDateTo').value   = dateTo  || '';
+            }
+            loadDaywise();
+        }
+
+        async function loadDaywise() {
+            const { dateFrom, dateTo } = getDwDateRange();
+            const dwSel = document.getElementById('dwFilterCompany');
+            const selCos = Array.from(dwSel.selectedOptions).map(o => o.value).filter(v => v);
+
+            // For OVERALL column: same date range
+            const opParams = new URLSearchParams({ period_type: 'OVERALL' });
+            if (dateFrom) opParams.append('date_from', dateFrom);
+            if (dateTo)   opParams.append('date_to',   dateTo);
+            selCos.forEach(id => opParams.append('company_id', id));
+
+            // For DAILY columns: fetch 1 extra day before range so first column gets a comparison
+            const extFrom = dateFrom
+                ? (() => { const d = new Date(dateFrom); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); })()
+                : '';
+            const dayParams = new URLSearchParams({ period_type: 'DAILY' });
+            if (extFrom) dayParams.append('date_from', extFrom);
+            if (dateTo)  dayParams.append('date_to',   dateTo);
+            selCos.forEach(id => dayParams.append('company_id', id));
+
+            // Update label badge
+            const presetLabels = {
+                last10: 'Last 10 Days', last7: 'Last 7 Days', today: 'Today',
+                yesterday: 'Yesterday', this_week: 'This Week', this_month: 'This Month',
+                this_year: 'This Year (Apr 1)', custom: `${dateFrom} → ${dateTo}`
+            };
+            const lbl = document.getElementById('dwRangeLabel');
+            if (lbl) lbl.textContent = presetLabels[document.getElementById('dwDatePreset').value] || 'Custom';
+
+            document.getElementById('dwLoadingState').style.display = 'flex';
+            document.getElementById('dwContent').style.opacity = '0.4';
+
+            try {
+                const [opResp, dayResp] = await Promise.all([
+                    staffFetch(`${API_BASE}/consolidated-overview?${opParams}`),
+                    staffFetch(`${API_BASE}/consolidated-overview?${dayParams}`)
+                ]);
+                if (opResp.ok && dayResp.ok) {
+                    const [opData, dayData] = await Promise.all([opResp.json(), dayResp.json()]);
+                    renderDaywiseTable(opData, dayData, dateFrom, dateTo);
+                } else {
+                    document.getElementById('dwTableBody').innerHTML =
+                        '<tr><td colspan="20" class="text-center text-danger py-4">Failed to load data. Please try again.</td></tr>';
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Day-wise comparison error:', e);
+                document.getElementById('dwTableBody').innerHTML =
+                    '<tr><td colspan="20" class="text-center text-danger py-4">Error loading data.</td></tr>';
+            } finally {
+                document.getElementById('dwLoadingState').style.display = 'none';
+                document.getElementById('dwContent').style.opacity = '1';
+            }
+        }
+
+        function renderDaywiseTable(overallData, dailyData, dateFrom, dateTo) {
+            const overallRows  = overallData.rows   || [];
+            const overallTotals = overallData.totals || {};
+            const dailyRows    = dailyData.rows     || [];
+
+            // Build lookup: company_name → { date_string → row }
+            const dailyMap = {};
+            dailyRows.forEach(r => {
+                if (!dailyMap[r.company_name]) dailyMap[r.company_name] = {};
+                dailyMap[r.company_name][r._period_date] = r;
+            });
+
+            // ── Generate the FULL date range from dateFrom→dateTo (so we always show all N days) ──
+            let computeDatesAsc = []; // ascending: oldest first — used for delta computation
+            if (dateFrom && dateTo) {
+                let cur = new Date(dateFrom + 'T00:00:00');
+                const end = new Date(dateTo + 'T00:00:00');
+                while (cur <= end) {
+                    computeDatesAsc.push(cur.toISOString().slice(0, 10));
+                    cur.setDate(cur.getDate() + 1);
+                }
+            } else {
+                // Fallback: use dates from API response
+                computeDatesAsc = [...new Set(dailyRows.map(r => r._period_date))].sort();
+            }
+
+            // prevDayDate = the extra day fetched before the range (for first-day delta)
+            // It's the day before dateFrom; we check if it exists in API data
+            const prevDayDate = dateFrom
+                ? (() => { const d = new Date(dateFrom + 'T00:00:00'); d.setDate(d.getDate()-1); return d.toISOString().slice(0,10); })()
+                : null;
+
+            // displayDates = REVERSED (newest first) for column headers and output
+            const displayDates = [...computeDatesAsc].reverse();
+
+            // Companies: union of overall + daily
+            const overallMap = {};
+            overallRows.forEach(r => { overallMap[r.company_name] = r; });
+            const allCompanies = [...new Set([
+                ...overallRows.map(r => r.company_name),
+                ...Object.keys(dailyMap)
+            ])].sort();
+
+            if (!allCompanies.length) {
+                document.getElementById('dwTableBody').innerHTML =
+                    '<tr><td colspan="20" class="text-center text-muted py-4">No data found for the selected filters.</td></tr>';
+                return;
+            }
+
+            const totalCols = 3 + 1 + displayDates.length * 2; // Company+Section+Metric + Overall + (Day+Delta)×N
+
+            // ── Build header (newest date first) ──
+            const fmtDate = dateStr => {
+                const d = new Date(dateStr + 'T00:00:00');
+                return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+            };
+            let hdr = `<tr>
+                <th class="dw-th-left">Company</th>
+                <th class="dw-th-left">Section</th>
+                <th class="dw-th-left">Metric</th>
+                <th class="col-overall-hdr">Overall Balance<br><span style="font-weight:400;font-size:10px;">(period aggregate)</span></th>`;
+            displayDates.forEach(dt => {
+                hdr += `<th class="col-day-hdr">${fmtDate(dt)}</th>`;
+                hdr += `<th class="col-delta-hdr">vs Prev</th>`;
+            });
+            hdr += `</tr>`;
+            document.getElementById('dwTableHead').innerHTML = hdr;
+
+            // ── Shared helpers ──
+            const dwFmt = v => new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v || 0);
+
+            function numTd(val, isBal, extraCls = '') {
+                const v = parseFloat(val || 0);
+                const cls = v > 0 ? 'pos' : v < 0 ? 'neg' : '';
+                return `<td class="num ${cls}${isBal ? ' bal' : ''} ${extraCls}">${dwFmt(v)}</td>`;
+            }
+            function deltaTd(delta, extraCls = '') {
+                if (delta === null) return `<td class="num delta-zero ${extraCls}">—</td>`;
+                const v = parseFloat(delta);
+                if (Math.abs(v) < 0.005) return `<td class="num delta-zero ${extraCls}">—</td>`;
+                const cls = v > 0 ? 'delta-pos' : 'delta-neg';
+                return `<td class="num ${cls} ${extraCls}">${v > 0 ? '+' : ''}${dwFmt(v)}</td>`;
+            }
+
+            // Returns the "net balance" (Bal A + Bal B) for a section snapshot
+            function coNetBal(secSnap) {
+                const a = (secSnap.section_a || {}); const b = (secSnap.section_b || {});
+                return parseFloat(a.balance || 0) + parseFloat(b.balance || 0);
+            }
+
+            // ── Helper: compute day-column TDs in ascending order, then reverse for newest-first display ──
+            function buildDayColsAscThenReverse(getValForDate, getPrevDayVal, isBal) {
+                // Compute (dayTd, deltaTd) in ascending order using computeDatesAsc
+                const pairs = [];
+                let prevVal = prevDayDate ? getPrevDayVal(prevDayDate) : null;
+                computeDatesAsc.forEach(dt => {
+                    const dayVal = getValForDate(dt);
+                    const delta  = prevVal !== null ? dayVal - prevVal : null;
+                    pairs.push(numTd(dayVal, isBal) + deltaTd(delta));
+                    prevVal = dayVal;
+                });
+                // Reverse so newest date is leftmost column
+                return pairs.reverse().join('');
+            }
+
+            // ── Helper: render one company block (or "ALL COMPANIES") ──
+            function renderCompanyBlock(cn, overallRow, compDailyMap, colorStyle, isAllCo) {
+                let out = '';
+                const coClass  = isAllCo ? 'dw-all-co-cell' : 'dw-company-cell';
+                const rowClass = isAllCo ? 'dw-all-co-row'  : '';
+                const rowSpan  = DW_ROWS_PER_CO; // 17 rows = 1 overview + 16 metrics
+
+                let rowIdx = 0;
+
+                // ── Row 0: Company Overview (Bal A + Bal B net position) ──
+                {
+                    const oA  = parseFloat((overallRow.section_a || {}).balance || 0);
+                    const oB  = parseFloat((overallRow.section_b || {}).balance || 0);
+                    const oNet = oA + oB;
+
+                    let tr = `<tr class="dw-co-overview ${rowClass}">`;
+                    tr += `<td class="${coClass}" rowspan="${rowSpan}" style="${colorStyle}">${cn}</td>`;
+                    tr += `<td class="dw-co-overview-label" colspan="2" style="font-weight:700;color:#065f46;padding-left:10px;">
+                              <i class="fas fa-chart-line me-1"></i>Company Overview
+                              <span style="font-size:10px;font-weight:400;color:#6b7280;margin-left:6px;">Bal A + Bal B</span>
+                           </td>`;
+                    tr += `<td class="num bal col-overall-td">${dwFmt(oNet)}</td>`;
+                    tr += buildDayColsAscThenReverse(
+                        dt  => coNetBal(compDailyMap[dt] || {}),
+                        pdt => coNetBal(compDailyMap[pdt] || {}),
+                        true
+                    );
+                    tr += `</tr>`;
+                    out += tr;
+                    rowIdx++;
+                }
+
+                // ── Rows 1–16: Section metrics ──
+                DW_SECTIONS.forEach((sec) => {
+                    sec.metrics.forEach((metric, mi) => {
+                        const hlCls = metric.hl ? `dw-hl ${rowClass}` : rowClass;
+                        let tr = `<tr class="${hlCls}">`;
+
+                        if (mi === 0) {
+                            tr += `<td class="dw-sec-cell ${sec.cls}" rowspan="${sec.metrics.length}">${sec.label}</td>`;
+                        }
+
+                        tr += `<td class="dw-metric">${metric.label}</td>`;
+
+                        // Overall balance value
+                        const overallVal = dwGetVal(overallRow[sec.key] || {}, metric.key);
+                        tr += `<td class="num col-overall-td${metric.hl ? ' bal' : ''}">${dwFmt(overallVal)}</td>`;
+
+                        // Day columns: compute ascending, reverse for display
+                        tr += buildDayColsAscThenReverse(
+                            dt  => dwGetVal((compDailyMap[dt]  || {})[sec.key] || {}, metric.key),
+                            pdt => dwGetVal((compDailyMap[pdt] || {})[sec.key] || {}, metric.key),
+                            metric.hl
+                        );
+
+                        tr += `</tr>`;
+                        out += tr;
+                        rowIdx++;
+                    });
+                });
+
+                return out;
+            }
+
+            let tbody = '';
+
+            // ── ALL COMPANIES totals block (top) ──
+            // Build aggregated daily map: for each date, sum metrics across all companies
+            const allCoDailyMap = {}; // date → fake "row" with aggregated sections
+            computeDatesAsc.concat(prevDayDate ? [prevDayDate] : []).forEach(dt => {
+                const agg = {};
+                DW_SECTIONS.forEach(sec => {
+                    const secAgg = {};
+                    sec.metrics.forEach(m => {
+                        secAgg[m.key] = dwAggDay(dailyMap, dt, sec.key, m.key);
+                        // For stock_in/stock_out we store directly; dwGetVal handles the custom keys
+                        if (m.key === 'stock_in') {
+                            secAgg.stock_in_taxable = Object.values(dailyMap).reduce((s, cdm) =>
+                                s + parseFloat(((cdm[dt] || {})[sec.key] || {}).stock_in_taxable || 0), 0);
+                            secAgg.stock_in_gst = Object.values(dailyMap).reduce((s, cdm) =>
+                                s + parseFloat(((cdm[dt] || {})[sec.key] || {}).stock_in_gst || 0), 0);
+                        }
+                        if (m.key === 'stock_out') {
+                            secAgg.stock_out_taxable = Object.values(dailyMap).reduce((s, cdm) =>
+                                s + parseFloat(((cdm[dt] || {})[sec.key] || {}).stock_out_taxable || 0), 0);
+                            secAgg.stock_out_gst = Object.values(dailyMap).reduce((s, cdm) =>
+                                s + parseFloat(((cdm[dt] || {})[sec.key] || {}).stock_out_gst || 0), 0);
+                        }
+                    });
+                    agg[sec.key] = secAgg;
+                });
+                allCoDailyMap[dt] = agg;
+            });
+
+            tbody += renderCompanyBlock(
+                'ALL COMPANIES',
+                overallTotals,
+                allCoDailyMap,
+                'background:#0f172a;color:#fff;', // special dark style
+                true
+            );
+
+            // ── Per-company blocks ──
+            allCompanies.forEach((cn, idx) => {
+                const pal     = DW_CO_PALETTE[idx % DW_CO_PALETTE.length];
+                const clrStyle = `background:${pal.bg};color:${pal.text};`;
+                tbody += renderCompanyBlock(
+                    cn,
+                    overallMap[cn] || {},
+                    dailyMap[cn]   || {},
+                    clrStyle,
+                    false
+                );
+            });
+
+            document.getElementById('dwTableBody').innerHTML = tbody ||
+                `<tr><td colspan="${totalCols}" class="text-center text-muted py-4">No data found.</td></tr>`;
+        }
+
+        function exportDaywise() {
+            const table = document.getElementById('dwTable');
+            if (!table) return;
+            let csv = [];
+            for (const row of table.rows) {
+                const cells = Array.from(row.cells).map(c => `"${c.innerText.replace(/\n/g, ' ').replace(/,/g, '').trim()}"`);
+                csv.push(cells.join(','));
+            }
+            const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href = url;
+            a.download = `daywise_comparison_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportConsolidated() {
+            const viewMode = document.getElementById('coViewMode').value;
+            const { dateFrom, dateTo } = getCoDateRange();
+            const sortBy = document.getElementById('coSortBy').value;
+            const coSelect = document.getElementById('coFilterCompany');
+            const selected = Array.from(coSelect.selectedOptions).map(o => o.value).filter(v => v);
+
+            const params = new URLSearchParams({ period_type: viewMode, sort_by: sortBy, format: 'csv' });
+            selected.forEach(id => params.append('company_id', id));
+            if (dateFrom) params.append('date_from', dateFrom);
+            if (dateTo) params.append('date_to', dateTo);
+
+            // Export as CSV by serializing current table data
+            const table = document.getElementById('coTable');
+            if (!table) return;
+            let csv = [];
+            for (const row of table.rows) {
+                const cells = Array.from(row.cells).map(cell => {
+                    let t = cell.innerText.replace(/\n/g, ' ').replace(/,/g, '').trim();
+                    return `"${t}"`;
+                });
+                csv.push(cells.join(','));
+            }
+            const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `consolidated_overview_${viewMode}_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spare Parts Orders | Partner Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/partner-token-manager.js"></script>
+    <style>
+        body { background: #f3f4f6; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .partner-main-content { margin-left: 260px; min-height: 100vh; transition: margin-left 0.3s; }
+        .page-top { background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%); padding: 24px 28px 20px; color: #fff; }
+        .page-top h1 { margin: 0; font-size: 1.4rem; font-weight: 700; }
+        .page-top p { margin: 4px 0 0; font-size: 13px; opacity: 0.8; }
+        .content-wrap { padding: 24px 28px; }
+        .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 14px 18px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+        .filter-bar input, .filter-bar select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 13px; }
+        .btn-primary-c { padding: 8px 18px; background: #2563eb; color: #fff; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-primary-c:hover { background: #1d4ed8; }
+        .btn-outline-c { padding: 7px 14px; background: #fff; color: #2563eb; border: 1px solid #2563eb; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .btn-outline-c:hover { background: #dbeafe; }
+        .btn-danger-c { padding: 5px 10px; background: #fff; color: #dc2626; border: 1px solid #dc2626; border-radius: 5px; font-size: 11px; cursor: pointer; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th { padding: 10px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #e5e7eb; text-align: left; }
+        .data-table td { padding: 11px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .data-table tr:hover td { background: #f9fafb; }
+        .badge-status { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .st-SUBMITTED   { background: #dbeafe; color: #1e40af; }
+        .st-ACKNOWLEDGED{ background: #fef3c7; color: #92400e; }
+        .st-FULFILLED   { background: #d1fae5; color: #065f46; }
+        .st-CANCELLED   { background: #f3f4f6; color: #6b7280; }
+        .stock-ok   { color: #059669; font-weight: 600; }
+        .stock-low  { color: #d97706; font-weight: 600; }
+        .stock-none { color: #dc2626; font-weight: 600; }
+        /* Catalog grid */
+        .catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+        .item-card { background: #fff; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.07); padding: 14px 16px; border: 2px solid transparent; cursor: pointer; transition: border .15s, box-shadow .15s; }
+        .item-card:hover { border-color: #2563eb; box-shadow: 0 3px 12px rgba(37,99,235,.12); }
+        .item-card.selected { border-color: #2563eb; background: #eff6ff; }
+        .item-code { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 4px; }
+        .item-name  { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 6px; line-height: 1.3; }
+        .item-stock { font-size: 12px; margin-bottom: 8px; }
+        .item-qty-row { display: flex; gap: 8px; align-items: center; }
+        .item-qty-row input { width: 60px; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 5px; font-size: 13px; text-align: center; }
+        .qty-check { width: 16px; height: 16px; accent-color: #2563eb; }
+        /* Cart */
+        .cart-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-bottom: 1px solid #f3f4f6; }
+        .cart-item-name { font-size: 13px; font-weight: 600; color: #111827; }
+        .cart-item-meta { font-size: 11px; color: #6b7280; }
+        .empty-state { text-align: center; padding: 50px 20px; color: #9ca3af; }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; }
+        .tab-pills { display: flex; gap: 8px; margin-bottom: 20px; }
+        .tab-pill { padding: 8px 18px; border-radius: 30px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1.5px solid #e5e7eb; background: #fff; color: #6b7280; }
+        .tab-pill.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+        @media(max-width:768px){.partner-main-content{margin-left:0;}}
+    </style>
+</head>
+<body>
+<div id="partnerSidebarContainer"></div>
+<div class="partner-main-content">
+    <div class="page-top">
+        <h1><i class="fas fa-tools me-2"></i>Spare Parts Orders</h1>
+        <p>Browse spare parts catalog and submit purchase requests</p>
+    </div>
+    <div class="content-wrap">
+        <!-- Tab pills -->
+        <div class="tab-pills">
+            <div class="tab-pill active" id="pillCatalog" onclick="showTab('catalog')">
+                <i class="fas fa-th-large me-1"></i>Browse Catalog
+            </div>
+            <div class="tab-pill" id="pillRequests" onclick="showTab('requests')">
+                <i class="fas fa-list me-1"></i>My Requests
+            </div>
+        </div>
+
+        <!-- CATALOG TAB -->
+        <div id="tabCatalog">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-search me-2"></i>Spare Parts Catalog</span>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <span id="catalogCount" class="text-muted" style="font-size:12px;"></span>
+                        <button class="btn-outline-c" onclick="loadCatalog()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+                    </div>
+                </div>
+                <div class="card-body p-3">
+                    <div class="filter-bar">
+                        <input type="text" id="catalogSearch" placeholder="Search item code or name…" oninput="debounceSearch()" style="min-width:220px;">
+                        <select id="companyFilter" onchange="loadCatalog()">
+                            <option value="">All Companies</option>
+                        </select>
+                    </div>
+                    <div id="catalogLoading" style="text-align:center;padding:40px;color:#9ca3af;">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i><br><br>Loading catalog…
+                    </div>
+                    <div id="catalogGrid" class="catalog-grid" style="display:none;"></div>
+                    <div id="catalogEmpty" class="empty-state" style="display:none;">
+                        <i class="fas fa-box-open"></i>
+                        <h3>No spare parts found</h3>
+                        <p>Try a different search</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart -->
+            <div class="card" id="cartCard" style="display:none;">
+                <div class="card-header">
+                    <span><i class="fas fa-shopping-cart me-2" style="color:#2563eb;"></i>Your Order Request</span>
+                    <div style="display:flex;gap:10px;">
+                        <button class="btn-outline-c" onclick="clearCart()">Clear All</button>
+                        <button class="btn-primary-c" onclick="openSubmitModal()">
+                            <i class="fas fa-paper-plane me-1"></i>Submit Request
+                        </button>
+                    </div>
+                </div>
+                <div id="cartBody"></div>
+            </div>
+        </div>
+
+        <!-- REQUESTS TAB -->
+        <div id="tabRequests" style="display:none;">
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-clipboard-list me-2"></i>My Spare Part Requests</span>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <select id="reqStatusFilter" onchange="loadMyRequests()" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="">All Statuses</option>
+                            <option value="SUBMITTED">Submitted</option>
+                            <option value="ACKNOWLEDGED">Acknowledged</option>
+                            <option value="FULFILLED">Fulfilled</option>
+                            <option value="CANCELLED">Cancelled</option>
+                        </select>
+                        <button class="btn-outline-c" onclick="loadMyRequests()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="reqLoading" style="text-align:center;padding:40px;color:#9ca3af;">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    </div>
+                    <div id="reqTable" style="display:none;overflow-x:auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Request #</th>
+                                    <th>Items</th>
+                                    <th>Status</th>
+                                    <th>Submitted</th>
+                                    <th>Notes</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reqTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="reqEmpty" class="empty-state" style="display:none;">
+                        <i class="fas fa-clipboard-check"></i>
+                        <h3>No requests yet</h3>
+                        <p>Browse the catalog and submit your first request</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submit Modal -->
+<div class="modal fade" id="submitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-paper-plane me-2"></i>Submit Spare Parts Request</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="submitCartSummary"></div>
+                <div class="mb-3 mt-3">
+                    <label class="form-label" style="font-size:13px;font-weight:600;">Company</label>
+                    <select id="submitCompany" class="form-select" style="font-size:13px;">
+                        <option value="">Select company…</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:13px;font-weight:600;">Notes (optional)</label>
+                    <textarea id="submitNotes" class="form-control" rows="2" style="font-size:13px;" placeholder="Any special requirements or urgency notes…"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="submitRequest()">
+                    <i class="fas fa-paper-plane me-1"></i>Submit Request
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailTitle">Request Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detailBody"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/partner_sidebar.js"></script>
+<script>
+    const API = '/api/v1/partner';
+    function getToken() { return localStorage.getItem('partner_token'); }
+    function authH() { return { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' }; }
+
+    let cart = {};     // item_id → {item, qty}
+    let companies = [];
+    let searchTimer = null;
+    let currentTab = 'catalog';
+
+    function showTab(tab) {
+        currentTab = tab;
+        document.getElementById('tabCatalog').style.display = tab === 'catalog' ? '' : 'none';
+        document.getElementById('tabRequests').style.display = tab === 'requests' ? '' : 'none';
+        document.getElementById('pillCatalog').classList.toggle('active', tab === 'catalog');
+        document.getElementById('pillRequests').classList.toggle('active', tab === 'requests');
+        if (tab === 'requests') loadMyRequests();
+    }
+
+    function debounceSearch() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadCatalog, 300);
+    }
+
+    async function loadCatalog() {
+        const token = getToken();
+        if (!token) { window.location.href = '/partner/login'; return; }
+        document.getElementById('catalogLoading').style.display = '';
+        document.getElementById('catalogGrid').style.display = 'none';
+        document.getElementById('catalogEmpty').style.display = 'none';
+
+        const search = document.getElementById('catalogSearch').value.trim();
+        const co = document.getElementById('companyFilter').value;
+        let url = `${API}/auth/spare-catalog?limit=200`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (co) url += `&company_id=${co}`;
+
+        try {
+            const r = await fetch(url, { headers: authH() });
+            const d = await r.json();
+            const items = d.items || [];
+            document.getElementById('catalogCount').textContent = `${items.length} items`;
+            if (!items.length) {
+                document.getElementById('catalogLoading').style.display = 'none';
+                document.getElementById('catalogEmpty').style.display = '';
+                return;
+            }
+            renderCatalog(items);
+        } catch(e) {
+            document.getElementById('catalogLoading').style.display = 'none';
+            document.getElementById('catalogEmpty').style.display = '';
+        }
+    }
+
+    function renderCatalog(items) {
+        const grid = document.getElementById('catalogGrid');
+        grid.innerHTML = items.map(item => {
+            const selected = !!cart[item.item_id];
+            const qty = cart[item.item_id]?.qty || 1;
+            const stockClass = item.current_stock > 10 ? 'stock-ok' : item.current_stock > 0 ? 'stock-low' : 'stock-none';
+            const stockLabel = item.current_stock > 0 ? `${item.current_stock} in stock` : 'Out of stock';
+            return `<div class="item-card ${selected ? 'selected' : ''}" id="card-${item.item_id}">
+                <div class="item-code">${item.item_code}</div>
+                <div class="item-name">${item.item_name}</div>
+                <div class="item-stock"><span class="${stockClass}">${stockLabel}</span> · ${item.unit_of_measure}</div>
+                <div class="item-qty-row">
+                    <input type="checkbox" class="qty-check" id="chk-${item.item_id}"
+                        ${selected ? 'checked' : ''}
+                        onchange="toggleCartItem(${item.item_id}, this.checked, '${item.item_code}', '${item.item_name.replace(/'/g,"\\'")}', '${item.unit_of_measure}')">
+                    <input type="number" id="qty-${item.item_id}" value="${qty}" min="1" step="1"
+                        style="${selected ? '' : 'display:none'}"
+                        onchange="updateCartQty(${item.item_id}, this.value)"
+                        onclick="event.stopPropagation()">
+                    <label for="chk-${item.item_id}" style="font-size:12px;color:#374151;cursor:pointer;margin-left:2px;">
+                        ${selected ? 'Added' : 'Add to request'}
+                    </label>
+                </div>
+            </div>`;
+        }).join('');
+        document.getElementById('catalogLoading').style.display = 'none';
+        document.getElementById('catalogGrid').style.display = '';
+    }
+
+    function toggleCartItem(itemId, checked, code, name, uom) {
+        const qtyEl = document.getElementById(`qty-${itemId}`);
+        const card  = document.getElementById(`card-${itemId}`);
+        if (checked) {
+            const qty = parseFloat(qtyEl.value) || 1;
+            cart[itemId] = { item_id: itemId, item_code: code, item_name: name, uom, qty };
+            qtyEl.style.display = '';
+            card.classList.add('selected');
+        } else {
+            delete cart[itemId];
+            qtyEl.style.display = 'none';
+            card.classList.remove('selected');
+        }
+        renderCart();
+    }
+
+    function updateCartQty(itemId, val) {
+        if (cart[itemId]) {
+            cart[itemId].qty = Math.max(1, parseFloat(val) || 1);
+            renderCart();
+        }
+    }
+
+    function renderCart() {
+        const keys = Object.keys(cart);
+        const cartCard = document.getElementById('cartCard');
+        if (!keys.length) { cartCard.style.display = 'none'; return; }
+        cartCard.style.display = '';
+        document.getElementById('cartBody').innerHTML = keys.map(k => {
+            const item = cart[k];
+            return `<div class="cart-row">
+                <div>
+                    <div class="cart-item-name">${item.item_name}</div>
+                    <div class="cart-item-meta">${item.item_code} · ${item.uom}</div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <input type="number" value="${item.qty}" min="1" style="width:60px;padding:4px 8px;border:1px solid #d1d5db;border-radius:5px;font-size:13px;"
+                        onchange="updateCartQty(${item.item_id}, this.value)">
+                    <button class="btn-danger-c" onclick="removeFromCart(${item.item_id})">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function removeFromCart(itemId) {
+        delete cart[itemId];
+        const chk = document.getElementById(`chk-${itemId}`);
+        const card = document.getElementById(`card-${itemId}`);
+        const qtyEl = document.getElementById(`qty-${itemId}`);
+        if (chk) chk.checked = false;
+        if (card) card.classList.remove('selected');
+        if (qtyEl) qtyEl.style.display = 'none';
+        renderCart();
+    }
+
+    function clearCart() {
+        cart = {};
+        document.querySelectorAll('.qty-check').forEach(c => { c.checked = false; });
+        document.querySelectorAll('.item-card').forEach(c => c.classList.remove('selected'));
+        document.querySelectorAll('[id^="qty-"]').forEach(q => q.style.display = 'none');
+        renderCart();
+    }
+
+    function openSubmitModal() {
+        const keys = Object.keys(cart);
+        if (!keys.length) { alert('Add items to your request first'); return; }
+        const summary = `<div style="background:#f0f9ff;border-radius:8px;padding:12px 14px;">
+            <div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px;">ORDER SUMMARY (${keys.length} items)</div>
+            ${keys.map(k => `<div style="font-size:13px;color:#374151;margin-bottom:4px;">
+                <span style="font-weight:600;">${cart[k].item_name}</span>
+                <span style="color:#6b7280;"> — Qty: ${cart[k].qty} ${cart[k].uom}</span>
+            </div>`).join('')}
+        </div>`;
+        document.getElementById('submitCartSummary').innerHTML = summary;
+        // Fill company select
+        const sel = document.getElementById('submitCompany');
+        sel.innerHTML = '<option value="">Select company…</option>' +
+            companies.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
+        new bootstrap.Modal(document.getElementById('submitModal')).show();
+    }
+
+    async function submitRequest() {
+        const token = getToken();
+        const company_id = document.getElementById('submitCompany').value;
+        const notes = document.getElementById('submitNotes').value.trim();
+        if (!company_id) { alert('Please select a company'); return; }
+        const items = Object.values(cart).map(item => ({
+            item_id: item.item_id, quantity: item.qty, uom: item.uom
+        }));
+        try {
+            const r = await fetch(`${API}/auth/spare-requests`, {
+                method: 'POST',
+                headers: authH(),
+                body: JSON.stringify({ items, notes, company_id: parseInt(company_id) })
+            });
+            const d = await r.json();
+            if (d.success) {
+                bootstrap.Modal.getInstance(document.getElementById('submitModal')).hide();
+                clearCart();
+                alert(`✅ Request ${d.request?.request_number} submitted successfully!`);
+                showTab('requests');
+            } else {
+                alert('Error: ' + (d.detail || d.message || 'Failed to submit'));
+            }
+        } catch(e) {
+            alert('Network error. Please try again.');
+        }
+    }
+
+    async function loadMyRequests() {
+        const token = getToken();
+        document.getElementById('reqLoading').style.display = '';
+        document.getElementById('reqTable').style.display = 'none';
+        document.getElementById('reqEmpty').style.display = 'none';
+        const status = document.getElementById('reqStatusFilter').value;
+        let url = `${API}/auth/spare-requests?limit=100`;
+        if (status) url += `&status=${status}`;
+        try {
+            const r = await fetch(url, { headers: authH() });
+            const d = await r.json();
+            const reqs = d.requests || [];
+            if (!reqs.length) {
+                document.getElementById('reqLoading').style.display = 'none';
+                document.getElementById('reqEmpty').style.display = '';
+                return;
+            }
+            document.getElementById('reqTableBody').innerHTML = reqs.map(req => {
+                const lineNames = (req.lines || []).slice(0, 2).map(l => l.item_name || l.item_code).join(', ');
+                const more = (req.lines || []).length > 2 ? ` +${req.lines.length - 2} more` : '';
+                const date = req.created_at ? new Date(req.created_at).toLocaleDateString('en-IN') : '—';
+                return `<tr>
+                    <td><strong>${req.request_number}</strong></td>
+                    <td>
+                        <div style="font-size:13px;">${lineNames}${more}</div>
+                        <div style="font-size:11px;color:#6b7280;">${req.line_count} item(s)</div>
+                    </td>
+                    <td><span class="badge-status st-${req.status}">${req.status}</span></td>
+                    <td style="font-size:12px;color:#6b7280;">${date}</td>
+                    <td style="font-size:12px;color:#6b7280;max-width:140px;">${req.notes || '—'}</td>
+                    <td>
+                        <button class="btn-outline-c" style="font-size:11px;padding:4px 10px;" onclick="showDetail(${JSON.stringify(req).replace(/"/g,'&quot;')})">
+                            <i class="fas fa-eye me-1"></i>View
+                        </button>
+                        ${req.status === 'SUBMITTED' ? `<button class="btn-danger-c" style="margin-left:6px;" onclick="cancelRequest(${req.id})">Cancel</button>` : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+            document.getElementById('reqLoading').style.display = 'none';
+            document.getElementById('reqTable').style.display = '';
+        } catch(e) {
+            document.getElementById('reqLoading').style.display = 'none';
+            document.getElementById('reqEmpty').style.display = '';
+        }
+    }
+
+    function showDetail(req) {
+        document.getElementById('detailTitle').textContent = `Request ${req.request_number}`;
+        const lines = (req.lines || []).map(l =>
+            `<tr><td>${l.item_code}</td><td>${l.item_name}</td><td>${l.quantity}</td><td>${l.unit_of_measure}</td><td>${l.notes || '—'}</td></tr>`
+        ).join('');
+        document.getElementById('detailBody').innerHTML = `
+            <div class="mb-3">
+                <span class="badge-status st-${req.status}">${req.status}</span>
+                <span style="font-size:12px;color:#6b7280;margin-left:10px;">
+                    Submitted: ${req.created_at ? new Date(req.created_at).toLocaleString('en-IN') : '—'}
+                </span>
+            </div>
+            ${req.notes ? `<p style="font-size:13px;"><strong>Notes:</strong> ${req.notes}</p>` : ''}
+            ${req.acknowledged_by_name ? `<p style="font-size:12px;color:#6b7280;">Acknowledged by: ${req.acknowledged_by_name} on ${req.acknowledged_at ? new Date(req.acknowledged_at).toLocaleDateString('en-IN') : ''}</p>` : ''}
+            <table class="data-table">
+                <thead><tr><th>Code</th><th>Item</th><th>Qty</th><th>UoM</th><th>Notes</th></tr></thead>
+                <tbody>${lines}</tbody>
+            </table>`;
+        new bootstrap.Modal(document.getElementById('detailModal')).show();
+    }
+
+    async function cancelRequest(reqId) {
+        if (!confirm('Cancel this spare parts request?')) return;
+        try {
+            const r = await fetch(`${API}/auth/spare-requests/${reqId}/cancel`, {
+                method: 'PUT', headers: authH()
+            });
+            const d = await r.json();
+            if (d.success) { alert('Request cancelled'); loadMyRequests(); }
+            else alert('Error: ' + (d.detail || 'Could not cancel'));
+        } catch(e) { alert('Network error'); }
+    }
+
+    async function loadCompanies() {
+        try {
+            const r = await fetch('/api/v1/staff/accounts/companies', { headers: authH() });
+            const d = await r.json();
+            companies = d.companies || d.data || [];
+            const sel = document.getElementById('companyFilter');
+            sel.innerHTML = '<option value="">All Companies</option>' +
+                companies.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
+        } catch(e) {}
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        const token = getToken();
+        if (!token) { window.location.href = '/partner/login'; return; }
+        await loadCompanies();
+        await loadCatalog();
+    });
+</script>
+</body>
+</html>

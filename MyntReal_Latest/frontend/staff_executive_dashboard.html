@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mynt Real — Executive Dashboard</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f3f4f6;min-height:100vh;margin:0}
+.content-area{padding:16px}
+/* Page banner */
+.page-banner{background:linear-gradient(135deg,#1e3a5f,#0f2240);border-radius:10px;padding:13px 18px;margin-bottom:10px;color:white;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.page-banner h1{font-size:15px;font-weight:700;margin:0}
+.page-banner p{opacity:.8;margin:0;font-size:10.5px}
+.btn-banner{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.btn-banner.white{background:white;color:#1e3a5f}.btn-banner.outline{background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.35)}
+/* Tabs */
+.tab-bar{display:flex;gap:4px;margin-bottom:10px;border-bottom:2px solid #e5e7eb}
+.tab-btn{padding:6px 14px;border-radius:6px 6px 0 0;font-size:11.5px;font-weight:600;border:none;cursor:pointer;background:transparent;color:#6b7280;border-bottom:2px solid transparent;margin-bottom:-2px}
+.tab-btn.active{background:#1e3a5f;color:white;border-bottom-color:#1e3a5f}
+.tab-pane{display:none}.tab-pane.active{display:block}
+/* Quick filters */
+.quick-filter-bar{background:white;border-radius:8px;margin-bottom:6px;padding:8px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.qf-label{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.qf-btn{padding:4px 11px;border-radius:20px;font-size:11.5px;font-weight:600;border:2px solid #e5e7eb;cursor:pointer;background:white;color:#374151;transition:all .15s}
+.qf-btn:hover{border-color:#1e3a5f;color:#1e3a5f}
+.qf-btn.active{background:#1e3a5f;color:white;border-color:#1e3a5f}
+.qf-divider{width:1px;height:18px;background:#e5e7eb;margin:0 2px}
+/* Filters */
+.dash-filters{background:white;border-radius:8px;margin-bottom:10px;padding:10px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07);display:flex;flex-wrap:wrap;gap:7px;align-items:flex-end}
+.fgroup{display:flex;flex-direction:column;gap:2px}
+.fgroup label{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
+.fgroup .form-control,.fgroup .form-select{font-size:11.5px;padding:4px 7px;border-radius:5px;border:1px solid #e5e7eb;min-width:100px}
+.btn-filter{padding:5px 12px;border-radius:6px;font-size:11.5px;font-weight:600;border:none;cursor:pointer}
+.btn-filter.apply{background:#1e3a5f;color:white}.btn-filter.reset{background:#f3f4f6;color:#6b7280}
+/* KPI cards */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:10px}
+.kpi-card{background:white;border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.kpi-label{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.kpi-value{font-size:21px;font-weight:800;color:#1f2937;line-height:1.1}
+.kpi-sub{font-size:9.5px;color:#9ca3af;margin-top:2px}
+.kpi-card.won .kpi-value{color:#065f46}.kpi-card.biz .kpi-value{color:#1d4ed8;font-size:15px}
+.kpi-card.wpct .kpi-value{color:#7c3aed}.kpi-card.prog .kpi-value{color:#d97706}.kpi-card.lost .kpi-value{color:#991b1b}
+/* Grid */
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:10px}
+.dash-full{grid-column:1/-1}
+@media(max-width:700px){.dash-grid{grid-template-columns:1fr}}
+.dash-card{background:white;border-radius:8px;padding:13px 15px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.dash-card-title{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#1e3a5f;margin-bottom:9px;display:flex;align-items:center;gap:5px}
+/* Bar rows */
+.dash-bar-row{display:flex;align-items:center;gap:7px;margin-bottom:5px;font-size:11px}
+.dash-bar-label{min-width:120px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#374151;font-weight:500;font-size:11px}
+.dash-bar-wrap{flex:1;background:#f3f4f6;border-radius:3px;height:7px;overflow:hidden}
+.dash-bar-fill{height:100%;border-radius:3px;background:#1e3a5f;transition:width .4s}
+.dash-bar-count{min-width:34px;text-align:right;font-weight:700;color:#1f2937;font-size:10.5px}
+.dash-bar-won{min-width:34px;text-align:right;font-size:10px;color:#059669;font-weight:600}
+.dash-bar-val{min-width:55px;text-align:right;font-size:10px;color:#1d4ed8;font-weight:600}
+.dash-empty{text-align:center;color:#9ca3af;padding:20px;font-size:12px}
+.loading-overlay{display:flex;align-items:center;justify-content:center;padding:24px;color:#6b7280;font-size:12px;gap:6px}
+/* Handlers tab */
+.handler-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e5e7eb}
+.handler-type-btn{padding:5px 14px;border-radius:20px;font-size:11.5px;font-weight:600;border:2px solid #e5e7eb;cursor:pointer;background:white;color:#374151;transition:all .15s;white-space:nowrap}
+.handler-type-btn:hover{border-color:#1e3a5f;color:#1e3a5f}
+.handler-type-btn.active{background:#1e3a5f;color:white;border-color:#1e3a5f}
+.handler-search{flex:1;min-width:160px;padding:5px 10px;border-radius:6px;border:1px solid #d1d5db;font-size:11.5px;outline:none}
+.handler-search:focus{border-color:#1e3a5f;box-shadow:0 0 0 2px rgba(30,58,95,.1)}
+.handler-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.handler-table th{background:#1e3a5f;color:white;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:7px 9px;text-align:center;white-space:nowrap;position:sticky;top:0;z-index:1}
+.handler-table th:first-child{text-align:left;border-radius:4px 0 0 0}
+.handler-table th:last-child{border-radius:0 4px 0 0}
+.handler-table td{padding:6px 9px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+.handler-table tr:hover td{background:#f0f6ff}
+.handler-table tr:last-child td{border-bottom:none}
+.h-rank{font-size:10px;font-weight:700;color:#9ca3af;width:28px;text-align:center}
+.h-name{font-weight:600;color:#1f2937;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.h-code{font-size:9.5px;color:#6b7280;font-weight:400}
+.h-total{text-align:center;font-weight:800;color:#1f2937;font-size:13px}
+.h-won{text-align:center;font-weight:700;color:#059669}
+.h-prog{text-align:center;font-weight:600;color:#d97706}
+.h-lost{text-align:center;font-weight:600;color:#dc2626}
+.h-wpct{text-align:center;font-weight:700;color:#7c3aed;font-size:10.5px}
+.h-dv{text-align:right;font-weight:600;color:#1d4ed8;font-size:10.5px;white-space:nowrap}
+.h-bar{width:70px;padding:0 6px}
+.handler-table-wrap{border-radius:6px;border:1px solid #e5e7eb;overflow-x:scroll;overflow-y:auto;max-height:calc(100vh - 340px);min-height:260px;-webkit-overflow-scrolling:touch}
+/* DC-SCROLL-001: visible scrollbars for handler/stagewise tables */
+.handler-table-wrap::-webkit-scrollbar{width:9px;height:9px}
+.handler-table-wrap::-webkit-scrollbar-track{background:#f1f5f9;border-radius:4px}
+.handler-table-wrap::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:4px}
+.handler-table-wrap::-webkit-scrollbar-thumb:hover{background:#64748b}
+.handler-table-wrap::-webkit-scrollbar-corner{background:#f1f5f9}
+.h-count-badge{font-size:9.5px;background:#eff6ff;color:#1d4ed8;padding:2px 6px;border-radius:10px;font-weight:700;margin-left:6px}
+/* Stagewise table */
+.sw-table{width:100%;min-width:max-content;border-collapse:collapse;font-size:11px}
+.sw-table th{background:#1e3a5f;color:white;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:5px 6px;text-align:center;white-space:nowrap;position:sticky;top:0;z-index:1}
+.sw-table th.sw-group{font-size:9px;letter-spacing:.05em;border-bottom:1px solid rgba(255,255,255,.2)}
+.sw-table th.sw-sub{font-size:8px;opacity:.9;cursor:pointer;user-select:none}
+.sw-table th.sw-sub:hover{background:#2d5080}
+.sw-table th.sw-sorted{background:#2d5080;color:#fbbf24}
+.sw-table th:first-child{text-align:left}
+.sw-table td{padding:5px 6px;border-bottom:1px solid #f0f0f0;vertical-align:middle;text-align:center;font-size:10.5px}
+.sw-table td:first-child,.sw-table td:nth-child(2){text-align:left}
+.sw-table tr:hover td{background:#f0f6ff}
+.sw-table tr:last-child td{border-bottom:none}
+.sw-cnt{font-weight:700;color:#1f2937}
+.sw-dv{font-weight:600;color:#1d4ed8;font-size:10px;white-space:nowrap}
+.sw-zero{color:#d1d5db}
+/* Frozen columns 1 & 2 in stagewise table */
+.sw-table .sw-fc1{position:sticky;left:0;z-index:3;background:#1e3a5f;min-width:40px;width:40px}
+.sw-table .sw-fc2{position:sticky;left:40px;z-index:3;background:#1e3a5f;box-shadow:2px 0 6px rgba(0,0,0,.10)}
+.sw-table tbody td.sw-fc1{background:#fff;z-index:2}
+.sw-table tbody td.sw-fc2{background:#fff;z-index:2;box-shadow:2px 0 6px rgba(0,0,0,.10)}
+.sw-table tr:hover td.sw-fc1,.sw-table tr:hover td.sw-fc2{background:#f0f6ff}
+/* DC-FREEZE-001: Frozen header rows for stagewise + handler tables */
+.sw-table thead tr:first-child{position:sticky;top:0;z-index:10}
+.sw-table thead tr:nth-child(2){position:sticky;top:37px;z-index:10}
+.sw-table tbody tr.sw-total-row{position:sticky;top:73px;z-index:8;background:#1e3a5f}
+.sw-table thead th.sw-fc1,.sw-table thead th.sw-fc2{z-index:14}
+.sw-table tbody tr.sw-total-row td.sw-fc1,.sw-table tbody tr.sw-total-row td.sw-fc2{z-index:11;background:#1e3a5f}
+/* DC-FREEZE-001: Frozen header + TOTAL row + first 2 cols for handler table */
+.handler-table thead tr{position:sticky;top:0;z-index:10}
+.handler-table tbody tr.h-total-row{position:sticky;top:36px;z-index:8}
+.handler-table th:first-child,.handler-table td:first-child{position:sticky;left:0;z-index:5;background:inherit}
+.handler-table th:nth-child(2),.handler-table td:nth-child(2){position:sticky;left:34px;z-index:5;background:inherit;box-shadow:2px 0 6px rgba(0,0,0,.1)}
+.handler-table thead th:first-child,.handler-table thead th:nth-child(2){z-index:14;background:#1e3a5f}
+.handler-table tbody tr.h-total-row td:first-child,.handler-table tbody tr.h-total-row td:nth-child(2){z-index:11;background:#1e3a5f}
+.handler-table tbody td:first-child,.handler-table tbody td:nth-child(2){background:#fff}
+.handler-table tr:hover td:first-child,.handler-table tr:hover td:nth-child(2){background:#f0f6ff}
+.handler-table tbody tr.h-total-row:hover td:first-child,.handler-table tbody tr.h-total-row:hover td:nth-child(2){background:#1e3a5f}
+/* Handler source filter dropdown */
+.handler-src-sel{font-size:10.5px;padding:3px 6px;border:1px solid #d1d5db;border-radius:5px;background:#fff;color:#374151;cursor:pointer;height:28px;min-width:100px;max-width:140px}
+/* Trend chart */
+.trend-table{width:100%;border-collapse:collapse;font-size:11px}
+.trend-table th{background:#f8fafc;color:#6b7280;font-size:9.5px;font-weight:700;text-transform:uppercase;padding:5px 8px;text-align:center;border-bottom:1px solid #e5e7eb}
+.trend-table td{padding:4px 8px;border-bottom:1px solid #f0f0f0;text-align:center;vertical-align:middle}
+.trend-table tr:last-child td{border-bottom:none}
+.trend-bar-cell{width:180px}
+.t-bar-wrap{background:#f3f4f6;border-radius:2px;height:6px;overflow:hidden}
+.t-bar-fill{height:100%;border-radius:2px;background:#1e3a5f}
+.t-bar-won{height:100%;border-radius:2px;background:#059669}
+.badge-total{background:#eff6ff;color:#1d4ed8;padding:2px 6px;border-radius:4px;font-weight:700;font-size:10.5px}
+.badge-won{background:#d1fae5;color:#065f46;padding:2px 6px;border-radius:4px;font-weight:700;font-size:10.5px}
+.badge-dv{background:#fef9c3;color:#92400e;padding:2px 6px;border-radius:4px;font-weight:600;font-size:10px}
+/* DC-EXEC-DD-FULLSCREEN-001 */
+#edOverlay.ed-fs{padding:0!important}
+#edOverlay.ed-fs #edModal{max-width:100vw!important;max-height:100vh!important;border-radius:0!important;height:100vh}
+#edOverlay.ed-fs #edLeadTableWrap{max-height:calc(100vh - 310px)!important}
+th[data-sk]{cursor:pointer;user-select:none}
+th[data-sk]:hover{background:#eef2f7!important}
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+  <div id="headerContainer"></div>
+  <div class="content-area">
+
+    <div class="page-banner">
+      <div>
+        <h1><i class="fas fa-chart-line me-1"></i>Executive Dashboard</h1>
+        <p>Live analytics — Solar · EV B2B · EV B2C · EV Spares · Real Dreams · Insurance · ETC Training</p>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+        <button class="btn-banner outline" onclick="loadDashboard()"><i class="fas fa-sync-alt"></i> Refresh</button>
+        <button class="btn-banner white" onclick="window.history.back()"><i class="fas fa-arrow-left"></i> Back</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tab_overview" onclick="switchTab('overview')"><i class="fas fa-chart-bar me-1"></i>Overview</button>
+      <button class="tab-btn" id="tab_trends" onclick="switchTab('trends')"><i class="fas fa-chart-line me-1"></i>Monthly &amp; Weekly Trends</button>
+      <button class="tab-btn" id="tab_handlers" onclick="switchTab('handlers')"><i class="fas fa-users me-1"></i>Handlers Status Wise</button>
+      <button class="tab-btn" id="tab_stagewise" onclick="switchTab('stagewise')"><i class="fas fa-table me-1"></i>Stagewise Handlers</button>
+      <button class="tab-btn" id="tab_groundsource" onclick="switchTab('groundsource')"><i class="fas fa-map-marker-alt me-1"></i>Ground Source</button>
+      <button class="tab-btn" id="tab_lead_view" onclick="switchTab('lead_view')"><i class="fas fa-file-invoice me-1"></i>Lead View</button>
+      <button class="tab-btn" id="tab_member_view" onclick="switchTab('member_view')"><i class="fas fa-coins me-1"></i>Member Earnings</button>
+    </div>
+
+    <!-- Quick date filters -->
+    <div class="quick-filter-bar">
+      <span class="qf-label"><i class="fas fa-bolt me-1"></i>Quick Period</span>
+      <button class="qf-btn active" id="qf_overall" onclick="applyQuickFilter('overall')">Overall</button>
+      <button class="qf-btn" id="qf_mtd" onclick="applyQuickFilter('mtd')">MTD</button>
+      <button class="qf-btn" id="qf_ytd" onclick="applyQuickFilter('ytd')">YTD <span style="font-size:9px;opacity:.7">(Apr 1)</span></button>
+      <div class="qf-divider"></div>
+      <span style="font-size:10px;color:#9ca3af" id="qfPeriodLabel">All time</span>
+    </div>
+
+    <!-- Filters -->
+    <div class="dash-filters">
+      <div class="fgroup">
+        <label>Segment</label>
+        <select class="form-select" id="dashCategory">
+          <option value="">All Segments</option>
+          <option value="Solar">Solar</option><option value="EV B2B">EV B2B</option>
+          <option value="EV B2C">EV B2C</option><option value="EV Spares">EV Spares</option>
+          <option value="Real Dreams">Real Dreams</option><option value="Insurance">Insurance</option>
+          <option value="ETC Training">ETC Training</option>
+        </select>
+      </div>
+      <div class="fgroup">
+        <label>Status</label>
+        <select class="form-select" id="dashStatus">
+          <option value="">All Statuses</option>
+          <option value="won_plus">Won / Post-Won</option><option value="new">New</option>
+          <option value="contacted">Contacted</option><option value="interested">Interested</option>
+          <option value="qualified">Qualified</option><option value="proposal">Proposal</option>
+          <option value="won">Won</option><option value="order_placed">Order Placed</option>
+          <option value="dispatched">Dispatched</option><option value="delivered">Delivered</option>
+          <option value="installed">Installed</option><option value="completed">Completed</option>
+          <option value="on_hold">On Hold</option><option value="lost">Lost</option>
+        </select>
+      </div>
+      <div class="fgroup">
+        <label>Source (Lead Source)</label>
+        <input type="text" class="form-control" id="dashSource" placeholder="e.g. Online, Walk-in">
+      </div>
+      <div class="fgroup">
+        <label>Ground Source</label>
+        <input type="text" class="form-control" id="dashNetSource" placeholder="MNR / VGK / Partner ID or name">
+      </div>
+      <div class="fgroup">
+        <label>Senior</label>
+        <input type="text" class="form-control" id="dashGuruFilter" placeholder="Guru ID or name">
+      </div>
+      <div class="fgroup">
+        <label>Extended</label>
+        <input type="text" class="form-control" id="dashZGuruFilter" placeholder="Extended ID or name">
+      </div>
+      <div class="fgroup">
+        <label>Support Emp Code</label>
+        <input type="text" class="form-control" id="dashTelecaller" placeholder="e.g. MR10002" style="min-width:90px">
+      </div>
+      <div class="fgroup">
+        <label>Field Staff Emp Code</label>
+        <input type="text" class="form-control" id="dashFieldStaff" placeholder="e.g. MR10003" style="min-width:90px">
+      </div>
+      <div class="fgroup">
+        <label>Created From</label>
+        <input type="date" class="form-control" id="dashFrom" style="min-width:120px">
+      </div>
+      <div class="fgroup">
+        <label>Created To</label>
+        <input type="date" class="form-control" id="dashTo" style="min-width:120px">
+      </div>
+      <div class="fgroup">
+        <label>Deal Closed From</label>
+        <input type="date" class="form-control" id="dashClosedFrom" style="min-width:120px">
+      </div>
+      <div class="fgroup">
+        <label>Deal Closed To</label>
+        <input type="date" class="form-control" id="dashClosedTo" style="min-width:120px">
+      </div>
+      <div class="fgroup">
+        <label>Submit Date From</label>
+        <input type="date" class="form-control" id="dashSubmitFrom" style="min-width:120px">
+      </div>
+      <div class="fgroup">
+        <label>Submit Date To</label>
+        <input type="date" class="form-control" id="dashSubmitTo" style="min-width:120px">
+      </div>
+      <div class="fgroup">
+        <label>Complete Date From</label>
+        <input type="date" class="form-control" id="dashCompleteFrom" style="min-width:120px">
+      </div>
+      <div class="fgroup">
+        <label>Complete Date To</label>
+        <input type="date" class="form-control" id="dashCompleteTo" style="min-width:120px">
+      </div>
+      <div class="fgroup">
+        <label>1st Txn Received From</label>
+        <input type="date" class="form-control" id="dashDvrFrom" style="min-width:120px">
+      </div>
+      <div class="fgroup">
+        <label>1st Txn Received To</label>
+        <input type="date" class="form-control" id="dashDvrTo" style="min-width:120px">
+      </div>
+      <div class="fgroup">
+        <label>Solar Stage</label>
+        <select class="form-select" id="dashSolarStage" style="min-width:140px">
+          <option value="">All Stages</option>
+          <option value="documents_pending">Docs Pending</option>
+          <option value="application_submitted">App Submitted</option>
+          <option value="pending_with_bank">At Bank</option>
+          <option value="loan_rejected">Loan Rejected</option>
+          <option value="documents_issue">Docs Issue</option>
+          <option value="load_extension">Load Extension</option>
+          <option value="electricity_bill_change">Elec Bill Chg</option>
+          <option value="installation_pending">Installation Pending</option>
+          <option value="net_meter_pending">Net Meter</option>
+          <option value="balance_pending">Bal Pending</option>
+          <option value="balance_received">Bal Received</option>
+          <option value="subsidy_pending">Subsidy Pending</option>
+          <option value="completed">Completed</option>
+          <option value="not_interested">Not Interested</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="different_vendor">Diff Vendor</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:5px;align-items:flex-end">
+        <button class="btn-filter apply" onclick="loadDashboard()"><i class="fas fa-chart-bar me-1"></i>Load</button>
+        <button class="btn-filter reset" onclick="resetFilters()">Reset</button>
+      </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="kpi-row" id="kpiRow">
+      <div class="kpi-card"><div class="kpi-label">Total Leads</div><div class="kpi-value" id="kpiTotal">—</div></div>
+      <div class="kpi-card won"><div class="kpi-label">Won</div><div class="kpi-value" id="kpiWon">—</div><div class="kpi-sub" id="kpiWonPct"></div></div>
+      <div class="kpi-card wpct"><div class="kpi-label">Win Rate</div><div class="kpi-value" id="kpiWinRate">—</div></div>
+      <div class="kpi-card prog"><div class="kpi-label">In Progress</div><div class="kpi-value" id="kpiProgress">—</div></div>
+      <div class="kpi-card lost"><div class="kpi-label">Lost</div><div class="kpi-value" id="kpiLost">—</div></div>
+      <div class="kpi-card biz"><div class="kpi-label">Total Value</div><div class="kpi-value" id="kpiDealTotal">—</div><div class="kpi-sub" id="kpiDealWon"></div></div>
+      <div class="kpi-card"><div class="kpi-label">Avg Value</div><div class="kpi-value" id="kpiAvg" style="font-size:15px">—</div></div>
+      <div class="kpi-card" style="border-left:3px solid #059669"><div class="kpi-label">Collected</div><div class="kpi-value" id="kpiCollected" style="font-size:15px;color:#065f46">—</div></div>
+      <div class="kpi-card" style="border-left:3px solid #b91c1c"><div class="kpi-label">Pending Balance</div><div class="kpi-value" id="kpiPending" style="font-size:15px;color:#b91c1c">—</div><div class="kpi-sub" style="color:#9ca3af">Excl. Loan Rejected</div></div>
+      <div class="kpi-card" style="border-left:3px solid #9d174d"><div class="kpi-label">Loan Rejected ₹</div><div class="kpi-value" id="kpiLoanRejected" style="font-size:15px;color:#9d174d">—</div><div class="kpi-sub" style="color:#9ca3af">Excluded from Pending</div></div>
+    </div>
+
+    <!-- Overview Tab -->
+    <div class="tab-pane active" id="pane_overview">
+      <div class="dash-grid">
+        <div class="dash-card">
+          <div class="dash-card-title"><i class="fas fa-chart-pie"></i> By Status</div>
+          <div id="dashByStatus"><div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title"><i class="fas fa-layer-group"></i> By Segment</div>
+          <div id="dashByCategory"><div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title"><i class="fas fa-share-alt"></i> By Source</div>
+          <div id="dashBySource"><div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title"><i class="fas fa-headset"></i> By Support Staff</div>
+          <div id="dashByTelecaller"><div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+        </div>
+        <div class="dash-card dash-full">
+          <div class="dash-card-title"><i class="fas fa-user-tie"></i> By Field Staff (Showroom)</div>
+          <div id="dashByFieldStaff"><div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Handlers Status Wise Tab -->
+    <div class="tab-pane" id="pane_handlers">
+      <div class="dash-card">
+        <div class="dash-card-title"><i class="fas fa-users"></i> Handler Performance Leaderboard</div>
+        <div class="handler-controls">
+          <span style="font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">Handler Type:</span>
+          <button class="handler-type-btn active" id="htBtn_ground"   onclick="setHandlerType('ground')">Ground Source</button>
+          <button class="handler-type-btn"        id="htBtn_handler"  onclick="setHandlerType('handler')">Handler</button>
+          <button class="handler-type-btn"        id="htBtn_support"  onclick="setHandlerType('support')">Telecaller</button>
+          <button class="handler-type-btn"        id="htBtn_field"    onclick="setHandlerType('field')">Showroom</button>
+          <button class="handler-type-btn"        id="htBtn_guru"     onclick="setHandlerType('guru')">Senior</button>
+          <button class="handler-type-btn"        id="htBtn_zguru"    onclick="setHandlerType('zguru')">Extended</button>
+          <button class="handler-type-btn"        id="htBtn_adguru"   onclick="setHandlerType('adguru')">On Ground Support</button>
+          <button class="handler-type-btn"        id="htBtn_partner"  onclick="setHandlerType('partner')">Business Partner</button>
+          <button class="handler-type-btn"        id="htBtn_source"   onclick="setHandlerType('source')">Lead Source</button>
+          <div style="flex:1;min-width:8px"></div>
+          <select class="handler-src-sel" id="htSrcFilter" onchange="applyHandlerSrcFilter(this.value)" title="Filter by Lead Source">
+            <option value="">All Sources</option>
+          </select>
+          <input class="handler-search" id="handlerSearch" type="text" placeholder="Search by name or code…" oninput="filterHandlerTable()">
+        </div>
+        <div id="handlerCountLine" style="font-size:10.5px;color:#6b7280;margin-bottom:8px;padding-left:2px"></div>
+        <div class="handler-table-wrap" id="handlerTableWrap">
+          <div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Load data using the Load button above…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stagewise Handlers Tab -->
+    <div class="tab-pane" id="pane_stagewise">
+      <div class="dash-card">
+        <div class="dash-card-title"><i class="fas fa-table"></i> Stagewise Handler Breakdown — Counts &amp; Values Side by Side</div>
+        <div class="handler-controls">
+          <span style="font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap">Handler Type:</span>
+          <button class="handler-type-btn active" id="swBtn_ground"   onclick="setHandlerType('ground')">Ground Source</button>
+          <button class="handler-type-btn"        id="swBtn_handler"  onclick="setHandlerType('handler')">Handler</button>
+          <button class="handler-type-btn"        id="swBtn_support"  onclick="setHandlerType('support')">Telecaller</button>
+          <button class="handler-type-btn"        id="swBtn_field"    onclick="setHandlerType('field')">Showroom</button>
+          <button class="handler-type-btn"        id="swBtn_guru"     onclick="setHandlerType('guru')">Senior</button>
+          <button class="handler-type-btn"        id="swBtn_zguru"    onclick="setHandlerType('zguru')">Extended</button>
+          <button class="handler-type-btn"        id="swBtn_adguru"   onclick="setHandlerType('adguru')">On Ground Support</button>
+          <button class="handler-type-btn"        id="swBtn_partner"  onclick="setHandlerType('partner')">Business Partner</button>
+          <button class="handler-type-btn"        id="swBtn_source"   onclick="setHandlerType('source')">Lead Source</button>
+          <div style="flex:1;min-width:8px"></div>
+          <select class="handler-src-sel" id="swSrcFilter" onchange="applyHandlerSrcFilter(this.value)" title="Filter by Lead Source">
+            <option value="">All Sources</option>
+          </select>
+          <input class="handler-search" id="stagwiseSearch" type="text" placeholder="Search by name or code…" oninput="renderStagewiseTable()">
+        </div>
+        <div id="stagwiseCountLine" style="font-size:10.5px;color:#6b7280;margin-bottom:8px;padding-left:2px"></div>
+        <div class="handler-table-wrap" id="stagwiseTableWrap">
+          <div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Load data using the Load button above…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trends Tab -->
+    <div class="tab-pane" id="pane_trends">
+      <div class="dash-grid">
+        <div class="dash-card dash-full">
+          <div class="dash-card-title"><i class="fas fa-calendar-alt"></i> Monthly Trend — Last 12 Months</div>
+          <div id="dashMonthly"><div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+        </div>
+        <div class="dash-card dash-full">
+          <div class="dash-card-title"><i class="fas fa-calendar-week"></i> Weekly Trend — Last 12 Weeks</div>
+          <div id="dashWeekly"><div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ground Source Tab (DC-EXEC-GS-001: same endpoint + same format as Category Lead Master Ground Source Wise) -->
+    <div class="tab-pane" id="pane_groundsource">
+      <div class="dash-card">
+        <div class="dash-card-title" style="margin-bottom:10px">
+          <i class="fas fa-map-marker-alt"></i> Ground Source Wise Leads
+          <span style="font-size:9px;font-weight:400;color:#9ca3af;margin-left:8px">Same as Category Lead Master · W-0 = this week</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px">
+          <select id="execGsCategory" style="padding:4px 8px;border-radius:5px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:11px" onchange="loadExecGs()">
+            <option value="">All Categories</option>
+            <option value="Solar">Solar</option>
+            <option value="EV B2B">EV B2B</option>
+            <option value="EV B2C">EV B2C</option>
+            <option value="EV Spares">EV Spares</option>
+            <option value="Real Dreams">Real Dreams</option>
+            <option value="Insurance">Insurance</option>
+            <option value="ETC Training">ETC Training</option>
+          </select>
+          <select id="execGsType" style="padding:4px 8px;border-radius:5px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:11px" onchange="loadExecGs()">
+            <option value="all">All Types</option>
+            <option value="mnr">MNR Members</option>
+            <option value="vgk">VGK / Partners</option>
+            <option value="staff">Staff</option>
+          </select>
+          <input id="execGsSearch" type="text" placeholder="Filter by name…" style="padding:4px 8px;border-radius:5px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;font-size:11px;min-width:140px" oninput="_execGsFilter()">
+          <span id="execGsCountLine" style="font-size:10.5px;color:#6b7280;margin-left:4px"></span>
+        </div>
+        <div id="execGsWrap">
+          <div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lead View Tab (DC-EXEC-LV-001: live embed of VGK Members Lead View — single source, auto-reflects any changes) -->
+    <div class="tab-pane" id="pane_lead_view">
+      <div style="font-size:10.5px;color:#6b7280;padding:4px 2px 8px;display:flex;align-items:center;gap:6px">
+        <i class="fas fa-link" style="color:#7c3aed"></i>
+        Live embed of the <strong>Lead View</strong> tab — any future changes to that tab reflect here automatically (single source).
+      </div>
+      <iframe id="iframeLeadView" src="about:blank"
+        style="width:100%;height:calc(100vh - 290px);min-height:520px;border:none;border-radius:8px;background:#f3f4f6"
+      ></iframe>
+    </div>
+
+    <!-- Member Earnings Tab (DC-EXEC-ME-001: live embed of VGK Members Income Dashboard — single source) -->
+    <div class="tab-pane" id="pane_member_view">
+      <div style="font-size:10.5px;color:#6b7280;padding:4px 2px 8px;display:flex;align-items:center;gap:6px">
+        <i class="fas fa-link" style="color:#7c3aed"></i>
+        Live embed of the <strong>Income Dashboard</strong> tab — any future changes to that tab reflect here automatically (single source).
+      </div>
+      <iframe id="iframeMemberView" src="about:blank"
+        style="width:100%;height:calc(100vh - 290px);min-height:520px;border:none;border-radius:8px;background:#f3f4f6"
+      ></iframe>
+    </div>
+
+  </div>
+</div>
+
+<script src="/staff_sidebar.js"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+const API_CRM = '/api/v1/crm';
+
+const STATUS_COLORS = {
+  won:'#059669',order_placed:'#10b981',dispatched:'#3b82f6',delivered:'#6366f1',
+  installed:'#8b5cf6',completed:'#0ea5e9',new:'#94a3b8',contacted:'#f59e0b',
+  interested:'#22c55e',qualified:'#a855f7',proposal:'#ec4899',on_hold:'#9ca3af',lost:'#ef4444'
+};
+
+function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
+function fmtNum(n){return Number(n||0).toLocaleString('en-IN');}
+function fmtVal(n){
+  n=parseFloat(n||0);
+  if(n>=10000000)return(n/10000000).toFixed(2)+'Cr';
+  if(n>=100000)return(n/100000).toFixed(2)+'L';
+  if(n>=1000)return(n/1000).toFixed(1)+'K';
+  return n.toFixed(0);
+}
+
+// ── Quick date filter helpers ────────────────────────────────────────────────
+function fmtDateISO(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function getMtdStart(){
+  const t=new Date(); return new Date(t.getFullYear(),t.getMonth(),1);
+}
+function getYtdStart(){
+  // Indian Financial Year starts April 1
+  const t=new Date();
+  const m=t.getMonth()+1; // 1-based
+  const y=t.getFullYear();
+  return m>=4?new Date(y,3,1):new Date(y-1,3,1); // month 3 = April (0-based)
+}
+let _activeQF='overall';
+function applyQuickFilter(type){
+  _activeQF=type;
+  document.querySelectorAll('.qf-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('qf_'+type).classList.add('active');
+  const today=new Date();
+  const todayStr=fmtDateISO(today);
+  const fromEl=document.getElementById('dashFrom');
+  const toEl=document.getElementById('dashTo');
+  const lbl=document.getElementById('qfPeriodLabel');
+  if(type==='overall'){
+    fromEl.value=''; toEl.value='';
+    lbl.textContent='All time';
+  } else if(type==='mtd'){
+    const s=getMtdStart();
+    fromEl.value=fmtDateISO(s); toEl.value=todayStr;
+    lbl.textContent=`${s.toLocaleDateString('en-IN',{day:'numeric',month:'short'})} – ${today.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}`;
+  } else if(type==='ytd'){
+    const s=getYtdStart();
+    fromEl.value=fmtDateISO(s); toEl.value=todayStr;
+    lbl.textContent=`Apr 1, ${s.getFullYear()} – ${today.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} (FY ${s.getFullYear()}-${String(s.getFullYear()+1).slice(2)})`;
+  }
+  loadDashboard();
+}
+
+let _activeTab = 'overview';
+let _handlerSrcFilter = '';
+let _allSources = [];   // DC-HANDLER-SRC-001: cached from unfiltered load
+
+/* DC-HANDLER-SRC-001: Source filter for handler / stagewise tabs */
+function applyHandlerSrcFilter(v){
+  _handlerSrcFilter = v;
+  // Sync both selects to the chosen value (keep options intact, just change selected)
+  ['htSrcFilter','swSrcFilter'].forEach(id=>{
+    const el=document.getElementById(id); if(el && el.value!==v) el.value=v;
+  });
+  // Update the main source text input so buildParams() picks it up
+  const srcEl=document.getElementById('dashSource'); if(srcEl) srcEl.value=v;
+  loadDashboard();
+}
+
+function populateHandlerSrcFilter(data){
+  // Only refresh the master source list when the load was unfiltered
+  // (avoids the dropdown collapsing to 1 item after a filtered reload)
+  const activeSrc = (document.getElementById('dashSource')||{}).value||'';
+  if(!activeSrc){
+    _allSources = (data.by_source||[])
+      .filter(r=>!r._unassigned)
+      .map(r=>r.source||r.name||'')
+      .filter(Boolean);
+  }
+  const srcs = _allSources;
+  const sel0=document.getElementById('htSrcFilter');
+  const sel1=document.getElementById('swSrcFilter');
+  [sel0,sel1].forEach(sel=>{
+    if(!sel) return;
+    const prev=sel.value;
+    sel.innerHTML='<option value="">All Sources</option>'+
+      srcs.map(s=>`<option value="${s}"${prev===s?' selected':''}>${s}</option>`).join('');
+    // Restore selection (needed because innerHTML wipes it)
+    if(prev) sel.value=prev;
+  });
+}
+
+function switchTab(name){
+  _activeTab=name;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab_'+name).classList.add('active');
+  document.getElementById('pane_'+name).classList.add('active');
+  if(name==='overview'     && _dashData) renderKPIs(_dashData);
+  if(name==='trends'       && _dashData) renderKPIs(_dashData);
+  if(name==='handlers'     && _dashData) renderHandlerTable();
+  if(name==='stagewise'    && _dashData) renderStagewiseTable();
+  if(name==='groundsource' && !_execGsAll.length) loadExecGs();
+  if(name==='lead_view'){
+    const f=document.getElementById('iframeLeadView');
+    if(f && f.src==='about:blank') f.src='/staff/vgk/members?embed=1&autotab=leadView';
+  }
+  if(name==='member_view'){
+    const f=document.getElementById('iframeMemberView');
+    if(f && f.src==='about:blank') f.src='/staff/vgk/members?embed=1&autotab=incomeDash';
+  }
+}
+
+/* DC-KPI-TAB-001: Update KPI cards from the rows currently shown in the
+   Handlers tab. Rows carry s_won + s_lost from _stageFromRow(). */
+function _updateKPIsFromHandlerRows(rows){
+  const total  = rows.reduce((s,r)=>s+(r.total||0),0);
+  const won    = rows.reduce((s,r)=>s+(r.s_won||0),0);
+  const lost   = rows.reduce((s,r)=>s+(r.s_lost||0),0);
+  const inProg = Math.max(0, total - won - lost);
+  const dv     = rows.reduce((s,r)=>s+(r.deal_value||0),0);
+  const fdv    = rows.reduce((s,r)=>s+(r.final_deal_value||0),0);
+  const winPct = total>0?((won/total)*100).toFixed(1):'0';
+  const avgV   = total>0?(dv/total):0;
+  document.getElementById('kpiTotal').textContent     = fmtNum(total);
+  document.getElementById('kpiWon').textContent       = fmtNum(won);
+  document.getElementById('kpiWonPct').textContent    = total>0?`${winPct}% of total`:'';
+  document.getElementById('kpiWinRate').textContent   = `${winPct}%`;
+  document.getElementById('kpiProgress').textContent  = fmtNum(inProg);
+  document.getElementById('kpiLost').textContent      = fmtNum(lost);
+  document.getElementById('kpiDealTotal').textContent = dv>0?'₹'+fmtVal(dv):'₹0';
+  document.getElementById('kpiDealWon').textContent   = fdv>0?'Completed ₹: '+fmtVal(fdv):'';
+  document.getElementById('kpiAvg').textContent       = avgV>0?'₹'+fmtVal(avgV):'₹0';
+  document.getElementById('kpiCollected').textContent    = '—';
+  document.getElementById('kpiPending').textContent      = '—';
+  document.getElementById('kpiLoanRejected').textContent = '—';
+}
+
+/* DC-KPI-TAB-001: Update KPI cards from Stagewise rows.
+   Stagewise rows carry solar pipeline stage counts (sp_*).
+   Won ≈ total minus dropped stages (not_interested + cancelled + different_vendor). */
+function _updateKPIsFromStagewiseRows(rows){
+  const total   = rows.reduce((s,r)=>s+(r.total||0),0);
+  const dropped = rows.reduce((s,r)=>s+(r.sp_not_interested||0)+(r.sp_cancelled||0)+(r.sp_different_vendor||0),0);
+  const won     = Math.max(0, total - dropped);
+  const comp    = rows.reduce((s,r)=>s+(r.sp_completed||0),0);
+  const inProg  = Math.max(0, won - comp);
+  const dv      = rows.reduce((s,r)=>s+(r.deal_value||0),0);
+  const fdv     = rows.reduce((s,r)=>s+(r.final_deal_value||0),0);
+  const winPct  = total>0?((won/total)*100).toFixed(1):'0';
+  const avgV    = total>0?(dv/total):0;
+  document.getElementById('kpiTotal').textContent     = fmtNum(total);
+  document.getElementById('kpiWon').textContent       = fmtNum(won);
+  document.getElementById('kpiWonPct').textContent    = total>0?`${winPct}% of total`:'';
+  document.getElementById('kpiWinRate').textContent   = `${winPct}%`;
+  document.getElementById('kpiProgress').textContent  = fmtNum(inProg);
+  document.getElementById('kpiLost').textContent      = fmtNum(dropped);
+  document.getElementById('kpiDealTotal').textContent = dv>0?'₹'+fmtVal(dv):'₹0';
+  document.getElementById('kpiDealWon').textContent   = fdv>0?'Completed ₹: '+fmtVal(fdv):'';
+  document.getElementById('kpiAvg').textContent       = avgV>0?'₹'+fmtVal(avgV):'₹0';
+  document.getElementById('kpiCollected').textContent    = '—';
+  document.getElementById('kpiPending').textContent      = '—';
+  document.getElementById('kpiLoanRejected').textContent = '—';
+}
+
+function resetFilters(){
+  ['dashCategory','dashStatus','dashSolarStage'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['dashSource','dashNetSource','dashGuruFilter','dashZGuruFilter','dashTelecaller','dashFieldStaff','dashFrom','dashTo','dashClosedFrom','dashClosedTo','dashSubmitFrom','dashSubmitTo','dashCompleteFrom','dashCompleteTo','dashDvrFrom','dashDvrTo'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  // Also clear the inline source filter and reset cache so it repopulates
+  _handlerSrcFilter=''; _allSources=[];
+  ['htSrcFilter','swSrcFilter'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  _activeQF='overall';
+  document.querySelectorAll('.qf-btn').forEach(b=>b.classList.remove('active'));
+  const ob=document.getElementById('qf_overall');if(ob)ob.classList.add('active');
+  const lbl=document.getElementById('qfPeriodLabel');if(lbl)lbl.textContent='All time';
+  loadDashboard();
+}
+
+function gv(id){return (document.getElementById(id)||{}).value||'';}
+
+function buildParams(){
+  const p=new URLSearchParams();
+  const addIf=(k,v)=>{if(v)p.set(k,v);};
+  addIf('category',    gv('dashCategory'));
+  addIf('status',      gv('dashStatus'));
+  addIf('source',      gv('dashSource').trim());
+  addIf('net_source',    gv('dashNetSource').trim());
+  addIf('guru_filter',   gv('dashGuruFilter').trim());
+  addIf('z_guru_filter', gv('dashZGuruFilter').trim());
+  addIf('telecaller_emp_code',  gv('dashTelecaller').trim());
+  addIf('field_staff_emp_code', gv('dashFieldStaff').trim());
+  addIf('created_from', gv('dashFrom'));
+  addIf('created_to',   gv('dashTo'));
+  addIf('closed_from',  gv('dashClosedFrom'));
+  addIf('closed_to',    gv('dashClosedTo'));
+  addIf('submit_date_from', gv('dashSubmitFrom'));
+  addIf('submit_date_to',   gv('dashSubmitTo'));
+  addIf('complete_date_from', gv('dashCompleteFrom'));
+  addIf('complete_date_to',   gv('dashCompleteTo'));
+  addIf('first_dvr_from', gv('dashDvrFrom'));
+  addIf('first_dvr_to',   gv('dashDvrTo'));
+  addIf('solar_pipeline_status', gv('dashSolarStage'));
+  return p.toString();
+}
+
+function setLoading(){
+  ['kpiTotal','kpiWon','kpiWinRate','kpiProgress','kpiLost','kpiDealTotal','kpiAvg'].forEach(id=>{
+    const e=document.getElementById(id);if(e)e.textContent='—';
+  });
+  ['kpiWonPct','kpiDealWon'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='';});
+  ['dashByStatus','dashByCategory','dashBySource','dashByTelecaller','dashByFieldStaff','dashMonthly','dashWeekly'].forEach(id=>{
+    const e=document.getElementById(id);
+    if(e)e.innerHTML='<div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  });
+  const sw=document.getElementById('stagwiseTableWrap');
+  if(sw) sw.innerHTML='<div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+}
+
+async function loadDashboard(){
+  setLoading();
+  try{
+    const resp=await staffFetch(`${API_CRM}/lead-analytics?${buildParams()}`);
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.detail||`HTTP ${resp.status}`);}
+    const data=await resp.json();
+    _dashData = data;
+    populateHandlerSrcFilter(data);
+    renderKPIs(data);
+    renderOverview(data);
+    renderTrends(data);
+    if(_activeTab==='handlers')  renderHandlerTable();
+    if(_activeTab==='stagewise') renderStagewiseTable();
+  }catch(e){
+    console.error('[EXEC-DASH]',e);
+    ['dashByStatus','dashByCategory','dashBySource','dashByTelecaller','dashByFieldStaff','dashMonthly','dashWeekly'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el)el.innerHTML=`<div class="dash-empty" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i> ${esc(e.message)}</div>`;
+    });
+    const hw=document.getElementById('handlerTableWrap');
+    if(hw)hw.innerHTML=`<div class="dash-empty" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i> ${esc(e.message)}</div>`;
+  }
+}
+
+// DC-EXEC-GS-001: Ground Source tab — same API + same format as Category Lead Master Ground Source Wise
+let _execGsAll=[], _execGsVisible=[], _execGsSortCol='total', _execGsSortDir='desc', _execGsWeekLabels=[];
+const _EXEC_GS_TYPE_LABELS={mnr:'MNR Member',vgk:'VGK Partner',vgk_partner:'VGK Partner',partner:'Partner',staff:'Staff'};
+function _execGsTypeColor(t){return({mnr:'#6d28d9',vgk:'#0891b2',vgk_partner:'#0891b2',partner:'#059669',staff:'#d97706'})[t]||'#6b7280';}
+
+async function loadExecGs(){
+  const wrap=document.getElementById('execGsWrap');
+  if(!wrap)return;
+  wrap.innerHTML='<div class="loading-overlay"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  const p=new URLSearchParams();
+  const cat=(document.getElementById('execGsCategory')||{}).value||'';
+  const typ=(document.getElementById('execGsType')||{}).value||'all';
+  if(cat) p.set('category',cat);
+  if(typ&&typ!=='all') p.set('gs_type_filter',typ);
+  try{
+    const resp=await staffFetch(`${API_CRM}/ground-source-weekly?${p.toString()}`);
+    if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.detail||`HTTP ${resp.status}`);}
+    const data=await resp.json();
+    _execGsAll=data.data||[];
+    _execGsWeekLabels=data.week_labels||['W-0','W-1','W-2','W-3','W-4','W-5'];
+    _execGsVisible=[..._execGsAll];
+    _execGsSortCol='total';_execGsSortDir='desc';
+    _execGsFilter();
+    const c=document.getElementById('execGsCountLine');
+    if(c) c.textContent=`${_execGsAll.length} source${_execGsAll.length!==1?'s':''}`;
+  }catch(e){
+    wrap.innerHTML=`<div class="dash-empty" style="color:#dc2626"><i class="fas fa-exclamation-circle"></i> ${esc(e.message)}</div>`;
+  }
+}
+
+function _execGsFilter(){
+  const q=((document.getElementById('execGsSearch')||{}).value||'').toLowerCase().trim();
+  _execGsVisible=q?_execGsAll.filter(r=>(r.gs_name||'').toLowerCase().includes(q)||(r.gs_id||'').toLowerCase().includes(q)):[..._execGsAll];
+  _execGsSortAndRender();
+}
+
+function _execGsSortBy(col){
+  if(_execGsSortCol===col){_execGsSortDir=_execGsSortDir==='asc'?'desc':'asc';}
+  else{_execGsSortCol=col;_execGsSortDir=col==='gs_name'?'asc':'desc';}
+  _execGsSortAndRender();
+}
+
+function _execGsSortAndRender(){
+  const dir=_execGsSortDir==='asc'?1:-1;
+  const _5w=r=>(r.w0||0)+(r.w1||0)+(r.w2||0)+(r.w3||0)+(r.w4||0);
+  _execGsVisible.sort((a,b)=>{
+    const av=_execGsSortCol==='_5w'?_5w(a):(a[_execGsSortCol]??'');
+    const bv=_execGsSortCol==='_5w'?_5w(b):(b[_execGsSortCol]??'');
+    return typeof av==='number'?dir*(av-bv):dir*String(av).localeCompare(String(bv));
+  });
+  _execGsRenderTable();
+}
+
+function _execGsRenderTable(){
+  const wrap=document.getElementById('execGsWrap');
+  if(!wrap)return;
+  if(!_execGsVisible.length){wrap.innerHTML='<div class="dash-empty">No ground sources found.</div>';return;}
+  const wCols=['w0','w1','w2','w3','w4','w5'];
+  const wHdrs=_execGsWeekLabels.length?_execGsWeekLabels:['W-0','W-1','W-2','W-3','W-4','W-5'];
+  // DC-EXEC-GS-5W: 5W Total = sum of W-0 through W-4 (last 5 weeks including current)
+  const _5wCols=['w0','w1','w2','w3','w4'];
+  let html=`<table style="width:100%;border-collapse:collapse;font-size:11px;color:#e2e8f0">
+    <thead><tr style="background:#1e293b;color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.4px">
+      <th style="width:32px"></th>
+      <th style="padding:6px 8px;text-align:left;font-weight:600">S.No</th>
+      <th style="padding:6px 8px;text-align:left;font-weight:600;cursor:pointer" onclick="_execGsSortBy('gs_name')">Name</th>
+      <th style="padding:6px 8px;font-weight:600;text-align:center">Type</th>
+      <th style="padding:6px 10px;font-weight:600;text-align:center;cursor:pointer" onclick="_execGsSortBy('total')">Total</th>
+      <th style="padding:6px 8px;font-weight:600;text-align:center;background:#0f2744;color:#fbbf24;cursor:pointer" onclick="_execGsSortBy('_5w')" title="Sum of W-0 to W-4 (last 5 weeks)">5W Total</th>
+      ${wCols.map((k,i)=>`<th style="padding:6px 8px;font-weight:600;text-align:center;cursor:pointer" onclick="_execGsSortBy('${k}')" title="${wHdrs[i]||'W-'+i}">${(wHdrs[i]||'W-'+i).split(' ')[0]}</th>`).join('')}
+    </tr></thead><tbody>`;
+  _execGsVisible.forEach((r,i)=>{
+    const typeLabel=_EXEC_GS_TYPE_LABELS[r.gs_type]||r.gs_type||'—';
+    const typeBadge=`<span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${_execGsTypeColor(r.gs_type)};color:white;font-weight:600">${typeLabel}</span>`;
+    const w5Total=_5wCols.reduce((s,k)=>s+(r[k]||0),0);
+    const wCells=wCols.map(k=>{const v=r[k]||0;return `<td style="padding:4px 8px;text-align:center;${v>0?'font-weight:700;color:#60a5fa':'color:#475569'}">${v}</td>`;}).join('');
+    const safeName=(r.gs_name||'—').replace(/'/g,"\\'");
+    const bg=i%2===0?'#0d1929':'#0f1e33';
+    html+=`<tr style="border-bottom:1px solid #1e293b;background:${bg};color:#e2e8f0">
+      <td style="padding:4px 6px;text-align:center">
+        <button onclick="toggleExecGsExpand(this,'${esc(r.gs_id||'')}','${r.gs_type||'mnr'}','${safeName}')"
+          style="width:22px;height:22px;border-radius:4px;border:1px solid #334155;background:#1e293b;color:#94a3b8;font-size:13px;line-height:1;cursor:pointer;font-weight:700" title="Expand leads">+</button>
+      </td>
+      <td style="padding:4px 8px;color:#6b7280;font-size:11px">${i+1}</td>
+      <td style="padding:4px 8px;color:#e2e8f0"><strong style="color:#f1f5f9">${esc(r.gs_name||'—')}</strong><br><span style="font-size:10px;color:#64748b">${esc(r.gs_id||'')}</span></td>
+      <td style="padding:4px 8px;text-align:center">${typeBadge}</td>
+      <td style="padding:4px 10px;font-weight:800;font-size:14px;text-align:center;color:#f1f5f9">${r.total}</td>
+      <td style="padding:4px 8px;text-align:center;background:#0a1e35;${w5Total>0?'font-weight:800;color:#fbbf24':'color:#475569'}">${w5Total||0}</td>
+      ${wCells}
+    </tr>`;
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+
+async function toggleExecGsExpand(btn,gsId,gsType,gsName){
+  const row=btn.closest('tr');
+  const next=row.nextElementSibling;
+  if(next&&next.classList.contains('exec-gs-expand-row')){
+    const hidden=next.style.display==='none';
+    next.style.display=hidden?'':'none';
+    btn.textContent=hidden?'−':'+';
+    return;
+  }
+  btn.textContent='…';btn.disabled=true;
+  const p=new URLSearchParams({gs_id:gsId,gs_type:gsType});
+  const cat=(document.getElementById('execGsCategory')||{}).value;
+  if(cat) p.set('category',cat);
+  try{
+    const resp=await staffFetch(`${API_CRM}/ground-source-leads?${p.toString()}`);
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data=await resp.json();
+    const leads=data.leads||[];
+    const scMap={new:'#6b7280',contacted:'#3b82f6',qualified:'#8b5cf6',won:'#059669',lost:'#ef4444',follow_up:'#f59e0b',pending:'#d97706'};
+    const fmt=v=>v>0?'₹'+Number(v).toLocaleString('en-IN'):'—';
+    const leadsHtml=leads.length===0
+      ?`<div style="color:#9ca3af;padding:10px 12px;font-size:12px">No leads found for this source.</div>`
+      :`<table style="width:100%;font-size:11px;border-collapse:collapse">
+        <thead><tr style="background:#1e293b;color:#94a3b8;font-size:10px;text-transform:uppercase">
+          <th style="padding:6px 10px;text-align:left">ID</th>
+          <th style="padding:6px 10px;text-align:left">Date</th>
+          <th style="padding:6px 10px;text-align:left">Name</th>
+          <th style="padding:6px 10px;text-align:left">Category</th>
+          <th style="padding:6px 10px;text-align:left">Status</th>
+          <th style="padding:6px 10px;text-align:right">Deal Value</th>
+          <th style="padding:6px 10px;text-align:left">Company</th>
+        </tr></thead>
+        <tbody>${leads.map((l,li)=>{
+          const sc=scMap[l.status]||'#6b7280';
+          const bg=li%2===0?'#0d1929':'#0f1e33';
+          const co=(l.company_name||'').replace('Pvt Ltd','').replace('LLP','').replace('Private Limited','').trim();
+          return `<tr style="background:${bg};border-bottom:1px solid #1e293b">
+            <td style="padding:4px 10px;color:#6b7280">${l.id}</td>
+            <td style="padding:4px 10px;color:#94a3b8">${l.created_at||'—'}</td>
+            <td style="padding:4px 10px;font-weight:600">${esc(l.name||'—')}</td>
+            <td style="padding:4px 10px;color:#7c3aed">${esc(l.category||'—')}</td>
+            <td style="padding:4px 10px"><span style="background:${sc}22;color:${sc};padding:1px 6px;border-radius:8px;font-size:10px;font-weight:600">${l.status||'—'}</span></td>
+            <td style="padding:4px 10px;text-align:right;color:#10b981">${fmt(l.deal_value)}</td>
+            <td style="padding:4px 10px;color:#9ca3af;font-size:10px">${esc(co)}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+    const expandRow=document.createElement('tr');
+    expandRow.className='exec-gs-expand-row';
+    expandRow.innerHTML=`<td colspan="11" style="padding:0;background:#071220;border-bottom:2px solid #1e3a5f">${leadsHtml}</td>`;
+    row.insertAdjacentElement('afterend',expandRow);
+    btn.textContent='−';btn.disabled=false;
+  }catch(e){
+    btn.textContent='+';btn.disabled=false;
+    alert('Error loading leads: '+e.message);
+  }
+}
+
+function renderKPIs(data){
+  const s=data.summary||{};
+  const total=s.total_leads||0;
+  const wonPct=total>0?((s.won_leads/total)*100).toFixed(1):'0';
+  document.getElementById('kpiTotal').textContent    =fmtNum(total);
+  document.getElementById('kpiWon').textContent      =fmtNum(s.won_leads||0);
+  document.getElementById('kpiWonPct').textContent   =total>0?`${wonPct}% of total`:'';
+  document.getElementById('kpiWinRate').textContent  =`${wonPct}%`;
+  document.getElementById('kpiProgress').textContent =fmtNum(s.in_progress_leads||0);
+  document.getElementById('kpiLost').textContent     =fmtNum(s.lost_leads||0);
+  document.getElementById('kpiDealTotal').textContent=s.total_deal_value>0?'₹'+fmtVal(s.total_deal_value):'₹0';
+  document.getElementById('kpiDealWon').textContent  =s.won_deal_value>0?'Won: ₹'+fmtVal(s.won_deal_value):'';
+  document.getElementById('kpiAvg').textContent      =s.avg_deal_value>0?'₹'+fmtVal(s.avg_deal_value):'₹0';
+  document.getElementById('kpiCollected').textContent    =s.total_collected>0?'₹'+fmtVal(s.total_collected):'₹0';
+  document.getElementById('kpiPending').textContent      =s.total_pending>0?'₹'+fmtVal(s.total_pending):'₹0';
+  document.getElementById('kpiLoanRejected').textContent =s.loan_rejected_pending>0?'₹'+fmtVal(s.loan_rejected_pending):'₹0';
+}
+
+function renderBreakdownTable(containerId, rows, {labelKey,countKey,wonKey,valKey,colorFn,labelHeader,completedKey,finalDvKey,winRcvKey,compRcvKey}={}){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  if(!rows||!rows.length){el.innerHTML='<div class="dash-empty">No data</div>';return;}
+  const maxC=Math.max(1,...rows.map(r=>r[countKey]||r.count||r.total||0));
+  const showWon=!!wonKey, showVal=!!valKey, showComp=showWon&&!!completedKey, showFdv=showWon&&!!finalDvKey;
+  const showWinRcv=showWon&&!!winRcvKey, showCompRcv=showWon&&!!compRcvKey;
+  const totTotal=rows.reduce((s,r)=>s+(r[countKey]||r.count||r.total||0),0);
+  const totWon=wonKey?rows.reduce((s,r)=>s+(r[wonKey]||0),0):0;
+  const totDv=valKey?rows.reduce((s,r)=>s+(r[valKey]||0),0):0;
+  const totWinRcv=winRcvKey?rows.reduce((s,r)=>s+(r[winRcvKey]||0),0):0;
+  const totComp=completedKey?rows.reduce((s,r)=>s+(r[completedKey]||0),0):0;
+  const totFdv=finalDvKey?rows.reduce((s,r)=>s+(r[finalDvKey]||0),0):0;
+  const totCompRcv=compRcvKey?rows.reduce((s,r)=>s+(r[compRcvKey]||0),0):0;
+  const totWinPct=totTotal>0?((totWon/totTotal)*100).toFixed(1):'0';
+  const totCompWonPct=totWon>0?((totComp/totWon)*100).toFixed(1):'0';
+  const thS='text-align:right;padding:5px 7px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap';
+  const totStyle='background:#1e3a5f;color:white;border-bottom:2px solid #0f2744';
+  const totCell='text-align:right;padding:5px 7px;font-weight:700;font-size:11px;white-space:nowrap';
+  el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11px">
+    <thead><tr style="background:#f8fafc;border-bottom:1px solid #e5e7eb">
+      <th style="text-align:left;padding:5px 7px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">${esc(labelHeader||'Name')}</th>
+      <th style="${thS};color:#6b7280">Total</th>
+      ${showWon?`<th style="${thS};color:#059669">Won</th>
+      <th style="${thS};color:#7c3aed">Win%</th>`:''}
+      ${showVal?`<th style="${thS};color:#1d4ed8">Win Value</th>`:''}
+      ${showWinRcv?`<th style="${thS};color:#2563eb">Win Rcvd</th>`:''}
+      ${showComp?`<th style="${thS};color:#0d9488">Completed</th>
+      <th style="${thS};color:#0d9488">Comp/Won%</th>
+      <th style="${thS};color:#0d9488">Comp Value</th>`:''}
+      ${showCompRcv?`<th style="${thS};color:#0891b2">Comp Rcvd</th>`:''}
+      <th style="width:80px;padding:5px 7px"></th>
+    </tr></thead>
+    <tbody>
+    <tr style="${totStyle}">
+      <td style="padding:5px 7px;font-weight:800;font-size:11px;letter-spacing:.05em">TOTAL</td>
+      <td style="${totCell};text-align:right">${fmtNum(totTotal)}</td>
+      ${showWon?`<td style="${totCell};text-align:right">${fmtNum(totWon)}</td>
+      <td style="${totCell};text-align:right">${totWinPct}%</td>`:''}
+      ${showVal?`<td style="${totCell};text-align:right">${totDv>0?'₹'+fmtVal(totDv):'—'}</td>`:''}
+      ${showWinRcv?`<td style="${totCell};text-align:right">${totWinRcv>0?'₹'+fmtVal(totWinRcv):'—'}</td>`:''}
+      ${showComp?`<td style="${totCell};text-align:right">${totComp>0?fmtNum(totComp):'—'}</td>
+      <td style="${totCell};text-align:right">${totWon>0?totCompWonPct+'%':'—'}</td>
+      <td style="${totCell};text-align:right">${totFdv>0?'₹'+fmtVal(totFdv):'—'}</td>`:''}
+      ${showCompRcv?`<td style="${totCell};text-align:right">${totCompRcv>0?'₹'+fmtVal(totCompRcv):'—'}</td>`:''}
+      <td></td>
+    </tr>
+    ${rows.map((r,i)=>{
+      const lbl=r[labelKey]||'—';
+      const cnt=r[countKey]||r.count||r.total||0;
+      const won=wonKey?(r[wonKey]||0):0;
+      const comp=completedKey?(r[completedKey]||0):0;
+      const fdv=finalDvKey?(r[finalDvKey]||0):0;
+      const dv=valKey?(r[valKey]||0):0;
+      const winRcv=winRcvKey?(r[winRcvKey]||0):0;
+      const compRcv=compRcvKey?(r[compRcvKey]||0):0;
+      const winPct=cnt>0?((won/cnt)*100).toFixed(1):'0';
+      const compWonPct=won>0?((comp/won)*100).toFixed(1):'0';
+      const barPct=(cnt/maxC*100).toFixed(1);
+      const wonBarPct=cnt>0?((won/cnt)*100).toFixed(1):'0';
+      const clr=colorFn?colorFn(r):'#1e3a5f';
+      const isUnassigned=!!r._unassigned;
+      const bg=isUnassigned?'#f9fafb':(i%2===0?'white':'#fafafa');
+      const lblStyle=isUnassigned
+        ?'padding:5px 7px;font-weight:400;color:#9ca3af;font-style:italic;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'
+        :'padding:5px 7px;font-weight:500;color:#1f2937;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      const cntStyle=isUnassigned?'font-weight:600;color:#9ca3af;font-size:12px':'font-weight:700;color:#1f2937;font-size:12px';
+      return `<tr style="background:${bg};border-bottom:1px solid #f0f0f0${isUnassigned?';border-top:1px dashed #e5e7eb':''}">
+        <td style="${lblStyle}" title="${esc(lbl)}">${esc(lbl)}</td>
+        <td style="text-align:right;padding:5px 7px"><span style="${cntStyle}">${fmtNum(cnt)}</span></td>
+        ${showWon?`<td style="text-align:right;padding:5px 7px"><span style="font-weight:700;color:${isUnassigned?'#9ca3af':'#059669'}">${fmtNum(won)}</span></td>
+        <td style="text-align:right;padding:5px 7px"><span style="font-weight:600;color:${isUnassigned?'#9ca3af':'#7c3aed'};font-size:10.5px">${winPct}%</span></td>`:''}
+        ${showVal?`<td style="text-align:right;padding:5px 7px;white-space:nowrap">${dv>0?`<span style="font-weight:600;color:${isUnassigned?'#9ca3af':'#1d4ed8'};font-size:10.5px">₹${fmtVal(dv)}</span>`:'—'}</td>`:''}
+        ${showWinRcv?`<td style="text-align:right;padding:5px 7px;white-space:nowrap">${winRcv>0?`<span style="font-weight:600;color:${isUnassigned?'#9ca3af':'#2563eb'};font-size:10.5px">₹${fmtVal(winRcv)}</span>`:'—'}</td>`:''}
+        ${showComp?`<td style="text-align:right;padding:5px 7px"><span style="font-weight:700;color:#0d9488">${comp>0?fmtNum(comp):'—'}</span></td>
+        <td style="text-align:right;padding:5px 7px"><span style="font-weight:600;color:#0d9488;font-size:10.5px">${won>0?compWonPct+'%':'—'}</span></td>
+        <td style="text-align:right;padding:5px 7px;white-space:nowrap">${fdv>0?'<span style="font-weight:600;color:#0d9488;font-size:10.5px">₹'+fmtVal(fdv)+'</span>':'—'}</td>`:''}
+        ${showCompRcv?`<td style="text-align:right;padding:5px 7px;white-space:nowrap">${compRcv>0?`<span style="font-weight:600;color:#0891b2;font-size:10.5px">₹${fmtVal(compRcv)}</span>`:'—'}</td>`:''}
+        <td style="padding:5px 7px">
+          <div style="background:#f3f4f6;border-radius:3px;height:6px;overflow:hidden">
+            <div style="display:flex;height:100%">
+              <div style="width:${wonBarPct}%;background:${isUnassigned?'#d1d5db':'#059669'};border-radius:3px 0 0 3px"></div>
+              <div style="width:${Math.max(0,parseFloat(barPct)-parseFloat(wonBarPct)).toFixed(1)}%;background:${isUnassigned?'#e5e7eb':clr};opacity:.55"></div>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+}
+
+function renderOverview(data){
+  renderBreakdownTable('dashByStatus',data.by_status||[],{
+    labelKey:'status',countKey:'count',valKey:'deal_value',labelHeader:'Status',
+    colorFn:r=>STATUS_COLORS[r.status]||'#1e3a5f'
+  });
+  renderBreakdownTable('dashByCategory',data.by_category||[],{labelKey:'category',countKey:'total',wonKey:'won',valKey:'deal_value',completedKey:'completed',finalDvKey:'final_deal_value',winRcvKey:'win_received',compRcvKey:'completed_received',labelHeader:'Segment'});
+  renderBreakdownTable('dashBySource',data.by_source||[],{labelKey:'source',countKey:'total',wonKey:'won',valKey:'deal_value',completedKey:'completed',finalDvKey:'final_deal_value',winRcvKey:'win_received',compRcvKey:'completed_received',labelHeader:'Source'});
+  renderBreakdownTable('dashByTelecaller',data.by_telecaller||[],{labelKey:'name',countKey:'total',wonKey:'won',valKey:'deal_value',completedKey:'completed',finalDvKey:'final_deal_value',winRcvKey:'win_received',compRcvKey:'completed_received',labelHeader:'Support Staff'});
+  renderBreakdownTable('dashByFieldStaff',data.by_field_staff||[],{labelKey:'name',countKey:'total',wonKey:'won',valKey:'deal_value',completedKey:'completed',finalDvKey:'final_deal_value',winRcvKey:'win_received',compRcvKey:'completed_received',labelHeader:'Field Staff'});
+}
+
+// ── Handlers Tab ─────────────────────────────────────────────────────────────
+let _dashData = null;
+let _activeHandlerType = 'ground';
+
+const _HT_TYPES = ['ground','handler','support','field','guru','zguru','adguru','partner','source'];
+function setHandlerType(type){
+  _activeHandlerType = type;
+  _HT_TYPES.forEach(t=>{
+    ['htBtn_','swBtn_'].forEach(pfx=>{
+      const b=document.getElementById(pfx+t);
+      if(b) b.classList.toggle('active', t===type);
+    });
+  });
+  ['handlerSearch','stagwiseSearch'].forEach(id=>{
+    const s=document.getElementById(id); if(s) s.value='';
+  });
+  if(_activeTab==='stagewise') renderStagewiseTable();
+  else renderHandlerTable();
+}
+
+function filterHandlerTable(){
+  if(_activeTab==='stagewise') renderStagewiseTable();
+  else renderHandlerTable();
+}
+
+// DC-SOLAR-STAGE-COLS: Solar pipeline stage columns for the Stagewise Handlers table.
+// Order: Completed, Installation Pending, At Bank, Docs Pending, then all other stages, Total at end.
+const SOLAR_SW_COLS = [
+  {key:'sp_completed',              label:'Completed',            color:'#059669'},
+  {key:'sp_installation_pending',   label:'Installation Pending', color:'#3b82f6'},
+  {key:'sp_at_bank',                label:'At Bank',              color:'#f97316'},
+  {key:'sp_documents_pending',      label:'Docs Pending',         color:'#d97706'},
+  {key:'sp_application_submitted',  label:'App Submitted',        color:'#8b5cf6'},
+  {key:'sp_loan_rejected',          label:'Loan Rejected',        color:'#dc2626'},
+  {key:'sp_docs_issue',             label:'Docs Issue',           color:'#b45309'},
+  {key:'sp_load_extension',         label:'Load Extension',       color:'#7c3aed'},
+  {key:'sp_electricity_bill_change',label:'Elec Bill Chg',        color:'#0891b2'},
+  {key:'sp_net_meter_pending',      label:'Net Meter',            color:'#9333ea'},
+  {key:'sp_balance_pending',        label:'Bal Pending',          color:'#c2410c'},
+  {key:'sp_balance_received',       label:'Bal Received',         color:'#065f46'},
+  {key:'sp_subsidy_pending',        label:'Subsidy Pending',      color:'#0f766e'},
+  {key:'sp_not_interested',         label:'Not Interested',       color:'#6b7280'},
+  {key:'sp_cancelled',              label:'Cancelled',            color:'#9ca3af'},
+  {key:'sp_different_vendor',       label:'Diff Vendor',          color:'#a78bfa'},
+];
+
+// DC-STAGE-COLS: Stage column definitions for the leaderboard.
+// Option B: Active pipeline + combined Won + Lost + Total.
+const STAGE_COLS = [
+  {key:'s_new',       label:'New',        color:'#60a5fa'},
+  {key:'s_contacted', label:'Contacted',  color:'#a78bfa'},
+  {key:'s_interested',label:'Interested', color:'#34d399'},
+  {key:'s_qualified', label:'Qualified',  color:'#fbbf24'},
+  {key:'s_proposal',  label:'Proposal',   color:'#f97316'},
+  {key:'s_on_hold',   label:'On Hold',    color:'#94a3b8'},
+  {key:'s_won',       label:'Won ✓',      color:'#059669'},
+  {key:'s_lost',      label:'Lost',       color:'#ef4444'},
+];
+
+function _stageFromRow(r){
+  // Map backend fields; for source tab which has no stage data use won/in_prog/lost
+  return {
+    s_new:        r.s_new||0,
+    s_contacted:  r.s_contacted||0,
+    s_interested: r.s_interested||0,
+    s_qualified:  r.s_qualified||0,
+    s_proposal:   r.s_proposal||0,
+    s_on_hold:    r.s_on_hold||0,
+    s_won:        r.s_won!=null?r.s_won:(r.won||0),
+    s_lost:       r.s_lost!=null?r.s_lost:(r.lost||0),
+  };
+}
+
+function renderHandlerTable(){
+  if(!_dashData) return;
+  const wrap = document.getElementById('handlerTableWrap');
+  const countLine = document.getElementById('handlerCountLine');
+  if(!wrap) return;
+
+  let rows = [];
+  let labelCol = 'Name';
+  let showCode = false;
+
+  if(_activeHandlerType === 'ground'){
+    rows = (_dashData.by_ground_source||[]).map(r=>({
+      name:r.name||r.code||'—', code:r.code||'', type:r.type||'',
+      total:r.total||0, deal_value:r.deal_value||0, completed:r.completed||0, final_deal_value:r.final_deal_value||0, ..._stageFromRow(r)
+    }));
+    labelCol = 'Ground Source'; showCode = true;
+  } else if(_activeHandlerType === 'handler'){
+    rows = (_dashData.by_handler||[]).map(r=>({
+      name:r.name||r.emp_code||'—', code:r.emp_code||'',
+      total:r.total||0, deal_value:r.deal_value||0, completed:r.completed||0, final_deal_value:r.final_deal_value||0, ..._stageFromRow(r)
+    }));
+    labelCol = 'Handler (Assigned Staff)'; showCode = true;
+  } else if(_activeHandlerType === 'support'){
+    rows = (_dashData.by_telecaller||[]).map(r=>({
+      name:r.name||'—', code:r.emp_code||'',
+      total:r.total||0, deal_value:r.deal_value||0, completed:r.completed||0, final_deal_value:r.final_deal_value||0, ..._stageFromRow(r)
+    }));
+    labelCol = 'Telecaller'; showCode = true;
+  } else if(_activeHandlerType === 'field'){
+    rows = (_dashData.by_field_staff||[]).map(r=>({
+      name:r.name||'—', code:r.emp_code||'',
+      total:r.total||0, deal_value:r.deal_value||0, completed:r.completed||0, final_deal_value:r.final_deal_value||0, ..._stageFromRow(r)
+    }));
+    labelCol = 'Showroom (Field Staff)'; showCode = true;
+  } else if(_activeHandlerType === 'zguru'){
+    rows = (_dashData.by_z_guru||[]).map(r=>({
+      name:r.name||r.mnr_id||'—', code:r.mnr_id||'',
+      total:r.total||0, deal_value:r.deal_value||0, completed:r.completed||0, final_deal_value:r.final_deal_value||0, ..._stageFromRow(r)
+    }));
+    labelCol = 'Extended'; showCode = true;
+  } else if(_activeHandlerType === 'adguru'){
+    rows = (_dashData.by_adi_guru||[]).map(r=>({
+      name:r.name||r.mnr_id||'—', code:r.mnr_id||'',
+      total:r.total||0, deal_value:r.deal_value||0, completed:r.completed||0, final_deal_value:r.final_deal_value||0, ..._stageFromRow(r)
+    }));
+    labelCol = 'On Ground Support'; showCode = true;
+  } else if(_activeHandlerType === 'partner'){
+    rows = (_dashData.by_partner||[]).map(r=>({
+      name:r.name||r.code||'—', code:r.code||'',
+      total:r.total||0, deal_value:r.deal_value||0, completed:r.completed||0, final_deal_value:r.final_deal_value||0, ..._stageFromRow(r)
+    }));
+    labelCol = 'Business Partner'; showCode = true;
+  } else if(_activeHandlerType === 'guru'){
+    rows = (_dashData.by_guru||[]).map(r=>({
+      name:r.name||r.mnr_id||'—', code:r.mnr_id||'',
+      total:r.total||0, deal_value:r.deal_value||0, completed:r.completed||0, final_deal_value:r.final_deal_value||0, ..._stageFromRow(r)
+    }));
+    labelCol = 'Senior'; showCode = true;
+  } else if(_activeHandlerType === 'source'){
+    rows = (_dashData.by_source||[]).map(r=>({
+      name:r.source||r.name||'—', code:'',
+      total:r.total||r.count||0, deal_value:r.deal_value||0, completed:r.completed||0, final_deal_value:r.final_deal_value||0, ..._stageFromRow(r)
+    }));
+    labelCol = 'Lead Source';
+  }
+
+  // Client-side search filter
+  const q = (document.getElementById('handlerSearch')||{}).value||'';
+  if(q.trim()){
+    const ql = q.toLowerCase();
+    rows = rows.filter(r=>(r.name||'').toLowerCase().includes(ql)||(r.code||'').toLowerCase().includes(ql));
+  }
+
+  if(countLine) countLine.textContent = rows.length ? `Showing ${rows.length} handler${rows.length!==1?'s':''}` : '';
+  _updateKPIsFromHandlerRows(rows);  // DC-KPI-TAB-001
+
+  if(!rows.length){
+    wrap.innerHTML='<div class="dash-empty"><i class="fas fa-inbox me-1"></i>No data for this handler type</div>';
+    return;
+  }
+
+  // Totals row computation
+  const t_total=rows.reduce((s,r)=>s+r.total,0);
+  const t_s_won=rows.reduce((s,r)=>s+(r.s_won||0),0);
+  const t_dv=rows.reduce((s,r)=>s+r.deal_value,0);
+  const t_comp=rows.reduce((s,r)=>s+r.completed,0);
+  const t_fdv=rows.reduce((s,r)=>s+r.final_deal_value,0);
+  const t_winPct=t_total>0?((t_s_won/t_total)*100).toFixed(1):'0';
+  const t_compWonPct=t_s_won>0?((t_comp/t_s_won)*100).toFixed(1):'0';
+  const t_stages={};
+  STAGE_COLS.forEach(col=>{t_stages[col.key]=rows.reduce((s,r)=>s+(r[col.key]||0),0);});
+  const htotStyle='background:#1e3a5f;color:white;border-bottom:2px solid #0f2744';
+  const htotCell='text-align:center;padding:5px 6px;font-size:11.5px;font-weight:700';
+
+  // Build stage-column TDs
+  const stageTdStyle = 'text-align:center;padding:5px 6px;font-size:11.5px;font-weight:600;';
+  const tbody = rows.map((r,i)=>{
+    const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
+    const stageTds = STAGE_COLS.map(col=>{
+      const v = r[col.key]||0;
+      return `<td style="${stageTdStyle}color:${v>0?col.color:'#d1d5db'}">${v>0?fmtNum(v):'—'}</td>`;
+    }).join('');
+    const winPct = r.total>0?((r.s_won/r.total)*100).toFixed(1):'0';
+    const _hk=esc(_activeHandlerType==='source'?(r.name||''):(r.code||r.name||''));
+    const _trAttrs=r._unassigned?'':` class="h-data-row" data-htype="${esc(_activeHandlerType)}" data-hkey="${_hk}" data-hname="${esc(r.name||'')}" data-hext="${esc(r.type||'')}" onclick="openExecDrillDown(this)" style="cursor:pointer"`;
+    return `<tr${_trAttrs}>
+      <td class="h-rank" style="text-align:center;font-size:${i<3?'13px':'10px'}">${medal}</td>
+      <td style="padding:5px 9px">
+        <div class="h-name" title="${esc(r.name)}">${esc(r.name)}</div>
+        ${showCode&&r.code?`<div class="h-code">${esc(r.code)}</div>`:''}
+        ${r.type?`<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;display:inline-block;margin-top:1px;background:${r.type.startsWith('vgk')?'#d1fae5':'#dbeafe'};color:${r.type.startsWith('vgk')?'#065f46':'#1e40af'}">${r.type.startsWith('vgk')?'VGK4U':'MNR'}</span>`:''}
+      </td>
+      <td style="text-align:center;font-weight:800;color:#1f2937;font-size:13px;padding:5px 8px">${fmtNum(r.total)}</td>
+      ${stageTds}
+      <td style="text-align:center;font-size:10.5px;font-weight:700;color:#7c3aed">${winPct}%</td>
+      <td style="text-align:right;font-weight:600;color:#1d4ed8;font-size:10.5px;white-space:nowrap;padding:5px 9px">${r.deal_value>0?'₹'+fmtVal(r.deal_value):'—'}</td>
+      <td style="${stageTdStyle}color:${r.completed>0?'#0d9488':'#d1d5db'}">${r.completed>0?fmtNum(r.completed):'—'}</td>
+      <td style="text-align:center;font-size:10.5px;font-weight:600;color:#0d9488;padding:5px 6px">${r.completed>0&&r.s_won>0?((r.completed/r.s_won)*100).toFixed(1)+'%':'—'}</td>
+      <td style="text-align:right;font-size:10.5px;font-weight:600;color:#0d9488;white-space:nowrap;padding:5px 6px">${r.final_deal_value>0?'₹'+fmtVal(r.final_deal_value):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const stageHeaders = STAGE_COLS.map(col=>`<th style="color:${col.color};white-space:nowrap">${col.label}</th>`).join('');
+  const htotStageTds=STAGE_COLS.map(col=>{const v=t_stages[col.key];return `<td style="${htotCell}">${v>0?fmtNum(v):'—'}</td>`;}).join('');
+  const htotRow=`<tr class="h-total-row" style="${htotStyle}">
+    <td style="text-align:center;font-size:10px;font-weight:800;padding:5px 6px">Σ</td>
+    <td style="padding:5px 9px;font-weight:800;font-size:11px;letter-spacing:.05em">TOTAL</td>
+    <td style="${htotCell}">${fmtNum(t_total)}</td>
+    ${htotStageTds}
+    <td style="${htotCell}">${t_winPct}%</td>
+    <td style="text-align:right;font-weight:700;font-size:10.5px;white-space:nowrap;padding:5px 9px">${t_dv>0?'₹'+fmtVal(t_dv):'—'}</td>
+    <td style="${htotCell}">${t_comp>0?fmtNum(t_comp):'—'}</td>
+    <td style="${htotCell}">${t_comp>0&&t_s_won>0?t_compWonPct+'%':'—'}</td>
+    <td style="text-align:right;font-size:10.5px;font-weight:700;white-space:nowrap;padding:5px 6px">${t_fdv>0?'₹'+fmtVal(t_fdv):'—'}</td>
+  </tr>`;
+  wrap.innerHTML=`<table class="handler-table">
+    <thead><tr>
+      <th style="width:34px">#</th>
+      <th style="text-align:left">${esc(labelCol)}</th>
+      <th>Total</th>
+      ${stageHeaders}
+      <th style="color:#7c3aed;white-space:nowrap">Win%</th>
+      <th style="text-align:right;color:#1d4ed8;white-space:nowrap">Win Value</th>
+      <th style="color:#0d9488;white-space:nowrap">Completed</th>
+      <th style="color:#0d9488;white-space:nowrap">Comp/Won%</th>
+      <th style="color:#0d9488;text-align:right;white-space:nowrap">Completed Value</th>
+    </tr></thead>
+    <tbody>${htotRow}${tbody}</tbody>
+  </table>`;
+}
+
+// ── Stagewise Handlers Tab ────────────────────────────────────────────────────
+let _swSortKey = 'total';
+let _swSortAsc  = false;
+
+function swSort(key){
+  if(_swSortKey===key){ _swSortAsc=!_swSortAsc; }
+  else { _swSortKey=key; _swSortAsc=false; }
+  renderStagewiseTable();
+}
+
+function _buildSwRows(){
+  if(!_dashData) return {rows:[],labelCol:'Name',showCode:false};
+  const t=_activeHandlerType;
+  const SD=r=>({
+    sp_completed:r.sp_completed||0,                          dv_sp_completed:r.dv_sp_completed||0,
+    sp_installation_pending:r.sp_installation_pending||0,    dv_sp_installation_pending:r.dv_sp_installation_pending||0,
+    sp_at_bank:r.sp_at_bank||0,                              dv_sp_at_bank:r.dv_sp_at_bank||0,
+    sp_documents_pending:r.sp_documents_pending||0,           dv_sp_documents_pending:r.dv_sp_documents_pending||0,
+    sp_application_submitted:r.sp_application_submitted||0,  dv_sp_application_submitted:r.dv_sp_application_submitted||0,
+    sp_loan_rejected:r.sp_loan_rejected||0,                  dv_sp_loan_rejected:r.dv_sp_loan_rejected||0,
+    sp_docs_issue:r.sp_docs_issue||0,                        dv_sp_docs_issue:r.dv_sp_docs_issue||0,
+    sp_load_extension:r.sp_load_extension||0,                dv_sp_load_extension:r.dv_sp_load_extension||0,
+    sp_electricity_bill_change:r.sp_electricity_bill_change||0,dv_sp_electricity_bill_change:r.dv_sp_electricity_bill_change||0,
+    sp_net_meter_pending:r.sp_net_meter_pending||0,           dv_sp_net_meter_pending:r.dv_sp_net_meter_pending||0,
+    sp_balance_pending:r.sp_balance_pending||0,               dv_sp_balance_pending:r.dv_sp_balance_pending||0,
+    sp_balance_received:r.sp_balance_received||0,             dv_sp_balance_received:r.dv_sp_balance_received||0,
+    sp_subsidy_pending:r.sp_subsidy_pending||0,               dv_sp_subsidy_pending:r.dv_sp_subsidy_pending||0,
+    sp_not_interested:r.sp_not_interested||0,                dv_sp_not_interested:r.dv_sp_not_interested||0,
+    sp_cancelled:r.sp_cancelled||0,                          dv_sp_cancelled:r.dv_sp_cancelled||0,
+    sp_different_vendor:r.sp_different_vendor||0,             dv_sp_different_vendor:r.dv_sp_different_vendor||0,
+  });
+  let rows=[],labelCol='Name',showCode=false;
+  if(t==='ground'){
+    rows=(_dashData.by_ground_source||[]).map(r=>({name:r.name||r.code||'—',code:r.code||'',type:r.type||'',total:r.total||0,deal_value:r.deal_value||0,completed:r.completed||0,final_deal_value:r.final_deal_value||0,...SD(r)}));
+    labelCol='Ground Source';showCode=true;
+  } else if(t==='handler'){
+    rows=(_dashData.by_handler||[]).map(r=>({name:r.name||r.emp_code||'—',code:r.emp_code||'',total:r.total||0,deal_value:r.deal_value||0,completed:r.completed||0,final_deal_value:r.final_deal_value||0,...SD(r)}));
+    labelCol='Handler (Assigned Staff)';showCode=true;
+  } else if(t==='support'){
+    rows=(_dashData.by_telecaller||[]).map(r=>({name:r.name||'—',code:r.emp_code||'',total:r.total||0,deal_value:r.deal_value||0,completed:r.completed||0,final_deal_value:r.final_deal_value||0,...SD(r)}));
+    labelCol='Telecaller';showCode=true;
+  } else if(t==='field'){
+    rows=(_dashData.by_field_staff||[]).map(r=>({name:r.name||'—',code:r.emp_code||'',total:r.total||0,deal_value:r.deal_value||0,completed:r.completed||0,final_deal_value:r.final_deal_value||0,...SD(r)}));
+    labelCol='Showroom (Field Staff)';showCode=true;
+  } else if(t==='zguru'){
+    rows=(_dashData.by_z_guru||[]).map(r=>({name:r.name||r.mnr_id||'—',code:r.mnr_id||'',total:r.total||0,deal_value:r.deal_value||0,completed:r.completed||0,final_deal_value:r.final_deal_value||0,...SD(r)}));
+    labelCol='Extended';showCode=true;
+  } else if(t==='adguru'){
+    rows=(_dashData.by_adi_guru||[]).map(r=>({name:r.name||r.mnr_id||'—',code:r.mnr_id||'',total:r.total||0,deal_value:r.deal_value||0,completed:r.completed||0,final_deal_value:r.final_deal_value||0,...SD(r)}));
+    labelCol='On Ground Support';showCode=true;
+  } else if(t==='partner'){
+    rows=(_dashData.by_partner||[]).map(r=>({name:r.name||r.code||'—',code:r.code||'',total:r.total||0,deal_value:r.deal_value||0,completed:r.completed||0,final_deal_value:r.final_deal_value||0,...SD(r)}));
+    labelCol='Business Partner';showCode=true;
+  } else if(t==='guru'){
+    rows=(_dashData.by_guru||[]).map(r=>({name:r.name||r.mnr_id||'—',code:r.mnr_id||'',total:r.total||0,deal_value:r.deal_value||0,completed:r.completed||0,final_deal_value:r.final_deal_value||0,...SD(r)}));
+    labelCol='Senior';showCode=true;
+  } else if(t==='source'){
+    rows=(_dashData.by_source||[]).map(r=>({name:r.source||r.name||'—',code:'',total:r.total||r.count||0,deal_value:r.deal_value||0,completed:r.completed||0,final_deal_value:r.final_deal_value||0,...SD(r)}));
+    labelCol='Lead Source';
+  }
+  return {rows,labelCol,showCode};
+}
+
+function renderStagewiseTable(){
+  if(!_dashData) return;
+  const wrap=document.getElementById('stagwiseTableWrap');
+  const countLine=document.getElementById('stagwiseCountLine');
+  if(!wrap) return;
+
+  let {rows,labelCol,showCode}=_buildSwRows();
+
+  const q=(document.getElementById('stagwiseSearch')||{}).value||'';
+  if(q.trim()){
+    const ql=q.toLowerCase();
+    rows=rows.filter(r=>(r.name||'').toLowerCase().includes(ql)||(r.code||'').toLowerCase().includes(ql));
+  }
+
+  rows.sort((a,b)=>{
+    const av=a[_swSortKey]||0,bv=b[_swSortKey]||0;
+    return _swSortAsc?av-bv:bv-av;
+  });
+
+  if(countLine) countLine.textContent=rows.length?`Showing ${rows.length} handler${rows.length!==1?'s':''}` : '';
+  _updateKPIsFromStagewiseRows(rows);  // DC-KPI-TAB-001
+  if(!rows.length){
+    wrap.innerHTML='<div class="dash-empty"><i class="fas fa-inbox me-1"></i>No data for this handler type</div>';
+    return;
+  }
+
+  const SW_COLS=[
+    ...SOLAR_SW_COLS.map(c=>({label:c.label,cntKey:c.key,dvKey:'dv_'+c.key,color:c.color})),
+    {label:'Total',cntKey:'total',dvKey:'deal_value',color:'#1f2937'},
+    {label:'Completed',cntKey:'completed',dvKey:'final_deal_value',color:'#0d9488'},
+  ];
+
+  const arrow=k=>_swSortKey===k?(_swSortAsc?' ↑':' ↓'):'';
+  const sc=k=>_swSortKey===k?' sw-sorted':'';
+
+  // Stagewise totals
+  const sw_t={};
+  SW_COLS.forEach(c=>{sw_t[c.cntKey]=rows.reduce((s,r)=>s+(r[c.cntKey]||0),0);sw_t[c.dvKey]=rows.reduce((s,r)=>s+(r[c.dvKey]||0),0);});
+  const swtotCells=SW_COLS.map((c,ci)=>{
+    const cnt=sw_t[c.cntKey]||0,dv=sw_t[c.dvKey]||0;
+    const brd=ci>0?'border-left:1px solid rgba(255,255,255,.15)':'';
+    return `<td style="${brd};padding:4px 5px;text-align:center"><span style="font-weight:800;font-size:11px">${cnt>0?fmtNum(cnt):'—'}</span></td>`+
+           `<td style="padding:4px 5px;text-align:right"><span style="font-weight:700;font-size:10.5px;white-space:nowrap">${dv>0?'₹'+fmtVal(dv):'—'}</span></td>`;
+  }).join('');
+  const swtotRow=`<tr class="sw-total-row" style="background:#1e3a5f;color:white;border-bottom:2px solid #0f2744">
+    <td class="sw-fc1" style="text-align:center;font-size:10px;font-weight:800;padding:5px 6px">Σ</td>
+    <td class="sw-fc2" style="padding:5px 8px;font-weight:800;font-size:11px;letter-spacing:.05em;min-width:150px">TOTAL</td>
+    ${swtotCells}
+  </tr>`;
+
+  const grpRow=SW_COLS.map(c=>`<th colspan="2" class="sw-group" style="color:${c.color};border-left:1px solid rgba(255,255,255,.2)">${esc(c.label)}</th>`).join('');
+  const subRow=SW_COLS.map(c=>`
+    <th class="sw-sub${sc(c.cntKey)}" onclick="swSort('${c.cntKey}')" style="border-left:1px solid rgba(255,255,255,.1)">Cnt${arrow(c.cntKey)}</th>
+    <th class="sw-sub${sc(c.dvKey)}"  onclick="swSort('${c.dvKey}')">DV${arrow(c.dvKey)}</th>`).join('');
+
+  const tbody=rows.map((r,i)=>{
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':`#${i+1}`;
+    const cells=SW_COLS.map((c,ci)=>{
+      const cnt=r[c.cntKey]||0, dv=r[c.dvKey]||0;
+      const brd=ci>0?'border-left:1px solid #f0f0f0':'';
+      return `<td style="${brd}"><span class="${cnt>0?'sw-cnt':'sw-zero'}">${cnt>0?fmtNum(cnt):'—'}</span></td>`+
+             `<td><span class="${dv>0?'sw-dv':'sw-zero'}">${dv>0?'₹'+fmtVal(dv):'—'}</span></td>`;
+    }).join('');
+    const _swHk=esc(_activeHandlerType==='source'?(r.name||''):(r.code||r.name||''));
+    const _swTrAttrs=r._unassigned?'':` class="h-data-row" data-htype="${esc(_activeHandlerType)}" data-hkey="${_swHk}" data-hname="${esc(r.name||'')}" data-hext="${esc(r.type||'')}" onclick="openExecDrillDown(this)" style="cursor:pointer"`;
+    return `<tr${_swTrAttrs}>
+      <td class="sw-fc1" style="text-align:center;font-size:${i<3?'13px':'10px'};padding:5px 6px">${medal}</td>
+      <td class="sw-fc2" style="padding:5px 8px;min-width:150px">
+        <div class="h-name" title="${esc(r.name)}">${esc(r.name)}</div>
+        ${showCode&&r.code?`<div class="h-code">${esc(r.code)}</div>`:''}
+        ${r.type?`<span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;display:inline-block;margin-top:1px;background:${r.type.startsWith('vgk')?'#d1fae5':'#dbeafe'};color:${r.type.startsWith('vgk')?'#065f46':'#1e40af'}">${r.type.startsWith('vgk')?'VGK4U':'MNR'}</span>`:''}
+      </td>
+      ${cells}
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML=`<table class="sw-table">
+    <thead>
+      <tr>
+        <th rowspan="2" class="sw-fc1">#</th>
+        <th rowspan="2" class="sw-fc2" style="text-align:left;min-width:150px">${esc(labelCol)}</th>
+        ${grpRow}
+      </tr>
+      <tr>${subRow}</tr>
+    </thead>
+    <tbody>${swtotRow}${tbody}</tbody>
+  </table>`;
+  // DC-STICKY-FIX-001: measure actual header row heights after render and
+  // set correct sticky top offsets so TOTAL row never overlaps data rows.
+  requestAnimationFrame(()=>{
+    const tbl=wrap.querySelector('.sw-table');
+    if(!tbl) return;
+    const hRows=tbl.querySelectorAll('thead tr');
+    const totRow=tbl.querySelector('tbody tr.sw-total-row');
+    if(hRows.length>=2){
+      const h1=hRows[0].getBoundingClientRect().height;
+      const h2=hRows[1].getBoundingClientRect().height;
+      hRows[1].style.top=Math.round(h1)+'px';
+      if(totRow) totRow.style.top=Math.round(h1+h2)+'px';
+    }
+  });
+}
+
+function renderTrendTable(containerId, rows){
+  const el=document.getElementById(containerId);
+  if(!el)return;
+  if(!rows||!rows.length){el.innerHTML='<div class="dash-empty">No trend data</div>';return;}
+  const maxT=Math.max(1,...rows.map(r=>r.total));
+  const trTot=rows.reduce((s,r)=>s+r.total,0);
+  const trWon=rows.reduce((s,r)=>s+r.won,0);
+  const trDv=rows.reduce((s,r)=>s+(r.deal_value||0),0);
+  const trWinRcv=rows.reduce((s,r)=>s+(r.win_received||0),0);
+  const trComp=rows.reduce((s,r)=>s+(r.completed||0),0);
+  const trFdv=rows.reduce((s,r)=>s+(r.final_deal_value||0),0);
+  const trCompRcv=rows.reduce((s,r)=>s+(r.completed_received||0),0);
+  const trWinPct=trTot>0?((trWon/trTot)*100).toFixed(1):'0';
+  const trCompWonPct=trWon>0?((trComp/trWon)*100).toFixed(1):'0';
+  const trtotStyle='background:#1e3a5f;color:white;border-bottom:2px solid #0f2744';
+  const trtotCell='text-align:center;padding:5px 6px;font-weight:700;font-size:11px;white-space:nowrap';
+  const trtotRow=`<tr style="${trtotStyle}">
+    <td style="text-align:left;font-weight:800;white-space:nowrap;font-size:11px;padding:5px 7px">TOTAL</td>
+    <td style="${trtotCell}">${fmtNum(trTot)}</td>
+    <td style="${trtotCell}">${fmtNum(trWon)}</td>
+    <td style="${trtotCell}">${trWinPct}%</td>
+    <td style="${trtotCell}">${trDv>0?'₹'+fmtVal(trDv):'—'}</td>
+    <td style="${trtotCell}">${trWinRcv>0?'₹'+fmtVal(trWinRcv):'—'}</td>
+    <td style="${trtotCell}">—</td>
+    <td style="${trtotCell}">${trComp>0?fmtNum(trComp):'—'}</td>
+    <td style="${trtotCell}">${trComp>0&&trWon>0?trCompWonPct+'%':'—'}</td>
+    <td style="${trtotCell}">${trFdv>0?'₹'+fmtVal(trFdv):'—'}</td>
+    <td style="${trtotCell}">${trCompRcv>0?'₹'+fmtVal(trCompRcv):'—'}</td>
+    <td style="${trtotCell}">—</td>
+    <td class="trend-bar-cell"></td>
+  </tr>`;
+  el.innerHTML=`<table class="trend-table">
+    <thead><tr>
+      <th style="text-align:left">Period</th>
+      <th>Total Leads</th>
+      <th>Won</th>
+      <th>Win%</th>
+      <th style="color:#1d4ed8;white-space:nowrap">Win Value</th>
+      <th style="color:#2563eb;white-space:nowrap">Win Rcvd</th>
+      <th style="white-space:nowrap;color:#6366f1">vs Prev</th>
+      <th style="color:#0d9488">Completed</th>
+      <th style="color:#0d9488;white-space:nowrap">Comp/Won%</th>
+      <th style="color:#0d9488;white-space:nowrap">Comp Value</th>
+      <th style="color:#0891b2;white-space:nowrap">Comp Rcvd</th>
+      <th style="white-space:nowrap;color:#6366f1">vs Prev</th>
+      <th class="trend-bar-cell">Progress</th>
+    </tr></thead>
+    <tbody>
+    ${trtotRow}
+    ${rows.map((r,i)=>{
+      const wp=r.total>0?((r.won/r.total)*100).toFixed(1):'0';
+      const pct=(r.total/maxT*100).toFixed(1);
+      const wonPct=r.total>0?(r.won/r.total*100).toFixed(1):0;
+      const comp=r.completed||0;
+      const fdv=r.final_deal_value||0;
+      const winRcv=r.win_received||0;
+      const compRcv=r.completed_received||0;
+      const compWonPct=r.won>0?((comp/r.won)*100).toFixed(1):'0';
+      const prevR=rows[i+1];
+      const curDv=r.deal_value||0;
+      const prevDv=prevR?(prevR.deal_value||0):null;
+      let vsPrevCell='<span style="color:#d1d5db;font-size:10px">—</span>';
+      if(prevDv!==null&&(curDv>0||prevDv>0)){
+        const delta=curDv-prevDv;
+        const col=delta>0?'#059669':delta<0?'#ef4444':'#6b7280';
+        const sign=delta>0?'+':delta<0?'-':'';
+        vsPrevCell=delta===0?'<span style="color:#6b7280;font-size:10px">—</span>':`<span style="font-size:10px;font-weight:700;color:${col}">${sign}₹${fmtVal(Math.abs(delta))}</span>`;
+      }
+      return `<tr>
+        <td style="text-align:left;font-weight:600;white-space:nowrap;font-size:11px">${esc(r.label)}</td>
+        <td><span class="badge-total">${fmtNum(r.total)}</span></td>
+        <td><span class="badge-won">${fmtNum(r.won)}</span></td>
+        <td style="font-size:10.5px;color:#7c3aed;font-weight:700">${wp}%</td>
+        <td style="white-space:nowrap">${curDv>0?`<span class="badge-dv">₹${fmtVal(curDv)}</span>`:'—'}</td>
+        <td style="white-space:nowrap;text-align:center">${winRcv>0?`<span style="font-size:10.5px;font-weight:600;color:#2563eb">₹${fmtVal(winRcv)}</span>`:'—'}</td>
+        <td style="text-align:center">${vsPrevCell}</td>
+        <td style="text-align:center"><span style="font-weight:700;color:#0d9488;font-size:11px">${comp>0?fmtNum(comp):'—'}</span></td>
+        <td style="text-align:center"><span style="font-weight:600;color:#0d9488;font-size:10.5px">${comp>0&&r.won>0?compWonPct+'%':'—'}</span></td>
+        <td style="white-space:nowrap">${fdv>0?'<span style="font-weight:600;color:#0d9488;font-size:10.5px">₹'+fmtVal(fdv)+'</span>':'—'}</td>
+        <td style="white-space:nowrap;text-align:center">${compRcv>0?`<span style="font-size:10.5px;font-weight:600;color:#0891b2">₹${fmtVal(compRcv)}</span>`:'—'}</td>
+        <td style="text-align:center">${(()=>{const prevFdv=prevR?(prevR.final_deal_value||0):null;if(prevFdv===null||(fdv===0&&prevFdv===0))return'<span style="color:#d1d5db;font-size:10px">—</span>';const d=fdv-prevFdv;if(d===0)return'<span style="color:#6b7280;font-size:10px">—</span>';const col=d>0?'#059669':'#ef4444';const s=d>0?'+':'-';return`<span style="font-size:10px;font-weight:700;color:${col}">${s}₹${fmtVal(Math.abs(d))}</span>`;})()}</td>
+        <td class="trend-bar-cell">
+          <div class="t-bar-wrap">
+            <div style="display:flex;height:100%">
+              <div class="t-bar-won" style="width:${wonPct}%"></div>
+              <div class="t-bar-fill" style="width:${Math.max(0,pct-wonPct)}%"></div>
+            </div>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function renderTrends(data){
+  renderTrendTable('dashMonthly', (data.monthly_trend||[]).slice().reverse());
+  renderTrendTable('dashWeekly',  (data.weekly_trend||[]).slice().reverse());
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  if(typeof StaffSidebar!=='undefined') await StaffSidebar.init();
+  if(typeof StaffHeader!=='undefined'){
+    StaffHeader.inject('Executive Dashboard','fas fa-chart-line');
+    StaffHeader.init();
+  }
+  loadDashboard();
+});
+
+// ── DC-EXEC-DRILLDOWN-001: Handler Lead Drill-Down Modal ──────────────────────
+const API_CRM_DD = '/api/v1/crm';
+const API_OPC_DD = '/api/v1/operator-calls';
+const API_CTK_DD = '/api/v1/call-tracking';
+let _edCurrentLead = null;  // {id, company_id, name, phone_raw}
+// DC-EXEC-DD-SORT-001: Drilldown lead cache + sort state
+let _edLeadsData=[], _edSortBy='submit_date', _edSortDir='desc';
+
+const _STATUS_COL = {
+  won:'#059669',order_placed:'#0891b2',dispatched:'#0284c7',delivered:'#1d4ed8',
+  installed:'#7c3aed',completed:'#065f46',lost:'#dc2626',on_hold:'#9ca3af',
+  new:'#60a5fa',contacted:'#a78bfa',interested:'#34d399',qualified:'#fbbf24',proposal:'#f97316',
+};
+const _SOL_LABEL = {
+  pending_with_bank:'At Bank',installation_pending:'Inst. Pending',documents_pending:'Docs Pending',
+  application_submitted:'App Submitted',loan_rejected:'Loan Rejected',documents_issue:'Docs Issue',
+  load_extension:'Load Extension',electricity_bill_change:'Elec Bill Chg',
+  net_meter_pending:'Net Meter',balance_pending:'Bal Pending',balance_received:'Bal Received',
+  subsidy_pending:'Subsidy Pending',completed:'Completed',not_interested:'Not Interested',
+  cancelled:'Cancelled',different_vendor:'Diff Vendor',
+};
+
+function _edFmtDt(iso){
+  if(!iso) return '—';
+  try{const d=new Date(iso);return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});}catch{return iso.slice(0,10);}
+}
+function _edFmtDtTime(iso){
+  if(!iso) return '—';
+  try{const d=new Date(iso);return d.toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});}catch{return iso;}
+}
+
+// DC-EXEC-DD-SORT-001: Days helper
+function _edComputeDays(l){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const raw=l.submit_date||l.created_at;
+  if(!raw) return null;
+  const d=new Date(raw.slice(0,10)); d.setHours(0,0,0,0);
+  return isNaN(d.getTime())?null:Math.max(0,Math.floor((today-d)/86400000));
+}
+function _edUpdateSortUI(){
+  document.querySelectorAll('#edModalTable th[data-sk]').forEach(th=>{
+    const ic=th.querySelector('.ed-si');
+    if(!ic) return;
+    if(th.dataset.sk===_edSortBy){ic.textContent=_edSortDir==='asc'?' ▲':' ▼';ic.style.color='#1e3a5f';}
+    else{ic.textContent=' ⇅';ic.style.color='#9ca3af';}
+  });
+}
+function _edRenderLeads(leads){
+  const body=document.getElementById('edLeadListBody');
+  if(!body) return;
+  if(!leads.length){
+    body.innerHTML='<tr><td colspan="13" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox me-1"></i>No leads found</td></tr>';
+    _edUpdateSortUI(); return;
+  }
+  body.innerHTML=leads.map((l,i)=>{
+    const stCol=_STATUS_COL[l.status]||'#6b7280';
+    const solLbl=l.solar_pipeline_status?(_SOL_LABEL[l.solar_pipeline_status]||l.solar_pipeline_status):'—';
+    const dv=l.deal_value_total>0?'₹'+fmtVal(l.deal_value_total):'—';
+    const latNote=l.latest_note?`<span title="${esc(l.latest_note.note||'')}" style="font-size:10px;color:#6b7280;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle">${esc((l.latest_note.note||'').substring(0,60)+(l.latest_note.note&&l.latest_note.note.length>60?'…':''))}</span>`:'<span style="color:#d1d5db;font-size:10px">—</span>';
+    const days=_edComputeDays(l);
+    const daysCell=days===null?`<td style="text-align:center;padding:5px 6px;font-size:10px;color:#d1d5db">—</td>`:(()=>{
+      const col=days<=7?'#059669':days<=30?'#d97706':days<=60?'#ea580c':'#dc2626';
+      const bg=days<=7?'#f0fdf4':days<=30?'#fffbeb':days<=60?'#fff7ed':'#fef2f2';
+      return `<td style="text-align:center;padding:5px 6px;white-space:nowrap" title="Days since Submit Date"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${days}d</span></td>`;
+    })();
+    return `<tr class="ed-lead-row" style="cursor:pointer" onclick="_edSelectLead(${l.id},${l.company_id},'${esc(l.name)}','${esc(l.phone_raw||'')}',this)">
+      <td style="text-align:center;font-size:10px;color:#9ca3af;padding:5px 6px">${i+1}</td>
+      <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.created_at)}</td>
+      <td style="font-size:10.5px;white-space:nowrap;padding:5px 6px">${_edFmtDt(l.submit_date)}</td>
+      ${daysCell}
+      <td style="font-weight:600;font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 6px">${esc(l.name)}</td>
+      <td style="font-size:10.5px;font-family:monospace;padding:5px 6px">${esc(l.phone_raw||l.phone||'—')}</td>
+      <td style="padding:5px 6px"><span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:8px;background:${stCol}22;color:${stCol};white-space:nowrap">${esc(l.status)}</span></td>
+      <td style="font-size:10px;color:#0891b2;white-space:nowrap;padding:5px 6px">${esc(solLbl)}</td>
+      <td style="font-size:10px;color:#059669;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.loan_bank||'—')}</td>
+      <td style="font-size:10px;color:#047857;white-space:nowrap;padding:5px 6px;max-width:110px;overflow:hidden;text-overflow:ellipsis">${esc(l.bank_branch||'—')}</td>
+      <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:5px 6px;max-width:100px;overflow:hidden;text-overflow:ellipsis">${esc(l.brand_name||'—')}</td>
+      <td style="font-size:10px;font-weight:600;color:#1d4ed8;white-space:nowrap;text-align:right;padding:5px 6px">${dv}</td>
+      <td style="max-width:180px;padding:5px 6px">${latNote}</td>
+    </tr>`;
+  }).join('');
+  _edUpdateSortUI();
+}
+function _edSortLeads(col){
+  if(_edSortBy===col) _edSortDir=_edSortDir==='asc'?'desc':'asc';
+  else{_edSortBy=col;_edSortDir='asc';}
+  _edLeadsData.sort((a,b)=>{
+    if(col==='_days'){
+      const va=_edComputeDays(a)??(_edSortDir==='asc'?Infinity:-Infinity);
+      const vb=_edComputeDays(b)??(_edSortDir==='asc'?Infinity:-Infinity);
+      return _edSortDir==='asc'?va-vb:vb-va;
+    }
+    if(col==='deal_value_total'){
+      const va=a[col]||0; const vb=b[col]||0;
+      return _edSortDir==='asc'?va-vb:vb-va;
+    }
+    const va=(a[col]||'').toString(); const vb=(b[col]||'').toString();
+    const c=va.localeCompare(vb); return _edSortDir==='asc'?c:-c;
+  });
+  _edRenderLeads(_edLeadsData);
+}
+function _edToggleFullscreen(){
+  const ov=document.getElementById('edOverlay');
+  const ic=document.getElementById('edFsIcon');
+  if(!ov) return;
+  ov.classList.toggle('ed-fs');
+  if(ic) ic.className=ov.classList.contains('ed-fs')?'fas fa-compress':'fas fa-expand';
+}
+async function openExecDrillDown(tr){
+  const htype=tr.dataset.htype, hkey=tr.dataset.hkey, hname=tr.dataset.hname, hext=tr.dataset.hext;
+  if(!htype||!hkey) return;
+  const ov=document.getElementById('edOverlay');
+  const title=document.getElementById('edModalTitle');
+  const body=document.getElementById('edLeadListBody');
+  const cnt=document.getElementById('edLeadCount');
+  const panel=document.getElementById('edDetailPanel');
+  if(!ov) return;
+  title.textContent=hname||hkey;
+  body.innerHTML='<tr><td colspan="13" style="text-align:center;padding:20px;color:#6b7280"><i class="fas fa-spinner fa-spin me-1"></i>Loading leads…</td></tr>';
+  cnt.textContent='';
+  if(panel) panel.style.display='none';
+  _edCurrentLead=null;
+  _edLeadsData=[]; _edSortBy='submit_date'; _edSortDir='desc';
+  ov.style.display='flex';
+  // Build params: reuse all current dashboard filters + handler-specific ones
+  const base=buildParams();
+  const p=new URLSearchParams(base);
+  p.set('handler_type', htype);
+  p.set('handler_key',  hkey);
+  if(hext) p.set('handler_type_ext', hext);
+  try{
+    const r=await staffFetch(`${API_CRM_DD}/exec-handler-leads?${p.toString()}`);
+    if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.detail||`HTTP ${r.status}`);}
+    const d=await r.json();
+    _edLeadsData=d.data||[];
+    const total=d.total||0;
+    cnt.textContent=`${fmtNum(total)} lead${total!==1?'s':''} (showing ${_edLeadsData.length})`;
+    _edLeadsData.sort((a,b)=>{const va=a.submit_date||a.created_at||'';const vb=b.submit_date||b.created_at||'';return vb.localeCompare(va);});
+    _edRenderLeads(_edLeadsData);
+  }catch(e){
+    body.innerHTML=`<tr><td colspan="13" style="text-align:center;padding:20px;color:#dc2626"><i class="fas fa-exclamation-circle me-1"></i>${esc(e.message)}</td></tr>`;
+  }
+}
+
+function closeExecDrillDown(){
+  const ov=document.getElementById('edOverlay');
+  if(ov) ov.style.display='none';
+  _edCurrentLead=null;
+}
+
+function _edSelectLead(leadId, companyId, name, phoneRaw, tr){
+  // Highlight selected row
+  document.querySelectorAll('#edLeadListBody .ed-lead-row').forEach(r=>r.style.background='');
+  if(tr) tr.style.background='#eff6ff';
+  _edCurrentLead={id:leadId,company_id:companyId,name,phone_raw:phoneRaw};
+  const panel=document.getElementById('edDetailPanel');
+  const pTitle=document.getElementById('edDetailTitle');
+  const callSec=document.getElementById('edCallHistSection');
+  const callBtn=document.getElementById('edCallHistBtn');
+  if(!panel) return;
+  if(pTitle) pTitle.textContent=`Notes — ${name}`;
+  if(callSec){callSec.style.display='none';callSec.innerHTML='';}
+  if(callBtn) callBtn.textContent='📞 Call History';
+  panel.style.display='flex';
+  _edLoadNotes(leadId, companyId);
+}
+
+async function _edLoadNotes(leadId, companyId){
+  const list=document.getElementById('edNotesList');
+  if(!list) return;
+  list.innerHTML='<div style="text-align:center;padding:14px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i></div>';
+  try{
+    const r=await staffFetch(`${API_CRM_DD}/leads/${leadId}/notes?company_id=${companyId}`);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d=await r.json();
+    const notes=d.data||[];
+    if(!notes.length){list.innerHTML='<div style="color:#9ca3af;font-size:12px;text-align:center;padding:12px">No comments yet</div>';return;}
+    list.innerHTML=notes.map(n=>{
+      const dt=_edFmtDtTime(n.created_at);
+      return `<div style="border-bottom:1px solid #f3f4f6;padding:10px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:9.5px;color:#9ca3af">${esc(dt)} · ${esc(n.created_by_id||'')}</span>
+        </div>
+        <div style="font-size:12.5px;color:#1f2937;line-height:1.5">${esc(n.note)}</div>
+      </div>`;
+    }).join('');
+  }catch(e){list.innerHTML=`<div style="color:#dc2626;font-size:12px;padding:10px">Error: ${esc(e.message)}</div>`;}
+}
+
+async function _edSubmitNote(){
+  const ta=document.getElementById('edNewNote');
+  const val=(ta?.value||'').trim();
+  if(!val){return;}
+  if(!_edCurrentLead) return;
+  const btn=document.getElementById('edNoteBtn');
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';}
+  try{
+    const r=await staffFetch(`${API_CRM_DD}/leads/${_edCurrentLead.id}/notes?company_id=${_edCurrentLead.company_id}`,
+      {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:val,is_private:false})});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    ta.value='';
+    _edLoadNotes(_edCurrentLead.id, _edCurrentLead.company_id);
+  }catch(e){alert('Error: '+e.message);}
+  finally{if(btn){btn.disabled=false;btn.innerHTML='<i class="fas fa-paper-plane me-1"></i>Add';}}
+}
+
+async function _edToggleCallHist(){
+  const sec=document.getElementById('edCallHistSection');
+  const btn=document.getElementById('edCallHistBtn');
+  if(!sec||!_edCurrentLead) return;
+  if(sec.style.display!=='none'){sec.style.display='none';if(btn)btn.textContent='📞 Call History';return;}
+  sec.style.display='block';
+  if(btn) btn.textContent='▲ Hide Calls';
+  sec.innerHTML='<div style="text-align:center;padding:12px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading calls…</div>';
+  try{
+    const r=await staffFetch(`${API_CTK_DD}/lead/${_edCurrentLead.id}/calls`);
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d=await r.json();
+    const calls=d.data||[];
+    if(!calls.length){sec.innerHTML='<div style="color:#9ca3af;font-size:12px;text-align:center;padding:12px">No call records for this lead</div>';return;}
+    const _cc={'OUTGOING':'#0ea5e9','INCOMING':'#059669','MISSED':'#dc2626','REJECTED':'#7c3aed','DIALER':'#d97706'};
+    sec.innerHTML='<div style="padding:6px 14px;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Call History ('+calls.length+')</div>'+
+      calls.slice(0,10).map(c=>{
+        const ct=(c.call_type||'OUTGOING').toUpperCase();
+        const sc=_cc[ct]||'#6b7280';
+        const dt=_edFmtDtTime(c.created_at||c.call_date);
+        const dur=c.duration_seconds>0?(Math.floor(c.duration_seconds/60)+'m '+(c.duration_seconds%60)+'s'):'—';
+        const agent=c.staff_name||c.contact_name||'—';
+        const outcome=c.call_outcome?' · '+esc(c.call_outcome):'';
+        return '<div style="padding:8px 14px;border-bottom:1px solid #f3f4f6;display:flex;align-items:flex-start;gap:9px">'+
+          '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+sc+'22;color:'+sc+';font-weight:700;white-space:nowrap;margin-top:2px">'+ct+'</span>'+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:12px;color:#1f2937;font-weight:600">'+esc(agent)+outcome+'</div>'+
+            '<div style="font-size:11px;color:#6b7280;margin-top:1px">'+esc(dt)+' &nbsp;·&nbsp; '+dur+'</div>'+
+          '</div></div>';
+      }).join('');
+  }catch(e){sec.innerHTML='<div style="color:#dc2626;font-size:12px;padding:10px">Error: '+esc(e.message)+'</div>';}
+}
+</script>
+
+<!-- DC-EXEC-DRILLDOWN-001: Handler Lead Drill-Down Modal -->
+<div id="edOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9500;align-items:flex-start;justify-content:center;padding:12px;overflow-y:auto" onclick="if(event.target===this)closeExecDrillDown()">
+  <div id="edModal" style="background:#fff;border-radius:14px;width:100%;max-width:1100px;margin:auto;display:flex;flex-direction:column;box-shadow:0 16px 60px rgba(0,0,0,.28);min-height:400px;max-height:calc(100vh - 24px)">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#1e3a5f,#0f2440);border-radius:14px 14px 0 0;padding:13px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="color:#fff;font-weight:800;font-size:14px"><i class="fas fa-list me-2"></i><span id="edModalTitle">Leads</span></div>
+        <div id="edLeadCount" style="font-size:10.5px;color:rgba(255,255,255,.7);margin-top:2px"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button onclick="_edToggleFullscreen()" title="Enlarge / Collapse" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:13px;padding:4px 10px;border-radius:6px;cursor:pointer;line-height:1"><i id="edFsIcon" class="fas fa-expand"></i></button>
+        <button onclick="closeExecDrillDown()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;opacity:.8">✕</button>
+      </div>
+    </div>
+    <!-- Lead list table -->
+    <div id="edLeadTableWrap" style="overflow-x:auto;overflow-y:auto;flex:1;min-height:180px;max-height:340px;border-bottom:2px solid #e5e7eb">
+      <table id="edModalTable" style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:900px">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="padding:6px 6px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
+            <th data-sk="created_at" onclick="_edSortLeads('created_at')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Date of Lead<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+            <th data-sk="submit_date" onclick="_edSortLeads('submit_date')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Submit Date<span class="ed-si" style="color:#1e3a5f"> ▼</span></th>
+            <th data-sk="_days" onclick="_edSortLeads('_days')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center">Days<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+            <th data-sk="name" onclick="_edSortLeads('name')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Name<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+            <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Phone</th>
+            <th data-sk="status" onclick="_edSortLeads('status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Status<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+            <th data-sk="solar_pipeline_status" onclick="_edSortLeads('solar_pipeline_status')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Solar Stage<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+            <th data-sk="loan_bank" onclick="_edSortLeads('loan_bank')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Bank<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+            <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#047857;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Branch</th>
+            <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Brand</th>
+            <th data-sk="deal_value_total" onclick="_edSortLeads('deal_value_total')" style="padding:6px 8px;font-size:9px;font-weight:700;color:#1d4ed8;text-transform:uppercase;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap">Deal Value<span class="ed-si" style="color:#9ca3af"> ⇅</span></th>
+            <th style="padding:6px 8px;font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Latest Note</th>
+          </tr>
+        </thead>
+        <tbody id="edLeadListBody">
+          <tr><td colspan="13" style="text-align:center;padding:20px;color:#9ca3af">Select a handler row to view leads</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Lead detail panel: notes + call history -->
+    <div id="edDetailPanel" style="display:none;flex-direction:column;flex-shrink:0;border-top:2px solid #e5e7eb">
+      <div style="background:#f8fafc;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e5e7eb;flex-shrink:0">
+        <span style="font-size:12.5px;font-weight:700;color:#1e3a5f"><i class="fas fa-comment-dots me-2"></i><span id="edDetailTitle">Notes</span></span>
+        <button id="edCallHistBtn" onclick="_edToggleCallHist()" style="background:rgba(30,58,95,.1);border:1px solid #c7d2fe;color:#1e3a5f;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer">📞 Call History</button>
+      </div>
+      <div id="edCallHistSection" style="display:none;background:#f8fafc;max-height:180px;overflow-y:auto;border-bottom:1px solid #e5e7eb"></div>
+      <div id="edNotesList" style="flex:1;overflow-y:auto;min-height:80px;max-height:200px"></div>
+      <div style="padding:10px 14px;border-top:1px solid #e5e7eb;display:flex;gap:7px;align-items:center;flex-shrink:0">
+        <textarea id="edNewNote" rows="2" placeholder="Add a comment…" style="flex:1;font-size:12px;border:1.5px solid #d1d5db;border-radius:7px;padding:7px 10px;resize:none;font-family:inherit"></textarea>
+        <button id="edNoteBtn" onclick="_edSubmitNote()" style="padding:8px 14px;background:#1e3a5f;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap"><i class="fas fa-paper-plane me-1"></i>Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

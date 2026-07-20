@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Marketplace - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #10B981;
+            --primary-dark: #059669;
+            --accent-color: #f97316;
+            --bg-light: #f8fafc;
+            --text-dark: #1e293b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg-light); color: var(--text-dark); }
+        
+        .page-wrapper {
+            margin-left: 260px;
+            transition: margin-left 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .page-wrapper {
+                margin-left: 0;
+            }
+        }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #d1fae5; color: #065f46; }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .main-layout { display: flex; gap: 20px; }
+        
+        .filter-sidebar { width: 280px; flex-shrink: 0; }
+        .filter-sidebar .filter-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 20px; position: sticky; top: 80px; max-height: calc(100vh - 200px); overflow-y: auto; }
+        .filter-sidebar h5 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--primary-color); display: flex; align-items: center; gap: 8px; }
+        .filter-section-title { font-size: 0.7rem; text-transform: uppercase; color: #6b7280; font-weight: 600; margin-top: 16px; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #e5e7eb; }
+        .filter-sidebar .form-label { font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 4px; }
+        .filter-sidebar .form-control, .filter-sidebar .form-select { font-size: 0.85rem; padding: 8px 10px; border-radius: 6px; }
+        .filter-sidebar .btn-apply { background: var(--primary-color); color: white; border: none; width: 100%; padding: 10px; border-radius: 8px; font-weight: 500; margin-top: 16px; }
+        .filter-sidebar .btn-apply:hover { background: var(--primary-dark); }
+        .filter-sidebar .btn-clear { background: #f3f4f6; color: #374151; border: none; width: 100%; padding: 8px; border-radius: 6px; font-size: 0.85rem; margin-top: 8px; }
+        .filter-sidebar .btn-clear:hover { background: #e5e7eb; }
+        
+        .properties-main { flex: 1; min-width: 0; }
+        .properties-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+        .properties-header h5 { margin: 0; font-weight: 600; }
+        .properties-header .sort-select { width: auto; font-size: 0.85rem; }
+        
+        .property-list { display: flex; flex-direction: column; gap: 16px; }
+        
+        .property-card-horizontal {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: flex;
+            transition: box-shadow 0.2s;
+        }
+        .property-card-horizontal:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+        
+        .property-image-section { width: 200px; min-width: 200px; height: 180px; position: relative; flex-shrink: 0; }
+        .property-image-section img { width: 100%; height: 100%; object-fit: cover; }
+        .property-image-section .placeholder-icon { display: flex; align-items: center; justify-content: center; height: 100%; background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%); color: #94a3b8; }
+        .property-price-badge { position: absolute; bottom: 10px; left: 10px; background: var(--primary-color); color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; }
+        .image-count-badge { position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
+        
+        .property-content-section { flex: 1; padding: 16px; display: flex; flex-direction: column; }
+        .property-category-badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-bottom: 8px; width: fit-content; }
+        .category-residential { background: #d1fae5; color: #065f46; }
+        .category-commercial { background: #dbeafe; color: #1e40af; }
+        .category-agricultural { background: #fef3c7; color: #92400e; }
+        
+        .property-title { font-size: 1.1rem; font-weight: 600; color: var(--text-dark); margin-bottom: 4px; }
+        .property-location { font-size: 0.85rem; color: #6b7280; margin-bottom: 12px; }
+        
+        .property-features { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+        .feature-item { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: #6b7280; }
+        .feature-item i { color: var(--primary-color); }
+        
+        .property-actions { margin-top: auto; display: flex; gap: 8px; }
+        .btn-view-details { background: var(--primary-color); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; text-decoration: none; }
+        .btn-view-details:hover { background: var(--primary-dark); color: white; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; background: white; border-radius: 12px; }
+        .empty-state i { font-size: 48px; color: #d1d5db; margin-bottom: 16px; }
+        .empty-state h5 { color: #6b7280; margin-bottom: 8px; }
+        .empty-state p { color: #9ca3af; font-size: 0.9rem; }
+        
+        .pagination-container { display: flex; justify-content: center; margin-top: 24px; gap: 8px; }
+        .pagination-btn { padding: 8px 16px; border: 1px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer; font-size: 0.85rem; }
+        .pagination-btn:hover { background: #f9fafb; }
+        .pagination-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        @media (max-width: 992px) {
+            .main-layout { flex-direction: column; }
+            .filter-sidebar { width: 100%; }
+            .filter-sidebar .filter-card { position: static; max-height: none; }
+        }
+        @media (max-width: 768px) {
+            .property-card-horizontal { flex-direction: column; }
+            .property-image-section { width: 100%; height: 200px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="staffSidebar"></div>
+    <div class="page-wrapper">
+    <div class="top-header">
+        <div class="header-left">
+            <span class="page-title"><i class="fas fa-store"></i> Property Marketplace</span>
+        </div>
+        <div class="header-right">
+            <div class="user-info-header">
+                <div class="user-avatar-sm" id="headerUserInitials">SM</div>
+                <div class="user-info-details">
+                    <span class="user-info-name" id="headerUserName">Staff Member</span>
+                    <span class="user-info-role" id="headerUserRole">STAFF</span>
+                </div>
+            </div>
+            <button class="btn-logout" onclick="StaffSidebar.logout()">
+                <i class="fas fa-sign-out-alt me-2"></i>Logout
+            </button>
+        </div>
+    </div>
+    
+    <div class="content-area">
+        <div class="page-banner">
+            <h1><i class="fas fa-store"></i> Property Marketplace</h1>
+            <p>Browse and manage all listed properties from the staff portal</p>
+        </div>
+        
+        <div class="main-layout">
+            <div class="filter-sidebar">
+                <div class="filter-card">
+                    <h5><i class="fas fa-filter"></i> Filters</h5>
+                    
+                    <div class="filter-section-title">Property Type</div>
+                    <div class="mb-3">
+                        <select class="form-select" id="filterPropertyType">
+                            <option value="">All Types</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-section-title">Category</div>
+                    <div class="mb-3">
+                        <select class="form-select" id="filterCategory">
+                            <option value="">All Categories</option>
+                            <option value="residential">Residential</option>
+                            <option value="commercial">Commercial</option>
+                            <option value="agricultural">Agricultural</option>
+                            <option value="industrial">Industrial</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-section-title">Price Range</div>
+                    <div class="mb-2">
+                        <label class="form-label">Min Price</label>
+                        <input type="number" class="form-control" id="filterMinPrice" placeholder="0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Max Price</label>
+                        <input type="number" class="form-control" id="filterMaxPrice" placeholder="Any">
+                    </div>
+                    
+                    <div class="filter-section-title">Location</div>
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="filterLocation" placeholder="City or area...">
+                    </div>
+                    
+                    <button class="btn-apply" onclick="applyFilters()">
+                        <i class="fas fa-search"></i> Apply Filters
+                    </button>
+                    <button class="btn-clear" onclick="clearFilters()">
+                        <i class="fas fa-times"></i> Clear All
+                    </button>
+                </div>
+            </div>
+            
+            <div class="properties-main">
+                <div class="properties-header">
+                    <h5><span id="property-count">0</span> Properties Found</h5>
+                    <select class="form-select sort-select" id="sortSelect" onchange="applyFilters()">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="price_low">Price: Low to High</option>
+                        <option value="price_high">Price: High to Low</option>
+                    </select>
+                </div>
+                
+                <div class="property-list" id="property-list">
+                    <div class="text-center py-4"><div class="spinner-border text-success"></div></div>
+                </div>
+                
+                <div class="pagination-container" id="pagination-container"></div>
+            </div>
+        </div>
+    </div>
+    </div><!-- end page-wrapper -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let currentPage = 1;
+        const pageSize = 10;
+        let totalProperties = 0;
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const name = userData.full_name || 'Staff Member';
+            const role = userData.role_name || 'Employee';
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            document.getElementById('headerUserInitials').textContent = initials;
+            document.getElementById('headerUserName').textContent = name;
+            document.getElementById('headerUserRole').textContent = role;
+        }
+        
+        async function initializePage() {
+            try {
+                if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+                if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+                if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+                updateHeaderUserInfo();
+                
+                await loadPropertyTypes();
+                await loadProperties();
+            } catch (error) {
+                console.error('Init error:', error);
+            }
+        }
+        
+        async function loadPropertyTypes() {
+            try {
+                const response = await fetch('/api/v1/real-dreams/public/property-types');
+                if (response.ok) {
+                    const data = await response.json();
+                    const types = Array.isArray(data) ? data : (data.property_types || []);
+                    const select = document.getElementById('filterPropertyType');
+                    types.forEach(type => {
+                        const option = document.createElement('option');
+                        option.value = type.id;
+                        option.textContent = type.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load property types:', error);
+            }
+        }
+        
+        async function loadProperties() {
+            const container = document.getElementById('property-list');
+            container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-success"></div></div>';
+            
+            try {
+                const params = new URLSearchParams({
+                    page: currentPage,
+                    limit: pageSize,
+                    sort_by: document.getElementById('sortSelect').value
+                });
+                
+                const propertyType = document.getElementById('filterPropertyType').value;
+                const category = document.getElementById('filterCategory').value;
+                const minPrice = document.getElementById('filterMinPrice').value;
+                const maxPrice = document.getElementById('filterMaxPrice').value;
+                const location = document.getElementById('filterLocation').value;
+                
+                if (propertyType) params.append('property_type_id', propertyType);
+                if (category) params.append('category', category);
+                if (minPrice) params.append('min_price', minPrice);
+                if (maxPrice) params.append('max_price', maxPrice);
+                if (location) params.append('search', location);
+                
+                const response = await fetch(`/api/v1/real-dreams/public/properties?${params}`);
+                if (!response.ok) throw new Error('Failed to fetch properties');
+                
+                const data = await response.json();
+                totalProperties = data.total || data.properties?.length || 0;
+                document.getElementById('property-count').textContent = totalProperties;
+                
+                renderProperties(data.properties || data);
+                renderPagination();
+                
+            } catch (error) {
+                console.error('Load properties error:', error);
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h5>Failed to Load Properties</h5>
+                        <p>Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderProperties(properties) {
+            const container = document.getElementById('property-list');
+            
+            if (!properties || properties.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-home"></i>
+                        <h5>No Properties Found</h5>
+                        <p>Try adjusting your filters to see more results.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = properties.map(property => {
+                const categoryClass = `category-${(property.category || 'residential').toLowerCase()}`;
+                const imageCount = property.images?.length || 0;
+                const primaryImage = property.images?.[0]?.url || property.primary_image;
+                
+                return `
+                    <div class="property-card-horizontal">
+                        <div class="property-image-section">
+                            ${primaryImage ? 
+                                `<img src="${primaryImage}" alt="${property.title}" onerror="this.parentElement.innerHTML='<div class=\\'placeholder-icon\\'><i class=\\'fas fa-home fa-3x\\'></i></div>'">` :
+                                `<div class="placeholder-icon"><i class="fas fa-home fa-3x"></i></div>`
+                            }
+                            <span class="property-price-badge">${formatPrice(property.price)}</span>
+                            ${imageCount > 1 ? `<span class="image-count-badge"><i class="fas fa-images"></i> ${imageCount}</span>` : ''}
+                        </div>
+                        <div class="property-content-section">
+                            <span class="property-category-badge ${categoryClass}">${property.category || 'Residential'}</span>
+                            <h6 class="property-title">${property.title}</h6>
+                            <p class="property-location"><i class="fas fa-map-marker-alt"></i> ${property.location || property.city || 'Location not specified'}</p>
+                            <div class="property-features">
+                                ${property.bedrooms ? `<span class="feature-item"><i class="fas fa-bed"></i> ${property.bedrooms} Beds</span>` : ''}
+                                ${property.bathrooms ? `<span class="feature-item"><i class="fas fa-bath"></i> ${property.bathrooms} Baths</span>` : ''}
+                                ${property.area_sqft ? `<span class="feature-item"><i class="fas fa-ruler-combined"></i> ${property.area_sqft} sq ft</span>` : ''}
+                                ${property.property_type_name ? `<span class="feature-item"><i class="fas fa-building"></i> ${property.property_type_name}</span>` : ''}
+                            </div>
+                            <div class="property-actions">
+                                <a href="/real-dreams/property/${property.id}" class="btn-view-details" target="_blank">
+                                    <i class="fas fa-eye"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function formatPrice(price) {
+            if (!price) return 'Price on Request';
+            if (price >= 10000000) return `₹${(price / 10000000).toFixed(2)} Cr`;
+            if (price >= 100000) return `₹${(price / 100000).toFixed(2)} Lac`;
+            return `₹${price.toLocaleString('en-IN')}`;
+        }
+        
+        function renderPagination() {
+            const container = document.getElementById('pagination-container');
+            const totalPages = Math.ceil(totalProperties / pageSize);
+            
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            html += `<button class="pagination-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i></button>`;
+            
+            for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+                html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            
+            if (totalPages > 5) {
+                html += `<span class="pagination-btn" style="pointer-events: none;">...</span>`;
+                html += `<button class="pagination-btn ${totalPages === currentPage ? 'active' : ''}" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            html += `<button class="pagination-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fas fa-chevron-right"></i></button>`;
+            
+            container.innerHTML = html;
+        }
+        
+        function goToPage(page) {
+            if (page < 1) return;
+            currentPage = page;
+            loadProperties();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function applyFilters() {
+            currentPage = 1;
+            loadProperties();
+        }
+        
+        function clearFilters() {
+            document.getElementById('filterPropertyType').value = '';
+            document.getElementById('filterCategory').value = '';
+            document.getElementById('filterMinPrice').value = '';
+            document.getElementById('filterMaxPrice').value = '';
+            document.getElementById('filterLocation').value = '';
+            document.getElementById('sortSelect').value = 'newest';
+            applyFilters();
+        }
+        
+        document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
+</body>
+</html>

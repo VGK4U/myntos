@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Lead Incentives - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { flex: 1; overflow-y: auto; }
+        .content-area { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+
+        /* Tier status card */
+        .tier-card-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+        .tier-badge-circle {
+            width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        .tier-badge-circle.escalated { background: linear-gradient(135deg, #f59e0b, #d97706); }
+
+        /* Summary mini cards */
+        .summary-cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+        .summary-card {
+            flex: 1; min-width: 130px; border-radius: 12px; padding: 16px;
+            text-align: center; color: white; box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+        }
+        .summary-card .sc-amount { font-size: 1.4rem; font-weight: 700; }
+        .summary-card .sc-label { font-size: 11px; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+        /* Month accordion */
+        .month-header {
+            cursor: pointer; border-radius: 10px; padding: 14px 18px;
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 12px; flex-wrap: wrap; background: white;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.15s;
+        }
+        .month-header:hover { background: #f8fafc; }
+        .month-header .chev { transition: transform 0.2s; }
+        .month-header.open .chev { transform: rotate(180deg); }
+
+        table.inc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.inc-table th { background: #f8fafc; color: #374151; font-weight: 600; padding: 9px 10px; border: 1px solid #e5e7eb; white-space: nowrap; }
+        table.inc-table td { padding: 9px 10px; border: 1px solid #e5e7eb; vertical-align: middle; }
+        table.inc-table tr:hover td { background: #fafafa; }
+
+        .year-select { border: 1px solid #d1d5db; border-radius: 8px; padding: 6px 10px; font-size: 13px; background: white; }
+        .year-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); outline: none; }
+
+        .empty-state { text-align: center; padding: 48px 20px; color: #9ca3af; }
+        .empty-state i { font-size: 3rem; margin-bottom: 12px; }
+
+        /* Page tabs */
+        .page-tabs { border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; display: flex; gap: 0; }
+        .page-tab-btn {
+            background: none; border: none; padding: 12px 20px; font-size: 14px; font-weight: 600;
+            color: #6b7280; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px;
+            border-radius: 0; transition: color 0.15s;
+        }
+        .page-tab-btn.active { color: #6366f1; border-bottom-color: #6366f1; }
+        .page-tab-btn:hover:not(.active) { color: #374151; background: #f9fafb; }
+
+        /* Leads tab */
+        .leads-table th { background: #f8fafc; color: #374151; font-weight: 600; padding: 9px 12px; white-space: nowrap; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; }
+        .leads-table td { padding: 10px 12px; vertical-align: middle; font-size: 13px; }
+        .leads-table tr:hover td { background: #fafafa; }
+        .lead-name-link { color: #4f46e5; font-weight: 600; text-decoration: none; }
+        .lead-name-link:hover { text-decoration: underline; }
+        .sortable-col { cursor: pointer; user-select: none; }
+        .sortable-col:hover { background: #eef0f6 !important; }
+        .sort-icon { font-size: 10px; opacity: 0.7; }
+
+        @media (max-width: 767px) {
+            .content-area { padding: 12px; }
+            .tier-card-inner { flex-direction: column; align-items: flex-start; }
+            .summary-cards { gap: 8px; }
+            .summary-card { min-width: calc(50% - 4px); padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+
+            <!-- Page header -->
+            <div class="mb-3">
+                <h5 class="mb-0 fw-semibold text-dark">My Lead Incentives</h5>
+                <small class="text-muted">Incentives earned on CRM leads where you are assigned as Field Staff</small>
+            </div>
+
+            <!-- Tab navigation -->
+            <div class="page-tabs">
+                <button class="page-tab-btn active" id="tabEarnings" onclick="switchTab('earnings')">
+                    <i class="fas fa-hand-holding-usd me-1"></i>My Earnings
+                </button>
+                <button class="page-tab-btn" id="tabLeads" onclick="switchTab('leads')">
+                    <i class="fas fa-users me-1"></i>Sourced Leads
+                </button>
+                <button class="page-tab-btn" id="tabPerformance" onclick="switchTab('performance')">
+                    <i class="fas fa-chart-bar me-1"></i>Performance Payouts
+                </button>
+                <button class="page-tab-btn" id="tabLiveAch" onclick="switchTab('liveAch')">
+                    <i class="fas fa-trophy me-1"></i>Live Achievement
+                </button>
+            </div>
+
+            <!-- ══ EARNINGS PANEL ══ -->
+            <div id="earningsPanel">
+
+            <!-- Filters row -->
+            <div class="d-flex align-items-center justify-content-end flex-wrap gap-2 mb-4">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="small text-muted fw-semibold mb-0">Month</label>
+                    <select class="year-select" id="monthSelect" onchange="onMonthChange()"></select>
+                    <label class="small text-muted fw-semibold mb-0 ms-1">Year</label>
+                    <select class="year-select" id="yearSelect" onchange="onYearChange()"></select>
+                </div>
+            </div>
+
+            <!-- Tier Status Card -->
+            <div class="card" id="tierCard">
+                <div class="card-body p-3">
+                    <div class="tier-card-inner">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="tier-badge-circle" id="tierBadgeCircle">
+                                <i class="fas fa-trophy text-white"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark" id="tierLabel">Loading tier…</div>
+                                <div class="text-muted small" id="tierSubLabel"></div>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1" style="max-width:420px">
+                            <div class="d-flex justify-content-between small text-muted mb-1">
+                                <span>Progress to Tier 1 (5× salary)</span>
+                                <span id="tierProgress">0%</span>
+                            </div>
+                            <div class="progress" style="height:10px;border-radius:8px">
+                                <div class="progress-bar" id="tierBar" role="progressbar"
+                                     style="width:0%;background:linear-gradient(90deg,#11998e,#38ef7d);border-radius:8px;transition:width 0.6s"></div>
+                            </div>
+                            <div class="d-flex justify-content-between small mt-1">
+                                <span class="text-muted">Earned: <strong id="tierEarned">₹0</strong></span>
+                                <span class="text-muted">Target: <strong id="tierTarget">₹0</strong></span>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <div class="small text-muted">Rate Multiplier</div>
+                            <div class="fs-4 fw-bold" id="tierMultiplier" style="color:#667eea">1.0×</div>
+                            <span class="badge" id="tierStatusBadge" style="background:#e0e7ff;color:#4f46e5">Standard</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live This Month Banner -->
+            <div id="liveMonthBanner" style="display:none;background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);border-radius:12px;padding:16px 20px;margin-bottom:16px;color:#fff;">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <div>
+                        <div style="font-size:0.72rem;opacity:0.85;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">
+                            <i class="fas fa-bolt me-1"></i>Live Earned — <span id="liveMonthLabel"></span>
+                        </div>
+                        <div id="liveBannerTotal" style="font-size:2rem;font-weight:800;line-height:1.1">₹0.00</div>
+                    </div>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <div class="text-end">
+                            <div style="font-size:0.72rem;opacity:0.8;text-transform:uppercase">Self Leads</div>
+                            <div id="liveBannerSelf" style="font-size:1rem;font-weight:700">₹0</div>
+                        </div>
+                        <div class="text-end">
+                            <div style="font-size:0.72rem;opacity:0.8;text-transform:uppercase">Company Leads</div>
+                            <div id="liveBannerCompany" style="font-size:1rem;font-weight:700">₹0</div>
+                        </div>
+                    </div>
+                    <div style="font-size:0.72rem;opacity:0.7;align-self:flex-end">
+                        <i class="fas fa-info-circle me-1"></i>Real-time — updates as leads are processed
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Cards (payout history totals) -->
+            <div class="summary-cards" id="summaryCards">
+                <div class="summary-card" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)">
+                    <div><i class="fas fa-wallet fa-lg opacity-75"></i></div>
+                    <div class="sc-amount" id="summaryTotal">₹0</div>
+                    <div class="sc-label">Total Earned</div>
+                </div>
+                <div class="summary-card" style="background:linear-gradient(135deg,#f7971e 0%,#ffd200 100%)">
+                    <div><i class="fas fa-clock fa-lg opacity-75"></i></div>
+                    <div class="sc-amount" id="summaryPending">₹0</div>
+                    <div class="sc-label">Pending</div>
+                </div>
+                <div class="summary-card" style="background:linear-gradient(135deg,#11998e 0%,#38ef7d 100%)">
+                    <div><i class="fas fa-check-circle fa-lg opacity-75"></i></div>
+                    <div class="sc-amount" id="summaryCleared">₹0</div>
+                    <div class="sc-label">Cleared</div>
+                </div>
+                <div class="summary-card" style="background:linear-gradient(135deg,#4facfe 0%,#00f2fe 100%)">
+                    <div><i class="fas fa-list-ol fa-lg opacity-75"></i></div>
+                    <div class="sc-amount" id="summaryCount">0</div>
+                    <div class="sc-label">Entries</div>
+                </div>
+            </div>
+
+            <!-- Incentive Config Rate Card -->
+            <div class="card mb-3" id="capacityCard" style="display:none">
+                <div class="card-body p-0">
+                    <div class="d-flex align-items-center justify-content-between px-3 pt-3 pb-2">
+                        <div>
+                            <div class="fw-bold text-dark"><i class="fas fa-sliders-h text-primary me-2"></i>This Month's Incentive Rates</div>
+                            <small class="text-muted">Rates set by HR/Accounts at MyntReal — applies to all staff by segment, not by company</small>
+                        </div>
+                        <span class="badge" id="capacityMultiplierBadge" style="background:#e0e7ff;color:#4f46e5;font-size:13px">1.0×</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="inc-table" id="capacityTable">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-center" title="Your personal min target set by HR — total leads (self+company+direct) must reach this before incentive is paid">My Target</th>
+                                    <th class="text-center" title="Rate when you source the lead yourself">Self Source</th>
+                                    <th class="text-center" title="Rate when lead has MNR or VGK4U reference ID linked">Company Leads</th>
+                                    <th class="text-center" title="Rate for direct work (no MNR/VGK4U ID linked, not self-sourced)">Direct Work</th>
+                                    <th class="text-center">Achieved</th>
+                                    <th class="text-end">Earned ₹</th>
+                                    <th class="text-center">Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="capacityBody">
+                                <tr><td colspan="8" class="text-center text-muted py-3">Loading rates…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Breakdown -->
+            <div id="monthlyContainer">
+                <div class="text-center py-5" id="loadingState">
+                    <div class="spinner-border text-primary" style="width:2rem;height:2rem"></div>
+                    <p class="mt-2 text-muted">Loading your incentives…</p>
+                </div>
+                <div class="empty-state d-none" id="emptyState">
+                    <i class="fas fa-hand-holding-usd text-muted d-block"></i>
+                    <p class="mb-1">No incentive entries found for this year.</p>
+                    <p class="small">Incentives are created automatically when a CRM transaction is validated on a lead where you are the Field Staff.</p>
+                </div>
+                <div id="monthAccordion"></div>
+            </div>
+
+            </div><!-- /earningsPanel -->
+
+            <!-- ══ SOURCED LEADS PANEL ══ -->
+            <div id="leadsPanel" style="display:none">
+
+                <!-- Filter bar — row 1: search + quick filters -->
+                <div class="card mb-3">
+                    <div class="card-body p-3">
+                        <!-- Search -->
+                        <div class="d-flex gap-2 mb-2 flex-wrap">
+                            <div class="position-relative flex-grow-1" style="min-width:180px;max-width:320px">
+                                <i class="fas fa-search position-absolute" style="left:10px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:13px"></i>
+                                <input type="text" class="form-control form-control-sm ps-4" id="leadsSearch"
+                                       placeholder="Search name, phone, city…"
+                                       oninput="clearTimeout(window._lsSearchT); window._lsSearchT=setTimeout(()=>loadSourcingLeads(1),350)">
+                            </div>
+                            <select class="year-select" id="leadsStatusFilter" onchange="loadSourcingLeads(1)" style="min-width:130px">
+                                <option value="">All Statuses</option>
+                                <option value="new">New</option>
+                                <option value="processing">Processing</option>
+                                <option value="qualified">Qualified</option>
+                                <option value="won">Won ✓</option>
+                                <option value="lost">Lost</option>
+                                <option value="on_hold">On Hold</option>
+                            </select>
+                            <select class="year-select" id="leadsPriorityFilter" onchange="loadSourcingLeads(1)" style="min-width:130px">
+                                <option value="">All Priorities</option>
+                                <option value="urgent">🔴 Urgent</option>
+                                <option value="high">🟠 High</option>
+                                <option value="medium">🟡 Medium</option>
+                                <option value="low">🟢 Low</option>
+                            </select>
+                            <select class="year-select" id="leadsCategoryFilter" onchange="loadSourcingLeads(1)" style="min-width:140px">
+                                <option value="">All Categories</option>
+                            </select>
+                            <select class="year-select" id="leadsFollowupFilter" onchange="loadSourcingLeads(1)" style="min-width:140px">
+                                <option value="">Any Follow-up</option>
+                                <option value="today">📅 Due Today</option>
+                                <option value="overdue">⚠️ Overdue</option>
+                            </select>
+                            <select class="year-select" id="leadsMonthFilter" onchange="loadSourcingLeads(1)" style="min-width:130px">
+                                <option value="">All Months</option>
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                            <select class="year-select" id="leadsYearFilter" onchange="loadSourcingLeads(1)" style="min-width:100px">
+                                <option value="">All Years</option>
+                            </select>
+                        </div>
+                        <!-- Sort + result count row -->
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="small text-muted fw-semibold">Sort:</span>
+                            <select class="year-select" id="leadsSortBy" onchange="loadSourcingLeads(1)" style="min-width:150px">
+                                <option value="updated_at">Last Updated</option>
+                                <option value="created_at">Date Added</option>
+                                <option value="next_followup_date">Follow-up Date</option>
+                                <option value="confirmed_final_value">Value (Confirmed Final)</option>
+                                <option value="deal_value_received">Received Amount</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-secondary" id="leadsSortDirBtn" onclick="toggleLeadsSortDir()" title="Toggle sort direction">
+                                <i class="fas fa-arrow-down" id="leadsSortDirIcon"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary ms-1" onclick="clearLeadsFilters()">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary ms-1" onclick="loadSourcingLeads(1)">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                            <span class="ms-auto small text-muted" id="leadsTotalLabel"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spinner -->
+                <div class="text-center py-4" id="leadsSpinner">
+                    <div class="spinner-border text-primary" style="width:2rem;height:2rem"></div>
+                    <p class="mt-2 text-muted small">Loading leads…</p>
+                </div>
+
+                <!-- Empty state -->
+                <div class="empty-state d-none" id="leadsEmpty">
+                    <i class="fas fa-users text-muted d-block"></i>
+                    <p class="mb-1">No sourced leads found.</p>
+                    <p class="small">Leads appear here when you are assigned as Field Staff on a CRM lead.</p>
+                </div>
+
+                <!-- Table -->
+                <div class="card d-none" id="leadsTableCard">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 leads-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px">#</th>
+                                    <th class="sortable-col" data-col="created_at" onclick="sortLeadsByCol('created_at')" title="Sort by date added">
+                                        Lead Name <i class="fas fa-sort ms-1 sort-icon text-muted" id="sortIcon_created_at"></i>
+                                    </th>
+                                    <th class="d-none d-md-table-cell">Phone</th>
+                                    <th>Category</th>
+                                    <th class="sortable-col" data-col="status" onclick="sortLeadsByCol('status')" title="Sort by status">
+                                        Status <i class="fas fa-sort ms-1 sort-icon text-muted" id="sortIcon_status"></i>
+                                    </th>
+                                    <th>Priority</th>
+                                    <th>City</th>
+                                    <th class="sortable-col" data-col="confirmed_final_value" onclick="sortLeadsByCol('confirmed_final_value')" title="Sort by confirmed final value">
+                                        Value <i class="fas fa-sort ms-1 sort-icon text-muted" id="sortIcon_confirmed_final_value"></i>
+                                    </th>
+                                    <th class="sortable-col" data-col="next_followup_date" onclick="sortLeadsByCol('next_followup_date')" title="Sort by follow-up date">
+                                        Follow-up <i class="fas fa-sort ms-1 sort-icon text-muted" id="sortIcon_next_followup_date"></i>
+                                    </th>
+                                    <th class="sortable-col" data-col="updated_at" onclick="sortLeadsByCol('updated_at')" title="Sort by last updated">
+                                        Updated <i class="fas fa-sort ms-1 sort-icon text-muted" id="sortIcon_updated_at"></i>
+                                    </th>
+                                    <th title="Month of last update">Month</th>
+                                    <th class="text-end" title="Estimated incentive based on your rate card">Incentive ₹</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leadsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    <div class="d-flex align-items-center justify-content-between px-3 py-2 border-top" id="leadsPagination" style="display:none">
+                        <span class="small text-muted" id="leadsPageInfo"></span>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-secondary" id="leadsPrevBtn" onclick="loadSourcingLeads(leadsCurrentPage-1)">‹ Prev</button>
+                            <button class="btn btn-sm btn-outline-secondary" id="leadsNextBtn" onclick="loadSourcingLeads(leadsCurrentPage+1)">Next ›</button>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /leadsPanel -->
+
+            <!-- ══ PERFORMANCE PAYOUTS PANEL ══ -->
+            <div id="performancePanel" style="display:none">
+                <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                    <div class="small text-muted">Performance-based incentive payouts calculated by HR/Accounts</div>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="small text-muted fw-semibold mb-0">Year</label>
+                        <select class="year-select" id="perfYearSelect" onchange="loadPerfPayouts()"></select>
+                    </div>
+                </div>
+                <div class="summary-cards mb-3">
+                    <div class="summary-card" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)">
+                        <div><i class="fas fa-wallet fa-lg opacity-75"></i></div>
+                        <div class="sc-amount" id="perfTotal">₹0</div>
+                        <div class="sc-label">Total Earned</div>
+                    </div>
+                    <div class="summary-card" style="background:linear-gradient(135deg,#f7971e 0%,#ffd200 100%)">
+                        <div><i class="fas fa-clock fa-lg opacity-75"></i></div>
+                        <div class="sc-amount" id="perfPending">₹0</div>
+                        <div class="sc-label">Pending</div>
+                    </div>
+                    <div class="summary-card" style="background:linear-gradient(135deg,#11998e 0%,#38ef7d 100%)">
+                        <div><i class="fas fa-check-circle fa-lg opacity-75"></i></div>
+                        <div class="sc-amount" id="perfCleared">₹0</div>
+                        <div class="sc-label">Cleared</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div style="overflow-x:auto">
+                            <table class="inc-table">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th style="text-align:center">Company</th>
+                                        <th style="text-align:right">Incentive Amount</th>
+                                        <th style="text-align:center">Status</th>
+                                        <th style="text-align:center">Due / Cleared</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="perfPayoutsBody">
+                                    <tr><td colspan="5" style="text-align:center;padding:32px;color:#9ca3af">Select year and load</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /performancePanel -->
+
+            <!-- ══ LIVE ACHIEVEMENT PANEL ══ -->
+            <div id="liveAchPanel" style="display:none">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                    <div>
+                        <div class="fw-bold text-dark"><i class="fas fa-trophy text-warning me-2"></i>My Live Incentive Achievement</div>
+                        <small class="text-muted">Real-time calculation: Self leads earn flat rate · Company leads earn company rate + bonus eligibility</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="year-select" id="liveAchMonth"></select>
+                        <select class="year-select" id="liveAchYear"></select>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadLiveAch()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Total earned banner -->
+                <div id="liveAchBanner" style="display:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:12px;padding:16px 20px;margin-bottom:16px;color:#fff;">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <div style="font-size:0.8rem;opacity:0.85;text-transform:uppercase;letter-spacing:0.5px;">Total Incentive Earned</div>
+                            <div id="liveAchTotal" style="font-size:1.7rem;font-weight:700;">₹0.00</div>
+                        </div>
+                        <div class="text-end">
+                            <div style="font-size:0.78rem;opacity:0.85;">Month</div>
+                            <div id="liveAchMonthLabel" style="font-size:1rem;font-weight:600;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Achievement breakdown table -->
+                <div class="card">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="inc-table" id="liveAchTable">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:120px">Category</th>
+                                        <th class="text-center">Self Leads<br><small style="font-weight:400;color:#6b7280;font-size:10px">flat rate, no bonus</small></th>
+                                        <th class="text-right text-end" style="color:#7c3aed">Self ₹</th>
+                                        <th class="text-center">Company Leads<br><small style="font-weight:400;color:#6b7280;font-size:10px">has MNR/VGK4U ID · bonus eligible</small></th>
+                                        <th class="text-right text-end" style="color:#0891b2">Company ₹</th>
+                                        <th class="text-center">Direct Work<br><small style="font-weight:400;color:#6b7280;font-size:10px">no MNR/VGK4U ID</small></th>
+                                        <th class="text-right text-end" style="color:#7c3aed">Direct ₹</th>
+                                        <th class="text-center">Target / Eligibility</th>
+                                        <th class="text-center">Bonus</th>
+                                        <th class="text-right text-end fw-bold">Total ₹</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="liveAchBody">
+                                    <tr><td colspan="10" class="text-center text-muted py-4">Select month and click Refresh</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-2 small text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <strong>Self Leads</strong> = leads you sourced yourself — earn flat rate, never attract bonus multiplier.
+                    <strong>Company Leads</strong> = leads where MNR or VGK4U reference ID is linked (guru, handler, or partner) — bonus-eligible when target is reached.
+                    <strong>Direct Work</strong> = leads with no MNR/VGK4U ID linked and not self-sourced — earn direct-work rate (7.5% for ETC).
+                    Target must be met (self+company+direct total) before any incentive is paid.
+                </div>
+            </div><!-- /liveAchPanel -->
+
+        </div><!-- /content-area -->
+    </div><!-- /main-content -->
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+    (function(){
+        const API = '/api/v1/staff';
+        const MONTH_NAMES = ['January','February','March','April','May','June',
+                             'July','August','September','October','November','December'];
+
+        // ── Populate dropdowns ──────────────────────────────────────────────
+        const nowD     = new Date();
+        const curYear  = nowD.getFullYear();
+        const curMonth = nowD.getMonth() + 1;
+
+        const monthSel = document.getElementById('monthSelect');
+        MONTH_NAMES.forEach((name, i) => {
+            const o = document.createElement('option');
+            o.value = i + 1; o.textContent = name;
+            if(i + 1 === curMonth) o.selected = true;
+            monthSel.appendChild(o);
+        });
+
+        const yearSel = document.getElementById('yearSelect');
+        for(let y = curYear; y >= 2024; y--){
+            const o = document.createElement('option');
+            o.value = y; o.textContent = y;
+            yearSel.appendChild(o);
+        }
+
+        // ── Helpers ─────────────────────────────────────────────────────────
+        function fmt(n){ return '₹' + Number(n || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+        function pct(n){ return Number(n || 0).toFixed(2) + '%'; }
+        function mulLabel(n){ return Number(n || 1).toFixed(1) + '×'; }
+
+        function statusBadge(s){
+            if(s === 'cleared')    return '<span class="badge" style="background:#d1fae5;color:#065f46">Cleared</span>';
+            if(s === 'cancelled')  return '<span class="badge" style="background:#fee2e2;color:#991b1b">Cancelled</span>';
+            return '<span class="badge" style="background:#fef3c7;color:#92400e">Pending</span>';
+        }
+
+        function showTierError(msg){
+            document.getElementById('tierLabel').textContent    = msg || 'Could not load';
+            document.getElementById('tierSubLabel').textContent = '';
+        }
+
+        // ── Tier (monthly) ───────────────────────────────────────────────────
+        async function loadTier(){
+            const month = monthSel.value;
+            const year  = yearSel.value;
+            document.getElementById('tierLabel').textContent    = 'Loading…';
+            document.getElementById('tierSubLabel').textContent = '';
+            try{
+                const r = await staffFetch(`${API}/lead-incentives/my-tier-status?month=${month}&year=${year}`);
+                if(!r.ok){ showTierError('Could not load tier status'); return; }
+                const d = await r.json();
+                if(!d.success){ showTierError('No data'); return; }
+
+                const esc       = d.is_escalated;
+                const remaining = Math.max(0, (d.threshold_5x||0) - (d.cumulative_earned||0));
+                const lbl       = esc ? '🎯 Tier 1 — Full Rate Unlocked' : '⭐ Standard Rate';
+                const sub       = esc
+                    ? `120% of VGK L1 rate — crossed 5× salary in ${d.month_label}`
+                    : (d.threshold_5x > 0
+                        ? `${d.month_label}: ${fmt(remaining)} more to unlock 1.2× rate`
+                        : `${d.month_label}: No payroll profile — contact HR`);
+
+                document.getElementById('tierLabel').textContent     = lbl;
+                document.getElementById('tierSubLabel').textContent   = sub;
+                document.getElementById('tierProgress').textContent   = (d.progress_pct||0) + '%';
+                document.getElementById('tierBar').style.width        = Math.min(d.progress_pct||0, 100) + '%';
+                document.getElementById('tierEarned').textContent     = fmt(d.cumulative_earned);
+                document.getElementById('tierTarget').textContent     = fmt(d.threshold_5x);
+                document.getElementById('tierMultiplier').textContent = mulLabel(d.multiplier);
+
+                const badgeEl  = document.getElementById('tierBadgeCircle');
+                const statusEl = document.getElementById('tierStatusBadge');
+                const mulEl    = document.getElementById('tierMultiplier');
+                if(esc){
+                    badgeEl.classList.add('escalated');
+                    statusEl.textContent = '120% Rate';
+                    statusEl.style.cssText = 'background:#fef3c7;color:#92400e';
+                    mulEl.style.color = '#d97706';
+                } else {
+                    badgeEl.classList.remove('escalated');
+                    statusEl.textContent = 'Standard';
+                    statusEl.style.cssText = 'background:#e0e7ff;color:#4f46e5';
+                    mulEl.style.color = '#667eea';
+                }
+            } catch(e){
+                console.error('[MyIncv] Tier load error:', e);
+                showTierError('Could not load tier status');
+            }
+        }
+
+        // ── Month change: reload tier + live-month overlay ───────────────
+        window.onMonthChange = function(){ loadTier(); loadLiveMonth(); };
+        // ── Year change: reload tier, full earnings accordion + live-month ─
+        window.onYearChange = function(){ loadTier(); loadEarnings(); loadLiveMonth(); };
+
+        // ── Earnings (full year, month accordion) ─────────────────────────
+        async function loadEarnings(){
+            const year    = yearSel.value;
+            const loadEl  = document.getElementById('loadingState');
+            const emptyEl = document.getElementById('emptyState');
+            const accEl   = document.getElementById('monthAccordion');
+            loadEl.classList.remove('d-none');
+            emptyEl.classList.add('d-none');
+            accEl.innerHTML = '';
+
+            try{
+                const r = await staffFetch(`${API}/lead-incentives/my-earnings?year=${year}`);
+                loadEl.classList.add('d-none');
+                if(!r.ok){ emptyEl.classList.remove('d-none'); return; }
+                const d = await r.json();
+                if(!d.success){ emptyEl.classList.remove('d-none'); return; }
+
+                const s = d.summary;
+                document.getElementById('summaryTotal').textContent   = fmt(s.total_earned);
+                document.getElementById('summaryPending').textContent = fmt(s.total_pending);
+                document.getElementById('summaryCleared').textContent = fmt(s.total_cleared);
+                document.getElementById('summaryCount').textContent   = s.entry_count;
+
+                if(!d.months || !d.months.length){ emptyEl.classList.remove('d-none'); return; }
+
+                d.months.forEach((mon, idx) => {
+                    const colId = 'mcol_' + mon.month_key.replace('-','_');
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    div.innerHTML = `
+                        <div class="month-header ${idx===0?'open':''}" id="hdr_${colId}" onclick="toggleMonth('${colId}')">
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="fas fa-calendar-alt text-primary"></i>
+                                <div>
+                                    <div class="fw-semibold">${mon.month_label}</div>
+                                    <small class="text-muted">${mon.entries.length} entr${mon.entries.length===1?'y':'ies'}</small>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="text-end">
+                                    <div class="fw-bold text-success">${fmt(mon.total)}</div>
+                                    <small class="text-muted">${fmt(mon.pending)} pending · ${fmt(mon.cleared)} cleared</small>
+                                </div>
+                                <i class="fas fa-chevron-down text-muted chev ${idx===0?'open':''}"></i>
+                            </div>
+                        </div>
+                        <div id="${colId}" class="${idx===0?'':'d-none'}">
+                            <div class="table-responsive">
+                                <table class="inc-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th><th>Lead</th><th>Category</th>
+                                            <th class="text-end">Revenue</th>
+                                            <th class="text-center">VGK Rate</th>
+                                            <th class="text-center">Multiplier</th>
+                                            <th class="text-end">Incentive</th>
+                                            <th class="text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${mon.entries.map(e => `
+                                        <tr>
+                                            <td class="text-muted small">#${e.id}</td>
+                                            <td>
+                                                <div class="fw-semibold small">${e.lead_name || '—'}</div>
+                                                <small class="text-muted">Lead #${e.lead_id}</small>
+                                            </td>
+                                            <td><span class="badge bg-light text-dark border">${e.category||'—'}</span></td>
+                                            <td class="text-end">${fmt(e.revenue)}</td>
+                                            <td class="text-center">${pct(e.vgk_rate_pct)}</td>
+                                            <td class="text-center">
+                                                <span class="${e.multiplier>=1.2?'text-warning fw-bold':'text-primary'}">${mulLabel(e.multiplier)}</span>
+                                                ${e.multiplier>=1.2?'<i class="fas fa-fire text-warning ms-1" title="Tier 1 Rate"></i>':''}
+                                            </td>
+                                            <td class="text-end fw-semibold text-success">${fmt(e.incentive_amount)}</td>
+                                            <td class="text-center">${statusBadge(e.status)}</td>
+                                        </tr>`).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>`;
+                    accEl.appendChild(div);
+                });
+            } catch(e){
+                loadEl.classList.add('d-none');
+                emptyEl.classList.remove('d-none');
+                console.error('[MyIncv] Earnings load error:', e);
+            }
+        }
+
+        window.toggleMonth = function(id){
+            const el   = document.getElementById(id);
+            const hdr  = document.getElementById('hdr_' + id);
+            const chev = hdr ? hdr.querySelector('.chev') : null;
+            const isOpen = !el.classList.contains('d-none');
+            if(isOpen){
+                el.classList.add('d-none');
+                if(hdr) hdr.classList.remove('open');
+                if(chev) chev.style.transform = '';
+            } else {
+                el.classList.remove('d-none');
+                if(hdr) hdr.classList.add('open');
+                if(chev) chev.style.transform = 'rotate(180deg)';
+            }
+        };
+
+        // ── Incentive Config Rate Card ─────────────────────────────────────
+        const UNIT_LABELS = { training: 'students', solar: 'deals', ev_b2c: 'deals', ev_b2b: 'deals', ev_b2b_new: 'deals', ev_b2b_existing: 'deals' };
+        function fmtTarget(val, unit, slug){
+            if(unit === 'amount') return '₹' + Number(val).toLocaleString('en-IN');
+            const uLabel = UNIT_LABELS[slug] || 'units';
+            return Number(val).toLocaleString('en-IN') + ' ' + uLabel;
+        }
+        function fmtRate(rate, itype, slug){
+            if(itype === 'fixed_per_unit'){
+                const uLbl = UNIT_LABELS[slug] || 'unit';
+                return '₹' + Number(rate).toLocaleString('en-IN') + '/' + uLbl;
+            }
+            if(itype === 'fixed_amount') return '₹' + Number(rate).toLocaleString('en-IN') + ' flat';
+            return Number(rate).toFixed(2) + '%';
+        }
+        function fmtType(itype){
+            if(itype === 'fixed_per_unit') return '<span class="badge" style="background:#d1fae5;color:#065f46">Fixed/Unit</span>';
+            if(itype === 'fixed_amount')   return '<span class="badge" style="background:#dbeafe;color:#1e40af">Fixed</span>';
+            return '<span class="badge" style="background:#ede9fe;color:#5b21b6">Percentage</span>';
+        }
+
+        // ── Global incentive config (keyed by category_slug) ────────────────
+        window._incvCfg = {};   // populated by loadCapacity()
+
+        // Map a lead's category_name → slug using loaded config
+        function leadCatSlug(catName){
+            if(!catName) return null;
+            const cn = catName.toLowerCase();
+            for(const slug of Object.keys(window._incvCfg)){
+                const cfgName = (window._incvCfg[slug].category_name || '').toLowerCase();
+                if(cn === cfgName || cn.includes(slug.replace(/_/g,' '))) return slug;
+            }
+            // fallback fuzzy
+            if(cn.includes('training') || cn.includes('etc')) return 'training';
+            if(cn.includes('solar'))   return 'solar';
+            if(cn.includes('b2c'))     return 'ev_b2c';
+            if(cn.includes('b2b'))     return 'ev_b2b_new';
+            if(cn.includes('insurance')) return 'insurance';
+            if(cn.includes('real estate') || cn.includes('real dream') || cn.includes('property')) return 'real_estate';
+            return null;
+        }
+
+        // Calculate estimated incentive for one lead row
+        function calcLeadIncentive(ld){
+            const slug = leadCatSlug(ld.category_name);
+            if(!slug || !window._incvCfg[slug]) return null;
+            const cfg  = window._incvCfg[slug];
+            const hasSupport = ld.has_support || ld.showroom_supported || false;
+            const rate = hasSupport ? cfg.rate_wi : cfg.rate_no;
+            if(cfg.itype === 'fixed_per_unit' || cfg.itype === 'fixed_amount'){
+                return rate;
+            }
+            // percentage of deal value received (or confirmed_final_value)
+            const val = parseFloat(ld.deal_value_received || ld.confirmed_final_value || ld.deal_value_total || 0);
+            if(!val) return null;
+            return (val * rate) / 100;
+        }
+
+        async function loadCapacity(){
+            try{
+                const r = await staffFetch(`${API}/lead-incentives/my-earning-capacity`);
+                if(!r.ok) return;
+                const d = await r.json();
+                if(!d.success || !d.categories || !d.categories.length) return;
+
+                // ── Store globally for per-lead incentive calc ──
+                window._incvCfg = {};
+                d.categories.forEach(c => {
+                    window._incvCfg[c.category_slug] = {
+                        category_name: c.category_name,
+                        rate_no: c.rate_no_support,
+                        rate_wi: c.rate_with_support,
+                        itype: c.incentive_type,
+                    };
+                });
+
+                const multiplier = d.multiplier;
+                const badge = document.getElementById('capacityMultiplierBadge');
+                badge.textContent = Number(multiplier).toFixed(1) + '×';
+                if(multiplier >= 1.2){
+                    badge.style.cssText = 'background:#fef3c7;color:#92400e;font-size:13px';
+                }
+
+                const tbody = document.getElementById('capacityBody');
+                tbody.innerHTML = d.categories.map(c => {
+                    const dwRate = c.incentive_rate_direct_work || 0;
+                    const dwDisp = dwRate > 0 ? fmtRate(dwRate, c.incentive_type, c.category_slug) : '<span style="color:#d1d5db">—</span>';
+                    const cfgTgt = fmtTarget(c.min_target_value, c.min_target_unit, c.category_slug);
+                    return `<tr data-cap-slug="${c.category_slug}">
+                        <td class="fw-semibold">${c.category_name}</td>
+                        <td class="text-center cap-mytgt" style="color:#6b7280" title="Your personal target (updated from live data)">${cfgTgt}</td>
+                        <td class="text-center fw-semibold text-success">${fmtRate(c.rate_no_support, c.incentive_type, c.category_slug)}</td>
+                        <td class="text-center fw-semibold" style="color:#0369a1">${fmtRate(c.rate_with_support, c.incentive_type, c.category_slug)}</td>
+                        <td class="text-center fw-semibold" style="color:#7c3aed">${dwDisp}</td>
+                        <td class="text-center cap-ach" style="color:#374151">—</td>
+                        <td class="text-end fw-semibold cap-earn" style="color:#1f2937">—</td>
+                        <td class="text-center">${fmtType(c.incentive_type)}</td>
+                    </tr>`;
+                }).join('');
+
+                document.getElementById('capacityCard').style.display = '';
+                // Populate Achieved/Earned from live data (month-scoped)
+                loadLiveMonth();
+            } catch(e){ console.warn('[MyIncv] Capacity load error:', e); }
+        }
+
+        // ── Live-month banner + rate card Achieved/Earned overlay ────────────
+        const MNTH_NAMES = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+        const fmtLive  = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        const fmtLiveS = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+        const CAP_UNIT = { training:'students', solar:'deals', ev_b2c:'deals', ev_b2b:'deals', ev_b2b_new:'deals', ev_b2b_existing:'deals', insurance:'₹', real_estate:'₹' };
+
+        async function loadLiveMonth(){
+            const month = parseInt(monthSel.value);
+            const year  = parseInt(yearSel.value);
+            const banner = document.getElementById('liveMonthBanner');
+            try{
+                const r = await staffFetch(`${API}/performance/my-incentive-achievements?month=${month}&year=${year}`);
+                if(!r.ok){ banner.style.display='none'; return; }
+                const d = await r.json();
+                const emp = (d.data||[])[0];
+                if(!emp){ banner.style.display='none'; _clearCapacityOverlay(); return; }
+
+                // Always update target cells — independent of whether earnings exist
+                (emp.categories||[]).forEach(c => {
+                    const row = document.querySelector(`#capacityBody tr[data-cap-slug="${c.slug}"]`);
+                    if(!row) return;
+                    const unit    = CAP_UNIT[c.slug] || '';
+                    const tgtCell = row.querySelector('.cap-mytgt');
+                    if(tgtCell && c.min_target !== undefined){
+                        const empTgt = c.min_target;
+                        const tgtTxt = unit === '₹'
+                            ? '₹' + Number(empTgt).toLocaleString('en-IN')
+                            : empTgt + ' ' + unit;
+                        if(c.target_met){
+                            tgtCell.innerHTML = `<span style="color:#059669;font-weight:700">${tgtTxt} <i class="fas fa-check-circle" style="font-size:10px"></i></span>`;
+                        } else {
+                            const gapTxt = c.gap > 0 ? ` <small style="color:#9ca3af">(need ${c.gap} more)</small>` : '';
+                            tgtCell.innerHTML = `<span style="color:#ef4444;font-weight:600">${tgtTxt}</span>${gapTxt}`;
+                        }
+                    }
+                });
+
+                // Banner + Achieved/Earned overlay only when there are actual earnings
+                if(!(emp.total_incentive_earned > 0)){
+                    banner.style.display='none';
+                    _clearCapacityOverlay();
+                    return;
+                }
+
+                // Banner
+                document.getElementById('liveMonthLabel').textContent = MNTH_NAMES[month] + ' ' + year;
+                document.getElementById('liveBannerTotal').textContent = fmtLive(emp.total_incentive_earned);
+                let totalSelf=0, totalCo=0;
+                (emp.categories||[]).forEach(c => {
+                    totalSelf += (c.self_incentive||0);
+                    totalCo   += (c.company_incentive_base||0) + (c.bonus_applied ? Math.max(0, c.incentive_earned - (c.self_incentive||0) - (c.company_incentive_base||0)) : 0);
+                });
+                document.getElementById('liveBannerSelf').textContent    = fmtLiveS(totalSelf);
+                document.getElementById('liveBannerCompany').textContent = fmtLiveS(totalCo);
+                banner.style.display = '';
+
+                // Rate card overlay — Achieved + Earned columns
+                (emp.categories||[]).forEach(c => {
+                    const row = document.querySelector(`#capacityBody tr[data-cap-slug="${c.slug}"]`);
+                    if(!row) return;
+                    const unit  = CAP_UNIT[c.slug] || '';
+                    const count = (c.self_count||0) + (c.company_count||0) + (c.direct_count||0);
+                    const achTxt = unit === '₹'
+                        ? '₹' + Number(c.achieved_amount||0).toLocaleString('en-IN')
+                        : count + ' ' + unit;
+                    const earned = c.incentive_earned || 0;
+                    const hasMet = count > 0 || (c.achieved_amount||0) > 0;
+                    const achCell  = row.querySelector('.cap-ach');
+                    const earnCell = row.querySelector('.cap-earn');
+                    if(achCell){
+                        achCell.innerHTML = hasMet
+                            ? `<span style="color:#059669;font-weight:700">${achTxt} <i class="fas fa-check-circle text-success" style="font-size:10px"></i></span>`
+                            : `<span style="color:#374151">${achTxt}</span>`;
+                    }
+                    if(earnCell){
+                        earnCell.textContent = earned > 0 ? fmtLive(earned) : '₹0.00';
+                        earnCell.style.color = earned > 0 ? '#059669' : '#1f2937';
+                    }
+                });
+            } catch(e){ banner.style.display='none'; console.warn('[MyIncv] Live month error:', e); }
+        }
+
+        function _clearCapacityOverlay(){
+            document.querySelectorAll('#capacityBody tr[data-cap-slug]').forEach(row => {
+                const achCell  = row.querySelector('.cap-ach');
+                const earnCell = row.querySelector('.cap-earn');
+                if(achCell)  achCell.innerHTML  = '<span style="color:#374151">0</span>';
+                if(earnCell) earnCell.textContent = '₹0.00';
+            });
+        }
+
+        // ── Tab switching ────────────────────────────────────────────────────
+        let leadsLoaded   = false;
+        let leadsCurrentPage = 1;
+        let leadsSortDir  = 'desc';
+
+        let perfLoaded    = false;
+        let liveAchLoaded = false;
+        let catsLoaded    = false;
+
+        window.switchTab = function(tab){
+            const isEarnings    = (tab === 'earnings');
+            const isLeads       = (tab === 'leads');
+            const isPerformance = (tab === 'performance');
+            const isLiveAch     = (tab === 'liveAch');
+            document.getElementById('earningsPanel').style.display    = isEarnings    ? '' : 'none';
+            document.getElementById('leadsPanel').style.display       = isLeads       ? '' : 'none';
+            document.getElementById('performancePanel').style.display = isPerformance ? '' : 'none';
+            document.getElementById('liveAchPanel').style.display     = isLiveAch     ? '' : 'none';
+            document.getElementById('tabEarnings').classList.toggle('active',    isEarnings);
+            document.getElementById('tabLeads').classList.toggle('active',       isLeads);
+            document.getElementById('tabPerformance').classList.toggle('active', isPerformance);
+            document.getElementById('tabLiveAch').classList.toggle('active',     isLiveAch);
+            if(isLeads){
+                if(!catsLoaded){ catsLoaded = true; loadLeadsCategories(); }
+                if(!leadsLoaded){ loadSourcingLeads(1); }
+            }
+            if(isPerformance && !perfLoaded){
+                perfLoaded = true;
+                loadPerfPayouts();
+            }
+            if(isLiveAch && !liveAchLoaded){
+                liveAchLoaded = true;
+                loadLiveAch();
+            }
+        };
+
+        // ── Live Achievement tab — init dropdowns ─────────────────────────────
+        (function initLiveAch(){
+            const mSel = document.getElementById('liveAchMonth');
+            const ySel = document.getElementById('liveAchYear');
+            const MONTH_NAMES2 = ['January','February','March','April','May','June',
+                                  'July','August','September','October','November','December'];
+            MONTH_NAMES2.forEach((name, i) => {
+                const o = document.createElement('option');
+                o.value = i + 1; o.textContent = name;
+                if(i + 1 === curMonth) o.selected = true;
+                mSel.appendChild(o);
+            });
+            for(let y = curYear; y >= 2024; y--){
+                const o = document.createElement('option');
+                o.value = y; o.textContent = y;
+                if(y === curYear) o.selected = true;
+                ySel.appendChild(o);
+            }
+        })();
+
+        const LIVE_CAT_LABEL = {
+            training:'ETC Students', solar:'Solar', ev_b2c:'B2C',
+            ev_b2b:'B2B', ev_b2b_new:'B2B (New)', ev_b2b_existing:'B2B (Exist.)',
+            insurance:'Insurance', real_estate:'Real Estate'
+        };
+        const LIVE_CAT_UNIT = {
+            training:'students', solar:'deals', ev_b2c:'deals',
+            ev_b2b:'deals', ev_b2b_new:'deals', ev_b2b_existing:'deals',
+            insurance:'₹', real_estate:'₹'
+        };
+
+        function fmtLiveAch(n){ return '₹' + Number(n || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+        function fmtAchCount(count, amount, slug){
+            const unit = LIVE_CAT_UNIT[slug] || '';
+            if(!count && !amount) return '<span style="color:#d1d5db">—</span>';
+            if(unit === '₹') return '₹' + Number(amount).toLocaleString('en-IN');
+            return Number(count) + ' ' + unit;
+        }
+
+        window.loadLiveAch = async function(){
+            const month = document.getElementById('liveAchMonth').value;
+            const year  = document.getElementById('liveAchYear').value;
+            const tbody = document.getElementById('liveAchBody');
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px"><div class="spinner-border spinner-border-sm text-primary" role="status"></div> Loading…</td></tr>';
+            document.getElementById('liveAchBanner').style.display = 'none';
+            const MNTH = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+            try {
+                const r = await staffFetch(`${API}/performance/my-incentive-achievements?month=${month}&year=${year}`);
+                if(!r.ok){ tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:32px;color:#ef4444"><i class="fas fa-exclamation-circle me-1"></i>Could not load achievements</td></tr>'; return; }
+                const d = await r.json();
+                const emp = (d.data || [])[0];
+                if(!emp){
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>No incentive data for this period</td></tr>';
+                    return;
+                }
+                const cats = emp.categories || [];
+                const activeCats = cats.filter(c => c.self_count > 0 || c.company_count > 0 || c.direct_count > 0 || c.achieved_count > 0);
+
+                document.getElementById('liveAchTotal').textContent   = fmtLiveAch(emp.total_incentive_earned);
+                document.getElementById('liveAchMonthLabel').textContent = MNTH[+month] + ' ' + year;
+                document.getElementById('liveAchBanner').style.display = '';
+
+                if(!activeCats.length){
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>No activity recorded for this period</td></tr>';
+                    return;
+                }
+
+                const catOrder = ['training','solar','ev_b2c','ev_b2b_new','ev_b2b_existing','ev_b2b','insurance','real_estate'];
+                const sorted = catOrder.map(s => activeCats.find(c => c.slug === s)).filter(Boolean);
+
+                tbody.innerHTML = sorted.map(c => {
+                    const selfDisp    = fmtAchCount(c.self_count,    c.self_amount,    c.slug);
+                    const compDisp    = fmtAchCount(c.company_count, c.company_amount, c.slug);
+                    const directDisp  = fmtAchCount(c.direct_count||0, c.direct_amount||0, c.slug);
+                    const selfInc     = c.self_incentive > 0    ? fmtLiveAch(c.self_incentive)    : '<span style="color:#d1d5db">—</span>';
+                    const compInc     = c.company_incentive_base > 0 ? fmtLiveAch(c.company_incentive_base) : '<span style="color:#d1d5db">—</span>';
+                    const directInc   = (c.direct_incentive_base||0) > 0 ? fmtLiveAch(c.direct_incentive_base) : '<span style="color:#d1d5db">—</span>';
+                    const bonusDisp   = c.bonus_applied
+                        ? `<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700;">×${c.bonus_multiplier} BONUS</span>`
+                        : '<span style="color:#d1d5db">—</span>';
+                    // Target / Eligibility cell
+                    let tgtDisp;
+                    if(c.target_met){
+                        tgtDisp = `<span style="color:#059669;font-weight:700;font-size:11px"><i class="fas fa-check-circle me-1"></i>Met (${c.min_target})</span>`;
+                    } else {
+                        tgtDisp = `<span style="color:#ef4444;font-size:11px"><i class="fas fa-lock me-1"></i>Need ${c.gap} more</span>`;
+                    }
+                    const rowStyle    = c.bonus_applied ? 'background:rgba(254,243,199,0.35)' : '';
+                    return `<tr style="${rowStyle}">
+                        <td class="fw-semibold">${LIVE_CAT_LABEL[c.slug] || c.slug}</td>
+                        <td class="text-center" style="color:#7c3aed">${selfDisp}</td>
+                        <td class="text-end fw-semibold" style="color:#7c3aed">${selfInc}</td>
+                        <td class="text-center" style="color:#0891b2">${compDisp}</td>
+                        <td class="text-end fw-semibold" style="color:#0891b2">${compInc}</td>
+                        <td class="text-center" style="color:#7c3aed">${directDisp}</td>
+                        <td class="text-end fw-semibold" style="color:#7c3aed">${directInc}</td>
+                        <td class="text-center">${tgtDisp}</td>
+                        <td class="text-center">${bonusDisp}</td>
+                        <td class="text-end fw-bold" style="color:#1f2937">${fmtLiveAch(c.incentive_earned)}</td>
+                    </tr>`;
+                }).join('') + `<tr style="background:#f3f4f6;border-top:2px solid #e5e7eb">
+                    <td colspan="9" class="fw-bold text-end" style="padding:10px 12px">Total Incentive Earned</td>
+                    <td class="text-end fw-bold" style="color:#7c3aed;font-size:1rem;padding:10px 12px">${fmtLiveAch(emp.total_incentive_earned)}</td>
+                </tr>`;
+            } catch(e){
+                console.error('[LiveAch]', e);
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:32px;color:#ef4444">Error loading data</td></tr>';
+            }
+        };
+
+        // ── Performance Payouts tab ───────────────────────────────────────────
+        (function initPerfYear(){
+            const sel = document.getElementById('perfYearSelect');
+            for(let y = curYear; y >= 2024; y--){
+                const o = document.createElement('option');
+                o.value = y; o.textContent = y;
+                if(y === curYear) o.selected = true;
+                sel.appendChild(o);
+            }
+        })();
+
+        window.loadPerfPayouts = async function(){
+            const year  = document.getElementById('perfYearSelect').value;
+            const tbody = document.getElementById('perfPayoutsBody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></td></tr>';
+            try {
+                const r = await staffFetch(`${API}/incentive-payouts/my-summary?year=${year}`);
+                if(!r.ok){ tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:#ef4444">Could not load payouts</td></tr>'; return; }
+                const d = await r.json();
+                const s = d.summary || {};
+                document.getElementById('perfTotal').textContent   = fmt(s.total   || 0);
+                document.getElementById('perfPending').textContent = fmt(s.pending || 0);
+                document.getElementById('perfCleared').textContent = fmt(s.cleared || 0);
+                const MNTH = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+                if(!d.data || !d.data.length){
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox fa-2x mb-2 d-block"></i>No performance payouts for ' + year + '</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = d.data.map(p => {
+                    const dateLabel = p.cleared_at
+                        ? 'Cleared: ' + new Date(p.cleared_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'})
+                        : (p.due_date ? 'Due: ' + new Date(p.due_date).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}) : '—');
+                    return `<tr>
+                        <td class="fw-semibold">${MNTH[p.month] || p.month} ${p.year}</td>
+                        <td style="text-align:center;color:#6b7280;font-size:12px">${p.company_name}</td>
+                        <td style="text-align:right;font-weight:700;color:#1f2937">${fmt(p.total_incentive)}</td>
+                        <td style="text-align:center">${statusBadge(p.payout_status)}</td>
+                        <td style="text-align:center;font-size:12px;color:#6b7280">${dateLabel}</td>
+                    </tr>`;
+                }).join('');
+            } catch(e){
+                console.error('[PerfPayout]', e);
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:#ef4444">Error loading payouts</td></tr>';
+            }
+        };
+
+        // ── Load categories into dropdown ─────────────────────────────────────
+        async function loadLeadsCategories(){
+            try{
+                const r = await staffFetch('/api/v1/crm/signup/categories');
+                if(!r.ok) return;
+                const d = await r.json();
+                const cats = d.categories || d.data || d || [];
+                const sel = document.getElementById('leadsCategoryFilter');
+
+                // Clear all options except the first "All Categories" anchor
+                while(sel.options.length > 1) sel.remove(1);
+
+                // Deduplicate by name (same category can exist across companies with different IDs)
+                const seenNames = new Set();
+                cats.forEach(c => {
+                    const nm = (c.name || c.category_name || '').trim();
+                    if(!nm || seenNames.has(nm.toLowerCase())) return;
+                    seenNames.add(nm.toLowerCase());
+                    const o = document.createElement('option');
+                    o.value = c.id;
+                    o.textContent = nm;
+                    sel.appendChild(o);
+                });
+            } catch(e){ console.warn('[MyIncv] Cat load fail:', e); }
+        }
+
+        // ── Sort direction toggle ────────────────────────────────────────────
+        window.toggleLeadsSortDir = function(){
+            leadsSortDir = leadsSortDir === 'desc' ? 'asc' : 'desc';
+            document.getElementById('leadsSortDirIcon').className =
+                leadsSortDir === 'desc' ? 'fas fa-arrow-down' : 'fas fa-arrow-up';
+            loadSourcingLeads(1);
+        };
+
+        // ── Column header sort click ─────────────────────────────────────────
+        window.sortLeadsByCol = function(col){
+            const sortSel = document.getElementById('leadsSortBy');
+            if(sortSel.value === col){
+                window.toggleLeadsSortDir();
+            } else {
+                sortSel.value = col;
+                leadsSortDir = 'desc';
+                document.getElementById('leadsSortDirIcon').className = 'fas fa-arrow-down';
+                loadSourcingLeads(1);
+            }
+        };
+
+        // ── Update sort icons in column headers ──────────────────────────────
+        function updateSortIcons(activeCol){
+            const cols = ['created_at','status','deal_value_total','next_followup_date','updated_at'];
+            cols.forEach(c => {
+                const el = document.getElementById('sortIcon_' + c);
+                if(!el) return;
+                if(c === activeCol){
+                    el.className = leadsSortDir === 'desc'
+                        ? 'fas fa-arrow-down ms-1 sort-icon text-primary'
+                        : 'fas fa-arrow-up ms-1 sort-icon text-primary';
+                } else {
+                    el.className = 'fas fa-sort ms-1 sort-icon text-muted';
+                }
+            });
+        }
+
+        // ── Clear all leads filters ───────────────────────────────────────────
+        window.clearLeadsFilters = function(){
+            document.getElementById('leadsSearch').value = '';
+            document.getElementById('leadsStatusFilter').value = '';
+            document.getElementById('leadsPriorityFilter').value = '';
+            document.getElementById('leadsCategoryFilter').value = '';
+            document.getElementById('leadsFollowupFilter').value = '';
+            document.getElementById('leadsMonthFilter').value = '';
+            document.getElementById('leadsYearFilter').value = '';
+            document.getElementById('leadsSortBy').value = 'updated_at';
+            leadsSortDir = 'desc';
+            document.getElementById('leadsSortDirIcon').className = 'fas fa-arrow-down';
+            loadSourcingLeads(1);
+        };
+
+        // ── Status badge ─────────────────────────────────────────────────────
+        function leadStatusBadge(status){
+            const map = {
+                new:        ['#dbeafe','#1d4ed8','New'],
+                processing: ['#ede9fe','#6d28d9','Processing'],
+                qualified:  ['#d1fae5','#065f46','Qualified'],
+                won:        ['#d1fae5','#065f46','Won ✓'],
+                lost:       ['#fee2e2','#991b1b','Lost'],
+                on_hold:    ['#fef3c7','#92400e','On Hold'],
+            };
+            const [bg, color, label] = map[status] || ['#f3f4f6','#374151', status || '—'];
+            return `<span class="badge" style="background:${bg};color:${color};font-size:11px">${label}</span>`;
+        }
+
+        // ── Priority badge ────────────────────────────────────────────────────
+        function priorityBadge(p){
+            const map = {
+                urgent: ['#fee2e2','#991b1b','🔴 Urgent'],
+                high:   ['#ffedd5','#9a3412','🟠 High'],
+                medium: ['#fef9c3','#854d0e','🟡 Medium'],
+                low:    ['#dcfce7','#166534','🟢 Low'],
+            };
+            const [bg, color, label] = map[p] || ['#f3f4f6','#6b7280', p || '—'];
+            return `<span class="badge" style="background:${bg};color:${color};font-size:11px">${label}</span>`;
+        }
+
+        // ── Format date helper ────────────────────────────────────────────────
+        function fmtDate(dt){
+            if(!dt) return '—';
+            return new Date(dt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+        }
+
+        function fmtMoney(v){
+            if(v == null || v === '') return '—';
+            const n = parseFloat(v);
+            if(isNaN(n)) return '—';
+            return '₹' + n.toLocaleString('en-IN', {maximumFractionDigits:0});
+        }
+
+        // ── Sourced Leads loader ──────────────────────────────────────────────
+        async function loadSourcingLeads(page){
+            page = page || 1;
+            if(page < 1) return;
+            leadsCurrentPage = page;
+
+            const spEl   = document.getElementById('leadsSpinner');
+            const emEl   = document.getElementById('leadsEmpty');
+            const cardEl = document.getElementById('leadsTableCard');
+            const bodyEl = document.getElementById('leadsTableBody');
+            const pagEl  = document.getElementById('leadsPagination');
+            const ttlEl  = document.getElementById('leadsTotalLabel');
+
+            spEl.classList.remove('d-none');
+            emEl.classList.add('d-none');
+            cardEl.classList.add('d-none');
+
+            try{
+                const search   = (document.getElementById('leadsSearch').value || '').trim();
+                const status   = document.getElementById('leadsStatusFilter').value;
+                const priority = document.getElementById('leadsPriorityFilter').value;
+                const catId    = document.getElementById('leadsCategoryFilter').value;
+                const followup = document.getElementById('leadsFollowupFilter').value;
+                const sortBy   = document.getElementById('leadsSortBy').value;
+                const filterMonth = document.getElementById('leadsMonthFilter').value;
+                const filterYear  = document.getElementById('leadsYearFilter').value;
+
+                const params = new URLSearchParams({
+                    segment:      'staff_handler',
+                    handler_role: 'field_staff',
+                    per_page:     25,
+                    page,
+                    sort_by:  sortBy,
+                    sort_dir: leadsSortDir,
+                });
+                if(search)       params.set('search',           search);
+                if(status)       params.set('status',           status);
+                if(priority)     params.set('priority',         priority);
+                if(catId)        params.set('category_id',      catId);
+                if(followup)     params.set('followup_filter',  followup);
+                if(filterMonth)  params.set('month',            filterMonth);
+                if(filterYear)   params.set('year',             filterYear);
+
+                const r = await staffFetch(`/api/v1/crm/unified-my-leads?${params}`);
+                spEl.classList.add('d-none');
+
+                if(!r.ok){
+                    emEl.classList.remove('d-none');
+                    ttlEl.textContent = '';
+                    return;
+                }
+
+                const d      = await r.json();
+                const leads  = d.leads || d.data || [];
+                const total  = d.total != null ? d.total : leads.length;
+                const totalPages = Math.max(Math.ceil(total / 25), 1);
+
+                leadsLoaded = true;
+                ttlEl.textContent = total
+                    ? `${total.toLocaleString()} lead${total !== 1 ? 's' : ''} found`
+                    : 'No leads found';
+
+                updateSortIcons(sortBy);
+
+                if(!leads.length){
+                    emEl.classList.remove('d-none');
+                    return;
+                }
+
+                bodyEl.innerHTML = leads.map((ld, i) => {
+                    const idx  = (page - 1) * 25 + i + 1;
+                    const name = ld.name || '—';
+                    const phone = ld.phone || '—';
+                    const cat  = ld.category_name || '—';
+                    const city = ld.city || '—';
+
+                    // Follow-up indicator
+                    let followupHtml = '—';
+                    if(ld.next_followup_date){
+                        const fpDate = new Date(ld.next_followup_date);
+                        const today  = new Date(); today.setHours(0,0,0,0);
+                        const isToday   = fpDate.toDateString() === today.toDateString();
+                        const isOverdue = fpDate < today && !isToday;
+                        const fpStr = fmtDate(ld.next_followup_date);
+                        if(isOverdue){
+                            followupHtml = `<span class="badge" style="background:#fee2e2;color:#991b1b;font-size:11px">⚠️ ${fpStr}</span>`;
+                        } else if(isToday){
+                            followupHtml = `<span class="badge" style="background:#d1fae5;color:#065f46;font-size:11px">📅 Today</span>`;
+                        } else {
+                            followupHtml = `<span class="text-muted small">${fpStr}</span>`;
+                        }
+                    }
+
+                    // Month from updated_at
+                    const updDate = ld.updated_at ? new Date(ld.updated_at) : null;
+                    const monthLabel = updDate
+                        ? updDate.toLocaleDateString('en-IN', {month:'short', year:'numeric'})
+                        : '—';
+
+                    // Incentive ₹ calculation
+                    const incvAmt = calcLeadIncentive(ld);
+                    let incvHtml;
+                    if(incvAmt != null){
+                        const isWon = ['won','completed'].includes(ld.status);
+                        if(isWon){
+                            incvHtml = `<span class="fw-semibold text-success">₹${Number(incvAmt).toLocaleString('en-IN',{maximumFractionDigits:0})}</span>`;
+                        } else {
+                            incvHtml = `<span class="text-muted small" title="Estimated — lead not yet won">~₹${Number(incvAmt).toLocaleString('en-IN',{maximumFractionDigits:0})}</span>`;
+                        }
+                    } else {
+                        incvHtml = '<span class="text-muted small">—</span>';
+                    }
+
+                    return `<tr>
+                        <td class="text-muted small">${idx}</td>
+                        <td>
+                            <a class="lead-name-link" href="/staff/leads?id=${ld.id}" target="_blank">${name}</a>
+                            <div class="text-muted" style="font-size:11px">${phone}</div>
+                        </td>
+                        <td class="d-none d-md-table-cell text-muted small">${phone}</td>
+                        <td><span class="badge bg-light text-dark border" style="font-size:11px">${cat}</span></td>
+                        <td>${leadStatusBadge(ld.status)}</td>
+                        <td>${priorityBadge(ld.priority)}</td>
+                        <td class="text-muted small">${city}</td>
+                        <td class="text-end small">${ld.confirmed_final_value != null ? `<span title="Confirmed Final ₹${fmtMoney(ld.confirmed_final_value)}" style="color:#92400e;font-weight:700">&#128274; ${fmtMoney(ld.confirmed_final_value)}</span>` : fmtMoney(ld.deal_value_total)}</td>
+                        <td>${followupHtml}</td>
+                        <td class="text-muted small">${fmtDate(ld.updated_at)}</td>
+                        <td class="text-muted small" style="white-space:nowrap">${monthLabel}</td>
+                        <td class="text-end">${incvHtml}</td>
+                    </tr>`;
+                }).join('');
+
+                cardEl.classList.remove('d-none');
+
+                // Pagination
+                const prevBtn = document.getElementById('leadsPrevBtn');
+                const nextBtn = document.getElementById('leadsNextBtn');
+                document.getElementById('leadsPageInfo').textContent = `Page ${page} of ${totalPages}  (${total} total)`;
+                prevBtn.disabled = (page <= 1);
+                nextBtn.disabled = (page >= totalPages);
+                pagEl.style.display = totalPages > 1 ? '' : 'none';
+
+            } catch(e){
+                spEl.classList.add('d-none');
+                emEl.classList.remove('d-none');
+                console.error('[MyIncv] Leads load error:', e);
+            }
+        }
+
+        window._initMyIncentives = async function(){
+            await StaffSidebar.init();
+            StaffHeader.inject('My Lead Incentives', 'fas fa-hand-holding-usd');
+
+            // ── Populate leads year filter dropdown ──
+            const leadsYearSel = document.getElementById('leadsYearFilter');
+            if(leadsYearSel){
+                const curY = new Date().getFullYear();
+                for(let y = curY; y >= curY - 3; y--){
+                    const o = document.createElement('option');
+                    o.value = y; o.textContent = y;
+                    leadsYearSel.appendChild(o);
+                }
+            }
+
+            loadTier();
+            loadEarnings();
+            loadCapacity();
+            loadLiveMonth();
+        };
+
+        document.addEventListener('DOMContentLoaded', window._initMyIncentives);
+    })();
+    </script>
+</body>
+</html>

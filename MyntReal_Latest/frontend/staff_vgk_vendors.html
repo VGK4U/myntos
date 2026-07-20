@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGK Vendor Master — Staff</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;background:#f0fdf4}
+        .main-content{padding:24px}
+        .page-header{background:linear-gradient(135deg,#064e3b,#059669);border-radius:14px;padding:24px 28px;color:#fff;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between}
+        .page-header h1{font-size:22px;font-weight:800;margin-bottom:4px}
+        .page-header p{font-size:14px;opacity:.85;margin:0}
+        .tabs{display:flex;gap:0;margin-bottom:20px;background:#fff;border-radius:10px;border:1.5px solid #bbf7d0;overflow:hidden}
+        .tab{padding:11px 22px;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border-right:1.5px solid #bbf7d0;transition:all .2s}
+        .tab:last-child{border-right:none}
+        .tab.active{background:#059669;color:#fff}
+        .tab:hover:not(.active){background:#f0fdf4}
+        .filter-row{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+        .filter-row input,.filter-row select{border:1.5px solid #d1fae5;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;background:#fff}
+        .filter-row input:focus,.filter-row select:focus{border-color:#059669}
+        .summary-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+        .sum-card{flex:1;min-width:140px;background:#fff;border-radius:12px;padding:16px 18px;border:1.5px solid #d1fae5;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        .sum-card .label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+        .sum-card .value{font-size:22px;font-weight:800;color:#059669}
+        .table-wrap{background:#fff;border-radius:12px;border:1.5px solid #d1fae5;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        table{width:100%;border-collapse:collapse}
+        thead tr{background:#f0fdf4}
+        th{padding:12px 14px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;border-bottom:1.5px solid #d1fae5;white-space:nowrap}
+        td{padding:11px 14px;font-size:13px;color:#374151;border-bottom:1px solid #f0fdf4;vertical-align:middle}
+        tr:last-child td{border-bottom:none}
+        tr:hover td{background:#f9fafb}
+        .badge{border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;display:inline-block}
+        .badge-active{background:#d1fae5;color:#065f46}
+        .badge-pending{background:#fef3c7;color:#92400e}
+        .badge-suspended{background:#fee2e2;color:#991b1b}
+        .btn-primary{background:#059669;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+        .btn-primary:hover{background:#047857}
+        .btn-outline{background:#fff;color:#059669;border:1.5px solid #059669;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer}
+        .btn-outline:hover{background:#f0fdf4}
+        .btn-sm{padding:5px 12px;font-size:12px}
+        .empty-state{padding:48px;text-align:center;color:#9ca3af}
+        .empty-state i{font-size:48px;margin-bottom:12px;opacity:.4;display:block}
+        .pagination{display:flex;gap:6px;align-items:center;margin-top:16px;justify-content:center}
+        .pg-btn{background:#fff;border:1.5px solid #d1fae5;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer}
+        .pg-btn:hover{background:#f0fdf4}
+        .pg-btn.active{background:#059669;color:#fff;border-color:#059669}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center}
+        .modal-overlay.show{display:flex}
+        .modal-box{background:#fff;border-radius:14px;padding:28px;width:600px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+        .modal-title{font-size:16px;font-weight:800;color:#111;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+        .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+        .form-row.full{grid-template-columns:1fr}
+        .form-group label{font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;display:block}
+        .form-group input,.form-group select,.form-group textarea{width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 12px;font-size:13px;outline:none;background:#fff}
+        .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:#059669}
+        .form-section-title{font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:.07em;margin:16px 0 10px;border-bottom:1px solid #d1fae5;padding-bottom:6px}
+        .section-tab{background:#fff;border-radius:12px;border:1.5px solid #d1fae5;padding:20px;margin-bottom:20px}
+        .cat-card{background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:14px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+        .cat-card .cat-name{font-size:14px;font-weight:700;color:#111}
+        .cat-card .cat-slug{font-size:12px;color:#6b7280}
+        .alert{border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:14px}
+        .alert-success{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+        .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+        .user-badge{background:rgba(255,255,255,.18);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:600}
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-store me-2"></i>VGK Vendor Master</h1>
+            <p>Manage empanelled vendors — categories, onboarding, KYC, QR codes</p>
+        </div>
+        <button class="btn-primary" onclick="openCreateVendor()"><i class="fas fa-plus"></i> Add Vendor</button>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('vendors', this)"><i class="fas fa-store me-1"></i> All Vendors</div>
+        <div class="tab" onclick="switchTab('categories', this)"><i class="fas fa-tags me-1"></i> Categories</div>
+    </div>
+
+    <!-- Vendors Tab -->
+    <div id="tab-vendors">
+        <div class="summary-row" id="summaryRow">
+            <div class="sum-card"><div class="label">Total Vendors</div><div class="value" id="sumTotal">—</div></div>
+            <div class="sum-card"><div class="label">Active</div><div class="value" id="sumActive" style="color:#059669">—</div></div>
+            <div class="sum-card"><div class="label">Pending</div><div class="value" id="sumPending" style="color:#d97706">—</div></div>
+            <div class="sum-card"><div class="label">Marketplace</div><div class="value" id="sumMarketplace" style="color:#2563eb">—</div></div>
+        </div>
+        <div class="filter-row">
+            <input type="text" id="searchInput" placeholder="Search name, phone, GST…" oninput="debounceLoad()">
+            <select id="statusFilter" onchange="loadVendors(1)">
+                <option value="">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="ACTIVE">Active</option>
+                <option value="SUSPENDED">Suspended</option>
+            </select>
+            <select id="catFilter" onchange="loadVendors(1)">
+                <option value="">All Categories</option>
+            </select>
+            <input type="text" id="pincodeFilter" placeholder="Pincode" oninput="debounceLoad()" style="width:100px">
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Code</th><th>Vendor Name</th><th>Category</th>
+                        <th>Phone</th><th>City/Pin</th><th>Discount%</th>
+                        <th>Transactions</th><th>Business</th><th>Status</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="vendorBody">
+                    <tr><td colspan="10" class="empty-state"><i class="fas fa-spinner fa-spin"></i><br>Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <!-- Categories Tab -->
+    <div id="tab-categories" style="display:none">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+            <button class="btn-primary" onclick="openCreateCategory()"><i class="fas fa-plus"></i> Add Category</button>
+        </div>
+        <div id="categoriesList"></div>
+    </div>
+</div>
+
+<!-- Create Vendor Modal -->
+<div class="modal-overlay" id="createVendorModal">
+    <div class="modal-box">
+        <div class="modal-title">
+            <span><i class="fas fa-store me-2"></i>New Vendor</span>
+            <button onclick="closeModal('createVendorModal')" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280">&times;</button>
+        </div>
+        <div id="createVendorAlert"></div>
+        <div class="form-section-title">Business Info</div>
+        <div class="form-row">
+            <div class="form-group"><label>Vendor Name *</label><input type="text" id="cv_name" placeholder="Grand Sweets & Snacks"></div>
+            <div class="form-group">
+                <label>Category *</label>
+                <div style="display:flex;gap:6px;align-items:center">
+                    <select id="cv_category" style="flex:1"></select>
+                    <button type="button" onclick="openCreateCategory()" title="Add new category" style="background:#059669;color:#fff;border:none;border-radius:7px;padding:7px 11px;font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0"><i class="fas fa-plus"></i></button>
+                </div>
+                <div id="cv_category_hint" style="font-size:11px;color:#dc2626;margin-top:3px;display:none"><i class="fas fa-exclamation-circle"></i> No categories yet — click <b>+</b> to add one first.</div>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>GST Number</label><input type="text" id="cv_gst" placeholder="37XXXXX..."></div>
+            <div class="form-group"><label>PAN Number</label><input type="text" id="cv_pan"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Contact Person</label><input type="text" id="cv_contact"></div>
+            <div class="form-group"><label>Phone *</label><input type="text" id="cv_phone" placeholder="9876543210"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Email</label><input type="text" id="cv_email"></div>
+            <div class="form-group"><label>WhatsApp</label><input type="text" id="cv_whatsapp"></div>
+        </div>
+        <div class="form-section-title">Location</div>
+        <div class="form-row">
+            <div class="form-group"><label>Address Line 1</label><input type="text" id="cv_addr1"></div>
+            <div class="form-group"><label>City</label><input type="text" id="cv_city"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>State</label><input type="text" id="cv_state" value="Andhra Pradesh"></div>
+            <div class="form-group"><label>Pincode</label><input type="text" id="cv_pin"></div>
+        </div>
+        <div class="form-section-title">Discount & Marketplace</div>
+        <div class="form-row">
+            <div class="form-group"><label>Flat Discount % (agreed)</label><input type="number" id="cv_disc" step="0.5" min="0" max="50" placeholder="5"></div>
+            <div class="form-group" style="display:flex;align-items:center;gap:10px;padding-top:22px">
+                <input type="checkbox" id="cv_marketplace" style="width:auto">
+                <label for="cv_marketplace" style="margin:0;font-size:13px">Opted into Marketplace</label>
+            </div>
+        </div>
+        <div class="form-row full">
+            <div class="form-group"><label>Shop Description</label><textarea id="cv_desc" rows="2"></textarea></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
+            <button class="btn-outline" onclick="closeModal('createVendorModal')">Cancel</button>
+            <button class="btn-primary" onclick="submitCreateVendor()"><i class="fas fa-save"></i> Create Vendor</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create Category Modal -->
+<div class="modal-overlay" id="createCatModal">
+    <div class="modal-box" style="width:420px">
+        <div class="modal-title">
+            <span><i class="fas fa-tags me-2"></i>New Category</span>
+            <button onclick="closeModal('createCatModal')" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280">&times;</button>
+        </div>
+        <div id="createCatAlert"></div>
+        <div class="form-row full">
+            <div class="form-group"><label>Category Name *</label><input type="text" id="cc_name" placeholder="Sweet Shop"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label>Icon (FA class)</label><input type="text" id="cc_icon" placeholder="fas fa-candy-cane"></div>
+            <div class="form-group"><label>Display Order</label><input type="number" id="cc_order" value="0"></div>
+        </div>
+        <div class="form-row full">
+            <div class="form-group"><label>Description</label><textarea id="cc_desc" rows="2"></textarea></div>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+            <button class="btn-outline" onclick="closeModal('createCatModal')">Cancel</button>
+            <button class="btn-primary" onclick="submitCreateCategory()"><i class="fas fa-save"></i> Save Category</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '/api/v1';
+let currentPage = 1;
+let categories = [];
+let dbTimer;
+
+function getToken() { return window.staffTokenManager ? window.staffTokenManager.getToken() : localStorage.getItem('staff_token'); }
+function headers() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() }; }
+
+async function init() {
+    await loadCategories();
+    await loadVendors(1);
+}
+
+function switchTab(tab, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-vendors').style.display = tab === 'vendors' ? '' : 'none';
+    document.getElementById('tab-categories').style.display = tab === 'categories' ? '' : 'none';
+    if (tab === 'categories') loadCategoriesTab();
+}
+
+async function loadCategories() {
+    const r = await fetch(`${API}/staff/vgk/vendors/categories`, { headers: headers() });
+    if (!r.ok) return;
+    categories = await r.json();
+    const sel = document.getElementById('catFilter');
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">All Categories</option>';
+    categories.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id; o.textContent = c.name;
+        sel.appendChild(o);
+    });
+    sel.value = prev;
+}
+
+function _rebuildCvCategory(selectId) {
+    const sel = document.getElementById('cv_category');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Select category</option>';
+    categories.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id; o.textContent = c.name;
+        sel.appendChild(o);
+    });
+    if (selectId) sel.value = selectId;
+    const hint = document.getElementById('cv_category_hint');
+    if (hint) hint.style.display = categories.length === 0 ? '' : 'none';
+}
+
+function debounceLoad() { clearTimeout(dbTimer); dbTimer = setTimeout(() => loadVendors(1), 350); }
+
+async function loadVendors(page) {
+    currentPage = page;
+    const search = document.getElementById('searchInput').value;
+    const status = document.getElementById('statusFilter').value;
+    const cat = document.getElementById('catFilter').value;
+    const pin = document.getElementById('pincodeFilter').value;
+    let url = `${API}/staff/vgk/vendors?page=${page}&per_page=25`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (status) url += `&status=${status}`;
+    if (cat) url += `&category_id=${cat}`;
+    if (pin) url += `&pincode=${pin}`;
+    const r = await fetch(url, { headers: headers() });
+    if (!r.ok) return;
+    const data = await r.json();
+    renderVendors(data);
+}
+
+function renderVendors(data) {
+    const body = document.getElementById('vendorBody');
+    const rows = data.data || [];
+    if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="10" class="empty-state"><i class="fas fa-store"></i><br>No vendors found</td></tr>';
+        return;
+    }
+    const statCounts = { ACTIVE: 0, PENDING: 0, marketplace: 0 };
+    rows.forEach(v => {
+        if (v.status === 'ACTIVE') statCounts.ACTIVE++;
+        if (v.status === 'PENDING') statCounts.PENDING++;
+        if (v.marketplace_opted) statCounts.marketplace++;
+    });
+    document.getElementById('sumTotal').textContent = data.total;
+    document.getElementById('sumActive').textContent = statCounts.ACTIVE;
+    document.getElementById('sumPending').textContent = statCounts.PENDING;
+    document.getElementById('sumMarketplace').textContent = statCounts.marketplace;
+
+    body.innerHTML = rows.map(v => `
+        <tr>
+            <td><code style="font-size:11px">${v.vendor_code}</code></td>
+            <td><div style="font-weight:700">${v.vendor_name}</div>${v.has_login ? '<span style="font-size:10px;color:#059669"><i class="fas fa-key"></i> Portal</span>' : ''}</td>
+            <td>${v.category_name || '—'}</td>
+            <td>${v.phone}</td>
+            <td>${v.city || '—'}<br><span style="font-size:11px;color:#6b7280">${v.pincode || ''}</span></td>
+            <td><strong>${v.flat_discount_pct}%</strong></td>
+            <td>${v.total_transactions}</td>
+            <td>₹${Number(v.total_business_value).toLocaleString('en-IN')}</td>
+            <td><span class="badge badge-${v.status.toLowerCase()}">${v.status}</span></td>
+            <td>
+                <a href="/staff/vgk/vendor/${v.id}" class="btn-outline btn-sm" style="text-decoration:none;display:inline-block;margin-right:4px"><i class="fas fa-eye"></i> View</a>
+            </td>
+        </tr>
+    `).join('');
+
+    // Pagination
+    const pg = document.getElementById('pagination');
+    const pages = data.pages || 1;
+    if (pages <= 1) { pg.innerHTML = ''; return; }
+    let html = '';
+    if (currentPage > 1) html += `<button class="pg-btn" onclick="loadVendors(${currentPage - 1})">‹</button>`;
+    for (let i = Math.max(1, currentPage - 2); i <= Math.min(pages, currentPage + 2); i++) {
+        html += `<button class="pg-btn ${i === currentPage ? 'active' : ''}" onclick="loadVendors(${i})">${i}</button>`;
+    }
+    if (currentPage < pages) html += `<button class="pg-btn" onclick="loadVendors(${currentPage + 1})">›</button>`;
+    pg.innerHTML = html;
+}
+
+async function loadCategoriesTab() {
+    const r = await fetch(`${API}/staff/vgk/vendors/categories`, { headers: headers() });
+    if (!r.ok) return;
+    const cats = await r.json();
+    const el = document.getElementById('categoriesList');
+    if (!cats.length) {
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-tags"></i><br>No categories yet. Add the first one.</div>';
+        return;
+    }
+    el.innerHTML = cats.map(c => `
+        <div class="cat-card">
+            <div>
+                <div class="cat-name"><i class="${c.icon || 'fas fa-store'} me-2" style="color:#059669"></i>${c.name}</div>
+                <div class="cat-slug">/${c.slug} · Order: ${c.display_order} · ${c.is_active ? 'Active' : 'Inactive'}</div>
+                ${c.description ? `<div style="font-size:12px;color:#6b7280;margin-top:4px">${c.description}</div>` : ''}
+            </div>
+            <button class="btn-outline btn-sm" onclick="toggleCategory(${c.id}, ${!c.is_active})">
+                ${c.is_active ? 'Deactivate' : 'Activate'}
+            </button>
+        </div>
+    `).join('');
+}
+
+async function toggleCategory(id, newState) {
+    const r = await fetch(`${API}/staff/vgk/vendors/categories/${id}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({ is_active: newState })
+    });
+    if (r.ok) loadCategoriesTab();
+}
+
+function openCreateVendor() {
+    _rebuildCvCategory(null);
+    document.getElementById('createVendorAlert').innerHTML = '';
+    document.getElementById('createVendorModal').classList.add('show');
+}
+
+async function submitCreateVendor() {
+    const alertEl = document.getElementById('createVendorAlert');
+    const payload = {
+        vendor_name: document.getElementById('cv_name').value.trim(),
+        category_id: document.getElementById('cv_category').value,
+        gst_number: document.getElementById('cv_gst').value.trim(),
+        pan_number: document.getElementById('cv_pan').value.trim(),
+        contact_person: document.getElementById('cv_contact').value.trim(),
+        phone: document.getElementById('cv_phone').value.trim(),
+        email: document.getElementById('cv_email').value.trim(),
+        whatsapp_number: document.getElementById('cv_whatsapp').value.trim(),
+        address_line1: document.getElementById('cv_addr1').value.trim(),
+        city: document.getElementById('cv_city').value.trim(),
+        state: document.getElementById('cv_state').value.trim(),
+        pincode: document.getElementById('cv_pin').value.trim(),
+        flat_discount_pct: parseFloat(document.getElementById('cv_disc').value || 0),
+        marketplace_opted: document.getElementById('cv_marketplace').checked,
+        shop_description: document.getElementById('cv_desc').value.trim(),
+    };
+    if (!payload.vendor_name || !payload.category_id || !payload.phone) {
+        alertEl.innerHTML = '<div class="alert alert-error">Vendor name, category and phone are required.</div>';
+        return;
+    }
+    const r = await fetch(`${API}/staff/vgk/vendors`, { method: 'POST', headers: headers(), body: JSON.stringify(payload) });
+    const data = await r.json();
+    if (r.ok && data.success) {
+        alertEl.innerHTML = `<div class="alert alert-success">Vendor created: <strong>${data.vendor_code}</strong>. <a href="/staff/vgk/vendor/${data.id}">View Detail →</a></div>`;
+        loadVendors(1);
+    } else {
+        alertEl.innerHTML = `<div class="alert alert-error">${data.detail || 'Failed to create vendor.'}</div>`;
+    }
+}
+
+function openCreateCategory() {
+    document.getElementById('createCatAlert').innerHTML = '';
+    ['cc_name','cc_icon','cc_desc'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cc_order').value = 0;
+    document.getElementById('createCatModal').classList.add('show');
+}
+
+async function submitCreateCategory() {
+    const alertEl = document.getElementById('createCatAlert');
+    const name = document.getElementById('cc_name').value.trim();
+    if (!name) { alertEl.innerHTML = '<div class="alert alert-error">Name required.</div>'; return; }
+    const r = await fetch(`${API}/staff/vgk/vendors/categories`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({
+            name, icon: document.getElementById('cc_icon').value.trim() || 'fas fa-store',
+            description: document.getElementById('cc_desc').value.trim(),
+            display_order: parseInt(document.getElementById('cc_order').value || 0)
+        })
+    });
+    const data = await r.json();
+    if (r.ok && data.success) {
+        alertEl.innerHTML = '<div class="alert alert-success">Category created.</div>';
+        await loadCategories();
+        _rebuildCvCategory(data.id);
+        loadCategoriesTab();
+        setTimeout(() => closeModal('createCatModal'), 1200);
+    } else {
+        alertEl.innerHTML = `<div class="alert alert-error">${data.detail || 'Failed.'}</div>`;
+    }
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+window.addEventListener('click', e => {
+    if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('show');
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await StaffSidebar.init();
+    StaffHeader.inject('VGK Vendor Master', 'fas fa-store');
+    await init();
+});
+</script>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+</body>
+</html>

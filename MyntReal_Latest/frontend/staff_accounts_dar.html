@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAR — Daily Activity Report — SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 20px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+        .page-header h1 { font-size: 22px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 13px; color: #6b7280; margin: 2px 0 0 0; }
+        .filter-bar { background: white; padding: 14px 18px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-group select, .filter-group input { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 140px; }
+        .period-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .period-btn { padding: 7px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: white; font-size: 12px; cursor: pointer; transition: all .15s; }
+        .period-btn.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+        .period-btn:hover:not(.active) { background: #f9fafb; }
+
+        /* DC_DAR_004 (May 2026): tab strip — Daily vs Comparison */
+        .dar-tabs { display: flex; gap: 0; margin-bottom: 12px; border-bottom: 2px solid #e5e7eb; }
+        .dar-tab { padding: 10px 18px; cursor: pointer; font-size: 13px; font-weight: 600; color: #6b7280;
+                   border: none; background: transparent; border-bottom: 3px solid transparent;
+                   margin-bottom: -2px; transition: all .15s; }
+        .dar-tab:hover { color: #374151; }
+        .dar-tab.active { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+
+        /* DC-BAL-DASH-001: Balance Dashboard tab styles */
+        #balanceDashContent { display: none; }
+        .bal-period-bar { background: white; padding: 12px 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .bal-period-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .bal-period-btn { padding: 6px 13px; border-radius: 6px; border: 1px solid #d1d5db; background: white; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+        .bal-period-btn.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+        .bal-period-btn:hover:not(.active) { background: #f9fafb; }
+        .bal-sort-group { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; font-weight: 600; }
+        .bal-sort-group select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; }
+        .bal-grand { background: linear-gradient(135deg,#1d4ed8,#2563eb); color: white; border-radius: 12px; padding: 16px 24px; margin-bottom: 18px; display: grid; grid-template-columns: 1fr repeat(4,auto); gap: 12px 32px; align-items: center; box-shadow: 0 4px 12px rgba(29,78,216,.25); }
+        .bal-grand-label { font-size: 15px; font-weight: 700; }
+        .bal-grand-col { text-align: right; }
+        .bal-grand-col small { display: block; font-size: 10px; font-weight: 600; opacity: .75; text-transform: uppercase; margin-bottom: 2px; }
+        .bal-grand-col strong { font-size: 17px; font-weight: 800; }
+        .bal-section { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; overflow: hidden; }
+        .bal-section-hdr { display: flex; align-items: center; gap: 10px; padding: 12px 18px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; }
+        .bal-section-hdr h3 { font-size: 13px; font-weight: 700; color: #1f2937; margin: 0; }
+        .bal-section-hdr .bal-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .bal-section-hdr .bal-section-totals { margin-left: auto; display: flex; gap: 24px; font-size: 12px; }
+        .bal-section-totals span { color: #6b7280; font-weight: 600; }
+        .bal-section-totals b { color: #1f2937; margin-left: 4px; }
+        .bal-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .bal-tbl th { background: #f5f3ff; color: #5b21b6; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 8px 14px; border-bottom: 1px solid #ddd6fe; cursor: pointer; user-select: none; white-space: nowrap; }
+        .bal-tbl th:hover { background: #ede9fe; }
+        .bal-tbl th .sort-arrow { margin-left: 4px; opacity: .4; }
+        .bal-tbl th.sort-asc .sort-arrow::after { content: '↑'; opacity: 1; }
+        .bal-tbl th.sort-desc .sort-arrow::after { content: '↓'; opacity: 1; }
+        .bal-tbl td { padding: 9px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        .bal-tbl tr:last-child td { border-bottom: none; }
+        .bal-tbl tr:hover td { background: #f9fafb; }
+        .bal-tbl .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .bal-tbl .neg-bal { color: #dc2626; font-weight: 700; }
+        .bal-tbl .neg-row td { background: #fef2f2 !important; }
+        .bal-tbl .pos { color: #059669; font-weight: 600; }
+        .bal-tbl .neg { color: #dc2626; font-weight: 600; }
+        .bal-recv { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 16px 20px; display: flex; align-items: center; gap: 14px; }
+        .bal-recv-icon { width: 40px; height: 40px; background: #fef3c7; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #92400e; }
+        .bal-recv-val { font-size: 20px; font-weight: 800; color: #1f2937; }
+        .bal-recv-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .bal-loading { text-align: center; padding: 48px; color: #9ca3af; font-size: 14px; }
+        .bal-empty { text-align: center; padding: 32px; color: #9ca3af; font-size: 13px; }
+        .bal-co-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #e0f2fe; color: #0c4a6e; white-space: nowrap; }
+        .bal-bank-detail { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .btn-load { padding: 8px 14px; border-radius: 6px; border: 1px solid #1d4ed8; background: #1d4ed8; color: white; font-size: 13px; cursor: pointer; }
+        .btn-load:hover { background: #1e40af; }
+        .custom-range { display:none; gap: 8px; }
+        .custom-range.show { display: flex; }
+
+        /* DAR table */
+        .dar-card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1); overflow: hidden; }
+        .dar-scroll { max-height: 78vh; overflow: auto; }
+        table.dar { width: 100%; border-collapse: collapse; font-size: 12px; }
+        table.dar th, table.dar td { padding: 7px 8px; border-bottom: 1px solid #f3f4f6; white-space: nowrap; text-align: right; }
+        table.dar thead th { position: sticky; top: 0; background: #f9fafb; z-index: 4; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; font-size: 11px; }
+        table.dar td.label, table.dar th.label { text-align: left; position: sticky; left: 0; background: white; z-index: 3; min-width: 220px; font-weight: 500; color: #374151; border-right: 1px solid #e5e7eb; }
+        table.dar thead th.label { background: #f9fafb; z-index: 5; }
+        /* DC_DAR_004: Color-coded section banners — high-contrast, distinct per
+           section type so the table is scannable at a glance. The colspan TD
+           paints across the full row; a 4px left accent stripe mimics row banding. */
+        table.dar tr.section-header td { color: #fff; font-weight: 700; text-transform: uppercase;
+            font-size: 11.5px; letter-spacing: .6px; padding: 10px 12px; position: sticky; left: 0; z-index: 2;
+            border-bottom: 1px solid rgba(0,0,0,.12); border-top: 1px solid rgba(255,255,255,.15);
+            box-shadow: inset 4px 0 0 rgba(0,0,0,.25); text-align: left; }
+        table.dar tr.section-header td.label { position: sticky; left: 0; z-index: 3; }
+        /* Per-section accent palette (background gradients) */
+        table.dar tr.section-header.sec-pl-debit  td { background: linear-gradient(90deg,#1e40af 0%,#3b82f6 100%); }
+        table.dar tr.section-header.sec-pl-credit td { background: linear-gradient(90deg,#047857 0%,#10b981 100%); }
+        table.dar tr.section-header.sec-bs-liab   td { background: linear-gradient(90deg,#9a3412 0%,#f97316 100%); }
+        table.dar tr.section-header.sec-bs-asset  td { background: linear-gradient(90deg,#6d28d9 0%,#a78bfa 100%); }
+        table.dar tr.section-header.sec-sales     td { background: linear-gradient(90deg,#0e7490 0%,#06b6d4 100%); }
+        table.dar tr.section-header.sec-purch     td { background: linear-gradient(90deg,#9f1239 0%,#fb7185 100%); }
+        table.dar tr.section-header.sec-leads     td { background: linear-gradient(90deg,#854d0e 0%,#eab308 100%); }
+        table.dar tr.section-header.sec-tickets   td { background: linear-gradient(90deg,#374151 0%,#6b7280 100%); }
+        table.dar tr.section-header.sec-attend    td { background: linear-gradient(90deg,#7c2d12 0%,#dc2626 100%); }
+        table.dar tr.section-header.sec-default   td { background: linear-gradient(90deg,#1e293b 0%,#475569 100%); }
+
+        /* DC_DAR_004: column-wise light tints so each time-period / date is easy
+           to track vertically. These apply to value + delta cells *and* the thead
+           cells. Section-header banners override (their gradient takes precedence). */
+        /* Comparison mode — semantic per-period pastels matching the banner palette */
+        table.dar td.col-today,        table.dar th.col-today        { background: #fef9c3; }
+        table.dar td.col-this-week,    table.dar th.col-this-week    { background: #dbeafe; }
+        table.dar td.col-last-week,    table.dar th.col-last-week    { background: #eff6ff; }
+        table.dar td.col-this-month,   table.dar th.col-this-month   { background: #d1fae5; }
+        table.dar td.col-last-month,   table.dar th.col-last-month   { background: #ecfdf5; }
+        table.dar td.col-this-fy,      table.dar th.col-this-fy      { background: #ede9fe; }
+        table.dar td.col-overall,      table.dar th.col-overall      { background: #f1f5f9; }
+        /* Daily mode — alternating week-band stripes (5-day groups) */
+        table.dar td.col-band-a,       table.dar th.col-band-a       { background: #f8fafc; }
+        table.dar td.col-band-b,       table.dar th.col-band-b       { background: #fefce8; }
+        /* Hover row still works on top of column tints */
+        table.dar tbody tr:hover td:not(.section-header td) { filter: brightness(0.96); }
+        table.dar td.delta { color: #6b7280; font-size: 11px; padding: 7px 4px; min-width: 50px; }
+        table.dar td.delta.positive { color: #059669; font-weight: 600; }
+        table.dar td.delta.negative { color: #dc2626; font-weight: 600; }
+        table.dar td.value { font-variant-numeric: tabular-nums; min-width: 80px; }
+        table.dar th.value-head { min-width: 80px; }
+        table.dar th.delta-head { min-width: 50px; font-size: 10px; color: #9ca3af; }
+        table.dar th.period-end, table.dar td.period-end { background: #fef9c3 !important; font-weight: 600; }
+        table.dar tbody tr:hover td:not(.section-header td) { background: #fafafa; }
+        .empty-state { padding: 60px 20px; text-align: center; color: #6b7280; }
+        .loading { padding: 40px; text-align: center; color: #6b7280; }
+        .dar-warning-banner {
+            background: #fef3c7; border: 1px solid #f59e0b; color: #92400e;
+            padding: 10px 14px; border-radius: 8px; margin-bottom: 12px;
+            font-size: 13px; line-height: 1.5;
+        }
+        .dar-warning-banner .dar-warning-title {
+            font-weight: 700; display: block; margin-bottom: 4px;
+        }
+        .dar-warning-banner ul { margin: 4px 0 0 18px; padding: 0; }
+        .dar-warning-banner li { margin: 2px 0; }
+        .dar-warning-banner .dar-warning-detail {
+            color: #78350f; font-family: 'SFMono-Regular', Consolas, monospace;
+            font-size: 11px;
+        }
+
+        /* Sidebar layout */
+        @media (min-width: 769px) {
+            .main-content { margin-left: 260px; }
+        }
+        .read-only-badge { display: inline-block; padding: 3px 8px; background: #fef3c7; color: #92400e; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-left: 8px; }
+    </style>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/staff_universal_filter.js?v=20260503a"></script>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+    <div class="content-area" id="mainContent">
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-calendar-check" style="color:#1d4ed8;margin-right:8px;"></i>DAR
+                    <span class="read-only-badge">Read-only</span>
+                </h1>
+                <p id="periodLabel">Loading…</p>
+            </div>
+            <button class="btn-load" onclick="loadDAR()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+        </div>
+
+        <!-- DC_DAR_004 tabs: Daily (10-day grid) vs Comparison (period snapshots) -->
+        <!-- DC-BAL-DASH-001: Balance tab added -->
+        <div class="dar-tabs">
+            <button class="dar-tab active" data-tab="daily" onclick="setTab('daily')">
+                <i class="fas fa-calendar-day me-1"></i>Daily (last 10 days)
+            </button>
+            <button class="dar-tab" data-tab="comparison" onclick="setTab('comparison')">
+                <i class="fas fa-chart-line me-1"></i>Period Comparison
+            </button>
+            <button class="dar-tab" data-tab="balance" onclick="setTab('balance')">
+                <i class="fas fa-wallet me-1"></i>Balance
+            </button>
+        </div>
+
+        <!-- Universal filter (Company select; persists via localStorage key dc_universal_filter_staff_accounts_dar) -->
+        <div id="universalFilterContainer"></div>
+
+        <!-- Period bar (hidden on comparison tab — columns are fixed) -->
+        <div id="periodFilterBar">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Period</label>
+                <div class="period-btns">
+                    <button class="period-btn active" data-period="TODAY" onclick="setPeriod('TODAY')">Today</button>
+                    <button class="period-btn" data-period="YESTERDAY" onclick="setPeriod('YESTERDAY')">Yesterday</button>
+                    <button class="period-btn" data-period="THIS_MONTH" onclick="setPeriod('THIS_MONTH')">This Month</button>
+                    <button class="period-btn" data-period="THIS_QUARTER" onclick="setPeriod('THIS_QUARTER')">Quarter</button>
+                    <button class="period-btn" data-period="THIS_FY" onclick="setPeriod('THIS_FY')">FY</button>
+                    <button class="period-btn" data-period="OVERALL" onclick="setPeriod('OVERALL')">Overall</button>
+                    <button class="period-btn" data-period="CUSTOM" onclick="setPeriod('CUSTOM')">Custom</button>
+                </div>
+            </div>
+            <div class="custom-range" id="customRange">
+                <div class="filter-group">
+                    <label>From</label>
+                    <input type="date" id="dateFrom">
+                </div>
+                <div class="filter-group">
+                    <label>To</label>
+                    <input type="date" id="dateTo">
+                </div>
+                <button class="btn-load" onclick="loadDAR()">Apply</button>
+            </div>
+        </div>
+        </div><!-- /periodFilterBar -->
+
+        <div class="dar-card">
+            <div class="dar-scroll" id="darTableWrap">
+                <div class="loading"><i class="fas fa-spinner fa-spin me-2"></i>Loading DAR…</div>
+            </div>
+        </div>
+
+        <!-- DC-BAL-DASH-001: Balance Dashboard content (hidden until tab selected) -->
+        <div id="balanceDashContent">
+            <!-- Balance period filter bar -->
+            <div class="bal-period-bar">
+                <div>
+                    <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:5px;">Period</div>
+                    <div class="bal-period-btns" id="balPeriodBtns">
+                        <button class="bal-period-btn active" data-bperiod="OVERALL" onclick="setBalPeriod('OVERALL')">Overall</button>
+                        <button class="bal-period-btn" data-bperiod="FTD" onclick="setBalPeriod('FTD')">FTD</button>
+                        <button class="bal-period-btn" data-bperiod="YESTERDAY" onclick="setBalPeriod('YESTERDAY')">Yesterday</button>
+                        <button class="bal-period-btn" data-bperiod="THIS_WEEK" onclick="setBalPeriod('THIS_WEEK')">This Week</button>
+                        <button class="bal-period-btn" data-bperiod="THIS_MONTH" onclick="setBalPeriod('THIS_MONTH')">This Month</button>
+                        <button class="bal-period-btn" data-bperiod="THIS_FY" onclick="setBalPeriod('THIS_FY')">This FY</button>
+                    </div>
+                </div>
+                <div class="bal-sort-group">
+                    <span>Sort by</span>
+                    <select id="balSortSelect" onchange="renderBalanceDash(lastBalData)">
+                        <option value="company">Company</option>
+                        <option value="account">Account Name</option>
+                        <option value="balance_desc">Balance ↓</option>
+                        <option value="balance_asc">Balance ↑</option>
+                        <option value="in_desc">In ↓</option>
+                        <option value="out_desc">Out ↓</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Dashboard output -->
+            <div id="balanceDashOutput">
+                <div class="bal-loading"><i class="fas fa-spinner fa-spin me-2"></i>Select Balance tab to load…</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/staff_header.js?v=20260503a"></script>
+<script>
+(function() {
+    'use strict';
+    // Period state persisted alongside the universal filter (company) state.
+    const PERIOD_KEY = 'dc_universal_filter_staff_accounts_dar_period';
+    const TAB_KEY = 'dc_universal_filter_staff_accounts_dar_tab';
+    let currentPeriod = (function() {
+        try { return localStorage.getItem(PERIOD_KEY) || 'TODAY'; }
+        catch (_) { return 'TODAY'; }
+    })();
+    let currentTab = (function() {
+        try { return localStorage.getItem(TAB_KEY) || 'daily'; }
+        catch (_) { return 'daily'; }
+    })();
+    let currentCompanyId = 0;
+    let universalFilter = null;
+
+    // DC_DAR_004 / DC-BAL-DASH-001: switch between 'daily', 'comparison', 'balance'.
+    function setTab(t) {
+        currentTab = t;
+        try { localStorage.setItem(TAB_KEY, t); } catch (_) {}
+        document.querySelectorAll('.dar-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+        const pf   = document.getElementById('periodFilterBar');
+        const dc   = document.querySelector('.dar-card');
+        const bc   = document.getElementById('balanceDashContent');
+        if (t === 'balance') {
+            if (dc) dc.style.display = 'none';
+            if (pf) pf.style.display = 'none';
+            if (bc) bc.style.display = 'block';
+            loadBalanceDash();
+        } else {
+            if (dc) dc.style.display = '';
+            if (bc) bc.style.display = 'none';
+            if (pf) pf.style.display = (t === 'comparison') ? 'none' : '';
+            loadDAR();
+        }
+    }
+    window.setTab = setTab;
+
+    function setPeriod(p) {
+        currentPeriod = p;
+        try { localStorage.setItem(PERIOD_KEY, p); } catch (_) {}
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === p));
+        const cr = document.getElementById('customRange');
+        if (p === 'CUSTOM') { cr.classList.add('show'); }
+        else { cr.classList.remove('show'); loadDAR(); }
+    }
+    window.setPeriod = setPeriod;
+
+    function fmtNum(v, isCount) {
+        if (v === null || v === undefined || isNaN(v)) return '—';
+        if (isCount) return Math.round(v).toLocaleString('en-IN');
+        if (Math.abs(v) >= 100000) return '₹' + (v / 100000).toFixed(2) + 'L';
+        if (Math.abs(v) >= 1000) return '₹' + (v / 1000).toFixed(1) + 'K';
+        return '₹' + v.toFixed(0);
+    }
+    function fmtDelta(prev, cur, isCount) {
+        if (prev === undefined || prev === null) return '';
+        const d = cur - prev;
+        if (Math.abs(d) < 0.01) return '0';
+        const sign = d > 0 ? '+' : '−';
+        if (isCount) return sign + Math.abs(Math.round(d));
+        if (Math.abs(d) >= 1000) return sign + '₹' + (Math.abs(d) / 1000).toFixed(1) + 'K';
+        return sign + '₹' + Math.abs(d).toFixed(0);
+    }
+    function deltaClass(prev, cur, gd) {
+        if (prev === undefined || prev === null || gd === 'neutral') return '';
+        const d = cur - prev;
+        if (Math.abs(d) < 0.01) return '';
+        const isPositive = d > 0;
+        if (gd === 'up') return isPositive ? 'positive' : 'negative';
+        if (gd === 'down') return isPositive ? 'negative' : 'positive';
+        return '';
+    }
+
+    async function initUniversalFilter() {
+        if (typeof DCUniversalFilter === 'undefined') {
+            console.warn('[DAR] DCUniversalFilter unavailable — falling back to no filter UI');
+            return;
+        }
+        universalFilter = new DCUniversalFilter('universalFilterContainer', {
+            showCompany: true,
+            showStaffType: false,
+            showDepartment: false,
+            showEmployee: false,
+            showSearch: false,
+            pageKey: 'staff_accounts_dar',
+            companyLabel: 'All Companies',
+            onFilterChange: (state) => {
+                currentCompanyId = state.selectedCompany || 0;
+                loadDAR();
+            }
+        });
+        try {
+            await universalFilter.waitForReady();
+            currentCompanyId = universalFilter.state.selectedCompany || 0;
+        } catch (e) {
+            console.warn('[DAR] universal filter init failed:', e);
+        }
+    }
+
+    async function loadDAR() {
+        const wrap = document.getElementById('darTableWrap');
+        wrap.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin me-2"></i>Loading DAR…</div>';
+        const company_id = currentCompanyId || (universalFilter && universalFilter.state.selectedCompany) || 0;
+        currentCompanyId = company_id;
+        // DC_DAR_004: comparison tab ignores the period selector (snap dates
+        // are fixed: Today / This Week / Last Week / This Month / Last Month /
+        // This FY / Overall) and sends mode=comparison.
+        const mode = (currentTab === 'comparison') ? 'comparison' : 'daily';
+        let url = `/api/v1/staff/accounts/dar?company_id=${company_id}&mode=${mode}&period=${encodeURIComponent(currentPeriod)}`;
+        if (mode === 'daily' && currentPeriod === 'CUSTOM') {
+            const df = document.getElementById('dateFrom').value;
+            const dt = document.getElementById('dateTo').value;
+            if (dt) url += `&date_to=${dt}`;
+            if (df) url += `&date_from=${df}`;
+        }
+        try {
+            const resp = await staffFetchJson(url);
+            if (!resp || !resp.success) {
+                wrap.innerHTML = `<div class="empty-state"><i class="fas fa-triangle-exclamation me-2"></i>Failed to load DAR.</div>`;
+                return;
+            }
+            renderDAR(resp.data);
+        } catch (e) {
+            console.error('[DAR] load failed:', e);
+            wrap.innerHTML = `<div class="empty-state"><i class="fas fa-triangle-exclamation me-2"></i>Error: ${e.message || e}</div>`;
+        }
+    }
+    window.loadDAR = loadDAR;
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function renderErrorBanner(errors) {
+        if (!errors || !errors.length) return '';
+        // Group by section so the banner stays compact when one source fails
+        // on multiple snapshot days.
+        const bySection = {};
+        errors.forEach(e => {
+            const sec = e.section || 'unknown';
+            if (!bySection[sec]) bySection[sec] = [];
+            bySection[sec].push(e);
+        });
+        const items = Object.keys(bySection).sort().map(sec => {
+            const list = bySection[sec];
+            const days = list.map(e => e.snap).filter(Boolean).join(', ');
+            const sample = list[0] && list[0].message ? list[0].message : '';
+            return `<li><strong>${escapeHtml(sec)}</strong> — failed on ${escapeHtml(days || 'one or more days')}` +
+                   (sample ? ` <span class="dar-warning-detail">(${escapeHtml(sample)})</span>` : '') +
+                   `</li>`;
+        }).join('');
+        return `
+            <div class="dar-warning-banner" role="alert">
+                <span class="dar-warning-title">
+                    <i class="fas fa-triangle-exclamation me-1"></i>
+                    Some DAR data sources could not be loaded — affected cells show as 0
+                </span>
+                <ul>${items}</ul>
+            </div>`;
+    }
+
+    function renderDAR(d) {
+        const dates = d.business_dates_label || [];
+        const endDate = d.end_date;
+        const isComparison = (d.mode === 'comparison');
+        // In daily mode show "<co> — <period> • last N days ending <date>".
+        // In comparison mode the columns are fixed period snapshots, so render
+        // a simpler heading.
+        const coLabel = `${d.company_name || 'All Companies'}${d.company_count && d.company_count > 1 ? ` (${d.company_count})` : ''}`;
+        document.getElementById('periodLabel').textContent = isComparison
+            ? `${coLabel} — ${d.period_label}`
+            : `${coLabel} — ${d.period_label} • last ${dates.length} days ending ${endDate}`;
+
+        // Daily view: display newest → oldest (reverse the chronological list).
+        // Comparison view: backend already orders columns Today → Overall, do
+        // NOT reverse. The leftmost column is highlighted as the focus column
+        // in both modes.
+        const datesDesc = isComparison ? dates.slice() : dates.slice().reverse();
+
+        // DC_DAR_004: column tint class per index. In comparison mode the 7
+        // columns are fixed semantic periods; in daily mode we band groups of
+        // 5 calendar days (≈ a working week) into alternating subtle stripes.
+        const COMPARISON_COLS = ['col-today','col-this-week','col-last-week',
+                                 'col-this-month','col-last-month','col-this-fy','col-overall'];
+        function colClass(idx) {
+            if (isComparison) return COMPARISON_COLS[idx] || '';
+            return (Math.floor(idx / 5) % 2 === 0) ? 'col-band-a' : 'col-band-b';
+        }
+
+        let html = renderErrorBanner(d.errors);
+        html += '<table class="dar"><thead><tr><th class="label">Item</th>';
+        datesDesc.forEach((dlbl, idx) => {
+            const isEnd = (idx === 0); // leftmost = period end / current day
+            const cc = colClass(idx);
+            html += `<th class="value-head ${cc}${isEnd ? ' period-end' : ''}">${dlbl}</th>`;
+            if (idx < datesDesc.length - 1) html += `<th class="delta-head ${cc}">Δ</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        // DC_DAR_004: classify section title → CSS accent class for color banding
+        function sectionClass(title) {
+            const t = (title || '').toLowerCase();
+            if (t.includes('p&l') && t.includes('debit'))   return 'sec-pl-debit';
+            if (t.includes('p&l') && t.includes('credit'))  return 'sec-pl-credit';
+            if (t.includes('balance sheet') && t.includes('liab'))  return 'sec-bs-liab';
+            if (t.includes('balance sheet') && t.includes('asset')) return 'sec-bs-asset';
+            if (t.includes('sales'))      return 'sec-sales';
+            if (t.includes('purchase'))   return 'sec-purch';
+            if (t.includes('lead'))       return 'sec-leads';
+            if (t.includes('ticket'))     return 'sec-tickets';
+            if (t.includes('attendance')) return 'sec-attend';
+            return 'sec-default';
+        }
+        (d.sections || []).forEach(sec => {
+            const colspan = 1 + datesDesc.length + Math.max(datesDesc.length - 1, 0);
+            const secCls = sectionClass(sec.title);
+            html += `<tr class="section-header ${secCls}"><td class="label" colspan="${colspan}">${sec.title}</td></tr>`;
+            (sec.rows || []).forEach(row => {
+                html += `<tr><td class="label">${row.label}</td>`;
+                const valsRaw = row.values || [];
+                const vals = isComparison ? valsRaw.slice() : valsRaw.slice().reverse();
+                vals.forEach((v, idx) => {
+                    const isEnd = (idx === 0); // leftmost = current day
+                    const cc = colClass(idx);
+                    html += `<td class="value ${cc}${isEnd ? ' period-end' : ''}">${fmtNum(v, row.is_count)}</td>`;
+                    if (idx < vals.length - 1) {
+                        // The cell to the right is the OLDER day; delta is
+                        // (current_day_value - previous_day_value).
+                        const olderVal = vals[idx + 1];
+                        const dc = deltaClass(olderVal, v, row.good_direction);
+                        html += `<td class="delta ${dc} ${cc}">${fmtDelta(olderVal, v, row.is_count)}</td>`;
+                    }
+                });
+                html += '</tr>';
+            });
+        });
+        html += '</tbody></table>';
+        document.getElementById('darTableWrap').innerHTML = html;
+    }
+
+    async function initPage() {
+        try { if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init(); } catch (e) { console.error('[DAR] sidebar init failed:', e); }
+        try {
+            if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('DAR — Daily Activity Report', 'fas fa-calendar-check'); StaffHeader.init(); }
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+        } catch (e) { console.error('[DAR] header init failed:', e); }
+        // Restore persisted period + tab state.
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === currentPeriod));
+        if (currentPeriod === 'CUSTOM') document.getElementById('customRange').classList.add('show');
+        document.querySelectorAll('.dar-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === currentTab));
+        const pf = document.getElementById('periodFilterBar');
+        const dc = document.querySelector('.dar-card');
+        const bc = document.getElementById('balanceDashContent');
+        if (currentTab === 'balance') {
+            if (dc) dc.style.display = 'none';
+            if (pf) pf.style.display = 'none';
+            if (bc) bc.style.display = 'block';
+        } else {
+            if (pf) pf.style.display = (currentTab === 'comparison') ? 'none' : '';
+        }
+        await initUniversalFilter();
+        if (currentTab === 'balance') loadBalanceDash(); else loadDAR();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPage);
+    } else {
+        initPage();
+    }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // DC-BAL-DASH-001: Balance Dashboard — banks / UPI / cash holders / receivables
+    // ══════════════════════════════════════════════════════════════════════════
+
+    const BAL_PERIOD_KEY = 'dc_bal_dash_period';
+    let   balPeriod      = (function(){ try { return localStorage.getItem(BAL_PERIOD_KEY) || 'OVERALL'; } catch(_){ return 'OVERALL'; } })();
+    let   lastBalData    = null;   // cached last API response for re-sort
+
+    function setBalPeriod(p) {
+        balPeriod = p;
+        try { localStorage.setItem(BAL_PERIOD_KEY, p); } catch(_) {}
+        document.querySelectorAll('.bal-period-btn').forEach(b => b.classList.toggle('active', b.dataset.bperiod === p));
+        loadBalanceDash();
+    }
+    window.setBalPeriod = setBalPeriod;
+
+    async function loadBalanceDash() {
+        // Sync period buttons
+        document.querySelectorAll('.bal-period-btn').forEach(b => b.classList.toggle('active', b.dataset.bperiod === balPeriod));
+        const out = document.getElementById('balanceDashOutput');
+        out.innerHTML = '<div class="bal-loading"><i class="fas fa-spinner fa-spin me-2"></i>Loading balance data…</div>';
+        try {
+            const coId = currentCompanyId || 0;
+            const url  = `/api/v1/staff/accounts/balance-dashboard?period=${balPeriod}${coId ? '&company_id=' + coId : ''}`;
+            const data = await staffFetchJson(url);
+            if (!data.success) throw new Error(data.message || 'Failed to load');
+            lastBalData = data;
+            renderBalanceDash(data);
+        } catch (e) {
+            document.getElementById('balanceDashOutput').innerHTML =
+                `<div class="bal-empty"><i class="fas fa-exclamation-triangle me-2" style="color:#f59e0b;"></i>${e.message}</div>`;
+        }
+    }
+
+    function _balSort(rows) {
+        const sort = (document.getElementById('balSortSelect') || {}).value || 'company';
+        const cp = [...rows];
+        if (sort === 'company')       cp.sort((a,b)=> (a.company_name+a.account_name).localeCompare(b.company_name+b.account_name));
+        else if (sort === 'account')  cp.sort((a,b)=> a.account_name.localeCompare(b.account_name));
+        else if (sort === 'balance_desc') cp.sort((a,b)=> b.running_balance - a.running_balance);
+        else if (sort === 'balance_asc')  cp.sort((a,b)=> a.running_balance - b.running_balance);
+        else if (sort === 'in_desc')  cp.sort((a,b)=> b.period_in  - a.period_in);
+        else if (sort === 'out_desc') cp.sort((a,b)=> b.period_out - a.period_out);
+        return cp;
+    }
+
+    function _fmtBal(v, forceSign) {
+        const n = parseFloat(v || 0);
+        const abs = Math.abs(n);
+        let s;
+        if (abs >= 10000000) s = '₹' + (abs/10000000).toFixed(2) + 'Cr';
+        else if (abs >= 100000) s = '₹' + (abs/100000).toFixed(2) + 'L';
+        else if (abs >= 1000)   s = '₹' + (abs/1000).toFixed(2) + 'K';
+        else                    s = '₹' + abs.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        if (forceSign && n > 0) return '+' + s;
+        if (n < 0) return '−' + s;
+        return s;
+    }
+
+    function _balTableRows(rows, isUnexpectedNeg) {
+        if (!rows.length) return '<tr><td colspan="7" class="bal-empty">No accounts found</td></tr>';
+        return _balSort(rows).map(r => {
+            const negBal = r.running_balance < 0 && isUnexpectedNeg;
+            const balCls = r.running_balance < 0 ? 'neg-bal' : (r.running_balance > 0 ? 'pos' : '');
+            const netCls = r.net_change > 0 ? 'pos' : (r.net_change < 0 ? 'neg' : '');
+            const detail = r.bank_detail ? `<div class="bal-bank-detail"><i class="fas fa-university" style="font-size:9px;margin-right:3px;"></i>${r.bank_detail}</div>` : '';
+            return `<tr class="${negBal ? 'neg-row' : ''}">
+                <td><span class="bal-co-badge">${r.company_name}</span></td>
+                <td><div style="font-weight:600;">${r.account_name}</div>${detail}</td>
+                <td class="num pos">${_fmtBal(r.period_in)}</td>
+                <td class="num neg">${_fmtBal(r.period_out)}</td>
+                <td class="num ${netCls}">${_fmtBal(r.net_change, true)}</td>
+                <td class="num ${balCls}" title="Running balance as of period end">${_fmtBal(r.running_balance)}</td>
+                <td style="color:#9ca3af;font-size:11px;white-space:nowrap;">${r.last_txn_date || '—'}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function _balSectionHtml(title, icon, iconBg, rows, totals, isUnexpectedNeg) {
+        if (!rows.length) return '';
+        const th = `<div class="bal-section-hdr">
+            <div class="bal-icon" style="background:${iconBg};">${icon}</div>
+            <h3>${title} <span style="color:#9ca3af;font-weight:400;font-size:11px;">(${rows.length} account${rows.length!==1?'s':''})</span></h3>
+            <div class="bal-section-totals">
+                <span>In: <b style="color:#059669;">${_fmtBal(totals.period_in)}</b></span>
+                <span>Out: <b style="color:#dc2626;">${_fmtBal(totals.period_out)}</b></span>
+                <span>Net: <b class="${totals.net_change>=0?'':''}${totals.net_change<0?'neg':totals.net_change>0?'pos':''}" style="color:${totals.net_change<0?'#dc2626':totals.net_change>0?'#059669':'#374151'};">${_fmtBal(totals.net_change, true)}</b></span>
+                <span>Balance: <b style="color:#1d4ed8;">${_fmtBal(totals.running_balance)}</b></span>
+            </div>
+        </div>
+        <div style="overflow-x:auto;">
+        <table class="bal-tbl">
+            <thead><tr>
+                <th>Company</th>
+                <th>Account</th>
+                <th class="num">In (₹)</th>
+                <th class="num">Out (₹)</th>
+                <th class="num">Net Change</th>
+                <th class="num">Balance</th>
+                <th>Last Txn</th>
+            </tr></thead>
+            <tbody>${_balTableRows(rows, isUnexpectedNeg)}</tbody>
+        </table></div>`;
+        return `<div class="bal-section">${th}</div>`;
+    }
+
+    function renderBalanceDash(data) {
+        if (!data) return;
+        lastBalData = data;
+        const g = data.grand_total;
+        const periodLabel = { OVERALL:'Overall', FTD:'For The Day', YESTERDAY:'Yesterday', THIS_WEEK:'This Week', THIS_MONTH:'This Month', THIS_FY:'This FY' }[data.period] || data.period;
+        const grandHtml = `<div class="bal-grand">
+            <div class="bal-grand-label"><i class="fas fa-wallet me-2"></i>Overall — Cash + Bank + UPI<br>
+                <span style="font-size:11px;opacity:.7;font-weight:400;">Period: ${periodLabel}${data.period_start ? ' (' + data.period_start + ' → ' + data.period_end + ')' : ''}</span>
+            </div>
+            <div class="bal-grand-col"><small>In</small><strong>${_fmtBal(g.period_in)}</strong></div>
+            <div class="bal-grand-col"><small>Out</small><strong>${_fmtBal(g.period_out)}</strong></div>
+            <div class="bal-grand-col"><small>Net Change</small><strong>${_fmtBal(g.net_change, true)}</strong></div>
+            <div class="bal-grand-col"><small>Balance</small><strong>${_fmtBal(g.running_balance)}</strong></div>
+        </div>`;
+
+        const banksHtml = _balSectionHtml(
+            'Banks', '<i class="fas fa-university" style="color:#1d4ed8;"></i>', '#dbeafe',
+            data.banks, data.bank_totals, false   // overdraft banks = flagged but allowed
+        );
+        const upiHtml = data.upi && data.upi.length ? _balSectionHtml(
+            'UPI / Digital Wallets', '<i class="fas fa-mobile-alt" style="color:#7c3aed;"></i>', '#ede9fe',
+            data.upi, data.upi_totals, true    // UPI going negative = unexpected
+        ) : '';
+        const cashHtml = _balSectionHtml(
+            'Cash Holders', '<i class="fas fa-hand-holding-usd" style="color:#059669;"></i>', '#d1fae5',
+            data.cash, data.cash_totals, true   // cash negative = always unexpected
+        );
+
+        const recvFmt = _fmtBal(data.receivables);
+        const recvHtml = `<div class="bal-recv">
+            <div class="bal-recv-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+            <div>
+                <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:3px;">Receivables</div>
+                <div class="bal-recv-val">${recvFmt}</div>
+                <div class="bal-recv-sub">Based on ledger balances — excluding Cash &amp; Bank</div>
+            </div>
+        </div>`;
+
+        document.getElementById('balanceDashOutput').innerHTML = grandHtml + banksHtml + upiHtml + cashHtml + recvHtml;
+    }
+    window.renderBalanceDash = renderBalanceDash;
+})();
+</script>
+</body>
+</html>

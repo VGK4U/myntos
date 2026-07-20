@@ -1,0 +1,3344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - My Timesheet</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .header-logo { height: 36px; width: auto; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        
+        .content-area { padding: 16px 24px; max-width: 1400px; margin: 0 auto; }
+        
+        .date-nav {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border-radius: 12px;
+            padding: 16px 24px;
+            color: white;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .date-nav-controls { display: flex; align-items: center; justify-content: center; gap: 24px; }
+        .date-nav-btn {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .date-nav-btn:hover { background: rgba(255,255,255,0.3); }
+        .current-date { font-size: 24px; font-weight: 700; }
+        .date-subtitle { font-size: 14px; opacity: 0.9; margin-top: 4px; }
+        
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        .summary-card {
+            background: white;
+            border-radius: 10px;
+            padding: 14px 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .summary-value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .summary-label { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .summary-value.text-success { color: #059669; }
+        .summary-value.text-warning { color: #d97706; }
+        .summary-value.text-danger { color: #dc2626; }
+        
+        .tab-navigation {
+            display: flex;
+            gap: 0;
+            margin-bottom: 16px;
+            background: white;
+            border-radius: 10px;
+            padding: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .tab-btn:hover { background: #f3f4f6; color: #374151; }
+        .tab-btn.active {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .filter-bar {
+            background: white;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .filter-bar .form-control, .filter-bar .form-select {
+            max-width: 140px;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .filter-bar .btn-filter {
+            padding: 6px 16px;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .filter-bar .btn-reset {
+            padding: 6px 12px;
+            background: #f3f4f6;
+            color: #374151;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        
+        .accordion-day {
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .accordion-header {
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .accordion-header:hover { background: #f9fafb; }
+        .accordion-date {
+            font-weight: 600;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .accordion-date i { color: #4f46e5; }
+        .accordion-summary {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .accordion-summary .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .accordion-toggle {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: #4f46e5;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .accordion-toggle:hover { background: #4338ca; }
+        .accordion-day.expanded .accordion-toggle .toggle-icon::before { content: '-'; }
+        .toggle-icon::before { content: '+'; }
+        .accordion-body {
+            display: none;
+            padding: 0;
+            border-top: 1px solid #e5e7eb;
+        }
+        .accordion-day.expanded .accordion-body { display: block; }
+        
+        .records-table { width: 100%; font-size: 13px; }
+        .records-table th { 
+            font-weight: 600; 
+            color: #6b7280; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            padding: 10px 12px; 
+            background: #f9fafb; 
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .records-table td { 
+            padding: 10px 12px; 
+            vertical-align: middle; 
+            color: #374151; 
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .records-table tbody tr:hover { background: #f9fafb; }
+        
+        .day-attendance-info {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+        }
+        .att-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            margin-bottom: 6px;
+        }
+        .att-row:last-child { margin-bottom: 0; }
+        .att-row i { width: 16px; font-size: 12px; }
+        .att-label { color: #6b7280; font-weight: 500; }
+        .att-value { color: #1f2937; font-weight: 600; }
+        .att-sep { color: #d1d5db; margin: 0 8px; }
+        
+        .entries-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .entries-label i { margin-right: 6px; }
+        
+        .entries-list { display: flex; flex-direction: column; gap: 0; }
+        
+        .record-entry {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f3f4f6;
+            gap: 12px;
+        }
+        .record-entry:last-child { border-bottom: none; }
+        .record-time { min-width: 100px; font-weight: 500; color: #374151; font-size: 13px; }
+        .record-duration { 
+            background: #e0e7ff; 
+            color: #4338ca; 
+            padding: 3px 8px; 
+            border-radius: 4px; 
+            font-size: 12px; 
+            font-weight: 500;
+            min-width: 50px;
+            text-align: center;
+        }
+        .record-type {
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .record-type.task { background: #dbeafe; color: #1e40af; }
+        .record-type.kra { background: #d1fae5; color: #065f46; }
+        .record-type.lead { background: #fef3c7; color: #92400e; }
+        .record-type.journey { background: #e0e7ff; color: #4338ca; }
+        .record-type.others { background: #f3f4f6; color: #374151; }
+        .record-desc { flex: 1; color: #4b5563; font-size: 13px; }
+        .record-status {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .record-status.submitted { background: #fef3c7; color: #92400e; }
+        .record-status.approved { background: #d1fae5; color: #065f46; }
+        .record-status.rejected { background: #fee2e2; color: #991b1b; }
+        .record-status.resubmitted { background: #e0e7ff; color: #4338ca; }
+        .record-status.created { background: #f3f4f6; color: #6b7280; }
+        
+        .records-empty {
+            text-align: center;
+            padding: 32px 20px;
+            color: #6b7280;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .records-empty i { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+        .records-empty h6 { font-size: 14px; margin-bottom: 4px; }
+        .records-empty p { font-size: 13px; margin: 0; }
+        
+        .accordion-employee {
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .accordion-employee-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .accordion-employee-header:hover { opacity: 0.95; }
+        .accordion-employee-body {
+            display: none;
+            padding: 0;
+        }
+        .accordion-employee.expanded .accordion-employee-body { display: block; }
+        .entry-section-header { padding: 6px 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+        .entry-section-header.pending { color: #92400e; background: #fffbeb; border-left: 3px solid #f59e0b; }
+        .entry-section-header.approved-hdr { color: #065f46; background: #ecfdf5; border-left: 3px solid #10b981; }
+        .entry-section-header.custom-hdr { color: #374151; background: #f9fafb; border-left: 3px solid #6b7280; }
+        
+        .card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 16px; }
+        .card-header { 
+            background: transparent; 
+            border-bottom: 1px solid #e5e7eb; 
+            padding: 12px 16px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; font-size: 15px; }
+        .card-body { padding: 14px 16px; }
+        
+        .entry-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+        .form-group { margin-bottom: 0; }
+        .form-group label { font-weight: 500; color: #374151; margin-bottom: 6px; display: block; font-size: 14px; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        /* DC Protocol (Jan 22, 2026): Multi-lead selection UI */
+        .lead-selection-container {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 12px;
+            background: #f9fafb;
+        }
+        .lead-filter-row {
+            display: flex;
+            align-items: center;
+        }
+        .lead-filter-row input {
+            flex: 1;
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+        .lead-checkbox-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 8px;
+        }
+        .lead-checkbox-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.15s;
+            margin-bottom: 4px;
+        }
+        .lead-checkbox-item:hover {
+            background: #f3f4f6;
+        }
+        .lead-checkbox-item.selected {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+        }
+        .lead-checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .lead-checkbox-item .lead-info {
+            flex: 1;
+        }
+        .lead-checkbox-item .lead-name {
+            font-weight: 500;
+            color: #374151;
+            font-size: 14px;
+        }
+        .lead-checkbox-item .lead-meta {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .lead-checkbox-item .lead-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: #dcfce7;
+            color: #166534;
+            margin-left: 6px;
+        }
+        .lead-checkbox-item .lead-badge.created { background: #dbeafe; color: #1e40af; }
+        .lead-checkbox-item .lead-badge.followup { background: #fef3c7; color: #92400e; }
+        .lead-checkbox-item .lead-badge.interacted { background: #e0e7ff; color: #4338ca; }
+        .lead-filter-btn.active {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+            color: white;
+        }
+        
+        .btn-add-entry {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-add-entry:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); }
+        
+        .entries-list { margin-top: 0; }
+        .entry-item {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+            gap: 16px;
+        }
+        .entry-item:last-child { border-bottom: none; }
+        .entry-time {
+            min-width: 120px;
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 15px;
+        }
+        .entry-duration {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .entry-type {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+        .entry-type-badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .entry-type-badge.task { background: #dbeafe; color: #1e40af; }
+        .entry-type-badge.kra { background: #d1fae5; color: #065f46; }
+        .entry-type-badge.lead { background: #fef3c7; color: #92400e; }
+        .entry-type-badge.others { background: #f3f4f6; color: #374151; }
+        .entry-title { color: #374151; font-size: 14px; }
+        .entry-status {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .entry-status.submitted { background: #fef3c7; color: #92400e; }
+        .entry-status.approved { background: #d1fae5; color: #065f46; }
+        .entry-status.rejected { background: #fee2e2; color: #991b1b; }
+        .entry-status.resubmitted { background: #e0e7ff; color: #4338ca; }
+        .entry-actions { display: flex; gap: 8px; }
+        .entry-actions button {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .entry-actions .btn-edit { background: #dbeafe; color: #1e40af; }
+        .entry-actions .btn-delete { background: #fee2e2; color: #991b1b; }
+        .entry-actions button:hover { transform: scale(1.1); }
+        .entry-actions button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        /* Quick Activity Chips */
+        .quick-activity-chips {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
+        }
+        .qa-chip {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+            border: 1.5px solid #d1d5db; background: #f9fafb; color: #374151;
+            cursor: pointer; user-select: none; transition: all 0.15s;
+        }
+        .qa-chip:hover { border-color: #6366f1; color: #4f46e5; background: #eef2ff; }
+        .qa-chip.active {
+            border-color: #4f46e5; background: #4f46e5; color: #fff;
+        }
+        .qa-chip i { font-size: 11px; }
+        /* Segment Tab Selector */
+        .qa-segment-tabs {
+            display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;
+        }
+        .qa-seg-btn {
+            padding: 3px 11px; border-radius: 14px; font-size: 11px; font-weight: 600;
+            border: 1.5px solid #e5e7eb; background: #f3f4f6; color: #6b7280;
+            cursor: pointer; transition: all 0.15s; white-space: nowrap;
+        }
+        .qa-seg-btn:hover { border-color: #a5b4fc; color: #4f46e5; background: #eef2ff; }
+        .qa-seg-btn.active { border-color: #4f46e5; background: #4f46e5; color: #fff; }
+        .qa-seg-btn.seg-crm.active { border-color: #0284c7; background: #0284c7; }
+        .qa-seg-btn.seg-solar.active { border-color: #d97706; background: #d97706; }
+        .qa-seg-btn.seg-training.active { border-color: #7c3aed; background: #7c3aed; }
+        .qa-seg-btn.seg-vgk.active { border-color: #059669; background: #059669; }
+        .qa-seg-btn.seg-admin.active { border-color: #64748b; background: #64748b; }
+        /* Segment-colored active chips */
+        .qa-chip.active.seg-crm { border-color: #0284c7; background: #0284c7; }
+        .qa-chip.active.seg-solar { border-color: #d97706; background: #d97706; }
+        .qa-chip.active.seg-training { border-color: #7c3aed; background: #7c3aed; }
+        .qa-chip.active.seg-vgk { border-color: #059669; background: #059669; }
+        .qa-chip.active.seg-admin { border-color: #64748b; background: #64748b; }
+
+        .entry-auto { background: #f0fdf4; border-left: 3px solid #16a34a; }
+        .entry-auto-badge {
+            display: inline-flex; align-items: center; gap: 3px;
+            background: #dcfce7; color: #15803d; border: 1px solid #86efac;
+            border-radius: 4px; padding: 1px 6px; font-size: 10px; font-weight: 600;
+            margin-left: 4px; white-space: nowrap;
+        }
+        .entry-lock-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            color: #6b7280; font-size: 13px; padding: 4px 8px;
+            background: #f3f4f6; border-radius: 6px; cursor: default;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: #6b7280;
+        }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-state h6 { font-size: 16px; margin-bottom: 8px; color: #374151; }
+        
+        .attendance-info {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .attendance-info.warning {
+            background: #fef3c7;
+            border-color: #fde68a;
+        }
+        .attendance-info i { font-size: 20px; }
+        .attendance-info.warning i { color: #d97706; }
+        .attendance-info:not(.warning) i { color: #059669; }
+        
+        .progress-bar-container {
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .progress-bar-fill.good { background: #10b981; }
+        .progress-bar-fill.warning { background: #f59e0b; }
+        .progress-bar-fill.danger { background: #ef4444; }
+        
+        .activity-summary-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        .activity-summary-header {
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .activity-summary-header h5 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .activity-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .activity-summary-table thead th {
+            background: #f9fafb;
+            padding: 10px 16px;
+            font-weight: 600;
+            color: #6b7280;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+        }
+        .activity-summary-table tbody td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #374151;
+            vertical-align: middle;
+        }
+        .activity-summary-table tbody tr:hover { background: #f9fafb; }
+        .activity-summary-table tbody tr.total-row {
+            background: #f0f9ff;
+            font-weight: 700;
+        }
+        .activity-summary-table tbody tr.total-row td {
+            border-top: 2px solid #e5e7eb;
+            color: #1e40af;
+        }
+        .activity-cat-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+        .activity-cat-icon.kra { background: #d1fae5; color: #065f46; }
+        .activity-cat-icon.task { background: #dbeafe; color: #1e40af; }
+        .activity-cat-icon.dayplan { background: #fef3c7; color: #92400e; }
+        .activity-cat-icon.journey { background: #e0e7ff; color: #4338ca; }
+        .activity-cat-icon.lead { background: #fce7f3; color: #9d174d; }
+        .activity-cat-icon.ticket { background: #fee2e2; color: #991b1b; }
+        .activity-cat-icon.custom { background: #f3f4f6; color: #374151; }
+        .btn-view-detail {
+            padding: 3px 10px;
+            font-size: 11px;
+            border-radius: 4px;
+            border: 1px solid #d1d5db;
+            background: white;
+            color: #4f46e5;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-view-detail:hover { background: #4f46e5; color: white; border-color: #4f46e5; }
+        .activity-detail-panel {
+            background: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            padding: 16px;
+            display: none;
+        }
+        .activity-detail-panel.open { display: block; }
+        .activity-detail-table {
+            width: 100%;
+            font-size: 12px;
+            border-collapse: collapse;
+        }
+        .activity-detail-table th {
+            padding: 8px 12px;
+            font-weight: 600;
+            color: #6b7280;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            text-align: left;
+        }
+        .activity-detail-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #374151;
+        }
+        .count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .count-badge.total { background: #e5e7eb; color: #374151; }
+        .count-badge.completed { background: #d1fae5; color: #065f46; }
+        .count-badge.pending { background: #fef3c7; color: #92400e; }
+        .count-badge.in-progress { background: #dbeafe; color: #1e40af; }
+        .activity-time-badge {
+            font-weight: 600;
+            color: #059669;
+        }
+        .activity-no-data {
+            text-align: center;
+            padding: 24px;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .rules-card {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .rules-card h6 { color: #0369a1; margin-bottom: 12px; font-size: 14px; }
+        .rules-list { list-style: none; padding: 0; margin: 0; }
+        .rules-list li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 13px;
+            color: #374151;
+        }
+        .rules-list li i { color: #0284c7; }
+        
+        /* Timeline Styling (DC Protocol Compliant) */
+        .timeline-container {
+            position: relative;
+            padding: 20px 0;
+        }
+        .timeline-events {
+            position: relative;
+            padding: 0 0 0 50px;
+        }
+        .timeline-events::before {
+            content: '';
+            position: absolute;
+            left: 17px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #10b981, #3b82f6, #ef4444);
+        }
+        .timeline-event {
+            position: relative;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+        }
+        .timeline-event::before {
+            content: '';
+            position: absolute;
+            left: -42px;
+            top: 4px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 3px solid white;
+            background: #6b7280;
+            box-shadow: 0 0 0 3px #e5e7eb;
+        }
+        .timeline-event.clock_in::before { background: #10b981; box-shadow: 0 0 0 3px #d1fae5; }
+        .timeline-event.break_start::before { background: #f59e0b; box-shadow: 0 0 0 3px #fef3c7; }
+        .timeline-event.break_end::before { background: #3b82f6; box-shadow: 0 0 0 3px #dbeafe; }
+        .timeline-event.clock_out::before { background: #ef4444; box-shadow: 0 0 0 3px #fee2e2; }
+        
+        .timeline-event-content {
+            flex: 1;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 12px 16px;
+            transition: all 0.2s;
+        }
+        .timeline-event-content:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-color: #d1d5db;
+        }
+        .timeline-event-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .timeline-event-icon {
+            font-size: 18px;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        .timeline-event.clock_in .timeline-event-icon { background: #10b981; }
+        .timeline-event.break_start .timeline-event-icon { background: #f59e0b; }
+        .timeline-event.break_end .timeline-event-icon { background: #3b82f6; }
+        .timeline-event.clock_out .timeline-event-icon { background: #ef4444; }
+        
+        .timeline-event-title {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 15px;
+        }
+        .timeline-event-time {
+            font-weight: 700;
+            color: #374151;
+            font-size: 16px;
+            min-width: 60px;
+        }
+        .timeline-event-details {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+        .timeline-event-detail-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 4px 0;
+        }
+        .timeline-event-detail-item i {
+            color: #9ca3af;
+            min-width: 16px;
+        }
+        .timeline-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #9ca3af;
+        }
+        .timeline-empty i { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        .timeline-empty p { margin: 8px 0; font-size: 14px; }
+        
+        /* Side-by-Side Layout for Timeline + Entry Form */
+        .timeline-entry-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+        .timeline-entry-container .card {
+            margin-bottom: 0;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .timeline-entry-container #timelineContainer {
+            max-height: 550px;
+            overflow-y: auto;
+        }
+        
+        @media (max-width: 1200px) {
+            .timeline-entry-container {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .timeline-entry-container {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .timeline-entry-container .card {
+                max-height: none;
+            }
+            .timeline-entry-container #timelineContainer {
+                max-height: none;
+            }
+        }
+        
+        .modal-content { border-radius: 16px; }
+        .modal-header { border-bottom: 1px solid #e5e7eb; padding: 20px 24px; }
+        .modal-body { padding: 24px; }
+        .modal-footer { border-top: 1px solid #e5e7eb; padding: 16px 24px; }
+        
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin-left: 0;
+        }
+        
+        .team-filter-btn { background: white; border: 1px solid #e5e7eb; padding: 6px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+        .team-filter-btn:hover { background: #f3f4f6; }
+        .team-filter-btn.active { background: #6366f1; color: white; border-color: #6366f1; }
+        .entry-action-btn { padding: 4px 10px; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
+        .entry-action-btn.approve { background: #d1fae5; color: #065f46; }
+        .entry-action-btn.approve:hover { background: #a7f3d0; }
+        .entry-action-btn.reject { background: #fee2e2; color: #991b1b; }
+        .entry-action-btn.reject:hover { background: #fecaca; }
+        .accordion-toggle-emp {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.3);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .accordion-employee.expanded .toggle-icon-emp::before { content: '-'; }
+        .toggle-icon-emp::before { content: '+'; }
+
+        @media (max-width: 768px) {
+            .content-area { padding: 16px; }
+            .date-nav { padding: 20px; }
+            .current-date { font-size: 20px; }
+            .entry-item { flex-wrap: wrap; }
+            .entry-form { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="tab-navigation">
+            <button class="tab-btn active" onclick="switchTab('today')" id="tabToday">
+                <i class="fas fa-calendar-day"></i>
+                Today's Entries
+            </button>
+            <button class="tab-btn" onclick="switchTab('records')" id="tabRecords">
+                <i class="fas fa-history"></i>
+                Attendance Records
+            </button>
+            <button class="tab-btn" onclick="switchTab('team')" id="tabTeam" style="display:none;">
+                <i class="fas fa-users"></i>
+                Team Timesheet
+            </button>
+        </div>
+
+        <!-- TAB 1: TODAY'S ENTRIES (Single Day View) -->
+        <div class="tab-content active" id="tabContentToday">
+
+        <div class="date-nav">
+            <div class="date-nav-controls">
+                <button class="date-nav-btn" onclick="changeDate(-1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div>
+                    <div class="current-date" id="currentDate">Loading...</div>
+                    <div class="date-subtitle" id="dayName">-</div>
+                </div>
+                <button class="date-nav-btn" onclick="changeDate(1)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="mt-3">
+                <input type="date" id="datePicker" class="form-control" style="width: auto; display: inline-block; background: rgba(255,255,255,0.2); border: none; color: white;" onchange="goToDate(this.value)">
+            </div>
+        </div>
+
+        <div class="summary-row">
+            <div class="summary-card">
+                <div class="summary-value" id="clockedHours">0:00</div>
+                <div class="summary-label">Clocked Hours</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value text-success" id="loggedHours">0:00</div>
+                <div class="summary-label">Logged Hours</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value text-warning" id="remainingHours">0:00</div>
+                <div class="summary-label">Remaining</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-value" id="entryCount">0</div>
+                <div class="summary-label">Entries</div>
+            </div>
+        </div>
+
+        <div id="attendanceAlert" class="attendance-info" style="display: none;">
+            <i class="fas fa-info-circle"></i>
+            <div id="attendanceAlertText">-</div>
+        </div>
+
+        <!-- SIDE-BY-SIDE: TODAY'S TIMELINE + ADD TIME ENTRY -->
+        <div class="timeline-entry-container">
+            <!-- TODAY'S TIMELINE SECTION (Left) -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-clock me-2"></i>Today's Timeline</h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="refreshTimeline()" title="Refresh timeline">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="card-body" id="timelineContainer">
+                    <div class="empty-state">
+                        <i class="fas fa-history"></i>
+                        <h6>Loading timeline...</h6>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADD TIME ENTRY SECTION (Right) -->
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-plus-circle me-2"></i>Add Time Entry</h5>
+                </div>
+                <div class="card-body">
+                    <form id="timesheetForm" onsubmit="submitEntry(event)">
+                        <div class="entry-form">
+                            <div class="form-group">
+                                <label>Start Time</label>
+                                <input type="time" id="startTime" required>
+                            </div>
+                            <div class="form-group">
+                                <label>End Time</label>
+                                <input type="time" id="endTime" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Break Start Time (Optional)</label>
+                                <input type="time" id="breakStartTime">
+                            </div>
+                            <div class="form-group">
+                                <label>Break End Time (Optional)</label>
+                                <input type="time" id="breakEndTime">
+                            </div>
+                            <div class="form-group">
+                                <label>Break Type</label>
+                                <select id="breakType">
+                                    <option value="">None</option>
+                                    <option value="lunch">Lunch Break</option>
+                                    <option value="tea">Tea Break</option>
+                                    <option value="personal">Personal</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Entry Type</label>
+                                <select id="entryType" required onchange="toggleTypeFields()">
+                                    <option value="">Select Type</option>
+                                    <option value="task">Task</option>
+                                    <option value="kra">KRA</option>
+                                    <option value="lead">Lead</option>
+                                    <option value="journey">Journey</option>
+                                    <option value="others">Others</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="taskGroup" style="display: none;">
+                                <label>Task</label>
+                                <select id="taskId">
+                                    <option value="">Select Task</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="kraGroup" style="display: none;">
+                                <label>KRA</label>
+                                <select id="kraId">
+                                    <option value="">Select KRA</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="leadGroup" style="display: none; grid-column: 1 / -1;">
+                                <label>Select Leads <span class="text-muted">(Multiple selection allowed)</span></label>
+                                <div class="lead-selection-container">
+                                    <div class="lead-filter-row mb-2">
+                                        <input type="text" id="leadSearchInput" class="form-control form-control-sm" placeholder="Search leads...">
+                                        <div class="btn-group btn-group-sm ms-2">
+                                            <button type="button" class="btn btn-outline-primary lead-filter-btn active" data-filter="all">All</button>
+                                            <button type="button" class="btn btn-outline-success lead-filter-btn" data-filter="today">Today's</button>
+                                        </div>
+                                    </div>
+                                    <div class="lead-checkbox-list" id="leadCheckboxList">
+                                        <div class="text-muted text-center py-3">Loading leads...</div>
+                                    </div>
+                                    <div class="selected-leads-summary mt-2" id="selectedLeadsSummary" style="display: none;">
+                                        <small class="text-primary"><i class="fas fa-check-circle me-1"></i><span id="selectedLeadsCount">0</span> leads selected</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group" id="journeyGroup" style="display: none;">
+                                <label>Journey</label>
+                                <select id="journeyId">
+                                    <option value="">Select Journey</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Quick Activity <span class="text-muted" style="font-weight:400; font-size:12px;">(tap to fill)</span></label>
+                                <!-- Segment selector tabs -->
+                                <div class="qa-segment-tabs" id="qaSegmentTabs">
+                                    <span class="qa-seg-btn active" data-seg="general" onclick="switchQaSeg(this)">⚡ General</span>
+                                    <span class="qa-seg-btn seg-crm" data-seg="crm" onclick="switchQaSeg(this)">📞 CRM / Leads</span>
+                                    <span class="qa-seg-btn seg-solar" data-seg="solar" onclick="switchQaSeg(this)">☀️ SOLAR</span>
+                                    <span class="qa-seg-btn seg-training" data-seg="training" onclick="switchQaSeg(this)">🎓 Training</span>
+                                    <span class="qa-seg-btn seg-vgk" data-seg="vgk" onclick="switchQaSeg(this)">🌐 VGK Network</span>
+                                    <span class="qa-seg-btn seg-admin" data-seg="admin" onclick="switchQaSeg(this)">🗂️ Admin</span>
+                                </div>
+                                <!-- Chips per segment -->
+                                <div class="quick-activity-chips" id="quickActivityChips">
+                                    <!-- General (default) -->
+                                    <span class="qa-chip" data-seg="general" data-etype="others" onclick="selectQuickActivity(this, 'Team Meeting', 'others')"><i class="fas fa-users"></i> Team Meeting</span>
+                                    <span class="qa-chip" data-seg="general" data-etype="lead" onclick="selectQuickActivity(this, 'Client Call', 'lead')"><i class="fas fa-phone"></i> Client Call</span>
+                                    <span class="qa-chip" data-seg="general" data-etype="others" onclick="selectQuickActivity(this, 'Training / Learning', 'others')"><i class="fas fa-graduation-cap"></i> Training</span>
+                                    <span class="qa-chip" data-seg="general" data-etype="journey" onclick="selectQuickActivity(this, 'Travel / Field Visit', 'journey')"><i class="fas fa-car"></i> Travel / Field</span>
+                                    <span class="qa-chip" data-seg="general" data-etype="others" onclick="selectQuickActivity(this, 'Report Preparation', 'others')"><i class="fas fa-file-alt"></i> Report Prep</span>
+                                    <span class="qa-chip" data-seg="general" data-etype="others" onclick="selectQuickActivity(this, 'Admin / Documentation', 'others')"><i class="fas fa-folder"></i> Admin / Docs</span>
+                                    <!-- CRM / Leads -->
+                                    <span class="qa-chip seg-crm" data-seg="crm" data-etype="lead" onclick="selectQuickActivity(this, 'Lead Follow-up Call', 'lead')"><i class="fas fa-phone-alt"></i> Lead Follow-up</span>
+                                    <span class="qa-chip seg-crm" data-seg="crm" data-etype="lead" onclick="selectQuickActivity(this, 'Customer Meeting', 'lead')"><i class="fas fa-handshake"></i> Customer Meeting</span>
+                                    <span class="qa-chip seg-crm" data-seg="crm" data-etype="lead" onclick="selectQuickActivity(this, 'Lead Site Visit', 'lead')"><i class="fas fa-map-marker-alt"></i> Site Visit</span>
+                                    <span class="qa-chip seg-crm" data-seg="crm" data-etype="lead" onclick="selectQuickActivity(this, 'Product Demo to Lead', 'lead')"><i class="fas fa-tv"></i> Product Demo</span>
+                                    <span class="qa-chip seg-crm" data-seg="crm" data-etype="lead" onclick="selectQuickActivity(this, 'Cold Call / Prospecting', 'lead')"><i class="fas fa-headset"></i> Cold Call</span>
+                                    <span class="qa-chip seg-crm" data-seg="crm" data-etype="lead" onclick="selectQuickActivity(this, 'Lead Escalation / NMC', 'lead')"><i class="fas fa-exclamation-circle"></i> Escalation / NMC</span>
+                                    <span class="qa-chip seg-crm" data-seg="crm" data-etype="lead" onclick="selectQuickActivity(this, 'Lead Category Update', 'lead')"><i class="fas fa-tags"></i> Category Update</span>
+                                    <span class="qa-chip seg-crm" data-seg="crm" data-etype="lead" onclick="selectQuickActivity(this, 'Lead Dialer Session', 'lead')"><i class="fas fa-tty"></i> Dialer Session</span>
+                                    <span class="qa-chip seg-crm" data-seg="crm" data-etype="others" onclick="selectQuickActivity(this, 'Feedback Meeting with Customer', 'others')"><i class="fas fa-comments"></i> Feedback Meeting</span>
+                                    <!-- SOLAR -->
+                                    <span class="qa-chip seg-solar" data-seg="solar" data-etype="journey" onclick="selectQuickActivity(this, 'Solar Site Survey', 'journey')"><i class="fas fa-search-location"></i> Site Survey</span>
+                                    <span class="qa-chip seg-solar" data-seg="solar" data-etype="lead" onclick="selectQuickActivity(this, 'Solar Customer Consultation', 'lead')"><i class="fas fa-solar-panel"></i> Customer Consult</span>
+                                    <span class="qa-chip seg-solar" data-seg="solar" data-etype="journey" onclick="selectQuickActivity(this, 'Solar Panel Installation', 'journey')"><i class="fas fa-tools"></i> Installation</span>
+                                    <span class="qa-chip seg-solar" data-seg="solar" data-etype="others" onclick="selectQuickActivity(this, 'Solar Technical Inspection', 'others')"><i class="fas fa-clipboard-check"></i> Tech Inspection</span>
+                                    <span class="qa-chip seg-solar" data-seg="solar" data-etype="others" onclick="selectQuickActivity(this, 'Solar Training Session', 'others')"><i class="fas fa-graduation-cap"></i> Solar Training</span>
+                                    <span class="qa-chip seg-solar" data-seg="solar" data-etype="others" onclick="selectQuickActivity(this, 'Solar Documentation / Net Metering', 'others')"><i class="fas fa-file-signature"></i> Documentation</span>
+                                    <span class="qa-chip seg-solar" data-seg="solar" data-etype="journey" onclick="selectQuickActivity(this, 'Solar AMC / Service Visit', 'journey')"><i class="fas fa-wrench"></i> AMC / Service</span>
+                                    <span class="qa-chip seg-solar" data-seg="solar" data-etype="lead" onclick="selectQuickActivity(this, 'Solar Proposal Shared', 'lead')"><i class="fas fa-file-invoice"></i> Proposal Shared</span>
+                                    <!-- Training -->
+                                    <span class="qa-chip seg-training" data-seg="training" data-etype="others" onclick="selectQuickActivity(this, 'Internal Product Training', 'others')"><i class="fas fa-book-open"></i> Product Training</span>
+                                    <span class="qa-chip seg-training" data-seg="training" data-etype="others" onclick="selectQuickActivity(this, 'Sales Skills Training', 'others')"><i class="fas fa-chart-line"></i> Sales Training</span>
+                                    <span class="qa-chip seg-training" data-seg="training" data-etype="others" onclick="selectQuickActivity(this, 'Solar Product Training', 'others')"><i class="fas fa-solar-panel"></i> Solar Training</span>
+                                    <span class="qa-chip seg-training" data-seg="training" data-etype="others" onclick="selectQuickActivity(this, 'EV / Electric Vehicle Training', 'others')"><i class="fas fa-bolt"></i> EV Training</span>
+                                    <span class="qa-chip seg-training" data-seg="training" data-etype="others" onclick="selectQuickActivity(this, 'VGK Program Training', 'others')"><i class="fas fa-network-wired"></i> VGK Training</span>
+                                    <span class="qa-chip seg-training" data-seg="training" data-etype="others" onclick="selectQuickActivity(this, 'CRM / Software Training', 'others')"><i class="fas fa-laptop"></i> CRM Training</span>
+                                    <span class="qa-chip seg-training" data-seg="training" data-etype="others" onclick="selectQuickActivity(this, 'Team Briefing / Morning Huddle', 'others')"><i class="fas fa-bullhorn"></i> Team Briefing</span>
+                                    <span class="qa-chip seg-training" data-seg="training" data-etype="others" onclick="selectQuickActivity(this, 'Certification / Exam Preparation', 'others')"><i class="fas fa-award"></i> Certification Prep</span>
+                                    <!-- VGK Network -->
+                                    <span class="qa-chip seg-vgk" data-seg="vgk" data-etype="others" onclick="selectQuickActivity(this, 'VGK Member Activation / Onboarding', 'others')"><i class="fas fa-user-plus"></i> Member Activation</span>
+                                    <span class="qa-chip seg-vgk" data-seg="vgk" data-etype="others" onclick="selectQuickActivity(this, 'VGK Team Meeting', 'others')"><i class="fas fa-users-cog"></i> VGK Meeting</span>
+                                    <span class="qa-chip seg-vgk" data-seg="vgk" data-etype="lead" onclick="selectQuickActivity(this, 'VGK Prospect / New Member Lead', 'lead')"><i class="fas fa-user-tie"></i> Prospect Meeting</span>
+                                    <span class="qa-chip seg-vgk" data-seg="vgk" data-etype="others" onclick="selectQuickActivity(this, 'Bonanza Review / Update', 'others')"><i class="fas fa-trophy"></i> Bonanza Review</span>
+                                    <span class="qa-chip seg-vgk" data-seg="vgk" data-etype="others" onclick="selectQuickActivity(this, 'VGK Income / Wallet Support', 'others')"><i class="fas fa-wallet"></i> Income Support</span>
+                                    <span class="qa-chip seg-vgk" data-seg="vgk" data-etype="others" onclick="selectQuickActivity(this, 'Network Expansion / Team Building', 'others')"><i class="fas fa-project-diagram"></i> Team Building</span>
+                                    <span class="qa-chip seg-vgk" data-seg="vgk" data-etype="others" onclick="selectQuickActivity(this, 'VGK Coupon / Voucher Handling', 'others')"><i class="fas fa-ticket-alt"></i> Coupon Handling</span>
+                                    <!-- Admin -->
+                                    <span class="qa-chip seg-admin" data-seg="admin" data-etype="others" onclick="selectQuickActivity(this, 'Admin / Documentation', 'others')"><i class="fas fa-folder"></i> Admin / Docs</span>
+                                    <span class="qa-chip seg-admin" data-seg="admin" data-etype="others" onclick="selectQuickActivity(this, 'Report Preparation', 'others')"><i class="fas fa-file-alt"></i> Report Prep</span>
+                                    <span class="qa-chip seg-admin" data-seg="admin" data-etype="others" onclick="selectQuickActivity(this, 'Internal Review / Audit', 'others')"><i class="fas fa-search"></i> Internal Review</span>
+                                    <span class="qa-chip seg-admin" data-seg="admin" data-etype="others" onclick="selectQuickActivity(this, 'Team Meeting / Standup', 'others')"><i class="fas fa-users"></i> Team Meeting</span>
+                                    <span class="qa-chip seg-admin" data-seg="admin" data-etype="others" onclick="selectQuickActivity(this, 'Feedback Meeting', 'others')"><i class="fas fa-comments"></i> Feedback Meeting</span>
+                                    <span class="qa-chip seg-admin" data-seg="admin" data-etype="others" onclick="selectQuickActivity(this, 'HR / Payroll / Attendance Work', 'others')"><i class="fas fa-id-card"></i> HR / Payroll</span>
+                                    <span class="qa-chip seg-admin" data-seg="admin" data-etype="others" onclick="selectQuickActivity(this, 'Accounts / Finance Work', 'others')"><i class="fas fa-calculator"></i> Accounts</span>
+                                    <span class="qa-chip seg-admin" data-seg="admin" data-etype="journey" onclick="selectQuickActivity(this, 'Travel / Field Visit', 'journey')"><i class="fas fa-car"></i> Travel / Field</span>
+                                </div>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Comments (Optional)</label>
+                                <textarea id="comments" rows="2" placeholder="What did you work on?"></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-end">
+                            <button type="submit" class="btn-add-entry">
+                                <i class="fas fa-plus"></i>
+                                Add Entry
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIVITY SUMMARY SECTION -->
+        <div class="activity-summary-card" id="activitySummaryCard">
+            <div class="activity-summary-header">
+                <h5><i class="fas fa-chart-pie me-2"></i>Activity Summary</h5>
+                <button class="btn-view-detail" onclick="loadActivitySummary()" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+            </div>
+            <div id="activitySummaryBody">
+                <div class="activity-no-data"><i class="fas fa-spinner fa-spin me-2"></i>Loading activity data...</div>
+            </div>
+            <div id="activityDetailPanel" class="activity-detail-panel"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list me-2"></i>Today's Entries</h5>
+                <div class="progress-info">
+                    <small id="progressText" class="text-muted">0% logged</small>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="progress-bar-container mx-3 mt-3">
+                    <div class="progress-bar-fill good" id="progressBar" style="width: 0%"></div>
+                </div>
+                <div class="entries-list" id="entriesList">
+                    <div class="empty-state">
+                        <i class="fas fa-clock"></i>
+                        <h6>No entries for this date</h6>
+                        <p>Add your first time entry above</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="rules-card">
+                    <h6><i class="fas fa-info-circle me-2"></i>Attendance Rules</h6>
+                    <ul class="rules-list">
+                        <li><i class="fas fa-times-circle text-danger"></i> Less than 2 hours = ABSENT</li>
+                        <li><i class="fas fa-adjust text-warning"></i> 2-6 hours = HALF DAY</li>
+                        <li><i class="fas fa-check-circle text-success"></i> 6-8 hours = FULL DAY</li>
+                        <li><i class="fas fa-star text-primary"></i> More than 8 hours = OT (extra counted)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="rules-card">
+                    <h6><i class="fas fa-lightbulb me-2"></i>Tips</h6>
+                    <ul class="rules-list">
+                        <li><i class="fas fa-clock"></i> Time entries should be within clock-in/out bounds</li>
+                        <li><i class="fas fa-layer-group"></i> You can add multiple entries for different tasks</li>
+                        <li><i class="fas fa-lock"></i> Approved entries cannot be edited</li>
+                        <li><i class="fas fa-redo"></i> Rejected entries can be edited and resubmitted</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        </div><!-- END TAB 1: Today's Entries -->
+
+        <!-- TAB 2: ATTENDANCE RECORDS (Multi-Day History) -->
+        <div class="tab-content" id="tabContentRecords">
+            <div class="filter-bar">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 12px; color: #6b7280; white-space: nowrap;">From:</span>
+                    <input type="date" id="recordsFromDate" class="form-control">
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size: 12px; color: #6b7280; white-space: nowrap;">To:</span>
+                    <input type="date" id="recordsToDate" class="form-control">
+                </div>
+                <select id="recordsStatus" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="submitted">Submitted</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="resubmitted">Resubmitted</option>
+                </select>
+                <select id="recordsType" class="form-select">
+                    <option value="">All Types</option>
+                    <option value="task">Task</option>
+                    <option value="kra">KRA</option>
+                    <option value="others">Others</option>
+                </select>
+                <button class="btn-filter" onclick="loadAttendanceRecords()">
+                    <i class="fas fa-search me-1"></i> Search
+                </button>
+                <button class="btn-reset" onclick="resetRecordsFilters()">
+                    <i class="fas fa-undo"></i>
+                </button>
+            </div>
+
+            <div id="recordsContainer">
+                <div class="records-empty">
+                    <i class="fas fa-calendar-alt"></i>
+                    <h6>Select a date range to view attendance records</h6>
+                    <p>Use the filters above to search your timesheet history</p>
+                </div>
+            </div>
+        </div><!-- END TAB 2: Attendance Records -->
+
+        <div class="tab-content" id="tabContentTeam">
+            <div class="filter-bar" style="border-bottom: none; padding-bottom: 0; flex-wrap: wrap; gap: 8px;">
+                <select id="teamReportingManagerFilter" style="min-width: 180px;" onchange="loadTeamEntries()">
+                    <option value="">All Reporting Managers</option>
+                </select>
+                <select id="teamDeptFilter" style="min-width: 160px;" onchange="loadTeamEntries()">
+                    <option value="">All Departments</option>
+                </select>
+                <select id="teamStaffTypeFilter" style="min-width: 140px;" onchange="loadTeamEntries()">
+                    <option value="">All Staff Types</option>
+                    <option value="MN_STAFF">MN Staff</option>
+                    <option value="MN_EMPLOYEE">MN Employee</option>
+                    <option value="FREELANCER">Freelancer</option>
+                    <option value="MYNT_REAL">Mynt Real</option>
+                </select>
+                <input type="text" id="teamEmployeeSearch" class="form-control" style="min-width: 180px; max-width: 220px;" placeholder="Search employee name…" oninput="debounceTeamSearch()">
+            </div>
+            <div class="filter-bar">
+                <div>
+                    <button class="team-filter-btn active" data-status="">All</button>
+                    <button class="team-filter-btn" data-status="submitted">Pending</button>
+                    <button class="team-filter-btn" data-status="resubmitted">Resubmitted</button>
+                    <button class="team-filter-btn" data-status="approved">Approved</button>
+                    <button class="team-filter-btn" data-status="rejected">Rejected</button>
+                </div>
+                <div class="d-flex gap-2 ms-auto">
+                    <input type="date" id="teamFromDate" class="form-control">
+                    <input type="date" id="teamToDate" class="form-control">
+                    <button class="btn btn-primary btn-sm" onclick="loadTeamEntries()"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            <div id="teamEntriesContainer">
+                <div class="records-empty">
+                    <i class="fas fa-users"></i>
+                    <h6>Team Timesheet Entries</h6>
+                    <p>Select a date range and click search</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Entry</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editEntryId">
+                    <div class="mb-3">
+                        <label class="form-label">Start Time</label>
+                        <input type="time" class="form-control" id="editStartTime" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">End Time</label>
+                        <input type="time" class="form-control" id="editEndTime" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label mb-1">Quick Activity <span class="text-muted" style="font-size:11px;">(tap to fill)</span></label>
+                        <div class="qa-segment-tabs" id="editQaSegmentTabs" style="margin-bottom:6px;">
+                            <span class="qa-seg-btn active" data-seg="general" onclick="switchEditQaSeg(this)">⚡ General</span>
+                            <span class="qa-seg-btn seg-crm" data-seg="crm" onclick="switchEditQaSeg(this)">📞 CRM</span>
+                            <span class="qa-seg-btn seg-solar" data-seg="solar" onclick="switchEditQaSeg(this)">☀️ SOLAR</span>
+                            <span class="qa-seg-btn seg-training" data-seg="training" onclick="switchEditQaSeg(this)">🎓 Training</span>
+                            <span class="qa-seg-btn seg-vgk" data-seg="vgk" onclick="switchEditQaSeg(this)">🌐 VGK</span>
+                            <span class="qa-seg-btn seg-admin" data-seg="admin" onclick="switchEditQaSeg(this)">🗂️ Admin</span>
+                        </div>
+                        <div class="quick-activity-chips" id="editQuickActivityChips">
+                            <span class="qa-chip" data-seg="general" onclick="selectEditChip(this,'Team Meeting')"><i class="fas fa-users"></i> Team Meeting</span>
+                            <span class="qa-chip" data-seg="general" onclick="selectEditChip(this,'Client Call')"><i class="fas fa-phone"></i> Client Call</span>
+                            <span class="qa-chip" data-seg="general" onclick="selectEditChip(this,'Training / Learning')"><i class="fas fa-graduation-cap"></i> Training</span>
+                            <span class="qa-chip" data-seg="general" onclick="selectEditChip(this,'Travel / Field Visit')"><i class="fas fa-car"></i> Travel / Field</span>
+                            <span class="qa-chip" data-seg="general" onclick="selectEditChip(this,'Report Preparation')"><i class="fas fa-file-alt"></i> Report Prep</span>
+                            <span class="qa-chip" data-seg="general" onclick="selectEditChip(this,'Admin / Documentation')"><i class="fas fa-folder"></i> Admin / Docs</span>
+                            <span class="qa-chip seg-crm" data-seg="crm" onclick="selectEditChip(this,'Lead Follow-up Call')"><i class="fas fa-phone-alt"></i> Lead Follow-up</span>
+                            <span class="qa-chip seg-crm" data-seg="crm" onclick="selectEditChip(this,'Customer Meeting')"><i class="fas fa-handshake"></i> Customer Meeting</span>
+                            <span class="qa-chip seg-crm" data-seg="crm" onclick="selectEditChip(this,'Lead Site Visit')"><i class="fas fa-map-marker-alt"></i> Site Visit</span>
+                            <span class="qa-chip seg-crm" data-seg="crm" onclick="selectEditChip(this,'Product Demo to Lead')"><i class="fas fa-tv"></i> Product Demo</span>
+                            <span class="qa-chip seg-crm" data-seg="crm" onclick="selectEditChip(this,'Cold Call / Prospecting')"><i class="fas fa-headset"></i> Cold Call</span>
+                            <span class="qa-chip seg-crm" data-seg="crm" onclick="selectEditChip(this,'Lead Escalation / NMC')"><i class="fas fa-exclamation-circle"></i> Escalation</span>
+                            <span class="qa-chip seg-crm" data-seg="crm" onclick="selectEditChip(this,'Lead Dialer Session')"><i class="fas fa-tty"></i> Dialer Session</span>
+                            <span class="qa-chip seg-solar" data-seg="solar" onclick="selectEditChip(this,'Solar Site Survey')"><i class="fas fa-search-location"></i> Site Survey</span>
+                            <span class="qa-chip seg-solar" data-seg="solar" onclick="selectEditChip(this,'Solar Customer Consultation')"><i class="fas fa-solar-panel"></i> Customer Consult</span>
+                            <span class="qa-chip seg-solar" data-seg="solar" onclick="selectEditChip(this,'Solar Panel Installation')"><i class="fas fa-tools"></i> Installation</span>
+                            <span class="qa-chip seg-solar" data-seg="solar" onclick="selectEditChip(this,'Solar Training Session')"><i class="fas fa-graduation-cap"></i> Solar Training</span>
+                            <span class="qa-chip seg-solar" data-seg="solar" onclick="selectEditChip(this,'Solar Documentation / Net Metering')"><i class="fas fa-file-signature"></i> Documentation</span>
+                            <span class="qa-chip seg-solar" data-seg="solar" onclick="selectEditChip(this,'Solar AMC / Service Visit')"><i class="fas fa-wrench"></i> AMC / Service</span>
+                            <span class="qa-chip seg-training" data-seg="training" onclick="selectEditChip(this,'Internal Product Training')"><i class="fas fa-book-open"></i> Product Training</span>
+                            <span class="qa-chip seg-training" data-seg="training" onclick="selectEditChip(this,'Sales Skills Training')"><i class="fas fa-chart-line"></i> Sales Training</span>
+                            <span class="qa-chip seg-training" data-seg="training" onclick="selectEditChip(this,'Solar Product Training')"><i class="fas fa-solar-panel"></i> Solar Training</span>
+                            <span class="qa-chip seg-training" data-seg="training" onclick="selectEditChip(this,'EV / Electric Vehicle Training')"><i class="fas fa-bolt"></i> EV Training</span>
+                            <span class="qa-chip seg-training" data-seg="training" onclick="selectEditChip(this,'VGK Program Training')"><i class="fas fa-network-wired"></i> VGK Training</span>
+                            <span class="qa-chip seg-training" data-seg="training" onclick="selectEditChip(this,'Team Briefing / Morning Huddle')"><i class="fas fa-bullhorn"></i> Team Briefing</span>
+                            <span class="qa-chip seg-vgk" data-seg="vgk" onclick="selectEditChip(this,'VGK Member Activation / Onboarding')"><i class="fas fa-user-plus"></i> Member Activation</span>
+                            <span class="qa-chip seg-vgk" data-seg="vgk" onclick="selectEditChip(this,'VGK Team Meeting')"><i class="fas fa-users-cog"></i> VGK Meeting</span>
+                            <span class="qa-chip seg-vgk" data-seg="vgk" onclick="selectEditChip(this,'Bonanza Review / Update')"><i class="fas fa-trophy"></i> Bonanza Review</span>
+                            <span class="qa-chip seg-vgk" data-seg="vgk" onclick="selectEditChip(this,'VGK Income / Wallet Support')"><i class="fas fa-wallet"></i> Income Support</span>
+                            <span class="qa-chip seg-vgk" data-seg="vgk" onclick="selectEditChip(this,'Network Expansion / Team Building')"><i class="fas fa-project-diagram"></i> Team Building</span>
+                            <span class="qa-chip seg-admin" data-seg="admin" onclick="selectEditChip(this,'Admin / Documentation')"><i class="fas fa-folder"></i> Admin / Docs</span>
+                            <span class="qa-chip seg-admin" data-seg="admin" onclick="selectEditChip(this,'Report Preparation')"><i class="fas fa-file-alt"></i> Report Prep</span>
+                            <span class="qa-chip seg-admin" data-seg="admin" onclick="selectEditChip(this,'Internal Review / Audit')"><i class="fas fa-search"></i> Internal Review</span>
+                            <span class="qa-chip seg-admin" data-seg="admin" onclick="selectEditChip(this,'HR / Payroll / Attendance Work')"><i class="fas fa-id-card"></i> HR / Payroll</span>
+                            <span class="qa-chip seg-admin" data-seg="admin" onclick="selectEditChip(this,'Accounts / Finance Work')"><i class="fas fa-calculator"></i> Accounts</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comments</label>
+                        <textarea class="form-control" id="editComments" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/timesheet';
+        let currentDate = new Date();
+        let tasks = [];
+        let kras = [];
+
+        let timelineRefreshInterval;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            const staffData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const fullName = staffData.full_name || 'Staff Member';
+            const headerUserNameEl = document.getElementById('headerUserName');
+            const headerUserEmpIdEl = document.getElementById('headerUserEmpId');
+            const headerUserInitialsEl = document.getElementById('headerUserInitials');
+            if (headerUserNameEl) headerUserNameEl.textContent = fullName;
+            if (headerUserEmpIdEl) headerUserEmpIdEl.textContent = staffData.emp_code || staffData.employee_code || '-';
+            const initials = fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            if (headerUserInitialsEl) headerUserInitialsEl.textContent = initials || '--';
+            
+            await Promise.all([loadTasks(), loadKRAs(), loadLeads()]);
+            updateDateDisplay();
+            loadEntries();
+            loadTimeline();
+            loadActivitySummary();
+            
+            timelineRefreshInterval = setInterval(() => {
+                loadTimeline();
+            }, 30000);
+
+            try {
+                const teamCheckResp = await staffFetch(`${API_BASE}/team-entries?limit=1`);
+                if (teamCheckResp.ok) {
+                    const teamCheckData = await teamCheckResp.json();
+                    if (teamCheckData.success) {
+                        document.getElementById('tabTeam').style.display = '';
+                        const urlParams = new URLSearchParams(window.location.search);
+                        if (urlParams.get('tab') === 'team') {
+                            switchTab('team');
+                        }
+                    }
+                }
+            } catch (e) {
+                if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') {
+                    console.warn('[DC] Team tab access check failed:', e);
+                }
+            }
+        });
+
+        // Clear interval on page unload
+        window.addEventListener('beforeunload', function() {
+            if (timelineRefreshInterval) {
+                clearInterval(timelineRefreshInterval);
+            }
+        });
+
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function formatTime(minutes) {
+            const hrs = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${hrs}:${mins.toString().padStart(2, '0')}`;
+        }
+
+        function formatTimeHM(minutes) {
+            if (!minutes || minutes <= 0) return '0h 00m';
+            const hrs = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            if (hrs === 0) return `${mins}m`;
+            return `${hrs}h ${mins.toString().padStart(2, '0')}m`;
+        }
+
+        const CATEGORY_ICONS = {
+            kra: 'fas fa-bullseye',
+            task: 'fas fa-tasks',
+            dayplan: 'fas fa-calendar-check',
+            journey: 'fas fa-route',
+            lead: 'fas fa-user-tie',
+            ticket: 'fas fa-ticket-alt',
+            custom: 'fas fa-clock'
+        };
+
+        async function loadActivitySummary(keepDetailOpen = false) {
+            const body = document.getElementById('activitySummaryBody');
+            const detailPanel = document.getElementById('activityDetailPanel');
+            if (!keepDetailOpen) {
+                detailPanel.classList.remove('open');
+                detailPanel.innerHTML = '';
+            }
+
+            try {
+                const dateStr = formatDate(currentDate);
+                const response = await staffFetch(`/api/v1/staff/attendance/activity-summary?target_date=${dateStr}`);
+                if (!response.ok) {
+                    body.innerHTML = '<div class="activity-no-data">Unable to load activity data</div>';
+                    return;
+                }
+                const result = await response.json();
+                if (result.success && result.data) {
+                    renderActivitySummary(result.data);
+                } else {
+                    body.innerHTML = '<div class="activity-no-data">No activity data available</div>';
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error loading activity summary:', err);
+                body.innerHTML = '<div class="activity-no-data">Error loading activity data</div>';
+            }
+        }
+
+        function renderActivitySummary(data) {
+            const body = document.getElementById('activitySummaryBody');
+            const categories = data.categories || [];
+            const totals = data.totals || {};
+            const deptType = data.dept_type || 'other';
+
+            window._activityDeptType = deptType;
+
+            if (categories.length === 0 && totals.total === 0) {
+                body.innerHTML = '<div class="activity-no-data"><i class="fas fa-info-circle me-2"></i>No activities recorded for this date</div>';
+                return;
+            }
+
+            const activeCats = categories.filter(c => {
+                if (c.source_type === 'overdue_leads') return true;
+                return c.total > 0 || c.completed_minutes > 0;
+            });
+
+            let html = '<table class="activity-summary-table"><thead><tr>';
+            html += '<th>Category</th><th>Items</th><th>Completed</th><th>Pending</th><th>Total Time</th><th></th>';
+            html += '</tr></thead><tbody>';
+
+            html += `<tr class="total-row" style="background:linear-gradient(135deg,#1e40af 0%,#0369a1 100%);">
+                <td style="color:white;border:none;"><strong><i class="fas fa-chart-bar me-2"></i>Activity Summary Total</strong></td>
+                <td style="color:white;border:none;"><strong>${totals.total} entries</strong></td>
+                <td style="color:white;border:none;"><strong>${totals.completed}</strong></td>
+                <td style="color:white;border:none;"><strong>${totals.pending + (totals.in_progress || 0)}</strong></td>
+                <td style="color:white;border:none;"><strong class="activity-time-badge" style="background:rgba(255,255,255,0.2);color:white;">${formatTimeHM(totals.completed_minutes)}</strong></td>
+                <td style="border:none;"></td>
+            </tr>`;
+
+            activeCats.forEach(cat => {
+                const isOverdue = cat.source_type === 'overdue_leads';
+                const icon = isOverdue ? 'fas fa-exclamation-triangle' : (CATEGORY_ICONS[cat.source_type] || 'fas fa-clock');
+                const rowStyle = isOverdue ? 'background:rgba(251,191,36,0.08);border-left:3px solid #f59e0b;' : '';
+                const labelStyle = isOverdue ? 'color:#d97706;font-weight:600;' : '';
+                const pendingBadgeClass = isOverdue && cat.pending > 0 ? 'pending' : (cat.pending + (cat.in_progress || 0) > 0 ? 'pending' : 'completed');
+                html += `<tr style="${rowStyle}">
+                    <td>
+                        <span class="activity-cat-icon ${cat.source_type}" style="${isOverdue ? 'background:rgba(251,191,36,0.15);color:#d97706;' : ''}"><i class="${icon}"></i></span>
+                        <span style="${labelStyle}">${cat.label}</span>
+                        ${isOverdue && cat.total > 0 ? `<span style="margin-left:6px;font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-weight:700;">${cat.total} overdue</span>` : ''}
+                    </td>
+                    <td><span class="count-badge total">${cat.total}</span></td>
+                    <td><span class="count-badge completed">${cat.completed}</span></td>
+                    <td><span class="count-badge ${pendingBadgeClass}">${cat.pending + (cat.in_progress || 0)}</span></td>
+                    <td>${isOverdue ? '<span style="color:#d97706;font-size:11px;">cross-date</span>' : `<span class="activity-time-badge">${formatTimeHM(cat.completed_minutes)}</span>`}</td>
+                    <td><button class="btn-view-detail" onclick="viewActivityDetail('${cat.source_type}', '${cat.label}')" style="${isOverdue ? 'border-color:#d97706;color:#d97706;' : ''}">View</button></td>
+                </tr>`;
+            });
+
+            if (activeCats.length === 0) {
+                html += '<tr><td colspan="6" class="activity-no-data">No activities recorded for this date</td></tr>';
+            }
+
+            html += '</tbody></table>';
+            body.innerHTML = html;
+        }
+
+        async function viewActivityDetail(sourceType, label) {
+            const panel = document.getElementById('activityDetailPanel');
+            panel.classList.add('open');
+            panel.innerHTML = `<div class="activity-no-data"><i class="fas fa-spinner fa-spin me-2"></i>Loading ${label}...</div>`;
+
+            try {
+                const dateStr = formatDate(currentDate);
+                const response = await staffFetch(`/api/v1/staff/attendance/activity-detail/${sourceType}?target_date=${dateStr}`);
+                if (!response.ok) {
+                    panel.innerHTML = `<div class="activity-no-data">Unable to load detail</div>`;
+                    return;
+                }
+                const result = await response.json();
+                if (result.success && result.data) {
+                    renderActivityDetail(result.data, label, sourceType);
+                } else {
+                    panel.innerHTML = `<div class="activity-no-data">No details available</div>`;
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                panel.innerHTML = `<div class="activity-no-data">Error loading detail</div>`;
+            }
+        }
+
+        function renderActivityDetail(data, label, sourceType) {
+            const panel = document.getElementById('activityDetailPanel');
+            const items = data.source_items || data.items || [];
+            const timeEntries = data.time_entries || [];
+            const isOverdue = sourceType === 'overdue_leads';
+            const isLead = sourceType === 'lead' || isOverdue;
+            const isKra = sourceType === 'kra';
+            const isTask = sourceType === 'task';
+            const isTicket = sourceType === 'ticket';
+
+            window._actDetailSourceType = sourceType;
+            window._actDetailItems = items;
+            window._actDetailDate = formatDate(currentDate);
+
+            let statusOptions = '';
+            if (isKra) {
+                statusOptions = ['pending','in_progress','completed','skipped','partial'].map(s =>
+                    `<option value="${s}">${s.replace('_',' ')}</option>`).join('');
+            } else if (isTask) {
+                statusOptions = ['pending','in_progress','on_hold','completed','cancelled'].map(s =>
+                    `<option value="${s}">${s.replace('_',' ')}</option>`).join('');
+            } else if (isLead) {
+                statusOptions = ['new','contacted','warm','hot','won','lost','dropped'].map(s =>
+                    `<option value="${s}">${s.replace('_',' ')}</option>`).join('');
+            } else if (isTicket) {
+                statusOptions = [
+                    ['new','New'],['acknowledged','Acknowledged'],['diagnosing','Diagnosing'],
+                    ['ready_for_work','Ready for Work'],['work_complete','Work Complete']
+                ].map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+            }
+
+            const canEdit = isKra || isTask || isLead || isTicket;
+
+            const headerColor = isOverdue ? '#d97706' : '#1f2937';
+            const headerIcon = isOverdue ? 'fas fa-exclamation-triangle' : (CATEGORY_ICONS[sourceType] || 'fas fa-clock');
+
+            let html = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h6 style="margin:0; font-size:14px; color:${headerColor};"><i class="${headerIcon} me-2"></i>${label} Details</h6>
+                <button class="btn-view-detail" onclick="document.getElementById('activityDetailPanel').classList.remove('open')"><i class="fas fa-times"></i> Close</button>
+            </div>`;
+
+            if (items.length > 0) {
+                html += '<div style="overflow-x:auto;">';
+                items.forEach((item, idx) => {
+                    const st = item.status || item.sub_status || 'pending';
+                    const statusClass = st === 'completed' || st === 'won' || st === 'work_complete' ? 'completed'
+                        : st === 'in_progress' || st === 'hot' || st === 'diagnosing' ? 'in-progress' : 'pending';
+                    const itemId = item.id || item.source_id;
+                    const companyId = item.company_id || '';
+                    const tatDue = item.tat_due_at ? `<small style="color:#ef4444;margin-left:6px;">TAT: ${item.tat_due_at}</small>` : '';
+
+                    const statusSelectId = `actSel_${idx}`;
+                    const logFormId = `logForm_${idx}`;
+
+                    const optionsWithSelected = canEdit ? statusOptions.replace(
+                        `value="${st}"`, `value="${st}" selected`
+                    ) : '';
+
+                    const callTimeSecs = (isLead && item.call_time_seconds > 0) ? item.call_time_seconds : 0;
+                    const callTimeFormatted = item.call_time_formatted || '';
+                    const callSynced = isLead && callTimeSecs > 0;
+
+                    const logTimeBtn = callSynced ? '' : `
+                            <button onclick="toggleLogTimeForm('${logFormId}')"
+                                style="font-size:11px;padding:3px 10px;background:#0ea5e9;color:#fff;border:none;border-radius:6px;cursor:pointer;">
+                                <i class="fas fa-clock"></i> Log Time
+                            </button>`;
+
+                    const callTimeBadge = callSynced ? `
+                            <span style="font-size:11px;padding:3px 10px;background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:6px;display:inline-flex;align-items:center;gap:4px;">
+                                <i class="fas fa-phone" style="font-size:9px;"></i> ${callTimeFormatted} <span style="font-size:9px;opacity:0.7;">(synced)</span>
+                            </span>` : '';
+
+                    const logTimeForm = callSynced ? '' : `
+                        <div id="${logFormId}" style="display:none;margin-top:8px;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                                <div>
+                                    <label style="font-size:10px;color:#64748b;display:block;margin-bottom:3px;">Minutes *</label>
+                                    <input type="number" id="logMin_${idx}" min="1" max="480" placeholder="e.g. 30"
+                                        style="width:90px;font-size:12px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                                <div style="flex:1;min-width:150px;">
+                                    <label style="font-size:10px;color:#64748b;display:block;margin-bottom:3px;">Comment (optional)</label>
+                                    <input type="text" id="logCmt_${idx}" placeholder="What did you do?"
+                                        style="width:100%;font-size:12px;padding:4px 8px;border:1px solid #d1d5db;border-radius:6px;">
+                                </div>
+                                <button onclick="submitActivityLog('${isLead ? 'lead' : sourceType}',${itemId},'logMin_${idx}','logCmt_${idx}')"
+                                    style="font-size:11px;padding:4px 12px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;">
+                                    <i class="fas fa-save"></i> Save
+                                </button>
+                            </div>
+                        </div>`;
+
+                    const editControls = canEdit ? `
+                        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                            <select id="${statusSelectId}" style="font-size:11px;padding:3px 6px;border:1px solid #d1d5db;border-radius:6px;background:#fff;cursor:pointer;">
+                                ${optionsWithSelected}
+                            </select>
+                            <button onclick="saveActivityStatus('${sourceType}',${itemId},'${statusSelectId}','${companyId}',${idx})"
+                                style="font-size:11px;padding:3px 10px;background:#4f46e5;color:#fff;border:none;border-radius:6px;cursor:pointer;">
+                                Save Status
+                            </button>
+                            ${logTimeBtn}
+                            ${callTimeBadge}
+                        </div>
+                        ${logTimeForm}
+                    ` : '';
+
+                    html += `
+                    <div style="padding:10px 0;border-bottom:1px solid #f1f5f9;${idx === 0 ? 'border-top:1px solid #f1f5f9;' : ''}">
+                        <div style="display:flex;align-items:flex-start;gap:10px;">
+                            <span style="color:#64748b;font-size:12px;min-width:22px;padding-top:2px;">${idx+1}.</span>
+                            <div style="flex:1;">
+                                <div style="font-size:13px;font-weight:600;color:#1e293b;">
+                                    ${item.title || item.source_title || item.code || '-'}
+                                    ${item.code && item.title ? `<span style="color:#94a3b8;font-size:11px;margin-left:4px;">[${item.code}]</span>` : ''}
+                                    ${item.phone ? `<small style="color:#64748b;margin-left:6px;"><i class="fas fa-phone" style="font-size:9px;"></i> ${item.phone}</small>` : ''}
+                                    ${tatDue}
+                                </div>
+                                <div style="margin-top:4px;">
+                                    <span class="count-badge ${statusClass}" style="font-size:10px;">${st.replace(/_/g,' ')}</span>
+                                    ${item.priority ? `<span style="margin-left:6px;font-size:10px;color:#94a3b8;">${item.priority}</span>` : ''}
+                                    ${item.time_spent_minutes > 0 ? `<span style="margin-left:6px;font-size:10px;color:#64748b;"><i class="fas fa-clock" style="font-size:9px;"></i> ${formatTimeHM(item.time_spent_minutes)}</span>` : ''}
+                                </div>
+                                ${editControls}
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+            } else if (timeEntries.length > 0) {
+                html += '<table class="activity-detail-table"><thead><tr>';
+                html += '<th>#</th><th>Description</th><th>Time</th><th>Logged At</th>';
+                html += '</tr></thead><tbody>';
+                timeEntries.forEach((entry, idx) => {
+                    html += `<tr>
+                        <td>${idx + 1}</td>
+                        <td>${entry.source_title || entry.description || '-'}</td>
+                        <td>${formatTimeHM(entry.completed_minutes || 0)}</td>
+                        <td>${entry.created_at ? new Date(entry.created_at).toLocaleTimeString('en-IN', {hour: '2-digit', minute: '2-digit'}) : '-'}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+            } else {
+                html += '<div class="activity-no-data">No items found for this category</div>';
+            }
+
+            if (timeEntries.length > 0 && items.length > 0) {
+                html += `<div style="margin-top:10px;padding-top:8px;border-top:1px solid #e2e8f0;">
+                    <small style="color:#64748b;font-size:11px;"><i class="fas fa-clock me-1"></i>Time entries today: ${timeEntries.length} · Total: ${formatTimeHM(data.total_completed_minutes || 0)}</small>
+                </div>`;
+            }
+
+            panel.innerHTML = html;
+        }
+
+        function toggleLogTimeForm(formId) {
+            const el = document.getElementById(formId);
+            if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function saveActivityStatus(sourceType, itemId, selectId, companyId, idx) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            const newStatus = sel.value;
+            if (!newStatus) return;
+
+            const btn = sel.nextElementSibling;
+            const origText = btn ? btn.textContent : '';
+            if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+
+            try {
+                let resp;
+                if (sourceType === 'kra') {
+                    resp = await staffFetch(`/api/v1/staff/kra/instances/${itemId}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({completion_status: newStatus})
+                    });
+                } else if (sourceType === 'task') {
+                    resp = await staffFetch(`/api/v1/staff/tasks/${itemId}/status`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({status: newStatus, notes: ''})
+                    });
+                } else if (sourceType === 'lead' || sourceType === 'overdue_leads') {
+                    if (!companyId) {
+                        throw new Error('Lead has no company assigned — cannot update status from here');
+                    }
+                    resp = await staffFetch(`/api/v1/crm/leads/${itemId}?company_id=${companyId}`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({status: newStatus})
+                    });
+                } else if (sourceType === 'ticket') {
+                    const item = (window._actDetailItems || [])[idx] || {};
+                    const ticketStrId = item.ticket_str_id || itemId;
+                    const actionMap = {
+                        acknowledged: 'acknowledge', diagnosing: 'diagnose',
+                        work_complete: 'complete', ready_for_work: 'complete'
+                    };
+                    const action = actionMap[newStatus];
+                    if (!action) throw new Error('No workflow action for this status');
+                    resp = await fetch(`/api/v1/tickets/service/${ticketStrId}/${action}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token')}`},
+                        body: JSON.stringify({})
+                    });
+                }
+
+                if (!resp || !resp.ok) {
+                    const err = await resp?.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Update failed');
+                }
+
+                if (btn) { btn.textContent = '✓ Saved'; btn.style.background = '#10b981'; }
+                setTimeout(() => {
+                    if (btn) { btn.textContent = origText; btn.style.background = ''; btn.disabled = false; }
+                }, 2000);
+                loadActivitySummary(true);
+
+            } catch (e) {
+                if (btn) { btn.textContent = 'Error'; btn.style.background = '#ef4444'; btn.disabled = false; }
+                setTimeout(() => { if (btn) { btn.textContent = origText; btn.style.background = ''; } }, 2500);
+                console.error('[saveActivityStatus]', e);
+            }
+        }
+
+        async function submitActivityLog(sourceType, sourceId, minInputId, cmtInputId) {
+            const minInput = document.getElementById(minInputId);
+            const cmtInput = document.getElementById(cmtInputId);
+            const minutes = parseInt((minInput || {}).value || '0');
+            if (!minutes || minutes < 1) { alert('Please enter a valid number of minutes (min 1).'); return; }
+
+            const saveBtn = minInput ? minInput.closest('div[style]')?.querySelector('button[onclick*="submitActivityLog"]') : null;
+            if (saveBtn) { saveBtn.textContent = 'Saving…'; saveBtn.disabled = true; }
+
+            try {
+                const resp = await staffFetch('/api/v1/staff/attendance/activity-log', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        source_type: sourceType,
+                        source_id: sourceId,
+                        completed_minutes: minutes,
+                        description: (cmtInput || {}).value || '',
+                        date: window._actDetailDate || formatDate(currentDate)
+                    })
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Log failed');
+                }
+                if (minInput) minInput.value = '';
+                if (cmtInput) cmtInput.value = '';
+                if (saveBtn) { saveBtn.textContent = '✓ Logged'; saveBtn.style.background = '#0ea5e9'; }
+                setTimeout(() => {
+                    if (saveBtn) { saveBtn.textContent = '💾 Save'; saveBtn.style.background = ''; saveBtn.disabled = false; }
+                }, 2000);
+                loadActivitySummary(true);
+            } catch (e) {
+                if (saveBtn) { saveBtn.textContent = 'Error'; saveBtn.style.background = '#ef4444'; saveBtn.disabled = false; }
+                setTimeout(() => { if (saveBtn) { saveBtn.textContent = '💾 Save'; saveBtn.style.background = ''; } }, 2500);
+                console.error('[submitActivityLog]', e);
+            }
+        }
+
+        function updateDateDisplay() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').textContent = currentDate.toLocaleDateString('en-IN', options);
+            document.getElementById('dayName').textContent = currentDate.toLocaleDateString('en-IN', { weekday: 'long' });
+            document.getElementById('datePicker').value = formatDate(currentDate);
+        }
+
+        function changeDate(delta) {
+            currentDate.setDate(currentDate.getDate() + delta);
+            updateDateDisplay();
+            loadEntries();
+            loadTimeline();
+            loadActivitySummary();
+        }
+
+        function goToDate(dateStr) {
+            currentDate = new Date(dateStr);
+            updateDateDisplay();
+            loadEntries();
+            loadTimeline();
+            loadActivitySummary();
+        }
+
+        async function loadTimeline() {
+            try {
+                const dateStr = formatDate(currentDate);
+                const response = await staffFetch(`${API_BASE}/timeline/${dateStr}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        renderTimeline(data.timeline);
+                    }
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error loading timeline:', err);
+                renderTimelineError();
+            }
+        }
+
+        function renderTimeline(events) {
+            const container = document.getElementById('timelineContainer');
+            
+            if (!events || events.length === 0) {
+                container.innerHTML = `
+                    <div class="timeline-empty">
+                        <i class="fas fa-history"></i>
+                        <p>No clock events for this date</p>
+                        <small>Events will appear here as you clock in/out</small>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<div class="timeline-container"><div class="timeline-events">';
+
+            events.forEach((event, index) => {
+                const iconMap = {
+                    'clock_in': 'sign-in-alt',
+                    'clock_out': 'sign-out-alt',
+                    'break_start': 'coffee',
+                    'break_end': 'play'
+                };
+
+                const icon = iconMap[event.type] || 'clock';
+                
+                html += `
+                    <div class="timeline-event ${event.type}">
+                        <div class="timeline-event-content">
+                            <div class="timeline-event-header">
+                                <div class="timeline-event-icon">
+                                    <i class="fas fa-${icon}"></i>
+                                </div>
+                                <div>
+                                    <div class="timeline-event-title">${event.title}</div>
+                                    <div class="timeline-event-time">${event.time}</div>
+                                </div>
+                            </div>
+                            <div class="timeline-event-details">
+                `;
+
+                if (event.location) {
+                    html += `<div class="timeline-event-detail-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>${event.location}</span>
+                    </div>`;
+                }
+
+                if (event.mode) {
+                    const modeLabel = event.mode === 'office' ? 'Office' : event.mode === 'wfh' ? 'Work From Home' : event.mode === 'field' ? 'Field Work' : 'Hybrid';
+                    html += `<div class="timeline-event-detail-item">
+                        <i class="fas fa-location-dot"></i>
+                        <span>${modeLabel}</span>
+                    </div>`;
+                }
+
+                if (event.break_type) {
+                    html += `<div class="timeline-event-detail-item">
+                        <i class="fas fa-tag"></i>
+                        <span>${event.break_type.replace('_', ' ').toUpperCase()} Break${event.is_paid ? ' (Paid)' : ' (Unpaid)'}</span>
+                    </div>`;
+                }
+
+                if (event.duration_minutes) {
+                    const mins = event.duration_minutes;
+                    const hours = Math.floor(mins / 60);
+                    const secs = mins % 60;
+                    const duration = hours > 0 ? `${hours}h ${secs}m` : `${secs}m`;
+                    html += `<div class="timeline-event-detail-item">
+                        <i class="fas fa-hourglass-end"></i>
+                        <span>Duration: ${duration}</span>
+                    </div>`;
+                }
+
+                html += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div></div>';
+            container.innerHTML = html;
+        }
+
+        function renderTimelineError() {
+            const container = document.getElementById('timelineContainer');
+            container.innerHTML = `
+                <div class="timeline-empty">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Failed to load timeline</p>
+                    <small>Check your connection and try again</small>
+                </div>
+            `;
+        }
+
+        async function refreshTimeline() {
+            await loadTimeline();
+        }
+
+        async function loadTasks() {
+            try {
+                const response = await staffFetch(`${API_BASE}/my-tasks`);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.success) {
+                    tasks = data.tasks;
+                    const select = document.getElementById('taskId');
+                    select.innerHTML = '<option value="">Select Task</option>';
+                    tasks.forEach(t => {
+                        select.innerHTML += `<option value="${t.id}">[${t.task_code}] ${t.title}</option>`;
+                    });
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error loading tasks:', err);
+            }
+        }
+
+        async function loadKRAs() {
+            try {
+                const response = await staffFetch(`${API_BASE}/my-kras`);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.success) {
+                    kras = data.kras;
+                    const select = document.getElementById('kraId');
+                    select.innerHTML = '<option value="">Select KRA</option>';
+                    kras.forEach(k => {
+                        select.innerHTML += `<option value="${k.id}">${k.title}</option>`;
+                    });
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error loading KRAs:', err);
+            }
+        }
+
+        // DC Protocol (Jan 22, 2026): Multi-lead selection with Today's Leads filter
+        let leads = [];
+        let todaysLeads = [];
+        let selectedLeadIds = new Set();
+        let currentLeadFilter = 'all';
+        
+        async function loadLeads() {
+            try {
+                const response = await staffFetch(`${API_BASE}/my-leads`);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.success) {
+                    leads = data.leads || [];
+                    todaysLeads = data.todays_leads || [];
+                    renderLeadCheckboxList();
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error loading Leads:', err);
+            }
+        }
+        
+        function renderLeadCheckboxList() {
+            const container = document.getElementById('leadCheckboxList');
+            const searchTerm = (document.getElementById('leadSearchInput')?.value || '').toLowerCase();
+            
+            let filteredLeads = currentLeadFilter === 'today' ? todaysLeads : leads;
+            
+            if (searchTerm) {
+                filteredLeads = filteredLeads.filter(l => 
+                    (l.name || '').toLowerCase().includes(searchTerm) ||
+                    (l.phone || '').toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (filteredLeads.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center py-3">No leads found</div>';
+                return;
+            }
+            
+            container.innerHTML = filteredLeads.map(l => {
+                const isSelected = selectedLeadIds.has(l.id);
+                const badges = (l.today_reason || []).map(r => 
+                    `<span class="lead-badge ${r}">${r}</span>`
+                ).join('');
+                
+                return `
+                    <div class="lead-checkbox-item ${isSelected ? 'selected' : ''}" onclick="toggleLeadSelection(${l.id})">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation(); toggleLeadSelection(${l.id})">
+                        <div class="lead-info">
+                            <div class="lead-name">${l.name || 'Unknown'}${badges}</div>
+                            <div class="lead-meta">${l.phone || 'No phone'} - ${l.status || 'N/A'}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            updateSelectedLeadsSummary();
+        }
+        
+        function toggleLeadSelection(leadId) {
+            if (selectedLeadIds.has(leadId)) {
+                selectedLeadIds.delete(leadId);
+            } else {
+                selectedLeadIds.add(leadId);
+            }
+            renderLeadCheckboxList();
+        }
+        
+        function updateSelectedLeadsSummary() {
+            const summary = document.getElementById('selectedLeadsSummary');
+            const countSpan = document.getElementById('selectedLeadsCount');
+            if (selectedLeadIds.size > 0) {
+                summary.style.display = 'block';
+                countSpan.textContent = selectedLeadIds.size;
+            } else {
+                summary.style.display = 'none';
+            }
+        }
+        
+        function getSelectedLeadIds() {
+            return Array.from(selectedLeadIds);
+        }
+        
+        function clearLeadSelection() {
+            selectedLeadIds.clear();
+            renderLeadCheckboxList();
+        }
+        
+        // Initialize lead filter buttons and search
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.lead-filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.lead-filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentLeadFilter = this.dataset.filter;
+                    renderLeadCheckboxList();
+                });
+            });
+            
+            const searchInput = document.getElementById('leadSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    renderLeadCheckboxList();
+                });
+            }
+        });
+
+        let journeys = [];
+        async function loadJourneys() {
+            try {
+                const dateStr = formatDate(currentDate);
+                const response = await staffFetch(`${API_BASE}/my-journeys/${dateStr}`);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.success) {
+                    journeys = data.journeys;
+                    const select = document.getElementById('journeyId');
+                    select.innerHTML = '<option value="">Select Journey</option>';
+                    journeys.forEach(j => {
+                        select.innerHTML += `<option value="${j.id}">${j.display_name}</option>`;
+                    });
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error loading Journeys:', err);
+            }
+        }
+
+        async function loadEntries() {
+            try {
+                const dateStr = formatDate(currentDate);
+                console.log('[DC-TIMESHEET] Loading entries for:', dateStr);
+                const response = await staffFetch(`${API_BASE}/my-entries/${dateStr}`);
+                console.log('[DC-TIMESHEET] Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    console.error('[DC-TIMESHEET] Failed to load entries:', response.status, errorData);
+                    const container = document.getElementById('entriesList');
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                            <h6>Unable to load entries</h6>
+                            <p>Please refresh the page or try again later</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const data = await response.json();
+                console.log('[DC-TIMESHEET] Loaded', data.entries?.length || 0, 'entries');
+                
+                if (data.success) {
+                    renderEntries(data.entries);
+                    updateSummary(data);
+                    showAttendanceAlert(data.attendance);
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('[DC-TIMESHEET] Error loading entries:', err);
+                const container = document.getElementById('entriesList');
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                        <h6>Error loading entries</h6>
+                        <p>${err.message || 'Please try again'}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderEntries(entries) {
+            const container = document.getElementById('entriesList');
+            
+            if (!entries || entries.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-clock"></i>
+                        <h6>No entries for this date</h6>
+                        <p>Add your first time entry above</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = entries.map(entry => {
+                const isLocked = entry.is_locked || entry.status === 'approved';
+                const isAuto = !!entry.auto_source;
+                const autoLabel = entry.auto_source === 'kra' ? 'KRA' : entry.auto_source === 'day_plan' ? 'Day Plan' : entry.auto_source === 'journey' ? 'Journey' : null;
+                const noEdit = isLocked || isAuto;
+                const autoTitle = isAuto ? `Auto-captured from ${autoLabel}. Edit time in the source.` : '';
+                return `
+                    <div class="entry-item${isAuto ? ' entry-auto' : ''}">
+                        <div class="entry-time">${entry.start_time.substring(0,5)} - ${entry.end_time.substring(0,5)}</div>
+                        <div class="entry-duration">${formatTime(entry.duration_minutes)}</div>
+                        <div class="entry-type">
+                            <span class="entry-type-badge ${entry.entry_type}">${entry.entry_type.toUpperCase()}</span>
+                            ${isAuto ? `<span class="entry-auto-badge" title="${autoTitle}"><i class="fas fa-robot"></i> ${autoLabel}</span>` : ''}
+                            <span class="entry-title">${entry.task_title || entry.kra_title || entry.lead_name || entry.journey_name || entry.comments || '-'}</span>
+                        </div>
+                        <span class="entry-status ${entry.status}">${entry.status.replace('_', ' ').toUpperCase()}</span>
+                        <div class="entry-actions">
+                            ${isAuto ? `<span class="entry-lock-badge" title="${autoTitle}"><i class="fas fa-lock"></i></span>` : `
+                            <button class="btn-edit" onclick="openEditModal(${entry.id}, '${entry.start_time}', '${entry.end_time}', '${entry.comments || ''}')" ${isLocked ? 'disabled' : ''} title="Edit">
+                                <i class="fas fa-pencil"></i>
+                            </button>
+                            <button class="btn-delete" onclick="deleteEntry(${entry.id})" ${isLocked ? 'disabled' : ''} title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>`}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateSummary(data) {
+            const clockedMinutes = data.available_minutes || 0;
+            const loggedMinutes = data.total_minutes || 0;
+            const remainingMinutes = Math.max(0, clockedMinutes - loggedMinutes);
+            
+            document.getElementById('clockedHours').textContent = formatTime(clockedMinutes);
+            document.getElementById('loggedHours').textContent = formatTime(loggedMinutes);
+            document.getElementById('remainingHours').textContent = formatTime(remainingMinutes);
+            document.getElementById('entryCount').textContent = data.entries?.length || 0;
+            
+            const percentage = clockedMinutes > 0 ? Math.min(100, Math.round((loggedMinutes / clockedMinutes) * 100)) : 0;
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = percentage + '%';
+            progressBar.className = 'progress-bar-fill ' + (percentage >= 80 ? 'good' : percentage >= 50 ? 'warning' : 'danger');
+            document.getElementById('progressText').textContent = `${percentage}% logged`;
+        }
+
+        function showAttendanceAlert(attendance) {
+            const alert = document.getElementById('attendanceAlert');
+            const text = document.getElementById('attendanceAlertText');
+            
+            if (!attendance || !attendance.clock_in) {
+                alert.style.display = 'flex';
+                alert.className = 'attendance-info warning';
+                text.textContent = 'No clock-in record for this date. You can still add timesheet entries.';
+            } else if (!attendance.clock_out) {
+                alert.style.display = 'flex';
+                alert.className = 'attendance-info warning';
+                text.textContent = `Clocked in at ${new Date(attendance.clock_in).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}. Still working.`;
+            } else {
+                alert.style.display = 'flex';
+                alert.className = 'attendance-info';
+                const clockIn = new Date(attendance.clock_in).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                const clockOut = new Date(attendance.clock_out).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                text.textContent = `Work hours: ${clockIn} - ${clockOut}`;
+            }
+        }
+
+        // ── Quick Activity: segment switching ──────────────────────────────────
+        function switchQaSeg(btn) {
+            const seg = btn.dataset.seg;
+            // Update tab active state
+            document.querySelectorAll('#qaSegmentTabs .qa-seg-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // Show/hide chips
+            document.querySelectorAll('#quickActivityChips .qa-chip').forEach(chip => {
+                chip.style.display = (chip.dataset.seg === seg) ? '' : 'none';
+            });
+            // Clear any active chip selection when switching segments
+            document.querySelectorAll('#quickActivityChips .qa-chip.active').forEach(c => c.classList.remove('active'));
+        }
+
+        function selectQuickActivity(chip, label, entryType) {
+            const allChips = document.querySelectorAll('#quickActivityChips .qa-chip');
+            const isAlreadyActive = chip.classList.contains('active');
+            allChips.forEach(c => c.classList.remove('active'));
+
+            const commentsEl = document.getElementById('comments');
+            if (isAlreadyActive) {
+                if (commentsEl.value === label) commentsEl.value = '';
+            } else {
+                chip.classList.add('active');
+                commentsEl.value = label;
+                // Auto-set entry type based on chip's segment intent
+                const typeEl = document.getElementById('entryType');
+                if (!typeEl.value && entryType) {
+                    typeEl.value = entryType;
+                    toggleTypeFields();
+                } else if (!typeEl.value) {
+                    typeEl.value = 'others';
+                    toggleTypeFields();
+                }
+            }
+        }
+
+        // ── Edit modal Quick Activity helpers ────────────────────────────────
+        function switchEditQaSeg(btn) {
+            const seg = btn.dataset.seg;
+            document.querySelectorAll('#editQaSegmentTabs .qa-seg-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('#editQuickActivityChips .qa-chip').forEach(chip => {
+                chip.style.display = (chip.dataset.seg === seg) ? '' : 'none';
+            });
+            document.querySelectorAll('#editQuickActivityChips .qa-chip.active').forEach(c => c.classList.remove('active'));
+        }
+
+        function selectEditChip(chip, label) {
+            const allChips = document.querySelectorAll('#editQuickActivityChips .qa-chip');
+            const isAlreadyActive = chip.classList.contains('active');
+            allChips.forEach(c => c.classList.remove('active'));
+            const commentsEl = document.getElementById('editComments');
+            if (isAlreadyActive) {
+                if (commentsEl.value === label) commentsEl.value = '';
+            } else {
+                chip.classList.add('active');
+                commentsEl.value = label;
+            }
+        }
+
+        // Initialize: show only general chips on load; clear chip on comment edit
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show only "general" segment chips by default (both main form and edit modal)
+            document.querySelectorAll('#quickActivityChips .qa-chip').forEach(chip => {
+                if (chip.dataset.seg !== 'general') chip.style.display = 'none';
+            });
+            document.querySelectorAll('#editQuickActivityChips .qa-chip').forEach(chip => {
+                if (chip.dataset.seg !== 'general') chip.style.display = 'none';
+            });
+            // Clear chip highlight when user manually edits comments
+            const commentsEl = document.getElementById('comments');
+            if (commentsEl) {
+                commentsEl.addEventListener('input', function() {
+                    const activeChip = document.querySelector('#quickActivityChips .qa-chip.active');
+                    if (activeChip && commentsEl.value !== activeChip.textContent.trim().replace(/\s+/g, ' ')) {
+                        activeChip.classList.remove('active');
+                    }
+                });
+            }
+        });
+
+        function toggleTypeFields() {
+            const type = document.getElementById('entryType').value;
+            document.getElementById('taskGroup').style.display = type === 'task' ? 'block' : 'none';
+            document.getElementById('kraGroup').style.display = type === 'kra' ? 'block' : 'none';
+            document.getElementById('leadGroup').style.display = type === 'lead' ? 'block' : 'none';
+            document.getElementById('journeyGroup').style.display = type === 'journey' ? 'block' : 'none';
+            if (type === 'journey') {
+                loadJourneys();
+            }
+        }
+
+        async function submitEntry(e) {
+            e.preventDefault();
+
+            const _st = document.getElementById('startTime').value;
+            const _et = document.getElementById('endTime').value;
+            if (_st && _et && _et <= _st) {
+                alert('End time must be after start time. Please correct the times.');
+                document.getElementById('endTime').focus();
+                return;
+            }
+            
+            const entryType = document.getElementById('entryType').value;
+            const breakStartTime = document.getElementById('breakStartTime').value;
+            const breakEndTime = document.getElementById('breakEndTime').value;
+            const breakType = document.getElementById('breakType').value;
+            
+            // Calculate break duration
+            let breakDurationMinutes = 0;
+            if (breakStartTime && breakEndTime) {
+                const breakStart = new Date(`2000-01-01 ${breakStartTime}`);
+                const breakEnd = new Date(`2000-01-01 ${breakEndTime}`);
+                breakDurationMinutes = Math.round((breakEnd - breakStart) / 60000);
+            }
+            
+            const payload = {
+                date: formatDate(currentDate),
+                start_time: document.getElementById('startTime').value,
+                end_time: document.getElementById('endTime').value,
+                break_start_time: breakStartTime || null,
+                break_end_time: breakEndTime || null,
+                break_duration_minutes: breakDurationMinutes,
+                break_type: breakType || null,
+                entry_type: entryType,
+                comments: document.getElementById('comments').value || null
+            };
+            
+            if (entryType === 'task') {
+                payload.task_id = parseInt(document.getElementById('taskId').value) || null;
+                if (!payload.task_id) {
+                    alert('Please select a task');
+                    return;
+                }
+            } else if (entryType === 'kra') {
+                payload.kra_id = parseInt(document.getElementById('kraId').value) || null;
+                if (!payload.kra_id) {
+                    alert('Please select a KRA');
+                    return;
+                }
+            } else if (entryType === 'lead') {
+                // DC Protocol (Jan 22, 2026): Multi-lead selection support
+                const selectedIds = getSelectedLeadIds();
+                if (selectedIds.length === 0) {
+                    alert('Please select at least one Lead');
+                    return;
+                }
+                if (selectedIds.length === 1) {
+                    payload.lead_id = selectedIds[0];
+                } else {
+                    payload.lead_ids = selectedIds;
+                }
+            } else if (entryType === 'journey') {
+                payload.journey_id = parseInt(document.getElementById('journeyId').value) || null;
+                if (!payload.journey_id) {
+                    alert('Please select a Journey');
+                    return;
+                }
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('timesheetForm').reset();
+                    toggleTypeFields();
+                    // Reset Quick Activity chips + segment back to General
+                    document.querySelectorAll('#quickActivityChips .qa-chip').forEach(c => {
+                        c.classList.remove('active');
+                        c.style.display = (c.dataset.seg === 'general') ? '' : 'none';
+                    });
+                    document.querySelectorAll('#qaSegmentTabs .qa-seg-btn').forEach(b => {
+                        b.classList.toggle('active', b.dataset.seg === 'general');
+                    });
+                    clearLeadSelection(); // DC Protocol: Clear multi-lead selection
+                    loadEntries();
+                    const leadCount = data.lead_count || 1;
+                    alert(leadCount > 1 ? `Created entries for ${leadCount} leads!` : 'Entry added successfully!');
+                } else {
+                    alert(data.detail || 'Failed to add entry');
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error:', err);
+                alert('Error adding entry');
+            }
+        }
+
+        function openEditModal(id, startTime, endTime, comments) {
+            document.getElementById('editEntryId').value = id;
+            document.getElementById('editStartTime').value = startTime.substring(0, 5);
+            document.getElementById('editEndTime').value = endTime.substring(0, 5);
+            document.getElementById('editComments').value = comments || '';
+            // Reset edit modal chips to General segment
+            document.querySelectorAll('#editQuickActivityChips .qa-chip').forEach(c => {
+                c.classList.remove('active');
+                c.style.display = (c.dataset.seg === 'general') ? '' : 'none';
+            });
+            document.querySelectorAll('#editQaSegmentTabs .qa-seg-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.seg === 'general');
+            });
+            new bootstrap.Modal(document.getElementById('editModal')).show();
+        }
+
+        async function saveEdit() {
+            const id = document.getElementById('editEntryId').value;
+            const _est = document.getElementById('editStartTime').value;
+            const _eet = document.getElementById('editEndTime').value;
+            if (_est && _eet && _eet <= _est) {
+                alert('End time must be after start time. Please correct the times.');
+                document.getElementById('editEndTime').focus();
+                return;
+            }
+            const payload = {
+                start_time: _est,
+                end_time: _eet,
+                comments: document.getElementById('editComments').value || null
+            };
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.activeElement?.blur();
+                    bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                    loadEntries();
+                    alert('Entry updated successfully!');
+                } else {
+                    alert(data.detail || 'Failed to update entry');
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error:', err);
+                alert('Error updating entry');
+            }
+        }
+
+        async function deleteEntry(id) {
+            if (!confirm('Are you sure you want to delete this entry?')) return;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    loadEntries();
+                    alert('Entry deleted successfully!');
+                } else {
+                    alert(data.detail || 'Failed to delete entry');
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error:', err);
+                alert('Error deleting entry');
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (tab === 'today') {
+                document.getElementById('tabToday').classList.add('active');
+                document.getElementById('tabContentToday').classList.add('active');
+            } else if (tab === 'team') {
+                document.getElementById('tabTeam').classList.add('active');
+                document.getElementById('tabContentTeam').classList.add('active');
+                initTeamFilters();
+            } else {
+                document.getElementById('tabRecords').classList.add('active');
+                document.getElementById('tabContentRecords').classList.add('active');
+                initRecordsFilters();
+            }
+        }
+
+        function initRecordsFilters() {
+            const today = new Date();
+            const fromDate = new Date(today);
+            fromDate.setDate(today.getDate() - 7);
+            
+            document.getElementById('recordsFromDate').value = formatDate(fromDate);
+            document.getElementById('recordsToDate').value = formatDate(today);
+        }
+
+        function resetRecordsFilters() {
+            initRecordsFilters();
+            document.getElementById('recordsStatus').value = '';
+            document.getElementById('recordsType').value = '';
+            document.getElementById('recordsContainer').innerHTML = `
+                <div class="records-empty">
+                    <i class="fas fa-calendar-alt"></i>
+                    <h6>Select a date range to view attendance records</h6>
+                    <p>Use the filters above to search your timesheet history</p>
+                </div>
+            `;
+        }
+
+        function buildRecordSections(entries) {
+            const pendingEntries = entries.filter(e => e.status === 'submitted' || e.status === 'resubmitted');
+            const approvedEntries = entries.filter(e => e.status === 'approved');
+            const rejectedEntries = entries.filter(e => e.status === 'rejected');
+            let html = '';
+
+            if (pendingEntries.length > 0) {
+                const pendingTotal = pendingEntries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header pending"><i class="fas fa-paper-plane"></i> Submitted Time Entries (${pendingEntries.length}) — ${formatTime(pendingTotal)} pending</div>
+                    <table class="records-table"><thead><tr>
+                        <th>Time</th><th>Submitted</th><th>Type</th><th>Activity</th><th>Status</th>
+                    </tr></thead><tbody>
+                    ${pendingEntries.map(entry => `<tr>
+                        <td>${entry.start_time.substring(0,5)} - ${entry.end_time.substring(0,5)}</td>
+                        <td><span class="record-duration">${formatTime(entry.duration_minutes)}</span></td>
+                        <td><span class="record-type ${entry.entry_type}">${entry.entry_type.toUpperCase()}</span></td>
+                        <td>${entry.task_title || entry.kra_title || entry.lead_name || entry.journey_name || entry.comments || '-'}</td>
+                        <td><span class="record-status ${entry.status}">${entry.status.toUpperCase()}</span></td>
+                    </tr>`).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (approvedEntries.length > 0) {
+                const approvedTotal = approvedEntries.reduce((s, e) => s + (e.approved_minutes || e.duration_minutes || 0), 0);
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header approved-hdr"><i class="fas fa-check-double"></i> Approved Time Entries (${approvedEntries.length}) — ${formatTime(approvedTotal)} approved</div>
+                    <table class="records-table"><thead><tr>
+                        <th>Time</th><th>Submitted</th><th>Approved Time</th><th>Type</th><th>Activity</th><th>Approved On</th>
+                    </tr></thead><tbody>
+                    ${approvedEntries.map(entry => {
+                        const apprMin = entry.approved_minutes != null ? entry.approved_minutes : entry.duration_minutes;
+                        const timeDiff = apprMin !== entry.duration_minutes;
+                        return `<tr>
+                        <td>${entry.start_time.substring(0,5)} - ${entry.end_time.substring(0,5)}</td>
+                        <td><span class="record-duration">${formatTime(entry.duration_minutes)}</span></td>
+                        <td><span style="font-weight:700;color:#065f46;">${formatTime(apprMin)}</span>${timeDiff ? ' <span style="font-size:10px;color:#dc2626;" title="Reduced from submitted time">&#9660;</span>' : ''}</td>
+                        <td><span class="record-type ${entry.entry_type}">${entry.entry_type.toUpperCase()}</span></td>
+                        <td>${entry.task_title || entry.kra_title || entry.lead_name || entry.journey_name || entry.comments || '-'}</td>
+                        <td style="font-size:11px;color:#065f46;">${entry.approved_at ? new Date(entry.approved_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+                    </tr>`;
+                    }).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (rejectedEntries.length > 0) {
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header" style="color:#991b1b;background:#fef2f2;border-left:3px solid #ef4444;"><i class="fas fa-times-circle"></i> Rejected Time Entries (${rejectedEntries.length})</div>
+                    <table class="records-table"><thead><tr>
+                        <th>Time</th><th>Submitted</th><th>Type</th><th>Activity</th><th>Reason</th><th>Rejected On</th>
+                    </tr></thead><tbody>
+                    ${rejectedEntries.map(entry => `<tr>
+                        <td>${entry.start_time.substring(0,5)} - ${entry.end_time.substring(0,5)}</td>
+                        <td><span class="record-duration">${formatTime(entry.duration_minutes)}</span></td>
+                        <td><span class="record-type ${entry.entry_type}">${entry.entry_type.toUpperCase()}</span></td>
+                        <td>${entry.task_title || entry.kra_title || entry.lead_name || entry.journey_name || entry.comments || '-'}</td>
+                        <td style="color:#991b1b;font-size:12px;">${entry.rejection_reason || '-'}</td>
+                        <td style="font-size:11px;color:#991b1b;">${entry.rejected_at ? new Date(entry.rejected_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+                    </tr>`).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (pendingEntries.length === 0 && approvedEntries.length === 0 && rejectedEntries.length === 0) {
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header custom-hdr"><i class="fas fa-clock"></i> Time Entries</div>
+                    <div style="text-align:center;padding:12px;color:#9ca3af;font-size:12px;">No time entries for this date</div></div>`;
+            }
+
+            return html;
+        }
+
+        async function loadAttendanceRecords() {
+            const fromDate = document.getElementById('recordsFromDate').value;
+            const toDate = document.getElementById('recordsToDate').value;
+            const status = document.getElementById('recordsStatus').value;
+            const entryType = document.getElementById('recordsType').value;
+            
+            if (!fromDate || !toDate) {
+                alert('Please select both from and to dates');
+                return;
+            }
+            
+            const container = document.getElementById('recordsContainer');
+            container.innerHTML = '<div class="records-empty"><i class="fas fa-spinner fa-spin"></i><h6>Loading records...</h6></div>';
+            
+            try {
+                let url = `${API_BASE}/my-history?from_date=${fromDate}&to_date=${toDate}`;
+                if (status) url += `&status=${status}`;
+                if (entryType) url += `&entry_type=${entryType}`;
+                
+                const response = await staffFetch(url);
+                
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || 'Failed to load records');
+                }
+                
+                const data = await response.json();
+                
+                if (!data.success || !data.entries || data.entries.length === 0) {
+                    container.innerHTML = `
+                        <div class="records-empty">
+                            <i class="fas fa-inbox"></i>
+                            <h6>No entries found</h6>
+                            <p>Try adjusting your date range or filters</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let entries = data.entries;
+                
+                const groupedByDate = {};
+                entries.forEach(entry => {
+                    const dateKey = (entry.date || '').split('T')[0];
+                    if (!dateKey) return;
+                    if (!groupedByDate[dateKey]) {
+                        groupedByDate[dateKey] = {
+                            entries: [],
+                            totalMinutes: 0,
+                            clockIn: entry.clock_in || null,
+                            clockOut: entry.clock_out || null,
+                            workedMinutes: entry.worked_minutes || entry.attendance_minutes || 0,
+                            attendanceStatus: entry.attendance_status || null,
+                            approvalStatus: entry.approval_status || null
+                        };
+                    }
+                    groupedByDate[dateKey].entries.push(entry);
+                    groupedByDate[dateKey].totalMinutes += entry.duration_minutes || 0;
+                });
+                
+                const sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+                
+                const staffData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const empName = staffData.full_name || 'Staff Member';
+                const empCode = staffData.emp_code || staffData.employee_code || '-';
+                
+                const totalMinutesAll = entries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+                const totalEntries = entries.length;
+                const daysWithEntries = sortedDates.length;
+                
+                const submittedEntries = entries.filter(e => e.status === 'submitted' || e.status === 'resubmitted');
+                const approvedEntries = entries.filter(e => e.status === 'approved');
+                const submittedMin = submittedEntries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+                const approvedMin = approvedEntries.reduce((s, e) => s + (e.approved_minutes || e.duration_minutes || 0), 0);
+                
+                const avgTotal = daysWithEntries > 0 ? Math.round(totalMinutesAll / daysWithEntries) : 0;
+                const avgSubmitted = daysWithEntries > 0 ? Math.round(submittedMin / daysWithEntries) : 0;
+                const avgApproved = daysWithEntries > 0 ? Math.round(approvedMin / daysWithEntries) : 0;
+                
+                const fromD = new Date(fromDate), toD = new Date(toDate);
+                let totalCalDays = 0;
+                for (let d = new Date(fromD); d <= toD; d.setDate(d.getDate() + 1)) totalCalDays++;
+                const noEntryDays = Math.max(0, totalCalDays - daysWithEntries);
+                
+                let html = `
+                    <div class="accordion-employee expanded" id="emp-summary">
+                        <div class="accordion-employee-header" style="flex-direction:column;align-items:stretch;gap:6px;cursor:default;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:16px;font-weight:700;line-height:1.3;">${empName}</div>
+                                    <div style="font-size:13px;opacity:0.8;">${empCode}</div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap" style="justify-content:flex-end;">
+                                    ${submittedEntries.length > 0 ? `<span class="badge" style="background:rgba(255,200,0,0.3);font-size:13px;padding:5px 10px;"><i class="fas fa-clock"></i> ${formatTime(submittedMin)} submitted (${submittedEntries.length})</span>` : ''}
+                                    ${approvedEntries.length > 0 ? `<span class="badge" style="background:rgba(255,255,255,0.2);font-size:13px;padding:5px 10px;"><i class="fas fa-check-circle"></i> ${formatTime(approvedMin)} approved (${approvedEntries.length})</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 flex-wrap" style="padding-left:0;">
+                                <span style="font-size:13px;"><i class="fas fa-clock"></i> ${formatTime(totalMinutesAll)} total</span>
+                                <span style="font-size:13px;"><i class="fas fa-calendar"></i> ${daysWithEntries} days</span>
+                                <span style="font-size:13px;"><i class="fas fa-list"></i> ${totalEntries} entries</span>
+                                <span style="font-size:13px;opacity:0.85;">|</span>
+                                <span style="font-size:13px;opacity:0.9;"><i class="fas fa-chart-line"></i> Avg/day:</span>
+                                <span style="font-size:13px;opacity:0.9;"><i class="fas fa-clock"></i> ${formatTime(avgTotal)} total</span>
+                                ${submittedEntries.length > 0 ? `<span style="font-size:13px;opacity:0.9;"><i class="fas fa-paper-plane"></i> ${formatTime(avgSubmitted)} submitted</span>` : ''}
+                                ${approvedEntries.length > 0 ? `<span style="font-size:13px;opacity:0.9;"><i class="fas fa-check-circle"></i> ${formatTime(avgApproved)} approved</span>` : ''}
+                                ${noEntryDays > 0 ? `<span style="font-size:13px;opacity:0.75;"><i class="fas fa-calendar-times"></i> ${noEntryDays} no-entry days</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="accordion-employee-body" style="display:block;">
+                `;
+                
+                sortedDates.forEach((date, idx) => {
+                    const dayData = groupedByDate[date];
+                    const dateObj = new Date(date);
+                    const formattedDate = dateObj.toLocaleDateString('en-IN', { 
+                        weekday: 'short', 
+                        day: '2-digit', 
+                        month: 'short', 
+                        year: 'numeric' 
+                    });
+                    
+                    const loggedMinutes = dayData.totalMinutes;
+                    const loggedTime = formatTime(loggedMinutes);
+                    const workedMinutes = dayData.workedMinutes || 0;
+                    const entryCount = dayData.entries.length;
+                    
+                    const clockInDisp = dayData.clockIn || '--:--';
+                    const clockOutDisp = dayData.clockOut || '--:--';
+                    
+                    let hrStatusBadge = '';
+                    const attStatus = dayData.attendanceStatus;
+                    const apprStatus = dayData.approvalStatus;
+                    if (!attStatus && !apprStatus) {
+                        hrStatusBadge = '<span class="badge" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-exclamation-triangle"></i> Attendance Not Marked</span>';
+                    } else if (attStatus === 'present') {
+                        hrStatusBadge = '<span class="badge" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check-circle"></i> Present</span>';
+                    } else if (attStatus === 'half_day') {
+                        hrStatusBadge = '<span class="badge" style="background:#fef3c7;color:#92400e;"><i class="fas fa-adjust"></i> Half Day</span>';
+                    } else if (attStatus === 'absent') {
+                        hrStatusBadge = '<span class="badge" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-times-circle"></i> Absent</span>';
+                    } else if (attStatus) {
+                        hrStatusBadge = `<span class="badge" style="background:#f3f4f6;color:#374151;">${attStatus.charAt(0).toUpperCase() + attStatus.slice(1)}</span>`;
+                    }
+                    if (apprStatus && apprStatus !== 'approved') {
+                        hrStatusBadge += ` <span class="badge" style="background:#e0e7ff;color:#3730a3;"><i class="fas fa-hourglass-half"></i> ${apprStatus.charAt(0).toUpperCase() + apprStatus.slice(1)}</span>`;
+                    } else if (apprStatus === 'approved') {
+                        hrStatusBadge += ' <span class="badge" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check"></i> Approved</span>';
+                    }
+                    
+                    const statusCounts = { approved: 0, submitted: 0, rejected: 0, resubmitted: 0 };
+                    const statusMinutes = { approved: 0, submitted: 0, rejected: 0, resubmitted: 0 };
+                    dayData.entries.forEach(e => {
+                        if (statusCounts.hasOwnProperty(e.status)) {
+                            statusCounts[e.status]++;
+                            statusMinutes[e.status] += e.duration_minutes || 0;
+                        }
+                    });
+                    
+                    let statusBadges = '';
+                    if (statusMinutes.submitted > 0 || statusMinutes.resubmitted > 0) {
+                        const subTotal = statusMinutes.submitted + statusMinutes.resubmitted;
+                        const subCount = statusCounts.submitted + statusCounts.resubmitted;
+                        statusBadges += `<span class="badge" style="background:#fef3c7;color:#92400e;"><i class="fas fa-clock"></i> ${formatTime(subTotal)} (${subCount})</span>`;
+                    }
+                    if (statusMinutes.approved > 0) statusBadges += `<span class="badge" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check-circle"></i> ${formatTime(statusMinutes.approved)} (${statusCounts.approved})</span>`;
+                    if (statusMinutes.rejected > 0) statusBadges += `<span class="badge" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-times-circle"></i> ${formatTime(statusMinutes.rejected)} (${statusCounts.rejected})</span>`;
+                    
+                    html += `
+                        <div class="accordion-day ${idx === 0 ? 'expanded' : ''}" id="accordion-${date}">
+                            <div class="accordion-header" onclick="toggleAccordion('${date}')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="accordion-toggle"><span class="toggle-icon"></span></div>
+                                    <div>
+                                        <strong>${formattedDate}</strong>
+                                        <div style="font-size:12px;color:#6b7280;margin-top:2px;">
+                                            <i class="fas fa-sign-in-alt" style="color:#10b981;"></i> ${clockInDisp}
+                                            <span style="margin:0 4px;">→</span>
+                                            <i class="fas fa-sign-out-alt" style="color:#ef4444;"></i> ${clockOutDisp}
+                                            ${workedMinutes > 0 ? `<span style="margin-left:8px;"><i class="fas fa-briefcase"></i> ${formatTime(workedMinutes)}</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    ${hrStatusBadge}
+                                    <span style="font-size:12px;color:#4f46e5;font-weight:600;"><i class="fas fa-clock"></i> ${loggedTime} logged</span>
+                                    <span style="font-size:12px;color:#6b7280;"><i class="fas fa-list"></i> ${entryCount} entries</span>
+                                    ${statusBadges}
+                                </div>
+                            </div>
+                            <div class="accordion-body">
+                                ${buildRecordSections(dayData.entries)}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+                
+                container.innerHTML = html;
+                
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error loading records:', err);
+                container.innerHTML = `
+                    <div class="records-empty">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h6>Error loading records</h6>
+                        <p>${err.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function toggleAccordion(date) {
+            const accordion = document.getElementById(`accordion-${date}`);
+            if (accordion) {
+                accordion.classList.toggle('expanded');
+            }
+        }
+
+        let teamCurrentStatus = '';
+        let teamFiltersInitialized = false;
+
+        function initTeamFilters() {
+            if (teamFiltersInitialized) return;
+            teamFiltersInitialized = true;
+            const today = new Date();
+            const fromDate = new Date(today);
+            fromDate.setDate(today.getDate() - 7);
+            document.getElementById('teamFromDate').value = formatDate(fromDate);
+            document.getElementById('teamToDate').value = formatDate(today);
+            loadTeamReportingManagers();
+            loadTeamDepartments();
+            document.querySelectorAll('.team-filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.team-filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    teamCurrentStatus = this.dataset.status;
+                    loadTeamEntries();
+                });
+            });
+        }
+
+        let _teamSearchTimer = null;
+        function debounceTeamSearch() {
+            if (_teamSearchTimer) clearTimeout(_teamSearchTimer);
+            _teamSearchTimer = setTimeout(() => loadTeamEntries(), 350);
+        }
+
+        async function loadTeamReportingManagers() {
+            try {
+                const response = await staffFetch(`${API_BASE}/reporting-managers`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('teamReportingManagerFilter');
+                    if (!select) return;
+                    const managers = data.managers || [];
+                    managers.forEach(mgr => {
+                        const option = document.createElement('option');
+                        option.value = mgr.id;
+                        option.textContent = `${mgr.name} (${mgr.code})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+            }
+        }
+
+        async function loadTeamDepartments() {
+            try {
+                const response = await staffFetch('/api/v1/staff/departments');
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('teamDeptFilter');
+                    if (!select) return;
+                    const depts = data.departments || data || [];
+                    depts.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+            }
+        }
+
+        async function loadTeamEntries() {
+            const container = document.getElementById('teamEntriesContainer');
+            container.innerHTML = '<div class="records-empty"><i class="fas fa-spinner fa-spin"></i><h6>Loading team entries...</h6></div>';
+            try {
+                const params = new URLSearchParams();
+                const fromVal = document.getElementById('teamFromDate').value;
+                const toVal = document.getElementById('teamToDate').value;
+                if (fromVal) params.append('from_date', fromVal);
+                if (toVal) params.append('to_date', toVal);
+                if (teamCurrentStatus) params.append('status', teamCurrentStatus);
+                const rmFilter = document.getElementById('teamReportingManagerFilter');
+                if (rmFilter && rmFilter.value) params.append('reporting_manager_id', rmFilter.value);
+                const deptFilter = document.getElementById('teamDeptFilter');
+                if (deptFilter && deptFilter.value) params.append('department_id', deptFilter.value);
+                const stFilter = document.getElementById('teamStaffTypeFilter');
+                if (stFilter && stFilter.value) params.append('staff_type', stFilter.value);
+                const empSearch = document.getElementById('teamEmployeeSearch');
+                if (empSearch && empSearch.value.trim()) params.append('search', empSearch.value.trim());
+                params.append('limit', '100');
+
+                const response = await staffFetch(`${API_BASE}/team-entries?${params}`);
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.success) {
+                    renderTeamEntries(data.entries);
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                container.innerHTML = '<div class="records-empty"><i class="fas fa-exclamation-circle"></i><h6>Error loading entries</h6></div>';
+            }
+        }
+
+        function renderTeamEntries(entries) {
+            const container = document.getElementById('teamEntriesContainer');
+            if (!entries || entries.length === 0) {
+                container.innerHTML = '<div class="records-empty"><i class="fas fa-clipboard-list"></i><h6>No entries found</h6><p>Adjust filters or check back later</p></div>';
+                return;
+            }
+
+            const groupedByEmployee = {};
+            entries.forEach(entry => {
+                const empKey = String(entry.employee_id || entry.employee_code || 'unknown').replace(/[^a-zA-Z0-9]/g, '_');
+                const dateKey = (entry.date || '').split('T')[0];
+                if (!groupedByEmployee[empKey]) {
+                    groupedByEmployee[empKey] = {
+                        name: entry.employee_name || 'Unknown',
+                        code: entry.employee_code || '',
+                        employee_id: entry.employee_id || 0,
+                        dates: {},
+                        totalMinutes: 0
+                    };
+                }
+                if (!groupedByEmployee[empKey].dates[dateKey]) {
+                    groupedByEmployee[empKey].dates[dateKey] = {
+                        entries: [],
+                        totalMinutes: 0,
+                        clockIn: entry.clock_in || null,
+                        clockOut: entry.clock_out || null,
+                        workedMinutes: entry.worked_minutes || 0,
+                        attendanceStatus: entry.attendance_status || null,
+                        approvalStatus: entry.approval_status || null
+                    };
+                }
+                groupedByEmployee[empKey].dates[dateKey].entries.push(entry);
+                groupedByEmployee[empKey].dates[dateKey].totalMinutes += entry.duration_minutes || 0;
+                groupedByEmployee[empKey].totalMinutes += entry.duration_minutes || 0;
+            });
+
+            const employeeKeys = Object.keys(groupedByEmployee);
+            let html = '';
+
+            employeeKeys.forEach((empKey, empIdx) => {
+                const emp = groupedByEmployee[empKey];
+                const sortedDates = Object.keys(emp.dates).sort((a, b) => new Date(b) - new Date(a));
+                const entryCount = sortedDates.reduce((sum, d) => sum + emp.dates[d].entries.length, 0);
+                const allEmpEntries = sortedDates.reduce((arr, d) => arr.concat(emp.dates[d].entries), []);
+                const empSubmittedMin = allEmpEntries.filter(e => e.status === 'submitted' || e.status === 'resubmitted').reduce((s, e) => s + (e.duration_minutes || 0), 0);
+                const empApprovedMin = allEmpEntries.filter(e => e.status === 'approved').reduce((s, e) => s + (e.approved_minutes || e.duration_minutes || 0), 0);
+                const empSubmittedCount = allEmpEntries.filter(e => e.status === 'submitted' || e.status === 'resubmitted').length;
+                const empApprovedCount = allEmpEntries.filter(e => e.status === 'approved').length;
+                const daysWithEntries = sortedDates.length;
+                const avgTotal = daysWithEntries > 0 ? Math.round(emp.totalMinutes / daysWithEntries) : 0;
+                const avgSubmitted = daysWithEntries > 0 ? Math.round(empSubmittedMin / daysWithEntries) : 0;
+                const avgApproved = daysWithEntries > 0 ? Math.round(empApprovedMin / daysWithEntries) : 0;
+                const noEntryDays = (() => {
+                    const fromVal = document.getElementById('teamFromDate')?.value;
+                    const toVal = document.getElementById('teamToDate')?.value;
+                    if (!fromVal || !toVal) return 0;
+                    const from = new Date(fromVal), to = new Date(toVal);
+                    let totalCalDays = 0;
+                    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) totalCalDays++;
+                    return Math.max(0, totalCalDays - daysWithEntries);
+                })();
+
+                html += `
+                    <div class="accordion-employee ${empIdx === 0 ? 'expanded' : ''}" id="team-emp-${empKey}">
+                        <div class="accordion-employee-header" onclick="toggleTeamEmployee('${empKey}')" style="flex-direction:column;align-items:stretch;gap:6px;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="accordion-toggle-emp"><span class="toggle-icon-emp"></span></div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:16px;font-weight:700;line-height:1.3;">${emp.name}</div>
+                                    <div style="font-size:13px;opacity:0.8;">${emp.code}</div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap" style="justify-content:flex-end;">
+                                    ${empSubmittedCount > 0 ? `<span class="badge" style="background:rgba(255,200,0,0.3);font-size:13px;padding:5px 10px;"><i class="fas fa-clock"></i> ${formatTime(empSubmittedMin)} submitted (${empSubmittedCount})</span>` : ''}
+                                    ${empApprovedCount > 0 ? `<span class="badge" style="background:rgba(255,255,255,0.2);font-size:13px;padding:5px 10px;"><i class="fas fa-check-circle"></i> ${formatTime(empApprovedMin)} approved (${empApprovedCount})</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 flex-wrap" style="padding-left:36px;">
+                                <span style="font-size:13px;"><i class="fas fa-clock"></i> ${formatTime(emp.totalMinutes)} total</span>
+                                <span style="font-size:13px;"><i class="fas fa-calendar"></i> ${sortedDates.length} days</span>
+                                <span style="font-size:13px;"><i class="fas fa-list"></i> ${entryCount} entries</span>
+                                <span style="font-size:13px;opacity:0.85;">|</span>
+                                <span style="font-size:13px;opacity:0.9;"><i class="fas fa-chart-line"></i> Avg/day:</span>
+                                <span style="font-size:13px;opacity:0.9;"><i class="fas fa-clock"></i> ${formatTime(avgTotal)} total</span>
+                                ${empSubmittedCount > 0 ? `<span style="font-size:13px;opacity:0.9;"><i class="fas fa-paper-plane"></i> ${formatTime(avgSubmitted)} submitted</span>` : ''}
+                                ${empApprovedCount > 0 ? `<span style="font-size:13px;opacity:0.9;"><i class="fas fa-check-circle"></i> ${formatTime(avgApproved)} approved</span>` : ''}
+                                ${noEntryDays > 0 ? `<span style="font-size:13px;opacity:0.75;"><i class="fas fa-calendar-times"></i> ${noEntryDays} no-entry days</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="accordion-employee-body">
+                `;
+
+                sortedDates.forEach((dateKey, dateIdx) => {
+                    const dayData = emp.dates[dateKey];
+                    const dateObj = new Date(dateKey);
+                    const formattedDate = dateObj.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+                    const clockInDisp = dayData.clockIn || '--:--';
+                    const clockOutDisp = dayData.clockOut || '--:--';
+                    const workedMinutes = dayData.workedMinutes || 0;
+
+                    let hrStatusBadge = '';
+                    const attStatus = dayData.attendanceStatus;
+                    const apprStatus = dayData.approvalStatus;
+                    if (!attStatus && !apprStatus) {
+                        hrStatusBadge = '<span class="badge" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-exclamation-triangle"></i> Attendance Not Marked</span>';
+                    } else if (attStatus === 'present') {
+                        hrStatusBadge = '<span class="badge" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check-circle"></i> Present</span>';
+                    } else if (attStatus === 'half_day') {
+                        hrStatusBadge = '<span class="badge" style="background:#fef3c7;color:#92400e;"><i class="fas fa-adjust"></i> Half Day</span>';
+                    } else if (attStatus === 'absent') {
+                        hrStatusBadge = '<span class="badge" style="background:#fee2e2;color:#991b1b;"><i class="fas fa-times-circle"></i> Absent</span>';
+                    } else if (attStatus) {
+                        hrStatusBadge = `<span class="badge" style="background:#f3f4f6;color:#374151;">${attStatus.charAt(0).toUpperCase() + attStatus.slice(1)}</span>`;
+                    }
+                    if (apprStatus && apprStatus !== 'approved') {
+                        hrStatusBadge += ` <span class="badge" style="background:#e0e7ff;color:#3730a3;"><i class="fas fa-hourglass-half"></i> ${apprStatus.charAt(0).toUpperCase() + apprStatus.slice(1)}</span>`;
+                    } else if (apprStatus === 'approved') {
+                        hrStatusBadge += ' <span class="badge" style="background:#d1fae5;color:#065f46;"><i class="fas fa-check"></i> Approved</span>';
+                    }
+
+                    const daySubmittedEntries = dayData.entries.filter(e => e.status === 'submitted' || e.status === 'resubmitted');
+                    const dayApprovedEntries = dayData.entries.filter(e => e.status === 'approved');
+                    const dayRejectedEntries = dayData.entries.filter(e => e.status === 'rejected');
+                    const daySubmittedMin = daySubmittedEntries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+                    const dayApprovedMin = dayApprovedEntries.reduce((s, e) => s + (e.approved_minutes || e.duration_minutes || 0), 0);
+
+                    let dayStatusBadges = '';
+                    if (daySubmittedEntries.length > 0) {
+                        dayStatusBadges += `<span class="badge" style="background:#fef3c7;color:#92400e;margin-left:6px;"><i class="fas fa-clock"></i> ${formatTime(daySubmittedMin)} submitted (${daySubmittedEntries.length})</span>`;
+                    }
+                    if (dayApprovedEntries.length > 0) {
+                        dayStatusBadges += `<span class="badge" style="background:#d1fae5;color:#065f46;margin-left:6px;"><i class="fas fa-check-circle"></i> ${formatTime(dayApprovedMin)} approved (${dayApprovedEntries.length})</span>`;
+                    }
+                    if (dayRejectedEntries.length > 0) {
+                        dayStatusBadges += `<span class="badge" style="background:#fee2e2;color:#991b1b;margin-left:6px;"><i class="fas fa-times-circle"></i> ${dayRejectedEntries.length} rejected</span>`;
+                    }
+
+                    html += `
+                        <div class="accordion-day ${empIdx === 0 && dateIdx === 0 ? 'expanded' : ''}" id="team-day-${empKey}-${dateKey}">
+                            <div class="accordion-header" onclick="toggleTeamDay('${empKey}', '${dateKey}')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="accordion-toggle"><span class="toggle-icon"></span></div>
+                                    <div>
+                                        <strong>${formattedDate}</strong>
+                                        <div style="font-size:12px;color:#6b7280;margin-top:2px;">
+                                            <i class="fas fa-sign-in-alt" style="color:#10b981;"></i> ${clockInDisp}
+                                            <span style="margin:0 4px;">→</span>
+                                            <i class="fas fa-sign-out-alt" style="color:#ef4444;"></i> ${clockOutDisp}
+                                            ${workedMinutes > 0 ? `<span style="margin-left:8px;"><i class="fas fa-briefcase"></i> ${formatTime(workedMinutes)}</span>` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    ${hrStatusBadge}
+                                    <span style="font-size:12px;color:#4f46e5;font-weight:600;"><i class="fas fa-clock"></i> ${formatTime(dayData.totalMinutes)} logged</span>
+                                    <span style="font-size:12px;color:#6b7280;"><i class="fas fa-list"></i> ${dayData.entries.length} entries</span>
+                                    ${dayStatusBadges}
+                                </div>
+                            </div>
+                            <div class="accordion-body">
+                                ${buildTeamEntrySections(dayData.entries, empKey, dateKey)}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function buildTeamEntrySections(entries, empKey, dateKey) {
+            const pendingEntries = entries.filter(e => e.status === 'submitted' || e.status === 'resubmitted');
+            const approvedEntries = entries.filter(e => e.status === 'approved');
+            const rejectedEntries = entries.filter(e => e.status === 'rejected');
+            let html = '';
+
+            if (pendingEntries.length > 0) {
+                const pendingTotal = pendingEntries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header pending"><i class="fas fa-paper-plane"></i> Submitted Time Entries (${pendingEntries.length}) — ${formatTime(pendingTotal)} pending</div>
+                    <table class="records-table"><thead><tr>
+                        <th>Time</th><th>Submitted</th><th>Type</th><th>Activity</th><th>Approve Time</th><th style="width:150px;">Action</th>
+                    </tr></thead><tbody>
+                    ${pendingEntries.map(entry => {
+                        const hrs = Math.floor(entry.duration_minutes / 60);
+                        const mins = entry.duration_minutes % 60;
+                        return `<tr>
+                        <td>${entry.start_time.substring(0,5)} - ${entry.end_time.substring(0,5)}</td>
+                        <td><span class="record-duration">${formatTime(entry.duration_minutes)}</span></td>
+                        <td><span class="record-type ${entry.entry_type}">${entry.entry_type.toUpperCase()}</span></td>
+                        <td>${entry.task_title || entry.kra_title || entry.lead_name || entry.journey_name || entry.comments || '-'}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:2px;">
+                                <input type="number" id="team-appr-hrs-${entry.id}" value="${hrs}" min="0" max="23" style="width:40px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;text-align:center;" title="Hours">
+                                <span style="font-size:11px;color:#6b7280;">h</span>
+                                <input type="number" id="team-appr-mins-${entry.id}" value="${mins}" min="0" max="59" style="width:40px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;text-align:center;" title="Minutes">
+                                <span style="font-size:11px;color:#6b7280;">m</span>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="entry-action-btn approve" onclick="approveTeamEntry(${entry.id})"><i class="fas fa-check me-1"></i>Approve</button>
+                            <button class="entry-action-btn reject" onclick="rejectTeamEntry(${entry.id})"><i class="fas fa-times me-1"></i>Reject</button>
+                        </td>
+                    </tr>`;
+                    }).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (approvedEntries.length > 0) {
+                const approvedTotal = approvedEntries.reduce((s, e) => s + (e.approved_minutes || e.duration_minutes || 0), 0);
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header approved-hdr"><i class="fas fa-check-double"></i> Approved Time Entries (${approvedEntries.length}) — ${formatTime(approvedTotal)} approved</div>
+                    <table class="records-table"><thead><tr>
+                        <th>Time</th><th>Submitted</th><th>Approved Time</th><th>Type</th><th>Activity</th><th>Approved On</th>
+                    </tr></thead><tbody>
+                    ${approvedEntries.map(entry => {
+                        const apprMin = entry.approved_minutes != null ? entry.approved_minutes : entry.duration_minutes;
+                        const timeDiff = apprMin !== entry.duration_minutes;
+                        return `<tr>
+                        <td>${entry.start_time.substring(0,5)} - ${entry.end_time.substring(0,5)}</td>
+                        <td><span class="record-duration">${formatTime(entry.duration_minutes)}</span></td>
+                        <td><span style="font-weight:700;color:#065f46;">${formatTime(apprMin)}</span>${timeDiff ? ' <span style="font-size:10px;color:#dc2626;" title="Reduced from submitted time">&#9660;</span>' : ''}</td>
+                        <td><span class="record-type ${entry.entry_type}">${entry.entry_type.toUpperCase()}</span></td>
+                        <td>${entry.task_title || entry.kra_title || entry.lead_name || entry.journey_name || entry.comments || '-'}</td>
+                        <td style="font-size:11px;color:#065f46;">${entry.approved_at ? new Date(entry.approved_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+                    </tr>`;
+                    }).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (rejectedEntries.length > 0) {
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header" style="color:#991b1b;background:#fef2f2;border-left:3px solid #ef4444;"><i class="fas fa-times-circle"></i> Rejected Time Entries (${rejectedEntries.length})</div>
+                    <table class="records-table"><thead><tr>
+                        <th>Time</th><th>Submitted</th><th>Type</th><th>Activity</th><th>Reason</th><th>Rejected On</th>
+                    </tr></thead><tbody>
+                    ${rejectedEntries.map(entry => `<tr>
+                        <td>${entry.start_time.substring(0,5)} - ${entry.end_time.substring(0,5)}</td>
+                        <td><span class="record-duration">${formatTime(entry.duration_minutes)}</span></td>
+                        <td><span class="record-type ${entry.entry_type}">${entry.entry_type.toUpperCase()}</span></td>
+                        <td>${entry.task_title || entry.kra_title || entry.lead_name || entry.journey_name || entry.comments || '-'}</td>
+                        <td style="color:#991b1b;font-size:12px;">${entry.rejection_reason || '-'}</td>
+                        <td style="font-size:11px;color:#991b1b;">${entry.rejected_at ? new Date(entry.rejected_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+                    </tr>`).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (pendingEntries.length === 0 && approvedEntries.length === 0 && rejectedEntries.length === 0) {
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header custom-hdr"><i class="fas fa-clock"></i> Time Entries</div>
+                    <div style="text-align:center;padding:12px;color:#9ca3af;font-size:12px;">No time entries for this date</div></div>`;
+            }
+
+            return html;
+        }
+
+        async function approveTeamEntry(entryId) {
+            const hrsEl = document.getElementById(`team-appr-hrs-${entryId}`);
+            const minsEl = document.getElementById(`team-appr-mins-${entryId}`);
+            const approvedMinutes = (parseInt(hrsEl?.value || '0') * 60) + parseInt(minsEl?.value || '0');
+            if (approvedMinutes <= 0) {
+                alert('Please enter the approved time (must be greater than 0)');
+                return;
+            }
+            try {
+                const response = await staffFetch(`${API_BASE}/${entryId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'approve', approved_minutes: approvedMinutes })
+                });
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to approve entry');
+                    return;
+                }
+                loadTeamEntries();
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                alert('Failed to approve entry');
+            }
+        }
+
+        async function rejectTeamEntry(entryId) {
+            const reason = prompt('Rejection reason:');
+            if (reason === null) return;
+            try {
+                const response = await staffFetch(`${API_BASE}/${entryId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'reject', rejection_reason: reason || 'Rejected by supervisor' })
+                });
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to reject entry');
+                    return;
+                }
+                loadTeamEntries();
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                alert('Failed to reject entry');
+            }
+        }
+
+        function toggleTeamEmployee(empKey) {
+            const el = document.getElementById(`team-emp-${empKey}`);
+            if (el) el.classList.toggle('expanded');
+        }
+
+        function toggleTeamDay(empKey, dateKey) {
+            const el = document.getElementById(`team-day-${empKey}-${dateKey}`);
+            if (el) el.classList.toggle('expanded');
+        }
+    </script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('My Timesheet', 'fas fa-clock');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+        });
+    </script>
+    </div>
+</body>
+</html>

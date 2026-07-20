@@ -1,0 +1,639 @@
+<div class="container-fluid mt-4">
+        <div class="mb-3 text-end">
+            <a href="/finance/dashboard" class="btn btn-primary btn-sm">
+                <i class="fas fa-home me-2"></i>Go to Dashboard
+            </a>
+        </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-truck text-warning"></i> Awards and Bonanza Tracking</h2>
+            <p class="text-muted mb-0">Track delivery status and process approved awards</p>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-start border-primary border-4">
+                <div class="card-body">
+                    <h6 class="text-muted">Pending Payment</h6>
+                    <h3 id="countPending">-</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-start border-success border-4">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Amount Pending</h6>
+                    <h3 id="totalAmount">₹0</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-start border-info border-4">
+                <div class="card-body">
+                    <h6 class="text-muted">Processed Today</h6>
+                    <h3 id="countProcessed">-</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-start border-warning border-4">
+                <div class="card-body">
+                    <h6 class="text-muted">Company Earnings</h6>
+                    <h3 id="companyEarnings">₹0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Handling Charges Tracker -->
+    <div class="card mb-4 border-start border-danger border-4">
+        <div class="card-header bg-danger text-white">
+            <i class="fas fa-receipt"></i> Handling Charges & GST Tracker
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <small class="text-muted d-block">Total Handling Charges</small>
+                        <h4 class="text-primary mb-0" id="totalHandlingCharges">₹0</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <small class="text-muted d-block">Total GST (18%)</small>
+                        <h4 class="text-info mb-0" id="totalGST">₹0</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-success text-white rounded">
+                        <small class="d-block">Grand Total</small>
+                        <h4 class="mb-0" id="grandTotalHandling">₹0</h4>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center p-3 bg-light rounded">
+                        <small class="text-muted d-block">Total Transactions</small>
+                        <h4 class="text-secondary mb-0" id="totalTransactionsHandling">0</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-header"><i class="fas fa-filter"></i> Filters</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Award Type</label>
+                    <select class="form-select" id="filterType" onchange="applyFilters()">
+                        <option value="">All Types</option>
+                        <option value="MNR 2.0 Bonanza">MNR 2.0 Bonanza</option>
+                        <option value="Direct Facilitation Award">Direct Award</option>
+                        <option value="Group Performance Recognition Award">Matching Award</option>
+                        <option value="Bonanza (Legacy)">Legacy Bonanza</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Delivery Status</label>
+                    <select class="form-select" id="filterStatus" onchange="applyFilters()">
+                        <option value="">All Status</option>
+                        <option value="Pending Dispatch">Pending Dispatch</option>
+                        <option value="Dispatched">Dispatched</option>
+                        <option value="Delivered">Delivered</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Search Item/User</label>
+                    <input type="text" class="form-control" id="filterSearch" placeholder="Search..." oninput="applyFilters()">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <button class="btn btn-secondary w-100" onclick="clearFilters()">
+                        <i class="fas fa-times"></i> Clear Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Awards Table -->
+    <div class="card">
+        <div class="card-header"><i class="fas fa-receipt"></i> Awards Ready for Payment</div>
+        <div class="card-body">
+            <div id="loading" class="text-center py-5">
+                <div class="spinner-border text-warning"></div>
+                <p class="mt-3">Loading awards...</p>
+            </div>
+            <div id="awards" style="display:none;">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-sm">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>User ID</th>
+                                <th>User Name</th>
+                                <th>Type</th>
+                                <th>Item/Award</th>
+                                <th>Bonanza</th>
+                                <th>Delivery Status</th>
+                                <th>Dispatch Date</th>
+                                <th>Received Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="awardsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Processing Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-calculator"></i> Process Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="awardTypeIndicator" class="alert mb-3" style="display:none;"></div>
+                
+                <h6>Cost Details</h6>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Budgeted Amount</label>
+                        <input type="number" class="form-control" id="budgetedAmount" readonly>
+                        <small class="text-muted">Original budgeted cost</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Actual Cost Paid</label>
+                        <input type="number" class="form-control" id="actualCost" step="0.01" required>
+                        <small class="text-muted">Actual amount paid</small>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Cost Variance (Budgeted - Actual)</label>
+                        <input type="number" class="form-control" id="costVariance" readonly>
+                        <small class="text-muted">Positive = savings, Negative = overspend</small>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Variance Reason</label>
+                        <textarea class="form-control" id="varianceReason" rows="2" placeholder="Explain any cost difference..."></textarea>
+                    </div>
+                </div>
+                
+                <!-- Physical Award Fields (Tax & Transport) -->
+                <!-- Handling Charges Field (for all awards) -->
+                <hr>
+                <h6><i class="fas fa-hand-holding-usd"></i> Company Handling Charges</h6>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-12">
+                        <label class="form-label">Handling Charges</label>
+                        <input type="number" class="form-control" id="handlingChargesInput" step="0.01" value="0">
+                        <small class="text-muted">Company handling charges (18% GST will be auto-calculated)</small>
+                    </div>
+                </div>
+                
+                <div id="physicalAwardFields" style="display:none;">
+                    <hr>
+                    <h6><i class="fas fa-gift"></i> Charges Collected from Winner</h6>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Tax Amount</label>
+                            <input type="number" class="form-control" id="taxAmount" step="0.01" value="0">
+                            <small class="text-muted">GST/Tax collected</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Transport Charges</label>
+                            <input type="number" class="form-control" id="transportCharges" step="0.01" value="0">
+                            <small class="text-muted">Delivery charges</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr>
+                <h6>Payment Breakdown</h6>
+                <div id="physicalBreakdown" style="display:none;">
+                    <table class="table table-sm">
+                        <tr><td>Item Cost:</td><td class="text-end">₹<span id="physicalCost">0</span></td></tr>
+                        <tr class="table-warning"><td colspan="2"><strong>Company Handling Charges</strong></td></tr>
+                        <tr><td class="ps-3">Handling Charges:</td><td class="text-end">₹<span id="physicalHandlingCharges">0</span></td></tr>
+                        <tr><td class="ps-3">GST (18% on Handling):</td><td class="text-end text-info">₹<span id="physicalHandlingGST">0</span></td></tr>
+                        <tr class="table-info"><td colspan="2"><strong>Charges Collected from Winner</strong></td></tr>
+                        <tr><td class="ps-3">Tax Collected from Winner:</td><td class="text-end text-success">+₹<span id="physicalTax">0</span></td></tr>
+                        <tr><td class="ps-3">Transport Collected from Winner:</td><td class="text-end text-success">+₹<span id="physicalTransport">0</span></td></tr>
+                        <tr><td>Cost Variance (Savings):</td><td class="text-end text-primary">₹<span id="physicalVariance">0</span></td></tr>
+                        <tr class="table-success fw-bold"><td>Total Company Earnings:</td><td class="text-end">₹<span id="physicalEarnings">0</span></td></tr>
+                    </table>
+                </div>
+                
+                <div id="cashBreakdown" style="display:none;">
+                    <table class="table table-sm">
+                        <tr><td>Amount to User:</td><td class="text-end fw-bold text-success">₹<span id="netAmount">0</span></td></tr>
+                        <tr class="table-warning"><td colspan="2"><strong>Company Revenue</strong></td></tr>
+                        <tr><td class="ps-3">Handling Charges:</td><td class="text-end">₹<span id="handlingCharges">0</span></td></tr>
+                        <tr><td class="ps-3">GST (18% on Handling):</td><td class="text-end">₹<span id="handlingGST">0</span></td></tr>
+                        <tr class="table-success fw-bold"><td>Total Company Revenue:</td><td class="text-end">₹<span id="modalCompanyEarnings">0</span></td></tr>
+                    </table>
+                </div>
+                
+                <input type="hidden" id="processingType">
+                <input type="hidden" id="processingId">
+                <input type="hidden" id="isPhysicalAward" value="false">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="confirmPayment()">
+                    <i class="fas fa-check-circle"></i> Process Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tracking Update Modal -->
+<div class="modal fade" id="trackingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title"><i class="fas fa-truck"></i> Update Tracking</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Dispatch Date</label>
+                    <input type="date" class="form-control" id="trackingDispatchDate">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Received Date</label>
+                    <input type="date" class="form-control" id="trackingReceivedDate">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Delivery Notes</label>
+                    <textarea class="form-control" id="trackingNotes" rows="3" placeholder="Add notes about courier, tracking ID, etc."></textarea>
+                </div>
+                <input type="hidden" id="trackingClaimId">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-info" onclick="saveTracking()">
+                    <i class="fas fa-save"></i> Save Tracking
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let allAwards = [];  // Store all awards for filtering
+
+async function loadAwards() {
+    try {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('awards').style.display = 'none';
+        
+        const response = await fetch(`/api/v1/awards/finance/awards/pending`, {
+            headers: { 'Authorization': `Bearer ${window.sessionToken}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load awards');
+        
+        const data = await response.json();
+        allAwards = data.awards || [];  // Store for filtering
+        applyFilters();  // Render with filters
+        updateSummary(data.stats);
+        
+        // Load handling charges tracker
+        loadHandlingChargesTracker();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error loading awards: ' + error.message);
+    }
+}
+
+async function loadHandlingChargesTracker() {
+    try {
+        const response = await fetch(`/api/v1/awards/finance/awards/handling-charges-tracker`, {
+            headers: { 'Authorization': `Bearer ${window.sessionToken}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load handling charges tracker');
+        
+        const data = await response.json();
+        
+        if (data.success && data.summary) {
+            document.getElementById('totalHandlingCharges').textContent = `₹${Number(data.summary.total_handling_charges || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('totalGST').textContent = `₹${Number(data.summary.total_gst || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('grandTotalHandling').textContent = `₹${Number(data.summary.grand_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('totalTransactionsHandling').textContent = data.summary.total_transactions || 0;
+        }
+    } catch (error) {
+        console.error('Error loading handling charges tracker:', error);
+        // Silent fail - don't alert user
+    }
+}
+
+function applyFilters() {
+    const filterType = document.getElementById('filterType').value;
+    const filterStatus = document.getElementById('filterStatus').value;
+    const filterSearch = document.getElementById('filterSearch').value.toLowerCase();
+    
+    const filtered = allAwards.filter(award => {
+        if (filterType && award.award_type !== filterType) return false;
+        if (filterStatus && award.delivery_status !== filterStatus) return false;
+        if (filterSearch) {
+            const searchStr = `${award.user_id} ${award.user_name} ${award.tier_name || ''}`.toLowerCase();
+            if (!searchStr.includes(filterSearch)) return false;
+        }
+        return true;
+    });
+    
+    renderAwards(filtered);
+}
+
+function clearFilters() {
+    document.getElementById('filterType').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterSearch').value = '';
+    applyFilters();
+}
+
+function renderAwards(awards) {
+    const tbody = document.getElementById('awardsBody');
+    tbody.innerHTML = '';
+    
+    if (!awards || awards.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-3">No awards found</td></tr>';
+    } else {
+        awards.forEach(award => {
+            const statusBadge = getStatusBadge(award.delivery_status);
+            const dispatchDate = award.dispatch_date ? new Date(award.dispatch_date).toLocaleDateString('en-IN') : '-';
+            const receivedDate = award.received_date ? new Date(award.received_date).toLocaleDateString('en-IN') : '-';
+            
+            const row = `
+                <tr>
+                    <td><span class="badge bg-secondary">${award.user_id || 'N/A'}</span></td>
+                    <td>${award.user_name || 'Unknown'}</td>
+                    <td><span class="badge bg-primary">${award.award_type}</span></td>
+                    <td><strong>${award.tier_name || 'N/A'}</strong></td>
+                    <td>${award.bonanza_name || '-'}</td>
+                    <td>${statusBadge}</td>
+                    <td>${dispatchDate}</td>
+                    <td>${receivedDate}</td>
+                    <td>
+                        ${award.award_type === 'Bonanza' || award.award_type === 'MNR 2.0 Bonanza' ? `
+                            <button class="btn btn-sm btn-success me-1" onclick="openPaymentModal('bonanza', ${award.id}, ${award.budgeted_amount || 0}, ${award.is_monetary !== false})">
+                                <i class="fas fa-credit-card"></i> Process
+                            </button>
+                            <button class="btn btn-sm btn-info" onclick="openTrackingModal(${award.id}, '${dispatchDate}', '${receivedDate}', '${award.delivery_notes || ''}')">
+                                <i class="fas fa-truck"></i> Track
+                            </button>
+                        ` : `
+                            <button class="btn btn-sm btn-success" onclick="openPaymentModal(mapAwardTypeToAPI('${award.award_type}'), ${award.id}, ${award.budgeted_amount || 0}, ${award.is_monetary !== false})">
+                                <i class="fas fa-credit-card"></i> Process
+                            </button>
+                        `}
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    }
+    
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('awards').style.display = 'block';
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'Pending Dispatch': '<span class="badge bg-warning text-dark">Pending Dispatch</span>',
+        'Dispatched': '<span class="badge bg-info">Dispatched</span>',
+        'Delivered': '<span class="badge bg-success">Delivered</span>'
+    };
+    return badges[status] || '<span class="badge bg-secondary">N/A</span>';
+}
+
+function mapAwardTypeToAPI(awardType) {
+    const typeMap = {
+        'Direct Facilitation Award': 'direct',
+        'Group Performance Recognition Award': 'matching',
+        'Bonanza': 'bonanza',
+        'MNR 2.0 Bonanza': 'bonanza'
+    };
+    
+    const mappedType = typeMap[awardType];
+    if (!mappedType) {
+        console.error(`⚠️ Unmapped award type: "${awardType}". Please update mapAwardTypeToAPI function.`);
+        return null;
+    }
+    return mappedType;
+}
+
+function updateSummary(stats) {
+    document.getElementById('countPending').textContent = stats?.pending || 0;
+    document.getElementById('totalAmount').textContent = `₹${stats?.total_amount || 0}`;
+    document.getElementById('countProcessed').textContent = stats?.processed_today || 0;
+    document.getElementById('companyEarnings').textContent = `₹${stats?.company_earnings || 0}`;
+}
+
+function openPaymentModal(type, id, amount, isCash = true) {
+    document.getElementById('processingType').value = type;
+    document.getElementById('processingId').value = id;
+    document.getElementById('budgetedAmount').value = amount || 0;
+    document.getElementById('actualCost').value = amount || 0;
+    document.getElementById('isPhysicalAward').value = !isCash;
+    
+    // Reset tax and transport fields
+    document.getElementById('taxAmount').value = 0;
+    document.getElementById('transportCharges').value = 0;
+    
+    // Show/hide appropriate sections
+    const isPhysical = !isCash;
+    const indicator = document.getElementById('awardTypeIndicator');
+    
+    if (isPhysical) {
+        // Physical Award UI
+        indicator.className = 'alert alert-info mb-3';
+        indicator.innerHTML = '<i class="fas fa-gift"></i> <strong>Physical Award:</strong> No admin/TDS deductions. You can collect tax and transport charges from the winner.';
+        indicator.style.display = 'block';
+        document.getElementById('physicalAwardFields').style.display = 'block';
+        document.getElementById('physicalBreakdown').style.display = 'block';
+        document.getElementById('cashBreakdown').style.display = 'none';
+    } else {
+        // Cash Award UI
+        indicator.className = 'alert alert-success mb-3';
+        indicator.innerHTML = '<i class="fas fa-money-bill-wave"></i> <strong>Cash Award:</strong> Full amount goes to user. Add handling charges for company revenue.';
+        indicator.style.display = 'block';
+        document.getElementById('physicalAwardFields').style.display = 'none';
+        document.getElementById('physicalBreakdown').style.display = 'none';
+        document.getElementById('cashBreakdown').style.display = 'block';
+    }
+    
+    // Reset handling charges
+    document.getElementById('handlingChargesInput').value = 0;
+    
+    updateCalculations();
+    new bootstrap.Modal(document.getElementById('paymentModal')).show();
+}
+
+// Add event listeners
+document.getElementById('actualCost')?.addEventListener('input', updateCalculations);
+document.getElementById('handlingChargesInput')?.addEventListener('input', updateCalculations);
+document.getElementById('taxAmount')?.addEventListener('input', updateCalculations);
+document.getElementById('transportCharges')?.addEventListener('input', updateCalculations);
+
+function updateCalculations() {
+    const budgeted = parseFloat(document.getElementById('budgetedAmount').value) || 0;
+    const actual = parseFloat(document.getElementById('actualCost').value) || 0;
+    const handlingCharges = parseFloat(document.getElementById('handlingChargesInput').value) || 0;
+    const isPhysical = document.getElementById('isPhysicalAward').value === 'true';
+    
+    // Calculate 18% GST on handling charges
+    const handlingGST = handlingCharges * 0.18;
+    
+    // Fix negative variance when budgeted is 0 or NULL
+    const variance = budgeted > 0 ? (budgeted - actual) : 0;
+    
+    document.getElementById('costVariance').value = variance.toFixed(0);
+    
+    if (isPhysical) {
+        // PHYSICAL AWARD CALCULATION
+        const tax = parseFloat(document.getElementById('taxAmount').value) || 0;
+        const transport = parseFloat(document.getElementById('transportCharges').value) || 0;
+        // Company earnings = handling charges + GST + tax/transport from winner + cost savings
+        const companyEarnings = handlingCharges + handlingGST + tax + transport + variance;
+        
+        document.getElementById('physicalCost').textContent = actual.toFixed(0);
+        document.getElementById('physicalHandlingCharges').textContent = handlingCharges.toFixed(0);
+        document.getElementById('physicalHandlingGST').textContent = handlingGST.toFixed(0);
+        document.getElementById('physicalTax').textContent = tax.toFixed(0);
+        document.getElementById('physicalTransport').textContent = transport.toFixed(0);
+        document.getElementById('physicalVariance').textContent = variance.toFixed(0);
+        document.getElementById('physicalEarnings').textContent = Math.max(0, companyEarnings).toFixed(0);
+    } else {
+        // CASH AWARD CALCULATION (NO deductions - full amount to user)
+        const net = actual;  // Full amount goes to user
+        // Company earnings = handling charges + cost savings only
+        const companyEarnings = handlingCharges + variance;
+        
+        document.getElementById('netAmount').textContent = net.toFixed(0);
+        document.getElementById('handlingCharges').textContent = handlingCharges.toFixed(0);
+        document.getElementById('handlingGST').textContent = handlingGST.toFixed(0);
+        document.getElementById('modalCompanyEarnings').textContent = Math.max(0, companyEarnings).toFixed(0);
+    }
+}
+
+async function confirmPayment() {
+    const type = document.getElementById('processingType').value;
+    const id = document.getElementById('processingId').value;
+    const actual_cost = parseFloat(document.getElementById('actualCost').value);
+    const variance_reason = document.getElementById('varianceReason').value;
+    const handlingCharges = parseFloat(document.getElementById('handlingChargesInput').value) || 0;
+    const isPhysical = document.getElementById('isPhysicalAward').value === 'true';
+    
+    // Build request payload
+    const payload = {
+        actual_cost: actual_cost,
+        cost_variance_reason: variance_reason,
+        handling_charges: handlingCharges
+    };
+    
+    // Add tax and transport for physical awards
+    if (isPhysical) {
+        payload.tax_amount = parseFloat(document.getElementById('taxAmount').value) || 0;
+        payload.transport_charges = parseFloat(document.getElementById('transportCharges').value) || 0;
+    }
+    
+    try {
+        const response = await fetch(`/api/v1/awards/finance/awards/${type}/${id}/process`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${window.sessionToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('❌ Payment processing error:', errorData);
+            throw new Error(errorData.detail || 'Payment processing failed');
+        }
+        
+        const result = await response.json();
+        alert(result.message || 'Payment processed successfully');
+        bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+        loadAwards();
+    } catch (error) {
+        console.error('❌ Payment processing exception:', error);
+        alert('Error: ' + error.message);
+    }
+}
+
+function openTrackingModal(claimId, dispatchDate, receivedDate, notes) {
+    document.getElementById('trackingClaimId').value = claimId;
+    
+    // Convert displayed date to YYYY-MM-DD format for input
+    if (dispatchDate && dispatchDate !== '-') {
+        const parts = dispatchDate.split('/');
+        if (parts.length === 3) {
+            document.getElementById('trackingDispatchDate').value = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        }
+    } else {
+        document.getElementById('trackingDispatchDate').value = '';
+    }
+    
+    if (receivedDate && receivedDate !== '-') {
+        const parts = receivedDate.split('/');
+        if (parts.length === 3) {
+            document.getElementById('trackingReceivedDate').value = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+        }
+    } else {
+        document.getElementById('trackingReceivedDate').value = '';
+    }
+    
+    document.getElementById('trackingNotes').value = notes || '';
+    
+    new bootstrap.Modal(document.getElementById('trackingModal')).show();
+}
+
+async function saveTracking() {
+    const claimId = document.getElementById('trackingClaimId').value;
+    const dispatchDate = document.getElementById('trackingDispatchDate').value;
+    const receivedDate = document.getElementById('trackingReceivedDate').value;
+    const notes = document.getElementById('trackingNotes').value;
+    
+    try {
+        const response = await fetch(`/api/v1/awards/finance/bonanza/${claimId}/tracking`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${window.sessionToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                dispatch_date: dispatchDate || null,
+                received_date: receivedDate || null,
+                delivery_notes: notes || null
+            })
+        });
+        
+        if (!response.ok) throw new Error('Failed to update tracking');
+        
+        const data = await response.json();
+        alert('✅ Tracking details updated successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('trackingModal')).hide();
+        loadAwards();  // Reload to show updated tracking
+    } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error updating tracking: ' + error.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadAwards);
+</script>

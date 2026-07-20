@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connections Gallery - MNR Business Access Program Reference System</title>
+    <style>
+        .tree-container {
+            padding: 30px 20px;
+            overflow-x: auto;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 0 0 12px 12px;
+        }
+        
+        /* Tree wrapper for centering */
+        .tree-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 700px;
+        }
+        
+        /* Level containers */
+        .level-root { margin-bottom: 0; }
+        .level-children {
+            display: flex;
+            justify-content: center;
+            gap: 200px;
+            margin-top: 0;
+        }
+        .level-grandchildren {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            margin-top: 0;
+        }
+        .grandchild-group { display: flex; gap: 30px; }
+        .grandchild-spacer { width: 120px; }
+        
+        /* Connectors */
+        .connector-root-down {
+            width: 4px;
+            height: 40px;
+            background: linear-gradient(to bottom, #10b981, #059669);
+            margin: 0 auto;
+            border-radius: 2px;
+        }
+        .connector-split {
+            width: 360px;
+            height: 4px;
+            background: linear-gradient(to right, #9333ea 0%, #10b981 50%, #ec4899 100%);
+            margin: 0 auto;
+            border-radius: 2px;
+            position: relative;
+        }
+        .connector-split::before,
+        .connector-split::after {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 40px;
+            top: 4px;
+            border-radius: 2px;
+        }
+        .connector-split::before { left: 0; background: linear-gradient(to bottom, #9333ea, #7c3aed); }
+        .connector-split::after { right: 0; background: linear-gradient(to bottom, #ec4899, #db2777); }
+        
+        /* Level 1 to Level 2 connectors */
+        .level-1-connectors {
+            display: flex;
+            justify-content: center;
+            gap: 200px;
+            margin-top: 25px;
+        }
+        .branch-connector {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .connector-down-small {
+            width: 4px;
+            height: 30px;
+            border-radius: 2px;
+        }
+        .connector-down-small.left { background: linear-gradient(to bottom, #9333ea, #7c3aed); }
+        .connector-down-small.right { background: linear-gradient(to bottom, #ec4899, #db2777); }
+        .connector-branch-split {
+            width: 150px;
+            height: 4px;
+            border-radius: 2px;
+            position: relative;
+        }
+        .connector-branch-split.left { background: linear-gradient(to right, #a855f7, #9333ea, #a855f7); }
+        .connector-branch-split.right { background: linear-gradient(to right, #f472b6, #ec4899, #f472b6); }
+        .connector-branch-split::before,
+        .connector-branch-split::after {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 30px;
+            top: 4px;
+            border-radius: 2px;
+        }
+        .connector-branch-split.left::before,
+        .connector-branch-split.left::after { background: #9333ea; }
+        .connector-branch-split.right::before,
+        .connector-branch-split.right::after { background: #ec4899; }
+        .connector-branch-split::before { left: 0; }
+        .connector-branch-split::after { right: 0; }
+        
+        /* Node styles */
+        .tree-node {
+            display: inline-block;
+            text-align: center;
+            padding: 18px 16px;
+            border: 3px solid;
+            border-radius: 14px;
+            background: white;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+            min-width: 160px;
+            max-width: 180px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tree-node:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .tree-node.active {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+        }
+        .tree-node.inactive {
+            background: #f3f4f6;
+        }
+        .tree-node.root { border-color: #10b981; box-shadow: 0 6px 25px rgba(16,185,129,0.3); }
+        .tree-node.left { border-color: #9333ea; box-shadow: 0 6px 20px rgba(147,51,234,0.25); }
+        .tree-node.right { border-color: #ec4899; box-shadow: 0 6px 20px rgba(236,72,153,0.25); }
+        
+        .node-name {
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+        .tree-node.active .node-name { color: white; }
+        .tree-node:not(.active) .node-name { color: #1f2937; }
+        
+        .node-id { font-size: 12px; margin-bottom: 8px; font-weight: 600; }
+        .tree-node.root .node-id { color: #059669; }
+        .tree-node.left .node-id { color: #9333ea; }
+        .tree-node.right .node-id { color: #ec4899; }
+        .tree-node.active .node-id { color: rgba(255,255,255,0.9); }
+        
+        .node-package {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            margin-top: 8px;
+        }
+        .tree-node.root .node-package { background: #059669; }
+        .tree-node.left .node-package { background: #9333ea; }
+        .tree-node.right .node-package { background: #ec4899; }
+        
+        .node-position {
+            margin-top: 6px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tree-node.root .node-position { color: #059669; }
+        .tree-node.left .node-position { color: #9333ea; }
+        .tree-node.right .node-position { color: #ec4899; }
+        .tree-node.active .node-position { color: rgba(255,255,255,0.8); }
+        
+        /* Empty slot */
+        .empty-slot {
+            display: inline-block;
+            min-width: 160px;
+            max-width: 180px;
+            border: 3px dashed #9ca3af;
+            border-radius: 14px;
+            padding: 24px 16px;
+            text-align: center;
+            background: rgba(156, 163, 175, 0.08);
+        }
+        .empty-slot.left { border-color: rgba(147,51,234,0.4); }
+        .empty-slot.right { border-color: rgba(236,72,153,0.4); }
+        .empty-slot .icon { font-size: 24px; margin-bottom: 6px; color: #9ca3af; }
+        .empty-slot .label { font-size: 11px; color: #9ca3af; }
+        .empty-slot .position { font-size: 10px; font-weight: 700; margin-top: 4px; }
+        .empty-slot.left .position { color: #a855f7; }
+        .empty-slot.right .position { color: #f472b6; }
+        
+        /* Legend */
+        .tree-legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            padding: 16px 24px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .legend-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid;
+        }
+        .legend-dot.root { background: #10b981; border-color: #059669; }
+        .legend-dot.left { background: #9333ea; border-color: #7c3aed; }
+        .legend-dot.right { background: #ec4899; border-color: #db2777; }
+    </style>
+<!-- [DC-T33] VGK4U audience tabs (auto-mount + jQuery audience injector) --><script src="/audience-tabs.js"></script></head>
+<body>
+    <div class="container-fluid mt-4">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>🌳 Connections Gallery</h2>
+                <p class="text-muted mb-0">Visual team structure (parent-wise)</p>
+            </div>
+        <a href="/admin/dashboard" class="btn btn-primary btn-sm">
+                <i class="fas fa-home me-2"></i>Go to Dashboard
+            </a>
+            </div>
+
+                <!-- User Filter Component -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-filter"></i> Filter by User ID
+            </div>
+            <div class="card-body">
+                <form id="userFilterForm" class="row g-3">
+                    <div class="col-md-8">
+                        <label for="userIdInput" class="form-label">Enter User ID (MNR ID)</label>
+                        <input type="text" class="form-control" id="userIdInput" 
+                               placeholder="e.g., MNR182364369 or MNR1800143" 
+                               pattern="MNR[0-9]{7,9}" 
+                               title="Enter a valid MNR ID (10 or 12 digits: MNR1800143 or MNR182364369)">
+                        <div class="form-text">Leave empty to view your own data</div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" id="applyFilterBtn" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Apply Filter
+                        </button>
+                    </div>
+                </form>
+                <div id="filterInfo" class="mt-3" style="display: none;">
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i> 
+                        Showing data for: <strong id="filteredUserId"></strong>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="clearUserFilter()">
+                            <i class="fas fa-times"></i> Clear Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-5">
+            <div class="spinner-border text-info" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading team structure...</p>
+        </div>
+
+        <!-- Tree View -->
+        <div id="treeView" style="display: none;">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-project-diagram"></i> Binary Tree Structure
+                        <span id="totalMembers" class="badge bg-light text-dark float-end">0 members</span>
+                    </h5>
+                </div>
+                <div class="card-body tree-container">
+                    <div id="treeContent">
+                        <!-- Tree populated via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Data State -->
+        <div id="noDataState" style="display: none;" class="text-center py-5">
+            <i class="fas fa-project-diagram fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No Team Structure Found</h4>
+            <p class="text-muted">This user has no downline members yet.</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" style="display: none;" class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorMessage">An error occurred while loading data.</span>
+        </div>
+    </div>
+
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        // Get URL parameters and make filteredUserId globally accessible
+        const urlParams = new URLSearchParams(window.location.search);
+        window.filteredUserId = urlParams.get('user_id');
+
+        // Initialize filter if user_id is in URL
+        if (window.filteredUserId) {
+            const userInput = document.getElementById('userIdInput');
+            const filterInfo = document.getElementById('filterInfo');
+            const filteredUserIdSpan = document.getElementById('filteredUserId');
+            
+            if (userInput) userInput.value = window.filteredUserId;
+            if (filteredUserIdSpan) filteredUserIdSpan.textContent = window.filteredUserId;
+            if (filterInfo) filterInfo.style.display = 'block';
+        }
+
+        // Handle filter form submission
+        document.getElementById('userFilterForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const userId = normalizeAdminUserId(document.getElementById('userIdInput').value);
+            
+            if (userId) {
+                // Validate format (10 or 12 digits: MNR + 7-9 digits)
+                const mnrIdPattern = /^MNR[0-9]{7,9}$/;
+                if (!mnrIdPattern.test(userId)) {
+                    alert('Please enter a valid MNR ID (10 or 12 digits: MNR1800143 or MNR182364369)');
+                    return;
+                }
+                
+                // Update URL with user_id parameter
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('user_id', userId);
+                window.location.href = currentUrl.toString();
+            } else {
+                // Remove user_id parameter if empty
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete('user_id');
+                window.location.href = currentUrl.toString();
+            }
+        });
+
+        // Clear filter function
+        function clearUserFilter() {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.delete('user_id');
+            window.location.href = currentUrl.toString();
+        }
+
+        // Fetch binary tree data (3 levels)
+        async function loadTreeData() {
+            const userId = window.filteredUserId || window.currentUserId;
+            
+            if (!userId) {
+                showError('User ID not found');
+                return;
+            }
+
+            try {
+                showLoading();
+                
+                const response = await fetch(`${window.BACKEND_URL}/users/team/binary-tree?user_id=${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${window.sessionToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                // API returns {data: {root, left_child, right_child, ...}}
+                if (result.data && result.data.root) {
+                    displayBinaryTree(result.data);
+                } else {
+                    showNoData();
+                }
+            } catch (error) {
+                console.error('Error loading tree:', error);
+                showError(error.message);
+            }
+        }
+
+        function displayBinaryTree(treeData) {
+            const treeContent = document.getElementById('treeContent');
+            
+            // Count total nodes in tree (root + level 1 + level 2)
+            let totalCount = 0;
+            if (treeData.root) totalCount++;
+            if (treeData.left_child) totalCount++;
+            if (treeData.right_child) totalCount++;
+            if (treeData.left_child?.left_child) totalCount++;
+            if (treeData.left_child?.right_child) totalCount++;
+            if (treeData.right_child?.left_child) totalCount++;
+            if (treeData.right_child?.right_child) totalCount++;
+            
+            document.getElementById('totalMembers').textContent = `${totalCount} members`;
+
+            const hasChildren = treeData.left_child || treeData.right_child;
+            const hasGrandchildren = treeData.left_child?.left_child || treeData.left_child?.right_child || 
+                                     treeData.right_child?.left_child || treeData.right_child?.right_child;
+
+            // Render 3-level binary tree with proper connections
+            let html = `
+                <div class="tree-wrapper">
+                    <!-- LEVEL 0: ROOT -->
+                    <div class="level-root">
+                        ${renderNode(treeData.root, 'root')}
+                    </div>
+                    
+                    ${hasChildren ? `
+                        <!-- Connector: Root to Children -->
+                        <div class="connector-root-down"></div>
+                        <div class="connector-split"></div>
+                        
+                        <!-- LEVEL 1: GROUP A & GROUP B CHILDREN -->
+                        <div class="level-children">
+                            ${treeData.left_child ? renderNode(treeData.left_child, 'left') : renderEmptySlot('Group A', 'left')}
+                            ${treeData.right_child ? renderNode(treeData.right_child, 'right') : renderEmptySlot('Group B', 'right')}
+                        </div>
+                    ` : ''}
+                    
+                    ${hasGrandchildren ? `
+                        <!-- Connectors: Children to Grandchildren -->
+                        <div class="level-1-connectors">
+                            <div class="branch-connector">
+                                <div class="connector-down-small left"></div>
+                                <div class="connector-branch-split left"></div>
+                            </div>
+                            <div class="branch-connector">
+                                <div class="connector-down-small right"></div>
+                                <div class="connector-branch-split right"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- LEVEL 2: GRANDCHILDREN -->
+                        <div class="level-grandchildren">
+                            <div class="grandchild-group">
+                                ${treeData.left_child?.left_child ? renderNode(treeData.left_child.left_child, 'left') : renderEmptySlot('LL', 'left')}
+                                ${treeData.left_child?.right_child ? renderNode(treeData.left_child.right_child, 'left') : renderEmptySlot('LR', 'left')}
+                            </div>
+                            <div class="grandchild-spacer"></div>
+                            <div class="grandchild-group">
+                                ${treeData.right_child?.left_child ? renderNode(treeData.right_child.left_child, 'right') : renderEmptySlot('RL', 'right')}
+                                ${treeData.right_child?.right_child ? renderNode(treeData.right_child.right_child, 'right') : renderEmptySlot('RR', 'right')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Legend -->
+                    <div class="tree-legend">
+                        <div class="legend-item"><div class="legend-dot root"></div> Root</div>
+                        <div class="legend-item"><div class="legend-dot left"></div> Group A</div>
+                        <div class="legend-item"><div class="legend-dot right"></div> Group B</div>
+                    </div>
+                </div>
+            `;
+
+            treeContent.innerHTML = html;
+            hideLoading();
+            document.getElementById('treeView').style.display = 'block';
+        }
+
+        function renderNode(member, position) {
+            if (!member) return '';
+            
+            const isActive = member.status === 'Active';
+            const statusClass = isActive ? 'active' : 'inactive';
+            const positionLabel = position === 'left' ? 'GROUP A' : position === 'right' ? 'GROUP B' : 'ROOT';
+            const shortName = (member.name || 'N/A').length > 14 ? (member.name || 'N/A').substring(0, 12) + '..' : (member.name || 'N/A');
+            
+            return `
+                <div class="tree-node ${statusClass} ${position}" onclick="viewUserTree('${escapeHTML(member.mnr_id || '')}')">
+                    <div class="node-name">${escapeHTML(shortName)}</div>
+                    <div class="node-id">${escapeHTML(member.mnr_id || 'N/A')}</div>
+                    <span class="badge ${isActive ? 'bg-success' : 'bg-secondary'}" style="font-size: 9px; text-transform: uppercase;">${escapeHTML(member.status || 'Inactive')}</span>
+                    <div class="node-package">${escapeHTML(member.package || 'N/A')}</div>
+                    <div class="node-position">${positionLabel}</div>
+                </div>
+            `;
+        }
+
+        function renderEmptySlot(label, side) {
+            return `
+                <div class="empty-slot ${side}">
+                    <div class="icon">➕</div>
+                    <div class="label">Empty Slot</div>
+                    <div class="position">${label}</div>
+                </div>
+            `;
+        }
+
+        function viewUserTree(mnrId) {
+            if (!mnrId) return;
+            // Redirect to same page with new user_id
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('user_id', mnrId);
+            window.location.href = currentUrl.toString();
+        }
+
+        function showLoading() {
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('treeView').style.display = 'none';
+            document.getElementById('noDataState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        function showNoData() {
+            hideLoading();
+            document.getElementById('noDataState').style.display = 'block';
+        }
+
+        function showError(message) {
+            hideLoading();
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').style.display = 'block';
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function escapeJS(str) {
+            if (!str) return '';
+            return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        // Load data on page load
+        window.addEventListener('DOMContentLoaded', loadTreeData);
+    </script>
+</body>
+</html>

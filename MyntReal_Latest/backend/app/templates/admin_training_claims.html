@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Claims Management - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        
+        .claim-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+        
+        .claim-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .bonus-badge {
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .btn-action {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-graduation-cap"></i> Training Claims Management</h2>
+                    <p class="mb-0">Review and approve training course discount claims</p>
+                </div>
+                <div>
+                    <button class="btn btn-light" onclick="window.history.back()">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card text-center" onclick="filterClaims('Pending')">
+                    <h3 id="pending-count">0</h3>
+                    <p class="mb-0"><i class="fas fa-clock"></i> Pending Claims</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center" onclick="filterClaims('Approved')">
+                    <h3 id="approved-count">0</h3>
+                    <p class="mb-0"><i class="fas fa-check-circle"></i> Approved</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center" onclick="loadStatistics()">
+                    <h3 id="total-discount">₹0</h3>
+                    <p class="mb-0"><i class="fas fa-money-bill-wave"></i> Total Discount</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card text-center" onclick="loadStatistics()">
+                    <h3 id="total-bonus">₹0</h3>
+                    <p class="mb-0"><i class="fas fa-gift"></i> Bonus Given</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="main-card">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <label class="form-label">Filter by Status:</label>
+                    <select class="form-select" id="status-filter" onchange="loadClaims()">
+                        <option value="">All Claims</option>
+                        <option value="Pending" selected>Pending</option>
+                        <option value="Admin Approved">Admin Approved</option>
+                        <option value="Institute Confirmed">Institute Confirmed</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label><br>
+                    <button class="btn btn-primary" onclick="loadClaims()">
+                        <i class="fas fa-sync"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Claims -->
+        <div class="main-card">
+            <h4><i class="fas fa-clipboard-list text-primary"></i> Training Claims</h4>
+            <div id="claims-container" class="mt-3">
+                <div class="text-center text-muted">
+                    <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                    <p>Loading claims...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approval Modal -->
+    <div class="modal fade" id="approval-modal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Approve Training Claim</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="claim-details"></div>
+                    
+                    <form id="approval-form">
+                        <input type="hidden" id="approval_claim_id">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Training Institute Name</label>
+                            <input type="text" class="form-control" id="institute_name">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Institute Contact</label>
+                            <input type="text" class="form-control" id="institute_contact" 
+                                   pattern="[0-9]{10}" maxlength="10">
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            Providing institute details will mark this claim as "Institute Confirmed" 
+                            and notify the institute to coordinate training.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="approveClaim()">
+                        <i class="fas fa-check"></i> Approve Claim
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejection Modal -->
+    <div class="modal fade" id="rejection-modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reject Training Claim</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="rejection_claim_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Rejection Reason *</label>
+                        <textarea class="form-control" id="rejection_reason" rows="4" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="rejectClaim()">
+                        <i class="fas fa-times"></i> Reject Claim
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        let approvalModalInstance, rejectionModalInstance;
+        
+        $(document).ready(function() {
+            approvalModalInstance = new bootstrap.Modal(document.getElementById('approval-modal'));
+            rejectionModalInstance = new bootstrap.Modal(document.getElementById('rejection-modal'));
+            
+            loadStatistics();
+            loadClaims();
+        });
+        
+        // Load statistics
+        function loadStatistics() {
+            $.ajax({
+                url: '/api/v1/training/statistics',
+                type: 'GET',
+                success: function(response) {
+                    const stats = response.statistics;
+                    $('#pending-count').text(stats.pending_claims);
+                    $('#approved-count').text(stats.approved_claims);
+                    $('#total-discount').text('₹' + stats.total_discount_approved.toLocaleString());
+                    $('#total-bonus').text('₹' + stats.total_bonus_given.toLocaleString());
+                },
+                error: function(xhr) {
+                    console.error('Failed to load statistics');
+                }
+            });
+        }
+        
+        // Load claims
+        function loadClaims() {
+            const statusFilter = $('#status-filter').val();
+            const url = `/api/v1/training/claims/all${statusFilter ? '?status_filter=' + statusFilter : ''}`;
+            
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(response) {
+                    displayClaims(response.claims);
+                },
+                error: function(xhr) {
+                    $('#claims-container').html(
+                        '<div class="alert alert-danger">Failed to load claims</div>'
+                    );
+                }
+            });
+        }
+        
+        // Filter claims by status
+        function filterClaims(status) {
+            $('#status-filter').val(status);
+            loadClaims();
+        }
+        
+        // Display claims
+        function displayClaims(claims) {
+            if (claims.length === 0) {
+                $('#claims-container').html(
+                    '<div class="alert alert-info">No claims found</div>'
+                );
+                return;
+            }
+            
+            let html = '<div class="table-responsive"><table class="table table-hover">';
+            html += `
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>User</th>
+                        <th>Course</th>
+                        <th>Trainee</th>
+                        <th>Discount</th>
+                        <th>Bonus</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+            
+            claims.forEach(claim => {
+                const isPending = claim.claim_status === 'Pending';
+                
+                html += `
+                    <tr>
+                        <td><strong>#${claim.id}</strong></td>
+                        <td>${new Date(claim.created_at).toLocaleDateString()}</td>
+                        <td>
+                            ${claim.user_name}<br>
+                            <small class="text-muted">${claim.user_id}</small>
+                        </td>
+                        <td>${claim.course_name}</td>
+                        <td>
+                            ${claim.is_bonus ? `<span class="bonus-badge"><i class="fas fa-gift"></i> BONUS</span><br>` : ''}
+                            Contact info available
+                        </td>
+                        <td>₹${claim.discount_amount.toLocaleString()}</td>
+                        <td>${claim.is_bonus ? `<span class="bonus-badge">₹${claim.bonus_amount ? claim.bonus_amount.toLocaleString() : '0'}</span>` : '-'}</td>
+                        <td>
+                            <span class="badge ${getStatusBadgeClass(claim.claim_status)}">
+                                ${claim.claim_status}
+                            </span>
+                        </td>
+                        <td>
+                            ${isPending ? `
+                                <button class="btn btn-success btn-action" onclick="showApprovalModal(${claim.id})">
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                                <button class="btn btn-danger btn-action" onclick="showRejectionModal(${claim.id})">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
+                            ` : `
+                                <button class="btn btn-info btn-action" onclick="viewClaimDetails(${claim.id})">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            $('#claims-container').html(html);
+        }
+        
+        // Get status badge class
+        function getStatusBadgeClass(status) {
+            if (status === 'Pending') return 'bg-warning';
+            if (status.includes('Approved')) return 'bg-success';
+            if (status.includes('Confirmed')) return 'bg-info';
+            if (status === 'Completed') return 'bg-primary';
+            if (status === 'Rejected') return 'bg-danger';
+            return 'bg-secondary';
+        }
+        
+        // Show approval modal
+        function showApprovalModal(claimId) {
+            // Fetch claim details first
+            $.ajax({
+                url: '/api/v1/training/claims/all?status_filter=Pending',
+                type: 'GET',
+                success: function(response) {
+                    const claim = response.claims.find(c => c.id === claimId);
+                    if (claim) {
+                        $('#approval_claim_id').val(claimId);
+                        
+                        let detailsHtml = `
+                            <div class="alert alert-primary">
+                                <h6><strong>Claim #${claim.id}</strong></h6>
+                                <p class="mb-1"><strong>User:</strong> ${claim.user_name} (${claim.user_id})</p>
+                                <p class="mb-1"><strong>Course:</strong> ${claim.course_name}</p>
+                                <p class="mb-1"><strong>Discount:</strong> ₹${claim.discount_amount.toLocaleString()}</p>
+                                ${claim.is_bonus ? `<p class="mb-0"><span class="bonus-badge">Bonus Used: ₹${claim.bonus_amount || 0}</span></p>` : ''}
+                            </div>
+                        `;
+                        
+                        $('#claim-details').html(detailsHtml);
+                        approvalModalInstance.show();
+                    }
+                }
+            });
+        }
+        
+        // Approve claim
+        function approveClaim() {
+            const claimId = $('#approval_claim_id').val();
+            const instituteName = $('#institute_name').val();
+            const instituteContact = $('#institute_contact').val();
+            
+            const approvalData = {
+                claim_id: parseInt(claimId),
+                action: 'approve',
+                institute_name: instituteName || null,
+                institute_contact: instituteContact || null
+            };
+            
+            $.ajax({
+                url: '/api/v1/training/claims/approve',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(approvalData),
+                success: function(response) {
+                    alert(response.message);
+                    approvalModalInstance.hide();
+                    $('#approval-form')[0].reset();
+                    loadClaims();
+                    loadStatistics();
+                },
+                error: function(xhr) {
+                    alert(xhr.responseJSON?.detail || 'Failed to approve claim');
+                }
+            });
+        }
+        
+        // Show rejection modal
+        function showRejectionModal(claimId) {
+            $('#rejection_claim_id').val(claimId);
+            $('#rejection_reason').val('');
+            rejectionModalInstance.show();
+        }
+        
+        // Reject claim
+        function rejectClaim() {
+            const claimId = $('#rejection_claim_id').val();
+            const reason = $('#rejection_reason').val();
+            
+            if (!reason) {
+                alert('Please provide a rejection reason');
+                return;
+            }
+            
+            const rejectionData = {
+                claim_id: parseInt(claimId),
+                action: 'reject',
+                rejection_reason: reason
+            };
+            
+            $.ajax({
+                url: '/api/v1/training/claims/approve',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(rejectionData),
+                success: function(response) {
+                    alert(response.message);
+                    rejectionModalInstance.hide();
+                    $('#rejection_reason').val('');
+                    loadClaims();
+                    loadStatistics();
+                },
+                error: function(xhr) {
+                    alert(xhr.responseJSON?.detail || 'Failed to reject claim');
+                }
+            });
+        }
+        
+        // View claim details
+        function viewClaimDetails(claimId) {
+            alert('View details for claim #' + claimId);
+        }
+    </script>
+</body>
+</html>

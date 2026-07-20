@@ -1,0 +1,689 @@
+<style>
+    .points-page .page-banner {
+        background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+        border-radius: 16px; padding: 24px; margin-bottom: 24px; color: white;
+    }
+    .points-page .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+    .points-page .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+    
+    .points-page .points-hero {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-radius: 20px; padding: 40px; text-align: center; margin-bottom: 24px;
+        box-shadow: 0 4px 20px rgba(217, 119, 6, 0.15);
+    }
+    .points-page .points-hero .balance-label { font-size: 14px; color: #92400e; margin-bottom: 8px; }
+    .points-page .points-hero .balance-value { font-size: 56px; font-weight: 800; color: #92400e; }
+    .points-page .points-hero .balance-sub { font-size: 14px; color: #b45309; margin-top: 8px; }
+    
+    .points-page .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    
+    .points-page .summary-card {
+        background: white; border-radius: 16px; padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;
+    }
+    .points-page .summary-card .icon {
+        width: 56px; height: 56px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 16px; font-size: 24px;
+    }
+    .points-page .summary-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+    .points-page .summary-card .label { color: #6b7280; font-size: 13px; margin-top: 4px; }
+    
+    .points-page .card-gold .icon { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
+    .points-page .card-green .icon { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #059669; }
+    .points-page .card-red .icon { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #dc2626; }
+    .points-page .card-blue .icon { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #2563eb; }
+    
+    .points-page .card { background: white; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: none; margin-bottom: 24px; }
+    .points-page .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .points-page .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 10px; }
+    .points-page .card-body { padding: 24px; }
+    
+    .points-page .utilisation-chart {
+        display: flex; align-items: center; gap: 24px; padding: 24px;
+        background: #f9fafb; border-radius: 16px; margin-bottom: 24px;
+    }
+    .points-page .chart-circle {
+        width: 120px; height: 120px; border-radius: 50%;
+        background: conic-gradient(#059669 0deg, #059669 var(--used-deg), #e5e7eb var(--used-deg), #e5e7eb 360deg);
+        display: flex; align-items: center; justify-content: center;
+        position: relative;
+    }
+    .points-page .chart-circle::before {
+        content: ''; position: absolute; width: 80px; height: 80px;
+        background: white; border-radius: 50%;
+    }
+    .points-page .chart-circle .percent {
+        position: relative; z-index: 1; font-size: 20px; font-weight: 700; color: #1f2937;
+    }
+    .points-page .chart-legend { flex: 1; }
+    .points-page .legend-item { display: flex; align-items: center; margin-bottom: 12px; }
+    .points-page .legend-dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; }
+    .points-page .legend-dot.used { background: #059669; }
+    .points-page .legend-dot.available { background: #e5e7eb; }
+    .points-page .legend-text { flex: 1; color: #6b7280; font-size: 14px; }
+    .points-page .legend-value { font-weight: 600; color: #1f2937; }
+    
+    .points-page .table { margin: 0; }
+    .points-page .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; }
+    .points-page .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+    .points-page .table tbody tr:hover { background: #f9fafb; }
+    
+    .points-page .txn-type { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .points-page .txn-credit { background: #d1fae5; color: #065f46; }
+    .points-page .txn-debit { background: #fee2e2; color: #991b1b; }
+    .points-page .txn-consumption { background: #fef3c7; color: #92400e; }
+    
+    .points-page .amount-positive { color: #059669; font-weight: 600; }
+    .points-page .amount-negative { color: #dc2626; font-weight: 600; }
+    
+    .points-page .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+    .points-page .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+    
+    .points-page .loading-spinner { width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: #d97706; border-radius: 50%; animation: pointsSpin 0.8s linear infinite; margin: 40px auto; }
+    @keyframes pointsSpin { to { transform: rotate(360deg); } }
+    
+    .points-page .linked-systems { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px; }
+    .points-page .system-link {
+        background: #f9fafb; border-radius: 12px; padding: 16px;
+        display: flex; align-items: center; gap: 12px;
+        text-decoration: none; color: #1f2937; transition: all 0.2s;
+    }
+    .points-page .system-link:hover { background: #e5e7eb; transform: translateY(-2px); }
+    .points-page .system-link i { font-size: 24px; }
+    .points-page .system-link .info { flex: 1; }
+    .points-page .system-link .name { font-weight: 600; font-size: 14px; }
+    .points-page .system-link .desc { font-size: 12px; color: #6b7280; }
+    
+    .points-page .important-notice {
+        background: #fef2f2; border-left: 4px solid #dc2626;
+        padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;
+    }
+    .points-page .important-notice h6 { color: #991b1b; margin-bottom: 10px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .points-page .important-notice ul { margin: 0; padding-left: 20px; color: #b91c1c; font-size: 14px; }
+    .points-page .important-notice li { margin-bottom: 6px; }
+    
+    .points-page .expiry-section {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+        border-radius: 12px; padding: 20px; margin-bottom: 24px; text-align: center;
+    }
+    .points-page .expiry-section .expiry-label { font-size: 14px; color: #92400e; margin-bottom: 8px; }
+    .points-page .expiry-section .expiry-date { font-size: 18px; font-weight: 700; color: #92400e; margin-bottom: 8px; }
+    .points-page .expiry-section .countdown { font-size: 24px; font-weight: 800; color: #d97706; }
+    .points-page .expiry-section .exempted { font-size: 18px; font-weight: 700; color: #059669; }
+    
+    .points-page .zynova-roles {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;
+    }
+    .points-page .zynova-role-card {
+        background: white; border-radius: 12px; padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center;
+    }
+    .points-page .zynova-role-card .segment-icon { font-size: 28px; margin-bottom: 10px; }
+    .points-page .zynova-role-card .segment-name { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
+    .points-page .zynova-role-card .role-name { font-size: 16px; font-weight: 700; color: #1f2937; }
+    .points-page .zynova-role-card.real-estate { border-left: 4px solid #2563eb; }
+    .points-page .zynova-role-card.insurance { border-left: 4px solid #dc2626; }
+    
+    .points-page .btn-download {
+        background: linear-gradient(135deg, #059669, #047857);
+        border: none; color: white; border-radius: 10px; padding: 12px 24px;
+        font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .points-page .btn-download:hover { background: linear-gradient(135deg, #047857, #065f46); color: white; }
+    /* ── Mobile table: fix iOS overflow scroll ── */
+    html { overflow-x: hidden; }
+    body { overflow-x: visible !important; }
+    @media (max-width: 639px) {
+        .table-responsive { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        .table-responsive table, .table-responsive .table { min-width: max-content; }
+        .table-responsive th { padding: 7px 8px !important; font-size: 10px !important; white-space: nowrap; }
+        .table-responsive td { padding: 7px 8px !important; font-size: 11px !important; }
+    }
+</style>
+
+<div class="points-page">
+    <div class="page-banner">
+        <h1>🎯 Reward Points & Receipts</h1>
+        <p>Track your MNR Points across all systems</p>
+    </div>
+    
+    <div class="important-notice">
+        <h6><i class="fas fa-exclamation-triangle"></i> Important Information</h6>
+        <ul>
+            <li>Points are <strong>non-refundable</strong> and <strong>non-transferable</strong></li>
+            <li>Validity: <strong>24 months</strong> from the activation date</li>
+            <li>Unused credits expire automatically without refund</li>
+        </ul>
+    </div>
+    
+    <div class="important-notice" style="background: #fef9c3; border-left-color: #eab308;">
+        <h6 style="color: #854d0e;"><i class="fas fa-video"></i> Feedback Video and Photos Requirement</h6>
+        <p style="color: #854d0e; margin-bottom: 10px; font-size: 14px;">
+            <strong>For members activated before 1st Dec 2025 who received exemption:</strong> Sharing feedback videos and photos is mandatory to be eligible for incentives or points benefits.
+        </p>
+        <p style="color: #713f12; font-size: 13px; margin-bottom: 8px;"><strong>Eligible Engagement Activities:</strong></p>
+        <ul style="color: #854d0e; font-size: 13px; margin: 0; padding-left: 20px;">
+            <li>Reels (video content)</li>
+            <li>WhatsApp Status sharing</li>
+            <li>Social Media posts</li>
+            <li>Sharing & Ratings in Announcement sections</li>
+            <li>Engaging with teams</li>
+            <li>Attending Zoom calls</li>
+        </ul>
+        <p style="color: #713f12; font-size: 12px; margin-top: 12px; font-style: italic;">
+            <i class="fas fa-info-circle me-1"></i> Please note: Submitted feedback videos and photos may be publicly displayed on our platforms for promotional and community engagement purposes. By sharing your content, you acknowledge and consent to this use.
+        </p>
+    </div>
+    
+    <div id="loadingStatePts">
+        <div class="loading-spinner"></div>
+        <p class="text-center text-muted">Loading your points data...</p>
+    </div>
+    
+    <div id="mainContentPts" style="display: none;">
+        <div class="expiry-section" id="expirySection">
+            <div class="expiry-label">Points Validity Status</div>
+            <div id="expiryContent">
+                <div class="expiry-date" id="expiryDate">Loading...</div>
+                <div class="countdown" id="expiryCountdown"></div>
+            </div>
+        </div>
+        
+        <div class="zynova-roles">
+            <div class="zynova-role-card real-estate">
+                <div class="segment-icon"><i class="fas fa-building text-primary"></i></div>
+                <div class="segment-name">VGK Real Dreams</div>
+                <div class="role-name" id="realEstateRole">-</div>
+            </div>
+            <div class="zynova-role-card insurance">
+                <div class="segment-icon"><i class="fas fa-shield-alt text-danger"></i></div>
+                <div class="segment-name">VGK Care</div>
+                <div class="role-name" id="insuranceRole">-</div>
+            </div>
+        </div>
+        
+        <div class="points-hero">
+            <div class="balance-label">Available MNR Points</div>
+            <div class="balance-value" id="currentBalancePts">0</div>
+            <div class="balance-sub">Points can be used for incentives across all MyntReal systems</div>
+            <div class="mt-3" id="paymentSlipSection">
+                <button class="btn-download" id="btnDownloadPdf" onclick="downloadReceiptPdf()" style="display: none;">
+                    <i class="fas fa-file-pdf"></i> Download Receipt (PDF)
+                </button>
+                <button class="btn-download" id="btnDownloadSlip" onclick="downloadPaymentSlip()" style="display: none; margin-left: 10px; background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+                    <i class="fas fa-print"></i> Print Receipt
+                </button>
+                <div id="exemptionMessage" style="display: none; background: #d1fae5; color: #065f46; padding: 12px 20px; border-radius: 10px; font-weight: 500;">
+                    <i class="fas fa-info-circle me-2"></i> Exception Coupon (Activated before Dec 1, 2025) - Payment receipt not available
+                </div>
+                <div id="welcomeCouponMessage" style="display: none; background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #3730a3; padding: 16px 24px; border-radius: 12px; font-weight: 600; text-align: center;">
+                    <i class="fas fa-gift me-2"></i> Welcome Coupon (Exception Coupon) - No payment made
+                    <p style="font-size: 13px; font-weight: 400; margin-top: 8px; margin-bottom: 0; color: #4338ca;">Payment receipt and download are not applicable for Welcome Coupon members</p>
+                </div>
+                <!-- DC Protocol (Jan 12, 2026): Motivational message for users without coupon payment -->
+                <div id="motivationalMessage" style="display: none; background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; padding: 20px 24px; border-radius: 12px; font-weight: 600; text-align: center; font-size: 16px;">
+                    <i class="fas fa-rocket me-2"></i> Your take an opportunity for a great Journey
+                    <p style="font-size: 13px; font-weight: 400; margin-top: 8px; margin-bottom: 0;">Apply a coupon to unlock full benefits and download your payment receipt</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="summary-cards">
+            <div class="summary-card card-gold">
+                <div class="icon"><i class="fas fa-gift"></i></div>
+                <div class="value" id="initialPointsPts">15,000</div>
+                <div class="label">Initial Allocation</div>
+            </div>
+            <div class="summary-card card-green">
+                <div class="icon"><i class="fas fa-plus-circle"></i></div>
+                <div class="value" id="totalCreditedPts">0</div>
+                <div class="label">Total Credited</div>
+            </div>
+            <div class="summary-card card-red">
+                <div class="icon"><i class="fas fa-minus-circle"></i></div>
+                <div class="value" id="totalConsumedPts">0</div>
+                <div class="label">Total Consumed</div>
+            </div>
+            <div class="summary-card card-blue">
+                <div class="icon"><i class="fas fa-exchange-alt"></i></div>
+                <div class="value" id="transactionCountPts">0</div>
+                <div class="label">Transactions</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie text-warning"></i> Points Utilisation</h5>
+            </div>
+            <div class="card-body">
+                <div class="utilisation-chart">
+                    <div class="chart-circle" id="utilisationChartPts" style="--used-deg: 0deg;">
+                        <span class="percent" id="usedPercentPts">0%</span>
+                    </div>
+                    <div class="chart-legend">
+                        <div class="legend-item">
+                            <div class="legend-dot used"></div>
+                            <span class="legend-text">Points Used</span>
+                            <span class="legend-value" id="legendUsedPts">0</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot available"></div>
+                            <span class="legend-text">Points Available</span>
+                            <span class="legend-value" id="legendAvailablePts">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-history text-primary"></i> Transaction History</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table" id="transactionTablePts">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionBodyPts">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyTransactionsPts" class="empty-state" style="display: none;">
+                    <i class="fas fa-receipt"></i>
+                    <p>No transactions yet</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-link text-success"></i> Linked Systems</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">Your points are connected to these systems:</p>
+                <div class="linked-systems">
+                    <a href="/user/ev-benefits" class="system-link">
+                        <i class="fas fa-car text-primary"></i>
+                        <div class="info">
+                            <div class="name">EV Benefits</div>
+                            <div class="desc">Electric Vehicle discounts</div>
+                        </div>
+                    </a>
+                    <a href="/user/zynova/real-estate" class="system-link">
+                        <i class="fas fa-building text-success"></i>
+                        <div class="info">
+                            <div class="name">VGK Real Dreams</div>
+                            <div class="desc">Real Estate incentives</div>
+                        </div>
+                    </a>
+                    <a href="/user/zynova/insurance" class="system-link">
+                        <i class="fas fa-shield-alt text-danger"></i>
+                        <div class="info">
+                            <div class="name">VGK Care</div>
+                            <div class="desc">Insurance incentives</div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const formatNumberPts = (num) => {
+        return (num || 0).toLocaleString('en-IN');
+    };
+    
+    const formatDatePts = (dateStr) => {
+        if (!dateStr) return '-';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    };
+    
+    const getTypeClassPts = (type) => {
+        if (type.includes('credit') || type.includes('allocation')) return 'txn-credit';
+        if (type.includes('debit') || type.includes('consumption')) return 'txn-consumption';
+        return 'txn-debit';
+    };
+    
+    const getAmountClassPts = (amount) => {
+        return amount >= 0 ? 'amount-positive' : 'amount-negative';
+    };
+    
+    async function loadDataPts() {
+        try {
+            const [balanceRes, historyRes] = await Promise.all([
+                fetch('/api/v1/myntreal/points/me'),
+                fetch('/api/v1/myntreal/points/me/history?per_page=50')
+            ]);
+            
+            const balanceData = await balanceRes.json();
+            const historyData = await historyRes.json();
+            
+            document.getElementById('loadingStatePts').style.display = 'none';
+            document.getElementById('mainContentPts').style.display = 'block';
+            
+            if (balanceData.success && balanceData.data) {
+                const data = balanceData.data;
+                document.getElementById('currentBalancePts').textContent = formatNumberPts(data.current_balance);
+                document.getElementById('initialPointsPts').textContent = formatNumberPts(data.initial_points);
+                document.getElementById('totalCreditedPts').textContent = formatNumberPts(data.total_credited);
+                document.getElementById('totalConsumedPts').textContent = formatNumberPts(data.total_consumed);
+                
+                const total = data.initial_points + data.total_credited;
+                const used = data.total_consumed;
+                const usedPercent = total > 0 ? Math.round((used / total) * 100) : 0;
+                const usedDeg = (usedPercent / 100) * 360;
+                
+                document.getElementById('utilisationChartPts').style.setProperty('--used-deg', usedDeg + 'deg');
+                document.getElementById('usedPercentPts').textContent = usedPercent + '%';
+                document.getElementById('legendUsedPts').textContent = formatNumberPts(used);
+                document.getElementById('legendAvailablePts').textContent = formatNumberPts(data.current_balance);
+                
+                if (data.receipt_no) {
+                    userReceiptNo = data.receipt_no;
+                    console.log('[MNR Points] Receipt number:', userReceiptNo);
+                }
+                
+                // DC Protocol (Jan 12, 2026): Use is_coupon_paid from API response
+                const isCouponPaid = data.is_coupon_paid || (data.member && data.member.is_coupon_paid) || false;
+                isWelcomeCouponUser = data.is_welcome_coupon || (data.member && data.member.is_welcome_coupon) || false;
+                console.log('[MNR Points] Coupon paid:', isCouponPaid, 'Package:', data.package_name, 'Welcome Coupon:', isWelcomeCouponUser);
+                
+                if (data.member) {
+                    console.log('[MNR Points] Member data from points API:', data.member);
+                    if (data.member.name) userName = data.member.name;
+                    if (data.member.mnr_id) userMnrId = data.member.mnr_id;
+                    if (data.member.coupon_purchase_date) userPaymentDate = new Date(data.member.coupon_purchase_date);
+                    if (data.member.activation_date) {
+                        userActivationDate = new Date(data.member.activation_date);
+                        const exemptionCutoff = new Date('2025-12-01');
+                        isExemptedUser = userActivationDate && userActivationDate < exemptionCutoff;
+                        console.log('[MNR Points] Activation date:', userActivationDate, 'Exempted:', isExemptedUser);
+                        updateExpirySection(userActivationDate);
+                        updatePaymentSlipSection(isExemptedUser, isCouponPaid, isWelcomeCouponUser);
+                    } else {
+                        console.log('[MNR Points] No activation date - showing pending state');
+                        updateExpirySection(null);
+                        updatePaymentSlipSection(false, isCouponPaid, isWelcomeCouponUser);
+                    }
+                } else {
+                    updatePaymentSlipSection(false, isCouponPaid, isWelcomeCouponUser);
+                }
+            }
+            
+            if (historyData.success && historyData.data) {
+                const transactions = historyData.data.transactions || [];
+                document.getElementById('transactionCountPts').textContent = historyData.data.total || transactions.length;
+                
+                if (transactions.length === 0) {
+                    document.getElementById('emptyTransactionsPts').style.display = 'block';
+                    document.getElementById('transactionTablePts').style.display = 'none';
+                } else {
+                    const tbody = document.getElementById('transactionBodyPts');
+                    tbody.innerHTML = transactions.map(txn => 
+                        '<tr>' +
+                            '<td>' + formatDatePts(txn.created_at) + '</td>' +
+                            '<td><span class="txn-type ' + getTypeClassPts(txn.transaction_type) + '">' + txn.transaction_type.replace(/_/g, ' ') + '</span></td>' +
+                            '<td>' + (txn.description || '-') + '</td>' +
+                            '<td class="' + getAmountClassPts(txn.amount) + '">' + (txn.amount >= 0 ? '+' : '') + formatNumberPts(txn.amount) + '</td>' +
+                            '<td>' + formatNumberPts(txn.balance_after) + '</td>' +
+                        '</tr>'
+                    ).join('');
+                }
+            }
+            
+        } catch (error) {
+            console.error('Error loading data:', error);
+            document.getElementById('loadingStatePts').innerHTML = 
+                '<div class="empty-state"><i class="fas fa-exclamation-circle text-danger"></i><p>Error loading data. Please refresh.</p></div>';
+        }
+    }
+    
+    let userActivationDate = null;
+    let userName = '';
+    let userMnrId = '';
+    let userPaymentDate = null;
+    let userReceiptNo = '';
+    let isExemptedUser = false;
+    let isWelcomeCouponUser = false;
+    
+    async function loadUserDataAndVGK4URoles() {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                updateExpirySection(null);
+                return;
+            }
+            
+            const userRes = await fetch('/api/v1/users/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (userRes.ok) {
+                const userData = await userRes.json();
+                console.log('[MNR Points] User data received:', userData);
+                if (userData) {
+                    userName = userData.name || userData.full_name || '';
+                    userMnrId = userData.mnr_id || '';
+                    userActivationDate = userData.activation_date ? new Date(userData.activation_date) : null;
+                    
+                    const exemptionCutoff = new Date('2025-12-01');
+                    isExemptedUser = userActivationDate && userActivationDate < exemptionCutoff;
+                    if (userData.is_welcome_coupon) isWelcomeCouponUser = true;
+                    
+                    const isCouponPaid = userData.coupon_status === 'Active' || userData.coupon_status === 'Activated';
+                    
+                    updateExpirySection(userActivationDate);
+                    updatePaymentSlipSection(isExemptedUser, isCouponPaid, isWelcomeCouponUser);
+                }
+            } else {
+                console.log('[MNR Points] User API failed, status:', userRes.status);
+                updateExpirySection(null);
+            }
+            
+            const zynovaRes = await fetch('/api/v1/incentives/zynova/real-estate/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (zynovaRes.ok) {
+                const zynovaData = await zynovaRes.json();
+                if (zynovaData.success && zynovaData.data) {
+                    const roleMap = {
+                        'promoter': 'Promoter',
+                        'team_leader': 'Team Leader',
+                        'zonal_manager': 'Zonal Manager',
+                        'director': 'Director'
+                    };
+                    document.getElementById('realEstateRole').textContent = 
+                        roleMap[zynovaData.data.real_estate_role] || zynovaData.data.real_estate_role || '-';
+                    document.getElementById('insuranceRole').textContent = 
+                        roleMap[zynovaData.data.insurance_role] || zynovaData.data.insurance_role || '-';
+                }
+            }
+        } catch (error) {
+            console.log('[MNR Points] Error loading user data:', error);
+            updateExpirySection(null);
+        }
+    }
+    
+    // DC Protocol (Jan 12, 2026): Updated to handle coupon payment status
+    // DC Protocol (Jan 30, 2026): Added PDF download button
+    // DC Protocol (Feb 18, 2026): Welcome Coupon - no receipt download/print
+    function updatePaymentSlipSection(isExempted, isCouponPaid = true, isWelcomeCoupon = false) {
+        const btnDownloadPdf = document.getElementById('btnDownloadPdf');
+        const btnDownload = document.getElementById('btnDownloadSlip');
+        const exemptionMsg = document.getElementById('exemptionMessage');
+        const motivationalMsg = document.getElementById('motivationalMessage');
+        const welcomeCouponMsg = document.getElementById('welcomeCouponMessage');
+        
+        btnDownloadPdf.style.display = 'none';
+        btnDownload.style.display = 'none';
+        exemptionMsg.style.display = 'none';
+        motivationalMsg.style.display = 'none';
+        welcomeCouponMsg.style.display = 'none';
+        
+        if (isWelcomeCoupon) {
+            welcomeCouponMsg.style.display = 'block';
+        } else if (!isCouponPaid) {
+            motivationalMsg.style.display = 'block';
+        } else if (isExempted) {
+            exemptionMsg.style.display = 'block';
+        } else {
+            btnDownloadPdf.style.display = 'inline-flex';
+            btnDownload.style.display = 'inline-flex';
+        }
+    }
+    
+    function updateExpirySection(activationDate) {
+        const expiryDateEl = document.getElementById('expiryDate');
+        const countdownEl = document.getElementById('expiryCountdown');
+        const exemptionCutoff = new Date('2025-12-01');
+        
+        if (!activationDate) {
+            expiryDateEl.textContent = 'Activation pending';
+            countdownEl.textContent = '';
+            return;
+        }
+        
+        const expiryDate = new Date(activationDate);
+        expiryDate.setMonth(expiryDate.getMonth() + 24);
+        
+        expiryDateEl.textContent = 'Expires: ' + expiryDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+        
+        updateCountdown(expiryDate, countdownEl);
+        setInterval(() => updateCountdown(expiryDate, countdownEl), 60000);
+    }
+    
+    function updateCountdown(expiryDate, el) {
+        const now = new Date();
+        const diff = expiryDate - now;
+        
+        if (diff <= 0) {
+            el.innerHTML = '<span style="color:#dc2626;">Expired</span>';
+            return;
+        }
+        
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const months = Math.floor(days / 30);
+        const remainingDays = days % 30;
+        
+        if (months > 0) {
+            el.textContent = months + ' month' + (months > 1 ? 's' : '') + ' ' + remainingDays + ' day' + (remainingDays !== 1 ? 's' : '') + ' remaining';
+        } else {
+            el.textContent = days + ' day' + (days !== 1 ? 's' : '') + ' remaining';
+        }
+    }
+    
+    function downloadReceiptPdf() {
+        if (isWelcomeCouponUser) {
+            alert('Welcome Coupon (Exception Coupon) - Payment receipt is not applicable as no payment was made.');
+            return;
+        }
+        if (isExemptedUser) {
+            alert('Exception Coupon (Activated before December 1, 2025) - Payment receipt is not available for exception coupons. Your points are still valid for 24 months from activation date.');
+            return;
+        }
+        
+        const token = localStorage.getItem('token') || sessionStorage.getItem('session_token');
+        if (!token) {
+            alert('Please log in to download your receipt.');
+            return;
+        }
+        
+        // Show loading state
+        const btn = document.getElementById('btnDownloadPdf');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+        btn.disabled = true;
+        
+        fetch('/api/v1/receipt/membership-receipt', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to generate receipt');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'MNR_Receipt_' + (userMnrId || 'member') + '.pdf';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+        })
+        .catch(error => {
+            console.error('Receipt download error:', error);
+            alert('Failed to download receipt. Please try again.');
+        })
+        .finally(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+    
+    function downloadPaymentSlip() {
+        if (isWelcomeCouponUser) {
+            alert('Welcome Coupon (Exception Coupon) - Payment receipt is not applicable as no payment was made.');
+            return;
+        }
+        if (isExemptedUser) {
+            alert('Exception Coupon (Activated before December 1, 2025) - Payment receipt is not available for exception coupons. Your points are still valid for 24 months from activation date.');
+            return;
+        }
+        
+        const token = localStorage.getItem('token') || sessionStorage.getItem('session_token');
+        if (!token) {
+            alert('Please log in to print your receipt.');
+            return;
+        }
+        
+        const btn = document.getElementById('btnDownloadSlip');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Opening...';
+        btn.disabled = true;
+        
+        fetch('/api/v1/receipt/membership-receipt', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to generate receipt');
+            return response.blob();
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            if (printWindow) {
+                printWindow.onload = function() {
+                    setTimeout(() => printWindow.print(), 500);
+                };
+            }
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        })
+        .catch(error => {
+            console.error('Receipt print error:', error);
+            alert('Failed to open receipt. Please try again.');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        loadDataPts();
+        loadUserDataAndVGK4URoles();
+    });
+</script>

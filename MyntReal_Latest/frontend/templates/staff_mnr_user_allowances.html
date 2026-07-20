@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNR — Allowances | Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="/public/css/dark-theme.css" rel="stylesheet">
+    <script src="/staff_header.js"></script>
+    <style>
+        body.dark-theme { background-color: #0d1117 !important; color: #c9d1d9 !important; }
+        .main-content { background-color: #0d1117 !important; }
+        .container-fluid { background-color: transparent !important; }
+        .mnr-search-card { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%) !important; border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 12px; }
+        .mnr-search-card .form-control { background: rgba(255, 255, 255, 0.1) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; color: #fff !important; }
+        .allowance-card { background: #161b22 !important; border-radius: 12px; padding: 20px; margin-bottom: 16px; border-left: 4px solid #ffc107 !important; border-top: 1px solid rgba(255,255,255,0.1); border-right: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .allowance-card.car-card { border-left-color: #17a2b8 !important; }
+        .allowance-card:hover { background: #1f2937 !important; }
+        .allowance-header { border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 12px; margin-bottom: 16px; }
+        .progress { height: 8px; background: rgba(255, 255, 255, 0.1) !important; border-radius: 4px; }
+        .progress-bar { border-radius: 4px; }
+        .stat-box { background: #21262d !important; border-radius: 8px; padding: 16px; text-align: center; }
+        .stat-value { font-size: 1.3rem; font-weight: 700; }
+        .stat-label { font-size: 0.8rem; color: #8b949e !important; }
+        .payment-row { background: #21262d !important; border-radius: 6px; padding: 12px; margin-bottom: 8px; }
+        .nav-tabs { border-bottom: 1px solid #30363d !important; background: transparent !important; }
+        .nav-tabs .nav-link { color: #8b949e !important; border: none !important; border-bottom: 2px solid transparent !important; background: transparent !important; padding: 10px 20px; }
+        .nav-tabs .nav-link:hover { color: #c9d1d9 !important; }
+        .nav-tabs .nav-link.active { color: #ffc107 !important; border-bottom-color: #ffc107 !important; background: transparent !important; }
+        .nav-item { background: transparent !important; }
+        .text-muted { color: #8b949e !important; }
+        #no-member-message { color: #8b949e !important; }
+        #no-member-message i { color: #6e7681 !important; }
+        .eligibility-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 6px; }
+        .eligibility-label { color: #c9d1d9; font-size: 0.9rem; }
+        .eligibility-value { font-weight: 600; }
+        .deadline-info { display: flex; justify-content: space-between; margin-top: 8px; padding: 8px 12px; background: rgba(255,193,7,0.1); border-radius: 6px; }
+        .deadline-info span { font-size: 0.85rem; }
+        .deadline-info .label { color: #8b949e; }
+        .deadline-info .value { color: #ffc107; font-weight: 600; }
+        .missed-badge { background: #dc3545 !important; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+    </style>
+</head>
+<body class="dark-theme">
+    <div id="staffSidebar"></div>
+    <div id="headerContainer"></div>
+
+    <main class="main-content" id="main-content">
+        <div class="container-fluid py-4">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-0"><i class="fas fa-hand-holding-usd me-2"></i>MNR — Allowances</h2>
+                    <p class="text-muted mb-0">View field allowance eligibility and payment history for members</p>
+                </div>
+            </div>
+
+            <div class="mnr-search-card p-4 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <label class="form-label text-warning fw-bold"><i class="fas fa-search me-2"></i>Search MNR ID</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted">MNR</span>
+                            <input type="text" class="form-control" id="mnr-id-input" placeholder="Enter member ID" style="text-transform: uppercase;">
+                            <button class="btn btn-warning" type="button" id="search-btn"><i class="fas fa-search me-1"></i> Search</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div id="member-info" style="display: none;" class="p-3">
+                            <h5 class="mb-0 text-white" id="member-name">-</h5>
+                            <small class="text-muted" id="member-id-display">-</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="no-member-message" class="text-center py-5 text-muted">
+                <i class="fas fa-search fa-3x mb-3"></i>
+                <p>Enter an MNR ID to view their field allowances</p>
+            </div>
+
+            <div id="content-area" style="display: none;">
+                <ul class="nav nav-tabs mb-4">
+                    <li class="nav-item"><a class="nav-link active" href="#" data-tab="status">Allowance Status</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-tab="history">Payment History</a></li>
+                </ul>
+                
+                <div id="status-tab">
+                    <div id="active-allowance-alert" class="alert alert-success mb-4" style="display: none;">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Active Allowance:</strong> <span id="active-allowance-type">-</span>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-lg-6 mb-4">
+                            <div class="allowance-card">
+                                <div class="allowance-header">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="mb-1" style="color: #fff;"><i class="fas fa-wallet text-warning me-2"></i>Standard Field Allowance</h5>
+                                            <small style="color: #8b949e;">₹10,000/month × 18 months</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="stat-value text-warning" id="std-status">-</div>
+                                            <small style="color: #8b949e;">Status</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="eligibility-row">
+                                    <span class="eligibility-label"><i class="fas fa-user-plus me-2 text-warning"></i>7 Direct Facilitations (45 days)</span>
+                                    <span class="eligibility-value" style="color: #ffc107;" id="std-directs-display">0/7</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-warning" id="std-directs-bar" style="width: 0%;"></div>
+                                </div>
+                                <div class="deadline-info mb-3">
+                                    <span><span class="label">Remaining:</span> <span class="value" id="std-remaining-count">7</span></span>
+                                    <span><span class="label">Deadline:</span> <span class="value" id="std-deadline">-</span></span>
+                                </div>
+                                
+                                <div class="eligibility-row">
+                                    <span class="eligibility-label"><i class="fas fa-sync-alt me-2 text-info"></i>Monthly Requirement:</span>
+                                    <span class="eligibility-value" style="color: #17a2b8;">20 Matching Pairs/month</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-info" id="std-matches-bar" style="width: 0%;"></div>
+                                </div>
+                                <div class="d-flex justify-content-between" style="color: #8b949e; font-size: 0.85rem;">
+                                    <span>Current: <span style="color: #fff;" id="std-matches">0</span>/20</span>
+                                    <span id="std-next-payment-container" style="display: none;">Next: <span style="color: #28a745;" id="std-next-payment">-</span></span>
+                                </div>
+                                
+                                <div class="row mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <div class="col-4 text-center">
+                                        <small style="color: #8b949e;">Months</small>
+                                        <div style="color: #fff; font-weight: 600;" id="std-months">0/18</div>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <small style="color: #8b949e;">Total Paid</small>
+                                        <div style="color: #28a745; font-weight: 600;" id="std-paid">₹0</div>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <small style="color: #8b949e;">Remaining</small>
+                                        <div style="color: #ffc107; font-weight: 600;" id="std-remaining">₹1,80,000</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-6 mb-4">
+                            <div class="allowance-card car-card">
+                                <div class="allowance-header">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h5 class="mb-1" style="color: #fff;"><i class="fas fa-car text-info me-2"></i>Car Allowance (Premium)</h5>
+                                            <small style="color: #8b949e;">₹25,000/month × 72 months</small>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="stat-value text-info" id="car-status">-</div>
+                                            <small style="color: #8b949e;">Status</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="eligibility-row">
+                                    <span class="eligibility-label"><i class="fas fa-chart-line me-2 text-info"></i>250 Group Facilitation (90 days)</span>
+                                    <span class="eligibility-value" style="color: #17a2b8;" id="car-points-display">0/250</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-info" id="car-points-bar" style="width: 0%;"></div>
+                                </div>
+                                <div class="deadline-info mb-3">
+                                    <span><span class="label">Remaining:</span> <span class="value" id="car-remaining-count">250</span></span>
+                                    <span><span class="label">Deadline:</span> <span class="value" id="car-deadline">-</span></span>
+                                </div>
+                                
+                                <div class="eligibility-row">
+                                    <span class="eligibility-label"><i class="fas fa-sync-alt me-2 text-warning"></i>Monthly Requirement:</span>
+                                    <span class="eligibility-value" style="color: #ffc107;">40 Matching Pairs/month</span>
+                                </div>
+                                <div class="progress mb-2">
+                                    <div class="progress-bar bg-warning" id="car-matches-bar" style="width: 0%;"></div>
+                                </div>
+                                <div class="d-flex justify-content-between" style="color: #8b949e; font-size: 0.85rem;">
+                                    <span>Current: <span style="color: #fff;" id="car-matches">0</span>/40</span>
+                                    <span id="car-next-payment-container" style="display: none;">Next: <span style="color: #28a745;" id="car-next-payment">-</span></span>
+                                </div>
+                                
+                                <div class="row mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                                    <div class="col-4 text-center">
+                                        <small style="color: #8b949e;">Months</small>
+                                        <div style="color: #fff; font-weight: 600;" id="car-months">0/72</div>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <small style="color: #8b949e;">Total Paid</small>
+                                        <div style="color: #28a745; font-weight: 600;" id="car-paid">₹0</div>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <small style="color: #8b949e;">Remaining</small>
+                                        <div style="color: #ffc107; font-weight: 600;" id="car-remaining">₹18,00,000</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="history-tab" style="display: none;">
+                    <div class="allowance-card">
+                        <div class="allowance-header">
+                            <h5 class="mb-0" style="color: #fff;"><i class="fas fa-history text-warning me-2"></i>Payment History</h5>
+                            <small style="color: #8b949e;">All field allowance payments for this member</small>
+                        </div>
+                        <div id="payment-history-list">
+                            <div class="text-center py-4 text-muted">
+                                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                            <div class="d-flex justify-content-between">
+                                <span style="color: #8b949e;">Total Payments:</span>
+                                <span style="color: #28a745; font-weight: 700; font-size: 1.2rem;" id="total-paid">₹0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/staff_sidebar.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        let currentMnrId = null;
+        let allowanceData = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            StaffSidebar.init();
+            StaffHeader.inject('MNR — Allowances', 'fas fa-hand-holding-usd');
+            
+            document.getElementById('search-btn').addEventListener('click', searchMember);
+            document.getElementById('mnr-id-input').addEventListener('keypress', e => { if(e.key === 'Enter') searchMember(); });
+            
+            document.querySelectorAll('.nav-tabs .nav-link').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('.nav-tabs .nav-link').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    const tabName = this.dataset.tab;
+                    document.getElementById('status-tab').style.display = tabName === 'status' ? 'block' : 'none';
+                    document.getElementById('history-tab').style.display = tabName === 'history' ? 'block' : 'none';
+                });
+            });
+        });
+        
+        async function searchMember() {
+            let mnrId = document.getElementById('mnr-id-input').value.trim().toUpperCase();
+            if (!mnrId) return;
+            if (!mnrId.startsWith('MNR')) mnrId = 'MNR' + mnrId;
+            currentMnrId = mnrId;
+            
+            document.getElementById('member-info').style.display = 'block';
+            document.getElementById('member-id-display').textContent = mnrId;
+            document.getElementById('content-area').style.display = 'block';
+            document.getElementById('no-member-message').style.display = 'none';
+            
+            loadAllowances();
+        }
+        
+        async function loadAllowances() {
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/allowances/${currentMnrId}`);
+                if (!response.ok) throw new Error('Failed to load allowances');
+                const result = await response.json();
+                
+                document.getElementById('member-name').textContent = result.member_info?.name || currentMnrId;
+                allowanceData = result.data;
+                
+                renderAllowanceStatus();
+                renderPaymentHistory();
+                
+                console.log('[DC-ALLOWANCES] Loaded allowance data for', currentMnrId, allowanceData);
+            } catch (error) {
+                console.error('[DC-ALLOWANCES] Error:', error);
+                document.getElementById('status-tab').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+            }
+        }
+        
+        function renderAllowanceStatus() {
+            const allowStatus = allowanceData?.allowance_status;
+            if (!allowStatus) {
+                console.warn('[DC-ALLOWANCES] No allowance_status in response:', allowanceData);
+                return;
+            }
+            
+            const std = allowStatus.standard_allowance || {};
+            const car = allowStatus.car_allowance || {};
+            
+            if (allowStatus.current_active) {
+                document.getElementById('active-allowance-alert').style.display = 'block';
+                document.getElementById('active-allowance-type').textContent = 
+                    allowStatus.current_active === 'car' ? 'Car Allowance (₹25,000/month)' : 'Standard Field Allowance (₹10,000/month)';
+            } else {
+                document.getElementById('active-allowance-alert').style.display = 'none';
+            }
+            
+            const stdStatus = std.status || {};
+            const stdInitial = std.initial_requirements?.direct_referrals || {};
+            const stdMonthly = std.monthly_requirements?.matching_pairs || {};
+            const stdDates = std.target_dates || {};
+            
+            document.getElementById('std-status').textContent = stdStatus.overall_status || 'Not Started';
+            document.getElementById('std-status').style.color = stdStatus.overall_status === 'Active' ? '#28a745' : '#ffc107';
+            
+            const stdDirects = stdInitial.current || 0;
+            const stdDirectsTarget = stdInitial.required || 7;
+            const stdDirectsRemaining = stdInitial.remaining ?? Math.max(0, stdDirectsTarget - stdDirects);
+            document.getElementById('std-directs-display').textContent = `${stdDirects}/${stdDirectsTarget}`;
+            document.getElementById('std-remaining-count').textContent = stdDirectsRemaining;
+            document.getElementById('std-directs-bar').style.width = `${stdInitial.progress_percentage || 0}%`;
+            
+            if (stdDates.initial_eligibility_deadline) {
+                document.getElementById('std-deadline').textContent = formatDate(stdDates.initial_eligibility_deadline);
+            }
+            
+            const stdMatches = stdMonthly.current || 0;
+            const stdMatchesTarget = stdMonthly.required || 20;
+            document.getElementById('std-matches').textContent = stdMatches;
+            document.getElementById('std-matches-bar').style.width = `${stdMonthly.progress_percentage || 0}%`;
+            
+            if (stdDates.next_payment_date) {
+                document.getElementById('std-next-payment-container').style.display = 'inline';
+                document.getElementById('std-next-payment').textContent = formatDate(stdDates.next_payment_date);
+            }
+            
+            const stdMonths = stdStatus.months_completed || 0;
+            document.getElementById('std-months').textContent = `${stdMonths}/18`;
+            
+            const stdPaid = parseFloat(stdStatus.total_paid || 0);
+            const stdTotal = std.total_value || 180000;
+            document.getElementById('std-paid').textContent = formatCurrency(stdPaid);
+            document.getElementById('std-remaining').textContent = formatCurrency(stdTotal - stdPaid);
+            
+            const carStatus = car.status || {};
+            const carInitial = car.initial_requirements?.matching_points || {};
+            const carMonthly = car.monthly_requirements?.matching_pairs || {};
+            const carDates = car.target_dates || {};
+            
+            document.getElementById('car-status').textContent = carStatus.overall_status || 'Not Eligible';
+            document.getElementById('car-status').style.color = carStatus.overall_status === 'Active' ? '#28a745' : '#17a2b8';
+            
+            const carPoints = carInitial.current || 0;
+            const carPointsTarget = carInitial.required || 250;
+            const carPointsRemaining = carInitial.remaining ?? Math.max(0, carPointsTarget - carPoints);
+            document.getElementById('car-points-display').textContent = `${carPoints}/${carPointsTarget}`;
+            document.getElementById('car-remaining-count').textContent = carPointsRemaining;
+            document.getElementById('car-points-bar').style.width = `${carInitial.progress_percentage || 0}%`;
+            
+            if (carDates.initial_eligibility_deadline) {
+                document.getElementById('car-deadline').textContent = formatDate(carDates.initial_eligibility_deadline);
+            }
+            
+            const carMatches = carMonthly.current || 0;
+            const carMatchesTarget = carMonthly.required || 40;
+            document.getElementById('car-matches').textContent = carMatches;
+            document.getElementById('car-matches-bar').style.width = `${carMonthly.progress_percentage || 0}%`;
+            
+            if (carDates.next_payment_date) {
+                document.getElementById('car-next-payment-container').style.display = 'inline';
+                document.getElementById('car-next-payment').textContent = formatDate(carDates.next_payment_date);
+            }
+            
+            const carMonths = carStatus.months_completed || 0;
+            document.getElementById('car-months').textContent = `${carMonths}/72`;
+            
+            const carPaid = parseFloat(carStatus.total_paid || 0);
+            const carTotal = car.total_value || 1800000;
+            document.getElementById('car-paid').textContent = formatCurrency(carPaid);
+            document.getElementById('car-remaining').textContent = formatCurrency(carTotal - carPaid);
+        }
+        
+        function renderPaymentHistory() {
+            const payments = allowanceData?.payment_history || [];
+            const list = document.getElementById('payment-history-list');
+            
+            if (payments.length === 0) {
+                list.innerHTML = '<div class="text-center py-4" style="color: #8b949e;"><i class="fas fa-inbox fa-3x mb-3"></i><p>No field allowance payments yet. Meet eligibility criteria to start earning!</p></div>';
+            } else {
+                list.innerHTML = payments.map(p => `
+                    <div class="payment-row d-flex justify-content-between align-items-center">
+                        <div>
+                            <div style="color: #fff; font-weight: 500;">${p.description || 'Field Allowance Payment'}</div>
+                            <small style="color: #8b949e;">${p.timestamp ? formatDate(p.timestamp) : '-'}</small>
+                        </div>
+                        <div style="color: #28a745; font-weight: 600;">${formatCurrency(p.amount)}</div>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('total-paid').textContent = formatCurrency(allowanceData?.total_paid || 0);
+        }
+        
+        function formatCurrency(amount) {
+            return '₹' + parseFloat(amount || 0).toLocaleString('en-IN');
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+    </script>
+</body>
+</html>

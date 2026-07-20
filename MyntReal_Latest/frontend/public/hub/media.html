@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media Hub — News, Blogs, Videos & Publications | MyntReal</title>
+<!-- ═══ SEO ══════════════════════════════════════════════════════════════════ -->
+<meta name="description" content="Stay updated with MyntReal's latest news, blog posts, YouTube videos, and publications from our multi-business ecosystem covering EV, Solar, Real Estate, Insurance, and Training.">
+<meta name="keywords" content="MyntReal news, MyntReal blog, EV news India, solar energy updates, MyntReal media, publications, YouTube videos, MyntReal press">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://www.myntreal.com/hub/media">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="MyntReal">
+<meta property="og:url" content="https://www.myntreal.com/hub/media">
+<meta property="og:title" content="Media Hub — News, Blogs, Videos & Publications | MyntReal">
+<meta property="og:description" content="Stay updated with MyntReal's latest news, blog posts, YouTube videos, and publications from our multi-business ecosystem.">
+<meta property="og:image" content="https://www.myntreal.com/hub/Assets/Myntreal.logo.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@MyntReal">
+<meta name="twitter:title" content="Media Hub — News, Blogs, Videos & Publications | MyntReal">
+<meta name="twitter:description" content="Latest news, blogs, videos and publications from the MyntReal multi-business ecosystem.">
+<meta name="twitter:image" content="https://www.myntreal.com/hub/Assets/Myntreal.logo.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "MyntReal Media Hub",
+  "url": "https://www.myntreal.com/hub/media",
+  "description": "News, blog posts, YouTube videos, and publications from MyntReal's multi-business ecosystem.",
+  "isPartOf": {"@type": "WebSite", "name": "MyntReal", "url": "https://www.myntreal.com"}
+}
+</script>
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/hub/media.css?v=5">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="/public/js/share-modal.js" defer></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="container nav">
+    <div class="logo">
+      <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" class="site-logo">
+    </div>
+    <nav id="nav">
+      <a href="/hub">Home</a>
+      <a href="/hub/about">About</a>
+      <a href="/hub/media" class="active">Media</a>
+      <div class="dropdown">
+        <a href="#" class="drop-btn">Verticals ▾</a>
+        <div class="dropdown-menu">
+          <a href="/hub/manthra"><span>⚡</span> Manthra EV</a>
+          <a href="/hub/hgs"><span>☀️</span> Har Ghar Solar</a>
+          <a href="/hub/etc"><span>🎓</span> EVolution Training</a>
+          <a href="/hub/realestate"><span>🏠</span> VGK Real Dreams</a>
+          <a href="/hub/care"><span>🛡️</span> VGK Care</a>
+        </div>
+      </div>
+      <a href="/hub/contact">Contact</a>
+      <a href="/careers">Careers</a>
+    </nav>
+    <a href="/landing" style="background:#2563eb;color:#fff;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap">Login</a>
+    <div class="menu-toggle" onclick="document.getElementById('nav').classList.toggle('open')">☰</div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container center">
+    <h1>Media Hub</h1>
+    <p>Videos, publications, and insights from the MyntReal ecosystem.</p>
+  </div>
+</section>
+
+<!-- MAIN LAYOUT -->
+<div class="container">
+  <div class="media-layout">
+
+    <!-- LEFT TABS -->
+    <aside class="media-sidebar">
+      <nav class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('youtube', this)" id="tab-youtube">
+          <span class="tab-icon">▶️</span>
+          <span>YouTube Videos</span>
+          <span class="tab-count" id="count-youtube">—</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('publication', this)" id="tab-publication">
+          <span class="tab-icon">📰</span>
+          <span>Publications</span>
+          <span class="tab-count" id="count-publication">—</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('blog', this)" id="tab-blog">
+          <span class="tab-icon">✍️</span>
+          <span>Blogs</span>
+          <span class="tab-count" id="count-blog">—</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('gallery', this)" id="tab-gallery">
+          <span class="tab-icon">🖼️</span>
+          <span>Gallery</span>
+          <span class="tab-count" id="count-gallery">—</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- CONTENT AREA -->
+    <main class="media-content">
+
+      <!-- YouTube -->
+      <div class="content-section active" id="section-youtube">
+        <h2 class="section-title">YouTube Videos</h2>
+        <p class="section-subtitle">Watch our latest videos on EV, Solar, Training, Real Estate & more.</p>
+        <div class="cards-grid" id="grid-youtube">
+          <div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+        </div>
+      </div>
+
+      <!-- Publications -->
+      <div class="content-section" id="section-publication">
+        <h2 class="section-title">Publications</h2>
+        <p class="section-subtitle">News coverage, press releases, and official documents.</p>
+        <div class="cards-grid" id="grid-publication">
+          <div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+        </div>
+      </div>
+
+      <!-- Blogs -->
+      <div class="content-section" id="section-blog">
+        <h2 class="section-title">Blogs</h2>
+        <p class="section-subtitle">Insights, guides, and stories from the MyntReal team.</p>
+        <div class="cards-grid" id="grid-blog">
+          <div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+        </div>
+      </div>
+
+      <!-- Gallery -->
+      <div class="content-section" id="section-gallery">
+        <h2 class="section-title">Gallery</h2>
+        <p class="section-subtitle">Photos and short videos from the MyntReal ecosystem.</p>
+        <div id="grid-gallery">
+          <div class="loading-row"><i class="fas fa-spinner fa-spin"></i> Loading…</div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- GALLERY LIGHTBOX [DC_GALLERY_001] -->
+<div id="galleryLightbox">
+  <!-- Full-screen solid backdrop — click to close -->
+  <div id="lbBackdrop" onclick="closeLightbox()"></div>
+  <!-- Close -->
+  <button id="lbClose" onclick="closeLightbox()">✕</button>
+  <!-- Left arrow -->
+  <button id="lbPrevBtn" onclick="lbNav(-1)">&#8249;</button>
+  <!-- Media wrapper — solid black bg so narrow portrait images don't bleed -->
+  <div id="lbImgWrap">
+    <img id="lbImg" src="" alt="">
+    <video id="lbVideo" src="" controls style="display:none;max-width:100%;max-height:100%;border-radius:6px;box-shadow:0 8px 40px rgba(0,0,0,.6)"></video>
+  </div>
+  <!-- Right arrow -->
+  <button id="lbNextBtn" onclick="lbNav(1)">&#8250;</button>
+  <!-- Counter -->
+  <div id="lbCounter"></div>
+</div>
+<style>
+#galleryLightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #000;
+}
+#galleryLightbox.open { display: block; }
+#lbBackdrop {
+  position: absolute;
+  inset: 0;
+  cursor: zoom-out;
+}
+#lbImgWrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 80px;
+  pointer-events: none;
+}
+#lbImg {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.6);
+  display: block;
+}
+#lbClose {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background .15s;
+}
+#lbClose:hover { background: rgba(255,255,255,.3); }
+#lbPrevBtn, #lbNextBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,.18);
+  border: none;
+  color: #fff;
+  font-size: 36px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+  line-height: 1;
+}
+#lbPrevBtn { left: 16px; }
+#lbNextBtn { right: 16px; }
+#lbPrevBtn:hover, #lbNextBtn:hover { background: rgba(255,255,255,.35); }
+#lbPrevBtn:active, #lbNextBtn:active { background: rgba(255,255,255,.5); }
+#lbCounter {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,.85);
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(255,255,255,.12);
+  padding: 4px 16px;
+  border-radius: 20px;
+  white-space: nowrap;
+  z-index: 2;
+}
+.gallery-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:8px; }
+.gallery-item { border-radius:8px; overflow:hidden; cursor:pointer; aspect-ratio:1; background:#f3f4f6; position:relative; }
+.gallery-item img { width:100%; height:100%; object-fit:cover; transition:transform .2s; display:block; }
+.gallery-item:hover img { transform:scale(1.04); }
+.loading-row { display:flex; align-items:center; gap:10px; padding:40px; color:#9ca3af; font-size:14px; }
+</style>
+
+<!-- BLOG READ-MORE MODAL -->
+<div class="modal-backdrop" id="blogModal" onclick="closeBlogModal(event)">
+  <div class="blog-modal">
+    <!-- sticky close-only top bar -->
+    <div class="modal-close-bar">
+      <button class="modal-close" onclick="document.getElementById('blogModal').classList.remove('open')" aria-label="Close">✕</button>
+    </div>
+    <!-- banner image — shown at natural aspect ratio, no crop -->
+    <div class="blog-modal-banner" id="modalBanner"></div>
+    <!-- attractive title block below banner -->
+    <div class="blog-modal-title-area">
+      <div class="blog-modal-type-badge" id="modalTypeBadge">Blog</div>
+      <h2 class="blog-modal-title" id="modalTitle">Blog Post</h2>
+      <div class="blog-modal-meta" id="modalMeta"></div>
+    </div>
+    <div class="modal-body">
+      <div class="blog-full-content" id="modalBody"></div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid #f1f5f9;" id="modalReactions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal" class="footer-logo">
+        <p>MyntReal integrates multiple high-growth industries into one scalable ecosystem including EV, Solar, Training, Insurance and Real Estate services.</p>
+        <div class="footer-social" id="sm-hub" style="margin-top:10px"></div>
+        <script>(function(){fetch('/api/v1/social-links/hub').then(function(r){return r.ok?r.json():[];}).then(function(ls){if(!ls||!ls.length)return;var ic={facebook:'fa-brands fa-facebook-f',instagram:'fa-brands fa-instagram',youtube:'fa-brands fa-youtube',linkedin:'fa-brands fa-linkedin-in',google:'fa-brands fa-google'};var el=document.getElementById('sm-hub');el.innerHTML=ls.map(function(l){return'<a href="'+l.url+'" target="_blank" rel="noopener"><i class="'+ic[l.platform]+'"></i></a>';}).join('');}).catch(function(){});})();</script>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="/hub">Home</a>
+        <a href="/hub/about">About</a>
+        <a href="/hub/media">Media</a>
+        <a href="/hub/contact">Contact</a>
+      </div>
+      <div class="footer-col">
+        <h4>Our Verticals</h4>
+        <a href="/hub/manthra">Manthra EV</a>
+        <a href="/hub/hgs">Har Ghar Solar</a>
+        <a href="/hub/etc">EVolution Training</a>
+        <a href="/hub/care">VGK Care</a>
+        <a href="/hub/realestate">VGK Real Dreams</a>
+      </div>
+      <div class="footer-col">
+        <h4>Get Support</h4>
+        <a href="/service-request">Support Form</a>
+        <a href="/service-request?category=ev">Manthra EV Support</a>
+        <a href="/service-request?category=solar">Solar Support</a>
+        <a href="/service-request?category=etc">Training Support</a>
+        <a href="/service-request?category=care">VGK Care Support</a>
+        <a href="/service-request?category=realestate">Real Estate Support</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 MyntReal. All rights reserved.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+const API = '/api/v1';
+
+/* ── Visitor fingerprint (localStorage UUID for reaction dedup) ── */
+function getVisitorKey() {
+  let key = localStorage.getItem('mnr_vk');
+  if (!key) {
+    key = 'vk_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+    localStorage.setItem('mnr_vk', key);
+  }
+  return key;
+}
+
+/* ── Local reaction state ── */
+const myReactions = JSON.parse(localStorage.getItem('mnr_rxn') || '{}');
+function saveMyReactions() { localStorage.setItem('mnr_rxn', JSON.stringify(myReactions)); }
+
+/* ── Tab switching ── */
+const loaded = { youtube: false, publication: false, blog: false, gallery: false };
+
+function switchTab(type, btn, skipSave) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('section-' + type).classList.add('active');
+  if (!skipSave) localStorage.setItem('mnr_media_tab', type);
+  if (!loaded[type]) {
+    if (type === 'gallery') loadGallery();
+    else loadMedia(type);
+  }
+}
+
+/* ── Media/gallery caches — safe modal + share data ── */
+const mediaCache   = {};   // all media items keyed by id
+const galleryCache = {};   // gallery sets keyed by id
+
+/* ── Load media items ── */
+async function loadMedia(type) {
+  loaded[type] = true;
+  const grid = document.getElementById('grid-' + type);
+  try {
+    const r = await fetch(`${API}/hub/media/items?media_type=${type}&per_page=50`);
+    if (!r.ok) throw new Error('Failed');
+    const data = await r.json();
+    document.getElementById('count-' + type).textContent = data.total;
+    if (!data.items || data.items.length === 0) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-${type==='youtube'?'video':type==='publication'?'newspaper':'pen-nib'}"></i><p>No ${type === 'youtube' ? 'videos' : type + 's'} yet. Check back soon!</p></div>`;
+      return;
+    }
+    data.items.forEach(item => { mediaCache[item.id] = item; });
+    grid.innerHTML = data.items.map(item => renderCard(item)).join('');
+  } catch (e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="fas fa-exclamation-circle"></i><p>Could not load content. Please refresh.</p></div>`;
+  }
+}
+
+/* ── Load gallery ── */
+async function loadGallery() {
+  loaded.gallery = true;
+  const container = document.getElementById('grid-gallery');
+  try {
+    const r = await fetch(`${API}/hub/gallery`);
+    if (!r.ok) throw new Error('Failed');
+    const data = await r.json();
+    document.getElementById('count-gallery').textContent = data.total;
+    if (!data.galleries || data.galleries.length === 0) {
+      container.innerHTML = `<div class="empty-state"><i class="fas fa-images"></i><p>No gallery items yet. Check back soon!</p></div>`;
+      return;
+    }
+    data.galleries.forEach(g => { galleryCache[g.id] = g; });
+    container.innerHTML = data.galleries.map(g => renderGallerySet(g)).join('');
+    /* scroll to anchor if a shared gallery link was opened */
+    const hash = window.location.hash;
+    if (hash && hash.startsWith('#gallery-')) {
+      const target = document.getElementById(hash.slice(1));
+      if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+    }
+  } catch(e) {
+    container.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Could not load gallery. Please refresh.</p></div>`;
+  }
+}
+
+function _hubFileUrl(url) {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('/')) return url;
+  return `/api/v1/files/${url}`;
+}
+
+/* photo sets registry for lightbox navigation: gid → [{url, name}] */
+const _lbSets = {};
+let _lbCurSet = [];
+let _lbCurIdx = 0;
+
+function renderGallerySet(g) {
+  const files = g.files || [];
+  /* register ALL files (photos + videos) for lightbox navigation */
+  _lbSets[g.id] = files.map(f => ({ url: _hubFileUrl(f.file_url), name: f.file_name || '', type: f.file_type }));
+
+  const filesHtml = files.map((f, fi) => {
+    const url = _hubFileUrl(f.file_url);
+    if (f.file_type === 'video') {
+      /* video card: fixed 200px height, play overlay, click opens lightbox */
+      return `<div style="grid-column:span 2;position:relative;cursor:pointer;height:200px;border-radius:10px;overflow:hidden;background:#000" onclick="openGalleryLightbox(${g.id},${fi})" title="${escHtml(f.file_name||'')}">
+        <video src="${escHtml(url)}" preload="metadata" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none"></video>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25)">
+          <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#111"><path d="M8 5v14l11-7z"/></svg>
+          </div>
+        </div>
+      </div>`;
+    }
+    return `<div class="gallery-item" onclick="openGalleryLightbox(${g.id},${fi})" title="${escHtml(f.file_name||'')}">
+      <img src="${escHtml(url)}" alt="${escHtml(f.file_name||'')}" onerror="this.parentElement.style.display='none'" loading="lazy">
+    </div>`;
+  }).join('');
+
+  return `<div class="gallery-set" id="gallery-${g.id}" style="margin-bottom:36px">
+    <div style="margin-bottom:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div>
+        <h3 style="font-size:17px;font-weight:700;color:#111827;margin:0 0 4px">${escHtml(g.title)}</h3>
+        ${g.description ? `<p style="font-size:13px;color:#6b7280;margin:0 0 2px">${escHtml(g.description)}</p>` : ''}
+        <span style="font-size:11px;color:#9ca3af">${files.length} item${files.length !== 1 ? 's' : ''}</span>
+      </div>
+      <button class="share-media-btn" title="Share gallery" onclick="shareMediaBtn(this)" data-share-id="${g.id}" data-share-type="gallery" data-share-title="${escHtml(g.title)}" data-share-url="https://vgk4u.com/hub/media#gallery-${g.id}" style="flex-shrink:0;margin-top:2px"><i class="fas fa-share"></i> Share</button>
+    </div>
+    <div class="gallery-grid">${filesHtml}</div>
+  </div>`;
+}
+
+/* ── Gallery lightbox with navigation ── */
+function openGalleryLightbox(galleryId, idx) {
+  _lbCurSet = _lbSets[galleryId] || [];
+  _lbCurIdx = Math.max(0, Math.min(idx, _lbCurSet.length - 1));
+  _lbUpdateUI();
+  document.getElementById('galleryLightbox').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function _lbUpdateUI() {
+  const item = _lbCurSet[_lbCurIdx];
+  if (!item) return;
+  const img = document.getElementById('lbImg');
+  const vid = document.getElementById('lbVideo');
+  const wrap = document.getElementById('lbImgWrap');
+  /* pause previous video if any */
+  if (!vid.paused) { vid.pause(); }
+  if (item.type === 'video') {
+    img.style.display = 'none';
+    img.src = '';
+    vid.style.display = 'block';
+    vid.src = item.url;
+    vid.load();
+    /* allow pointer events so video controls (play, seek etc.) work */
+    wrap.style.pointerEvents = 'auto';
+    wrap.style.cursor = 'default';
+  } else {
+    vid.style.display = 'none';
+    vid.src = '';
+    img.style.display = 'block';
+    img.src = item.url;
+    img.alt = item.name;
+    /* pass clicks through to the backdrop so clicking the side closes the lightbox */
+    wrap.style.pointerEvents = 'none';
+    wrap.style.cursor = '';
+  }
+  const total = _lbCurSet.length;
+  document.getElementById('lbCounter').textContent = total > 1 ? `${_lbCurIdx + 1} / ${total}` : '';
+  const show = total > 1 ? 'flex' : 'none';
+  document.getElementById('lbPrevBtn').style.display = show;
+  document.getElementById('lbNextBtn').style.display = show;
+}
+
+function lbNav(dir) {
+  if (!_lbCurSet.length) return;
+  _lbCurIdx = (_lbCurIdx + dir + _lbCurSet.length) % _lbCurSet.length;
+  _lbUpdateUI();
+}
+
+function closeLightbox() {
+  document.getElementById('galleryLightbox').classList.remove('open');
+  document.getElementById('lbImg').src = '';
+  const vid = document.getElementById('lbVideo');
+  vid.pause();
+  vid.src = '';
+  document.body.style.overflow = '';
+  _lbCurSet = [];
+}
+
+/* keyboard navigation */
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('galleryLightbox').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft')  lbNav(-1);
+  if (e.key === 'ArrowRight') lbNav(1);
+  if (e.key === 'Escape')     closeLightbox();
+});
+
+/* touch swipe support */
+let _lbTouchX = null;
+document.getElementById('galleryLightbox').addEventListener('touchstart', e => {
+  _lbTouchX = e.changedTouches[0].clientX;
+}, { passive: true });
+document.getElementById('galleryLightbox').addEventListener('touchend', e => {
+  if (_lbTouchX === null) return;
+  const dx = e.changedTouches[0].clientX - _lbTouchX;
+  if (Math.abs(dx) > 50) lbNav(dx < 0 ? 1 : -1);
+  _lbTouchX = null;
+}, { passive: true });
+
+/* ── Card renderers ── */
+function renderCard(item) {
+  const rxn = item.reactions || {};
+  if (item.media_type === 'youtube') return renderYouTube(item, rxn);
+  if (item.media_type === 'publication') return renderPublication(item, rxn);
+  return renderBlog(item, rxn);
+}
+
+function renderYouTube(item, rxn) {
+  const thumb = item.thumbnail_url || getYtThumb(item.url);
+  const desc = item.description || '';
+  const LIMIT = 160;
+  const truncated = desc.length > LIMIT;
+  const shortDesc = truncated ? desc.slice(0, LIMIT).trimEnd() + '…' : desc;
+  const descHtml = shortDesc ? `<div class="blog-excerpt yt-desc">${nl2br(escHtml(shortDesc))}</div>` : '';
+  const moreBtn = truncated
+    ? `<button class="blog-read-more" onclick="openYtDetail(${item.id},${escHtml(JSON.stringify(item.title))},${escHtml(JSON.stringify(item.url))},${escHtml(JSON.stringify(desc))})">more →</button>`
+    : '';
+  return `<div class="media-card yt-card" data-id="${item.id}">
+    <div class="yt-thumb" onclick="openYt(${escHtml(JSON.stringify(item.url))}, ${item.id})">
+      ${thumb ? `<img src="${escHtml(thumb)}" alt="${escHtml(item.title)}" onerror="this.style.display='none'">` : ''}
+      <div class="play-btn"><i class="fab fa-youtube" style="color:#ff0000;font-size:44px;"></i></div>
+      <span class="yt-badge">YOUTUBE</span>
+    </div>
+    <div class="yt-info">
+      <div class="blog-category">Video</div>
+      <div class="blog-title">${escHtml(item.title)}</div>
+      ${descHtml}
+      ${moreBtn}
+      <div class="card-footer" style="padding:0;border:none;margin-top:auto;padding-top:14px;">
+        <div class="card-meta"><i class="fas fa-eye"></i> ${item.click_count} views</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${renderReactions(item.id, rxn)}
+          <button class="share-media-btn" title="Share" onclick="shareMediaBtn(this)" data-share-id="${item.id}" data-share-type="youtube" data-share-title="${escHtml(item.title)}" data-share-url="${escHtml(item.url || '')}"><i class="fas fa-share"></i> Share</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderPublication(item, rxn) {
+  const links = Array.isArray(item.links) ? item.links : [];
+  const thumb = item.thumbnail_url;
+  return `<div class="media-card pub-card" data-id="${item.id}">
+    ${thumb
+      ? `<div class="pub-top-thumb"><img src="${escHtml(thumb)}" alt="${escHtml(item.title)}" onerror="this.parentElement.outerHTML='<div class=\\'pub-no-thumb-bar\\'><div class=\\'pub-icon\\'><i class=\\'fas fa-newspaper\\'></i></div><div class=\\'pub-label\\'>Publication</div></div>'"></div>`
+      : `<div class="pub-no-thumb-bar"><div class="pub-icon"><i class="fas fa-newspaper"></i></div><div class="pub-label">News &amp; Press</div></div>`}
+    <div class="pub-right">
+      <div class="blog-category">News &amp; Press</div>
+      <div class="blog-title">${escHtml(item.title)}</div>
+      ${item.description ? `<div class="blog-excerpt">${escHtml(item.description)}</div>` : ''}
+      <div class="pub-links-row">
+        ${links.map(l => `<a href="${escHtml(l.url)}" target="_blank" rel="noopener" class="pub-link-badge" onclick="trackClick(${item.id})"><i class="fas fa-external-link-alt"></i> ${escHtml(l.label || 'Read Article')}</a>`).join('')}
+        ${links.length === 0 ? '<span style="font-size:12px;color:#94a3b8">No links added yet.</span>' : ''}
+        ${item.pdf_path ? `<a href="${escHtml(item.pdf_path)}" target="_blank" class="pub-pdf-badge" onclick="trackClick(${item.id})"><i class="fas fa-file-pdf"></i> PDF</a>` : ''}
+      </div>
+      <div class="card-footer" style="padding:0;border:none;margin-top:auto;padding-top:14px;">
+        <div class="card-meta"><i class="fas fa-eye"></i> ${item.click_count} views</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${renderReactions(item.id, rxn)}
+          <button class="share-media-btn" title="Share" onclick="shareMediaBtn(this)" data-share-id="${item.id}" data-share-type="publication" data-share-title="${escHtml(item.title)}" data-share-url="${escHtml(links.length > 0 ? links[0].url : '')}"><i class="fas fa-share"></i> Share</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderBlog(item, rxn) {
+  const rawDesc = item.description || (item.body ? item.body.replace(/<[^>]+>/g, '').slice(0, 200) : '');
+  const LIMIT = 180;
+  const truncated = rawDesc.length > LIMIT;
+  const excerpt = truncated ? rawDesc.slice(0, LIMIT).trimEnd() + '…' : rawDesc;
+  const thumb = item.thumbnail_url;
+  const hasBody = !!(item.body && item.body.trim());
+  const permalinkUrl = `/hub/blog/${item.id}`;
+  const shareUrl = `https://www.myntreal.com/hub/blog/${item.id}`;
+  return `<div class="media-card blog-card" data-id="${item.id}">
+    <div class="blog-top-thumb">
+      <a href="${permalinkUrl}" onclick="event.preventDefault(); openBlogById(${item.id})" style="display:block;height:100%">
+        ${thumb
+          ? `<img src="${escHtml(thumb)}" alt="${escHtml(item.title)}" onerror="this.parentElement.innerHTML='<div class=\\'blog-thumb-placeholder\\'>✍️</div>'">`
+          : '<div class="blog-thumb-placeholder">✍️</div>'}
+      </a>
+    </div>
+    <div class="blog-info">
+      <div class="blog-category">Blog</div>
+      <a href="${permalinkUrl}" onclick="event.preventDefault(); openBlogById(${item.id})" class="blog-title" style="text-decoration:none;cursor:pointer;display:block">${escHtml(item.title)}</a>
+      ${excerpt ? `<div class="blog-excerpt">${escHtml(excerpt)}</div>` : ''}
+      ${hasBody ? `<a href="${permalinkUrl}" onclick="event.preventDefault(); openBlogById(${item.id})" class="blog-read-more" style="text-decoration:none">Read more →</a>` : ''}
+      <div class="card-footer" style="padding:0;border:none;margin-top:auto;padding-top:14px;">
+        <div class="card-meta"><i class="fas fa-eye"></i> ${item.click_count} views</div>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${renderReactions(item.id, rxn)}
+          <button class="share-media-btn" title="Share" onclick="shareMediaBtn(this)" data-share-id="${item.id}" data-share-type="blog" data-share-title="${escHtml(item.title)}" data-share-url="${shareUrl}"><i class="fas fa-share"></i> Share</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderReactions(mediaId, rxn) {
+  const key = String(mediaId);
+  const mySet = myReactions[key] || {};
+  return `<div class="reactions" id="rxn-${mediaId}">
+    ${['like','love','shoutout'].map(t => {
+      const icon = t==='like'?'👍':t==='love'?'❤️':'📣';
+      const isActive = !!mySet[t];
+      const cls = isActive ? `active-${t}` : '';
+      const cnt = rxn[t] || 0;
+      return `<button class="rxn-btn ${cls}" onclick="toggleReaction(${mediaId},'${t}',this)" title="${t.charAt(0).toUpperCase()+t.slice(1)}"><span class="rxn-icon">${icon}</span><span class="rxn-count">${cnt || ''}</span></button>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ── Reaction toggle ── */
+async function toggleReaction(mediaId, reactionType, btn) {
+  const key = String(mediaId);
+  if (!myReactions[key]) myReactions[key] = {};
+  try {
+    const r = await fetch(`${API}/hub/media/${mediaId}/react`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ reaction_type: reactionType, reactor_key: getVisitorKey() })
+    });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    if (data.action === 'added') myReactions[key][reactionType] = true;
+    else delete myReactions[key][reactionType];
+    saveMyReactions();
+    const container = document.getElementById('rxn-' + mediaId);
+    if (container) container.innerHTML = Object.entries({like:'👍',love:'❤️',shoutout:'📣'}).map(([t,icon]) => {
+      const isActive = !!(myReactions[key] || {})[t];
+      const cnt = data.counts[t] || 0;
+      return `<button class="rxn-btn ${isActive?'active-'+t:''}" onclick="toggleReaction(${mediaId},'${t}',this)" title="${t.charAt(0).toUpperCase()+t.slice(1)}"><span class="rxn-icon">${icon}</span><span class="rxn-count">${cnt||''}</span></button>`;
+    }).join('');
+  } catch(e) {}
+}
+
+/* ── Share helper ── */
+function shareMedia(title, pageUrl, thumb, text) {
+  const url = pageUrl || window.location.href;
+  if (window.MyntShareModal) {
+    MyntShareModal.show({ url, title, text: text || title, type: 'general', thumbnail: thumb || '' });
+  } else {
+    navigator.clipboard && navigator.clipboard.writeText(url).then(() => alert('Link copied!')).catch(() => alert(url));
+  }
+}
+function shareMediaBtn(el) {
+  const id    = el.dataset.shareId   ? Number(el.dataset.shareId) : null;
+  const type  = el.dataset.shareType || '';
+  const title = el.dataset.shareTitle || 'MyntReal';
+  let   url   = el.dataset.shareUrl  || '';
+  let   thumb = '';
+  let   text  = title;
+
+  if (id && type === 'gallery' && galleryCache[id]) {
+    const g = galleryCache[id];
+    thumb = g.thumbnail_url || '';
+    /* thumbnail from first image file if no explicit thumb */
+    if (!thumb && g.files) {
+      const img = g.files.find(f => f.file_type !== 'video');
+      if (img) thumb = _hubFileUrl(img.file_url);
+    }
+  } else if (id && mediaCache[id]) {
+    const item = mediaCache[id];
+    thumb = item.thumbnail_url || '';
+    if (type === 'youtube' && !thumb) thumb = getYtThumb(item.url || '');
+    if (!url && type === 'youtube') url = item.url || '';
+    if (type === 'publication') {
+      const links = Array.isArray(item.links) ? item.links : [];
+      if (!url && links.length > 0) url = links[0].url;
+      /* include all article URLs in text so WhatsApp previews each */
+      const linkUrls = links.map(l => l.url).filter(Boolean);
+      text = linkUrls.length > 1
+        ? title + '\n\n' + linkUrls.slice(1).join('\n')
+        : title;
+    }
+  }
+  shareMedia(title, url || window.location.href, thumb, text);
+}
+
+/* ── Click tracking ── */
+function trackClick(mediaId) {
+  fetch(`${API}/hub/media/${mediaId}/click`, { method: 'POST' }).catch(() => {});
+}
+
+/* ── YouTube helpers ── */
+function getYtId(url) {
+  if (!url) return null;
+  const m = url.match(/[?&]v=([^&]+)/) || url.match(/youtu\.be\/([^?]+)/);
+  return m ? m[1] : null;
+}
+function getYtThumb(url) {
+  const id = getYtId(url);
+  return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : '';
+}
+function openYt(url, mediaId) {
+  trackClick(mediaId);
+  window.open(url, '_blank', 'noopener');
+}
+
+/* ── Blog modal ── */
+function openBlog(mediaId, title, body, thumbnail, typeLabel, dateStr) {
+  trackClick(mediaId);
+  document.getElementById('modalTitle').textContent = title;
+  const badgeEl = document.getElementById('modalTypeBadge');
+  if (badgeEl) badgeEl.textContent = typeLabel || 'Blog';
+  const metaEl = document.getElementById('modalMeta');
+  if (metaEl) metaEl.textContent = dateStr ? `Published ${dateStr}` : '';
+  document.getElementById('modalBody').innerHTML = body || '';
+  document.getElementById('modalReactions').innerHTML = `<b style="font-size:13px;color:#64748b">Reactions</b><br><br>` + renderReactions(mediaId, {});
+  const banner = document.getElementById('modalBanner');
+  if (thumbnail) {
+    banner.innerHTML = `<img src="${escHtml(thumbnail)}" alt="${escHtml(title)}" onerror="this.parentElement.classList.remove('has-img');this.parentElement.innerHTML=''">`;
+    banner.classList.add('has-img');
+  } else {
+    banner.innerHTML = '';
+    banner.classList.remove('has-img');
+  }
+  document.getElementById('blogModal').classList.add('open');
+}
+function openBlogById(mediaId) {
+  const item = mediaCache[mediaId];
+  if (!item) return;
+  const raw = item.media_type || 'blog';
+  const typeLabel = raw.charAt(0).toUpperCase() + raw.slice(1);
+  const dateStr = item.created_at
+    ? new Date(item.created_at).toLocaleDateString('en-IN', {day:'numeric', month:'long', year:'numeric'})
+    : '';
+  openBlog(item.id, item.title, item.body, item.thumbnail_url || '', typeLabel, dateStr);
+}
+function closeBlogModal(e) {
+  if (e.target === document.getElementById('blogModal')) document.getElementById('blogModal').classList.remove('open');
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function nl2br(s) {
+  return String(s || '').replace(/\n/g, '<br>');
+}
+
+/* ── YouTube detail modal (reuses blog modal) ── */
+function openYtDetail(mediaId, title, url, description) {
+  trackClick(mediaId);
+  document.getElementById('modalTitle').textContent = title;
+  const badgeEl = document.getElementById('modalTypeBadge');
+  if (badgeEl) badgeEl.textContent = 'YouTube';
+  const metaEl = document.getElementById('modalMeta');
+  if (metaEl) metaEl.textContent = '';
+  const banner = document.getElementById('modalBanner');
+  banner.innerHTML = '';
+  banner.classList.remove('has-img');
+  document.getElementById('modalBody').innerHTML =
+    `<p style="margin-bottom:16px"><a href="${escHtml(url)}" target="_blank" rel="noopener" style="color:#2563eb;font-weight:600;text-decoration:none"><i class="fab fa-youtube" style="color:#ff0000"></i> Watch on YouTube →</a></p>` +
+    `<div style="font-size:14.5px;line-height:1.8;color:#374151;white-space:pre-line">${escHtml(description)}</div>`;
+  document.getElementById('modalReactions').innerHTML =
+    `<b style="font-size:13px;color:#64748b">Reactions</b><br><br>` + renderReactions(mediaId, {});
+  document.getElementById('blogModal').classList.add('open');
+}
+
+/* ── Prefetch counts for all tabs so badges are never stuck on — ── */
+async function prefetchCounts() {
+  const types = ['youtube', 'publication', 'blog'];
+  types.forEach(async type => {
+    if (loaded[type]) return;          /* skip if already loaded by switchTab */
+    try {
+      const r = await fetch(`${API}/hub/media/items?media_type=${type}&per_page=1`);
+      if (!r.ok) return;
+      const d = await r.json();
+      if (!loaded[type]) document.getElementById('count-' + type).textContent = d.total;
+    } catch(e) {}
+  });
+  if (!loaded.gallery) {
+    try {
+      const r = await fetch(`${API}/hub/gallery`);
+      if (!r.ok) return;
+      const d = await r.json();
+      if (!loaded.gallery) document.getElementById('count-gallery').textContent = d.total;
+    } catch(e) {}
+  }
+}
+
+/* Initial load — restore last active tab */
+const VALID_TABS = ['youtube', 'publication', 'blog', 'gallery'];
+const savedTab = localStorage.getItem('mnr_media_tab');
+const initTab = VALID_TABS.includes(savedTab) ? savedTab : 'youtube';
+if (initTab !== 'youtube') {
+  const initBtn = document.getElementById('tab-' + initTab);
+  if (initBtn) switchTab(initTab, initBtn, true);
+  else loadMedia('youtube');
+} else {
+  loadMedia('youtube');
+}
+/* fire count prefetch in background for un-loaded tabs */
+prefetchCounts();
+</script>
+</body>
+</html>

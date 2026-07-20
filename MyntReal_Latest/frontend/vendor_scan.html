@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>VGK Shop</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;background:#f5f3ff;min-height:100vh;padding-bottom:100px}
+
+        /* ── Top bar ── */
+        .topbar{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+        .topbar-brand{font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}
+        .topbar-right{display:flex;align-items:center;gap:10px}
+        .member-pill{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;display:none}
+
+        /* ── Loading / Error ── */
+        .loading-box{text-align:center;padding:80px 20px;color:#6b7280}
+        .loading-box i{font-size:48px;color:#7c3aed;opacity:.35;display:block;margin-bottom:14px}
+        .error-box{text-align:center;padding:80px 20px;color:#6b7280;max-width:320px;margin:0 auto}
+        .error-box i{font-size:60px;color:#e9d5ff;display:block;margin-bottom:16px}
+
+        /* ── Hero ── */
+        .hero{position:relative;min-height:160px;background:linear-gradient(135deg,#4c1d95,#7c3aed);overflow:hidden}
+        .hero-banner{width:100%;height:180px;object-fit:cover;display:block}
+        .hero-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.6) 0%,transparent 50%)}
+        .hero-content{position:absolute;bottom:0;left:0;right:0;padding:14px 16px;display:flex;align-items:flex-end;gap:14px}
+        .hero-logo{width:70px;height:70px;border-radius:16px;border:3px solid #fff;background:linear-gradient(135deg,#7c3aed,#4c1d95);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;text-transform:uppercase;flex-shrink:0;box-shadow:0 4px 16px rgba(0,0,0,.3);overflow:hidden}
+        .hero-logo img{width:100%;height:100%;object-fit:cover}
+        .hero-text{flex:1;min-width:0}
+        .hero-name{font-size:20px;font-weight:900;color:#fff;line-height:1.2;text-shadow:0 1px 4px rgba(0,0,0,.5)}
+        .hero-sub{font-size:13px;color:rgba(255,255,255,.85);margin-top:3px}
+        .hero-badges{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}
+        .badge-cat{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);border-radius:12px;padding:3px 10px;font-size:11px;color:#fff;font-weight:700}
+        .badge-cashback{background:#10b981;border-radius:12px;padding:3px 10px;font-size:11px;color:#fff;font-weight:800}
+
+        /* ── Content ── */
+        .main{max-width:480px;margin:0 auto;padding:0 0 16px}
+
+        /* ── Info card ── */
+        .info-card{background:#fff;border-radius:0 0 16px 16px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06);margin-bottom:12px}
+        .info-row{display:flex;align-items:center;gap:10px;font-size:13px;color:#374151;margin-bottom:8px}
+        .info-row:last-child{margin-bottom:0}
+        .info-row i{color:#7c3aed;width:18px;text-align:center;flex-shrink:0}
+        .info-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+        .action-btn{flex:1;min-width:90px;border:none;border-radius:10px;padding:10px 8px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
+        .action-wa{background:#d1fae5;color:#065f46}
+        .action-call{background:#dbeafe;color:#1e40af}
+        .action-map{background:#fce7f3;color:#9d174d}
+
+        /* ── Section ── */
+        .section{margin:0 0 12px;padding:0 12px}
+        .section-title{font-size:13px;font-weight:800;color:#4c1d95;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+        /* ── Category chips ── */
+        .cat-chips{display:flex;flex-wrap:wrap;gap:8px}
+        .cat-chip{background:#fff;border:1.5px solid #ede9fe;border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;align-items:center;min-width:100px;gap:4px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        .cat-chip-icon{font-size:20px;color:#7c3aed;margin-bottom:2px}
+        .cat-chip-name{font-size:12px;font-weight:700;color:#1f2937;text-align:center}
+        .cat-chip-disc{font-size:12px;font-weight:800;color:#059669}
+
+        /* ── Product cards ── */
+        .products-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+        .prod-card{background:#fff;border:1.5px solid #ede9fe;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        .prod-img-box{width:100%;height:110px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;color:#c4b5fd;font-size:32px;overflow:hidden}
+        .prod-img-box img{width:100%;height:100%;object-fit:cover}
+        .prod-body{padding:10px 10px 8px}
+        .prod-name{font-size:12px;font-weight:700;color:#1f2937;line-height:1.3;margin-bottom:4px}
+        .prod-price{font-size:13px;font-weight:800;color:#4c1d95}
+        .prod-disc-pill{background:#d1fae5;color:#065f46;border-radius:8px;padding:1px 6px;font-size:10px;font-weight:800;display:inline-block;margin-top:3px}
+        .prod-cat-name{font-size:10px;color:#6b7280;margin-top:3px}
+
+        /* ── Cashback CTA ── */
+        .cashback-cta{background:#fff;border-radius:16px;border:2px solid #7c3aed;padding:20px;margin:0 12px 12px;text-align:center;box-shadow:0 4px 20px rgba(109,40,217,.15)}
+        .cashback-cta h3{font-size:17px;font-weight:900;color:#4c1d95;margin-bottom:6px}
+        .cashback-cta p{font-size:13px;color:#6b7280;margin-bottom:16px}
+        .btn-cashback{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;border:none;border-radius:12px;padding:14px 24px;font-size:15px;font-weight:800;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:10px}
+        .btn-cashback:hover{opacity:.9}
+        .btn-skip{background:none;border:none;color:#9ca3af;font-size:13px;cursor:pointer;margin-top:10px;width:100%;padding:6px}
+
+        /* ── Purchase form ── */
+        .purchase-section{background:#fff;border-radius:16px;border:2px solid #10b981;padding:20px;margin:0 12px 12px;box-shadow:0 4px 20px rgba(16,185,129,.1)}
+        .purchase-section h3{font-size:16px;font-weight:800;color:#065f46;margin-bottom:4px}
+        .purchase-section p{font-size:13px;color:#6b7280;margin-bottom:16px}
+        .member-info-bar{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px;display:flex;align-items:center;gap:10px}
+        .wallet-balance{font-weight:800;color:#059669}
+        .form-group{margin-bottom:13px}
+        .form-group label{font-size:11px;font-weight:700;color:#374151;margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.06em}
+        .form-group input,.form-group select{width:100%;border:1.5px solid #d1d5db;border-radius:9px;padding:10px 13px;font-size:14px;outline:none;background:#f9fafb;transition:border .2s}
+        .form-group input:focus,.form-group select:focus{border-color:#7c3aed;background:#fff}
+        .cashback-preview{background:#f5f3ff;border:1.5px solid #ede9fe;border-radius:10px;padding:12px;text-align:center;margin-bottom:14px;display:none}
+        .cashback-preview .amount{font-size:22px;font-weight:900;color:#7c3aed}
+        .cashback-preview .label{font-size:11px;color:#6b7280;margin-top:2px}
+        .btn-submit{background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:10px}
+        .btn-submit:disabled{opacity:.6;cursor:not-allowed}
+        .alert{border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:12px}
+        .alert-success{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+        .alert-error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+
+        /* ── Login slide panel ── */
+        .login-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-end;justify-content:center}
+        .login-overlay.show{display:flex}
+        .login-panel{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;box-shadow:0 -8px 40px rgba(0,0,0,.2);position:relative}
+        .login-panel h3{font-size:18px;font-weight:900;color:#1f2937;margin-bottom:4px;text-align:center}
+        .login-panel p{font-size:13px;color:#6b7280;text-align:center;margin-bottom:18px}
+        .login-panel .form-group label{color:#4c1d95}
+        .btn-login{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;width:100%;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px}
+        .btn-close-panel{position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer}
+        .login-divider{text-align:center;font-size:12px;color:#9ca3af;margin:14px 0;display:flex;align-items:center;gap:10px}
+        .login-divider::before,.login-divider::after{content:'';flex:1;border-top:1px solid #e5e7eb}
+        .login-alert-box{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:9px;padding:11px 14px;font-size:13px;display:none;margin-bottom:12px}
+
+        /* ── Sticky footer ── */
+        .sticky-footer{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1.5px solid #ede9fe;padding:12px 16px;z-index:400;display:flex;gap:10px;align-items:center}
+        .sticky-footer .ff-text{flex:1;font-size:12px;color:#6b7280;line-height:1.4}
+        .sticky-footer .ff-text strong{color:#4c1d95;display:block}
+        .ff-btn{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;border:none;border-radius:10px;padding:11px 20px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0}
+        .ff-btn.logged-in{background:linear-gradient(135deg,#059669,#10b981)}
+    </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+    <div class="topbar-brand">
+        <i class="fas fa-store"></i>
+        <span id="topbarShopName">VGK Shop</span>
+    </div>
+    <div class="topbar-right">
+        <span class="member-pill" id="memberPill"><i class="fas fa-check-circle" style="margin-right:4px"></i><span id="memberPillName">—</span></span>
+    </div>
+</div>
+
+<!-- Loading -->
+<div id="loadingBox" class="loading-box">
+    <i class="fas fa-spinner fa-spin"></i>
+    <p>Loading shop details…</p>
+</div>
+
+<!-- Error -->
+<div id="errorBox" class="error-box" style="display:none">
+    <i class="fas fa-exclamation-triangle"></i>
+    <h2 style="font-size:18px;font-weight:800;color:#374151;margin-bottom:8px">Shop Not Found</h2>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:20px">This QR code may be invalid or this shop is no longer active.</p>
+    <a href="/vgk/vendor-directory" style="text-decoration:none">
+        <button style="background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer">
+            <i class="fas fa-store" style="margin-right:8px"></i>Browse All Shops
+        </button>
+    </a>
+</div>
+
+<!-- Main content (hidden until loaded) -->
+<div id="mainContent" style="display:none">
+
+    <!-- Hero section -->
+    <div class="hero" id="heroBox">
+        <img id="heroBannerImg" class="hero-banner" src="" alt="" style="display:none" onerror="this.style.display='none'">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-logo" id="heroLogo"></div>
+            <div class="hero-text">
+                <div class="hero-name" id="heroName">—</div>
+                <div class="hero-sub" id="heroSub"></div>
+                <div class="hero-badges" id="heroBadges"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+
+        <!-- Shop info card -->
+        <div class="info-card" id="infoCard"></div>
+
+        <!-- Product categories with discounts -->
+        <div class="section" id="catSection" style="display:none">
+            <div class="section-title"><i class="fas fa-tags"></i> VGK Member Discounts</div>
+            <div class="cat-chips" id="catChips"></div>
+        </div>
+
+        <!-- Marketplace products -->
+        <div class="section" id="productsSection" style="display:none">
+            <div class="section-title"><i class="fas fa-box-open"></i> Products Available</div>
+            <div class="products-grid" id="productsGrid"></div>
+        </div>
+
+        <!-- Cashback CTA (shown when not logged in) -->
+        <div class="cashback-cta" id="ctaBox">
+            <div style="font-size:38px;margin-bottom:10px">🎁</div>
+            <h3>Earn VGK Cashback Here!</h3>
+            <p>Login with your VGK Member ID to earn cashback on every purchase at this shop. Cashback is credited to your VGK wallet after Accounts approval.</p>
+            <button class="btn-cashback" onclick="openLogin()">
+                <i class="fas fa-wallet"></i> Login & Claim Cashback
+            </button>
+            <button class="btn-skip" onclick="dismissCta()">
+                <i class="fas fa-eye" style="margin-right:6px"></i>Skip — just browsing
+            </button>
+        </div>
+
+        <!-- Purchase form (shown after login) -->
+        <div class="purchase-section" id="purchaseSection" style="display:none">
+            <h3><i class="fas fa-receipt" style="margin-right:8px"></i>Submit Purchase for Cashback</h3>
+            <p>Fill in your invoice details — Accounts team will review and credit cashback to your VGK wallet.</p>
+            <div class="member-info-bar" id="memberInfoBar">
+                <i class="fas fa-user-check" style="color:#059669;font-size:16px"></i>
+                <div style="flex:1"><div style="font-weight:700;color:#065f46" id="memberInfoName">—</div><div style="font-size:12px;color:#6b7280">Wallet: <span class="wallet-balance" id="memberInfoWallet">₹0.00</span></div></div>
+            </div>
+            <div id="purchaseAlert"></div>
+            <div class="form-group">
+                <label>Invoice / Bill Number *</label>
+                <input type="text" id="f_invoice" placeholder="e.g. INV-20260315-001">
+            </div>
+            <div class="form-group">
+                <label>Product Category *</label>
+                <select id="f_category" onchange="calcCashback()">
+                    <option value="">Select category…</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Amount Excluding Tax (₹) *</label>
+                <input type="number" id="f_amtExcl" placeholder="0.00" min="0" step="0.01" oninput="calcCashback()">
+            </div>
+            <div class="form-group">
+                <label>Total Amount Including Tax (₹)</label>
+                <input type="number" id="f_amtTotal" placeholder="0.00" min="0" step="0.01">
+            </div>
+            <div class="cashback-preview" id="cashbackPreview">
+                <div class="amount" id="previewAmt">₹0.00</div>
+                <div class="label">Estimated cashback — credited after approval</div>
+                <div style="font-size:11px;color:#9ca3af;margin-top:3px" id="previewPct"></div>
+            </div>
+            <div class="form-group">
+                <label>Wallet Deduction (₹) — optional</label>
+                <input type="number" id="f_wallet" placeholder="0" min="0" step="1" value="0">
+            </div>
+            <div class="form-group">
+                <label>Invoice Image URL — optional</label>
+                <input type="text" id="f_imgUrl" placeholder="Paste Google Drive or image link">
+            </div>
+            <button class="btn-submit" id="btnSubmit" onclick="submitPurchase()">
+                <i class="fas fa-paper-plane"></i> Submit for Cashback
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- Sticky footer -->
+<div class="sticky-footer" id="stickyFooter" style="display:none">
+    <div class="ff-text">
+        <strong id="ffShopName">—</strong>
+        <span id="ffDiscount">Earn VGK cashback here</span>
+    </div>
+    <button class="ff-btn" id="ffBtn" onclick="footerAction()">
+        <i class="fas fa-wallet" style="margin-right:6px"></i>Get Cashback
+    </button>
+</div>
+
+<!-- Login slide-up panel -->
+<div class="login-overlay" id="loginOverlay" onclick="overlayBackdropClick(event)">
+    <div class="login-panel">
+        <button class="btn-close-panel" onclick="closeLogin()">&times;</button>
+        <div style="text-align:center;margin-bottom:14px">
+            <div style="width:54px;height:54px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;color:#7c3aed">
+                <i class="fas fa-user-shield"></i>
+            </div>
+        </div>
+        <h3>VGK Member Login</h3>
+        <p>Enter your VGK Member ID or registered mobile number to earn cashback at this shop</p>
+        <div id="loginAlertBox" class="login-alert-box"></div>
+        <div class="form-group">
+            <label>VGK Member ID / Mobile Number</label>
+            <input type="text" id="loginId" placeholder="e.g. VGK12345678 or 9876543210" autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPwd" placeholder="Your VGK password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+        </div>
+        <button class="btn-login" id="btnLogin" onclick="doLogin()">
+            <i class="fas fa-sign-in-alt"></i> Login & Earn Cashback
+        </button>
+        <div class="login-divider">or</div>
+        <button onclick="closeLogin()" style="background:none;border:1.5px solid #e5e7eb;border-radius:10px;padding:11px;font-size:13px;cursor:pointer;width:100%;color:#6b7280;font-weight:600">
+            <i class="fas fa-eye" style="margin-right:6px"></i>Just Browsing — Skip for Now
+        </button>
+    </div>
+</div>
+
+<script>
+const API = '/api/v1';
+const qrToken = (window.location.pathname.split('/vendor/scan/')[1] || '').split('?')[0].trim();
+
+let vendorData = null;
+let memberToken = localStorage.getItem('vgk_token') || null;
+let memberInfo = null;
+let walletBalance = 0;
+let productCategories = [];
+
+function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmt(n) {
+    return '₹' + Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function initials(name) {
+    return (name || '?').split(/\s+/).filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
+}
+
+async function init() {
+    if (!qrToken) { showError(); return; }
+    try {
+        const r = await fetch(`${API}/vgk/vendor/scan/${qrToken}`);
+        if (!r.ok) { showError(); return; }
+        vendorData = await r.json();
+        renderShop();
+        if (memberToken) await loadMemberInfo();
+    } catch(e) {
+        showError();
+    }
+}
+
+function renderShop() {
+    document.getElementById('loadingBox').style.display = 'none';
+    document.getElementById('mainContent').style.display = '';
+
+    const v = vendorData;
+    const shopName = v.vendor_name || v.shop_name || 'Shop';
+    document.title = shopName + ' — VGK Shop';
+
+    // Top bar name
+    document.getElementById('topbarShopName').textContent = shopName.length > 22 ? shopName.slice(0, 22) + '…' : shopName;
+
+    // ── Hero ──
+    if (v.banner_url) {
+        const img = document.getElementById('heroBannerImg');
+        img.src = v.banner_url;
+        img.style.display = '';
+    }
+    const logoEl = document.getElementById('heroLogo');
+    if (v.logo_url) {
+        logoEl.innerHTML = `<img src="${esc(v.logo_url)}" alt="${esc(shopName)}" onerror="this.style.display='none';this.parentNode.textContent='${initials(shopName)}'">`;
+    } else {
+        logoEl.textContent = initials(shopName);
+    }
+    document.getElementById('heroName').textContent = shopName;
+    const sub = [v.category_name, v.city].filter(Boolean).join(' · ');
+    document.getElementById('heroSub').textContent = sub;
+
+    const badges = [];
+    if (v.category_name) badges.push(`<span class="badge-cat">${esc(v.category_name)}</span>`);
+    if (v.flat_discount_pct) badges.push(`<span class="badge-cashback">${v.flat_discount_pct}% Cashback</span>`);
+    document.getElementById('heroBadges').innerHTML = badges.join('');
+
+    // ── Info card ──
+    const infoRows = [];
+    const addrParts = [v.address_line1, v.city, v.state, v.pincode].filter(Boolean);
+    if (addrParts.length) infoRows.push(`<div class="info-row"><i class="fas fa-map-marker-alt"></i><span>${esc(addrParts.join(', '))}</span></div>`);
+    if (v.contact_phone) infoRows.push(`<div class="info-row"><i class="fas fa-phone"></i><a href="tel:${esc(v.contact_phone)}" style="color:inherit;text-decoration:none">${esc(v.contact_phone)}</a></div>`);
+    if (v.working_hours) infoRows.push(`<div class="info-row"><i class="fas fa-clock"></i><span>${esc(v.working_hours)}</span></div>`);
+    if (v.shop_description) infoRows.push(`<div class="info-row" style="align-items:flex-start"><i class="fas fa-info-circle" style="margin-top:2px"></i><span style="color:#6b7280">${esc(v.shop_description)}</span></div>`);
+
+    const actionBtns = [];
+    if (v.whatsapp_number) {
+        const wa = (v.whatsapp_number || '').replace(/\D/g, '');
+        actionBtns.push(`<a class="action-btn action-wa" href="https://wa.me/91${wa}?text=${encodeURIComponent('Hi ' + shopName + ', I am a VGK member!')}" target="_blank"><i class="fab fa-whatsapp"></i>WhatsApp</a>`);
+    }
+    if (v.contact_phone) actionBtns.push(`<a class="action-btn action-call" href="tel:${esc(v.contact_phone)}"><i class="fas fa-phone"></i>Call</a>`);
+    if (v.city || v.address_line1) {
+        const q = encodeURIComponent((shopName + ' ' + (v.city || '')).trim());
+        actionBtns.push(`<a class="action-btn action-map" href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank"><i class="fas fa-map-marked-alt"></i>Map</a>`);
+    }
+    document.getElementById('infoCard').innerHTML = infoRows.join('') + (actionBtns.length ? `<div class="info-actions">${actionBtns.join('')}</div>` : '');
+
+    // ── Product categories ──
+    productCategories = v.product_categories || [];
+    if (productCategories.length) {
+        document.getElementById('catSection').style.display = '';
+        document.getElementById('catChips').innerHTML = productCategories.map(c => {
+            const disc = c.discount_pct != null ? c.discount_pct : (v.flat_discount_pct || 0);
+            return `<div class="cat-chip">
+                <div class="cat-chip-icon"><i class="fas fa-tag"></i></div>
+                <div class="cat-chip-name">${esc(c.category_name)}</div>
+                <div class="cat-chip-disc">${disc}% off</div>
+            </div>`;
+        }).join('');
+
+        // Populate category dropdown
+        const sel = document.getElementById('f_category');
+        sel.innerHTML = '<option value="">Select category…</option>' + productCategories.map(c => {
+            const disc = c.discount_pct != null ? c.discount_pct : (v.flat_discount_pct || 0);
+            return `<option value="${c.id}" data-disc="${disc}">${esc(c.category_name)} — ${disc}% off</option>`;
+        }).join('');
+    }
+
+    // ── Marketplace products ──
+    const prods = v.marketplace_products || [];
+    if (prods.length) {
+        document.getElementById('productsSection').style.display = '';
+        document.getElementById('productsGrid').innerHTML = prods.map(p => {
+            const imgHtml = p.image_url_1
+                ? `<div class="prod-img-box"><img src="${esc(p.image_url_1)}" alt="${esc(p.product_name)}" onerror="this.parentNode.innerHTML='<i class=&quot;fas fa-box&quot;></i>'"></div>`
+                : `<div class="prod-img-box"><i class="fas fa-box"></i></div>`;
+            const price = p.price_excl_tax ? `<div class="prod-price">${fmt(p.price_excl_tax)}</div>` : '';
+            const disc = p.discount_pct ? `<span class="prod-disc-pill">${p.discount_pct}% off</span>` : '';
+            return `<div class="prod-card">${imgHtml}<div class="prod-body">
+                <div class="prod-name">${esc(p.product_name)}</div>
+                ${price}${disc}
+                ${p.product_kit ? `<div class="prod-cat-name">${esc(p.product_kit)}</div>` : ''}
+            </div></div>`;
+        }).join('');
+    }
+
+    // ── Sticky footer ──
+    document.getElementById('ffShopName').textContent = shopName;
+    document.getElementById('ffDiscount').textContent = v.flat_discount_pct ? `Up to ${v.flat_discount_pct}% VGK cashback` : 'Earn VGK cashback here';
+    document.getElementById('stickyFooter').style.display = '';
+}
+
+async function loadMemberInfo() {
+    try {
+        const r = await fetch(`${API}/vgk/auth/me`, {
+            headers: { 'Authorization': `Bearer ${memberToken}` }
+        });
+        if (!r.ok) { memberToken = null; localStorage.removeItem('vgk_token'); return; }
+        const d = await r.json();
+        memberInfo = d.partner || d;
+
+        // Load wallet
+        const wr = await fetch(`${API}/vgk/member/wallet`, {
+            headers: { 'Authorization': `Bearer ${memberToken}` }
+        });
+        if (wr.ok) {
+            const wd = await wr.json();
+            walletBalance = parseFloat(wd.wallet_balance || 0);
+        }
+        showMemberUI();
+    } catch(e) {
+        memberToken = null;
+        localStorage.removeItem('vgk_token');
+    }
+}
+
+function showMemberUI() {
+    if (!memberInfo) return;
+    const name = memberInfo.partner_name || memberInfo.name || 'Member';
+    const code = memberInfo.partner_code || '';
+
+    // Top bar pill
+    document.getElementById('memberPill').style.display = '';
+    document.getElementById('memberPillName').textContent = code || name;
+
+    // Member info bar
+    document.getElementById('memberInfoName').textContent = name + (code ? ` (${code})` : '');
+    document.getElementById('memberInfoWallet').textContent = fmt(walletBalance);
+
+    // Swap CTA → purchase form
+    document.getElementById('ctaBox').style.display = 'none';
+    document.getElementById('purchaseSection').style.display = '';
+
+    // Sticky footer
+    const ffBtn = document.getElementById('ffBtn');
+    ffBtn.innerHTML = '<i class="fas fa-receipt" style="margin-right:6px"></i>Submit Purchase';
+    ffBtn.className = 'ff-btn logged-in';
+}
+
+function openLogin() {
+    document.getElementById('loginOverlay').classList.add('show');
+    document.getElementById('loginAlertBox').style.display = 'none';
+    setTimeout(() => document.getElementById('loginId').focus(), 300);
+}
+
+function closeLogin() {
+    document.getElementById('loginOverlay').classList.remove('show');
+}
+
+function overlayBackdropClick(e) {
+    if (e.target === document.getElementById('loginOverlay')) closeLogin();
+}
+
+function dismissCta() {
+    document.getElementById('ctaBox').style.display = 'none';
+}
+
+async function doLogin() {
+    const id = (document.getElementById('loginId').value || '').trim();
+    const pwd = document.getElementById('loginPwd').value;
+    const alertEl = document.getElementById('loginAlertBox');
+    const btn = document.getElementById('btnLogin');
+
+    if (!id || !pwd) {
+        alertEl.textContent = 'Please enter your Member ID / Mobile and password.';
+        alertEl.style.display = '';
+        return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>Logging in…';
+    alertEl.style.display = 'none';
+
+    try {
+        const r = await fetch(`${API}/vgk/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: id, password: pwd })
+        });
+        const d = await r.json();
+        if (r.ok && d.success && d.access_token) {
+            memberToken = d.access_token;
+            localStorage.setItem('vgk_token', memberToken);
+            memberInfo = d.partner || {};
+            walletBalance = 0;
+            closeLogin();
+            await loadMemberInfo();
+            setTimeout(() => {
+                const el = document.getElementById('purchaseSection');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+        } else {
+            alertEl.textContent = d.detail || d.message || 'Login failed. Please check your credentials.';
+            alertEl.style.display = '';
+        }
+    } catch(e) {
+        alertEl.textContent = 'Connection error. Please try again.';
+        alertEl.style.display = '';
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sign-in-alt" style="margin-right:8px"></i>Login & Earn Cashback';
+}
+
+function footerAction() {
+    if (memberToken && memberInfo) {
+        const el = document.getElementById('purchaseSection');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        openLogin();
+    }
+}
+
+function calcCashback() {
+    const amt = parseFloat(document.getElementById('f_amtExcl').value) || 0;
+    const sel = document.getElementById('f_category');
+    const opt = sel.selectedOptions[0];
+    const disc = opt && opt.dataset.disc ? parseFloat(opt.dataset.disc) : (vendorData?.flat_discount_pct || 0);
+    const cashback = amt * disc / 100;
+    const previewEl = document.getElementById('cashbackPreview');
+    if (amt > 0 && disc > 0) {
+        document.getElementById('previewAmt').textContent = fmt(cashback);
+        document.getElementById('previewPct').textContent = `${disc}% of ₹${amt.toLocaleString('en-IN')} (pending Accounts approval)`;
+        previewEl.style.display = '';
+    } else {
+        previewEl.style.display = 'none';
+    }
+}
+
+async function submitPurchase() {
+    if (!memberToken) { openLogin(); return; }
+
+    const invoice = (document.getElementById('f_invoice').value || '').trim();
+    const catId = document.getElementById('f_category').value;
+    const amtExcl = parseFloat(document.getElementById('f_amtExcl').value) || 0;
+    const amtTotal = parseFloat(document.getElementById('f_amtTotal').value) || amtExcl;
+    const wallet = parseFloat(document.getElementById('f_wallet').value) || 0;
+    const imgUrl = (document.getElementById('f_imgUrl').value || '').trim();
+    const alertEl = document.getElementById('purchaseAlert');
+    const btn = document.getElementById('btnSubmit');
+
+    if (!invoice) { alertEl.innerHTML = '<div class="alert alert-error">Invoice number is required.</div>'; return; }
+    if (!catId) { alertEl.innerHTML = '<div class="alert alert-error">Please select a product category.</div>'; return; }
+    if (amtExcl <= 0) { alertEl.innerHTML = '<div class="alert alert-error">Please enter the purchase amount.</div>'; return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin" style="margin-right:8px"></i>Submitting…';
+    alertEl.innerHTML = '';
+
+    try {
+        const r = await fetch(`${API}/vgk/vendor/transaction`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${memberToken}` },
+            body: JSON.stringify({
+                vendor_qr_token: qrToken,
+                product_category_id: parseInt(catId),
+                invoice_number: invoice,
+                amount_excl_tax: amtExcl,
+                amount_total: amtTotal,
+                wallet_deduction_requested: wallet > 0 ? wallet : null,
+                invoice_image_url: imgUrl || null
+            })
+        });
+        const d = await r.json();
+        if (r.ok && d.success) {
+            alertEl.innerHTML = `<div class="alert alert-success">
+                <strong>✅ Submitted!</strong><br>
+                Reference: <code>${esc(d.txn_number || '—')}</code><br>
+                Estimated Cashback: <strong>${fmt(d.discount_amount)}</strong> (${d.discount_pct || 0}%)<br>
+                <small>Accounts team will review and credit to your VGK wallet.</small>
+            </div>`;
+            ['f_invoice','f_amtExcl','f_amtTotal','f_imgUrl'].forEach(id => { document.getElementById(id).value = ''; });
+            document.getElementById('f_wallet').value = '0';
+            document.getElementById('f_category').value = '';
+            document.getElementById('cashbackPreview').style.display = 'none';
+            btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px"></i>Submit Another Purchase';
+        } else {
+            alertEl.innerHTML = `<div class="alert alert-error">${esc(d.detail || 'Submission failed. Please try again.')}</div>`;
+            btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px"></i>Submit for Cashback';
+        }
+    } catch(e) {
+        alertEl.innerHTML = '<div class="alert alert-error">Connection error. Please try again.</div>';
+        btn.innerHTML = '<i class="fas fa-paper-plane" style="margin-right:8px"></i>Submit for Cashback';
+    }
+    btn.disabled = false;
+}
+
+function showError() {
+    document.getElementById('loadingBox').style.display = 'none';
+    document.getElementById('errorBox').style.display = '';
+}
+
+init();
+</script>
+</body>
+</html>

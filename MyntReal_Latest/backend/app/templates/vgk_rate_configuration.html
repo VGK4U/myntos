@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Management - VGK Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --vgk-primary: #d97706;
+            --vgk-secondary: #f59e0b;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--vgk-primary), var(--vgk-secondary));
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .rate-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        
+        .rate-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-color: var(--vgk-primary);
+        }
+        
+        .current-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--vgk-primary);
+        }
+        
+        .slider-container {
+            padding: 20px 0;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #e5e7eb;
+            outline: none;
+            border-radius: 3px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--vgk-primary);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-percentage"></i> Rate Management</h2>
+                    <p class="mb-0">Configure system-wide financial rates and percentages</p>
+                </div>
+                <div>
+                    <button class="btn btn-light" onclick="window.history.back()">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-card">
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle"></i> <strong>Critical Warning:</strong> Rate changes affect all future income calculations. Changes take effect immediately for new transactions.
+            </div>
+
+            <!-- Rate Configuration Cards -->
+            <div class="row">
+                {% for rate in rates %}
+                <div class="col-md-6 mb-4">
+                    <div class="rate-card">
+                        <h5 class="mb-3"><i class="fas fa-cog"></i> {{ rate.name }}</h5>
+                        <p class="text-muted">{{ rate.description }}</p>
+                        
+                        <div class="text-center my-4">
+                            <div class="current-value">
+                                <span id="value-{{ rate.id }}">{{ rate.current_value }}</span>{{ rate.unit }}
+                            </div>
+                            <small class="text-muted">Current Value</small>
+                        </div>
+
+                        <div class="slider-container">
+                            <input type="range" 
+                                   id="slider-{{ rate.id }}" 
+                                   min="{{ rate.min }}" 
+                                   max="{{ rate.max }}" 
+                                   step="{{ rate.step }}" 
+                                   value="{{ rate.current_value }}"
+                                   oninput="updateValue('{{ rate.id }}', this.value, '{{ rate.unit }}')">
+                            <div class="d-flex justify-content-between mt-2">
+                                <small>{{ rate.min }}{{ rate.unit }}</small>
+                                <small>{{ rate.max }}{{ rate.unit }}</small>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label">Reason for Change (Optional)</label>
+                            <input type="text" class="form-control" id="reason-{{ rate.id }}" placeholder="Enter reason...">
+                        </div>
+
+                        <div class="mt-3 text-end">
+                            <button class="btn btn-primary" onclick="updateRate('{{ rate.id }}', '{{ rate.name }}')">
+                                <i class="fas fa-save"></i> Update Rate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Change History -->
+            <div class="mt-4">
+                <h5><i class="fas fa-history"></i> Recent Changes</h5>
+                <div id="changeHistory" class="mt-3">
+                    <p class="text-muted">Rate change history will appear here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateValue(rateId, value, unit) {
+            document.getElementById('value-' + rateId).textContent = value;
+        }
+
+        async function updateRate(rateId, rateName) {
+            const newValue = parseFloat(document.getElementById('slider-' + rateId).value);
+            const reason = document.getElementById('reason-' + rateId).value;
+            
+            const confirmMsg = `Are you sure you want to update ${rateName} to ${newValue}?\n\nThis will affect all new income calculations.`;
+            
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('user_id', '{{ user_id }}');
+                formData.append('rate_id', rateId);
+                formData.append('new_value', newValue);
+                if (reason) {
+                    formData.append('reason', reason);
+                }
+
+                const response = await fetch('/api/v1/vgk/rate-configuration/update', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Rate updated successfully!\n\nOld Value: ' + result.old_value + '\nNew Value: ' + result.new_value);
+                    location.reload();
+                } else {
+                    alert('❌ Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('❌ Error updating rate');
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

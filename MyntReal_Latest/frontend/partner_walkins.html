@@ -1,0 +1,1276 @@
+DD <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walk-ins - Partner Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/partner-token-manager.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; }
+        .page-header {
+            background: linear-gradient(135deg, #1565c0 0%, #42a5f5 100%);
+            color: white; padding: 28px 30px; border-radius: 0 0 20px 20px; margin-bottom: 28px;
+        }
+        .page-header h1 { font-size: 1.8rem; font-weight: 700; margin: 0; }
+        .mobile-menu-toggle {
+            display: none; position: fixed; top: 15px; left: 15px; z-index: 1001;
+            background: #1565c0; color: white; border: none; border-radius: 8px; padding: 10px 15px;
+        }
+        @media (max-width: 768px) { .mobile-menu-toggle { display: block; } }
+        .card { border: none; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .stat-card {
+            border-radius: 14px; padding: 18px 20px; color: white; text-align: center;
+            margin-bottom: 16px;
+        }
+        .stat-card .stat-val { font-size: 1.8rem; font-weight: 700; }
+        .stat-card .stat-lbl { font-size: 0.82rem; opacity: 0.9; margin-top: 2px; }
+        .stat-blue { background: linear-gradient(135deg, #1565c0, #42a5f5); }
+        .stat-green { background: linear-gradient(135deg, #2e7d32, #66bb6a); }
+        .stat-orange { background: linear-gradient(135deg, #e65100, #ffb74d); }
+        .stat-purple { background: linear-gradient(135deg, #1d4ed8, #ce93d8); }
+        .stat-teal { background: linear-gradient(135deg, #00695c, #4db6ac); }
+        .stat-red { background: linear-gradient(135deg, #b71c1c, #ef9a9a); }
+        .filter-bar { background: white; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .filter-btn { border-radius: 20px; font-size: 0.82rem; padding: 5px 14px; margin: 2px; }
+        .filter-btn.active { background: #1565c0; color: white; border-color: #1565c0; }
+        .nav-tabs .nav-link { color: #555; font-weight: 600; border-radius: 8px 8px 0 0; }
+        .nav-tabs .nav-link.active { color: #1565c0; border-bottom: 3px solid #1565c0; background: white; }
+        .form-label { font-weight: 600; font-size: 0.88rem; color: #444; margin-bottom: 4px; }
+        .form-control, .form-select { border-radius: 8px; font-size: 0.9rem; }
+        .section-title {
+            font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+            color: #888; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #eee;
+        }
+        .badge-purpose { font-size: 0.75rem; padding: 4px 10px; border-radius: 10px; }
+        .outcome-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 10px; }
+        .tag-pill { display: inline-block; background: #e3f2fd; color: #1565c0; border-radius: 10px; padding: 2px 8px; font-size: 0.72rem; margin: 1px; }
+        .tag-pill.green { background: #e8f5e9; color: #2e7d32; }
+        .tag-pill.orange { background: #fff3e0; color: #e65100; }
+        .table-responsive { border-radius: 10px; }
+        .table th { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.5px; color: #666; background: #f8f9fa; }
+        .table td { font-size: 0.9rem; vertical-align: middle; }
+        .action-btn { font-size: 0.78rem; padding: 3px 10px; border-radius: 6px; }
+        .crm-badge { background: #e8f5e9; color: #2e7d32; font-size: 0.72rem; padding: 2px 7px; border-radius: 8px; }
+        .modal-header { background: linear-gradient(135deg, #1565c0, #42a5f5); color: white; border-radius: 12px 12px 0 0; }
+        .modal-header .btn-close { filter: brightness(0) invert(1); }
+        .modal-content { border-radius: 14px; border: none; }
+        .walkin-row:hover { background: #f0f7ff; }
+        #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .loading-spinner { display: none; text-align: center; padding: 40px; }
+        /* ── WA Template Picker ── */
+        .wa-tpl-item { border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; margin-bottom:10px; cursor:pointer; transition:all .15s; background:#fff; }
+        .wa-tpl-item:hover { border-color:#25d366; background:#f0fdf4; }
+        .wa-tpl-item.selected { border-color:#25d366; background:#f0fdf4; box-shadow:0 0 0 2px rgba(37,211,102,.25); }
+        .wa-tpl-name { font-size:13px; font-weight:700; color:#1e293b; margin-bottom:4px; }
+        .wa-tpl-segment { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; padding:2px 8px; border-radius:20px; background:#f1f5f9; color:#64748b; display:inline-block; margin-bottom:6px; }
+        .wa-tpl-body { font-size:12px; color:#475569; line-height:1.55; white-space:pre-wrap; word-break:break-word; max-height:80px; overflow:hidden; }
+        .wa-tpl-body.expanded { max-height:none; }
+        .btn-call-w { background:#1d4ed8; border-color:#1d4ed8; color:#fff; font-size:0.78rem; padding:3px 9px; border-radius:7px; }
+        .btn-call-w:hover { background:#1e40af; color:#fff; }
+        .btn-wa-w { background:#25d366; border-color:#25d366; color:#fff; font-size:0.78rem; padding:3px 9px; border-radius:7px; }
+        .btn-wa-w:hover { background:#1aad53; color:#fff; }
+    </style>
+</head>
+<body>
+<button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+<div id="sidebarContainer"></div>
+
+<div class="partner-main-content">
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <h1><i class="fas fa-walking me-3"></i>Walk-ins</h1>
+                    <p class="mb-0 opacity-80 mt-1">Record customer visits and estimations from your store</p>
+                </div>
+                <div class="mt-2 mt-md-0 d-flex gap-2">
+                    <button class="btn btn-light" onclick="openNewWalkinModal()">
+                        <i class="fas fa-plus me-2"></i>New Walk-in
+                    </button>
+                    <button class="btn btn-outline-light" onclick="openEstimationTab()">
+                        <i class="fas fa-file-alt me-2"></i>New Estimation
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-fluid px-4">
+        <!-- Summary Cards -->
+        <div id="summaryRow" class="row g-3 mb-4">
+            <div class="col-6 col-md-2"><div class="stat-card stat-blue"><div class="stat-val" id="statTotalWalkins">-</div><div class="stat-lbl">Total Walk-ins</div></div></div>
+            <div class="col-6 col-md-2"><div class="stat-card stat-green"><div class="stat-val" id="statToday">-</div><div class="stat-lbl">Today</div></div></div>
+            <div class="col-6 col-md-2"><div class="stat-card stat-orange"><div class="stat-val" id="statCompanyFU">-</div><div class="stat-lbl">Company Follow-ups</div></div></div>
+            <div class="col-6 col-md-2"><div class="stat-card stat-teal"><div class="stat-val" id="statConverted">-</div><div class="stat-lbl">Converted</div></div></div>
+            <div class="col-6 col-md-2"><div class="stat-card stat-purple"><div class="stat-val" id="statEstDraft">-</div><div class="stat-lbl">Estimations (Draft)</div></div></div>
+            <div class="col-6 col-md-2"><div class="stat-card stat-green"><div class="stat-val" id="statEstValue">-</div><div class="stat-lbl">Confirmed Est. Value</div></div></div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar mb-3">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="text-muted fw-600" style="font-size:0.85rem;">Period:</span>
+                <button class="btn btn-outline-secondary filter-btn" onclick="setDateFilter('ftd')">Today</button>
+                <button class="btn btn-outline-secondary filter-btn" onclick="setDateFilter('yesterday')">Yesterday</button>
+                <button class="btn btn-outline-secondary filter-btn active" onclick="setDateFilter('mtd')">MTD</button>
+                <button class="btn btn-outline-secondary filter-btn" onclick="setDateFilter('fty')">FTY</button>
+                <button class="btn btn-outline-secondary filter-btn" onclick="setDateFilter('custom')">Custom</button>
+                <div id="customDateRange" style="display:none;" class="d-flex gap-2 ms-2">
+                    <input type="date" id="dateFrom" class="form-control form-control-sm" style="width:140px;">
+                    <input type="date" id="dateTo" class="form-control form-control-sm" style="width:140px;">
+                    <button class="btn btn-primary btn-sm" onclick="applyFilters()">Apply</button>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                <input type="text" id="searchInput" class="form-control form-control-sm" style="width:200px;" placeholder="Search name / phone..." oninput="debounceSearch()">
+                <select id="purposeFilter" class="form-select form-select-sm" style="width:160px;" onchange="applyFilters()">
+                    <option value="">All Purposes</option>
+                </select>
+                <select id="outcomeFilter" class="form-select form-select-sm" style="width:160px;" onchange="applyFilters()">
+                    <option value="">All Outcomes</option>
+                    <option value="pending">Pending</option>
+                    <option value="interested">Interested</option>
+                    <option value="not_interested">Not Interested</option>
+                    <option value="demo_given">Demo Given</option>
+                    <option value="follow_up">Follow-up Scheduled</option>
+                    <option value="converted">Converted</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mb-3" id="walkinTabs">
+            <li class="nav-item">
+                <button class="nav-link active" id="tabWalkins" onclick="switchTab('walkins')">
+                    <i class="fas fa-walking me-2"></i>Walk-ins <span class="badge bg-primary ms-1" id="walkinCount">0</span>
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link" id="tabEstimations" onclick="switchTab('estimations')">
+                    <i class="fas fa-file-invoice me-2"></i>Estimations
+                </button>
+            </li>
+        </ul>
+
+        <!-- Walk-ins Tab -->
+        <div id="panelWalkins">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="loading-spinner" id="walkinSpinner"><div class="spinner-border text-primary"></div></div>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date / Time</th>
+                                    <th>Customer</th>
+                                    <th>Phone</th>
+                                    <th>Purpose</th>
+                                    <th>Outcome</th>
+                                    <th>Tags</th>
+                                    <th>VGK</th>
+                                    <th>CRM</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="walkinTableBody">
+                                <tr><td colspan="9" class="text-center py-4 text-muted">Loading walk-ins...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-3" id="walkinPagination"></div>
+        </div>
+
+        <!-- Estimations Tab (links to Sales page) -->
+        <div id="panelEstimations" style="display:none;">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-file-invoice fa-3x text-primary mb-3"></i>
+                    <h5>Estimations are managed on the Sales page</h5>
+                    <p class="text-muted">Create quotations / estimations linked to walk-in customers</p>
+                    <a href="/partner/sales/invoices?doc=estimate" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Go to Sales → Create Estimation
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Walk-in Modal -->
+<div class="modal fade" id="walkinModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-walking me-2"></i>Record Walk-in</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Returning Customer Toggle -->
+                <div class="alert alert-info py-2 mb-3">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="isReturning" onchange="onReturningToggle()">
+                        <label class="form-check-label" for="isReturning"><strong>Returning Customer</strong> — search by phone to pre-fill</label>
+                    </div>
+                </div>
+                <div id="returningSearch" style="display:none;" class="mb-3">
+                    <div class="input-group">
+                        <input type="text" id="returningPhone" class="form-control" placeholder="Enter previous phone number..." oninput="searchPreviousVisit()">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    </div>
+                    <div id="previousVisitResults" class="mt-2"></div>
+                </div>
+
+                <div class="row">
+                    <!-- Customer Info -->
+                    <div class="col-12 mb-2"><div class="section-title">Customer Information</div></div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Full Name *</label>
+                        <input type="text" id="wName" class="form-control" placeholder="Customer name" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Primary Phone *</label>
+                        <input type="tel" id="wPhone" class="form-control" placeholder="Mobile number" required onblur="checkVGKPhone()">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Alternate Phone</label>
+                        <input type="tel" id="wAltPhone" class="form-control" placeholder="Alternate number">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="wEmail" class="form-control" placeholder="Email address">
+                    </div>
+
+                    <!-- Registration Checkboxes -->
+                    <div class="col-12 mb-2"><div class="section-title">Customer Registration</div></div>
+                    <div class="col-12 mb-3">
+                        <div class="d-flex flex-wrap gap-3">
+                            <div class="form-check"><input class="form-check-input" type="checkbox" id="wNew"><label class="form-check-label" for="wNew">New</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" id="wMNR"><label class="form-check-label" for="wMNR">Registered with MNR</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" id="wVGK"><label class="form-check-label" for="wVGK">VGK Member</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" id="wExisting"><label class="form-check-label" for="wExisting">Existing Customer</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" id="wMarketplace"><label class="form-check-label" for="wMarketplace">Marketplace User</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" id="wOtherPartner"><label class="form-check-label" for="wOtherPartner">Other Partner's Customer</label></div>
+                        </div>
+                    </div>
+
+                    <!-- VGK Enrolment Section -->
+                    <div class="col-12 mb-2"><div class="section-title" style="color:#6d28d9"><i class="fas fa-id-card me-1"></i>VGK Enrolment</div></div>
+                    <div class="col-12 mb-3" id="vgkEnrolSection">
+                        <!-- Existing VGK Member Banner (auto-shown on phone blur) -->
+                        <div id="vgkExistingBanner" style="display:none" class="alert alert-success py-2 mb-2">
+                            <i class="fas fa-check-circle me-1"></i>
+                            <strong id="vgkExistingText">Customer is already a VGK member</strong> — will be linked automatically
+                        </div>
+
+                        <!-- Enrolment Toggle -->
+                        <div id="vgkEnrolToggleRow" class="alert py-2 mb-2" style="background:#f5f3ff;border:1px solid #c4b5fd">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="wRegisterVGK" checked onchange="onVGKToggle()">
+                                <label class="form-check-label" for="wRegisterVGK" style="color:#6d28d9;font-weight:600">
+                                    <i class="fas fa-user-plus me-1"></i>Enrol as VGK Member
+                                    <small class="text-muted fw-normal ms-2">Password = mobile number · 15,000 welcome credits</small>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Referral / Upline Search -->
+                        <div id="vgkReferralRow" class="ms-1">
+                            <label class="form-label" style="font-size:0.85rem;color:#6b7280">Referral / Upline <small>(optional — search by VGK ID, name or mobile)</small></label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text" style="background:#f5f3ff;border-color:#c4b5fd"><i class="fas fa-search" style="color:#7c3aed"></i></span>
+                                <input type="text" id="vgkReferralSearch" class="form-control" placeholder="Type to search VGK members..." oninput="searchVGKReferral()" autocomplete="off" style="border-color:#c4b5fd">
+                            </div>
+                            <div id="vgkReferralResults" class="mt-1"></div>
+                            <div id="vgkReferralSelected" style="display:none" class="mt-1 p-2 rounded" style="background:#f5f3ff">
+                                <i class="fas fa-user-check me-1" style="color:#6d28d9"></i>
+                                <span id="vgkReferralSelectedText"></span>
+                                <button type="button" class="btn btn-link btn-sm p-0 ms-2 text-danger" onclick="clearVGKReferral()">×</button>
+                            </div>
+                            <small class="text-muted">If no referral entered — you become the upline for this customer</small>
+                        </div>
+                    </div>
+                    <input type="hidden" id="vgkReferralId" value="">
+
+                    <!-- [DC-PHONE-OTP-001] WhatsApp OTP verification for VGK enrolment -->
+                    <div id="walkinOtpSection" class="ms-1 mt-2">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span style="font-size:0.85rem;color:#6b7280;font-weight:600"><i class="fab fa-whatsapp text-success me-1"></i>Verify Customer's WhatsApp</span>
+                            <button type="button" id="walkinSendOtpBtn" onclick="walkinSendOTP()" class="btn btn-sm btn-outline-primary" style="font-size:12px">Send OTP</button>
+                        </div>
+                        <div id="walkinOtpBlock" style="display:none;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:10px;margin-bottom:6px">
+                            <div style="font-size:12px;color:#166534;margin-bottom:6px"><i class="fab fa-whatsapp"></i> OTP sent to customer's WhatsApp. Enter below:</div>
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="walkinOtpInput" maxlength="6" placeholder="6-digit OTP" class="form-control" style="font-size:14px;font-weight:700;letter-spacing:4px;text-align:center">
+                                <button type="button" id="walkinVerifyBtn" onclick="walkinVerifyOTP()" class="btn btn-success" style="font-size:12px">Verify</button>
+                            </div>
+                            <div style="margin-top:5px;font-size:11px;color:#6b7280">Didn't receive? <a href="#" onclick="walkinSendOTP();return false">Resend OTP</a></div>
+                        </div>
+                        <div id="walkinOtpVerifiedBadge" style="display:none;background:#f0fdf4;border:1.5px solid #22c55e;border-radius:8px;padding:6px 10px;color:#166534;font-size:12px;font-weight:600;margin-bottom:6px">
+                            <i class="fas fa-check-circle"></i> Customer's WhatsApp verified
+                        </div>
+                        <input type="hidden" id="walkinPhoneVerifiedToken" value="">
+                    </div>
+
+                    <!-- Visit Details -->
+                    <div class="col-12 mb-2"><div class="section-title">Visit Details</div></div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Visit Date</label>
+                        <input type="date" id="wDate" class="form-control">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Visit Time</label>
+                        <input type="time" id="wTime" class="form-control">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Lead Source</label>
+                        <select id="wLeadSource" class="form-select">
+                            <option value="walk_in">Walk-in</option>
+                            <option value="referral">Referral</option>
+                            <option value="online">Online</option>
+                            <option value="campaign">Campaign</option>
+                            <option value="whatsapp">WhatsApp</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Visit Purpose *</label>
+                        <select id="wPurpose" class="form-select" required onchange="onPurposeChange()">
+                            <option value="">Loading categories...</option>
+                        </select>
+                        <input type="hidden" id="wCategoryId" value="">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Product Interest</label>
+                        <input type="text" id="wInterest" class="form-control" placeholder="e.g. 3kW solar, EV scooter...">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Assigned To <small class="text-muted">(Sales Team)</small></label>
+                        <div style="position:relative">
+                            <input type="text" id="wAssigned" class="form-control" placeholder="Type to search sales team..." autocomplete="off" oninput="searchSalesTeam()">
+                            <div id="wAssignedResults" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:9999;background:#fff;border:1px solid #dee2e6;border-top:none;border-radius:0 0 6px 6px;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.12)"></div>
+                        </div>
+                    </div>
+
+                    <!-- Outcome -->
+                    <div class="col-12 mb-2"><div class="section-title">Visit Outcome</div></div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Outcome</label>
+                        <select id="wOutcome" class="form-select" onchange="onOutcomeChange()">
+                            <option value="pending">Pending</option>
+                            <option value="interested">Interested</option>
+                            <option value="not_interested">Not Interested</option>
+                            <option value="demo_given">Demo Given</option>
+                            <option value="follow_up">Follow-up Scheduled</option>
+                            <option value="converted">Converted to Sale</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3" id="followUpDateRow" style="display:none;">
+                        <label class="form-label">Follow-up Date</label>
+                        <input type="date" id="wFollowUp" class="form-control">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea id="wNotes" class="form-control" rows="3" placeholder="Any additional notes about the visit..."></textarea>
+                    </div>
+
+                    <!-- Follow-up Assignment -->
+                    <div class="col-12 mb-2"><div class="section-title">Follow-up Assignment</div></div>
+                    <div class="col-12 mb-3">
+                        <div class="card p-3" style="background:#fff8e1; border:1px solid #ffeb3b;">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="wCompanyFU">
+                                <label class="form-check-label" for="wCompanyFU">
+                                    <strong>Company Follow-up</strong>
+                                    <span class="d-block text-muted" style="font-size:0.82rem;">Send this lead to company CRM for staff follow-up. This will appear as a fresh lead in the staff system with Walk-in source and your partner tag.</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="saveWalkin()" id="saveWalkinBtn">
+                    <i class="fas fa-save me-2"></i>Save Walk-in
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View/Edit Walk-in Modal -->
+<div class="modal fade" id="viewWalkinModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-eye me-2"></i>Walk-in Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewWalkinBody">Loading...</div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-success" id="convertToInvoiceBtn" onclick="convertToInvoice()">
+                    <i class="fas fa-file-invoice-dollar me-2"></i>Create Invoice
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/partner_sidebar.js"></script>
+<script>
+let currentTab = 'walkins';
+let currentDateFilter = 'mtd';
+let currentPage = 1;
+let searchTimer = null;
+let currentWalkinId = null;
+
+// ─── Init ───
+document.addEventListener('DOMContentLoaded', () => {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('wDate').value = today;
+    const now = new Date();
+    document.getElementById('wTime').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    loadSignupCategories().then(() => {
+        setTimeout(() => { loadSummary(); loadWalkins(); }, 300);
+    });
+});
+
+// toggleMobileMenu is defined globally by partner_sidebar.js
+
+// ─── Date Filters ───
+function setDateFilter(f) {
+    currentDateFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('customDateRange').style.display = f === 'custom' ? 'flex' : 'none';
+    if (f !== 'custom') { currentPage = 1; loadSummary(); loadWalkins(); }
+}
+
+function applyFilters() {
+    currentPage = 1;
+    loadSummary();
+    loadWalkins();
+}
+
+function debounceSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 400);
+}
+
+function buildDateParams() {
+    let p = `date_filter=${currentDateFilter}`;
+    if (currentDateFilter === 'custom') {
+        const from = document.getElementById('dateFrom').value;
+        const to = document.getElementById('dateTo').value;
+        if (from) p += `&date_from=${from}`;
+        if (to) p += `&date_to=${to}`;
+    }
+    return p;
+}
+
+// ─── Summary ───
+async function loadSummary() {
+    try {
+        const res = await fetch(`/api/v1/partner/walkins/summary?${buildDateParams()}`, {
+            headers: { 'Authorization': 'Bearer ' + getPartnerToken() }
+        });
+        const d = await res.json();
+        if (!d.success) return;
+        document.getElementById('statTotalWalkins').textContent = d.walkins.total;
+        document.getElementById('statToday').textContent = d.walkins.today;
+        document.getElementById('statCompanyFU').textContent = d.walkins.company_followups;
+        document.getElementById('statConverted').textContent = d.walkins.converted;
+        document.getElementById('statEstDraft').textContent = d.estimations.draft;
+        document.getElementById('statEstValue').textContent = '₹' + formatAmount(d.estimations.confirmed_value);
+    } catch(e) { console.error(e); }
+}
+
+// ─── Walk-ins List ───
+async function loadWalkins() {
+    document.getElementById('walkinSpinner').style.display = 'block';
+    const search = document.getElementById('searchInput').value;
+    const purpose = document.getElementById('purposeFilter').value;
+    const outcome = document.getElementById('outcomeFilter').value;
+    let url = `/api/v1/partner/walkins?page=${currentPage}&per_page=20&${buildDateParams()}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (purpose) url += `&purpose=${purpose}`;
+    if (outcome) url += `&outcome=${outcome}`;
+    try {
+        const res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + getPartnerToken() } });
+        const d = await res.json();
+        document.getElementById('walkinSpinner').style.display = 'none';
+        if (!d.success) { showToast('Failed to load walk-ins', 'danger'); return; }
+        document.getElementById('walkinCount').textContent = d.total;
+        renderWalkins(d.data);
+        renderPagination(d.total, d.page, d.per_page, 'walkinPagination', loadWalkins);
+    } catch(e) { document.getElementById('walkinSpinner').style.display = 'none'; console.error(e); }
+}
+
+let PURPOSE_LABELS = {};
+let _signupCategories = [];
+const OUTCOME_COLORS = { pending: 'secondary', interested: 'primary', not_interested: 'danger', demo_given: 'info', follow_up: 'warning', converted: 'success' };
+const OUTCOME_LABELS = { pending: 'Pending', interested: 'Interested', not_interested: 'Not Interested', demo_given: 'Demo Given', follow_up: 'Follow-up', converted: 'Converted' };
+
+async function loadSignupCategories() {
+    try {
+        const token = getPartnerToken();
+        const meRes = await fetch('/api/v1/partner/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const meData = await meRes.json();
+        const companyId = (meData.partner && meData.partner.primary_company_id) || (meData.partner && meData.partner.company_ids && meData.partner.company_ids[0]);
+        if (!companyId) {
+            _markPurposeLoadFailed('Company not found');
+            return;
+        }
+
+        const res = await fetch(`/api/v1/signup-categories/list?company_id=${companyId}`, { headers: { 'Authorization': 'Bearer ' + token } });
+        const d = await res.json();
+        if (!d.success || !d.categories || !d.categories.length) {
+            _markPurposeLoadFailed('No categories available');
+            return;
+        }
+
+        _signupCategories = d.categories;
+
+        PURPOSE_LABELS = {};
+        _signupCategories.forEach(c => { PURPOSE_LABELS[c.slug] = c.name; });
+
+        const formSelect = document.getElementById('wPurpose');
+        formSelect.innerHTML = _signupCategories.map((c, i) =>
+            `<option value="${c.slug}" data-id="${c.id}"${i === 0 ? ' selected' : ''}>${c.name}</option>`
+        ).join('');
+        document.getElementById('wCategoryId').value = _signupCategories[0] ? _signupCategories[0].id : '';
+
+        const filterSelect = document.getElementById('purposeFilter');
+        filterSelect.innerHTML = '<option value="">All Purposes</option>' +
+            _signupCategories.map(c => `<option value="${c.slug}">${c.name}</option>`).join('');
+    } catch(e) {
+        console.error('Failed to load signup categories', e);
+        _markPurposeLoadFailed('Failed to load');
+    }
+}
+
+function _markPurposeLoadFailed(reason) {
+    const formSelect = document.getElementById('wPurpose');
+    if (formSelect) {
+        formSelect.innerHTML = `<option value="">-- ${reason} --</option>`;
+        formSelect.dataset.loadFailed = '1';
+    }
+}
+
+function onPurposeChange() {
+    const sel = document.getElementById('wPurpose');
+    const opt = sel.options[sel.selectedIndex];
+    document.getElementById('wCategoryId').value = opt ? (opt.dataset.id || '') : '';
+}
+
+function renderWalkins(rows) {
+    const tbody = document.getElementById('walkinTableBody');
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center py-5 text-muted"><i class="fas fa-walking fa-2x mb-3 d-block"></i>No walk-ins found for this period</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map(r => {
+        const tags = [];
+        if (r.is_new_customer) tags.push('<span class="tag-pill" style="background:#dcfce7;color:#15803d">New</span>');
+        if (r.registered_with_mnr) tags.push('<span class="tag-pill green">MNR</span>');
+        if (r.registered_with_vgk) tags.push('<span class="tag-pill" style="background:#ede9fe;color:#6d28d9">VGK</span>');
+        if (r.is_existing_customer) tags.push('<span class="tag-pill orange">Existing</span>');
+        const outColor = OUTCOME_COLORS[r.visit_outcome] || 'secondary';
+        const outLabel = OUTCOME_LABELS[r.visit_outcome] || r.visit_outcome;
+        const purpLabel = PURPOSE_LABELS[r.visit_purpose] || r.visit_purpose;
+        const crm = r.company_follow_up ? `<span class="crm-badge"><i class="fas fa-check me-1"></i>CRM</span>` : '';
+        let vgkCell = '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+        if (r.vgk_member_id) {
+            const resetBtn = r.vgk_reset_allowed
+                ? `<button class="btn btn-outline-secondary btn-sm ms-1 px-1 py-0" style="font-size:0.7rem" onclick="resetVGKPassword(${r.vgk_member_id})" title="Reset password to mobile number"><i class="fas fa-key"></i></button>`
+                : '';
+            vgkCell = `<span class="tag-pill" style="background:#ede9fe;color:#6d28d9;font-size:0.7rem"><i class="fas fa-id-card me-1"></i>VGK</span>${resetBtn}`;
+        }
+        const nameEsc = r.customer_name.replace(/'/g,"&#39;");
+        const phoneEsc = r.customer_phone.replace(/'/g,"&#39;");
+        return `<tr class="walkin-row">
+            <td><div style="font-size:0.88rem;">${formatDate(r.visit_date)}</div><div style="font-size:0.78rem;color:#888;">${r.visit_time || ''}</div></td>
+            <td><div class="fw-600">${r.customer_name}</div>${r.is_returning ? '<span style="font-size:0.72rem;color:#1565c0;">Returning</span>' : ''}</td>
+            <td>${r.customer_phone}</td>
+            <td><span class="badge bg-light text-dark badge-purpose">${purpLabel}</span></td>
+            <td><span class="badge bg-${outColor} outcome-badge">${outLabel}</span></td>
+            <td>${tags.join(' ')}</td>
+            <td>${vgkCell}</td>
+            <td>${crm}</td>
+            <td>
+                <div class="d-flex flex-wrap gap-1">
+                ${r.customer_phone ? `<a href="tel:${r.customer_phone}" class="btn btn-sm btn-call-w" title="Call ${r.customer_phone}"><i class="fas fa-phone"></i></a>` : ''}
+                ${r.customer_phone ? `<button class="btn btn-sm btn-wa-w" onclick="openWATplW('${phoneEsc}', '${nameEsc}')" title="WhatsApp Message"><i class="fab fa-whatsapp"></i></button>` : ''}
+                <button class="btn btn-outline-primary action-btn" onclick="viewWalkin(${r.id})"><i class="fas fa-eye"></i></button>
+                <button class="btn btn-outline-success action-btn" onclick="quickConvert(${r.id}, '${nameEsc}', '${phoneEsc}')"><i class="fas fa-file-invoice"></i></button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+// ─── View Walk-in ───
+async function viewWalkin(id) {
+    currentWalkinId = id;
+    document.getElementById('viewWalkinBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+    new bootstrap.Modal(document.getElementById('viewWalkinModal')).show();
+    try {
+        const res = await fetch(`/api/v1/partner/walkins/${id}`, { headers: { 'Authorization': 'Bearer ' + getPartnerToken() } });
+        const d = await res.json();
+        if (!d.success) return;
+        const w = d.data;
+        const tags = [];
+        if (w.is_new_customer) tags.push('New Customer');
+        if (w.registered_with_mnr) tags.push('Registered with MNR');
+        if (w.registered_with_vgk) tags.push('VGK Member');
+        if (w.is_existing_customer) tags.push('Existing Customer');
+        if (w.is_marketplace_user) tags.push('Marketplace User');
+        document.getElementById('viewWalkinBody').innerHTML = `
+            <div class="row g-3">
+                <div class="col-md-6"><strong>Name:</strong> ${w.customer_name}</div>
+                <div class="col-md-6"><strong>Phone:</strong> ${w.customer_phone}</div>
+                <div class="col-md-6"><strong>Alt Phone:</strong> ${w.alternate_phone || '-'}</div>
+                <div class="col-md-6"><strong>Email:</strong> ${w.customer_email || '-'}</div>
+                <div class="col-md-6"><strong>Date:</strong> ${formatDate(w.visit_date)} ${w.visit_time || ''}</div>
+                <div class="col-md-6"><strong>Purpose:</strong> ${PURPOSE_LABELS[w.visit_purpose] || w.visit_purpose}</div>
+                <div class="col-md-6"><strong>Product Interest:</strong> ${w.product_interest || '-'}</div>
+                <div class="col-md-6"><strong>Outcome:</strong> <span class="badge bg-${OUTCOME_COLORS[w.visit_outcome] || 'secondary'}">${OUTCOME_LABELS[w.visit_outcome] || w.visit_outcome}</span></div>
+                ${w.follow_up_date ? `<div class="col-md-6"><strong>Follow-up:</strong> ${formatDate(w.follow_up_date)}</div>` : ''}
+                <div class="col-12"><strong>Tags:</strong> ${tags.length ? tags.map(t => `<span class="tag-pill">${t}</span>`).join(' ') : '-'}</div>
+                <div class="col-12"><strong>Company Follow-up:</strong> ${w.company_follow_up ? '<span class="crm-badge">Yes — sent to CRM</span>' : 'No'}</div>
+                ${w.notes ? `<div class="col-12"><strong>Notes:</strong><br><span class="text-muted">${w.notes}</span></div>` : ''}
+            </div>
+        `;
+    } catch(e) { console.error(e); }
+}
+
+function quickConvert(id, name, phone) {
+    window.location.href = `/partner/sales/invoices?walkin_id=${id}&customer=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}`;
+}
+
+function convertToInvoice() {
+    if (currentWalkinId) window.location.href = `/partner/sales/invoices?walkin_id=${currentWalkinId}`;
+}
+
+// ─── New Walk-in ───
+function openNewWalkinModal() {
+    document.getElementById('isReturning').checked = false;
+    document.getElementById('returningSearch').style.display = 'none';
+    document.getElementById('wName').value = '';
+    document.getElementById('wPhone').value = '';
+    document.getElementById('wAltPhone').value = '';
+    document.getElementById('wEmail').value = '';
+    ['wNew','wMNR','wVGK','wExisting','wMarketplace','wOtherPartner','wCompanyFU'].forEach(id => document.getElementById(id).checked = false);
+    if (_signupCategories.length > 0) {
+        document.getElementById('wPurpose').value = _signupCategories[0].slug;
+        document.getElementById('wCategoryId').value = _signupCategories[0].id;
+    }
+    
+    document.getElementById('wOutcome').value = 'pending';
+    document.getElementById('wNotes').value = '';
+    document.getElementById('wInterest').value = '';
+    document.getElementById('wAssigned').value = '';
+    document.getElementById('wAssignedResults').style.display = 'none';
+    document.getElementById('wAssignedResults').innerHTML = '';
+    document.getElementById('followUpDateRow').style.display = 'none';
+    // Reset VGK section
+    document.getElementById('wRegisterVGK').checked = true;
+    document.getElementById('vgkReferralRow').style.display = 'block';
+    document.getElementById('vgkEnrolToggleRow').style.display = 'block';
+    document.getElementById('vgkExistingBanner').style.display = 'none';
+    document.getElementById('vgkReferralSearch').value = '';
+    document.getElementById('vgkReferralResults').innerHTML = '';
+    document.getElementById('vgkReferralSelected').style.display = 'none';
+    document.getElementById('vgkReferralId').value = '';
+    // [DC-PHONE-OTP-001] Reset OTP state and show OTP section (since VGK is default-checked)
+    walkinOtpReset();
+    document.getElementById('walkinOtpSection').style.display = 'block';
+    new bootstrap.Modal(document.getElementById('walkinModal')).show();
+}
+
+function openEstimationTab() {
+    window.location.href = '/partner/sales/invoices?doc=estimate';
+}
+
+function onReturningToggle() {
+    document.getElementById('returningSearch').style.display = document.getElementById('isReturning').checked ? 'block' : 'none';
+}
+
+function onOutcomeChange() {
+    const val = document.getElementById('wOutcome').value;
+    document.getElementById('followUpDateRow').style.display = val === 'follow_up' ? 'block' : 'none';
+}
+
+async function searchPreviousVisit() {
+    const phone = document.getElementById('returningPhone').value;
+    if (phone.length < 5) return;
+    try {
+        const res = await fetch(`/api/v1/partner/walkins?search=${encodeURIComponent(phone)}&per_page=5`, {
+            headers: { 'Authorization': 'Bearer ' + getPartnerToken() }
+        });
+        const d = await res.json();
+        const container = document.getElementById('previousVisitResults');
+        if (!d.success || !d.data.length) { container.innerHTML = '<small class="text-muted">No previous visits found</small>'; return; }
+        container.innerHTML = d.data.map(r => `
+            <div class="border rounded p-2 mb-1 cursor-pointer" onclick="selectPreviousVisit('${r.customer_name}', '${r.customer_phone}', '${r.alternate_phone || ''}', '${r.customer_email || ''}', '${formatDate(r.visit_date)}')">
+                <strong>${r.customer_name}</strong> — ${r.customer_phone} <small class="text-muted">(${formatDate(r.visit_date)})</small>
+            </div>
+        `).join('');
+    } catch(e) {}
+}
+
+function selectPreviousVisit(name, phone, altPhone, email, visitDate) {
+    document.getElementById('wName').value = name;
+    document.getElementById('wPhone').value = phone;
+    document.getElementById('wAltPhone').value = altPhone;
+    document.getElementById('wEmail').value = email;
+    document.getElementById('previousVisitResults').innerHTML = `<div class="alert alert-success py-1">Pre-filled from visit on <strong>${visitDate || 'record'}</strong></div>`;
+    checkVGKPhone();
+}
+
+// ─── VGK Enrolment JS ───
+function onVGKToggle() {
+    const on = document.getElementById('wRegisterVGK').checked;
+    document.getElementById('vgkReferralRow').style.display = on ? 'block' : 'none';
+    // [DC-PHONE-OTP-001] Show/hide OTP section with VGK toggle
+    document.getElementById('walkinOtpSection').style.display = on ? 'block' : 'none';
+    if (!on) {
+        walkinOtpReset();
+    }
+}
+
+// [DC-PHONE-OTP-001] Walkin VGK OTP helpers
+function walkinOtpReset() {
+    document.getElementById('walkinOtpBlock').style.display = 'none';
+    document.getElementById('walkinOtpVerifiedBadge').style.display = 'none';
+    document.getElementById('walkinPhoneVerifiedToken').value = '';
+    const oi = document.getElementById('walkinOtpInput'); if (oi) oi.value = '';
+}
+async function walkinSendOTP() {
+    const phone = (document.getElementById('wPhone').value || '').trim().replace(/[^0-9]/g, '');
+    if (!phone || phone.length < 10) { showToast('Enter customer phone number first', 'danger'); return; }
+    const btn = document.getElementById('walkinSendOtpBtn');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+        const r = await fetch('/api/v1/partner/walkins/send-otp', {
+            method: 'POST', headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + getPartnerToken()},
+            body: JSON.stringify({phone})
+        });
+        const d = await r.json();
+        if (r.ok && d.success) {
+            document.getElementById('walkinOtpBlock').style.display = 'block';
+            document.getElementById('walkinOtpVerifiedBadge').style.display = 'none';
+            document.getElementById('walkinPhoneVerifiedToken').value = '';
+            document.getElementById('walkinOtpInput').value = '';
+            document.getElementById('walkinOtpInput').focus();
+        } else {
+            showToast(d.detail || d.message || 'Failed to send OTP', 'danger');
+        }
+    } catch { showToast('Network error sending OTP', 'danger'); }
+    finally { btn.disabled = false; btn.textContent = 'Send OTP'; }
+}
+async function walkinVerifyOTP() {
+    const phone = (document.getElementById('wPhone').value || '').trim().replace(/[^0-9]/g, '');
+    const otpCode = (document.getElementById('walkinOtpInput').value || '').trim();
+    if (!otpCode || otpCode.length !== 6) { showToast('Enter the 6-digit OTP', 'danger'); return; }
+    const btn = document.getElementById('walkinVerifyBtn');
+    btn.disabled = true; btn.textContent = 'Verifying…';
+    try {
+        const r = await fetch('/api/v1/partner/walkins/verify-otp', {
+            method: 'POST', headers: {'Content-Type':'application/json', 'Authorization': 'Bearer ' + getPartnerToken()},
+            body: JSON.stringify({phone, otp_code: otpCode})
+        });
+        const d = await r.json();
+        if (r.ok && d.success) {
+            document.getElementById('walkinPhoneVerifiedToken').value = d.phone_verified_token;
+            document.getElementById('walkinOtpBlock').style.display = 'none';
+            document.getElementById('walkinOtpVerifiedBadge').style.display = 'block';
+        } else {
+            showToast(d.detail || d.message || 'Invalid OTP', 'danger');
+        }
+    } catch { showToast('Network error verifying OTP', 'danger'); }
+    finally { btn.disabled = false; btn.textContent = 'Verify'; }
+}
+
+async function checkVGKPhone() {
+    const phone = document.getElementById('wPhone').value.trim();
+    if (phone.length < 7) return;
+    try {
+        const res = await fetch(`/api/v1/partner/vgk/check-phone?phone=${encodeURIComponent(phone)}`, {
+            headers: { 'Authorization': 'Bearer ' + getPartnerToken() }
+        });
+        const d = await res.json();
+        if (d.exists) {
+            document.getElementById('vgkExistingText').textContent = `${d.name} (${d.partner_code}) is already a VGK member`;
+            document.getElementById('vgkExistingBanner').style.display = 'block';
+            document.getElementById('vgkEnrolToggleRow').style.display = 'none';
+            document.getElementById('vgkReferralRow').style.display = 'none';
+            document.getElementById('wRegisterVGK').checked = true;
+        } else {
+            document.getElementById('vgkExistingBanner').style.display = 'none';
+            document.getElementById('vgkEnrolToggleRow').style.display = 'block';
+            const on = document.getElementById('wRegisterVGK').checked;
+            document.getElementById('vgkReferralRow').style.display = on ? 'block' : 'none';
+        }
+    } catch(e) {}
+}
+
+let _vgkSearchTimer = null;
+async function searchVGKReferral() {
+    clearTimeout(_vgkSearchTimer);
+    const q = document.getElementById('vgkReferralSearch').value.trim();
+    if (q.length < 2) { document.getElementById('vgkReferralResults').innerHTML = ''; return; }
+    _vgkSearchTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/v1/partner/vgk/search-referral?q=${encodeURIComponent(q)}`, {
+                headers: { 'Authorization': 'Bearer ' + getPartnerToken() }
+            });
+            const d = await res.json();
+            const container = document.getElementById('vgkReferralResults');
+            if (!d.data || !d.data.length) { container.innerHTML = '<small class="text-muted">No VGK members found</small>'; return; }
+            container.innerHTML = d.data.map(m => `
+                <div class="border rounded p-2 mb-1" style="cursor:pointer;background:#f0f9ff;border-color:#bfdbfe!important" onclick="selectVGKReferral(${m.id}, '${m.partner_code}', '${(m.name||'').replace(/'/g,"&#39;")}', '${m.phone||''}')">
+                    <strong style="color:#6d28d9">${m.partner_code}</strong> — ${m.name || '—'} <small class="text-muted">${m.phone || ''}</small>
+                </div>
+            `).join('');
+        } catch(e) {}
+    }, 350);
+}
+
+function selectVGKReferral(id, code, name, phone) {
+    document.getElementById('vgkReferralId').value = id;
+    document.getElementById('vgkReferralSearch').value = '';
+    document.getElementById('vgkReferralResults').innerHTML = '';
+    document.getElementById('vgkReferralSelectedText').textContent = `${code} — ${name} ${phone}`;
+    document.getElementById('vgkReferralSelected').style.display = 'block';
+}
+
+function clearVGKReferral() {
+    document.getElementById('vgkReferralId').value = '';
+    document.getElementById('vgkReferralSelected').style.display = 'none';
+    document.getElementById('vgkReferralSearch').value = '';
+}
+
+async function resetVGKPassword(vgkId) {
+    if (!confirm('Reset this VGK member\'s password to their registered mobile number?')) return;
+    try {
+        const res = await fetch(`/api/v1/partner/vgk/reset-password/${vgkId}`, {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + getPartnerToken() }
+        });
+        const d = await res.json();
+        if (d.success) showToast(d.message, 'success');
+        else showToast(d.detail || 'Reset failed', 'danger');
+    } catch(e) { showToast('Network error', 'danger'); }
+}
+
+async function saveWalkin() {
+    const name = document.getElementById('wName').value.trim();
+    const phone = document.getElementById('wPhone').value.trim();
+    if (!name || !phone) { showToast('Name and phone are required', 'danger'); return; }
+    const purposeSel = document.getElementById('wPurpose');
+    if (purposeSel.dataset.loadFailed === '1' || !purposeSel.value) {
+        showToast('Visit Purpose categories could not be loaded. Please refresh the page and try again.', 'danger');
+        return;
+    }
+
+    // [DC-PHONE-OTP-001] Require phone verification if enrolling as VGK
+    const registerAsVGK = document.getElementById('wRegisterVGK').checked;
+    const walkinPhoneToken = (document.getElementById('walkinPhoneVerifiedToken').value || '').trim();
+    if (registerAsVGK && !walkinPhoneToken) {
+        showToast('WhatsApp verification required for VGK enrolment — click "Send OTP" and verify the customer\'s phone.', 'danger');
+        return;
+    }
+
+    const btn = document.getElementById('saveWalkinBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+    const payload = {
+        customer_name: name,
+        customer_phone: phone,
+        alternate_phone: document.getElementById('wAltPhone').value.trim() || null,
+        customer_email: document.getElementById('wEmail').value.trim() || null,
+        customer_type: document.getElementById('isReturning').checked ? 'REGISTERED' : 'WALK_IN',
+        is_returning: document.getElementById('isReturning').checked,
+        registered_with_mnr: document.getElementById('wMNR').checked,
+        registered_with_vgk: document.getElementById('wVGK').checked,
+        is_new_customer: document.getElementById('wNew').checked,
+        is_existing_customer: document.getElementById('wExisting').checked,
+        is_marketplace_user: document.getElementById('wMarketplace').checked,
+        is_other_partner_customer: document.getElementById('wOtherPartner').checked,
+        register_as_vgk: registerAsVGK,
+        vgk_referral_id: document.getElementById('vgkReferralId').value ? parseInt(document.getElementById('vgkReferralId').value) : null,
+        vgk_phone_verified_token: walkinPhoneToken || null,
+        visit_date: document.getElementById('wDate').value,
+        visit_time: document.getElementById('wTime').value,
+        visit_purpose: document.getElementById('wPurpose').value,
+        category_id: document.getElementById('wCategoryId').value ? parseInt(document.getElementById('wCategoryId').value) : null,
+        product_interest: document.getElementById('wInterest').value.trim() || null,
+        lead_source: document.getElementById('wLeadSource').value,
+        assigned_to: document.getElementById('wAssigned').value.trim() || null,
+        visit_outcome: document.getElementById('wOutcome').value,
+        follow_up_date: document.getElementById('wFollowUp').value || null,
+        notes: document.getElementById('wNotes').value.trim() || null,
+        company_follow_up: document.getElementById('wCompanyFU').checked,
+    };
+
+    try {
+        const res = await fetch('/api/v1/partner/walkins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getPartnerToken() },
+            body: JSON.stringify(payload)
+        });
+        const d = await res.json();
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-2"></i>Save Walk-in';
+        if (d.success) {
+            showToast(d.message, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('walkinModal')).hide();
+            loadSummary(); loadWalkins();
+            // DC Protocol (Apr 2026): Show VGK share modal after Bootstrap modal fully dismisses (350ms)
+            if (d.vgk && d.vgk.partner_code && !d.vgk.error) {
+                setTimeout(() => showWalkinVgkShareModal(d.vgk), 380);
+            }
+        } else {
+            showToast(d.detail || 'Failed to save', 'danger');
+        }
+    } catch(e) {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-2"></i>Save Walk-in';
+        showToast('Network error', 'danger');
+    }
+}
+
+// ─── DC Protocol (Apr 2026): Sales team type-and-search autocomplete ───────────
+let _salesTeamTimer = null;
+async function searchSalesTeam() {
+    clearTimeout(_salesTeamTimer);
+    const inp = document.getElementById('wAssigned');
+    const box = document.getElementById('wAssignedResults');
+    const q = inp.value.trim();
+    if (q.length < 2) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    _salesTeamTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/api/v1/partner/sales-team/search?q=${encodeURIComponent(q)}`, {
+                headers: { 'Authorization': 'Bearer ' + getPartnerToken() }
+            });
+            const d = await res.json();
+            if (!d.data || !d.data.length) {
+                box.innerHTML = '<div style="padding:8px 12px;color:#6c757d;font-size:13px">No staff found</div>';
+                box.style.display = 'block';
+                return;
+            }
+            box.innerHTML = d.data.map(m => {
+                const label = m.full_name + (m.designation ? ' · ' + m.designation : '') + ' (' + m.emp_code + ')';
+                const safe = label.replace(/'/g, "&#39;");
+                const storeVal = m.full_name + ' (' + m.emp_code + ')';
+                return `<div style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f0f0f0"
+                             onmousedown="selectSalesMember('${storeVal.replace(/'/g,"&#39;")}')"
+                             onmouseover="this.style.background='#f0f9ff'"
+                             onmouseout="this.style.background=''">
+                            <strong style="color:#1d4ed8">${m.full_name}</strong>
+                            ${m.designation ? '<small style="color:#6c757d"> · ' + m.designation + '</small>' : ''}
+                            <small style="color:#9ca3af"> (${m.emp_code})</small>
+                        </div>`;
+            }).join('');
+            box.style.display = 'block';
+        } catch(e) { box.style.display = 'none'; }
+    }, 300);
+}
+
+function selectSalesMember(val) {
+    document.getElementById('wAssigned').value = val;
+    document.getElementById('wAssignedResults').style.display = 'none';
+    document.getElementById('wAssignedResults').innerHTML = '';
+}
+
+document.addEventListener('click', function(e) {
+    const inp = document.getElementById('wAssigned');
+    const box = document.getElementById('wAssignedResults');
+    if (inp && box && !inp.contains(e.target) && !box.contains(e.target)) {
+        box.style.display = 'none';
+    }
+});
+
+// ─── DC Protocol (Apr 2026): VGK share modal after walk-in save ─────────────
+// Format matches crm_lead_editor.js _showVgkShareModal exactly.
+function showWalkinVgkShareModal(vgk) {
+    const existing = document.getElementById('walkinVgkShareOverlay');
+    if (existing) existing.remove();
+
+    const code    = vgk.partner_code || '';
+    const name    = vgk.partner_name || '';
+    const phone   = (vgk.phone || '').replace(/\D/g, '');
+    const pwd     = vgk.auto_password || null;
+    const pts     = (vgk.points_balance || 0).toLocaleString('en-IN');
+    const ref     = 'https://vgk4u.com/vgk/login?tab=signup&ref=' + encodeURIComponent(code);
+    const yt      = 'https://www.youtube.com/@VGK4YOU';
+    const isNew   = vgk.was_created === true;
+    const adName  = vgk.advisor_name || '';
+    const adCode  = vgk.advisor_code || '';
+    const regards = `— Team VGK4U | 📞 +91 858585 2738 | 🌐 vgk4u.com/hargharsolar${adName ? '\n👤 Your Advisor: ' + adName + (adCode ? ' (Ext: ' + adCode + ')' : '') : ''}`;
+
+    const _esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    const buildMsg = (lang) => {
+        const ph = phone ? '0' + phone.slice(-10) : '-';
+        if (lang === 'hindi') {
+            if (isNew && pwd)
+                return `🎉🎊 बधाई हो ${name} जी! 🎊🎉\n\n✨ VGK4U में आपका हार्दिक स्वागत है! ✨\n🏆 आपके खाते में 10,000 वेलकम बोनस पॉइंट्स जमा हो गए हैं!\n\n🔐 लॉगिन विवरण:\n🌐 Website: www.vgk4u.com\n👤 Username: ${code}\n🔑 Password: ${pwd}\n📞 Phone: ${ph}\n💰 Points Balance: ${pts} pts\n🔗 Referral Link:\n${ref}\n\n🌞 आज से कमाई शुरू करें — अपने दोस्तों के साथ लिंक शेयर करें!\n\n▶️ YouTube:\n${yt}\n\n${regards}`;
+            return `🙏 नमस्ते ${name} जी!\n\n✅ आपका VGK4U खाता विवरण:\n🌐 Website: www.vgk4u.com\n👤 VGK ID: ${code}\n💰 Points Balance: ${pts} pts\n🔗 Referral Link:\n${ref}\n\n▶️ YouTube:\n${yt}\n\n${regards}`;
+        }
+        if (lang === 'telugu') {
+            if (isNew && pwd)
+                return `🎉🎊 అభినందనలు ${name} గారు! 🎊🎉\n\n✨ VGK4U లో స్వాగతం! ✨\n🏆 మీ ఖాతాలో 10,000 వెల్కమ్ పాయింట్లు జమ అయ్యాయి!\n\n🔐 లాగిన్ వివరాలు:\n🌐 Website: www.vgk4u.com\n👤 Username: ${code}\n🔑 Password: ${pwd}\n📞 Phone: ${ph}\n💰 Points: ${pts} pts\n🔗 Referral Link:\n${ref}\n\n🌞 ఈరోజే సంపాదించడం ప్రారంభించండి — మీ లింక్‌ను స్నేహితులతో షేర్ చేయండి!\n\n▶️ YouTube:\n${yt}\n\n${regards}`;
+            return `🙏 నమస్కారం ${name} గారు!\n\n✅ మీ VGK4U వివరాలు:\n🌐 Website: www.vgk4u.com\n👤 VGK ID: ${code}\n💰 Points: ${pts} pts\n🔗 Referral Link:\n${ref}\n\n▶️ YouTube:\n${yt}\n\n${regards}`;
+        }
+        // English (default)
+        if (isNew && pwd)
+            return `🎉🎊 Congratulations ${name}! 🎊🎉\n\n✨ Welcome to VGK4U! ✨\n🏆 10,000 Welcome Bonus Points have been credited to your account!\n\n🔐 Your Login Details:\n🌐 Website: www.vgk4u.com\n👤 Username: ${code}\n🔑 Password: ${pwd}\n📞 Phone: ${ph}\n💰 Points Balance: ${pts} pts\n🔗 Your Referral Link:\n${ref}\n\n🌞 Start earning today — share your link with friends & family!\n\n▶️ Watch how to earn (YouTube):\n${yt}\n\n${regards}`;
+        return `👋 Hello ${name}!\n\n✅ Here are your VGK4U account details:\n🌐 Website: www.vgk4u.com\n👤 VGK ID: ${code}\n💰 Points Balance: ${pts} pts\n🔗 Your Referral Link:\n${ref}\n\n▶️ Learn how to earn commissions:\n${yt}\n\n${regards}`;
+    };
+
+    const overlay = document.createElement('div');
+    overlay.id = 'walkinVgkShareOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:199999;display:flex;align-items:center;justify-content:center;padding:1rem';
+    overlay.innerHTML = `
+        <div style="background:#fff;border-radius:16px;padding:22px;max-width:460px;width:100%;box-shadow:0 25px 50px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto">
+            <div style="text-align:center;margin-bottom:14px">
+                <div style="font-size:28px">${isNew ? '🎉' : '📋'}</div>
+                <h5 style="font-weight:800;color:#4c1d95;margin:6px 0 4px">${isNew ? 'VGK4U Account Created!' : 'VGK4U Member Details'}</h5>
+                <p style="font-size:12px;color:#6b7280;margin:0">Share credentials via WhatsApp</p>
+            </div>
+            <div style="background:#f5f3ff;border:1.5px solid #ddd6fe;border-radius:10px;padding:12px 16px;margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:#6b7280">Name</span><strong style="font-size:13px">${_esc(name)}</strong></div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:#6b7280">VGK4U ID</span><strong style="font-size:13px;color:#7c3aed">${_esc(code)}</strong></div>
+                ${pwd ? `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:#6b7280">Password</span><strong style="font-size:13px;color:#059669;font-family:monospace">${_esc(pwd)}</strong></div>` : ''}
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:#6b7280">Points</span><strong style="font-size:13px;color:#7c3aed">${pts}</strong></div>
+            </div>
+            <div style="margin-bottom:10px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:6px">
+                    <label style="font-size:12px;font-weight:700;color:#374151">Share Message</label>
+                    <select id="walkinVgkShareLang" onchange="(function(){const o=document.getElementById('walkinVgkShareOverlay');if(o&&o._buildMsg)document.getElementById('walkinVgkShareMsg').value=o._buildMsg(document.getElementById('walkinVgkShareLang').value);})()" style="font-size:12px;border:1px solid #ddd;border-radius:6px;padding:3px 8px">
+                        <option value="english">English</option>
+                        <option value="hindi">हिंदी</option>
+                        <option value="telugu">తెలుగు</option>
+                    </select>
+                </div>
+                <textarea id="walkinVgkShareMsg" rows="9" style="width:100%;font-size:13px;border:1.5px solid #ddd6fe;border-radius:8px;padding:10px;resize:vertical;font-family:inherit;line-height:1.55"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button onclick="(function(){const msg=document.getElementById('walkinVgkShareMsg').value;if(navigator.clipboard){navigator.clipboard.writeText(msg).then(()=>{showToast('Copied!','success');})}else{prompt('Copy:',msg);}})()" style="flex:1;min-width:90px;padding:10px;border:1.5px solid #7c3aed;background:#fff;color:#7c3aed;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer"><i class="fas fa-copy me-1"></i>Copy</button>
+                <button id="walkinVgkWaBtn" style="flex:1;min-width:90px;padding:10px;background:#25D366;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer"><i class="fab fa-whatsapp me-1"></i>WhatsApp</button>
+                <button onclick="document.getElementById('walkinVgkShareOverlay').remove()" style="padding:10px 16px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">Close</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+    overlay._buildMsg = buildMsg;
+    document.getElementById('walkinVgkShareMsg').value = buildMsg('english');
+    // WhatsApp button uses closure to safely get the phone at click time
+    document.getElementById('walkinVgkWaBtn').addEventListener('click', () => {
+        const msg = document.getElementById('walkinVgkShareMsg').value;
+        const ph = phone.length === 10 ? '91' + phone : phone;
+        const url = ph ? 'https://wa.me/' + ph + '?text=' + encodeURIComponent(msg)
+                       : 'https://wa.me/?text=' + encodeURIComponent(msg);
+        window.open(url, '_blank');
+    });
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+// ─── Tabs ───
+function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('panelWalkins').style.display = tab === 'walkins' ? 'block' : 'none';
+    document.getElementById('panelEstimations').style.display = tab === 'estimations' ? 'block' : 'none';
+    document.getElementById('tabWalkins').classList.toggle('active', tab === 'walkins');
+    document.getElementById('tabEstimations').classList.toggle('active', tab === 'estimations');
+}
+
+// ─── Pagination ───
+function renderPagination(total, page, perPage, containerId, loadFn) {
+    const pages = Math.max(1, Math.ceil(total / perPage));
+    const container = document.getElementById(containerId);
+    if (pages <= 1) { container.innerHTML = ''; return; }
+    let html = `<small class="text-muted">Showing ${(page-1)*perPage+1}–${Math.min(page*perPage,total)} of ${total}</small>`;
+    html += '<div class="d-flex gap-1">';
+    if (page > 1) html += `<button class="btn btn-outline-secondary btn-sm" onclick="goPage(${page-1})">← Prev</button>`;
+    for (let p = Math.max(1,page-2); p <= Math.min(pages,page+2); p++) {
+        html += `<button class="btn btn-sm ${p===page?'btn-primary':'btn-outline-secondary'}" onclick="goPage(${p})">${p}</button>`;
+    }
+    if (page < pages) html += `<button class="btn btn-outline-secondary btn-sm" onclick="goPage(${page+1})">Next →</button>`;
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function goPage(p) { currentPage = p; loadWalkins(); }
+
+// ─── Helpers ───
+function getPartnerToken() { return window.PartnerTokenManager ? PartnerTokenManager.getToken() : (localStorage.getItem('partner_token') || ''); }
+function formatDate(s) { if (!s) return '-'; const d = new Date(s); return d.toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}); }
+function formatAmount(n) { return Number(n || 0).toLocaleString('en-IN', {maximumFractionDigits:0}); }
+
+function showToast(msg, type = 'success') {
+    const id = 'toast' + Date.now();
+    const colors = { success: '#2e7d32', danger: '#b71c1c', warning: '#e65100', info: '#1565c0' };
+    document.getElementById('toastContainer').insertAdjacentHTML('beforeend', `
+        <div id="${id}" style="background:${colors[type]||colors.info};color:white;padding:12px 20px;border-radius:10px;margin-bottom:8px;box-shadow:0 4px 12px rgba(0,0,0,0.2);min-width:280px;">
+            ${msg}
+        </div>
+    `);
+    setTimeout(() => { const el = document.getElementById(id); if (el) el.remove(); }, 4000);
+}
+</script>
+
+<!-- ── WhatsApp Template Picker Modal (Walkins) ── -->
+<div class="modal fade" id="waTplModalW" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border-radius:14px;overflow:hidden">
+      <div class="modal-header" style="background:linear-gradient(135deg,#25d366,#128c7e);border:none;border-radius:0">
+        <div class="d-flex align-items-center gap-3">
+          <div style="width:38px;height:38px;background:rgba(255,255,255,.2);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="fab fa-whatsapp" style="font-size:20px;color:#fff"></i>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:800;color:#fff">Send WhatsApp Message</div>
+            <div style="font-size:11px;color:rgba(255,255,255,.8)" id="waTplWSubtitle">Pick a message template</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close" style="filter:brightness(0) invert(1);margin-left:auto" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:20px;max-height:68vh;overflow-y:auto">
+        <div style="margin-bottom:14px;position:relative">
+          <input type="text" id="waTplSearchW" class="form-control form-control-sm" placeholder="Search templates…" oninput="_filterWaTplsW()" style="padding-left:32px">
+          <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px"></i>
+        </div>
+        <div id="waTplListW">
+          <div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading templates…</div>
+        </div>
+      </div>
+      <div class="modal-footer" style="background:#f8fafc;border-top:1px solid #e2e8f0;gap:10px">
+        <div style="flex:1;font-size:12px;color:#64748b" id="waTplWNote">Select a template above to preview, then click Send.</div>
+        <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-sm btn-wa-w" id="waTplWSendBtn" onclick="_sendSelectedWATplW()" disabled>
+          <i class="fab fa-whatsapp me-1"></i> Open WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── WA Template Picker (partner_walkins.html) ──
+let _waTplAllW = null;
+let _waTplPhoneW = '';
+let _waTplNameW = '';
+let _waTplSelectedW = null;
+
+function _fmtPhoneWAW(raw) {
+  const digits = (raw || '').replace(/\D/g, '');
+  if (digits.length === 10) return '91' + digits;
+  if (digits.length === 12 && digits.startsWith('91')) return digits;
+  if (digits.length === 11 && digits.startsWith('0')) return '91' + digits.slice(1);
+  return digits;
+}
+
+function _subTplW(text, name, phone) {
+  return (text || '')
+    .replace(/\{\{name\}\}/gi, name || 'Customer')
+    .replace(/\{\{phone\}\}/gi, phone || '')
+    .replace(/\{\{custom_1\}\}/gi, name || 'Customer')
+    .replace(/\{\{custom_2\}\}/gi, '')
+    .replace(/\{\{1\}\}/gi, name || 'Customer')
+    .replace(/\{\{2\}\}/gi, phone || '');
+}
+
+async function openWATplW(phone, name) {
+  _waTplPhoneW = phone;
+  _waTplNameW = name;
+  _waTplSelectedW = null;
+  document.getElementById('waTplWSubtitle').textContent = 'To: ' + name + ' · ' + phone;
+  document.getElementById('waTplSearchW').value = '';
+  document.getElementById('waTplWSendBtn').disabled = true;
+  document.getElementById('waTplWNote').textContent = 'Select a template above to preview, then click Send.';
+  new bootstrap.Modal(document.getElementById('waTplModalW')).show();
+  if (!_waTplAllW) await _fetchWATplsW();
+  _renderWATplsW('');
+}
+
+async function _fetchWATplsW() {
+  document.getElementById('waTplListW').innerHTML =
+    '<div class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Loading templates…</div>';
+  try {
+    const resp = await fetch('/api/v1/partner/wa-templates', { headers: { 'Authorization': 'Bearer ' + getPartnerToken() } });
+    const data = await resp.json();
+    _waTplAllW = data.success ? (data.templates || []) : [];
+  } catch(e) {
+    _waTplAllW = [];
+    document.getElementById('waTplListW').innerHTML = '<div class="alert alert-warning">Could not load templates. Try again.</div>';
+  }
+}
+
+function _filterWaTplsW() {
+  _renderWATplsW('', document.getElementById('waTplSearchW').value);
+}
+
+function _renderWATplsW(segment, search) {
+  const q = (search || '').toLowerCase();
+  const tpls = (_waTplAllW || []).filter(t => {
+    if (!t.is_active) return false;
+    if (q && !t.name.toLowerCase().includes(q) && !(t.body_text || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  if (!tpls.length) {
+    document.getElementById('waTplListW').innerHTML = '<div class="text-center py-4 text-muted">No templates found.</div>';
+    return;
+  }
+  document.getElementById('waTplListW').innerHTML = tpls.map(t => {
+    const preview = _subTplW(t.body_text, _waTplNameW, _waTplPhoneW);
+    return '<div class="wa-tpl-item" id="waTplW_' + t.id + '" onclick="_selTplW(' + t.id + ')">' +
+      '<div class="d-flex align-items-start justify-content-between gap-2">' +
+        '<div style="min-width:0">' +
+          '<div class="wa-tpl-name">' + t.name + '</div>' +
+          '<span class="wa-tpl-segment">' + (t.segment || 'general') + '</span>' +
+          '<div class="wa-tpl-body">' + preview.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>' +
+        '</div>' +
+        '<div style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:2px solid #cbd5e1;display:flex;align-items:center;justify-content:center;margin-top:2px" id="waTplWChk_' + t.id + '"></div>' +
+      '</div></div>';
+  }).join('');
+  if (_waTplSelectedW) {
+    const el = document.getElementById('waTplW_' + _waTplSelectedW.id);
+    if (el) el.classList.add('selected');
+  }
+}
+
+function _selTplW(id) {
+  const t = (_waTplAllW || []).find(x => x.id === id);
+  if (!t) return;
+  _waTplSelectedW = t;
+  document.querySelectorAll('#waTplListW .wa-tpl-item').forEach(el => el.classList.remove('selected'));
+  document.querySelectorAll('[id^="waTplWChk_"]').forEach(el => { el.style.background=''; el.style.borderColor='#cbd5e1'; el.innerHTML=''; });
+  const el = document.getElementById('waTplW_' + id);
+  if (el) el.classList.add('selected');
+  const chk = document.getElementById('waTplWChk_' + id);
+  if (chk) { chk.style.background='#25d366'; chk.style.borderColor='#25d366'; chk.innerHTML='<i class="fas fa-check" style="font-size:10px;color:#fff"></i>'; }
+  const body = el ? el.querySelector('.wa-tpl-body') : null;
+  if (body) body.classList.add('expanded');
+  document.getElementById('waTplWNote').textContent = '"' + t.name + '" selected — will open WhatsApp with this message.';
+  document.getElementById('waTplWSendBtn').disabled = false;
+}
+
+function _sendSelectedWATplW() {
+  if (!_waTplSelectedW || !_waTplPhoneW) return;
+  const msg = _subTplW(_waTplSelectedW.body_text, _waTplNameW, _waTplPhoneW);
+  const url = 'https://wa.me/' + _fmtPhoneWAW(_waTplPhoneW) + '?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
+  bootstrap.Modal.getInstance(document.getElementById('waTplModalW'))?.hide();
+}
+</script>
+</body>
+</html>

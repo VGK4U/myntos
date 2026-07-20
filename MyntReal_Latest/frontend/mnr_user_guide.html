@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - MNR Member Portal Guide</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff7ed; min-height: 100vh; color: #1f2937; }
+
+        /* ── AUTH OVERLAY ── */
+        #authOverlay { position: fixed; inset: 0; background: linear-gradient(135deg, #1a0a00 0%, #7c2d12 50%, #c2410c 100%); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+        .auth-box { background: white; border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 420px; box-shadow: 0 25px 60px rgba(0,0,0,0.4); }
+        .auth-logo { text-align: center; margin-bottom: 24px; }
+        .auth-logo img { height: 48px; object-fit: contain; }
+        .auth-box h2 { font-size: 1.3rem; font-weight: 700; color: #1f2937; text-align: center; margin-bottom: 6px; }
+        .auth-box p { text-align: center; color: #6b7280; font-size: 0.88rem; margin-bottom: 28px; }
+        .auth-box label { font-size: 0.83rem; font-weight: 600; color: #374151; margin-bottom: 5px; display: block; }
+        .auth-box input { width: 100%; padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 0.92rem; outline: none; transition: border 0.2s; margin-bottom: 16px; font-family: inherit; }
+        .auth-box input:focus { border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234,88,12,0.1); }
+        .auth-btn { width: 100%; padding: 12px; background: linear-gradient(135deg, #ea580c, #c2410c); color: white; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; font-family: inherit; }
+        .auth-btn:hover { opacity: 0.92; }
+        .auth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .auth-error { background: #fef2f2; border: 1px solid #fca5a5; color: #dc2626; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px; display: none; }
+
+        /* ── HEADER ── */
+        .guide-header { background: linear-gradient(135deg, #1a0a00 0%, #7c2d12 50%, #c2410c 100%); color: white; padding: 28px 0 24px; }
+        .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+        .header-logos { display: flex; align-items: center; gap: 14px; }
+        .header-logos img { height: 42px; object-fit: contain; }
+        .header-logos .logo-divider { width: 1px; height: 34px; background: rgba(255,255,255,0.25); }
+        .header-nav { display: flex; align-items: center; gap: 8px; }
+        .header-back { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; padding: 6px 13px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; transition: all 0.2s; }
+        .header-back:hover { color: white; border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.08); }
+        .logout-btn { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,180,180,0.8); background: transparent; border: 1px solid rgba(255,100,100,0.25); border-radius: 6px; padding: 6px 13px; font-size: 13px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+        .logout-btn:hover { color: #fca5a5; border-color: rgba(255,100,100,0.6); background: rgba(220,38,38,0.12); }
+        .guide-title-row { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+        .guide-header h1 { font-size: 1.65rem; font-weight: 700; margin: 0; }
+        .guide-header .tagline { font-size: 0.9rem; opacity: 0.8; margin-top: 4px; }
+        .guide-header .stats-row { display: flex; gap: 22px; margin-top: 8px; font-size: 0.83rem; opacity: 0.7; }
+        .search-wrap { position: relative; width: 300px; max-width: 100%; }
+        .search-wrap input { width: 100%; padding: 9px 13px 9px 38px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; background: rgba(255,255,255,0.1); color: white; font-size: 14px; outline: none; transition: all 0.2s; font-family: inherit; }
+        .search-wrap input::placeholder { color: rgba(255,255,255,0.5); }
+        .search-wrap input:focus { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.15); }
+        .search-wrap .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.5); font-size: 13px; }
+        .search-wrap .search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.5); font-size: 13px; cursor: pointer; display: none; background: none; border: none; padding: 4px; }
+        .search-results-dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: white; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); max-height: 340px; overflow-y: auto; z-index: 200; display: none; }
+        .search-results-dropdown.active { display: block; }
+        .sr-item { padding: 11px 14px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.15s; display: flex; align-items: flex-start; gap: 10px; }
+        .sr-item:last-child { border-bottom: none; }
+        .sr-item:hover { background: #fff7ed; }
+        .sr-item-icon { width: 28px; height: 28px; border-radius: 6px; background: #fff3e0; display: flex; align-items: center; justify-content: center; color: #ea580c; font-size: 12px; flex-shrink: 0; }
+        .sr-item-text .sr-name { font-size: 0.85rem; font-weight: 600; color: #1f2937; }
+        .sr-item-text .sr-section { font-size: 0.75rem; color: #9ca3af; margin-top: 2px; }
+        .sr-count { padding: 7px 14px; font-size: 11px; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #f3f4f6; }
+
+        /* ── LAYOUT ── */
+        .page-layout { display: flex; align-items: flex-start; }
+        .left-sidebar { width: 224px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; background: #fff; border-right: 1px solid #e5e7eb; box-shadow: 2px 0 8px rgba(0,0,0,0.04); z-index: 50; scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
+        .left-sidebar::-webkit-scrollbar { width: 4px; }
+        .left-sidebar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .sidebar-hdr { padding: 12px 14px 8px; border-bottom: 1px solid #f3f4f6; }
+        .sidebar-hdr p { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #9ca3af; margin: 0; }
+        .sidebar-nav { padding: 4px 0 24px; }
+        .sidebar-item { display: flex; align-items: center; gap: 8px; padding: 7px 13px; color: #4b5563; text-decoration: none; font-size: 0.78rem; font-weight: 500; cursor: pointer; border-left: 3px solid transparent; transition: all 0.15s; line-height: 1.3; }
+        .sidebar-item:hover { color: #ea580c; background: #fff7ed; border-left-color: #fed7aa; }
+        .sidebar-item.active { color: #ea580c; background: #fff3e0; border-left-color: #ea580c; font-weight: 600; }
+        .sidebar-item i.si-ico { width: 14px; text-align: center; font-size: 0.73rem; flex-shrink: 0; }
+        .sidebar-item .si-cnt { margin-left: auto; font-size: 0.67rem; background: #f3f4f6; color: #6b7280; padding: 1px 5px; border-radius: 8px; flex-shrink: 0; }
+        .sidebar-item.active .si-cnt { background: #fed7aa; color: #c2410c; }
+        .main-content { flex: 1; min-width: 0; overflow: hidden; }
+
+        /* ── SECTION & CARDS ── */
+        .section { padding: 32px 0; border-bottom: 1px solid #e5e7eb; }
+        .section:last-child { border-bottom: none; }
+        .section h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 5px; color: #1f2937; display: flex; align-items: center; gap: 10px; }
+        .section h2 .tab-num { background: #ea580c; color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+        .section .subtitle { color: #6b7280; font-size: 0.9rem; margin-bottom: 18px; }
+        .page-card { background: white; border-radius: 12px; padding: 18px 22px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border-left: 4px solid #ea580c; }
+        .page-card.has-guide { border-left-color: #059669; }
+        .page-card-header { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .page-card-header .pc-icon { width: 34px; height: 34px; border-radius: 8px; background: #fff3e0; display: flex; align-items: center; justify-content: center; color: #ea580c; font-size: 15px; flex-shrink: 0; }
+        .page-card.has-guide .pc-icon { background: #ecfdf5; color: #059669; }
+        .page-card-header h4 { margin: 0; font-size: 0.97rem; font-weight: 600; color: #1f2937; flex: 1; }
+        .page-card-header .pc-toggle { color: #9ca3af; font-size: 13px; transition: transform 0.2s; }
+        .page-card-header .pc-toggle.open { transform: rotate(180deg); }
+        .page-card .pc-route { font-size: 0.77rem; color: #9ca3af; margin: 6px 0 8px; font-family: monospace; }
+        .page-card .pc-purpose { font-size: 0.88rem; color: #4b5563; line-height: 1.6; margin-bottom: 10px; }
+        .pc-detail { display: none; padding-top: 14px; border-top: 1px solid #f3f4f6; margin-top: 10px; }
+        .pc-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; margin: 14px 0 6px; }
+        .pc-section-title:first-child { margin-top: 0; }
+        .pc-list { list-style: none; padding: 0; margin: 0 0 10px; }
+        .pc-list li { font-size: 0.85rem; color: #374151; padding: 4px 0 4px 18px; position: relative; line-height: 1.5; }
+        .pc-list li::before { content: '•'; position: absolute; left: 6px; color: #ea580c; font-size: 10px; top: 5px; }
+        .pc-badge { display: inline-block; font-size: 0.72rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; margin-right: 4px; margin-bottom: 4px; }
+        .pc-badge.status-active { background: #d1fae5; color: #065f46; }
+        .pc-badge.status-pending { background: #fef3c7; color: #92400e; }
+        .pc-badge.status-done { background: #dbeafe; color: #1e40af; }
+        .pc-badge.status-info { background: #f3f4f6; color: #374151; }
+        .flow-steps { counter-reset: step; padding: 0; margin: 0 0 10px; list-style: none; }
+        .flow-steps li { counter-increment: step; font-size: 0.85rem; color: #374151; padding: 5px 0 5px 30px; position: relative; line-height: 1.5; }
+        .flow-steps li::before { content: counter(step); position: absolute; left: 0; top: 4px; width: 20px; height: 20px; background: #ea580c; color: white; border-radius: 50%; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+        .tip-box { background: #fff7ed; border-left: 3px solid #ea580c; padding: 10px 14px; border-radius: 0 8px 8px 0; margin-bottom: 10px; }
+        .tip-box p { font-size: 0.83rem; color: #92400e; margin: 0; line-height: 1.5; }
+        .mistake-box { background: #fef2f2; border-left: 3px solid #ef4444; padding: 10px 14px; border-radius: 0 8px 8px 0; margin-bottom: 6px; }
+        .mistake-box p { font-size: 0.83rem; color: #991b1b; margin: 0; line-height: 1.5; }
+
+        /* ── LOADING / EMPTY ── */
+        .loading-wrap { text-align: center; padding: 80px 40px; }
+        .loading-wrap .spinner { width: 44px; height: 44px; border: 4px solid #fed7aa; border-top-color: #ea580c; border-radius: 50%; animation: spin 0.9s linear infinite; margin: 0 auto 18px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { text-align: center; padding: 60px 40px; color: #9ca3af; }
+        .no-results { padding: 20px; text-align: center; font-size: 0.85rem; color: #9ca3af; }
+
+        /* ── SEARCH HIGHLIGHT ── */
+        .page-card.hidden-by-search { display: none; }
+        .section.all-hidden { display: none; }
+
+        @media (max-width: 768px) {
+            .left-sidebar { display: none; }
+            .guide-header h1 { font-size: 1.3rem; }
+            .search-wrap { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- AUTH OVERLAY -->
+<div id="authOverlay">
+    <div class="auth-box">
+        <div class="auth-logo">
+            <img src="/public/mnr-logo.png" alt="MNR Logo" onerror="this.style.display='none'">
+        </div>
+        <h2>Member Portal Guide</h2>
+        <p>Sign in with your MNR Member credentials to access the guide</p>
+        <div class="auth-error" id="authError"></div>
+        <label for="loginId">Member ID or Mobile Number</label>
+        <input type="text" id="loginId" placeholder="e.g. MR00001 or 9876543210" autocomplete="username">
+        <label for="loginPass">Password</label>
+        <input type="password" id="loginPass" placeholder="Your password" autocomplete="current-password">
+        <button class="auth-btn" id="loginBtn" onclick="doLogin()">
+            <i class="fas fa-sign-in-alt me-2"></i>Sign In
+        </button>
+    </div>
+</div>
+
+<!-- HEADER -->
+<div class="guide-header">
+    <div class="container-fluid px-4">
+        <div class="header-top">
+            <div class="header-logos">
+                <img src="/public/mnr-logo.png" alt="MNR" onerror="this.style.display='none'">
+                <div class="logo-divider"></div>
+                <img src="/public/myntreal-logo.png" alt="MyntReal" onerror="this.style.display='none'">
+            </div>
+            <div class="header-nav">
+                <a href="/" class="header-back"><i class="fas fa-arrow-left"></i> Home</a>
+                <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+            </div>
+        </div>
+        <div class="guide-title-row">
+            <div>
+                <h1><i class="fas fa-book-open me-2" style="color:#fed7aa;"></i>MNR Member Portal Guide</h1>
+                <div class="tagline">Complete reference for your member dashboard, income, wallets, and benefits</div>
+                <div class="stats-row" id="statsRow">
+                    <span><i class="fas fa-circle-notch fa-spin me-1"></i> Loading...</span>
+                </div>
+            </div>
+            <div class="search-wrap">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="globalSearch" placeholder="Search pages..." oninput="handleSearch(this.value)" onkeydown="handleSearchKey(event)">
+                <button class="search-clear" id="searchClear" onclick="clearSearch()"><i class="fas fa-times"></i></button>
+                <div class="search-results-dropdown" id="searchDropdown"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="page-layout">
+    <!-- LEFT SIDEBAR -->
+    <div class="left-sidebar">
+        <div class="sidebar-hdr"><p>Sections</p></div>
+        <nav class="sidebar-nav" id="sidebarNav"></nav>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <div class="container-fluid px-4">
+            <div id="guideContent">
+                <div class="loading-wrap">
+                    <div class="spinner"></div>
+                    <p style="color:#6b7280;font-size:0.9rem;">Loading member portal guide...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let guideData = null;
+let authToken = null;
+
+// ── AUTH ──────────────────────────────────────────────────
+async function init() {
+    const token = localStorage.getItem('token') || localStorage.getItem('auth_token') || localStorage.getItem('authToken');
+    if (token) {
+        try {
+            const res = await fetch('/api/v1/auth/me-hybrid', { headers: { Authorization: 'Bearer ' + token } });
+            if (res.ok) {
+                authToken = token;
+                document.getElementById('authOverlay').style.display = 'none';
+                loadGuide();
+                return;
+            }
+        } catch(e) {}
+    }
+    // Not logged in — show overlay
+    document.getElementById('authOverlay').style.display = 'flex';
+}
+
+async function doLogin() {
+    const id = document.getElementById('loginId').value.trim();
+    const pw = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('authError');
+    const btn = document.getElementById('loginBtn');
+    errEl.style.display = 'none';
+    if (!id || !pw) { showAuthError('Please enter your Member ID and password.'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i>Signing in...';
+    try {
+        const res = await fetch('/api/v1/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username: id, password: pw })
+        });
+        const data = await res.json();
+        if (res.ok && data.access_token) {
+            authToken = data.access_token;
+            localStorage.setItem('token', authToken);
+            document.getElementById('authOverlay').style.display = 'none';
+            loadGuide();
+        } else {
+            showAuthError(data.detail || 'Invalid credentials. Please try again.');
+        }
+    } catch(e) {
+        showAuthError('Connection error. Please check your network and try again.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Sign In';
+    }
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('authOverlay').style.display !== 'none') doLogin();
+});
+
+function showAuthError(msg) {
+    const el = document.getElementById('authError');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+function doLogout() {
+    localStorage.removeItem('token');
+    authToken = null;
+    document.getElementById('authOverlay').style.display = 'flex';
+    document.getElementById('authError').style.display = 'none';
+    document.getElementById('loginId').value = '';
+    document.getElementById('loginPass').value = '';
+}
+
+// ── DATA LOAD ────────────────────────────────────────────
+async function loadGuide() {
+    try {
+        const res = await fetch('/api/v1/mnr/user-guide/pages', {
+            headers: authToken ? { Authorization: 'Bearer ' + authToken } : {}
+        });
+        if (!res.ok) throw new Error('Failed to load guide data');
+        guideData = await res.json();
+        renderGuide();
+    } catch(e) {
+        document.getElementById('guideContent').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle fa-2x mb-3" style="color:#ea580c;"></i>
+                <p>Could not load the guide. Please refresh the page.</p>
+                <button onclick="loadGuide()" style="background:#ea580c;color:white;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;margin-top:10px;">Retry</button>
+            </div>`;
+    }
+}
+
+// ── RENDER ────────────────────────────────────────────────
+function renderGuide() {
+    const sections = guideData.sections || [];
+    document.getElementById('statsRow').innerHTML =
+        `<span><i class="fas fa-layer-group me-1"></i>${sections.length} section${sections.length !== 1 ? 's' : ''}</span>` +
+        `<span><i class="fas fa-file-alt me-1"></i>${guideData.total_pages} pages</span>`;
+
+    // Sidebar
+    const sidebarNav = document.getElementById('sidebarNav');
+    sidebarNav.innerHTML = sections.map((sec, i) => `
+        <div class="sidebar-item${i === 0 ? ' active' : ''}" onclick="scrollToSection('sec-${i}', this)">
+            <i class="${sec.icon || 'fas fa-folder'} si-ico"></i>
+            <span>${sec.title}</span>
+            <span class="si-cnt">${sec.pages.length}</span>
+        </div>`).join('');
+
+    // Main content
+    document.getElementById('guideContent').innerHTML = sections.map((sec, si) => `
+        <div class="section" id="sec-${si}" data-section-idx="${si}">
+            <h2>
+                <span class="tab-num">${si + 1}</span>
+                ${sec.title}
+            </h2>
+            <div class="subtitle">${sec.description || ''}</div>
+            ${sec.pages.map(page => renderPageCard(page)).join('')}
+        </div>`).join('') || `<div class="empty-state"><i class="fas fa-book-open fa-2x mb-3" style="color:#d1d5db;"></i><p>No pages found in the guide.</p></div>`;
+
+    // Intersection observer for sidebar highlighting
+    setupScrollSpy(sections.length);
+    buildSearchIndex(sections);
+}
+
+function renderPageCard(page) {
+    const g = page.guide || {};
+    const hasFull = g.purpose || (g.main_sections && g.main_sections.length) || (g.usage_flow && g.usage_flow.length);
+
+    const statusBadges = (g.statuses || []).map(s =>
+        `<span class="pc-badge status-info">${s}</span>`).join('');
+
+    const detailHtml = hasFull ? `
+        <div class="pc-detail" id="detail-${page.menu_code}">
+            ${g.who_can_access ? `<div class="pc-section-title">Who Can Access</div><p style="font-size:0.85rem;color:#374151;margin-bottom:10px;">${g.who_can_access}</p>` : ''}
+            ${g.main_sections && g.main_sections.length ? `
+                <div class="pc-section-title">What You'll Find Here</div>
+                <ul class="pc-list">${g.main_sections.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
+            ${g.usage_flow && g.usage_flow.length ? `
+                <div class="pc-section-title">How to Use</div>
+                <ol class="flow-steps">${g.usage_flow.map(s => `<li>${s}</li>`).join('')}</ol>` : ''}
+            ${g.fields && g.fields.length ? `
+                <div class="pc-section-title">Key Fields</div>
+                <ul class="pc-list">${g.fields.map(f => `<li>${f}</li>`).join('')}</ul>` : ''}
+            ${statusBadges ? `<div class="pc-section-title">Statuses</div><div style="margin-bottom:10px;">${statusBadges}</div>` : ''}
+            ${g.tips && g.tips.length ? `
+                <div class="pc-section-title">Tips</div>
+                ${g.tips.map(t => `<div class="tip-box"><p><i class="fas fa-lightbulb me-2" style="color:#ea580c;"></i>${t}</p></div>`).join('')}` : ''}
+            ${g.common_mistakes && g.common_mistakes.length ? `
+                <div class="pc-section-title">Common Mistakes</div>
+                ${g.common_mistakes.map(m => `<div class="mistake-box"><p><i class="fas fa-exclamation-circle me-2"></i>${m}</p></div>`).join('')}` : ''}
+        </div>` : '';
+
+    return `
+        <div class="page-card${hasFull ? ' has-guide' : ''}" data-page-name="${(page.menu_name || '').toLowerCase()}" data-page-desc="${(page.description || '').toLowerCase()}">
+            <div class="page-card-header" onclick="toggleCard('${page.menu_code}', this)">
+                <div class="pc-icon"><i class="${page.menu_icon || 'fas fa-file'}"></i></div>
+                <h4>${page.menu_name}</h4>
+                ${hasFull ? `<i class="fas fa-chevron-down pc-toggle"></i>` : ''}
+            </div>
+            ${page.route_path ? `<div class="pc-route"><i class="fas fa-link me-1" style="opacity:0.6;"></i>${page.route_path}</div>` : ''}
+            ${g.purpose || page.description ? `<div class="pc-purpose">${g.purpose || page.description}</div>` : ''}
+            ${detailHtml}
+        </div>`;
+}
+
+// ── CARD TOGGLE ───────────────────────────────────────────
+function toggleCard(code, headerEl) {
+    const detail = document.getElementById('detail-' + code);
+    if (!detail) return;
+    const toggle = headerEl.querySelector('.pc-toggle');
+    const isOpen = detail.style.display === 'block';
+    detail.style.display = isOpen ? 'none' : 'block';
+    if (toggle) toggle.classList.toggle('open', !isOpen);
+}
+
+// ── SCROLL SPY ────────────────────────────────────────────
+function scrollToSection(id, el) {
+    const target = document.getElementById(id);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function setupScrollSpy(count) {
+    if (!window.IntersectionObserver) return;
+    const items = document.querySelectorAll('.sidebar-nav .sidebar-item');
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                const idx = e.target.dataset.sectionIdx;
+                items.forEach(i => i.classList.remove('active'));
+                if (items[idx]) items[idx].classList.add('active');
+            }
+        });
+    }, { rootMargin: '-30% 0px -60% 0px', threshold: 0 });
+    document.querySelectorAll('.section').forEach(s => observer.observe(s));
+}
+
+// ── SEARCH ────────────────────────────────────────────────
+let searchIndex = [];
+function buildSearchIndex(sections) {
+    searchIndex = [];
+    sections.forEach((sec, si) => {
+        sec.pages.forEach(p => {
+            searchIndex.push({
+                sectionIdx: si,
+                sectionTitle: sec.title,
+                name: p.menu_name,
+                code: p.menu_code,
+                icon: p.menu_icon,
+                purpose: (p.guide && p.guide.purpose) || p.description || ''
+            });
+        });
+    });
+}
+
+function handleSearch(val) {
+    const clearBtn = document.getElementById('searchClear');
+    clearBtn.style.display = val ? 'block' : 'none';
+    const dropdown = document.getElementById('searchDropdown');
+
+    if (!val.trim()) {
+        dropdown.classList.remove('active');
+        clearInlineSearch();
+        return;
+    }
+
+    const term = val.toLowerCase();
+    const matches = searchIndex.filter(p =>
+        p.name.toLowerCase().includes(term) || p.purpose.toLowerCase().includes(term)
+    ).slice(0, 8);
+
+    if (!matches.length) {
+        dropdown.innerHTML = '<div class="no-results">No pages found</div>';
+    } else {
+        dropdown.innerHTML = `<div class="sr-count">${matches.length} result${matches.length !== 1 ? 's' : ''}</div>` +
+            matches.map(m => `
+                <div class="sr-item" onclick="jumpToPage('${m.code}', '${m.sectionIdx}')">
+                    <div class="sr-item-icon"><i class="${m.icon || 'fas fa-file'}"></i></div>
+                    <div class="sr-item-text">
+                        <div class="sr-name">${highlight(m.name, val)}</div>
+                        <div class="sr-section">${m.sectionTitle}</div>
+                    </div>
+                </div>`).join('');
+    }
+    dropdown.classList.add('active');
+    filterCards(term);
+}
+
+function handleSearchKey(e) {
+    if (e.key === 'Escape') clearSearch();
+}
+
+function clearSearch() {
+    document.getElementById('globalSearch').value = '';
+    document.getElementById('searchClear').style.display = 'none';
+    document.getElementById('searchDropdown').classList.remove('active');
+    clearInlineSearch();
+}
+
+function filterCards(term) {
+    document.querySelectorAll('.page-card').forEach(card => {
+        const name = card.dataset.pageName || '';
+        const desc = card.dataset.pageDesc || '';
+        const match = name.includes(term) || desc.includes(term);
+        card.classList.toggle('hidden-by-search', !match);
+    });
+    document.querySelectorAll('.section').forEach(sec => {
+        const visible = sec.querySelectorAll('.page-card:not(.hidden-by-search)');
+        sec.classList.toggle('all-hidden', visible.length === 0);
+    });
+}
+
+function clearInlineSearch() {
+    document.querySelectorAll('.page-card').forEach(c => c.classList.remove('hidden-by-search'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('all-hidden'));
+}
+
+function jumpToPage(code, sectionIdx) {
+    document.getElementById('searchDropdown').classList.remove('active');
+    const card = document.querySelector(`.page-card .pc-icon`)?.closest('.page-card');
+    const allCards = document.querySelectorAll('.page-card');
+    for (const c of allCards) {
+        const header = c.querySelector('.page-card-header h4');
+        if (!header) continue;
+        const detail = document.getElementById('detail-' + code);
+        if (detail) {
+            detail.style.display = 'block';
+            const toggle = c.querySelector('.pc-toggle');
+            if (toggle) toggle.classList.add('open');
+            setTimeout(() => c.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+            break;
+        }
+    }
+    // Also jump via section
+    const sec = document.getElementById('sec-' + sectionIdx);
+    if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function highlight(text, term) {
+    if (!term) return text;
+    const re = new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return text.replace(re, '<mark style="background:#fed7aa;padding:0 2px;border-radius:2px;">$1</mark>');
+}
+
+document.addEventListener('click', e => {
+    const dd = document.getElementById('searchDropdown');
+    if (dd && !dd.contains(e.target) && !document.getElementById('globalSearch').contains(e.target)) {
+        dd.classList.remove('active');
+    }
+});
+
+// ── START ─────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

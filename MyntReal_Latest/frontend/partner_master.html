@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Partner Master - DC_PARTNER_002</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .top-header { height: 64px; background: white; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .page-title { font-size: 18px; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .user-info-header { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .user-info-header .user-avatar-sm { width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #d1fae5; color: #059669; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .partner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+        .partner-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; transition: all 0.2s; }
+        .partner-card:hover { border-color: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15); }
+        .partner-card h3 { font-size: 16px; font-weight: 600; color: #1f2937; margin: 0 0 4px 0; }
+        .partner-card .partner-code { font-size: 12px; color: #6b7280; font-family: monospace; }
+        .partner-card .category-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-top: 8px; }
+        
+        .directory-table { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }
+        .table-header { padding: 16px 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .table-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .result-count { font-size: 14px; color: #6b7280; }
+        .partner-table { width: 100%; border-collapse: collapse; }
+        .partner-table thead th { background: #f9fafb; padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e5e7eb; }
+        .partner-table tbody td { padding: 14px 16px; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151; vertical-align: middle; }
+        .partner-table tbody tr:hover { background: #f9fafb; }
+        .partner-info { display: flex; align-items: center; gap: 12px; }
+        .partner-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+        .pm-logo-avatar { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+        .pm-logo-initials { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+        /* View modal logo */
+        .vm-logo-box { display: flex; align-items: center; gap: 14px; }
+        .vm-logo-img { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; box-shadow: 0 3px 10px rgba(0,0,0,.15); flex-shrink: 0; }
+        .vm-logo-initials { width: 60px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 22px; flex-shrink: 0; box-shadow: 0 3px 10px rgba(0,0,0,.15); }
+        /* Edit form logo upload */
+        .logo-upload-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-top: 1px dashed #e5e7eb; border-bottom: 1px dashed #e5e7eb; margin-bottom: 12px; }
+        .logo-upload-preview { width: 52px; height: 52px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 18px; flex-shrink: 0; }
+        .logo-upload-preview img { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; }
+        .logo-upload-info { flex: 1; }
+        .logo-upload-info label { font-size: 12px; font-weight: 700; color: #374151; display: block; margin-bottom: 4px; }
+        .logo-upload-info small { font-size: 11px; color: #9ca3af; display: block; margin-bottom: 6px; }
+        .logo-upload-btn { font-size: 11px; font-weight: 600; padding: 5px 14px; border-radius: 6px; border: 1.5px solid #10b981; color: #059669; background: #fff; cursor: pointer; }
+        .logo-upload-btn:hover { background: #059669; color: #fff; }
+        /* [DC-PARTNER-TERMS-001] Edit Modal Tabs */
+        .edit-tab-nav { display:flex; gap:2px; padding:10px 16px 0; background:#10172a; overflow-x:auto; border-bottom:1px solid #374151; flex-shrink:0; scrollbar-width:none; }
+        .edit-tab-nav::-webkit-scrollbar { display:none; }
+        .edit-tab-btn { background:none; border:none; border-bottom:2px solid transparent; padding:8px 12px; font-size:11.5px; font-weight:600; color:#6b7280; cursor:pointer; white-space:nowrap; transition:color .15s; }
+        .edit-tab-btn.active { color:#7c3aed; border-bottom-color:#7c3aed; }
+        .edit-tab-btn:hover:not(.active) { color:#a78bfa; }
+        .edit-tab-panel { padding:14px 0 4px; }
+        .kyc-doc-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid #1e293b; }
+        .kyc-doc-row:last-child { border-bottom:none; }
+        .kyc-doc-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+        .kyc-badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:700; }
+        .kyc-badge-approved { background:#064e3b; color:#10b981; }
+        .kyc-badge-pending { background:#451a03; color:#f59e0b; }
+        .kyc-badge-rejected { background:#450a0a; color:#ef4444; }
+        .kyc-badge-none { background:#1f2937; color:#9ca3af; }
+        #editLogoFileInput { display: none; }
+        .logo-upload-msg { font-size: 11px; margin-top: 4px; }
+        .partner-details .name { font-weight: 600; color: #1f2937; }
+        .partner-details .code { font-size: 12px; color: #6b7280; font-family: monospace; }
+        .user-id-cell { font-family: monospace; font-size: 13px; background: #f0fdf4; padding: 4px 8px; border-radius: 4px; color: #166534; }
+        .contact-cell { font-size: 13px; }
+        .contact-cell .phone { color: #374151; }
+        .contact-cell .email { color: #6b7280; font-size: 12px; }
+        .company-pills { display: flex; flex-wrap: wrap; gap: 4px; max-width: 180px; }
+        .btn-reset { background: #fef3c7; color: #92400e; }
+        .btn-reset:hover { background: #fde68a; }
+        .btn-action { padding: 5px 10px; font-size: 11px; border-radius: 5px; cursor: pointer; border: none; margin-right: 4px; }
+        .category-dealer { background: #dbeafe; color: #1d4ed8; }
+        .category-distributor { background: #fef3c7; color: #b45309; }
+        .category-vendor { background: #e0e7ff; color: #4338ca; }
+        .category-real_dream_partner { background: #d1fae5; color: #059669; }
+        .category-service_center { background: #fce7f3; color: #be185d; }
+        .partner-type-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 500; margin-left: 6px; background: #f3f4f6; color: #6b7280; }
+        .partner-card .contact-info { margin-top: 12px; font-size: 13px; color: #6b7280; }
+        .partner-card .contact-info i { width: 20px; color: #9ca3af; }
+        .badge-active    { background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-inactive  { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-pause     { background: #fef3c7; color: #d97706; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-expired   { background: #ffedd5; color: #ea580c; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-suspended { background: #ede9fe; color: #7c3aed; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #10b981; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; overflow-y: auto; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; background: white; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-group input.is-invalid, .form-group select.is-invalid { border-color: #dc2626; }
+        .form-group .invalid-feedback { color: #dc2626; font-size: 12px; margin-top: 4px; display: none; }
+        .form-group input.is-invalid + .invalid-feedback, .form-group select.is-invalid + .invalid-feedback { display: block; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        .form-section { border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .form-section-title { font-size: 14px; font-weight: 600; color: #4338ca; margin: -28px 0 12px 8px; background: white; padding: 0 8px; display: inline-block; }
+        .filter-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+        .filter-bar input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 200px; }
+        .filter-bar select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 120px; }
+        .category-tabs { display: flex; gap: 4px; background: #f3f4f6; padding: 4px; border-radius: 8px; }
+        .category-tab { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: transparent; color: #6b7280; transition: all 0.2s; }
+        .category-tab:hover { color: #1f2937; }
+        .category-tab.active { background: white; color: #1f2937; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .category-tab .tab-count { display: inline-block; background: #e5e7eb; padding: 1px 6px; border-radius: 10px; font-size: 11px; margin-left: 4px; }
+        .category-tab.active .tab-count { background: #10b981; color: white; }
+        .btn-logout { background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        .btn-logout:hover { background: #dc2626; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        .header-divider { width: 1px; height: 32px; background: #e5e7eb; margin: 0 8px; }
+        .partner-actions { display: flex; gap: 8px; margin-top: 12px; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; border: none; }
+        .btn-edit { background: #f3f4f6; color: #374151; }
+        .btn-edit:hover { background: #e5e7eb; }
+        .btn-view { background: #dbeafe; color: #1d4ed8; }
+        .btn-view:hover { background: #bfdbfe; }
+        .selected-companies-display { display: flex; flex-wrap: wrap; gap: 8px; min-height: 32px; }
+        .company-chip { display: inline-flex; align-items: center; gap: 6px; background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 500; }
+        .company-chip i { cursor: pointer; font-size: 10px; opacity: 0.7; }
+        .company-chip i:hover { opacity: 1; }
+        .company-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+        .company-badge-sm { display: inline-block; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 500; }
+        .vendor-fields { display: none; }
+        .vendor-fields.show { display: block; }
+        .map-link-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #dbeafe; color: #1d4ed8; border-radius: 6px; font-size: 12px; text-decoration: none; margin-right: 8px; }
+        .map-link-btn:hover { background: #bfdbfe; color: #1d4ed8; }
+        @media (max-width: 768px) {
+            .form-row, .form-row-3 { grid-template-columns: 1fr; }
+            .filter-bar { flex-direction: column; }
+            .filter-bar input { width: 100%; }
+            .category-tabs { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div class="top-header">
+            <div class="header-left">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" class="header-logo" onerror="this.style.display='none'">
+                <div class="header-divider"></div>
+                <div id="backButtonContainer"></div>
+                <h1 class="page-title"><i class="fas fa-handshake text-success"></i>Business Partners</h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info-header" id="headerUserInfo">
+                    <div class="user-avatar-sm" id="headerUserInitials">--</div>
+                    <div class="user-info-details">
+                        <span class="user-info-name" id="headerUserName">Loading...</span>
+                        <div class="user-info-meta"><span class="user-info-role" id="headerUserRole">-</span><span id="headerUserEmpId">-</span></div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="StaffSidebar.logout()"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="page-header">
+                <div><h1>Business Partner Master</h1><p>Unified management for dealers, distributors, and vendors</p></div>
+                <button class="btn-primary-custom" onclick="openCreateModal()"><i class="fas fa-plus me-2"></i>Add Partner</button>
+            </div>
+            
+            <div class="filter-bar">
+                <div class="category-tabs" id="categoryTabs">
+                    <button class="category-tab active" data-category="" onclick="setCategory('')">All <span class="tab-count" id="countAll">0</span></button>
+                    <button class="category-tab" data-category="DEALER" onclick="setCategory('DEALER')"><i class="fas fa-store me-1"></i>Dealers <span class="tab-count" id="countDealer">0</span></button>
+                    <button class="category-tab" data-category="DISTRIBUTOR" onclick="setCategory('DISTRIBUTOR')"><i class="fas fa-truck me-1"></i>Distributors <span class="tab-count" id="countDistributor">0</span></button>
+                    <button class="category-tab" data-category="VENDOR" onclick="setCategory('VENDOR')"><i class="fas fa-boxes me-1"></i>Vendors <span class="tab-count" id="countVendor">0</span></button>
+                    <button class="category-tab" data-category="REAL_DREAM_PARTNER" onclick="setCategory('REAL_DREAM_PARTNER')"><i class="fas fa-home me-1"></i>Real Dreams <span class="tab-count" id="countRealDream">0</span></button>
+                    <button class="category-tab" data-category="SERVICE_CENTER" onclick="setCategory('SERVICE_CENTER')"><i class="fas fa-wrench me-1"></i>Service Centers <span class="tab-count" id="countServiceCenter">0</span></button>
+                </div>
+                <input type="text" id="searchInput" placeholder="Search by name, code, contact..." onkeyup="filterPartners()">
+                <select id="statusFilter" onchange="filterPartners()">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="pause">Paused</option>
+                    <option value="expired">Expired</option>
+                    <option value="suspended">Suspended</option>
+                </select>
+            </div>
+            
+            <div class="directory-table">
+                <div class="table-header">
+                    <h3><i class="fas fa-handshake me-2 text-success"></i>Partner Directory</h3>
+                    <span class="result-count" id="recordCount">0 partners</span>
+                </div>
+                <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+                <div id="tableContainer" style="display: none; overflow-x: auto;">
+                    <table class="partner-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Partner Info</th>
+                                <th>User ID (Login)</th>
+                                <th style="width:140px">VGK4U ID</th>
+                                <th>Category</th>
+                                <th>Contact</th>
+                                <th>Companies</th>
+                                <th style="width: 80px;">Status</th>
+                                <th style="width: 180px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="partnerTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <i class="fas fa-handshake"></i><h3>No Partners Found</h3><p>Add your first official partner to get started with B2B orders</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="passwordResetModal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #fef3c7, #fde68a);">
+                <h3><i class="fas fa-key me-2 text-warning"></i>Reset Partner Password</h3>
+                <button class="modal-close" onclick="closeModal('passwordResetModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="resetConfirmSection">
+                    <div class="alert alert-warning" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This will reset the partner's password to their Partner Code.
+                    </div>
+                    <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+                        <p style="margin: 0 0 8px 0;"><strong>Partner:</strong> <span id="resetPartnerName">-</span></p>
+                        <p style="margin: 0 0 8px 0;"><strong>Code:</strong> <span id="resetPartnerCode" class="user-id-cell">-</span></p>
+                        <p style="margin: 0;"><strong>New Password:</strong> <span id="resetNewPassword" class="user-id-cell">Same as Partner Code</span></p>
+                    </div>
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="confirmResetCheck" style="width: 18px; height: 18px;">
+                            <span>I confirm I want to reset this partner's password</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="resetSuccessSection" style="display: none;">
+                    <div class="alert alert-success" style="background: #d1fae5; border: 1px solid #10b981; border-radius: 8px; padding: 16px; text-align: center;">
+                        <i class="fas fa-check-circle fa-2x mb-2" style="color: #10b981;"></i>
+                        <h5 style="margin: 8px 0;">Password Reset Successful!</h5>
+                        <p style="margin: 0 0 12px 0;">Temporary password:</p>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <span id="tempPasswordDisplay" class="user-id-cell" style="font-size: 18px; padding: 8px 16px;"></span>
+                            <button onclick="copyTempPassword()" class="btn-sm btn-view" title="Copy to clipboard">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <p style="margin: 12px 0 0 0; font-size: 12px; color: #6b7280;">Partner should change this password on next login.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('passwordResetModal')">Close</button>
+                <button class="btn btn-warning" id="confirmResetBtn" onclick="confirmPasswordReset()" disabled>
+                    <i class="fas fa-key me-1"></i>Reset Password
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-plus-circle me-2"></i>Add Business Partner</h3><button class="modal-close" onclick="closeModal('createModal')">&times;</button></div>
+            <div class="modal-body">
+                <form id="createForm">
+                    <div class="form-row">
+                        <div class="form-group"><label>Partner Code *</label><input type="text" id="formCode" required placeholder="e.g., DLR001" maxlength="20"></div>
+                        <div class="form-group"><label>Category *</label><select id="formCategory" required onchange="toggleVendorFields()"><option value="">Select category</option><option value="DEALER">Dealer</option><option value="DISTRIBUTOR">Distributor</option><option value="VENDOR">Vendor</option><option value="REAL_DREAM_PARTNER">Real Dream Partner</option><option value="SERVICE_CENTER">Service Center</option></select></div>
+                    </div>
+                    <div class="vendor-fields" id="vendorTypeSection">
+                        <div class="form-group"><label>Partner Type *</label><select id="formPartnerType"><option value="BOTH">Both (Product + Service)</option><option value="PRODUCT">Product Vendor</option><option value="SERVICE">Service Vendor</option></select></div>
+                    </div>
+                    
+                    <!-- DC Protocol Jan 2026: Service Center specific fields -->
+                    <div class="service-center-fields form-section" id="serviceCenterSection" style="display: none;">
+                        <span class="form-section-title"><i class="fas fa-wrench me-1"></i>Service Center Details</span>
+                        <div class="form-row">
+                            <div class="form-group"><label>Coverage Radius (km)</label><input type="number" id="formCoverageRadius" placeholder="e.g., 50" min="1" max="500"></div>
+                            <div class="form-group"><label>Certified Technicians</label><input type="number" id="formTechnicianCount" placeholder="e.g., 5" min="0" max="100"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Service SLA (hours)</label><input type="number" id="formServiceSlA" placeholder="e.g., 24" min="1" max="168" value="24"></div>
+                            <div class="form-group"><label>Specialized Equipment</label><input type="text" id="formEquipmentList" placeholder="e.g., Battery Tester, Motor Analyzer"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group"><label>Partner Name *</label><input type="text" id="formName" required placeholder="Business/Company name" maxlength="200"></div>
+                    
+                    <div class="form-section">
+                        <span class="form-section-title"><i class="fas fa-user me-1"></i>Primary Contact</span>
+                        <div class="form-row">
+                            <div class="form-group"><label>Contact Person</label><input type="text" id="formContact" placeholder="Primary contact name"></div>
+                            <div class="form-group"><label>Phone</label><input type="text" id="formPhone" placeholder="10-digit phone" maxlength="15" onblur="validatePhone(this)"><div class="invalid-feedback">Phone must be 10 digits</div></div>
+                        </div>
+                        <div class="form-group"><label>Email</label><input type="email" id="formEmail" placeholder="Email address" onblur="validateEmail(this)"><div class="invalid-feedback">Invalid email format</div></div>
+                        <div class="form-group"><label>WhatsApp Number</label><input type="text" id="formWhatsapp" placeholder="WhatsApp number" maxlength="15"></div>
+                    </div>
+                    
+                    <div class="vendor-fields form-section" id="additionalContactsSection">
+                        <span class="form-section-title"><i class="fas fa-users me-1"></i>Additional Contacts</span>
+                        <div class="form-row-3">
+                            <div class="form-group"><label>Contact 1 Name</label><input type="text" id="formContact1Name" placeholder="Name"></div>
+                            <div class="form-group"><label>Phone</label><input type="text" id="formContact1Phone" placeholder="Phone" maxlength="15"></div>
+                            <div class="form-group"><label>Designation</label><input type="text" id="formContact1Designation" placeholder="e.g., Sales Manager"></div>
+                        </div>
+                        <div class="form-row-3">
+                            <div class="form-group"><label>Contact 2 Name</label><input type="text" id="formContact2Name" placeholder="Name"></div>
+                            <div class="form-group"><label>Phone</label><input type="text" id="formContact2Phone" placeholder="Phone" maxlength="15"></div>
+                            <div class="form-group"><label>Designation</label><input type="text" id="formContact2Designation" placeholder="e.g., Accounts"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- [DC-PARTNER-CONTACTS-001] Portal Sales/Service Contacts + Module Settings -->
+                    <div class="form-section" id="portalSettingsSection" style="display:none;">
+                        <span class="form-section-title"><i class="fas fa-store me-1"></i>Partner Portal Settings</span>
+                        <div class="form-row">
+                            <div class="form-group"><label>Sales Contact Name</label><input type="text" id="formSalesContactName" placeholder="Sales POC name" maxlength="100"></div>
+                            <div class="form-group"><label>Sales Contact Number</label><input type="text" id="formSalesContactNumber" placeholder="Sales mobile" maxlength="15"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Service Contact Name</label><input type="text" id="formServiceContactName" placeholder="Service POC name" maxlength="100"></div>
+                            <div class="form-group"><label>Service Contact Number</label><input type="text" id="formServiceContactNumber" placeholder="Service mobile" maxlength="15"></div>
+                        </div>
+                        <div id="formModuleSettingsBlock">
+                            <label style="font-weight:600;margin-bottom:8px;display:block;">Portal Modules — per staff role</label>
+                            <div style="margin-bottom:10px;">
+                                <div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:5px;"><i class="fas fa-user-tie me-1"></i>Sales Staff Modules</div>
+                                <div style="display:flex;flex-wrap:wrap;gap:10px;padding:8px 10px;background:#eff6ff;border-radius:6px;border:1px solid #bfdbfe;">
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSales_walkins" checked> Walk-ins</label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSales_leads" checked> Leads</label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSales_service"> Service</label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSales_marketplace" checked> Marketplace</label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSales_stock" checked> Stock</label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSales_sales" checked> Sales / Invoice</label>
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size:12px;font-weight:700;color:#059669;margin-bottom:5px;"><i class="fas fa-tools me-1"></i>Service Staff Modules</div>
+                                <div style="display:flex;flex-wrap:wrap;gap:10px;padding:8px 10px;background:#f0fdf4;border-radius:6px;border:1px solid #a7f3d0;">
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSvc_walkins"> Walk-ins</label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSvc_leads"> Leads</label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSvc_service" checked> Service</label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSvc_marketplace" checked> Marketplace</label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSvc_stock" checked> Stock</label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="formModSvc_sales"> Sales / Invoice</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <span class="form-section-title"><i class="fas fa-file-invoice me-1"></i>Tax Details</span>
+                        <div class="form-row">
+                            <div class="form-group"><label>GST Number</label><input type="text" id="formGst" placeholder="15-digit GSTIN" maxlength="15" onblur="validateGst(this)"><div class="invalid-feedback">GST must be exactly 15 characters</div></div>
+                            <div class="form-group"><label>PAN Number</label><input type="text" id="formPan" placeholder="10-digit PAN (AAAAA9999A)" maxlength="10" onblur="validatePan(this)"><div class="invalid-feedback">PAN must be 10 characters (format: AAAAA9999A)</div></div>
+                        </div>
+                        <div class="form-group">
+                            <label>GST Treatment</label>
+                            <div style="display:flex;gap:16px;align-items:center;margin-top:6px;">
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                                    <input type="radio" name="formGstType" value="CGST_SGST" checked> CGST + SGST (Intra-state)
+                                </label>
+                                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+                                    <input type="radio" name="formGstType" value="IGST"> IGST (Inter-state)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <span class="form-section-title"><i class="fas fa-map-marker-alt me-1"></i>Address</span>
+                        <div class="form-group"><label>Address</label><textarea id="formAddress" placeholder="Business address" rows="2"></textarea></div>
+                        <div class="form-row">
+                            <div class="form-group"><label>City</label><input type="text" id="formCity" placeholder="City"></div>
+                            <div class="form-group"><label>State</label><input type="text" id="formState" placeholder="State"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Pincode</label><input type="text" id="formPincode" placeholder="Pincode" maxlength="6"></div>
+                            <div class="form-group"><label>Zone</label><input type="text" id="formZone" placeholder="Zone/Region"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="vendor-fields form-section" id="mapLinksSection">
+                        <span class="form-section-title"><i class="fas fa-map me-1"></i>Map Links</span>
+                        <div class="form-row">
+                            <div class="form-group"><label>Map Link 1 Label</label><input type="text" id="formMapLink1Label" placeholder="e.g., Office" value="Office"></div>
+                            <div class="form-group"><label>Map Link 1 URL</label><input type="url" id="formMapLink1" placeholder="Google Maps URL"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Map Link 2 Label</label><input type="text" id="formMapLink2Label" placeholder="e.g., Warehouse" value="Warehouse"></div>
+                            <div class="form-group"><label>Map Link 2 URL</label><input type="url" id="formMapLink2" placeholder="Google Maps URL"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <span class="form-section-title"><i class="fas fa-credit-card me-1"></i>Payment Terms</span>
+                        <div class="form-row">
+                            <div class="form-group"><label>Payment Terms</label><select id="formPaymentTerms"><option value="ADVANCE">Advance</option><option value="COD">Cash on Delivery</option><option value="CREDIT">Credit</option><option value="PARTIAL_ADVANCE">Partial Advance</option></select></div>
+                            <div class="form-group"><label>Credit Days</label><input type="number" id="formCreditDays" placeholder="30" min="0" value="30"></div>
+                        </div>
+                        <div class="form-group"><label>Credit Limit (₹)</label><input type="number" id="formCreditLimit" placeholder="0" min="0" step="1000"></div>
+                    </div>
+                    
+                    <div class="vendor-fields form-section" id="bankDetailsSection">
+                        <span class="form-section-title"><i class="fas fa-university me-1"></i>Bank Details</span>
+                        <div class="form-row">
+                            <div class="form-group"><label>Bank Name</label><input type="text" id="formBankName" placeholder="Bank name"></div>
+                            <div class="form-group"><label>Branch</label><input type="text" id="formBankBranch" placeholder="Branch name"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Account Number</label><input type="text" id="formAccountNumber" placeholder="Account number" maxlength="20"></div>
+                            <div class="form-group"><label>IFSC Code</label><input type="text" id="formIfscCode" placeholder="IFSC code" maxlength="11"></div>
+                        </div>
+                        <div class="form-group"><label>Payment Scanner QR URL</label><input type="url" id="formPaymentQrUrl" placeholder="URL to payment QR image"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Assign to Companies * <small class="text-muted">(Hold Ctrl/Cmd to select multiple)</small></label>
+                        <select id="formCompanies" multiple required style="min-height: 120px;"><option value="">Loading companies...</option></select>
+                        <div id="selectedCompaniesDisplay" class="selected-companies-display mt-2"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="createPartner()"><i class="fas fa-save me-1"></i>Create Partner</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-eye me-2"></i>Partner Details</h3><button class="modal-close" onclick="closeModal('viewModal')">&times;</button></div>
+            <div class="modal-body" id="viewModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('viewModal')">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content" style="max-width:740px">
+            <div class="modal-header"><h3><i class="fas fa-edit me-2"></i>Edit Business Partner</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+            <!-- [DC-PARTNER-TERMS-001] 5-Tab Edit Modal -->
+            <div class="edit-tab-nav" id="editTabNav">
+                <button class="edit-tab-btn active" onclick="switchEditTab('general')" id="editTabBtn_general"><i class="fas fa-building me-1"></i>General</button>
+                <button class="edit-tab-btn" onclick="switchEditTab('kyc')" id="editTabBtn_kyc"><i class="fas fa-id-card me-1"></i>KYC &amp; Identity</button>
+                <button class="edit-tab-btn" onclick="switchEditTab('docs')" id="editTabBtn_docs"><i class="fas fa-file-signature me-1"></i>Documents</button>
+                <button class="edit-tab-btn" onclick="switchEditTab('terms')" id="editTabBtn_terms"><i class="fas fa-calendar-alt me-1"></i>Partnership Terms</button>
+                <button class="edit-tab-btn" onclick="switchEditTab('portal')" id="editTabBtn_portal"><i class="fas fa-store me-1"></i>Portal Settings</button>
+            </div>
+            <div class="modal-body" style="padding-top:8px">
+                <form id="editForm">
+
+                    <!-- ═══ TAB 1: GENERAL ═══ -->
+                    <div id="editTab_general" class="edit-tab-panel">
+                        <div class="logo-upload-row" id="editLogoRow">
+                            <div class="logo-upload-preview" id="editLogoPreview" style="background:#10b981"></div>
+                            <div class="logo-upload-info">
+                                <label><i class="fas fa-image me-1"></i>Business Logo</label>
+                                <small>PNG, JPG or WebP · Max 2MB · Shown on invoices</small>
+                                <div>
+                                    <button type="button" class="logo-upload-btn" id="editLogoUploadBtn" onclick="document.getElementById('editLogoFileInput').click()">
+                                        <i class="fas fa-upload me-1"></i><span id="editLogoUploadBtnText">Upload Logo</span>
+                                    </button>
+                                    <input type="file" id="editLogoFileInput" accept="image/png,image/jpeg,image/webp" onchange="handleEditLogoUpload(this)">
+                                </div>
+                                <div class="logo-upload-msg" id="editLogoMsg"></div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>Partner Code</label><input type="text" id="editFormCode" readonly class="bg-light"></div>
+                            <div class="form-group"><label>Category *</label><select id="editFormCategory" required onchange="toggleEditVendorFields()"><option value="DEALER">Dealer</option><option value="DISTRIBUTOR">Distributor</option><option value="VENDOR">Vendor</option><option value="REAL_DREAM_PARTNER">Real Dream Partner</option><option value="SERVICE_CENTER">Service Center</option></select></div>
+                        </div>
+                        <div class="vendor-fields">
+                            <div class="form-group"><label>Partner Type</label><select id="editFormPartnerType"><option value="BOTH">Both (Product + Service)</option><option value="PRODUCT">Product Vendor</option><option value="SERVICE">Service Vendor</option></select></div>
+                        </div>
+                        <div class="service-center-fields form-section" id="editServiceCenterSection" style="display:none">
+                            <span class="form-section-title"><i class="fas fa-wrench me-1"></i>Service Center Details</span>
+                            <div class="form-row">
+                                <div class="form-group"><label>Coverage Radius (km)</label><input type="number" id="editFormCoverageRadius" placeholder="e.g., 50" min="1" max="500"></div>
+                                <div class="form-group"><label>Certified Technicians</label><input type="number" id="editFormTechnicianCount" placeholder="e.g., 5" min="0" max="100"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Service SLA (hours)</label><input type="number" id="editFormServiceSlA" placeholder="e.g., 24" min="1" max="168"></div>
+                                <div class="form-group"><label>Specialized Equipment</label><input type="text" id="editFormEquipmentList" placeholder="e.g., Battery Tester, Motor Analyzer"></div>
+                            </div>
+                        </div>
+                        <div class="form-group"><label>Partner Name *</label><input type="text" id="editFormName" required placeholder="Business/Company name" maxlength="200"></div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-user me-1"></i>Primary Contact</span>
+                            <div class="form-row">
+                                <div class="form-group"><label>Contact Person</label><input type="text" id="editFormContact" placeholder="Primary contact name"></div>
+                                <div class="form-group"><label>Phone</label><input type="text" id="editFormPhone" placeholder="10-digit phone" maxlength="15" onblur="validatePhone(this)"><div class="invalid-feedback">Phone must be 10 digits</div></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Email</label><input type="email" id="editFormEmail" placeholder="Email address" onblur="validateEmail(this)"><div class="invalid-feedback">Invalid email format</div></div>
+                                <div class="form-group"><label>WhatsApp Number</label><input type="text" id="editFormWhatsapp" placeholder="WhatsApp number" maxlength="15"></div>
+                            </div>
+                        </div>
+                        <div class="vendor-fields form-section">
+                            <span class="form-section-title"><i class="fas fa-users me-1"></i>Additional Contacts</span>
+                            <div class="form-row-3">
+                                <div class="form-group"><label>Contact 1 Name</label><input type="text" id="editFormContact1Name" placeholder="Name"></div>
+                                <div class="form-group"><label>Phone</label><input type="text" id="editFormContact1Phone" placeholder="Phone" maxlength="15"></div>
+                                <div class="form-group"><label>Designation</label><input type="text" id="editFormContact1Designation" placeholder="e.g., Sales Manager"></div>
+                            </div>
+                            <div class="form-row-3">
+                                <div class="form-group"><label>Contact 2 Name</label><input type="text" id="editFormContact2Name" placeholder="Name"></div>
+                                <div class="form-group"><label>Phone</label><input type="text" id="editFormContact2Phone" placeholder="Phone" maxlength="15"></div>
+                                <div class="form-group"><label>Designation</label><input type="text" id="editFormContact2Designation" placeholder="e.g., Accounts"></div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-file-invoice me-1"></i>Tax Details</span>
+                            <div class="form-row">
+                                <div class="form-group"><label>GST Number</label><input type="text" id="editFormGst" placeholder="15-digit GSTIN" maxlength="15" onblur="validateGst(this)"><div class="invalid-feedback">GST must be exactly 15 characters</div></div>
+                                <div class="form-group"><label>PAN Number</label><input type="text" id="editFormPan" placeholder="10-digit PAN (AAAAA9999A)" maxlength="10" onblur="validatePan(this)"><div class="invalid-feedback">PAN must be 10 characters (format: AAAAA9999A)</div></div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-map-marker-alt me-1"></i>Address</span>
+                            <div class="form-group"><label>Address</label><textarea id="editFormAddress" placeholder="Business address" rows="2"></textarea></div>
+                            <div class="form-row">
+                                <div class="form-group"><label>City</label><input type="text" id="editFormCity" placeholder="City"></div>
+                                <div class="form-group"><label>State</label><input type="text" id="editFormState" placeholder="State"></div>
+                            </div>
+                            <div class="form-group"><label>Pincode</label><input type="text" id="editFormPincode" placeholder="Pincode" maxlength="6"></div>
+                        </div>
+                        <div class="vendor-fields form-section">
+                            <span class="form-section-title"><i class="fas fa-map me-1"></i>Map Links</span>
+                            <div class="form-row">
+                                <div class="form-group"><label>Map Link 1 Label</label><input type="text" id="editFormMapLink1Label" placeholder="e.g., Office"></div>
+                                <div class="form-group"><label>Map Link 1 URL</label><input type="url" id="editFormMapLink1" placeholder="Google Maps URL"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Map Link 2 Label</label><input type="text" id="editFormMapLink2Label" placeholder="e.g., Warehouse"></div>
+                                <div class="form-group"><label>Map Link 2 URL</label><input type="url" id="editFormMapLink2" placeholder="Google Maps URL"></div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-credit-card me-1"></i>Payment Terms</span>
+                            <div class="form-row">
+                                <div class="form-group"><label>Payment Terms</label><select id="editFormPaymentTerms"><option value="ADVANCE">Advance</option><option value="COD">Cash on Delivery</option><option value="CREDIT">Credit</option><option value="PARTIAL_ADVANCE">Partial Advance</option></select></div>
+                                <div class="form-group"><label>Credit Days</label><input type="number" id="editFormCreditDays" placeholder="30" min="0"></div>
+                            </div>
+                            <div class="form-group"><label>Credit Limit (₹)</label><input type="number" id="editFormCreditLimit" placeholder="0" min="0" step="1000"></div>
+                        </div>
+                        <div class="form-group">
+                            <label><strong>Partner Status</strong></label>
+                            <select id="editFormStatus" class="form-control" style="background:#1a1a2e;color:#e2e8f0;border:1px solid #374151;border-radius:6px;padding:8px 12px;width:100%">
+                                <option value="active">Active — Full portal access</option>
+                                <option value="inactive">Inactive — Login blocked (deactivated)</option>
+                                <option value="pause">Paused — Login blocked (temporary)</option>
+                                <option value="expired">Expired — Login blocked (contract ended)</option>
+                                <option value="suspended">Suspended — Login blocked (disciplinary)</option>
+                            </select>
+                            <small style="color:#9ca3af">Only <strong>Active</strong> partners can log in and see portal menus.</small>
+                        </div>
+                    </div>
+
+                    <!-- ═══ TAB 2: KYC & IDENTITY ═══ -->
+                    <div id="editTab_kyc" class="edit-tab-panel" style="display:none">
+                        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 14px;border-bottom:1px solid #374151;margin-bottom:16px">
+                            <span style="font-size:13px;color:#9ca3af">KYC Status: <span id="editKycStatusBadge" style="font-weight:700;color:#f59e0b">—</span></span>
+                        </div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-id-card me-1"></i>Identity Numbers</span>
+                            <div class="form-row">
+                                <div class="form-group"><label>Aadhaar Number</label><input type="text" id="editFormAadhaar" placeholder="12-digit Aadhaar number" maxlength="12" inputmode="numeric"></div>
+                                <div class="form-group"><label>PAN Number (copy)</label><input type="text" id="editFormPanDisplay" placeholder="Same as Tax Details" maxlength="10" style="text-transform:uppercase" oninput="document.getElementById('editFormPan').value=this.value.toUpperCase()"></div>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-file-alt me-1"></i>KYC Documents</span>
+                            <div id="editKycDocsList"><div style="color:#9ca3af;font-size:13px;text-align:center;padding:24px"><i class="fas fa-spinner fa-spin me-2"></i>Loading KYC documents…</div></div>
+                        </div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-university me-1"></i>Bank Details</span>
+                            <div class="form-row">
+                                <div class="form-group"><label>Bank Name</label><input type="text" id="editFormBankName" placeholder="Bank name"></div>
+                                <div class="form-group"><label>Branch</label><input type="text" id="editFormBankBranch" placeholder="Branch name"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Account Number</label><input type="text" id="editFormAccountNumber" placeholder="Account number" maxlength="20"></div>
+                                <div class="form-group"><label>IFSC Code</label><input type="text" id="editFormIfscCode" placeholder="IFSC code" maxlength="11"></div>
+                            </div>
+                            <div class="form-group"><label>Payment Scanner QR URL</label><input type="url" id="editFormPaymentQrUrl" placeholder="URL to payment QR image"></div>
+                        </div>
+                    </div>
+
+                    <!-- ═══ TAB 3: AGREEMENT & DOCS ═══ -->
+                    <div id="editTab_docs" class="edit-tab-panel" style="display:none">
+                        <div style="background:#1e3a5f;border-radius:8px;padding:12px 16px;margin-bottom:16px;border-left:3px solid #3b82f6">
+                            <i class="fas fa-info-circle" style="color:#60a5fa"></i>
+                            <span style="font-size:12px;color:#93c5fd;margin-left:6px">Agreement and Application documents are uploaded by staff only. Partners can view their submission status from the portal.</span>
+                        </div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-file-signature me-1"></i>Agreement Document</span>
+                            <div id="editAgreementDocStatus" style="margin-bottom:12px"></div>
+                            <label style="font-size:13px;margin-bottom:6px;display:block;color:#9ca3af">Upload Agreement (PDF, JPG, PNG — max 5MB)</label>
+                            <input type="file" id="editAgreementFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="uploadPartnerDoc('agreement', this)">
+                            <button type="button" class="logo-upload-btn" onclick="document.getElementById('editAgreementFileInput').click()">
+                                <i class="fas fa-upload me-1"></i>Upload Agreement
+                            </button>
+                            <span id="editAgreementUploadMsg" style="font-size:12px;margin-left:10px;color:#10b981"></span>
+                        </div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-file-alt me-1"></i>Application Document</span>
+                            <div id="editApplicationDocStatus" style="margin-bottom:12px"></div>
+                            <label style="font-size:13px;margin-bottom:6px;display:block;color:#9ca3af">Upload Application (PDF, JPG, PNG — max 5MB)</label>
+                            <input type="file" id="editApplicationFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="uploadPartnerDoc('application', this)">
+                            <button type="button" class="logo-upload-btn" onclick="document.getElementById('editApplicationFileInput').click()">
+                                <i class="fas fa-upload me-1"></i>Upload Application
+                            </button>
+                            <span id="editApplicationUploadMsg" style="font-size:12px;margin-left:10px;color:#10b981"></span>
+                        </div>
+                    </div>
+
+                    <!-- ═══ TAB 4: PARTNERSHIP TERMS ═══ -->
+                    <div id="editTab_terms" class="edit-tab-panel" style="display:none">
+                        <div style="background:#3b2f05;border-radius:8px;padding:12px 16px;margin-bottom:16px;border-left:3px solid #f59e0b">
+                            <i class="fas fa-bell" style="color:#f59e0b"></i>
+                            <span style="font-size:12px;color:#fde68a;margin-left:6px">A WhatsApp reminder is sent automatically to the partner and VGK4U / leadership staff when the agreement is within the reminder window of the end date.</span>
+                        </div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-calendar-alt me-1"></i>Agreement Dates</span>
+                            <div class="form-row">
+                                <div class="form-group"><label>Partnership Start Date</label><input type="date" id="editFormStartDate"></div>
+                                <div class="form-group"><label>Partnership End Date</label><input type="date" id="editFormEndDate"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Reminder Days Before Expiry</label>
+                                <input type="number" id="editFormReminderDays" placeholder="90" min="1" max="365" value="90">
+                                <small style="color:#9ca3af;font-size:11px">WhatsApp reminder is sent this many days before the end date (default: 90 days)</small>
+                            </div>
+                        </div>
+                        <div class="form-section">
+                            <span class="form-section-title"><i class="fas fa-rupee-sign me-1"></i>Security Deposit</span>
+                            <div class="form-group">
+                                <label>Security Deposit Amount (₹) — Informational Only</label>
+                                <input type="number" id="editFormSecurityDeposit" placeholder="0.00" min="0" step="100">
+                                <small style="color:#9ca3af;font-size:11px">Stored for reference only. No ledger entry is created.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══ TAB 5: PORTAL SETTINGS ═══ -->
+                    <div id="editTab_portal" class="edit-tab-panel" style="display:none">
+                        <div class="form-section" id="editPortalSettingsSection">
+                            <span class="form-section-title"><i class="fas fa-store me-1"></i>Partner Portal Settings</span>
+                            <div class="form-row">
+                                <div class="form-group"><label>Sales Contact Name</label><input type="text" id="editFormSalesContactName" placeholder="Sales POC name" maxlength="100"></div>
+                                <div class="form-group"><label>Sales Contact Number</label><input type="text" id="editFormSalesContactNumber" placeholder="Sales mobile" maxlength="15"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Service Contact Name</label><input type="text" id="editFormServiceContactName" placeholder="Service POC name" maxlength="100"></div>
+                                <div class="form-group"><label>Service Contact Number</label><input type="text" id="editFormServiceContactNumber" placeholder="Service mobile" maxlength="15"></div>
+                            </div>
+                            <div id="editFormModuleSettingsBlock">
+                                <label style="font-weight:600;margin-bottom:8px;display:block;">Portal Modules — per staff role</label>
+                                <div style="margin-bottom:10px;">
+                                    <div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:5px;"><i class="fas fa-user-tie me-1"></i>Sales Staff Modules</div>
+                                    <div style="display:flex;flex-wrap:wrap;gap:10px;padding:8px 10px;background:#eff6ff;border-radius:6px;border:1px solid #bfdbfe;">
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSales_walkins"> Walk-ins</label>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSales_leads"> Leads</label>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSales_service"> Service</label>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSales_marketplace"> Marketplace</label>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSales_stock"> Stock</label>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSales_sales"> Sales / Invoice</label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div style="font-size:12px;font-weight:700;color:#059669;margin-bottom:5px;"><i class="fas fa-tools me-1"></i>Service Staff Modules</div>
+                                    <div style="display:flex;flex-wrap:wrap;gap:10px;padding:8px 10px;background:#f0fdf4;border-radius:6px;border:1px solid #a7f3d0;">
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSvc_walkins"> Walk-ins</label>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSvc_leads"> Leads</label>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSvc_service"> Service</label>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSvc_marketplace"> Marketplace</label>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSvc_stock"> Stock</label>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="editModSvc_sales"> Sales / Invoice</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="updatePartner()"><i class="fas fa-save me-1"></i>Update Partner</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let allPartners = [];
+        let companies = [];
+        let currentCategory = '';
+        const API_BASE = '/api/v1/partner';
+        
+        function getAuthToken() {
+            return localStorage.getItem('staff_token');
+        }
+        
+        function toggleVendorFields() {
+            const category = document.getElementById('formCategory').value;
+            const isVendorOrRealDream = category === 'VENDOR' || category === 'REAL_DREAM_PARTNER';
+            const isServiceCenter = category === 'SERVICE_CENTER';
+            const isPortalPartner = isVendorOrRealDream || isServiceCenter;
+            document.querySelectorAll('#createModal .vendor-fields').forEach(el => {
+                el.classList.toggle('show', isVendorOrRealDream);
+            });
+            // DC Protocol Jan 2026: Toggle service center fields
+            const scSection = document.getElementById('serviceCenterSection');
+            if (scSection) scSection.style.display = isServiceCenter ? 'block' : 'none';
+            // [DC-PARTNER-CONTACTS-001] Show portal settings for all portal partner types
+            const portalSection = document.getElementById('portalSettingsSection');
+            if (portalSection) portalSection.style.display = isPortalPartner ? 'block' : 'none';
+        }
+        
+        function toggleEditVendorFields() {
+            const category = document.getElementById('editFormCategory').value;
+            const isVendorOrRealDream = category === 'VENDOR' || category === 'REAL_DREAM_PARTNER';
+            const isServiceCenter = category === 'SERVICE_CENTER';
+            document.querySelectorAll('#editModal .vendor-fields').forEach(el => {
+                el.classList.toggle('show', isVendorOrRealDream);
+            });
+            // DC Protocol Jan 2026: Toggle service center fields
+            const scSection = document.getElementById('editServiceCenterSection');
+            if (scSection) scSection.style.display = isServiceCenter ? 'block' : 'none';
+        }
+        
+        function validatePhone(input) {
+            const value = input.value.replace(/\D/g, '');
+            if (value && value.length !== 10) {
+                input.classList.add('is-invalid');
+                return false;
+            }
+            input.classList.remove('is-invalid');
+            return true;
+        }
+        
+        function validateEmail(input) {
+            const value = input.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (value && !emailRegex.test(value)) {
+                input.classList.add('is-invalid');
+                return false;
+            }
+            input.classList.remove('is-invalid');
+            return true;
+        }
+        
+        function validateGst(input) {
+            const value = input.value.trim().toUpperCase();
+            input.value = value;
+            if (value && value.length !== 15) {
+                input.classList.add('is-invalid');
+                return false;
+            }
+            input.classList.remove('is-invalid');
+            return true;
+        }
+        
+        function validatePan(input) {
+            const value = input.value.trim().toUpperCase();
+            input.value = value;
+            const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+            if (value && !panRegex.test(value)) {
+                input.classList.add('is-invalid');
+                return false;
+            }
+            input.classList.remove('is-invalid');
+            return true;
+        }
+        
+        function setCategory(category) {
+            currentCategory = category;
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.category === category);
+            });
+            filterPartners();
+        }
+        
+        function updateCategoryCounts() {
+            const counts = { all: allPartners.length, dealer: 0, distributor: 0, vendor: 0, realDream: 0, serviceCenter: 0 };
+            allPartners.forEach(p => {
+                if (p.category === 'DEALER') counts.dealer++;
+                else if (p.category === 'DISTRIBUTOR') counts.distributor++;
+                else if (p.category === 'VENDOR') counts.vendor++;
+                else if (p.category === 'REAL_DREAM_PARTNER') counts.realDream++;
+                else if (p.category === 'SERVICE_CENTER') counts.serviceCenter++;
+            });
+            document.getElementById('countAll').textContent = counts.all;
+            document.getElementById('countDealer').textContent = counts.dealer;
+            document.getElementById('countDistributor').textContent = counts.distributor;
+            document.getElementById('countVendor').textContent = counts.vendor;
+            document.getElementById('countRealDream').textContent = counts.realDream;
+            document.getElementById('countServiceCenter').textContent = counts.serviceCenter;
+        }
+        
+        async function loadCompanies() {
+            try {
+                const response = await fetch('/api/v1/staff/accounts/companies', {
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    companies = result.data || result.companies || [];
+                    const select = document.getElementById('formCompanies');
+                    select.innerHTML = companies.map(c => 
+                        `<option value="${c.id}">${c.company_name} (${c.company_code})</option>`
+                    ).join('');
+                    
+                    select.addEventListener('change', updateSelectedCompaniesDisplay);
+                }
+            } catch (error) {
+                console.error('Error loading companies:', error);
+            }
+        }
+        
+        function updateSelectedCompaniesDisplay() {
+            const select = document.getElementById('formCompanies');
+            const display = document.getElementById('selectedCompaniesDisplay');
+            const selected = Array.from(select.selectedOptions);
+            
+            if (selected.length === 0) {
+                display.innerHTML = '<span class="text-muted">No companies selected</span>';
+            } else {
+                display.innerHTML = selected.map(opt => 
+                    `<span class="company-chip">${escapeHtml(opt.text)} <i class="fas fa-times" onclick="removeCompanySelection(${opt.value})"></i></span>`
+                ).join('');
+            }
+        }
+        
+        function removeCompanySelection(companyId) {
+            const select = document.getElementById('formCompanies');
+            Array.from(select.options).forEach(opt => {
+                if (parseInt(opt.value) === companyId) {
+                    opt.selected = false;
+                }
+            });
+            updateSelectedCompaniesDisplay();
+        }
+        
+        function getCompanyBadgesHtml(companySegments) {
+            if (!companySegments || companySegments.length === 0) return '';
+            
+            return companySegments.map(cs => {
+                const company = companies.find(c => c.id === cs.company_id);
+                const companyName = company ? company.company_code : `Company #${cs.company_id}`;
+                return `<span class="company-badge-sm">${escapeHtml(companyName)}</span>`;
+            }).join('');
+        }
+        
+        async function loadPartners() {
+            try {
+                document.getElementById('loadingState').style.display = 'flex';
+                document.getElementById('tableContainer').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'none';
+                
+                const response = await fetch(API_BASE + '/partners', {
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    allPartners = result.data || [];
+                    updateCategoryCounts();
+                    filterPartners();
+                } else {
+                    throw new Error('Failed to load partners');
+                }
+            } catch (error) {
+                console.error('Error loading partners:', error);
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('emptyState').innerHTML = '<i class="fas fa-exclamation-triangle"></i><h3>Error Loading Partners</h3><p>' + error.message + '</p>';
+            }
+        }
+        
+        function renderPartners(partners) {
+            document.getElementById('loadingState').style.display = 'none';
+            const tableContainer = document.getElementById('tableContainer');
+            const tbody = document.getElementById('partnerTableBody');
+            
+            if (partners.length === 0) {
+                tableContainer.style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('recordCount').textContent = '0 partners';
+                return;
+            }
+            
+            document.getElementById('emptyState').style.display = 'none';
+            tableContainer.style.display = 'block';
+            document.getElementById('recordCount').textContent = `${partners.length} partner${partners.length !== 1 ? 's' : ''}`;
+            
+            tbody.innerHTML = partners.map((p, index) => {
+                const companyBadges = getCompanyBadgesHtml(p.company_segments);
+                const initials = _pmLogoInitials(p.partner_name);
+                const _rowColor = _pmLogoColor(p.partner_name);
+                const _rowAvatarEl = p.logo_path
+                    ? `<img src="/uploads/${p.logo_path}" class="pm-logo-avatar" alt="Logo" onerror="this.outerHTML='<div class=pm-logo-initials style=background:${_rowColor}>${initials}</div>'">`
+                    : `<div class="pm-logo-initials" style="background:${_rowColor}">${initials}</div>`;
+                const contactHtml = getContactHtml(p);
+                const categoryClass = `category-${p.category.toLowerCase()}`;
+                const { statusClass, statusText } = getPartnerStatusBadge(p.login_status, p.is_active);
+                
+                return `
+                <tr>
+                    <td style="text-align: center; color: #9ca3af;">${index + 1}</td>
+                    <td>
+                        <div class="partner-info">
+                            ${_rowAvatarEl}
+                            <div class="partner-details">
+                                <div class="name">${escapeHtml(p.partner_name)}</div>
+                                <div class="code">${escapeHtml(p.partner_code)}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="user-id-cell">${escapeHtml(p.partner_code)}</span></td>
+                    <td>${renderVgkCell(p)}</td>
+                    <td><span class="category-badge ${categoryClass}">${formatCategory(p.category)}</span></td>
+                    <td class="contact-cell">${contactHtml}</td>
+                    <td><div class="company-pills">${companyBadges || '<span style="color: #9ca3af;">-</span>'}</div></td>
+                    <td><span class="${statusClass}">${statusText}</span></td>
+                    <td>
+                        <button class="btn-action btn-view" onclick="viewPartner(${p.id})" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn-action btn-edit" onclick="editPartner(${p.id})" title="Edit Partner">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-action btn-reset" onclick="openPasswordResetModal(${p.id})" title="Reset Password">
+                            <i class="fas fa-key"></i>
+                        </button>
+                        ${p.category !== 'VGK_TEAM' ? `<button class="btn-action" onclick="sharePartner(${p.id})" title="Share Login Details" style="background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0">
+                            <i class="fab fa-whatsapp"></i>
+                        </button>` : ''}
+                    </td>
+                </tr>
+            `}).join('');
+        }
+        
+        // DC Protocol (Apr 2026): Render VGK4U ID cell — badge if linked, create button if not
+        function renderVgkCell(p) {
+            if (p.category === 'VGK_TEAM') {
+                return `<span style="color:#9ca3af;font-size:11px">N/A</span>`;
+            }
+            if (p.vgk_code) {
+                const active = p.vgk_is_active;
+                const dotColor = active ? '#10b981' : '#ef4444';
+                const dotTitle = active ? 'VGK Active' : 'VGK Inactive';
+                return `<div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px">
+                    <span style="font-family:monospace;font-size:12px;font-weight:700;color:#7c3aed;background:#f5f3ff;padding:2px 8px;border-radius:5px">${escapeHtml(p.vgk_code)}</span>
+                    <span style="font-size:10px;color:${dotColor};display:flex;align-items:center;gap:3px">
+                        <span style="width:6px;height:6px;border-radius:50%;background:${dotColor};display:inline-block"></span>${dotTitle}
+                    </span>
+                </div>`;
+            }
+            return `<button onclick="createVgkLogin(${p.id})"
+                style="background:#f0f9ff;border:1px solid #7c3aed;color:#7c3aed;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">
+                + Create VGK Login
+            </button>`;
+        }
+
+        // DC Protocol (Apr 2026): Create VGK login on demand from partner directory
+        async function createVgkLogin(partnerId) {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Creating…';
+            try {
+                const token = localStorage.getItem('staff_token');
+                const r = await fetch(`/api/v1/partner/partners/${partnerId}/create-vgk-login`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const d = await r.json();
+                if (d.success) {
+                    // Refresh partner list to show new VGK code
+                    allPartners = [];
+                    await loadPartners();
+                    // Find the partner data for share modal
+                    const partner = allPartners.find(p => p.id === partnerId);
+                    if (partner && !d.already_exists) {
+                        showPartnerShareModal(partner, partner.partner_code, d.vgk_code);
+                    } else if (d.already_exists) {
+                        alert(`VGK login already exists: ${d.vgk_code}`);
+                    }
+                } else {
+                    alert('Error: ' + (d.detail || d.message || 'Failed to create VGK login'));
+                    btn.disabled = false;
+                    btn.textContent = '+ Create VGK Login';
+                }
+            } catch (e) {
+                alert('Network error. Please try again.');
+                btn.disabled = false;
+                btn.textContent = '+ Create VGK Login';
+            }
+        }
+
+        function getPartnerStatusBadge(loginStatus, isActive) {
+            const s = loginStatus || (isActive ? 'active' : 'inactive');
+            const map = {
+                'active':    { cls: 'badge-active',    text: 'Active' },
+                'inactive':  { cls: 'badge-inactive',  text: 'Inactive' },
+                'pause':     { cls: 'badge-pause',     text: 'Paused' },
+                'expired':   { cls: 'badge-expired',   text: 'Expired' },
+                'suspended': { cls: 'badge-suspended', text: 'Suspended' },
+                'locked':    { cls: 'badge-suspended', text: 'Locked' },
+            };
+            const m = map[s] || map['inactive'];
+            return { statusClass: m.cls, statusText: m.text };
+        }
+
+        function getInitials(name) {
+            if (!name) return '??';
+            const parts = name.trim().split(/\s+/);
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        // DC_PARTNER_LOGO_001: Logo avatar helpers
+        const _PM_LOGO_PALETTE = ['#4f46e5','#0891b2','#059669','#d97706','#dc2626','#7c3aed','#db2777','#0369a1'];
+        function _pmLogoColor(name) {
+            const s = name || 'BZ';
+            return _PM_LOGO_PALETTE[Array.from(s).reduce((a,c)=>a+c.charCodeAt(0),0) % _PM_LOGO_PALETTE.length];
+        }
+        function _pmLogoInitials(name) {
+            if (!name) return 'BZ';
+            const words = name.trim().split(/\s+/);
+            return words.length >= 2 ? (words[0][0]+words[1][0]).toUpperCase() : name.slice(0,2).toUpperCase();
+        }
+
+        // Render logo in edit modal preview area
+        function _renderEditLogoPreview(partner) {
+            const previewEl = document.getElementById('editLogoPreview');
+            const btnText = document.getElementById('editLogoUploadBtnText');
+            if (!previewEl) return;
+            const color = _pmLogoColor(partner.partner_name || '');
+            const initials = _pmLogoInitials(partner.partner_name || '');
+            if (partner.logo_path) {
+                previewEl.innerHTML = `<img src="/uploads/${partner.logo_path}" alt="Logo" onerror="this.parentElement.style.background='${color}';this.parentElement.textContent='${initials}'">`;
+                previewEl.style.background = 'transparent';
+                if (btnText) btnText.textContent = 'Change Logo';
+            } else {
+                previewEl.innerHTML = initials;
+                previewEl.style.background = color;
+                if (btnText) btnText.textContent = 'Upload Logo';
+            }
+            document.getElementById('editLogoMsg').innerHTML = '';
+        }
+
+        async function handleEditLogoUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const msg = document.getElementById('editLogoMsg');
+            if (file.size > 2 * 1024 * 1024) {
+                msg.innerHTML = '<span style="color:#dc2626"><i class="fas fa-exclamation-circle me-1"></i>Max 2MB</span>';
+                input.value = '';
+                return;
+            }
+            const btn = document.getElementById('editLogoUploadBtn');
+            const btnText = document.getElementById('editLogoUploadBtnText');
+            btn.disabled = true;
+            if (btnText) btnText.textContent = 'Uploading…';
+            msg.innerHTML = '';
+            try {
+                const staffToken = localStorage.getItem('staff_token');
+                const fd = new FormData();
+                fd.append('file', file);
+                const resp = await fetch(`/api/v1/partner/admin/partners/${editingPartnerId}/logo`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + staffToken },
+                    body: fd
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    // Update local partner data
+                    const idx = allPartners.findIndex(p => p.id === editingPartnerId);
+                    if (idx !== -1) { allPartners[idx].logo_path = result.logo_path; }
+                    _renderEditLogoPreview({ partner_name: document.getElementById('editFormName').value, logo_path: result.logo_path });
+                    msg.innerHTML = '<span style="color:#059669"><i class="fas fa-check-circle me-1"></i>Logo updated!</span>';
+                } else {
+                    msg.innerHTML = `<span style="color:#dc2626">${result.detail||'Upload failed'}</span>`;
+                }
+            } catch(e) {
+                msg.innerHTML = '<span style="color:#dc2626">Upload failed</span>';
+            } finally {
+                btn.disabled = false;
+            }
+            input.value = '';
+        }
+
+        function getContactHtml(partner) {
+            let html = '';
+            if (partner.phone) {
+                html += `<div class="phone"><i class="fas fa-phone me-1" style="color: #9ca3af; font-size: 11px;"></i>${escapeHtml(partner.phone)}</div>`;
+            }
+            if (partner.email) {
+                html += `<div class="email"><i class="fas fa-envelope me-1" style="color: #9ca3af; font-size: 11px;"></i>${escapeHtml(partner.email)}</div>`;
+            }
+            return html || '<span style="color: #9ca3af;">-</span>';
+        }
+        
+        function formatCategory(category) {
+            if (!category) return '-';
+            return category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+        
+        let resetPartnerId = null;
+        
+        function openPasswordResetModal(partnerId) {
+            const partner = allPartners.find(p => p.id === partnerId);
+            if (!partner) return;
+            
+            resetPartnerId = partnerId;
+            document.getElementById('resetPartnerName').textContent = partner.partner_name;
+            document.getElementById('resetPartnerCode').textContent = partner.partner_code;
+            document.getElementById('resetNewPassword').textContent = partner.partner_code;
+            
+            document.getElementById('resetConfirmSection').style.display = 'block';
+            document.getElementById('resetSuccessSection').style.display = 'none';
+            document.getElementById('confirmResetCheck').checked = false;
+            document.getElementById('confirmResetBtn').disabled = true;
+            document.getElementById('confirmResetBtn').style.display = 'inline-block';
+            
+            document.getElementById('passwordResetModal').classList.add('active');
+        }
+        
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.id === 'confirmResetCheck') {
+                document.getElementById('confirmResetBtn').disabled = !e.target.checked;
+            }
+        });
+        
+        async function confirmPasswordReset() {
+            if (!resetPartnerId) return;
+            
+            const btn = document.getElementById('confirmResetBtn');
+            const displayedCode = document.getElementById('resetPartnerCode').textContent;
+            
+            const partner = allPartners.find(p => p.id === resetPartnerId);
+            if (!partner || partner.partner_code !== displayedCode) {
+                console.error('[DC-PARTNER] ID/Code mismatch detected:', {
+                    resetPartnerId,
+                    displayedCode,
+                    foundPartner: partner ? partner.partner_code : 'not found'
+                });
+                alert('Data mismatch detected. Please refresh the page and try again.');
+                closeModal('passwordResetModal');
+                loadPartners();
+                return;
+            }
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Resetting...';
+            
+            try {
+                const response = await fetch(API_BASE + '/partners/' + resetPartnerId + '/reset-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.partner_code !== displayedCode) {
+                        console.error('[DC-PARTNER] Server returned different partner:', result.partner_code);
+                        alert('Server returned different partner. Please refresh and try again.');
+                        closeModal('passwordResetModal');
+                        loadPartners();
+                        return;
+                    }
+                    document.getElementById('tempPasswordDisplay').textContent = result.temporary_password;
+                    document.getElementById('resetConfirmSection').style.display = 'none';
+                    document.getElementById('resetSuccessSection').style.display = 'block';
+                    btn.style.display = 'none';
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to reset password'));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-key me-1"></i>Reset Password';
+                }
+            } catch (error) {
+                console.error('Error resetting password:', error);
+                alert('Error resetting password: ' + error.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-key me-1"></i>Reset Password';
+            }
+        }
+        
+        function copyTempPassword() {
+            const password = document.getElementById('tempPasswordDisplay').textContent;
+            navigator.clipboard.writeText(password).then(() => {
+                alert('Password copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+        
+        function filterPartners() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value;
+            
+            let filtered = allPartners.filter(p => {
+                const matchSearch = !search || 
+                    p.partner_name.toLowerCase().includes(search) || 
+                    p.partner_code.toLowerCase().includes(search) ||
+                    (p.contact_person && p.contact_person.toLowerCase().includes(search)) ||
+                    (p.phone && p.phone.includes(search)) ||
+                    (p.email && p.email.toLowerCase().includes(search));
+                const matchCategory = !currentCategory || p.category === currentCategory;
+                const pStatus = p.login_status || (p.is_active ? 'active' : 'inactive');
+                const matchStatus = !status || pStatus === status;
+                return matchSearch && matchCategory && matchStatus;
+            });
+            
+            renderPartners(filtered);
+        }
+        
+        function openCreateModal() {
+            document.getElementById('createForm').reset();
+            document.getElementById('formPaymentTerms').value = 'ADVANCE';
+            document.getElementById('formCreditDays').value = '30';
+            document.getElementById('formPartnerType').value = 'BOTH';
+            document.getElementById('formMapLink1Label').value = 'Office';
+            document.getElementById('formMapLink2Label').value = 'Warehouse';
+            const select = document.getElementById('formCompanies');
+            Array.from(select.options).forEach(opt => opt.selected = false);
+            document.getElementById('selectedCompaniesDisplay').innerHTML = '<span class="text-muted">No companies selected</span>';
+            document.querySelectorAll('.vendor-fields').forEach(el => el.classList.remove('show'));
+            document.querySelectorAll('.form-group input, .form-group select').forEach(el => el.classList.remove('is-invalid'));
+            document.getElementById('createModal').classList.add('active');
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+        
+        async function createPartner() {
+            const select = document.getElementById('formCompanies');
+            const selectedCompanyIds = Array.from(select.selectedOptions).map(opt => parseInt(opt.value));
+            
+            if (selectedCompanyIds.length === 0) {
+                alert('Please select at least one company');
+                return;
+            }
+            
+            const phoneEl = document.getElementById('formPhone');
+            const emailEl = document.getElementById('formEmail');
+            const gstEl = document.getElementById('formGst');
+            const panEl = document.getElementById('formPan');
+            
+            if (!validatePhone(phoneEl) || !validateEmail(emailEl) || !validateGst(gstEl) || !validatePan(panEl)) {
+                alert('Please fix the validation errors before submitting');
+                return;
+            }
+            
+            const category = document.getElementById('formCategory').value;
+            const isVendorOrRealDream = category === 'VENDOR' || category === 'REAL_DREAM_PARTNER';
+            
+            const data = {
+                partner_code: document.getElementById('formCode').value.trim(),
+                partner_name: document.getElementById('formName').value.trim(),
+                category: category,
+                contact_person: document.getElementById('formContact').value.trim() || null,
+                phone: phoneEl.value.trim() || null,
+                email: emailEl.value.trim() || null,
+                alternate_phone: document.getElementById('formWhatsapp').value.trim() || null,
+                gstin: gstEl.value.trim() || null,
+                pan: panEl.value.trim() || null,
+                billing_address: document.getElementById('formAddress').value.trim() || null,
+                billing_city: document.getElementById('formCity').value.trim() || null,
+                billing_state: document.getElementById('formState').value.trim() || null,
+                billing_pincode: document.getElementById('formPincode').value.trim() || null,
+                credit_limit: parseFloat(document.getElementById('formCreditLimit').value) || 0,
+                payment_terms_days: parseInt(document.getElementById('formCreditDays').value) || 30,
+                company_ids: selectedCompanyIds,
+                gst_type: (document.querySelector('input[name="formGstType"]:checked') || {}).value || 'CGST_SGST'
+            };
+            
+            if (isVendorOrRealDream) {
+                data.partner_type = document.getElementById('formPartnerType').value;
+                data.contact_person_1_name = document.getElementById('formContact1Name').value.trim() || null;
+                data.contact_person_1_phone = document.getElementById('formContact1Phone').value.trim() || null;
+                data.contact_person_1_designation = document.getElementById('formContact1Designation').value.trim() || null;
+                data.contact_person_2_name = document.getElementById('formContact2Name').value.trim() || null;
+                data.contact_person_2_phone = document.getElementById('formContact2Phone').value.trim() || null;
+                data.contact_person_2_designation = document.getElementById('formContact2Designation').value.trim() || null;
+                data.map_link_1 = document.getElementById('formMapLink1').value.trim() || null;
+                data.map_link_1_label = document.getElementById('formMapLink1Label').value.trim() || 'Office';
+                data.map_link_2 = document.getElementById('formMapLink2').value.trim() || null;
+                data.map_link_2_label = document.getElementById('formMapLink2Label').value.trim() || 'Warehouse';
+                data.bank_name = document.getElementById('formBankName').value.trim() || null;
+                data.bank_branch = document.getElementById('formBankBranch').value.trim() || null;
+                data.account_number = document.getElementById('formAccountNumber').value.trim() || null;
+                data.ifsc_code = document.getElementById('formIfscCode').value.trim() || null;
+                data.payment_scanner_qr_url = document.getElementById('formPaymentQrUrl').value.trim() || null;
+            }
+            
+            // DC Protocol Jan 2026: Service Center specific fields
+            if (category === 'SERVICE_CENTER') {
+                data.service_coverage_radius_km = parseInt(document.getElementById('formCoverageRadius').value) || null;
+                data.certified_technician_count = parseInt(document.getElementById('formTechnicianCount').value) || null;
+                data.specialized_equipment_list = document.getElementById('formEquipmentList').value.trim() || null;
+                data.service_center_sla_hours = parseInt(document.getElementById('formServiceSlA').value) || 24;
+            }
+            // [DC-PARTNER-CONTACTS-001] Portal settings for vendor/service/real-dream partners
+            if (isVendorOrRealDream || category === 'SERVICE_CENTER') {
+                data.sales_contact_name = document.getElementById('formSalesContactName').value.trim() || null;
+                data.sales_contact_number = document.getElementById('formSalesContactNumber').value.trim() || null;
+                data.service_contact_name = document.getElementById('formServiceContactName').value.trim() || null;
+                data.service_contact_number = document.getElementById('formServiceContactNumber').value.trim() || null;
+                data.module_settings = {
+                    sales_staff: {
+                        walkins:     document.getElementById('formModSales_walkins').checked,
+                        leads:       document.getElementById('formModSales_leads').checked,
+                        service:     document.getElementById('formModSales_service').checked,
+                        marketplace: document.getElementById('formModSales_marketplace').checked,
+                        stock:       document.getElementById('formModSales_stock').checked,
+                        sales:       document.getElementById('formModSales_sales').checked,
+                    },
+                    service_staff: {
+                        walkins:     document.getElementById('formModSvc_walkins').checked,
+                        leads:       document.getElementById('formModSvc_leads').checked,
+                        service:     document.getElementById('formModSvc_service').checked,
+                        marketplace: document.getElementById('formModSvc_marketplace').checked,
+                        stock:       document.getElementById('formModSvc_stock').checked,
+                        sales:       document.getElementById('formModSvc_sales').checked,
+                    },
+                };
+            }
+            
+            const _doPartnerCreate = () => fetch(API_BASE + '/partners', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getAuthToken()}`
+                },
+                body: JSON.stringify(data)
+            });
+
+            try {
+                let response;
+                try {
+                    response = await _doPartnerCreate();
+                } catch (networkErr) {
+                    // DC Protocol (Mar 2026): Retry once on network error (transient socket hang)
+                    console.warn('[DC-PARTNER] Network error on first attempt, retrying in 1.5s...', networkErr.message);
+                    await new Promise(r => setTimeout(r, 1500));
+                    response = await _doPartnerCreate();
+                }
+
+                if (response.ok) {
+                    const result = await response.json();
+                    closeModal('createModal');
+                    allPartners = [];
+                    setTimeout(() => loadPartners(), 500);
+                    // DC Protocol (Apr 2026): Show share modal with auto-generated credentials
+                    showPartnerShareModal(result.data, result.auto_password);
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to create partner'));
+                }
+            } catch (error) {
+                console.error('Error creating partner:', error);
+                alert('Network error — server did not respond. Please try again in a moment.');
+            }
+        }
+        
+        // DC Protocol (Apr 2026): Share partner login credentials via WhatsApp share modal
+        function sharePartner(id) {
+            const partner = allPartners.find(p => p.id === id);
+            if (!partner) return;
+            // Default password = partner's phone digits (set at account creation)
+            const defaultPwd = (partner.phone || '').replace(/\D/g, '') || partner.partner_code;
+            showPartnerShareModal(partner, defaultPwd, partner.vgk_code || null);
+        }
+
+        async function viewPartner(id) {
+            const partner = allPartners.find(p => p.id === id);
+            if (!partner) return;
+            
+            const isVendorOrRealDream = partner.category === 'VENDOR' || partner.category === 'REAL_DREAM_PARTNER';
+            const partnerTypeBadge = isVendorOrRealDream && partner.partner_type ? 
+                `<span class="partner-type-badge">${partner.partner_type}</span>` : '';
+            
+            let mapLinksHtml = '';
+            if (isVendorOrRealDream) {
+                if (partner.map_link_1) {
+                    mapLinksHtml += `<a href="${escapeHtml(partner.map_link_1)}" target="_blank" class="map-link-btn"><i class="fas fa-map-marker-alt"></i>${escapeHtml(partner.map_link_1_label || 'Office')}</a>`;
+                }
+                if (partner.map_link_2) {
+                    mapLinksHtml += `<a href="${escapeHtml(partner.map_link_2)}" target="_blank" class="map-link-btn"><i class="fas fa-map-marker-alt"></i>${escapeHtml(partner.map_link_2_label || 'Warehouse')}</a>`;
+                }
+            }
+            
+            let additionalContactsHtml = '';
+            if (isVendorOrRealDream && (partner.contact_person_1_name || partner.contact_person_2_name)) {
+                additionalContactsHtml = `
+                    <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 12px;">
+                        <strong style="color: #4338ca;"><i class="fas fa-users me-1"></i>Additional Contacts</strong>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+                            ${partner.contact_person_1_name ? `<div><strong>Contact 1:</strong> ${escapeHtml(partner.contact_person_1_name)}${partner.contact_person_1_designation ? ' (' + escapeHtml(partner.contact_person_1_designation) + ')' : ''}<br>${partner.contact_person_1_phone || '-'}</div>` : ''}
+                            ${partner.contact_person_2_name ? `<div><strong>Contact 2:</strong> ${escapeHtml(partner.contact_person_2_name)}${partner.contact_person_2_designation ? ' (' + escapeHtml(partner.contact_person_2_designation) + ')' : ''}<br>${partner.contact_person_2_phone || '-'}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            let bankDetailsHtml = '';
+            if (isVendorOrRealDream && (partner.bank_name || partner.account_number)) {
+                bankDetailsHtml = `
+                    <div style="border-top: 1px solid #e5e7eb; padding-top: 12px; margin-top: 12px;">
+                        <strong style="color: #4338ca;"><i class="fas fa-university me-1"></i>Bank Details</strong>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+                            <div><strong>Bank:</strong> ${escapeHtml(partner.bank_name || '-')}</div>
+                            <div><strong>Branch:</strong> ${escapeHtml(partner.bank_branch || '-')}</div>
+                            <div><strong>Account:</strong> ${escapeHtml(partner.account_number || '-')}</div>
+                            <div><strong>IFSC:</strong> ${escapeHtml(partner.ifsc_code || '-')}</div>
+                        </div>
+                        ${partner.payment_scanner_qr_url ? `<div style="margin-top: 8px;"><strong>Payment QR:</strong> <a href="${escapeHtml(partner.payment_scanner_qr_url)}" target="_blank" class="map-link-btn"><i class="fas fa-qrcode"></i>View QR</a></div>` : ''}
+                    </div>
+                `;
+            }
+            
+            const body = document.getElementById('viewModalBody');
+            // DC_PARTNER_LOGO_001: Build logo/initials for view modal header
+            const _vmColor = _pmLogoColor(partner.partner_name);
+            const _vmInitials = _pmLogoInitials(partner.partner_name);
+            const _logoEl = partner.logo_path
+                ? `<img src="/uploads/${escapeHtml(partner.logo_path)}" class="vm-logo-img" alt="Logo" onerror="this.outerHTML='<div class=vm-logo-initials style=background:${_vmColor}>${_vmInitials}</div>'">`
+                : `<div class="vm-logo-initials" style="background:${_vmColor}">${_vmInitials}</div>`;
+
+            body.innerHTML = `
+                <div style="display: grid; gap: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
+                        <div class="vm-logo-box">
+                            ${_logoEl}
+                            <div>
+                                <h4 style="margin: 0; font-size: 20px;">${escapeHtml(partner.partner_name)}</h4>
+                                <span style="font-family: monospace; color: #6b7280;">${escapeHtml(partner.partner_code)}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="category-badge category-${partner.category.toLowerCase()}">${partner.category}</span>${partnerTypeBadge}
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div><strong>Status:</strong> <span class="${getPartnerStatusBadge(partner.login_status, partner.is_active).statusClass}">${getPartnerStatusBadge(partner.login_status, partner.is_active).statusText}</span></div>
+                        <div><strong>Contact:</strong> ${partner.contact_person || '-'}</div>
+                        <div><strong>Phone:</strong> ${partner.phone || '-'}</div>
+                        <div><strong>Email:</strong> ${partner.email || '-'}</div>
+                        <div><strong>WhatsApp:</strong> ${partner.whatsapp_number || '-'}</div>
+                        <div><strong>GST:</strong> ${partner.gst_number || '-'}</div>
+                        <div><strong>PAN:</strong> ${partner.pan_number || '-'}</div>
+                        <div><strong>Payment Terms:</strong> ${partner.payment_terms || '-'}</div>
+                        <div><strong>Credit Limit:</strong> ₹${(partner.credit_limit || 0).toLocaleString()}</div>
+                        <div><strong>Credit Days:</strong> ${partner.credit_days || 0}</div>
+                    </div>
+                    ${partner.address ? `<div><strong>Address:</strong> ${escapeHtml(partner.address)}, ${partner.city || ''} ${partner.state || ''} ${partner.pincode || ''}</div>` : ''}
+                    ${mapLinksHtml ? `<div style="margin-top: 8px;"><strong>Map Links:</strong> ${mapLinksHtml}</div>` : ''}
+                    ${additionalContactsHtml}
+                    ${bankDetailsHtml}
+                </div>
+            `;
+            document.getElementById('viewModal').classList.add('active');
+        }
+        
+        let editingPartnerId = null;
+        
+        async function editPartner(id) {
+            const partner = allPartners.find(p => p.id === id);
+            if (!partner) return;
+            
+            editingPartnerId = id;
+            switchEditTab('general');
+
+            document.getElementById('editFormCode').value = partner.partner_code || '';
+            document.getElementById('editFormName').value = partner.partner_name || '';
+            document.getElementById('editFormCategory').value = partner.category || 'DEALER';
+            document.getElementById('editFormPartnerType').value = partner.partner_type || 'BOTH';
+            document.getElementById('editFormContact').value = partner.contact_person || '';
+            document.getElementById('editFormPhone').value = partner.phone || '';
+            document.getElementById('editFormEmail').value = partner.email || '';
+            document.getElementById('editFormWhatsapp').value = partner.whatsapp_number || '';
+            document.getElementById('editFormGst').value = partner.gst_number || '';
+            document.getElementById('editFormPan').value = partner.pan_number || '';
+            document.getElementById('editFormAddress').value = partner.address || '';
+            document.getElementById('editFormCity').value = partner.city || '';
+            document.getElementById('editFormState').value = partner.state || '';
+            document.getElementById('editFormPincode').value = partner.pincode || '';
+            document.getElementById('editFormPaymentTerms').value = partner.payment_terms || 'ADVANCE';
+            document.getElementById('editFormCreditLimit').value = partner.credit_limit || 0;
+            document.getElementById('editFormCreditDays').value = partner.credit_days || 30;
+            document.getElementById('editFormStatus').value = partner.login_status || (partner.is_active ? 'active' : 'inactive');
+
+            document.getElementById('editFormContact1Name').value = partner.contact_person_1_name || '';
+            document.getElementById('editFormContact1Phone').value = partner.contact_person_1_phone || '';
+            document.getElementById('editFormContact1Designation').value = partner.contact_person_1_designation || '';
+            document.getElementById('editFormContact2Name').value = partner.contact_person_2_name || '';
+            document.getElementById('editFormContact2Phone').value = partner.contact_person_2_phone || '';
+            document.getElementById('editFormContact2Designation').value = partner.contact_person_2_designation || '';
+            document.getElementById('editFormMapLink1').value = partner.map_link_1 || '';
+            document.getElementById('editFormMapLink1Label').value = partner.map_link_1_label || 'Office';
+            document.getElementById('editFormMapLink2').value = partner.map_link_2 || '';
+            document.getElementById('editFormMapLink2Label').value = partner.map_link_2_label || 'Warehouse';
+            document.getElementById('editFormBankName').value = partner.bank_name || '';
+            document.getElementById('editFormBankBranch').value = partner.bank_branch || '';
+            document.getElementById('editFormAccountNumber').value = partner.account_number || '';
+            document.getElementById('editFormIfscCode').value = partner.ifsc_code || '';
+            document.getElementById('editFormPaymentQrUrl').value = partner.payment_scanner_qr_url || '';
+
+            // [DC-PARTNER-TERMS-001] KYC & Identity tab
+            document.getElementById('editFormAadhaar').value = partner.aadhaar_number || '';
+            document.getElementById('editFormPanDisplay').value = partner.pan_number || '';
+            const kycStatusBadge = document.getElementById('editKycStatusBadge');
+            if (kycStatusBadge) {
+                const ks = partner.kyc_status || 'Not Submitted';
+                kycStatusBadge.textContent = ks;
+                kycStatusBadge.style.color = ks === 'Approved' ? '#10b981' : ks === 'Rejected' ? '#ef4444' : '#f59e0b';
+            }
+
+            // [DC-PARTNER-TERMS-001] Partnership Terms tab
+            document.getElementById('editFormStartDate').value = partner.partner_start_date || '';
+            document.getElementById('editFormEndDate').value = partner.partner_end_date || '';
+            document.getElementById('editFormReminderDays').value = partner.reminder_days_before != null ? partner.reminder_days_before : 90;
+            document.getElementById('editFormSecurityDeposit').value = partner.security_deposit || '';
+
+            // [DC-PARTNER-TERMS-001] Docs tab — render agreement / application status
+            const agreementEl = document.getElementById('editAgreementDocStatus');
+            const appEl = document.getElementById('editApplicationDocStatus');
+            if (agreementEl) {
+                agreementEl.innerHTML = partner.agreement_document_path
+                    ? `<div class="agreement-status-row"><i class="fas fa-check-circle text-success me-2"></i><span style="font-size:12px;color:#10b981">Agreement document on file</span><a href="/uploads/${escapeHtml(partner.agreement_document_path)}" target="_blank" style="margin-left:auto;font-size:11px;color:#60a5fa"><i class="fas fa-external-link-alt me-1"></i>View</a></div>`
+                    : `<div style="font-size:12px;color:#9ca3af;padding:8px 0"><i class="fas fa-minus-circle me-1"></i>No agreement document uploaded yet</div>`;
+            }
+            if (appEl) {
+                appEl.innerHTML = partner.application_document_path
+                    ? `<div class="agreement-status-row"><i class="fas fa-check-circle text-success me-2"></i><span style="font-size:12px;color:#10b981">Application document on file</span><a href="/uploads/${escapeHtml(partner.application_document_path)}" target="_blank" style="margin-left:auto;font-size:11px;color:#60a5fa"><i class="fas fa-external-link-alt me-1"></i>View</a></div>`
+                    : `<div style="font-size:12px;color:#9ca3af;padding:8px 0"><i class="fas fa-minus-circle me-1"></i>No application document uploaded yet</div>`;
+            }
+
+            const isVendorOrRealDream = partner.category === 'VENDOR' || partner.category === 'REAL_DREAM_PARTNER';
+            document.querySelectorAll('#editModal .vendor-fields').forEach(el => {
+                el.classList.toggle('show', isVendorOrRealDream);
+            });
+
+            const isServiceCenter = partner.category === 'SERVICE_CENTER';
+            const scSection = document.getElementById('editServiceCenterSection');
+            if (scSection) scSection.style.display = isServiceCenter ? 'block' : 'none';
+            document.getElementById('editFormCoverageRadius').value = partner.service_coverage_radius_km || '';
+            document.getElementById('editFormTechnicianCount').value = partner.certified_technician_count || '';
+            document.getElementById('editFormServiceSlA').value = partner.service_center_sla_hours || '';
+            document.getElementById('editFormEquipmentList').value = partner.specialized_equipment_list || '';
+
+            // [DC-PARTNER-CONTACTS-001] Portal settings
+            document.getElementById('editFormSalesContactName').value = partner.sales_contact_name || '';
+            document.getElementById('editFormSalesContactNumber').value = partner.sales_contact_number || '';
+            document.getElementById('editFormServiceContactName').value = partner.service_contact_name || '';
+            document.getElementById('editFormServiceContactNumber').value = partner.service_contact_number || '';
+            const ms = partner.module_settings || {};
+            const salesMs = ms.sales_staff || (('walkins' in ms || 'leads' in ms) ? ms : {});
+            const svcMs   = ms.service_staff || (('walkins' in ms || 'service' in ms) ? ms : {});
+            document.getElementById('editModSales_walkins').checked     = salesMs.walkins     !== false;
+            document.getElementById('editModSales_leads').checked       = salesMs.leads       !== false;
+            document.getElementById('editModSales_service').checked     = salesMs.service     !== false;
+            document.getElementById('editModSales_marketplace').checked = salesMs.marketplace !== false;
+            document.getElementById('editModSales_stock').checked       = salesMs.stock       !== false;
+            document.getElementById('editModSales_sales').checked       = salesMs.sales       !== false;
+            document.getElementById('editModSvc_walkins').checked       = svcMs.walkins       !== false;
+            document.getElementById('editModSvc_leads').checked         = svcMs.leads         !== false;
+            document.getElementById('editModSvc_service').checked       = svcMs.service       !== false;
+            document.getElementById('editModSvc_marketplace').checked   = svcMs.marketplace   !== false;
+            document.getElementById('editModSvc_stock').checked         = svcMs.stock         !== false;
+            document.getElementById('editModSvc_sales').checked         = svcMs.sales         !== false;
+            
+            document.querySelectorAll('#editModal .form-group input, #editModal .form-group select').forEach(el => el.classList.remove('is-invalid'));
+            _renderEditLogoPreview(partner);
+            document.getElementById('editModal').classList.add('active');
+
+            // Load KYC docs asynchronously (non-blocking)
+            loadPartnerKYCDocs(id);
+        }
+        
+        async function updatePartner() {
+            if (!editingPartnerId) return;
+            
+            const phoneEl = document.getElementById('editFormPhone');
+            const emailEl = document.getElementById('editFormEmail');
+            const gstEl = document.getElementById('editFormGst');
+            const panEl = document.getElementById('editFormPan');
+            
+            if (!validatePhone(phoneEl) || !validateEmail(emailEl) || !validateGst(gstEl) || !validatePan(panEl)) {
+                alert('Please fix the validation errors before submitting');
+                return;
+            }
+            
+            const category = document.getElementById('editFormCategory').value;
+            const isVendorOrRealDream = category === 'VENDOR' || category === 'REAL_DREAM_PARTNER';
+            
+            const data = {
+                partner_name: document.getElementById('editFormName').value.trim(),
+                category: category,
+                login_status: document.getElementById('editFormStatus').value,
+                contact_person: document.getElementById('editFormContact').value.trim() || null,
+                phone: phoneEl.value.trim() || null,
+                email: emailEl.value.trim() || null,
+                whatsapp_number: document.getElementById('editFormWhatsapp').value.trim() || null,
+                gst_number: gstEl.value.trim() || null,
+                pan_number: panEl.value.trim() || null,
+                address: document.getElementById('editFormAddress').value.trim() || null,
+                city: document.getElementById('editFormCity').value.trim() || null,
+                state: document.getElementById('editFormState').value.trim() || null,
+                pincode: document.getElementById('editFormPincode').value.trim() || null,
+                payment_terms: document.getElementById('editFormPaymentTerms').value,
+                credit_limit: parseFloat(document.getElementById('editFormCreditLimit').value) || 0,
+                credit_days: parseInt(document.getElementById('editFormCreditDays').value) || 30,
+                // [DC-PARTNER-TERMS-001] KYC & Identity
+                aadhaar_number: document.getElementById('editFormAadhaar').value.trim() || null,
+                // [DC-PARTNER-TERMS-001] Partnership Terms
+                partner_start_date: document.getElementById('editFormStartDate').value || null,
+                partner_end_date: document.getElementById('editFormEndDate').value || null,
+                reminder_days_before: parseInt(document.getElementById('editFormReminderDays').value) || 90,
+                security_deposit: parseFloat(document.getElementById('editFormSecurityDeposit').value) || null,
+                // Bank details — always sent (universally required for KYC)
+                bank_name: document.getElementById('editFormBankName').value.trim() || null,
+                bank_branch: document.getElementById('editFormBankBranch').value.trim() || null,
+                account_number: document.getElementById('editFormAccountNumber').value.trim() || null,
+                ifsc_code: document.getElementById('editFormIfscCode').value.trim() || null,
+                payment_scanner_qr_url: document.getElementById('editFormPaymentQrUrl').value.trim() || null,
+            };
+            
+            if (isVendorOrRealDream) {
+                data.partner_type = document.getElementById('editFormPartnerType').value;
+                data.contact_person_1_name = document.getElementById('editFormContact1Name').value.trim() || null;
+                data.contact_person_1_phone = document.getElementById('editFormContact1Phone').value.trim() || null;
+                data.contact_person_1_designation = document.getElementById('editFormContact1Designation').value.trim() || null;
+                data.contact_person_2_name = document.getElementById('editFormContact2Name').value.trim() || null;
+                data.contact_person_2_phone = document.getElementById('editFormContact2Phone').value.trim() || null;
+                data.contact_person_2_designation = document.getElementById('editFormContact2Designation').value.trim() || null;
+                data.map_link_1 = document.getElementById('editFormMapLink1').value.trim() || null;
+                data.map_link_1_label = document.getElementById('editFormMapLink1Label').value.trim() || 'Office';
+                data.map_link_2 = document.getElementById('editFormMapLink2').value.trim() || null;
+                data.map_link_2_label = document.getElementById('editFormMapLink2Label').value.trim() || 'Warehouse';
+            }
+            
+            if (category === 'SERVICE_CENTER') {
+                data.service_coverage_radius_km = parseInt(document.getElementById('editFormCoverageRadius').value) || null;
+                data.certified_technician_count = parseInt(document.getElementById('editFormTechnicianCount').value) || null;
+                data.specialized_equipment_list = document.getElementById('editFormEquipmentList').value.trim() || null;
+                data.service_center_sla_hours = parseInt(document.getElementById('editFormServiceSlA').value) || 24;
+            }
+
+            data.sales_contact_name = document.getElementById('editFormSalesContactName').value.trim() || null;
+            data.sales_contact_number = document.getElementById('editFormSalesContactNumber').value.trim() || null;
+            data.service_contact_name = document.getElementById('editFormServiceContactName').value.trim() || null;
+            data.service_contact_number = document.getElementById('editFormServiceContactNumber').value.trim() || null;
+            data.module_settings = {
+                sales_staff: {
+                    walkins:     document.getElementById('editModSales_walkins').checked,
+                    leads:       document.getElementById('editModSales_leads').checked,
+                    service:     document.getElementById('editModSales_service').checked,
+                    marketplace: document.getElementById('editModSales_marketplace').checked,
+                    stock:       document.getElementById('editModSales_stock').checked,
+                    sales:       document.getElementById('editModSales_sales').checked,
+                },
+                service_staff: {
+                    walkins:     document.getElementById('editModSvc_walkins').checked,
+                    leads:       document.getElementById('editModSvc_leads').checked,
+                    service:     document.getElementById('editModSvc_service').checked,
+                    marketplace: document.getElementById('editModSvc_marketplace').checked,
+                    stock:       document.getElementById('editModSvc_stock').checked,
+                    sales:       document.getElementById('editModSvc_sales').checked,
+                },
+            };
+            
+            try {
+                const response = await fetch(API_BASE + '/partners/' + editingPartnerId, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    closeModal('editModal');
+                    editingPartnerId = null;
+                    allPartners = [];
+                    setTimeout(() => loadPartners(), 500);
+                    alert('Partner updated successfully!');
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.detail || 'Failed to update partner'));
+                }
+            } catch (error) {
+                console.error('Error updating partner:', error);
+                alert('Error updating partner: ' + error.message);
+            }
+        }
+
+        // [DC-PARTNER-TERMS-001] Tab switcher for edit modal
+        function switchEditTab(tab) {
+            document.querySelectorAll('.edit-tab-panel').forEach(p => p.style.display = 'none');
+            document.querySelectorAll('.edit-tab-btn').forEach(b => b.classList.remove('active'));
+            const panel = document.getElementById('editTab_' + tab);
+            if (panel) panel.style.display = '';
+            const btn = document.getElementById('editTabBtn_' + tab);
+            if (btn) btn.classList.add('active');
+        }
+
+        // [DC-PARTNER-TERMS-001] Load KYC docs for staff view + approve/reject buttons
+        async function loadPartnerKYCDocs(partnerId) {
+            const el = document.getElementById('editKycDocsList');
+            if (!el) return;
+            try {
+                const res = await fetch(`${API_BASE}/partners/${partnerId}/kyc`, {
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                if (!res.ok) {
+                    el.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:12px 0">KYC data unavailable (insufficient permissions)</div>';
+                    return;
+                }
+                const d = await res.json();
+                const docs = d.kyc_documents || [];
+                const DOC_LABELS = {
+                    aadhar_front: 'Aadhaar Front', aadhar_back: 'Aadhaar Back',
+                    pan_card: 'PAN Card', passport_photo: 'Passport Photo'
+                };
+                const DOC_COLORS = { aadhar_front: '#3b82f6', aadhar_back: '#8b5cf6', pan_card: '#f59e0b', passport_photo: '#10b981' };
+                if (docs.length === 0) {
+                    el.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:12px 0;text-align:center"><i class="fas fa-folder-open me-1"></i>No KYC documents submitted yet</div>';
+                    return;
+                }
+                el.innerHTML = docs.map(doc => {
+                    const color = DOC_COLORS[doc.document_type] || '#6b7280';
+                    const label = DOC_LABELS[doc.document_type] || doc.document_type;
+                    const statusHtml = doc.status === 'Approved'
+                        ? `<span class="kyc-badge kyc-badge-approved"><i class="fas fa-check-circle me-1"></i>Approved</span>`
+                        : doc.status === 'Rejected'
+                        ? `<span class="kyc-badge kyc-badge-rejected"><i class="fas fa-times-circle me-1"></i>Rejected</span>`
+                        : `<span class="kyc-badge kyc-badge-pending"><i class="fas fa-clock me-1"></i>${doc.status || 'Pending'}</span>`;
+                    const actionHtml = doc.status !== 'Approved'
+                        ? `<div style="margin-top:6px;display:flex;gap:6px">
+                            <button type="button" onclick="approveKYCDoc(${partnerId},${doc.id})" style="padding:3px 10px;background:#064e3b;color:#10b981;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer"><i class="fas fa-check me-1"></i>Approve</button>
+                            ${doc.status !== 'Rejected' ? `<button type="button" onclick="rejectKYCDoc(${partnerId},${doc.id})" style="padding:3px 10px;background:#450a0a;color:#ef4444;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer"><i class="fas fa-times me-1"></i>Reject</button>` : ''}
+                           </div>` : '';
+                    const fileLink = doc.file_path ? `<a href="/uploads/${escapeHtml(doc.file_path)}" target="_blank" style="font-size:10px;color:#60a5fa;margin-left:6px"><i class="fas fa-external-link-alt"></i> View</a>` : '';
+                    return `<div class="kyc-doc-row">
+                        <div class="kyc-doc-icon" style="background:${color}22;color:${color}"><i class="fas fa-file-alt"></i></div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-size:12px;font-weight:600;color:#e2e8f0">${label}${fileLink}</div>
+                            <div style="font-size:10px;color:#64748b;margin-top:2px">${doc.file_name || ''}${doc.uploaded_at ? ' · ' + new Date(doc.uploaded_at).toLocaleDateString('en-IN') : ''}</div>
+                            ${doc.rejection_reason ? `<div style="font-size:10px;color:#ef4444;margin-top:2px">${doc.rejection_reason}</div>` : ''}
+                            ${actionHtml}
+                        </div>
+                        <div style="flex-shrink:0">${statusHtml}</div>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                el.innerHTML = '<div style="color:#9ca3af;font-size:12px;padding:12px 0">Failed to load KYC documents</div>';
+            }
+        }
+
+        async function approveKYCDoc(partnerId, docId) {
+            try {
+                const res = await fetch(`${API_BASE}/partners/${partnerId}/kyc/${docId}/approve`, {
+                    method: 'PUT', headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                if (res.ok) { loadPartnerKYCDocs(partnerId); }
+                else { const e = await res.json(); alert('Error: ' + (e.detail || 'Failed to approve')); }
+            } catch (e) { alert('Network error'); }
+        }
+
+        async function rejectKYCDoc(partnerId, docId) {
+            const reason = prompt('Rejection reason (required):');
+            if (!reason || !reason.trim()) return;
+            try {
+                const params = new URLSearchParams({ reason: reason.trim() });
+                const res = await fetch(`${API_BASE}/partners/${partnerId}/kyc/${docId}/reject?${params}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                });
+                if (res.ok) { loadPartnerKYCDocs(partnerId); }
+                else { const e = await res.json(); alert('Error: ' + (e.detail || 'Failed to reject')); }
+            } catch (e) { alert('Network error'); }
+        }
+
+        async function uploadPartnerDoc(docType, input) {
+            if (!editingPartnerId) return;
+            const file = input.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) { alert('File too large. Max 5MB.'); input.value = ''; return; }
+            const msgEl = document.getElementById(docType === 'agreement' ? 'editAgreementUploadMsg' : 'editApplicationUploadMsg');
+            if (msgEl) { msgEl.textContent = 'Uploading…'; msgEl.style.color = '#f59e0b'; }
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const url = `${API_BASE}/partners/${editingPartnerId}/upload-${docType}`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` },
+                    body: fd
+                });
+                const d = await res.json();
+                if (res.ok && d.success) {
+                    if (msgEl) { msgEl.textContent = '✓ Uploaded successfully'; msgEl.style.color = '#10b981'; }
+                    // Refresh partner list in background
+                    setTimeout(() => { allPartners = []; loadPartners(); }, 1000);
+                } else {
+                    if (msgEl) { msgEl.textContent = '✗ ' + (d.detail || 'Upload failed'); msgEl.style.color = '#ef4444'; }
+                }
+            } catch (e) {
+                if (msgEl) { msgEl.textContent = '✗ Network error'; msgEl.style.color = '#ef4444'; }
+            }
+            input.value = '';
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            StaffSidebar.init();
+            loadCompanies();
+            loadPartners();
+        });
+
+        // DC Protocol (Apr 2026): Partner creation/VGK login share modal — 3-language support
+        // category: 'DEALER' | 'DISTRIBUTOR' | 'VENDOR' | 'REAL_DREAM_PARTNER' | 'SERVICE_CENTER'
+        // Dealers & Distributors are associated with VGK4U; others show only Myntreal LLP
+        function buildShareMessages(name, partnerCode, pwd, vgkCode, category) {
+            const loginUrl = 'https://vgk4u.com/partner/login';
+            const isVgkAssociated = category === 'DEALER' || category === 'DISTRIBUTOR';
+
+            // VGK4U ID lines (shown when the partner has a linked VGK code)
+            const vgkIdLine  = vgkCode ? `\n📌 Your VGK4U ID: ${vgkCode}` : '';
+            const vgkIdTe    = vgkCode ? `\n📌 మీ VGK4U ID: ${vgkCode}` : '';
+            const vgkIdHi    = vgkCode ? `\n📌 आपकी VGK4U ID: ${vgkCode}` : '';
+
+            // VGK4U association line (shown only for Dealers & Distributors)
+            const vgkAssocEn = isVgkAssociated ? `\n🤝 Associated Platform: VGK4U — accessible from the left sidebar after login.` : '';
+            const vgkAssocTe = isVgkAssociated ? `\n🤝 అనుబంధ ప్లాట్‌ఫారం: VGK4U — లాగిన్ తర్వాత ఎడమ మెనూలో యాక్సెస్ చేయవచ్చు.` : '';
+            const vgkAssocHi = isVgkAssociated ? `\n🤝 संबद्ध प्लेटफ़ॉर्म: VGK4U — लॉगिन के बाद बाईं साइडबार से एक्सेस करें।` : '';
+
+            return {
+                en: `🎉 Congratulations ${name} Garu & Welcome to Myntreal LLP! 🎉\n\nYour partner account has been successfully created. You can now access your dashboard and manage your business activities.\n\n🔗 Login URL: ${loginUrl}\n👤 Username: ${partnerCode}\n🔒 Password: ${pwd}${vgkIdLine}${vgkAssocEn}\n\nPlease log in and change your password for security purposes.\n\nIf you face any issues, feel free to reach out.\nWelcome aboard, and wishing you great success! 🚀\n– Team Myntreal LLP`,
+
+                te: `🎉 అభినందనలు ${name} గారూ & Myntreal LLP కి స్వాగతం! 🎉\n\nమీ పార్టనర్ అకౌంట్ విజయవంతంగా సృష్టించబడింది. మీరు ఇప్పుడు మీ డాష్‌బోర్డ్‌ను యాక్సెస్ చేసి మీ వ్యాపార కార్యకలాపాలను నిర్వహించవచ్చు.\n\n🔗 లాగిన్ URL: ${loginUrl}\n👤 యూజర్‌నేమ్: ${partnerCode}\n🔒 పాస్‌వర్డ్: ${pwd}${vgkIdTe}${vgkAssocTe}\n\nదయచేసి లాగిన్ అయి భద్రత కోసం మీ పాస్‌వర్డ్ మార్చుకోండి.\n\nఏవైనా సమస్యలు వస్తే మాకు సంప్రదించండి.\nMyntreal LLP టీమ్‌లో మీకు స్వాగతం, మీకు గొప్ప విజయం కలగాలని ఆశిస్తున్నాం! 🚀`,
+
+                hi: `🎉 बधाई हो ${name} जी & Myntreal LLP में आपका स्वागत है! 🎉\n\nआपका पार्टनर अकाउंट सफलतापूर्वक बना दिया गया है। आप अब अपना डैशबोर्ड एक्सेस कर सकते हैं और अपनी व्यावसायिक गतिविधियाँ शुरू कर सकते हैं।\n\n🔗 Login URL: ${loginUrl}\n👤 Username: ${partnerCode}\n🔒 Password: ${pwd}${vgkIdHi}${vgkAssocHi}\n\nकृपया लॉगिन करें और सुरक्षा के लिए अपना पासवर्ड बदलें।\n\nकोई समस्या हो तो हमसे संपर्क करें।\nटीम Myntreal LLP में आपका स्वागत है, आपको बड़ी सफलता मिले! 🚀`
+            };
+        }
+
+        let _shareActiveLang = 'en';
+
+        function showPartnerShareModal(partnerData, autoPassword, vgkCodeOverride) {
+            const name = partnerData.contact_person || partnerData.partner_name || '';
+            const code = partnerData.partner_code || '';
+            const vgkCode = vgkCodeOverride || partnerData.vgk_code || null;
+            const phone = (partnerData.whatsapp_number || partnerData.phone || '').replace(/\D/g, '');
+            const pwd = autoPassword || code;
+            const category = (partnerData.category || '').toUpperCase();
+            _shareActiveLang = 'en';
+
+            const msgs = buildShareMessages(name, code, pwd, vgkCode, category);
+            const phoneNum = phone ? (phone.startsWith('91') ? phone : '91' + phone) : '';
+            // Store in window vars to avoid inline attribute escaping issues with multilingual text
+            window._shareMsgs = msgs;
+            window._sharePhone = phoneNum;
+
+            const modal = document.createElement('div');
+            modal.id = 'partnerShareModal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px';
+            modal.innerHTML = `
+              <div style="background:#fff;border-radius:16px;padding:22px;max-width:520px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto">
+                <div style="text-align:center;margin-bottom:16px">
+                  <div style="font-size:2rem;margin-bottom:6px">🎉</div>
+                  <h3 style="margin:0;color:#1d4ed8;font-size:1.05rem;font-weight:700">Partner Account Ready!</h3>
+                  <p style="margin:4px 0 0;color:#6b7280;font-size:0.82rem">Share login credentials via WhatsApp</p>
+                </div>
+
+                <!-- Credentials summary -->
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <div><div style="font-size:10px;color:#9ca3af;font-weight:600;text-transform:uppercase">Partner ID</div><div style="font-size:13px;font-weight:700;color:#1d4ed8">${escapeHtml(code)}</div></div>
+                  <div><div style="font-size:10px;color:#9ca3af;font-weight:600;text-transform:uppercase">Password</div><div style="font-size:13px;font-weight:700;color:#7c3aed">${escapeHtml(pwd)}</div></div>
+                  ${vgkCode ? `<div style="grid-column:1/-1"><div style="font-size:10px;color:#9ca3af;font-weight:600;text-transform:uppercase">VGK4U ID</div><div style="font-size:13px;font-weight:700;color:#059669">${escapeHtml(vgkCode)}</div></div>` : ''}
+                </div>
+
+                <!-- Language tabs (use window._shareMsgs to avoid HTML attr escaping issues) -->
+                <div style="display:flex;gap:6px;margin-bottom:10px">
+                  <button id="shareLangEn" onclick="switchShareLang('en')" style="flex:1;padding:6px;border-radius:7px;border:2px solid #1d4ed8;background:#1d4ed8;color:#fff;font-size:12px;font-weight:600;cursor:pointer">English</button>
+                  <button id="shareLangTe" onclick="switchShareLang('te')" style="flex:1;padding:6px;border-radius:7px;border:2px solid #e5e7eb;background:#fff;color:#374151;font-size:12px;font-weight:600;cursor:pointer">తెలుగు</button>
+                  <button id="shareLangHi" onclick="switchShareLang('hi')" style="flex:1;padding:6px;border-radius:7px;border:2px solid #e5e7eb;background:#fff;color:#374151;font-size:12px;font-weight:600;cursor:pointer">हिंदी</button>
+                </div>
+
+                <!-- Message preview -->
+                <div id="shareTextBox" style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:0.8rem;line-height:1.75;white-space:pre-wrap;color:#0c4a6e;max-height:220px;overflow-y:auto">${escapeHtml(msgs.en)}</div>
+
+                <!-- Action buttons -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+                  <button id="shareWaBtn" onclick="sendShareWA(window._sharePhone, document.getElementById('shareTextBox').textContent)"
+                    style="background:#25d366;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+                    <i class="fab fa-whatsapp"></i> Send via WhatsApp
+                  </button>
+                  <button onclick="copyClipboard(document.getElementById('shareTextBox').textContent)"
+                    style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer">
+                    📋 Copy
+                  </button>
+                  <button onclick="document.getElementById('partnerShareModal').remove()"
+                    style="background:#e5e7eb;color:#374151;border:none;border-radius:8px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer">
+                    Close
+                  </button>
+                </div>
+              </div>`;
+            document.body.appendChild(modal);
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+        }
+
+        function switchShareLang(lang) {
+            _shareActiveLang = lang;
+            const msgs = window._shareMsgs || {};
+            const box = document.getElementById('shareTextBox');
+            if (box) box.textContent = msgs[lang] || msgs.en || '';
+            ['En','Te','Hi'].forEach(l => {
+                const btn = document.getElementById('shareLang' + l);
+                if (!btn) return;
+                const isActive = l.toLowerCase() === lang;
+                btn.style.background = isActive ? '#1d4ed8' : '#fff';
+                btn.style.color = isActive ? '#fff' : '#374151';
+                btn.style.borderColor = isActive ? '#1d4ed8' : '#e5e7eb';
+            });
+        }
+
+        function sendShareWA(phoneNum, text) {
+            const url = phoneNum
+                ? `https://wa.me/${phoneNum}?text=${encodeURIComponent(text)}`
+                : `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function copyClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                ta.remove();
+                alert('Copied!');
+            });
+        }
+
+        function sendViaWhatsApp(phone, encodedText) {
+            const clean = phone.replace(/\D/g, '');
+            const num = clean.startsWith('91') ? clean : '91' + clean;
+            window.open(`https://wa.me/${num}?text=${encodedText}`, '_blank');
+        }
+
+        function copyToClipboard(text) {
+            copyClipboard(text.replace ? text.replace(/\\n/g, '\n') : text);
+        }
+    </script>
+</body>
+</html>

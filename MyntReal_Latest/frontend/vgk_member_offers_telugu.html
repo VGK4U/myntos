@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="te">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGK4U Channel Partner Offers — Loyalty Program | తెలుగు</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        :root{
+            --p9:#1e0a3c;--p8:#3b0d6e;--p7:#4c1d95;--p6:#5b21b6;--p5:#7c3aed;--p4:#8b5cf6;--p1:#f5f3ff;
+            --g5:#22c55e;--g6:#16a34a;--b6:#2563eb;
+            --amber:#f59e0b;--amber-bg:rgba(245,158,11,.18);--amber-border:rgba(245,158,11,.4);
+        }
+        body{background:linear-gradient(150deg,var(--p9) 0%,var(--p8) 40%,var(--p6) 100%);min-height:100vh;font-family:'Segoe UI',system-ui,sans-serif;color:#fff}
+
+        /* NAV */
+        .topnav{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:rgba(0,0,0,.2);border-bottom:1px solid rgba(255,255,255,.1);backdrop-filter:blur(8px);position:sticky;top:0;z-index:100}
+        .logo-wrap{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff}
+        .logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--p5),var(--p7));display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(124,58,237,.5)}
+        .logo-text{font-size:16px;font-weight:800;letter-spacing:.5px}
+        .logo-sub{font-size:10px;opacity:.7;font-weight:500}
+        .nav-btns{display:flex;gap:10px}
+        .btn-nav{padding:8px 18px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;transition:all .18s;display:inline-flex;align-items:center;gap:6px}
+        .btn-outline{border:1.5px solid rgba(255,255,255,.35);color:#fff;background:transparent}
+        .btn-outline:hover{background:rgba(255,255,255,.12);color:#fff}
+        .btn-solid{background:linear-gradient(135deg,var(--p5),var(--p7));color:#fff;border:none;box-shadow:0 4px 14px rgba(124,58,237,.5)}
+        .btn-solid:hover{opacity:.9;transform:translateY(-1px);color:#fff}
+
+        /* HERO */
+        .hero{text-align:center;padding:52px 20px 36px;max-width:820px;margin:0 auto}
+        .hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:30px;padding:6px 18px;font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#a78bfa;margin-bottom:16px}
+        .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--g5);box-shadow:0 0 0 3px rgba(34,197,94,.25);animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(34,197,94,.25)}50%{box-shadow:0 0 0 6px rgba(34,197,94,.1)}}
+        .hero h1{font-size:clamp(26px,5vw,44px);font-weight:900;line-height:1.18;margin-bottom:12px;background:linear-gradient(135deg,#fff 40%,#c4b5fd 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .hero-desc{font-size:15px;color:rgba(255,255,255,.78);line-height:1.65;max-width:600px;margin:0 auto 24px}
+        .hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+        .btn-hero-p{padding:13px 28px;border-radius:10px;font-size:15px;font-weight:800;background:linear-gradient(135deg,var(--p5),#4338ca);color:#fff;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(124,58,237,.6);transition:all .18s}
+        .btn-hero-p:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(124,58,237,.7);color:#fff}
+        .btn-hero-o{padding:13px 28px;border-radius:10px;font-size:15px;font-weight:700;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);backdrop-filter:blur(6px);color:#fff;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .18s}
+        .btn-hero-o:hover{background:rgba(255,255,255,.15);color:#fff}
+
+        /* STATS */
+        .stats-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;max-width:860px;margin:0 auto 44px;padding:0 20px}
+        .stat-chip{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:14px 20px;text-align:center;min-width:130px;flex:1;backdrop-filter:blur(6px)}
+        .stat-val{font-size:20px;font-weight:900;color:#c4b5fd}
+        .stat-label{font-size:11px;color:rgba(255,255,255,.7);margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+
+        /* CONTENT */
+        .content-wrapper{max-width:1060px;margin:0 auto;padding:0 20px 60px}
+        .section-title{text-align:center;margin-bottom:28px}
+        .section-title h2{font-size:22px;font-weight:800;color:#fff}
+        .section-title p{font-size:13.5px;color:rgba(255,255,255,.65);margin-top:6px;line-height:1.55}
+
+        /* TABS */
+        .cat-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+        .cat-tab{padding:9px 20px;border-radius:22px;font-size:13px;font-weight:700;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.07);color:rgba(255,255,255,.75);cursor:pointer;transition:all .18s}
+        .cat-tab.active{background:linear-gradient(135deg,var(--p5),var(--p7));border-color:transparent;color:#fff;box-shadow:0 4px 16px rgba(124,58,237,.5)}
+        .cat-tab:hover:not(.active){background:rgba(255,255,255,.14);color:#fff}
+        .cat-panel{display:none}
+        .cat-panel.active{display:block}
+
+        /* RATE CARDS */
+        .commission-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        @media(max-width:620px){.commission-grid{grid-template-columns:1fr}}
+        .comm-card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:16px;overflow:hidden;backdrop-filter:blur(8px)}
+        .comm-card-header{padding:14px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.1)}
+        .comm-badge{font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;letter-spacing:.4px;flex-shrink:0}
+        .badge-reg{background:rgba(96,165,250,.2);color:#93c5fd;border:1px solid rgba(96,165,250,.4)}
+        .badge-act{background:rgba(34,197,94,.18);color:#86efac;border:1px solid rgba(34,197,94,.35)}
+        .comm-card-title{font-size:14px;font-weight:800;flex:1}
+        .comm-card-sub{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}
+        .comm-table{width:100%;border-collapse:collapse}
+        .comm-table thead tr{background:rgba(0,0,0,.15)}
+        .comm-table th{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:rgba(255,255,255,.5);padding:8px 14px;text-align:left}
+        .comm-table td{padding:10px 14px;font-size:13px;font-weight:600;border-top:1px solid rgba(255,255,255,.07)}
+        /* L4 support row */
+        .tr-l4 td{background:var(--amber-bg) !important;border-top:1px solid var(--amber-border)}
+        .tr-l4 td:first-child{border-left:3px solid var(--amber)}
+        .level-dot{width:26px;height:26px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;margin-right:7px}
+        .ld1{background:rgba(124,58,237,.35);color:#c4b5fd}
+        .ld2{background:rgba(59,130,246,.3);color:#93c5fd}
+        .ld3{background:rgba(16,185,129,.25);color:#6ee7b7}
+        .ld4{background:rgba(245,158,11,.35);color:#fcd34d}
+        .rate-pct{font-size:14px;font-weight:800;color:#e9d5ff}
+        .rate-zero{color:rgba(255,255,255,.35);font-size:12px;font-weight:500}
+        .support-tag{display:inline-flex;align-items:center;gap:4px;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:20px;padding:2px 8px;font-size:10px;font-weight:800;color:var(--amber);letter-spacing:.3px;margin-left:4px}
+
+        /* ── CALCULATION SECTION ── */
+        .calc-section{margin-top:20px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.12);border-radius:16px;overflow:hidden}
+        .calc-header{padding:14px 20px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+        .calc-title{font-size:14px;font-weight:800;display:flex;align-items:center;gap:7px}
+        .calc-amount-row{display:flex;align-items:center;gap:8px;font-size:13px}
+        .calc-amount-row label{color:rgba(255,255,255,.65);font-size:12px;font-weight:600}
+        .deal-input{background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);border-radius:8px;color:#fff;font-size:14px;font-weight:800;padding:6px 12px;width:130px;text-align:right;outline:none}
+        .deal-input:focus{border-color:var(--p4)}
+
+        .calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid rgba(255,255,255,.06)}
+        @media(max-width:620px){.calc-grid{grid-template-columns:1fr}}
+        .calc-col{padding:16px 18px}
+        .calc-col:first-child{border-right:1px solid rgba(255,255,255,.06)}
+        .calc-col-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+        .calc-col-title.reg{color:#93c5fd}
+        .calc-col-title.act{color:#86efac}
+
+        .calc-table{width:100%;border-collapse:collapse;font-size:13px}
+        .calc-table th{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:rgba(255,255,255,.45);padding:5px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.08)}
+        .calc-table td{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+        /* L4 amber highlight in calc */
+        .calc-tr-l4 td{background:rgba(245,158,11,.12) !important}
+        .calc-tr-l4 td:first-child{border-left:3px solid var(--amber)}
+        /* total row */
+        .calc-tr-total td{border-top:2px solid rgba(255,255,255,.15);font-weight:800;font-size:13.5px;padding-top:9px}
+        .earn-val{font-weight:800;color:#e9d5ff;font-size:13px}
+        .earn-zero{color:rgba(255,255,255,.3);font-size:12px}
+        .earn-amber{font-weight:800;color:var(--amber);font-size:13px}
+
+        /* Summary row */
+        .calc-summary{padding:12px 18px;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:10px;flex-wrap:wrap;background:rgba(0,0,0,.12)}
+        .sum-chip{flex:1;min-width:140px;border-radius:10px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px}
+        .sum-chip.source-chip{background:rgba(124,58,237,.2);border:1px solid rgba(124,58,237,.35)}
+        .sum-chip.support-chip{background:var(--amber-bg);border:1px solid var(--amber-border)}
+        .sum-chip.total-chip{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3)}
+        .sum-icon{font-size:18px;margin-top:2px}
+        .sum-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.75}
+        .sum-val{font-size:16px;font-weight:900}
+        .sum-val.source-val{color:#c4b5fd}
+        .sum-val.support-val{color:var(--amber)}
+        .sum-val.total-val{color:#86efac}
+        .sum-note{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px;line-height:1.4}
+
+        /* L4 lifetime note */
+        .l4-note{padding:10px 18px;background:rgba(245,158,11,.08);border-top:1px dashed var(--amber-border);font-size:11.5px;color:rgba(255,255,255,.75);display:flex;align-items:flex-start;gap:8px}
+        .l4-note i{color:var(--amber);margin-top:2px;flex-shrink:0}
+
+        /* LEVEL LEGEND */
+        .level-legend{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:16px 20px;margin-top:20px}
+        .legend-title{font-size:12.5px;font-weight:700;color:rgba(255,255,255,.8);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+        .legend-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+        .legend-item{display:flex;align-items:flex-start;gap:10px}
+        .legend-dot{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;margin-top:2px}
+        .legend-text{font-size:12px;line-height:1.5;color:rgba(255,255,255,.72)}
+        .legend-text strong{color:#fff}
+        /* L4 amber legend */
+        .legend-l4-box{border:1.5px solid var(--amber-border);border-radius:10px;padding:10px 14px;background:var(--amber-bg);display:flex;align-items:flex-start;gap:10px;margin-top:8px}
+        .legend-l4-box .legend-dot{background:rgba(245,158,11,.35);color:#fcd34d}
+        .legend-l4-box .legend-text strong{color:var(--amber)}
+
+        /* EV SPARES SECTION */
+        .spares-section{margin-top:48px}
+        .spares-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        @media(max-width:600px){.spares-grid{grid-template-columns:1fr}}
+        .spares-card{border-radius:16px;padding:22px;border:1.5px solid;backdrop-filter:blur(6px)}
+        .spares-card.s-reg{background:rgba(96,165,250,.07);border-color:rgba(96,165,250,.3)}
+        .spares-card.s-act{background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.3)}
+        .spares-rate{font-size:36px;font-weight:900;margin:10px 0 4px}
+        .spares-card.s-reg .spares-rate{color:#93c5fd}
+        .spares-card.s-act .spares-rate{color:#86efac}
+        .spares-label{font-size:12px;color:rgba(255,255,255,.6);line-height:1.5}
+
+        /* POINTS SECTION */
+        .points-section{margin-top:48px}
+        .points-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        @media(max-width:600px){.points-grid{grid-template-columns:1fr}}
+        .points-card{border-radius:16px;padding:22px;border:1.5px solid;backdrop-filter:blur(6px)}
+        .points-card.p-reg{background:rgba(96,165,250,.07);border-color:rgba(96,165,250,.3)}
+        .points-card.p-act{background:rgba(245,158,11,.08);border-color:var(--amber-border)}
+        .points-icon{font-size:28px;margin-bottom:12px}
+        .points-title{font-size:15px;font-weight:800;margin-bottom:6px}
+        .points-amt{font-size:32px;font-weight:900;margin:8px 0 6px}
+        .points-card.p-reg .points-amt{color:#93c5fd}
+        .points-card.p-act .points-amt{color:var(--amber)}
+        .points-sub{font-size:12px;color:rgba(255,255,255,.65);line-height:1.5}
+        .points-badge{display:inline-block;background:rgba(255,255,255,.12);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;margin-top:8px}
+
+        /* MEMBERSHIP DIFF */
+        .diff-section{margin-top:48px}
+        .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        @media(max-width:600px){.diff-grid{grid-template-columns:1fr}}
+        .diff-card{border-radius:16px;padding:22px;border:1.5px solid}
+        .diff-card.d-reg{background:rgba(96,165,250,.08);border-color:rgba(96,165,250,.3)}
+        .diff-card.d-act{background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.3)}
+        .diff-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px}
+        .diff-card.d-reg .diff-icon{background:rgba(96,165,250,.2);color:#93c5fd}
+        .diff-card.d-act .diff-icon{background:rgba(34,197,94,.2);color:#86efac}
+        .diff-title{font-size:15px;font-weight:800;margin-bottom:5px}
+        .diff-sub{font-size:12px;color:rgba(255,255,255,.65);margin-bottom:14px;line-height:1.5}
+        .diff-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+        .diff-list li{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:rgba(255,255,255,.85);line-height:1.45}
+        .diff-list li i{margin-top:3px;flex-shrink:0}
+        .diff-card.d-reg .diff-list li i{color:#93c5fd}
+        .diff-card.d-act .diff-list li i{color:#86efac}
+
+        /* HOW IT WORKS */
+        .hiw-section{margin-top:48px}
+        .hiw-steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+        .hiw-step{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:20px 16px;text-align:center}
+        .step-num{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--p5),var(--p7));font-size:13px;font-weight:900;color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;box-shadow:0 4px 14px rgba(124,58,237,.5)}
+        .step-icon{font-size:20px;margin-bottom:8px}
+        .step-title{font-size:13.5px;font-weight:800;margin-bottom:5px}
+        .step-desc{font-size:11.5px;color:rgba(255,255,255,.65);line-height:1.5}
+
+        /* CTA */
+        .bottom-cta{margin-top:52px;background:linear-gradient(135deg,rgba(124,58,237,.35),rgba(76,29,149,.5));border:1px solid rgba(124,58,237,.4);border-radius:20px;padding:38px 28px;text-align:center;backdrop-filter:blur(8px)}
+        .bottom-cta h2{font-size:24px;font-weight:900;margin-bottom:10px}
+        .bottom-cta p{font-size:14px;color:rgba(255,255,255,.78);margin-bottom:22px}
+        .cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+        .btn-cta-m{padding:13px 30px;border-radius:10px;font-size:14px;font-weight:800;background:#fff;color:var(--p7);border:none;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .18s}
+        .btn-cta-m:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3);color:var(--p7)}
+        .btn-cta-s{padding:13px 26px;border-radius:10px;font-size:14px;font-weight:700;border:2px solid rgba(255,255,255,.45);color:#fff;background:transparent;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .18s}
+        .btn-cta-s:hover{background:rgba(255,255,255,.12);color:#fff}
+
+        /* FOOTER */
+        .page-footer{text-align:center;padding:20px;font-size:12px;color:rgba(255,255,255,.4);border-top:1px solid rgba(255,255,255,.08)}
+        .page-footer a{color:rgba(255,255,255,.6);text-decoration:none}
+        .page-footer a:hover{color:#fff}
+
+        /* SHARE BUTTON */
+        .btn-share{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;border:1.5px solid rgba(255,255,255,.35);color:#fff;background:rgba(255,255,255,.08);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .18s}
+        .btn-share:hover{background:rgba(255,255,255,.18)}
+
+        /* SHARE MODAL */
+        .share-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+        .share-overlay.open{display:flex}
+        .share-box{background:linear-gradient(160deg,#1e0a3c,#3b0d6e);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:28px;width:92%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+        .share-box-title{font-size:17px;font-weight:800;margin-bottom:4px}
+        .share-box-sub{font-size:12.5px;color:rgba(255,255,255,.65);margin-bottom:22px}
+        .share-opts{display:flex;flex-direction:column;gap:10px}
+        .share-opt{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);cursor:pointer;transition:all .18s;color:#fff;text-decoration:none}
+        .share-opt:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.25);color:#fff}
+        .share-opt-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+        .share-opt-text{flex:1}
+        .share-opt-title{font-size:14px;font-weight:800}
+        .share-opt-desc{font-size:11.5px;color:rgba(255,255,255,.58);margin-top:2px}
+        .share-close{margin-top:18px;width:100%;padding:10px;border:1px solid rgba(255,255,255,.18);border-radius:10px;background:transparent;color:rgba(255,255,255,.65);font-size:13px;font-weight:700;cursor:pointer;transition:all .18s}
+        .share-close:hover{background:rgba(255,255,255,.08);color:#fff}
+        .copy-feedback{display:none;font-size:11px;color:#86efac;font-weight:700;margin-top:6px;text-align:center}
+
+        /* PRINT / PDF STYLES */
+        @media print {
+            body{background:#fff !important;color:#1e0a3c !important}
+            .topnav,.hero,.stats-row,.share-overlay,.page-footer,.bottom-cta,.hiw-section,.diff-section,.no-print,.calc-row,.calc-block{display:none !important}
+            .print-header{display:flex !important}
+            .content-wrapper{max-width:100%;padding:0 12px}
+            .section-title{margin-bottom:14px !important}
+            .section-title h2{color:#1e0a3c !important;font-size:16px !important}
+            .section-title p{color:#555 !important;font-size:12px !important}
+            .cat-tabs{display:none !important}
+            .cat-panel{display:block !important;margin-bottom:20px;break-inside:avoid}
+            .commission-grid{grid-template-columns:1fr 1fr;gap:12px}
+            .comm-card{background:#f8f5ff !important;border:1.5px solid #c4b5fd !important;break-inside:avoid}
+            .comm-card-header{background:#ede9fe !important;padding:10px 14px !important}
+            .comm-card-title{color:#1e0a3c !important;font-size:13px !important}
+            .comm-card-sub{color:#555 !important;font-size:11px !important}
+            .comm-table td,.comm-table th{color:#1e0a3c !important;border-color:#e5e5e5 !important;font-size:11.5px !important;padding:7px 10px !important}
+            .tr-l4 td{background:#fef3c7 !important;border-color:#fcd34d !important}
+            .level-dot{print-color-adjust:exact;-webkit-print-color-adjust:exact}
+            .spares-section{margin-top:16px}
+            .spares-grid{gap:12px}
+            .spares-card{background:#f0fdf4 !important;border:1.5px solid #86efac !important;padding:14px !important;break-inside:avoid}
+            .spares-rate{color:#1e0a3c !important;font-size:24px !important}
+            .points-section{margin-top:16px}
+            .points-grid{gap:12px}
+            .points-card{background:#fefce8 !important;border:1.5px solid #fcd34d !important;break-inside:avoid;padding:14px !important}
+            .points-amt{color:#1e0a3c !important;font-size:22px !important}
+            .level-legend{background:#f8f5ff !important;border:1.5px solid #c4b5fd !important;margin-top:16px;padding:12px 16px !important}
+            .legend-l4-box{background:#fef3c7 !important;border-color:#fcd34d !important}
+            .legend-text,.legend-text strong{color:#1e0a3c !important;font-size:11px !important}
+            .earn-val,.rate-val,.rate-pct{color:#1e0a3c !important}
+            .print-disclaimer{display:block !important}
+            @page{margin:14mm;size:A4}
+        }
+
+        /* SKELETON */
+        .skel{background:rgba(255,255,255,.08);border-radius:14px;animation:shimmer 1.6s ease-in-out infinite}
+        @keyframes shimmer{0%,100%{opacity:.5}50%{opacity:1}}
+        .err-state{text-align:center;padding:40px;color:rgba(255,255,255,.6)}
+        .err-state i{font-size:26px;color:#f87171;display:block;margin-bottom:10px}
+    </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="topnav">
+    <a href="/vgk/login" class="logo-wrap">
+        <div class="logo-icon"><i class="fas fa-crown"></i></div>
+        <div>
+            <div class="logo-text">VGK4U</div>
+            <div class="logo-sub">లాయల్టీ ప్రోగ్రామ్</div>
+        </div>
+    </a>
+    <div class="nav-btns">
+        <button class="btn-share no-print" onclick="openShare()"><i class="fas fa-share-alt"></i> షేర్</button>
+        <button class="btn-share no-print" onclick="openWAText()" style="background:rgba(245,158,11,.18);border-color:rgba(245,158,11,.4)" title="Share as Text Summary"><i class="fas fa-comment-alt" style="color:#fcd34d"></i> <span class="d-none d-sm-inline">Text</span></button>
+        <a href="/vgk/login?tab=signup" class="btn-nav btn-outline no-print"><i class="fas fa-user-plus"></i> Free గా Join అవ్వండి</a>
+        <a href="/vgk/login" class="btn-nav btn-solid no-print"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+    </div>
+</nav>
+
+
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-badge"><span class="live-dot"></span>VGK4U పార్టనర్ ప్రోగ్రామ్ — నిజమైన ప్రాజెక్టుల నుండి సంపాదించండి</div>
+    <h1>కస్టమర్లను కనెక్ట్ చేయండి.<br>నిజమైన ఇన్స్టాలేషన్ల నుండి సంపాదించండి.</h1>
+    <p class="hero-desc">
+        VGK4U మీకు Solar, EV, మరియు Insurance అవకాశాలను ISO 9001:2015 సర్టిఫైడ్ execution partners తో కనెక్ట్ చేస్తుంది.
+        Technical knowledge అవసరం లేదు — మీరు customer తీసుకొస్తే, execution team మిగిలిన అంతా చూసుకుంటుంది.
+        FREE గా start అవ్వండి మరియు వెంటనే <strong style="color:#fde68a">10,000 Welcome Points</strong> పొందండి.
+        పూర్తయిన ప్రతి project పై <strong id="heroMaxRate" style="color:#c4b5fd">5% వరకు commission</strong> సంపాదించండి — rates live గా verify చేయబడ్డాయి.
+    </p>
+    <!-- 10,000 Points highlight banner -->
+    <div style="display:inline-flex;align-items:center;gap:12px;background:linear-gradient(135deg,#059669,#16a34a);border:none;border-radius:14px;padding:12px 26px;margin:10px auto 4px;font-size:14px;font-weight:700;color:#fff;letter-spacing:.02em;box-shadow:0 4px 18px rgba(5,150,105,.45)">
+        <span style="font-size:22px">🎁</span>
+        <span>Register <strong>FREE</strong> అవ్వండి — వెంటనే <span style="font-size:20px;font-weight:900;letter-spacing:-0.5px">10,000</span> Loyalty Points సంపాదించండి!</span>
+    </div>
+    <!-- Referral bonus hero note -->
+    <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(124,58,237,.22);border:1.5px solid rgba(196,181,253,.45);border-radius:12px;padding:10px 20px;margin:8px auto 4px;font-size:13px;font-weight:600;color:#e9d5ff;flex-wrap:wrap;justify-content:center">
+        <span style="font-size:18px">🤝</span>
+        <span>Referral link ద్వారా join అవ్వండి → extra <strong style="color:#fde68a;font-size:15px">+5,000</strong> pts = <strong style="color:#fff">మొత్తం 15,000!</strong></span>
+        <span style="opacity:.65;font-size:11.5px">&nbsp;(మీరు activate చేసినప్పుడు referrer కి కూడా 5,000 pts వస్తాయి)</span>
+    </div>
+    <div class="hero-cta">
+        <a href="/vgk/login?tab=signup" class="btn-hero-p"><i class="fas fa-rocket"></i> Channel Partner గా Join అవ్వండి — 10,000 Points పొందండి</a>
+        <a href="/vgk/login" class="btn-hero-o"><i class="fas fa-sign-in-alt"></i> Sign In</a>
+    </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+    <div class="stat-chip"><div class="stat-val">4 Levels</div><div class="stat-label">Commission Levels</div></div>
+    <div class="stat-chip"><div class="stat-val" id="statCatCount">—</div><div class="stat-label">Project Categories</div></div>
+    <div class="stat-chip"><div class="stat-val" id="statMaxRate">—</div><div class="stat-label">గరిష్ట Commission/Deal</div></div>
+    <div class="stat-chip"><div class="stat-val">Live</div><div class="stat-label">Verified Rates</div></div>
+</div>
+
+<style>@media(max-width:540px){.vgk-meaning-grid{grid-template-columns:repeat(2,1fr)!important}.vgk-meaning-grid>div{border-right:none!important;border-bottom:1px solid rgba(255,255,255,.08)}}</style>
+<!-- ── VGK4U Meaning Section ── -->
+<div style="width:100%;max-width:900px;margin:0 auto 32px;padding:0 16px;box-sizing:border-box" class="no-print">
+    <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:20px;overflow:hidden;backdrop-filter:blur(10px)">
+        <!-- Header -->
+        <div style="text-align:center;padding:22px 16px 10px">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.15em;color:#c4b5fd;text-transform:uppercase;margin-bottom:4px">అర్థం</div>
+            <div style="font-size:26px;font-weight:900;color:#fff;letter-spacing:-0.5px">VGK<span style="color:#f97316">4</span>U</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:4px;font-style:italic">మెరుగైన రేపటి కోసం ఆవిష్కరణ</div>
+            <div style="width:48px;height:3px;background:linear-gradient(90deg,#f97316,#7c3aed);border-radius:2px;margin:8px auto 0"></div>
+        </div>
+        <!-- 4 Cards -->
+        <div class="vgk-meaning-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding:16px 12px 20px">
+            <!-- V -->
+            <div style="text-align:center;padding:12px 8px;border-right:1px solid rgba(255,255,255,.08)">
+                <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#3b82f6);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;box-shadow:0 4px 12px rgba(29,78,216,.4)"><i class="fas fa-gem" style="color:#fff;font-size:18px"></i></div>
+                <div style="font-size:28px;font-weight:900;color:#60a5fa;line-height:1">V</div>
+                <div style="font-size:10px;font-weight:800;color:#93c5fd;letter-spacing:.1em;text-transform:uppercase;margin:3px 0 8px">Value</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.5">Quality Products మరియు నమ్మకమైన Opportunities ద్వారా Real Value సృష్టిస్తాం.</div>
+            </div>
+            <!-- G -->
+            <div style="text-align:center;padding:12px 8px;border-right:1px solid rgba(255,255,255,.08)">
+                <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#15803d,#22c55e);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;box-shadow:0 4px 12px rgba(21,128,61,.4)"><i class="fas fa-chart-line" style="color:#fff;font-size:18px"></i></div>
+                <div style="font-size:28px;font-weight:900;color:#4ade80;line-height:1">G</div>
+                <div style="font-size:10px;font-weight:800;color:#86efac;letter-spacing:.1em;text-transform:uppercase;margin:3px 0 8px">Generation</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.5">Income generate చేయడానికి, Career build చేయడానికి, మెరుగైన Future సృష్టించడానికి మీకు power ఇస్తాం.</div>
+            </div>
+            <!-- K -->
+            <div style="text-align:center;padding:12px 8px;border-right:1px solid rgba(255,255,255,.08)">
+                <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#c2410c,#f97316);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;box-shadow:0 4px 12px rgba(194,65,12,.4)"><i class="fas fa-cogs" style="color:#fff;font-size:18px"></i></div>
+                <div style="font-size:28px;font-weight:900;color:#fb923c;line-height:1">K</div>
+                <div style="font-size:10px;font-weight:800;color:#fdba74;letter-spacing:.1em;text-transform:uppercase;margin:3px 0 8px">Kinetics</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.5">Sustainable Growth కోసం Speed, Innovation మరియు Action తో ముందుకు నడుస్తాం.</div>
+            </div>
+            <!-- 4U -->
+            <div style="text-align:center;padding:12px 8px">
+                <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6d28d9,#a855f7);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;box-shadow:0 4px 12px rgba(109,40,217,.4)"><i class="fas fa-users" style="color:#fff;font-size:16px"></i></div>
+                <div style="font-size:28px;font-weight:900;color:#c084fc;line-height:1">4U</div>
+                <div style="font-size:10px;font-weight:800;color:#d8b4fe;letter-spacing:.1em;text-transform:uppercase;margin:3px 0 8px">For You</div>
+                <div style="font-size:11px;color:rgba(255,255,255,.65);line-height:1.5">మేము చేసే ప్రతిదీ మీ కోసమే — మా Partner, మా Family, మా Future.</div>
+            </div>
+        </div>
+        <!-- Tagline bar -->
+        <div style="background:rgba(0,0,0,.3);border-top:1px solid rgba(255,255,255,.08);padding:14px 20px;text-align:center">
+            <span style="font-size:13px;font-weight:700;color:rgba(255,255,255,.6)">VGK4U అంటే </span>
+            <span style="font-size:14px;font-weight:900;color:#fff">"<span style="color:#60a5fa">V</span>alue <span style="color:#4ade80">G</span>eneration <span style="color:#fb923c">K</span>inetics <span style="color:#c084fc">For You</span>"</span>
+        </div>
+    </div>
+</div>
+
+<!-- PRINT-ONLY BRANDED HEADER -->
+<div class="print-header" style="display:none;align-items:center;justify-content:space-between;padding:0 0 12px;border-bottom:2px solid #1e0a3c;margin-bottom:18px">
+    <div>
+        <div style="font-size:18px;font-weight:900;color:#1e0a3c;letter-spacing:-0.5px">VGK4U Loyalty Program</div>
+        <div style="font-size:11px;color:#555;margin-top:2px">Channel Partner Referral Bonus Sheet &nbsp;·&nbsp; Mynt Real LLP / VGK Real Dreams</div>
+    </div>
+    <div style="text-align:right;font-size:10px;color:#888">
+        <div id="printDate"></div>
+        <div style="margin-top:2px">Rates are live &amp; subject to change without notice</div>
+    </div>
+</div>
+
+<!-- MAIN -->
+<div class="content-wrapper">
+
+    <!-- COMMISSION RATES & CALCULATOR -->
+    <div class="section-title">
+        <h2><span class="live-dot"></span>Commission Structure &amp; Live Earning Calculator</h2>
+        <p id="regBonusSub">
+            అన్ని commission rates live గా verify చేయబడ్డాయి — నేరుగా VGK4U admin config తో sync అయ్యాయి.
+            <strong style="color:#c4b5fd">Registered</strong> (free) వారికి L1 &amp; L4 వస్తాయి &nbsp;|&nbsp;
+            <strong style="color:#86efac">Activated</strong> (₹5,000 pkg) వారికి 4 levels అన్నీ వస్తాయి.
+            &nbsp;<span style="color:var(--amber);font-weight:700">★ L4 = Support System</span> — ప్రత్యేకంగా చూపబడింది.
+        </p>
+    </div>
+
+    <div class="cat-tabs" id="catTabs">
+        <div class="skel" style="height:40px;width:280px;border-radius:22px"></div>
+    </div>
+    <div id="commPanels">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="skel" style="height:240px"></div>
+            <div class="skel" style="height:240px"></div>
+        </div>
+    </div>
+
+    <!-- LEVEL LEGEND -->
+    <div class="level-legend">
+        <div class="legend-title"><i class="fas fa-info-circle" style="color:#a78bfa"></i>4 Referral Levels అర్థం చేసుకోండి</div>
+        <div class="legend-items">
+            <div class="legend-item">
+                <div class="legend-dot ld1">L1</div>
+                <div class="legend-text"><strong>Level 1 — Direct Source</strong><br>మీరు నేరుగా ఒకర్ని refer చేసి వారు deal close చేస్తే — ఇది మీ direct earning.</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot ld2">L2</div>
+                <div class="legend-text"><strong>Level 2 — Senior Partner</strong><br>మీరు deal close చేసినప్పుడు మీకు refer చేసిన వ్యక్తి (మీ senior) earn చేస్తారు.</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot ld3">L3</div>
+                <div class="legend-text"><strong>Level 3 — Extended Team</strong><br>Third-generation earning. Activated Channel Partners రెండు levels పైన వారి నుండి earn చేస్తారు.</div>
+            </div>
+        </div>
+        <!-- L4 highlighted separately -->
+        <div class="legend-l4-box" style="margin-top:14px">
+            <div class="legend-dot ld4">L4</div>
+            <div class="legend-text">
+                <strong>Level 4 — ★ SUPPORT SYSTEM</strong><br>
+                L4 అంటే deal handle/close చేయడంలో <em>source లేదా company</em> కి support చేసే వ్యక్తి — introduce చేసిన వ్యక్తి కాదు.
+                ఈ income <strong style="color:var(--amber)">2nd billing నుండి pay చేయబడుతుంది</strong>.
+                <em style="color:rgba(255,255,255,.75);font-size:11px"><strong style="color:var(--amber)">EV B2B Income:</strong> 1st Invoice — <strong style="color:#fff">3% Activated / 2% Registered</strong>. 2nd Invoice నుండి — <strong style="color:#fff">1% Activated / 0.5% Registered</strong> (lifetime, per billing cycle). Conditions వర్తిస్తాయి.</em>
+            </div>
+        </div>
+    </div>
+
+    <!-- EV SPARES SECTION -->
+    <div class="spares-section">
+        <div class="section-title">
+            <h2>⚡ EV Spares Marketplace — 25% వరకు Off</h2>
+            <p>VGK4U Channel Partners కి EV spare parts పై <strong style="color:#c4b5fd">25% వరకు exclusive discount</strong> దొరుకుతుంది — batteries, motors, controllers &amp; మరిన్ని. Checkout లో automatically apply అవుతుంది.</p>
+        </div>
+        <div style="background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(124,58,237,.18));border:1.5px solid rgba(86,239,154,.35);border-radius:20px;padding:28px 24px;text-align:center;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(34,197,94,.15),transparent 70%);pointer-events:none"></div>
+            <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,.15);border:1px solid rgba(86,239,154,.4);border-radius:24px;padding:5px 16px;margin-bottom:16px;">
+                <span style="font-size:12px;color:#86efac;font-weight:700;letter-spacing:.5px">⚡ అన్ని VGK4U MEMBERS కి</span>
+            </div>
+            <div style="font-size:72px;font-weight:900;line-height:1;color:#86efac;margin-bottom:6px;text-shadow:0 0 32px rgba(34,197,94,.4)">25<span style="font-size:40px">%</span></div>
+            <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:16px">EV Spare Parts పై Maximum Discount</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.72);line-height:1.7;max-width:480px;margin:0 auto 20px;">
+                మీ membership discount VGK4U Marketplace లో checkout లో directly apply అవుతుంది. Network పెంచుకున్న కొద్దీ referral bonuses ద్వారా savings కూడా పెరుగుతాయి.
+                <br><br>
+                <span style="color:#86efac;font-weight:700">ఉదాహరణ:</span> ₹50,000 EV spare parts order పై — full Channel Partner benefits తో <strong style="color:#86efac">₹12,500</strong> వరకు save చేయవచ్చు.
+            </div>
+            <a href="/ecom" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#059669,#047857);color:#fff;text-decoration:none;padding:12px 28px;border-radius:12px;font-weight:700;font-size:14px;box-shadow:0 4px 16px rgba(5,150,105,.35);">
+                <i class="fas fa-bolt"></i> ఇప్పుడే EV Spares కొనండి
+            </a>
+        </div>
+        <div style="margin-top:12px;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);border-radius:12px;padding:12px 16px;font-size:12.5px;color:rgba(255,255,255,.75);display:flex;align-items:flex-start;gap:8px">
+            <i class="fas fa-info-circle" style="color:#a78bfa;margin-top:2px;flex-shrink:0"></i>
+            <span>Discount rates <strong style="color:#c4b5fd">VGK4U Referral Bonus Table</strong> లో EV Spares category కింద కూడా చూపబడతాయి. Referral bonus earnings ప్రతి purchase పై effective savings ని మరింత పెంచుతాయి.</span>
+        </div>
+    </div>
+
+    <!-- POINTS SECTION -->
+    <div class="points-section" id="points-refill">
+        <div class="section-title">
+            <h2>🏆 VGK4U Points — Registered &amp; Activated</h2>
+            <p>Points మీ VGK4U wallet కి credit అవుతాయి మరియు Reference Bonus earnings &amp; benefits కోసం redeem చేయవచ్చు.</p>
+        </div>
+        <div class="points-grid">
+            <div class="points-card p-reg">
+                <div class="points-icon">🎁</div>
+                <div class="points-title">Registered Channel Partner</div>
+                <div class="points-amt">10,000</div>
+                <div style="font-size:12px;font-weight:700;color:#93c5fd;margin-bottom:8px">Welcome Points</div>
+                <div class="points-sub">
+                    Free registration పై వెంటనే <strong style="color:#fff">10,000 welcome points</strong> మీ VGK4U wallet కి credit అవుతాయి. Spares discounts &amp; మరిన్నింటికి use చేయవచ్చు.
+                </div>
+                <div class="points-badge">Registration లో Credit</div>
+            </div>
+            <div class="points-card p-act">
+                <div class="points-icon">⭐</div>
+                <div class="points-title">Activated Channel Partner</div>
+                <div class="points-amt">60,000</div>
+                <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:8px">10,000 Registration + 50,000 Activation</div>
+                <div class="points-sub">
+                    ₹5,000 activation package pay చేసి <strong style="color:#fff">60,000 total points</strong> పొందండి (10,000 registration + 50,000 activation) — పూర్తి 4-level Reference Bonus &amp; higher earning rates unlock అవుతాయి.
+                </div>
+                <div class="points-badge" style="background:rgba(245,158,11,.2);color:var(--amber)">Activation లో Credit</div>
+            </div>
+        </div>
+
+        <!-- REFERRAL SIGNUP BONUS — full-width banner card below the two cards -->
+        <div style="margin-top:16px;border-radius:16px;overflow:hidden;border:1.5px solid rgba(196,181,253,.45);background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(76,29,149,.28));backdrop-filter:blur(8px)">
+            <!-- Header -->
+            <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px">
+                <span style="font-size:22px">🤝</span>
+                <div>
+                    <div style="font-size:14px;font-weight:800;color:#e9d5ff">Referral Signup Bonus — Extra 5,000 Points</div>
+                    <div style="font-size:11.5px;color:rgba(255,255,255,.6);margin-top:2px">Activation జరిగినప్పుడు new Channel Partner మరియు referrer <em>ఇద్దరికీ</em> లభిస్తుంది</div>
+                </div>
+            </div>
+            <!-- Two columns: new member side + referrer side -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0">
+                <!-- New member (referee) -->
+                <div style="padding:16px 20px;border-right:1px solid rgba(255,255,255,.08)">
+                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#93c5fd;margin-bottom:10px"><i class="fas fa-user-plus me-1"></i>కొత్త Channel Partner (Joining)</div>
+                    <div style="font-size:28px;font-weight:900;color:#c4b5fd;margin-bottom:4px">+5,000 <span style="font-size:14px;font-weight:700;color:#a78bfa">pts</span></div>
+                    <div style="font-size:12px;color:rgba(255,255,255,.72);line-height:1.55;margin-bottom:10px">
+                        మీరు <strong style="color:#fff">referral link ద్వారా sign up</strong> అయినప్పుడు, standard 10,000 Welcome Points తో పాటు extra <strong style="color:#fde68a">5,000 Referral Bonus points</strong> పొందుతారు.
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+                            <i class="fas fa-check-circle" style="color:#86efac;flex-shrink:0"></i>
+                            <span><strong style="color:#fff">10,000</strong> Welcome pts — registration లో</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+                            <i class="fas fa-check-circle" style="color:#86efac;flex-shrink:0"></i>
+                            <span><strong style="color:#fde68a">+5,000</strong> Referral pts — link ద్వారా signup చేసినప్పుడు</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;margin-top:4px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px">
+                            <i class="fas fa-trophy" style="color:#fde68a;flex-shrink:0"></i>
+                            <span style="color:#fde68a">= మొత్తం 15,000 pts!</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Referrer side -->
+                <div style="padding:16px 20px">
+                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#86efac;margin-bottom:10px"><i class="fas fa-share-alt me-1"></i>Referrer (మీరు — VGK Channel Partner)</div>
+                    <div style="font-size:28px;font-weight:900;color:#86efac;margin-bottom:4px">+5,000 <span style="font-size:14px;font-weight:700;color:#4ade80">pts</span></div>
+                    <div style="font-size:12px;color:rgba(255,255,255,.72);line-height:1.55;margin-bottom:10px">
+                        మీ <strong style="color:#fff">referral link ద్వారా</strong> ఎవరైనా sign up అయి <strong style="color:#fde68a">account activate</strong> చేసుకుంటే, మీ wallet కి <strong style="color:#86efac">5,000 Referral Bonus points</strong> credit అవుతాయి.
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+                            <i class="fas fa-link" style="color:#93c5fd;flex-shrink:0"></i>
+                            <span>మీ personal referral link share చేయండి</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+                            <i class="fas fa-user-check" style="color:#93c5fd;flex-shrink:0"></i>
+                            <span>వారు sign up అయి membership activate చేసుకుంటారు</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+                            <i class="fas fa-bolt" style="color:#fde68a;flex-shrink:0"></i>
+                            <span><strong style="color:#fde68a">వారి activation</strong> పై automatically trigger అవుతుంది</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;margin-top:4px;border-top:1px solid rgba(255,255,255,.1);padding-top:8px">
+                            <i class="fas fa-wallet" style="color:#86efac;flex-shrink:0"></i>
+                            <span style="color:#86efac">= 5,000 pts → మీ wallet</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Note bar -->
+            <div style="padding:10px 20px;background:rgba(0,0,0,.15);border-top:1px dashed rgba(255,255,255,.12);font-size:11.5px;color:rgba(255,255,255,.65);display:flex;align-items:flex-start;gap:8px">
+                <i class="fas fa-info-circle" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+                <span>కొత్త <strong style="color:#fde68a">Channel Partner</strong> కి 5,000 bonus signup లోనే credit అవుతుంది. <strong style="color:#86efac">Referrer</strong> కి 5,000 bonus కేవలం new Channel Partner <strong style="color:#fff">activation complete</strong> చేసినప్పుడే trigger అవుతుంది (₹5,000 activation package కొనుగోలు). 1 PT = ₹1 విలువ.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUTO-REFILL BENEFIT BANNER -->
+    <div style="margin-top:24px;border-radius:18px;overflow:hidden;border:2px solid rgba(196,181,253,.55);background:linear-gradient(135deg,rgba(109,40,217,.22),rgba(76,29,149,.35),rgba(124,58,237,.18));backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(109,40,217,.25)">
+        <div style="padding:18px 24px;display:flex;align-items:center;gap:14px;border-bottom:1px solid rgba(255,255,255,.1)">
+            <span style="font-size:34px;flex-shrink:0">🔄</span>
+            <div>
+                <div style="font-size:16px;font-weight:900;color:#e9d5ff;letter-spacing:.3px">Points Refill (×2) — Activated Channel Partners కి Auto-Refill</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:3px">180 రోజుల్లో full balance వాడుకోండి → వెంటనే 50,000 మరిన్ని పొందండి. మొత్తం 2 refills వరకు.</div>
+            </div>
+            <div style="margin-left:auto;flex-shrink:0;background:rgba(196,181,253,.18);border:1.5px solid rgba(196,181,253,.4);border-radius:10px;padding:8px 14px;text-align:center;min-width:80px">
+                <div style="font-size:22px;font-weight:900;color:#c4b5fd">50K</div>
+                <div style="font-size:10px;color:rgba(255,255,255,.55);font-weight:700">AUTO REFILL</div>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0">
+            <div style="padding:16px 20px;border-right:1px solid rgba(255,255,255,.08);text-align:center">
+                <div style="font-size:22px;margin-bottom:6px">💳</div>
+                <div style="font-size:12px;font-weight:800;color:#fde68a;margin-bottom:4px">Step 1</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.75);line-height:1.5">Purchases లేదా benefits పై మీ పూర్తి points balance (60,000 pts అన్నీ) వాడుకోండి</div>
+            </div>
+            <div style="padding:16px 20px;border-right:1px solid rgba(255,255,255,.08);text-align:center">
+                <div style="font-size:22px;margin-bottom:6px">⏱️</div>
+                <div style="font-size:12px;font-weight:800;color:#fde68a;margin-bottom:4px">Step 2</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.75);line-height:1.5">మీ last major credit (activation లేదా last refill) నుండి 180 రోజుల్లో చేయండి</div>
+            </div>
+            <div style="padding:16px 20px;text-align:center">
+                <div style="font-size:22px;margin-bottom:6px">🚀</div>
+                <div style="font-size:12px;font-weight:800;color:#86efac;margin-bottom:4px">Instant Refill</div>
+                <div style="font-size:12px;color:rgba(255,255,255,.75);line-height:1.5">మీ wallet కి <strong style="color:#fff">50,000 points</strong> auto-credit అవుతాయి. మొత్తం 2 refills వరకు.</div>
+            </div>
+        </div>
+        <div style="padding:12px 20px;background:rgba(0,0,0,.18);border-top:1px dashed rgba(255,255,255,.12);font-size:11px;color:rgba(255,255,255,.5);display:flex;align-items:flex-start;gap:8px">
+            <i class="fas fa-info-circle" style="color:#a78bfa;flex-shrink:0;margin-top:2px"></i>
+            <span>*<strong style="color:#fde68a">Paid Activated Channel Partners</strong> (₹5,000 activation package) కి మాత్రమే. Points కి <strong style="color:#fff">expiry లేదు</strong> — 180 రోజుల్లో fully use చేయకపోతే, remaining balance retain అవుతుంది కానీ balance zero అయ్యేంత వరకు auto-refill trigger కాదు. Maximum 2 auto-refills per Channel Partner. 1 PT = ₹1 విలువ. Cash కి redeem చేయడానికి వీలు లేదు.</span>
+        </div>
+    </div>
+
+    <!-- MEMBERSHIP COMPARISON -->
+    <div class="diff-section">
+        <div class="section-title">
+            <h2>Partner (Free) vs Activated Partner</h2>
+            <p>Free గా register అవ్వండి మరియు వెంటనే earn చేయడం start అవ్వండి — Activate అయి పూర్తి commission potential unlock చేయండి.</p>
+        </div>
+        <div class="diff-grid">
+            <div class="diff-card d-reg">
+                <div class="diff-icon"><i class="fas fa-id-card"></i></div>
+                <div class="diff-title">Partner (Free)</div>
+                <div class="diff-sub" id="regDiffSub">Free గా start అవ్వండి. మీరు introduce చేసిన ప్రతి completed project పై commission సంపాదించండి.</div>
+                <ul class="diff-list">
+                    <li><i class="fas fa-check-circle"></i> Join చేసినప్పుడు 10,000 Welcome Points</li>
+                    <li><i class="fas fa-check-circle" style="color:#fde68a"></i> <span>Referral link ద్వారా join అయితే +5,000 bonus pts <strong style="color:#fde68a">(= మొత్తం 15,000!)</strong></span></li>
+                    <li id="regBonusBullet"><i class="fas fa-check-circle"></i> మీరు introduce చేసిన projects పై L1 Commission</li>
+                    <li><i class="fas fa-check-circle"></i> మీరు close చేయడంలో help చేసిన deals పై L4 Support Commission</li>
+                    <li><i class="fas fa-check-circle"></i> EV Spares marketplace orders పై 2%</li>
+                    <li><i class="fas fa-check-circle"></i> VGK4U partner portal కి access</li>
+                </ul>
+            </div>
+            <div class="diff-card d-act">
+                <div class="diff-icon"><i class="fas fa-star"></i></div>
+                <div class="diff-title">Activated Partner</div>
+                <div class="diff-sub">ఒకసారి మాత్రమే ₹5,000 package. అన్ని levels లో పూర్తి commission access + 60,000 total points.</div>
+                <ul class="diff-list">
+                    <li><i class="fas fa-check-circle"></i> 60,000 Total Points (10,000 registration + 50,000 activation)</li>
+                    <li><i class="fas fa-check-circle"></i> 4 commission levels అన్నింటిలో earn చేయండి (L1–L4)</li>
+                    <li><i class="fas fa-check-circle"></i> Higher L1 rates — ప్రతి project పై maximum earning</li>
+                    <li><i class="fas fa-check-circle"></i> EV Spares marketplace orders పై 3%</li>
+                    <li><i class="fas fa-check-circle"></i> Priority support, bonuses &amp; coupon access</li>
+                    <li style="color:#c4b5fd"><i class="fas fa-sync" style="color:#a78bfa"></i> <strong style="color:#e9d5ff">Points Refill (×2)*</strong> — 180 రోజుల్లో full balance use చేసిన ప్రతిసారీ 50,000 pts Auto-Refill</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="hiw-section">
+        <div class="section-title">
+            <h2>ఇది ఎలా పని చేస్తుంది</h2>
+            <p>Simple గా, transparent గా, మొదటి రోజు నుండే rewarding.</p>
+        </div>
+        <div class="hiw-steps">
+            <div class="hiw-step">
+                <div class="step-num">1</div><div class="step-icon">📝</div>
+                <div class="step-title">Partner గా Register అవ్వండి</div>
+                <div class="step-desc">ఖర్చు లేకుండా మీ account register చేయండి. వెంటనే <strong style="color:#fde68a">10,000 welcome points</strong> పొందండి — referral link ద్వారా join అయితే <strong style="color:#c4b5fd">15,000</strong>.</div>
+            </div>
+            <div class="hiw-step">
+                <div class="step-num">2</div><div class="step-icon">🤝</div>
+                <div class="step-title">Customer లను Identify చేయండి</div>
+                <div class="step-desc">Solar, EV, లేదా Insurance పై ఆసక్తి ఉన్న customers ను మా certified execution team తో కనెక్ట్ చేయండి. వారు మీ link ద్వారా sign up చేసినప్పుడు — మీకు automatically <strong style="color:#86efac">+2,000 pts</strong> వస్తాయి.</div>
+            </div>
+            <div class="hiw-step">
+                <div class="step-num">3</div><div class="step-icon">🏗️</div>
+                <div class="step-title">Project Execute అవుతుంది</div>
+                <div class="step-desc">మా ISO 9001:2015 certified execution partners site inspection, design, installation, మరియు completion అన్నీ చూసుకుంటారు — మీరు ప్రతి step లో update పొందుతారు.</div>
+            </div>
+            <div class="hiw-step">
+                <div class="step-num">4</div><div class="step-icon">💰</div>
+                <div class="step-title">Commission సంపాదించండి</div>
+                <div class="step-desc">Project complete అయినప్పుడు, published rates ప్రకారం మీ commission credit అవుతుంది. మీ partner dashboard లో అన్ని earnings live గా track చేయండి.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUPPORT FUNCTION NOTICE -->
+    <div class="no-print" style="margin-bottom:28px">
+        <div style="background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(245,158,11,.08));border:1.5px solid rgba(245,158,11,.5);border-radius:16px;padding:16px 20px;display:flex;align-items:flex-start;gap:14px">
+            <div style="background:rgba(245,158,11,.28);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+                <i class="fas fa-star" style="color:#f59e0b;font-size:18px"></i>
+            </div>
+            <div>
+                <div style="font-size:14px;font-weight:800;color:#fcd34d;margin-bottom:5px">మీ Team ని Support చేయండి — Earnings ని Maximize చేయండి</div>
+                <div style="font-size:12.5px;color:rgba(255,255,255,.82);line-height:1.65">
+                    మీరు ఒక deal పై actively <strong style="color:#fcd34d">support confirm</strong> చేసినప్పుడు, ఆ deal కి మీ <strong style="color:#86efac">full commission share</strong> లభిస్తుంది.
+                    Confirm చేయని deals కి deal terms ప్రకారం <strong style="color:#fcd34d">partial commission</strong> వస్తుంది.
+                    <span style="display:block;margin-top:7px;font-size:11.5px;color:rgba(255,255,255,.72)">
+                        <i class="fas fa-users" style="margin-right:4px;color:#fcd34d"></i>
+                        <strong style="color:#fcd34d">Senior (L2)</strong> మరియు <strong style="color:#fcd34d">Extended (L3)</strong> support members కి మాత్రమే వర్తిస్తుంది.
+                        ప్రతి deal పై commission terms assess చేసి నిర్ణయించే హక్కు <strong style="color:#86efac">Source</strong> కి ఉంటుంది.
+                    </span>
+                    <span style="display:block;margin-top:5px;font-size:11px;color:rgba(255,255,255,.48)">
+                        <i class="fas fa-info-circle" style="margin-right:4px"></i>
+                        మీ dashboard → Leads tab ద్వారా support confirm చేయండి. Early confirmation మీ full earning ని lock చేస్తుంది.
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DC_CP_001: Join Us as Channel Partners Highlight (Telugu) -->
+    <div style="margin-bottom:28px">
+        <div style="background:linear-gradient(135deg,#1e0a3c 0%,#3b0d6e 50%,#0d2e1a 100%);border:2px solid rgba(196,181,253,.45);border-radius:20px;padding:30px 28px 26px;text-align:center;box-shadow:0 8px 32px rgba(124,58,237,.35);position:relative;overflow:hidden">
+            <div style="position:absolute;top:-30px;right:-30px;width:130px;height:130px;border-radius:50%;background:rgba(124,58,237,.12);pointer-events:none"></div>
+            <div style="position:absolute;bottom:-20px;left:-20px;width:90px;height:90px;border-radius:50%;background:rgba(34,197,94,.08);pointer-events:none"></div>
+            <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.45);border-radius:30px;padding:5px 16px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:#86efac;margin-bottom:14px">
+                <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.25)"></span>
+                ఇప్పుడే చేరండి
+            </div>
+            <div style="font-size:26px;font-weight:900;color:#fff;letter-spacing:-.3px;margin-bottom:8px;line-height:1.2">Join Us as <span style="color:#c4b5fd">Channel Partners</span></div>
+            <div style="font-size:13px;color:rgba(255,255,255,.75);max-width:540px;margin:0 auto 20px;line-height:1.65">
+                Technical skill అవసరం లేదు. మీరు customer తీసుకొస్తే — మా certified team మిగతా అన్నీ చూసుకుంటుంది. <strong style="color:#fde68a">FREE</strong> గా join అవ్వి <strong style="color:#fde68a">10,000 Welcome Points</strong> వెంటనే పొందండి.
+            </div>
+            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+                <a href="/vgk/login?tab=signup" style="padding:12px 28px;background:linear-gradient(135deg,#7c3aed,#4338ca);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 20px rgba(124,58,237,.5)">
+                    <i class="fas fa-rocket"></i> Channel Partner అవ్వండి — FREE
+                </a>
+                <a href="/vgk/login" style="padding:12px 24px;border:2px solid rgba(196,181,253,.5);background:rgba(255,255,255,.07);color:#e9d5ff;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px">
+                    <i class="fas fa-sign-in-alt"></i> ఇప్పటికే Channel Partner?
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="bottom-cta">
+        <h2>Partner Income Build చేయడం Start చేయండి</h2>
+        <p>VGK4U లో join అవ్వి real Solar మరియు EV projects నుండి commission సంపాదించండి. మీరు customer తీసుకొస్తే — మా ISO 9001:2015 certified partner MyntReal execution చూసుకుంటుంది. Technical skill అవసరం లేదు.</p>
+        <div class="cta-btns">
+            <a href="/vgk/login?tab=signup" class="btn-cta-m"><i class="fas fa-rocket" style="color:var(--p7)"></i> ఇప్పుడే VGK4U Join అవ్వండి</a>
+            <a href="/vgk/login" class="btn-cta-s"><i class="fas fa-sign-in-alt"></i> Already Channel Partner గా ఉన్నారా? Sign In</a>
+            <a href="https://www.youtube.com/@VGK4YOU" target="_blank" rel="noopener noreferrer"
+               style="padding:13px 26px;border-radius:10px;font-size:14px;font-weight:700;border:2px solid rgba(255,68,68,.55);color:#f87171;background:rgba(255,0,0,.1);text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:all .18s;backdrop-filter:blur(6px)"
+               onmouseover="this.style.background='rgba(255,0,0,.2)';this.style.borderColor='rgba(255,68,68,.8)'" onmouseout="this.style.background='rgba(255,0,0,.1)';this.style.borderColor='rgba(255,68,68,.55)'">
+                <i class="fab fa-youtube" style="font-size:18px;color:#ff4444"></i> YouTube లో చూడండి
+            </a>
+        </div>
+    </div>
+
+</div><!-- /content-wrapper -->
+
+<div class="print-disclaimer" style="display:none;margin:28px 0 8px 0;padding:12px 16px;border-top:2px solid #1e0a3c;font-size:11px;color:#555;line-height:1.6">
+    <strong>VGK4U Loyalty Program — Channel Partner Offers</strong> &nbsp;|&nbsp; vgk4u.com / mnrteam.com<br>
+    * Conditions apply. Referral bonus rates, structures, and offers can be modified at any time without prior notice. All rates shown are as configured in the VGK4U admin system at the time of printing. For the latest rates, visit the live offer page. &nbsp;|&nbsp; © VGK4U / Mynt Real LLP. All rights reserved.
+</div>
+
+<div class="page-footer">
+    Referral bonus rates live గా ఉన్నాయి — VGK4U admin నిర్వహిస్తున్నారు. Rates మారవచ్చు — ఎప్పుడూ ఈ page ని refer చేయండి.
+    &nbsp;|&nbsp;<a href="/vgk/login">Channel Partner Login</a>&nbsp;|&nbsp;<a href="/ecom" target="_blank">EV Marketplace</a>&nbsp;|&nbsp;<a href="https://www.youtube.com/@VGK4YOU" target="_blank" rel="noopener noreferrer" style="color:#f87171"><i class="fab fa-youtube" style="margin-right:4px"></i>YouTube</a>
+    <br style="margin-bottom:6px">
+    <span style="font-size:11px;opacity:.55">* Conditions apply. Referral bonus rates &amp; offers ముందస్తు నోటీసు లేకుండా ఎప్పుడైనా మార్చబడవచ్చు. &nbsp;|&nbsp; © VGK4U / Mynt Real LLP</span>
+</div>
+
+<script>
+const CAT_DEFAULTS = { 'EV B2B':100000, 'EV B2C':100000, 'Solar':240000 };
+
+function numFmt(v){ return '\u20b9'+Math.round(v).toLocaleString('en-IN'); }
+function escHtml(s){ const d=document.createElement('div');d.textContent=s||'';return d.innerHTML; }
+
+/* Format a single commission rate — handles both PCT and AMOUNT modes */
+function _fmtRate(pct, type, amt) {
+    if ((type || 'PCT') === 'AMOUNT') return amt > 0 ? '\u20b9' + Number(amt).toLocaleString('en-IN') + ' flat' : '0';
+    return pct + '%';
+}
+
+/* Build tbody rows — Rate + \u20b9 Example merged in one table */
+/* Return array of level numbers (1-4) that have a non-zero rate in cfg */
+function _configuredLevels(cfg) {
+    if (!cfg) return [1, 4];
+    return [1, 2, 3, 4].filter(n => {
+        const pct = cfg['level' + n + '_pct'];
+        const amt = cfg['level' + n + '_amt'];
+        return (pct > 0) || (amt > 0);
+    });
+}
+
+/* Format an array like [1,2,3,4] → "L1, L2, L3 & L4" */
+function _levelStr(levels) {
+    if (!levels || levels.length === 0) return 'L1 & L4';
+    const strs = levels.map(n => 'L' + n);
+    if (strs.length === 1) return strs[0];
+    return strs.slice(0, -1).join(', ') + ' & ' + strs[strs.length - 1];
+}
+
+function buildRows(cfg, dealAmt) {
+    if (!cfg) return '<tr><td colspan="3" style="text-align:center;color:rgba(255,255,255,.4);font-size:12px;padding:14px">Configure చేయబడలేదు</td></tr>';
+    const LEVELS = [
+        {n:1, dot:'ld1', role:'Source (Direct)',       pct:cfg.level1_pct, type:cfg.level1_type||'PCT', amt:cfg.level1_amt||0},
+        {n:2, dot:'ld2', role:'Senior Partner',        pct:cfg.level2_pct, type:cfg.level2_type||'PCT', amt:cfg.level2_amt||0},
+        {n:3, dot:'ld3', role:'Extended Team',         pct:cfg.level3_pct, type:cfg.level3_type||'PCT', amt:cfg.level3_amt||0},
+        {n:4, dot:'ld4', role:'Support System \u2605', pct:cfg.level4_pct, type:cfg.level4_type||'PCT', amt:cfg.level4_amt||0},
+    ];
+    let total = 0;
+    const rows = LEVELS.map(l => {
+        const isAmt = l.type === 'AMOUNT';
+        const earn  = isAmt ? l.amt : dealAmt * (l.pct / 100);
+        const hasVal = isAmt ? l.amt > 0 : l.pct > 0;
+        total += earn;
+        const isL4 = l.n === 4;
+        const eqPct   = (isAmt && l.amt > 0 && dealAmt > 0) ? (l.amt / dealAmt * 100) : 0;
+        const eqPctStr = eqPct > 0 ? `<div style="font-size:10px;color:rgba(255,255,255,.45);font-weight:600;margin-top:2px">&#x2248; ${+eqPct.toFixed(2)}% of deal</div>` : '';
+        const rateStr = isAmt
+            ? (l.amt > 0 ? '\u20b9' + Number(l.amt).toLocaleString('en-IN') + ' flat/deal' + eqPctStr : '<span style="color:rgba(255,255,255,.3)">\u2014</span>')
+            : (l.pct > 0 ? (+l.pct.toFixed(2)) + '%' : '<span style="color:rgba(255,255,255,.3)">\u2014</span>');
+        const earnHtml = earn > 0
+            ? `<span style="font-weight:800;color:${isL4?'var(--amber)':'#e9d5ff'}">${numFmt(earn)}</span>`
+            : '<span style="color:rgba(255,255,255,.28)">\u2014</span>';
+        const supportTag = isL4 ? ' <span class="support-tag"><i class="fas fa-star" style="font-size:8px"></i> SUPPORT</span>' : '';
+        return `<tr class="${isL4?'tr-l4':''}">
+            <td><div style="display:flex;align-items:center">
+                <div class="level-dot ${l.dot}">L${l.n}</div>
+                <span style="font-size:12.5px;font-weight:700;color:${isL4?'var(--amber)':'#fff'}">${l.role}${supportTag}</span>
+            </div></td>
+            <td style="font-size:13px;font-weight:700;color:${hasVal?'#e9d5ff':'rgba(255,255,255,.3)'}">${rateStr}</td>
+            <td>${earnHtml}</td>
+        </tr>`;
+    }).join('');
+    const totalRow = `<tr style="border-top:2px solid rgba(255,255,255,.15)">
+        <td colspan="2" style="font-size:12px;font-weight:700;color:rgba(255,255,255,.6)">మొత్తం Earning Capacity</td>
+        <td style="font-size:13px;font-weight:900;color:#86efac">${numFmt(total)}</td>
+    </tr>`;
+    return rows + totalRow;
+}
+
+/* Build a single rate card (Registered or Activated) with merged Rate + Example columns */
+function buildCard(cat, type, dealAmt, pid) {
+    const cfg        = type==='reg' ? cat.registered : cat.activated;
+    const badgeClass = type==='reg' ? 'badge-reg' : 'badge-act';
+    const badgeText  = type==='reg' ? '\ud83d\udd35 Registered' : '\ud83d\udfe2 Activated';
+    const regLvls  = type==='reg' ? _configuredLevels(cfg) : [];
+    const subtitle   = type==='reg' ? 'Free — ' + _levelStr(regLvls) + ' Project Commission' : '₹5,000 Activated — పూర్తి 4-level commission';
+    return `<div class="comm-card">
+        <div class="comm-card-header">
+            <span class="comm-badge ${badgeClass}">${badgeText}</span>
+            <div style="flex:1">
+                <div class="comm-card-title">${escHtml(cat.category_name)}</div>
+                <div class="comm-card-sub">${subtitle}</div>
+            </div>
+        </div>
+        <table class="comm-table">
+            <thead><tr><th>Referral Level &amp; పాత్ర</th><th>Rate</th><th>\u20b9 ఉదాహరణ</th></tr></thead>
+            <tbody id="tbody_${type}_${pid}">${buildRows(cfg, dealAmt)}</tbody>
+        </table>
+    </div>`;
+}
+
+/* Recalculate all earning cells when deal amount changes */
+function recalc(pid, catData) {
+    const inp = document.getElementById('dealAmt_'+pid);
+    if (!inp) return;
+    const amt = parseFloat(inp.value.replace(/[^0-9.]/g,'')) || 0;
+    document.getElementById('tbody_reg_'+pid).innerHTML = buildRows(catData.registered, amt);
+    document.getElementById('tbody_act_'+pid).innerHTML = buildRows(catData.activated,  amt);
+    document.getElementById('sum_reg_'+pid).innerHTML   = buildSummary(catData.registered, amt);
+    document.getElementById('sum_act_'+pid).innerHTML   = buildSummary(catData.activated,  amt);
+}
+
+function buildSummary(cfg, dealAmt) {
+    if (!cfg) return '';
+    const src  = dealAmt*(cfg.level1_pct/100);
+    const supp = dealAmt*(cfg.level4_pct/100);
+    const tot  = dealAmt*((cfg.level1_pct+cfg.level2_pct+cfg.level3_pct+cfg.level4_pct)/100);
+    return `
+        <div class="sum-chip source-chip">
+            <div class="sum-icon">\ud83c\udfaf</div>
+            <div><div class="sum-label">Source Earning (L1)</div><div class="sum-val source-val">${numFmt(src)}</div><div class="sum-note">మీ direct referral bonus</div></div>
+        </div>
+        <div class="sum-chip support-chip">
+            <div class="sum-icon">\u2605</div>
+            <div><div class="sum-label" style="color:var(--amber)">Support Earning (L4)</div><div class="sum-val support-val">${numFmt(supp)}</div><div class="sum-note">2nd billing నుండి Lifetime</div></div>
+        </div>
+        <div class="sum-chip total-chip">
+            <div class="sum-icon">\ud83d\udcb0</div>
+            <div><div class="sum-label">Total Capacity</div><div class="sum-val total-val">${numFmt(tot)}</div><div class="sum-note">4 levels అన్నీ కలిపి</div></div>
+        </div>`;
+}
+
+/* Build the full panel — deal input above, merged cards, summaries below */
+function buildPanel(cat, idx) {
+    const defaultAmt = CAT_DEFAULTS[cat.category_name] || 100000;
+    const pid = 'p'+idx;
+    const reg = cat.registered;
+    const act = cat.activated;
+    return `
+        <div class="calc-row" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <i class="fas fa-calculator" style="color:#a78bfa;font-size:13px"></i>
+            <span style="font-size:12.5px;font-weight:700;color:rgba(255,255,255,.6)">ఉదాహరణ deal value (\u20b9)</span>
+            <input class="deal-input" id="dealAmt_${pid}" type="text" value="${defaultAmt.toLocaleString('en-IN')}"
+                oninput="this.value=this.value.replace(/[^0-9]/g,'');recalc('${pid}',window._vgkCats[${idx}])"
+                onblur="if(!this.value||this.value==='0')this.value='${defaultAmt}';recalc('${pid}',window._vgkCats[${idx}])"
+                placeholder="1,00,000">
+        </div>
+        <div class="commission-grid">
+            ${buildCard(cat,'reg',defaultAmt,pid)}
+            ${buildCard(cat,'act',defaultAmt,pid)}
+        </div>
+        ${cat.category_name === 'Solar' ? `
+        <div style="margin-top:12px;background:rgba(34,197,94,.06);border:1.5px solid rgba(34,197,94,.35);border-radius:14px;overflow:hidden">
+            <div style="padding:12px 16px 8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid rgba(34,197,94,.2)">
+                <i class="fas fa-check-circle" style="color:#86efac;font-size:15px"></i>
+                <span style="font-size:13.5px;font-weight:800;color:#86efac">Solar — CIBIL Validation Advance</span>
+                <span style="margin-left:auto;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.35);border-radius:20px;padding:3px 10px;font-size:10.5px;font-weight:800;color:#86efac">Solar మాత్రమే</span>
+            </div>
+            <div style="padding:12px 16px;display:flex;align-items:flex-start;gap:14px">
+                <div style="flex-shrink:0;text-align:center">
+                    <div style="font-size:28px;font-weight:900;color:#86efac">₹1,000</div>
+                    <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Advance Earning</div>
+                </div>
+                <div style="font-size:12.5px;color:rgba(255,255,255,.8);line-height:1.7">Solar <strong style="color:#fff">application submit అయిన తర్వాత</strong> మరియు customer యొక్క <strong style="color:#fff">CIBIL validate అయిన తర్వాత</strong>, ₹1,000 మీ <strong style="color:#fde68a">earnings advance గా release</strong> చేయబడుతుంది. Deal complete అయినప్పుడు ఈ మొత్తం మీ project commission నుండి adjust చేయబడుతుంది — మీ పూర్తి commission అలాగే ఉంటుంది.</div>
+            </div>
+        </div>` : ''}
+        ${cat.category_name === 'EV B2B' ? `
+        <div style="margin-top:12px;background:rgba(245,158,11,.06);border:1.5px solid var(--amber-border);border-radius:14px;overflow:hidden">
+            <div style="padding:12px 16px 8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--amber-border)">
+                <i class="fas fa-infinity" style="color:var(--amber);font-size:15px"></i>
+                <span style="font-size:13.5px;font-weight:800;color:var(--amber)">EV B2B — Tiered Commission Structure</span>
+                <span style="margin-left:auto;background:var(--amber-bg);border:1px solid var(--amber-border);border-radius:20px;padding:3px 10px;font-size:10.5px;font-weight:800;color:var(--amber)">EV B2B Only</span>
+            </div>
+            <div style="padding:12px 16px">
+                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">🧾 1st Invoice (First billing cycle)</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+                    <div style="background:rgba(96,165,250,.08);border:1px solid rgba(96,165,250,.3);border-radius:10px;padding:12px">
+                        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#93c5fd;margin-bottom:4px">🔵 Registered</div>
+                        <div style="font-size:26px;font-weight:900;color:#93c5fd">2%</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:3px">1st invoice value పై</div>
+                    </div>
+                    <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px">
+                        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#86efac;margin-bottom:4px">🟢 Activated</div>
+                        <div style="font-size:26px;font-weight:900;color:#86efac">3%</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:3px">1st invoice value పై</div>
+                    </div>
+                </div>
+                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">♻️ 2nd Invoice నుండి (Lifetime · Repeat billing)</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                    <div style="background:rgba(96,165,250,.05);border:1px solid rgba(96,165,250,.2);border-radius:10px;padding:12px">
+                        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#93c5fd;margin-bottom:4px">🔵 Registered</div>
+                        <div style="font-size:26px;font-weight:900;color:#93c5fd">0.5%</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:3px">Lifetime · Per billing cycle</div>
+                    </div>
+                    <div style="background:rgba(34,197,94,.05);border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px">
+                        <div style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#86efac;margin-bottom:4px">🟢 Activated</div>
+                        <div style="font-size:26px;font-weight:900;color:#86efac">1%</div>
+                        <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:3px">Lifetime · Per billing cycle</div>
+                    </div>
+                </div>
+                <div style="font-size:12px;color:rgba(255,255,255,.7);line-height:1.6">
+                    <strong style="color:#fff">ఇది ఎలా పని చేస్తుంది:</strong> EV B2B లో, 1st invoice పై higher rate earn చేస్తారు, తర్వాత అదే client నుండి వచ్చే repeat orders పై <strong>lifetime referral bonus</strong> earn చేస్తారు — 2nd billing cycle నుండి, orders continue అయినంత కాలం.
+                </div>
+                <div style="margin-top:10px;background:rgba(0,0,0,.2);border-radius:8px;padding:10px 12px;font-size:11.5px;color:rgba(255,255,255,.65);display:flex;align-items:flex-start;gap:8px">
+                    <i class="fas fa-exclamation-circle" style="color:var(--amber);margin-top:2px;flex-shrink:0"></i>
+                    <span><strong style="color:var(--amber)">Conditions apply:</strong> Lifetime income కి eligible గా ఉండాలంటే <strong style="color:#fff">ప్రతి 2 నెలలకు minimum 5 vehicles order</strong> చేయాలి. Order frequency ఈ threshold కంటే తగ్గిపోతే, lifetime income pause అవ్వవచ్చు.</span>
+                </div>
+            </div>
+        </div>` : ''}
+    `;
+}
+
+/* ── SHARE FUNCTIONS ── */
+function openShare(){
+    const signupUrl = window.location.origin + '/vgk/login?tab=signup';
+    const _heroRateTxt = (document.getElementById('heroMaxRate') || {}).textContent || '5% per deal';
+    const text = `VGK4U Loyalty Program join అవ్వండి మరియు EV vehicles, Solar energy & మరిన్నింటిపై referral bonuses earn చేయండి — 4 referral levels లో ${_heroRateTxt} వరకు! నా referral link ద్వారా join అయితే extra +5,000 bonus points కూడా పొందుతారు!`;
+    if (window.MyntShareModal) {
+        MyntShareModal.show({
+            url: signupUrl,
+            title: 'VGK4U Channel Partner Offers',
+            subtitle: 'Join as Channel Partner — Get 10,000 pts + 5,000 Referral Bonus',
+            text: text,
+            type: 'referral',
+            defaultReferrerId: 'VGK07102207',
+            composeEnabled: true,
+            langSupport: true,
+            showReferrer: true
+        });
+    } else {
+        navigator.clipboard.writeText(signupUrl).catch(()=>{});
+        alert('Link: ' + signupUrl);
+    }
+}
+
+function copyLink(){
+    const url = window.location.origin + '/offerst';
+    function _showCopied() {
+        const t = document.createElement('div');
+        t.textContent = '✅ Link copied!';
+        Object.assign(t.style, {position:'fixed',bottom:'24px',left:'50%',transform:'translateX(-50%)',background:'#1e1b4b',color:'#a78bfa',padding:'10px 22px',borderRadius:'40px',fontSize:'13px',fontWeight:'700',zIndex:'99999',boxShadow:'0 4px 20px rgba(0,0,0,.5)'});
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2500);
+    }
+    navigator.clipboard.writeText(url).then(_showCopied).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        _showCopied();
+    });
+}
+
+function _openWhatsApp(text) {
+    var encoded = encodeURIComponent(text);
+    var isMob = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMob) {
+        location.href = 'whatsapp://send?text=' + encoded;
+        setTimeout(function() { window.open('https://wa.me/?text=' + encoded, '_blank'); }, 1500);
+    } else {
+        window.open('https://wa.me/?text=' + encoded, '_blank');
+    }
+}
+
+function openWA(){
+    const link = window.location.origin + '/offerst';
+    _openWhatsApp('*VGK4U Loyalty Program*\nEV & Solar deals పై referral bonuses earn చేయండి — 4 levels లో 5% వరకు.\n\n' + link + '\n\n_Conditions apply._');
+    return false;
+}
+
+function openWAText(){
+    const cats = window._vgkCats || [];
+    const link = window.location.origin + '/offerst';
+    let lines = ['*VGK4U — Referral Bonus Sheet*', ''];
+    cats.forEach(c => {
+        const r = c.registered, a = c.activated;
+        lines.push('*' + c.category_name + '*');
+        if (r) {
+            const _regLvls = _configuredLevels(r);
+            let _regLine = '  Registered  →  L1: ' + _fmtRate(r.level1_pct,r.level1_type,r.level1_amt);
+            if (_regLvls.includes(2)) _regLine += '  L2: ' + _fmtRate(r.level2_pct,r.level2_type,r.level2_amt);
+            if (_regLvls.includes(3)) _regLine += '  L3: ' + _fmtRate(r.level3_pct,r.level3_type,r.level3_amt);
+            _regLine += '  L4: ' + _fmtRate(r.level4_pct,r.level4_type,r.level4_amt);
+            lines.push(_regLine);
+        }
+        if (a) lines.push('  Activated   \u2192  L1: ' + _fmtRate(a.level1_pct,a.level1_type,a.level1_amt) + '  L2: ' + _fmtRate(a.level2_pct,a.level2_type,a.level2_amt) + '  L3: ' + _fmtRate(a.level3_pct,a.level3_type,a.level3_amt) + '  L4: ' + _fmtRate(a.level4_pct,a.level4_type,a.level4_amt));
+    });
+    lines.push('');
+    lines.push('*EV Spares Discount*');
+    lines.push('  Registered: 2%  |  Activated: 3%');
+    lines.push('');
+    lines.push('*Welcome Points*');
+    lines.push('  Join (free): 10,000 pts  |  Activate: 60,000 pts (10K + 50K)');
+    lines.push('');
+    lines.push('Full details & live calculator: ' + link);
+    lines.push('_*Conditions apply. Rates subject to change without notice.*_');
+    _openWhatsApp(lines.join('\n'));
+}
+
+function downloadPDF(){
+    const link = window.location.origin + '/offerst';
+    _openWhatsApp('*VGK4U Channel Partner Offers*\nView or save the offer sheet as PDF:\n' + link + '\n\n_Conditions apply. Rates subject to change without notice._');
+    setTimeout(() => {
+        document.getElementById('printDate').textContent = 'Printed: ' + new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+        document.querySelectorAll('.cat-panel').forEach(p => p.style.display = 'block');
+        window.print();
+        setTimeout(() => {
+            document.querySelectorAll('.cat-panel').forEach((p,i) => p.style.display = i===0?'block':'none');
+        }, 1200);
+    }, 400);
+}
+
+/* Main loader — with auto-retry */
+async function loadRates(_attempt) {
+    _attempt = _attempt || 1;
+    const MAX_ATTEMPTS = 4;
+    const RETRY_DELAYS = [0, 5, 8, 12];
+    try {
+        const resp = await fetch('/api/v1/vgk/public/commission-rates');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        if (!data.success || !data.data || !data.data.length) throw new Error('No data');
+        const tabOrder = ['Solar', 'EV B2C', 'EV B2B'];
+        const cats = data.data.slice().sort((a, b) => {
+            const ai = tabOrder.indexOf(a.category_name);
+            const bi = tabOrder.indexOf(b.category_name);
+            return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+        });
+        window._vgkCats = cats;
+
+        /* Dynamically update banner & diff section based on registered config */
+        const _frCfg = cats[0] && cats[0].registered;
+        if (_frCfg) {
+            const _rLvls = _configuredLevels(_frCfg);
+            const _rStr  = _levelStr(_rLvls);
+            const _banEl = document.getElementById('regBonusSub');
+            if (_banEl) _banEl.innerHTML = 'Rates live గా ఉన్నాయి — VGK4U admin config తో sync అయ్యాయి.'
+                + ' <strong style="color:#c4b5fd">Registered</strong> (free) వారికి ' + _rStr + ' వస్తాయి &nbsp;|&nbsp;'
+                + ' <strong style="color:#86efac">Activated</strong> (₹5,000 pkg) వారికి 4 levels అన్నీ వస్తాయి.'
+                + ' &nbsp;<span style="color:var(--amber);font-weight:700">★ L4 = Support System</span> — ప్రత్యేకంగా చూపబడింది.';
+            const _dsEl = document.getElementById('regDiffSub');
+            if (_dsEl) _dsEl.textContent = 'Free. వెంటనే commission earn మొదలెట్టండి — ' + _rStr + ' Project Commission config ప్రకారం.';
+            const _bbEl = document.getElementById('regBonusBullet');
+            if (_bbEl) _bbEl.innerHTML = '<i class="fas fa-check-circle"></i> మీరు introduce చేసిన deals పై ' + _rStr + ' Project Commission';
+        }
+
+
+        document.getElementById('statCatCount').textContent = cats.length;
+        let maxRate = 0;
+        cats.forEach(c => {
+            [c.registered, c.activated].forEach(cfg => {
+                if (!cfg) return;
+                [cfg.level1_pct, cfg.level2_pct, cfg.level3_pct, cfg.level4_pct].forEach(v => { if (v > maxRate) maxRate = v; });
+            });
+        });
+        document.getElementById('statMaxRate').textContent = (+maxRate.toFixed(1)) + '%';
+        const _heroRateEl = document.getElementById('heroMaxRate');
+        if (_heroRateEl) _heroRateEl.textContent = (+maxRate.toFixed(1)) + '% per deal';
+
+        document.getElementById('catTabs').innerHTML = cats.map((c, i) =>
+            `<button class="cat-tab ${i===0?'active':''}" onclick="switchCat(${i})" id="tab-${i}">${escHtml(c.category_name)}</button>`
+        ).join('');
+
+        document.getElementById('commPanels').innerHTML = cats.map((cat, i) =>
+            `<div class="cat-panel ${i===0?'active':''}" id="panel-${i}">${buildPanel(cat, i)}</div>`
+        ).join('');
+
+    } catch(err) {
+        if (_attempt < MAX_ATTEMPTS) {
+            const delay = RETRY_DELAYS[_attempt] || 8;
+            document.getElementById('catTabs').innerHTML = '';
+            const _pEl = document.getElementById('commPanels');
+            let _secs = delay;
+            _pEl.innerHTML = `<div class="err-state"><i class="fas fa-sync fa-spin" style="color:#a78bfa"></i><div style="font-weight:700;margin-bottom:6px;color:#c4b5fd">Commission rates లోడ్ అవుతున్నాయి...</div><div id="_rCountdown" style="font-size:12px;color:rgba(255,255,255,.6)">${_secs}s లో retry చేస్తున్నాం</div></div>`;
+            const _cd = setInterval(() => {
+                _secs--;
+                const el = document.getElementById('_rCountdown');
+                if (el) el.textContent = _secs > 0 ? `${_secs}s లో retry చేస్తున్నాం` : 'Connecting...';
+                if (_secs <= 0) { clearInterval(_cd); loadRates(_attempt + 1); }
+            }, 1000);
+        } else {
+            document.getElementById('catTabs').innerHTML = '';
+            document.getElementById('commPanels').innerHTML = `<div class="err-state"><i class="fas fa-exclamation-triangle"></i><div style="font-weight:700;margin-bottom:6px">Commission rates లోడ్ అవలేదు</div><div style="font-size:12px;margin-bottom:12px">Refresh చేయండి లేదా తర్వాత try చేయండి.</div><button onclick="loadRates(1)" style="padding:8px 20px;border-radius:8px;background:rgba(124,58,237,.3);border:1px solid rgba(124,58,237,.5);color:#c4b5fd;font-size:13px;font-weight:700;cursor:pointer">↻ మళ్ళీ Try చేయండి</button></div>`;
+        }
+    }
+}
+
+function switchCat(idx) {
+    document.querySelectorAll('.cat-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+    document.querySelectorAll('.cat-panel').forEach((p,i) => p.classList.toggle('active', i===idx));
+}
+
+loadRates();
+</script>
+<script src="/public/js/share-modal.js"></script>
+
+<!-- ── Bilingual Legal Scroller (VGK4U) ── -->
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu:wght@400&display=swap');
+body { padding-bottom: 40px !important; }
+.vgk-disc-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+    background: #0d1117; border-top: 1px solid rgba(255,255,255,.15);
+    padding: 8px 0; overflow: hidden; white-space: nowrap;
+}
+.vgk-disc-track {
+    display: inline-block; white-space: nowrap;
+    animation: vgkScroll 80s linear infinite; will-change: transform;
+}
+.vgk-disc-track:hover { animation-play-state: paused; }
+.vgk-disc-text {
+    display: inline; white-space: nowrap;
+    font-size: 0.92rem; font-weight: 500;
+    color: rgba(255,255,255,.82);
+    font-family: 'Noto Sans Telugu', 'Noto Sans', system-ui, sans-serif;
+    padding-right: 8rem;
+}
+.vgk-disc-badge {
+    display: inline-block; font-size: 0.62rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: #a78bfa; background: rgba(167,139,250,.15);
+    border: 1px solid rgba(167,139,250,.35);
+    border-radius: 3px; padding: 2px 7px; margin-right: .6rem; vertical-align: middle;
+}
+.vgk-disc-sep {
+    display: inline-block; width: 1px; height: 10px;
+    background: rgba(139,92,246,.5); margin: 0 2.5rem; vertical-align: middle;
+}
+@keyframes vgkScroll { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
+</style>
+<div class="vgk-disc-bar no-print" role="complementary" aria-label="VGK4U Notice">
+    <div class="vgk-disc-track">
+        <span class="vgk-disc-text">
+            <span class="vgk-disc-badge">VGK4U</span>
+            VGK for You (VGK4U) promotes green energy — Electric Vehicles (EV), Solar Power — and personal protection through Insurance &amp; other services. Register FREE and instantly receive 10,000 Loyalty Points. Refer friends, climb your benefits, and redeem points for rewards. Participation does not constitute an investment, deposit, or money circulation scheme. All services subject to applicable terms and eligibility.
+            <span class="vgk-disc-sep"></span>
+            <span class="vgk-disc-badge">VGK4U</span>
+            VGK4U (VGK ఫర్ యూ) ఎలక్ట్రిక్ వాహనాలు (EV), సోలార్ ఎనర్జీ వంటి హరిత శక్తి పరిష్కారాలను మరియు ఇన్సూరెన్స్ వంటి వ్యక్తిగత సురక్షా సేవలను ప్రోత్సహిస్తుంది. నేడే ఉచితంగా నమోదు చేసుకుని 10,000 లాయల్టీ పాయింట్లు పొందండి. స్నేహితులను రెఫర్ చేయండి, మీ లాభాలను పెంచుకోండి, పాయింట్లను రిడీమ్ చేయండి. ఇందులో పాల్గొనడం పెట్టుబడి, డిపాజిట్ లేదా మనీ సర్క్యులేషన్ స్కీమ్ కాదు.
+        </span>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawals - MNR Business Access Program</title>
+<!-- [DC-T33] VGK4U audience tabs (auto-mount + jQuery audience injector) --><script src="/audience-tabs.js"></script></head>
+<body>
+    <div class="container-fluid mt-4">
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>💸 Payout Requests</h2>
+                <p class="text-muted mb-0">Withdrawal history (user-wise)</p>
+            </div>
+        <a href="/admin/dashboard" class="btn btn-primary btn-sm">
+                <i class="fas fa-home me-2"></i>Go to Dashboard
+            </a>
+            </div>
+        
+        <!-- User Filter Component -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <i class="fas fa-filter"></i> Filter by User ID
+            </div>
+            <div class="card-body">
+                <form id="userFilterForm" class="row g-3">
+                    <div class="col-md-8">
+                        <label for="userIdInput" class="form-label">Enter User ID (MNR ID)</label>
+                        <input type="text" class="form-control" id="userIdInput" 
+                               placeholder="e.g., MNR182364369 or MNR1800143" 
+                               pattern="MNR[0-9]{7,9}" 
+                               title="Enter a valid MNR ID (10 or 12 digits: MNR1800143 or MNR182364369)">
+                        <div class="form-text">Leave empty to view your own data</div>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" id="applyFilterBtn" class="btn btn-success w-100">
+                            <i class="fas fa-search"></i> Apply Filter
+                        </button>
+                    </div>
+                </form>
+                <div id="filterInfo" class="mt-3" style="display: none;">
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i> 
+                        Showing data for: <strong id="filteredUserId"></strong>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="clearUserFilter()">
+                            <i class="fas fa-times"></i> Clear Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Earnings Summary Cards -->
+        <div id="walletSummary" style="display: none;">
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card shadow-sm border-success">
+                        <div class="card-body">
+                            <h6 class="text-muted">Total Earned</h6>
+                            <h3 id="totalEarned" class="text-success">₹0</h3>
+                            <small class="text-muted">All time earnings</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow-sm border-warning">
+                        <div class="card-body">
+                            <h6 class="text-muted">Awaiting Approval</h6>
+                            <h3 id="awaitingApproval" class="text-warning">₹0</h3>
+                            <small class="text-muted">Pending + Verified</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow-sm border-primary">
+                        <div class="card-body">
+                            <h6 class="text-muted">Finance Paid</h6>
+                            <h3 id="financePaid" class="text-primary">₹0</h3>
+                            <small class="text-muted">Approved & Paid</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card shadow-sm border-info">
+                        <div class="card-body text-center">
+                            <button id="approveBtn" class="btn btn-success btn-lg w-100" onclick="approveEarnings()" style="display:none;">
+                                <i class="fas fa-check-circle"></i> Approve All
+                            </button>
+                            <small class="text-muted d-block mt-2" id="approveInfo"></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Loading State -->
+        <div id="loadingState" class="text-center py-5">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3 text-muted">Loading withdrawal data...</p>
+        </div>
+        
+        <!-- Data Table -->
+        <div id="dataTable" style="display: none;">
+            <div class="card shadow-sm">
+                <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white;">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list"></i> Withdrawal History
+                        <span id="recordCount" class="badge bg-light text-dark float-end">0</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Request ID</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Requested At</th>
+                                    <th>Processed At</th>
+                                    <th>Payment Reference</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBody">
+                                <!-- Data populated via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- No Data State -->
+        <div id="noDataState" style="display: none;" class="text-center py-5">
+            <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No Withdrawals Found</h4>
+            <p class="text-muted">This user has no withdrawal requests yet.</p>
+        </div>
+        
+        <!-- Error State -->
+        <div id="errorState" style="display: none;" class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorMessage">An error occurred while loading data.</span>
+        </div>
+    </div>
+    
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let filteredUserId = urlParams.get('user_id');
+        
+        // Initialize filter if user_id is in URL
+        if (filteredUserId) {
+            // STEP 1: Normalize the URL parameter
+            const normalized = normalizeAdminUserId(filteredUserId);
+            filteredUserId = normalized;  // Reassign for API calls
+            
+            // STEP 2: Update DOM elements
+            const userInput = document.getElementById('userIdInput');
+            const filterInfo = document.getElementById('filterInfo');
+            const filteredUserIdSpan = document.getElementById('filteredUserId');
+            
+            
+            if (userInput) userInput.value = filteredUserId;
+            if (filteredUserIdSpan) filteredUserIdSpan.textContent = filteredUserId;
+            if (filterInfo) filterInfo.style.display = 'block';
+        }
+
+        // Handle filter form submission
+        document.getElementById('userFilterForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const userId = normalizeAdminUserId(document.getElementById('userIdInput').value);
+            
+            if (userId) {
+                const mnrIdPattern = /^MNR[0-9]{7,9}$/;
+                if (!mnrIdPattern.test(userId)) {
+                    alert('Please enter a valid MNR ID (10 or 12 digits: MNR1800143 or MNR182364369)');
+                    return;
+                }
+                
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('user_id', userId);
+                window.location.href = currentUrl.toString();
+            } else {
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete('user_id');
+                window.location.href = currentUrl.toString();
+            }
+        });
+
+        // Clear filter function
+        function clearUserFilter() {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.delete('user_id');
+            window.location.href = currentUrl.toString();
+        }
+        
+        async function loadData() {
+            // Admin must select a user via filter - don't use admin's own ID
+            const userId = filteredUserId;
+            if (!userId) {
+                document.getElementById('loadingState').style.display = 'none';
+                const noDataDiv = document.getElementById('noDataState');
+                noDataDiv.innerHTML = `
+                    <i class="fas fa-user-check fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">Please Select a User</h4>
+                    <p class="text-muted">Use the filter above to select a user and view their Withdrawal data.</p>
+                `;
+                noDataDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                // Hide all states
+                document.getElementById('dataTable').style.display = 'none';
+                document.getElementById('walletSummary').style.display = 'none';
+                document.getElementById('noDataState').style.display = 'none';
+                document.getElementById('errorState').style.display = 'none';
+                document.getElementById('loadingState').style.display = 'block';
+                
+                // Load user earnings - shows ACTUAL earnings (PendingIncome)
+                const earningsResponse = await fetch(`${window.BACKEND_URL}/withdrawals/admin/user-earnings?user_id=${userId}`, {
+                    credentials: 'include'
+                });
+                
+                if (!earningsResponse.ok) {
+                    throw new Error(`HTTP ${earningsResponse.status}: ${earningsResponse.statusText}`);
+                }
+                
+                const result = await earningsResponse.json();
+                const earnings = result.earnings || [];
+                const summary = result.summary || {};
+                
+                // Update summary cards
+                document.getElementById('totalEarned').textContent = `₹${(summary.total_earned || 0).toLocaleString()}`;
+                document.getElementById('awaitingApproval').textContent = `₹${(summary.awaiting_approval || 0).toLocaleString()}`;
+                document.getElementById('financePaid').textContent = `₹${(summary.finance_paid || 0).toLocaleString()}`;
+                
+                // Show approve button for Finance Admin/RVZ if there's pending amount
+                const approveBtn = document.getElementById('approveBtn');
+                const approveInfo = document.getElementById('approveInfo');
+                if (summary.awaiting_approval > 0 && earnings.length > 0 && earnings[0].can_approve) {
+                    approveBtn.style.display = 'block';
+                    approveInfo.textContent = `₹${summary.awaiting_approval.toLocaleString()} pending`;
+                }
+                
+                document.getElementById('walletSummary').style.display = 'block';
+                
+                if (earnings.length === 0) {
+                    document.getElementById('noDataState').innerHTML = '<i class="fas fa-check-circle fa-4x text-success mb-3"></i><h4 class="text-success">All Earnings Approved!</h4><p class="text-muted">This user has no pending earnings.</p>';
+                    document.getElementById('noDataState').style.display = 'block';
+                } else {
+                    const tbody = document.getElementById('tableBody');
+                    tbody.innerHTML = earnings.map(e => {
+                        const statusBadge = e.verification_status === 'Finance Paid' ? 'bg-success' : 
+                                          e.verification_status === 'Pending' ? 'bg-warning' : 
+                                          e.verification_status === 'Admin Verified' ? 'bg-info' : 
+                                          e.verification_status === 'Super Admin Approved' ? 'bg-primary' : 'bg-secondary';
+                        
+                        return `
+                            <tr>
+                                <td>${e.business_date || 'N/A'}</td>
+                                <td><strong>₹${(e.net_amount || 0).toLocaleString()}</strong></td>
+                                <td><span class="badge ${statusBadge}">${e.verification_status || 'Pending'}</span></td>
+                                <td>${e.gross_amount ? `₹${e.gross_amount.toLocaleString()}` : '-'}</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                        `;
+                    }).join('');
+                    document.getElementById('recordCount').textContent = earnings.length;
+                    document.getElementById('dataTable').style.display = 'block';
+                }
+                
+            } catch (error) {
+                console.error('Error loading withdrawals:', error);
+                document.getElementById('errorMessage').textContent = error.message;
+                document.getElementById('errorState').style.display = 'block';
+            } finally {
+                document.getElementById('loadingState').style.display = 'none';
+            }
+        }
+        
+        // Approve earnings function (Finance Admin / RVZ ID)
+        async function approveEarnings() {
+            const userId = filteredUserId;
+            if (!userId) {
+                alert('Please select a user first');
+                return;
+            }
+            
+            if (!confirm(`Approve ALL pending earnings for user ${userId}?`)) {
+                return;
+            }
+            
+            const approveBtn = document.getElementById('approveBtn');
+            approveBtn.disabled = true;
+            approveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Approving...';
+            
+            try {
+                const response = await fetch(`${window.BACKEND_URL}/withdrawals/finance/approve-earnings?user_id=${userId}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ ${result.approval_type}\n\n${result.message}`);
+                    window.location.reload(); // Reload to show updated data
+                } else {
+                    alert(`❌ Error: ${result.message}`);
+                }
+            } catch (error) {
+                console.error('Approval error:', error);
+                alert(`❌ Error approving earnings: ${error.message}`);
+            } finally {
+                approveBtn.disabled = false;
+                approveBtn.innerHTML = '<i class="fas fa-check-circle"></i> Approve All';
+            }
+        }
+        
+        window.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>

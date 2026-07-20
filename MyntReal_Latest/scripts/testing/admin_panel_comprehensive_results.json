@@ -1,0 +1,253 @@
+{
+  "timestamp": "2025-09-29T11:41:52.230641",
+  "admin_functionality_tests": {
+    "user_list_access": {
+      "status": "FAIL",
+      "timestamp": "2025-09-29T11:42:02.847739",
+      "details": {},
+      "error": "Admin users endpoint not found (404)"
+    },
+    "kyc_review_access": {
+      "status": "FAIL",
+      "timestamp": "2025-09-29T11:42:03.109099",
+      "details": {},
+      "error": "No working KYC review endpoint found"
+    },
+    "payout_summary_today": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:42:04.544371",
+      "details": {
+        "date_range": "today",
+        "data_keys": [
+          "success",
+          "summary",
+          "recent_payouts",
+          "generated_at"
+        ],
+        "response_time": "1.434s"
+      },
+      "error": null
+    },
+    "payout_summary_week": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:42:05.293894",
+      "details": {
+        "date_range": "week",
+        "data_keys": [
+          "success",
+          "summary",
+          "recent_payouts",
+          "generated_at"
+        ],
+        "response_time": "0.749s"
+      },
+      "error": null
+    },
+    "payout_summary_month": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:42:06.014710",
+      "details": {
+        "date_range": "month",
+        "data_keys": [
+          "success",
+          "summary",
+          "recent_payouts",
+          "generated_at"
+        ],
+        "response_time": "0.720s"
+      },
+      "error": null
+    },
+    "wallet_transactions_limit_5": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:42:06.752610",
+      "details": {
+        "requested_limit": 5,
+        "actual_count": 0,
+        "data_structure": "dict"
+      },
+      "error": null
+    },
+    "wallet_transactions_limit_10": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:42:07.072441",
+      "details": {
+        "requested_limit": 10,
+        "actual_count": 0,
+        "data_structure": "dict"
+      },
+      "error": null
+    },
+    "wallet_transactions_limit_20": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:42:07.392175",
+      "details": {
+        "requested_limit": 20,
+        "actual_count": 0,
+        "data_structure": "dict"
+      },
+      "error": null
+    },
+    "earnings_trigger_access": {
+      "status": "FAIL",
+      "timestamp": "2025-09-29T11:42:07.606482",
+      "details": {},
+      "error": "No working earnings trigger endpoint found"
+    },
+    "awards_management_access": {
+      "status": "WARNING",
+      "timestamp": "2025-09-29T11:42:07.770510",
+      "details": {},
+      "error": "No working awards management endpoint found"
+    },
+    "team_management_access": {
+      "status": "WARNING",
+      "timestamp": "2025-09-29T11:42:07.997036",
+      "details": {},
+      "error": "No working team management endpoint found"
+    }
+  },
+  "error_detection": [],
+  "navigation_tests": {
+    "admin_dashboard": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:41:53.350984",
+      "details": {
+        "page_size": 28265,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "0.742s"
+      },
+      "error": null
+    },
+    "admin_system_dashboard": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:41:53.835122",
+      "details": {
+        "page_size": 15329,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "0.472s"
+      },
+      "error": null
+    },
+    "admin_bulk_edit": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:41:54.622677",
+      "details": {
+        "page_size": 15382,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "0.779s"
+      },
+      "error": null
+    },
+    "admin_earnings_trigger": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:41:54.975334",
+      "details": {
+        "page_size": 15453,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "0.345s"
+      },
+      "error": null
+    },
+    "admin_team_management": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:41:55.404408",
+      "details": {
+        "page_size": 15319,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "0.417s"
+      },
+      "error": null
+    },
+    "admin_awards": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:41:56.081930",
+      "details": {
+        "page_size": 15240,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "0.663s"
+      },
+      "error": null
+    },
+    "admin_kyc_review": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:41:56.676564",
+      "details": {
+        "page_size": 15385,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "0.574s"
+      },
+      "error": null
+    },
+    "admin_financial_operations": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:41:57.466728",
+      "details": {
+        "page_size": 15369,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "0.711s"
+      },
+      "error": null
+    },
+    "admin_payouts": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:41:59.556172",
+      "details": {
+        "page_size": 15364,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "2.062s"
+      },
+      "error": null
+    },
+    "admin_users": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:42:00.897832",
+      "details": {
+        "page_size": 15333,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "1.320s"
+      },
+      "error": null
+    },
+    "admin_users_list": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:42:01.806830",
+      "details": {
+        "page_size": 16430,
+        "content_type": "text/html; charset=utf-8",
+        "response_time": "0.897s"
+      },
+      "error": null
+    }
+  },
+  "interaction_tests": {
+    "filter_test_users": {
+      "status": "FAIL",
+      "timestamp": "2025-09-29T11:42:08.083827",
+      "details": {},
+      "error": "HTTP 404"
+    },
+    "filter_test_wallet-transactions": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:42:08.394458",
+      "details": {
+        "params_tested": {
+          "limit": 1
+        },
+        "response_received": true
+      },
+      "error": null
+    },
+    "filter_test_payout-summary": {
+      "status": "PASS",
+      "timestamp": "2025-09-29T11:42:09.074467",
+      "details": {
+        "params_tested": {
+          "date_range": "today"
+        },
+        "response_received": true
+      },
+      "error": null
+    }
+  }
+}

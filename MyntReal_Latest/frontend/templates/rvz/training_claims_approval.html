@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RVZ Supreme - Training Claims Approval</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container-fluid { padding: 20px; }
+        .header-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .stats-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            flex: 1;
+            min-width: 180px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-card h3 { font-size: 2rem; margin: 0; font-weight: bold; }
+        .stat-card p { margin: 5px 0 0 0; opacity: 0.9; }
+        .btn-rvz {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+        .btn-rvz:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            color: white;
+        }
+        .table-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .back-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .back-btn:hover { background: #f8f9fa; color: #764ba2; }
+        @media (max-width: 768px) {
+            .stats-row { flex-direction: column; }
+            .stat-card { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <a href="/rvz-dashboard" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to RVZ Dashboard
+        </a>
+
+        <div class="header-card">
+            <h1 class="mb-0">
+                <i class="fas fa-graduation-cap text-primary"></i>
+                RVZ Supreme - Training Claims Approval
+            </h1>
+            <p class="text-muted mb-0">Bulk approve/reject training claims</p>
+        </div>
+
+        <div class="stats-row" id="statsContainer">
+            <div class="stat-card">
+                <h3 id="totalCount">0</h3>
+                <p>Total Claims</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="totalAmount">₹0</h3>
+                <p>Total Amount</p>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <div class="mb-3">
+                <button class="btn btn-success me-2" onclick="bulkApprove()">
+                    <i class="fas fa-check-circle"></i> Approve Selected
+                </button>
+                <button class="btn btn-danger me-2" onclick="bulkReject()">
+                    <i class="fas fa-times-circle"></i> Reject Selected
+                </button>
+                <button class="btn btn-secondary" onclick="loadClaims()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                            <th>User ID</th>
+                            <th>User Name</th>
+                            <th>Course</th>
+                            <th>Fee</th>
+                            <th>Trainee</th>
+                            <th>Contact</th>
+                            <th>Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody id="claimsTableBody">
+                        <tr>
+                            <td colspan="8" class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const API_BASE = '/api/v1';
+        const token = localStorage.getItem('token');
+
+        async function loadClaims() {
+            try {
+                const response = await fetch(`${API_BASE}/rvz-supreme/training-claims/pending`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateStats(result.data);
+                    renderTable(result.data.claims);
+                } else {
+                    alert('Failed to load claims: ' + (result.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error loading claims');
+            }
+        }
+
+        function updateStats(data) {
+            document.getElementById('totalCount').textContent = data.total_count || 0;
+            document.getElementById('totalAmount').textContent = '₹' + (data.total_amount || 0).toLocaleString('en-IN');
+        }
+
+        function renderTable(claims) {
+            const tbody = document.getElementById('claimsTableBody');
+            
+            if (!claims || claims.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No pending claims</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = claims.map(c => `
+                <tr>
+                    <td><input type="checkbox" class="claim-checkbox" value="${c.id}"></td>
+                    <td>${c.user_id}</td>
+                    <td>${c.user_name}</td>
+                    <td>${c.course_name}</td>
+                    <td>₹${c.course_fee.toLocaleString('en-IN')}</td>
+                    <td>${c.trainee_name}</td>
+                    <td>${c.trainee_contact}</td>
+                    <td>${new Date(c.submitted_at).toLocaleDateString('en-IN')}</td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.claim-checkbox').forEach(cb => cb.checked = selectAll);
+        }
+
+        function getSelectedClaims() {
+            return Array.from(document.querySelectorAll('.claim-checkbox:checked')).map(cb => parseInt(cb.value));
+        }
+
+        async function bulkApprove() {
+            const claimIds = getSelectedClaims();
+            
+            if (claimIds.length === 0) {
+                alert('Please select at least one claim');
+                return;
+            }
+            
+            if (!confirm(`Approve ${claimIds.length} claims?`)) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/rvz-supreme/training-claims/supreme-approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        claim_ids: claimIds,
+                        action: 'approve'
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    loadClaims();
+                } else {
+                    alert('Error: ' + (result.detail?.error || result.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error approving claims');
+            }
+        }
+
+        async function bulkReject() {
+            const claimIds = getSelectedClaims();
+            
+            if (claimIds.length === 0) {
+                alert('Please select at least one claim');
+                return;
+            }
+            
+            const reason = prompt('Enter rejection reason:');
+            if (!reason) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/rvz-supreme/training-claims/supreme-approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        claim_ids: claimIds,
+                        action: 'reject',
+                        rejection_reason: reason
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    loadClaims();
+                } else {
+                    alert('Error: ' + (result.detail?.error || result.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error rejecting claims');
+            }
+        }
+
+        loadClaims();
+    </script>
+</body>
+</html>

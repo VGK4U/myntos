@@ -1,0 +1,2924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EV Spares PO Management — Staff Portal</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+.content-area { padding: 24px; }
+
+.page-banner {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+}
+.page-banner h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+.page-banner p { opacity: 0.9; margin: 0; font-size: 13px; }
+
+.tab-nav {
+  display: flex; gap: 0; margin-bottom: 20px;
+  background: white; border-radius: 12px; padding: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.tab-btn {
+  flex: 1; padding: 10px 20px; border: none; background: transparent;
+  border-radius: 8px; font-size: 13px; font-weight: 600; color: #6b7280;
+  cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.tab-btn.active { background: #0ea5e9; color: white; }
+.tab-btn:hover:not(.active) { background: #f0f9ff; color: #0ea5e9; }
+
+.stat-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-card {
+  background: white; border-radius: 10px; padding: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); text-align: center;
+}
+.stat-card .val { font-size: 26px; font-weight: 700; color: #1f2937; }
+.stat-card .lbl { color: #6b7280; font-size: 11px; margin-top: 2px; text-transform: uppercase; font-weight: 600; }
+.stat-card.blue  { border-top: 3px solid #0ea5e9; }
+.stat-card.green { border-top: 3px solid #059669; }
+.stat-card.orange{ border-top: 3px solid #d97706; }
+.stat-card.purple{ border-top: 3px solid #7c3aed; }
+.stat-card.red   { border-top: 3px solid #dc2626; }
+
+.filter-card {
+  background: white; border-radius: 12px; padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px;
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+}
+.filter-card label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; display: block; margin-bottom: 4px; }
+.filter-card .form-control, .filter-card .form-select {
+  font-size: 13px; padding: 6px 10px; border-radius: 6px; border: 1px solid #e5e7eb; min-width: 140px;
+}
+.filter-card .form-control:focus, .filter-card .form-select:focus {
+  border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.1);
+}
+.filter-group { display: flex; flex-direction: column; }
+
+.data-card {
+  background: white; border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 24px; overflow: hidden;
+}
+.data-card-header {
+  padding: 14px 20px; border-bottom: 1px solid #f3f4f6;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
+}
+.data-card-header h5 { font-size: 15px; font-weight: 600; color: #1f2937; margin: 0; }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th {
+  background: #f9fafb; padding: 10px 12px;
+  font-weight: 600; color: #6b7280; border-bottom: 2px solid #e5e7eb;
+  font-size: 11px; text-transform: uppercase; white-space: nowrap;
+}
+.data-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.data-table tbody tr:hover { background: #f0f9ff; }
+.sortable-th { cursor: pointer; user-select: none; }
+.sortable-th:hover { background: #eef2ff !important; color: #4338ca !important; }
+.sort-icon { margin-left: 4px; font-size: 10px; color: #d1d5db; display: inline-block; }
+.sort-icon.asc::after  { content: '▲'; color: #6366f1; }
+.sort-icon.desc::after { content: '▼'; color: #6366f1; }
+
+.badge-draft         { background: #f3f4f6; color: #6b7280; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+.badge-procurement_pending { background: #fef3c7; color: #92400e; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+.badge-confirmed     { background: #dbeafe; color: #1d4ed8; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+.badge-partial_dispatch { background: #fef3c7; color: #92400e; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+.badge-dispatched    { background: #d1fae5; color: #065f46; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+.badge-cancelled     { background: #fee2e2; color: #991b1b; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+.badge-pending       { background: #dbeafe; color: #1d4ed8; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+.badge-ordered       { background: #e0e7ff; color: #3730a3; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+.badge-received      { background: #d1fae5; color: #065f46; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+
+.cust-badge-public     { background: #dcfce7; color: #166534; font-size: 11px; padding: 2px 7px; border-radius: 20px; font-weight: 700; }
+.cust-badge-mnr_member { background: #dbeafe; color: #1e40af; font-size: 11px; padding: 2px 7px; border-radius: 20px; font-weight: 700; }
+.cust-badge-partner    { background: #f3e8ff; color: #6b21a8; font-size: 11px; padding: 2px 7px; border-radius: 20px; font-weight: 700; }
+
+.po-number { font-family: 'Courier New', monospace; font-weight: 700; color: #0ea5e9; font-size: 12px; }
+
+.action-btn {
+  padding: 4px 10px; font-size: 12px; border-radius: 6px;
+  border: none; cursor: pointer; font-weight: 600; transition: opacity .15s;
+}
+.action-btn:hover { opacity: .8; }
+.btn-view     { background: #0ea5e9; color: white; }
+.btn-dispatch { background: #059669; color: white; }
+.btn-edit     { background: #7c3aed; color: white; }
+
+.pagination-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px; font-size: 12px; color: #6b7280; border-top: 1px solid #f3f4f6;
+  flex-wrap: wrap; gap: 8px;
+}
+.page-btn {
+  background: white; border: 1px solid #e5e7eb; color: #374151;
+  padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;
+}
+.page-btn:disabled { opacity: .4; cursor: not-allowed; }
+.page-btn:not(:disabled):hover { border-color: #0ea5e9; color: #0ea5e9; }
+
+.empty-state { padding: 48px 20px; text-align: center; color: #9ca3af; }
+.empty-state i { font-size: 40px; margin-bottom: 12px; display: block; }
+
+/* Modals */
+.modal-content { border: none; border-radius: 12px; }
+.modal-header { background: linear-gradient(135deg, #0ea5e9, #0284c7); border-radius: 12px 12px 0 0; }
+.modal-title  { color: white; font-weight: 700; font-size: 15px; }
+.modal-header .btn-close { filter: invert(1) brightness(2); }
+
+.info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.info-block { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; }
+.info-block .ib-lbl { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+.info-block .ib-val { font-size: 13px; font-weight: 600; color: #1f2937; }
+
+.sum-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.sum-card { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 10px 16px; min-width: 120px; text-align: center; }
+.sum-card .sv { font-size: 18px; font-weight: 800; color: #0c4a6e; }
+.sum-card .sl { font-size: 10px; color: #0ea5e9; font-weight: 700; text-transform: uppercase; }
+.sum-card.green { background: #f0fdf4; border-color: #86efac; }
+.sum-card.green .sv { color: #14532d; }
+.sum-card.green .sl { color: #059669; }
+.sum-card.orange { background: #fffbeb; border-color: #fde68a; }
+.sum-card.orange .sv { color: #78350f; }
+.sum-card.orange .sl { color: #d97706; }
+
+.items-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.items-table th { background: #f9fafb; padding: 8px 10px; font-weight: 600; color: #6b7280; border-bottom: 1px solid #e5e7eb; font-size: 10px; text-transform: uppercase; }
+.items-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+.items-table tr:last-child td { border-bottom: none; }
+
+.disp-input { border: 1px solid #e5e7eb; border-radius: 5px; padding: 4px 8px; font-size: 12px; width: 80px; text-align: right; }
+.disp-input:focus { outline: none; border-color: #0ea5e9; }
+.ei-input { border: 1px solid #d1d5db; border-radius: 5px; padding: 3px 6px; font-size: 12px; text-align: right; }
+.ei-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px #bfdbfe; }
+.disp-note  { border: 1px solid #e5e7eb; border-radius: 5px; padding: 4px 8px; font-size: 12px; width: 120px; }
+.disp-note:focus { outline: none; border-color: #0ea5e9; }
+
+.sync-btn {
+  background: linear-gradient(135deg, #059669, #10b981); border: none; color: white;
+  padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer;
+}
+.sync-btn:disabled { opacity: .5; cursor: not-allowed; }
+.sync-btn:not(:disabled):hover { opacity: .88; }
+
+.stock-ok  { background: #d1fae5; color: #065f46; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 700; }
+.stock-low { background: #fef3c7; color: #92400e; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 700; }
+/* Stock Analysis tab */
+.stk-badge-ok  { background: #d1fae5; color: #065f46; font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
+.stk-badge-low { background: #fef3c7; color: #92400e; font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
+.stk-badge-out { background: #fee2e2; color: #991b1b; font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 700; white-space: nowrap; }
+.qty-wrap { display: flex; align-items: center; gap: 6px; justify-content: center; }
+.qty-display { cursor: pointer; font-weight: 700; padding: 4px 10px; border-radius: 6px; background: #f3f4f6; border: 1px dashed #d1d5db; min-width: 52px; text-align: center; font-size: 13px; }
+.qty-display:hover { border-color: #0ea5e9; background: #f0f9ff; }
+.qty-input-inline { width: 64px; font-size: 13px; font-weight: 700; text-align: center; border: 2px solid #0ea5e9; border-radius: 6px; padding: 3px 6px; }
+.qty-input-inline:focus { outline: none; }
+.save-indicator { font-size: 14px; min-width: 18px; }
+.btn-raise-proc { background: #d97706; color: white; font-size: 11px; border: none; border-radius: 6px; padding: 3px 9px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.btn-raise-proc:hover { opacity: .85; }
+.btn-invoice { background: #0f766e; color: white; }
+.pi-badge { display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:700;color:#166534;font-family:monospace; }
+.btn-gen-img { background: #7c3aed; color: white; font-size: 11px; border: none; border-radius: 6px; padding: 3px 9px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+.btn-gen-img:hover { opacity: .85; }
+
+/* Toast */
+.toast-stack { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast-msg {
+  background: white; border-radius: 10px; padding: 12px 18px; font-size: 13px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.15); min-width: 240px; display: flex; align-items: center; gap: 10px;
+}
+.toast-msg.success { border-left: 4px solid #059669; }
+.toast-msg.error   { border-left: 4px solid #dc2626; }
+.toast-msg.info    { border-left: 4px solid #0ea5e9; }
+
+@media (max-width: 767px) {
+  .content-area { padding: 14px; }
+  .filter-card .form-control, .filter-card .form-select { min-width: 120px; }
+}
+</style>
+</head>
+<body>
+
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+<div id="headerContainer"></div>
+
+<div class="content-area">
+
+  <!-- Page Banner -->
+  <div class="page-banner">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+      <div>
+        <h1><i class="fas fa-file-invoice"></i>EV Spares — PO Management</h1>
+        <p>Purchase Orders · Dispatch Tracking · Procurement Requests · VGK4U</p>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="/marketplace" target="_blank" class="btn btn-sm btn-light fw-600" style="font-weight:600;">
+          <i class="fas fa-store me-1"></i>View Marketplace
+        </a>
+        <button class="sync-btn" id="syncBtn" onclick="syncSheet()">
+          <i class="fas fa-sync-alt me-1"></i>Sync Catalog Sheet
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab nav -->
+  <div class="tab-nav" style="max-width:720px;">
+    <button class="tab-btn active" id="tabPO" onclick="switchTab('po')">
+      <i class="fas fa-file-invoice"></i> Purchase Orders
+      <span id="tabPoBadge" class="badge bg-primary ms-1" style="font-size:10px;"></span>
+    </button>
+    <button class="tab-btn" id="tabProc" onclick="switchTab('proc')">
+      <i class="fas fa-boxes"></i> Procurement
+      <span id="tabProcBadge" class="badge bg-danger ms-1" style="font-size:10px;"></span>
+    </button>
+    <button class="tab-btn" id="tabStk" onclick="switchTab('stk')">
+      <i class="fas fa-layer-group"></i> Stock Analysis
+      <span id="tabStkBadge" class="badge bg-danger ms-1" style="font-size:10px;display:none;"></span>
+    </button>
+  </div>
+
+  <!-- ── PO Tab ──────────────────────────────────────────────────────────── -->
+  <div id="panepo">
+
+    <!-- Stats -->
+    <div class="stat-cards" id="poStats"></div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+      <div class="filter-group" style="flex:1;min-width:200px;">
+        <label>Search</label>
+        <input type="text" class="form-control" id="poSearch" placeholder="PO #, name, phone, MNR ID…" oninput="debouncePOLoad()">
+      </div>
+      <div class="filter-group">
+        <label>Company</label>
+        <select class="form-select" id="poCompany" onchange="loadPOs(1)">
+          <option value="">All Companies</option>
+          <option value="1">VGK4U</option>
+          <option value="2">MNR</option>
+          <option value="3">MyntReal</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Source</label>
+        <select class="form-select" id="poSourceType" onchange="loadPOs(1)">
+          <option value="">All Sources</option>
+          <option value="service_ticket">Service Ticket</option>
+          <option value="technical_ticket">Technical Ticket</option>
+          <option value="manual">Manual / Direct</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select class="form-select" id="poStatus" onchange="loadPOs(1)">
+          <option value="">All Statuses</option>
+          <option value="draft">Draft</option>
+          <option value="procurement_pending">Procurement Pending</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="accepted">Accepted</option>
+          <option value="in_progress">In Progress</option>
+          <option value="under_procurement">Under Procurement</option>
+          <option value="received">Received</option>
+          <option value="payment_pending">Payment Pending</option>
+          <option value="payment_received">Payment Received</option>
+          <option value="partial_dispatch">Partial Dispatch</option>
+          <option value="dispatched">Dispatched</option>
+          <option value="hold">On Hold</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Customer Type</label>
+        <select class="form-select" id="poCustType" onchange="loadPOs(1)">
+          <option value="">All</option>
+          <option value="public">Public</option>
+          <option value="mnr_member">MNR Member</option>
+          <option value="partner">Partner</option>
+          <option value="service_ticket">Service Ticket</option>
+          <option value="technical_ticket">Technical Ticket</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>From</label>
+        <input type="date" class="form-control" id="poDateFrom" onchange="loadPOs(1)">
+      </div>
+      <div class="filter-group">
+        <label>To</label>
+        <input type="date" class="form-control" id="poDateTo" onchange="loadPOs(1)">
+      </div>
+      <div class="d-flex gap-2 align-items-end">
+        <button class="btn btn-primary btn-sm fw-600" onclick="loadPOs(1)"><i class="fas fa-search me-1"></i>Search</button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="clearPOFilters()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="data-card">
+      <div class="data-card-header">
+        <h5><i class="fas fa-list me-2 text-primary"></i>Purchase Orders</h5>
+        <span id="poCountLabel" style="font-size:12px;color:#6b7280;"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="sortable-th" onclick="sortPOs('po_number')"><span>PO Number</span><span class="sort-icon" id="po-si-po_number"></span></th>
+              <th class="sortable-th" onclick="sortPOs('created_at')"><span>Date</span><span class="sort-icon" id="po-si-created_at"></span></th>
+              <th class="sortable-th" onclick="sortPOs('customer_name')"><span>Customer</span><span class="sort-icon" id="po-si-customer_name"></span></th>
+              <th>Type</th>
+              <th>MNR / Partner</th>
+              <th class="text-center">Items</th>
+              <th class="sortable-th text-center" onclick="sortPOs('total_ordered_qty')"><span>Qty</span><span class="sort-icon" id="po-si-total_ordered_qty"></span></th>
+              <th class="sortable-th text-end" onclick="sortPOs('total_value')"><span>Value (₹)</span><span class="sort-icon" id="po-si-total_value"></span></th>
+              <th class="text-center">Dispatched</th>
+              <th class="text-center">Proc.</th>
+              <th class="sortable-th" onclick="sortPOs('status')"><span>Status</span><span class="sort-icon" id="po-si-status"></span></th>
+              <th>Source</th>
+              <th>Manager</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="poTableBody">
+            <tr><td colspan="14" class="empty-state"><i class="fas fa-spinner fa-spin"></i>Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination-row" id="poPagination"></div>
+    </div>
+  </div>
+
+  <!-- ── Procurement Tab ─────────────────────────────────────────────────── -->
+  <div id="paneproc" style="display:none;">
+
+    <!-- Filters -->
+    <div class="filter-card">
+      <div class="filter-group" style="flex:1;min-width:200px;">
+        <label>Search</label>
+        <input type="text" class="form-control" id="procSearch" placeholder="Proc #, PO #, SKU, product…" oninput="debounceProcLoad()">
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select class="form-select" id="procStatus" onchange="loadProc(1)">
+          <option value="">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="accepted">Accepted</option>
+          <option value="in_progress">In Progress</option>
+          <option value="under_procurement">Under Procurement</option>
+          <option value="ordered">Ordered</option>
+          <option value="received">Received</option>
+          <option value="quality_check_pending">Quality Check Pending</option>
+          <option value="quality_confirmed">Quality Confirmed</option>
+          <option value="quality_failed">Quality Failed</option>
+          <option value="added_to_stock">Added to Stock</option>
+          <option value="hold">On Hold</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Source</label>
+        <select class="form-select" id="procSource" onchange="loadProc(1)">
+          <option value="">All Sources</option>
+          <option value="manual">Manual</option>
+          <option value="service_ticket">Service Ticket</option>
+          <option value="technical_ticket">Technical Ticket</option>
+          <option value="auto_sync">Auto-Sync</option>
+          <option value="po_creation">PO</option>
+        </select>
+      </div>
+      <div class="d-flex gap-2 align-items-end">
+        <button class="btn btn-primary btn-sm fw-600" onclick="loadProc(1)"><i class="fas fa-search me-1"></i>Search</button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="clearProcFilters()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="data-card">
+      <div class="data-card-header">
+        <h5><i class="fas fa-boxes me-2 text-warning"></i>Procurement Requests</h5>
+        <span id="procCountLabel" style="font-size:12px;color:#6b7280;"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr id="procSortRow">
+              <th class="sortable-th" onclick="sortProc('proc_number')"><span>Proc. #</span><span class="sort-icon" id="si-proc_number"></span></th>
+              <th class="sortable-th" onclick="sortProc('po_id')"><span>Linked PO</span><span class="sort-icon" id="si-po_id"></span></th>
+              <th class="sortable-th" onclick="sortProc('sku')"><span>SKU</span><span class="sort-icon" id="si-sku"></span></th>
+              <th class="sortable-th" onclick="sortProc('product')"><span>Product</span><span class="sort-icon" id="si-product"></span></th>
+              <th>Specification</th>
+              <th>Color</th>
+              <th>Model</th>
+              <th class="sortable-th text-center" onclick="sortProc('ordered')"><span>Ordered</span><span class="sort-icon" id="si-ordered"></span></th>
+              <th class="sortable-th text-center" onclick="sortProc('available')"><span>Available</span><span class="sort-icon" id="si-available"></span></th>
+              <th class="sortable-th text-center" onclick="sortProc('shortfall')"><span>Shortfall</span><span class="sort-icon" id="si-shortfall"></span></th>
+              <th class="sortable-th" onclick="sortProc('status')"><span>Status</span><span class="sort-icon" id="si-status"></span></th>
+              <th class="sortable-th" onclick="sortProc('source')"><span>Source</span><span class="sort-icon" id="si-source"></span></th>
+              <th class="sortable-th" onclick="sortProc('created')"><span>Created</span><span class="sort-icon" id="si-created"></span></th>
+              <th>Manager</th>
+              <th class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody id="procTableBody">
+            <tr><td colspan="15" class="empty-state"><i class="fas fa-spinner fa-spin"></i>Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination-row" id="procPagination"></div>
+    </div>
+  </div>
+
+  <!-- ── Stock Analysis Tab ───────────────────────────────────────────────── -->
+  <div id="panestk" style="display:none;">
+
+    <!-- Summary cards -->
+    <div class="stat-cards" id="stkStats"></div>
+
+    <!-- Filters + Bulk Action -->
+    <div class="filter-card">
+      <div class="filter-group" style="flex:1;min-width:180px;">
+        <label>Category</label>
+        <select class="form-select" id="stkCat" onchange="loadStock()">
+          <option value="">All Categories</option>
+        </select>
+      </div>
+      <div class="filter-group" style="flex:1;min-width:160px;">
+        <label>Company</label>
+        <select class="form-select" id="stkCompany" onchange="loadStock()">
+          <option value="">All Companies</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Stock Status</label>
+        <select class="form-select" id="stkStatus" onchange="loadStock()">
+          <option value="all">All</option>
+          <option value="out">Out of Stock</option>
+          <option value="low">Low Stock (1–5)</option>
+          <option value="ok">In Stock (&gt;5)</option>
+        </select>
+      </div>
+      <div class="d-flex gap-2 align-items-end flex-wrap">
+        <button class="btn btn-primary btn-sm fw-600" onclick="loadStock()"><i class="fas fa-sync me-1"></i>Refresh</button>
+        <button class="btn btn-sm fw-600" id="raiseAllBtn" style="background:#d97706;color:white;display:none;" onclick="raiseAllOutOfStock()">
+          <i class="fas fa-exclamation-triangle me-1"></i>Raise All Out-of-Stock
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="data-card">
+      <div class="data-card-header">
+        <h5><i class="fas fa-layer-group me-2 text-primary"></i>Stock Analysis</h5>
+        <span id="stkCountLabel" style="font-size:12px;color:#6b7280;"></span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:36px;">#</th>
+              <th class="sortable-th" onclick="sortStk('sku')"><span>SKU</span><span class="sort-icon" id="stk-si-sku"></span></th>
+              <th class="sortable-th" onclick="sortStk('name')"><span>Product Name</span><span class="sort-icon" id="stk-si-name"></span></th>
+              <th>Specification</th>
+              <th class="sortable-th" onclick="sortStk('color')"><span>Color</span><span class="sort-icon" id="stk-si-color"></span></th>
+              <th>Model</th>
+              <th class="sortable-th" onclick="sortStk('category_name')"><span>Category</span><span class="sort-icon" id="stk-si-category_name"></span></th>
+              <th class="sortable-th" onclick="sortStk('company_name')"><span>Company</span><span class="sort-icon" id="stk-si-company_name"></span></th>
+              <th class="sortable-th text-center" style="min-width:110px;" onclick="sortStk('available_qty')"><span>Avail. Qty</span><span class="sort-icon" id="stk-si-available_qty"></span></th>
+              <th class="sortable-th text-center" onclick="sortStk('status')"><span>Status</span><span class="sort-icon" id="stk-si-status"></span></th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="stkTableBody">
+            <tr><td colspan="11" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content-area -->
+</div><!-- /main-content -->
+
+
+<!-- ── Toast stack ──────────────────────────────────────────────────────── -->
+<div class="toast-stack" id="toastStack"></div>
+
+
+<!-- ── PO View Modal ────────────────────────────────────────────────────── -->
+<div class="modal fade" id="poViewModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-file-invoice me-2"></i><span id="vmTitle">PO Detail</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4" id="vmBody">
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-sm fw-600" id="vmGenerateInvoiceBtn" onclick="openInvoiceModal(currentPOId)"
+          style="background:#0f766e;color:white;display:none;">
+          <i class="fas fa-file-invoice me-1"></i>Generate Invoice
+        </button>
+        <button type="button" class="btn btn-sm fw-600" id="vmDispatchBtn" onclick="openDispatch()"
+          style="background:#059669;color:white;display:none;">
+          <i class="fas fa-truck me-1"></i>Update Dispatch
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Dispatch Update Modal ────────────────────────────────────────────── -->
+<div class="modal fade" id="dispatchModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-truck me-2"></i>Update Dispatch — <span id="dmPoNumber"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted mb-3" style="font-size:13px;">Enter dispatched qty and revenue for each item. Only items with qty &gt; 0 will be saved.</p>
+        <div style="overflow-x:auto;">
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>SKU</th><th>Product</th><th class="text-center">Ordered</th>
+                <th class="text-center">Already Dispatched</th>
+                <th class="text-center">New Dispatch Qty</th>
+                <th class="text-end">Revenue (₹)</th><th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="dispatchItemsBody"></tbody>
+          </table>
+        </div>
+        <hr class="my-3">
+        <p class="fw-600 mb-2" style="font-size:12px;color:#374151;">Delivery Details (optional — applies to all items in this dispatch)</p>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label" style="font-size:11px;font-weight:600;">Courier / Carrier</label>
+            <input type="text" class="form-control form-control-sm" id="dmCourierName" placeholder="e.g. BlueDart, DTDC…">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" style="font-size:11px;font-weight:600;">Tracking Number</label>
+            <input type="text" class="form-control form-control-sm" id="dmTrackingNumber" placeholder="Tracking / waybill number">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" style="font-size:11px;font-weight:600;">Vehicle Number</label>
+            <input type="text" class="form-control form-control-sm" id="dmVehicleNumber" placeholder="e.g. MH01AB1234">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" style="font-size:11px;font-weight:600;">Driver Name</label>
+            <input type="text" class="form-control form-control-sm" id="dmDriverName" placeholder="Driver name (optional)">
+          </div>
+        </div>
+        <div id="dispatchError" class="alert alert-danger py-2 mt-3" style="display:none;font-size:13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm fw-600" id="dispatchSaveBtn" onclick="saveDispatch()"
+          style="background:#059669;color:white;">
+          <i class="fas fa-save me-1"></i>Save Dispatch
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── PO Status Update Modal ────────────────────────────────────────────── -->
+<div class="modal fade" id="poStatusModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Update PO Status</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted mb-3" id="poStatusModalDesc" style="font-size:13px;"></p>
+        <div class="mb-3">
+          <label class="form-label fw-600" style="font-size:12px;">New Status</label>
+          <select class="form-select form-select-sm" id="poNewStatus">
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="payment_pending">Payment Pending</option>
+            <option value="payment_received">Payment Received</option>
+            <option value="procurement">Procurement</option>
+            <option value="ordered">Ordered</option>
+            <option value="received">Received</option>
+            <option value="partial_dispatch">Partial Dispatch</option>
+            <option value="dispatched">Dispatched</option>
+            <option value="completed">Completed</option>
+            <option value="hold">On Hold</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label fw-600" style="font-size:12px;">Notes (optional)</label>
+          <textarea class="form-control form-control-sm" id="poStatusNotes" rows="2" placeholder="Optional notes…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm fw-600" id="poStatusSaveBtn" onclick="savePOStatusUpdate()">
+          <i class="fas fa-save me-1"></i>Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Procurement Update Modal ─────────────────────────────────────────── -->
+<div class="modal fade" id="procModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-boxes me-2"></i>Update Procurement</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted mb-3" id="procModalDesc" style="font-size:13px;"></p>
+        <div class="mb-3">
+          <label class="form-label fw-600" style="font-size:12px;">New Status</label>
+          <select class="form-select form-select-sm" id="procNewStatus">
+            <option value="pending">Pending</option>
+            <option value="accepted">Accepted</option>
+            <option value="in_progress">In Progress</option>
+            <option value="under_procurement">Under Procurement</option>
+            <option value="ordered">Ordered</option>
+            <option value="received">Received</option>
+            <option value="quality_check_pending">Quality Check Pending</option>
+            <option value="quality_confirmed">Quality Confirmed</option>
+            <option value="quality_failed">Quality Failed</option>
+            <option value="added_to_stock">Added to Stock</option>
+            <option value="hold">On Hold</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="mb-3" id="procReceivedQtyWrap" style="display:none;">
+          <label class="form-label fw-600" style="font-size:12px;">Received Qty</label>
+          <input type="number" class="form-control form-control-sm" id="procReceivedQty" min="0" placeholder="Qty received from supplier">
+        </div>
+        <div>
+          <label class="form-label fw-600" style="font-size:12px;">Notes (optional)</label>
+          <textarea class="form-control form-control-sm" id="procUpdateNotes" rows="2" placeholder="Optional notes…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm fw-600" id="procSaveBtn" onclick="saveProcUpdate()">
+          <i class="fas fa-save me-1"></i>Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Assign Manager Modal ─────────────────────────────────────────────── -->
+<div class="modal fade" id="assignMgrModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fas fa-user-tag me-2"></i>Assign Store Manager</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted mb-3" id="assignMgrDesc" style="font-size:13px;"></p>
+        <div class="mb-0">
+          <label class="form-label fw-600" style="font-size:12px;">Select Staff Member</label>
+          <select class="form-select form-select-sm" id="assignMgrStaff">
+            <option value="">Loading staff…</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm fw-600" id="assignMgrSaveBtn" onclick="saveAssignManager()">
+          <i class="fas fa-save me-1"></i>Assign
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Payment Modal ─────────────────────────────────────────────────────── -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:600px;">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#f0fdf4;border-bottom:1px solid #bbf7d0;">
+        <h5 class="modal-title" style="font-size:14px;font-weight:700;color:#065f46;">
+          <i class="fas fa-rupee-sign me-2"></i>Payments — <span id="pmPoNumber"></span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <!-- Summary bar -->
+        <div id="pmSummaryBar" style="display:flex;gap:0;border-bottom:1px solid #e5e7eb;font-size:12px;">
+          <div style="flex:1;padding:10px 16px;border-right:1px solid #e5e7eb;">
+            <div style="color:#6b7280;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">Total Value</div>
+            <div id="pmTotalValue" style="font-size:15px;font-weight:700;color:#1f2937">—</div>
+          </div>
+          <div style="flex:1;padding:10px 16px;border-right:1px solid #e5e7eb;">
+            <div style="color:#6b7280;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">Paid</div>
+            <div id="pmTotalPaid" style="font-size:15px;font-weight:700;color:#059669">—</div>
+          </div>
+          <div style="flex:1;padding:10px 16px;">
+            <div style="color:#6b7280;font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">Balance</div>
+            <div id="pmBalance" style="font-size:15px;font-weight:700;color:#dc2626">—</div>
+          </div>
+        </div>
+        <!-- Existing transactions -->
+        <div id="pmTxnList" style="padding:12px 16px;max-height:200px;overflow-y:auto;border-bottom:1px solid #e5e7eb;">
+          <div style="color:#9ca3af;font-size:12px;text-align:center;padding:12px 0;">Loading transactions…</div>
+        </div>
+        <!-- Read-only note for terminal-state POs -->
+        <div id="pmReadOnlyNote" style="display:none;padding:10px 16px;background:#eff6ff;border-bottom:1px solid #bfdbfe;">
+          <i class="fas fa-info-circle me-1" style="color:#2563eb;"></i>
+          <span style="font-size:12px;color:#1e40af;font-weight:600;">Transactions are view-only for this PO status. Payments can only be added for active orders.</span>
+        </div>
+        <!-- Add new transaction form -->
+        <div id="pmNewPaymentSection" style="padding:14px 16px;background:#fafafa;">
+          <div style="font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">
+            <i class="fas fa-plus-circle me-1" style="color:#059669"></i>Add New Payment
+          </div>
+          <div class="row g-2">
+            <div class="col-md-4">
+              <label class="form-label fw-600" style="font-size:11px;margin-bottom:3px;">Amount (₹) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control form-control-sm" id="pmAmount" min="0.01" step="0.01" placeholder="0.00">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-600" style="font-size:11px;margin-bottom:3px;">Payment Mode <span class="text-danger">*</span></label>
+              <select class="form-select form-select-sm" id="pmPaymentMode">
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="neft">NEFT</option>
+                <option value="rtgs">RTGS</option>
+                <option value="cheque">Cheque</option>
+                <option value="card">Card</option>
+                <option value="dd">DD</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-600" style="font-size:11px;margin-bottom:3px;">Date</label>
+              <input type="date" class="form-control form-control-sm" id="pmTransactionDate">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-600" style="font-size:11px;margin-bottom:3px;">Reference / UTR #</label>
+              <input type="text" class="form-control form-control-sm" id="pmReferenceNumber" placeholder="Optional">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-600" style="font-size:11px;margin-bottom:3px;">Notes</label>
+              <input type="text" class="form-control form-control-sm" id="pmNotes" placeholder="Optional notes">
+            </div>
+          </div>
+          <div id="paymentError" class="alert alert-danger py-2 mt-2 mb-0" style="display:none;font-size:12px;"></div>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:10px 16px;">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-sm fw-600" id="paymentSaveBtn" onclick="savePayment()"
+          style="background:#059669;color:white;min-width:140px;">
+          <i class="fas fa-plus me-1"></i>Record Payment
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── Generate Invoice Modal ────────────────────────────────────────────── -->
+<div class="modal fade" id="invoiceTypeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(135deg,#0f766e,#0d9488);">
+        <h5 class="modal-title"><i class="fas fa-file-invoice me-2"></i>Generate Invoice — <span id="imPoNumber"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <p class="text-muted mb-3" style="font-size:13px;">Select invoice type to generate a downloadable document.</p>
+        <div id="imPiBadgeWrap" style="display:none;margin-bottom:12px;">
+          <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Existing Invoice Number</div>
+          <span class="pi-badge"><i class="fas fa-check-circle"></i><span id="imExistingPi"></span></span>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-600" style="font-size:12px;">Invoice Type</label>
+          <div class="d-flex gap-3 mt-1">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="invoiceType" id="itTax" value="tax" checked>
+              <label class="form-check-label fw-600" for="itTax" style="font-size:13px;">
+                <i class="fas fa-receipt me-1 text-success"></i>Tax Invoice
+                <div style="font-size:11px;font-weight:400;color:#6b7280;margin-top:2px;">With GST breakdown · PI number assigned</div>
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="invoiceType" id="itEst" value="estimate">
+              <label class="form-check-label fw-600" for="itEst" style="font-size:13px;">
+                <i class="fas fa-file-alt me-1 text-primary"></i>Estimate
+                <div style="font-size:11px;font-weight:400;color:#6b7280;margin-top:2px;">Without tax columns · no PI number</div>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div id="imError" class="alert alert-danger py-2" style="display:none;font-size:13px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm fw-600" id="imGenerateBtn" onclick="confirmGenerateInvoice()"
+          style="background:#0f766e;color:white;">
+          <i class="fas fa-download me-1"></i>Generate &amp; Download
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+const API = '/api/v1/marketplace';
+const COMPANY_ID = 1;
+
+let poPage = 1, procPage = 1;
+let poSortBy = 'created_at', poSortDir = 'desc';
+let procSortBy = 'created', procSortOrder = 'desc';
+let stkSortBy = 'available_qty', stkSortDir = 'asc';
+let currentPOId = null, currentPOData = null, currentProcId = null, currentPOStatusId = null;
+let debounceTimer = null;
+
+// ── Tab switching ──────────────────────────────────────────────────────────────
+function switchTab(t) {
+  document.getElementById('panepo').style.display   = t === 'po'   ? '' : 'none';
+  document.getElementById('paneproc').style.display = t === 'proc' ? '' : 'none';
+  document.getElementById('panestk').style.display  = t === 'stk'  ? '' : 'none';
+  document.getElementById('tabPO').classList.toggle('active', t === 'po');
+  document.getElementById('tabProc').classList.toggle('active', t === 'proc');
+  document.getElementById('tabStk').classList.toggle('active', t === 'stk');
+  if (t === 'proc') loadProc(1);
+  if (t === 'stk')  loadStock();
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const icons = { success: 'check-circle', error: 'exclamation-circle', info: 'info-circle' };
+  const colors = { success: '#059669', error: '#dc2626', info: '#0ea5e9' };
+  const el = document.createElement('div');
+  el.className = `toast-msg ${type}`;
+  el.innerHTML = `<i class="fas fa-${icons[type]}" style="color:${colors[type]}"></i><span>${msg}</span>`;
+  document.getElementById('toastStack').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ── Formatters ─────────────────────────────────────────────────────────────────
+function fmt(n) { return n == null ? '—' : Number(n).toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(s) { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('en-IN') + ' ' + d.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}); }
+function fmtShort(s) { return s ? new Date(s).toLocaleDateString('en-IN') : '—'; }
+
+function statusBadge(st) {
+  return `<span class="badge-${st}">${st.replace(/_/g,' ').toUpperCase()}</span>`;
+}
+function custBadge(ct) {
+  const labels = { public:'Public', mnr_member:'MNR Member', partner:'Partner' };
+  return `<span class="cust-badge-${ct}">${labels[ct]||ct}</span>`;
+}
+function poSourceBadge(src, ticket_id = null) {
+  if (src === 'service_ticket') {
+    let label = ticket_id ? `TKT-${ticket_id}` : 'Service';
+    return `<span style="background:#fce7f3;color:#9d174d;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;"><i class="fas fa-ticket-alt me-1"></i>${label}</span>`;
+  }
+  if (src === 'technical_ticket') return '<span style="background:#dbeafe;color:#1e40af;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;"><i class="fas fa-microchip me-1"></i>Technical</span>';
+  return '<span style="color:#9ca3af;font-size:11px;">Public</span>';
+}
+function procSourceBadge(src, ticket_id = null) {
+  if (src === 'service_ticket') {
+    let label = ticket_id ? `TKT-${ticket_id}` : 'Service';
+    return `<span style="background:#fce7f3;color:#9d174d;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;"><i class="fas fa-ticket-alt me-1"></i>${label}</span>`;
+  }
+  if (src === 'technical_ticket') return '<span style="background:#dbeafe;color:#1e40af;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;"><i class="fas fa-microchip me-1"></i>Technical</span>';
+  if (src === 'auto_sync')        return '<span style="background:#e0e7ff;color:#3730a3;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;"><i class="fas fa-sync me-1"></i>Auto-Sync</span>';
+  if (src === 'po_creation')      return '<span style="background:#f0fdf4;color:#166534;font-size:11px;padding:2px 7px;border-radius:20px;font-weight:700;"><i class="fas fa-file-invoice me-1"></i>PO</span>';
+  return '<span style="color:#9ca3af;font-size:11px;">Manual</span>';
+}
+
+// ── Sync Sheet ─────────────────────────────────────────────────────────────────
+async function syncSheet() {
+  const btn = document.getElementById('syncBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Syncing…';
+  try {
+    const res = await staffFetch(`${API}/pos/sync-sheet?company_id=${COMPANY_ID}`, {method:'POST'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Sync failed');
+    let msg = `Sync complete — ${data.upserted || data.successful_records || 0} items updated`;
+    if (data.auto_procurement_raised > 0)
+      msg += ` · ${data.auto_procurement_raised} procurement(s) auto-raised for zero-stock items`;
+    toast(msg, 'success');
+    loadPOs(poPage);
+    // Refresh stock tab if open
+    if (document.getElementById('panestk').style.display !== 'none') loadStock();
+  } catch(e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Sync Catalog Sheet';
+  }
+}
+
+// ── PO Stats ───────────────────────────────────────────────────────────────────
+async function loadPOStats() {
+  try {
+    const _cFilter = document.getElementById('poCompany')?.value || '';
+    const _statsUrl = _cFilter
+      ? `${API}/pos/?company_id=${_cFilter}&per_page=100`
+      : `${API}/pos/?per_page=100`;
+    const res = await staffFetch(_statsUrl);
+    if (!res.ok) return;
+    const data = await res.json();
+    const all = data.pos || [];
+    const totalVal = all.reduce((s,p) => s + parseFloat(p.total_value||0), 0);
+    const totalRev = all.reduce((s,p) => s + parseFloat(p.revenue_collected||0), 0);
+    const pending  = all.filter(p => p.status === 'confirmed').length;
+    const procNeeded = all.reduce((s,p) => s + (p.procurement_count||0), 0);
+    document.getElementById('poStats').innerHTML = `
+      <div class="stat-card blue"><div class="val">${data.total}</div><div class="lbl">Total POs</div></div>
+      <div class="stat-card orange"><div class="val">${pending}</div><div class="lbl">Pending Dispatch</div></div>
+      <div class="stat-card green"><div class="val">₹${fmt(totalVal)}</div><div class="lbl">Order Value</div></div>
+      <div class="stat-card green"><div class="val">₹${fmt(totalRev)}</div><div class="lbl">Revenue Collected</div></div>
+      <div class="stat-card ${procNeeded>0?'red':'green'}"><div class="val">${procNeeded}</div><div class="lbl">Procurement Items</div></div>
+    `;
+    if (data.total > 0) document.getElementById('tabPoBadge').textContent = data.total;
+  } catch(e) {}
+}
+
+// ── PO List ────────────────────────────────────────────────────────────────────
+function debouncePOLoad() { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => loadPOs(1), 400); }
+
+function sortPOs(col) {
+  if (poSortBy === col) poSortDir = poSortDir === 'asc' ? 'desc' : 'asc';
+  else { poSortBy = col; poSortDir = 'desc'; }
+  loadPOs(1);
+}
+function renderPOSortIcons() {
+  ['po_number','created_at','customer_name','total_ordered_qty','total_value','status'].forEach(c => {
+    const el = document.getElementById(`po-si-${c}`);
+    if (el) el.className = 'sort-icon' + (poSortBy === c ? ` ${poSortDir}` : '');
+  });
+}
+
+async function loadPOs(page = 1) {
+  poPage = page;
+  const _poCompany   = document.getElementById('poCompany')?.value || '';
+  const _poSrcType   = document.getElementById('poSourceType')?.value || '';
+  const params = new URLSearchParams({
+    page, per_page: 25,
+    sort_by: poSortBy, sort_dir: poSortDir,
+    ...(_poCompany                                         && {company_id: _poCompany}),
+    ...(_poSrcType                                         && {source_type: _poSrcType}),
+    ...(document.getElementById('poSearch').value.trim()   && {search: document.getElementById('poSearch').value.trim()}),
+    ...(document.getElementById('poStatus').value          && {status: document.getElementById('poStatus').value}),
+    ...(document.getElementById('poCustType').value        && {customer_type: document.getElementById('poCustType').value}),
+    ...(document.getElementById('poDateFrom').value        && {date_from: document.getElementById('poDateFrom').value}),
+    ...(document.getElementById('poDateTo').value          && {date_to: document.getElementById('poDateTo').value}),
+  });
+  document.getElementById('poTableBody').innerHTML =
+    '<tr><td colspan="14" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  try {
+    const res = await staffFetch(`${API}/pos/?${params}`);
+    if (!res.ok) throw new Error('Failed to load');
+    const data = await res.json();
+    document.getElementById('poCountLabel').textContent = `${data.total} record${data.total!==1?'s':''}`;
+
+    if (!data.pos?.length) {
+      document.getElementById('poTableBody').innerHTML =
+        '<tr><td colspan="14" class="empty-state"><i class="fas fa-inbox"></i><br>No purchase orders found</td></tr>';
+      document.getElementById('poPagination').innerHTML = '';
+      return;
+    }
+
+    document.getElementById('poTableBody').innerHTML = data.pos.map(po => `
+      <tr>
+        <td><span class="po-number">${po.po_number}</span></td>
+        <td style="white-space:nowrap;font-size:12px;">${fmtShort(po.created_at)}</td>
+        <td>
+          <div style="font-weight:600;font-size:13px;">${po.customer_name}</div>
+          <div style="color:#9ca3af;font-size:11px;">${po.customer_phone}</div>
+        </td>
+        <td>${custBadge(po.customer_type)}</td>
+        <td style="font-size:12px;">${po.mnr_id || po.partner_code || '<span style="color:#d1d5db;">—</span>'}</td>
+        <td class="text-center">${po.total_items}</td>
+        <td class="text-center">${po.total_ordered_qty}</td>
+        <td class="text-end fw-600">₹${fmt(po.total_value)}</td>
+        <td class="text-center">
+          <div class="fw-600">${po.total_dispatched||0}</div>
+          ${po.revenue_collected ? `<div style="font-size:11px;color:#059669;">₹${fmt(po.revenue_collected)}</div>` : ''}
+        </td>
+        <td class="text-center">
+          ${po.procurement_count > 0
+            ? `<span style="color:#d97706;font-weight:700;">${po.procurement_count}</span>`
+            : `<span style="color:#d1d5db;">—</span>`}
+        </td>
+        <td>${statusBadge(po.status)}</td>
+        <td>${poSourceBadge(po.source_type, po.source_ticket_id)}</td>
+        <td style="font-size:11px;white-space:nowrap;">
+          ${po.store_manager_name
+            ? `<span style="color:#0ea5e9;font-weight:600;">${po.store_manager_name}</span>`
+            : `<span style="color:#d1d5db;">—</span>`}
+        </td>
+        <td class="text-center" style="white-space:nowrap;">
+          <button class="action-btn btn-view me-1" onclick="viewPO(${po.id})" title="View"><i class="fas fa-eye"></i></button>
+          <button class="action-btn me-1" onclick="downloadPOById(${po.id})" title="Download PO" style="background:#fff0f0;color:#c62828;border-color:#fecaca;"><i class="fas fa-file-download"></i></button>
+          <button class="action-btn btn-edit me-1" onclick="openPOStatusUpdate(${po.id},'${po.po_number}','${po.status}')" title="Update Status"><i class="fas fa-edit"></i></button>
+          ${po.status !== 'dispatched' && po.status !== 'cancelled'
+            ? `<button class="action-btn btn-dispatch me-1" onclick="viewAndDispatch(${po.id})" title="Dispatch"><i class="fas fa-truck"></i></button>`
+            : ''}
+          ${po.status !== 'cancelled'
+            ? `<button class="action-btn me-1" onclick="openPayment(${po.id},'${po.po_number}','${po.status}',${po.company_id||1})" title="${po.status==='completed'||po.status==='dispatched'?'View Payments':'Record / View Payments'}" style="background:${po.status==='completed'||po.status==='dispatched'?'#f0f9ff;color:#0369a1;border-color:#bae6fd':'#f0fdf4;color:#059669;border-color:#a7f3d0'};"><i class="fas fa-rupee-sign"></i></button>`
+            : ''}
+          ${po.status === 'dispatched' || po.status === 'partial_dispatch' || po.status === 'completed'
+            ? `<button class="action-btn btn-invoice me-1" onclick="openInvoiceModal(${po.id})" title="Generate Invoice"><i class="fas fa-file-invoice"></i></button>`
+            : ''}
+          <button class="action-btn" onclick="openAssignManager(${po.id},'po','${po.po_number}')" title="Assign Manager" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe;"><i class="fas fa-user-tag"></i></button>
+        </td>
+      </tr>
+    `).join('');
+
+    renderPagination('poPagination', data.page, data.pages, data.total, 'loadPOs');
+    renderPOSortIcons();
+  } catch(e) {
+    document.getElementById('poTableBody').innerHTML =
+      `<tr><td colspan="14" class="empty-state"><i class="fas fa-exclamation-circle text-danger"></i><br>${e.message}</td></tr>`;
+  }
+}
+
+function clearPOFilters() {
+  ['poSearch','poDateFrom','poDateTo'].forEach(id => document.getElementById(id).value = '');
+  ['poStatus','poCustType','poCompany','poSourceType'].forEach(id => document.getElementById(id).value = '');
+  loadPOs(1);
+}
+
+// ── PO View ────────────────────────────────────────────────────────────────────
+async function viewPO(poId) {
+  currentPOId = poId; currentPOData = null;
+  document.getElementById('vmTitle').textContent = 'Loading…';
+  document.getElementById('vmBody').innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div></div>';
+  document.getElementById('vmDispatchBtn').style.display = 'none';
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('poViewModal')).show();
+  try {
+    const res = await staffFetch(`${API}/pos/${poId}?company_id=${COMPANY_ID}`);
+    if (!res.ok) throw new Error('Failed to load PO');
+    const po = await res.json();
+    currentPOData = po;
+    renderPODetail(po);
+    if (po.status !== 'dispatched' && po.status !== 'cancelled')
+      document.getElementById('vmDispatchBtn').style.display = '';
+    const terminalSt = ['dispatched','partial_dispatch','completed'];
+    document.getElementById('vmGenerateInvoiceBtn').style.display = terminalSt.includes(po.status) ? '' : 'none';
+  } catch(e) {
+    document.getElementById('vmBody').innerHTML =
+      `<div class="empty-state"><i class="fas fa-exclamation-circle text-danger"></i><br>${e.message}</div>`;
+  }
+}
+
+async function refreshPOContent(poId) {
+  try {
+    const res = await staffFetch(`${API}/pos/${poId}?company_id=${COMPANY_ID}`);
+    if (!res.ok) throw new Error('Failed to reload PO');
+    const po = await res.json();
+    currentPOData = po;
+    renderPODetail(po);
+    if (po.status !== 'dispatched' && po.status !== 'cancelled')
+      document.getElementById('vmDispatchBtn').style.display = '';
+    const terminalSt = ['dispatched','partial_dispatch','completed'];
+    document.getElementById('vmGenerateInvoiceBtn').style.display = terminalSt.includes(po.status) ? '' : 'none';
+  } catch(e) { /* silent — modal stays open */ }
+}
+
+async function viewAndDispatch(poId) {
+  await viewPO(poId);
+  setTimeout(() => openDispatch(), 700);
+}
+
+function renderPODetail(po) {
+  const s = po.summary || {};
+  document.getElementById('vmTitle').textContent = po.po_number;
+  document.getElementById('vmBody').innerHTML = `
+    <div class="info-grid">
+      <div class="info-block"><div class="ib-lbl">PO Number</div><div class="ib-val po-number">${po.po_number}</div></div>
+      <div class="info-block"><div class="ib-lbl">Status</div><div class="ib-val">${statusBadge(po.status)}</div></div>
+      <div class="info-block"><div class="ib-lbl">Created</div><div class="ib-val">${fmtDate(po.created_at)}</div></div>
+      <div class="info-block"><div class="ib-lbl">Customer</div><div class="ib-val">${po.customer_name}</div></div>
+      <div class="info-block"><div class="ib-lbl">Phone</div><div class="ib-val">${po.customer_phone}</div></div>
+      <div class="info-block"><div class="ib-lbl">Email</div><div class="ib-val">${po.customer_email||'—'}</div></div>
+      <div class="info-block"><div class="ib-lbl">Customer Type</div><div class="ib-val">${custBadge(po.customer_type)}</div></div>
+      <div class="info-block"><div class="ib-lbl">MNR ID</div><div class="ib-val">${po.mnr_id||'—'}</div></div>
+      <div class="info-block"><div class="ib-lbl">Partner Code</div><div class="ib-val">${po.partner_code||'—'}</div></div>
+      ${po.discount_name ? `<div class="info-block"><div class="ib-lbl">Discount</div><div class="ib-val" style="color:#0ea5e9;">${po.discount_name}</div></div>` : ''}
+      ${po.discount_coupon_id ? `<div class="info-block" style="grid-column:span 2"><div class="ib-lbl">Discount Coupon ID</div><div class="ib-val"><span style="background:#fef9c3;color:#713f12;padding:2px 8px;border-radius:4px;font-weight:700;letter-spacing:.04em;">${po.discount_coupon_id}</span>${po.coupon_entered_by_name ? `<span style="font-size:10px;color:#6b7280;margin-left:8px;">Entered by: <b>${po.coupon_entered_by_name}</b>${po.coupon_entered_at ? ' on '+fmtDate(po.coupon_entered_at) : ''}</span>` : ''}</div></div>` : ''}
+      ${po.pi_number ? `<div class="info-block"><div class="ib-lbl">Invoice No.</div><div class="ib-val"><span class="pi-badge" style="font-size:11px;padding:2px 7px;"><i class="fas fa-check-circle me-1"></i>${po.pi_number}</span></div></div>` : ''}
+      ${po.notes ? `<div class="info-block" style="grid-column:span 2"><div class="ib-lbl">Notes</div><div class="ib-val" style="font-size:12px;">${po.notes}</div></div>` : ''}
+    </div>
+
+    <!-- Bill To / Ship To -->
+    <div style="display:flex;gap:12px;margin-bottom:14px;">
+      <div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 12px;">
+        <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">📦 Bill To</div>
+        <div style="font-weight:700;font-size:12.5px;color:#1a2e4a;">${po.bill_name||po.customer_name||'—'}</div>
+        <div style="font-size:11px;color:#374151;">${po.bill_phone||po.customer_phone||''}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">${(po.bill_address||po.delivery_address||'—').replace(/\n/g,'<br>')}</div>
+      </div>
+      <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 12px;">
+        <div style="font-size:10px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">🚚 Ship To</div>
+        <div style="font-weight:700;font-size:12.5px;color:#1a2e4a;">${po.ship_name||po.bill_name||po.customer_name||'—'}</div>
+        <div style="font-size:11px;color:#374151;">${po.ship_phone||po.bill_phone||po.customer_phone||''}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">${(po.ship_address||po.bill_address||po.delivery_address||po.ship_same_as_bill?'(Same as billing)':'—').replace(/\n/g,'<br>')}</div>
+      </div>
+    </div>
+    <div style="margin-bottom:14px;">
+      <button class="btn btn-sm" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:11px;font-weight:600;" onclick="openAddrEdit(${po.id})">
+        ✏️ Edit Addresses
+      </button>
+      <button class="btn btn-sm ms-2" style="background:#2563eb;color:#fff;font-size:11px;font-weight:600;" onclick="toggleEditItems()">
+        🛒 Edit Items
+      </button>
+      <button class="btn btn-sm ms-2" style="background:#d97706;color:#fff;font-size:11px;font-weight:600;" onclick="toggleCouponPanel()">
+        🏷️ Coupon ID
+      </button>
+      <button class="btn btn-sm ms-2" style="background:#c62828;color:#fff;font-size:11px;font-weight:600;" onclick="downloadPO(currentPOData)">
+        📥 Download PO
+      </button>
+      ${['dispatched','partial_dispatch','completed'].includes(po.status)
+        ? `<button class="btn btn-sm ms-2" style="background:#0f766e;color:#fff;font-size:11px;font-weight:600;" onclick="openInvoiceModal(${po.id})">
+            🧾 Generate Invoice
+          </button>`
+        : ''}
+    </div>
+
+    <!-- Coupon Entry Panel -->
+    <div id="couponEntryPanel" style="display:none;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">🏷️ Discount Coupon ID</div>
+      <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">
+        Enter the discount coupon / MNR ID / Partner code applied to this order.
+        ${currentPOData && currentPOData.coupon_entered_by_name
+          ? `<span style="color:#374151;font-weight:600;">Last coupon entered by: <b>${currentPOData.coupon_entered_by_name}</b>${currentPOData.coupon_entered_at ? ' on ' + fmtDate(currentPOData.coupon_entered_at) : ''}.</span>`
+          : ''}
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+        <div>
+          <label style="font-size:10px;font-weight:600;color:#374151;">Coupon / ID</label>
+          <input type="text" id="couponIdInput" class="form-control form-control-sm" style="max-width:220px;"
+            placeholder="MNR123... / VGK... / PROMO..."
+            value="${currentPOData && currentPOData.discount_coupon_id ? currentPOData.discount_coupon_id : ''}">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:600;color:#374151;">Type</label>
+          <select id="couponModeSelect" class="form-select form-select-sm" style="max-width:150px;">
+            <option value="">— select —</option>
+            <option value="mnr" ${currentPOData&&currentPOData.discount_mode==='mnr'?'selected':''}>MNR (3%)</option>
+            <option value="student" ${currentPOData&&currentPOData.discount_mode==='student'?'selected':''}>Student (10%)</option>
+            <option value="partner" ${currentPOData&&currentPOData.discount_mode==='partner'?'selected':''}>Partner (12%)</option>
+            <option value="vgk" ${currentPOData&&currentPOData.discount_mode==='vgk'?'selected':''}>VGK (3%)</option>
+            <option value="promo" ${currentPOData&&currentPOData.discount_mode==='promo'?'selected':''}>Promo</option>
+          </select>
+        </div>
+        <button class="btn btn-sm btn-warning fw-600" onclick="saveCoupon()" style="font-size:11px;">
+          <i class="fas fa-save me-1"></i>Apply Coupon
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="saveCoupon(true)" style="font-size:11px;">
+          <i class="fas fa-times me-1"></i>Remove
+        </button>
+        <span id="couponSaveMsg" style="font-size:11px;display:none;align-self:center;"></span>
+      </div>
+    </div>
+
+    <!-- Edit Items Panel -->
+    <div id="editItemsPanel" style="display:none;background:#f8fafc;border:1px solid #bfdbfe;border-radius:8px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;">Edit Order Items</div>
+
+      <!-- Editable items table -->
+      <div id="editItemsTable"></div>
+
+      <!-- Catalog search -->
+      <div style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:12px;">
+        <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Add from Catalog</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+          <input type="text" id="itemSearchInput" class="form-control form-control-sm" placeholder="Search by name or SKU…" oninput="searchCatalogItems(this.value)" style="max-width:320px;">
+          <span style="font-size:11px;color:#9ca3af;">Type at least 2 characters</span>
+        </div>
+        <div id="catalogSearchResults"></div>
+      </div>
+
+      <!-- Custom item form -->
+      <div style="margin-top:14px;border-top:1px solid #e2e8f0;padding-top:12px;">
+        <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Add Custom Item</div>
+        <div class="row g-2">
+          <div class="col-md-2"><label style="font-size:10px;font-weight:600;">SKU *</label>
+            <input class="form-control form-control-sm" id="ciSku" placeholder="CUSTOM001"></div>
+          <div class="col-md-3"><label style="font-size:10px;font-weight:600;">Product Name *</label>
+            <input class="form-control form-control-sm" id="ciName" placeholder="Item description"></div>
+          <div class="col-md-3"><label style="font-size:10px;font-weight:600;">Specifications</label>
+            <input class="form-control form-control-sm" id="ciSpec" placeholder="e.g. 60V 45AH / 2 Year Warranty"></div>
+          <div class="col-md-2"><label style="font-size:10px;font-weight:600;">Category</label>
+            <input class="form-control form-control-sm" id="ciCat" placeholder="Optional"></div>
+          <div class="col-1"><label style="font-size:10px;font-weight:600;">Qty *</label>
+            <input type="number" class="form-control form-control-sm" id="ciQty" min="1" value="1"></div>
+          <div class="col-md-2"><label style="font-size:10px;font-weight:600;">Dealer ₹ *</label>
+            <input type="number" class="form-control form-control-sm" id="ciPrice" min="0" step="0.01" placeholder="0.00"></div>
+          <div class="col-1"><label style="font-size:10px;font-weight:600;">GST%</label>
+            <input type="number" class="form-control form-control-sm" id="ciGst" min="0" max="28" value="18"></div>
+          <div class="col-1 d-flex align-items-end">
+            <button class="btn btn-sm btn-success fw-600" onclick="addCustomItem()" style="font-size:11px;width:100%;">+ Add</button>
+          </div>
+        </div>
+        <div id="customItemMsg" style="font-size:11px;color:#ef4444;margin-top:4px;display:none;"></div>
+      </div>
+    </div>
+    <div id="addrEditForm" style="display:none;background:#fafafa;border:1px solid #e5e7eb;border-radius:6px;padding:12px 14px;margin-bottom:14px;">
+      <div class="fw-bold mb-2" style="font-size:11px;">Edit Bill To / Ship To</div>
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label style="font-size:11px;font-weight:600;">Bill Name</label>
+          <input class="form-control form-control-sm" id="addrBillName">
+        </div>
+        <div class="col-md-6">
+          <label style="font-size:11px;font-weight:600;">Bill Phone</label>
+          <input class="form-control form-control-sm" id="addrBillPhone">
+        </div>
+        <div class="col-12">
+          <label style="font-size:11px;font-weight:600;">Billing Address</label>
+          <textarea class="form-control form-control-sm" id="addrBillAddress" rows="2"></textarea>
+        </div>
+        <div class="col-12">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="addrShipSame" onchange="toggleAddrShipSame()">
+            <label class="form-check-label" style="font-size:11px;font-weight:600;" for="addrShipSame">Ship To same as Bill To</label>
+          </div>
+        </div>
+        <div id="addrShipFields">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label style="font-size:11px;font-weight:600;">Ship Name</label>
+              <input class="form-control form-control-sm" id="addrShipName">
+            </div>
+            <div class="col-md-6">
+              <label style="font-size:11px;font-weight:600;">Ship Phone</label>
+              <input class="form-control form-control-sm" id="addrShipPhone">
+            </div>
+            <div class="col-12">
+              <label style="font-size:11px;font-weight:600;">Shipping Address</label>
+              <textarea class="form-control form-control-sm" id="addrShipAddress" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 d-flex gap-2 mt-1">
+          <button class="btn btn-sm btn-primary fw-600" id="addrSaveBtn" onclick="saveAddresses()" style="font-size:11px;">Save Addresses</button>
+          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('addrEditForm').style.display='none';" style="font-size:11px;">Cancel</button>
+          <span id="addrSaveMsg" style="font-size:11px;color:#059669;display:none;align-self:center;"></span>
+        </div>
+      </div>
+    </div>
+    <div class="sum-strip">
+      <div class="sum-card"><div class="sv">${s.total_items||0}</div><div class="sl">Products</div></div>
+      <div class="sum-card"><div class="sv">${s.total_ordered_qty||0}</div><div class="sl">Ordered</div></div>
+      <div class="sum-card"><div class="sv">${s.total_dispatched||0}</div><div class="sl">Dispatched</div></div>
+      <div class="sum-card orange"><div class="sv">${s.balance_qty||0}</div><div class="sl">Balance</div></div>
+      <div class="sum-card green"><div class="sv">₹${fmt(s.total_value)}</div><div class="sl">Order Value</div></div>
+      <div class="sum-card green"><div class="sv">₹${fmt(s.total_revenue_collected)}</div><div class="sl">Revenue</div></div>
+    </div>
+
+    <h6 class="fw-700 text-muted mb-2" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;">Order Items</h6>
+    <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:16px;">
+      <table class="items-table">
+        <thead>
+          <tr>
+            <th>SKU</th><th>HSN</th><th>Product</th><th>Category</th><th>Specification</th><th>Color</th><th>Model</th>
+            <th class="text-center">Ordered</th><th class="text-end">Dealer ₹</th>
+            <th class="text-center">GST%</th><th class="text-end">Line Total</th>
+            <th class="text-center">Dispatched</th><th class="text-end">Revenue</th><th>Stock</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${(po.items||[]).map(it => `
+            <tr>
+              <td style="font-family:monospace;font-size:11px;">${it.sku}</td>
+              <td style="font-family:monospace;font-size:10px;color:#6b7280;">${it.hsn_code||'—'}</td>
+              <td style="max-width:160px;font-size:12px;">${it.product_name}</td>
+              <td style="font-size:11px;color:#6b7280;">${it.category_name||'—'}</td>
+              <td style="font-size:11px;color:#374151;">${it.specifications||'—'}</td>
+              <td style="font-size:11px;">${it.color||'—'}</td>
+              <td style="font-size:11px;color:#374151;">${it.model_compat||'—'}</td>
+              <td class="text-center fw-600">${it.ordered_qty}</td>
+              <td class="text-end">₹${fmt(it.dealer_price)}</td>
+              <td class="text-center">${it.gst_percent}%</td>
+              <td class="text-end fw-600" style="color:#059669;">₹${fmt(it.line_total)}</td>
+              <td class="text-center fw-600" style="color:#0ea5e9;">${it.dispatched_qty||0}</td>
+              <td class="text-end" style="color:#059669;">${it.revenue_collected?'₹'+fmt(it.revenue_collected):'—'}</td>
+              <td>${it.procurement_required
+                  ? '<span class="stock-low">LOW</span>'
+                  : '<span class="stock-ok">OK</span>'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    ${po.procurement_records?.length ? `
+      <h6 class="fw-700 text-muted mb-2" style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;">Procurement Records</h6>
+      <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:8px;">
+        <table class="items-table">
+          <thead><tr><th>Proc #</th><th>SKU</th><th>Product</th><th class="text-center">Ordered</th><th class="text-center">Available</th><th class="text-center">Shortfall</th><th>Status</th></tr></thead>
+          <tbody>
+            ${po.procurement_records.map(pr => `
+              <tr>
+                <td style="font-family:monospace;font-size:11px;">${pr.procurement_number}</td>
+                <td style="font-size:11px;">${pr.sku}</td>
+                <td style="font-size:12px;">${pr.product_name}</td>
+                <td class="text-center">${pr.ordered_qty}</td>
+                <td class="text-center" style="color:#6b7280;">${pr.available_qty}</td>
+                <td class="text-center fw-600" style="color:#d97706;">${pr.shortfall_qty}</td>
+                <td>${statusBadge(pr.status)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : ''}
+  `;
+}
+
+// ── Edit Items ─────────────────────────────────────────────────────────────────
+
+function toggleEditItems() {
+  const panel = document.getElementById('editItemsPanel');
+  if (!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? '' : 'none';
+  if (opening) renderEditItemsTable();
+}
+
+function toggleCouponPanel() {
+  const panel = document.getElementById('couponEntryPanel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? '' : 'none';
+}
+
+async function saveCoupon(remove = false) {
+  if (!currentPOId) return;
+  const couponId  = remove ? null : (document.getElementById('couponIdInput')?.value || '').trim() || null;
+  const mode      = remove ? null : (document.getElementById('couponModeSelect')?.value || null);
+  const msgEl     = document.getElementById('couponSaveMsg');
+  const showMsg   = (txt, ok) => {
+    if (!msgEl) return;
+    msgEl.style.display = '';
+    msgEl.style.color   = ok ? '#059669' : '#ef4444';
+    msgEl.textContent   = txt;
+    setTimeout(() => { if (msgEl) msgEl.style.display = 'none'; }, 5000);
+  };
+  if (!remove && !couponId) { showMsg('Please enter a coupon ID or code.', false); return; }
+  if (!remove && !mode) { showMsg('Please select the discount type (MNR / Partner / Student…).', false); return; }
+  try {
+    const res = await staffFetch(`${API}/pos/${currentPOId}/coupon?company_id=${COMPANY_ID}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ discount_coupon_id: couponId, discount_mode: mode }),
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Failed'); }
+    const data = await res.json();
+    await refreshPOContent(currentPOId);
+    if (remove) {
+      showMsg('Coupon removed. Prices reset to original.', true);
+    } else {
+      const pct = data.discount_pct || 0;
+      const total = data.new_total_value != null ? '₹' + Number(data.new_total_value).toLocaleString('en-IN', {minimumFractionDigits:2}) : '';
+      showMsg(`✅ ${data.discount_name || 'Coupon'} applied — ${pct}% discount. New total: ${total}`, true);
+    }
+  } catch(e) {
+    showMsg('Error: ' + e.message, false);
+  }
+}
+
+function renderEditItemsTable() {
+  const po = currentPOData;
+  if (!po || !po.items) return;
+  const rows = (po.items || []).map(it => `
+    <tr data-ei-id="${it.id}">
+      <td style="font-family:monospace;font-size:11px;white-space:nowrap;">${it.sku}</td>
+      <td style="font-size:12px;max-width:160px;">${it.product_name}</td>
+      <td><input type="number" class="ei-input" id="ei-qty-${it.id}" min="1" value="${it.ordered_qty}"
+        oninput="markEiDirty(${it.id})" style="width:60px;"></td>
+      <td><input type="number" class="ei-input" id="ei-price-${it.id}" min="0" step="0.01" value="${it.dealer_price}"
+        oninput="markEiDirty(${it.id})" style="width:90px;"></td>
+      <td><input type="number" class="ei-input" id="ei-gst-${it.id}" min="0" max="28" value="${it.gst_percent}"
+        oninput="markEiDirty(${it.id})" style="width:55px;"></td>
+      <td id="eit-lt-${it.id}" style="font-size:12px;font-weight:600;color:#059669;white-space:nowrap;">₹${fmt(it.line_total)}</td>
+      <td style="white-space:nowrap;">
+        <button id="ei-save-${it.id}" class="btn btn-sm me-1" title="Save changes"
+          style="background:#f3f4f6;color:#9ca3af;border:1px solid #e5e7eb;font-size:10px;padding:2px 8px;cursor:not-allowed;"
+          disabled onclick="saveItemUpdate(${it.id})">
+          <i class="fas fa-save"></i> Save
+        </button>
+        <button class="btn btn-sm" title="Remove item"
+          style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;font-size:10px;padding:2px 6px;"
+          onclick="deleteItem(${it.id})"><i class="fas fa-trash-alt"></i>
+        </button>
+      </td>
+    </tr>`).join('');
+
+  document.getElementById('editItemsTable').innerHTML = `
+    <div style="overflow-x:auto;border:1px solid #e5e7eb;border-radius:6px;">
+      <table class="items-table">
+        <thead><tr>
+          <th>SKU</th><th>Product</th>
+          <th>Qty</th><th>Dealer ₹</th><th>GST%</th>
+          <th>Line Total</th><th>Actions</th>
+        </tr></thead>
+        <tbody>${rows || '<tr><td colspan="7" class="text-center text-muted" style="font-size:12px;">No items</td></tr>'}</tbody>
+      </table>
+    </div>`;
+}
+
+function markEiDirty(itemId) {
+  const btn = document.getElementById(`ei-save-${itemId}`);
+  if (!btn) return;
+  btn.disabled = false;
+  btn.style.background = '#dcfce7';
+  btn.style.color = '#16a34a';
+  btn.style.border = '1px solid #86efac';
+  btn.style.cursor = 'pointer';
+}
+
+async function saveItemUpdate(itemId) {
+  const row = document.querySelector(`[data-ei-id="${itemId}"]`);
+  const btn = document.getElementById(`ei-save-${itemId}`);
+  if (!row) return;
+  const body = {
+    ordered_qty:  parseInt(document.getElementById(`ei-qty-${itemId}`)?.value)   || 1,
+    dealer_price: parseFloat(document.getElementById(`ei-price-${itemId}`)?.value) || 0,
+    gst_percent:  parseFloat(document.getElementById(`ei-gst-${itemId}`)?.value)  || 0,
+  };
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…'; }
+  try {
+    const res = await staffFetch(`${API}/pos/${currentPOId}/items/${itemId}?company_id=${COMPANY_ID}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Update failed'); }
+    const data = await res.json();
+    const ltCell = document.getElementById(`eit-lt-${itemId}`);
+    if (ltCell) ltCell.textContent = '₹' + fmt(data.item.line_total);
+    const idx = (currentPOData.items || []).findIndex(i => i.id === itemId);
+    if (idx >= 0) Object.assign(currentPOData.items[idx], data.item);
+    if (btn) {
+      btn.innerHTML = '<i class="fas fa-check"></i> Saved';
+      btn.style.background = '#f0fdf4';
+      btn.style.color = '#16a34a';
+      btn.style.border = '1px solid #bbf7d0';
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-save"></i> Save';
+        btn.style.background = '#f3f4f6';
+        btn.style.color = '#9ca3af';
+        btn.style.border = '1px solid #e5e7eb';
+        btn.style.cursor = 'not-allowed';
+        btn.disabled = true;
+      }, 2000);
+    }
+  } catch(e) {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-save"></i> Save';
+      btn.style.background = '#fee2e2';
+      btn.style.color = '#dc2626';
+      btn.style.border = '1px solid #fca5a5';
+      btn.style.cursor = 'pointer';
+    }
+    alert('Error saving item: ' + e.message);
+  }
+}
+
+async function deleteItem(itemId) {
+  if (!confirm('Remove this item from the PO?')) return;
+  try {
+    const res = await staffFetch(`${API}/pos/${currentPOId}/items/${itemId}?company_id=${COMPANY_ID}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Delete failed'); }
+    await refreshPOContent(currentPOId);
+    const panel = document.getElementById('editItemsPanel');
+    if (panel) { panel.style.display = ''; renderEditItemsTable(); }
+  } catch(e) {
+    alert('Error removing item: ' + e.message);
+  }
+}
+
+let _catalogResults = [];
+let _catalogTimer   = null;
+
+function searchCatalogItems(q) {
+  clearTimeout(_catalogTimer);
+  const el = document.getElementById('catalogSearchResults');
+  if (!q || q.length < 2) { if (el) el.innerHTML = ''; return; }
+  _catalogTimer = setTimeout(async () => {
+    try {
+      el.innerHTML = '<div style="font-size:11px;color:#6b7280;padding:4px 0;"><i class="fas fa-spinner fa-spin me-1"></i>Searching…</div>';
+      const res = await staffFetch(`${API}/catalog-search?q=${encodeURIComponent(q)}&company_id=${COMPANY_ID}`);
+      if (!res.ok) throw new Error('Search failed');
+      _catalogResults = await res.json();
+      renderCatalogResults();
+    } catch(e) {
+      el.innerHTML = `<div style="color:#ef4444;font-size:11px;">${e.message}</div>`;
+    }
+  }, 400);
+}
+
+function renderCatalogResults() {
+  const el = document.getElementById('catalogSearchResults');
+  if (!el) return;
+  if (!_catalogResults.length) {
+    el.innerHTML = '<div style="font-size:11px;color:#6b7280;padding:4px 0;">No products found.</div>';
+    return;
+  }
+  const rows = _catalogResults.map((p, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:11px;">
+      <div>
+        <span style="font-family:monospace;color:#6b7280;font-size:10px;">${p.sku}</span>
+        <span style="margin-left:8px;font-weight:600;">${p.name}</span>
+        <span style="margin-left:6px;color:#9ca3af;">${p.category_name||''}</span>
+        ${p.specifications ? `<span style="margin-left:6px;font-size:10px;color:#374151;background:#f3f4f6;padding:1px 5px;border-radius:3px;">${p.specifications}</span>` : ''}
+        ${p.warranty_details ? `<span style="margin-left:4px;font-size:10px;color:#059669;background:#f0fdf4;padding:1px 5px;border-radius:3px;"><i class="fas fa-shield-alt me-1"></i>${p.warranty_details}</span>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <span style="font-weight:700;color:#059669;">₹${fmt(p.dealer_price)}</span>
+        <input type="number" id="cqty_${i}" min="1" value="1"
+          style="width:52px;font-size:11px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;">
+        <button class="btn btn-sm" onclick="addCatalogItem(${i})"
+          style="background:#dcfce7;color:#16a34a;border:1px solid #86efac;font-size:10px;padding:2px 8px;">
+          Add
+        </button>
+      </div>
+    </div>`).join('');
+  el.innerHTML = `<div style="border:1px solid #e5e7eb;border-radius:6px;max-height:210px;overflow-y:auto;">${rows}</div>`;
+}
+
+async function addCatalogItem(idx) {
+  const p   = _catalogResults[idx];
+  const qty = parseInt(document.getElementById(`cqty_${idx}`)?.value) || 1;
+  if (!p) return;
+  const body = {
+    sku:             p.sku,
+    product_name:    p.name,
+    category_name:   p.category_name || null,
+    brand:           p.brand || null,
+    specifications:  p.specifications || null,
+    speciality:      p.speciality || null,
+    color:           p.color || null,
+    warranty_details: p.warranty_details || null,
+    ordered_qty:     qty,
+    dealer_price:    p.dealer_price,
+    gst_percent:     p.gst_percent || 18,
+  };
+  try {
+    const res = await staffFetch(`${API}/pos/${currentPOId}/items?company_id=${COMPANY_ID}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Failed'); }
+    await refreshPOContent(currentPOId);
+    const panel = document.getElementById('editItemsPanel');
+    if (panel) { panel.style.display = ''; renderEditItemsTable(); }
+    document.getElementById('itemSearchInput').value = '';
+    document.getElementById('catalogSearchResults').innerHTML = '';
+    _catalogResults = [];
+  } catch(e) {
+    alert('Error adding item: ' + e.message);
+  }
+}
+
+async function addCustomItem() {
+  const sku   = (document.getElementById('ciSku')?.value   || '').trim();
+  const name  = (document.getElementById('ciName')?.value  || '').trim();
+  const spec  = (document.getElementById('ciSpec')?.value  || '').trim();
+  const cat   = (document.getElementById('ciCat')?.value   || '').trim();
+  const qty   = parseInt(document.getElementById('ciQty')?.value)   || 0;
+  const price = parseFloat(document.getElementById('ciPrice')?.value) || 0;
+  const gst   = parseFloat(document.getElementById('ciGst')?.value);
+  const msg   = document.getElementById('customItemMsg');
+
+  const showMsg = (txt) => { if (msg) { msg.textContent = txt; msg.style.display = ''; } };
+  if (msg) msg.style.display = 'none';
+
+  if (!sku)        return showMsg('SKU is required.');
+  if (!name)       return showMsg('Product name is required.');
+  if (qty < 1)     return showMsg('Qty must be at least 1.');
+  if (price < 0)   return showMsg('Enter a valid dealer price.');
+
+  const body = {
+    sku, product_name: name,
+    category_name: cat || null,
+    specifications: spec || null,
+    ordered_qty: qty,
+    dealer_price: price,
+    gst_percent: isNaN(gst) ? 18 : gst,
+  };
+  try {
+    const res = await staffFetch(`${API}/pos/${currentPOId}/items?company_id=${COMPANY_ID}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.detail || 'Failed'); }
+    await refreshPOContent(currentPOId);
+    const panel = document.getElementById('editItemsPanel');
+    if (panel) { panel.style.display = ''; renderEditItemsTable(); }
+    ['ciSku','ciName','ciSpec','ciCat','ciPrice'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('ciQty').value  = '1';
+    document.getElementById('ciGst').value  = '18';
+  } catch(e) {
+    showMsg('Error: ' + e.message);
+  }
+}
+
+// ── Dispatch ───────────────────────────────────────────────────────────────────
+function openDispatch() {
+  if (!currentPOData) return;
+  const po = currentPOData;
+  document.getElementById('dmPoNumber').textContent = po.po_number;
+  document.getElementById('dispatchError').style.display = 'none';
+  const saveBtn = document.getElementById('dispatchSaveBtn');
+  saveBtn.disabled = false;
+  saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Dispatch';
+
+  document.getElementById('dispatchItemsBody').innerHTML = (po.items||[]).map(it => {
+    const remaining = it.ordered_qty - (it.dispatched_qty||0);
+    return `
+      <tr data-item-id="${it.id}">
+        <td style="font-family:monospace;font-size:11px;">${it.sku}</td>
+        <td style="font-size:12px;max-width:150px;">${it.product_name}</td>
+        <td class="text-center">${it.ordered_qty}</td>
+        <td class="text-center" style="color:#0ea5e9;font-weight:600;">${it.dispatched_qty||0}</td>
+        <td class="text-center"><input type="number" class="disp-input dispatch-qty" min="0" max="${remaining}" value="0"></td>
+        <td class="text-end"><input type="number" class="disp-input dispatch-rev" min="0" step="0.01" value="0"></td>
+        <td><input type="text" class="disp-note dispatch-note" placeholder="notes…"></td>
+      </tr>`;
+  }).join('');
+
+  bootstrap.Modal.getInstance(document.getElementById('poViewModal'))?.hide();
+  setTimeout(() => new bootstrap.Modal(document.getElementById('dispatchModal')).show(), 300);
+}
+
+async function saveDispatch() {
+  const rows = document.querySelectorAll('#dispatchItemsBody tr[data-item-id]');
+  const courier_name   = document.getElementById('dmCourierName').value.trim() || null;
+  const tracking_number = document.getElementById('dmTrackingNumber').value.trim() || null;
+  const vehicle_number = document.getElementById('dmVehicleNumber').value.trim() || null;
+  const driver_name    = document.getElementById('dmDriverName').value.trim() || null;
+  const items = [];
+  rows.forEach(row => {
+    const qty = parseInt(row.querySelector('.dispatch-qty').value)||0;
+    const rev = parseFloat(row.querySelector('.dispatch-rev').value)||0;
+    const note = row.querySelector('.dispatch-note').value||null;
+    if (qty > 0 || rev > 0)
+      items.push({po_item_id: parseInt(row.dataset.itemId), dispatched_qty: qty, revenue_collected: rev, dispatch_notes: note, courier_name, tracking_number, vehicle_number, driver_name});
+  });
+
+  if (!items.length) {
+    document.getElementById('dispatchError').textContent = 'Enter at least one item with dispatch qty or revenue.';
+    document.getElementById('dispatchError').style.display = 'block';
+    return;
+  }
+
+  const btn = document.getElementById('dispatchSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  document.getElementById('dispatchError').style.display = 'none';
+
+  try {
+    const res = await staffFetch(`${API}/pos/${currentPOId}/dispatch?company_id=${COMPANY_ID}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({items}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(JSON.stringify(data.detail)||'Failed');
+    toast(`Dispatch updated. Status: ${data.po_status.replace(/_/g,' ')}. Revenue: ₹${Number(data.revenue_collected).toFixed(2)}`, 'success');
+    bootstrap.Modal.getInstance(document.getElementById('dispatchModal'))?.hide();
+    loadPOs(poPage); loadPOStats();
+  } catch(e) {
+    document.getElementById('dispatchError').textContent = e.message;
+    document.getElementById('dispatchError').style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save me-1"></i>Save Dispatch';
+  }
+}
+
+// ── Procurement List ───────────────────────────────────────────────────────────
+function debounceProcLoad() { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => loadProc(1), 400); }
+
+function sortProc(col) {
+  if (procSortBy === col) procSortOrder = procSortOrder === 'asc' ? 'desc' : 'asc';
+  else { procSortBy = col; procSortOrder = 'desc'; }
+  loadProc(1);
+}
+function renderProcSortIcons() {
+  ['proc_number','po_id','sku','product','ordered','available','shortfall','status','source','created'].forEach(c => {
+    const el = document.getElementById(`si-${c}`);
+    if (el) el.className = 'sort-icon' + (procSortBy === c ? ` ${procSortOrder}` : '');
+  });
+}
+
+async function loadProc(page = 1) {
+  procPage = page;
+  const params = new URLSearchParams({
+    company_id: COMPANY_ID, page, per_page: 25,
+    sort_by: procSortBy, sort_order: procSortOrder,
+    ...(document.getElementById('procSearch').value.trim() && {search: document.getElementById('procSearch').value.trim()}),
+    ...(document.getElementById('procStatus').value        && {status: document.getElementById('procStatus').value}),
+    ...(document.getElementById('procSource').value        && {source_type: document.getElementById('procSource').value}),
+  });
+  document.getElementById('procTableBody').innerHTML =
+    '<tr><td colspan="15" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  try {
+    const res = await staffFetch(`${API}/procurement/?${params}`);
+    if (!res.ok) throw new Error('Failed to load');
+    const data = await res.json();
+    document.getElementById('procCountLabel').textContent = `${data.total} record${data.total!==1?'s':''}`;
+    if (data.total > 0) document.getElementById('tabProcBadge').textContent = data.total;
+    else document.getElementById('tabProcBadge').textContent = '';
+
+    if (!data.records?.length) {
+      document.getElementById('procTableBody').innerHTML =
+        '<tr><td colspan="15" class="empty-state"><i class="fas fa-inbox"></i><br>No procurement records found</td></tr>';
+      document.getElementById('procPagination').innerHTML = '';
+      renderProcSortIcons();
+      return;
+    }
+
+    document.getElementById('procTableBody').innerHTML = data.records.map(pr => `
+      <tr>
+        <td><span class="po-number">${pr.procurement_number}</span></td>
+        <td style="font-size:12px;">
+          ${pr.po_number
+            ? `<span style="color:#0ea5e9;font-weight:600;">${pr.po_number}</span>`
+            : `<span style="color:#6b7280;font-size:11px;" title="${pr.triggered_by||'auto'}">Auto-Sync</span>`}
+        </td>
+        <td style="font-family:monospace;font-size:11px;">${pr.sku}</td>
+        <td style="font-size:12px;max-width:160px;">${pr.product_name}</td>
+        <td style="font-size:11px;color:#374151;">${pr.specifications||'—'}</td>
+        <td style="font-size:11px;">${pr.color||'—'}</td>
+        <td style="font-size:11px;color:#374151;">${pr.model_compat||'—'}</td>
+        <td class="text-center">${pr.ordered_qty}</td>
+        <td class="text-center" style="color:#6b7280;">${pr.available_qty}</td>
+        <td class="text-center fw-600" style="color:#d97706;">${pr.shortfall_qty}</td>
+        <td>${statusBadge(pr.status)}</td>
+        <td>${procSourceBadge(pr.source_type, pr.source_ticket_id)}</td>
+        <td style="font-size:12px;white-space:nowrap;">${fmtShort(pr.created_at)}</td>
+        <td style="font-size:11px;white-space:nowrap;">
+          ${pr.store_manager_name
+            ? `<span style="color:#0ea5e9;font-weight:600;">${pr.store_manager_name}</span>`
+            : `<span style="color:#d1d5db;">—</span>`}
+        </td>
+        <td class="text-center" style="white-space:nowrap;">
+          <button class="action-btn btn-edit me-1" onclick="openProcUpdate(${pr.id},'${pr.procurement_number}','${pr.status}','${pr.product_name.replace(/'/g,"\\'")}')">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="action-btn" onclick="openAssignManager(${pr.id},'proc','${pr.procurement_number}')" title="Assign Manager" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe;"><i class="fas fa-user-tag"></i></button>
+        </td>
+      </tr>
+    `).join('');
+
+    renderPagination('procPagination', data.page, data.pages, data.total, 'loadProc');
+    renderProcSortIcons();
+  } catch(e) {
+    document.getElementById('procTableBody').innerHTML =
+      `<tr><td colspan="15" class="empty-state"><i class="fas fa-exclamation-circle text-danger"></i><br>${e.message}</td></tr>`;
+  }
+}
+
+function clearProcFilters() {
+  document.getElementById('procSearch').value = '';
+  document.getElementById('procStatus').value = '';
+  document.getElementById('procSource').value = '';
+  loadProc(1);
+}
+
+// ── Procurement Update ─────────────────────────────────────────────────────────
+function _toggleProcReceivedQty() {
+  const st = document.getElementById('procNewStatus').value;
+  const show = st === 'received' || st === 'quality_check_pending' || st === 'quality_confirmed' || st === 'added_to_stock';
+  document.getElementById('procReceivedQtyWrap').style.display = show ? '' : 'none';
+}
+
+function openProcUpdate(id, procNum, currentStatus, productName) {
+  currentProcId = id;
+  document.getElementById('procModalDesc').textContent = `${procNum} — ${productName}`;
+  document.getElementById('procNewStatus').value = currentStatus;
+  document.getElementById('procUpdateNotes').value = '';
+  document.getElementById('procReceivedQty').value = '';
+  _toggleProcReceivedQty();
+  document.getElementById('procNewStatus').onchange = _toggleProcReceivedQty;
+  const btn = document.getElementById('procSaveBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-save me-1"></i>Save';
+  new bootstrap.Modal(document.getElementById('procModal')).show();
+}
+
+async function saveProcUpdate() {
+  const status = document.getElementById('procNewStatus').value;
+  const notes  = document.getElementById('procUpdateNotes').value.trim()||null;
+  const rqRaw  = document.getElementById('procReceivedQty').value;
+  const received_qty = rqRaw !== '' ? parseInt(rqRaw) : undefined;
+  const body = {status, procurement_notes: notes};
+  if (received_qty !== undefined && !isNaN(received_qty)) body.received_qty = received_qty;
+  const btn = document.getElementById('procSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  try {
+    const res = await staffFetch(`${API}/procurement/${currentProcId}?company_id=${COMPANY_ID}`, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail||'Update failed');
+    toast(`Procurement status → ${status.toUpperCase()}`, 'success');
+    bootstrap.Modal.getInstance(document.getElementById('procModal'))?.hide();
+    loadProc(procPage);
+  } catch(e) {
+    toast(e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save me-1"></i>Save';
+  }
+}
+
+// ── PO Status Update ───────────────────────────────────────────────────────────
+function openPOStatusUpdate(id, poNumber, currentStatus) {
+  currentPOStatusId = id;
+  document.getElementById('poStatusModalDesc').textContent = `PO: ${poNumber}`;
+  document.getElementById('poNewStatus').value = currentStatus;
+  document.getElementById('poStatusNotes').value = '';
+  const btn = document.getElementById('poStatusSaveBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-save me-1"></i>Save';
+  new bootstrap.Modal(document.getElementById('poStatusModal')).show();
+}
+
+async function savePOStatusUpdate() {
+  const status = document.getElementById('poNewStatus').value;
+  const notes  = document.getElementById('poStatusNotes').value.trim() || null;
+  const btn    = document.getElementById('poStatusSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  try {
+    const res = await staffFetch(`${API}/pos/${currentPOStatusId}/status?company_id=${COMPANY_ID}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({status, notes}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Update failed');
+    toast(`PO status updated → ${status.replace(/_/g,' ').toUpperCase()}`, 'success');
+    bootstrap.Modal.getInstance(document.getElementById('poStatusModal'))?.hide();
+    loadPOs(poPage);
+  } catch(e) {
+    toast(e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save me-1"></i>Save';
+  }
+}
+
+// ── Assign Manager ─────────────────────────────────────────────────────────────
+let staffListCache = null;
+let _assignId = null, _assignType = null;
+
+async function loadStaffList() {
+  if (staffListCache) return staffListCache;
+  try {
+    const res = await staffFetch(`${API}/pos/staff-list`);
+    if (!res.ok) throw new Error('Failed to load staff');
+    staffListCache = await res.json();
+    return staffListCache;
+  } catch(e) {
+    return [];
+  }
+}
+
+async function openAssignManager(id, type, label) {
+  _assignId = id;
+  _assignType = type;
+  document.getElementById('assignMgrDesc').textContent =
+    `${type === 'po' ? 'PO' : 'Procurement'}: ${label}`;
+  const sel = document.getElementById('assignMgrStaff');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  const btn = document.getElementById('assignMgrSaveBtn');
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-save me-1"></i>Assign';
+  new bootstrap.Modal(document.getElementById('assignMgrModal')).show();
+  const staff = await loadStaffList();
+  if (!staff.length) {
+    sel.innerHTML = '<option value="">No staff found</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">— Select staff member —</option>' +
+    staff.map(s => `<option value="${s.id}">${s.full_name}${s.emp_code ? ' ('+s.emp_code+')' : ''}${s.designation ? ' — '+s.designation : ''}</option>`).join('');
+}
+
+async function saveAssignManager() {
+  const staff_id = document.getElementById('assignMgrStaff').value;
+  if (!staff_id) { toast('Please select a staff member', 'error'); return; }
+  const btn = document.getElementById('assignMgrSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Assigning…';
+  const url = _assignType === 'po'
+    ? `${API}/pos/${_assignId}/assign-manager?company_id=${COMPANY_ID}`
+    : `${API}/procurement/${_assignId}/assign-manager?company_id=${COMPANY_ID}`;
+  try {
+    const res = await staffFetch(url, {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({store_manager_id: parseInt(staff_id)}),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail||'Assignment failed');
+    toast(`Manager assigned: ${data.store_manager_name}`, 'success');
+    bootstrap.Modal.getInstance(document.getElementById('assignMgrModal'))?.hide();
+    if (_assignType === 'po') { loadPOs(poPage); } else { loadProc(procPage); }
+  } catch(e) {
+    toast(e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save me-1"></i>Assign';
+  }
+}
+
+// ── Payment Recording ─────────────────────────────────────────────────────────
+let _paymentPoId = null;
+let _paymentPoCompanyId = 1;
+let _paymentPoStatus = null;
+const _PM_READONLY_STATUSES = new Set(['dispatched','completed']);
+const PM_MODE_LABELS = {cash:'Cash',upi:'UPI',neft:'NEFT',rtgs:'RTGS',cheque:'Cheque',card:'Card',dd:'DD',other:'Other'};
+const PM_IE_COLORS = {PENDING:'#f59e0b',CONFIRMED:'#059669',REJECTED:'#dc2626'};
+
+function openPayment(poId, poNumber, poStatus, poCompanyId) {
+  _paymentPoId = poId;
+  _paymentPoStatus = poStatus || '';
+  _paymentPoCompanyId = poCompanyId || 1;
+  const isReadOnly = _PM_READONLY_STATUSES.has(_paymentPoStatus);
+  document.getElementById('pmPoNumber').textContent = poNumber;
+  document.getElementById('pmAmount').value = '';
+  document.getElementById('pmPaymentMode').value = 'cash';
+  document.getElementById('pmTransactionDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('pmReferenceNumber').value = '';
+  document.getElementById('pmNotes').value = '';
+  document.getElementById('paymentError').style.display = 'none';
+  document.getElementById('pmTotalValue').textContent = '—';
+  document.getElementById('pmTotalPaid').textContent = '—';
+  document.getElementById('pmBalance').textContent = '—';
+  document.getElementById('pmTxnList').innerHTML = '<div style="color:#9ca3af;font-size:12px;text-align:center;padding:12px 0;"><i class="fas fa-spinner fa-spin me-1"></i> Loading…</div>';
+  // Show/hide new payment form based on status
+  const pmForm = document.getElementById('pmNewPaymentSection');
+  if (pmForm) pmForm.style.display = isReadOnly ? 'none' : '';
+  const pmNote = document.getElementById('pmReadOnlyNote');
+  if (pmNote) pmNote.style.display = isReadOnly ? '' : 'none';
+  const btn = document.getElementById('paymentSaveBtn');
+  btn.style.display = isReadOnly ? 'none' : '';
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-plus me-1"></i>Record Payment';
+  new bootstrap.Modal(document.getElementById('paymentModal')).show();
+  _loadPoTransactions(poId);
+}
+
+async function _loadPoTransactions(poId) {
+  try {
+    const res = await staffFetch(`${API}/pos/${poId}/transactions?company_id=${_paymentPoCompanyId||COMPANY_ID}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed to load transactions');
+    const fmt = v => '₹' + parseFloat(v||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('pmTotalValue').textContent = fmt(data.total_value);
+    document.getElementById('pmTotalPaid').textContent = fmt(data.total_paid);
+    const bal = parseFloat(data.balance || 0);
+    const balEl = document.getElementById('pmBalance');
+    balEl.textContent = fmt(Math.abs(bal));
+    balEl.style.color = bal > 0 ? '#dc2626' : bal < 0 ? '#7c3aed' : '#059669';
+    const txns = data.transactions || [];
+    const list = document.getElementById('pmTxnList');
+    if (!txns.length) {
+      list.innerHTML = '<div style="color:#9ca3af;font-size:12px;text-align:center;padding:12px 0;"><i class="fas fa-inbox me-1"></i> No payments recorded yet</div>';
+      return;
+    }
+    list.innerHTML = txns.map((t, i) => {
+      const d = t.transaction_date ? t.transaction_date.slice(0,10) : '—';
+      const mode = PM_MODE_LABELS[t.payment_mode] || t.payment_mode || '—';
+      const ieStatus = t.income_entry_status || 'PENDING';
+      const ieColor = PM_IE_COLORS[ieStatus] || '#6b7280';
+      const ieNum = t.income_entry_number || '—';
+      const vsColor = t.validation_status === 'validated' ? '#059669' : t.validation_status === 'rejected' ? '#dc2626' : '#f59e0b';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:${i<txns.length-1?'1px solid #f3f4f6':'none'}">
+        <div style="flex:0 0 28px;height:28px;border-radius:50%;background:#f0fdf4;color:#059669;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">${i+1}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:12px;color:#1f2937;">₹${parseFloat(t.amount||0).toLocaleString('en-IN',{minimumFractionDigits:2})} <span style="font-weight:400;color:#6b7280;font-size:11px;">via ${mode}</span></div>
+          <div style="font-size:10.5px;color:#6b7280;">${d}${t.reference_number ? ' · Ref: '+t.reference_number : ''}${t.notes ? ' · '+t.notes : ''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+          <div style="font-size:10px;font-weight:600;color:${ieColor};background:${ieColor}22;padding:2px 6px;border-radius:8px;margin-bottom:2px;">IE: ${ieStatus}</div>
+          <div style="font-size:9.5px;color:#9ca3af;">${ieNum}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('pmTxnList').innerHTML = `<div style="color:#dc2626;font-size:12px;text-align:center;padding:12px 0;">${e.message}</div>`;
+  }
+}
+
+async function savePayment() {
+  const amount = parseFloat(document.getElementById('pmAmount').value);
+  if (!amount || amount <= 0) {
+    document.getElementById('paymentError').textContent = 'Please enter a valid amount.';
+    document.getElementById('paymentError').style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('paymentSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  document.getElementById('paymentError').style.display = 'none';
+  try {
+    const body = {
+      amount,
+      payment_mode: document.getElementById('pmPaymentMode').value,
+      transaction_date: document.getElementById('pmTransactionDate').value || null,
+      reference_number: document.getElementById('pmReferenceNumber').value.trim() || null,
+      notes: document.getElementById('pmNotes').value.trim() || null,
+    };
+    const res = await staffFetch(`${API}/pos/${_paymentPoId}/payment?company_id=${_paymentPoCompanyId||COMPANY_ID}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail||'Payment recording failed');
+    toast(data.message || `Payment of ₹${amount.toFixed(2)} recorded`, 'success');
+    // Reset form fields but keep modal open to show updated transactions
+    document.getElementById('pmAmount').value = '';
+    document.getElementById('pmReferenceNumber').value = '';
+    document.getElementById('pmNotes').value = '';
+    document.getElementById('pmTransactionDate').value = new Date().toISOString().slice(0,10);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-plus me-1"></i>Record Payment';
+    // Reload transaction list inside modal
+    _loadPoTransactions(_paymentPoId);
+    // Refresh PO list in background
+    loadPOs(poPage); loadPOStats();
+  } catch(e) {
+    document.getElementById('paymentError').textContent = e.message;
+    document.getElementById('paymentError').style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-plus me-1"></i>Record Payment';
+  }
+}
+
+// ── Stock Analysis ─────────────────────────────────────────────────────────────
+let _stkAllItems = [];   // full dataset from server, filtered client-side
+
+function _stkStatusBadge(st) {
+  const map = { ok: ['stk-badge-ok','In Stock'], low: ['stk-badge-low','Low Stock'], out: ['stk-badge-out','Out of Stock'] };
+  const [cls, label] = map[st] || ['stk-badge-out','Unknown'];
+  return `<span class="${cls}">${label}</span>`;
+}
+
+async function loadStock() {
+  document.getElementById('stkTableBody').innerHTML =
+    '<tr><td colspan="11" class="empty-state"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+  document.getElementById('stkStats').innerHTML = '';
+  try {
+    const cat     = document.getElementById('stkCat').value;
+    const company = document.getElementById('stkCompany').value;
+    const status  = document.getElementById('stkStatus').value || 'all';
+    const params  = new URLSearchParams({ company_id: COMPANY_ID });
+    if (cat)     params.append('filter_category', cat);
+    if (company) params.append('filter_company', company);
+    if (status !== 'all') params.append('filter_status', status);
+
+    const res  = await staffFetch(`${API}/stock-analysis?${params}`);
+    if (!res.ok) throw new Error('Failed to load stock data');
+    const data = await res.json();
+    const s    = data.summary;
+
+    // Populate filter dropdowns (first load only — if empty)
+    _populateStkDropdowns(s.categories || [], s.companies || []);
+
+    // Summary cards
+    document.getElementById('stkStats').innerHTML = `
+      <div class="stat-card blue"><div class="val">${s.total_skus}</div><div class="lbl">Total SKUs</div></div>
+      <div class="stat-card green"><div class="val">${s.in_stock}</div><div class="lbl">In Stock</div></div>
+      <div class="stat-card orange"><div class="val">${s.low_stock}</div><div class="lbl">Low Stock</div></div>
+      <div class="stat-card red"><div class="val">${s.out_of_stock}</div><div class="lbl">Out of Stock</div></div>
+    `;
+
+    // Show/hide bulk raise button
+    const raiseBtn = document.getElementById('raiseAllBtn');
+    raiseBtn.style.display = s.out_of_stock > 0 ? '' : 'none';
+
+    _stkAllItems = data.items;
+    _renderStkTable(data.items);
+    document.getElementById('stkCountLabel').textContent =
+      `${data.items.length} SKU${data.items.length !== 1 ? 's' : ''}`;
+
+    // Update tab badge for out-of-stock count
+    const badge = document.getElementById('tabStkBadge');
+    if (s.out_of_stock > 0) {
+      badge.textContent = s.out_of_stock;
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('stkTableBody').innerHTML =
+      `<tr><td colspan="11" class="empty-state"><i class="fas fa-exclamation-circle text-danger"></i><br>${e.message}</td></tr>`;
+  }
+}
+
+function _populateStkDropdowns(categories, companies) {
+  const catSel = document.getElementById('stkCat');
+  const cmpSel = document.getElementById('stkCompany');
+  if (catSel.options.length <= 1 && categories.length) {
+    categories.forEach(c => {
+      const o = document.createElement('option'); o.value = c; o.textContent = c;
+      catSel.appendChild(o);
+    });
+  }
+  if (cmpSel.options.length <= 1 && companies.length) {
+    companies.forEach(c => {
+      const o = document.createElement('option'); o.value = c; o.textContent = c || '(no company)';
+      cmpSel.appendChild(o);
+    });
+  }
+}
+
+function sortStk(col) {
+  if (stkSortBy === col) stkSortDir = stkSortDir === 'asc' ? 'desc' : 'asc';
+  else { stkSortBy = col; stkSortDir = 'asc'; }
+  if (_stkAllItems?.length) _renderStkTable(_stkAllItems);
+}
+function renderStkSortIcons() {
+  ['sku','name','color','category_name','company_name','available_qty','status'].forEach(c => {
+    const el = document.getElementById(`stk-si-${c}`);
+    if (el) el.className = 'sort-icon' + (stkSortBy === c ? ` ${stkSortDir}` : '');
+  });
+}
+
+function _renderStkTable(items) {
+  const statusOrder = { out: 0, low: 1, ok: 2 };
+  const sorted = [...items].sort((a, b) => {
+    let av = a[stkSortBy], bv = b[stkSortBy];
+    if (stkSortBy === 'status') { av = statusOrder[av] ?? 99; bv = statusOrder[bv] ?? 99; }
+    if (av === null || av === undefined) av = '';
+    if (bv === null || bv === undefined) bv = '';
+    const cmp = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
+    return stkSortDir === 'asc' ? cmp : -cmp;
+  });
+  renderStkSortIcons();
+  if (!sorted.length) {
+    document.getElementById('stkTableBody').innerHTML =
+      '<tr><td colspan="11" class="empty-state"><i class="fas fa-inbox"></i><br>No items found for selected filter</td></tr>';
+    return;
+  }
+  document.getElementById('stkTableBody').innerHTML = sorted.map((item, i) => {
+    const actions = [];
+    if (item.status === 'out')
+      actions.push(`<button class="btn-raise-proc" onclick="raiseProcForSku(${item.id})" title="Raise Procurement Request">
+        <i class="fas fa-exclamation-triangle me-1"></i>Raise Proc.
+      </button>`);
+    if (!item.has_image)
+      actions.push(`<button class="btn-gen-img" onclick="genImage(${item.id})" title="Generate AI product image">
+        <i class="fas fa-robot me-1"></i>Gen Image
+      </button>`);
+
+    const companyCell = item.company_name
+      ? `<span style="font-size:11px;color:#0284c7;">${item.company_name}</span>`
+      : `<span style="color:#d1d5db;font-size:11px;">—</span>`;
+
+    const specCell = item.specifications
+      ? `<span style="font-size:11px;color:#374151;">${item.specifications}</span>`
+      : `<span style="color:#d1d5db;font-size:11px;">—</span>`;
+    const colorCell = item.color
+      ? `<span style="font-size:11px;color:#374151;">${item.color}</span>`
+      : `<span style="color:#d1d5db;font-size:11px;">—</span>`;
+    const modelCell = item.model_compat
+      ? `<span style="font-size:11px;color:#374151;">${item.model_compat}</span>`
+      : `<span style="color:#d1d5db;font-size:11px;">—</span>`;
+
+    return `<tr id="stkrow-${item.id}">
+      <td style="color:#9ca3af;font-size:11px;">${i + 1}</td>
+      <td style="font-family:monospace;font-size:11px;">${item.sku}</td>
+      <td style="font-size:12px;max-width:200px;font-weight:600;">${item.name}
+        ${item.speciality ? `<div style="font-size:10px;color:#7c3aed;">${item.speciality}</div>` : ''}
+      </td>
+      <td>${specCell}</td>
+      <td>${colorCell}</td>
+      <td>${modelCell}</td>
+      <td style="font-size:11px;color:#6b7280;">${item.category_name}</td>
+      <td>${companyCell}</td>
+      <td class="text-center">
+        <div class="qty-wrap">
+          <span class="qty-display" id="qd-${item.id}" onclick="startQtyEdit(${item.id},${item.available_qty})"
+            title="Click to edit stock quantity">${item.available_qty}</span>
+          <span class="save-indicator" id="qi-${item.id}"></span>
+        </div>
+      </td>
+      <td class="text-center">${_stkStatusBadge(item.status)}</td>
+      <td class="text-center" style="white-space:nowrap;">
+        ${actions.length ? actions.join(' ') : '<span style="color:#d1d5db;font-size:11px;">—</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Inline qty editing ─────────────────────────────────────────────────────────
+let _qtyTimer = null;
+
+function startQtyEdit(id, currentQty) {
+  const display = document.getElementById(`qd-${id}`);
+  if (!display) return;
+  const wrap = display.parentElement;
+
+  // Replace display with input
+  display.style.display = 'none';
+  const inp = document.createElement('input');
+  inp.type = 'number'; inp.min = '0'; inp.value = currentQty;
+  inp.className = 'qty-input-inline';
+  inp.id = `qi-inp-${id}`;
+  wrap.insertBefore(inp, display);
+  inp.focus(); inp.select();
+
+  const save = async () => {
+    const newVal = parseInt(inp.value);
+    if (isNaN(newVal) || newVal < 0) { cancelQtyEdit(id, currentQty); return; }
+    if (newVal === currentQty) { cancelQtyEdit(id, currentQty); return; }
+
+    const ind = document.getElementById(`qi-${id}`);
+    if (ind) ind.textContent = '⏳';
+    inp.disabled = true;
+
+    try {
+      const res = await staffFetch(`${API}/products/${id}/stock?company_id=${COMPANY_ID}`, {
+        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ available_qty: newVal }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Save failed');
+      if (ind) ind.textContent = '✅';
+      display.textContent = newVal;
+      setTimeout(() => { if (ind) ind.textContent = ''; }, 2000);
+      // Update the item in local cache and re-check actions
+      const item = _stkAllItems.find(x => x.id === id);
+      if (item) {
+        item.available_qty = newVal;
+        item.status = newVal === 0 ? 'out' : newVal <= 5 ? 'low' : 'ok';
+      }
+      // Update badge in same row
+      const row = document.getElementById(`stkrow-${id}`);
+      if (row) {
+        const badgeCell = row.cells[6];
+        if (badgeCell) badgeCell.innerHTML = _stkStatusBadge(item ? item.status : (newVal===0?'out':newVal<=5?'low':'ok'));
+      }
+    } catch(e) {
+      if (ind) ind.textContent = '❌';
+      setTimeout(() => { if (ind) ind.textContent = ''; }, 2500);
+      toast(e.message, 'error');
+    } finally {
+      inp.remove();
+      display.style.display = '';
+    }
+  };
+
+  inp.addEventListener('blur', save);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+    if (e.key === 'Escape') { inp.removeEventListener('blur', save); cancelQtyEdit(id, currentQty); }
+  });
+}
+
+function cancelQtyEdit(id, originalQty) {
+  const inp = document.getElementById(`qi-inp-${id}`);
+  if (inp) inp.remove();
+  const display = document.getElementById(`qd-${id}`);
+  if (display) { display.textContent = originalQty; display.style.display = ''; }
+}
+
+// ── Raise procurement for single SKU ──────────────────────────────────────────
+async function raiseProcForSku(productId) {
+  try {
+    const res = await staffFetch(`${API}/procurement/raise-for-sku?product_id=${productId}&company_id=${COMPANY_ID}`, {method:'POST'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+    if (data.success) {
+      toast(`Procurement ${data.procurement_number} raised for ${data.sku}`, 'success');
+      loadStock();
+    } else {
+      toast(data.message || 'Open procurement already exists', 'info');
+    }
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ── Raise all out-of-stock ─────────────────────────────────────────────────────
+async function raiseAllOutOfStock() {
+  const btn = document.getElementById('raiseAllBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Raising…';
+  try {
+    const res = await staffFetch(`${API}/procurement/raise-all-out?company_id=${COMPANY_ID}`, {method:'POST'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+    toast(data.message || `${data.raised} procurement(s) raised`, 'success');
+    loadStock();
+    loadProc(1);
+  } catch(e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>Raise All Out-of-Stock';
+  }
+}
+
+// ── Generate AI image ──────────────────────────────────────────────────────────
+async function genImage(productId) {
+  toast('Generating AI image, please wait…', 'info');
+  try {
+    const res = await staffFetch(`${API}/products/${productId}/generate-image?company_id=${COMPANY_ID}`, {method:'POST'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed');
+    toast('AI image generated successfully', 'success');
+    loadStock();
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+// ── Pagination ─────────────────────────────────────────────────────────────────
+function renderPagination(elId, page, pages, total, fnName) {
+  const el = document.getElementById(elId);
+  if (pages <= 1) { el.innerHTML = `<span>${total} record${total!==1?'s':''}</span>`; return; }
+  el.innerHTML = `
+    <span>${total} records — Page ${page} of ${pages}</span>
+    <div style="display:flex;gap:4px;">
+      <button class="page-btn" onclick="${fnName}(1)" ${page<=1?'disabled':''}>&laquo;</button>
+      <button class="page-btn" onclick="${fnName}(${page-1})" ${page<=1?'disabled':''}>&lsaquo;</button>
+      <button class="page-btn" onclick="${fnName}(${page+1})" ${page>=pages?'disabled':''}>&rsaquo;</button>
+      <button class="page-btn" onclick="${fnName}(${pages})" ${page>=pages?'disabled':''}>&raquo;</button>
+    </div>`;
+}
+
+// ── Bill/Ship Address Edit ──────────────────────────────────────────────────────
+let _addrEditPoId = null;
+
+function openAddrEdit(poId) {
+  _addrEditPoId = poId;
+  const po = currentPOData || {};
+  document.getElementById('addrBillName').value    = po.bill_name    || po.customer_name  || '';
+  document.getElementById('addrBillPhone').value   = po.bill_phone   || po.customer_phone || '';
+  document.getElementById('addrBillAddress').value = po.bill_address || po.delivery_address || '';
+  const same = po.ship_same_as_bill !== false && !po.ship_address;
+  document.getElementById('addrShipSame').checked  = same;
+  document.getElementById('addrShipFields').style.display = same ? 'none' : 'block';
+  document.getElementById('addrShipName').value    = po.ship_name    || '';
+  document.getElementById('addrShipPhone').value   = po.ship_phone   || '';
+  document.getElementById('addrShipAddress').value = po.ship_address || '';
+  document.getElementById('addrSaveMsg').style.display = 'none';
+  document.getElementById('addrEditForm').style.display = 'block';
+}
+
+function toggleAddrShipSame() {
+  const same = document.getElementById('addrShipSame').checked;
+  document.getElementById('addrShipFields').style.display = same ? 'none' : 'block';
+}
+
+async function saveAddresses() {
+  if (!_addrEditPoId) return;
+  const btn = document.getElementById('addrSaveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const same = document.getElementById('addrShipSame').checked;
+  const payload = {
+    bill_name:    document.getElementById('addrBillName').value.trim() || null,
+    bill_phone:   document.getElementById('addrBillPhone').value.trim() || null,
+    bill_address: document.getElementById('addrBillAddress').value.trim() || null,
+    ship_same_as_bill: same,
+    ship_name:    same ? null : (document.getElementById('addrShipName').value.trim() || null),
+    ship_phone:   same ? null : (document.getElementById('addrShipPhone').value.trim() || null),
+    ship_address: same ? null : (document.getElementById('addrShipAddress').value.trim() || null),
+  };
+  try {
+    const res = await staffFetch(`${API}/pos/${_addrEditPoId}/addresses?company_id=${COMPANY_ID}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Save failed');
+    const msg = document.getElementById('addrSaveMsg');
+    msg.textContent = '✓ Addresses saved.'; msg.style.display = 'inline';
+    // Refresh current PO data
+    if (currentPOData) {
+      Object.assign(currentPOData, payload);
+      if (payload.bill_name) currentPOData.bill_name = payload.bill_name;
+      if (payload.bill_phone) currentPOData.bill_phone = payload.bill_phone;
+      if (payload.bill_address) currentPOData.bill_address = payload.bill_address;
+      if (same) {
+        currentPOData.ship_name = payload.bill_name || currentPOData.bill_name;
+        currentPOData.ship_phone = payload.bill_phone || currentPOData.bill_phone;
+        currentPOData.ship_address = payload.bill_address || currentPOData.bill_address;
+      } else {
+        currentPOData.ship_name = payload.ship_name;
+        currentPOData.ship_phone = payload.ship_phone;
+        currentPOData.ship_address = payload.ship_address;
+      }
+    }
+  } catch(e) {
+    alert('Error saving addresses: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Addresses';
+  }
+}
+
+// ── Amount to Words ─────────────────────────────────────────────────────────────
+function _amtWordsStaff(n) {
+  const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function w(x) {
+    if(x<20) return ones[x]||'';
+    if(x<100) return tens[Math.floor(x/10)]+(x%10?' '+ones[x%10]:'');
+    if(x<1000) return ones[Math.floor(x/100)]+' Hundred'+(x%100?' '+w(x%100):'');
+    if(x<100000) return w(Math.floor(x/1000))+' Thousand'+(x%1000?' '+w(x%1000):'');
+    if(x<10000000) return w(Math.floor(x/100000))+' Lakh'+(x%100000?' '+w(x%100000):'');
+    return w(Math.floor(x/10000000))+' Crore'+(x%10000000?' '+w(x%10000000):'');
+  }
+  const r=Math.round(n); const p=Math.round((n-r)*100);
+  return 'INR '+w(r)+' Only'+(p?' and '+w(p)+' Paise':'');
+}
+
+// ── Download PO as PDF ──────────────────────────────────────────────────────────
+async function downloadPOById(poId) {
+  // If already loaded, use currentPOData; else fetch
+  if (currentPOData && currentPOData.id === poId) {
+    downloadPO(currentPOData); return;
+  }
+  try {
+    const res = await staffFetch(`${API}/pos/${poId}?company_id=${COMPANY_ID}`);
+    if (!res.ok) throw new Error('Could not load PO');
+    downloadPO(await res.json());
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function downloadPO(po) {
+  if (!po) return;
+  const items = po.items || [];
+  const billName  = po.bill_name  || po.customer_name  || '';
+  const billPhone = po.bill_phone || po.customer_phone || '';
+  const billAddr  = po.bill_address || po.delivery_address || '';
+  const shipSame  = po.ship_same_as_bill || !po.ship_address;
+  const shipName  = shipSame ? billName  : (po.ship_name  || billName);
+  const shipPhone = shipSame ? billPhone : (po.ship_phone || billPhone);
+  const shipAddr  = shipSame ? billAddr  : (po.ship_address || billAddr);
+
+  const _date = new Date(po.created_at || Date.now()).toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  const _now  = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+
+  let rows = '', sno = 0, baseTot = 0, effTot = 0, taxTot = 0, lineTot = 0;
+  const gstMap = {};
+
+  items.forEach(it => {
+    sno++;
+    const exTax   = +(it.net_price || it.dealer_price || 0);
+    const disc    = +(it.discount_amount || 0);
+    const taxPct  = +(it.gst_percent || 18);
+    const taxAmt  = +(it.gst_amount || 0) || (exTax - disc) * taxPct / 100;
+    const line    = +(it.line_total || (exTax - disc + taxAmt) * it.ordered_qty);
+    const specCol    = [it.specifications, it.speciality, it.color].filter(Boolean).join(' / ') || '';
+    const warrantyTx = it.warranty_details ? `Warranty: ${it.warranty_details}` : '';
+    const half    = (taxPct / 2).toFixed(1);
+    const halfAmt = (taxAmt * it.ordered_qty / 2).toFixed(2);
+    const gstCell = `<div style="font-weight:700;">₹${(taxAmt*it.ordered_qty).toFixed(2)}</div>
+      <div style="font-size:8.5px;color:#555;">CGST ${half}%: ₹${halfAmt}</div>
+      <div style="font-size:8.5px;color:#555;">SGST ${half}%: ₹${halfAmt}</div>`;
+    rows += `<tr>
+      <td style="text-align:center;">${sno}</td>
+      <td style="font-family:monospace;font-size:9px;color:#6b7280;">${it.hsn_code||'—'}</td>
+      <td><div style="font-weight:700;font-size:11.5px;color:#1a2e4a;">${it.product_name||it.sku}</div>
+        <div style="font-size:9px;font-family:monospace;color:#6b7280;">${it.sku}</div>
+        ${specCol?`<div style="font-size:9px;color:#888;">${specCol}</div>`:''}
+        ${warrantyTx?`<div style="font-size:8.5px;color:#059669;font-weight:600;">${warrantyTx}</div>`:''}
+      </td>
+      <td style="text-align:center;">${it.ordered_qty}</td>
+      <td style="text-align:right;">₹${(+it.dealer_price||0).toFixed(2)}</td>
+      <td style="text-align:right;">₹${(exTax*it.ordered_qty).toFixed(2)}</td>
+      <td style="text-align:right;">₹${((exTax-disc)*it.ordered_qty).toFixed(2)}</td>
+      <td>${gstCell}</td>
+      <td style="text-align:right;font-weight:700;color:#1a2e4a;">₹${line.toFixed(2)}</td>
+    </tr>`;
+    baseTot += exTax * it.ordered_qty;
+    effTot  += (exTax - disc) * it.ordered_qty;
+    taxTot  += taxAmt * it.ordered_qty;
+    lineTot += line;
+    if (!gstMap[taxPct]) gstMap[taxPct] = {taxable:0,tax:0};
+    gstMap[taxPct].taxable += (exTax - disc) * it.ordered_qty;
+    gstMap[taxPct].tax     += taxAmt * it.ordered_qty;
+  });
+
+  let gstRows = '';
+  Object.entries(gstMap).sort(([a],[b])=>+a-+b).forEach(([pct,v]) => {
+    const h = (+pct/2).toFixed(1);
+    gstRows += `<tr><td style="text-align:right;color:#555;font-size:10px;">CGST @ ${h}% (on ₹${v.taxable.toFixed(2)}):</td><td style="text-align:right;">₹${(v.tax/2).toFixed(2)}</td></tr>`;
+    gstRows += `<tr><td style="text-align:right;color:#555;font-size:10px;">SGST @ ${h}%:</td><td style="text-align:right;">₹${(v.tax/2).toFixed(2)}</td></tr>`;
+  });
+
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert('Popup was blocked by your browser.\nPlease allow popups for this site, then try again.');
+    return;
+  }
+  win.document.write(`<html><head><title>PO ${po.po_number}</title><style>
+    *{box-sizing:border-box;}body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:0;padding:20px;}
+    .page{max-width:940px;margin:0 auto;}
+    .co-header{display:flex;justify-content:space-between;border-bottom:2.5px solid #1a2e4a;padding-bottom:10px;margin-bottom:12px;}
+    .co-left h2{margin:0;font-size:18px;color:#1a2e4a;font-weight:800;}
+    .co-left p{margin:2px 0;font-size:9.5px;color:#555;}
+    .co-right{text-align:right;font-size:9.5px;color:#555;min-width:210px;}
+    .co-right .doc-title{font-size:14px;font-weight:800;color:#1a2e4a;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;}
+    .addr-box{display:flex;gap:0;border:1px solid #d1d5db;border-radius:4px;margin-bottom:12px;overflow:hidden;}
+    .addr-col{flex:1;padding:9px 12px;font-size:9.5px;line-height:1.55;}
+    .addr-col:first-child{border-right:1px solid #d1d5db;background:#f8faff;}
+    .addr-col:last-child{background:#f8fff8;}
+    .addr-label{font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;font-size:8px;margin-bottom:4px;}
+    .addr-name{font-weight:700;font-size:12px;color:#1a2e4a;}
+    table.items{width:100%;border-collapse:collapse;margin-bottom:12px;table-layout:fixed;}
+    table.items th{background:#1a2e4a;color:#fff;padding:6px 6px;font-size:9px;border:1px solid #0f1f35;white-space:normal;line-height:1.3;}
+    table.items td{border:1px solid #d1d5db;padding:5px 6px;vertical-align:top;font-size:10px;}
+    table.items tr:nth-child(even) td{background:#f9fafb;}
+    table.items .totals-row td{background:#e8eeff;font-weight:700;border-top:2px solid #1a2e4a;}
+    .footer-right{display:flex;justify-content:flex-end;margin-bottom:10px;}
+    .totals-t{min-width:350px;border-collapse:collapse;font-size:10.5px;}
+    .totals-t td{padding:4px 10px;}
+    .totals-t tr.sep td{border-top:1px solid #d1d5db;padding-top:6px;}
+    .totals-t tr.grand td{background:#1a2e4a;color:#fff;font-weight:700;font-size:13px;padding:7px 10px;}
+    .in-words{border:1px solid #d1d5db;border-radius:4px;padding:7px 12px;background:#fafafa;font-size:9.5px;margin-bottom:10px;}
+    .sig-row{display:flex;justify-content:space-between;align-items:flex-end;font-size:9.5px;padding-top:4px;}
+    .sig-right .sig-line{border-top:1.5px solid #374151;padding-top:5px;font-weight:700;color:#1a2e4a;margin-top:36px;font-size:10.5px;text-align:right;}
+    @media print{body{padding:0;}button{display:none;}}
+  </style></head><body>
+  <div class="page">
+    <div class="co-header">
+      <div class="co-left">
+        <h2>VGK4U &mdash; EV Spares</h2>
+        <p>Lucky Enterprises &nbsp;&bull;&nbsp; GSTIN: 37ISOPK9135A1ZF &nbsp;&bull;&nbsp; State: Andhra Pradesh (Code 37)</p>
+        <p style="margin-top:3px;">Team VGK4U &nbsp;&bull;&nbsp; Mynt Real LLP</p>
+      </div>
+      <div class="co-right">
+        <div class="doc-title">Purchase Order</div>
+        <div>PO No: <b>${po.po_number}</b></div>
+        <div>PO Date: ${_date}</div>
+        <div>Print Date: ${_now}</div>
+        <div style="margin-top:4px;">Status: <b>${(po.status||'').replace(/_/g,' ').toUpperCase()}</b></div>
+        ${po.discount_name?`<div style="color:#0077b6;font-weight:700;margin-top:4px;">Discount: ${po.discount_name}</div>`:''}
+      </div>
+    </div>
+    <div class="addr-box">
+      <div class="addr-col">
+        <div class="addr-label">&#x1F4E6; Bill To</div>
+        <div class="addr-name">${billName||'—'}</div>
+        ${billPhone?`<div>${billPhone}</div>`:''}
+        ${billAddr?`<div style="margin-top:3px;font-size:9.5px;">${billAddr.replace(/\n/g,'<br>')}</div>`:''}
+      </div>
+      <div class="addr-col">
+        <div class="addr-label">&#x1F69A; Ship To</div>
+        <div class="addr-name">${shipName||billName||'—'}</div>
+        ${(shipPhone&&shipPhone!==billPhone)?`<div>${shipPhone}</div>`:(!shipPhone?'':`<div style="color:#6b7280;font-size:9px;">${shipPhone}</div>`)}
+        ${(shipAddr&&shipAddr!==billAddr)?`<div style="margin-top:3px;font-size:9.5px;">${shipAddr.replace(/\n/g,'<br>')}</div>`:
+          `<div style="color:#6b7280;font-style:italic;font-size:9px;margin-top:3px;">Same as billing address</div>`}
+      </div>
+    </div>
+    <table class="items">
+      <colgroup>
+        <col style="width:3.5%"><col style="width:7%"><col style="width:22%"><col style="width:5%"><col style="width:9%">
+        <col style="width:10%"><col style="width:10%"><col style="width:15%"><col style="width:13.5%">
+      </colgroup>
+      <tr>
+        <th style="text-align:center;">S.No.</th>
+        <th>HSN Code</th>
+        <th>Description<br><span style="font-weight:400;font-size:8px;">SKU / Name / Spec / Color</span></th>
+        <th style="text-align:center;">Qty</th>
+        <th style="text-align:right;">Unit Rate<br><span style="font-weight:400;font-size:8px;">Excl. GST</span></th>
+        <th style="text-align:right;">Subtotal<br><span style="font-weight:400;font-size:8px;">Excl. GST</span></th>
+        <th style="text-align:right;">Eff. Amount<br><span style="font-weight:400;font-size:8px;">After Discount</span></th>
+        <th>GST Amount<br><span style="font-weight:400;font-size:8px;">CGST + SGST</span></th>
+        <th style="text-align:right;">Line Total<br><span style="font-weight:400;font-size:8px;">Incl. GST</span></th>
+      </tr>
+      ${rows||'<tr><td colspan="9" style="text-align:center;color:#6b7280;padding:12px;">No items available</td></tr>'}
+      <tr class="totals-row">
+        <td colspan="5" style="text-align:right;color:#1a2e4a;">TOTALS</td>
+        <td style="text-align:right;">₹${baseTot.toFixed(2)}</td>
+        <td style="text-align:right;">₹${effTot.toFixed(2)}</td>
+        <td style="text-align:right;">₹${taxTot.toFixed(2)}</td>
+        <td style="text-align:right;color:#1a2e4a;font-size:11.5px;">₹${lineTot.toFixed(2)}</td>
+      </tr>
+    </table>
+    <div class="footer-right">
+      <table class="totals-t">
+        <tr><td style="text-align:right;color:#6b7280;">Subtotal (excl. GST):</td><td style="text-align:right;">₹${baseTot.toFixed(2)}</td></tr>
+        ${effTot !== baseTot ? `<tr><td style="text-align:right;color:#dc2626;">Discount:</td><td style="text-align:right;color:#dc2626;">−₹${(baseTot-effTot).toFixed(2)}</td></tr>` : ''}
+        <tr class="sep"><td style="text-align:right;color:#374151;">Effective Amount (excl. GST):</td><td style="text-align:right;">₹${effTot.toFixed(2)}</td></tr>
+        ${gstRows}
+        <tr style="border-top:1px solid #d1d5db;"><td style="text-align:right;color:#374151;padding-top:5px;">Total GST:</td><td style="text-align:right;font-weight:700;padding-top:5px;">₹${taxTot.toFixed(2)}</td></tr>
+        <tr class="grand"><td style="text-align:right;">Grand Total (incl. GST):</td><td style="text-align:right;">₹${lineTot.toFixed(2)}</td></tr>
+      </table>
+    </div>
+    <div class="in-words"><strong>Amount in Words:</strong> ${_amtWordsStaff(lineTot)}</div>
+    <div class="sig-row">
+      <div style="font-size:9.5px;color:#374151;line-height:1.7;">
+        This is a system-generated Purchase Order.<br>
+        For queries contact: Team VGK4U &mdash; Lucky Enterprises
+      </div>
+      <div class="sig-right">
+        <div class="sig-line">For Lucky Enterprises<br>Authorised Signatory</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:20px;padding-top:12px;border-top:1px solid #e5e7eb;">
+      <button onclick="window.print()" style="background:#1a2e4a;color:#fff;border:none;padding:8px 28px;font-size:12px;border-radius:5px;cursor:pointer;font-weight:700;">🖨️ Print / Save as PDF</button>
+    </div>
+  </div>
+  </body></html>`);
+  win.document.close();
+  win.print();
+}
+
+// ── Generate Invoice ───────────────────────────────────────────────────────────
+
+let _invoicePoId = null, _invoicePoData = null;
+
+async function openInvoiceModal(poId) {
+  _invoicePoId = poId;
+  _invoicePoData = null;
+  document.getElementById('imPoNumber').textContent = '…';
+  document.getElementById('imError').style.display = 'none';
+  document.getElementById('imPiBadgeWrap').style.display = 'none';
+  document.getElementById('itTax').checked = true;
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('invoiceTypeModal')).show();
+  try {
+    const res = await staffFetch(`${API}/pos/${poId}?company_id=${COMPANY_ID}`);
+    if (!res.ok) throw new Error('Failed to load PO');
+    _invoicePoData = await res.json();
+    document.getElementById('imPoNumber').textContent = _invoicePoData.po_number;
+    if (_invoicePoData.pi_number) {
+      document.getElementById('imExistingPi').textContent = _invoicePoData.pi_number;
+      document.getElementById('imPiBadgeWrap').style.display = '';
+    }
+  } catch(e) {
+    document.getElementById('imError').textContent = e.message;
+    document.getElementById('imError').style.display = '';
+  }
+}
+
+async function confirmGenerateInvoice() {
+  if (!_invoicePoData) { alert('PO data not loaded yet. Please wait.'); return; }
+  const mode = document.querySelector('input[name="invoiceType"]:checked')?.value || 'tax';
+  const btn = document.getElementById('imGenerateBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generating…';
+  document.getElementById('imError').style.display = 'none';
+  try {
+    let piNum = _invoicePoData.pi_number || null;
+    if (mode === 'tax' && !piNum) {
+      const r = await staffFetch(`${API}/pos/${_invoicePoId}/generate-invoice?company_id=${COMPANY_ID}`, {method:'POST'});
+      if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Failed to generate invoice'); }
+      const d = await r.json();
+      piNum = d.pi_number;
+      _invoicePoData.pi_number = piNum;
+      document.getElementById('imExistingPi').textContent = piNum;
+      document.getElementById('imPiBadgeWrap').style.display = '';
+      if (currentPOData && currentPOData.id === _invoicePoId) { currentPOData.pi_number = piNum; }
+    }
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('invoiceTypeModal')).hide();
+    _buildAndPrintInvoice(_invoicePoData, mode, piNum);
+    toast(mode === 'tax' ? `Tax Invoice ${piNum} generated` : 'Estimate generated', 'success');
+    if (currentPOData && currentPOData.id === _invoicePoId) renderPODetail(currentPOData);
+  } catch(e) {
+    document.getElementById('imError').textContent = e.message;
+    document.getElementById('imError').style.display = '';
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-download me-1"></i>Generate &amp; Download';
+  }
+}
+
+function _buildAndPrintInvoice(po, mode, piNum) {
+  const isTax = mode === 'tax';
+  const title  = isTax ? 'TAX INVOICE' : 'PROFORMA ESTIMATE';
+  const refNo  = isTax && piNum ? piNum : `EST-${po.po_number}`;
+  const now    = new Date();
+  const genDate = now.toLocaleDateString('en-IN', {day:'2-digit',month:'long',year:'numeric'});
+  const genTime = now.toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit',hour12:true});
+
+  const items = po.items || [];
+  let rows = '', baseTot = 0, effTot = 0, taxTot = 0, lineTot = 0;
+  const gstMap = {};
+
+  items.forEach((it, i) => {
+    const dealer  = parseFloat(it.dealer_price) || 0;
+    const disc    = parseFloat(it.discount_amount) || 0;
+    const eff     = dealer - disc;
+    const gstPct  = parseFloat(it.gst_percent) || 0;
+    const taxAmt  = parseFloat(it.gst_amount) || round2(eff * gstPct / 100);
+    const qty     = parseInt(it.ordered_qty) || 1;
+    const lineInc = parseFloat(it.line_total) || round2((eff + taxAmt) * qty);
+    baseTot += dealer * qty; effTot += eff * qty; taxTot += taxAmt * qty; lineTot += lineInc;
+    if (!gstMap[gstPct]) gstMap[gstPct] = {taxable:0, tax:0};
+    gstMap[gstPct].taxable += eff * qty; gstMap[gstPct].tax += taxAmt * qty;
+
+    const specColor  = [it.specifications, it.speciality, it.color].filter(Boolean).join(' / ') || '';
+    const warrantyLn = it.warranty_details ? ` | Warranty: ${it.warranty_details}` : '';
+
+    if (isTax) {
+      const gstCell = gstPct > 0
+        ? `<span style="font-size:9px;color:#555;">CGST ${(gstPct/2).toFixed(1)}%: ₹${(taxAmt*qty/2).toFixed(2)}<br>SGST ${(gstPct/2).toFixed(1)}%: ₹${(taxAmt*qty/2).toFixed(2)}</span>`
+        : '<span style="color:#9ca3af;font-size:9px;">Nil</span>';
+      rows += `<tr${i%2?'':''}>
+        <td style="text-align:center;">${i+1}</td>
+        <td style="font-size:9px;color:#6b7280;">${it.hsn_code||'—'}</td>
+        <td><strong style="font-size:10px;">${it.product_name}</strong><br><span style="font-size:8.5px;color:#6b7280;">${it.sku}${specColor?' | '+specColor:''}${warrantyLn}</span></td>
+        <td style="text-align:center;">${qty}</td>
+        <td style="text-align:right;">₹${dealer.toFixed(2)}</td>
+        <td style="text-align:right;">₹${(dealer*qty).toFixed(2)}</td>
+        <td style="text-align:right;">₹${(eff*qty).toFixed(2)}</td>
+        <td>${gstCell}</td>
+        <td style="text-align:right;font-weight:700;color:#1a2e4a;">₹${lineInc.toFixed(2)}</td>
+      </tr>`;
+    } else {
+      rows += `<tr>
+        <td style="text-align:center;">${i+1}</td>
+        <td><strong style="font-size:10px;">${it.product_name}</strong><br><span style="font-size:8.5px;color:#6b7280;">${it.sku}${specColor?' | '+specColor:''}${warrantyLn}</span></td>
+        <td style="text-align:center;">${qty}</td>
+        <td style="text-align:right;">₹${eff.toFixed(2)}</td>
+        <td style="text-align:right;font-weight:700;color:#1a2e4a;">₹${(eff*qty).toFixed(2)}</td>
+      </tr>`;
+    }
+  });
+
+  const rawTotal = lineTot;
+  const rounded  = Math.round(rawTotal);
+  const roundOff = rounded - rawTotal;
+  const grandTotal = rounded;
+
+  let gstRows = '';
+  if (isTax) {
+    Object.entries(gstMap).sort(([a],[b])=>+a-+b).forEach(([pct,v]) => {
+      const h = (+pct/2);
+      gstRows += `<tr><td style="text-align:right;color:#555;font-size:10px;">CGST @ ${h.toFixed(1)}% (on ₹${v.taxable.toFixed(2)}):</td><td style="text-align:right;font-weight:600;">₹${(v.tax/2).toFixed(2)}</td></tr>`;
+      gstRows += `<tr><td style="text-align:right;color:#555;font-size:10px;">SGST @ ${h.toFixed(1)}%:</td><td style="text-align:right;font-weight:600;">₹${(v.tax/2).toFixed(2)}</td></tr>`;
+    });
+  }
+
+  const billName  = po.bill_name  || po.customer_name || '';
+  const billPhone = po.bill_phone || po.customer_phone || '';
+  const billAddr  = po.bill_address || po.delivery_address || '';
+  const shipName  = po.ship_name  || billName;
+  const shipPhone = po.ship_phone || billPhone;
+  const shipAddr  = po.ship_address || billAddr;
+  const sameAddr  = po.ship_same_as_bill || shipAddr === billAddr;
+
+  const taxCols = isTax
+    ? `<col style="width:3%"><col style="width:7%"><col style="width:23%"><col style="width:5%"><col style="width:9%"><col style="width:9.5%"><col style="width:9.5%"><col style="width:17%"><col style="width:12%">`
+    : `<col style="width:4%"><col style="width:36%"><col style="width:6%"><col style="width:26%"><col style="width:28%">`;
+
+  const taxTotRow = isTax
+    ? `<td colspan="5" style="text-align:right;color:#1a2e4a;">TOTALS</td>
+       <td style="text-align:right;">₹${baseTot.toFixed(2)}</td>
+       <td style="text-align:right;">₹${effTot.toFixed(2)}</td>
+       <td style="text-align:right;">₹${taxTot.toFixed(2)}</td>
+       <td style="text-align:right;color:#1a2e4a;font-size:11.5px;">₹${rawTotal.toFixed(2)}</td>`
+    : `<td colspan="3" style="text-align:right;color:#1a2e4a;">TOTALS</td>
+       <td style="text-align:right;">—</td>
+       <td style="text-align:right;color:#1a2e4a;font-size:11.5px;">₹${rawTotal.toFixed(2)}</td>`;
+
+  const taxSummaryRows = isTax
+    ? `<tr><td style="text-align:right;color:#6b7280;">Subtotal (excl. GST):</td><td style="text-align:right;">₹${baseTot.toFixed(2)}</td></tr>
+       ${effTot !== baseTot ? `<tr><td style="text-align:right;color:#dc2626;">Discount:</td><td style="text-align:right;color:#dc2626;">−₹${(baseTot-effTot).toFixed(2)}</td></tr>` : ''}
+       <tr class="sep"><td style="text-align:right;color:#374151;">Effective Amount (excl. GST):</td><td style="text-align:right;">₹${effTot.toFixed(2)}</td></tr>
+       ${gstRows}
+       <tr style="border-top:1px solid #d1d5db;"><td style="text-align:right;color:#374151;padding-top:5px;">Total GST:</td><td style="text-align:right;font-weight:700;padding-top:5px;">₹${taxTot.toFixed(2)}</td></tr>
+       <tr style="border-top:1px solid #d1d5db;"><td style="text-align:right;color:#374151;padding-top:5px;">Total (incl. GST):</td><td style="text-align:right;padding-top:5px;">₹${rawTotal.toFixed(2)}</td></tr>
+       ${Math.abs(roundOff)>=0.005?`<tr><td style="text-align:right;color:${roundOff>=0?'#059669':'#dc2626'};font-size:10px;">Round Off:</td><td style="text-align:right;color:${roundOff>=0?'#059669':'#dc2626'};font-size:10px;">${roundOff>=0?'+':'−'}₹${Math.abs(roundOff).toFixed(2)}</td></tr>`:''}
+       <tr class="grand"><td style="text-align:right;">Grand Total (incl. GST):</td><td style="text-align:right;">₹${grandTotal.toFixed(2)}</td></tr>`
+    : `<tr style="border-top:1px solid #d1d5db;"><td style="text-align:right;color:#374151;padding-top:5px;">Total Amount:</td><td style="text-align:right;padding-top:5px;">₹${rawTotal.toFixed(2)}</td></tr>
+       ${Math.abs(roundOff)>=0.005?`<tr><td style="text-align:right;color:${roundOff>=0?'#059669':'#dc2626'};font-size:10px;">Round Off:</td><td style="text-align:right;color:${roundOff>=0?'#059669':'#dc2626'};font-size:10px;">${roundOff>=0?'+':'−'}₹${Math.abs(roundOff).toFixed(2)}</td></tr>`:''}
+       <tr class="grand"><td style="text-align:right;">Grand Total:</td><td style="text-align:right;">₹${grandTotal.toFixed(2)}</td></tr>`;
+
+  const disclaimer = isTax
+    ? `&#x26A0; <strong>Disclaimer:</strong> This is a tax invoice. GSTIN: 37ISOPK9135A1ZF &mdash; Lucky Enterprises, Andhra Pradesh. All disputes subject to jurisdiction of Andhra Pradesh courts.`
+    : `&#x26A0; <strong>Disclaimer:</strong> This is a proforma estimate and not a tax invoice. Prices are subject to change. For confirmed orders with GST, request a Tax Invoice. GSTIN: 37ISOPK9135A1ZF &mdash; Lucky Enterprises, Andhra Pradesh.`;
+
+  const win = window.open('','_blank');
+  win.document.write(`<html><head><title>${title} — ${refNo}</title><style>
+    *{box-sizing:border-box;}
+    body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:0;padding:20px;}
+    .page{max-width:940px;margin:0 auto;}
+    .co-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2.5px solid #1a2e4a;padding-bottom:10px;margin-bottom:12px;}
+    .co-left h2{margin:0;font-size:18px;color:#1a2e4a;font-weight:800;}
+    .co-left p{margin:2px 0;font-size:9.5px;color:#555;}
+    .co-right{text-align:right;font-size:9.5px;color:#555;min-width:200px;}
+    .co-right .doc-title{font-size:14px;font-weight:800;color:${isTax?'#065f46':'#1d4ed8'};letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;}
+    .addr-box{display:flex;gap:0;border:1px solid #d1d5db;border-radius:4px;margin-bottom:12px;overflow:hidden;}
+    .addr-col{flex:1;padding:9px 12px;font-size:9.5px;line-height:1.55;}
+    .addr-col:first-child{border-right:1px solid #d1d5db;background:#f8faff;}
+    .addr-col:last-child{background:#f8fff8;}
+    .addr-label{font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;font-size:8px;margin-bottom:4px;}
+    .addr-name{font-weight:700;font-size:12px;color:#1a2e4a;}
+    table.items{width:100%;border-collapse:collapse;margin-bottom:12px;table-layout:fixed;}
+    table.items th{background:#1a2e4a;color:#fff;padding:6px 6px;font-size:9px;border:1px solid #0f1f35;white-space:normal;line-height:1.3;}
+    table.items td{border:1px solid #d1d5db;padding:5px 6px;vertical-align:top;font-size:10px;}
+    table.items tr:nth-child(even) td{background:#f9fafb;}
+    table.items .totals-row td{background:#e8eeff;font-weight:700;border-top:2px solid #1a2e4a;}
+    .footer-right{display:flex;justify-content:flex-end;margin-bottom:10px;}
+    .totals-t{min-width:350px;border-collapse:collapse;font-size:10.5px;}
+    .totals-t td{padding:4px 10px;}
+    .totals-t tr.sep td{border-top:1px solid #d1d5db;padding-top:6px;}
+    .totals-t tr.grand td{background:#1a2e4a;color:#fff;font-weight:700;font-size:13px;padding:7px 10px;}
+    .in-words{border:1px solid #d1d5db;border-radius:4px;padding:7px 12px;background:#fafafa;font-size:9.5px;margin-bottom:10px;}
+    .disclaimer{background:#fffbeb;border:1px solid #fbbf24;border-radius:4px;padding:8px 10px;font-size:9px;color:#92400e;line-height:1.5;margin-bottom:12px;}
+    @media print{body{padding:0;}button{display:none;}}
+  </style></head><body><div class="page">
+    <div class="co-header">
+      <div class="co-left">
+        <h2>VGK4U &mdash; EV Spares</h2>
+        <p>Lucky Enterprises &nbsp;&bull;&nbsp; GSTIN: 37ISOPK9135A1ZF &nbsp;&bull;&nbsp; State: Andhra Pradesh (Code 37)</p>
+        <p style="margin-top:3px;">Team VGK4U</p>
+      </div>
+      <div class="co-right">
+        <div class="doc-title">${title}</div>
+        <div>Ref No: <b>${refNo}</b></div>
+        <div>PO Ref: <b>${po.po_number}</b></div>
+        <div>Date: ${genDate} &nbsp;|&nbsp; ${genTime}</div>
+      </div>
+    </div>
+    <div class="addr-box">
+      <div class="addr-col">
+        <div class="addr-label">&#x1F4E6; Bill To</div>
+        <div class="addr-name">${billName||'<span style="color:#aaa;font-style:italic;font-weight:400;">Not specified</span>'}</div>
+        ${billPhone?`<div>${billPhone}</div>`:''}
+        ${billAddr?`<div style="margin-top:3px;font-size:9.5px;">${billAddr.replace(/\n/g,'<br>')}</div>`:''}
+      </div>
+      <div class="addr-col">
+        <div class="addr-label">&#x1F69A; Ship To</div>
+        <div class="addr-name">${shipName||'<span style="color:#aaa;font-style:italic;font-weight:400;">Same as Bill To</span>'}</div>
+        ${shipPhone?`<div>${shipPhone}</div>`:''}
+        ${sameAddr?`<div style="color:#6b7280;font-style:italic;font-size:9px;margin-top:3px;">Same as billing address</div>`:(shipAddr?`<div style="margin-top:3px;font-size:9.5px;">${shipAddr.replace(/\n/g,'<br>')}</div>`:'')}
+      </div>
+    </div>
+    <table class="items">
+      <colgroup>${taxCols}</colgroup>
+      <tr>
+        <th style="text-align:center;">S.No.</th>
+        ${isTax?'<th>HSN</th>':''}
+        <th>Description<br><span style="font-weight:400;font-size:8px;">SKU / Name / Spec / Color</span></th>
+        <th style="text-align:center;">Qty</th>
+        ${isTax?'<th style="text-align:right;">Unit Rate<br><span style="font-weight:400;font-size:8px;">Excl. GST</span></th>':''}
+        ${isTax?'<th style="text-align:right;">Subtotal<br><span style="font-weight:400;font-size:8px;">Excl. GST</span></th>':''}
+        <th style="text-align:right;">${isTax?'Eff. Amount<br><span style="font-weight:400;font-size:8px;">After Discount</span>':'Unit Price'}</th>
+        ${isTax?'<th>GST Amount<br><span style="font-weight:400;font-size:8px;">CGST + SGST</span></th>':''}
+        <th style="text-align:right;">Line Total${isTax?'<br><span style="font-weight:400;font-size:8px;">Incl. GST</span>':''}</th>
+      </tr>
+      ${rows||'<tr><td colspan="9" style="text-align:center;color:#6b7280;padding:12px;">No items</td></tr>'}
+      <tr class="totals-row">${taxTotRow}</tr>
+    </table>
+    <div class="footer-right">
+      <table class="totals-t">${taxSummaryRows}</table>
+    </div>
+    <div class="in-words"><strong>Amount in Words:</strong> ${_amtWordsStaff(grandTotal)}</div>
+    <div class="disclaimer">${disclaimer}</div>
+    <div style="border-top:1px solid #d1d5db;padding-top:10px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;font-size:9.5px;">
+      <div>Thank you for your business!<br><strong>Team VGK4U</strong> &mdash; for Lucky Enterprises</div>
+      <div style="text-align:right;color:#6b7280;font-size:9px;max-width:260px;line-height:1.5;">
+        ${isTax?`<strong>${refNo}</strong> is a computer-generated tax invoice.`:'This is a computer-generated estimate document.'}
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #e5e7eb;">
+      <button onclick="window.print()" style="background:#1a2e4a;color:#fff;border:none;padding:8px 28px;font-size:12px;border-radius:5px;cursor:pointer;font-weight:700;">🖨️ Print / Save as PDF</button>
+    </div>
+  </div></body></html>`);
+  win.document.close(); win.print();
+}
+
+function round2(n) { return Math.round(n * 100) / 100; }
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+</script>
+<script>
+(async function() {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader !== 'undefined') StaffHeader.inject('EV Spares PO Management', 'fas fa-file-invoice');
+    loadPOs(1);
+    loadPOStats();
+})();
+</script>
+</body>
+</html>

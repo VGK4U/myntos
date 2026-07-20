@@ -1,0 +1,53 @@
+{
+  "role": "Finance Admin",
+  "total_pages": 31,
+  "tested": 28,
+  "passed": 26,
+  "failed": 2,
+  "errors": [
+    {
+      "page": "Income Verification",
+      "url": "/vgk/income-history-supreme",
+      "error": "404 Not Found",
+      "screenshot": "page_010_Income_Verification"
+    },
+    {
+      "page": "Withdrawals",
+      "url": "/user/withdrawals",
+      "error": "404 Not Found",
+      "screenshot": "page_014_Withdrawals"
+    }
+  ],
+  "screenshots": [
+    "tests/screenshots/finance_01_login_page_20251104_064758.png",
+    "tests/screenshots/finance_02_login_success_20251104_064802.png",
+    "tests/screenshots/finance_page_000_Finance_Dashboard_20251104_064804.png",
+    "tests/screenshots/finance_page_001_Payment_Processing_20251104_064807.png",
+    "tests/screenshots/finance_page_002_KYC_Approval_20251104_064811.png",
+    "tests/screenshots/finance_page_003_PIN_Approvals_20251104_064815.png",
+    "tests/screenshots/finance_page_004_Expense_Management_20251104_064819.png",
+    "tests/screenshots/finance_page_005_TDS_Management_20251104_064822.png",
+    "tests/screenshots/finance_page_006_Financial_Reports_20251104_064825.png",
+    "tests/screenshots/finance_page_007_Transfer_Queue_20251104_064829.png",
+    "tests/screenshots/finance_page_008_Transfer_History_20251104_064833.png",
+    "tests/screenshots/finance_page_009_Income_Verified_20251104_064836.png",
+    "tests/screenshots/finance_page_010_Income_Verification_20251104_064840.png",
+    "tests/screenshots/finance_page_011_Search_Members_20251104_064844.png",
+    "tests/screenshots/finance_page_012_Birthday_Details_20251104_064847.png",
+    "tests/screenshots/finance_page_013_Support_Tickets_20251104_064851.png",
+    "tests/screenshots/finance_page_014_Withdrawals_20251104_064855.png",
+    "tests/screenshots/finance_page_015_Bank_Approval_20251104_064859.png",
+    "tests/screenshots/finance_page_016_Buy_Coupon_20251104_064903.png",
+    "tests/screenshots/finance_page_017_Activate_Coupon_20251104_064906.png",
+    "tests/screenshots/finance_page_018_Coupon_Status_20251104_064910.png",
+    "tests/screenshots/finance_page_019_Coupon_Progress_20251104_064913.png",
+    "tests/screenshots/finance_page_020_Coupon_Transfer_20251104_064916.png",
+    "tests/screenshots/finance_page_021_All_Members_20251104_064920.png",
+    "tests/screenshots/finance_page_022_Direct_Referrals_20251104_064924.png",
+    "tests/screenshots/finance_page_023_Picture_View_20251104_064927.png",
+    "tests/screenshots/finance_page_024_Ved_Team_20251104_064931.png",
+    "tests/screenshots/finance_page_025_Awards_20251104_064934.png",
+    "tests/screenshots/finance_page_026_Bonanza_Awards_20251104_064938.png",
+    "tests/screenshots/finance_page_027_Bonanza_Claims_20251104_064942.png"
+  ]
+}

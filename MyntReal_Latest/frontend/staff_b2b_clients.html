@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>B2B SaaS Admin — Phase 2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#f3f4f6; min-height:100vh; }
+  .content-area { padding: 24px; }
+  h1 { margin: 0 0 4px; font-size: 22px; color:#1f2937; }
+  .sub { color:#666; margin: 0 0 12px; font-size: 12px; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+  .pill.shadow{background:#fff4d6;color:#7a4a00}
+  .pill.ok    {background:#d6f5d6;color:#185c18}
+  .pill.warn  {background:#fde2e2;color:#8a1818}
+  .pill.muted {background:#eee;color:#555}
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin: 8px 0 12px; }
+  .tab  { padding: 7px 14px; border:1px solid #ccc; background:#fff; border-radius:6px; cursor:pointer; font-size: 13px; }
+  .tab.active{ background:#0a66c2; color:#fff; border-color:#0a66c2; }
+  .panel{ background:#fff; border:1px solid #e1e4e8; border-radius:8px; padding:14px; }
+  .panel h3{ margin:0 0 10px; font-size:15px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:10px; }
+  table { width:100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { border-bottom: 1px solid #eef0f2; padding: 6px 8px; text-align: left; vertical-align: top;}
+  th { background:#fafbfc; font-weight:600; color:#444; }
+  tr:hover td { background:#fafcff; }
+  button { padding: 6px 12px; border:1px solid #ccc; background:#fff; border-radius:5px; cursor:pointer; font-size:12px; }
+  button.primary{ background:#0a66c2; color:#fff; border-color:#0a66c2; }
+  button.danger { background:#c0392b; color:#fff; border-color:#c0392b; }
+  button:disabled{ opacity:.5; cursor:not-allowed }
+  input, select, textarea { padding: 6px 8px; border:1px solid #ccc; border-radius:4px; font-size:12px; font-family:inherit;}
+  textarea{ width:100%; min-height:60px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+  .stat { background:#f8fafc; border:1px solid #e1e4e8; border-radius:6px; padding:8px 10px; }
+  .stat .n { font-size:18px; font-weight:700; }
+  .stat .l { color:#666; font-size:11px; }
+  .b2b-modal-bg{ position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:100000; }
+  .b2b-modal{ background:#fff; border-radius:8px; padding:18px; max-width:560px; width:96%; max-height:88vh; overflow:auto; display:block; position:relative; pointer-events:auto;}
+  .b2b-modal h3{ margin:0 0 10px; }
+  .b2b-modal .field{ display:flex; flex-direction:column; margin-bottom:8px; }
+  .b2b-modal .field label{ font-size:11px; color:#555; margin-bottom:3px; }
+  .err{ color:#c0392b; }
+  .small{ font-size:11px; color:#888; }
+  .mono{ font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size:11.5px; }
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+<div id="headerContainer"></div>
+
+<div class="content-area">
+  <h1>B2B SaaS Admin <span class="pill shadow" id="phase-pill">PHASE 2</span></h1>
+  <p class="sub">Foundation in shadow mode. Phase 2 adds full CRUD over clients, modules, plans, subscriptions, pricing, and dependencies.</p>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="status">Status</div>
+    <div class="tab" data-tab="clients">Clients</div>
+    <div class="tab" data-tab="modules">Modules</div>
+    <div class="tab" data-tab="plans">Plans</div>
+    <div class="tab" data-tab="subscriptions">Subscriptions</div>
+    <div class="tab" data-tab="pricing">Pricing</div>
+    <div class="tab" data-tab="overrides">Overrides</div>
+    <div class="tab" data-tab="deps">Dependencies</div>
+    <div class="tab" data-tab="audit">Audit</div>
+    <div class="tab" data-tab="shadow">Shadow Log</div>
+  </div>
+
+  <div class="panel" id="panel"></div>
+
+<script>
+function tok(){ return localStorage.getItem('staff_token') || ''; }
+function authH(){ const t=tok(); return t ? {'Authorization':'Bearer '+t,'Content-Type':'application/json'} : {'Content-Type':'application/json'}; }
+async function api(method, path, body){
+  const url = '/api/v1/platform-b2b'+path;
+  let r;
+  try {
+    r = await fetch(url, {method, headers:authH(), body: body?JSON.stringify(body):undefined});
+  } catch (netErr) {
+    console.error('[B2B-ADMIN] Network error', method, url, netErr);
+    throw new Error('Network error: '+netErr.message);
+  }
+  const text = await r.text();
+  let json = null; try{ json = text?JSON.parse(text):null; } catch(_) {}
+  if (!r.ok) {
+    const msg = (json && (json.detail || json.message)) || (r.status+' '+r.statusText);
+    console.error('[B2B-ADMIN] API error', method, url, r.status, msg, json);
+    throw new Error(msg);
+  }
+  return json;
+}
+function fmt(d){ return d? String(d).replace('T',' ').slice(0,19):''; }
+function esc(s){ return s==null?'': String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const $ = q => document.querySelector(q);
+const TABS = { status:renderStatus, clients:renderClients, modules:renderModules, plans:renderPlans,
+               subscriptions:renderSubs, pricing:renderPricing, overrides:renderOverrides,
+               deps:renderDeps, audit:renderAudit, shadow:renderShadow };
+
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  TABS[t.dataset.tab]();
+}));
+
+// -------- modal helper --------
+function modal(title, fields, onSave, opts){
+  opts = opts || {};
+  const bg = document.createElement('div'); bg.className='b2b-modal-bg';
+  const m  = document.createElement('div'); m.className='b2b-modal';
+  m.innerHTML = '<h3>'+esc(title)+'</h3>' +
+    fields.map(f => f.type==='static'
+      ? `<div class="field">${f.label?`<label>${esc(f.label)}</label>`:''}<div class="static-block" style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;background:#fafafa">${f.html||''}</div></div>`
+      : `<div class="field"><label>${esc(f.label)}</label>${
+      f.type==='textarea' ? `<textarea name="${f.name}">${esc(f.value||'')}</textarea>`
+    : f.type==='select'   ? `<select name="${f.name}">${(f.options||[]).map(o=>`<option value="${esc(o.v)}" ${o.v==f.value?'selected':''}>${esc(o.l)}</option>`).join('')}</select>`
+    : f.type==='checkbox' ? `<label><input type="checkbox" name="${f.name}" ${f.value?'checked':''}/> ${esc(f.hint||'')}</label>`
+    :                       `<input type="${f.type||'text'}" name="${f.name}" value="${esc(f.value||'')}" placeholder="${esc(f.placeholder||'')}"/>`
+    }</div>`).join('') +
+    '<div class="row" style="justify-content:flex-end"><button id="b-cancel">Cancel</button><button id="b-save" class="primary">Save</button></div>' +
+    '<div id="b-err" class="err small"></div>';
+  bg.appendChild(m); document.body.appendChild(bg);
+  bg.querySelector('#b-cancel').onclick = () => bg.remove();
+  bg.querySelector('#b-save').onclick = async () => {
+    const out = {};
+    for (const f of fields) {
+      const el = m.querySelector(`[name="${f.name}"]`);
+      if (!el) continue;
+      if (f.type==='checkbox') out[f.name] = el.checked;
+      else if (f.type==='number') out[f.name] = el.value === '' ? null : Number(el.value);
+      else out[f.name] = el.value === '' ? null : el.value;
+    }
+    try { await onSave(out); bg.remove(); }
+    catch(e){
+      console.error('[B2B-ADMIN] Modal save failed:', e);
+      const errEl = m.querySelector('#b-err');
+      if (errEl) { errEl.textContent = '⚠ '+e.message; errEl.style.fontSize='13px'; errEl.style.padding='8px 0'; }
+      else alert('Save failed: '+e.message);
+    }
+  };
+  // Phase 3a.1 — onMount lets callers wire post-render handlers on inline static panels
+  if (typeof opts.onMount === 'function') {
+    try { opts.onMount(m, bg); } catch(e){ console.error('[B2B-ADMIN] onMount error:', e); }
+  }
+  return { bg, m };
+}
+
+// -------- renderers --------
+async function renderStatus(){
+  $('#panel').innerHTML = '<h3>Layer status</h3><div id="grid" class="grid">Loading…</div>';
+  try {
+    const s = await api('GET','/status');
+    const c = s.counts || {};
+    const phasePill = document.getElementById('phase-pill');
+    if (phasePill) {
+      phasePill.textContent = s.enforce_flag ? 'PHASE 3 (ENFORCING)' : 'PHASE 2 (SHADOW)';
+      phasePill.className = 'pill ' + (s.enforce_flag ? 'warn' : 'shadow');
+    }
+    $('#grid').innerHTML = `
+      <div class="stat"><div class="n">${s.phase}</div><div class="l">Phase</div></div>
+      <div class="stat"><div class="n">${s.shadow_mode?'YES':'NO'}</div><div class="l">Shadow mode</div></div>
+      <div class="stat"><div class="n">${s.enforce_flag?'ON':'OFF'}</div><div class="l">B2B_ENFORCE</div></div>
+      <div class="stat"><div class="n">${c.platform_clients??'-'}</div><div class="l">Clients</div></div>
+      <div class="stat"><div class="n">${c.platform_modules??'-'}</div><div class="l">Modules</div></div>
+      <div class="stat"><div class="n">${c.platform_plans??'-'}</div><div class="l">Plans</div></div>
+      <div class="stat"><div class="n">${c.platform_subscriptions??'-'}</div><div class="l">Subscriptions</div></div>
+      <div class="stat"><div class="n">${c.b2b_shadow_log??'-'}</div><div class="l">Shadow log rows</div></div>`;
+  } catch(e){ $('#grid').innerHTML = '<span class="err">'+e.message+'</span>'; }
+}
+
+async function renderClients(){
+  $('#panel').innerHTML = `<div class="row"><h3 style="margin:0;flex:1">Clients</h3>
+    <button class="primary" id="new-client">+ New client</button></div>
+    <table id="t"><thead><tr><th>ID</th><th>Code</th><th>Name</th><th>Internal</th><th>Status</th><th>Currency</th><th>GSTIN / State</th><th>Issuing entity</th><th>Companies under umbrella</th><th>Contact</th><th></th></tr></thead><tbody><tr><td colspan="11">Loading…</td></tr></tbody></table>`;
+
+  // Phase 3a.1 — fetch legal entities once for the issuing-entity dropdown
+  let legalEntities = [];
+  try { legalEntities = (await api('GET','/legal-entities')).legal_entities || []; }
+  catch(e){ console.warn('[B2B-ADMIN] legal-entities fetch failed:', e.message); }
+  const leOptions = [{v:'',l:'— none —'}].concat(
+    legalEntities.map(le => ({ v: le.id, l: `#${le.id} ${le.company_code||''} — ${le.company_name}${le.gst_number?' ('+le.gst_number+')':''}` }))
+  );
+  const leMap = Object.fromEntries(legalEntities.map(le => [le.id, le]));
+
+  document.getElementById('new-client').onclick = () => modal('New client', [
+    { name:'client_code', label:'Client code (unique)', placeholder:'ACME-001' },
+    { name:'client_name', label:'Display name' },
+    { name:'contact_name',label:'Contact name' },
+    { name:'contact_email',label:'Contact email', type:'email' },
+    { name:'contact_phone',label:'Contact phone' },
+    { name:'billing_currency', label:'Billing currency', type:'select', value:'INR',
+      options:[{v:'INR',l:'INR'},{v:'USD',l:'USD'}] },
+    { name:'status', label:'Status', type:'select', value:'active',
+      options:[{v:'active',l:'active'},{v:'trial',l:'trial'},{v:'suspended',l:'suspended'}] },
+    // Phase 3a.1 — Tally/Zoho parity
+    { name:'primary_legal_entity_id', label:'Issuing legal entity (default)', type:'select', value:'', options: leOptions },
+    { name:'gstin', label:'Customer GSTIN', placeholder:'e.g. 29AABCM1234N1ZA' },
+    { name:'state_for_gst', label:'State for GST', placeholder:'e.g. Karnataka' },
+    { name:'pan_number', label:'PAN', placeholder:'e.g. AABCM1234N' },
+    { name:'billing_address', label:'Billing address', type:'textarea' },
+    { name:'notes', label:'Notes', type:'textarea' },
+  ], async (v) => { await api('POST','/clients', v); renderClients(); });
+
+  try {
+    const { clients } = await api('GET','/clients');
+    const tb = document.querySelector('#t tbody');
+    if (!clients.length){ tb.innerHTML = '<tr><td colspan="11">No clients.</td></tr>'; return; }
+    tb.innerHTML = clients.map(c => {
+      const le = c.primary_legal_entity_id ? leMap[c.primary_legal_entity_id] : null;
+      const leLabel = le ? `${esc(le.company_code||'')} <div class="small">${esc(le.company_name)}</div>` : '<span class="small">—</span>';
+      const gstLine = c.gstin ? `<span class="mono">${esc(c.gstin)}</span><div class="small">${esc(c.state_for_gst||'')}</div>` : '<span class="small">—</span>';
+      // Phase 3a.1 — render umbrella companies (self marked as "primary", others listed below)
+      const umbrella = Array.isArray(c.umbrella_companies) ? c.umbrella_companies : [];
+      let umbrellaCell;
+      if (!umbrella.length) {
+        umbrellaCell = '<span class="small">— none —</span>';
+      } else {
+        const items = umbrella.map(u => {
+          const cls = u.is_active ? '' : 'muted';
+          const tag = u.is_primary ? '<span class="pill ok" style="margin-right:4px">self</span>' : '';
+          const inactive = u.is_active ? '' : ' <span class="small">(inactive)</span>';
+          return `<div class="${cls}" style="line-height:1.3">${tag}<span class="mono">${esc(u.company_code||'')}</span> — ${esc(u.company_name)}${inactive}</div>`;
+        }).join('');
+        umbrellaCell = `<div class="small" style="margin-bottom:2px">${umbrella.length} ${umbrella.length===1?'company':'companies'}</div>${items}`;
+      }
+      return `<tr>
+      <td>${c.id}</td><td class="mono">${esc(c.client_code)}</td><td>${esc(c.client_name)}</td>
+      <td>${c.is_internal?'<span class="pill ok">internal</span>':''}</td>
+      <td><span class="pill ${c.status==='active'?'ok':c.status==='archived'?'muted':'warn'}">${esc(c.status)}</span></td>
+      <td>${esc(c.billing_currency)}</td>
+      <td>${gstLine}</td>
+      <td>${leLabel}</td>
+      <td>${umbrellaCell}</td>
+      <td>${esc(c.contact_name||'')}<div class="small">${esc(c.contact_email||'')}</div></td>
+      <td>
+        <button data-edit="${c.id}">Edit</button>
+        <button data-effective="${c.id}">Pricing</button>
+        ${c.is_internal?'':`<button class="danger" data-del="${c.id}">Archive</button>`}
+      </td></tr>`;
+    }).join('');
+    tb.querySelectorAll('[data-edit]').forEach(b => b.onclick = async () => {
+      const c = clients.find(x=>x.id==b.dataset.edit);
+      // Phase 3a.1 — interactive umbrella panel inside Edit Client modal.
+      // Renders one row per attached company with Toggle-active + Detach buttons,
+      // and a footer picker to attach an unassigned associated_company.
+      const renderUmbrellaPanel = (umb, unassigned) => {
+        const header = `<div class="small" style="margin-bottom:6px"><b>${umb.length}</b> ${umb.length===1?'company':'companies'} under this tenant umbrella:</div>`;
+        const empty  = '<div class="small" style="margin-bottom:6px">No legal entities linked yet. Attach one below.</div>';
+        const rows = umb.map(u => {
+          const tag = u.is_primary
+            ? '<span class="pill ok" style="margin-right:6px">self / primary</span>'
+            : '<span class="pill muted" style="margin-right:6px">other</span>';
+          const statusBadge = u.is_active
+            ? '<span class="pill ok" style="margin-left:6px">active</span>'
+            : '<span class="pill warn" style="margin-left:6px">inactive</span>';
+          const gst = u.gst_number ? ` <span class="small mono">${esc(u.gst_number)}</span>` : '';
+          const st  = u.state ? ` <span class="small">· ${esc(u.state)}</span>` : '';
+          const toggleLbl = u.is_active ? 'Deactivate' : 'Activate';
+          const detachBtn = u.is_primary
+            ? '<button disabled title="Cannot detach the issuing entity. Change Issuing entity below first." style="opacity:.5">Detach</button>'
+            : `<button data-act="detach" data-id="${u.id}" data-name="${esc(u.company_name)}">Detach</button>`;
+          return `<div data-row="${u.id}" style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px dashed #e5e7eb">
+            <div style="flex:1;line-height:1.4">
+              ${tag}<span class="mono">${esc(u.company_code||'')}</span> — ${esc(u.company_name)}${gst}${st}${statusBadge}
+            </div>
+            <button data-act="toggle" data-id="${u.id}" data-active="${u.is_active?1:0}">${toggleLbl}</button>
+            ${detachBtn}
+          </div>`;
+        }).join('');
+        const opts = unassigned.map(u => `<option value="${u.id}">#${u.id} ${esc(u.company_code||'')} — ${esc(u.company_name)}${u.gst_number?' ('+esc(u.gst_number)+')':''}</option>`).join('');
+        const attach = `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb">
+          <div class="small" style="margin-bottom:4px"><b>Attach existing company</b> ${unassigned.length?'':'<span class="small">— none available (all companies already assigned)</span>'}</div>
+          <div style="display:flex;gap:6px">
+            <select data-attach-select style="flex:1" ${unassigned.length?'':'disabled'}>
+              <option value="">— choose a company —</option>${opts}
+            </select>
+            <button data-act="attach" ${unassigned.length?'':'disabled'}>Attach</button>
+          </div>
+          <div data-umb-msg class="small" style="margin-top:4px;color:#b91c1c"></div>
+        </div>`;
+        return (umb.length ? header : empty) + rows + attach;
+      };
+
+      // Initial fetch: which companies aren't attached anywhere?
+      let unassigned = [];
+      try { unassigned = (await api('GET','/companies?unassigned_only=true')).companies || []; }
+      catch(e){ console.warn('[B2B-ADMIN] unassigned fetch failed:', e.message); }
+
+      let currentUmbrella = (c.umbrella_companies || []).slice();
+      const initialHtml = renderUmbrellaPanel(currentUmbrella, unassigned);
+
+      let umbrellaMutated = false;
+      const wireUmbrellaHandlers = (modalEl, bgEl) => {
+        const panel = modalEl.querySelector('[data-umb-panel]');
+        if (!panel) return;
+        // Phase 3a.1 — if the operator made umbrella changes and then clicks
+        // Cancel, the table still needs to refresh (Save path already does so).
+        const cancelBtn = modalEl.querySelector('#b-cancel');
+        if (cancelBtn) {
+          cancelBtn.addEventListener('click', () => {
+            if (umbrellaMutated) renderClients();
+          });
+        }
+        const showMsg = (txt, isErr) => {
+          const el = panel.querySelector('[data-umb-msg]');
+          if (el) { el.textContent = txt || ''; el.style.color = isErr ? '#b91c1c' : '#065f46'; }
+        };
+        const refreshPanel = async () => {
+          // Re-fetch this client (umbrella) + unassigned, then re-render in place
+          let fresh = null, un = [];
+          try {
+            const all = (await api('GET','/clients')).clients || [];
+            fresh = all.find(x => x.id === c.id);
+            un    = (await api('GET','/companies?unassigned_only=true')).companies || [];
+          } catch(e){ showMsg(e.message, true); return; }
+          if (fresh) currentUmbrella = fresh.umbrella_companies || [];
+          panel.innerHTML = renderUmbrellaPanel(currentUmbrella, un);
+          // Update the in-memory `clients` cache so the table reflects changes after modal closes
+          if (fresh) {
+            const idx = clients.findIndex(x => x.id === c.id);
+            if (idx >= 0) clients[idx] = fresh;
+          }
+        };
+        panel.addEventListener('click', async (ev) => {
+          const btn = ev.target.closest('button[data-act]');
+          if (!btn) return;
+          ev.preventDefault();
+          const act = btn.dataset.act;
+          try {
+            if (act === 'toggle') {
+              const id = Number(btn.dataset.id);
+              const newActive = btn.dataset.active === '1' ? false : true;
+              await api('PATCH','/companies/'+id, { is_active: newActive });
+              umbrellaMutated = true;
+              showMsg('Status updated.', false);
+              await refreshPanel();
+            } else if (act === 'detach') {
+              const id = Number(btn.dataset.id);
+              if (!confirm(`Detach "${btn.dataset.name}" from this tenant umbrella?`)) return;
+              await api('PATCH','/companies/'+id, { client_id: null });
+              umbrellaMutated = true;
+              showMsg('Company detached.', false);
+              await refreshPanel();
+            } else if (act === 'attach') {
+              const sel = panel.querySelector('[data-attach-select]');
+              const id = Number(sel && sel.value);
+              if (!id) { showMsg('Pick a company first.', true); return; }
+              await api('PATCH','/companies/'+id, { client_id: c.id });
+              umbrellaMutated = true;
+              showMsg('Company attached.', false);
+              await refreshPanel();
+            }
+          } catch(e){
+            console.error('[B2B-ADMIN] umbrella action failed:', e);
+            showMsg(e.message || 'Action failed', true);
+          }
+        });
+      };
+
+      modal('Edit client #'+c.id, [
+        { type:'static', label:'Companies under this tenant umbrella',
+          html: `<div data-umb-panel>${initialHtml}</div>` },
+        { name:'client_name', label:'Display name', value:c.client_name },
+        { name:'contact_name',label:'Contact name', value:c.contact_name },
+        { name:'contact_email',label:'Contact email', value:c.contact_email },
+        { name:'contact_phone',label:'Contact phone', value:c.contact_phone },
+        { name:'billing_currency', label:'Billing currency', type:'select', value:c.billing_currency,
+          options:[{v:'INR',l:'INR'},{v:'USD',l:'USD'}] },
+        { name:'status', label:'Status', type:'select', value:c.status,
+          options:[{v:'active',l:'active'},{v:'trial',l:'trial'},{v:'suspended',l:'suspended'},{v:'archived',l:'archived'}] },
+        // Phase 3a.1 — Tally/Zoho parity
+        { name:'primary_legal_entity_id', label:'Issuing legal entity (default)', type:'select',
+          value: c.primary_legal_entity_id || '', options: leOptions },
+        { name:'gstin', label:'Customer GSTIN', value:c.gstin, placeholder:'e.g. 29AABCM1234N1ZA' },
+        { name:'state_for_gst', label:'State for GST', value:c.state_for_gst, placeholder:'e.g. Karnataka' },
+        { name:'pan_number', label:'PAN', value:c.pan_number, placeholder:'e.g. AABCM1234N' },
+        { name:'billing_address', label:'Billing address', type:'textarea', value:c.billing_address },
+        { name:'notes', label:'Notes', type:'textarea', value:c.notes },
+      ], async (v) => {
+        // Coerce primary_legal_entity_id to int|null for FK
+        if (v.primary_legal_entity_id === '' || v.primary_legal_entity_id == null) v.primary_legal_entity_id = null;
+        else v.primary_legal_entity_id = Number(v.primary_legal_entity_id);
+        await api('PATCH','/clients/'+c.id, v); renderClients();
+      }, { onMount: wireUmbrellaHandlers });
+    });
+    tb.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!confirm('Archive this client?')) return;
+      await api('DELETE','/clients/'+b.dataset.del); renderClients();
+    });
+    tb.querySelectorAll('[data-effective]').forEach(b => b.onclick = async () => {
+      try {
+        const r = await api('GET','/clients/'+b.dataset.effective+'/effective-pricing');
+        const lines = r.items.map(i => `${i.module_code.padEnd(50)}  ${String(i.effective_price).padStart(10)} ${r.currency}  ${i.has_override?'(override)':''}`).join('\n');
+        alert(`Effective pricing — ${r.module_count} modules — subtotal ${r.subtotal} ${r.currency}\n\n${lines.slice(0, 6000)}`);
+      } catch(e){ alert(e.message); }
+    });
+  } catch(e){ document.querySelector('#t tbody').innerHTML = '<tr><td colspan="11" class="err">'+e.message+'</td></tr>'; }
+}
+
+// Phase 3a.2 — group modules by category (portal) and sidebar_section.
+// Both levels are collapsible. Filter input matches across all groups and
+// auto-expands groups containing matches.
+async function renderModules(){
+  $('#panel').innerHTML = `<div class="row"><h3 style="margin:0;flex:1">Modules</h3>
+    <input id="q" placeholder="filter (code, name, HSN, category, section)…" style="min-width:320px"/>
+    <button id="exp-all" class="small">Expand all</button>
+    <button id="col-all" class="small">Collapse all</button></div>
+    <div id="mod-tree" style="margin-top:8px">Loading…</div>`;
+  try {
+    const { modules } = await api('GET','/modules?include_internal=true');
+    const tree = document.getElementById('mod-tree');
+    // Build {category -> {sidebar_section -> [modules]}}
+    const tre = {};
+    for (const m of modules) {
+      const cat = m.category || '— (uncategorized) —';
+      const sec = m.sidebar_section || '— (no section) —';
+      (tre[cat] = tre[cat] || {});
+      (tre[cat][sec] = tre[cat][sec] || []).push(m);
+    }
+    // Persist expanded state across re-draws.
+    const openCat = new Set(Object.keys(tre).slice(0, 1)); // first cat open by default
+    const openSec = new Set();
+
+    const draw = (q) => {
+      const ql = (q || '').toLowerCase().trim();
+      const matches = (m) => !ql || (m.module_code+' '+m.module_name+' '+(m.hsn_sac_code||'')+' '+(m.category||'')+' '+(m.sidebar_section||'')).toLowerCase().includes(ql);
+      const cats = Object.keys(tre).sort();
+      let totalShown = 0;
+      const out = [];
+      for (const cat of cats) {
+        const secs = tre[cat];
+        let catCount = 0;
+        const secKeys = Object.keys(secs).sort();
+        const secBlocks = [];
+        for (const sec of secKeys) {
+          const ms = secs[sec].filter(matches);
+          if (!ms.length) continue;
+          catCount += ms.length;
+          totalShown += ms.length;
+          // Auto-expand sec when filtering
+          const secKey = cat+'::'+sec;
+          const secOpen = ql ? true : openSec.has(secKey);
+          const rows = secOpen ? `<table style="width:100%;font-size:12px"><thead style="background:#f9fafb">
+            <tr><th>ID</th><th>Code</th><th>Name</th><th>HSN/SAC</th><th>UoM</th><th>GST%</th><th>Internal</th><th>Active</th><th></th></tr>
+            </thead><tbody>${ms.slice(0,500).map(m => `<tr>
+              <td>${m.id}</td><td class="mono">${esc(m.module_code)}</td><td>${esc(m.module_name)}</td>
+              <td class="mono">${esc(m.hsn_sac_code||'')}</td><td>${esc(m.unit_of_measure||'')}</td>
+              <td>${m.default_tax_rate_pct!=null?esc(m.default_tax_rate_pct):''}</td>
+              <td>${m.internal_only?'yes':''}</td>
+              <td>${m.is_active?'<span class="pill ok">on</span>':'<span class="pill muted">off</span>'}</td>
+              <td><button data-edit="${m.id}">Edit</button></td></tr>`).join('')}
+            </tbody></table>` : '';
+          secBlocks.push(`<div data-sec="${esc(secKey)}" style="margin:4px 0 4px 14px;border-left:2px solid #e5e7eb;padding-left:8px">
+            <div data-sec-toggle="${esc(secKey)}" style="cursor:pointer;font-size:13px;padding:3px 0;user-select:none">
+              <span style="display:inline-block;width:14px">${secOpen?'▼':'▶'}</span>
+              <span class="mono" style="color:#374151">${esc(sec)}</span>
+              <span class="small" style="color:#6b7280">(${ms.length})</span>
+            </div>${rows}</div>`);
+        }
+        if (!catCount) continue;
+        const catOpen = ql ? true : openCat.has(cat);
+        const block = `<div data-cat="${esc(cat)}" style="margin:6px 0;border:1px solid #e5e7eb;border-radius:6px;padding:6px 10px;background:#ffffff">
+          <div data-cat-toggle="${esc(cat)}" style="cursor:pointer;font-weight:600;padding:4px 0;user-select:none">
+            <span style="display:inline-block;width:14px">${catOpen?'▼':'▶'}</span>
+            ${esc(cat)} <span class="small" style="color:#6b7280;font-weight:400">— ${catCount} module${catCount===1?'':'s'}</span>
+          </div>
+          ${catOpen ? secBlocks.join('') : ''}
+        </div>`;
+        out.push(block);
+      }
+      tree.innerHTML = (out.length ? out.join('') : '<div class="small">No matches.</div>') +
+        `<div class="small" style="margin-top:6px;color:#6b7280">Showing ${totalShown} of ${modules.length} modules${ql?' (filtered)':''}.</div>`;
+      tree.querySelectorAll('[data-cat-toggle]').forEach(el => el.onclick = () => {
+        const k = el.getAttribute('data-cat-toggle');
+        if (openCat.has(k)) openCat.delete(k); else openCat.add(k);
+        draw(document.getElementById('q').value);
+      });
+      tree.querySelectorAll('[data-sec-toggle]').forEach(el => el.onclick = () => {
+        const k = el.getAttribute('data-sec-toggle');
+        if (openSec.has(k)) openSec.delete(k); else openSec.add(k);
+        draw(document.getElementById('q').value);
+      });
+      tree.querySelectorAll('[data-edit]').forEach(b => b.onclick = async () => {
+        const m = modules.find(x=>x.id==b.dataset.edit);
+        modal('Edit module #'+m.id, [
+          { name:'module_name', label:'Name', value:m.module_name },
+          { name:'category', label:'Category (portal)', value:m.category },
+          { name:'description', label:'Description', type:'textarea', value:m.description },
+          { name:'hsn_sac_code', label:'HSN / SAC code', value:m.hsn_sac_code, placeholder:'e.g. 998314' },
+          { name:'unit_of_measure', label:'Unit of measure', value:m.unit_of_measure || 'NOS', placeholder:'NOS / SUB / MO' },
+          { name:'default_tax_rate_pct', label:'Default GST rate (%)', type:'number', value:m.default_tax_rate_pct },
+          { name:'internal_only', label:'Internal only', type:'checkbox', value:m.internal_only, hint:'Hide from external tenants' },
+          { name:'is_active', label:'Active', type:'checkbox', value:m.is_active },
+        ], async (v) => {
+          if (v.default_tax_rate_pct === '' || v.default_tax_rate_pct == null) v.default_tax_rate_pct = null;
+          else v.default_tax_rate_pct = Number(v.default_tax_rate_pct);
+          await api('PATCH','/modules/'+m.id, v); renderModules();
+        });
+      });
+    };
+    draw('');
+    document.getElementById('q').oninput = (e) => draw(e.target.value);
+    document.getElementById('exp-all').onclick = () => {
+      Object.keys(tre).forEach(c => openCat.add(c));
+      Object.keys(tre).forEach(c => Object.keys(tre[c]).forEach(s => openSec.add(c+'::'+s)));
+      draw(document.getElementById('q').value);
+    };
+    document.getElementById('col-all').onclick = () => {
+      openCat.clear(); openSec.clear();
+      draw(document.getElementById('q').value);
+    };
+  } catch(e){ document.getElementById('mod-tree').innerHTML = '<span class="err">'+esc(e.message)+'</span>'; }
+}
+
+// Phase 3a.2 — Plans table now shows per-plan rollup (active subs, modules,
+// seats, monthly/annual billing value, cleared/pending invoice totals) and
+// the Edit modal embeds a category > section module-tree picker that, on
+// Save, propagates to every active subscription on the plan and emits a
+// pro-rata adjustment invoice for the delta (server-side via /modules/sync).
+async function renderPlans(){
+  $('#panel').innerHTML = `<div class="row"><h3 style="margin:0;flex:1">Plans</h3>
+    <button class="primary" id="new-plan">+ New plan</button></div>
+    <div class="small" style="color:#6b7280;margin:4px 0 8px 0">Edit a plan to change its modules — module changes auto-propagate to active subscriptions with a pro-rata adjustment invoice.</div>
+    <table id="t" style="font-size:12px"><thead><tr>
+      <th>ID</th><th>Code</th><th>Name</th>
+      <th title="Modules in this plan template">Modules</th>
+      <th title="Active subscriptions on this plan">Active subs</th>
+      <th title="Sum of seat_count across active subs">Seats</th>
+      <th title="Monthly billing value across all active subs (INR)">Monthly ₹</th>
+      <th title="Annual billing value (cycle-aware) across all active subs (INR)">Annual ₹</th>
+      <th title="Sum of paid invoices for subs of this plan">Cleared ₹</th>
+      <th title="Sum of open + partial + overdue invoices">Pending ₹</th>
+      <th>Active</th><th></th>
+    </tr></thead><tbody><tr><td colspan="12">Loading…</td></tr></tbody></table>`;
+  document.getElementById('new-plan').onclick = () => modal('New plan', [
+    { name:'plan_code', label:'Plan code (unique)' },
+    { name:'plan_name', label:'Display name' },
+    { name:'description', label:'Description', type:'textarea' },
+    { name:'is_active', label:'Active', type:'checkbox', value:true },
+  ], async (v) => { await api('POST','/plans', v); renderPlans(); });
+
+  try {
+    const { plans } = await api('GET','/plans');
+    const tb = document.querySelector('#t tbody');
+    if (!plans.length){ tb.innerHTML = '<tr><td colspan="12">No plans.</td></tr>'; return; }
+    const fmt = (v) => (v == null ? '—' : Number(v).toLocaleString('en-IN', {maximumFractionDigits:2}));
+    tb.innerHTML = plans.map(p => `<tr>
+      <td>${p.id}</td><td class="mono">${esc(p.plan_code)}</td><td>${esc(p.plan_name)}</td>
+      <td>${p.module_count != null ? p.module_count : (p.module_ids||[]).length}</td>
+      <td>${p.active_subscription_count || 0}</td>
+      <td>${p.total_seats || 0}</td>
+      <td>${fmt(p.monthly_billing_value)}</td>
+      <td>${fmt(p.annual_billing_value)}</td>
+      <td><span class="pill ${(+p.cleared_amount||0)>0?'ok':'muted'}">${fmt(p.cleared_amount)}</span></td>
+      <td><span class="pill ${(+p.pending_amount||0)>0?'warn':'muted'}">${fmt(p.pending_amount)}</span></td>
+      <td>${p.is_active?'<span class="pill ok">on</span>':'<span class="pill muted">off</span>'}</td>
+      <td>
+        <button data-edit="${p.id}">Edit</button>
+        ${p.plan_code==='INTERNAL_FULL'?'':`<button class="danger" data-del="${p.id}">Deactivate</button>`}
+      </td></tr>`).join('');
+    tb.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!confirm('Deactivate this plan?')) return;
+      await api('DELETE','/plans/'+b.dataset.del); renderPlans();
+    });
+    tb.querySelectorAll('[data-edit]').forEach(b => b.onclick = async () => {
+      const planId = +b.dataset.edit;
+      // Fetch fresh plan + full module catalog in parallel.
+      let plan, modules;
+      try {
+        const r = await Promise.all([
+          api('GET','/plans/'+planId),
+          api('GET','/modules?include_internal=true'),
+        ]);
+        plan = r[0]; modules = r[1].modules || [];
+      } catch(e){ alert('Load failed: '+e.message); return; }
+      openEditPlanModal(plan, modules);
+    });
+  } catch(e){ document.querySelector('#t tbody').innerHTML = '<tr><td colspan="12" class="err">'+esc(e.message)+'</td></tr>'; }
+}
+
+// Phase 3a.2 — rich Edit Plan modal: name/desc/active + grouped module tree.
+// On Save: PATCH plan basics (if changed) + POST /plans/{id}/modules/sync.
+function openEditPlanModal(plan, modules){
+  const planId = plan.id;
+  const haveSet = new Set(plan.module_ids || []);
+  const initialHave = new Set(haveSet); // for delta preview
+
+  // Build {category -> {section -> [modules]}}
+  const tre = {};
+  for (const m of modules) {
+    const cat = m.category || '— (uncategorized) —';
+    const sec = m.sidebar_section || '— (no section) —';
+    (tre[cat] = tre[cat] || {});
+    (tre[cat][sec] = tre[cat][sec] || []).push(m);
+  }
+  const openCat = new Set(); const openSec = new Set();
+  // Auto-expand categories with any selected modules so operator immediately sees them
+  for (const cat of Object.keys(tre)) {
+    let any = false;
+    for (const sec of Object.keys(tre[cat])) {
+      const inSec = tre[cat][sec].some(m => haveSet.has(m.id));
+      if (inSec) { openSec.add(cat+'::'+sec); any = true; }
+    }
+    if (any) openCat.add(cat);
+  }
+
+  const bg = document.createElement('div'); bg.className='b2b-modal-bg';
+  const m  = document.createElement('div'); m.className='b2b-modal';
+  m.style.maxWidth = '720px'; m.style.width = '92vw';
+  m.innerHTML = `<h3>Edit plan #${planId} — ${esc(plan.plan_code)}</h3>
+    <div class="field"><label>Display name</label><input name="plan_name" value="${esc(plan.plan_name||'')}"/></div>
+    <div class="field"><label>Description</label><textarea name="description">${esc(plan.description||'')}</textarea></div>
+    <div class="field"><label><input type="checkbox" name="is_active" ${plan.is_active?'checked':''}/> Active</label></div>
+    <div style="border-top:1px solid #e5e7eb;margin:10px 0;padding-top:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <b style="flex:1">Modules included <span class="small" style="color:#6b7280">(<span data-have-count>${haveSet.size}</span> of ${modules.length})</span></b>
+        <input data-tree-filter placeholder="filter modules…" style="min-width:200px"/>
+        <button data-tree-expand class="small">Expand all</button>
+        <button data-tree-collapse class="small">Collapse all</button>
+      </div>
+      <div data-rollup class="small" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:6px 8px;margin-bottom:6px">
+        <b>${plan.active_subscription_count||0}</b> active subscription${(plan.active_subscription_count||0)===1?'':'s'} on this plan.
+        Module changes will be applied to ${plan.active_subscription_count||0===0?'no subs (template-only)':'all of them'}, with a pro-rata adjustment invoice per sub for the remainder of the current billing window.
+      </div>
+      <div data-delta class="small" style="margin-bottom:6px"></div>
+      <div data-tree style="max-height:48vh;overflow:auto;border:1px solid #e5e7eb;border-radius:4px;padding:6px;background:#fff"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px">
+      <button id="b-cancel">Cancel</button>
+      <button id="b-save" class="primary">Save</button>
+    </div>
+    <div id="b-err" class="err small" style="margin-top:6px"></div>
+    <div id="b-ok" class="small" style="margin-top:6px;color:#065f46"></div>`;
+  bg.appendChild(m); document.body.appendChild(bg);
+
+  const treeEl = m.querySelector('[data-tree]');
+  const filterEl = m.querySelector('[data-tree-filter]');
+  const haveCountEl = m.querySelector('[data-have-count]');
+  const deltaEl = m.querySelector('[data-delta]');
+
+  const updateDelta = () => {
+    const added = [...haveSet].filter(x => !initialHave.has(x));
+    const removed = [...initialHave].filter(x => !haveSet.has(x));
+    haveCountEl.textContent = haveSet.size;
+    if (!added.length && !removed.length) { deltaEl.innerHTML = '<span style="color:#6b7280">No module changes pending.</span>'; return; }
+    deltaEl.innerHTML = `<b>Pending changes:</b> <span style="color:#065f46">+${added.length} added</span>, <span style="color:#b91c1c">−${removed.length} removed</span>.`;
+  };
+
+  const drawTree = () => {
+    const ql = (filterEl.value || '').toLowerCase().trim();
+    const matches = (mod) => !ql || (mod.module_code+' '+mod.module_name+' '+(mod.category||'')+' '+(mod.sidebar_section||'')).toLowerCase().includes(ql);
+    const cats = Object.keys(tre).sort();
+    const out = [];
+    for (const cat of cats) {
+      const secKeys = Object.keys(tre[cat]).sort();
+      let catTotal = 0, catSelected = 0;
+      const secBlocks = [];
+      for (const sec of secKeys) {
+        const ms = tre[cat][sec].filter(matches);
+        if (!ms.length) continue;
+        catTotal += ms.length;
+        const selectedHere = ms.filter(x => haveSet.has(x.id)).length;
+        catSelected += selectedHere;
+        const secKey = cat+'::'+sec;
+        const secOpen = ql ? true : openSec.has(secKey);
+        const items = secOpen ? ms.slice(0, 800).map(mod =>
+          `<label style="display:flex;gap:6px;padding:2px 0;font-size:12px;align-items:center">
+             <input type="checkbox" data-mid="${mod.id}" ${haveSet.has(mod.id)?'checked':''}/>
+             <span class="mono" style="color:#374151">${esc(mod.module_code)}</span>
+             <span style="color:#6b7280;flex:1">${esc(mod.module_name)}</span>
+           </label>`).join('') : '';
+        secBlocks.push(`<div style="margin:3px 0 3px 14px;border-left:2px solid #e5e7eb;padding-left:8px">
+          <div data-sec-toggle="${esc(secKey)}" style="cursor:pointer;font-size:13px;padding:2px 0;user-select:none">
+            <span style="display:inline-block;width:14px">${secOpen?'▼':'▶'}</span>
+            <input type="checkbox" data-sec-bulk="${esc(secKey)}" ${selectedHere===ms.length?'checked':''} ${selectedHere>0&&selectedHere<ms.length?'data-mixed=1':''} onclick="event.stopPropagation()"/>
+            <span class="mono" style="color:#374151">${esc(sec)}</span>
+            <span class="small" style="color:#6b7280">(${selectedHere}/${ms.length})</span>
+          </div>${items}</div>`);
+      }
+      if (!catTotal) continue;
+      const catOpen = ql ? true : openCat.has(cat);
+      out.push(`<div style="margin:5px 0;border:1px solid #e5e7eb;border-radius:6px;padding:5px 8px;background:#ffffff">
+        <div data-cat-toggle="${esc(cat)}" style="cursor:pointer;font-weight:600;padding:3px 0;user-select:none">
+          <span style="display:inline-block;width:14px">${catOpen?'▼':'▶'}</span>
+          ${esc(cat)} <span class="small" style="color:#6b7280;font-weight:400">(${catSelected}/${catTotal} selected)</span>
+        </div>${catOpen ? secBlocks.join('') : ''}</div>`);
+    }
+    treeEl.innerHTML = out.length ? out.join('') : '<div class="small" style="color:#6b7280">No matches.</div>';
+    treeEl.querySelectorAll('[data-cat-toggle]').forEach(el => el.onclick = () => {
+      const k = el.getAttribute('data-cat-toggle');
+      if (openCat.has(k)) openCat.delete(k); else openCat.add(k);
+      drawTree();
+    });
+    treeEl.querySelectorAll('[data-sec-toggle]').forEach(el => el.onclick = () => {
+      const k = el.getAttribute('data-sec-toggle');
+      if (openSec.has(k)) openSec.delete(k); else openSec.add(k);
+      drawTree();
+    });
+    treeEl.querySelectorAll('input[data-mid]').forEach(cb => cb.onchange = () => {
+      const mid = +cb.dataset.mid;
+      if (cb.checked) haveSet.add(mid); else haveSet.delete(mid);
+      // Re-draw to sync section bulk state without losing scroll: keep simple, redraw once.
+      drawTree(); updateDelta();
+    });
+    treeEl.querySelectorAll('input[data-sec-bulk]').forEach(cb => cb.onchange = (ev) => {
+      const k = ev.target.getAttribute('data-sec-bulk');
+      const [cat, sec] = k.split('::');
+      const ms = tre[cat][sec].filter(matches);
+      if (ev.target.checked) ms.forEach(mod => haveSet.add(mod.id));
+      else ms.forEach(mod => haveSet.delete(mod.id));
+      drawTree(); updateDelta();
+    });
+  };
+  drawTree(); updateDelta();
+  filterEl.oninput = drawTree;
+  m.querySelector('[data-tree-expand]').onclick = () => {
+    Object.keys(tre).forEach(c => openCat.add(c));
+    Object.keys(tre).forEach(c => Object.keys(tre[c]).forEach(s => openSec.add(c+'::'+s)));
+    drawTree();
+  };
+  m.querySelector('[data-tree-collapse]').onclick = () => {
+    openCat.clear(); openSec.clear(); drawTree();
+  };
+
+  m.querySelector('#b-cancel').onclick = () => bg.remove();
+  m.querySelector('#b-save').onclick = async () => {
+    const errEl = m.querySelector('#b-err'); errEl.textContent = '';
+    const okEl  = m.querySelector('#b-ok');  okEl.textContent  = '';
+    const planName = m.querySelector('input[name="plan_name"]').value;
+    const description = m.querySelector('textarea[name="description"]').value;
+    const isActive = m.querySelector('input[name="is_active"]').checked;
+    const targetIds = [...haveSet].sort((a,b)=>a-b);
+    try {
+      // 1) Patch plan basics if changed
+      const basicChanged = (planName !== (plan.plan_name||'')) ||
+                           (description !== (plan.description||'')) ||
+                           (isActive !== !!plan.is_active);
+      if (basicChanged) {
+        await api('PATCH','/plans/'+planId, { plan_name: planName, description: description, is_active: isActive });
+      }
+      // 2) Sync modules + propagate
+      const syncResult = await api('POST','/plans/'+planId+'/modules/sync', { module_ids: targetIds, propagate: true });
+      // Summarize result
+      const added = (syncResult.added||[]).length;
+      const removed = (syncResult.removed||[]).length;
+      const subs = (syncResult.sub_results || []);
+      const invoices = subs.filter(s => s.invoice_number).map(s => s.invoice_number);
+      const skipped = subs.filter(s => s.skipped_reason).map(s => `sub#${s.sub_id}: ${s.skipped_reason}`);
+      let msg = `Saved. Module delta: +${added} / −${removed}.`;
+      if (invoices.length) msg += ` Pro-rata invoices: ${invoices.join(', ')}.`;
+      if (skipped.length)  msg += ` No invoice for: ${skipped.join('; ')}.`;
+      okEl.textContent = msg;
+      setTimeout(() => { bg.remove(); renderPlans(); }, 1400);
+    } catch(e){
+      console.error('[B2B-ADMIN] plan save failed:', e);
+      errEl.textContent = '⚠ ' + e.message;
+    }
+  };
+}
+
+async function renderSubs(){
+  $('#panel').innerHTML = `<div class="row"><h3 style="margin:0;flex:1">Subscriptions</h3>
+    <button class="primary" id="new-sub">+ New subscription</button></div>
+    <table id="t"><thead><tr><th>ID</th><th>Client</th><th>Plan</th><th>Cycle</th><th>Currency</th><th>Status</th><th>Seats</th><th>Trial</th><th>Period</th><th></th></tr></thead><tbody><tr><td colspan="10">Loading…</td></tr></tbody></table>`;
+  const [{ subscriptions }, { clients }, { plans }] = await Promise.all([
+    api('GET','/subscriptions'), api('GET','/clients'), api('GET','/plans')
+  ]);
+  document.getElementById('new-sub').onclick = () => modal('New subscription', [
+    { name:'client_id', label:'Client', type:'select',
+      options: clients.map(c=>({v:c.id, l:`#${c.id} ${c.client_code} — ${c.client_name}`})) },
+    { name:'plan_id', label:'Plan', type:'select',
+      options: [{v:'',l:'— none —'}, ...plans.map(p=>({v:p.id, l:`#${p.id} ${p.plan_code}`}))]},
+    { name:'display_plan_name', label:'Display plan name (optional)' },
+    { name:'billing_currency', label:'Billing currency', type:'select', value:'INR',
+      options:[{v:'INR',l:'INR'},{v:'USD',l:'USD'}] },
+    { name:'billing_cycle', label:'Billing cycle', type:'select', value:'monthly',
+      options:[{v:'monthly',l:'monthly'},{v:'annual',l:'annual'}] },
+    { name:'status', label:'Status', type:'select', value:'active',
+      options:[{v:'trial',l:'trial'},{v:'active',l:'active'},{v:'suspended',l:'suspended'},{v:'cancelled',l:'cancelled'}] },
+    { name:'is_trial', label:'Is trial', type:'checkbox', value:false },
+    // Phase 3a.2 — seat = staff login count for the tenant
+    { name:'seat_count', label:'Seats (staff logins)', type:'number', value:1 },
+    { name:'starts_on', label:'Starts on', type:'date' },
+    { name:'ends_on', label:'Ends on', type:'date' },
+    { name:'trial_ends_on', label:'Trial ends on', type:'date' },
+  ], async (v) => {
+    if (!v.client_id) throw new Error('client required');
+    v.client_id = +v.client_id; if (v.plan_id) v.plan_id = +v.plan_id; else v.plan_id = null;
+    if (v.seat_count == null || v.seat_count === '') v.seat_count = 1;
+    v.seat_count = Math.max(1, Number(v.seat_count) || 1);
+    await api('POST','/subscriptions', v); renderSubs();
+  });
+
+  const cmap = Object.fromEntries(clients.map(c=>[c.id, c]));
+  const pmap = Object.fromEntries(plans.map(p=>[p.id, p]));
+  const tb = document.querySelector('#t tbody');
+  if (!subscriptions.length){ tb.innerHTML='<tr><td colspan="9">No subscriptions.</td></tr>'; return; }
+  tb.innerHTML = subscriptions.map(s => `<tr>
+    <td>${s.id}</td>
+    <td>${cmap[s.client_id] ? esc(cmap[s.client_id].client_code) : s.client_id}</td>
+    <td>${s.plan_id && pmap[s.plan_id] ? esc(pmap[s.plan_id].plan_code) : '—'}${s.display_plan_name?`<div class="small">${esc(s.display_plan_name)}</div>`:''}</td>
+    <td>${esc(s.billing_cycle)}</td>
+    <td>${esc(s.billing_currency)}</td>
+    <td><span class="pill ${s.status==='active'?'ok':s.status==='suspended'||s.status==='cancelled'?'warn':'shadow'}">${esc(s.status)}</span></td>
+    <td>${s.seat_count != null ? s.seat_count : 1}</td>
+    <td>${s.is_trial?'yes':''}</td>
+    <td class="small">${s.starts_on||''} → ${s.ends_on||'—'}</td>
+    <td><button data-edit="${s.id}">Edit</button> <button data-mods="${s.id}">Modules</button></td>
+  </tr>`).join('');
+
+  tb.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => {
+    const s = subscriptions.find(x=>x.id==b.dataset.edit);
+    modal('Edit subscription #'+s.id, [
+      { name:'plan_id', label:'Plan', type:'select', value:s.plan_id||'',
+        options:[{v:'',l:'— none —'}, ...plans.map(p=>({v:p.id, l:`#${p.id} ${p.plan_code}`}))]},
+      { name:'display_plan_name', label:'Display plan name', value:s.display_plan_name },
+      { name:'billing_currency', label:'Currency', type:'select', value:s.billing_currency,
+        options:[{v:'INR',l:'INR'},{v:'USD',l:'USD'}] },
+      { name:'billing_cycle', label:'Cycle', type:'select', value:s.billing_cycle,
+        options:[{v:'monthly',l:'monthly'},{v:'annual',l:'annual'}] },
+      { name:'status', label:'Status', type:'select', value:s.status,
+        options:[{v:'trial',l:'trial'},{v:'active',l:'active'},{v:'suspended',l:'suspended'},{v:'cancelled',l:'cancelled'}] },
+      { name:'is_trial', label:'Is trial', type:'checkbox', value:s.is_trial },
+      // Phase 3a.2 — seat = staff login count for the tenant
+      { name:'seat_count', label:'Seats (staff logins)', type:'number', value:s.seat_count != null ? s.seat_count : 1 },
+      { name:'starts_on', label:'Starts on', type:'date', value:s.starts_on },
+      { name:'ends_on', label:'Ends on', type:'date', value:s.ends_on },
+      { name:'trial_ends_on', label:'Trial ends on', type:'date', value:s.trial_ends_on },
+    ], async (v) => {
+      if (v.plan_id === '') v.plan_id = null; else if (v.plan_id) v.plan_id = +v.plan_id;
+      if (v.seat_count != null && v.seat_count !== '') v.seat_count = Math.max(1, Number(v.seat_count) || 1);
+      await api('PATCH','/subscriptions/'+s.id, v); renderSubs();
+    });
+  });
+  tb.querySelectorAll('[data-mods]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.mods;
+    const [sub, { modules }] = await Promise.all([api('GET','/subscriptions/'+id), api('GET','/modules?include_internal=true')]);
+    const have = Object.fromEntries((sub.modules||[]).map(m => [m.module_id, m.enabled]));
+    const bg = document.createElement('div'); bg.className='b2b-modal-bg';
+    const m  = document.createElement('div'); m.className='b2b-modal';
+    m.innerHTML = `<h3>Subscription #${id} — modules (${Object.keys(have).length} of ${modules.length})</h3>
+      <input id="f" placeholder="filter…" style="width:100%;margin-bottom:8px"/>
+      <div id="ml" style="max-height:55vh;overflow:auto;border:1px solid #eee;border-radius:4px;padding:6px"></div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px"><button id="cl">Close</button></div>`;
+    bg.appendChild(m); document.body.appendChild(bg);
+    const ml = m.querySelector('#ml');
+    const draw = (q) => {
+      const list = q ? modules.filter(x => (x.module_code+x.module_name).toLowerCase().includes(q.toLowerCase())) : modules;
+      ml.innerHTML = list.slice(0,400).map(x =>
+        `<label style="display:flex;gap:6px;padding:3px 0;font-size:12px"><input type="checkbox" data-mid="${x.id}" ${(x.id in have)?'checked':''}/> <span class="mono">${esc(x.module_code)}</span> <span style="color:#666">${esc(x.module_name)}</span></label>`).join('');
+      ml.querySelectorAll('input[type=checkbox]').forEach(cb => cb.onchange = async () => {
+        const mid = +cb.dataset.mid;
+        try {
+          if (cb.checked) { await api('POST','/subscriptions/'+id+'/modules', {module_id: mid, enabled:true}); have[mid]=true; }
+          else            { await api('DELETE','/subscriptions/'+id+'/modules/'+mid);                          delete have[mid]; }
+        } catch(e){ cb.checked = !cb.checked; alert(e.message); }
+      });
+    };
+    draw('');
+    m.querySelector('#f').oninput = (e) => draw(e.target.value);
+    m.querySelector('#cl').onclick = () => bg.remove();
+  });
+}
+
+async function renderPricing(){
+  $('#panel').innerHTML = `<div class="row"><h3 style="margin:0;flex:1">Global module pricing</h3>
+    <button class="primary" id="new-price">+ Set / update</button></div>
+    <input id="q" placeholder="filter modules…" style="width:100%;margin-bottom:8px"/>
+    <table id="t"><thead><tr><th>Module</th><th>INR</th><th>USD</th><th>Unit</th><th></th></tr></thead><tbody><tr><td colspan="5">Loading…</td></tr></tbody></table>`;
+  const [{ pricing }, { modules }] = await Promise.all([api('GET','/pricing'), api('GET','/modules?include_internal=true')]);
+  const pmap = Object.fromEntries(pricing.map(p=>[p.module_id, p]));
+  const tb = document.querySelector('#t tbody');
+  const draw = (q) => {
+    const list = q ? modules.filter(m => (m.module_code+m.module_name).toLowerCase().includes(q.toLowerCase())) : modules;
+    tb.innerHTML = list.slice(0,300).map(m => {
+      const p = pmap[m.id];
+      return `<tr>
+        <td><span class="mono">${esc(m.module_code)}</span><div class="small">${esc(m.module_name)}</div></td>
+        <td>${p?p.price_inr:'<span class="small">—</span>'}</td>
+        <td>${p?p.price_usd:'<span class="small">—</span>'}</td>
+        <td>${p?esc(p.pricing_unit):'<span class="small">—</span>'}</td>
+        <td><button data-mid="${m.id}">Set</button></td>
+      </tr>`;
+    }).join('');
+    tb.querySelectorAll('[data-mid]').forEach(b => b.onclick = () => {
+      const mid = +b.dataset.mid;
+      const p = pmap[mid] || { price_inr:0, price_usd:0, pricing_unit:'per_company' };
+      modal('Set pricing — module #'+mid, [
+        { name:'price_inr', label:'INR price', type:'number', value:p.price_inr },
+        { name:'price_usd', label:'USD price', type:'number', value:p.price_usd },
+        { name:'pricing_unit', label:'Pricing unit', type:'select', value:p.pricing_unit,
+          options:[{v:'per_company',l:'per_company'},{v:'per_seat',l:'per_seat'},{v:'flat',l:'flat'}] },
+      ], async (v) => { v.module_id = mid; await api('PUT','/pricing', v); renderPricing(); });
+    });
+  };
+  draw('');
+  document.getElementById('q').oninput = (e) => draw(e.target.value);
+  document.getElementById('new-price').onclick = () => alert('Click "Set" on a module row.');
+}
+
+async function renderOverrides(){
+  $('#panel').innerHTML = `<div class="row"><h3 style="margin:0;flex:1">Per-client price overrides</h3>
+    <select id="cs"></select> <button class="primary" id="new-ovr">+ New override</button></div>
+    <table id="t"><thead><tr><th>ID</th><th>Module</th><th>INR</th><th>USD</th><th>Unit</th><th>Notes</th><th></th></tr></thead><tbody><tr><td colspan="7">Pick a client.</td></tr></tbody></table>`;
+  const [{ clients }, { modules }] = await Promise.all([api('GET','/clients'), api('GET','/modules?include_internal=true')]);
+  const cs = document.getElementById('cs');
+  cs.innerHTML = clients.map(c => `<option value="${c.id}">#${c.id} ${esc(c.client_code)} — ${esc(c.client_name)}</option>`).join('');
+  const tb = document.querySelector('#t tbody');
+  const draw = async () => {
+    const cid = +cs.value;
+    const { overrides } = await api('GET','/pricing-overrides?client_id='+cid);
+    if (!overrides.length){ tb.innerHTML = '<tr><td colspan="7">No overrides for this client.</td></tr>'; return; }
+    const mmap = Object.fromEntries(modules.map(m=>[m.id, m.module_code]));
+    tb.innerHTML = overrides.map(o => `<tr>
+      <td>${o.id}</td><td class="mono">${esc(mmap[o.module_id]||o.module_id)}</td>
+      <td>${o.price_inr??''}</td><td>${o.price_usd??''}</td>
+      <td>${esc(o.pricing_unit||'')}</td><td>${esc(o.notes||'')}</td>
+      <td><button class="danger" data-del="${o.id}">Delete</button></td>
+    </tr>`).join('');
+    tb.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!confirm('Delete override?')) return;
+      await api('DELETE','/pricing-overrides/'+b.dataset.del); draw();
+    });
+  };
+  cs.onchange = draw; draw();
+  document.getElementById('new-ovr').onclick = () => modal('New / update override', [
+    { name:'module_id', label:'Module', type:'select', options: modules.map(m=>({v:m.id, l:m.module_code})) },
+    { name:'price_inr', label:'INR price', type:'number' },
+    { name:'price_usd', label:'USD price', type:'number' },
+    { name:'pricing_unit', label:'Pricing unit', type:'select',
+      options:[{v:'',l:'— inherit —'},{v:'per_company',l:'per_company'},{v:'per_seat',l:'per_seat'},{v:'flat',l:'flat'}] },
+    { name:'notes', label:'Notes', type:'textarea' },
+  ], async (v) => {
+    v.client_id = +cs.value; v.module_id = +v.module_id;
+    if (v.pricing_unit === '') v.pricing_unit = null;
+    await api('PUT','/pricing-overrides', v); draw();
+  });
+}
+
+async function renderDeps(){
+  $('#panel').innerHTML = `<h3>Module dependencies</h3>
+    <div class="row"><select id="ms"></select></div>
+    <table id="t"><thead><tr><th>Dep ID</th><th>Depends on</th><th></th></tr></thead><tbody><tr><td colspan="3">Pick a module.</td></tr></tbody></table>
+    <div class="row"><select id="ds"></select> <button class="primary" id="add-dep">+ Add dependency</button></div>`;
+  const { modules } = await api('GET','/modules?include_internal=true');
+  const mmap = Object.fromEntries(modules.map(m=>[m.id, m.module_code]));
+  document.getElementById('ms').innerHTML = modules.map(m=>`<option value="${m.id}">${esc(m.module_code)}</option>`).join('');
+  document.getElementById('ds').innerHTML = modules.map(m=>`<option value="${m.id}">${esc(m.module_code)}</option>`).join('');
+  const tb = document.querySelector('#t tbody');
+  const draw = async () => {
+    const mid = +document.getElementById('ms').value;
+    const { dependencies } = await api('GET','/modules/'+mid+'/dependencies');
+    if (!dependencies.length){ tb.innerHTML = '<tr><td colspan="3">No dependencies.</td></tr>'; return; }
+    tb.innerHTML = dependencies.map(d => `<tr>
+      <td>${d.id}</td><td class="mono">${esc(mmap[d.depends_on_module_id]||d.depends_on_module_id)}</td>
+      <td><button class="danger" data-del="${d.id}">Remove</button></td></tr>`).join('');
+    tb.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      await api('DELETE','/modules/'+mid+'/dependencies/'+b.dataset.del); draw();
+    });
+  };
+  document.getElementById('ms').onchange = draw; draw();
+  document.getElementById('add-dep').onclick = async () => {
+    const mid = +document.getElementById('ms').value;
+    const did = +document.getElementById('ds').value;
+    if (mid === did) return alert('A module cannot depend on itself.');
+    try { await api('POST','/modules/'+mid+'/dependencies', {depends_on_module_id: did}); draw(); }
+    catch(e){ alert(e.message); }
+  };
+}
+
+async function renderAudit(){
+  $('#panel').innerHTML = '<h3>Recent audit log (200 latest)</h3><table id="t"><thead><tr><th>When</th><th>Actor</th><th>Client</th><th>Entity</th><th>Action</th><th>Entity ID</th></tr></thead><tbody><tr><td colspan="6">Loading…</td></tr></tbody></table>';
+  try {
+    const { audit } = await api('GET','/audit?limit=200');
+    const tb = document.querySelector('#t tbody');
+    if (!audit.length){ tb.innerHTML = '<tr><td colspan="6">No audit rows.</td></tr>'; return; }
+    tb.innerHTML = audit.map(a => `<tr>
+      <td class="small">${fmt(a.created_at)}</td><td>${a.actor_staff_id??''}</td>
+      <td>${a.client_id??''}</td><td><span class="pill muted">${esc(a.entity)}</span></td>
+      <td>${esc(a.action)}</td><td>${a.entity_id??''}</td></tr>`).join('');
+  } catch(e){ document.querySelector('#t tbody').innerHTML='<tr><td colspan="6" class="err">'+e.message+'</td></tr>'; }
+}
+
+async function renderShadow(){
+  $('#panel').innerHTML = '<h3>Shadow log (200 latest) <span class="small">phase-3 enforcement preview</span></h3><table id="t"><thead><tr><th>When</th><th>Client</th><th>User</th><th>Module</th><th>Decision</th><th>Reason</th><th>Route</th></tr></thead><tbody><tr><td colspan="7">Loading…</td></tr></tbody></table>';
+  try {
+    const { shadow_log } = await api('GET','/shadow-log?limit=200');
+    const tb = document.querySelector('#t tbody');
+    if (!shadow_log.length){ tb.innerHTML = '<tr><td colspan="7">No shadow log rows.</td></tr>'; return; }
+    tb.innerHTML = shadow_log.map(s => `<tr>
+      <td class="small">${fmt(s.created_at)}</td><td>${s.client_id??''}</td>
+      <td>${esc(s.user_type||'')} ${s.user_id??''}</td>
+      <td class="mono">${esc(s.module_code||'')}</td>
+      <td><span class="pill ${s.decision==='ALLOW'?'ok':'warn'}">${esc(s.decision)}</span></td>
+      <td>${esc(s.reason||'')}</td><td class="small">${esc(s.route||'')}</td></tr>`).join('');
+  } catch(e){ document.querySelector('#t tbody').innerHTML='<tr><td colspan="7" class="err">'+e.message+'</td></tr>'; }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+  if (typeof StaffHeader !== 'undefined') {
+    StaffHeader.inject('Platform Clients (B2B) — VGK SaaS', 'fas fa-handshake');
+    StaffHeader.init();
+  }
+  if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+  renderStatus();
+});
+</script>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+</body>
+</html>

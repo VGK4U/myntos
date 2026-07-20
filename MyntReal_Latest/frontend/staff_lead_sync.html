@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Sync — Mynt Real LLP Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 24px; }
+
+        /* ── Page tabs ── */
+        .sync-tabs { display: flex; gap: 4px; margin-bottom: 24px; background: white; border-radius: 12px; padding: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+        .sync-tab  { flex: 1; padding: 10px 16px; border: none; background: none; border-radius: 8px; font-size: .88rem; font-weight: 600; color: #6b7280; cursor: pointer; transition: all .15s; }
+        .sync-tab.active { background: #6366f1; color: white; }
+        .sync-tab:hover:not(.active) { background: #f3f4f6; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* ── Cards ── */
+        .stat-card { background:#fff; border-radius:10px; padding:16px 20px; box-shadow:0 2px 8px rgba(0,0,0,.06); text-align:center; flex:1; min-width:140px; }
+        .stat-val  { font-size:1.8rem; font-weight:800; color:#1f2937; }
+        .stat-lbl  { font-size:.75rem; color:#6b7280; text-transform:uppercase; letter-spacing:.03em; }
+        .section-card { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08); margin-bottom:24px; }
+        .section-head { background:linear-gradient(90deg,#1a3c6e,#2e5fa3); color:#fff; border-radius:12px 12px 0 0; padding:14px 20px; display:flex; justify-content:space-between; align-items:center; }
+        .section-head strong { font-size:.95rem; }
+
+        /* ── Config row ── */
+        .config-row { border:1px solid #e5e7eb; border-radius:10px; padding:16px 18px; margin-bottom:14px; background:#fff; }
+        .config-row.paused { background:#f9fafb; }
+        .slot-label { cursor:pointer; margin-right:12px; font-size:.82rem; font-weight:600; user-select:none; }
+        .slot-label input[type=checkbox] { accent-color:#6366f1; margin-right:4px; vertical-align:middle; }
+        .badge-active { background:#dcfce7; color:#15803d; }
+        .badge-paused { background:#f3f4f6; color:#6b7280; }
+        .status-badge { font-size:.78rem; padding:3px 10px; border-radius:20px; font-weight:600; }
+
+        /* ── Preview table ── */
+        .preview-table { font-size:.83rem; }
+        .preview-table th { background:#f8f9fa; font-size:.78rem; font-weight:700; color:#374151; text-transform:uppercase; }
+        .row-new    { background:#f0fdf4; }
+        .row-dup    { background:#fff7ed; }
+        .row-err    { background:#fef2f2; }
+        .cat-badge  { display:inline-block; padding:2px 8px; border-radius:12px; font-size:.72rem; font-weight:700; background:#ede9fe; color:#6d28d9; }
+        .emp-badge  { display:inline-block; padding:2px 8px; border-radius:12px; font-size:.72rem; font-weight:700; background:#dbeafe; color:#1e40af; }
+        .status-chip { display:inline-block; padding:2px 8px; border-radius:12px; font-size:.72rem; font-weight:700; }
+        .chip-new  { background:#dcfce7; color:#15803d; }
+        .chip-contacted { background:#fef3c7; color:#92400e; }
+        .chip-interested { background:#dbeafe; color:#1e40af; }
+        .chip-lost { background:#fee2e2; color:#991b1b; }
+
+        /* ── Summary chips ── */
+        .summ-chip { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:30px; font-size:.85rem; font-weight:700; }
+        .summ-new  { background:#d1fae5; color:#065f46; }
+        .summ-dup  { background:#fef3c7; color:#92400e; }
+        .summ-err  { background:#fee2e2; color:#991b1b; }
+
+        /* ── Spinner overlay ── */
+        #previewSpinner { display:none; text-align:center; padding:40px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+
+            <!-- Page title -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+                <div>
+                    <h4 style="font-weight:800;color:#1f2937;margin:0;">
+                        <i class="fab fa-google me-2" style="color:#6366f1;"></i>Lead Sync
+                    </h4>
+                    <div style="font-size:.85rem;color:#6b7280;margin-top:2px;">
+                        Google Sheets → CRM &nbsp;·&nbsp; On-demand re-sync
+                    </div>
+                </div>
+                <a href="/staff/leads" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Leads
+                </a>
+            </div>
+
+            <!-- Alert area -->
+            <div id="alertBox" style="display:none;margin-bottom:16px;"></div>
+
+            <!-- Tabs -->
+            <div class="sync-tabs">
+                <button class="sync-tab active" id="tab-btn-sheets" onclick="switchTab('sheets')">
+                    <i class="fas fa-table me-1"></i> Connected Sheets
+                </button>
+                <button class="sync-tab" id="tab-btn-preview" onclick="switchTab('preview')">
+                    <i class="fas fa-eye me-1"></i> Preview &amp; Sync
+                </button>
+                <button class="sync-tab" id="tab-btn-history" onclick="switchTab('history')">
+                    <i class="fas fa-history me-1"></i> Sync History
+                </button>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════
+                 TAB 1: CONNECTED SHEETS
+                 ══════════════════════════════════════════════════════ -->
+            <div id="panel-sheets" class="tab-panel active">
+
+                <!-- Stats bar -->
+                <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;">
+                    <div class="stat-card" style="border-left:4px solid #6366f1;">
+                        <div class="stat-val" id="statSheets">—</div>
+                        <div class="stat-lbl">Connected Sheets</div>
+                    </div>
+                    <div class="stat-card" style="border-left:4px solid #22c55e;">
+                        <div class="stat-val" id="statLeads">—</div>
+                        <div class="stat-lbl">Total Leads Imported</div>
+                    </div>
+                    <div class="stat-card" style="border-left:4px solid #f59e0b;">
+                        <div style="font-size:1rem;font-weight:700;color:#1f2937;" id="statLastSync">—</div>
+                        <div class="stat-lbl">Last Sync</div>
+                    </div>
+                </div>
+
+                <!-- Add new sheet -->
+                <div class="section-card">
+                    <div class="section-head">
+                        <span><i class="fas fa-plus-circle me-2"></i><strong>Connect a Google Sheet</strong></span>
+                    </div>
+                    <div style="padding:24px;">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" style="font-size:.88rem;">Name</label>
+                                <input type="text" class="form-control" id="newName" placeholder="e.g. Jagannath Leads Master" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" style="font-size:.88rem;">Google Sheet URL</label>
+                                <input type="url" class="form-control" id="newUrl" placeholder="https://docs.google.com/spreadsheets/d/..." />
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button class="btn btn-primary w-100" onclick="addConfig()" style="background:#6366f1;border:none;">
+                                    <i class="fas fa-plus me-1"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mt-3 mb-0 py-2" style="font-size:.84rem;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Sheet must be shared as <strong>"Anyone with the link → Viewer"</strong>.
+                            Phone number is used as the duplicate key — existing leads with the same number are skipped.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connected sheets -->
+                <div class="section-card">
+                    <div class="section-head">
+                        <span><i class="fas fa-table me-2"></i><strong>Connected Sheets</strong></span>
+                    </div>
+                    <div style="padding:20px;" id="configList">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>Loading…
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Column mapping reference -->
+                <div class="section-card">
+                    <div class="section-head">
+                        <span><i class="fas fa-columns me-2"></i><strong>Column Mapping Reference</strong></span>
+                    </div>
+                    <div style="padding:20px;overflow-x:auto;">
+                        <table class="table table-sm" style="font-size:.84rem;">
+                            <thead style="background:#f8f9fa;">
+                                <tr><th>Sheet Column</th><th>CRM Field</th><th>Notes</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td><strong>Customer Name</strong></td><td>name</td><td>Lead display name</td></tr>
+                                <tr><td><strong>Mobile</strong></td><td>phone</td><td>Duplicate check key — same number = skip</td></tr>
+                                <tr><td><strong>Lead For</strong></td><td>company + category</td><td>Determines CRM category (see below)</td></tr>
+                                <tr><td><strong>Lead Owner</strong></td><td>telecaller / handler</td><td>Fuzzy-matched to staff employee by first name</td></tr>
+                                <tr><td><strong>Status</strong></td><td>status</td><td>YET TO CONTACT→new · Interested→interested · Not interested→lost</td></tr>
+                                <tr><td><strong>Area</strong></td><td>area</td><td>Direct</td></tr>
+                                <tr><td><strong>Pin Code</strong></td><td>pincode</td><td>Direct</td></tr>
+                                <tr><td><strong>Reference From</strong></td><td>source_details</td><td>e.g. "Jagannath Garu"</td></tr>
+                                <tr><td><strong>Comments</strong></td><td>description + recent_comments</td><td>Full history</td></tr>
+                                <tr><td><strong>Next Follow up</strong></td><td>next_followup_date + followup record</td><td>Parsed from text</td></tr>
+                                <tr><td><strong>Last Call Made</strong></td><td>followup note (completed)</td><td>Logged as completed followup</td></tr>
+                                <tr><td><strong>Other Info / Info Details</strong></td><td>description</td><td>Appended to description</td></tr>
+                            </tbody>
+                        </table>
+                        <div style="margin-top:12px;">
+                            <strong style="font-size:.84rem;">Lead For → Category Mapping:</strong>
+                            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+                                <span class="cat-badge">to_setup_solar → Solar</span>
+                                <span class="cat-badge">to_purchase_a_electric_scooter → EV B2C</span>
+                                <span class="cat-badge">to_set_up_ev_business → EV B2B</span>
+                                <span class="cat-badge">to_get_the_training_on_ev → ETC Training</span>
+                                <span class="cat-badge">to_set_up_service_centre → EV B2B</span>
+                                <span class="cat-badge">business_hub_/_franchise → EV B2B</span>
+                                <span class="cat-badge">Anything → General (use Type column)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════
+                 TAB 2: PREVIEW & SYNC
+                 ══════════════════════════════════════════════════════ -->
+            <div id="panel-preview" class="tab-panel">
+
+                <!-- Sheet selector + action -->
+                <div class="section-card">
+                    <div class="section-head">
+                        <span><i class="fas fa-eye me-2"></i><strong>Preview &amp; Execute Sync</strong></span>
+                    </div>
+                    <div style="padding:20px;">
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold" style="font-size:.88rem;">Select Sheet</label>
+                                <select class="form-select" id="previewConfigSel">
+                                    <option value="">— Choose a connected sheet —</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex gap-2">
+                                <button class="btn btn-outline-primary" onclick="runPreview()" id="previewBtn" style="border-color:#6366f1;color:#6366f1;font-weight:600;">
+                                    <i class="fas fa-eye me-1"></i> Preview
+                                </button>
+                                <button class="btn btn-success" onclick="runSync()" id="syncBtn" style="font-weight:600;display:none;">
+                                    <i class="fas fa-sync-alt me-1"></i> Sync Now
+                                </button>
+                            </div>
+                        </div>
+                        <div class="alert alert-warning mt-3 mb-0 py-2" style="font-size:.84rem;">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Preview</strong> shows what would be imported without making any changes.
+                            Click <strong>Sync Now</strong> to actually import leads.
+                            Existing leads with the same phone number are always skipped.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spinner -->
+                <div id="previewSpinner">
+                    <div class="spinner-border text-primary" style="width:3rem;height:3rem;"></div>
+                    <div style="margin-top:12px;font-size:.9rem;color:#6b7280;" id="previewSpinnerMsg">Loading preview…</div>
+                </div>
+
+                <!-- Preview results -->
+                <div id="previewResults" style="display:none;">
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;" id="previewSummary"></div>
+
+                    <!-- Employee match legend -->
+                    <div class="section-card" style="margin-bottom:16px;">
+                        <div style="padding:14px 18px;">
+                            <strong style="font-size:.88rem;">Lead Owner → Employee Matches:</strong>
+                            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;" id="ownerMatchList"></div>
+                        </div>
+                    </div>
+
+                    <!-- Preview table -->
+                    <div class="section-card">
+                        <div class="section-head">
+                            <span><i class="fas fa-list me-2"></i><strong>Preview Rows</strong>
+                                <span style="font-size:.78rem;opacity:.8;margin-left:8px;">(showing first 200 rows)</span>
+                            </span>
+                            <button class="btn btn-sm btn-success" onclick="runSync()" id="syncBtn2" style="font-size:.8rem;display:none;">
+                                <i class="fas fa-sync-alt me-1"></i> Sync Now
+                            </button>
+                        </div>
+                        <div style="overflow-x:auto;">
+                            <table class="table table-hover preview-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Status</th>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Area</th>
+                                        <th>Lead For → Category</th>
+                                        <th>CRM Status</th>
+                                        <th>Owner → Employee</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sync result -->
+                <div id="syncResultBox" style="display:none;"></div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════
+                 TAB 3: SYNC HISTORY
+                 ══════════════════════════════════════════════════════ -->
+            <div id="panel-history" class="tab-panel">
+
+                <!-- DC Protocol (F4/F5): Admin-only duplicate cleanup panel -->
+                <div id="dupCleanupPanel" class="section-card" style="display:none; border-left:4px solid #f59e0b;">
+                    <div class="section-head" style="background:linear-gradient(90deg,#92400e,#d97706);">
+                        <span><i class="fas fa-broom me-2"></i><strong>Duplicate Lead Cleanup</strong></span>
+                        <span id="dupCountBadge" class="badge" style="background:rgba(255,255,255,.2);font-size:.8rem;"></span>
+                    </div>
+                    <div style="padding:16px 20px;">
+                        <div id="dupStatusMsg" style="font-size:.88rem;color:#374151;margin-bottom:14px;">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Checking for duplicates…
+                        </div>
+                        <div id="dupCleanupResult" style="display:none;margin-bottom:12px;"></div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button id="dryRunBtn" class="btn btn-sm btn-outline-warning"
+                                    style="font-size:.82rem;font-weight:600;" onclick="runCleanup(true)">
+                                <i class="fas fa-eye me-1"></i>Dry Run (Preview Only)
+                            </button>
+                            <button id="cleanupBtn" class="btn btn-sm btn-danger"
+                                    style="font-size:.82rem;font-weight:600;display:none;" onclick="runCleanup(false)">
+                                <i class="fas fa-trash-alt me-1"></i>Remove All Duplicates
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-head" style="justify-content:space-between;">
+                        <span><i class="fas fa-history me-2"></i><strong>Sync History</strong></span>
+                        <div style="display:flex;gap:10px;align-items:center;">
+                            <select id="historyFilter" class="form-select form-select-sm"
+                                    style="width:auto;font-size:.82rem;border-radius:6px;"
+                                    onchange="loadHistory()">
+                                <option value="">All Sheets</option>
+                            </select>
+                            <button class="btn btn-sm btn-light" onclick="loadHistory()" style="font-size:.82rem;">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div style="padding:0;" id="historyWrap">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>Loading…
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const SLOTS = [
+            { key: 'sync_9am',  label: '9 AM'  },
+            { key: 'sync_12pm', label: '12 PM' },
+            { key: 'sync_3pm',  label: '3 PM'  },
+            { key: 'sync_6pm',  label: '6 PM'  },
+        ];
+
+        const STATUS_COLORS = {
+            new: 'chip-new', contacted: 'chip-contacted',
+            interested: 'chip-interested', lost: 'chip-lost',
+        };
+
+        let configs = [];
+        let token   = '';
+        let lastPreviewData = null;
+        let selectedConfigId = null;
+
+        document.addEventListener('DOMContentLoaded', async function () {
+            token = localStorage.getItem('staff_token');
+            if (!token) { window.location.href = '/staff/login'; return; }
+
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Lead Sync — Google Sheets', 'fab fa-google');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+
+            await loadConfigs();
+            loadHistory();
+
+            // Auto-open preview tab if ?tab=preview in URL
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('tab') === 'preview') switchTab('preview');
+        });
+
+        // ── Tab switching ─────────────────────────────────────────────────────
+        function switchTab(name) {
+            document.querySelectorAll('.sync-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById('tab-btn-' + name).classList.add('active');
+            document.getElementById('panel-' + name).classList.add('active');
+            if (name === 'history') loadHistory();
+        }
+
+        // ── Load & render configs ─────────────────────────────────────────────
+        async function loadConfigs() {
+            try {
+                const res = await fetch('/api/v1/crm/lead-sync/configs', {
+                    headers: { Authorization: 'Bearer ' + token }
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.detail || 'Load failed');
+                configs = data.configs || [];
+                renderStats();
+                renderList();
+                renderPreviewSelector();
+            } catch (e) {
+                document.getElementById('configList').innerHTML =
+                    '<div class="alert alert-danger m-3"><i class="fas fa-exclamation-circle me-2"></i>' + e.message + '</div>';
+            }
+        }
+
+        function renderStats() {
+            document.getElementById('statSheets').textContent = configs.length;
+            const total = configs.reduce(function (s, c) { return s + (c.total_imported || 0); }, 0);
+            document.getElementById('statLeads').textContent = total.toLocaleString('en-IN');
+            const dates = configs.map(function (c) { return c.last_synced_at; }).filter(Boolean).sort().reverse();
+            document.getElementById('statLastSync').textContent = dates.length
+                ? new Date(dates[0]).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })
+                : 'Never';
+        }
+
+        function renderList() {
+            const el = document.getElementById('configList');
+            if (!configs.length) {
+                el.innerHTML = '<div class="text-center text-muted py-5">'
+                    + '<i class="fas fa-table fa-2x mb-3 d-block"></i>'
+                    + 'No sheets connected yet. Add one above.</div>';
+                return;
+            }
+            el.innerHTML = configs.map(function (cfg) {
+                const lastSync = cfg.last_synced_at
+                    ? new Date(cfg.last_synced_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })
+                    : 'Never';
+                const slotHtml = SLOTS.map(function (s) {
+                    const checked = cfg[s.key] !== false;
+                    return '<label class="slot-label">'
+                        + '<input type="checkbox" ' + (checked ? 'checked' : '')
+                        + ' onchange="toggleSlot(' + cfg.id + ',\'' + s.key + '\',this.checked)">'
+                        + '<span style="color:' + (checked ? '#6366f1' : '#9ca3af') + '">' + s.label + '</span>'
+                        + '</label>';
+                }).join('');
+                const badgeCls = cfg.is_active ? 'badge-active' : 'badge-paused';
+                const badgeTxt = cfg.is_active ? '● Active' : '● Paused';
+
+                return '<div class="config-row ' + (cfg.is_active ? '' : 'paused') + '" id="cfg-' + cfg.id + '">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;">'
+                    +   '<div style="flex:1;min-width:200px;">'
+                    +     '<div style="font-weight:700;font-size:1rem;color:#1f2937;">' + esc(cfg.name) + '</div>'
+                    +     '<div style="font-size:.78rem;color:#6b7280;margin-top:3px;"><i class="fab fa-google me-1"></i><a href="' + esc(cfg.sheet_url || '') + '" target="_blank" rel="noopener" style="color:#6366f1;word-break:break-all;">' + esc(cfg.sheet_url || '') + '</a></div>'
+                    +     '<div style="font-size:.78rem;color:#6b7280;margin-top:3px;">'
+                    +       '<i class="fas fa-clock me-1"></i>Last sync: ' + lastSync
+                    +       ' &nbsp;·&nbsp; <i class="fas fa-users me-1"></i>'
+                    +       (cfg.total_imported || 0).toLocaleString('en-IN') + ' leads imported'
+                    +     '</div>'
+                    +   '</div>'
+                    +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">'
+                    +     '<span class="status-badge ' + badgeCls + '">' + badgeTxt + '</span>'
+                    +     '<button class="btn btn-sm" style="background:#ede9fe;color:#6366f1;border:none;font-weight:600;font-size:.8rem;" '
+                    +       'onclick="quickPreviewAndSync(' + cfg.id + ',\'' + esc(cfg.name) + '\')">'
+                    +       '<i class="fas fa-sync-alt me-1"></i>Sync Now</button>'
+                    +     '<a class="btn btn-sm" href="' + esc(cfg.sheet_url || '') + '" target="_blank" rel="noopener" style="background:#f0fdf4;color:#15803d;border:none;font-weight:600;font-size:.8rem;">'
+                    +       '<i class="fas fa-external-link-alt me-1"></i>Open Sheet</a>'
+                    +     '<button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none;font-size:.8rem;" '
+                    +       'onclick="deleteConfig(' + cfg.id + ',\'' + esc(cfg.name) + '\')">'
+                    +       '<i class="fas fa-trash"></i></button>'
+                    +   '</div>'
+                    + '</div>'
+                    + '<div style="margin-top:12px;padding-top:10px;border-top:1px solid #f3f4f6;">'
+                    +   '<span style="font-size:.78rem;color:#6b7280;font-weight:600;margin-right:10px;">Sync on:</span>'
+                    +   slotHtml
+                    + '</div>'
+                    + '</div>';
+            }).join('');
+        }
+
+        function renderPreviewSelector() {
+            const sel = document.getElementById('previewConfigSel');
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">— Choose a connected sheet —</option>'
+                + configs.map(function (c) {
+                    return '<option value="' + c.id + '"' + (String(cur) === String(c.id) ? ' selected' : '') + '>'
+                           + esc(c.name) + '</option>';
+                }).join('');
+        }
+
+        // ── Quick Sync (direct, no preview) ──────────────────────────────────
+        async function quickPreviewAndSync(id, name) {
+            showAlert('info', '<i class="fas fa-spinner fa-spin me-1"></i> Syncing "' + esc(name) + '"…');
+            try {
+                const res = await fetch('/api/v1/crm/lead-sync/run/' + id, {
+                    method: 'POST', headers: { Authorization: 'Bearer ' + token }
+                });
+                const d = await res.json();
+                if (!d.success) throw new Error(d.detail || 'Sync failed');
+                const imp  = d.total_imported || 0;
+                const skip = d.total_skipped  || 0;
+                showAlert('success',
+                    '<i class="fas fa-check-circle me-1"></i> <strong>+' + imp + ' new leads imported</strong>'
+                    + ' · ' + skip + ' duplicates skipped');
+                loadConfigs();
+                loadHistory();
+            } catch (e) { showAlert('danger', 'Sync failed: ' + e.message); }
+        }
+
+        function goToPreviewTab(configId) {
+            switchTab('preview');
+            document.getElementById('previewConfigSel').value = configId;
+            runPreview();
+        }
+
+        // ── Preview ───────────────────────────────────────────────────────────
+        async function runPreview() {
+            const sel = document.getElementById('previewConfigSel');
+            const id  = sel.value;
+            if (!id) { alert('Please select a sheet first.'); return; }
+            selectedConfigId = id;
+
+            document.getElementById('previewResults').style.display = 'none';
+            document.getElementById('syncResultBox').style.display  = 'none';
+            document.getElementById('previewSpinner').style.display = 'block';
+            document.getElementById('previewSpinnerMsg').textContent = 'Fetching sheet & analysing rows…';
+            document.getElementById('syncBtn').style.display  = 'none';
+            document.getElementById('syncBtn2').style.display = 'none';
+
+            try {
+                const res = await fetch('/api/v1/crm/lead-sync/preview/' + id, {
+                    headers: { Authorization: 'Bearer ' + token }
+                });
+                const d = await res.json();
+                if (!d.success) throw new Error(d.detail || 'Preview failed');
+                lastPreviewData = d;
+                renderPreview(d);
+            } catch (e) {
+                document.getElementById('previewSpinner').style.display = 'none';
+                showAlert('danger', 'Preview failed: ' + e.message);
+            }
+        }
+
+        function renderPreview(d) {
+            document.getElementById('previewSpinner').style.display = 'none';
+            const newCount = d.total_imported || 0;   // preview_only reuses total_imported for new count
+            const dupCount = d.total_skipped  || 0;
+            const errCount = d.total_errors   || 0;
+            const rows = d.preview_rows || [];
+
+            // Summary chips
+            document.getElementById('previewSummary').innerHTML =
+                '<span class="summ-chip summ-new"><i class="fas fa-plus-circle"></i> ' + newCount + ' New leads to import</span>'
+                + '<span class="summ-chip summ-dup"><i class="fas fa-ban"></i> ' + dupCount + ' Duplicates (will be skipped)</span>'
+                + (errCount ? '<span class="summ-chip summ-err"><i class="fas fa-exclamation"></i> ' + errCount + ' Parse errors</span>' : '');
+
+            // Owner matching legend
+            const ownerMap = {};
+            rows.forEach(function (r) {
+                if (r.owner && !ownerMap[r.owner]) ownerMap[r.owner] = r.matched_employee || null;
+            });
+            document.getElementById('ownerMatchList').innerHTML = Object.keys(ownerMap).map(function (own) {
+                const emp = ownerMap[own];
+                return '<div style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">'
+                    + '<span style="font-size:.82rem;color:#374151;font-weight:600;">' + esc(own) + '</span>'
+                    + '<span style="color:#9ca3af;">→</span>'
+                    + (emp
+                        ? '<span class="emp-badge">' + esc(emp) + '</span>'
+                        : '<span style="font-size:.78rem;color:#dc2626;">No match — will be unassigned</span>')
+                    + '</div>';
+            }).join('');
+
+            // Table
+            document.getElementById('previewTableBody').innerHTML = rows.slice(0, 200).map(function (r, i) {
+                const rowCls = r.row_status === 'new' ? 'row-new' : r.row_status === 'duplicate' ? 'row-dup' : 'row-err';
+                const statusIcon = r.row_status === 'new' ? '✅' : r.row_status === 'duplicate' ? '🔁' : '❌';
+                const statusLabel = r.row_status === 'new' ? 'New' : r.row_status === 'duplicate' ? 'Duplicate' : 'Error';
+                const crmStatus  = r.status || '';
+                const chipCls    = STATUS_COLORS[crmStatus] || '';
+
+                return '<tr class="' + rowCls + '">'
+                    + '<td style="color:#9ca3af;">' + (i + 1) + '</td>'
+                    + '<td>' + statusIcon + ' <span style="font-size:.78rem;font-weight:600;">' + statusLabel + '</span></td>'
+                    + '<td style="font-weight:600;color:#1f2937;">' + esc(r.name || '—') + '</td>'
+                    + '<td style="color:#374151;font-family:monospace;">' + esc(r.phone || '—') + '</td>'
+                    + '<td style="color:#6b7280;">' + esc(r.area || '—') + '</td>'
+                    + '<td><span class="cat-badge">' + esc(r.category_label || r.lead_for || '—') + '</span></td>'
+                    + '<td>' + (crmStatus ? '<span class="status-chip ' + chipCls + '">' + crmStatus + '</span>' : '—') + '</td>'
+                    + '<td>'
+                    +   (r.matched_employee ? '<span class="emp-badge">' + esc(r.matched_employee) + '</span>'
+                        : r.owner ? '<span style="font-size:.75rem;color:#6b7280;">' + esc(r.owner) + ' (unassigned)</span>'
+                        : '—')
+                    + '</td>'
+                    + '</tr>';
+            }).join('');
+
+            document.getElementById('previewResults').style.display = 'block';
+            if (newCount > 0) {
+                document.getElementById('syncBtn').style.display  = '';
+                document.getElementById('syncBtn2').style.display = '';
+            }
+        }
+
+        // ── Execute Sync ──────────────────────────────────────────────────────
+        async function runSync() {
+            if (!selectedConfigId) return;
+            const cfg = configs.find(function (c) { return String(c.id) === String(selectedConfigId); });
+            const name = cfg ? cfg.name : 'Sheet';
+            if (!confirm('Import all new leads from "' + name + '"? Duplicates will be skipped automatically.')) return;
+
+            document.getElementById('syncBtn').disabled  = true;
+            document.getElementById('syncBtn2').disabled = true;
+            document.getElementById('syncBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Syncing…';
+            document.getElementById('previewSpinner').style.display = 'block';
+            document.getElementById('previewSpinnerMsg').textContent = 'Importing leads…';
+            document.getElementById('previewResults').style.display = 'none';
+
+            try {
+                const res = await fetch('/api/v1/crm/lead-sync/run/' + selectedConfigId, {
+                    method: 'POST', headers: { Authorization: 'Bearer ' + token }
+                });
+                const d = await res.json();
+                document.getElementById('previewSpinner').style.display = 'none';
+                // DC Protocol (F5): 409 = concurrent sync already running
+                if (res.status === 409) throw new Error('⚠️ A sync is already in progress for this sheet. Please wait a moment and try again.');
+                if (!d.success) throw new Error(d.detail || 'Sync failed');
+                document.getElementById('syncResultBox').innerHTML =
+                    '<div class="alert alert-success" style="font-size:.95rem;">'
+                    + '<i class="fas fa-check-circle me-2"></i>'
+                    + '<strong>+' + (d.total_imported || 0) + ' new leads imported</strong>'
+                    + ' · ' + (d.total_skipped || 0) + ' duplicates skipped'
+                    + (d.total_errors ? ' · ' + d.total_errors + ' parse errors' : '')
+                    + '.<br><small style="opacity:.8;">Check the Sync History tab for the full log.</small>'
+                    + '</div>';
+                document.getElementById('syncResultBox').style.display = '';
+                loadConfigs();
+                loadHistory();
+            } catch (e) {
+                document.getElementById('previewSpinner').style.display = 'none';
+                document.getElementById('syncResultBox').innerHTML =
+                    '<div class="alert alert-danger">' + e.message + '</div>';
+                document.getElementById('syncResultBox').style.display = '';
+            }
+            document.getElementById('syncBtn').disabled  = false;
+            document.getElementById('syncBtn2').disabled = false;
+            document.getElementById('syncBtn').innerHTML = '<i class="fas fa-sync-alt me-1"></i> Sync Now';
+        }
+
+        // ── Config actions ────────────────────────────────────────────────────
+        async function addConfig() {
+            const name = document.getElementById('newName').value.trim();
+            const url  = document.getElementById('newUrl').value.trim();
+            if (!name || !url) { showAlert('danger', 'Please enter a name and a Sheet URL.'); return; }
+            showAlert('info', '<i class="fas fa-spinner fa-spin me-1"></i> Adding sheet…');
+            try {
+                const res = await fetch('/api/v1/crm/lead-sync/configs', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                    body: JSON.stringify({ name: name, sheet_url: url })
+                });
+                const d = await res.json();
+                if (d.success) {
+                    document.getElementById('newName').value = '';
+                    document.getElementById('newUrl').value  = '';
+                    showAlert('success', '<i class="fas fa-check-circle me-1"></i> Sheet added! Go to Preview & Sync tab to import leads.');
+                    loadConfigs();
+                } else {
+                    showAlert('danger', d.detail || 'Failed to add sheet.');
+                }
+            } catch (e) { showAlert('danger', 'Error: ' + e.message); }
+        }
+
+        async function deleteConfig(id, name) {
+            if (!confirm('Remove "' + name + '"? Imported leads are kept.')) return;
+            await fetch('/api/v1/crm/lead-sync/configs/' + id, {
+                method: 'DELETE', headers: { Authorization: 'Bearer ' + token }
+            });
+            showAlert('success', 'Removed.');
+            loadConfigs();
+        }
+
+        async function toggleSlot(id, key, val) {
+            const cfg = configs.find(function (c) { return c.id === id; });
+            if (!cfg) return;
+            const payload = {
+                sync_9am:  key === 'sync_9am'  ? val : cfg.sync_9am  !== false,
+                sync_12pm: key === 'sync_12pm' ? val : cfg.sync_12pm !== false,
+                sync_3pm:  key === 'sync_3pm'  ? val : cfg.sync_3pm  !== false,
+                sync_6pm:  key === 'sync_6pm'  ? val : cfg.sync_6pm  !== false,
+                daily_sync_enabled: cfg.daily_sync_enabled !== false,
+            };
+            const res = await fetch('/api/v1/crm/lead-sync/configs/' + id + '/slots', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+                body: JSON.stringify(payload)
+            });
+            const d = await res.json();
+            if (d.success) cfg[key] = val;
+        }
+
+        // ── Sync History ──────────────────────────────────────────────────────
+        async function loadHistory() {
+            const configId = document.getElementById('historyFilter').value;
+            const url = '/api/v1/crm/lead-sync/history?limit=50' + (configId ? '&config_id=' + configId : '');
+            try {
+                const res  = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+                const data = await res.json();
+                renderHistory(data.history || []);
+            } catch (e) {
+                document.getElementById('historyWrap').innerHTML =
+                    '<div class="alert alert-danger m-3">' + e.message + '</div>';
+            }
+        }
+
+        function renderHistory(rows) {
+            const sel = document.getElementById('historyFilter');
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">All Sheets</option>'
+                + configs.map(function (c) {
+                    return '<option value="' + c.id + '"' + (String(cur) === String(c.id) ? ' selected' : '') + '>'
+                           + esc(c.name) + '</option>';
+                }).join('');
+
+            const wrap = document.getElementById('historyWrap');
+            if (!rows.length) {
+                wrap.innerHTML = '<div class="text-center text-muted py-5">'
+                    + '<i class="fas fa-history fa-2x mb-3 d-block"></i>'
+                    + 'No sync history yet. Run a sync to see results here.</div>';
+                return;
+            }
+            wrap.innerHTML = '<div style="overflow-x:auto;">'
+                + '<table class="table table-hover mb-0" style="font-size:.85rem;">'
+                + '<thead style="background:#f8f9fa;"><tr>'
+                + '<th style="width:165px;">When</th>'
+                + '<th>Sheet</th>'
+                + '<th style="width:70px;text-align:center;">By</th>'
+                + '<th style="width:110px;text-align:center;color:#16a34a;">New Leads</th>'
+                + '<th style="width:110px;text-align:center;color:#d97706;">Duplicates Skipped</th>'
+                + '<th style="width:80px;text-align:center;color:#dc2626;">Errors</th>'
+                + '</tr></thead><tbody>'
+                + rows.map(function (r) {
+                    const dt = r.synced_at
+                        ? new Date(r.synced_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })
+                        : '—';
+                    const byBadge = r.triggered_by === 'manual'
+                        ? '<span class="badge" style="background:#6366f1;font-size:.75rem;">Manual</span>'
+                        : '<span class="badge bg-secondary" style="font-size:.75rem;">Auto</span>';
+                    const newStyle = r.new_leads > 0 ? 'color:#16a34a;font-weight:700;' : 'color:#9ca3af;';
+                    return '<tr>'
+                        + '<td style="white-space:nowrap;color:#6b7280;">' + dt + '</td>'
+                        + '<td><span style="font-weight:600;color:#1f2937;">' + esc(r.config_name || '—') + '</span></td>'
+                        + '<td style="text-align:center;">' + byBadge + '</td>'
+                        + '<td style="text-align:center;' + newStyle + '">'
+                        +   (r.new_leads > 0 ? '+' : '') + (r.new_leads || 0)
+                        + '</td>'
+                        + '<td style="text-align:center;color:#d97706;">' + (r.duplicate_leads || 0) + '</td>'
+                        + '<td style="text-align:center;color:#dc2626;">' + (r.error_count || 0) + '</td>'
+                        + '</tr>';
+                }).join('')
+                + '</tbody></table></div>';
+        }
+
+        // ── Admin: Duplicate Cleanup (DC Protocol F4/F5) ──────────────────────
+        async function initCleanupPanel() {
+            // Show panel only for admins — check by running a dry-run silently
+            try {
+                const res = await fetch('/api/v1/crm/lead-sync/admin/cleanup-duplicates?dry_run=true', {
+                    method: 'POST', headers: { Authorization: 'Bearer ' + token }
+                });
+                if (res.status === 403) return;  // not admin — keep panel hidden
+                const d = await res.json();
+                const panel = document.getElementById('dupCleanupPanel');
+                const badge = document.getElementById('dupCountBadge');
+                const msg   = document.getElementById('dupStatusMsg');
+                const delBtn = document.getElementById('cleanupBtn');
+                panel.style.display = '';
+                const dupCount = d.duplicate_leads_found || 0;
+                badge.textContent = dupCount + ' duplicates';
+                if (dupCount === 0) {
+                    msg.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i>No duplicates found — database is clean.';
+                    document.getElementById('dryRunBtn').style.display = 'none';
+                } else {
+                    msg.innerHTML = `<i class="fas fa-exclamation-triangle text-warning me-2"></i><strong>${dupCount.toLocaleString()} duplicate leads found.</strong> Click <em>Dry Run</em> to see detail, then <em>Remove All Duplicates</em> to clean up. Child records (follow-ups, notes, etc.) are safely reassigned to the original lead before deletion.`;
+                    delBtn.style.display = '';
+                }
+            } catch(e) { /* silently fail — not critical */ }
+        }
+
+        async function runCleanup(isDryRun) {
+            const msg     = document.getElementById('dupStatusMsg');
+            const result  = document.getElementById('dupCleanupResult');
+            const dryBtn  = document.getElementById('dryRunBtn');
+            const delBtn  = document.getElementById('cleanupBtn');
+
+            if (!isDryRun && !confirm('This will permanently delete all duplicate leads (keeping the original per phone number) and reassign their follow-ups/notes to the original. This cannot be undone. Proceed?')) return;
+
+            dryBtn.disabled = true; delBtn.disabled = true;
+            msg.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>' + (isDryRun ? 'Running preview…' : 'Removing duplicates — please wait…');
+            result.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/v1/crm/lead-sync/admin/cleanup-duplicates?dry_run=' + isDryRun, {
+                    method: 'POST', headers: { Authorization: 'Bearer ' + token }
+                });
+                const d = await res.json();
+                if (!d.success) throw new Error(d.detail || 'Cleanup failed');
+
+                let html = '';
+                if (isDryRun) {
+                    html = '<div class="alert alert-info py-2" style="font-size:.84rem;">'
+                        + '<strong>Dry Run Result:</strong> '
+                        + (d.duplicate_leads_found || 0) + ' duplicate leads would be deleted. '
+                        + 'Child records: '
+                        + Object.entries(d.child_records_to_reassign || {}).map(([t, n]) => `${t}: ${n}`).join(', ')
+                        + '</div>';
+                    msg.innerHTML = 'Dry run complete. Review the details below, then click <strong>Remove All Duplicates</strong> to proceed.';
+                } else {
+                    html = '<div class="alert alert-success py-2" style="font-size:.84rem;">'
+                        + '<i class="fas fa-check-circle me-2"></i>'
+                        + '<strong>' + (d.duplicate_leads_deleted || 0) + ' duplicate leads removed.</strong> '
+                        + (d.unique_index_created ? 'Unique phone index added — future duplicates blocked.' : '')
+                        + '</div>';
+                    msg.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i>Cleanup complete. Database is clean.';
+                    document.getElementById('dupCountBadge').textContent = '0 duplicates';
+                    delBtn.style.display = 'none'; dryBtn.style.display = 'none';
+                }
+                result.innerHTML = html;
+                result.style.display = '';
+            } catch(e) {
+                result.innerHTML = '<div class="alert alert-danger py-2" style="font-size:.84rem;">' + esc(e.message) + '</div>';
+                result.style.display = '';
+                msg.textContent = 'Cleanup failed — see error above.';
+            }
+            dryBtn.disabled = false; delBtn.disabled = false;
+        }
+
+        // Show cleanup panel when history tab is opened
+        const _origSwitchTab = switchTab;
+        switchTab = function(name) {
+            _origSwitchTab(name);
+            if (name === 'history') initCleanupPanel();
+        };
+
+        // ── Utilities ─────────────────────────────────────────────────────────
+        function showAlert(type, html) {
+            const box = document.getElementById('alertBox');
+            const map = { success: 'success', danger: 'danger', info: 'info', warning: 'warning' };
+            box.innerHTML = '<div class="alert alert-' + (map[type] || 'info') + ' py-2" style="font-size:.88rem;">' + html + '</div>';
+            box.style.display = '';
+            if (type === 'success') setTimeout(function () { box.style.display = 'none'; }, 6000);
+        }
+
+        function esc(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>

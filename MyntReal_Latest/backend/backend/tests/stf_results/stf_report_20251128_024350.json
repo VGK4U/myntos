@@ -1,0 +1,381 @@
+{
+  "test_name": "Staff Timesheet & Journey STF",
+  "timestamp": "2025-11-28T02:43:50.215272",
+  "scenarios": {
+    "preflight": {
+      "Backend Health": {
+        "status": "PASS",
+        "message": "Status: 200",
+        "timestamp": "2025-11-28T02:43:50.222988"
+      },
+      "Frontend Server": {
+        "status": "PASS",
+        "message": "Status: 200",
+        "timestamp": "2025-11-28T02:43:50.240583"
+      }
+    },
+    "frontend_routes": {
+      "Staff Login Page": {
+        "status": "PASS",
+        "message": "/staff/login -> 200",
+        "timestamp": "2025-11-28T02:43:50.247939"
+      },
+      "Staff Dashboard": {
+        "status": "PASS",
+        "message": "/staff/dashboard -> 200",
+        "timestamp": "2025-11-28T02:43:50.252351"
+      },
+      "My Journeys Page": {
+        "status": "PASS",
+        "message": "/staff/my-journeys -> 200",
+        "timestamp": "2025-11-28T02:43:50.258154"
+      },
+      "Team Journeys Page": {
+        "status": "PASS",
+        "message": "/staff/team-journeys -> 200",
+        "timestamp": "2025-11-28T02:43:50.262013"
+      },
+      "All Journeys Page": {
+        "status": "PASS",
+        "message": "/staff/all-journeys -> 200",
+        "timestamp": "2025-11-28T02:43:50.265522"
+      },
+      "VGK4U Journey Dashboard": {
+        "status": "PASS",
+        "message": "/staff/vgk4u-journeys -> 200",
+        "timestamp": "2025-11-28T02:43:50.269488"
+      },
+      "My Attendance Page": {
+        "status": "PASS",
+        "message": "/staff/my-attendance -> 200",
+        "timestamp": "2025-11-28T02:43:50.274693"
+      },
+      "Team Attendance Page": {
+        "status": "PASS",
+        "message": "/staff/team-attendance -> 200",
+        "timestamp": "2025-11-28T02:43:50.279170"
+      },
+      "Attendance Reports Page": {
+        "status": "PASS",
+        "message": "/staff/attendance-reports -> 200",
+        "timestamp": "2025-11-28T02:43:50.283728"
+      },
+      "KRA Review Page": {
+        "status": "PASS",
+        "message": "/staff/kra-review -> 200",
+        "timestamp": "2025-11-28T02:43:50.291698"
+      },
+      "KRA Templates Page": {
+        "status": "PASS",
+        "message": "/staff/kra-templates -> 200",
+        "timestamp": "2025-11-28T02:43:50.306076"
+      },
+      "Task Review Page": {
+        "status": "PASS",
+        "message": "/staff/task-review -> 200",
+        "timestamp": "2025-11-28T02:43:50.311188"
+      }
+    },
+    "journey_api": {
+      "Transport Rates": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/journeys/transport-rates -> 401",
+        "timestamp": "2025-11-28T02:43:50.319990"
+      },
+      "My Journeys List": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/journeys/my -> 401",
+        "timestamp": "2025-11-28T02:43:50.328851"
+      },
+      "Team Journeys List": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/journeys/team -> 401",
+        "timestamp": "2025-11-28T02:43:50.335508"
+      },
+      "All Journeys List": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/journeys/all -> 401",
+        "timestamp": "2025-11-28T02:43:50.342397"
+      },
+      "Journey Statistics": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/journeys/stats -> 401",
+        "timestamp": "2025-11-28T02:43:50.348861"
+      },
+      "Active Journey Check": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/journeys/active -> 401",
+        "timestamp": "2025-11-28T02:43:50.356918"
+      },
+      "HR Journey View": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/journeys/hr -> 401",
+        "timestamp": "2025-11-28T02:43:50.364393"
+      },
+      "VGK4U Dashboard": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/journeys/vgk4u/dashboard -> 401",
+        "timestamp": "2025-11-28T02:43:50.369640"
+      }
+    },
+    "attendance_api": {
+      "Today Attendance": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/attendance/today -> 401",
+        "timestamp": "2025-11-28T02:43:50.375844"
+      },
+      "Attendance History": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/attendance/history -> 401",
+        "timestamp": "2025-11-28T02:43:50.381972"
+      },
+      "Work Intervals Today": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/work-intervals/today -> 404",
+        "timestamp": "2025-11-28T02:43:50.389724"
+      },
+      "Team Attendance": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/attendance/team -> 401",
+        "timestamp": "2025-11-28T02:43:50.394588"
+      },
+      "Attendance Reports": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/attendance/reports -> 404",
+        "timestamp": "2025-11-28T02:43:50.401055"
+      }
+    },
+    "kra_api": {
+      "My KRA Instances": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/kra/my-instances -> 404",
+        "timestamp": "2025-11-28T02:43:50.409555"
+      },
+      "KRA Templates": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/kra/templates -> 401",
+        "timestamp": "2025-11-28T02:43:50.415856"
+      },
+      "Team KRA Review": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/kra/team-review -> 404",
+        "timestamp": "2025-11-28T02:43:50.424764"
+      },
+      "Pending Reviews": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/kra/pending-review -> 404",
+        "timestamp": "2025-11-28T02:43:50.433182"
+      }
+    },
+    "task_api": {
+      "My Tasks": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/tasks/my -> 401",
+        "timestamp": "2025-11-28T02:43:50.437730"
+      },
+      "Assigned Tasks": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/tasks/assigned -> 401",
+        "timestamp": "2025-11-28T02:43:50.443251"
+      },
+      "Team Tasks": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/tasks/team -> 401",
+        "timestamp": "2025-11-28T02:43:50.448643"
+      },
+      "Pending Task Reviews": {
+        "status": "PASS",
+        "message": "GET /api/v1/staff/tasks/pending-review -> 401",
+        "timestamp": "2025-11-28T02:43:50.453952"
+      }
+    },
+    "role_access": {
+      "Junior Executive (20) Access Matrix": {
+        "status": "PASS",
+        "message": "Expected access to: /staff/my-journeys",
+        "timestamp": "2025-11-28T02:43:50.454091"
+      },
+      "Senior Executive (40) Access Matrix": {
+        "status": "PASS",
+        "message": "Expected access to: /staff/my-journeys",
+        "timestamp": "2025-11-28T02:43:50.454100"
+      },
+      "Manager (60) Access Matrix": {
+        "status": "PASS",
+        "message": "Expected access to: /staff/my-journeys, /staff/team-journeys",
+        "timestamp": "2025-11-28T02:43:50.454107"
+      },
+      "Team Leader (70) Access Matrix": {
+        "status": "PASS",
+        "message": "Expected access to: /staff/my-journeys, /staff/team-journeys",
+        "timestamp": "2025-11-28T02:43:50.454113"
+      },
+      "HR (85) Access Matrix": {
+        "status": "PASS",
+        "message": "Expected access to: /staff/my-journeys, /staff/team-journeys, /staff/all-journeys",
+        "timestamp": "2025-11-28T02:43:50.454119"
+      },
+      "Key Leadership (100) Access Matrix": {
+        "status": "PASS",
+        "message": "Expected access to: /staff/my-journeys, /staff/team-journeys, /staff/all-journeys",
+        "timestamp": "2025-11-28T02:43:50.454125"
+      },
+      "VGK4U Supreme (150) Access Matrix": {
+        "status": "PASS",
+        "message": "Expected access to: /staff/my-journeys, /staff/team-journeys, /staff/all-journeys, /staff/vgk4u-journeys",
+        "timestamp": "2025-11-28T02:43:50.454130"
+      }
+    },
+    "transport_rates": {
+      "Transport Rates API": {
+        "status": "PASS",
+        "message": "API requires authentication (correct)",
+        "timestamp": "2025-11-28T02:43:50.459579"
+      },
+      "Car Rate": {
+        "status": "PASS",
+        "message": "Expected: \u20b98.0/km",
+        "timestamp": "2025-11-28T02:43:50.459600"
+      },
+      "Bike Rate": {
+        "status": "PASS",
+        "message": "Expected: \u20b94.0/km",
+        "timestamp": "2025-11-28T02:43:50.459607"
+      },
+      "Local_Transport Rate": {
+        "status": "PASS",
+        "message": "Expected: \u20b93.0/km",
+        "timestamp": "2025-11-28T02:43:50.459612"
+      },
+      "Others Rate": {
+        "status": "PASS",
+        "message": "Expected: \u20b92.0/km",
+        "timestamp": "2025-11-28T02:43:50.459617"
+      }
+    },
+    "journey_workflows": {
+      "Scenario 1: Normal Journey": {
+        "status": "PASS",
+        "message": "7 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459707"
+      },
+      "Scenario 2: GPS Disabled Journey": {
+        "status": "PASS",
+        "message": "6 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459712"
+      },
+      "Scenario 3: Journey Approval Flow": {
+        "status": "PASS",
+        "message": "5 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459717"
+      },
+      "Scenario 4: VGK4U Configuration": {
+        "status": "PASS",
+        "message": "4 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459721"
+      },
+      "Scenario 5: Bulk Approval": {
+        "status": "PASS",
+        "message": "4 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459725"
+      }
+    },
+    "timesheet_workflows": {
+      "Scenario 1: Check-In Flow": {
+        "status": "PASS",
+        "message": "5 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459734"
+      },
+      "Scenario 2: Break Management": {
+        "status": "PASS",
+        "message": "5 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459738"
+      },
+      "Scenario 3: Check-Out Flow": {
+        "status": "PASS",
+        "message": "5 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459742"
+      },
+      "Scenario 4: Manager Review": {
+        "status": "PASS",
+        "message": "4 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459746"
+      },
+      "Scenario 5: Field Work Integration": {
+        "status": "PASS",
+        "message": "4 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459750"
+      }
+    },
+    "manager_review": {
+      "KRA Manager Review": {
+        "status": "PASS",
+        "message": "4 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459759"
+      },
+      "Task Manager Review": {
+        "status": "PASS",
+        "message": "4 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459763"
+      },
+      "Attendance Review": {
+        "status": "PASS",
+        "message": "4 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459767"
+      },
+      "Journey Review": {
+        "status": "PASS",
+        "message": "4 steps defined",
+        "timestamp": "2025-11-28T02:43:50.459771"
+      }
+    },
+    "database": {
+      "Table: staff_journeys": {
+        "status": "PASS",
+        "message": "1 records",
+        "timestamp": "2025-11-28T02:43:50.678923"
+      },
+      "Table: staff_journey_track_points": {
+        "status": "PASS",
+        "message": "184 records",
+        "timestamp": "2025-11-28T02:43:50.700012"
+      },
+      "Table: staff_journey_approvals": {
+        "status": "PASS",
+        "message": "0 records",
+        "timestamp": "2025-11-28T02:43:50.720847"
+      },
+      "Table: staff_attendance": {
+        "status": "PASS",
+        "message": "3 records",
+        "timestamp": "2025-11-28T02:43:50.741721"
+      },
+      "Table: staff_attendance_breaks": {
+        "status": "PASS",
+        "message": "1 records",
+        "timestamp": "2025-11-28T02:43:50.762262"
+      },
+      "Table: staff_transport_rates": {
+        "status": "PASS",
+        "message": "4 records",
+        "timestamp": "2025-11-28T02:43:50.782887"
+      },
+      "Table: staff_employees": {
+        "status": "PASS",
+        "message": "12 records",
+        "timestamp": "2025-11-28T02:43:50.803847"
+      },
+      "Table: staff_roles": {
+        "status": "PASS",
+        "message": "11 records",
+        "timestamp": "2025-11-28T02:43:50.825062"
+      }
+    }
+  },
+  "summary": {
+    "total": 69,
+    "passed": 69,
+    "failed": 0,
+    "warnings": 0
+  }
+}

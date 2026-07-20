@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - My Location History</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="/public/css/staff-kyc-theme.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .header-logo { height: 36px; width: auto; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .role-badge-supreme { background: #fef2f2; color: #dc2626; }
+        .role-badge-hr { background: #f3e8ff; color: #7c3aed; }
+        .role-badge-leadership { background: #fef3c7; color: #d97706; }
+        .role-badge-default { background: #f3f4f6; color: #374151; }
+
+        .content-area { padding: 24px; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .stat-icon.blue { background: #dbeafe; color: #2563eb; }
+        .stat-icon.green { background: #d1fae5; color: #059669; }
+        .stat-icon.yellow { background: #fef3c7; color: #d97706; }
+        .stat-icon.purple { background: #e0e7ff; color: #4338ca; }
+        .stat-value { font-size: 24px; font-weight: 700; color: #1f2937; margin-top: 8px; }
+        .stat-label { font-size: 13px; color: #6b7280; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        
+        .filters-bar { padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filters-bar select, .filters-bar input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        
+        #locationMap { height: 400px; border-radius: 12px; margin-bottom: 20px; }
+        
+        .timeline { padding: 20px; max-height: 500px; overflow-y: auto; }
+        .timeline-item { display: flex; gap: 16px; margin-bottom: 16px; position: relative; padding-bottom: 16px; border-bottom: 1px solid #f3f4f6; }
+        .timeline-item:last-child { border-bottom: none; }
+        .timeline-icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+        .timeline-icon.active { background: #d1fae5; color: #059669; }
+        .timeline-icon.break { background: #fef3c7; color: #d97706; }
+        .timeline-icon.journey { background: #dbeafe; color: #2563eb; }
+        .timeline-icon.offline { background: #f3f4f6; color: #6b7280; }
+        .timeline-content { flex: 1; }
+        .timeline-time { font-size: 12px; color: #6b7280; }
+        .timeline-title { font-weight: 600; color: #1f2937; }
+        .timeline-details { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-active { background: #dcfce7; color: #166534; }
+        .badge-break { background: #fef3c7; color: #92400e; }
+        .badge-journey { background: #dbeafe; color: #1e40af; }
+        .badge-offline { background: #f3f4f6; color: #6b7280; }
+        
+        .playback-controls { background: #f9fafb; padding: 16px; border-radius: 8px; margin-top: 16px; }
+        .playback-controls .btn { margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="d-flex justify-content-end mb-4">
+                <button class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-label">Total Records</div>
+                            <div class="stat-value" id="totalRecords">0</div>
+                        </div>
+                        <div class="stat-icon blue"><i class="fas fa-map-pin"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-label">Unique Locations</div>
+                            <div class="stat-value" id="uniqueLocations">0</div>
+                        </div>
+                        <div class="stat-icon green"><i class="fas fa-location-arrow"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-label">Distance (km)</div>
+                            <div class="stat-value" id="totalDistance">0</div>
+                        </div>
+                        <div class="stat-icon yellow"><i class="fas fa-road"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-label">Journeys Today</div>
+                            <div class="stat-value" id="journeyCount">0</div>
+                        </div>
+                        <div class="stat-icon purple"><i class="fas fa-route"></i></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-map me-2"></i>Location Map</h5>
+                        </div>
+                        <div class="card-body p-3">
+                            <div id="locationMap"></div>
+                            <div class="playback-controls">
+                                <div class="d-flex align-items-center gap-3">
+                                    <button class="btn btn-sm btn-success" id="playBtn" onclick="togglePlayback()">
+                                        <i class="fas fa-play"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-secondary" onclick="resetPlayback()">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                    <input type="range" class="form-range flex-grow-1" id="playbackSlider" min="0" max="100" value="0">
+                                    <select class="form-select form-select-sm" id="playbackSpeed" style="width: 80px;">
+                                        <option value="1">1x</option>
+                                        <option value="2" selected>2x</option>
+                                        <option value="4">4x</option>
+                                    </select>
+                                </div>
+                                <div class="d-flex justify-content-between small text-muted mt-2">
+                                    <span id="playbackTime">--:--</span>
+                                    <span id="playbackProgress">0 / 0 points</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-clock me-2"></i>Timeline</h5>
+                        </div>
+                        <div class="filters-bar">
+                            <select id="dateFilter" class="form-select form-select-sm" onchange="filterByDate()">
+                                <option value="today">Today</option>
+                                <option value="yesterday">Yesterday</option>
+                                <option value="week">This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                            <input type="date" id="customDate" class="form-control form-control-sm" style="display: none;" onchange="loadHistory()">
+                        </div>
+                        <div class="timeline" id="locationTimeline">
+                            <div class="text-center py-4">
+                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                                <p class="mt-2 text-muted">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let map = null;
+        let markers = [];
+        let routePolyline = null;
+        let locationData = [];
+        let playbackIndex = 0;
+        let playbackMarker = null;
+        let playbackInterval = null;
+        let isPlaying = false;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('My Location History', 'fas fa-map-marker-alt');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            updateHeaderUserInfo();
+            
+            initMap();
+            await loadHistory();
+            await loadDriftSummary();
+        });
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const name = userData.full_name || 'Staff Member';
+            const role = userData.role_name || 'Employee';
+            const empId = userData.emp_code || userData.employee_code || '-';
+            
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            
+            document.getElementById('headerUserInitials').textContent = initials;
+            document.getElementById('headerUserName').textContent = name;
+            document.getElementById('headerUserEmpId').textContent = empId;
+            
+            const roleEl = document.getElementById('headerUserRole');
+            roleEl.textContent = role;
+            
+            if (role.includes('Supreme') || role.includes('VGK4U')) {
+                roleEl.className = 'user-info-role role-badge-supreme';
+            } else if (role.includes('HR')) {
+                roleEl.className = 'user-info-role role-badge-hr';
+            } else if (role.includes('Leadership') || role.includes('Leader')) {
+                roleEl.className = 'user-info-role role-badge-leadership';
+            } else {
+                roleEl.className = 'user-info-role role-badge-default';
+            }
+        }
+        
+        function initMap() {
+            map = L.map('locationMap').setView([20.5937, 78.9629], 5);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+        }
+        
+        function filterByDate() {
+            const filter = document.getElementById('dateFilter').value;
+            document.getElementById('customDate').style.display = filter === 'custom' ? 'block' : 'none';
+            if (filter !== 'custom') {
+                loadHistory();
+            }
+        }
+        
+        async function loadHistory() {
+            const filter = document.getElementById('dateFilter').value;
+            let url = `${API_BASE}/staff/attendance/location/my/history`;
+            
+            const today = new Date();
+            let params = new URLSearchParams();
+            
+            if (filter === 'today') {
+                params.append('date', today.toISOString().split('T')[0]);
+            } else if (filter === 'yesterday') {
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                params.append('date', yesterday.toISOString().split('T')[0]);
+            } else if (filter === 'week') {
+                const weekAgo = new Date(today);
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                params.append('from_date', weekAgo.toISOString().split('T')[0]);
+                params.append('to_date', today.toISOString().split('T')[0]);
+            } else if (filter === 'month') {
+                const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                params.append('from_date', monthStart.toISOString().split('T')[0]);
+                params.append('to_date', today.toISOString().split('T')[0]);
+            } else if (filter === 'custom') {
+                const customDate = document.getElementById('customDate').value;
+                if (customDate) {
+                    params.append('date', customDate);
+                }
+            }
+            
+            params.append('limit', '200');
+            
+            try {
+                const response = await staffFetch(`${url}?${params.toString()}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    locationData = data.locations || [];
+                    document.getElementById('totalRecords').textContent = data.total || 0;
+                    
+                    updateMap();
+                    updateTimeline();
+                    calculateStats();
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading history:', error);
+            }
+        }
+        
+        async function loadDriftSummary() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/attendance/location/today/drifts`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('uniqueLocations').textContent = data.unique_locations_count || 0;
+                    document.getElementById('totalDistance').textContent = (data.total_distance_km || 0).toFixed(2);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading drift summary:', error);
+            }
+        }
+        
+        function updateMap() {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            if (routePolyline) {
+                map.removeLayer(routePolyline);
+            }
+            
+            if (locationData.length === 0) return;
+            
+            const coords = locationData.filter(l => l.latitude && l.longitude).map(l => [l.latitude, l.longitude]);
+            
+            if (coords.length > 0) {
+                routePolyline = L.polyline(coords, { color: '#6366f1', weight: 3, opacity: 0.7 }).addTo(map);
+                
+                const startIcon = L.divIcon({
+                    className: 'custom-marker',
+                    html: '<i class="fas fa-play-circle" style="color: #10b981; font-size: 24px;"></i>',
+                    iconSize: [24, 24]
+                });
+                
+                const endIcon = L.divIcon({
+                    className: 'custom-marker',
+                    html: '<i class="fas fa-flag-checkered" style="color: #ef4444; font-size: 24px;"></i>',
+                    iconSize: [24, 24]
+                });
+                
+                markers.push(L.marker(coords[coords.length - 1], { icon: startIcon }).addTo(map));
+                markers.push(L.marker(coords[0], { icon: endIcon }).addTo(map));
+                
+                map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+            }
+            
+            document.getElementById('playbackSlider').max = locationData.length - 1;
+        }
+        
+        function updateTimeline() {
+            const container = document.getElementById('locationTimeline');
+            
+            if (locationData.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No location data for this period</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            locationData.forEach((loc, idx) => {
+                const time = loc.captured_at ? new Date(loc.captured_at).toLocaleTimeString() : '--:--';
+                const status = loc.is_on_journey ? 'journey' : (loc.is_on_break ? 'break' : (loc.is_clocked_in ? 'active' : 'offline'));
+                const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+                const icon = status === 'journey' ? 'route' : (status === 'break' ? 'coffee' : (status === 'active' ? 'check' : 'times'));
+                
+                html += `
+                    <div class="timeline-item" onclick="focusLocation(${idx})">
+                        <div class="timeline-icon ${status}">
+                            <i class="fas fa-${icon}"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <div class="d-flex justify-content-between">
+                                <span class="timeline-time">${time}</span>
+                                <span class="badge badge-${status}">${statusLabel}</span>
+                            </div>
+                            <div class="timeline-title">Location Update</div>
+                            <div class="timeline-details">
+                                <i class="fas fa-crosshairs me-1"></i>Accuracy: ${loc.accuracy_m ? loc.accuracy_m.toFixed(0) + 'm' : 'N/A'}
+                                ${loc.break_type ? `<br><i class="fas fa-pause me-1"></i>${loc.break_type}` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function calculateStats() {
+            let journeyCount = 0;
+            locationData.forEach(l => {
+                if (l.is_on_journey) journeyCount++;
+            });
+            document.getElementById('journeyCount').textContent = Math.ceil(journeyCount / 10);
+        }
+        
+        function focusLocation(idx) {
+            const loc = locationData[idx];
+            if (loc && loc.latitude && loc.longitude) {
+                map.setView([loc.latitude, loc.longitude], 16);
+                
+                if (playbackMarker) {
+                    map.removeLayer(playbackMarker);
+                }
+                
+                playbackMarker = L.marker([loc.latitude, loc.longitude], {
+                    icon: L.divIcon({
+                        className: 'custom-marker',
+                        html: '<i class="fas fa-location-arrow" style="color: #6366f1; font-size: 28px;"></i>',
+                        iconSize: [28, 28]
+                    })
+                }).addTo(map);
+                
+                document.getElementById('playbackSlider').value = idx;
+                updatePlaybackInfo(idx);
+            }
+        }
+        
+        function togglePlayback() {
+            if (isPlaying) {
+                clearInterval(playbackInterval);
+                isPlaying = false;
+                document.getElementById('playBtn').innerHTML = '<i class="fas fa-play"></i>';
+            } else {
+                isPlaying = true;
+                document.getElementById('playBtn').innerHTML = '<i class="fas fa-pause"></i>';
+                
+                const speed = parseInt(document.getElementById('playbackSpeed').value);
+                playbackInterval = setInterval(() => {
+                    if (playbackIndex >= locationData.length - 1) {
+                        togglePlayback();
+                        return;
+                    }
+                    playbackIndex++;
+                    focusLocation(playbackIndex);
+                }, 1000 / speed);
+            }
+        }
+        
+        function resetPlayback() {
+            if (isPlaying) togglePlayback();
+            playbackIndex = 0;
+            focusLocation(0);
+        }
+        
+        function updatePlaybackInfo(idx) {
+            const loc = locationData[idx];
+            if (loc) {
+                document.getElementById('playbackTime').textContent = loc.captured_at ? new Date(loc.captured_at).toLocaleTimeString() : '--:--';
+            }
+            document.getElementById('playbackProgress').textContent = `${idx + 1} / ${locationData.length} points`;
+        }
+        
+        document.getElementById('playbackSlider').addEventListener('input', function() {
+            playbackIndex = parseInt(this.value);
+            focusLocation(playbackIndex);
+        });
+        
+        function refreshData() {
+            loadHistory();
+            loadDriftSummary();
+        }
+    </script>
+</body>
+</html>

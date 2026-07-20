@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Announcements — VGK4U Member</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+  body { background:#f6f9fc; font-family:'Segoe UI', Roboto, sans-serif; }
+  .vgk-hero { background:linear-gradient(135deg, #0d9488, #0d9488cc); color:#fff; padding:24px 20px; border-radius:0 0 18px 18px; margin-bottom:20px; }
+  .vgk-hero h1 { font-size:22px; font-weight:800; margin:0; }
+  .vgk-hero p  { opacity:0.9; margin:4px 0 0; font-size:13px; }
+  .back-link { color:#fff; text-decoration:none; opacity:0.85; font-size:13px; }
+  .back-link:hover { opacity:1; color:#fff; }
+</style>
+</head>
+<body>
+  <div class="vgk-hero">
+    <div style="max-width:760px;margin:0 auto">
+      <a href="/vgk/dashboard" class="back-link"><i class="fas fa-arrow-left me-2"></i>Back to Dashboard</a>
+      <h1 class="mt-2"><i class="fas fa-list me-2"></i>My Announcements</h1>
+      <p>Track the status of your announcements.</p>
+      <div style="margin-top:8px;font-size:11px;opacity:0.7"><i class="fas fa-shield-alt me-1"></i>VGK4U Members · Audience-aware · DC Protocol IST</div>
+    </div>
+  </div>
+  <main class="container" style="padding-bottom:60px">
+    
+      <div class="mb-3" style="max-width:760px;margin:0 auto">
+        <select class="form-select" id="anStatus">
+          <option value="">All</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div id="anList" style="max-width:760px;margin:0 auto"></div>
+  </main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function(){
+  
+      const $ = (s) => document.querySelector(s);
+      async function load() {
+        const st = $('#anStatus').value;
+        const url = '/api/v1/vgk-member/announcements/list-mine?audience=vgk4u' + (st ? '&status=' + st : '');
+        const r = await fetch(url, { credentials: 'include' });
+        const d = await r.json();
+        $('#anList').innerHTML = (d.items || []).map(x => `
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong>${x.title}</strong>
+              <span class="badge bg-${x.status==='approved'?'success':x.status==='rejected'?'danger':'warning'}">${x.status}</span>
+            </div>
+            <div style="color:#6b7280;font-size:12px;margin-top:4px">Type: ${x.announcement_type} · ${new Date(x.created_at).toLocaleString('en-IN')}</div>
+            ${x.description ? `<p style="margin:8px 0 0">${x.description}</p>` : ''}
+            ${x.rejection_reason ? `<div class="alert alert-danger mt-2 mb-0 py-2">Reason: ${x.rejection_reason}</div>` : ''}
+            ${x.published_at ? `<div style="color:#10b981;font-size:11px;margin-top:6px">Published: ${new Date(x.published_at).toLocaleString('en-IN')}</div>` : ''}
+          </div>`).join('') || '<div class="text-muted text-center">No announcements found.</div>';
+      }
+      $('#anStatus').addEventListener('change', load);
+      load();
+})();
+</script>
+</body>
+</html>

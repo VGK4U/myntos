@@ -1,0 +1,1 @@
+# Frontend Selenium Test Configuration

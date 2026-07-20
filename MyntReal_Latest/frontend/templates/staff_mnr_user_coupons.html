@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNR — Coupons | Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link href="/public/css/dark-theme.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_header.js"></script>
+    <style>
+        body { background: #0f172a; min-height: 100vh; }
+        .main-content { margin-left: 260px; padding: 24px; transition: margin-left 0.3s ease; padding-top: 88px; }
+        body.sidebar-collapsed-mode .main-content { margin-left: 70px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0 !important; } }
+        .mnr-search-card { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 12px; }
+        .mnr-search-card .form-control { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; }
+        .mnr-search-card .form-control::placeholder { color: rgba(255, 255, 255, 0.5); }
+        .nav-tabs { border-bottom: 2px solid rgba(255, 255, 255, 0.1); }
+        .nav-tabs .nav-link { color: #adb5bd; border: none; border-bottom: 3px solid transparent; background: transparent; padding: 12px 20px; font-weight: 500; }
+        .nav-tabs .nav-link:hover { color: #ffc107; border-bottom-color: rgba(255, 193, 7, 0.3); }
+        .nav-tabs .nav-link.active { color: #ffc107; border-bottom-color: #ffc107; background: transparent; }
+        .stat-card { background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 20px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .stat-value { font-size: 2rem; font-weight: 700; color: #ffc107; }
+        .stat-label { color: #adb5bd; font-size: 0.875rem; margin-top: 4px; }
+        .data-table { background: rgba(255, 255, 255, 0.03); border-radius: 12px; overflow: hidden; }
+        .data-table th { background: rgba(255, 193, 7, 0.1); color: #ffc107; font-weight: 600; border: none; padding: 12px 16px; }
+        .data-table td { color: #e2e8f0; border-color: rgba(255, 255, 255, 0.05); padding: 12px 16px; }
+        .data-table tr:hover { background: rgba(255, 255, 255, 0.05); }
+        .badge-status { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-pending { background: #fbbf24; color: #000; }
+        .badge-approved, .badge-fulfilled, .badge-completed, .badge-active { background: #10b981; color: #fff; }
+        .badge-rejected { background: #ef4444; color: #fff; }
+        .badge-available, .badge-unused { background: #3b82f6; color: #fff; }
+        .badge-used, .badge-transferred { background: #6b7280; color: #fff; }
+        .badge-in { background: #22c55e; color: #fff; }
+        .badge-out { background: #f97316; color: #fff; }
+        .filter-section { background: rgba(255, 255, 255, 0.03); border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+        .filter-section .form-label { color: #ffc107 !important; font-weight: 600; }
+        .filter-section .form-select, .filter-section .form-control { background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.2); color: #e2e8f0; }
+        .filter-section .form-select option { background: #1a1a2e; color: #e2e8f0; }
+        .filter-section .form-control::placeholder { color: #94a3b8; }
+        .form-select option { background: #1a1a2e; color: #e2e8f0; }
+        .form-select { background-color: #1e293b; color: #e2e8f0; border-color: rgba(255, 255, 255, 0.2); }
+        .filter-section .form-control[type="date"] { color: #e2e8f0; }
+        .filter-section .form-control[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
+        .btn-transfer { background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%); color: #000; font-weight: 600; border: none; }
+        .btn-transfer:hover { background: linear-gradient(135deg, #ffca2c 0%, #ffb74d 100%); color: #000; }
+        .transfer-modal .modal-content { background: #1a1a2e; border: 1px solid rgba(255, 193, 7, 0.3); }
+        .transfer-modal .modal-header { border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        .transfer-modal .modal-footer { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+        .pagination .page-link { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); color: #fff; }
+        .pagination .page-link:hover { background: rgba(255, 193, 7, 0.2); }
+        .pagination .page-item.active .page-link { background: #ffc107; border-color: #ffc107; color: #000; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 4rem; margin-bottom: 20px; color: #374151; }
+    </style>
+</head>
+<body class="dark-theme">
+    <div id="staffSidebar"></div>
+    <div id="headerContainer"></div>
+
+    <main class="main-content" id="main-content">
+        <div class="container-fluid py-4">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="text-warning mb-0"><i class="fas fa-ticket-alt me-2"></i>MNR — Coupons</h2>
+                    <p class="text-muted mb-0">View and manage member coupon data</p>
+                </div>
+            </div>
+
+            <div class="mnr-search-card p-4 mb-4">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <label class="form-label text-warning fw-bold"><i class="fas fa-search me-2"></i>Search MNR ID</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted">MNR</span>
+                            <input type="text" class="form-control" id="mnr-id-input" placeholder="Enter member ID (e.g., 1800145)" style="text-transform: uppercase;">
+                            <button class="btn btn-warning" type="button" id="search-btn"><i class="fas fa-search me-1"></i> Search</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6" id="member-info" style="display: none;">
+                        <div class="p-3" style="background: rgba(255, 193, 7, 0.1); border-radius: 8px;">
+                            <h5 class="mb-0 text-white" id="member-name">-</h5>
+                            <small class="text-muted" id="member-id-display">-</small>
+                            <span class="badge ms-2" id="member-status">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="content-area" style="display: none;">
+                <ul class="nav nav-tabs mb-4" id="couponTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-tab="purchased"><i class="fas fa-shopping-cart me-1"></i> Purchased</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="usage"><i class="fas fa-check-circle me-1"></i> Usage Status</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="transfers"><i class="fas fa-exchange-alt me-1"></i> Transfers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="activate"><i class="fas fa-bolt me-1"></i> Activate Coupon</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="buy"><i class="fas fa-credit-card me-1"></i> Buy Coupon</a>
+                    </li>
+                </ul>
+
+                <div class="row mb-4" id="stats-row"></div>
+
+                <div class="filter-section" id="filter-section">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-2">
+                            <label class="form-label text-light small">Status</label>
+                            <select class="form-select form-select-sm" id="filter-status">
+                                <option value="">All Status</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-light small">Package Type</label>
+                            <select class="form-select form-select-sm" id="filter-package">
+                                <option value="">All Packages</option>
+                                <option value="Platinum">Platinum</option>
+                                <option value="Diamond">Diamond</option>
+                                <option value="Star">Star</option>
+                                <option value="Loyal">Loyal</option>
+                                <option value="Welcome">Welcome Coupon</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2" id="direction-filter-container" style="display: none;">
+                            <label class="form-label text-light small">Direction</label>
+                            <select class="form-select form-select-sm" id="filter-direction">
+                                <option value="">All</option>
+                                <option value="in">Incoming</option>
+                                <option value="out">Outgoing</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-light small">Date From</label>
+                            <input type="date" class="form-control form-control-sm" id="filter-date-from">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-light small">Date To</label>
+                            <input type="date" class="form-control form-control-sm" id="filter-date-to">
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-outline-warning btn-sm w-100" onclick="applyFilters()"><i class="fas fa-filter me-1"></i> Apply</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="transfer-action-section" style="display: none;" class="mb-4">
+                    <button class="btn btn-transfer" data-bs-toggle="modal" data-bs-target="#transferModal">
+                        <i class="fas fa-exchange-alt me-2"></i> Initiate Transfer
+                    </button>
+                </div>
+
+                <div id="activate-coupon-section" style="display: none;">
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="card bg-dark border-success mb-4">
+                                <div class="card-header bg-success text-white fw-bold">
+                                    <i class="fas fa-bolt me-2"></i>Activate Coupon for Member
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label text-white">Select Coupon <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="activate-coupon-select">
+                                            <option value="">Select available coupon...</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-white">Target Member (Optional)</label>
+                                        <div class="input-group mb-2">
+                                            <input type="text" class="form-control" id="activate-target-search" placeholder="Search by MNR ID, name, or phone..." oninput="debounceSearchMembers()">
+                                            <button class="btn btn-outline-success" type="button" onclick="searchInactiveMembers()"><i class="fas fa-search"></i></button>
+                                        </div>
+                                        <input type="hidden" id="activate-target-user" value="">
+                                        <div id="search-results-container" class="list-group mb-2" style="max-height: 200px; overflow-y: auto; display: none;"></div>
+                                        <div id="selected-member-display" class="alert alert-success py-2 mb-0" style="display: none;">
+                                            <i class="fas fa-user-check me-2"></i><span id="selected-member-text"></span>
+                                            <button type="button" class="btn-close btn-sm float-end" onclick="clearSelectedMember()"></button>
+                                        </div>
+                                        <small class="text-muted">Search inactive members by MNR ID, name, or phone</small>
+                                    </div>
+                                    <div class="mb-3" id="phone-update-section">
+                                        <label class="form-label text-white">Mobile Number <span class="text-warning">(Update if needed)</span></label>
+                                        <input type="text" class="form-control" id="activate-new-phone" placeholder="10-digit mobile number" maxlength="10">
+                                        <small class="text-muted" id="current-phone-display">Current: --</small>
+                                    </div>
+                                    <div class="alert alert-info py-2 mb-3">
+                                        <small><i class="fas fa-info-circle me-1"></i>Activating a coupon will assign points and trigger income calculations.</small>
+                                    </div>
+                                    <button class="btn btn-success w-100" id="execute-activation-btn" onclick="executeActivation()">
+                                        <i class="fas fa-bolt me-2"></i>Activate Coupon
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card bg-dark border-secondary mb-4">
+                                <div class="card-header text-white fw-bold">
+                                    <i class="fas fa-history me-2"></i>Recent Activations
+                                </div>
+                                <div class="card-body" id="recent-activations-list">
+                                    <p class="text-muted text-center mb-0">No recent activations</p>
+                                </div>
+                            </div>
+                            <div class="card bg-dark border-secondary">
+                                <div class="card-header text-white fw-bold">
+                                    <i class="fas fa-users me-2"></i>Eligible Downline
+                                </div>
+                                <div class="card-body" id="eligible-downline-list" style="max-height: 200px; overflow-y: auto;">
+                                    <p class="text-muted text-center mb-0">No eligible members</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="buy-coupon-section" style="display: none;">
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="card bg-dark border-warning mb-4">
+                                <div class="card-header bg-warning text-dark fw-bold">
+                                    <i class="fas fa-credit-card me-2"></i>Purchase Coupon for Member
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label text-white">Package Type <span class="text-danger">*</span></label>
+                                        <select class="form-select" id="buy-package-type" onchange="handlePackageChange()">
+                                            <option value="">Select Package...</option>
+                                            <option value="PLATINUM">Platinum - ₹15,000</option>
+                                            <option value="DIAMOND">Diamond - ₹7,500</option>
+                                            <option value="BLUE">Star (Blue) - ₹1,000</option>
+                                            <option value="LOYAL">Loyal - ₹500</option>
+                                            <option value="WELCOME" id="welcome-option" style="display: none;">Welcome Coupon - ₹0 (VGK Mentor/EA Only)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-white">Quantity <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="buy-quantity" min="1" max="10" value="1">
+                                    </div>
+                                    <div class="mb-3" id="funding-source-container">
+                                        <label class="form-label text-white">Funding Source <span class="text-danger">*</span></label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="funding-source" id="funding-wallet" value="wallet" checked>
+                                            <label class="form-check-label text-white" for="funding-wallet">
+                                                <i class="fas fa-wallet me-1"></i> User Wallet <span class="text-muted">(Balance: <span id="wallet-balance">₹0</span>)</span>
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="funding-source" id="funding-offline" value="offline">
+                                            <label class="form-check-label text-white" for="funding-offline">
+                                                <i class="fas fa-money-bill me-1"></i> Offline Payment (Cash/Bank)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div id="offline-fields" style="display: none;">
+                                        <div class="mb-3">
+                                            <label class="form-label text-white">Payment Method <span class="text-danger">*</span></label>
+                                            <select class="form-select" id="buy-payment-method">
+                                                <option value="">Select...</option>
+                                                <option value="Cash">Cash</option>
+                                                <option value="Bank Transfer">Bank Transfer</option>
+                                                <option value="UPI">UPI</option>
+                                                <option value="Cheque">Cheque</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-white">Transaction ID <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="buy-transaction-id" placeholder="Enter transaction reference">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label text-white">Amount Paid <span class="text-danger">*</span></label>
+                                            <input type="number" class="form-control" id="buy-amount-paid" placeholder="Enter amount paid">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label text-white">Remarks (Optional)</label>
+                                        <textarea class="form-control" id="buy-remarks" rows="2" placeholder="Staff notes/reason"></textarea>
+                                    </div>
+                                    <div class="alert alert-info py-2 mb-3" id="buy-summary">
+                                        <strong>Total:</strong> <span id="buy-total">₹0</span> for <span id="buy-qty-display">0</span> coupon(s)
+                                    </div>
+                                    <button class="btn btn-warning w-100" onclick="executePurchase()">
+                                        <i class="fas fa-shopping-cart me-2"></i>Complete Purchase
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="card bg-dark border-secondary">
+                                <div class="card-header text-white fw-bold">
+                                    <i class="fas fa-info-circle me-2"></i>Package Information
+                                </div>
+                                <div class="card-body">
+                                    <table class="table table-dark table-sm">
+                                        <thead><tr><th>Package</th><th>Price</th><th>Points</th></tr></thead>
+                                        <tbody>
+                                            <tr><td>Platinum</td><td>₹15,000</td><td>1.0</td></tr>
+                                            <tr><td>Diamond</td><td>₹7,500</td><td>0.5</td></tr>
+                                            <tr><td>Star (Blue)</td><td>₹1,000</td><td>0</td></tr>
+                                            <tr><td>Loyal</td><td>₹500</td><td>0</td></tr>
+                                            <tr id="welcome-row" style="display: none;"><td>Welcome Coupon 🎁</td><td>₹0</td><td>0 (for matching)</td></tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="alert alert-warning py-2 mb-0">
+                                        <small><i class="fas fa-exclamation-triangle me-1"></i>Purchases are auto-approved when staff-initiated. Full audit trail is maintained.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="data-container"></div>
+
+                <nav id="pagination-container" class="mt-4" style="display: none;">
+                    <ul class="pagination justify-content-center" id="pagination"></ul>
+                </nav>
+            </div>
+
+            <div id="no-member-message" class="empty-state">
+                <i class="fas fa-search"></i>
+                <h4 class="text-muted">Enter an MNR ID to view coupons</h4>
+                <p class="text-muted">Search for a member to view their coupon data</p>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal fade transfer-modal" id="transferModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-warning"><i class="fas fa-exchange-alt me-2"></i>Transfer Coupon</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-white">Select Coupon</label>
+                        <select class="form-select" id="transfer-coupon-select">
+                            <option value="">Select a coupon...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white">Target MNR ID</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted">MNR</span>
+                            <input type="text" class="form-control" id="transfer-target-id" placeholder="Enter target member ID" style="text-transform: uppercase;">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-white">Transfer Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="transfer-reason" rows="3" placeholder="Enter reason for transfer (minimum 5 characters)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-transfer" onclick="executeTransfer()">
+                        <i class="fas fa-paper-plane me-1"></i> Transfer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260511a"></script>
+    <script>
+        let currentMnrId = null;
+        let currentTab = 'purchased';
+        let currentPage = 1;
+        let availableForTransfer = [];
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            StaffSidebar.init();
+            StaffHeader.inject('MNR — Coupons', 'fas fa-ticket-alt');
+
+            document.getElementById('search-btn').addEventListener('click', searchMember);
+            document.getElementById('mnr-id-input').addEventListener('keypress', e => { if (e.key === 'Enter') searchMember(); });
+            
+            document.querySelectorAll('#couponTabs .nav-link').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.querySelectorAll('#couponTabs .nav-link').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTab = this.dataset.tab;
+                    currentPage = 1;
+                    updateFiltersForTab();
+                    if (currentMnrId) loadData();
+                });
+            });
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const mnrParam = urlParams.get('mnr_id');
+            if (mnrParam) {
+                document.getElementById('mnr-id-input').value = mnrParam;
+                searchMember();
+            }
+            
+            checkWelcomeCouponAccess();
+        });
+        
+        function checkWelcomeCouponAccess() {
+            const staffData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const staffType = (staffData.staff_type || '').toUpperCase();
+            const roleName = (staffData.role_name || staffData.role || '').toUpperCase();
+            const empCode = (staffData.emp_code || '').toUpperCase();
+            const deptName = (staffData.department_name || '').toLowerCase();
+            
+            const isVGKSupreme = staffType === 'VGK4U' || 
+                                 roleName.includes('VGK4U SUPREME') || 
+                                 roleName === 'EA' || 
+                                 roleName === 'EXECUTIVE ASSISTANT';
+            
+            if (isVGKSupreme) {
+                const welcomeOption = document.getElementById('welcome-option');
+                const welcomeRow = document.getElementById('welcome-row');
+                if (welcomeOption) welcomeOption.style.display = '';
+                if (welcomeRow) welcomeRow.style.display = '';
+            }
+            
+            const canBuyCoupon = empCode === 'MR10001' || deptName.includes('accounts') || deptName.includes('finance');
+            if (!canBuyCoupon) {
+                const buyTab = document.querySelector('[data-tab="buy"]');
+                if (buyTab) buyTab.closest('li').style.display = 'none';
+            }
+
+            const canActivateCoupon = empCode === 'MR10001' ||
+                staffType === 'VGK4U' ||
+                roleName.includes('VGK4U SUPREME') ||
+                roleName === 'EA' ||
+                roleName === 'EXECUTIVE ASSISTANT' ||
+                deptName.includes('sales');
+            if (!canActivateCoupon) {
+                const activateTab = document.querySelector('[data-tab="activate"]');
+                if (activateTab) activateTab.closest('li').style.display = 'none';
+            }
+        }
+        
+        function handlePackageChange() {
+            const pkg = document.getElementById('buy-package-type').value;
+            const fundingContainer = document.getElementById('funding-source-container');
+            const offlineFields = document.getElementById('offline-fields');
+            
+            if (pkg === 'WELCOME') {
+                if (fundingContainer) fundingContainer.style.display = 'none';
+                if (offlineFields) offlineFields.style.display = 'none';
+            } else {
+                if (fundingContainer) fundingContainer.style.display = '';
+                const walletRadio = document.getElementById('funding-wallet');
+                if (walletRadio) walletRadio.disabled = false;
+            }
+            updateBuySummary();
+        }
+
+        function updateFiltersForTab() {
+            const statusSelect = document.getElementById('filter-status');
+            const directionContainer = document.getElementById('direction-filter-container');
+            const transferSection = document.getElementById('transfer-action-section');
+            const buySection = document.getElementById('buy-coupon-section');
+            const filterSection = document.getElementById('filter-section');
+            const dataContainer = document.getElementById('data-container');
+            const statsRow = document.getElementById('stats-row');
+            const paginationContainer = document.getElementById('pagination-container');
+            
+            statusSelect.innerHTML = '<option value="">All Status</option>';
+            
+            const activateSection = document.getElementById('activate-coupon-section');
+            
+            if (currentTab === 'purchased') {
+                statusSelect.innerHTML += '<option value="Pending">Pending</option><option value="Approved">Approved</option><option value="Fulfilled">Fulfilled</option><option value="Rejected">Rejected</option>';
+                directionContainer.style.display = 'none';
+                transferSection.style.display = 'none';
+                buySection.style.display = 'none';
+                activateSection.style.display = 'none';
+                filterSection.style.display = 'block';
+                dataContainer.style.display = 'block';
+                statsRow.style.display = 'flex';
+                paginationContainer.style.display = 'block';
+            } else if (currentTab === 'usage') {
+                statusSelect.innerHTML += '<option value="Active">Active</option><option value="Available">Available</option><option value="Used">Used</option><option value="Transferred">Transferred</option><option value="Expired">Expired</option>';
+                directionContainer.style.display = 'none';
+                transferSection.style.display = 'none';
+                buySection.style.display = 'none';
+                activateSection.style.display = 'none';
+                filterSection.style.display = 'block';
+                dataContainer.style.display = 'block';
+                statsRow.style.display = 'flex';
+                paginationContainer.style.display = 'block';
+            } else if (currentTab === 'transfers') {
+                statusSelect.innerHTML += '<option value="Pending">Pending</option><option value="Approved">Approved</option><option value="Completed">Completed</option><option value="Rejected">Rejected</option>';
+                directionContainer.style.display = 'block';
+                transferSection.style.display = 'block';
+                buySection.style.display = 'none';
+                activateSection.style.display = 'none';
+                filterSection.style.display = 'block';
+                dataContainer.style.display = 'block';
+                statsRow.style.display = 'flex';
+                paginationContainer.style.display = 'block';
+            } else if (currentTab === 'activate') {
+                directionContainer.style.display = 'none';
+                transferSection.style.display = 'none';
+                buySection.style.display = 'none';
+                document.getElementById('activate-coupon-section').style.display = 'block';
+                filterSection.style.display = 'none';
+                dataContainer.style.display = 'none';
+                statsRow.style.display = 'none';
+                paginationContainer.style.display = 'none';
+                loadActivateData();
+            } else if (currentTab === 'buy') {
+                directionContainer.style.display = 'none';
+                transferSection.style.display = 'none';
+                buySection.style.display = 'block';
+                document.getElementById('activate-coupon-section').style.display = 'none';
+                filterSection.style.display = 'none';
+                dataContainer.style.display = 'none';
+                statsRow.style.display = 'none';
+                paginationContainer.style.display = 'none';
+                loadWalletBalance();
+                updateBuySummary();
+            }
+        }
+
+        async function searchMember() {
+            let mnrId = document.getElementById('mnr-id-input').value.trim().toUpperCase();
+            if (!mnrId) return;
+            if (!mnrId.startsWith('MNR')) mnrId = 'MNR' + mnrId;
+            currentMnrId = mnrId;
+            currentPage = 1;
+            
+            document.getElementById('member-info').style.display = 'block';
+            document.getElementById('member-id-display').textContent = mnrId;
+            document.getElementById('content-area').style.display = 'block';
+            document.getElementById('no-member-message').style.display = 'none';
+            
+            updateFiltersForTab();
+            loadData();
+        }
+
+        function applyFilters() {
+            currentPage = 1;
+            loadData();
+        }
+
+        async function loadData() {
+            const statusFilter = document.getElementById('filter-status').value;
+            const packageFilter = document.getElementById('filter-package').value;
+            const directionFilter = document.getElementById('filter-direction').value;
+            const dateFrom = document.getElementById('filter-date-from').value;
+            const dateTo = document.getElementById('filter-date-to').value;
+            
+            let url = `/api/v1/staff/mnr-user/coupons/${currentMnrId}?tab=${currentTab}&page=${currentPage}`;
+            if (statusFilter) url += `&status_filter=${statusFilter}`;
+            if (packageFilter) url += `&package_filter=${packageFilter}`;
+            if (directionFilter) url += `&direction_filter=${directionFilter}`;
+            if (dateFrom) url += `&date_from=${dateFrom}`;
+            if (dateTo) url += `&date_to=${dateTo}`;
+            
+            try {
+                const response = await staffFetch(url);
+                if (!response.ok) throw new Error('Failed to load data');
+                const data = await response.json();
+                
+                document.getElementById('member-name').textContent = data.member_info?.name || currentMnrId;
+                document.getElementById('member-status').textContent = data.member_info?.status || 'Unknown';
+                document.getElementById('member-status').className = 'badge ms-2 ' + (data.member_info?.status === 'Active' ? 'bg-success' : 'bg-secondary');
+                
+                renderStats(data.summary);
+                renderData(data.data);
+                renderPagination(data.data.pagination);
+                
+                if (currentTab === 'transfers' && data.data.available_for_transfer) {
+                    availableForTransfer = data.data.available_for_transfer;
+                    updateTransferCouponSelect();
+                }
+            } catch (error) {
+                document.getElementById('data-container').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+            }
+        }
+
+        function renderStats(summary) {
+            if (!summary) return;
+            const statsRow = document.getElementById('stats-row');
+            
+            if (currentTab === 'purchased') {
+                statsRow.innerHTML = `
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value">${summary.total_requests || 0}</div><div class="stat-label">Total Requests</div></div></div>
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value text-warning">${summary.pending || 0}</div><div class="stat-label">Pending</div></div></div>
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value text-info">${summary.approved || 0}</div><div class="stat-label">Approved</div></div></div>
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value text-success">${summary.fulfilled || 0}</div><div class="stat-label">Fulfilled</div></div></div>
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value text-danger">${summary.rejected || 0}</div><div class="stat-label">Rejected</div></div></div>
+                    <div class="col-md-2"><div class="stat-card"><div class="stat-value">₹${(summary.total_value || 0).toLocaleString('en-IN')}</div><div class="stat-label">Total Value</div></div></div>
+                `;
+            } else if (currentTab === 'usage') {
+                statsRow.innerHTML = `
+                    <div class="col-md-3"><div class="stat-card"><div class="stat-value">${summary.total_coupons || 0}</div><div class="stat-label">Total Coupons</div></div></div>
+                    <div class="col-md-3"><div class="stat-card"><div class="stat-value text-success">${summary.available || 0}</div><div class="stat-label">Available</div></div></div>
+                    <div class="col-md-3"><div class="stat-card"><div class="stat-value text-secondary">${summary.used || 0}</div><div class="stat-label">Used</div></div></div>
+                    <div class="col-md-3"><div class="stat-card"><div class="stat-value text-info">${summary.transferred || 0}</div><div class="stat-label">Transferred</div></div></div>
+                `;
+            } else if (currentTab === 'transfers') {
+                statsRow.innerHTML = `
+                    <div class="col-md-4"><div class="stat-card"><div class="stat-value text-success">${summary.total_incoming || 0}</div><div class="stat-label">Incoming</div></div></div>
+                    <div class="col-md-4"><div class="stat-card"><div class="stat-value text-warning">${summary.total_outgoing || 0}</div><div class="stat-label">Outgoing</div></div></div>
+                    <div class="col-md-4"><div class="stat-card"><div class="stat-value text-info">${summary.available_for_transfer || 0}</div><div class="stat-label">Available for Transfer</div></div></div>
+                `;
+            }
+        }
+
+        function renderData(data) {
+            const container = document.getElementById('data-container');
+            
+            if (currentTab === 'purchased') {
+                const items = data.purchases || [];
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-shopping-cart"></i><h5>No purchase requests found</h5></div>';
+                    return;
+                }
+                container.innerHTML = `
+                    <div class="table-responsive data-table">
+                        <table class="table table-dark mb-0">
+                            <thead><tr><th>ID</th><th>Package</th><th>Value</th><th>Qty</th><th>Total</th><th>Payment</th><th>Status</th><th>Request Date</th><th>Detail</th></tr></thead>
+                            <tbody>${items.map(p => `
+                                <tr>
+                                    <td>#${p.id}</td>
+                                    <td><span class="badge bg-primary">${pkgLabel(p.package_type)}</span></td>
+                                    <td>₹${(p.package_value || 0).toLocaleString('en-IN')}</td>
+                                    <td>${p.quantity}</td>
+                                    <td>₹${(p.total_amount || 0).toLocaleString('en-IN')}</td>
+                                    <td>${p.payment_method || '-'}</td>
+                                    <td><span class="badge-status badge-${p.status?.toLowerCase()}">${p.status}</span></td>
+                                    <td>${p.request_date ? new Date(p.request_date).toLocaleDateString() : '-'}</td>
+                                    <td><button class="btn btn-sm btn-outline-warning" style="font-size:11px;padding:2px 8px;" onclick='showPurchaseDetail(${JSON.stringify(p)})'><i class="fas fa-eye me-1"></i>View</button></td>
+                                </tr>
+                            `).join('')}</tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (currentTab === 'usage') {
+                const items = data.coupons || [];
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-ticket-alt"></i><h5>No coupons found</h5></div>';
+                    return;
+                }
+                container.innerHTML = `
+                    <div class="table-responsive data-table">
+                        <table class="table table-dark mb-0">
+                            <thead><tr><th>Coupon ID</th><th>Type</th><th>Status</th><th>Registered On / Used By</th><th>Generation Date</th><th>Activation Date</th><th>Detail</th></tr></thead>
+                            <tbody>${items.map(c => `
+                                <tr>
+                                    <td>#${c.id}</td>
+                                    <td><span class="badge bg-primary">${pkgLabel(c.coupon_type)}</span></td>
+                                    <td><span class="badge-status badge-${(c.status || '').toLowerCase().replace(' ', '-')}">${c.status || 'Unknown'}</span></td>
+                                    <td>${c.used_by ? `<a href="/staff/mnr-user/profile?mnr_id=${c.used_by.mnr_id}" class="text-warning">${escapeHtml(c.used_by.mnr_id)}</a><br><small class="text-muted">${escapeHtml(c.used_by.name || '')}</small>` : '<span class="text-muted">-</span>'}</td>
+                                    <td>${c.generation_date ? new Date(c.generation_date).toLocaleDateString('en-IN') : '-'}</td>
+                                    <td>${c.activated_at ? new Date(c.activated_at).toLocaleDateString('en-IN') : '-'}</td>
+                                    <td><button class="btn btn-sm btn-outline-warning" style="font-size:11px;padding:2px 8px;" onclick='showCouponDetail(${JSON.stringify(c)})'><i class="fas fa-eye me-1"></i>View</button></td>
+                                </tr>
+                            `).join('')}</tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (currentTab === 'transfers') {
+                const items = data.transfers || [];
+                if (items.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-exchange-alt"></i><h5>No transfers found</h5></div>';
+                    return;
+                }
+                container.innerHTML = `
+                    <div class="table-responsive data-table">
+                        <table class="table table-dark mb-0">
+                            <thead><tr><th>ID</th><th>Direction</th><th>From</th><th>To</th><th>Package</th><th>Status</th><th>Date</th><th>Reason</th></tr></thead>
+                            <tbody>${items.map(t => `
+                                <tr>
+                                    <td>#${t.id}</td>
+                                    <td><span class="badge-status badge-${t.direction}">${t.direction === 'in' ? '↓ IN' : '↑ OUT'}</span></td>
+                                    <td><a href="/staff/mnr-user/profile?mnr_id=${t.from_user.mnr_id}" class="text-warning">${t.from_user.mnr_id}</a><br><small class="text-muted">${t.from_user.name}</small></td>
+                                    <td><a href="/staff/mnr-user/profile?mnr_id=${t.to_user.mnr_id}" class="text-warning">${t.to_user.mnr_id}</a><br><small class="text-muted">${t.to_user.name}</small></td>
+                                    <td><span class="badge bg-primary">${pkgLabel(t.package_type)}</span></td>
+                                    <td><span class="badge-status badge-${t.status?.toLowerCase()}">${t.status}</span></td>
+                                    <td>${t.transfer_date ? new Date(t.transfer_date).toLocaleDateString() : '-'}</td>
+                                    <td><small>${t.transfer_reason || '-'}</small></td>
+                                </tr>
+                            `).join('')}</tbody>
+                        </table>
+                    </div>
+                `;
+            }
+        }
+
+        function renderPagination(pagination) {
+            if (!pagination || pagination.total_pages <= 1) {
+                document.getElementById('pagination-container').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('pagination-container').style.display = 'block';
+            const paginationEl = document.getElementById('pagination');
+            let html = '';
+            
+            if (pagination.page > 1) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${pagination.page - 1})">&laquo;</a></li>`;
+            }
+            
+            for (let i = 1; i <= pagination.total_pages; i++) {
+                if (i === 1 || i === pagination.total_pages || (i >= pagination.page - 2 && i <= pagination.page + 2)) {
+                    html += `<li class="page-item ${i === pagination.page ? 'active' : ''}"><a class="page-link" href="#" onclick="goToPage(${i})">${i}</a></li>`;
+                } else if (i === pagination.page - 3 || i === pagination.page + 3) {
+                    html += `<li class="page-item disabled"><a class="page-link">...</a></li>`;
+                }
+            }
+            
+            if (pagination.page < pagination.total_pages) {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${pagination.page + 1})">&raquo;</a></li>`;
+            }
+            
+            paginationEl.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            loadData();
+        }
+
+        function updateTransferCouponSelect() {
+            const select = document.getElementById('transfer-coupon-select');
+            select.innerHTML = '<option value="">Select a coupon...</option>';
+            availableForTransfer.forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${pkgLabel(c.coupon_type)} - Coupon #${c.id} (${c.status})</option>`;
+            });
+        }
+
+        async function executeTransfer() {
+            const couponId = document.getElementById('transfer-coupon-select').value;
+            let targetId = document.getElementById('transfer-target-id').value.trim().toUpperCase();
+            const reason = document.getElementById('transfer-reason').value.trim();
+            
+            if (!couponId) { alert('Please select a coupon'); return; }
+            if (!targetId) { alert('Please enter target MNR ID'); return; }
+            if (reason.length < 5) { alert('Please enter a valid reason (minimum 5 characters)'); return; }
+            
+            if (!targetId.startsWith('MNR')) targetId = 'MNR' + targetId;
+            
+            if (targetId === currentMnrId) {
+                alert('Cannot transfer to the same user');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/coupons/${currentMnrId}/transfer`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to_user_id: targetId,
+                        coupon_id: parseInt(couponId),
+                        transfer_reason: reason
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Transfer failed');
+                }
+                
+                alert('Transfer successful!');
+                bootstrap.Modal.getInstance(document.getElementById('transferModal')).hide();
+                
+                document.getElementById('transfer-coupon-select').value = '';
+                document.getElementById('transfer-target-id').value = '';
+                document.getElementById('transfer-reason').value = '';
+                
+                loadData();
+            } catch (error) {
+                alert('Transfer failed: ' + error.message);
+            }
+        }
+
+        const PACKAGE_PRICES = { 'PLATINUM': 15000, 'DIAMOND': 7500, 'BLUE': 1000, 'LOYAL': 500, 'WELCOME': 0 };
+        const PACKAGE_LABELS = { '15000': 'Platinum', '7500': 'Diamond', '1000': 'Star (Blue)', '500': 'Loyal', '0': 'Welcome 🎁', 'PLATINUM': 'Platinum', 'DIAMOND': 'Diamond', 'BLUE': 'Star (Blue)', 'LOYAL': 'Loyal', 'WELCOME': 'Welcome 🎁' };
+        function pkgLabel(type) { return PACKAGE_LABELS[type] || type || 'N/A'; }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('input[name="funding-source"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.getElementById('offline-fields').style.display = this.value === 'offline' ? 'block' : 'none';
+                });
+            });
+
+            const packageSelect = document.getElementById('buy-package-type');
+            const qtyInput = document.getElementById('buy-quantity');
+            
+            if (packageSelect) packageSelect.addEventListener('change', updateBuySummary);
+            if (qtyInput) qtyInput.addEventListener('input', updateBuySummary);
+        });
+
+        function updateBuySummary() {
+            const pkg = document.getElementById('buy-package-type').value;
+            const qty = parseInt(document.getElementById('buy-quantity').value) || 0;
+            const price = PACKAGE_PRICES[pkg] || 0;
+            const total = price * qty;
+            
+            document.getElementById('buy-total').textContent = '₹' + total.toLocaleString('en-IN');
+            document.getElementById('buy-qty-display').textContent = qty;
+        }
+
+        async function loadWalletBalance() {
+            if (!currentMnrId) return;
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/members/${currentMnrId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const walletBalance = data.data?.upgrade_wallet_balance || data.data?.wallet?.upgrade_wallet || 0;
+                    document.getElementById('wallet-balance').textContent = '₹' + parseFloat(walletBalance).toLocaleString('en-IN');
+                }
+            } catch (e) { console.error('Failed to load wallet balance', e); }
+        }
+
+        async function executePurchase() {
+            const packageType = document.getElementById('buy-package-type').value;
+            const quantity = parseInt(document.getElementById('buy-quantity').value) || 0;
+            const remarks = document.getElementById('buy-remarks').value.trim();
+            const isWelcome = packageType === 'WELCOME';
+
+            if (!packageType) { alert('Please select a package type'); return; }
+            if (quantity < 1 || quantity > 10) { alert('Quantity must be between 1 and 10'); return; }
+            
+            let fundingSource;
+            if (isWelcome) {
+                fundingSource = 'welcome';
+            } else {
+                fundingSource = document.querySelector('input[name="funding-source"]:checked').value;
+            }
+
+            const paymentMethod = document.getElementById('buy-payment-method').value;
+            const transactionId = document.getElementById('buy-transaction-id').value.trim();
+            const amountPaid = parseFloat(document.getElementById('buy-amount-paid').value) || 0;
+
+            if (!isWelcome && fundingSource === 'offline') {
+                if (!paymentMethod) { alert('Please select payment method'); return; }
+                if (!transactionId) { alert('Please enter transaction ID'); return; }
+                if (amountPaid < PACKAGE_PRICES[packageType] * quantity) {
+                    alert('Amount paid must be at least ₹' + (PACKAGE_PRICES[packageType] * quantity).toLocaleString('en-IN'));
+                    return;
+                }
+            }
+
+            const payload = {
+                package_type: packageType,
+                quantity: quantity,
+                funding_source: fundingSource
+            };
+
+            if (!isWelcome && fundingSource === 'offline') {
+                payload.payment_method = paymentMethod;
+                payload.transaction_id = transactionId;
+                payload.amount_paid = amountPaid;
+            }
+            if (remarks) payload.remarks = remarks;
+
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/coupons/${currentMnrId}/purchase`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Purchase failed');
+                }
+
+                alert(`Purchase successful!\n\n${data.purchase?.quantity}x ${data.purchase?.package_type} coupon(s) created.\nCoupon IDs: ${data.purchase?.coupons_created?.join(', ')}`);
+                
+                document.getElementById('buy-package-type').value = '';
+                document.getElementById('buy-quantity').value = '1';
+                document.getElementById('buy-payment-method').value = '';
+                document.getElementById('buy-transaction-id').value = '';
+                document.getElementById('buy-amount-paid').value = '';
+                document.getElementById('buy-remarks').value = '';
+                document.querySelector('#funding-wallet').checked = true;
+                document.getElementById('offline-fields').style.display = 'none';
+                updateBuySummary();
+                loadWalletBalance();
+                
+                document.querySelector('[data-tab="purchased"]').click();
+            } catch (error) {
+                alert('Purchase failed: ' + error.message);
+            }
+        }
+
+        let eligibleMembersCache = [];
+        let searchDebounceTimer = null;
+        let selectedTargetMember = null;
+        
+        async function loadActivateData() {
+            if (!currentMnrId) return;
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/coupons/${currentMnrId}?tab=activate`);
+                if (!response.ok) throw new Error('Failed to load activation data');
+                const data = await response.json();
+                
+                eligibleMembersCache = data.data?.eligible_members || [];
+                
+                document.getElementById('member-name').textContent = data.member_info?.name || currentMnrId;
+                document.getElementById('member-status').textContent = data.member_info?.status || 'Unknown';
+                document.getElementById('member-status').className = 'badge ms-2 ' + (data.member_info?.status === 'Active' ? 'bg-success' : 'bg-secondary');
+                
+                const couponSelect = document.getElementById('activate-coupon-select');
+                couponSelect.innerHTML = '<option value="">Select available coupon...</option>';
+                if (data.data?.available_coupons?.length > 0) {
+                    data.data.available_coupons.forEach(c => {
+                        couponSelect.innerHTML += `<option value="${c.id}">#${c.id} - ${c.package_name || c.coupon_type}</option>`;
+                    });
+                }
+                
+                clearSelectedMember();
+                document.getElementById('activate-target-search').value = '';
+                document.getElementById('activate-new-phone').value = '';
+                document.getElementById('current-phone-display').textContent = 'Current: --';
+                
+                const activationsList = document.getElementById('recent-activations-list');
+                if (data.data?.recent_activations?.length > 0) {
+                    activationsList.innerHTML = data.data.recent_activations.map(a => `
+                        <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-2 mb-2">
+                            <div>
+                                <small class="text-muted">#${a.coupon_id}</small>
+                                <span class="badge bg-info ms-2">${a.package_name || a.coupon_type}</span>
+                            </div>
+                            <div>
+                                <small class="text-muted">${a.used_by || '-'}</small>
+                                <small class="text-secondary ms-2">${a.activation_date ? new Date(a.activation_date).toLocaleDateString() : '-'}</small>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    activationsList.innerHTML = '<p class="text-muted text-center mb-0">No recent activations</p>';
+                }
+                
+                const eligibleList = document.getElementById('eligible-downline-list');
+                if (eligibleMembersCache.length > 0) {
+                    eligibleList.innerHTML = eligibleMembersCache.map(m => `
+                        <div class="d-flex justify-content-between align-items-center border-bottom border-secondary pb-2 mb-2 eligible-member-item" 
+                             style="cursor: pointer;" 
+                             onclick="selectTargetMember('${m.mnr_id}', '${(m.name || '').replace(/'/g, "\\'")}', '${m.phone || ''}')">
+                            <div>
+                                <strong class="text-white">${m.name}</strong>
+                                <small class="text-muted ms-2">${m.mnr_id}</small>
+                                ${m.referrer_id ? `<small class="text-warning ms-1">(Ref: ${m.referrer_id})</small>` : ''}
+                            </div>
+                            <small class="text-muted">${m.phone || 'No phone'}</small>
+                        </div>
+                    `).join('');
+                } else {
+                    eligibleList.innerHTML = '<p class="text-muted text-center mb-0">No eligible members</p>';
+                }
+                
+            } catch (error) {
+                console.error('Failed to load activation data:', error);
+                document.getElementById('activate-coupon-select').innerHTML = '<option value="">Error loading coupons</option>';
+            }
+        }
+        
+        function debounceSearchMembers() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                searchInactiveMembers();
+            }, 300);
+        }
+        
+        async function searchInactiveMembers() {
+            const searchInput = document.getElementById('activate-target-search');
+            const resultsContainer = document.getElementById('search-results-container');
+            const query = searchInput.value.trim();
+            
+            if (query.length < 1) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/coupons/${currentMnrId}/search-inactive-members?q=${encodeURIComponent(query)}`);
+                if (!response.ok) throw new Error('Search failed');
+                const data = await response.json();
+                
+                if (data.members && data.members.length > 0) {
+                    resultsContainer.innerHTML = '';
+                    data.members.forEach(m => {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'list-group-item list-group-item-action bg-dark text-white border-secondary';
+                        btn.dataset.mnrid = m.mnr_id || '';
+                        btn.dataset.name = m.name || '';
+                        btn.dataset.phone = m.phone || '';
+                        btn.onclick = function() {
+                            selectTargetMember(this.dataset.mnrid, this.dataset.name, this.dataset.phone);
+                        };
+                        btn.innerHTML = `
+                            <div class="d-flex justify-content-between">
+                                <span><strong>${escapeHtml(m.name || '')}</strong> <small class="text-muted">(${m.mnr_id})</small></span>
+                                <small class="text-muted">${m.phone || 'No phone'}</small>
+                            </div>
+                            ${m.referrer_id ? `<small class="text-warning">Ref: ${m.referrer_id}</small>` : ''}
+                        `;
+                        resultsContainer.appendChild(btn);
+                    });
+                    resultsContainer.style.display = 'block';
+                } else {
+                    resultsContainer.innerHTML = '<div class="list-group-item bg-dark text-muted text-center">No inactive members found</div>';
+                    resultsContainer.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Search failed:', error);
+                resultsContainer.innerHTML = '<div class="list-group-item bg-dark text-danger text-center">Search error</div>';
+                resultsContainer.style.display = 'block';
+            }
+        }
+        
+        function selectTargetMember(mnrId, name, phone) {
+            selectedTargetMember = { mnr_id: mnrId, name: name, phone: phone };
+            document.getElementById('activate-target-user').value = mnrId;
+            document.getElementById('search-results-container').style.display = 'none';
+            document.getElementById('activate-target-search').value = '';
+            
+            document.getElementById('selected-member-text').textContent = `${name} (${mnrId})`;
+            document.getElementById('selected-member-display').style.display = 'block';
+            
+            document.getElementById('current-phone-display').textContent = `Current: ${phone || 'No phone set'}`;
+            document.getElementById('activate-new-phone').value = phone || '';
+        }
+        
+        function clearSelectedMember() {
+            selectedTargetMember = null;
+            document.getElementById('activate-target-user').value = '';
+            document.getElementById('selected-member-display').style.display = 'none';
+            document.getElementById('selected-member-text').textContent = '';
+            document.getElementById('current-phone-display').textContent = 'Current: --';
+            document.getElementById('activate-new-phone').value = '';
+        }
+        
+        function onTargetMemberChange() {
+            const targetValue = document.getElementById('activate-target-user').value;
+            const phoneInput = document.getElementById('activate-new-phone');
+            const phoneDisplay = document.getElementById('current-phone-display');
+            
+            if (targetValue && selectedTargetMember) {
+                phoneDisplay.textContent = `Current: ${selectedTargetMember.phone || 'No phone set'}`;
+                phoneInput.value = selectedTargetMember.phone || '';
+            } else {
+                phoneDisplay.textContent = 'Current: --';
+                phoneInput.value = '';
+            }
+        }
+
+        async function executeActivation() {
+            const couponId = document.getElementById('activate-coupon-select').value;
+            const targetUserId = document.getElementById('activate-target-user').value;
+            const newPhoneNumber = document.getElementById('activate-new-phone').value.trim();
+            
+            if (!couponId) {
+                alert('Please select a coupon to activate');
+                return;
+            }
+            
+            if (!currentMnrId) {
+                alert('No member selected');
+                return;
+            }
+            
+            if (newPhoneNumber && (!/^\d{10}$/.test(newPhoneNumber))) {
+                alert('Please enter a valid 10-digit mobile number');
+                return;
+            }
+            
+            const btn = document.getElementById('execute-activation-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Activating...';
+            
+            const payload = {
+                coupon_id: couponId
+            };
+            if (targetUserId) payload.target_user_id = targetUserId;
+            if (newPhoneNumber) payload.new_phone_number = newPhoneNumber;
+            
+            try {
+                const response = await staffFetch(`/api/v1/staff/mnr-user/coupons/${currentMnrId}/activate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Activation failed');
+                }
+                
+                alert(`Activation successful!\n\nCoupon #${data.activation?.coupon_id} activated for ${data.activation?.target_user}.\nPackage: ${data.activation?.package}\nPoints: ${data.activation?.points_assigned}`);
+                
+                loadActivateData();
+                
+            } catch (error) {
+                alert('Activation failed: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-bolt me-2"></i>Activate Coupon';
+            }
+        }
+
+        function _fmtDt(v) {
+            if (!v) return '<span class="text-muted">—</span>';
+            return new Date(v).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        }
+        function _infoRow(label, value) {
+            return `<div class="d-flex align-items-start gap-2 py-2" style="border-bottom:1px solid rgba(255,255,255,0.07);">
+                <div style="min-width:160px;font-size:12px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.4px;">${label}</div>
+                <div style="font-size:13px;color:#e2e8f0;">${value}</div>
+            </div>`;
+        }
+
+        function showPurchaseDetail(p) {
+            let staffWho = '—';
+            const notes = p.superadmin_notes || '';
+            const details = p.payment_details || '';
+            const staffMatch = notes.match(/Staff auto-approved purchase by (\S+)/) || details.match(/Staff (?:purchase|offline purchase) (?:from wallet )?by (\S+)/);
+            if (staffMatch) staffWho = '<span class="badge bg-info text-dark">' + escapeHtml(staffMatch[1]) + '</span>';
+            else if (p.superadmin_approved_by) staffWho = '<span class="badge bg-success">' + escapeHtml(p.superadmin_approved_by) + '</span>';
+
+            let approvedBy = '—';
+            if (p.superadmin_approved_by) approvedBy = '<span class="badge bg-success">' + escapeHtml(p.superadmin_approved_by) + '</span>';
+            let financeBy = '—';
+            if (p.finance_validated_by) financeBy = '<span class="badge bg-primary">' + escapeHtml(p.finance_validated_by) + '</span>';
+
+            document.getElementById('couponDetailModalTitle').textContent = 'Purchase #' + p.id + ' Detail';
+            document.getElementById('couponDetailModalBody').innerHTML =
+                _infoRow('Package', pkgLabel(p.package_type)) +
+                _infoRow('Quantity', p.quantity) +
+                _infoRow('Total Amount', '₹' + (p.total_amount || 0).toLocaleString('en-IN')) +
+                _infoRow('Payment Method', escapeHtml(p.payment_method || '—')) +
+                _infoRow('Transaction ID', escapeHtml(p.transaction_id || '—')) +
+                _infoRow('Status', '<span class="badge-status badge-' + (p.status || '').toLowerCase() + '">' + (p.status || '—') + '</span>') +
+                _infoRow('Request Date', _fmtDt(p.request_date)) +
+                _infoRow('Completed Date', _fmtDt(p.completed_date)) +
+                '<hr style="border-color:rgba(255,255,255,0.1);">' +
+                '<div style="font-size:11px;color:#ffc107;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;"><i class="fas fa-user-shield me-1"></i>Staff Audit Trail</div>' +
+                _infoRow('Generated / Bought By', staffWho) +
+                _infoRow('Admin Approved By', approvedBy) +
+                _infoRow('Finance Validated By', financeBy) +
+                _infoRow('Approval Notes', escapeHtml(notes || '—'));
+
+            new bootstrap.Modal(document.getElementById('couponDetailModal')).show();
+        }
+
+        function showCouponDetail(c) {
+            let activatedBy = '—';
+            if (c.activated_by_staff) {
+                activatedBy = '<span class="badge bg-success">' + escapeHtml(c.activated_by_staff.staff_emp_code) + '</span>';
+                if (c.activated_by_staff.activated_on) activatedBy += ' <small class="text-muted">on ' + _fmtDt(c.activated_by_staff.activated_on) + '</small>';
+            }
+            let usedByHtml = '—';
+            if (c.used_by) {
+                usedByHtml = '<a href="/staff/mnr-user/profile?mnr_id=' + escapeHtml(c.used_by.mnr_id) + '" class="text-warning">' + escapeHtml(c.used_by.mnr_id) + '</a>';
+                if (c.used_by.name) usedByHtml += ' — ' + escapeHtml(c.used_by.name);
+            }
+
+            document.getElementById('couponDetailModalTitle').textContent = 'Coupon #' + c.id + ' Detail';
+            document.getElementById('couponDetailModalBody').innerHTML =
+                _infoRow('Coupon ID', '#' + c.id) +
+                _infoRow('Package', pkgLabel(c.coupon_type)) +
+                _infoRow('Status', '<span class="badge-status badge-' + (c.status || '').toLowerCase().replace(' ','-') + '">' + (c.status || '—') + '</span>') +
+                _infoRow('Generation Date', _fmtDt(c.generation_date)) +
+                _infoRow('Activation Date', _fmtDt(c.activated_at)) +
+                _infoRow('Registered On / Used By', usedByHtml) +
+                '<hr style="border-color:rgba(255,255,255,0.1);">' +
+                '<div style="font-size:11px;color:#ffc107;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;"><i class="fas fa-user-shield me-1"></i>Staff Audit Trail</div>' +
+                _infoRow('Activated By (Staff)', activatedBy);
+
+            new bootstrap.Modal(document.getElementById('couponDetailModal')).show();
+        }
+    </script>
+
+    <div class="modal fade" id="couponDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background:#1a2035;color:#e2e8f0;border:1px solid rgba(255,255,255,0.1);">
+                <div class="modal-header" style="background:rgba(255,193,7,0.15);border-bottom:1px solid rgba(255,193,7,0.3);">
+                    <h5 class="modal-title" id="couponDetailModalTitle" style="color:#ffc107;"><i class="fas fa-ticket-alt me-2"></i>Coupon Detail</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="couponDetailModalBody" style="padding:16px 20px;max-height:70vh;overflow-y:auto;"></div>
+                <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,0.1);">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

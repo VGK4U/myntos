@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGK Cash Income — Sales Review</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;background:#f0fdf4}
+        .main-content{padding:24px}
+        .page-header{background:linear-gradient(135deg,#064e3b,#059669);border-radius:14px;padding:24px 28px;color:#fff;margin-bottom:24px}
+        .page-header h1{font-size:22px;font-weight:800;margin-bottom:6px}
+        .page-header p{font-size:14px;opacity:.85;margin:0}
+        .workflow-steps{display:flex;gap:0;margin-bottom:24px;border-radius:10px;overflow:hidden;border:1.5px solid #bbf7d0}
+        .step{flex:1;padding:12px 16px;background:#f0fdf4;font-size:12px;font-weight:600;color:#6b7280;text-align:center;border-right:1.5px solid #bbf7d0}
+        .step:last-child{border-right:none}
+        .step.active{background:#059669;color:#fff}
+        .step.done{background:#d1fae5;color:#065f46}
+        .summary-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+        .sum-card{flex:1;min-width:140px;background:#fff;border-radius:12px;padding:16px 18px;border:1.5px solid #d1fae5;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        .sum-card .label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+        .sum-card .value{font-size:22px;font-weight:800;color:#059669}
+        .sum-card .value.amber{color:#d97706}
+        .sum-card .value.red{color:#dc2626}
+        .filter-row{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+        .filter-row input,.filter-row select{border:1.5px solid #d1fae5;border-radius:8px;padding:8px 12px;font-size:13px;outline:none}
+        .table-wrap{background:#fff;border-radius:12px;border:1.5px solid #d1fae5;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+        table{width:100%;border-collapse:collapse}
+        thead tr{background:#f0fdf4}
+        th{padding:12px 14px;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.05em;border-bottom:1.5px solid #d1fae5;white-space:nowrap}
+        td{padding:11px 14px;font-size:13px;color:#374151;border-bottom:1px solid #f0fdf4;vertical-align:middle}
+        tr:last-child td{border-bottom:none}
+        tr:hover td{background:#f9fafb}
+        .badge-draft{background:#fef3c7;color:#92400e;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
+        .badge-pending{background:#dbeafe;color:#1e40af;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
+        .badge-cancelled{background:#fee2e2;color:#991b1b;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700}
+        .level-pill{background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700}
+        .btn-confirm{background:#059669;color:#fff;border:none;border-radius:7px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
+        .btn-confirm:hover{background:#047857}
+        .btn-reject{background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:7px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer}
+        .btn-reject:hover{background:#fef2f2}
+        .empty-state{padding:48px;text-align:center;color:#9ca3af}
+        .empty-state i{font-size:48px;margin-bottom:12px;opacity:.4}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center}
+        .modal-overlay.show{display:flex}
+        .modal-box{background:#fff;border-radius:14px;padding:28px;width:480px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+        .modal-title{font-size:16px;font-weight:800;color:#111;margin-bottom:16px}
+        .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+        .info-item label{font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em}
+        .info-item .val{font-size:15px;font-weight:700;color:#111}
+        .form-label{font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;display:block}
+        textarea,input[type=text]{width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:9px 12px;font-size:13px;outline:none;resize:vertical}
+        textarea:focus,input[type=text]:focus{border-color:#059669}
+        .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+        .btn-cancel-modal{background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer}
+        .btn-proceed-confirm{background:#059669;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer}
+        .btn-proceed-reject{background:#dc2626;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer}
+        .toast-wrap{position:fixed;top:70px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+        .toast-msg{background:#111;color:#fff;border-radius:8px;padding:10px 18px;font-size:13px;font-weight:600;animation:fadeIn .2s}
+        .toast-msg.success{background:#059669}
+        .toast-msg.error{background:#dc2626}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        @media(max-width:768px){.info-grid{grid-template-columns:1fr}.summary-row{flex-direction:column}}
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+
+    <div class="page-header">
+        <h1><i class="fas fa-clipboard-check me-2"></i>Cash Income — Sales Confirmation</h1>
+        <p>Review DRAFT income entries triggered by completed CRM deals. Confirm to credit partners; reject to cancel.</p>
+    </div>
+
+    <div class="workflow-steps">
+        <div class="step active"><i class="fas fa-file-alt me-1"></i>1. DRAFT (Sales Review)</div>
+        <div class="step"><i class="fas fa-clock me-1"></i>2. PENDING (Accounts)</div>
+        <div class="step"><i class="fas fa-check me-1"></i>3. RELEASED (Paid)</div>
+    </div>
+
+    <div class="summary-row" id="summaryRow">
+        <div class="sum-card"><div class="label">Draft Entries</div><div class="value amber" id="sumDraft">—</div></div>
+        <div class="sum-card"><div class="label">Total Amount</div><div class="value" id="sumAmount">—</div></div>
+        <div class="sum-card"><div class="label">Pending (Accounts)</div><div class="value" id="sumPending">—</div></div>
+        <div class="sum-card"><div class="label">Released (Paid)</div><div class="value" id="sumReleased">—</div></div>
+    </div>
+
+    <div class="filter-row">
+        <input type="text" id="searchInput" placeholder="Search partner, client, entry #…" oninput="filterTable()" style="min-width:220px">
+        <button onclick="loadDrafts()" style="background:#059669;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer"><i class="fas fa-sync me-1"></i>Refresh</button>
+        <span id="lastRefresh" style="font-size:11px;color:#9ca3af"></span>
+    </div>
+
+    <div class="table-wrap">
+        <table id="draftTable">
+            <thead>
+                <tr>
+                    <th>Entry #</th>
+                    <th>Partner</th>
+                    <th>Level</th>
+                    <th>Client</th>
+                    <th>Category</th>
+                    <th>Value</th>
+                    <th title="Locked at completion — actual payout base">Confirmed &#10003;</th>
+                    <th>Commission %</th>
+                    <th>Cash Income</th>
+                    <th>Points Debit</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="draftBody">
+                <tr><td colspan="11" class="empty-state"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+        <div class="modal-title"><i class="fas fa-check-circle me-2" style="color:#059669"></i>Confirm Cash Income Entry</div>
+        <div class="info-grid" id="confirmInfoGrid"></div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;font-size:12px;color:#065f46;margin-bottom:14px">
+            <strong>On confirmation:</strong> VGK Discount Credits (points) will be debited from the partner's balance. If points are insufficient, income is credited anyway (points debit waived). Cash income will move to PENDING status for Accounts release.
+        </div>
+        <label class="form-label">Notes (optional)</label>
+        <textarea id="confirmNotes" rows="2" placeholder="Add any remarks…"></textarea>
+        <div class="modal-actions">
+            <button class="btn-cancel-modal" onclick="closeModals()">Cancel</button>
+            <button class="btn-proceed-confirm" onclick="doConfirm()"><i class="fas fa-check me-1"></i>Confirm Entry</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal-overlay" id="rejectModal">
+    <div class="modal-box">
+        <div class="modal-title"><i class="fas fa-times-circle me-2" style="color:#dc2626"></i>Reject Cash Income Entry</div>
+        <div class="info-grid" id="rejectInfoGrid"></div>
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;font-size:12px;color:#991b1b;margin-bottom:14px">
+            <strong>On rejection:</strong> Entry will be CANCELLED. No points or cash movement will occur. This action cannot be undone.
+        </div>
+        <label class="form-label">Rejection Reason <span style="color:#dc2626">*</span></label>
+        <textarea id="rejectReason" rows="2" placeholder="Enter reason for rejection…"></textarea>
+        <div class="modal-actions">
+            <button class="btn-cancel-modal" onclick="closeModals()">Cancel</button>
+            <button class="btn-proceed-reject" onclick="doReject()"><i class="fas fa-times me-1"></i>Reject Entry</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const API = '/api/v1';
+let companyId = null;
+let selectedEntry = null;
+let allRows = [];
+
+function getStaffToken() {
+    return localStorage.getItem('staff_token') || getCookie('staff_token') || '';
+}
+function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+}
+function staffLogout() {
+    localStorage.clear(); document.cookie = 'staff_token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
+    location.href = '/staff/login';
+}
+function showToast(msg, type='success') {
+    const t = document.createElement('div');
+    t.className = `toast-msg ${type}`; t.textContent = msg;
+    document.getElementById('toastWrap').appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+}
+function fmt(n) { return '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(s) { if (!s) return '—'; const d = new Date(s); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+
+async function initPage() {
+    const token = getStaffToken();
+    if (!token) { location.href = '/staff/login'; return; }
+    try {
+        const r = await fetch(`${API}/staff/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!r.ok) { location.href = '/staff/login'; return; }
+        const d = await r.json();
+        const emp = d.employee || d;
+        companyId = emp.company_id;
+    } catch (e) { console.error('[initPage]', e); location.href = '/staff/login'; return; }
+    await loadDrafts();
+    await loadSummary();
+}
+
+async function loadSummary() {
+    const token = getStaffToken();
+    try {
+        const r = await fetch(`${API}/vgk/staff/vgk/wallet/summary?company_id=${companyId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await r.json();
+        if (d.success) {
+            document.getElementById('sumDraft').textContent = d.stats.draft_entries;
+            document.getElementById('sumAmount').textContent = fmt(d.stats.pending_amount);
+            document.getElementById('sumPending').textContent = d.stats.pending_entries;
+            document.getElementById('sumReleased').textContent = '—';
+        }
+    } catch {}
+}
+
+async function loadDrafts() {
+    const token = getStaffToken();
+    document.getElementById('draftBody').innerHTML = '<tr><td colspan="11" class="empty-state"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Loading…</td></tr>';
+    try {
+        const r = await fetch(`${API}/vgk/staff/vgk/cash-income/drafts?company_id=${companyId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const d = await r.json();
+        document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+        allRows = d.data || [];
+        renderTable(allRows);
+    } catch (e) {
+        document.getElementById('draftBody').innerHTML = `<tr><td colspan="11" class="empty-state"><i class="fas fa-exclamation-triangle fa-2x"></i><br>Failed to load — ${e.message}</td></tr>`;
+    }
+}
+
+function renderTable(rows) {
+    const tbody = document.getElementById('draftBody');
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-state"><i class="fas fa-check-circle fa-3x" style="color:#059669"></i><br><strong style="color:#059669">All clear!</strong><br>No DRAFT entries pending review.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map(r => `
+        <tr>
+            <td style="font-weight:700;font-family:monospace">${r.entry_number}</td>
+            <td>
+                <div style="font-weight:700">${r.partner_name || '—'}</div>
+                <div style="font-size:11px;color:#6b7280">${r.partner_code || ''}</div>
+            </td>
+            <td><span class="level-pill">L${r.level} ${r.level===1?'(Self)':r.level===2?'(L2)':r.level===3?'(L3)':'(L4)'}</span></td>
+            <td>${r.client_name || '—'}</td>
+            <td style="font-size:12px">${r.category_name || '—'}</td>
+            <td>${fmt(r.deal_value_excl_tax || r.deal_value_total)}</td>
+            <td>${r.confirmed_final_value != null ? `<span style="font-weight:700;color:#92400e;background:#fef3c7;padding:1px 6px;border-radius:4px;font-size:11px;border:1px solid #fcd34d">&#128274; ${fmt(r.confirmed_final_value)}</span>` : '<span style="color:#9ca3af;font-size:11px">—</span>'}</td>
+            <td style="text-align:center">${Number(r.commission_pct).toFixed(2)}%</td>
+            <td style="font-weight:800;color:#059669">${fmt(r.commission_amount)}</td>
+            <td style="color:#d97706">${fmt(r.points_debit_required)} pts</td>
+            <td style="font-size:12px;color:#6b7280">${fmtDate(r.created_at)}</td>
+            <td style="white-space:nowrap">
+                <button class="btn-confirm me-1" onclick="openConfirm(${JSON.stringify(r).replace(/"/g,'&quot;')})"><i class="fas fa-check me-1"></i>Confirm</button>
+                <button class="btn-reject" onclick="openReject(${JSON.stringify(r).replace(/"/g,'&quot;')})"><i class="fas fa-times me-1"></i>Reject</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    renderTable(allRows.filter(r =>
+        (r.entry_number||'').toLowerCase().includes(q) ||
+        (r.partner_name||'').toLowerCase().includes(q) ||
+        (r.partner_code||'').toLowerCase().includes(q) ||
+        (r.client_name||'').toLowerCase().includes(q) ||
+        (r.category_name||'').toLowerCase().includes(q)
+    ));
+}
+
+function infoGrid(r) {
+    return `
+        <div class="info-item"><label>Entry #</label><div class="val" style="font-family:monospace">${r.entry_number}</div></div>
+        <div class="info-item"><label>Partner</label><div class="val">${r.partner_name||'—'} <small style="color:#6b7280">(${r.partner_code||''})</small></div></div>
+        <div class="info-item"><label>Level</label><div class="val">L${r.level} — ${r.level_label||''}</div></div>
+        <div class="info-item"><label>Cash Income</label><div class="val" style="color:#059669">${fmt(r.commission_amount)}</div></div>
+        <div class="info-item"><label>Points to Debit</label><div class="val" style="color:#d97706">${Number(r.points_debit_required||0).toLocaleString()} pts</div></div>
+        <div class="info-item"><label>Client</label><div class="val">${r.client_name||'—'}</div></div>
+    `;
+}
+
+function openConfirm(r) {
+    selectedEntry = r;
+    document.getElementById('confirmInfoGrid').innerHTML = infoGrid(r);
+    document.getElementById('confirmNotes').value = '';
+    document.getElementById('confirmModal').classList.add('show');
+}
+function openReject(r) {
+    selectedEntry = r;
+    document.getElementById('rejectInfoGrid').innerHTML = infoGrid(r);
+    document.getElementById('rejectReason').value = '';
+    document.getElementById('rejectModal').classList.add('show');
+}
+function closeModals() {
+    document.getElementById('confirmModal').classList.remove('show');
+    document.getElementById('rejectModal').classList.remove('show');
+    selectedEntry = null;
+}
+
+async function doConfirm() {
+    if (!selectedEntry) return;
+    const token = getStaffToken();
+    const btn = document.querySelector('#confirmModal .btn-proceed-confirm');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing…';
+    try {
+        const r = await fetch(`${API}/vgk/staff/vgk/cash-income/${selectedEntry.id}/confirm?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'confirm', notes: document.getElementById('confirmNotes').value })
+        });
+        const d = await r.json();
+        if (r.ok && d.success) {
+            showToast(`✅ ${selectedEntry.entry_number} confirmed — ${fmt(d.commission_amount)} credited`, 'success');
+            closeModals(); loadDrafts(); loadSummary();
+        } else {
+            showToast(d.detail || d.error || 'Confirmation failed', 'error');
+        }
+    } catch (e) {
+        showToast('Network error: ' + e.message, 'error');
+    }
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-check me-1"></i>Confirm Entry';
+}
+
+async function doReject() {
+    if (!selectedEntry) return;
+    const reason = document.getElementById('rejectReason').value.trim();
+    if (!reason) { showToast('Please enter a rejection reason', 'error'); return; }
+    const token = getStaffToken();
+    const btn = document.querySelector('#rejectModal .btn-proceed-reject');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing…';
+    try {
+        const r = await fetch(`${API}/vgk/staff/vgk/cash-income/${selectedEntry.id}/confirm?company_id=${companyId}`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'reject', rejection_reason: reason })
+        });
+        const d = await r.json();
+        if (r.ok && d.success) {
+            showToast(`Entry ${selectedEntry.entry_number} rejected`, 'success');
+            closeModals(); loadDrafts(); loadSummary();
+        } else {
+            showToast(d.detail || d.error || 'Rejection failed', 'error');
+        }
+    } catch (e) {
+        showToast('Network error: ' + e.message, 'error');
+    }
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-times me-1"></i>Reject Entry';
+}
+
+document.querySelectorAll('.modal-overlay').forEach(m => m.addEventListener('click', e => { if (e.target === m) closeModals(); }));
+document.addEventListener('DOMContentLoaded', async () => {
+    await StaffSidebar.init();
+    StaffHeader.inject('Cash Income — Sales', 'fas fa-file-invoice-dollar');
+    await initPage();
+});
+</script>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+</body>
+</html>

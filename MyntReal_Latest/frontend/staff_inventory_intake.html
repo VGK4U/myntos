@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase Intake Validation - Inventory Management</title>
+    <script>
+    (function() {
+        try {
+            var match = document.cookie.match(/(?:^|;\s*)staff_token=([^;]+)/);
+            if (match && match[1]) {
+                var cookieToken = decodeURIComponent(match[1]);
+                var localToken = localStorage.getItem('staff_token');
+                if (cookieToken && cookieToken !== localToken) {
+                    localStorage.setItem('staff_token', cookieToken);
+                }
+            }
+        } catch(e) {}
+    })();
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .filter-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+        .filter-row select, .filter-row input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 150px; }
+        .btn-primary-custom { background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .btn-secondary:hover { background: #e5e7eb; }
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-item { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-item .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .summary-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .summary-item.pending .value { color: #f59e0b; }
+        .summary-item.received .value { color: #3b82f6; }
+        .summary-item.qc .value { color: #8b5cf6; }
+        .summary-item.approved .value { color: #10b981; }
+        .summary-item.rejected .value { color: #dc2626; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .qty-cell { font-weight: 600; font-family: monospace; }
+        .qty-ordered { color: #6b7280; }
+        .qty-received { color: #3b82f6; }
+        .qty-passed { color: #059669; }
+        .qty-rejected { color: #dc2626; }
+        .qty-pending { color: #f59e0b; }
+        .badge-status { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-PENDING { background: #fef3c7; color: #d97706; }
+        .badge-RECEIVED { background: #dbeafe; color: #1d4ed8; }
+        .badge-QC_IN_PROGRESS { background: #e0e7ff; color: #4f46e5; }
+        .badge-QC_COMPLETE { background: #d1fae5; color: #059669; }
+        .badge-AWAITING_APPROVAL { background: #fef3c7; color: #d97706; }
+        .badge-APPROVED { background: #a7f3d0; color: #047857; }
+        .badge-REJECTED { background: #fee2e2; color: #dc2626; }
+        .badge-PARTIAL { background: #e0e7ff; color: #4f46e5; }
+        .btn-action { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; margin-right: 4px; }
+        .btn-view { background: #f3f4f6; color: #374151; }
+        .btn-view:hover { background: #374151; color: white; }
+        .btn-receive { background: #dbeafe; color: #1d4ed8; }
+        .btn-receive:hover { background: #1d4ed8; color: white; }
+        .btn-qc { background: #e0e7ff; color: #4f46e5; }
+        .btn-qc:hover { background: #4f46e5; color: white; }
+        .btn-approve { background: #d1fae5; color: #059669; }
+        .btn-approve:hover { background: #059669; color: white; }
+        .btn-reject { background: #fee2e2; color: #dc2626; }
+        .btn-reject:hover { background: #dc2626; color: white; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #f59e0b; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        
+        .pagination { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+        .pagination button { padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination button.active { background: #f59e0b; color: white; border-color: #f59e0b; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 1000px; width: 95%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; background: white; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .info-item { background: #f9fafb; padding: 12px; border-radius: 8px; }
+        .info-item label { font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        .info-item .value { font-size: 14px; font-weight: 600; color: #1f2937; margin-top: 4px; }
+        .qty-compare { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+        .qty-compare .arrow { color: #9ca3af; }
+        .qc-checklist { background: #f9fafb; padding: 16px; border-radius: 8px; margin-top: 12px; }
+        .qc-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+        .qc-item:last-child { border-bottom: none; }
+        .qc-item label { font-weight: 500; color: #374151; }
+        .qc-radio-group { display: flex; gap: 16px; }
+        .qc-radio { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        .qc-radio input { cursor: pointer; }
+        .lifecycle-timeline { padding: 20px 0; }
+        .lifecycle-event { display: flex; gap: 16px; padding: 12px 0; border-left: 2px solid #e5e7eb; margin-left: 8px; padding-left: 24px; position: relative; }
+        .lifecycle-event::before { content: ''; position: absolute; left: -6px; top: 16px; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; border: 2px solid white; }
+        .lifecycle-event.first::before { background: #059669; }
+        .lifecycle-event .event-time { font-size: 12px; color: #6b7280; min-width: 120px; }
+        .lifecycle-event .event-details { flex: 1; }
+        .lifecycle-event .event-type { font-weight: 600; color: #1f2937; }
+        .lifecycle-event .event-notes { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    </style>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content" id="mainContent">
+            <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-header">
+                <div>
+                    <h1>Purchase Intake Validation</h1>
+                    <p>Track ordered vs received vs QC-passed quantities for all purchases</p>
+                </div>
+                <button class="btn-primary-custom" onclick="loadDashboard()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+
+            <div class="summary-row" id="summaryStats">
+                <div class="summary-item pending">
+                    <div class="value" id="statPending">0</div>
+                    <div class="label">Pending Receipt</div>
+                </div>
+                <div class="summary-item received">
+                    <div class="value" id="statReceived">0</div>
+                    <div class="label">Awaiting QC</div>
+                </div>
+                <div class="summary-item qc">
+                    <div class="value" id="statQC">0</div>
+                    <div class="label">QC Complete</div>
+                </div>
+                <div class="summary-item approved">
+                    <div class="value" id="statApproved">0</div>
+                    <div class="label">Approved</div>
+                </div>
+                <div class="summary-item rejected">
+                    <div class="value" id="statRejected">0</div>
+                    <div class="label">Items Rejected</div>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <select id="filterCompany" onchange="loadBatches()">
+                    <option value="">All Companies</option>
+                </select>
+                <select id="filterStatus" onchange="loadBatches()">
+                    <option value="">All Statuses</option>
+                    <option value="PENDING">Pending Receipt</option>
+                    <option value="RECEIVED">Received</option>
+                    <option value="QC_IN_PROGRESS">QC In Progress</option>
+                    <option value="QC_COMPLETE">QC Complete</option>
+                    <option value="AWAITING_APPROVAL">Awaiting Approval</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="PARTIAL">Partial</option>
+                </select>
+                <select id="filterVendor" onchange="loadBatches()">
+                    <option value="">All Vendors</option>
+                </select>
+                <input type="date" id="filterDateFrom" onchange="loadBatches()" placeholder="From Date">
+                <input type="date" id="filterDateTo" onchange="loadBatches()" placeholder="To Date">
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span><i class="fas fa-boxes"></i> Intake Batches</span>
+                    <span class="text-muted" id="batchCount">0 batches</span>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table class="data-table" id="batchesTable">
+                            <thead>
+                                <tr>
+                                    <th>Batch #</th>
+                                    <th>Invoice</th>
+                                    <th>Vendor</th>
+                                    <th>Ordered</th>
+                                    <th>Received</th>
+                                    <th>QC Passed</th>
+                                    <th>Rejected</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batchesBody">
+                                <tr><td colspan="10" class="loading-spinner"><div class="spinner"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="viewModalTitle">Batch Details</h3>
+                <button class="modal-close" onclick="closeModal('viewModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="viewModalBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('viewModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="receiveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Record Physical Receipt</h3>
+                <button class="modal-close" onclick="closeModal('receiveModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="receiveModalBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('receiveModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="submitReceipt()">
+                    <i class="fas fa-check"></i> Confirm Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="qcModal">
+        <div class="modal-content" style="max-width: 1200px;">
+            <div class="modal-header">
+                <h3>QC Inspection</h3>
+                <button class="modal-close" onclick="closeModal('qcModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="qcModalBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('qcModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="submitQC()">
+                    <i class="fas fa-clipboard-check"></i> Submit QC Results
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="approveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Approve Intake Batch</h3>
+                <button class="modal-close" onclick="closeModal('approveModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="approveModalBody"></div>
+                <div class="form-group">
+                    <label>Approval Notes</label>
+                    <textarea id="approvalNotes" placeholder="Optional notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('approveModal')">Cancel</button>
+                <button class="btn-reject" onclick="rejectBatch()">
+                    <i class="fas fa-times"></i> Reject
+                </button>
+                <button class="btn-approve" onclick="approveBatch()">
+                    <i class="fas fa-check"></i> Approve & Add to Stock
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let currentUser = null;
+        let currentBatchId = null;
+        let currentPage = 1;
+        const pageSize = 20;
+
+        function getAuthToken() {
+            let token = localStorage.getItem('staff_token');
+            if (!token) {
+                const m = document.cookie.match(/(?:^|;\s*)staff_token=([^;]+)/);
+                if (m) {
+                    token = decodeURIComponent(m[1]);
+                    localStorage.setItem('staff_token', token);
+                }
+            }
+            return token;
+        }
+
+        async function init() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Purchase Intake Validation', 'fas fa-sync-alt');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            await loadCurrentUser();
+            await Promise.all([loadCompanies(), loadVendors()]);
+            await loadDashboard();
+            await loadBatches();
+        }
+
+        async function loadCurrentUser() {
+            try {
+                const token = getAuthToken();
+                if (!token) {
+                    window.location.href = '/staff/login';
+                    return;
+                }
+                const res = await fetch(`${API_BASE}/staff/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Not authenticated');
+                currentUser = await res.json();
+                const avatarEl = document.getElementById('userAvatarHeader');
+                const nameEl = document.getElementById('userNameHeader');
+                const idEl = document.getElementById('userIdHeader');
+                const roleEl = document.getElementById('userRoleHeader');
+                if (avatarEl) avatarEl.textContent = (currentUser.first_name?.[0] || '') + (currentUser.last_name?.[0] || '');
+                if (nameEl) nameEl.textContent = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`;
+                if (idEl) idEl.textContent = currentUser.employee_id || '';
+                if (roleEl) roleEl.textContent = currentUser.role || '';
+            } catch (e) {
+                console.error('Auth error:', e);
+                if (e.message === 'Not authenticated') {
+                    window.location.href = '/staff/login';
+                }
+            }
+        }
+
+        async function loadCompanies() {
+            try {
+                const token = getAuthToken();
+                const res = await fetch(`${API_BASE}/staff/accounts/companies`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const select = document.getElementById('filterCompany');
+                    (data.companies || []).forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.company_name || c.name;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error('Load companies error:', e); }
+        }
+
+        async function loadVendors() {
+            try {
+                const token = getAuthToken();
+                const res = await fetch(`${API_BASE}/staff/accounts/vendors?page_size=100`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const select = document.getElementById('filterVendor');
+                    (data.data?.items || data.items || []).forEach(v => {
+                        const opt = document.createElement('option');
+                        opt.value = v.id;
+                        opt.textContent = v.vendor_name;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) { console.error('Load vendors error:', e); }
+        }
+
+        async function loadDashboard() {
+            try {
+                const token = getAuthToken();
+                const companyId = document.getElementById('filterCompany').value;
+                let url = `${API_BASE}/staff/accounts/purchase-intake/dashboard`;
+                if (companyId) url += `?company_id=${companyId}`;
+                
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const stats = data.data || {};
+                    document.getElementById('statPending').textContent = stats.pending_count || 0;
+                    document.getElementById('statReceived').textContent = stats.received_count || 0;
+                    document.getElementById('statQC').textContent = stats.qc_complete_count || 0;
+                    document.getElementById('statApproved').textContent = stats.approved_count || 0;
+                    document.getElementById('statRejected').textContent = stats.rejected_items || 0;
+                }
+            } catch (e) { console.error('Load dashboard error:', e); }
+        }
+
+        async function loadBatches() {
+            const token = getAuthToken();
+            const tbody = document.getElementById('batchesBody');
+            tbody.innerHTML = '<tr><td colspan="10" class="loading-spinner"><div class="spinner"></div></td></tr>';
+
+            try {
+                const params = new URLSearchParams();
+                params.append('page', currentPage);
+                params.append('page_size', pageSize);
+                
+                const companyId = document.getElementById('filterCompany').value;
+                const status = document.getElementById('filterStatus').value;
+                const vendorId = document.getElementById('filterVendor').value;
+                const dateFrom = document.getElementById('filterDateFrom').value;
+                const dateTo = document.getElementById('filterDateTo').value;
+                
+                if (companyId) params.append('company_id', companyId);
+                if (status) params.append('status', status);
+                if (vendorId) params.append('vendor_id', vendorId);
+                if (dateFrom) params.append('date_from', dateFrom);
+                if (dateTo) params.append('date_to', dateTo);
+
+                const res = await fetch(`${API_BASE}/staff/accounts/purchase-intake/batches?${params}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!res.ok) throw new Error('Failed to load batches');
+                const data = await res.json();
+                const batches = data.data?.items || [];
+                const total = data.data?.total || 0;
+                
+                document.getElementById('batchCount').textContent = `${total} batches`;
+
+                if (batches.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="10" class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No intake batches found</p>
+                    </td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = batches.map(b => `
+                    <tr>
+                        <td><strong>${b.batch_number || '--'}</strong></td>
+                        <td>${b.invoice_number || '--'}</td>
+                        <td>${b.vendor_name || '--'}</td>
+                        <td class="qty-cell qty-ordered">${b.total_ordered_qty || 0}</td>
+                        <td class="qty-cell qty-received">${b.total_received_qty || 0}</td>
+                        <td class="qty-cell qty-passed">${b.total_accepted_qty || 0}</td>
+                        <td class="qty-cell qty-rejected">${b.total_rejected_qty || 0}</td>
+                        <td><span class="badge-status badge-${b.status}">${formatStatus(b.status)}</span></td>
+                        <td>${formatDate(b.created_at)}</td>
+                        <td>
+                            <button class="btn-action btn-view" onclick="viewBatch(${b.id})" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${b.status === 'PENDING' ? `
+                                <button class="btn-action btn-receive" onclick="openReceiveModal(${b.id})" title="Record Receipt">
+                                    <i class="fas fa-truck-loading"></i>
+                                </button>
+                            ` : ''}
+                            ${b.status === 'RECEIVED' || b.status === 'QC_IN_PROGRESS' ? `
+                                <button class="btn-action btn-qc" onclick="openQCModal(${b.id})" title="QC Inspection">
+                                    <i class="fas fa-clipboard-check"></i>
+                                </button>
+                            ` : ''}
+                            ${b.status === 'QC_COMPLETE' || b.status === 'AWAITING_APPROVAL' ? `
+                                <button class="btn-action btn-approve" onclick="openApproveModal(${b.id})" title="Approve">
+                                    <i class="fas fa-check-circle"></i>
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+
+                renderPagination(total, data.data?.total_pages || 1);
+            } catch (e) {
+                console.error('Load batches error:', e);
+                tbody.innerHTML = `<tr><td colspan="10" class="empty-state">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Error loading batches</p>
+                </td></tr>`;
+            }
+        }
+
+        function formatStatus(status) {
+            const map = {
+                'PENDING': 'Pending Receipt',
+                'RECEIVED': 'Received',
+                'QC_IN_PROGRESS': 'QC In Progress',
+                'QC_COMPLETE': 'QC Complete',
+                'AWAITING_APPROVAL': 'Awaiting Approval',
+                'APPROVED': 'Approved',
+                'REJECTED': 'Rejected',
+                'PARTIAL': 'Partial'
+            };
+            return map[status] || status;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '--';
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function renderPagination(total, totalPages) {
+            const pagination = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            let html = '';
+            html += `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">Prev</button>`;
+            for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+                html += `<button class="${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            if (totalPages > 5) html += `<span>...</span>`;
+            html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next</button>`;
+            pagination.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            loadBatches();
+        }
+
+        async function viewBatch(batchId) {
+            const token = getAuthToken();
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/purchase-intake/batches/${batchId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Failed to load batch');
+                const data = await res.json();
+                const batch = data.data;
+
+                document.getElementById('viewModalTitle').textContent = `Batch ${batch.batch_number}`;
+                document.getElementById('viewModalBody').innerHTML = `
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Invoice Number</label>
+                            <div class="value">${batch.invoice_number || '--'}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Vendor</label>
+                            <div class="value">${batch.vendor_name || '--'}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Status</label>
+                            <div class="value"><span class="badge-status badge-${batch.status}">${formatStatus(batch.status)}</span></div>
+                        </div>
+                        <div class="info-item">
+                            <label>Created</label>
+                            <div class="value">${formatDate(batch.created_at)}</div>
+                        </div>
+                    </div>
+                    <h5 style="margin: 20px 0 12px 0;">Quantity Summary</h5>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Total Ordered</label>
+                            <div class="value qty-ordered">${batch.total_ordered_qty || 0}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Total Received</label>
+                            <div class="value qty-received">${batch.total_received_qty || 0}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>QC Passed</label>
+                            <div class="value qty-passed">${batch.total_accepted_qty || 0}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Rejected</label>
+                            <div class="value qty-rejected">${batch.total_rejected_qty || 0}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Pending from Vendor</label>
+                            <div class="value qty-pending">${batch.total_pending_qty || 0}</div>
+                        </div>
+                    </div>
+                    <h5 style="margin: 20px 0 12px 0;">Items (${(batch.items || []).length})</h5>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Ordered</th>
+                                    <th>Received</th>
+                                    <th>Passed</th>
+                                    <th>Rejected</th>
+                                    <th>QC Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(batch.items || []).map(item => `
+                                    <tr>
+                                        <td>${item.stock_item_name || '--'}</td>
+                                        <td class="qty-cell qty-ordered">${item.ordered_qty || 0}</td>
+                                        <td class="qty-cell qty-received">${item.received_qty || 0}</td>
+                                        <td class="qty-cell qty-passed">${item.accepted_qty || 0}</td>
+                                        <td class="qty-cell qty-rejected">${item.rejected_qty || 0}</td>
+                                        <td><span class="badge-status badge-${item.qc_status || 'PENDING'}">${item.qc_status || 'Pending'}</span></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                openModal('viewModal');
+            } catch (e) {
+                console.error('View batch error:', e);
+                alert('Failed to load batch details');
+            }
+        }
+
+        async function openReceiveModal(batchId) {
+            currentBatchId = batchId;
+            const token = getAuthToken();
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/purchase-intake/batches/${batchId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Failed to load batch');
+                const data = await res.json();
+                const batch = data.data;
+
+                document.getElementById('receiveModalBody').innerHTML = `
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Batch</label>
+                            <div class="value">${batch.batch_number}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Vendor</label>
+                            <div class="value">${batch.vendor_name}</div>
+                        </div>
+                    </div>
+                    <h5 style="margin: 20px 0 12px 0;">Enter Received Quantities</h5>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Ordered</th>
+                                    <th>Received Qty</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${(batch.items || []).map(item => `
+                                    <tr>
+                                        <td>${item.stock_item_name || '--'}</td>
+                                        <td class="qty-cell">${item.ordered_qty || 0}</td>
+                                        <td>
+                                            <input type="number" 
+                                                   id="recv_qty_${item.id}" 
+                                                   value="${item.ordered_qty || 0}" 
+                                                   min="0" 
+                                                   max="${item.ordered_qty || 0}"
+                                                   style="width: 80px;">
+                                        </td>
+                                        <td>
+                                            <input type="text" 
+                                                   id="recv_notes_${item.id}" 
+                                                   placeholder="Optional notes"
+                                                   style="width: 150px;">
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label>Receipt Notes</label>
+                        <textarea id="receiptNotes" placeholder="Overall notes about the receipt..."></textarea>
+                    </div>
+                `;
+                openModal('receiveModal');
+            } catch (e) {
+                console.error('Open receive modal error:', e);
+                alert('Failed to load batch');
+            }
+        }
+
+        async function submitReceipt() {
+            const token = getAuthToken();
+            const items = [];
+            document.querySelectorAll('[id^="recv_qty_"]').forEach(input => {
+                const itemId = input.id.replace('recv_qty_', '');
+                items.push({
+                    item_id: parseInt(itemId),
+                    received_qty: parseInt(input.value) || 0,
+                    notes: document.getElementById(`recv_notes_${itemId}`)?.value || ''
+                });
+            });
+
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/purchase-intake/batches/${currentBatchId}/receive`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        items: items,
+                        notes: document.getElementById('receiptNotes')?.value || ''
+                    })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to record receipt');
+                }
+                closeModal('receiveModal');
+                await loadBatches();
+                await loadDashboard();
+                alert('Receipt recorded successfully!');
+            } catch (e) {
+                console.error('Submit receipt error:', e);
+                alert(e.message);
+            }
+        }
+
+        async function openQCModal(batchId) {
+            currentBatchId = batchId;
+            const token = getAuthToken();
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/purchase-intake/batches/${batchId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Failed to load batch');
+                const data = await res.json();
+                const batch = data.data;
+
+                const qcFields = ['physical_condition', 'specification_match', 'color_match', 'packaging_intact', 'serial_verified', 'documentation_complete', 'quantity_match'];
+                
+                document.getElementById('qcModalBody').innerHTML = `
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Batch</label>
+                            <div class="value">${batch.batch_number}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Vendor</label>
+                            <div class="value">${batch.vendor_name}</div>
+                        </div>
+                    </div>
+                    <h5 style="margin: 20px 0 12px 0;">QC Inspection</h5>
+                    ${(batch.items || []).filter(i => i.received_qty > 0).map(item => `
+                        <div class="card" style="margin-bottom: 16px;">
+                            <div class="card-header">
+                                <span>${item.stock_item_name} (Received: ${item.received_qty})</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>QC Passed Quantity</label>
+                                        <input type="number" id="qc_passed_${item.id}" value="${item.received_qty}" min="0" max="${item.received_qty}">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Rejected Quantity</label>
+                                        <input type="number" id="qc_rejected_${item.id}" value="0" min="0" max="${item.received_qty}" onchange="updateQCQty(${item.id}, ${item.received_qty})">
+                                    </div>
+                                </div>
+                                <div class="qc-checklist">
+                                    <h6>Standard QC Checklist</h6>
+                                    ${qcFields.map(field => `
+                                        <div class="qc-item">
+                                            <label>${formatQCField(field)}</label>
+                                            <div class="qc-radio-group">
+                                                <label class="qc-radio">
+                                                    <input type="radio" name="qc_${item.id}_${field}" value="OK" checked> OK
+                                                </label>
+                                                <label class="qc-radio">
+                                                    <input type="radio" name="qc_${item.id}_${field}" value="NOT_OK"> Not OK
+                                                </label>
+                                                ${field === 'color_match' ? `
+                                                    <label class="qc-radio">
+                                                        <input type="radio" name="qc_${item.id}_${field}" value="NA"> N/A
+                                                    </label>
+                                                ` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="form-group" style="margin-top: 12px;">
+                                    <label>Remarks</label>
+                                    <textarea id="qc_remarks_${item.id}" placeholder="QC notes..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+                openModal('qcModal');
+            } catch (e) {
+                console.error('Open QC modal error:', e);
+                alert('Failed to load batch');
+            }
+        }
+
+        function formatQCField(field) {
+            const map = {
+                'physical_condition': 'Physical Condition',
+                'specification_match': 'Specification Match',
+                'color_match': 'Color Match',
+                'packaging_intact': 'Packaging Intact',
+                'serial_verified': 'Serial Number Verified',
+                'documentation_complete': 'Documentation Complete',
+                'quantity_match': 'Quantity Match'
+            };
+            return map[field] || field;
+        }
+
+        function updateQCQty(itemId, maxQty) {
+            const rejected = parseInt(document.getElementById(`qc_rejected_${itemId}`).value) || 0;
+            document.getElementById(`qc_passed_${itemId}`).value = Math.max(0, maxQty - rejected);
+        }
+
+        async function submitQC() {
+            const token = getAuthToken();
+            const items = [];
+            const qcFields = ['physical_condition', 'specification_match', 'color_match', 'packaging_intact', 'serial_verified', 'documentation_complete', 'quantity_match'];
+            
+            document.querySelectorAll('[id^="qc_passed_"]').forEach(input => {
+                const itemId = input.id.replace('qc_passed_', '');
+                const checklist = {};
+                qcFields.forEach(field => {
+                    const selected = document.querySelector(`input[name="qc_${itemId}_${field}"]:checked`);
+                    checklist[field] = selected?.value || 'OK';
+                });
+                
+                items.push({
+                    item_id: parseInt(itemId),
+                    accepted_qty: parseInt(input.value) || 0,
+                    rejected_qty: parseInt(document.getElementById(`qc_rejected_${itemId}`)?.value) || 0,
+                    qc_checklist: checklist,
+                    remarks: document.getElementById(`qc_remarks_${itemId}`)?.value || ''
+                });
+            });
+
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/purchase-intake/batches/${currentBatchId}/qc`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ items: items })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to submit QC');
+                }
+                closeModal('qcModal');
+                await loadBatches();
+                await loadDashboard();
+                alert('QC results submitted successfully!');
+            } catch (e) {
+                console.error('Submit QC error:', e);
+                alert(e.message);
+            }
+        }
+
+        async function openApproveModal(batchId) {
+            currentBatchId = batchId;
+            const token = getAuthToken();
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/purchase-intake/batches/${batchId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) throw new Error('Failed to load batch');
+                const data = await res.json();
+                const batch = data.data;
+
+                document.getElementById('approveModalBody').innerHTML = `
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Batch</label>
+                            <div class="value">${batch.batch_number}</div>
+                        </div>
+                        <div class="info-item">
+                            <label>Vendor</label>
+                            <div class="value">${batch.vendor_name}</div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info" style="background: #dbeafe; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                        <strong>Summary:</strong> ${batch.total_accepted_qty || 0} items passed QC and will be added to inventory.
+                        ${batch.total_rejected_qty > 0 ? `<br><span style="color: #dc2626;">${batch.total_rejected_qty} items rejected - consider creating a vendor return request.</span>` : ''}
+                    </div>
+                `;
+                document.getElementById('approvalNotes').value = '';
+                openModal('approveModal');
+            } catch (e) {
+                console.error('Open approve modal error:', e);
+                alert('Failed to load batch');
+            }
+        }
+
+        async function approveBatch() {
+            const token = getAuthToken();
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/purchase-intake/batches/${currentBatchId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        notes: document.getElementById('approvalNotes')?.value || ''
+                    })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to approve batch');
+                }
+                closeModal('approveModal');
+                await loadBatches();
+                await loadDashboard();
+                alert('Batch approved! QC-passed items added to inventory.');
+            } catch (e) {
+                console.error('Approve batch error:', e);
+                alert(e.message);
+            }
+        }
+
+        async function rejectBatch() {
+            const reason = prompt('Enter rejection reason:');
+            if (!reason) return;
+
+            const token = getAuthToken();
+            try {
+                const res = await fetch(`${API_BASE}/staff/accounts/purchase-intake/batches/${currentBatchId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reason: reason })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to reject batch');
+                }
+                closeModal('approveModal');
+                await loadBatches();
+                await loadDashboard();
+                alert('Batch rejected.');
+            } catch (e) {
+                console.error('Reject batch error:', e);
+                alert(e.message);
+            }
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function logout() {
+            localStorage.removeItem('staff_token');
+            window.location.href = '/staff/login';
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

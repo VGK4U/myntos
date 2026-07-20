@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Location Tracker - MyntReal LLP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="/public/css/staff-kyc-theme.css" rel="stylesheet">
+    <style>
+        .content-area { padding: 24px; }
+        
+        /* Battery indicator styles (WVV_UI_BATTERY_001) */
+        .battery-indicator { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .battery-indicator.high { background: #dcfce7; color: #166534; }
+        .battery-indicator.medium { background: #fef3c7; color: #92400e; }
+        .battery-indicator.low { background: #fee2e2; color: #991b1b; }
+        .battery-indicator.critical { background: #dc2626; color: white; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .stat-icon.blue { background: #dbeafe; color: #2563eb; }
+        .stat-icon.green { background: #d1fae5; color: #059669; }
+        .stat-icon.yellow { background: #fef3c7; color: #d97706; }
+        .stat-icon.purple { background: #e0e7ff; color: #4338ca; }
+        .stat-icon.gray { background: #f3f4f6; color: #6b7280; }
+        .stat-value { font-size: 24px; font-weight: 700; color: #1f2937; margin-top: 8px; }
+        .stat-label { font-size: 13px; color: #6b7280; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        
+        #liveMap { height: 500px; border-radius: 12px; }
+        
+        .team-list { max-height: 500px; overflow-y: auto; }
+        .team-member { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.2s; }
+        .team-member:hover { background: #f9fafb; }
+        .team-member:last-child { border-bottom: none; }
+        .team-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; font-size: 14px; }
+        .team-avatar.active { background: #10b981; }
+        .team-avatar.break { background: #f59e0b; }
+        .team-avatar.journey { background: #3b82f6; }
+        .team-avatar.offline { background: #9ca3af; }
+        .team-info { flex: 1; }
+        .team-name { font-weight: 600; color: #1f2937; font-size: 14px; }
+        .team-role { font-size: 12px; color: #6b7280; }
+        .team-status { text-align: right; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .status-badge.active { background: #dcfce7; color: #166534; }
+        .status-badge.break { background: #fef3c7; color: #92400e; }
+        .status-badge.journey { background: #dbeafe; color: #1e40af; }
+        .status-badge.offline { background: #f3f4f6; color: #6b7280; }
+        .last-seen { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        
+        .tab-buttons { display: flex; gap: 8px; }
+        .tab-btn { padding: 8px 16px; border-radius: 20px; border: 1px solid #d1d5db; background: white; color: #374151; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .tab-btn:hover { border-color: #6366f1; color: #6366f1; }
+        .tab-btn.active { background: #6366f1; border-color: #6366f1; color: white; }
+        
+        .history-filters { padding: 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        /* DC_MOBILE_SCROLL_001: Enhanced history-table for mobile horizontal scrolling */
+        .history-table { max-height: 400px; overflow-y: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .history-table table { margin-bottom: 0; min-width: 500px; }
+        .history-table th { position: sticky; top: 0; background: #f9fafb; font-weight: 600; white-space: nowrap; }
+        
+        .refresh-indicator { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
+        .refresh-indicator.updating { color: #10b981; }
+        .refresh-indicator i { animation: none; }
+        .refresh-indicator.updating i { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        .legend { display: flex; gap: 16px; flex-wrap: wrap; padding: 12px 16px; background: #f9fafb; border-radius: 8px; margin-top: 12px; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .legend-dot.active { background: #10b981; }
+        .legend-dot.break { background: #f59e0b; }
+        .legend-dot.journey { background: #3b82f6; }
+        .legend-dot.offline { background: #9ca3af; }
+        
+        /* DC_UNIVERSAL_FILTER_001: Filters bar styling */
+        .filters-bar { padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filters-bar select, .filters-bar input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+    </style>
+    <!-- DC-FIX: jQuery for staff pages -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="mb-1"><i class="fas fa-location-dot me-2 text-primary"></i>Team Locations</h4>
+                    <p class="text-muted mb-0 small">Monitor your team's real-time locations</p>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="refresh-indicator" id="refreshIndicator">
+                        <i class="fas fa-sync-alt"></i>
+                        <span id="lastUpdateTime">--</span>
+                    </span>
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" onclick="switchTab('live')">Live View</button>
+                        <button class="tab-btn" onclick="switchTab('history')">History</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-label">Total Team</div>
+                            <div class="stat-value" id="totalTeam">0</div>
+                        </div>
+                        <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-label">Active Now</div>
+                            <div class="stat-value" id="activeCount">0</div>
+                        </div>
+                        <div class="stat-icon green"><i class="fas fa-circle-check"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-label">On Break</div>
+                            <div class="stat-value" id="breakCount">0</div>
+                        </div>
+                        <div class="stat-icon yellow"><i class="fas fa-coffee"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-label">On Journey</div>
+                            <div class="stat-value" id="journeyCount">0</div>
+                        </div>
+                        <div class="stat-icon purple"><i class="fas fa-route"></i></div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-label">Offline</div>
+                            <div class="stat-value" id="offlineCount">0</div>
+                        </div>
+                        <div class="stat-icon gray"><i class="fas fa-circle-xmark"></i></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DC_UNIVERSAL_FILTER_001: Universal Filter Container -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5><i class="fas fa-filter me-2"></i>Filters</h5>
+                </div>
+                <div id="universalFilterContainer" class="filters-bar" style="border-bottom: none; padding: 16px 20px;"></div>
+                
+                <!-- Fallback filters - shown if universal filter fails to load -->
+                <div id="fallbackFiltersContainer" class="filters-bar" style="border-bottom: none; padding: 16px 20px; display: flex;">
+                    <select id="fallbackDepartmentFilter" class="form-select form-select-sm" style="min-width: 160px; max-width: 200px;" onchange="loadLiveLocations()">
+                        <option value="">All Departments</option>
+                    </select>
+                    <select id="fallbackStaffTypeFilter" class="form-select form-select-sm" style="min-width: 140px; max-width: 180px;" onchange="loadLiveLocations()">
+                        <option value="">All Staff Types</option>
+                        <option value="MN_STAFF">MN Staff</option>
+                        <option value="MN_EMPLOYEE">MN Employee</option>
+                        <option value="FREELANCER">Freelancer</option>
+                        <option value="MYNT_REAL">Mynt Real</option>
+                    </select>
+                    <input type="text" id="fallbackEmployeeSearch" class="form-control form-control-sm" style="min-width: 200px; max-width: 250px;" placeholder="Search employee..." oninput="debounceEmployeeSearch()">
+                </div>
+            </div>
+            
+            <div id="liveViewTab">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-map-location-dot me-2"></i>Live Map</h5>
+                                <button class="btn btn-sm btn-outline-primary" onclick="refreshLiveData()">
+                                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                                </button>
+                            </div>
+                            <div class="card-body p-3">
+                                <div id="liveMap"></div>
+                                <div class="legend">
+                                    <div class="legend-item"><div class="legend-dot active"></div>Active</div>
+                                    <div class="legend-item"><div class="legend-dot break"></div>On Break</div>
+                                    <div class="legend-item"><div class="legend-dot journey"></div>On Journey</div>
+                                    <div class="legend-item"><div class="legend-dot offline"></div>Offline</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="fas fa-users me-2"></i>Team Members</h5>
+                                <span class="badge bg-secondary" id="teamCount">0</span>
+                            </div>
+                            <div class="team-list" id="teamList">
+                                <div class="text-center py-4">
+                                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                                    <p class="mt-2 text-muted">Loading team...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="historyTab" style="display: none;">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-clock-rotate-left me-2"></i>Location History</h5>
+                    </div>
+                    <div class="history-filters">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Employee</label>
+                                <div id="teamMemberSearchContainer"></div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">Date</label>
+                                <input type="date" class="form-control form-control-sm" id="historyDate" onchange="loadHistory()">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">From</label>
+                                <input type="date" class="form-control form-control-sm" id="historyFrom">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-semibold">To</label>
+                                <input type="date" class="form-control form-control-sm" id="historyTo">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-primary btn-sm" onclick="loadHistory()">
+                                <i class="fas fa-search me-1"></i>Search
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="clearHistoryFilters()">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </button>
+                            <button class="btn btn-outline-success btn-sm" onclick="exportHistory()">
+                                <i class="fas fa-download me-1"></i>Export
+                            </button>
+                        </div>
+                    </div>
+                    <div class="history-table">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Employee</th>
+                                    <th>Time</th>
+                                    <th>Status</th>
+                                    <th>Accuracy</th>
+                                    <th>DC Code</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historyTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        Select filters and search
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="p-3 border-top text-center" id="loadMoreHistory" style="display: none;">
+                        <button class="btn btn-outline-primary btn-sm" onclick="loadMoreHistory()">Load More</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff_universal_filter.js?v=1764165148"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/team-member-search.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let map = null;
+        let markers = {};
+        let teamData = [];
+        let refreshInterval = null;
+        let historyOffset = 0;
+        const HISTORY_LIMIT = 100;
+        let universalFilter = null;
+        let universalFilterReady = false;
+        let teamMemberSearch = null;
+        
+        let employeeSearchTimeout = null;
+        function debounceEmployeeSearch() {
+            clearTimeout(employeeSearchTimeout);
+            employeeSearchTimeout = setTimeout(() => {
+                loadLiveLocations();
+            }, 500);
+        }
+        
+        function buildFilterPayload() {
+            if (universalFilterReady && universalFilter && universalFilter.isReady && !universalFilter.initFailed) {
+                try {
+                    const filters = universalFilter.getFilters();
+                    return filters;
+                } catch (e) {
+                    console.warn('[DC] Error getting universal filter values:', e);
+                }
+            }
+            const fallbackDept = document.getElementById('fallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('fallbackStaffTypeFilter');
+            const fallbackEmployee = document.getElementById('fallbackEmployeeSearch');
+            return {
+                company_id: null,
+                staff_type: fallbackStaff ? (fallbackStaff.value || null) : null,
+                department_id: fallbackDept ? (fallbackDept.value || null) : null,
+                employee_id: null,
+                employee: null,
+                search: fallbackEmployee ? (fallbackEmployee.value.trim() || null) : null
+            };
+        }
+        
+        async function loadFallbackDepartments() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/departments`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('fallbackDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading fallback departments:', error);
+            }
+        }
+        
+        function hideFallbackFilters() {
+            const fallback = document.getElementById('fallbackFiltersContainer');
+            if (fallback) fallback.style.display = 'none';
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // DC_UI_INIT_001: Initialize sidebar (role-based - Manager 60+)
+                if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Team Location Tracker', 'fas fa-users-viewfinder');
+                
+                // DC_UI_INIT_002: Initialize header (user profile & context)
+                if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            } catch (error) {
+                console.error('DC_PAGE_INIT_ERROR: Team Location Tracker initialization failed', error);
+            }
+            
+            try {
+                const meRes = await staffFetch(`${API_BASE}/staff/auth/me`);
+                
+                if (!meRes.ok) {
+                    return;
+                }
+            
+            // DC_API_RESPONSE_EXTRACTION_001: Extract employee data from response
+            const meResponse = await meRes.json();
+            const me = meResponse.employee;
+            
+            // DC_RBAC_VALIDATION_001: Validate role data exists
+            if (!me || !me.role) {
+                console.error('DC_RBAC_ERROR_001: Role data missing from auth response', { me, rawResponse: meResponse });
+                document.querySelector('.content-area').innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-exclamation-circle fa-4x text-danger mb-3"></i>
+                        <h4>Error Loading User Information</h4>
+                        <p class="text-muted">Unable to load your role information.</p>
+                        <a href="/staff/dashboard" class="btn btn-primary">Back to Dashboard</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            const hierarchyLevel = me.role.hierarchy_level || 0;
+            
+            // DC_RBAC_ACCESS_002: Team Location Tracker - Manager (60+) + VGK/EA (85+)
+            // Access Rule: (Manager 60+) OR (VGK/EA 85+)
+            const isManager = hierarchyLevel >= 60;
+            const isHROrEA = hierarchyLevel >= 85;
+            const canAccess = isManager || isHROrEA;
+            
+            console.log('DC_RBAC_ACCESS_CHECK', {
+                page: 'TeamLocationTracker',
+                role: me.role.role_name,
+                hierarchy_level: hierarchyLevel,
+                isManager: isManager,
+                isHROrEA: isHROrEA,
+                canAccess: canAccess
+            });
+            
+            if (!canAccess) {
+                document.querySelector('.content-area').innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-lock fa-4x text-muted mb-3"></i>
+                        <h4>Access Denied</h4>
+                        <p class="text-muted">You need Manager level (60+) or higher to access Team Location Tracker.<br/>Your current level: ${hierarchyLevel}</p>
+                        <a href="/staff/dashboard" class="btn btn-primary">Back to Dashboard</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            loadFallbackDepartments();
+            
+            if (typeof DCUniversalFilter !== 'undefined') {
+                universalFilter = new DCUniversalFilter('universalFilterContainer', {
+                    showCompany: false,
+                    showStaffType: true,
+                    showDepartment: true,
+                    showEmployee: true,
+                    showSearch: false,
+                    pageKey: 'staff_team_location_tracker',
+                    onFilterChange: () => {
+                        if (universalFilterReady) loadLiveLocations();
+                    }
+                });
+                
+                try {
+                    const success = await Promise.race([
+                        universalFilter.waitForReady(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                    ]);
+                    await new Promise(r => setTimeout(r, 50));
+                    if (success === true && 
+                        universalFilter.isReady === true && 
+                        universalFilter.initFailed === false &&
+                        document.getElementById('universalFilterContainer')?.children.length > 0) {
+                        universalFilterReady = true;
+                        hideFallbackFilters();
+                        console.log('[DC] Universal filter ready - using enhanced filters');
+                    } else {
+                        console.warn('[DC] Universal filter not fully ready, keeping fallback');
+                        universalFilterReady = false;
+                    }
+                } catch (e) {
+                    console.warn('[DC] Universal filter initialization failed or timed out, using fallback:', e);
+                    universalFilterReady = false;
+                }
+            } else {
+                console.warn('[DC] DCUniversalFilter not available - using fallback filters');
+            }
+            
+            initMap();
+            await loadLiveLocations();
+            startAutoRefresh();
+            
+            document.getElementById('historyDate').value = new Date().toISOString().split('T')[0];
+            } catch (error) {
+                console.error('DC_PAGE_INIT_ERROR: Team Location Tracker initialization failed', error);
+            }
+        });
+        
+        function initMap() {
+            map = L.map('liveMap').setView([20.5937, 78.9629], 5);
+            
+            // DC_MAP_LAYERS_001: Multiple map layer options
+            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 19
+            });
+            
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri',
+                maxZoom: 19
+            });
+            
+            const terrainLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri',
+                maxZoom: 19
+            });
+            
+            const hybridLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri + Labels',
+                maxZoom: 19
+            });
+            
+            // Add labels overlay for hybrid view
+            const labelsOverlay = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                pane: 'overlayPane'
+            });
+            
+            // Default to street view
+            streetLayer.addTo(map);
+            
+            // Layer control
+            const baseMaps = {
+                "Street": streetLayer,
+                "Satellite": satelliteLayer,
+                "Terrain": terrainLayer,
+                "Hybrid": hybridLayer
+            };
+            
+            L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+            
+            // Add labels when hybrid is selected
+            map.on('baselayerchange', function(e) {
+                if (e.name === 'Hybrid') {
+                    labelsOverlay.addTo(map);
+                } else {
+                    map.removeLayer(labelsOverlay);
+                }
+            });
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('liveViewTab').style.display = tab === 'live' ? 'block' : 'none';
+            document.getElementById('historyTab').style.display = tab === 'history' ? 'block' : 'none';
+            
+            if (tab === 'history') {
+                populateEmployeeDropdown();
+            }
+        }
+        
+        function startAutoRefresh() {
+            refreshInterval = setInterval(() => {
+                loadLiveLocations();
+            }, 30000);
+        }
+        
+        async function loadLiveLocations() {
+            document.getElementById('refreshIndicator').classList.add('updating');
+            
+            try {
+                const filters = buildFilterPayload();
+                
+                let url = `${API_BASE}/staff/attendance/location/team/live`;
+                const params = new URLSearchParams();
+                
+                if (filters.department_id) params.append('department_id', filters.department_id);
+                if (filters.staff_type) params.append('staff_type', filters.staff_type);
+                if (filters.employee_id) params.append('employee_id', filters.employee_id);
+                
+                if (params.toString()) {
+                    url += '?' + params.toString();
+                }
+                
+                const response = await staffFetch(url);
+                
+                if (response.status === 403) {
+                    showAccessDenied();
+                    return;
+                }
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    teamData = data.locations || [];
+                    
+                    document.getElementById('totalTeam').textContent = data.summary?.total || 0;
+                    document.getElementById('activeCount').textContent = data.summary?.active || 0;
+                    document.getElementById('breakCount').textContent = data.summary?.on_break || 0;
+                    document.getElementById('journeyCount').textContent = data.summary?.on_journey || 0;
+                    document.getElementById('offlineCount').textContent = data.summary?.offline || 0;
+                    document.getElementById('teamCount').textContent = teamData.length;
+                    
+                    updateMap();
+                    updateTeamList();
+                    
+                    document.getElementById('lastUpdateTime').textContent = new Date().toLocaleTimeString();
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading live locations:', error);
+            }
+            
+            document.getElementById('refreshIndicator').classList.remove('updating');
+        }
+        
+        function showAccessDenied() {
+            document.querySelector('.content-area').innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-lock fa-4x text-muted mb-3"></i>
+                    <h4>Access Denied</h4>
+                    <p class="text-muted">You need Manager level or higher to view team locations.</p>
+                    <a href="/staff/dashboard" class="btn btn-primary">Back to Dashboard</a>
+                </div>
+            `;
+        }
+        
+        function updateMap() {
+            Object.values(markers).forEach(m => map.removeLayer(m));
+            markers = {};
+            
+            const bounds = [];
+            
+            teamData.forEach(loc => {
+                if (!loc.lat || !loc.lng) return;
+                
+                const status = loc.status || 'offline';
+                const color = status === 'journey' ? '#3b82f6' : status === 'break' ? '#f59e0b' : status === 'active' ? '#10b981' : '#9ca3af';
+                
+                const icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="width: 36px; height: 36px; background: ${color}; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px;">${getInitials(loc.name || loc.emp_code)}</div>`,
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18]
+                });
+                
+                const marker = L.marker([loc.lat, loc.lng], { icon }).addTo(map);
+                
+                const time = loc.captured_at ? new Date(loc.captured_at).toLocaleString() : 'Unknown';
+                // DC_GPS_DUAL_TIER_001: Display accuracy quality indicator
+                const accuracyQuality = loc.accuracy_quality || (loc.accuracy_m <= 50 ? 'high' : loc.accuracy_m <= 100 ? 'medium' : loc.accuracy_m <= 300 ? 'low' : 'degraded');
+                const accuracyColor = accuracyQuality === 'high' ? '#10b981' : accuracyQuality === 'medium' ? '#3b82f6' : accuracyQuality === 'low' ? '#f59e0b' : '#ef4444';
+                const accuracyLabel = accuracyQuality === 'high' ? 'High' : accuracyQuality === 'medium' ? 'Medium' : accuracyQuality === 'low' ? 'Low' : 'Weak Signal';
+                
+                // DC_LIVE_TRACKER_005: Enhanced popup with clock-in, breaks, worked hours
+                const clockInDisplay = loc.clock_in_time ? new Date(loc.clock_in_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const breakMins = loc.total_break_minutes || 0;
+                const breakDisplay = breakMins > 0 ? `${Math.floor(breakMins / 60)}h ${breakMins % 60}m` : 'None';
+                const workedMins = loc.worked_minutes || 0;
+                const workedDisplay = workedMins > 0 ? `${Math.floor(workedMins / 60)}h ${workedMins % 60}m` : 'N/A';
+                
+                marker.bindPopup(`
+                    <div style="min-width: 220px;">
+                        <strong style="font-size: 14px;">${loc.name || loc.emp_code}</strong><br>
+                        <small class="text-muted">${loc.employee?.role_name || ''} | ${loc.employee?.department_name || ''}</small>
+                        <hr class="my-2">
+                        <div class="small">
+                            <strong>Status:</strong> <span class="text-capitalize">${status}</span><br>
+                            <strong>Clock-in:</strong> ${clockInDisplay}<br>
+                            <strong>Worked:</strong> ${workedDisplay}<br>
+                            <strong>Breaks:</strong> ${breakDisplay}<br>
+                            <hr class="my-1" style="border-color: #eee;">
+                            <strong>Last Update:</strong> ${time}<br>
+                            <strong>Accuracy:</strong> ${loc.accuracy_m ? Math.round(loc.accuracy_m) + 'm' : 'N/A'} <span style="color: ${accuracyColor}; font-weight: 600;">(${accuracyLabel})</span><br>
+                            <strong>Battery:</strong> ${loc.battery_percentage !== null && loc.battery_percentage !== undefined ? loc.battery_percentage + '%' : 'N/A'}
+                            ${loc.break_type ? `<br><strong>Current Break:</strong> ${loc.break_type}` : ''}
+                        </div>
+                        <hr class="my-2">
+                        <div class="d-flex gap-2">
+                            <button onclick="openInMaps(${loc.lat}, ${loc.lng}, '${(loc.name || loc.emp_code).replace(/'/g, "\\'")}', 'google')" class="btn btn-sm btn-outline-primary flex-fill" style="font-size: 11px;">
+                                <i class="fab fa-google"></i> Google Maps
+                            </button>
+                            <button onclick="openInMaps(${loc.lat}, ${loc.lng}, '${(loc.name || loc.emp_code).replace(/'/g, "\\'")}', 'apple')" class="btn btn-sm btn-outline-secondary flex-fill" style="font-size: 11px;">
+                                <i class="fab fa-apple"></i> Apple Maps
+                            </button>
+                        </div>
+                    </div>
+                `);
+                
+                markers[loc.employee_id] = marker;
+                bounds.push([loc.lat, loc.lng]);
+            });
+            
+            if (bounds.length > 0) {
+                if (bounds.length === 1) {
+                    map.setView(bounds[0], 15);
+                } else {
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            }
+        }
+        
+        function updateTeamList() {
+            const container = document.getElementById('teamList');
+            
+            if (teamData.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <i class="fas fa-users-slash fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No team members found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const sorted = [...teamData].sort((a, b) => {
+                const order = { journey: 0, active: 1, break: 2, offline: 3 };
+                return (order[a.status] || 3) - (order[b.status] || 3);
+            });
+            
+            container.innerHTML = sorted.map(loc => {
+                const status = loc.status || 'offline';
+                const initials = getInitials(loc.name || loc.emp_code);
+                const time = loc.captured_at ? getTimeAgo(new Date(loc.captured_at)) : 'No data';
+                
+                // DC_LIVE_TRACKER_002: Enhanced offline display with full date/time
+                let lastSeenDisplay = time;
+                if (status === 'offline' && loc.captured_at) {
+                    const capturedDate = new Date(loc.captured_at);
+                    lastSeenDisplay = capturedDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) + ' ' + capturedDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                }
+                
+                // DC_LIVE_TRACKER_003: Battery indicator for list
+                const batteryIcon = loc.battery_percentage !== null && loc.battery_percentage !== undefined 
+                    ? `<span class="ms-2 small ${loc.battery_percentage < 20 ? 'text-danger' : 'text-muted'}"><i class="fas fa-battery-${loc.battery_percentage >= 50 ? 'full' : loc.battery_percentage >= 25 ? 'half' : 'quarter'}"></i> ${loc.battery_percentage}%</span>` 
+                    : '';
+                
+                return `
+                    <div class="team-member" onclick="focusMember(${loc.employee_id})" data-emp-id="${loc.employee_id}">
+                        <div class="team-avatar ${status}">${initials}</div>
+                        <div class="team-info">
+                            <div class="team-name">${loc.name || loc.emp_code}${batteryIcon}</div>
+                            <div class="team-role">${loc.employee?.role_name || ''} ${loc.employee?.department_name ? '| ' + loc.employee.department_name : ''}</div>
+                        </div>
+                        <div class="team-status">
+                            <span class="status-badge ${status}">${status === 'journey' ? 'Journey' : status === 'break' ? (loc.break_type || 'Break') : status === 'active' ? 'Active' : 'Offline'}</span>
+                            <div class="last-seen">${status === 'offline' ? 'Last: ' : ''}${lastSeenDisplay}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function focusMember(empId) {
+            const marker = markers[empId];
+            if (marker) {
+                map.setView(marker.getLatLng(), 16);
+                marker.openPopup();
+            } else {
+                // DC Protocol: Show user feedback when employee has no location data
+                const employee = teamData.find(loc => loc.employee_id === empId);
+                const empName = employee ? (employee.name || employee.emp_code) : 'Employee';
+                showLocationToast(`No live location available for ${empName}. They may be offline or haven't shared their location yet.`, 'warning');
+            }
+        }
+        
+        // DC_LIVE_TRACKER_OPEN_MAPS (Feb 2026): Open employee location in external maps app
+        function openInMaps(lat, lng, name, mapType) {
+            if (!lat || !lng) {
+                showLocationToast('Location coordinates not available', 'warning');
+                return;
+            }
+            
+            let url;
+            const encodedName = encodeURIComponent(name || 'Employee Location');
+            
+            if (mapType === 'apple') {
+                // Apple Maps - works on iOS and opens in Apple Maps app
+                url = `https://maps.apple.com/?q=${encodedName}&ll=${lat},${lng}&z=16`;
+            } else {
+                // Google Maps - works on Android and web, opens in Google Maps app on mobile
+                url = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+            }
+            
+            // Open in new tab/app
+            window.open(url, '_blank');
+        }
+        
+        // DC Protocol: Toast notification for location feedback (Dec 04, 2025)
+        function showLocationToast(message, type = 'info') {
+            let toastContainer = document.getElementById('locationToastContainer');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'locationToastContainer';
+                toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                toastContainer.style.zIndex = '9999';
+                document.body.appendChild(toastContainer);
+            }
+            
+            const bgClass = type === 'success' ? 'bg-success' : type === 'warning' ? 'bg-warning text-dark' : type === 'error' ? 'bg-danger' : 'bg-info';
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center ${bgClass} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-${type === 'warning' ? 'exclamation-triangle' : type === 'error' ? 'times-circle' : type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close ${type === 'warning' ? '' : 'btn-close-white'} me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast, { delay: 4000 });
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => toast.remove());
+        }
+        
+        function getInitials(name) {
+            if (!name) return '??';
+            const parts = name.split(' ');
+            return parts.length > 1 ? (parts[0][0] + parts[1][0]).toUpperCase() : name.substring(0, 2).toUpperCase();
+        }
+        
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+            return Math.floor(seconds / 86400) + 'd ago';
+        }
+        
+        function refreshLiveData() {
+            loadLiveLocations();
+        }
+        
+        function populateEmployeeDropdown() {
+            if (!teamMemberSearch) {
+                teamMemberSearch = new TeamMemberSearch({
+                    containerId: 'teamMemberSearchContainer',
+                    placeholder: 'Search team member...',
+                    compactMode: true,
+                    onSelect: (member) => { loadHistory(); },
+                    onClear: () => { loadHistory(); }
+                });
+            }
+            
+            try {
+                staffFetch(`/api/v1/crm/my-downline`).then(response => {
+                    if (!response.ok) return;
+                    response.json().then(data => {
+                        if (data.success) {
+                            teamMemberSearch.setMembers(data.self, data.data || []);
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('[Location-Tracker] Error loading team members:', error);
+            }
+        }
+        
+        async function loadHistory() {
+            historyOffset = 0;
+            
+            const employee = teamMemberSearch ? teamMemberSearch.getValue() : '';
+            const date = document.getElementById('historyDate').value;
+            const fromDate = document.getElementById('historyFrom').value;
+            const toDate = document.getElementById('historyTo').value;
+            
+            let url = `${API_BASE}/staff/attendance/location/team/history?limit=${HISTORY_LIMIT}&offset=0`;
+            
+            if (employee) url += `&employee_id=${employee}`;
+            if (date) url += `&date=${date}`;
+            else if (fromDate && toDate) url += `&from_date=${fromDate}&to_date=${toDate}`;
+            
+            try {
+                const response = await staffFetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    renderHistoryTable(data.locations || [], false);
+                    document.getElementById('loadMoreHistory').style.display = data.has_more ? 'block' : 'none';
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading history:', error);
+            }
+        }
+        
+        // WVV_UI_BATTERY_001: Reusable battery indicator utility
+        function getBatteryIndicator(percentage) {
+            if (!percentage && percentage !== 0) return 'N/A';
+            const level = parseInt(percentage);
+            let className = 'battery-indicator high';
+            if (level < 10) className = 'battery-indicator critical';
+            else if (level < 20) className = 'battery-indicator low';
+            else if (level < 50) className = 'battery-indicator medium';
+            return `<span class="${className}"><i class="fas fa-battery-${level >= 50 ? 'full' : level >= 25 ? 'three-quarters' : level >= 10 ? 'half' : 'quarter'}"></i> ${level}%</span>`;
+        }
+        
+        function renderHistoryTable(locations, append = false) {
+            const tbody = document.getElementById('historyTableBody');
+            
+            if (locations.length === 0 && !append) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No history found</td></tr>`;
+                return;
+            }
+            
+            const html = locations.map(loc => {
+                const time = loc.captured_at ? new Date(loc.captured_at).toLocaleString() : '--';
+                const status = loc.is_on_journey ? 'journey' : loc.is_on_break ? 'break' : loc.is_clocked_in ? 'active' : 'offline';
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">${loc.employee?.full_name || loc.employee?.emp_code || 'Unknown'}</div>
+                            <small class="text-muted">${loc.employee?.role_name || ''}</small>
+                        </td>
+                        <td>${time}</td>
+                        <td><span class="status-badge ${status}">${status}</span></td>
+                        <td>${loc.accuracy_m ? Math.round(loc.accuracy_m) + 'm' : 'N/A'}</td>
+                        <td>${getBatteryIndicator(loc.battery_percentage)}</td>
+                        <td><code class="small">${loc.dc_code || 'N/A'}</code></td>
+                    </tr>
+                `;
+            }).join('');
+            
+            if (append) {
+                tbody.innerHTML += html;
+            } else {
+                tbody.innerHTML = html;
+            }
+        }
+        
+        async function loadMoreHistory() {
+            historyOffset += HISTORY_LIMIT;
+            
+            const employee = teamMemberSearch ? teamMemberSearch.getValue() : '';
+            const date = document.getElementById('historyDate').value;
+            const fromDate = document.getElementById('historyFrom').value;
+            const toDate = document.getElementById('historyTo').value;
+            
+            let url = `${API_BASE}/staff/attendance/location/team/history?limit=${HISTORY_LIMIT}&offset=${historyOffset}`;
+            
+            if (employee) url += `&employee_id=${employee}`;
+            if (date) url += `&date=${date}`;
+            else if (fromDate && toDate) url += `&from_date=${fromDate}&to_date=${toDate}`;
+            
+            try {
+                const response = await staffFetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    renderHistoryTable(data.locations || [], true);
+                    document.getElementById('loadMoreHistory').style.display = data.has_more ? 'block' : 'none';
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading more history:', error);
+            }
+        }
+        
+        function clearHistoryFilters() {
+            if (teamMemberSearch) teamMemberSearch.clearSelection();
+            document.getElementById('historyDate').value = '';
+            document.getElementById('historyFrom').value = '';
+            document.getElementById('historyTo').value = '';
+        }
+        
+        async function exportHistory() {
+            const employee = teamMemberSearch ? teamMemberSearch.getValue() : '';
+            const date = document.getElementById('historyDate').value;
+            
+            let url = `${API_BASE}/staff/attendance/location/team/history?limit=500`;
+            if (employee) url += `&employee_id=${employee}`;
+            if (date) url += `&date=${date}`;
+            
+            try {
+                const response = await staffFetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    const csv = [
+                        ['Employee', 'Time', 'Latitude', 'Longitude', 'Accuracy', 'Battery %', 'Status', 'DC Code'].join(','),
+                        ...data.locations.map(loc => [
+                            loc.employee?.full_name || loc.employee?.emp_code,
+                            loc.captured_at,
+                            loc.latitude,
+                            loc.longitude,
+                            loc.accuracy_m,
+                            loc.battery_percentage || 'N/A',
+                            loc.is_on_journey ? 'Journey' : loc.is_on_break ? 'Break' : 'Active',
+                            loc.dc_code
+                        ].join(','))
+                    ].join('\n');
+                    
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `team_location_history_${new Date().toISOString().split('T')[0]}.csv`;
+                    link.click();
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Export error:', error);
+            }
+        }
+    </script>
+    <script src="/public/js/dc-error-handler.js"></script>
+</body>
+</html>

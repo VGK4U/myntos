@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RVZ Expense Management - Supreme Authority</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container-fluid {
+            max-width: 1800px;
+        }
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link {
+            color: #6b7280;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-weight: 600;
+            padding: 12px 20px;
+        }
+        .nav-tabs .nav-link.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: transparent;
+        }
+        .nav-tabs .nav-link i {
+            margin-right: 8px;
+        }
+        .badge-pending {
+            background: #f59e0b;
+        }
+        .badge-approved {
+            background: #10b981;
+        }
+        .badge-rejected {
+            background: #ef4444;
+        }
+        .badge-finance {
+            background: #3b82f6;
+        }
+        .badge-rvz {
+            background: #8b5cf6;
+        }
+        .badge-auto {
+            background: #06b6d4;
+        }
+        .action-btn {
+            padding: 5px 12px;
+            font-size: 0.85rem;
+            margin: 2px;
+        }
+        .filter-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .table-responsive {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .expense-table th {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .supreme-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .award-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .award-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- Header -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="mb-1">
+                            <img src="/public/vgk4u-logo-100.png" alt="VGK4U" style="height:28px;background:#fff;border-radius:5px;padding:2px 6px;margin-right:8px;vertical-align:middle;">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            RVZ Expense Management
+                            <span class="supreme-badge ms-2">SUPREME AUTHORITY</span>
+                        </h1>
+                        <p class="text-muted mb-0">Full CRUD access with dual approval workflow | Auto-creation from award procurement</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary me-2" onclick="showCreateExpenseModal()">
+                            <i class="fas fa-plus me-1"></i>Create Expense
+                        </button>
+                        <a href="/rvz/dashboard" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row" id="summaryCards">
+            <div class="col-md-2">
+                <div class="stat-card" onclick="filterByStatus('all')">
+                    <div class="stat-label">Total Expenses</div>
+                    <div class="stat-value text-primary" id="totalExpenses">0</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card" onclick="filterByStatus('pending')">
+                    <div class="stat-label">Pending Approval</div>
+                    <div class="stat-value text-warning" id="pendingExpenses">0</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card" onclick="filterByStatus('approved')">
+                    <div class="stat-label">Approved</div>
+                    <div class="stat-value text-success" id="approvedExpenses">0</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card" onclick="filterBySource('auto_award')">
+                    <div class="stat-label">Auto-Award</div>
+                    <div class="stat-value text-info" id="autoAwardExpenses">0</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card" onclick="filterBySource('rvz_manual')">
+                    <div class="stat-label">RVZ Created</div>
+                    <div class="stat-value text-purple" id="vgkExpenses">0</div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="stat-card">
+                    <div class="stat-label">Total Amount</div>
+                    <div class="stat-value text-success" id="totalAmount">₹0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="card">
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-4" id="expenseTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button">
+                            <i class="fas fa-list"></i>All Expenses
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending" type="button">
+                            <i class="fas fa-clock"></i>Pending RVZ Approval
+                            <span class="badge bg-warning ms-1" id="pendingBadge">0</span>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="auto-award-tab" data-bs-toggle="tab" data-bs-target="#auto-award" type="button">
+                            <i class="fas fa-gift"></i>Auto-Created from Awards
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="my-created-tab" data-bs-toggle="tab" data-bs-target="#my-created" type="button">
+                            <i class="fas fa-user-shield"></i>My Created Expenses
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="expenseTabContent">
+                    <!-- All Expenses Tab -->
+                    <div class="tab-pane fade show active" id="all" role="tabpanel">
+                        <div class="filter-section">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select" id="filterStatus">
+                                        <option value="">All Statuses</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="approved">Approved</option>
+                                        <option value="rejected">Rejected</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Source Type</label>
+                                    <select class="form-select" id="filterSource">
+                                        <option value="">All Sources</option>
+                                        <option value="finance_manual">Finance Manual</option>
+                                        <option value="rvz_manual">RVZ Manual</option>
+                                        <option value="auto_award">Auto-Award</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Date From</label>
+                                    <input type="date" class="form-control" id="filterDateFrom">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Date To</label>
+                                    <input type="date" class="form-control" id="filterDateTo">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button class="btn btn-primary w-100" onclick="loadAllExpenses()">
+                                        <i class="fas fa-search me-1"></i>Filter
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover expense-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Description</th>
+                                        <th>Vendor</th>
+                                        <th>Status</th>
+                                        <th>Source</th>
+                                        <th>Award Link</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allExpensesTable">
+                                    <tr>
+                                        <td colspan="10" class="text-center">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Pending RVZ Approval Tab -->
+                    <div class="tab-pane fade" id="pending" role="tabpanel">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            These expenses were created by Finance Admin and require your approval (RVZ Supreme Authority).
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover expense-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Description</th>
+                                        <th>Vendor</th>
+                                        <th>Created By</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pendingExpensesTable">
+                                    <tr>
+                                        <td colspan="8" class="text-center">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Auto-Created from Awards Tab -->
+                    <div class="tab-pane fade" id="auto-award" role="tabpanel">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            These expenses were automatically created when award procurement was processed. They track actual costs paid for physical awards and bonanzas.
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover expense-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Amount</th>
+                                        <th>Description</th>
+                                        <th>Award Type</th>
+                                        <th>Award ID</th>
+                                        <th>Vendor</th>
+                                        <th>Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="autoAwardExpensesTable">
+                                    <tr>
+                                        <td colspan="8" class="text-center">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- My Created Expenses Tab -->
+                    <div class="tab-pane fade" id="my-created" role="tabpanel">
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Expenses you created are auto-approved (RVZ Supreme Authority). No approval needed!
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover expense-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Description</th>
+                                        <th>Vendor</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="myCreatedExpensesTable">
+                                    <tr>
+                                        <td colspan="8" class="text-center">Loading...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Expense Modal -->
+    <div class="modal fade" id="createExpenseModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus-circle me-2"></i>Create Expense (RVZ Supreme)
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <i class="fas fa-crown me-2"></i>
+                        <strong>RVZ Supreme Authority:</strong> Expenses you create are automatically approved. No additional approval needed!
+                    </div>
+                    <form id="createExpenseForm">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Expense Date *</label>
+                                <input type="date" class="form-control" id="expenseDate" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Amount *</label>
+                                <input type="number" step="0.01" class="form-control" id="expenseAmount" placeholder="₹" required>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Category *</label>
+                                <input type="text" class="form-control" id="expenseCategory" placeholder="e.g., Award, Office, Travel" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Vendor</label>
+                                <input type="text" class="form-control" id="expenseVendor" placeholder="Vendor name">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description *</label>
+                            <textarea class="form-control" id="expenseDescription" rows="2" placeholder="Expense description" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Payment Mode *</label>
+                                <select class="form-select" id="expensePaymentMode" required>
+                                    <option value="">Select payment mode</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                    <option value="UPI">UPI</option>
+                                    <option value="Credit Card">Credit Card</option>
+                                    <option value="Cheque">Cheque</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Reference No</label>
+                                <input type="text" class="form-control" id="expenseReferenceNo" placeholder="Transaction/Ref number">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" id="expenseNotes" rows="2" placeholder="Additional notes"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="createExpense()">
+                        <i class="fas fa-check me-1"></i>Create & Auto-Approve
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense Details Modal -->
+    <div class="modal fade" id="expenseDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-file-invoice me-2"></i>Expense Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="expenseDetailsContent">
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const userId = new URLSearchParams(window.location.search).get('user_id');
+        const API_BASE = '';
+
+        // Load summary statistics
+        async function loadSummary() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/rvz/expenses/summary?user_id=${userId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('totalExpenses').textContent = data.data.total_expenses;
+                    document.getElementById('pendingExpenses').textContent = data.data.pending_approval;
+                    document.getElementById('approvedExpenses').textContent = data.data.approved;
+                    document.getElementById('autoAwardExpenses').textContent = data.data.auto_award_expenses;
+                    document.getElementById('vgkExpenses').textContent = data.data.vgk_created_expenses;
+                    document.getElementById('totalAmount').textContent = '₹' + data.data.total_amount.toLocaleString();
+                    document.getElementById('pendingBadge').textContent = data.data.pending_approval;
+                }
+            } catch (error) {
+                console.error('Error loading summary:', error);
+            }
+        }
+
+        // Load all expenses with filters
+        async function loadAllExpenses() {
+            const status = document.getElementById('filterStatus').value;
+            const source = document.getElementById('filterSource').value;
+            const dateFrom = document.getElementById('filterDateFrom').value;
+            const dateTo = document.getElementById('filterDateTo').value;
+
+            let url = `${API_BASE}/api/v1/rvz/expenses/list?user_id=${userId}`;
+            if (status) url += `&status=${status}`;
+            if (source) url += `&source=${source}`;
+            if (dateFrom) url += `&date_from=${dateFrom}`;
+            if (dateTo) url += `&date_to=${dateTo}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderAllExpenses(data.expenses);
+                }
+            } catch (error) {
+                console.error('Error loading expenses:', error);
+            }
+        }
+
+        function renderAllExpenses(expenses) {
+            const tbody = document.getElementById('allExpensesTable');
+            if (expenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center">No expenses found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = expenses.map(exp => `
+                <tr>
+                    <td><strong>#${exp.id}</strong></td>
+                    <td>${new Date(exp.expense_date).toLocaleDateString()}</td>
+                    <td>${exp.category}</td>
+                    <td><strong>₹${parseFloat(exp.amount).toLocaleString()}</strong></td>
+                    <td>${exp.description.substring(0, 50)}...</td>
+                    <td>${exp.vendor || '-'}</td>
+                    <td><span class="badge badge-${exp.status}">${exp.status.toUpperCase()}</span></td>
+                    <td><span class="badge badge-${exp.source_type === 'finance_manual' ? 'finance' : exp.source_type === 'rvz_manual' ? 'rvz' : 'auto'}">${exp.source_type.replace('_', ' ').toUpperCase()}</span></td>
+                    <td>${exp.award_reference_id ? `<a href="#" class="award-link">${exp.award_reference_type} #${exp.award_reference_id}</a>` : (exp.bonanza_reference_id ? `<a href="#" class="award-link">${exp.bonanza_reference_type} #${exp.bonanza_reference_id}</a>` : '-')}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info action-btn" onclick="viewExpenseDetails(${exp.id})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        ${exp.status === 'pending' && exp.source_type === 'finance_manual' ? `
+                        <button class="btn btn-sm btn-success action-btn" onclick="approveExpense(${exp.id})">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger action-btn" onclick="rejectExpense(${exp.id})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        ` : ''}
+                        ${!exp.award_reference_id && !exp.bonanza_reference_id ? `
+                        <button class="btn btn-sm btn-danger action-btn" onclick="deleteExpense(${exp.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Load pending expenses
+        async function loadPendingExpenses() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/rvz/expenses/pending/list?user_id=${userId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderPendingExpenses(data.pending_expenses);
+                }
+            } catch (error) {
+                console.error('Error loading pending expenses:', error);
+            }
+        }
+
+        function renderPendingExpenses(expenses) {
+            const tbody = document.getElementById('pendingExpensesTable');
+            if (expenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No pending expenses</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = expenses.map(exp => `
+                <tr>
+                    <td><strong>#${exp.id}</strong></td>
+                    <td>${new Date(exp.expense_date).toLocaleDateString()}</td>
+                    <td>${exp.category}</td>
+                    <td><strong>₹${parseFloat(exp.amount).toLocaleString()}</strong></td>
+                    <td>${exp.description}</td>
+                    <td>${exp.vendor || '-'}</td>
+                    <td>${exp.created_by_id}</td>
+                    <td>
+                        <button class="btn btn-sm btn-success action-btn" onclick="approveExpense(${exp.id})">
+                            <i class="fas fa-check me-1"></i>Approve
+                        </button>
+                        <button class="btn btn-sm btn-danger action-btn" onclick="rejectExpense(${exp.id})">
+                            <i class="fas fa-times me-1"></i>Reject
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Load auto-award expenses
+        async function loadAutoAwardExpenses() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/rvz/expenses/auto-award/list?user_id=${userId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderAutoAwardExpenses(data.auto_award_expenses);
+                }
+            } catch (error) {
+                console.error('Error loading auto-award expenses:', error);
+            }
+        }
+
+        function renderAutoAwardExpenses(expenses) {
+            const tbody = document.getElementById('autoAwardExpensesTable');
+            if (expenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No auto-created expenses</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = expenses.map(exp => `
+                <tr>
+                    <td><strong>#${exp.id}</strong></td>
+                    <td>${new Date(exp.expense_date).toLocaleDateString()}</td>
+                    <td><strong>₹${parseFloat(exp.amount).toLocaleString()}</strong></td>
+                    <td>${exp.description}</td>
+                    <td><span class="badge badge-info">${exp.award_reference_type || exp.bonanza_reference_type}</span></td>
+                    <td><a href="#" class="award-link">#${exp.award_reference_id || exp.bonanza_reference_id}</a></td>
+                    <td>${exp.vendor}</td>
+                    <td>${new Date(exp.created_at).toLocaleDateString()}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Load my created expenses
+        async function loadMyCreatedExpenses() {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/rvz/expenses/list?user_id=${userId}&source=rvz_manual`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderMyCreatedExpenses(data.expenses);
+                }
+            } catch (error) {
+                console.error('Error loading my expenses:', error);
+            }
+        }
+
+        function renderMyCreatedExpenses(expenses) {
+            const tbody = document.getElementById('myCreatedExpensesTable');
+            if (expenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No expenses created by you yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = expenses.map(exp => `
+                <tr>
+                    <td><strong>#${exp.id}</strong></td>
+                    <td>${new Date(exp.expense_date).toLocaleDateString()}</td>
+                    <td>${exp.category}</td>
+                    <td><strong>₹${parseFloat(exp.amount).toLocaleString()}</strong></td>
+                    <td>${exp.description.substring(0, 50)}...</td>
+                    <td>${exp.vendor || '-'}</td>
+                    <td><span class="badge badge-approved">AUTO-APPROVED</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-info action-btn" onclick="viewExpenseDetails(${exp.id})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger action-btn" onclick="deleteExpense(${exp.id})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Create expense
+        function showCreateExpenseModal() {
+            document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+            new bootstrap.Modal(document.getElementById('createExpenseModal')).show();
+        }
+
+        async function createExpense() {
+            const form = document.getElementById('createExpenseForm');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const expenseData = {
+                expense_date: document.getElementById('expenseDate').value,
+                amount: parseFloat(document.getElementById('expenseAmount').value),
+                category: document.getElementById('expenseCategory').value,
+                description: document.getElementById('expenseDescription').value,
+                vendor: document.getElementById('expenseVendor').value || null,
+                payment_mode: document.getElementById('expensePaymentMode').value,
+                reference_no: document.getElementById('expenseReferenceNo').value || null,
+                notes: document.getElementById('expenseNotes').value || null
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/rvz/expenses/create?user_id=${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(expenseData)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Expense created and auto-approved (RVZ Supreme Authority)!');
+                    bootstrap.Modal.getInstance(document.getElementById('createExpenseModal')).hide();
+                    form.reset();
+                    loadSummary();
+                    loadAllExpenses();
+                    loadMyCreatedExpenses();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error creating expense:', error);
+                alert('Error creating expense');
+            }
+        }
+
+        // Approve expense
+        async function approveExpense(expenseId) {
+            if (!confirm('Approve this expense?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/rvz/expenses/${expenseId}/approve?user_id=${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes: 'RVZ Approved' })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Expense approved!');
+                    loadSummary();
+                    loadAllExpenses();
+                    loadPendingExpenses();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error approving expense:', error);
+            }
+        }
+
+        // Reject expense
+        async function rejectExpense(expenseId) {
+            const reason = prompt('Enter rejection reason:');
+            if (!reason) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/rvz/expenses/${expenseId}/reject?user_id=${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rejection_reason: reason })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Expense rejected!');
+                    loadSummary();
+                    loadAllExpenses();
+                    loadPendingExpenses();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error rejecting expense:', error);
+            }
+        }
+
+        // Delete expense
+        async function deleteExpense(expenseId) {
+            const reason = prompt('Enter deletion reason:');
+            if (!reason) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/rvz/expenses/${expenseId}/delete?user_id=${userId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deletion_reason: reason })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('✅ Expense deleted!');
+                    loadSummary();
+                    loadAllExpenses();
+                    loadMyCreatedExpenses();
+                } else {
+                    alert('Error: ' + (data.detail || data.message));
+                }
+            } catch (error) {
+                console.error('Error deleting expense:', error);
+            }
+        }
+
+        // View expense details
+        async function viewExpenseDetails(expenseId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/rvz/expenses/${expenseId}?user_id=${userId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const exp = data.expense;
+                    const audit = data.audit_trail;
+                    
+                    const content = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Expense Information</h6>
+                                <table class="table table-sm">
+                                    <tr><td><strong>ID:</strong></td><td>${exp.id}</td></tr>
+                                    <tr><td><strong>Date:</strong></td><td>${new Date(exp.expense_date).toLocaleDateString()}</td></tr>
+                                    <tr><td><strong>Amount:</strong></td><td><strong>₹${parseFloat(exp.amount).toLocaleString()}</strong></td></tr>
+                                    <tr><td><strong>Category:</strong></td><td>${exp.category}</td></tr>
+                                    <tr><td><strong>Vendor:</strong></td><td>${exp.vendor || '-'}</td></tr>
+                                    <tr><td><strong>Payment Mode:</strong></td><td>${exp.payment_mode}</td></tr>
+                                    <tr><td><strong>Reference No:</strong></td><td>${exp.reference_no || '-'}</td></tr>
+                                    <tr><td><strong>Status:</strong></td><td><span class="badge badge-${exp.status}">${exp.status}</span></td></tr>
+                                    <tr><td><strong>Source:</strong></td><td><span class="badge badge-${exp.source_type === 'rvz_manual' ? 'rvz' : 'auto'}">${exp.source_type}</span></td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Audit Trail</h6>
+                                <div style="max-height: 300px; overflow-y: auto;">
+                                    ${audit.map(a => `
+                                        <div class="border-bottom pb-2 mb-2">
+                                            <small class="text-muted">${new Date(a.created_at).toLocaleString()}</small><br>
+                                            <strong>${a.action.toUpperCase()}</strong> by ${a.actor_id} (${a.actor_role})<br>
+                                            ${a.action_notes ? `<em>${a.action_notes}</em>` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <h6>Description</h6>
+                            <p>${exp.description}</p>
+                            ${exp.notes ? `<h6>Notes</h6><p>${exp.notes}</p>` : ''}
+                        </div>
+                    `;
+                    
+                    document.getElementById('expenseDetailsContent').innerHTML = content;
+                    new bootstrap.Modal(document.getElementById('expenseDetailsModal')).show();
+                }
+            } catch (error) {
+                console.error('Error loading expense details:', error);
+            }
+        }
+
+        // Filter shortcuts
+        function filterByStatus(status) {
+            document.getElementById('filterStatus').value = status === 'all' ? '' : status;
+            loadAllExpenses();
+        }
+
+        function filterBySource(source) {
+            document.getElementById('filterSource').value = source;
+            loadAllExpenses();
+        }
+
+        // Tab change handlers
+        document.getElementById('pending-tab').addEventListener('shown.bs.tab', loadPendingExpenses);
+        document.getElementById('auto-award-tab').addEventListener('shown.bs.tab', loadAutoAwardExpenses);
+        document.getElementById('my-created-tab').addEventListener('shown.bs.tab', loadMyCreatedExpenses);
+
+        // Initial load
+        loadSummary();
+        loadAllExpenses();
+    </script>
+</body>
+</html>

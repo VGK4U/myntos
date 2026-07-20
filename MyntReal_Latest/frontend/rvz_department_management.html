@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP - Configuration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-weight: 600; font-size: 14px; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+        .user-info-role { padding: 2px 8px; border-radius: 12px; background: #e0e7ff; color: #4338ca; font-size: 11px; font-weight: 500; }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 0; }
+        .card-body { padding: 24px; }
+        
+        .nav-tabs { border-bottom: none; padding: 0 20px; }
+        .nav-tabs .nav-link { 
+            color: #6b7280; border: none; padding: 16px 20px; font-weight: 500; 
+            border-bottom: 3px solid transparent; margin-bottom: -1px; transition: all 0.2s;
+        }
+        .nav-tabs .nav-link:hover { color: #1f2937; background: #f9fafb; }
+        .nav-tabs .nav-link.active { color: #6366f1; border-bottom-color: #6366f1; background: transparent; }
+        .nav-tabs .nav-link.disabled { color: #d1d5db; }
+        
+        .form-label { font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px; }
+        .form-control, .form-select {
+            border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 14px;
+            font-size: 14px; transition: all 0.2s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        .form-control::placeholder { color: #9ca3af; }
+        .form-text { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        
+        .btn-primary { background: #6366f1; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500; }
+        .btn-primary:hover { background: #4f46e5; }
+        .btn-outline-secondary { border-color: #d1d5db; color: #6b7280; }
+        .btn-outline-secondary:hover { background: #f3f4f6; color: #374151; border-color: #9ca3af; }
+        
+        .accordion-item { background: white; border: 1px solid #e5e7eb; margin-bottom: 8px; border-radius: 8px !important; overflow: hidden; }
+        .accordion-button { background: #f9fafb; color: #1f2937; font-weight: 600; padding: 16px 20px; }
+        .accordion-button:not(.collapsed) { background: #eef2ff; color: #6366f1; box-shadow: none; }
+        .accordion-button:focus { box-shadow: none; border-color: #6366f1; }
+        .accordion-button::after { filter: none; }
+        .accordion-body { background: white; padding: 20px; }
+        
+        .form-check-input { width: 18px; height: 18px; border-color: #d1d5db; }
+        .form-check-input:checked { background-color: #6366f1; border-color: #6366f1; }
+        .form-check-input:focus { box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+        .form-check-label { color: #374151; font-size: 14px; margin-left: 4px; }
+        
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        .checkbox-item { background: #f9fafb; padding: 12px 16px; border-radius: 8px; border: 1px solid #e5e7eb; transition: all 0.2s; }
+        .checkbox-item:hover { border-color: #6366f1; background: #eef2ff; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-top: none; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-active { background: #dcfce7; color: #166534; }
+        .status-paused { background: #fef3c7; color: #92400e; }
+        
+        .dept-code { color: #6366f1; font-weight: 600; font-family: monospace; font-size: 13px; }
+        
+        .modal-content { border-radius: 12px; border: none; }
+        .modal-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-bottom: none; padding: 16px 24px; border-radius: 12px 12px 0 0; }
+        .modal-header .btn-close { filter: brightness(0) invert(1); }
+        .modal-body { padding: 24px; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; border-radius: 0 0 12px 12px; }
+        
+        .toast-container { position: fixed; top: 80px; right: 20px; z-index: 9999; }
+        
+        .staff-select { max-height: 300px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
+        .staff-item { display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: all 0.2s; }
+        .staff-item:last-child { border-bottom: none; }
+        .staff-item:hover { background: #eef2ff; }
+        
+        .section-title { color: #6366f1; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; }
+        
+        .placeholder-tab { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .placeholder-tab i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; color: #6366f1; }
+        .placeholder-tab h5 { color: #374151; margin-bottom: 8px; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+        
+        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-radius: 50%; border-top-color: #6366f1; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .action-btns { display: flex; gap: 6px; }
+        .btn-icon { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+        <div class="top-header">
+            <div class="header-left">
+                <div id="backButtonContainer"></div>
+                <h1 class="page-title">
+                    <i class="fas fa-cogs text-primary"></i>
+                    Configuration
+                </h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info-header">
+                    <div class="user-avatar-sm" id="headerUserInitials">--</div>
+                    <div class="user-info-details">
+                        <span class="user-info-name" id="headerUserName">Loading...</span>
+                        <div class="user-info-meta">
+                            <span class="user-info-role" id="headerUserRole">-</span>
+                            <span id="headerUserEmpId" style="color: #6b7280;">-</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="StaffSidebar.logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="page-banner">
+                <h1><i class="fas fa-cogs me-2"></i>Configuration</h1>
+                <p>Create, configure, and manage organizational departments with role-based access control</p>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <ul class="nav nav-tabs" id="departmentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="create-tab" data-bs-toggle="tab" data-bs-target="#createTab" type="button" role="tab">
+                                <i class="fas fa-plus-circle me-2"></i>Create Department
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="manage-tab" data-bs-toggle="tab" data-bs-target="#manageTab" type="button" role="tab">
+                                <i class="fas fa-list me-2"></i>View & Edit
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link disabled" id="hierarchy-tab" data-bs-toggle="tab" data-bs-target="#hierarchyTab" type="button" role="tab" disabled>
+                                <i class="fas fa-sitemap me-2"></i>Hierarchy
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link disabled" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analyticsTab" type="button" role="tab" disabled>
+                                <i class="fas fa-chart-bar me-2"></i>Analytics
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="card-body">
+                    <div class="tab-content" id="departmentTabContent">
+                        
+                        <div class="tab-pane fade show active" id="createTab" role="tabpanel">
+                            <form id="createDepartmentForm" onsubmit="return createDepartment(event)">
+                                <div class="accordion" id="createAccordion">
+                                    
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#sectionA">
+                                                <i class="fas fa-info-circle me-2 text-primary"></i>Section A: Basic Information
+                                            </button>
+                                        </h2>
+                                        <div id="sectionA" class="accordion-collapse collapse show" data-bs-parent="#createAccordion">
+                                            <div class="accordion-body">
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Department Name <span class="text-danger">*</span></label>
+                                                        <input type="text" class="form-control" id="deptName" required placeholder="e.g., Information Technology">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Department Code</label>
+                                                        <input type="text" class="form-control" id="deptCode" disabled placeholder="Auto-generated (e.g., DEPT001)" style="background: #f3f4f6;">
+                                                        <div class="form-text">Code will be auto-generated</div>
+                                                    </div>
+                                                    <div class="col-12 mb-3">
+                                                        <label class="form-label">Description</label>
+                                                        <textarea class="form-control" id="deptDescription" rows="3" placeholder="Brief description of the department's responsibilities..."></textarea>
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">Department Head</label>
+                                                        <select class="form-select" id="deptHead">
+                                                            <option value="">Select Department Head (Optional)</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sectionB">
+                                                <i class="fas fa-user-shield me-2 text-primary"></i>Section B: Role-Based Access Control
+                                            </button>
+                                        </h2>
+                                        <div id="sectionB" class="accordion-collapse collapse" data-bs-parent="#createAccordion">
+                                            <div class="accordion-body">
+                                                <p class="text-muted mb-3">Select which hierarchy levels can access this department:</p>
+                                                <div class="checkbox-grid" id="hierarchyCheckboxes">
+                                                    <div class="text-center py-4">
+                                                        <div class="loading-spinner"></div>
+                                                        <p class="mt-2 mb-0 text-muted">Loading hierarchy levels...</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sectionC">
+                                                <i class="fas fa-database me-2 text-primary"></i>Section C: Data Assignments
+                                            </button>
+                                        </h2>
+                                        <div id="sectionC" class="accordion-collapse collapse" data-bs-parent="#createAccordion">
+                                            <div class="accordion-body">
+                                                <div class="section-title">Task Categories</div>
+                                                <div class="checkbox-grid mb-4" id="taskCategoryCheckboxes">
+                                                    <div class="text-center py-4"><div class="loading-spinner"></div></div>
+                                                </div>
+                                                
+                                                <div class="section-title">Expense Categories</div>
+                                                <div class="checkbox-grid mb-4" id="expenseCategoryCheckboxes">
+                                                    <div class="text-center py-4"><div class="loading-spinner"></div></div>
+                                                </div>
+                                                
+                                                <div class="section-title">System Features</div>
+                                                <div class="checkbox-grid" id="systemFeatureCheckboxes">
+                                                    <div class="text-center py-4"><div class="loading-spinner"></div></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sectionD">
+                                                <i class="fas fa-users me-2 text-primary"></i>Section D: Staff Assignment
+                                            </button>
+                                        </h2>
+                                        <div id="sectionD" class="accordion-collapse collapse" data-bs-parent="#createAccordion">
+                                            <div class="accordion-body">
+                                                <p class="text-muted mb-3">Select staff members to assign to this department (multi-department enabled):</p>
+                                                <div class="mb-3">
+                                                    <input type="text" class="form-control" id="staffSearch" placeholder="Search staff by name or employee code...">
+                                                </div>
+                                                <div class="staff-select" id="staffCheckboxes">
+                                                    <div class="text-center py-4">
+                                                        <div class="loading-spinner"></div>
+                                                        <p class="mt-2 mb-0 text-muted">Loading staff members...</p>
+                                                    </div>
+                                                </div>
+                                                <div class="form-text mt-2">
+                                                    <i class="fas fa-info-circle me-1"></i>Staff can belong to multiple departments
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="resetCreateForm()">
+                                        <i class="fas fa-undo me-1"></i>Reset
+                                    </button>
+                                    <button type="submit" class="btn btn-primary" id="createBtn">
+                                        <i class="fas fa-plus me-1"></i>Create Department
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="manageTab" role="tabpanel">
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <input type="text" class="form-control" id="deptSearchInput" placeholder="Search departments..." style="width: 300px;" oninput="filterDepartments()">
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="showInactive" onchange="loadDepartments()">
+                                    <label class="form-check-label" for="showInactive">Show Paused Departments</label>
+                                </div>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table" id="departmentsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Department Name</th>
+                                            <th>Head</th>
+                                            <th>Staff Count</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="departmentsTableBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center py-4">
+                                                <div class="loading-spinner"></div>
+                                                <p class="mt-2 mb-0 text-muted">Loading departments...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="hierarchyTab" role="tabpanel">
+                            <div class="placeholder-tab">
+                                <i class="fas fa-sitemap"></i>
+                                <h5>Department Hierarchy</h5>
+                                <p class="text-muted">Visual tree diagram of department relationships</p>
+                                <span class="badge bg-secondary">Coming Soon</span>
+                            </div>
+                        </div>
+                        
+                        <div class="tab-pane fade" id="analyticsTab" role="tabpanel">
+                            <div class="placeholder-tab">
+                                <i class="fas fa-chart-bar"></i>
+                                <h5>Department Analytics</h5>
+                                <p class="text-muted">Performance metrics and reporting</p>
+                                <span class="badge bg-secondary">Coming Soon</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="editDeptModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Department</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="editModalBody"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEditDepartment()">
+                        <i class="fas fa-save me-1"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="createRoleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-tag me-2"></i>Create Department Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="roleModalDeptId">
+                    <div class="mb-3">
+                        <label class="form-label">Role Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="newRoleName" placeholder="e.g., Finance Manager" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="newRoleDescription" rows="2" placeholder="Brief description..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Hierarchy Permissions</label>
+                        <div class="checkbox-grid" id="roleHierarchyCheckboxes"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createDepartmentRole()">
+                        <i class="fas fa-plus me-1"></i>Create Role
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast-container" id="toastContainer"></div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const API_BASE = window.location.origin + '/api/v1';
+        let configOptions = null;
+        let allDepartments = [];
+        let currentEditDeptId = null;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            StaffSidebar.init();
+            await StaffHeader.init('headerUserInitials', 'headerUserName', 'headerUserRole', 'headerUserEmpId', 'actionButtons');
+            StaffBackButton.init('backButtonContainer');
+            
+            await loadConfigOptions();
+            await loadDepartments();
+            
+            document.getElementById('staffSearch').addEventListener('input', filterStaffList);
+        });
+        
+        async function loadConfigOptions() {
+            try {
+                configOptions = await staffFetchJson(`${API_BASE}/rvz/departments/config-options`);
+                renderHierarchyCheckboxes();
+                renderTaskCategoryCheckboxes();
+                renderExpenseCategoryCheckboxes();
+                renderSystemFeatureCheckboxes();
+                renderStaffCheckboxes();
+                renderDeptHeadOptions();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading config options:', error);
+                showToast('Error loading configuration options', 'error');
+            }
+        }
+        
+        function renderHierarchyCheckboxes() {
+            const container = document.getElementById('hierarchyCheckboxes');
+            if (!configOptions?.hierarchy_levels) {
+                container.innerHTML = '<p class="text-muted">No hierarchy levels available</p>';
+                return;
+            }
+            
+            container.innerHTML = configOptions.hierarchy_levels.map(level => `
+                <div class="checkbox-item">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="hierarchy_${level.code}" value="${level.code}">
+                        <label class="form-check-label" for="hierarchy_${level.code}">${level.label}</label>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function renderTaskCategoryCheckboxes() {
+            const container = document.getElementById('taskCategoryCheckboxes');
+            if (!configOptions?.task_categories) {
+                container.innerHTML = '<p class="text-muted">No task categories available</p>';
+                return;
+            }
+            
+            container.innerHTML = configOptions.task_categories.map(cat => `
+                <div class="checkbox-item">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="taskcat_${cat.id}" value="${cat.id}">
+                        <label class="form-check-label" for="taskcat_${cat.id}">${cat.name}</label>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function renderExpenseCategoryCheckboxes() {
+            const container = document.getElementById('expenseCategoryCheckboxes');
+            if (!configOptions?.expense_categories) {
+                container.innerHTML = '<p class="text-muted">No expense categories available</p>';
+                return;
+            }
+            
+            container.innerHTML = configOptions.expense_categories.map(cat => `
+                <div class="checkbox-item">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="expcat_${cat.id}" value="${cat.id}">
+                        <label class="form-check-label" for="expcat_${cat.id}">${cat.name}</label>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function renderSystemFeatureCheckboxes() {
+            const container = document.getElementById('systemFeatureCheckboxes');
+            if (!configOptions?.system_features) {
+                container.innerHTML = '<p class="text-muted">No system features available</p>';
+                return;
+            }
+            
+            container.innerHTML = configOptions.system_features.map(feat => `
+                <div class="checkbox-item">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="feat_${feat.code}" value="${feat.code}">
+                        <label class="form-check-label" for="feat_${feat.code}">
+                            ${feat.name}
+                            <small class="d-block text-muted">${feat.description}</small>
+                        </label>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function renderStaffCheckboxes() {
+            const container = document.getElementById('staffCheckboxes');
+            if (!configOptions?.staff_members || configOptions.staff_members.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center py-3">No staff members available</p>';
+                return;
+            }
+            
+            container.innerHTML = configOptions.staff_members.map(emp => `
+                <div class="staff-item" data-name="${emp.full_name.toLowerCase()}" data-code="${emp.emp_code.toLowerCase()}">
+                    <div class="form-check w-100">
+                        <input class="form-check-input" type="checkbox" id="staff_${emp.id}" value="${emp.id}">
+                        <label class="form-check-label w-100" for="staff_${emp.id}">
+                            <span class="dept-code me-2">${emp.emp_code}</span>
+                            ${emp.full_name}
+                            ${emp.department_name ? `<small class="text-muted ms-2">(${emp.department_name})</small>` : ''}
+                        </label>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function renderDeptHeadOptions() {
+            const select = document.getElementById('deptHead');
+            if (!configOptions?.staff_members) return;
+            
+            select.innerHTML = '<option value="">Select Department Head (Optional)</option>' +
+                configOptions.staff_members.map(emp => 
+                    `<option value="${emp.id}">${emp.emp_code} - ${emp.full_name}</option>`
+                ).join('');
+        }
+        
+        function filterStaffList() {
+            const searchTerm = document.getElementById('staffSearch').value.toLowerCase();
+            const staffItems = document.querySelectorAll('#staffCheckboxes .staff-item');
+            
+            staffItems.forEach(item => {
+                const name = item.dataset.name;
+                const code = item.dataset.code;
+                if (name.includes(searchTerm) || code.includes(searchTerm)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+        
+        async function createDepartment(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('deptName').value.trim();
+            if (!name) {
+                showToast('Department name is required', 'error');
+                return false;
+            }
+            
+            const rolePermissions = [];
+            document.querySelectorAll('#hierarchyCheckboxes input:checked').forEach(cb => {
+                rolePermissions.push(parseInt(cb.value));
+            });
+            
+            const taskCategories = [];
+            document.querySelectorAll('#taskCategoryCheckboxes input:checked').forEach(cb => {
+                taskCategories.push(parseInt(cb.value));
+            });
+            
+            const expenseCategories = [];
+            document.querySelectorAll('#expenseCategoryCheckboxes input:checked').forEach(cb => {
+                expenseCategories.push(parseInt(cb.value));
+            });
+            
+            const systemFeatures = [];
+            document.querySelectorAll('#systemFeatureCheckboxes input:checked').forEach(cb => {
+                systemFeatures.push(cb.value);
+            });
+            
+            const staffMemberIds = [];
+            document.querySelectorAll('#staffCheckboxes input:checked').forEach(cb => {
+                staffMemberIds.push(parseInt(cb.value));
+            });
+            
+            const data = {
+                name: name,
+                description: document.getElementById('deptDescription').value || null,
+                head_id: document.getElementById('deptHead').value ? parseInt(document.getElementById('deptHead').value) : null,
+                role_permissions: rolePermissions,
+                data_assignments: {
+                    task_categories: taskCategories,
+                    expense_categories: expenseCategories
+                },
+                system_features: systemFeatures,
+                staff_member_ids: staffMemberIds
+            };
+            
+            const btn = document.getElementById('createBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner me-2"></span>Creating...';
+            
+            try {
+                const result = await staffFetchJson(`${API_BASE}/rvz/departments/create`, {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                
+                showToast(`Department "${result.department.name}" created successfully with code ${result.department.department_code}`, 'success');
+                resetCreateForm();
+                loadDepartments();
+                document.querySelector('#manage-tab').click();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error creating department:', error);
+                showToast(error.message || 'Error creating department', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plus me-1"></i>Create Department';
+            }
+            
+            return false;
+        }
+        
+        function resetCreateForm() {
+            document.getElementById('createDepartmentForm').reset();
+            document.querySelectorAll('#createAccordion input[type="checkbox"]').forEach(cb => cb.checked = false);
+        }
+        
+        async function loadDepartments() {
+            const includeInactive = document.getElementById('showInactive')?.checked || false;
+            
+            try {
+                const data = await staffFetchJson(`${API_BASE}/rvz/departments/list?include_inactive=${includeInactive}`);
+                allDepartments = data.departments;
+                renderDepartmentsTable();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading departments:', error);
+                showToast('Error loading departments', 'error');
+            }
+        }
+        
+        function renderDepartmentsTable() {
+            const tbody = document.getElementById('departmentsTableBody');
+            
+            if (allDepartments.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="empty-state">
+                            <i class="fas fa-building"></i>
+                            <h5>No departments found</h5>
+                            <p class="text-muted">Create your first department to get started!</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = allDepartments.map(dept => `
+                <tr>
+                    <td><span class="dept-code">${dept.department_code || '-'}</span></td>
+                    <td>
+                        <strong>${dept.name}</strong>
+                        ${dept.description ? `<br><small class="text-muted">${dept.description.substring(0, 50)}${dept.description.length > 50 ? '...' : ''}</small>` : ''}
+                    </td>
+                    <td>${dept.head_name || '<span class="text-muted">-</span>'}</td>
+                    <td>
+                        <span class="badge bg-secondary">${dept.employee_count} primary</span>
+                        ${dept.multi_dept_count > 0 ? `<span class="badge bg-info ms-1">${dept.multi_dept_count} multi</span>` : ''}
+                    </td>
+                    <td>
+                        <span class="status-badge ${dept.is_active ? 'status-active' : 'status-paused'}">
+                            <i class="fas fa-${dept.is_active ? 'check-circle' : 'pause-circle'} me-1"></i>
+                            ${dept.is_active ? 'Active' : 'Paused'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn btn-sm btn-outline-primary btn-icon" onclick="editDepartment(${dept.id})" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-${dept.is_active ? 'warning' : 'success'} btn-icon" onclick="toggleDepartmentStatus(${dept.id}, ${!dept.is_active})" title="${dept.is_active ? 'Pause' : 'Activate'}">
+                                <i class="fas fa-${dept.is_active ? 'pause' : 'play'}"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-info btn-icon" onclick="openCreateRoleModal(${dept.id})" title="Add Role">
+                                <i class="fas fa-user-tag"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function filterDepartments() {
+            const searchTerm = document.getElementById('deptSearchInput').value.toLowerCase();
+            const filteredDepts = allDepartments.filter(dept => 
+                dept.name.toLowerCase().includes(searchTerm) ||
+                (dept.department_code && dept.department_code.toLowerCase().includes(searchTerm))
+            );
+            
+            const tbody = document.getElementById('departmentsTableBody');
+            
+            if (filteredDepts.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No departments match your search</td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = filteredDepts.map(dept => `
+                <tr>
+                    <td><span class="dept-code">${dept.department_code || '-'}</span></td>
+                    <td><strong>${dept.name}</strong></td>
+                    <td>${dept.head_name || '-'}</td>
+                    <td><span class="badge bg-secondary">${dept.employee_count}</span></td>
+                    <td><span class="status-badge ${dept.is_active ? 'status-active' : 'status-paused'}">${dept.is_active ? 'Active' : 'Paused'}</span></td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn btn-sm btn-outline-primary btn-icon" onclick="editDepartment(${dept.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-${dept.is_active ? 'warning' : 'success'} btn-icon" onclick="toggleDepartmentStatus(${dept.id}, ${!dept.is_active})"><i class="fas fa-${dept.is_active ? 'pause' : 'play'}"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        let currentEditDeptData = null;
+        let originalStaffAssignments = [];
+        
+        async function editDepartment(deptId) {
+            currentEditDeptId = deptId;
+            
+            try {
+                const data = await staffFetchJson(`${API_BASE}/rvz/departments/${deptId}`);
+                const dept = data.department;
+                currentEditDeptData = dept;
+                    originalStaffAssignments = data.multi_dept_assignments?.map(a => a.employee_id) || [];
+                    
+                    const rolePermissions = dept.role_permissions || [];
+                    const dataAssignments = dept.data_assignments || {};
+                    const taskCategories = dataAssignments.task_categories || [];
+                    const expenseCategories = dataAssignments.expense_categories || [];
+                    const systemFeatures = dept.system_features || [];
+                    
+                    document.getElementById('editModalBody').innerHTML = `
+                        <div class="accordion" id="editAccordion">
+                            <!-- Section A: Basic Information -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#editSectionA">
+                                        <i class="fas fa-info-circle text-primary me-2"></i>Section A: Basic Information
+                                    </button>
+                                </h2>
+                                <div id="editSectionA" class="accordion-collapse collapse show" data-bs-parent="#editAccordion">
+                                    <div class="accordion-body">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Department Name <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="editDeptName" value="${dept.name}" required>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label">Department Code</label>
+                                                <input type="text" class="form-control" value="${dept.department_code || 'N/A'}" disabled>
+                                                <small class="text-muted">Code cannot be changed</small>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Description</label>
+                                            <textarea class="form-control" id="editDeptDescription" rows="2">${dept.description || ''}</textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Department Head</label>
+                                            <select class="form-select" id="editDeptHead">
+                                                <option value="">Select Department Head</option>
+                                                ${configOptions?.staff_members?.map(emp => 
+                                                    `<option value="${emp.id}" ${dept.head_id === emp.id ? 'selected' : ''}>${emp.emp_code} - ${emp.full_name}</option>`
+                                                ).join('') || ''}
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Section B: Role-Based Access Control -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#editSectionB">
+                                        <i class="fas fa-user-shield text-success me-2"></i>Section B: Role-Based Access Control
+                                    </button>
+                                </h2>
+                                <div id="editSectionB" class="accordion-collapse collapse" data-bs-parent="#editAccordion">
+                                    <div class="accordion-body">
+                                        <p class="text-muted mb-3">Select which hierarchy levels can access this department:</p>
+                                        <div class="checkbox-grid" id="editHierarchyCheckboxes">
+                                            ${configOptions?.hierarchy_levels?.map(level => `
+                                                <div class="checkbox-item">
+                                                    <div class="form-check">
+                                                        <input type="checkbox" class="form-check-input edit-hierarchy-cb" 
+                                                            id="editHierarchy_${level.code}" value="${level.code}"
+                                                            ${rolePermissions.includes(level.code) ? 'checked' : ''}>
+                                                        <label class="form-check-label" for="editHierarchy_${level.code}">${level.label}</label>
+                                                    </div>
+                                                </div>
+                                            `).join('') || '<p class="text-muted">No hierarchy levels available</p>'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Section C: Data Assignments -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#editSectionC">
+                                        <i class="fas fa-database text-warning me-2"></i>Section C: Data Assignments
+                                    </button>
+                                </h2>
+                                <div id="editSectionC" class="accordion-collapse collapse" data-bs-parent="#editAccordion">
+                                    <div class="accordion-body">
+                                        <h6 class="mb-3"><i class="fas fa-tasks me-2"></i>Task Categories</h6>
+                                        <div class="checkbox-grid mb-4" id="editTaskCategoryCheckboxes">
+                                            ${configOptions?.task_categories?.map(cat => `
+                                                <div class="checkbox-item">
+                                                    <div class="form-check">
+                                                        <input type="checkbox" class="form-check-input edit-task-cat-cb" 
+                                                            id="editTaskCat_${cat.id}" value="${cat.id}"
+                                                            ${taskCategories.includes(cat.id) ? 'checked' : ''}>
+                                                        <label class="form-check-label" for="editTaskCat_${cat.id}">${cat.name}</label>
+                                                    </div>
+                                                </div>
+                                            `).join('') || ''}
+                                        </div>
+                                        
+                                        <h6 class="mb-3"><i class="fas fa-receipt me-2"></i>Expense Categories</h6>
+                                        <div class="checkbox-grid mb-4" id="editExpenseCategoryCheckboxes">
+                                            ${configOptions?.expense_categories?.map(cat => `
+                                                <div class="checkbox-item">
+                                                    <div class="form-check">
+                                                        <input type="checkbox" class="form-check-input edit-expense-cat-cb" 
+                                                            id="editExpenseCat_${cat.id}" value="${cat.id}"
+                                                            ${expenseCategories.includes(cat.id) ? 'checked' : ''}>
+                                                        <label class="form-check-label" for="editExpenseCat_${cat.id}">${cat.name}</label>
+                                                    </div>
+                                                </div>
+                                            `).join('') || ''}
+                                        </div>
+                                        
+                                        <h6 class="mb-3"><i class="fas fa-cogs me-2"></i>System Features</h6>
+                                        <div class="checkbox-grid" id="editSystemFeaturesCheckboxes">
+                                            ${configOptions?.system_features?.map(feat => `
+                                                <div class="checkbox-item">
+                                                    <div class="form-check">
+                                                        <input type="checkbox" class="form-check-input edit-sys-feat-cb" 
+                                                            id="editSysFeat_${feat.code}" value="${feat.code}"
+                                                            ${systemFeatures.includes(feat.code) ? 'checked' : ''}>
+                                                        <label class="form-check-label" for="editSysFeat_${feat.code}">${feat.name}</label>
+                                                    </div>
+                                                </div>
+                                            `).join('') || ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Section D: Staff Assignment -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#editSectionD">
+                                        <i class="fas fa-users text-info me-2"></i>Section D: Staff Assignment
+                                    </button>
+                                </h2>
+                                <div id="editSectionD" class="accordion-collapse collapse" data-bs-parent="#editAccordion">
+                                    <div class="accordion-body">
+                                        <p class="text-muted mb-3">Select staff members to assign to this department (multi-department enabled):</p>
+                                        <div class="mb-3">
+                                            <input type="text" class="form-control" id="editStaffSearch" placeholder="Search staff by name or employee code...">
+                                        </div>
+                                        <div class="staff-list" id="editStaffList" style="max-height: 250px; overflow-y: auto;">
+                                            ${configOptions?.staff_members?.map(emp => `
+                                                <div class="staff-item" data-name="${emp.full_name.toLowerCase()}" data-code="${emp.emp_code.toLowerCase()}">
+                                                    <div class="form-check">
+                                                        <input type="checkbox" class="form-check-input edit-staff-cb" 
+                                                            id="editStaff_${emp.id}" value="${emp.id}"
+                                                            ${originalStaffAssignments.includes(emp.id) ? 'checked' : ''}>
+                                                        <label class="form-check-label" for="editStaff_${emp.id}">
+                                                            <span class="staff-code">${emp.emp_code}</span>
+                                                            ${emp.full_name}
+                                                            <small class="text-muted">(${emp.department_name || 'No Dept'})</small>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            `).join('') || ''}
+                                        </div>
+                                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i>Staff can belong to multiple departments</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Section E: Custom Roles -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#editSectionE">
+                                        <i class="fas fa-user-tag text-danger me-2"></i>Section E: Custom Roles
+                                    </button>
+                                </h2>
+                                <div id="editSectionE" class="accordion-collapse collapse" data-bs-parent="#editAccordion">
+                                    <div class="accordion-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <span class="text-muted">Department-specific roles</span>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="openCreateRoleModal(${deptId})">
+                                                <i class="fas fa-plus me-1"></i>Add Role
+                                            </button>
+                                        </div>
+                                        <div id="editDeptCustomRoles">
+                                            ${data.custom_roles?.length > 0 ? data.custom_roles.map(role => `
+                                                <div class="d-flex justify-content-between align-items-center mb-2 p-3 rounded" style="background: #f9fafb; border: 1px solid #e5e7eb;">
+                                                    <div>
+                                                        <strong>${role.role_name}</strong>
+                                                        <small class="text-muted d-block">${role.role_description || 'No description'}</small>
+                                                    </div>
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="deleteRole(${deptId}, ${role.id})">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            `).join('') : '<p class="text-muted">No custom roles defined</p>'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                document.getElementById('editStaffSearch').addEventListener('input', filterEditStaffList);
+                
+                new bootstrap.Modal(document.getElementById('editDeptModal')).show();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading department:', error);
+                showToast('Error loading department details', 'error');
+            }
+        }
+        
+        function filterEditStaffList() {
+            const searchTerm = document.getElementById('editStaffSearch').value.toLowerCase();
+            const items = document.querySelectorAll('#editStaffList .staff-item');
+            items.forEach(item => {
+                const name = item.dataset.name;
+                const code = item.dataset.code;
+                item.style.display = (name.includes(searchTerm) || code.includes(searchTerm)) ? '' : 'none';
+            });
+        }
+        
+        async function saveEditDepartment() {
+            const rolePermissions = Array.from(document.querySelectorAll('.edit-hierarchy-cb:checked')).map(cb => parseInt(cb.value));
+            const taskCategories = Array.from(document.querySelectorAll('.edit-task-cat-cb:checked')).map(cb => parseInt(cb.value));
+            const expenseCategories = Array.from(document.querySelectorAll('.edit-expense-cat-cb:checked')).map(cb => parseInt(cb.value));
+            const systemFeatures = Array.from(document.querySelectorAll('.edit-sys-feat-cb:checked')).map(cb => cb.value);
+            const selectedStaff = Array.from(document.querySelectorAll('.edit-staff-cb:checked')).map(cb => parseInt(cb.value));
+            
+            const data = {
+                name: document.getElementById('editDeptName').value,
+                description: document.getElementById('editDeptDescription').value || null,
+                head_id: document.getElementById('editDeptHead').value ? parseInt(document.getElementById('editDeptHead').value) : null,
+                role_permissions: rolePermissions,
+                data_assignments: {
+                    task_categories: taskCategories,
+                    expense_categories: expenseCategories
+                },
+                system_features: systemFeatures
+            };
+            
+            try {
+                await staffFetchJson(`${API_BASE}/rvz/departments/${currentEditDeptId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(data)
+                });
+                
+                const staffToAdd = selectedStaff.filter(id => !originalStaffAssignments.includes(id));
+                const staffToRemove = originalStaffAssignments.filter(id => !selectedStaff.includes(id));
+                
+                if (staffToAdd.length > 0) {
+                    await staffFetchJson(`${API_BASE}/rvz/departments/${currentEditDeptId}/assign-staff`, {
+                        method: 'POST',
+                        body: JSON.stringify(staffToAdd)
+                    });
+                }
+                
+                for (const empId of staffToRemove) {
+                    await staffFetchJson(`${API_BASE}/rvz/departments/${currentEditDeptId}/remove-staff/${empId}`, {
+                        method: 'DELETE'
+                    });
+                }
+                
+                showToast('Department updated successfully', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('editDeptModal')).hide();
+                loadDepartments();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error updating department:', error);
+                showToast(error.message || 'Error updating department', 'error');
+            }
+        }
+        
+        async function toggleDepartmentStatus(deptId, setActive) {
+            const action = setActive ? 'activate' : 'pause';
+            
+            if (!confirm(`Are you sure you want to ${action} this department?`)) return;
+            
+            try {
+                await staffFetchJson(`${API_BASE}/rvz/departments/${deptId}/status?is_active=${setActive}`, {
+                    method: 'PATCH'
+                });
+                
+                showToast(`Department ${setActive ? 'activated' : 'paused'} successfully`, 'success');
+                loadDepartments();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error toggling department status:', error);
+                showToast('Error updating department status', 'error');
+            }
+        }
+        
+        function openCreateRoleModal(deptId) {
+            document.getElementById('roleModalDeptId').value = deptId;
+            document.getElementById('newRoleName').value = '';
+            document.getElementById('newRoleDescription').value = '';
+            
+            const container = document.getElementById('roleHierarchyCheckboxes');
+            if (configOptions?.hierarchy_levels) {
+                container.innerHTML = configOptions.hierarchy_levels.map(level => `
+                    <div class="checkbox-item">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="roleHier_${level.code}" value="${level.code}">
+                            <label class="form-check-label" for="roleHier_${level.code}">${level.label}</label>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            new bootstrap.Modal(document.getElementById('createRoleModal')).show();
+        }
+        
+        async function createDepartmentRole() {
+            const deptId = document.getElementById('roleModalDeptId').value;
+            const roleName = document.getElementById('newRoleName').value.trim();
+            
+            if (!roleName) {
+                showToast('Role name is required', 'error');
+                return;
+            }
+            
+            const hierarchyPermissions = [];
+            document.querySelectorAll('#roleHierarchyCheckboxes input:checked').forEach(cb => {
+                hierarchyPermissions.push(parseInt(cb.value));
+            });
+            
+            try {
+                await staffFetchJson(`${API_BASE}/rvz/departments/${deptId}/roles`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        role_name: roleName,
+                        role_description: document.getElementById('newRoleDescription').value || null,
+                        hierarchy_permissions: hierarchyPermissions
+                    })
+                });
+                
+                showToast('Role created successfully', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('createRoleModal')).hide();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error creating role:', error);
+                showToast(error.message || 'Error creating role', 'error');
+            }
+        }
+        
+        async function deleteRole(deptId, roleId) {
+            if (!confirm('Are you sure you want to delete this role?')) return;
+            
+            try {
+                await staffFetchJson(`${API_BASE}/rvz/departments/${deptId}/roles/${roleId}`, {
+                    method: 'DELETE'
+                });
+                
+                showToast('Role deleted successfully', 'success');
+                editDepartment(deptId);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error deleting role:', error);
+                showToast('Error deleting role', 'error');
+            }
+        }
+        
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const id = 'toast_' + Date.now();
+            const bgClass = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-primary';
+            
+            const toastHtml = `
+                <div id="${id}" class="toast ${bgClass} text-white" role="alert">
+                    <div class="toast-body d-flex align-items-center">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                        ${message}
+                        <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', toastHtml);
+            const toastEl = document.getElementById(id);
+            const toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+            toast.show();
+            
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+    </script>
+</body>
+</html>

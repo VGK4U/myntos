@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partner — MyntReal</title>
+  <link rel="icon" href="/hub/Assets/favicon.ico" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/hub/style.css?v=9">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  <style>
+    /* ── Page body ── */
+    body { background: #f4f6f8; }
+
+    /* ── Hero ── */
+    .partner-hero {
+      background: linear-gradient(135deg, #0d1b2a 0%, #1a2e46 55%, #0d1b2a 100%);
+      padding: 100px 20px 60px;
+      text-align: center;
+      color: #fff;
+    }
+    .partner-logo-wrap {
+      width: 140px; height: 140px;
+      background: #fff;
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 22px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.28);
+      overflow: hidden;
+      padding: 12px;
+    }
+    .partner-logo-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .partner-logo-wrap .no-logo { font-size: 3rem; color: #bbb; }
+    .partner-hero h1 { font-size: clamp(1.6rem,4vw,2.4rem); font-weight: 800; margin: 0 0 14px; }
+    .hero-badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 18px; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      border-radius: 20px; padding: 6px 16px; font-size: .82rem; font-weight: 600;
+    }
+    .hero-badge.green  { background: rgba(46,204,113,.18); border: 1px solid rgba(46,204,113,.4); color: #4ade80; }
+    .hero-badge.back   { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); color: #fff; cursor: pointer; text-decoration: none; }
+    .hero-badge.back:hover { background: rgba(255,255,255,.2); }
+
+    /* ── Content cards ── */
+    .partner-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 14px rgba(0,0,0,.07);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+    .partner-card h3 {
+      font-size: .88rem; font-weight: 700; color: #0d1b2a;
+      text-transform: uppercase; letter-spacing: .08em;
+      margin: 0 0 18px; padding-bottom: 12px;
+      border-bottom: 2px solid #eef0f4;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .partner-card h3 i { color: #2563eb; }
+    .info-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; font-size: .95rem; color: #444; }
+    .info-row .icon { color: #2563eb; min-width: 20px; padding-top: 2px; }
+
+    /* Rich text notes */
+    .partner-notes { line-height: 1.75; color: #555; font-size: .95rem; }
+    .partner-notes p { margin-bottom: .65em; }
+    .partner-notes ul, .partner-notes ol { padding-left: 1.5em; margin-bottom: .65em; }
+    .partner-notes strong { color: #1a1a2e; }
+    .partner-notes a { color: #2563eb; }
+
+    /* ── Gallery ── */
+    .gallery-scroll {
+      display: flex; gap: 12px;
+      overflow-x: auto; padding-bottom: 6px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .gallery-scroll::-webkit-scrollbar { height: 4px; }
+    .gallery-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+    .gallery-scroll::-webkit-scrollbar-thumb { background: #c0c4cc; border-radius: 4px; }
+    .gallery-item {
+      flex-shrink: 0; scroll-snap-align: start;
+      width: 220px; height: 160px;
+      border-radius: 12px; overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0,0,0,.1);
+      cursor: pointer; position: relative;
+    }
+    .gallery-item img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
+    .gallery-item:hover img { transform: scale(1.04); }
+    .gallery-item .caption {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,.6));
+      color: #fff; font-size: .72rem; padding: 22px 10px 8px;
+    }
+
+    /* ── Lightbox ── */
+    .lb-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.92); z-index: 9999;
+      align-items: center; justify-content: center;
+    }
+    .lb-overlay.open { display: flex; }
+    .lb-overlay img { max-width: 90vw; max-height: 85vh; border-radius: 10px; object-fit: contain; }
+    .lb-close { position: absolute; top: 18px; right: 22px; color: #fff; font-size: 2rem; cursor: pointer; background: none; border: none; opacity: .75; }
+    .lb-close:hover { opacity: 1; }
+
+    /* ── Skeleton ── */
+    .skeleton { background: #e0e0e0; border-radius: 8px; animation: sk 1.4s ease infinite; }
+    @keyframes sk { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Not found ── */
+    .not-found { text-align: center; padding: 80px 20px; }
+    .not-found i { font-size: 3rem; color: #bbb; display: block; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<!-- ══ HEADER (matches home page exactly) ══ -->
+<header id="header">
+  <div class="container nav">
+    <div class="menu-toggle" id="menuToggle">
+      <span></span><span></span><span></span>
+    </div>
+    <div class="logo">
+      <a href="/hub"><img src="/hub/Assets/Myntreal.logo.png" alt="MyntReal Logo" class="site-logo"></a>
+    </div>
+    <div class="right-group">
+      <nav id="navMenu">
+        <a href="/hub">Home</a>
+        <a href="/hub/about">About</a>
+        <a href="/hub/media">Media</a>
+        <div class="dropdown">
+          <a href="#" class="dropdown-trigger">Verticals <span class="dropdown-arrow">▾</span></a>
+          <div class="dropdown-menu">
+            <a href="/hub/manthra">⚡ Manthra EV</a>
+            <a href="/hub/hgs">☀️ Har Ghar Solar</a>
+            <a href="/hub/etc">🎓 EVolution Training</a>
+            <a href="/hub/realestate">🏡 VGK Real Dreams</a>
+            <a href="/hub/care">🛡️ VGK Care</a>
+          </div>
+        </div>
+        <a href="/hub/contact">Contact</a>
+        <a href="/careers">Careers</a>
+      </nav>
+      <div class="header-actions">
+        <a href="/landing" class="btn-login">Login</a>
+      </div>
+    </div>
+  </div>
+  <div class="nav-overlay" id="navOverlay"></div>
+</header>
+
+<!-- ══ HERO ══ -->
+<section class="partner-hero" id="heroSection">
+  <div id="heroLogo" class="partner-logo-wrap">
+    <div class="skeleton" style="width:100%;height:100%;border-radius:8px;"></div>
+  </div>
+  <h1 id="heroName"><span class="skeleton" style="width:220px;height:36px;display:inline-block;"></span></h1>
+  <div class="hero-badges">
+    <span class="hero-badge green"><i class="fas fa-handshake"></i> Associated Partner — MyntReal</span>
+    <a href="/hub" class="hero-badge back"><i class="fas fa-arrow-left"></i> Back to Home</a>
+  </div>
+</section>
+
+<!-- ══ CONTENT ══ -->
+<div class="container" style="max-width:860px; padding: 40px 16px 60px;">
+
+  <div class="not-found" id="notFound" style="display:none">
+    <i class="fas fa-building"></i>
+    <h4>Partner not found</h4>
+    <p style="color:#888">This partner profile is unavailable.</p>
+    <a href="/hub" class="btn-primary" style="margin-top:16px;display:inline-block">Back to Home</a>
+  </div>
+
+  <div id="partnerContent" style="display:none">
+
+    <div class="partner-card" id="basicCard" style="display:none">
+      <h3><i class="fas fa-info-circle"></i> Company Details</h3>
+      <div id="infoRows"></div>
+    </div>
+
+    <div class="partner-card" id="galleryCard" style="display:none">
+      <h3><i class="fas fa-images"></i> Gallery</h3>
+      <div class="gallery-scroll" id="galleryScroll"></div>
+    </div>
+
+    <div class="partner-card" id="notesCard" style="display:none">
+      <h3><i class="fas fa-file-alt"></i> About the Company</h3>
+      <div class="partner-notes" id="notesBody"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ LIGHTBOX ══ -->
+<div class="lb-overlay" id="lbOverlay" onclick="closeLb(event)">
+  <button class="lb-close" onclick="closeLb()">✕</button>
+  <img id="lbImg" src="" alt="">
+</div>
+
+<!-- ══ FOOTER (matches home page exactly) ══ -->
+<footer class="site-footer">
+  <div class="container footer-grid">
+
+    <div class="footer-brand">
+      <img src="/hub/Assets/MyntWhite.png" alt="MyntReal">
+      <p>MyntReal integrates multiple high-growth industries into one scalable ecosystem including EV, Solar, Training, Insurance and Real Estate services.</p>
+      <div class="footer-social" id="sm-hub"></div>
+      <script>(function(){fetch('/api/v1/social-links/hub').then(function(r){return r.ok?r.json():[];}).then(function(ls){if(!ls||!ls.length)return;var ic={facebook:'fa-brands fa-facebook-f',instagram:'fa-brands fa-instagram',youtube:'fa-brands fa-youtube',linkedin:'fa-brands fa-linkedin-in',google:'fa-brands fa-google'};var el=document.getElementById('sm-hub');el.innerHTML=ls.map(function(l){return'<a href="'+l.url+'" target="_blank" rel="noopener"><i class="'+ic[l.platform]+'"></i></a>';}).join('');}).catch(function(){});})();</script>
+    </div>
+
+    <div class="footer-links">
+      <h4>Company</h4>
+      <a href="/hub">Home</a>
+      <a href="/hub/about">About</a>
+      <a href="/hub/media">Media</a>
+      <a href="/hub/verticals">Verticals</a>
+      <a href="/hub/contact">Contact</a>
+      <a href="/careers">Careers</a>
+    </div>
+
+    <div class="footer-links">
+      <h4>Our Verticals</h4>
+      <a href="/hub/manthra">Manthra EV</a>
+      <a href="/hub/hgs">Har Ghar Solar</a>
+      <a href="/hub/etc">EVolution Training</a>
+      <a href="/hub/care">VGK Care</a>
+      <a href="/hub/realestate">VGK Real Dreams</a>
+    </div>
+
+    <div class="footer-links">
+      <h4>Get Support</h4>
+      <a href="/service-request">Support Form</a>
+      <a href="/service-request?category=ev">Manthra EV Support</a>
+      <a href="/service-request?category=solar">Solar Support</a>
+      <a href="/service-request?category=etc">Training Support</a>
+      <a href="/service-request?category=care">VGK Care Support</a>
+      <a href="/service-request?category=realestate">Real Estate Support</a>
+    </div>
+
+    <div class="footer-links footer-contact">
+      <h4>Contact</h4>
+      <p>📍 Survey No. 156/1, Mainroad Saripalli</p>
+      <p>Pendurthi, Visakhapatnam — 531173</p>
+      <p>📞 +91 8585852738</p>
+      <p>✉ contact@myntreal.com</p>
+      <div class="footer-newsletter">
+        <h5>Get Updates</h5>
+        <div class="newsletter-box">
+          <input type="email" placeholder="Enter your email">
+          <button>Subscribe</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footer-divider"></div>
+  <div class="footer-bottom">
+    <div class="container footer-bottom-inner">
+      <p>© 2026 MyntReal. All rights reserved.</p>
+      <div class="footer-policy">
+        <a href="/privacy">Privacy Policy</a>
+        <a href="#">Terms</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ── Mobile menu (same as home page) ── */
+const menuToggle = document.getElementById('menuToggle');
+const navMenu    = document.getElementById('navMenu');
+const overlay    = document.getElementById('navOverlay');
+menuToggle.addEventListener('click', () => {
+  menuToggle.classList.toggle('active');
+  navMenu.classList.toggle('active');
+  overlay.classList.toggle('active');
+});
+overlay.addEventListener('click', () => {
+  menuToggle.classList.remove('active');
+  navMenu.classList.remove('active');
+  overlay.classList.remove('active');
+});
+document.querySelectorAll('.dropdown-trigger').forEach(t => {
+  t.addEventListener('click', e => {
+    if (window.innerWidth < 900) {
+      e.preventDefault();
+      t.parentElement.classList.toggle('active');
+    }
+  });
+});
+
+/* ── Scroll header ── */
+window.addEventListener('scroll', () => {
+  document.getElementById('header').classList.toggle('scrolled', window.scrollY > 20);
+});
+
+/* ── Partner data ── */
+(function () {
+  const pid = new URLSearchParams(location.search).get('id') || location.pathname.split('/').filter(Boolean).pop();
+  if (!pid || isNaN(parseInt(pid, 10))) { showNotFound(); return; }
+
+  Promise.all([
+    fetch('/api/v1/hub/partners/' + pid).then(r => r.ok ? r.json() : Promise.reject(r.status)),
+    fetch('/api/v1/hub/partners/' + pid + '/gallery').then(r => r.ok ? r.json() : [])
+  ])
+  .then(([p, gallery]) => renderPartner(p, gallery))
+  .catch(() => showNotFound());
+
+  function sanitize(html) {
+    if (typeof DOMPurify !== 'undefined') {
+      return DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ['b','i','u','em','strong','ul','ol','li','p','br','a','h2','h3'],
+        ALLOWED_ATTR: ['href','target','rel']
+      });
+    }
+    return html.replace(/<script[\s\S]*?<\/script>/gi, '');
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderPartner(p, gallery) {
+    document.title = p.company_name + ' — MyntReal Partner';
+
+    const logoWrap = document.getElementById('heroLogo');
+    logoWrap.innerHTML = p.logo_url
+      ? '<img src="' + esc(p.logo_url) + '" alt="' + esc(p.company_name) + '">'
+      : '<i class="fas fa-building no-logo"></i>';
+
+    document.getElementById('heroName').textContent = p.company_name;
+
+    const rows = [];
+    if (p.address)          rows.push({ icon: 'fa-map-marker-alt', text: p.address });
+    if (p.established_year) rows.push({ icon: 'fa-calendar-alt', text: 'Established ' + p.established_year });
+    if (rows.length) {
+      document.getElementById('infoRows').innerHTML = rows.map(r =>
+        '<div class="info-row"><i class="fas ' + r.icon + ' icon"></i><span>' + esc(r.text) + '</span></div>'
+      ).join('');
+      document.getElementById('basicCard').style.display = '';
+    }
+
+    if (gallery && gallery.length) {
+      document.getElementById('galleryScroll').innerHTML = gallery.map((ph, i) => `
+        <div class="gallery-item" onclick="openLb('${esc(ph.photo_url)}')">
+          <img src="${esc(ph.photo_url)}" alt="${esc(ph.caption || 'Photo ' + (i+1))}" loading="lazy">
+          ${ph.caption ? '<div class="caption">' + esc(ph.caption) + '</div>' : ''}
+        </div>
+      `).join('');
+      document.getElementById('galleryCard').style.display = '';
+    }
+
+    if (p.notes) {
+      document.getElementById('notesBody').innerHTML = sanitize(p.notes);
+      document.getElementById('notesCard').style.display = '';
+    }
+
+    document.getElementById('partnerContent').style.display = '';
+  }
+
+  function showNotFound() {
+    document.getElementById('heroSection').style.display = 'none';
+    document.getElementById('notFound').style.display = '';
+  }
+})();
+
+/* ── Lightbox ── */
+function openLb(src) {
+  document.getElementById('lbImg').src = src;
+  document.getElementById('lbOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLb(e) {
+  if (e && e.target !== document.getElementById('lbOverlay') && !e.target.classList.contains('lb-close')) return;
+  document.getElementById('lbOverlay').classList.remove('open');
+  document.getElementById('lbImg').src = '';
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.getElementById('lbOverlay').classList.remove('open'); document.body.style.overflow = ''; } });
+</script>
+</body>
+</html>

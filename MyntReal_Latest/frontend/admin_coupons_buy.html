@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Purchase Coupon - Admin - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<!-- [DC-T33] VGK4U audience tabs (auto-mount + jQuery audience injector) --><script src="/audience-tabs.js"></script></head>
+<body style="background: #f5f5f5;">
+    <nav class="navbar navbar-dark" style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%)">
+        <div class="container-fluid">
+            <span class="navbar-brand"><i class="fas fa-ticket-alt"></i> Buy Coupon/PIN</span>
+            <a href="/admin/dashboard" class="btn btn-outline-light btn-sm"><i class="fas fa-arrow-left"></i> Dashboard</a>
+        </div>
+    </nav>
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <strong><i class="fas fa-info-circle"></i> Package Information:</strong><br>
+                    • Platinum (₹15,000): Maximum benefits, ₹3,000 direct referral bonus<br>
+                    • Diamond (₹7,500): Great value, ₹1,500 direct referral bonus (up to 2x)
+                </div>
+                
+                <!-- Payment Scanner Section -->
+                <div class="card mb-4" style="border: 2px solid #28a745; background: linear-gradient(135deg, #f8fff8 0%, #e8f5e9 100%);">
+                    <div class="card-header" style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white;">
+                        <h5 class="mb-0"><i class="fas fa-qrcode me-2"></i>Payment Scanner - Verify Before Payment</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="/attached_assets/payment_scanner.png" alt="MNR Payment Scanner" style="max-width: 100%; max-height: 400px; border-radius: 0.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <div class="mt-3 alert alert-warning" style="margin-bottom: 0;">
+                            <strong><i class="fas fa-exclamation-triangle"></i> Important:</strong> Verify the company name <strong>"MNR MEGA NATURAL RESOURCES"</strong> before making payment
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-shopping-cart"></i> Purchase Coupon for Member</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="userFilterContainer" class="mb-4">
+                            <div class="alert alert-secondary">
+                                <i class="fas fa-user-search"></i> Select a member to purchase coupon for them
+                            </div>
+                        </div>
+                        
+                        <form id="adminPinPurchaseForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Member ID</label>
+                                    <input type="text" class="form-control" id="memberId" placeholder="Enter MNR ID" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Package Type</label>
+                                    <select class="form-select" id="packageType" required>
+                                        <option value="">Select Package</option>
+                                        <option value="15000">Platinum - ₹15,000</option>
+                                        <option value="7500">Diamond - ₹7,500</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Quantity</label>
+                                    <input type="number" class="form-control" id="quantity" min="1" max="10" value="1" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Transaction ID</label>
+                                    <input type="text" class="form-control" id="transactionId" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Submit Purchase</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <a href="/admin/coupons/progress" class="btn btn-outline-secondary"><i class="fas fa-chart-line"></i> View Progress</a>
+                    <a href="/admin/coupons/status" class="btn btn-outline-info"><i class="fas fa-list"></i> Coupon Status</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leadership Group (VED) - MNR Business Access Program Reference System</title>
+<!-- [DC-T33] VGK4U audience tabs (auto-mount + jQuery audience injector) --><script src="/audience-tabs.js"></script></head>
+<body>
+    <div class="container-fluid mt-4">
+        <div class="mb-3 text-end">
+            <a href="/admin/dashboard" class="btn btn-primary btn-sm">
+                <i class="fas fa-home me-2"></i>Go to Dashboard
+            </a>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>👑 Leadership Group (VED)</h2>
+                <p class="text-muted mb-0">View Ved team members</p>
+            </div>
+        </div>
+
+        <!-- User Filter -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-filter"></i> Filter by User ID
+            </div>
+            <div class="card-body">
+                <form id="userFilterForm" class="row g-3">
+                    <div class="col-md-8">
+                        <label for="userIdInput" class="form-label">Enter User ID (MNR ID)</label>
+                        <input type="text" class="form-control" id="userIdInput" placeholder="e.g., MNR1800143">
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Apply Filter
+                        </button>
+                    </div>
+                </form>
+                <div id="filterInfo" class="mt-3" style="display: none;">
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i> 
+                        Showing data for: <strong id="filteredUserId"></strong>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="clearUserFilter()">
+                            <i class="fas fa-times"></i> Clear Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Filters -->
+        <div class="card mb-4">
+            <div class="card-header bg-secondary text-white">
+                <i class="fas fa-sliders-h"></i> Advanced Filters
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="startDateFilter">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="endDateFilter">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Package</label>
+                        <select class="form-select" id="packageFilter">
+                            <option value="">All</option>
+                            <option value="Platinum">Platinum</option>
+                            <option value="Diamond">Diamond</option>
+                            <option value="Blue">Blue</option>
+                            <option value="Loyal">Loyal</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">All</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Coupon Status</label>
+                        <select class="form-select" id="couponFilter">
+                            <option value="">All</option>
+                            <option value="Purchased">Purchased</option>
+                            <option value="Assigned">Assigned</option>
+                            <option value="Activated">Activated</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-outline-secondary w-100" onclick="resetAdvancedFilters()">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loadingState" class="text-center py-5">
+            <div class="spinner-border text-warning"></div>
+            <p class="mt-3 text-muted">Loading Ved team data...</p>
+        </div>
+
+        <!-- Ved Head Info Card (Always Visible) -->
+        <div id="vedHeadCard" style="display: none;" class="card shadow-sm mb-4">
+            <div class="card-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+                <h5 class="mb-0">
+                    <i class="fas fa-crown"></i> Ved Head (Position 3)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>MNR ID:</strong><br>
+                        <span id="vedHeadBevId" class="text-primary fs-5"></span>
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Name:</strong><br>
+                        <span id="vedHeadName"></span>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Package:</strong><br>
+                        <span id="vedHeadPackage" class="badge bg-warning"></span>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Status:</strong><br>
+                        <span id="vedHeadStatus"></span>
+                    </div>
+                    <div class="col-md-2">
+                        <strong>Activation:</strong><br>
+                        <span id="vedHeadActivation"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="vedTable" style="display: none;">
+            <div class="card shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #f59e0b 0%, #eab308 100%); color: white;">
+                    <h5 class="mb-0">
+                        <i class="fas fa-users-crown"></i> Ved Team Members
+                        <span id="vedCount" class="badge bg-light text-dark float-end">0</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>MNR ID</th>
+                                    <th>Name</th>
+                                    <th>Package</th>
+                                    <th>Registration Date</th>
+                                    <th>Activation Date</th>
+                                    <th>Status</th>
+                                    <th>Coupon Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vedTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="noDataState" style="display: none;" class="text-center py-5">
+            <i class="fas fa-crown fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">No Ved Team Members Found</h4>
+        </div>
+
+        <div id="errorState" style="display: none;" class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="errorMessage"></span>
+        </div>
+    </div>
+
+    <script src="/public/js/admin-id-utils.js"></script>
+<script>
+        const urlParams = new URLSearchParams(window.location.search);
+        window.filteredUserId = urlParams.get('user_id');
+
+        if (window.filteredUserId) {
+            const normalized = normalizeAdminUserId(window.filteredUserId);
+            document.getElementById('userIdInput').value = normalized;
+            window.filteredUserId = normalized;
+            document.getElementById('filteredUserId').textContent = normalized;
+            document.getElementById('filterInfo').style.display = 'block';
+        }
+
+        document.getElementById('userFilterForm')?.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const userId = normalizeAdminUserId(document.getElementById('userIdInput').value);
+            const currentUrl = new URL(window.location.href);
+            if (userId) {
+                currentUrl.searchParams.set('user_id', userId);
+            } else {
+                currentUrl.searchParams.delete('user_id');
+            }
+            window.location.href = currentUrl.toString();
+        });
+
+        function clearUserFilter() {
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.delete('user_id');
+            window.location.href = currentUrl.toString();
+        }
+
+        function resetAdvancedFilters() {
+            document.getElementById('startDateFilter').value = '';
+            document.getElementById('endDateFilter').value = '';
+            document.getElementById('packageFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('couponFilter').value = '';
+            loadVedData();
+        }
+        
+        ['startDateFilter', 'endDateFilter', 'packageFilter', 'statusFilter', 'couponFilter'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', loadVedData);
+        });
+
+        async function loadVedData() {
+            const userId = window.filteredUserId || window.currentUserId;
+            
+            if (!userId) {
+                hideLoading();
+                document.getElementById('noDataState').innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-filter fa-4x text-primary mb-3"></i>
+                        <h4>Select a User to View Ved Team</h4>
+                    </div>
+                `;
+                document.getElementById('noDataState').style.display = 'block';
+                return;
+            }
+
+            try {
+                showLoading();
+                
+                const params = new URLSearchParams();
+                params.append('user_id', userId);
+                
+                const startDate = document.getElementById('startDateFilter')?.value;
+                const endDate = document.getElementById('endDateFilter')?.value;
+                const pkg = document.getElementById('packageFilter')?.value;
+                const status = document.getElementById('statusFilter')?.value;
+                const coupon = document.getElementById('couponFilter')?.value;
+                
+                if (startDate) params.append('start_date', startDate);
+                if (endDate) params.append('end_date', endDate);
+                if (pkg) params.append('package', pkg);
+                if (status) params.append('status', status);
+                if (coupon) params.append('coupon_status', coupon);
+
+                // CALL SAME ENDPOINT AS USER PAGE
+                const response = await fetch(`${window.BACKEND_URL || ''}/users/team/ved-members?${params.toString()}`, {
+                    headers: { 'Authorization': `Bearer ${window.sessionToken}` }
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const result = await response.json();
+                
+                // API returns {success: true, data: {ved_head: {...}, ved_members: [...], total: X}}
+                if (result.success && result.data) {
+                    // Display Ved Head in separate card
+                    if (result.data.ved_head) {
+                        displayVedHead(result.data.ved_head);
+                    }
+                    
+                    // Display Ved Team members in table (excludes Ved Head)
+                    const vedMembers = result.data.ved_members || [];
+                    document.getElementById('vedCount').textContent = vedMembers.length;
+                    displayVedMembers(vedMembers);
+                } else {
+                    showNoData();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError(error.message);
+            }
+        }
+
+        function displayVedHead(vedHead) {
+            if (!vedHead) return;
+            
+            document.getElementById('vedHeadBevId').textContent = vedHead.mnr_id || 'N/A';
+            document.getElementById('vedHeadName').textContent = vedHead.name || 'N/A';
+            document.getElementById('vedHeadPackage').textContent = vedHead.package || 'N/A';
+            document.getElementById('vedHeadPackage').className = `badge ${vedHead.package === 'Platinum' ? 'bg-warning' : 'bg-secondary'}`;
+            
+            const statusBadge = vedHead.status === 'Active' ? 
+                '<span class="badge bg-success">Active</span>' : 
+                '<span class="badge bg-danger">Inactive</span>';
+            document.getElementById('vedHeadStatus').innerHTML = statusBadge;
+            
+            const activationText = vedHead.activation_date ? 
+                formatDateTime(vedHead.activation_date) : 
+                '<span class="text-danger">Not Activated</span>';
+            document.getElementById('vedHeadActivation').innerHTML = activationText;
+            
+            document.getElementById('vedHeadCard').style.display = 'block';
+        }
+
+        function displayVedMembers(members) {
+            if (members.length === 0) {
+                hideLoading();
+                document.getElementById('vedTable').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('vedCount').textContent = members.length;
+            document.getElementById('vedTableBody').innerHTML = members.map(m => `
+                <tr class="hover:bg-gray-50">
+                    <td><strong>${escapeHTML(m.mnr_id || 'N/A')}</strong></td>
+                    <td>${escapeHTML(m.name || 'N/A')}</td>
+                    <td>${escapeHTML(m.package || 'N/A')}</td>
+                    <td>${m.registration_date ? formatDateTime(m.registration_date) : 'N/A'}</td>
+                    <td>${m.activation_date ? formatDateTime(m.activation_date) : 'Not Activated'}</td>
+                    <td>
+                        <span class="badge ${m.status === 'Active' ? 'bg-success' : 'bg-danger'}">
+                            ${escapeHTML(m.status || 'Inactive')}
+                        </span>
+                    </td>
+                    <td>${escapeHTML(m.coupon_status || 'N/A')}</td>
+                </tr>
+            `).join('');
+
+            hideLoading();
+            document.getElementById('vedTable').style.display = 'block';
+        }
+
+        function showLoading() {
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('vedHeadCard').style.display = 'none';
+            document.getElementById('vedTable').style.display = 'none';
+            document.getElementById('noDataState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        function showNoData() {
+            hideLoading();
+            document.getElementById('noDataState').style.display = 'block';
+        }
+
+        function showError(message) {
+            hideLoading();
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorState').style.display = 'block';
+        }
+
+        function formatDateTime(dateStr) {
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            const dateOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+            const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true };
+            return date.toLocaleDateString('en-IN', dateOptions) + ' ' + date.toLocaleTimeString('en-IN', timeOptions);
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function escapeJS(str) {
+            if (!str) return '';
+            return String(str).replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        window.addEventListener('DOMContentLoaded', loadVedData);
+    </script>
+</body>
+</html>

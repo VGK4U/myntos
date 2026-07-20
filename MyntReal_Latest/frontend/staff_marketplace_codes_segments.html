@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codes & Segments - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .page-header h1 { font-size: 22px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 13px; color: #6b7280; margin: 2px 0 0 0; }
+        .tab-bar { display: flex; gap: 4px; background: white; padding: 6px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; width: fit-content; }
+        .tab-btn { padding: 8px 20px; border: none; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; background: transparent; color: #6b7280; transition: all 0.2s; }
+        .tab-btn.active { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; }
+        .tab-btn:hover:not(.active) { background: #f3f4f6; color: #374151; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 14px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .card-body { padding: 20px; }
+        .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+        .filter-bar select, .filter-bar input { padding: 7px 11px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 13px; background: white; }
+        .filter-bar select:focus, .filter-bar input:focus { outline: none; border-color: #6366f1; }
+        .btn-primary-custom { background: linear-gradient(135deg, #6366f1, #4f46e5); border: none; color: white; padding: 8px 18px; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary-custom:hover { color: white; opacity: 0.92; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th { background: #f9fafb; padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e5e7eb; white-space: nowrap; cursor: pointer; user-select: none; }
+        .data-table th:hover { background: #f0f0f5; }
+        .data-table th .sort-icon { margin-left: 4px; opacity: 0.4; }
+        .data-table th.sorted .sort-icon { opacity: 1; color: #6366f1; }
+        .data-table td { padding: 12px 14px; border-bottom: 1px solid #f3f4f6; color: #374151; vertical-align: middle; }
+        .data-table tr:hover { background: #fafafa; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .badge-active { background: #d1fae5; color: #059669; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .badge-paused { background: #fef3c7; color: #d97706; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .badge-inactive { background: #fee2e2; color: #dc2626; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
+        .badge-mnr { background: #dbeafe; color: #1d4ed8; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+        .badge-partner { background: #ede9fe; color: #7c3aed; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+        .badge-student { background: #d1fae5; color: #059669; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+        .badge-promo { background: #fce7f3; color: #be185d; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+        .action-btn { padding: 5px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; margin-right: 4px; }
+        .btn-edit { background: #dbeafe; color: #1d4ed8; }
+        .btn-edit:hover { background: #1d4ed8; color: white; }
+        .btn-pause { background: #fef3c7; color: #d97706; }
+        .btn-pause:hover { background: #d97706; color: white; }
+        .btn-delete { background: #fee2e2; color: #dc2626; }
+        .btn-delete:hover { background: #dc2626; color: white; }
+        .btn-resume { background: #d1fae5; color: #059669; }
+        .btn-resume:hover { background: #059669; color: white; }
+        .empty-state { text-align: center; padding: 50px 20px; color: #9ca3af; }
+        .empty-state i { font-size: 42px; margin-bottom: 14px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 36px; height: 36px; border: 3px solid #e5e7eb; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.9s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .pct-cell { font-weight: 600; color: #6366f1; }
+        .pct-cell.na { color: #d1d5db; font-weight: 400; }
+        /* ── Inline segment % editing ── */
+        .seg-pct-cell { cursor: pointer; min-width: 110px; position: relative; }
+        .seg-pct-cell:hover .seg-pct-display { background: #f0f0ff; border-radius: 6px; }
+        .seg-pct-display { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; transition: background 0.15s; white-space: nowrap; }
+        .seg-pct-display.set { color: #4f46e5; }
+        .seg-pct-display.zero { color: #dc2626; background: #fee2e2; border-radius: 6px; }
+        .seg-pct-display.zero:hover { background: #fecaca; }
+        .seg-pct-display.notset { color: #9ca3af; font-weight: 400; font-style: italic; }
+        .seg-pct-display.notset i { font-size: 10px; }
+        .seg-pct-edit-wrap { display: flex; align-items: center; gap: 4px; }
+        .seg-pct-input { width: 70px; padding: 4px 7px; border: 2px solid #6366f1; border-radius: 6px; font-size: 12px; font-weight: 600; color: #1f2937; outline: none; }
+        .seg-pct-suffix { font-size: 12px; color: #6b7280; }
+        .seg-pct-save { background: #6366f1; color: white; border: none; border-radius: 5px; width: 22px; height: 22px; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+        .seg-pct-cancel { background: #e5e7eb; color: #374151; border: none; border-radius: 5px; width: 22px; height: 22px; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+        .seg-pct-saving { color: #9ca3af; font-size: 11px; }
+        .seg-col-th { background: #f0f0ff !important; color: #4f46e5 !important; }
+        .summary-row { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+        .summary-card { background: white; border-radius: 10px; padding: 16px 20px; flex: 1; min-width: 150px; border: 1px solid #e5e7eb; }
+        .summary-card .val { font-size: 26px; font-weight: 700; color: #1f2937; }
+        .summary-card .lbl { font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .sortable { cursor: pointer; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9000; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: white; border-radius: 14px; max-width: 560px; width: 95%; max-height: 90vh; overflow-y: auto; }
+        .modal-head { padding: 18px 22px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-head h3 { font-size: 16px; font-weight: 700; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 22px; color: #9ca3af; cursor: pointer; line-height: 1; }
+        .modal-close:hover { color: #374151; }
+        .modal-body { padding: 20px 22px; }
+        .modal-footer { padding: 14px 22px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.03em; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 13px; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #6366f1; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .seg-discount-grid { display: grid; gap: 10px; margin-top: 6px; }
+        .seg-discount-row { display: flex; align-items: center; gap: 10px; background: #f9fafb; padding: 8px 12px; border-radius: 7px; }
+        .seg-discount-row label { flex: 1; font-size: 13px; color: #374151; margin: 0; font-weight: 500; }
+        .seg-discount-row input[type=number] { width: 90px; padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+        .seg-discount-row span { font-size: 13px; color: #6b7280; }
+        .table-wrap { overflow-x: auto; }
+        .analytics-val { font-weight: 600; color: #1f2937; }
+        .analytics-val.zero { color: #d1d5db; font-weight: 400; }
+        .val-green { color: #059669; }
+        .confirm-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9500; }
+        .confirm-overlay.active { display: flex; }
+        .confirm-box { background: white; border-radius: 12px; padding: 28px; max-width: 360px; width: 90%; text-align: center; }
+        .confirm-box h4 { font-size: 16px; font-weight: 700; color: #1f2937; margin-bottom: 10px; }
+        .confirm-box p { font-size: 13px; color: #6b7280; margin-bottom: 20px; }
+        .confirm-btns { display: flex; gap: 10px; justify-content: center; }
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 12px 18px; border-radius: 8px; color: white; font-size: 13px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease; max-width: 320px; }
+        .toast.success { background: #059669; }
+        .toast.error { background: #dc2626; }
+        .toast.info { background: #6366f1; }
+        @keyframes slideIn { from { transform: translateX(60px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+
+            <div class="page-header">
+                <div>
+                    <h1><i class="fas fa-tags me-2" style="color:#6366f1"></i>Codes &amp; Segments</h1>
+                    <p>Manage marketplace segments, promo codes, and track usage analytics</p>
+                </div>
+            </div>
+
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('segments')"><i class="fas fa-layer-group me-1"></i>Segments</button>
+                <button class="tab-btn" onclick="switchTab('codes')"><i class="fas fa-ticket-alt me-1"></i>Discount Codes</button>
+                <button class="tab-btn" onclick="switchTab('analytics')"><i class="fas fa-chart-bar me-1"></i>Analytics</button>
+            </div>
+
+            <!-- ─── TAB 1: SEGMENTS ─── -->
+            <div id="tab-segments" class="tab-pane active">
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-layer-group me-2"></i>Marketplace Segments</span>
+                        <button class="btn-primary-custom" onclick="openSegModal()"><i class="fas fa-plus"></i>Add Segment</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="filter-bar">
+                            <select id="segFilterStatus" onchange="renderSegments()">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                            <input type="text" id="segSearch" placeholder="Search name / slug..." oninput="renderSegments()" style="min-width:200px">
+                        </div>
+                        <div id="segLoading" class="loading-spinner"><div class="spinner"></div></div>
+                        <div class="table-wrap" id="segTableWrap" style="display:none">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable('segments','name')">Name <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('segments','slug')">Slug <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('segments','mnr_pct')">MNR % <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('segments','partner_pct')">Partner % <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('segments','student_pct')">Student % <i class="fas fa-sort sort-icon"></i></th>
+                                        <th>Type</th>
+                                        <th>Allow</th>
+                                        <th onclick="sortTable('segments','is_active')">Status <i class="fas fa-sort sort-icon"></i></th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="segTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div id="segEmpty" class="empty-state" style="display:none">
+                            <i class="fas fa-layer-group"></i>
+                            <h4>No Segments Found</h4>
+                            <p>Add your first marketplace segment to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── TAB 2: DISCOUNT CODES ─── -->
+            <div id="tab-codes" class="tab-pane">
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-ticket-alt me-2"></i>Promo / Discount Codes</span>
+                        <button class="btn-primary-custom" onclick="openCodeModal()"><i class="fas fa-plus"></i>New Code</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="filter-bar">
+                            <select id="codeFilterStatus" onchange="renderCodes()">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="paused">Paused</option>
+                            </select>
+                            <input type="text" id="codeSearch" placeholder="Search code / label..." oninput="renderCodes()" style="min-width:200px">
+                            <select id="codeFilterSeg" onchange="renderCodes()">
+                                <option value="">All Segments</option>
+                            </select>
+                        </div>
+                        <div id="codeLoading" class="loading-spinner"><div class="spinner"></div></div>
+                        <div class="table-wrap" id="codeTableWrap" style="display:none">
+                            <table class="data-table" id="codeTable">
+                                <thead>
+                                    <tr id="codeTableHead">
+                                        <th onclick="sortTable('codes','code')">Code <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('codes','label')">Label <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('codes','default_discount_pct')">Default % <i class="fas fa-sort sort-icon"></i></th>
+                                        <!-- segment columns injected dynamically -->
+                                        <th onclick="sortTable('codes','status')">Status <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('codes','valid_from')">Valid From <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('codes','valid_to')">Valid To <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('codes','times_searched')">Searches <i class="fas fa-sort sort-icon"></i></th>
+                                        <th onclick="sortTable('codes','times_used')">Used <i class="fas fa-sort sort-icon"></i></th>
+                                        <th>Limit</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="codeTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div id="codeEmpty" class="empty-state" style="display:none">
+                            <i class="fas fa-ticket-alt"></i>
+                            <h4>No Discount Codes Found</h4>
+                            <p>Create your first promo code to get started</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── TAB 3: ANALYTICS ─── -->
+            <div id="tab-analytics" class="tab-pane">
+                <div class="summary-row">
+                    <div class="summary-card">
+                        <div class="val" id="anTotalSearches">0</div>
+                        <div class="lbl">Total Searches</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="val" id="anTotalApplied">0</div>
+                        <div class="lbl">Times Applied</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="val" id="anTotalPurchased">0</div>
+                        <div class="lbl">Purchases Made</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="val" id="anTotalValue">₹0</div>
+                        <div class="lbl">Total Business Generated</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span><i class="fas fa-chart-bar me-2"></i>Usage by Code / ID</span>
+                        <button class="btn-primary-custom" onclick="loadAnalytics()"><i class="fas fa-sync-alt"></i>Refresh</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="filter-bar">
+                            <select id="anFilterType" onchange="loadAnalytics()">
+                                <option value="">All Types</option>
+                                <option value="mnr">MNR ID</option>
+                                <option value="partner">Partner Code</option>
+                                <option value="student">Student ID</option>
+                                <option value="promo">Promo Code</option>
+                            </select>
+                            <select id="anFilterSeg" onchange="loadAnalytics()">
+                                <option value="">All Segments</option>
+                            </select>
+                            <input type="date" id="anDateFrom" onchange="loadAnalytics()" title="Date from">
+                            <input type="date" id="anDateTo" onchange="loadAnalytics()" title="Date to">
+                            <select id="anSortBy" onchange="loadAnalytics()">
+                                <option value="searches">Sort by Searches</option>
+                                <option value="applied">Sort by Applied</option>
+                                <option value="purchased">Sort by Purchased</option>
+                                <option value="value">Sort by Value</option>
+                            </select>
+                            <select id="anSortDir" onchange="loadAnalytics()">
+                                <option value="desc">High → Low</option>
+                                <option value="asc">Low → High</option>
+                            </select>
+                            <input type="text" id="anSearch" placeholder="Search ID / code..." oninput="filterAnalyticsTable()" style="min-width:180px">
+                        </div>
+                        <div id="anLoading" class="loading-spinner"><div class="spinner"></div></div>
+                        <div class="table-wrap" id="anTableWrap" style="display:none">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Code / ID</th>
+                                        <th>Type</th>
+                                        <th>Searches</th>
+                                        <th>Valid Searches</th>
+                                        <th>Applied (PO Created)</th>
+                                        <th>Purchased (Completed)</th>
+                                        <th>Business Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="anTableBody"></tbody>
+                            </table>
+                        </div>
+                        <div id="anEmpty" class="empty-state" style="display:none">
+                            <i class="fas fa-chart-bar"></i>
+                            <h4>No Analytics Data</h4>
+                            <p>Data will appear as discounts are searched and applied at the marketplace</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ─── SEGMENT MODAL ─── -->
+    <div class="modal-overlay" id="segModal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3 id="segModalTitle"><i class="fas fa-layer-group me-2"></i>Add Segment</h3>
+                <button class="modal-close" onclick="closeModal('segModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="segEditId">
+                <div class="form-group">
+                    <label>Segment Name *</label>
+                    <input type="text" id="segName" placeholder="e.g. EV Spares">
+                </div>
+                <div class="form-group">
+                    <label>Slug *</label>
+                    <input type="text" id="segSlug" placeholder="e.g. ev-spares (auto-filled)" oninput="this.value=this.value.toLowerCase().replace(/\s+/g,'-')">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="segDesc" rows="2" placeholder="Brief description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Segment Type</label>
+                    <select id="segType">
+                        <option value="ECOM">ECOM — Product Catalogue (EV Spares etc.)</option>
+                        <option value="REAL_DREAMS">REAL DREAMS — Property Listings</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>MNR Discount %</label>
+                        <input type="number" id="segMnrPct" step="0.1" min="0" max="100" value="3.0">
+                    </div>
+                    <div class="form-group">
+                        <label>Partner Discount %</label>
+                        <input type="number" id="segPartnerPct" step="0.1" min="0" max="100" value="12.0">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Student Discount %</label>
+                        <input type="number" id="segStudentPct" step="0.1" min="0" max="100" value="10.0">
+                    </div>
+                    <div class="form-group">
+                        <label>Sort Order</label>
+                        <input type="number" id="segSortOrder" value="0" min="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Allow Discounts For</label>
+                    <div style="display:flex;gap:18px;margin-top:6px;">
+                        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;">
+                            <input type="checkbox" id="segAllowMnr" checked> MNR Members
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;">
+                            <input type="checkbox" id="segAllowPartner" checked> Partners
+                        </label>
+                        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:400;text-transform:none;letter-spacing:0;">
+                            <input type="checkbox" id="segAllowStudent" checked> ETC Students
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" id="segStatusGroup" style="display:none">
+                    <label>Status</label>
+                    <select id="segStatus">
+                        <option value="true">Active</option>
+                        <option value="false">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="closeModal('segModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="saveSeg()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── PROMO CODE MODAL ─── -->
+    <div class="modal-overlay" id="codeModal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3 id="codeModalTitle"><i class="fas fa-ticket-alt me-2"></i>New Discount Code</h3>
+                <button class="modal-close" onclick="closeModal('codeModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="codeEditId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Code * <small style="color:#6b7280;font-weight:400">(auto-uppercased)</small></label>
+                        <input type="text" id="codeCode" placeholder="e.g. DIWALI20" oninput="this.value=this.value.toUpperCase()">
+                    </div>
+                    <div class="form-group">
+                        <label>Label / Name</label>
+                        <input type="text" id="codeLabel" placeholder="e.g. Diwali Sale 2025">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Default Discount %</label>
+                        <input type="number" id="codeDefaultPct" step="0.1" min="0" max="100" value="0" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Usage Limit <small style="color:#6b7280;font-weight:400">(blank = unlimited)</small></label>
+                        <input type="number" id="codeLimit" min="1" placeholder="Unlimited">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Valid From</label>
+                        <input type="datetime-local" id="codeValidFrom">
+                    </div>
+                    <div class="form-group">
+                        <label>Valid To</label>
+                        <input type="datetime-local" id="codeValidTo">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Per-Segment Discount % <small style="color:#6b7280;font-weight:400">(overrides Default % for that segment)</small></label>
+                    <div class="seg-discount-grid" id="segDiscountGrid">
+                        <div style="color:#9ca3af;font-size:13px;padding:8px 0;">Loading segments...</div>
+                    </div>
+                </div>
+                <div class="form-group" id="codeStatusGroup" style="display:none">
+                    <label>Status</label>
+                    <select id="codeStatus">
+                        <option value="active">Active</option>
+                        <option value="paused">Paused</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" onclick="closeModal('codeModal')">Cancel</button>
+                <button class="btn-primary-custom" onclick="saveCode()"><i class="fas fa-save me-1"></i>Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── CONFIRM DIALOG ─── -->
+    <div class="confirm-overlay" id="confirmOverlay">
+        <div class="confirm-box">
+            <h4 id="confirmTitle">Confirm</h4>
+            <p id="confirmMsg">Are you sure?</p>
+            <div class="confirm-btns">
+                <button class="btn btn-secondary btn-sm" onclick="closeConfirm()">Cancel</button>
+                <button class="btn btn-danger btn-sm" id="confirmOkBtn" onclick="">Yes, proceed</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const COMPANY_ID = 1;
+        const API = '/api/v1/marketplace';
+        let segments = [];
+        let promoCodes = [];
+        let analyticsRows = [];
+        let sortState = { segments: { col: 'name', dir: 'asc' }, codes: { col: 'code', dir: 'asc' } };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('Codes & Segments', 'fas fa-tags');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            await loadSegments();
+            await loadCodes();
+        });
+
+        // ─── TABS ───
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach((b, i) => {
+                const tabs = ['segments', 'codes', 'analytics'];
+                b.classList.toggle('active', tabs[i] === tab);
+            });
+            document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            if (tab === 'analytics' && analyticsRows.length === 0) loadAnalytics();
+        }
+
+        // ─── TOAST ───
+        function toast(msg, type = 'success') {
+            const c = document.getElementById('toastContainer');
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.textContent = msg;
+            c.appendChild(el);
+            setTimeout(() => el.remove(), 3500);
+        }
+
+        // ─── CONFIRM ───
+        function showConfirm(title, msg, onOk) {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMsg').textContent = msg;
+            document.getElementById('confirmOkBtn').onclick = () => { closeConfirm(); onOk(); };
+            document.getElementById('confirmOverlay').classList.add('active');
+        }
+        function closeConfirm() {
+            document.getElementById('confirmOverlay').classList.remove('active');
+        }
+
+        // ─── MODAL ───
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // ─── SORT ───
+        function sortTable(tab, col) {
+            if (sortState[tab].col === col) {
+                sortState[tab].dir = sortState[tab].dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortState[tab].col = col;
+                sortState[tab].dir = 'asc';
+            }
+            tab === 'segments' ? renderSegments() : renderCodes();
+        }
+
+        function sortData(arr, col, dir) {
+            return [...arr].sort((a, b) => {
+                let va = a[col] ?? '', vb = b[col] ?? '';
+                if (typeof va === 'number' && typeof vb === 'number') return dir === 'asc' ? va - vb : vb - va;
+                va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+                if (va < vb) return dir === 'asc' ? -1 : 1;
+                if (va > vb) return dir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        // ═══════════════════════════════════════
+        // TAB 1 — SEGMENTS
+        // ═══════════════════════════════════════
+        async function loadSegments() {
+            document.getElementById('segLoading').style.display = 'flex';
+            document.getElementById('segTableWrap').style.display = 'none';
+            document.getElementById('segEmpty').style.display = 'none';
+            try {
+                const r = await staffFetch(`${API}/segments?company_id=${COMPANY_ID}&include_inactive=true`);
+                const raw = await r.json();
+                segments = Array.isArray(raw) ? raw : (raw.segments || raw.data || []);
+                populateSegmentFilters();
+                renderSegments();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                toast('Failed to load segments', 'error');
+                document.getElementById('segLoading').style.display = 'none';
+                document.getElementById('segEmpty').style.display = 'block';
+            }
+        }
+
+        function populateSegmentFilters() {
+            const selCode = document.getElementById('codeFilterSeg');
+            const selAn = document.getElementById('anFilterSeg');
+            [selCode, selAn].forEach(sel => {
+                sel.innerHTML = '<option value="">All Segments</option>';
+                segments.forEach(s => {
+                    sel.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+                });
+            });
+        }
+
+        function renderSegments() {
+            document.getElementById('segLoading').style.display = 'none';
+            const statusF = document.getElementById('segFilterStatus').value;
+            const searchF = document.getElementById('segSearch').value.toLowerCase();
+            let data = segments.filter(s => {
+                const statusOk = !statusF || (statusF === 'active' ? s.is_active : !s.is_active);
+                const searchOk = !searchF || s.name.toLowerCase().includes(searchF) || (s.slug || '').toLowerCase().includes(searchF);
+                return statusOk && searchOk;
+            });
+            data = sortData(data, sortState.segments.col, sortState.segments.dir);
+            const tbody = document.getElementById('segTableBody');
+            if (!data.length) {
+                document.getElementById('segTableWrap').style.display = 'none';
+                document.getElementById('segEmpty').style.display = 'block';
+                return;
+            }
+            tbody.innerHTML = data.map(s => `
+                <tr>
+                    <td><strong>${s.name}</strong></td>
+                    <td><code style="background:#f3f4f6;padding:2px 6px;border-radius:4px;font-size:12px;">${s.slug}</code></td>
+                    <td class="pct-cell">${s.mnr_pct ?? 3.0}%</td>
+                    <td class="pct-cell">${s.partner_pct ?? 12.0}%</td>
+                    <td class="pct-cell">${s.student_pct ?? 10.0}%</td>
+                    <td style="font-size:12px;">
+                        ${(s.segment_type||'ECOM')==='REAL_DREAMS'
+                          ? '<span style="background:#fef3c7;color:#b45309;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;">REAL DREAMS</span>'
+                          : '<span style="background:#dbeafe;color:#1e40af;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;">ECOM</span>'}
+                    </td>
+                    <td style="font-size:12px;">
+                        ${s.allow_mnr ? '<span class="badge-mnr me-1">MNR</span>' : ''}
+                        ${s.allow_partner ? '<span class="badge-partner me-1">Partner</span>' : ''}
+                        ${s.allow_student ? '<span class="badge-student">Student</span>' : ''}
+                    </td>
+                    <td><span class="${s.is_active ? 'badge-active' : 'badge-inactive'}">${s.is_active ? 'Active' : 'Inactive'}</span></td>
+                    <td>
+                        <button class="action-btn btn-edit" onclick="openSegModal(${s.id})"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn ${s.is_active ? 'btn-pause' : 'btn-resume'}" onclick="toggleSeg(${s.id},${!s.is_active})">
+                            <i class="fas fa-${s.is_active ? 'pause' : 'play'}"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            document.getElementById('segTableWrap').style.display = 'block';
+            document.getElementById('segEmpty').style.display = 'none';
+        }
+
+        function openSegModal(id) {
+            const seg = id ? segments.find(s => s.id === id) : null;
+            document.getElementById('segEditId').value = id || '';
+            document.getElementById('segModalTitle').innerHTML = `<i class="fas fa-layer-group me-2"></i>${id ? 'Edit' : 'Add'} Segment`;
+            document.getElementById('segName').value = seg?.name || '';
+            document.getElementById('segSlug').value = seg?.slug || '';
+            document.getElementById('segSlug').disabled = !!id;
+            document.getElementById('segDesc').value = seg?.description || '';
+            document.getElementById('segMnrPct').value = seg?.mnr_pct ?? 3.0;
+            document.getElementById('segPartnerPct').value = seg?.partner_pct ?? 12.0;
+            document.getElementById('segStudentPct').value = seg?.student_pct ?? 10.0;
+            document.getElementById('segSortOrder').value = seg?.sort_order ?? 0;
+            document.getElementById('segAllowMnr').checked = seg ? seg.allow_mnr : true;
+            document.getElementById('segAllowPartner').checked = seg ? seg.allow_partner : true;
+            document.getElementById('segAllowStudent').checked = seg ? seg.allow_student : true;
+            document.getElementById('segType').value = seg?.segment_type || 'ECOM';
+            document.getElementById('segStatusGroup').style.display = id ? 'block' : 'none';
+            if (id) document.getElementById('segStatus').value = String(seg?.is_active ?? true);
+            document.getElementById('segModal').classList.add('active');
+        }
+
+        async function saveSeg() {
+            const id = document.getElementById('segEditId').value;
+            const name = document.getElementById('segName').value.trim();
+            const slug = document.getElementById('segSlug').value.trim();
+            if (!name || (!id && !slug)) { toast('Name and Slug are required', 'error'); return; }
+            const payload = {
+                name, slug,
+                description: document.getElementById('segDesc').value.trim() || null,
+                mnr_pct: parseFloat(document.getElementById('segMnrPct').value) || 3.0,
+                partner_pct: parseFloat(document.getElementById('segPartnerPct').value) || 12.0,
+                student_pct: parseFloat(document.getElementById('segStudentPct').value) || 10.0,
+                sort_order: parseInt(document.getElementById('segSortOrder').value) || 0,
+                allow_mnr: document.getElementById('segAllowMnr').checked,
+                allow_partner: document.getElementById('segAllowPartner').checked,
+                allow_student: document.getElementById('segAllowStudent').checked,
+                segment_type: document.getElementById('segType').value || 'ECOM',
+            };
+            if (id) {
+                payload.is_active = document.getElementById('segStatus').value === 'true';
+            }
+            try {
+                const url = id ? `${API}/segments/${id}?company_id=${COMPANY_ID}` : `${API}/segments?company_id=${COMPANY_ID}`;
+                const r = await staffFetch(url, { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+                if (!r.ok) { const d = await r.json(); toast(d.detail || 'Save failed', 'error'); return; }
+                toast(id ? 'Segment updated' : 'Segment created');
+                closeModal('segModal');
+                await loadSegments();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                toast('Save failed', 'error');
+            }
+        }
+
+        async function toggleSeg(id, newActive) {
+            try {
+                const r = await staffFetch(`${API}/segments/${id}?company_id=${COMPANY_ID}`, {
+                    method: 'PUT', body: JSON.stringify({ is_active: newActive })
+                });
+                if (!r.ok) { toast('Update failed', 'error'); return; }
+                toast(newActive ? 'Segment activated' : 'Segment paused');
+                await loadSegments();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                toast('Update failed', 'error');
+            }
+        }
+
+        // ═══════════════════════════════════════
+        // TAB 2 — DISCOUNT CODES
+        // ═══════════════════════════════════════
+        async function loadCodes() {
+            document.getElementById('codeLoading').style.display = 'flex';
+            document.getElementById('codeTableWrap').style.display = 'none';
+            document.getElementById('codeEmpty').style.display = 'none';
+            try {
+                const r = await staffFetch(`${API}/promo-codes?company_id=${COMPANY_ID}`);
+                promoCodes = await r.json();
+                if (!Array.isArray(promoCodes)) promoCodes = [];
+                injectSegmentColumns();
+                renderCodes();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                toast('Failed to load codes', 'error');
+                document.getElementById('codeLoading').style.display = 'none';
+                document.getElementById('codeEmpty').style.display = 'block';
+            }
+        }
+
+        function injectSegmentColumns() {
+            const head = document.getElementById('codeTableHead');
+            const existing = head.querySelectorAll('.seg-col-th');
+            existing.forEach(el => el.remove());
+            const insertBefore = head.children[3];
+            segments.forEach(s => {
+                const th = document.createElement('th');
+                th.className = 'seg-col-th';
+                th.innerHTML = `${s.name} % <i class="fas fa-pencil-alt" style="font-size:9px;opacity:0.5;margin-left:3px;" title="Click cell to edit"></i>`;
+                th.title = `Discount % for segment: ${s.name} — click any cell to edit inline`;
+                head.insertBefore(th, insertBefore);
+            });
+        }
+
+        function _segPctDisplay(pct) {
+            if (pct == null) {
+                return `<span class="seg-pct-display notset"><i class="fas fa-plus-circle"></i> Set %</span>`;
+            }
+            if (Number(pct) === 0) {
+                return `<span class="seg-pct-display zero"><i class="fas fa-ban"></i> Invalid for segment</span>`;
+            }
+            return `<span class="seg-pct-display set"><i class="fas fa-tag"></i> ${pct}%</span>`;
+        }
+
+        function renderCodes() {
+            document.getElementById('codeLoading').style.display = 'none';
+            const statusF = document.getElementById('codeFilterStatus').value;
+            const searchF = document.getElementById('codeSearch').value.toLowerCase();
+            const segF = document.getElementById('codeFilterSeg').value;
+            let data = promoCodes.filter(c => {
+                const statusOk = !statusF || c.status === statusF;
+                const searchOk = !searchF || c.code.toLowerCase().includes(searchF) || (c.label || '').toLowerCase().includes(searchF);
+                const segOk = !segF || (c.segment_discounts && String(segF) in c.segment_discounts);
+                return statusOk && searchOk && segOk;
+            });
+            data = sortData(data, sortState.codes.col, sortState.codes.dir);
+            const tbody = document.getElementById('codeTableBody');
+            if (!data.length) {
+                document.getElementById('codeTableWrap').style.display = 'none';
+                document.getElementById('codeEmpty').style.display = 'block';
+                return;
+            }
+            tbody.innerHTML = data.map(c => {
+                const segCols = segments.map(s => {
+                    const raw = c.segment_discounts ? c.segment_discounts[String(s.id)] : undefined;
+                    const pct = (raw !== undefined && raw !== null) ? Number(raw) : null;
+                    return `<td class="seg-pct-cell" data-code-id="${c.id}" data-seg-id="${s.id}" data-pct="${pct ?? ''}" onclick="startInlineEdit(this)">${_segPctDisplay(pct)}</td>`;
+                }).join('');
+                const isPaused = c.status === 'paused';
+                return `<tr>
+                    <td><strong><code style="background:#f3f4f6;padding:2px 7px;border-radius:4px;">${c.code}</code></strong></td>
+                    <td>${c.label || '<span style="color:#d1d5db">—</span>'}</td>
+                    <td class="pct-cell">${c.default_discount_pct}%</td>
+                    ${segCols}
+                    <td><span class="badge-${c.status}">${c.status}</span></td>
+                    <td style="font-size:11px;color:#6b7280;white-space:nowrap;" title="${c.valid_from||''}">${c.valid_from ? c.valid_from.slice(0,16).replace('T',' ') : '—'}</td>
+                    <td style="font-size:11px;color:#6b7280;white-space:nowrap;" title="${c.valid_to||''}">${c.valid_to ? c.valid_to.slice(0,16).replace('T',' ') : '—'}</td>
+                    <td><span class="analytics-val">${c.times_searched}</span></td>
+                    <td><span class="analytics-val">${c.times_used}</span></td>
+                    <td style="color:#6b7280;">${c.usage_limit ?? '∞'}</td>
+                    <td style="white-space:nowrap;">
+                        <button class="action-btn btn-edit" onclick="openCodeModal(${c.id})" title="Edit details"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn ${isPaused ? 'btn-resume' : 'btn-pause'}" onclick="toggleCode(${c.id},'${isPaused ? 'active' : 'paused'}')" title="${isPaused ? 'Resume' : 'Pause'}">
+                            <i class="fas fa-${isPaused ? 'play' : 'pause'}"></i>
+                        </button>
+                        <button class="action-btn btn-delete" onclick="deleteCode(${c.id},'${c.code}')" title="Delete"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            }).join('');
+            document.getElementById('codeTableWrap').style.display = 'block';
+            document.getElementById('codeEmpty').style.display = 'none';
+        }
+
+        // ─── Inline segment % edit ──────────────────────────────────────────────
+        let _activeInlineCell = null;
+
+        function startInlineEdit(td) {
+            if (td.dataset.editing === '1') return;
+            // Cancel any other open editor first
+            if (_activeInlineCell && _activeInlineCell !== td) cancelInlineEdit(_activeInlineCell);
+            _activeInlineCell = td;
+            td.dataset.editing = '1';
+            const codeId = td.dataset.codeId;
+            const segId = td.dataset.segId;
+            const currentPct = td.dataset.pct === '' ? '' : td.dataset.pct;
+
+            td.innerHTML = `
+                <div class="seg-pct-edit-wrap">
+                    <input class="seg-pct-input" id="ipe_${codeId}_${segId}" type="number"
+                        min="0" max="100" step="0.1" value="${currentPct}"
+                        placeholder="0–100"
+                        onkeydown="handleInlineKey(event, this.closest('td'))">
+                    <span class="seg-pct-suffix">%</span>
+                    <button class="seg-pct-save" onclick="commitInlineEdit(this.closest('td'))" title="Save"><i class="fas fa-check"></i></button>
+                    <button class="seg-pct-cancel" onclick="cancelInlineEdit(this.closest('td'))" title="Cancel"><i class="fas fa-times"></i></button>
+                </div>`;
+            const inp = td.querySelector('.seg-pct-input');
+            inp.focus();
+            inp.select();
+        }
+
+        function handleInlineKey(e, td) {
+            if (e.key === 'Enter') { e.preventDefault(); commitInlineEdit(td); }
+            if (e.key === 'Escape') { e.preventDefault(); cancelInlineEdit(td); }
+        }
+
+        function cancelInlineEdit(td) {
+            if (td.dataset.editing !== '1') return;
+            delete td.dataset.editing;
+            _activeInlineCell = null;
+            const pct = td.dataset.pct === '' ? null : Number(td.dataset.pct);
+            td.innerHTML = _segPctDisplay(pct);
+            td.onclick = function() { startInlineEdit(this); };
+        }
+
+        async function commitInlineEdit(td) {
+            if (td.dataset.editing !== '1') return;
+            const inp = td.querySelector('.seg-pct-input');
+            const rawVal = inp.value.trim();
+            const codeId = Number(td.dataset.codeId);
+            const segId = String(td.dataset.segId);
+
+            // Show saving state
+            td.innerHTML = `<span class="seg-pct-saving"><i class="fas fa-spinner fa-spin me-1"></i>Saving…</span>`;
+            delete td.dataset.editing;
+            _activeInlineCell = null;
+
+            // Build updated segment_discounts for this code
+            const code = promoCodes.find(c => c.id === codeId);
+            if (!code) { renderCodes(); return; }
+            const newSegDiscounts = Object.assign({}, code.segment_discounts || {});
+            if (rawVal === '' || rawVal === null) {
+                delete newSegDiscounts[segId];
+            } else {
+                const numVal = parseFloat(rawVal);
+                if (isNaN(numVal) || numVal < 0 || numVal > 100) {
+                    toast('Value must be between 0 and 100', 'error');
+                    td.dataset.pct = code.segment_discounts?.[segId] ?? '';
+                    const pct = td.dataset.pct === '' ? null : Number(td.dataset.pct);
+                    td.innerHTML = _segPctDisplay(pct);
+                    td.onclick = function() { startInlineEdit(this); };
+                    return;
+                }
+                newSegDiscounts[segId] = numVal;
+            }
+
+            try {
+                const r = await staffFetch(`${API}/promo-codes/${codeId}?company_id=${COMPANY_ID}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ segment_discounts: newSegDiscounts }),
+                });
+                if (!r.ok) {
+                    const d = await r.json();
+                    toast(d.detail || 'Save failed', 'error');
+                    const pct = td.dataset.pct === '' ? null : Number(td.dataset.pct);
+                    td.innerHTML = _segPctDisplay(pct);
+                    td.onclick = function() { startInlineEdit(this); };
+                    return;
+                }
+                const updated = await r.json();
+                // Patch local state
+                const idx = promoCodes.findIndex(c => c.id === codeId);
+                if (idx >= 0) promoCodes[idx] = updated;
+                const newPct = updated.segment_discounts?.[segId];
+                const newPctNum = (newPct !== undefined && newPct !== null) ? Number(newPct) : null;
+                td.dataset.pct = newPctNum !== null ? String(newPctNum) : '';
+                td.innerHTML = _segPctDisplay(newPctNum);
+                td.onclick = function() { startInlineEdit(this); };
+                toast(rawVal === '' ? 'Segment % cleared' : `Saved: ${rawVal}% for this segment`);
+                if (newPctNum === 0) toast('Set to 0% — code will be invalid for this segment', 'info');
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                toast('Save failed', 'error');
+                const pct = td.dataset.pct === '' ? null : Number(td.dataset.pct);
+                td.innerHTML = _segPctDisplay(pct);
+                td.onclick = function() { startInlineEdit(this); };
+            }
+        }
+
+        function openCodeModal(id) {
+            const code = id ? promoCodes.find(c => c.id === id) : null;
+            document.getElementById('codeEditId').value = id || '';
+            document.getElementById('codeModalTitle').innerHTML = `<i class="fas fa-ticket-alt me-2"></i>${id ? 'Edit' : 'New'} Discount Code`;
+            document.getElementById('codeCode').value = code?.code || '';
+            document.getElementById('codeCode').disabled = !!id;
+            document.getElementById('codeLabel').value = code?.label || '';
+            document.getElementById('codeDefaultPct').value = code?.default_discount_pct ?? 0;
+            document.getElementById('codeLimit').value = code?.usage_limit || '';
+            document.getElementById('codeValidFrom').value = code?.valid_from ? code.valid_from.slice(0,16) : '';
+            document.getElementById('codeValidTo').value = code?.valid_to ? code.valid_to.slice(0,16) : '';
+            document.getElementById('codeStatusGroup').style.display = id ? 'block' : 'none';
+            if (id) document.getElementById('codeStatus').value = code?.status || 'active';
+            buildSegDiscountGrid(code?.segment_discounts || {});
+            document.getElementById('codeModal').classList.add('active');
+        }
+
+        function buildSegDiscountGrid(existing) {
+            const grid = document.getElementById('segDiscountGrid');
+            if (!segments.length) {
+                grid.innerHTML = '<div style="color:#9ca3af;font-size:13px;padding:8px 0;">No segments defined yet</div>';
+                return;
+            }
+            grid.innerHTML = segments.map(s => `
+                <div class="seg-discount-row">
+                    <label>${s.name}</label>
+                    <input type="number" id="segDisc_${s.id}" step="0.1" min="0" max="100"
+                        value="${existing[String(s.id)] ?? ''}"
+                        placeholder="Use default">
+                    <span>%</span>
+                </div>
+            `).join('');
+        }
+
+        async function saveCode() {
+            const id = document.getElementById('codeEditId').value;
+            const code = document.getElementById('codeCode').value.trim().toUpperCase();
+            if (!id && !code) { toast('Code is required', 'error'); return; }
+            const segDiscounts = {};
+            segments.forEach(s => {
+                const val = document.getElementById(`segDisc_${s.id}`)?.value;
+                if (val !== '' && val != null) segDiscounts[String(s.id)] = parseFloat(val);
+            });
+            const vfRaw = document.getElementById('codeValidFrom').value;
+            const vtRaw = document.getElementById('codeValidTo').value;
+            const payload = {
+                label: document.getElementById('codeLabel').value.trim() || null,
+                default_discount_pct: parseFloat(document.getElementById('codeDefaultPct').value) || 0,
+                segment_discounts: segDiscounts,
+                usage_limit: parseInt(document.getElementById('codeLimit').value) || null,
+                valid_from: vfRaw || null,
+                valid_to: vtRaw || null,
+            };
+            if (!id) payload.code = code;
+            if (id) payload.status = document.getElementById('codeStatus').value;
+            try {
+                const url = id ? `${API}/promo-codes/${id}?company_id=${COMPANY_ID}` : `${API}/promo-codes?company_id=${COMPANY_ID}`;
+                const r = await staffFetch(url, { method: id ? 'PUT' : 'POST', body: JSON.stringify(payload) });
+                if (!r.ok) { const d = await r.json(); toast(d.detail || 'Save failed', 'error'); return; }
+                toast(id ? 'Code updated' : 'Code created');
+                closeModal('codeModal');
+                await loadCodes();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                toast('Save failed', 'error');
+            }
+        }
+
+        async function toggleCode(id, newStatus) {
+            try {
+                const r = await staffFetch(`${API}/promo-codes/${id}?company_id=${COMPANY_ID}`, {
+                    method: 'PUT', body: JSON.stringify({ status: newStatus })
+                });
+                if (!r.ok) { toast('Update failed', 'error'); return; }
+                toast(newStatus === 'active' ? 'Code activated' : 'Code paused');
+                await loadCodes();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                toast('Update failed', 'error');
+            }
+        }
+
+        function deleteCode(id, code) {
+            showConfirm('Delete Code', `Delete "${code}" permanently? This cannot be undone.`, async () => {
+                try {
+                    const r = await staffFetch(`${API}/promo-codes/${id}?company_id=${COMPANY_ID}`, { method: 'DELETE' });
+                    if (!r.ok) { toast('Delete failed', 'error'); return; }
+                    toast('Code deleted');
+                    await loadCodes();
+                } catch (e) {
+                    if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                    toast('Delete failed', 'error');
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════
+        // TAB 3 — ANALYTICS
+        // ═══════════════════════════════════════
+        async function loadAnalytics() {
+            document.getElementById('anLoading').style.display = 'flex';
+            document.getElementById('anTableWrap').style.display = 'none';
+            document.getElementById('anEmpty').style.display = 'none';
+            const codeType = document.getElementById('anFilterType').value;
+            const segId = document.getElementById('anFilterSeg').value;
+            const dateFrom = document.getElementById('anDateFrom').value;
+            const dateTo = document.getElementById('anDateTo').value;
+            const sortBy = document.getElementById('anSortBy').value;
+            const sortDir = document.getElementById('anSortDir').value;
+            let url = `${API}/analytics/code-usage?company_id=${COMPANY_ID}&sort_by=${sortBy}&sort_dir=${sortDir}`;
+            if (codeType) url += `&code_type=${codeType}`;
+            if (segId) url += `&segment_id=${segId}`;
+            if (dateFrom) url += `&date_from=${dateFrom}`;
+            if (dateTo) url += `&date_to=${dateTo}`;
+            try {
+                const r = await staffFetch(url);
+                const data = await r.json();
+                analyticsRows = data.rows || [];
+                renderAnalyticsTable(analyticsRows);
+                updateAnalyticsSummary(analyticsRows);
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                toast('Failed to load analytics', 'error');
+                document.getElementById('anLoading').style.display = 'none';
+                document.getElementById('anEmpty').style.display = 'block';
+            }
+        }
+
+        function filterAnalyticsTable() {
+            const q = document.getElementById('anSearch').value.toLowerCase();
+            const filtered = q ? analyticsRows.filter(r => r.code_value.toLowerCase().includes(q)) : analyticsRows;
+            renderAnalyticsTable(filtered);
+        }
+
+        function renderAnalyticsTable(rows) {
+            document.getElementById('anLoading').style.display = 'none';
+            if (!rows.length) {
+                document.getElementById('anTableWrap').style.display = 'none';
+                document.getElementById('anEmpty').style.display = 'block';
+                return;
+            }
+            const typeBadge = { mnr: 'badge-mnr', partner: 'badge-partner', student: 'badge-student', promo: 'badge-promo' };
+            const typeLabel = { mnr: 'MNR', partner: 'Partner', student: 'Student', promo: 'Promo' };
+            document.getElementById('anTableBody').innerHTML = rows.map(r => `
+                <tr>
+                    <td><strong>${r.code_value}</strong></td>
+                    <td><span class="${typeBadge[r.code_type] || ''}">${typeLabel[r.code_type] || r.code_type}</span></td>
+                    <td><span class="analytics-val ${r.searches === 0 ? 'zero' : ''}">${r.searches}</span></td>
+                    <td><span class="analytics-val ${r.valid_searches === 0 ? 'zero' : ''}">${r.valid_searches}</span></td>
+                    <td><span class="analytics-val ${r.applied === 0 ? 'zero' : ''}">${r.applied}</span></td>
+                    <td><span class="analytics-val ${r.purchased === 0 ? 'zero' : ''} ${r.purchased > 0 ? 'val-green' : ''}">${r.purchased}</span></td>
+                    <td><strong class="${r.total_value > 0 ? 'val-green' : 'analytics-val zero'}">₹${r.total_value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
+                </tr>
+            `).join('');
+            document.getElementById('anTableWrap').style.display = 'block';
+            document.getElementById('anEmpty').style.display = 'none';
+        }
+
+        function updateAnalyticsSummary(rows) {
+            const totSearches = rows.reduce((s, r) => s + r.searches, 0);
+            const totApplied = rows.reduce((s, r) => s + r.applied, 0);
+            const totPurchased = rows.reduce((s, r) => s + r.purchased, 0);
+            const totValue = rows.reduce((s, r) => s + r.total_value, 0);
+            document.getElementById('anTotalSearches').textContent = totSearches.toLocaleString();
+            document.getElementById('anTotalApplied').textContent = totApplied.toLocaleString();
+            document.getElementById('anTotalPurchased').textContent = totPurchased.toLocaleString();
+            document.getElementById('anTotalValue').textContent = '₹' + totValue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Auto-fill slug from name
+        document.addEventListener('input', e => {
+            if (e.target.id === 'segName' && !document.getElementById('segEditId').value) {
+                document.getElementById('segSlug').value = e.target.value.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+            }
+        });
+    </script>
+</body>
+</html>

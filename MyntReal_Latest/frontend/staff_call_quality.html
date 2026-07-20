@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Call Quality Review — Staff Portal</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh;}
+.main-content{margin-left:280px;padding-top:88px;min-height:100vh;transition:margin-left .3s;}
+@media(max-width:768px){.main-content{margin-left:0;}}
+.content-area{padding:20px;}
+.page-banner{background:linear-gradient(135deg,#0f766e 0%,#065f46 100%);border-radius:12px;padding:22px 24px;margin-bottom:20px;color:#fff;}
+.page-banner h1{font-size:22px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:10px;}
+.page-banner p{opacity:.85;margin:0;font-size:13px;}
+.filter-bar{background:#fff;border-radius:10px;padding:14px 18px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:18px;}
+.filter-bar .fg{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
+.filter-bar label{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;display:block;margin-bottom:3px;}
+.filter-bar .form-control,.filter-bar .form-select{font-size:13px;padding:6px 10px;border-radius:6px;min-width:130px;border:1px solid #e5e7eb;}
+.filter-bar .form-control:focus,.filter-bar .form-select:focus{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.1);}
+.tab-row{display:flex;gap:6px;margin-bottom:18px;}
+.tab-btn{padding:8px 20px;border-radius:8px;border:1px solid #d1d5db;background:#fff;color:#6b7280;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;}
+.tab-btn.active{background:#0f766e;border-color:#0f766e;color:#fff;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+.stat-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.07);text-align:center;}
+.stat-card .val{font-size:22px;font-weight:700;color:#1f2937;}
+.stat-card .lbl{color:#6b7280;font-size:10px;margin-top:2px;text-transform:uppercase;font-weight:600;}
+.stat-card.cl-teal{border-left:3px solid #0f766e;}
+.stat-card.cl-amber{border-left:3px solid #d97706;}
+.stat-card.cl-blue{border-left:3px solid #2563eb;}
+.stat-card.cl-grn{border-left:3px solid #059669;}
+.card-wrap{background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.07);overflow:hidden;margin-bottom:18px;}
+.card-hdr{padding:12px 16px;border-bottom:1px solid #f3f4f6;font-weight:700;font-size:13px;color:#1a2e4a;display:flex;align-items:center;justify-content:space-between;}
+table.dt{width:100%;border-collapse:collapse;font-size:13px;}
+table.dt th{padding:9px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid #e5e7eb;}
+table.dt td{padding:9px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle;}
+table.dt tr:last-child td{border-bottom:none;}
+table.dt tr:hover td{background:#f0fdf9;}
+.badge-status{display:inline-block;padding:2px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;}
+.badge-pending{background:#fef3c7;color:#92400e;}
+.badge-reviewed{background:#d1fae5;color:#065f46;}
+.badge-skipped{background:#f3f4f6;color:#6b7280;}
+.score-pill{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:700;}
+.score-exc{background:#d1fae5;color:#065f46;}
+.score-good{background:#dbeafe;color:#1e40af;}
+.score-avg{background:#fef3c7;color:#92400e;}
+.score-poor{background:#fee2e2;color:#991b1b;}
+.score-na{background:#f3f4f6;color:#9ca3af;}
+.btn-review{background:#0f766e;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;}
+.btn-review:hover{background:#0d6460;}
+.btn-view{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;}
+.cat-bar{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.cat-bar .lbl{font-size:12px;color:#374151;min-width:130px;font-weight:600;}
+.cat-bar .bar-wrap{flex:1;background:#e5e7eb;border-radius:6px;height:10px;overflow:hidden;}
+.cat-bar .bar-fill{height:10px;border-radius:6px;transition:width .4s;}
+.cat-bar .sc{font-size:11px;font-weight:700;min-width:36px;text-align:right;}
+.exec-row{cursor:pointer;}
+.exec-row:hover td{background:#f0fdf9 !important;}
+.trend-chart{display:flex;align-items:flex-end;gap:3px;height:70px;padding:0 4px;}
+.trend-bar-wrap{display:flex;flex-direction:column;align-items:center;flex:1;height:100%;}
+.trend-bar{width:100%;border-radius:3px 3px 0 0;min-height:2px;transition:height .3s;}
+.trend-date{font-size:8px;color:#9ca3af;margin-top:2px;transform:rotate(-45deg);white-space:nowrap;}
+.empty-state{text-align:center;padding:40px;color:#9ca3af;font-size:14px;}
+.empty-state i{font-size:32px;margin-bottom:10px;display:block;}
+.spinner-wrap{text-align:center;padding:40px;}
+/* Review Modal */
+.modal-backdrop-custom{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1050;align-items:center;justify-content:center;}
+.modal-backdrop-custom.open{display:flex;}
+.modal-box{background:#fff;border-radius:12px;width:720px;max-width:95vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column;}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;}
+.modal-hdr h5{font-size:16px;font-weight:700;color:#1a2e4a;margin:0;}
+.modal-body-inner{flex:1;overflow-y:auto;padding:20px;}
+.modal-ftr{padding:12px 20px;border-top:1px solid #e5e7eb;display:flex;align-items:center;justify-content:flex-end;gap:8px;}
+.score-stars{display:flex;gap:6px;align-items:center;}
+.star-btn{font-size:20px;cursor:pointer;color:#d1d5db;transition:color .15s;background:none;border:none;padding:0;}
+.star-btn.active,.star-btn:hover{color:#f59e0b;}
+.info-row{display:flex;gap:0;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:14px;}
+.info-col{flex:1;padding:10px 14px;background:#f9fafb;font-size:12px;line-height:1.6;}
+.info-col:not(:last-child){border-right:1px solid #e5e7eb;}
+.info-col .lbl{font-weight:700;color:#6b7280;font-size:10px;text-transform:uppercase;}
+.info-col .val{color:#1a2e4a;font-weight:600;}
+.section-hdr{font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.06em;margin:14px 0 8px;}
+.score-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.score-row .lbl-s{font-size:13px;font-weight:600;color:#374151;min-width:180px;}
+.score-row .stars{display:flex;gap:4px;}
+.note-item{border-left:3px solid #d1d5db;padding:6px 10px;margin-bottom:6px;font-size:12px;background:#f9fafb;border-radius:0 4px 4px 0;}
+.note-item .author{font-weight:700;color:#1a2e4a;font-size:11px;}
+.note-item .text{color:#374151;margin-top:2px;}
+/* Sample Trigger */
+.sample-btn{background:#0f766e;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;}
+.sample-btn:hover{background:#0d6460;}
+.sample-btn:disabled{opacity:.6;cursor:not-allowed;}
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+
+<div class="main-content">
+<div class="content-area">
+
+<div class="page-banner">
+  <h1><i class="fas fa-clipboard-check"></i> Call Quality Review</h1>
+  <p>Auto-sampled call quality monitoring for the sales team — 5% or minimum 5 calls per executive per day, whichever is higher.</p>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <div class="fg">
+    <div>
+      <label>Date From</label>
+      <input type="date" id="filterDateFrom" class="form-control" style="min-width:140px;">
+    </div>
+    <div>
+      <label>Date To</label>
+      <input type="date" id="filterDateTo" class="form-control" style="min-width:140px;">
+    </div>
+    <div>
+      <label>Status</label>
+      <select id="filterStatus" class="form-select">
+        <option value="">All</option>
+        <option value="pending">Pending</option>
+        <option value="reviewed">Reviewed</option>
+        <option value="skipped">Skipped</option>
+      </select>
+    </div>
+    <div>
+      <label>Executive</label>
+      <select id="filterStaff" class="form-select" style="min-width:160px;">
+        <option value="">All Executives</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end;">
+      <button class="btn btn-sm" onclick="loadReviews(1)" style="background:#0f766e;color:#fff;font-weight:600;border:none;border-radius:6px;padding:7px 16px;">
+        <i class="fas fa-filter me-1"></i>Filter
+      </button>
+      <button class="sample-btn" id="sampleBtn" onclick="triggerSample()" title="Auto-sample today's calls">
+        <i class="fas fa-random"></i> Sample Today
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tab-row">
+  <button class="tab-btn active" onclick="switchTab('review')" id="tabReview"><i class="fas fa-list-check me-1"></i>Review Sheet</button>
+  <button class="tab-btn" onclick="switchTab('dashboard')" id="tabDashboard"><i class="fas fa-chart-bar me-1"></i>Quality Dashboard</button>
+</div>
+
+<!-- ── Tab: Review Sheet ──────────────────────────── -->
+<div class="tab-content active" id="tabReviewContent">
+  <div class="stat-cards" id="reviewSummaryCards">
+    <div class="stat-card cl-teal"><div class="val" id="sCTotal">—</div><div class="lbl">Total Sampled</div></div>
+    <div class="stat-card cl-amber"><div class="val" id="sCPending">—</div><div class="lbl">Pending Review</div></div>
+    <div class="stat-card cl-grn"><div class="val" id="sCReviewed">—</div><div class="lbl">Reviewed</div></div>
+    <div class="stat-card cl-blue"><div class="val" id="sCAvgScore">—</div><div class="lbl">Avg Quality Score</div></div>
+  </div>
+  <div class="card-wrap">
+    <div class="card-hdr">
+      <span><i class="fas fa-clipboard-list me-1" style="color:#0f766e;"></i>Review Queue</span>
+      <span id="reviewPaginationInfo" style="font-size:11px;color:#6b7280;font-weight:400;"></span>
+    </div>
+    <div id="reviewTableWrap">
+      <div class="spinner-wrap"><div class="spinner-border text-success"></div></div>
+    </div>
+    <div id="reviewPagination" style="padding:10px 16px;display:flex;gap:6px;flex-wrap:wrap;"></div>
+  </div>
+</div>
+
+<!-- ── Tab: Quality Dashboard ─────────────────────── -->
+<div class="tab-content" id="tabDashboardContent">
+  <div class="stat-cards" id="dashSummaryCards">
+    <div class="stat-card cl-teal"><div class="val" id="dCTotal">—</div><div class="lbl">Total Sampled</div></div>
+    <div class="stat-card cl-amber"><div class="val" id="dCPending">—</div><div class="lbl">Awaiting Review</div></div>
+    <div class="stat-card cl-grn"><div class="val" id="dCReviewed">—</div><div class="lbl">Reviewed</div></div>
+    <div class="stat-card cl-blue"><div class="val" id="dCAvgScore">—</div><div class="lbl">Overall Avg Score</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;" class="grid-2c">
+    <div class="card-wrap">
+      <div class="card-hdr"><i class="fas fa-sliders-h me-1" style="color:#0f766e;"></i>Parameter Averages</div>
+      <div style="padding:16px;" id="catAvgsWrap">
+        <div class="spinner-wrap"><div class="spinner-border text-success" style="width:1.4rem;height:1.4rem;"></div></div>
+      </div>
+    </div>
+    <div class="card-wrap">
+      <div class="card-hdr"><i class="fas fa-chart-line me-1" style="color:#0f766e;"></i>Daily Trend</div>
+      <div style="padding:16px;" id="trendWrap">
+        <div class="spinner-wrap"><div class="spinner-border text-success" style="width:1.4rem;height:1.4rem;"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card-wrap">
+    <div class="card-hdr"><i class="fas fa-users me-1" style="color:#0f766e;"></i>Executive Breakdown</div>
+    <div id="execTableWrap">
+      <div class="spinner-wrap"><div class="spinner-border text-success"></div></div>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+
+<!-- ── Review Detail Modal ──────────────────────────── -->
+<div class="modal-backdrop-custom" id="reviewModal">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h5 id="rmTitle">Quality Review</h5>
+      <button onclick="closeReviewModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;">×</button>
+    </div>
+    <div class="modal-body-inner" id="rmBody">
+      <div class="spinner-wrap"><div class="spinner-border text-success"></div></div>
+    </div>
+    <div class="modal-ftr">
+      <button onclick="closeReviewModal()" style="background:#f3f4f6;color:#374151;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;">Close</button>
+      <button id="rmSaveBtn" onclick="submitReview()" style="background:#0f766e;color:#fff;border:none;border-radius:6px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;display:none;">
+        <i class="fas fa-save me-1"></i>Save Review
+      </button>
+      <button id="rmSkipBtn" onclick="skipReview()" style="background:#f3f4f6;color:#6b7280;border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;display:none;">
+        Skip
+      </button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API = '/api/v1';
+let _cid = null;
+let currentPage = 1, totalPages = 1;
+let currentReviewId = null, currentReviewData = null;
+let _scores = { score_script:null, score_tone:null, score_info_accuracy:null, score_customer_handling:null, score_closing:null, score_disposition:null };
+
+function _cidParam() { return _cid ? `company_id=${_cid}` : ''; }
+function _addCid(url) { const p = _cidParam(); return p ? (url.includes('?') ? url + '&' + p : url + '?' + p) : url; }
+
+function toast(msg, type='success') {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:20px;right:20px;z-index:9999;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;color:#fff;background:${type==='success'?'#059669':type==='error'?'#dc2626':'#1d4ed8'};box-shadow:0 4px 12px rgba(0,0,0,.2);`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function scoreLabel(s) {
+  if (!s && s !== 0) return '<span class="score-pill score-na">N/A</span>';
+  const n = parseFloat(s);
+  if (n >= 4.5) return `<span class="score-pill score-exc">${n.toFixed(1)} Excellent</span>`;
+  if (n >= 3.5) return `<span class="score-pill score-good">${n.toFixed(1)} Good</span>`;
+  if (n >= 2.5) return `<span class="score-pill score-avg">${n.toFixed(1)} Average</span>`;
+  if (n >= 1.5) return `<span class="score-pill score-poor">${n.toFixed(1)} Below Avg</span>`;
+  return `<span class="score-pill score-poor">${n.toFixed(1)} Poor</span>`;
+}
+
+function barColor(s) {
+  if (!s) return '#d1d5db';
+  if (s >= 4.5) return '#059669';
+  if (s >= 3.5) return '#0f766e';
+  if (s >= 2.5) return '#d97706';
+  return '#dc2626';
+}
+
+function fmtDur(sec) {
+  if (!sec) return '—';
+  if (sec < 60) return `${sec}s`;
+  return `${Math.floor(sec/60)}m ${sec%60}s`;
+}
+
+function fmtDate(s) {
+  if (!s) return '—';
+  return new Date(s).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'});
+}
+
+function fmtDT(s) {
+  if (!s) return '—';
+  return new Date(s).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true});
+}
+
+function switchTab(tab) {
+  document.getElementById('tabReview').classList.toggle('active', tab==='review');
+  document.getElementById('tabDashboard').classList.toggle('active', tab==='dashboard');
+  document.getElementById('tabReviewContent').classList.toggle('active', tab==='review');
+  document.getElementById('tabDashboardContent').classList.toggle('active', tab==='dashboard');
+  if (tab === 'dashboard') loadDashboard();
+}
+
+// ── Set default date range (last 7 days) ────────────────────────────────────
+function initDateFilters() {
+  const today = new Date();
+  const pastWeek = new Date(today); pastWeek.setDate(today.getDate() - 6);
+  document.getElementById('filterDateTo').value = today.toISOString().split('T')[0];
+  document.getElementById('filterDateFrom').value = pastWeek.toISOString().split('T')[0];
+}
+
+// ── Load Reviews ─────────────────────────────────────────────────────────────
+async function loadReviews(page = 1) {
+  currentPage = page;
+  const df = document.getElementById('filterDateFrom').value;
+  const dt = document.getElementById('filterDateTo').value;
+  const status = document.getElementById('filterStatus').value;
+  const staffId = document.getElementById('filterStaff').value;
+
+  document.getElementById('reviewTableWrap').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-success"></div></div>';
+
+  let url = _addCid(`${API}/call-quality/reviews?page=${page}&per_page=25`);
+  if (df) url += `&date_from=${df}`;
+  if (dt) url += `&date_to=${dt}`;
+  if (status) url += `&status=${status}`;
+  if (staffId) url += `&staff_id=${staffId}`;
+
+  try {
+    const res = await staffFetch(url);
+    if (!res.ok) throw new Error('Failed to load reviews');
+    const data = await res.json();
+    totalPages = data.pages || 1;
+
+    // Update summary from reviews on the page
+    updateReviewSummaryFromData(data);
+    renderReviewTable(data.reviews);
+    renderPagination(data.total, page, totalPages);
+    populateStaffFilter(data.reviews);
+  } catch(e) {
+    document.getElementById('reviewTableWrap').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle text-danger"></i>${e.message}</div>`;
+  }
+}
+
+function updateReviewSummaryFromData(data) {
+  const all = data.reviews || [];
+  document.getElementById('sCTotal').textContent = data.total || 0;
+  const pending = all.filter(r => r.status === 'pending').length;
+  const reviewed = all.filter(r => r.status === 'reviewed').length;
+  document.getElementById('sCPending').textContent = data.total ? '…' : 0;
+  document.getElementById('sCReviewed').textContent = data.total ? '…' : 0;
+  const scores = all.filter(r => r.overall_score).map(r => r.overall_score);
+  document.getElementById('sCAvgScore').textContent = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '—';
+}
+
+function renderReviewTable(reviews) {
+  if (!reviews || !reviews.length) {
+    document.getElementById('reviewTableWrap').innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-check"></i>No reviews found for the selected filters.</div>';
+    return;
+  }
+  let html = `<div style="overflow-x:auto;"><table class="dt"><thead><tr>
+    <th>#</th><th>Executive</th><th>Sample Date</th><th>Phone / Contact</th><th>Call Type</th><th>Duration</th><th>Lead</th><th>Status</th><th>Overall Score</th><th>Actions</th>
+  </tr></thead><tbody>`;
+  reviews.forEach((r, i) => {
+    html += `<tr>
+      <td style="color:#9ca3af;font-size:11px;">${r.id}</td>
+      <td>
+        <div style="font-weight:600;font-size:13px;">${r.staff_name}</div>
+        <div style="font-size:10px;color:#6b7280;">${r.emp_code || ''} ${r.staff_role ? '· '+r.staff_role : ''}</div>
+      </td>
+      <td style="font-size:12px;">${r.sample_date}</td>
+      <td>
+        <div style="font-size:12px;">${r.call_phone || '—'}</div>
+        ${r.call_contact_name ? `<div style="font-size:10px;color:#6b7280;">${r.call_contact_name}</div>` : ''}
+      </td>
+      <td><span style="font-size:11px;font-weight:600;text-transform:capitalize;">${r.call_type || '—'}</span></td>
+      <td style="font-size:12px;">${fmtDur(r.call_duration_seconds)}</td>
+      <td>
+        ${r.lead_name ? `<div style="font-size:12px;font-weight:600;">${r.lead_name}</div><div style="font-size:10px;color:#6b7280;">${r.lead_status || ''}</div>` : '<span style="color:#d1d5db;">—</span>'}
+      </td>
+      <td><span class="badge-status badge-${r.status}">${r.status}</span></td>
+      <td>${scoreLabel(r.overall_score)}</td>
+      <td>
+        ${r.status === 'pending'
+          ? `<button class="btn-review" onclick="openReview(${r.id})"><i class="fas fa-pen me-1"></i>Review</button>`
+          : `<button class="btn-view" onclick="openReview(${r.id})"><i class="fas fa-eye me-1"></i>View</button>`}
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('reviewTableWrap').innerHTML = html;
+}
+
+function renderPagination(total, page, pages) {
+  const info = document.getElementById('reviewPaginationInfo');
+  info.textContent = `${total} total reviews`;
+  const el = document.getElementById('reviewPagination');
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  const addBtn = (lbl, p, disabled, active) => {
+    html += `<button onclick="${disabled ? '' : `loadReviews(${p})`}" style="padding:5px 10px;border-radius:5px;border:1px solid ${active?'#0f766e':'#e5e7eb'};background:${active?'#0f766e':'#fff'};color:${active?'#fff':'#374151'};font-size:12px;cursor:${disabled?'default':'pointer'};opacity:${disabled?.4:1};">${lbl}</button>`;
+  };
+  addBtn('«', 1, page===1);
+  addBtn('‹', page-1, page===1);
+  for (let p = Math.max(1, page-2); p <= Math.min(pages, page+2); p++) addBtn(p, p, false, p===page);
+  addBtn('›', page+1, page===pages);
+  addBtn('»', pages, page===pages);
+  el.innerHTML = html;
+}
+
+function populateStaffFilter(reviews) {
+  const sel = document.getElementById('filterStaff');
+  const existing = new Set([...sel.options].map(o => o.value));
+  reviews.forEach(r => {
+    if (!existing.has(String(r.staff_id))) {
+      const opt = document.createElement('option');
+      opt.value = r.staff_id;
+      opt.textContent = `${r.staff_name}${r.emp_code ? ' ('+r.emp_code+')' : ''}`;
+      sel.appendChild(opt);
+      existing.add(String(r.staff_id));
+    }
+  });
+}
+
+// ── Sample Trigger ───────────────────────────────────────────────────────────
+async function triggerSample() {
+  const btn = document.getElementById('sampleBtn');
+  const today = new Date().toISOString().split('T')[0];
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sampling…';
+  try {
+    const res = await staffFetch(_addCid(`${API}/call-quality/sample?sample_date=${today}`), { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed to sample');
+    toast(`${data.sampled} review(s) created for today`, 'success');
+    loadReviews(1);
+  } catch(e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-random"></i> Sample Today';
+  }
+}
+
+// ── Review Modal ─────────────────────────────────────────────────────────────
+async function openReview(reviewId) {
+  currentReviewId = reviewId;
+  _scores = { score_script:null, score_tone:null, score_info_accuracy:null, score_customer_handling:null, score_closing:null, score_disposition:null };
+  document.getElementById('rmTitle').textContent = `Review #${reviewId}`;
+  document.getElementById('rmBody').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-success"></div></div>';
+  document.getElementById('rmSaveBtn').style.display = 'none';
+  document.getElementById('rmSkipBtn').style.display = 'none';
+  document.getElementById('reviewModal').classList.add('open');
+
+  try {
+    const res = await staffFetch(_addCid(`${API}/call-quality/reviews/${reviewId}`));
+    if (!res.ok) throw new Error('Failed to load review');
+    currentReviewData = await res.json();
+    renderReviewModal(currentReviewData);
+  } catch(e) {
+    document.getElementById('rmBody').innerHTML = `<div class="empty-state text-danger"><i class="fas fa-exclamation-circle"></i>${e.message}</div>`;
+  }
+}
+
+function renderReviewModal(r) {
+  const isPending = r.status === 'pending';
+  if (isPending) { document.getElementById('rmSaveBtn').style.display = ''; document.getElementById('rmSkipBtn').style.display = ''; }
+
+  const PARAMS = [
+    { key:'score_script', label:'Script Adherence', desc:'Followed sales script & introduction?'},
+    { key:'score_tone', label:'Tone & Attitude', desc:'Professional, positive, respectful?'},
+    { key:'score_info_accuracy', label:'Information Accuracy', desc:'Correct product/service info given?'},
+    { key:'score_customer_handling', label:'Customer Handling', desc:'Handled objections & queries well?'},
+    { key:'score_closing', label:'Closing Technique', desc:'Proper follow-up commitment taken?'},
+    { key:'score_disposition', label:'Disposition Accuracy', desc:'CRM status updated correctly?'},
+  ];
+
+  let html = `
+  <div class="info-row">
+    <div class="info-col"><div class="lbl">Executive</div><div class="val">${r.staff_name} ${r.emp_code ? '<span style="color:#6b7280;font-size:11px;">('+r.emp_code+')</span>' : ''}</div></div>
+    <div class="info-col"><div class="lbl">Sample Date</div><div class="val">${r.sample_date}</div></div>
+    <div class="info-col"><div class="lbl">Status</div><div class="val"><span class="badge-status badge-${r.status}">${r.status}</span></div></div>
+    ${r.reviewer_name ? `<div class="info-col"><div class="lbl">Reviewed By</div><div class="val">${r.reviewer_name}</div></div>` : ''}
+  </div>`;
+
+  if (r.call_phone || r.call_type) {
+    html += `<div class="section-hdr"><i class="fas fa-phone me-1" style="color:#0f766e;"></i>Call Details</div>
+    <div class="info-row">
+      <div class="info-col"><div class="lbl">Phone</div><div class="val">${r.call_phone || '—'}</div></div>
+      <div class="info-col"><div class="lbl">Contact Name</div><div class="val">${r.call_contact_name || '—'}</div></div>
+      <div class="info-col"><div class="lbl">Type</div><div class="val" style="text-transform:capitalize;">${r.call_type || '—'}</div></div>
+      <div class="info-col"><div class="lbl">Duration</div><div class="val">${fmtDur(r.call_duration_seconds)}</div></div>
+      <div class="info-col"><div class="lbl">Date & Time</div><div class="val">${fmtDT(r.call_datetime)}</div></div>
+    </div>`;
+  } else {
+    html += `<div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:6px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:12px;"><i class="fas fa-exclamation-triangle me-1"></i>No call log linked. Review based on CRM interactions and lead feedback.</div>`;
+  }
+
+  if (r.lead_name) {
+    html += `<div class="section-hdr"><i class="fas fa-user me-1" style="color:#0f766e;"></i>Lead Details</div>
+    <div class="info-row">
+      <div class="info-col"><div class="lbl">Lead Name</div><div class="val">${r.lead_name}</div></div>
+      <div class="info-col"><div class="lbl">Phone</div><div class="val">${r.lead_phone || '—'}</div></div>
+      <div class="info-col"><div class="lbl">Status</div><div class="val">${r.lead_status || '—'}</div></div>
+    </div>`;
+    if (r.lead_notes && r.lead_notes.length) {
+      html += `<div class="section-hdr"><i class="fas fa-sticky-note me-1" style="color:#0f766e;"></i>Recent Lead Notes</div>`;
+      r.lead_notes.slice(0,5).forEach(n => {
+        html += `<div class="note-item"><div class="author">${n.author || 'Staff'} <span style="color:#9ca3af;font-weight:400;">${fmtDT(n.created_at)}</span></div><div class="text">${n.note}</div></div>`;
+      });
+    }
+  }
+
+  html += `<div class="section-hdr" style="margin-top:16px;"><i class="fas fa-star me-1" style="color:#f59e0b;"></i>Quality Scores</div>
+  <div style="background:#f9fafb;border-radius:8px;padding:14px;border:1px solid #e5e7eb;">`;
+
+  PARAMS.forEach(p => {
+    const currentVal = r[p.key] || 0;
+    html += `<div class="score-row">
+      <div class="lbl-s">${p.label}<br><span style="font-size:10px;color:#9ca3af;font-weight:400;">${p.desc}</span></div>
+      <div class="stars" id="stars_${p.key}">
+        ${[1,2,3,4,5].map(n => `<button class="star-btn ${currentVal >= n ? 'active' : ''}" onclick="setScore('${p.key}', ${n}, this.closest('.stars'))" data-val="${n}">★</button>`).join('')}
+      </div>
+      <span id="sc_lbl_${p.key}" style="font-size:11px;color:#6b7280;min-width:60px;margin-left:6px;">${currentVal ? currentVal+'/5' : '—'}</span>
+    </div>`;
+    if (currentVal) _scores[p.key] = currentVal;
+  });
+
+  html += `</div>
+  <div style="margin-top:14px;">
+    <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:6px;"><i class="fas fa-comment me-1" style="color:#0f766e;"></i>Overall Remarks</label>
+    <textarea id="rmRemarks" rows="3" style="width:100%;border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;font-size:13px;resize:vertical;" placeholder="General feedback, specific issues observed, action points for the executive…">${r.overall_remarks || ''}</textarea>
+  </div>`;
+
+  document.getElementById('rmBody').innerHTML = html;
+}
+
+function setScore(key, val, starsEl) {
+  _scores[key] = val;
+  starsEl.querySelectorAll('.star-btn').forEach(btn => btn.classList.toggle('active', parseInt(btn.dataset.val) <= val));
+  const lbl = document.getElementById(`sc_lbl_${key}`);
+  if (lbl) lbl.textContent = `${val}/5`;
+}
+
+async function submitReview() {
+  const btn = document.getElementById('rmSaveBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  try {
+    const payload = {
+      ..._scores,
+      overall_remarks: document.getElementById('rmRemarks')?.value || '',
+      status: 'reviewed',
+    };
+    const res = await staffFetch(_addCid(`${API}/call-quality/reviews/${currentReviewId}/submit`), {
+      method: 'POST', body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed to submit');
+    toast('Review saved successfully!', 'success');
+    closeReviewModal();
+    loadReviews(currentPage);
+  } catch(e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-1"></i>Save Review';
+  }
+}
+
+async function skipReview() {
+  try {
+    await staffFetch(_addCid(`${API}/call-quality/reviews/${currentReviewId}/submit`), {
+      method: 'POST', body: JSON.stringify({ status: 'skipped', overall_remarks: 'Skipped by reviewer.' }),
+    });
+    toast('Review skipped.', 'info');
+    closeReviewModal();
+    loadReviews(currentPage);
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function closeReviewModal() {
+  document.getElementById('reviewModal').classList.remove('open');
+  currentReviewId = null; currentReviewData = null;
+}
+
+// ── Dashboard ────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  const df = document.getElementById('filterDateFrom').value;
+  const dt = document.getElementById('filterDateTo').value;
+  let url = _addCid(`${API}/call-quality/dashboard`);
+  if (df) url += `&date_from=${df}`;
+  if (dt) url += `&date_to=${dt}`;
+
+  document.getElementById('catAvgsWrap').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-success" style="width:1.4rem;height:1.4rem;"></div></div>';
+  document.getElementById('trendWrap').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-success" style="width:1.4rem;height:1.4rem;"></div></div>';
+  document.getElementById('execTableWrap').innerHTML = '<div class="spinner-wrap"><div class="spinner-border text-success"></div></div>';
+
+  try {
+    const res = await staffFetch(url);
+    if (!res.ok) throw new Error('Failed to load dashboard');
+    const data = await res.json();
+    const s = data.summary;
+
+    document.getElementById('dCTotal').textContent = s.total_sampled;
+    document.getElementById('dCPending').textContent = s.pending;
+    document.getElementById('dCReviewed').textContent = s.reviewed;
+    document.getElementById('dCAvgScore').textContent = s.avg_overall_score ? s.avg_overall_score.toFixed(1) : '—';
+    document.getElementById('sCTotal').textContent = s.total_sampled;
+    document.getElementById('sCPending').textContent = s.pending;
+    document.getElementById('sCReviewed').textContent = s.reviewed;
+    document.getElementById('sCAvgScore').textContent = s.avg_overall_score ? s.avg_overall_score.toFixed(1) : '—';
+
+    renderCatAvgs(data.category_averages);
+    renderTrend(data.daily_trend);
+    renderExecTable(data.exec_breakdown);
+  } catch(e) {
+    ['catAvgsWrap','trendWrap','execTableWrap'].forEach(id => {
+      document.getElementById(id).innerHTML = `<div class="empty-state text-danger">${e.message}</div>`;
+    });
+  }
+}
+
+function renderCatAvgs(cats) {
+  const labels = {
+    script: 'Script Adherence',
+    tone: 'Tone & Attitude',
+    info_accuracy: 'Info Accuracy',
+    customer_handling: 'Customer Handling',
+    closing: 'Closing Technique',
+    disposition: 'Disposition Accuracy',
+  };
+  let html = '';
+  Object.entries(labels).forEach(([key, lbl]) => {
+    const val = cats[key];
+    const pct = val ? (val / 5 * 100).toFixed(0) : 0;
+    html += `<div class="cat-bar">
+      <span class="lbl">${lbl}</span>
+      <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${barColor(val)};"></div></div>
+      <span class="sc" style="color:${barColor(val)};">${val ? val.toFixed(1) : '—'}</span>
+    </div>`;
+  });
+  document.getElementById('catAvgsWrap').innerHTML = html || '<div class="empty-state" style="padding:16px;">No score data yet.</div>';
+}
+
+function renderTrend(trend) {
+  if (!trend || !trend.length) {
+    document.getElementById('trendWrap').innerHTML = '<div class="empty-state" style="padding:16px;">No trend data yet.</div>';
+    return;
+  }
+  const maxScore = 5;
+  let barsHtml = '';
+  trend.slice(-14).forEach(d => {
+    const h = d.avg_score ? Math.max(4, (d.avg_score / maxScore * 60)) : 2;
+    const col = barColor(d.avg_score);
+    barsHtml += `<div class="trend-bar-wrap" title="${d.date}: ${d.avg_score ? d.avg_score.toFixed(1) : 'No data'} (${d.reviewed}/${d.total} reviewed)">
+      <div class="trend-bar" style="height:${h}px;background:${col};"></div>
+      <div class="trend-date">${d.date.slice(5)}</div>
+    </div>`;
+  });
+  document.getElementById('trendWrap').innerHTML = `<div class="trend-chart">${barsHtml}</div>
+    <div style="font-size:10px;color:#9ca3af;text-align:center;margin-top:6px;">Last 14 days — bar height = avg quality score</div>`;
+}
+
+function renderExecTable(execs) {
+  if (!execs || !execs.length) {
+    document.getElementById('execTableWrap').innerHTML = '<div class="empty-state"><i class="fas fa-users"></i>No executive data.</div>';
+    return;
+  }
+  let html = `<div style="overflow-x:auto;"><table class="dt"><thead><tr>
+    <th>Executive</th><th>Role</th><th>Sampled</th><th>Reviewed</th><th>Pending</th><th>Avg Score</th><th>Rating</th>
+  </tr></thead><tbody>`;
+  execs.forEach(e => {
+    html += `<tr>
+      <td><div style="font-weight:600;font-size:13px;">${e.staff_name}</div><div style="font-size:10px;color:#6b7280;">${e.emp_code || ''}</div></td>
+      <td style="font-size:12px;text-transform:capitalize;">${e.role || '—'}</td>
+      <td style="font-weight:600;">${e.total_sampled}</td>
+      <td style="color:#059669;font-weight:600;">${e.reviewed}</td>
+      <td style="color:${e.pending > 0 ? '#d97706' : '#6b7280'};font-weight:600;">${e.pending}</td>
+      <td>${e.avg_score ? e.avg_score.toFixed(1) : '—'}</td>
+      <td>${scoreLabel(e.avg_score)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('execTableWrap').innerHTML = html;
+}
+
+// ── Load staff employees for filter dropdown ─────────────────────────────────
+async function loadStaffFilter() {
+  try {
+    const res = await staffFetch(`${API}/staff/tasks/analytics/employees-for-filter?limit=100`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const sel = document.getElementById('filterStaff');
+    (data.employees || []).forEach(e => {
+      const opt = document.createElement('option');
+      opt.value = e.id;
+      opt.textContent = `${e.full_name}${e.emp_code ? ' (' + e.emp_code + ')' : ''}`;
+      sel.appendChild(opt);
+    });
+  } catch(e) { console.warn('[CQ] Failed to load staff filter:', e.message); }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await StaffSidebar.init();
+  StaffHeader.inject('Call Quality Review', 'fas fa-clipboard-check');
+  const ud = StaffSidebar.userData || {};
+  const _FA_ROLES = new Set(['vgk4u','hr','accounts','key_leadership','leadership_role','team_leader','manager']);
+  const _isFullAccess = StaffSidebar.allowedMenuPaths === '*' || _FA_ROLES.has((ud.user_role_code || '').toLowerCase());
+  _cid = _isFullAccess ? null : (ud.base_company_id || (ud.employee && ud.employee.base_company_id) || null);
+
+  initDateFilters();
+  await loadStaffFilter();
+  await loadReviews(1);
+});
+</script>
+<script src="/staff_sidebar.js"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+</body>
+</html>

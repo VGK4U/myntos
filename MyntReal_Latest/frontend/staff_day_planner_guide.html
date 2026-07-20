@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - Staff System Guide</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; color: #1f2937; }
+        .guide-header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: white; padding: 32px 0 28px; }
+        .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .header-logos { display: flex; align-items: center; gap: 16px; }
+        .header-logos img { height: 44px; object-fit: contain; }
+        .header-logos .logo-divider { width: 1px; height: 36px; background: rgba(255,255,255,0.25); }
+        .header-back { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; padding: 6px 14px; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; transition: all 0.2s; }
+        .header-back:hover { color: white; border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.08); }
+        .header-nav { display: flex; align-items: center; gap: 8px; }
+        .logout-btn { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,180,180,0.8); background: transparent; border: 1px solid rgba(255,100,100,0.25); border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+        .logout-btn:hover { color: #fca5a5; border-color: rgba(255,100,100,0.6); background: rgba(220,38,38,0.12); }
+        .guide-title-row { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+        .guide-header h1 { font-size: 1.75rem; font-weight: 700; margin: 0; }
+        .guide-header .tagline { font-size: 0.95rem; opacity: 0.8; margin-top: 4px; }
+        .guide-header .stats-row { display: flex; gap: 24px; margin-top: 10px; font-size: 0.85rem; opacity: 0.7; }
+        .search-wrap { position: relative; width: 320px; max-width: 100%; }
+        .search-wrap input { width: 100%; padding: 10px 14px 10px 40px; border: 1px solid rgba(255,255,255,0.25); border-radius: 8px; background: rgba(255,255,255,0.1); color: white; font-size: 14px; outline: none; transition: all 0.2s; }
+        .search-wrap input::placeholder { color: rgba(255,255,255,0.5); }
+        .search-wrap input:focus { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.15); box-shadow: 0 0 0 3px rgba(255,255,255,0.08); }
+        .search-wrap .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.5); font-size: 14px; }
+        .search-wrap .search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.5); font-size: 14px; cursor: pointer; display: none; background: none; border: none; padding: 4px; }
+        .search-wrap .search-clear:hover { color: white; }
+        .search-results-dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: white; border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.2); max-height: 360px; overflow-y: auto; z-index: 200; display: none; }
+        .search-results-dropdown.active { display: block; }
+        .sr-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.15s; display: flex; align-items: flex-start; gap: 10px; }
+        .sr-item:last-child { border-bottom: none; }
+        .sr-item:hover { background: #f0f0ff; }
+        .sr-item .sr-icon { flex-shrink: 0; width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: white; margin-top: 2px; }
+        .sr-item .sr-text { flex: 1; }
+        .sr-item .sr-title { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .sr-item .sr-title mark { background: #fef08a; color: #1f2937; border-radius: 2px; padding: 0 2px; }
+        .sr-item .sr-section { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+        .sr-empty { padding: 24px 16px; text-align: center; color: #9ca3af; font-size: 14px; }
+        .sr-count { padding: 8px 16px; font-size: 11px; color: #9ca3af; background: #f9fafb; border-bottom: 1px solid #f3f4f6; }
+
+        .guide-container { padding: 0 24px; }
+        .page-layout { display: flex; align-items: flex-start; }
+        .left-sidebar { width: 232px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; background: #fff; border-right: 1px solid #e5e7eb; box-shadow: 2px 0 8px rgba(0,0,0,0.04); z-index: 50; scrollbar-width: thin; scrollbar-color: #d1d5db transparent; }
+        .left-sidebar::-webkit-scrollbar { width: 4px; }
+        .left-sidebar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+        .sidebar-hdr { padding: 12px 16px 8px; border-bottom: 1px solid #f3f4f6; }
+        .sidebar-hdr p { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: #9ca3af; margin: 0; }
+        .sidebar-nav { padding: 4px 0 24px; }
+        .sidebar-item { display: flex; align-items: center; gap: 8px; padding: 7px 14px; color: #4b5563; text-decoration: none; font-size: 0.8rem; font-weight: 500; cursor: pointer; border-left: 3px solid transparent; transition: all 0.15s; line-height: 1.3; }
+        .sidebar-item:hover { color: #4f46e5; background: #f5f3ff; border-left-color: #c7d2fe; }
+        .sidebar-item.active { color: #4f46e5; background: #eff6ff; border-left-color: #4f46e5; font-weight: 600; }
+        .sidebar-item i.si-ico { width: 15px; text-align: center; font-size: 0.75rem; flex-shrink: 0; }
+        .sidebar-item .si-cnt { margin-left: auto; font-size: 0.68rem; background: #f3f4f6; color: #6b7280; padding: 1px 5px; border-radius: 8px; flex-shrink: 0; }
+        .sidebar-item.active .si-cnt { background: #e0e7ff; color: #4f46e5; }
+        .main-content { flex: 1; min-width: 0; overflow: hidden; }
+        .section { padding: 36px 0; border-bottom: 1px solid #e5e7eb; }
+        .section:last-child { border-bottom: none; }
+        .section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; color: #1f2937; display: flex; align-items: center; gap: 10px; }
+        .section h2 .tab-num { background: #4f46e5; color: white; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+        .section .subtitle { color: #6b7280; font-size: 0.95rem; margin-bottom: 20px; }
+        .section h3 { font-size: 1.05rem; font-weight: 600; margin: 24px 0 10px; color: #374151; display: flex; align-items: center; gap: 8px; }
+        .section h3 i { color: #6b7280; font-size: 0.9rem; }
+        .page-card { background: white; border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid #4f46e5; }
+        .page-card.has-guide { border-left-color: #059669; }
+        .page-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; cursor: pointer; }
+        .page-card-header .pc-icon { width: 36px; height: 36px; border-radius: 8px; background: #eef2ff; display: flex; align-items: center; justify-content: center; color: #4f46e5; font-size: 16px; flex-shrink: 0; }
+        .page-card.has-guide .pc-icon { background: #ecfdf5; color: #059669; }
+        .page-card-header h4 { margin: 0; font-size: 1rem; font-weight: 600; color: #1f2937; flex: 1; }
+        .page-card-header .pc-toggle { color: #9ca3af; font-size: 14px; transition: transform 0.2s; }
+        .page-card-header .pc-toggle.open { transform: rotate(180deg); }
+        .page-card .pc-route { font-size: 0.8rem; color: #9ca3af; margin-bottom: 8px; font-family: monospace; }
+        .page-card .pc-purpose { font-size: 0.9rem; color: #4b5563; line-height: 1.6; margin-bottom: 12px; }
+        .page-card .pc-access { font-size: 0.85rem; color: #6b7280; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .page-card .pc-access i { color: #4f46e5; }
+        .pc-detail { display: none; }
+        /* DC_PLATFORM_GUIDE_001: Platform Setup tab styles (left-nav layout) */
+        .ps-layout { display:flex; gap:16px; align-items:flex-start; min-height:420px; position:relative; }
+        .ps-hamburger { display:none; align-items:center; justify-content:center; width:38px; height:38px; background:#1e3a8a; color:#fff; border:none; border-radius:8px; cursor:pointer; margin-bottom:10px; font-size:.95rem; }
+        .ps-hamburger:hover { background:#0f172a; }
+        .ps-leftnav { width:230px; flex-shrink:0; background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:6px; max-height:75vh; overflow-y:auto; position:sticky; top:14px; box-shadow:0 1px 3px rgba(0,0,0,0.04); }
+        .ps-nav-group { margin-bottom:6px; }
+        .ps-nav-grouphdr { font-size:.66rem; text-transform:uppercase; letter-spacing:.07em; color:#9ca3af; padding:10px 10px 4px; font-weight:700; }
+        .ps-nav-item { display:flex; align-items:center; gap:9px; padding:7px 10px; cursor:pointer; border-radius:6px; font-size:.82rem; color:#4b5563; transition:all .12s; line-height:1.3; }
+        .ps-nav-item:hover { background:#f3f4f6; color:#1e3a8a; }
+        .ps-nav-item.active { background:#eef2ff; color:#1e3a8a; font-weight:600; }
+        .ps-nav-item i { width:16px; text-align:center; font-size:.8rem; flex-shrink:0; }
+        .ps-nav-item span { flex:1; }
+        .ps-content { flex:1; min-width:0; }
+        .ps-view { display:none; }
+        .ps-view.active { display:block; }
+        .ps-links { margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
+        .ps-link-btn { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; background:#1e3a8a; color:#fff !important; font-size:.76rem; font-weight:600; border-radius:14px; text-decoration:none !important; transition:all .15s; }
+        .ps-link-btn:hover { background:#0f172a; transform:translateX(2px); }
+        .ps-link-btn i { font-size:.65rem; }
+        @media (max-width:768px) {
+            .ps-layout { flex-direction:column; }
+            .ps-hamburger { display:inline-flex; }
+            .ps-leftnav { display:none; width:100%; position:static; max-height:55vh; }
+            .ps-layout.nav-open .ps-leftnav { display:block; }
+        }
+        .ps-meta { font-size:.78rem; color:#9ca3af; margin-bottom:14px; }
+        .ps-helpbox { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:10px 14px; font-size:.85rem; color:#1e3a8a; margin-bottom:16px; }
+        .ps-helpbox i { margin-right:6px; }
+        .ps-step { display:grid; grid-template-columns:170px 1fr; gap:14px; padding:9px 0; border-top:1px solid #f3f4f6; font-size:.88rem; }
+        .ps-step .lbl { font-weight:600; color:#1e3a8a; }
+        .ps-step .det { color:#374151; line-height:1.55; }
+        .ps-step code { background:#f3f4f6; padding:1px 6px; border-radius:4px; font-size:.82rem; color:#0f172a; }
+        .ps-card { background:white; border-radius:12px; padding:18px 22px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05); border-left:4px solid #1e3a8a; }
+        .ps-card-head { display:flex; align-items:flex-start; gap:12px; margin-bottom:6px; }
+        .ps-card-head .ps-icon { width:34px; height:34px; border-radius:8px; background:#eef2ff; color:#1e3a8a; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .ps-card-head h4 { margin:0; font-size:1rem; font-weight:700; color:#0f172a; }
+        .ps-card-head p { margin:3px 0 0; font-size:.85rem; color:#6b7280; line-height:1.5; }
+        .ps-stats { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin-bottom:18px; }
+        .ps-stat { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px 14px; }
+        .ps-stat .v { font-size:1.4rem; font-weight:700; color:#0f172a; }
+        .ps-stat .k { font-size:.7rem; color:#6b7280; text-transform:uppercase; letter-spacing:.05em; margin-top:4px; }
+        .ps-tbl { width:100%; background:#fff; border:1px solid #e5e7eb; border-radius:10px; border-collapse:separate; border-spacing:0; overflow:hidden; margin-bottom:18px; font-size:.85rem; }
+        .ps-tbl th { background:#f9fafb; padding:8px 12px; text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; color:#6b7280; border-bottom:1px solid #e5e7eb; }
+        .ps-tbl td { padding:8px 12px; border-bottom:1px solid #f3f4f6; }
+        .ps-tbl tr:last-child td { border-bottom:none; }
+        .ps-pill { display:inline-block; padding:2px 9px; border-radius:10px; font-size:.7rem; font-weight:600; }
+        .ps-pill-ok { background:#d1fae5; color:#065f46; }
+        .ps-pill-warn { background:#fef3c7; color:#92400e; }
+        .ps-pill-err { background:#fee2e2; color:#991b1b; }
+        .ps-pill-mute { background:#e5e7eb; color:#4b5563; }
+        .ps-changelog .ps-entry { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:14px 16px; margin-bottom:12px; }
+        .ps-entry-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
+        .ps-entry-head h5 { margin:0; font-size:.95rem; font-weight:700; color:#0f172a; }
+        .ps-entry-head .ps-tag { background:#1e3a8a; color:#fff; font-size:.68rem; padding:2px 7px; border-radius:4px; font-weight:600; }
+        .ps-entry-head .ps-date { color:#6b7280; font-size:.75rem; font-family:monospace; }
+        .ps-changelog ul { margin:4px 0 0; padding-left:18px; color:#374151; font-size:.85rem; line-height:1.55; }
+        .ps-toc { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px; margin-bottom:16px; }
+        .ps-toc a { display:inline-block; margin:3px 5px 3px 0; padding:3px 9px; font-size:.75rem; background:#eef2ff; color:#1e3a8a; border-radius:12px; text-decoration:none; font-weight:500; }
+        .ps-toc a:hover { background:#1e3a8a; color:#fff; }
+        @media (max-width:768px) { .ps-step { grid-template-columns:1fr; } }
+        .pc-detail.open { display: block; }
+        .pc-detail-section { margin-bottom: 16px; }
+        .pc-detail-section h5 { font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .pc-detail-section h5 i { color: #4f46e5; font-size: 0.8rem; }
+        .info-card { background: #f9fafb; border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; }
+        .info-card p, .info-card li { font-size: 0.88rem; color: #4b5563; line-height: 1.65; }
+        .info-card ul { padding-left: 18px; margin: 6px 0 0; }
+        .info-card li { margin-bottom: 3px; }
+        .column-table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 0.88rem; }
+        .column-table th { background: #f3f4f6; padding: 8px 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; }
+        .column-table td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; color: #4b5563; vertical-align: top; }
+        .column-table tr:hover td { background: #fafbfc; }
+        .badge-sample { padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 500; display: inline-block; margin: 2px; }
+        .steps-list { counter-reset: steps; list-style: none; padding: 0; }
+        .steps-list li { counter-increment: steps; padding: 10px 14px 10px 46px; position: relative; font-size: 0.88rem; color: #4b5563; line-height: 1.55; margin-bottom: 6px; background: #f9fafb; border-radius: 8px; }
+        .steps-list li::before { content: counter(steps); position: absolute; left: 12px; top: 10px; background: #4f46e5; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
+        .tip-card { background: #ecfdf5; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; border-left: 3px solid #059669; }
+        .tip-card p { font-size: 0.88rem; color: #065f46; margin: 0; }
+        .mistake-card { background: #fef2f2; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; border-left: 3px solid #dc2626; }
+        .mistake-card p { font-size: 0.88rem; color: #991b1b; margin: 0; }
+        .loading-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .loading-state i { font-size: 2rem; color: #4f46e5; margin-bottom: 16px; }
+        .error-state { text-align: center; padding: 60px 20px; color: #dc2626; }
+
+        @media (max-width: 768px) {
+            .search-wrap { width: 100%; }
+            .guide-title-row { flex-direction: column; align-items: flex-start; }
+            .header-logos img { height: 36px; }
+            .guide-header h1 { font-size: 1.3rem; }
+            .left-sidebar { display: none; }
+            .page-card { padding: 16px; }
+        }
+        .print-btn { position: fixed; bottom: 24px; right: 24px; background: #4f46e5; color: white; border: none; width: 48px; height: 48px; border-radius: 50%; box-shadow: 0 4px 12px rgba(79,70,229,0.4); cursor: pointer; font-size: 18px; z-index: 50; display: flex; align-items: center; justify-content: center; }
+        .print-btn:hover { background: #4338ca; }
+        .highlight-flash { animation: flashHighlight 2s ease-out; }
+        @keyframes flashHighlight { 0% { background: #fef08a; box-shadow: 0 0 0 4px #fef08a; } 100% { background: white; box-shadow: none; } }
+        @media print {
+            .left-sidebar, .print-btn, .header-back, .search-wrap, .search-results-dropdown { display: none !important; }
+            .section { page-break-inside: avoid; }
+            body { background: white; }
+            .guide-header { background: #1a1a2e !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .pc-detail { display: block !important; }
+        }
+
+        .login-overlay { position: fixed; inset: 0; background: rgba(10,14,28,0.97); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+        .login-overlay.hidden { display: none !important; }
+        .login-card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 380px; box-shadow: 0 25px 60px rgba(0,0,0,0.7); }
+        .login-logos { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; }
+        .login-logos img { height: 38px; object-fit: contain; }
+        .login-logos .ldiv { width: 1px; height: 30px; background: rgba(255,255,255,0.2); }
+        .login-heading { text-align: center; font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+        .login-sub { text-align: center; font-size: 0.82rem; color: #64748b; margin-bottom: 28px; }
+        .lf-group { margin-bottom: 16px; }
+        .lf-group label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 6px; }
+        .lf-group input { width: 100%; padding: 10px 14px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #f1f5f9; font-size: 0.95rem; font-family: inherit; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        .lf-group input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.15); }
+        .login-btn { width: 100%; padding: 11px; background: #4f46e5; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; margin-top: 8px; font-family: inherit; }
+        .login-btn:hover { opacity: 0.88; }
+        .login-error { color: #ef4444; font-size: 0.82rem; text-align: center; margin-top: 12px; display: none; }
+        .login-error.show { display: block; }
+        .login-footer { text-align: center; font-size: 0.72rem; color: #475569; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <div class="login-logos">
+                <img src="/public/mnr-logo.png" alt="MNR" onerror="this.style.display='none'">
+                <div class="ldiv"></div>
+                <img src="/public/myntreal-logo.png" alt="Myntreal" onerror="this.style.display='none'">
+            </div>
+            <div class="login-heading">Staff System Guide</div>
+            <div class="login-sub">Restricted access — authorised personnel only</div>
+            <form id="loginForm" onsubmit="handleLogin(event)" autocomplete="off">
+                <div class="lf-group">
+                    <label>Member ID</label>
+                    <input type="text" id="loginUser" placeholder="e.g. MR10001" required>
+                </div>
+                <div class="lf-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPass" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="login-btn">Access Document</button>
+                <div class="login-error" id="loginError">Invalid credentials. Please try again.</div>
+            </form>
+            <div class="login-footer">MyntReal LLP &mdash; Confidential Internal Document</div>
+        </div>
+    </div>
+
+    <div class="guide-header">
+        <div class="guide-container">
+            <div class="header-top">
+                <div class="header-logos">
+                    <img src="/public/mnr-logo.png" alt="MNR Logo">
+                    <div class="logo-divider"></div>
+                    <img src="/public/myntreal-logo.png" alt="MyntReal Logo">
+                </div>
+                <div class="header-nav">
+                    <a href="/staff/dashboard" class="header-back"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+                    <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                </div>
+            </div>
+            <div class="guide-title-row">
+                <div>
+                    <h1><i class="fas fa-book-open me-2"></i>Staff System Guide</h1>
+                    <div class="tagline">Complete training reference for all staff portal pages</div>
+                    <div class="stats-row" id="guideStats"></div>
+                </div>
+                <div class="search-wrap">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="guideSearchInput" placeholder="Search pages... (e.g. KRA, timesheet, leave, invoice)" autocomplete="off">
+                    <button class="search-clear" id="searchClearBtn"><i class="fas fa-times"></i></button>
+                    <div class="search-results-dropdown" id="searchDropdown"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page-layout">
+        <aside class="left-sidebar" id="leftSidebar">
+            <div class="sidebar-hdr"><p>Sections</p></div>
+            <div class="sidebar-nav" id="navInner"></div>
+        </aside>
+        <div class="main-content">
+            <div class="guide-container" id="guideContent">
+                <div class="loading-state" id="loadingState">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading guide content...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="print-btn" onclick="window.print()" title="Print Guide">
+        <i class="fas fa-print"></i>
+    </button>
+
+    <script>
+    let guideData = null;
+    let searchIndex = [];
+
+    async function loadGuide() {
+        try {
+            const resp = await fetch('/api/v1/staff/guide/pages');
+            if (!resp.ok) throw new Error('Failed to load guide');
+            guideData = await resp.json();
+            renderNav();
+            renderSections();
+            buildSearchIndex();
+            document.getElementById('guideStats').textContent =
+                guideData.total_sections + ' sections | ' + guideData.total_pages + ' pages documented';
+            // DC_PLATFORM_GUIDE_001: Append the Platform Setup tab after main guide loads.
+            loadPlatformSetup();
+        } catch (err) {
+            document.getElementById('guideContent').innerHTML =
+                '<div class="error-state"><i class="fas fa-exclamation-triangle" style="font-size:2rem;margin-bottom:16px;"></i><p>Could not load guide. Please refresh the page.</p></div>';
+        }
+    }
+
+    function renderNav() {
+        const nav = document.getElementById('navInner');
+        nav.innerHTML = '';
+        guideData.sections.forEach((sec, i) => {
+            const a = document.createElement('div');
+            a.className = 'sidebar-item' + (i === 0 ? ' active' : '');
+            a.innerHTML = '<i class="' + sec.icon + ' si-ico"></i><span style="flex:1">' + sec.title + '</span><span class="si-cnt">' + sec.pages.length + '</span>';
+            a.onclick = function() {
+                document.getElementById('sec-' + sec.id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+                nav.querySelectorAll('.sidebar-item').forEach(x => x.classList.remove('active'));
+                a.classList.add('active');
+            };
+            nav.appendChild(a);
+        });
+        setupScrollSpy();
+    }
+
+    function setupScrollSpy() {
+        const sections = guideData.sections.map(s => document.getElementById('sec-' + s.id)).filter(Boolean);
+        const items = document.querySelectorAll('#navInner .sidebar-item');
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    const idx = sections.indexOf(entry.target);
+                    if (idx >= 0) {
+                        items.forEach(x => x.classList.remove('active'));
+                        if (items[idx]) {
+                            items[idx].classList.add('active');
+                            items[idx].scrollIntoView({ block: 'nearest' });
+                        }
+                    }
+                }
+            });
+        }, { rootMargin: '-10% 0px -80% 0px' });
+        sections.forEach(s => observer.observe(s));
+    }
+
+    function renderSections() {
+        const container = document.getElementById('guideContent');
+        container.innerHTML = '';
+        guideData.sections.forEach((sec, sIdx) => {
+            const div = document.createElement('div');
+            div.className = 'section';
+            div.id = 'sec-' + sec.id;
+            div.innerHTML = '<h2><span class="tab-num">' + (sIdx + 1) + '</span> ' + escHtml(sec.title) + '</h2>' +
+                '<p class="subtitle">' + escHtml(sec.description) + '</p>';
+
+            sec.pages.forEach((page, pIdx) => {
+                div.appendChild(renderPageCard(page, sec, sIdx + '-' + pIdx));
+            });
+            container.appendChild(div);
+        });
+    }
+
+    function renderPageCard(page, section, uid) {
+        const g = page.guide;
+        const hasGuide = g.purpose || g.usage_flow.length > 0;
+        const card = document.createElement('div');
+        card.className = 'page-card' + (hasGuide ? ' has-guide' : '');
+        card.setAttribute('data-searchable', 'true');
+        card.id = 'page-' + page.menu_code;
+
+        let headerHtml = '<div class="page-card-header" onclick="togglePageDetail(\'' + uid + '\')">' +
+            '<div class="pc-icon"><i class="' + page.menu_icon + '"></i></div>' +
+            '<h4>' + escHtml(page.menu_name) + '</h4>' +
+            (hasGuide ? '<i class="fas fa-chevron-down pc-toggle" id="toggle-' + uid + '"></i>' : '') +
+            '</div>';
+
+        let bodyHtml = '';
+        if (g.purpose) {
+            bodyHtml += '<p class="pc-purpose">' + escHtml(g.purpose) + '</p>';
+        }
+        if (g.who_can_access) {
+            bodyHtml += '<div class="pc-access"><i class="fas fa-lock"></i> <strong>Access:</strong> ' + escHtml(g.who_can_access) + '</div>';
+        }
+
+        let detailHtml = '';
+        if (hasGuide) {
+            detailHtml = '<div class="pc-detail" id="detail-' + uid + '">';
+
+            if (g.main_sections && g.main_sections.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-th-large"></i> Main Sections</h5>';
+                detailHtml += '<div class="info-card"><ul>';
+                g.main_sections.forEach(function(s) {
+                    detailHtml += '<li><strong>' + escHtml(s.name) + '</strong> - ' + escHtml(s.description) + '</li>';
+                });
+                detailHtml += '</ul></div></div>';
+            }
+
+            if (g.usage_flow && g.usage_flow.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-shoe-prints"></i> Step-by-Step Usage</h5>';
+                detailHtml += '<ol class="steps-list">';
+                g.usage_flow.forEach(function(step) {
+                    detailHtml += '<li>' + escHtml(step) + '</li>';
+                });
+                detailHtml += '</ol></div>';
+            }
+
+            if (g.fields && g.fields.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-list-alt"></i> Field Explanations</h5>';
+                detailHtml += '<table class="column-table"><tr><th>Field</th><th>What It Means</th></tr>';
+                g.fields.forEach(function(f) {
+                    detailHtml += '<tr><td><strong>' + escHtml(f.name) + '</strong></td><td>' + escHtml(f.description) + '</td></tr>';
+                });
+                detailHtml += '</table></div>';
+            }
+
+            if (g.statuses && g.statuses.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-info-circle"></i> Status Meanings</h5>';
+                detailHtml += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">';
+                g.statuses.forEach(function(s) {
+                    detailHtml += '<span class="badge-sample" style="background:' + s.color + ';color:' + getContrastColor(s.color) + ';">' + escHtml(s.status) + '</span>';
+                });
+                detailHtml += '</div>';
+                detailHtml += '<div class="info-card"><ul>';
+                g.statuses.forEach(function(s) {
+                    detailHtml += '<li><strong>' + escHtml(s.status) + '</strong> - ' + escHtml(s.meaning) + '</li>';
+                });
+                detailHtml += '</ul></div></div>';
+            }
+
+            if (g.tips && g.tips.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-lightbulb"></i> Best Practices</h5>';
+                g.tips.forEach(function(t) {
+                    detailHtml += '<div class="tip-card"><p><i class="fas fa-check-circle me-1"></i> ' + escHtml(t) + '</p></div>';
+                });
+                detailHtml += '</div>';
+            }
+
+            if (g.common_mistakes && g.common_mistakes.length > 0) {
+                detailHtml += '<div class="pc-detail-section"><h5><i class="fas fa-exclamation-triangle"></i> Common Mistakes to Avoid</h5>';
+                g.common_mistakes.forEach(function(m) {
+                    detailHtml += '<div class="mistake-card"><p><i class="fas fa-times-circle me-1"></i> ' + escHtml(m) + '</p></div>';
+                });
+                detailHtml += '</div>';
+            }
+
+            detailHtml += '</div>';
+        }
+
+        card.innerHTML = headerHtml + bodyHtml + detailHtml;
+        return card;
+    }
+
+    function togglePageDetail(uid) {
+        const det = document.getElementById('detail-' + uid);
+        const tog = document.getElementById('toggle-' + uid);
+        if (!det || !tog) return;
+        const isOpen = det.classList.contains('open');
+        det.classList.toggle('open');
+        tog.classList.toggle('open');
+    }
+
+    function buildSearchIndex() {
+        searchIndex = [];
+        if (!guideData) return;
+        guideData.sections.forEach(function(sec) {
+            sec.pages.forEach(function(page) {
+                const g = page.guide;
+                let text = page.menu_name + ' ' + (g.purpose || '') + ' ' + (g.who_can_access || '');
+                if (g.fields) g.fields.forEach(function(f) { text += ' ' + f.name + ' ' + f.description; });
+                if (g.statuses) g.statuses.forEach(function(s) { text += ' ' + s.status + ' ' + s.meaning; });
+                if (g.tips) g.tips.forEach(function(t) { text += ' ' + t; });
+                if (g.usage_flow) g.usage_flow.forEach(function(u) { text += ' ' + u; });
+                if (g.main_sections) g.main_sections.forEach(function(s) { text += ' ' + s.name + ' ' + s.description; });
+                if (g.common_mistakes) g.common_mistakes.forEach(function(m) { text += ' ' + m; });
+                searchIndex.push({
+                    title: page.menu_name,
+                    text: text.toLowerCase(),
+                    section: sec.title,
+                    icon: page.menu_icon,
+                    code: page.menu_code
+                });
+            });
+        });
+    }
+
+    const searchInput = document.getElementById('guideSearchInput');
+    const clearBtn = document.getElementById('searchClearBtn');
+    const dropdown = document.getElementById('searchDropdown');
+    let searchTimeout = null;
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(handleSearch, 200);
+    });
+    searchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { clearSearch(); }
+    });
+    clearBtn.addEventListener('click', clearSearch);
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-wrap')) dropdown.classList.remove('active');
+    });
+
+    function handleSearch() {
+        const q = searchInput.value.trim().toLowerCase();
+        clearBtn.style.display = q ? 'block' : 'none';
+        if (!q || q.length < 2) { dropdown.classList.remove('active'); return; }
+        const terms = q.split(/\s+/);
+        const results = searchIndex.filter(function(item) {
+            return terms.every(function(t) { return item.text.includes(t); });
+        });
+        if (results.length === 0) {
+            dropdown.innerHTML = '<div class="sr-empty">No pages found for "' + escHtml(q) + '"</div>';
+        } else {
+            let html = '<div class="sr-count">' + results.length + ' page' + (results.length !== 1 ? 's' : '') + ' found</div>';
+            results.slice(0, 20).forEach(function(r) {
+                const titleHtml = highlightMatch(r.title, terms);
+                html += '<div class="sr-item" onclick="goToPage(\'' + r.code + '\')">' +
+                    '<div class="sr-icon" style="background:#4f46e5;"><i class="' + r.icon + '"></i></div>' +
+                    '<div class="sr-text"><div class="sr-title">' + titleHtml + '</div>' +
+                    '<div class="sr-section">' + escHtml(r.section) + '</div></div></div>';
+            });
+            dropdown.innerHTML = html;
+        }
+        dropdown.classList.add('active');
+    }
+
+    function clearSearch() {
+        searchInput.value = '';
+        clearBtn.style.display = 'none';
+        dropdown.classList.remove('active');
+    }
+
+    function goToPage(code) {
+        dropdown.classList.remove('active');
+        clearSearch();
+        const el = document.getElementById('page-' + code);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('highlight-flash');
+        setTimeout(function() { el.classList.remove('highlight-flash'); }, 2500);
+        const uid = findUid(code);
+        if (uid) {
+            const det = document.getElementById('detail-' + uid);
+            const tog = document.getElementById('toggle-' + uid);
+            if (det && !det.classList.contains('open')) {
+                det.classList.add('open');
+                if (tog) tog.classList.add('open');
+            }
+        }
+    }
+
+    function findUid(code) {
+        if (!guideData) return null;
+        for (let s = 0; s < guideData.sections.length; s++) {
+            for (let p = 0; p < guideData.sections[s].pages.length; p++) {
+                if (guideData.sections[s].pages[p].menu_code === code) return (s + '-' + p);
+            }
+        }
+        return null;
+    }
+
+    function highlightMatch(text, terms) {
+        let result = escHtml(text);
+        terms.forEach(function(t) {
+            const regex = new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+            result = result.replace(regex, '<mark>$1</mark>');
+        });
+        return result;
+    }
+
+    function escHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function getContrastColor(hex) {
+        if (!hex) return '#000';
+        hex = hex.replace('#', '');
+        if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+        const r = parseInt(hex.substr(0,2), 16);
+        const g = parseInt(hex.substr(2,2), 16);
+        const b = parseInt(hex.substr(4,2), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.5 ? '#1f2937' : '#ffffff';
+    }
+
+    // DC_PLATFORM_GUIDE_001 (May 2026): Platform Setup tab — appended to staff guide.
+    async function loadPlatformSetup() {
+        try {
+            const resp = await fetch('/api/v1/staff/platform-setup-guide', { credentials: 'include' });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+            renderPlatformSetupNavItem(data);
+            renderPlatformSetupSection(data);
+        } catch (err) {
+            console.error('[PSG] failed to load platform setup', err);
+        }
+    }
+
+    function renderPlatformSetupNavItem(data) {
+        const nav = document.getElementById('navInner');
+        if (!nav) return;
+        const a = document.createElement('div');
+        a.className = 'sidebar-item';
+        a.id = 'navi-platform-setup';
+        const pageCount = (data.setup_sections || []).length + (data.changelog || []).length;
+        a.innerHTML = '<i class="fas fa-book-open si-ico"></i><span style="flex:1">Platform Setup</span><span class="si-cnt">' + pageCount + '</span>';
+        a.onclick = function() {
+            const tgt = document.getElementById('sec-platform-setup');
+            if (tgt) tgt.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            nav.querySelectorAll('.sidebar-item').forEach(x => x.classList.remove('active'));
+            a.classList.add('active');
+        };
+        nav.appendChild(a);
+    }
+
+    function renderPlatformSetupSection(data) {
+        const container = document.getElementById('guideContent');
+        if (!container) return;
+        const sIdx = (guideData ? guideData.sections.length : 0);
+        const wrap = document.createElement('div');
+        wrap.className = 'section';
+        wrap.id = 'sec-platform-setup';
+        const meta = data.generated_at || '';
+        const setupSecs = data.setup_sections || [];
+
+        // Build left nav
+        let nav = '<div class="ps-nav-group"><div class="ps-nav-grouphdr"><i class="fas fa-list-check"></i> Tenant Setup</div>';
+        setupSecs.forEach((s, i) => {
+            nav += '<div class="ps-nav-item' + (i === 0 ? ' active' : '') + '" data-target="setup-' + escHtml(s.id) + '">' +
+                   '<i class="' + escHtml(s.icon || 'fas fa-circle') + '"></i><span>' + escHtml(s.title) + '</span></div>';
+        });
+        nav += '</div>';
+        nav += '<div class="ps-nav-group"><div class="ps-nav-grouphdr"><i class="fas fa-cog"></i> System</div>' +
+               '<div class="ps-nav-item" data-target="inventory"><i class="fas fa-database"></i><span>Live Inventory</span></div>' +
+               '<div class="ps-nav-item" data-target="changelog"><i class="fas fa-clock-rotate-left"></i><span>Update Log</span></div>' +
+               '</div>';
+
+        // Build views
+        let views = '';
+        setupSecs.forEach((s, i) => {
+            views += '<div class="ps-view' + (i === 0 ? ' active' : '') + '" data-view="setup-' + escHtml(s.id) + '">' + renderPSSetupOne(s) + '</div>';
+        });
+        views += '<div class="ps-view" data-view="inventory">' + renderPSInventory(data) + '</div>';
+        views += '<div class="ps-view" data-view="changelog">' + renderPSChangelog(data) + '</div>';
+
+        wrap.innerHTML =
+            '<h2><span class="tab-num">' + (sIdx + 1) + '</span> Platform Setup</h2>' +
+            '<p class="subtitle">End-to-end onboarding, configuration, and operations reference for the MyntReal / VGK4U SFMS platform.</p>' +
+            '<div class="ps-meta">Generated ' + escHtml(meta.replace('T',' ').replace('Z',' UTC')) + '</div>' +
+            '<button class="ps-hamburger" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>' +
+            '<div class="ps-layout">' +
+                '<aside class="ps-leftnav">' + nav + '</aside>' +
+                '<div class="ps-content">' + views + '</div>' +
+            '</div>';
+        container.appendChild(wrap);
+
+        // wire interactions
+        const layout = wrap.querySelector('.ps-layout');
+        wrap.querySelectorAll('.ps-nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                wrap.querySelectorAll('.ps-nav-item').forEach(x => x.classList.remove('active'));
+                wrap.querySelectorAll('.ps-view').forEach(x => x.classList.remove('active'));
+                item.classList.add('active');
+                const v = wrap.querySelector('.ps-view[data-view="' + item.dataset.target + '"]');
+                if (v) v.classList.add('active');
+                if (window.innerWidth <= 768) layout.classList.remove('nav-open');
+                wrap.querySelector('.ps-content').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+        });
+        const hb = wrap.querySelector('.ps-hamburger');
+        if (hb) hb.addEventListener('click', () => layout.classList.toggle('nav-open'));
+    }
+
+    function renderPSSetupOne(s) {
+        let html = '<div class="ps-helpbox"><i class="fas fa-info-circle"></i>Curated content lives in <code>backend/app/data/platform_setup_content.py</code>. Edit <code>SETUP_SECTIONS</code> there and restart the backend to update.</div>';
+        html += '<div class="ps-card"><div class="ps-card-head">' +
+            '<div class="ps-icon"><i class="' + escHtml(s.icon || 'fas fa-circle') + '"></i></div>' +
+            '<div><h4>' + escHtml(s.title) + '</h4><p>' + escHtml(s.summary || '') + '</p></div></div>';
+        (s.steps || []).forEach(st => {
+            html += '<div class="ps-step"><div class="lbl">' + escHtml(st.label) + '</div><div class="det">' + escHtml(st.detail);
+            if (st.links && st.links.length) {
+                html += '<div class="ps-links">';
+                st.links.forEach(l => {
+                    html += '<a class="ps-link-btn" href="' + escHtml(l.route) + '" target="_blank" rel="noopener">' + escHtml(l.label) + ' <i class="fas fa-arrow-right"></i></a>';
+                });
+                html += '</div>';
+            }
+            html += '</div></div>';
+        });
+        html += '</div>';
+        return html;
+    }
+
+    function renderPSInventory(data) {
+        const inv = data.live_inventory || {}, st = inv.stats || {};
+        const cs  = inv.companies || [], sx = inv.sections || [], env = inv.env || [];
+        const card = (k, v) => '<div class="ps-stat"><div class="v">' + escHtml(v) + '</div><div class="k">' + escHtml(k) + '</div></div>';
+        let html = '<div class="ps-helpbox"><i class="fas fa-bolt"></i>Live data — pulled from the database and environment on every page load.</div>';
+        html += '<div class="ps-stats">' +
+            card('Companies (active / total)', (st.companies_active ?? 0) + ' / ' + (st.companies_total ?? 0)) +
+            card('Active employees',  st.employees_total ?? 0) +
+            card('Departments',       st.departments_total ?? 0) +
+            card('Menu sections',     st.menu_sections_total ?? 0) +
+            card('Total pages',       st.menu_pages_total ?? 0) +
+            card('Audit log entries', st.audit_log_entries ?? 0) +
+        '</div>';
+
+        html += '<h5 style="font-size:.9rem;font-weight:700;margin:14px 0 8px;color:#0f172a;"><i class="fas fa-building"></i> Companies</h5>';
+        if (cs.length) {
+            html += '<table class="ps-tbl"><thead><tr><th>ID</th><th>Code</th><th>Name</th><th>Status</th></tr></thead><tbody>';
+            cs.forEach(c => {
+                html += '<tr><td>' + escHtml(c.id) + '</td><td><code>' + escHtml(c.code || '') + '</code></td><td>' + escHtml(c.name) + '</td>' +
+                    '<td>' + (c.active ? '<span class="ps-pill ps-pill-ok">Active</span>' : '<span class="ps-pill ps-pill-mute">Inactive</span>') + '</td></tr>';
+            });
+            html += '</tbody></table>';
+        } else {
+            html += '<p style="color:#9ca3af;font-size:.85rem;">No companies configured yet.</p>';
+        }
+
+        html += '<h5 style="font-size:.9rem;font-weight:700;margin:14px 0 8px;color:#0f172a;"><i class="fas fa-bars"></i> Menu Sections</h5>';
+        if (sx.length) {
+            html += '<table class="ps-tbl"><thead><tr><th>Order</th><th>Section ID</th><th>Title</th><th>Pages</th></tr></thead><tbody>';
+            sx.forEach(s => {
+                html += '<tr><td>' + escHtml(s.order) + '</td><td><code>' + escHtml(s.section) + '</code></td><td>' + escHtml(s.title) + '</td><td>' + escHtml(s.menu_count) + '</td></tr>';
+            });
+            html += '</tbody></table>';
+        }
+
+        html += '<h5 style="font-size:.9rem;font-weight:700;margin:14px 0 8px;color:#0f172a;"><i class="fas fa-key"></i> Environment Secrets</h5>';
+        if (env.length) {
+            html += '<table class="ps-tbl"><thead><tr><th>Name</th><th>Status</th><th>Required</th><th>Purpose</th></tr></thead><tbody>';
+            env.forEach(e => {
+                const status = e.present
+                    ? '<span class="ps-pill ps-pill-ok">Present</span>'
+                    : (e.required ? '<span class="ps-pill ps-pill-err">Missing</span>' : '<span class="ps-pill ps-pill-warn">Not set</span>');
+                const req = e.required ? '<span class="ps-pill ps-pill-err">Required</span>' : '<span class="ps-pill ps-pill-mute">Optional</span>';
+                html += '<tr><td><code>' + escHtml(e.name) + '</code></td><td>' + status + '</td><td>' + req + '</td><td>' + escHtml(e.purpose) + '</td></tr>';
+            });
+            html += '</tbody></table>';
+        }
+        return html;
+    }
+
+    function renderPSChangelog(data) {
+        const log = data.changelog || [];
+        if (!log.length) return '<p style="color:#9ca3af">No changelog entries yet.</p>';
+        let html = '<div class="ps-helpbox"><i class="fas fa-pen-to-square"></i>Append a new entry to <code>PLATFORM_CHANGELOG</code> in <code>backend/app/data/platform_setup_content.py</code> after every notable platform change.</div>';
+        html += '<div class="ps-changelog">';
+        log.forEach(e => {
+            html += '<div class="ps-entry"><div class="ps-entry-head"><h5>' + escHtml(e.title) + '</h5>' +
+                '<div><span class="ps-tag">' + escHtml(e.tag || '') + '</span> <span class="ps-date">' + escHtml(e.date || '') + '</span></div></div>';
+            if (e.details && e.details.length) {
+                html += '<ul>';
+                e.details.forEach(d => { html += '<li>' + escHtml(d) + '</li>'; });
+                html += '</ul>';
+            }
+            html += '</div>';
+        });
+        html += '</div>';
+        return html;
+    }
+
+    var AUTH_PAGE_KEY = 'staffguide';
+    var AUTH_CREDS = [
+        { user: 'MR10001', pass: 'Mrguide', canPrint: false },
+        { user: 'MR10002', pass: 'MR10001', canPrint: true }
+    ];
+
+    function initAuth() {
+        var stored = sessionStorage.getItem('mnr_doc_' + AUTH_PAGE_KEY);
+        if (stored) {
+            try {
+                var d = JSON.parse(stored);
+                var cred = AUTH_CREDS.find(function(c) { return c.user === d.u && c.pass === d.p; });
+                if (cred) { applyDocPermissions(cred.canPrint); document.getElementById('loginOverlay').classList.add('hidden'); loadGuide(); return; }
+            } catch(e) {}
+        }
+    }
+
+    function handleLogin(e) {
+        e.preventDefault();
+        var user = document.getElementById('loginUser').value.trim();
+        var pass = document.getElementById('loginPass').value;
+        var cred = AUTH_CREDS.find(function(c) { return c.user === user && c.pass === pass; });
+        if (cred) {
+            sessionStorage.setItem('mnr_doc_' + AUTH_PAGE_KEY, JSON.stringify({ u: user, p: pass }));
+            document.getElementById('loginOverlay').classList.add('hidden');
+            applyDocPermissions(cred.canPrint);
+            loadGuide();
+        } else {
+            document.getElementById('loginError').classList.add('show');
+            document.getElementById('loginPass').value = '';
+        }
+    }
+
+    function applyDocPermissions(canPrint) {
+        if (!canPrint) {
+            var btn = document.querySelector('.print-btn');
+            if (btn) btn.style.display = 'none';
+            var s = document.createElement('style');
+            s.textContent = '@media print { body { display: none !important; } }';
+            document.head.appendChild(s);
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); e.stopPropagation(); }
+            }, true);
+        }
+    }
+
+    function doLogout() {
+        sessionStorage.removeItem('mnr_doc_' + AUTH_PAGE_KEY);
+        location.reload();
+    }
+
+    initAuth();
+    </script>
+</body>
+</html>

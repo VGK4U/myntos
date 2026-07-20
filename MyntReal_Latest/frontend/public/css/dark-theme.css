@@ -1,0 +1,104 @@
+:root {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-tertiary: #0f3460;
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --text-muted: #6c757d;
+    --accent-primary: #ffc107;
+    --accent-secondary: #e94560;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --card-bg: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-theme {
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    color: var(--text-primary);
+    min-height: 100vh;
+}
+
+/* DC-VGK-THEME-001: Override portal's hardcoded light #f3f4f6 on .main-content */
+.dark-theme .main-content,
+.dark-theme .content-area {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary);
+}
+
+.dark-theme .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+}
+
+.dark-theme .text-muted {
+    color: var(--text-muted) !important;
+}
+
+.dark-theme .form-control {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.dark-theme .form-control:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+}
+
+.dark-theme .form-select {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+.dark-theme .form-select:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+}
+
+.dark-theme .form-label {
+    color: var(--text-primary);
+}
+
+.dark-theme .nav-tabs .nav-link {
+    color: var(--text-secondary);
+    border-color: transparent;
+}
+
+.dark-theme .nav-tabs .nav-link.active {
+    color: var(--accent-primary);
+    background: transparent;
+    border-bottom-color: var(--accent-primary);
+}
+
+.dark-theme .btn-outline-warning {
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.dark-theme .btn-outline-warning:hover {
+    background: var(--accent-primary);
+    color: var(--bg-primary);
+}
+
+.dark-theme .table {
+    color: var(--text-primary);
+}
+
+.dark-theme .table-dark {
+    background: var(--bg-secondary);
+}
+
+.dark-theme .modal-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+}
+
+.dark-theme .input-group-text {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}

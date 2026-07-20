@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VGK Commission Config — Staff</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+.content-area { padding: 24px; }
+.page-banner { background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.page-banner h1 { font-size: 20px; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 10px; }
+.page-banner p { opacity: .85; margin: 0; font-size: 12.5px; }
+.summary-row { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+.stat-card { background: white; border-radius: 10px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); flex: 1; min-width: 130px; }
+.stat-card .val { font-size: 22px; font-weight: 700; color: #111827; }
+.stat-card .lbl { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-top: 3px; }
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden; }
+.table-card-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f0f0f0; }
+.table-card-header h3 { font-size: 14px; font-weight: 700; color: #111827; }
+table { width: 100%; border-collapse: collapse; }
+thead th { padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; background: #f9fafb; text-align: left; }
+tbody td { padding: 9px 14px; font-size: 13px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+tbody tr.cat-first td { border-top: 2px solid #e5e7eb; }
+tbody tr.cat-second td { border-bottom: 2px solid #e5e7eb; }
+tbody tr:hover td { background: #fafafa; }
+.badge-active { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: #d1fae5; color: #065f46; cursor: pointer; }
+.badge-paused { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; background: #fee2e2; color: #991b1b; cursor: pointer; }
+.badge-noconfig { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: #f3f4f6; color: #9ca3af; }
+.badge-pct { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #ede9fe; color: #7c3aed; font-weight: 700; }
+.badge-amt { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #dcfce7; color: #166534; font-weight: 700; }
+.member-badge-reg  { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 10px; font-weight: 700; background: #dbeafe; color: #1e40af; white-space: nowrap; }
+.member-badge-act  { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 10px; font-weight: 700; background: #d1fae5; color: #065f46; white-space: nowrap; }
+input.edit-input { width: 80px; padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 12px; }
+.type-toggle { display: flex; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; font-size: 11px; font-weight: 700; }
+.type-toggle button { border: none; padding: 4px 8px; cursor: pointer; background: #f9fafb; color: #6b7280; transition: all .15s; }
+.type-toggle button.active-pct { background: #ede9fe; color: #7c3aed; }
+.type-toggle button.active-amt { background: #dcfce7; color: #166534; }
+.edit-level-group { display: flex; align-items: center; gap: 4px; }
+.btn-edit { padding: 4px 12px; border: none; background: #ede9fe; color: #7c3aed; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-edit:hover { background: #ddd6fe; }
+.btn-save { padding: 4px 12px; border: none; background: #7c3aed; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.btn-save:hover { background: #6d28d9; }
+.btn-cancel-edit { padding: 4px 10px; border: none; background: #f3f4f6; color: #6b7280; border-radius: 6px; font-size: 12px; cursor: pointer; margin-left: 4px; }
+.excl-tax-note { font-size: 10px; color: #6b7280; margin-top: 2px; }
+.cat-name-cell { background: #f9fafb; font-weight: 700; font-size: 13px; color: #111827; vertical-align: middle !important; border-right: 1px solid #e5e7eb; }
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; color: white; font-size: 13px; font-weight: 600; z-index: 9999; opacity: 0; transform: translateY(10px); transition: all .3s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+
+/* ── Tabs ── */
+.tab-bar { display: flex; gap: 4px; margin-bottom: 20px; background: white; border-radius: 12px; padding: 6px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.tab-btn { flex: 1; padding: 10px 18px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: transparent; color: #6b7280; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.tab-btn.active { background: #7c3aed; color: white; }
+.tab-btn:not(.active):hover { background: #f3f4f6; color: #374151; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Upline Manager ── */
+.section-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 20px; overflow: hidden; }
+.section-header { padding: 14px 18px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 10px; }
+.section-header h3 { font-size: 14px; font-weight: 700; color: #111827; margin: 0; }
+.section-header .sec-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.section-body { padding: 18px; }
+
+/* member / upline cards */
+.member-card { border: 1.5px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+.member-card .avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+.member-card .info .name { font-size: 14px; font-weight: 700; color: #111827; }
+.member-card .info .sub  { font-size: 11.5px; color: #6b7280; margin-top: 2px; }
+.member-card .info .code { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; display: inline-block; margin-top: 4px; }
+
+.search-wrap { position: relative; }
+.search-wrap input { width: 100%; padding: 9px 14px 9px 36px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 13px; outline: none; transition: border-color .2s; }
+.search-wrap input:focus { border-color: #7c3aed; }
+.search-wrap .si { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 13px; }
+.dropdown-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: white; border: 1.5px solid #e5e7eb; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.1); z-index: 999; max-height: 220px; overflow-y: auto; display: none; }
+.dropdown-list.open { display: block; }
+.dropdown-item { padding: 9px 14px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f3f4f6; transition: background .1s; }
+.dropdown-item:hover { background: #f5f3ff; }
+.dropdown-item .di-name { font-weight: 600; color: #111827; }
+.dropdown-item .di-sub  { font-size: 11px; color: #6b7280; margin-top: 1px; }
+
+/* impact box */
+.impact-box { border-radius: 10px; padding: 14px 16px; font-size: 13px; }
+.impact-box.warn { background: #fef9c3; border: 1.5px solid #fde047; color: #713f12; }
+.impact-box.safe { background: #f0fdf4; border: 1.5px solid #86efac; color: #14532d; }
+.impact-box .ib-title { font-weight: 700; margin-bottom: 6px; font-size: 13px; }
+.impact-box ul { margin: 0; padding-left: 18px; }
+.impact-box ul li { margin-bottom: 3px; }
+
+/* chain display */
+.chain-node { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb; margin-bottom: 6px; }
+.chain-node .cn-lvl { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.chain-node .cn-info { font-size: 13px; font-weight: 600; color: #111827; }
+.chain-node .cn-sub  { font-size: 11px; color: #6b7280; }
+.chain-arrow { text-align: center; color: #9ca3af; font-size: 14px; margin: -2px 0; }
+
+/* confirm banner */
+.confirm-banner { background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 10px; padding: 14px 16px; margin-top: 16px; }
+.confirm-banner .cb-title { font-size: 13px; font-weight: 700; color: #991b1b; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.confirm-banner .cb-body  { font-size: 12.5px; color: #7f1d1d; margin-bottom: 12px; }
+
+/* filters row */
+.filter-row { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px 18px; background: #f9fafb; border-bottom: 1px solid #f0f0f0; align-items: flex-end; }
+.filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+.filter-group label { font-size: 10.5px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+.filter-group input, .filter-group select { padding: 7px 10px; border: 1.5px solid #d1d5db; border-radius: 7px; font-size: 12.5px; outline: none; background: white; transition: border-color .2s; }
+.filter-group input:focus, .filter-group select:focus { border-color: #7c3aed; }
+.filter-actions { display: flex; gap: 8px; align-items: flex-end; }
+.btn-filter-apply { padding: 7px 16px; background: #7c3aed; color: white; border: none; border-radius: 7px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.btn-filter-apply:hover { background: #6d28d9; }
+.btn-filter-clear { padding: 7px 14px; background: #f3f4f6; color: #374151; border: none; border-radius: 7px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.btn-filter-clear:hover { background: #e5e7eb; }
+
+/* audit table badges */
+.badge-reassigned { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #dbeafe; color: #1e40af; }
+.badge-kept { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #f3f4f6; color: #6b7280; }
+.badge-removed { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #fee2e2; color: #991b1b; }
+
+/* pagination */
+.pager { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid #f0f0f0; justify-content: flex-end; }
+.pager button { padding: 5px 12px; border: 1.5px solid #d1d5db; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; background: white; color: #374151; }
+.pager button:disabled { opacity: .4; cursor: default; }
+.pager button.active-page { background: #7c3aed; color: white; border-color: #7c3aed; }
+.pager .pager-info { font-size: 12px; color: #6b7280; }
+</style>
+</head>
+<body>
+  <nav id="staffSidebar"></nav>
+  <div class="main-content">
+  <div id="headerContainer"></div>
+
+<div class="content-area">
+
+<!-- summary stats (shared across tabs) -->
+<div class="summary-row" id="summaryRow">
+  <div class="stat-card"><div class="val" id="sumActive">—</div><div class="lbl">Active Configs</div></div>
+  <div class="stat-card"><div class="val" id="sumTotal">—</div><div class="lbl">Total Categories</div></div>
+  <div class="stat-card"><div class="val" id="sumVgkTotal">—</div><div class="lbl">VGK Members</div></div>
+  <div class="stat-card"><div class="val" id="sumVgkActive">—</div><div class="lbl">Active Members</div></div>
+</div>
+
+<!-- tab bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tabBtnRates"   onclick="switchTab('rates')">
+    <i class="fas fa-table"></i> Commission Rates
+  </button>
+  <button class="tab-btn"        id="tabBtnUpline"  onclick="switchTab('upline')">
+    <i class="fas fa-sitemap"></i> Upline Manager
+  </button>
+  <button class="tab-btn"        id="tabBtnBrands"  onclick="switchTab('brands')">
+    <i class="fas fa-tag"></i> Solar Brands
+  </button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     TAB 1 — Commission Rates (unchanged)
+════════════════════════════════════════════════════ -->
+<div class="tab-panel active" id="panelRates">
+<div class="table-card">
+  <div class="table-card-header">
+    <h3><i class="fas fa-table me-2" style="color:#7c3aed"></i>Category Commission Matrix</h3>
+    <span style="font-size:11px;color:#6b7280;"><i class="fas fa-info-circle me-1"></i>Commissions calculated on deal value <strong>excluding taxes</strong></span>
+  </div>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr>
+      <th>Category</th>
+      <th>Member State</th>
+      <th title="L1 — Commission earned by the VGK member who owns the deal (SOURCE)">L1 Source</th>
+      <th title="L2 — Commission earned by the direct upline of L1 (Senior)">L2 Senior</th>
+      <th title="L3 — Commission earned by the upline of L2 (Extended)">L3 Extended</th>
+      <th title="L4 CORE — Commission earned by the upliner of L3 (default 50% of L3)">L4 Core</th>
+      <th title="L5 Support — Commission earned by the Field Support assigned per lead">L5 Support</th>
+      <th title="L6 Showroom — Commission earned by the Showroom/Partner when showroom_vgk_id is set on a lead">Showroom/Partner</th>
+      <th>Monthly Target (₹)</th><th>Bonus %</th><th>Markup %</th>
+      <th>Status</th><th>Actions</th>
+    </tr></thead>
+    <tbody id="configTable"><tr><td colspan="13" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+  </table>
+  </div>
+</div>
+</div><!-- /panelRates -->
+
+<!-- ═══════════════════════════════════════════════════
+     TAB 2 — Upline Manager
+════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panelUpline">
+
+  <!-- ── Section 1: Change Details ── -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="sec-icon" style="background:#ede9fe;color:#7c3aed"><i class="fas fa-exchange-alt"></i></div>
+      <div>
+        <h3>1 — Change Details</h3>
+        <div style="font-size:11.5px;color:#6b7280;margin-top:2px">Search a member, pick a new upline, provide a reason, then confirm.</div>
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="row g-3">
+
+        <!-- Member search -->
+        <div class="col-md-6">
+          <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:5px;display:block">
+            <i class="fas fa-user me-1"></i>Select Member to Change
+          </label>
+          <div class="search-wrap" id="memberSearchWrap">
+            <i class="fas fa-search si"></i>
+            <input type="text" id="memberSearchInput" placeholder="Type name, code or phone…" autocomplete="off"
+              oninput="onMemberSearch(this.value)" onfocus="openDropdown('memberDrop')" onblur="closeDropdownDelay('memberDrop')">
+            <div class="dropdown-list" id="memberDrop"></div>
+          </div>
+          <div id="memberCard" style="margin-top:10px;display:none"></div>
+        </div>
+
+        <!-- New upline search -->
+        <div class="col-md-6">
+          <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:5px;display:block">
+            <i class="fas fa-sitemap me-1"></i>New Upline (leave blank to remove)
+          </label>
+          <div class="search-wrap" id="uplineSearchWrap">
+            <i class="fas fa-search si"></i>
+            <input type="text" id="uplineSearchInput" placeholder="Type name, code or phone…" autocomplete="off"
+              oninput="onUplineSearch(this.value)" onfocus="openDropdown('uplineDrop')" onblur="closeDropdownDelay('uplineDrop')"
+              disabled>
+            <div class="dropdown-list" id="uplineDrop"></div>
+          </div>
+          <div id="newUplineCard" style="margin-top:10px;display:none"></div>
+          <div style="margin-top:8px">
+            <label style="font-size:11.5px;color:#6b7280;cursor:pointer;display:flex;align-items:center;gap:6px">
+              <input type="checkbox" id="removeUplineChk" onchange="onRemoveUplineToggle()"> Remove existing upline (set to none)
+            </label>
+          </div>
+        </div>
+
+        <!-- Reason -->
+        <div class="col-12">
+          <label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:5px;display:block">
+            <i class="fas fa-comment-alt me-1"></i>Reason for Change <span style="color:#dc2626">*</span>
+          </label>
+          <textarea id="changeReason" rows="2" placeholder="Enter a clear reason for this upline change (required)…"
+            style="width:100%;padding:9px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;resize:vertical;outline:none;font-family:inherit;"
+            oninput="validateChangeForm()"></textarea>
+        </div>
+
+        <!-- Impact preview box -->
+        <div class="col-12" id="impactPreviewArea" style="display:none"></div>
+
+        <!-- Reassign option -->
+        <div class="col-12" id="reassignArea" style="display:none">
+          <label style="font-size:11.5px;color:#374151;cursor:pointer;display:flex;align-items:flex-start;gap:8px">
+            <input type="checkbox" id="reassignChk" style="margin-top:2px">
+            <span>
+              <strong>Reassign PENDING income entries to new upline</strong><br>
+              <span style="color:#6b7280;font-size:11px">
+                By default, existing PENDING entries stay with the old upline. Tick this only if you want those entries moved to the new upline.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <!-- Confirm -->
+        <div class="col-12" id="confirmArea" style="display:none">
+          <div class="confirm-banner">
+            <div class="cb-title"><i class="fas fa-exclamation-triangle"></i> Confirm Upline Change</div>
+            <div class="cb-body" id="confirmSummaryText"></div>
+            <div style="display:flex;gap:10px">
+              <button id="btnConfirmChange" onclick="applyUplineChange()"
+                style="padding:8px 20px;background:#7c3aed;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+                <i class="fas fa-check me-1"></i>Confirm Change
+              </button>
+              <button onclick="resetChangeForm()"
+                style="padding:8px 16px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Section 2: Audit Log ── -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="sec-icon" style="background:#dcfce7;color:#16a34a"><i class="fas fa-history"></i></div>
+      <div>
+        <h3>2 — Audit Log</h3>
+        <div style="font-size:11.5px;color:#6b7280;margin-top:2px">Full history of every upline change made across all VGK members.</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-row">
+      <div class="filter-group" style="min-width:180px">
+        <label><i class="fas fa-user me-1"></i>Member</label>
+        <input type="text" id="fMember" placeholder="Name or code…" oninput="scheduleAuditLoad()">
+      </div>
+      <div class="filter-group" style="min-width:180px">
+        <label><i class="fas fa-sitemap me-1"></i>Old Upline</label>
+        <input type="text" id="fOldUpline" placeholder="Name or code…" oninput="scheduleAuditLoad()">
+      </div>
+      <div class="filter-group" style="min-width:180px">
+        <label><i class="fas fa-sitemap me-1"></i>New Upline</label>
+        <input type="text" id="fNewUpline" placeholder="Name or code…" oninput="scheduleAuditLoad()">
+      </div>
+      <div class="filter-group" style="min-width:160px">
+        <label><i class="fas fa-user-shield me-1"></i>Changed By (Staff)</label>
+        <input type="text" id="fChangedBy" placeholder="Staff name…" oninput="scheduleAuditLoad()">
+      </div>
+      <div class="filter-group" style="min-width:140px">
+        <label><i class="fas fa-calendar me-1"></i>Date From</label>
+        <input type="date" id="fDateFrom" onchange="loadAuditLog()">
+      </div>
+      <div class="filter-group" style="min-width:140px">
+        <label><i class="fas fa-calendar-check me-1"></i>Date To</label>
+        <input type="date" id="fDateTo" onchange="loadAuditLog()">
+      </div>
+      <div class="filter-group" style="min-width:150px">
+        <label><i class="fas fa-exchange-alt me-1"></i>Entries Reassigned</label>
+        <select id="fReassigned" onchange="loadAuditLog()">
+          <option value="">All</option>
+          <option value="yes">Reassigned</option>
+          <option value="no">Kept with old</option>
+        </select>
+      </div>
+      <div class="filter-group" style="min-width:140px">
+        <label><i class="fas fa-link me-1"></i>Change Type</label>
+        <select id="fChangeType" onchange="loadAuditLog()">
+          <option value="">All</option>
+          <option value="set">Upline Set / Changed</option>
+          <option value="removed">Upline Removed</option>
+        </select>
+      </div>
+      <div class="filter-group" style="min-width:110px">
+        <label><i class="fas fa-list me-1"></i>Per Page</label>
+        <select id="fPerPage" onchange="auditPage=1;loadAuditLog()">
+          <option value="20">20</option>
+          <option value="30" selected>30</option>
+          <option value="50">50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-filter-apply" onclick="auditPage=1;loadAuditLog()"><i class="fas fa-search me-1"></i>Apply</button>
+        <button class="btn-filter-clear" onclick="clearAuditFilters()"><i class="fas fa-times me-1"></i>Clear</button>
+      </div>
+    </div>
+
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr>
+        <th>#</th>
+        <th>Member</th>
+        <th>Old Upline</th>
+        <th>New Upline</th>
+        <th>Change Type</th>
+        <th>Pending Entries</th>
+        <th>Entries</th>
+        <th>Reason</th>
+        <th>Changed By</th>
+        <th>Date &amp; Time</th>
+      </tr></thead>
+      <tbody id="auditTable">
+        <tr><td colspan="10" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="pager" id="auditPager" style="display:none"></div>
+  </div>
+
+  <!-- ── Section 3: Upline Chain & Impact Detail ── -->
+  <div class="section-card">
+    <div class="section-header">
+      <div class="sec-icon" style="background:#fef3c7;color:#d97706"><i class="fas fa-project-diagram"></i></div>
+      <div>
+        <h3>3 — Upline Chain &amp; Impact Detail</h3>
+        <div style="font-size:11.5px;color:#6b7280;margin-top:2px">Select a member in Section 1 to see their current upline chain and impact summary here.</div>
+      </div>
+    </div>
+    <div class="section-body" id="impactDetailBody">
+      <div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px">
+        <i class="fas fa-sitemap fa-2x" style="display:block;margin-bottom:10px;opacity:.3"></i>
+        Select a member in Section 1 to load impact details.
+      </div>
+    </div>
+  </div>
+
+</div><!-- /panelUpline -->
+
+<!-- ═══════════════════════════════════════════════════
+     TAB 3 — Solar Brands (DC-VGK-BRAND-INCENTIVE-001)
+════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panelBrands">
+<div class="table-card">
+  <div class="table-card-header" style="justify-content:space-between;align-items:center">
+    <h3><i class="fas fa-tag me-2" style="color:#0891b2"></i>Solar Brand Incentive Config</h3>
+    <button class="btn btn-sm" onclick="openBrandModal()" style="background:#0891b2;color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700"><i class="fas fa-plus me-1"></i>Add Brand</button>
+  </div>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr>
+      <th>Brand Name</th><th>L1 (Source) ₹</th><th>L2 (Senior) ₹</th><th>L5 (Support) ₹</th><th>Status</th><th>Actions</th>
+    </tr></thead>
+    <tbody id="brandsTable"><tr><td colspan="6" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+  </table>
+  </div>
+</div>
+</div><!-- /panelBrands -->
+
+<!-- Brand Modal -->
+<div class="modal fade" id="brandModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content" style="background:#1e293b;color:#e2e8f0;border:1px solid rgba(255,255,255,.1)">
+      <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,.08)">
+        <h5 class="modal-title" id="brandModalTitle">Add Solar Brand</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="bmBrandId">
+        <div class="mb-3"><label class="form-label" style="font-size:12px">Brand Name</label><input type="text" class="form-control form-control-sm" id="bmName" placeholder="e.g. Tata Power Solar"></div>
+        <div class="mb-3"><label class="form-label" style="font-size:12px">L1 Advance ₹ (Source Partner)</label><input type="number" class="form-control form-control-sm" id="bmL1" value="0" min="0" step="1"></div>
+        <div class="mb-3"><label class="form-label" style="font-size:12px">L2 Advance ₹ (Senior)</label><input type="number" class="form-control form-control-sm" id="bmL2" value="0" min="0" step="1"></div>
+        <div class="mb-3"><label class="form-label" style="font-size:12px">L5 Advance ₹ (Field Support)</label><input type="number" class="form-control form-control-sm" id="bmL5" value="0" min="0" step="1"></div>
+      </div>
+      <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,.08)">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm" onclick="saveBrand()" style="background:#0891b2;color:#fff">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content-area -->
+
+<div class="toast" id="toast"></div>
+  </div></div>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+const API = '/api/v1';
+let configData = [];
+let auditPage  = 1;
+let auditDebounce = null;
+
+// ─── State for upline change form ─────────────────────────────────────────
+let selectedMember  = null;  // {id, partner_code, partner_name, phone, current_upline_id}
+let selectedNewUpline = null; // null = no change or remove
+
+// ─── Toast ────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ─── Tab switching ─────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const tabMap = { rates:'Rates', upline:'Upline', brands:'Brands' };
+  const key = tabMap[tab] || 'Rates';
+  document.getElementById('tabBtn' + key).classList.add('active');
+  document.getElementById('panel'  + key).classList.add('active');
+  if (tab === 'upline') loadAuditLog();
+  if (tab === 'brands') loadBrands();
+}
+
+// ─── Solar Brands tab (DC-VGK-BRAND-INCENTIVE-001) ─────────────────────────
+let _brandsCache = [];
+
+async function loadBrands() {
+  try {
+    const r = await staffFetch('/api/v1/vgk/brands');
+    const j = await r.json();
+    if (!j.success) { showToast('Failed to load brands', 'error'); return; }
+    _brandsCache = j.brands || [];
+    renderBrandsTable(_brandsCache);
+  } catch(e) { showToast('Error loading brands', 'error'); }
+}
+
+function renderBrandsTable(brands) {
+  const tb = document.getElementById('brandsTable');
+  if (!brands.length) {
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#9ca3af">No brands configured yet.</td></tr>';
+    return;
+  }
+  tb.innerHTML = brands.map(b => `
+    <tr>
+      <td><strong>${b.brand_name}</strong></td>
+      <td>₹${Number(b.l1_amount).toLocaleString('en-IN')}</td>
+      <td>₹${Number(b.l2_amount).toLocaleString('en-IN')}</td>
+      <td>₹${Number(b.l5_amount).toLocaleString('en-IN')}</td>
+      <td>${b.is_active
+        ? '<span class="badge" style="background:#16a34a;color:#fff;padding:4px 10px;border-radius:12px">Active</span>'
+        : '<span class="badge" style="background:#f59e0b;color:#fff;padding:4px 10px;border-radius:12px">Paused</span>'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-info me-1" style="font-size:11px" title="Edit" onclick="openBrandModal(${b.id})"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm me-1" style="font-size:11px;background:${b.is_active?'#fef3c7':'#d1fae5'};border:1px solid ${b.is_active?'#fcd34d':'#6ee7b7'};color:${b.is_active?'#92400e':'#065f46'}" title="${b.is_active?'Pause brand':'Resume brand'}" onclick="toggleBrandPause(${b.id},${b.is_active})"><i class="fas fa-${b.is_active?'pause':'play'}"></i></button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openBrandModal(brandId) {
+  document.getElementById('bmBrandId').value = brandId || '';
+  if (brandId) {
+    const b = _brandsCache.find(x => x.id === brandId);
+    if (!b) return;
+    document.getElementById('brandModalTitle').textContent = 'Edit Brand';
+    document.getElementById('bmName').value = b.brand_name;
+    document.getElementById('bmL1').value   = b.l1_amount;
+    document.getElementById('bmL2').value   = b.l2_amount;
+    document.getElementById('bmL5').value   = b.l5_amount;
+  } else {
+    document.getElementById('brandModalTitle').textContent = 'Add Solar Brand';
+    document.getElementById('bmName').value = '';
+    document.getElementById('bmL1').value   = '0';
+    document.getElementById('bmL2').value   = '0';
+    document.getElementById('bmL5').value   = '0';
+  }
+  new bootstrap.Modal(document.getElementById('brandModal')).show();
+}
+
+async function saveBrand() {
+  const brandId = document.getElementById('bmBrandId').value;
+  const name = document.getElementById('bmName').value.trim();
+  if (!name) { showToast('Brand name is required', 'error'); return; }
+  const body = {
+    brand_name: name,
+    l1_amount: parseFloat(document.getElementById('bmL1').value) || 0,
+    l2_amount: parseFloat(document.getElementById('bmL2').value) || 0,
+    l5_amount: parseFloat(document.getElementById('bmL5').value) || 0,
+  };
+  try {
+    let r;
+    if (brandId) {
+      r = await staffFetch(`/api/v1/vgk/brands/${brandId}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    } else {
+      // Need company_id — get from first entry or use 4 (VGK4U default)
+      body.company_id = 4;
+      r = await staffFetch('/api/v1/vgk/brands', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+    }
+    const j = await r.json();
+    if (!j.success) { showToast(j.detail || 'Save failed', 'error'); return; }
+    bootstrap.Modal.getInstance(document.getElementById('brandModal'))?.hide();
+    showToast('Brand saved', 'success');
+    loadBrands();
+  } catch(e) { showToast('Error saving brand', 'error'); }
+}
+
+async function toggleBrandPause(brandId, isCurrentlyActive) {
+  const action = isCurrentlyActive ? 'pause' : 'resume';
+  const msg    = isCurrentlyActive
+    ? 'Pause this brand? New leads won\'t show it, but existing assignments are kept.'
+    : 'Resume this brand? It will appear again in the Solar lead brand dropdown.';
+  if (!confirm(msg)) return;
+  try {
+    const r = await staffFetch(`/api/v1/vgk/brands/${brandId}`, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ is_active: !isCurrentlyActive })
+    });
+    const j = await r.json();
+    if (!j.success) { showToast(j.detail || 'Failed', 'error'); return; }
+    showToast(`Brand ${action}d`, 'success');
+    loadBrands();
+  } catch(e) { showToast(`Error trying to ${action} brand`, 'error'); }
+}
+
+async function deactivateBrand(brandId, name) {
+  if (!confirm(`Deactivate brand "${name}"? Existing leads will keep their brand assignment but new leads won't see it.`)) return;
+  try {
+    const r = await staffFetch(`/api/v1/vgk/brands/${brandId}`, { method:'DELETE' });
+    const j = await r.json();
+    if (!j.success) { showToast(j.detail || 'Failed', 'error'); return; }
+    showToast('Brand deactivated', 'success');
+    loadBrands();
+  } catch(e) { showToast('Error', 'error'); }
+}
+
+// ─── Commission Rates tab ─────────────────────────────────────────────────
+async function loadConfig() {
+  try {
+    const r = await staffFetch(API + '/vgk/config');
+    const d = await r.json();
+    if (!d.success) { showToast('Failed to load config', 'error'); return; }
+    configData = d.data;
+    document.getElementById('sumTotal').textContent = d.data.length;
+    const activeCount = d.data.filter(x =>
+      (x.config_registered && x.config_registered.is_active) ||
+      (x.config_activated  && x.config_activated.is_active)
+    ).length;
+    document.getElementById('sumActive').textContent = activeCount;
+    document.getElementById('sumVgkTotal').textContent  = d.summary.total_vgk_members;
+    document.getElementById('sumVgkActive').textContent = d.summary.active_vgk_members;
+    renderTable(d.data);
+  } catch(e) { showToast('Error loading config', 'error'); }
+}
+
+function fmtLevel(c, n) {
+  if (!c) return '—';
+  const type = c[`level${n}_type`] || 'PCT';
+  const pct  = c[`level${n}_pct`]  || 0;
+  const amt  = c[`level${n}_amt`]  || 0;
+  if (type === 'AMOUNT') return `<span class="badge-amt">₹ ${Number(amt).toLocaleString('en-IN')}</span><div class="excl-tax-note">flat/deal</div>`;
+  return `<span class="badge-pct">${pct}%</span><div class="excl-tax-note">of excl-tax val</div>`;
+}
+function fmtLevelCore(c) {
+  if (!c) return '—';
+  const type = c.level4_core_type || 'PCT';
+  const pct  = c.level4_core_pct  || 0;
+  const amt  = c.level4_core_amt  || 0;
+  if (type === 'AMOUNT') return `<span class="badge-amt">₹ ${Number(amt).toLocaleString('en-IN')}</span><div class="excl-tax-note">flat/deal</div>`;
+  return `<span class="badge-pct">${pct}%</span><div class="excl-tax-note">of excl-tax val</div>`;
+}
+function fmtLevelShowroom(c) {
+  if (!c) return '—';
+  const type = c.showroom_type || 'PCT';
+  const pct  = c.showroom_pct  || 0;
+  const amt  = c.showroom_amt  || 0;
+  if (!pct && !amt) return '<span style="color:#9ca3af;font-size:11px">Not set</span>';
+  if (type === 'AMOUNT') return `<span class="badge-amt">₹ ${Number(amt).toLocaleString('en-IN')}</span><div class="excl-tax-note">flat/deal</div>`;
+  return `<span class="badge-pct">${pct}%</span><div class="excl-tax-note">of deal value</div>`;
+}
+function rowKey(catId, isPaid) { return `${catId}_${isPaid ? 1 : 0}`; }
+
+function renderTable(data) {
+  const tbody = document.getElementById('configTable');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:30px;color:#9ca3af">No categories found</td></tr>'; return; }
+  let html = '';
+  data.forEach(row => {
+    html += buildRow(row.category_id, row.category_name, false, row.config_registered, true);
+    html += buildRow(row.category_id, null, true, row.config_activated, false);
+  });
+  tbody.innerHTML = html;
+}
+
+function buildRow(catId, catName, isPaid, c, isFirstRow) {
+  const rk   = rowKey(catId, isPaid);
+  const cls  = isFirstRow ? 'cat-first' : 'cat-second';
+  const mbadge = isPaid
+    ? '<span class="member-badge-act"><i class="fas fa-star me-1" style="font-size:9px"></i>Activated</span>'
+    : '<span class="member-badge-reg"><i class="fas fa-user me-1" style="font-size:9px"></i>Registered</span>';
+  const catCell = isFirstRow ? `<td class="cat-name-cell" rowspan="2" style="min-width:120px">${catName}</td>` : '';
+  const statusCell = c
+    ? `<span class="${c.is_active ? 'badge-active' : 'badge-paused'}" onclick="toggleStatus(${catId},${isPaid},${!c.is_active})">
+        <i class="fas fa-circle" style="font-size:8px"></i>${c.is_active ? 'Active' : 'Paused'}
+       </span>`
+    : '<span class="badge-noconfig">No Config</span>';
+  return `<tr class="${cls}" id="row-${rk}">
+    ${catCell}
+    <td>${mbadge}</td>
+    <td class="val-field" data-field="l1">${fmtLevel(c,1)}</td>
+    <td class="val-field" data-field="l2">${fmtLevel(c,2)}</td>
+    <td class="val-field" data-field="l3">${fmtLevel(c,3)}</td>
+    <td class="val-field" data-field="l4core">${fmtLevelCore(c)}</td>
+    <td class="val-field" data-field="l4">${fmtLevel(c,4)}</td>
+    <td class="val-field" data-field="showroom">${fmtLevelShowroom(c)}</td>
+    <td class="val-field" data-field="monthly_target">${c ? '₹'+Number(c.monthly_target).toLocaleString('en-IN') : '—'}</td>
+    <td class="val-field" data-field="bonus_pct">${c ? c.bonus_pct+'%' : '—'}</td>
+    <td class="val-field" data-field="markup_pct">${c ? c.markup_pct+'%' : '—'}</td>
+    <td class="status-field">${statusCell}</td>
+    <td><button class="btn-edit" onclick="startEdit(${catId},${isPaid})"><i class="fas fa-pencil me-1"></i>Edit</button></td>
+  </tr>`;
+}
+
+function levelEditHtml(catId, isPaid, n, c) {
+  const type = (c && c[`level${n}_type`]) || 'PCT';
+  const pct  = (c && c[`level${n}_pct`]  !== undefined) ? c[`level${n}_pct`]  : 0;
+  const amt  = (c && c[`level${n}_amt`]  !== undefined) ? c[`level${n}_amt`]  : 0;
+  const rk   = rowKey(catId, isPaid);
+  return `<div class="edit-level-group" id="eg-${rk}-${n}">
+    <div class="type-toggle">
+      <button id="tt-${rk}-${n}-PCT"    onclick="setLvlType('${rk}',${n},'PCT')"    class="${type==='PCT'?'active-pct':''}">%</button>
+      <button id="tt-${rk}-${n}-AMOUNT" onclick="setLvlType('${rk}',${n},'AMOUNT')" class="${type==='AMOUNT'?'active-amt':''}">₹</button>
+    </div>
+    <div id="pct-wrap-${rk}-${n}" style="display:${type==='PCT'?'block':'none'}">
+      <input class="edit-input" id="ei-${rk}-l${n}pct" value="${pct}" type="number" min="0" max="100" step="0.01" placeholder="%">
+    </div>
+    <div id="amt-wrap-${rk}-${n}" style="display:${type==='AMOUNT'?'block':'none'}">
+      <input class="edit-input" style="width:90px" id="ei-${rk}-l${n}amt" value="${amt}" type="number" min="0" step="1" placeholder="₹">
+    </div>
+  </div>`;
+}
+function levelEditHtmlShowroom(catId, isPaid, c) {
+  const type = (c && c.showroom_type) || 'PCT';
+  const pct  = (c && c.showroom_pct  !== undefined) ? c.showroom_pct  : 0;
+  const amt  = (c && c.showroom_amt  !== undefined) ? c.showroom_amt  : 0;
+  const rk   = rowKey(catId, isPaid);
+  const slot = 'sr';
+  return `<div class="edit-level-group" id="eg-${rk}-${slot}">
+    <div class="type-toggle">
+      <button id="tt-${rk}-${slot}-PCT"    onclick="setLvlType('${rk}','${slot}','PCT')"    class="${type==='PCT'?'active-pct':''}">%</button>
+      <button id="tt-${rk}-${slot}-AMOUNT" onclick="setLvlType('${rk}','${slot}','AMOUNT')" class="${type==='AMOUNT'?'active-amt':''}">₹</button>
+    </div>
+    <div id="pct-wrap-${rk}-${slot}" style="display:${type==='PCT'?'block':'none'}">
+      <input class="edit-input" id="ei-${rk}-lsrpct" value="${pct}" type="number" min="0" max="100" step="0.01" placeholder="%">
+    </div>
+    <div id="amt-wrap-${rk}-${slot}" style="display:${type==='AMOUNT'?'block':'none'}">
+      <input class="edit-input" style="width:90px" id="ei-${rk}-lsramt" value="${amt}" type="number" min="0" step="1" placeholder="₹">
+    </div>
+  </div>`;
+}
+function levelEditHtmlCore(catId, isPaid, c) {
+  const type = (c && c.level4_core_type) || 'PCT';
+  const pct  = (c && c.level4_core_pct  !== undefined) ? c.level4_core_pct  : 0;
+  const amt  = (c && c.level4_core_amt  !== undefined) ? c.level4_core_amt  : 0;
+  const rk   = rowKey(catId, isPaid);
+  const slot = '4c';
+  return `<div class="edit-level-group" id="eg-${rk}-${slot}">
+    <div class="type-toggle">
+      <button id="tt-${rk}-${slot}-PCT"    onclick="setLvlType('${rk}','${slot}','PCT')"    class="${type==='PCT'?'active-pct':''}">%</button>
+      <button id="tt-${rk}-${slot}-AMOUNT" onclick="setLvlType('${rk}','${slot}','AMOUNT')" class="${type==='AMOUNT'?'active-amt':''}">₹</button>
+    </div>
+    <div id="pct-wrap-${rk}-${slot}" style="display:${type==='PCT'?'block':'none'}">
+      <input class="edit-input" id="ei-${rk}-l4cpct" value="${pct}" type="number" min="0" max="100" step="0.01" placeholder="%">
+    </div>
+    <div id="amt-wrap-${rk}-${slot}" style="display:${type==='AMOUNT'?'block':'none'}">
+      <input class="edit-input" style="width:90px" id="ei-${rk}-l4camt" value="${amt}" type="number" min="0" step="1" placeholder="₹">
+    </div>
+  </div>`;
+}
+
+function setLvlType(rk, n, type) {
+  document.getElementById(`pct-wrap-${rk}-${n}`).style.display = type === 'PCT' ? 'block' : 'none';
+  document.getElementById(`amt-wrap-${rk}-${n}`).style.display = type === 'AMOUNT' ? 'block' : 'none';
+  document.getElementById(`tt-${rk}-${n}-PCT`).className    = type === 'PCT'    ? 'active-pct' : '';
+  document.getElementById(`tt-${rk}-${n}-AMOUNT`).className = type === 'AMOUNT' ? 'active-amt' : '';
+}
+
+function startEdit(catId, isPaid) {
+  const row = configData.find(r => r.category_id === catId);
+  const c   = isPaid ? row.config_activated : row.config_registered;
+  const rk  = rowKey(catId, isPaid);
+  const tr  = document.getElementById('row-' + rk);
+  tr.querySelector('[data-field="l1"]').innerHTML = levelEditHtml(catId, isPaid, 1, c);
+  tr.querySelector('[data-field="l2"]').innerHTML = levelEditHtml(catId, isPaid, 2, c);
+  tr.querySelector('[data-field="l3"]').innerHTML = levelEditHtml(catId, isPaid, 3, c);
+  tr.querySelector('[data-field="l4core"]').innerHTML = levelEditHtmlCore(catId, isPaid, c);
+  tr.querySelector('[data-field="l4"]').innerHTML = levelEditHtml(catId, isPaid, 4, c);
+  tr.querySelector('[data-field="showroom"]').innerHTML = levelEditHtmlShowroom(catId, isPaid, c);
+  ['monthly_target','bonus_pct','markup_pct'].forEach(f => {
+    const td  = tr.querySelector(`[data-field="${f}"]`);
+    const val = (c && c[f] !== undefined) ? c[f] : 0;
+    const w   = f === 'monthly_target' ? '90px' : '60px';
+    const stp = f === 'monthly_target' ? '1' : '0.01';
+    td.innerHTML = `<input class="edit-input" style="width:${w}" id="ei-${rk}-${f}" value="${val}" type="number" min="0" step="${stp}">`;
+  });
+  const isActive = c ? c.is_active !== false : true;
+  tr.querySelector('.status-field').innerHTML = `<select class="form-select form-select-sm" id="ei-${rk}-is_active" style="width:90px;font-size:12px">
+    <option value="true"  ${isActive  ? 'selected' : ''}>Active</option>
+    <option value="false" ${!isActive ? 'selected' : ''}>Paused</option>
+  </select>`;
+  tr.lastElementChild.innerHTML = `<button class="btn-save" onclick="saveEdit(${catId},${isPaid})"><i class="fas fa-check me-1"></i>Save</button>
+    <button class="btn-cancel-edit" onclick="loadConfig()">Cancel</button>`;
+}
+
+function getLvlType(rk, n) {
+  const pctBtn = document.getElementById(`tt-${rk}-${n}-PCT`);
+  return pctBtn && pctBtn.classList.contains('active-pct') ? 'PCT' : 'AMOUNT';
+}
+
+async function saveEdit(catId, isPaid) {
+  const rk      = rowKey(catId, isPaid);
+  const payload = { is_paid_member: isPaid, is_active: document.getElementById(`ei-${rk}-is_active`).value === 'true' };
+  // L4 CORE (DC-VGK-L4CORE-001)
+  const l4cType = getLvlType(rk, '4c');
+  payload.level4_core_type = l4cType;
+  payload.level4_core_pct  = parseFloat(document.getElementById(`ei-${rk}-l4cpct`)?.value || 0) || 0;
+  payload.level4_core_amt  = parseFloat(document.getElementById(`ei-${rk}-l4camt`)?.value || 0) || 0;
+  // L6 Showroom (DC-SHOWROOM-COMMISSION-001)
+  const srType = getLvlType(rk, 'sr');
+  payload.showroom_type = srType;
+  payload.showroom_pct  = parseFloat(document.getElementById(`ei-${rk}-lsrpct`)?.value || 0) || 0;
+  payload.showroom_amt  = parseFloat(document.getElementById(`ei-${rk}-lsramt`)?.value || 0) || 0;
+  for (const n of [1,2,3,4]) {
+    const type = getLvlType(rk, n);
+    payload[`level${n}_type`] = type;
+    payload[`level${n}_pct`]  = parseFloat(document.getElementById(`ei-${rk}-l${n}pct`)?.value || 0) || 0;
+    payload[`level${n}_amt`]  = parseFloat(document.getElementById(`ei-${rk}-l${n}amt`)?.value || 0) || 0;
+  }
+  for (const f of ['monthly_target','bonus_pct','markup_pct']) {
+    const el = document.getElementById(`ei-${rk}-${f}`);
+    if (!el) { showToast('Input not found', 'error'); return; }
+    payload[f] = parseFloat(el.value) || 0;
+  }
+  const paidParam = isPaid ? 'true' : 'false';
+  try {
+    const r = await staffFetch(`${API}/vgk/config/${catId}?is_paid_member=${paidParam}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (d.success) { showToast('Commission config saved!'); loadConfig(); }
+    else showToast(d.detail || 'Save failed', 'error');
+  } catch(e) { showToast('Error saving config', 'error'); }
+}
+
+async function toggleStatus(catId, isPaid, newStatus) {
+  const row = configData.find(r => r.category_id === catId);
+  const c   = isPaid ? row.config_activated : row.config_registered;
+  if (!row || !c) return;
+  const payload = {
+    is_paid_member: isPaid,
+    level1_pct: c.level1_pct, level1_type: c.level1_type||'PCT', level1_amt: c.level1_amt||0,
+    level2_pct: c.level2_pct, level2_type: c.level2_type||'PCT', level2_amt: c.level2_amt||0,
+    level3_pct: c.level3_pct, level3_type: c.level3_type||'PCT', level3_amt: c.level3_amt||0,
+    level4_core_pct: c.level4_core_pct||0, level4_core_type: c.level4_core_type||'PCT', level4_core_amt: c.level4_core_amt||0,
+    level4_pct: c.level4_pct||0, level4_type: c.level4_type||'PCT', level4_amt: c.level4_amt||0,
+    showroom_pct: c.showroom_pct||0, showroom_type: c.showroom_type||'PCT', showroom_amt: c.showroom_amt||0,
+    monthly_target: c.monthly_target, bonus_pct: c.bonus_pct, markup_pct: c.markup_pct,
+    is_active: newStatus
+  };
+  const paidParam = isPaid ? 'true' : 'false';
+  try {
+    const r = await staffFetch(`${API}/vgk/config/${catId}?is_paid_member=${paidParam}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (d.success) { showToast('Status updated!'); loadConfig(); }
+    else showToast(d.detail || 'Update failed', 'error');
+  } catch(e) { showToast('Error updating status', 'error'); }
+}
+
+// ─── Member search (Section 1) ────────────────────────────────────────────
+let memberSearchTimer = null;
+async function onMemberSearch(val) {
+  clearTimeout(memberSearchTimer);
+  if (val.length < 2) { closeDrop('memberDrop'); return; }
+  memberSearchTimer = setTimeout(async () => {
+    try {
+      const r = await staffFetch(`${API}/vgk/members/search?q=${encodeURIComponent(val)}&active_only=false`);
+      const d = await r.json();
+      if (!d.success) return;
+      renderMemberDrop(d.data, 'memberDrop', pickMember);
+    } catch(e) {}
+  }, 280);
+}
+
+function renderMemberDrop(items, dropId, callback) {
+  const el = document.getElementById(dropId);
+  if (!items.length) { el.innerHTML = '<div class="dropdown-item" style="color:#9ca3af">No results</div>'; el.classList.add('open'); return; }
+  el.innerHTML = items.map(m =>
+    `<div class="dropdown-item" onclick='${callback.name}(${JSON.stringify(m)})'>
+       <div class="di-name">${m.partner_name} <span style="font-size:10px;color:#7c3aed;font-weight:700">${m.partner_code}</span></div>
+       <div class="di-sub">${m.phone || ''} · ${m.is_active ? '✓ Active' : '✗ Inactive'}</div>
+     </div>`
+  ).join('');
+  el.classList.add('open');
+}
+
+async function pickMember(m) {
+  selectedMember    = m;
+  selectedNewUpline = null;
+  closeDrop('memberDrop');
+  document.getElementById('memberSearchInput').value = `${m.partner_name} (${m.partner_code})`;
+
+  // Reset new upline search
+  document.getElementById('uplineSearchInput').value = '';
+  document.getElementById('uplineSearchInput').disabled = false;
+  document.getElementById('newUplineCard').style.display = 'none';
+  document.getElementById('removeUplineChk').checked = false;
+
+  // Show member card
+  renderMemberCard(m);
+
+  // Load impact data
+  await loadImpactData(m.id);
+  validateChangeForm();
+}
+
+function renderMemberCard(m) {
+  const initials = (m.partner_name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  const card = `<div class="member-card">
+    <div class="avatar" style="background:#ede9fe;color:#7c3aed">${initials}</div>
+    <div class="info">
+      <div class="name">${m.partner_name}</div>
+      <div class="sub">${m.phone || 'No phone'}</div>
+      <span class="code" style="background:#ede9fe;color:#7c3aed">${m.partner_code}</span>
+      ${m.is_active
+        ? '<span class="code" style="background:#d1fae5;color:#065f46;margin-left:4px">Active</span>'
+        : '<span class="code" style="background:#fee2e2;color:#991b1b;margin-left:4px">Inactive</span>'}
+    </div>
+  </div>`;
+  const el = document.getElementById('memberCard');
+  el.innerHTML = card;
+  el.style.display = 'block';
+}
+
+// ─── Upline search (Section 1) ────────────────────────────────────────────
+let uplineSearchTimer = null;
+async function onUplineSearch(val) {
+  clearTimeout(uplineSearchTimer);
+  if (val.length < 2) { closeDrop('uplineDrop'); selectedNewUpline = null; validateChangeForm(); return; }
+  uplineSearchTimer = setTimeout(async () => {
+    try {
+      const r = await staffFetch(`${API}/vgk/members/search?q=${encodeURIComponent(val)}&active_only=false`);
+      const d = await r.json();
+      if (!d.success) return;
+      const filtered = selectedMember ? d.data.filter(m => m.id !== selectedMember.id) : d.data;
+      renderMemberDrop(filtered, 'uplineDrop', pickNewUpline);
+    } catch(e) {}
+  }, 280);
+}
+
+async function pickNewUpline(m) {
+  selectedNewUpline = m;
+  closeDrop('uplineDrop');
+  document.getElementById('uplineSearchInput').value = `${m.partner_name} (${m.partner_code})`;
+  document.getElementById('removeUplineChk').checked = false;
+
+  const initials = (m.partner_name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('newUplineCard').innerHTML = `<div class="member-card">
+    <div class="avatar" style="background:#dcfce7;color:#16a34a">${initials}</div>
+    <div class="info">
+      <div class="name">${m.partner_name}</div>
+      <div class="sub">${m.phone || ''}</div>
+      <span class="code" style="background:#dcfce7;color:#16a34a">${m.partner_code}</span>
+    </div>
+  </div>`;
+  document.getElementById('newUplineCard').style.display = 'block';
+  validateChangeForm();
+}
+
+function onRemoveUplineToggle() {
+  const chk = document.getElementById('removeUplineChk').checked;
+  if (chk) {
+    selectedNewUpline = null;
+    document.getElementById('uplineSearchInput').value = '';
+    document.getElementById('uplineSearchInput').disabled = true;
+    document.getElementById('newUplineCard').style.display = 'none';
+  } else {
+    document.getElementById('uplineSearchInput').disabled = false;
+  }
+  validateChangeForm();
+}
+
+// ─── Impact data load (Section 3 + inline preview) ────────────────────────
+let impactData = null;
+async function loadImpactData(memberId) {
+  document.getElementById('impactDetailBody').innerHTML =
+    '<div style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+  try {
+    const r = await staffFetch(`${API}/vgk/members/${memberId}/upline-impact`);
+    const d = await r.json();
+    if (!d.success) { impactData = null; return; }
+    impactData = d.data;
+    renderImpactDetail(d.data);
+    renderImpactPreview(d.data);
+  } catch(e) { impactData = null; }
+}
+
+function renderImpactDetail(data) {
+  const chain = data.upline_chain || [];
+  const member = data.member;
+  const pending = data.pending_entries_affected || 0;
+  const history = data.change_history || [];
+
+  let chainHtml = '';
+  // Self node
+  const si = (member.partner_name || '?').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  chainHtml += `<div class="chain-node">
+    <div class="cn-lvl" style="background:#ede9fe;color:#7c3aed">MEMBER</div>
+    <div><div class="cn-info">${member.partner_name}</div><div class="cn-sub">${member.partner_code}</div></div>
+  </div>`;
+  if (chain.length === 0) {
+    chainHtml += `<div style="text-align:center;font-size:12px;color:#9ca3af;padding:8px">No upline — this member is at the top of the chain.</div>`;
+  }
+  chain.forEach((node, idx) => {
+    const lbl = idx === 0 ? 'L2 Senior' : idx === 1 ? 'L3 Extended' : 'L4+';
+    const colour = idx === 0 ? '#fef9c3;color:#713f12' : idx === 1 ? '#fee2e2;color:#991b1b' : '#f3f4f6;color:#374151';
+    chainHtml += `<div class="chain-arrow"><i class="fas fa-chevron-up" style="font-size:10px"></i></div>
+    <div class="chain-node">
+      <div class="cn-lvl" style="background:${colour}">${lbl}</div>
+      <div>
+        <div class="cn-info">${node.partner_name}</div>
+        <div class="cn-sub">${node.partner_code} · ${node.is_active ? '✓ Active' : '✗ Inactive'}</div>
+      </div>
+    </div>`;
+  });
+
+  // History table
+  let histHtml = '';
+  if (history.length) {
+    histHtml = `<div style="margin-top:20px">
+      <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px"><i class="fas fa-history me-1"></i>Change History for this member</div>
+      <div style="overflow-x:auto"><table style="font-size:12px">
+        <thead><tr>
+          <th>Date</th><th>Old Upline</th><th>New Upline</th><th>Changed By</th><th>Entries</th><th>Reason</th>
+        </tr></thead><tbody>
+        ${history.map(h => `<tr>
+          <td style="white-space:nowrap">${fmtDt(h.created_at)}</td>
+          <td>${h.old_upline_name ? `${h.old_upline_name} <span style="font-size:10px;color:#7c3aed">${h.old_upline_code||''}</span>` : '<span style="color:#9ca3af">—</span>'}</td>
+          <td>${h.new_upline_name ? `${h.new_upline_name} <span style="font-size:10px;color:#16a34a">${h.new_upline_code||''}</span>` : '<span style="color:#9ca3af">Removed</span>'}</td>
+          <td>${h.changed_by_name || '—'}</td>
+          <td>${h.entries_reassigned
+            ? `<span class="badge-reassigned">Reassigned (${h.pending_entries_affected})</span>`
+            : (h.pending_entries_affected > 0 ? `<span class="badge-kept">Kept (${h.pending_entries_affected})</span>` : '—')}</td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(h.reason||'').replace(/"/g,'&quot;')}">${h.reason||'—'}</td>
+        </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+  } else {
+    histHtml = `<div style="margin-top:16px;font-size:12px;color:#9ca3af">No previous upline changes for this member.</div>`;
+  }
+
+  document.getElementById('impactDetailBody').innerHTML = `
+    <div class="row g-3">
+      <div class="col-md-5">
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px"><i class="fas fa-sitemap me-1"></i>Current Upline Chain</div>
+        ${chainHtml}
+      </div>
+      <div class="col-md-7">
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:10px"><i class="fas fa-coins me-1"></i>Commission Impact</div>
+        <div class="impact-box ${pending > 0 ? 'warn' : 'safe'}">
+          <div class="ib-title">${pending > 0 ? `⚠ ${pending} PENDING income entr${pending===1?'y':'ies'} affected` : '✓ No PENDING income entries affected'}</div>
+          <ul>
+            <li>${pending > 0 ? `${pending} PENDING L2/L3 entr${pending===1?'y':'ies'} currently credit the immediate upline` : 'No pending entries need attention'}</li>
+            <li>CONFIRMED entries are <strong>never</strong> modified under any circumstance</li>
+            <li>Future deals will credit the new upline chain from the change date onwards</li>
+          </ul>
+        </div>
+        ${histHtml}
+      </div>
+    </div>`;
+}
+
+function renderImpactPreview(data) {
+  const pending = data.pending_entries_affected || 0;
+  const chain   = data.upline_chain || [];
+  const curUpline = chain.length ? chain[0] : null;
+
+  let html = `<div class="impact-box ${pending > 0 ? 'warn' : 'safe'}">
+    <div class="ib-title">${pending > 0 ? `⚠ ${pending} PENDING income entr${pending===1?'y':'ies'} will be affected` : '✓ No PENDING income entries affected'}</div>
+    <ul>
+      <li>Current upline: <strong>${curUpline ? curUpline.partner_name + ' (' + curUpline.partner_code + ')' : 'None'}</strong></li>
+      ${pending > 0 ? `<li>${pending} PENDING L2/L3 entr${pending===1?'y':'ies'} are credited to the current upline — by default these stay with the old upline</li>` : ''}
+      <li>CONFIRMED entries are never modified</li>
+    </ul>
+  </div>`;
+
+  document.getElementById('impactPreviewArea').innerHTML = html;
+  document.getElementById('impactPreviewArea').style.display = 'block';
+
+  if (pending > 0) {
+    document.getElementById('reassignArea').style.display = 'block';
+  } else {
+    document.getElementById('reassignArea').style.display = 'none';
+    document.getElementById('reassignChk').checked = false;
+  }
+}
+
+// ─── Validate & show confirm ───────────────────────────────────────────────
+function validateChangeForm() {
+  const confirmArea = document.getElementById('confirmArea');
+  if (!selectedMember) { confirmArea.style.display = 'none'; return; }
+  const reason = document.getElementById('changeReason').value.trim();
+  const removeChk = document.getElementById('removeUplineChk').checked;
+  const hasNewUpline = selectedNewUpline !== null || removeChk;
+  if (!reason || reason.length < 5 || !hasNewUpline) { confirmArea.style.display = 'none'; return; }
+
+  const oldUplineName = impactData && impactData.upline_chain.length
+    ? `${impactData.upline_chain[0].partner_name} (${impactData.upline_chain[0].partner_code})`
+    : 'None';
+  const newUplineName = removeChk ? 'None (removed)'
+    : selectedNewUpline ? `${selectedNewUpline.partner_name} (${selectedNewUpline.partner_code})`
+    : '—';
+  const reassign = document.getElementById('reassignChk').checked;
+  const pending  = impactData ? (impactData.pending_entries_affected || 0) : 0;
+
+  document.getElementById('confirmSummaryText').innerHTML =
+    `Change upline for <strong>${selectedMember.partner_name} (${selectedMember.partner_code})</strong>:<br>
+     <span style="color:#6b7280">Old upline:</span> <strong>${oldUplineName}</strong> →
+     <span style="color:#6b7280">New upline:</span> <strong>${newUplineName}</strong><br>
+     ${pending > 0
+       ? `<span style="color:#92400e">${pending} PENDING income entries will <strong>${reassign ? 'be reassigned to new upline' : 'remain with old upline'}</strong>.</span><br>`
+       : ''}
+     Reason: <em>${reason}</em>`;
+
+  confirmArea.style.display = 'block';
+}
+
+// ─── Apply upline change ───────────────────────────────────────────────────
+async function applyUplineChange() {
+  if (!selectedMember) return;
+  const reason     = document.getElementById('changeReason').value.trim();
+  const removeChk  = document.getElementById('removeUplineChk').checked;
+  const reassign   = document.getElementById('reassignChk').checked;
+  const newUplineId = removeChk ? 0 : (selectedNewUpline ? selectedNewUpline.id : null);
+  if (newUplineId === null) { showToast('Please select a new upline or tick "Remove"', 'error'); return; }
+
+  const btn = document.getElementById('btnConfirmChange');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processing…';
+
+  try {
+    const r = await staffFetch(`${API}/vgk/members/${selectedMember.id}/change-upline`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ new_upline_id: newUplineId === 0 ? null : newUplineId, reason, reassign_pending: reassign })
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast('Upline changed successfully!');
+      resetChangeForm();
+      loadAuditLog();
+    } else {
+      showToast(d.detail || 'Change failed', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check me-1"></i>Confirm Change';
+    }
+  } catch(e) {
+    showToast('Error applying change', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-check me-1"></i>Confirm Change';
+  }
+}
+
+function resetChangeForm() {
+  selectedMember    = null;
+  selectedNewUpline = null;
+  impactData        = null;
+  document.getElementById('memberSearchInput').value = '';
+  document.getElementById('uplineSearchInput').value = '';
+  document.getElementById('uplineSearchInput').disabled = true;
+  document.getElementById('changeReason').value = '';
+  document.getElementById('memberCard').style.display = 'none';
+  document.getElementById('newUplineCard').style.display = 'none';
+  document.getElementById('impactPreviewArea').style.display = 'none';
+  document.getElementById('reassignArea').style.display = 'none';
+  document.getElementById('confirmArea').style.display = 'none';
+  document.getElementById('removeUplineChk').checked = false;
+  document.getElementById('reassignChk').checked = false;
+  document.getElementById('impactDetailBody').innerHTML =
+    '<div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px"><i class="fas fa-sitemap fa-2x" style="display:block;margin-bottom:10px;opacity:.3"></i>Select a member in Section 1 to load impact details.</div>';
+}
+
+// ─── Audit log (Section 2) ────────────────────────────────────────────────
+function scheduleAuditLoad() {
+  clearTimeout(auditDebounce);
+  auditDebounce = setTimeout(() => { auditPage = 1; loadAuditLog(); }, 380);
+}
+
+async function loadAuditLog() {
+  const tbody = document.getElementById('auditTable');
+  tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-1"></i>Loading…</td></tr>';
+
+  const params = new URLSearchParams();
+  params.set('page', auditPage);
+  params.set('per_page', document.getElementById('fPerPage').value || 30);
+
+  try {
+    const r = await staffFetch(`${API}/vgk/upline-change-logs?${params}`);
+    const d = await r.json();
+    if (!d.success) { tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#dc2626">Failed to load audit log</td></tr>'; return; }
+
+    // Client-side filter (name/text filters — server has pagination, text filter here)
+    let rows = d.data;
+    const fMember    = (document.getElementById('fMember').value || '').toLowerCase().trim();
+    const fOld       = (document.getElementById('fOldUpline').value || '').toLowerCase().trim();
+    const fNew       = (document.getElementById('fNewUpline').value || '').toLowerCase().trim();
+    const fBy        = (document.getElementById('fChangedBy').value || '').toLowerCase().trim();
+    const fFrom      = document.getElementById('fDateFrom').value;
+    const fTo        = document.getElementById('fDateTo').value;
+    const fReassign  = document.getElementById('fReassigned').value;
+    const fType      = document.getElementById('fChangeType').value;
+
+    if (fMember) rows = rows.filter(r =>
+      (r.member_name||'').toLowerCase().includes(fMember) || (r.member_code||'').toLowerCase().includes(fMember));
+    if (fOld) rows = rows.filter(r =>
+      (r.old_upline_name||'').toLowerCase().includes(fOld) || (r.old_upline_code||'').toLowerCase().includes(fOld));
+    if (fNew) rows = rows.filter(r =>
+      (r.new_upline_name||'').toLowerCase().includes(fNew) || (r.new_upline_code||'').toLowerCase().includes(fNew));
+    if (fBy)  rows = rows.filter(r => (r.changed_by_name||'').toLowerCase().includes(fBy));
+    if (fFrom) rows = rows.filter(r => r.created_at && r.created_at >= fFrom);
+    if (fTo)   rows = rows.filter(r => r.created_at && r.created_at.slice(0,10) <= fTo);
+    if (fReassign === 'yes') rows = rows.filter(r => r.entries_reassigned);
+    if (fReassign === 'no')  rows = rows.filter(r => !r.entries_reassigned);
+    if (fType === 'set')     rows = rows.filter(r => r.new_upline_id !== null && r.new_upline_id !== undefined);
+    if (fType === 'removed') rows = rows.filter(r => r.new_upline_id === null || r.new_upline_id === undefined);
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af">No audit records match the current filters.</td></tr>';
+      document.getElementById('auditPager').style.display = 'none';
+      return;
+    }
+
+    tbody.innerHTML = rows.map((row, idx) => {
+      const changeType = row.new_upline_id
+        ? `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e40af;font-weight:700">Changed</span>`
+        : `<span class="badge-removed">Removed</span>`;
+      const entriesBadge = row.entries_reassigned
+        ? `<span class="badge-reassigned">Reassigned (${row.pending_entries_affected})</span>`
+        : (row.pending_entries_affected > 0
+            ? `<span class="badge-kept">Kept (${row.pending_entries_affected})</span>`
+            : '<span style="color:#9ca3af;font-size:11px">—</span>');
+      return `<tr>
+        <td style="color:#6b7280;font-size:11px">#${row.id}</td>
+        <td>
+          <div style="font-weight:600;font-size:13px">${row.member_name||'—'}</div>
+          <div style="font-size:10px;color:#7c3aed;font-weight:700">${row.member_code||''}</div>
+        </td>
+        <td>
+          ${row.old_upline_name
+            ? `<div style="font-size:12.5px;font-weight:600">${row.old_upline_name}</div><div style="font-size:10px;color:#6b7280">${row.old_upline_code||''}</div>`
+            : '<span style="color:#9ca3af;font-size:11px">None</span>'}
+        </td>
+        <td>
+          ${row.new_upline_name
+            ? `<div style="font-size:12.5px;font-weight:600">${row.new_upline_name}</div><div style="font-size:10px;color:#6b7280">${row.new_upline_code||''}</div>`
+            : '<span style="color:#9ca3af;font-size:11px">Removed</span>'}
+        </td>
+        <td>${changeType}</td>
+        <td style="text-align:center">${row.pending_entries_affected||0}</td>
+        <td>${entriesBadge}</td>
+        <td style="max-width:180px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(row.reason||'').replace(/"/g,'&quot;')}">${row.reason||'—'}</td>
+        <td style="font-size:12px">${row.changed_by_name||'—'}</td>
+        <td style="font-size:11.5px;white-space:nowrap;color:#6b7280">${fmtDt(row.created_at)}</td>
+      </tr>`;
+    }).join('');
+
+    renderAuditPager(d.total, d.pages);
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:20px;color:#dc2626">Error loading audit log</td></tr>';
+  }
+}
+
+function renderAuditPager(total, pages) {
+  const pager = document.getElementById('auditPager');
+  if (pages <= 1) { pager.style.display = 'none'; return; }
+  pager.style.display = 'flex';
+  let html = `<span class="pager-info">Page ${auditPage} of ${pages} · ${total} records</span>`;
+  html += `<button onclick="auditGo(1)" ${auditPage===1?'disabled':''}>«</button>`;
+  html += `<button onclick="auditGo(${auditPage-1})" ${auditPage===1?'disabled':''}>‹</button>`;
+  for (let p = Math.max(1, auditPage-2); p <= Math.min(pages, auditPage+2); p++) {
+    html += `<button onclick="auditGo(${p})" class="${p===auditPage?'active-page':''}">${p}</button>`;
+  }
+  html += `<button onclick="auditGo(${auditPage+1})" ${auditPage===pages?'disabled':''}>›</button>`;
+  html += `<button onclick="auditGo(${pages})" ${auditPage===pages?'disabled':''}>»</button>`;
+  pager.innerHTML = html;
+}
+
+function auditGo(p) { auditPage = p; loadAuditLog(); }
+
+function clearAuditFilters() {
+  ['fMember','fOldUpline','fNewUpline','fChangedBy','fDateFrom','fDateTo'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('fReassigned').value = '';
+  document.getElementById('fChangeType').value = '';
+  document.getElementById('fPerPage').value = '30';
+  auditPage = 1;
+  loadAuditLog();
+}
+
+// ─── Dropdown helpers ──────────────────────────────────────────────────────
+function openDropdown(id) { document.getElementById(id).classList.add('open'); }
+function closeDrop(id)    { document.getElementById(id).classList.remove('open'); }
+function closeDropdownDelay(id) { setTimeout(() => closeDrop(id), 180); }
+
+// ─── Date format ───────────────────────────────────────────────────────────
+function fmtDt(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) + ' ' +
+         d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true });
+}
+
+// ─── Init ──────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await StaffSidebar.init();
+  StaffHeader.inject('VGK Commission Config', 'fas fa-sliders-h');
+  loadConfig();
+});
+</script>
+</body>
+</html>

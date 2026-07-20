@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Test Users - VGK Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .page-header {
+            background: linear-gradient(135deg, #d97706, #f59e0b);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-card">
+            <div class="page-header">
+                <h1><i class="fas fa-vial me-3"></i>Create Test Users</h1>
+                <p class="mb-0">Generate test data for system testing - VGK Only</p>
+            </div>
+
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Warning:</strong> Test users are for development/testing only. Use unique test email domains.
+            </div>
+
+            <form id="createTestForm" onsubmit="createTestUsers(event)">
+                <div class="mb-3">
+                    <label class="form-label">Number of Test Users *</label>
+                    <input type="number" class="form-control" name="count" min="1" max="100" value="10" required>
+                    <small class="text-muted">Max 100 users at a time</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Test User Prefix</label>
+                    <input type="text" class="form-control" name="prefix" value="TEST">
+                    <small class="text-muted">Will be used in names and emails (e.g., TEST001@example.com)</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Referrer ID (optional)</label>
+                    <input type="text" class="form-control" name="referrer_id" placeholder="Leave empty for random">
+                    <small class="text-muted">All test users will use this referrer, or random if empty</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Package Status</label>
+                    <select class="form-select" name="package_status">
+                        <option value="Inactive">Inactive</option>
+                        <option value="Active">Active</option>
+                    </select>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="create_tree" id="createTree" checked>
+                    <label class="form-check-label" for="createTree">
+                        Create hierarchical tree structure (referral chain)
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-danger btn-lg w-100">
+                    <i class="fas fa-plus-circle me-2"></i>Generate Test Users
+                </button>
+            </form>
+
+            <div id="result" class="mt-4" style="display:none;"></div>
+
+            <div class="text-center mt-4">
+                <a href="/vgk/dashboard" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const userId = '{{ user_id }}';
+
+        async function createTestUsers(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+
+            if (!confirm(`Create ${formData.get('count')} test users?`)) return;
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'alert alert-info';
+            resultDiv.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating test users...';
+
+            try {
+                const response = await fetch(`/vgk/create-user-testing/generate?user_id=${userId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        count: parseInt(formData.get('count')),
+                        prefix: formData.get('prefix'),
+                        referrer_id: formData.get('referrer_id') || null,
+                        package_status: formData.get('package_status'),
+                        create_tree: formData.get('create_tree') === 'on'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.className = 'alert alert-success';
+                    resultDiv.innerHTML = `
+                        <h5><i class="fas fa-check-circle me-2"></i>${data.message}</h5>
+                        <p class="mb-0">Created ${data.users_created} test users</p>
+                        <div class="mt-2">
+                            <strong>First User ID:</strong> ${data.first_user_id || 'N/A'}<br>
+                            <strong>Last User ID:</strong> ${data.last_user_id || 'N/A'}<br>
+                            <strong>Default Password:</strong> <code>Test@123</code>
+                        </div>
+                    `;
+                    event.target.reset();
+                } else {
+                    resultDiv.className = 'alert alert-danger';
+                    resultDiv.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i>${data.message}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.innerHTML = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

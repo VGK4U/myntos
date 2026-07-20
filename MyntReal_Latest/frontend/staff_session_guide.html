@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Staff Features Guide — Session March 2026</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{
+  --blue:#1e3a5f;--teal:#0e9f8b;--gold:#f5a623;
+  --sales:#818cf8;--proc:#f59e0b;--svc:#38bdf8;
+  --zypo-bg:#dcfce7;--zypo-c:#14532d;--zypr-bg:#fef3c7;--zypr-c:#92400e;
+  --border:#e2e8f0;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1e293b;font-size:14px;margin:0;}
+/* header */
+.hdr{background:linear-gradient(135deg,#1e3a5f 0%,#0e9f8b 100%);color:#fff;padding:22px 32px 18px;border-bottom:3px solid var(--gold);}
+.hdr h1{font-size:21px;font-weight:700;margin:0;}
+.hdr p{font-size:11px;opacity:.8;margin:4px 0 0;}
+/* tab bar */
+.nav-tabs{background:#fff;border-bottom:2px solid var(--border);padding:0 16px;box-shadow:0 1px 4px rgba(0,0,0,.05);flex-wrap:nowrap;overflow-x:auto;}
+.nav-tabs .nav-link{font-size:12px;font-weight:700;padding:11px 14px;color:#64748b;border:none;border-bottom:3px solid transparent;border-radius:0;white-space:nowrap;}
+.nav-tabs .nav-link.active{color:var(--blue);border-bottom-color:var(--blue);}
+.tab-content{padding:22px 20px;max-width:1060px;margin:0 auto;}
+/* section title */
+.sec{font-size:15px;font-weight:800;color:var(--blue);border-bottom:2px solid var(--border);padding-bottom:7px;margin:22px 0 13px;}
+.sec.first{margin-top:0;}
+/* stream badge */
+.stream-hdr{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.stream-tag{font-size:12px;font-weight:800;padding:4px 14px;border-radius:20px;letter-spacing:.5px;}
+/* cards */
+.card-plain{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;}
+.lcard{border-left:4px solid var(--teal);background:#fff;border-radius:0 8px 8px 0;padding:12px 16px;margin:8px 0;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.lcard.a{border-left-color:#3b82f6;}
+.lcard.b{border-left-color:#8b5cf6;}
+.lcard.c{border-left-color:#0e9f8b;}
+.lcard.warn{border-left-color:#f59e0b;}
+.lcard.done{border-left-color:#22c55e;}
+/* info/warn/success boxes */
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:11px 15px;margin:10px 0;font-size:12px;}
+.warn-box{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:11px 15px;margin:10px 0;font-size:12px;}
+.suc-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:11px 15px;margin:10px 0;font-size:12px;}
+.danger-box{background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;padding:11px 15px;margin:10px 0;font-size:12px;}
+/* code */
+code,pre{font-family:'Cascadia Code',monospace;font-size:11px;}
+.ep{display:inline-block;background:#1e293b;color:#7dd3fc;padding:2px 9px;border-radius:4px;font-family:monospace;font-size:11px;}
+.ep.get{background:#0369a1;color:#e0f2fe;}
+.ep.post{background:#166534;color:#dcfce7;}
+.ep.put{background:#92400e;color:#fef3c7;}
+.pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;}
+.pill-a{background:#dbeafe;color:#1e40af;}
+.pill-b{background:#f3e8ff;color:#6b21a8;}
+.pill-c{background:#d1fae5;color:#065f46;}
+/* two col */
+.tcol{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:680px){.tcol{grid-template-columns:1fr;}}
+/* scenario tile mockup */
+.mock-card{background:#1e293b;color:#f1f5f9;border-radius:12px;padding:14px;font-size:12px;position:relative;}
+.mock-label{font-size:8px;letter-spacing:1px;text-transform:uppercase;opacity:.55;}
+.mock-val{font-size:20px;font-weight:800;margin-bottom:1px;}
+.mock-sub{font-size:9px;opacity:.6;}
+.mock-note{font-size:9px;color:#fbbf24;font-weight:600;}
+.mock-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700;}
+/* dept kpi tile */
+.kpi-tile{background:#fff;border-radius:10px;padding:10px 14px;text-align:center;border:1px solid var(--border);}
+.kpi-val{font-size:20px;font-weight:800;}
+.kpi-lbl{font-size:10px;color:#64748b;margin-top:2px;}
+/* zypo/zypr */
+.zy-po{display:inline-block;padding:2px 10px;border-radius:4px;font-size:11px;font-weight:800;background:var(--zypo-bg);color:var(--zypo-c);border:1px solid #86efac;}
+.zy-pr{display:inline-block;padding:2px 10px;border-radius:4px;font-size:11px;font-weight:800;background:var(--zypr-bg);color:var(--zypr-c);border:1px solid #fde68a;}
+/* timeline */
+.tl{padding-left:22px;position:relative;}
+.tl::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--border);}
+.tl-item{position:relative;margin-bottom:14px;}
+.tl-dot{position:absolute;left:-19px;top:3px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px currentColor;}
+.tl-body{background:#fff;border-radius:8px;padding:10px 14px;box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid var(--border);}
+.tl-time{font-size:10px;color:#94a3b8;margin-top:3px;}
+/* step number */
+.sn{display:inline-flex;width:20px;height:20px;border-radius:50%;background:var(--blue);color:#fff;font-size:9px;font-weight:800;align-items:center;justify-content:center;flex-shrink:0;margin-right:7px;}
+/* field table */
+.ftbl td,.ftbl th{font-size:12px;padding:6px 10px;}
+.ftbl thead{background:var(--blue);color:#fff;}
+/* role badge */
+.rb{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;}
+.rb-mgr{background:#dcfce7;color:#166534;}
+.rb-tech{background:#fef3c7;color:#92400e;}
+.rb-admin{background:#f3e8ff;color:#6b21a8;}
+.rb-staff{background:#dbeafe;color:#1d4ed8;}
+.rb-mobile{background:#fce7f3;color:#9d174d;}
+/* step card for staff guide */
+.sc{background:#fff;border-radius:10px;padding:13px 16px;border:1px solid var(--border);margin-bottom:10px;}
+.sc h6{font-size:13px;font-weight:700;margin-bottom:6px;}
+/* stock dot */
+.dot-green{display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:4px;}
+.dot-amber{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:4px;}
+.dot-red{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:4px;}
+/* formula box */
+.formula{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-family:monospace;font-size:12px;margin:10px 0;}
+/* footer */
+footer{background:#f1f5f9;border-top:1px solid var(--border);text-align:center;padding:10px;font-size:11px;color:#94a3b8;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1><i class="fas fa-rocket me-2"></i>Staff Platform Features — March 2026 Session Guide</h1>
+  <p>Three delivery streams: A — Day End Report Timesheet Fix &nbsp;·&nbsp; B — Department KPIs &nbsp;·&nbsp; C — Marketplace → Service Ticket Integration</p>
+</div>
+
+<ul class="nav nav-tabs" id="mainTabs" role="tablist">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-overview"><i class="fas fa-sitemap me-1"></i>Overview</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-streamA"><i class="fas fa-clock me-1 text-primary"></i>Stream A — Day End Report</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-streamB"><i class="fas fa-chart-bar me-1 text-purple"></i>Stream B — Dept KPIs</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-streamC"><i class="fas fa-plug me-1 text-success"></i>Stream C — Marketplace Integration</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-staff"><i class="fas fa-id-badge me-1"></i>Staff Guide</button></li>
+</ul>
+
+<div class="tab-content">
+
+<!-- ════════════════════════════════════════════════ OVERVIEW ════ -->
+<div class="tab-pane fade show active" id="t-overview">
+  <div class="sec first"><i class="fas fa-boxes me-2"></i>What Was Delivered This Session</div>
+  <div class="tcol" style="gap:16px;margin-bottom:20px;">
+    <div class="lcard a">
+      <div><span class="stream-tag" style="background:#dbeafe;color:#1e40af;">A</span>&nbsp;<strong>Day End Report — Timesheet Fix</strong></div>
+      <p style="font-size:12px;margin-top:8px;margin-bottom:0;">Fixed a real-world bug where staff who logged timesheets yesterday but haven't logged today would see "0h 0m Submitted" on their Day End Report. Now auto-falls back to the previous workday, shows a date note, and correctly labels hours as "Logged" vs "Submitted".</p>
+    </div>
+    <div class="lcard b">
+      <div><span class="stream-tag" style="background:#f3e8ff;color:#6b21a8;">B</span>&nbsp;<strong>Department KPIs in Day End Report</strong></div>
+      <p style="font-size:12px;margin-top:8px;margin-bottom:0;">Each department now shows 3 personalised KPI tiles in the Day End Report and mobile progress card. Sales staff see talk time + leads; Procurement staff see parts received and pending; Service staff see tickets and TAT%. Hidden for all-other departments.</p>
+    </div>
+    <div class="lcard c" style="grid-column:1/-1;">
+      <div><span class="stream-tag" style="background:#d1fae5;color:#065f46;">C</span>&nbsp;<strong>Marketplace → Service Ticket Integration</strong></div>
+      <p style="font-size:12px;margin-top:8px;margin-bottom:0;">Service staff can now pick spare parts directly from the VGK4U catalog while raising a spare request on any ticket. System auto-creates a <span class="zy-po">ZYPO</span> (in-stock) or <span class="zy-pr">ZYPR</span> (out-of-stock) immediately. Source labels appear in procurement dashboards.</p>
+    </div>
+  </div>
+
+  <div class="sec"><i class="fas fa-file-code me-2"></i>Files Changed</div>
+  <div class="table-responsive">
+  <table class="table ftbl table-bordered">
+    <thead><tr><th>File</th><th>Stream</th><th>What Changed</th></tr></thead>
+    <tbody>
+      <tr><td><code>frontend/staff_progress.html</code></td><td><span class="pill pill-a">A</span> <span class="pill pill-b">B</span></td><td>Auto-fallback logic, tsDateNote, derTSDate label, dept KPI tiles in Day End Report modal, share text</td></tr>
+      <tr><td><code>mobile/src/pages/ProgressPage.ts</code></td><td><span class="pill pill-a">A</span> <span class="pill pill-b">B</span></td><td>"Logged / Approved" label, deptKpiDetail() 3-chip row per dept type</td></tr>
+      <tr><td><code>backend/app/api/v1/endpoints/staff_progress.py</code></td><td><span class="pill pill-b">B</span></td><td>is_procurement detection, get_procurement_kpi_summary(), dept_kpi in summary response</td></tr>
+      <tr><td><code>backend/app/api/v1/endpoints/staff_day_plans.py</code></td><td><span class="pill pill-b">B</span></td><td>dept_type + dept_kpi added to build_progress() self/team response</td></tr>
+      <tr><td><code>backend/app/models/ticket.py</code></td><td><span class="pill pill-c">C</span></td><td>4 new linking columns on ServiceTicketSpareRequest</td></tr>
+      <tr><td><code>backend/app/models/marketplace.py</code></td><td><span class="pill pill-c">C</span></td><td>source_type, source_ticket_id on ZYPO and ZYPR models</td></tr>
+      <tr><td><code>backend/app/main.py</code></td><td><span class="pill pill-c">C</span></td><td>Idempotent ALTER TABLE for all 8 new columns</td></tr>
+      <tr><td><code>backend/app/api/v1/endpoints/marketplace_po.py</code></td><td><span class="pill pill-c">C</span></td><td>New GET /catalog-search endpoint</td></tr>
+      <tr><td><code>backend/app/api/v1/endpoints/tickets.py</code></td><td><span class="pill pill-c">C</span></td><td>request-spares extended with catalog path + ZYPO/ZYPR auto-creation</td></tr>
+      <tr><td><code>frontend/staff_service_queue.html</code></td><td><span class="pill pill-c">C</span></td><td>Two-mode spare input (Catalog/Manual), search modal, basket, ZYPO/ZYPR badges</td></tr>
+      <tr><td><code>frontend/staff_service_procurement.html</code></td><td><span class="pill pill-c">C</span></td><td>Source column, ZYPO/ZYPR link badges</td></tr>
+      <tr><td><code>frontend/staff_zynova_po.html</code></td><td><span class="pill pill-c">C</span></td><td>Source column + filter dropdown in PO and Procurement tabs</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════ STREAM A ════ -->
+<div class="tab-pane fade" id="t-streamA">
+
+  <div class="stream-hdr">
+    <span class="stream-tag" style="background:#dbeafe;color:#1e40af;font-size:16px;padding:6px 20px;">A</span>
+    <div>
+      <div style="font-weight:800;font-size:16px;">Day End Report — Timesheet Fallback + Label Fix</div>
+      <div style="font-size:12px;color:#64748b;">Affects: <code>staff_progress.html</code> (web) &amp; <code>ProgressPage.ts</code> (mobile)</div>
+    </div>
+  </div>
+
+  <div class="sec first"><i class="fas fa-bug me-2"></i>The Problem</div>
+  <div class="danger-box">
+    <strong>Scenario:</strong> A sales executive submits timesheet entries on March 1st (4h 30m logged). On March 2nd morning (before logging anything), they click "Generate Day End Report". The report shows <strong>"Submitted: 0h 0m"</strong> because today (March 2) has no entries.<br><br>
+    <strong>Same bug on mobile:</strong> ProgressPage showed the label "Submitted" even for <code>ts_total_time_updated</code>, which counts ALL entries regardless of submission status — the label was factually wrong.
+  </div>
+
+  <div class="sec"><i class="fas fa-stream me-2"></i>Scenario A1 — Report generated same day as timesheet</div>
+  <div class="lcard done">
+    <strong>March 1, 6:30 PM:</strong> Priya (Sales) finishes her day and generates Day End Report.<br>
+    Today's timesheet: 6h 15m logged and submitted.<br>
+    → Report shows: <strong>Logged: 6h 15m &nbsp;|&nbsp; Submitted: 6h 15m</strong><br>
+    → No fallback needed. Label = <strong>"Submitted"</strong> (correct, same day, submitted data).
+  </div>
+
+  <div class="sec"><i class="fas fa-arrow-left me-2"></i>Scenario A2 — Report generated next morning (fallback kicks in)</div>
+  <div class="tl">
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#3b82f6;background:#3b82f6;"></div>
+      <div class="tl-body">
+        <span class="sn">1</span><strong>User opens Day End Report on March 2 at 9:00 AM</strong><br>
+        <small style="color:#64748b;">currentTab = 'today' &nbsp;|&nbsp; No timesheet entries for March 2 yet.</small>
+      </div>
+      <div class="tl-time">March 2 · 9:00 AM</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#d97706;background:#d97706;"></div>
+      <div class="tl-body">
+        <span class="sn">2</span><strong>System fetches today's progress summary</strong><br>
+        <span class="ep get">GET /api/v1/staff/progress/summary?target_date=2026-03-02</span><br>
+        <small style="color:#64748b;display:block;margin-top:4px;">Returns <code>submitted_hours = "0h 0m"</code></small>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#7c3aed;background:#7c3aed;"></div>
+      <div class="tl-body">
+        <span class="sn">3</span><strong>Auto-fallback triggers</strong>
+        <div class="formula" style="margin-top:8px;">
+if (tsSubmitted === '0h 0m' &amp;&amp; currentTab === 'today') {<br>
+&nbsp;&nbsp;// Calculate previous workday (skips Sunday)<br>
+&nbsp;&nbsp;const prevDate = new Date(today);<br>
+&nbsp;&nbsp;prevDate.setDate(prevDate.getDate() - 1);<br>
+&nbsp;&nbsp;if (prevDate.getDay() === 0) prevDate.setDate(prevDate.getDate() - 1); // skip Sunday<br>
+&nbsp;&nbsp;fetch('/api/v1/staff/progress/summary?target_date=2026-03-01');<br>
+}
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#059669;background:#059669;"></div>
+      <div class="tl-body">
+        <span class="sn">4</span><strong>Previous day has data → use it</strong><br>
+        <span class="ep get">GET /api/v1/staff/progress/summary?target_date=2026-03-01</span><br>
+        <small style="color:#64748b;display:block;margin-top:4px;">Returns <code>submitted_hours = "4h 30m"</code> → fallback applied</small>
+        <div class="suc-box" style="margin-top:8px;">
+          <strong>tsDateNote</strong> = <code style="color:#14532d;">"for 01 Mar"</code><br>
+          <strong>derTSDateNote</strong> element becomes visible in amber: <em>(for 01 Mar)</em><br>
+          <strong>derTSSubLabel</strong> changes from <em>"Submitted"</em> → <strong>"Logged"</strong>
+        </div>
+      </div>
+      <div class="tl-time">March 2 · 9:00 AM (computed)</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#22c55e;background:#22c55e;"></div>
+      <div class="tl-body">
+        <span class="sn">5</span><strong>Report renders with fallback data</strong>
+        <!-- Mock report UI -->
+        <div class="mock-card" style="margin-top:10px;max-width:320px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;opacity:.55;">Timesheet</div>
+            <div class="mock-note">(for 01 Mar)</div>
+          </div>
+          <div style="display:flex;gap:16px;">
+            <div><div class="mock-label">Total Logged</div><div class="mock-val">4h 45m</div></div>
+            <div><div class="mock-label" id="mockLabel" style="color:#7dd3fc;">Logged</div><div class="mock-val" style="color:#7dd3fc;">4h 30m</div></div>
+            <div><div class="mock-label" style="color:#4ade80;">Approved</div><div class="mock-val" style="color:#4ade80;">4h 30m</div></div>
+          </div>
+        </div>
+        <div class="info-box" style="margin-top:8px;">Note in amber corner: <strong>"(for 01 Mar)"</strong> — user immediately knows this is yesterday's data.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="sec"><i class="fas fa-mobile-alt me-2"></i>Scenario A3 — Mobile ProgressPage Label Fix</div>
+  <div class="lcard a">
+    <strong>Problem:</strong> <code>ts_total_time_updated</code> counts ALL time entries regardless of status (draft, submitted, approved). The mobile page was showing the label "Submitted" — technically wrong.<br><br>
+    <strong>Fix:</strong> Label changed to <strong>"Logged"</strong> throughout. Mobile renders:<br>
+    <code style="font-size:12px;">&lt;small class="dp-detail-label"&gt;Logged / Approved&lt;/small&gt;</code><br><br>
+    <strong>Result:</strong> Mobile progress card shows → <em><span style="color:#3b82f6;">4h 30m</span> / <span style="color:#22c55e;">4h 30m</span> &nbsp; Logged / Approved</em>
+  </div>
+
+  <div class="sec"><i class="fas fa-share me-2"></i>Share Text Update</div>
+  <div class="info-box">When share text is generated for WhatsApp/copy, it now includes the timesheet date note when fallback was used:<br>
+  <code style="font-size:11px;">📋 Timesheet: 4h 30m Logged (for 01 Mar)</code> instead of just <code>4h 30m Submitted</code>.
+  </div>
+
+  <div class="sec"><i class="fas fa-table me-2"></i>Logic Summary</div>
+  <div class="table-responsive">
+  <table class="table ftbl table-bordered">
+    <thead><tr><th>Condition</th><th>Data Source</th><th>Label</th><th>Date Note</th></tr></thead>
+    <tbody>
+      <tr><td>Today tab, today has data</td><td>Today's summary</td><td><strong>Submitted</strong></td><td>Hidden</td></tr>
+      <tr><td>Today tab, today = 0h, yesterday has data</td><td>Yesterday's summary</td><td><strong>Logged</strong></td><td><span style="color:#f59e0b;font-weight:600;">(for DD Mon)</span></td></tr>
+      <tr><td>Today tab, both 0h</td><td>Today's (empty)</td><td><strong>Submitted</strong></td><td>Hidden</td></tr>
+      <tr><td>Non-today tab (any historical)</td><td>That day's summary</td><td><strong>Logged</strong></td><td>Hidden</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════ STREAM B ════ -->
+<div class="tab-pane fade" id="t-streamB">
+
+  <div class="stream-hdr">
+    <span class="stream-tag" style="background:#f3e8ff;color:#6b21a8;font-size:16px;padding:6px 20px;">B</span>
+    <div>
+      <div style="font-weight:800;font-size:16px;">Department KPIs in Day End Report + Mobile</div>
+      <div style="font-size:12px;color:#64748b;">Affects: <code>staff_progress.py</code> · <code>staff_day_plans.py</code> · <code>staff_progress.html</code> · <code>ProgressPage.ts</code></div>
+    </div>
+  </div>
+
+  <div class="sec first"><i class="fas fa-sitemap me-2"></i>How Dept Type is Detected</div>
+  <div class="formula">
+dept_name_lower = employee.department.name.lower()
+is_sales_dept       = 'sales' in dept_name_lower
+is_service_dept     = 'service' in dept_name_lower or 'technical' in dept_name_lower
+is_procurement_dept = 'procurement' in dept_name_lower or 'purchase' in dept_name_lower
+
+dept_type = 'sales'       if is_sales_dept
+          = 'service'     if is_service_dept
+          = 'procurement' if is_procurement_dept
+          = 'other'       (everything else — no KPI tiles shown)
+  </div>
+
+  <div class="sec"><i class="fas fa-chart-bar me-2"></i>Three Department Scenarios</div>
+
+  <!-- SALES -->
+  <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;padding:16px;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <i class="fas fa-phone-alt" style="color:var(--sales);font-size:16px;"></i>
+      <strong style="color:#3730a3;font-size:14px;">Sales Department — dept_type = "sales"</strong>
+    </div>
+    <div class="tl">
+      <div class="tl-item">
+        <div class="tl-dot" style="color:var(--sales);background:var(--sales);"></div>
+        <div class="tl-body">
+          <strong>Scenario:</strong> Priya (Sales Executive) generates Day End Report at 6 PM on March 1.<br>
+          She made 12 calls today (total 2h 18m talk time), handled 5 new leads, 2 leads are overdue.
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="color:var(--sales);background:var(--sales);"></div>
+        <div class="tl-body">
+          <strong>Backend gathers:</strong>
+          <div class="formula" style="margin-top:6px;">
+GET /api/v1/staff/progress/summary?target_date=2026-03-01
+Response:
+{
+  "dept_type": "sales",
+  "dept_kpi": {
+    "talk_time_formatted": "2h 18m",
+    "talk_time_today_secs": 8280,
+    "leads_handled_today": 5,
+    "overdue_leads": 2
+  }
+}
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="color:#22c55e;background:#22c55e;"></div>
+        <div class="tl-body">
+          <strong>Report shows 3 tiles (indigo theme):</strong>
+          <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+            <div class="kpi-tile" style="border-color:#c7d2fe;min-width:100px;">
+              <div class="kpi-val" style="color:#4f46e5;">2h 18m</div>
+              <div class="kpi-lbl">Talk Time</div>
+            </div>
+            <div class="kpi-tile" style="border-color:#c7d2fe;min-width:100px;">
+              <div class="kpi-val" style="color:#0ea5e9;">5</div>
+              <div class="kpi-lbl">Leads Handled</div>
+            </div>
+            <div class="kpi-tile" style="border-color:#c7d2fe;min-width:100px;">
+              <div class="kpi-val" style="color:#ef4444;">2</div>
+              <div class="kpi-lbl">Overdue</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="info-box" style="margin-top:4px;"><strong>API sources:</strong> Talk time from call logs (sum of call_duration where call_date = target_date). Leads handled from CRM leads (status updated today). Overdue from next_followup_date &lt; today.</div>
+  </div>
+
+  <!-- PROCUREMENT -->
+  <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:16px;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <i class="fas fa-boxes" style="color:var(--proc);font-size:16px;"></i>
+      <strong style="color:#92400e;font-size:14px;">Procurement Department — dept_type = "procurement"</strong>
+    </div>
+    <div class="tl">
+      <div class="tl-item">
+        <div class="tl-dot" style="color:var(--proc);background:var(--proc);"></div>
+        <div class="tl-body">
+          <strong>Scenario:</strong> Venkat (Procurement Officer) checks his progress. Today 3 PO items were received (₹28,500 value). 7 PRs still pending. 2 PRs are older than 3 days (above TAT).
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="color:var(--proc);background:var(--proc);"></div>
+        <div class="tl-body">
+          <strong>Backend function:</strong> <code>get_procurement_kpi_summary(db, employee_id, target_date)</code>
+          <div class="formula" style="margin-top:6px;">
+received_today_count = COUNT(marketplace_procurement_requests)
+  WHERE status='received' AND DATE(updated_at) = target_date
+
+received_today_value = SUM(unit_price × received_qty)
+  WHERE same filter
+
+pending_count = COUNT WHERE status IN ('pending','confirmed','ordered')
+
+above_tat_count = COUNT WHERE status IN ('pending','confirmed','ordered')
+  AND created_at &lt; target_date - 3 days
+          </div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="color:#22c55e;background:#22c55e;"></div>
+        <div class="tl-body">
+          <strong>Report shows 3 tiles (amber theme):</strong>
+          <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+            <div class="kpi-tile" style="border-color:#fde68a;min-width:120px;">
+              <div class="kpi-val" style="color:#d97706;">3<div style="font-size:11px;color:#92400e;">₹28,500</div></div>
+              <div class="kpi-lbl">Rcvd Today</div>
+            </div>
+            <div class="kpi-tile" style="border-color:#fde68a;min-width:100px;">
+              <div class="kpi-val" style="color:#f59e0b;">7</div>
+              <div class="kpi-lbl">Pending</div>
+            </div>
+            <div class="kpi-tile" style="border-color:#fde68a;min-width:100px;">
+              <div class="kpi-val" style="color:#ef4444;">2</div>
+              <div class="kpi-lbl">Above TAT</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVICE -->
+  <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:16px;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <i class="fas fa-tools" style="color:var(--svc);font-size:16px;"></i>
+      <strong style="color:#0c4a6e;font-size:14px;">Service Department — dept_type = "service"</strong>
+    </div>
+    <div class="tl">
+      <div class="tl-item">
+        <div class="tl-dot" style="color:var(--svc);background:var(--svc);"></div>
+        <div class="tl-body">
+          <strong>Scenario:</strong> Suresh (Service Manager) finishes the day. He handled 6 tickets today. 5 of 6 are within SLA (83%). 1 is above TAT.
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="color:#22c55e;background:#22c55e;"></div>
+        <div class="tl-body">
+          <strong>Report shows 3 tiles (sky theme):</strong>
+          <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+            <div class="kpi-tile" style="border-color:#bae6fd;min-width:100px;">
+              <div class="kpi-val" style="color:#0284c7;">6</div>
+              <div class="kpi-lbl">Tickets</div>
+            </div>
+            <div class="kpi-tile" style="border-color:#bae6fd;min-width:100px;">
+              <div class="kpi-val" style="color:#22c55e;">83%</div>
+              <div class="kpi-lbl">Within TAT</div>
+            </div>
+            <div class="kpi-tile" style="border-color:#bae6fd;min-width:100px;">
+              <div class="kpi-val" style="color:#ef4444;">1</div>
+              <div class="kpi-lbl">Above TAT</div>
+            </div>
+          </div>
+          <div class="info-box" style="margin-top:8px;">within_tat_pct colour: ≥80% → green, ≥50% → amber, &lt;50% → red.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec"><i class="fas fa-mobile-alt me-2"></i>Mobile — deptKpiDetail() Function</div>
+  <div class="lcard b">
+    The mobile ProgressPage renders KPI chips via <code>deptKpiDetail(entry)</code>. Same 3 tiles, same logic, compact horizontal layout inside the progress card.<br><br>
+    <strong>Shown only for:</strong> dept_type = 'sales' | 'service' | 'procurement'<br>
+    <strong>Hidden when:</strong> dept_type = 'other' OR dept_kpi field missing from API<br><br>
+    Source: <code>self.dept_kpi</code> from day-progress endpoint (<code>GET /api/v1/staff/day-plans/day-progress</code>)
+  </div>
+
+  <div class="sec"><i class="fas fa-ban me-2"></i>Scenario — Other Department (No Tiles)</div>
+  <div class="lcard warn">
+    HR, Finance, Admin, IT staff get <code>dept_type = "other"</code>. The <code>derDeptSection</code> div remains hidden (<code>display:none</code>). No tiles, no cluttering the Day End Report with irrelevant metrics.
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════ STREAM C ════ -->
+<div class="tab-pane fade" id="t-streamC">
+
+  <div class="stream-hdr">
+    <span class="stream-tag" style="background:#d1fae5;color:#065f46;font-size:16px;padding:6px 20px;">C</span>
+    <div>
+      <div style="font-weight:800;font-size:16px;">Marketplace → Service Ticket Integration</div>
+      <div style="font-size:12px;color:#64748b;">Catalog search · Auto ZYPO/ZYPR · Source labels in dashboards</div>
+    </div>
+  </div>
+
+  <div class="sec first"><i class="fas fa-plug me-2"></i>What's New</div>
+  <p style="font-size:12px;">Before this change, staff requesting spare parts on a service ticket had to type part names manually and then separately raise a PO or PR. Now the entire process is unified into a single flow with real-time catalog lookup and automatic document creation.</p>
+
+  <div class="sec"><i class="fas fa-film me-2"></i>Scenario C-Full — EV Battery Spare Request via Catalog</div>
+
+  <div class="tl">
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#3b82f6;background:#3b82f6;"></div>
+      <div class="tl-body">
+        <span class="sn">1</span><strong>Service Manager opens a spares ticket</strong><br>
+        Ticket #SVT-2026-0047 — battery pack replacement. Clicks <strong>"Request Spares"</strong>.<br>
+        Two mode buttons appear: <span style="background:#1e3a5f;color:#fff;padding:2px 10px;border-radius:4px;font-size:11px;font-weight:700;cursor:default;">Pick from Catalog</span> &nbsp; <span style="background:#f1f5f9;color:#374151;padding:2px 10px;border-radius:4px;font-size:11px;font-weight:700;border:1px solid #e2e8f0;cursor:default;">Enter Manually</span>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#0369a1;background:#0369a1;"></div>
+      <div class="tl-body">
+        <span class="sn">2</span><strong>Search the catalog (400ms debounce)</strong><br>
+        Types: "72V battery" → system calls:<br>
+        <span class="ep get">GET /api/v1/marketplace/catalog-search?q=72V+battery&amp;company_id=1&amp;discount_mode=dealer</span><br>
+        <div style="margin-top:8px;background:#f8fafc;border-radius:6px;padding:10px;font-size:12px;">
+          <strong>Results returned (LIMIT 30, name-match-first ordering):</strong><br>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+            <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:200px;">
+              <div style="font-size:10px;color:#94a3b8;">ZY-BAT-72V30AH</div>
+              <div style="font-weight:700;font-size:12px;">VGK4U 72V 30Ah Lithium Pack</div>
+              <div style="font-size:11px;"><span class="dot-green"></span>Qty: 2 in stock</div>
+              <div style="font-size:12px;color:#166534;font-weight:700;">₹21,830 (incl. 18% GST)</div>
+            </div>
+            <div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:200px;">
+              <div style="font-size:10px;color:#94a3b8;">ZY-BAT-48V20AH</div>
+              <div style="font-weight:700;font-size:12px;">VGK4U 48V 20Ah Pack</div>
+              <div style="font-size:11px;"><span class="dot-red"></span>Out of stock → ZYPR</div>
+              <div style="font-size:12px;color:#dc2626;font-weight:700;">₹12,450</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#7c3aed;background:#7c3aed;"></div>
+      <div class="tl-body">
+        <span class="sn">3</span><strong>Pricing formula (applied server-side)</strong>
+        <div class="formula" style="margin-top:8px;">
+dealer_price   = ₹18,500  (catalog field)
+discount_mode  = 'dealer' → disc_pct = 12%
+net_before_tax = dealer_price × (1 - 0.12)  = ₹16,280
+gst_pct        = 18%
+gst_amount     = net_before_tax × 0.18      = ₹2,930.40
+final_price    = net_before_tax + gst_amount = ₹19,210.40
+        </div>
+        <div class="info-box"><strong>No floor guard.</strong> Pricing is formula-only. Margin floor (20%) applies to category config, not ticket spares.</div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#059669;background:#059669;"></div>
+      <div class="tl-body">
+        <span class="sn">4</span><strong>Click item → added to basket</strong><br>
+        Fields auto-populated (read-only): name, SKU, HSN code, unit price, GST%, total. Hidden: <code>marketplace_spare_id</code>.<br>
+        Add a second item (manual): "BMS Wiring Harness" — free-text, <code>is_custom = true</code>.<br>
+        Basket shows 2 rows.
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#0e9f8b;background:#0e9f8b;"></div>
+      <div class="tl-body">
+        <span class="sn">5</span><strong>Click "Submit Spare Request" → WVV transaction fires</strong><br>
+        <span class="ep post">POST /api/v1/tickets/service/{ticket_id}/request-spares</span>
+        <div class="formula" style="margin-top:8px;">
+Payload:
+[
+  { "marketplace_spare_id": 47, "discount_mode": "dealer",
+    "part_name": "VGK4U 72V 30Ah Pack", "sku": "ZY-BAT-72V30AH",
+    "quantity_required": 1 },
+  { "marketplace_spare_id": null, "part_name": "BMS Wiring Harness",
+    "sku": null, "quantity_required": 1, "estimated_cost": 1200 }
+]
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#22c55e;background:#22c55e;"></div>
+      <div class="tl-body">
+        <span class="sn">6</span><strong>System auto-creates documents (single DB transaction)</strong>
+        <div class="tcol" style="margin-top:10px;gap:10px;">
+          <div class="suc-box">
+            <strong><span class="zy-po">ZYPO</span> auto-created for item 1</strong><br>
+            SKU: ZY-BAT-72V30AH — available_qty (2) ≥ qty_required (1)<br>
+            <code>MarketplacePurchaseOrder</code> created:<br>
+            &nbsp;· PO# <code>ZYPO-2026-00047</code><br>
+            &nbsp;· source_type = 'service_ticket'<br>
+            &nbsp;· source_ticket_id = ticket.id<br>
+            &nbsp;· spare.marketplace_po_id = ZYPO.id<br>
+            <strong>Stock NOT decremented</strong> — only on physical dispatch.
+          </div>
+          <div class="warn-box">
+            <strong><span class="zy-pr">ZYPR</span> auto-created for item 2</strong><br>
+            Wiring Harness — is_custom=True, no catalog match<br>
+            <code>MarketplaceProcurementRequest</code> created:<br>
+            &nbsp;· PR# <code>ZYPR-2026-00031</code><br>
+            &nbsp;· source_type = 'service_ticket'<br>
+            &nbsp;· triggered_by = 'service_ticket'<br>
+            &nbsp;· source_ticket_id = ticket.id<br>
+            Dedup: if open ZYPR exists for same SKU+company → reuse it.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#0ea5e9;background:#0ea5e9;"></div>
+      <div class="tl-body">
+        <span class="sn">7</span><strong>Badges appear on spare rows in the ticket</strong>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12px;">
+          <span>VGK4U 72V 30Ah Pack</span> <span class="zy-po">ZYPO-2026-00047</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px;font-size:12px;">
+          <span>BMS Wiring Harness</span> <span class="zy-pr">ZYPR-2026-00031</span>
+        </div>
+        <div class="info-box" style="margin-top:8px;">Clicking the badge opens the ZYPO or ZYPR detail page.</div>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#64748b;background:#64748b;"></div>
+      <div class="tl-body">
+        <span class="sn">8</span><strong>Source appears in procurement dashboards</strong><br>
+        In <code>/staff/zynova-po</code> and <code>/staff/service-procurement</code>:<br>
+        <div style="margin-top:8px;background:#f8fafc;border-radius:6px;padding:10px;font-size:12px;">
+          <table style="width:100%;border-collapse:collapse;">
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:4px 8px;font-weight:700;">ZYPO-2026-00047</td>
+              <td>ZY-BAT-72V30AH</td>
+              <td><span style="background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;">Service Ticket</span> #SVT-2026-0047</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 8px;font-weight:700;">ZYPO-2026-00032</td>
+              <td>ZY-CTRL-72V</td>
+              <td><span style="background:#f1f5f9;color:#475569;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;">Manual</span></td>
+            </tr>
+          </table>
+        </div>
+        Filter dropdown: All Sources | Manual | Service Ticket | Technical Ticket | Auto-Sync | PO
+      </div>
+    </div>
+
+  </div>
+
+  <div class="sec"><i class="fas fa-code-branch me-2"></i>Catalog vs Manual Mode — Summary</div>
+  <div class="table-responsive">
+  <table class="table ftbl table-bordered">
+    <thead><tr><th>Property</th><th>Catalog Mode</th><th>Manual Mode</th></tr></thead>
+    <tbody>
+      <tr><td>marketplace_spare_id</td><td>Set (catalog item ID)</td><td>null</td></tr>
+      <tr><td>is_custom</td><td>False</td><td>True</td></tr>
+      <tr><td>Pricing</td><td>Auto-calculated (formula)</td><td>Free-text estimated_cost</td></tr>
+      <tr><td>ZYPO/ZYPR created?</td><td>Yes — auto based on stock</td><td>ZYPR only (no catalog reference)</td></tr>
+      <tr><td>HSN code</td><td>From catalog</td><td>Must enter manually</td></tr>
+      <tr><td>Stock dot shown</td><td>Yes (green/amber/red)</td><td>No</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="sec"><i class="fas fa-database me-2"></i>New DB Columns (8 total — idempotent)</div>
+  <div class="tcol">
+    <div class="card-plain" style="font-size:12px;">
+      <strong>service_ticket_spare_request</strong>
+      <ul style="margin-top:6px;margin-bottom:0;">
+        <li><code>marketplace_spare_id</code> — FK to marketplace_spares</li>
+        <li><code>marketplace_po_id</code> — FK to marketplace_purchase_orders</li>
+        <li><code>marketplace_procurement_id</code> — FK to marketplace_procurement_requests</li>
+        <li><code>discount_mode</code> — mnr / dealer / student / partner</li>
+      </ul>
+    </div>
+    <div class="card-plain" style="font-size:12px;">
+      <strong>marketplace_procurement_requests</strong>
+      <ul style="margin-top:6px;margin-bottom:0;"><li><code>source_type</code> DEFAULT 'manual'</li><li><code>source_ticket_id</code> FK → service_ticket</li></ul>
+      <strong style="display:block;margin-top:10px;">marketplace_purchase_orders</strong>
+      <ul style="margin-top:6px;margin-bottom:0;"><li><code>source_type</code> DEFAULT 'public'</li><li><code>source_ticket_id</code> FK → service_ticket</li></ul>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════ STAFF GUIDE ════ -->
+<div class="tab-pane fade" id="t-staff">
+
+  <div class="sec first"><i class="fas fa-id-badge me-2"></i>Role-by-Role Operating Instructions</div>
+
+  <!-- SALES STAFF -->
+  <div style="background:#fff;border:1px solid #c7d2fe;border-radius:10px;overflow:hidden;margin-bottom:18px;">
+    <div style="background:#3730a3;color:#fff;padding:11px 16px;"><i class="fas fa-phone-alt me-2"></i><strong>Sales Staff</strong> — Day End Report &amp; KPI Tiles</div>
+    <div style="padding:16px;">
+      <div class="sc">
+        <h6><i class="fas fa-moon me-2 text-primary"></i>How to Generate Your Day End Report</h6>
+        <ol style="font-size:12px;margin-bottom:0;">
+          <li>Go to <strong>My Progress</strong> (today tab).</li>
+          <li>Click <span style="background:#1e3a5f;color:#fff;padding:1px 8px;border-radius:4px;font-size:11px;">Generate Day End Report</span>.</li>
+          <li>The report opens as a modal card with dark theme.</li>
+          <li>If today's timesheet = 0h, the system auto-fetches yesterday's data and shows <strong>"(for DD Mon)"</strong> in amber. This is normal — it means your previous day's hours are shown.</li>
+          <li>Look for the <strong>KPI tiles section</strong>: you'll see Talk Time, Leads Handled, and Overdue count.</li>
+          <li>Use the <span style="background:#22c55e;color:#fff;padding:1px 8px;border-radius:4px;font-size:11px;">Share</span> button to send to WhatsApp or copy.</li>
+        </ol>
+      </div>
+      <div class="sc">
+        <h6><i class="fas fa-exclamation-circle me-2 text-warning"></i>What the Labels Mean</h6>
+        <div class="table-responsive">
+        <table class="table ftbl table-bordered" style="margin:0;">
+          <thead><tr><th>Label</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Logged</strong></td><td>All time entries counted — whether draft, submitted, or approved. Shows when viewing historical dates or fallback data.</td></tr>
+            <tr><td><strong>Submitted</strong></td><td>Time entries formally submitted to manager. Shows only when viewing today's own data with actual submissions.</td></tr>
+            <tr><td><strong>(for DD Mon)</strong></td><td>Amber note — report is using previous workday data because today has no entries yet.</td></tr>
+            <tr><td><strong>Overdue</strong> (red tile)</td><td>CRM leads whose next_followup_date has passed. Take action before closing the day.</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+      <div class="sc">
+        <h6><i class="fas fa-mobile-alt me-2 text-purple-600"></i>Mobile ProgressPage</h6>
+        <p style="font-size:12px;margin:0;">Open the mobile app → Today tab. Your progress card shows Logged / Approved hours (not just "Submitted"). The KPI row below shows Talk Time, Leads, Overdue inline. If dept_type = 'other', this row is hidden — nothing to worry about.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVICE MANAGER -->
+  <div style="background:#fff;border:1px solid #bbf7d0;border-radius:10px;overflow:hidden;margin-bottom:18px;">
+    <div style="background:#166534;color:#fff;padding:11px 16px;"><i class="fas fa-tools me-2"></i><strong>Service Manager</strong> — Spare Requests via Catalog</div>
+    <div style="padding:16px;">
+      <div class="sc">
+        <h6><i class="fas fa-cogs me-2 text-success"></i>How to Request Spares Using the Catalog</h6>
+        <ol style="font-size:12px;margin-bottom:0;">
+          <li>Open the service ticket in the Service Queue.</li>
+          <li>Click <span style="background:#7c3aed;color:#fff;padding:1px 8px;border-radius:4px;font-size:11px;">Request Spares</span>.</li>
+          <li>Two buttons appear: <strong>Pick from Catalog</strong> (default, recommended) and <strong>Enter Manually</strong>.</li>
+          <li>In Catalog mode: type part name or SKU in the search box. Wait ~400ms for results.</li>
+          <li>Choose discount mode from the dropdown: MNR (3%), Dealer (12%), Student (10%), Partner (12%).</li>
+          <li>Read the stock dot: <span class="dot-green"></span>In stock (→ ZYPO), <span class="dot-red"></span>Out of stock (→ ZYPR).</li>
+          <li>Click a result to add to basket. Add multiple items if needed.</li>
+          <li>If a part isn't in the catalog: switch to <strong>Enter Manually</strong> — type name, qty, estimated cost.</li>
+          <li>Click <strong>Submit</strong>. System creates ZYPO/ZYPR automatically. Badges appear on spare rows.</li>
+        </ol>
+      </div>
+      <div class="sc">
+        <h6><i class="fas fa-tag me-2 text-success"></i>ZYPO vs ZYPR — What Happens</h6>
+        <div class="tcol" style="gap:10px;">
+          <div class="suc-box" style="font-size:12px;">
+            <strong><span class="zy-po">ZYPO</span></strong> — Part is in stock<br>
+            A Purchase Order is auto-raised against your company. No manual creation needed. Stock is NOT reduced yet — only when physically dispatched. ZYPO appears in the VGK4U PO list with Source = "Service Ticket #..."
+          </div>
+          <div class="warn-box" style="font-size:12px;">
+            <strong><span class="zy-pr">ZYPR</span></strong> — Part out of stock<br>
+            A Procurement Request is raised for the procurement team to source. If an existing open ZYPR exists for the same SKU, it's reused (no duplicates). ZYPR appears in Procurement dashboard with Source = "Service Ticket #..."
+          </div>
+        </div>
+      </div>
+      <div class="sc">
+        <h6><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Rules to Remember</h6>
+        <ul style="font-size:12px;margin:0;">
+          <li>Do NOT create a separate ZYPO/ZYPR manually if you're using the catalog picker — it's already done.</li>
+          <li>Discount mode affects the price shown in the ZYPO/ZYPR document. Choose carefully.</li>
+          <li>If the part isn't in the VGK4U catalog (e.g., a third-party vendor part), use Manual mode.</li>
+          <li>Changing the spare after ZYPO/ZYPR creation requires cancelling the PO/PR first — contact Admin.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROCUREMENT STAFF -->
+  <div style="background:#fff;border:1px solid #fde68a;border-radius:10px;overflow:hidden;margin-bottom:18px;">
+    <div style="background:#92400e;color:#fff;padding:11px 16px;"><i class="fas fa-boxes me-2"></i><strong>Procurement Staff</strong> — Viewing KPIs &amp; Source-Linked Documents</div>
+    <div style="padding:16px;">
+      <div class="sc">
+        <h6><i class="fas fa-chart-bar me-2 text-warning"></i>Your Day End Report KPI Tiles</h6>
+        <p style="font-size:12px;margin-bottom:8px;">Your report shows 3 amber tiles: Received Today (count + ₹ value), Pending count, and Above TAT count. These come from the marketplace_procurement_requests table filtered to your assignments for that day.</p>
+        <div class="warn-box" style="font-size:12px;"><strong>Above TAT:</strong> Any PR older than 3 days still in pending/confirmed/ordered status. These need immediate vendor follow-up.</div>
+      </div>
+      <div class="sc">
+        <h6><i class="fas fa-search me-2 text-warning"></i>Finding Ticket-Sourced PRs in Dashboards</h6>
+        <ol style="font-size:12px;margin-bottom:0;">
+          <li>Open <strong>VGK4U Procurement</strong> or <strong>Service Procurement</strong> page.</li>
+          <li>Use the <strong>Source</strong> filter dropdown → select "Service Ticket" to see only ticket-sourced PRs.</li>
+          <li>The Source column shows the linked ticket number as a clickable link.</li>
+          <li>Click the ticket link to view full context: customer, vehicle, issue, why this part was needed.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div style="background:#fff;border:1px solid #ddd6fe;border-radius:10px;overflow:hidden;margin-bottom:18px;">
+    <div style="background:#6b21a8;color:#fff;padding:11px 16px;"><i class="fas fa-crown me-2"></i><strong>Admin / RVZ</strong> — Full View &amp; Troubleshooting</div>
+    <div style="padding:16px;">
+      <div class="tcol">
+        <div class="sc">
+          <h6><i class="fas fa-cog me-2"></i>Day End Report Issues to Watch</h6>
+          <ul style="font-size:12px;margin:0;">
+            <li>If a staff member reports "my hours show yesterday's date" — that's the auto-fallback working correctly. Normal behaviour.</li>
+            <li>If KPI tiles don't appear → check their department name in HR master. Must contain "sales", "procurement", "service" or "purchase" to detect dept_type.</li>
+            <li>Talk time not showing → verify call logs are synced for that date.</li>
+          </ul>
+        </div>
+        <div class="sc">
+          <h6><i class="fas fa-link me-2"></i>Marketplace Source Tracking</h6>
+          <ul style="font-size:12px;margin:0;">
+            <li>All ticket-sourced ZYPOs have <code>source_type = 'service_ticket'</code> and <code>source_ticket_id</code> set.</li>
+            <li>Manually-created ZYPOs have <code>source_type = 'public'</code> (default).</li>
+            <li>Source column is searchable/filterable on all procurement dashboards.</li>
+            <li>Cancelling a ZYPO linked to a ticket → manually update the spare request's <code>marketplace_po_id</code> to null via Admin panel.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUICK REF TABLE -->
+  <div class="sec"><i class="fas fa-bolt me-2"></i>Quick Reference — Feature Locations</div>
+  <div class="table-responsive">
+  <table class="table ftbl table-bordered">
+    <thead><tr><th>Feature</th><th>Where to Find It</th><th>Who Uses It</th></tr></thead>
+    <tbody>
+      <tr><td>Day End Report with timesheet fallback</td><td>My Progress → "Generate Day End Report"</td><td>All staff</td></tr>
+      <tr><td>Dept KPI tiles (Sales/Procurement/Service)</td><td>Day End Report modal (bottom section) + Mobile ProgressPage</td><td>Dept staff only</td></tr>
+      <tr><td>Catalog spare picker</td><td>Service Queue → Open Ticket → Request Spares → Pick from Catalog</td><td>Service Manager</td></tr>
+      <tr><td>ZYPO auto-creation</td><td>Automatic on spare request if stock available</td><td>System</td></tr>
+      <tr><td>ZYPR auto-creation</td><td>Automatic on spare request if stock unavailable</td><td>System</td></tr>
+      <tr><td>Source filter in procurement</td><td>VGK4U PO page / Service Procurement → Source dropdown</td><td>Procurement / Admin</td></tr>
+      <tr><td>Ticket link on ZYPR/ZYPO</td><td>Source column — click to open ticket</td><td>All relevant staff</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+</div><!-- /tab-content -->
+<footer>VGK4U / MNR Platform · March 2026 Feature Release · Internal Reference · All data shown is illustrative</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

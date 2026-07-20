@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banner & Communication Management - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #1e3a8a;
+            --secondary-color: #3b82f6;
+            --accent-color: #10b981;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+        
+        .admin-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .page-header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-header p {
+            color: #6b7280;
+            margin: 0;
+        }
+        
+        .banner-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .nav-pills .nav-link {
+            color: #6b7280;
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            margin-right: 0.5rem;
+            transition: all 0.3s;
+        }
+        
+        .nav-pills .nav-link.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            padding: 0.6rem 1.5rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-active { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-draft { background: #e5e7eb; color: #374151; }
+        .status-stopped { background: #fef3c7; color: #92400e; }
+        .status-inactive { background: #e5e7eb; color: #374151; }
+        
+        .table {
+            margin-top: 1.5rem;
+        }
+        
+        .table th {
+            background: #f3f4f6;
+            color: var(--primary-color);
+            font-weight: 600;
+            padding: 1rem;
+        }
+        
+        .table td {
+            padding: 1rem;
+            vertical-align: middle;
+        }
+        
+        .action-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            margin-right: 0.25rem;
+        }
+        
+        .modal-content {
+            border-radius: 15px;
+            border: none;
+        }
+        
+        .modal-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 15px 15px 0 0;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25);
+        }
+        
+        .top-earner-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        .banner-preview {
+            border: 2px dashed #d1d5db;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-top: 1rem;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .banner-preview img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="page-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1><i class="bi bi-megaphone"></i> Banner & Communication Management</h1>
+                    <p>Manage TOP Performers banners, custom banners, image banners, popups, and communication templates</p>
+                </div>
+                <div>
+                    <a href="/admin/birthdays" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-cake2"></i> Birthdays
+                    </a>
+                    <a href="/admin/dashboard" class="btn btn-outline-primary">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="banner-card">
+            <ul class="nav nav-pills mb-4" id="bannerTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="top-performers-tab" data-bs-toggle="pill" data-bs-target="#top-performers" type="button">
+                        <i class="bi bi-trophy"></i> TOP Performers
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="custom-banner-tab" data-bs-toggle="pill" data-bs-target="#custom-banner" type="button">
+                        <i class="bi bi-card-text"></i> Custom Banners
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="image-banner-tab" data-bs-toggle="pill" data-bs-target="#image-banner" type="button">
+                        <i class="bi bi-image"></i> Image Banners
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="popup-tab" data-bs-toggle="pill" data-bs-target="#popup" type="button">
+                        <i class="bi bi-window"></i> Popup Messages
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="birthday-tab" data-bs-toggle="pill" data-bs-target="#birthday" type="button">
+                        <i class="bi bi-cake2"></i> Birthday Banner
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="bannerTabsContent">
+                <!-- TOP Performers Tab -->
+                <div class="tab-pane fade show active" id="top-performers" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>TOP 5 Performers Banner</h3>
+                        <button class="btn btn-primary" onclick="refreshTopPerformers()">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                    
+                    <div id="topPerformersTable">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>User ID</th>
+                                    <th>Name</th>
+                                    <th>Total Earnings</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topPerformersBody">
+                                <tr>
+                                    <td colspan="6" class="text-center">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <h4>Skipped Users</h4>
+                        <div id="skippedUsersTable">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>User ID</th>
+                                        <th>Skipped By</th>
+                                        <th>Skipped Date</th>
+                                        <th>Reason</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="skippedUsersBody">
+                                    <tr>
+                                        <td colspan="5" class="text-center">No skipped users</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Banners Tab -->
+                <div class="tab-pane fade" id="custom-banner" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Custom Text Banners</h3>
+                        <button class="btn btn-primary" onclick="showCreateCustomBanner()">
+                            <i class="bi bi-plus-circle"></i> Create Banner
+                        </button>
+                    </div>
+                    
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Created By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customBannersBody">
+                            <tr>
+                                <td colspan="6" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Image Banners Tab -->
+                <div class="tab-pane fade" id="image-banner" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Image Banners</h3>
+                        <button class="btn btn-primary" onclick="showCreateImageBanner()">
+                            <i class="bi bi-plus-circle"></i> Create Banner
+                        </button>
+                    </div>
+                    
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Created By</th>
+                                <th>Approved By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="imageBannersBody">
+                            <tr>
+                                <td colspan="6" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Popup Messages Tab -->
+                <div class="tab-pane fade" id="popup" role="tabpanel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3>Popup Messages</h3>
+                        <button class="btn btn-primary" onclick="showCreatePopup()">
+                            <i class="bi bi-plus-circle"></i> Create Popup
+                        </button>
+                    </div>
+                    
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Target Page</th>
+                                <th>Status</th>
+                                <th>Created By</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="popupsBody">
+                            <tr>
+                                <td colspan="6" class="text-center">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Birthday Banner Tab -->
+                <div class="tab-pane fade" id="birthday" role="tabpanel">
+                    <div class="mb-4">
+                        <h3><i class="bi bi-cake2"></i> Birthday Banner Management</h3>
+                        <p class="text-muted">Manage birthday messages and skipped users</p>
+                    </div>
+                    
+                    <!-- Today's Birthdays Preview -->
+                    <div class="card mb-4" style="background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);">
+                        <div class="card-body text-white">
+                            <h5 class="mb-3"><i class="bi bi-calendar-event"></i> Today's Birthdays</h5>
+                            <div id="todayBirthdaysPreview">
+                                <div class="text-center">Loading...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Birthday Messages Section -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="bi bi-chat-quote"></i> Daily Birthday Messages</h5>
+                                <button class="btn btn-sm btn-primary" onclick="showAddMessageModal()">
+                                    <i class="bi bi-plus-circle"></i> Add Message
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">Messages rotate daily. Current message is highlighted.</p>
+                            <div id="birthdayMessagesTable">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Message Text</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="birthdayMessagesBody">
+                                        <tr>
+                                            <td colspan="4" class="text-center">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Skipped Birthday Users Section -->
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="bi bi-person-x"></i> Skipped Birthday Users</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">These users will not appear in the birthday banner</p>
+                            <div id="birthdaySkippedTable">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>User ID</th>
+                                            <th>Name</th>
+                                            <th>Skipped By</th>
+                                            <th>Skip Date</th>
+                                            <th>Reason</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="birthdaySkippedBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center">No skipped users</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Banner Modal -->
+    <div class="modal fade" id="customBannerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Custom Banner</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="customBannerForm">
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Content</label>
+                            <textarea class="form-control" name="content" rows="3" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Banner Type</label>
+                                <select class="form-select" name="banner_type">
+                                    <option value="announcement">Announcement</option>
+                                    <option value="promotion">Promotion</option>
+                                    <option value="alert">Alert</option>
+                                    <option value="info">Info</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Priority</label>
+                                <select class="form-select" name="priority">
+                                    <option value="1">High</option>
+                                    <option value="2" selected>Medium</option>
+                                    <option value="3">Low</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Background Color</label>
+                                <input type="color" class="form-control" name="background_color" value="#007bff">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Text Color</label>
+                                <input type="color" class="form-control" name="text_color" value="#ffffff">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitCustomBanner()">Create Banner</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup Message Modal -->
+    <div class="modal fade" id="popupModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Popup Message</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="popupForm">
+                        <div class="mb-3">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Content</label>
+                            <textarea class="form-control" name="content" rows="4" required></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Target Page</label>
+                                <select class="form-select" name="target_page" required>
+                                    <option value="After Login">After Login</option>
+                                    <option value="Dashboard">Dashboard</option>
+                                    <option value="PIN Activation">PIN Activation</option>
+                                    <option value="PIN Purchase">PIN Purchase</option>
+                                    <option value="Coupon Page">Coupon Page</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Popup Size</label>
+                                <select class="form-select" name="popup_size">
+                                    <option value="Small">Small</option>
+                                    <option value="Medium" selected>Medium</option>
+                                    <option value="Large">Large</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status">
+                                <option value="Draft">Draft</option>
+                                <option value="Pending" selected>Pending (Send for Approval)</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitPopup()">Create Popup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Banner Modal -->
+    <div class="modal fade" id="imageBannerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Image Banner</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="imageBannerForm">
+                        <div class="mb-3">
+                            <label class="form-label">Title *</label>
+                            <input type="text" class="form-control" name="title" required minlength="3" maxlength="200">
+                        </div>
+                        
+                        <!-- Image Input Method Selection -->
+                        <div class="mb-3">
+                            <label class="form-label">Image Source *</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="imageMethod" id="imageMethodUpload" value="upload" checked autocomplete="off" onchange="toggleImageInput()">
+                                <label class="btn btn-outline-primary" for="imageMethodUpload">
+                                    <i class="bi bi-upload"></i> Upload File
+                                </label>
+                                
+                                <input type="radio" class="btn-check" name="imageMethod" id="imageMethodURL" value="url" autocomplete="off" onchange="toggleImageInput()">
+                                <label class="btn btn-outline-primary" for="imageMethodURL">
+                                    <i class="bi bi-link-45deg"></i> Image URL
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- File Upload Option -->
+                        <div class="mb-3" id="uploadSection">
+                            <label class="form-label">Upload Banner Image</label>
+                            <input type="file" class="form-control" id="bannerImageFile" accept="image/*">
+                            <small class="text-muted">Supported: JPG, PNG, GIF (Max 100 KB)</small>
+                            <div id="imagePreview" class="mt-2"></div>
+                        </div>
+
+                        <!-- URL Input Option -->
+                        <div class="mb-3 d-none" id="urlSection">
+                            <label class="form-label">Image URL</label>
+                            <input type="url" class="form-control" id="bannerImageURL" placeholder="https://example.com/banner.jpg">
+                            <small class="text-muted">Enter a direct link to the banner image</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Text Content (Optional)</label>
+                            <textarea class="form-control" name="text_content" rows="3" placeholder="Optional text content for the banner"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Banner Type *</label>
+                                <select class="form-select" name="banner_type" required>
+                                    <option value="announcement">Announcement</option>
+                                    <option value="promotion">Promotion</option>
+                                    <option value="alert">Alert</option>
+                                    <option value="info">Info</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Display Location</label>
+                                <select class="form-select" name="display_location">
+                                    <option value="dashboard" selected>Dashboard</option>
+                                    <option value="home">Home Page</option>
+                                    <option value="coupon">Coupon Page</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Display Order</label>
+                            <input type="number" class="form-control" name="display_order" value="0" min="0">
+                            <small class="text-muted">Lower numbers appear first (0 = highest priority)</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitImageBanner()">Create Banner</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let authToken = localStorage.getItem('authToken');
+
+        // Load TOP Performers on page load
+        $(document).ready(function() {
+            loadTopPerformers();
+            loadSkippedUsers();
+            loadCustomBanners();
+            loadImageBanners();
+            loadPopups();
+        });
+
+        function loadTopPerformers() {
+            $.ajax({
+                url: `${API_BASE}/banners/top-performers`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    let html = '';
+                    data.top_performers.forEach(performer => {
+                        html += `
+                            <tr>
+                                <td><span class="top-earner-badge"><i class="bi bi-trophy"></i> #${performer.rank}</span></td>
+                                <td>${performer.user_id}</td>
+                                <td>${performer.name}</td>
+                                <td>₹${performer.total_earnings.toLocaleString()}</td>
+                                <td><span class="status-badge status-active">Active</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning action-btn" onclick="skipUser('${performer.user_id}')">
+                                        <i class="bi bi-eye-slash"></i> Skip
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    $('#topPerformersBody').html(html || '<tr><td colspan="6" class="text-center">No data available</td></tr>');
+                },
+                error: function(err) {
+                    console.error('Error loading TOP performers:', err);
+                }
+            });
+        }
+
+        function loadSkippedUsers() {
+            $.ajax({
+                url: `${API_BASE}/banners/top-performers/skipped`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    let html = '';
+                    data.forEach(user => {
+                        html += `
+                            <tr>
+                                <td>${user.user_id}</td>
+                                <td>${user.skipped_by}</td>
+                                <td>${new Date(user.skipped_date).toLocaleDateString()}</td>
+                                <td>${user.reason || 'N/A'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success action-btn" onclick="reactivateUser('${user.user_id}')">
+                                        <i class="bi bi-check-circle"></i> Reactivate
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    $('#skippedUsersBody').html(html || '<tr><td colspan="5" class="text-center">No skipped users</td></tr>');
+                }
+            });
+        }
+
+        function skipUser(userId) {
+            let reason = prompt('Enter reason for skipping this user from banner:');
+            if (!reason) return;
+
+            $.ajax({
+                url: `${API_BASE}/banners/top-performers/skip`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({ user_id: userId, skipped_by: 'ADMIN', reason: reason }),
+                success: function(data) {
+                    alert(data.message);
+                    loadTopPerformers();
+                    loadSkippedUsers();
+                },
+                error: function(err) {
+                    alert('Error skipping user');
+                }
+            });
+        }
+
+        function reactivateUser(userId) {
+            if (!confirm('Reactivate this user for TOP performers banner?')) return;
+
+            $.ajax({
+                url: `${API_BASE}/banners/top-performers/reactivate/${userId}`,
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    alert(data.message);
+                    loadTopPerformers();
+                    loadSkippedUsers();
+                },
+                error: function(err) {
+                    alert('Error reactivating user');
+                }
+            });
+        }
+
+        function refreshTopPerformers() {
+            loadTopPerformers();
+            loadSkippedUsers();
+        }
+
+        function loadCustomBanners() {
+            $.ajax({
+                url: `${API_BASE}/banners/custom`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    let html = '';
+                    data.forEach(banner => {
+                        html += `
+                            <tr>
+                                <td>${banner.title}</td>
+                                <td>${banner.banner_type}</td>
+                                <td>Priority ${banner.priority}</td>
+                                <td><span class="status-badge ${banner.is_active ? 'status-active' : 'status-draft'}">${banner.is_active ? 'Active' : 'Inactive'}</span></td>
+                                <td>${banner.created_by}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info action-btn" onclick="toggleCustomBanner(${banner.id})">
+                                        <i class="bi bi-toggle-on"></i> Toggle
+                                    </button>
+                                    <button class="btn btn-sm btn-danger action-btn" onclick="deleteCustomBanner(${banner.id})">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    $('#customBannersBody').html(html || '<tr><td colspan="6" class="text-center">No banners found</td></tr>');
+                }
+            });
+        }
+
+        function loadImageBanners() {
+            $.ajax({
+                url: `${API_BASE}/banners/image`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    let html = '';
+                    data.forEach(banner => {
+                        const canToggle = banner.status === 'Active' || banner.status === 'Stopped';
+                        const isPaused = banner.status === 'Stopped' || banner.status === 'Inactive';
+                        const toggleIcon = isPaused ? 'bi-play-fill' : 'bi-pause-fill';
+                        const toggleText = isPaused ? 'Resume' : 'Pause';
+                        const toggleClass = isPaused ? 'btn-success' : 'btn-warning';
+                        const toggleDisabled = canToggle ? '' : 'disabled';
+                        const toggleTitle = canToggle ? toggleText : 'Requires approval first';
+                        html += `
+                            <tr>
+                                <td>${banner.title}</td>
+                                <td>${banner.banner_type}</td>
+                                <td><span class="status-badge status-${banner.status.toLowerCase()}">${banner.status}</span></td>
+                                <td>${banner.created_by}</td>
+                                <td>${banner.approved_by || 'N/A'}</td>
+                                <td>
+                                    <button class="btn btn-sm ${toggleClass} action-btn" onclick="toggleImageBanner(${banner.id})" title="${toggleTitle}" ${toggleDisabled}>
+                                        <i class="bi ${toggleIcon}"></i> ${toggleText}
+                                    </button>
+                                    <button class="btn btn-sm btn-info action-btn" onclick="editImageBanner(${banner.id})" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger action-btn" onclick="deleteImageBanner(${banner.id})" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    $('#imageBannersBody').html(html || '<tr><td colspan="6" class="text-center">No banners found</td></tr>');
+                }
+            });
+        }
+        
+        function toggleImageBanner(bannerId) {
+            $.ajax({
+                url: `${API_BASE}/banners/image/${bannerId}/toggle`,
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    alert(data.message);
+                    loadImageBanners();
+                },
+                error: function(err) {
+                    alert('Error toggling banner: ' + (err.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+        
+        function editImageBanner(bannerId) {
+            $.ajax({
+                url: `${API_BASE}/banners/image/${bannerId}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(banner) {
+                    // Populate form with existing data
+                    $('#imageBannerForm')[0].reset();
+                    $('#imageBannerForm [name="title"]').val(banner.title);
+                    $('#imageBannerForm [name="banner_type"]').val(banner.banner_type);
+                    $('#imageBannerForm [name="display_order"]').val(banner.display_order || 0);
+                    $('#imageBannerForm [name="text_content"]').val(banner.text_content || '');
+                    
+                    // Set URL if exists
+                    if (banner.image_content && !banner.image_content.startsWith('data:')) {
+                        $('#imageMethodURL').prop('checked', true);
+                        toggleImageInput();
+                        $('#imageBannerForm [name="image_url"]').val(banner.image_content);
+                    }
+                    
+                    // Mark as edit mode
+                    $('#imageBannerForm').data('edit-id', bannerId);
+                    $('.modal-title', '#imageBannerModal').text('Edit Image Banner');
+                    $('#imageBannerModal').modal('show');
+                },
+                error: function(err) {
+                    alert('Error loading banner: ' + (err.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+
+        function loadPopups() {
+            $.ajax({
+                url: `${API_BASE}/banners/popups`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    let html = '';
+                    data.forEach(popup => {
+                        const canToggle = ['Active', 'Approved', 'Inactive'].includes(popup.status);
+                        const isPaused = !popup.is_active || popup.status === 'Inactive';
+                        const toggleIcon = isPaused ? 'bi-play-fill' : 'bi-pause-fill';
+                        const toggleText = isPaused ? 'Resume' : 'Pause';
+                        const toggleClass = isPaused ? 'btn-success' : 'btn-warning';
+                        const toggleDisabled = canToggle ? '' : 'disabled';
+                        const toggleTitle = canToggle ? toggleText : 'Requires approval first';
+                        html += `
+                            <tr>
+                                <td>${popup.title}</td>
+                                <td>${popup.popup_type}</td>
+                                <td>${popup.target_page}</td>
+                                <td><span class="status-badge status-${popup.status.toLowerCase()}">${popup.status}</span></td>
+                                <td>${popup.created_by}</td>
+                                <td>
+                                    <button class="btn btn-sm ${toggleClass} action-btn" onclick="togglePopup(${popup.id})" title="${toggleTitle}" ${toggleDisabled}>
+                                        <i class="bi ${toggleIcon}"></i> ${toggleText}
+                                    </button>
+                                    <button class="btn btn-sm btn-info action-btn" onclick="editPopup(${popup.id})" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger action-btn" onclick="deletePopup(${popup.id})" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    $('#popupsBody').html(html || '<tr><td colspan="6" class="text-center">No popups found</td></tr>');
+                }
+            });
+        }
+        
+        function togglePopup(popupId) {
+            $.ajax({
+                url: `${API_BASE}/banners/popups/${popupId}/toggle`,
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    alert(data.message);
+                    loadPopups();
+                },
+                error: function(err) {
+                    alert('Error toggling popup: ' + (err.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+        
+        function editPopup(popupId) {
+            $.ajax({
+                url: `${API_BASE}/banners/popups/${popupId}`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(popup) {
+                    // Populate form with existing data
+                    $('#popupForm')[0].reset();
+                    $('#popupForm [name="title"]').val(popup.title);
+                    $('#popupForm [name="content"]').val(popup.content);
+                    $('#popupForm [name="popup_type"]').val(popup.popup_type);
+                    $('#popupForm [name="target_page"]').val(popup.target_page);
+                    $('#popupForm [name="popup_size"]').val(popup.popup_size || 'Medium');
+                    $('#popupForm [name="priority"]').val(popup.priority || 1);
+                    $('#popupForm [name="background_color"]').val(popup.background_color || '#007bff');
+                    $('#popupForm [name="text_color"]').val(popup.text_color || '#ffffff');
+                    $('#popupForm [name="auto_close_seconds"]').val(popup.auto_close_seconds || '');
+                    
+                    // Mark as edit mode
+                    $('#popupForm').data('edit-id', popupId);
+                    $('.modal-title', '#popupModal').text('Edit Popup Message');
+                    $('#popupModal').modal('show');
+                },
+                error: function(err) {
+                    alert('Error loading popup: ' + (err.responseJSON?.detail || 'Unknown error'));
+                }
+            });
+        }
+
+        function showCreateCustomBanner() {
+            $('#customBannerModal').modal('show');
+        }
+
+        function submitCustomBanner() {
+            const formData = $('#customBannerForm').serializeArray();
+            const data = {};
+            formData.forEach(field => {
+                data[field.name] = field.value;
+            });
+            data.created_by = 'ADMIN';
+
+            $.ajax({
+                url: `${API_BASE}/banners/custom`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function() {
+                    alert('Custom banner created successfully!');
+                    $('#customBannerModal').modal('hide');
+                    loadCustomBanners();
+                },
+                error: function(err) {
+                    alert('Error creating banner');
+                }
+            });
+        }
+
+        function toggleCustomBanner(bannerId) {
+            $.ajax({
+                url: `${API_BASE}/banners/custom/${bannerId}/toggle`,
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    alert(data.message);
+                    loadCustomBanners();
+                }
+            });
+        }
+
+        function deleteCustomBanner(bannerId) {
+            if (!confirm('Delete this banner?')) return;
+
+            $.ajax({
+                url: `${API_BASE}/banners/custom/${bannerId}`,
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function() {
+                    alert('Banner deleted');
+                    loadCustomBanners();
+                }
+            });
+        }
+
+        function showCreateImageBanner() {
+            $('#imageBannerForm')[0].reset();
+            $('#imageBannerForm').removeData('edit-id');
+            $('.modal-title', '#imageBannerModal').text('Create Image Banner');
+            $('#imagePreview').html('');
+            $('#imageBannerModal').modal('show');
+            toggleImageInput();
+        }
+
+        function toggleImageInput() {
+            const method = $('input[name="imageMethod"]:checked').val();
+            if (method === 'upload') {
+                $('#uploadSection').removeClass('d-none');
+                $('#urlSection').addClass('d-none');
+            } else {
+                $('#uploadSection').addClass('d-none');
+                $('#urlSection').removeClass('d-none');
+            }
+        }
+
+        // Preview uploaded image
+        $('#imageBannerForm').on('change', '#bannerImageFile', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Check file size (100KB limit)
+                if (file.size > 100 * 1024) {
+                    alert('File size must be less than 100 KB');
+                    $(this).val('');
+                    return;
+                }
+
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    $('#imagePreview').html(`
+                        <img src="${e.target.result}" class="img-fluid" style="max-height: 200px; border-radius: 8px;">
+                    `);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function submitImageBanner() {
+            const form = $('#imageBannerForm');
+            if (!form[0].checkValidity()) {
+                form[0].reportValidity();
+                return;
+            }
+
+            const method = $('input[name="imageMethod"]:checked').val();
+            const formData = form.serializeArray();
+            const data = {};
+            formData.forEach(field => {
+                data[field.name] = field.value;
+            });
+
+            // Add required fields
+            data.created_by = 'ADMIN';
+            data.display_order = parseInt(data.display_order) || 0;
+
+            // Handle image based on method
+            if (method === 'upload') {
+                const fileInput = $('#bannerImageFile')[0];
+                if (!fileInput.files || !fileInput.files[0]) {
+                    alert('Please select an image file');
+                    return;
+                }
+
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    // Store base64 image data
+                    data.image_content = e.target.result;
+                    sendImageBannerRequest(data, form);
+                };
+                
+                reader.readAsDataURL(file);
+            } else {
+                // URL method
+                const imageURL = $('#bannerImageURL').val();
+                if (!imageURL) {
+                    alert('Please enter an image URL');
+                    return;
+                }
+                data.image_content = imageURL;
+                sendImageBannerRequest(data, form);
+            }
+        }
+
+        function sendImageBannerRequest(data, form) {
+            const editId = form.data('edit-id');
+            const isEdit = !!editId;
+            const url = isEdit ? `${API_BASE}/banners/image/${editId}` : `${API_BASE}/banners/image`;
+            const method = isEdit ? 'PUT' : 'POST';
+            
+            $.ajax({
+                url: url,
+                method: method,
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function(response) {
+                    alert(isEdit ? 'Image banner updated successfully!' : 'Image banner created successfully! Awaiting approval.');
+                    $('#imageBannerModal').modal('hide');
+                    form[0].reset();
+                    form.removeData('edit-id');
+                    $('.modal-title', '#imageBannerModal').text('Create Image Banner');
+                    $('#imagePreview').html('');
+                    loadImageBanners();
+                },
+                error: function(err) {
+                    alert('Error creating image banner: ' + (err.responseJSON?.detail || 'Please try again'));
+                }
+            });
+        }
+
+        function deleteImageBanner(bannerId) {
+            if (!confirm('Delete this banner?')) return;
+
+            $.ajax({
+                url: `${API_BASE}/banners/image/${bannerId}`,
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function() {
+                    alert('Banner deleted');
+                    loadImageBanners();
+                }
+            });
+        }
+
+        function showCreatePopup() {
+            $('#popupForm')[0].reset();
+            $('#popupForm').removeData('edit-id');
+            $('.modal-title', '#popupModal').text('Create Popup Message');
+            $('#popupModal').modal('show');
+        }
+
+        function submitPopup() {
+            const form = $('#popupForm');
+            const formData = form.serializeArray();
+            const data = {};
+            formData.forEach(field => {
+                data[field.name] = field.value;
+            });
+            data.created_by = 'ADMIN';
+            data.popup_type = data.popup_type || 'General';
+            data.background_color = data.background_color || '#007bff';
+            data.text_color = data.text_color || '#ffffff';
+            data.priority = parseInt(data.priority) || 1;
+
+            const editId = form.data('edit-id');
+            const isEdit = !!editId;
+            const url = isEdit ? `${API_BASE}/banners/popups/${editId}` : `${API_BASE}/banners/popups`;
+            const method = isEdit ? 'PUT' : 'POST';
+
+            $.ajax({
+                url: url,
+                method: method,
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify(data),
+                success: function() {
+                    alert(isEdit ? 'Popup updated successfully!' : 'Popup created successfully!');
+                    $('#popupModal').modal('hide');
+                    form[0].reset();
+                    form.removeData('edit-id');
+                    $('.modal-title', '#popupModal').text('Create Popup Message');
+                    loadPopups();
+                },
+                error: function(err) {
+                    alert('Error creating popup');
+                }
+            });
+        }
+
+        function deletePopup(popupId) {
+            if (!confirm('Delete this popup?')) return;
+
+            $.ajax({
+                url: `${API_BASE}/banners/popups/${popupId}`,
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function() {
+                    alert('Popup deleted');
+                    loadPopups();
+                }
+            });
+        }
+        
+        // ============================================
+        // BIRTHDAY BANNER FUNCTIONS
+        // ============================================
+        
+        function loadTodayBirthdays() {
+            $.ajax({
+                url: `${API_BASE}/banners/birthday-today`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    if (data.has_birthdays && data.users.length > 0) {
+                        const preview = data.users.map(u => 
+                            `<span class="badge bg-light text-dark me-2 mb-2">${u.name} (${u.location})</span>`
+                        ).join('');
+                        $('#todayBirthdaysPreview').html(preview);
+                    } else {
+                        $('#todayBirthdaysPreview').html('<div class="text-center">No birthdays today</div>');
+                    }
+                }
+            });
+        }
+        
+        function loadBirthdayMessages() {
+            $.ajax({
+                url: `${API_BASE}/banners/birthday-messages`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    if (data.success && data.messages.length > 0) {
+                        const today = new Date().toISOString().split('T')[0];
+                        const rows = data.messages.map((msg, idx) => {
+                            const isCurrent = msg.message_text === data.current_message;
+                            const rowClass = isCurrent ? 'table-warning' : '';
+                            const badge = msg.is_active 
+                                ? '<span class="status-badge status-active">Active</span>'
+                                : '<span class="status-badge status-draft">Inactive</span>';
+                            return `
+                                <tr class="${rowClass}">
+                                    <td>${idx + 1}${isCurrent ? ' ⭐' : ''}</td>
+                                    <td>${msg.message_text}</td>
+                                    <td>${badge}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-danger action-btn" onclick="deleteBirthdayMessage(${msg.id})">
+                                            <i class="bi bi-trash"></i> Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('');
+                        $('#birthdayMessagesBody').html(rows);
+                    } else {
+                        $('#birthdayMessagesBody').html('<tr><td colspan="4" class="text-center">No messages found</td></tr>');
+                    }
+                }
+            });
+        }
+        
+        function loadBirthdaySkipped() {
+            $.ajax({
+                url: `${API_BASE}/banners/birthday-skipped`,
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function(data) {
+                    if (data.success && data.skipped_users.length > 0) {
+                        const rows = data.skipped_users.map(user => `
+                            <tr>
+                                <td>${user.user_id}</td>
+                                <td>${user.name}</td>
+                                <td>${user.skipped_by_name}</td>
+                                <td>${new Date(user.skipped_at).toLocaleDateString()}</td>
+                                <td>${user.reason || '-'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success action-btn" onclick="reactivateBirthdayUser('${user.user_id}')">
+                                        <i class="bi bi-check-circle"></i> Reactivate
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('');
+                        $('#birthdaySkippedBody').html(rows);
+                    } else {
+                        $('#birthdaySkippedBody').html('<tr><td colspan="6" class="text-center">No skipped users</td></tr>');
+                    }
+                }
+            });
+        }
+        
+        function skipBirthdayUser(userId) {
+            const reason = prompt('Enter reason for skipping this user from birthday banner:');
+            if (!reason) return;
+            
+            $.ajax({
+                url: `${API_BASE}/banners/birthday-skip/${userId}`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({ reason: reason }),
+                success: function() {
+                    alert('User skipped from birthday banner');
+                    loadBirthdaySkipped();
+                    loadTodayBirthdays();
+                },
+                error: function(err) {
+                    alert('Error: ' + (err.responseJSON?.detail || 'Failed to skip user'));
+                }
+            });
+        }
+        
+        function reactivateBirthdayUser(userId) {
+            if (!confirm('Reactivate this user for birthday banner?')) return;
+            
+            $.ajax({
+                url: `${API_BASE}/banners/birthday-reactivate/${userId}`,
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function() {
+                    alert('User reactivated for birthday banner');
+                    loadBirthdaySkipped();
+                    loadTodayBirthdays();
+                },
+                error: function(err) {
+                    alert('Error: ' + (err.responseJSON?.detail || 'Failed to reactivate'));
+                }
+            });
+        }
+        
+        function deleteBirthdayMessage(messageId) {
+            if (!confirm('Delete this birthday message?')) return;
+            
+            $.ajax({
+                url: `${API_BASE}/banners/birthday-messages/${messageId}`,
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${authToken}` },
+                success: function() {
+                    alert('Message deleted');
+                    loadBirthdayMessages();
+                },
+                error: function(err) {
+                    alert('Error: ' + (err.responseJSON?.detail || 'Failed to delete'));
+                }
+            });
+        }
+        
+        function showAddMessageModal() {
+            const text = prompt('Enter new birthday message:');
+            if (!text || text.trim() === '') return;
+            
+            $.ajax({
+                url: `${API_BASE}/banners/birthday-messages`,
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                data: JSON.stringify({ message_text: text }),
+                success: function() {
+                    alert('Birthday message added!');
+                    loadBirthdayMessages();
+                },
+                error: function(err) {
+                    alert('Error: ' + (err.responseJSON?.detail || 'Failed to add message'));
+                }
+            });
+        }
+        
+        // Load birthday data when tab is clicked
+        $('#birthday-tab').on('click', function() {
+            loadTodayBirthdays();
+            loadBirthdayMessages();
+            loadBirthdaySkipped();
+        });
+    </script>
+</body>
+</html>

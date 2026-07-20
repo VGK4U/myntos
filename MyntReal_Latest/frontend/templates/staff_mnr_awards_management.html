@@ -1,0 +1,2367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Awards Management - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --accent-gold: #d4af37;
+            --accent-green: #28a745;
+            --accent-blue: #007bff;
+            --accent-orange: #fd7e14;
+            --accent-red: #dc3545;
+            --border-color: #dee2e6;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        .main-content {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+        }
+        .page-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            border-bottom: 3px solid var(--accent-gold);
+            padding: 1.5rem 2rem;
+            margin-bottom: 0;
+        }
+        .page-title {
+            color: var(--accent-gold);
+            font-weight: 600;
+            margin: 0;
+        }
+        .page-subtitle {
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9rem;
+            margin: 0.25rem 0 0 0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 0 1rem;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 1rem;
+            border-left: 4px solid var(--accent-gold);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .stat-card.pending { border-left-color: var(--accent-orange); }
+        .stat-card.approval { border-left-color: var(--accent-blue); }
+        .stat-card.procurement { border-left-color: #17a2b8; }
+        .stat-card.dispatched { border-left-color: #6f42c1; }
+        .stat-card.delivered { border-left-color: var(--accent-green); }
+        .stat-card.budget { border-left-color: var(--accent-gold); }
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .filter-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin: 0 1rem 1.5rem 1rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .filter-card .form-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+        .status-multiselect {
+            position: relative;
+        }
+        .status-multiselect-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            height: 38px;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            user-select: none;
+        }
+        .status-multiselect-trigger:hover {
+            border-color: #86b7fe;
+        }
+        .status-multiselect-options {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            background: var(--bg-card, #fff);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 0.5rem;
+            margin-top: 2px;
+        }
+        .status-multiselect-options.show {
+            display: block;
+        }
+        .status-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            margin-bottom: 2px;
+        }
+        .status-option:hover {
+            background: var(--bg-main, #f0f0f0);
+        }
+        .status-option .form-check-input:checked {
+            background-color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+        .delivered-debt-alert {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            margin-top: 0.75rem;
+            color: #664d03;
+            font-size: 0.85rem;
+        }
+        .delivered-debt-alert i {
+            color: #ffc107;
+        }
+        .awards-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            margin: 0 1rem 1.5rem 1rem;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .awards-card-header {
+            background: #f1f3f5;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .awards-card-header h5 {
+            margin: 0;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        .table thead th {
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+            padding: 0.75rem 1rem;
+        }
+        .table thead:not(.table-dark) th {
+            background: #f8f9fa;
+            color: var(--text-secondary);
+        }
+        .table thead.table-dark th,
+        thead.table-dark th,
+        .table-dark th {
+            color: #fff !important;
+            background-color: #212529 !important;
+            --bs-table-bg: #212529;
+            --bs-table-color: #fff;
+        }
+        .table tbody tr {
+            border-bottom: 1px solid var(--border-color);
+        }
+        .table tbody tr:hover {
+            background: rgba(212, 175, 55, 0.05);
+        }
+        .table td {
+            padding: 0.75rem 1rem;
+            vertical-align: middle;
+        }
+        .badge-status {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-approval { background: #cce5ff; color: #004085; }
+        .badge-procurement { background: #d1ecf1; color: #0c5460; }
+        .badge-dispatched { background: #e2d5f1; color: #4a2c7d; }
+        .badge-delivered { background: #d4edda; color: #155724; }
+        .badge-rejected { background: #f8d7da; color: #721c24; }
+        .badge-type {
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .badge-direct { background: #f8d7da; color: #721c24; }
+        .badge-matching { background: #d4edda; color: #155724; }
+        .badge-bonanza { background: #fff3cd; color: #856404; }
+        .btn-action {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            margin-right: 0.25rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loading-overlay.hidden { display: none; }
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .user-id {
+            font-weight: 600;
+            color: var(--accent-blue);
+        }
+        .user-name {
+            font-size: 0.8rem;
+            color: #6c757d;
+            font-weight: 500;
+            display: block;
+        }
+        .sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        .sortable:hover {
+            background: #e9ecef;
+        }
+        .sortable i {
+            margin-left: 5px;
+            opacity: 0.5;
+        }
+        .sortable.active i {
+            opacity: 1;
+        }
+        .gift-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .gift-name {
+            font-weight: 500;
+        }
+        .gift-tier {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .amount-info {
+            text-align: right;
+        }
+        .amount-budgeted {
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+        .amount-actual {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .modal-content {
+            border-radius: 10px;
+        }
+        .modal-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .elig-cell {
+            position: relative;
+        }
+        .elig-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0.3rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .elig-badge.elig-pass { background: #d4edda; color: #155724; }
+        .elig-badge.elig-fail { background: #f8d7da; color: #721c24; }
+        .elig-badge.elig-partial { background: #fff3cd; color: #856404; }
+        .elig-popover {
+            display: none;
+            position: absolute;
+            z-index: 1050;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            padding: 0.75rem;
+            min-width: 240px;
+            right: 0;
+            top: 100%;
+            margin-top: 4px;
+        }
+        .elig-cell:hover .elig-popover,
+        .elig-popover.show {
+            display: block;
+        }
+        .elig-popover-title {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.35rem;
+        }
+        .elig-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            padding: 2px 0;
+            color: #333;
+        }
+        .elig-icon-ok { color: #28a745; }
+        .elig-icon-fail { color: #dc3545; }
+        .elig-icon-pending { color: #fd7e14; }
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner-border text-warning" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="page-title"><i class="fas fa-trophy me-2"></i>Awards Management</h2>
+                <p class="page-subtitle">Unified view of all Direct Facilitation, Group Performance, and Bonanza awards</p>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mx-3 mb-3" id="mainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="awards-tab" data-bs-toggle="tab" data-bs-target="#awardsPane" type="button" role="tab">
+                <i class="fas fa-trophy me-1"></i> All Awards
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="eligibility-tab" data-bs-toggle="tab" data-bs-target="#eligibilityPane" type="button" role="tab" onclick="loadBonanzaEligibility()">
+                <i class="fas fa-gift me-1"></i> Bonanza Claim
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="achievementData-tab" data-bs-toggle="tab" data-bs-target="#achievementDataPane" type="button" role="tab" onclick="loadAchievementDataCampaignsAM()">
+                <i class="fas fa-chart-bar me-1"></i> Bonanza Tracking
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+    <div class="tab-pane fade show active" id="awardsPane" role="tabpanel">
+
+    <div class="stats-grid" style="grid-template-columns: repeat(6, 1fr);">
+        <div class="stat-card" style="border-left-color: #6c757d;">
+            <div class="stat-label">Pending</div>
+            <div class="stat-value" id="statPendingElig">0</div>
+        </div>
+        <div class="stat-card pending">
+            <div class="stat-label">Pending Approval</div>
+            <div class="stat-value" id="statPending">0</div>
+        </div>
+        <div class="stat-card approval">
+            <div class="stat-label">Approved</div>
+            <div class="stat-value" id="statApproved">0</div>
+        </div>
+        <div class="stat-card dispatched">
+            <div class="stat-label">Processed</div>
+            <div class="stat-value" id="statProcessed">0</div>
+        </div>
+        <div class="stat-card delivered">
+            <div class="stat-label">Completed</div>
+            <div class="stat-value" id="statCompleted">0</div>
+        </div>
+        <div class="stat-card" style="border-left-color: var(--accent-red);">
+            <div class="stat-label">Rejected</div>
+            <div class="stat-value" id="statRejected">0</div>
+        </div>
+    </div>
+
+    <div class="filter-card">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Award Type</label>
+                <select class="form-select" id="filterType" onchange="applyFilters()">
+                    <option value="all">All Types</option>
+                    <option value="direct">Direct Facilitations</option>
+                    <option value="matching">Group Performance Recognitions</option>
+                    <option value="bonanza">Bonanza</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <div class="status-multiselect" id="statusFilterDropdown">
+                    <div class="status-multiselect-trigger" id="statusFilterBtn" onclick="toggleStatusDropdown(event)">
+                        <span id="statusFilterLabel">All Status</span>
+                        <i class="fas fa-chevron-down" style="font-size: 0.65rem;"></i>
+                    </div>
+                    <div class="status-multiselect-options" id="statusOptions">
+                        <label class="status-option">
+                            <input type="checkbox" class="form-check-input status-cb" value="Pending" onchange="onStatusFilterChange()">
+                            <span>Pending (Eligibility Not Met)</span>
+                        </label>
+                        <label class="status-option">
+                            <input type="checkbox" class="form-check-input status-cb" value="Pending Approval" onchange="onStatusFilterChange()">
+                            <span>Pending Approval</span>
+                        </label>
+                        <label class="status-option">
+                            <input type="checkbox" class="form-check-input status-cb" value="Claimed" onchange="onStatusFilterChange()">
+                            <span>Claimed (Bonanza)</span>
+                        </label>
+                        <label class="status-option">
+                            <input type="checkbox" class="form-check-input status-cb" value="Approved" onchange="onStatusFilterChange()">
+                            <span>Approved</span>
+                        </label>
+                        <label class="status-option">
+                            <input type="checkbox" class="form-check-input status-cb" value="Processed" onchange="onStatusFilterChange()">
+                            <span>Processed</span>
+                        </label>
+                        <label class="status-option">
+                            <input type="checkbox" class="form-check-input status-cb" value="Completed" onchange="onStatusFilterChange()">
+                            <span>Completed</span>
+                        </label>
+                        <label class="status-option">
+                            <input type="checkbox" class="form-check-input status-cb" value="Rejected" onchange="onStatusFilterChange()">
+                            <span>Rejected</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Sort By</label>
+                <select class="form-select" id="sortBy" onchange="applyFilters()">
+                    <option value="date_desc">Date (Newest)</option>
+                    <option value="date_asc">Date (Oldest)</option>
+                    <option value="amount_desc">Amount (High-Low)</option>
+                    <option value="amount_asc">Amount (Low-High)</option>
+                    <option value="user_id">User ID</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Search User</label>
+                <input type="text" class="form-control" id="filterSearch" placeholder="MNR ID or Name..." oninput="applyFilters()">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Date From</label>
+                <input type="date" class="form-control" id="filterDateFrom" onchange="applyFilters()">
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-secondary w-100" onclick="clearFilters()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="awards-card">
+        <div class="awards-card-header">
+            <h5><i class="fas fa-list-alt me-2"></i>All Awards</h5>
+            <span id="totalCount" class="text-muted">Total: 0</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th class="sortable" onclick="sortTable('achievement_date')">Date <i class="fas fa-sort"></i></th>
+                        <th class="sortable" onclick="sortTable('user_id')">User <i class="fas fa-sort"></i></th>
+                        <th class="sortable" onclick="sortTable('award_type')">Type <i class="fas fa-sort"></i></th>
+                        <th class="sortable" onclick="sortTable('gift_name')">Gift/Award <i class="fas fa-sort"></i></th>
+                        <th class="sortable" onclick="sortTable('tier_required')">Target <i class="fas fa-sort"></i></th>
+                        <th class="sortable" onclick="sortTable('achieved_count')">Achieved <i class="fas fa-sort"></i></th>
+                        <th class="sortable" onclick="sortTable('kyc_status')">KYC Status <i class="fas fa-sort"></i></th>
+                        <th>Key Eligibility</th>
+                        <th class="sortable" onclick="sortTable('group_eligibility')">Group Eligibility <i class="fas fa-sort"></i></th>
+                        <th>Eligibility</th>
+                        <th class="sortable" onclick="sortTable('processed_status')">Status <i class="fas fa-sort"></i></th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="awardsTableBody">
+                </tbody>
+            </table>
+        </div>
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fas fa-trophy"></i>
+            <h5>No Awards Found</h5>
+            <p>No awards match your current filters</p>
+        </div>
+    </div>
+
+    </div>
+
+    <div class="tab-pane fade" id="eligibilityPane" role="tabpanel">
+        <div class="filter-card">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Bonanza Group</label>
+                    <select class="form-select" id="eligibilityGroupFilter" onchange="onGroupFilterChange()">
+                        <option value="">All Groups</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Bonanza (Reward)</label>
+                    <select class="form-select" id="eligibilityBonanzaFilter" onchange="filterEligibility()">
+                        <option value="">All Bonanzas</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Search User</label>
+                    <input type="text" class="form-control" id="eligibilitySearch" placeholder="MNR ID or Name..." oninput="filterEligibility()">
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-secondary w-100" onclick="clearEligibilityFilters()">
+                        <i class="fas fa-times me-1"></i> Clear
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" onclick="filterEligibility()">
+                        <i class="fas fa-filter me-1"></i> Apply Filter
+                    </button>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-12">
+                    <label class="form-label mb-1" style="font-size:0.85rem;">Status Filter</label>
+                    <div class="d-flex flex-wrap gap-3" id="eligibilityStatusCheckboxes">
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="checkbox" id="sf_unclaimed" value="unclaimed" checked onchange="filterEligibility()">
+                            <label class="form-check-label" for="sf_unclaimed"><span class="badge bg-success">Unclaimed</span></label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="checkbox" id="sf_in_progress" value="in_progress" checked onchange="filterEligibility()">
+                            <label class="form-check-label" for="sf_in_progress"><span class="badge bg-warning text-dark">In Progress</span></label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="checkbox" id="sf_claimed_pending" value="claimed_pending" onchange="filterEligibility()">
+                            <label class="form-check-label" for="sf_claimed_pending"><span class="badge bg-info text-dark">Claimed - Pending</span></label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="checkbox" id="sf_claimed_approved" value="claimed_approved" onchange="filterEligibility()">
+                            <label class="form-check-label" for="sf_claimed_approved"><span class="badge bg-primary">Approved</span></label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="checkbox" id="sf_delivered" value="delivered" onchange="filterEligibility()">
+                            <label class="form-check-label" for="sf_delivered"><span class="badge bg-success">Delivered</span></label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0">
+                            <input class="form-check-input" type="checkbox" id="sf_expired" value="expired" onchange="filterEligibility()">
+                            <label class="form-check-label" for="sf_expired"><span class="badge bg-dark">Expired</span></label>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm ms-2" onclick="toggleAllStatusCB(true)" style="font-size:0.75rem;">Select All</button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="toggleAllStatusCB(false)" style="font-size:0.75rem;">Deselect All</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="awards-card">
+            <div class="awards-card-header">
+                <h5><i class="fas fa-gift me-2"></i>Bonanza Claim</h5>
+                <span id="eligibilityCount" class="text-muted">Total: 0</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead style="background:#2c3e50;">
+                        <tr>
+                            <th style="color:#fff;">Period</th>
+                            <th style="color:#fff;">User</th>
+                            <th style="color:#fff;">Bonanza</th>
+                            <th style="color:#fff;">Criteria</th>
+                            <th style="color:#fff;">Progress</th>
+                            <th style="color:#fff;">Reward</th>
+                            <th style="color:#fff;">Key Eligibility</th>
+                            <th style="color:#fff;">Eligibility</th>
+                            <th style="color:#fff;">Status</th>
+                            <th style="color:#fff;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eligibilityTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div id="eligibilityEmptyState" class="empty-state" style="display: none;">
+                <i class="fas fa-gift"></i>
+                <h5>No Eligible Users</h5>
+                <p>No users match your current filters</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane fade" id="achievementDataPane" role="tabpanel">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>📊 Bonanza Tracking</h5>
+                <p class="mb-0 small">Track member achievements across all bonanza campaign levels</p>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3 g-2">
+                    <div class="col-md-3">
+                        <label class="form-label">Select Campaign</label>
+                        <select class="form-control" id="amCampaignSelect">
+                            <option value="">Loading campaigns...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Date From</label>
+                        <input type="date" class="form-control" id="amDateFrom">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Date To</label>
+                        <input type="date" class="form-control" id="amDateTo">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Search (MNR ID / Name / Referrer)</label>
+                        <input type="text" class="form-control" id="amSearch" placeholder="Search...">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-primary w-100" onclick="loadAchievementDataAM()">
+                            <i class="fas fa-search"></i> Load Data
+                        </button>
+                    </div>
+                </div>
+                <div id="amSummaryContainer" class="mb-3">
+                    <div class="text-center py-3 text-muted small">Select a campaign and click Load Data to view summary.</div>
+                </div>
+
+                <hr class="my-2">
+
+                <div id="amDisclaimersSection" class="mb-2" style="display:none;">
+                    <div class="alert alert-light border py-2 px-3" style="font-size:11px;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <i class="fas fa-info-circle text-primary me-1"></i> <strong>Disclaimer:</strong> Only unique data counts for claiming. If any new claim happens, achievement data will get changed.
+                                <br><i class="fas fa-star text-warning me-1"></i> <strong>Exempted Coupon Bonus:</strong> Exempted coupon users get +1 added to their target. Their referrals are included as bonus contributions.
+                                <br><i class="fas fa-check-circle text-success me-1"></i> <strong>Eligibility:</strong> A person needs at least 1 direct facilitation after 17th Nov 2025 to be eligible.
+                            </div>
+                            <div class="col-md-6">
+                                <i class="fas fa-chart-bar text-info me-1"></i> <strong>Achieved Count:</strong> Shows total activated referrals/team members within the campaign period only.
+                                <br><i class="fas fa-minus-circle text-danger me-1"></i> <strong>Claimed:</strong> Previously claimed points are deducted. Balance = Achieved - Claimed.
+                                <br><i class="fas fa-snowflake text-primary me-1"></i> <strong>Frozen Columns:</strong> MNR ID, Name (Group A) and Eligibility (Group B) columns stay visible when scrolling.
+                                <br><i class="fas fa-palette text-warning me-1"></i> <strong>Highlighted Rows:</strong> Yellow-tinted rows with star indicate Exempted Coupon users.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="amPagination" class="mb-2" style="display:none;">
+                    <small class="text-muted" id="amPaginationInfo"></small>
+                    <div class="btn-group btn-group-sm ms-2">
+                        <button class="btn btn-outline-secondary" id="amPrevBtn" onclick="amChangePage(-1)">Prev</button>
+                        <button class="btn btn-outline-secondary" id="amNextBtn" onclick="amChangePage(1)">Next</button>
+                    </div>
+                </div>
+                <div id="amTableContainer">
+                    <div class="text-center py-3 text-muted small">Member-level achievement details will appear here after loading data.</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div class="modal fade" id="amContribModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-users me-2"></i>Achievement Contributors</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 p-3 bg-light rounded border">
+                        <div class="row">
+                            <div class="col-md-4"><strong>Member:</strong> <span id="amContribUser" class="text-primary fw-bold"></span></div>
+                            <div class="col-md-4"><strong>Campaign:</strong> <span id="amContribCampaign" class="fw-bold"></span></div>
+                            <div class="col-md-4"><strong>Type:</strong> <span id="amContribType" class="fw-bold"></span></div>
+                        </div>
+                    </div>
+                    <div id="amContribContent">
+                        <div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2">Loading contributors...</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="contributorsModal" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-users me-2"></i>Contributors</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 p-3 bg-light rounded border">
+                        <div class="row align-items-center">
+                            <div class="col-md-4">
+                                <strong>User:</strong> <span id="contribUserId" class="text-primary fw-bold"></span>
+                                <span id="contribUserName" class="text-muted ms-1"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Award:</strong> <span id="contribGiftName" class="fw-bold"></span>
+                                <span id="contribRankName" class="text-muted ms-1"></span>
+                            </div>
+                            <div class="col-md-4">
+                                <strong>Achieved:</strong> <span id="contribAchievedDate" class="fw-bold"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="contributorsLoading" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2">Loading contributors...</p>
+                    </div>
+                    <div id="contributorsContent" style="display: none;">
+                        <div id="directContributors" style="display: none;">
+                            <h6 class="border-bottom pb-2 mb-3"><i class="fas fa-user-plus me-2 text-primary"></i>Direct Facilitations</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>#</th>
+                                            <th>MNR ID</th>
+                                            <th>Name</th>
+                                            <th>Package</th>
+                                            <th>Points</th>
+                                            <th>Activation Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="directContributorsBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div id="matchingContributors" style="display: none;">
+                            <h6 class="border-bottom pb-2 mb-3"><i class="fas fa-sitemap me-2 text-success"></i>Group Performance Matching</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-primary mb-2"><i class="fas fa-users me-1"></i>Group A (<span id="groupACount">0</span>)</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped">
+                                            <thead class="table-light">
+                                                <tr><th>MNR ID</th><th>Name</th><th>Package</th><th>Activated</th></tr>
+                                            </thead>
+                                            <tbody id="groupABody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-success mb-2"><i class="fas fa-users me-1"></i>Group B (<span id="groupBCount">0</span>)</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped">
+                                            <thead class="table-light">
+                                                <tr><th>MNR ID</th><th>Name</th><th>Package</th><th>Activated</th></tr>
+                                            </thead>
+                                            <tbody id="groupBBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="deliveredDebtInfo" class="delivered-debt-alert" style="display: none;"></div>
+                        <div id="noContributors" class="text-center py-4 text-muted" style="display: none;">
+                            <i class="fas fa-info-circle fa-2x mb-2"></i>
+                            <p>No contributor data available</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="claimOnBehalfModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-hand-holding-heart me-2"></i>Claim on Behalf</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning mb-3">
+                        <strong>WVV Protocol:</strong> This claim will IMMEDIATELY deduct from the user's Direct/Matching award progress.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">User</label>
+                        <input type="text" class="form-control" id="claimUserId" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bonanza</label>
+                        <input type="text" class="form-control" id="claimBonanzaName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reward</label>
+                        <input type="text" class="form-control" id="claimReward" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Deduction Impact</label>
+                        <div class="p-2 bg-light rounded" id="claimDeductionInfo"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Staff Notes (Optional)</label>
+                        <textarea class="form-control" id="claimStaffNotes" rows="2" placeholder="Reason for claiming on behalf..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="confirmClaimBtn" onclick="confirmClaimOnBehalf()">
+                        <i class="fas fa-check me-1"></i> Confirm Claim
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extend Bonanza End Date Modal -->
+    <div class="modal fade" id="extendBonanzaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-calendar-plus me-2"></i>Extend Bonanza Period</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Extending the end date will allow claims to be processed for this bonanza.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bonanza</label>
+                        <input type="text" class="form-control" id="extendBonanzaName" readonly>
+                        <input type="hidden" id="extendBonanzaId">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Current End Date</label>
+                        <input type="text" class="form-control" id="extendCurrentEndDate" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">New End Date <span class="text-danger">*</span></label>
+                        <input type="datetime-local" class="form-control" id="extendNewEndDate" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="confirmExtendBtn" onclick="confirmExtendBonanza()">
+                        <i class="fas fa-check me-1"></i> Extend Period
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="actionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="actionModalTitle">Action</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="actionModalContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="actionModalSubmit" onclick="submitAction()">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allAwards = [];
+        let filteredAwards = [];
+        let currentAction = null;
+        const API_BASE = '/api/v1/unified-awards';
+        let keyEligibilityMap = {};
+
+        async function loadKeyEligibilityBulk() {
+            try {
+                const userIds = [...new Set(allAwards.map(a => a.user_id).filter(Boolean))];
+                if (userIds.length === 0) return;
+                const token = getToken();
+                const res = await fetch('/api/v1/auth/key-eligibility-bulk', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_ids: userIds })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    keyEligibilityMap = data.data || {};
+                }
+            } catch (e) { console.log('Key eligibility bulk check skipped:', e); }
+        }
+
+        function getKeyEligBadge(userId) {
+            const isElig = keyEligibilityMap[userId];
+            if (isElig === true) return '<span class="badge bg-success" style="font-size:0.7rem;">Eligible</span>';
+            if (isElig === false) return '<span class="badge bg-danger" style="font-size:0.7rem;">Not Eligible</span>';
+            return '<span class="badge bg-secondary" style="font-size:0.7rem;">—</span>';
+        }
+
+        function getToken() {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'staff_token' || name === 'session_token') {
+                    return value;
+                }
+            }
+            return window.sessionToken || '';
+        }
+
+        async function fetchWithAuth(url, options = {}) {
+            const token = getToken();
+            const response = await fetch(url, {
+                ...options,
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            });
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+                throw new Error(error.detail || 'Request failed');
+            }
+            return response.json();
+        }
+
+        async function loadAwards() {
+            try {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                
+                const params = new URLSearchParams({
+                    award_types: 'all',
+                    limit: '200'
+                });
+                
+                const _t0 = performance.now();
+                const response = await fetchWithAuth(`${API_BASE}/list?${params}`);
+                allAwards = response.awards || [];
+                
+                const _elapsed = Math.round(performance.now() - _t0);
+                console.log(`[DC-Awards] Loaded ${allAwards.length} awards in ${_elapsed}ms (server: ${response.query_time_ms || '?'}ms, cached: ${response.cached || false})`);
+                
+                await loadKeyEligibilityBulk();
+                updateStats();
+                applyFilters();
+                
+            } catch (error) {
+                console.error('Error loading awards:', error);
+                showAlert('Error loading awards: ' + error.message, 'danger');
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+        }
+
+        function updateStats() {
+            const stats = { pendingElig: 0, pending: 0, approved: 0, processed: 0, completed: 0, rejected: 0 };
+            
+            allAwards.forEach(award => {
+                const s = award.simplified_status;
+                if (s === 'Pending') stats.pendingElig++;
+                else if (s === 'Pending Approval' || s === 'Claimed') stats.pending++;
+                else if (s === 'Approved') stats.approved++;
+                else if (s === 'Processed') stats.processed++;
+                else if (s === 'Completed') stats.completed++;
+                else if (s === 'Rejected') stats.rejected++;
+            });
+            
+            document.getElementById('statPendingElig').textContent = stats.pendingElig;
+            document.getElementById('statPending').textContent = stats.pending;
+            document.getElementById('statApproved').textContent = stats.approved;
+            document.getElementById('statProcessed').textContent = stats.processed;
+            document.getElementById('statCompleted').textContent = stats.completed;
+            document.getElementById('statRejected').textContent = stats.rejected;
+        }
+
+        let currentSortField = 'achievement_date';
+        let currentSortDir = 'desc';
+
+        function sortTable(field) {
+            if (currentSortField === field) {
+                currentSortDir = currentSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortField = field;
+                currentSortDir = 'asc';
+            }
+            
+            filteredAwards.sort((a, b) => {
+                let valA = a[field] || '';
+                let valB = b[field] || '';
+                
+                if (field === 'achievement_date') {
+                    valA = new Date(valA || 0).getTime();
+                    valB = new Date(valB || 0).getTime();
+                } else if (field === 'tier_required' || field === 'achieved_count') {
+                    valA = Number(valA) || 0;
+                    valB = Number(valB) || 0;
+                } else if (typeof valA === 'string') {
+                    valA = valA.toLowerCase();
+                    valB = valB.toLowerCase();
+                }
+                
+                if (valA < valB) return currentSortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return currentSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            renderAwards();
+            
+            // Update sort icons
+            document.querySelectorAll('.sortable').forEach(th => {
+                th.classList.remove('active');
+                th.querySelector('i').className = 'fas fa-sort';
+            });
+            const activeHeader = event.currentTarget;
+            activeHeader.classList.add('active');
+            activeHeader.querySelector('i').className = currentSortDir === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+        }
+
+        function toggleStatusDropdown(event) {
+            event.stopPropagation();
+            const options = document.getElementById('statusOptions');
+            options.classList.toggle('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('statusFilterDropdown');
+            if (dropdown && !dropdown.contains(e.target)) {
+                document.getElementById('statusOptions').classList.remove('show');
+            }
+        });
+
+        function getSelectedStatuses() {
+            return Array.from(document.querySelectorAll('.status-cb:checked')).map(cb => cb.value);
+        }
+
+        function onStatusFilterChange() {
+            const selected = getSelectedStatuses();
+            const label = document.getElementById('statusFilterLabel');
+            if (selected.length === 0) {
+                label.textContent = 'All Status';
+            } else if (selected.length === 1) {
+                label.textContent = selected[0];
+            } else {
+                label.textContent = `${selected.length} selected`;
+            }
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const filterType = document.getElementById('filterType').value;
+            const selectedStatuses = getSelectedStatuses();
+            const filterSearch = document.getElementById('filterSearch').value.toLowerCase();
+            const filterDateFrom = document.getElementById('filterDateFrom').value;
+            const sortBy = document.getElementById('sortBy').value;
+            
+            filteredAwards = allAwards.filter(award => {
+                if (filterType !== 'all' && award.award_type !== filterType) return false;
+                if (selectedStatuses.length > 0 && !selectedStatuses.includes(award.simplified_status)) return false;
+                if (filterSearch) {
+                    const searchStr = `${award.user_id} ${award.user_name} ${award.gift_name || ''} ${award.rank_name || ''}`.toLowerCase();
+                    if (!searchStr.includes(filterSearch)) return false;
+                }
+                if (filterDateFrom && award.achievement_date < filterDateFrom) return false;
+                return true;
+            });
+            
+            // Apply sorting
+            filteredAwards.sort((a, b) => {
+                switch(sortBy) {
+                    case 'date_asc':
+                        return (a.achievement_date || '').localeCompare(b.achievement_date || '');
+                    case 'date_desc':
+                        return (b.achievement_date || '').localeCompare(a.achievement_date || '');
+                    case 'amount_desc':
+                        return (b.budgeted_amount || 0) - (a.budgeted_amount || 0);
+                    case 'amount_asc':
+                        return (a.budgeted_amount || 0) - (b.budgeted_amount || 0);
+                    case 'user_id':
+                        return (a.user_id || '').localeCompare(b.user_id || '');
+                    default:
+                        return 0;
+                }
+            });
+            
+            renderAwards();
+        }
+
+        function clearFilters() {
+            document.getElementById('filterType').value = 'all';
+            document.querySelectorAll('.status-cb').forEach(cb => cb.checked = false);
+            document.getElementById('statusFilterLabel').textContent = 'All Status';
+            document.getElementById('statusOptions').classList.remove('show');
+            document.getElementById('filterSearch').value = '';
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('sortBy').value = 'date_desc';
+            applyFilters();
+        }
+
+        function getStatusBadge(award) {
+            const s = award.simplified_status;
+            const badges = {
+                'Pending': '<span class="badge-status" style="background:#e2e3e5;color:#383d41;">Pending</span>',
+                'Pending Approval': '<span class="badge-status badge-pending">Pending Approval</span>',
+                'Claimed': '<span class="badge-status badge-pending">Claimed</span>',
+                'Approved': '<span class="badge-status badge-approval">Approved</span>',
+                'Processed': '<span class="badge-status badge-dispatched">Processed</span>',
+                'Completed': '<span class="badge-status badge-delivered">Completed</span>',
+                'Rejected': '<span class="badge-status badge-rejected">Rejected</span>'
+            };
+            return badges[s] || `<span class="badge-status badge-pending">${s}</span>`;
+        }
+
+        function getTypeBadge(type) {
+            const badges = {
+                'direct': '<span class="badge-type badge-direct">Direct Facilitation</span>',
+                'matching': '<span class="badge-type badge-matching">Group Performance</span>',
+                'bonanza': '<span class="badge-type badge-bonanza">Bonanza</span>'
+            };
+            return badges[type] || type;
+        }
+
+        function getKycStatusBadge(status) {
+            const badges = {
+                'Approved': '<span class="badge bg-success" style="font-size: 0.75rem;">Approved</span>',
+                'Pending': '<span class="badge bg-warning text-dark" style="font-size: 0.75rem;">Pending</span>',
+                'Rejected': '<span class="badge bg-danger" style="font-size: 0.75rem;">Rejected</span>',
+                'Partially Approved': '<span class="badge bg-info" style="font-size: 0.75rem;">Partial</span>'
+            };
+            return badges[status] || `<span class="badge bg-secondary" style="font-size: 0.75rem;">${status || 'Pending'}</span>`;
+        }
+
+        function getGroupEligibilityBadge(eligibility) {
+            const badges = {
+                'Yes': '<span class="badge bg-success" style="font-size: 0.75rem;">Yes</span>',
+                'No': '<span class="badge bg-danger" style="font-size: 0.75rem;">No</span>',
+                'Group A Missing': '<span class="badge bg-warning text-dark" style="font-size: 0.75rem;">Group A Missing</span>',
+                'Group B Missing': '<span class="badge bg-warning text-dark" style="font-size: 0.75rem;">Group B Missing</span>',
+                'Unknown': '<span class="badge bg-secondary" style="font-size: 0.75rem;">Unknown</span>'
+            };
+            return badges[eligibility] || `<span class="badge bg-secondary" style="font-size: 0.75rem;">${eligibility || 'Unknown'}</span>`;
+        }
+
+        function getEligibilityCriteriaCell(criteria) {
+            if (!criteria) return '<span class="badge bg-secondary" style="font-size: 0.72rem;">N/A</span>';
+            
+            const checks = [
+                { key: 'is_activated', label: 'Account Activated' },
+                { key: 'kyc_approved', label: 'KYC Approved' },
+                { key: 'program_utilisation_completed', label: 'Program Utilisation' },
+                { key: 'group_a_ok', label: 'Group A (1+ active)' },
+                { key: 'group_b_ok', label: 'Group B (1+ active)' },
+            ];
+            
+            const passed = checks.filter(c => criteria[c.key]).length;
+            const total = checks.length;
+            const allPassed = passed === total;
+            
+            let badgeClass = 'elig-fail';
+            let badgeText = `${passed}/${total}`;
+            if (allPassed) {
+                badgeClass = 'elig-pass';
+                badgeText = 'All Met';
+            } else if (passed > 0) {
+                badgeClass = 'elig-partial';
+            }
+            
+            const items = checks.map(c => {
+                const ok = criteria[c.key];
+                const icon = ok ? '<i class="fas fa-check-circle elig-icon-ok"></i>' : '<i class="fas fa-times-circle elig-icon-fail"></i>';
+                return `<div class="elig-item">${icon} ${c.label}</div>`;
+            }).join('');
+            
+            return `<div class="elig-cell">
+                <span class="elig-badge ${badgeClass}"><i class="fas fa-clipboard-check"></i> ${badgeText}</span>
+                <div class="elig-popover">
+                    <div class="elig-popover-title">Eligibility Criteria</div>
+                    ${items}
+                </div>
+            </div>`;
+        }
+
+        const eligibilityLoadCache = {};
+        async function loadEligibility(userId, awardType, awardId) {
+            const grpCell = document.getElementById(`grp-${awardType}-${awardId}`);
+            const eligCell = document.getElementById(`elig-${awardType}-${awardId}`);
+            if (grpCell) grpCell.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            if (eligCell) eligCell.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            
+            try {
+                if (!eligibilityLoadCache[userId]) {
+                    eligibilityLoadCache[userId] = await fetchWithAuth(`${API_BASE}/user-eligibility/${userId}`);
+                }
+                const data = eligibilityLoadCache[userId];
+                if (grpCell) grpCell.innerHTML = getGroupEligibilityBadge(data.group_eligibility);
+                if (eligCell) eligCell.innerHTML = getEligibilityCriteriaCell(data.eligibility_criteria);
+                
+                const award = allAwards.find(a => a.award_type === awardType && a.award_id === awardId);
+                if (award) {
+                    award.group_eligibility = data.group_eligibility;
+                    award.eligibility_criteria = data.eligibility_criteria;
+                }
+            } catch (e) {
+                if (grpCell) grpCell.innerHTML = '<span class="badge bg-danger">Error</span>';
+                if (eligCell) eligCell.innerHTML = '<span class="badge bg-danger">Error</span>';
+            }
+        }
+
+        function getActionButtons(award) {
+            const s = award.simplified_status;
+            const type = award.award_type;
+            const id = award.award_id;
+            let buttons = '';
+            
+            if (s === 'Pending') {
+                buttons += `<button class="btn btn-sm btn-warning btn-action" onclick="performAction(${id}, '${type}', 'approve')" title="Verify eligibility & promote"><i class="fas fa-arrow-up"></i> Verify</button>`;
+            } else if (s === 'Pending Approval' || s === 'Claimed') {
+                buttons += `<button class="btn btn-sm btn-success btn-action" onclick="performAction(${id}, '${type}', 'approve')"><i class="fas fa-thumbs-up"></i> Approve</button>`;
+            } else if (s === 'Approved') {
+                buttons += `<button class="btn btn-sm btn-info btn-action" onclick="performAction(${id}, '${type}', 'process')"><i class="fas fa-cog"></i> Process</button>`;
+            } else if (s === 'Processed') {
+                buttons += `<button class="btn btn-sm btn-primary btn-action" onclick="performAction(${id}, '${type}', 'complete')"><i class="fas fa-check-circle"></i> Complete</button>`;
+            }
+            
+            if (s !== 'Completed' && s !== 'Rejected') {
+                buttons += `<button class="btn btn-sm btn-outline-danger btn-action" onclick="performAction(${id}, '${type}', 'reject')"><i class="fas fa-times"></i></button>`;
+            }
+            
+            return buttons || '<span class="text-muted">-</span>';
+        }
+
+        function renderAwards() {
+            const tbody = document.getElementById('awardsTableBody');
+            const emptyState = document.getElementById('emptyState');
+            
+            document.getElementById('totalCount').textContent = `Total: ${filteredAwards.length}`;
+            
+            if (filteredAwards.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            tbody.innerHTML = filteredAwards.map((award, idx) => {
+                const target = award.tier_required || 0;
+                const achieved = award.achieved_count || 0;
+                const achievedColor = achieved >= target ? 'text-success' : 'text-warning';
+                return `
+                <tr>
+                    <td>${award.achievement_date ? new Date(award.achievement_date).toLocaleDateString('en-IN') : '-'}</td>
+                    <td>
+                        <div class="user-info">
+                            <a href="/staff/mnr/users/${award.user_id}" class="user-id text-decoration-none">${award.user_id}</a>
+                            <div style="font-size: 0.75rem; color: #333; font-weight: 500; margin-top: 2px;">${award.user_name || '(No Name)'}</div>
+                        </div>
+                    </td>
+                    <td>${getTypeBadge(award.award_type)}</td>
+                    <td>
+                        <div class="gift-info">
+                            <span class="gift-name">${award.gift_name || '-'}</span>
+                            <span class="gift-tier">${award.rank_name || ''}</span>
+                        </div>
+                    </td>
+                    <td class="text-center fw-bold">${target}</td>
+                    <td class="text-center fw-bold ${achievedColor}">${achieved}</td>
+                    <td>${getKycStatusBadge(award.kyc_status)}</td>
+                    <td>${getKeyEligBadge(award.user_id)}</td>
+                    <td id="grp-${award.award_type}-${award.award_id}">${award.group_eligibility ? getGroupEligibilityBadge(award.group_eligibility) : '<span class="badge bg-secondary" style="cursor:pointer;" onclick="loadEligibility(\''+award.user_id+'\',\''+award.award_type+'\','+award.award_id+')">Load</span>'}</td>
+                    <td id="elig-${award.award_type}-${award.award_id}">${award.eligibility_criteria ? getEligibilityCriteriaCell(award.eligibility_criteria) : '<span class="badge bg-secondary" style="cursor:pointer;" onclick="loadEligibility(\''+award.user_id+'\',\''+award.award_type+'\','+award.award_id+')">Load</span>'}</td>
+                    <td>${getStatusBadge(award)}</td>
+                    <td>
+                        <div class="d-flex gap-1 flex-wrap">
+                            ${getActionButtons(award)}
+                            <button class="btn btn-sm btn-outline-info btn-action" onclick="viewStatusHistory('${award.award_type}', ${award.award_id})" title="View Status History">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary btn-action" onclick="viewContributors('${award.user_id}', '${award.award_type}', ${award.award_id}, ${award.tier_required || 0}, '${(award.gift_name || '').replace(/'/g, "\\'")}', '${(award.rank_name || '').replace(/'/g, "\\'")}', '${award.achievement_date || ''}')" title="View Contributors">
+                                <i class="fas fa-users"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function performAction(awardId, awardType, action) {
+            currentAction = { awardId, awardType, action };
+            
+            const titles = {
+                'approve': 'Approve Award',
+                'process': 'Mark as Processed',
+                'complete': 'Mark as Completed',
+                'reject': 'Reject Award'
+            };
+            
+            document.getElementById('actionModalTitle').textContent = titles[action] || 'Action';
+            
+            let content = `
+                <div class="mb-3">
+                    <label class="form-label">${action === 'reject' ? 'Rejection Reason' : 'Comment (Optional)'}</label>
+                    <textarea class="form-control" id="actionNotes" rows="3" ${action === 'reject' ? 'required' : ''} placeholder="${action === 'reject' ? 'Enter reason for rejection...' : 'Add any comments...'}"></textarea>
+                </div>
+            `;
+            
+            document.getElementById('actionModalContent').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('actionModal')).show();
+        }
+
+        async function submitAction() {
+            if (!currentAction) return;
+            
+            const { awardId, awardType, action } = currentAction;
+            const comment = document.getElementById('actionNotes')?.value || '';
+            
+            const statusMap = {
+                'approve': 'Approved',
+                'process': 'Processed',
+                'complete': 'Completed',
+                'reject': 'Rejected'
+            };
+            
+            const newStatus = statusMap[action];
+            if (!newStatus) { showAlert('Unknown action', 'danger'); return; }
+            
+            if (action === 'reject' && !comment.trim()) {
+                showAlert('Please enter a rejection reason', 'warning');
+                return;
+            }
+            
+            try {
+                const token = getToken();
+                const response = await fetch(`${API_BASE}/update-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        award_id: awardId,
+                        award_type: awardType,
+                        new_status: newStatus,
+                        comment: comment || null
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+                    showAlert(result.detail || 'Action failed', 'danger');
+                    return;
+                }
+                
+                bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+                showAlert(result.message || ('Status updated to ' + newStatus + ' successfully!'), 'success');
+                await loadAwards();
+                
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+            
+            currentAction = null;
+        }
+
+        async function viewStatusHistory(awardType, awardId) {
+            try {
+                const data = await fetchWithAuth(`${API_BASE}/status-history/${awardType}/${awardId}`);
+                const history = data.history || [];
+                
+                let content = '';
+                if (history.length === 0) {
+                    content = '<div class="text-center py-4 text-muted"><i class="fas fa-info-circle fa-2x mb-2"></i><p>No data to show</p></div>';
+                } else {
+                    content = '<div class="timeline-container">';
+                    history.forEach((entry, idx) => {
+                        const date = entry.timestamp ? new Date(entry.timestamp).toLocaleString('en-IN') : '-';
+                        const comment = entry.comment || '<span class="text-muted fst-italic">No comment</span>';
+                        const statusColor = {
+                            'Pending': '#fd7e14', 'Claimed': '#fd7e14',
+                            'Approved': '#007bff', 'Processed': '#6f42c1',
+                            'Completed': '#28a745', 'Rejected': '#dc3545'
+                        }[entry.new_status] || '#6c757d';
+                        
+                        content += `
+                            <div class="d-flex mb-3 pb-3 ${idx < history.length - 1 ? 'border-bottom' : ''}">
+                                <div class="me-3 text-center" style="min-width: 40px;">
+                                    <div style="width: 12px; height: 12px; border-radius: 50%; background: ${statusColor}; margin: 4px auto;"></div>
+                                    ${idx < history.length - 1 ? '<div style="width: 2px; height: 30px; background: #dee2e6; margin: 0 auto;"></div>' : ''}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <span class="badge" style="background: ${statusColor}; font-size: 0.75rem;">${entry.new_status}</span>
+                                            ${entry.old_status ? '<small class="text-muted ms-1">from ' + entry.old_status + '</small>' : ''}
+                                        </div>
+                                        <small class="text-muted">${date}</small>
+                                    </div>
+                                    <div class="mt-1" style="font-size: 0.85rem;">${comment}</div>
+                                    <small class="text-muted">By: ${entry.actor_role} (${entry.actor_id})</small>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    content += '</div>';
+                }
+                
+                document.getElementById('actionModalTitle').textContent = 'Status History';
+                document.getElementById('actionModalContent').innerHTML = content;
+                document.getElementById('actionModalSubmit').style.display = 'none';
+                const modal = new bootstrap.Modal(document.getElementById('actionModal'));
+                modal.show();
+                document.getElementById('actionModal').addEventListener('hidden.bs.modal', function handler() {
+                    document.getElementById('actionModalSubmit').style.display = '';
+                    document.getElementById('actionModal').removeEventListener('hidden.bs.modal', handler);
+                });
+            } catch (error) {
+                showAlert('Error loading history: ' + error.message, 'danger');
+            }
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 10000; max-width: 400px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+
+        function exportToExcel() {
+            let csv = 'Achievement Date,User ID,User Name,Type,Gift Name,Target,Achieved,KYC Status,Group Eligibility,Eligibility,Status\n';
+            filteredAwards.forEach(award => {
+                const ec = award.eligibility_criteria;
+                const eligSummary = ec ? `${[ec.is_activated, ec.kyc_approved, ec.program_utilisation_completed, ec.group_a_ok, ec.group_b_ok].filter(Boolean).length}/5` : 'N/A';
+                csv += `"${award.achievement_date || ''}","${award.user_id}","${award.user_name}","${award.award_type}","${award.gift_name || ''}","${award.tier_required || 0}","${award.achieved_count || 0}","${award.kyc_status || 'Pending'}","${award.group_eligibility || 'Unknown'}","${eligSummary}","${award.processed_status}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `awards_export_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        document.addEventListener('DOMContentLoaded', loadAwards);
+
+        let allEligibility = [];
+        let filteredEligibility = [];
+        let activeBonanzas = [];
+        let bonanzaGroups = [];
+        let currentClaimData = null;
+        let eligibilityLoaded = false;
+
+        function extractBonanzaGroup(name) {
+            if (!name) return name;
+            const parts = name.split(' — ');
+            return parts[0].trim();
+        }
+
+        function getItemStatus(item) {
+            if (item.is_expired && !item.already_claimed) return 'expired';
+            if (item.already_claimed) {
+                if (item.claim_status === 'approved') {
+                    if (item.delivery_status === 'delivered') return 'delivered';
+                    return 'claimed_approved';
+                }
+                return 'claimed_pending';
+            }
+            if (item.is_eligible) return 'unclaimed';
+            return 'in_progress';
+        }
+
+        function getStatusBadge(item) {
+            const s = getItemStatus(item);
+            switch(s) {
+                case 'expired': return '<span class="badge bg-dark text-white">Expired</span>';
+                case 'delivered': return '<span class="badge bg-success"><i class="fas fa-check-double me-1"></i>Delivered</span>';
+                case 'claimed_approved': return '<span class="badge bg-primary"><i class="fas fa-check me-1"></i>Approved</span>';
+                case 'claimed_pending': return '<span class="badge bg-info text-dark"><i class="fas fa-clock me-1"></i>Claimed - Pending</span>';
+                case 'unclaimed': return '<span class="badge bg-success">Eligible</span>';
+                case 'in_progress': return '<span class="badge bg-warning text-dark">In Progress</span>';
+                default: return '<span class="badge bg-secondary">Unknown</span>';
+            }
+        }
+
+        function toggleAllStatusCB(checked) {
+            document.querySelectorAll('#eligibilityStatusCheckboxes input[type=checkbox]').forEach(cb => cb.checked = checked);
+            filterEligibility();
+        }
+
+        function getSelectedEligStatuses() {
+            const cbs = document.querySelectorAll('#eligibilityStatusCheckboxes input[type=checkbox]:checked');
+            return [...cbs].map(cb => cb.value);
+        }
+
+        async function loadBonanzaEligibility() {
+            if (eligibilityLoaded && allEligibility.length > 0) {
+                return;
+            }
+            
+            try {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                
+                const response = await fetchWithAuth('/api/v1/bonanza/admin/all-eligibility');
+                
+                if (response.success) {
+                    allEligibility = response.eligibility_data || [];
+                    activeBonanzas = response.active_bonanzas || [];
+                    
+                    const bonanzaUserIds = [...new Set(allEligibility.map(e => e.user_id).filter(Boolean))];
+                    const missingIds = bonanzaUserIds.filter(id => !(id in keyEligibilityMap));
+                    if (missingIds.length > 0) {
+                        try {
+                            const token = getToken();
+                            const r = await fetch('/api/v1/auth/key-eligibility-bulk', {
+                                method: 'POST',
+                                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ user_ids: missingIds })
+                            });
+                            if (r.ok) { const d = await r.json(); Object.assign(keyEligibilityMap, d.data || {}); }
+                        } catch(e) {}
+                    }
+                    
+                    const groupSet = new Map();
+                    activeBonanzas.forEach(b => {
+                        const grp = extractBonanzaGroup(b.name);
+                        if (!groupSet.has(grp)) {
+                            groupSet.set(grp, []);
+                        }
+                        groupSet.get(grp).push(b);
+                    });
+                    bonanzaGroups = [...groupSet.entries()].map(([name, items]) => ({ name, bonanzaIds: items.map(i => i.id), items }));
+                    
+                    const groupSelect = document.getElementById('eligibilityGroupFilter');
+                    groupSelect.innerHTML = '<option value="">All Groups</option>';
+                    bonanzaGroups.forEach((g, idx) => {
+                        groupSelect.innerHTML += `<option value="${idx}">${g.name} (${g.items.length} levels)</option>`;
+                    });
+                    
+                    populateBonanzaDropdown(activeBonanzas);
+                    
+                    eligibilityLoaded = true;
+                    filterEligibility();
+                }
+                
+            } catch (error) {
+                console.error('Error loading eligibility:', error);
+                showAlert('Error loading eligibility: ' + error.message, 'danger');
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+        }
+
+        function populateBonanzaDropdown(bonanzaList) {
+            const bonanzaSelect = document.getElementById('eligibilityBonanzaFilter');
+            bonanzaSelect.innerHTML = '<option value="">All Bonanzas</option>';
+            bonanzaList.forEach(b => {
+                const label = b.award_name ? `${b.name} — ${b.award_name}` : b.name;
+                bonanzaSelect.innerHTML += `<option value="${b.id}">${label}</option>`;
+            });
+        }
+
+        function onGroupFilterChange() {
+            const groupIdx = document.getElementById('eligibilityGroupFilter').value;
+            if (groupIdx === '') {
+                populateBonanzaDropdown(activeBonanzas);
+            } else {
+                const group = bonanzaGroups[parseInt(groupIdx)];
+                populateBonanzaDropdown(group.items);
+            }
+            document.getElementById('eligibilityBonanzaFilter').value = '';
+            filterEligibility();
+        }
+
+        function filterEligibility() {
+            const groupIdx = document.getElementById('eligibilityGroupFilter').value;
+            const bonanzaId = document.getElementById('eligibilityBonanzaFilter').value;
+            const search = document.getElementById('eligibilitySearch').value.toLowerCase();
+            const selectedStatuses = getSelectedEligStatuses();
+            
+            let groupBonanzaIds = null;
+            if (groupIdx !== '') {
+                groupBonanzaIds = new Set(bonanzaGroups[parseInt(groupIdx)].bonanzaIds);
+            }
+            
+            filteredEligibility = allEligibility.filter(item => {
+                if (groupBonanzaIds && !groupBonanzaIds.has(item.bonanza_id)) return false;
+                if (bonanzaId && item.bonanza_id != bonanzaId) return false;
+                if (search) {
+                    const searchStr = `${item.user_id} ${item.user_name}`.toLowerCase();
+                    if (!searchStr.includes(search)) return false;
+                }
+                const itemStatus = getItemStatus(item);
+                if (selectedStatuses.length > 0 && !selectedStatuses.includes(itemStatus)) return false;
+                return true;
+            });
+            
+            renderEligibility();
+        }
+
+        function clearEligibilityFilters() {
+            document.getElementById('eligibilityGroupFilter').value = '';
+            document.getElementById('eligibilityBonanzaFilter').value = '';
+            document.getElementById('eligibilitySearch').value = '';
+            populateBonanzaDropdown(activeBonanzas);
+            document.getElementById('sf_unclaimed').checked = true;
+            document.getElementById('sf_in_progress').checked = true;
+            document.getElementById('sf_claimed_pending').checked = false;
+            document.getElementById('sf_claimed_approved').checked = false;
+            document.getElementById('sf_delivered').checked = false;
+            document.getElementById('sf_expired').checked = false;
+            filterEligibility();
+        }
+
+        function renderEligibility() {
+            const tbody = document.getElementById('eligibilityTableBody');
+            const emptyState = document.getElementById('eligibilityEmptyState');
+            
+            document.getElementById('eligibilityCount').textContent = `Total: ${filteredEligibility.length}`;
+            
+            if (filteredEligibility.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            tbody.innerHTML = filteredEligibility.map(item => {
+                const progressPercent = Math.min(100, (item.current_progress / item.target_requirement) * 100);
+                const progressClass = item.is_eligible ? 'bg-success' : 'bg-warning';
+                const startDate = item.start_date ? new Date(item.start_date).toLocaleDateString('en-IN', {day:'2-digit',month:'short'}) : '-';
+                const endDate = item.end_date ? new Date(item.end_date).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'2-digit'}) : '-';
+                
+                return `
+                <tr>
+                    <td style="font-size:0.8rem;white-space:nowrap;">${startDate}<br><small class="text-muted">to ${endDate}</small></td>
+                    <td>
+                        <div class="user-info">
+                            <span class="user-id">${item.user_id}</span>
+                            <span class="user-name text-dark">${item.user_name}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <strong class="text-dark">${item.bonanza_name}</strong>
+                        ${item.is_expired ? '<span class="badge bg-dark ms-1" style="font-size: 0.65rem;">Expired</span>' : ''}
+                        ${item.award_name ? `<small class="d-block text-muted">${item.award_name}</small>` : ''}
+                    </td>
+                    <td>
+                        <span class="badge ${item.criteria_type.startsWith('direct_referral') ? 'bg-primary' : (item.criteria_type === 'matching_points' ? 'bg-info' : 'bg-secondary')}">${item.criteria_type.startsWith('direct_referral') ? 'Direct Facilitation' : (item.criteria_type === 'matching_points' ? 'Group Performance' : item.criteria_type)}</span>
+                        <small class="d-block text-muted">Target: ${item.target_requirement}</small>
+                    </td>
+                    <td>
+                        <div class="progress" style="height: 24px; min-width: 100px; background: #e9ecef;">
+                            <div class="progress-bar ${progressClass} text-white fw-bold" style="width: ${Math.max(progressPercent, 30)}%; font-size: 0.85rem;">${item.current_progress}/${item.target_requirement}</div>
+                        </div>
+                    </td>
+                    <td>
+                        ${(function() {
+                            // DC_VGK_SLAB_ELIG_001: slab_wise reward_amount is null; use slab_payout or slab_extra_amount
+                            if (item.reward_type === 'slab_wise' || item.slab_extra_amount) {
+                                if (item.slab_payout != null) {
+                                    return `<span class="text-success fw-bold">₹${item.slab_payout.toLocaleString('en-IN')}</span><small class="d-block text-muted">${item.current_progress||0}×₹${(item.slab_extra_amount||0).toLocaleString('en-IN')}/file</small>`;
+                                }
+                                return `<span class="text-warning fw-bold">₹${(item.slab_extra_amount||0).toLocaleString('en-IN')}/file</span>`;
+                            }
+                            if (item.is_monetary) return `<span class="text-success fw-bold">₹${(item.reward_amount||0).toLocaleString('en-IN')}</span>`;
+                            return `<span class="fw-bold text-dark">${item.award_name || 'Gift'}</span>`;
+                        })()}
+                        ${item.portal === 'VGK' ? '<span class="badge bg-purple ms-1" style="font-size:0.6rem;background:#7c3aed">VGK</span>' : ''}
+                    </td>
+                    <td>${item.portal === 'VGK' ? '<span class="badge bg-secondary">VGK Partner</span>' : getKeyEligBadge(item.user_id)}</td>
+                    <td>${item.portal === 'VGK' ? '—' : getEligibilityCriteriaCell(item.eligibility_criteria)}</td>
+                    <td>
+                        ${getStatusBadge(item)}
+                        ${item.claimed_at ? '<small class="d-block text-muted">' + new Date(item.claimed_at).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'2-digit'}) + '</small>' : ''}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-1 flex-wrap">
+                            ${item.portal !== 'VGK' ? `<button class="btn btn-sm btn-outline-primary btn-action" onclick="viewContributorsEligibility('${item.user_id}', '${item.criteria_type}')" title="View Contributors"><i class="fas fa-users"></i></button>` : ''}
+                            ${item.is_eligible && !item.already_claimed && !item.is_expired && item.portal !== 'VGK'
+                                ? `<button class="btn btn-sm btn-warning btn-action" onclick="openClaimModal('${item.user_id}', '${item.user_name}', ${item.bonanza_id}, '${item.bonanza_name}', '${item.criteria_type}', ${item.target_requirement}, ${item.is_monetary}, '${item.award_name || ''}', ${item.reward_amount || 0})" title="Claim on Behalf">
+                                    <i class="fas fa-hand-holding-heart"></i>
+                                   </button>`
+                                : (item.is_eligible && !item.already_claimed && item.portal === 'VGK'
+                                    ? `<a href="/staff/vgk/bonanza-claims" class="btn btn-sm btn-outline-purple btn-action" style="border-color:#7c3aed;color:#7c3aed" title="Manage VGK Claims"><i class="fas fa-external-link-alt"></i></a>`
+                                    : (item.is_expired && item.is_eligible && !item.already_claimed && item.portal !== 'VGK'
+                                        ? `<button class="btn btn-sm btn-outline-warning btn-action" onclick="openExtendModal(${item.bonanza_id}, '${item.bonanza_name}', '${item.end_date || ''}')" title="Extend Period to Claim"><i class="fas fa-calendar-plus"></i></button>`
+                                        : ''))}
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        function openClaimModal(userId, userName, bonanzaId, bonanzaName, criteriaType, targetReq, isMonetary, awardName, rewardAmount) {
+            currentClaimData = { userId, bonanzaId };
+            
+            document.getElementById('claimUserId').value = `${userId} - ${userName}`;
+            document.getElementById('claimBonanzaName').value = bonanzaName;
+            document.getElementById('claimReward').value = isMonetary ? `₹${rewardAmount.toLocaleString()}` : awardName;
+            
+            const deductionType = criteriaType === 'direct_referrals' ? 'Direct Facilitations' : 'Group Performance';
+            document.getElementById('claimDeductionInfo').innerHTML = `
+                <strong>Deduction:</strong> ${targetReq} ${deductionType}<br>
+                <small class="text-muted">This will reduce the user's ${deductionType.toLowerCase()} count for awards calculation.</small>
+            `;
+            
+            document.getElementById('claimStaffNotes').value = '';
+            
+            new bootstrap.Modal(document.getElementById('claimOnBehalfModal')).show();
+        }
+
+        async function confirmClaimOnBehalf() {
+            if (!currentClaimData) return;
+            
+            const confirmBtn = document.getElementById('confirmClaimBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Processing...';
+            
+            try {
+                const response = await fetchWithAuth('/api/v1/bonanza/admin/claim-on-behalf', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_id: currentClaimData.userId,
+                        bonanza_id: currentClaimData.bonanzaId,
+                        staff_notes: document.getElementById('claimStaffNotes').value || null
+                    })
+                });
+                
+                bootstrap.Modal.getInstance(document.getElementById('claimOnBehalfModal')).hide();
+                showAlert(response.message || 'Claim successful!', 'success');
+                
+                eligibilityLoaded = false;
+                allEligibility = [];
+                await loadBonanzaEligibility();
+                await loadAwards();
+                
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-check me-1"></i> Confirm Claim';
+                currentClaimData = null;
+            }
+        }
+
+        // Extend Bonanza End Date Functions
+        let extendBonanzaData = null;
+
+        function openExtendModal(bonanzaId, bonanzaName, endDate) {
+            extendBonanzaData = { bonanzaId };
+            document.getElementById('extendBonanzaId').value = bonanzaId;
+            document.getElementById('extendBonanzaName').value = bonanzaName;
+            document.getElementById('extendCurrentEndDate').value = endDate ? new Date(endDate).toLocaleString() : 'Not set';
+            
+            // Set default new end date to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 7);
+            tomorrow.setHours(23, 59, 0, 0);
+            document.getElementById('extendNewEndDate').value = tomorrow.toISOString().slice(0, 16);
+            
+            new bootstrap.Modal(document.getElementById('extendBonanzaModal')).show();
+        }
+
+        async function confirmExtendBonanza() {
+            if (!extendBonanzaData) return;
+            
+            const newEndDate = document.getElementById('extendNewEndDate').value;
+            if (!newEndDate) {
+                showAlert('Please select a new end date', 'warning');
+                return;
+            }
+            
+            const confirmBtn = document.getElementById('confirmExtendBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Updating...';
+            
+            try {
+                const response = await fetchWithAuth(`/api/v1/bonanza/edit/${extendBonanzaData.bonanzaId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        end_date: new Date(newEndDate).toISOString()
+                    })
+                });
+                
+                bootstrap.Modal.getInstance(document.getElementById('extendBonanzaModal')).hide();
+                showAlert('Bonanza period extended successfully! You can now process claims.', 'success');
+                
+                // Reload eligibility data
+                eligibilityLoaded = false;
+                allEligibility = [];
+                await loadBonanzaEligibility();
+                
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-check me-1"></i> Extend Period';
+                extendBonanzaData = null;
+            }
+        }
+
+        function getPreviousTierRequired(userId, awardType, currentTierRequired) {
+            const userAwards = allAwards.filter(a => a.user_id === userId && a.award_type === awardType && (a.tier_required || 0) < currentTierRequired);
+            if (userAwards.length === 0) return 0;
+            return Math.max(...userAwards.map(a => a.tier_required || 0));
+        }
+
+        async function viewContributors(userId, awardType, awardId, tierRequired, giftName, rankName, achievedDate) {
+            document.getElementById('contribUserId').textContent = userId;
+            document.getElementById('contribUserName').textContent = '';
+            document.getElementById('contribGiftName').textContent = giftName || '-';
+            document.getElementById('contribRankName').textContent = rankName ? `(${rankName})` : '';
+            document.getElementById('contribAchievedDate').textContent = achievedDate ? new Date(achievedDate).toLocaleDateString('en-IN') : '-';
+            document.getElementById('contributorsLoading').style.display = 'block';
+            document.getElementById('contributorsContent').style.display = 'none';
+            document.getElementById('directContributors').style.display = 'none';
+            document.getElementById('matchingContributors').style.display = 'none';
+            document.getElementById('noContributors').style.display = 'none';
+            document.getElementById('deliveredDebtInfo').style.display = 'none';
+            
+            new bootstrap.Modal(document.getElementById('contributorsModal')).show();
+            
+            try {
+                let url = `/api/v1/users/${userId}/contributors?type=${awardType}`;
+                if (tierRequired && tierRequired > 0) {
+                    url += `&tier_required=${tierRequired}`;
+                }
+                const response = await fetchWithAuth(url);
+                
+                document.getElementById('contributorsLoading').style.display = 'none';
+                document.getElementById('contributorsContent').style.display = 'block';
+                
+                if (response.user_name) {
+                    document.getElementById('contribUserName').textContent = `(${response.user_name})`;
+                }
+                
+                if (awardType === 'direct' && response.direct_referrals && response.direct_referrals.length > 0) {
+                    document.getElementById('directContributors').style.display = 'block';
+                    const prevTier = getPreviousTierRequired(userId, awardType, tierRequired);
+                    document.getElementById('directContributorsBody').innerHTML = response.direct_referrals.map((r, i) => {
+                        const isNewForTier = prevTier > 0 && i >= prevTier;
+                        const rowClass = isNewForTier ? '' : (prevTier > 0 ? 'opacity-50' : '');
+                        const tierBadge = prevTier > 0 && i < prevTier ? '<span class="badge bg-secondary ms-1" style="font-size:0.6rem;">prev tier</span>' : '';
+                        return `
+                        <tr class="${rowClass}">
+                            <td>${i + 1}</td>
+                            <td class="text-primary fw-bold">${r.id || r.user_id}</td>
+                            <td>${r.name}${tierBadge}</td>
+                            <td><span class="badge ${r.package === 'Platinum' ? 'bg-warning text-dark' : 'bg-info'}">${r.package}</span></td>
+                            <td>${r.points || r.package_points || 0}</td>
+                            <td>${r.activation_date ? new Date(r.activation_date).toLocaleDateString() : '-'}</td>
+                        </tr>`;
+                    }).join('');
+                } else if (awardType === 'matching' && response.matching_data) {
+                    document.getElementById('matchingContributors').style.display = 'block';
+                    const groupA = response.matching_data.group_a || response.matching_data.left_leg || [];
+                    const groupB = response.matching_data.group_b || response.matching_data.right_leg || [];
+                    document.getElementById('groupACount').textContent = groupA.length;
+                    document.getElementById('groupBCount').textContent = groupB.length;
+                    document.getElementById('groupABody').innerHTML = groupA.map(m => `
+                        <tr><td class="text-primary">${m.id || m.user_id}</td><td>${m.name}</td><td><span class="badge bg-info">${m.package}</span></td><td>${m.activation_date ? new Date(m.activation_date).toLocaleDateString() : '-'}</td></tr>
+                    `).join('') || '<tr><td colspan="4" class="text-muted text-center">No members</td></tr>';
+                    document.getElementById('groupBBody').innerHTML = groupB.map(m => `
+                        <tr><td class="text-success">${m.id || m.user_id}</td><td>${m.name}</td><td><span class="badge bg-info">${m.package}</span></td><td>${m.activation_date ? new Date(m.activation_date).toLocaleDateString() : '-'}</td></tr>
+                    `).join('') || '<tr><td colspan="4" class="text-muted text-center">No members</td></tr>';
+                } else if (awardType === 'bonanza') {
+                    const award = allAwards.find(a => a.award_id === awardId && a.award_type === 'bonanza');
+                    const directSnap = (award && award.direct_contributors_snapshot) || (response.direct_referrals && response.direct_referrals.length > 0 ? response.direct_referrals : null);
+                    const matchSnap = (award && award.matching_contributors_snapshot) || (response.matching_data || null);
+                    if (directSnap && directSnap.length > 0) {
+                        document.getElementById('directContributors').style.display = 'block';
+                        document.getElementById('directContributorsBody').innerHTML = directSnap.map((r, i) => `
+                            <tr>
+                                <td>${i + 1}</td>
+                                <td class="text-primary fw-bold">${r.user_id || r.id}</td>
+                                <td>${r.name}</td>
+                                <td><span class="badge ${r.package === 'Platinum' ? 'bg-warning text-dark' : 'bg-info'}">${r.package}</span></td>
+                                <td>${r.points || r.package_points || 0}</td>
+                                <td>${r.activation_date ? new Date(r.activation_date).toLocaleDateString() : '-'}</td>
+                            </tr>
+                        `).join('');
+                    } else if (matchSnap) {
+                        document.getElementById('matchingContributors').style.display = 'block';
+                        const groupA = matchSnap.group_a || matchSnap.left_leg || [];
+                        const groupB = matchSnap.group_b || matchSnap.right_leg || [];
+                        document.getElementById('groupACount').textContent = groupA.length;
+                        document.getElementById('groupBCount').textContent = groupB.length;
+                        document.getElementById('groupABody').innerHTML = groupA.map(m => `
+                            <tr><td class="text-primary">${m.user_id || m.id}</td><td>${m.name}</td><td><span class="badge bg-info">${m.package}</span></td><td>${m.activation_date ? new Date(m.activation_date).toLocaleDateString() : '-'}</td></tr>
+                        `).join('') || '<tr><td colspan="4" class="text-muted text-center">No members</td></tr>';
+                        document.getElementById('groupBBody').innerHTML = groupB.map(m => `
+                            <tr><td class="text-success">${m.user_id || m.id}</td><td>${m.name}</td><td><span class="badge bg-info">${m.package}</span></td><td>${m.activation_date ? new Date(m.activation_date).toLocaleDateString() : '-'}</td></tr>
+                        `).join('') || '<tr><td colspan="4" class="text-muted text-center">No members</td></tr>';
+                    } else {
+                        document.getElementById('noContributors').style.display = 'block';
+                    }
+                } else {
+                    document.getElementById('noContributors').style.display = 'block';
+                }
+                
+                const debtDiv = document.getElementById('deliveredDebtInfo');
+                if (response.bonanza_consumed > 0 || response.delivered_debt > 0) {
+                    let debtHtml = '<i class="fas fa-exclamation-triangle me-2"></i>';
+                    debtHtml += `<strong>Bonanza Impact:</strong> ${response.bonanza_consumed || 0} point(s) consumed by bonanza claims.`;
+                    if (response.total_raw !== undefined) {
+                        debtHtml += ` Total referrals: ${response.total_raw}, Available after deduction: ${response.total_available || 0}.`;
+                    }
+                    if (response.delivered_debt > 0 && response.delivered_debt_details && response.delivered_debt_details.length > 0) {
+                        debtHtml += '<br><i class="fas fa-gift me-2 mt-1"></i><strong>Delivered Debt:</strong> ';
+                        debtHtml += response.delivered_debt_details.map(d =>
+                            `${d.award_name} (${d.gift_name}) - ${d.status}, ${d.debt_points} point(s) to recover from future achievements`
+                        ).join('; ');
+                        debtHtml += '.';
+                    }
+                    debtDiv.innerHTML = debtHtml;
+                    debtDiv.style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('contributorsLoading').style.display = 'none';
+                document.getElementById('contributorsContent').style.display = 'block';
+                document.getElementById('noContributors').style.display = 'block';
+                document.getElementById('noContributors').innerHTML = `<i class="fas fa-exclamation-circle fa-2x mb-2 text-danger"></i><p>Error loading: ${error.message}</p>`;
+            }
+        }
+
+        async function viewContributorsEligibility(userId, criteriaType) {
+            const awardType = criteriaType === 'direct_referrals' ? 'direct' : 'matching';
+            await viewContributors(userId, awardType, null, 0);
+        }
+
+        function amEscapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+        function amEscapeJS(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+        }
+
+        let amCurrentPage = 1;
+        let amTotalPages = 1;
+        let amSortCol = null;
+        let amSortDir = 'asc';
+        let amLastData = null;
+        let amLastLevels = null;
+        let amSumSortCol = null;
+        let amSumSortDir = 'asc';
+        let amSumLastData = null;
+
+        async function loadAchievementDataCampaignsAM() {
+            try {
+                const sel = document.getElementById('amCampaignSelect');
+                if (!sel) return;
+                sel.innerHTML = '<option value="">Loading campaigns...</option>';
+                const data = await fetchWithAuth('/api/v1/bonanza/achievement-data/campaigns');
+                if (data.success && data.campaigns && data.campaigns.length > 0) {
+                    sel.innerHTML = '<option value="">-- Select Campaign --</option>';
+                    data.campaigns.forEach(c => {
+                        const label = c.name + (c.is_active ? ' (Active)' : '') + ' [' + c.level_count + ' levels]';
+                        sel.innerHTML += '<option value="' + amEscapeHTML(c.name) + '">' + amEscapeHTML(label) + '</option>';
+                    });
+                } else {
+                    sel.innerHTML = '<option value="">No campaigns found</option>';
+                }
+            } catch (e) {
+                console.error('Error loading campaigns:', e);
+                const sel = document.getElementById('amCampaignSelect');
+                if (sel) sel.innerHTML = '<option value="">Error loading campaigns</option>';
+            }
+        }
+
+        function amSumSort(col) {
+            if (!amSumLastData) return;
+            if (amSumSortCol === col) { amSumSortDir = amSumSortDir === 'asc' ? 'desc' : 'asc'; }
+            else { amSumSortCol = col; amSumSortDir = 'asc'; }
+            amRenderSummary(amSumLastData);
+        }
+
+        function amRenderSummary(rows) {
+            amSumLastData = rows;
+            const container = document.getElementById('amSummaryContainer');
+            if (!rows || rows.length === 0) {
+                container.innerHTML = '<div class="alert alert-info py-2" style="font-size:12px;">No summary data for this campaign.</div>';
+                return;
+            }
+            if (amSumSortCol !== null) {
+                rows = [...rows].sort((a, b) => {
+                    let va = a[amSumSortCol], vb = b[amSumSortCol];
+                    if (va === null || va === undefined) va = '';
+                    if (vb === null || vb === undefined) vb = '';
+                    if (typeof va === 'number' && typeof vb === 'number') return amSumSortDir === 'asc' ? va - vb : vb - va;
+                    va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+                    return amSumSortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+                });
+            }
+            const arrow = function(c) { return amSumSortCol === c ? (amSumSortDir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'; };
+            let html = '<h6 class="mb-2" style="font-size:13px;"><i class="fas fa-chart-pie me-1"></i>Campaign Level Summary</h6>';
+            html += '<div class="table-responsive"><table class="table table-sm table-bordered table-striped" style="font-size:11px;"><thead class="table-dark"><tr>';
+            html += '<th style="cursor:pointer;" onclick="amSumSort(\'award_name\')">Award' + arrow('award_name') + '</th>';
+            html += '<th style="cursor:pointer;" onclick="amSumSort(\'level_type\')">Type' + arrow('level_type') + '</th>';
+            html += '<th style="cursor:pointer;" onclick="amSumSort(\'target\')">Target' + arrow('target') + '</th>';
+            html += '<th style="cursor:pointer;" onclick="amSumSort(\'max_winners\')">Max Count' + arrow('max_winners') + '</th>';
+            html += '<th style="cursor:pointer;" onclick="amSumSort(\'reward_type\')">Reward Type' + arrow('reward_type') + '</th>';
+            html += '<th style="cursor:pointer;" onclick="amSumSort(\'reward_amount\')">Reward Amt' + arrow('reward_amount') + '</th>';
+            html += '<th style="cursor:pointer;" onclick="amSumSort(\'achieved_count\')">Achieved' + arrow('achieved_count') + '</th>';
+            html += '<th style="cursor:pointer;" onclick="amSumSort(\'claimed_count\')">Claimed' + arrow('claimed_count') + '</th>';
+            html += '<th>Unclaimed</th>';
+            html += '<th style="cursor:pointer;" onclick="amSumSort(\'status\')">Status' + arrow('status') + '</th>';
+            html += '</tr></thead><tbody>';
+            rows.forEach(r => {
+                const typeBadge = r.level_type === 'Direct' ? 'primary' : 'success';
+                const unclaimed = Math.max(0, r.achieved_count - r.claimed_count);
+                html += '<tr>';
+                html += '<td class="fw-bold" style="font-size:13px;">' + amEscapeHTML(r.award_name) + '</td>';
+                html += '<td><span class="badge bg-' + typeBadge + '" style="font-size:11px;">' + r.level_type + '</span></td>';
+                html += '<td class="text-center fw-bold" style="font-size:14px;">' + r.target + '</td>';
+                html += '<td class="text-center fw-bold" style="font-size:13px;">' + (r.max_winners != null ? r.max_winners : '-') + '</td>';
+                html += '<td>' + amEscapeHTML(r.reward_type || '-') + '</td>';
+                html += '<td class="text-center" style="font-size:13px;">' + (r.reward_amount ? '₹' + r.reward_amount : '-') + '</td>';
+                html += '<td class="text-center"><span class="badge bg-success" style="font-size:12px;padding:5px 10px;">' + r.achieved_count + '</span></td>';
+                html += '<td class="text-center"><span class="badge bg-warning text-dark" style="font-size:12px;padding:5px 10px;">' + r.claimed_count + '</span></td>';
+                html += '<td class="text-center"><span class="badge bg-' + (unclaimed > 0 ? 'danger' : 'secondary') + '" style="font-size:12px;padding:5px 10px;">' + unclaimed + '</span></td>';
+                html += '<td><span class="badge bg-' + (r.status === 'Approved' ? 'success' : 'secondary') + '" style="font-size:10px;">' + amEscapeHTML(r.status) + '</span></td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        function amSortData(col) {
+            if (!amLastData || !amLastLevels) return;
+            if (amSortCol === col) { amSortDir = amSortDir === 'asc' ? 'desc' : 'asc'; }
+            else { amSortCol = col; amSortDir = 'asc'; }
+            amRenderTable(amLastData, amLastLevels);
+        }
+
+        function amRenderTable(rows, levels) {
+            amLastData = rows;
+            amLastLevels = levels;
+            const container = document.getElementById('amTableContainer');
+            if (!rows || rows.length === 0) {
+                container.innerHTML = '<div class="alert alert-info" style="font-size:12px;">No member-level achievement data found.</div>';
+                return;
+            }
+            const directLevels = levels.direct || [];
+            const groupLevels = levels.group || [];
+
+            if (amSortCol !== null) {
+                const sortFn = (a, b) => {
+                    let va = a[amSortCol], vb = b[amSortCol];
+                    if (va === null || va === undefined) va = '';
+                    if (vb === null || vb === undefined) vb = '';
+                    if (typeof va === 'number' && typeof vb === 'number') return amSortDir === 'asc' ? va - vb : vb - va;
+                    if (typeof va === 'boolean' && typeof vb === 'boolean') { va = va ? 1 : 0; vb = vb ? 1 : 0; return amSortDir === 'asc' ? va - vb : vb - va; }
+                    va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+                    if (va < vb) return amSortDir === 'asc' ? -1 : 1;
+                    if (va > vb) return amSortDir === 'asc' ? 1 : -1;
+                    return 0;
+                };
+                rows.sort(sortFn);
+            }
+            const arrow = function(col) { return amSortCol === col ? (amSortDir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'; };
+
+            function buildTableHeader() {
+                let h = '<tr>';
+                h += '<th rowspan="2" class="am-sticky-col" style="cursor:pointer;min-width:90px;position:sticky;left:0;z-index:5;background:#212529;color:#fff;" onclick="amSortData(\'mnr_id\')">MNR ID' + arrow('mnr_id') + '</th>';
+                h += '<th rowspan="2" class="am-sticky-col-name" style="cursor:pointer;min-width:120px;position:sticky;left:90px;z-index:5;background:#212529;color:#fff;" onclick="amSortData(\'name\')">Name' + arrow('name') + '</th>';
+                h += '<th rowspan="2" style="cursor:pointer;min-width:90px;background:#212529;color:#fff;" onclick="amSortData(\'referrer_id\')">Referrer' + arrow('referrer_id') + '</th>';
+                h += '<th rowspan="2" style="cursor:pointer;min-width:80px;background:#212529;color:#fff;" onclick="amSortData(\'started_achieving_date\')">Started' + arrow('started_achieving_date') + '</th>';
+                h += '<th rowspan="2" style="cursor:pointer;min-width:60px;background:#212529;color:#fff;" onclick="amSortData(\'type\')">Type' + arrow('type') + '</th>';
+                h += '<th rowspan="2" style="cursor:pointer;min-width:75px;background:#212529;color:#fff;" onclick="amSortData(\'coupon_status\')">Grp Status' + arrow('coupon_status') + '</th>';
+                h += '<th rowspan="2" style="cursor:pointer;min-width:60px;background:#212529;color:#fff;" onclick="amSortData(\'kyc_status\')">KYC' + arrow('kyc_status') + '</th>';
+                h += '<th colspan="5" class="text-center" style="background:#1a5276;color:#fff;">Overall</th>';
+                if (directLevels.length > 0) h += '<th colspan="' + directLevels.length + '" class="text-center" style="background:#1a6b2c;color:#fff;">Direct Levels</th>';
+                if (groupLevels.length > 0) h += '<th colspan="' + groupLevels.length + '" class="text-center" style="background:#6b1a5c;color:#fff;">Group Levels</th>';
+                h += '<th rowspan="2" style="background:#212529;color:#fff;">View</th>';
+                h += '<th rowspan="2" class="am-sticky-col-right" style="cursor:pointer;position:sticky;right:0;z-index:5;background:#212529;color:#fff;min-width:80px;" onclick="amSortData(\'is_eligible\')">Eligibility' + arrow('is_eligible') + '</th>';
+                h += '</tr><tr>';
+                h += '<th style="cursor:pointer;background:#1a5276;color:#fff;" onclick="amSortData(\'target\')">Target' + arrow('target') + '</th>';
+                h += '<th style="cursor:pointer;background:#1a5276;color:#fff;" onclick="amSortData(\'max_achieved\')">Achvd' + arrow('max_achieved') + '</th>';
+                h += '<th style="cursor:pointer;background:#1a5276;color:#fff;" onclick="amSortData(\'claimed_points\')">Claimed' + arrow('claimed_points') + '</th>';
+                h += '<th style="cursor:pointer;background:#1a5276;color:#fff;" onclick="amSortData(\'balance_points\')">Balance' + arrow('balance_points') + '</th>';
+                h += '<th style="cursor:pointer;background:#1a5276;color:#fff;" onclick="amSortData(\'achieved\')">Net' + arrow('achieved') + '</th>';
+                directLevels.forEach(l => { h += '<th class="text-center" style="min-width:90px;white-space:normal;line-height:1.2;padding:4px;background:#1a6b2c;color:#fff;">' + amEscapeHTML(l.award_name) + '<br>(' + l.target + ')</th>'; });
+                groupLevels.forEach(l => { h += '<th class="text-center" style="min-width:90px;white-space:normal;line-height:1.2;padding:4px;background:#6b1a5c;color:#fff;">' + amEscapeHTML(l.award_name) + '<br>(' + l.target + ')</th>'; });
+                h += '</tr>';
+                return h;
+            }
+
+            function buildRow(row) {
+                const campaign = document.getElementById('amCampaignSelect')?.value || '';
+                const typeBadge = row.type === 'Direct' ? 'primary' : 'success';
+                const bgStyle = row.has_welcome_bonus ? 'background:#fff3cd33;' : '';
+                const rowBg = row.has_welcome_bonus ? '#fff3cd' : '#fff';
+                let h = '<tr style="' + bgStyle + '">';
+                h += '<td class="fw-bold am-sticky-col" style="position:sticky;left:0;z-index:2;background:' + rowBg + ';">' + amEscapeHTML(row.mnr_id) + (row.has_welcome_bonus ? ' <i class="fas fa-star text-warning" title="Exempted coupon user (+1 target)"></i>' : '') + '</td>';
+                h += '<td class="am-sticky-col-name" style="position:sticky;left:90px;z-index:2;background:' + rowBg + ';">' + amEscapeHTML(row.name) + '</td>';
+                h += '<td>' + amEscapeHTML(row.referrer_id || '-') + (row.referrer_name ? '<br>' + amEscapeHTML(row.referrer_name) : '') + '</td>';
+                h += '<td>' + (row.started_achieving_date ? row.started_achieving_date.split('T')[0] : '-') + '</td>';
+                h += '<td><span class="badge bg-' + typeBadge + '">' + row.type + '</span></td>';
+                const csBadge = row.coupon_status === 'Activated' ? 'success' : row.coupon_status === 'PENDING' ? 'warning' : 'secondary';
+                h += '<td class="text-center"><span class="badge bg-' + csBadge + '">' + amEscapeHTML(row.coupon_status || '-') + '</span></td>';
+                const kycBadge = row.kyc_status === 'Approved' ? 'success' : row.kyc_status === 'Pending' ? 'warning' : row.kyc_status === 'Rejected' ? 'danger' : 'secondary';
+                h += '<td class="text-center"><span class="badge bg-' + kycBadge + '">' + amEscapeHTML(row.kyc_status || 'Pending') + '</span></td>';
+                h += '<td class="text-center fw-bold">' + row.target + '</td>';
+                h += '<td class="text-center">' + row.max_achieved + (row.welcome_coupon_count > 0 ? '<br><small class="text-warning">(' + row.welcome_coupon_count + ' EC)</small>' : '') + '</td>';
+                h += '<td class="text-center">' + (row.claimed_points > 0 ? '<span class="text-danger fw-bold">' + row.claimed_points + '</span>' : '0') + '</td>';
+                h += '<td class="text-center">' + (row.balance_points > 0 ? '<span class="text-success fw-bold">' + row.balance_points + '</span>' : '0') + '</td>';
+                h += '<td class="text-center fw-bold">' + row.achieved + '</td>';
+                function renderLevelCell(ls) {
+                    if (ls.status === '-') return '<td class="text-center text-muted">-</td>';
+                    if (ls.status === 'Claimed') { const cb = ls.claimed_status === 'Delivered' ? 'success' : ls.claimed_status === 'Rejected' ? 'danger' : 'info'; return '<td class="text-center"><span class="badge bg-' + cb + '">Claimed</span></td>'; }
+                    if (ls.status === 'Achieved') return '<td class="text-center"><span class="badge bg-success">Eligible</span></td>';
+                    return '<td class="text-center"><span class="badge bg-warning text-dark">' + amEscapeHTML(ls.status) + ' left</span></td>';
+                }
+                (row.direct_level_statuses || []).forEach(ls => { h += renderLevelCell(ls); });
+                (row.group_level_statuses || []).forEach(ls => { h += renderLevelCell(ls); });
+                const typeArg = row.type === 'Direct' ? 'direct' : 'group';
+                h += '<td><button class="btn btn-sm btn-outline-primary py-0 px-1" onclick="loadAmContributors(\'' + amEscapeJS(row.mnr_id) + '\',\'' + amEscapeJS(campaign) + '\',\'' + typeArg + '\',\'' + amEscapeJS(row.name) + '\')"><i class="fas fa-eye"></i></button></td>';
+                const eligBadge = row.is_eligible ? 'success' : 'danger';
+                const eligText = row.is_eligible ? 'Eligible' : 'Not Eligible';
+                h += '<td class="text-center am-sticky-col-right" style="position:sticky;right:0;z-index:1;background:' + rowBg + ';"><span class="badge bg-' + eligBadge + '">' + eligText + '</span></td>';
+                h += '</tr>';
+                return h;
+            }
+
+            let html = '<h6 class="mb-2" style="font-size:13px;"><i class="fas fa-users me-1"></i>Member Achievement Details <small class="text-muted">(' + rows.length + ' records)</small></h6>';
+            html += '<div class="table-responsive" style="max-height:65vh;overflow:auto;"><table class="table table-sm table-bordered table-striped table-hover" style="font-size:12px;white-space:nowrap;"><thead class="table-dark" style="position:sticky;top:0;z-index:6;">';
+            html += buildTableHeader();
+            html += '</thead><tbody>';
+            rows.forEach(row => { html += buildRow(row); });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        async function loadAchievementDataAM(page) {
+            const campaign = document.getElementById('amCampaignSelect')?.value;
+            if (!campaign) { alert('Please select a campaign'); return; }
+            if (page) amCurrentPage = page; else amCurrentPage = 1;
+            const dateFrom = document.getElementById('amDateFrom')?.value || '';
+            const dateTo = document.getElementById('amDateTo')?.value || '';
+            const search = document.getElementById('amSearch')?.value || '';
+            const container = document.getElementById('amTableContainer');
+            const sumContainer = document.getElementById('amSummaryContainer');
+            container.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> Loading details...</div>';
+            sumContainer.innerHTML = '<div class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> Loading summary...</div>';
+
+            let sumUrl = '/api/v1/bonanza/achievement-data/summary?campaign_name=' + encodeURIComponent(campaign);
+            if (dateFrom) sumUrl += '&date_from=' + dateFrom;
+            if (dateTo) sumUrl += '&date_to=' + dateTo;
+            try {
+                const sumData = await fetchWithAuth(sumUrl);
+                if (sumData.success) {
+                    amSumSortCol = null; amSumSortDir = 'asc';
+                    amRenderSummary(sumData.summary);
+                }
+            } catch (e) {
+                sumContainer.innerHTML = '<div class="alert alert-danger py-1" style="font-size:11px;">Error loading summary: ' + e.message + '</div>';
+            }
+
+            try {
+                let url = '/api/v1/bonanza/achievement-data?campaign_name=' + encodeURIComponent(campaign) + '&page=' + amCurrentPage + '&page_size=50';
+                if (dateFrom) url += '&date_from=' + dateFrom;
+                if (dateTo) url += '&date_to=' + dateTo;
+                if (search) url += '&search=' + encodeURIComponent(search);
+                const data = await fetchWithAuth(url);
+                if (!data.success) { container.innerHTML = '<div class="alert alert-danger">Error: ' + (data.detail || 'Failed to load') + '</div>'; return; }
+                if (!data.data || data.data.length === 0) { container.innerHTML = '<div class="alert alert-info" style="font-size:12px;">No member-level achievement data found for this campaign.</div>'; document.getElementById('amPagination').style.display = 'none'; return; }
+                amSortCol = null; amSortDir = 'asc';
+                amRenderTable(data.data, data.levels);
+                const disclaimerEl = document.getElementById('amDisclaimersSection');
+                if (disclaimerEl) disclaimerEl.style.display = '';
+                amTotalPages = Math.ceil(data.total / data.page_size);
+                const pagEl = document.getElementById('amPagination');
+                pagEl.style.display = data.total > data.page_size ? '' : 'none';
+                document.getElementById('amPaginationInfo').textContent = 'Page ' + data.page + ' of ' + amTotalPages + ' (' + data.total + ' records)';
+                document.getElementById('amPrevBtn').disabled = data.page <= 1;
+                document.getElementById('amNextBtn').disabled = data.page >= amTotalPages;
+            } catch (e) {
+                container.innerHTML = '<div class="alert alert-danger">Error loading achievement data: ' + e.message + '</div>';
+                console.error('Achievement data error:', e);
+            }
+        }
+
+        function amChangePage(dir) { loadAchievementDataAM(amCurrentPage + dir); }
+
+        async function loadAmContributors(userId, campaign, type, userName) {
+            document.getElementById('amContribUser').textContent = userId + ' - ' + userName;
+            document.getElementById('amContribCampaign').textContent = campaign;
+            document.getElementById('amContribType').textContent = type === 'direct' ? 'Direct Facilitation' : 'Group Facilitation';
+            const content = document.getElementById('amContribContent');
+            content.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2">Loading...</p></div>';
+            const modal = new bootstrap.Modal(document.getElementById('amContribModal'));
+            modal.show();
+            try {
+                const dateFrom = document.getElementById('amDateFrom')?.value || '';
+                const dateTo = document.getElementById('amDateTo')?.value || '';
+                let url = '/api/v1/bonanza/achievement-data/contributors?campaign_name=' + encodeURIComponent(campaign) + '&user_id=' + encodeURIComponent(userId) + '&achievement_type=' + type;
+                if (dateFrom) url += '&date_from=' + dateFrom;
+                if (dateTo) url += '&date_to=' + dateTo;
+                const data = await fetchWithAuth(url);
+                if (!data.success || !data.contributors || data.contributors.length === 0) {
+                    content.innerHTML = '<div class="alert alert-info">No contributors found.</div>';
+                    return;
+                }
+                let html = '';
+                if (type === 'direct') {
+                    html += '<div class="table-responsive"><table class="table table-sm table-striped table-bordered"><thead class="table-light"><tr>';
+                    html += '<th>#</th><th>MNR ID</th><th>Name</th><th>Package</th><th>Activation Date</th><th>Status</th>';
+                    html += '</tr></thead><tbody>';
+                    data.contributors.forEach((c, i) => {
+                        html += '<tr><td>' + (i + 1) + '</td>';
+                        html += '<td>' + amEscapeHTML(c.mnr_id) + '</td><td>' + amEscapeHTML(c.name) + '</td>';
+                        html += '<td><span class="badge bg-info">' + amEscapeHTML(c.package || '-') + '</span></td>';
+                        html += '<td>' + (c.activation_date ? c.activation_date.split('T')[0] : '-') + '</td>';
+                        html += '<td>' + amEscapeHTML(c.status || '-') + '</td>';
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table></div>';
+                    html += '<div class="mt-2 text-muted small">Total: ' + data.total + ' contributors</div>';
+                } else {
+                    const teamContribs = data.contributors.filter(c => c.source === 'team');
+                    const matchContribs = data.contributors.filter(c => c.source === 'matching');
+                    if (teamContribs.length > 0) {
+                        const groupA = teamContribs.filter(c => c.side === 'Group A');
+                        const groupB = teamContribs.filter(c => c.side === 'Group B');
+                        html += '<div class="row">';
+                        html += '<div class="col-md-6">';
+                        html += '<h6 class="text-primary mb-2"><i class="fas fa-arrow-left me-1"></i>Group A (Left) <span class="badge bg-primary">' + groupA.length + '</span></h6>';
+                        html += '<div class="table-responsive"><table class="table table-sm table-striped table-bordered"><thead class="table-light"><tr>';
+                        html += '<th>#</th><th>MNR ID</th><th>Name</th><th>Package</th><th>Activation Date</th>';
+                        html += '</tr></thead><tbody>';
+                        if (groupA.length === 0) { html += '<tr><td colspan="5" class="text-center text-muted">No Group A members</td></tr>'; }
+                        groupA.forEach((c, i) => {
+                            html += '<tr><td>' + (i + 1) + '</td>';
+                            html += '<td>' + amEscapeHTML(c.mnr_id) + '</td><td>' + amEscapeHTML(c.name) + '</td>';
+                            html += '<td><span class="badge bg-info">' + amEscapeHTML(c.package || '-') + '</span></td>';
+                            html += '<td>' + (c.activation_date ? c.activation_date.split('T')[0] : '-') + '</td>';
+                            html += '</tr>';
+                        });
+                        html += '</tbody></table></div></div>';
+                        html += '<div class="col-md-6">';
+                        html += '<h6 class="text-success mb-2"><i class="fas fa-arrow-right me-1"></i>Group B (Right) <span class="badge bg-success">' + groupB.length + '</span></h6>';
+                        html += '<div class="table-responsive"><table class="table table-sm table-striped table-bordered"><thead class="table-light"><tr>';
+                        html += '<th>#</th><th>MNR ID</th><th>Name</th><th>Package</th><th>Activation Date</th>';
+                        html += '</tr></thead><tbody>';
+                        if (groupB.length === 0) { html += '<tr><td colspan="5" class="text-center text-muted">No Group B members</td></tr>'; }
+                        groupB.forEach((c, i) => {
+                            html += '<tr><td>' + (i + 1) + '</td>';
+                            html += '<td>' + amEscapeHTML(c.mnr_id) + '</td><td>' + amEscapeHTML(c.name) + '</td>';
+                            html += '<td><span class="badge bg-info">' + amEscapeHTML(c.package || '-') + '</span></td>';
+                            html += '<td>' + (c.activation_date ? c.activation_date.split('T')[0] : '-') + '</td>';
+                            html += '</tr>';
+                        });
+                        html += '</tbody></table></div></div></div>';
+                        html += '<div class="mt-2 text-muted small">Total Team: ' + teamContribs.length + ' (Group A: ' + groupA.length + ' | Group B: ' + groupB.length + ')</div>';
+                    }
+                    if (matchContribs.length > 0) {
+                        if (teamContribs.length > 0) html += '<hr class="my-2">';
+                        html += '<h6 class="text-warning mb-2"><i class="fas fa-exchange-alt me-1"></i>Matching Income Contributors <span class="badge bg-warning text-dark">' + matchContribs.length + '</span></h6>';
+                        html += '<div class="table-responsive"><table class="table table-sm table-striped table-bordered"><thead class="table-light"><tr>';
+                        html += '<th>#</th><th>Referred ID</th><th>Name</th><th>Amount</th><th>Date</th>';
+                        html += '</tr></thead><tbody>';
+                        matchContribs.forEach((c, i) => {
+                            html += '<tr><td>' + (i + 1) + '</td>';
+                            html += '<td>' + amEscapeHTML(c.referred_id || '-') + '</td><td>' + amEscapeHTML(c.referred_name || '-') + '</td>';
+                            html += '<td>₹' + (c.amount || 0) + '</td>';
+                            html += '<td>' + (c.date ? c.date.split('T')[0] : '-') + '</td>';
+                            html += '</tr>';
+                        });
+                        html += '</tbody></table></div>';
+                    }
+                    if (teamContribs.length === 0 && matchContribs.length === 0) {
+                        html += '<div class="alert alert-info">No contributors found.</div>';
+                    }
+                }
+                content.innerHTML = html;
+            } catch (e) {
+                content.innerHTML = '<div class="alert alert-danger">Error: ' + e.message + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>

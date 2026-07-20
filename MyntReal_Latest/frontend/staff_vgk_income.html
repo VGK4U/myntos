@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VGK Income Management — Staff</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+.content-area { padding: 24px; }
+.page-banner { background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.page-banner h1 { font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.page-banner p { opacity: .85; margin: 0; font-size: 12.5px; }
+.summary-row { display: flex; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+.stat-card { background: white; border-radius: 10px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); flex: 1; min-width: 130px; }
+.stat-card .val { font-size: 20px; font-weight: 700; color: #111827; }
+.stat-card .lbl { font-size: 11px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-top: 3px; }
+.filter-bar { background: white; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+.filter-bar .fgroup { display: flex; flex-direction: column; gap: 3px; }
+.filter-bar label { font-size: 10.5px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
+.filter-bar .form-control, .filter-bar .form-select { font-size: 12.5px; padding: 6px 10px; border-radius: 7px; border: 1px solid #e5e7eb; min-width: 110px; }
+.btn-filter { padding: 7px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; }
+.btn-filter.apply { background: #7c3aed; color: white; }
+.btn-filter.reset { background: #f3f4f6; color: #6b7280; }
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden; }
+.table-card-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; gap: 8px; }
+.table-card-header h3 { font-size: 14px; font-weight: 700; color: #111827; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+thead th { padding: 10px 12px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; background: #f9fafb; white-space: nowrap; }
+tbody td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; white-space: nowrap; }
+.badge { padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge-pending { background: #fef3c7; color: #92400e; }
+.badge-confirmed { background: #d1fae5; color: #065f46; }
+.badge-cancelled { background: #f3f4f6; color: #6b7280; }
+.badge-l1 { background: #ede9fe; color: #7c3aed; }
+.badge-l2 { background: #dbeafe; color: #1e40af; }
+.badge-l3 { background: #dcfce7; color: #166534; }
+.badge-l0 { background: #fce7f3; color: #9d174d; }
+.btn-confirm { padding: 4px 10px; background: #d1fae5; color: #065f46; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.btn-confirm:hover { background: #a7f3d0; }
+.btn-cancel-act { padding: 4px 10px; background: #fee2e2; color: #991b1b; border: none; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+.btn-cancel-act:hover { background: #fecaca; }
+.btn-bulk { padding: 8px 16px; background: #7c3aed; color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.btn-bulk:hover { background: #6d28d9; }
+.pagination { display: flex; gap: 6px; align-items: center; padding: 14px 18px; justify-content: flex-end; border-top: 1px solid #f0f0f0; }
+.page-btn { padding: 5px 12px; border: 1px solid #e5e7eb; background: white; border-radius: 6px; font-size: 12px; cursor: pointer; }
+.page-btn.active { background: #7c3aed; color: white; border-color: #7c3aed; }
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; color: white; font-size: 13px; font-weight: 600; z-index: 9999; opacity: 0; transform: translateY(10px); transition: all .3s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: #059669; }
+.toast.error { background: #dc2626; }
+</style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+<div class="content-area">
+
+
+<div class="summary-row">
+  <div class="stat-card"><div class="val" id="sumPending">₹—</div><div class="lbl">Total Pending</div></div>
+  <div class="stat-card"><div class="val" id="sumConfirmed">₹—</div><div class="lbl">Total Confirmed</div></div>
+  <div class="stat-card"><div class="val" id="sumMonth">₹—</div><div class="lbl">This Month</div></div>
+  <div class="stat-card"><div class="val" id="sumCount">—</div><div class="lbl">Total Entries</div></div>
+</div>
+
+<div class="filter-bar">
+  <div class="fgroup"><label>Date From</label><input class="form-control" id="dateFrom" type="date"></div>
+  <div class="fgroup"><label>Date To</label><input class="form-control" id="dateTo" type="date"></div>
+  <div class="fgroup"><label>Member</label><input class="form-control" id="memberSearch" placeholder="Name / phone / code" style="min-width:160px" oninput="searchMember(this.value)">
+    <div id="memberDropdown" style="position:absolute;z-index:100;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);display:none;min-width:200px;max-height:160px;overflow-y:auto;margin-top:2px"></div>
+  </div>
+  <input type="hidden" id="filtPartnerId">
+  <div class="fgroup"><label>Status</label>
+    <select class="form-select" id="filtStatus">
+      <option value="">All</option><option value="PENDING">Pending</option><option value="CONFIRMED">Confirmed</option><option value="CANCELLED">Cancelled</option>
+    </select>
+  </div>
+  <div class="fgroup"><label>Level</label>
+    <select class="form-select" id="filtLevel" style="min-width:90px">
+      <option value="">All</option><option value="0">Activation</option><option value="1">L1 (Self)</option><option value="2">L2 (Referrer)</option><option value="3">L3 (Field)</option><option value="4">L4 (Core)</option><option value="5">L5 (Support)</option><option value="6">Showroom</option>
+    </select>
+  </div>
+  <button class="btn-filter apply" onclick="loadIncome(1)"><i class="fas fa-search me-1"></i>Search</button>
+  <button class="btn-filter reset" onclick="resetFilters()">Reset</button>
+</div>
+
+<div class="table-card">
+  <div class="table-card-header">
+    <h3><i class="fas fa-list me-2" style="color:#7c3aed"></i>Commission Entries <span id="totalBadge" style="background:#ede9fe;color:#7c3aed;border-radius:20px;padding:2px 10px;font-size:12px;font-weight:700;margin-left:8px">0</span></h3>
+    <button class="btn-bulk" onclick="bulkConfirmPending()"><i class="fas fa-check-double"></i> Bulk Confirm Pending</button>
+  </div>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr>
+      <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
+      <th>Entry #</th><th>Member</th><th>Category</th><th>Level</th>
+      <th>Revenue (₹)</th><th>Comm %</th><th>Commission (₹)</th><th>Bonus (₹)</th>
+      <th>Support</th><th>Status</th><th>Deal</th><th>Date</th><th>Actions</th>
+    </tr></thead>
+    <tbody id="incomeTable"><tr><td colspan="14" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+  </table>
+  </div>
+  <div class="pagination" id="paginationBar"></div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+    </div></div>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+const API = '/api/v1';
+let currentPage = 1;
+let selectedIds = new Set();
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+function resetFilters() {
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value = '';
+  document.getElementById('memberSearch').value = '';
+  document.getElementById('filtPartnerId').value = '';
+  document.getElementById('filtStatus').value = '';
+  document.getElementById('filtLevel').value = '';
+  selectedIds.clear();
+  loadIncome(1);
+}
+
+function buildUrl(page) {
+  let url = API + '/vgk/income?page=' + page + '&page_size=25';
+  const df = document.getElementById('dateFrom').value;
+  const dt = document.getElementById('dateTo').value;
+  const pid = document.getElementById('filtPartnerId').value;
+  const st = document.getElementById('filtStatus').value;
+  const lv = document.getElementById('filtLevel').value;
+  if (df) url += '&date_from=' + df;
+  if (dt) url += '&date_to=' + dt;
+  if (pid) url += '&partner_id=' + pid;
+  if (st) url += '&status=' + st;
+  if (lv !== '') url += '&level=' + lv;
+  return url;
+}
+
+async function loadIncome(page = 1) {
+  currentPage = page;
+  selectedIds.clear();
+  document.getElementById('selectAll').checked = false;
+  const tbody = document.getElementById('incomeTable');
+  tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+  try {
+    const r = await staffFetch(buildUrl(page));
+    const d = await r.json();
+    if (!d.success) { showToast('Failed to load', 'error'); return; }
+
+    const s = d.summary;
+    document.getElementById('sumPending').textContent = '₹' + Number(s.total_pending).toLocaleString('en-IN', {maximumFractionDigits:0});
+    document.getElementById('sumConfirmed').textContent = '₹' + Number(s.total_confirmed).toLocaleString('en-IN', {maximumFractionDigits:0});
+    document.getElementById('sumMonth').textContent = '₹' + Number(s.this_month).toLocaleString('en-IN', {maximumFractionDigits:0});
+    document.getElementById('sumCount').textContent = d.total;
+    document.getElementById('totalBadge').textContent = d.total;
+
+    if (!d.data.length) {
+      tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:30px;color:#9ca3af">No income entries found</td></tr>';
+    } else {
+      tbody.innerHTML = d.data.map(e => {
+        const lvlMap = {0:'L0',1:'L1',2:'L2',3:'L3',4:'L4',5:'L5 Support',6:'Showroom'};
+        const lvlCls = {0:'badge-l0',1:'badge-l1',2:'badge-l2',3:'badge-l3',4:'badge-l3',5:'badge-l3',6:'badge-l2'};
+        const stCls = {PENDING:'badge-pending',CONFIRMED:'badge-confirmed',CANCELLED:'badge-cancelled'};
+        const actions = e.status === 'PENDING'
+          ? `<button class="btn-confirm" onclick="confirmEntry(${e.id})">Confirm</button> <button class="btn-cancel-act" onclick="cancelEntry(${e.id})">Cancel</button>`
+          : `<span style="color:#9ca3af;font-size:11px">${e.status}</span>`;
+
+        // Support column — only for L2 (Guru) and L3 (Z Guru)
+        let suppCol = '—';
+        if (e.level === 2 || e.level === 3) {
+          const lbl = e.level === 2 ? 'Guru (L2)' : 'Z Guru (L3)';
+          const sc = e.support_confirmed;
+          const chkId = `staff-supp-${e.id}`;
+          let badge = '';
+          if (sc === true)  badge = '<span style="font-size:10px;color:#059669;font-weight:700">✓ Supported</span>';
+          else if (sc === false) badge = '<span style="font-size:10px;color:#dc2626;font-weight:700">✗ Denied</span>';
+          else badge = '<span style="font-size:10px;color:#d97706;font-weight:700">? Pending</span>';
+          suppCol = `<div style="display:flex;flex-direction:column;gap:3px">
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11.5px;margin:0">
+              <input type="checkbox" id="${chkId}" ${sc===true?'checked':''} style="accent-color:#7c3aed;cursor:pointer"
+                onchange="staffSetSupport(${e.id}, this.checked, '${chkId}')">
+              Confirmed
+            </label>
+            ${badge}
+          </div>`;
+        }
+
+        return `<tr id="row-${e.id}">
+          <td><input type="checkbox" class="row-chk" value="${e.id}" onchange="toggleRowCheck(${e.id}, this.checked)" ${selectedIds.has(e.id)?'checked':''}></td>
+          <td><strong style="color:#7c3aed;font-size:11.5px">${e.entry_number}</strong></td>
+          <td><div style="font-weight:600">${e.partner_name||'—'}</div><div style="font-size:10.5px;color:#9ca3af">${e.partner_code||''}</div></td>
+          <td style="font-size:11.5px">${e.category_name||'—'}</td>
+          <td><span class="badge ${lvlCls[e.level]||'badge-l1'}">${lvlMap[e.level]||'L'+e.level}</span></td>
+          <td>₹${Number(e.revenue_amount||0).toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+          <td>${e.commission_pct}%</td>
+          <td><strong>₹${Number(e.commission_amount||0).toLocaleString('en-IN',{maximumFractionDigits:0})}</strong></td>
+          <td>${e.bonus_amount > 0 ? '₹'+Number(e.bonus_amount).toLocaleString('en-IN',{maximumFractionDigits:0}) : '—'}</td>
+          <td>${suppCol}</td>
+          <td><span class="badge ${stCls[e.status]||'badge-pending'}">${e.status}</span></td>
+          <td style="font-size:11px;color:#6b7280">${e.source_lead_id ? '#'+e.source_lead_id : '—'}</td>
+          <td style="font-size:11px;color:#6b7280">${e.created_at ? new Date(e.created_at).toLocaleDateString('en-IN') : '—'}</td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join('');
+    }
+    renderPagination(d.total, page, 25);
+  } catch(e) { showToast('Error loading income', 'error'); tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:20px;color:#dc2626">Error loading data</td></tr>'; }
+}
+
+function renderPagination(total, page, size) {
+  const pages = Math.ceil(total / size);
+  const bar = document.getElementById('paginationBar');
+  if (pages <= 1) { bar.innerHTML = ''; return; }
+  let html = `<span style="font-size:12px;color:#6b7280;margin-right:8px">${total} total</span>`;
+  for (let i = 1; i <= Math.min(pages, 10); i++) {
+    html += `<button class="page-btn ${i === page ? 'active' : ''}" onclick="loadIncome(${i})">${i}</button>`;
+  }
+  bar.innerHTML = html;
+}
+
+function toggleRowCheck(id, checked) {
+  if (checked) selectedIds.add(id); else selectedIds.delete(id);
+}
+
+function toggleSelectAll(cb) {
+  document.querySelectorAll('.row-chk').forEach(c => {
+    c.checked = cb.checked;
+    const id = parseInt(c.value);
+    if (cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+  });
+}
+
+async function confirmEntry(id) {
+  try {
+    const r = await staffFetch(API + '/vgk/income/' + id + '/confirm', { method: 'POST' });
+    const d = await r.json();
+    if (d.success) { showToast('Entry confirmed, points credited!'); loadIncome(currentPage); }
+    else showToast(d.detail || 'Confirm failed', 'error');
+  } catch(e) { showToast('Error', 'error'); }
+}
+
+async function cancelEntry(id) {
+  if (!confirm('Cancel this income entry?')) return;
+  try {
+    const r = await staffFetch(API + '/vgk/income/' + id + '/cancel', { method: 'POST' });
+    const d = await r.json();
+    if (d.success) { showToast('Entry cancelled'); loadIncome(currentPage); }
+    else showToast(d.detail || 'Cancel failed', 'error');
+  } catch(e) { showToast('Error', 'error'); }
+}
+
+async function bulkConfirmPending() {
+  const ids = selectedIds.size > 0
+    ? Array.from(selectedIds)
+    : Array.from(document.querySelectorAll('.row-chk')).filter(c => {
+        const row = document.getElementById('row-' + c.value);
+        return row && row.innerHTML.includes('badge-pending');
+      }).map(c => parseInt(c.value));
+  if (!ids.length) { showToast('No pending entries to confirm', 'error'); return; }
+  if (!confirm('Confirm ' + ids.length + ' pending entries?')) return;
+  try {
+    const r = await staffFetch(API + '/vgk/income/bulk-confirm', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(ids) });
+    const d = await r.json();
+    if (d.success) { showToast('Confirmed ' + d.confirmed + ' entries!'); loadIncome(currentPage); }
+    else showToast(d.detail || 'Bulk confirm failed', 'error');
+  } catch(e) { showToast('Error in bulk confirm', 'error'); }
+}
+
+let memberSearchTimeout;
+async function searchMember(q) {
+  clearTimeout(memberSearchTimeout);
+  const dd = document.getElementById('memberDropdown');
+  if (!q.trim()) { dd.style.display = 'none'; return; }
+  memberSearchTimeout = setTimeout(async () => {
+    const r = await staffFetch(API + '/vgk/members/search?q=' + encodeURIComponent(q));
+    const d = await r.json();
+    if (!d.data || !d.data.length) { dd.style.display = 'none'; return; }
+    dd.style.display = 'block';
+    dd.innerHTML = d.data.map(m => `<div onclick="selectMember(${m.id},'${m.partner_name}','${m.partner_code}')" style="padding:8px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid #f3f4f6">
+      <strong>${m.partner_code}</strong> — ${m.partner_name}</div>`).join('');
+  }, 300);
+}
+
+function selectMember(id, name, code) {
+  document.getElementById('filtPartnerId').value = id;
+  document.getElementById('memberSearch').value = code + ' — ' + name;
+  document.getElementById('memberDropdown').style.display = 'none';
+}
+
+async function staffSetSupport(entryId, confirmed, chkId) {
+  const chk = document.getElementById(chkId);
+  if (chk) chk.disabled = true;
+  try {
+    const r = await staffFetch(API + '/vgk/income/' + entryId + '/set-support', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ confirmed })
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast('Support ' + (confirmed ? 'confirmed ✓' : 'cleared') + ' for entry #' + entryId);
+      loadIncome(currentPage);
+    } else {
+      showToast(d.detail || 'Failed to update support', 'error');
+      if (chk) { chk.checked = !confirmed; chk.disabled = false; }
+    }
+  } catch {
+    showToast('Error updating support', 'error');
+    if (chk) { chk.checked = !confirmed; chk.disabled = false; }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  await StaffSidebar.init();
+  StaffHeader.inject('VGK Income Management', 'fas fa-hand-holding-usd');
+  loadIncome(1);
+});
+</script>
+</body>
+</html>

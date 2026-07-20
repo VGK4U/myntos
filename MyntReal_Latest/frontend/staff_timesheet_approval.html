@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - Timesheet Approval</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .header-logo { height: 36px; width: auto; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        
+        .content-area { padding: 24px; max-width: 1600px; margin: 0 auto; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .stat-value { font-size: 28px; font-weight: 700; }
+        .stat-value.pending { color: #d97706; }
+        .stat-value.approved { color: #059669; }
+        .stat-value.rejected { color: #dc2626; }
+        .stat-label { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { 
+            background: transparent; 
+            border-bottom: 1px solid #e5e7eb; 
+            padding: 16px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 0; }
+        
+        .filters-bar { 
+            padding: 16px 20px; 
+            background: #f9fafb; 
+            border-bottom: 1px solid #e5e7eb; 
+            display: flex; 
+            gap: 12px; 
+            flex-wrap: wrap; 
+            align-items: center; 
+        }
+        .filters-bar select, .filters-bar input { 
+            padding: 8px 12px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 6px; 
+            font-size: 14px; 
+        }
+        .filter-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn.active { background: #4f46e5; color: white; }
+        .filter-btn:not(.active) { background: #e5e7eb; color: #374151; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; border-top: none; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-submitted { background: #fef3c7; color: #92400e; }
+        .badge-approved { background: #d1fae5; color: #065f46; }
+        .badge-rejected { background: #fee2e2; color: #991b1b; }
+        .badge-resubmitted { background: #e0e7ff; color: #4338ca; }
+        .badge-task { background: #dbeafe; color: #1e40af; }
+        .badge-kra { background: #d1fae5; color: #065f46; }
+        .badge-others { background: #f3f4f6; color: #374151; }
+        
+        .action-btn {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn.approve { background: #10b981; color: white; }
+        .action-btn.reject { background: #ef4444; color: white; }
+        .action-btn:hover { transform: translateY(-1px); }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: #6b7280;
+        }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        
+        .modal-content { border-radius: 16px; }
+        .modal-header { border-bottom: 1px solid #e5e7eb; padding: 20px 24px; }
+        .modal-body { padding: 24px; }
+        .modal-footer { border-top: 1px solid #e5e7eb; padding: 16px 24px; }
+        
+        .entry-details { background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .entry-details .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+        .entry-details .detail-row:last-child { border-bottom: none; }
+        .entry-details .detail-label { color: #6b7280; font-size: 13px; }
+        .entry-details .detail-value { font-weight: 500; color: #1f2937; }
+        
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin-left: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .content-area { padding: 16px; }
+            .filters-bar { flex-direction: column; align-items: stretch; }
+            .table-responsive { font-size: 13px; }
+        }
+        
+        .accordion-employee {
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .accordion-employee-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .accordion-employee-header:hover { opacity: 0.95; }
+        .accordion-employee-body {
+            display: none;
+            padding: 0;
+        }
+        .accordion-employee.expanded .accordion-employee-body { display: block; }
+        
+        .accordion-day {
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .accordion-day:last-child { border-bottom: none; }
+        .accordion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            background: #f9fafb;
+        }
+        .accordion-header:hover { background: #f3f4f6; }
+        .accordion-body {
+            display: none;
+            padding: 0;
+            border-top: 1px solid #e5e7eb;
+        }
+        .accordion-day.expanded .accordion-body { display: block; }
+        
+        .accordion-toggle {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            background: #4f46e5;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .accordion-toggle-emp {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.3);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .accordion-employee.expanded .toggle-icon-emp::before { content: '-'; }
+        .toggle-icon-emp::before { content: '+'; }
+        .accordion-day.expanded .toggle-icon::before { content: '-'; }
+        .toggle-icon::before { content: '+'; }
+        
+        .records-table { width: 100%; font-size: 13px; }
+        .records-table th { 
+            font-weight: 600; 
+            color: #6b7280; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            padding: 10px 12px; 
+            background: #f9fafb; 
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .records-table td { 
+            padding: 10px 12px; 
+            vertical-align: middle; 
+            color: #374151; 
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .records-table tbody tr:hover { background: #fafafa; }
+        
+        .record-duration { 
+            background: #e0e7ff; 
+            color: #4338ca; 
+            padding: 3px 8px; 
+            border-radius: 4px; 
+            font-size: 12px; 
+            font-weight: 500;
+        }
+        .record-type { padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .record-type.task { background: #dbeafe; color: #1e40af; }
+        .record-type.kra { background: #d1fae5; color: #065f46; }
+        .record-type.others { background: #f3f4f6; color: #374151; }
+        .record-type.lead { background: #fce7f3; color: #9d174d; }
+        .record-type.journey { background: #e0f2fe; color: #075985; }
+        .record-status { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .record-status.submitted { background: #fef3c7; color: #92400e; }
+        .record-status.approved { background: #d1fae5; color: #065f46; }
+        .record-status.rejected { background: #fee2e2; color: #991b1b; }
+        .record-status.resubmitted { background: #e0e7ff; color: #4338ca; }
+        .entry-action-btn { padding: 4px 10px; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
+        .entry-action-btn.approve { background: #d1fae5; color: #065f46; }
+        .entry-action-btn.approve:hover { background: #a7f3d0; }
+        .entry-action-btn.reject { background: #fee2e2; color: #991b1b; }
+        .entry-action-btn.reject:hover { background: #fecaca; }
+        .entry-section-header { padding: 6px 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+        .entry-section-header.pending { color: #92400e; background: #fffbeb; border-left: 3px solid #f59e0b; }
+        .entry-section-header.approved-hdr { color: #065f46; background: #ecfdf5; border-left: 3px solid #10b981; }
+        .entry-section-header.custom-hdr { color: #374151; background: #f9fafb; border-left: 3px solid #6b7280; }
+        
+        #entriesContainer { padding: 16px; }
+        .records-empty {
+            text-align: center;
+            padding: 32px 20px;
+            color: #6b7280;
+        }
+        .records-empty i { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+
+        
+        .activity-panel-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .activity-panel-table th {
+            background: #f9fafb;
+            padding: 8px 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .activity-panel-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #374151;
+        }
+        .activity-panel-table tr.total-row {
+            background: #eff6ff;
+            font-weight: 700;
+        }
+        .activity-panel-table tr.total-row td { color: #1e40af; border-top: 2px solid #bfdbfe; }
+        .cat-icon {
+            width: 24px; height: 24px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            margin-right: 6px;
+        }
+        .cat-icon.kra { background: #d1fae5; color: #065f46; }
+        .cat-icon.task { background: #dbeafe; color: #1e40af; }
+        .cat-icon.dayplan { background: #fef3c7; color: #92400e; }
+        .cat-icon.journey { background: #e0e7ff; color: #4338ca; }
+        .cat-icon.lead { background: #fce7f3; color: #9d174d; }
+        .cat-icon.ticket { background: #fee2e2; color: #991b1b; }
+        .cat-icon.custom { background: #f3f4f6; color: #374151; }
+        .cnt-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .cnt-badge.done { background: #d1fae5; color: #065f46; }
+        .cnt-badge.wait { background: #fef3c7; color: #92400e; }
+        .cnt-badge.all { background: #e5e7eb; color: #374151; }
+        
+        .activity-panel-table tr.summary-total-row {
+            background: linear-gradient(135deg, #1e40af 0%, #0369a1 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 13px;
+        }
+        .activity-panel-table tr.summary-total-row td { color: white; border: none; padding: 10px 12px; }
+        .btn-act-view {
+            font-size: 10px; padding: 2px 8px; border-radius: 4px;
+            border: 1px solid #bae6fd; background: #f0f9ff; color: #0369a1;
+            cursor: pointer; font-weight: 500;
+        }
+        .btn-act-view:hover { background: #0369a1; color: white; }
+        
+        .detail-sub-table {
+            width: 100%; border-collapse: collapse; font-size: 11px;
+            background: white; border-radius: 6px; overflow: hidden;
+        }
+        .detail-sub-table th {
+            background: #fef3c7; padding: 6px 8px; font-weight: 600;
+            color: #92400e; font-size: 10px; text-transform: uppercase;
+        }
+        .detail-sub-table td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; }
+        .status-pill {
+            font-size: 9px; padding: 1px 6px; border-radius: 8px; font-weight: 600;
+            display: inline-block;
+        }
+        .status-pill.completed { background: #d1fae5; color: #065f46; }
+        .status-pill.in_progress, .status-pill.in-progress { background: #dbeafe; color: #1e40af; }
+        .status-pill.pending { background: #fef3c7; color: #92400e; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value pending" id="pendingCount">0</div>
+                <div class="stat-label">Pending Approval</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value approved" id="approvedCount">0</div>
+                <div class="stat-label">Approved Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value rejected" id="rejectedCount">0</div>
+                <div class="stat-label">Rejected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalCount">0</div>
+                <div class="stat-label">Total Entries</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-filter me-2"></i>Team Timesheet Entries</h5>
+            </div>
+            
+            <!-- DC_UNIVERSAL_FILTER_001: Universal Filter Container -->
+            <div id="universalFilterContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0;"></div>
+            
+            <!-- Fallback filters - shown if universal filter fails to load -->
+            <div id="fallbackFiltersContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0; display: flex;">
+                <select id="fallbackDepartmentFilter" style="min-width: 160px;" onchange="loadEntries()">
+                    <option value="">All Departments</option>
+                </select>
+                <select id="fallbackStaffTypeFilter" style="min-width: 140px;" onchange="loadEntries()">
+                    <option value="">All Staff Types</option>
+                    <option value="MN_STAFF">MN Staff</option>
+                    <option value="MN_EMPLOYEE">MN Employee</option>
+                    <option value="FREELANCER">Freelancer</option>
+                    <option value="MYNT_REAL">Mynt Real</option>
+                </select>
+                <input type="text" id="fallbackEmployeeSearch" class="form-control" style="min-width: 200px;" placeholder="Search employee..." oninput="debounceEmployeeSearch()">
+            </div>
+            
+            <div class="filters-bar" style="border-bottom: none; padding-bottom: 0;">
+                <select id="reportingManagerFilter" style="min-width: 200px;" onchange="loadEntries()">
+                    <option value="">All Reporting Managers</option>
+                </select>
+            </div>
+
+            <div class="filters-bar">
+                <div>
+                    <button class="filter-btn active" data-status="">All</button>
+                    <button class="filter-btn" data-status="submitted">Pending</button>
+                    <button class="filter-btn" data-status="resubmitted">Resubmitted</button>
+                    <button class="filter-btn" data-status="approved">Approved</button>
+                    <button class="filter-btn" data-status="rejected">Rejected</button>
+                </div>
+                <div class="d-flex gap-2 ms-auto">
+                    <input type="date" id="fromDate" class="form-control">
+                    <input type="date" id="toDate" class="form-control">
+                    <button class="btn btn-primary btn-sm" onclick="loadEntries()">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div id="entriesContainer">
+                    <div class="records-empty">
+                        <i class="fas fa-clipboard-list"></i>
+                        <h6>No entries found</h6>
+                        <p>Adjust filters or check back later</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="historyModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-history me-2"></i>Entry History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="historyContent">
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/timesheet';
+        let currentStatus = '';
+        
+        let universalFilter = null;
+        let universalFilterReady = false;
+        
+        let employeeSearchTimeout = null;
+        function debounceEmployeeSearch() {
+            if (employeeSearchTimeout) clearTimeout(employeeSearchTimeout);
+            employeeSearchTimeout = setTimeout(() => loadEntries(), 300);
+        }
+        
+        function buildFilterPayload() {
+            if (universalFilterReady && universalFilter && universalFilter.isReady && !universalFilter.initFailed) {
+                try {
+                    const filters = universalFilter.getFilters();
+                    return filters;
+                } catch (e) {
+                    console.warn('[DC] Error getting universal filter values:', e);
+                }
+            }
+            const fallbackDept = document.getElementById('fallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('fallbackStaffTypeFilter');
+            const fallbackEmployee = document.getElementById('fallbackEmployeeSearch');
+            return {
+                company_id: null,
+                staff_type: fallbackStaff ? (fallbackStaff.value || null) : null,
+                department_id: fallbackDept ? (fallbackDept.value || null) : null,
+                employee_id: null,
+                employee: null,
+                search: fallbackEmployee ? (fallbackEmployee.value.trim() || null) : null
+            };
+        }
+        
+        async function loadFallbackDepartments() {
+            try {
+                const response = await staffFetch('/api/v1/staff/departments');
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('fallbackDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading fallback departments:', error);
+            }
+        }
+        
+        async function loadReportingManagers() {
+            try {
+                const response = await staffFetch(`${API_BASE}/reporting-managers`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('reportingManagerFilter');
+                    if (!select) return;
+                    const managers = data.managers || [];
+                    managers.forEach(mgr => {
+                        const option = document.createElement('option');
+                        option.value = mgr.id;
+                        option.textContent = `${mgr.name} (${mgr.code})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading reporting managers:', error);
+            }
+        }
+
+        function hideFallbackFilters() {
+            const fallback = document.getElementById('fallbackFiltersContainer');
+            if (fallback) fallback.style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            const staffData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const fullName = staffData.full_name || 'Manager';
+            const headerUserNameEl = document.getElementById('headerUserName');
+            const headerUserEmpIdEl = document.getElementById('headerUserEmpId');
+            const headerUserInitialsEl = document.getElementById('headerUserInitials');
+            if (headerUserNameEl) headerUserNameEl.textContent = fullName;
+            if (headerUserEmpIdEl) headerUserEmpIdEl.textContent = staffData.emp_code || staffData.employee_code || '-';
+            const initials = fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            if (headerUserInitialsEl) headerUserInitialsEl.textContent = initials || '--';
+            
+            const today = new Date();
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            
+            document.getElementById('fromDate').value = weekAgo.toISOString().split('T')[0];
+            document.getElementById('toDate').value = today.toISOString().split('T')[0];
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentStatus = this.dataset.status;
+                    loadEntries();
+                });
+            });
+            
+            loadFallbackDepartments();
+            loadReportingManagers();
+            
+            if (typeof DCUniversalFilter !== 'undefined') {
+                universalFilter = new DCUniversalFilter('universalFilterContainer', {
+                    showCompany: false,
+                    showStaffType: true,
+                    showDepartment: true,
+                    showEmployee: true,
+                    showSearch: false,
+                    pageKey: 'staff_timesheet_approval',
+                    onFilterChange: () => {
+                        if (universalFilterReady) loadEntries();
+                    }
+                });
+                
+                try {
+                    const success = await Promise.race([
+                        universalFilter.waitForReady(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                    ]);
+                    await new Promise(r => setTimeout(r, 50));
+                    if (success === true && 
+                        universalFilter.isReady === true && 
+                        universalFilter.initFailed === false &&
+                        document.getElementById('universalFilterContainer')?.children.length > 0) {
+                        universalFilterReady = true;
+                        hideFallbackFilters();
+                        console.log('[DC] Universal filter ready - using enhanced filters');
+                    } else {
+                        console.warn('[DC] Universal filter not fully ready, keeping fallback');
+                        universalFilterReady = false;
+                    }
+                } catch (e) {
+                    console.warn('[DC] Universal filter initialization failed or timed out, using fallback:', e);
+                    universalFilterReady = false;
+                }
+            } else {
+                console.warn('[DC] DCUniversalFilter not available - using fallback filters');
+            }
+            
+            loadEntries();
+        });
+
+        function formatTime(minutes) {
+            const hrs = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return `${hrs}:${mins.toString().padStart(2, '0')}`;
+        }
+
+        async function loadEntries() {
+            try {
+                const params = new URLSearchParams();
+                if (document.getElementById('fromDate').value) {
+                    params.append('from_date', document.getElementById('fromDate').value);
+                }
+                if (document.getElementById('toDate').value) {
+                    params.append('to_date', document.getElementById('toDate').value);
+                }
+                if (currentStatus) {
+                    params.append('status', currentStatus);
+                }
+                
+                const filters = buildFilterPayload();
+                if (filters.department_id) {
+                    params.append('department_id', filters.department_id);
+                }
+                if (filters.staff_type) {
+                    params.append('staff_type', filters.staff_type);
+                }
+                if (filters.employee_id) {
+                    params.append('employee_id', filters.employee_id);
+                } else if (filters.employee && filters.employee.id) {
+                    params.append('employee_id', filters.employee.id);
+                }
+                const rmFilter = document.getElementById('reportingManagerFilter');
+                if (rmFilter && rmFilter.value) {
+                    params.append('reporting_manager_id', rmFilter.value);
+                }
+                
+                params.append('limit', '100');
+                
+                const response = await staffFetch(`${API_BASE}/team-entries?${params}`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderEntries(data.entries);
+                    updateStats(data.entries);
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error loading entries:', err);
+            }
+        }
+
+        function renderEntries(entries) {
+            const container = document.getElementById('entriesContainer');
+            
+            if (!entries || entries.length === 0) {
+                container.innerHTML = `
+                    <div class="records-empty">
+                        <i class="fas fa-clipboard-list"></i>
+                        <h6>No entries found</h6>
+                        <p>Adjust filters or check back later</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const groupedByEmployee = {};
+            entries.forEach(entry => {
+                const empKey = String(entry.employee_id || entry.employee_code || 'unknown').replace(/[^a-zA-Z0-9]/g, '_');
+                const dateKey = (entry.date || '').split('T')[0];
+                if (!groupedByEmployee[empKey]) {
+                    groupedByEmployee[empKey] = {
+                        name: entry.employee_name || 'Unknown',
+                        code: entry.employee_code || '',
+                        employee_id: entry.employee_id || 0,
+                        dates: {},
+                        totalMinutes: 0,
+                        statusMinutes: {}
+                    };
+                }
+                if (!groupedByEmployee[empKey].dates[dateKey]) {
+                    groupedByEmployee[empKey].dates[dateKey] = {
+                        entries: [],
+                        totalMinutes: 0,
+                        statusMinutes: {}
+                    };
+                }
+                groupedByEmployee[empKey].dates[dateKey].entries.push(entry);
+                groupedByEmployee[empKey].dates[dateKey].totalMinutes += entry.duration_minutes || 0;
+                groupedByEmployee[empKey].totalMinutes += entry.duration_minutes || 0;
+                const status = entry.status || 'other';
+                groupedByEmployee[empKey].dates[dateKey].statusMinutes[status] = (groupedByEmployee[empKey].dates[dateKey].statusMinutes[status] || 0) + (entry.duration_minutes || 0);
+                groupedByEmployee[empKey].statusMinutes[status] = (groupedByEmployee[empKey].statusMinutes[status] || 0) + (entry.duration_minutes || 0);
+            });
+
+            const employeeKeys = Object.keys(groupedByEmployee);
+            let html = '';
+            
+            employeeKeys.forEach((empKey, empIdx) => {
+                const emp = groupedByEmployee[empKey];
+                const sortedDates = Object.keys(emp.dates).sort((a, b) => new Date(b) - new Date(a));
+                const entryCount = sortedDates.reduce((sum, d) => sum + emp.dates[d].entries.length, 0);
+                
+                const allEmpEntries = sortedDates.reduce((arr, d) => arr.concat(emp.dates[d].entries), []);
+                const empSubmittedMin = allEmpEntries.filter(e => e.status === 'submitted' || e.status === 'resubmitted').reduce((s, e) => s + (e.duration_minutes || 0), 0);
+                const empApprovedMin = allEmpEntries.filter(e => e.status === 'approved').reduce((s, e) => s + (e.approved_minutes || e.duration_minutes || 0), 0);
+                const empSubmittedCount = allEmpEntries.filter(e => e.status === 'submitted' || e.status === 'resubmitted').length;
+                const empApprovedCount = allEmpEntries.filter(e => e.status === 'approved').length;
+                const daysWithEntries = sortedDates.length;
+                const avgTotal = daysWithEntries > 0 ? Math.round(emp.totalMinutes / daysWithEntries) : 0;
+                const avgSubmitted = daysWithEntries > 0 ? Math.round(empSubmittedMin / daysWithEntries) : 0;
+                const avgApproved = daysWithEntries > 0 ? Math.round(empApprovedMin / daysWithEntries) : 0;
+                const noEntryDays = (() => {
+                    const fromVal = document.getElementById('fromDate')?.value;
+                    const toVal = document.getElementById('toDate')?.value;
+                    if (!fromVal || !toVal) return 0;
+                    const from = new Date(fromVal), to = new Date(toVal);
+                    let totalCalDays = 0;
+                    for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) totalCalDays++;
+                    return Math.max(0, totalCalDays - daysWithEntries);
+                })();
+                
+                html += `
+                    <div class="accordion-employee ${empIdx === 0 ? 'expanded' : ''}" id="emp-${empKey}">
+                        <div class="accordion-employee-header" onclick="toggleEmployee('${empKey}')" style="flex-direction:column;align-items:stretch;gap:6px;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="accordion-toggle-emp"><span class="toggle-icon-emp"></span></div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="font-size:16px;font-weight:700;line-height:1.3;">${emp.name}</div>
+                                    <div style="font-size:13px;opacity:0.8;">${emp.code}</div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap" style="justify-content:flex-end;">
+                                    ${empSubmittedCount > 0 ? `<span class="badge" style="background:rgba(255,200,0,0.3);font-size:13px;padding:5px 10px;"><i class="fas fa-clock"></i> ${formatTime(empSubmittedMin)} submitted (${empSubmittedCount})</span>` : ''}
+                                    ${empApprovedCount > 0 ? `<span class="badge" style="background:rgba(255,255,255,0.2);font-size:13px;padding:5px 10px;"><i class="fas fa-check-circle"></i> ${formatTime(empApprovedMin)} approved (${empApprovedCount})</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 flex-wrap" style="padding-left:36px;">
+                                <span style="font-size:13px;"><i class="fas fa-clock"></i> ${formatTime(emp.totalMinutes)} total</span>
+                                <span id="activity-badge-${empKey}" style="font-size:13px;display:none;"><i class="fas fa-chart-pie" style="color:#0ea5e9;"></i> <span class="act-val">0</span> activity</span>
+                                <span style="font-size:13px;"><i class="fas fa-calendar"></i> ${sortedDates.length} days</span>
+                                <span style="font-size:13px;"><i class="fas fa-list"></i> ${entryCount} entries</span>
+                                <span style="font-size:13px;opacity:0.85;">|</span>
+                                <span style="font-size:13px;opacity:0.9;"><i class="fas fa-chart-line"></i> Avg/day:</span>
+                                <span style="font-size:13px;opacity:0.9;"><i class="fas fa-clock"></i> ${formatTime(avgTotal)} total</span>
+                                ${empSubmittedCount > 0 ? `<span style="font-size:13px;opacity:0.9;"><i class="fas fa-paper-plane"></i> ${formatTime(avgSubmitted)} submitted</span>` : ''}
+                                ${empApprovedCount > 0 ? `<span style="font-size:13px;opacity:0.9;"><i class="fas fa-check-circle"></i> ${formatTime(avgApproved)} approved</span>` : ''}
+                                ${noEntryDays > 0 ? `<span style="font-size:13px;opacity:0.75;"><i class="fas fa-calendar-times"></i> ${noEntryDays} no-entry days</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="accordion-employee-body">
+                `;
+
+                const empId = emp.employee_id || 0;
+                
+                sortedDates.forEach((dateKey, dateIdx) => {
+                    const dayData = emp.dates[dateKey];
+                    const dateObj = new Date(dateKey);
+                    const formattedDate = dateObj.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+                    
+                    const daySubmittedEntries = dayData.entries.filter(e => e.status === 'submitted' || e.status === 'resubmitted');
+                    const dayApprovedEntries = dayData.entries.filter(e => e.status === 'approved');
+                    const daySubmittedMin = daySubmittedEntries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+                    const dayApprovedMin = dayApprovedEntries.reduce((s, e) => s + (e.approved_minutes || e.duration_minutes || 0), 0);
+                    const dayRejectedEntries = dayData.entries.filter(e => e.status === 'rejected');
+                    let dayStatusBadges = '';
+                    if (daySubmittedEntries.length > 0) {
+                        dayStatusBadges += `<span class="badge" style="background:#fef3c7;color:#92400e;margin-left:6px;"><i class="fas fa-clock"></i> ${formatTime(daySubmittedMin)} submitted (${daySubmittedEntries.length})</span>`;
+                    }
+                    if (dayApprovedEntries.length > 0) {
+                        dayStatusBadges += `<span class="badge" style="background:#d1fae5;color:#065f46;margin-left:6px;"><i class="fas fa-check-circle"></i> ${formatTime(dayApprovedMin)} approved (${dayApprovedEntries.length})</span>`;
+                    }
+                    if (dayRejectedEntries.length > 0) {
+                        dayStatusBadges += `<span class="badge" style="background:#fee2e2;color:#991b1b;margin-left:6px;"><i class="fas fa-times-circle"></i> ${dayRejectedEntries.length} rejected</span>`;
+                    }
+                    
+                    html += `
+                        <div class="accordion-day ${empIdx === 0 && dateIdx === 0 ? 'expanded' : ''}" id="day-${empKey}-${dateKey}">
+                            <div class="accordion-header" onclick="toggleDay('${empKey}', '${dateKey}')">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="accordion-toggle"><span class="toggle-icon"></span></div>
+                                    <strong>${formattedDate}</strong>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span style="font-size:12px;color:#059669;"><i class="fas fa-check-circle"></i> ${formatTime(dayData.totalMinutes)} logged</span>
+                                    <span id="day-submitted-badge-${empKey}-${dateKey}" style="font-size:12px;color:#d97706;display:none;"><i class="fas fa-paper-plane"></i> <span class="day-sub-val">0</span> submitted</span>
+                                    <span id="day-approved-badge-${empKey}-${dateKey}" style="font-size:12px;color:#059669;display:none;"><i class="fas fa-check-double"></i> <span class="day-appr-val">0</span> approved</span>
+                                    <span style="font-size:12px;color:#6b7280;"><i class="fas fa-list"></i> ${dayData.entries.length} entries</span>
+                                    ${dayStatusBadges}
+                                </div>
+                            </div>
+                            <div class="accordion-body">
+                                <div class="activity-panel-day" id="activity-panel-day-${empKey}-${dateKey}" data-emp-id="${empId}">
+                                    <div style="text-align:center;padding:10px;color:#9ca3af;font-size:12px;"><i class="fas fa-spinner fa-spin me-1"></i>Loading activity...</div>
+                                </div>
+                                ${buildTimeEntrySections(dayData.entries, empKey, dateKey)}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `</div></div>`;
+            });
+            
+            container.innerHTML = html;
+
+            employeeKeys.forEach(empKey => {
+                const emp = groupedByEmployee[empKey];
+                const sortedDates = Object.keys(emp.dates).sort((a, b) => new Date(b) - new Date(a));
+                const empId = emp.employee_id || 0;
+                if (empId > 0) {
+                    loadEmpActivityAllDates(empId, empKey, sortedDates);
+                }
+            });
+        }
+        
+        function toggleEmployee(empKey) {
+            const el = document.getElementById(`emp-${empKey}`);
+            if (el) el.classList.toggle('expanded');
+        }
+        
+        function toggleDay(empKey, dateKey) {
+            const el = document.getElementById(`day-${empKey}-${dateKey}`);
+            if (el) el.classList.toggle('expanded');
+        }
+
+        function fmtHM(m) {
+            if (!m || m <= 0) return '0m';
+            const h = Math.floor(m / 60), mm = m % 60;
+            return h === 0 ? `${mm}m` : `${h}h ${mm.toString().padStart(2, '0')}m`;
+        }
+
+        function buildTimeEntrySections(entries, empKey, dateKey) {
+            const pendingEntries = entries.filter(e => e.status === 'submitted' || e.status === 'resubmitted');
+            const approvedEntries = entries.filter(e => e.status === 'approved');
+            const rejectedEntries = entries.filter(e => e.status === 'rejected');
+            let html = '';
+
+            if (pendingEntries.length > 0) {
+                const pendingTotal = pendingEntries.reduce((s, e) => s + (e.duration_minutes || 0), 0);
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header pending"><i class="fas fa-paper-plane"></i> Submitted Time Entries (${pendingEntries.length}) — ${formatTime(pendingTotal)} pending</div>
+                    <table class="records-table"><thead><tr>
+                        <th>Time</th><th>Submitted</th><th>Type</th><th>Activity</th><th>Approve Time</th><th style="width:150px;">Action</th>
+                    </tr></thead><tbody>
+                    ${pendingEntries.map(entry => {
+                        const hrs = Math.floor(entry.duration_minutes / 60);
+                        const mins = entry.duration_minutes % 60;
+                        return `<tr>
+                        <td>${entry.start_time.substring(0,5)} - ${entry.end_time.substring(0,5)}</td>
+                        <td><span class="record-duration">${formatTime(entry.duration_minutes)}</span></td>
+                        <td><span class="record-type ${entry.entry_type}">${entry.entry_type.toUpperCase()}</span></td>
+                        <td>${entry.task_title || entry.kra_title || entry.lead_name || entry.journey_name || entry.comments || '-'}</td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:2px;">
+                                <input type="number" id="appr-hrs-${entry.id}" value="${hrs}" min="0" max="23" style="width:40px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;text-align:center;" title="Hours">
+                                <span style="font-size:11px;color:#6b7280;">h</span>
+                                <input type="number" id="appr-mins-${entry.id}" value="${mins}" min="0" max="59" style="width:40px;padding:2px 4px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;text-align:center;" title="Minutes">
+                                <span style="font-size:11px;color:#6b7280;">m</span>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="entry-action-btn approve" onclick="approveTimesheetEntry(${entry.id}, '${empKey}', '${dateKey}')"><i class="fas fa-check me-1"></i>Approve</button>
+                            <button class="entry-action-btn reject" onclick="rejectTimesheetEntry(${entry.id}, '${empKey}', '${dateKey}')"><i class="fas fa-times me-1"></i>Reject</button>
+                        </td>
+                    </tr>`;
+                    }).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (approvedEntries.length > 0) {
+                const approvedTotal = approvedEntries.reduce((s, e) => s + (e.approved_minutes || e.duration_minutes || 0), 0);
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header approved-hdr"><i class="fas fa-check-double"></i> Approved Time Entries (${approvedEntries.length}) — ${formatTime(approvedTotal)} approved</div>
+                    <table class="records-table"><thead><tr>
+                        <th>Time</th><th>Submitted</th><th>Approved Time</th><th>Type</th><th>Activity</th><th>Approved On</th>
+                    </tr></thead><tbody>
+                    ${approvedEntries.map(entry => {
+                        const apprMin = entry.approved_minutes != null ? entry.approved_minutes : entry.duration_minutes;
+                        const timeDiff = apprMin !== entry.duration_minutes;
+                        return `<tr>
+                        <td>${entry.start_time.substring(0,5)} - ${entry.end_time.substring(0,5)}</td>
+                        <td><span class="record-duration">${formatTime(entry.duration_minutes)}</span></td>
+                        <td><span style="font-weight:700;color:#065f46;">${formatTime(apprMin)}</span>${timeDiff ? ' <span style="font-size:10px;color:#dc2626;" title="Reduced from submitted time">&#9660;</span>' : ''}</td>
+                        <td><span class="record-type ${entry.entry_type}">${entry.entry_type.toUpperCase()}</span></td>
+                        <td>${entry.task_title || entry.kra_title || entry.lead_name || entry.journey_name || entry.comments || '-'}</td>
+                        <td style="font-size:11px;color:#065f46;">${entry.approved_at ? new Date(entry.approved_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+                    </tr>`;
+                    }).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (rejectedEntries.length > 0) {
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header" style="color:#991b1b;background:#fef2f2;border-left:3px solid #ef4444;"><i class="fas fa-times-circle"></i> Rejected Time Entries (${rejectedEntries.length})</div>
+                    <table class="records-table"><thead><tr>
+                        <th>Time</th><th>Duration</th><th>Type</th><th>Activity</th><th>Reason</th>
+                    </tr></thead><tbody>
+                    ${rejectedEntries.map(entry => `<tr>
+                        <td>${entry.start_time.substring(0,5)} - ${entry.end_time.substring(0,5)}</td>
+                        <td><span class="record-duration">${formatTime(entry.duration_minutes)}</span></td>
+                        <td><span class="record-type ${entry.entry_type}">${entry.entry_type.toUpperCase()}</span></td>
+                        <td>${entry.task_title || entry.kra_title || entry.lead_name || entry.journey_name || entry.comments || '-'}</td>
+                        <td style="color:#991b1b;font-size:12px;">${entry.rejection_reason || '-'}</td>
+                    </tr>`).join('')}
+                    </tbody></table></div>`;
+            }
+
+            if (pendingEntries.length === 0 && approvedEntries.length === 0 && rejectedEntries.length === 0) {
+                html += `<div class="time-entries-section" style="margin-top:4px;">
+                    <div class="entry-section-header custom-hdr"><i class="fas fa-clock"></i> Time Entries</div>
+                    <div style="text-align:center;padding:12px;color:#9ca3af;font-size:12px;">No time entries for this date</div></div>`;
+            }
+
+            return html;
+        }
+
+        function _adjustStatCount(elId, delta) {
+            const el = document.getElementById(elId);
+            if (el) el.textContent = Math.max(0, parseInt(el.textContent || '0') + delta);
+        }
+
+        function _markEntryRowApproved(entryId, approvedMinutes) {
+            const hrsEl = document.getElementById(`appr-hrs-${entryId}`);
+            if (!hrsEl) return;
+            const row = hrsEl.closest('tr');
+            if (!row) return;
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 2) {
+                cells[cells.length - 2].innerHTML = `<span style="font-weight:700;color:#065f46;">${fmtHM(approvedMinutes)}</span>`;
+                cells[cells.length - 1].innerHTML = '<span style="color:#065f46;font-weight:600;font-size:12px;white-space:nowrap;"><i class="fas fa-check-circle me-1"></i>Approved</span>';
+            }
+            row.style.opacity = '0.6';
+        }
+
+        function _markEntryRowRejected(entryId, reason) {
+            const hrsEl = document.getElementById(`appr-hrs-${entryId}`);
+            if (!hrsEl) return;
+            const row = hrsEl.closest('tr');
+            if (!row) return;
+            const cells = row.querySelectorAll('td');
+            if (cells.length >= 1) {
+                cells[cells.length - 2].innerHTML = `<span style="font-size:11px;color:#991b1b;">${reason || 'Rejected'}</span>`;
+                cells[cells.length - 1].innerHTML = '<span style="color:#991b1b;font-weight:600;font-size:12px;white-space:nowrap;"><i class="fas fa-times-circle me-1"></i>Rejected</span>';
+            }
+            row.style.opacity = '0.6';
+        }
+
+        async function approveTimesheetEntry(entryId, empKey, dateKey) {
+            const hrsEl = document.getElementById(`appr-hrs-${entryId}`);
+            const minsEl = document.getElementById(`appr-mins-${entryId}`);
+            const approvedMinutes = (parseInt(hrsEl?.value || '0') * 60) + parseInt(minsEl?.value || '0');
+            if (approvedMinutes <= 0) {
+                alert('Please enter the approved time (must be greater than 0)');
+                return;
+            }
+            const actionCell = hrsEl?.closest('tr')?.querySelectorAll('td');
+            if (actionCell && actionCell.length) {
+                actionCell[actionCell.length - 1].innerHTML = '<span style="color:#6b7280;font-size:12px;"><i class="fas fa-spinner fa-spin me-1"></i>Saving…</span>';
+            }
+            try {
+                const response = await staffFetch(`${API_BASE}/${entryId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'approve', approved_minutes: approvedMinutes })
+                });
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to approve entry');
+                    loadEntries();
+                    return;
+                }
+                _markEntryRowApproved(entryId, approvedMinutes);
+                _adjustStatCount('pendingCount', -1);
+                _adjustStatCount('approvedCount', 1);
+                _adjustStatCount('totalCount', 0);
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Approve error:', err);
+                alert('Failed to approve entry');
+                loadEntries();
+            }
+        }
+
+        async function rejectTimesheetEntry(entryId, empKey, dateKey) {
+            const reason = prompt('Rejection reason:');
+            if (reason === null) return;
+            const hrsEl = document.getElementById(`appr-hrs-${entryId}`);
+            const actionCell = hrsEl?.closest('tr')?.querySelectorAll('td');
+            if (actionCell && actionCell.length) {
+                actionCell[actionCell.length - 1].innerHTML = '<span style="color:#6b7280;font-size:12px;"><i class="fas fa-spinner fa-spin me-1"></i>Saving…</span>';
+            }
+            try {
+                const response = await staffFetch(`${API_BASE}/${entryId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'reject', comments: reason || 'Rejected by supervisor' })
+                });
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    alert(err.detail || 'Failed to reject entry');
+                    loadEntries();
+                    return;
+                }
+                _markEntryRowRejected(entryId, reason || 'Rejected by supervisor');
+                _adjustStatCount('pendingCount', -1);
+                _adjustStatCount('rejectedCount', 1);
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Reject error:', err);
+                alert('Failed to reject entry');
+                loadEntries();
+            }
+        }
+
+        const CAT_ICONS = {
+            kra: 'fas fa-bullseye', task: 'fas fa-tasks', dayplan: 'fas fa-calendar-check',
+            journey: 'fas fa-route', lead: 'fas fa-user-tie', ticket: 'fas fa-ticket-alt', custom: 'fas fa-clock'
+        };
+
+        async function loadEmpActivityAllDates(employeeId, empKey, sortedDates) {
+            const dayResults = await Promise.all(sortedDates.map(async (dateKey) => {
+                const panel = document.getElementById(`activity-panel-day-${empKey}-${dateKey}`);
+                try {
+                    const response = await staffFetch(`/api/v1/staff/attendance/activity-summary?target_date=${dateKey}&employee_id=${employeeId}`);
+                    if (!response.ok) { if (panel) panel.innerHTML = ''; return 0; }
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        const dayMins = result.data.totals?.completed_minutes || 0;
+                        const dayBadge = document.getElementById(`day-act-badge-${empKey}-${dateKey}`);
+                        if (dayBadge && dayMins > 0) {
+                            dayBadge.querySelector('.day-act-val').textContent = fmtHM(dayMins);
+                            dayBadge.style.display = 'inline';
+                        }
+                        if (panel) renderDayActivitySummary(panel, result.data, empKey, dateKey, employeeId);
+                        return dayMins;
+                    } else {
+                        if (panel) panel.innerHTML = '<div style="text-align:center;padding:8px;color:#9ca3af;font-size:12px;"><i class="fas fa-info-circle me-1"></i>No activities</div>';
+                    }
+                } catch (err) {
+                    if (panel) panel.innerHTML = '';
+                }
+                return 0;
+            }));
+            const empTotalActMins = dayResults.reduce((sum, m) => sum + m, 0);
+            const badge = document.getElementById(`activity-badge-${empKey}`);
+            if (badge && empTotalActMins > 0) {
+                badge.querySelector('.act-val').textContent = fmtHM(empTotalActMins);
+                badge.style.display = 'inline';
+            }
+        }
+
+        function renderDayActivitySummary(panel, data, empKey, dateKey, employeeId) {
+            const cats = (data.categories || []).filter(c => c.total > 0 || c.completed_minutes > 0);
+            const totals = data.totals || {};
+            const dayId = `${empKey}-${dateKey}`;
+
+            if (cats.length === 0 && totals.total === 0) {
+                panel.innerHTML = '<div style="text-align:center;padding:8px;color:#9ca3af;font-size:12px;"><i class="fas fa-info-circle me-1"></i>No activities</div>';
+                return;
+            }
+
+            const subBadge = document.getElementById(`day-submitted-badge-${empKey}-${dateKey}`);
+            if (subBadge && totals.completed_minutes > 0) {
+                subBadge.querySelector('.day-sub-val').textContent = fmtHM(totals.completed_minutes);
+                subBadge.style.display = 'inline';
+            }
+            const apprBadge = document.getElementById(`day-approved-badge-${empKey}-${dateKey}`);
+            if (apprBadge && totals.approved_minutes > 0) {
+                apprBadge.querySelector('.day-appr-val').textContent = fmtHM(totals.approved_minutes);
+                apprBadge.style.display = 'inline';
+            } else if (apprBadge) {
+                apprBadge.style.display = 'none';
+            }
+
+            let html = `<div style="padding:6px 10px;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;"><i class="fas fa-chart-pie me-1"></i>Activity Summary</div>`;
+            html += '<table class="activity-panel-table"><thead><tr>';
+            html += '<th>Category</th><th>Items</th><th>Completed</th><th>Pending</th><th>Submitted Time</th><th>Approved Time</th><th></th>';
+            html += '</tr></thead><tbody>';
+
+            html += `<tr class="summary-total-row">
+                <td><i class="fas fa-chart-bar me-1"></i>Total</td>
+                <td>${totals.total}</td>
+                <td>${totals.completed}</td>
+                <td>${totals.pending + (totals.in_progress || 0)}</td>
+                <td>${fmtHM(totals.completed_minutes)}</td>
+                <td>${totals.approved_minutes > 0 ? `<span style="color:#059669;font-weight:700;">${fmtHM(totals.approved_minutes)}</span>` : '<span style="color:#9ca3af;">—</span>'}</td>
+                <td></td>
+            </tr>`;
+
+            cats.forEach(cat => {
+                const icon = CAT_ICONS[cat.source_type] || 'fas fa-clock';
+                const approvedDisp = (cat.approved_minutes || 0) > 0
+                    ? `<span style="color:#059669;font-weight:700;">${fmtHM(cat.approved_minutes)}</span>`
+                    : (cat.pending_count > 0 ? '<span style="color:#d97706;font-size:11px;">Pending</span>' : '<span style="color:#9ca3af;">—</span>');
+                html += `<tr>
+                    <td><span class="cat-icon ${cat.source_type}"><i class="${icon}"></i></span>${cat.label}</td>
+                    <td><span class="cnt-badge all">${cat.total}</span></td>
+                    <td><span class="cnt-badge done">${cat.completed}</span></td>
+                    <td><span class="cnt-badge wait">${cat.pending + (cat.in_progress || 0)}</span></td>
+                    <td style="font-weight:600;color:#374151;">${fmtHM(cat.completed_minutes)}</td>
+                    <td>${approvedDisp}</td>
+                    <td>${cat.total > 0 || cat.completed_minutes > 0 ? `<button class="btn-act-view" onclick="openActivityModal(${employeeId},'${dateKey}','${cat.source_type}','${cat.label}')"><i class="fas fa-eye me-1"></i>View</button>` : ''}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            panel.innerHTML = html;
+        }
+
+        let _modalEmpId = 0, _modalDate = '', _modalSourceType = '', _modalLabel = '';
+
+        async function openActivityModal(employeeId, dateKey, sourceType, label) {
+            _modalEmpId = employeeId;
+            _modalDate = dateKey;
+            _modalSourceType = sourceType;
+            _modalLabel = label;
+
+            const modal = document.getElementById('activityDetailModal');
+            const title = document.getElementById('actModalTitle');
+            const body = document.getElementById('actModalBody');
+            if (!modal) return;
+
+            const icon = CAT_ICONS[sourceType] || 'fas fa-clock';
+            title.innerHTML = `<i class="${icon} me-1"></i>${label} - ${new Date(dateKey).toLocaleDateString('en-IN', {weekday:'short', day:'2-digit', month:'short', year:'numeric'})}`;
+            body.innerHTML = '<div style="text-align:center;padding:30px;color:#6b7280;"><i class="fas fa-spinner fa-spin me-2"></i>Loading details...</div>';
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            try {
+                const response = await staffFetch(`/api/v1/staff/attendance/activity-detail/${sourceType}?target_date=${dateKey}&employee_id=${employeeId}`);
+                if (!response.ok) { body.innerHTML = '<div style="padding:20px;color:#ef4444;">Unable to load details</div>'; return; }
+                const result = await response.json();
+                if (result.success && result.data) {
+                    renderActivityModal(body, result.data, sourceType, label, employeeId, dateKey);
+                } else {
+                    body.innerHTML = '<div style="padding:20px;color:#9ca3af;">No detail data available</div>';
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') { closeActivityModal(); return; }
+                body.innerHTML = '<div style="padding:20px;color:#ef4444;">Error loading details</div>';
+            }
+        }
+
+        function closeActivityModal() {
+            const modal = document.getElementById('activityDetailModal');
+            if (modal) modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function renderActivityModal(body, data, sourceType, label, employeeId, dateKey) {
+            const sourceItems = data.source_items || [];
+            const timeEntries = data.time_entries || [];
+            const icon = CAT_ICONS[sourceType] || 'fas fa-clock';
+
+            let html = '';
+
+            if (sourceItems.length > 0) {
+                html += `<div style="font-size:13px;font-weight:600;color:#0369a1;margin-bottom:8px;"><i class="${icon} me-1"></i>Source Items (${sourceItems.length})</div>`;
+                html += '<table class="detail-sub-table"><thead><tr>';
+                html += '<th>#</th><th>Title</th><th>Status</th><th>Time</th>';
+                html += '</tr></thead><tbody>';
+                sourceItems.forEach((item, idx) => {
+                    const st = item.status || 'pending';
+                    const stClass = st.replace(/_/g, '-');
+                    const mins = item.time_spent_minutes || item.completed_minutes || item.duration_minutes || item.required_minutes || 0;
+                    html += `<tr>
+                        <td>${idx + 1}</td>
+                        <td>${item.title || item.source_title || item.code || '-'}</td>
+                        <td><span class="status-pill ${stClass}">${st.replace(/_/g, ' ')}</span></td>
+                        <td style="font-weight:600;color:#059669;">${fmtHM(mins)}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+            }
+
+            if (timeEntries.length > 0) {
+                html += `<div style="font-size:13px;font-weight:600;color:#92400e;margin:16px 0 8px;"><i class="fas fa-clock me-1"></i>Time Log Entries (${timeEntries.length})</div>`;
+                html += `<div style="margin-bottom:8px;display:flex;gap:6px;">
+                    <button class="btn btn-sm btn-success" onclick="bulkApproveCategory('${sourceType}','${dateKey}',${employeeId})"><i class="fas fa-check-double me-1"></i>Approve All Pending</button>
+                    <button class="btn btn-sm btn-danger" onclick="bulkRejectCategory('${sourceType}','${dateKey}',${employeeId})"><i class="fas fa-times me-1"></i>Reject All Pending</button>
+                </div>`;
+                html += '<table class="detail-sub-table"><thead><tr>';
+                html += '<th>#</th><th>Description</th><th>Submitted</th><th>Approved Time</th><th>Status</th><th>Actions</th>';
+                html += '</tr></thead><tbody>';
+                timeEntries.forEach((te, idx) => {
+                    const st = te.approval_status || 'submitted';
+                    const stClass = st.replace(/_/g, '-');
+                    const canAct = st === 'submitted' || st === 'resubmitted';
+                    const approvedVal = te.approved_minutes != null ? fmtHM(te.approved_minutes) : '-';
+                    html += `<tr id="act-row-${te.id}">
+                        <td>${idx + 1}</td>
+                        <td>${te.source_title || te.description || '-'}</td>
+                        <td style="font-weight:600;">${fmtHM(te.completed_minutes)}</td>
+                        <td style="font-weight:600;color:#059669;">${approvedVal}</td>
+                        <td><span class="status-pill ${stClass}">${st.replace(/_/g, ' ')}</span></td>
+                        <td>
+                            ${canAct ? `
+                                <div class="d-flex align-items-center gap-1">
+                                    <input type="number" class="form-control form-control-sm" id="appr-min-${te.id}" value="${te.completed_minutes}" min="1" max="1440" style="width:70px;font-size:12px;" title="Approved time (minutes)">
+                                    <button class="action-btn approve" onclick="approveActivityEntry(${te.id})" title="Approve with entered time"><i class="fas fa-check"></i></button>
+                                    <button class="action-btn reject" onclick="rejectActivityEntry(${te.id})" title="Reject"><i class="fas fa-times"></i></button>
+                                </div>
+                            ` : `
+                                <span style="font-size:11px;color:#6b7280;">${st === 'approved' ? '<i class="fas fa-check-circle text-success"></i> Done' : st === 'rejected' ? '<i class="fas fa-times-circle text-danger"></i> Rejected' : st}</span>
+                            `}
+                        </td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+            } else if (sourceItems.length === 0) {
+                html += '<div style="padding:20px;text-align:center;color:#9ca3af;">No entries found for this category on this date</div>';
+            }
+
+            body.innerHTML = html;
+        }
+
+        async function approveActivityEntry(entryId) {
+            const adjInput = document.getElementById(`appr-min-${entryId}`);
+            const approvedMins = adjInput ? parseInt(adjInput.value) : null;
+
+            try {
+                const response = await staffFetch(`/api/v1/staff/attendance/activity-approve/${entryId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'approve', approved_minutes: approvedMins})
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showToast('Activity entry approved', 'success');
+                    openActivityModal(_modalEmpId, _modalDate, _modalSourceType, _modalLabel);
+                    reloadDayActivityPanel(_modalEmpId, _modalDate);
+                } else {
+                    showToast(result.detail || 'Approval failed', 'error');
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                showToast('Error approving entry', 'error');
+            }
+        }
+
+        async function rejectActivityEntry(entryId) {
+            const reason = prompt('Enter rejection reason:');
+            if (!reason) return;
+
+            try {
+                const response = await staffFetch(`/api/v1/staff/attendance/activity-approve/${entryId}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({action: 'reject', comments: reason})
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showToast('Activity entry rejected', 'success');
+                    openActivityModal(_modalEmpId, _modalDate, _modalSourceType, _modalLabel);
+                    reloadDayActivityPanel(_modalEmpId, _modalDate);
+                } else {
+                    showToast(result.detail || 'Rejection failed', 'error');
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                showToast('Error rejecting entry', 'error');
+            }
+        }
+
+        async function bulkApproveCategory(sourceType, dateKey, employeeId) {
+            if (!confirm('Approve all pending entries for this category?')) return;
+            try {
+                const response = await staffFetch('/api/v1/staff/attendance/activity-approve-bulk', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({employee_id: employeeId, date: dateKey, source_type: sourceType, action: 'approve'})
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showToast(`${result.count || 0} entries approved`, 'success');
+                    openActivityModal(employeeId, dateKey, sourceType, _modalLabel);
+                    reloadDayActivityPanel(employeeId, dateKey);
+                } else {
+                    showToast(result.detail || 'Bulk approval failed', 'error');
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                showToast('Error in bulk approval', 'error');
+            }
+        }
+
+        async function bulkRejectCategory(sourceType, dateKey, employeeId) {
+            const reason = prompt('Enter rejection reason for all pending entries:');
+            if (!reason) return;
+            try {
+                const response = await staffFetch('/api/v1/staff/attendance/activity-approve-bulk', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({employee_id: employeeId, date: dateKey, source_type: sourceType, action: 'reject', comments: reason})
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showToast(`${result.count || 0} entries rejected`, 'success');
+                    openActivityModal(employeeId, dateKey, sourceType, _modalLabel);
+                    reloadDayActivityPanel(employeeId, dateKey);
+                } else {
+                    showToast(result.detail || 'Bulk rejection failed', 'error');
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                showToast('Error in bulk rejection', 'error');
+            }
+        }
+
+        async function reloadDayActivityPanel(employeeId, dateKey) {
+            const panels = document.querySelectorAll(`[id^="activity-panel-day-"][id$="-${dateKey}"]`);
+            for (const panel of panels) {
+                const empKey = panel.id.replace('activity-panel-day-', '').replace(`-${dateKey}`, '');
+                try {
+                    const response = await staffFetch(`/api/v1/staff/attendance/activity-summary?target_date=${dateKey}&employee_id=${employeeId}`);
+                    if (!response.ok) continue;
+                    const result = await response.json();
+                    if (result.success && result.data) {
+                        renderDayActivitySummary(panel, result.data, empKey, dateKey, employeeId);
+                        const dayBadge = document.getElementById(`day-act-badge-${empKey}-${dateKey}`);
+                        const dayMins = result.data.totals?.completed_minutes || 0;
+                        if (dayBadge && dayMins > 0) {
+                            dayBadge.querySelector('.day-act-val').textContent = fmtHM(dayMins);
+                            dayBadge.style.display = 'inline';
+                        }
+                    }
+                } catch (err) {}
+            }
+        }
+
+        function showToast(msg, type) {
+            const existing = document.querySelector('.act-toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.className = 'act-toast';
+            toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:100001;padding:12px 20px;border-radius:8px;color:#fff;font-size:14px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity 0.3s;`;
+            toast.style.background = type === 'success' ? '#059669' : type === 'error' ? '#dc2626' : '#6b7280';
+            toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} me-1"></i>${msg}`;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function updateStats(entries) {
+            const pending = entries.filter(e => e.status === 'submitted' || e.status === 'resubmitted').length;
+            const approved = entries.filter(e => e.status === 'approved').length;
+            const rejected = entries.filter(e => e.status === 'rejected').length;
+            
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('approvedCount').textContent = approved;
+            document.getElementById('rejectedCount').textContent = rejected;
+            document.getElementById('totalCount').textContent = entries.length;
+        }
+
+        async function viewHistory(id) {
+            try {
+                const response = await staffFetch(`${API_BASE}/${id}/history`);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    let html = '<div class="timeline">';
+                    
+                    if (data.history && data.history.length > 0) {
+                        data.history.forEach(h => {
+                            html += `
+                                <div class="d-flex gap-3 mb-3 pb-3 border-bottom">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-${h.action === 'approved' ? 'check text-success' : h.action === 'rejected' ? 'times text-danger' : 'edit text-primary'}"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <strong>${h.action.toUpperCase()}</strong> by ${h.actor_name || 'Unknown'}
+                                        <br><small class="text-muted">${new Date(h.action_at).toLocaleString('en-IN')}</small>
+                                        ${h.comments ? `<br><em>${h.comments}</em>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        html += '<p class="text-muted">No history available</p>';
+                    }
+                    
+                    html += '</div>';
+                    document.getElementById('historyContent').innerHTML = html;
+                    new bootstrap.Modal(document.getElementById('historyModal')).show();
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error:', err);
+            }
+        }
+    </script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js?v=1764165148"></script>
+    <script src="/public/js/staff_universal_filter.js?v=1764165148"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Timesheet Approval', 'fas fa-clock');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+        });
+    </script>
+    </div>
+
+    <div id="activityDetailModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:100000;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:12px;width:90%;max-width:800px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#1e3a5f,#0369a1);color:#fff;border-radius:12px 12px 0 0;">
+                <h5 style="margin:0;font-size:16px;" id="actModalTitle"></h5>
+                <button onclick="closeActivityModal()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 4px;"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="actModalBody" style="padding:16px 20px;overflow-y:auto;flex:1;"></div>
+            <div style="padding:12px 20px;border-top:1px solid #e5e7eb;text-align:right;">
+                <button class="btn btn-secondary btn-sm" onclick="closeActivityModal()"><i class="fas fa-times me-1"></i>Close</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .activity-panel-day { padding:0 16px 8px; }
+        .activity-panel-day .activity-panel-table { width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px; }
+        .activity-panel-day .activity-panel-table th { background:#f1f5f9;padding:6px 8px;text-align:left;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0; }
+        .activity-panel-day .activity-panel-table td { padding:5px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle; }
+        .activity-panel-day .summary-total-row { background:linear-gradient(135deg,#dbeafe,#bfdbfe);font-weight:700; }
+        .activity-panel-day .summary-total-row td { color:#1e40af;border-bottom:2px solid #93c5fd; }
+        #actModalBody .detail-sub-table { width:100%;border-collapse:collapse;font-size:13px; }
+        #actModalBody .detail-sub-table th { background:#f8fafc;padding:8px 10px;text-align:left;font-weight:600;color:#475569;border-bottom:2px solid #e2e8f0; }
+        #actModalBody .detail-sub-table td { padding:7px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle; }
+        #actModalBody .status-pill { font-size:11px;padding:2px 8px;border-radius:10px;font-weight:600;text-transform:capitalize; }
+        #actModalBody .status-pill.submitted { background:#fef3c7;color:#92400e; }
+        #actModalBody .status-pill.resubmitted { background:#e0e7ff;color:#4338ca; }
+        #actModalBody .status-pill.approved { background:#d1fae5;color:#065f46; }
+        #actModalBody .status-pill.rejected { background:#fee2e2;color:#991b1b; }
+        #actModalBody .status-pill.completed { background:#d1fae5;color:#065f46; }
+        #actModalBody .status-pill.pending { background:#f3f4f6;color:#6b7280; }
+        #actModalBody .status-pill.in-progress { background:#dbeafe;color:#1e40af; }
+        #actModalBody .action-btn { width:28px;height:28px;border-radius:6px;border:none;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;justify-content:center; }
+        #actModalBody .action-btn.approve { background:#d1fae5;color:#059669; }
+        #actModalBody .action-btn.approve:hover { background:#059669;color:#fff; }
+        #actModalBody .action-btn.reject { background:#fee2e2;color:#dc2626; }
+        #actModalBody .action-btn.reject:hover { background:#dc2626;color:#fff; }
+    </style>
+</body>
+</html>

@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bonanza Awards</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --text-color: #1a365d;
+            --card-bg: white;
+            --table-header-bg: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+        [data-theme="dark"] {
+            --bg-color: #1a202c;
+            --text-color: #e2e8f0;
+            --card-bg: #2d3748;
+            --table-header-bg: #374151;
+            --border-color: #4a5568;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            padding: 0;
+            margin: 0;
+        }
+        .content-wrapper {
+            padding: 0;
+        }
+        .page-title {
+            color: var(--text-color);
+            margin-bottom: 25px;
+            font-weight: 700;
+        }
+        .eligibility-banner {
+            display: none;
+            background: linear-gradient(135deg, #e8f4fd 0%, #d1ecf1 100%);
+            border: 1px solid #b8daff;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 24px;
+            color: #1a365d;
+        }
+        .eligibility-banner .banner-title { font-size: 15px; font-weight: 600; margin: 0 0 8px 0; color: #1a365d; }
+        .eligibility-banner .banner-desc { font-size: 13px; margin: 0 0 14px 0; color: #2d5f8a; line-height: 1.5; }
+        .eligibility-banner .checklist { list-style: none; padding: 0; margin: 0; }
+        .eligibility-banner .checklist li { font-size: 14px; padding: 5px 0; display: flex; align-items: center; gap: 8px; }
+        .eligibility-banner .checklist li .status-icon { font-size: 16px; min-width: 20px; text-align: center; }
+        .eligibility-banner .checklist li .done { color: #38a169; }
+        .eligibility-banner .checklist li .pending { color: #d69e2e; }
+        .feedback-notice {
+            background: #fef9c3;
+            border-left: 4px solid #eab308;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+        [data-theme="dark"] .feedback-notice {
+            background: #4a4520;
+            border-left-color: #d69e2e;
+        }
+        .feedback-notice h6 { color: #854d0e; margin-bottom: 10px; font-weight: 600; }
+        .feedback-notice p { color: #854d0e; margin-bottom: 10px; font-size: 14px; }
+        .feedback-notice ul { color: #854d0e; font-size: 13px; margin: 0; padding-left: 20px; }
+        [data-theme="dark"] .feedback-notice h6,
+        [data-theme="dark"] .feedback-notice p,
+        [data-theme="dark"] .feedback-notice ul { color: #fbd38d; }
+        .filter-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .filter-card .card-body { padding: 20px; }
+        .bonanza-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+        .bonanza-card .card-header {
+            background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
+            color: white;
+            padding: 15px 20px;
+        }
+        .bonanza-card .card-header h5 { margin: 0; font-weight: 600; }
+        .table-responsive { overflow-x: auto; }
+        .table { margin-bottom: 0; background: var(--card-bg); }
+        .table thead th {
+            background: var(--table-header-bg);
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 600;
+            color: var(--text-color);
+            padding: 12px 15px;
+            white-space: nowrap;
+        }
+        .table tbody td {
+            padding: 12px 15px;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        .table tbody tr:hover { background: rgba(0,0,0,0.02); }
+        [data-theme="dark"] .table tbody tr:hover { background: rgba(255,255,255,0.05); }
+        .badge { font-weight: 500; padding: 6px 12px; }
+        .btn-claim {
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .btn-claim:hover { background: linear-gradient(135deg, #2f855a 0%, #276749 100%); color: white; }
+        .btn-claim:disabled { background: #ccc; cursor: not-allowed; }
+        .progress { height: 8px; border-radius: 4px; background: #e9ecef; }
+        [data-theme="dark"] .progress { background: #4a5568; }
+        .progress-bar { border-radius: 4px; }
+        .claimed-section { margin-top: 30px; }
+        .form-control, .form-select {
+            background: var(--card-bg);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+        .form-label { color: var(--text-color); }
+        .back-btn { margin-top: 20px; display: inline-block; }
+        .alert-info {
+            background: #e0f2fe;
+            border-color: #7dd3fc;
+            color: #0369a1;
+        }
+        [data-theme="dark"] .alert-info {
+            background: #1e3a5f;
+            border-color: #3b82f6;
+            color: #93c5fd;
+        }
+    </style>
+</head>
+<body>
+    <div class="content-wrapper">
+        <h3 class="page-title"><i class="fas fa-trophy me-2"></i>Bonanza Awards</h3>
+        
+        <div id="eligibilityBanner" class="eligibility-banner" style="display: none;">
+            <p class="banner-title"><i class="fas fa-clipboard-check me-2"></i>Eligibility Checklist</p>
+            <p class="banner-desc">Awards and bonanza benefits are unlocked after successful utilisation of an eligible product or service through the MNR Business Access Program.</p>
+            <ul class="checklist" id="eligibilityChecklist"></ul>
+        </div>
+        
+        <div class="alert alert-info">
+            <strong><i class="fas fa-info-circle me-1"></i>Bonanza Campaigns:</strong> Time-limited special reward campaigns. 
+            <span class="text-danger fw-bold">Bonanzas must be claimed within 5 days after the campaign end date!</span>
+        </div>
+        
+        <div class="filter-card card">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Search by Name</label>
+                        <input type="text" id="bonanzaSearch" class="form-control" placeholder="Type bonanza name...">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Filter by Status</label>
+                        <select id="statusFilter" class="form-select">
+                            <option value="all">All Bonanzas</option>
+                            <option value="Achieved">Achieved</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Missed Opportunity">Expired</option>
+                            <option value="Claimed">Claimed</option>
+                            <option value="Bonanza Closed">Closed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Filter by Date</label>
+                        <select id="dateFilter" class="form-select">
+                            <option value="all">All Dates</option>
+                            <option value="active">Active Now</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="past">Past</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Filter by Type</label>
+                        <select id="typeFilter" class="form-select">
+                            <option value="all">All Types</option>
+                            <option value="direct_referrals">Direct Facilitations</option>
+                            <option value="matching_points">Group Facilitation</option>
+                            <option value="earnings_target">Earnings Target</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="claimed-section mb-4">
+            <div class="bonanza-card card">
+                <div class="card-header" style="background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);">
+                    <h5><i class="fas fa-check-circle me-2"></i>Your Claimed Bonanzas</h5>
+                </div>
+                <div class="card-body" id="claimedBonanzas">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 mb-0 text-muted">Loading claimed bonanzas...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="bonanzaStatusBadge" class="alert mb-3" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center">
+                <span id="bonanzaStatusText"></span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="toggleViewAll()">
+                    <span id="toggleViewText">View All</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="bonanza-card card">
+            <div class="card-header">
+                <h5><i class="fas fa-star me-2"></i>Bonanza Campaigns</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="bonanzaTable">
+                        <thead>
+                            <tr>
+                                <th>Bonanza Name</th>
+                                <th>Campaign Period</th>
+                                <th>Criteria</th>
+                                <th>Target</th>
+                                <th>Your Progress</th>
+                                <th>Reward</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bonanzaTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2 mb-0 text-muted">Loading bonanza campaigns...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="feedback-notice mt-4">
+            <h6><i class="fas fa-video me-1"></i>Feedback Video and Photos Requirement</h6>
+            <p><strong>To claim Bonanza rewards:</strong> Sharing feedback videos and photos is important.</p>
+            <p style="font-size: 13px; margin-bottom: 8px;"><strong>Eligible Engagement Activities:</strong></p>
+            <ul>
+                <li>Reels (video content)</li>
+                <li>WhatsApp Status sharing</li>
+                <li>Social Media posts</li>
+                <li>Sharing & Ratings in Announcement sections</li>
+                <li>Engaging with teams</li>
+                <li>Attending Zoom calls</li>
+            </ul>
+            <p style="font-size: 12px; margin-top: 12px; font-style: italic;">
+                <i class="fas fa-info-circle me-1"></i>Please note: Submitted feedback videos and photos may be publicly displayed on our platforms for promotional and community engagement purposes.
+            </p>
+        </div>
+        
+        <a href="/dashboard" class="btn btn-secondary back-btn"><i class="fas fa-arrow-left me-1"></i>Back to Dashboard</a>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        var API_BASE_URL = "";
+        var sessionToken = null;
+        var allBonanzas = [];
+        var showingAll = true;
+        
+        function applyTheme() {
+            try {
+                var theme = window.parent.document.body.getAttribute("data-theme") || 
+                           localStorage.getItem("theme") || "light";
+                document.documentElement.setAttribute("data-theme", theme);
+                document.body.setAttribute("data-theme", theme);
+            } catch(e) {
+                var theme = localStorage.getItem("theme") || "light";
+                document.documentElement.setAttribute("data-theme", theme);
+                document.body.setAttribute("data-theme", theme);
+            }
+        }
+        
+        function getSessionToken() {
+            try {
+                var parentToken = window.parent.sessionToken;
+                if (parentToken) return parentToken;
+            } catch(e) {}
+            var token = sessionStorage.getItem("session_token");
+            if (!token) {
+                var cookies = document.cookie.split(";");
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.indexOf("mnr_session=") === 0) {
+                        token = cookie.substring(12);
+                        break;
+                    }
+                }
+            }
+            return token;
+        }
+        
+        function apiRequest(endpoint, options) {
+            options = options || {};
+            var headers = options.headers || {};
+            headers["Content-Type"] = "application/json";
+            if (sessionToken) {
+                headers["Authorization"] = "Bearer " + sessionToken;
+            }
+            options.headers = headers;
+            return fetch(API_BASE_URL + endpoint, options).then(function(response) {
+                if (response.status === 401) {
+                    window.parent.location.href = "/login";
+                    throw new Error("Unauthorized");
+                }
+                return response.json();
+            });
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return "-";
+            var d = new Date(dateStr);
+            return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+        }
+        
+        function formatNumber(num) {
+            if (num === null || num === undefined) return "0";
+            return Number(num).toLocaleString("en-IN");
+        }
+        
+        function getStatusBadge(status) {
+            var colors = {
+                "Achieved": "success",
+                "In Progress": "primary",
+                "Missed Opportunity": "danger",
+                "Claimed": "info",
+                "Bonanza Closed": "secondary",
+                "Not Started": "warning"
+            };
+            var color = colors[status] || "secondary";
+            return '<span class="badge bg-' + color + '">' + status + '</span>';
+        }
+        
+        function getCriteriaLabel(type) {
+            var labels = {
+                "direct_referrals": "Direct Facilitations",
+                "matching_points": "Group Facilitation",
+                "earnings_target": "Earnings Target"
+            };
+            return labels[type] || type;
+        }
+        
+        function renderBonanzaRow(b) {
+            var targetVal = b.target_requirement || b.target_required || 0;
+            var progressVal = b.current_progress || b.user_progress || 0;
+            var progressPercent = targetVal > 0 ? Math.min(100, (progressVal / targetVal) * 100) : 0;
+            var progressColor = progressPercent >= 100 ? "bg-success" : progressPercent >= 50 ? "bg-primary" : "bg-warning";
+            var canClaim = b.status === "Achieved" && !b.is_claimed;
+            var claimDeadline = b.claim_deadline ? new Date(b.claim_deadline) : null;
+            var now = new Date();
+            var deadlinePassed = claimDeadline && now > claimDeadline;
+            
+            var actionBtn = "";
+            if (b.is_claimed) {
+                actionBtn = '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Claimed</span>';
+            } else if (canClaim && !deadlinePassed) {
+                actionBtn = '<button class="btn btn-claim btn-sm" onclick="claimBonanza(' + b.id + ', this)"><i class="fas fa-gift me-1"></i>Claim</button>';
+            } else if (deadlinePassed) {
+                actionBtn = '<span class="badge bg-secondary">Expired</span>';
+            } else {
+                actionBtn = '<span class="text-muted">-</span>';
+            }
+            
+            var rewardDisplay = b.award_name || b.reward || "-";
+            
+            var html = "<tr>";
+            html += "<td><strong>" + (b.name || "-") + "</strong></td>";
+            html += "<td>" + formatDate(b.start_date) + " - " + formatDate(b.end_date) + "</td>";
+            html += "<td>" + getCriteriaLabel(b.criteria_type) + "</td>";
+            html += "<td class='text-center'><strong>" + formatNumber(targetVal) + "</strong></td>";
+            html += "<td style='min-width: 150px;'>";
+            html += "<div class='d-flex align-items-center gap-2'>";
+            html += "<div class='progress flex-grow-1'><div class='progress-bar " + progressColor + "' style='width: " + progressPercent + "%'></div></div>";
+            html += "<small>" + formatNumber(progressVal) + "/" + formatNumber(targetVal) + "</small>";
+            html += "</div></td>";
+            html += "<td><strong class='text-success'>" + rewardDisplay + "</strong></td>";
+            html += "<td>" + getStatusBadge(b.status) + "</td>";
+            html += "<td>" + actionBtn + "</td>";
+            html += "</tr>";
+            return html;
+        }
+        
+        function renderBonanzas(bonanzas) {
+            var tbody = document.getElementById("bonanzaTableBody");
+            if (!bonanzas || bonanzas.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No bonanza campaigns found</td></tr>';
+                return;
+            }
+            var html = "";
+            for (var i = 0; i < bonanzas.length; i++) {
+                html += renderBonanzaRow(bonanzas[i]);
+            }
+            tbody.innerHTML = html;
+        }
+        
+        function filterBonanzas() {
+            var search = document.getElementById("bonanzaSearch").value.toLowerCase();
+            var status = document.getElementById("statusFilter").value;
+            var date = document.getElementById("dateFilter").value;
+            var type = document.getElementById("typeFilter").value;
+            var now = new Date();
+            
+            var filtered = allBonanzas.filter(function(b) {
+                if (search && b.name.toLowerCase().indexOf(search) === -1) return false;
+                if (status !== "all" && b.status !== status) return false;
+                if (type !== "all" && b.criteria_type !== type) return false;
+                if (date !== "all") {
+                    var start = new Date(b.start_date);
+                    var end = new Date(b.end_date);
+                    if (date === "active" && (now < start || now > end)) return false;
+                    if (date === "upcoming" && now >= start) return false;
+                    if (date === "past" && now <= end) return false;
+                }
+                return true;
+            });
+            
+            renderBonanzas(filtered);
+        }
+        
+        function toggleViewAll() {
+            showingAll = !showingAll;
+            document.getElementById("toggleViewText").textContent = showingAll ? "Show Active" : "View All";
+            loadBonanzas();
+        }
+        
+        function claimBonanza(bonanzaId, btn) {
+            if (!confirm("Are you sure you want to claim this bonanza reward?")) return;
+            
+            if (!btn) return;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Claiming...';
+            
+            apiRequest("/api/v1/bonanza/claim", {
+                method: "POST",
+                body: JSON.stringify({ bonanza_id: bonanzaId })
+            }).then(function(data) {
+                if (data.success || data.message) {
+                    alert("Bonanza claimed successfully!");
+                    loadBonanzas();
+                    loadClaimedBonanzas();
+                } else {
+                    alert("Failed to claim: " + (data.detail || "Unknown error"));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-gift me-1"></i>Claim';
+                }
+            }).catch(function(err) {
+                console.error("Claim error:", err);
+                alert("Failed to claim bonanza. Please try again.");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-gift me-1"></i>Claim';
+            });
+        }
+        
+        function loadBonanzas() {
+            var endpoint = showingAll ? "/api/v1/bonanza/my-bonanzas?include_all=true" : "/api/v1/bonanza/my-bonanzas";
+            apiRequest(endpoint).then(function(data) {
+                allBonanzas = data.bonanzas || data || [];
+                filterBonanzas();
+            }).catch(function(err) {
+                console.error("Load bonanzas error:", err);
+                document.getElementById("bonanzaTableBody").innerHTML = '<tr><td colspan="8" class="text-center text-danger py-4">Failed to load bonanza campaigns. Please refresh the page.</td></tr>';
+            });
+        }
+        
+        function loadClaimedBonanzas() {
+            apiRequest("/api/v1/bonanza/my-claimed").then(function(data) {
+                var container = document.getElementById("claimedBonanzas");
+                var claims = data.claimed_bonanzas || data.claims || [];
+                if (claims.length > 0) {
+                    var html = '<div class="table-responsive"><table class="table table-hover"><thead><tr>';
+                    html += '<th>Bonanza Name</th><th>Progress</th><th>Reward</th><th>Claimed On</th><th>Status</th><th>Dispatch Date</th><th>Received Date</th>';
+                    html += '</tr></thead><tbody>';
+                    
+                    for (var i = 0; i < claims.length; i++) {
+                        var c = claims[i];
+                        var claimedDate = formatDate(c.claimed_date || c.claimed_at);
+                        var statusColors = {
+                            "Pending": "secondary",
+                            "Claimed": "info",
+                            "Approved": "primary",
+                            "Approved - Pending Processing": "warning",
+                            "Ready to Dispatch": "info",
+                            "Dispatched": "primary",
+                            "Processed": "primary",
+                            "Delivered": "success",
+                            "Delivered - Completed": "success",
+                            "Completed": "success"
+                        };
+                        var statusColor = statusColors[c.processed_status] || "secondary";
+                        html += "<tr>";
+                        html += "<td>" + (c.bonanza_name || "-") + "</td>";
+                        html += "<td>" + formatNumber(c.target_achieved) + " / " + formatNumber(c.target_required) + "</td>";
+                        html += "<td><strong class='text-success'>" + (c.reward || "-") + "</strong></td>";
+                        html += "<td>" + claimedDate + "</td>";
+                        html += '<td><span class="badge bg-' + statusColor + '">' + (c.processed_status || "Processing") + '</span></td>';
+                        html += "<td>" + formatDate(c.dispatch_date) + "</td>";
+                        html += "<td>" + formatDate(c.received_date) + "</td>";
+                        html += "</tr>";
+                    }
+                    html += "</tbody></table></div>";
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="text-muted text-center py-3">No claimed bonanzas yet</p>';
+                }
+            }).catch(function(err) {
+                console.error("Claimed bonanzas load error:", err);
+                document.getElementById("claimedBonanzas").innerHTML = '<p class="text-danger text-center">Failed to load claimed bonanzas</p>';
+            });
+        }
+        
+        function checkEligibility() {
+            apiRequest("/api/v1/auth/me-hybrid?role=mnr").then(function(data) {
+                var eligibility = data.data ? data.data.eligibility_status : data.eligibility_status;
+                if (!eligibility) return;
+                
+                var isActivated = eligibility.is_activated;
+                var kycApproved = (eligibility.kyc_status || 'pending').toLowerCase() === 'approved';
+                var utilisationDone = eligibility.program_utilisation_completed || false;
+                var groupA = (eligibility.group_a_points || 0) >= 1;
+                var groupB = (eligibility.group_b_points || 0) >= 1;
+                
+                var isKeyEligible = eligibility.is_key_eligible || false;
+                window.__isKeyEligible = isKeyEligible;
+                
+                if (!isKeyEligible) {
+                    var keyBanner = document.createElement('div');
+                    keyBanner.className = 'feedback-notice';
+                    keyBanner.innerHTML = '<h6><i class="fas fa-exclamation-triangle"></i> Key Eligibility Required</h6><p>' + (eligibility.key_eligibility_message || 'Complete at least 1 Direct Business Facilitation after 17th Nov 2025.') + '</p><p style="font-size:12px;margin:0;">Post 17 Nov 2025 Direct BF count: <strong>' + (eligibility.post_cutoff_referral_count || 0) + '</strong></p>';
+                    var wrapper = document.querySelector('.content-wrapper');
+                    if (wrapper) wrapper.insertBefore(keyBanner, wrapper.firstChild);
+                }
+                
+                var allClear = isActivated && kycApproved && utilisationDone && groupA && groupB;
+                if (allClear) return;
+                
+                var banner = document.getElementById("eligibilityBanner");
+                var checklist = document.getElementById("eligibilityChecklist");
+                banner.style.display = "block";
+                
+                var items = [
+                    { done: isActivated, label: "Account Activated" },
+                    { done: kycApproved, label: "KYC Approved" },
+                    { done: utilisationDone, label: "Program Utilisation Completed" },
+                    { done: groupA, label: "Group A \u2013 Minimum 1 active & utilised business facilitation" },
+                    { done: groupB, label: "Group B \u2013 Minimum 1 active & utilised business facilitation" },
+                    { done: isKeyEligible, label: "Key Eligibility \u2013 Minimum 1 Direct BF after 17 Nov 2025" }
+                ];
+                
+                checklist.innerHTML = items.map(function(item) {
+                    var icon = item.done ? '<span class="status-icon done">\u2705</span>' : '<span class="status-icon pending">\u23F3</span>';
+                    return '<li>' + icon + '<span>' + item.label + '</span></li>';
+                }).join('');
+            }).catch(function(err) {
+                console.log("Eligibility check skipped:", err);
+            });
+        }
+        
+        document.getElementById("bonanzaSearch").addEventListener("input", filterBonanzas);
+        document.getElementById("statusFilter").addEventListener("change", filterBonanzas);
+        document.getElementById("dateFilter").addEventListener("change", filterBonanzas);
+        document.getElementById("typeFilter").addEventListener("change", filterBonanzas);
+        
+        applyTheme();
+        sessionToken = getSessionToken();
+        if (!sessionToken) {
+            window.parent.location.href = "/login";
+        } else {
+            checkEligibility();
+            loadBonanzas();
+            loadClaimedBonanzas();
+        }
+        
+        window.addEventListener("message", function(e) {
+            if (e.data && e.data.type === "theme-change") {
+                document.documentElement.setAttribute("data-theme", e.data.theme);
+                document.body.setAttribute("data-theme", e.data.theme);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Portal - Audit Logs & Analytics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 24px; }
+
+        .page-tabs { display: flex; gap: 4px; margin-bottom: 20px; background: #fff; padding: 6px; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); flex-wrap: wrap; }
+        .page-tab { padding: 9px 18px; border-radius: 10px; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: none; background: transparent; color: #6b7280; transition: all 0.2s ease; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+        .page-tab.active { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff; box-shadow: 0 4px 12px rgba(30,58,138,0.3); }
+        .page-tab:not(.active):hover { background: #f3f4f6; color: #1f2937; }
+        .tab-pane-custom { display: none; }
+        .tab-pane-custom.active { display: block; }
+
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 14px; margin-bottom: 18px; }
+        .stat-card { background: #fff; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-left: 4px solid transparent; }
+        .stat-card.blue   { border-color: #1d4ed8; }
+        .stat-card.green  { border-color: #16a34a; }
+        .stat-card.purple { border-color: #7c3aed; }
+        .stat-card.orange { border-color: #ea580c; }
+        .stat-card.teal   { border-color: #0891b2; }
+        .stat-card.rose   { border-color: #e11d48; }
+        .stat-card.amber  { border-color: #d97706; }
+        .stat-label { font-size: 0.70rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #9ca3af; margin-bottom: 6px; }
+        .stat-value { font-size: 1.8rem; font-weight: 800; color: #111827; line-height: 1; }
+        .stat-sub   { font-size: 0.73rem; color: #6b7280; margin-top: 4px; }
+
+        .filter-card { background: #fff; border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); border-left: 4px solid #1d4ed8; }
+        .filter-card .form-control,
+        .filter-card .form-select { border-radius: 8px; border: 1px solid #d1d5db; font-size: 0.84rem; padding: 8px 11px; }
+        .filter-card label { font-size: 0.75rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+        .btn-apply { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 0.83rem; font-weight: 600; cursor: pointer; }
+        .btn-apply:hover { opacity: 0.9; }
+        .btn-reset { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 8px; padding: 8px 14px; font-size: 0.83rem; font-weight: 600; cursor: pointer; }
+        .btn-reset:hover { background: #e5e7eb; }
+
+        .data-card { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.07); overflow: hidden; margin-bottom: 18px; }
+        .data-card-header { padding: 14px 18px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+        .data-card-header h5 { margin: 0; font-weight: 700; color: #111827; font-size: 0.92rem; }
+
+        .two-col-tops { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+        @media (max-width: 900px) { .two-col-tops { grid-template-columns: 1fr; } }
+
+        .table { margin: 0; font-size: 0.82rem; }
+        .table th { font-weight: 700; color: #6b7280; font-size: 0.70rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 10px 13px; background: #f9fafb; border-top: none; white-space: nowrap; }
+        .table td { padding: 11px 13px; vertical-align: middle; color: #374151; border-color: #f3f4f6; }
+        .table tbody tr:hover { background: #fafafa; }
+
+        .badge-sm { padding: 3px 8px; border-radius: 5px; font-size: 0.70rem; font-weight: 700; white-space: nowrap; }
+        .b-create  { background: #dcfce7; color: #166534; }
+        .b-update  { background: #dbeafe; color: #1e40af; }
+        .b-delete  { background: #fee2e2; color: #991b1b; }
+        .b-login   { background: #f3e8ff; color: #6b21a8; }
+        .b-logout  { background: #fef3c7; color: #92400e; }
+        .b-direct  { background: #f0fdf4; color: #166534; }
+        .b-ref     { background: #eff6ff; color: #1e40af; }
+        .b-clean   { background: #d1fae5; color: #065f46; }
+        .b-timeout { background: #fef3c7; color: #92400e; }
+        .b-staff   { background: #ede9fe; color: #4c1d95; }
+        .b-mnr     { background: #dbeafe; color: #1e3a8a; }
+        .b-partner { background: #fef9c3; color: #713f12; }
+        .b-prod    { background: #ecfdf5; color: #065f46; }
+
+        .rank-circle { width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800; }
+        .rank-1 { background: #fef3c7; color: #92400e; }
+        .rank-2 { background: #f3f4f6; color: #374151; }
+        .rank-3 { background: #fde8d8; color: #9a3412; }
+        .rank-n { background: #f3f4f6; color: #6b7280; }
+
+        .pag-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid #f3f4f6; font-size: 0.81rem; color: #6b7280; }
+        .pag-btns { display: flex; gap: 3px; }
+        .pag-btn { padding: 5px 11px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.80rem; color: #374151; }
+        .pag-btn:hover:not(:disabled) { background: #f3f4f6; }
+        .pag-btn.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+        .pag-btn:disabled { opacity: 0.4; cursor: default; }
+
+        .empty-state { text-align: center; padding: 36px 20px; color: #9ca3af; }
+        .empty-state i { font-size: 30px; margin-bottom: 8px; display: block; }
+        .spin-wrap  { text-align: center; padding: 36px; color: #9ca3af; }
+        .notice-bar { background: #fef9c3; border: 1px solid #fbbf24; border-radius: 8px; padding: 10px 14px; font-size: 0.82rem; color: #78350f; margin-bottom: 14px; }
+
+        @media (max-width: 768px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } .content-area { padding: 12px; } }
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+<div class="content-area">
+
+    <div class="page-tabs">
+        <button class="page-tab active" id="tabAudit"   onclick="switchTab('audit')"><i class="fas fa-history"></i> Activity Log</button>
+        <button class="page-tab"        id="tabMarket"  onclick="switchTab('market')"><i class="fas fa-chart-line"></i> Marketplace Analysis</button>
+        <button class="page-tab"        id="tabStaff"   onclick="switchTab('staff')"><i class="fas fa-id-badge"></i> Staff Logins</button>
+        <button class="page-tab"        id="tabMnr"     onclick="switchTab('mnr')"><i class="fas fa-users"></i> MNR Logins</button>
+        <button class="page-tab"        id="tabPartner" onclick="switchTab('partner')"><i class="fas fa-handshake"></i> Partner Logins</button>
+    </div>
+
+    <!-- ══ TAB 1: ACTIVITY LOG ══ -->
+    <div class="tab-pane-custom active" id="paneAudit">
+        <div class="filter-card">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3"><label>Action Type</label>
+                    <select class="form-select" id="filterAction" onchange="filterLogs()">
+                        <option value="">All Actions</option><option value="CREATE">Create</option>
+                        <option value="UPDATE">Update</option><option value="DELETE">Delete</option>
+                        <option value="LOGIN">Login</option><option value="LOGOUT">Logout</option>
+                    </select>
+                </div>
+                <div class="col-md-3"><label>Entity Type</label>
+                    <select class="form-select" id="filterEntity" onchange="filterLogs()">
+                        <option value="">All Entities</option><option value="employee">Employee</option>
+                        <option value="department">Department</option><option value="setting">Setting</option>
+                    </select>
+                </div>
+                <div class="col-md-2"><label>Date From</label><input type="date" class="form-control" id="filterDateFrom" onchange="filterLogs()"></div>
+                <div class="col-md-2"><label>Date To</label>  <input type="date" class="form-control" id="filterDateTo"   onchange="filterLogs()"></div>
+                <div class="col-md-2"><button class="btn-apply w-100" onclick="loadAuditLogs()"><i class="fas fa-sync-alt me-1"></i>Refresh</button></div>
+            </div>
+        </div>
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-list me-2 text-primary"></i>System Activity Log</h5>
+                <span class="text-muted small" id="auditCount"></span>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Entity</th><th>Description</th><th>IP Address</th></tr></thead>
+                    <tbody id="logsTable"><tr><td colspan="6"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ TAB 2: MARKETPLACE ANALYSIS ══ -->
+    <div class="tab-pane-custom" id="paneMarket">
+        <!-- 1. STAT CARDS -->
+        <div class="stat-grid">
+            <div class="stat-card blue">  <div class="stat-label"><i class="fas fa-eye me-1"></i>Total Visits</div>      <div class="stat-value" id="mStat_total">—</div>      <div class="stat-sub">All catalog page views</div></div>
+            <div class="stat-card teal">  <div class="stat-label"><i class="fas fa-fingerprint me-1"></i>Unique IPs</div> <div class="stat-value" id="mStat_unique_ips">—</div> <div class="stat-sub">Distinct visitors</div></div>
+            <div class="stat-card green"> <div class="stat-label"><i class="fas fa-calendar-day me-1"></i>Today</div>     <div class="stat-value" id="mStat_today">—</div>      <div class="stat-sub">Hits in last 24h</div></div>
+            <div class="stat-card purple"><div class="stat-label"><i class="fas fa-share-alt me-1"></i>Total Shares</div> <div class="stat-value" id="mStat_shares">—</div>    <div class="stat-sub">Catalog links generated</div></div>
+            <div class="stat-card orange"><div class="stat-label"><i class="fas fa-users me-1"></i>Unique Sharers</div>   <div class="stat-value" id="mStat_sharers">—</div>   <div class="stat-sub">MNR members who shared</div></div>
+            <div class="stat-card rose">  <div class="stat-label"><i class="fas fa-mouse-pointer me-1"></i>Direct</div>   <div class="stat-value" id="mStat_direct">—</div>    <div class="stat-sub">No referral code</div></div>
+        </div>
+        <!-- 2. FILTERS -->
+        <div class="filter-card">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2"><label>Date From</label><input type="date" class="form-control" id="mktDateFrom"></div>
+                <div class="col-md-2"><label>Date To</label>  <input type="date" class="form-control" id="mktDateTo"></div>
+                <div class="col-md-2"><label>MNR ID</label>   <input type="text"  class="form-control" id="mktMnrId" placeholder="e.g. MNR12345"></div>
+                <div class="col-md-2"><label>IP Address</label><input type="text" class="form-control" id="mktIp" placeholder="e.g. 192.168"></div>
+                <div class="col-md-2"><label>Visit Type</label>
+                    <select class="form-select" id="mktHasRef">
+                        <option value="">All</option><option value="true">Via Share Link</option><option value="false">Direct</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button class="btn-apply" onclick="applyMktFilters()"><i class="fas fa-filter me-1"></i>Apply</button>
+                    <button class="btn-reset" onclick="resetMktFilters()">Reset</button>
+                </div>
+            </div>
+        </div>
+        <!-- 3. TOP SECTIONS -->
+        <div class="two-col-tops">
+            <div class="data-card" style="margin-bottom:0">
+                <div class="data-card-header">
+                    <h5><i class="fas fa-trophy me-2 text-warning"></i>Top Catalog Sharers</h5>
+                    <span class="text-muted small">Ranked by shares</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>#</th><th>MNR ID</th><th>Member Name</th><th>Shares</th><th>Views</th><th>Last Shared</th></tr></thead>
+                        <tbody id="mktSharersTbody"><tr><td colspan="6"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="data-card" style="margin-bottom:0">
+                <div class="data-card-header">
+                    <h5><i class="fas fa-shopping-basket me-2 text-success"></i>Top 10 Basket Products</h5>
+                    <span class="text-muted small">By units ordered</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>#</th><th>SKU</th><th>Product Name</th><th>Category</th><th>Qty Ordered</th><th>Orders</th></tr></thead>
+                        <tbody id="mktProductsTbody"><tr><td colspan="6"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <!-- 4. VISIT LOG -->
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-table me-2 text-primary"></i>Catalog Visit Log</h5>
+                <span class="text-muted small" id="mktHitCount">Loading...</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Timestamp</th><th>IP Address</th><th>Visit Type</th><th>Share Ref</th><th>MNR ID</th><th>Member Name</th><th>Referrer</th><th>User Agent</th></tr></thead>
+                    <tbody id="mktHitsTbody"><tr><td colspan="8"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr></tbody>
+                </table>
+            </div>
+            <div class="pag-bar" id="mktPagBar" style="display:none;">
+                <span id="mktPagInfo"></span><div class="pag-btns" id="mktPagBtns"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ TAB 3: STAFF LOGINS ══ -->
+    <div class="tab-pane-custom" id="paneStaff">
+        <!-- 1. STAT CARDS -->
+        <div class="stat-grid">
+            <div class="stat-card blue">  <div class="stat-label"><i class="fas fa-sign-in-alt me-1"></i>Total Logins</div>  <div class="stat-value" id="st_total">—</div>  <div class="stat-sub">All staff login events</div></div>
+            <div class="stat-card teal">  <div class="stat-label"><i class="fas fa-user-check me-1"></i>Unique Users</div>   <div class="stat-value" id="st_unique">—</div> <div class="stat-sub">Distinct staff logged in</div></div>
+            <div class="stat-card green"> <div class="stat-label"><i class="fas fa-calendar-day me-1"></i>Today</div>        <div class="stat-value" id="st_today">—</div>  <div class="stat-sub">Logins today</div></div>
+            <div class="stat-card purple"><div class="stat-label"><i class="fas fa-calendar-alt me-1"></i>This Month</div>   <div class="stat-value" id="st_month">—</div>  <div class="stat-sub">Logins this month</div></div>
+            <div class="stat-card orange"><div class="stat-label"><i class="fas fa-clock me-1"></i>Avg Session</div>         <div class="stat-value" id="st_avg">—</div>   <div class="stat-sub">Average session duration</div></div>
+            <div class="stat-card rose">  <div class="stat-label"><i class="fas fa-ban me-1"></i>Failed Logins</div>         <div class="stat-value" id="st_failed">—</div> <div class="stat-sub">Failed attempts</div></div>
+        </div>
+        <!-- 2. FILTERS -->
+        <div class="filter-card">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2"><label>Date From</label><input type="date" class="form-control" id="stDateFrom"></div>
+                <div class="col-md-2"><label>Date To</label>  <input type="date" class="form-control" id="stDateTo"></div>
+                <div class="col-md-4"><label>Employee ID / Name</label><input type="text" class="form-control" id="stSearch" placeholder="e.g. MR10001 or John"></div>
+                <div class="col-md-4 d-flex gap-2 align-items-end">
+                    <button class="btn-apply" onclick="applyLoginFilters('staff')"><i class="fas fa-filter me-1"></i>Apply</button>
+                    <button class="btn-reset" onclick="resetLoginFilters('staff')">Reset</button>
+                </div>
+            </div>
+        </div>
+        <!-- 3. TOP STAFF -->
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-trophy me-2 text-warning"></i>Top Staff by Login Activity</h5>
+                <span class="text-muted small">Ranked by total logins</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>#</th><th>Emp ID</th><th>Full Name</th><th>Role</th><th>Dept</th><th>Total Logins</th><th>Total Time</th><th>Last Login</th></tr></thead>
+                    <tbody id="stTopTbody"><tr><td colspan="8"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <!-- 4. SESSION LOG -->
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-list me-2 text-primary"></i>Staff Session Log</h5>
+                <span class="text-muted small" id="stCount">Loading...</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Login Time</th><th>Emp ID</th><th>Full Name</th><th>Role</th><th>Department</th><th>Session Duration</th><th>Ended By</th><th>IP Address</th></tr></thead>
+                    <tbody id="stTbody"><tr><td colspan="8"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr></tbody>
+                </table>
+            </div>
+            <div class="pag-bar" id="stPagBar" style="display:none;">
+                <span id="stPagInfo"></span><div class="pag-btns" id="stPagBtns"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ TAB 4: MNR LOGINS ══ -->
+    <div class="tab-pane-custom" id="paneMnr">
+        <div class="notice-bar"><i class="fas fa-info-circle me-2"></i>MNR login tracking started from the go-live date of this feature. Historical data prior to that is not available.</div>
+        <!-- 1. STAT CARDS -->
+        <div class="stat-grid">
+            <div class="stat-card blue">  <div class="stat-label"><i class="fas fa-sign-in-alt me-1"></i>Total Logins</div>  <div class="stat-value" id="mn_total">—</div>  <div class="stat-sub">All MNR login events</div></div>
+            <div class="stat-card teal">  <div class="stat-label"><i class="fas fa-user-check me-1"></i>Unique Members</div> <div class="stat-value" id="mn_unique">—</div> <div class="stat-sub">Distinct MNR users</div></div>
+            <div class="stat-card green"> <div class="stat-label"><i class="fas fa-calendar-day me-1"></i>Today</div>        <div class="stat-value" id="mn_today">—</div>  <div class="stat-sub">Logins today</div></div>
+            <div class="stat-card purple"><div class="stat-label"><i class="fas fa-calendar-alt me-1"></i>This Month</div>   <div class="stat-value" id="mn_month">—</div>  <div class="stat-sub">Logins this month</div></div>
+            <div class="stat-card orange"><div class="stat-label"><i class="fas fa-clock me-1"></i>Avg Session</div>         <div class="stat-value" id="mn_avg">—</div>   <div class="stat-sub">Average session duration</div></div>
+            <div class="stat-card green"> <div class="stat-label"><i class="fas fa-check-circle me-1"></i>Clean Logouts</div><div class="stat-value" id="mn_clean">—</div> <div class="stat-sub">Sessions with logout</div></div>
+        </div>
+        <!-- 2. FILTERS -->
+        <div class="filter-card">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2"><label>Date From</label><input type="date" class="form-control" id="mnDateFrom"></div>
+                <div class="col-md-2"><label>Date To</label>  <input type="date" class="form-control" id="mnDateTo"></div>
+                <div class="col-md-3"><label>MNR ID / Name</label><input type="text" class="form-control" id="mnSearch" placeholder="e.g. MNR12345 or name"></div>
+                <div class="col-md-2"><label>Session Type</label>
+                    <select class="form-select" id="mnHasType">
+                        <option value="">All</option><option value="logout">Clean Logout</option><option value="timeout">Timeout</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2 align-items-end">
+                    <button class="btn-apply" onclick="applyLoginFilters('mnr')"><i class="fas fa-filter me-1"></i>Apply</button>
+                    <button class="btn-reset" onclick="resetLoginFilters('mnr')">Reset</button>
+                </div>
+            </div>
+        </div>
+        <!-- 3. TOP MNR -->
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-trophy me-2 text-warning"></i>Most Active MNR Members</h5>
+                <span class="text-muted small">Ranked by total logins</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>#</th><th>MNR ID</th><th>Name</th><th>Total Logins</th><th>Total Time</th><th>Avg Session</th><th>Last Login</th></tr></thead>
+                    <tbody id="mnTopTbody"><tr><td colspan="7"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <!-- 4. SESSION LOG -->
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-list me-2 text-primary"></i>MNR Session Log</h5>
+                <span class="text-muted small" id="mnCount">Loading...</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Login Time</th><th>MNR ID</th><th>Name</th><th>Session Duration</th><th>Logout Time</th><th>Ended By</th><th>IP Address</th></tr></thead>
+                    <tbody id="mnTbody"><tr><td colspan="7"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr></tbody>
+                </table>
+            </div>
+            <div class="pag-bar" id="mnPagBar" style="display:none;">
+                <span id="mnPagInfo"></span><div class="pag-btns" id="mnPagBtns"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ TAB 5: PARTNER LOGINS ══ -->
+    <div class="tab-pane-custom" id="panePartner">
+        <div class="notice-bar"><i class="fas fa-info-circle me-2"></i>Business Partner login tracking started from the go-live date of this feature. Historical data prior to that is not available.</div>
+        <!-- 1. STAT CARDS -->
+        <div class="stat-grid">
+            <div class="stat-card blue">  <div class="stat-label"><i class="fas fa-sign-in-alt me-1"></i>Total Logins</div>  <div class="stat-value" id="pt_total">—</div>  <div class="stat-sub">All partner logins</div></div>
+            <div class="stat-card teal">  <div class="stat-label"><i class="fas fa-handshake me-1"></i>Unique Partners</div> <div class="stat-value" id="pt_unique">—</div> <div class="stat-sub">Distinct partners</div></div>
+            <div class="stat-card green"> <div class="stat-label"><i class="fas fa-calendar-day me-1"></i>Today</div>        <div class="stat-value" id="pt_today">—</div>  <div class="stat-sub">Logins today</div></div>
+            <div class="stat-card purple"><div class="stat-label"><i class="fas fa-calendar-alt me-1"></i>This Month</div>   <div class="stat-value" id="pt_month">—</div>  <div class="stat-sub">Logins this month</div></div>
+            <div class="stat-card orange"><div class="stat-label"><i class="fas fa-clock me-1"></i>Avg Session</div>         <div class="stat-value" id="pt_avg">—</div>   <div class="stat-sub">Average session duration</div></div>
+            <div class="stat-card amber"> <div class="stat-label"><i class="fas fa-check-circle me-1"></i>Clean Logouts</div><div class="stat-value" id="pt_clean">—</div> <div class="stat-sub">Sessions with logout</div></div>
+        </div>
+        <!-- 2. FILTERS -->
+        <div class="filter-card">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2"><label>Date From</label><input type="date" class="form-control" id="ptDateFrom"></div>
+                <div class="col-md-2"><label>Date To</label>  <input type="date" class="form-control" id="ptDateTo"></div>
+                <div class="col-md-3"><label>Partner Code / Name</label><input type="text" class="form-control" id="ptSearch" placeholder="e.g. DLR001 or name"></div>
+                <div class="col-md-2"><label>Session Type</label>
+                    <select class="form-select" id="ptHasType">
+                        <option value="">All</option><option value="logout">Clean Logout</option><option value="timeout">Timeout</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2 align-items-end">
+                    <button class="btn-apply" onclick="applyLoginFilters('partner')"><i class="fas fa-filter me-1"></i>Apply</button>
+                    <button class="btn-reset" onclick="resetLoginFilters('partner')">Reset</button>
+                </div>
+            </div>
+        </div>
+        <!-- 3. TOP PARTNERS -->
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-trophy me-2 text-warning"></i>Most Active Business Partners</h5>
+                <span class="text-muted small">Ranked by total logins</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>#</th><th>Partner Code</th><th>Name</th><th>Total Logins</th><th>Total Time</th><th>Avg Session</th><th>Last Login</th></tr></thead>
+                    <tbody id="ptTopTbody"><tr><td colspan="7"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <!-- 4. SESSION LOG -->
+        <div class="data-card">
+            <div class="data-card-header">
+                <h5><i class="fas fa-list me-2 text-primary"></i>Partner Session Log</h5>
+                <span class="text-muted small" id="ptCount">Loading...</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Login Time</th><th>Partner Code</th><th>Name</th><th>Session Duration</th><th>Logout Time</th><th>Ended By</th></tr></thead>
+                    <tbody id="ptTbody"><tr><td colspan="6"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr></tbody>
+                </table>
+            </div>
+            <div class="pag-bar" id="ptPagBar" style="display:none;">
+                <span id="ptPagInfo"></span><div class="pag-btns" id="ptPagBtns"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let allLogs = [];
+const mkt = { page:1, perPage:50, total:0 };
+const st  = { page:1, perPage:50, total:0, loaded:false };
+const mn  = { page:1, perPage:50, total:0, loaded:false };
+const pt  = { page:1, perPage:50, total:0, loaded:false };
+const loginState = { mnr: mn, partner: pt };
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function () {
+    const token = localStorage.getItem('staff_token');
+    if (!token) { window.location.href = '/staff/login'; return; }
+
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    StaffHeader.inject('Staff Portal - Audit Logs & Analytics', 'fas fa-history');
+    if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+    if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+
+    const ud = JSON.parse(localStorage.getItem('staff_user') || '{}');
+    const ALLOWED_NAMES  = ['VGK Mentor', 'VGK4U Supreme Admin', 'Key Leadership'];
+    const ALLOWED_CODES  = ['vgk4u', 'key_leadership'];
+    const rc = (ud.role_code||'').toLowerCase();
+    if (!ALLOWED_NAMES.includes(ud.role_name) && ud.authLevel !== 'RVZ ID' && !ALLOWED_CODES.includes(rc)) {
+        document.querySelector('.content-area').innerHTML = `
+            <div class="alert alert-danger mt-4">
+                <i class="fas fa-lock me-2"></i>Access Denied — VGK Mentor, Key Leadership, or Supreme Admin level required.
+                <br><small class="text-muted mt-1 d-block">Your role: <strong>${ud.role_name||'Unknown'}</strong></small>
+            </div>`;
+        return;
+    }
+    loadAuditLogs();
+});
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+    const map = { audit:'Audit', market:'Market', staff:'Staff', mnr:'Mnr', partner:'Partner' };
+    document.querySelectorAll('.page-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-pane-custom').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab' + map[tab]).classList.add('active');
+    document.getElementById('pane' + map[tab]).classList.add('active');
+    if (tab === 'market'  && mkt.total === 0)  { loadAllMarket(); }
+    if (tab === 'staff'   && !st.loaded)        { loadAllStaff(); }
+    if (tab === 'mnr'     && !mn.loaded)        { loadAllLogin('mnr'); }
+    if (tab === 'partner' && !pt.loaded)        { loadAllLogin('partner'); }
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function fmtDuration(mins) {
+    if (mins === null || mins === undefined) return '<span class="text-muted">—</span>';
+    mins = parseInt(mins) || 0;
+    if (mins < 1)  return '<span class="text-muted">&lt; 1 min</span>';
+    if (mins < 60) return `<strong>${mins}</strong> min`;
+    const h = Math.floor(mins/60), m = mins % 60;
+    return `<strong>${h}h</strong>${m > 0 ? ' ' + m + 'm' : ''}`;
+}
+function fmtDurationText(mins) {
+    if (!mins) return '—';
+    mins = parseInt(mins) || 0;
+    if (mins < 60) return mins + ' min';
+    const h = Math.floor(mins/60), m = mins%60;
+    return h + 'h' + (m > 0 ? ' ' + m + 'm' : '');
+}
+function fmtDt(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('en-IN', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function endedBadge(by) {
+    if (!by || by === 'timeout') return '<span class="badge-sm b-timeout">Timeout</span>';
+    if (by === 'logout')         return '<span class="badge-sm b-clean">Logout</span>';
+    return `<span class="badge-sm b-timeout">${by}</span>`;
+}
+function rankCircle(i) {
+    const cls = i===1?'rank-1':i===2?'rank-2':i===3?'rank-3':'rank-n';
+    return `<span class="rank-circle ${cls}">${i}</span>`;
+}
+function renderPagination(state, infoId, btnsId, barId, loadFn) {
+    const total = Math.ceil(state.total / state.perPage);
+    if (total <= 1) { document.getElementById(barId).style.display='none'; return; }
+    document.getElementById(barId).style.display='flex';
+    const s=(state.page-1)*state.perPage+1, e=Math.min(state.page*state.perPage,state.total);
+    document.getElementById(infoId).textContent=`Showing ${s}–${e} of ${state.total.toLocaleString()}`;
+    let html=`<button class="pag-btn" onclick="${loadFn}(${state.page-1})" ${state.page===1?'disabled':''}>‹</button>`;
+    for (let i=Math.max(1,state.page-2); i<=Math.min(total,state.page+2); i++)
+        html+=`<button class="pag-btn ${i===state.page?'active':''}" onclick="${loadFn}(${i})">${i}</button>`;
+    html+=`<button class="pag-btn" onclick="${loadFn}(${state.page+1})" ${state.page===total?'disabled':''}>›</button>`;
+    document.getElementById(btnsId).innerHTML=html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB 1: ACTIVITY LOG
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadAuditLogs() {
+    document.getElementById('logsTable').innerHTML=`<tr><td colspan="6"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr>`;
+    try {
+        const r = await staffFetch('/api/v1/staff/audit-logs');
+        if (r.ok) {
+            const d = await r.json();
+            // Endpoint returns { logs: [...], pagination: {...} }
+            allLogs = Array.isArray(d) ? d : (d.logs || []);
+        } else {
+            allLogs = [];
+        }
+    } catch (e) {
+        if (e.message==='AUTH_EXPIRED'||e.message==='NO_TOKEN') return;
+        allLogs = [];
+    }
+    filterLogs();
+}
+function filterLogs() {
+    const action=document.getElementById('filterAction').value.toLowerCase(),
+          entity=document.getElementById('filterEntity').value.toLowerCase(),
+          df=document.getElementById('filterDateFrom').value, dt=document.getElementById('filterDateTo').value;
+    const filtered=allLogs.filter(l=>{
+        // DB fields: action, resource_type, timestamp, employee_name, ip_address
+        if (action && (l.action||'').toLowerCase()!==action) return false;
+        if (entity && (l.resource_type||l.entity||'').toLowerCase()!==entity) return false;
+        if (df && new Date(l.timestamp)<new Date(df)) return false;
+        if (dt && new Date(l.timestamp)>new Date(dt+'T23:59:59')) return false;
+        return true;
+    });
+    document.getElementById('auditCount').textContent=`${filtered.length} record${filtered.length!==1?'s':''}`;
+    const clsMap={CREATE:'b-create',UPDATE:'b-update',DELETE:'b-delete',LOGIN:'b-login',LOGOUT:'b-logout',LOGIN_SUCCESS:'b-login',LOGIN_FAILED:'b-delete',LOGOUT_SUCCESS:'b-logout'};
+    const tbody=document.getElementById('logsTable');
+    if (!filtered.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><i class="fas fa-history"></i><p>No logs found</p></div></td></tr>`;return;}
+    tbody.innerHTML=filtered.map(l=>{
+        const a=(l.action||'').toUpperCase();
+        // Normalise field names — endpoint uses employee_name / resource_type
+        const user   = l.employee_name || l.user || '-';
+        const entity = l.resource_type || l.entity || '-';
+        const desc   = l.description   || l.details || '-';
+        const ip     = l.ip_address    || l.ip     || '-';
+        return `<tr>
+            <td style="white-space:nowrap;font-size:0.78rem;">${fmtDt(l.timestamp)}</td>
+            <td>${user}</td>
+            <td><span class="badge-sm ${clsMap[a]||'b-update'}">${a}</span></td>
+            <td>${entity}</td>
+            <td style="font-size:0.79rem;color:#374151;">${desc}</td>
+            <td><code style="font-size:0.76rem;">${ip}</code></td>
+        </tr>`;
+    }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB 2: MARKETPLACE — query builders
+// ─────────────────────────────────────────────────────────────────────────────
+function mktFilterQs() {
+    const df=document.getElementById('mktDateFrom').value, dt=document.getElementById('mktDateTo').value,
+          mi=document.getElementById('mktMnrId').value.trim(), ip=document.getElementById('mktIp').value.trim(),
+          hr=document.getElementById('mktHasRef').value;
+    const p=[];
+    if(df) p.push(`date_from=${df}`); if(dt) p.push(`date_to=${dt}`);
+    if(mi) p.push(`mnr_id=${encodeURIComponent(mi)}`); if(ip) p.push(`ip_address=${encodeURIComponent(ip)}`);
+    if(hr) p.push(`has_ref=${hr}`);
+    return p.length ? '?' + p.join('&') : '';
+}
+function mktHitsQs(page) {
+    const base = mktFilterQs();
+    const sep  = base ? '&' : '?';
+    return base + `${sep}page=${page}&per_page=${mkt.perPage}`;
+}
+function mktProductsQs() {
+    const df=document.getElementById('mktDateFrom').value, dt=document.getElementById('mktDateTo').value;
+    const p=[]; if(df) p.push(`date_from=${df}`); if(dt) p.push(`date_to=${dt}`);
+    return p.length ? '?' + p.join('&') : '';
+}
+
+async function loadAllMarket() {
+    await Promise.all([
+        loadMktSummary(),
+        loadMktSharers(),
+        loadMktTopProducts(),
+        loadMktHits(1)
+    ]);
+}
+async function loadMktSummary() {
+    ['mStat_total','mStat_unique_ips','mStat_today','mStat_shares','mStat_sharers','mStat_direct'].forEach(id=>document.getElementById(id).textContent='…');
+    try {
+        const r=await staffFetch('/api/v1/catalog/admin/summary'+mktFilterQs());
+        if (!r.ok) throw new Error();
+        const d=await r.json();
+        document.getElementById('mStat_total').textContent     =(d.total_hits||0).toLocaleString();
+        document.getElementById('mStat_unique_ips').textContent=(d.unique_ips||0).toLocaleString();
+        document.getElementById('mStat_today').textContent     =(d.today_hits||0).toLocaleString();
+        document.getElementById('mStat_shares').textContent    =(d.total_shares||0).toLocaleString();
+        document.getElementById('mStat_sharers').textContent   =(d.unique_sharers||0).toLocaleString();
+        document.getElementById('mStat_direct').textContent    =(d.direct_visits||0).toLocaleString();
+    } catch { ['mStat_total','mStat_unique_ips','mStat_today','mStat_shares','mStat_sharers','mStat_direct'].forEach(id=>document.getElementById(id).textContent='—'); }
+}
+async function loadMktSharers() {
+    const tbody=document.getElementById('mktSharersTbody');
+    tbody.innerHTML=`<tr><td colspan="6"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr>`;
+    try {
+        const r=await staffFetch('/api/v1/catalog/admin/top-sharers'+mktFilterQs());
+        if (!r.ok) throw new Error();
+        const d=await r.json();
+        const sharers=d.sharers||d.data||[];
+        if (!sharers.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><i class="fas fa-trophy"></i><p>No share data yet</p></div></td></tr>`;return;}
+        tbody.innerHTML=sharers.map((s,i)=>`<tr>
+            <td>${rankCircle(i+1)}</td>
+            <td><span class="badge-sm b-mnr">${s.mnr_id||'-'}</span></td>
+            <td>${s.member_name||'-'}</td>
+            <td><strong>${(s.share_count||s.total_shares||0).toLocaleString()}</strong></td>
+            <td>${(s.total_views||s.hit_count||0).toLocaleString()}</td>
+            <td style="font-size:0.78rem;">${s.last_shared_at?new Date(s.last_shared_at).toLocaleDateString():'-'}</td>
+        </tr>`).join('');
+    } catch {tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load</p></div></td></tr>`;}
+}
+async function loadMktTopProducts() {
+    const tbody=document.getElementById('mktProductsTbody');
+    tbody.innerHTML=`<tr><td colspan="6"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr>`;
+    try {
+        const r=await staffFetch('/api/v1/staff/session-analytics/marketplace/top-products?limit=10'+mktProductsQs().replace('?','&'));
+        if (!r.ok) throw new Error();
+        const d=await r.json();
+        if (!d.products||!d.products.length){tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><i class="fas fa-shopping-basket"></i><p>No basket data yet</p></div></td></tr>`;return;}
+        tbody.innerHTML=d.products.map(p=>`<tr>
+            <td>${rankCircle(p.rank)}</td>
+            <td><code style="font-size:0.75rem;">${p.sku}</code></td>
+            <td style="max-width:180px;"><span title="${p.product_name}" style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.product_name}</span></td>
+            <td><span class="badge-sm b-prod">${p.category_name}</span></td>
+            <td><strong>${p.total_qty_ordered.toLocaleString()}</strong> units</td>
+            <td>${p.total_orders.toLocaleString()} POs</td>
+        </tr>`).join('');
+    } catch {tbody.innerHTML=`<tr><td colspan="6"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load</p></div></td></tr>`;}
+}
+async function loadMktHits(page) {
+    page=page||mkt.page; mkt.page=page;
+    document.getElementById('mktHitsTbody').innerHTML=`<tr><td colspan="8"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr>`;
+    document.getElementById('mktPagBar').style.display='none';
+    try {
+        const r=await staffFetch('/api/v1/catalog/admin/hits'+mktHitsQs(page));
+        if (!r.ok) throw new Error();
+        const d=await r.json();
+        mkt.total=d.total||0;
+        document.getElementById('mktHitCount').textContent=`${mkt.total.toLocaleString()} total visit${mkt.total!==1?'s':''}`;
+        const tbody=document.getElementById('mktHitsTbody');
+        if (!d.hits||!d.hits.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><i class="fas fa-chart-bar"></i><p>No visits found</p></div></td></tr>`;return;}
+        tbody.innerHTML=d.hits.map(h=>{
+            const hasRef=h.share_ref_code&&h.share_ref_code!=='';
+            return `<tr>
+                <td style="white-space:nowrap;font-size:0.76rem;">${fmtDt(h.viewed_at)}</td>
+                <td><code style="font-size:0.76rem;">${h.ip_address||'-'}</code></td>
+                <td><span class="badge-sm ${hasRef?'b-ref':'b-direct'}">${hasRef?'Via Link':'Direct'}</span></td>
+                <td><code style="font-size:0.74rem;">${h.share_ref_code||'-'}</code></td>
+                <td>${h.mnr_id?`<span class="badge-sm b-mnr">${h.mnr_id}</span>`:'-'}</td>
+                <td>${h.member_name||'-'}</td>
+                <td title="${h.referrer||''}" style="font-size:0.74rem;color:#6b7280;">${(h.referrer||'').substring(0,40)||'-'}</td>
+                <td title="${h.user_agent||''}" style="font-size:0.72rem;color:#9ca3af;">${(h.user_agent||'').substring(0,55)||'-'}</td>
+            </tr>`;
+        }).join('');
+        renderPagination(mkt,'mktPagInfo','mktPagBtns','mktPagBar','loadMktHits');
+    } catch {document.getElementById('mktHitsTbody').innerHTML=`<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load</p></div></td></tr>`;document.getElementById('mktHitCount').textContent='—';}
+}
+function applyMktFilters() { mkt.page=1; loadAllMarket(); }
+function resetMktFilters() {
+    ['mktDateFrom','mktDateTo','mktMnrId','mktIp'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('mktHasRef').value='';
+    mkt.page=1; loadAllMarket();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TAB 3: STAFF LOGINS
+// ─────────────────────────────────────────────────────────────────────────────
+function stFilterQs() {
+    const df=document.getElementById('stDateFrom').value, dt=document.getElementById('stDateTo').value,
+          s=document.getElementById('stSearch').value.trim();
+    const p=[]; if(df) p.push(`date_from=${df}`); if(dt) p.push(`date_to=${dt}`); if(s) p.push(`emp_code=${encodeURIComponent(s)}`);
+    return p.length ? '?' + p.join('&') : '';
+}
+function stHitsQs(page) {
+    const base=stFilterQs(), sep=base?'&':'?';
+    return base + `${sep}page=${page}&per_page=${st.perPage}`;
+}
+
+async function loadAllStaff(page) {
+    st.loaded=true;
+    await Promise.all([loadStaffSummary(), loadStaffTop(), loadStaffSessions(page||1)]);
+}
+async function loadStaffSummary() {
+    ['st_total','st_unique','st_today','st_month','st_avg','st_failed'].forEach(id=>document.getElementById(id).textContent='…');
+    try {
+        const r=await staffFetch('/api/v1/staff/session-analytics/staff/summary'+stFilterQs());
+        if (!r.ok) throw new Error();
+        const d=await r.json();
+        document.getElementById('st_total').textContent =(d.total_logins||0).toLocaleString();
+        document.getElementById('st_unique').textContent=(d.unique_users||0).toLocaleString();
+        document.getElementById('st_today').textContent =(d.today_logins||0).toLocaleString();
+        document.getElementById('st_month').textContent =(d.this_month||0).toLocaleString();
+        document.getElementById('st_avg').textContent   =fmtDurationText(d.avg_duration_min);
+        document.getElementById('st_failed').textContent=(d.failed_logins||0).toLocaleString();
+    } catch {['st_total','st_unique','st_today','st_month','st_avg','st_failed'].forEach(id=>document.getElementById(id).textContent='—');}
+}
+async function loadStaffTop() {
+    const tbody=document.getElementById('stTopTbody');
+    tbody.innerHTML=`<tr><td colspan="8"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr>`;
+    try {
+        const r=await staffFetch('/api/v1/staff/session-analytics/staff/top-users'+stFilterQs());
+        if (!r.ok) throw new Error();
+        const d=await r.json();
+        if (!d.users||!d.users.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><i class="fas fa-trophy"></i><p>No data yet</p></div></td></tr>`;return;}
+        tbody.innerHTML=d.users.map((u,i)=>`<tr>
+            <td>${rankCircle(i+1)}</td>
+            <td><span class="badge-sm b-staff">${u.emp_code||'-'}</span></td>
+            <td>${u.full_name||'-'}</td>
+            <td style="font-size:0.78rem;">${u.role_name||'-'}</td>
+            <td style="font-size:0.78rem;">${u.department_name||'-'}</td>
+            <td><strong>${(u.total_logins||0).toLocaleString()}</strong></td>
+            <td>${fmtDurationText(u.total_minutes)}</td>
+            <td style="font-size:0.78rem;">${fmtDt(u.last_login)}</td>
+        </tr>`).join('');
+    } catch {tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load</p></div></td></tr>`;}
+}
+async function loadStaffSessions(page) {
+    page=page||st.page; st.page=page;
+    document.getElementById('stTbody').innerHTML=`<tr><td colspan="8"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr>`;
+    document.getElementById('stPagBar').style.display='none';
+    try {
+        const r=await staffFetch('/api/v1/staff/session-analytics/staff/sessions'+stHitsQs(page));
+        if (!r.ok) throw new Error();
+        const d=await r.json();
+        st.total=d.total||0;
+        document.getElementById('stCount').textContent=`${st.total.toLocaleString()} session${st.total!==1?'s':''}`;
+        const tbody=document.getElementById('stTbody');
+        if (!d.sessions||!d.sessions.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty-state"><i class="fas fa-id-badge"></i><p>No login sessions found</p></div></td></tr>`;return;}
+        tbody.innerHTML=d.sessions.map(s=>`<tr>
+            <td style="white-space:nowrap;font-size:0.78rem;">${fmtDt(s.login_at)}</td>
+            <td><span class="badge-sm b-staff">${s.emp_code||'-'}</span></td>
+            <td>${s.full_name||'-'}</td>
+            <td style="font-size:0.78rem;">${s.role_name||'-'}</td>
+            <td style="font-size:0.78rem;">${s.department_name||'-'}</td>
+            <td>${fmtDuration(s.session_duration_minutes)}</td>
+            <td>${endedBadge(s.ended_by)}</td>
+            <td><code style="font-size:0.76rem;">${s.ip_address||'-'}</code></td>
+        </tr>`).join('');
+        renderPagination(st,'stPagInfo','stPagBtns','stPagBar','loadStaffPage');
+    } catch {document.getElementById('stTbody').innerHTML=`<tr><td colspan="8"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load</p></div></td></tr>`;document.getElementById('stCount').textContent='—';}
+}
+function loadStaffPage(p){ loadStaffSessions(p); }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TABS 4 & 5: MNR + PARTNER (shared)
+// ─────────────────────────────────────────────────────────────────────────────
+function loginFilterQs(type) {
+    const pre=type==='mnr'?'mn':'pt';
+    const df=document.getElementById(pre+'DateFrom').value, dt=document.getElementById(pre+'DateTo').value,
+          s=document.getElementById(pre+'Search').value.trim(), ht=document.getElementById(pre+'HasType').value;
+    const p=[];
+    if(df) p.push(`date_from=${df}`); if(dt) p.push(`date_to=${dt}`);
+    if(s)  p.push(`search=${encodeURIComponent(s)}`); if(ht) p.push(`has_type=${ht}`);
+    return p.length ? '?' + p.join('&') : '';
+}
+function loginHitsQs(type, page) {
+    const state=loginState[type];
+    const base=loginFilterQs(type), sep=base?'&':'?';
+    return base + `${sep}page=${page}&per_page=${state.perPage}`;
+}
+
+async function loadAllLogin(type, page) {
+    loginState[type].loaded=true;
+    await Promise.all([loadLoginSummary(type), loadLoginTop(type), loadLoginSessions(type, page||1)]);
+}
+async function loadLoginSummary(type) {
+    const pre=type==='mnr'?'mn':'pt';
+    const ids=[`${pre}_total`,`${pre}_unique`,`${pre}_today`,`${pre}_month`,`${pre}_avg`,`${pre}_clean`];
+    ids.forEach(id=>document.getElementById(id).textContent='…');
+    try {
+        const r=await staffFetch(`/api/v1/staff/session-analytics/${type}/summary`+loginFilterQs(type));
+        if (!r.ok) throw new Error();
+        const d=await r.json();
+        document.getElementById(`${pre}_total`).textContent =(d.total_logins||0).toLocaleString();
+        document.getElementById(`${pre}_unique`).textContent=(d.unique_users||0).toLocaleString();
+        document.getElementById(`${pre}_today`).textContent =(d.today_logins||0).toLocaleString();
+        document.getElementById(`${pre}_month`).textContent =(d.this_month||0).toLocaleString();
+        document.getElementById(`${pre}_avg`).textContent   =fmtDurationText(d.avg_duration_min);
+        document.getElementById(`${pre}_clean`).textContent =(d.clean_sessions||0).toLocaleString();
+    } catch { ids.forEach(id=>document.getElementById(id).textContent='—'); }
+}
+async function loadLoginTop(type) {
+    const pre=type==='mnr'?'mn':'pt', bCls=type==='mnr'?'b-mnr':'b-partner';
+    const tbody=document.getElementById(pre+'TopTbody');
+    tbody.innerHTML=`<tr><td colspan="7"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr>`;
+    try {
+        const r=await staffFetch(`/api/v1/staff/session-analytics/${type}/top-users`+loginFilterQs(type));
+        if (!r.ok) throw new Error();
+        const d=await r.json();
+        if (!d.users||!d.users.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><i class="fas fa-trophy"></i><p>No data yet</p></div></td></tr>`;return;}
+        tbody.innerHTML=d.users.map((u,i)=>`<tr>
+            <td>${rankCircle(i+1)}</td>
+            <td><span class="badge-sm ${bCls}">${u.user_identifier||'-'}</span></td>
+            <td>${u.display_name||'-'}</td>
+            <td><strong>${(u.total_logins||0).toLocaleString()}</strong></td>
+            <td>${fmtDurationText(u.total_minutes)}</td>
+            <td>${fmtDurationText(u.avg_minutes)}</td>
+            <td style="font-size:0.78rem;">${fmtDt(u.last_login)}</td>
+        </tr>`).join('');
+    } catch {tbody.innerHTML=`<tr><td colspan="7"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load</p></div></td></tr>`;}
+}
+async function loadLoginSessions(type, page) {
+    const state=loginState[type], pre=type==='mnr'?'mn':'pt', bCls=type==='mnr'?'b-mnr':'b-partner', cols=type==='mnr'?7:6;
+    page=page||state.page; state.page=page;
+    document.getElementById(pre+'Tbody').innerHTML=`<tr><td colspan="${cols}"><div class="spin-wrap"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr>`;
+    document.getElementById(pre+'PagBar').style.display='none';
+    try {
+        const r=await staffFetch(`/api/v1/staff/session-analytics/${type}/sessions`+loginHitsQs(type,page));
+        if (!r.ok) throw new Error();
+        const d=await r.json();
+        state.total=d.total||0;
+        document.getElementById(pre+'Count').textContent=`${state.total.toLocaleString()} session${state.total!==1?'s':''}`;
+        const tbody=document.getElementById(pre+'Tbody');
+        if (!d.sessions||!d.sessions.length){tbody.innerHTML=`<tr><td colspan="${cols}"><div class="empty-state"><i class="fas fa-user-clock"></i><p>No sessions recorded yet</p></div></td></tr>`;return;}
+        const fnName=type==='mnr'?'loadMnrPage':'loadPtPage';
+        tbody.innerHTML=d.sessions.map(s=>{
+            const dur=s.session_duration_minutes??s.effective_duration_minutes;
+            const base=`<td style="white-space:nowrap;font-size:0.78rem;">${fmtDt(s.login_at)}</td><td><span class="badge-sm ${bCls}">${s.user_identifier||'-'}</span></td><td>${s.display_name||'-'}</td><td>${fmtDuration(dur)}</td><td style="font-size:0.78rem;">${s.logout_at?fmtDt(s.logout_at):'—'}</td><td>${endedBadge(s.ended_by)}</td>`;
+            const ip=type==='mnr'?`<td><code style="font-size:0.76rem;">${s.ip_address||'-'}</code></td>`:'';
+            return `<tr>${base}${ip}</tr>`;
+        }).join('');
+        renderPagination(state,pre+'PagInfo',pre+'PagBtns',pre+'PagBar',fnName);
+    } catch {document.getElementById(pre+'Tbody').innerHTML=`<tr><td colspan="${cols}"><div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Failed to load</p></div></td></tr>`;document.getElementById(pre+'Count').textContent='—';}
+}
+function loadMnrPage(p){ loadLoginSessions('mnr',p); }
+function loadPtPage(p) { loadLoginSessions('partner',p); }
+
+// Apply / Reset — reload ALL sections with current filter values
+function applyLoginFilters(type) {
+    if (type==='staff') { st.page=1; loadAllStaff(1); return; }
+    loginState[type].page=1; loadAllLogin(type,1);
+}
+function resetLoginFilters(type) {
+    const pre=type==='staff'?'st':type==='mnr'?'mn':'pt';
+    ['DateFrom','DateTo','Search'].forEach(s=>{const el=document.getElementById(pre+s);if(el) el.value='';});
+    const ht=document.getElementById(pre+'HasType'); if(ht) ht.value='';
+    if (type==='staff'){st.page=1; loadAllStaff(1);}
+    else {loginState[type].page=1; loadAllLogin(type,1);}
+}
+</script>
+</body>
+</html>

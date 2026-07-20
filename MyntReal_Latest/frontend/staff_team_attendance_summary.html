@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - Team Attendance Summary</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; max-width: 1600px; margin: 0 auto; }
+        
+        .summary-banner {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .summary-banner h4 { font-weight: 600; margin-bottom: 16px; }
+        .summary-stats { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 16px; }
+        .summary-stat {
+            text-align: center;
+            padding: 12px 24px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        .summary-stat-value { font-size: 28px; font-weight: 700; }
+        .summary-stat-label { font-size: 13px; opacity: 0.9; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { 
+            background: transparent; 
+            border-bottom: 1px solid #e5e7eb; 
+            padding: 16px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 0; }
+        
+        .filters-bar { 
+            padding: 16px 20px; 
+            background: #f9fafb; 
+            border-bottom: 1px solid #e5e7eb; 
+            display: flex; 
+            gap: 12px; 
+            flex-wrap: wrap; 
+            align-items: center; 
+        }
+        .filters-bar select, .filters-bar input { 
+            padding: 8px 12px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 6px; 
+            font-size: 14px; 
+        }
+        
+        .table { margin: 0; }
+        .table th { 
+            font-weight: 600; 
+            color: #6b7280; 
+            font-size: 12px; 
+            text-transform: uppercase; 
+            padding: 12px 16px; 
+            background: #f9fafb; 
+            border-top: none; 
+            position: sticky;
+            top: 0;
+        }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .employee-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .employee-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .employee-name { font-weight: 600; color: #1f2937; }
+        .employee-code { font-size: 12px; color: #6b7280; }
+        
+        .stat-cell { text-align: center; }
+        .stat-value { font-weight: 600; font-size: 16px; }
+        .stat-value.present { color: #059669; }
+        .stat-value.absent { color: #dc2626; }
+        .stat-value.half { color: #d97706; }
+        .stat-value.ot { color: #2563eb; }
+        
+        .progress-mini {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+            width: 60px;
+            margin: 4px auto 0;
+        }
+        .progress-mini-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+        .progress-mini-fill.good { background: #10b981; }
+        .progress-mini-fill.warning { background: #f59e0b; }
+        .progress-mini-fill.danger { background: #ef4444; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 48px 20px;
+            color: #6b7280;
+        }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        
+        .view-details-btn {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            border: 1px solid #d1d5db;
+            background: white;
+            color: #374151;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .view-details-btn:hover { background: #f3f4f6; }
+        
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin-left: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .content-area { padding: 16px; }
+            .summary-stats { flex-direction: column; }
+            .summary-stat { width: 100%; }
+            .filters-bar { flex-direction: column; }
+        }
+    </style>
+    <!-- DC-FIX: jQuery for staff pages -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <!-- TABS NAVIGATION -->
+        <ul class="nav nav-tabs mb-4" id="teamTabs" role="tablist" style="border-bottom: 2px solid #e5e7eb;">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summary-pane" type="button" role="tab">
+                    <i class="fas fa-chart-bar me-2"></i>Attendance Summary
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="marked-tab" data-bs-toggle="tab" data-bs-target="#marked-pane" type="button" role="tab">
+                    <i class="fas fa-clipboard me-2"></i>Team Marked Attendance
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="teamTabContent">
+            <!-- TAB 1: ATTENDANCE SUMMARY -->
+            <div class="tab-pane fade show active" id="summary-pane" role="tabpanel">
+
+        <div class="summary-banner">
+            <h4><i class="fas fa-chart-pie me-2"></i>Team Overview</h4>
+            <div class="summary-stats">
+                <div class="summary-stat">
+                    <div class="summary-stat-value" id="totalEmployees">0</div>
+                    <div class="summary-stat-label">Team Members</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-value" id="totalPresent">0</div>
+                    <div class="summary-stat-label">Total Present Days</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-value" id="totalAbsent">0</div>
+                    <div class="summary-stat-label">Total Absent Days</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-value" id="totalOT">0</div>
+                    <div class="summary-stat-label">Total OT Hours</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-value" id="totalWorkHours">0</div>
+                    <div class="summary-stat-label">Total Work Hours</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-table me-2"></i>Employee Attendance Summary</h5>
+                <button class="btn btn-outline-primary btn-sm" onclick="exportData()">
+                    <i class="fas fa-download me-1"></i>Export
+                </button>
+            </div>
+            
+            <!-- DC_UNIVERSAL_FILTER_001: Universal Filter Container -->
+            <div id="universalFilterContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0;"></div>
+
+            <!-- Fallback filters - shown if universal filter fails to load -->
+            <div id="fallbackFiltersContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0; display: flex;">
+                <select id="fallbackDepartmentFilter" style="min-width: 160px;" onchange="loadSummary()">
+                    <option value="">All Departments</option>
+                </select>
+                <select id="fallbackStaffTypeFilter" style="min-width: 140px;" onchange="loadSummary()">
+                    <option value="">All Staff Types</option>
+                    <option value="MN_STAFF">MN Staff</option>
+                    <option value="MN_EMPLOYEE">MN Employee</option>
+                    <option value="FREELANCER">Freelancer</option>
+                    <option value="MYNT_REAL">Mynt Real</option>
+                </select>
+            </div>
+
+            <div class="filters-bar">
+                <div class="d-flex gap-2 align-items-center">
+                    <label class="mb-0">Period:</label>
+                    <input type="date" id="fromDate" class="form-control">
+                    <span>to</span>
+                    <input type="date" id="toDate" class="form-control">
+                </div>
+                <button class="btn btn-primary" onclick="loadSummary()">
+                    <i class="fas fa-sync me-1"></i>Load Summary
+                </button>
+            </div>
+
+            <div class="card-body">
+                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Employee</th>
+                                <th class="stat-cell">Present</th>
+                                <th class="stat-cell">Absent</th>
+                                <th class="stat-cell">Half Days</th>
+                                <th class="stat-cell">Full Days</th>
+                                <th class="stat-cell">OT Hours</th>
+                                <th class="stat-cell">Total Hours</th>
+                                <th class="stat-cell">Attendance %</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="summaryTable">
+                            <tr>
+                                <td colspan="9">
+                                    <div class="empty-state">
+                                        <i class="fas fa-users"></i>
+                                        <h6>No data available</h6>
+                                        <p>Select a date range and click Load Summary</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            </div>
+
+            <!-- TAB 2: TEAM MARKED ATTENDANCE -->
+            <div class="tab-pane fade" id="marked-pane" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-clipboard-list me-2"></i>Team HR Marked Attendance</h5>
+                    </div>
+                    <div class="filters-bar">
+                        <div class="d-flex gap-2 align-items-center">
+                            <label class="mb-0">Month:</label>
+                            <input type="month" id="markedMonth" class="form-control" style="width: auto;">
+                        </div>
+                        <button class="btn btn-primary" onclick="loadMarkedTeamData()">
+                            <i class="fas fa-sync me-1"></i>Load
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="exportMarkedData()">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Employee</th>
+                                        <th class="stat-cell">Marked Hours</th>
+                                        <th class="stat-cell">Approved Hours</th>
+                                        <th class="stat-cell">Net Days</th>
+                                        <th class="stat-cell">Pending Approvals</th>
+                                        <th class="stat-cell">Discrepancies</th>
+                                        <th class="stat-cell">Status</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="markedTeamTable">
+                                    <tr>
+                                        <td colspan="8">
+                                            <div class="empty-state">
+                                                <i class="fas fa-inbox"></i>
+                                                <h6>Select a month to view team marked attendance</h6>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-line me-2"></i>Team Marked Attendance Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="summary-stats" style="justify-content: space-around; flex-wrap: wrap; gap: 20px;">
+                            <div class="summary-stat" style="padding: 12px 24px; background: #f3f4f6; border-radius: 12px;">
+                                <div class="summary-stat-value" id="teamMarkedTotal">0.0</div>
+                                <div class="summary-stat-label">Total Marked Hours</div>
+                            </div>
+                            <div class="summary-stat" style="padding: 12px 24px; background: #f3f4f6; border-radius: 12px;">
+                                <div class="summary-stat-value" id="teamApprovedTotal">0.0</div>
+                                <div class="summary-stat-label">Total Approved Hours</div>
+                            </div>
+                            <div class="summary-stat" style="padding: 12px 24px; background: #f3f4f6; border-radius: 12px;">
+                                <div class="summary-stat-value" id="teamNetDaysTotal">0.0</div>
+                                <div class="summary-stat-label">Total Net Days</div>
+                            </div>
+                            <div class="summary-stat" style="padding: 12px 24px; background: #fef3c7; border-radius: 12px;">
+                                <div class="summary-stat-value" style="color: #d97706;" id="teamPendingTotal">0</div>
+                                <div class="summary-stat-label">Pending Approvals</div>
+                            </div>
+                            <div class="summary-stat" style="padding: 12px 24px; background: #fee2e2; border-radius: 12px;">
+                                <div class="summary-stat-value" style="color: #dc2626;" id="teamDiscrepanciesTotal">0</div>
+                                <div class="summary-stat-label">Discrepancies</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff_universal_filter.js?v=1764165148"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/timesheet';
+        const API_ATTENDANCE = '/api/v1/staff/attendance-sheet';
+        let currentSummary = [];
+        let staffData = {};
+        
+        // DC_UNIVERSAL_FILTER_001: Universal filter state
+        let universalFilter = null;
+        let universalFilterReady = false;
+
+        function buildFilterPayload() {
+            const searchInput = document.getElementById('searchInput');
+            const searchText = searchInput ? searchInput.value : '';
+            
+            if (universalFilterReady && universalFilter && universalFilter.isReady && !universalFilter.initFailed) {
+                try {
+                    const filters = universalFilter.getFilters();
+                    filters.search = filters.search || searchText;
+                    return filters;
+                } catch (e) {
+                    console.warn('[DC] Error getting universal filter values:', e);
+                }
+            }
+            const fallbackDept = document.getElementById('fallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('fallbackStaffTypeFilter');
+            return {
+                company_id: null,
+                staff_type: fallbackStaff ? (fallbackStaff.value || null) : null,
+                department_id: fallbackDept ? (fallbackDept.value || null) : null,
+                employee_id: null,
+                employee: null,
+                search: searchText || null
+            };
+        }
+
+        async function loadFallbackDepartments() {
+            try {
+                const response = await staffFetch('/api/v1/staff/departments');
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('fallbackDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading fallback departments:', error);
+            }
+        }
+
+        function hideFallbackFilters() {
+            const fallback = document.getElementById('fallbackFiltersContainer');
+            if (fallback) fallback.style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            staffData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const employeeNameEl = document.getElementById('employeeName');
+            if (employeeNameEl) employeeNameEl.textContent = staffData.full_name || 'Manager';
+            
+            const today = new Date();
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('fromDate').value = monthStart.toISOString().split('T')[0];
+            document.getElementById('toDate').value = today.toISOString().split('T')[0];
+            
+            // DC_UNIVERSAL_FILTER_001: Load fallback departments first
+            loadFallbackDepartments();
+
+            // DC_UNIVERSAL_FILTER_001: Initialize universal filter
+            if (typeof DCUniversalFilter !== 'undefined') {
+                universalFilter = new DCUniversalFilter('universalFilterContainer', {
+                    showCompany: false,
+                    showStaffType: true,
+                    showDepartment: true,
+                    showEmployee: true,
+                    showSearch: false,
+                    pageKey: 'staff_team_attendance_summary',
+                    onFilterChange: () => {
+                        if (universalFilterReady) loadSummary();
+                    }
+                });
+                
+                try {
+                    const success = await Promise.race([
+                        universalFilter.waitForReady(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                    ]);
+                    await new Promise(r => setTimeout(r, 50));
+                    if (success === true && 
+                        universalFilter.isReady === true && 
+                        universalFilter.initFailed === false &&
+                        document.getElementById('universalFilterContainer')?.children.length > 0) {
+                        universalFilterReady = true;
+                        hideFallbackFilters();
+                        console.log('[DC] Universal filter ready - using enhanced filters');
+                    } else {
+                        console.warn('[DC] Universal filter not fully ready, keeping fallback');
+                        universalFilterReady = false;
+                    }
+                } catch (e) {
+                    console.warn('[DC] Universal filter initialization failed or timed out, using fallback:', e);
+                    universalFilterReady = false;
+                }
+            } else {
+                console.warn('[DC] DCUniversalFilter not available - using fallback filters');
+            }
+
+            loadSummary();
+        });
+
+        async function loadSummary() {
+            try {
+                const params = new URLSearchParams();
+                params.append('from_date', document.getElementById('fromDate').value);
+                params.append('to_date', document.getElementById('toDate').value);
+                
+                // DC_UNIVERSAL_FILTER_001: Use buildFilterPayload for filters
+                const filters = buildFilterPayload();
+                const departmentId = filters.department_id || '';
+                const staffType = filters.staff_type || '';
+                const employeeId = filters.employee_id || '';
+                
+                if (departmentId) params.append('department_id', departmentId);
+                if (staffType) params.append('staff_type', staffType);
+                if (employeeId) params.append('employee_id', employeeId);
+                
+                const response = await staffFetch(`${API_BASE}/team-summary?${params}`);
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentSummary = data.team_summary;
+                    renderSummary(data.team_summary);
+                    updateTotals(data.totals, data.employee_count);
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error loading summary:', err);
+            }
+        }
+
+        function getInitials(name) {
+            if (!name) return '?';
+            return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+        }
+
+        function renderSummary(summary) {
+            const tbody = document.getElementById('summaryTable');
+            
+            if (!summary || summary.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9">
+                            <div class="empty-state">
+                                <i class="fas fa-users"></i>
+                                <h6>No data available</h6>
+                                <p>No team members found for the selected criteria</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const fromDate = new Date(document.getElementById('fromDate').value);
+            const toDate = new Date(document.getElementById('toDate').value);
+            const totalDays = Math.ceil((toDate - fromDate) / (1000 * 60 * 60 * 24)) + 1;
+            const workDays = Math.round(totalDays * 5 / 7);
+
+            tbody.innerHTML = summary.map(emp => {
+                const attendancePercent = workDays > 0 ? Math.round((emp.present_days / workDays) * 100) : 0;
+                const progressClass = attendancePercent >= 80 ? 'good' : attendancePercent >= 50 ? 'warning' : 'danger';
+                
+                return `
+                    <tr>
+                        <td>
+                            <div class="employee-info">
+                                <div class="employee-avatar">${getInitials(emp.employee_name)}</div>
+                                <div>
+                                    <div class="employee-name">${emp.employee_name}</div>
+                                    <div class="employee-code">${emp.employee_code || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="stat-cell">
+                            <div class="stat-value present">${emp.present_days}</div>
+                        </td>
+                        <td class="stat-cell">
+                            <div class="stat-value absent">${emp.absent_days}</div>
+                        </td>
+                        <td class="stat-cell">
+                            <div class="stat-value half">${emp.half_days}</div>
+                        </td>
+                        <td class="stat-cell">
+                            <div class="stat-value">${emp.full_days}</div>
+                        </td>
+                        <td class="stat-cell">
+                            <div class="stat-value ot">${emp.ot_hours.toFixed(1)}</div>
+                        </td>
+                        <td class="stat-cell">
+                            <div class="stat-value">${emp.total_work_hours.toFixed(1)}</div>
+                        </td>
+                        <td class="stat-cell">
+                            <div class="stat-value">${attendancePercent}%</div>
+                            <div class="progress-mini">
+                                <div class="progress-mini-fill ${progressClass}" style="width: ${attendancePercent}%"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="view-details-btn" onclick="viewEmployeeDetails(${emp.employee_id})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateTotals(totals, count) {
+            document.getElementById('totalEmployees').textContent = count || 0;
+            document.getElementById('totalPresent').textContent = totals.present || 0;
+            document.getElementById('totalAbsent').textContent = totals.absent || 0;
+            document.getElementById('totalOT').textContent = (totals.ot_hours || 0).toFixed(1);
+            document.getElementById('totalWorkHours').textContent = (totals.total_work_hours || 0).toFixed(1);
+        }
+
+        function viewEmployeeDetails(employeeId) {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            window.location.href = `/staff/attendance-computation?employee_id=${employeeId}&from=${fromDate}&to=${toDate}`;
+        }
+
+        function exportData() {
+            if (!currentSummary || currentSummary.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            let csv = 'Employee Name,Employee Code,Present Days,Absent Days,Half Days,Full Days,OT Hours,Total Work Hours\n';
+            currentSummary.forEach(emp => {
+                csv += `"${emp.employee_name}","${emp.employee_code || ''}",${emp.present_days},${emp.absent_days},${emp.half_days},${emp.full_days},${emp.ot_hours.toFixed(1)},${emp.total_work_hours.toFixed(1)}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `team_attendance_summary_${document.getElementById('fromDate').value}_${document.getElementById('toDate').value}.csv`;
+            a.click();
+        }
+
+        async function loadMarkedTeamData() {
+            try {
+                const month = document.getElementById('markedMonth').value;
+                if (!month) {
+                    alert('Please select a month');
+                    return;
+                }
+                
+                // DC: Authorization check - Manager hierarchy validation
+                if (staffData.role_code !== 'hr' && staffData.role_code !== 'ea' && staffData.role_code !== 'vgk4u' && staffData.role_code !== 'manager') {
+                    alert('❌ Access Denied - Only managers and HR can view team attendance');
+                    window.location.href = '/staff/dashboard';
+                    return;
+                }
+                
+                const response = await staffFetch(`${API_ATTENDANCE}/manager/team/${staffData.id}/${month}`);
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                if (data.success) {
+                    renderMarkedTeamData(data.team_members);
+                    updateMarkedTeamSummary(data.team_summary);
+                } else {
+                    alert('⚠️ Error: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error:', err);
+                alert('❌ Failed to load team marked attendance data');
+            }
+        }
+
+        function renderMarkedTeamData(records) {
+            const tbody = document.getElementById('markedTeamTable');
+            
+            if (!records || records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i class="fas fa-inbox"></i><h6>No marked attendance data for this month</h6></div></td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = records.map(r => {
+                const statusColor = r.approval_status === 'approved' ? '✅' : r.approval_status === 'pending' ? '⏳' : '❌';
+                const discrepancyColor = Math.abs(r.discrepancy) > 0.5 ? 'danger' : 'warning';
+                return `
+                    <tr>
+                        <td>
+                            <div class="employee-info">
+                                <div class="employee-avatar" style="width: 36px; height: 36px; font-size: 12px;">${getInitials(r.employee_name)}</div>
+                                <div>
+                                    <div class="employee-name" style="margin: 0;">${r.employee_name}</div>
+                                    <div class="employee-code" style="margin: 0;">${r.employee_code || ''}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="stat-cell"><strong>${r.marked_hours.toFixed(1)}</strong> hrs</td>
+                        <td class="stat-cell"><strong>${r.approved_hours !== null ? r.approved_hours.toFixed(1) : '⏳'}</strong> hrs</td>
+                        <td class="stat-cell"><strong>${r.net_days.toFixed(2)}</strong> Days</td>
+                        <td class="stat-cell"><span style="background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 4px; font-weight: 600;">${r.pending_count}</span></td>
+                        <td class="stat-cell"><span class="stat-value ${discrepancyColor === 'danger' ? 'danger' : 'warning'}" style="font-size: 14px;">${r.discrepancy > 0 ? '+' : ''}${r.discrepancy.toFixed(2)} hrs</span></td>
+                        <td class="stat-cell">${statusColor} ${r.approval_status.toUpperCase()}</td>
+                        <td>
+                            <button class="view-details-btn" onclick="viewEmployeeDetails(${r.employee_id})" style="padding: 4px 8px;">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateMarkedTeamSummary(summary) {
+            document.getElementById('teamMarkedTotal').textContent = summary.total_marked_hours.toFixed(1);
+            document.getElementById('teamApprovedTotal').textContent = summary.total_approved_hours.toFixed(1);
+            document.getElementById('teamNetDaysTotal').textContent = summary.total_net_days.toFixed(2);
+            document.getElementById('teamPendingTotal').textContent = summary.pending_approvals_count || 0;
+            document.getElementById('teamDiscrepanciesTotal').textContent = summary.discrepancies_count || 0;
+        }
+
+        function exportMarkedData() {
+            const month = document.getElementById('markedMonth').value;
+            if (!month) {
+                alert('Please select a month first');
+                return;
+            }
+            
+            let csv = 'Employee Name,Employee Code,Marked Hours,Approved Hours,Net Days,Pending Approvals,Discrepancy (hrs),Approval Status\n';
+            
+            const rows = document.querySelectorAll('#markedTeamTable tr');
+            rows.forEach(row => {
+                if (row.querySelector('.employee-name')) {
+                    const cells = row.querySelectorAll('td');
+                    const name = cells[0].querySelector('.employee-name').textContent.trim();
+                    const code = cells[0].querySelector('.employee-code').textContent.trim();
+                    const marked = cells[1].textContent.trim();
+                    const approved = cells[2].textContent.trim();
+                    const netDays = cells[3].textContent.trim();
+                    const pending = cells[4].textContent.trim();
+                    const discrepancy = cells[5].textContent.trim();
+                    const status = cells[6].textContent.trim();
+                    
+                    csv += `"${name}","${code}",${marked},${approved},${netDays},${pending},${discrepancy},${status}\n`;
+                }
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `team_marked_attendance_${month}.csv`;
+            a.click();
+        }
+    </script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Team Attendance Summary', 'fas fa-chart-pie');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+        });
+    </script>
+    </div>
+</body>
+</html>

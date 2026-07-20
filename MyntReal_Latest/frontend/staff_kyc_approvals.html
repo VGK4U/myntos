@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP - KYC Approvals</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 16px; }
+        .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .stat-icon.pending { background: #dbeafe; color: #2563eb; }
+        .stat-icon.approved { background: #d1fae5; color: #059669; }
+        .stat-icon.rejected { background: #fee2e2; color: #dc2626; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-label { font-size: 14px; color: #6b7280; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 0; }
+        
+        .filters-bar { padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; flex-wrap: wrap; }
+        .filters-bar select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-top: none; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-submitted { background: #dbeafe; color: #1e40af; }
+        .badge-approved { background: #dcfce7; color: #166534; }
+        .badge-rejected { background: #fee2e2; color: #991b1b; }
+        
+        .btn-sm { padding: 6px 10px; font-size: 13px; }
+        .action-btns { display: flex; gap: 6px; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        
+        .modal-content { border-radius: 12px; border: none; }
+        .modal-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-bottom: none; padding: 16px 24px; border-radius: 12px 12px 0 0; }
+        .modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; border-radius: 0 0 12px 12px; }
+        
+        .detail-section { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; }
+        .detail-section:last-child { border-bottom: none; margin-bottom: 0; }
+        .detail-section-title { font-size: 14px; font-weight: 600; color: #6366f1; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .detail-row { display: flex; margin-bottom: 10px; }
+        .detail-label { width: 160px; color: #6b7280; font-size: 13px; flex-shrink: 0; }
+        .detail-value { color: #1f2937; font-weight: 500; font-size: 13px; word-break: break-word; }
+        
+        .employee-header { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+        .employee-header h6 { color: #0369a1; margin-bottom: 12px; }
+        .employee-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .employee-meta-item { text-align: center; }
+        .employee-meta-label { font-size: 11px; color: #6b7280; text-transform: uppercase; }
+        .employee-meta-value { font-size: 14px; font-weight: 600; color: #1f2937; }
+        
+        .doc-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; text-align: center; margin-bottom: 12px; }
+        .doc-card .doc-icon { font-size: 24px; color: #6366f1; margin-bottom: 8px; }
+        .doc-card .doc-name { font-size: 13px; font-weight: 500; color: #1f2937; margin-bottom: 6px; }
+        .doc-card .doc-size { font-size: 11px; color: #6b7280; margin-bottom: 8px; }
+        .doc-card .btn { padding: 4px 10px; font-size: 11px; }
+        .doc-card.pending-doc { background: #fffbeb; border-color: #fcd34d; border-style: dashed; }
+        .doc-card.pending-doc .doc-icon { color: #f59e0b; }
+        .doc-card .doc-status { font-size: 11px; }
+        
+        .doc-preview-modal .modal-body { text-align: center; padding: 20px; }
+        .doc-preview-modal img { max-width: 100%; max-height: 60vh; border-radius: 8px; }
+        .doc-preview-modal iframe { width: 100%; height: 60vh; border: none; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon pending"><i class="fas fa-hourglass-half"></i></div>
+                    <div>
+                        <div class="stat-value" id="pendingCount">0</div>
+                        <div class="stat-label">Pending Review</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon approved"><i class="fas fa-check-circle"></i></div>
+                    <div>
+                        <div class="stat-value" id="approvedCount">0</div>
+                        <div class="stat-label">Approved</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon rejected"><i class="fas fa-times-circle"></i></div>
+                    <div>
+                        <div class="stat-value" id="rejectedCount">0</div>
+                        <div class="stat-label">Rejected</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tab nav -->
+            <div style="display:flex;gap:6px;margin-bottom:16px">
+                <button id="kycTab-members" class="btn btn-primary btn-sm" style="border-radius:8px;font-weight:600" onclick="switchKycTab('members')"><i class="fas fa-users me-1"></i>MNR Members</button>
+                <button id="kycTab-partners" class="btn btn-outline-secondary btn-sm" style="border-radius:8px;font-weight:600" onclick="switchKycTab('partners')"><i class="fas fa-handshake me-1"></i>Partners & VGK</button>
+            </div>
+
+            <!-- MNR Members KYC Table -->
+            <div id="kycPane-members">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list me-2"></i>KYC Submissions — MNR Members</h5>
+                </div>
+                <div class="filters-bar">
+                    <select id="statusFilter" onchange="filterRecords()">
+                        <option value="">All Status</option>
+                        <option value="submitted">Pending Review</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Employee Name</th>
+                                    <th>Submitted</th>
+                                    <th>Status</th>
+                                    <th>Reviewed By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="kycTable">
+                                <tr><td colspan="6"><div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+            <!-- Partner & VGK KYC Table (DC Protocol Mar 2026) -->
+            <div id="kycPane-partners" style="display:none">
+            <div class="card">
+                <div class="card-header" style="flex-wrap:wrap;gap:10px">
+                    <h5><i class="fas fa-handshake me-2"></i>KYC Submissions — Partners & VGK Members</h5>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <select id="partnerStatusFilter" onchange="loadPartnerKycRecords()" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px">
+                            <option value="">All Status</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Staff Validated">Staff Validated</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadPartnerKycRecords()" style="font-size:12px"><i class="fas fa-sync me-1"></i>Refresh</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="partnerKycContainer">
+                        <div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i></div>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="kycDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-id-card me-2"></i>KYC Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="kycDetails"></div>
+                <div class="modal-footer" id="modalFooter"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="rejectModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-times-circle me-2"></i>Reject KYC</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejectionReason" rows="4" placeholder="Please provide a clear reason for rejection so the employee can make corrections..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmReject()">
+                        <i class="fas fa-times me-2"></i>Reject KYC
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade doc-preview-modal" id="docPreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="docPreviewTitle">Document Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="docPreviewBody"></div>
+                <div class="modal-footer">
+                    <a href="#" id="docDownloadLink" class="btn btn-primary" target="_blank">
+                        <i class="fas fa-download me-2"></i>Download
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        let allRecords = [];
+        let selectedKycId = null;
+        let detailModal, rejectModal, docPreviewModal;
+        
+        const DOC_ICONS = {
+            profile_photo: 'fa-user-circle',
+            aadhaar_front: 'fa-id-card',
+            aadhaar_back: 'fa-id-card-alt',
+            pan_card: 'fa-credit-card',
+            passport: 'fa-passport',
+            passport_photo: 'fa-passport',
+            driving_license: 'fa-car',
+            voter_id: 'fa-vote-yea',
+            bank_passbook: 'fa-book',
+            cancelled_cheque: 'fa-money-check-alt'
+        };
+        
+        const DOC_LABELS = {
+            profile_photo: 'Profile Photo',
+            aadhaar_front: 'Aadhaar Front',
+            aadhaar_back: 'Aadhaar Back',
+            pan_card: 'PAN Card',
+            passport: 'Passport',
+            passport_photo: 'Passport Photo',
+            driving_license: 'Driving License',
+            voter_id: 'Voter ID',
+            bank_passbook: 'Bank Passbook',
+            cancelled_cheque: 'Cancelled Cheque'
+        };
+        
+        // All required KYC document types
+        const ALL_DOCUMENT_TYPES = [
+            'profile_photo',
+            'passport_photo',
+            'aadhaar_front',
+            'aadhaar_back',
+            'pan_card',
+            'driving_license',
+            'voter_id',
+            'bank_passbook',
+            'cancelled_cheque'
+        ];
+        
+        // Render pending/missing documents
+        function renderPendingDocuments(documents) {
+            const uploadedTypes = documents ? Object.keys(documents) : [];
+            const pendingTypes = ALL_DOCUMENT_TYPES.filter(type => !uploadedTypes.includes(type));
+            
+            if (pendingTypes.length === 0) {
+                return '<p class="text-success text-center"><i class="fas fa-check-circle me-2"></i>All documents uploaded</p>';
+            }
+            
+            return pendingTypes.map(docType => {
+                const icon = DOC_ICONS[docType] || 'fa-file';
+                const label = DOC_LABELS[docType] || docType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                return `
+                    <div class="col-md-4">
+                        <div class="doc-card pending-doc">
+                            <div class="doc-icon text-warning"><i class="fas ${icon}"></i></div>
+                            <div class="doc-name">${label}</div>
+                            <div class="doc-status text-warning"><i class="fas fa-clock me-1"></i>Pending</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function renderDocumentsGrid(documents, empCode) {
+            if (!documents || Object.keys(documents).length === 0) {
+                return '';
+            }
+            
+            return Object.entries(documents).map(([docType, docInfo]) => {
+                const icon = DOC_ICONS[docType] || 'fa-file';
+                const label = DOC_LABELS[docType] || docType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                const sizeKB = docInfo.file_size ? (docInfo.file_size / 1024).toFixed(1) : '?';
+                const url = `/api/v1/staff/kyc/document/${empCode}/${docInfo.file_name}`;
+                
+                return `
+                    <div class="col-md-4">
+                        <div class="doc-card">
+                            <div class="doc-icon"><i class="fas ${icon}"></i></div>
+                            <div class="doc-name">${label}</div>
+                            <div class="doc-size">${sizeKB} KB - ${docInfo.file_format?.toUpperCase()}</div>
+                            <button class="btn btn-outline-primary" onclick="previewDocument('${url}', '${label}', '${docInfo.file_format}')">
+                                <i class="fas fa-eye me-1"></i>View
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function previewDocument(url, title, format) {
+            docPreviewModal = docPreviewModal || new bootstrap.Modal(document.getElementById('docPreviewModal'));
+            
+            document.getElementById('docPreviewTitle').textContent = title;
+            document.getElementById('docDownloadLink').href = url;
+            document.getElementById('docDownloadLink').onclick = function(e) {
+                e.preventDefault();
+                downloadDocument(url, title);
+            };
+            
+            const body = document.getElementById('docPreviewBody');
+            body.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading document...</p></div>';
+            
+            docPreviewModal.show();
+            
+            try {
+                const response = await staffFetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`Failed to load document: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                
+                if (format === 'pdf') {
+                    body.innerHTML = `<iframe src="${blobUrl}" style="width:100%;height:60vh;border:none;"></iframe>`;
+                } else {
+                    body.innerHTML = `<img src="${blobUrl}" alt="${title}" style="max-width:100%;max-height:60vh;display:block;margin:0 auto;">`;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading document:', error);
+                body.innerHTML = `<div class="text-center py-5 text-danger"><i class="fas fa-exclamation-triangle fa-3x mb-3"></i><p>Failed to load document</p><small>${error.message}</small></div>`;
+            }
+        }
+        
+        async function downloadDocument(url, filename) {
+            try {
+                const response = await staffFetch(url);
+                
+                if (!response.ok) throw new Error('Download failed');
+                
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(blobUrl);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Failed to download document: ' + error.message);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('KYC Approvals', 'fas fa-user-check');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            detailModal = new bootstrap.Modal(document.getElementById('kycDetailModal'));
+            rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
+            
+            await loadKycRecords();
+        });
+        
+        async function loadKycRecords() {
+            const status = document.getElementById('statusFilter').value;
+            
+            try {
+                const url = `/api/v1/kyc-bank/staff/kyc-pending${status ? `?status=${status}` : ''}`;
+                console.log('[KYC] Loading records with filter:', { status, url });
+                const response = await staffFetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('[KYC] API Response:', { records: data.kyc_records?.length, stats: data.stats });
+                    allRecords = data.kyc_records || [];
+                    
+                    document.getElementById('pendingCount').textContent = data.stats?.pending || 0;
+                    document.getElementById('approvedCount').textContent = data.stats?.approved || 0;
+                    document.getElementById('rejectedCount').textContent = data.stats?.rejected || 0;
+                    
+                    renderRecords();
+                } else if (response.status === 403) {
+                    alert('Access denied. Only VGK4U Supreme, Key Leadership, Admin, or HR can access KYC approvals.');
+                    window.location.href = '/staff/dashboard';
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading KYC records:', error);
+            }
+        }
+        
+        function renderRecords() {
+            const tbody = document.getElementById('kycTable');
+            
+            if (allRecords.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="6">
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <p>No KYC submissions found</p>
+                        </div>
+                    </td></tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = allRecords.map(kyc => `
+                <tr>
+                    <td><strong>${kyc.employee_code || kyc.employee_id || '-'}</strong></td>
+                    <td>${kyc.employee_name || '-'}</td>
+                    <td>${kyc.submitted_at ? new Date(kyc.submitted_at).toLocaleDateString('en-IN') : '-'}</td>
+                    <td>
+                        <span class="badge badge-${kyc.status}">${kyc.status.charAt(0).toUpperCase() + kyc.status.slice(1)}</span>
+                    </td>
+                    <td>${kyc.reviewer_name || '-'}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="btn btn-outline-primary btn-sm" onclick="viewDetails(${kyc.id})" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${kyc.status === 'submitted' ? `
+                                <button class="btn btn-success btn-sm" onclick="approveKyc(${kyc.id})" title="Approve">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="openRejectModal(${kyc.id})" title="Reject">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function filterRecords() {
+            loadKycRecords();
+        }
+        
+        function formatValue(val) {
+            return val || '<span class="text-muted">-</span>';
+        }
+        
+        async function viewDetails(kycId) {
+            try {
+                const response = await staffFetch(`/api/v1/kyc-bank/staff/kyc-detail/${kycId}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const kyc = data.kyc;
+                    const emp = data.employee;
+                    
+                    document.getElementById('kycDetails').innerHTML = `
+                        <div class="employee-header">
+                            <h6><i class="fas fa-user-tie me-2"></i>Employee Information</h6>
+                            <div class="employee-meta">
+                                <div class="employee-meta-item">
+                                    <div class="employee-meta-label">Employee ID</div>
+                                    <div class="employee-meta-value">${emp?.emp_code || '-'}</div>
+                                </div>
+                                <div class="employee-meta-item">
+                                    <div class="employee-meta-label">Name</div>
+                                    <div class="employee-meta-value">${emp?.full_name || '-'}</div>
+                                </div>
+                                <div class="employee-meta-item">
+                                    <div class="employee-meta-label">Department</div>
+                                    <div class="employee-meta-value">${emp?.department_name || '-'}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title"><i class="fas fa-user"></i>Personal Details</div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="detail-row"><span class="detail-label">Father's Name</span><span class="detail-value">${formatValue(kyc.father_name)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Mother's Name</span><span class="detail-value">${formatValue(kyc.mother_name)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Spouse Name</span><span class="detail-value">${formatValue(kyc.spouse_name)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Date of Birth</span><span class="detail-value">${formatValue(kyc.date_of_birth)}</span></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="detail-row"><span class="detail-label">Gender</span><span class="detail-value">${formatValue(kyc.gender)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Blood Group</span><span class="detail-value">${formatValue(kyc.blood_group)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Marital Status</span><span class="detail-value">${formatValue(kyc.marital_status)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Nationality</span><span class="detail-value">${formatValue(kyc.nationality)}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title"><i class="fas fa-graduation-cap"></i>Education & Experience</div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="detail-row"><span class="detail-label">Qualification</span><span class="detail-value">${formatValue(kyc.highest_qualification)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Specialization</span><span class="detail-value">${formatValue(kyc.specialization)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Institution</span><span class="detail-value">${formatValue(kyc.institution_name)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Year of Passing</span><span class="detail-value">${formatValue(kyc.year_of_passing)}</span></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="detail-row"><span class="detail-label">Previous Company</span><span class="detail-value">${formatValue(kyc.previous_company)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Previous Designation</span><span class="detail-value">${formatValue(kyc.previous_designation)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Experience (Years)</span><span class="detail-value">${formatValue(kyc.previous_experience_years)}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title"><i class="fas fa-map-marker-alt"></i>Address Details</div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="mb-2 text-muted" style="font-size: 12px;">Permanent Address</h6>
+                                    <div class="detail-row"><span class="detail-label">Address Line 1</span><span class="detail-value">${formatValue(kyc.permanent_address_line1 || kyc.permanent_address)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Address Line 2</span><span class="detail-value">${formatValue(kyc.permanent_address_line2)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">City</span><span class="detail-value">${formatValue(kyc.permanent_city || kyc.city)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">State</span><span class="detail-value">${formatValue(kyc.permanent_state || kyc.state)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Pincode</span><span class="detail-value">${formatValue(kyc.permanent_pincode || kyc.pincode)}</span></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="mb-2 text-muted" style="font-size: 12px;">Current Address ${kyc.same_as_permanent ? '<span class="badge bg-info">Same as Permanent</span>' : ''}</h6>
+                                    <div class="detail-row"><span class="detail-label">Address Line 1</span><span class="detail-value">${formatValue(kyc.current_address_line1 || kyc.current_address)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Address Line 2</span><span class="detail-value">${formatValue(kyc.current_address_line2)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">City</span><span class="detail-value">${formatValue(kyc.current_city)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">State</span><span class="detail-value">${formatValue(kyc.current_state)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Pincode</span><span class="detail-value">${formatValue(kyc.current_pincode)}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title"><i class="fas fa-id-badge"></i>Identity Documents</div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="detail-row"><span class="detail-label">Aadhar Number</span><span class="detail-value">${formatValue(kyc.aadhar_number)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">PAN Number</span><span class="detail-value">${formatValue(kyc.pan_number)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Voter ID</span><span class="detail-value">${formatValue(kyc.voter_id)}</span></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="detail-row"><span class="detail-label">Passport Number</span><span class="detail-value">${formatValue(kyc.passport_number)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Passport Expiry</span><span class="detail-value">${formatValue(kyc.passport_expiry)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Driving License</span><span class="detail-value">${formatValue(kyc.driving_license)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">DL Expiry</span><span class="detail-value">${formatValue(kyc.dl_expiry)}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title"><i class="fas fa-university"></i>Bank Details</div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="detail-row"><span class="detail-label">Account Holder</span><span class="detail-value">${formatValue(kyc.bank_account_holder)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Bank Name</span><span class="detail-value">${formatValue(kyc.bank_name)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Account Number</span><span class="detail-value">${formatValue(kyc.account_number)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Account Type</span><span class="detail-value">${formatValue(kyc.account_type)}</span></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="detail-row"><span class="detail-label">IFSC Code</span><span class="detail-value">${formatValue(kyc.ifsc_code)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Branch</span><span class="detail-value">${formatValue(kyc.bank_branch)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">UPI ID</span><span class="detail-value">${formatValue(kyc.upi_id)}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title"><i class="fas fa-phone-alt"></i>Emergency Contact</div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="detail-row"><span class="detail-label">Name</span><span class="detail-value">${formatValue(kyc.emergency_contact_name)}</span></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">${formatValue(kyc.emergency_contact_phone)}</span></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="detail-row"><span class="detail-label">Relationship</span><span class="detail-value">${formatValue(kyc.emergency_contact_relation)}</span></div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="detail-row"><span class="detail-label">Address</span><span class="detail-value">${formatValue(kyc.emergency_contact_address)}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title"><i class="fas fa-user-friends"></i>Nominee Details</div>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="detail-row"><span class="detail-label">Nominee Name</span><span class="detail-value">${formatValue(kyc.nominee_name)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Relationship</span><span class="detail-value">${formatValue(kyc.nominee_relationship)}</span></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="detail-row"><span class="detail-label">Date of Birth</span><span class="detail-value">${formatValue(kyc.nominee_dob)}</span></div>
+                                    <div class="detail-row"><span class="detail-label">Phone</span><span class="detail-value">${formatValue(kyc.nominee_phone)}</span></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="detail-row"><span class="detail-label">Address</span><span class="detail-value">${formatValue(kyc.nominee_address)}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title"><i class="fas fa-file-alt"></i>Uploaded Documents (${kyc.documents ? Object.keys(kyc.documents).length : 0}/${ALL_DOCUMENT_TYPES.length})</div>
+                            <div class="row" id="kycDocumentsGrid">
+                                ${renderDocumentsGrid(kyc.documents, emp?.emp_code)}
+                            </div>
+                            ${!kyc.documents || Object.keys(kyc.documents).length === 0 ? '<p class="text-muted text-center mt-3"><i class="fas fa-inbox me-2"></i>No documents uploaded</p>' : ''}
+                        </div>
+                        
+                        <div class="detail-section">
+                            <div class="detail-section-title"><i class="fas fa-clock text-warning"></i>Pending Documents</div>
+                            <div class="row" id="kycPendingDocsGrid">
+                                ${renderPendingDocuments(kyc.documents)}
+                            </div>
+                        </div>
+                        
+                        ${kyc.rejection_reason ? `
+                            <div class="alert alert-danger mt-3">
+                                <strong><i class="fas fa-exclamation-circle me-2"></i>Rejection Reason:</strong><br>
+                                ${kyc.rejection_reason}
+                            </div>
+                        ` : ''}
+                    `;
+                    
+                    const footer = document.getElementById('modalFooter');
+                    if (kyc.status === 'submitted') {
+                        footer.innerHTML = `
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-danger" onclick="detailModal.hide(); openRejectModal(${kyc.id})">
+                                <i class="fas fa-times me-2"></i>Reject
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="approveKyc(${kyc.id})">
+                                <i class="fas fa-check me-2"></i>Approve
+                            </button>
+                        `;
+                    } else {
+                        footer.innerHTML = `<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>`;
+                    }
+                    
+                    detailModal.show();
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading KYC details:', error);
+            }
+        }
+        
+        async function approveKyc(kycId) {
+            if (!confirm('Are you sure you want to approve this KYC submission?')) return;
+            
+            try {
+                const response = await staffFetch('/api/v1/kyc-bank/staff/kyc-approve', {
+                    method: 'POST',
+                    body: JSON.stringify({ kyc_ids: [kycId] })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(result.message || 'KYC approved successfully!');
+                    detailModal.hide();
+                    await loadKycRecords();
+                } else {
+                    alert(result.detail || 'Failed to approve KYC');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error approving KYC:', error);
+                alert('Error approving KYC');
+            }
+        }
+        
+        function openRejectModal(kycId) {
+            selectedKycId = kycId;
+            document.getElementById('rejectionReason').value = '';
+            rejectModal.show();
+        }
+        
+        async function confirmReject() {
+            const reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                alert('Please enter a rejection reason');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch('/api/v1/kyc-bank/staff/kyc-reject', {
+                    method: 'POST',
+                    body: JSON.stringify({ kyc_ids: [selectedKycId], reason })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(result.message || 'KYC rejected');
+                    rejectModal.hide();
+                    await loadKycRecords();
+                } else {
+                    alert(result.detail || 'Failed to reject KYC');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error rejecting KYC:', error);
+                alert('Error rejecting KYC');
+            }
+        }
+
+        // ─── DC Protocol Mar 2026: Partner & VGK KYC Tab ──────────────────────────
+
+        let _partnerKycLoaded = false;
+        let _partnerRejectDocId = null;
+
+        function switchKycTab(name) {
+            document.getElementById('kycPane-members').style.display = name === 'members' ? '' : 'none';
+            document.getElementById('kycPane-partners').style.display = name === 'partners' ? '' : 'none';
+            document.getElementById('kycTab-members').className = name === 'members' ? 'btn btn-primary btn-sm' : 'btn btn-outline-secondary btn-sm';
+            document.getElementById('kycTab-members').style.borderRadius = '8px';
+            document.getElementById('kycTab-members').style.fontWeight = '600';
+            document.getElementById('kycTab-partners').className = name === 'partners' ? 'btn btn-primary btn-sm' : 'btn btn-outline-secondary btn-sm';
+            document.getElementById('kycTab-partners').style.borderRadius = '8px';
+            document.getElementById('kycTab-partners').style.fontWeight = '600';
+            if (name === 'partners' && !_partnerKycLoaded) {
+                _partnerKycLoaded = true;
+                loadPartnerKycRecords();
+            }
+        }
+
+        const PARTNER_DOC_LABELS_ADMIN = {
+            aadhar_front: 'Aadhaar Front', aadhar_back: 'Aadhaar Back',
+            aadhaar_front: 'Aadhaar Front', aadhaar_back: 'Aadhaar Back',
+            pan_card: 'PAN Card', passport_photo: 'Passport Photo'
+        };
+
+        async function loadPartnerKycRecords() {
+            const container = document.getElementById('partnerKycContainer');
+            container.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i></div>';
+            const sf = document.getElementById('partnerStatusFilter')?.value || '';
+            try {
+                const url = '/api/v1/kyc-bank/staff/partner-kyc-pending' + (sf ? '?status_filter=' + encodeURIComponent(sf) : '');
+                const resp = await staffFetch(url);
+                if (!resp.ok) { container.innerHTML = '<div class="alert alert-danger m-3">Failed to load partner KYC records.</div>'; return; }
+                const data = await resp.json();
+                const partners = data.partners || [];
+                if (partners.length === 0) {
+                    container.innerHTML = '<div class="text-center py-5 text-muted"><i class="fas fa-inbox fa-3x mb-3 d-block opacity-50"></i><p>No partner KYC submissions found.</p></div>';
+                    return;
+                }
+                container.innerHTML = partners.map(p => `
+                    <div style="border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin:16px;background:#fafafa">
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+                            <div>
+                                <strong style="font-size:15px;color:#1f2937">${escHtmlAdmin(p.partner_name)}</strong>
+                                <span style="font-size:12px;color:#6a1b9a;font-weight:700;margin-left:8px">${escHtmlAdmin(p.partner_code)}</span>
+                                <span style="font-size:11px;background:#ede9fe;color:#6a1b9a;padding:2px 8px;border-radius:12px;margin-left:6px;font-weight:600">${escHtmlAdmin(p.category)}</span>
+                            </div>
+                            <span style="font-size:12px;font-weight:700;padding:3px 12px;border-radius:20px;${kycStatusStyle(p.kyc_status)}">${escHtmlAdmin(p.kyc_status)}</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+                            ${(p.documents||[]).map(doc => renderPartnerDocCard(doc, p.partner_code)).join('')}
+                        </div>
+                    </div>`).join('');
+            } catch(e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                container.innerHTML = '<div class="alert alert-danger m-3">Error: ' + e.message + '</div>';
+            }
+        }
+
+        function escHtmlAdmin(s) { const d = document.createElement('div'); d.textContent = s||''; return d.innerHTML; }
+
+        function kycStatusStyle(s) {
+            const m = { 'Approved':'background:#d1fae5;color:#065f46','Pending':'background:#fef3c7;color:#92400e','Rejected':'background:#fee2e2;color:#991b1b','Staff Validated':'background:#dbeafe;color:#1e40af','Not Submitted':'background:#f3f4f6;color:#6b7280' };
+            return m[s] || m['Not Submitted'];
+        }
+
+        function renderPartnerDocCard(doc, partnerCode) {
+            const label = PARTNER_DOC_LABELS_ADMIN[doc.document_type] || doc.document_type;
+            const stColor = { 'Approved':'#059669','Pending':'#d97706','Staff Validated':'#2563eb','Rejected':'#dc2626' };
+            const viewUrl = doc.file_path ? `/api/v1/files/serve?path=${encodeURIComponent(doc.file_path)}&partner_code=${encodeURIComponent(partnerCode)}` : '#';
+            return `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;text-align:center">
+                <div style="font-size:22px;margin-bottom:6px;color:#6366f1"><i class="fas fa-file-alt"></i></div>
+                <div style="font-size:12px;font-weight:700;margin-bottom:4px">${escHtmlAdmin(label)}</div>
+                <div style="font-size:11px;font-weight:700;color:${stColor[doc.status]||'#6b7280'};margin-bottom:8px">${escHtmlAdmin(doc.status)}</div>
+                ${doc.rejection_reason ? `<div style="font-size:10px;color:#dc2626;margin-bottom:6px">${escHtmlAdmin(doc.rejection_reason)}</div>` : ''}
+                <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">
+                    ${doc.status === 'Pending' ? `<button class="btn btn-outline-info btn-sm" style="font-size:11px;padding:3px 8px" onclick="pValidate(${doc.id})" title="Staff Validate"><i class="fas fa-check me-1"></i>Validate</button>` : ''}
+                    ${doc.status === 'Staff Validated' ? `<button class="btn btn-success btn-sm" style="font-size:11px;padding:3px 8px" onclick="pApprove(${doc.id})" title="Finance Approve"><i class="fas fa-check-double me-1"></i>Approve</button>` : ''}
+                    ${doc.status !== 'Approved' && doc.status !== 'Not Uploaded' ? `<button class="btn btn-danger btn-sm" style="font-size:11px;padding:3px 8px" onclick="pReject(${doc.id})" title="Reject"><i class="fas fa-times"></i></button>` : ''}
+                </div>
+            </div>`;
+        }
+
+        async function pValidate(docId) {
+            if (!confirm('Validate this document? (Step 1 of 2)')) return;
+            try {
+                const r = await staffFetch('/api/v1/kyc-bank/staff/kyc-validate', { method: 'POST', body: JSON.stringify({ kyc_ids: [docId] }) });
+                const d = await r.json();
+                if (d.success) { loadPartnerKycRecords(); } else { alert(d.detail || 'Validation failed'); }
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') alert('Error: ' + e.message); }
+        }
+
+        async function pApprove(docId) {
+            if (!confirm('Approve this document? (Final approval)')) return;
+            try {
+                const r = await staffFetch('/api/v1/kyc-bank/staff/kyc-approve', { method: 'POST', body: JSON.stringify({ kyc_ids: [docId] }) });
+                const d = await r.json();
+                if (d.success) { alert(d.message || 'Approved'); loadPartnerKycRecords(); } else { alert(d.detail || 'Approval failed'); }
+            } catch(e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') alert('Error: ' + e.message); }
+        }
+
+        function pReject(docId) {
+            _partnerRejectDocId = docId;
+            document.getElementById('rejectionReason').value = '';
+            rejectModal.show();
+            window._pRejectMode = true;
+        }
+
+        // Extend confirmReject to handle partner docs
+        const _origConfirmReject = confirmReject;
+        window.confirmReject = async function() {
+            if (window._pRejectMode) {
+                window._pRejectMode = false;
+                const reason = document.getElementById('rejectionReason').value.trim();
+                if (!reason) { alert('Please enter a rejection reason'); return; }
+                try {
+                    const r = await staffFetch('/api/v1/kyc-bank/staff/kyc-reject', { method: 'POST', body: JSON.stringify({ kyc_ids: [_partnerRejectDocId], reason }) });
+                    const d = await r.json();
+                    if (r.ok) { alert(d.message || 'Document rejected'); rejectModal.hide(); loadPartnerKycRecords(); }
+                    else { alert(d.detail || 'Rejection failed'); }
+                } catch(e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') alert('Error: ' + e.message); }
+                return;
+            }
+            await _origConfirmReject();
+        };
+    </script>
+</body>
+</html>

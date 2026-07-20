@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Asset Manager — Staff</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<script src="/public/js/staff-token-manager.js"></script>
+<script src="/public/js/staff-fetch.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:#f3f4f6; min-height:100vh; }
+.main-content { margin-left:0; transition:margin-left .3s; padding-top:88px; }
+.sidebar-expanded .main-content { margin-left:260px; }
+.content-area { padding:24px; }
+
+/* Banner */
+.page-banner { background:linear-gradient(135deg,#0f172a 0%,#1e40af 100%); border-radius:12px; padding:20px 24px; margin-bottom:20px; color:white; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.page-banner h1 { font-size:20px; font-weight:700; margin-bottom:3px; display:flex; align-items:center; gap:10px; }
+.page-banner p { opacity:.85; margin:0; font-size:12.5px; }
+
+/* Stats */
+.summary-row { display:flex; gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+.stat-card { background:white; border-radius:10px; padding:16px 20px; box-shadow:0 1px 3px rgba(0,0,0,.08); flex:1; min-width:120px; }
+.stat-card .val { font-size:22px; font-weight:700; color:#111827; }
+.stat-card .lbl { font-size:11px; color:#6b7280; font-weight:600; text-transform:uppercase; margin-top:3px; }
+.stat-card .icon-wrap { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:10px; }
+
+/* Filter tabs */
+.tab-bar { display:flex; gap:4px; margin-bottom:20px; background:white; border-radius:12px; padding:6px; box-shadow:0 1px 3px rgba(0,0,0,.08); overflow-x:auto; }
+.tab-btn { flex-shrink:0; padding:9px 16px; border:none; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; background:transparent; color:#6b7280; transition:all .2s; display:flex; align-items:center; gap:7px; white-space:nowrap; }
+.tab-btn.active { background:#1e40af; color:white; }
+.tab-btn:not(.active):hover { background:#f3f4f6; color:#374151; }
+.tab-btn .cnt { background:rgba(0,0,0,.12); border-radius:20px; padding:1px 7px; font-size:11px; }
+.tab-btn.active .cnt { background:rgba(255,255,255,.25); }
+
+/* Toolbar */
+.toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+.search-box { display:flex; align-items:center; gap:8px; background:white; border:1.5px solid #d1d5db; border-radius:8px; padding:7px 12px; flex:1; max-width:340px; }
+.search-box input { border:none; outline:none; font-size:13px; color:#374151; width:100%; background:transparent; }
+.search-box i { color:#9ca3af; font-size:14px; }
+.btn-primary { background:#1e40af; color:white; border:none; border-radius:8px; padding:8px 18px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:7px; transition:all .2s; }
+.btn-primary:hover { background:#1d4ed8; }
+.btn-outline { background:white; color:#374151; border:1.5px solid #d1d5db; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:7px; transition:all .2s; }
+.btn-outline:hover { background:#f9fafb; border-color:#9ca3af; }
+
+/* Asset grid */
+.asset-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
+
+/* Asset card */
+.asset-card { background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); overflow:hidden; transition:box-shadow .2s; display:flex; flex-direction:column; }
+.asset-card:hover { box-shadow:0 4px 12px rgba(0,0,0,.12); }
+.asset-thumb { background:#f8fafc; height:160px; display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; border-bottom:1px solid #f0f0f0; }
+.asset-thumb img { max-width:100%; max-height:140px; object-fit:contain; }
+.asset-thumb .no-preview { color:#d1d5db; font-size:40px; }
+.system-badge { position:absolute; top:8px; left:8px; background:#1e40af; color:white; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+.unused-badge { position:absolute; top:8px; right:8px; background:#f3f4f6; color:#9ca3af; font-size:10px; font-weight:700; padding:2px 8px; border-radius:20px; }
+
+.asset-body { padding:14px; flex:1; }
+.asset-name { font-weight:700; font-size:13px; color:#111827; margin-bottom:3px; word-break:break-all; line-height:1.4; }
+.asset-slot { font-size:11px; color:#1e40af; font-weight:600; margin-bottom:8px; }
+.asset-meta { display:flex; gap:10px; font-size:11px; color:#6b7280; margin-bottom:10px; flex-wrap:wrap; }
+.asset-meta span { display:flex; align-items:center; gap:4px; }
+
+/* Placements */
+.placement-list { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:10px; }
+.placement-chip { background:#eff6ff; color:#1e40af; font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; display:flex; align-items:center; gap:3px; }
+.placement-chip a { color:inherit; text-decoration:none; }
+.placement-chip:hover { background:#dbeafe; }
+.no-placement { font-size:11px; color:#9ca3af; font-style:italic; }
+
+/* Action row */
+.asset-actions { display:flex; gap:6px; padding:12px 14px; border-top:1px solid #f3f4f6; }
+.btn-sm { padding:5px 12px; border:none; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; transition:all .15s; display:flex; align-items:center; gap:5px; }
+.btn-replace { background:#ede9fe; color:#7c3aed; flex:1; justify-content:center; }
+.btn-replace:hover { background:#ddd6fe; }
+.btn-view { background:#e0f2fe; color:#0369a1; }
+.btn-view:hover { background:#bae6fd; }
+.btn-delete { background:#fee2e2; color:#991b1b; }
+.btn-delete:hover { background:#fecaca; }
+
+/* Empty state */
+.empty-state { text-align:center; padding:60px 20px; color:#9ca3af; }
+.empty-state i { font-size:48px; margin-bottom:16px; display:block; }
+.empty-state p { font-size:15px; }
+
+/* Upload modal overlay */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center; }
+.modal-overlay.active { display:flex; }
+.modal-box { background:white; border-radius:16px; width:100%; max-width:540px; margin:16px; max-height:90vh; overflow-y:auto; }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 0; }
+.modal-header h2 { font-size:18px; font-weight:700; color:#111827; }
+.modal-close { background:none; border:none; cursor:pointer; color:#6b7280; font-size:20px; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:6px; }
+.modal-close:hover { background:#f3f4f6; }
+.modal-body { padding:20px 24px 24px; }
+
+/* Drop zone */
+.drop-zone { border:2px dashed #d1d5db; border-radius:12px; padding:36px 20px; text-align:center; cursor:pointer; transition:all .2s; background:#fafafa; }
+.drop-zone:hover, .drop-zone.drag-over { border-color:#1e40af; background:#eff6ff; }
+.drop-zone i { font-size:36px; color:#9ca3af; display:block; margin-bottom:12px; }
+.drop-zone.drag-over i { color:#1e40af; }
+.drop-zone p { font-size:14px; color:#6b7280; margin:0; }
+.drop-zone p strong { color:#1e40af; }
+.drop-zone input[type=file] { display:none; }
+.drop-preview { margin-top:14px; background:#f3f4f6; border-radius:8px; padding:10px 14px; display:none; align-items:center; gap:10px; }
+.drop-preview img { width:60px; height:45px; object-fit:contain; border-radius:4px; background:white; }
+.drop-preview .dp-info { flex:1; font-size:12px; color:#374151; }
+.drop-preview .dp-info strong { display:block; font-weight:700; margin-bottom:2px; }
+
+/* Form fields */
+.form-group { margin-bottom:16px; }
+.form-group label { font-size:13px; font-weight:600; color:#374151; display:block; margin-bottom:6px; }
+.form-control { width:100%; border:1.5px solid #d1d5db; border-radius:8px; padding:9px 12px; font-size:13px; outline:none; transition:border-color .15s; }
+.form-control:focus { border-color:#1e40af; }
+select.form-control { appearance:none; background:white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='%236b7280' d='M5.3 7.3l4.7 4.7 4.7-4.7L16 8.7l-6 6-6-6 1.3-1.4z'/%3E%3C/svg%3E") no-repeat right 10px center/18px; padding-right:36px; cursor:pointer; }
+
+/* Upload progress + result */
+.upload-progress { display:none; margin-top:14px; }
+.progress-bar-wrap { height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden; margin-top:4px; }
+.progress-bar-fill { height:100%; background:#1e40af; border-radius:3px; transition:width .3s; width:0%; }
+.upload-result { display:none; margin-top:14px; padding:14px; border-radius:10px; font-size:13px; }
+.upload-result.success { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+.upload-result.error { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; }
+
+/* Toast */
+.toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:10px; color:white; font-size:13px; font-weight:600; z-index:9999; opacity:0; transform:translateY(10px); transition:all .3s; pointer-events:none; max-width:380px; }
+.toast.show { opacity:1; transform:translateY(0); }
+.toast.success { background:#059669; }
+.toast.error { background:#dc2626; }
+.toast.info { background:#1e40af; }
+
+/* Loading skeleton */
+.skeleton { background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
+@keyframes shimmer { to { background-position:-200% 0; } }
+.skel-card { background:white; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.skel-thumb { width:100%; height:140px; margin-bottom:12px; }
+.skel-line { height:12px; margin-bottom:8px; }
+.skel-line.short { width:60%; }
+
+/* Responsive */
+@media (max-width:640px) {
+  .asset-grid { grid-template-columns:1fr; }
+  .summary-row { gap:8px; }
+  .stat-card { min-width:100px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Staff sidebar injected by menu master -->
+<div id="staff-sidebar-mount"></div>
+
+<div class="main-content" id="mainContent">
+<div class="content-area">
+
+  <!-- Banner -->
+  <div class="page-banner">
+    <div>
+      <h1><i class="fas fa-images"></i> Website Asset Manager</h1>
+      <p>All logos, banners, and brand images used across the MyntReal Hub — view placements, upload optimized replacements</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-outline" onclick="refreshAssets()" id="refreshBtn">
+        <i class="fas fa-sync-alt"></i> Refresh
+      </button>
+      <button class="btn-primary" onclick="openUpload()">
+        <i class="fas fa-cloud-upload-alt"></i> Upload Asset
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="summary-row" id="statsRow">
+    <div class="stat-card"><div class="icon-wrap" style="background:#eff6ff;color:#1e40af;"><i class="fas fa-layer-group"></i></div><div class="val" id="st-total">—</div><div class="lbl">Total Assets</div></div>
+    <div class="stat-card"><div class="icon-wrap" style="background:#f0fdf4;color:#059669;"><i class="fas fa-star"></i></div><div class="val" id="st-system">—</div><div class="lbl">System Slots</div></div>
+    <div class="stat-card"><div class="icon-wrap" style="background:#fef3c7;color:#d97706;"><i class="fas fa-link"></i></div><div class="val" id="st-inuse">—</div><div class="lbl">In Use</div></div>
+    <div class="stat-card"><div class="icon-wrap" style="background:#fef2f2;color:#dc2626;"><i class="fas fa-exclamation-circle"></i></div><div class="val" id="st-unused">—</div><div class="lbl">Unused</div></div>
+    <div class="stat-card"><div class="icon-wrap" style="background:#f3f4f6;color:#6b7280;"><i class="fas fa-database"></i></div><div class="val" id="st-size">—</div><div class="lbl">Total Size</div></div>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="tab-bar" id="tabBar">
+    <button class="tab-btn active" data-cat="all" onclick="setTab(this,'all')"><i class="fas fa-th"></i> All <span class="cnt" id="cnt-all">0</span></button>
+    <button class="tab-btn" data-cat="system" onclick="setTab(this,'system')"><i class="fas fa-star"></i> System Slots <span class="cnt" id="cnt-system">0</span></button>
+    <button class="tab-btn" data-cat="logo" onclick="setTab(this,'logo')"><i class="fas fa-trademark"></i> Logos <span class="cnt" id="cnt-logo">0</span></button>
+    <button class="tab-btn" data-cat="banner" onclick="setTab(this,'banner')"><i class="fas fa-panorama"></i> Banners <span class="cnt" id="cnt-banner">0</span></button>
+    <button class="tab-btn" data-cat="brand" onclick="setTab(this,'brand')"><i class="fas fa-briefcase"></i> Brand Logos <span class="cnt" id="cnt-brand">0</span></button>
+    <button class="tab-btn" data-cat="other" onclick="setTab(this,'other')"><i class="fas fa-file-image"></i> Other <span class="cnt" id="cnt-other">0</span></button>
+    <button class="tab-btn" data-cat="unused" onclick="setTab(this,'unused')"><i class="fas fa-archive"></i> Unused <span class="cnt" id="cnt-unused">0</span></button>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-box">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Search by filename, slot, or page…" oninput="renderGrid()">
+    </div>
+    <div style="font-size:12px;color:#6b7280;" id="resultCount"></div>
+  </div>
+
+  <!-- Asset grid -->
+  <div class="asset-grid" id="assetGrid">
+    <!-- skeleton loaders -->
+    <div class="skel-card"><div class="skeleton skel-thumb"></div><div class="skeleton skel-line"></div><div class="skeleton skel-line short"></div></div>
+    <div class="skel-card"><div class="skeleton skel-thumb"></div><div class="skeleton skel-line"></div><div class="skeleton skel-line short"></div></div>
+    <div class="skel-card"><div class="skeleton skel-thumb"></div><div class="skeleton skel-line"></div><div class="skeleton skel-line short"></div></div>
+    <div class="skel-card"><div class="skeleton skel-thumb"></div><div class="skeleton skel-line"></div><div class="skeleton skel-line short"></div></div>
+    <div class="skel-card"><div class="skeleton skel-thumb"></div><div class="skeleton skel-line"></div><div class="skeleton skel-line short"></div></div>
+    <div class="skel-card"><div class="skeleton skel-thumb"></div><div class="skeleton skel-line"></div><div class="skeleton skel-line short"></div></div>
+  </div>
+
+</div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal-overlay" id="uploadModal">
+<div class="modal-box">
+  <div class="modal-header">
+    <h2 id="modalTitle"><i class="fas fa-cloud-upload-alt" style="color:#1e40af;margin-right:8px;"></i>Upload Asset</h2>
+    <button class="modal-close" onclick="closeUpload()"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="modal-body">
+
+    <!-- Drop zone -->
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <input type="file" id="fileInput" accept="image/*" onchange="onFileSelected(this)">
+      <i class="fas fa-cloud-upload-alt" id="dz-icon"></i>
+      <p><strong>Click to browse</strong> or drag & drop an image here</p>
+      <p style="font-size:11px;margin-top:6px;color:#9ca3af;">PNG, JPG, WEBP, SVG supported — auto-optimized on upload</p>
+    </div>
+    <div class="drop-preview" id="dropPreview">
+      <img id="previewImg" src="" alt="">
+      <div class="dp-info">
+        <strong id="previewName">—</strong>
+        <span id="previewSize">—</span>
+      </div>
+      <button class="btn-sm btn-delete" onclick="clearFile()" title="Remove"><i class="fas fa-times"></i></button>
+    </div>
+
+    <!-- Slot selector -->
+    <div class="form-group" style="margin-top:16px;">
+      <label><i class="fas fa-star" style="color:#1e40af;"></i> System Slot <span style="font-weight:400;color:#6b7280;">(optional — replaces a specific site slot)</span></label>
+      <select class="form-control" id="slotSelect" onchange="onSlotChange()">
+        <option value="">— Custom upload (not a system slot) —</option>
+      </select>
+    </div>
+
+    <!-- Asset type preset -->
+    <div class="form-group" id="presetGroup">
+      <label><i class="fas fa-magic" style="color:#7c3aed;"></i> Optimization Preset <span style="font-weight:400;color:#6b7280;">(auto-resize + compress)</span></label>
+      <select class="form-control" id="presetSelect">
+        <option value="other">Other (max 1200×1200, PNG)</option>
+      </select>
+      <div style="font-size:11px;color:#6b7280;margin-top:4px;" id="presetHint"></div>
+    </div>
+
+    <!-- Custom filename -->
+    <div class="form-group" id="customNameGroup">
+      <label><i class="fas fa-tag" style="color:#059669;"></i> Custom Filename <span style="font-weight:400;color:#6b7280;">(optional — extension added automatically)</span></label>
+      <input type="text" class="form-control" id="customNameInput" placeholder="e.g. partner-bajaj-logo">
+    </div>
+
+    <!-- Progress + result -->
+    <div class="upload-progress" id="uploadProgress">
+      <div style="font-size:12px;color:#374151;margin-bottom:4px;">Uploading &amp; optimizing…</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressFill"></div></div>
+    </div>
+    <div class="upload-result" id="uploadResult"></div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn-outline" style="flex:1;" onclick="closeUpload()">Cancel</button>
+      <button class="btn-primary" style="flex:2;justify-content:center;" onclick="doUpload()" id="uploadBtn">
+        <i class="fas fa-cloud-upload-alt"></i> Upload &amp; Optimize
+      </button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Staff sidebar loader -->
+<script src="/public/js/staff-menu-master.js"></script>
+<script>
+// ─── State ────────────────────────────────────────────────────────────────
+let allAssets  = [];
+let systemSlots = {};
+let presets    = {};
+let activeTab  = 'all';
+let uploadFile = null;
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadAssets();
+  setupDragDrop();
+});
+
+async function loadAssets() {
+  try {
+    const res = await staffFetch('/api/v1/vgk/hub/assets');
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    allAssets   = data.assets   || [];
+    systemSlots = data.system_slots || {};
+    presets     = data.presets  || {};
+    updateStats(data.stats || {});
+    populateSlotSelect();
+    populatePresetSelect();
+    renderGrid();
+  } catch(e) {
+    showGrid(`<div class="empty-state"><i class="fas fa-exclamation-triangle" style="color:#dc2626;"></i><p>Failed to load assets: ${e.message}</p></div>`);
+  }
+}
+
+function refreshAssets() {
+  const btn = document.getElementById('refreshBtn');
+  btn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing…';
+  btn.disabled = true;
+  loadAssets().then(() => {
+    btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+    btn.disabled = false;
+    showToast('Assets refreshed', 'success');
+  });
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────
+function updateStats(s) {
+  document.getElementById('st-total').textContent  = s.total  ?? '—';
+  document.getElementById('st-system').textContent = s.system_slots ?? '—';
+  document.getElementById('st-inuse').textContent  = s.in_use ?? '—';
+  document.getElementById('st-unused').textContent = s.unused ?? '—';
+  document.getElementById('st-size').textContent   = s.total_size_mb != null ? s.total_size_mb + ' MB' : '—';
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────
+function setTab(btn, cat) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeTab = cat;
+  renderGrid();
+}
+
+function updateCounts(filtered) {
+  const cats = ['all','system','logo','banner','brand','other','unused'];
+  const countOf = cat => {
+    if (cat === 'all')    return allAssets.length;
+    if (cat === 'system') return allAssets.filter(a => a.is_system).length;
+    return allAssets.filter(a => a.category === cat).length;
+  };
+  cats.forEach(c => {
+    const el = document.getElementById('cnt-' + c);
+    if (el) el.textContent = countOf(c);
+  });
+}
+
+// ─── Grid ─────────────────────────────────────────────────────────────────
+function renderGrid() {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  updateCounts();
+
+  let items = allAssets;
+
+  if (activeTab === 'system') items = items.filter(a => a.is_system);
+  else if (activeTab !== 'all') items = items.filter(a => a.category === activeTab);
+
+  if (q) {
+    items = items.filter(a =>
+      (a.filename || '').toLowerCase().includes(q) ||
+      (a.slot_label || '').toLowerCase().includes(q) ||
+      (a.slot || '').toLowerCase().includes(q) ||
+      (a.placements || []).some(p => (p.page || '').toLowerCase().includes(q))
+    );
+  }
+
+  document.getElementById('resultCount').textContent = `${items.length} asset${items.length !== 1 ? 's' : ''}`;
+
+  if (!items.length) {
+    showGrid('<div class="empty-state"><i class="fas fa-search"></i><p>No assets match your filter.</p></div>');
+    return;
+  }
+
+  showGrid(items.map(renderCard).join(''));
+}
+
+function showGrid(html) {
+  document.getElementById('assetGrid').innerHTML = html;
+}
+
+function renderCard(a) {
+  const isImg = ['.png','.jpg','.jpeg','.webp','.gif','.avif'].includes(a.ext);
+  const thumb = isImg
+    ? `<img src="${a.url}" alt="${a.filename}" loading="lazy" onerror="this.style.display='none';this.nextSibling.style.display='block'">`
+    : '';
+  const fallIcon = `<i class="fas fa-file-image no-preview" style="display:${isImg?'none':'block'}"></i>`;
+
+  const systemBadge = a.is_system ? `<span class="system-badge"><i class="fas fa-star"></i> System</span>` : '';
+  const unusedBadge = !a.is_system && a.placement_count === 0 ? `<span class="unused-badge">Unused</span>` : '';
+
+  const placementChips = a.placements && a.placements.length
+    ? a.placements.map(p => `<span class="placement-chip" title="${p.file}">${p.url ? `<a href="${p.url}" target="_blank"><i class="fas fa-external-link-alt" style="font-size:8px;"></i> ${p.page}</a>` : p.page}</span>`).join('')
+    : `<span class="no-placement">Not referenced in any page</span>`;
+
+  const meta = [
+    a.width ? `<span><i class="fas fa-expand"></i> ${a.width}×${a.height}px</span>` : '',
+    a.size_kb ? `<span><i class="fas fa-weight"></i> ${a.size_kb} KB</span>` : '',
+    `<span><i class="fas fa-tag"></i> ${a.ext.replace('.','').toUpperCase()}</span>`,
+  ].filter(Boolean).join('');
+
+  const deleteable = !a.is_system;
+  const fEnc = encodeURIComponent(a.filename);
+
+  return `
+<div class="asset-card" data-filename="${a.filename}">
+  <div class="asset-thumb">
+    ${thumb}${fallIcon}
+    ${systemBadge}${unusedBadge}
+  </div>
+  <div class="asset-body">
+    <div class="asset-name">${a.filename}</div>
+    ${a.slot_label ? `<div class="asset-slot"><i class="fas fa-star"></i> ${a.slot_label}</div>` : ''}
+    <div class="asset-meta">${meta}</div>
+    <div class="placement-list">${placementChips}</div>
+  </div>
+  <div class="asset-actions">
+    <button class="btn-sm btn-replace" onclick='openReplaceFor(${JSON.stringify(a.slot||'')}, ${JSON.stringify(a.filename)})'>
+      <i class="fas fa-cloud-upload-alt"></i> Replace
+    </button>
+    <a class="btn-sm btn-view" href="${a.url}" target="_blank" title="View full size">
+      <i class="fas fa-eye"></i>
+    </a>
+    ${deleteable ? `<button class="btn-sm btn-delete" onclick="deleteAsset('${a.filename.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>` : ''}
+  </div>
+</div>`;
+}
+
+// ─── Upload Modal ──────────────────────────────────────────────────────────
+function populateSlotSelect() {
+  const sel = document.getElementById('slotSelect');
+  const saved = sel.value;
+  sel.innerHTML = '<option value="">— Custom upload (not a system slot) —</option>';
+  Object.entries(systemSlots).forEach(([k, s]) => {
+    sel.innerHTML += `<option value="${k}">${s.label} (${s.filename})</option>`;
+  });
+  sel.value = saved || '';
+}
+
+function populatePresetSelect() {
+  const sel = document.getElementById('presetSelect');
+  sel.innerHTML = '';
+  Object.entries(presets).forEach(([k, p]) => {
+    sel.innerHTML += `<option value="${k}">${p.label} — max ${p.w}×${p.h}px, ${p.fmt}</option>`;
+  });
+  updatePresetHint();
+}
+
+function updatePresetHint() {
+  const k = document.getElementById('presetSelect').value;
+  const p = presets[k];
+  if (!p) return;
+  document.getElementById('presetHint').textContent =
+    `Resizes to max ${p.w}×${p.h}px, saves as ${p.fmt}${p.fmt==='WEBP'?', quality '+p.q:''}. Aspect ratio preserved.`;
+}
+
+document.getElementById && document.getElementById('presetSelect') &&
+  document.getElementById('presetSelect').addEventListener('change', updatePresetHint);
+
+function openUpload() {
+  resetModal();
+  document.getElementById('modalTitle').innerHTML = '<i class="fas fa-cloud-upload-alt" style="color:#1e40af;margin-right:8px;"></i>Upload Asset';
+  document.getElementById('uploadModal').classList.add('active');
+}
+
+function openReplaceFor(slotKey, filename) {
+  resetModal();
+  document.getElementById('modalTitle').innerHTML = `<i class="fas fa-sync-alt" style="color:#7c3aed;margin-right:8px;"></i>Replace: ${filename}`;
+  if (slotKey) {
+    document.getElementById('slotSelect').value = slotKey;
+    onSlotChange();
+  } else {
+    document.getElementById('customNameInput').value = filename.replace(/\.[^.]+$/, '');
+  }
+  document.getElementById('uploadModal').classList.add('active');
+}
+
+function closeUpload() {
+  document.getElementById('uploadModal').classList.remove('active');
+  clearFile();
+}
+
+function resetModal() {
+  clearFile();
+  document.getElementById('slotSelect').value = '';
+  document.getElementById('presetSelect').value = 'other';
+  document.getElementById('customNameInput').value = '';
+  document.getElementById('uploadResult').style.display = 'none';
+  document.getElementById('uploadProgress').style.display = 'none';
+  document.getElementById('uploadBtn').disabled = false;
+  document.getElementById('uploadBtn').innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Upload & Optimize';
+  updatePresetHint();
+  onSlotChange();
+}
+
+function onSlotChange() {
+  const slot = document.getElementById('slotSelect').value;
+  const presetGroup = document.getElementById('presetGroup');
+  const customGroup = document.getElementById('customNameGroup');
+
+  if (slot && systemSlots[slot]) {
+    const s = systemSlots[slot];
+    presetGroup.style.opacity = '.5';
+    document.getElementById('presetSelect').value = s.preset;
+    presetGroup.title = `Auto-set to '${s.preset}' for this slot`;
+    customGroup.style.display = 'none';
+  } else {
+    presetGroup.style.opacity = '1';
+    presetGroup.title = '';
+    customGroup.style.display = '';
+  }
+  updatePresetHint();
+}
+
+// ─── Drag & Drop ──────────────────────────────────────────────────────────
+function setupDragDrop() {
+  const dz = document.getElementById('dropZone');
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    const files = e.dataTransfer.files;
+    if (files && files[0]) setUploadFile(files[0]);
+  });
+}
+
+function onFileSelected(input) {
+  if (input.files && input.files[0]) setUploadFile(input.files[0]);
+}
+
+function setUploadFile(file) {
+  uploadFile = file;
+  const dp = document.getElementById('dropPreview');
+  dp.style.display = 'flex';
+  document.getElementById('previewName').textContent = file.name;
+  document.getElementById('previewSize').textContent = (file.size / 1024).toFixed(1) + ' KB original';
+  const reader = new FileReader();
+  reader.onload = e => { document.getElementById('previewImg').src = e.target.result; };
+  reader.readAsDataURL(file);
+  document.getElementById('uploadResult').style.display = 'none';
+}
+
+function clearFile() {
+  uploadFile = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('dropPreview').style.display = 'none';
+  document.getElementById('previewImg').src = '';
+}
+
+// ─── Upload ───────────────────────────────────────────────────────────────
+async function doUpload() {
+  if (!uploadFile) { showToast('Please select a file first', 'error'); return; }
+
+  const slot       = document.getElementById('slotSelect').value;
+  const preset     = document.getElementById('presetSelect').value;
+  const customName = document.getElementById('customNameInput').value.trim();
+
+  const fd = new FormData();
+  fd.append('file', uploadFile);
+  fd.append('preset', preset);
+  if (slot)       fd.append('slot', slot);
+  if (customName) fd.append('custom_name', customName);
+
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading…';
+  document.getElementById('uploadProgress').style.display = 'block';
+  document.getElementById('uploadResult').style.display = 'none';
+
+  // Animate progress bar
+  let pct = 0;
+  const pFill = document.getElementById('progressFill');
+  const pTimer = setInterval(() => { if (pct < 85) { pct += 8; pFill.style.width = pct + '%'; } }, 180);
+
+  try {
+    const res = await staffFetch('/api/v1/vgk/hub/assets/upload', { method:'POST', body: fd });
+    clearInterval(pTimer);
+    pFill.style.width = '100%';
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+
+    const resPct = data.reduction_pct || 0;
+    const resEl  = document.getElementById('uploadResult');
+    resEl.className = 'upload-result success';
+    resEl.style.display = 'block';
+    resEl.innerHTML = `
+      <strong><i class="fas fa-check-circle"></i> Uploaded successfully!</strong><br>
+      <span style="font-size:12px;">
+        <b>${data.filename}</b> &nbsp;·&nbsp;
+        ${data.optimized?.w}×${data.optimized?.h}px &nbsp;·&nbsp;
+        ${data.optimized?.kb} KB
+        ${resPct > 0 ? `<span style="color:#059669;">(−${resPct}% vs original)</span>` : ''}
+        ${data.placements?.length ? `<br>Found in: ${data.placements.map(p=>p.page).join(', ')}` : ''}
+      </span>`;
+
+    showToast(`${data.filename} uploaded (${data.optimized?.kb} KB)`, 'success');
+    setTimeout(() => { closeUpload(); loadAssets(); }, 1800);
+
+  } catch(e) {
+    clearInterval(pTimer);
+    pFill.style.width = '0%';
+    const resEl = document.getElementById('uploadResult');
+    resEl.className = 'upload-result error';
+    resEl.style.display = 'block';
+    resEl.innerHTML = `<strong><i class="fas fa-exclamation-circle"></i> Upload failed</strong><br><span style="font-size:12px;">${e.message}</span>`;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Try Again';
+  }
+}
+
+// ─── Delete ───────────────────────────────────────────────────────────────
+async function deleteAsset(filename) {
+  if (!confirm(`Delete "${filename}"? This cannot be undone.`)) return;
+  try {
+    const res = await staffFetch(`/api/v1/vgk/hub/assets/${encodeURIComponent(filename)}`, { method:'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Delete failed');
+    showToast(`${filename} deleted`, 'success');
+    allAssets = allAssets.filter(a => a.filename !== filename);
+    renderGrid();
+  } catch(e) {
+    showToast(e.message, 'error');
+  }
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => { t.className = `toast ${type}`; }, 3200);
+}
+
+// Close modal on overlay click
+document.getElementById('uploadModal').addEventListener('click', function(e) {
+  if (e.target === this) closeUpload();
+});
+
+// Keyboard ESC closes modal
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeUpload(); });
+
+// Preset select change
+document.addEventListener('DOMContentLoaded', () => {
+  const ps = document.getElementById('presetSelect');
+  if (ps) ps.addEventListener('change', updatePresetHint);
+});
+</script>
+</body>
+</html>

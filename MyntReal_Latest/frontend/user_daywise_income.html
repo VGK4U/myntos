@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facilitation Summary - MNR Business Access Program</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .income-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .income-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
+        }
+        
+        .income-type-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+        
+        .day-card {
+            border-left: 4px solid #667eea;
+            background: white;
+            transition: all 0.3s;
+        }
+        
+        .day-card:hover {
+            border-left-color: #38ef7d;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark shadow-sm" style="background: rgba(0,0,0,0.2);">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-calendar-day me-2"></i>Day-wise Income Breakdown
+            </span>
+            <button class="btn btn-outline-light btn-sm" onclick="window.history.back()">
+                <i class="fas fa-arrow-left me-2"></i>Back
+            </button>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <!-- Filter Card -->
+        <div class="card shadow-lg border-0 mb-4">
+            <div class="card-header bg-dark text-white py-3">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Select Date Range</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold"><i class="fas fa-calendar-alt me-2"></i>From Date</label>
+                        <input type="date" class="form-control form-control-lg" id="from_date">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold"><i class="fas fa-calendar-check me-2"></i>To Date</label>
+                        <input type="date" class="form-control form-control-lg" id="to_date">
+                    </div>
+                    <div class="col-md-4 mb-3 d-flex align-items-end">
+                        <button class="btn btn-primary btn-lg w-100" onclick="loadDaywise()">
+                            <i class="fas fa-search me-2"></i>Load Income Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4" id="summaryCards" style="display: none;">
+            <div class="col-md-3 mb-3">
+                <div class="card income-card h-100 border-0 shadow" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                    <div class="card-body text-white text-center p-4">
+                        <div class="d-flex justify-content-between align-items-center"><div><i class="fas fa-user-plus fa-2x mb-2 opacity-75"></i>
+                        <h5 class="mb-0 fw-bold" id="totalDirect">₹0</h5>
+                        <small>Direct Business</small></div><a href="/dashboard" class="btn btn-light btn-sm"><i class="fas fa-home me-2"></i>Go to Dashboard</a></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card income-card h-100 border-0 shadow" style="background: linear-gradient(135deg, #FA8BFF 0%, #2BD2FF 100%);">
+                    <div class="card-body text-white text-center p-4">
+                        <i class="fas fa-code-branch fa-2x mb-2 opacity-75"></i>
+                        <h5 class="mb-0 fw-bold" id="totalMatching">₹0</h5>
+                        <small>Group Performance Recognition</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card income-card h-100 border-0 shadow" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                    <div class="card-body text-white text-center p-4">
+                        <i class="fas fa-users fa-2x mb-2 opacity-75"></i>
+                        <h5 class="mb-0 fw-bold" id="totalVed">₹0</h5>
+                        <small>VED Leadership Recognition</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card income-card h-100 border-0 shadow" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="card-body text-white text-center p-4">
+                        <i class="fas fa-hand-holding-usd fa-2x mb-2 opacity-75"></i>
+                        <h5 class="mb-0 fw-bold" id="totalGuru">₹0</h5>
+                        <small>Mentorship Contribution Benefit</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Card -->
+        <div class="row mb-4" id="totalCard" style="display: none;">
+            <div class="col-12">
+                <div class="card border-0 shadow-lg" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="card-body text-white text-center p-4">
+                        <h3 class="mb-2"><i class="fas fa-coins me-3"></i>Total Income for Selected Period</h3>
+                        <h1 class="mb-0 fw-bold" id="grandTotal">₹0</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Income Data Container -->
+        <div id="incomeData"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let authToken = localStorage.getItem('authToken');
+        let userId = '';
+        
+        // Get user profile
+        $.ajax({
+            url: `${API_BASE}/users/profile`,
+            headers: {'Authorization': `Bearer ${authToken}`},
+            success: r => {
+                userId = r.user.user_id;
+                console.log('✅ User ID:', userId);
+            },
+            error: e => {
+                console.error('❌ Error loading profile:', e);
+                alert('Please login first');
+                window.location.href = '/login.html';
+            }
+        });
+        
+        function loadDaywise() {
+            const fromDate = $('#from_date').val();
+            const toDate = $('#to_date').val();
+            
+            if (!fromDate || !toDate) {
+                alert('Please select both From and To dates');
+                return;
+            }
+            
+            $('#incomeData').html(`
+                <div class="text-center py-5">
+                    <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5 class="text-white">Fetching day-wise income data...</h5>
+                </div>
+            `);
+            
+            $.ajax({
+                url: `${API_BASE}/financial-operations/income/${userId}/comprehensive-day-wise?from_date=${fromDate}&to_date=${toDate}`,
+                headers: {'Authorization': `Bearer ${authToken}`},
+                success: function(response) {
+                    console.log('✅ Day-wise Income Response:', response);
+                    
+                    if (response.success && response.data) {
+                        const dailyData = response.data.daily_breakdown || [];
+                        
+                        if (dailyData.length === 0) {
+                            $('#incomeData').html(`
+                                <div class="card shadow-lg">
+                                    <div class="card-body text-center py-5">
+                                        <i class="fas fa-inbox fa-5x text-muted mb-3"></i>
+                                        <h4 class="text-muted">No Income Records Found</h4>
+                                        <p class="text-muted">No income was earned during the selected period</p>
+                                    </div>
+                                </div>
+                            `);
+                            $('#summaryCards').hide();
+                            $('#totalCard').hide();
+                            return;
+                        }
+                        
+                        // Calculate totals
+                        let totalDirect = 0, totalMatching = 0, totalVed = 0, totalGuru = 0;
+                        
+                        dailyData.forEach(day => {
+                            totalDirect += parseFloat(day.direct_referral || 0);
+                            totalMatching += parseFloat(day.matching_referral || 0);
+                            totalVed += parseFloat(day.ved_income || 0);
+                            totalGuru += parseFloat(day.guru_dakshina || 0);
+                        });
+                        
+                        const grandTotal = totalDirect + totalMatching + totalVed + totalGuru;
+                        
+                        // Update summary cards
+                        $('#totalDirect').text('₹' + totalDirect.toLocaleString('en-IN'));
+                        $('#totalMatching').text('₹' + totalMatching.toLocaleString('en-IN'));
+                        $('#totalVed').text('₹' + totalVed.toLocaleString('en-IN'));
+                        $('#totalGuru').text('₹' + totalGuru.toLocaleString('en-IN'));
+                        $('#grandTotal').text('₹' + grandTotal.toLocaleString('en-IN'));
+                        
+                        $('#summaryCards').show();
+                        $('#totalCard').show();
+                        
+                        // Build day-wise cards
+                        let html = '<div class="row">';
+                        
+                        dailyData.forEach(day => {
+                            const dayTotal = parseFloat(day.direct_referral || 0) + 
+                                           parseFloat(day.matching_referral || 0) + 
+                                           parseFloat(day.ved_income || 0) + 
+                                           parseFloat(day.guru_dakshina || 0);
+                            
+                            html += `
+                                <div class="col-12 mb-3">
+                                    <div class="card day-card shadow">
+                                        <div class="card-body p-4">
+                                            <div class="row align-items-center">
+                                                <div class="col-md-2">
+                                                    <h5 class="mb-0 text-primary">
+                                                        <i class="fas fa-calendar-day me-2"></i>${day.date}
+                                                    </h5>
+                                                </div>
+                                                <div class="col-md-2 text-center">
+                                                    <span class="income-type-badge bg-success text-white">
+                                                        Direct: ₹${parseFloat(day.direct_referral || 0).toLocaleString('en-IN')}
+                                                    </span>
+                                                </div>
+                                                <div class="col-md-2 text-center">
+                                                    <span class="income-type-badge" style="background: linear-gradient(135deg, #FA8BFF 0%, #2BD2FF 100%); color: white;">
+                                                        Matching: ₹${parseFloat(day.matching_referral || 0).toLocaleString('en-IN')}
+                                                    </span>
+                                                </div>
+                                                <div class="col-md-2 text-center">
+                                                    <span class="income-type-badge bg-warning text-dark">
+                                                        Ved: ₹${parseFloat(day.ved_income || 0).toLocaleString('en-IN')}
+                                                    </span>
+                                                </div>
+                                                <div class="col-md-2 text-center">
+                                                    <span class="income-type-badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                                        Guru: ₹${parseFloat(day.guru_dakshina || 0).toLocaleString('en-IN')}
+                                                    </span>
+                                                </div>
+                                                <div class="col-md-2 text-end">
+                                                    <h4 class="mb-0 text-success fw-bold">₹${dayTotal.toLocaleString('en-IN')}</h4>
+                                                    <small class="text-muted">Daily Total</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        
+                        html += '</div>';
+                        $('#incomeData').html(html);
+                        
+                    } else {
+                        throw new Error(response.message || 'Failed to load data');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('❌ Error loading day-wise income:', error);
+                    $('#incomeData').html(`
+                        <div class="card shadow-lg">
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-exclamation-triangle fa-5x text-danger mb-3"></i>
+                                <h4 class="text-danger">Error Loading Data</h4>
+                                <p class="text-muted">${error}</p>
+                                <button class="btn btn-primary" onclick="loadDaywise()">
+                                    <i class="fas fa-redo me-2"></i>Retry
+                                </button>
+                            </div>
+                        </div>
+                    `);
+                }
+            });
+        }
+        
+        // Set default dates (last 30 days)
+        $(document).ready(function() {
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+            
+            $('#to_date').val(today.toISOString().split('T')[0]);
+            $('#from_date').val(thirtyDaysAgo.toISOString().split('T')[0]);
+        });
+    </script>
+</body>
+</html>

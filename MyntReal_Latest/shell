@@ -1,0 +1,2 @@
+cd /home/runner/workspace/backend
+python3 copy_db_simple.py

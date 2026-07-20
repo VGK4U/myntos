@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Center Revenue - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 280px; min-height: 100vh; transition: margin-left 0.3s ease; padding-top: 0; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+        .content-area { margin-left: 260px; margin-top: 64px; min-height: calc(100vh - 64px); padding: 24px; transition: margin-left 0.3s ease; }
+        body.sidebar-collapsed-mode .content-area { margin-left: 70px; }
+        @media (max-width: 768px) { .content-area { margin-left: 0; margin-top: 56px; } }
+        .page-banner { background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white; }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 24px; }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .stat-card .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
+        .stat-card .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .stat-card .label { color: #6b7280; font-size: 13px; margin-top: 4px; }
+        .stat-green .icon { background: #d1fae5; color: #059669; }
+        .stat-blue .icon { background: #dbeafe; color: #2563eb; }
+        .stat-purple .icon { background: #ede9fe; color: #7c3aed; }
+        .stat-orange .icon { background: #ffedd5; color: #ea580c; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        .filter-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; align-items: center; }
+        .filter-row .form-control, .filter-row .form-select { max-width: 180px; border-radius: 8px; font-size: 14px; }
+        .category-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+        .badge-service-center { background: #dbeafe; color: #1e40af; }
+        .badge-dealer { background: #d1fae5; color: #065f46; }
+        .badge-distributor { background: #fef3c7; color: #92400e; }
+        .revenue-cell { font-weight: 600; color: #059669; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .loading-state { text-align: center; padding: 40px; }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <div id="staffSidebar"></div>
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-banner">
+                <h1><i class="fas fa-rupee-sign"></i> Revenue Report</h1>
+                <p>View revenue breakdown by service center, dealer, and distributor with date filters.</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card stat-green">
+                        <div class="icon"><i class="fas fa-rupee-sign"></i></div>
+                        <div class="value" id="stat-total">₹0</div>
+                        <div class="label">Total Revenue</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card stat-blue">
+                        <div class="icon"><i class="fas fa-cogs"></i></div>
+                        <div class="value" id="stat-spares">₹0</div>
+                        <div class="label">Spares Revenue</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card stat-purple">
+                        <div class="icon"><i class="fas fa-wrench"></i></div>
+                        <div class="value" id="stat-service">₹0</div>
+                        <div class="label">Service Revenue</div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6 mb-3">
+                    <div class="stat-card stat-orange">
+                        <div class="icon"><i class="fas fa-user-cog"></i></div>
+                        <div class="value" id="stat-labour">₹0</div>
+                        <div class="label">Labour Revenue</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5><i class="fas fa-table me-2"></i>Partner-wise Revenue</h5>
+                    <div class="filter-row mb-0">
+                        <select class="form-select form-select-sm" id="filter-partner" onchange="loadData()">
+                            <option value="">All Partners</option>
+                        </select>
+                        <input type="date" class="form-control form-control-sm" id="filter-date-from" title="From Date" onchange="loadData()">
+                        <input type="date" class="form-control form-control-sm" id="filter-date-to" title="To Date" onchange="loadData()">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()" title="Clear Filters">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="exportData()" title="Export">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="loading-state" class="loading-state">
+                        <div class="spinner-border text-success" role="status"></div>
+                        <p class="mt-3 text-muted">Loading revenue data...</p>
+                    </div>
+                    <div id="empty-state" class="empty-state" style="display: none;">
+                        <i class="fas fa-chart-bar"></i>
+                        <h4>No Revenue Data</h4>
+                        <p>No billing records found for the selected filters.</p>
+                    </div>
+                    <div class="table-responsive" id="revenue-table" style="display: none;">
+                        <table class="table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Partner</th>
+                                    <th>Category</th>
+                                    <th>Billings</th>
+                                    <th class="text-end">Spares</th>
+                                    <th class="text-end">Service</th>
+                                    <th class="text-end">Labour</th>
+                                    <th class="text-end">Total Revenue</th>
+                                </tr>
+                            </thead>
+                            <tbody id="revenue-body"></tbody>
+                            <tfoot id="revenue-footer"></tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script>
+        let revenueData = null;
+        let partnersLoaded = false;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Service Center Revenue', 'fas fa-chart-line');
+            await loadPartners();
+            loadData();
+        });
+        
+        async function loadPartners() {
+            try {
+                const response = await fetch('/api/v1/tickets/partners', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}` }
+                });
+                if (response.ok) {
+                    const partners = await response.json();
+                    const select = document.getElementById('filter-partner');
+                    partners.forEach(p => {
+                        const option = document.createElement('option');
+                        option.value = p.id;
+                        option.textContent = `${p.partner_name} (${p.partner_code})`;
+                        select.appendChild(option);
+                    });
+                    partnersLoaded = true;
+                }
+            } catch (error) {
+                console.error('Failed to load partners:', error);
+            }
+        }
+        
+        async function loadData() {
+            try {
+                document.getElementById('loading-state').style.display = 'block';
+                document.getElementById('revenue-table').style.display = 'none';
+                document.getElementById('empty-state').style.display = 'none';
+                
+                const partnerId = document.getElementById('filter-partner').value;
+                const dateFrom = document.getElementById('filter-date-from').value;
+                const dateTo = document.getElementById('filter-date-to').value;
+                
+                let url = '/api/v1/tickets/service/reports/revenue-by-partner?';
+                if (partnerId) url += `partner_id=${partnerId}&`;
+                if (dateFrom) url += `date_from=${dateFrom}&`;
+                if (dateTo) url += `date_to=${dateTo}&`;
+                
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load data');
+                revenueData = await response.json();
+                updateStats();
+                renderTable();
+            } catch (error) {
+                document.getElementById('loading-state').innerHTML = `
+                    <div class="text-danger">
+                        <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
+                        <h4>Failed to Load</h4>
+                        <p>${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadData()">Retry</button>
+                    </div>`;
+            }
+        }
+        
+        function updateStats() {
+            const summary = revenueData.summary;
+            document.getElementById('stat-total').textContent = formatCurrency(summary.grand_total_revenue);
+            document.getElementById('stat-spares').textContent = formatCurrency(summary.total_spares_revenue);
+            document.getElementById('stat-service').textContent = formatCurrency(summary.total_service_revenue);
+            document.getElementById('stat-labour').textContent = formatCurrency(summary.total_labour_revenue);
+        }
+        
+        function renderTable() {
+            document.getElementById('loading-state').style.display = 'none';
+            
+            const partners = revenueData.partners.filter(p => p.total_revenue > 0 || p.total_billings > 0);
+            
+            if (partners.length === 0) {
+                document.getElementById('empty-state').style.display = 'block';
+                document.getElementById('revenue-table').style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('empty-state').style.display = 'none';
+            document.getElementById('revenue-table').style.display = 'block';
+            
+            document.getElementById('revenue-body').innerHTML = partners.map(p => `
+                <tr>
+                    <td>
+                        <strong>${p.partner_name}</strong>
+                        <br><small class="text-muted">${p.partner_code}</small>
+                    </td>
+                    <td><span class="category-badge badge-${getCategoryClass(p.category)}">${formatCategory(p.category)}</span></td>
+                    <td>${p.total_billings}</td>
+                    <td class="text-end">${formatCurrency(p.spares_revenue)}</td>
+                    <td class="text-end">${formatCurrency(p.service_revenue)}</td>
+                    <td class="text-end">${formatCurrency(p.labour_revenue)}</td>
+                    <td class="text-end revenue-cell">${formatCurrency(p.total_revenue)}</td>
+                </tr>
+            `).join('');
+            
+            const summary = revenueData.summary;
+            document.getElementById('revenue-footer').innerHTML = `
+                <tr style="background: #f9fafb; font-weight: 600;">
+                    <td colspan="3">Total (${summary.total_partners} partners)</td>
+                    <td class="text-end">${formatCurrency(summary.total_spares_revenue)}</td>
+                    <td class="text-end">${formatCurrency(summary.total_service_revenue)}</td>
+                    <td class="text-end">${formatCurrency(summary.total_labour_revenue)}</td>
+                    <td class="text-end revenue-cell">${formatCurrency(summary.grand_total_revenue)}</td>
+                </tr>
+            `;
+        }
+        
+        function formatCurrency(amount) {
+            return '₹' + (amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        }
+        
+        function formatCategory(category) {
+            const labels = {
+                'SERVICE_CENTER': 'Service Center',
+                'DEALER': 'Dealer',
+                'DISTRIBUTOR': 'Distributor'
+            };
+            return labels[category] || category;
+        }
+        
+        function getCategoryClass(category) {
+            const classes = {
+                'SERVICE_CENTER': 'service-center',
+                'DEALER': 'dealer',
+                'DISTRIBUTOR': 'distributor'
+            };
+            return classes[category] || 'dealer';
+        }
+        
+        function clearFilters() {
+            document.getElementById('filter-partner').value = '';
+            document.getElementById('filter-date-from').value = '';
+            document.getElementById('filter-date-to').value = '';
+            loadData();
+        }
+        
+        function exportData() {
+            if (!revenueData || !revenueData.partners.length) {
+                alert('No data to export');
+                return;
+            }
+            
+            let csv = 'Partner Name,Partner Code,Category,Billings,Spares Revenue,Service Revenue,Labour Revenue,Total Revenue\n';
+            revenueData.partners.forEach(p => {
+                csv += `"${p.partner_name}","${p.partner_code}","${formatCategory(p.category)}",${p.total_billings},${p.spares_revenue},${p.service_revenue},${p.labour_revenue},${p.total_revenue}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `service_center_revenue_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

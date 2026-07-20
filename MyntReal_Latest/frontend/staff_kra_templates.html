@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP - KRA Templates</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; max-width: 1400px; margin: 0 auto; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 12px 12px 0 0 !important; padding: 16px 20px; border: none; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .card-header h5 { margin: 0; font-weight: 600; font-size: 16px; }
+        .card-body { padding: 24px; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        
+        .info-banner { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+        .info-banner i { color: #0369a1; font-size: 20px; }
+        .info-banner-text { color: #0c4a6e; font-size: 13px; }
+        
+        .modal-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-radius: 12px 12px 0 0; }
+        .modal-content { border-radius: 12px; border: none; }
+        .form-label { font-weight: 500; color: #374151; font-size: 13px; }
+        .form-control, .form-select { border-radius: 8px; border: 1px solid #d1d5db; }
+        .form-control:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        
+        .kra-table { width: 100%; }
+        .kra-table th { 
+            background: #f8fafc; font-weight: 600; font-size: 12px; color: #374151; 
+            padding: 12px 16px; text-align: left; border-bottom: 2px solid #e5e7eb; 
+            text-transform: uppercase; cursor: pointer; white-space: nowrap;
+            user-select: none;
+        }
+        .kra-table th:hover { background: #f1f5f9; }
+        .kra-table th .sort-icon { margin-left: 6px; color: #9ca3af; }
+        .kra-table th.sorted-asc .sort-icon, .kra-table th.sorted-desc .sort-icon { color: #6366f1; }
+        .kra-table td { padding: 14px 16px; border-bottom: 1px solid #f3f4f6; font-size: 14px; vertical-align: middle; }
+        .kra-table tr:hover { background: #f9fafb; }
+        
+        .badge { padding: 4px 10px; border-radius: 6px; font-weight: 500; font-size: 11px; }
+        .badge-daily { background: #fee2e2; color: #991b1b; }
+        .badge-weekly { background: #fef3c7; color: #92400e; }
+        .badge-monthly { background: #d1fae5; color: #065f46; }
+        .badge-quarterly { background: #e0e7ff; color: #4338ca; }
+        .badge-selected_days { background: #fce7f3; color: #9d174d; }
+        .badge-custom { background: #f3e8ff; color: #7c3aed; }
+        .badge-every_n_days { background: #cffafe; color: #0e7490; }
+        .badge-every_15_days { background: #fef9c3; color: #a16207; }
+        .badge-adhoc { background: #f3f4f6; color: #374151; }
+        .badge-active { background: #d1fae5; color: #065f46; }
+        .badge-inactive { background: #fee2e2; color: #991b1b; }
+        
+        .assigned-names { display: flex; flex-wrap: wrap; gap: 4px; }
+        .employee-name-tag { background: #e0e7ff; color: #3730a3; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+        .employee-more-tag { background: #f3f4f6; color: #6b7280; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+        .no-assignment { color: #9ca3af; font-style: italic; font-size: 12px; }
+        
+        .action-buttons { display: flex; gap: 8px; }
+        .btn-action { padding: 6px 12px; font-size: 12px; border-radius: 6px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+        .btn-assign { background: #6366f1; color: white; }
+        .btn-assign:hover { background: #4f46e5; }
+        .btn-edit { background: #fef3c7; color: #92400e; }
+        .btn-edit:hover { background: #fde68a; }
+        .btn-view { background: #f3f4f6; color: #374151; }
+        .btn-view:hover { background: #e5e7eb; }
+        
+        .filter-panel { padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .filter-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filter-row .form-control, .filter-row .form-select { max-width: 180px; font-size: 13px; }
+        .filter-row .btn { font-size: 13px; }
+        
+        .header-actions { display: flex; gap: 8px; }
+        
+        .header-logo { height: 32px; }
+
+        .user-info-name { font-weight: 600; color: #1f2937; font-size: 14px; }
+        .user-info-meta { font-size: 12px; color: #6b7280; }
+
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="info-banner">
+                <i class="fas fa-info-circle"></i>
+                <div class="info-banner-text">
+                    KRA Templates allow managers to define reusable Key Result Areas that can be assigned to employees. Templates ensure consistency in performance tracking across teams.
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-folder-open me-2"></i>Available Templates</h5>
+                    <div class="header-actions">
+                        <button class="btn btn-sm btn-light" onclick="toggleFilters()" style="border-radius: 6px;">
+                            <i class="fas fa-filter me-1"></i>Filters
+                        </button>
+                        <button class="btn btn-sm btn-light" onclick="openCreateModal()" id="createBtn" style="display: none;">
+                            <i class="fas fa-plus me-1"></i>Create Template
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="filter-panel" id="filterPanel" style="display: none;">
+                    <div class="filter-row">
+                        <input type="text" class="form-control" id="filterSearch" placeholder="Search KRA title..." onkeyup="debounceFilter()">
+                        <input type="text" class="form-control" id="filterEmployeeSearch" placeholder="Search assigned employee..." onkeyup="debounceFilter()">
+                        <select class="form-select" id="filterFrequency" onchange="applyFilters()">
+                            <option value="">All Frequencies</option>
+                            <option value="daily">Daily</option>
+                            <option value="every_n_days">Every N Days</option>
+                            <option value="selected_days">Selected Days</option>
+                            <option value="every_15_days">Every 15 Days</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="custom">Custom</option>
+                            <option value="adhoc">Ad-hoc</option>
+                        </select>
+                        <select class="form-select" id="filterStatus" onchange="applyFilters()">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                        <input type="date" class="form-control" id="filterDateFrom" onchange="applyFilters()" title="Created From">
+                        <input type="date" class="form-control" id="filterDateTo" onchange="applyFilters()" title="Created To">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()">
+                            <i class="fas fa-redo me-1"></i>Reset
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card-body" style="padding: 0;">
+                    <div class="table-responsive">
+                        <table class="kra-table">
+                            <thead>
+                                <tr>
+                                    <th onclick="sortTable('sno')" data-field="sno">S.No. <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortTable('title')" data-field="title">KRA Title <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortTable('assigned_count')" data-field="assigned_count">Assigned Employees <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortTable('frequency')" data-field="frequency">Frequency <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortTable('target_time')" data-field="target_time">Target Time <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortTable('status')" data-field="status">Status <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortTable('created_at')" data-field="created_at">Created Date <i class="fas fa-sort sort-icon"></i></th>
+                                    <th onclick="sortTable('updated_at')" data-field="updated_at">Updated Date <i class="fas fa-sort sort-icon"></i></th>
+                                    <th style="cursor: default;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="templateTableBody">
+                                <tr>
+                                    <td colspan="9">
+                                        <div class="empty-state">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <p>Loading templates...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="createTemplateModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Create KRA Template</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="templateErrorMsg"></div>
+                    <div class="mb-3">
+                        <label class="form-label">KRA Code <span class="badge bg-info text-dark">Auto-Generated</span></label>
+                        <input type="text" class="form-control" id="templateKraCode" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
+                        <small class="form-text text-muted">System auto-generates code (e.g., KRA-001, KRA-002) - Read only</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Template Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="templateTitle" placeholder="e.g., Daily Sales Report">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="templateDescription" rows="3" placeholder="Describe what this KRA entails..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Frequency <span class="text-danger">*</span></label>
+                        <select class="form-select" id="templateFrequency" onchange="updateFrequencyUI()">
+                            <option value="daily">Daily</option>
+                            <option value="every_n_days">Every N Days</option>
+                            <option value="selected_days">Selected Days</option>
+                            <option value="every_15_days">Every 15 Days</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="custom">Custom</option>
+                            <option value="adhoc">Ad-hoc</option>
+                        </select>
+                    </div>
+                    
+                    <div id="everyNDaysUI" style="display: none;" class="mb-3">
+                        <label class="form-label">Interval (Days) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="everyNDaysInterval" min="1" max="90" placeholder="e.g., 3 for every 3 days">
+                        <small class="form-text text-muted">Minimum 1, Maximum 90 days</small>
+                    </div>
+                    
+                    <div id="selectedDaysUI" style="display: none;" class="mb-3">
+                        <label class="form-label">Select Days <span class="text-danger">*</span></label>
+                        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="dayMonday" value="monday">
+                                    <label class="form-check-label" for="dayMonday">Monday</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="dayTuesday" value="tuesday">
+                                    <label class="form-check-label" for="dayTuesday">Tuesday</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="dayWednesday" value="wednesday">
+                                    <label class="form-check-label" for="dayWednesday">Wednesday</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="dayThursday" value="thursday">
+                                    <label class="form-check-label" for="dayThursday">Thursday</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="dayFriday" value="friday">
+                                    <label class="form-check-label" for="dayFriday">Friday</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="daySaturday" value="saturday">
+                                    <label class="form-check-label" for="daySaturday">Saturday</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="daySunday" value="sunday">
+                                    <label class="form-check-label" for="daySunday">Sunday</label>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted mt-2">Select at least one day</small>
+                    </div>
+                    
+                    <div id="monthlyUI" style="display: none;" class="mb-3">
+                        <label class="form-label">Day of Month <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="monthlyDayOfMonth" min="1" max="31" placeholder="1-31">
+                        <small class="form-text text-muted">Which day of each month (1-31)</small>
+                    </div>
+                    
+                    <div id="customFrequencyUI" style="display: none;" class="mb-3">
+                        <label class="form-label">Select Dates in Month <span class="text-danger">*</span></label>
+                        <div style="background: #f8f9fa; padding: 12px; border-radius: 8px;">
+                            <div id="customDatesContainer" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;"></div>
+                        </div>
+                        <small class="form-text text-muted mt-2">Select specific dates in month</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Target Completion Time</label>
+                        <input type="time" class="form-control" id="targetTime" placeholder="HH:MM">
+                        <small class="form-text text-muted">Daily deadline by which this KRA should be completed (optional)</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createTemplate()">
+                        <i class="fas fa-save me-1"></i>Create Template
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="assignTemplateModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Assign KRA to Employee</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="assignTemplateId">
+                    <div class="mb-3">
+                        <label class="form-label">Template</label>
+                        <input type="text" class="form-control" id="assignTemplateName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Select Employees <span class="text-danger">*</span></label>
+                        <div style="max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 6px;" id="employeeCheckboxContainer">
+                            <p class="text-muted">Loading employees...</p>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Effective From <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="assignEffectiveFrom">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Effective Until (Optional)</label>
+                        <input type="date" class="form-control" id="assignEffectiveUntil">
+                        <small class="text-muted">Leave empty for continuous assignment (No End Date)</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="assignTemplate()">
+                        <i class="fas fa-check me-1"></i>Assign
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const API_BASE = '';
+        let currentUser = null;
+        let templates = [];
+        let filteredTemplates = [];
+        let employees = [];
+        let sortField = 'created_at';
+        let sortAsc = false;
+        let filterTimeout = null;
+        let canCreate = false;
+        let canEdit = false;
+        let canAssign = false;
+        let canDeactivate = false;
+        let canDelete = false;
+        let editingTemplateId = null;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('KRA Templates', 'fas fa-file-alt');
+            currentUser = StaffSidebar.userData;
+            if (currentUser) {
+                updateHeaderInfo();
+                initCustomDates();
+                await checkPermissions();
+                await loadTemplates();
+            }
+        });
+        
+        function initCustomDates() {
+            const container = document.getElementById('customDatesContainer');
+            if (!container) return;
+            let html = '';
+            for (let i = 1; i <= 31; i++) {
+                html += `
+                    <div class="form-check" style="font-size: 12px;">
+                        <input class="form-check-input custom-date-check" type="checkbox" value="${i}" id="customDate${i}">
+                        <label class="form-check-label" for="customDate${i}" style="margin-bottom: 0;">${i}</label>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+        
+        function updateHeaderInfo() {
+            if (!currentUser) return;
+            const initials = (currentUser.first_name?.[0] || '') + (currentUser.last_name?.[0] || '');
+            document.getElementById('headerUserInitials').textContent = initials || '--';
+            document.getElementById('headerUserName').textContent = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Staff';
+            document.getElementById('headerUserRole').textContent = currentUser.role_name || 'Staff';
+            document.getElementById('headerUserEmpId').textContent = currentUser.employee_id || '';
+        }
+        
+        async function checkPermissions() {
+            const superRoles = ['VGK Mentor', 'VGK4U Supreme'];
+            const isSuperRole = superRoles.includes(currentUser?.role_name);
+            
+            if (isSuperRole) {
+                canCreate = true;
+                canEdit = true;
+                canAssign = true;
+                canDeactivate = true;
+                canDelete = true;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/menu-settings/my-menus?unified=true`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const menus = data.menus || [];
+                    const kraTemplateAccess = menus.find(m => 
+                        m.route_path === '/staff/kra-templates' || 
+                        m.menu_code === 'kra_templates' ||
+                        m.menu_name?.toLowerCase().includes('kra template')
+                    );
+                    if (kraTemplateAccess) {
+                        canCreate = canCreate || kraTemplateAccess.can_edit || false;
+                        canEdit = canEdit || kraTemplateAccess.can_edit || false;
+                        canAssign = canAssign || kraTemplateAccess.can_view || true;
+                    }
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.warn('[DC] Menu access check failed, using defaults:', error);
+            }
+            
+            if (canCreate) {
+                document.getElementById('createBtn').style.display = 'inline-flex';
+            }
+        }
+        
+        async function loadTemplates(employeeSearch = '') {
+            try {
+                let url = `${API_BASE}/api/v1/staff/kra/templates`;
+                if (employeeSearch) {
+                    url += `?employee_search=${encodeURIComponent(employeeSearch)}`;
+                }
+                const response = await staffFetch(url);
+                
+                if (!response.ok) throw new Error('Failed to load templates');
+                
+                const data = await response.json();
+                console.log('[DC-API-RESPONSE] Full API response:', JSON.stringify(data, null, 2));
+                templates = data.templates || [];
+                console.log('[DC-API-RESPONSE] Templates loaded:', templates.length);
+                templates.forEach(t => {
+                    console.log('[DC-API-RESPONSE] Template', t.id, t.title, '- assigned_employee_names:', t.assigned_employee_names, '- assigned_count:', t.assigned_count);
+                });
+                filteredTemplates = [...templates];
+                applyClientFilters();
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading templates:', error);
+                document.getElementById('templateTableBody').innerHTML = `
+                    <tr><td colspan="9">
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p>No templates available yet</p>
+                        </div>
+                    </td></tr>`;
+            }
+        }
+        
+        function toggleFilters() {
+            const panel = document.getElementById('filterPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function debounceFilter() {
+            if (filterTimeout) clearTimeout(filterTimeout);
+            filterTimeout = setTimeout(() => applyFilters(), 300);
+        }
+        
+        let lastEmployeeSearch = '';
+        
+        async function applyFilters() {
+            const employeeSearch = (document.getElementById('filterEmployeeSearch')?.value || '').trim();
+            
+            if (employeeSearch !== lastEmployeeSearch) {
+                lastEmployeeSearch = employeeSearch;
+                await loadTemplates(employeeSearch);
+            } else {
+                applyClientFilters();
+            }
+        }
+        
+        function applyClientFilters() {
+            const search = (document.getElementById('filterSearch')?.value || '').toLowerCase();
+            const frequency = document.getElementById('filterFrequency')?.value || '';
+            const status = document.getElementById('filterStatus')?.value || '';
+            const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+            const dateTo = document.getElementById('filterDateTo')?.value || '';
+            
+            filteredTemplates = templates.filter(t => {
+                if (search && !t.title?.toLowerCase().includes(search) && !t.kra_code?.toLowerCase().includes(search)) {
+                    return false;
+                }
+                if (frequency && t.frequency !== frequency) return false;
+                if (status) {
+                    const isActive = t.status !== 'inactive';
+                    if (status === 'active' && !isActive) return false;
+                    if (status === 'inactive' && isActive) return false;
+                }
+                if (dateFrom && t.created_at) {
+                    if (new Date(t.created_at) < new Date(dateFrom)) return false;
+                }
+                if (dateTo && t.created_at) {
+                    if (new Date(t.created_at) > new Date(dateTo + 'T23:59:59')) return false;
+                }
+                return true;
+            });
+            
+            sortAndRender();
+        }
+        
+        async function resetFilters() {
+            document.getElementById('filterSearch').value = '';
+            document.getElementById('filterEmployeeSearch').value = '';
+            document.getElementById('filterFrequency').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            lastEmployeeSearch = '';
+            await loadTemplates();
+        }
+        
+        function sortTable(field) {
+            const headers = document.querySelectorAll('.kra-table th');
+            headers.forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                const icon = th.querySelector('.sort-icon');
+                if (icon) icon.className = 'fas fa-sort sort-icon';
+            });
+            
+            if (sortField === field) {
+                sortAsc = !sortAsc;
+            } else {
+                sortField = field;
+                sortAsc = true;
+            }
+            
+            const currentTh = document.querySelector(`th[data-field="${field}"]`);
+            if (currentTh) {
+                currentTh.classList.add(sortAsc ? 'sorted-asc' : 'sorted-desc');
+                const icon = currentTh.querySelector('.sort-icon');
+                if (icon) icon.className = `fas fa-sort-${sortAsc ? 'up' : 'down'} sort-icon`;
+            }
+            
+            sortAndRender();
+        }
+        
+        function sortAndRender() {
+            filteredTemplates.sort((a, b) => {
+                let valA, valB;
+                
+                if (sortField === 'sno') {
+                    return 0;
+                } else if (sortField === 'title') {
+                    valA = (a.title || '').toLowerCase();
+                    valB = (b.title || '').toLowerCase();
+                } else if (sortField === 'assigned_count') {
+                    valA = a.assigned_count || 0;
+                    valB = b.assigned_count || 0;
+                } else if (sortField === 'frequency') {
+                    valA = a.frequency || '';
+                    valB = b.frequency || '';
+                } else if (sortField === 'status') {
+                    valA = a.is_active !== false ? 1 : 0;
+                    valB = b.is_active !== false ? 1 : 0;
+                } else if (sortField === 'created_at') {
+                    valA = new Date(a.created_at || 0).getTime();
+                    valB = new Date(b.created_at || 0).getTime();
+                } else if (sortField === 'updated_at') {
+                    valA = new Date(a.updated_at || 0).getTime();
+                    valB = new Date(b.updated_at || 0).getTime();
+                } else {
+                    valA = a[sortField] || '';
+                    valB = b[sortField] || '';
+                }
+                
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+            
+            renderTemplates();
+        }
+        
+        function renderTemplates() {
+            const tbody = document.getElementById('templateTableBody');
+            
+            if (!filteredTemplates || filteredTemplates.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="9">
+                        <div class="empty-state">
+                            <i class="fas fa-folder-open"></i>
+                            <p>No templates match your filters</p>
+                        </div>
+                    </td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = filteredTemplates.map((template, index) => {
+                const isActive = template.status !== 'inactive';
+                const statusBadge = isActive 
+                    ? '<span class="badge badge-active">Active</span>' 
+                    : '<span class="badge badge-inactive">Inactive</span>';
+                
+                let actionButtons = '';
+                if (canAssign && isActive) {
+                    actionButtons += `<button class="btn-action btn-assign" onclick="openAssignModal(${template.id}, '${escapeHtml(template.title)}')" title="Assign to employees">
+                        <i class="fas fa-user-plus"></i> Assign
+                    </button>`;
+                }
+                if (canEdit) {
+                    actionButtons += `<button class="btn-action btn-edit" onclick="editTemplate(${template.id})" title="Edit template">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>`;
+                }
+                if (canDeactivate) {
+                    if (isActive) {
+                        actionButtons += `<button class="btn-action btn-deactivate" onclick="toggleTemplateStatus(${template.id}, false)" title="Deactivate template" style="background: #fee2e2; color: #991b1b;">
+                            <i class="fas fa-pause"></i>
+                        </button>`;
+                    } else {
+                        actionButtons += `<button class="btn-action btn-activate" onclick="toggleTemplateStatus(${template.id}, true)" title="Activate template" style="background: #d1fae5; color: #065f46;">
+                            <i class="fas fa-play"></i>
+                        </button>`;
+                    }
+                }
+                if (canDelete && (!isActive || (template.assigned_count || 0) === 0)) {
+                    actionButtons += `<button class="btn-action" onclick="deleteTemplate(${template.id})" title="Permanently delete template" style="background: #dc2626; color: white;">
+                        <i class="fas fa-trash"></i>
+                    </button>`;
+                }
+                
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>
+                            <div>
+                                <strong>${escapeHtml(template.title)}</strong>
+                                ${template.kra_code ? `<div style="font-size: 11px; color: #6b7280;">${escapeHtml(template.kra_code)}</div>` : ''}
+                            </div>
+                        </td>
+                        <td class="assigned-employees-cell" data-template-id="${template.id}">
+                            ${renderAssignedEmployees(template)}
+                        </td>
+                        <td><span class="badge badge-${template.frequency || 'daily'}">${formatFrequency(template.frequency)}</span></td>
+                        <td>${template.target_time ? template.target_time : '<span class="text-muted">—</span>'}</td>
+                        <td>${statusBadge}</td>
+                        <td>${formatDate(template.created_at)}</td>
+                        <td>${formatDate(template.updated_at)}</td>
+                        <td>
+                            <div class="action-buttons">
+                                ${actionButtons}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function formatFrequency(freq) {
+            const map = {
+                'daily': 'Daily',
+                'weekly': 'Weekly',
+                'bi_weekly': 'Bi-Weekly',
+                'monthly': 'Monthly',
+                'quarterly': 'Quarterly',
+                'half_yearly': 'Half-Yearly',
+                'yearly': 'Yearly',
+                'every_n_days': 'Every N Days',
+                'every_15_days': 'Every 15 Days',
+                'selected_days': 'Selected Days',
+                'custom': 'Custom',
+                'adhoc': 'Ad-hoc'
+            };
+            return map[freq] || freq || 'Daily';
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        
+        // DC Protocol: Fresh implementation for Assigned Employees column
+        function renderAssignedEmployees(template) {
+            console.log('[DC-ASSIGNED] Template ID:', template.id, 'Data:', {
+                names: template.assigned_employee_names,
+                count: template.assigned_count
+            });
+            
+            const names = template.assigned_employee_names;
+            const count = template.assigned_count || 0;
+            
+            // Check if names array exists and has items
+            if (names && Array.isArray(names) && names.length > 0) {
+                const displayNames = names.slice(0, 3);
+                let html = '<div class="assigned-names">';
+                displayNames.forEach(name => {
+                    html += `<span class="employee-name-tag">${escapeHtml(name)}</span>`;
+                });
+                if (count > 3) {
+                    html += `<span class="employee-more-tag">+${count - 3} more</span>`;
+                }
+                html += '</div>';
+                console.log('[DC-ASSIGNED] Rendering names for template', template.id, ':', displayNames);
+                return html;
+            }
+            
+            console.log('[DC-ASSIGNED] No names for template', template.id, '- showing Not assigned');
+            return '<span class="no-assignment">Not assigned</span>';
+        }
+        
+        function updateFrequencyUI() {
+            const freq = document.getElementById('templateFrequency').value;
+            
+            document.getElementById('everyNDaysUI').style.display = 'none';
+            document.getElementById('selectedDaysUI').style.display = 'none';
+            document.getElementById('monthlyUI').style.display = 'none';
+            document.getElementById('customFrequencyUI').style.display = 'none';
+            
+            if (freq === 'every_n_days') {
+                document.getElementById('everyNDaysUI').style.display = 'block';
+            } else if (freq === 'selected_days') {
+                document.getElementById('selectedDaysUI').style.display = 'block';
+            } else if (freq === 'monthly') {
+                document.getElementById('monthlyUI').style.display = 'block';
+            } else if (freq === 'custom') {
+                document.getElementById('customFrequencyUI').style.display = 'block';
+            }
+        }
+        
+        async function openCreateModal() {
+            editingTemplateId = null;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/kra/next-code`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('templateKraCode').value = data.kra_code;
+                } else {
+                    document.getElementById('templateKraCode').value = 'ERROR-GENERATING';
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error fetching next code:', error);
+                document.getElementById('templateKraCode').value = 'ERROR';
+            }
+            
+            document.getElementById('templateTitle').value = '';
+            document.getElementById('templateDescription').value = '';
+            document.getElementById('templateFrequency').value = 'daily';
+            document.getElementById('targetTime').value = '';
+            document.getElementById('templateErrorMsg').innerHTML = '';
+            
+            document.querySelectorAll('#selectedDaysUI input[type="checkbox"]').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.custom-date-check').forEach(cb => cb.checked = false);
+            
+            updateFrequencyUI();
+            
+            document.querySelector('#createTemplateModal .modal-title').innerHTML = '<i class="fas fa-plus-circle me-2"></i>Create KRA Template';
+            new bootstrap.Modal(document.getElementById('createTemplateModal')).show();
+        }
+        
+        async function createTemplate() {
+            const title = document.getElementById('templateTitle').value.trim();
+            const description = document.getElementById('templateDescription').value.trim();
+            const frequency = document.getElementById('templateFrequency').value;
+            
+            if (!title) {
+                document.getElementById('templateErrorMsg').innerHTML = '<div class="alert alert-danger">Title is required</div>';
+                return;
+            }
+            
+            let frequency_config = null;
+            
+            if (frequency === 'daily') {
+                frequency_config = { pattern: 'daily' };
+            } else if (frequency === 'every_n_days') {
+                const interval = parseInt(document.getElementById('everyNDaysInterval').value);
+                if (!interval || interval < 1 || interval > 90) {
+                    document.getElementById('templateErrorMsg').innerHTML = '<div class="alert alert-danger">Please enter a valid interval (1-90 days)</div>';
+                    return;
+                }
+                frequency_config = { pattern: 'every_n_days', interval: interval };
+            } else if (frequency === 'selected_days') {
+                const selectedDays = [];
+                ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].forEach(day => {
+                    if (document.getElementById(`day${day}`)?.checked) {
+                        selectedDays.push(day.toLowerCase());
+                    }
+                });
+                if (selectedDays.length === 0) {
+                    document.getElementById('templateErrorMsg').innerHTML = '<div class="alert alert-danger">Please select at least one day</div>';
+                    return;
+                }
+                frequency_config = { pattern: 'selected_days', days: selectedDays };
+            } else if (frequency === 'every_15_days') {
+                frequency_config = { pattern: 'every_15_days' };
+            } else if (frequency === 'monthly') {
+                const dayOfMonth = parseInt(document.getElementById('monthlyDayOfMonth').value);
+                if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) {
+                    document.getElementById('templateErrorMsg').innerHTML = '<div class="alert alert-danger">Please enter a valid day of month (1-31)</div>';
+                    return;
+                }
+                frequency_config = { pattern: 'monthly', day_of_month: dayOfMonth };
+            } else if (frequency === 'custom') {
+                const customDates = [];
+                document.querySelectorAll('.custom-date-check:checked').forEach(cb => {
+                    customDates.push(parseInt(cb.value));
+                });
+                if (customDates.length === 0) {
+                    document.getElementById('templateErrorMsg').innerHTML = '<div class="alert alert-danger">Please select at least one date</div>';
+                    return;
+                }
+                frequency_config = { pattern: 'custom', dates: customDates };
+            } else if (frequency === 'adhoc') {
+                frequency_config = { pattern: 'adhoc' };
+            }
+            
+            // DC-KRA-CODE-001: kra_code is auto-generated server-side.
+            // Send whatever the input shows (may be a valid code like KRA-001, or omit if
+            // generation failed — the backend always assigns the correct code).
+            const kraCodeRaw = document.getElementById('templateKraCode').value.trim();
+            const kra_code = /^[A-Z]{2,4}-\d{3}$/.test(kraCodeRaw) ? kraCodeRaw : null;
+
+            try {
+                const isEdit = editingTemplateId !== null;
+                const endpoint = isEdit 
+                    ? `${API_BASE}/api/v1/staff/kra/templates/${editingTemplateId}`
+                    : `${API_BASE}/api/v1/staff/kra/templates`;
+                
+                const targetTimeVal = document.getElementById('targetTime').value || null;
+                const payload = {
+                    title,
+                    description,
+                    frequency,
+                    frequency_config
+                };
+                if (kra_code) payload.kra_code = kra_code;
+                if (targetTimeVal) payload.target_time = targetTimeVal;
+                
+                const response = await staffFetch(endpoint, {
+                    method: isEdit ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `Failed to ${isEdit ? 'update' : 'create'} template`);
+                }
+                
+                bootstrap.Modal.getInstance(document.getElementById('createTemplateModal')).hide();
+                editingTemplateId = null;
+                await loadTemplates();
+                alert(`KRA template ${isEdit ? 'updated' : 'created'} successfully!`);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                document.getElementById('templateErrorMsg').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+            }
+        }
+        
+        function openAssignModal(templateId, templateName) {
+            document.getElementById('assignTemplateId').value = templateId;
+            document.getElementById('assignTemplateName').value = templateName;
+            document.getElementById('assignEffectiveFrom').value = new Date().toISOString().split('T')[0];
+            document.getElementById('assignEffectiveUntil').value = '';
+            
+            loadEmployeesForAssign();
+            
+            new bootstrap.Modal(document.getElementById('assignTemplateModal')).show();
+        }
+
+        async function loadEmployeesForAssign() {
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/employees?status=active`);
+                if (!response.ok) throw new Error('Failed to load employees');
+                const data = await response.json();
+                const employees = data.employees || [];
+
+                let html = '';
+                employees.forEach(emp => {
+                    html += `
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" value="${emp.emp_code}" id="emp${emp.id}">
+                            <label class="form-check-label" for="emp${emp.id}">
+                                ${emp.first_name} ${emp.last_name} (${emp.emp_code}) - ${emp.role_name}
+                            </label>
+                        </div>
+                    `;
+                });
+
+                document.getElementById('employeeCheckboxContainer').innerHTML = html || '<p class="text-muted">No employees found</p>';
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading employees:', error);
+                document.getElementById('employeeCheckboxContainer').innerHTML = '<p class="text-danger">Failed to load employees</p>';
+            }
+        }
+        
+        async function assignTemplate() {
+            const templateId = document.getElementById('assignTemplateId').value;
+            const effectiveFrom = document.getElementById('assignEffectiveFrom').value;
+            const effectiveUntil = document.getElementById('assignEffectiveUntil').value;
+            
+            const checkboxes = document.querySelectorAll('#employeeCheckboxContainer input[type="checkbox"]:checked');
+            const employeeIds = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (employeeIds.length === 0) {
+                alert('Please select at least one employee');
+                return;
+            }
+            
+            if (!effectiveFrom) {
+                alert('Please select Effective From date');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/api/v1/staff/kra/templates/${templateId}/assign`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        employee_ids: employeeIds,
+                        effective_from: effectiveFrom,
+                        effective_until: effectiveUntil || null
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to assign template');
+                }
+                
+                const result = await response.json();
+                document.activeElement?.blur();
+                bootstrap.Modal.getInstance(document.getElementById('assignTemplateModal')).hide();
+                await loadTemplates();
+                alert(`KRA assigned successfully!\nInstances created: ${result.created_instances}`);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error assigning template:', error);
+                alert(error.message || 'Failed to assign template');
+            }
+        }
+        
+        async function editTemplate(templateId) {
+            editingTemplateId = templateId;
+            const template = templates.find(t => t.id === templateId);
+            if (!template) {
+                alert('Template not found');
+                return;
+            }
+            
+            document.getElementById('templateTitle').value = template.title || '';
+            document.getElementById('templateDescription').value = template.description || '';
+            document.getElementById('templateFrequency').value = template.frequency || 'daily';
+            document.getElementById('templateKraCode').value = template.kra_code || '';
+            document.getElementById('targetTime').value = template.target_time || '';
+            
+            updateFrequencyUI();
+            
+            if (template.frequency_config) {
+                if (template.frequency === 'every_n_days' && template.frequency_config.interval_days) {
+                    document.getElementById('everyNDaysValue').value = template.frequency_config.interval_days;
+                }
+                if (template.frequency === 'monthly' && template.frequency_config.day_of_month) {
+                    document.getElementById('monthlyDay').value = template.frequency_config.day_of_month;
+                }
+                if (template.frequency === 'selected_days' && template.frequency_config.days) {
+                    template.frequency_config.days.forEach(day => {
+                        const checkbox = document.querySelector(`#selectedDaysUI input[value="${day}"]`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
+                if (template.frequency === 'custom' && template.frequency_config.dates) {
+                    template.frequency_config.dates.forEach(date => {
+                        const checkbox = document.getElementById(`customDate${date}`);
+                        if (checkbox) checkbox.checked = true;
+                    });
+                }
+            }
+            
+            document.querySelector('#createTemplateModal .modal-title').innerHTML = '<i class="fas fa-edit me-2"></i>Edit KRA Template';
+            new bootstrap.Modal(document.getElementById('createTemplateModal')).show();
+        }
+        
+        async function toggleTemplateStatus(templateId, activate) {
+            const action = activate ? 'reactivate' : 'deactivate';
+            const confirmMsg = activate 
+                ? 'Are you sure you want to activate this template?' 
+                : 'Are you sure you want to deactivate this template? Assigned instances will not generate new tasks.';
+            
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                const endpoint = activate 
+                    ? `${API_BASE}/api/v1/staff/kra/templates/${templateId}/reactivate`
+                    : `${API_BASE}/api/v1/staff/kra/templates/${templateId}`;
+                
+                const response = await staffFetch(endpoint, {
+                    method: activate ? 'POST' : 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `Failed to ${action} template`);
+                }
+                
+                await loadTemplates();
+                alert(`Template ${activate ? 'activated' : 'deactivated'} successfully`);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error(`Error ${action} template:`, error);
+                alert(error.message || `Failed to ${action} template`);
+            }
+        }
+        
+        async function deleteTemplate(templateId) {
+            try {
+                const previewRes = await staffFetch(`${API_BASE}/api/v1/staff/kra/templates/${templateId}/delete-preview`);
+                if (!previewRes.ok) {
+                    const err = await previewRes.json();
+                    alert(err.detail || 'Failed to check delete eligibility');
+                    return;
+                }
+                const preview = await previewRes.json();
+
+                if (!preview.can_delete) {
+                    alert(preview.reason || 'This template cannot be deleted right now.');
+                    return;
+                }
+
+                const impact = preview.impact;
+                let msg = `⚠️ Permanently Delete "${preview.title}" (${preview.kra_code})?\n\n`;
+                msg += `This will:\n`;
+                if (impact.future_assignments_to_remove > 0) msg += `• Remove ${impact.future_assignments_to_remove} future assignment(s)\n`;
+                if (impact.future_instances_to_remove > 0) msg += `• Remove ${impact.future_instances_to_remove} future KRA instance(s)\n`;
+                if (impact.current_assignments_to_end > 0) msg += `• End ${impact.current_assignments_to_end} current assignment(s)\n`;
+                msg += `\n✅ ${impact.past_instances_preserved} past instance(s) will be preserved.\n`;
+                msg += `\nThis action cannot be undone. Continue?`;
+
+                if (!confirm(msg)) return;
+
+                const deleteRes = await staffFetch(`${API_BASE}/api/v1/staff/kra/templates/${templateId}/permanent`, {
+                    method: 'DELETE'
+                });
+
+                if (!deleteRes.ok) {
+                    const err = await deleteRes.json();
+                    throw new Error(err.detail || 'Failed to delete template');
+                }
+
+                const result = await deleteRes.json();
+                await loadTemplates();
+                alert(`Template deleted successfully!\n• Future assignments removed: ${result.future_assignments_removed}\n• Future instances removed: ${result.future_instances_removed}\n• Current assignments ended: ${result.current_assignments_ended}`);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error deleting template:', error);
+                alert(error.message || 'Failed to delete template');
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

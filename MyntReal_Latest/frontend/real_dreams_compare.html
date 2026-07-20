@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Properties - Real Dreams</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2d5016;
+            --secondary-color: #4a7c23;
+            --accent-color: #f97316;
+            --bg-light: #f8fafc;
+            --text-dark: #1e293b;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+        }
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+        .comparison-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        .comparison-header {
+            display: grid;
+            gap: 0;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .property-column {
+            padding: 1.5rem;
+            text-align: center;
+            border-right: 1px solid #e2e8f0;
+            position: relative;
+        }
+        .property-column:last-child {
+            border-right: none;
+        }
+        .property-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            background: #f1f5f9;
+        }
+        .property-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+        .property-location {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+        .property-price {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+        .remove-property {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .remove-property:hover {
+            background: #dc2626;
+        }
+        .comparison-row {
+            display: grid;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .comparison-row:last-child {
+            border-bottom: none;
+        }
+        .comparison-row:nth-child(even) {
+            background: #f8fafc;
+        }
+        .row-label {
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            min-width: 150px;
+        }
+        .row-value {
+            padding: 1rem 1.5rem;
+            text-align: center;
+            border-left: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .row-value.best {
+            background: #dcfce7;
+            font-weight: 600;
+            color: #16a34a;
+        }
+        .amenity-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+        .amenity-badge {
+            background: #e2e8f0;
+            color: #475569;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+        }
+        .amenity-badge.has {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        .amenity-badge.missing {
+            background: #fee2e2;
+            color: #dc2626;
+            text-decoration: line-through;
+        }
+        .rating-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        .rating-stars {
+            color: #fbbf24;
+        }
+        .add-property-card {
+            padding: 2rem;
+            text-align: center;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .add-property-card:hover {
+            border-color: var(--primary-color);
+            background: #f8fafc;
+        }
+        .add-property-card i {
+            font-size: 3rem;
+            color: #94a3b8;
+            margin-bottom: 1rem;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: 12px;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            color: #cbd5e1;
+            margin-bottom: 1.5rem;
+        }
+        .property-search-modal .modal-body {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .search-property-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .search-property-item:hover {
+            border-color: var(--primary-color);
+            background: #f8fafc;
+        }
+        .search-property-item.selected {
+            border-color: var(--primary-color);
+            background: #dcfce7;
+        }
+        .search-property-item img {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-right: 1rem;
+        }
+        .search-property-info h6 {
+            margin: 0;
+            font-size: 0.95rem;
+        }
+        .search-property-info p {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        .btn-compare-action {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+        }
+        .btn-compare-action:hover {
+            background: var(--secondary-color);
+            color: white;
+        }
+        .view-details-btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .view-details-btn:hover {
+            background: var(--secondary-color);
+            color: white;
+        }
+        @media (max-width: 992px) {
+            .comparison-header, .comparison-row {
+                grid-template-columns: 1fr;
+            }
+            .property-column, .row-value {
+                border-right: none;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            .row-label {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <script>
+        (function(){
+            const _p = new URLSearchParams(window.location.search);
+            const _from = _p.get('from');
+            const _cid = _p.get('company_id');
+            window._compareBackUrl = _from === 'marketplace'
+                ? (_cid ? `/ecom?company_id=${_cid}&segment=real-dreams` : '/ecom?segment=real-dreams')
+                : '/real-dreams';
+        })();
+    </script>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="/real-dreams">
+                <img src="/assets/logo.png" alt="Real Dreams" height="40" onerror="this.src='https://via.placeholder.com/120x40?text=Real+Dreams'">
+            </a>
+            <div class="ms-auto">
+                <a id="compareBackBtn" href="/real-dreams" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left me-1"></i> Back to Marketplace
+                </a>
+            </div>
+        </div>
+    </nav>
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            var btn = document.getElementById('compareBackBtn');
+            if(btn && window._compareBackUrl) btn.href = window._compareBackUrl;
+        });
+    </script>
+
+    <div class="page-header">
+        <div class="container">
+            <h1><i class="fas fa-columns me-2"></i> Compare Properties</h1>
+            <p class="mb-0">Compare up to 4 properties side-by-side</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="comparisonContent">
+            <div id="emptyState" class="empty-state">
+                <i class="fas fa-balance-scale"></i>
+                <h4>No Properties Selected</h4>
+                <p class="text-muted mb-4">Select properties to compare their features side-by-side</p>
+                <button class="btn btn-compare-action btn-lg" onclick="openPropertySearch()">
+                    <i class="fas fa-plus me-2"></i> Add Properties to Compare
+                </button>
+            </div>
+
+            <div id="comparisonTable" class="comparison-container" style="display: none;">
+            </div>
+        </div>
+
+        <div class="text-center my-4" id="addMoreSection" style="display: none;">
+            <button class="btn btn-outline-primary" onclick="openPropertySearch()" id="addMoreBtn">
+                <i class="fas fa-plus me-1"></i> Add Property to Compare
+            </button>
+            <button class="btn btn-outline-danger ms-2" onclick="clearAll()">
+                <i class="fas fa-trash me-1"></i> Clear All
+            </button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="propertySearchModal" tabindex="-1">
+        <div class="modal-dialog modal-lg property-search-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-search me-2"></i> Select Properties</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="propertySearchInput" placeholder="Search properties by title or location..." oninput="filterSearchResults()">
+                    </div>
+                    <div id="propertySearchResults">
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary"></div>
+                            <p class="mt-2 text-muted">Loading properties...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <span class="me-auto text-muted" id="selectedCount">0 selected</span>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-compare-action" onclick="addSelectedProperties()">
+                        <i class="fas fa-plus me-1"></i> Add Selected
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1/real-dreams';
+        let companyId = null;
+        let selectedPropertyIds = [];
+        let comparisonData = null;
+        let allProperties = [];
+        let tempSelectedIds = [];
+
+        function getUrlParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        // DC Protocol: Helper to generate property URL with valid company_id only
+        function getPropertyUrl(propertyId) {
+            const base = `/real-dreams/property/${propertyId}`;
+            return companyId && !isNaN(companyId) ? `${base}?company_id=${companyId}` : base;
+        }
+
+        // DC Protocol: Helper to get API params with valid company_id only
+        function getCompanyParam() {
+            return companyId && !isNaN(companyId) ? `?company_id=${companyId}` : '';
+        }
+
+        async function init() {
+            const urlCompanyId = getUrlParam('company_id');
+            // DC Protocol: Validate company_id is a valid integer, not "null" or NaN
+            if (urlCompanyId && urlCompanyId !== 'null' && !isNaN(parseInt(urlCompanyId))) {
+                companyId = parseInt(urlCompanyId);
+            } else {
+                // Fallback to default company
+                try {
+                    const defaultResponse = await fetch(`${API_BASE}/public/default-company`);
+                    const defaultData = await defaultResponse.json();
+                    if (defaultData.success && defaultData.company_id) {
+                        companyId = defaultData.company_id;
+                    }
+                } catch (e) {
+                    console.error('[DC-COMPARE] Failed to get default company:', e);
+                }
+            }
+
+            const urlPropertyIds = getUrlParam('ids');
+            if (urlPropertyIds) {
+                selectedPropertyIds = urlPropertyIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+                if (selectedPropertyIds.length > 0) {
+                    await loadComparison();
+                }
+            }
+
+            updateUI();
+        }
+
+        async function loadComparison() {
+            if (selectedPropertyIds.length === 0) {
+                comparisonData = null;
+                updateUI();
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/public/properties/compare${getCompanyParam()}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ property_ids: selectedPropertyIds })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    comparisonData = data;
+                    renderComparison();
+                }
+            } catch (error) {
+                console.error('Failed to load comparison:', error);
+            }
+
+            updateUI();
+        }
+
+        function renderComparison() {
+            if (!comparisonData || !comparisonData.properties.length) {
+                document.getElementById('comparisonTable').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                return;
+            }
+
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('comparisonTable').style.display = 'block';
+
+            const properties = comparisonData.properties;
+            const fields = comparisonData.comparison_fields;
+            const numProps = properties.length;
+            const gridCols = `150px repeat(${numProps}, 1fr)`;
+
+            let html = `
+                <div class="comparison-header" style="grid-template-columns: ${gridCols};">
+                    <div class="row-label">Property</div>
+                    ${properties.map(prop => `
+                        <div class="property-column">
+                            <button class="remove-property" onclick="removeProperty(${prop.id})" title="Remove">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <img src="${prop.primary_image || '/assets/placeholder-property.png'}" 
+                                 alt="${escapeHtml(prop.title)}" 
+                                 class="property-image"
+                                 onerror="this.src='https://via.placeholder.com/200x180?text=No+Image'">
+                            <div class="property-title">${escapeHtml(prop.title)}</div>
+                            <div class="property-location">
+                                <i class="fas fa-map-marker-alt text-muted me-1"></i>
+                                ${escapeHtml(prop.city || '')}${prop.state ? ', ' + escapeHtml(prop.state) : ''}
+                            </div>
+                            <div class="property-price">${formatPrice(prop.price)}</div>
+                            <a href="${getPropertyUrl(prop.id)}" class="view-details-btn">
+                                <i class="fas fa-eye me-1"></i> View Details
+                            </a>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            fields.forEach(field => {
+                const values = properties.map(prop => prop[field.field]);
+                let bestIndex = -1;
+
+                if (field.type === 'number' || field.type === 'currency') {
+                    const numValues = values.map(v => parseFloat(v) || 0);
+                    if (field.field === 'price') {
+                        bestIndex = numValues.indexOf(Math.min(...numValues.filter(v => v > 0)));
+                    } else if (field.field === 'area_sqft' || field.field === 'bedrooms' || field.field === 'bathrooms' || field.field === 'parking_spaces') {
+                        bestIndex = numValues.indexOf(Math.max(...numValues));
+                    }
+                } else if (field.type === 'rating') {
+                    const ratings = values.map(v => parseFloat(v) || 0);
+                    const maxRating = Math.max(...ratings);
+                    if (maxRating > 0) {
+                        bestIndex = ratings.indexOf(maxRating);
+                    }
+                }
+
+                html += `
+                    <div class="comparison-row" style="grid-template-columns: ${gridCols};">
+                        <div class="row-label">${field.label}</div>
+                        ${properties.map((prop, idx) => {
+                            let value = prop[field.field];
+                            let displayValue = formatFieldValue(field, value, prop);
+                            let isBest = idx === bestIndex && bestIndex !== -1;
+                            return `<div class="row-value ${isBest ? 'best' : ''}">${displayValue}</div>`;
+                        }).join('')}
+                    </div>
+                `;
+            });
+
+            document.getElementById('comparisonTable').innerHTML = html;
+            updateUrl();
+        }
+
+        function formatFieldValue(field, value, prop) {
+            if (value === null || value === undefined || value === '') {
+                return '<span class="text-muted">-</span>';
+            }
+
+            switch (field.type) {
+                case 'currency':
+                    return formatPrice(value);
+                case 'number':
+                    return value.toLocaleString('en-IN');
+                case 'rating':
+                    const rating = parseFloat(value) || 0;
+                    const stars = '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
+                    return `<div class="rating-display">
+                        <span class="rating-stars">${stars}</span>
+                        <span>${rating.toFixed(1)} (${prop.total_ratings || 0})</span>
+                    </div>`;
+                case 'list':
+                    if (Array.isArray(value) && value.length > 0) {
+                        return `<div class="amenity-list">
+                            ${value.slice(0, 6).map(a => `<span class="amenity-badge has">${escapeHtml(a.name)}</span>`).join('')}
+                            ${value.length > 6 ? `<span class="amenity-badge">+${value.length - 6} more</span>` : ''}
+                        </div>`;
+                    }
+                    return '<span class="text-muted">None</span>';
+                default:
+                    return escapeHtml(String(value));
+            }
+        }
+
+        function formatPrice(price) {
+            if (!price) return 'On Request';
+            if (price >= 10000000) {
+                return '₹' + (price / 10000000).toFixed(2) + ' Cr';
+            } else if (price >= 100000) {
+                return '₹' + (price / 100000).toFixed(2) + ' L';
+            }
+            return '₹' + price.toLocaleString('en-IN');
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateUI() {
+            const hasProperties = selectedPropertyIds.length > 0;
+            document.getElementById('emptyState').style.display = hasProperties ? 'none' : 'block';
+            document.getElementById('comparisonTable').style.display = hasProperties ? 'block' : 'none';
+            document.getElementById('addMoreSection').style.display = hasProperties ? 'block' : 'none';
+            document.getElementById('addMoreBtn').disabled = selectedPropertyIds.length >= 4;
+            
+            if (selectedPropertyIds.length >= 4) {
+                document.getElementById('addMoreBtn').innerHTML = '<i class="fas fa-check me-1"></i> Maximum 4 Properties';
+            } else {
+                document.getElementById('addMoreBtn').innerHTML = '<i class="fas fa-plus me-1"></i> Add Property to Compare';
+            }
+        }
+
+        function updateUrl() {
+            if (selectedPropertyIds.length > 0) {
+                const url = new URL(window.location.href);
+                // DC Protocol: Only set company_id if valid
+                if (companyId && !isNaN(companyId)) {
+                    url.searchParams.set('company_id', companyId);
+                }
+                url.searchParams.set('ids', selectedPropertyIds.join(','));
+                window.history.replaceState({}, '', url);
+            }
+        }
+
+        async function openPropertySearch() {
+            if (selectedPropertyIds.length >= 4) {
+                alert('Maximum 4 properties can be compared at once.');
+                return;
+            }
+
+            tempSelectedIds = [];
+            document.getElementById('propertySearchInput').value = '';
+            updateSelectedCount();
+            
+            const modal = new bootstrap.Modal(document.getElementById('propertySearchModal'));
+            modal.show();
+
+            await loadAllProperties();
+        }
+
+        async function loadAllProperties() {
+            document.getElementById('propertySearchResults').innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="mt-2 text-muted">Loading properties...</p>
+                </div>
+            `;
+
+            try {
+                // DC Protocol: Use valid company_id or omit parameter
+                const params = companyId && !isNaN(companyId) ? `?company_id=${companyId}&limit=100` : '?limit=100';
+                const response = await fetch(`${API_BASE}/public/properties${params}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    allProperties = data.properties.filter(p => !selectedPropertyIds.includes(p.id));
+                    renderSearchResults(allProperties);
+                }
+            } catch (error) {
+                console.error('Failed to load properties:', error);
+                document.getElementById('propertySearchResults').innerHTML = `
+                    <div class="text-center py-4 text-danger">
+                        Failed to load properties. Please try again.
+                    </div>
+                `;
+            }
+        }
+
+        function filterSearchResults() {
+            const searchTerm = document.getElementById('propertySearchInput').value.toLowerCase();
+            const filtered = allProperties.filter(p => 
+                p.title.toLowerCase().includes(searchTerm) ||
+                (p.city && p.city.toLowerCase().includes(searchTerm)) ||
+                (p.address && p.address.toLowerCase().includes(searchTerm))
+            );
+            renderSearchResults(filtered);
+        }
+
+        function renderSearchResults(properties) {
+            if (properties.length === 0) {
+                document.getElementById('propertySearchResults').innerHTML = `
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-search fa-2x mb-2"></i>
+                        <p>No properties found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const maxCanAdd = 4 - selectedPropertyIds.length;
+            document.getElementById('propertySearchResults').innerHTML = properties.map(prop => `
+                <div class="search-property-item ${tempSelectedIds.includes(prop.id) ? 'selected' : ''}" 
+                     onclick="toggleTempSelection(${prop.id})"
+                     data-property-id="${prop.id}">
+                    <img src="${prop.primary_image || 'https://via.placeholder.com/80x60?text=No+Image'}" 
+                         alt="${escapeHtml(prop.title)}"
+                         onerror="this.src='https://via.placeholder.com/80x60?text=No+Image'">
+                    <div class="search-property-info">
+                        <h6>${escapeHtml(prop.title)}</h6>
+                        <p><i class="fas fa-map-marker-alt me-1"></i> ${escapeHtml(prop.city || 'Unknown')}</p>
+                        <p class="text-primary fw-bold">${formatPrice(prop.price)}</p>
+                    </div>
+                    <div class="ms-auto">
+                        ${tempSelectedIds.includes(prop.id) 
+                            ? '<i class="fas fa-check-circle text-success fa-lg"></i>' 
+                            : '<i class="far fa-circle text-muted fa-lg"></i>'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleTempSelection(propertyId) {
+            const maxCanAdd = 4 - selectedPropertyIds.length;
+            
+            if (tempSelectedIds.includes(propertyId)) {
+                tempSelectedIds = tempSelectedIds.filter(id => id !== propertyId);
+            } else {
+                if (tempSelectedIds.length >= maxCanAdd) {
+                    alert(`You can only add ${maxCanAdd} more property${maxCanAdd > 1 ? 'ies' : ''}`);
+                    return;
+                }
+                tempSelectedIds.push(propertyId);
+            }
+            
+            updateSelectedCount();
+            filterSearchResults();
+        }
+
+        function updateSelectedCount() {
+            document.getElementById('selectedCount').textContent = `${tempSelectedIds.length} selected`;
+        }
+
+        async function addSelectedProperties() {
+            if (tempSelectedIds.length === 0) {
+                alert('Please select at least one property');
+                return;
+            }
+
+            selectedPropertyIds = [...selectedPropertyIds, ...tempSelectedIds];
+            bootstrap.Modal.getInstance(document.getElementById('propertySearchModal')).hide();
+            
+            await loadComparison();
+        }
+
+        function removeProperty(propertyId) {
+            selectedPropertyIds = selectedPropertyIds.filter(id => id !== propertyId);
+            if (selectedPropertyIds.length > 0) {
+                loadComparison();
+            } else {
+                comparisonData = null;
+                document.getElementById('comparisonTable').innerHTML = '';
+                updateUI();
+                // DC Protocol: Only include company_id if valid
+                const params = companyId && !isNaN(companyId) ? `?company_id=${companyId}` : '';
+                window.history.replaceState({}, '', window.location.pathname + params);
+            }
+        }
+
+        function clearAll() {
+            if (confirm('Remove all properties from comparison?')) {
+                selectedPropertyIds = [];
+                comparisonData = null;
+                document.getElementById('comparisonTable').innerHTML = '';
+                updateUI();
+                // DC Protocol: Only include company_id if valid
+                const params = companyId && !isNaN(companyId) ? `?company_id=${companyId}` : '';
+                window.history.replaceState({}, '', window.location.pathname + params);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

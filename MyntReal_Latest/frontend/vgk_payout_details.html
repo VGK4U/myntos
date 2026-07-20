@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payout Details - RVZ Supreme</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .page-container {
+            padding: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        .header-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
+        }
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 0;
+        }
+        .breadcrumb {
+            background: transparent;
+            padding: 0;
+            margin: 8px 0 0 0;
+        }
+        .breadcrumb-item a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .breadcrumb-item.active {
+            color: #764ba2;
+        }
+        .filter-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+        .filter-section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+        .btn-rvz-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+        .btn-rvz-primary:hover {
+            opacity: 0.9;
+            color: white;
+        }
+        .subtotal-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .subtotal-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+        .subtotal-card.paid {
+            border-left-color: #28a745;
+        }
+        .subtotal-card.pending {
+            border-left-color: #ffc107;
+        }
+        .subtotal-card.guru {
+            border-left-color: #dc3545;
+        }
+        .subtotal-card.total {
+            border-left-color: #6f42c1;
+            background: linear-gradient(135deg, rgba(111,66,193,0.1) 0%, rgba(102,126,234,0.1) 100%);
+        }
+        .subtotal-label {
+            font-size: 0.85rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .subtotal-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .subtotal-card.paid .subtotal-value {
+            color: #28a745;
+        }
+        .subtotal-card.pending .subtotal-value {
+            color: #ffc107;
+        }
+        .subtotal-card.guru .subtotal-value {
+            color: #dc3545;
+        }
+        .subtotal-card.total .subtotal-value {
+            color: #6f42c1;
+        }
+        .subtotal-count {
+            font-size: 0.75rem;
+            color: #999;
+        }
+        .data-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .table-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .loading-spinner {
+            text-align: center;
+            padding: 60px 20px;
+            color: white;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(102, 126, 234, 0.05);
+        }
+        .table thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            border: none;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .badge {
+            padding: 6px 12px;
+            font-size: 0.75rem;
+        }
+        
+        /* Date Group Row Styles */
+        .date-group-row {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            font-weight: 600;
+            cursor: pointer;
+            border-left: 4px solid #667eea;
+        }
+        .date-group-row:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+        }
+        .date-group-row td {
+            padding: 15px !important;
+            vertical-align: middle;
+        }
+        .expand-icon {
+            transition: transform 0.3s ease;
+            display: inline-block;
+            width: 20px;
+            text-align: center;
+        }
+        .expand-icon.expanded {
+            transform: rotate(90deg);
+        }
+        
+        /* Detail Row Styles */
+        .detail-row {
+            display: none;
+            background-color: #f8f9fa;
+        }
+        .detail-row.show {
+            display: table-row;
+        }
+        .detail-row td {
+            padding-left: 50px !important;
+            border-left: 3px solid #dee2e6;
+        }
+        .income-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .income-badge.direct {
+            background-color: #007bff;
+            color: white;
+        }
+        .income-badge.matching {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .income-badge.ved {
+            background-color: #28a745;
+            color: white;
+        }
+        .income-badge.guru {
+            background-color: #dc3545;
+            color: white;
+        }
+        .income-badge.other {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        /* Type Row Styles (clickable income type rows) */
+        .type-row {
+            cursor: pointer;
+        }
+        .type-row:hover {
+            background-color: rgba(102, 126, 234, 0.08);
+        }
+        .income-badge {
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .income-badge:hover {
+            transform: scale(1.05);
+        }
+        
+        /* User Row Styles (third level) */
+        .user-row {
+            display: none;
+            background-color: #fafbfc;
+        }
+        .user-row.show {
+            display: table-row;
+        }
+        .user-row td {
+            padding-left: 80px !important;
+            border-left: 3px dotted #ced4da;
+            font-size: 0.9rem;
+        }
+        .user-id-badge {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <!-- Header -->
+        <div class="header-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="page-title"><img src="/public/vgk4u-logo-100.png" alt="VGK4U" style="height:28px;background:#fff;border-radius:5px;padding:2px 6px;margin-right:8px;vertical-align:middle;"><i class="fas fa-hand-holding-usd"></i> Payout Details</h1>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="/rvz"><i class="fas fa-home"></i> RVZ Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="/rvz/company-earnings">Company Earnings</a></li>
+                            <li class="breadcrumb-item active">Payout Details</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    <a href="/rvz/company-earnings" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="filter-card">
+            <div class="filter-section-title"><i class="fas fa-filter"></i> Filters & Actions</div>
+            <div class="row g-3 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">
+                        <i class="fas fa-calendar-alt"></i> From Date
+                    </label>
+                    <input type="date" class="form-control" id="fromDate">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">
+                        <i class="fas fa-calendar-alt"></i> To Date
+                    </label>
+                    <input type="date" class="form-control" id="toDate">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">
+                        <i class="fas fa-filter"></i> Income Type
+                    </label>
+                    <select class="form-select" id="incomeTypeFilter">
+                        <option value="">All Income Types</option>
+                        <option value="Direct Facilitation">Direct Facilitation</option>
+                        <option value="Group Performance Recognition">Group Performance Recognition</option>
+                        <option value="VED Leadership Recognition">VED Leadership Recognition</option>
+                        <option value="Mentorship Contribution Benefit">Mentorship Contribution Benefit</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-rvz-primary w-100" onclick="loadData()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-secondary w-100" onclick="clearFilters()">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-success w-100" onclick="exportToCSV()">
+                        <i class="fas fa-file-csv"></i> Export CSV
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Loading Spinner -->
+        <div class="loading-spinner" id="loadingSpinner">
+            <div class="spinner-border text-light" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="text-white mt-3">Loading payout data...</p>
+        </div>
+
+        <!-- Data Table -->
+        <div class="data-card" id="dataCard" style="display: none;">
+            <!-- Tab Navigation -->
+            <ul class="nav nav-tabs mb-3" id="viewTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="date-tab" data-bs-toggle="tab" data-bs-target="#date-view" type="button" role="tab" onclick="switchView('date')">
+                        <i class="fas fa-calendar-alt"></i> Date-wise View
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="user-tab" data-bs-toggle="tab" data-bs-target="#user-view" type="button" role="tab" onclick="switchView('user')">
+                        <i class="fas fa-users"></i> User-wise View
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="viewTabContent">
+                <!-- Date-wise View -->
+                <div class="tab-pane fade show active" id="date-view" role="tabpanel">
+                    <!-- Subtotals Section 1: Status-based Breakdown -->
+                    <div class="mb-2" style="font-weight: 600; color: #667eea; font-size: 0.9rem;">
+                        <i class="fas fa-chart-bar"></i> Status-based Breakdown
+                    </div>
+                    <div class="subtotal-cards mb-3">
+                        <div class="subtotal-card paid">
+                            <div class="subtotal-label">Paid Payouts</div>
+                            <div class="subtotal-value" id="subtotalPaidDate">₹0.00</div>
+                            <div class="subtotal-count" id="countPaidDate">0 transactions</div>
+                        </div>
+                        <div class="subtotal-card pending">
+                            <div class="subtotal-label">Pending Payouts</div>
+                            <div class="subtotal-value" id="subtotalPendingDate">₹0.00</div>
+                            <div class="subtotal-count" id="countPendingDate">0 transactions</div>
+                        </div>
+                        <div class="subtotal-card total">
+                            <div class="subtotal-label">Total Payouts</div>
+                            <div class="subtotal-value" id="subtotalTotalDate">₹0.00</div>
+                            <div class="subtotal-count" id="countTotalDate">0 total transactions</div>
+                        </div>
+                    </div>
+
+                    <!-- Subtotals Section 2: Income-type Breakdown (Dynamic) -->
+                    <div class="mb-2" style="font-weight: 600; color: #667eea; font-size: 0.9rem;">
+                        <i class="fas fa-layer-group"></i> Income-type Breakdown
+                    </div>
+                    <div class="subtotal-cards mb-3" id="incomeTypeSubtotalsDate">
+                        <!-- Dynamically populated from API -->
+                    </div>
+                    <div class="table-title">
+                        <i class="fas fa-table"></i> Payout Transactions (Grouped by Date)
+                        <span class="float-end text-muted" style="font-size: 0.85rem;" id="recordCount">0 records</span>
+                    </div>
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i> Click <strong>+</strong> on date to expand income types → Click <strong>+</strong> on income type to view users | Click column headers to sort
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th style="cursor: pointer;" onclick="sortDateView('date')">
+                                        Date <i class="fas fa-sort" id="sort-icon-date"></i>
+                                    </th>
+                                    <th style="cursor: pointer;" onclick="sortDateView('status')">
+                                        Status <i class="fas fa-sort" id="sort-icon-status"></i>
+                                    </th>
+                                    <th style="cursor: pointer;" onclick="sortDateView('count')">
+                                        Count <i class="fas fa-sort" id="sort-icon-count"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" onclick="sortDateView('amount')">
+                                        Net Amount (₹) <i class="fas fa-sort" id="sort-icon-amount"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" onclick="sortDateView('tds')">
+                                        TDS (₹) <i class="fas fa-sort" id="sort-icon-tds"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="dataTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-info" id="paginationInfo"></div>
+                </div>
+
+                <!-- User-wise View -->
+                <div class="tab-pane fade" id="user-view" role="tabpanel">
+                    <!-- Subtotals Section 1: Status-based Breakdown -->
+                    <div class="mb-2" style="font-weight: 600; color: #667eea; font-size: 0.9rem;">
+                        <i class="fas fa-chart-bar"></i> Status-based Breakdown
+                    </div>
+                    <div class="subtotal-cards mb-3">
+                        <div class="subtotal-card paid">
+                            <div class="subtotal-label">Paid Payouts</div>
+                            <div class="subtotal-value" id="subtotalPaidUser">₹0.00</div>
+                            <div class="subtotal-count" id="countPaidUser">0 users</div>
+                        </div>
+                        <div class="subtotal-card pending">
+                            <div class="subtotal-label">Pending Payouts</div>
+                            <div class="subtotal-value" id="subtotalPendingUser">₹0.00</div>
+                            <div class="subtotal-count" id="countPendingUser">0 users</div>
+                        </div>
+                        <div class="subtotal-card total">
+                            <div class="subtotal-label">Total Payouts</div>
+                            <div class="subtotal-value" id="subtotalTotalUser">₹0.00</div>
+                            <div class="subtotal-count" id="countTotalUser">0 total users</div>
+                        </div>
+                    </div>
+
+                    <!-- Subtotals Section 2: Income-type Breakdown (Dynamic) -->
+                    <div class="mb-2" style="font-weight: 600; color: #667eea; font-size: 0.9rem;">
+                        <i class="fas fa-layer-group"></i> Income-type Breakdown
+                    </div>
+                    <div class="subtotal-cards mb-3" id="incomeTypeSubtotalsUser">
+                        <!-- Dynamically populated from API -->
+                    </div>
+                    <div class="table-title">
+                        <i class="fas fa-table"></i> Payout Transactions (Grouped by User)
+                        <span class="float-end text-muted" style="font-size: 0.85rem;" id="recordCountUser">0 records</span>
+                    </div>
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i> Click <strong>+</strong> on user to expand income types → Click <strong>+</strong> on income type to view dates | Click column headers to sort
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"></th>
+                                    <th style="cursor: pointer;" onclick="sortUserView('user')">
+                                        User <i class="fas fa-sort" id="sort-user-icon-user"></i>
+                                    </th>
+                                    <th style="cursor: pointer;" onclick="sortUserView('count')">
+                                        Count <i class="fas fa-sort" id="sort-user-icon-count"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" onclick="sortUserView('paid')">
+                                        Paid (₹) <i class="fas fa-sort" id="sort-user-icon-paid"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" onclick="sortUserView('pending')">
+                                        Pending (₹) <i class="fas fa-sort" id="sort-user-icon-pending"></i>
+                                    </th>
+                                    <th class="text-end" style="cursor: pointer;" onclick="sortUserView('total')">
+                                        Total (₹) <i class="fas fa-sort" id="sort-user-icon-total"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-info" id="paginationInfoUser"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="data-card empty-state" id="emptyState" style="display: none;">
+            <i class="fas fa-inbox"></i>
+            <h4>No Data Available</h4>
+            <p class="text-muted">Apply filters and click Refresh to load payout data</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1/company-earnings';
+        let currentData = [];
+        let groupedData = {};
+        let guruDakshinaData = [];
+
+        function formatCurrency(amount) {
+            return '₹' + Number(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr || dateStr === 'Pending') return dateStr;
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN', { 
+                day: '2-digit', 
+                month: 'short', 
+                year: 'numeric' 
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('fromDate').value = '';
+            document.getElementById('toDate').value = '';
+            document.getElementById('incomeTypeFilter').value = '';
+            loadData();
+        }
+
+        async function loadData() {
+            const loading = document.getElementById('loadingSpinner');
+            const dataCard = document.getElementById('dataCard');
+            const emptyState = document.getElementById('emptyState');
+
+            loading.style.display = 'block';
+            dataCard.style.display = 'none';
+            emptyState.style.display = 'none';
+
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            const incomeTypeFilter = document.getElementById('incomeTypeFilter').value;
+
+            try {
+                let url = `${API_BASE}/payout-details?limit=1000`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+
+                const response = await fetch(url, { credentials: 'include' });
+
+                if (response.status === 401 || response.status === 403) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.message || 'Failed to load data');
+                }
+
+                currentData = result.data || [];
+
+                // Apply income type filter if selected
+                if (incomeTypeFilter) {
+                    currentData = currentData.filter(item => item.income_type === incomeTypeFilter);
+                }
+
+                // Load Mentorship Contribution Benefit data separately
+                await loadGuruDakshina();
+
+                if (currentData.length === 0 && guruDakshinaData.length === 0) {
+                    emptyState.style.display = 'block';
+                } else {
+                    groupDataByDate();
+                    renderGroupedTable();
+                    renderSubtotals(result.totals);
+                    dataCard.style.display = 'block';
+                }
+
+            } catch (error) {
+                console.error('Error loading data:', error);
+                alert('Failed to load payout data. Please try again.');
+                emptyState.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function loadGuruDakshina() {
+            try {
+                const fromDate = document.getElementById('fromDate').value;
+                const toDate = document.getElementById('toDate').value;
+
+                let url = `${API_BASE}/expense-details?limit=1000`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+
+                const response = await fetch(url, { credentials: 'include' });
+                if (!response.ok) return;
+
+                const result = await response.json();
+                if (result.success) {
+                    guruDakshinaData = (result.data || []).filter(item => item.category === 'Mentorship Contribution Benefit');
+                }
+            } catch (error) {
+                console.error('Error loading Mentorship Contribution Benefit:', error);
+            }
+        }
+
+        function groupDataByDate() {
+            groupedData = {};
+            
+            // Group regular payouts
+            currentData.forEach(item => {
+                const date = item.business_date;
+                if (!groupedData[date]) {
+                    groupedData[date] = {
+                        date: date,
+                        items: [],
+                        totalCount: 0,
+                        totalNet: 0,
+                        totalTDS: 0,
+                        status: item.status
+                    };
+                }
+                
+                groupedData[date].items.push(item);
+                groupedData[date].totalCount += item.count;
+                groupedData[date].totalNet += item.net_amount;
+                groupedData[date].totalTDS += item.tds_deduction;
+            });
+
+            // Add Mentorship Contribution Benefit to grouped data
+            guruDakshinaData.forEach(item => {
+                const date = item.expense_date;
+                if (!groupedData[date]) {
+                    groupedData[date] = {
+                        date: date,
+                        items: [],
+                        totalCount: 0,
+                        totalNet: 0,
+                        totalTDS: 0,
+                        status: item.status === 'approved' ? 'Completed' : 'Pending'
+                    };
+                }
+                
+                groupedData[date].items.push({
+                    income_type: 'Mentorship Contribution Benefit',
+                    status: item.status === 'approved' ? 'Completed' : 'Pending',
+                    count: item.count,
+                    net_amount: item.amount,
+                    tds_deduction: 0
+                });
+                groupedData[date].totalCount += item.count;
+                groupedData[date].totalNet += item.amount;
+            });
+        }
+
+        function toggleDateGroup(date) {
+            const detailRows = document.querySelectorAll(`.detail-${date.replace(/[^a-zA-Z0-9]/g, '')}`);
+            const icon = document.getElementById(`icon-${date.replace(/[^a-zA-Z0-9]/g, '')}`);
+            
+            detailRows.forEach(row => {
+                row.classList.toggle('show');
+            });
+            
+            icon.classList.toggle('expanded');
+        }
+
+        function getIncomeBadgeClass(incomeType) {
+            if (incomeType.includes('Direct')) return 'direct';
+            if (incomeType.includes('Matching')) return 'matching';
+            if (incomeType.includes('Ved')) return 'ved';
+            if (incomeType.includes('Senior')) return 'guru';
+            return 'other';
+        }
+
+        async function toggleTypeGroup(date, incomeType, typeRowId) {
+            const userRowsClass = `user-${typeRowId}`;
+            const userRows = document.querySelectorAll(`.${userRowsClass}`);
+            const icon = document.getElementById(`icon-type-${typeRowId}`);
+            
+            if (userRows.length > 0) {
+                // Already loaded, just toggle visibility
+                userRows.forEach(row => row.classList.toggle('show'));
+                if (icon) icon.classList.toggle('expanded');
+            } else {
+                // Load user details from API
+                await loadUserDetails(date, incomeType, typeRowId);
+                if (icon) icon.classList.add('expanded');
+            }
+        }
+
+        async function loadUserDetails(date, incomeType, typeRowId) {
+            try {
+                const url = `${API_BASE}/payout-user-details?transaction_date=${date}&income_type=${encodeURIComponent(incomeType)}`;
+                const response = await fetch(url, { credentials: 'include' });
+                
+                if (!response.ok) {
+                    console.error('Failed to load user details');
+                    return;
+                }
+                
+                const result = await response.json();
+                if (!result.success || !result.data || result.data.length === 0) {
+                    alert(`No user details available for ${incomeType} on ${formatDate(date)}`);
+                    return;
+                }
+                
+                // Find the type row and insert user rows after it
+                const typeRow = document.getElementById(typeRowId);
+                if (!typeRow) return;
+                
+                const tbody = typeRow.parentElement;
+                let insertAfter = typeRow;
+                
+                // Create user rows
+                result.data.forEach(user => {
+                    const userRow = document.createElement('tr');
+                    userRow.className = `user-row user-${typeRowId} show`;
+                    
+                    userRow.innerHTML = `
+                        <td></td>
+                        <td>
+                            <span class="user-id-badge">${user.user_id}</span>
+                            <span class="ms-2">${user.user_name}</span>
+                        </td>
+                        <td><span class="badge bg-secondary" style="font-size: 0.7rem;">${user.status || '-'}</span></td>
+                        <td>1</td>
+                        <td class="text-end">${formatCurrency(user.amount)}</td>
+                        <td class="text-end"><small class="text-muted">${user.details || '-'}</small></td>
+                    `;
+                    
+                    tbody.insertBefore(userRow, insertAfter.nextSibling);
+                    insertAfter = userRow;
+                });
+                
+            } catch (error) {
+                console.error('Error loading user details:', error);
+                alert('Failed to load user details. Please try again.');
+            }
+        }
+
+        function renderGroupedTable() {
+            const tbody = document.getElementById('dataTableBody');
+            tbody.innerHTML = '';
+            
+            const dates = Object.keys(groupedData).sort((a, b) => new Date(b) - new Date(a));
+            
+            let totalRecords = 0;
+            dates.forEach(date => {
+                const group = groupedData[date];
+                const dateId = date.replace(/[^a-zA-Z0-9]/g, '');
+                totalRecords += group.items.length;
+                
+                const statusBadge = group.status === 'Completed' 
+                    ? '<span class="badge bg-success">Paid</span>' 
+                    : '<span class="badge bg-warning">Pending</span>';
+                
+                // Date group row
+                const groupRow = document.createElement('tr');
+                groupRow.className = 'date-group-row';
+                groupRow.onclick = () => toggleDateGroup(date);
+                groupRow.innerHTML = `
+                    <td><i class="fas fa-plus expand-icon" id="icon-${dateId}"></i></td>
+                    <td><strong>${formatDate(date)}</strong></td>
+                    <td>${statusBadge}</td>
+                    <td><span class="badge bg-primary">${group.totalCount}</span></td>
+                    <td class="text-end"><strong>${formatCurrency(group.totalNet)}</strong></td>
+                    <td class="text-end"><strong>${formatCurrency(group.totalTDS)}</strong></td>
+                `;
+                tbody.appendChild(groupRow);
+                
+                // Detail rows (income type rows)
+                group.items.forEach((item, index) => {
+                    const detailRow = document.createElement('tr');
+                    const typeRowId = `type-${dateId}-${index}`;
+                    detailRow.className = `detail-row detail-${dateId} type-row`;
+                    detailRow.id = typeRowId;
+                    
+                    const badgeClass = getIncomeBadgeClass(item.income_type);
+                    const itemStatusBadge = item.status === 'Completed' 
+                        ? '<span class="badge bg-success">Paid</span>' 
+                        : '<span class="badge bg-warning">Pending</span>';
+                    
+                    detailRow.innerHTML = `
+                        <td><i class="fas fa-plus expand-icon" id="icon-type-${typeRowId}" style="font-size: 0.8rem; color: #667eea;"></i></td>
+                        <td>
+                            <span class="income-badge ${badgeClass}" title="Click to view users">${item.income_type}</span>
+                        </td>
+                        <td>${itemStatusBadge}</td>
+                        <td>${item.count}</td>
+                        <td class="text-end">${formatCurrency(item.net_amount)}</td>
+                        <td class="text-end">${formatCurrency(item.tds_deduction)}</td>
+                    `;
+                    
+                    // Add click handler for income type badge
+                    detailRow.onclick = (e) => {
+                        e.stopPropagation();
+                        toggleTypeGroup(date, item.income_type, typeRowId);
+                    };
+                    
+                    tbody.appendChild(detailRow);
+                });
+            });
+            
+            document.getElementById('recordCount').textContent = `${dates.length} date${dates.length !== 1 ? 's' : ''} (${totalRecords} income records)`;
+        }
+
+        // Helper: Map income_type to human-readable labels and icons
+        function formatIncomeTypeLabel(incomeType) {
+            const labels = {
+                'direct_referral': { label: 'Direct Facilitation', icon: 'fa-user-plus', class: 'direct' },
+                'matching_referral': { label: 'Group Performance Recognition', icon: 'fa-users', class: 'matching' },
+                'ved_income': { label: 'VED Leadership Recognition', icon: 'fa-chart-line', class: 'ved' },
+                'guru_dakshina': { label: 'Mentorship Contribution Benefit (2%)', icon: 'fa-hands-helping', class: 'guru' }
+            };
+            
+            return labels[incomeType] || { label: incomeType, icon: 'fa-circle', class: 'default' };
+        }
+
+        // Render dynamic income-type breakdown cards
+        function renderIncomeTypeCards(incomeTypeBreakdown, containerId, isUserView = false) {
+            const container = document.getElementById(containerId);
+            if (!container) {
+                console.error('❌ Container not found:', containerId);
+                return;
+            }
+            
+            if (!incomeTypeBreakdown || incomeTypeBreakdown.length === 0) {
+                container.innerHTML = '<div class="alert alert-info" style="margin: 0;"><i class="fas fa-info-circle"></i> No income type data available for the selected date range</div>';
+                console.warn('⚠️ No income type breakdown data to render');
+                return;
+            }
+            
+            console.log(`✅ Rendering ${incomeTypeBreakdown.length} income-type cards in ${containerId}:`, incomeTypeBreakdown);
+            
+            container.innerHTML = '';
+            
+            incomeTypeBreakdown.forEach((item, index) => {
+                const formatted = formatIncomeTypeLabel(item.income_type);
+                const amount = item.amount || 0;
+                const count = item.count || item.user_count || 0;
+                const countLabel = isUserView ? 
+                    `${count} user${count !== 1 ? 's' : ''}` :
+                    `${count} transaction${count !== 1 ? 's' : ''}`;
+                
+                console.log(`  Card ${index + 1}: ${formatted.label} = ${amount}, count = ${count}`);
+                
+                const card = document.createElement('div');
+                card.className = `subtotal-card ${formatted.class}`;
+                card.innerHTML = `
+                    <div class="subtotal-label">
+                        <i class="fas ${formatted.icon}"></i> ${formatted.label}
+                    </div>
+                    <div class="subtotal-value">${formatCurrency(amount)}</div>
+                    <div class="subtotal-count">${countLabel}</div>
+                `;
+                container.appendChild(card);
+            });
+            
+            console.log(`✅ Successfully rendered ${container.children.length} cards`);
+        }
+
+        function renderSubtotals(totals) {
+            if (!totals) return;
+            
+            console.log('🔍 Payout Totals Received:', totals);
+            console.log('🔍 Income Type Breakdown:', totals.income_type_breakdown);
+            
+            const paidTotal = totals.total_paid || 0;
+            const pendingTotal = totals.total_pending || 0;
+            const grandTotal = totals.grand_total || 0;
+            
+            const paidCount = currentData.filter(r => r.status === 'Completed').reduce((sum, r) => sum + r.count, 0);
+            const pendingCount = currentData.filter(r => r.status === 'Pending').reduce((sum, r) => sum + r.count, 0);
+            
+            // Section 1: Status-based subtotals
+            document.getElementById('subtotalPaidDate').textContent = formatCurrency(paidTotal);
+            document.getElementById('subtotalPendingDate').textContent = formatCurrency(pendingTotal);
+            document.getElementById('subtotalTotalDate').textContent = formatCurrency(grandTotal);
+            
+            document.getElementById('countPaidDate').textContent = `${paidCount} transaction${paidCount !== 1 ? 's' : ''}`;
+            document.getElementById('countPendingDate').textContent = `${pendingCount} transaction${pendingCount !== 1 ? 's' : ''}`;
+            document.getElementById('countTotalDate').textContent = `${paidCount + pendingCount} total transactions`;
+            
+            // Section 2: Income-type breakdown (dynamic)
+            if (totals.income_type_breakdown && totals.income_type_breakdown.length > 0) {
+                console.log('✅ Rendering income-type cards:', totals.income_type_breakdown);
+                renderIncomeTypeCards(totals.income_type_breakdown, 'incomeTypeSubtotalsDate', false);
+            } else {
+                console.warn('⚠️ No income_type_breakdown found in totals');
+            }
+            
+            // Update User-wise when available
+            renderUserSubtotals(totals);
+        }
+
+        function renderUserSubtotals(totals) {
+            if (!totals) return;
+            
+            const paidTotal = totals.total_paid || 0;
+            const pendingTotal = totals.total_pending || 0;
+            const grandTotal = totals.grand_total || 0;
+            
+            const totalUsers = userWiseData.length;
+            
+            // Section 1: Status-based subtotals
+            document.getElementById('subtotalPaidUser').textContent = formatCurrency(paidTotal);
+            document.getElementById('subtotalPendingUser').textContent = formatCurrency(pendingTotal);
+            document.getElementById('subtotalTotalUser').textContent = formatCurrency(grandTotal);
+            
+            document.getElementById('countPaidUser').textContent = `${totalUsers} user${totalUsers !== 1 ? 's' : ''}`;
+            document.getElementById('countPendingUser').textContent = `${totalUsers} user${totalUsers !== 1 ? 's' : ''}`;
+            document.getElementById('countTotalUser').textContent = `${totalUsers} total user${totalUsers !== 1 ? 's' : ''}`;
+            
+            // Section 2: Income-type breakdown (dynamic)
+            if (totals.income_type_breakdown) {
+                renderIncomeTypeCards(totals.income_type_breakdown, 'incomeTypeSubtotalsUser', true);
+            }
+        }
+
+        function exportToCSV() {
+            if (currentData.length === 0 && guruDakshinaData.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            
+            let csv = 'Date,Income Type,Status,Count,Net Amount,TDS Deduction\n';
+            
+            const dates = Object.keys(groupedData).sort((a, b) => new Date(b) - new Date(a));
+            
+            dates.forEach(date => {
+                const group = groupedData[date];
+                group.items.forEach(item => {
+                    csv += `${formatDate(date)},"${item.income_type}","${item.status}",${item.count},${item.net_amount},${item.tds_deduction}\n`;
+                });
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `payout_details_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Tab View Switching & User-wise Views
+        let currentView = 'date';
+        let userWiseData = [];
+        let dateSortOrder = {};
+        let userSortOrder = {};
+
+        function switchView(view) {
+            currentView = view;
+            if (view === 'user') {
+                loadUserWiseData();
+            }
+        }
+
+        async function loadUserWiseData() {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            try {
+                let url = `${API_BASE}/payout-by-user?limit=1000`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+
+                const response = await fetch(url, { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load user-wise data');
+
+                const result = await response.json();
+                userWiseData = result.data || [];
+                renderUserWiseTable();
+            } catch (error) {
+                console.error('Error loading user-wise data:', error);
+                alert('Failed to load user-wise data');
+            }
+        }
+
+        function renderUserWiseTable() {
+            const tbody = document.getElementById('userTableBody');
+            tbody.innerHTML = '';
+
+            if (userWiseData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No data available</td></tr>';
+                return;
+            }
+
+            userWiseData.forEach((user, index) => {
+                const userId = user.user_id.replace(/[^a-zA-Z0-9]/g, '');
+                const userRowId = `user-${userId}-${index}`;
+
+                const userRow = document.createElement('tr');
+                userRow.className = 'date-group-row';
+                userRow.id = userRowId;
+                userRow.onclick = () => toggleUserGroup(user.user_id, userRowId);
+
+                userRow.innerHTML = `
+                    <td><i class="fas fa-plus expand-icon" id="icon-${userRowId}"></i></td>
+                    <td>
+                        <strong>${user.user_name}</strong>
+                        <div class="text-muted" style="font-size: 0.85rem;">${user.user_id}</div>
+                    </td>
+                    <td>${user.transaction_count}</td>
+                    <td class="text-end">${formatCurrency(user.paid_amount)}</td>
+                    <td class="text-end">${formatCurrency(user.pending_amount)}</td>
+                    <td class="text-end">${formatCurrency(user.total_amount)}</td>
+                `;
+
+                tbody.appendChild(userRow);
+            });
+
+            document.getElementById('recordCountUser').textContent = `${userWiseData.length} user${userWiseData.length !== 1 ? 's' : ''}`;
+        }
+
+        async function toggleUserGroup(userId, userRowId) {
+            const sourceRowsClass = `source-${userRowId}`;
+            const sourceRows = document.querySelectorAll(`.${sourceRowsClass}`);
+            const icon = document.getElementById(`icon-${userRowId}`);
+
+            if (sourceRows.length > 0) {
+                sourceRows.forEach(row => row.classList.toggle('show'));
+                icon.classList.toggle('expanded');
+            } else {
+                await loadSourcesForUser(userId, userRowId);
+                icon.classList.add('expanded');
+            }
+        }
+
+        async function loadSourcesForUser(userId, userRowId) {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            try {
+                let url = `${API_BASE}/payout-sources-for-user?user_id=${userId}`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+
+                const response = await fetch(url, { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load sources');
+
+                const result = await response.json();
+                if (!result.success || !result.data) return;
+
+                const userRow = document.getElementById(userRowId);
+                const tbody = userRow.parentElement;
+                let insertAfter = userRow;
+
+                result.data.forEach((source, index) => {
+                    const sourceRowId = `source-${userRowId}-${index}`;
+                    const sourceRow = document.createElement('tr');
+                    sourceRow.className = `source-detail-row source-${userRowId} type-row show`;
+                    sourceRow.id = sourceRowId;
+
+                    sourceRow.innerHTML = `
+                        <td><i class="fas fa-plus expand-icon" id="icon-${sourceRowId}" style="font-size: 0.8rem; color: #667eea;"></i></td>
+                        <td><span class="badge bg-info">${source.income_type}</span></td>
+                        <td>${source.count}</td>
+                        <td class="text-end">${formatCurrency(source.paid_amount)}</td>
+                        <td class="text-end">${formatCurrency(source.pending_amount)}</td>
+                        <td class="text-end">${formatCurrency(source.total_amount)}</td>
+                    `;
+
+                    sourceRow.onclick = (e) => {
+                        e.stopPropagation();
+                        toggleUserSourceGroup(userId, source.income_type, sourceRowId);
+                    };
+
+                    insertAfter.insertAdjacentElement('afterend', sourceRow);
+                    insertAfter = sourceRow;
+                });
+            } catch (error) {
+                console.error('Error loading sources for user:', error);
+            }
+        }
+
+        async function toggleUserSourceGroup(userId, incomeType, sourceRowId) {
+            const dateRowsClass = `date-${sourceRowId}`;
+            const dateRows = document.querySelectorAll(`.${dateRowsClass}`);
+            const icon = document.getElementById(`icon-${sourceRowId}`);
+
+            if (dateRows.length > 0) {
+                dateRows.forEach(row => row.classList.toggle('show'));
+                icon.classList.toggle('expanded');
+            } else {
+                await loadDatesForUserSource(userId, incomeType, sourceRowId);
+                icon.classList.add('expanded');
+            }
+        }
+
+        async function loadDatesForUserSource(userId, incomeType, sourceRowId) {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+
+            try {
+                let url = `${API_BASE}/payout-dates-for-user-source?user_id=${userId}&income_type=${encodeURIComponent(incomeType)}`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+
+                const response = await fetch(url, { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load dates');
+
+                const result = await response.json();
+                if (!result.success || !result.data) return;
+
+                const sourceRow = document.getElementById(sourceRowId);
+                const tbody = sourceRow.parentElement;
+                let insertAfter = sourceRow;
+
+                result.data.forEach((dateItem, index) => {
+                    const dateRow = document.createElement('tr');
+                    dateRow.className = `user-row date-${sourceRowId} show`;
+
+                    dateRow.innerHTML = `
+                        <td></td>
+                        <td>${formatDate(dateItem.transaction_date)}</td>
+                        <td>${dateItem.count}</td>
+                        <td class="text-end">${formatCurrency(dateItem.paid_amount)}</td>
+                        <td class="text-end">${formatCurrency(dateItem.pending_amount)}</td>
+                        <td class="text-end">${formatCurrency(dateItem.total_amount)}</td>
+                    `;
+
+                    insertAfter.insertAdjacentElement('afterend', dateRow);
+                    insertAfter = dateRow;
+                });
+            } catch (error) {
+                console.error('Error loading dates for user source:', error);
+            }
+        }
+
+        // Sorting Functions
+        function sortDateView(column) {
+            const currentOrder = dateSortOrder[column] || 'none';
+            let newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+            dateSortOrder = { [column]: newOrder };
+
+            const dates = Object.keys(groupedData);
+            dates.sort((a, b) => {
+                if (column === 'date') {
+                    return newOrder === 'asc' ? new Date(a) - new Date(b) : new Date(b) - new Date(a);
+                } else if (column === 'count') {
+                    const countA = groupedData[a].totalCount;
+                    const countB = groupedData[b].totalCount;
+                    return newOrder === 'asc' ? countA - countB : countB - countA;
+                } else if (column === 'amount') {
+                    const amtA = groupedData[a].totalNetAmount;
+                    const amtB = groupedData[b].totalNetAmount;
+                    return newOrder === 'asc' ? amtA - amtB : amtB - amtA;
+                } else if (column === 'tds') {
+                    const tdsA = groupedData[a].totalTds;
+                    const tdsB = groupedData[b].totalTds;
+                    return newOrder === 'asc' ? tdsA - tdsB : tdsB - tdsA;
+                }
+                return 0;
+            });
+
+            const sortedGroupedData = {};
+            dates.forEach(date => { sortedGroupedData[date] = groupedData[date]; });
+            groupedData = sortedGroupedData;
+
+            updateSortIcons('date', column, newOrder);
+            renderGroupedTable();
+        }
+
+        function sortUserView(column) {
+            const currentOrder = userSortOrder[column] || 'none';
+            let newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+            userSortOrder = { [column]: newOrder };
+
+            userWiseData.sort((a, b) => {
+                if (column === 'user') {
+                    return newOrder === 'asc' ? a.user_name.localeCompare(b.user_name) : b.user_name.localeCompare(a.user_name);
+                } else if (column === 'count') {
+                    return newOrder === 'asc' ? a.transaction_count - b.transaction_count : b.transaction_count - a.transaction_count;
+                } else if (column === 'paid') {
+                    return newOrder === 'asc' ? a.paid_amount - b.paid_amount : b.paid_amount - a.paid_amount;
+                } else if (column === 'pending') {
+                    return newOrder === 'asc' ? a.pending_amount - b.pending_amount : b.pending_amount - a.pending_amount;
+                } else if (column === 'total') {
+                    return newOrder === 'asc' ? a.total_amount - b.total_amount : b.total_amount - a.total_amount;
+                }
+                return 0;
+            });
+
+            updateSortIcons('user', column, newOrder);
+            renderUserWiseTable();
+        }
+
+        function updateSortIcons(view, column, order) {
+            const prefix = view === 'date' ? 'sort-icon-' : 'sort-user-icon-';
+            ['date', 'status', 'count', 'amount', 'tds', 'user', 'paid', 'pending', 'total'].forEach(col => {
+                const icon = document.getElementById(`${prefix}${col}`);
+                if (icon) {
+                    icon.className = col === column && order !== 'none'
+                        ? `fas fa-sort-${order === 'asc' ? 'up' : 'down'}`
+                        : 'fas fa-sort';
+                }
+            });
+        }
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+        });
+    </script>
+</body>
+</html>

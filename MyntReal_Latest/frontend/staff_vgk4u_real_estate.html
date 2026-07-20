@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGK Real Dreams (ZR) - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        
+        .main-content { margin-left: 280px; padding-top: 0; min-height: 100vh; transition: margin-left 0.3s ease; padding-top: 88px; }
+        @media (max-width: 768px) { .main-content { margin-left: 0; } }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 24px; }
+        
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; height: 100%; }
+        .stat-card .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-card .label { color: #6b7280; font-size: 13px; margin-top: 4px; }
+        
+        .stat-purple .icon { background: #ede9fe; color: #7c3aed; }
+        .stat-blue .icon { background: #dbeafe; color: #2563eb; }
+        .stat-green .icon { background: #d1fae5; color: #059669; }
+        .stat-gold .icon { background: #fef3c7; color: #d97706; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #059669, #047857); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; }
+        .user-name { font-weight: 600; color: #1f2937 !important; }
+        .user-id { font-size: 11px; color: #4b5563 !important; }
+        
+        .role-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: capitalize; }
+        .role-promoter { background: #f3f4f6; color: #6b7280; }
+        .role-team_leader { background: #dbeafe; color: #1e40af; }
+        .role-zonal_manager { background: #ede9fe; color: #7c3aed; }
+        .role-director { background: #fef3c7; color: #92400e; }
+        
+        .revenue-badge { font-weight: 700; }
+        .revenue-positive { color: #059669; }
+        
+        .filter-panel { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; }
+        .filter-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+        .filter-row .form-control, .filter-row .form-select { border-radius: 8px; }
+        
+        .btn-primary { background: #059669; border: none; }
+        .btn-primary:hover { background: #047857; }
+        .btn-outline-primary { color: #059669; border-color: #059669; }
+        .btn-outline-primary:hover { background: #059669; color: white; }
+        
+        .action-btn { padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; border: none; margin: 0 2px; }
+        .action-btn-promote { background: #d1fae5; color: #065f46; }
+        .action-btn-promote:hover { background: #a7f3d0; }
+        .action-btn-view { background: #e0e7ff; color: #3730a3; }
+        .action-btn-view:hover { background: #c7d2fe; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; background: #ede9fe; color: #7c3aed; }
+
+        .loading-spinner { display: none; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top-color: #059669; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; color: #059669; }
+        
+        .modal-header { background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; }
+        .modal-header .btn-close { filter: invert(1); }
+        
+        .progress { height: 8px; border-radius: 4px; }
+        .progress-bar { background: linear-gradient(90deg, #059669, #047857); }
+        
+        .promotion-target { font-size: 11px; color: #6b7280; margin-top: 4px; }
+        
+        .pagination { margin: 20px 0 0 0; }
+        .page-link { color: #059669; }
+        .page-item.active .page-link { background: #059669; border-color: #059669; }
+        
+        .view-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+        .view-toggle .btn { padding: 8px 20px; border-radius: 8px; font-weight: 500; }
+        .view-toggle .btn.active { background: #059669; color: white; border-color: #059669; }
+        .view-toggle .btn:not(.active) { background: white; color: #6b7280; border: 1px solid #e5e7eb; }
+        
+        .hierarchy-container { display: none; }
+        .hierarchy-container.active { display: block; }
+        .list-container { display: block; }
+        .list-container.hidden { display: none; }
+        
+        .tree-view { padding: 20px; }
+        .tree-node { margin-left: 0; }
+        .tree-node .tree-children { margin-left: 32px; border-left: 2px solid #e5e7eb; padding-left: 16px; }
+        .tree-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin: 8px 0; background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); transition: all 0.2s; }
+        .tree-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateX(4px); }
+        .tree-item .tree-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; color: white; }
+        .tree-item .tree-info { flex: 1; }
+        .tree-item .tree-name { font-weight: 600; color: #1f2937; font-size: 14px; }
+        .tree-item .tree-id { font-size: 11px; color: #6b7280; }
+        .tree-item .tree-revenue { font-size: 12px; color: #059669; font-weight: 600; }
+        .tree-item .tree-team-count { font-size: 11px; color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 10px; }
+        
+        .role-director .tree-avatar { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .role-zonal_manager .tree-avatar { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .role-team_leader .tree-avatar { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .role-promoter .tree-avatar { background: linear-gradient(135deg, #6b7280, #4b5563); }
+        
+        .tree-level-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+        .level-1 { background: #fef3c7; color: #92400e; }
+        .level-2 { background: #ede9fe; color: #7c3aed; }
+        .level-3 { background: #dbeafe; color: #1e40af; }
+        .level-4 { background: #f3f4f6; color: #6b7280; }
+        
+        .collapse-btn { background: none; border: none; padding: 4px 8px; cursor: pointer; color: #6b7280; font-size: 12px; }
+        .collapse-btn:hover { color: #047857; }
+        
+        .income-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+        .income-pending { background: #fef3c7; color: #92400e; }
+        .income-approved { background: #d1fae5; color: #065f46; }
+        .income-disbursed { background: #dbeafe; color: #1e40af; }
+        .income-total { background: #f3f4f6; color: #374151; font-weight: 700; }
+        
+        .expand-btn { background: #f3f4f6; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; color: #059669; }
+        .expand-btn:hover { background: #e5e7eb; }
+        
+        .transaction-row { display: none; background: #f9fafb; }
+        .transaction-row.show { display: table-row; }
+        .transaction-details { padding: 16px; }
+        .transaction-table { width: 100%; font-size: 12px; }
+        .transaction-table th { background: #e5e7eb; padding: 8px 12px; text-align: left; font-weight: 600; }
+        .transaction-table td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
+        .transaction-table .status-pending { color: #d97706; }
+        .transaction-table .status-approved { color: #059669; }
+        .transaction-table .status-disbursed { color: #2563eb; }
+        
+        .status-section { margin-bottom: 16px; }
+        .status-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .status-header.pending-header { background: #fef3c7; color: #92400e; }
+        .status-header.approved-header { background: #d1fae5; color: #065f46; }
+        .status-header.disbursed-header { background: #dbeafe; color: #1e40af; }
+        .status-transactions { margin-top: 8px; display: none; }
+        .status-transactions.show { display: block; }
+        
+        .income-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+        
+        .promotion-progress { min-width: 100px; }
+        .promotion-progress .progress { margin-bottom: 2px; }
+        .promotion-progress small { font-size: 10px; white-space: nowrap; }
+        
+        .hierarchy-table-header {
+            display: flex; align-items: center; gap: 0;
+            background: #f9fafb; border-bottom: 2px solid #e5e7eb;
+            padding: 12px 16px; font-size: 12px; font-weight: 600;
+            color: #6b7280; text-transform: uppercase; position: sticky; top: 0; z-index: 10;
+        }
+        .hierarchy-row {
+            display: flex; align-items: center; gap: 0;
+            padding: 10px 16px; border-bottom: 1px solid #f3f4f6;
+            transition: background 0.15s;
+        }
+        .hierarchy-row:hover { background: #f9fafb; }
+        .hierarchy-col { display: flex; align-items: center; }
+        .hierarchy-col-member { flex: 2; min-width: 200px; gap: 8px; }
+        .hierarchy-col-role { flex: 1; min-width: 100px; justify-content: center; }
+        .hierarchy-col-revenue { flex: 1; min-width: 90px; justify-content: flex-end; font-weight: 600; font-size: 13px; }
+        .hierarchy-col-progress { flex: 1; min-width: 100px; flex-direction: column; align-items: flex-start; }
+        .hierarchy-col-income { flex: 1; min-width: 80px; justify-content: flex-end; }
+        .hierarchy-col-actions { flex: 0 0 80px; justify-content: center; gap: 4px; }
+        
+        .tree-toggle-btn { background: none; border: none; padding: 4px 6px; cursor: pointer; color: #6b7280; font-size: 11px; }
+        .tree-toggle-btn:hover { color: #047857; }
+        .tree-toggle-spacer { width: 24px; display: inline-block; }
+        .tree-avatar-sm { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 11px; color: white; flex-shrink: 0; }
+        .tree-member-info { display: flex; flex-direction: column; }
+        .tree-member-info .tree-name { font-weight: 600; color: #1f2937; font-size: 13px; }
+        .tree-member-info .tree-id { font-size: 10px; color: #6b7280; }
+        
+        .role-director .tree-avatar-sm, .hierarchy-row.role-director .tree-avatar-sm { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .role-zonal_manager .tree-avatar-sm, .hierarchy-row.role-zonal_manager .tree-avatar-sm { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .role-team_leader .tree-avatar-sm, .hierarchy-row.role-team_leader .tree-avatar-sm { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .role-promoter .tree-avatar-sm, .hierarchy-row.role-promoter .tree-avatar-sm { background: linear-gradient(135deg, #6b7280, #4b5563); }
+        
+        .tree-view { padding: 0; overflow-x: auto; }
+        .tree-node .tree-children { margin-left: 0; padding-left: 0; border-left: none; display: block; }
+        .tree-node .tree-children.collapsed { display: none; }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="page-banner">
+                <h1><i class="fas fa-sitemap"></i> VGK Real Dreams (ZR)</h1>
+                <p>Manage Zynova hierarchy - Promoters, Team Leaders, Zonal Managers, and Directors</p>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stat-card stat-purple">
+                        <div class="icon"><i class="fas fa-users"></i></div>
+                        <div class="value" id="statPromoters">--</div>
+                        <div class="label">Promoters</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-blue">
+                        <div class="icon"><i class="fas fa-user-tie"></i></div>
+                        <div class="value" id="statTeamLeaders">--</div>
+                        <div class="label">Team Leaders</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-green">
+                        <div class="icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div class="value" id="statZonalManagers">--</div>
+                        <div class="label">Zonal Managers</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card stat-gold">
+                        <div class="icon"><i class="fas fa-crown"></i></div>
+                        <div class="value" id="statDirectors">--</div>
+                        <div class="label">Directors</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="view-toggle">
+                <button class="btn active" id="listViewBtn" onclick="switchView('list')">
+                    <i class="fas fa-list me-2"></i>List View
+                </button>
+                <button class="btn" id="hierarchyViewBtn" onclick="switchView('hierarchy')">
+                    <i class="fas fa-sitemap me-2"></i>Hierarchy View
+                </button>
+            </div>
+            
+            <div class="filter-panel" id="filterPanel">
+                <div class="filter-row">
+                    <div class="flex-grow-1">
+                        <input type="text" class="form-control" id="searchInput" placeholder="Search by name or MNR ID...">
+                    </div>
+                    <div>
+                        <select class="form-select" id="roleFilter">
+                            <option value="">All Roles</option>
+                            <option value="promoter">Promoter</option>
+                            <option value="team_leader">Team Leader</option>
+                            <option value="zonal_manager">Zonal Manager</option>
+                            <option value="director">Director</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary" onclick="loadMembers()">
+                            <i class="fas fa-search me-2"></i>Search
+                        </button>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-primary" onclick="showAddMemberModal()">
+                            <i class="fas fa-plus me-2"></i>Add Member
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="list-container" id="listContainer">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-list me-2"></i>Member Directory</h5>
+                    <div class="loading-spinner" id="tableSpinner"></div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 30px;"></th>
+                                    <th>Member</th>
+                                    <th class="text-center">ZR Role</th>
+                                    <th class="text-end">Self Revenue</th>
+                                    <th class="text-end">Team Revenue</th>
+                                    <th class="text-center" style="min-width:150px;">Promotion Progress</th>
+                                    <th class="text-end">Pending</th>
+                                    <th class="text-end">Approved</th>
+                                    <th class="text-end">Disbursed</th>
+                                    <th class="text-end">Total Income</th>
+                                    <th class="text-center">Joined</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="membersTableBody">
+                                <tr>
+                                    <td colspan="12" class="text-center py-5">
+                                        <div class="empty-state">
+                                            <i class="fas fa-sitemap"></i>
+                                            <p>Loading members...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center" id="pagination"></ul>
+            </nav>
+            </div>
+            
+            <div class="hierarchy-container" id="hierarchyContainer">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-sitemap me-2"></i>Team Hierarchy</h5>
+                        <div class="loading-spinner" id="hierarchySpinner"></div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="hierarchy-table-header">
+                            <div class="hierarchy-col hierarchy-col-member">Member</div>
+                            <div class="hierarchy-col hierarchy-col-role">ZR Role</div>
+                            <div class="hierarchy-col hierarchy-col-revenue">Self Revenue</div>
+                            <div class="hierarchy-col hierarchy-col-revenue">Team Revenue</div>
+                            <div class="hierarchy-col hierarchy-col-progress">Promotion</div>
+                            <div class="hierarchy-col hierarchy-col-income">Pending</div>
+                            <div class="hierarchy-col hierarchy-col-income">Approved</div>
+                            <div class="hierarchy-col hierarchy-col-income">Disbursed</div>
+                            <div class="hierarchy-col hierarchy-col-income">Total</div>
+                            <div class="hierarchy-col hierarchy-col-actions">Actions</div>
+                        </div>
+                        <div class="tree-view" id="hierarchyTree">
+                            <div class="empty-state">
+                                <i class="fas fa-sitemap"></i>
+                                <p>Loading hierarchy...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="addMemberModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Add Zynova Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">User ID (MNR)</label>
+                        <input type="text" class="form-control" id="addUserId" placeholder="e.g., MNR1800143" pattern="MNR\d+" style="text-transform: uppercase;">
+                        <small class="text-muted">Enter full MNR ID like MNR1800143</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Initial Role</label>
+                        <select class="form-select" id="addRole">
+                            <option value="promoter">Promoter</option>
+                            <option value="team_leader">Team Leader</option>
+                            <option value="zonal_manager">Zonal Manager</option>
+                            <option value="director">Director</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Parent Member ID (Optional)</label>
+                        <input type="number" class="form-control" id="addParentId" placeholder="Enter parent Zynova member ID">
+                        <small class="text-muted">Leave empty if no sponsor</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitAddMember()">
+                        <i class="fas fa-check me-2"></i>Add Member
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="promoteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-arrow-up me-2"></i>Promote Member</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="promoteMemberId">
+                    <div class="mb-3">
+                        <label class="form-label">Member</label>
+                        <input type="text" class="form-control" id="promoteMemberName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Current Role</label>
+                        <input type="text" class="form-control" id="promoteCurrentRole" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Promote To</label>
+                        <select class="form-select" id="promoteNewRole">
+                            <option value="team_leader">Team Leader</option>
+                            <option value="zonal_manager">Zonal Manager</option>
+                            <option value="director">Director</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="submitPromotion()">
+                        <i class="fas fa-arrow-up me-2"></i>Promote
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script>
+        let currentPage = 1;
+        const perPage = 20;
+        
+        const PROMOTION_TARGETS = {
+            promoter: { target: 100000, next: 'Team Leader', label: '₹1L self revenue' },
+            team_leader: { target: 500000, next: 'Zonal Manager', label: '₹5L self+team revenue' },
+            zonal_manager: { target: 1000000, next: 'Director', label: '₹10L self+team revenue' },
+            director: { target: null, next: null, label: 'Highest rank achieved' }
+        };
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            await StaffSidebar.init();
+            StaffHeader.inject('VGK Real Dreams (ZR)', 'fas fa-sitemap');
+            updateHeaderInfo();
+            loadMembers();
+        });
+        
+        function updateHeaderInfo() {
+            const staffData = JSON.parse(localStorage.getItem('staff_data') || sessionStorage.getItem('staff_data') || '{}');
+            if (staffData.name) {
+                document.getElementById('headerUserName').textContent = staffData.name;
+                document.getElementById('headerUserInitials').textContent = staffData.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            }
+            if (staffData.role_name) {
+                document.getElementById('headerUserRole').textContent = staffData.role_name;
+            }
+        }
+        
+        async function loadMembers() {
+            const spinner = document.getElementById('tableSpinner');
+            spinner.style.display = 'block';
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const role = document.getElementById('roleFilter').value;
+                const category = document.getElementById('categoryFilter').value;
+                const search = document.getElementById('searchInput').value;
+                
+                let url = `/api/v1/myntreal/zynova/members?page=${currentPage}&per_page=${perPage}&include_transactions=true`;
+                if (role) url += `&role=${role}`;
+                if (category) url += `&category=${encodeURIComponent(category)}`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                
+                const response = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load members');
+                
+                const data = await response.json();
+                renderTable(data.data || []);
+                updateStats(data.data || []);
+                
+                if (data.filters && data.filters.categories) {
+                    populateCategoryFilter(data.filters.categories);
+                }
+            } catch (error) {
+                console.error('Error loading members:', error);
+                document.getElementById('membersTableBody').innerHTML = `
+                    <tr><td colspan="12" class="text-center py-5">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>Failed to load members. Please try again.</p>
+                        </div>
+                    </td></tr>`;
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+        
+        function populateCategoryFilter(categories) {
+            const select = document.getElementById('categoryFilter');
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">All Categories</option>';
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                if (cat === currentValue) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+        
+        function renderTable(data) {
+            const tbody = document.getElementById('membersTableBody');
+            
+            if (!data.length) {
+                tbody.innerHTML = `
+                    <tr><td colspan="12" class="text-center py-5">
+                        <div class="empty-state">
+                            <i class="fas fa-sitemap"></i>
+                            <p>No Zynova members found</p>
+                        </div>
+                    </td></tr>`;
+                return;
+            }
+            
+            let html = '';
+            data.forEach((item, idx) => {
+                const initials = (item.user_name || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                const reRoleClass = `role-${item.real_estate_role || item.role}`;
+                const insRoleClass = `role-${item.insurance_role || item.role}`;
+                const reRoleDisplay = item.real_estate_role_display || `ZR ${(item.real_estate_role || item.role || 'promoter').replace(/_/g, ' ')}`;
+                const insRoleDisplay = item.insurance_role_display || `ZC ${(item.insurance_role || item.role || 'promoter').replace(/_/g, ' ')}`;
+                const joinedDate = item.joined_at ? new Date(item.joined_at).toLocaleDateString('en-IN') : 'N/A';
+                
+                const selfRevenue = item.total_revenue || 0;
+                const teamRevenue = item.team_revenue || 0;
+                const incomePending = item.income_pending || 0;
+                const incomeApproved = item.income_approved || 0;
+                const incomeDisbursed = item.income_disbursed || 0;
+                const incomeTotal = item.income_total || 0;
+                
+                const promotion = getPromotionProgress(item.real_estate_role || item.role, selfRevenue, teamRevenue);
+                
+                const hasTransactions = item.transactions && (
+                    (item.transactions.pending && item.transactions.pending.length) ||
+                    (item.transactions.approved && item.transactions.approved.length) ||
+                    (item.transactions.disbursed && item.transactions.disbursed.length)
+                );
+                
+                const canPromote = item.role !== 'director';
+                const rowId = `row-${item.id}`;
+                
+                html += `
+                    <tr>
+                        <td class="text-center">
+                            ${hasTransactions ? `<button class="expand-btn" onclick="toggleTransactions('${rowId}')"><i class="fas fa-plus" id="icon-${rowId}"></i></button>` : ''}
+                        </td>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar">${initials}</div>
+                                <div>
+                                    <div class="user-name">${item.user_name || 'Unknown'}</div>
+                                    <div class="user-id">MNR: ${item.user_id}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="role-badge ${reRoleClass}">${reRoleDisplay}</span>
+                        </td>
+                        <td class="text-end">
+                            <span class="text-success fw-bold">₹${formatAmount(selfRevenue)}</span>
+                        </td>
+                        <td class="text-end">
+                            <span class="text-info fw-bold">₹${formatAmount(teamRevenue)}</span>
+                        </td>
+                        <td>
+                            <div class="promotion-progress">
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar ${promotion.barClass}" role="progressbar" style="width: ${promotion.percent}%"></div>
+                                </div>
+                                <small class="text-muted">${promotion.label}</small>
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <span class="income-badge income-pending">₹${formatAmount(incomePending)}</span>
+                            <div class="text-muted" style="font-size:10px;">${item.transaction_counts?.pending || 0} txn</div>
+                        </td>
+                        <td class="text-end">
+                            <span class="income-badge income-approved">₹${formatAmount(incomeApproved)}</span>
+                            <div class="text-muted" style="font-size:10px;">${item.transaction_counts?.approved || 0} txn</div>
+                        </td>
+                        <td class="text-end">
+                            <span class="income-badge income-disbursed">₹${formatAmount(incomeDisbursed)}</span>
+                            <div class="text-muted" style="font-size:10px;">${item.transaction_counts?.disbursed || 0} txn</div>
+                        </td>
+                        <td class="text-end">
+                            <span class="income-badge income-total">₹${formatAmount(incomeTotal)}</span>
+                        </td>
+                        <td class="text-center">${joinedDate}</td>
+                        <td class="text-center">
+                            <button class="action-btn action-btn-view" onclick="viewMember(${item.id})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            ${canPromote ? `
+                                <button class="action-btn action-btn-promote" onclick="showPromoteModal(${item.id}, '${item.user_name || 'Member'}', '${item.role}')">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>`;
+                
+                if (hasTransactions) {
+                    html += `
+                    <tr class="transaction-row" id="${rowId}">
+                        <td colspan="12">
+                            <div class="transaction-details">
+                                ${renderTransactionSection('pending', 'Pending', item.transactions.pending || [], incomePending)}
+                                ${renderTransactionSection('approved', 'Approved', item.transactions.approved || [], incomeApproved)}
+                                ${renderTransactionSection('disbursed', 'Disbursed', item.transactions.disbursed || [], incomeDisbursed)}
+                            </div>
+                        </td>
+                    </tr>`;
+                }
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
+        function formatAmount(amount) {
+            if (amount >= 100000) return (amount / 100000).toFixed(2) + 'L';
+            if (amount >= 1000) return (amount / 1000).toFixed(1) + 'K';
+            return amount.toLocaleString('en-IN');
+        }
+        
+        function getPromotionProgress(role, selfRevenue, teamRevenue) {
+            const targets = PROMOTION_TARGETS[role];
+            if (!targets || !targets.target) {
+                return { percent: 100, label: 'Max rank', barClass: 'bg-success' };
+            }
+            
+            let currentValue = selfRevenue;
+            if (role === 'team_leader' || role === 'zonal_manager') {
+                currentValue = selfRevenue + teamRevenue;
+            }
+            
+            const percent = Math.min(100, Math.round((currentValue / targets.target) * 100));
+            let barClass = 'bg-warning';
+            if (percent >= 100) barClass = 'bg-success';
+            else if (percent >= 50) barClass = 'bg-info';
+            
+            return {
+                percent,
+                label: `${percent}% to ${targets.next}`,
+                barClass
+            };
+        }
+        
+        function renderTransactionSection(status, label, transactions, total) {
+            if (!transactions.length) return '';
+            
+            const sectionId = `section-${status}-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+            
+            return `
+                <div class="status-section">
+                    <div class="status-header ${status}-header" onclick="toggleStatusSection('${sectionId}')">
+                        <i class="fas fa-chevron-right" id="icon-${sectionId}"></i>
+                        <span>${label}</span>
+                        <span class="ms-auto">₹${total.toLocaleString('en-IN')} (${transactions.length} transactions)</span>
+                    </div>
+                    <div class="status-transactions" id="${sectionId}">
+                        <table class="transaction-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Category</th>
+                                    <th>Revenue</th>
+                                    <th>Incentive</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${transactions.map(txn => `
+                                    <tr>
+                                        <td>#${txn.id}</td>
+                                        <td>${(txn.category || 'N/A').replace(/_/g, ' ')}</td>
+                                        <td>₹${(txn.revenue_amount || 0).toLocaleString('en-IN')}</td>
+                                        <td class="status-${status}"><strong>₹${(txn.incentive_amount || 0).toLocaleString('en-IN')}</strong></td>
+                                        <td>${txn.created_at ? new Date(txn.created_at).toLocaleDateString('en-IN') : 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        }
+        
+        function toggleTransactions(rowId) {
+            const row = document.getElementById(rowId);
+            const icon = document.getElementById('icon-' + rowId);
+            if (row.classList.contains('show')) {
+                row.classList.remove('show');
+                icon.classList.remove('fa-minus');
+                icon.classList.add('fa-plus');
+            } else {
+                row.classList.add('show');
+                icon.classList.remove('fa-plus');
+                icon.classList.add('fa-minus');
+            }
+        }
+        
+        function toggleStatusSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const icon = document.getElementById('icon-' + sectionId);
+            if (section.classList.contains('show')) {
+                section.classList.remove('show');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                section.classList.add('show');
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+        
+        function updateStats(data) {
+            const counts = { promoter: 0, team_leader: 0, zonal_manager: 0, director: 0 };
+            data.forEach(d => {
+                if (counts.hasOwnProperty(d.role)) counts[d.role]++;
+            });
+            
+            document.getElementById('statPromoters').textContent = counts.promoter;
+            document.getElementById('statTeamLeaders').textContent = counts.team_leader;
+            document.getElementById('statZonalManagers').textContent = counts.zonal_manager;
+            document.getElementById('statDirectors').textContent = counts.director;
+        }
+        
+        function showAddMemberModal() {
+            document.getElementById('addUserId').value = '';
+            document.getElementById('addRole').value = 'promoter';
+            document.getElementById('addParentId').value = '';
+            new bootstrap.Modal(document.getElementById('addMemberModal')).show();
+        }
+        
+        async function submitAddMember() {
+            let userId = document.getElementById('addUserId').value.trim().toUpperCase();
+            const role = document.getElementById('addRole').value;
+            const parentId = document.getElementById('addParentId').value;
+            
+            if (!userId) {
+                alert('Please enter a user ID');
+                return;
+            }
+            
+            if (!userId.startsWith('MNR')) {
+                userId = 'MNR' + userId;
+            }
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch('/api/v1/myntreal/zynova/members', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        role: role,
+                        parent_id: parentId ? parseInt(parentId) : null
+                    })
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Failed to add member');
+                }
+                
+                bootstrap.Modal.getInstance(document.getElementById('addMemberModal')).hide();
+                alert('Zynova member added successfully!');
+                loadMembers();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        function showPromoteModal(memberId, memberName, currentRole) {
+            document.getElementById('promoteMemberId').value = memberId;
+            document.getElementById('promoteMemberName').value = memberName;
+            document.getElementById('promoteCurrentRole').value = currentRole.replace(/_/g, ' ');
+            
+            const select = document.getElementById('promoteNewRole');
+            select.innerHTML = '';
+            
+            const roles = ['team_leader', 'zonal_manager', 'director'];
+            const roleIndex = roles.indexOf(currentRole);
+            
+            roles.slice(roleIndex + 1).forEach(role => {
+                const option = document.createElement('option');
+                option.value = role;
+                option.textContent = role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                select.appendChild(option);
+            });
+            
+            new bootstrap.Modal(document.getElementById('promoteModal')).show();
+        }
+        
+        async function submitPromotion() {
+            const memberId = document.getElementById('promoteMemberId').value;
+            const newRole = document.getElementById('promoteNewRole').value;
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch(`/api/v1/myntreal/zynova/members/${memberId}/promote`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ new_role: newRole })
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Failed to promote member');
+                }
+                
+                bootstrap.Modal.getInstance(document.getElementById('promoteModal')).hide();
+                alert('Member promoted successfully!');
+                loadMembers();
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        // DC Protocol (Dec 31, 2025): Comprehensive Member Details View
+        async function viewMember(memberId) {
+            const modal = document.getElementById('memberDetailsModal');
+            const modalBody = document.getElementById('memberDetailsBody');
+            const modalTitle = document.getElementById('memberDetailsTitle');
+            
+            modalBody.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-success" role="status"></div>
+                    <p class="mt-2 text-muted">Loading member details...</p>
+                </div>`;
+            modalTitle.textContent = 'Member Details';
+            new bootstrap.Modal(modal).show();
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch(`/api/v1/myntreal/zynova/members/${memberId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Failed to load member details');
+                }
+                
+                const result = await response.json();
+                const data = result.data;
+                
+                modalTitle.textContent = data.user_name || 'Member Details';
+                modalBody.innerHTML = renderMemberDetails(data);
+                
+            } catch (error) {
+                console.error('Error loading member details:', error);
+                modalBody.innerHTML = `
+                    <div class="text-center py-5 text-danger">
+                        <i class="fas fa-exclamation-circle fa-3x mb-3"></i>
+                        <p>Failed to load member details</p>
+                        <small>${error.message}</small>
+                    </div>`;
+            }
+        }
+        
+        function renderMemberDetails(data) {
+            const re = data.real_estate || {};
+            const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+            const formatAmount = (n) => parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+            const roleDisplay = re.role_display || (re.role || 'Promoter').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            const statusBadge = data.is_active 
+                ? '<span class="badge bg-success">Active</span>' 
+                : `<span class="badge bg-danger">Inactive</span>`;
+            
+            return `
+                <!-- Profile Overview Section -->
+                <div class="member-detail-section">
+                    <div class="section-header">
+                        <i class="fas fa-user"></i> Profile Overview
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">MNR ID</div>
+                                <div class="info-value">${data.user_id || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">Status</div>
+                                <div class="info-value">${statusBadge}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">Mobile</div>
+                                <div class="info-value">${data.user_mobile || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">Email</div>
+                                <div class="info-value">${data.user_email || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">MNR Created</div>
+                                <div class="info-value">${formatDate(data.mnr_created_at)}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">MNR Activated</div>
+                                <div class="info-value">${formatDate(data.mnr_activated_at)}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">Zynova Joined</div>
+                                <div class="info-value">${formatDate(data.joined_at)}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">Sponsor</div>
+                                <div class="info-value">${re.upline ? re.upline.name : '-'}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Real Estate Segment Performance -->
+                <div class="member-detail-section">
+                    <div class="section-header">
+                        <i class="fas fa-building"></i> VGK Real Dreams (ZR) Performance
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="stat-mini stat-role">
+                                <div class="stat-mini-icon"><i class="fas fa-user-tie"></i></div>
+                                <div class="stat-mini-value">${roleDisplay}</div>
+                                <div class="stat-mini-label">Current Role</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-mini stat-revenue">
+                                <div class="stat-mini-icon"><i class="fas fa-rupee-sign"></i></div>
+                                <div class="stat-mini-value">₹${formatAmount(re.self_revenue)}</div>
+                                <div class="stat-mini-label">Self Revenue</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-mini stat-team">
+                                <div class="stat-mini-icon"><i class="fas fa-users"></i></div>
+                                <div class="stat-mini-value">₹${formatAmount(re.team_revenue)}</div>
+                                <div class="stat-mini-label">Team Revenue</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">Team Members</div>
+                                <div class="info-value">${re.team_count || 0}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">Promoted At</div>
+                                <div class="info-value">${formatDate(re.promoted_at)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Lead Activity Summary -->
+                <div class="member-detail-section">
+                    <div class="section-header">
+                        <i class="fas fa-chart-line"></i> Lead Activity (Real Estate)
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="stat-mini stat-leads">
+                                <div class="stat-mini-icon"><i class="fas fa-clipboard-list"></i></div>
+                                <div class="stat-mini-value">${re.leads?.total || 0}</div>
+                                <div class="stat-mini-label">Total Leads</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-mini stat-converted">
+                                <div class="stat-mini-icon"><i class="fas fa-check-circle"></i></div>
+                                <div class="stat-mini-value">${re.leads?.converted || 0}</div>
+                                <div class="stat-mini-label">Converted</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-mini stat-rate">
+                                <div class="stat-mini-icon"><i class="fas fa-percentage"></i></div>
+                                <div class="stat-mini-value">${re.leads?.conversion_rate || 0}%</div>
+                                <div class="stat-mini-label">Conversion Rate</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-mini stat-deal">
+                                <div class="stat-mini-icon"><i class="fas fa-rupee-sign"></i></div>
+                                <div class="stat-mini-value">₹${formatAmount(re.leads?.total_deal_value)}</div>
+                                <div class="stat-mini-label">Value</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">First Lead Assigned</div>
+                                <div class="info-value">${formatDate(re.leads?.first_lead_at)}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-card">
+                                <div class="info-label">First Lead Converted</div>
+                                <div class="info-value">${formatDate(re.leads?.first_converted_at)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Earnings Summary -->
+                <div class="member-detail-section">
+                    <div class="section-header">
+                        <i class="fas fa-wallet"></i> Earnings Summary
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="earnings-card earnings-pending">
+                                <div class="earnings-icon"><i class="fas fa-clock"></i></div>
+                                <div class="earnings-amount">₹${formatAmount(re.earnings?.pending)}</div>
+                                <div class="earnings-label">Pending</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="earnings-card earnings-approved">
+                                <div class="earnings-icon"><i class="fas fa-check"></i></div>
+                                <div class="earnings-amount">₹${formatAmount(re.earnings?.approved)}</div>
+                                <div class="earnings-label">Approved</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="earnings-card earnings-disbursed">
+                                <div class="earnings-icon"><i class="fas fa-money-bill-wave"></i></div>
+                                <div class="earnings-amount">₹${formatAmount(re.earnings?.disbursed)}</div>
+                                <div class="earnings-label">Disbursed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Team Members -->
+                ${data.team && data.team.length > 0 ? `
+                <div class="member-detail-section">
+                    <div class="section-header">
+                        <i class="fas fa-users"></i> Direct Team Members (${data.team.length})
+                    </div>
+                    <div class="team-list">
+                        ${data.team.map(t => `
+                            <div class="team-member-row">
+                                <div class="team-avatar">${(t.name || 'U').charAt(0)}</div>
+                                <div class="team-info">
+                                    <div class="team-name">${t.name || 'Unknown'}</div>
+                                    <div class="team-role">${(t.role || 'member').replace(/_/g, ' ')}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        }
+        
+        let currentView = 'list';
+        
+        function switchView(view) {
+            currentView = view;
+            
+            document.getElementById('listViewBtn').classList.toggle('active', view === 'list');
+            document.getElementById('hierarchyViewBtn').classList.toggle('active', view === 'hierarchy');
+            
+            document.getElementById('listContainer').classList.toggle('hidden', view !== 'list');
+            document.getElementById('hierarchyContainer').classList.toggle('active', view === 'hierarchy');
+            document.getElementById('filterPanel').style.display = view === 'list' ? 'block' : 'none';
+            
+            if (view === 'hierarchy') {
+                loadHierarchy();
+            }
+        }
+        
+        async function loadHierarchy() {
+            const spinner = document.getElementById('hierarchySpinner');
+            const treeContainer = document.getElementById('hierarchyTree');
+            spinner.style.display = 'block';
+            
+            try {
+                const token = localStorage.getItem('staff_token');
+                const response = await fetch('/api/v1/myntreal/zynova/members/hierarchy', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (!response.ok) throw new Error('Failed to load hierarchy');
+                
+                const result = await response.json();
+                const hierarchy = result.data?.hierarchy || [];
+                
+                if (result.data?.stats) {
+                    document.getElementById('statPromoters').textContent = result.data.stats.promoter || 0;
+                    document.getElementById('statTeamLeaders').textContent = result.data.stats.team_leader || 0;
+                    document.getElementById('statZonalManagers').textContent = result.data.stats.zonal_manager || 0;
+                    document.getElementById('statDirectors').textContent = result.data.stats.director || 0;
+                }
+                
+                if (!hierarchy.length) {
+                    treeContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-sitemap"></i>
+                            <p>No hierarchy data found</p>
+                        </div>`;
+                    return;
+                }
+                
+                treeContainer.innerHTML = renderHierarchyTree(hierarchy, 1);
+            } catch (error) {
+                console.error('Error loading hierarchy:', error);
+                treeContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Failed to load hierarchy. Please try again.</p>
+                    </div>`;
+            } finally {
+                spinner.style.display = 'none';
+            }
+        }
+        
+        function renderHierarchyTree(nodes, level) {
+            if (!nodes || !nodes.length) return '';
+            
+            return nodes.map(node => {
+                const initials = (node.user_name || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                const roleLabel = (node.role || 'member').replace(/_/g, ' ');
+                const childrenCount = node.children?.length || 0;
+                const hasChildren = childrenCount > 0;
+                const nodeId = `node-${node.id}`;
+                
+                const roleIcons = {
+                    director: '👑',
+                    zonal_manager: '📍',
+                    team_leader: '👔',
+                    promoter: '👤'
+                };
+                
+                const selfRevenue = node.total_revenue || 0;
+                const teamRevenue = node.team_revenue || 0;
+                const incomePending = node.income_pending || 0;
+                const incomeApproved = node.income_approved || 0;
+                const incomeDisbursed = node.income_disbursed || 0;
+                const incomeTotal = node.income_total || 0;
+                
+                const promotion = getPromotionProgress(node.role, selfRevenue, teamRevenue);
+                const canPromote = node.role !== 'director';
+                const indentPx = (level - 1) * 24;
+                
+                return `
+                    <div class="tree-node">
+                        <div class="hierarchy-row role-${node.role}">
+                            <div class="hierarchy-col hierarchy-col-member" style="padding-left: ${indentPx}px;">
+                                ${hasChildren ? `<button class="tree-toggle-btn" onclick="toggleChildren('${nodeId}')"><i class="fas fa-chevron-down" id="icon-${nodeId}"></i></button>` : '<span class="tree-toggle-spacer"></span>'}
+                                <div class="tree-avatar-sm">${initials}</div>
+                                <div class="tree-member-info">
+                                    <div class="tree-name">${roleIcons[node.role] || '👤'} ${node.user_name || 'Unknown'}</div>
+                                    <div class="tree-id">${node.user_id}${hasChildren ? ` (${childrenCount})` : ''}</div>
+                                </div>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-role">
+                                <span class="role-badge role-${node.role}">${roleLabel}</span>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-revenue text-success">₹${formatAmount(selfRevenue)}</div>
+                            <div class="hierarchy-col hierarchy-col-revenue text-info">₹${formatAmount(teamRevenue)}</div>
+                            <div class="hierarchy-col hierarchy-col-progress">
+                                <div class="progress" style="height:6px;width:80px;">
+                                    <div class="progress-bar ${promotion.barClass}" style="width:${promotion.percent}%"></div>
+                                </div>
+                                <small class="text-muted">${promotion.label}</small>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-income">
+                                <span class="income-badge income-pending">₹${formatAmount(incomePending)}</span>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-income">
+                                <span class="income-badge income-approved">₹${formatAmount(incomeApproved)}</span>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-income">
+                                <span class="income-badge income-disbursed">₹${formatAmount(incomeDisbursed)}</span>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-income">
+                                <span class="income-badge income-total">₹${formatAmount(incomeTotal)}</span>
+                            </div>
+                            <div class="hierarchy-col hierarchy-col-actions">
+                                <button class="action-btn action-btn-view" onclick="viewMember(${node.id})"><i class="fas fa-eye"></i></button>
+                                ${canPromote ? `<button class="action-btn action-btn-promote" onclick="showPromoteModal(${node.id}, '${node.user_name || 'Member'}', '${node.role}')"><i class="fas fa-arrow-up"></i></button>` : ''}
+                            </div>
+                        </div>
+                        ${hasChildren ? `<div class="tree-children" id="${nodeId}">${renderHierarchyTree(node.children, level + 1)}</div>` : ''}
+                    </div>`;
+            }).join('');
+        }
+        
+        function toggleChildren(nodeId) {
+            const children = document.getElementById(nodeId);
+            const icon = document.getElementById('icon-' + nodeId);
+            if (!children || !icon) return;
+            
+            const isCollapsed = children.classList.contains('collapsed');
+            if (isCollapsed) {
+                children.classList.remove('collapsed');
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-down');
+            } else {
+                children.classList.add('collapsed');
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-right');
+            }
+        }
+    </script>
+    
+    <!-- DC Protocol (Dec 31, 2025): Member Details Modal -->
+    <div class="modal fade" id="memberDetailsModal" tabindex="-1" aria-labelledby="memberDetailsTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="memberDetailsTitle">Member Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="memberDetailsBody">
+                    <!-- Content loaded dynamically -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        /* Member Details Modal Styles - DC Protocol (Dec 31, 2025) */
+        #memberDetailsModal .modal-header {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+        }
+        #memberDetailsModal .modal-header .btn-close {
+            filter: invert(1);
+        }
+        .member-detail-section {
+            background: #f9fafb;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .member-detail-section .section-header {
+            font-weight: 600;
+            font-size: 15px;
+            color: #1f2937;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .member-detail-section .section-header i {
+            color: #059669;
+        }
+        .info-card {
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        .info-label {
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .stat-mini {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+        .stat-mini-icon {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+        .stat-mini-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .stat-mini-label {
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .stat-role .stat-mini-icon { color: #7c3aed; }
+        .stat-revenue .stat-mini-icon { color: #059669; }
+        .stat-team .stat-mini-icon { color: #2563eb; }
+        .stat-leads .stat-mini-icon { color: #6366f1; }
+        .stat-converted .stat-mini-icon { color: #10b981; }
+        .stat-rate .stat-mini-icon { color: #f59e0b; }
+        .stat-deal .stat-mini-icon { color: #059669; }
+        
+        .earnings-card {
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+        .earnings-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .earnings-amount {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .earnings-label {
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .earnings-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .earnings-pending .earnings-icon { color: #d97706; }
+        .earnings-approved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        .earnings-approved .earnings-icon { color: #059669; }
+        .earnings-disbursed {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        .earnings-disbursed .earnings-icon { color: #2563eb; }
+        
+        .team-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .team-member-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        .team-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #059669, #047857);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .team-name {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 14px;
+        }
+        .team-role {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: capitalize;
+        }
+    </style>
+</body>
+</html>

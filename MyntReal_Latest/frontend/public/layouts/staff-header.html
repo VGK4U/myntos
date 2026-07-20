@@ -1,0 +1,74 @@
+<!--
+  DC_LAYOUT_PHASE_1: Common Staff Header
+  Single source of truth for all staff page headers
+  Created: Jan 22, 2026
+  
+  Usage: Include via server-side injection or client-side fetch
+  Pages must NOT define their own headers after this file exists
+-->
+
+<div class="dc-top-header" id="dc-top-header">
+  <div class="dc-header-left">
+    <button class="dc-sidebar-toggle" id="dc-sidebar-toggle" aria-label="Toggle Sidebar">
+      <i class="fas fa-bars"></i>
+    </button>
+    <img src="/public/images/logo.png" alt="MyntReal Logo" height="36" class="dc-header-logo" />
+    <span class="dc-page-title" id="dc-page-title"></span>
+  </div>
+  <div class="dc-header-right">
+    <span class="dc-role-label" id="dc-role-label"></span>
+    <span class="dc-employee-id" id="dc-employee-id"></span>
+    <button class="dc-logout-btn" id="dc-logout-btn" onclick="logout()">
+      <i class="fas fa-sign-out-alt"></i>
+      <span class="dc-logout-text">Logout</span>
+    </button>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+  
+  function initDCHeader() {
+    var userData = null;
+    try {
+      userData = JSON.parse(localStorage.getItem('staff_user') || 'null');
+    } catch (e) {}
+    
+    if (userData) {
+      var roleLabel = document.getElementById('dc-role-label');
+      var employeeId = document.getElementById('dc-employee-id');
+      
+      if (roleLabel && userData.role_name) {
+        roleLabel.textContent = userData.role_name;
+      }
+      if (employeeId && userData.emp_code) {
+        employeeId.textContent = userData.emp_code;
+      }
+    }
+    
+    var sidebarToggle = document.getElementById('dc-sidebar-toggle');
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener('click', function() {
+        if (typeof StaffSidebar !== 'undefined' && StaffSidebar.toggleSidebar) {
+          StaffSidebar.toggleSidebar();
+        } else {
+          document.body.classList.toggle('sidebar-collapsed');
+        }
+      });
+    }
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDCHeader);
+  } else {
+    initDCHeader();
+  }
+})();
+
+function logout() {
+  localStorage.removeItem('staff_token');
+  localStorage.removeItem('staff_user');
+  window.location.href = '/staff/login';
+}
+</script>

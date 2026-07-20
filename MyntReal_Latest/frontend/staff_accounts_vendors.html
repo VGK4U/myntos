@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendors - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .btn-primary-custom { background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .filter-section { background: white; padding: 16px 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 12px; font-weight: 600; color: #6b7280; }
+        .filter-group input, .filter-group select { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 200px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .badge-active { background: #d1fae5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .badge-inactive { background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #f59e0b; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 12px; max-width: 900px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #1f2937; margin: 0; }
+        .modal-close { background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .form-tabs { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; }
+        .form-tab { padding: 12px 20px; cursor: pointer; border: none; background: none; font-size: 14px; font-weight: 500; color: #6b7280; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+        .form-tab:hover { color: #f59e0b; }
+        .form-tab.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .section-header { font-size: 14px; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin: 20px 0 16px 0; display: flex; align-items: center; gap: 8px; }
+        .section-header i { color: #f59e0b; }
+        .company-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .company-badge { background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+        .company-badge .remove-badge { cursor: pointer; color: #dc2626; }
+        .pin-lookup-btn { background: #3b82f6; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .pin-lookup-btn:hover { background: #2563eb; }
+        .scanner-preview { max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 8px; }
+        .map-link-btn { background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+        .map-link-btn:hover { background: #059669; color: white; }
+
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .header-logo { height: 36px; width: auto; }
+        
+        .product-select-container { border: 1px solid #d1d5db; border-radius: 6px; padding: 8px; max-height: 150px; overflow-y: auto; }
+        .product-checkbox { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+        .product-checkbox input { width: 16px; height: 16px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+            <div class="page-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 16px;">
+                <button class="btn-primary-custom" onclick="openCreateModal()"><i class="fas fa-plus me-2"></i>Add Vendor</button>
+            </div>
+            
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>Company</label>
+                    <select id="companyFilter" onchange="filterVendors()">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Vendor Type</label>
+                    <select id="typeFilter" onchange="filterVendors()">
+                        <option value="">All Types</option>
+                        <option value="PRODUCT">Product Only</option>
+                        <option value="SERVICE">Service Only</option>
+                        <option value="BOTH">Both</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Search</label>
+                    <input type="text" id="searchInput" placeholder="Search by name, code, or GST..." onkeyup="filterVendors()">
+                </div>
+                <button class="btn btn-outline-secondary" onclick="clearFilters()"><i class="fas fa-times me-1"></i>Clear</button>
+            </div>
+            
+            <div class="card">
+                <div class="card-header"><span><i class="fas fa-truck me-2"></i>Vendors</span><span class="text-muted" id="recordCount">0 vendors</span></div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="tableContainer" style="display: none;">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Name</th>
+                                        <th>Contact</th>
+                                        <th>GST Number</th>
+                                        <th>Location</th>
+                                        <th>Companies</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="vendorTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-truck"></i><h3>No Vendors Found</h3><p>Add your first vendor to get started</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create Modal -->
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-plus-circle me-2"></i>Add Vendor</h3><button class="modal-close" onclick="closeModal('createModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-tabs">
+                    <button class="form-tab active" onclick="switchTab('create', 'basic')">Basic Info</button>
+                    <button class="form-tab" onclick="switchTab('create', 'contact')">Contacts</button>
+                    <button class="form-tab" onclick="switchTab('create', 'address')">Address</button>
+                    <button class="form-tab" onclick="switchTab('create', 'bank')">Bank & Payment</button>
+                    <button class="form-tab" onclick="switchTab('create', 'products')">Products</button>
+                </div>
+                <form id="createForm">
+                    <!-- Basic Info Tab -->
+                    <div class="tab-content active" id="create-basic">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="form-group"><label>Vendor Name *</label><input type="text" id="formName" required placeholder="Enter vendor name"></div>
+                            <div class="form-group"><label>Vendor Code *</label><input type="text" id="formCode" required placeholder="e.g., VND001"></div>
+                            <div class="form-group"><label>Vendor Type</label><select id="formType"><option value="BOTH">Both (Product & Service)</option><option value="PRODUCT">Product Only</option><option value="SERVICE">Service Only</option></select></div>
+                            <div class="form-group"><label>Email</label><input type="email" id="formEmail" placeholder="Email address"></div>
+                            <div class="form-group"><label>GST Number</label><input type="text" id="formGst" placeholder="15-character GSTIN" maxlength="15"></div>
+                            <div class="form-group"><label>PAN Number</label><input type="text" id="formPan" placeholder="10-character PAN" maxlength="10"></div>
+                        </div>
+                        <div class="form-group" style="margin-top:8px;">
+                            <label style="font-weight:600;">GST Treatment <span style="font-weight:400;font-size:12px;color:#6b7280;">(affects invoice tax split)</span></label>
+                            <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+                                <label id="formGstCard_CGST" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:140px;padding:10px 14px;border:2px solid #3b82f6;border-radius:8px;background:#eff6ff;">
+                                    <input type="radio" id="formGstTypeCGST" name="formGstType" value="CGST_SGST" checked onchange="updateGstCard('form')">
+                                    <div>
+                                        <div style="font-weight:700;color:#1d4ed8;font-size:13px;">CGST + SGST</div>
+                                        <div style="font-size:11px;color:#6b7280;">Intra-state purchase</div>
+                                    </div>
+                                </label>
+                                <label id="formGstCard_IGST" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:140px;padding:10px 14px;border:2px solid #e5e7eb;border-radius:8px;background:#f9fafb;">
+                                    <input type="radio" id="formGstTypeIGST" name="formGstType" value="IGST" onchange="updateGstCard('form')">
+                                    <div>
+                                        <div style="font-weight:700;color:#374151;font-size:13px;">IGST</div>
+                                        <div style="font-size:11px;color:#6b7280;">Inter-state / Import</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-building"></i>Applicable Companies</div>
+                        <div class="form-group">
+                            <select id="formCompanySelect" onchange="addCompanyBadge('form')">
+                                <option value="">-- Select Company to Add --</option>
+                            </select>
+                            <div class="company-badges" id="formCompanyBadges"></div>
+                            <input type="hidden" id="formApplicableCompanies" value="[]">
+                        </div>
+                        <div class="section-header" style="margin-top:8px;"><i class="fas fa-balance-scale"></i>Opening Balance <span style="font-size:11px;font-weight:400;color:#6b7280;">(per company — optional)</span></div>
+                        <div id="formObRows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
+                        <button type="button" onclick="addObRow('form')" style="background:none;border:1px dashed #6366f1;color:#6366f1;border-radius:5px;padding:5px 14px;font-size:12px;cursor:pointer;"><i class="fas fa-plus-circle me-1"></i>Add Opening Balance</button>
+                    </div>
+                    
+                    <!-- Contacts Tab -->
+                    <div class="tab-content" id="create-contact">
+                        <div class="section-header"><i class="fas fa-user"></i>Contact Person 1 (Primary)</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                            <div class="form-group"><label>Name</label><input type="text" id="formContact1Name" placeholder="Contact name"></div>
+                            <div class="form-group"><label>Phone</label><input type="text" id="formContact1Phone" placeholder="Phone number"></div>
+                            <div class="form-group"><label>Designation</label><input type="text" id="formContact1Designation" placeholder="e.g., Sales Manager"></div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-user-friends"></i>Contact Person 2 (Secondary)</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                            <div class="form-group"><label>Name</label><input type="text" id="formContact2Name" placeholder="Contact name"></div>
+                            <div class="form-group"><label>Phone</label><input type="text" id="formContact2Phone" placeholder="Phone number"></div>
+                            <div class="form-group"><label>Designation</label><input type="text" id="formContact2Designation" placeholder="e.g., Accounts Manager"></div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-globe"></i>Website</div>
+                        <div class="form-group"><input type="url" id="formWebsite" placeholder="https://www.example.com"></div>
+                    </div>
+                    
+                    <!-- Address Tab -->
+                    <div class="tab-content" id="create-address">
+                        <div class="section-header"><i class="fas fa-map-marker-alt"></i>Primary Address</div>
+                        <div class="form-group"><label>Address</label><textarea id="formAddress" placeholder="Full address" rows="2"></textarea></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; align-items: end;">
+                            <div class="form-group"><label>Pincode</label><input type="text" id="formPincode" placeholder="6-digit PIN" maxlength="6" oninput="autoLookupPincode('form')"></div>
+                            <div class="form-group"><label>City</label><input type="text" id="formCity" placeholder="City"></div>
+                            <div class="form-group"><label>State</label><input type="text" id="formState" placeholder="State"></div>
+                            <button type="button" class="pin-lookup-btn" onclick="lookupPincode('form')"><i class="fas fa-search"></i> Lookup</button>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="form-group">
+                                <label>Map Link 1 (Office)</label>
+                                <input type="text" id="formMapLink1Label" placeholder="Label (e.g., Head Office)" style="margin-bottom: 8px;">
+                                <input type="url" id="formMapLink1" placeholder="Google Maps URL">
+                            </div>
+                            <div class="form-group">
+                                <label>Map Link 2 (Warehouse)</label>
+                                <input type="text" id="formMapLink2Label" placeholder="Label (e.g., Warehouse)" style="margin-bottom: 8px;">
+                                <input type="url" id="formMapLink2" placeholder="Google Maps URL">
+                            </div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-shipping-fast"></i>Shipping Address (if different)</div>
+                        <div class="form-group"><textarea id="formShipAddress" placeholder="Shipping address" rows="2"></textarea></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; align-items: end;">
+                            <div class="form-group"><label>Pincode</label><input type="text" id="formShipPincode" placeholder="6-digit PIN" maxlength="6" oninput="autoLookupPincode('formShip')"></div>
+                            <div class="form-group"><label>City</label><input type="text" id="formShipCity" placeholder="City"></div>
+                            <div class="form-group"><label>State</label><input type="text" id="formShipState" placeholder="State"></div>
+                            <button type="button" class="pin-lookup-btn" onclick="lookupPincode('formShip')"><i class="fas fa-search"></i> Lookup</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Bank Tab -->
+                    <div class="tab-content" id="create-bank">
+                        <div class="section-header"><i class="fas fa-university"></i>Bank Details</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="form-group"><label>Bank Name</label><input type="text" id="formBankName" placeholder="Bank name"></div>
+                            <div class="form-group"><label>Branch</label><input type="text" id="formBankBranch" placeholder="Branch name"></div>
+                            <div class="form-group"><label>Account Number</label><input type="text" id="formAccountNo" placeholder="Account number"></div>
+                            <div class="form-group"><label>IFSC Code</label><input type="text" id="formIfsc" placeholder="11-character IFSC" maxlength="11"></div>
+                            <div class="form-group"><label>Account Holder Name</label><input type="text" id="formAccountHolder" placeholder="Account holder name"></div>
+                            <div class="form-group"><label>UPI ID</label><input type="text" id="formUpiId" placeholder="e.g., vendor@upi"></div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-qrcode"></i>Payment Scanner QR</div>
+                        <div class="form-group">
+                            <label>Upload QR Code Image</label>
+                            <input type="file" id="formScannerFile" accept="image/*" style="padding: 8px;">
+                            <small class="text-muted d-block mt-1">Upload vendor's payment QR code for quick payments</small>
+                        </div>
+                        <div class="section-header"><i class="fas fa-credit-card"></i>Payment Terms</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                            <div class="form-group"><label>Payment Terms</label><select id="formPaymentTerms"><option value="COD">Cash on Delivery</option><option value="ADVANCE">Advance</option><option value="CREDIT_15">Credit 15 Days</option><option value="CREDIT_30">Credit 30 Days</option><option value="CREDIT_45">Credit 45 Days</option><option value="CREDIT_60">Credit 60 Days</option></select></div>
+                            <div class="form-group"><label>Credit Limit (₹)</label><input type="number" id="formCreditLimit" placeholder="0.00" min="0" step="0.01"></div>
+                            <div class="form-group"><label>Credit Days</label><input type="number" id="formCreditDays" placeholder="0" min="0" max="365"></div>
+                        </div>
+                        <div class="form-group"><label>Terms & Conditions</label><textarea id="formTerms" placeholder="Custom terms and conditions" rows="2"></textarea></div>
+                    </div>
+                    
+                    <!-- Products Tab -->
+                    <div class="tab-content" id="create-products">
+                        <div class="section-header"><i class="fas fa-boxes"></i>Associated Products</div>
+                        <p class="text-muted mb-3">Search and select products this vendor supplies:</p>
+                        <div class="form-group mb-3">
+                            <input type="text" id="formProductSearch" class="form-control" placeholder="Search products by name or code..." oninput="searchProducts('form')">
+                        </div>
+                        <div class="mb-2" id="formSelectedProductsContainer" style="display: none;">
+                            <label class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i>Selected Products (<span id="formSelectedCount">0</span>)</label>
+                            <div class="product-select-container" id="formSelectedProducts" style="max-height: 100px; background: #f0fdf4; border-color: #22c55e;"></div>
+                        </div>
+                        <label class="text-muted small">Available Products</label>
+                        <div class="product-select-container" id="formProductList" style="max-height: 200px;">
+                            <p class="text-muted">Type to search products...</p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="createVendor()"><i class="fas fa-save me-1"></i>Save Vendor</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header"><h3><i class="fas fa-edit me-2"></i>Edit Vendor</h3><button class="modal-close" onclick="closeModal('editModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-tabs">
+                    <button class="form-tab active" onclick="switchTab('edit', 'basic')">Basic Info</button>
+                    <button class="form-tab" onclick="switchTab('edit', 'contact')">Contacts</button>
+                    <button class="form-tab" onclick="switchTab('edit', 'address')">Address</button>
+                    <button class="form-tab" onclick="switchTab('edit', 'bank')">Bank & Payment</button>
+                    <button class="form-tab" onclick="switchTab('edit', 'products')">Products</button>
+                </div>
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <!-- Basic Info Tab -->
+                    <div class="tab-content active" id="edit-basic">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="form-group"><label>Vendor Name *</label><input type="text" id="editName" required placeholder="Enter vendor name"></div>
+                            <div class="form-group"><label>Vendor Code</label><input type="text" id="editCode" readonly style="background: #f3f4f6; cursor: not-allowed;"></div>
+                            <div class="form-group"><label>Vendor Type</label><select id="editType"><option value="BOTH">Both (Product & Service)</option><option value="PRODUCT">Product Only</option><option value="SERVICE">Service Only</option></select></div>
+                            <div class="form-group"><label>Email</label><input type="email" id="editEmail" placeholder="Email address"></div>
+                            <div class="form-group"><label>GST Number</label><input type="text" id="editGst" placeholder="15-character GSTIN" maxlength="15"></div>
+                            <div class="form-group"><label>PAN Number</label><input type="text" id="editPan" placeholder="10-character PAN" maxlength="10"></div>
+                        </div>
+                        <div class="form-group" style="margin-top:8px;">
+                            <label style="font-weight:600;">GST Treatment <span style="font-weight:400;font-size:12px;color:#6b7280;">(affects invoice tax split)</span></label>
+                            <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+                                <label id="editGstCard_CGST" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:140px;padding:10px 14px;border:2px solid #3b82f6;border-radius:8px;background:#eff6ff;">
+                                    <input type="radio" id="editGstTypeCGST" name="editGstType" value="CGST_SGST" checked onchange="updateGstCard('edit')">
+                                    <div>
+                                        <div style="font-weight:700;color:#1d4ed8;font-size:13px;">CGST + SGST</div>
+                                        <div style="font-size:11px;color:#6b7280;">Intra-state purchase</div>
+                                    </div>
+                                </label>
+                                <label id="editGstCard_IGST" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:140px;padding:10px 14px;border:2px solid #e5e7eb;border-radius:8px;background:#f9fafb;">
+                                    <input type="radio" id="editGstTypeIGST" name="editGstType" value="IGST" onchange="updateGstCard('edit')">
+                                    <div>
+                                        <div style="font-weight:700;color:#374151;font-size:13px;">IGST</div>
+                                        <div style="font-size:11px;color:#6b7280;">Inter-state / Import</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-building"></i>Applicable Companies</div>
+                        <div class="form-group">
+                            <select id="editCompanySelect" onchange="addCompanyBadge('edit')">
+                                <option value="">-- Select Company to Add --</option>
+                            </select>
+                            <div class="company-badges" id="editCompanyBadges"></div>
+                            <input type="hidden" id="editApplicableCompanies" value="[]">
+                        </div>
+                        <div class="section-header" style="margin-top:8px;"><i class="fas fa-balance-scale"></i>Opening Balance <span style="font-size:11px;font-weight:400;color:#6b7280;">(per company — override)</span></div>
+                        <div id="editObRows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
+                        <button type="button" onclick="addObRow('edit')" style="background:none;border:1px dashed #6366f1;color:#6366f1;border-radius:5px;padding:5px 14px;font-size:12px;cursor:pointer;"><i class="fas fa-plus-circle me-1"></i>Add Opening Balance</button>
+                        <div class="form-group mt-3">
+                            <label class="d-flex align-items-center gap-2"><input type="checkbox" id="editIsActive" checked> <span>Active</span></label>
+                        </div>
+                    </div>
+                    
+                    <!-- Contacts Tab -->
+                    <div class="tab-content" id="edit-contact">
+                        <div class="section-header"><i class="fas fa-user"></i>Contact Person 1 (Primary)</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                            <div class="form-group"><label>Name</label><input type="text" id="editContact1Name" placeholder="Contact name"></div>
+                            <div class="form-group"><label>Phone</label><input type="text" id="editContact1Phone" placeholder="Phone number"></div>
+                            <div class="form-group"><label>Designation</label><input type="text" id="editContact1Designation" placeholder="e.g., Sales Manager"></div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-user-friends"></i>Contact Person 2 (Secondary)</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                            <div class="form-group"><label>Name</label><input type="text" id="editContact2Name" placeholder="Contact name"></div>
+                            <div class="form-group"><label>Phone</label><input type="text" id="editContact2Phone" placeholder="Phone number"></div>
+                            <div class="form-group"><label>Designation</label><input type="text" id="editContact2Designation" placeholder="e.g., Accounts Manager"></div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-globe"></i>Website</div>
+                        <div class="form-group"><input type="url" id="editWebsite" placeholder="https://www.example.com"></div>
+                    </div>
+                    
+                    <!-- Address Tab -->
+                    <div class="tab-content" id="edit-address">
+                        <div class="section-header"><i class="fas fa-map-marker-alt"></i>Primary Address</div>
+                        <div class="form-group"><label>Address</label><textarea id="editAddress" placeholder="Full address" rows="2"></textarea></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; align-items: end;">
+                            <div class="form-group"><label>Pincode</label><input type="text" id="editPincode" placeholder="6-digit PIN" maxlength="6" oninput="autoLookupPincode('edit')"></div>
+                            <div class="form-group"><label>City</label><input type="text" id="editCity" placeholder="City"></div>
+                            <div class="form-group"><label>State</label><input type="text" id="editState" placeholder="State"></div>
+                            <button type="button" class="pin-lookup-btn" onclick="lookupPincode('edit')"><i class="fas fa-search"></i> Lookup</button>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="form-group">
+                                <label>Map Link 1</label>
+                                <input type="text" id="editMapLink1Label" placeholder="Label (e.g., Head Office)" style="margin-bottom: 8px;">
+                                <input type="url" id="editMapLink1" placeholder="Google Maps URL">
+                                <div id="editMapLink1Preview" class="mt-2"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Map Link 2</label>
+                                <input type="text" id="editMapLink2Label" placeholder="Label (e.g., Warehouse)" style="margin-bottom: 8px;">
+                                <input type="url" id="editMapLink2" placeholder="Google Maps URL">
+                                <div id="editMapLink2Preview" class="mt-2"></div>
+                            </div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-shipping-fast"></i>Shipping Address</div>
+                        <div class="form-group"><textarea id="editShipAddress" placeholder="Shipping address" rows="2"></textarea></div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 16px; align-items: end;">
+                            <div class="form-group"><label>Pincode</label><input type="text" id="editShipPincode" placeholder="6-digit PIN" maxlength="6" oninput="autoLookupPincode('editShip')"></div>
+                            <div class="form-group"><label>City</label><input type="text" id="editShipCity" placeholder="City"></div>
+                            <div class="form-group"><label>State</label><input type="text" id="editShipState" placeholder="State"></div>
+                            <button type="button" class="pin-lookup-btn" onclick="lookupPincode('editShip')"><i class="fas fa-search"></i> Lookup</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Bank Tab -->
+                    <div class="tab-content" id="edit-bank">
+                        <div class="section-header"><i class="fas fa-university"></i>Bank Details</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="form-group"><label>Bank Name</label><input type="text" id="editBankName" placeholder="Bank name"></div>
+                            <div class="form-group"><label>Branch</label><input type="text" id="editBankBranch" placeholder="Branch name"></div>
+                            <div class="form-group"><label>Account Number</label><input type="text" id="editAccountNo" placeholder="Account number"></div>
+                            <div class="form-group"><label>IFSC Code</label><input type="text" id="editIfsc" placeholder="11-character IFSC" maxlength="11"></div>
+                            <div class="form-group"><label>Account Holder Name</label><input type="text" id="editAccountHolder" placeholder="Account holder name"></div>
+                            <div class="form-group"><label>UPI ID</label><input type="text" id="editUpiId" placeholder="e.g., vendor@upi"></div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-qrcode"></i>Payment Scanner QR</div>
+                        <div class="form-group">
+                            <label>Upload New QR Code</label>
+                            <input type="file" id="editScannerFile" accept="image/*" style="padding: 8px;">
+                            <div id="editScannerPreview" class="mt-2"></div>
+                        </div>
+                        <div class="section-header"><i class="fas fa-credit-card"></i>Payment Terms</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                            <div class="form-group"><label>Payment Terms</label><select id="editPaymentTerms"><option value="COD">Cash on Delivery</option><option value="ADVANCE">Advance</option><option value="CREDIT_15">Credit 15 Days</option><option value="CREDIT_30">Credit 30 Days</option><option value="CREDIT_45">Credit 45 Days</option><option value="CREDIT_60">Credit 60 Days</option></select></div>
+                            <div class="form-group"><label>Credit Limit (₹)</label><input type="number" id="editCreditLimit" placeholder="0.00" min="0" step="0.01"></div>
+                            <div class="form-group"><label>Credit Days</label><input type="number" id="editCreditDays" placeholder="0" min="0" max="365"></div>
+                        </div>
+                        <div class="form-group"><label>Terms & Conditions</label><textarea id="editTerms" placeholder="Custom terms and conditions" rows="2"></textarea></div>
+                    </div>
+                    
+                    <!-- Products Tab -->
+                    <div class="tab-content" id="edit-products">
+                        <div class="section-header"><i class="fas fa-boxes"></i>Associated Products</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                            <p class="text-muted mb-0" style="font-size:13px;">Products this vendor supplies (manually select or auto-load from purchase history):</p>
+                            <button type="button" id="btnLoadPurchaseHistory" onclick="loadPurchaseHistoryProducts()" style="padding:6px 12px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;"><i class="fas fa-history me-1"></i>Load from Purchases</button>
+                        </div>
+                        <div class="form-group mb-3">
+                            <input type="text" id="editProductSearch" class="form-control" placeholder="Search products by name or code..." oninput="searchProducts('edit')">
+                        </div>
+                        <div class="mb-2" id="editSelectedProductsContainer" style="display: none;">
+                            <label class="text-success fw-bold"><i class="fas fa-check-circle me-1"></i>Selected Products (<span id="editSelectedCount">0</span>)</label>
+                            <div class="product-select-container" id="editSelectedProducts" style="max-height: 120px; background: #f0fdf4; border-color: #22c55e;"></div>
+                        </div>
+                        <label class="text-muted small">Available Products</label>
+                        <div class="product-select-container" id="editProductList" style="max-height: 200px;">
+                            <p class="text-muted">Type to search products...</p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
+                <button type="button" class="btn-primary-custom" onclick="updateVendor()"><i class="fas fa-save me-1"></i>Update Vendor</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let allVendors = [];
+        let allCompanies = [];
+        let allProducts = [];
+        const DELETE_ALLOWED_IDS = ['MR10001', 'MR10025'];
+        let canDeleteVendors = false;
+        let formSelectedProductIds = [];
+        let editSelectedProductIds = [];
+        let productSearchTimeout = null;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Vendors', 'fas fa-truck'); if (typeof StaffHeader !== 'undefined') StaffHeader.init(); if (typeof StaffBackButton !== 'undefined') StaffBackButton.init(); updateHeaderUserInfo();
+            await Promise.all([loadCompanies(), loadProducts(), loadVendors()]);
+        });
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            document.getElementById('headerUserInitials').textContent = (userData.full_name || 'SM').split(' ').map(n => n[0]).join('').substring(0, 2);
+            document.getElementById('headerUserName').textContent = userData.full_name || 'Staff Member';
+            document.getElementById('headerUserEmpId').textContent = userData.emp_code || '-';
+            document.getElementById('headerUserRole').textContent = userData.role_name || 'Employee';
+            canDeleteVendors = DELETE_ALLOWED_IDS.includes(userData.emp_code || '');
+        }
+        
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch(`${API_BASE}/companies`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allCompanies = data.companies || [];
+                    populateCompanyDropdowns();
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Failed to load companies:', e);
+            }
+        }
+        
+        function populateCompanyDropdowns() {
+            const filterSelect = document.getElementById('companyFilter');
+            const formSelect = document.getElementById('formCompanySelect');
+            const editSelect = document.getElementById('editCompanySelect');
+            
+            filterSelect.innerHTML = '<option value="">All Companies</option>' + 
+                allCompanies.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
+            
+            const companyOptions = '<option value="">-- Select Company to Add --</option>' + 
+                allCompanies.map(c => `<option value="${c.id}" data-name="${c.company_name}">${c.company_name}</option>`).join('');
+            formSelect.innerHTML = companyOptions;
+            editSelect.innerHTML = companyOptions;
+        }
+        
+        async function loadProducts() {
+            try {
+                const response = await staffFetch(`${API_BASE}/stock-items?page_size=100`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allProducts = data.stock_items || [];
+                    console.log('[DC-VENDOR] Loaded', allProducts.length, 'products');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-VENDOR] Failed to load products:', e);
+            }
+        }
+        
+        function searchProducts(prefix) {
+            clearTimeout(productSearchTimeout);
+            productSearchTimeout = setTimeout(() => doProductSearch(prefix), 300);
+        }
+        
+        async function doProductSearch(prefix) {
+            const searchInput = document.getElementById(`${prefix}ProductSearch`);
+            const productList = document.getElementById(`${prefix}ProductList`);
+            const searchTerm = searchInput.value.trim();
+            
+            if (searchTerm.length < 2) {
+                productList.innerHTML = '<p class="text-muted">Type at least 2 characters to search...</p>';
+                return;
+            }
+            
+            productList.innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Searching...</p>';
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/stock-items?search=${encodeURIComponent(searchTerm)}&page_size=50`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const products = data.stock_items || [];
+                    const selectedIds = prefix === 'form' ? formSelectedProductIds : editSelectedProductIds;
+                    
+                    if (!products.length) {
+                        productList.innerHTML = '<p class="text-muted">No products found matching your search</p>';
+                        return;
+                    }
+                    
+                    productList.innerHTML = products.map(p => {
+                        const isSelected = selectedIds.includes(p.id);
+                        return `<div class="product-checkbox">
+                            <input type="checkbox" id="${prefix}Product_${p.id}" value="${p.id}" 
+                                   ${isSelected ? 'checked' : ''} onchange="toggleProductSelection('${prefix}', ${p.id}, '${escapeHtml(p.item_code)}', '${escapeHtml(p.item_name)}')">
+                            <label for="${prefix}Product_${p.id}">${p.item_code} - ${p.item_name}</label>
+                        </div>`;
+                    }).join('');
+                } else {
+                    productList.innerHTML = '<p class="text-danger">Failed to search products</p>';
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-VENDOR] Product search error:', e);
+                productList.innerHTML = '<p class="text-danger">Search error</p>';
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML.replace(/'/g, "\\'");
+        }
+        
+        function toggleProductSelection(prefix, productId, itemCode, itemName) {
+            const selectedIds = prefix === 'form' ? formSelectedProductIds : editSelectedProductIds;
+            const index = selectedIds.indexOf(productId);
+            
+            if (index === -1) {
+                selectedIds.push(productId);
+                if (prefix === 'form') {
+                    formSelectedProductIds = selectedIds;
+                } else {
+                    editSelectedProductIds = selectedIds;
+                }
+            } else {
+                selectedIds.splice(index, 1);
+            }
+            
+            updateSelectedProductsUI(prefix);
+        }
+        
+        function updateSelectedProductsUI(prefix) {
+            const selectedIds = prefix === 'form' ? formSelectedProductIds : editSelectedProductIds;
+            const container = document.getElementById(`${prefix}SelectedProductsContainer`);
+            const countSpan = document.getElementById(`${prefix}SelectedCount`);
+            const selectedList = document.getElementById(`${prefix}SelectedProducts`);
+            
+            countSpan.textContent = selectedIds.length;
+            
+            if (selectedIds.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            
+            const matchedProducts = allProducts.filter(p => selectedIds.includes(p.id));
+            const unmatchedIds = selectedIds.filter(id => !allProducts.find(p => p.id === id));
+            
+            let html = matchedProducts.map(p => `
+                <div class="product-checkbox">
+                    <input type="checkbox" checked onchange="toggleProductSelection('${prefix}', ${p.id}, '', '')">
+                    <label><strong>${p.item_code}</strong> - ${p.item_name}</label>
+                </div>
+            `).join('');
+            
+            if (unmatchedIds.length > 0) {
+                html += unmatchedIds.map(id => `
+                    <div class="product-checkbox">
+                        <input type="checkbox" checked onchange="toggleProductSelection('${prefix}', ${id}, '', '')">
+                        <label>Product ID: ${id} <small class="text-muted">(details loading...)</small></label>
+                    </div>
+                `).join('');
+            }
+            
+            selectedList.innerHTML = html;
+        }
+
+        function updateGstCard(prefix) {
+            const val = document.querySelector(`input[name="${prefix}GstType"]:checked`)?.value || 'CGST_SGST';
+            const isCgst = val === 'CGST_SGST';
+            const cgstCard = document.getElementById(`${prefix}GstCard_CGST`);
+            const igstCard = document.getElementById(`${prefix}GstCard_IGST`);
+            if (!cgstCard || !igstCard) return;
+            if (isCgst) {
+                cgstCard.style.border = '2px solid #3b82f6';
+                cgstCard.style.background = '#eff6ff';
+                cgstCard.querySelector('div > div:first-child').style.color = '#1d4ed8';
+                igstCard.style.border = '2px solid #e5e7eb';
+                igstCard.style.background = '#f9fafb';
+                igstCard.querySelector('div > div:first-child').style.color = '#374151';
+            } else {
+                igstCard.style.border = '2px solid #f59e0b';
+                igstCard.style.background = '#fffbeb';
+                igstCard.querySelector('div > div:first-child').style.color = '#b45309';
+                cgstCard.style.border = '2px solid #e5e7eb';
+                cgstCard.style.background = '#f9fafb';
+                cgstCard.querySelector('div > div:first-child').style.color = '#374151';
+            }
+        }
+
+        let _currentEditVendorId = null;
+        async function loadPurchaseHistoryProducts() {
+            if (!_currentEditVendorId) return;
+            const btn = document.getElementById('btnLoadPurchaseHistory');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading...';
+            try {
+                const response = await staffFetch(`${API_BASE}/vendors/${_currentEditVendorId}/purchase-history-products`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const products = data.products || [];
+                    if (!products.length) {
+                        btn.innerHTML = '<i class="fas fa-history me-1"></i>Load from Purchases';
+                        btn.disabled = false;
+                        alert('No purchase history found for this vendor.');
+                        return;
+                    }
+                    let added = 0;
+                    products.forEach(p => {
+                        if (!editSelectedProductIds.includes(p.item_id)) {
+                            editSelectedProductIds.push(p.item_id);
+                            added++;
+                        }
+                        if (!allProducts.find(x => x.id === p.item_id)) {
+                            allProducts.push({ id: p.item_id, item_code: p.item_code || `ITEM${p.item_id}`, item_name: p.item_name || `Product ${p.item_id}` });
+                        }
+                    });
+                    updateSelectedProductsUI('edit');
+                    btn.innerHTML = `<i class="fas fa-check me-1"></i>${added} added`;
+                    setTimeout(() => {
+                        btn.innerHTML = '<i class="fas fa-history me-1"></i>Load from Purchases';
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    btn.innerHTML = '<i class="fas fa-history me-1"></i>Load from Purchases';
+                    btn.disabled = false;
+                    alert('Could not load purchase history.');
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-VENDOR] Purchase history load error:', e);
+                btn.innerHTML = '<i class="fas fa-history me-1"></i>Load from Purchases';
+                btn.disabled = false;
+            }
+        }
+
+        async function loadVendorProducts(vendorId, prefix) {
+            try {
+                const response = await staffFetch(`${API_BASE}/vendors/${vendorId}/products`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const products = data.products || [];
+                    const selectedIds = products.map(p => p.item_id);
+                    
+                    if (prefix === 'form') {
+                        formSelectedProductIds = selectedIds;
+                    } else {
+                        editSelectedProductIds = selectedIds;
+                    }
+                    
+                    products.forEach(p => {
+                        if (!allProducts.find(existing => existing.id === p.item_id)) {
+                            allProducts.push({
+                                id: p.item_id,
+                                item_code: p.item_code || `ITEM${p.item_id}`,
+                                item_name: p.item_name || `Product ${p.item_id}`
+                            });
+                        }
+                    });
+                    
+                    updateSelectedProductsUI(prefix);
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-VENDOR] Failed to load vendor products:', e);
+            }
+        }
+        
+        async function loadVendors() {
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/vendors?include_inactive=true&page_size=500`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allVendors = data.vendors || [];
+                    filterVendors();
+                } else { showEmptyState(); }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showEmptyState();
+            }
+            document.getElementById('loadingState').style.display = 'none';
+        }
+        
+        function filterVendors() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const companyId = document.getElementById('companyFilter').value;
+            const vendorType = document.getElementById('typeFilter').value;
+            
+            let filtered = allVendors;
+            
+            if (search) {
+                filtered = filtered.filter(v => 
+                    (v.vendor_name || '').toLowerCase().includes(search) || 
+                    (v.vendor_code || '').toLowerCase().includes(search) || 
+                    (v.gst_number || '').toLowerCase().includes(search) ||
+                    (v.city || '').toLowerCase().includes(search)
+                );
+            }
+            
+            if (companyId) {
+                filtered = filtered.filter(v => {
+                    const companies = v.applicable_companies || [];
+                    return companies.includes('ALL') || companies.includes(parseInt(companyId));
+                });
+            }
+            
+            if (vendorType) {
+                filtered = filtered.filter(v => v.vendor_type === vendorType);
+            }
+            
+            renderVendors(filtered);
+        }
+        
+        function clearFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('companyFilter').value = '';
+            document.getElementById('typeFilter').value = '';
+            filterVendors();
+        }
+        
+        function renderVendors(vendors) {
+            const tbody = document.getElementById('vendorTable');
+            if (!vendors.length) { showEmptyState(); return; }
+            document.getElementById('tableContainer').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('recordCount').textContent = `${vendors.length} vendors`;
+            
+            tbody.innerHTML = vendors.map(v => {
+                const contactDisplay = v.contact_person_1_name || v.contact_person || '-';
+                const phoneDisplay = v.contact_person_1_phone || v.phone || '-';
+                const _vac = v.applicable_companies || [];
+                const companies = _vac.includes('ALL')
+                    ? 'All Companies'
+                    : _vac.map(id => {
+                        const company = allCompanies.find(c => c.id === id);
+                        return company ? company.company_name.substring(0, 20) : '';
+                    }).filter(Boolean).join(', ') || '-';
+                
+                return `<tr>
+                    <td><code>${v.vendor_code || '-'}</code></td>
+                    <td><strong>${v.vendor_name || 'Unnamed'}</strong>${contactDisplay !== '-' ? `<br><small class="text-muted">${contactDisplay}</small>` : ''}</td>
+                    <td>${phoneDisplay}${v.email ? `<br><small class="text-muted">${v.email}</small>` : ''}</td>
+                    <td>${v.gst_number || '-'}${v.pan_number ? `<br><small class="text-muted">PAN: ${v.pan_number}</small>` : ''}</td>
+                    <td>${v.city || '-'}${v.state ? `, ${v.state}` : ''}</td>
+                    <td><small>${companies}</small></td>
+                    <td><span class="${v.is_active !== false ? 'badge-active' : 'badge-inactive'}">${v.is_active !== false ? 'Active' : 'Inactive'}</span></td>
+                    <td style="white-space:nowrap">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="openEditModal(${v.id})"><i class="fas fa-edit"></i></button>
+                        ${canDeleteVendors ? `<button class="btn btn-sm btn-outline-danger ms-1" onclick="deleteVendor(${v.id}, '${(v.vendor_name||'').replace(/'/g,'\\\'')}')" title="Delete vendor"><i class="fas fa-trash"></i></button>` : ''}
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+        
+        function showEmptyState() { 
+            document.getElementById('tableContainer').style.display = 'none'; 
+            document.getElementById('emptyState').style.display = 'block'; 
+            document.getElementById('recordCount').textContent = '0 vendors';
+        }
+        
+        function switchTab(modal, tab) {
+            const tabs = document.querySelectorAll(`#${modal}Modal .form-tab`);
+            const contents = document.querySelectorAll(`#${modal}Modal .tab-content`);
+            
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${modal}-${tab}`).classList.add('active');
+        }
+        
+        function addCompanyBadge(prefix) {
+            const select = document.getElementById(`${prefix}CompanySelect`);
+            const selectedOption = select.options[select.selectedIndex];
+            if (!select.value) return;
+            
+            const companyId = parseInt(select.value);
+            const companyName = selectedOption.dataset.name || selectedOption.text;
+            
+            const hiddenInput = document.getElementById(`${prefix}ApplicableCompanies`);
+            let companies = JSON.parse(hiddenInput.value || '[]');
+            
+            if (!companies.includes(companyId)) {
+                companies.push(companyId);
+                hiddenInput.value = JSON.stringify(companies);
+                renderCompanyBadges(prefix, companies);
+            }
+            
+            select.value = '';
+        }
+        
+        function removeCompanyBadge(prefix, companyId) {
+            const hiddenInput = document.getElementById(`${prefix}ApplicableCompanies`);
+            let companies = JSON.parse(hiddenInput.value || '[]');
+            companies = companies.filter(id => id !== companyId);
+            hiddenInput.value = JSON.stringify(companies);
+            renderCompanyBadges(prefix, companies);
+        }
+        
+        function renderCompanyBadges(prefix, companyIds) {
+            const container = document.getElementById(`${prefix}CompanyBadges`);
+            container.innerHTML = companyIds.map(id => {
+                const company = allCompanies.find(c => c.id === id);
+                const name = company ? company.company_name : `Company #${id}`;
+                return `<span class="company-badge">${name.substring(0, 25)} <span class="remove-badge" onclick="removeCompanyBadge('${prefix}', ${id})">&times;</span></span>`;
+            }).join('');
+            renderObRows(prefix);
+        }
+
+        // ═══════════ Opening Balance per-company widget (DC-OB-WIDGET-001) ═══════════
+        const _obData = {};
+        function getCoArrForPrefix(_p) { return allCompanies || []; }
+        function _obGetAvailCos(prefix) {
+            const all = getCoArrForPrefix(prefix);
+            try {
+                const el = document.getElementById(`${prefix}ApplicableCompanies`);
+                if (!el) return all;
+                const ids = JSON.parse(el.value || '[]');
+                if (!ids.length) return all;
+                return all.filter(c => ids.includes(c.id));
+            } catch(e) { return all; }
+        }
+        function renderObRows(prefix) {
+            const container = document.getElementById(`${prefix}ObRows`);
+            if (!container) return;
+            const rows = _obData[prefix] || [];
+            if (!rows.length) {
+                container.innerHTML = '<div style="color:#9ca3af;font-size:12px;font-style:italic;padding:3px 2px;">No opening balance set — click <b>Add Opening Balance</b> below.</div>';
+                return;
+            }
+            const avail = _obGetAvailCos(prefix);
+            container.innerHTML = rows.map((r, i) => `
+                <div style="display:grid;grid-template-columns:minmax(110px,2fr) 100px 150px 120px 30px;gap:6px;align-items:end;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;">
+                    <div><label style="font-size:11px;color:#6b7280;display:block;margin-bottom:2px;">Company</label>
+                    <select style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;"
+                        onchange="_obData['${prefix}'][${i}].company_id=this.value?parseInt(this.value):null">
+                        <option value="">All applicable</option>
+                        ${avail.map(c=>`<option value="${c.id}"${r.company_id==c.id?' selected':''}>${(c.company_name||'Co '+c.id).substring(0,28)}</option>`).join('')}
+                    </select></div>
+                    <div><label style="font-size:11px;color:#6b7280;display:block;margin-bottom:2px;">Amount (₹)</label>
+                    <input type="number" min="0" step="0.01" value="${r.amount||0}"
+                        style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;"
+                        oninput="_obData['${prefix}'][${i}].amount=parseFloat(this.value)||0"></div>
+                    <div><label style="font-size:11px;color:#6b7280;display:block;margin-bottom:2px;">Balance Type</label>
+                    <select style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;"
+                        onchange="_obData['${prefix}'][${i}].type=this.value">
+                        <option value="CREDIT"${r.type==='CREDIT'?' selected':''}>CR — We owe them</option>
+                        <option value="DEBIT"${r.type==='DEBIT'?' selected':''}>DR — They owe us</option>
+                    </select></div>
+                    <div><label style="font-size:11px;color:#6b7280;display:block;margin-bottom:2px;">As of Date</label>
+                    <input type="date" value="${r.date||''}"
+                        style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;"
+                        oninput="_obData['${prefix}'][${i}].date=this.value||null"></div>
+                    <button type="button" onclick="removeObRow('${prefix}',${i})"
+                        style="background:none;border:1px solid #fca5a5;color:#ef4444;border-radius:4px;padding:4px 7px;cursor:pointer;" title="Remove">
+                        <i class="fas fa-times" style="font-size:10px;"></i></button>
+                </div>`).join('');
+        }
+        function addObRow(prefix) {
+            if (!_obData[prefix]) _obData[prefix] = [];
+            _obData[prefix].push({company_id:null, amount:0, type:'CREDIT', date:null});
+            renderObRows(prefix);
+        }
+        function removeObRow(prefix, i) {
+            if (_obData[prefix]) _obData[prefix].splice(i,1);
+            renderObRows(prefix);
+        }
+        function resetObRows(prefix) { _obData[prefix]=[]; renderObRows(prefix); }
+        function setObRowsFromApi(prefix, apiRows) {
+            _obData[prefix] = (apiRows||[]).map(r=>({
+                company_id: r.company_id||null,
+                amount: parseFloat(r.amount??r.opening_balance)||0,
+                type: r.type||r.opening_balance_type||'CREDIT',
+                date: r.date||r.opening_balance_date||null
+            })).filter(r=>r.amount>0);
+            renderObRows(prefix);
+        }
+        function collectObRows(prefix) {
+            return (_obData[prefix]||[]).map(r=>({
+                company_id: r.company_id||null, amount: r.amount||0,
+                type: r.type||'CREDIT', date: r.date||null
+            }));
+        }
+        // ══════════════════════════════════════════════════════════════════════════════
+
+        const pincodeLookupTimers = {};
+        
+        function autoLookupPincode(prefix) {
+            if (pincodeLookupTimers[prefix]) {
+                clearTimeout(pincodeLookupTimers[prefix]);
+            }
+            const pincodeField = document.getElementById(`${prefix}Pincode`);
+            const pincode = pincodeField.value.trim();
+            
+            if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
+                pincodeLookupTimers[prefix] = setTimeout(() => lookupPincode(prefix, true), 500);
+            }
+        }
+        
+        async function lookupPincode(prefix, silent = false) {
+            const pincodeField = document.getElementById(`${prefix}Pincode`);
+            const pincode = pincodeField.value.trim();
+            
+            if (!pincode || pincode.length !== 6) {
+                if (!silent) alert('Please enter a valid 6-digit PIN code');
+                return;
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            try {
+                const response = await fetch(`${API_BASE}/pincode/${pincode}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById(`${prefix}City`).value = data.city || '';
+                    document.getElementById(`${prefix}State`).value = data.state || '';
+                    console.log('[DC-VENDOR] PIN lookup success:', pincode, '->', data.city, data.state);
+                } else {
+                    if (!silent) alert(data.error || 'PIN code not found');
+                }
+            } catch (e) {
+                console.error('[DC-VENDOR] PIN lookup error:', e);
+                if (!silent) alert('Failed to lookup PIN code');
+            }
+        }
+        
+        function openCreateModal() { 
+            document.getElementById('createForm').reset();
+            document.getElementById('formApplicableCompanies').value = '[]';
+            document.getElementById('formCompanyBadges').innerHTML = '';
+            resetObRows('form');
+            
+            formSelectedProductIds = [];
+            document.getElementById('formProductSearch').value = '';
+            document.getElementById('formProductList').innerHTML = '<p class="text-muted">Type to search products...</p>';
+            updateSelectedProductsUI('form');
+            
+            document.querySelectorAll('#createModal .form-tab').forEach((t, i) => {
+                t.classList.toggle('active', i === 0);
+            });
+            document.querySelectorAll('#createModal .tab-content').forEach((c, i) => {
+                c.classList.toggle('active', i === 0);
+            });
+            
+            document.getElementById('createModal').classList.add('active'); 
+        }
+        
+        async function deleteVendor(vendorId, vendorName) {
+            if (!canDeleteVendors) return;
+            if (!confirm(`Delete vendor "${vendorName}"?\n\nThis will deactivate the vendor and cannot be undone easily.`)) return;
+            try {
+                const token = localStorage.getItem('staff_token');
+                const r = await fetch(`${API_BASE}/vendors/${vendorId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await r.json();
+                if (r.ok && data.success) {
+                    allVendors = allVendors.filter(v => v.id !== vendorId);
+                    filterVendors();
+                } else {
+                    alert(data.detail || data.message || 'Failed to delete vendor');
+                }
+            } catch (e) {
+                alert('Network error — could not delete vendor');
+            }
+        }
+
+        async function openEditModal(vendorId) {
+            _currentEditVendorId = vendorId;
+            const token = localStorage.getItem('staff_token');
+            try {
+                const [vendorRes, productsRes] = await Promise.all([
+                    fetch(`${API_BASE}/vendors/${vendorId}`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE}/vendors/${vendorId}/products`, { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
+                
+                if (!vendorRes.ok) { alert('Failed to load vendor details'); return; }
+                const vendorData = await vendorRes.json();
+                const v = vendorData.vendor;
+                
+                let vendorProducts = [];
+                let vendorProductDetails = [];
+                if (productsRes.ok) {
+                    const prodData = await productsRes.json();
+                    vendorProductDetails = prodData.products || [];
+                    vendorProducts = vendorProductDetails.map(p => p.item_id);
+                }
+                
+                document.getElementById('editId').value = v.id;
+                document.getElementById('editName').value = v.vendor_name || '';
+                document.getElementById('editCode').value = v.vendor_code || '';
+                document.getElementById('editType').value = v.vendor_type || 'BOTH';
+                document.getElementById('editEmail').value = v.email || '';
+                document.getElementById('editGst').value = v.gst_number || '';
+                document.getElementById('editPan').value = v.pan_number || '';
+                const editGstTypeVal = v.gst_type || 'CGST_SGST';
+                document.getElementById(editGstTypeVal === 'IGST' ? 'editGstTypeIGST' : 'editGstTypeCGST').checked = true;
+                updateGstCard('edit');
+                
+                document.getElementById('editContact1Name').value = v.contact_person_1_name || v.contact_person || '';
+                document.getElementById('editContact1Phone').value = v.contact_person_1_phone || v.phone || '';
+                document.getElementById('editContact1Designation').value = v.contact_person_1_designation || '';
+                document.getElementById('editContact2Name').value = v.contact_person_2_name || '';
+                document.getElementById('editContact2Phone').value = v.contact_person_2_phone || '';
+                document.getElementById('editContact2Designation').value = v.contact_person_2_designation || '';
+                document.getElementById('editWebsite').value = v.website_url || '';
+                
+                document.getElementById('editAddress').value = v.address || '';
+                document.getElementById('editCity').value = v.city || '';
+                document.getElementById('editState').value = v.state || '';
+                document.getElementById('editPincode').value = v.pincode || '';
+                document.getElementById('editMapLink1').value = v.map_link_1 || '';
+                document.getElementById('editMapLink1Label').value = v.map_link_1_label || 'Office';
+                document.getElementById('editMapLink2').value = v.map_link_2 || '';
+                document.getElementById('editMapLink2Label').value = v.map_link_2_label || 'Warehouse';
+                document.getElementById('editShipAddress').value = v.ship_to_address || '';
+                document.getElementById('editShipCity').value = v.ship_to_city || '';
+                document.getElementById('editShipState').value = v.ship_to_state || '';
+                document.getElementById('editShipPincode').value = v.ship_to_pincode || '';
+                
+                document.getElementById('editBankName').value = v.bank_name || '';
+                document.getElementById('editBankBranch').value = v.bank_branch || '';
+                document.getElementById('editAccountNo').value = v.account_number || '';
+                document.getElementById('editIfsc').value = v.ifsc_code || '';
+                document.getElementById('editAccountHolder').value = v.account_holder_name || '';
+                document.getElementById('editUpiId').value = v.upi_id || '';
+                document.getElementById('editPaymentTerms').value = v.payment_terms || 'COD';
+                document.getElementById('editCreditLimit').value = v.credit_limit || 0;
+                document.getElementById('editCreditDays').value = v.credit_days || 0;
+                document.getElementById('editTerms').value = v.terms_conditions || '';
+                document.getElementById('editIsActive').checked = v.is_active !== false;
+
+                setObRowsFromApi('edit', v.opening_balances || []);
+                
+                if (v.payment_scanner_path) {
+                    document.getElementById('editScannerPreview').innerHTML = `<img src="${v.payment_scanner_path}" class="scanner-preview" alt="QR Code">`;
+                } else {
+                    document.getElementById('editScannerPreview').innerHTML = '';
+                }
+                
+                const companies = v.applicable_companies || [];
+                document.getElementById('editApplicableCompanies').value = JSON.stringify(companies);
+                renderCompanyBadges('edit', companies);
+                
+                editSelectedProductIds = vendorProducts;
+                
+                vendorProductDetails.forEach(p => {
+                    if (!allProducts.find(existing => existing.id === p.item_id)) {
+                        allProducts.push({
+                            id: p.item_id,
+                            item_code: p.item_code || `ITEM${p.item_id}`,
+                            item_name: p.item_name || `Product ${p.item_id}`
+                        });
+                    }
+                });
+                
+                document.getElementById('editProductSearch').value = '';
+                document.getElementById('editProductList').innerHTML = '<p class="text-muted">Type to search products...</p>';
+                updateSelectedProductsUI('edit');
+                
+                document.querySelectorAll('#editModal .form-tab').forEach((t, i) => {
+                    t.classList.toggle('active', i === 0);
+                });
+                document.querySelectorAll('#editModal .tab-content').forEach((c, i) => {
+                    c.classList.toggle('active', i === 0);
+                });
+                
+                document.getElementById('editModal').classList.add('active');
+            } catch (e) { 
+                console.error('Error loading vendor:', e);
+                alert('Failed to load vendor details'); 
+            }
+        }
+        
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        
+        function getSelectedProducts(prefix) {
+            return prefix === 'form' ? formSelectedProductIds : editSelectedProductIds;
+        }
+        
+        async function createVendor() {
+            const token = localStorage.getItem('staff_token');
+            const vendorName = document.getElementById('formName').value.trim();
+            const vendorCode = document.getElementById('formCode').value.trim();
+            if (!vendorName) { alert('Vendor name is required'); return; }
+            if (!vendorCode) { alert('Vendor code is required'); return; }
+            
+            const _rawCompanies = JSON.parse(document.getElementById('formApplicableCompanies').value || '[]');
+            const applicableCompanies = _rawCompanies.length > 0 ? _rawCompanies : ['ALL'];
+            const productIds = getSelectedProducts('form');
+            
+            const data = { 
+                vendor_name: vendorName, 
+                vendor_code: vendorCode.toUpperCase(),
+                vendor_type: document.getElementById('formType').value || 'BOTH',
+                contact_person: document.getElementById('formContact1Name').value.trim() || null,
+                phone: document.getElementById('formContact1Phone').value.trim() || null,
+                email: document.getElementById('formEmail').value.trim().toLowerCase() || null,
+                contact_person_1_name: document.getElementById('formContact1Name').value.trim() || null,
+                contact_person_1_phone: document.getElementById('formContact1Phone').value.trim() || null,
+                contact_person_1_designation: document.getElementById('formContact1Designation').value.trim() || null,
+                contact_person_2_name: document.getElementById('formContact2Name').value.trim() || null,
+                contact_person_2_phone: document.getElementById('formContact2Phone').value.trim() || null,
+                contact_person_2_designation: document.getElementById('formContact2Designation').value.trim() || null,
+                gst_number: document.getElementById('formGst').value.trim().toUpperCase() || null,
+                pan_number: document.getElementById('formPan').value.trim().toUpperCase() || null,
+                address: document.getElementById('formAddress').value.trim() || null,
+                city: document.getElementById('formCity').value.trim() || null,
+                state: document.getElementById('formState').value.trim() || null,
+                pincode: document.getElementById('formPincode').value.trim() || null,
+                map_link_1: document.getElementById('formMapLink1').value.trim() || null,
+                map_link_1_label: document.getElementById('formMapLink1Label').value.trim() || 'Office',
+                map_link_2: document.getElementById('formMapLink2').value.trim() || null,
+                map_link_2_label: document.getElementById('formMapLink2Label').value.trim() || 'Warehouse',
+                bank_name: document.getElementById('formBankName').value.trim() || null,
+                bank_branch: document.getElementById('formBankBranch').value.trim() || null,
+                account_number: document.getElementById('formAccountNo').value.trim() || null,
+                ifsc_code: document.getElementById('formIfsc').value.trim().toUpperCase() || null,
+                account_holder_name: document.getElementById('formAccountHolder').value.trim() || null,
+                upi_id: document.getElementById('formUpiId').value.trim() || null,
+                website_url: document.getElementById('formWebsite').value.trim() || null,
+                terms_conditions: document.getElementById('formTerms').value.trim() || null,
+                ship_to_address: document.getElementById('formShipAddress').value.trim() || null,
+                ship_to_city: document.getElementById('formShipCity').value.trim() || null,
+                ship_to_state: document.getElementById('formShipState').value.trim() || null,
+                ship_to_pincode: document.getElementById('formShipPincode').value.trim() || null,
+                payment_terms: document.getElementById('formPaymentTerms').value || 'COD',
+                credit_limit: parseFloat(document.getElementById('formCreditLimit').value) || 0,
+                credit_days: parseInt(document.getElementById('formCreditDays').value) || 0,
+                gst_type: document.querySelector('input[name="formGstType"]:checked')?.value || 'CGST_SGST',
+                applicable_companies: applicableCompanies,
+                product_ids: productIds,
+                opening_balances: collectObRows('form')
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/vendors`, { 
+                    method: 'POST', 
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(data) 
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const vendorId = result.vendor?.id;
+                    
+                    const scannerFile = document.getElementById('formScannerFile').files[0];
+                    if (scannerFile && vendorId) {
+                        const formData = new FormData();
+                        formData.append('file', scannerFile);
+                        await fetch(`${API_BASE}/vendors/${vendorId}/scanner`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` },
+                            body: formData
+                        });
+                    }
+                    
+                    closeModal('createModal'); 
+                    loadVendors(); 
+                    alert('Vendor created successfully'); 
+                } else { 
+                    const err = await response.json(); 
+                    alert(err.detail?.message || err.detail || err.message || 'Failed to create vendor'); 
+                }
+            } catch (e) { 
+                console.error('Create vendor error:', e);
+                alert('Failed to create vendor'); 
+            }
+        }
+        
+        async function updateVendor() {
+            const token = localStorage.getItem('staff_token');
+            const vendorId = document.getElementById('editId').value;
+            const vendorName = document.getElementById('editName').value.trim();
+            if (!vendorName) { alert('Vendor name is required'); return; }
+            
+            const _rawEditCompanies = JSON.parse(document.getElementById('editApplicableCompanies').value || '[]');
+            const applicableCompanies = _rawEditCompanies.length > 0 ? _rawEditCompanies : ['ALL'];
+            const productIds = getSelectedProducts('edit');
+            
+            const data = { 
+                vendor_name: vendorName,
+                vendor_type: document.getElementById('editType').value || 'BOTH',
+                contact_person: document.getElementById('editContact1Name').value.trim() || null,
+                phone: document.getElementById('editContact1Phone').value.trim() || null,
+                email: document.getElementById('editEmail').value.trim().toLowerCase() || null,
+                contact_person_1_name: document.getElementById('editContact1Name').value.trim() || null,
+                contact_person_1_phone: document.getElementById('editContact1Phone').value.trim() || null,
+                contact_person_1_designation: document.getElementById('editContact1Designation').value.trim() || null,
+                contact_person_2_name: document.getElementById('editContact2Name').value.trim() || null,
+                contact_person_2_phone: document.getElementById('editContact2Phone').value.trim() || null,
+                contact_person_2_designation: document.getElementById('editContact2Designation').value.trim() || null,
+                gst_number: document.getElementById('editGst').value.trim().toUpperCase() || null,
+                pan_number: document.getElementById('editPan').value.trim().toUpperCase() || null,
+                address: document.getElementById('editAddress').value.trim() || null,
+                city: document.getElementById('editCity').value.trim() || null,
+                state: document.getElementById('editState').value.trim() || null,
+                pincode: document.getElementById('editPincode').value.trim() || null,
+                map_link_1: document.getElementById('editMapLink1').value.trim() || null,
+                map_link_1_label: document.getElementById('editMapLink1Label').value.trim() || 'Office',
+                map_link_2: document.getElementById('editMapLink2').value.trim() || null,
+                map_link_2_label: document.getElementById('editMapLink2Label').value.trim() || 'Warehouse',
+                bank_name: document.getElementById('editBankName').value.trim() || null,
+                bank_branch: document.getElementById('editBankBranch').value.trim() || null,
+                account_number: document.getElementById('editAccountNo').value.trim() || null,
+                ifsc_code: document.getElementById('editIfsc').value.trim().toUpperCase() || null,
+                account_holder_name: document.getElementById('editAccountHolder').value.trim() || null,
+                upi_id: document.getElementById('editUpiId').value.trim() || null,
+                website_url: document.getElementById('editWebsite').value.trim() || null,
+                terms_conditions: document.getElementById('editTerms').value.trim() || null,
+                ship_to_address: document.getElementById('editShipAddress').value.trim() || null,
+                ship_to_city: document.getElementById('editShipCity').value.trim() || null,
+                ship_to_state: document.getElementById('editShipState').value.trim() || null,
+                ship_to_pincode: document.getElementById('editShipPincode').value.trim() || null,
+                payment_terms: document.getElementById('editPaymentTerms').value || 'COD',
+                credit_limit: parseFloat(document.getElementById('editCreditLimit').value) || 0,
+                credit_days: parseInt(document.getElementById('editCreditDays').value) || 0,
+                gst_type: document.querySelector('input[name="editGstType"]:checked')?.value || 'CGST_SGST',
+                is_active: document.getElementById('editIsActive').checked,
+                applicable_companies: applicableCompanies,
+                product_ids: productIds,
+                opening_balances: collectObRows('edit')
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/vendors/${vendorId}`, { 
+                    method: 'PUT', 
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(data) 
+                });
+                
+                if (response.ok) {
+                    const scannerFile = document.getElementById('editScannerFile').files[0];
+                    if (scannerFile) {
+                        const formData = new FormData();
+                        formData.append('file', scannerFile);
+                        await fetch(`${API_BASE}/vendors/${vendorId}/scanner`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` },
+                            body: formData
+                        });
+                    }
+                    
+                    if (productIds.length > 0) {
+                        await fetch(`${API_BASE}/vendors/${vendorId}/products`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ product_ids: productIds })
+                        });
+                    }
+                    
+                    closeModal('editModal'); 
+                    loadVendors(); 
+                    alert('Vendor updated successfully'); 
+                } else { 
+                    const err = await response.json(); 
+                    alert(err.detail?.message || err.detail || err.message || 'Failed to update vendor'); 
+                }
+            } catch (e) { 
+                console.error('Update vendor error:', e);
+                alert('Failed to update vendor'); 
+            }
+        }
+    </script>
+</body>
+</html>

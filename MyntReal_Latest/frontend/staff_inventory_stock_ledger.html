@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Ledger - Inventory Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-role { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; background: #f3f4f6; color: #374151; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+        .page-header h1 { font-size: 24px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 14px; color: #6b7280; margin: 4px 0 0 0; }
+        .filter-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+        .filter-row select, .filter-row input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; min-width: 150px; }
+        .btn-primary-custom { background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; color: white; padding: 10px 20px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-primary-custom:hover { color: white; transform: translateY(-1px); }
+        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .summary-item { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-item .value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .summary-item .label { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .table-container { overflow-x: auto; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th { text-align: left; padding: 12px 16px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+        .data-table td { padding: 14px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        .data-table tr:hover { background: #f9fafb; }
+        .amount { font-weight: 600; font-family: monospace; }
+        .qty-in { color: #059669; font-weight: 600; }
+        .qty-out { color: #dc2626; font-weight: 600; }
+        .entry-type { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .type-OPENING { background: #dbeafe; color: #2563eb; }
+        .type-PURCHASE { background: #d1fae5; color: #059669; }
+        .type-SALE { background: #fee2e2; color: #dc2626; }
+        .type-TRANSFER_IN { background: #d1fae5; color: #059669; }
+        .type-TRANSFER_OUT { background: #fef3c7; color: #d97706; }
+        .type-ADJUSTMENT { background: #e5e7eb; color: #374151; }
+        .type-RETURN { background: #fce7f3; color: #db2777; }
+        .type-SERVICE_CONSUMPTION { background: #fef3c7; color: #d97706; }
+        .type-DAMAGE { background: #fee2e2; color: #dc2626; }
+        .type-WRITE_OFF { background: #fee2e2; color: #dc2626; }
+        .type-MFG_CONSUMPTION { background: #fef3c7; color: #d97706; }
+        .type-MFG_OUTPUT { background: #d1fae5; color: #059669; }
+        .estimate-badge { display: inline-block; margin-left: 5px; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; background: #f3e8ff; color: #7c3aed; border: 1px solid #c4b5fd; letter-spacing: 0.5px; vertical-align: middle; }
+        tr.estimate-row { background: #faf5ff !important; opacity: 0.88; }
+        tr.estimate-row td { font-style: italic; }
+        .narration-text { font-size: 11px; color: #6b7280; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #d1d5db; }
+        .loading-spinner { display: flex; justify-content: center; padding: 40px; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .header-logo { height: 36px; width: auto; }
+        
+        .balance-row { background: #fef3c7 !important; font-weight: 600; }
+        .pagination { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+        .pagination button { padding: 8px 16px; border: 1px solid #d1d5db; background: white; border-radius: 6px; cursor: pointer; }
+        .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pagination button.active { background: #8b5cf6; color: white; border-color: #8b5cf6; }
+        .item-filter-container { position: relative; min-width: 250px; }
+        .item-filter-container input[type="text"] { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        .item-filter-container input[type="text"]:focus { border-color: #8b5cf6; outline: none; box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1); }
+        .item-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 6px; max-height: 300px; overflow-y: auto; z-index: 100; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 4px; }
+        .item-dropdown.show { display: block; }
+        .item-option { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 13px; transition: background 0.15s; }
+        .item-option:hover { background: #f3f4f6; }
+        .item-option:last-child { border-bottom: none; }
+        .item-option .item-code { font-weight: 600; color: #6d28d9; font-family: monospace; }
+        .stock-item-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; cursor: pointer; }
+        .no-img-ph { width: 40px; height: 40px; background: #f3f4f6; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #d1d5db; font-size: 16px; border: 1px solid #e5e7eb; }
+        .btn-view { background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .btn-view:hover { background: #8b5cf6; color: white; border-color: #8b5cf6; }
+        .entry-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 9999; align-items: center; justify-content: center; padding: 16px; }
+        .entry-modal-overlay.show { display: flex; }
+        .entry-modal { background: white; border-radius: 14px; width: 100%; max-width: 680px; max-height: 88vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+        .entry-modal-header { padding: 18px 22px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 1; border-radius: 14px 14px 0 0; }
+        .entry-modal-header h3 { font-size: 16px; font-weight: 700; color: #1f2937; margin: 0; display: flex; align-items: center; gap: 10px; }
+        .entry-modal-close { background: none; border: none; font-size: 20px; color: #6b7280; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+        .entry-modal-close:hover { background: #f3f4f6; }
+        .entry-modal-body { padding: 20px 22px; }
+        .detail-section { margin-bottom: 20px; }
+        .detail-section-title { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #f3f4f6; }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .detail-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .detail-item { display: flex; flex-direction: column; gap: 2px; }
+        .detail-label { font-size: 10px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .detail-value { font-size: 13px; color: #1f2937; font-weight: 500; }
+        .detail-value.amount { font-family: monospace; font-weight: 700; color: #059669; }
+        .detail-value.ref { font-family: monospace; font-size: 12px; color: #6d28d9; }
+        .source-doc-loading { text-align: center; padding: 24px; color: #6b7280; font-size: 13px; }
+        .line-items-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+        .line-items-table th { background: #f9fafb; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 600; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+        .line-items-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+        .modal-goto-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; padding: 8px 14px; background: #f3f4f6; border-radius: 8px; font-size: 12px; font-weight: 600; color: #4b5563; text-decoration: none; border: 1px solid #e5e7eb; }
+        .modal-goto-link:hover { background: #ede9fe; color: #6d28d9; border-color: #c4b5fd; }
+        .updated-by-cell { font-size: 11px; color: #6b7280; }
+    </style>
+</head>
+<body>
+    <div id="staffSidebar"></div>
+    <div class="main-content" id="mainContent">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+
+    <div class="page-header">
+                <div>
+                    <h1>Stock Ledger</h1>
+                    <p>Track all stock movements and balances</p>
+                </div>
+                <button class="btn-primary-custom" onclick="viewBalances()"><i class="fas fa-chart-bar"></i> View Balances</button>
+            </div>
+            <div class="filter-row">
+                <select id="filterCompany" onchange="onCompanyChange()">
+                    <option value="">All Companies</option>
+                </select>
+                <div id="itemFilterContainer" class="item-filter-container">
+                    <input type="text" id="itemSearchInput" placeholder="Search items..." 
+                           oninput="onItemSearch(event)" onfocus="onItemSearch(event)" autocomplete="off">
+                    <input type="hidden" id="selectedItemId" value="">
+                    <div id="itemDropdown" class="item-dropdown"></div>
+                </div>
+                <select id="filterType" onchange="loadLedger()">
+                    <option value="">All Types</option>
+                    <option value="OPENING">Opening</option>
+                    <option value="PURCHASE">Purchase</option>
+                    <option value="SALE">Sale</option>
+                    <option value="TRANSFER_IN">Transfer In</option>
+                    <option value="TRANSFER_OUT">Transfer Out</option>
+                    <option value="ADJUSTMENT">Adjustment</option>
+                    <option value="MFG_CONSUMPTION">Manufacturing Consumption</option>
+                    <option value="MFG_OUTPUT">Manufacturing Output</option>
+                    <option value="RETURN">Return</option>
+                    <option value="DAMAGE">Damage</option>
+                    <option value="WRITE_OFF">Write Off</option>
+                </select>
+                <input type="date" id="filterFromDate" onchange="loadLedger()" autocomplete="off">
+                <input type="date" id="filterToDate" onchange="loadLedger()" autocomplete="off">
+                <button class="btn-primary-custom" onclick="loadLedger()"><i class="fas fa-search"></i> Search</button>
+            </div>
+            <div class="summary-row">
+                <div class="summary-item"><div class="value" id="totalEntries">0</div><div class="label">Total Entries</div></div>
+                <div class="summary-item"><div class="value qty-in" id="totalIn">0</div><div class="label">Total Qty In</div></div>
+                <div class="summary-item"><div class="value qty-out" id="totalOut">0</div><div class="label">Total Qty Out</div></div>
+                <div class="summary-item"><div class="value" id="netBalance">0</div><div class="label">Net Balance</div></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span>Stock Transactions</span></div>
+                <div class="card-body">
+                    <div id="loadingSpinner" class="loading-spinner"><div class="spinner"></div></div>
+                    <div id="tableContainer" class="table-container" style="display:none;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Company</th>
+                                    <th style="width:50px;">Image</th>
+                                    <th>Item Code</th>
+                                    <th>Item Name</th>
+                                    <th>Brand</th>
+                                    <th>Compatible W/ Model</th>
+                                    <th>Spec / Size</th>
+                                    <th>Unit</th>
+                                    <th>Type</th>
+                                    <th>Reference</th>
+                                    <th>Narration</th>
+                                    <th>Qty In</th>
+                                    <th>Qty Out</th>
+                                    <th>Rate</th>
+                                    <th>Value</th>
+                                    <th title="Marketplace available quantity">Mkt Qty</th>
+                                    <th>Balance Qty</th>
+                                    <th>Balance Value</th>
+                                    <th>Updated By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledgerBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="emptyState" class="empty-state" style="display:none;">
+                        <i class="fas fa-clipboard-list"></i>
+                        <h3>No ledger entries found</h3>
+                        <p>Stock transactions will appear here</p>
+                    </div>
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Entry Detail Modal -->
+    <div class="entry-modal-overlay" id="entryModalOverlay" onclick="if(event.target===this)closeEntryModal()">
+        <div class="entry-modal">
+            <div class="entry-modal-header">
+                <h3 id="entryModalTitle"><i class="fas fa-receipt"></i> Entry Details</h3>
+                <button class="entry-modal-close" onclick="closeEntryModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="entry-modal-body" id="entryModalBody">
+                <div class="source-doc-loading"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/accounts';
+        let currentPage = 1;
+        let itemsMap = {};
+        let companiesMap = {};
+        let allStockItems = [];
+        let currentEntries = [];
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('staff_token');
+            if (!token) { window.location.href = '/staff/login'; return; }
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Stock Ledger', 'fas fa-chart-bar');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            updateHeaderUserInfo();
+            
+            const _urlParams = new URLSearchParams(window.location.search);
+            const _urlItemId = _urlParams.get('item_id');
+            const _urlCompanyId = _urlParams.get('company_id');
+            
+            try { await loadCompanies(); } catch(e) { console.error('[DC-STOCK-LEDGER] loadCompanies error:', e); }
+            
+            if (_urlCompanyId) {
+                const sel = document.getElementById('filterCompany');
+                if (sel) sel.value = _urlCompanyId;
+            }
+            
+            try { await loadStockItems(); } catch(e) { console.error('[DC-STOCK-LEDGER] loadStockItems error:', e); }
+            
+            if (_urlItemId) {
+                let item = itemsMap[parseInt(_urlItemId)];
+                if (!item) {
+                    // Item not in the 1000-item batch — fetch it directly by ID
+                    try {
+                        const r = await staffFetch(`${API_BASE}/stock-items/${_urlItemId}`);
+                        if (r.ok) {
+                            const d = await r.json();
+                            item = d.stock_item || d;
+                            itemsMap[parseInt(_urlItemId)] = item;
+                        }
+                    } catch(e) { console.warn('[DC-STOCK-LEDGER] Could not fetch item by id:', e); }
+                }
+                if (item) {
+                    const label = `${item.item_code} - ${item.item_name}`;
+                    document.getElementById('itemSearchInput').value = label;
+                }
+                document.getElementById('selectedItemId').value = _urlItemId;
+
+                // Clear date fields right before loadLedger — overrides any browser autofill
+                // so ALL historical entries for the item are shown
+                document.getElementById('filterFromDate').value = '';
+                document.getElementById('filterToDate').value = '';
+            }
+            
+            try { await loadLedger(); } catch(e) {
+                console.error('[DC-STOCK-LEDGER] loadLedger error:', e);
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+            }
+        });
+        
+        async function loadCompanies() {
+            try {
+                const response = await staffFetch(`${API_BASE}/companies`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const companies = data.companies || [];
+                    const select = document.getElementById('filterCompany');
+                    companies.forEach(company => {
+                        companiesMap[company.id] = company;
+                        const option = document.createElement('option');
+                        option.value = company.id;
+                        option.textContent = company.company_name;
+                        select.appendChild(option);
+                    });
+                    console.log('[DC-STOCK-LEDGER] Loaded companies:', companies.length);
+                }
+            } catch (e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') console.error('[DC-STOCK-LEDGER] Error loading companies:', e); }
+        }
+        
+        function onCompanyChange() {
+            document.getElementById('itemSearchInput').value = '';
+            document.getElementById('selectedItemId').value = '';
+            loadStockItems();
+            loadLedger();
+        }
+        
+        let itemSearchTimeout = null;
+        let itemSearchController = null;
+        
+        async function loadStockItems(searchTerm = '') {
+            const companyId = document.getElementById('filterCompany').value;
+            if (itemSearchController) itemSearchController.abort();
+            itemSearchController = new AbortController();
+            try {
+                let url = `${API_BASE}/stock-items?page_size=1000`;
+                if (companyId) url += `&company_id=${companyId}`;
+                if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+                const response = await staffFetch(url, { signal: itemSearchController.signal });
+                if (response.ok) {
+                    const data = await response.json();
+                    const items = data.stock_items || data.items || [];
+                    allStockItems = items;
+                    itemsMap = {};
+                    const dropdown = document.getElementById('itemDropdown');
+                    dropdown.innerHTML = '<div class="item-option" data-id="">All Items</div>';
+                    items.forEach(item => {
+                        itemsMap[item.id] = item;
+                        const div = document.createElement('div');
+                        div.className = 'item-option';
+                        div.setAttribute('data-id', item.id);
+                        div.innerHTML = `<span class="item-code">${item.item_code}</span> - ${item.item_name}`;
+                        dropdown.appendChild(div);
+                    });
+                    console.log('[DC-STOCK-LEDGER] Loaded stock items:', items.length);
+                }
+            } catch (e) {
+                if (e.name !== 'AbortError' && e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN')
+                    console.error('[DC-STOCK-LEDGER] Error loading stock items:', e);
+            }
+        }
+        
+        function onItemSearch(e) {
+            const searchTerm = e.target.value;
+            if (itemSearchTimeout) clearTimeout(itemSearchTimeout);
+            itemSearchTimeout = setTimeout(() => {
+                loadStockItems(searchTerm);
+            }, 300);
+            document.getElementById('itemDropdown').classList.add('show');
+        }
+        
+        function selectItem(itemId, itemText) {
+            document.getElementById('itemSearchInput').value = itemText || 'All Items';
+            document.getElementById('selectedItemId').value = itemId;
+            document.getElementById('itemDropdown').classList.remove('show');
+            loadLedger();
+        }
+        
+        document.addEventListener('click', function(e) {
+            const container = document.getElementById('itemFilterContainer');
+            if (container && !container.contains(e.target)) {
+                document.getElementById('itemDropdown').classList.remove('show');
+            }
+            
+            if (e.target.classList.contains('item-option') || e.target.closest('.item-option')) {
+                const option = e.target.classList.contains('item-option') ? e.target : e.target.closest('.item-option');
+                const itemId = option.getAttribute('data-id');
+                const itemText = option.textContent.trim();
+                selectItem(itemId, itemText);
+            }
+        });
+        
+        async function loadLedger() {
+            document.getElementById('loadingSpinner').style.display = 'flex';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            
+            let url = `${API_BASE}/stock-ledger?page=${currentPage}&page_size=50`;
+            const companyId = document.getElementById('filterCompany').value;
+            const itemId = document.getElementById('selectedItemId').value;
+            const entryType = document.getElementById('filterType').value;
+            const fromDate = document.getElementById('filterFromDate').value;
+            const toDate = document.getElementById('filterToDate').value;
+            
+            if (companyId) url += `&company_id=${companyId}`;
+            if (itemId) url += `&item_id=${itemId}`;
+            if (entryType) url += `&entry_type=${entryType}`;
+            if (fromDate) url += `&date_from=${fromDate}`;
+            if (toDate) url += `&date_to=${toDate}`;
+            
+            console.log('[DC-STOCK-LEDGER] Fetching:', url);
+            
+            try {
+                const response = await staffFetch(url);
+                document.getElementById('loadingSpinner').style.display = 'none';
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const entries = data.entries || [];
+                    
+                    if (entries.length === 0) {
+                        document.getElementById('emptyState').style.display = 'block';
+                    } else {
+                        document.getElementById('tableContainer').style.display = 'block';
+                        renderLedger(entries);
+                        updateSummary(entries, data.total);
+                        renderPagination(data.total, data.page_size);
+                    }
+                } else {
+                    console.error('[DC-STOCK-LEDGER] Error:', response.status);
+                    document.getElementById('emptyState').style.display = 'block';
+                }
+            } catch (e) {
+                console.error('[DC-STOCK-LEDGER] Error loading ledger:', e);
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+            }
+        }
+        
+        function renderLedger(entries) {
+            currentEntries = entries;
+            const tbody = document.getElementById('ledgerBody');
+            tbody.innerHTML = entries.map((entry, idx) => {
+                const itemCode = entry.item_code || `ITEM-${entry.item_id}`;
+                const itemName = entry.item_name || `Item #${entry.item_id}`;
+                const isEst = entry.is_estimate === true || entry.is_estimate === 1;
+                const estimateBadge = isEst ? `<span class="estimate-badge" title="Soft entry — not counted in real balance">ESTIMATE</span>` : '';
+                const narration = entry.narration
+                    ? `<span class="narration-text" title="${entry.narration.replace(/"/g, '&quot;')}">${entry.narration}</span>`
+                    : '<span style="color:#d1d5db">—</span>';
+                const item = itemsMap[entry.item_id] || {};
+                const companyDisplayName = entry.company_name || (companiesMap[entry.company_id] ? companiesMap[entry.company_id].company_name : null);
+                const companyLabel = companyDisplayName
+                    ? `<span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;">${companyDisplayName}</span>`
+                    : `<span style="color:#9ca3af;font-size:11px;">—</span>`;
+
+                // Item-level fields from itemsMap (populated by loadStockItems)
+                const primaryImg = item.primary_image || (item.images && item.images[0]
+                    ? (item.images[0].compressed_path || item.images[0].original_path) : null);
+                const imgCell = primaryImg
+                    ? `<img src="${primaryImg}" class="stock-item-thumb" title="${itemName}">`
+                    : `<div class="no-img-ph"><i class="fas fa-image"></i></div>`;
+
+                // Prefer data from the ledger entry (backend-enriched), fall back to local itemsMap
+                const _brand = entry.brand || item.brand;
+                const brandCell = _brand
+                    ? `<span style="background:#f3f4f6;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;">${_brand}</span>`
+                    : '<span style="color:#d1d5db;font-size:11px;">—</span>';
+
+                const _modelCompat = entry.model_compat || item.model_compat;
+                const modelCell = _modelCompat
+                    ? `<span title="${_modelCompat}" style="font-size:11px;display:block;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_modelCompat}</span>`
+                    : '<span style="color:#d1d5db;font-size:11px;">—</span>';
+
+                const specParts = [entry.specification || item.specification, entry.size || item.size].filter(Boolean);
+                const specCell = specParts.length
+                    ? `<span title="${specParts.join(' / ')}" style="font-size:11px;display:block;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${specParts.join(' / ')}</span>`
+                    : '<span style="color:#d1d5db;font-size:11px;">—</span>';
+
+                const unitCell = `<span style="font-size:11px;">${item.unit_of_measure || '—'}</span>`;
+
+                const mktQty = item.marketplace_available_qty;
+                const mktQtyCell = mktQty != null
+                    ? `<span style="font-size:11px;background:${mktQty > 0 ? '#dcfce7' : '#fef2f2'};color:${mktQty > 0 ? '#166534' : '#991b1b'};padding:2px 7px;border-radius:4px;font-weight:600;">${mktQty}</span>`
+                    : '<span style="color:#d1d5db;font-size:11px;">—</span>';
+
+                const updatedByCell = entry.updated_by_name
+                    ? `<span class="updated-by-cell"><i class="fas fa-user" style="font-size:10px;margin-right:3px;color:#9ca3af;"></i>${entry.updated_by_name}</span>`
+                    : '<span style="color:#d1d5db;font-size:11px;">—</span>';
+
+                return `
+                    <tr${isEst ? ' class="estimate-row"' : ''}>
+                        <td>${formatDate(entry.transaction_date)}</td>
+                        <td>${companyLabel}</td>
+                        <td style="padding:8px 10px;">${imgCell}</td>
+                        <td><code style="font-size:11px;">${itemCode}</code></td>
+                        <td><strong style="font-size:13px;">${itemName}</strong></td>
+                        <td>${brandCell}</td>
+                        <td>${modelCell}</td>
+                        <td>${specCell}</td>
+                        <td>${unitCell}</td>
+                        <td>
+                            <span class="entry-type type-${entry.entry_type}">${formatEntryType(entry.entry_type)}</span>
+                            ${estimateBadge}
+                        </td>
+                        <td><code style="font-size:11px;">${entry.reference_number || entry.reference_type + '#' + entry.reference_id}</code></td>
+                        <td>${narration}</td>
+                        <td class="qty-in">${parseFloat(entry.quantity_in) > 0 ? '+' + formatNumber(entry.quantity_in) : '-'}</td>
+                        <td class="qty-out">${parseFloat(entry.quantity_out) > 0 ? '-' + formatNumber(entry.quantity_out) : '-'}</td>
+                        <td class="amount">${formatCurrency(entry.unit_rate)}</td>
+                        <td class="amount">${formatCurrency(entry.total_value)}</td>
+                        <td>${mktQtyCell}</td>
+                        <td><strong>${isEst ? '<span title="Real balance — estimate not counted">' + formatNumber(entry.balance_qty) + '</span>' : formatNumber(entry.balance_qty)}</strong></td>
+                        <td class="amount">${formatCurrency(entry.balance_value)}</td>
+                        <td>${updatedByCell}</td>
+                        <td><button class="btn-view" onclick="viewEntry(${idx})"><i class="fas fa-eye"></i> View</button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function updateSummary(entries, total) {
+            let totalIn = 0, totalOut = 0;
+            entries.forEach(e => {
+                totalIn += parseFloat(e.quantity_in) || 0;
+                totalOut += parseFloat(e.quantity_out) || 0;
+            });
+            document.getElementById('totalEntries').textContent = total || entries.length;
+            document.getElementById('totalIn').textContent = formatNumber(totalIn);
+            document.getElementById('totalOut').textContent = formatNumber(totalOut);
+            document.getElementById('netBalance').textContent = formatNumber(totalIn - totalOut);
+        }
+        
+        function renderPagination(total, pageSize) {
+            const totalPages = Math.ceil(total / pageSize);
+            const pagination = document.getElementById('pagination');
+            if (totalPages <= 1) { pagination.innerHTML = ''; return; }
+            
+            let html = `<button ${currentPage === 1 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">Prev</button>`;
+            for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+                html += `<button class="${currentPage === i ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            if (totalPages > 5) html += `<span>...</span><button onclick="goToPage(${totalPages})">${totalPages}</button>`;
+            html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next</button>`;
+            pagination.innerHTML = html;
+        }
+        
+        function goToPage(page) { currentPage = page; loadLedger(); }
+        
+        function viewBalances() {
+            const companyId = document.getElementById('filterCompany').value;
+            const url = companyId
+                ? `/staff/inventory/stock-items?company_id=${companyId}`
+                : '/staff/inventory/stock-items';
+            window.location.href = url;
+        }
+
+        function closeEntryModal() {
+            document.getElementById('entryModalOverlay').classList.remove('show');
+        }
+
+        async function viewEntry(idx) {
+            const entry = currentEntries[idx];
+            if (!entry) return;
+            const overlay = document.getElementById('entryModalOverlay');
+            const body = document.getElementById('entryModalBody');
+            const title = document.getElementById('entryModalTitle');
+
+            const typeLabel = formatEntryType(entry.entry_type);
+            title.innerHTML = `<span class="entry-type type-${entry.entry_type}" style="font-size:13px;">${typeLabel}</span>&nbsp;${entry.reference_number || (entry.reference_type + ' #' + entry.reference_id)}`;
+            body.innerHTML = `<div class="source-doc-loading"><i class="fas fa-spinner fa-spin"></i> Loading details...</div>`;
+            overlay.classList.add('show');
+
+            const item = itemsMap[entry.item_id] || {};
+            const itemName = entry.item_name || item.item_name || `Item #${entry.item_id}`;
+            const itemCode = entry.item_code || item.item_code || `ITEM-${entry.item_id}`;
+
+            // Ledger entry section (always shown)
+            const entrySection = `
+                <div class="detail-section">
+                    <div class="detail-section-title">Stock Movement</div>
+                    <div class="detail-grid cols-3">
+                        <div class="detail-item"><span class="detail-label">Date</span><span class="detail-value">${formatDate(entry.transaction_date)}</span></div>
+                        <div class="detail-item"><span class="detail-label">Type</span><span class="detail-value"><span class="entry-type type-${entry.entry_type}" style="font-size:11px;">${typeLabel}</span></span></div>
+                        <div class="detail-item"><span class="detail-label">Company</span><span class="detail-value">${entry.company_name || '—'}</span></div>
+                        <div class="detail-item"><span class="detail-label">Item Code</span><span class="detail-value ref">${itemCode}</span></div>
+                        <div class="detail-item"><span class="detail-label">Item Name</span><span class="detail-value">${itemName}</span></div>
+                        <div class="detail-item"><span class="detail-label">Reference</span><span class="detail-value ref">${entry.reference_number || entry.reference_type + '#' + entry.reference_id}</span></div>
+                        <div class="detail-item"><span class="detail-label">Qty In</span><span class="detail-value" style="color:#059669;font-weight:700;">${parseFloat(entry.quantity_in) > 0 ? '+' + formatNumber(entry.quantity_in) : '—'}</span></div>
+                        <div class="detail-item"><span class="detail-label">Qty Out</span><span class="detail-value" style="color:#dc2626;font-weight:700;">${parseFloat(entry.quantity_out) > 0 ? '-' + formatNumber(entry.quantity_out) : '—'}</span></div>
+                        <div class="detail-item"><span class="detail-label">Rate</span><span class="detail-value amount">${formatCurrency(entry.unit_rate)}</span></div>
+                        <div class="detail-item"><span class="detail-label">Value</span><span class="detail-value amount">${formatCurrency(entry.total_value)}</span></div>
+                        <div class="detail-item"><span class="detail-label">Balance Qty</span><span class="detail-value">${formatNumber(entry.balance_qty)}</span></div>
+                        <div class="detail-item"><span class="detail-label">Balance Value</span><span class="detail-value amount">${formatCurrency(entry.balance_value)}</span></div>
+                    </div>
+                    ${entry.narration ? `<div style="margin-top:10px;padding:8px 12px;background:#f9fafb;border-radius:6px;font-size:12px;color:#6b7280;"><i class="fas fa-comment-alt" style="margin-right:6px;"></i>${entry.narration}</div>` : ''}
+                    ${entry.updated_by_name ? `<div style="margin-top:8px;font-size:11px;color:#9ca3af;"><i class="fas fa-user-edit" style="margin-right:4px;"></i>Updated by ${entry.updated_by_name}</div>` : ''}
+                </div>
+            `;
+
+            // Fetch source document based on reference_type
+            let sourceHtml = '';
+            try {
+                if (entry.reference_type === 'VENDOR_TXN') {
+                    sourceHtml = await fetchVendorTransaction(entry.reference_id);
+                } else if (entry.reference_type === 'SALE') {
+                    sourceHtml = await fetchSalesInvoice(entry.reference_id, entry.company_id);
+                } else if (entry.reference_type === 'STOCK_TRANSFER') {
+                    sourceHtml = await fetchStockTransfer(entry.reference_id);
+                } else if (entry.reference_type === 'OPENING') {
+                    sourceHtml = `<div class="detail-section"><div class="detail-section-title">Opening Balance</div><p style="font-size:13px;color:#6b7280;">This is the initial stock opening entry. The quantity of <strong>${formatNumber(entry.quantity_in)}</strong> units was recorded as the opening balance for this item.</p></div>`;
+                } else if (entry.reference_type === 'SERVICE') {
+                    sourceHtml = await fetchServiceTicket(entry.reference_id);
+                } else if (entry.reference_type === 'ADJUSTMENT') {
+                    sourceHtml = `<div class="detail-section"><div class="detail-section-title">Adjustment Details</div><p style="font-size:13px;color:#6b7280;">Stock adjustment entry. ${entry.narration || 'No additional details available.'}</p></div>`;
+                } else if (entry.reference_type === 'RETURN') {
+                    sourceHtml = `<div class="detail-section"><div class="detail-section-title">Return Details</div><p style="font-size:13px;color:#6b7280;">Return transaction. Reference: <code>${entry.reference_number || '#' + entry.reference_id}</code>. ${entry.narration || ''}</p></div>`;
+                } else if (entry.reference_type === 'MANUFACTURING') {
+                    sourceHtml = `<div class="detail-section"><div class="detail-section-title">Manufacturing Details</div><p style="font-size:13px;color:#6b7280;">Manufacturing entry (${typeLabel}). Reference: <code>${entry.reference_number || '#' + entry.reference_id}</code>. ${entry.narration || ''}</p></div>`;
+                } else {
+                    sourceHtml = `<div class="detail-section"><div class="detail-section-title">Source Document</div><p style="font-size:13px;color:#6b7280;">Reference type: <strong>${entry.reference_type}</strong> — ID: <code>${entry.reference_id}</code>. ${entry.narration || ''}</p></div>`;
+                }
+            } catch(e) {
+                sourceHtml = `<div class="detail-section"><p style="font-size:12px;color:#dc2626;">Could not load source document details.</p></div>`;
+            }
+
+            body.innerHTML = entrySection + sourceHtml;
+        }
+
+        const _fmt  = v => '₹' + parseFloat(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        const _fmtD = d => d ? new Date(d + (d.includes('T')?'':'T00:00:00')).toLocaleDateString('en-IN', {day:'2-digit',month:'short',year:'numeric'}) : '—';
+        const _sec  = (h, c) => `<div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;margin-bottom:6px;border-bottom:1px solid #e5e7eb;padding-bottom:4px;">${h}</div>${c}</div>`;
+        const _kv   = (l, v, x='') => v && v !== '—' ? `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #f3f4f6;"><span style="color:#6b7280;font-size:12px;">${l}</span><span style="font-size:12px;font-weight:600;color:#111827;text-align:right;${x}">${v}</span></div>` : '';
+        const _payB = s => { const m={'PAID':'#d1fae5|#065f46','PARTIAL':'#fef3c7|#92400e','PARTIAL_PAID':'#fef3c7|#92400e','FULLY_PAID':'#d1fae5|#065f46','PENDING':'#fee2e2|#991b1b','OVERDUE':'#fce7f3|#9d174d','APPROVED':'#d1fae5|#065f46','SUBMITTED':'#dbeafe|#1e40af'}; const[bg,col]=(m[s]||'#f3f4f6|#374151').split('|'); return `<span style="background:${bg};color:${col};border-radius:10px;padding:2px 8px;font-size:11px;font-weight:700;">${(s||'').replace(/_/g,' ')}</span>`; };
+
+        async function fetchVendorTransaction(txnId) {
+            try {
+                const r = await staffFetch(`${API_BASE}/vendor-transactions/${txnId}`);
+                if (!r.ok) return `<div class="detail-section"><div class="detail-section-title">Purchase</div><p style="font-size:12px;color:#9ca3af;">Details not accessible.</p><a class="modal-goto-link" href="/staff/vgk/vendor-transactions"><i class="fas fa-external-link-alt"></i> Go to Vendor Transactions</a></div>`;
+                const d = await r.json();
+                const t = d.transaction || d;
+                const lineItems = (t.line_items || []).filter(li => parseFloat(li.quantity||0) > 0);
+                const lineRows = lineItems.map(li => `<tr style="border-bottom:1px solid #f3f4f6;">
+                    <td style="padding:5px 6px;">${li.item_description || li.item_code || '—'}<br><span style="color:#9ca3af;font-size:10px;">${li.hsn_code ? 'HSN: '+li.hsn_code : ''}</span></td>
+                    <td style="padding:5px 6px;text-align:right;">${formatNumber(li.quantity)} ${li.unit_of_measure||''}</td>
+                    <td style="padding:5px 6px;text-align:right;">${_fmt(li.unit_rate)}</td>
+                    <td style="padding:5px 6px;text-align:right;">${parseFloat(li.gst_rate||0)}%</td>
+                    <td style="padding:5px 6px;text-align:right;">${_fmt(li.cgst_amount)}</td>
+                    <td style="padding:5px 6px;text-align:right;">${_fmt(li.sgst_amount||li.igst_amount)}</td>
+                    <td style="padding:5px 6px;text-align:right;font-weight:700;">${_fmt(li.total_amount)}</td>
+                </tr>`).join('');
+                const lineTable = lineRows ? `<table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:4px;"><thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;"><th style="padding:5px 6px;text-align:left;font-size:10.5px;color:#6b7280;">Item</th><th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">Qty</th><th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">Rate</th><th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">GST%</th><th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">CGST</th><th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">SGST/IGST</th><th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">Total</th></tr></thead><tbody>${lineRows}</tbody></table>` : '<p style="color:#9ca3af;font-size:12px;margin:0;">No line items.</p>';
+                return `
+                    <div style="background:linear-gradient(135deg,#fff7ed,#fef3c7);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;">
+                        <div><div style="font-size:15px;font-weight:800;color:#92400e;">${t.transaction_number||'—'}</div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:2px;">${(t.transaction_type||'').replace(/_/g,' ')} · ${(t.record_type||'').replace(/_/g,' ')}</div></div>
+                        <div style="text-align:right;">${_payB(t.payment_status||t.status)}<div style="font-size:11px;color:#6b7280;margin-top:4px;">Date: ${_fmtD(t.transaction_date)}</div>${t.due_date?`<div style="font-size:11px;color:#dc2626;">Due: ${_fmtD(t.due_date)}</div>`:''}</div>
+                    </div>
+                    ${_sec('Vendor', `<div style="font-size:13px;font-weight:700;color:#111827;">${t.vendor_name||'—'}</div>${t.vendor_phone?`<div style="font-size:12px;color:#6b7280;margin-top:2px;"><i class="fas fa-phone" style="width:14px;"></i> ${t.vendor_phone}</div>`:''} ${t.vendor_gstin?`<div style="font-size:12px;color:#6b7280;"><i class="fas fa-id-card" style="width:14px;"></i> GSTIN: <code>${t.vendor_gstin}</code></div>`:''} ${t.vendor_invoice_no?`<div style="font-size:12px;color:#374151;margin-top:4px;"><strong>Vendor Invoice:</strong> ${t.vendor_invoice_no}${t.vendor_invoice_date?' · '+_fmtD(t.vendor_invoice_date):''}</div>`:''}`)}
+                    ${_sec('Line Items', lineTable)}
+                    ${_sec('Financial Summary', `
+                        ${_kv('Subtotal', _fmt(t.subtotal))}
+                        ${parseFloat(t.total_discount||0)>0?_kv('Discount','− '+_fmt(t.total_discount),'color:#dc2626;'):''}
+                        ${_kv('Taxable Amount', _fmt(t.taxable_amount))}
+                        ${parseFloat(t.total_cgst||0)>0?_kv('CGST',_fmt(t.total_cgst)):''}
+                        ${parseFloat(t.total_sgst||0)>0?_kv('SGST',_fmt(t.total_sgst)):''}
+                        ${parseFloat(t.total_igst||0)>0?_kv('IGST',_fmt(t.total_igst)):''}
+                        ${parseFloat(t.total_tds||0)>0?_kv('TDS',_fmt(t.total_tds)):''}
+                        ${parseFloat(t.round_off||0)!==0?_kv('Round Off',_fmt(t.round_off)):''}
+                        <div style="display:flex;justify-content:space-between;padding:6px 0;margin-top:4px;border-top:2px solid #92400e;"><span style="font-weight:700;font-size:13px;color:#92400e;">Grand Total</span><span style="font-weight:800;font-size:14px;color:#92400e;">${_fmt(t.grand_total)}</span></div>
+                    `)}
+                    ${_sec('Payment', `
+                        ${_kv('Mode', t.payment_mode||'—')}
+                        ${t.payment_reference?_kv('Reference',t.payment_reference):''}
+                        ${_kv('Amount Paid', _fmt(t.amount_paid), 'color:#059669;')}
+                        ${parseFloat(t.balance_due||0)>0?_kv('Balance Due',_fmt(t.balance_due),'color:#dc2626;font-size:13px;'):_kv('Balance Due',_fmt(0))}
+                    `)}
+                    ${t.narration?_sec('Narration',`<div style="font-size:12px;color:#374151;">${t.narration}</div>`):''}
+                    <a class="modal-goto-link" href="/staff/vgk/vendor-transactions"><i class="fas fa-external-link-alt"></i> Go to Vendor Transactions</a>`;
+            } catch(e) {
+                return `<div class="detail-section"><p style="font-size:12px;color:#9ca3af;">Unable to load purchase details.</p><a class="modal-goto-link" href="/staff/vgk/vendor-transactions"><i class="fas fa-external-link-alt"></i> Go to Vendor Transactions</a></div>`;
+            }
+        }
+
+        async function fetchSalesInvoice(invoiceId, companyId) {
+            try {
+                let url = `${API_BASE}/sales-invoices/${invoiceId}`;
+                if (companyId) url += `?company_id=${companyId}`;
+                const r = await staffFetch(url);
+                if (!r.ok) return `<div class="detail-section"><div class="detail-section-title">Sales Invoice</div><p style="font-size:12px;color:#9ca3af;">Details not accessible.</p><a class="modal-goto-link" href="/staff/accounts/sales-invoices${companyId?'?open_invoice='+invoiceId+'&company_id='+companyId:''}"><i class="fas fa-external-link-alt"></i> Go to Sales Invoices</a></div>`;
+                const d = await r.json();
+                const inv = d.invoice || d;
+                const isIGST = inv.is_igst;
+                const lineRows = (inv.line_items || []).map(li => `<tr style="border-bottom:1px solid #f3f4f6;">
+                    <td style="padding:5px 6px;">${li.item_description || li.item_code || '—'}<br><span style="color:#9ca3af;font-size:10px;">${li.hsn_code?'HSN: '+li.hsn_code:''}</span></td>
+                    <td style="padding:5px 6px;text-align:right;">${formatNumber(li.quantity)} ${li.unit_of_measure||'PCS'}</td>
+                    <td style="padding:5px 6px;text-align:right;">${_fmt(li.unit_rate)}</td>
+                    <td style="padding:5px 6px;text-align:right;">${parseFloat(li.gst_rate||0)}%</td>
+                    ${!isIGST?`<td style="padding:5px 6px;text-align:right;">${_fmt(li.cgst_amount)}</td><td style="padding:5px 6px;text-align:right;">${_fmt(li.sgst_amount)}</td>`:`<td style="padding:5px 6px;text-align:right;" colspan="2">${_fmt(li.igst_amount)}</td>`}
+                    <td style="padding:5px 6px;text-align:right;font-weight:700;">${_fmt(li.total_amount||li.line_total)}</td>
+                </tr>`).join('');
+                const thCols = `<th style="padding:5px 6px;text-align:left;font-size:10.5px;color:#6b7280;">Item</th><th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">Qty</th><th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">Rate</th><th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">GST%</th>${!isIGST?`<th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">CGST</th><th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">SGST</th>`:`<th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;" colspan="2">IGST</th>`}<th style="padding:5px 6px;text-align:right;font-size:10.5px;color:#6b7280;">Total</th>`;
+                const lineTable = lineRows ? `<table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:4px;"><thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">${thCols}</tr></thead><tbody>${lineRows}</tbody></table>` : '<p style="color:#9ca3af;font-size:12px;margin:0;">No line items.</p>';
+                return `
+                    <div style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border-radius:10px;padding:12px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:flex-start;">
+                        <div><div style="font-size:15px;font-weight:800;color:#1d4ed8;">${inv.invoice_number||'—'}</div>
+                        <div style="font-size:11px;color:#6b7280;margin-top:2px;">${inv.document_type?inv.document_type.replace('_',' ').toUpperCase():'TAX INVOICE'}${inv.so_number?' · SO: '+inv.so_number:''}</div></div>
+                        <div style="text-align:right;">${_payB(inv.payment_status)}<div style="font-size:11px;color:#6b7280;margin-top:4px;">Date: ${_fmtD(inv.invoice_date)}</div>${inv.due_date?`<div style="font-size:11px;color:#dc2626;">Due: ${_fmtD(inv.due_date)}</div>`:''}</div>
+                    </div>
+                    ${_sec('Customer', `<div style="font-size:13px;font-weight:700;color:#111827;">${inv.customer_name||'—'}</div>${inv.customer_phone?`<div style="font-size:12px;color:#6b7280;margin-top:2px;"><i class="fas fa-phone" style="width:14px;"></i> ${inv.customer_phone}</div>`:''} ${inv.customer_email?`<div style="font-size:12px;color:#6b7280;"><i class="fas fa-envelope" style="width:14px;"></i> ${inv.customer_email}</div>`:''} ${inv.customer_gstin?`<div style="font-size:12px;color:#6b7280;"><i class="fas fa-id-card" style="width:14px;"></i> GSTIN: <code>${inv.customer_gstin}</code></div>`:''} ${inv.billing_address?`<div style="font-size:11px;color:#9ca3af;margin-top:4px;">${inv.billing_address}</div>`:''}`)}
+                    ${_sec('Line Items', lineTable)}
+                    ${_sec('Financial Summary', `
+                        ${_kv('Subtotal', _fmt(inv.subtotal))}
+                        ${parseFloat(inv.total_discount||0)>0?_kv('Discount','− '+_fmt(inv.total_discount),'color:#dc2626;'):''}
+                        ${parseFloat(inv.coupon_discount_amount||0)>0?_kv(`Coupon (${inv.coupon_code||''})`, '− '+_fmt(inv.coupon_discount_amount),'color:#7c3aed;'):''}
+                        ${parseFloat(inv.manual_discount_amount||0)>0?_kv('Manual Discount','− '+_fmt(inv.manual_discount_amount),'color:#dc2626;'):''}
+                        ${_kv('Taxable Amount', _fmt(inv.taxable_amount))}
+                        ${!isIGST?_kv('CGST',_fmt(inv.cgst_amount)):''}
+                        ${!isIGST?_kv('SGST',_fmt(inv.sgst_amount)):''}
+                        ${isIGST?_kv('IGST',_fmt(inv.igst_amount)):''}
+                        ${parseFloat(inv.total_tax||0)>0?_kv('Total Tax',_fmt(inv.total_tax),'color:#d97706;'):''}
+                        ${parseFloat(inv.round_off||0)!==0?_kv('Round Off',_fmt(inv.round_off)):''}
+                        <div style="display:flex;justify-content:space-between;padding:6px 0;margin-top:4px;border-top:2px solid #1d4ed8;"><span style="font-weight:700;font-size:13px;color:#1d4ed8;">Grand Total</span><span style="font-weight:800;font-size:14px;color:#1d4ed8;">${_fmt(inv.grand_total)}</span></div>
+                        ${parseFloat(inv.net_payable||0)!==parseFloat(inv.grand_total||0)?`<div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="font-weight:700;font-size:12px;">Net Payable</span><span style="font-weight:700;font-size:13px;">${_fmt(inv.net_payable)}</span></div>`:''}
+                    `)}
+                    ${_sec('Payment', `
+                        ${_kv('Mode', inv.payment_mode||'—')}
+                        ${_kv('Amount Received', _fmt(inv.amount_received), 'color:#059669;')}
+                        ${parseFloat(inv.balance_due||0)>0?_kv('Balance Due',_fmt(inv.balance_due),'color:#dc2626;font-size:13px;'):_kv('Balance Due',_fmt(0))}
+                        ${inv.is_credit_sale?_kv('Credit Days',`${inv.credit_days} days`):''}
+                    `)}
+                    ${inv.amount_in_words?`<div style="background:#f9fafb;border-radius:6px;padding:8px 12px;font-size:11.5px;color:#374151;font-style:italic;margin-bottom:12px;"><strong>In words:</strong> ${inv.amount_in_words}</div>`:''}
+                    <a class="modal-goto-link" href="/staff/accounts/sales-invoices${companyId?'?open_invoice='+invoiceId+'&company_id='+companyId:''}"><i class="fas fa-external-link-alt"></i> Open This Invoice</a>`;
+            } catch(e) {
+                return `<div class="detail-section"><p style="font-size:12px;color:#9ca3af;">Unable to load sales invoice details.</p><a class="modal-goto-link" href="/staff/accounts/sales-invoices${companyId?'?open_invoice='+invoiceId+'&company_id='+companyId:''}"><i class="fas fa-external-link-alt"></i> Open This Invoice</a></div>`;
+            }
+        }
+
+        async function fetchStockTransfer(transferId) {
+            try {
+                const r = await staffFetch(`${API_BASE}/stock-transfers/${transferId}`);
+                if (!r.ok) return `<div class="detail-section"><div class="detail-section-title">Stock Transfer</div><p style="font-size:12px;color:#9ca3af;">Details not accessible (ID: ${transferId}).</p></div>`;
+                const d = await r.json();
+                const tr = d.transfer || d;
+                return `
+                    <div class="detail-section">
+                        <div class="detail-section-title">Stock Transfer — ${tr.transfer_number || ''}</div>
+                        <div class="detail-grid">
+                            <div class="detail-item"><span class="detail-label">Transfer No</span><span class="detail-value ref">${tr.transfer_number || '—'}</span></div>
+                            <div class="detail-item"><span class="detail-label">Date</span><span class="detail-value">${formatDate(tr.transfer_date)}</span></div>
+                            <div class="detail-item"><span class="detail-label">From Company</span><span class="detail-value">${companiesMap[tr.from_company_id]?.company_name || 'Company #'+tr.from_company_id}</span></div>
+                            <div class="detail-item"><span class="detail-label">To Company</span><span class="detail-value">${companiesMap[tr.to_company_id]?.company_name || 'Company #'+tr.to_company_id}</span></div>
+                            <div class="detail-item"><span class="detail-label">Quantity</span><span class="detail-value">${formatNumber(tr.quantity)}</span></div>
+                            <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value">${tr.status || '—'}</span></div>
+                            <div class="detail-item"><span class="detail-label">Total Value</span><span class="detail-value amount">${formatCurrency(tr.total_value)}</span></div>
+                            <div class="detail-item"><span class="detail-label">Type</span><span class="detail-value">${tr.transfer_type || '—'}</span></div>
+                        </div>
+                        ${tr.narration ? `<div style="margin-top:8px;padding:7px 10px;background:#f9fafb;border-radius:6px;font-size:12px;color:#6b7280;">${tr.narration}</div>` : ''}
+                    </div>`;
+            } catch(e) {
+                return `<div class="detail-section"><p style="font-size:12px;color:#9ca3af;">Unable to load stock transfer details.</p></div>`;
+            }
+        }
+
+        async function fetchServiceTicket(ticketId) {
+            try {
+                const r = await staffFetch(`${API_BASE}/service-center-tracking/by-ticket/${ticketId}`);
+                if (!r.ok) return `<div class="detail-section"><div class="detail-section-title">Service Ticket</div><p style="font-size:12px;color:#9ca3af;">Details not accessible (ID: ${ticketId}).</p><a class="modal-goto-link" href="/staff/service-tickets/queue"><i class="fas fa-external-link-alt"></i> Go to Service Queue</a></div>`;
+                const d = await r.json();
+                const t = d.tracking || d.data || d;
+                return `
+                    <div class="detail-section">
+                        <div class="detail-section-title">Service Ticket</div>
+                        <div class="detail-grid">
+                            <div class="detail-item"><span class="detail-label">Ticket ID</span><span class="detail-value ref">#${ticketId}</span></div>
+                            <div class="detail-item"><span class="detail-label">Status</span><span class="detail-value">${t.status || t.current_status || '—'}</span></div>
+                            <div class="detail-item"><span class="detail-label">Vehicle</span><span class="detail-value">${t.vehicle_number || t.registration_number || '—'}</span></div>
+                            <div class="detail-item"><span class="detail-label">Customer</span><span class="detail-value">${t.customer_name || '—'}</span></div>
+                        </div>
+                        <a class="modal-goto-link" href="/staff/service-tickets/queue"><i class="fas fa-external-link-alt"></i> Go to Service Queue</a>
+                    </div>`;
+            } catch(e) {
+                return `<div class="detail-section"><div class="detail-section-title">Service Ticket</div><p style="font-size:12px;color:#9ca3af;">Unable to load ticket details.</p><a class="modal-goto-link" href="/staff/service-tickets/queue"><i class="fas fa-external-link-alt"></i> Go to Service Queue</a></div>`;
+            }
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        
+        function formatEntryType(type) {
+            return (type || '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+        }
+        
+        function formatNumber(num) {
+            return parseFloat(num || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+        }
+        
+        function formatCurrency(amount) {
+            return '₹' + parseFloat(amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const el = id => document.getElementById(id);
+            if (el('headerUserInitials')) el('headerUserInitials').textContent = (userData.full_name || 'SM').split(' ').map(n => n[0]).join('').substring(0, 2);
+            if (el('headerUserName'))    el('headerUserName').textContent = userData.full_name || 'Staff Member';
+            if (el('headerUserEmpId'))   el('headerUserEmpId').textContent = userData.emp_code || '-';
+            if (el('headerUserRole'))    el('headerUserRole').textContent = userData.role_name || 'Employee';
+        }
+
+        function logout() {
+            localStorage.removeItem('staff_token');
+            localStorage.removeItem('staff_data');
+            window.location.href = '/staff/login';
+        }
+    </script>
+</body>
+</html>

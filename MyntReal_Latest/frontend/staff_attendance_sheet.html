@@ -1,0 +1,3199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Records - MNR</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #0284c7;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --light: #f3f4f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .header-logo {
+            height: 36px;
+            width: auto;
+        }
+
+        .user-info-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-info-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .user-info-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .user-info-role {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .role-badge-supreme { background: #fef2f2; color: #dc2626; }
+        .role-badge-hr { background: #f3e8ff; color: #7c3aed; }
+        .role-badge-leadership { background: #fef3c7; color: #d97706; }
+        .role-badge-default { background: #f3f4f6; color: #374151; }
+
+        .content-area {
+            padding: 24px;
+            flex: 1;
+        }
+
+        .filter-section {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+        
+        .filters-bar { 
+            padding: 16px 20px; 
+            background: #f9fafb; 
+            border-bottom: 1px solid #e5e7eb; 
+            display: flex; 
+            gap: 12px; 
+            flex-wrap: wrap; 
+            align-items: center; 
+        }
+        .filters-bar select, .filters-bar input { 
+            padding: 8px 12px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 6px; 
+            font-size: 14px; 
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .date-picker-row {
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+        }
+
+        .date-picker-group {
+            flex: 1;
+        }
+
+        .date-picker-group label {
+            font-weight: 600;
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .date-picker-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            padding: 10px 16px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            background: #0369a1;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.3);
+        }
+
+        .alerts-section {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+        }
+
+        .alerts-section h6 {
+            margin-bottom: 12px;
+            font-weight: 700;
+            color: #d97706;
+        }
+
+        .alert-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #92400e;
+        }
+
+        .alert-item i {
+            min-width: 20px;
+        }
+
+        .table-wrapper {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            table-layout: auto;
+        }
+
+        thead {
+            background: #f9fafb !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 20 !important;
+        }
+
+        th {
+            padding: 10px !important;
+            text-align: left;
+            font-weight: 700;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+            white-space: nowrap;
+            background: #f9fafb !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 15 !important;
+        }
+
+        /* DC Protocol (Jan 07, 2026): TABLE-SPECIFIC STICKY COLUMNS */
+        /* ============================================================ */
+        
+        /* TABLE 1: HOURS SUMMARY TABLE (8 columns) */
+        /* Columns: Department(140px), Employee(180px), Pending, Submitted, Approved, Rejected, Total, Eligible */
+        .hours-summary-table {
+            table-layout: auto;
+        }
+        /* Department column - sticky at left: 0 */
+        .hours-summary-table thead th:first-child,
+        .hours-summary-table tbody td:first-child {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 12 !important;
+            background: #f9fafb !important;
+            min-width: 140px;
+        }
+        .hours-summary-table tbody td:first-child {
+            background: #fff !important;
+        }
+        /* Employee column - sticky at left: 140px */
+        .hours-summary-table thead th:nth-child(2),
+        .hours-summary-table tbody td:nth-child(2) {
+            position: sticky !important;
+            left: 140px !important;
+            z-index: 12 !important;
+            background: #f9fafb !important;
+            min-width: 180px;
+        }
+        .hours-summary-table tbody td:nth-child(2) {
+            background: #fff !important;
+        }
+        .hours-summary-table tbody tr:hover td:first-child,
+        .hours-summary-table tbody tr:hover td:nth-child(2) {
+            background: #f9fafb !important;
+        }
+        
+        /* TABLE 2: ATTENDANCE DETAILS TABLE (9 + date columns) */
+        /* Columns: Department(130px), Employee(160px), Leaves(65px), Absences(65px), Half Days(65px), Present(65px), Holidays(65px), Weekends(65px), Net Days(75px), [dates...] */
+        /* Cumulative offsets: 0, 130, 290, 355, 420, 485, 550, 615, 680 */
+        .attendance-details-table {
+            table-layout: auto;
+        }
+        /* Column 1: Department - sticky at left: 0 */
+        .attendance-details-table thead th:nth-child(1),
+        .attendance-details-table tbody td:nth-child(1) {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 12 !important;
+            background: #f9fafb !important;
+            min-width: 130px;
+            max-width: 130px;
+        }
+        .attendance-details-table tbody td:nth-child(1) {
+            background: #fff !important;
+        }
+        /* Column 2: Employee - sticky at left: 130px */
+        .attendance-details-table thead th:nth-child(2),
+        .attendance-details-table tbody td:nth-child(2) {
+            position: sticky !important;
+            left: 130px !important;
+            z-index: 12 !important;
+            background: #f9fafb !important;
+            min-width: 160px;
+            max-width: 180px;
+            white-space: normal;
+        }
+        .attendance-details-table tbody td:nth-child(2) {
+            background: #fff !important;
+        }
+        /* Column 3: Leaves - sticky at left: 290px */
+        .attendance-details-table thead th:nth-child(3),
+        .attendance-details-table tbody td:nth-child(3) {
+            position: sticky !important;
+            left: 290px !important;
+            z-index: 12 !important;
+            background: #f3e8ff !important;
+            min-width: 65px;
+            max-width: 65px;
+        }
+        /* Column 4: Absences - sticky at left: 355px */
+        .attendance-details-table thead th:nth-child(4),
+        .attendance-details-table tbody td:nth-child(4) {
+            position: sticky !important;
+            left: 355px !important;
+            z-index: 12 !important;
+            background: #fee2e2 !important;
+            min-width: 65px;
+            max-width: 65px;
+        }
+        /* Column 5: Half Days - sticky at left: 420px */
+        .attendance-details-table thead th:nth-child(5),
+        .attendance-details-table tbody td:nth-child(5) {
+            position: sticky !important;
+            left: 420px !important;
+            z-index: 12 !important;
+            background: #fed7aa !important;
+            min-width: 65px;
+            max-width: 65px;
+        }
+        /* Column 6: Present - sticky at left: 485px */
+        .attendance-details-table thead th:nth-child(6),
+        .attendance-details-table tbody td:nth-child(6) {
+            position: sticky !important;
+            left: 485px !important;
+            z-index: 12 !important;
+            background: #dcfce7 !important;
+            min-width: 65px;
+            max-width: 65px;
+        }
+        /* Column 7: Holidays - sticky at left: 550px */
+        .attendance-details-table thead th:nth-child(7),
+        .attendance-details-table tbody td:nth-child(7) {
+            position: sticky !important;
+            left: 550px !important;
+            z-index: 12 !important;
+            background: #dbeafe !important;
+            min-width: 65px;
+            max-width: 65px;
+        }
+        /* Column 8: Weekends - sticky at left: 615px */
+        .attendance-details-table thead th:nth-child(8),
+        .attendance-details-table tbody td:nth-child(8) {
+            position: sticky !important;
+            left: 615px !important;
+            z-index: 12 !important;
+            background: #e5e7eb !important;
+            min-width: 65px;
+            max-width: 65px;
+        }
+        /* Column 9: Net Days - sticky at left: 680px */
+        .attendance-details-table thead th:nth-child(9),
+        .attendance-details-table tbody td:nth-child(9) {
+            position: sticky !important;
+            left: 680px !important;
+            z-index: 12 !important;
+            background: #ecfdf5 !important;
+            min-width: 75px;
+            max-width: 75px;
+            font-weight: 700;
+        }
+        /* Hover states for all sticky columns */
+        .attendance-details-table tbody tr:hover td:nth-child(1),
+        .attendance-details-table tbody tr:hover td:nth-child(2),
+        .attendance-details-table tbody tr:hover td:nth-child(3),
+        .attendance-details-table tbody tr:hover td:nth-child(4),
+        .attendance-details-table tbody tr:hover td:nth-child(5),
+        .attendance-details-table tbody tr:hover td:nth-child(6),
+        .attendance-details-table tbody tr:hover td:nth-child(7),
+        .attendance-details-table tbody tr:hover td:nth-child(8),
+        .attendance-details-table tbody tr:hover td:nth-child(9) {
+            filter: brightness(0.95);
+        }
+        
+        /* Category columns - for backward compatibility */
+        .attendance-details-table .category-col {
+            text-align: center;
+        }
+        
+        /* Net Days column styling - for backward compatibility */
+        .attendance-details-table .net-days-col {
+            text-align: center;
+            font-weight: 700;
+        }
+        
+        /* DATE CELLS - Scrollable, not sticky */
+        .date-cell { 
+            position: static !important; 
+            z-index: auto !important;
+            min-width: 75px;
+            text-align: center;
+        }
+
+        /* Totals row styling - all 9 columns sticky for Table 2 */
+        .totals-row td {
+            font-weight: 700;
+            background: #f3f4f6 !important;
+        }
+        /* Sticky positioning for totals row columns 1-9 (Table 2: Attendance Details) */
+        .attendance-details-table .totals-row td:nth-child(1) {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 12 !important;
+            background: #f3f4f6 !important;
+        }
+        .attendance-details-table .totals-row td:nth-child(2) {
+            position: sticky !important;
+            left: 130px !important;
+            z-index: 12 !important;
+            background: #f3f4f6 !important;
+        }
+        .attendance-details-table .totals-row td:nth-child(3) {
+            position: sticky !important;
+            left: 290px !important;
+            z-index: 12 !important;
+            background: #f3e8ff !important;
+        }
+        .attendance-details-table .totals-row td:nth-child(4) {
+            position: sticky !important;
+            left: 355px !important;
+            z-index: 12 !important;
+            background: #fee2e2 !important;
+        }
+        .attendance-details-table .totals-row td:nth-child(5) {
+            position: sticky !important;
+            left: 420px !important;
+            z-index: 12 !important;
+            background: #fed7aa !important;
+        }
+        .attendance-details-table .totals-row td:nth-child(6) {
+            position: sticky !important;
+            left: 485px !important;
+            z-index: 12 !important;
+            background: #dcfce7 !important;
+        }
+        .attendance-details-table .totals-row td:nth-child(7) {
+            position: sticky !important;
+            left: 550px !important;
+            z-index: 12 !important;
+            background: #dbeafe !important;
+        }
+        .attendance-details-table .totals-row td:nth-child(8) {
+            position: sticky !important;
+            left: 615px !important;
+            z-index: 12 !important;
+            background: #e5e7eb !important;
+        }
+        .attendance-details-table .totals-row td:nth-child(9) {
+            position: sticky !important;
+            left: 680px !important;
+            z-index: 12 !important;
+            background: #ecfdf5 !important;
+        }
+        /* Table 1 (Hours Summary) totals - only 2 columns sticky */
+        .hours-summary-table .totals-row td:nth-child(1) {
+            position: sticky !important;
+            left: 0 !important;
+            z-index: 12 !important;
+            background: #f3f4f6 !important;
+        }
+        .hours-summary-table .totals-row td:nth-child(2) {
+            position: sticky !important;
+            left: 140px !important;
+            z-index: 12 !important;
+            background: #f3f4f6 !important;
+        }
+
+        td {
+            padding: 10px !important;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .employee-col {
+            font-weight: 600;
+            color: var(--dark);
+            width: 160px;
+            position: sticky;
+            left: 0;
+            z-index: 11;
+            background: white;
+            padding: 10px !important;
+            font-size: 12px;
+        }
+
+        .manager-col {
+            font-weight: 500;
+            color: #6b7280;
+            width: 110px;
+            position: sticky;
+            left: 160px;
+            z-index: 11;
+            background: white;
+            padding: 10px !important;
+            font-size: 11px;
+        }
+
+        .dept-col {
+            font-size: 11px;
+            color: #6b7280;
+            width: 110px;
+            position: sticky;
+            left: 270px;
+            z-index: 11;
+            background: white;
+            padding: 10px !important;
+        }
+
+        .summary-cell {
+            width: 85px;
+            padding: 10px !important;
+            font-size: 11px;
+            position: sticky;
+            z-index: 11;
+            background: white;
+        }
+
+        .summary-cell.pending { left: 380px; }
+        .summary-cell.submitted { left: 465px; }
+        .summary-cell.approved { left: 550px; }
+        .summary-cell.rejected { left: 635px; }
+        .summary-cell.total { left: 720px; }
+        .summary-cell.eligible { left: 805px; }
+
+        .summary-cell.categories {
+            left: auto;
+            position: sticky;
+        }
+        .summary-cell.categories:nth-of-type(1) { left: 890px; }
+        .summary-cell.categories:nth-of-type(2) { left: 975px; }
+        .summary-cell.categories:nth-of-type(3) { left: 1060px; }
+        .summary-cell.categories:nth-of-type(4) { left: 1145px; }
+        .summary-cell.categories:nth-of-type(5) { left: 1230px; }
+        .summary-cell.categories:nth-of-type(6) { left: 1315px; }
+
+        .date-cell {
+            text-align: center;
+            width: 140px;
+            padding: 10px !important;
+        }
+
+        .hours-cell {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .hours-value {
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--dark);
+        }
+
+        .hours-status {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .status-approved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .net-days-cell {
+            text-align: center;
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--success);
+            min-width: 100px;
+        }
+
+        .action-cell {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-edit {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-edit:hover {
+            background: #0369a1;
+        }
+
+        .btn-review {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-review:hover {
+            background: #d97706;
+        }
+
+        .totals-row {
+            background: #f3f4f6;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .totals-row td {
+            border-top: 2px solid #d1d5db;
+            border-bottom: 2px solid #d1d5db;
+        }
+
+        .bulk-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .bulk-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bulk-btn-primary {
+            background: var(--success);
+            color: white;
+        }
+
+        .bulk-btn-primary:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .bulk-btn-secondary {
+            background: #e5e7eb;
+            color: var(--dark);
+        }
+
+        .bulk-btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* ==================== SUMMARY TABLE STYLES (NEW) ==================== */
+        .summary-section {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .summary-table thead {
+            background: #f9fafb;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .summary-table th {
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 700;
+            color: #374151;
+            border-bottom: 2px solid #e5e7eb;
+            white-space: nowrap;
+        }
+
+        .summary-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+            color: #374151;
+        }
+
+        .summary-table tbody tr {
+            transition: background-color 0.15s ease;
+        }
+
+        .summary-table tbody tr:hover {
+            background-color: #f9fafb;
+        }
+
+        .summary-table tbody tr.status-approved {
+            border-left: 4px solid #10b981;
+        }
+
+        .summary-table tbody tr.status-pending {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .summary-table tbody tr.status-rejected {
+            border-left: 4px solid #ef4444;
+        }
+
+        .summary-table tbody tr.totals-row {
+            background: #f3f4f6;
+            font-weight: 700;
+            border-top: 2px solid #d1d5db;
+            border-bottom: 2px solid #d1d5db;
+        }
+
+        .summary-table .hours-value {
+            font-weight: 600;
+            color: #059669;
+        }
+
+        .summary-table .hours-pending {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+
+        .summary-table .hours-rejected {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        /* TAB NAVIGATION STYLES */
+        .nav-tabs {
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 24px;
+            gap: 8px;
+        }
+
+        .nav-tabs .nav-link {
+            color: #6b7280;
+            border: none;
+            border-bottom: 3px solid transparent;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: #374151;
+            border-bottom-color: #d1d5db;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: transparent;
+        }
+
+        .tab-content {
+            margin-top: 0;
+        }
+
+        @media (max-width: 768px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+
+            .date-picker-row {
+                flex-direction: column;
+            }
+
+            .bulk-actions {
+                flex-direction: column;
+            }
+
+            .bulk-btn {
+                justify-content: center;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-card.full-width {
+                grid-column: 1;
+            }
+
+            /* MOBILE RESPONSIVE TABLE FIX */
+            table {
+                table-layout: auto !important;
+                min-width: 800px !important;
+            }
+
+            .table-scroll {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            /* Remove sticky positioning on mobile - prevents overlap */
+            thead th,
+            thead th:nth-child(1),
+            thead th:nth-child(2),
+            thead th:nth-child(3),
+            thead th:nth-child(4),
+            thead th:nth-child(5),
+            thead th:nth-child(6),
+            thead th:nth-child(7),
+            thead th:nth-child(8),
+            thead th:nth-child(9),
+            thead th:nth-child(10),
+            thead th:nth-child(11),
+            thead th:nth-child(12),
+            thead th:nth-child(13),
+            thead th:nth-child(14),
+            thead th:nth-child(15),
+            tbody td:nth-child(1),
+            tbody td:nth-child(2),
+            tbody td:nth-child(3),
+            tbody td:nth-child(4),
+            tbody td:nth-child(5),
+            tbody td:nth-child(6),
+            tbody td:nth-child(7),
+            tbody td:nth-child(8),
+            tbody td:nth-child(9),
+            .totals-row td:nth-child(1),
+            .totals-row td:nth-child(2),
+            .totals-row td:nth-child(3),
+            .totals-row td:nth-child(4),
+            .totals-row td:nth-child(5),
+            .totals-row td:nth-child(6),
+            .totals-row td:nth-child(7),
+            .totals-row td:nth-child(8),
+            .totals-row td:nth-child(9) {
+                position: static !important;
+                left: auto !important;
+            }
+
+            .employee-col,
+            .manager-col,
+            .dept-col,
+            .summary-cell {
+                position: static !important;
+                left: auto !important;
+            }
+
+            /* Reduce column widths on mobile */
+            th, td {
+                padding: 8px 6px !important;
+                font-size: 12px !important;
+                white-space: nowrap;
+            }
+
+            .employee-col {
+                width: auto !important;
+                min-width: 100px !important;
+            }
+
+            .manager-col,
+            .dept-col {
+                width: auto !important;
+                min-width: 80px !important;
+            }
+
+            .summary-cell {
+                width: auto !important;
+                min-width: 70px !important;
+            }
+
+            .date-cell {
+                width: auto !important;
+                min-width: 80px !important;
+            }
+
+            /* Header mobile adjustments */
+
+            .header-logo {
+                height: 28px;
+            }
+
+            /* Team filter section mobile styles */
+            .team-filter-section {
+                flex-direction: column !important;
+                gap: 10px !important;
+            }
+
+            .team-filter-section select,
+            .team-filter-section input {
+                width: 100% !important;
+            }
+
+            /* Nav tabs mobile */
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+
+            .nav-tabs .nav-link {
+                padding: 10px 12px;
+                font-size: 12px;
+            }
+        }
+
+        /* Extra small screens (< 480px) */
+        @media (max-width: 480px) {
+            table {
+                min-width: 700px !important;
+            }
+
+            th, td {
+                padding: 6px 4px !important;
+                font-size: 11px !important;
+            }
+
+            .content-area {
+                padding: 12px !important;
+            }
+
+            .filter-section {
+                padding: 12px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+        <!-- DC_UNIVERSAL_FILTER_001: Universal Filter Container -->
+        <div id="universalFilterContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0; background: white; border-radius: 12px 12px 0 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+        
+        <!-- Fallback filters - shown if universal filter fails to load -->
+        <div id="fallbackFiltersContainer" class="filters-bar" style="border-bottom: none; padding-bottom: 0; display: flex; background: white; padding: 16px 20px;">
+            <select id="fallbackDepartmentFilter" style="min-width: 160px;" onchange="loadAttendanceRecords()">
+                <option value="">All Departments</option>
+            </select>
+            <select id="fallbackStaffTypeFilter" style="min-width: 140px;" onchange="loadAttendanceRecords()">
+                <option value="">All Staff Types</option>
+                <option value="MN_STAFF">MN Staff</option>
+                <option value="MN_EMPLOYEE">MN Employee</option>
+                <option value="FREELANCER">Freelancer</option>
+                <option value="MYNT_REAL">Mynt Real</option>
+            </select>
+        </div>
+        
+        <!-- FILTER SECTION -->
+        <div class="filter-section">
+            <h6 style="margin-bottom: 20px; font-weight: 700;">
+                <i class="fas fa-filter me-2"></i>Filters & Date Selection
+            </h6>
+
+            <!-- DC Protocol: Filter row for Department and Manager -->
+            <div class="filter-row" id="advancedFilterRow">
+                <div class="filter-group">
+                    <label>Manager</label>
+                    <select id="managerFilter" onchange="applyFilters()">
+                        <option value="">All Managers</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Department</label>
+                    <select id="departmentFilter" onchange="applyFilters()">
+                        <option value="">All Departments</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Team</label>
+                    <select id="teamFilter" onchange="applyFilters()">
+                        <option value="">All Teams</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Role</label>
+                    <select id="roleFilter" onchange="applyFilters()">
+                        <option value="">All Roles</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="date-picker-row">
+                <div class="date-picker-group" style="flex: 1;">
+                    <label>From Date</label>
+                    <input type="date" id="fromDate" onchange="onFromDateChange()">
+                </div>
+                <div class="date-picker-group" style="flex: 1;">
+                    <label>To Date</label>
+                    <input type="date" id="toDate" onchange="onToDateChange()">
+                </div>
+                <div class="nav-buttons">
+                    <button class="nav-btn" onclick="goToPreviousMonth()">
+                        <i class="fas fa-chevron-left"></i> Previous Month
+                    </button>
+                    <button class="nav-btn" onclick="goToCurrentMonth()">
+                        <i class="fas fa-calendar-today"></i> Current Month
+                    </button>
+                    <button class="nav-btn" onclick="goToNextMonth()">
+                        <i class="fas fa-chevron-right"></i> Next Month
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALERTS SECTION -->
+        <div id="alertsContainer"></div>
+
+        <!-- TAB NAVIGATION - DC COMPLIANT ROLE-BASED -->
+        <ul class="nav nav-tabs mb-4" id="attendanceTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="attendance-records-tab" data-bs-toggle="tab" data-bs-target="#attendance-records-pane" type="button" role="tab">
+                    <i class="fas fa-user me-2"></i>My Attendance
+                </button>
+            </li>
+            <li class="nav-item" id="team-attendance-container" style="display:none;" role="presentation">
+                <button class="nav-link" id="team-attendance-tab" data-bs-toggle="tab" data-bs-target="#team-attendance-pane" type="button" role="tab">
+                    <i class="fas fa-users me-2"></i>Team Attendance
+                </button>
+            </li>
+            <!-- Tab 3 (Bulk Marking) removed - merged into Team Attendance -->
+        </ul>
+
+        <!-- TAB CONTENT -->
+        <div class="tab-content" id="attendanceTabContent">
+            <!-- TAB 1: ATTENDANCE RECORDS (All Employees - Managers get employee filter) -->
+            <div class="tab-pane fade show active" id="attendance-records-pane" role="tabpanel">
+                <!-- DC Protocol (Dec 04, 2025): Employee Filter - ONLY visible for managers -->
+                <div class="filter-section" id="attendanceRecordsFilterSection" style="display: none; margin-bottom: 16px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+                    <div style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;" class="team-filter-section">
+                        <div style="flex: 1; min-width: 250px;">
+                            <label style="display: block; font-weight: 600; font-size: 13px; color: #6b7280; margin-bottom: 6px;">
+                                <i class="fas fa-user-circle me-1"></i>View Attendance For
+                            </label>
+                            <div id="teamMemberSearchContainer"></div>
+                        </div>
+                        <div id="selectedEmployeeInfo" style="flex: 1; min-width: 200px; padding: 10px; background: #ecfdf5; border-radius: 8px; border-left: 4px solid #10b981; display: none;">
+                            <span style="font-size: 13px; color: #065f46;"><i class="fas fa-info-circle me-1"></i>Viewing: <strong id="selectedEmployeeName">Your Records</strong></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="summary-section" id="attendanceRecordsSummary" style="display:none;">
+                    <h6 style="margin-bottom: 16px; font-weight: 700; color: #374151;">
+                        <i class="fas fa-chart-pie me-2"></i>Attendance Summary
+                    </h6>
+                    <div class="table-scroll" style="max-height: none; margin-bottom: 0;">
+                        <table class="summary-table">
+                            <thead>
+                                <tr>
+                                    <th style="min-width: 140px;">Metric</th>
+                                    <th style="min-width: 120px; text-align: center;">Value</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceRecordsSummaryBody">
+                                <tr>
+                                    <td colspan="2" style="text-align: center; padding: 20px;">Loading...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <div class="table-scroll">
+                        <table id="attendanceRecordsTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Day</th>
+                                    <th style="text-align: center;">Login Time</th>
+                                    <th style="text-align: center;">Logout Time</th>
+                                    <th style="text-align: center;">Total Hours</th>
+                                    <th>Marked Status</th>
+                                    <th>Marked Hours</th>
+                                    <th>Approved Status</th>
+                                    <th>Approved Hours</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceRecordsTableBody">
+                                <tr>
+                                    <td colspan="9" style="text-align: center; padding: 40px;">
+                                        <div class="empty-state">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <p>Loading attendance data...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: TEAM ATTENDANCE (Manager Only - BULK MARKING FORMAT) -->
+            <div class="tab-pane fade" id="team-attendance-pane" role="tabpanel">
+                <!-- DC Protocol (Dec 04, 2025): Team Attendance Summary (Same format as Bulk Marking) -->
+                <div class="summary-section" id="teamSummaryContainer" style="display:none;">
+                    <h6 style="margin-bottom: 16px; font-weight: 700; color: #374151;">
+                        <i class="fas fa-users me-2"></i>Employee-Wise Attendance Summary (Current Filters Applied)
+                    </h6>
+                    
+                    <div class="table-scroll" style="max-height: none; margin-bottom: 0;">
+                        <table class="summary-table hours-summary-table">
+                            <thead>
+                                <tr>
+                                    <th style="min-width: 140px;">Department</th>
+                                    <th style="min-width: 180px;">Employee Name</th>
+                                    <th style="min-width: 85px; text-align: center; background: #fffbeb;">Pending Hrs</th>
+                                    <th style="min-width: 85px; text-align: center; background: #fef3c7;">Submitted Hrs</th>
+                                    <th style="min-width: 85px; text-align: center; background: #f0f9ff;">Approved Hrs</th>
+                                    <th style="min-width: 85px; text-align: center; background: #fef2f2;">Rejected Hrs</th>
+                                    <th style="min-width: 85px; text-align: center; background: #fae8ff;">Exception Hrs</th>
+                                    <th style="min-width: 85px; text-align: center; background: #f9fafb;">Total Hrs</th>
+                                    <th style="min-width: 75px; text-align: center; background: #dcfce7;">Present</th>
+                                    <th style="min-width: 75px; text-align: center; background: #f3e8ff;">Leaves</th>
+                                    <th style="min-width: 75px; text-align: center; background: #fee2e2;">Absences</th>
+                                    <th style="min-width: 75px; text-align: center; background: #fed7aa;">Half Days</th>
+                                    <th style="min-width: 75px; text-align: center; background: #dbeafe;">Holidays</th>
+                                    <th style="min-width: 75px; text-align: center; background: #e5e7eb;">Weekends</th>
+                                    <th style="min-width: 75px; text-align: center; background: #ecfdf5; font-weight: 700;">Net Days</th>
+                                    <th style="min-width: 85px; text-align: center; background: #fef3c7;">Exc. Days</th>
+                                    <th style="min-width: 85px; text-align: center; background: #ecfdf5;">Eligible Days</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teamSummaryTableBody">
+                                <tr>
+                                    <td colspan="17" style="text-align: center; padding: 20px; color: #9ca3af;">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading summary...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- DC Protocol: Monthly Grid with Day-by-Day Columns (VIEW ONLY) -->
+                <div class="table-wrapper">
+                    <div class="table-scroll">
+                        <table id="teamAttendanceTable" class="attendance-details-table">
+                            <thead>
+                                <tr id="teamHeaderRow">
+                                    <th style="min-width: 140px;">Department</th>
+                                    <th style="min-width: 180px;">Employee Name</th>
+                                    <th class="category-col" style="text-align: center; background: #f3e8ff; font-size: 11px;">Leaves</th>
+                                    <th class="category-col" style="text-align: center; background: #fee2e2; font-size: 11px;">Absences</th>
+                                    <th class="category-col" style="text-align: center; background: #fed7aa; font-size: 11px;">Half Days</th>
+                                    <th class="category-col" style="text-align: center; background: #dcfce7; font-size: 11px;">Present</th>
+                                    <th class="category-col" style="text-align: center; background: #dbeafe; font-size: 11px;">Holidays</th>
+                                    <th class="category-col" style="text-align: center; background: #e5e7eb; font-size: 11px;">Weekends</th>
+                                    <th class="net-days-col" style="text-align: center; background: #ecfdf5; font-size: 11px; font-weight: 700;">Net Days</th>
+                                    <!-- Date columns will be inserted here dynamically -->
+                                </tr>
+                            </thead>
+                            <tbody id="teamAttendanceTableBody">
+                                <tr>
+                                    <td colspan="12" style="text-align: center; padding: 40px;">
+                                        <div class="empty-state">
+                                            <i class="fas fa-spinner fa-spin"></i>
+                                            <p>Loading team attendance data...</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- DC Protocol: Action Buttons - Marking buttons shown only for HR/Accounts/EA/VGK4U -->
+                <div class="action-buttons" style="margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
+                    <!-- Marking Buttons - only visible for authorized roles -->
+                    <div id="markingButtonsContainer" style="display: none;">
+                        <button class="bulk-btn bulk-btn-primary" onclick="approveAll()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-right: 8px;">
+                            <i class="fas fa-check-circle me-1"></i> Approve All
+                        </button>
+                        <button class="bulk-btn bulk-btn-secondary" onclick="saveDraft()" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-right: 8px;">
+                            <i class="fas fa-save me-1"></i> Save Draft
+                        </button>
+                    </div>
+                    <button class="action-btn btn-info" onclick="exportTeamCSV()" style="padding: 10px 20px; background: #0ea5e9; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-file-csv me-2"></i>Export CSV
+                    </button>
+                    <button class="action-btn btn-secondary" onclick="generateTeamReport()" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-chart-bar me-2"></i>Generate Report
+                    </button>
+                    <span id="viewOnlyModeLabel" style="display: flex; align-items: center; margin-left: auto; font-size: 12px; color: #9ca3af;">
+                        <i class="fas fa-eye me-1"></i> View Only Mode - Data managed by HR
+                    </span>
+                    <span id="markingModeLabel" style="display: none; align-items: center; margin-left: auto; font-size: 12px; color: #10b981;">
+                        <i class="fas fa-edit me-1"></i> Marking Mode - You can mark attendance
+                    </span>
+                </div>
+            </div>
+
+<!-- TAB 3 (BULK MARKING) removed - functionality merged into Team Attendance tab -->
+        </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff_universal_filter.js?v=1764165148"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/team-member-search.js"></script>
+    <script>
+        let currentMonthData = null;
+        let allEmployees = [];
+        let universalFilter = null;
+        let universalFilterReady = false;
+        let teamMemberSearch = null;
+
+        const API_BASE = '/api/v1/staff/attendance-sheet';
+        
+        function buildFilterPayload() {
+            if (universalFilterReady && universalFilter && universalFilter.isReady && !universalFilter.initFailed) {
+                try {
+                    const filters = universalFilter.getFilters();
+                    return filters;
+                } catch (e) {
+                    console.warn('[DC] Error getting universal filter values:', e);
+                }
+            }
+            const fallbackDept = document.getElementById('fallbackDepartmentFilter');
+            const fallbackStaff = document.getElementById('fallbackStaffTypeFilter');
+            return {
+                company_id: null,
+                staff_type: fallbackStaff ? (fallbackStaff.value || null) : null,
+                department_id: fallbackDept ? (fallbackDept.value || null) : null,
+                employee_id: null,
+                employee: null,
+                search: null
+            };
+        }
+        
+        async function loadFallbackDepartments() {
+            try {
+                const response = await staffFetch('/api/v1/staff/departments');
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('fallbackDepartmentFilter');
+                    if (!select) return;
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading fallback departments:', error);
+            }
+        }
+        
+        function hideFallbackFilters() {
+            const fallback = document.getElementById('fallbackFiltersContainer');
+            if (fallback) fallback.style.display = 'none';
+        }
+        
+        // DC Protocol: Load department options for advanced filter
+        async function loadDepartmentFilter() {
+            try {
+                const response = await staffFetch('/api/v1/staff/departments');
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('departmentFilter');
+                    if (!select) return;
+                    // Clear existing options except first
+                    while (select.options.length > 1) select.remove(1);
+                    const departments = data.departments || data || [];
+                    departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading department filter:', error);
+            }
+        }
+        
+        // DC Protocol: Load manager options for advanced filter
+        async function loadManagerFilter() {
+            try {
+                const response = await staffFetch('/api/v1/staff/employees/managers');
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('managerFilter');
+                    if (!select) return;
+                    // Clear existing options except first
+                    while (select.options.length > 1) select.remove(1);
+                    const managers = data.managers || data || [];
+                    managers.forEach(mgr => {
+                        const option = document.createElement('option');
+                        option.value = mgr.id;
+                        option.textContent = mgr.full_name || mgr.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('[DC] Error loading manager filter:', error);
+            }
+        }
+
+        // DC Compliance: Initialize header user info from localStorage with null-safety checks
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const name = userData.full_name || 'Staff Member';
+            const role = userData.role_name || 'Employee';
+            const empId = userData.emp_code || userData.employee_code || '-';
+            
+            // DC Compliance: Verify all required header elements exist before setting values
+            const headerUserInitials = document.getElementById('headerUserInitials');
+            const headerUserName = document.getElementById('headerUserName');
+            const headerUserEmpId = document.getElementById('headerUserEmpId');
+            const headerUserRole = document.getElementById('headerUserRole');
+            
+            if (!headerUserInitials || !headerUserName || !headerUserEmpId || !headerUserRole) {
+                console.error('DC ERROR: Header elements not found in DOM. Cannot update user info.', {
+                    headerUserInitials: !!headerUserInitials,
+                    headerUserName: !!headerUserName,
+                    headerUserEmpId: !!headerUserEmpId,
+                    headerUserRole: !!headerUserRole
+                });
+                return;
+            }
+            
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            
+            headerUserInitials.textContent = initials;
+            headerUserName.textContent = name;
+            headerUserEmpId.textContent = empId;
+            headerUserRole.textContent = role;
+            
+            if (role.includes('Supreme') || role.includes('VGK4U')) {
+                headerUserRole.className = 'user-info-role role-badge-supreme';
+            } else if (role.includes('HR')) {
+                headerUserRole.className = 'user-info-role role-badge-hr';
+            } else if (role.includes('Leadership') || role.includes('Leader')) {
+                headerUserRole.className = 'user-info-role role-badge-leadership';
+            } else {
+                headerUserRole.className = 'user-info-role role-badge-default';
+            }
+        }
+
+        // DC Protocol: Check if user has an attendance-authorised additional department
+        function _hasAttendanceDept(userData) {
+            const depts = userData.additional_departments || [];
+            const authorised = ['accounts', 'human resources', 'hr'];
+            return depts.some(function(d) {
+                return authorised.includes((d.department_name || '').toLowerCase());
+            });
+        }
+
+        // DC Protocol: Check if user can mark attendance (HR, Accounts, EA, VGK4U, MR10001)
+        // Also grants marking rights when HR or Accounts is an additional department assignment
+        function canMarkAttendance() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const roleCode = (userData.role_code || '').toLowerCase();
+            const empCode = (userData.emp_code || userData.employee_code || '').toUpperCase();
+            const markingRoles = ['hr', 'accounts', 'ea', 'vgk4u'];
+            return markingRoles.includes(roleCode) || _hasAttendanceDept(userData) || empCode === 'MR10001';
+        }
+
+        // DC Compliance: Initialize tabs based on user role
+        function initializeTabs() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const userRole = userData.role_name || '';
+            const userId = userData.employee_id || userData.id || null;
+
+            // Tab 1: "My Attendance" - Always visible (shows only logged-in user's data)
+            // Tab 2: "Team Attendance" - Only for Managers/Leaders with marking for authorized roles
+            const teamTabContainer = document.getElementById('team-attendance-container');
+            const isManager = userRole.includes('Manager') || userRole.includes('Leadership') || 
+                              userRole.includes('HR') || userRole.includes('EA') || 
+                              userRole.includes('VGK') || userRole.includes('Supreme') ||
+                              userRole.includes('Accounts') || userRole.includes('Team Leader') ||
+                              _hasAttendanceDept(userData);
+            
+            if (isManager) {
+                teamTabContainer.style.display = 'block';
+                // DC Protocol (Dec 04, 2025): Show employee filter for managers in My Attendance tab
+                initializeAttendanceRecordsFilter(userId);
+                
+                // DC Protocol (Jan 01, 2026): Show marking buttons for authorized roles
+                if (canMarkAttendance()) {
+                    const markingBtns = document.getElementById('markingButtonsContainer');
+                    const viewOnlyLabel = document.getElementById('viewOnlyModeLabel');
+                    const markingLabel = document.getElementById('markingModeLabel');
+                    if (markingBtns) markingBtns.style.display = 'flex';
+                    if (viewOnlyLabel) viewOnlyLabel.style.display = 'none';
+                    if (markingLabel) markingLabel.style.display = 'flex';
+                }
+            } else {
+                teamTabContainer.style.display = 'none';
+            }
+
+            // DC Protocol: Setup tab change event listeners with filter visibility control
+            const advancedFilterRow = document.getElementById('advancedFilterRow');
+            
+            document.getElementById('attendance-records-tab').addEventListener('show.bs.tab', function() {
+                advancedFilterRow.style.display = 'none';
+                loadAttendanceRecords();
+            });
+
+            if (teamTabContainer.style.display !== 'none') {
+                document.getElementById('team-attendance-tab').addEventListener('show.bs.tab', function() {
+                    advancedFilterRow.style.display = 'grid';
+                    loadTeamAttendance();
+                });
+            }
+        }
+
+        // DC Protocol (Dec 04, 2025): Initialize employee filter for managers in Attendance Records tab
+        async function initializeAttendanceRecordsFilter(currentUserId) {
+            const filterSection = document.getElementById('attendanceRecordsFilterSection');
+            
+            if (!filterSection) return;
+            
+            filterSection.style.display = 'block';
+            
+            if (!teamMemberSearch) {
+                teamMemberSearch = new TeamMemberSearch({
+                    containerId: 'teamMemberSearchContainer',
+                    placeholder: 'Search team member...',
+                    compactMode: true,
+                    onSelect: (member) => { onAttendanceRecordsFilterChange(); },
+                    onClear: () => { onAttendanceRecordsFilterChange(); }
+                });
+            }
+            
+            try {
+                const response = await staffFetch(`/api/v1/crm/my-downline`);
+                if (!response.ok) {
+                    console.warn('[Attendance-Sheet] Failed to load team members');
+                    return;
+                }
+                const data = await response.json();
+                if (data.success) {
+                    teamMemberSearch.setMembers(data.self, data.data || []);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading team members for filter:', error);
+            }
+        }
+
+        // DC Protocol (Dec 04, 2025): Handle filter change in Attendance Records tab
+        function onAttendanceRecordsFilterChange() {
+            const filterValue = teamMemberSearch ? teamMemberSearch.getValue() : '';
+            const infoDiv = document.getElementById('selectedEmployeeInfo');
+            const nameSpan = document.getElementById('selectedEmployeeName');
+            
+            if (!filterValue) {
+                infoDiv.style.display = 'none';
+                loadAttendanceRecords();
+            } else {
+                const selectedMember = teamMemberSearch ? teamMemberSearch.getSelectedMember() : null;
+                const selectedText = selectedMember ? `${selectedMember.name} (${selectedMember.emp_code})` : '';
+                nameSpan.textContent = selectedText;
+                infoDiv.style.display = 'block';
+                loadAttendanceRecords(filterValue);
+            }
+        }
+
+        // DC Compliance: Load attendance records (own or selected employee for managers)
+        // Dec 04, 2025: Enhanced to support manager viewing team member records
+        // Dec 07, 2025: DC_UNIVERSAL_FILTER_001 - Integrated with universal filter pattern
+        async function loadAttendanceRecords(selectedEmployeeId = null) {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const currentUserId = userData.employee_id || userData.id;
+            const fromDateVal = document.getElementById('fromDate').value;
+            
+            // DC_UNIVERSAL_FILTER_001: Get filter values from universal filter or fallback
+            const filters = buildFilterPayload();
+            
+            // Determine which employee's data to load
+            // Priority: selectedEmployeeId (direct param) > universal filter employee_id > current user
+            let targetEmpId = selectedEmployeeId;
+            if (!targetEmpId && filters.employee_id) {
+                targetEmpId = filters.employee_id;
+            }
+            if (!targetEmpId) {
+                targetEmpId = currentUserId;
+            }
+
+            if (!targetEmpId || !fromDateVal) {
+                console.error('DC ERROR: Missing employee ID or date');
+                return;
+            }
+
+            try {
+                const monthYear = fromDateVal.substring(0, 7); // YYYY-MM format
+                
+                // Build URL with optional filter params
+                let url = `${API_BASE}/employee/${targetEmpId}/marked-data/${monthYear}`;
+                const params = [];
+                if (filters.department_id) params.push(`department_id=${filters.department_id}`);
+                if (filters.staff_type) params.push(`staff_type=${filters.staff_type}`);
+                if (params.length > 0) url += `?${params.join('&')}`;
+                
+                const response = await staffFetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                renderAttendanceRecordsTable(data, selectedEmployeeId !== null || filters.employee_id !== null);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading attendance records:', error);
+                document.getElementById('attendanceRecordsTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 20px; color: #ef4444;">
+                            <i class="fas fa-exclamation-circle"></i> Error loading attendance data
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // DC Compliance: Render attendance records table
+        // Dec 04, 2025: Fixed field mapping to match backend response (records, status, approval_status)
+        // Dec 04, 2025: Added Login Time, Logout Time, Total Hours columns
+        function renderAttendanceRecordsTable(data, isViewingOther = false) {
+            const tbody = document.getElementById('attendanceRecordsTableBody');
+            
+            // DC Protocol: Backend returns 'records' array, not 'attendance_records'
+            if (!data || !data.records || data.records.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 40px; color: #6b7280;">
+                            <i class="fas fa-inbox"></i> No attendance records found for this month
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // DC Protocol: Map backend field names correctly
+            // Backend: status (marked), approval_status (approved), login_time, logout_time, total_hours
+            let totalLoggedHours = 0, totalMarkedHours = 0, totalApprovedHours = 0;
+            
+            // DC Protocol (Jan 01, 2026): Helper to parse HH:MM format to decimal hours
+            function parseHoursToDecimal(hoursStr) {
+                if (!hoursStr) return 0;
+                // Handle already numeric values
+                if (typeof hoursStr === 'number') return hoursStr;
+                // Handle HH:MM format (e.g., "08:30" -> 8.5)
+                if (typeof hoursStr === 'string' && hoursStr.includes(':')) {
+                    const parts = hoursStr.split(':');
+                    const hours = parseInt(parts[0]) || 0;
+                    const minutes = parseInt(parts[1]) || 0;
+                    return hours + (minutes / 60);
+                }
+                return parseFloat(hoursStr) || 0;
+            }
+            
+            const rows = data.records.map(record => {
+                const statusClass = (record.status || 'pending').toLowerCase().replace('_', '-');
+                const approvalClass = (record.approval_status || 'pending').toLowerCase().replace('_', '-');
+                const rowStyle = isViewingOther ? 'background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b;' : '';
+                
+                // Calculate totals (handle HH:MM format for total_hours)
+                const loggedHrs = parseHoursToDecimal(record.total_hours);
+                const markedHrs = parseFloat(record.marked_hours) || 0;
+                const approvedHrs = parseFloat(record.approved_hours) || 0;
+                totalLoggedHours += loggedHrs;
+                totalMarkedHours += markedHrs;
+                totalApprovedHours += approvedHrs;
+                
+                return `
+                <tr style="${rowStyle}">
+                    <td>${new Date(record.date).toLocaleDateString('en-IN')}</td>
+                    <td>${new Date(record.date).toLocaleDateString('en-IN', { weekday: 'short' })}</td>
+                    <td style="text-align: center; color: #059669; font-weight: 500;">${record.login_time || '<span style="color: #9ca3af;">-</span>'}</td>
+                    <td style="text-align: center; color: #dc2626; font-weight: 500;">${record.logout_time || '<span style="color: #9ca3af;">-</span>'}</td>
+                    <td style="text-align: center; font-weight: 600; color: #0284c7;">${record.total_hours || '<span style="color: #9ca3af;">-</span>'}</td>
+                    <td><span class="status-badge ${statusClass}">${record.status || '-'}</span></td>
+                    <td style="text-align: center; font-weight: 600;">${record.marked_hours || 0} hrs</td>
+                    <td><span class="status-badge ${approvalClass}">${record.approval_status || '-'}</span></td>
+                    <td style="text-align: center; font-weight: 600;">${record.approved_hours !== null ? record.approved_hours : '-'} hrs</td>
+                </tr>
+            `}).join('');
+
+            // DC Protocol (Jan 01, 2026): Add totals row at bottom
+            const totalsRow = `
+                <tr class="totals-row" style="font-weight: 700; background: #f3f4f6;">
+                    <td colspan="4" style="text-align: left;">MONTHLY TOTAL (${data.records.length} days)</td>
+                    <td style="text-align: center; color: #0284c7;">${totalLoggedHours.toFixed(2)} hrs</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center; color: #059669;">${totalMarkedHours.toFixed(2)} hrs</td>
+                    <td style="text-align: center;">-</td>
+                    <td style="text-align: center; color: #059669; background: #ecfdf5;">${totalApprovedHours.toFixed(2)} hrs</td>
+                </tr>
+            `;
+
+            tbody.innerHTML = rows + totalsRow;
+            
+            // DC Protocol: Update summary if available
+            if (data.summary) {
+                const summarySection = document.getElementById('attendanceRecordsSummary');
+                const summaryBody = document.getElementById('attendanceRecordsSummaryBody');
+                if (summarySection && summaryBody) {
+                    summarySection.style.display = 'block';
+                    summaryBody.innerHTML = `
+                        <tr>
+                            <td style="font-weight: 600;">Total Marked Hours</td>
+                            <td style="text-align: center; font-weight: 600;">${data.summary.total_marked_hours || 0} hrs</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600;">Total Approved Hours</td>
+                            <td style="text-align: center; font-weight: 600;">${data.summary.total_approved_hours || 0} hrs</td>
+                        </tr>
+                        <tr>
+                            <td style="font-weight: 600;">Total Net Days</td>
+                            <td style="text-align: center; font-weight: 600;">${data.summary.total_net_days || 0}</td>
+                        </tr>
+                    `;
+                }
+            }
+        }
+
+        // DC Protocol (Dec 04, 2025): Load team attendance data in BULK MARKING FORMAT
+        // Uses new endpoint /manager/team-monthly for consistent format with Bulk Marking tab
+        let teamAttendanceData = null; // Store for export functions
+        
+        async function loadTeamAttendance() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const managerId = userData.employee_id || userData.id;
+            const fromDateVal = document.getElementById('fromDate').value;
+
+            if (!managerId || !fromDateVal) {
+                console.error('DC ERROR: Missing manager ID or date');
+                return;
+            }
+
+            try {
+                const monthYear = fromDateVal.substring(0, 7);
+                
+                // DC Protocol (Dec 04, 2025): Use new bulk-marking format endpoint
+                const url = `${API_BASE}/manager/team-monthly/${managerId}/${monthYear}`;
+                
+                const response = await staffFetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                teamAttendanceData = data; // Store for export
+                renderTeamAttendanceGrid(data);
+                const alertDate = fromDateVal || document.getElementById('fromDate').value;
+                if (alertDate) loadAlerts(alertDate);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading team attendance:', error);
+                document.getElementById('teamAttendanceTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="20" style="text-align: center; padding: 20px; color: #ef4444;">
+                            <i class="fas fa-exclamation-circle"></i> Error loading team data
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // DC Protocol (Dec 04, 2025): Render team attendance in BULK MARKING FORMAT
+        // VIEW ONLY - Same format as Bulk Marking tab, self first then department-wise
+        function renderTeamAttendanceGrid(data) {
+            if (!data || !data.success) {
+                document.getElementById('teamAttendanceTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="20" style="text-align: center; padding: 40px; color: #6b7280;">
+                            <i class="fas fa-inbox"></i> No attendance data available
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // DC Protocol: Render Summary Table (same format as Bulk Marking)
+            renderTeamSummaryTable(data);
+            
+            // DC Protocol: Render Monthly Grid with day-by-day columns
+            renderTeamMonthlyGrid(data);
+        }
+        
+        // DC Protocol: Render Employee-Wise Summary Table
+        // DC Protocol (Jan 07, 2026): Added Exception Hrs and Exception Days columns
+        function renderTeamSummaryTable(data) {
+            const summaryContainer = document.getElementById('teamSummaryContainer');
+            const summaryBody = document.getElementById('teamSummaryTableBody');
+            
+            if (!data.employees || data.employees.length === 0) {
+                summaryContainer.style.display = 'none';
+                return;
+            }
+            
+            // DC Protocol: Stable sort by department then employee name to prevent row shuffling
+            const sortedEmployees = [...data.employees].sort((a, b) => {
+                const deptA = (a.department || '').toLowerCase();
+                const deptB = (b.department || '').toLowerCase();
+                if (deptA !== deptB) return deptA.localeCompare(deptB);
+                return (a.employee_name || '').toLowerCase().localeCompare((b.employee_name || '').toLowerCase());
+            });
+            
+            let tableHTML = '';
+            let totalPending = 0, totalSubmitted = 0, totalApproved = 0, totalRejected = 0, totalMarked = 0, totalEligible = 0;
+            let totalExceptionHrs = 0, totalExceptionDays = 0;
+            let totalPresent = 0, totalLeaves = 0, totalAbsences = 0, totalHalfDays = 0, totalHolidays = 0, totalWeekends = 0, totalNetDays = 0;
+            
+            sortedEmployees.forEach(emp => {
+                const summary = emp.summary || {};
+                const isSelf = emp.is_self;
+                const selfStyle = isSelf ? 'background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);' : '';
+                const selfBadge = isSelf ? ' <span class="badge bg-success" style="font-size: 9px;">YOU</span>' : '';
+                
+                totalPending += summary.pending_hours || 0;
+                totalSubmitted += summary.submitted_hours || summary.total_marked_hours || 0;
+                totalApproved += summary.approved_hours || 0;
+                totalRejected += summary.rejected_hours || 0;
+                totalExceptionHrs += summary.exception_hours || 0;
+                totalMarked += summary.total_marked_hours || 0;
+                totalExceptionDays += summary.exception_days || 0;
+                totalEligible += summary.eligible_days || 0;
+                totalPresent += summary.present_days_count || 0;
+                totalLeaves += summary.leaves_days || 0;
+                totalAbsences += summary.absences_count || 0;
+                totalHalfDays += summary.half_days_count || 0;
+                totalHolidays += summary.holidays_count || 0;
+                totalWeekends += summary.weekends_count || 0;
+                // Net Days = present + approved_leave (leaves_days) + holidays + half_days*0.5
+                const empNetDays = (summary.present_days_count || 0) + (summary.leaves_days || 0) + (summary.holidays_count || 0) + (summary.half_days_count || 0) * 0.5;
+                totalNetDays += empNetDays;
+                
+                tableHTML += `<tr style="${selfStyle}">
+                    <td>${emp.department || 'Unassigned'}</td>
+                    <td><strong>${emp.employee_name}</strong>${selfBadge}</td>
+                    <td style="text-align: center; background: #fffbeb;"><span class="hours-pending">${(summary.pending_hours || 0).toFixed(2)}</span></td>
+                    <td style="text-align: center; background: #fef3c7;"><span class="hours-submitted">${(summary.submitted_hours || summary.total_marked_hours || 0).toFixed(2)}</span></td>
+                    <td style="text-align: center; background: #f0f9ff;"><span class="hours-value">${(summary.approved_hours || 0).toFixed(2)}</span></td>
+                    <td style="text-align: center; background: #fef2f2;"><span class="hours-rejected">${(summary.rejected_hours || 0).toFixed(2)}</span></td>
+                    <td style="text-align: center; background: #fae8ff; font-weight: 600; color: #9333ea;">${(summary.exception_hours || 0).toFixed(2)}</td>
+                    <td style="text-align: center; background: #f9fafb; font-weight: 600;">${(summary.total_marked_hours || 0).toFixed(2)}</td>
+                    <td style="text-align: center; background: #dcfce7; font-weight: 600; color: #16a34a;">${summary.present_days_count || 0}</td>
+                    <td style="text-align: center; background: #f3e8ff; font-weight: 600; color: #7c3aed;">${(summary.leaves_days || 0).toFixed(1)}</td>
+                    <td style="text-align: center; background: #fee2e2; font-weight: 600; color: #ef4444;">${summary.absences_count || 0}</td>
+                    <td style="text-align: center; background: #fed7aa; font-weight: 600; color: #f97316;">${summary.half_days_count || 0}</td>
+                    <td style="text-align: center; background: #dbeafe; font-weight: 600; color: #0284c7;">${summary.holidays_count || 0}</td>
+                    <td style="text-align: center; background: #e5e7eb; font-weight: 600; color: #4b5563;">${summary.weekends_count || 0}</td>
+                    <td style="text-align: center; background: #ecfdf5; font-weight: 700; color: #059669;">${empNetDays.toFixed(1)}</td>
+                    <td style="text-align: center; background: #fef3c7; font-weight: 600; color: #d97706;">${(summary.exception_days || 0).toFixed(2)}</td>
+                    <td style="text-align: center; font-weight: 600; color: #059669; background: #ecfdf5; border-radius: 4px;">
+                        ${(summary.eligible_days || 0).toFixed(2)}
+                    </td>
+                </tr>`;
+            });
+            
+            // Add totals row with all columns
+            tableHTML += `<tr class="totals-row" style="font-weight: 700; background: #f3f4f6;">
+                <td>TOTAL</td>
+                <td>(${sortedEmployees.length} employees)</td>
+                <td style="text-align: center; color: #f59e0b; background: #fffbeb;">${totalPending.toFixed(2)}</td>
+                <td style="text-align: center; color: #d97706; background: #fef3c7;">${totalSubmitted.toFixed(2)}</td>
+                <td style="text-align: center; color: #059669; background: #f0f9ff;">${totalApproved.toFixed(2)}</td>
+                <td style="text-align: center; color: #ef4444; background: #fef2f2;">${totalRejected.toFixed(2)}</td>
+                <td style="text-align: center; color: #9333ea; background: #fae8ff;">${totalExceptionHrs.toFixed(2)}</td>
+                <td style="text-align: center; background: #f9fafb;">${totalMarked.toFixed(2)}</td>
+                <td style="text-align: center; color: #16a34a; background: #dcfce7;">${totalPresent}</td>
+                <td style="text-align: center; color: #7c3aed; background: #f3e8ff;">${totalLeaves.toFixed(1)}</td>
+                <td style="text-align: center; color: #ef4444; background: #fee2e2;">${totalAbsences}</td>
+                <td style="text-align: center; color: #f97316; background: #fed7aa;">${totalHalfDays}</td>
+                <td style="text-align: center; color: #0284c7; background: #dbeafe;">${totalHolidays}</td>
+                <td style="text-align: center; color: #4b5563; background: #e5e7eb;">${totalWeekends}</td>
+                <td style="text-align: center; color: #059669; background: #ecfdf5;">${totalNetDays.toFixed(1)}</td>
+                <td style="text-align: center; color: #d97706; background: #fef3c7;">${totalExceptionDays.toFixed(2)}</td>
+                <td style="text-align: center; background: #ecfdf5; color: #059669;">${totalEligible.toFixed(2)}</td>
+            </tr>`;
+            
+            summaryBody.innerHTML = tableHTML;
+            summaryContainer.style.display = 'block';
+        }
+        
+        // DC Protocol: Render Monthly Grid with day-by-day columns (VIEW ONLY)
+        // Table 2: Department, Employee Name, Leaves, Absences, Half Days, Present, Holidays, Weekends, Net Days + Date Columns
+        function renderTeamMonthlyGrid(data) {
+            // Build header with date columns (no <tr> wrapper - using innerHTML on existing <tr>)
+            let headerHTML = '';
+            headerHTML += '<th style="min-width: 140px; background: #f9fafb;">Department</th>';
+            headerHTML += '<th style="min-width: 180px; background: #f9fafb;">Employee Name</th>';
+            
+            // Category columns only (hours moved to Table 1)
+            headerHTML += '<th class="category-col" style="text-align: center; background: #f3e8ff; font-size: 11px;">Leaves</th>';
+            headerHTML += '<th class="category-col" style="text-align: center; background: #fee2e2; font-size: 11px;">Absences</th>';
+            headerHTML += '<th class="category-col" style="text-align: center; background: #fed7aa; font-size: 11px;">Half Days</th>';
+            headerHTML += '<th class="category-col" style="text-align: center; background: #dcfce7; font-size: 11px;">Present</th>';
+            headerHTML += '<th class="category-col" style="text-align: center; background: #dbeafe; font-size: 11px;">Holidays</th>';
+            headerHTML += '<th class="category-col" style="text-align: center; background: #e5e7eb; font-size: 11px;">Weekends</th>';
+            headerHTML += '<th class="net-days-col" style="text-align: center; background: #ecfdf5; font-size: 11px; font-weight: 700;">Net Days</th>';
+            
+            // Date columns - DC Protocol: Format as DD/MM for clarity
+            data.dates.forEach(dateStr => {
+                const dateObj = new Date(dateStr);
+                const day = dateObj.getDate().toString().padStart(2, '0');
+                const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                const formattedDate = `${day}/${month}`;
+                headerHTML += `<th class="date-cell" style="text-align: center;">${formattedDate}</th>`;
+            });
+            document.getElementById('teamHeaderRow').innerHTML = headerHTML;
+
+            // Build table body
+            let bodyHTML = '';
+            let totalNetDays = 0;
+
+            // DC Protocol: Stable sort by department then employee name (same order as summary table)
+            const sortedEmpsGrid = [...data.employees].sort((a, b) => {
+                const dA = (a.department || '').toLowerCase(), dB = (b.department || '').toLowerCase();
+                if (dA !== dB) return dA.localeCompare(dB);
+                return (a.employee_name || '').toLowerCase().localeCompare((b.employee_name || '').toLowerCase());
+            });
+
+            sortedEmpsGrid.forEach(emp => {
+                const summary = emp.summary || {};
+                const isSelf = emp.is_self;
+                const selfStyle = isSelf ? 'background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);' : '';
+                const selfBadge = isSelf ? ' <span class="badge bg-success" style="font-size: 9px;">YOU</span>' : '';
+                
+                // DC Protocol: Table 2 - Department, Employee Name, Attendance Counts, Net Days, then Date Columns
+                bodyHTML += `<tr style="${selfStyle}">
+                    <td style="background: ${isSelf ? '#d1fae5' : '#fff'};">
+                        ${emp.department || 'Unassigned'}
+                    </td>
+                    <td style="white-space: normal;">
+                        <strong>${emp.employee_name}</strong>${selfBadge}
+                        <br><small style="color: #6b7280;">${emp.employee_code || ''}</small>
+                    </td>
+                    
+                    <!-- Category Columns (Attendance Types) -->
+                    <td class="category-col" style="text-align: center; font-weight: 600; color: #7c3aed; background: #f3e8ff; font-size: 11px;">
+                        ${(summary.leaves_days || 0).toFixed(1)}
+                    </td>
+                    <td class="category-col" style="text-align: center; font-weight: 600; color: #ef4444; background: #fee2e2; font-size: 11px;">
+                        ${summary.absences_count || 0}
+                    </td>
+                    <td class="category-col" style="text-align: center; font-weight: 600; color: #f97316; background: #fed7aa; font-size: 11px;">
+                        ${summary.half_days_count || 0}
+                    </td>
+                    <td class="category-col" style="text-align: center; font-weight: 600; color: #16a34a; background: #dcfce7; font-size: 11px;">
+                        ${summary.present_days_count || 0}
+                    </td>
+                    <td class="category-col" style="text-align: center; font-weight: 600; color: #0284c7; background: #dbeafe; font-size: 11px;">
+                        ${summary.holidays_count || 0}
+                    </td>
+                    <td class="category-col" style="text-align: center; font-weight: 600; color: #4b5563; background: #e5e7eb; font-size: 11px;">
+                        ${summary.weekends_count || 0}
+                    </td>`;
+
+                // Calculate Net Days first (before date columns)
+                // DC-NET-DAYS-001: Use attendance_status for count — works for PENDING + APPROVED records
+                const STATUS_NET_DAYS = { present: 1, half_day: 0.5, sick_leave: 1,
+                    approved_leave: 1, casual_leave: 1, unpaid_leave: 1, holiday: 1, weekend: 1, absent: 0 };
+                let empNetDays = 0;
+                const hasMarkPermission = canMarkAttendance();
+                const todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+
+                data.dates.forEach(dateStr => {
+                    const dateData = emp.dates[dateStr];
+                    if (dateData) {
+                        const attStatus = (dateData.attendance_status || '').toLowerCase();
+                        empNetDays += (STATUS_NET_DAYS[attStatus] !== undefined) ? STATUS_NET_DAYS[attStatus] : (dateData.net_days || 0);
+                    }
+                });
+                totalNetDays += empNetDays;
+
+                // Add Net Days column (before date columns)
+                bodyHTML += `<td class="net-days-cell" style="text-align: center; font-weight: 700; color: #059669; background: #ecfdf5;">${empNetDays.toFixed(1)}</td>`;
+                
+                // Now add date columns
+                data.dates.forEach(dateStr => {
+                    const dateData = emp.dates[dateStr];
+                    if (dateData) {
+                        const status = dateData.status === 'approved' ? 'approved' : dateData.status === 'pending' ? 'pending' : 'rejected';
+                        // DC Protocol (Jan 01, 2026): Add click handler for authorized roles
+                        const cacheKey = `${emp.employee_id}_${dateStr}`;
+                        window.attendanceCache = window.attendanceCache || {};
+                        window.attendanceCache[cacheKey] = dateData;
+                        const clickHandler = hasMarkPermission ? `onclick="handleCellClickFromCache(${emp.employee_id}, '${dateStr}')"` : '';
+                        const cursorStyle = hasMarkPermission ? 'cursor: pointer;' : 'cursor: default;';
+                        
+                        // DC Protocol (Jan 07, 2026): Show leave type badges for leave statuses
+                        // Note: API returns lowercase values (casual_leave), normalize to uppercase for lookup
+                        const leaveTypes = {
+                            'CASUAL_LEAVE': { badge: 'CL', color: '#7c3aed', bg: '#f3e8ff' },
+                            'SICK_LEAVE': { badge: 'SL', color: '#dc2626', bg: '#fee2e2' },
+                            'APPROVED_LEAVE': { badge: 'PL', color: '#059669', bg: '#d1fae5' },
+                            'UNPAID_LEAVE': { badge: 'UL', color: '#ea580c', bg: '#fed7aa' }
+                        };
+                        const attStatus = (dateData.attendance_status || '').toUpperCase();
+                        const isLeave = leaveTypes[attStatus];
+                        
+                        if (isLeave) {
+                            // Show leave type badge instead of hours
+                            bodyHTML += `<td class="date-cell" ${clickHandler} style="${cursorStyle}; background: ${isLeave.bg};">
+                                <div class="hours-cell" style="border: 2px solid ${isLeave.color}; border-radius: 4px; padding: 4px; background: ${isLeave.bg};">
+                                    <span class="hours-value" style="color: ${isLeave.color}; font-weight: 700;">${isLeave.badge}</span>
+                                    <span class="hours-status" style="font-size: 9px; color: ${isLeave.color};">
+                                        ${status === 'approved' ? '✓' : status === 'pending' ? '⏳' : '✗'}
+                                    </span>
+                                </div>
+                            </td>`;
+                        } else {
+                            // Regular attendance - show hours
+                            bodyHTML += `<td class="date-cell" ${clickHandler} style="${cursorStyle}">
+                                <div class="hours-cell" style="border: 2px solid #ddd; border-radius: 4px; padding: 4px;">
+                                    <span class="hours-value">${dateData.approved_hours || dateData.marked_hours || '-'}</span>
+                                    <span class="hours-status status-${status}" style="font-size: 9px;">
+                                        ${status === 'approved' ? '✓ OK' : status === 'pending' ? '⏳ Wait' : '✗ Rej'}
+                                    </span>
+                                </div>
+                            </td>`;
+                        }
+                    } else {
+                        const cellDate = new Date(dateStr + 'T00:00:00');
+                        if (cellDate > todayMidnight) {
+                            bodyHTML += `<td class="date-cell" style="background: #f9fafb; cursor: default;"><span style="color: #d1d5db; font-size: 10px;">—</span></td>`;
+                        } else if (hasMarkPermission) {
+                            bodyHTML += `<td class="date-cell" onclick="handleCellClick(${emp.employee_id}, '${dateStr}', null)" style="cursor: pointer; background: #fef3c7;"><span style="color: #f59e0b; font-size: 10px;">Click to Mark</span></td>`;
+                        } else {
+                            bodyHTML += `<td class="date-cell" style="background: #f0f0f0;"><span style="color: #9ca3af; font-size: 10px;">-</span></td>`;
+                        }
+                    }
+                });
+
+                bodyHTML += `</tr>`;
+            });
+
+            // Add totals row - 9 separate cells for proper sticky behavior (no colspan)
+            // Columns: Department, Employee, Leaves, Absences, Half Days, Present, Holidays, Weekends, Net Days
+            bodyHTML += `<tr class="totals-row" style="font-weight: 700; background: #f3f4f6;">
+                <td>TOTAL</td>
+                <td>(${sortedEmpsGrid.length} employees)</td>
+                <td style="text-align: center;">-</td>
+                <td style="text-align: center;">-</td>
+                <td style="text-align: center;">-</td>
+                <td style="text-align: center;">-</td>
+                <td style="text-align: center;">-</td>
+                <td style="text-align: center;">-</td>
+                <td style="text-align: center; font-weight: 700; color: #059669;">${totalNetDays.toFixed(1)}</td>`;
+            
+            data.dates.forEach(() => {
+                bodyHTML += `<td class="date-cell" style="text-align: center;">-</td>`;
+            });
+            
+            bodyHTML += `</tr>`;
+
+            document.getElementById('teamAttendanceTableBody').innerHTML = bodyHTML;
+        }
+        
+        // DC Protocol: Export Team CSV (VIEW ONLY function)
+        // DC Protocol (Jan 07, 2026): Added Exception Hrs and Exception Days columns
+        function exportTeamCSV() {
+            if (!teamAttendanceData || !teamAttendanceData.employees) {
+                alert('No data available to export');
+                return;
+            }
+            
+            let csv = 'Employee,Employee Code,Department,Team Manager,Pending Hrs,Submitted Hrs,Approved Hrs,Rejected Hrs,Exception Hrs,Total Hrs,Exception Days,Eligible Days,Leaves,Absences,Half Days,Present,Holidays,Weekends,Net Days\n';
+            
+            teamAttendanceData.employees.forEach(emp => {
+                const s = emp.summary || {};
+                const submittedHrs = s.submitted_hours || s.total_marked_hours || 0;
+                csv += `"${emp.employee_name}","${emp.employee_code}","${emp.department}","${emp.team_manager}",`;
+                csv += `${s.pending_hours || 0},${submittedHrs},${s.approved_hours || 0},${s.rejected_hours || 0},${s.exception_hours || 0},${s.total_marked_hours || 0},`;
+                csv += `${s.exception_days || 0},${s.eligible_days || 0},${s.leaves_days || 0},${s.absences_count || 0},${s.half_days_count || 0},`;
+                csv += `${s.present_days_count || 0},${s.holidays_count || 0},${s.weekends_count || 0},${s.net_days || 0}\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `team_attendance_${teamAttendanceData.month}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+        
+        // DC Protocol: Generate Team Report (VIEW ONLY function)
+        function generateTeamReport() {
+            if (!teamAttendanceData || !teamAttendanceData.employees) {
+                alert('No data available to generate report');
+                return;
+            }
+            
+            const totals = teamAttendanceData.totals || {};
+            const report = `
+TEAM ATTENDANCE REPORT
+======================
+Month: ${teamAttendanceData.month}
+Team Size: ${totals.team_size || 0} employees
+
+SUMMARY:
+- Total Marked Hours: ${(totals.total_marked_hours || 0).toFixed(2)} hrs
+- Total Approved Hours: ${(totals.total_approved_hours || 0).toFixed(2)} hrs
+- Total Net Days: ${(totals.total_net_days || 0).toFixed(2)} days
+
+Generated: ${new Date().toLocaleString('en-IN')}
+            `.trim();
+            
+            alert(report);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            // DC Compliance: Initialize sidebar and header (single source of truth)
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Attendance Records', 'fas fa-list-check');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            updateHeaderUserInfo();
+
+            // DC Compliance: Initialize tabs based on user role
+            initializeTabs();
+
+            // Set current month
+            goToCurrentMonth();
+            
+            // DC_UNIVERSAL_FILTER_001: Initialize fallback departments first
+            loadFallbackDepartments();
+            
+            // DC Protocol: Load advanced filter options
+            loadDepartmentFilter();
+            loadManagerFilter();
+            
+            // DC_UNIVERSAL_FILTER_001: Initialize universal filter
+            if (typeof DCUniversalFilter !== 'undefined') {
+                universalFilter = new DCUniversalFilter('universalFilterContainer', {
+                    showCompany: false,
+                    showStaffType: true,
+                    showDepartment: true,
+                    showEmployee: true,
+                    showSearch: false,
+                    pageKey: 'staff_attendance_sheet',
+                    onFilterChange: () => {
+                        if (universalFilterReady) loadAttendanceRecords();
+                    }
+                });
+                
+                try {
+                    const success = await Promise.race([
+                        universalFilter.waitForReady(),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('Filter init timeout')), 5000))
+                    ]);
+                    await new Promise(r => setTimeout(r, 50));
+                    if (success === true && 
+                        universalFilter.isReady === true && 
+                        universalFilter.initFailed === false &&
+                        document.getElementById('universalFilterContainer')?.children.length > 0) {
+                        universalFilterReady = true;
+                        hideFallbackFilters();
+                        console.log('[DC] Universal filter ready - using enhanced filters');
+                    } else {
+                        console.warn('[DC] Universal filter not fully ready, keeping fallback');
+                        universalFilterReady = false;
+                    }
+                } catch (e) {
+                    console.warn('[DC] Universal filter initialization failed or timed out, using fallback:', e);
+                    universalFilterReady = false;
+                }
+            } else {
+                console.warn('[DC] DCUniversalFilter not available - using fallback filters');
+            }
+
+            // Load initial data - Attendance Records by default (own data)
+            loadAttendanceRecords();
+        });
+
+        async function loadSidebar() {
+            try {
+                const response = await staffFetch('/api/v1/staff/sidebar');
+                const data = await response.json();
+                if (data.html) {
+                    document.getElementById('staffSidebar').innerHTML = data.html;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading sidebar:', error);
+            }
+        }
+
+        function goToCurrentMonth() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            document.getElementById('fromDate').value = `${year}-${month}-01`;
+            updateToDate();
+            // DC Protocol (Jan 01, 2026): Only reload data for active tab
+            reloadActiveTabData();
+        }
+        
+        // DC Protocol (Jan 01, 2026): Reload data for the currently active tab
+        function reloadActiveTabData() {
+            const activeTab = document.querySelector('#attendanceTabs .nav-link.active');
+            if (activeTab && activeTab.id === 'team-attendance-tab') {
+                loadTeamAttendance();
+            } else {
+                loadAttendanceRecords();
+            }
+        }
+
+        function goToPreviousMonth() {
+            const fromDate = new Date(document.getElementById('fromDate').value);
+            fromDate.setMonth(fromDate.getMonth() - 1);
+            const year = fromDate.getFullYear();
+            const month = String(fromDate.getMonth() + 1).padStart(2, '0');
+            document.getElementById('fromDate').value = `${year}-${month}-01`;
+            updateToDate();
+            reloadActiveTabData();
+        }
+
+        function goToNextMonth() {
+            const fromDate = new Date(document.getElementById('fromDate').value);
+            fromDate.setMonth(fromDate.getMonth() + 1);
+            const year = fromDate.getFullYear();
+            const month = String(fromDate.getMonth() + 1).padStart(2, '0');
+            document.getElementById('fromDate').value = `${year}-${month}-01`;
+            updateToDate();
+            reloadActiveTabData();
+        }
+
+        function updateToDate() {
+            const fromDate = new Date(document.getElementById('fromDate').value);
+            const lastDay = new Date(fromDate.getFullYear(), fromDate.getMonth() + 1, 0);
+            const year = lastDay.getFullYear();
+            const month = String(lastDay.getMonth() + 1).padStart(2, '0');
+            const day = String(lastDay.getDate()).padStart(2, '0');
+            document.getElementById('toDate').value = `${year}-${month}-${day}`;
+        }
+        
+        // DC Protocol (Jan 07, 2026): Date range change handlers
+        function onFromDateChange() {
+            const fromDateStr = document.getElementById('fromDate').value;
+            const toDateStr = document.getElementById('toDate').value;
+            
+            // If toDate is empty or before fromDate, set it to end of month
+            if (!toDateStr || new Date(toDateStr) < new Date(fromDateStr)) {
+                updateToDate();
+            }
+            reloadActiveTabData();
+        }
+        
+        function onToDateChange() {
+            const fromDateStr = document.getElementById('fromDate').value;
+            const toDateStr = document.getElementById('toDate').value;
+            
+            // Validate: toDate must be >= fromDate
+            if (new Date(toDateStr) < new Date(fromDateStr)) {
+                alert('To Date cannot be before From Date');
+                updateToDate();
+                return;
+            }
+            reloadActiveTabData();
+        }
+
+        async function loadAlerts(dateStr) {
+            try {
+                const response = await staffFetch(`${API_BASE}/alerts/${dateStr}`);
+                const data = await response.json();
+
+                let alertHTML = '';
+                if (data.alerts.length > 0) {
+                    alertHTML = '<div class="alerts-section"><h6><i class="fas fa-exclamation-triangle me-2"></i>Custom Date Alerts</h6>';
+                    data.alerts.forEach(alert => {
+                        alertHTML += `<div class="alert-item"><i class="fas fa-circle-info"></i> ${alert}</div>`;
+                    });
+                    alertHTML += '</div>';
+                }
+                document.getElementById('alertsContainer').innerHTML = alertHTML;
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error loading alerts:', err);
+            }
+        }
+
+        function applyFilters() {
+            // DC Protocol (Jan 01, 2026): Apply filters to active tab only
+            reloadActiveTabData();
+        }
+
+        function reviewEmployee(employeeId) {
+            alert(`Review functionality for employee ${employeeId} - coming soon`);
+        }
+
+        async function approveAll() {
+            if (!confirm('Approve all pending attendance markings for this month?\n\nNote: Records without timesheet entries will be SKIPPED (DC Protocol).\nThis will approve marked hours as final hours for all valid pending records.')) {
+                return;
+            }
+            
+            try {
+                const monthYear = document.getElementById('monthPicker').value;
+                const deptId = document.getElementById('departmentFilter').value;
+                const managerId = document.getElementById('managerFilter').value;
+                
+                const response = await staffFetch(`${API_BASE}/bulk-approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        month_year: monthYear,
+                        department_id: deptId ? parseInt(deptId) : null,
+                        manager_id: managerId ? parseInt(managerId) : null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    let message = `✅ ${data.message}`;
+                    
+                    // DC Protocol: Show skipped employees if any
+                    if (data.skipped_count > 0 && data.skipped_employees) {
+                        message += '\n\n⚠️ SKIPPED (No Timesheet Entry):';
+                        data.skipped_employees.slice(0, 5).forEach(emp => {
+                            message += `\n• ${emp.name} (${emp.date})`;
+                        });
+                        if (data.skipped_employees.length > 5) {
+                            message += `\n... and ${data.skipped_employees.length - 5} more`;
+                        }
+                        message += '\n\nThese employees must submit timesheets first.';
+                    }
+                    
+                    alert(message);
+                    loadTeamAttendance();
+                } else {
+                    alert('❌ Error: ' + (data.detail || 'Failed to bulk approve'));
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Bulk approve error:', err);
+                alert('❌ Error: ' + err.message);
+            }
+        }
+
+        function exportCSV() {
+            alert('CSV export - coming soon');
+        }
+
+        function generateReport() {
+            alert('PDF report generation - coming soon');
+        }
+
+        function saveDraft() {
+            alert('Save as draft - coming soon');
+        }
+
+        // ==================== MARKING MODAL & FUNCTIONALITY ====================
+
+        function openMarkingModal(employeeId, dateStr, currentHours) {
+            window.markingData = { employeeId, dateStr, currentHours };
+            
+            // Find employee name
+            const emp = allEmployees.find(e => e.employee_id === employeeId);
+            const empName = emp ? emp.employee_name : 'Employee ' + employeeId;
+            const dateObj = new Date(dateStr);
+            
+            document.getElementById('markingEmployeeName').textContent = empName;
+            document.getElementById('markingDate').textContent = dateObj.toLocaleDateString('en-IN');
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('markingModal'));
+            modal.show();
+        }
+
+        async function submitMarking() {
+            const status = document.getElementById('attendanceStatus').value;
+            if (!status) {
+                alert('Please select attendance status');
+                return;
+            }
+
+            const { employeeId, dateStr } = window.markingData;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/mark`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        date: dateStr,
+                        employee_id: employeeId,
+                        attendance_status: status,
+                        notes: document.getElementById('markingNotes').value || null
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ Attendance marked successfully');
+                    
+                    // WCAG 2.1 AA: Blur active element before hiding modal to prevent aria-hidden error
+                    if (document.activeElement) document.activeElement.blur();
+                    
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('markingModal')).hide();
+                    
+                    // Refresh table
+                    loadTeamAttendance();
+                } else {
+                    alert('❌ Error: ' + (data.detail || 'Failed to mark attendance'));
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error:', err);
+                alert('❌ Error: ' + err.message);
+            }
+        }
+
+        // ==================== APPROVAL MODAL & FUNCTIONALITY ====================
+
+        function openApprovalModal(employeeId, dateStr, sheetId, markedHours, markedStatus, reconciliationStatus, timesheetHours, totalLoggedHours) {
+            window.approvalData = { employeeId, dateStr, sheetId, markedHours, markedStatus, reconciliationStatus, totalLoggedHours };
+            
+            // Find employee name
+            const emp = allEmployees.find(e => e.employee_id === employeeId);
+            const empName = emp ? emp.employee_name : 'Employee ' + employeeId;
+            const dateObj = new Date(dateStr);
+            
+            // Format status for display
+            const statusLabels = {
+                'present': 'Present (8 hours)',
+                'half_day': 'Half-Day (4 hours)',
+                'absent': 'Absent (0 hours)',
+                'sick_leave': 'Sick Leave (0 hours)',
+                'approved_leave': 'Approved Leave (0 hours)',
+                'casual_leave': 'Casual Leave (0 hours)',
+                'unpaid_leave': 'Unpaid Leave (0 hours)',
+                'holiday': 'Holiday (8 hours)',
+                'weekend': 'Weekend (0 hours)'
+            };
+            
+            document.getElementById('approvalEmployeeName').textContent = empName;
+            document.getElementById('approvalDate').textContent = dateObj.toLocaleDateString('en-IN');
+            document.getElementById('approvalMarkedStatus').textContent = statusLabels[markedStatus] || markedStatus;
+            document.getElementById('approvalMarkedHours').textContent = markedHours + ' hours';
+            document.getElementById('approvalHours').value = markedHours;
+            document.getElementById('approvalReason').value = '';
+            document.getElementById('approvalNewStatus').value = '';  // Reset status dropdown
+            
+            // DC PROTOCOL: Handle NO_ENTRY - Block approval
+            const noEntryWarning = document.getElementById('noEntryWarning');
+            const approvalFormSection = document.getElementById('approvalFormSection');
+            const statusChangeSection = document.getElementById('statusChangeSection');
+            const approvalSubmitBtn = document.getElementById('approvalSubmitBtn');
+            const reasonRequired = document.getElementById('reasonRequired');
+            
+            if (reconciliationStatus === 'no_entry') {
+                // BLOCK APPROVAL - Show warning, hide form, disable button
+                noEntryWarning.style.display = 'block';
+                approvalFormSection.style.display = 'none';
+                statusChangeSection.style.display = 'none';
+                approvalSubmitBtn.disabled = true;
+                approvalSubmitBtn.style.background = '#9ca3af';
+                approvalSubmitBtn.innerHTML = '<i class="fas fa-ban me-2"></i>Cannot Approve';
+                
+                // DC Protocol (Jan 01, 2026): Show exception bypass section for EA/VGK/MR10001
+                const exceptionBypassSection = document.getElementById('exceptionBypassSection');
+                const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const userRole = (userData.role_code || '').toLowerCase();
+                const userEmpCode = (userData.emp_code || userData.employee_code || '').toUpperCase();
+                if (userRole === 'ea' || userRole === 'vgk4u' || userEmpCode === 'MR10001') {
+                    exceptionBypassSection.style.display = 'block';
+                    // Pre-fill approved hours with marked hours
+                    document.getElementById('exceptionApprovedHours').value = markedHours || 8;
+                } else {
+                    exceptionBypassSection.style.display = 'none';
+                }
+            } else {
+                // ALLOW APPROVAL - Show form, enable button
+                noEntryWarning.style.display = 'none';
+                approvalFormSection.style.display = 'block';
+                statusChangeSection.style.display = 'block';
+                approvalSubmitBtn.disabled = false;
+                approvalSubmitBtn.style.background = '#059669';
+                approvalSubmitBtn.innerHTML = '<i class="fas fa-check-double me-2"></i>Approve';
+                
+                // Check if mismatch requires reason
+                if (reconciliationStatus === 'mismatch_warning') {
+                    reasonRequired.style.display = 'inline';
+                } else {
+                    reasonRequired.style.display = 'none';
+                }
+            }
+            
+            // DC Protocol: Display Timesheet Reconciliation Status
+            const reconciliationSection = document.getElementById('reconciliationSection');
+            if (reconciliationStatus) {
+                reconciliationSection.style.display = 'block';
+                
+                const reconciliationConfigs = {
+                    'matched': {
+                        bg: '#f0fdf4',
+                        border: '#86efac',
+                        icon: '✅',
+                        text: 'MATCHED',
+                        textColor: '#16a34a',
+                        labelColor: '#15803d'
+                    },
+                    'mismatch_warning': {
+                        bg: '#fef3c7',
+                        border: '#fcd34d',
+                        icon: '⚠️',
+                        text: 'MISMATCH',
+                        textColor: '#d97706',
+                        labelColor: '#b45309'
+                    },
+                    'no_entry': {
+                        bg: '#fef2f2',
+                        border: '#fca5a5',
+                        icon: '❌',
+                        text: 'NO TIMESHEET',
+                        textColor: '#dc2626',
+                        labelColor: '#b91c1c'
+                    },
+                    'manual_override': {
+                        bg: '#fff7ed',
+                        border: '#fdba74',
+                        icon: '🔶',
+                        text: 'MANUAL OVERRIDE',
+                        textColor: '#ea580c',
+                        labelColor: '#c2410c'
+                    }
+                };
+                
+                const config = reconciliationConfigs[reconciliationStatus] || reconciliationConfigs['no_entry'];
+                
+                reconciliationSection.style.background = config.bg;
+                reconciliationSection.style.border = `1px solid ${config.border}`;
+                document.getElementById('reconciliationLabel').style.color = config.labelColor;
+                document.getElementById('reconciliationIcon').textContent = config.icon;
+                document.getElementById('reconciliationStatusText').textContent = config.text;
+                document.getElementById('reconciliationStatusText').style.color = config.textColor;
+                document.getElementById('timesheetHours').textContent = (timesheetHours !== null && timesheetHours !== undefined && !isNaN(timesheetHours)) ? Number(timesheetHours).toFixed(2) + ' hrs' : 'N/A';
+                document.getElementById('totalLoggedHours').textContent = (totalLoggedHours !== null && totalLoggedHours !== undefined && !isNaN(totalLoggedHours)) ? Number(totalLoggedHours).toFixed(2) + ' hrs' : 'N/A';
+                document.getElementById('markedHoursCompare').textContent = (markedHours !== null && markedHours !== undefined && !isNaN(markedHours)) ? Number(markedHours).toFixed(2) + ' hrs' : 'N/A';
+            } else {
+                reconciliationSection.style.display = 'none';
+            }
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('approvalModal'));
+            modal.show();
+        }
+
+        async function submitApproval() {
+            const approvedHours = document.getElementById('approvalHours').value;
+            const approvalReason = document.getElementById('approvalReason').value;
+            const newStatus = document.getElementById('approvalNewStatus').value;
+            
+            if (!approvedHours || isNaN(approvedHours)) {
+                alert('Please enter valid approved hours');
+                return;
+            }
+            
+            const { sheetId, reconciliationStatus } = window.approvalData;
+            
+            // DC PROTOCOL: Validate reason required for mismatch
+            if (reconciliationStatus === 'mismatch_warning' && !approvalReason.trim()) {
+                alert('Reason is required when there is a timesheet mismatch (difference > 30 minutes)');
+                document.getElementById('approvalReason').focus();
+                return;
+            }
+            
+            try {
+                const requestBody = {
+                    approved_hours: parseFloat(approvedHours),
+                    approval_reason: approvalReason || null
+                };
+                
+                // Include new status if EA/VGK changed it
+                if (newStatus) {
+                    requestBody.new_attendance_status = newStatus;
+                }
+                
+                const response = await staffFetch(`${API_BASE}/${sheetId}/approve`, {
+                    method: 'POST',
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    let message = '✅ Attendance approved successfully';
+                    if (data.status_changed) {
+                        message += `\n\nStatus changed to: ${data.new_status.replace('_', ' ').toUpperCase()}`;
+                    }
+                    alert(message);
+                    
+                    // WCAG 2.1 AA: Blur active element before hiding modal to prevent aria-hidden error
+                    if (document.activeElement) document.activeElement.blur();
+                    
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('approvalModal')).hide();
+                    
+                    // Refresh table
+                    loadTeamAttendance();
+                } else {
+                    alert('❌ Error: ' + (data.detail || 'Failed to approve attendance'));
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error:', err);
+                alert('❌ Error: ' + err.message);
+            }
+        }
+
+        // DC Protocol (Jan 01, 2026): Exception Approval Bypass for EA/VGK
+        async function submitExceptionApproval() {
+            const exceptionReason = document.getElementById('exceptionReasonInput').value;
+            const approvedHours = document.getElementById('exceptionApprovedHours').value;
+            
+            // Validate exception reason (min 10 chars)
+            if (!exceptionReason || exceptionReason.trim().length < 10) {
+                alert('Exception reason must be at least 10 characters');
+                document.getElementById('exceptionReasonInput').focus();
+                return;
+            }
+            
+            // Validate approved hours
+            if (!approvedHours || isNaN(approvedHours) || parseFloat(approvedHours) < 0) {
+                alert('Please enter valid approved hours');
+                document.getElementById('exceptionApprovedHours').focus();
+                return;
+            }
+            
+            const { sheetId } = window.approvalData;
+            
+            // Disable button to prevent double-click
+            const btn = document.getElementById('exceptionApproveBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            
+            try {
+                const requestBody = {
+                    approved_hours: parseFloat(approvedHours),
+                    bypass_exception: true,
+                    exception_reason: exceptionReason.trim()
+                };
+                
+                const response = await staffFetch(`${API_BASE}/${sheetId}/approve`, {
+                    method: 'POST',
+                    body: JSON.stringify(requestBody)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    let message = '✅ Attendance approved with exception bypass';
+                    if (data.exception_id) {
+                        message += '\n\nException ID: ' + data.exception_id;
+                    }
+                    message += '\n\nThis approval has been logged in the Exception Approvals audit trail.';
+                    alert(message);
+                    
+                    // WCAG 2.1 AA: Blur active element before hiding modal
+                    if (document.activeElement) document.activeElement.blur();
+                    
+                    // Close modal
+                    bootstrap.Modal.getInstance(document.getElementById('approvalModal')).hide();
+                    
+                    // Refresh table
+                    loadTeamAttendance();
+                } else {
+                    alert('❌ Error: ' + (data.detail || 'Failed to approve with exception'));
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-shield-alt"></i> Approve with Exception';
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error:', err);
+                alert('❌ Error: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-shield-alt"></i> Approve with Exception';
+            }
+        }
+
+        // ==================== COMBINED CELL CLICK HANDLER ====================
+        
+        function handleCellClickFromCache(employeeId, dateStr) {
+            const cacheKey = `${employeeId}_${dateStr}`;
+            const dateData = window.attendanceCache ? window.attendanceCache[cacheKey] : null;
+            handleCellClick(employeeId, dateStr, dateData);
+        }
+        
+        function handleCellClick(employeeId, dateStr, dateData) {
+            if (!dateData) {
+                // No marking exists - open marking modal
+                openMarkingModal(employeeId, dateStr, 0);
+            } else if (dateData.status === 'pending') {
+                // Pending approval - open approval modal with reconciliation data
+                openApprovalModal(
+                    employeeId, 
+                    dateStr, 
+                    dateData.sheet_id, 
+                    dateData.marked_hours, 
+                    dateData.attendance_status,
+                    dateData.reconciliation_status,
+                    dateData.employee_actual_hours,
+                    dateData.total_logged_hours || dateData.clock_hours || null
+                );
+            } else {
+                // Already approved or rejected - open EDIT modal for EA/VGK to change status
+                openCellEditModal(employeeId, dateStr, dateData);
+            }
+        }
+        
+        // ==================== CELL EDIT MODAL (For Approved/Rejected Records) ====================
+        let cellEditSheetId = null;
+        let cellEditEmployeeId = null;
+        let cellEditDateStr = null;
+        
+        function openCellEditModal(employeeId, dateStr, dateData) {
+            cellEditSheetId = dateData.sheet_id;
+            cellEditEmployeeId = employeeId;
+            cellEditDateStr = dateStr;
+            
+            const emp = allEmployees.find(e => e.employee_id === employeeId);
+            const empName = emp ? emp.employee_name : 'Employee ' + employeeId;
+            const dateObj = new Date(dateStr);
+            
+            const statusLabels = {
+                'present': 'Present (8 hours)',
+                'half_day': 'Half-Day (4 hours)',
+                'absent': 'Absent (0 hours)',
+                'sick_leave': 'Sick Leave (0 hours)',
+                'approved_leave': 'Approved Leave (0 hours)',
+                'casual_leave': 'Casual Leave (0 hours)',
+                'unpaid_leave': 'Unpaid Leave (0 hours)',
+                'holiday': 'Holiday (8 hours)',
+                'weekend': 'Weekend (0 hours)'
+            };
+            
+            document.getElementById('cellEditEmployeeName').textContent = empName;
+            document.getElementById('cellEditDate').textContent = dateObj.toLocaleDateString('en-IN', { 
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' 
+            });
+            document.getElementById('cellEditCurrentStatus').textContent = statusLabels[dateData.attendance_status] || dateData.attendance_status;
+            document.getElementById('cellEditCurrentHours').textContent = `${dateData.approved_hours || dateData.marked_hours} hours`;
+            document.getElementById('cellEditApprovalStatus').textContent = dateData.status.toUpperCase();
+            document.getElementById('cellEditApprovalStatus').style.color = dateData.status === 'approved' ? '#059669' : '#dc2626';
+            
+            document.getElementById('cellEditNewStatus').value = '';
+            document.getElementById('cellEditReason').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('cellEditModal'));
+            modal.show();
+        }
+        
+        async function submitCellEdit() {
+            const newStatus = document.getElementById('cellEditNewStatus').value;
+            const reason = document.getElementById('cellEditReason').value.trim();
+            
+            if (!newStatus) {
+                alert('Please select a new status');
+                return;
+            }
+            if (!reason) {
+                alert('Please provide a reason for the change');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/${cellEditSheetId}/edit`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        new_attendance_status: newStatus,
+                        edit_reason: reason
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    alert(`✅ ${data.message}\n\nStatus reset to PENDING for re-approval.`);
+                    
+                    // Close modal
+                    if (document.activeElement) document.activeElement.blur();
+                    bootstrap.Modal.getInstance(document.getElementById('cellEditModal')).hide();
+                    
+                    // Refresh table
+                    loadTeamAttendance();
+                } else {
+                    alert('❌ Error: ' + (data.detail || 'Failed to edit attendance'));
+                }
+            } catch (err) {
+                if (err.message === 'AUTH_EXPIRED' || err.message === 'NO_TOKEN') return;
+                console.error('Error:', err);
+                alert('❌ Error: ' + err.message);
+            }
+        }
+    </script>
+
+    <!-- MARKING MODAL (Bootstrap) - WCAG 2.1 AA Compliant -->
+    <div class="modal fade" id="markingModal" tabindex="-1" aria-labelledby="markingModalLabel" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(90deg, #0284c7 0%, #0369a1 100%); color: white;">
+                    <h5 class="modal-title" id="markingModalLabel">Mark Attendance</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: 20px;">
+                        <p style="margin: 0; color: #6b7280; font-size: 12px;">Employee</p>
+                        <p style="margin: 0; font-weight: 600; font-size: 16px;" id="markingEmployeeName">-</p>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <p style="margin: 0; color: #6b7280; font-size: 12px;">Date</p>
+                        <p style="margin: 0; font-weight: 600; font-size: 16px;" id="markingDate">-</p>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 8px;">Attendance Status *</label>
+                        <select id="attendanceStatus" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px;">
+                            <option value="">-- Select Status --</option>
+                            <option value="present">✓ Present (8 hours)</option>
+                            <option value="half_day">◐ Half-Day (4 hours)</option>
+                            <option value="absent">✗ Absent (0 hours)</option>
+                            <option value="sick_leave">🏥 Sick Leave</option>
+                            <option value="approved_leave">📅 Approved Leave</option>
+                            <option value="casual_leave">😊 Casual Leave</option>
+                            <option value="unpaid_leave">💔 Unpaid Leave</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 8px;">Notes (Optional)</label>
+                        <textarea id="markingNotes" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 80px;" placeholder="Add notes if needed..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitMarking()" style="background: #0284c7; border: none;">
+                        <i class="fas fa-check-circle me-2"></i>Mark Attendance
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CELL EDIT MODAL - For editing approved/rejected attendance cells (EA/VGK) -->
+    <div class="modal fade" id="cellEditModal" tabindex="-1" aria-labelledby="cellEditModalLabel" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(90deg, #7c3aed 0%, #5b21b6 100%); color: white;">
+                    <h5 class="modal-title" id="cellEditModalLabel"><i class="fas fa-edit me-2"></i>Edit Attendance Status</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Warning Banner -->
+                    <div style="margin-bottom: 20px; padding: 15px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px;">
+                        <p style="margin: 0; color: #92400e; font-size: 13px;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>EA/VGK Edit Mode:</strong> Changing status will reset approval to PENDING for re-approval.
+                        </p>
+                    </div>
+                    
+                    <!-- Employee & Date Info -->
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; padding: 15px; background: #f3f4f6; border-radius: 8px;">
+                        <div>
+                            <p style="margin: 0; color: #6b7280; font-size: 12px;">Employee</p>
+                            <p style="margin: 0; font-weight: 600; font-size: 16px;" id="cellEditEmployeeName">-</p>
+                        </div>
+                        <div style="text-align: right;">
+                            <p style="margin: 0; color: #6b7280; font-size: 12px;">Date</p>
+                            <p style="margin: 0; font-weight: 600; font-size: 14px;" id="cellEditDate">-</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Current Status Display -->
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f0fdf4; border-radius: 8px; border: 1px solid #86efac;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <p style="margin: 0; color: #15803d; font-size: 12px;">Current Status</p>
+                                <p style="margin: 0; font-weight: 600; font-size: 16px; color: #166534;" id="cellEditCurrentStatus">-</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="margin: 0; color: #15803d; font-size: 12px;">Hours</p>
+                                <p style="margin: 0; font-weight: 600; font-size: 16px; color: #166534;" id="cellEditCurrentHours">-</p>
+                            </div>
+                        </div>
+                        <p style="margin: 8px 0 0 0; font-size: 12px;">
+                            Approval: <strong id="cellEditApprovalStatus" style="text-transform: uppercase;">-</strong>
+                        </p>
+                    </div>
+                    
+                    <!-- New Status Selection -->
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 8px;">New Status *</label>
+                        <select id="cellEditNewStatus" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                            <option value="">-- Select New Status --</option>
+                            <option value="present">✓ Present (8 hours)</option>
+                            <option value="half_day">◐ Half-Day (4 hours)</option>
+                            <option value="absent">✗ Absent (0 hours)</option>
+                            <option value="sick_leave">🏥 Sick Leave (0 hours)</option>
+                            <option value="approved_leave">📅 Approved Leave (0 hours)</option>
+                            <option value="casual_leave">😊 Casual Leave (0 hours)</option>
+                            <option value="unpaid_leave">💔 Unpaid Leave (0 hours)</option>
+                            <option value="holiday">🎉 Holiday (8 hours)</option>
+                            <option value="weekend">📆 Weekend (0 hours)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Reason for Edit -->
+                    <div style="margin-bottom: 20px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 8px;">Reason for Change *</label>
+                        <textarea id="cellEditReason" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 80px;" placeholder="Explain why the status is being changed (required for audit trail)..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="cellEditCancelBtn">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitCellEdit()" style="background: #7c3aed; border: none;">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPROVAL MODAL (Bootstrap) - WCAG 2.1 AA Compliant - DC Protocol Enhanced -->
+    <div class="modal fade" id="approvalModal" tabindex="-1" aria-labelledby="approvalModalLabel" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(90deg, #059669 0%, #047857 100%); color: white;">
+                    <h5 class="modal-title" id="approvalModalLabel"><i class="fas fa-check-double me-2"></i>Approve Attendance</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- DC Protocol: NO_ENTRY Warning - Blocks Approval (Exception Bypass for EA/VGK Jan 01, 2026) -->
+                    <div id="noEntryWarning" style="margin-bottom: 20px; padding: 15px; background: #fef2f2; border-radius: 8px; border: 2px solid #ef4444; display: none;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <i class="fas fa-exclamation-triangle" style="color: #dc2626; font-size: 24px;"></i>
+                            <span style="font-weight: 700; color: #dc2626; font-size: 16px;">NO TIMESHEET ENTRY</span>
+                        </div>
+                        <p style="margin: 0; color: #991b1b; font-size: 14px;">
+                            <strong>No Timesheet Entry!</strong><br>
+                            Employee must submit timesheet first before attendance can be approved.
+                        </p>
+                        
+                        <!-- DC Protocol (Jan 01, 2026): Exception Bypass for EA/VGK -->
+                        <div id="exceptionBypassSection" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #fecaca; display: none;">
+                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                                <i class="fas fa-shield-alt" style="color: #d97706;"></i>
+                                <span style="font-weight: 600; color: #92400e; font-size: 14px;">EA/VGK Exception Bypass</span>
+                            </div>
+                            <p style="margin: 0 0 10px 0; font-size: 13px; color: #78350f;">
+                                As EA/VGK, you can approve with exception. This will be recorded for audit.
+                            </p>
+                            <div style="margin-bottom: 12px;">
+                                <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 6px;">Exception Reason (min 10 chars) *</label>
+                                <textarea id="exceptionReasonInput" 
+                                    style="width: 100%; padding: 10px; border: 1px solid #fcd34d; border-radius: 6px; min-height: 70px; font-size: 13px; background: #fffbeb;" 
+                                    placeholder="Explain why this exception is being granted without timesheet entry..."
+                                ></textarea>
+                                <p style="margin: 4px 0 0 0; font-size: 11px; color: #92400e;">This reason will be logged in the Exception Approvals audit trail</p>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <label style="font-weight: 600; font-size: 13px; display: block; margin-bottom: 6px;">Approved Hours *</label>
+                                <input type="number" id="exceptionApprovedHours" step="0.5" min="0" max="24" 
+                                    style="width: 100%; padding: 8px 10px; border: 1px solid #fcd34d; border-radius: 6px; font-size: 14px; background: #fffbeb;"
+                                    placeholder="Enter approved hours (e.g., 8)">
+                            </div>
+                            <button type="button" id="exceptionApproveBtn" onclick="submitExceptionApproval()" 
+                                style="width: 100%; padding: 10px; background: linear-gradient(90deg, #d97706, #b45309); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                <i class="fas fa-shield-alt"></i> Approve with Exception
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px;">
+                        <p style="margin: 0; color: #6b7280; font-size: 12px;">Employee</p>
+                        <p style="margin: 0; font-weight: 600; font-size: 16px;" id="approvalEmployeeName">-</p>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <p style="margin: 0; color: #6b7280; font-size: 12px;">Date</p>
+                        <p style="margin: 0; font-weight: 600; font-size: 16px;" id="approvalDate">-</p>
+                    </div>
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f0fdf4; border-radius: 8px; border: 1px solid #86efac;">
+                        <p style="margin: 0; color: #15803d; font-size: 12px;">Marked Status</p>
+                        <p style="margin: 0; font-weight: 600; font-size: 18px; color: #166534;" id="approvalMarkedStatus">-</p>
+                        <p style="margin: 5px 0 0 0; color: #16a34a; font-size: 14px;">Marked Hours: <strong id="approvalMarkedHours">-</strong></p>
+                    </div>
+                    
+                    <!-- DC Protocol: Timesheet Reconciliation Display with Total Logged Hours -->
+                    <div id="reconciliationSection" style="margin-bottom: 20px; padding: 15px; border-radius: 8px; display: none;">
+                        <p style="margin: 0; font-size: 12px;" id="reconciliationLabel">Timesheet Reconciliation</p>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                            <div>
+                                <p style="margin: 0; font-size: 12px; color: #6b7280;">Timesheet Hours</p>
+                                <p style="margin: 0; font-weight: 700; font-size: 18px;" id="timesheetHours">-</p>
+                            </div>
+                            <div style="text-align: center;">
+                                <p style="margin: 0; font-size: 12px; color: #0284c7;">Logged Hours</p>
+                                <p style="margin: 0; font-weight: 700; font-size: 18px; color: #0284c7;" id="totalLoggedHours">-</p>
+                                <p style="margin: 0; font-size: 10px; color: #6b7280;">(Clock In/Out)</p>
+                            </div>
+                            <div style="text-align: center;">
+                                <span id="reconciliationIcon" style="font-size: 24px;"></span>
+                                <p style="margin: 0; font-size: 11px; font-weight: 600;" id="reconciliationStatusText">-</p>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="margin: 0; font-size: 12px; color: #6b7280;">Marked Hours</p>
+                                <p style="margin: 0; font-weight: 700; font-size: 18px;" id="markedHoursCompare">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- DC Protocol: EA/VGK Status Change Section -->
+                    <div id="statusChangeSection" style="margin-bottom: 20px;">
+                        <label for="approvalNewStatus" style="font-weight: 600; display: block; margin-bottom: 8px;">
+                            Change Status (Optional)
+                            <span style="font-weight: 400; color: #6b7280; font-size: 12px;"> - EA/VGK can modify status</span>
+                        </label>
+                        <select id="approvalNewStatus" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 14px; background: white;">
+                            <option value="">Keep Current Status</option>
+                            <option value="present">✓ Present (8 hours)</option>
+                            <option value="half_day">◐ Half-Day (4 hours)</option>
+                            <option value="absent">✗ Absent (0 hours)</option>
+                            <option value="sick_leave">🏥 Sick Leave (0 hours)</option>
+                            <option value="approved_leave">📅 Approved Leave (0 hours)</option>
+                            <option value="casual_leave">😊 Casual Leave (0 hours)</option>
+                            <option value="unpaid_leave">💔 Unpaid Leave (0 hours)</option>
+                            <option value="holiday">🎉 Holiday (8 hours)</option>
+                            <option value="weekend">📆 Weekend (0 hours)</option>
+                        </select>
+                        <p style="margin: 5px 0 0 0; color: #9ca3af; font-size: 12px;">Changing status will update marked hours automatically</p>
+                    </div>
+                    
+                    <div id="approvalFormSection">
+                        <div style="margin-bottom: 20px;">
+                            <label for="approvalHours" style="font-weight: 600; display: block; margin-bottom: 8px;">Approved Hours *</label>
+                            <input type="number" id="approvalHours" step="0.5" min="0" max="24" 
+                                style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 16px;" 
+                                placeholder="Enter approved hours (e.g., 8)"
+                                aria-describedby="approvalHoursHelp">
+                            <p id="approvalHoursHelp" style="margin: 5px 0 0 0; color: #9ca3af; font-size: 12px;">You can approve different hours if needed (e.g., 7 if late)</p>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <label for="approvalReason" style="font-weight: 600; display: block; margin-bottom: 8px;">
+                                Reason <span id="reasonRequired" style="display: none; color: #dc2626;">*Required (mismatch detected)</span>
+                            </label>
+                            <textarea id="approvalReason" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 8px; min-height: 60px;" placeholder="Add reason if approved hours differ from marked..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="approvalCancelBtn">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="submitApproval()" id="approvalSubmitBtn" style="background: #059669; border: none;">
+                        <i class="fas fa-check-double me-2"></i>Approve
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DC Protocol: Focus Management Script for WCAG 2.1 AA Compliance -->
+    <script>
+        // WCAG 2.1 AA: Proper focus management for modals
+        // FIX: aria-hidden error by blurring active element BEFORE Modal.hide() is called
+        document.addEventListener('DOMContentLoaded', function() {
+            const approvalModal = document.getElementById('approvalModal');
+            const markingModal = document.getElementById('markingModal');
+            
+            // Store last focused element before modal opens (separate for each modal)
+            let approvalTriggerElement = null;
+            let markingTriggerElement = null;
+            
+            // Utility: Safe blur before modal close
+            function safeBlurAndClose(modalElement, triggerRef) {
+                if (document.activeElement && modalElement.contains(document.activeElement)) {
+                    document.activeElement.blur();
+                }
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) modal.hide();
+            }
+            
+            // Utility: Fallback focus element
+            function getFallbackFocus() {
+                return document.querySelector('.main-content') || document.body;
+            }
+            
+            if (approvalModal) {
+                // SHOW: Store trigger element when modal is about to open
+                approvalModal.addEventListener('show.bs.modal', function() {
+                    approvalTriggerElement = document.activeElement;
+                });
+                
+                // SHOWN: Focus on first input when modal is fully visible
+                approvalModal.addEventListener('shown.bs.modal', function() {
+                    const firstInput = approvalModal.querySelector('input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
+                    if (firstInput) firstInput.focus();
+                });
+                
+                // HIDDEN: Return focus to trigger element after modal is fully hidden
+                approvalModal.addEventListener('hidden.bs.modal', function() {
+                    const target = (approvalTriggerElement && document.body.contains(approvalTriggerElement)) 
+                        ? approvalTriggerElement 
+                        : getFallbackFocus();
+                    if (target) target.focus();
+                    approvalTriggerElement = null;
+                });
+                
+                // Intercept Cancel button click - blur before data-bs-dismiss closes modal
+                const approvalCancelBtn = document.getElementById('approvalCancelBtn');
+                if (approvalCancelBtn) {
+                    approvalCancelBtn.addEventListener('click', function(e) {
+                        if (document.activeElement && approvalModal.contains(document.activeElement)) {
+                            document.activeElement.blur();
+                        }
+                    }, true); // Use capture phase to run before Bootstrap
+                }
+                
+                // Intercept X (close) button click
+                const approvalCloseBtn = approvalModal.querySelector('.btn-close');
+                if (approvalCloseBtn) {
+                    approvalCloseBtn.addEventListener('click', function(e) {
+                        if (document.activeElement && approvalModal.contains(document.activeElement)) {
+                            document.activeElement.blur();
+                        }
+                    }, true);
+                }
+                
+                // Intercept keyboard Esc key
+                approvalModal.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        if (document.activeElement && approvalModal.contains(document.activeElement)) {
+                            document.activeElement.blur();
+                        }
+                    }
+                }, true);
+            }
+            
+            if (markingModal) {
+                // SHOW: Store trigger element when modal is about to open
+                markingModal.addEventListener('show.bs.modal', function() {
+                    markingTriggerElement = document.activeElement;
+                });
+                
+                // SHOWN: Focus on first input when modal is fully visible
+                markingModal.addEventListener('shown.bs.modal', function() {
+                    const firstInput = markingModal.querySelector('input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
+                    if (firstInput) firstInput.focus();
+                });
+                
+                // HIDDEN: Return focus to trigger element after modal is fully hidden
+                markingModal.addEventListener('hidden.bs.modal', function() {
+                    const target = (markingTriggerElement && document.body.contains(markingTriggerElement)) 
+                        ? markingTriggerElement 
+                        : getFallbackFocus();
+                    if (target) target.focus();
+                    markingTriggerElement = null;
+                });
+                
+                // Intercept Cancel button click - blur before data-bs-dismiss closes modal
+                const markingCancelBtn = markingModal.querySelector('[data-bs-dismiss="modal"]');
+                if (markingCancelBtn) {
+                    markingCancelBtn.addEventListener('click', function(e) {
+                        if (document.activeElement && markingModal.contains(document.activeElement)) {
+                            document.activeElement.blur();
+                        }
+                    }, true);
+                }
+                
+                // Intercept X (close) button click
+                const markingCloseBtn = markingModal.querySelector('.btn-close');
+                if (markingCloseBtn) {
+                    markingCloseBtn.addEventListener('click', function(e) {
+                        if (document.activeElement && markingModal.contains(document.activeElement)) {
+                            document.activeElement.blur();
+                        }
+                    }, true);
+                }
+                
+                // Intercept keyboard Esc key
+                markingModal.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        if (document.activeElement && markingModal.contains(document.activeElement)) {
+                            document.activeElement.blur();
+                        }
+                    }
+                }, true);
+            }
+            
+            // ==================== CELL EDIT MODAL FOCUS MANAGEMENT ====================
+            const cellEditModal = document.getElementById('cellEditModal');
+            let cellEditTriggerElement = null;
+            
+            if (cellEditModal) {
+                // SHOW: Store trigger element when modal is about to open
+                cellEditModal.addEventListener('show.bs.modal', function() {
+                    cellEditTriggerElement = document.activeElement;
+                });
+                
+                // SHOWN: Focus on first input when modal is fully visible
+                cellEditModal.addEventListener('shown.bs.modal', function() {
+                    const firstInput = cellEditModal.querySelector('select:not([disabled]), input:not([disabled]), textarea:not([disabled])');
+                    if (firstInput) firstInput.focus();
+                });
+                
+                // HIDDEN: Return focus to trigger element after modal is fully hidden
+                cellEditModal.addEventListener('hidden.bs.modal', function() {
+                    const target = (cellEditTriggerElement && document.body.contains(cellEditTriggerElement)) 
+                        ? cellEditTriggerElement 
+                        : getFallbackFocus();
+                    if (target) target.focus();
+                    cellEditTriggerElement = null;
+                });
+                
+                // Intercept Cancel button click - blur before data-bs-dismiss closes modal
+                const cellEditCancelBtn = document.getElementById('cellEditCancelBtn');
+                if (cellEditCancelBtn) {
+                    cellEditCancelBtn.addEventListener('click', function(e) {
+                        if (document.activeElement && cellEditModal.contains(document.activeElement)) {
+                            document.activeElement.blur();
+                        }
+                    }, true);
+                }
+                
+                // Intercept X (close) button click
+                const cellEditCloseBtn = cellEditModal.querySelector('.btn-close');
+                if (cellEditCloseBtn) {
+                    cellEditCloseBtn.addEventListener('click', function(e) {
+                        if (document.activeElement && cellEditModal.contains(document.activeElement)) {
+                            document.activeElement.blur();
+                        }
+                    }, true);
+                }
+                
+                // Intercept keyboard Esc key
+                cellEditModal.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        if (document.activeElement && cellEditModal.contains(document.activeElement)) {
+                            document.activeElement.blur();
+                        }
+                    }
+                }, true);
+            }
+        });
+    </script>
+</body>
+</html>

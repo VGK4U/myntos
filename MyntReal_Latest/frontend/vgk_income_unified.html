@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VGK Income — Unified Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="/public/js/staff-token-manager.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#f0fdf4}
+.main-content{padding:18px 22px}
+.page-header{background:linear-gradient(135deg,#064e3b,#059669);border-radius:14px;padding:20px 24px;color:#fff;margin-bottom:18px}
+.page-header h1{font-size:20px;font-weight:800;margin-bottom:4px}
+.page-header p{font-size:13px;opacity:.85;margin:0}
+.tab-bar{display:flex;gap:0;margin-bottom:14px;background:#fff;border-radius:10px;border:1.5px solid #d1fae5;overflow:hidden}
+.tab-bar button{flex:1;padding:11px 14px;font-size:12.5px;font-weight:700;color:#6b7280;background:#fff;border:none;cursor:pointer;border-right:1.5px solid #d1fae5;transition:all .15s}
+.tab-bar button:last-child{border-right:none}
+.tab-bar button.active{background:#059669;color:#fff}
+.summary-row{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:16px}
+.sum-card.stage1approved .value{color:#5b21b6}
+.sum-card{background:#fff;border-radius:10px;padding:12px 14px;border:1.5px solid #d1fae5;cursor:pointer;transition:all .15s}
+.sum-card:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(5,150,105,.15)}
+.sum-card.active{background:#059669;color:#fff;border-color:#059669}
+.sum-card.active .label,.sum-card.active .amt{color:#fff !important}
+.sum-card .label{font-size:10.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;font-weight:600}
+.sum-card .value{font-size:20px;font-weight:800;color:#059669;line-height:1}
+.sum-card .amt{font-size:11px;color:#92400e;margin-top:2px;font-weight:600}
+.sum-card.draft .value{color:#92400e}
+.sum-card.pending .value{color:#1e40af}
+.sum-card.released .value{color:#0d9488}
+.sum-card.paid .value{color:#15803d}
+.sum-card.cancelled .value{color:#991b1b}
+.filter-row{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;background:#fff;padding:10px 12px;border-radius:10px;border:1.5px solid #d1fae5}
+.filter-row select,.filter-row input{border:1.5px solid #d1fae5;border-radius:7px;padding:7px 10px;font-size:12.5px;outline:none}
+.filter-row .lbl{font-size:11.5px;font-weight:600;color:#374151}
+.table-wrap{background:#fff;border-radius:12px;border:1.5px solid #d1fae5;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead tr{background:#f0fdf4}
+th{padding:10px 12px;font-size:10.5px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.04em;border-bottom:1.5px solid #d1fae5;white-space:nowrap;text-align:left}
+td{padding:9px 12px;font-size:12.5px;color:#374151;border-bottom:1px solid #f0fdf4;vertical-align:middle}
+tr:hover td{background:#f9fafb}
+.badge-st{border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700;display:inline-block}
+.b-DRAFT{background:#fef3c7;color:#92400e}
+.b-PENDING{background:#dbeafe;color:#1e40af}
+.b-RELEASED{background:#ccfbf1;color:#0f766e}
+.b-STAGE1_APPROVED{background:#ede9fe;color:#5b21b6}
+.b-PAID{background:#dcfce7;color:#166534}
+.b-CANCELLED{background:#fee2e2;color:#991b1b}
+.b-Stage1Approved{background:#ede9fe;color:#5b21b6}
+.b-Payout\ Completed{background:#dcfce7;color:#166534}
+.kind-pill{background:#f3f4f6;color:#374151;border-radius:14px;padding:2px 8px;font-size:10px;font-weight:700;display:inline-block;white-space:nowrap}
+.kind-pill.adv{background:#fef3c7;color:#92400e}
+.kind-pill.bnz{background:#ede9fe;color:#5b21b6}
+.kind-pill.snr{background:#fce7f3;color:#9d174d}
+.kind-pill.fa{background:#dbeafe;color:#1e40af}
+.kind-pill.slab{background:#d1fae5;color:#065f46}
+.btn-act{border:none;border-radius:6px;padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer;margin:0 2px}
+.btn-confirm{background:#3b82f6;color:#fff}
+.btn-release{background:#059669;color:#fff}
+.btn-pay{background:#15803d;color:#fff}
+.btn-approve{background:#7c3aed;color:#fff}
+.btn-reject{background:#fff;color:#dc2626;border:1.5px solid #fca5a5}
+.btn-skip{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff}
+.btn-act:hover{filter:brightness(1.1)}
+.btn-act:disabled{opacity:.5;cursor:not-allowed}
+.btn-wa{background:linear-gradient(135deg,#25d366,#128c7e);color:#fff}
+.btn-wa-web{background:linear-gradient(135deg,#128c7e,#075e54);color:#fff}
+.btn-card{background:linear-gradient(135deg,#d4af37,#f0c040);color:#1a2a00;border:none}
+.empty-state{padding:48px;text-align:center;color:#9ca3af}
+.empty-state i{font-size:42px;margin-bottom:10px;opacity:.4}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:14px;padding:24px;width:560px;max-width:96vw;box-shadow:0 20px 60px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:800;color:#111;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;background:#f9fafb;padding:12px;border-radius:10px}
+.info-item{}
+.info-item .lab{font-size:10.5px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.info-item .val{font-size:13.5px;font-weight:700;color:#111;margin-top:2px}
+.form-label{font-size:11.5px;font-weight:600;color:#374151;margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:.04em}
+textarea,input[type=text],select{width:100%;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 11px;font-size:12.5px;outline:none}
+textarea:focus,input[type=text]:focus,select:focus{border-color:#059669}
+.mode-tabs{display:flex;gap:6px;margin-bottom:10px}
+.mode-tab{flex:1;padding:9px;border:1.5px solid #d1d5db;border-radius:8px;background:#fff;font-size:12.5px;font-weight:700;cursor:pointer;color:#374151}
+.mode-tab.active{background:#059669;color:#fff;border-color:#059669}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.btn-cancel-modal{background:#fff;border:1.5px solid #d1d5db;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-go{background:#059669;color:#fff;border:none;border-radius:8px;padding:8px 22px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-go.danger{background:#dc2626}
+.toast-wrap{position:fixed;top:70px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast-msg{background:#111;color:#fff;border-radius:8px;padding:10px 16px;font-size:12.5px;font-weight:600;animation:fadeIn .2s;max-width:380px}
+.toast-msg.success{background:#059669}
+.toast-msg.error{background:#dc2626}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:1100px){.summary-row{grid-template-columns:repeat(3,1fr)}.info-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.summary-row{grid-template-columns:repeat(2,1fr)}.filter-row{flex-direction:column;align-items:stretch}.info-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+
+<div class="page-header">
+  <h1><i class="fas fa-coins me-2"></i>VGK Income — Unified Management</h1>
+  <p>DRAFT → PENDING → STAGE 1 APPROVE → STAGE 2 MARK PAID  •  Tally-style ledger postings  •  Skip-level for EA / MR10001 / VGK Supreme  •  Stage 1 = Approve  •  Stage 2 = Mark Paid</p>
+</div>
+
+<div class="tab-bar">
+  <button class="active" data-co="2" onclick="switchCo(2,this)"><i class="fas fa-building"></i> Zynova (VGK4U)</button>
+  <button data-co="3" onclick="switchCo(3,this)"><i class="fas fa-building"></i> MNR</button>
+  <button data-co="4" onclick="switchCo(4,this)"><i class="fas fa-building"></i> MyntReal</button>
+  <button data-co="0" onclick="switchCo(0,this)" style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border-color:#7c3aed"><i class="fas fa-layer-group"></i> VGK All</button>
+</div>
+
+<div class="summary-row" id="summaryRow"></div>
+
+<div class="filter-row">
+  <span class="lbl">Status:</span>
+  <select id="fStatus" onchange="loadList()">
+    <option value="">All</option>
+    <option value="DRAFT">DRAFT</option>
+    <option value="PENDING">PENDING</option>
+    <option value="STAGE1_APPROVED">STAGE1 APPROVED</option>
+    <option value="PAID">PAID</option>
+    <option value="Payout Completed">Payout Completed</option>
+    <option value="CANCELLED">CANCELLED</option>
+    <option value="BALANCE_RECEIVED_PLUS">Balance Received +</option>
+  </select>
+  <span class="lbl">Type:</span>
+  <select id="fKind" onchange="loadList()">
+    <option value="">All</option>
+    <option value="COMMISSION">Commission</option>
+    <option value="ADVANCE">Solar Advance</option>
+    <option value="SENIOR_COMM">Senior Comm</option>
+    <option value="BONANZA">Bonanza</option>
+    <option value="FIELD_ALLOWANCE">Field Allowance</option>
+  </select>
+  <span class="lbl">Month:</span>
+  <input type="month" id="fMonth" onchange="loadList()" style="max-width:140px">
+  <span class="lbl">From:</span>
+  <input type="date" id="fDateFrom" onchange="loadList()" style="max-width:140px" title="Income date from">
+  <span class="lbl">To:</span>
+  <input type="date" id="fDateTo" onchange="loadList()" style="max-width:140px" title="Income date to">
+  <span class="lbl">Search:</span>
+  <div style="position:relative;display:inline-flex;align-items:center;min-width:240px">
+    <input type="text" id="fSearch" placeholder="Partner / entry / name…" style="width:100%;padding-right:28px" oninput="_onSearchInput()" onkeydown="_onSearchKey(event)" autocomplete="off">
+    <button id="fSearchClear" title="Clear partner filter" onclick="_clearPartner()" style="display:none;position:absolute;right:6px;background:none;border:none;cursor:pointer;color:#059669;font-size:15px;line-height:1;padding:0"><i class="fas fa-times-circle"></i></button>
+    <div id="fSearchDrop" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:100%;background:#fff;border:1.5px solid #d1fae5;border-radius:9px;box-shadow:0 8px 28px rgba(0,0,0,.13);z-index:2000;max-height:260px;overflow-y:auto"></div>
+  </div>
+  <span class="lbl">Points:</span>
+  <select id="fPoints" onchange="loadList()">
+    <option value="">All</option>
+    <option value="available">✅ Available</option>
+    <option value="not_available">❌ Not Available</option>
+  </select>
+  <button class="btn-act" onclick="clearDateFilter()" style="background:#f3f4f6;color:#6b7280;border:1.5px solid #d1fae5" title="Clear date filters"><i class="fas fa-times"></i></button>
+  <button class="btn-act btn-confirm" onclick="loadList()" style="margin-left:auto"><i class="fas fa-redo"></i> Refresh</button>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr>
+      <th>Date</th>
+      <th>Entry #</th>
+      <th>Type</th>
+      <th>Partner / Member</th>
+      <th>Customer / Month</th>
+      <th style="text-align:right">Deal Value Recd ₹</th>
+      <th style="text-align:right">% Incentive</th>
+      <th style="text-align:right">Gross ₹</th>
+      <th style="text-align:right">Admin</th>
+      <th style="text-align:right">TDS</th>
+      <th style="text-align:right">Net ₹</th>
+      <th>Status</th>
+      <th style="text-align:center">Points Balance</th>
+      <th>Stage 1</th>
+      <th>Stage 2 / Paid</th>
+      <th style="text-align:center">Actions</th>
+    </tr></thead>
+    <tbody id="tableBody"><tr><td colspan="16" class="empty-state"><i class="fas fa-spinner fa-spin"></i><br>Loading…</td></tr></tbody>
+  </table>
+</div>
+
+<div class="modal-overlay" id="actModal">
+  <div class="modal-box">
+    <div class="modal-title"><span id="actTitle">Action</span></div>
+    <div class="info-grid" id="actInfo"></div>
+    <div id="payFields" style="display:none">
+      <label class="form-label">Payment Mode</label>
+      <div class="mode-tabs">
+        <button type="button" class="mode-tab active" id="modeBank" onclick="setMode('BANK')"><i class="fas fa-university"></i> Bank Transfer</button>
+        <button type="button" class="mode-tab" id="modeCash" onclick="setMode('CASH')"><i class="fas fa-money-bill-wave"></i> Cash</button>
+      </div>
+      <div id="bankPanel">
+        <label class="form-label">Company</label>
+        <select id="companySel" onchange="filterBanksByCompany()"></select>
+        <label class="form-label" style="margin-top:8px">Bank Account</label>
+        <select id="bankSel"></select>
+        <label class="form-label" style="margin-top:8px">UTR / Reference Number <span style="color:#dc2626">*</span></label>
+        <input type="text" id="utrInp" placeholder="e.g. UTR123456789012" maxlength="80">
+      </div>
+      <div id="cashPanel" style="display:none">
+        <label class="form-label">Paying Staff (Cash A/c)</label>
+        <select id="cashSel"></select>
+      </div>
+    </div>
+    <div id="rejFields" style="display:none">
+      <label class="form-label">Rejection Reason <span style="color:#dc2626">*</span></label>
+      <textarea id="rejReason" rows="3" placeholder="Reason for rejection (this will reverse all ledger postings)"></textarea>
+    </div>
+    <label class="form-label" style="margin-top:8px">Notes (optional)</label>
+    <textarea id="actNotes" rows="2" placeholder="Optional notes"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel-modal" onclick="closeAct()">Cancel</button>
+      <button class="btn-go" id="goBtn" onclick="submitAct()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+const TOK = (function(){
+  try { return localStorage.getItem('staff_token') || (window.STAFF_TOKEN_MANAGER && window.STAFF_TOKEN_MANAGER.getToken && window.STAFF_TOKEN_MANAGER.getToken()) || ''; } catch(e){ return ''; }
+})();
+let CO = 2, ROLE = {}, RATES = {admin_pct:8, tds_pct:2}, ROWS = [], CURRENT = null, MODE = 'BANK';
+let CURFILTER_STATUS = '';
+let VGK_MODE = false;
+let _selPartnerCode = '';   // DC-SEARCH-AC-001: set when user picks from autocomplete dropdown
+let _ROWS_FULL = [];        // DC-SEARCH-AC-001: full unfiltered rows for autocomplete suggestions
+
+function toast(msg, kind='success'){
+  const w = document.getElementById('toastWrap');
+  const d = document.createElement('div');
+  d.className = 'toast-msg ' + kind;
+  d.textContent = msg;
+  w.appendChild(d);
+  setTimeout(()=>d.remove(), 3500);
+}
+function fmt(n){ return '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:2}); }
+function fmtDt(s){ if(!s)return '-'; const ist=(s.endsWith('Z')||s.includes('+'))?s:s+'+05:30'; const d=new Date(ist); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'2-digit',timeZone:'Asia/Kolkata'}) + ' ' + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'}); }
+function fmtDate(s){ if(!s)return '—'; const ist=(s.endsWith('Z')||s.includes('+'))?s:s+'+05:30'; const d=new Date(ist); return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',timeZone:'Asia/Kolkata'}); }
+function debouncedLoad(){ clearTimeout(window._dt); window._dt = setTimeout(loadList, 350); }
+
+// DC-SEARCH-AC-001: Partner autocomplete for Search field ─────────────────────
+function _onSearchInput(){
+  _selPartnerCode = '';
+  document.getElementById('fSearchClear').style.display = 'none';
+  _buildSearchDrop();
+  debouncedLoad();
+}
+
+function _buildSearchDrop(){
+  const q = (document.getElementById('fSearch').value || '').trim().toLowerCase();
+  const drop = document.getElementById('fSearchDrop');
+  const src = _ROWS_FULL.length ? _ROWS_FULL : ROWS; // use full unfiltered set
+  if(!q || !src.length){ drop.style.display='none'; return; }
+  const seen=new Set(), partners=[];
+  for(const r of src){
+    const key = (r.partner_code||'')+'|'+(r.partner_name||'');
+    if(seen.has(key)||(!r.partner_code&&!r.partner_name)) continue;
+    seen.add(key);
+    partners.push({name:r.partner_name||r.partner_code||'', code:r.partner_code||''});
+  }
+  const matches = partners.filter(p =>
+    p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)
+  ).slice(0, 14);
+  if(!matches.length){ drop.style.display='none'; return; }
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  drop.innerHTML = matches.map(p =>
+    `<div onclick="_selPartner('${esc(p.name).replace(/'/g,"\\'")}','${esc(p.code)}')"
+      style="padding:9px 13px;cursor:pointer;border-bottom:1px solid #f0fdf4;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;gap:8px"
+      onmouseenter="this.style.background='#f0fdf4'" onmouseleave="this.style.background=''">
+      <strong style="color:#064e3b">${esc(p.name)}</strong>
+      <span style="font-size:11px;color:#6b7280;font-family:monospace;white-space:nowrap">${esc(p.code)}</span>
+    </div>`
+  ).join('');
+  drop.style.display='block';
+}
+
+function _selPartner(name, code){
+  _selPartnerCode = code;
+  const inp = document.getElementById('fSearch');
+  inp.value = name + (code ? '  (' + code + ')' : '');
+  document.getElementById('fSearchDrop').style.display='none';
+  document.getElementById('fSearchClear').style.display='';
+  loadList();
+}
+
+function _clearPartner(){
+  _selPartnerCode = '';
+  document.getElementById('fSearch').value = '';
+  document.getElementById('fSearchClear').style.display='none';
+  document.getElementById('fSearchDrop').style.display='none';
+  loadList();
+}
+
+function _onSearchKey(e){
+  if(e.key==='Escape') document.getElementById('fSearchDrop').style.display='none';
+  if(e.key==='Enter'){ document.getElementById('fSearchDrop').style.display='none'; debouncedLoad(); }
+}
+
+document.addEventListener('click', function(e){
+  if(!e.target.closest('#fSearchDrop') && e.target.id !== 'fSearch')
+    document.getElementById('fSearchDrop').style.display='none';
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
+function switchCo(co, btn){
+  CO = co;
+  VGK_MODE = (co === 0);
+  document.querySelectorAll('.tab-bar button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  loadList();
+}
+
+// DC_VGK_BONANZA_TABLE_001: Normalize a bonanza claim into a unified table row shape
+function normalizeBonanzaRow(c) {
+  const gross  = c.amount || 0;
+  const admin  = Math.round(gross * 0.10 * 100) / 100;
+  const net    = Math.round((gross - admin) * 100) / 100;
+
+  // Map processed_status → unified status
+  let status = 'PENDING';
+  if(c.processed_status === 'Paid') status = 'PAID';
+  else if(c.processed_status === 'Payment Released') status = 'RELEASED';
+
+  const deal   = c.deal_count > 1
+    ? ` (${c.deal_count} files × ₹${Number(c.slab_extra_amount || 0).toLocaleString('en-IN')})`
+    : '';
+
+  // Available actions for bonanza rows
+  const acts = [];
+  if(status === 'PENDING')  acts.push('approve_bnz');
+  if(status === 'RELEASED') acts.push('pay_bnz');
+
+  return {
+    id:                c.claim_id,
+    entry_number:      'BNZ-' + c.claim_id,
+    kind:              'BONANZA',
+    level:             null,
+    partner_name:      c.partner_name,
+    partner_code:      c.partner_code,
+    client_name:       (c.bonanza_name || 'Bonanza') + deal,
+    solar_value:       null,
+    commission_amount: gross,
+    admin_charges:     admin,
+    tds_amount:        0,
+    net_payout:        net,
+    status:            status,
+    confirmed_at:      null,
+    released_at:       c.released_at || null,
+    paid_at:           c.paid_at    || null,
+    payment_mode:      c.payment_mode      || null,
+    payment_utr:       c.payment_reference || null,
+    available_actions: acts,
+    company_id:        c.is_solar ? 4 : (c.partner_company_id || CO),
+    skip_reason:       null,
+    ledger_posted:     false,
+    income_date:       c.created_at || c.released_at || null,
+    _is_bonanza:       true,
+    _raw_bnz:          c,
+  };
+}
+
+// DC_VGK_FIELD_ALLOWANCE_STAGE_20260615: Normalize a field allowance row
+function normalizeFaRow(r) {
+  const gross = r.gross || r.amount_paid || 0;
+  const acts  = [];
+  const st    = r.status || 'Pending';
+  if(st === 'Pending' || st === '') acts.push('fa_stage1');
+  if(st === 'Stage1Approved')       acts.push('fa_stage2');
+
+  return {
+    id:                r.id,
+    entry_number:      `FA-${r.allowance_type||'STD'}-${r.month_year||''}`.toUpperCase().replace(/\s/g,'-'),
+    kind:              'FIELD_ALLOWANCE',
+    level:             null,
+    partner_name:      r.user_name || r.user_emp_code || r.user_id,
+    partner_code:      r.user_emp_code || '',
+    client_name:       (r.allowance_type||'').replace(/_/g,' ') + (r.month_year ? ' · ' + r.month_year : ''),
+    solar_value:       null,
+    commission_amount: gross,
+    admin_charges:     0,
+    tds_amount:        0,
+    net_payout:        gross,
+    status:            st === 'Payout Completed' ? 'PAID' : st,
+    confirmed_at:      r.stage_1_approved_at || null,
+    released_at:       r.stage_2_paid_at || null,
+    paid_at:           r.stage_2_paid_at || null,
+    payment_mode:      null,
+    payment_utr:       null,
+    available_actions: acts,
+    company_id:        r.company_id || CO,
+    skip_reason:       null,
+    ledger_posted:     false,
+    income_date:       r.created_at || null,
+    _is_field_allowance: true,
+    _raw_fa:           r,
+  };
+}
+
+async function loadList(){
+  const statusVal   = document.getElementById('fStatus').value || CURFILTER_STATUS;
+  const kindVal     = document.getElementById('fKind').value;
+  const monthVal    = document.getElementById('fMonth').value;  // YYYY-MM
+  const search      = document.getElementById('fSearch').value.trim();
+  const tb          = document.getElementById('tableBody');
+  tb.innerHTML = `<tr><td colspan="16" class="empty-state"><i class="fas fa-spinner fa-spin"></i><br>Loading…</td></tr>`;
+
+  // Build income query params
+  const pointsVal   = document.getElementById('fPoints').value;
+  const qp = VGK_MODE
+    ? new URLSearchParams({ vgk_mode: 'true', per_page: '200' })
+    : new URLSearchParams({ company_id: String(CO), per_page: '200' });
+  if(statusVal && !['Stage1Approved','Payout Completed'].includes(statusVal)) qp.set('status', statusVal);
+  if(kindVal && !['BONANZA','FIELD_ALLOWANCE'].includes(kindVal)) qp.set('kind', kindVal);
+  if(pointsVal) qp.set('points_filter', pointsVal);
+
+  const fetchIncome  = !kindVal || !['BONANZA','FIELD_ALLOWANCE'].includes(kindVal);
+  const bnzStatusOk  = !statusVal || statusVal === 'RELEASED' || statusVal === 'PAID' || statusVal === 'PENDING';
+  const fetchBonanza = (!kindVal || kindVal === 'BONANZA') && bnzStatusOk;
+  const fetchFA      = (!kindVal || kindVal === 'FIELD_ALLOWANCE');
+
+  // FA params
+  const faQp = new URLSearchParams({ per_page: '200' });
+  if(!VGK_MODE && CO) faQp.set('company_id', String(CO));
+  if(statusVal && ['Pending','Stage1Approved','Payout Completed'].includes(statusVal)) faQp.set('status', statusVal);
+  if(monthVal) faQp.set('month_year', monthVal.replace('-','').substring(2));  // YYMM
+  if(search) faQp.set('search', search);
+
+  try {
+    const [incomeRes, bnzRes, faRes] = await Promise.all([
+      fetchIncome
+        ? fetch(`/api/v1/vgk/staff/vgk/cash-income/unified-list?${qp.toString()}`, { headers: { 'Authorization': 'Bearer '+TOK } })
+        : Promise.resolve(null),
+      fetchBonanza
+        ? fetch('/api/v1/bonanza/vgk/pending-payments?stage=all', { headers: { 'Authorization': 'Bearer '+TOK } })
+        : Promise.resolve(null),
+      fetchFA
+        ? fetch(`/api/v1/vgk/staff/vgk/field-allowances?${faQp.toString()}`, { headers: { 'Authorization': 'Bearer '+TOK } })
+        : Promise.resolve(null),
+    ]);
+
+    let incomeData = { success: true, data: [], summary: [], role: {}, rates: {} };
+    if(incomeRes){
+      if(!incomeRes.ok) throw new Error('HTTP ' + incomeRes.status);
+      incomeData = await incomeRes.json();
+      if(!incomeData.success) throw new Error(incomeData.detail || 'load failed');
+    }
+
+    ROLE  = incomeData.role  || ROLE;
+    RATES = incomeData.rates || RATES;
+    ROWS  = incomeData.data  || [];
+
+    // Merge bonanza rows
+    let bnzSummaryItems = [];
+    if(bnzRes && bnzRes.ok){
+      const bnzData = await bnzRes.json();
+      let bnzRows = (bnzData.claims || []).map(normalizeBonanzaRow);
+      if(!VGK_MODE) bnzRows = bnzRows.filter(r => r.company_id === CO);
+      const bnzSumMap = {};
+      for(const r of bnzRows){
+        if(!bnzSumMap[r.status]) bnzSumMap[r.status] = { status: r.status, count: 0, gross: 0, net: 0 };
+        bnzSumMap[r.status].count += 1;
+        bnzSumMap[r.status].gross += r.commission_amount;
+        bnzSumMap[r.status].net   += r.net_payout;
+      }
+      bnzSummaryItems = Object.values(bnzSumMap);
+      if(statusVal) bnzRows = bnzRows.filter(r => r.status === statusVal);
+      ROWS = [...ROWS, ...bnzRows];
+    }
+
+    // Merge field allowance rows
+    let faSummaryItems = [];
+    if(faRes && faRes.ok){
+      const faData = await faRes.json();
+      let faRows = (faData.data || []).map(normalizeFaRow);
+      if(!VGK_MODE && CO) faRows = faRows.filter(r => r.company_id === CO);
+      const faSumMap = {};
+      for(const r of faRows){
+        const key = r.status;
+        if(!faSumMap[key]) faSumMap[key] = { status: key, count: 0, gross: 0, net: 0 };
+        faSumMap[key].count += 1;
+        faSumMap[key].gross += r.commission_amount;
+        faSumMap[key].net   += r.net_payout;
+      }
+      faSummaryItems = Object.values(faSumMap);
+      if(statusVal) faRows = faRows.filter(r => r.status === statusVal || r._raw_fa.status === statusVal);
+      ROWS = [...ROWS, ...faRows];
+    }
+
+    // Snapshot full rows before any filtering (used by autocomplete dropdown)
+    _ROWS_FULL = [...ROWS];
+    // Search filter — if partner selected from autocomplete use exact code, else free text
+    if(_selPartnerCode){
+      ROWS = ROWS.filter(r => (r.partner_code||'').toLowerCase() === _selPartnerCode.toLowerCase());
+    } else if(search){
+      const s = search.toLowerCase();
+      ROWS = ROWS.filter(r =>
+        (r.entry_number||'').toLowerCase().includes(s) ||
+        (r.partner_code||'').toLowerCase().includes(s) ||
+        (r.partner_name||'').toLowerCase().includes(s) ||
+        (r.client_name||'').toLowerCase().includes(s)
+      );
+    }
+
+    // Date From / To filter on income_date (or created_at for regular entries)
+    const dateFrom = document.getElementById('fDateFrom').value; // YYYY-MM-DD
+    const dateTo   = document.getElementById('fDateTo').value;
+    if(dateFrom || dateTo){
+      ROWS = ROWS.filter(r => {
+        const raw = r.income_date || r.created_at || null;
+        if(!raw) return !dateFrom; // no date → include only when no From set
+        const ist = (raw.endsWith('Z') || raw.includes('+')) ? raw : raw + '+05:30';
+        const d   = new Date(ist);
+        const ymd = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+        if(dateFrom && ymd < dateFrom) return false;
+        if(dateTo   && ymd > dateTo)   return false;
+        return true;
+      });
+    }
+
+    // Month filter for income entries
+    if(monthVal){
+      const ym = monthVal.replace('-','').substring(2); // YYMM
+      ROWS = ROWS.filter(r => {
+        if(r._is_field_allowance) return true; // already filtered server-side
+        return (r.entry_number||'').includes(ym);
+      });
+    }
+
+    // DC-SEARCH-SUM-001: always derive summary from filtered ROWS so cards always
+    // match what the table shows — partner/date/search filters included.
+    renderSummary(_summaryFromRows(ROWS));
+    renderTable(ROWS);
+  } catch(e){
+    tb.innerHTML = `<tr><td colspan="15" class="empty-state"><i class="fas fa-exclamation-triangle"></i><br>Error: ${e.message}</td></tr>`;
+  }
+}
+
+function renderSummary(summary){
+  const order = ['DRAFT','PENDING','RELEASED','STAGE1_APPROVED','PAID','CANCELLED'];
+  const agg = {};
+  let totalGross=0, totalNet=0;
+  for(const s of summary){
+    const key = s.status === 'Payout Completed' ? 'PAID' : s.status === 'Stage1Approved' ? 'STAGE1_APPROVED' : s.status;
+    if(!agg[key]) agg[key] = {count:0, gross:0, net:0};
+    agg[key].count += s.count;
+    agg[key].gross += (s.gross||0);
+    agg[key].net   += (s.net||0);
+    if(key !== 'CANCELLED'){ totalGross += (s.gross||0); totalNet += (s.net||0); }
+  }
+  const cards = order.map(st => {
+    const a = agg[st] || {count:0, gross:0, net:0};
+    const cls = st === 'STAGE1_APPROVED' ? 'stage1approved' : st.toLowerCase();
+    const active = (CURFILTER_STATUS === st) ? 'active' : '';
+    return `<div class="sum-card ${cls} ${active}" onclick="filterStatus('${st}')">
+      <div class="label">${st}</div>
+      <div class="value">${a.count}</div>
+      <div class="amt">${fmt(a.gross)}</div>
+    </div>`;
+  }).join('');
+  const total = `<div class="sum-card" style="background:#064e3b;color:#fff;border-color:#064e3b">
+    <div class="label" style="color:#a7f3d0">TOTAL NET</div>
+    <div class="value" style="color:#fff">${fmt(totalNet)}</div>
+    <div class="amt" style="color:#a7f3d0">Gross ${fmt(totalGross)}</div>
+  </div>`;
+  document.getElementById('summaryRow').innerHTML = cards + total;
+}
+
+function filterStatus(st){
+  CURFILTER_STATUS = (CURFILTER_STATUS === st) ? '' : st;
+  document.getElementById('fStatus').value = CURFILTER_STATUS;
+  loadList();
+}
+
+function kindCss(kind){
+  if(kind === 'ADVANCE')         return 'adv';
+  if(kind === 'SLAB_BONUS')      return 'slab';
+  if(kind === 'BONANZA')         return 'bnz';
+  if(kind === 'SENIOR_COMM')     return 'snr';
+  if(kind === 'FIELD_ALLOWANCE') return 'fa';
+  return '';
+}
+function kindLabel(kind, level){
+  const MAP = {
+    COMMISSION:     'Commission',
+    ADVANCE:        'Solar Advance',
+    SLAB_BONUS:     'Slab Bonus',
+    SENIOR_COMM:    'Senior Comm',
+    BONANZA:        'Bonanza',
+    FIELD_ALLOWANCE:'Field Allow',
+  };
+  const base = MAP[kind] || kind || 'Income';
+  if(level) return base + ' <span style="font-size:10px;font-weight:700;opacity:.85">L' + level + '</span>';
+  return base;
+}
+
+function clearDateFilter(){
+  document.getElementById('fDateFrom').value = '';
+  document.getElementById('fDateTo').value = '';
+  loadList();
+}
+
+// DC-SEARCH-SUM-001: compute summary cards from filtered ROWS array
+function _summaryFromRows(rows){
+  const agg = {};
+  for(const r of rows){
+    const st = r.status === 'Payout Completed' ? 'PAID'
+             : r.status === 'Stage1Approved'   ? 'STAGE1_APPROVED'
+             : (r.status || 'DRAFT');
+    if(!agg[st]) agg[st] = { status: st, count: 0, gross: 0, net: 0 };
+    agg[st].count++;
+    agg[st].gross += +(r.commission_amount || 0);
+    agg[st].net   += +(r.net_payout || 0);
+  }
+  return Object.values(agg);
+}
+
+function renderTable(rows){
+  const tb = document.getElementById('tableBody');
+  if(!rows.length){
+    tb.innerHTML = `<tr><td colspan="15" class="empty-state"><i class="fas fa-inbox"></i><br>No income records.</td></tr>`;
+    return;
+  }
+  tb.innerHTML = rows.map(r => {
+    const acts    = (r.available_actions || []).map(a => actBtn(r, a)).join('');
+    const paidBtns = r.status === 'PAID' && !r._is_bonanza && !r._is_field_allowance ? `
+      <button class="btn-act btn-wa" title="Send WhatsApp" onclick="sendWA(${r.id},${r.company_id||CO})">
+        <i class="fab fa-whatsapp"></i> WA
+      </button>
+      <button class="btn-act btn-wa-web" title="Open WhatsApp Web" onclick="openWAWeb(${r.id})">
+        <i class="fab fa-whatsapp"></i> Direct
+      </button>
+      <button class="btn-act btn-card" title="Download earner card" onclick="downloadCard(${r.id},${r.company_id||CO})">
+        <i class="fas fa-image"></i> Card
+      </button>` : '';
+
+    const statusBadge = `<span class="badge-st b-${(r.status||'').replace(' ','\\ ')}">${r.status||'—'}</span>` +
+      (r.ledger_posted ? ' <i class="fas fa-book" title="Ledger posted" style="color:#059669"></i>' : '');
+
+    const stage1Col = r._is_field_allowance && r._raw_fa
+      ? (r._raw_fa.stage_1_approved_by ? `<small><i class="fas fa-check" style="color:#059669"></i> ${r._raw_fa.stage_1_approved_by}<br>${fmtDt(r._raw_fa.stage_1_approved_at)}</small>` : '—')
+      : (r.stage_1_approved_by ? `<small><i class="fas fa-user-check" style="color:#7c3aed"></i> ${r.stage_1_approved_by}<br>${fmtDt(r.stage_1_approved_at)}</small>` : (r.confirmed_at ? `<small style="color:#9ca3af">Conf: ${fmtDt(r.confirmed_at)}</small>` : '—'));
+
+    const stage2Col = r._is_field_allowance && r._raw_fa
+      ? (r._raw_fa.stage_2_paid_by ? `<small><i class="fas fa-check" style="color:#15803d"></i> ${r._raw_fa.stage_2_paid_by}<br>${fmtDt(r._raw_fa.stage_2_paid_at)}</small>` : '—')
+      : (r.paid_at ? `<small><i class="fas fa-check" style="color:#15803d"></i> ${fmtDt(r.paid_at)}${r.payment_mode?'<br><span style="color:#374151">'+r.payment_mode+'</span>':''}${r.payment_utr?'<br><span style="color:#6b7280">'+r.payment_utr+'</span>':''}</small>` : '—');
+
+    const netCell = (function(){
+      if((r.net_payout||0) > 0) return fmt(r.net_payout);
+      if(r.status==='DRAFT'||r.status==='PENDING'){
+        const g=+(r.commission_amount||0);
+        const adm=+(g*0.08).toFixed(2);
+        const pay=g-adm;
+        const tds=+(pay*0.02).toFixed(2);
+        return '<span style="color:#d97706;font-size:11px" title="Estimated — deductions not yet applied">≈ '+fmt(pay-tds)+'</span>';
+      }
+      return fmt(0);
+    })();
+
+    const incomeDate = r.income_date || r.created_at || null;
+    return `<tr>
+      <td style="white-space:nowrap;color:#374151;font-size:12px"><strong>${fmtDate(incomeDate)}</strong></td>
+      <td><strong>${r.entry_number || ('#'+r.id)}</strong>${r.skip_reason ? `<br><small style="color:#7c3aed" title="${r.skip_reason}"><i class="fas fa-bolt"></i> skip</small>`:''}</td>
+      <td><span class="kind-pill ${kindCss(r.kind)}">${kindLabel(r.kind, r.level)}</span></td>
+      <td>${r.partner_name||'-'}<br><small class="text-muted">${r.partner_code||''}</small></td>
+      <td><small>${r.client_name||'—'}</small></td>
+      <td style="text-align:right;color:#1e40af;font-weight:600">${r.kind==='ADVANCE' ? '<span style="color:#9ca3af">—</span>' : (r.deal_value_received ? fmt(r.deal_value_received) : '<span style="color:#9ca3af">—</span>')}</td>
+      <td style="text-align:right;color:#7c3aed;font-weight:600">${r.kind==='ADVANCE' ? '<span style="color:#9ca3af">—</span>' : (r.commission_pct > 0 ? r.commission_pct.toFixed(2)+'%' : (r.deal_value_received && r.commission_amount ? (r.commission_amount/r.deal_value_received*100).toFixed(2)+'%' : '<span style="color:#9ca3af">—</span>'))}</td>
+      <td style="text-align:right;color:#059669;font-weight:600">${fmt(r.commission_amount)}</td>
+      <td style="text-align:right;color:#d97706">${r.admin_charges ? fmt(r.admin_charges) : '—'}</td>
+      <td style="text-align:right;color:#dc2626">${r.tds_amount ? fmt(r.tds_amount) : '—'}</td>
+      <td style="text-align:right;color:#15803d;font-weight:700">${netCell}</td>
+      <td>${statusBadge}</td>
+      <td style="text-align:center">${r.kind==='ADVANCE' || r.kind==='SLAB_BONUS' || r.kind==='SENIOR_COMM' ? pointsBalanceBadge(r) : '<small class="text-muted">—</small>'}</td>
+      <td>${stage1Col}</td>
+      <td>${stage2Col}</td>
+      <td style="text-align:center;white-space:nowrap">${acts}${paidBtns}${(!acts && !paidBtns) ? '<small class="text-muted">—</small>' : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function pointsBalanceBadge(r){
+  const pts = r.partner_points_balance;
+  if(pts === undefined || pts === null) return '<small class="text-muted">—</small>';
+  const net   = parseFloat(r.net_payout || 0);
+  const avail = parseFloat(pts);
+  const ok    = avail >= net;
+  const color = ok ? '#059669' : '#dc2626';
+  const icon  = ok ? '✅' : '❌';
+  const label = ok ? 'Available' : 'Not Available';
+  return `<span style="color:${color};font-size:12px;font-weight:600">${icon} ${label}</span><br><small style="color:#6b7280">${avail.toLocaleString('en-IN',{maximumFractionDigits:0})} pts</small>`;
+}
+
+function actBtn(r, a){
+  // Standard VCI actions
+  // DC-NO-RELEASE-001: 'release' removed from labels/classes — Stage 1 Approve is the first action.
+  const stdLabels = {confirm:'Confirm', stage1_approve:'Stage 1 Approve', mark_paid:'Mark Paid', reject:'Reject'};
+  const stdCls    = {confirm:'btn-confirm', stage1_approve:'btn-approve', mark_paid:'btn-pay', reject:'btn-reject'};
+  const stdIcon   = {confirm:'check', stage1_approve:'user-check', mark_paid:'rupee-sign', reject:'times'};
+
+  if(stdLabels[a]){
+    const skipMark = (ROLE.is_super && (a==='mark_paid' && (r.status==='DRAFT' || r.status==='PENDING'))) ? '<i class="fas fa-bolt"></i> ' : '';
+    return `<button class="btn-act ${stdCls[a]}" onclick='openAct(${r.id}, "${a}")'>${skipMark}<i class="fas fa-${stdIcon[a]}"></i> ${stdLabels[a]}</button>`;
+  }
+
+  // Bonanza actions
+  if(a === 'approve_bnz'){
+    const raw = r._raw_bnz || {};
+    return `<button class="btn-act btn-release" onclick="approveBnz(${raw.claim_id||r.id})"><i class="fas fa-paper-plane"></i> Stage 1 Release</button>`;
+  }
+  if(a === 'pay_bnz'){
+    const raw = r._raw_bnz || {};
+    const gross = r.commission_amount||0;
+    const pName = (r.partner_name||'').replace(/'/g,"\\'");
+    const bName = (r.client_name||'').replace(/'/g,"\\'");
+    return `<button class="btn-act btn-pay" onclick="openBnzPayModal(${raw.claim_id||r.id},${gross},'${pName}','${bName}')"><i class="fas fa-rupee-sign"></i> Stage 2 Pay</button>`;
+  }
+
+  // Field Allowance actions
+  if(a === 'fa_stage1'){
+    return `<button class="btn-act btn-approve" onclick="faStage1(${r.id})"><i class="fas fa-check"></i> Stage 1 Approve</button>`;
+  }
+  if(a === 'fa_stage2'){
+    return `<button class="btn-act btn-pay" onclick="faStage2(${r.id})"><i class="fas fa-rupee-sign"></i> Stage 2 Mark Paid</button>`;
+  }
+  return '';
+}
+
+// ── Bonanza Stage 1 (Release) ─────────────────────────────────────────────
+async function approveBnz(claimId){
+  if(!confirm('Release this bonanza payment? Wallet will be credited after 10% admin deduction.')) return;
+  try {
+    const r = await fetch(`/api/v1/bonanza/vgk/claims/${claimId}/status`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+TOK, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'Payment Released' })
+    });
+    const d = await r.json();
+    if(!r.ok || !d.success) throw new Error(d.detail || d.error || 'Release failed');
+    toast('Bonanza released — now record payment (Stage 2)', 'success');
+    loadList();
+  } catch(e){
+    toast('Release failed: ' + e.message, 'error');
+  }
+}
+
+// ── Bonanza Stage 2 (Make Payment) modal ─────────────────────────────────
+let _bnzPayClaimId = null;
+function openBnzPayModal(claimId, gross, partnerName, bonanzaName){
+  _bnzPayClaimId = claimId;
+  const admin10 = +(gross * 0.10).toFixed(2);
+  const net     = +(gross - admin10).toFixed(2);
+  document.getElementById('actTitle').innerHTML = `<i class="fas fa-money-bill-wave"></i> Bonanza Stage 2 — ${bonanzaName}`;
+  document.getElementById('actInfo').innerHTML = `
+    <div class="info-item"><div class="lab">Partner</div><div class="val">${partnerName}</div></div>
+    <div class="info-item"><div class="lab">Gross / Admin</div><div class="val">${fmt(gross)} / -${fmt(admin10)}</div></div>
+    <div class="info-item"><div class="lab">Net to Pay</div><div class="val" style="color:#15803d">${fmt(net)}</div></div>`;
+  document.getElementById('payFields').style.display = 'none';
+  document.getElementById('rejFields').style.display = 'none';
+  document.getElementById('actNotes').value = '';
+  document.getElementById('goBtn').className = 'btn-go';
+  document.getElementById('goBtn').textContent = 'Confirm Payment';
+  CURRENT = { _bnz_pay: true, claim_id: claimId, gross };
+  document.getElementById('actModal').classList.add('show');
+}
+
+// ── Field Allowance Stage 1 ───────────────────────────────────────────────
+async function faStage1(faId){
+  if(!confirm('Approve this field allowance (Stage 1)?')) return;
+  try {
+    const r = await fetch(`/api/v1/vgk/staff/vgk/field-allowances/${faId}/stage1-approve`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+TOK, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    if(!r.ok || !d.success) throw new Error(d.detail || d.error || 'Approve failed');
+    toast('Field allowance Stage 1 approved!', 'success');
+    loadList();
+  } catch(e){
+    toast('Approve failed: ' + e.message, 'error');
+  }
+}
+
+// ── Field Allowance Stage 2 ───────────────────────────────────────────────
+async function faStage2(faId){
+  if(!confirm('Mark this field allowance as Paid (Stage 2)?')) return;
+  try {
+    const r = await fetch(`/api/v1/vgk/staff/vgk/field-allowances/${faId}/stage2-mark-paid`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer '+TOK, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    if(!r.ok || !d.success) throw new Error(d.detail || d.error || 'Mark paid failed');
+    toast('Field allowance marked as Paid!', 'success');
+    loadList();
+  } catch(e){
+    toast('Mark paid failed: ' + e.message, 'error');
+  }
+}
+
+async function sendWA(entryId, companyCo){
+  if(!confirm('Send WhatsApp congratulations to this member?')) return;
+  try {
+    const r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/${entryId}/send-whatsapp?company_id=${companyCo}`, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + TOK },
+    });
+    const d = await r.json();
+    if(!r.ok || !d.success) throw new Error(d.detail || d.error || 'Send failed');
+    toast(`✅ WhatsApp sent to ${d.partner} (${d.sent_to})`, 'success');
+  } catch(e) {
+    toast('WA Error: ' + e.message, 'error');
+  }
+}
+
+async function openWAWeb(entryId){
+  const r = ROWS.find(x => x.id === entryId);
+  if(!r){ toast('Entry not found', 'error'); return; }
+  const title = r.name_title ? r.name_title + ' ' : '';
+  const name  = title + (r.partner_name || 'VGK Member');
+  const code  = r.partner_code || '';
+  const entry = r.entry_number || ('#' + r.id);
+  const gross = '\u20b9' + Number(r.commission_amount||0).toLocaleString('en-IN');
+  const msg = [
+    '\uD83C\uDFC6 Congratulations ' + name + ' (' + code + ')!',
+    '',
+    'You\'ve earned ' + gross + ' as VGK Cash Commission.',
+    'Entry: ' + entry,
+    '',
+    'Keep Leading. Keep Inspiring. Keep Growing!',
+    '\u2014 Team VGK4U'
+  ].join('\n');
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  try {
+    const co = r.company_id || CO;
+    const resp = await fetch(`/api/v1/vgk/staff/vgk/cash-income/${entryId}/earner-card?company_id=${co}`,
+      { headers: { 'Authorization': 'Bearer ' + TOK } });
+    if(resp.ok){
+      const blob = await resp.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `earner-card-${entry}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+      toast('Card downloaded — attach it in the WhatsApp chat', 'success');
+    }
+  } catch(_){}
+}
+
+async function downloadCard(entryId, companyCo){
+  toast('Generating earner card…', 'success');
+  try {
+    const r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/${entryId}/earner-card?company_id=${companyCo}`, {
+      headers: { 'Authorization': 'Bearer ' + TOK },
+    });
+    if(!r.ok) {
+      const d = await r.json().catch(()=>({}));
+      throw new Error(d.detail || 'Card generation failed');
+    }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `earner-card-${entryId}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('✅ Earner card downloaded!', 'success');
+  } catch(e) {
+    toast('Card Error: ' + e.message, 'error');
+  }
+}
+
+async function openAct(entryId, action){
+  CURRENT = { entry_id: entryId, action: action, row: ROWS.find(r=>r.id===entryId) };
+  const r = CURRENT.row;
+  document.getElementById('actTitle').innerHTML = `<i class="fas fa-${action==='reject'?'times':'check-circle'}"></i> ${action.replace('_',' ').toUpperCase()} — ${r.entry_number}`;
+  document.getElementById('actInfo').innerHTML = `
+    <div class="info-item"><div class="lab">Partner</div><div class="val">${r.partner_name || '-'}<br><small style="color:#6b7280">${r.partner_code||''}</small></div></div>
+    <div class="info-item"><div class="lab">Gross / Net</div><div class="val">${fmt(r.commission_amount)}<br><small style="color:#15803d">Net ${fmt(r.net_payout)}</small></div></div>
+    <div class="info-item"><div class="lab">Admin / TDS</div><div class="val"><small style="color:#d97706">${fmt(r.admin_charges)}</small><br><small style="color:#dc2626">${fmt(r.tds_amount)}</small></div></div>`;
+  document.getElementById('payFields').style.display = (action==='mark_paid') ? '' : 'none';
+  document.getElementById('rejFields').style.display = (action==='reject') ? '' : 'none';
+  document.getElementById('goBtn').className = 'btn-go' + (action==='reject' ? ' danger' : '');
+  const btnLabels = {reject:'Reject Entry', mark_paid:'Mark as Paid', stage1_approve:'Stage 1 Approve', release:'Release', confirm:'Confirm'};
+  document.getElementById('goBtn').textContent = btnLabels[action] || 'Confirm';
+  document.getElementById('actNotes').value = '';
+  document.getElementById('rejReason') && (document.getElementById('rejReason').value = '');
+  document.getElementById('utrInp').value = '';
+  if(action==='mark_paid'){
+    await loadPaymentOptions();
+    setMode('BANK');
+  }
+  document.getElementById('actModal').classList.add('show');
+}
+function closeAct(){ document.getElementById('actModal').classList.remove('show'); CURRENT = null; }
+function setMode(m){
+  MODE = m;
+  document.getElementById('modeBank').classList.toggle('active', m==='BANK');
+  document.getElementById('modeCash').classList.toggle('active', m==='CASH');
+  document.getElementById('bankPanel').style.display = (m==='BANK') ? '' : 'none';
+  document.getElementById('cashPanel').style.display = (m==='CASH') ? '' : 'none';
+}
+
+let ALL_BANKS = [];
+async function loadPaymentOptions(){
+  const r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/payment-options`, { headers: {'Authorization':'Bearer '+TOK}});
+  const d = await r.json();
+  ALL_BANKS = d.banks || [];
+  const cmpSel = document.getElementById('companySel');
+  const companies = d.companies || [];
+  cmpSel.innerHTML = companies.map(c =>
+    `<option value="${c.id}">${c.name}${c.code ? ' ('+c.code+')' : ''}</option>`
+  ).join('') || '<option value="">No companies found</option>';
+  filterBanksByCompany();
+  const csel = document.getElementById('cashSel');
+  csel.innerHTML = (d.cash_staff || []).map(s => `<option value="${s.staff_id}">${s.label}</option>`).join('') || '<option value="">No active staff</option>';
+}
+
+function filterBanksByCompany(){
+  const cmpId = parseInt(document.getElementById('companySel').value || '0');
+  const bsel  = document.getElementById('bankSel');
+  const filtered = cmpId ? ALL_BANKS.filter(b => b.company_id === cmpId) : ALL_BANKS;
+  if(filtered.length === 0){
+    bsel.innerHTML = '<option value="">No bank accounts configured for this company</option>';
+  } else {
+    bsel.innerHTML = filtered.map(b =>
+      `<option value="${b.ledger_id}">${b.label}${b.is_primary ? ' ★' : ''}</option>`
+    ).join('');
+  }
+}
+
+async function submitAct(){
+  if(!CURRENT) return;
+
+  // Bonanza Stage 2 payment
+  if(CURRENT._bnz_pay){
+    const notes = document.getElementById('actNotes').value.trim();
+    const btn = document.getElementById('goBtn');
+    btn.disabled = true;
+    try {
+      const r = await fetch(`/api/v1/bonanza/vgk/claims/${CURRENT.claim_id}/status`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer '+TOK, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'Paid', payment_mode: 'BANK', payment_reference: notes || 'Manual' })
+      });
+      const d = await r.json();
+      if(!r.ok || !d.success) throw new Error(d.detail || d.error || 'Payment failed');
+      toast('Bonanza payment recorded — wallet settled!', 'success');
+      closeAct();
+      loadList();
+    } catch(e){
+      toast('Payment failed: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+    return;
+  }
+
+  // Standard VCI action
+  const action = CURRENT.action;
+  const body = { entry_id: CURRENT.entry_id, action: action };
+  const notes = document.getElementById('actNotes').value.trim();
+  if(notes) body.notes = notes;
+
+  if(action==='reject'){
+    const reason = document.getElementById('rejReason').value.trim();
+    if(!reason){ toast('Rejection reason is required', 'error'); return; }
+    body.rejection_reason = reason;
+  } else if(action==='mark_paid'){
+    body.payment_mode = MODE;
+    if(MODE==='BANK'){
+      const bid = parseInt(document.getElementById('bankSel').value || '0');
+      const utr = document.getElementById('utrInp').value.trim();
+      if(!bid){ toast('Select a bank account', 'error'); return; }
+      if(!utr){ toast('UTR is required for bank payments', 'error'); return; }
+      body.bank_ledger_id = bid;
+      body.payment_utr    = utr;
+    } else {
+      const sid = parseInt(document.getElementById('cashSel').value || '0');
+      if(!sid){ toast('Select paying staff for cash payment', 'error'); return; }
+      body.cash_staff_id = sid;
+    }
+  }
+
+  document.getElementById('goBtn').disabled = true;
+  try {
+    const entryCo = (CURRENT && CURRENT.row && CURRENT.row.company_id) ? CURRENT.row.company_id : CO;
+    const r = await fetch(`/api/v1/vgk/staff/vgk/cash-income/unified-action?company_id=${entryCo}`, {
+      method: 'POST',
+      headers: { 'Authorization':'Bearer '+TOK, 'Content-Type':'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if(!r.ok || !d.success){ throw new Error(d.detail || d.error || 'Action failed'); }
+    let msg = `${action.toUpperCase()} OK on ${CURRENT.row.entry_number}`;
+    if((d.skipped_states||[]).length){ msg += ` (skip-level: ${d.skipped_states.join(' → ')})`; }
+    toast(msg, 'success');
+    closeAct();
+    loadList();
+  } catch(e){
+    toast('Error: ' + e.message, 'error');
+  } finally {
+    document.getElementById('goBtn').disabled = false;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+  if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+  if (typeof StaffHeader !== 'undefined') {
+    StaffHeader.inject('VGK Income — Unified', 'fas fa-coins');
+    StaffHeader.init();
+  }
+  if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+  loadList();
+});
+</script>
+<script src="/staff_sidebar.js"></script>
+<script src="/staff_header.js"></script>
+</div>
+</body>
+</html>

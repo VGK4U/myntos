@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KYC Documents — VGK4U Member</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+  body { background:#f6f9fc; font-family:'Segoe UI', Roboto, sans-serif; }
+  .vgk-hero { background:linear-gradient(135deg, #dc2626, #dc2626cc); color:#fff; padding:24px 20px; border-radius:0 0 18px 18px; margin-bottom:20px; }
+  .vgk-hero h1 { font-size:22px; font-weight:800; margin:0; }
+  .vgk-hero p  { opacity:0.9; margin:4px 0 0; font-size:13px; }
+  .back-link { color:#fff; text-decoration:none; opacity:0.85; font-size:13px; }
+  .back-link:hover { opacity:1; color:#fff; }
+  #kycSubmitBtn:disabled { opacity:.65; cursor:not-allowed; }
+</style>
+<script src="/vgk-member-module-gate.js" data-flag="kyc_vgk4u_enabled" data-label="KYC Documents"></script>
+</head>
+<body>
+  <div class="vgk-hero">
+    <div style="max-width:760px;margin:0 auto">
+      <a href="/vgk/dashboard" class="back-link"><i class="fas fa-arrow-left me-2"></i>Back to Dashboard</a>
+      <h1 class="mt-2"><i class="fas fa-id-card me-2"></i>KYC Documents</h1>
+      <p>Upload identity documents. They go to admin for verification.</p>
+      <div style="margin-top:8px;font-size:11px;opacity:0.7"><i class="fas fa-shield-alt me-1"></i>VGK4U Members · Audience-aware · DC Protocol IST</div>
+    </div>
+  </div>
+  <main class="container" style="padding-bottom:60px">
+    <form id="kycForm" enctype="multipart/form-data" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px;max-width:640px;margin:0 auto">
+      <div class="mb-3">
+        <label class="form-label fw-bold">Document Type *</label>
+        <select class="form-select" id="kycType" required>
+          <option value="">— select document type —</option>
+          <option value="aadhaar_front">Aadhaar Card — Front</option>
+          <option value="aadhaar_back">Aadhaar Card — Back</option>
+          <option value="pan_card">PAN Card</option>
+          <option value="passport_photo">Passport-size Photo</option>
+          <option value="bank_passbook">Bank Passbook / Cheque</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">Document File *</label>
+        <input type="file" class="form-control" id="kycFile" accept=".pdf,image/*" required>
+        <div class="form-text">Accepted: JPG, PNG, HEIC, PDF &bull; Max 10 MB</div>
+      </div>
+      <button type="submit" id="kycSubmitBtn" class="btn btn-danger w-100">
+        <i class="fas fa-upload me-2"></i>Upload Document
+      </button>
+    </form>
+    <div id="kycResult" class="mt-3" style="max-width:640px;margin:1rem auto"></div>
+    <h5 class="mt-4 mb-3" style="max-width:640px;margin:1rem auto">My Documents</h5>
+    <div id="kycList" style="max-width:640px;margin:0 auto"></div>
+  </main>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function(){
+  const $ = (s) => document.querySelector(s);
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function loadList() {
+    try {
+      const r = await fetch('/api/v1/vgk-member/kyc/my-documents?audience=vgk4u', { credentials: 'include' });
+      if (!r.ok) { $('#kycList').innerHTML = '<div class="alert alert-warning">Could not load documents.</div>'; return; }
+      const d = await r.json();
+      const docs = d.documents || [];
+      const statusColor = { 'Approved':'success', 'Rejected':'danger', 'Pending':'warning', 'Verified':'success' };
+      $('#kycList').innerHTML = docs.length
+        ? docs.map(x => `
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <strong>${escHtml(x.document_type)}</strong><br>
+              <small class="text-muted">Uploaded ${new Date(x.uploaded_at).toLocaleString('en-IN')}</small>
+              ${x.rejection_reason ? `<div class="text-danger small mt-1"><i class="fas fa-exclamation-triangle me-1"></i>${escHtml(x.rejection_reason)}</div>` : ''}
+            </div>
+            <span class="badge bg-${statusColor[x.status] || 'secondary'}">${escHtml(x.status)}</span>
+          </div>`).join('')
+        : '<div class="text-muted small p-2">No documents uploaded yet.</div>';
+    } catch(e) {
+      $('#kycList').innerHTML = '<div class="alert alert-warning">Could not load documents.</div>';
+    }
+  }
+
+  function showResult(html) {
+    const el = $('#kycResult');
+    el.innerHTML = html;
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  $('#kycForm').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+
+    const docType = $('#kycType').value;
+    const fileInput = $('#kycFile');
+    const btn = $('#kycSubmitBtn');
+
+    if (!docType) { showResult('<div class="alert alert-warning">Please select a document type.</div>'); return; }
+    if (!fileInput.files || !fileInput.files[0]) { showResult('<div class="alert alert-warning">Please choose a file to upload.</div>'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading… please wait';
+    showResult('<div class="alert alert-info"><i class="fas fa-spinner fa-spin me-2"></i>Uploading your document — please do not leave this page…</div>');
+
+    const fd = new FormData();
+    fd.append('document_type', docType);
+    fd.append('file', fileInput.files[0]);
+
+    try {
+      const r = await fetch('/api/v1/vgk-member/kyc/upload?audience=vgk4u', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd
+      });
+
+      let d = {};
+      try { d = await r.json(); } catch(_) {}
+
+      if (r.ok && (d.success !== false)) {
+        showResult('<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i><strong>Document uploaded successfully!</strong> It has been sent for staff verification. You will be notified once reviewed.</div>');
+        $('#kycForm').reset();
+        await loadList();
+      } else {
+        const errMsg = d.detail || d.message || `Upload failed (status ${r.status}). Please try again.`;
+        showResult(`<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-2"></i><strong>Upload failed:</strong> ${escHtml(errMsg)}</div>`);
+      }
+    } catch(e) {
+      showResult('<div class="alert alert-danger"><i class="fas fa-wifi me-2"></i><strong>Network error.</strong> Please check your connection and try again.</div>');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-upload me-2"></i>Upload Document';
+    }
+  });
+
+  loadList();
+})();
+</script>
+</body>
+</html>

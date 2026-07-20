@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MNR Business Access Program</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:system-ui,-apple-system,sans-serif;background:#1a1a2e;
+  -webkit-user-select:none;user-select:none}
+
+/* ── Top bar ──────────────────────────────── */
+#bar{display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(135deg,#0f3460,#1a1a2e);
+  padding:8px 16px;border-bottom:3px solid #e94560;height:56px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{height:38px;border-radius:4px}
+.brand-text h5{color:#fff;font-size:.95rem;font-weight:700;line-height:1.2}
+.brand-text small{color:#adb5bd;font-size:.72rem}
+.btns{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;
+  border:none;border-radius:8px;font-size:.82rem;font-weight:600;
+  cursor:pointer;color:#fff;text-decoration:none;line-height:1;white-space:nowrap;
+  transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn-home  {background:#0f3460}
+.btn-join  {background:#e94560}
+.btn-share {background:#25D366}
+.btn svg{flex-shrink:0}
+
+/* ── Referrer banner ──────────────────────── */
+#ref-banner{display:none;background:#fff8e1;border-bottom:2px solid #FFA500;
+  padding:6px 16px;font-size:.82rem;color:#5d4037;text-align:center}
+#ref-banner strong{color:#e67e22}
+
+/* ── Toolbar ──────────────────────────────── */
+#toolbar{display:flex;align-items:center;justify-content:center;gap:10px;
+  background:#111827;border-bottom:1px solid #2d3748;padding:6px 12px;
+  height:42px;flex-shrink:0}
+#toolbar button{background:#1e293b;color:#cbd5e1;border:1px solid #374151;
+  border-radius:6px;padding:5px 12px;cursor:pointer;font-size:.78rem;
+  font-weight:600;transition:background .15s}
+#toolbar button:hover:not(:disabled){background:#2d3748}
+#toolbar button:disabled{opacity:.35;cursor:not-allowed}
+#page-info{color:#94a3b8;font-size:.78rem;min-width:80px;text-align:center}
+
+/* ── Image viewer ─────────────────────────── */
+#wrap{display:flex;align-items:center;justify-content:center;
+  overflow-y:auto;background:#374151;padding:8px 0}
+#page-img{display:block;max-width:100%;height:auto;
+  max-height:calc(100vh - 100px);object-fit:contain;
+  box-shadow:0 2px 16px rgba(0,0,0,.6);
+  border-radius:2px;cursor:default}
+#img-shell{position:relative;display:flex;align-items:center;
+  justify-content:center;width:100%;max-width:min(900px,100%)}
+@media(max-width:600px){
+  #wrap{padding:4px 0}
+  #page-img{max-height:calc(100vh - 98px);border-radius:0}
+}
+
+/* skeleton while image loads */
+#img-skeleton{position:absolute;inset:0;background:#2d3748;
+  display:flex;align-items:center;justify-content:center;
+  color:#6b7280;font-size:.78rem;border-radius:2px}
+.spin{width:32px;height:32px;border:3px solid #333;border-top-color:#e94560;
+  border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Badge */
+#badge{position:fixed;bottom:14px;right:14px;background:rgba(0,0,0,.6);
+  color:#adb5bd;font-size:.68rem;padding:4px 9px;border-radius:20px;
+  pointer-events:none;backdrop-filter:blur(4px);z-index:100}
+
+/* Swipe hint on mobile */
+#swipe-hint{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.55);color:#fff;font-size:.72rem;padding:5px 14px;
+  border-radius:20px;pointer-events:none;transition:opacity .4s;z-index:99}
+
+@media(max-width:480px){
+  .brand-text small,.btn .lbl{display:none}
+  .btn{padding:7px 9px}
+  #wrap{padding:8px 4px}
+}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <div class="brand">
+    <img src="/public/mnr-logo.png" alt="MNR" onerror="this.style.display='none'">
+    <div class="brand-text">
+      <h5>MNR Business Access Program</h5>
+      <small>One Program. Multiple Everyday Benefits.</small>
+    </div>
+  </div>
+  <div class="btns">
+    <a href="/" class="btn btn-home">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span class="lbl">Home</span>
+    </a>
+    <button id="joinBtn" class="btn btn-join" onclick="goSignup()" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <span class="lbl">Join MNR</span>
+    </button>
+    <button id="shareBtn" class="btn btn-share" onclick="openCatalogShare()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      <span class="lbl">Share</span>
+    </button>
+  </div>
+</div>
+
+<div id="ref-banner">
+  <span>&#128100; You were referred by <strong id="ref-name">an MNR Member</strong></span>
+</div>
+
+<div id="toolbar">
+  <button id="btnPrev" onclick="changePage(-1)" disabled>&#8592; Prev</button>
+  <span id="page-info">Page 1 / 14</span>
+  <button id="btnNext" onclick="changePage(1)">Next &#8594;</button>
+</div>
+
+<div id="wrap">
+  <div id="img-shell">
+    <div id="img-skeleton"><div><div class="spin"></div><div>Loading page…</div></div></div>
+    <img id="page-img" alt="Catalog page" draggable="false" style="opacity:0">
+  </div>
+</div>
+
+<div id="badge">&#128274; Protected</div>
+<div id="swipe-hint" style="opacity:0"></div>
+
+<script>
+(function(){
+  var TOTAL = 14;
+  var current = 1;
+  var imgCache = {};
+
+  /* Anti-copy */
+  document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  document.addEventListener('keydown', function(e){
+    if((e.ctrlKey||e.metaKey) && 'pscu'.includes(e.key)) e.preventDefault();
+    if(e.key==='F12'||e.key==='PrintScreen') e.preventDefault();
+  });
+  document.addEventListener('copy', function(e){ e.preventDefault(); });
+
+  /* Helpers */
+  function pageUrl(n){
+    return '/public/catalog/pages/page-' + String(n).padStart(2,'0') + '.jpg';
+  }
+
+  function preload(n){
+    if(n<1||n>TOTAL||imgCache[n]) return;
+    var img = new Image();
+    img.src = pageUrl(n);
+    imgCache[n] = img;
+  }
+
+  function showPage(n){
+    if(n<1||n>TOTAL) return;
+    current = n;
+    var img = document.getElementById('page-img');
+    var skeleton = document.getElementById('img-skeleton');
+
+    skeleton.style.display = 'flex';
+    img.style.opacity = '0';
+
+    var src = pageUrl(n);
+    if(imgCache[n] && imgCache[n].complete && imgCache[n].naturalWidth){
+      img.src = src;
+      img.style.opacity = '1';
+      skeleton.style.display = 'none';
+    } else {
+      img.src = src;
+      img.onload = function(){
+        img.style.opacity = '1';
+        skeleton.style.display = 'none';
+      };
+      img.onerror = function(){
+        skeleton.innerHTML = '<p style="color:#e94560;padding:20px">Page not available.</p>';
+      };
+    }
+
+    document.getElementById('page-info').textContent = 'Page ' + n + ' / ' + TOTAL;
+    document.getElementById('btnPrev').disabled = (n <= 1);
+    document.getElementById('btnNext').disabled = (n >= TOTAL);
+
+    preload(n+1);
+    preload(n+2);
+    preload(n-1);
+
+    document.getElementById('wrap').scrollTo({top:0, behavior:'smooth'});
+  }
+
+  window.changePage = function(delta){
+    showPage(current + delta);
+  };
+
+  /* Adjust wrap height */
+  function adjustHeight(){
+    var bar = document.getElementById('bar').offsetHeight;
+    var toolbar = document.getElementById('toolbar').offsetHeight;
+    var banner = document.getElementById('ref-banner');
+    var bannerH = (banner && banner.style.display !== 'none') ? banner.offsetHeight : 0;
+    document.getElementById('wrap').style.height = 'calc(100vh - ' + (bar+toolbar+bannerH) + 'px)';
+  }
+  adjustHeight();
+  window.addEventListener('resize', adjustHeight);
+
+  /* Ref code + sponsor */
+  var ref='', sponsor='MNR1800401';
+  try{
+    var p = new URLSearchParams(location.search);
+    ref = p.get('ref') || '';
+    if(ref && !ref.startsWith('anon-')){
+      var dash = ref.lastIndexOf('-');
+      if(dash > 0){
+        var c = ref.substring(0, dash);
+        if(/^MNR[0-9]+$/i.test(c)) sponsor = c.toUpperCase();
+      }
+    }
+  }catch(e){}
+
+  /* Hit tracking */
+  fetch('/api/v1/catalog/public/hit' + (ref ? '?ref=' + encodeURIComponent(ref) : ''), {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({referrer: document.referrer||'', user_agent: navigator.userAgent})
+  }).catch(function(){});
+
+  /* Join button */
+  document.getElementById('joinBtn').style.display = 'inline-flex';
+  window.goSignup = function(){
+    var side = ref ? 'Right' : 'Left';
+    location.href = '/create-member?signup=true&side=' + side + '&sponsor=' + encodeURIComponent(sponsor);
+  };
+
+  /* Referrer banner */
+  if(ref){
+    fetch('/api/v1/catalog/public/referrer?ref=' + encodeURIComponent(ref))
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(!d.found) return;
+        var b = document.getElementById('ref-banner');
+        if(d.member_name) document.getElementById('ref-name').textContent = d.member_name;
+        b.style.display = 'block';
+        adjustHeight();
+      }).catch(function(){});
+  }
+
+  /* Share button — opens for everyone (logged-in or anonymous) */
+  window.openCatalogShare = function(){
+    try{
+      var tok = sessionStorage.getItem('session_token') || localStorage.getItem('session_token') || '';
+      if(tok) window.sessionToken = tok;
+    }catch(e){}
+    if(typeof window.openCatalogShareModal === 'function'){
+      window.openCatalogShareModal();
+    } else {
+      /* catalog-share.js still loading — poll up to 2 seconds */
+      var tries = 0;
+      var wait = setInterval(function(){
+        tries++;
+        if(typeof window.openCatalogShareModal === 'function'){
+          clearInterval(wait);
+          window.openCatalogShareModal();
+        } else if(tries >= 20){
+          clearInterval(wait);
+        }
+      }, 100);
+    }
+  };
+
+  /* Touch swipe support */
+  var touchStartX = 0, touchStartY = 0;
+  document.addEventListener('touchstart', function(e){
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, {passive:true});
+  document.addEventListener('touchend', function(e){
+    var dx = e.changedTouches[0].screenX - touchStartX;
+    var dy = e.changedTouches[0].screenY - touchStartY;
+    if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 40){
+      changePage(dx < 0 ? 1 : -1);
+    }
+  }, {passive:true});
+
+  /* Keyboard navigation */
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === 'ArrowDown') changePage(1);
+    if(e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   changePage(-1);
+  });
+
+  /* Start: show page 1, preload 2 & 3 */
+  showPage(1);
+  preload(2);
+  preload(3);
+
+})();
+</script>
+<script src="/public/js/catalog-share.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journeys Dashboard - MyntReal LLP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/public/css/staff-kyc-theme.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .vgk-header {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            border-left: 4px solid #f59e0b;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .vgk-header h4 {
+            color: #92400e;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .vgk-header p {
+            color: #78350f;
+            margin: 0;
+        }
+        
+        .btn-vgk {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .btn-vgk:hover {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+        
+        .vgk-stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .vgk-stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .vgk-stat-card.highlight {
+            border: 2px solid #f59e0b;
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+        }
+        
+        .vgk-config-section {
+            background: linear-gradient(135deg, #fffbeb, #fef3c7);
+            border: 2px solid #fde68a;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .vgk-config-section h6 {
+            color: #92400e;
+            font-weight: 700;
+        }
+        
+        .rate-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .rate-display:hover {
+            background: #f9fafb;
+        }
+        
+        .rate-amount {
+            color: #f59e0b;
+            font-weight: 700;
+        }
+        
+        .rate-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .rate-card:hover {
+            border-color: #f59e0b;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(245,158,11,0.2);
+        }
+        
+        .rate-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .rate-card.car .icon { color: #3b82f6; }
+        .rate-card.bike .icon { color: #ef4444; }
+        .rate-card.local .icon { color: #10b981; }
+        .rate-card.others .icon { color: #8b5cf6; }
+        
+        .filters-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .filters-bar label {
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        
+        /* Stats Grid Layout */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin: 0 auto 10px;
+        }
+        
+        .stat-icon.success { background: #d1fae5; color: #059669; }
+        .stat-icon.info { background: #dbeafe; color: #2563eb; }
+        .stat-icon.warning { background: #fef3c7; color: #d97706; }
+        .stat-icon.primary { background: #e0e7ff; color: #4f46e5; }
+        .stat-icon.danger { background: #fee2e2; color: #dc2626; }
+        
+        .stat-value { font-size: 24px; font-weight: 700; color: #1f2937; }
+        .stat-label { font-size: 13px; color: #6b7280; }
+        
+        @media (max-width: 1200px) { .stats-row { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 480px) { .stats-row { grid-template-columns: 1fr; } }
+    </style>
+    <!-- DC-FIX: jQuery for staff pages -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="vgk-header d-flex justify-content-between align-items-center flex-wrap">
+                <div>
+                    <p class="mb-0">Journey tracking, analytics & transport rate configuration</p>
+                </div>
+                <div class="d-flex gap-2" id="configButtonContainer">
+                    <!-- Transport Rates button - shown only for VGK4U Supreme, EA, Accounts -->
+                </div>
+            </div>
+            
+            <div class="filters-bar">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" class="form-control" id="startDate">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">End Date</label>
+                        <input type="date" class="form-control" id="endDate">
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-primary w-100" onclick="loadDashboard()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        
+            <div class="stats-row">
+                <div class="vgk-stat-card highlight">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-route"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-value" id="totalJourneys">0</div>
+                        <div class="stat-label">Total Journeys</div>
+                    </div>
+                </div>
+                <div class="vgk-stat-card">
+                    <div class="stat-icon info">
+                        <i class="fas fa-road"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-value" id="totalKm">0</div>
+                        <div class="stat-label">Total KM</div>
+                    </div>
+                </div>
+                <div class="vgk-stat-card">
+                    <div class="stat-icon success">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-value" id="approvedAmount">₹0</div>
+                        <div class="stat-label">Approved</div>
+                    </div>
+                </div>
+                <div class="vgk-stat-card">
+                    <div class="stat-icon warning">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-value" id="pendingAmount">₹0</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                </div>
+                <div class="vgk-stat-card">
+                    <div class="stat-icon danger">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-value" id="rejectedCount">0</div>
+                        <div class="stat-label">Rejected</div>
+                    </div>
+                </div>
+                <div class="vgk-stat-card">
+                    <div class="stat-icon" style="background: #f3f4f6; color: #6b7280;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-details">
+                        <div class="stat-value" id="nonReimbursable">0</div>
+                        <div class="stat-label">GPS Off</div>
+                    </div>
+                </div>
+            </div>
+        
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-car me-2"></i>KM by Transport Mode</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="transportChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-bullseye me-2"></i>Journeys by Purpose</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="purposeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-building me-2"></i>KM by Department</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="deptChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="vgk-config-section">
+                        <h6 class="mb-3"><i class="fas fa-rupee-sign me-2"></i>Current Transport Rates</h6>
+                        <div id="currentRates">
+                            <div class="text-center py-3">
+                                <i class="fas fa-spinner fa-spin text-warning"></i> Loading...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="configModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-bottom: 2px solid #f59e0b;">
+                    <h4 class="modal-title fw-bold" style="color: #92400e;">
+                        <i class="fas fa-cog me-2"></i>Transport Rate Configuration
+                    </h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="padding: 30px;">
+                    <div class="alert alert-warning mb-4" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; border: 2px solid #f59e0b; font-size: 16px; padding: 20px;">
+                        <i class="fas fa-exclamation-triangle me-2 fa-lg"></i>
+                        <strong>Important:</strong> Changes to transport rates will affect all future journey reimbursement calculations across the organization.
+                    </div>
+                    
+                    <h5 class="mb-4 text-center" style="color: #374151;">
+                        <i class="fas fa-rupee-sign me-2"></i>Set Per-Kilometer Rates for Each Transport Mode
+                    </h5>
+                    
+                    <div class="row g-4 justify-content-center" id="rateConfig">
+                        <div class="col-lg-4 col-md-6">
+                            <div class="rate-card car" style="padding: 35px; min-height: 260px;">
+                                <div class="icon" style="font-size: 4rem; margin-bottom: 20px;"><i class="fas fa-car"></i></div>
+                                <h4 class="fw-bold mb-3">Car</h4>
+                                <div class="input-group input-group-lg mt-3">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.5rem; padding: 15px 20px;">₹</span>
+                                    <input type="number" class="form-control text-center fw-bold" id="rate_car" step="0.5" min="0" value="8" style="font-size: 2.2rem; height: 75px;">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.3rem; padding: 15px 20px;">/km</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="rate-card bike" style="padding: 35px; min-height: 260px;">
+                                <div class="icon" style="font-size: 4rem; margin-bottom: 20px;"><i class="fas fa-motorcycle"></i></div>
+                                <h4 class="fw-bold mb-3">Bike</h4>
+                                <div class="input-group input-group-lg mt-3">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.5rem; padding: 15px 20px;">₹</span>
+                                    <input type="number" class="form-control text-center fw-bold" id="rate_bike" step="0.5" min="0" value="4" style="font-size: 2.2rem; height: 75px;">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.3rem; padding: 15px 20px;">/km</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="rate-card" style="padding: 35px; min-height: 260px; border-color: #10b981;">
+                                <div class="icon" style="font-size: 4rem; margin-bottom: 20px; color: #10b981;"><i class="fas fa-bolt"></i></div>
+                                <h4 class="fw-bold mb-3">E-Bike</h4>
+                                <div class="input-group input-group-lg mt-3">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.5rem; padding: 15px 20px;">₹</span>
+                                    <input type="number" class="form-control text-center fw-bold" id="rate_electric_bike" step="0.5" min="0" value="1" style="font-size: 2.2rem; height: 75px;">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.3rem; padding: 15px 20px;">/km</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="rate-card" style="padding: 35px; min-height: 260px; border-color: #f97316;">
+                                <div class="icon" style="font-size: 4rem; margin-bottom: 20px; color: #f97316;"><i class="fas fa-truck-pickup"></i></div>
+                                <h4 class="fw-bold mb-3">Cart</h4>
+                                <div class="input-group input-group-lg mt-3">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.5rem; padding: 15px 20px;">₹</span>
+                                    <input type="number" class="form-control text-center fw-bold" id="rate_cart" step="0.5" min="0" value="10" style="font-size: 2.2rem; height: 75px;">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.3rem; padding: 15px 20px;">/km</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="rate-card local" style="padding: 35px; min-height: 260px;">
+                                <div class="icon" style="font-size: 4rem; margin-bottom: 20px;"><i class="fas fa-bus"></i></div>
+                                <h4 class="fw-bold mb-3">Local Transport</h4>
+                                <div class="input-group input-group-lg mt-3">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.5rem; padding: 15px 20px;">₹</span>
+                                    <input type="number" class="form-control text-center fw-bold" id="rate_local_transport" step="0.5" min="0" value="3" style="font-size: 2.2rem; height: 75px;">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.3rem; padding: 15px 20px;">/km</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 col-md-6">
+                            <div class="rate-card others" style="padding: 35px; min-height: 260px;">
+                                <div class="icon" style="font-size: 4rem; margin-bottom: 20px;"><i class="fas fa-walking"></i></div>
+                                <h4 class="fw-bold mb-3">Others</h4>
+                                <div class="input-group input-group-lg mt-3">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.5rem; padding: 15px 20px;">₹</span>
+                                    <input type="number" class="form-control text-center fw-bold" id="rate_others" step="0.5" min="0" value="2" style="font-size: 2.2rem; height: 75px;">
+                                    <span class="input-group-text fw-bold" style="font-size: 1.3rem; padding: 15px 20px;">/km</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 20px 30px; background: #f9fafb;">
+                    <button type="button" class="btn btn-secondary btn-lg px-4" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-vgk btn-lg px-4" onclick="saveRates()">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+        const API_BASE = '/api/v1';
+        let transportChart, purposeChart, deptChart;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Journeys Reports', 'fas fa-chart-line');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            
+            initConfigButton();
+            setDefaultDates();
+            await loadDashboard();
+        });
+        
+        function initConfigButton() {
+            const staffUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const roleCode = (staffUser.role_code || staffUser.role?.role_code || '').toLowerCase();
+            const roleName = (staffUser.role_name || staffUser.role?.role_name || '').toLowerCase();
+            const hierarchyLevel = staffUser.hierarchy_level || staffUser.role?.hierarchy_level || 0;
+            const authLevel = (localStorage.getItem('staffAuthLevel') || '').toLowerCase();
+            
+            const allowedRoles = ['vgk4u_supreme', 'vgk4u supreme', 'vgk4u', 'ea', 'executive assistant', 'accounts', 'accountant', 'finance'];
+            const isVGK4USupreme = hierarchyLevel >= 150 || authLevel.includes('vgk4u') || authLevel.includes('rvz');
+            const isAllowedRole = allowedRoles.some(r => roleCode.includes(r) || roleName.includes(r));
+            
+            console.log('[Journeys Reports] Role check:', { roleCode, roleName, hierarchyLevel, authLevel, isVGK4USupreme, isAllowedRole });
+            
+            const container = document.getElementById('configButtonContainer');
+            if (isVGK4USupreme || isAllowedRole) {
+                container.innerHTML = `
+                    <button class="btn btn-vgk btn-lg" data-bs-toggle="modal" data-bs-target="#configModal" style="padding: 12px 24px; font-size: 16px;">
+                        <i class="fas fa-cog me-2"></i>Configure Transport Rates
+                    </button>
+                `;
+            } else {
+                container.innerHTML = '';
+            }
+        }
+        
+        function setDefaultDates() {
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+        }
+        
+        async function loadDashboard() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/journeys/vgk4u/dashboard?start_date=${startDate}&end_date=${endDate}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStats(data.summary);
+                    renderTransportChart(data.by_transport);
+                    renderPurposeChart(data.by_purpose);
+                    renderDeptChart(data.by_department);
+                    renderCurrentRates(data.transport_rates);
+                    populateRateInputs(data.transport_rates);
+                } else if (response.status === 403) {
+                    alert('VGK4U access required');
+                    window.location.href = '/staff/dashboard';
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading dashboard:', error);
+            }
+        }
+        
+        function updateStats(summary) {
+            document.getElementById('totalJourneys').textContent = summary.total_journeys;
+            document.getElementById('totalKm').textContent = summary.total_km.toFixed(1);
+            document.getElementById('approvedAmount').textContent = '₹' + summary.approved_amount.toFixed(0);
+            document.getElementById('pendingAmount').textContent = '₹' + summary.pending_amount.toFixed(0);
+            document.getElementById('rejectedCount').textContent = summary.rejected_count;
+            document.getElementById('nonReimbursable').textContent = summary.non_reimbursable_count;
+        }
+        
+        function renderTransportChart(data) {
+            const ctx = document.getElementById('transportChart').getContext('2d');
+            
+            if (transportChart) transportChart.destroy();
+            
+            transportChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data).map(formatTransport),
+                    datasets: [{
+                        data: Object.values(data),
+                        backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#8b5cf6']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { 
+                                color: '#374151',
+                                font: { size: 12 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderPurposeChart(data) {
+            const ctx = document.getElementById('purposeChart').getContext('2d');
+            
+            if (purposeChart) purposeChart.destroy();
+            
+            purposeChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(data).map(formatPurpose),
+                    datasets: [{
+                        data: Object.values(data),
+                        backgroundColor: ['#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#3b82f6', '#6b7280']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { 
+                                color: '#374151',
+                                font: { size: 12 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderDeptChart(data) {
+            const ctx = document.getElementById('deptChart').getContext('2d');
+            
+            if (deptChart) deptChart.destroy();
+            
+            deptChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: 'KM',
+                        data: Object.values(data),
+                        backgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#6b7280' },
+                            grid: { color: '#e5e7eb' }
+                        },
+                        y: {
+                            ticks: { color: '#6b7280' },
+                            grid: { color: '#e5e7eb' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function renderCurrentRates(rates) {
+            const container = document.getElementById('currentRates');
+            
+            if (!rates || rates.length === 0) {
+                container.innerHTML = '<p class="text-muted">No rates configured</p>';
+                return;
+            }
+            
+            container.innerHTML = rates.map(r => `
+                <div class="rate-display">
+                    <span><i class="fas fa-${getTransportIcon(r.transport_mode)} me-2"></i>${formatTransport(r.transport_mode)}</span>
+                    <span class="rate-amount">₹${r.rate_per_km}/km</span>
+                </div>
+            `).join('');
+        }
+        
+        function populateRateInputs(rates) {
+            rates.forEach(r => {
+                const input = document.getElementById(`rate_${r.transport_mode}`);
+                if (input) input.value = r.rate_per_km;
+            });
+        }
+        
+        async function saveRates() {
+            const modes = ['car', 'bike', 'electric_bike', 'cart', 'local_transport', 'others'];
+            
+            let success = true;
+            let savedCount = 0;
+            
+            for (const mode of modes) {
+                const input = document.getElementById(`rate_${mode}`);
+                if (!input) continue;
+                
+                const rate = parseFloat(input.value);
+                if (isNaN(rate) || rate < 0) continue;
+                
+                try {
+                    const response = await staffFetch(`${API_BASE}/staff/journeys/transport-rates/${mode}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ rate_per_km: rate })
+                    });
+                    
+                    if (response.ok) {
+                        savedCount++;
+                    } else {
+                        const err = await response.json().catch(() => ({}));
+                        console.error(`[Transport Rates] Failed to save ${mode}:`, err);
+                        success = false;
+                    }
+                } catch (error) {
+                    if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                    console.error(`Error updating ${mode}:`, error);
+                    success = false;
+                }
+            }
+            
+            if (success && savedCount > 0) {
+                document.activeElement?.blur();
+                bootstrap.Modal.getInstance(document.getElementById('configModal')).hide();
+                await loadDashboard();
+                alert(`Transport rates updated successfully (${savedCount} modes saved)`);
+            } else if (savedCount > 0) {
+                alert(`Partial update: ${savedCount} rates saved, some failed`);
+                await loadDashboard();
+            } else {
+                alert('Failed to update transport rates');
+            }
+        }
+        
+        function formatTransport(mode) {
+            const labels = { 
+                car: 'Car', 
+                bike: 'Bike', 
+                electric_bike: 'E-Bike',
+                cart: 'Cart',
+                local_transport: 'Local Transport', 
+                others: 'Others' 
+            };
+            return labels[mode] || mode;
+        }
+        
+        function formatPurpose(purpose) {
+            const labels = {
+                client_visit: 'Client Visit', site_inspection: 'Site Inspection', meeting: 'Meeting',
+                delivery: 'Delivery', collection: 'Collection', other: 'Other'
+            };
+            return labels[purpose] || purpose;
+        }
+        
+        function getTransportIcon(mode) {
+            const icons = { 
+                car: 'car', 
+                bike: 'motorcycle', 
+                electric_bike: 'bolt',
+                cart: 'truck-pickup',
+                local_transport: 'bus', 
+                others: 'walking' 
+            };
+            return icons[mode] || 'route';
+        }
+    </script>
+    <script src="/public/js/dc-error-handler.js"></script>
+</body>
+</html>

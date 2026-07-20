@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Field Allowance Management - Staff Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --accent-gold: #d4af37;
+            --accent-green: #28a745;
+            --accent-blue: #007bff;
+            --accent-orange: #fd7e14;
+            --accent-red: #dc3545;
+            --border-color: #dee2e6;
+        }
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        .main-content { padding-top: 0 !important; margin-top: 0 !important; }
+        .page-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            border-bottom: 3px solid var(--accent-gold);
+            padding: 1.5rem 2rem;
+            margin-bottom: 0;
+        }
+        .page-title { color: var(--accent-gold); font-weight: 600; margin: 0; }
+        .page-subtitle { color: rgba(255,255,255,0.8); font-size: 0.9rem; margin: 0.25rem 0 0 0; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding: 0 1rem;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 1rem;
+            border-left: 4px solid var(--accent-gold);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .stat-card.standard { border-left-color: var(--accent-orange); }
+        .stat-card.car { border-left-color: #17a2b8; }
+        .stat-card.eligible { border-left-color: var(--accent-green); }
+        .stat-card.not-eligible { border-left-color: var(--accent-red); }
+        .stat-card.active { border-left-color: var(--accent-blue); }
+        .stat-label { color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); }
+        .filter-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+            margin: 0 1rem 1.5rem 1rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .filter-card .form-label { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 0.25rem; font-weight: 500; }
+        .data-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            margin: 0 1rem 1.5rem 1rem;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .data-card-header {
+            background: #f1f3f5;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .data-card-header h5 { margin: 0; color: #2c3e50; font-weight: 600; }
+        .table thead th {
+            background: #f8f9fa;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border-color);
+            padding: 0.75rem 1rem;
+        }
+        .table tbody tr { border-bottom: 1px solid var(--border-color); }
+        .table tbody tr:hover { background: rgba(212, 175, 55, 0.05); }
+        .table td { padding: 0.75rem 1rem; vertical-align: middle; }
+        .badge-status { padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+        .badge-active { background: #1e7e34; color: #ffffff; }
+        .badge-in-progress { background: #e0a800; color: #1a1a1a; }
+        .badge-not-started { background: #6c757d; color: #ffffff; }
+        .badge-missed { background: #c82333; color: #ffffff; }
+        .badge-standard { background: #d4a017; color: #1a1a1a; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+        .badge-car { background: #117a8b; color: #ffffff; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.7rem; font-weight: 700; }
+        .badge-pending-payout { background: #e0a800; color: #1a1a1a; }
+        .badge-validated { background: #0056b3; color: #ffffff; }
+        .badge-payout-done { background: #1e7e34; color: #ffffff; }
+        .user-info { display: flex; flex-direction: column; gap: 3px; }
+        .user-id { font-weight: 600; color: var(--accent-blue); display: block !important; }
+        .user-name { font-size: 0.82rem; color: #222222 !important; font-weight: 700 !important; display: block !important; line-height: 1.3; }
+        .contrib-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 22px; height: 22px; border-radius: 50%;
+            background: #e8f4fd; color: #0056b3; cursor: pointer;
+            font-size: 0.65rem; border: 1px solid #b8daff;
+            transition: all 0.2s; vertical-align: middle; margin-left: 4px;
+        }
+        .contrib-icon:hover { background: #0056b3; color: #fff; }
+        .contrib-modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 10000;
+            justify-content: center; align-items: center;
+        }
+        .contrib-modal-overlay.show { display: flex; }
+        .contrib-modal-box {
+            background: #fff; border-radius: 12px; padding: 0;
+            max-width: 520px; width: 90%; max-height: 80vh;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25); overflow: hidden;
+        }
+        .contrib-modal-header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: #fff; padding: 1rem 1.25rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .contrib-modal-header h6 { margin: 0; font-weight: 600; font-size: 0.95rem; }
+        .contrib-modal-close { background: none; border: none; color: #fff; font-size: 1.2rem; cursor: pointer; opacity: 0.8; }
+        .contrib-modal-close:hover { opacity: 1; }
+        .contrib-modal-body { padding: 1rem 1.25rem; overflow-y: auto; max-height: 60vh; }
+        .contrib-list-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 0.6rem 0; border-bottom: 1px solid #f0f0f0;
+        }
+        .contrib-list-item:last-child { border-bottom: none; }
+        .contrib-avatar {
+            width: 34px; height: 34px; border-radius: 50%;
+            background: #e8f4fd; color: #0056b3;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.75rem; flex-shrink: 0;
+        }
+        .contrib-details { flex: 1; }
+        .contrib-name { font-weight: 600; color: #1a1a1a; font-size: 0.85rem; }
+        .contrib-id { font-size: 0.75rem; color: #0056b3; font-weight: 500; }
+        .contrib-date { font-size: 0.72rem; color: #555; }
+        .contrib-points { font-weight: 700; color: #1e7e34; font-size: 0.85rem; }
+        .contrib-summary {
+            background: #f8f9fa; border-radius: 8px; padding: 0.75rem;
+            margin-bottom: 0.75rem; display: flex; justify-content: space-between; align-items: center;
+        }
+        .contrib-loading { text-align: center; padding: 2rem; color: #6c757d; }
+        .sortable { cursor: pointer; user-select: none; }
+        .sortable:hover { background: #e9ecef; }
+        .sortable i { margin-left: 5px; opacity: 0.5; }
+        .sortable.active i { opacity: 1; }
+        .empty-state { text-align: center; padding: 3rem; color: var(--text-secondary); }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999;
+        }
+        .loading-overlay.hidden { display: none; }
+        .elig-cell { position: relative; }
+        .elig-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 0.3rem 0.6rem; border-radius: 20px;
+            font-size: 0.72rem; font-weight: 600;
+            cursor: pointer; white-space: nowrap;
+        }
+        .elig-badge.elig-pass { background: #1e7e34; color: #ffffff; }
+        .elig-badge.elig-fail { background: #c82333; color: #ffffff; }
+        .elig-badge.elig-partial { background: #e0a800; color: #1a1a1a; }
+        .elig-popover {
+            display: none; position: absolute; z-index: 1050;
+            background: #fff; border: 1px solid #dee2e6;
+            border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            padding: 0.75rem; min-width: 240px; right: 0; top: 100%; margin-top: 4px;
+        }
+        .elig-cell:hover .elig-popover, .elig-popover.show { display: block; }
+        .elig-popover-title { font-weight: 600; font-size: 0.8rem; color: #2c3e50; margin-bottom: 0.5rem; border-bottom: 1px solid #eee; padding-bottom: 0.35rem; }
+        .elig-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; padding: 2px 0; color: #333; }
+        .elig-icon-ok { color: #28a745; }
+        .elig-icon-fail { color: #dc3545; }
+        .elig-icon-pending { color: #fd7e14; }
+        .progress { height: 8px; background: #e9ecef; border-radius: 4px; }
+        .progress-bar { border-radius: 4px; }
+        .btn-action { padding: 0.25rem 0.5rem; font-size: 0.8rem; border-radius: 4px; margin-right: 0.25rem; }
+        .modal-content { border-radius: 10px; }
+        .modal-header { background: #f8f9fa; border-bottom: 1px solid var(--border-color); }
+        @media (max-width: 1200px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner-border text-warning" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="page-title"><i class="fas fa-hand-holding-usd me-2"></i>Field Allowance Management</h2>
+                <p class="page-subtitle">Eligibility tracking, monthly progress, and payout management for Standard & Car allowances</p>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mx-3 mb-3 mt-3" id="mainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="eligibility-tab" data-bs-toggle="tab" data-bs-target="#eligibilityPane" type="button" role="tab">
+                <i class="fas fa-clipboard-check me-1"></i> Eligibility Status
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="payouts-tab" data-bs-toggle="tab" data-bs-target="#payoutsPane" type="button" role="tab" onclick="loadPayouts()">
+                <i class="fas fa-money-check-alt me-1"></i> Monthly Payouts
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="eligibilityPane" role="tabpanel">
+            <div class="stats-grid mt-3" id="eligStatsGrid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Users</div>
+                    <div class="stat-value" id="statTotal">0</div>
+                </div>
+                <div class="stat-card standard">
+                    <div class="stat-label">Standard Eligible</div>
+                    <div class="stat-value" id="statStdEligible">0</div>
+                </div>
+                <div class="stat-card car">
+                    <div class="stat-label">Car Eligible</div>
+                    <div class="stat-value" id="statCarEligible">0</div>
+                </div>
+                <div class="stat-card active">
+                    <div class="stat-label">Active Standard</div>
+                    <div class="stat-value" id="statStdActive">0</div>
+                </div>
+                <div class="stat-card active">
+                    <div class="stat-label">Active Car</div>
+                    <div class="stat-value" id="statCarActive">0</div>
+                </div>
+                <div class="stat-card not-eligible">
+                    <div class="stat-label">Not Eligible</div>
+                    <div class="stat-value" id="statNotEligible">0</div>
+                </div>
+            </div>
+
+            <div class="filter-card">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Search User</label>
+                        <input type="text" class="form-control" id="eligSearch" placeholder="MNR ID or Name..." oninput="filterEligibility()">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Allowance Type</label>
+                        <select class="form-select" id="eligTypeFilter" onchange="filterEligibility()">
+                            <option value="">All Types</option>
+                            <option value="standard">Standard (₹10K)</option>
+                            <option value="car">Car (₹25K)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="eligStatusFilter" onchange="filterEligibility()">
+                            <option value="">All</option>
+                            <option value="eligible">Eligible / Active</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="not_eligible">Not Eligible</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Sort By</label>
+                        <select class="form-select" id="eligSortBy" onchange="filterEligibility()">
+                            <option value="name_asc">Name (A-Z)</option>
+                            <option value="name_desc">Name (Z-A)</option>
+                            <option value="std_progress">Std Progress (High)</option>
+                            <option value="car_progress">Car Progress (High)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-secondary w-100" onclick="clearEligFilters()"><i class="fas fa-times me-1"></i>Clear</button>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-primary w-100" onclick="loadEligibility()" title="Refresh"><i class="fas fa-sync"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-card">
+                <div class="data-card-header">
+                    <h5><i class="fas fa-users me-2"></i>Eligibility Overview</h5>
+                    <span id="eligCount" class="text-muted">Total: 0</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="sortable" onclick="sortElig('user_id')">User <i class="fas fa-sort"></i></th>
+                                <th>Package</th>
+                                <th class="sortable" onclick="setSortAndReload('std_progress')">Standard (₹10K/mo) <i class="fas fa-sort"></i></th>
+                                <th class="sortable" onclick="setSortAndReload('car_progress')">Car (₹25K/mo) <i class="fas fa-sort"></i></th>
+                                <th>Eligibility</th>
+                                <th>Active</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eligTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="eligEmptyState" class="empty-state" style="display: none;">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <h5>No Users Found</h5>
+                    <p>No users match your current filters</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="payoutsPane" role="tabpanel">
+            <div class="stats-grid mt-3" id="payoutStatsGrid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Eligible</div>
+                    <div class="stat-value" id="payStatTotal">0</div>
+                </div>
+                <div class="stat-card standard">
+                    <div class="stat-label">Pending</div>
+                    <div class="stat-value" id="payStatPending">0</div>
+                </div>
+                <div class="stat-card car">
+                    <div class="stat-label">Validated</div>
+                    <div class="stat-value" id="payStatValidated">0</div>
+                </div>
+                <div class="stat-card eligible">
+                    <div class="stat-label">Payout Done</div>
+                    <div class="stat-value" id="payStatDone">0</div>
+                </div>
+                <div class="stat-card active">
+                    <div class="stat-label">Total Paid (All)</div>
+                    <div class="stat-value" id="payStatTotalPaid">₹0</div>
+                </div>
+            </div>
+
+            <div class="filter-card">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Search User</label>
+                        <input type="text" class="form-control" id="paySearch" placeholder="MNR ID or Name..." oninput="filterPayouts()">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Allowance Type</label>
+                        <select class="form-select" id="payTypeFilter" onchange="filterPayouts()">
+                            <option value="">All Types</option>
+                            <option value="standard">Standard</option>
+                            <option value="car">Car</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Payout Status</label>
+                        <select class="form-select" id="payStatusFilter" onchange="filterPayouts()">
+                            <option value="">All</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Validated">Validated</option>
+                            <option value="Payout Completed">Payout Completed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-secondary w-100" onclick="clearPayFilters()"><i class="fas fa-times me-1"></i>Clear</button>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" onclick="loadPayouts()"><i class="fas fa-sync me-1"></i>Refresh</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-card">
+                <div class="data-card-header">
+                    <h5><i class="fas fa-money-check-alt me-2"></i>Monthly Payouts</h5>
+                    <span id="payCount" class="text-muted">Total: 0</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Type</th>
+                                <th>Monthly Amount</th>
+                                <th>Month</th>
+                                <th>Group Target</th>
+                                <th>Total Paid</th>
+                                <th>Payout Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="payEmptyState" class="empty-state" style="display: none;">
+                    <i class="fas fa-money-check-alt"></i>
+                    <h5>No Payouts Found</h5>
+                    <p>No eligible users match your current filters</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="statusModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Update Payout Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>User:</strong> <span id="statusUserId" class="text-primary"></span>
+                        <span id="statusUserName" class="text-muted ms-2"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Allowance:</strong> <span id="statusAllowanceType"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">New Status</label>
+                        <select class="form-select" id="newPayoutStatus">
+                            <option value="Pending">Pending</option>
+                            <option value="Validated">Validated</option>
+                            <option value="Payout Completed">Payout Completed</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" id="statusNotes" rows="3" placeholder="Add any notes..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="confirmStatusBtn" onclick="confirmStatusUpdate()">
+                        <i class="fas fa-check me-1"></i>Update Status
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/field-allowances';
+        let allEligData = [];
+        let filteredEligData = [];
+        let allPayData = [];
+        let filteredPayData = [];
+        let eligLoaded = false;
+        let payLoaded = false;
+        let currentStatusUpdate = null;
+
+        function getAuthToken() {
+            return localStorage.getItem('staffToken') || localStorage.getItem('authToken') || '';
+        }
+
+        async function fetchWithAuth(url, options = {}) {
+            const token = getAuthToken();
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+            const mergedOptions = { ...defaultOptions, ...options, headers: { ...defaultOptions.headers, ...(options.headers || {}) } };
+            const response = await fetch(url, mergedOptions);
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({ detail: 'Request failed' }));
+                throw new Error(err.detail || 'Request failed');
+            }
+            return response.json();
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 10000; max-width: 400px;';
+            alertDiv.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+
+        function getEligibilityCriteriaCell(ec) {
+            if (!ec) return '<span class="badge bg-secondary">Unknown</span>';
+            const checks = [
+                { label: 'Account Activated', ok: ec.is_activated },
+                { label: 'KYC Approved', ok: ec.kyc_approved }
+            ];
+            const passed = checks.filter(c => c.ok).length;
+            const total = checks.length;
+            let badgeClass = 'elig-fail';
+            if (passed === total) badgeClass = 'elig-pass';
+            else if (passed >= 1) badgeClass = 'elig-partial';
+
+            let popoverItems = checks.map(c =>
+                `<div class="elig-item"><i class="fas ${c.ok ? 'fa-check-circle elig-icon-ok' : 'fa-times-circle elig-icon-fail'}"></i>${c.label}</div>`
+            ).join('');
+
+            return `<div class="elig-cell"><span class="elig-badge ${badgeClass}"><i class="fas ${passed === total ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${passed}/${total}</span><div class="elig-popover"><div class="elig-popover-title">Eligibility Checklist</div>${popoverItems}</div></div>`;
+        }
+
+        function getStatusBadge(status) {
+            const map = {
+                'Active': 'badge-active',
+                'In Progress': 'badge-in-progress',
+                'Pending': 'badge-in-progress',
+                'Eligible': 'badge-active',
+                'Not Started': 'badge-not-started',
+                'Not Eligible': 'badge-not-started',
+                'Not Qualified': 'badge-not-started',
+                'Inactive': 'badge-not-started',
+                'Missed': 'badge-missed',
+                'Opportunity Missed': 'badge-missed'
+            };
+            return `<span class="badge-status ${map[status] || 'badge-not-started'}">${status}</span>`;
+        }
+
+        function getPayoutStatusBadge(status) {
+            const map = {
+                'Pending': 'badge-pending-payout',
+                'Validated': 'badge-validated',
+                'Payout Completed': 'badge-payout-done'
+            };
+            return `<span class="badge-status ${map[status] || 'badge-pending-payout'}">${status}</span>`;
+        }
+
+        let eligCurrentPage = 1;
+        let eligTotalPages = 1;
+
+        async function loadEligibility(page = 1) {
+            try {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                const search = document.getElementById('eligSearch').value || '';
+                const typeFilter = document.getElementById('eligTypeFilter').value || '';
+                const statusFilter = document.getElementById('eligStatusFilter').value || '';
+                const sortBy = document.getElementById('eligSortBy').value || 'name_asc';
+                let url = `${API_BASE}/all-eligibility?page=${page}&per_page=50`;
+                if (search) url += `&search=${encodeURIComponent(search)}`;
+                if (typeFilter) url += `&allowance_type=${typeFilter}`;
+                if (statusFilter) url += `&status_filter=${statusFilter}`;
+                if (sortBy === 'std_progress') url += `&sort_by=std_progress&sort_dir=desc`;
+                else if (sortBy === 'car_progress') url += `&sort_by=car_progress&sort_dir=desc`;
+                const response = await fetchWithAuth(url);
+                if (response.success) {
+                    allEligData = response.eligibility_data || [];
+                    filteredEligData = allEligData;
+                    eligCurrentPage = response.page || 1;
+                    eligTotalPages = response.total_pages || 1;
+                    const s = response.summary || {};
+                    document.getElementById('statTotal').textContent = s.total_users || 0;
+                    document.getElementById('statStdEligible').textContent = s.eligible_standard || 0;
+                    document.getElementById('statCarEligible').textContent = s.eligible_car || 0;
+                    document.getElementById('statStdActive').textContent = s.active_standard || 0;
+                    document.getElementById('statCarActive').textContent = s.active_car || 0;
+                    document.getElementById('statNotEligible').textContent = s.not_eligible || 0;
+                    eligLoaded = true;
+                    renderEligibility();
+                }
+            } catch (error) {
+                console.error('Error loading eligibility:', error);
+                showAlert('Error loading eligibility: ' + error.message, 'danger');
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+        }
+
+        let eligFilterTimeout = null;
+        function filterEligibility() {
+            if (eligFilterTimeout) clearTimeout(eligFilterTimeout);
+            eligFilterTimeout = setTimeout(() => loadEligibility(1), 400);
+        }
+
+        function clearEligFilters() {
+            document.getElementById('eligSearch').value = '';
+            document.getElementById('eligTypeFilter').value = '';
+            document.getElementById('eligStatusFilter').value = '';
+            document.getElementById('eligSortBy').value = 'name_asc';
+            loadEligibility(1);
+        }
+
+        function setSortAndReload(sortKey) {
+            const sortSelect = document.getElementById('eligSortBy');
+            if (sortSelect.value === sortKey) {
+                sortSelect.value = 'name_asc';
+            } else {
+                sortSelect.value = sortKey;
+            }
+            loadEligibility(1);
+        }
+
+        function renderEligibility() {
+            const tbody = document.getElementById('eligTableBody');
+            const emptyState = document.getElementById('eligEmptyState');
+            document.getElementById('eligCount').textContent = `Page ${eligCurrentPage} of ${eligTotalPages}`;
+
+            if (filteredEligData.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                document.getElementById('eligPagination').innerHTML = '';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = filteredEligData.map(item => {
+                const std = item.standard_allowance;
+                const car = item.car_allowance;
+                const stdProgressClass = std.initial_progress.percentage >= 100 ? 'bg-success' : 'bg-warning';
+                const carProgressClass = car.initial_progress.percentage >= 100 ? 'bg-success' : 'bg-info';
+
+                const safeUserId = encodeURIComponent(item.user_id);
+                const safeUserName = encodeURIComponent(item.user_name || '');
+                return `<tr>
+                    <td><div class="user-info"><span class="user-id">${escHtml(item.user_id)}</span><span class="user-name">${escHtml(item.user_name)}</span></div></td>
+                    <td><span class="badge bg-secondary">${escHtml(item.package || 'N/A')}</span></td>
+                    <td>
+                        <div class="mb-1">${getStatusBadge(std.status)} <span class="contrib-icon" onclick="showContributors(decodeURIComponent('${safeUserId}'),decodeURIComponent('${safeUserName}'),'standard')" title="View contributors"><i class="fas fa-users"></i></span></div>
+                        <div class="progress mb-1" style="height: 20px; min-width: 80px;">
+                            <div class="progress-bar ${stdProgressClass} text-white fw-bold" style="width: ${Math.max(std.initial_progress.percentage, 15)}%; font-size: 0.75rem;">
+                                ${std.initial_progress.current}/${std.initial_progress.required}
+                            </div>
+                        </div>
+                        <small style="color: #333; font-weight: 600;">${std.initial_progress.percentage >= 100 ? '<i class="fas fa-check-circle" style="color: #1e7e34;"></i> <span style="color: #1e7e34;">Qualified</span>' : `<span style="color: #555;">${std.initial_progress.percentage.toFixed(0)}%</span>`}</small>
+                        ${std.months_completed > 0 ? `<br><small style="color: #444; font-weight: 500;">${std.months_completed}/${std.tenure_months} months | ₹${std.total_paid.toLocaleString()}</small>` : ''}
+                    </td>
+                    <td>
+                        <div class="mb-1">${getStatusBadge(car.status)} <span class="contrib-icon" onclick="showContributors(decodeURIComponent('${safeUserId}'),decodeURIComponent('${safeUserName}'),'car')" title="View contributors"><i class="fas fa-sitemap"></i></span></div>
+                        <div class="progress mb-1" style="height: 20px; min-width: 80px;">
+                            <div class="progress-bar ${carProgressClass} text-white fw-bold" style="width: ${Math.max(car.initial_progress.percentage, 15)}%; font-size: 0.75rem;">
+                                ${car.initial_progress.current}/${car.initial_progress.required}
+                            </div>
+                        </div>
+                        <small style="color: #333; font-weight: 600;">${car.initial_progress.percentage >= 100 ? '<i class="fas fa-check-circle" style="color: #1e7e34;"></i> <span style="color: #1e7e34;">Qualified</span>' : `<span style="color: #555;">${car.initial_progress.percentage.toFixed(0)}%</span>`}</small>
+                        ${car.months_completed > 0 ? `<br><small style="color: #444; font-weight: 500;">${car.months_completed}/${car.tenure_months} months | ₹${car.total_paid.toLocaleString()}</small>` : ''}
+                    </td>
+                    <td>${getEligibilityCriteriaCell(item.eligibility_criteria)}</td>
+                    <td>${item.active_allowance ? `<span class="badge ${item.active_allowance === 'standard' ? 'badge-standard' : 'badge-car'}">${item.active_allowance === 'standard' ? 'Standard' : 'Car'} Active</span>` : '<span class="text-muted">-</span>'}</td>
+                </tr>`;
+            }).join('');
+
+            renderEligPagination();
+        }
+
+        function renderEligPagination() {
+            let paginationEl = document.getElementById('eligPagination');
+            if (!paginationEl) {
+                const tableCard = document.getElementById('eligTableBody').closest('.table-responsive');
+                paginationEl = document.createElement('div');
+                paginationEl.id = 'eligPagination';
+                paginationEl.className = 'mt-3 d-flex justify-content-center';
+                tableCard.parentElement.appendChild(paginationEl);
+            }
+            if (eligTotalPages <= 1) { paginationEl.innerHTML = ''; return; }
+            let html = '<nav><ul class="pagination pagination-sm mb-0">';
+            html += `<li class="page-item ${eligCurrentPage <= 1 ? 'disabled' : ''}"><a class="page-link" href="#" onclick="loadEligibility(${eligCurrentPage - 1}); return false;">Prev</a></li>`;
+            const start = Math.max(1, eligCurrentPage - 2);
+            const end = Math.min(eligTotalPages, eligCurrentPage + 2);
+            for (let i = start; i <= end; i++) {
+                html += `<li class="page-item ${i === eligCurrentPage ? 'active' : ''}"><a class="page-link" href="#" onclick="loadEligibility(${i}); return false;">${i}</a></li>`;
+            }
+            html += `<li class="page-item ${eligCurrentPage >= eligTotalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="loadEligibility(${eligCurrentPage + 1}); return false;">Next</a></li>`;
+            html += '</ul></nav>';
+            paginationEl.innerHTML = html;
+        }
+
+        async function loadPayouts() {
+            try {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                const response = await fetchWithAuth(`${API_BASE}/payouts`);
+                if (response.success) {
+                    allPayData = response.payouts || [];
+                    const s = response.summary || {};
+                    document.getElementById('payStatTotal').textContent = s.total_eligible || 0;
+                    document.getElementById('payStatPending').textContent = s.pending || 0;
+                    document.getElementById('payStatValidated').textContent = s.validated || 0;
+                    document.getElementById('payStatDone').textContent = s.payout_completed || 0;
+                    document.getElementById('payStatTotalPaid').textContent = `₹${(s.total_paid_all || 0).toLocaleString()}`;
+                    payLoaded = true;
+                    filterPayouts();
+                }
+            } catch (error) {
+                console.error('Error loading payouts:', error);
+                showAlert('Error loading payouts: ' + error.message, 'danger');
+            } finally {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }
+        }
+
+        function filterPayouts() {
+            const search = document.getElementById('paySearch').value.toLowerCase();
+            const typeFilter = document.getElementById('payTypeFilter').value;
+            const statusFilter = document.getElementById('payStatusFilter').value;
+
+            filteredPayData = allPayData.filter(item => {
+                if (search) {
+                    const searchStr = `${item.user_id} ${item.user_name}`.toLowerCase();
+                    if (!searchStr.includes(search)) return false;
+                }
+                if (typeFilter && item.allowance_type.toLowerCase() !== typeFilter) return false;
+                if (statusFilter && item.payout_status !== statusFilter) return false;
+                return true;
+            });
+            renderPayouts();
+        }
+
+        function clearPayFilters() {
+            document.getElementById('paySearch').value = '';
+            document.getElementById('payTypeFilter').value = '';
+            document.getElementById('payStatusFilter').value = '';
+            filterPayouts();
+        }
+
+        function renderPayouts() {
+            const tbody = document.getElementById('payTableBody');
+            const emptyState = document.getElementById('payEmptyState');
+            document.getElementById('payCount').textContent = `Total: ${filteredPayData.length}`;
+
+            if (filteredPayData.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = filteredPayData.map(item => {
+                const monthlyPercent = item.monthly_target > 0 ? Math.min(100, (item.monthly_achieved / item.monthly_target) * 100) : 0;
+                const monthlyClass = item.monthly_target_met ? 'bg-success' : 'bg-warning';
+                const safePayId = encodeURIComponent(item.user_id);
+                const safePayName = encodeURIComponent(item.user_name || '');
+                const contribType = item.allowance_type === 'Standard' ? 'standard' : 'car';
+                const monthLabel = item.current_month ? (() => {
+                    const [y, m] = item.current_month.split('-');
+                    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                    return `${months[parseInt(m)-1]} ${y}`;
+                })() : '-';
+
+                return `<tr>
+                    <td><div class="user-info"><span class="user-id">${escHtml(item.user_id)}</span><span class="user-name">${escHtml(item.user_name)}</span></div></td>
+                    <td><span class="${item.allowance_type === 'Standard' ? 'badge-standard' : 'badge-car'}">${item.allowance_type}</span></td>
+                    <td><strong class="text-success">₹${item.monthly_amount.toLocaleString()}</strong></td>
+                    <td><strong>${monthLabel}</strong></td>
+                    <td>
+                        <div class="d-flex align-items-center mb-1">
+                            <div class="progress flex-grow-1" style="height: 20px; min-width: 80px;">
+                                <div class="progress-bar ${monthlyClass} text-white fw-bold" style="width: ${Math.max(monthlyPercent, 20)}%; font-size: 0.75rem;">${item.monthly_achieved}/${item.monthly_target}</div>
+                            </div>
+                            <span class="contrib-icon ms-1" onclick="showContributors(decodeURIComponent('${safePayId}'),decodeURIComponent('${safePayName}'),'monthly_${contribType}')" title="View monthly contributors"><i class="fas fa-calendar-check"></i></span>
+                        </div>
+                        <small class="text-muted">${item.monthly_target_met ? '<i class="fas fa-check text-success"></i> Target Met' : `${monthlyPercent.toFixed(0)}% of target`}</small>
+                    </td>
+                    <td><strong class="text-success">₹${item.total_paid.toLocaleString()}</strong><br><small class="text-muted">of ₹${item.total_value.toLocaleString()}</small></td>
+                    <td>${getPayoutStatusBadge(item.payout_status)}</td>
+                    <td>
+                        ${item.progress_id ? `<button class="btn btn-sm btn-outline-warning btn-action" onclick="openStatusModal(decodeURIComponent('${safePayId}'), decodeURIComponent('${safePayName}'), '${item.allowance_type}', ${item.progress_id}, '${item.payout_status}')" title="Update Status"><i class="fas fa-edit"></i></button>` : '<span class="text-muted">-</span>'}
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function openStatusModal(userId, userName, allowanceType, progressId, currentStatus) {
+            currentStatusUpdate = { progressId };
+            document.getElementById('statusUserId').textContent = userId;
+            document.getElementById('statusUserName').textContent = `(${userName})`;
+            document.getElementById('statusAllowanceType').textContent = allowanceType;
+            document.getElementById('newPayoutStatus').value = currentStatus;
+            document.getElementById('statusNotes').value = '';
+            new bootstrap.Modal(document.getElementById('statusModal')).show();
+        }
+
+        async function confirmStatusUpdate() {
+            if (!currentStatusUpdate) return;
+            const btn = document.getElementById('confirmStatusBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Updating...';
+
+            try {
+                const newStatus = document.getElementById('newPayoutStatus').value;
+                const notes = document.getElementById('statusNotes').value;
+                const response = await fetchWithAuth(`${API_BASE}/payout/${currentStatusUpdate.progressId}/status`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ status: newStatus, notes })
+                });
+                bootstrap.Modal.getInstance(document.getElementById('statusModal')).hide();
+                showAlert(response.message || 'Status updated successfully!', 'success');
+                payLoaded = false;
+                await loadPayouts();
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check me-1"></i>Update Status';
+                currentStatusUpdate = null;
+            }
+        }
+
+        function exportEligibility() {
+            let csv = 'User ID,User Name,Package,Standard Status,Standard Progress,Car Status,Car Progress,Eligible Criteria,Active Allowance\n';
+            filteredEligData.forEach(item => {
+                const ec = item.eligibility_criteria;
+                const eligSummary = ec ? `${[ec.is_activated, ec.kyc_approved, ec.program_utilisation_completed, ec.group_a_ok, ec.group_b_ok].filter(Boolean).length}/5` : 'N/A';
+                csv += `"${item.user_id}","${item.user_name}","${item.package}","${item.standard_allowance.status}","${item.standard_allowance.initial_progress.percentage}%","${item.car_allowance.status}","${item.car_allowance.initial_progress.percentage}%","${eligSummary}","${item.active_allowance || 'None'}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `field_allowance_eligibility_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        function escHtml(str) {
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+
+        async function showContributors(userId, userName, type) {
+            const overlay = document.getElementById('contribModalOverlay');
+            const body = document.getElementById('contribModalBody');
+            const title = document.getElementById('contribModalTitle');
+            const isMonthly = type.startsWith('monthly_');
+            const typeLabels = {
+                'standard': 'Standard Contributors',
+                'car': 'Car Contributors',
+                'monthly_standard': 'Monthly Target Contributors',
+                'monthly_car': 'Monthly Target Contributors'
+            };
+            title.textContent = `${typeLabels[type] || type} — ${userName || userId}`;
+            body.innerHTML = '<div class="contrib-loading"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading contributors...</div>';
+            overlay.classList.add('show');
+
+            try {
+                const response = await fetchWithAuth(`${API_BASE}/contributors/${userId}?contributor_type=${type}`);
+                if (response.success && response.contributors.length > 0) {
+                    let html = '';
+                    if (isMonthly) {
+                        html += `<div class="contrib-summary">
+                            <span style="font-weight:600; color:#333;"><i class="fas fa-calendar-check me-1" style="color:#e0a800;"></i> ${escHtml(response.month || 'This Month')} — ${response.contributors.length} Referral${response.contributors.length !== 1 ? 's' : ''}</span>
+                            <span style="font-weight:700; color:#1e7e34;">${response.total_points} / ${response.required} pts</span>
+                        </div>`;
+                    } else if (type === 'standard') {
+                        html += `<div class="contrib-summary">
+                            <span style="font-weight:600; color:#333;"><i class="fas fa-users me-1" style="color:#0056b3;"></i> ${response.contributors.length} Direct Referrals</span>
+                            <span style="font-weight:700; color:#1e7e34;">${response.total_points} / ${response.required} pts</span>
+                        </div>`;
+                    } else {
+                        html += `<div class="contrib-summary">
+                            <span style="font-weight:600; color:#333;"><i class="fas fa-sitemap me-1" style="color:#117a8b;"></i> Binary Tree Legs</span>
+                            <span style="font-weight:700; color:#117a8b;">${response.contributors.length} Active</span>
+                        </div>`;
+                    }
+                    html += response.contributors.map((c, i) => `
+                        <div class="contrib-list-item">
+                            <div class="contrib-avatar">${(i + 1)}</div>
+                            <div class="contrib-details">
+                                <div class="contrib-name">${escHtml(c.name)}</div>
+                                <div class="contrib-id">${escHtml(c.id)} ${c.leg ? `<span style="color:#555;">• ${escHtml(c.leg)}</span>` : ''}</div>
+                                <div class="contrib-date"><i class="fas fa-calendar-alt me-1"></i>${escHtml(c.date)}</div>
+                            </div>
+                            <div class="contrib-points">${escHtml(String(c.points))} pt${c.points !== 1 ? 's' : ''}</div>
+                        </div>
+                    `).join('');
+                    body.innerHTML = html;
+                } else {
+                    const noMsg = isMonthly ? 'No contributors this month yet' : 'No contributors found';
+                    body.innerHTML = `<div class="contrib-loading"><i class="fas fa-info-circle me-2" style="color:#6c757d;"></i>${noMsg}</div>`;
+                }
+            } catch (err) {
+                body.innerHTML = `<div class="contrib-loading text-danger"><i class="fas fa-exclamation-circle me-2"></i>Error loading contributors</div>`;
+            }
+        }
+
+        function closeContribModal() {
+            document.getElementById('contribModalOverlay').classList.remove('show');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => loadEligibility(1));
+    </script>
+
+    <div id="contribModalOverlay" class="contrib-modal-overlay" onclick="if(event.target===this)closeContribModal()">
+        <div class="contrib-modal-box">
+            <div class="contrib-modal-header">
+                <h6 id="contribModalTitle">Contributors</h6>
+                <button class="contrib-modal-close" onclick="closeContribModal()">&times;</button>
+            </div>
+            <div class="contrib-modal-body" id="contribModalBody"></div>
+        </div>
+    </div>
+</body>
+</html>

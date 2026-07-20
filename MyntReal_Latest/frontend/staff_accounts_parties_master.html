@@ -1,0 +1,2827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parties Master - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+        .content-area { padding: 20px 24px 40px; }
+
+        /* Page Header */
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 12px; }
+        .page-header h1 { font-size: 22px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p  { font-size: 13px; color: #6b7280; margin: 3px 0 0; }
+
+        /* Stat cards row */
+        .stat-cards { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .stat-card { background: white; border-radius: 10px; padding: 12px 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; gap: 12px; min-width: 140px; }
+        .stat-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+        .stat-icon.blue   { background:#dbeafe; color:#1e40af; }
+        .stat-icon.green  { background:#d1fae5; color:#065f46; }
+        .stat-icon.red    { background:#fee2e2; color:#dc2626; }
+        .stat-icon.amber  { background:#fef3c7; color:#92400e; }
+        .stat-icon.purple { background:#ede9fe; color:#5b21b6; }
+        .stat-icon.slate  { background:#f1f5f9; color:#475569; }
+        .stat-val  { font-size: 20px; font-weight: 800; color: #111827; line-height: 1; }
+        .stat-lbl  { font-size: 11px; color: #6b7280; margin-top: 2px; }
+
+        /* Tab Nav */
+        .tab-nav { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; overflow-x: auto; }
+        .tab-btn { padding: 11px 20px; cursor: pointer; border: none; background: none; font-size: 13px; font-weight: 600; color: #6b7280; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+        .tab-btn:hover { color: #f59e0b; }
+        .tab-btn.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+        .tab-count { background: #e5e7eb; color: #374151; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+        .tab-btn.active .tab-count { background: #fef3c7; color: #92400e; }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* Filters */
+        .filter-bar { background: white; padding: 14px 18px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .fg { display: flex; flex-direction: column; gap: 3px; }
+        .fg label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .fg input, .fg select { padding: 7px 11px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 150px; background: white; }
+        .fg input:focus, .fg select:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.15); }
+        .btn-clear  { padding: 7px 14px; border: 1px solid #d1d5db; background: white; border-radius: 6px; font-size: 13px; cursor: pointer; color: #6b7280; }
+        .btn-clear:hover { background: #f3f4f6; }
+        .btn-add    { background: linear-gradient(135deg,#f59e0b,#d97706); border: none; color: white; padding: 7px 16px; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+        .btn-add:hover { opacity: .9; color: white; }
+        .btn-outline-add { border: 1.5px solid #f59e0b; background: white; color: #b45309; padding: 7px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+        .btn-outline-add:hover { background: #fef3c7; color: #92400e; }
+
+        /* Card + Table */
+        .card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 14px 18px; font-weight: 600; color: #1f2937; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 0; }
+        .tbl-wrap { overflow-x: auto; }
+        table.pm-table { width: 100%; border-collapse: collapse; }
+        table.pm-table th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; background: #f9fafb; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+        table.pm-table td { padding: 11px 14px; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+        table.pm-table tr:last-child td { border-bottom: none; }
+        table.pm-table tr:hover td { background: #fffbeb; }
+
+        /* Balance cells */
+        .bal-dr  { color: #dc2626; font-weight: 700; font-family: monospace; }
+        .bal-cr  { color: #059669; font-weight: 700; font-family: monospace; }
+        .bal-net { font-weight: 700; font-family: monospace; }
+        .bal-net.pos { color: #059669; }
+        .bal-net.neg { color: #dc2626; }
+        .bal-net.zero{ color: #6b7280; }
+
+        /* Badges */
+        .badge-type { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .bt-company    { background:#ede9fe; color:#5b21b6; }
+        .bt-vendor     { background:#fef3c7; color:#92400e; }
+        .bt-partner    { background:#dbeafe; color:#1e40af; }
+        .bt-dealer     { background:#d1fae5; color:#065f46; }
+        .bt-distributor{ background:#cffafe; color:#155e75; }
+        .bt-service    { background:#fce7f3; color:#9d174d; }
+        .bt-staff      { background:#e0f2fe; color:#075985; }
+        .bt-customer   { background:#f0fdf4; color:#166534; }
+        .bt-employee   { background:#e0f2fe; color:#075985; }
+        .bt-external   { background:#f1f5f9; color:#475569; }
+        .bt-rdp        { background:#fdf4ff; color:#7e22ce; }
+        .bt-mnr        { background:#fff7ed; color:#9a3412; }
+        .badge-active   { background:#d1fae5; color:#059669; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+        .badge-inactive { background:#fee2e2; color:#dc2626; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+        .badge-resigned { background:#fef3c7; color:#b45309; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+
+        /* Action Buttons */
+        .btn-act { background: none; border: 1px solid #e5e7eb; padding: 4px 9px; border-radius: 5px; font-size: 12px; cursor: pointer; color: #374151; display: inline-flex; align-items: center; gap: 4px; text-decoration: none; margin: 1px; }
+        .btn-act:hover  { background:#f3f4f6; color:#374151; }
+        .btn-act.edit   { border-color:#3b82f6; color:#3b82f6; }
+        .btn-act.edit:hover { background:#eff6ff; }
+        .btn-act.del    { border-color:#ef4444; color:#ef4444; }
+        .btn-act.del:hover  { background:#fef2f2; }
+        .btn-act.view   { border-color:#8b5cf6; color:#8b5cf6; }
+        .btn-act.view:hover { background:#f5f3ff; }
+
+        /* Empty / Loading */
+        .empty-state { text-align:center; padding:50px 20px; color:#9ca3af; }
+        .empty-state i { font-size:40px; margin-bottom:12px; color:#d1d5db; display:block; }
+        .empty-state p { font-size:14px; margin:4px 0 0; }
+        .loading-spinner { display:flex; justify-content:center; padding:50px; }
+        .spinner { width:36px; height:36px; border:3px solid #e5e7eb; border-top-color:#f59e0b; border-radius:50%; animation:spin .8s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* Modal */
+        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:flex-start; justify-content:center; z-index:1100; padding:20px; overflow-y:auto; }
+        .modal-overlay.active { display:flex; }
+        .modal-box { background:white; border-radius:12px; width:100%; max-width:700px; margin:auto; display:flex; flex-direction:column; }
+        .modal-hdr { padding:18px 20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:white; z-index:1; border-radius:12px 12px 0 0; }
+        .modal-hdr h3 { font-size:16px; font-weight:700; color:#1f2937; margin:0; }
+        .modal-close { background:none; border:none; font-size:22px; color:#9ca3af; cursor:pointer; line-height:1; }
+        .modal-close:hover { color:#374151; }
+        .modal-tabs { display:flex; border-bottom:1px solid #e5e7eb; background:#f9fafb; padding:0 20px; }
+        .mtab { padding:10px 16px; font-size:13px; font-weight:600; color:#6b7280; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; border: none; background:none; }
+        .mtab.active { color:#f59e0b; border-bottom-color:#f59e0b; }
+        .modal-bdy { padding:20px; overflow-y:auto; max-height:60vh; }
+        .modal-ftr { padding:14px 20px; border-top:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; flex-shrink:0; }
+        .modal-ftr-right { display:flex; gap:10px; }
+        .form-row2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .form-row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+        .fg-m { margin-bottom:14px; }
+        .fg-m label { display:block; font-size:12px; font-weight:600; color:#374151; margin-bottom:5px; }
+        .fg-m label .req { color:#ef4444; }
+        .fg-m input, .fg-m select, .fg-m textarea { width:100%; padding:9px 11px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; }
+        .fg-m input:focus, .fg-m select:focus, .fg-m textarea:focus { outline:none; border-color:#f59e0b; }
+        .sec-hdr { font-size:12px; font-weight:700; color:#374151; border-bottom:1px solid #e5e7eb; padding-bottom:6px; margin:16px 0 12px; display:flex; align-items:center; gap:6px; }
+        .sec-hdr i { color:#f59e0b; }
+        .btn-save   { background:linear-gradient(135deg,#f59e0b,#d97706); border:none; color:white; padding:9px 20px; border-radius:6px; font-weight:600; font-size:13px; cursor:pointer; }
+        .btn-cancel { background:white; border:1px solid #d1d5db; color:#374151; padding:9px 18px; border-radius:6px; font-size:13px; cursor:pointer; }
+        .btn-danger { background:#ef4444; border:none; color:white; padding:9px 18px; border-radius:6px; font-size:13px; cursor:pointer; }
+        .info-note { background:#fffbeb; border:1px solid #fcd34d; border-radius:6px; padding:8px 12px; font-size:12px; color:#92400e; display:flex; align-items:center; gap:6px; margin-bottom:14px; }
+        .mtab-content { display:none; }
+        .mtab-content.active { display:block; }
+        /* Company badge selector */
+        .vnd-company-badges { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; min-height:24px; }
+        .vnd-company-badge  { display:inline-flex; align-items:center; gap:5px; background:#fef3c7; color:#92400e; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+        .vnd-badge-close { background:none; border:none; color:#92400e; cursor:pointer; font-size:14px; line-height:1; padding:0; margin-left:2px; }
+        .vnd-badge-close:hover { color:#dc2626; }
+        /* GST Card radio buttons */
+        .gst-card-label { display:flex; align-items:center; gap:10px; cursor:pointer; flex:1; min-width:140px; padding:10px 14px; border:2px solid #e5e7eb; border-radius:8px; background:#f9fafb; transition:all .2s; }
+        .gst-card-label.selected { border-color:#3b82f6; background:#eff6ff; }
+        .gst-card-label.selected-igst { border-color:#f59e0b; background:#fffbeb; }
+        /* Pincode lookup */
+        .pin-lookup-btn { background:#6366f1; color:white; border:none; padding:9px 14px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .pin-lookup-btn:hover { background:#4f46e5; }
+        /* Product list */
+        .vnd-product-list { border:1px solid #d1d5db; border-radius:6px; max-height:200px; overflow-y:auto; padding:6px; }
+        .vnd-product-item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:5px; font-size:13px; cursor:pointer; }
+        .vnd-product-item:hover { background:#f9fafb; }
+        .vnd-product-item input[type=checkbox] { width:15px; height:15px; cursor:pointer; flex-shrink:0; }
+        .vnd-selected-header { font-size:12px; font-weight:700; color:#059669; margin-bottom:6px; }
+        .vnd-selected-box { border:1px solid #22c55e; border-radius:6px; background:#f0fdf4; padding:6px; max-height:100px; overflow-y:auto; margin-bottom:12px; }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+
+            <!-- Page header -->
+            <div class="page-header">
+                <div>
+                    <h1><i class="fas fa-users me-2" style="color:#f59e0b;"></i>Parties Master</h1>
+                    <p>All business parties — companies, vendors, partners, staff, and ledger history in one place</p>
+                </div>
+            </div>
+
+            <!-- Summary stat cards (updated after all loads) -->
+            <div class="stat-cards" id="globalStatCards">
+                <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-layer-group"></i></div><div><div class="stat-val" id="sc-total">—</div><div class="stat-lbl">Total Parties</div></div></div>
+                <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-building"></i></div><div><div class="stat-val" id="sc-companies">—</div><div class="stat-lbl">Companies</div></div></div>
+                <div class="stat-card"><div class="stat-icon amber"><i class="fas fa-truck"></i></div><div><div class="stat-val" id="sc-vendors">—</div><div class="stat-lbl">Vendors</div></div></div>
+                <div class="stat-card"><div class="stat-icon green"><i class="fas fa-handshake"></i></div><div><div class="stat-val" id="sc-partners">—</div><div class="stat-lbl">Partners</div></div></div>
+                <div class="stat-card"><div class="stat-icon slate"><i class="fas fa-user-tie"></i></div><div><div class="stat-val" id="sc-staff">—</div><div class="stat-lbl">Staff</div></div></div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchTab('all')"      id="tab-all"><i class="fas fa-layer-group"></i> All <span class="tab-count" id="cnt-all">—</span></button>
+                <button class="tab-btn" onclick="switchTab('companies')"       id="tab-companies"><i class="fas fa-building"></i> Companies <span class="tab-count" id="cnt-companies">—</span></button>
+                <button class="tab-btn" onclick="switchTab('vendors')"         id="tab-vendors"><i class="fas fa-truck"></i> Vendors <span class="tab-count" id="cnt-vendors">—</span></button>
+                <button class="tab-btn" onclick="switchTab('partners')"        id="tab-partners"><i class="fas fa-handshake"></i> Partners <span class="tab-count" id="cnt-partners">—</span></button>
+                <button class="tab-btn" onclick="switchTab('staff')"           id="tab-staff"><i class="fas fa-user-tie"></i> Staff <span class="tab-count" id="cnt-staff">—</span></button>
+                <button class="tab-btn" onclick="switchTab('ledger')"          id="tab-ledger"><i class="fas fa-book-open"></i> Ledger Parties <span class="tab-count" id="cnt-ledger">—</span></button>
+                <button class="tab-btn" onclick="switchTab('expense')"         id="tab-expense"><i class="fas fa-minus-circle"></i> Expense Heads <span class="tab-count" id="cnt-expense">—</span></button>
+                <button class="tab-btn" onclick="switchTab('income')"          id="tab-income"><i class="fas fa-plus-circle"></i> Income Heads <span class="tab-count" id="cnt-income">—</span></button>
+            </div>
+
+            <!-- ═══════════ ALL TAB ═══════════ -->
+            <div class="tab-panel active" id="panel-all">
+                <div class="filter-bar">
+                    <div class="fg"><label>Search</label><input type="text" id="all-search" placeholder="Name, code, phone…" oninput="renderAll()"></div>
+                    <div class="fg"><label>Type</label>
+                        <select id="all-type" onchange="renderAll()">
+                            <option value="">All Types</option>
+                            <option value="COMPANY">Company</option>
+                            <option value="VENDOR">Vendor</option>
+                            <option value="PARTNER">Partner</option>
+                            <option value="STAFF">Staff</option>
+                            <option value="CUSTOMER">Customer</option>
+                            <option value="EMPLOYEE">Employee</option>
+                            <option value="EXTERNAL">External</option>
+                        </select>
+                    </div>
+                    <button class="btn-clear" onclick="clearFilters('all')"><i class="fas fa-times me-1"></i>Clear</button>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span><i class="fas fa-layer-group me-2"></i>All Parties</span><span style="font-size:13px;color:#6b7280;" id="all-count-lbl">Loading…</span></div>
+                    <div class="card-body">
+                        <div id="all-loading" class="loading-spinner"><div class="spinner"></div></div>
+                        <div id="all-wrap" class="tbl-wrap" style="display:none;">
+                            <table class="pm-table"><thead><tr>
+                                <th>Name</th><th>Type</th><th>Code / ID</th><th>Contact</th><th>GST / Info</th><th>Status</th>
+                            </tr></thead><tbody id="all-tbody"></tbody></table>
+                        </div>
+                        <div id="all-empty" class="empty-state" style="display:none;"><i class="fas fa-search"></i><p>No parties found</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════ COMPANIES TAB ═══════════ -->
+            <div class="tab-panel" id="panel-companies">
+                <div class="stat-cards" id="co-stats">
+                    <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-building"></i></div><div><div class="stat-val" id="co-s-total">—</div><div class="stat-lbl">Total Companies</div></div></div>
+                    <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="stat-val" id="co-s-active">—</div><div class="stat-lbl">Active</div></div></div>
+                    <div class="stat-card"><div class="stat-icon red"><i class="fas fa-times-circle"></i></div><div><div class="stat-val" id="co-s-inactive">—</div><div class="stat-lbl">Inactive</div></div></div>
+                </div>
+                <div class="filter-bar">
+                    <div class="fg"><label>Search</label><input type="text" id="co-search" placeholder="Name or GST…" oninput="renderCompanies()"></div>
+                    <div class="fg"><label>Type</label>
+                        <select id="co-type" onchange="renderCompanies()">
+                            <option value="">All Types</option>
+                            <option value="MAIN">Main</option>
+                            <option value="SUBSIDIARY">Subsidiary</option>
+                            <option value="ASSOCIATE">Associate</option>
+                        </select>
+                    </div>
+                    <button class="btn-clear" onclick="clearFilters('co')"><i class="fas fa-times me-1"></i>Clear</button>
+                    <button class="btn-add" onclick="openCoModal()"><i class="fas fa-plus"></i>Add Company</button>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span><i class="fas fa-building me-2"></i>Associated Companies</span><span style="font-size:13px;color:#6b7280;" id="co-count-lbl">—</span></div>
+                    <div class="card-body">
+                        <div id="co-loading" class="loading-spinner"><div class="spinner"></div></div>
+                        <div id="co-wrap" class="tbl-wrap" style="display:none;">
+                            <table class="pm-table"><thead><tr><th>ID</th><th>Company Name</th><th>Type</th><th>Code</th><th>GST</th><th>Location</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody id="co-tbody"></tbody></table>
+                        </div>
+                        <div id="co-empty" class="empty-state" style="display:none;"><i class="fas fa-building"></i><p>No companies found</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════ VENDORS TAB ═══════════ -->
+            <div class="tab-panel" id="panel-vendors">
+                <div class="stat-cards" id="vnd-stats">
+                    <div class="stat-card"><div class="stat-icon amber"><i class="fas fa-truck"></i></div><div><div class="stat-val" id="vnd-s-total">—</div><div class="stat-lbl">Total Vendors</div></div></div>
+                    <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="stat-val" id="vnd-s-active">—</div><div class="stat-lbl">Active</div></div></div>
+                    <div class="stat-card"><div class="stat-icon red"><i class="fas fa-times-circle"></i></div><div><div class="stat-val" id="vnd-s-inactive">—</div><div class="stat-lbl">Inactive</div></div></div>
+                    <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-cogs"></i></div><div><div class="stat-val" id="vnd-s-both">—</div><div class="stat-lbl">Both Type</div></div></div>
+                </div>
+                <div class="filter-bar">
+                    <div class="fg"><label>Search</label><input type="text" id="vnd-search" placeholder="Name, code, GST…" oninput="renderVendors()"></div>
+                    <div class="fg"><label>Type</label>
+                        <select id="vnd-type" onchange="renderVendors()">
+                            <option value="">All Types</option>
+                            <option value="PRODUCT">Product</option>
+                            <option value="SERVICE">Service</option>
+                            <option value="BOTH">Both</option>
+                            <option value="SOLAR">Solar</option>
+                        </select>
+                    </div>
+                    <div class="fg"><label>Company</label>
+                        <select id="vnd-company" onchange="renderVendors()"><option value="">All Companies</option></select>
+                    </div>
+                    <div class="fg"><label>Status</label>
+                        <select id="vnd-status" onchange="renderVendors()">
+                            <option value="">All</option><option value="active">Active</option><option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <button class="btn-clear" onclick="clearFilters('vnd')"><i class="fas fa-times me-1"></i>Clear</button>
+                    <button class="btn-add" onclick="openVndModal()"><i class="fas fa-plus"></i>Add Vendor</button>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span><i class="fas fa-truck me-2"></i>Vendor Master</span><span style="font-size:13px;color:#6b7280;" id="vnd-count-lbl">—</span></div>
+                    <div class="card-body">
+                        <div id="vnd-loading" class="loading-spinner"><div class="spinner"></div></div>
+                        <div id="vnd-wrap" class="tbl-wrap" style="display:none;">
+                            <table class="pm-table"><thead><tr>
+                                <th>Code</th><th>Vendor Name</th><th>Type</th><th>Contact</th><th>GST</th><th>Location</th><th>Companies</th><th>Status</th><th>Actions</th>
+                            </tr></thead><tbody id="vnd-tbody"></tbody></table>
+                        </div>
+                        <div id="vnd-empty" class="empty-state" style="display:none;"><i class="fas fa-truck"></i><p>No vendors found</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════ PARTNERS TAB ═══════════ -->
+            <div class="tab-panel" id="panel-partners">
+                <div class="stat-cards" id="prt-stats">
+                    <div class="stat-card"><div class="stat-icon green"><i class="fas fa-handshake"></i></div><div><div class="stat-val" id="prt-s-total">—</div><div class="stat-lbl">Total Partners</div></div></div>
+                    <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="stat-val" id="prt-s-active">—</div><div class="stat-lbl">Active</div></div></div>
+                    <div class="stat-card"><div class="stat-icon amber"><i class="fas fa-car"></i></div><div><div class="stat-val" id="prt-s-dealer">—</div><div class="stat-lbl">Dealers</div></div></div>
+                    <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-warehouse"></i></div><div><div class="stat-val" id="prt-s-dist">—</div><div class="stat-lbl">Distributors</div></div></div>
+                    <div class="stat-card"><div class="stat-icon slate"><i class="fas fa-tools"></i></div><div><div class="stat-val" id="prt-s-svc">—</div><div class="stat-lbl">Service Centers</div></div></div>
+                </div>
+                <div class="filter-bar">
+                    <div class="fg"><label>Search</label><input type="text" id="prt-search" placeholder="Name, code, phone…" oninput="renderPartners()"></div>
+                    <div class="fg"><label>Category</label>
+                        <select id="prt-cat" onchange="renderPartners()">
+                            <option value="">All Categories</option>
+                            <option value="DEALER">Dealer</option>
+                            <option value="DISTRIBUTOR">Distributor</option>
+                            <option value="SERVICE_CENTER">Service Center</option>
+                            <option value="VENDOR">Vendor</option>
+                            <option value="REAL_DREAM_PARTNER">Real Dreams</option>
+                        </select>
+                    </div>
+                    <div class="fg"><label>Status</label>
+                        <select id="prt-status" onchange="renderPartners()">
+                            <option value="">All</option><option value="active">Active</option><option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <button class="btn-clear" onclick="clearFilters('prt')"><i class="fas fa-times me-1"></i>Clear</button>
+                    <button class="btn-add" onclick="openPrtModal()"><i class="fas fa-plus"></i>Add Partner</button>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span><i class="fas fa-handshake me-2"></i>Official Partners</span><span style="font-size:13px;color:#6b7280;" id="prt-count-lbl">—</span></div>
+                    <div class="card-body">
+                        <div id="prt-loading" class="loading-spinner"><div class="spinner"></div></div>
+                        <div id="prt-wrap" class="tbl-wrap" style="display:none;">
+                            <table class="pm-table"><thead><tr>
+                                <th>Code</th><th>Partner Name</th><th>Category</th><th>Contact</th><th>GST / PAN</th><th>Location</th><th>Status</th><th>Actions</th>
+                            </tr></thead><tbody id="prt-tbody"></tbody></table>
+                        </div>
+                        <div id="prt-empty" class="empty-state" style="display:none;"><i class="fas fa-handshake"></i><p>No partners found</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════ STAFF TAB ═══════════ -->
+            <div class="tab-panel" id="panel-staff">
+                <div class="stat-cards" id="stf-stats">
+                    <div class="stat-card"><div class="stat-icon slate"><i class="fas fa-user-tie"></i></div><div><div class="stat-val" id="stf-s-total">—</div><div class="stat-lbl">Total Staff</div></div></div>
+                    <div class="stat-card"><div class="stat-icon green"><i class="fas fa-check-circle"></i></div><div><div class="stat-val" id="stf-s-active">—</div><div class="stat-lbl">Active</div></div></div>
+                    <div class="stat-card"><div class="stat-icon red"><i class="fas fa-user-minus"></i></div><div><div class="stat-val" id="stf-s-resigned">—</div><div class="stat-lbl">Resigned</div></div></div>
+                    <div class="stat-card"><div class="stat-icon amber"><i class="fas fa-pause-circle"></i></div><div><div class="stat-val" id="stf-s-inactive">—</div><div class="stat-lbl">Inactive</div></div></div>
+                </div>
+                <div class="filter-bar">
+                    <div class="fg"><label>Search</label><input type="text" id="stf-search" placeholder="Name, code, phone…" oninput="renderStaff()"></div>
+                    <div class="fg"><label>Status</label>
+                        <select id="stf-status" onchange="renderStaff()">
+                            <option value="">All</option><option value="active">Active</option>
+                            <option value="inactive">Inactive</option><option value="resigned">Resigned</option><option value="terminated">Terminated</option>
+                        </select>
+                    </div>
+                    <button class="btn-clear" onclick="clearFilters('stf')"><i class="fas fa-times me-1"></i>Clear</button>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span><i class="fas fa-user-tie me-2"></i>Staff Members</span><span style="font-size:13px;color:#6b7280;" id="stf-count-lbl">—</span></div>
+                    <div class="card-body">
+                        <div id="stf-loading" class="loading-spinner"><div class="spinner"></div></div>
+                        <div id="stf-wrap" class="tbl-wrap" style="display:none;">
+                            <table class="pm-table"><thead><tr>
+                                <th>Code</th><th>Full Name</th><th>Role</th><th>Department</th><th>Phone</th><th>Status</th>
+                            </tr></thead><tbody id="stf-tbody"></tbody></table>
+                        </div>
+                        <div id="stf-empty" class="empty-state" style="display:none;"><i class="fas fa-user-tie"></i><p>No staff found</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════ LEDGER PARTIES TAB ═══════════ -->
+            <div class="tab-panel" id="panel-ledger">
+                <div class="stat-cards" id="ldg-stats">
+                    <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-book-open"></i></div><div><div class="stat-val" id="ldg-s-total">—</div><div class="stat-lbl">Total Parties</div></div></div>
+                    <div class="stat-card"><div class="stat-icon red"><i class="fas fa-arrow-up"></i></div><div><div class="stat-val" id="ldg-s-dr">—</div><div class="stat-lbl">Total Debit</div></div></div>
+                    <div class="stat-card"><div class="stat-icon green"><i class="fas fa-arrow-down"></i></div><div><div class="stat-val" id="ldg-s-cr">—</div><div class="stat-lbl">Total Credit</div></div></div>
+                    <div class="stat-card"><div class="stat-icon amber"><i class="fas fa-balance-scale"></i></div><div><div class="stat-val" id="ldg-s-net">—</div><div class="stat-lbl">Net Balance</div></div></div>
+                </div>
+                <div class="info-note"><i class="fas fa-info-circle"></i>Parties with journal entries — debit/credit balances shown per party.</div>
+                <div class="filter-bar">
+                    <div class="fg"><label>Search</label><input type="text" id="ldg-search" placeholder="Party name…" oninput="renderLedger()"></div>
+                    <div class="fg"><label>Party Type</label>
+                        <select id="ldg-type" onchange="renderLedger()">
+                            <option value="">All Types</option>
+                            <option value="COMPANY">Company</option><option value="CUSTOMER">Customer</option>
+                            <option value="VENDOR">Vendor</option><option value="EMPLOYEE">Employee</option>
+                            <option value="EXTERNAL">External</option>
+                        </select>
+                    </div>
+                    <div class="fg"><label>Company</label>
+                        <select id="ldg-company" onchange="loadLedgerData()"><option value="">All Companies</option></select>
+                    </div>
+                    <button class="btn-clear" onclick="clearFilters('ldg')"><i class="fas fa-times me-1"></i>Clear</button>
+                    <button class="btn-add" onclick="openAddLedgerPartyModal()"><i class="fas fa-plus"></i>Add Journal Entry</button>
+                </div>
+                <div class="card">
+                    <div class="card-header"><span><i class="fas fa-book-open me-2"></i>Ledger Party Balances</span><span style="font-size:13px;color:#6b7280;" id="ldg-count-lbl">—</span></div>
+                    <div class="card-body">
+                        <div id="ldg-loading" class="loading-spinner"><div class="spinner"></div></div>
+                        <div id="ldg-wrap" class="tbl-wrap" style="display:none;">
+                            <table class="pm-table"><thead><tr>
+                                <th>Party Name</th><th>Type</th><th>Party ID</th>
+                                <th style="text-align:right;">Total DR</th>
+                                <th style="text-align:right;">Total CR</th>
+                                <th style="text-align:right;">Net Balance</th>
+                                <th>Actions</th>
+                            </tr></thead><tbody id="ldg-tbody"></tbody></table>
+                        </div>
+                        <div id="ldg-empty" class="empty-state" style="display:none;"><i class="fas fa-book-open"></i><p>No ledger parties found</p></div>
+                    </div>
+                </div>
+            </div>
+            <!-- ═══════════ EXPENSE HEADS TAB ═══════════ -->
+            <div class="tab-panel" id="panel-expense">
+                <!-- Stat cards -->
+                <div class="stat-cards" id="exp-stats">
+                    <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-folder"></i></div><div><div class="stat-val" id="exp-s-main">—</div><div class="stat-lbl">Main Categories</div></div></div>
+                    <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-folder-open"></i></div><div><div class="stat-val" id="exp-s-sub">—</div><div class="stat-lbl">Sub Categories</div></div></div>
+                    <div class="stat-card"><div class="stat-icon red"><i class="fas fa-rupee-sign"></i></div><div><div class="stat-val" id="exp-s-total-amt">—</div><div class="stat-lbl">Total Expenses</div></div></div>
+                    <div class="stat-card"><div class="stat-icon amber"><i class="fas fa-receipt"></i></div><div><div class="stat-val" id="exp-s-entries">—</div><div class="stat-lbl">Total Entries</div></div></div>
+                </div>
+                <!-- Filter / Sort bar -->
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+                    <select id="exp-filter-co" onchange="changeExpCo()" style="height:34px;border:1px solid #d1d5db;border-radius:6px;padding:4px 10px;font-size:12px;background:#fff;color:#374151;min-width:160px;">
+                        <option value="">All Companies</option>
+                    </select>
+                    <select id="exp-sort" onchange="sortExp()" style="height:34px;border:1px solid #d1d5db;border-radius:6px;padding:4px 10px;font-size:12px;background:#fff;color:#374151;min-width:180px;">
+                        <option value="name_asc">Sort: Name A→Z</option>
+                        <option value="name_desc">Sort: Name Z→A</option>
+                        <option value="amt_desc">Sort: Amount ↓ High</option>
+                        <option value="amt_asc">Sort: Amount ↑ Low</option>
+                        <option value="cnt_desc">Sort: Entries ↓ High</option>
+                        <option value="cnt_asc">Sort: Entries ↑ Low</option>
+                    </select>
+                    <button onclick="resetExpFilters()" style="height:34px;padding:0 12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;font-size:12px;cursor:pointer;color:#374151;"><i class="fas fa-times me-1"></i>Reset</button>
+                </div>
+                <!-- Inner sub-tab toggle -->
+                <div style="display:flex;gap:8px;margin-bottom:16px;">
+                    <button class="btn-add" id="exp-inner-main-btn" onclick="switchExpInner('main')" style="background:linear-gradient(135deg,#6366f1,#4f46e5);"><i class="fas fa-folder me-1"></i>Main Categories</button>
+                    <button class="btn-outline-add" id="exp-inner-sub-btn" onclick="switchExpInner('sub')"><i class="fas fa-folder-open me-1"></i>Sub Categories</button>
+                </div>
+                <!-- Main categories panel -->
+                <div id="exp-inner-main">
+                    <div class="card">
+                        <div class="card-header">
+                            <span><i class="fas fa-folder me-2" style="color:#6366f1;"></i>Expense Main Categories</span>
+                            <button class="btn-add" onclick="openExpMainModal()"><i class="fas fa-plus"></i>Add Main Category</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="exp-main-loading" class="loading-spinner"><div class="spinner"></div></div>
+                            <div id="exp-main-wrap" class="tbl-wrap" style="display:none;">
+                                <table class="pm-table"><thead><tr>
+                                    <th>#</th><th>Category Name</th><th>Description</th><th>Sub Categories</th>
+                                    <th style="text-align:right;">Total Amount</th><th style="text-align:right;">Entries</th><th>Actions</th>
+                                </tr></thead><tbody id="exp-main-tbody"></tbody></table>
+                            </div>
+                            <div id="exp-main-empty" class="empty-state" style="display:none;"><i class="fas fa-folder"></i><p>No expense main categories yet</p></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Sub categories panel -->
+                <div id="exp-inner-sub" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <span><i class="fas fa-folder-open me-2" style="color:#059669;"></i>Expense Sub Categories</span>
+                            <button class="btn-add" onclick="openExpSubModal()" style="background:linear-gradient(135deg,#10b981,#059669);"><i class="fas fa-plus"></i>Add Sub Category</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="exp-sub-loading" class="loading-spinner"><div class="spinner"></div></div>
+                            <div id="exp-sub-wrap" class="tbl-wrap" style="display:none;">
+                                <table class="pm-table"><thead><tr>
+                                    <th>#</th><th>Sub Category Name</th><th>Main Category</th><th>Description</th>
+                                    <th style="text-align:right;">Total Amount</th><th style="text-align:right;">Entries</th><th>Actions</th>
+                                </tr></thead><tbody id="exp-sub-tbody"></tbody></table>
+                            </div>
+                            <div id="exp-sub-empty" class="empty-state" style="display:none;"><i class="fas fa-folder-open"></i><p>No expense sub categories yet</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════ INCOME HEADS TAB ═══════════ -->
+            <div class="tab-panel" id="panel-income">
+                <!-- Stat cards -->
+                <div class="stat-cards" id="inc-stats">
+                    <div class="stat-card"><div class="stat-icon amber"><i class="fas fa-coins"></i></div><div><div class="stat-val" id="inc-s-main">—</div><div class="stat-lbl">Main Categories</div></div></div>
+                    <div class="stat-card"><div class="stat-icon green"><i class="fas fa-circle-dollar-to-slot"></i></div><div><div class="stat-val" id="inc-s-sub">—</div><div class="stat-lbl">Sub Categories</div></div></div>
+                    <div class="stat-card"><div class="stat-icon blue"><i class="fas fa-rupee-sign"></i></div><div><div class="stat-val" id="inc-s-total-amt">—</div><div class="stat-lbl">Total Income</div></div></div>
+                    <div class="stat-card"><div class="stat-icon purple"><i class="fas fa-receipt"></i></div><div><div class="stat-val" id="inc-s-entries">—</div><div class="stat-lbl">Total Entries</div></div></div>
+                </div>
+                <!-- Filter / Sort bar -->
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+                    <select id="inc-filter-co" onchange="changeIncCo()" style="height:34px;border:1px solid #d1d5db;border-radius:6px;padding:4px 10px;font-size:12px;background:#fff;color:#374151;min-width:160px;">
+                        <option value="">All Companies</option>
+                    </select>
+                    <select id="inc-sort" onchange="sortInc()" style="height:34px;border:1px solid #d1d5db;border-radius:6px;padding:4px 10px;font-size:12px;background:#fff;color:#374151;min-width:180px;">
+                        <option value="name_asc">Sort: Name A→Z</option>
+                        <option value="name_desc">Sort: Name Z→A</option>
+                        <option value="amt_desc">Sort: Amount ↓ High</option>
+                        <option value="amt_asc">Sort: Amount ↑ Low</option>
+                        <option value="cnt_desc">Sort: Entries ↓ High</option>
+                        <option value="cnt_asc">Sort: Entries ↑ Low</option>
+                    </select>
+                    <button onclick="resetIncFilters()" style="height:34px;padding:0 12px;border:1px solid #d1d5db;border-radius:6px;background:#f9fafb;font-size:12px;cursor:pointer;color:#374151;"><i class="fas fa-times me-1"></i>Reset</button>
+                </div>
+                <!-- Inner sub-tab toggle -->
+                <div style="display:flex;gap:8px;margin-bottom:16px;">
+                    <button class="btn-add" id="inc-inner-main-btn" onclick="switchIncInner('main')" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><i class="fas fa-coins me-1"></i>Main Categories</button>
+                    <button class="btn-outline-add" id="inc-inner-sub-btn" onclick="switchIncInner('sub')"><i class="fas fa-circle-dollar-to-slot me-1"></i>Sub Categories</button>
+                </div>
+                <!-- Main categories panel -->
+                <div id="inc-inner-main">
+                    <div class="card">
+                        <div class="card-header">
+                            <span><i class="fas fa-coins me-2" style="color:#d97706;"></i>Income Main Categories</span>
+                            <button class="btn-add" onclick="openIncMainModal()" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><i class="fas fa-plus"></i>Add Main Category</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="inc-main-loading" class="loading-spinner"><div class="spinner"></div></div>
+                            <div id="inc-main-wrap" class="tbl-wrap" style="display:none;">
+                                <table class="pm-table"><thead><tr>
+                                    <th>#</th><th>Category Name</th><th>Description</th><th>Sub Categories</th>
+                                    <th style="text-align:right;">Total Amount</th><th style="text-align:right;">Entries</th><th>Actions</th>
+                                </tr></thead><tbody id="inc-main-tbody"></tbody></table>
+                            </div>
+                            <div id="inc-main-empty" class="empty-state" style="display:none;"><i class="fas fa-coins"></i><p>No income main categories yet</p></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Sub categories panel -->
+                <div id="inc-inner-sub" style="display:none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <span><i class="fas fa-circle-dollar-to-slot me-2" style="color:#d97706;"></i>Income Sub Categories</span>
+                            <button class="btn-add" onclick="openIncSubModal()" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><i class="fas fa-plus"></i>Add Sub Category</button>
+                        </div>
+                        <div class="card-body">
+                            <div id="inc-sub-loading" class="loading-spinner"><div class="spinner"></div></div>
+                            <div id="inc-sub-wrap" class="tbl-wrap" style="display:none;">
+                                <table class="pm-table"><thead><tr>
+                                    <th>#</th><th>Sub Category Name</th><th>Main Category</th><th>Description</th>
+                                    <th style="text-align:right;">Total Amount</th><th style="text-align:right;">Entries</th><th>Actions</th>
+                                </tr></thead><tbody id="inc-sub-tbody"></tbody></table>
+                            </div>
+                            <div id="inc-sub-empty" class="empty-state" style="display:none;"><i class="fas fa-circle-dollar-to-slot"></i><p>No income sub categories yet</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /content-area -->
+    </div><!-- /main-content -->
+
+    <!-- ═════════════════════ COMPANY MODAL ═════════════════════ -->
+    <div class="modal-overlay" id="coModal">
+        <div class="modal-box" style="max-width:560px;">
+            <div class="modal-hdr">
+                <h3><i class="fas fa-building me-2" style="color:#f59e0b;"></i><span id="coModalTitle">Add Company</span></h3>
+                <button class="modal-close" onclick="closeModal('coModal')">&times;</button>
+            </div>
+
+            <!-- ── Main edit form ── -->
+            <div class="modal-bdy" id="co-form-section">
+                <input type="hidden" id="co-edit-id">
+                <div class="form-row2">
+                    <div class="fg-m"><label>Company Name <span class="req">*</span></label><input type="text" id="co-name" placeholder="Full legal name"></div>
+                    <div class="fg-m"><label>Short Code</label><input type="text" id="co-code" placeholder="e.g., MRL" maxlength="10"><small id="co-code-hint" style="color:#6b7280;font-size:11px;display:none;">Code cannot be changed after creation</small></div>
+                </div>
+                <div class="form-row2">
+                    <div class="fg-m"><label>Company Type</label><select id="co-ctype"><option value="SUBSIDIARY">Subsidiary</option><option value="MAIN">Main</option><option value="ASSOCIATE">Associate</option></select></div>
+                    <div class="fg-m"><label>Status</label><select id="co-active"><option value="true">Active</option><option value="false">Inactive</option></select></div>
+                </div>
+                <div class="fg-m"><label>Address</label><textarea id="co-address" rows="2" placeholder="Registered address"></textarea></div>
+                <div class="form-row3">
+                    <div class="fg-m"><label>City</label><input type="text" id="co-city"></div>
+                    <div class="fg-m"><label>State</label><input type="text" id="co-state"></div>
+                    <div class="fg-m"><label>Pincode</label><input type="text" id="co-pincode" maxlength="10"></div>
+                </div>
+                <div class="form-row3">
+                    <div class="fg-m"><label>GST Number</label><input type="text" id="co-gst" maxlength="15" placeholder="15-char GSTIN"></div>
+                    <div class="fg-m"><label>PAN Number</label><input type="text" id="co-pan" maxlength="15"></div>
+                    <div class="fg-m"><label>CIN Number</label><input type="text" id="co-cin" maxlength="25"></div>
+                </div>
+                <div class="form-row2">
+                    <div class="fg-m"><label>Phone <span style="font-size:10px;color:#6b7280;">(shows on invoices)</span></label><input type="text" id="co-phone" maxlength="20" placeholder="+91 XXXXX XXXXX"></div>
+                    <div class="fg-m"><label>Email <span style="font-size:10px;color:#6b7280;">(shows on invoices)</span></label><input type="text" id="co-email" maxlength="200" placeholder="contact@company.com"></div>
+                </div>
+                <div class="fg-m"><label>Website</label><input type="text" id="co-website" maxlength="200" placeholder="https://company.com"></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+                    <input type="checkbox" id="co-marketplace" style="width:15px;height:15px;cursor:pointer;">
+                    <label for="co-marketplace" style="margin:0;font-size:12px;cursor:pointer;color:#374151;">Marketplace Endpoint <span style="color:#6366f1;font-size:11px;">(sells marketplace items to customers)</span></label>
+                </div>
+            </div>
+
+            <!-- ── Transfer & Delete panel (shown instead of form when Delete is clicked) ── -->
+            <div id="co-transfer-section" style="display:none;">
+                <div style="padding:16px 20px 0;">
+                    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:14px 16px;margin-bottom:14px;">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                            <i class="fas fa-exclamation-triangle" style="color:#dc2626;"></i>
+                            <strong style="color:#dc2626;font-size:13px;">This company has associated data</strong>
+                        </div>
+                        <p style="margin:0;font-size:12px;color:#7f1d1d;">Before deleting, transfer this data to another company. All records listed below will be re-assigned.</p>
+                    </div>
+
+                    <div id="co-transfer-counts" style="margin-bottom:14px;"></div>
+
+                    <div class="fg-m" style="margin-bottom:14px;">
+                        <label style="font-weight:600;font-size:13px;">Transfer all data to:</label>
+                        <select id="co-transfer-target" style="width:100%;padding:9px 11px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;margin-top:4px;">
+                            <option value="">— Select target company —</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="padding:0 20px 16px;display:flex;justify-content:space-between;align-items:center;">
+                    <button class="btn-cancel" onclick="coHideTransfer()"><i class="fas fa-arrow-left me-1"></i>Back</button>
+                    <button id="co-transfer-confirm-btn" class="btn-danger" onclick="doTransferAndDelete()" style="background:#dc2626;">
+                        <i class="fas fa-exchange-alt me-1"></i>Transfer &amp; Delete
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-ftr" id="co-form-footer">
+                <div><button class="btn-danger" id="coDeleteBtn" onclick="deleteCompany()" style="display:none;"><i class="fas fa-trash me-1"></i>Delete</button></div>
+                <div class="modal-ftr-right"><button class="btn-cancel" onclick="closeModal('coModal')">Cancel</button><button class="btn-save" onclick="saveCompany()"><i class="fas fa-save me-1"></i>Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═════════════════════ VENDOR MODAL ═════════════════════ -->
+    <div class="modal-overlay" id="vndModal">
+        <div class="modal-box">
+            <div class="modal-hdr">
+                <h3><i class="fas fa-truck me-2" style="color:#f59e0b;"></i><span id="vndModalTitle">Add Vendor</span></h3>
+                <button class="modal-close" onclick="closeModal('vndModal')">&times;</button>
+            </div>
+            <div class="modal-tabs">
+                <button class="mtab active" onclick="switchMTab('vnd','basic')">Basic Info</button>
+                <button class="mtab" onclick="switchMTab('vnd','contact')">Contacts</button>
+                <button class="mtab" onclick="switchMTab('vnd','address')">Address</button>
+                <button class="mtab" onclick="switchMTab('vnd','bank')">Bank &amp; Payment</button>
+                <button class="mtab" onclick="switchMTab('vnd','products')">Products</button>
+            </div>
+            <div class="modal-bdy">
+                <input type="hidden" id="vnd-edit-id">
+                <!-- Basic Info -->
+                <div class="mtab-content active" id="vnd-tab-basic">
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Vendor Name <span class="req">*</span></label><input type="text" id="vnd-name" placeholder="Full vendor name"></div>
+                        <div class="fg-m"><label>Vendor Code <span class="req">*</span></label><input type="text" id="vnd-code" placeholder="e.g., VND001" maxlength="20" style="text-transform:uppercase;"></div>
+                    </div>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Vendor Type</label>
+                            <select id="vnd-vtype"><option value="BOTH">Both (Product &amp; Service)</option><option value="PRODUCT">Product Only</option><option value="SERVICE">Service Only</option><option value="SOLAR">Solar</option></select>
+                        </div>
+                        <div class="fg-m"><label>Email</label><input type="email" id="vnd-email" placeholder="Email address"></div>
+                    </div>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>GST Number</label><input type="text" id="vnd-gst" maxlength="15" placeholder="15-character GSTIN" style="text-transform:uppercase;"></div>
+                        <div class="fg-m"><label>PAN Number</label><input type="text" id="vnd-pan" maxlength="10" placeholder="10-character PAN" style="text-transform:uppercase;"></div>
+                    </div>
+                    <div class="fg-m" style="margin-top:4px;">
+                        <label style="font-weight:600;">GST Treatment <span style="font-weight:400;font-size:12px;color:#6b7280;">(affects invoice tax split)</span></label>
+                        <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+                            <label id="vndGstCard_CGST" class="gst-card-label selected" onclick="setVndGstType('CGST_SGST')">
+                                <input type="radio" name="vndGstType" value="CGST_SGST" id="vnd-gsttype-cgst" checked style="width:16px;height:16px;">
+                                <div><div style="font-weight:700;color:#1d4ed8;font-size:13px;">CGST + SGST</div><div style="font-size:11px;color:#6b7280;">Intra-state purchase</div></div>
+                            </label>
+                            <label id="vndGstCard_IGST" class="gst-card-label" onclick="setVndGstType('IGST')">
+                                <input type="radio" name="vndGstType" value="IGST" id="vnd-gsttype-igst" style="width:16px;height:16px;">
+                                <div><div id="vndGstCard_IGST_lbl" style="font-weight:700;color:#374151;font-size:13px;">IGST</div><div style="font-size:11px;color:#6b7280;">Inter-state / Import</div></div>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="sec-hdr" style="margin-top:14px;"><i class="fas fa-building"></i> Applicable Companies</div>
+                    <div class="fg-m">
+                        <select id="vnd-company-select" onchange="addVndCompanyBadge()" style="width:100%;padding:9px 11px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                            <option value="">-- Select Company to Add --</option>
+                        </select>
+                        <div class="vnd-company-badges" id="vnd-company-badges"></div>
+                        <input type="hidden" id="vnd-applicable-companies" value="[]">
+                    </div>
+                    <div class="sec-hdr" style="margin-top:14px;"><i class="fas fa-balance-scale"></i> Opening Balance <span style="font-size:11px;font-weight:400;color:#6b7280;">(per company — optional)</span></div>
+                    <div id="vndObRows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
+                    <button type="button" onclick="addObRow('vnd')" style="background:none;border:1px dashed #6366f1;color:#6366f1;border-radius:5px;padding:5px 14px;font-size:12px;cursor:pointer;margin-bottom:6px;"><i class="fas fa-plus-circle me-1"></i>Add Opening Balance</button>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Trade Name</label><input type="text" id="vnd-trade" placeholder="Trading name (if different)"></div>
+                        <div class="fg-m"><label>Status</label><select id="vnd-active"><option value="true">Active</option><option value="false">Inactive</option></select></div>
+                    </div>
+                </div>
+                <!-- Contacts -->
+                <div class="mtab-content" id="vnd-tab-contact">
+                    <div class="sec-hdr"><i class="fas fa-user"></i> Contact Person 1 (Primary)</div>
+                    <div class="form-row3">
+                        <div class="fg-m"><label>Name</label><input type="text" id="vnd-cp1name" placeholder="Contact name"></div>
+                        <div class="fg-m"><label>Phone</label><input type="text" id="vnd-cp1phone" placeholder="Mobile / WhatsApp"></div>
+                        <div class="fg-m"><label>Designation</label><input type="text" id="vnd-cp1desig" placeholder="e.g., Sales Manager"></div>
+                    </div>
+                    <div class="sec-hdr"><i class="fas fa-user-friends"></i> Contact Person 2 (Secondary)</div>
+                    <div class="form-row3">
+                        <div class="fg-m"><label>Name</label><input type="text" id="vnd-cp2name" placeholder="Contact name"></div>
+                        <div class="fg-m"><label>Phone</label><input type="text" id="vnd-cp2phone" placeholder="Mobile"></div>
+                        <div class="fg-m"><label>Designation</label><input type="text" id="vnd-cp2desig" placeholder="e.g., Accounts Manager"></div>
+                    </div>
+                    <div class="sec-hdr"><i class="fas fa-globe"></i> Website</div>
+                    <div class="fg-m"><input type="url" id="vnd-website" placeholder="https://www.example.com"></div>
+                </div>
+                <!-- Address -->
+                <div class="mtab-content" id="vnd-tab-address">
+                    <div class="sec-hdr"><i class="fas fa-map-marker-alt"></i> Primary Address</div>
+                    <div class="fg-m"><label>Address</label><textarea id="vnd-addr" rows="2" placeholder="Full address"></textarea></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;">
+                        <div class="fg-m"><label>Pincode</label><input type="text" id="vnd-pincode" maxlength="6" placeholder="6-digit PIN" oninput="autoLookupVndPincode('vnd')"></div>
+                        <div class="fg-m"><label>City</label><input type="text" id="vnd-city" placeholder="City"></div>
+                        <div class="fg-m"><label>State</label><input type="text" id="vnd-state" placeholder="State"></div>
+                        <button type="button" class="pin-lookup-btn" onclick="lookupVndPincode('vnd')"><i class="fas fa-search"></i> Lookup</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
+                        <div class="fg-m">
+                            <label>Map Link 1 (Office)</label>
+                            <input type="text" id="vnd-maplbl1" placeholder="Label (e.g., Head Office)" style="margin-bottom:6px;">
+                            <input type="url" id="vnd-mapurl1" placeholder="Google Maps URL">
+                        </div>
+                        <div class="fg-m">
+                            <label>Map Link 2 (Warehouse)</label>
+                            <input type="text" id="vnd-maplbl2" placeholder="Label (e.g., Warehouse)" style="margin-bottom:6px;">
+                            <input type="url" id="vnd-mapurl2" placeholder="Google Maps URL">
+                        </div>
+                    </div>
+                    <div class="sec-hdr"><i class="fas fa-shipping-fast"></i> Shipping Address (if different)</div>
+                    <div class="fg-m"><textarea id="vnd-shipaddr" rows="2" placeholder="Shipping address"></textarea></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:end;">
+                        <div class="fg-m"><label>Pincode</label><input type="text" id="vnd-shippincode" maxlength="6" placeholder="6-digit PIN" oninput="autoLookupVndPincode('vndShip')"></div>
+                        <div class="fg-m"><label>City</label><input type="text" id="vnd-shipcity" placeholder="City"></div>
+                        <div class="fg-m"><label>State</label><input type="text" id="vnd-shipstate" placeholder="State"></div>
+                        <button type="button" class="pin-lookup-btn" onclick="lookupVndPincode('vndShip')"><i class="fas fa-search"></i> Lookup</button>
+                    </div>
+                </div>
+                <!-- Bank & Payment -->
+                <div class="mtab-content" id="vnd-tab-bank">
+                    <div class="sec-hdr"><i class="fas fa-university"></i> Bank Details</div>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Bank Name</label><input type="text" id="vnd-bankname" placeholder="Bank name"></div>
+                        <div class="fg-m"><label>Branch</label><input type="text" id="vnd-bankbranch" placeholder="Branch name"></div>
+                    </div>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Account Number</label><input type="text" id="vnd-accno" maxlength="30" placeholder="Account number"></div>
+                        <div class="fg-m"><label>IFSC Code</label><input type="text" id="vnd-ifsc" maxlength="11" placeholder="11-character IFSC" style="text-transform:uppercase;"></div>
+                    </div>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Account Holder Name</label><input type="text" id="vnd-accholder" placeholder="Account holder name"></div>
+                        <div class="fg-m"><label>UPI ID</label><input type="text" id="vnd-upi" placeholder="e.g., vendor@upi"></div>
+                    </div>
+                    <div class="sec-hdr"><i class="fas fa-qrcode"></i> Payment Scanner QR</div>
+                    <div class="fg-m">
+                        <label>Upload QR Code Image</label>
+                        <input type="file" id="vnd-qrfile" accept="image/*" style="padding:7px;width:100%;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                        <small style="color:#6b7280;display:block;margin-top:4px;">Upload vendor's payment QR code for quick payments</small>
+                        <div id="vnd-qr-preview" style="margin-top:6px;"></div>
+                    </div>
+                    <div class="sec-hdr"><i class="fas fa-credit-card"></i> Payment Terms</div>
+                    <div class="form-row3">
+                        <div class="fg-m"><label>Payment Terms</label>
+                            <select id="vnd-payterms"><option value="COD">Cash on Delivery</option><option value="ADVANCE">Advance</option><option value="CREDIT_15">Credit 15 Days</option><option value="CREDIT_30">Credit 30 Days</option><option value="CREDIT_45">Credit 45 Days</option><option value="CREDIT_60">Credit 60 Days</option></select>
+                        </div>
+                        <div class="fg-m"><label>Credit Limit (₹)</label><input type="number" id="vnd-creditlimit" value="0" min="0" step="0.01"></div>
+                        <div class="fg-m"><label>Credit Days</label><input type="number" id="vnd-creditdays" value="0" min="0" max="365"></div>
+                    </div>
+                    <div class="fg-m"><label>Terms &amp; Conditions</label><textarea id="vnd-terms" rows="2" placeholder="Custom terms and conditions"></textarea></div>
+                </div>
+                <!-- Products -->
+                <div class="mtab-content" id="vnd-tab-products">
+                    <div class="sec-hdr"><i class="fas fa-boxes"></i> Associated Products</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                        <p style="font-size:13px;color:#6b7280;margin:0;">Search and select products this vendor supplies:</p>
+                        <button type="button" id="vndLoadHistBtn" onclick="loadVndPurchaseHistory()" style="padding:6px 12px;background:#f59e0b;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:none;"><i class="fas fa-history me-1"></i>Load from Purchases</button>
+                    </div>
+                    <div class="fg-m" style="margin-bottom:10px;">
+                        <input type="text" id="vnd-product-search" placeholder="Search products by name or code…" oninput="searchVndProducts()" style="width:100%;padding:9px 11px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+                    </div>
+                    <div id="vnd-selected-container" style="display:none;">
+                        <div class="vnd-selected-header"><i class="fas fa-check-circle me-1"></i>Selected Products (<span id="vnd-selected-count">0</span>)</div>
+                        <div class="vnd-selected-box" id="vnd-selected-products"></div>
+                    </div>
+                    <label style="font-size:12px;color:#6b7280;font-weight:600;">Available Products</label>
+                    <div class="vnd-product-list" id="vnd-product-list"><p style="color:#9ca3af;font-size:13px;padding:8px;">Type to search products…</p></div>
+                </div>
+            </div>
+            <div class="modal-ftr">
+                <div><button class="btn-danger" id="vndDeleteBtn" onclick="deleteVendor()" style="display:none;"><i class="fas fa-trash me-1"></i>Deactivate</button></div>
+                <div class="modal-ftr-right"><button class="btn-cancel" onclick="closeModal('vndModal')">Cancel</button><button class="btn-save" onclick="saveVendor()"><i class="fas fa-save me-1"></i>Save Vendor</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═════════════════════ PARTNER MODAL ═════════════════════ -->
+    <div class="modal-overlay" id="prtModal">
+        <div class="modal-box">
+            <div class="modal-hdr">
+                <h3><i class="fas fa-handshake me-2" style="color:#f59e0b;"></i><span id="prtModalTitle">Add Partner</span></h3>
+                <button class="modal-close" onclick="closeModal('prtModal')">&times;</button>
+            </div>
+            <div class="modal-tabs">
+                <button class="mtab active" onclick="switchMTab('prt','basic')">Basic Info</button>
+                <button class="mtab" onclick="switchMTab('prt','contact')">Contacts</button>
+                <button class="mtab" onclick="switchMTab('prt','address')">Address</button>
+                <button class="mtab" onclick="switchMTab('prt','bank')">Bank &amp; Payment</button>
+            </div>
+            <div class="modal-bdy">
+                <input type="hidden" id="prt-edit-id">
+                <!-- Basic -->
+                <div class="mtab-content active" id="prt-tab-basic">
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Partner Name <span class="req">*</span></label><input type="text" id="prt-name" placeholder="Full name of partner"></div>
+                        <div class="fg-m"><label>Partner Code <span style="font-size:11px;color:#9ca3af;">(auto-generated if blank)</span></label><input type="text" id="prt-code" placeholder="e.g., DLR0001" maxlength="30" style="text-transform:uppercase;"></div>
+                    </div>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Category <span class="req">*</span></label>
+                            <select id="prt-catsel">
+                                <option value="DEALER">Dealer</option>
+                                <option value="DISTRIBUTOR">Distributor</option>
+                                <option value="SERVICE_CENTER">Service Center</option>
+                                <option value="VENDOR">Vendor</option>
+                                <option value="REAL_DREAM_PARTNER">Real Dreams Partner</option>
+                            </select>
+                        </div>
+                        <div class="fg-m"><label>Status</label><select id="prt-active"><option value="true">Active</option><option value="false">Inactive</option></select></div>
+                    </div>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>GST Number</label><input type="text" id="prt-gst" maxlength="15" placeholder="15-char GSTIN" style="text-transform:uppercase;"></div>
+                        <div class="fg-m"><label>PAN Number</label><input type="text" id="prt-pan" maxlength="10" style="text-transform:uppercase;"></div>
+                    </div>
+                    <div class="sec-hdr" style="margin-top:14px;"><i class="fas fa-balance-scale"></i> Opening Balance <span style="font-size:11px;font-weight:400;color:#6b7280;">(per company — optional)</span></div>
+                    <div id="prtObRows" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
+                    <button type="button" onclick="addObRow('prt')" style="background:none;border:1px dashed #6366f1;color:#6366f1;border-radius:5px;padding:5px 14px;font-size:12px;cursor:pointer;margin-bottom:6px;"><i class="fas fa-plus-circle me-1"></i>Add Opening Balance</button>
+                </div>
+                <!-- Contact -->
+                <div class="mtab-content" id="prt-tab-contact">
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Primary Contact Person</label><input type="text" id="prt-cp1name"></div>
+                        <div class="fg-m"><label>Phone / WhatsApp</label><input type="text" id="prt-phone" placeholder="10-digit mobile"></div>
+                    </div>
+                    <div class="fg-m"><label>Designation</label><input type="text" id="prt-cp1desig" placeholder="e.g., Owner"></div>
+                    <div class="sec-hdr"><i class="fas fa-user-friends"></i> Secondary Contact</div>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Contact Person 2</label><input type="text" id="prt-cp2name"></div>
+                        <div class="fg-m"><label>Phone</label><input type="text" id="prt-cp2phone"></div>
+                    </div>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Email</label><input type="email" id="prt-email"></div>
+                        <div class="fg-m"><label>WhatsApp Number</label><input type="text" id="prt-wa"></div>
+                    </div>
+                </div>
+                <!-- Address -->
+                <div class="mtab-content" id="prt-tab-address">
+                    <div class="fg-m"><label>Address</label><textarea id="prt-addr" rows="2"></textarea></div>
+                    <div class="form-row3">
+                        <div class="fg-m"><label>City</label><input type="text" id="prt-city"></div>
+                        <div class="fg-m"><label>State</label><input type="text" id="prt-state"></div>
+                        <div class="fg-m"><label>Pincode</label><input type="text" id="prt-pincode" maxlength="10"></div>
+                    </div>
+                    <div class="fg-m"><label>Zone</label><input type="text" id="prt-zone" placeholder="e.g., North, South"></div>
+                </div>
+                <!-- Bank & Payment -->
+                <div class="mtab-content" id="prt-tab-bank">
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Bank Name</label><input type="text" id="prt-bankname"></div>
+                        <div class="fg-m"><label>Branch</label><input type="text" id="prt-bankbranch"></div>
+                    </div>
+                    <div class="form-row2">
+                        <div class="fg-m"><label>Account Number</label><input type="text" id="prt-accno" maxlength="30"></div>
+                        <div class="fg-m"><label>IFSC Code</label><input type="text" id="prt-ifsc" maxlength="11" style="text-transform:uppercase;"></div>
+                    </div>
+                    <div class="form-row3">
+                        <div class="fg-m"><label>Payment Terms</label>
+                            <select id="prt-payterms"><option value="ADVANCE">Advance</option><option value="COD">COD</option><option value="CREDIT_15">Credit 15</option><option value="CREDIT_30">Credit 30</option><option value="CREDIT_45">Credit 45</option><option value="CREDIT_60">Credit 60</option></select>
+                        </div>
+                        <div class="fg-m"><label>Credit Limit (₹)</label><input type="number" id="prt-creditlimit" value="0" min="0"></div>
+                        <div class="fg-m"><label>Credit Days</label><input type="number" id="prt-creditdays" value="0" min="0" max="365"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-ftr">
+                <div><button class="btn-danger" id="prtDeleteBtn" onclick="deactivatePartner()" style="display:none;"><i class="fas fa-ban me-1"></i>Deactivate</button></div>
+                <div class="modal-ftr-right"><button class="btn-cancel" onclick="closeModal('prtModal')">Cancel</button><button class="btn-save" onclick="savePartner()"><i class="fas fa-save me-1"></i>Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═════════════════════ ADD LEDGER JOURNAL ENTRY MODAL ═════════════════════ -->
+    <div class="modal-overlay" id="ldgModal">
+        <div class="modal-box" style="max-width:560px;">
+            <div class="modal-hdr">
+                <h3><i class="fas fa-plus-circle me-2" style="color:#f59e0b;"></i>Add Journal Entry</h3>
+                <button class="modal-close" onclick="closeModal('ldgModal')">&times;</button>
+            </div>
+            <div class="modal-bdy">
+                <div class="info-note"><i class="fas fa-info-circle"></i>This adds a new ledger entry for a party. It will appear in their running balance immediately.</div>
+                <div class="form-row2">
+                    <div class="fg-m"><label>Company <span class="req">*</span></label>
+                        <select id="ldg-add-company"><option value="">-- Select Company --</option></select>
+                    </div>
+                    <div class="fg-m"><label>Entry Date <span class="req">*</span></label>
+                        <input type="date" id="ldg-add-date">
+                    </div>
+                </div>
+                <div class="form-row2">
+                    <div class="fg-m"><label>Party Type <span class="req">*</span></label>
+                        <select id="ldg-add-ptype">
+                            <option value="CUSTOMER">Customer</option><option value="VENDOR">Vendor</option>
+                            <option value="EMPLOYEE">Employee</option><option value="COMPANY">Company</option>
+                            <option value="EXTERNAL">External</option>
+                        </select>
+                    </div>
+                    <div class="fg-m"><label>Party Name <span class="req">*</span></label>
+                        <input type="text" id="ldg-add-pname" placeholder="Full party name">
+                    </div>
+                </div>
+                <div class="form-row2">
+                    <div class="fg-m"><label>Entry Type <span class="req">*</span></label>
+                        <select id="ldg-add-etype">
+                            <option value="DEBIT">Debit (DR)</option><option value="CREDIT">Credit (CR)</option>
+                        </select>
+                    </div>
+                    <div class="fg-m"><label>Amount (₹) <span class="req">*</span></label>
+                        <input type="number" id="ldg-add-amount" min="0.01" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="fg-m"><label>Narration / Remarks</label>
+                    <textarea id="ldg-add-narration" rows="2" placeholder="Brief description of this entry"></textarea>
+                </div>
+                <div class="fg-m"><label>Reference No.</label>
+                    <input type="text" id="ldg-add-ref" placeholder="Invoice / voucher / JV number">
+                </div>
+            </div>
+            <div class="modal-ftr">
+                <div></div>
+                <div class="modal-ftr-right">
+                    <button class="btn-cancel" onclick="closeModal('ldgModal')">Cancel</button>
+                    <button class="btn-save" onclick="saveLedgerEntry()"><i class="fas fa-save me-1"></i>Post Entry</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ EXPENSE MAIN CATEGORY MODAL ═══════════ -->
+    <div class="modal-overlay" id="expMainModal">
+        <div class="modal-box" style="max-width:500px;">
+            <div class="modal-hdr">
+                <h3><i class="fas fa-folder me-2" style="color:#6366f1;"></i><span id="expMainModalTitle">Add Expense Category</span></h3>
+                <button class="modal-close" onclick="closeModal('expMainModal')">&times;</button>
+            </div>
+            <div class="modal-bdy">
+                <input type="hidden" id="expMainId">
+                <div class="fg-m"><label>Category Name <span class="req">*</span></label><input type="text" id="expMainName" placeholder="e.g., Office Expenses"></div>
+                <div class="fg-m"><label>Description</label><textarea id="expMainDesc" rows="3" placeholder="Brief description of this category"></textarea></div>
+            </div>
+            <div class="modal-ftr">
+                <div><button class="btn-danger" id="expMainDelBtn" onclick="delExpMain()" style="display:none;"><i class="fas fa-trash me-1"></i>Delete</button></div>
+                <div class="modal-ftr-right">
+                    <button class="btn-cancel" onclick="closeModal('expMainModal')">Cancel</button>
+                    <button class="btn-save" style="background:linear-gradient(135deg,#6366f1,#4f46e5);" onclick="saveExpMain()"><i class="fas fa-save me-1"></i>Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ EXPENSE SUB CATEGORY MODAL ═══════════ -->
+    <div class="modal-overlay" id="expSubModal">
+        <div class="modal-box" style="max-width:500px;">
+            <div class="modal-hdr">
+                <h3><i class="fas fa-folder-open me-2" style="color:#059669;"></i><span id="expSubModalTitle">Add Expense Sub Category</span></h3>
+                <button class="modal-close" onclick="closeModal('expSubModal')">&times;</button>
+            </div>
+            <div class="modal-bdy">
+                <input type="hidden" id="expSubId">
+                <div class="fg-m"><label>Main Category <span class="req">*</span></label>
+                    <select id="expSubParent"><option value="">-- Select Main Category --</option></select>
+                </div>
+                <div class="fg-m"><label>Sub Category Name <span class="req">*</span></label><input type="text" id="expSubName" placeholder="e.g., Stationery"></div>
+                <div class="fg-m"><label>Description</label><textarea id="expSubDesc" rows="2" placeholder="Brief description"></textarea></div>
+            </div>
+            <div class="modal-ftr">
+                <div><button class="btn-danger" id="expSubDelBtn" onclick="delExpSub()" style="display:none;"><i class="fas fa-trash me-1"></i>Delete</button></div>
+                <div class="modal-ftr-right">
+                    <button class="btn-cancel" onclick="closeModal('expSubModal')">Cancel</button>
+                    <button class="btn-save" style="background:linear-gradient(135deg,#10b981,#059669);" onclick="saveExpSub()"><i class="fas fa-save me-1"></i>Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ INCOME MAIN CATEGORY MODAL ═══════════ -->
+    <div class="modal-overlay" id="incMainModal">
+        <div class="modal-box" style="max-width:500px;">
+            <div class="modal-hdr">
+                <h3><i class="fas fa-coins me-2" style="color:#d97706;"></i><span id="incMainModalTitle">Add Income Category</span></h3>
+                <button class="modal-close" onclick="closeModal('incMainModal')">&times;</button>
+            </div>
+            <div class="modal-bdy">
+                <input type="hidden" id="incMainId">
+                <div class="fg-m"><label>Category Name <span class="req">*</span></label><input type="text" id="incMainName" placeholder="e.g., Sales Revenue"></div>
+                <div class="fg-m"><label>Description</label><textarea id="incMainDesc" rows="3" placeholder="Brief description of this income category"></textarea></div>
+            </div>
+            <div class="modal-ftr">
+                <div><button class="btn-danger" id="incMainDelBtn" onclick="delIncMain()" style="display:none;"><i class="fas fa-trash me-1"></i>Delete</button></div>
+                <div class="modal-ftr-right">
+                    <button class="btn-cancel" onclick="closeModal('incMainModal')">Cancel</button>
+                    <button class="btn-save" style="background:linear-gradient(135deg,#f59e0b,#d97706);" onclick="saveIncMain()"><i class="fas fa-save me-1"></i>Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════ INCOME SUB CATEGORY MODAL ═══════════ -->
+    <div class="modal-overlay" id="incSubModal">
+        <div class="modal-box" style="max-width:500px;">
+            <div class="modal-hdr">
+                <h3><i class="fas fa-circle-dollar-to-slot me-2" style="color:#d97706;"></i><span id="incSubModalTitle">Add Income Sub Category</span></h3>
+                <button class="modal-close" onclick="closeModal('incSubModal')">&times;</button>
+            </div>
+            <div class="modal-bdy">
+                <input type="hidden" id="incSubId">
+                <div class="fg-m"><label>Main Category <span class="req">*</span></label>
+                    <select id="incSubParent"><option value="">-- Select Main Category --</option></select>
+                </div>
+                <div class="fg-m"><label>Sub Category Name <span class="req">*</span></label><input type="text" id="incSubName" placeholder="e.g., Product Sales"></div>
+                <div class="fg-m"><label>Description</label><textarea id="incSubDesc" rows="2" placeholder="Brief description"></textarea></div>
+            </div>
+            <div class="modal-ftr">
+                <div><button class="btn-danger" id="incSubDelBtn" onclick="delIncSub()" style="display:none;"><i class="fas fa-trash me-1"></i>Delete</button></div>
+                <div class="modal-ftr-right">
+                    <button class="btn-cancel" onclick="closeModal('incSubModal')">Cancel</button>
+                    <button class="btn-save" style="background:linear-gradient(135deg,#f59e0b,#d97706);" onclick="saveIncSub()"><i class="fas fa-save me-1"></i>Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="pm-toast" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:none;">
+        <div id="pm-toast-inner" style="background:#1f2937;color:white;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,.3);display:flex;align-items:center;gap:8px;"></div>
+    </div>
+
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script>
+    const API_BASE = '/api/v1/staff/accounts';
+
+    // ── Data stores ──
+    let _companies = [], _vendors = [], _partners = [], _staff = [];
+    let _ledgerParties = [], _ledgerBalances = [];
+    let _allCombined = [];
+
+    // ── Helpers ──
+    function fmt(n) {
+        const v = parseFloat(n) || 0;
+        return v === 0 ? '—' : '₹' + v.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function toast(msg, type = 'success') {
+        const t = document.getElementById('pm-toast');
+        const ti = document.getElementById('pm-toast-inner');
+        const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
+        const col  = type === 'success' ? '#10b981' : '#ef4444';
+        ti.innerHTML = `<i class="fas fa-${icon}" style="color:${col}"></i> ${msg}`;
+        t.style.display = 'block';
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => t.style.display = 'none', 3500);
+    }
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        document.getElementById('panel-' + tab).classList.add('active');
+    }
+    function switchMTab(prefix, name) {
+        const box = document.getElementById(prefix + 'Modal');
+        box.querySelectorAll('.mtab').forEach(b => b.classList.remove('active'));
+        box.querySelectorAll('.mtab-content').forEach(c => c.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById(prefix + '-tab-' + name).classList.add('active');
+    }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+    function clearFilters(pfx) {
+        const ids = { all:['all-search','all-type'], co:['co-search','co-type'], vnd:['vnd-search','vnd-type','vnd-company','vnd-status'],
+                      prt:['prt-search','prt-cat','prt-status'], stf:['stf-search','stf-status'], ldg:['ldg-search','ldg-type'] };
+        (ids[pfx]||[]).forEach(id => {
+            const el = document.getElementById(id); if (el) el.value = '';
+        });
+        const fns = { all:renderAll, co:renderCompanies, vnd:renderVendors, prt:renderPartners, stf:renderStaff, ldg:renderLedger };
+        if (fns[pfx]) fns[pfx]();
+    }
+
+    // ── Bootstrap ──
+    document.addEventListener('DOMContentLoaded', async function () {
+        if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+        StaffHeader.inject('Parties Master', 'fas fa-users');
+        if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+        if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+        // Set today's date for ledger entry modal
+        document.getElementById('ldg-add-date').value = new Date().toISOString().slice(0, 10);
+        await loadAll();
+    });
+
+    async function loadAll() {
+        await Promise.all([
+            loadCompanies(), loadVendors(), loadPartners(), loadStaff(), loadLedgerData()
+        ]);
+        buildCombined();
+        renderAll();
+    }
+
+    // ════════════════ COMPANIES ════════════════
+    async function loadCompanies() {
+        try {
+            const r = await staffFetch(API_BASE + '/companies');
+            if (r.ok) { const d = await r.json(); _companies = d.companies || []; }
+        } catch (e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; }
+        populateCompanyDropdowns();
+        updateCoStats();
+        document.getElementById('cnt-companies').textContent = _companies.length;
+        renderCompanies();
+    }
+    function updateCoStats() {
+        const active   = _companies.filter(c => c.is_active !== false).length;
+        const inactive = _companies.length - active;
+        document.getElementById('co-s-total').textContent   = _companies.length;
+        document.getElementById('co-s-active').textContent  = active;
+        document.getElementById('co-s-inactive').textContent= inactive;
+    }
+    function renderCompanies() {
+        const s = (document.getElementById('co-search').value || '').toLowerCase();
+        const t = document.getElementById('co-type').value;
+        const rows = _companies.filter(c =>
+            (!s || (c.company_name||'').toLowerCase().includes(s) || (c.gst_number||'').toLowerCase().includes(s)) &&
+            (!t || c.company_type === t)
+        );
+        document.getElementById('co-count-lbl').textContent = `${rows.length} of ${_companies.length} companies`;
+        document.getElementById('co-loading').style.display = 'none';
+        const wrap = document.getElementById('co-wrap'), empty = document.getElementById('co-empty');
+        if (!rows.length) { wrap.style.display='none'; empty.style.display='block'; return; }
+        empty.style.display='none'; wrap.style.display='block';
+        document.getElementById('co-tbody').innerHTML = rows.map(c => `
+            <tr>
+                <td style="font-family:monospace;font-size:12px;color:#6b7280;">${c.id}</td>
+                <td><span style="font-weight:700;color:#111827;">${c.company_name||'—'}</span></td>
+                <td><span class="badge-type bt-company">${c.company_type||'—'}</span></td>
+                <td style="font-family:monospace;font-size:12px;">${c.company_code||'—'}</td>
+                <td style="font-family:monospace;font-size:12px;">${c.gst_number||'—'}</td>
+                <td style="font-size:12px;">${[c.city,c.state].filter(Boolean).join(', ')||'—'}</td>
+                <td><span class="${c.is_active===false?'badge-inactive':'badge-active'}">${c.is_active===false?'Inactive':'Active'}</span></td>
+                <td><button class="btn-act edit" onclick="editCompany(${c.id})"><i class="fas fa-pen"></i> Edit</button></td>
+            </tr>`).join('');
+    }
+
+    // ════════════════ VENDORS ════════════════
+    async function loadVendors() {
+        try {
+            const r = await staffFetch(API_BASE + '/vendors?include_inactive=true&page_size=500');
+            if (r.ok) { const d = await r.json(); _vendors = d.vendors || []; }
+        } catch (e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; }
+        updateVndStats();
+        document.getElementById('cnt-vendors').textContent = _vendors.length;
+        renderVendors();
+    }
+    function updateVndStats() {
+        const active   = _vendors.filter(v => v.is_active !== false).length;
+        const inactive = _vendors.length - active;
+        const both     = _vendors.filter(v => v.vendor_type === 'BOTH').length;
+        document.getElementById('vnd-s-total').textContent   = _vendors.length;
+        document.getElementById('vnd-s-active').textContent  = active;
+        document.getElementById('vnd-s-inactive').textContent= inactive;
+        document.getElementById('vnd-s-both').textContent    = both;
+    }
+    function renderVendors() {
+        const s   = (document.getElementById('vnd-search').value || '').toLowerCase();
+        const t   = document.getElementById('vnd-type').value;
+        const cid = document.getElementById('vnd-company').value;
+        const st  = document.getElementById('vnd-status').value;
+        const rows = _vendors.filter(v =>
+            (!s || (v.vendor_name||'').toLowerCase().includes(s) || (v.vendor_code||'').toLowerCase().includes(s) || (v.gst_number||'').toLowerCase().includes(s)) &&
+            (!t  || v.vendor_type === t) &&
+            (!cid || (() => { const ac = v.applicable_companies||[]; return ac.includes('ALL') || ac.includes(parseInt(cid)); })()) &&
+            (!st  || (st === 'active' ? v.is_active !== false : v.is_active === false))
+        );
+        document.getElementById('vnd-count-lbl').textContent = `${rows.length} of ${_vendors.length} vendors`;
+        document.getElementById('vnd-loading').style.display = 'none';
+        const wrap = document.getElementById('vnd-wrap'), empty = document.getElementById('vnd-empty');
+        if (!rows.length) { wrap.style.display='none'; empty.style.display='block'; return; }
+        empty.style.display='none'; wrap.style.display='block';
+        document.getElementById('vnd-tbody').innerHTML = rows.map(v => {
+            const _vac = v.applicable_companies || [];
+            const cos = _vac.includes('ALL')
+                ? '<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:10px;">All Companies</span>'
+                : (_companies.filter(c => _vac.includes(c.id))).map(c => `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:10px;">${c.company_name}</span>`).join(' ');
+            return `<tr>
+                <td style="font-family:monospace;font-size:12px;color:#f59e0b;font-weight:700;">${v.vendor_code||'—'}</td>
+                <td><span style="font-weight:700;color:#111827;">${v.vendor_name||'—'}</span>${v.trade_name?`<br><span style="font-size:11px;color:#9ca3af;">${v.trade_name}</span>`:''}</td>
+                <td><span class="badge-type bt-vendor">${v.vendor_type||'—'}</span></td>
+                <td style="font-size:12px;">${v.contact_person_1_phone||v.contact_person_2_phone||v.phone||'—'}</td>
+                <td style="font-family:monospace;font-size:12px;">${v.gst_number||'—'}</td>
+                <td style="font-size:12px;">${[v.city,v.state].filter(Boolean).join(', ')||'—'}</td>
+                <td style="font-size:11px;">${cos||'—'}</td>
+                <td><span class="${v.is_active===false?'badge-inactive':'badge-active'}">${v.is_active===false?'Inactive':'Active'}</span></td>
+                <td>
+                    <button class="btn-act edit" onclick="editVendor(${v.id})"><i class="fas fa-pen"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ════════════════ PARTNERS ════════════════
+    const CAT_LABELS = { DEALER:'Dealer', DISTRIBUTOR:'Distributor', SERVICE_CENTER:'Service Center', VENDOR:'Vendor', REAL_DREAM_PARTNER:'Real Dreams' };
+    const CAT_CLS    = { DEALER:'bt-dealer', DISTRIBUTOR:'bt-distributor', SERVICE_CENTER:'bt-service', VENDOR:'bt-vendor', REAL_DREAM_PARTNER:'bt-rdp' };
+
+    async function loadPartners() {
+        try {
+            const r = await staffFetch(API_BASE + '/official-partners');
+            if (r.ok) { const d = await r.json(); _partners = d.partners || []; }
+        } catch (e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; }
+        updatePrtStats();
+        document.getElementById('cnt-partners').textContent = _partners.length;
+        renderPartners();
+    }
+    function updatePrtStats() {
+        const active  = _partners.filter(p => p.is_active).length;
+        const dealer  = _partners.filter(p => p.category === 'DEALER').length;
+        const dist    = _partners.filter(p => p.category === 'DISTRIBUTOR').length;
+        const svc     = _partners.filter(p => p.category === 'SERVICE_CENTER').length;
+        document.getElementById('prt-s-total').textContent  = _partners.length;
+        document.getElementById('prt-s-active').textContent = active;
+        document.getElementById('prt-s-dealer').textContent = dealer;
+        document.getElementById('prt-s-dist').textContent   = dist;
+        document.getElementById('prt-s-svc').textContent    = svc;
+    }
+    function renderPartners() {
+        const s   = (document.getElementById('prt-search').value || '').toLowerCase();
+        const cat = document.getElementById('prt-cat').value;
+        const st  = document.getElementById('prt-status').value;
+        const rows = _partners.filter(p =>
+            (!s || (p.name||'').toLowerCase().includes(s) || (p.code||'').toLowerCase().includes(s) || (p.phone||'').includes(s)) &&
+            (!cat || p.category === cat) &&
+            (!st  || (st === 'active' ? p.is_active : !p.is_active))
+        );
+        document.getElementById('prt-count-lbl').textContent = `${rows.length} of ${_partners.length} partners`;
+        document.getElementById('prt-loading').style.display = 'none';
+        const wrap = document.getElementById('prt-wrap'), empty = document.getElementById('prt-empty');
+        if (!rows.length) { wrap.style.display='none'; empty.style.display='block'; return; }
+        empty.style.display='none'; wrap.style.display='block';
+        document.getElementById('prt-tbody').innerHTML = rows.map(p => `
+            <tr>
+                <td style="font-family:monospace;font-size:12px;color:#3b82f6;font-weight:700;">${p.code||'—'}</td>
+                <td><span style="font-weight:700;color:#111827;">${p.name||'—'}</span></td>
+                <td><span class="badge-type ${CAT_CLS[p.category]||'bt-partner'}">${CAT_LABELS[p.category]||p.category||'—'}</span></td>
+                <td style="font-size:12px;">${p.phone||'—'}</td>
+                <td style="font-family:monospace;font-size:12px;">${[p.gst,p.pan].filter(Boolean).join(' / ')||'—'}</td>
+                <td style="font-size:12px;">${[p.city,p.state].filter(Boolean).join(', ')||'—'}</td>
+                <td><span class="${p.is_active?'badge-active':'badge-inactive'}">${p.is_active?'Active':'Inactive'}</span></td>
+                <td>
+                    <button class="btn-act edit" onclick="editPartner(${p.id})"><i class="fas fa-pen"></i></button>
+                </td>
+            </tr>`).join('');
+    }
+
+    // ════════════════ STAFF ════════════════
+    async function loadStaff() {
+        try {
+            const r = await staffFetch(API_BASE + '/staff-list');
+            if (r.ok) { const d = await r.json(); _staff = d.staff || []; }
+        } catch (e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; }
+        updateStfStats();
+        document.getElementById('cnt-staff').textContent = _staff.length;
+        renderStaff();
+    }
+    function updateStfStats() {
+        const active   = _staff.filter(s => s.status === 'active').length;
+        const resigned = _staff.filter(s => s.status === 'resigned').length;
+        const inactive = _staff.filter(s => s.status !== 'active' && s.status !== 'resigned').length;
+        document.getElementById('stf-s-total').textContent   = _staff.length;
+        document.getElementById('stf-s-active').textContent  = active;
+        document.getElementById('stf-s-resigned').textContent= resigned;
+        document.getElementById('stf-s-inactive').textContent= inactive;
+    }
+    function renderStaff() {
+        const s  = (document.getElementById('stf-search').value || '').toLowerCase();
+        const st = document.getElementById('stf-status').value;
+        const rows = _staff.filter(p =>
+            (!s || (p.name||'').toLowerCase().includes(s) || (p.code||'').toLowerCase().includes(s) || (p.phone||'').includes(s)) &&
+            (!st || p.status === st)
+        );
+        document.getElementById('stf-count-lbl').textContent = `${rows.length} of ${_staff.length} staff`;
+        document.getElementById('stf-loading').style.display = 'none';
+        const wrap = document.getElementById('stf-wrap'), empty = document.getElementById('stf-empty');
+        if (!rows.length) { wrap.style.display='none'; empty.style.display='block'; return; }
+        empty.style.display='none'; wrap.style.display='block';
+        document.getElementById('stf-tbody').innerHTML = rows.map(s => {
+            const scls = s.status === 'active' ? 'badge-active' : s.status === 'resigned' ? 'badge-resigned' : 'badge-inactive';
+            return `<tr>
+                <td style="font-family:monospace;font-size:12px;color:#075985;font-weight:700;">${s.code||'—'}</td>
+                <td><span style="font-weight:700;color:#111827;">${s.name||'—'}</span></td>
+                <td style="font-size:12px;">${s.role||'—'}</td>
+                <td style="font-size:12px;">${s.department||'—'}</td>
+                <td style="font-size:12px;">${s.phone||'—'}</td>
+                <td><span class="${scls}">${(s.status||'—').charAt(0).toUpperCase()+(s.status||'').slice(1)}</span></td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ════════════════ LEDGER PARTIES + BALANCES ════════════════
+    async function loadLedgerData() {
+        document.getElementById('ldg-loading').style.display = 'flex';
+        document.getElementById('ldg-wrap').style.display = 'none';
+        document.getElementById('ldg-empty').style.display = 'none';
+        const cid = document.getElementById('ldg-company').value;
+        const params = cid ? `?company_id=${cid}` : '';
+        try {
+            const [rp, rb] = await Promise.all([
+                staffFetch(API_BASE + '/party-ledger/parties' + params),
+                staffFetch(API_BASE + '/party-ledger/balances' + params)
+            ]);
+            if (rp.ok) { const d = await rp.json(); _ledgerParties  = d.parties  || []; }
+            if (rb.ok) { const d = await rb.json(); _ledgerBalances = d.balances || []; }
+        } catch (e) {
+            if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+            _ledgerParties = []; _ledgerBalances = [];
+        }
+        // Merge balances into parties
+        const balMap = {};
+        _ledgerBalances.forEach(b => { balMap[`${b.party_name}||${b.party_type}`] = b; });
+        _ledgerParties.forEach(p => {
+            const key = `${p.party_name}||${p.party_type}`;
+            const b = balMap[key] || {};
+            p.total_debit  = parseFloat(b.total_debit)  || 0;
+            p.total_credit = parseFloat(b.total_credit) || 0;
+            p.balance      = parseFloat(b.balance)      || 0;
+        });
+        // Ledger stat totals
+        const totalDR  = _ledgerParties.reduce((a, p) => a + p.total_debit, 0);
+        const totalCR  = _ledgerParties.reduce((a, p) => a + p.total_credit, 0);
+        const netBal   = totalDR - totalCR;
+        document.getElementById('ldg-s-total').textContent = _ledgerParties.length;
+        document.getElementById('ldg-s-dr').textContent    = '₹' + (totalDR/1000).toFixed(0) + 'K';
+        document.getElementById('ldg-s-cr').textContent    = '₹' + (totalCR/1000).toFixed(0) + 'K';
+        document.getElementById('ldg-s-net').textContent   = '₹' + (Math.abs(netBal)/1000).toFixed(0) + 'K';
+        document.getElementById('cnt-ledger').textContent  = _ledgerParties.length;
+        renderLedger();
+    }
+
+    const PTYPE_CLS = { COMPANY:'bt-company', CUSTOMER:'bt-customer', VENDOR:'bt-vendor', EMPLOYEE:'bt-employee', EXTERNAL:'bt-external' };
+    const PTYPE_LBL = { COMPANY:'Company', CUSTOMER:'Customer', VENDOR:'Vendor', EMPLOYEE:'Employee', EXTERNAL:'External' };
+
+    function renderLedger() {
+        const s  = (document.getElementById('ldg-search').value || '').toLowerCase();
+        const t  = document.getElementById('ldg-type').value;
+        const rows = _ledgerParties.filter(p =>
+            (!s || (p.party_name||'').toLowerCase().includes(s)) &&
+            (!t || p.party_type === t)
+        );
+        document.getElementById('ldg-count-lbl').textContent = `${rows.length} of ${_ledgerParties.length} parties`;
+        document.getElementById('ldg-loading').style.display = 'none';
+        const wrap = document.getElementById('ldg-wrap'), empty = document.getElementById('ldg-empty');
+        if (!rows.length) { wrap.style.display='none'; empty.style.display='block'; return; }
+        empty.style.display='none'; wrap.style.display='block';
+        document.getElementById('ldg-tbody').innerHTML = rows.map(p => {
+            const net = p.balance;
+            const netCls = net > 0 ? 'pos' : net < 0 ? 'neg' : 'zero';
+            return `<tr>
+                <td><span style="font-weight:700;color:#111827;">${p.party_name||'—'}</span></td>
+                <td><span class="badge-type ${PTYPE_CLS[p.party_type]||'bt-external'}">${PTYPE_LBL[p.party_type]||p.party_type||'—'}</span></td>
+                <td style="font-family:monospace;font-size:12px;color:#6b7280;">${p.party_id||'—'}</td>
+                <td style="text-align:right;"><span class="bal-dr">${p.total_debit ? fmt(p.total_debit) : '—'}</span></td>
+                <td style="text-align:right;"><span class="bal-cr">${p.total_credit ? fmt(p.total_credit) : '—'}</span></td>
+                <td style="text-align:right;"><span class="bal-net ${netCls}">${p.total_debit||p.total_credit ? fmt(Math.abs(net)) + (net < 0 ? ' CR' : net > 0 ? ' DR' : '') : '—'}</span></td>
+                <td>
+                    <a href="/staff/accounts/party-ledger?party_name=${encodeURIComponent(p.party_name)}&party_type=${p.party_type||''}" class="btn-act view" title="View full ledger">
+                        <i class="fas fa-book"></i> Ledger
+                    </a>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ════════════════ ALL COMBINED ════════════════
+    function buildCombined() {
+        _allCombined = [];
+        _companies.forEach(c => _allCombined.push({
+            name: c.company_name, code: c.company_code||'', type: 'COMPANY', sub: c.company_type,
+            contact: '', gst: c.gst_number||'', location: [c.city,c.state].filter(Boolean).join(', '),
+            status: c.is_active === false ? 'inactive' : 'active'
+        }));
+        _vendors.forEach(v => _allCombined.push({
+            name: v.vendor_name, code: v.vendor_code||'', type: 'VENDOR', sub: v.vendor_type,
+            contact: v.contact_person_1_phone||v.phone||'', gst: v.gst_number||'',
+            location: [v.city,v.state].filter(Boolean).join(', '),
+            status: v.is_active === false ? 'inactive' : 'active'
+        }));
+        _partners.forEach(p => _allCombined.push({
+            name: p.name, code: p.code||'', type: 'PARTNER', sub: CAT_LABELS[p.category]||p.category,
+            contact: p.phone||'', gst: p.gst||'', location: [p.city,p.state].filter(Boolean).join(', '),
+            status: p.is_active ? 'active' : 'inactive'
+        }));
+        _staff.forEach(s => _allCombined.push({
+            name: s.name, code: s.code||'', type: 'STAFF', sub: s.role||'',
+            contact: s.phone||'', gst: '', location: s.department||'', status: s.status||'active'
+        }));
+        const seen = new Set(_allCombined.map(x => (x.name||'').toLowerCase()));
+        _ledgerParties.forEach(p => {
+            const key = (p.party_name||'').toLowerCase();
+            if (!seen.has(key)) {
+                seen.add(key);
+                _allCombined.push({ name: p.party_name, code:'', type: p.party_type||'EXTERNAL',
+                    sub:'Ledger', contact:'', gst:'', location:'', status:'active' });
+            }
+        });
+        // Update global stat cards
+        document.getElementById('cnt-all').textContent     = _allCombined.length;
+        document.getElementById('sc-total').textContent    = _allCombined.length;
+        document.getElementById('sc-companies').textContent= _companies.length;
+        document.getElementById('sc-vendors').textContent  = _vendors.length;
+        document.getElementById('sc-partners').textContent = _partners.length;
+        document.getElementById('sc-staff').textContent    = _staff.length;
+    }
+
+    const TYPE_CLS = { COMPANY:'bt-company', VENDOR:'bt-vendor', PARTNER:'bt-partner', STAFF:'bt-staff', CUSTOMER:'bt-customer', EMPLOYEE:'bt-employee', EXTERNAL:'bt-external' };
+    function renderAll() {
+        const s = (document.getElementById('all-search').value || '').toLowerCase();
+        const t = document.getElementById('all-type').value;
+        const rows = _allCombined.filter(r =>
+            (!s || (r.name||'').toLowerCase().includes(s) || (r.code||'').toLowerCase().includes(s) || (r.contact||'').includes(s)) &&
+            (!t || r.type === t)
+        );
+        document.getElementById('all-count-lbl').textContent = `${rows.length} of ${_allCombined.length} parties`;
+        document.getElementById('all-loading').style.display = 'none';
+        const wrap = document.getElementById('all-wrap'), empty = document.getElementById('all-empty');
+        if (!rows.length) { wrap.style.display='none'; empty.style.display='block'; return; }
+        empty.style.display='none'; wrap.style.display='block';
+        document.getElementById('all-tbody').innerHTML = rows.map(r => `
+            <tr>
+                <td><span style="font-weight:700;color:#111827;">${r.name||'—'}</span></td>
+                <td><span class="badge-type ${TYPE_CLS[r.type]||'bt-external'}">${r.type||'—'}</span>
+                    ${r.sub ? `<span style="font-size:11px;color:#9ca3af;margin-left:4px;">${r.sub}</span>` : ''}</td>
+                <td style="font-family:monospace;font-size:12px;color:#6b7280;">${r.code||'—'}</td>
+                <td style="font-size:12px;">${r.contact||'—'}</td>
+                <td style="font-size:12px;">${r.gst||r.location||'—'}</td>
+                <td><span class="${r.status==='active'?'badge-active':r.status==='resigned'?'badge-resigned':'badge-inactive'}">${(r.status||'—').charAt(0).toUpperCase()+(r.status||'').slice(1)}</span></td>
+            </tr>`).join('');
+    }
+
+    // ════════════════ COMPANY DROPDOWNS ════════════════
+    function populateCompanyDropdowns() {
+        const opts = _companies.map(c => `<option value="${c.id}">${c.company_name}</option>`).join('');
+        ['vnd-company','ldg-company','ldg-add-company'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '<option value="">All Companies</option>' + opts;
+        });
+        // Expense & Income category filter selects
+        ['exp-filter-co','inc-filter-co'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '<option value="">All Companies</option>' + opts;
+        });
+        // Vendor badge-style company selector
+        const sel = document.getElementById('vnd-company-select');
+        if (sel) sel.innerHTML = '<option value="">-- Select Company to Add --</option>' + opts;
+    }
+
+    // ════════════════ VENDOR COMPANY BADGE HELPERS ════════════════
+    function addVndCompanyBadge() {
+        const sel = document.getElementById('vnd-company-select');
+        if (!sel.value) return;
+        const cid = parseInt(sel.value);
+        const cname = sel.options[sel.selectedIndex].text;
+        const hidden = document.getElementById('vnd-applicable-companies');
+        let arr = JSON.parse(hidden.value || '[]');
+        if (!arr.includes(cid)) {
+            arr.push(cid);
+            hidden.value = JSON.stringify(arr);
+            renderVndCompanyBadges(arr);
+        }
+        sel.value = '';
+    }
+    window.addVndCompanyBadge = addVndCompanyBadge;
+
+    function removeVndCompanyBadge(cid) {
+        const hidden = document.getElementById('vnd-applicable-companies');
+        let arr = JSON.parse(hidden.value || '[]').filter(x => x !== cid);
+        hidden.value = JSON.stringify(arr);
+        renderVndCompanyBadges(arr);
+    }
+    window.removeVndCompanyBadge = removeVndCompanyBadge;
+
+    function renderVndCompanyBadges(arr) {
+        const container = document.getElementById('vnd-company-badges');
+        container.innerHTML = arr.map(id => {
+            const co = _companies.find(c => c.id === id);
+            const name = co ? co.company_name : `Company #${id}`;
+            return `<span class="vnd-company-badge">${name} <button class="vnd-badge-close" onclick="removeVndCompanyBadge(${id})" title="Remove">&times;</button></span>`;
+        }).join('');
+        renderObRows('vnd');
+    }
+
+    // ═══════════ Opening Balance per-company widget (DC-OB-WIDGET-001) ═══════════
+    const _obData = {};
+    function getCoArrForPrefix(_p) { return _companies || []; }
+    function _obGetAvailCos(prefix) {
+        const all = getCoArrForPrefix(prefix);
+        try {
+            const el = document.getElementById(`${prefix}-applicable-companies`) ||
+                       document.getElementById(`${prefix}ApplicableCompanies`);
+            if (!el) return all;
+            const ids = JSON.parse(el.value || '[]');
+            if (!ids.length) return all;
+            return all.filter(c => ids.includes(c.id));
+        } catch(e) { return all; }
+    }
+    function renderObRows(prefix) {
+        const container = document.getElementById(`${prefix}ObRows`);
+        if (!container) return;
+        const rows = _obData[prefix] || [];
+        if (!rows.length) {
+            container.innerHTML = '<div style="color:#9ca3af;font-size:12px;font-style:italic;padding:3px 2px;">No opening balance set — click <b>Add Opening Balance</b> below.</div>';
+            return;
+        }
+        const avail = _obGetAvailCos(prefix);
+        container.innerHTML = rows.map((r, i) => `
+            <div style="display:grid;grid-template-columns:minmax(110px,2fr) 100px 150px 120px 30px;gap:6px;align-items:end;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;">
+                <div><label style="font-size:11px;color:#6b7280;display:block;margin-bottom:2px;">Company</label>
+                <select style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;"
+                    onchange="_obData['${prefix}'][${i}].company_id=this.value?parseInt(this.value):null">
+                    <option value="">All applicable</option>
+                    ${avail.map(c=>`<option value="${c.id}"${r.company_id==c.id?' selected':''}>${(c.company_name||'Co '+c.id).substring(0,28)}</option>`).join('')}
+                </select></div>
+                <div><label style="font-size:11px;color:#6b7280;display:block;margin-bottom:2px;">Amount (₹)</label>
+                <input type="number" min="0" step="0.01" value="${r.amount||0}"
+                    style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;"
+                    oninput="_obData['${prefix}'][${i}].amount=parseFloat(this.value)||0"></div>
+                <div><label style="font-size:11px;color:#6b7280;display:block;margin-bottom:2px;">Balance Type</label>
+                <select style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;"
+                    onchange="_obData['${prefix}'][${i}].type=this.value">
+                    <option value="CREDIT"${r.type==='CREDIT'?' selected':''}>CR — We owe them</option>
+                    <option value="DEBIT"${r.type==='DEBIT'?' selected':''}>DR — They owe us</option>
+                </select></div>
+                <div><label style="font-size:11px;color:#6b7280;display:block;margin-bottom:2px;">As of Date</label>
+                <input type="date" value="${r.date||''}"
+                    style="width:100%;padding:4px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;"
+                    oninput="_obData['${prefix}'][${i}].date=this.value||null"></div>
+                <button type="button" onclick="removeObRow('${prefix}',${i})"
+                    style="background:none;border:1px solid #fca5a5;color:#ef4444;border-radius:4px;padding:4px 7px;cursor:pointer;" title="Remove">
+                    <i class="fas fa-times" style="font-size:10px;"></i></button>
+            </div>`).join('');
+    }
+    function addObRow(prefix) {
+        if (!_obData[prefix]) _obData[prefix] = [];
+        _obData[prefix].push({company_id:null, amount:0, type:'CREDIT', date:null});
+        renderObRows(prefix);
+    }
+    function removeObRow(prefix, i) {
+        if (_obData[prefix]) _obData[prefix].splice(i,1);
+        renderObRows(prefix);
+    }
+    function resetObRows(prefix) { _obData[prefix]=[]; renderObRows(prefix); }
+    function setObRowsFromApi(prefix, apiRows) {
+        _obData[prefix] = (apiRows||[]).map(r=>({
+            company_id: r.company_id||null,
+            amount: parseFloat(r.amount??r.opening_balance)||0,
+            type: r.type||r.opening_balance_type||'CREDIT',
+            date: r.date||r.opening_balance_date||null
+        })).filter(r=>r.amount>0);
+        renderObRows(prefix);
+    }
+    function collectObRows(prefix) {
+        return (_obData[prefix]||[]).map(r=>({
+            company_id: r.company_id||null, amount: r.amount||0,
+            type: r.type||'CREDIT', date: r.date||null
+        }));
+    }
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // ════════════════ VENDOR GST TYPE CARD ════════════════
+    function setVndGstType(val) {
+        document.getElementById('vnd-gsttype-cgst').checked = (val === 'CGST_SGST');
+        document.getElementById('vnd-gsttype-igst').checked = (val === 'IGST');
+        const cgst = document.getElementById('vndGstCard_CGST');
+        const igst = document.getElementById('vndGstCard_IGST');
+        if (val === 'CGST_SGST') {
+            cgst.className = 'gst-card-label selected';
+            cgst.querySelector('div > div:first-child').style.color = '#1d4ed8';
+            igst.className = 'gst-card-label';
+            document.getElementById('vndGstCard_IGST_lbl').style.color = '#374151';
+        } else {
+            igst.className = 'gst-card-label selected-igst';
+            document.getElementById('vndGstCard_IGST_lbl').style.color = '#b45309';
+            cgst.className = 'gst-card-label';
+            cgst.querySelector('div > div:first-child').style.color = '#374151';
+        }
+    }
+    window.setVndGstType = setVndGstType;
+
+    // ════════════════ VENDOR PINCODE LOOKUP ════════════════
+    const _vndPinTimers = {};
+    function autoLookupVndPincode(pfx) {
+        clearTimeout(_vndPinTimers[pfx]);
+        const pin = document.getElementById(pfx === 'vnd' ? 'vnd-pincode' : 'vnd-shippincode').value.trim();
+        if (pin.length === 6 && /^\d{6}$/.test(pin)) {
+            _vndPinTimers[pfx] = setTimeout(() => lookupVndPincode(pfx, true), 500);
+        }
+    }
+    window.autoLookupVndPincode = autoLookupVndPincode;
+
+    async function lookupVndPincode(pfx, silent = false) {
+        const isPrimary = pfx === 'vnd';
+        const pinId  = isPrimary ? 'vnd-pincode'   : 'vnd-shippincode';
+        const cityId = isPrimary ? 'vnd-city'       : 'vnd-shipcity';
+        const stateId= isPrimary ? 'vnd-state'      : 'vnd-shipstate';
+        const pin = document.getElementById(pinId).value.trim();
+        if (!pin || pin.length !== 6) { if (!silent) alert('Please enter a valid 6-digit PIN code'); return; }
+        try {
+            const r = await staffFetch(`${API_BASE}/pincode/${pin}`);
+            const d = await r.json();
+            if (d.success) {
+                document.getElementById(cityId).value  = d.city  || '';
+                document.getElementById(stateId).value = d.state || '';
+            } else { if (!silent) alert(d.error || 'PIN code not found'); }
+        } catch (e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; if (!silent) alert('Failed to lookup PIN code'); }
+    }
+    window.lookupVndPincode = lookupVndPincode;
+
+    // ════════════════ VENDOR PRODUCTS ════════════════
+    let _vndProductIds = [];
+    let _vndAllProducts = [];
+    let _vndProdTimer = null;
+    let _vndCurrentEditId = null;
+
+    async function loadVndProducts() {
+        try {
+            const r = await staffFetch(`${API_BASE}/stock-items?page_size=100`);
+            if (r.ok) { const d = await r.json(); _vndAllProducts = d.stock_items || []; }
+        } catch (e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') console.warn('[DC-PARTIES] Products load failed:', e); }
+    }
+
+    function searchVndProducts() {
+        clearTimeout(_vndProdTimer);
+        _vndProdTimer = setTimeout(doVndProductSearch, 300);
+    }
+    window.searchVndProducts = searchVndProducts;
+
+    async function doVndProductSearch() {
+        const term = (document.getElementById('vnd-product-search').value || '').trim();
+        const list = document.getElementById('vnd-product-list');
+        if (term.length < 2) { list.innerHTML = '<p style="color:#9ca3af;font-size:13px;padding:8px;">Type at least 2 characters to search…</p>'; return; }
+        list.innerHTML = '<p style="color:#9ca3af;font-size:13px;padding:8px;"><i class="fas fa-spinner fa-spin me-1"></i>Searching…</p>';
+        try {
+            const r = await staffFetch(`${API_BASE}/stock-items?search=${encodeURIComponent(term)}&page_size=50`);
+            if (r.ok) {
+                const products = (await r.json()).stock_items || [];
+                if (!products.length) { list.innerHTML = '<p style="color:#9ca3af;font-size:13px;padding:8px;">No products found</p>'; return; }
+                list.innerHTML = products.map(p => {
+                    const checked = _vndProductIds.includes(p.id);
+                    return `<div class="vnd-product-item"><input type="checkbox" id="vndp_${p.id}" value="${p.id}" ${checked ? 'checked' : ''} onchange="toggleVndProduct(${p.id},'${p.item_code.replace(/'/g,"\\'")}','${p.item_name.replace(/'/g,"\\'")}')"><label for="vndp_${p.id}" style="cursor:pointer;">${p.item_code} — ${p.item_name}</label></div>`;
+                }).join('');
+            } else { list.innerHTML = '<p style="color:#ef4444;font-size:13px;padding:8px;">Search failed</p>'; }
+        } catch (e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') list.innerHTML = '<p style="color:#ef4444;font-size:13px;padding:8px;">Error searching</p>'; }
+    }
+
+    function toggleVndProduct(id, code, name) {
+        const idx = _vndProductIds.indexOf(id);
+        if (idx === -1) {
+            _vndProductIds.push(id);
+            if (!_vndAllProducts.find(p => p.id === id)) _vndAllProducts.push({ id, item_code: code, item_name: name });
+        } else { _vndProductIds.splice(idx, 1); }
+        updateVndProductsUI();
+    }
+    window.toggleVndProduct = toggleVndProduct;
+
+    function updateVndProductsUI() {
+        const container = document.getElementById('vnd-selected-container');
+        const countEl   = document.getElementById('vnd-selected-count');
+        const box       = document.getElementById('vnd-selected-products');
+        countEl.textContent = _vndProductIds.length;
+        if (!_vndProductIds.length) { container.style.display = 'none'; return; }
+        container.style.display = 'block';
+        box.innerHTML = _vndProductIds.map(id => {
+            const p = _vndAllProducts.find(x => x.id === id);
+            const lbl = p ? `${p.item_code} — ${p.item_name}` : `Product #${id}`;
+            return `<div class="vnd-product-item"><input type="checkbox" checked onchange="toggleVndProduct(${id},'','')"><label style="cursor:pointer;">${lbl}</label></div>`;
+        }).join('');
+    }
+
+    async function loadVndPurchaseHistory() {
+        if (!_vndCurrentEditId) return;
+        const btn = document.getElementById('vndLoadHistBtn');
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Loading…';
+        try {
+            const r = await staffFetch(`${API_BASE}/vendors/${_vndCurrentEditId}/purchase-history-products`);
+            if (r.ok) {
+                const products = (await r.json()).products || [];
+                if (!products.length) { alert('No purchase history found for this vendor.'); }
+                else {
+                    let added = 0;
+                    products.forEach(p => {
+                        if (!_vndProductIds.includes(p.item_id)) { _vndProductIds.push(p.item_id); added++; }
+                        if (!_vndAllProducts.find(x => x.id === p.item_id))
+                            _vndAllProducts.push({ id: p.item_id, item_code: p.item_code||`ITEM${p.item_id}`, item_name: p.item_name||`Product ${p.item_id}` });
+                    });
+                    updateVndProductsUI();
+                    btn.innerHTML = `<i class="fas fa-check me-1"></i>${added} added`;
+                    setTimeout(() => { btn.innerHTML = '<i class="fas fa-history me-1"></i>Load from Purchases'; btn.disabled = false; }, 2000);
+                    return;
+                }
+            }
+        } catch (e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; }
+        btn.innerHTML = '<i class="fas fa-history me-1"></i>Load from Purchases'; btn.disabled = false;
+    }
+    window.loadVndPurchaseHistory = loadVndPurchaseHistory;
+
+    // ════════════════ COMPANY CRUD ════════════════
+    function openCoModal(id) {
+        document.getElementById('coModalTitle').textContent = id ? 'Edit Company' : 'Add Company';
+        document.getElementById('coDeleteBtn').style.display = id ? 'inline-flex' : 'none';
+        document.getElementById('co-edit-id').value = id || '';
+        // Always reset transfer panel on open
+        document.getElementById('co-transfer-section').style.display = 'none';
+        document.getElementById('co-form-section').style.display = 'block';
+        document.getElementById('co-form-footer').style.display = '';
+        if (id) {
+            const c = _companies.find(x => x.id === id);
+            if (!c) return;
+            document.getElementById('co-name').value       = c.company_name||'';
+            document.getElementById('co-code').value       = c.company_code||'';
+            document.getElementById('co-code').readOnly    = true;
+            document.getElementById('co-code').style.background = '#f3f4f6';
+            document.getElementById('co-code-hint').style.display = 'block';
+            document.getElementById('co-ctype').value      = c.company_type||'SUBSIDIARY';
+            document.getElementById('co-active').value     = c.is_active===false ? 'false' : 'true';
+            document.getElementById('co-address').value    = c.address||'';
+            document.getElementById('co-city').value       = c.city||'';
+            document.getElementById('co-state').value      = c.state||'';
+            document.getElementById('co-pincode').value    = c.pincode||'';
+            document.getElementById('co-gst').value        = c.gst_number||'';
+            document.getElementById('co-pan').value        = c.pan_number||'';
+            document.getElementById('co-cin').value        = c.cin_number||'';
+            document.getElementById('co-phone').value      = c.phone||'';
+            document.getElementById('co-email').value      = c.email||'';
+            document.getElementById('co-website').value    = c.website||'';
+            document.getElementById('co-marketplace').checked = !!c.is_marketplace_endpoint;
+        } else {
+            ['co-name','co-code','co-address','co-city','co-state','co-pincode','co-gst','co-pan','co-cin','co-phone','co-email','co-website'].forEach(fid => document.getElementById(fid).value='');
+            document.getElementById('co-code').readOnly    = false;
+            document.getElementById('co-code').style.background = '';
+            document.getElementById('co-code-hint').style.display = 'none';
+            document.getElementById('co-ctype').value='SUBSIDIARY'; document.getElementById('co-active').value='true';
+            document.getElementById('co-marketplace').checked=false;
+        }
+        document.getElementById('coModal').classList.add('active');
+    }
+    window.openCoModal = openCoModal;
+    function editCompany(id) { openCoModal(id); }
+    window.editCompany = editCompany;
+
+    async function saveCompany() {
+        const id   = document.getElementById('co-edit-id').value;
+        const name = document.getElementById('co-name').value.trim();
+        if (!name) { toast('Company name is required', 'error'); return; }
+        const isEdit = !!id;
+        const body = {
+            company_name: name,
+            // company_code is immutable after creation — only send on POST
+            ...(!isEdit && { company_code: document.getElementById('co-code').value.trim()||undefined }),
+            company_type: document.getElementById('co-ctype').value,
+            is_active: document.getElementById('co-active').value === 'true',
+            address: document.getElementById('co-address').value.trim()||undefined,
+            city: document.getElementById('co-city').value.trim()||undefined,
+            state: document.getElementById('co-state').value.trim()||undefined,
+            pincode: document.getElementById('co-pincode').value.trim()||undefined,
+            gst_number: document.getElementById('co-gst').value.trim()||undefined,
+            pan_number: document.getElementById('co-pan').value.trim()||undefined,
+            cin_number: document.getElementById('co-cin').value.trim()||undefined,
+            phone: document.getElementById('co-phone').value.trim()||undefined,
+            email: document.getElementById('co-email').value.trim()||undefined,
+            website: document.getElementById('co-website').value.trim()||undefined,
+            is_marketplace_endpoint: document.getElementById('co-marketplace').checked
+        };
+        try {
+            const r = await staffFetch(id ? `${API_BASE}/companies/${id}` : `${API_BASE}/companies`,
+                { method: id?'PUT':'POST', body: JSON.stringify(body), headers: {'Content-Type':'application/json'} });
+            if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||`HTTP ${r.status}`); }
+            toast(id ? 'Company updated' : 'Company added');
+            closeModal('coModal');
+            await loadCompanies(); buildCombined(); renderAll();
+        } catch (e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') toast(e.message, 'error'); }
+    }
+    window.saveCompany = saveCompany;
+
+    // ── DC-CO-TRANSFER-001: Transfer & Delete helpers ──────────────────────
+
+    function coShowTransfer(summary) {
+        // Populate count table
+        const container = document.getElementById('co-transfer-counts');
+        container.innerHTML = `
+            <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+                <div style="padding:8px 12px;background:#f3f4f6;border-bottom:1px solid #e5e7eb;font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Data to be transferred</div>
+                <div style="padding:6px 0;">
+                ${summary.map(s => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 12px;">
+                        <span style="font-size:13px;color:#374151;">${s.label}</span>
+                        <span style="font-size:13px;font-weight:700;color:#1d4ed8;background:#eff6ff;padding:2px 10px;border-radius:20px;">${s.count.toLocaleString()}</span>
+                    </div>`).join('')}
+                </div>
+            </div>`;
+
+        // Populate target company dropdown (exclude current company)
+        const sourceId = parseInt(document.getElementById('co-edit-id').value);
+        const sel = document.getElementById('co-transfer-target');
+        sel.innerHTML = '<option value="">— Select target company —</option>';
+        _companies.filter(c => c.id !== sourceId && c.is_active !== false)
+                  .forEach(c => { const o = document.createElement('option'); o.value=c.id; o.textContent=c.company_name; sel.appendChild(o); });
+
+        // Swap sections
+        document.getElementById('co-form-section').style.display  = 'none';
+        document.getElementById('co-form-footer').style.display   = 'none';
+        document.getElementById('co-transfer-section').style.display = 'block';
+    }
+
+    function coHideTransfer() {
+        document.getElementById('co-transfer-section').style.display = 'none';
+        document.getElementById('co-form-section').style.display  = 'block';
+        document.getElementById('co-form-footer').style.display   = '';
+    }
+    window.coHideTransfer = coHideTransfer;
+
+    async function deleteCompany() {
+        const id = document.getElementById('co-edit-id').value;
+        if (!id) return;
+
+        // Step 1: fetch what data is linked to this company
+        const deleteBtn = document.getElementById('coDeleteBtn');
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Checking…';
+        try {
+            const r = await staffFetch(`${API_BASE}/companies/${id}/transfer-summary`);
+            if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.message||e.detail||`HTTP ${r.status}`); }
+            const { summary } = await r.json();
+
+            if (summary && summary.length > 0) {
+                // Has linked data — show transfer panel
+                coShowTransfer(summary);
+            } else {
+                // No data — simple confirm + delete
+                if (!confirm('This company has no linked data. Delete it?')) return;
+                const dr = await staffFetch(`${API_BASE}/companies/${id}`, { method:'DELETE' });
+                if (!dr.ok) { const e = await dr.json().catch(()=>({})); throw new Error(e.message||e.detail||`HTTP ${dr.status}`); }
+                toast('Company deleted');
+                closeModal('coModal');
+                await loadCompanies(); buildCombined(); renderAll();
+            }
+        } catch (e) {
+            if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') toast(e.message, 'error');
+        } finally {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = '<i class="fas fa-trash me-1"></i>Delete';
+        }
+    }
+    window.deleteCompany = deleteCompany;
+
+    async function doTransferAndDelete() {
+        const sourceId = document.getElementById('co-edit-id').value;
+        const targetId = document.getElementById('co-transfer-target').value;
+        if (!targetId) { toast('Please select a target company', 'error'); return; }
+
+        const btn = document.getElementById('co-transfer-confirm-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Transferring…';
+        try {
+            const r = await staffFetch(`${API_BASE}/companies/${sourceId}/transfer-to/${targetId}`, { method:'POST' });
+            if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.message||e.detail||`HTTP ${r.status}`); }
+            const result = await r.json();
+            const moved = Object.entries(result.transferred||{}).map(([k,v])=>`${k}: ${v}`).join(', ');
+            const bkNote = result.book_keeper_reassigned ? ` Book keeper role moved to ${result.target}.` : '';
+            toast(`Data transferred to ${result.target} and company deactivated${moved ? ' ('+moved+')' : ''}.${bkNote}`);
+            closeModal('coModal');
+            await loadCompanies(); buildCombined(); renderAll();
+        } catch (e) {
+            if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') toast(e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-exchange-alt me-1"></i>Transfer &amp; Delete';
+        }
+    }
+    window.doTransferAndDelete = doTransferAndDelete;
+
+    // ════════════════ VENDOR CRUD ════════════════
+    function _vndClearAllFields() {
+        ['vnd-name','vnd-code','vnd-gst','vnd-pan','vnd-trade',
+         'vnd-cp1name','vnd-cp1phone','vnd-cp1desig','vnd-cp2name','vnd-cp2phone','vnd-cp2desig',
+         'vnd-email','vnd-website',
+         'vnd-addr','vnd-pincode','vnd-city','vnd-state',
+         'vnd-maplbl1','vnd-mapurl1','vnd-maplbl2','vnd-mapurl2',
+         'vnd-shipaddr','vnd-shippincode','vnd-shipcity','vnd-shipstate',
+         'vnd-bankname','vnd-bankbranch','vnd-accno','vnd-ifsc','vnd-accholder','vnd-upi','vnd-terms'
+        ].forEach(fid => { const el = document.getElementById(fid); if (el) el.value = ''; });
+        document.getElementById('vnd-vtype').value = 'BOTH';
+        document.getElementById('vnd-active').value = 'true';
+        document.getElementById('vnd-payterms').value = 'COD';
+        document.getElementById('vnd-creditlimit').value = 0;
+        resetObRows('vnd');
+        document.getElementById('vnd-creditdays').value = 0;
+        document.getElementById('vnd-applicable-companies').value = '[]';
+        document.getElementById('vnd-company-badges').innerHTML = '';
+        document.getElementById('vnd-qrfile').value = '';
+        document.getElementById('vnd-qr-preview').innerHTML = '';
+        document.getElementById('vnd-product-search').value = '';
+        document.getElementById('vnd-product-list').innerHTML = '<p style="color:#9ca3af;font-size:13px;padding:8px;">Type to search products…</p>';
+        setVndGstType('CGST_SGST');
+        _vndProductIds = [];
+        _vndCurrentEditId = null;
+        document.getElementById('vndLoadHistBtn').style.display = 'none';
+        updateVndProductsUI();
+    }
+
+    async function openVndModal(id) {
+        document.getElementById('vndModalTitle').textContent = id ? 'Edit Vendor' : 'Add Vendor';
+        document.getElementById('vndDeleteBtn').style.display = id ? 'inline-flex' : 'none';
+        document.getElementById('vnd-edit-id').value = id || '';
+        document.getElementById('vndModal').querySelectorAll('.mtab').forEach((b,i)=>b.classList.toggle('active',i===0));
+        document.getElementById('vndModal').querySelectorAll('.mtab-content').forEach((c,i)=>c.classList.toggle('active',i===0));
+        _vndClearAllFields();
+        if (id) {
+            _vndCurrentEditId = id;
+            document.getElementById('vndLoadHistBtn').style.display = 'inline-block';
+            const v = _vendors.find(x => x.id === id);
+            if (!v) return;
+            // Basic Info
+            document.getElementById('vnd-name').value      = v.vendor_name||'';
+            document.getElementById('vnd-code').value      = v.vendor_code||'';
+            document.getElementById('vnd-vtype').value     = v.vendor_type||'BOTH';
+            document.getElementById('vnd-active').value    = v.is_active===false ? 'false' : 'true';
+            document.getElementById('vnd-email').value     = v.email||'';
+            document.getElementById('vnd-gst').value       = v.gst_number||'';
+            document.getElementById('vnd-pan').value       = v.pan_number||'';
+            setVndGstType(v.gst_type||'CGST_SGST');
+            document.getElementById('vnd-trade').value     = v.trade_name||'';
+            // Contacts
+            document.getElementById('vnd-cp1name').value   = v.contact_person_1_name||v.contact_person||'';
+            document.getElementById('vnd-cp1phone').value  = v.contact_person_1_phone||v.phone||'';
+            document.getElementById('vnd-cp1desig').value  = v.contact_person_1_designation||'';
+            document.getElementById('vnd-cp2name').value   = v.contact_person_2_name||'';
+            document.getElementById('vnd-cp2phone').value  = v.contact_person_2_phone||'';
+            document.getElementById('vnd-cp2desig').value  = v.contact_person_2_designation||'';
+            document.getElementById('vnd-website').value   = v.website_url||'';
+            // Address
+            document.getElementById('vnd-addr').value      = v.address||'';
+            document.getElementById('vnd-pincode').value   = v.pincode||'';
+            document.getElementById('vnd-city').value      = v.city||'';
+            document.getElementById('vnd-state').value     = v.state||'';
+            document.getElementById('vnd-maplbl1').value   = v.map_link_1_label||'Office';
+            document.getElementById('vnd-mapurl1').value   = v.map_link_1||'';
+            document.getElementById('vnd-maplbl2').value   = v.map_link_2_label||'Warehouse';
+            document.getElementById('vnd-mapurl2').value   = v.map_link_2||'';
+            document.getElementById('vnd-shipaddr').value  = v.ship_to_address||'';
+            document.getElementById('vnd-shippincode').value = v.ship_to_pincode||'';
+            document.getElementById('vnd-shipcity').value  = v.ship_to_city||'';
+            document.getElementById('vnd-shipstate').value = v.ship_to_state||'';
+            // Bank
+            document.getElementById('vnd-bankname').value  = v.bank_name||'';
+            document.getElementById('vnd-bankbranch').value= v.bank_branch||'';
+            document.getElementById('vnd-accno').value     = v.account_number||'';
+            document.getElementById('vnd-ifsc').value      = v.ifsc_code||'';
+            document.getElementById('vnd-accholder').value = v.account_holder_name||'';
+            document.getElementById('vnd-upi').value       = v.upi_id||'';
+            document.getElementById('vnd-payterms').value  = v.payment_terms||'COD';
+            document.getElementById('vnd-creditlimit').value= v.credit_limit||0;
+            document.getElementById('vnd-creditdays').value = v.credit_days||0;
+            document.getElementById('vnd-terms').value     = v.terms_conditions||'';
+            if (v.payment_scanner_path) {
+                document.getElementById('vnd-qr-preview').innerHTML =
+                    `<img src="${v.payment_scanner_path}" style="max-width:120px;border-radius:8px;margin-top:4px;" alt="QR">`;
+            }
+            // Applicable companies (badges)
+            const cos = Array.isArray(v.applicable_companies) ? v.applicable_companies.filter(x => typeof x === 'number') : [];
+            document.getElementById('vnd-applicable-companies').value = JSON.stringify(cos);
+            renderVndCompanyBadges(cos);
+            // DC_VENDOR_OB_EDIT_001: Fetch full vendor detail for OB pre-fill (list cache has null OB)
+            try {
+                const vdr = await staffFetch(`${API_BASE}/vendors/${id}`);
+                if (vdr.ok) {
+                    const vdd = await vdr.json();
+                    const vfull = vdd.vendor || {};
+                    setObRowsFromApi('vnd', vfull.opening_balances || []);
+                }
+            } catch (e) { /* non-critical — OB fields stay at cleared defaults */ }
+            // Products — load from API
+            try {
+                const pr = await staffFetch(`${API_BASE}/vendors/${id}/products`);
+                if (pr.ok) {
+                    const pd = await pr.json();
+                    const prods = pd.products || [];
+                    _vndProductIds = prods.map(p => p.item_id);
+                    prods.forEach(p => {
+                        if (!_vndAllProducts.find(x => x.id === p.item_id))
+                            _vndAllProducts.push({ id: p.item_id, item_code: p.item_code||`ITEM${p.item_id}`, item_name: p.item_name||`Product ${p.item_id}` });
+                    });
+                    updateVndProductsUI();
+                }
+            } catch (e) { /* non-critical */ }
+        }
+        document.getElementById('vndModal').classList.add('active');
+    }
+    window.openVndModal = openVndModal;
+
+    function editVendor(id) { openVndModal(id); }
+    window.editVendor = editVendor;
+
+    async function saveVendor() {
+        const id   = document.getElementById('vnd-edit-id').value;
+        const name = document.getElementById('vnd-name').value.trim();
+        const code = document.getElementById('vnd-code').value.trim().toUpperCase();
+        if (!name) { toast('Vendor name is required', 'error'); return; }
+        if (!id && !code) { toast('Vendor code is required for new vendors', 'error'); return; }
+        const selCos = JSON.parse(document.getElementById('vnd-applicable-companies').value || '[]');
+        const gstType = document.querySelector('input[name="vndGstType"]:checked')?.value || 'CGST_SGST';
+        const body = {
+            vendor_name: name,
+            vendor_type: document.getElementById('vnd-vtype').value,
+            is_active: document.getElementById('vnd-active').value === 'true',
+            email: document.getElementById('vnd-email').value.trim().toLowerCase() || null,
+            gst_number: document.getElementById('vnd-gst').value.trim().toUpperCase() || null,
+            pan_number: document.getElementById('vnd-pan').value.trim().toUpperCase() || null,
+            gst_type: gstType,
+            trade_name: document.getElementById('vnd-trade').value.trim() || null,
+            contact_person: document.getElementById('vnd-cp1name').value.trim() || null,
+            contact_person_1_name: document.getElementById('vnd-cp1name').value.trim() || null,
+            contact_person_1_phone: document.getElementById('vnd-cp1phone').value.trim() || null,
+            contact_person_1_designation: document.getElementById('vnd-cp1desig').value.trim() || null,
+            contact_person_2_name: document.getElementById('vnd-cp2name').value.trim() || null,
+            contact_person_2_phone: document.getElementById('vnd-cp2phone').value.trim() || null,
+            contact_person_2_designation: document.getElementById('vnd-cp2desig').value.trim() || null,
+            website_url: document.getElementById('vnd-website').value.trim() || null,
+            address: document.getElementById('vnd-addr').value.trim() || null,
+            pincode: document.getElementById('vnd-pincode').value.trim() || null,
+            city: document.getElementById('vnd-city').value.trim() || null,
+            state: document.getElementById('vnd-state').value.trim() || null,
+            map_link_1_label: document.getElementById('vnd-maplbl1').value.trim() || 'Office',
+            map_link_1: document.getElementById('vnd-mapurl1').value.trim() || null,
+            map_link_2_label: document.getElementById('vnd-maplbl2').value.trim() || 'Warehouse',
+            map_link_2: document.getElementById('vnd-mapurl2').value.trim() || null,
+            ship_to_address: document.getElementById('vnd-shipaddr').value.trim() || null,
+            ship_to_pincode: document.getElementById('vnd-shippincode').value.trim() || null,
+            ship_to_city: document.getElementById('vnd-shipcity').value.trim() || null,
+            ship_to_state: document.getElementById('vnd-shipstate').value.trim() || null,
+            bank_name: document.getElementById('vnd-bankname').value.trim() || null,
+            bank_branch: document.getElementById('vnd-bankbranch').value.trim() || null,
+            account_number: document.getElementById('vnd-accno').value.trim() || null,
+            ifsc_code: document.getElementById('vnd-ifsc').value.trim().toUpperCase() || null,
+            account_holder_name: document.getElementById('vnd-accholder').value.trim() || null,
+            upi_id: document.getElementById('vnd-upi').value.trim() || null,
+            payment_terms: document.getElementById('vnd-payterms').value,
+            credit_limit: parseFloat(document.getElementById('vnd-creditlimit').value) || 0,
+            credit_days: parseInt(document.getElementById('vnd-creditdays').value) || 0,
+            terms_conditions: document.getElementById('vnd-terms').value.trim() || null,
+            applicable_companies: selCos.length ? selCos : [],
+            product_ids: _vndProductIds,
+            opening_balances: collectObRows('vnd')
+        };
+        if (!id) { body.vendor_code = code; }
+        try {
+            const r = await staffFetch(id ? `${API_BASE}/vendors/${id}` : `${API_BASE}/vendors`,
+                { method: id ? 'PUT' : 'POST', body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } });
+            if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail || `HTTP ${r.status}`); }
+            const saved = await r.json();
+            const savedId = id || saved.vendor?.id || saved.id;
+            // Upload QR if provided
+            const qrFile = document.getElementById('vnd-qrfile').files[0];
+            if (qrFile && savedId) {
+                try {
+                    const fd = new FormData(); fd.append('file', qrFile);
+                    await staffFetch(`${API_BASE}/vendors/${savedId}/scanner`, { method: 'POST', body: fd });
+                } catch (e2) { console.warn('[DC-PARTIES] QR upload failed:', e2); }
+            }
+            // Save product associations
+            if (_vndProductIds.length && savedId) {
+                try {
+                    await staffFetch(`${API_BASE}/vendors/${savedId}/products`, {
+                        method: 'POST', body: JSON.stringify({ product_ids: _vndProductIds }),
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch (e2) { console.warn('[DC-PARTIES] Product save failed:', e2); }
+            }
+            toast(id ? 'Vendor updated' : 'Vendor created');
+            closeModal('vndModal');
+            await loadVendors(); buildCombined(); renderAll();
+        } catch (e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') toast(e.message, 'error'); }
+    }
+    window.saveVendor = saveVendor;
+
+    async function deleteVendor() {
+        const id = document.getElementById('vnd-edit-id').value;
+        if (!id || !confirm('Deactivate this vendor?')) return;
+        try {
+            const r = await staffFetch(`${API_BASE}/vendors/${id}`, { method:'DELETE' });
+            if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||`HTTP ${r.status}`); }
+            toast('Vendor deactivated'); closeModal('vndModal');
+            await loadVendors(); buildCombined(); renderAll();
+        } catch (e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') toast(e.message, 'error'); }
+    }
+    window.deleteVendor = deleteVendor;
+
+    // ════════════════ PARTNER CRUD ════════════════
+    function openPrtModal(id) {
+        document.getElementById('prtModalTitle').textContent = id ? 'Edit Partner' : 'Add Partner';
+        document.getElementById('prtDeleteBtn').style.display = id ? 'inline-flex' : 'none';
+        document.getElementById('prt-edit-id').value = id || '';
+        document.getElementById('prtModal').querySelectorAll('.mtab').forEach((b,i)=>b.classList.toggle('active',i===0));
+        document.getElementById('prtModal').querySelectorAll('.mtab-content').forEach((c,i)=>c.classList.toggle('active',i===0));
+        if (id) {
+            const p = _partners.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('prt-name').value       = p.name||'';
+            document.getElementById('prt-code').value       = p.code||'';
+            document.getElementById('prt-catsel').value     = p.category||'DEALER';
+            document.getElementById('prt-active').value     = p.is_active ? 'true' : 'false';
+            document.getElementById('prt-gst').value        = p.gst||'';
+            document.getElementById('prt-pan').value        = p.pan||'';
+            document.getElementById('prt-phone').value      = p.phone||'';
+            document.getElementById('prt-email').value      = p.email||'';
+            // address
+            document.getElementById('prt-city').value       = p.city||'';
+            document.getElementById('prt-state').value      = p.state||'';
+            ['prt-cp1name','prt-cp1desig','prt-cp2name','prt-cp2phone','prt-wa','prt-addr','prt-pincode','prt-zone',
+             'prt-bankname','prt-bankbranch','prt-accno','prt-ifsc'].forEach(fid => document.getElementById(fid).value='');
+            document.getElementById('prt-payterms').value='ADVANCE';
+            document.getElementById('prt-creditlimit').value=0; document.getElementById('prt-creditdays').value=0;
+            setObRowsFromApi('prt', (p && p.opening_balance) ? [{amount: p.opening_balance, type: p.opening_balance_type||'CREDIT', date: p.opening_balance_date||null}] : []);
+        } else {
+            ['prt-name','prt-code','prt-gst','prt-pan','prt-phone','prt-email','prt-cp1name','prt-cp1desig',
+             'prt-cp2name','prt-cp2phone','prt-wa','prt-addr','prt-city','prt-state','prt-pincode','prt-zone',
+             'prt-bankname','prt-bankbranch','prt-accno','prt-ifsc'].forEach(fid => document.getElementById(fid).value='');
+            document.getElementById('prt-catsel').value='DEALER'; document.getElementById('prt-active').value='true';
+            document.getElementById('prt-payterms').value='ADVANCE';
+            document.getElementById('prt-creditlimit').value=0; document.getElementById('prt-creditdays').value=0;
+            resetObRows('prt');
+        }
+        document.getElementById('prtModal').classList.add('active');
+    }
+    window.openPrtModal = openPrtModal;
+
+    function editPartner(id) { openPrtModal(id); }
+    window.editPartner = editPartner;
+
+    async function savePartner() {
+        const id   = document.getElementById('prt-edit-id').value;
+        const name = document.getElementById('prt-name').value.trim();
+        if (!name) { toast('Partner name is required', 'error'); return; }
+        const body = {
+            partner_name: name,
+            partner_code: document.getElementById('prt-code').value.trim().toUpperCase()||undefined,
+            category: document.getElementById('prt-catsel').value,
+            is_active: document.getElementById('prt-active').value==='true',
+            gst_number: document.getElementById('prt-gst').value.trim().toUpperCase()||null,
+            pan_number: document.getElementById('prt-pan').value.trim().toUpperCase()||null,
+            phone: document.getElementById('prt-phone').value.trim()||null,
+            email: document.getElementById('prt-email').value.trim()||null,
+            whatsapp_number: document.getElementById('prt-wa').value.trim()||null,
+            contact_person: document.getElementById('prt-cp1name').value.trim()||null,
+            contact_person_1_name: document.getElementById('prt-cp1name').value.trim()||null,
+            contact_person_1_phone: document.getElementById('prt-phone').value.trim()||null,
+            contact_person_1_designation: document.getElementById('prt-cp1desig').value.trim()||null,
+            contact_person_2_name: document.getElementById('prt-cp2name').value.trim()||null,
+            contact_person_2_phone: document.getElementById('prt-cp2phone').value.trim()||null,
+            address: document.getElementById('prt-addr').value.trim()||null,
+            city: document.getElementById('prt-city').value.trim()||null,
+            state: document.getElementById('prt-state').value.trim()||null,
+            pincode: document.getElementById('prt-pincode').value.trim()||null,
+            zone: document.getElementById('prt-zone').value.trim()||null,
+            bank_name: document.getElementById('prt-bankname').value.trim()||null,
+            bank_branch: document.getElementById('prt-bankbranch').value.trim()||null,
+            account_number: document.getElementById('prt-accno').value.trim()||null,
+            ifsc_code: document.getElementById('prt-ifsc').value.trim().toUpperCase()||null,
+            payment_terms: document.getElementById('prt-payterms').value,
+            credit_limit: parseFloat(document.getElementById('prt-creditlimit').value)||0,
+            credit_days: parseInt(document.getElementById('prt-creditdays').value)||0,
+            opening_balances: collectObRows('prt')
+        };
+        try {
+            const url = id ? `${API_BASE}/official-partners/${id}` : `${API_BASE}/official-partners`;
+            const r = await staffFetch(url, { method:id?'PUT':'POST', body:JSON.stringify(body), headers:{'Content-Type':'application/json'} });
+            if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||`HTTP ${r.status}`); }
+            toast(id ? 'Partner updated' : 'Partner created');
+            closeModal('prtModal');
+            await loadPartners(); buildCombined(); renderAll();
+        } catch (e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') toast(e.message, 'error'); }
+    }
+    window.savePartner = savePartner;
+
+    async function deactivatePartner() {
+        const id = document.getElementById('prt-edit-id').value;
+        if (!id || !confirm('Deactivate this partner?')) return;
+        try {
+            const r = await staffFetch(`${API_BASE}/official-partners/${id}`, { method:'DELETE' });
+            if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||`HTTP ${r.status}`); }
+            toast('Partner deactivated'); closeModal('prtModal');
+            await loadPartners(); buildCombined(); renderAll();
+        } catch (e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') toast(e.message, 'error'); }
+    }
+    window.deactivatePartner = deactivatePartner;
+
+    // ════════════════ LEDGER: ADD JOURNAL ENTRY ════════════════
+    function openAddLedgerPartyModal() {
+        document.getElementById('ldg-add-date').value = new Date().toISOString().slice(0,10);
+        document.getElementById('ldg-add-pname').value=''; document.getElementById('ldg-add-amount').value='';
+        document.getElementById('ldg-add-narration').value=''; document.getElementById('ldg-add-ref').value='';
+        document.getElementById('ldg-add-ptype').value='CUSTOMER'; document.getElementById('ldg-add-etype').value='DEBIT';
+        // pre-fill company if filter is set
+        const cid = document.getElementById('ldg-company').value;
+        if (cid) document.getElementById('ldg-add-company').value = cid;
+        document.getElementById('ldgModal').classList.add('active');
+    }
+    window.openAddLedgerPartyModal = openAddLedgerPartyModal;
+
+    async function saveLedgerEntry() {
+        const company_id = document.getElementById('ldg-add-company').value;
+        const party_name = document.getElementById('ldg-add-pname').value.trim();
+        const amount     = parseFloat(document.getElementById('ldg-add-amount').value);
+        const entry_date = document.getElementById('ldg-add-date').value;
+        if (!company_id) { toast('Select a company', 'error'); return; }
+        if (!party_name) { toast('Party name is required', 'error'); return; }
+        if (!amount || amount <= 0) { toast('Enter a valid amount', 'error'); return; }
+        const body = {
+            company_id: parseInt(company_id),
+            party_type: document.getElementById('ldg-add-ptype').value,
+            party_name: party_name,
+            entry_type: document.getElementById('ldg-add-etype').value,
+            amount: amount,
+            narration: document.getElementById('ldg-add-narration').value.trim()||null,
+            reference_number: document.getElementById('ldg-add-ref').value.trim()||null,
+            transaction_date: entry_date
+        };
+        try {
+            const r = await staffFetch(API_BASE + '/party-ledger', {
+                method:'POST', body:JSON.stringify(body), headers:{'Content-Type':'application/json'}
+            });
+            if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.detail||`HTTP ${r.status}`); }
+            toast('Journal entry posted');
+            closeModal('ldgModal');
+            await loadLedgerData();
+        } catch (e) { if (e.message !== 'AUTH_EXPIRED' && e.message !== 'NO_TOKEN') toast(e.message, 'error'); }
+    }
+    window.saveLedgerEntry = saveLedgerEntry;
+
+    // ════════════════════════════════════════════════════════════════
+    // EXPENSE & INCOME CATEGORIES — DC-EXPCAT-001
+    // ════════════════════════════════════════════════════════════════
+    const EXP_BASE = '/api/v1/expense-categories';
+    const INC_BASE = '/api/v1/income-categories';
+
+    let _expMain = [], _expSub = [], _expAmounts = { main:{}, sub:{} };
+    let _incMain = [], _incSub = [], _incAmounts = { main:{}, sub:{} };
+    let _expCatLoaded = false, _incCatLoaded = false;
+    let _expSort = 'name_asc', _expCo = '';
+    let _incSort = 'name_asc', _incCo = '';
+
+    // ── currency formatter (reuse existing fmt) ──
+    // fmt() already defined above
+
+    // ── inner sub-tab switches ──
+    function switchExpInner(tab) {
+        const showMain = tab === 'main';
+        document.getElementById('exp-inner-main').style.display = showMain ? 'block' : 'none';
+        document.getElementById('exp-inner-sub').style.display  = showMain ? 'none'  : 'block';
+        document.getElementById('exp-inner-main-btn').className = showMain ? 'btn-add' : 'btn-outline-add';
+        document.getElementById('exp-inner-sub-btn').className  = showMain ? 'btn-outline-add' : 'btn-add';
+        if (showMain) {
+            document.getElementById('exp-inner-main-btn').style.background = 'linear-gradient(135deg,#6366f1,#4f46e5)';
+            document.getElementById('exp-inner-sub-btn').style.background  = '';
+        } else {
+            document.getElementById('exp-inner-sub-btn').style.background  = 'linear-gradient(135deg,#10b981,#059669)';
+            document.getElementById('exp-inner-main-btn').style.background = '';
+        }
+    }
+    window.switchExpInner = switchExpInner;
+
+    function switchIncInner(tab) {
+        const showMain = tab === 'main';
+        document.getElementById('inc-inner-main').style.display = showMain ? 'block' : 'none';
+        document.getElementById('inc-inner-sub').style.display  = showMain ? 'none'  : 'block';
+        document.getElementById('inc-inner-main-btn').className = showMain ? 'btn-add' : 'btn-outline-add';
+        document.getElementById('inc-inner-sub-btn').className  = showMain ? 'btn-outline-add' : 'btn-add';
+        const gold = 'linear-gradient(135deg,#f59e0b,#d97706)';
+        document.getElementById('inc-inner-main-btn').style.background = showMain ? gold : '';
+        document.getElementById('inc-inner-sub-btn').style.background  = showMain ? '' : gold;
+    }
+    window.switchIncInner = switchIncInner;
+
+    // ── load expense categories + amounts ──
+    async function loadExpenseCategories() {
+        try {
+            const coParam = _expCo ? `?company_id=${_expCo}` : '';
+            const [rList, rAmt] = await Promise.all([
+                staffFetch(`${EXP_BASE}/list`),
+                staffFetch(`${EXP_BASE}/amounts-summary${coParam}`)
+            ]);
+            const dList = await rList.json();
+            const dAmt  = await rAmt.json().catch(() => ({success:false}));
+            if (dList.success) {
+                _expMain = dList.main_categories || [];
+                _expSub  = dList.sub_categories  || [];
+            }
+            if (dAmt.success) {
+                _expAmounts = { main: dAmt.main || {}, sub: dAmt.sub || {} };
+            }
+            renderExpenseMain();
+            renderExpenseSub();
+            updateExpenseStats();
+            document.getElementById('cnt-expense').textContent = _expMain.length + _expSub.length;
+        } catch(e) {
+            if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+        }
+    }
+
+    // ── reload only expense amounts (for company filter change) ──
+    async function reloadExpAmounts() {
+        try {
+            const coParam = _expCo ? `?company_id=${_expCo}` : '';
+            const rAmt = await staffFetch(`${EXP_BASE}/amounts-summary${coParam}`);
+            const dAmt = await rAmt.json().catch(() => ({success:false}));
+            if (dAmt.success) _expAmounts = { main: dAmt.main || {}, sub: dAmt.sub || {} };
+            renderExpenseMain();
+            renderExpenseSub();
+            updateExpenseStats();
+        } catch(e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; }
+    }
+
+    // ── load income categories + amounts ──
+    async function loadIncomeCategories() {
+        try {
+            const coParam = _incCo ? `?company_id=${_incCo}` : '';
+            const [rList, rAmt] = await Promise.all([
+                staffFetch(`${INC_BASE}/list`),
+                staffFetch(`${INC_BASE}/amounts-summary${coParam}`)
+            ]);
+            const dList = await rList.json();
+            const dAmt  = await rAmt.json().catch(() => ({success:false}));
+            if (dList.success) {
+                _incMain = dList.main_categories || [];
+                _incSub  = dList.sub_categories  || [];
+            }
+            if (dAmt.success) {
+                _incAmounts = { main: dAmt.main || {}, sub: dAmt.sub || {} };
+            }
+            renderIncomeMain();
+            renderIncomeSub();
+            updateIncomeStats();
+            document.getElementById('cnt-income').textContent = _incMain.length + _incSub.length;
+        } catch(e) {
+            if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+        }
+    }
+
+    // ── reload only income amounts (for company filter change) ──
+    async function reloadIncAmounts() {
+        try {
+            const coParam = _incCo ? `?company_id=${_incCo}` : '';
+            const rAmt = await staffFetch(`${INC_BASE}/amounts-summary${coParam}`);
+            const dAmt = await rAmt.json().catch(() => ({success:false}));
+            if (dAmt.success) _incAmounts = { main: dAmt.main || {}, sub: dAmt.sub || {} };
+            renderIncomeMain();
+            renderIncomeSub();
+            updateIncomeStats();
+        } catch(e) { if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return; }
+    }
+
+    // ── lazy-load on first tab visit ──
+    const _origSwitchTab = switchTab;
+    switchTab = function(tab) {
+        _origSwitchTab(tab);
+        if (tab === 'expense' && !_expCatLoaded) {
+            _expCatLoaded = true;
+            loadExpenseCategories();
+        }
+        if (tab === 'income' && !_incCatLoaded) {
+            _incCatLoaded = true;
+            loadIncomeCategories();
+        }
+    };
+
+    // ── stat card updaters ──
+    function updateExpenseStats() {
+        const totalAmt = Object.values(_expAmounts.main).reduce((s, v) => s + (v.total||0), 0);
+        const totalEnt = Object.values(_expAmounts.main).reduce((s, v) => s + (v.count||0), 0);
+        document.getElementById('exp-s-main').textContent     = _expMain.length;
+        document.getElementById('exp-s-sub').textContent      = _expSub.length;
+        document.getElementById('exp-s-total-amt').textContent = totalAmt ? '₹' + totalAmt.toLocaleString('en-IN', {maximumFractionDigits:0}) : '₹0';
+        document.getElementById('exp-s-entries').textContent  = totalEnt;
+    }
+    function updateIncomeStats() {
+        const totalAmt = Object.values(_incAmounts.main).reduce((s, v) => s + (v.total||0), 0);
+        const totalEnt = Object.values(_incAmounts.main).reduce((s, v) => s + (v.count||0), 0);
+        document.getElementById('inc-s-main').textContent      = _incMain.length;
+        document.getElementById('inc-s-sub').textContent       = _incSub.length;
+        document.getElementById('inc-s-total-amt').textContent = totalAmt ? '₹' + totalAmt.toLocaleString('en-IN', {maximumFractionDigits:0}) : '₹0';
+        document.getElementById('inc-s-entries').textContent   = totalEnt;
+    }
+
+    // ── sort helper ──
+    function _applySort(arr, sortKey, amtMap) {
+        const a2n = id => (amtMap[String(id)]||{}).total||0;
+        const a2c = id => (amtMap[String(id)]||{}).count||0;
+        const copy = [...arr];
+        if (sortKey === 'name_asc')  copy.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+        else if (sortKey === 'name_desc') copy.sort((a,b) => (b.name||'').localeCompare(a.name||''));
+        else if (sortKey === 'amt_desc')  copy.sort((a,b) => a2n(b.id) - a2n(a.id));
+        else if (sortKey === 'amt_asc')   copy.sort((a,b) => a2n(a.id) - a2n(b.id));
+        else if (sortKey === 'cnt_desc')  copy.sort((a,b) => a2c(b.id) - a2c(a.id));
+        else if (sortKey === 'cnt_asc')   copy.sort((a,b) => a2c(a.id) - a2c(b.id));
+        return copy;
+    }
+
+    // ── render expense main ──
+    function renderExpenseMain() {
+        const tbody = document.getElementById('exp-main-tbody');
+        const wrap  = document.getElementById('exp-main-wrap');
+        const empty = document.getElementById('exp-main-empty');
+        document.getElementById('exp-main-loading').style.display = 'none';
+        if (!_expMain.length) { wrap.style.display='none'; empty.style.display='block'; return; }
+        empty.style.display='none'; wrap.style.display='block';
+        const data = _applySort(_expMain, _expSort, _expAmounts.main);
+        tbody.innerHTML = data.map(cat => {
+            const subs = _expSub.filter(s => s.parent_id === cat.id);
+            const amt  = _expAmounts.main[String(cat.id)] || {};
+            const subPills = subs.length
+                ? subs.map(s=>`<span style="background:#ede9fe;color:#5b21b6;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:600;margin:1px;">${s.name}</span>`).join('')
+                : '';
+            return `<tr>
+                <td><code>${cat.id}</code></td>
+                <td>
+                    <strong style="color:#111827;">${cat.name}</strong>
+                    ${subPills ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:2px;">${subPills}</div>` : ''}
+                </td>
+                <td style="font-size:12px;color:#6b7280;">${cat.description||'—'}</td>
+                <td><span class="badge bg-info" style="font-size:11px;">${subs.length} sub${subs.length!==1?'s':''}</span></td>
+                <td style="text-align:right;"><span class="bal-dr" style="font-size:13px;">${amt.total ? fmt(amt.total) : '—'}</span></td>
+                <td style="text-align:right;"><span style="font-weight:600;color:#374151;">${amt.count||0}</span></td>
+                <td>
+                    <button class="btn-act edit" onclick="editExpMain(${cat.id})"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn-act del"  onclick="confirmDelExpMain(${cat.id},'${(cat.name||'').replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+    window.renderExpenseMain = renderExpenseMain;
+
+    // ── render expense sub ──
+    function renderExpenseSub() {
+        const tbody = document.getElementById('exp-sub-tbody');
+        const wrap  = document.getElementById('exp-sub-wrap');
+        const empty = document.getElementById('exp-sub-empty');
+        document.getElementById('exp-sub-loading').style.display = 'none';
+        if (!_expSub.length) { wrap.style.display='none'; empty.style.display='block'; return; }
+        empty.style.display='none'; wrap.style.display='block';
+        const data = _applySort(_expSub, _expSort, _expAmounts.sub);
+        tbody.innerHTML = data.map(sub => {
+            const par = _expMain.find(m => m.id === sub.parent_id);
+            const amt = _expAmounts.sub[String(sub.id)] || {};
+            return `<tr>
+                <td><code>${sub.id}</code></td>
+                <td><strong style="color:#111827;">${sub.name}</strong></td>
+                <td><span style="color:#6b7280;font-size:12px;"><i class="fas fa-folder me-1" style="color:#6366f1;"></i>${par?par.name:'Unknown'}</span></td>
+                <td style="font-size:12px;color:#6b7280;">${sub.description||'—'}</td>
+                <td style="text-align:right;"><span class="bal-dr" style="font-size:13px;">${amt.total ? fmt(amt.total) : '—'}</span></td>
+                <td style="text-align:right;"><span style="font-weight:600;color:#374151;">${amt.count||0}</span></td>
+                <td>
+                    <button class="btn-act edit" onclick="editExpSub(${sub.id})"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn-act del"  onclick="confirmDelExpSub(${sub.id},'${(sub.name||'').replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+    window.renderExpenseSub = renderExpenseSub;
+
+    // ── render income main ──
+    function renderIncomeMain() {
+        const tbody = document.getElementById('inc-main-tbody');
+        const wrap  = document.getElementById('inc-main-wrap');
+        const empty = document.getElementById('inc-main-empty');
+        document.getElementById('inc-main-loading').style.display = 'none';
+        if (!_incMain.length) { wrap.style.display='none'; empty.style.display='block'; return; }
+        empty.style.display='none'; wrap.style.display='block';
+        const data = _applySort(_incMain, _incSort, _incAmounts.main);
+        tbody.innerHTML = data.map(cat => {
+            const subs = _incSub.filter(s => s.parent_id === cat.id);
+            const amt  = _incAmounts.main[String(cat.id)] || {};
+            const subPills = subs.length
+                ? subs.map(s=>`<span style="background:#fef3c7;color:#92400e;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:600;margin:1px;">${s.name}</span>`).join('')
+                : '';
+            return `<tr>
+                <td><code>${cat.id}</code></td>
+                <td>
+                    <strong style="color:#111827;">${cat.name}</strong>
+                    ${subPills ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:2px;">${subPills}</div>` : ''}
+                </td>
+                <td style="font-size:12px;color:#6b7280;">${cat.description||'—'}</td>
+                <td><span class="badge bg-warning text-dark" style="font-size:11px;">${subs.length} sub${subs.length!==1?'s':''}</span></td>
+                <td style="text-align:right;"><span class="bal-cr" style="font-size:13px;">${amt.total ? fmt(amt.total) : '—'}</span></td>
+                <td style="text-align:right;"><span style="font-weight:600;color:#374151;">${amt.count||0}</span></td>
+                <td>
+                    <button class="btn-act edit" onclick="editIncMain(${cat.id})"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn-act del"  onclick="confirmDelIncMain(${cat.id},'${(cat.name||'').replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+    window.renderIncomeMain = renderIncomeMain;
+
+    // ── render income sub ──
+    function renderIncomeSub() {
+        const tbody = document.getElementById('inc-sub-tbody');
+        const wrap  = document.getElementById('inc-sub-wrap');
+        const empty = document.getElementById('inc-sub-empty');
+        document.getElementById('inc-sub-loading').style.display = 'none';
+        if (!_incSub.length) { wrap.style.display='none'; empty.style.display='block'; return; }
+        empty.style.display='none'; wrap.style.display='block';
+        const data = _applySort(_incSub, _incSort, _incAmounts.sub);
+        tbody.innerHTML = data.map(sub => {
+            const par = _incMain.find(m => m.id === sub.parent_id);
+            const amt = _incAmounts.sub[String(sub.id)] || {};
+            return `<tr>
+                <td><code>${sub.id}</code></td>
+                <td><strong style="color:#111827;">${sub.name}</strong></td>
+                <td><span style="color:#6b7280;font-size:12px;"><i class="fas fa-coins me-1" style="color:#d97706;"></i>${par?par.name:'Unknown'}</span></td>
+                <td style="font-size:12px;color:#6b7280;">${sub.description||'—'}</td>
+                <td style="text-align:right;"><span class="bal-cr" style="font-size:13px;">${amt.total ? fmt(amt.total) : '—'}</span></td>
+                <td style="text-align:right;"><span style="font-weight:600;color:#374151;">${amt.count||0}</span></td>
+                <td>
+                    <button class="btn-act edit" onclick="editIncSub(${sub.id})"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn-act del"  onclick="confirmDelIncSub(${sub.id},'${(sub.name||'').replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+    window.renderIncomeSub = renderIncomeSub;
+
+    // ── Expense filter / sort handlers ──
+    function changeExpCo() {
+        _expCo = document.getElementById('exp-filter-co').value;
+        reloadExpAmounts();
+    }
+    window.changeExpCo = changeExpCo;
+
+    function sortExp() {
+        _expSort = document.getElementById('exp-sort').value;
+        renderExpenseMain();
+        renderExpenseSub();
+    }
+    window.sortExp = sortExp;
+
+    function resetExpFilters() {
+        _expCo = ''; _expSort = 'name_asc';
+        document.getElementById('exp-filter-co').value = '';
+        document.getElementById('exp-sort').value = 'name_asc';
+        reloadExpAmounts();
+    }
+    window.resetExpFilters = resetExpFilters;
+
+    // ── Income filter / sort handlers ──
+    function changeIncCo() {
+        _incCo = document.getElementById('inc-filter-co').value;
+        reloadIncAmounts();
+    }
+    window.changeIncCo = changeIncCo;
+
+    function sortInc() {
+        _incSort = document.getElementById('inc-sort').value;
+        renderIncomeMain();
+        renderIncomeSub();
+    }
+    window.sortInc = sortInc;
+
+    function resetIncFilters() {
+        _incCo = ''; _incSort = 'name_asc';
+        document.getElementById('inc-filter-co').value = '';
+        document.getElementById('inc-sort').value = 'name_asc';
+        reloadIncAmounts();
+    }
+    window.resetIncFilters = resetIncFilters;
+
+    // ═══ EXPENSE MAIN CRUD ═══
+    function openExpMainModal() {
+        document.getElementById('expMainModalTitle').textContent = 'Add Expense Category';
+        document.getElementById('expMainId').value = '';
+        document.getElementById('expMainName').value = '';
+        document.getElementById('expMainDesc').value = '';
+        document.getElementById('expMainDelBtn').style.display = 'none';
+        document.getElementById('expMainModal').classList.add('active');
+    }
+    window.openExpMainModal = openExpMainModal;
+
+    function editExpMain(id) {
+        const cat = _expMain.find(c => c.id === id); if (!cat) return;
+        document.getElementById('expMainModalTitle').textContent = 'Edit Expense Category';
+        document.getElementById('expMainId').value  = cat.id;
+        document.getElementById('expMainName').value = cat.name;
+        document.getElementById('expMainDesc').value = cat.description||'';
+        document.getElementById('expMainDelBtn').style.display = 'inline-flex';
+        document.getElementById('expMainModal').classList.add('active');
+    }
+    window.editExpMain = editExpMain;
+
+    async function saveExpMain() {
+        const id   = document.getElementById('expMainId').value;
+        const name = document.getElementById('expMainName').value.trim();
+        const desc = document.getElementById('expMainDesc').value.trim();
+        if (!name) { toast('Category name is required', 'error'); return; }
+        try {
+            const url = id ? `${EXP_BASE}/main/update/${id}` : `${EXP_BASE}/main/create`;
+            const r = await staffFetch(url, { method:'POST', body:JSON.stringify({name, description:desc||null}), headers:{'Content-Type':'application/json'} });
+            const d = await r.json();
+            if (d.success) { toast(id ? 'Category updated' : 'Category created'); closeModal('expMainModal'); await loadExpenseCategories(); }
+            else toast(d.message||'Failed', 'error');
+        } catch(e) { if (e.message !== 'AUTH_EXPIRED') toast('Error: '+e.message, 'error'); }
+    }
+    window.saveExpMain = saveExpMain;
+
+    function confirmDelExpMain(id, name) {
+        document.getElementById('expMainId').value = id;
+        if (confirm(`Delete expense category "${name}"? This cannot be undone.`)) delExpMain();
+    }
+    window.confirmDelExpMain = confirmDelExpMain;
+
+    async function delExpMain() {
+        const id = document.getElementById('expMainId').value; if (!id) return;
+        try {
+            const r = await staffFetch(`${EXP_BASE}/main/${id}`, { method:'DELETE' });
+            const d = await r.json();
+            if (d.success) { toast('Category deleted'); closeModal('expMainModal'); await loadExpenseCategories(); }
+            else toast(d.message||'Delete failed', 'error');
+        } catch(e) { if (e.message !== 'AUTH_EXPIRED') toast('Error: '+e.message, 'error'); }
+    }
+    window.delExpMain = delExpMain;
+
+    // ═══ EXPENSE SUB CRUD ═══
+    function openExpSubModal() {
+        document.getElementById('expSubModalTitle').textContent = 'Add Expense Sub Category';
+        document.getElementById('expSubId').value = '';
+        document.getElementById('expSubName').value = '';
+        document.getElementById('expSubDesc').value = '';
+        document.getElementById('expSubDelBtn').style.display = 'none';
+        const sel = document.getElementById('expSubParent');
+        sel.innerHTML = '<option value="">-- Select Main Category --</option>' + _expMain.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+        document.getElementById('expSubModal').classList.add('active');
+    }
+    window.openExpSubModal = openExpSubModal;
+
+    function editExpSub(id) {
+        const sub = _expSub.find(s => s.id === id); if (!sub) return;
+        document.getElementById('expSubModalTitle').textContent = 'Edit Expense Sub Category';
+        document.getElementById('expSubId').value   = sub.id;
+        document.getElementById('expSubName').value = sub.name;
+        document.getElementById('expSubDesc').value = sub.description||'';
+        document.getElementById('expSubDelBtn').style.display = 'inline-flex';
+        const sel = document.getElementById('expSubParent');
+        sel.innerHTML = '<option value="">-- Select Main Category --</option>' + _expMain.map(c=>`<option value="${c.id}"${c.id===sub.parent_id?' selected':''}>${c.name}</option>`).join('');
+        document.getElementById('expSubModal').classList.add('active');
+    }
+    window.editExpSub = editExpSub;
+
+    async function saveExpSub() {
+        const id  = document.getElementById('expSubId').value;
+        const pid = document.getElementById('expSubParent').value;
+        const name = document.getElementById('expSubName').value.trim();
+        const desc = document.getElementById('expSubDesc').value.trim();
+        if (!pid)  { toast('Select a main category', 'error'); return; }
+        if (!name) { toast('Sub category name is required', 'error'); return; }
+        try {
+            const url  = id ? `${EXP_BASE}/sub/update/${id}` : `${EXP_BASE}/sub/create`;
+            const body = id ? {name, description:desc||null} : {name, parent_id:parseInt(pid), description:desc||null};
+            const r = await staffFetch(url, { method:'POST', body:JSON.stringify(body), headers:{'Content-Type':'application/json'} });
+            const d = await r.json();
+            if (d.success) { toast(id ? 'Sub category updated' : 'Sub category created'); closeModal('expSubModal'); await loadExpenseCategories(); }
+            else toast(d.message||'Failed', 'error');
+        } catch(e) { if (e.message !== 'AUTH_EXPIRED') toast('Error: '+e.message, 'error'); }
+    }
+    window.saveExpSub = saveExpSub;
+
+    function confirmDelExpSub(id, name) {
+        document.getElementById('expSubId').value = id;
+        if (confirm(`Delete sub category "${name}"?`)) delExpSub();
+    }
+    window.confirmDelExpSub = confirmDelExpSub;
+
+    async function delExpSub() {
+        const id = document.getElementById('expSubId').value; if (!id) return;
+        try {
+            const r = await staffFetch(`${EXP_BASE}/sub/${id}`, { method:'DELETE' });
+            const d = await r.json();
+            if (d.success) { toast('Sub category deleted'); closeModal('expSubModal'); await loadExpenseCategories(); }
+            else toast(d.message||'Delete failed', 'error');
+        } catch(e) { if (e.message !== 'AUTH_EXPIRED') toast('Error: '+e.message, 'error'); }
+    }
+    window.delExpSub = delExpSub;
+
+    // ═══ INCOME MAIN CRUD ═══
+    function openIncMainModal() {
+        document.getElementById('incMainModalTitle').textContent = 'Add Income Category';
+        document.getElementById('incMainId').value = '';
+        document.getElementById('incMainName').value = '';
+        document.getElementById('incMainDesc').value = '';
+        document.getElementById('incMainDelBtn').style.display = 'none';
+        document.getElementById('incMainModal').classList.add('active');
+    }
+    window.openIncMainModal = openIncMainModal;
+
+    function editIncMain(id) {
+        const cat = _incMain.find(c => c.id === id); if (!cat) return;
+        document.getElementById('incMainModalTitle').textContent = 'Edit Income Category';
+        document.getElementById('incMainId').value  = cat.id;
+        document.getElementById('incMainName').value = cat.name;
+        document.getElementById('incMainDesc').value = cat.description||'';
+        document.getElementById('incMainDelBtn').style.display = 'inline-flex';
+        document.getElementById('incMainModal').classList.add('active');
+    }
+    window.editIncMain = editIncMain;
+
+    async function saveIncMain() {
+        const id   = document.getElementById('incMainId').value;
+        const name = document.getElementById('incMainName').value.trim();
+        const desc = document.getElementById('incMainDesc').value.trim();
+        if (!name) { toast('Category name is required', 'error'); return; }
+        try {
+            const url = id ? `${INC_BASE}/main/update/${id}` : `${INC_BASE}/main/create`;
+            const r = await staffFetch(url, { method:'POST', body:JSON.stringify({name, description:desc||null}), headers:{'Content-Type':'application/json'} });
+            const d = await r.json();
+            if (d.success) { toast(id ? 'Income category updated' : 'Income category created'); closeModal('incMainModal'); await loadIncomeCategories(); }
+            else toast(d.message||'Failed', 'error');
+        } catch(e) { if (e.message !== 'AUTH_EXPIRED') toast('Error: '+e.message, 'error'); }
+    }
+    window.saveIncMain = saveIncMain;
+
+    function confirmDelIncMain(id, name) {
+        document.getElementById('incMainId').value = id;
+        if (confirm(`Delete income category "${name}"?`)) delIncMain();
+    }
+    window.confirmDelIncMain = confirmDelIncMain;
+
+    async function delIncMain() {
+        const id = document.getElementById('incMainId').value; if (!id) return;
+        try {
+            const r = await staffFetch(`${INC_BASE}/main/${id}`, { method:'DELETE' });
+            const d = await r.json();
+            if (d.success) { toast('Category deleted'); closeModal('incMainModal'); await loadIncomeCategories(); }
+            else toast(d.message||'Delete failed', 'error');
+        } catch(e) { if (e.message !== 'AUTH_EXPIRED') toast('Error: '+e.message, 'error'); }
+    }
+    window.delIncMain = delIncMain;
+
+    // ═══ INCOME SUB CRUD ═══
+    function openIncSubModal() {
+        document.getElementById('incSubModalTitle').textContent = 'Add Income Sub Category';
+        document.getElementById('incSubId').value = '';
+        document.getElementById('incSubName').value = '';
+        document.getElementById('incSubDesc').value = '';
+        document.getElementById('incSubDelBtn').style.display = 'none';
+        const sel = document.getElementById('incSubParent');
+        sel.innerHTML = '<option value="">-- Select Main Category --</option>' + _incMain.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+        document.getElementById('incSubModal').classList.add('active');
+    }
+    window.openIncSubModal = openIncSubModal;
+
+    function editIncSub(id) {
+        const sub = _incSub.find(s => s.id === id); if (!sub) return;
+        document.getElementById('incSubModalTitle').textContent = 'Edit Income Sub Category';
+        document.getElementById('incSubId').value   = sub.id;
+        document.getElementById('incSubName').value = sub.name;
+        document.getElementById('incSubDesc').value = sub.description||'';
+        document.getElementById('incSubDelBtn').style.display = 'inline-flex';
+        const sel = document.getElementById('incSubParent');
+        sel.innerHTML = '<option value="">-- Select Main Category --</option>' + _incMain.map(c=>`<option value="${c.id}"${c.id===sub.parent_id?' selected':''}>${c.name}</option>`).join('');
+        document.getElementById('incSubModal').classList.add('active');
+    }
+    window.editIncSub = editIncSub;
+
+    async function saveIncSub() {
+        const id  = document.getElementById('incSubId').value;
+        const pid = document.getElementById('incSubParent').value;
+        const name = document.getElementById('incSubName').value.trim();
+        const desc = document.getElementById('incSubDesc').value.trim();
+        if (!pid)  { toast('Select a main category', 'error'); return; }
+        if (!name) { toast('Sub category name is required', 'error'); return; }
+        try {
+            const url  = id ? `${INC_BASE}/sub/update/${id}` : `${INC_BASE}/sub/create`;
+            const body = id ? {name, description:desc||null} : {name, parent_id:parseInt(pid), description:desc||null};
+            const r = await staffFetch(url, { method:'POST', body:JSON.stringify(body), headers:{'Content-Type':'application/json'} });
+            const d = await r.json();
+            if (d.success) { toast(id ? 'Sub category updated' : 'Sub category created'); closeModal('incSubModal'); await loadIncomeCategories(); }
+            else toast(d.message||'Failed', 'error');
+        } catch(e) { if (e.message !== 'AUTH_EXPIRED') toast('Error: '+e.message, 'error'); }
+    }
+    window.saveIncSub = saveIncSub;
+
+    function confirmDelIncSub(id, name) {
+        document.getElementById('incSubId').value = id;
+        if (confirm(`Delete income sub category "${name}"?`)) delIncSub();
+    }
+    window.confirmDelIncSub = confirmDelIncSub;
+
+    async function delIncSub() {
+        const id = document.getElementById('incSubId').value; if (!id) return;
+        try {
+            const r = await staffFetch(`${INC_BASE}/sub/${id}`, { method:'DELETE' });
+            const d = await r.json();
+            if (d.success) { toast('Sub category deleted'); closeModal('incSubModal'); await loadIncomeCategories(); }
+            else toast(d.message||'Delete failed', 'error');
+        } catch(e) { if (e.message !== 'AUTH_EXPIRED') toast('Error: '+e.message, 'error'); }
+    }
+    window.delIncSub = delIncSub;
+    </script>
+</body>
+</html>

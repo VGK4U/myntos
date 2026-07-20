@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Dreams - Partner Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .back-btn { color: #6b7280; text-decoration: none; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 6px; transition: all 0.2s; }
+        .back-btn:hover { background: #f3f4f6; color: #1f2937; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-weight: 600; font-size: 14px; color: #1f2937; }
+        .user-info-role { padding: 2px 8px; border-radius: 12px; background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 500; }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .card-body { padding: 24px; }
+        
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .stat-card .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-card .label { color: #6b7280; font-size: 13px; margin-top: 4px; }
+        
+        .stat-green .icon { background: #d1fae5; color: #059669; }
+        .stat-blue .icon { background: #dbeafe; color: #2563eb; }
+        .stat-purple .icon { background: #e9d5ff; color: #7c3aed; }
+        .stat-orange .icon { background: #fed7aa; color: #ea580c; }
+        .stat-yellow .icon { background: #fef3c7; color: #d97706; }
+        .stat-red .icon { background: #fee2e2; color: #dc2626; }
+        
+        .form-label { font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px; }
+        .form-control, .form-select {
+            border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 14px;
+            font-size: 14px; transition: all 0.2s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #10B981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
+        
+        .btn-primary { background: #10B981; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500; }
+        .btn-primary:hover { background: #059669; }
+        .btn-success { background: #10B981; border: none; }
+        .btn-success:hover { background: #059669; }
+        .btn-outline-primary { border-color: #10B981; color: #10B981; }
+        .btn-outline-primary:hover { background: #10B981; color: white; }
+        .btn-outline-secondary { border-color: #d1d5db; color: #6b7280; }
+        .btn-outline-secondary:hover { background: #f3f4f6; color: #374151; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-top: none; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-draft { background: #f3f4f6; color: #6b7280; }
+        .status-pending { background: #fef3c7; color: #92400e; }
+        .status-approved { background: #d1fae5; color: #065f46; }
+        .status-rejected { background: #fee2e2; color: #991b1b; }
+        .status-suspended { background: #fecaca; color: #7f1d1d; }
+        
+        .partner-type-badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+        .type-dealer { background: #dbeafe; color: #1d4ed8; }
+        .type-builder { background: #e0e7ff; color: #4338ca; }
+        .type-agent { background: #fae8ff; color: #a21caf; }
+        .type-developer { background: #fef3c7; color: #b45309; }
+        
+        .icon-btn { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+        
+        .modal-content { border-radius: 12px; border: none; }
+        .modal-header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; border-bottom: none; padding: 16px 24px; border-radius: 12px 12px 0 0; }
+        .modal-header .btn-close { filter: brightness(0) invert(1); }
+        .modal-body { padding: 24px; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; border-radius: 0 0 12px 12px; }
+        
+        .toast-container { position: fixed; top: 80px; right: 20px; z-index: 9999; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; color: #10B981; }
+        .empty-state h5 { color: #374151; margin-bottom: 8px; }
+        
+        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-radius: 50%; border-top-color: #10B981; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .filter-bar { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+        .filter-bar .form-control, .filter-bar .form-select { width: auto; min-width: 180px; }
+        
+        .partner-details { background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .partner-details-row { display: flex; margin-bottom: 8px; }
+        .partner-details-row:last-child { margin-bottom: 0; }
+        .partner-details-label { width: 140px; color: #6b7280; font-size: 13px; }
+        .partner-details-value { flex: 1; font-weight: 500; color: #1f2937; font-size: 13px; }
+        
+        .nda-section { border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 16px; }
+        .nda-section.signed { border-color: #10B981; background: #f0fdf4; }
+        .nda-section i { font-size: 32px; margin-bottom: 12px; color: #6b7280; }
+        .nda-section.signed i { color: #10B981; }
+        
+        .document-list { list-style: none; padding: 0; margin: 0; }
+        .document-list li { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px; }
+        .document-list li:last-child { margin-bottom: 0; }
+        .document-list li i { color: #10B981; margin-right: 8px; }
+        
+        .action-buttons { display: flex; gap: 8px; margin-top: 16px; }
+        
+        .tag-input-container { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; border: 1px solid #d1d5db; border-radius: 8px; min-height: 45px; }
+        .tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #e5e7eb; border-radius: 16px; font-size: 13px; }
+        .tag .remove-tag { cursor: pointer; color: #6b7280; }
+        .tag .remove-tag:hover { color: #dc2626; }
+        .tag-input { border: none; outline: none; flex: 1; min-width: 100px; font-size: 14px; }
+        
+        .pagination-container { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; }
+        .pagination-info { color: #6b7280; font-size: 14px; }
+    
+        .header-logo {
+            height: 36px;
+            width: auto;
+        }
+        .user-info-details {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .user-info-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .user-info-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .user-info-role {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .role-badge-supreme { background: #fef2f2; color: #dc2626; }
+        .role-badge-hr { background: #f3e8ff; color: #7c3aed; }
+        .role-badge-leadership { background: #fef3c7; color: #d97706; }
+        .role-badge-default { background: #f3f4f6; color: #374151; }
+
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+        <div class="top-header">
+            <div class="header-left">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" class="header-logo">
+                <div class="header-divider"></div>
+                <div id="backButtonContainer"></div>
+                <h1 class="page-title">
+                    <i class="fas fa-handshake"></i>
+                    Real Dreams Partners
+                </h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info-header" id="headerUserInfo">
+                    <div class="user-avatar-sm" id="headerUserInitials">--</div>
+                    <div class="user-info-details">
+                        <span class="user-info-name" id="headerUserName">Loading...</span>
+                        <div class="user-info-meta">
+                            <span class="user-info-role role-badge-default" id="headerUserRole">-</span>
+                            <span id="headerUserEmpId">-</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="StaffSidebar.logout()">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+        <div class="page-banner">
+            <h1><i class="fas fa-handshake"></i> Partner Onboarding Management</h1>
+            <p>Register and manage Official Partners for Real Dreams property listings</p>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Select Company</label>
+                <select class="form-select" id="companySelect" onchange="onCompanyChange()">
+                    <option value="">Loading companies...</option>
+                </select>
+            </div>
+            <div class="col-md-8 d-flex align-items-end">
+                <button class="btn btn-primary" onclick="showAddPartnerModal()" id="addPartnerBtn" disabled>
+                    <i class="fas fa-plus me-2"></i>Register New Partner
+                </button>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-2 col-6 mb-3">
+                <div class="stat-card stat-blue">
+                    <div class="icon"><i class="fas fa-users"></i></div>
+                    <div class="value" id="statTotal">0</div>
+                    <div class="label">Total Partners</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-3">
+                <div class="stat-card stat-yellow">
+                    <div class="icon"><i class="fas fa-clock"></i></div>
+                    <div class="value" id="statPending">0</div>
+                    <div class="label">Pending Review</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-3">
+                <div class="stat-card stat-green">
+                    <div class="icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="value" id="statApproved">0</div>
+                    <div class="label">Approved</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-3">
+                <div class="stat-card stat-red">
+                    <div class="icon"><i class="fas fa-times-circle"></i></div>
+                    <div class="value" id="statRejected">0</div>
+                    <div class="label">Rejected</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-3">
+                <div class="stat-card stat-purple">
+                    <div class="icon"><i class="fas fa-file-alt"></i></div>
+                    <div class="value" id="statDraft">0</div>
+                    <div class="label">Draft</div>
+                </div>
+            </div>
+            <div class="col-md-2 col-6 mb-3">
+                <div class="stat-card stat-orange">
+                    <div class="icon"><i class="fas fa-home"></i></div>
+                    <div class="value" id="statProperties">0</div>
+                    <div class="label">Properties Listed</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list me-2"></i>Partner Profiles</h5>
+            </div>
+            <div class="card-body">
+                <div class="filter-bar">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search by partner name..." onkeyup="debounceSearch()">
+                    <select class="form-select" id="statusFilter" onchange="loadPartners()">
+                        <option value="">All Statuses</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="PENDING">Pending Review</option>
+                        <option value="APPROVED">Approved</option>
+                        <option value="REJECTED">Rejected</option>
+                        <option value="SUSPENDED">Suspended</option>
+                    </select>
+                    <select class="form-select" id="typeFilter" onchange="loadPartners()">
+                        <option value="">All Types</option>
+                        <option value="REAL_ESTATE_DEALER">Real Estate Dealer</option>
+                        <option value="BUILDER">Builder</option>
+                        <option value="AGENT">Agent</option>
+                        <option value="DEVELOPER">Developer</option>
+                    </select>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Partner</th>
+                                <th>Type</th>
+                                <th>RERA Number</th>
+                                <th>NDA Status</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="partnersTable">
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <i class="fas fa-building me-2"></i>Select a company to view partners
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination-container" id="paginationContainer" style="display: none;">
+                    <div class="pagination-info" id="paginationInfo">Showing 1-10 of 0</div>
+                    <nav>
+                        <ul class="pagination mb-0" id="pagination"></ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addPartnerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Register Partner for Real Dreams</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select Official Partner <span class="text-danger">*</span></label>
+                        <select class="form-select" id="partnerSelect" required>
+                            <option value="">Search and select a partner...</option>
+                        </select>
+                        <small class="text-muted">Only Official Partners not already registered for Real Dreams are shown</small>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Partner Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="partnerType" required>
+                                <option value="REAL_ESTATE_DEALER">Real Estate Dealer</option>
+                                <option value="BUILDER">Builder</option>
+                                <option value="AGENT">Agent</option>
+                                <option value="DEVELOPER">Developer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">RERA Registration Number</label>
+                            <input type="text" class="form-control" id="reraNumber" placeholder="e.g., RERA/MH/2024/12345">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Specializations</label>
+                        <div class="tag-input-container" id="specializationContainer">
+                            <input type="text" class="tag-input" id="specializationInput" placeholder="Type and press Enter...">
+                        </div>
+                        <small class="text-muted">E.g., Residential Flats, Commercial Plots, Agricultural Land</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Service Areas</label>
+                        <div class="tag-input-container" id="serviceAreaContainer">
+                            <input type="text" class="tag-input" id="serviceAreaInput" placeholder="Type and press Enter...">
+                        </div>
+                        <small class="text-muted">E.g., Pune, Mumbai, Nashik</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="registerPartner()">
+                        <i class="fas fa-save me-2"></i>Register Partner
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="partnerDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user me-2"></i>Partner Profile Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="partnerDetailContent">
+                    <div class="text-center py-4">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+                <div class="modal-footer" id="partnerDetailFooter">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="reviewModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reviewModalTitle">Review Partner Application</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="reviewProfileId">
+                    <input type="hidden" id="reviewAction">
+                    <div class="mb-3">
+                        <label class="form-label">Review Notes <span id="notesRequired" class="text-danger" style="display:none;">*</span></label>
+                        <textarea class="form-control" id="reviewNotes" rows="4" placeholder="Add notes for this decision..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn" id="reviewSubmitBtn" onclick="submitReview()">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editPartnerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Partner Profile</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editProfileId">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Partner Name</label>
+                            <input type="text" class="form-control" id="editPartnerName" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Partner Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editPartnerType" required>
+                                <option value="REAL_ESTATE_DEALER">Real Estate Dealer</option>
+                                <option value="BUILDER">Builder</option>
+                                <option value="AGENT">Agent</option>
+                                <option value="DEVELOPER">Developer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="editPartnerStatus">
+                                <option value="DRAFT">Draft</option>
+                                <option value="PENDING">Pending Review</option>
+                                <option value="APPROVED">Approved</option>
+                                <option value="REJECTED">Rejected</option>
+                                <option value="SUSPENDED">Suspended</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">RERA Registration Number</label>
+                            <input type="text" class="form-control" id="editReraNumber" placeholder="e.g., RERA/MH/2024/12345">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Specializations</label>
+                            <div class="tag-input-container" id="editSpecializationContainer">
+                                <input type="text" class="tag-input" id="editSpecializationInput" placeholder="Type and press Enter...">
+                            </div>
+                            <small class="text-muted">E.g., Residential Flats, Commercial Plots, Agricultural Land</small>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Service Areas</label>
+                            <div class="tag-input-container" id="editServiceAreaContainer">
+                                <input type="text" class="tag-input" id="editServiceAreaInput" placeholder="Type and press Enter...">
+                            </div>
+                            <small class="text-muted">E.g., Pune, Mumbai, Nashik</small>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label">RVZ Notes</label>
+                            <textarea class="form-control" id="editRvzNotes" rows="3" placeholder="Internal notes..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="savePartnerEdit()">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const API_BASE = '/api/v1/real-dreams';
+        let currentCompanyId = null;
+        let currentPage = 1;
+        let totalPages = 1;
+        let searchTimeout = null;
+        let specializations = [];
+        let serviceAreas = [];
+        
+        let addPartnerModal, partnerDetailModal, reviewModal;
+
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const name = userData.full_name || 'Staff Member';
+            const role = userData.role_name || 'Employee';
+            const empId = userData.emp_code || userData.employee_code || '-';
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            document.getElementById('headerUserInitials').textContent = initials;
+            document.getElementById('headerUserName').textContent = name;
+            document.getElementById('headerUserEmpId').textContent = empId;
+            const roleEl = document.getElementById('headerUserRole');
+            roleEl.textContent = role;
+            if (['VGK Mentor', 'VGK4U Supreme', 'VGK4U'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-supreme';
+            } else if (['HR', 'HR Manager'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-hr';
+            } else if (['Key Leadership', 'Leadership Role', 'Team Leader', 'Manager', 'Executive Admin'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-leadership';
+            } else {
+                roleEl.className = 'user-info-role role-badge-default';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            updateHeaderUserInfo();
+            
+            addPartnerModal = new bootstrap.Modal(document.getElementById('addPartnerModal'));
+            partnerDetailModal = new bootstrap.Modal(document.getElementById('partnerDetailModal'));
+            reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
+            
+            initTagInputs();
+            loadUserInfo();
+            loadCompanies();
+        });
+
+        function initTagInputs() {
+            document.getElementById('specializationInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && this.value.trim()) {
+                    e.preventDefault();
+                    addTag('specialization', this.value.trim());
+                    this.value = '';
+                }
+            });
+            
+            document.getElementById('serviceAreaInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && this.value.trim()) {
+                    e.preventDefault();
+                    addTag('serviceArea', this.value.trim());
+                    this.value = '';
+                }
+            });
+        }
+
+        function addTag(type, value) {
+            const container = document.getElementById(type === 'specialization' ? 'specializationContainer' : 'serviceAreaContainer');
+            const input = container.querySelector('.tag-input');
+            const arr = type === 'specialization' ? specializations : serviceAreas;
+            
+            if (arr.includes(value)) return;
+            arr.push(value);
+            
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.innerHTML = `${value} <span class="remove-tag" onclick="removeTag('${type}', '${value}', this)">&times;</span>`;
+            container.insertBefore(tag, input);
+        }
+
+        function removeTag(type, value, element) {
+            const arr = type === 'specialization' ? specializations : serviceAreas;
+            const idx = arr.indexOf(value);
+            if (idx > -1) arr.splice(idx, 1);
+            element.parentElement.remove();
+        }
+
+        function clearTags() {
+            specializations = [];
+            serviceAreas = [];
+            document.querySelectorAll('.tag').forEach(t => t.remove());
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? '#10B981' : type === 'error' ? '#ef4444' : '#3b82f6';
+            toast.className = 'toast show';
+            toast.style.cssText = `background: ${bgColor}; color: white; padding: 12px 20px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;`;
+            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>${message}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        async function loadUserInfo() {
+            try {
+                await staffFetchJson('/api/v1/staff/auth/me');
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-PAGE] Network error loading user info:', e);
+            }
+        }
+
+        async function loadCompanies() {
+            try {
+                const data = await staffFetchJson(`${API_BASE}/config/companies`);
+                const select = document.getElementById('companySelect');
+                select.innerHTML = '<option value="">Select a company...</option>';
+                
+                const enabledCompanies = data.companies.filter(c => c.is_enabled);
+                enabledCompanies.forEach(c => {
+                    select.innerHTML += `<option value="${c.company.id}">${c.company.company_name} (${c.company.company_code})</option>`;
+                });
+                
+                if (enabledCompanies.length === 1) {
+                    select.value = enabledCompanies[0].company.id;
+                    onCompanyChange();
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast('Failed to load companies', 'error');
+            }
+        }
+
+        function onCompanyChange() {
+            currentCompanyId = document.getElementById('companySelect').value;
+            document.getElementById('addPartnerBtn').disabled = !currentCompanyId;
+            
+            if (currentCompanyId) {
+                currentPage = 1;
+                loadPartners();
+                loadStats();
+            } else {
+                document.getElementById('partnersTable').innerHTML = `
+                    <tr><td colspan="7" class="text-center py-4 text-muted">
+                        <i class="fas fa-building me-2"></i>Select a company to view partners
+                    </td></tr>`;
+                resetStats();
+            }
+        }
+
+        function resetStats() {
+            ['statTotal', 'statPending', 'statApproved', 'statRejected', 'statDraft', 'statProperties'].forEach(id => {
+                document.getElementById(id).textContent = '0';
+            });
+        }
+
+        async function loadStats() {
+            if (!currentCompanyId) return;
+            
+            try {
+                const data = await staffFetchJson(`${API_BASE}/dashboard/stats?company_id=${currentCompanyId}`);
+                if (data.success) {
+                    document.getElementById('statTotal').textContent = data.total_partners || 0;
+                    document.getElementById('statPending').textContent = data.pending_partners || 0;
+                    document.getElementById('statApproved').textContent = data.approved_partners || 0;
+                    document.getElementById('statRejected').textContent = data.rejected_partners || 0;
+                    document.getElementById('statDraft').textContent = data.draft_partners || 0;
+                    document.getElementById('statProperties').textContent = data.total_properties || 0;
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('Error loading stats:', e);
+            }
+        }
+
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentPage = 1;
+                loadPartners();
+            }, 300);
+        }
+
+        async function loadPartners() {
+            if (!currentCompanyId) return;
+            
+            const search = document.getElementById('searchInput').value;
+            const status = document.getElementById('statusFilter').value;
+            const type = document.getElementById('typeFilter').value;
+            
+            let url = `${API_BASE}/partners?company_id=${currentCompanyId}&page=${currentPage}&limit=10`;
+            if (search) url += `&search=${encodeURIComponent(search)}`;
+            if (status) url += `&status=${status}`;
+            if (type) url += `&partner_type=${type}`;
+            
+            try {
+                const data = await staffFetchJson(url);
+                
+                if (!data.success || !data.profiles.length) {
+                    document.getElementById('partnersTable').innerHTML = `
+                        <tr><td colspan="7">
+                            <div class="empty-state">
+                                <i class="fas fa-handshake"></i>
+                                <h5>No Partners Found</h5>
+                                <p>No partner profiles match your criteria. Register a new partner to get started.</p>
+                            </div>
+                        </td></tr>`;
+                    document.getElementById('paginationContainer').style.display = 'none';
+                    return;
+                }
+                
+                totalPages = data.pages;
+                renderPartners(data.profiles);
+                renderPagination(data.total);
+            } catch (e) {
+                showToast('Failed to load partners', 'error');
+            }
+        }
+
+        function renderPartners(profiles) {
+            const tbody = document.getElementById('partnersTable');
+            tbody.innerHTML = profiles.map(p => `
+                <tr>
+                    <td>
+                        <strong>${p.partner_name || 'Unknown'}</strong>
+                        <div class="text-muted small">${p.partner_code || ''}</div>
+                    </td>
+                    <td><span class="partner-type-badge type-${p.partner_type.toLowerCase().replace('_', '-')}">${formatPartnerType(p.partner_type)}</span></td>
+                    <td>${p.rera_registration_number || '<span class="text-muted">Not provided</span>'}</td>
+                    <td>
+                        ${p.nda_signed ? 
+                            '<span class="text-success"><i class="fas fa-check-circle"></i> Signed</span>' : 
+                            '<span class="text-muted"><i class="fas fa-times-circle"></i> Not Signed</span>'}
+                    </td>
+                    <td><span class="status-badge status-${p.status.toLowerCase()}">${p.status}</span></td>
+                    <td>${new Date(p.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary icon-btn me-1" onclick="viewPartnerDetail(${p.id})" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-success icon-btn me-1" onclick="editPartner(${p.id})" title="Edit Profile">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        ${p.status === 'PENDING' ? `
+                            <button class="btn btn-sm btn-success icon-btn me-1" onclick="showReviewModal(${p.id}, 'approve')" title="Approve">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger icon-btn" onclick="showReviewModal(${p.id}, 'reject')" title="Reject">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        ` : ''}
+                        ${p.status === 'DRAFT' ? `
+                            <button class="btn btn-sm btn-warning icon-btn" onclick="forceApprovePartner(${p.id})" title="Force Approve (Bypass NDA)">
+                                <i class="fas fa-bolt"></i>
+                            </button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function formatPartnerType(type) {
+            return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        function renderPagination(total) {
+            const container = document.getElementById('paginationContainer');
+            const info = document.getElementById('paginationInfo');
+            const pagination = document.getElementById('pagination');
+            
+            container.style.display = total > 10 ? 'flex' : 'none';
+            const start = (currentPage - 1) * 10 + 1;
+            const end = Math.min(currentPage * 10, total);
+            info.textContent = `Showing ${start}-${end} of ${total}`;
+            
+            let html = '';
+            html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">&laquo;</a>
+            </li>`;
+            for (let i = 1; i <= totalPages && i <= 5; i++) {
+                html += `<li class="page-item ${currentPage === i ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                </li>`;
+            }
+            html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">&raquo;</a>
+            </li>`;
+            pagination.innerHTML = html;
+        }
+
+        function changePage(page) {
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            loadPartners();
+        }
+
+        async function showAddPartnerModal() {
+            clearTags();
+            document.getElementById('partnerSelect').innerHTML = '<option value="">Loading partners...</option>';
+            document.getElementById('partnerType').value = 'REAL_ESTATE_DEALER';
+            document.getElementById('reraNumber').value = '';
+            
+            addPartnerModal.show();
+            
+            try {
+                const data = await staffFetchJson(`${API_BASE}/partners/available?company_id=${currentCompanyId}`);
+                const select = document.getElementById('partnerSelect');
+                
+                if (!data.partners || !data.partners.length) {
+                    select.innerHTML = '<option value="">No available partners found</option>';
+                    return;
+                }
+                
+                select.innerHTML = '<option value="">Select a partner...</option>';
+                data.partners.forEach(p => {
+                    select.innerHTML += `<option value="${p.id}">${p.partner_name} (${p.partner_code}) - ${p.category}</option>`;
+                });
+            } catch (e) {
+                showToast('Failed to load available partners', 'error');
+            }
+        }
+
+        function clearPartnerFormValidation() {
+            document.querySelectorAll('#addPartnerModal .is-invalid').forEach(el => el.classList.remove('is-invalid'));
+            document.querySelectorAll('#addPartnerModal .invalid-feedback').forEach(el => el.remove());
+        }
+        
+        function validatePartnerForm() {
+            clearPartnerFormValidation();
+            let isValid = true;
+            
+            if (!currentCompanyId) {
+                showToast('Please select a company first', 'error');
+                return false;
+            }
+            
+            const partnerSelect = document.getElementById('partnerSelect');
+            if (!partnerSelect.value) {
+                partnerSelect.classList.add('is-invalid');
+                partnerSelect.insertAdjacentHTML('afterend', '<div class="invalid-feedback">Please select a partner</div>');
+                isValid = false;
+            }
+            
+            const partnerType = document.getElementById('partnerType');
+            if (!partnerType.value) {
+                partnerType.classList.add('is-invalid');
+                partnerType.insertAdjacentHTML('afterend', '<div class="invalid-feedback">Partner type is required</div>');
+                isValid = false;
+            }
+            
+            const reraNumber = document.getElementById('reraNumber');
+            if (reraNumber.value.trim() && !/^[A-Z0-9\/\-]+$/i.test(reraNumber.value.trim())) {
+                reraNumber.classList.add('is-invalid');
+                reraNumber.insertAdjacentHTML('afterend', '<div class="invalid-feedback">Invalid RERA format (letters, numbers, / and - only)</div>');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+        
+        async function registerPartner() {
+            if (!validatePartnerForm()) return;
+            
+            const partnerId = document.getElementById('partnerSelect').value;
+            const partnerType = document.getElementById('partnerType').value;
+            const reraNumber = document.getElementById('reraNumber').value.trim();
+            
+            const payload = {
+                company_id: parseInt(currentCompanyId),
+                partner_id: parseInt(partnerId),
+                partner_type: partnerType,
+                specialization: specializations.length ? specializations : null,
+                service_areas: serviceAreas.length ? serviceAreas : null,
+                rera_registration_number: reraNumber || null
+            };
+            
+            try {
+                const data = await staffFetchJson(`${API_BASE}/partners`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                
+                showToast('Partner registered successfully', 'success');
+                addPartnerModal.hide();
+                loadPartners();
+                loadStats();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast(e.message || 'Failed to register partner', 'error');
+            }
+        }
+
+        async function viewPartnerDetail(profileId) {
+            document.getElementById('partnerDetailContent').innerHTML = '<div class="text-center py-4"><div class="loading-spinner"></div></div>';
+            partnerDetailModal.show();
+            
+            try {
+                const data = await staffFetchJson(`${API_BASE}/partners/${profileId}`);
+                
+                if (!data.success) {
+                    document.getElementById('partnerDetailContent').innerHTML = '<p class="text-danger">Failed to load profile</p>';
+                    return;
+                }
+                
+                const p = data.profile;
+                const partner = p.partner || {};
+                
+                document.getElementById('partnerDetailContent').innerHTML = `
+                    <div class="partner-details">
+                        <h6 class="mb-3"><i class="fas fa-building me-2"></i>Partner Information</h6>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Partner Name</div>
+                            <div class="partner-details-value">${partner.partner_name || 'N/A'}</div>
+                        </div>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Partner Code</div>
+                            <div class="partner-details-value"><code>${partner.partner_code || 'N/A'}</code></div>
+                        </div>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Category</div>
+                            <div class="partner-details-value">${partner.category || 'N/A'}</div>
+                        </div>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Contact Person</div>
+                            <div class="partner-details-value">${partner.contact_person || 'N/A'}</div>
+                        </div>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Mobile</div>
+                            <div class="partner-details-value">${partner.mobile_1 || 'N/A'}</div>
+                        </div>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Email</div>
+                            <div class="partner-details-value">${partner.email || 'N/A'}</div>
+                        </div>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Address</div>
+                            <div class="partner-details-value">${[partner.address, partner.city, partner.state, partner.pincode].filter(Boolean).join(', ') || 'N/A'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="partner-details">
+                        <h6 class="mb-3"><i class="fas fa-home me-2"></i>Real Dreams Profile</h6>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Partner Type</div>
+                            <div class="partner-details-value"><span class="partner-type-badge type-${p.partner_type.toLowerCase().replace('_', '-')}">${formatPartnerType(p.partner_type)}</span></div>
+                        </div>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">RERA Number</div>
+                            <div class="partner-details-value">${p.rera_registration_number || '<span class="text-muted">Not provided</span>'}</div>
+                        </div>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Specializations</div>
+                            <div class="partner-details-value">${p.specialization && p.specialization.length ? p.specialization.join(', ') : '<span class="text-muted">None</span>'}</div>
+                        </div>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Service Areas</div>
+                            <div class="partner-details-value">${p.service_areas && p.service_areas.length ? p.service_areas.join(', ') : '<span class="text-muted">None</span>'}</div>
+                        </div>
+                        <div class="partner-details-row">
+                            <div class="partner-details-label">Status</div>
+                            <div class="partner-details-value"><span class="status-badge status-${p.status.toLowerCase()}">${p.status}</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="nda-section ${p.nda_signed ? 'signed' : ''}">
+                        <i class="fas fa-file-signature"></i>
+                        <div>
+                            <strong>${p.nda_signed ? 'NDA Signed' : 'NDA Not Signed'}</strong>
+                            ${p.nda_signed && p.nda_signed_at ? `<div class="small text-muted">Signed on ${new Date(p.nda_signed_at).toLocaleString()}</div>` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="partner-details">
+                        <h6 class="mb-3"><i class="fas fa-file-alt me-2"></i>Documents</h6>
+                        <ul class="document-list">
+                            <li>
+                                <div><i class="fas fa-certificate"></i> RERA Certificate</div>
+                                ${p.rera_certificate_url ? `<a href="${p.rera_certificate_url}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` : '<span class="text-muted small">Not uploaded</span>'}
+                            </li>
+                            <li>
+                                <div><i class="fas fa-handshake"></i> Dealership Agreement</div>
+                                ${p.dealership_agreement_url ? `<a href="${p.dealership_agreement_url}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` : '<span class="text-muted small">Not uploaded</span>'}
+                            </li>
+                            <li>
+                                <div><i class="fas fa-file-contract"></i> NDA Document</div>
+                                ${p.nda_document_url ? `<a href="${p.nda_document_url}" target="_blank" class="btn btn-sm btn-outline-primary">View</a>` : '<span class="text-muted small">Not uploaded</span>'}
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    ${p.rvz_notes ? `
+                    <div class="partner-details">
+                        <h6 class="mb-3"><i class="fas fa-comment me-2"></i>RVZ Notes</h6>
+                        <p class="mb-0">${p.rvz_notes}</p>
+                    </div>` : ''}
+                `;
+                
+                let footerHtml = '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>';
+                if (p.status === 'PENDING') {
+                    footerHtml += `
+                        <button type="button" class="btn btn-danger" onclick="partnerDetailModal.hide(); showReviewModal(${p.id}, 'reject')">
+                            <i class="fas fa-times me-2"></i>Reject
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="partnerDetailModal.hide(); showReviewModal(${p.id}, 'approve')">
+                            <i class="fas fa-check me-2"></i>Approve
+                        </button>
+                    `;
+                }
+                document.getElementById('partnerDetailFooter').innerHTML = footerHtml;
+            } catch (e) {
+                document.getElementById('partnerDetailContent').innerHTML = '<p class="text-danger">Failed to load profile</p>';
+            }
+        }
+
+        function showReviewModal(profileId, action) {
+            document.getElementById('reviewProfileId').value = profileId;
+            document.getElementById('reviewAction').value = action;
+            document.getElementById('reviewNotes').value = '';
+            
+            if (action === 'approve') {
+                document.getElementById('reviewModalTitle').textContent = 'Approve Partner Application';
+                document.getElementById('reviewSubmitBtn').className = 'btn btn-success';
+                document.getElementById('reviewSubmitBtn').innerHTML = '<i class="fas fa-check me-2"></i>Approve';
+                document.getElementById('notesRequired').style.display = 'none';
+            } else {
+                document.getElementById('reviewModalTitle').textContent = 'Reject Partner Application';
+                document.getElementById('reviewSubmitBtn').className = 'btn btn-danger';
+                document.getElementById('reviewSubmitBtn').innerHTML = '<i class="fas fa-times me-2"></i>Reject';
+                document.getElementById('notesRequired').style.display = 'inline';
+            }
+            
+            reviewModal.show();
+        }
+
+        async function submitReview() {
+            const profileId = document.getElementById('reviewProfileId').value;
+            const action = document.getElementById('reviewAction').value;
+            const notes = document.getElementById('reviewNotes').value.trim();
+            
+            if (action === 'reject' && !notes) {
+                showToast('Rejection reason is required', 'error');
+                return;
+            }
+            
+            try {
+                await staffFetchJson(`${API_BASE}/partners/${profileId}/${action}`, {
+                    method: 'POST',
+                    body: JSON.stringify({ notes })
+                });
+                
+                showToast(`Partner ${action === 'approve' ? 'approved' : 'rejected'} successfully`, 'success');
+                reviewModal.hide();
+                loadPartners();
+                loadStats();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast(e.message || `Failed to ${action} partner`, 'error');
+            }
+        }
+
+        let editPartnerModal = null;
+        let editSpecializations = [];
+        let editServiceAreas = [];
+
+        function initEditTagInputs() {
+            const specInput = document.getElementById('editSpecializationInput');
+            const areaInput = document.getElementById('editServiceAreaInput');
+
+            specInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && this.value.trim()) {
+                    e.preventDefault();
+                    const val = this.value.trim();
+                    if (!editSpecializations.includes(val)) {
+                        editSpecializations.push(val);
+                        renderEditTags('editSpecializationContainer', editSpecializations, 'spec');
+                    }
+                    this.value = '';
+                }
+            });
+
+            areaInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && this.value.trim()) {
+                    e.preventDefault();
+                    const val = this.value.trim();
+                    if (!editServiceAreas.includes(val)) {
+                        editServiceAreas.push(val);
+                        renderEditTags('editServiceAreaContainer', editServiceAreas, 'area');
+                    }
+                    this.value = '';
+                }
+            });
+        }
+
+        function renderEditTags(containerId, arr, prefix) {
+            const container = document.getElementById(containerId);
+            const input = container.querySelector('.tag-input');
+            container.querySelectorAll('.tag-badge').forEach(el => el.remove());
+            arr.forEach((tag, i) => {
+                const badge = document.createElement('span');
+                badge.className = 'tag-badge badge bg-primary me-1 mb-1';
+                const textNode = document.createTextNode(tag + ' ');
+                badge.appendChild(textNode);
+                const removeIcon = document.createElement('i');
+                removeIcon.className = 'fas fa-times ms-1';
+                removeIcon.style.cursor = 'pointer';
+                removeIcon.addEventListener('click', () => removeEditTag(prefix, i));
+                badge.appendChild(removeIcon);
+                container.insertBefore(badge, input);
+            });
+        }
+
+        function removeEditTag(prefix, index) {
+            if (prefix === 'spec') {
+                editSpecializations.splice(index, 1);
+                renderEditTags('editSpecializationContainer', editSpecializations, 'spec');
+            } else {
+                editServiceAreas.splice(index, 1);
+                renderEditTags('editServiceAreaContainer', editServiceAreas, 'area');
+            }
+        }
+
+        async function editPartner(profileId) {
+            if (!editPartnerModal) {
+                editPartnerModal = new bootstrap.Modal(document.getElementById('editPartnerModal'));
+                initEditTagInputs();
+            }
+
+            try {
+                const data = await staffFetchJson(`${API_BASE}/partners/${profileId}`);
+                if (!data.success || !data.profile) {
+                    showToast('Failed to load partner profile', 'error');
+                    return;
+                }
+                const p = data.profile;
+                const partner = p.partner || {};
+
+                document.getElementById('editProfileId').value = profileId;
+                document.getElementById('editPartnerName').value = partner.partner_name || p.user_name || '';
+                document.getElementById('editPartnerType').value = p.partner_type || 'REAL_ESTATE_DEALER';
+                document.getElementById('editPartnerStatus').value = p.status || 'PENDING';
+                document.getElementById('editReraNumber').value = p.rera_registration_number || '';
+                document.getElementById('editRvzNotes').value = p.rvz_notes || '';
+
+                editSpecializations = Array.isArray(p.specialization) ? [...p.specialization] :
+                    (typeof p.specialization === 'string' && p.specialization ? p.specialization.split(',').map(s => s.trim()) : []);
+                editServiceAreas = Array.isArray(p.service_areas) ? [...p.service_areas] :
+                    (typeof p.service_areas === 'string' && p.service_areas ? p.service_areas.split(',').map(s => s.trim()) : []);
+
+                renderEditTags('editSpecializationContainer', editSpecializations, 'spec');
+                renderEditTags('editServiceAreaContainer', editServiceAreas, 'area');
+
+                editPartnerModal.show();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast(e.message || 'Failed to load partner details', 'error');
+            }
+        }
+
+        async function savePartnerEdit() {
+            const profileId = document.getElementById('editProfileId').value;
+            const payload = {
+                partner_type: document.getElementById('editPartnerType').value,
+                status: document.getElementById('editPartnerStatus').value,
+                rera_registration_number: document.getElementById('editReraNumber').value || null,
+                specialization: editSpecializations,
+                service_areas: editServiceAreas,
+                rvz_notes: document.getElementById('editRvzNotes').value.trim() || null
+            };
+
+            try {
+                await staffFetchJson(`${API_BASE}/partners/${profileId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+
+                showToast('Partner profile updated successfully', 'success');
+                editPartnerModal.hide();
+                loadPartners();
+                loadStats();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast(e.message || 'Failed to update partner profile', 'error');
+            }
+        }
+
+        async function forceApprovePartner(profileId) {
+            if (!confirm('Force approve this partner? This will bypass NDA requirement.')) {
+                return;
+            }
+            
+            try {
+                const result = await staffFetchJson(`${API_BASE}/partners/${profileId}/force-approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({ notes: 'Force approved - NDA handled offline' })
+                });
+                
+                showToast(result.message || 'Partner force approved successfully', 'success');
+                loadPartners();
+                loadStats();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast(e.message || 'Failed to force approve partner', 'error');
+            }
+        }
+    </script>
+    </div>
+</body>
+</html>

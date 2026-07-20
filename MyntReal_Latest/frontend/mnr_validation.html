@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MNR System Validation | MNR Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0a1a;
+            --bg-secondary: #1a1028;
+            --bg-card: #1e1430;
+            --text-primary: #f1f5f9;
+            --text-secondary: #a3a0b8;
+            --accent-primary: #7c3aed;
+            --accent-secondary: #a855f7;
+            --accent-critical: #dc2626;
+            --accent-major: #f59e0b;
+            --accent-moderate: #3b82f6;
+            --accent-low: #059669;
+            --accent-pass: #059669;
+            --accent-fail: #dc2626;
+            --accent-verify: #f59e0b;
+            --border-color: #2d2244;
+            --gradient-start: #1a0533;
+            --gradient-mid: #2d1054;
+            --gradient-end: #4c1d95;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+        }
+
+        .header-area {
+            background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-mid) 50%, var(--gradient-end) 100%);
+            padding: 1.5rem 2rem;
+            border-bottom: 2px solid var(--accent-primary);
+        }
+        .header-area .logos { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.75rem; }
+        .header-area .logos img { height: 42px; }
+        .header-area h1 { font-size: 1.8rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.6rem; }
+        .header-area h1 i { color: var(--accent-secondary); }
+        .header-area .subtitle { color: var(--text-secondary); font-size: 0.95rem; }
+        .header-area .stats { color: #a3a0b8; font-size: 0.85rem; margin-top: 0.25rem; }
+        .back-nav {
+            position: absolute; right: 2rem; top: 1.5rem;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .back-btn {
+            background: rgba(124,58,237,0.2); border: 1px solid rgba(124,58,237,0.4);
+            color: #fff; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none;
+            transition: background 0.2s; white-space: nowrap;
+        }
+        .back-btn:hover { background: rgba(124,58,237,0.4); color: #fff; }
+        .logout-btn { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,180,180,0.85); background: transparent; border: 1px solid rgba(255,100,100,0.3); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
+        .logout-btn:hover { color: #fca5a5; border-color: rgba(255,100,100,0.7); background: rgba(220,38,38,0.15); }
+
+        .search-box { margin-top: 0.75rem; position: relative; max-width: 450px; }
+        .search-box input {
+            width: 100%; padding: 0.6rem 1rem 0.6rem 2.5rem;
+            border-radius: 8px; border: 1px solid var(--border-color);
+            background: rgba(124,58,237,0.08); color: var(--text-primary); font-size: 0.9rem;
+        }
+        .search-box input::placeholder { color: var(--text-secondary); }
+        .search-box i { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
+
+        .risk-summary-bar {
+            display: flex; gap: 1.5rem; padding: 1rem 2rem;
+            background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .risk-badge {
+            display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600;
+        }
+        .risk-badge .count { font-size: 1.1rem; font-weight: 700; }
+        .risk-critical { background: rgba(220,38,38,0.15); color: var(--accent-critical); border: 1px solid rgba(220,38,38,0.3); }
+        .risk-major { background: rgba(245,158,11,0.15); color: var(--accent-major); border: 1px solid rgba(245,158,11,0.3); }
+        .risk-moderate { background: rgba(59,130,246,0.15); color: var(--accent-moderate); border: 1px solid rgba(59,130,246,0.3); }
+        .risk-low { background: rgba(5,150,105,0.15); color: var(--accent-low); border: 1px solid rgba(5,150,105,0.3); }
+
+        .page-layout { display: flex; align-items: flex-start; min-height: calc(100vh - 180px); }
+        .left-sidebar { width: 220px; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--bg-secondary); border-right: 1px solid var(--border-color); z-index: 50; scrollbar-width: thin; scrollbar-color: var(--border-color) transparent; }
+        .left-sidebar::-webkit-scrollbar { width: 4px; }
+        .left-sidebar::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        .sidebar-hdr { padding: 12px 16px 8px; border-bottom: 1px solid var(--border-color); }
+        .sidebar-hdr p { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-secondary); margin: 0; }
+        .phase-tab { display: flex; align-items: center; gap: 0.5rem; padding: 9px 16px; color: var(--text-secondary); font-size: 0.82rem; font-weight: 500; cursor: pointer; border-left: 3px solid transparent; transition: all 0.15s; }
+        .phase-tab:hover { color: var(--text-primary); background: rgba(124,58,237,0.06); border-left-color: rgba(124,58,237,0.3); }
+        .phase-tab.active { color: var(--accent-secondary); background: rgba(124,58,237,0.1); border-left-color: var(--accent-secondary); font-weight: 600; }
+        .main-content { flex: 1; min-width: 0; overflow: hidden; }
+        .content-area { padding: 1.5rem 2rem 3rem; }
+        .phase-panel { display: none; }
+        .phase-panel.active { display: block; }
+
+        .section-block {
+            margin-bottom: 2rem; border: 1px solid var(--border-color);
+            border-radius: 10px; overflow: hidden; background: var(--bg-card);
+        }
+        .section-header {
+            padding: 1rem 1.25rem; background: rgba(124,58,237,0.05);
+            display: flex; align-items: center; gap: 0.75rem;
+            border-bottom: 1px solid var(--border-color); cursor: pointer;
+        }
+        .section-header i.icon { color: var(--accent-secondary); font-size: 1.1rem; }
+        .section-header .title { font-size: 1.1rem; font-weight: 600; flex: 1; }
+        .section-header .meta { font-size: 0.8rem; color: var(--text-secondary); }
+        .section-header .risk-label {
+            font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.5rem;
+            border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        .page-card {
+            border: 1px solid var(--border-color); border-radius: 8px;
+            margin: 0.75rem 1rem; overflow: hidden; transition: all 0.2s;
+        }
+        .page-card:hover { border-color: rgba(124,58,237,0.3); }
+        .page-card-header {
+            padding: 0.75rem 1rem; display: flex; align-items: center; gap: 0.5rem;
+            cursor: pointer; background: rgba(124,58,237,0.03);
+        }
+        .page-card-header i.icon { color: var(--accent-secondary); }
+        .page-card-header .name { font-weight: 500; flex: 1; }
+        .page-card-header .route { font-size: 0.75rem; color: var(--text-secondary); font-family: monospace; }
+        .page-card-header .chevron { color: var(--text-secondary); transition: transform 0.2s; }
+        .page-card-header.expanded .chevron { transform: rotate(90deg); }
+        .page-card-body { display: none; padding: 0.75rem 1rem; border-top: 1px solid var(--border-color); }
+        .page-card-body.show { display: block; }
+
+        .val-section { margin-bottom: 1rem; }
+        .val-section-title {
+            font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px; color: var(--text-secondary);
+            margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;
+        }
+
+        .ui-comp-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .ui-comp-tag {
+            background: rgba(124,58,237,0.12); border: 1px solid rgba(124,58,237,0.25);
+            color: var(--accent-secondary); padding: 0.2rem 0.6rem; border-radius: 4px;
+            font-size: 0.78rem;
+        }
+
+        .data-table {
+            width: 100%; border-collapse: collapse; font-size: 0.8rem;
+        }
+        .data-table th {
+            background: rgba(124,58,237,0.08); padding: 0.5rem;
+            text-align: left; border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary); font-weight: 600; text-transform: uppercase;
+            font-size: 0.7rem; letter-spacing: 0.5px;
+        }
+        .data-table td {
+            padding: 0.45rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.04);
+            vertical-align: top;
+        }
+
+        .check-list { list-style: none; padding: 0; }
+        .check-list li {
+            padding: 0.3rem 0; display: flex; align-items: flex-start; gap: 0.4rem;
+            font-size: 0.82rem; color: var(--text-secondary);
+        }
+        .check-list li i { margin-top: 0.15rem; font-size: 0.75rem; }
+        .check-list li i.fa-shield-alt { color: var(--accent-secondary); }
+        .check-list li i.fa-check-circle { color: var(--accent-pass); }
+        .check-list li i.fa-exclamation-triangle { color: var(--accent-major); }
+
+        .risk-item {
+            display: flex; align-items: flex-start; gap: 0.5rem;
+            padding: 0.5rem; margin-bottom: 0.4rem; border-radius: 6px;
+            font-size: 0.82rem;
+        }
+        .risk-item.critical { background: rgba(220,38,38,0.08); border-left: 3px solid var(--accent-critical); }
+        .risk-item.major { background: rgba(245,158,11,0.08); border-left: 3px solid var(--accent-major); }
+        .risk-item.moderate { background: rgba(59,130,246,0.08); border-left: 3px solid var(--accent-moderate); }
+        .risk-item.low { background: rgba(5,150,105,0.08); border-left: 3px solid var(--accent-low); }
+        .risk-tag {
+            font-size: 0.65rem; font-weight: 700; padding: 0.1rem 0.4rem;
+            border-radius: 3px; text-transform: uppercase; flex-shrink: 0;
+        }
+        .risk-tag.critical { background: rgba(220,38,38,0.2); color: var(--accent-critical); }
+        .risk-tag.major { background: rgba(245,158,11,0.2); color: var(--accent-major); }
+        .risk-tag.moderate { background: rgba(59,130,246,0.2); color: var(--accent-moderate); }
+        .risk-tag.low { background: rgba(5,150,105,0.2); color: var(--accent-low); }
+        .risk-tag.high { background: rgba(245,158,11,0.2); color: var(--accent-major); }
+
+        .parity-status {
+            font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.4rem;
+            border-radius: 3px; text-transform: uppercase;
+        }
+        .parity-PASS { background: rgba(5,150,105,0.2); color: var(--accent-pass); }
+        .parity-VERIFY { background: rgba(245,158,11,0.2); color: var(--accent-verify); }
+        .parity-FAIL { background: rgba(220,38,38,0.2); color: var(--accent-fail); }
+        .parity-MOBILE-ONLY { background: rgba(139,92,246,0.2); color: #a78bfa; }
+        .parity-WEB-ONLY { background: rgba(59,130,246,0.2); color: var(--accent-moderate); }
+
+        .enforcement-card {
+            border: 1px solid var(--border-color); border-radius: 10px;
+            margin-bottom: 1.25rem; overflow: hidden; background: var(--bg-card);
+        }
+        .enforcement-card .title-bar {
+            padding: 0.75rem 1rem; background: rgba(124,58,237,0.08);
+            display: flex; align-items: center; gap: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .enforcement-card .title-bar h3 { font-size: 0.95rem; font-weight: 600; flex: 1; margin: 0; }
+        .enforcement-card .status-tag {
+            font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.5rem;
+            border-radius: 4px; background: rgba(220,38,38,0.2); color: var(--accent-critical);
+        }
+        .enforcement-card .check-body { padding: 0.75rem 1rem; }
+
+        .wf-card {
+            border: 1px solid var(--border-color); border-radius: 10px;
+            margin-bottom: 1.5rem; overflow: hidden; background: var(--bg-card);
+        }
+        .wf-card .wf-header {
+            padding: 0.75rem 1rem; background: rgba(124,58,237,0.05);
+            display: flex; align-items: center; gap: 0.5rem; cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .wf-card .wf-header h3 { font-size: 1rem; font-weight: 600; flex: 1; margin: 0; }
+        .wf-card .wf-body { padding: 1rem; display: none; }
+        .wf-card .wf-body.show { display: block; }
+
+        .state-flow { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
+        .state-node {
+            background: rgba(124,58,237,0.12); border: 1px solid rgba(124,58,237,0.3);
+            color: var(--accent-secondary); padding: 0.35rem 0.75rem; border-radius: 6px;
+            font-size: 0.8rem; font-weight: 500;
+        }
+        .state-arrow { color: var(--text-secondary); font-size: 0.9rem; }
+
+        .transition-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 1rem; }
+        .transition-table th {
+            background: rgba(124,58,237,0.08); padding: 0.5rem;
+            text-align: left; border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary); font-weight: 600; text-transform: uppercase;
+            font-size: 0.7rem;
+        }
+        .transition-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+        .transition-valid { border-left: 3px solid var(--accent-pass); }
+        .transition-invalid { border-left: 3px solid var(--accent-fail); background: rgba(220,38,38,0.03); }
+
+        .no-data { text-align: center; padding: 3rem; color: var(--text-secondary); font-size: 0.9rem; }
+
+        .print-btn {
+            position: fixed; bottom: 2rem; right: 2rem; z-index: 100;
+            width: 50px; height: 50px; border-radius: 50%;
+            background: var(--accent-primary); color: #fff; border: none;
+            font-size: 1.2rem; cursor: pointer; box-shadow: 0 4px 15px rgba(124,58,237,0.4);
+            transition: transform 0.2s;
+        }
+        .print-btn:hover { transform: scale(1.1); }
+
+        .financial-highlight {
+            background: rgba(220,38,38,0.05); border: 1px solid rgba(220,38,38,0.2);
+            border-radius: 8px; padding: 1rem; margin-bottom: 1rem;
+        }
+        .financial-highlight h4 {
+            color: var(--accent-critical); font-size: 0.9rem; margin-bottom: 0.5rem;
+            display: flex; align-items: center; gap: 0.4rem;
+        }
+
+        @media print {
+            body { background: #fff; color: #000; }
+            .header-area { background: #fff; border-bottom: 2px solid #7c3aed; }
+            .header-area h1, .header-area .subtitle, .header-area .stats { color: #000; }
+            .left-sidebar, .print-btn, .search-box, .back-btn { display: none !important; }
+            .phase-panel { display: block !important; page-break-before: always; }
+            .phase-panel:first-of-type { page-break-before: auto; }
+            .section-block, .page-card, .enforcement-card, .wf-card { border-color: #ddd; background: #fff; }
+            .page-card-body, .wf-card .wf-body { display: block !important; }
+        }
+
+        .login-overlay { position: fixed; inset: 0; background: rgba(8,4,20,0.97); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+        .login-overlay.hidden { display: none !important; }
+        .login-card { background: #1a1028; border: 1px solid #2d2244; border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 380px; box-shadow: 0 25px 60px rgba(0,0,0,0.7); }
+        .login-logos { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; }
+        .login-logos img { height: 38px; object-fit: contain; }
+        .login-logos .ldiv { width: 1px; height: 30px; background: rgba(255,255,255,0.2); }
+        .login-heading { text-align: center; font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+        .login-sub { text-align: center; font-size: 0.82rem; color: #6b5b95; margin-bottom: 28px; }
+        .lf-group { margin-bottom: 16px; }
+        .lf-group label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #a3a0b8; margin-bottom: 6px; }
+        .lf-group input { width: 100%; padding: 10px 14px; background: #0f0a1a; border: 1px solid #2d2244; border-radius: 8px; color: #f1f5f9; font-size: 0.95rem; font-family: inherit; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        .lf-group input:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.15); }
+        .login-btn { width: 100%; padding: 11px; background: #7c3aed; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; margin-top: 8px; font-family: inherit; }
+        .login-btn:hover { opacity: 0.88; }
+        .login-error { color: #ef4444; font-size: 0.82rem; text-align: center; margin-top: 12px; display: none; }
+        .login-error.show { display: block; }
+        .login-footer { text-align: center; font-size: 0.72rem; color: #4a3f6b; margin-top: 20px; }
+
+        @media (max-width: 768px) {
+            .header-area { padding: 1rem; }
+            .header-area h1 { font-size: 1.3rem; }
+            .left-sidebar { display: none; }
+            .content-area { padding: 1rem; }
+            .risk-summary-bar { padding: 0.75rem 1rem; gap: 0.75rem; }
+            .back-btn { position: static; margin-top: 0.5rem; display: inline-block; }
+            .page-card { margin: 0.5rem; }
+            .data-table, .transition-table { display: block; overflow-x: auto; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <div class="login-logos">
+                <img src="/assets/img/mnr-logo.png" alt="MNR" onerror="this.style.display='none'">
+                <div class="ldiv"></div>
+                <img src="/assets/img/myntreal-logo.png" alt="Myntreal" onerror="this.style.display='none'">
+            </div>
+            <div class="login-heading">MNR System Validation</div>
+            <div class="login-sub">Restricted access — authorised personnel only</div>
+            <form id="loginForm" onsubmit="handleLogin(event)" autocomplete="off">
+                <div class="lf-group">
+                    <label>Member ID</label>
+                    <input type="text" id="loginUser" placeholder="e.g. MR10001" required>
+                </div>
+                <div class="lf-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPass" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="login-btn">Access Document</button>
+                <div class="login-error" id="loginError">Invalid credentials. Please try again.</div>
+            </form>
+            <div class="login-footer">MyntReal LLP &mdash; Confidential Internal Document</div>
+        </div>
+    </div>
+
+    <div class="header-area" style="position:relative;">
+        <div class="logos">
+            <img src="/assets/img/mnr-logo.png" alt="MNR" onerror="this.style.display='none'">
+            <img src="/assets/img/myntreal-logo.png" alt="Mynt Real" onerror="this.style.display='none'">
+        </div>
+        <h1><i class="fas fa-shield-alt"></i> MNR System Validation</h1>
+        <div class="subtitle">Enterprise-grade system enforcement — financial integrity, approval chains, risk matrix</div>
+        <div class="stats" id="headerStats">Loading...</div>
+        <div class="back-nav">
+            <a href="/dashboard" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+            <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search... (e.g. withdrawal, income, PIN, critical)">
+        </div>
+    </div>
+
+    <div class="risk-summary-bar" id="riskSummaryBar"></div>
+
+    <div class="page-layout">
+        <aside class="left-sidebar">
+            <div class="sidebar-hdr"><p>Phases</p></div>
+            <div id="phaseTabs">
+                <div class="phase-tab active" data-phase="pages"><i class="fas fa-layer-group"></i> Module Validation</div>
+                <div class="phase-tab" data-phase="workflows"><i class="fas fa-project-diagram"></i> Business Logic</div>
+                <div class="phase-tab" data-phase="enforcement"><i class="fas fa-lock"></i> Data & Security</div>
+                <div class="phase-tab" data-phase="impact"><i class="fas fa-link"></i> Cross-Module Impact</div>
+                <div class="phase-tab" data-phase="parity"><i class="fas fa-mobile-alt"></i> Mobile vs Web</div>
+                <div class="phase-tab" data-phase="risks"><i class="fas fa-exclamation-triangle"></i> Enterprise Risk</div>
+                <div class="phase-tab" data-phase="testing"><i class="fas fa-flask"></i> Testing Req.</div>
+            </div>
+        </aside>
+        <div class="main-content">
+            <div class="content-area">
+                <div class="phase-panel active" id="panel-pages"></div>
+                <div class="phase-panel" id="panel-workflows"></div>
+                <div class="phase-panel" id="panel-enforcement"></div>
+                <div class="phase-panel" id="panel-impact"></div>
+                <div class="phase-panel" id="panel-parity"></div>
+                <div class="phase-panel" id="panel-risks"></div>
+                <div class="phase-panel" id="panel-testing"></div>
+            </div>
+        </div>
+    </div>
+
+    <button class="print-btn" onclick="window.print()" title="Print Validation Document">
+        <i class="fas fa-print"></i>
+    </button>
+
+    <script>
+        const API_URL = '/api/v1/mnr/validation/pages';
+        let DATA = null;
+
+        function riskColor(level) {
+            const map = { critical: '#dc2626', major: '#f59e0b', high: '#f59e0b', moderate: '#3b82f6', medium: '#3b82f6', low: '#059669' };
+            return map[level] || map.low;
+        }
+
+        function riskLabel(level) {
+            return `<span class="risk-tag ${level}">${(level || 'LOW').toUpperCase()}</span>`;
+        }
+
+        function parityBadge(status) {
+            return `<span class="parity-status parity-${status}">${status}</span>`;
+        }
+
+        async function loadData() {
+            try {
+                const resp = await fetch(API_URL);
+                DATA = await resp.json();
+                renderAll();
+            } catch (e) {
+                document.getElementById('panel-pages').innerHTML = '<div class="no-data"><i class="fas fa-exclamation-circle"></i> Failed to load validation data. Check backend connection.</div>';
+            }
+        }
+
+        function renderAll() {
+            if (!DATA) return;
+            const totalHighPriority = (DATA.risk_summary.critical || 0) + (DATA.risk_summary.major || 0);
+            document.getElementById('headerStats').textContent =
+                `${DATA.total_sections} sections | ${DATA.total_pages} pages validated | ${totalHighPriority} critical/major risks identified`;
+
+            renderRiskSummary();
+            renderModuleValidation();
+            renderWorkflows();
+            renderEnforcement();
+            renderCrossModuleImpact();
+            renderParityOverview();
+            renderRiskMatrix();
+            renderTestingRequirements();
+        }
+
+        function renderTestingRequirements() {
+            const fReqs = [
+                { group:'Member Registration & Binary Tree', risk:'crit', items:[
+                    'New member registration with valid sponsor ID → MNR ID generated, placed in correct binary leg',
+                    'Left/right placement follows spillover logic — no manual override',
+                    'Duplicate MNR ID → registration blocked with clear error; no DB record created',
+                    'Invalid or non-existent sponsor ID → informative error, no partial record',
+                    'Signup category selection enforces correct document requirements per category',
+                    'Mobile number format validated (Indian 10-digit) server-side, not just client-side'
+                ]},
+                { group:'KYC & Bank Approval', risk:'crit', items:[
+                    'KYC document upload accepted only for valid file types (JPG, PNG, PDF) and size ≤ 5MB',
+                    'Staff approval of KYC updates member status immediately; income remains blocked until BOTH KYC + Bank approved',
+                    'KYC rejection with mandatory reason text; member receives notification',
+                    'Re-submission after rejection clears rejection flag and resets to pending state',
+                    'Bank details IFSC code validated against RBI master list',
+                    'Independent tracking: KYC approved ≠ Bank approved — both required for income unlock'
+                ]},
+                { group:'Income Calculation — 4 Streams', risk:'crit', items:[
+                    'Direct Referral: credited to Earning wallet on the same day new member joins under sponsor',
+                    'Matching Referral: triggered only on valid left+right pair completion; no double-counting',
+                    'Ved Income: calculated on correct downline depth and volume — verify against manual calculation',
+                    'Guru Dakshina: only qualified leaders receive it; non-qualified leaders get Rs 0',
+                    'Platinum member PIN points = 1.0, Diamond = 0.5, Star = 0.0 — verified in DB',
+                    'Income blocked for member whose KYC or Bank is unapproved — no partial income allowed'
+                ]},
+                { group:'Wallet & Withdrawal Business Rules', risk:'crit', items:[
+                    'Withdrawal attempts on Sunday → blocked with "Not available on Sunday" message',
+                    'Withdrawal amount ≤ Rs 2,000 → blocked with minimum amount message',
+                    'Rs 1,000 buffer enforced: system prevents withdrawal that would leave balance < Rs 1,000',
+                    '8% Admin charge deducted from gross withdrawal amount before payout',
+                    '2% TDS deducted from gross withdrawal amount before payout',
+                    'Package-specific wallet split (Earning / Withdrawable / Upgrade) verified for each package tier',
+                    'Approved withdrawal → net amount credited; rejected → gross amount returned to wallet instantly'
+                ]},
+                { group:'Awards & EV Coupons', risk:'high', items:[
+                    'Award nomination at Stage 1 only valid for eligible members — eligibility check enforced',
+                    'Each stage 1–6 requires correct approval action; cannot skip stages',
+                    'EV Coupon: each of 6 benefits redeemable exactly once — system prevents double-redemption',
+                    'Expired coupon blocked from redemption with clear expiry date shown',
+                    'Award rejection at any stage pauses workflow; member notified with reason'
+                ]},
+                { group:'Financial Data Integrity', risk:'crit', items:[
+                    'All monetary amounts stored as DECIMAL(15,2) — no floating-point representation in DB or UI',
+                    'Concurrent wallet withdrawal: race condition prevented (DB-level lock or optimistic concurrency)',
+                    'No orphaned income records: every income entry must link to a valid, active member',
+                    'Soft-delete policy: financial records never hard-deleted; audit trail always preserved',
+                    'Income batch (daily auto-approval): completed within scheduled window; no missed members'
+                ]},
+                { group:'Non-Functional — MNR System', risk:'high', items:[
+                    'Binary tree renders correctly for 10,000+ members within 3 seconds',
+                    'Income batch processing for 10,000 members completes within APScheduler schedule window',
+                    'Member dashboard loads within 2 seconds on 4G mobile connection',
+                    'Withdrawal page correctly reflects balance after each transaction with zero delay',
+                    'All MNR member portal pages accessible on mobile (Web-Mobile Parity Rule — no exceptions)',
+                    'No personal financial data (amounts, Aadhaar, bank) visible in browser console or network logs'
+                ]}
+            ];
+            const colors = { crit:'#ef4444', high:'#f97316', med:'#3b82f6', low:'#22c55e' };
+            let h = `<div style="font-size:1.15rem;font-weight:700;color:#7c3aed;margin-bottom:0.4rem;display:flex;align-items:center;gap:0.5rem;">
+                        <i class="fas fa-flask"></i> Testing Requirements — MNR System
+                     </div>
+                     <div style="color:#a3a0b8;font-size:0.88rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--border)">
+                        Functional and non-functional testing requirements specific to the MNR financial and member system.
+                        <a href="/testreq" style="color:#7c3aed;margin-left:8px;" target="_blank"><i class="fas fa-external-link-alt"></i> Open Full Testing Requirements Document</a>
+                     </div>`;
+            fReqs.forEach(r => {
+                const c = colors[r.risk] || '#94a3b8';
+                h += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:1rem;overflow:hidden;">
+                    <div style="padding:0.85rem 1.1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+                        <span style="background:${c}22;color:${c};border:1px solid ${c}44;font-size:0.65rem;font-weight:700;padding:2px 7px;border-radius:4px;text-transform:uppercase;">${r.risk}</span>
+                        <strong style="font-size:0.9rem;color:var(--text)">${r.group}</strong>
+                    </div>
+                    <div style="padding:0.85rem 1.1rem;">
+                        <ul style="list-style:none;margin:0;padding:0;">
+                        ${r.items.map(i=>`<li style="display:flex;gap:8px;padding:3px 0;font-size:0.82rem;color:#a3a0b8;border-bottom:1px solid #1e1230;"><span style="color:#7c3aed;flex-shrink:0">›</span>${i}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('panel-testing').innerHTML = h;
+        }
+
+        function renderRiskSummary() {
+            const bar = document.getElementById('riskSummaryBar');
+            const rs = DATA.risk_summary;
+            bar.innerHTML = `
+                <div class="risk-badge risk-critical"><span class="count">${rs.critical||0}</span> Critical</div>
+                <div class="risk-badge risk-major"><span class="count">${rs.major||0}</span> Major</div>
+                <div class="risk-badge risk-moderate"><span class="count">${rs.moderate||0}</span> Moderate</div>
+                <div class="risk-badge risk-low"><span class="count">${rs.low||0}</span> Low</div>
+                <div style="flex:1;"></div>
+                <div style="font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:0.3rem;">
+                    <i class="fas fa-clock"></i> Generated: ${new Date().toLocaleString()}
+                </div>`;
+        }
+
+        function renderModuleValidation() {
+            const panel = document.getElementById('panel-pages');
+            let html = '';
+
+            html += `<div class="financial-highlight">
+                <h4><i class="fas fa-exclamation-triangle"></i> High-Stakes Financial Module — All Validations Critical</h4>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;">
+                    This system handles real money: income calculations, wallet operations, withdrawal processing, and PIN transactions.
+                    Every validation rule below is treated as mandatory enforcement, not optional guidance.
+                </p>
+            </div>`;
+
+            DATA.sections.forEach((sec, si) => {
+                const rl = sec.risk_level || 'moderate';
+                html += `<div class="section-block" data-section="${sec.id}">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <i class="icon ${sec.icon}"></i>
+                        <span class="title">${sec.title}</span>
+                        <span class="meta">${sec.pages.length} pages</span>
+                        <span class="risk-label" style="background:${riskColor(rl)}22;color:${riskColor(rl)}">${rl.toUpperCase()}</span>
+                        <i class="fas fa-chevron-down" style="color:var(--text-secondary);transition:transform 0.2s;"></i>
+                    </div>
+                    <div class="section-pages" style="display:${si===0?'block':'none'}">`;
+
+                sec.pages.forEach(pg => {
+                    const v = pg.validation;
+                    const hasContent = v.ui_components.length || v.field_rules.length || v.risks.length;
+                    html += `<div class="page-card" data-search="${(pg.menu_name + ' ' + pg.route_path + ' ' + pg.menu_code + ' ' + (v.risks||[]).map(r=>r.description).join(' ')).toLowerCase()}">
+                        <div class="page-card-header" onclick="toggleCard(this)">
+                            <i class="icon ${pg.menu_icon}"></i>
+                            <span class="name">${pg.menu_name}</span>
+                            ${riskLabel(v.risk_level)}
+                            <span class="route">${pg.route_path || ''}</span>
+                            <i class="fas fa-chevron-right chevron"></i>
+                        </div>
+                        <div class="page-card-body">`;
+
+                    if (v.ui_components.length) {
+                        html += `<div class="val-section">
+                            <div class="val-section-title"><i class="fas fa-puzzle-piece"></i> UI Components</div>
+                            <div class="ui-comp-tags">${v.ui_components.map(c => `<span class="ui-comp-tag">${c}</span>`).join('')}</div>
+                        </div>`;
+                    }
+
+                    if (v.field_rules.length) {
+                        html += `<div class="val-section">
+                            <div class="val-section-title"><i class="fas fa-list-alt"></i> Field-Level Validation Rules</div>
+                            <table class="data-table"><thead><tr>
+                                <th>Field</th><th>Type</th><th>Required</th><th>Format / Validation</th><th>Editable By</th>
+                            </tr></thead><tbody>`;
+                        v.field_rules.forEach(f => {
+                            html += `<tr>
+                                <td><strong>${f.field}</strong></td>
+                                <td><code style="font-size:0.75rem;">${f.type}</code></td>
+                                <td>${f.required ? '<i class="fas fa-check" style="color:var(--accent-pass)"></i>' : '<i class="fas fa-minus" style="color:var(--text-secondary)"></i>'}</td>
+                                <td>${f.format || ''}<br><small style="color:var(--text-secondary)">${f.validation || ''}</small></td>
+                                <td>${f.editable_by || '-'}</td>
+                            </tr>`;
+                        });
+                        html += `</tbody></table></div>`;
+                    }
+
+                    if (v.button_validations.length) {
+                        html += `<div class="val-section">
+                            <div class="val-section-title"><i class="fas fa-mouse-pointer"></i> Button & Form Submission Logic</div>
+                            <table class="data-table"><thead><tr>
+                                <th>Action</th><th>API Endpoint</th><th>Required State</th><th>Role</th><th>Duplicate Prevention</th>
+                            </tr></thead><tbody>`;
+                        v.button_validations.forEach(b => {
+                            html += `<tr>
+                                <td><strong>${b.button}</strong></td>
+                                <td><code style="font-size:0.72rem;color:var(--accent-secondary)">${b.api}</code></td>
+                                <td>${b.requires}</td>
+                                <td>${b.role}</td>
+                                <td>${b.double_click}</td>
+                            </tr>`;
+                        });
+                        html += `</tbody></table></div>`;
+                    }
+
+                    if (v.backend_checks.length) {
+                        html += `<div class="val-section">
+                            <div class="val-section-title"><i class="fas fa-server"></i> Backend Enforcement Checks</div>
+                            <ul class="check-list">${v.backend_checks.map(c => `<li><i class="fas fa-shield-alt"></i> ${c}</li>`).join('')}</ul>
+                        </div>`;
+                    }
+
+                    if (v.risks.length) {
+                        html += `<div class="val-section">
+                            <div class="val-section-title"><i class="fas fa-exclamation-triangle"></i> Risk Assessment</div>
+                            ${v.risks.map(r => `<div class="risk-item ${r.level}">${riskLabel(r.level)} <span>${r.description}</span></div>`).join('')}
+                        </div>`;
+                    }
+
+                    if (!hasContent) {
+                        html += `<div style="padding:0.5rem;color:var(--text-secondary);font-size:0.85rem;"><i class="fas fa-info-circle"></i> Baseline enforcement rules apply. Detailed validation content pending.</div>`;
+                    }
+
+                    html += `</div></div>`;
+                });
+
+                html += `</div></div>`;
+            });
+            panel.innerHTML = html;
+        }
+
+        function renderWorkflows() {
+            const panel = document.getElementById('panel-workflows');
+            const wfs = DATA.workflow_validations;
+            if (!wfs || !Object.keys(wfs).length) {
+                panel.innerHTML = '<div class="no-data">No workflow validations available.</div>';
+                return;
+            }
+            let html = '<h2 style="margin-bottom:0.5rem;font-size:1.3rem;"><i class="fas fa-project-diagram" style="color:var(--accent-secondary);"></i> Business Logic & Status Transition Validation</h2>';
+            html += '<p style="color:var(--text-secondary);margin-bottom:1.5rem;font-size:0.9rem;">Complete status lifecycle validation for all MNR financial and operational workflows. Each invalid transition listed below MUST be blocked at the API level.</p>';
+
+            Object.values(wfs).forEach(wf => {
+                html += `<div class="wf-card">
+                    <div class="wf-header" onclick="toggleWf(this)">
+                        <i class="fas fa-sitemap" style="color:var(--accent-secondary)"></i>
+                        <h3>${wf.title}</h3>
+                        ${riskLabel(wf.risk_level)}
+                        <span style="font-size:0.8rem;color:var(--text-secondary)">${wf.module}</span>
+                        <i class="fas fa-chevron-down" style="color:var(--text-secondary);transition:transform 0.2s;"></i>
+                    </div>
+                    <div class="wf-body">
+                        <div class="val-section-title"><i class="fas fa-circle-notch"></i> Status States (Full Lifecycle)</div>
+                        <div class="state-flow">
+                            ${wf.states.map((s,i) => `<span class="state-node">${s}</span>${i < wf.states.length-1 ? '<i class="fas fa-long-arrow-alt-right state-arrow"></i>' : ''}`).join('')}
+                        </div>
+
+                        <div class="val-section-title" style="color:var(--accent-pass);"><i class="fas fa-check-circle"></i> Valid Transitions</div>
+                        <table class="transition-table"><thead><tr><th>From</th><th>To</th><th>Who Can Trigger</th><th>Condition</th></tr></thead><tbody>
+                        ${(wf.transitions||[]).map(t => `<tr class="transition-valid"><td>${t.from}</td><td>${t.to}</td><td>${t.who}</td><td>${t.condition}</td></tr>`).join('')}
+                        </tbody></table>
+
+                        <div class="val-section-title" style="color:var(--accent-fail);"><i class="fas fa-ban"></i> Invalid Transitions (MUST Block)</div>
+                        <table class="transition-table"><thead><tr><th>From</th><th>To</th><th>Why Blocked</th></tr></thead><tbody>
+                        ${(wf.invalid_transitions||[]).map(t => `<tr class="transition-invalid"><td>${t.from}</td><td>${t.to}</td><td>${t.reason}</td></tr>`).join('')}
+                        </tbody></table>
+
+                        <div class="val-section-title"><i class="fas fa-lock"></i> Lock Conditions</div>
+                        <ul class="check-list">${(wf.lock_conditions||[]).map(c => `<li><i class="fas fa-lock" style="color:var(--accent-critical)"></i> ${c}</li>`).join('')}</ul>
+
+                        <div style="margin-top:0.75rem;display:flex;gap:2rem;flex-wrap:wrap;">
+                            <div><strong style="font-size:0.8rem;color:var(--text-secondary);">Escalation:</strong> <span style="font-size:0.85rem;"> ${wf.escalation || 'None'}</span></div>
+                            <div><strong style="font-size:0.8rem;color:var(--text-secondary);">Audit Trail:</strong> <span style="font-size:0.85rem;"> ${wf.audit_required ? '<i class="fas fa-check" style="color:var(--accent-pass)"></i> Required' : '<i class="fas fa-times" style="color:var(--accent-fail)"></i> Not enforced'}</span></div>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            panel.innerHTML = html;
+        }
+
+        function renderEnforcement() {
+            const panel = document.getElementById('panel-enforcement');
+            const rules = DATA.global_enforcement;
+            if (!rules || !Object.keys(rules).length) {
+                panel.innerHTML = '<div class="no-data">No enforcement rules available.</div>';
+                return;
+            }
+            let html = '<h2 style="margin-bottom:0.5rem;font-size:1.3rem;"><i class="fas fa-lock" style="color:var(--accent-critical);"></i> Data & Security Validation</h2>';
+            html += '<p style="color:var(--text-secondary);margin-bottom:1.5rem;font-size:0.9rem;">Mandatory enforcement rules for the MNR financial platform. All checks below are non-negotiable requirements for production deployment.</p>';
+
+            Object.values(rules).forEach(rule => {
+                html += `<div class="enforcement-card">
+                    <div class="title-bar">
+                        <i class="fas fa-shield-alt" style="color:var(--accent-critical)"></i>
+                        <h3>${rule.title}</h3>
+                        <span class="status-tag">${rule.status}</span>
+                    </div>
+                    <div class="check-body">
+                        <ul class="check-list">${rule.checks.map(c => `<li><i class="fas fa-check-circle"></i> ${c}</li>`).join('')}</ul>
+                    </div>
+                </div>`;
+            });
+            panel.innerHTML = html;
+        }
+
+        function renderCrossModuleImpact() {
+            const panel = document.getElementById('panel-impact');
+            const impacts = [
+                { title: "Impact on Staff Module", icon: "fas fa-users-cog", items: [
+                    "Staff MNR Access: staff viewing/modifying MNR data must have audit trail",
+                    "Staff KYC Approval: staff verification feeds into MNR KYC workflow",
+                    "Staff menu access determines which MNR admin pages are visible",
+                    "Staff payroll system independent of MNR income — no cross-contamination",
+                    "Staff journey/CRM data isolated from MNR member data via DC Protocol",
+                    "Staff actions on MNR data logged separately from member actions"
+                ]},
+                { title: "Impact on Reports & Dashboards", icon: "fas fa-chart-bar", items: [
+                    "Income reports must reflect approved income only — pending/disputed excluded",
+                    "Withdrawal reports sync with wallet debit ledger — cross-validated",
+                    "Member growth reports derived from activation events, not registration",
+                    "PIN sales reports reconcile with payment verification records",
+                    "Binary tree depth/width reports regenerated on each activation, not cached",
+                    "Financial summary dashboards aggregate from transaction ledger, not cached totals",
+                    "Award reports track full lifecycle — qualification to redemption"
+                ]},
+                { title: "Impact on Totals & Summaries", icon: "fas fa-calculator", items: [
+                    "Total income = SUM of individual member incomes — verified by reconciliation",
+                    "Total wallet balance = SUM(all wallet balances) — nightly reconciliation job",
+                    "Total withdrawals = SUM of paid withdrawals — matched with bank records",
+                    "Active member count = COUNT where activation_status='Active'",
+                    "PIN inventory = Generated - Used - Expired — tracked via ledger",
+                    "Summary cache invalidation on any transaction — stale data prevention"
+                ]},
+                { title: "Impact on SFMS Integration", icon: "fas fa-exchange-alt", items: [
+                    "Withdrawal approvals create SFMS journal entries in same transaction",
+                    "Income credits sync with SFMS revenue recognition entries",
+                    "PIN sales create SFMS sales entries with GST calculations",
+                    "Admin charges (8%) and TDS (2%) create separate SFMS entries",
+                    "Monthly SFMS reconciliation validates MNR financial data",
+                    "SFMS sync failure must alert and prevent further financial operations"
+                ]},
+                { title: "Impact on VGK4U / Real Estate / Insurance", icon: "fas fa-layer-group", items: [
+                    "VGK4U dual-segment data isolated from MNR core via company_id",
+                    "Real Estate commissions tracked separately from MNR income streams",
+                    "Insurance policy management independent of MNR wallet system",
+                    "Cross-segment referrals tracked but income calculated independently",
+                    "VGK4U member hierarchies separate from MNR binary tree"
+                ]}
+            ];
+
+            let html = '<h2 style="margin-bottom:0.5rem;font-size:1.3rem;"><i class="fas fa-link" style="color:var(--accent-secondary);"></i> Cross-Module Impact Analysis</h2>';
+            html += '<p style="color:var(--text-secondary);margin-bottom:1.5rem;font-size:0.9rem;">How MNR module changes affect other systems. All cross-module dependencies must be validated before deployment.</p>';
+
+            impacts.forEach(impact => {
+                html += `<div class="enforcement-card">
+                    <div class="title-bar">
+                        <i class="${impact.icon}" style="color:var(--accent-secondary)"></i>
+                        <h3>${impact.title}</h3>
+                    </div>
+                    <div class="check-body">
+                        <ul class="check-list">${impact.items.map(i => `<li><i class="fas fa-check-circle"></i> ${i}</li>`).join('')}</ul>
+                    </div>
+                </div>`;
+            });
+            panel.innerHTML = html;
+        }
+
+        function renderParityOverview() {
+            const panel = document.getElementById('panel-parity');
+            let html = '<h2 style="margin-bottom:0.5rem;font-size:1.3rem;"><i class="fas fa-mobile-alt" style="color:var(--accent-secondary);"></i> Mobile vs Web Parity</h2>';
+            html += '<p style="color:var(--text-secondary);margin-bottom:1.5rem;font-size:0.9rem;"><i class="fas fa-exclamation-triangle" style="color:var(--accent-major)"></i> <strong>Rule:</strong> Any mismatch between web and mobile = DEFECT. Financial operations must be identical across platforms.</p>';
+
+            let allParity = [];
+            DATA.sections.forEach(sec => {
+                sec.pages.forEach(pg => {
+                    if (pg.validation.mobile_parity && pg.validation.mobile_parity.length) {
+                        pg.validation.mobile_parity.forEach(p => {
+                            allParity.push({ page: pg.menu_name, section: sec.title, ...p });
+                        });
+                    }
+                });
+            });
+
+            if (allParity.length) {
+                const grouped = {};
+                allParity.forEach(p => { if (!grouped[p.status]) grouped[p.status] = []; grouped[p.status].push(p); });
+
+                const order = ['FAIL', 'VERIFY', 'MOBILE-ONLY', 'WEB-ONLY', 'PASS'];
+                order.forEach(status => {
+                    if (!grouped[status] || !grouped[status].length) return;
+                    html += `<h3 style="font-size:1rem;margin:1rem 0 0.5rem;">${parityBadge(status)} <span style="margin-left:0.3rem;">${grouped[status].length} items</span></h3>`;
+                    html += `<table class="data-table"><thead><tr><th>Page</th><th>Check</th><th>Web</th><th>Mobile</th><th>Status</th></tr></thead><tbody>`;
+                    grouped[status].forEach(p => {
+                        html += `<tr><td>${p.page}</td><td>${p.check}</td><td>${p.web}</td><td>${p.mobile}</td><td>${parityBadge(p.status)}</td></tr>`;
+                    });
+                    html += `</tbody></table>`;
+                });
+            } else {
+                html += '<div class="no-data">No parity data available yet.</div>';
+            }
+            panel.innerHTML = html;
+        }
+
+        function renderRiskMatrix() {
+            const panel = document.getElementById('panel-risks');
+            let html = '<h2 style="margin-bottom:0.5rem;font-size:1.3rem;"><i class="fas fa-exclamation-triangle" style="color:var(--accent-critical);"></i> Enterprise Risk Report</h2>';
+            html += '<p style="color:var(--text-secondary);margin-bottom:1.5rem;font-size:0.9rem;">Comprehensive risk categorization for a high-stakes financial SaaS module. Aggressive assessment — assumes production environment with real money.</p>';
+
+            let allRisks = [];
+            DATA.sections.forEach(sec => {
+                sec.pages.forEach(pg => {
+                    if (pg.validation.risks) {
+                        pg.validation.risks.forEach(r => {
+                            allRisks.push({ page: pg.menu_name, section: sec.title, route: pg.route_path, ...r });
+                        });
+                    }
+                });
+            });
+
+            const riskOrder = ['critical', 'major', 'moderate', 'low'];
+            const riskGroups = {};
+            allRisks.forEach(r => { if (!riskGroups[r.level]) riskGroups[r.level] = []; riskGroups[r.level].push(r); });
+
+            const riskDefs = DATA.risk_definitions || {};
+            riskOrder.forEach(level => {
+                const def = riskDefs[level] || {};
+                const items = riskGroups[level] || [];
+                html += `<div class="section-block" style="border-left:4px solid ${riskColor(level)};">
+                    <div class="section-header" onclick="toggleSection(this)">
+                        <i class="fas fa-exclamation-circle" style="color:${riskColor(level)}"></i>
+                        <span class="title">${(def.label || level).toUpperCase()} RISK</span>
+                        <span class="meta">${items.length} items</span>
+                        <span class="risk-label" style="background:${riskColor(level)}22;color:${riskColor(level)}">${def.description || ''}</span>
+                        <i class="fas fa-chevron-down" style="color:var(--text-secondary)"></i>
+                    </div>
+                    <div class="section-pages" style="display:${level==='critical'?'block':'none'}">`;
+
+                if (items.length) {
+                    items.forEach(r => {
+                        html += `<div class="risk-item ${r.level}" style="margin:0.5rem 1rem;">
+                            ${riskLabel(r.level)}
+                            <div>
+                                <strong>${r.page}</strong> <span style="color:var(--text-secondary);font-size:0.75rem;">(${r.section})</span><br>
+                                <span>${r.description}</span>
+                            </div>
+                        </div>`;
+                    });
+                } else {
+                    html += '<div style="padding:1rem;color:var(--text-secondary);font-size:0.85rem;">No risks at this level.</div>';
+                }
+
+                html += `</div></div>`;
+            });
+
+            html += `<div class="enforcement-card" style="margin-top:2rem;">
+                <div class="title-bar" style="background:rgba(220,38,38,0.08);">
+                    <i class="fas fa-crosshairs" style="color:var(--accent-critical)"></i>
+                    <h3>Enterprise Risk Scenarios — Must Monitor</h3>
+                </div>
+                <div class="check-body">
+                    <ul class="check-list">
+                        <li><i class="fas fa-exclamation-triangle" style="color:var(--accent-critical)"></i> <strong>Approval Bypass:</strong> Direct API calls skipping approval chain, self-approval, status manipulation</li>
+                        <li><i class="fas fa-exclamation-triangle" style="color:var(--accent-critical)"></i> <strong>Financial Miscalculation:</strong> Float arithmetic in income, rounding errors in deductions, split ratio misconfiguration</li>
+                        <li><i class="fas fa-exclamation-triangle" style="color:var(--accent-critical)"></i> <strong>Status Corruption:</strong> Invalid state transitions, zombie records stuck in intermediate states, desync between modules</li>
+                        <li><i class="fas fa-exclamation-triangle" style="color:var(--accent-critical)"></i> <strong>Double Submission:</strong> Duplicate PIN generation, duplicate withdrawal creation, duplicate income credit</li>
+                        <li><i class="fas fa-exclamation-triangle" style="color:var(--accent-major)"></i> <strong>Concurrency Issues:</strong> Race conditions on wallet operations, parallel approval of same record, scheduler overlap</li>
+                        <li><i class="fas fa-exclamation-triangle" style="color:var(--accent-major)"></i> <strong>Data Tampering:</strong> ID manipulation for unauthorized access, amount modification in transit, tree position manipulation</li>
+                        <li><i class="fas fa-exclamation-triangle" style="color:var(--accent-moderate)"></i> <strong>Audit Gap:</strong> Financial operations without audit trail, admin actions not logged, config changes not versioned</li>
+                    </ul>
+                </div>
+            </div>`;
+            panel.innerHTML = html;
+        }
+
+        function toggleSection(el) {
+            const pages = el.nextElementSibling;
+            const icon = el.querySelector('.fa-chevron-down, .fa-chevron-up');
+            if (pages.style.display === 'none') {
+                pages.style.display = 'block';
+                if (icon) icon.style.transform = 'rotate(0deg)';
+            } else {
+                pages.style.display = 'none';
+                if (icon) icon.style.transform = 'rotate(-90deg)';
+            }
+        }
+
+        function toggleCard(el) {
+            el.classList.toggle('expanded');
+            el.nextElementSibling.classList.toggle('show');
+        }
+
+        function toggleWf(el) {
+            const body = el.nextElementSibling;
+            body.classList.toggle('show');
+            const icon = el.querySelector('.fa-chevron-down');
+            if (icon) icon.style.transform = body.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+
+        document.getElementById('phaseTabs').addEventListener('click', function(e) {
+            const tab = e.target.closest('.phase-tab');
+            if (!tab) return;
+            document.querySelectorAll('.phase-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.phase-panel').forEach(p => p.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById('panel-' + tab.dataset.phase).classList.add('active');
+        });
+
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const q = this.value.toLowerCase().trim();
+            document.querySelectorAll('.page-card').forEach(card => {
+                const text = card.getAttribute('data-search') || '';
+                card.style.display = (!q || text.includes(q)) ? '' : 'none';
+            });
+            if (q) document.querySelectorAll('.section-pages').forEach(sp => sp.style.display = 'block');
+        });
+
+        var AUTH_PAGE_KEY = 'mnrvalidation';
+        var AUTH_CREDS = [
+            { user: 'MR10001', pass: 'Mnrui', canPrint: false },
+            { user: 'MR10002', pass: 'MR10001', canPrint: true }
+        ];
+
+        function initAuth() {
+            var stored = sessionStorage.getItem('mnr_doc_' + AUTH_PAGE_KEY);
+            if (stored) {
+                try {
+                    var d = JSON.parse(stored);
+                    var cred = AUTH_CREDS.find(function(c) { return c.user === d.u && c.pass === d.p; });
+                    if (cred) { applyDocPermissions(cred.canPrint); document.getElementById('loginOverlay').classList.add('hidden'); loadData(); return; }
+                } catch(e) {}
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            var user = document.getElementById('loginUser').value.trim();
+            var pass = document.getElementById('loginPass').value;
+            var cred = AUTH_CREDS.find(function(c) { return c.user === user && c.pass === pass; });
+            if (cred) {
+                sessionStorage.setItem('mnr_doc_' + AUTH_PAGE_KEY, JSON.stringify({ u: user, p: pass }));
+                document.getElementById('loginOverlay').classList.add('hidden');
+                applyDocPermissions(cred.canPrint);
+                loadData();
+            } else {
+                document.getElementById('loginError').classList.add('show');
+                document.getElementById('loginPass').value = '';
+            }
+        }
+
+        function applyDocPermissions(canPrint) {
+            if (!canPrint) {
+                var btn = document.querySelector('.print-btn');
+                if (btn) btn.style.display = 'none';
+                var s = document.createElement('style');
+                s.textContent = '@media print { body { display: none !important; } }';
+                document.head.appendChild(s);
+                document.addEventListener('keydown', function(e) {
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); e.stopPropagation(); }
+                }, true);
+            }
+        }
+
+        function doLogout() {
+            sessionStorage.removeItem('mnr_doc_' + AUTH_PAGE_KEY);
+            location.reload();
+        }
+
+        initAuth();
+    </script>
+</body>
+</html>

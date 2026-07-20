@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP - Staff Portal Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a237e;
+            --secondary-color: #3949ab;
+            --accent-color: #5c6bc0;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%, var(--accent-color) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .login-container {
+            max-width: 450px;
+            width: 100%;
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .login-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .login-logo {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+        
+        .login-subtitle {
+            margin: 0;
+            color: #495057;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        
+        .login-body {
+            padding: 40px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .input-group {
+            position: relative;
+        }
+        
+        .input-group i.input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            z-index: 10;
+        }
+        
+        .form-control {
+            padding: 12px 15px 12px 45px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .form-control:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(57, 73, 171, 0.1);
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #666;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-login:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .btn-login:disabled {
+            background: #ccc;
+            transform: none;
+        }
+        
+        .login-footer {
+            text-align: center;
+            padding: 20px 40px 30px;
+            border-top: 1px solid #eee;
+        }
+        
+        .login-footer a {
+            color: var(--secondary-color);
+            text-decoration: none;
+        }
+        
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+        }
+        
+        .spinner-border {
+            width: 1.2rem;
+            height: 1.2rem;
+            border-width: 2px;
+        }
+        
+        /* NDA Modal Styles */
+        .nda-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        
+        .nda-modal-overlay.show {
+            display: flex;
+        }
+        
+        .nda-modal {
+            background: white;
+            border-radius: 16px;
+            max-width: 900px;
+            width: 95%;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .nda-modal-header {
+            background: linear-gradient(135deg, #1a237e 0%, #3949ab 100%);
+            color: white;
+            padding: 20px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .nda-modal-header i {
+            font-size: 32px;
+        }
+        
+        .nda-modal-header h4 {
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .nda-modal-header p {
+            margin: 4px 0 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .nda-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: #f9fafb;
+        }
+        
+        .nda-content {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: #374151;
+        }
+        
+        .nda-content h4, .nda-content h5 {
+            color: #1f2937;
+            margin-top: 24px;
+            margin-bottom: 12px;
+        }
+        
+        .nda-content p {
+            margin-bottom: 12px;
+        }
+        
+        .nda-content ol, .nda-content ul {
+            padding-left: 24px;
+            margin-bottom: 12px;
+        }
+        
+        .nda-modal-footer {
+            padding: 20px 24px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .nda-warning {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #92400e;
+            font-size: 13px;
+        }
+        
+        .nda-warning i {
+            color: #d97706;
+        }
+        
+        .nda-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn-nda {
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-nda-cancel {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        
+        .btn-nda-cancel:hover {
+            background: #e5e7eb;
+        }
+        
+        .btn-nda-accept {
+            background: #059669;
+            color: white;
+            border: none;
+        }
+        
+        .btn-nda-accept:hover {
+            background: #047857;
+        }
+        
+        .btn-nda:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        @media (max-width: 768px) {
+            .nda-modal {
+                width: 100%;
+                height: 100%;
+                max-height: 100%;
+                border-radius: 0;
+            }
+            
+            .nda-modal-footer {
+                flex-direction: column;
+            }
+            
+            .nda-buttons {
+                width: 100%;
+            }
+            
+            .nda-buttons button {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <img src="/assets/logos/myntreal_logo_vertical.png" alt="MyntReal" class="login-logo">
+                <p class="login-subtitle">Employee Management System</p>
+            </div>
+            
+            <div class="login-body">
+                <div id="alertContainer"></div>
+                
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>Employee ID</label>
+                        <div class="input-group">
+                            <i class="fas fa-id-card input-icon"></i>
+                            <input type="text" class="form-control" id="employeeId" placeholder="e.g., MR10001" required style="text-transform: uppercase;">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="input-group">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input type="password" class="form-control" id="password" placeholder="Enter your password" required>
+                            <button type="button" class="password-toggle" onclick="togglePassword()">
+                                <i class="fas fa-eye" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-login" id="loginBtn">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login
+                    </button>
+                </form>
+            </div>
+            
+            <div class="login-footer">
+                <a href="/login"><i class="fas fa-arrow-left me-1"></i> Back to User Login</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- NDA Acceptance Modal -->
+    <div class="nda-modal-overlay" id="ndaModal">
+        <div class="nda-modal">
+            <div class="nda-modal-header">
+                <i class="fas fa-file-contract"></i>
+                <div>
+                    <h4>Non-Disclosure Agreement</h4>
+                    <p>Please review and accept to continue</p>
+                </div>
+            </div>
+            <div class="nda-modal-body">
+                <div class="nda-content" id="ndaContent">
+                    Loading NDA content...
+                </div>
+            </div>
+            <div class="nda-modal-footer">
+                <div class="nda-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>You must accept the NDA to access the system</span>
+                </div>
+                <div class="nda-buttons">
+                    <button class="btn-nda btn-nda-cancel" onclick="cancelNda()">
+                        <i class="fas fa-times me-2"></i>Cancel & Logout
+                    </button>
+                    <button class="btn-nda btn-nda-accept" id="acceptNdaBtn" onclick="acceptNda()">
+                        <i class="fas fa-check me-2"></i>I Accept
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // DC Protocol: Fetch with retry for production resilience
+        async function fetchWithRetry(url, options = {}, maxRetries = 3, delay = 1000) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok || response.status < 500) {
+                        return response;
+                    }
+                    console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${url} (status: ${response.status})`);
+                } catch (error) {
+                    console.warn(`⚠️ Retry ${i + 1}/${maxRetries} for ${url}: ${error.message}`);
+                }
+                if (i < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+                }
+            }
+            throw new Error('Failed after ' + maxRetries + ' retries');
+        }
+        
+        let pendingNdaData = null;
+        
+        function getRedirectUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const redirect = urlParams.get('redirect');
+            if (redirect && redirect.startsWith('/') && !redirect.includes('//')) {
+                return decodeURIComponent(redirect);
+            }
+            return '/staff/dashboard';
+        }
+
+        async function isTokenValid(token) {
+            try {
+                const response = await fetch('/api/v1/staff/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                return response.ok;
+            } catch {
+                return false;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (token) {
+                const valid = await isTokenValid(token);
+                if (valid) {
+                    window.location.href = getRedirectUrl();
+                    return;
+                } else {
+                    localStorage.removeItem('staff_token');
+                    localStorage.removeItem('staff_user');
+                }
+            }
+            
+            // Check for auto-logout message
+            const logoutReason = sessionStorage.getItem('staff_logout_reason');
+            if (logoutReason) {
+                const alertContainer = document.getElementById('alertContainer');
+                let message = '';
+                let alertClass = 'alert-info';
+                
+                if (logoutReason === 'INACTIVITY_TIMEOUT') {
+                    message = '<i class="fas fa-clock me-2"></i>Your session expired due to 15 minutes of inactivity. Please log in again.';
+                    alertClass = 'alert-warning';
+                } else if (logoutReason === 'USER_REQUESTED') {
+                    message = '<i class="fas fa-sign-out-alt me-2"></i>You have been logged out successfully.';
+                    alertClass = 'alert-info';
+                }
+                
+                if (message) {
+                    alertContainer.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+                }
+                
+                // Clear the message after displaying
+                sessionStorage.removeItem('staff_logout_reason');
+            }
+            
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+        });
+        
+        function togglePassword() {
+            const passwordField = document.getElementById('password');
+            const toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                toggleIcon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                passwordField.type = 'password';
+                toggleIcon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+        
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const employeeId = document.getElementById('employeeId').value.toUpperCase().trim();
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const alertContainer = document.getElementById('alertContainer');
+            
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<span class="spinner-border me-2"></span>Logging in...';
+            alertContainer.innerHTML = '';
+            
+            try {
+                const response = await fetchWithRetry('/api/v1/staff/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ employee_id: employeeId, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.access_token) {
+                    localStorage.setItem('staff_token', data.access_token);
+                    
+                    if (data.employee) {
+                        localStorage.setItem('staff_user', JSON.stringify(data.employee));
+                    }
+                    
+                    // Check if NDA acceptance is required
+                    if (data.nda_required && data.nda_data) {
+                        pendingNdaData = data.nda_data;
+                        showNdaModal(data.nda_data, data.employee);
+                        
+                        loginBtn.disabled = false;
+                        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+                    } else {
+                        alertContainer.innerHTML = `
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>Login successful! Redirecting...
+                            </div>
+                        `;
+                        
+                        setTimeout(() => {
+                            window.location.href = getRedirectUrl();
+                        }, 1000);
+                    }
+                } else {
+                    throw new Error(data.detail || 'Invalid Employee ID or password');
+                }
+            } catch (error) {
+                alertContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>${error.message}
+                    </div>
+                `;
+                
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+            }
+        }
+        
+        function showNdaModal(ndaData, employee) {
+            const modal = document.getElementById('ndaModal');
+            const contentDiv = document.getElementById('ndaContent');
+            
+            // Replace dynamic placeholders
+            let content = ndaData.content_html;
+            const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+            
+            content = content.replace(/\{\{current_date\}\}/g, today);
+            content = content.replace(/\{\{employee_name\}\}/g, employee.full_name || 'Employee');
+            content = content.replace(/\{\{employee_code\}\}/g, employee.emp_code || '-');
+            content = content.replace(/\{\{employee_designation\}\}/g, employee.role_name || employee.designation || 'Staff');
+            content = content.replace(/\{\{company_name\}\}/g, 'MyntReal LLP');
+            content = content.replace(/\{\{company_address\}\}/g, 'Kothavalasa, Vizianagaram, Andhra Pradesh, India');
+            
+            contentDiv.innerHTML = content;
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function cancelNda() {
+            // Clear token and redirect to login
+            localStorage.removeItem('staff_token');
+            localStorage.removeItem('staff_user');
+            
+            document.getElementById('ndaModal').classList.remove('show');
+            document.body.style.overflow = '';
+            
+            document.getElementById('alertContainer').innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle me-2"></i>You must accept the NDA to access the system.
+                </div>
+            `;
+            
+            pendingNdaData = null;
+        }
+        
+        async function acceptNda() {
+            if (!pendingNdaData) return;
+            
+            const acceptBtn = document.getElementById('acceptNdaBtn');
+            acceptBtn.disabled = true;
+            acceptBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+            
+            const token = localStorage.getItem('staff_token');
+            
+            try {
+                const response = await fetchWithRetry('/api/v1/staff/nda/accept', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ nda_version_id: pendingNdaData.id })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('ndaModal').classList.remove('show');
+                    document.body.style.overflow = '';
+                    
+                    document.getElementById('alertContainer').innerHTML = `
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>NDA accepted. Redirecting to dashboard...
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        window.location.href = getRedirectUrl();
+                    }, 1500);
+                } else {
+                    throw new Error(data.detail || 'Failed to accept NDA');
+                }
+                
+            } catch (error) {
+                console.error('NDA acceptance error:', error);
+                
+                acceptBtn.disabled = false;
+                acceptBtn.innerHTML = '<i class="fas fa-check me-2"></i>I Accept';
+                
+                alert('Error accepting NDA: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

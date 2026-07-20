@@ -1,0 +1,17 @@
+{
+  "name": "mnr-frontend",
+  "version": "1.0.0",
+  "description": "MNR Reference Program Frontend",
+  "main": "server.js",
+  "files": [
+    "server.js",
+    "*.html",
+    "*.js",
+    "*.css",
+    "public/**/*",
+    "templates/**/*"
+  ],
+  "dependencies": {
+    "cookie": "^1.0.2"
+  }
+}

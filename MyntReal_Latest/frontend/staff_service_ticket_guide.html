@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Service Ticket Module — Complete Guide</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{
+  --mnr-blue:#1e3a5f;--mnr-teal:#0e9f8b;--mnr-gold:#f5a623;
+  --spares:#7c3aed;--tech:#0369a1;--general:#374151;
+  --step-bg:#f8fafc;--border:#e2e8f0;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;color:#1e293b;font-size:14px;}
+.guide-header{background:linear-gradient(135deg,#1e3a5f 0%,#0e9f8b 100%);color:#fff;padding:24px 32px 20px;border-bottom:3px solid #f5a623;}
+.guide-header h1{font-size:22px;font-weight:700;margin:0;}
+.guide-header p{font-size:12px;opacity:.85;margin:4px 0 0;}
+.nav-tabs{background:#fff;border-bottom:2px solid var(--border);padding:0 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.nav-tabs .nav-link{font-size:12px;font-weight:600;padding:12px 14px;color:#64748b;border:none;border-bottom:3px solid transparent;border-radius:0;white-space:nowrap;}
+.nav-tabs .nav-link.active{color:var(--mnr-blue);border-bottom-color:var(--mnr-blue);background:transparent;}
+.nav-tabs .nav-link:hover{color:var(--mnr-teal);}
+.tab-content{padding:24px 20px;max-width:1100px;margin:0 auto;}
+/* ── Flow pipeline ── */
+.pipeline{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;margin:16px 0;}
+.pip-step{display:flex;flex-direction:column;align-items:center;position:relative;min-width:100px;}
+.pip-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;z-index:1;}
+.pip-line{flex:1;height:3px;align-self:center;min-width:24px;}
+.pip-label{font-size:10px;font-weight:600;text-align:center;margin-top:6px;line-height:1.3;max-width:80px;}
+.pip-sub{font-size:9px;color:#94a3b8;text-align:center;max-width:80px;}
+/* ── Role badges ── */
+.role-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.role-member{background:#dbeafe;color:#1d4ed8;}
+.role-manager{background:#dcfce7;color:#166534;}
+.role-tech{background:#fef3c7;color:#92400e;}
+.role-admin{background:#f3e8ff;color:#6b21a8;}
+.role-partner{background:#ffe4e6;color:#9f1239;}
+/* ── Step cards ── */
+.step-card{border-left:4px solid var(--mnr-teal);background:#fff;border-radius:0 10px 10px 0;padding:14px 18px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.step-card.spares{border-left-color:var(--spares);}
+.step-card.tech{border-left-color:var(--tech);}
+.step-card.warn{border-left-color:#f59e0b;}
+.step-card.danger{border-left-color:#ef4444;}
+.step-card.success{border-left-color:#22c55e;}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--mnr-blue);color:#fff;font-size:10px;font-weight:700;margin-right:8px;flex-shrink:0;}
+.step-title{font-weight:700;font-size:13px;}
+.step-meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center;}
+/* ── Who does what table ── */
+.who-table td,.who-table th{font-size:12px;vertical-align:top;padding:8px 10px;}
+.who-table thead{background:var(--mnr-blue);color:#fff;}
+/* ── Field display ── */
+.field-row{display:flex;gap:0;border-bottom:1px solid var(--border);}
+.field-label{font-size:11px;color:#94a3b8;font-weight:600;width:160px;flex-shrink:0;padding:5px 0;}
+.field-val{font-size:12px;font-weight:500;padding:5px 8px;}
+.field-val.mono{font-family:monospace;font-size:11px;}
+/* ── Status badges ── */
+.sb{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+.sb-new{background:#dbeafe;color:#1e40af;}
+.sb-ack{background:#d1fae5;color:#065f46;}
+.sb-diag{background:#fef3c7;color:#92400e;}
+.sb-spare{background:#ede9fe;color:#5b21b6;}
+.sb-proc{background:#fce7f3;color:#831843;}
+.sb-ready{background:#d1fae5;color:#065f46;}
+.sb-done{background:#dcfce7;color:#14532d;}
+.sb-closed{background:#f1f5f9;color:#475569;}
+.sb-open{background:#dbeafe;color:#1e40af;}
+.sb-inprog{background:#fef3c7;color:#92400e;}
+.sb-resolved{background:#d1fae5;color:#065f46;}
+/* ── Info box ── */
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:12px;}
+.warn-box{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:12px;}
+.success-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:12px;}
+.danger-box{background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:12px;}
+/* ── Code ── */
+.api-tag{font-family:monospace;font-size:11px;background:#1e293b;color:#7dd3fc;padding:2px 8px;border-radius:4px;}
+.endpoint{font-family:monospace;font-size:11px;background:#f1f5f9;color:#0369a1;padding:3px 8px;border-radius:4px;display:inline-block;margin:2px 0;}
+/* ── Grid ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin:12px 0;}
+.kpi-card{background:#fff;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid var(--border);}
+.kpi-val{font-size:22px;font-weight:800;color:var(--mnr-blue);}
+.kpi-lbl{font-size:11px;color:#64748b;margin-top:4px;}
+/* ── Section title ── */
+.sec-title{font-size:16px;font-weight:800;color:var(--mnr-blue);border-bottom:2px solid var(--border);padding-bottom:8px;margin:24px 0 14px;}
+.sec-title.first{margin-top:0;}
+/* ── Split columns ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:700px){.two-col{grid-template-columns:1fr;}.nav-tabs{overflow-x:auto;flex-wrap:nowrap;}}
+/* ── Action button display ── */
+.action-btn{display:inline-block;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;margin:2px;border:1px solid;}
+.action-btn.primary{background:#1e3a5f;color:#fff;border-color:#1e3a5f;}
+.action-btn.success{background:#22c55e;color:#fff;border-color:#22c55e;}
+.action-btn.warning{background:#f59e0b;color:#fff;border-color:#f59e0b;}
+.action-btn.danger{background:#ef4444;color:#fff;border-color:#ef4444;}
+.action-btn.info{background:#0ea5e9;color:#fff;border-color:#0ea5e9;}
+.action-btn.purple{background:#7c3aed;color:#fff;border-color:#7c3aed;}
+/* ── Timeline ── */
+.timeline{position:relative;padding-left:24px;}
+.timeline::before{content:'';position:absolute;left:9px;top:0;bottom:0;width:2px;background:var(--border);}
+.tl-item{position:relative;margin-bottom:16px;}
+.tl-dot{position:absolute;left:-20px;top:2px;width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 2px currentColor;}
+.tl-content{background:#fff;border-radius:8px;padding:10px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--border);}
+.tl-time{font-size:10px;color:#94a3b8;margin-top:4px;}
+/* ── ZYPO/ZYPR ── */
+.zy-badge{display:inline-block;padding:2px 10px;border-radius:4px;font-size:11px;font-weight:800;letter-spacing:.5px;}
+.zy-po{background:#dcfce7;color:#14532d;border:1px solid #86efac;}
+.zy-pr{background:#fef3c7;color:#92400e;border:1px solid #fde68a;}
+/* ── Scroll fix ── */
+.tab-content{overflow:visible;}
+</style>
+</head>
+<body>
+
+<div class="guide-header">
+  <h1><i class="fas fa-tools me-2"></i>EV Service Ticket Module — Complete System Guide</h1>
+  <p>Full workflow reference for all roles · Based on actual system implementation · VGK4U Platform</p>
+</div>
+
+<!-- ───────────── TAB BAR ───────────── -->
+<ul class="nav nav-tabs" id="guideTabs" role="tablist">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-overview"><i class="fas fa-sitemap me-1"></i>Overview</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-spares"><i class="fas fa-cogs me-1 text-purple-600"></i>Spares Ticket</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-tech"><i class="fas fa-microchip me-1"></i>Technical Ticket</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-partner"><i class="fas fa-handshake me-1"></i>Partner Flow</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-public"><i class="fas fa-globe me-1"></i>Public / Website</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-procurement"><i class="fas fa-boxes me-1"></i>ZYPO / ZYPR</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-billing"><i class="fas fa-file-invoice-dollar me-1"></i>Billing & GST</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-staff"><i class="fas fa-id-badge me-1"></i>Staff Guide</button></li>
+</ul>
+
+<div class="tab-content" id="guideTabsContent">
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 1 : OVERVIEW                                              -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade show active" id="tab-overview">
+
+  <div class="sec-title first"><i class="fas fa-layer-group me-2"></i>What is the Service Ticket Module?</div>
+  <p>The VGK4U EV Service Ticket system manages the full lifecycle of customer service requests — from initial complaint to resolution and billing. It handles two core types of issues: <strong>spares-based</strong> (physical part replacement) and <strong>technical</strong> (diagnosis, software, electrical).</p>
+
+  <div class="two-col">
+    <div>
+      <div class="sec-title"><i class="fas fa-ticket-alt me-2"></i>Ticket Types</div>
+      <div class="step-card spares mb-2"><strong style="color:var(--spares)"><i class="fas fa-cogs me-1"></i>Spares</strong><br><small>Requires physical parts (battery, brake pad, controller, motor, wiring harness). Triggers procurement pipeline — ZYPO or ZYPR is auto-created when spares are picked from catalog.</small></div>
+      <div class="step-card tech mb-2"><strong style="color:var(--tech)"><i class="fas fa-microchip me-1"></i>Technical</strong><br><small>No physical part needed. Covers software flashes, motor tuning, BMS calibration, electrical faults, firmware upgrades. Goes directly to <em>Ready for Work</em> after diagnosis.</small></div>
+      <div class="step-card mb-2"><strong style="color:var(--general)"><i class="fas fa-headset me-1"></i>General</strong><br><small>Generic support queries, documentation help, warranty claims, general complaints. Simpler workflow — no spares sub-pipeline.</small></div>
+    </div>
+    <div>
+      <div class="sec-title"><i class="fas fa-door-open me-2"></i>How Tickets Enter the System</div>
+      <div class="step-card mb-2"><strong><i class="fas fa-globe me-1 text-primary"></i>Website / Public</strong><br><small>Customer submits from mnrteam.com. Rate-limited to 5/hr per IP. No login needed. Source = <code>website</code>.</small></div>
+      <div class="step-card mb-2"><strong><i class="fas fa-handshake me-1 text-danger"></i>Partner Portal</strong><br><small>Dealer/Service Center raises on behalf of their customer. Partner JWT required. Source = <code>partner_portal</code>. Ticket is auto-linked to that partner.</small></div>
+      <div class="step-card mb-2"><strong><i class="fas fa-user-tie me-1 text-success"></i>Staff / Internal</strong><br><small>Staff creates via Service Queue page. Can set ticket_type, assign technician, set priority. Source = <code>website</code> or <code>phone</code>.</small></div>
+    </div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-project-diagram me-2"></i>Complete Sub-Status Pipeline</div>
+  <p style="font-size:12px;color:#64748b;">Every ticket moves through these stages. The main <strong>status</strong> (Open/In Progress/Resolved/Closed) updates automatically as sub_status changes.</p>
+
+  <!-- FULL PIPELINE -->
+  <div style="overflow-x:auto;padding-bottom:8px;">
+  <div style="display:flex;align-items:flex-start;gap:0;min-width:700px;">
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;">
+      <div class="pip-dot" style="background:#3b82f6;">1</div>
+      <div style="font-size:10px;font-weight:700;text-align:center;color:#1e40af;line-height:1.3;">NEW<br><span class="sb sb-open" style="font-size:9px;">Open</span></div>
+      <div style="font-size:9px;color:#94a3b8;text-align:center;">Ticket raised<br>by any source</div>
+    </div>
+    <div style="width:30px;height:3px;background:#cbd5e1;align-self:center;margin-bottom:30px;"></div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;">
+      <div class="pip-dot" style="background:#059669;">2</div>
+      <div style="font-size:10px;font-weight:700;text-align:center;color:#065f46;line-height:1.3;">ACKNOWLEDGED<br><span class="sb sb-open" style="font-size:9px;">Open</span></div>
+      <div style="font-size:9px;color:#94a3b8;text-align:center;">Manager confirms<br>receipt</div>
+    </div>
+    <div style="width:30px;height:3px;background:#cbd5e1;align-self:center;margin-bottom:30px;"></div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;">
+      <div class="pip-dot" style="background:#d97706;">3</div>
+      <div style="font-size:10px;font-weight:700;text-align:center;color:#92400e;line-height:1.3;">DIAGNOSING<br><span class="sb sb-open" style="font-size:9px;">Open</span></div>
+      <div style="font-size:9px;color:#94a3b8;text-align:center;">Tech inspects<br>vehicle</div>
+    </div>
+    <div style="width:30px;height:3px;background:#cbd5e1;align-self:center;margin-bottom:30px;"></div>
+
+    <!-- FORK -->
+    <div style="display:flex;flex-direction:column;align-items:center;position:relative;">
+      <div style="display:flex;gap:12px;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:100px;">
+          <div class="pip-dot" style="background:#7c3aed;">4A</div>
+          <div style="font-size:10px;font-weight:700;text-align:center;color:#5b21b6;line-height:1.3;">AWAITING<br>SPARES<br><span class="sb sb-open" style="font-size:9px;">Open</span></div>
+          <div style="font-size:9px;color:#94a3b8;text-align:center;">Parts needed<br>→ ZYPO/ZYPR</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:100px;">
+          <div class="pip-dot" style="background:#22c55e;">4B</div>
+          <div style="font-size:10px;font-weight:700;text-align:center;color:#14532d;line-height:1.3;">READY<br>FOR WORK<br><span class="sb sb-inprog" style="font-size:9px;">In Progress</span></div>
+          <div style="font-size:9px;color:#94a3b8;text-align:center;">No spares<br>(Technical)</div>
+        </div>
+      </div>
+      <div style="font-size:9px;color:#f59e0b;font-weight:700;margin-top:4px;">↑ FORK: spares_required?</div>
+    </div>
+    <div style="width:30px;height:3px;background:#cbd5e1;align-self:center;margin-bottom:30px;"></div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;">
+      <div class="pip-dot" style="background:#db2777;">5</div>
+      <div style="font-size:10px;font-weight:700;text-align:center;color:#831843;line-height:1.3;">PROCUREMENT<br>IN PROGRESS<br><span class="sb sb-open" style="font-size:9px;">Open</span></div>
+      <div style="font-size:9px;color:#94a3b8;text-align:center;">Parts ordered/<br>confirmed</div>
+    </div>
+    <div style="width:30px;height:3px;background:#cbd5e1;align-self:center;margin-bottom:30px;"></div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;">
+      <div class="pip-dot" style="background:#22c55e;">6</div>
+      <div style="font-size:10px;font-weight:700;text-align:center;color:#14532d;line-height:1.3;">READY<br>FOR WORK<br><span class="sb sb-inprog" style="font-size:9px;">In Progress</span></div>
+      <div style="font-size:9px;color:#94a3b8;text-align:center;">All parts<br>received</div>
+    </div>
+    <div style="width:30px;height:3px;background:#cbd5e1;align-self:center;margin-bottom:30px;"></div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;">
+      <div class="pip-dot" style="background:#0ea5e9;">7</div>
+      <div style="font-size:10px;font-weight:700;text-align:center;color:#0c4a6e;line-height:1.3;">WORK<br>COMPLETE<br><span class="sb sb-resolved" style="font-size:9px;">Resolved</span></div>
+      <div style="font-size:9px;color:#94a3b8;text-align:center;">Tech finishes<br>job</div>
+    </div>
+    <div style="width:30px;height:3px;background:#cbd5e1;align-self:center;margin-bottom:30px;"></div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:90px;">
+      <div class="pip-dot" style="background:#64748b;">8</div>
+      <div style="font-size:10px;font-weight:700;text-align:center;color:#334155;line-height:1.3;">CLOSED<br><span class="sb sb-closed" style="font-size:9px;">Closed</span></div>
+      <div style="font-size:9px;color:#94a3b8;text-align:center;">Customer<br>satisfied</div>
+    </div>
+
+  </div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-users me-2"></i>Roles at a Glance</div>
+  <div class="table-responsive">
+  <table class="table who-table table-bordered">
+    <thead><tr><th>Role</th><th>Who</th><th>Can Do</th><th>Cannot Do</th></tr></thead>
+    <tbody>
+      <tr><td><span class="role-badge role-member">Customer / MNR</span></td><td>Any registered customer</td><td>Raise ticket, comment, close ticket (after resolved), view own tickets, upload media</td><td>Change status, assign staff, see billing internals</td></tr>
+      <tr><td><span class="role-badge role-partner">Partner</span></td><td>Dealer / Service Center JWT</td><td>Create tickets for customers, view own partner tickets, upload media, view charges billed to them</td><td>Acknowledge/diagnose, see all tickets, internal billing</td></tr>
+      <tr><td><span class="role-badge role-manager">Service Manager</span></td><td>Staff (service dept)</td><td>Acknowledge, assign technician, diagnose, request spares, acknowledge spares, release spares, mark work complete, create billing, reassign partner</td><td>Close (customer only)</td></tr>
+      <tr><td><span class="role-badge role-tech">Technician</span></td><td>Staff (service dept)</td><td>Diagnose, upload media, mark work complete</td><td>Manage billing, reassign staff</td></tr>
+      <tr><td><span class="role-badge role-admin">Admin / RVZ</span></td><td>RVZ admin users</td><td>Full access — all tickets, all partners, billing, reassignment, escalation</td><td>—</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-clock me-2"></i>TAT & SLA System</div>
+  <div class="two-col">
+    <div class="info-box">
+      <strong><i class="fas fa-stopwatch me-1"></i>Base TAT</strong><br>
+      Default = <strong>24 working hours</strong> from creation. Stored as <code>tat_base_hours</code>. A deadline (<code>tat_due_at</code>) is calculated and tracked.
+    </div>
+    <div class="info-box">
+      <strong><i class="fas fa-plus-circle me-1"></i>Extension for Spares</strong><br>
+      Each spare requested adds <strong>+48 hours</strong> (<code>tat_extension_hours</code> on spare request row). Total TAT = base + sum of all extensions.
+    </div>
+  </div>
+  <div class="warn-box"><i class="fas fa-exclamation-triangle me-1"></i><strong>SLA Breach:</strong> If <code>tat_due_at</code> is passed without work_complete, <code>sla_status</code> flips from <em>Within SLA</em> → <em>SLA Breached</em> → automatic escalation to reporting manager.</div>
+
+</div><!-- /overview -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 2 : SPARES TICKET — Full Example                          -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="tab-spares">
+
+  <div class="info-box"><i class="fas fa-cogs me-2" style="color:var(--spares)"></i><strong>Spares Ticket</strong> — Used when the EV needs a physical part replacement. This triggers the full procurement pipeline (ZYPO or ZYPR) and adds TAT extension per spare.</div>
+
+  <div class="sec-title first"><i class="fas fa-file-alt me-2"></i>Real Example: EV Battery Pack Replacement</div>
+
+  <!-- Ticket snapshot -->
+  <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <div><span style="font-family:monospace;font-size:14px;font-weight:800;color:var(--mnr-blue);">#SVT-2026-0047</span>&nbsp;&nbsp;<span class="sb sb-spares" style="background:#ede9fe;color:#5b21b6;">Spares</span>&nbsp;<span class="sb sb-open">Open</span></div>
+      <div style="font-size:11px;color:#64748b;">Created: 01 Mar 2026, 10:15 AM &nbsp;|&nbsp; Source: Partner Portal — Vijayawada EV Hub</div>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="field-row"><div class="field-label">Customer</div><div class="field-val">Ravi Shankar Rao</div></div>
+        <div class="field-row"><div class="field-label">Phone</div><div class="field-val">+91 98765 43210</div></div>
+        <div class="field-row"><div class="field-label">Product</div><div class="field-val">VGK4U ZX-Pro 3000 (EV Scooter)</div></div>
+        <div class="field-row"><div class="field-label">Serial No.</div><div class="field-val mono">ZX-3000-2024-VJA-00112</div></div>
+        <div class="field-row"><div class="field-label">Warranty</div><div class="field-val"><span style="color:#22c55e;font-weight:700;">Under Warranty</span></div></div>
+      </div>
+      <div>
+        <div class="field-row"><div class="field-label">Issue Category</div><div class="field-val">Battery Not Charging</div></div>
+        <div class="field-row"><div class="field-label">Priority</div><div class="field-val"><span style="color:#ef4444;font-weight:700;">High</span></div></div>
+        <div class="field-row"><div class="field-label">SLA Deadline</div><div class="field-val">02 Mar 2026, 10:15 AM</div></div>
+        <div class="field-row"><div class="field-label">Partner</div><div class="field-val">Vijayawada EV Hub (SC-0014)</div></div>
+        <div class="field-row"><div class="field-label">Spares Required</div><div class="field-val"><span style="color:var(--spares);font-weight:700;">Yes</span></div></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:10px;background:#f8fafc;border-radius:6px;font-size:12px;">
+      <strong>Issue Description:</strong> Customer reports the battery indicator shows 0% even after overnight charging. Charger LED turns green in 20 minutes (suspect BMS fault or dead cells). Vehicle is completely non-functional.
+    </div>
+  </div>
+
+  <!-- Timeline steps -->
+  <div class="sec-title"><i class="fas fa-stream me-2"></i>Step-by-Step Workflow</div>
+  <div class="timeline">
+
+    <!-- Step 1 -->
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#3b82f6;background:#3b82f6;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">1</span><span class="step-title">Ticket Created — sub_status: <span class="sb sb-new">new</span></span></div>
+          <div><span class="role-badge role-partner">Partner</span> or <span class="role-badge role-member">Customer</span></div>
+        </div>
+        <div class="step-meta">
+          <span class="endpoint">POST /api/v1/tickets/service/partner/create</span>
+          <span class="zy-badge" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">ticket_type = "spares"</span>
+        </div>
+        <p style="margin-top:8px;font-size:12px;">Vijayawada EV Hub logs into the partner portal and raises the ticket. The system auto-links <code>partner_id</code>, sets <code>source_channel = partner_portal</code>, and <code>spares_required = True</code>. SLA timer starts immediately.</p>
+        <div class="success-box">✅ Ticket <strong>#SVT-2026-0047</strong> created. Email/SMS notification sent to customer and service team.</div>
+      </div>
+      <div class="tl-time">01 Mar 2026 · 10:15 AM</div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#059669;background:#059669;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">2</span><span class="step-title">Acknowledge — sub_status: <span class="sb sb-ack">acknowledged</span></span></div>
+          <span class="role-badge role-manager">Service Manager</span>
+        </div>
+        <div class="step-meta">
+          <span class="endpoint">POST /api/v1/tickets/service/{ticket_id}/acknowledge</span>
+        </div>
+        <p style="margin-top:8px;font-size:12px;">Service Manager (e.g., Suresh Kumar, SM001) opens the ticket in the Service Queue, reviews it, and clicks <span class="action-btn success">✓ Acknowledge</span>. Optionally assigns a technician at this step.</p>
+        <ul style="font-size:12px;margin-bottom:0;">
+          <li>Sets <code>sub_status = acknowledged</code></li>
+          <li>Records acknowledgment in ticket log with timestamp</li>
+          <li>Partner portal shows ticket as "Acknowledged"</li>
+        </ul>
+      </div>
+      <div class="tl-time">01 Mar 2026 · 10:47 AM</div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#d97706;background:#d97706;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">3</span><span class="step-title">Diagnose — sub_status: <span class="sb sb-diag">diagnosing</span></span></div>
+          <span class="role-badge role-tech">Technician</span>
+        </div>
+        <div class="step-meta">
+          <span class="endpoint">POST /api/v1/tickets/service/{ticket_id}/diagnose</span>
+        </div>
+        <p style="margin-top:8px;font-size:12px;">Technician Prasad (TECH-004) physically inspects the vehicle. Using the diagnostic tool, confirms BMS cell-group 3 failure. Battery pack needs full replacement.</p>
+        <div style="background:#f8fafc;border-radius:6px;padding:10px;font-size:12px;margin-top:8px;">
+          <strong>Diagnosis Notes entered:</strong> "BMS diagnostic shows cell group 3 voltage = 0.2V (should be 3.6V). Full 72V 30Ah pack replacement required. Existing pack is unrecoverable."<br>
+          <strong>spares_required checkbox:</strong> <span style="color:var(--spares);font-weight:700;">✓ Checked</span>
+        </div>
+        <div class="warn-box" style="margin-top:8px;"><i class="fas fa-code-branch me-1"></i><strong>Fork point:</strong> Because spares_required = True → sub_status becomes <strong>awaiting_spares</strong>.<br>If it were a technical fix, it would go directly to <strong>ready_for_work</strong>.</div>
+      </div>
+      <div class="tl-time">01 Mar 2026 · 2:30 PM</div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="tl-item">
+      <div class="tl-dot" style="color:var(--spares);background:var(--spares);"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">4</span><span class="step-title">Request Spares — sub_status: <span class="sb sb-spare">awaiting_spares</span></span></div>
+          <span class="role-badge role-manager">Service Manager</span>
+        </div>
+        <div class="step-meta">
+          <span class="endpoint">POST /api/v1/tickets/service/{ticket_id}/request-spares</span>
+        </div>
+        <p style="margin-top:8px;font-size:12px;">Manager opens the spare request form. Clicks <span class="action-btn purple">Pick from Catalog</span> and searches "72V battery".</p>
+
+        <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px;font-size:12px;margin-top:8px;">
+          <strong style="color:var(--spares);">Spare Item 1 (from Catalog):</strong><br>
+          SKU: <code>ZY-BAT-72V30AH</code> · VGK4U 72V 30Ah Lithium Battery Pack<br>
+          Qty: 1 &nbsp;|&nbsp; Dealer Price: ₹18,500 &nbsp;|&nbsp; GST 18%: ₹3,330 &nbsp;|&nbsp; Total: ₹21,830<br>
+          Available Qty: 2 ✅ → <span class="zy-badge zy-po">ZYPO Auto-Created</span> <code>ZYPO-2026-00047</code>
+        </div>
+
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:12px;margin-top:8px;">
+          <strong style="color:#92400e;">Spare Item 2 (Manual Entry — custom part):</strong><br>
+          Name: BMS Wiring Harness (custom) · is_custom = True<br>
+          Qty: 1 &nbsp;|&nbsp; Estimated Cost: ₹1,200<br>
+          Out of stock → <span class="zy-badge zy-pr">ZYPR Auto-Created</span> <code>ZYPR-2026-00031</code>
+        </div>
+
+        <ul style="font-size:12px;margin-top:8px;margin-bottom:0;">
+          <li>TAT auto-extended: +48 hours per spare → SLA extended to 03 Mar 2026</li>
+          <li><code>spare_requested_at</code> timestamp recorded</li>
+          <li>Procurement team sees both entries in ZYPO / ZYPR dashboards</li>
+        </ul>
+      </div>
+      <div class="tl-time">01 Mar 2026 · 3:15 PM</div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#db2777;background:#db2777;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">5</span><span class="step-title">Spare Acknowledged — sub_status: <span class="sb sb-proc">procurement_in_progress</span></span></div>
+          <span class="role-badge role-manager">Service Manager / Procurement</span>
+        </div>
+        <div class="step-meta">
+          <span class="endpoint">POST /api/v1/tickets/service/{ticket_id}/acknowledge-spare</span>
+        </div>
+        <p style="margin-top:8px;font-size:12px;">Procurement team confirms availability. Battery (ZYPO-0047) is in stock — confirmed immediately. Wiring harness (ZYPR-0031) goes to vendor order.</p>
+        <ul style="font-size:12px;margin-bottom:0;">
+          <li>Each spare: <code>procurement_status</code> → <strong>acknowledged</strong></li>
+          <li>Ticket: <code>sub_status</code> → <strong>procurement_in_progress</strong></li>
+          <li><code>spare_acknowledged_at</code> recorded</li>
+        </ul>
+      </div>
+      <div class="tl-time">02 Mar 2026 · 9:00 AM</div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#22c55e;background:#22c55e;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">6</span><span class="step-title">Spare Released — sub_status: <span class="sb sb-ready">ready_for_work</span></span></div>
+          <span class="role-badge role-manager">Service Manager</span>
+        </div>
+        <div class="step-meta">
+          <span class="endpoint">POST /api/v1/tickets/service/{ticket_id}/release-spare/{spare_id}</span>
+        </div>
+        <p style="margin-top:8px;font-size:12px;">Battery pack arrives and is physically handed to the technician. Wiring harness arrives same afternoon. Manager marks both spares as released.</p>
+        <ul style="font-size:12px;margin-bottom:0;">
+          <li>Both spares: <code>procurement_status</code> → <strong>released</strong></li>
+          <li>When ALL spares released → ticket auto-moves to <strong>ready_for_work</strong></li>
+          <li>Main status upgrades to <strong>In Progress</strong></li>
+        </ul>
+      </div>
+      <div class="tl-time">02 Mar 2026 · 2:45 PM</div>
+    </div>
+
+    <!-- Step 7 -->
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#0ea5e9;background:#0ea5e9;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">7</span><span class="step-title">Work Complete — sub_status: <span class="sb sb-done">work_complete</span></span></div>
+          <span class="role-badge role-tech">Technician</span>
+        </div>
+        <div class="step-meta">
+          <span class="endpoint">POST /api/v1/tickets/service/{ticket_id}/work-complete</span>
+        </div>
+        <p style="margin-top:8px;font-size:12px;">Prasad installs the battery pack and wiring harness, runs full charge cycle test (100% achieved), verifies BMS diagnostics nominal. Uploads post-repair photos.</p>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px;font-size:12px;margin-top:8px;">
+          Resolution Notes: "Replaced 72V 30Ah battery pack and BMS wiring harness. Post-repair charge test: 0→100% in 4h 20m. BMS all cells nominal. Scooter running fine."
+        </div>
+        <ul style="font-size:12px;margin-top:8px;margin-bottom:0;">
+          <li>Status → <strong>Resolved</strong></li>
+          <li>Customer receives notification to review and close</li>
+          <li>Service Manager creates billing record</li>
+        </ul>
+      </div>
+      <div class="tl-time">02 Mar 2026 · 5:30 PM</div>
+    </div>
+
+    <!-- Step 8 -->
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#64748b;background:#64748b;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">8</span><span class="step-title">Closed — sub_status: <span class="sb sb-closed">closed</span></span></div>
+          <span class="role-badge role-member">Customer</span>
+        </div>
+        <p style="margin-top:8px;font-size:12px;">Ravi Shankar confirms the vehicle is working. Rates the service 5⭐. Ticket closes. Billing posted to SFMS.</p>
+        <div style="background:#f8fafc;border-radius:6px;padding:10px;font-size:12px;margin-top:8px;">
+          <strong>Final Billing (Under Warranty):</strong><br>
+          Battery Pack: ₹0 (warranty claim) · Wiring Harness: ₹0 (warranty) · Labour: ₹0<br>
+          Warranty Claim Amount: ₹23,030 · Net Payable by Customer: <strong>₹0</strong>
+        </div>
+      </div>
+      <div class="tl-time">03 Mar 2026 · 10:00 AM</div>
+    </div>
+
+  </div><!-- /timeline -->
+</div><!-- /spares tab -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 3 : TECHNICAL TICKET                                      -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="tab-tech">
+
+  <div class="info-box"><i class="fas fa-microchip me-2" style="color:var(--tech)"></i><strong>Technical Ticket</strong> — No physical parts needed. Motor tuning, BMS calibration, firmware flash, software faults, electrical diagnostics. Skips the entire spares pipeline — goes directly from <em>diagnosing</em> → <em>ready_for_work</em>.</div>
+
+  <div class="sec-title first"><i class="fas fa-file-alt me-2"></i>Real Example: Motor Controller Fault (Overcurrent Error)</div>
+
+  <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <div><span style="font-family:monospace;font-size:14px;font-weight:800;color:var(--mnr-blue);">#SVT-2026-0051</span>&nbsp;&nbsp;<span class="sb sb-done" style="background:#dbeafe;color:#1e40af;">Technical</span>&nbsp;<span class="sb sb-open">Open</span></div>
+      <div style="font-size:11px;color:#64748b;">Created: 02 Mar 2026, 9:00 AM &nbsp;|&nbsp; Source: Website</div>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="field-row"><div class="field-label">Customer</div><div class="field-val">Padma Lakshmi</div></div>
+        <div class="field-row"><div class="field-label">Phone</div><div class="field-val">+91 94400 12345</div></div>
+        <div class="field-row"><div class="field-label">Product</div><div class="field-val">VGK4U ZX-Lite 1500 (E-Bike)</div></div>
+        <div class="field-row"><div class="field-label">Warranty</div><div class="field-val"><span style="color:#ef4444;font-weight:700;">Out of Warranty (18 months old)</span></div></div>
+      </div>
+      <div>
+        <div class="field-row"><div class="field-label">Issue Category</div><div class="field-val">Motor / Drivetrain</div></div>
+        <div class="field-row"><div class="field-label">Priority</div><div class="field-val"><span style="color:#f59e0b;font-weight:700;">Medium</span></div></div>
+        <div class="field-row"><div class="field-label">SLA Deadline</div><div class="field-val">03 Mar 2026, 9:00 AM</div></div>
+        <div class="field-row"><div class="field-label">Spares Required</div><div class="field-val"><span style="color:#22c55e;font-weight:700;">No</span></div></div>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:10px;background:#f8fafc;border-radius:6px;font-size:12px;">
+      <strong>Issue:</strong> E-Bike cuts off at high speed (above 35km/h). Error code E-07 (Overcurrent protection) on dashboard. Happens consistently when riding uphill.
+    </div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-stream me-2"></i>Streamlined Technical Workflow</div>
+  <div class="timeline">
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#3b82f6;background:#3b82f6;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">1</span><span class="step-title">Created — <span class="sb sb-new">new</span></span></div>
+          <span class="role-badge role-member">Customer (Website)</span>
+        </div>
+        <span class="endpoint">POST /api/v1/tickets/service/public/create</span>
+        <p style="margin-top:8px;font-size:12px;">Padma raises the ticket from mnrteam.com. No login needed. Rate-limited to prevent spam. System sets <code>user_id = PUBLIC_GUEST</code>, <code>source_channel = website</code>.</p>
+      </div>
+      <div class="tl-time">02 Mar · 9:00 AM</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#059669;background:#059669;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">2</span><span class="step-title">Acknowledged — <span class="sb sb-ack">acknowledged</span></span></div>
+          <span class="role-badge role-manager">Service Manager</span>
+        </div>
+        <p style="margin-top:8px;font-size:12px;">Manager reads the ticket. Assigns to senior technician Venu (TECH-002) for motor diagnostics. Clicks Acknowledge.</p>
+      </div>
+      <div class="tl-time">02 Mar · 10:30 AM</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#d97706;background:#d97706;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">3</span><span class="step-title">Diagnosing → Ready for Work — <span class="sb sb-ready">ready_for_work</span></span></div>
+          <span class="role-badge role-tech">Technician</span>
+        </div>
+        <span class="endpoint">POST /api/v1/tickets/service/{ticket_id}/diagnose</span>
+        <div style="background:#f8fafc;border-radius:6px;padding:10px;font-size:12px;margin-top:8px;">
+          <strong>Venu's Diagnosis:</strong> Checked motor controller phase current limits using VESC tool. Default threshold 35A. Under load (uphill), phase current peaks at 38A → E-07 triggers. Fix: Adjust current limit to 40A and retune PID to reduce oscillation at high load.<br><br>
+          <strong>spares_required:</strong> <span style="color:#22c55e;font-weight:700;">✗ Not checked</span><br>
+          → sub_status directly becomes <strong style="color:#22c55e;">ready_for_work</strong> ✅
+        </div>
+        <div class="success-box" style="margin-top:8px;"><i class="fas fa-bolt me-1"></i><strong>No spares pipeline</strong> — Technical ticket skips Steps 4–6 of the spares flow entirely.</div>
+      </div>
+      <div class="tl-time">02 Mar · 1:00 PM</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#0ea5e9;background:#0ea5e9;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">4</span><span class="step-title">Work Complete — <span class="sb sb-done">work_complete</span></span></div>
+          <span class="role-badge role-tech">Technician</span>
+        </div>
+        <span class="endpoint">POST /api/v1/tickets/service/{ticket_id}/work-complete</span>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px;font-size:12px;margin-top:8px;">
+          Venu adjusts VESC motor controller: phase current limit raised to 40A, PID Kp 0.8→0.6. Road test: 7km uphill run — no cut-off. E-07 not triggered. Vehicle delivers 45km/h peak. All checks passed. Photos uploaded.
+        </div>
+        <p style="font-size:12px;margin-top:8px;">Status → <strong>Resolved</strong>. Padma receives SMS: "Your ticket #SVT-2026-0051 has been resolved."</p>
+      </div>
+      <div class="tl-time">02 Mar · 4:00 PM</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#64748b;background:#64748b;"></div>
+      <div class="tl-content">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+          <div><span class="step-num">5</span><span class="step-title">Billing Created + Closed — <span class="sb sb-closed">closed</span></span></div>
+          <span class="role-badge role-manager">Manager</span> + <span class="role-badge role-member">Customer</span>
+        </div>
+        <div style="background:#f8fafc;border-radius:6px;padding:10px;font-size:12px;margin-top:8px;">
+          <strong>Billing (Out of Warranty):</strong><br>
+          Labour / Diagnostic Charges: ₹800<br>
+          Motor Tuning Fee: ₹500<br>
+          GST @18%: ₹234 &nbsp;|&nbsp; <strong>Net Payable: ₹1,534</strong><br>
+          Payment Mode: UPI · Status: Paid
+        </div>
+        <p style="font-size:12px;margin-top:6px;">Padma closes the ticket. Rating: 4⭐. Billing posted to SFMS as journal entry.</p>
+      </div>
+      <div class="tl-time">02 Mar · 5:00 PM</div>
+    </div>
+
+  </div>
+
+  <div class="sec-title"><i class="fas fa-code-branch me-2"></i>Technical vs Spares — Key Differences</div>
+  <div class="table-responsive">
+  <table class="table who-table table-bordered">
+    <thead><tr><th>Feature</th><th>Technical</th><th>Spares</th></tr></thead>
+    <tbody>
+      <tr><td>ticket_type</td><td><code>technical</code></td><td><code>spares</code></td></tr>
+      <tr><td>spares_required</td><td>False</td><td>True</td></tr>
+      <tr><td>After Diagnosis goes to</td><td><code>ready_for_work</code> directly</td><td><code>awaiting_spares</code></td></tr>
+      <tr><td>TAT Extension</td><td>None</td><td>+48h per spare</td></tr>
+      <tr><td>ZYPO / ZYPR created?</td><td>No</td><td>Yes (auto)</td></tr>
+      <tr><td>Procurement sub-pipeline</td><td>Skipped</td><td>Full 3-step: acknowledge → ordered → released</td></tr>
+      <tr><td>Billing — Spares Amount</td><td>₹0</td><td>Sum of spare prices</td></tr>
+      <tr><td>Typical resolution time</td><td>Same day</td><td>2–5 days</td></tr>
+    </tbody>
+  </table>
+  </div>
+</div><!-- /tech tab -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 4 : PARTNER FLOW                                          -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="tab-partner">
+
+  <div class="info-box"><i class="fas fa-handshake me-2 text-danger"></i><strong>Partner Flow</strong> — Dealers, Service Centers, and Distributors raise tickets for their customers directly from the Partner Portal. They have a restricted but dedicated view.</div>
+
+  <div class="sec-title first"><i class="fas fa-id-card me-2"></i>What Partners Can Do</div>
+  <div class="two-col">
+    <div>
+      <div class="step-card mb-2"><i class="fas fa-plus-circle me-2 text-success"></i><strong>Create Tickets</strong><br><small>For any type (spares / technical / general). Auto-linked to their partner account. Customer info attached.</small><br><span class="endpoint mt-1">POST /service/partner/create</span></div>
+      <div class="step-card mb-2"><i class="fas fa-list me-2 text-primary"></i><strong>View Own Tickets Only</strong><br><small>DC Protocol: Partner-scoped. They only see tickets raised under their partner_id. No cross-partner visibility.</small><br><span class="endpoint mt-1">GET /service/partner/my-tickets</span></div>
+      <div class="step-card mb-2"><i class="fas fa-images me-2" style="color:var(--mnr-teal)"></i><strong>Upload Media</strong><br><small>Attach photos/videos to their own tickets (defect evidence, vehicle condition, repair photos). Max 5 images + 1 video.</small><br><span class="endpoint mt-1">POST /service/partner/{ticket_id}/upload-media</span></div>
+    </div>
+    <div>
+      <div class="step-card mb-2"><i class="fas fa-file-invoice-dollar me-2 text-warning"></i><strong>View Charges / Billing</strong><br><small>See bills raised against their service center — spares amount, labour, totals, payment status. Read-only.</small><br><span class="endpoint mt-1">GET /service/partner/charges</span></div>
+      <div class="step-card mb-2"><i class="fas fa-eye me-2 text-info"></i><strong>Track Ticket Status</strong><br><small>Can follow sub_status progression in real-time. See spare request status and estimated delivery dates.</small><br><span class="endpoint mt-1">GET /service/partner/ticket/{ticket_id}</span></div>
+      <div class="step-card danger mb-2"><i class="fas fa-ban me-2 text-danger"></i><strong>Cannot Do</strong><br><small>Acknowledge, diagnose, manage procurement, create billing, see other partners' tickets, see staff-internal notes.</small></div>
+    </div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-stream me-2"></i>Partner Portal — Typical Spares Journey</div>
+  <div style="overflow-x:auto;padding:12px 0;">
+  <table class="table table-bordered who-table">
+    <thead><tr><th>Step</th><th>Who</th><th>Action</th><th>Sub-Status</th><th>Partner Sees</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span class="role-badge role-partner">Partner</span></td><td>Raises ticket from portal, enters customer + vehicle details</td><td><span class="sb sb-new">new</span></td><td>"Submitted — Awaiting Acknowledgment"</td></tr>
+      <tr><td>2</td><td><span class="role-badge role-manager">Manager</span></td><td>Acknowledges on staff portal</td><td><span class="sb sb-ack">acknowledged</span></td><td>"Acknowledged by VGK4U Service Team"</td></tr>
+      <tr><td>3</td><td><span class="role-badge role-tech">Technician</span></td><td>Diagnoses vehicle</td><td><span class="sb sb-diag">diagnosing</span></td><td>"Under Diagnosis"</td></tr>
+      <tr><td>4</td><td><span class="role-badge role-manager">Manager</span></td><td>Requests spares from catalog</td><td><span class="sb sb-spare">awaiting_spares</span></td><td>"Parts Ordered — Expected 04 Mar"</td></tr>
+      <tr><td>5</td><td><span class="role-badge role-manager">Manager</span></td><td>Parts received, released to technician</td><td><span class="sb sb-ready">ready_for_work</span></td><td>"Parts Available — Work Starting"</td></tr>
+      <tr><td>6</td><td><span class="role-badge role-tech">Technician</span></td><td>Completes repair, uploads post-repair photos</td><td><span class="sb sb-done">work_complete</span></td><td>"Work Completed — Awaiting Customer Confirmation"</td></tr>
+      <tr><td>7</td><td><span class="role-badge role-manager">Manager</span></td><td>Creates billing record against this partner</td><td><span class="sb sb-done">work_complete</span></td><td>Billing visible in Charges tab</td></tr>
+      <tr><td>8</td><td><span class="role-badge role-member">Customer</span></td><td>Confirms and closes</td><td><span class="sb sb-closed">closed</span></td><td>"Closed — ⭐⭐⭐⭐⭐"</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-exchange-alt me-2"></i>Partner Reassignment</div>
+  <div class="info-box">
+    Staff (Admin/Manager) can reassign a ticket from one partner/service center to another. Example: ticket raised by Vijayawada EV Hub but the vehicle needs to be taken to the Guntur Service Center.<br><br>
+    <span class="endpoint">PUT /api/v1/tickets/{ticket_id}/reassign-partner</span><br>
+    Full history of all partner reassignments stored in <code>ServiceTicketPartnerHistory</code> table. Viewable via:<br>
+    <span class="endpoint">GET /api/v1/tickets/{ticket_id}/partner-history</span>
+  </div>
+
+</div><!-- /partner tab -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 5 : PUBLIC / WEBSITE                                      -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="tab-public">
+
+  <div class="info-box"><i class="fas fa-globe me-2 text-primary"></i><strong>Public / Website Flow</strong> — Customer raises a ticket from mnrteam.com without any login. The system accepts it, creates the ticket, and routes it to the service queue. Rate-limited to prevent abuse.</div>
+
+  <div class="sec-title first"><i class="fas fa-shield-alt me-2"></i>Rate Limiting & Security</div>
+  <div class="two-col">
+    <div class="warn-box">
+      <strong>Rate Limit:</strong> Max <strong>5 tickets per IP per hour</strong>.<br>
+      If exceeded → HTTP 429 "Too many requests from this IP."<br>
+      Implemented using in-memory <code>_public_ticket_rate_limit</code> dict with rolling window.
+    </div>
+    <div class="info-box">
+      <strong>Auth:</strong> No JWT required for public creation.<br>
+      <code>user_id</code> = <code>"PUBLIC_GUEST"</code><br>
+      <code>source_channel</code> = <code>"website"</code><br>
+      IP address + User-Agent recorded for audit.
+    </div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-stream me-2"></i>Public Ticket Journey</div>
+  <div class="timeline">
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#3b82f6;background:#3b82f6;"></div>
+      <div class="tl-content">
+        <span class="step-num">1</span><span class="step-title">Customer Submits via Website Form</span><br>
+        <span class="endpoint">POST /api/v1/tickets/service/public/create</span>
+        <p style="font-size:12px;margin-top:8px;">Customer fills: name, phone, email, vehicle model, serial, issue category, description. No account needed. System assigns <code>ticket_type = general</code> by default (can be overridden). SLA = 24 hours from submission.</p>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#d97706;background:#d97706;"></div>
+      <div class="tl-content">
+        <span class="step-num">2</span><span class="step-title">Ticket Appears in Staff Service Queue</span>
+        <p style="font-size:12px;margin-top:8px;">Appears in the "All Tickets" list with <code>source_channel = website</code> filter. Staff can see customer_name, customer_phone from the ticket fields. No partner linked.</p>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#059669;background:#059669;"></div>
+      <div class="tl-content">
+        <span class="step-num">3</span><span class="step-title">Staff Takes Over → Normal Workflow</span>
+        <p style="font-size:12px;margin-top:8px;">Service Manager acknowledges → assigns technician → diagnoses → (spares or technical path) → resolves. Standard pipeline from this point. Staff can optionally link the ticket to a partner service center if the vehicle is being brought there.</p>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#64748b;background:#64748b;"></div>
+      <div class="tl-content">
+        <span class="step-num">4</span><span class="step-title">Customer Contacted Directly</span>
+        <p style="font-size:12px;margin-top:8px;">Since no user account is linked, staff contacts the customer using the phone/email from the ticket. Customer cannot log in to close the ticket — staff marks it closed after verbal confirmation.</p>
+        <div class="warn-box" style="margin-top:6px;"><i class="fas fa-info-circle me-1"></i>Future: OTP-based closure for public tickets is planned.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="sec-title"><i class="fas fa-sitemap me-2"></i>All Three Entry Points Compared</div>
+  <div class="table-responsive">
+  <table class="table who-table table-bordered">
+    <thead><tr><th>Property</th><th>Website / Public</th><th>Partner Portal</th><th>Staff Internal</th></tr></thead>
+    <tbody>
+      <tr><td>Auth Required</td><td>No</td><td>Partner JWT</td><td>Staff JWT</td></tr>
+      <tr><td>user_id</td><td>PUBLIC_GUEST</td><td>PARTNER_{id}</td><td>Real user or PUBLIC_GUEST</td></tr>
+      <tr><td>source_channel</td><td>website</td><td>partner_portal</td><td>website / phone</td></tr>
+      <tr><td>Rate Limiting</td><td>5/hr per IP</td><td>None (authenticated)</td><td>None</td></tr>
+      <tr><td>partner_id linked?</td><td>No</td><td>Auto (JWT partner)</td><td>Optional</td></tr>
+      <tr><td>Default ticket_type</td><td>general</td><td>technical or spares</td><td>Any</td></tr>
+      <tr><td>Customer can close?</td><td>Staff closes on behalf</td><td>Staff/Customer</td><td>Staff closes on behalf</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+</div><!-- /public tab -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 6 : PROCUREMENT — ZYPO / ZYPR                            -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="tab-procurement">
+
+  <div class="info-box"><i class="fas fa-boxes me-2" style="color:var(--spares)"></i>When a spare part is requested on a ticket, the system <strong>automatically</strong> creates either a Purchase Order (ZYPO) or a Procurement Request (ZYPR) based on stock availability. No manual step needed.</div>
+
+  <div class="sec-title first"><i class="fas fa-code-branch me-2"></i>Decision Logic (WVV Protocol)</div>
+  <div class="two-col">
+    <div class="success-box">
+      <strong><span class="zy-badge zy-po">ZYPO</span> — In Stock Path</strong><br><br>
+      <strong>Condition:</strong> <code>available_qty ≥ quantity_required</code><br><br>
+      <strong>Action:</strong> System creates a <code>MarketplacePurchaseOrder</code> with:<br>
+      <ul style="font-size:12px;margin-bottom:0;">
+        <li><code>source_type = 'service_ticket'</code></li>
+        <li><code>source_ticket_id = ticket.id</code></li>
+        <li>PO number auto-generated: <code>ZYPO-{year}-{seq}</code></li>
+        <li>Line item added with pricing</li>
+      </ul>
+      <br><strong>Stock NOT decremented</strong> at creation — only at physical dispatch.<br>
+      Spare request: <code>marketplace_po_id</code> populated.
+    </div>
+    <div class="warn-box">
+      <strong><span class="zy-badge zy-pr">ZYPR</span> — Out of Stock Path</strong><br><br>
+      <strong>Condition:</strong> <code>available_qty &lt; quantity_required</code><br><br>
+      <strong>Action:</strong> System checks for an <em>existing open ZYPR</em> for the same SKU + company. If none → creates <code>MarketplaceProcurementRequest</code> with:<br>
+      <ul style="font-size:12px;margin-bottom:0;">
+        <li><code>source_type = 'service_ticket'</code></li>
+        <li><code>triggered_by = 'service_ticket'</code></li>
+        <li>PR number: <code>ZYPR-{year}-{seq}</code></li>
+      </ul>
+      <br>Spare request: <code>marketplace_procurement_id</code> populated.
+    </div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-dollar-sign me-2"></i>Pricing Calculation</div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12px;">
+    <div class="field-row"><div class="field-label">Dealer Price</div><div class="field-val">₹18,500 (base catalog price)</div></div>
+    <div class="field-row"><div class="field-label">Discount Mode</div><div class="field-val">MNR = 3% &nbsp;|&nbsp; Student = 10% &nbsp;|&nbsp; Dealer/Partner = 12%</div></div>
+    <div class="field-row"><div class="field-label">Net Before Tax</div><div class="field-val">dealer_price × (1 − disc%) → ₹18,500 × 0.97 = <strong>₹17,945</strong></div></div>
+    <div class="field-row"><div class="field-label">GST Amount</div><div class="field-val">net × (gst_pct / 100) → ₹17,945 × 0.18 = <strong>₹3,230.10</strong></div></div>
+    <div class="field-row"><div class="field-label">Final Price</div><div class="field-val">net + gst → <strong>₹21,175.10</strong></div></div>
+    <div style="margin-top:10px;background:#f0fdf4;border-radius:6px;padding:8px;"><strong>No margin floor check</strong> — Pricing is purely formula-driven. Margin floor (20%) applies only to category config pricing, not ticket spares.</div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-list-ol me-2"></i>Spare Procurement Status Flow</div>
+  <div class="pipeline" style="flex-wrap:wrap;gap:12px 0;">
+    <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">
+      <div class="pip-dot" style="background:#94a3b8;">1</div>
+      <div style="font-size:11px;font-weight:700;margin-left:8px;min-width:80px;"><span class="sb sb-new">pending</span><br><small class="text-muted">Just requested</small></div>
+      <div style="width:20px;height:2px;background:#cbd5e1;margin:0 4px;"></div>
+      <div class="pip-dot" style="background:#059669;">2</div>
+      <div style="font-size:11px;font-weight:700;margin-left:8px;min-width:100px;"><span class="sb sb-ack">acknowledged</span><br><small class="text-muted">Confirmed available</small></div>
+      <div style="width:20px;height:2px;background:#cbd5e1;margin:0 4px;"></div>
+      <div class="pip-dot" style="background:#d97706;">3</div>
+      <div style="font-size:11px;font-weight:700;margin-left:8px;min-width:80px;"><span class="sb sb-diag">ordered</span><br><small class="text-muted">PO sent to vendor</small></div>
+      <div style="width:20px;height:2px;background:#cbd5e1;margin:0 4px;"></div>
+      <div class="pip-dot" style="background:#7c3aed;">4</div>
+      <div style="font-size:11px;font-weight:700;margin-left:8px;min-width:80px;"><span class="sb sb-spare">received</span><br><small class="text-muted">Part arrived</small></div>
+      <div style="width:20px;height:2px;background:#cbd5e1;margin:0 4px;"></div>
+      <div class="pip-dot" style="background:#22c55e;">5</div>
+      <div style="font-size:11px;font-weight:700;margin-left:8px;min-width:80px;"><span class="sb sb-done">released</span><br><small class="text-muted">Given to tech</small></div>
+    </div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-search me-2"></i>Catalog Search (New Feature)</div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;">
+    <p style="font-size:12px;">Staff can pick spares directly from the VGK4U spare catalog while raising a spare request on any ticket. Two modes:</p>
+    <div class="two-col" style="gap:12px;">
+      <div style="background:#f0f9ff;border-radius:8px;padding:12px;font-size:12px;">
+        <strong style="color:#0369a1;"><i class="fas fa-search me-1"></i>Pick from Catalog</strong><br>
+        Search by name/SKU/category (400ms debounce). Select discount mode. Stock dot shows availability (green/amber/red). Click to add to basket. Price auto-calculated.
+      </div>
+      <div style="background:#f9fafb;border-radius:8px;padding:12px;font-size:12px;">
+        <strong style="color:#374151;"><i class="fas fa-keyboard me-1"></i>Enter Manually</strong>
+        <br>Type any part name, SKU, quantity, estimated cost. Sets <code>is_custom = True</code>. Allows for non-catalog or vendor-specific items.
+      </div>
+    </div>
+    <div class="endpoint" style="margin-top:10px;">GET /api/v1/marketplace/catalog-search?q=battery&company_id=1&discount_mode=mnr</div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-eye me-2"></i>Visibility in ZYPO / ZYPR Dashboards</div>
+  <div class="info-box">
+    All ticket-sourced POs and PRs appear in the main marketplace dashboards (<code>/staff/zynova-po</code>). A <strong>Source column</strong> shows:
+    <ul style="font-size:12px;margin-bottom:0;margin-top:6px;">
+      <li><span class="zy-badge zy-po">ZYPO</span> from service ticket → Source: "Service Ticket #SVT-2026-0047"</li>
+      <li><span class="zy-badge zy-pr">ZYPR</span> from procurement team → Source: "Manual"</li>
+    </ul>
+    Filter by source_type dropdown: Manual / Service Ticket / Technical Ticket / Auto-Sync / PO.
+  </div>
+
+</div><!-- /procurement tab -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 7 : BILLING & GST                                         -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="tab-billing">
+
+  <div class="info-box"><i class="fas fa-file-invoice-dollar me-2 text-warning"></i><strong>Billing</strong> is created by the Service Manager after work is complete. One billing record per ticket. Can be a simple <em>Bill</em> or a formal <em>GST Invoice</em>. Posted to SFMS for accounting.</div>
+
+  <div class="sec-title first"><i class="fas fa-table me-2"></i>Billing Breakdown</div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;">
+    <div class="field-row"><div class="field-label">Document Type</div><div class="field-val"><code>bill</code> (simple) or <code>invoice</code> (GST formal)</div></div>
+    <div class="field-row"><div class="field-label">Service Amount</div><div class="field-val">General service fee</div></div>
+    <div class="field-row"><div class="field-label">Spares Amount</div><div class="field-val">Sum of all spare part costs</div></div>
+    <div class="field-row"><div class="field-label">Labour Amount</div><div class="field-val">Technician labour charge</div></div>
+    <div class="field-row"><div class="field-label">Taxable Amount</div><div class="field-val">service + spares + labour</div></div>
+    <div class="field-row"><div class="field-label">CGST / SGST / IGST</div><div class="field-val">Split based on inter/intra-state transaction</div></div>
+    <div class="field-row"><div class="field-label">Discount Amount</div><div class="field-val">Any applied discount (warranty, loyalty, etc.)</div></div>
+    <div class="field-row"><div class="field-label">Round Off</div><div class="field-val">±0.50 max</div></div>
+    <div class="field-row"><div class="field-label">Net Payable</div><div class="field-val"><strong>Final amount customer pays</strong></div></div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-star me-2"></i>Warranty Scenarios</div>
+  <div class="table-responsive">
+  <table class="table who-table table-bordered">
+    <thead><tr><th>Warranty Status</th><th>Spares</th><th>Labour</th><th>Net Payable</th><th>warranty_claim_amount</th></tr></thead>
+    <tbody>
+      <tr><td><span style="color:#22c55e;font-weight:700;">Under Warranty</span></td><td>₹0 (claimed)</td><td>₹0 (included)</td><td><strong>₹0</strong></td><td>Full spares + labour value</td></tr>
+      <tr><td><span style="color:#f59e0b;font-weight:700;">AMC (Contract)</span></td><td>₹0 (covered)</td><td>₹0 (covered)</td><td><strong>₹0 or reduced</strong></td><td>Partial or full</td></tr>
+      <tr><td><span style="color:#ef4444;font-weight:700;">Out of Warranty</span></td><td>Full price</td><td>Full charge</td><td><strong>Full amount</strong></td><td>₹0</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-book me-2"></i>SFMS Integration</div>
+  <div class="two-col">
+    <div class="info-box">
+      <strong>sfms_status progression:</strong><br>
+      <code>draft</code> → <code>pending_sfms</code> → <code>posted</code><br><br>
+      On posting, a journal entry is created in MNR-SFMS. If post fails, error stored in <code>sfms_error</code> field for retry.
+    </div>
+    <div class="info-box">
+      <strong>Payment Tracking:</strong><br>
+      <code>payment_status</code>: pending / partial / paid<br>
+      <code>amount_paid</code> + <code>amount_due</code> tracked<br>
+      Payment modes: cash, UPI, card, NEFT<br>
+      Reference number stored.
+    </div>
+  </div>
+
+  <div class="sec-title"><i class="fas fa-receipt me-2"></i>Billing Items (Line Items)</div>
+  <div class="info-box">
+    Each billing has line items (<code>ServiceTicketBillingItem</code>) — one row per spare, service, or labour entry with HSN/SAC code, qty, rate, GST%. HSN summary is stored as JSON for GST return filing.
+  </div>
+
+</div><!-- /billing tab -->
+
+
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!-- TAB 8 : STAFF GUIDE                                           -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div class="tab-pane fade" id="tab-staff">
+
+  <div class="sec-title first"><i class="fas fa-user-shield me-2"></i>Role-by-Role Operating Instructions</div>
+
+  <!-- SERVICE MANAGER -->
+  <div style="background:#fff;border:1px solid #bbf7d0;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+    <div style="background:#166534;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+      <i class="fas fa-user-tie fa-lg"></i>
+      <div><div style="font-weight:800;font-size:15px;">Service Manager</div><div style="font-size:11px;opacity:.85;">Full operational control of ticket lifecycle</div></div>
+    </div>
+    <div style="padding:16px;">
+      <div class="two-col">
+        <div>
+          <p style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px;"><i class="fas fa-tasks me-1"></i>Daily Checklist</p>
+          <div class="step-card success mb-2" style="font-size:12px;">
+            <strong>1. Check New Tickets</strong><br>
+            Open Service Queue → filter by <code>sub_status = new</code>. Any ticket older than 2 hours without acknowledgment = priority action.
+          </div>
+          <div class="step-card success mb-2" style="font-size:12px;">
+            <strong>2. Acknowledge &amp; Assign</strong><br>
+            Click ticket → <span class="action-btn success">✓ Acknowledge</span> → Select technician from dropdown → Confirm. SMS sent to customer.
+          </div>
+          <div class="step-card success mb-2" style="font-size:12px;">
+            <strong>3. Review Spares Pending</strong><br>
+            Filter by <code>awaiting_spares</code>. For each: check ZYPO/ZYPR status. If vendor delayed → update expected delivery date.
+          </div>
+          <div class="step-card success mb-2" style="font-size:12px;">
+            <strong>4. Release Spares</strong><br>
+            When parts physically arrive → click spare row → <span class="action-btn success">Release Spare</span>. When ALL spares released → ticket auto-moves to <em>Ready for Work</em>.
+          </div>
+          <div class="step-card success mb-2" style="font-size:12px;">
+            <strong>5. Create Billing After Work Complete</strong><br>
+            Once technician marks work complete → open ticket → <span class="action-btn warning">Create Bill</span> → Enter amounts → Choose warranty status → Post.
+          </div>
+        </div>
+        <div>
+          <p style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px;"><i class="fas fa-exclamation-triangle me-1"></i>SLA Watch Rules</p>
+          <div class="warn-box mb-2" style="font-size:12px;">
+            <strong>Within 2 hrs of creation:</strong> Ticket must be acknowledged. If not, escalation auto-triggers.
+          </div>
+          <div class="warn-box mb-2" style="font-size:12px;">
+            <strong>Within 24 hrs:</strong> Diagnosis must be complete (for non-spares) or spares requested (for spares tickets).
+          </div>
+          <div class="warn-box mb-2" style="font-size:12px;">
+            <strong>Spares TAT:</strong> +48 hrs per spare. If 3 spares requested → up to +6 days extension possible. Communicate expected date to customer.
+          </div>
+          <div class="danger-box mb-2" style="font-size:12px;">
+            <strong>SLA Breach:</strong> If <code>tat_due_at</code> passes without work_complete → status shows red. Auto-escalation to reporting manager. You must add a comment explaining delay.
+          </div>
+          <p style="font-size:12px;font-weight:700;color:#166534;margin:12px 0 8px;"><i class="fas fa-user-friends me-1"></i>Staff Reassignment</p>
+          <div class="info-box" style="font-size:12px;">
+            If a technician is unavailable → <span class="action-btn primary">Reassign Staff</span>. Select new manager and/or technician. Reason required. Full history logged.
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:12px;font-weight:700;color:#166534;margin:16px 0 8px;"><i class="fas fa-keyboard me-1"></i>Spare Request — Step by Step</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:11px;">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;border-radius:8px;text-align:center;">Open Ticket<br><i class="fas fa-arrow-down"></i></div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;border-radius:8px;text-align:center;">Click<br>"Request Spares"<br><i class="fas fa-arrow-down"></i></div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;border-radius:8px;text-align:center;">Choose<br>"Pick from Catalog"<br>or "Enter Manually"<br><i class="fas fa-arrow-down"></i></div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;border-radius:8px;text-align:center;">Search / type<br>part name<br><i class="fas fa-arrow-down"></i></div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;border-radius:8px;text-align:center;">Set discount<br>mode if needed<br><i class="fas fa-arrow-down"></i></div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;border-radius:8px;text-align:center;">Click<br>Submit Basket<br><i class="fas fa-arrow-down"></i></div>
+        <div style="background:#dcfce7;border:1px solid #86efac;padding:8px 12px;border-radius:8px;text-align:center;font-weight:700;"><span class="zy-badge zy-po">ZYPO</span> or<br><span class="zy-badge zy-pr">ZYPR</span><br>auto-created ✅</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TECHNICIAN -->
+  <div style="background:#fff;border:1px solid #fde68a;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+    <div style="background:#92400e;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+      <i class="fas fa-wrench fa-lg"></i>
+      <div><div style="font-weight:800;font-size:15px;">Service Technician</div><div style="font-size:11px;opacity:.85;">Diagnose · Repair · Document</div></div>
+    </div>
+    <div style="padding:16px;">
+      <div class="two-col">
+        <div>
+          <div class="step-card warn mb-2" style="font-size:12px;">
+            <strong>Step 1: Accept Assignment</strong><br>
+            You'll receive notification when a ticket is assigned to you. Open Service Queue → filter by your name. Review issue description before going to vehicle.
+          </div>
+          <div class="step-card warn mb-2" style="font-size:12px;">
+            <strong>Step 2: Diagnose</strong><br>
+            Inspect vehicle. Click <span class="action-btn warning">Diagnose</span>. Enter diagnosis notes (be specific — these appear on the customer report). Check "Spares Required" if parts needed.
+          </div>
+          <div class="step-card warn mb-2" style="font-size:12px;">
+            <strong>Step 3: Upload Media</strong><br>
+            Upload before-repair photos (defect evidence). Especially important for warranty claims. Max 5 images + 1 video.<br>
+            <span class="endpoint">POST /service/{ticket_id}/upload-media</span>
+          </div>
+        </div>
+        <div>
+          <div class="step-card warn mb-2" style="font-size:12px;">
+            <strong>Step 4: Wait for Spares (if needed)</strong><br>
+            If spares were requested, ticket shows <code>awaiting_spares</code> / <code>procurement_in_progress</code>. Do not proceed until Manager marks spares as released.
+          </div>
+          <div class="step-card warn mb-2" style="font-size:12px;">
+            <strong>Step 5: Complete Work</strong><br>
+            After repair, click <span class="action-btn info">Mark Work Complete</span>. Enter resolution summary (required). Upload post-repair photos. System moves status to Resolved.
+          </div>
+          <div class="step-card warn mb-2" style="font-size:12px;">
+            <strong>What NOT to do</strong><br>
+            • Do not skip diagnosis notes<br>
+            • Do not mark work complete before all spares received<br>
+            • Do not upload irrelevant images<br>
+            • Do not discuss billing with customers — that's Manager's role
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div style="background:#fff;border:1px solid #ddd6fe;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+    <div style="background:#6b21a8;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+      <i class="fas fa-crown fa-lg"></i>
+      <div><div style="font-weight:800;font-size:15px;">Admin / RVZ</div><div style="font-size:11px;opacity:.85;">Full visibility · Override capability · Billing finalization</div></div>
+    </div>
+    <div style="padding:16px;font-size:12px;">
+      <div class="two-col">
+        <div>
+          <p style="font-weight:700;color:#6b21a8;margin-bottom:8px;">Exclusive Admin Actions</p>
+          <ul>
+            <li>View ALL tickets regardless of partner, staff, or source</li>
+            <li>Reassign between partners (<code>PUT /{ticket_id}/reassign-partner</code>)</li>
+            <li>Reassign between staff (<code>PUT /{ticket_id}/reassign-staff</code>)</li>
+            <li>Escalate tickets manually</li>
+            <li>View full ticket timeline (<code>GET /admin/timeline</code>)</li>
+            <li>Post billing to SFMS</li>
+            <li>See partner charges dashboard</li>
+          </ul>
+        </div>
+        <div>
+          <p style="font-weight:700;color:#6b21a8;margin-bottom:8px;">Dashboard Views</p>
+          <div class="endpoint mb-1">GET /admin/all — All tickets with filters</div>
+          <div class="endpoint mb-1">GET /admin/open-tickets — SLA tracking list</div>
+          <div class="endpoint mb-1">GET /admin/timeline — Date-wise open/resolved counts</div>
+          <div class="endpoint mb-1">GET /service/partner/{id}/overview — Partner stats</div>
+          <p style="font-weight:700;color:#6b21a8;margin:12px 0 8px;">Key Filters Available</p>
+          <p style="color:#64748b;">status, ticket_type, source_channel, partner_id, assigned_to, date range, sla_status, priority</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PARTNER -->
+  <div style="background:#fff;border:1px solid #fecdd3;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+    <div style="background:#9f1239;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+      <i class="fas fa-store fa-lg"></i>
+      <div><div style="font-weight:800;font-size:15px;">Partner / Service Center</div><div style="font-size:11px;opacity:.85;">Raise · Track · View Charges</div></div>
+    </div>
+    <div style="padding:16px;font-size:12px;">
+      <div class="two-col">
+        <div>
+          <p style="font-weight:700;color:#9f1239;margin-bottom:8px;">How to Raise a Ticket (Partner Portal)</p>
+          <ol>
+            <li>Log in to the Partner Portal at <code>mnrteam.com/partner</code></li>
+            <li>Go to <strong>Service Tickets</strong> → <strong>New Ticket</strong></li>
+            <li>Enter customer details (name, phone, vehicle model, serial)</li>
+            <li>Select ticket type: <strong>Technical</strong> or <strong>Spares</strong></li>
+            <li>Describe the issue in detail (including error codes if any)</li>
+            <li>Submit — ticket auto-links to your partner account</li>
+          </ol>
+        </div>
+        <div>
+          <p style="font-weight:700;color:#9f1239;margin-bottom:8px;">Viewing Your Charges</p>
+          <p>Go to Service Tickets → <strong>My Charges</strong> tab. Shows all bills raised against your service center including spares amount, labour, tax, payment status.</p>
+          <div class="warn-box" style="margin-top:8px;">If you see a charge you disagree with → raise a query by commenting on the ticket. Do NOT raise a new ticket for billing disputes.</div>
+          <p style="font-weight:700;color:#9f1239;margin-top:12px;margin-bottom:6px;">Media Upload Rules</p>
+          <ul style="margin-bottom:0;">
+            <li>Max 5 images (10MB each)</li>
+            <li>Max 1 video (50MB)</li>
+            <li>Always upload defect photos before repair begins</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUICK REF -->
+  <div class="sec-title"><i class="fas fa-bolt me-2"></i>Quick Reference — Who Does What at Each Stage</div>
+  <div class="table-responsive">
+  <table class="table who-table table-bordered">
+    <thead><tr><th>Sub-Status</th><th style="color:#22c55e;">Service Manager</th><th style="color:#fbbf24;">Technician</th><th style="color:#a78bfa;">Admin</th><th style="color:#fb7185;">Partner</th></tr></thead>
+    <tbody style="font-size:11px;">
+      <tr><td><span class="sb sb-new">new</span></td><td>Read, Acknowledge, Assign Tech</td><td>Read only</td><td>Full</td><td>View own, Upload media</td></tr>
+      <tr><td><span class="sb sb-ack">acknowledged</span></td><td>Assign/Reassign Tech</td><td>Prepare to diagnose</td><td>Full</td><td>View status</td></tr>
+      <tr><td><span class="sb sb-diag">diagnosing</span></td><td>Review notes, add spare items</td><td><strong>Diagnose, enter notes, upload photos</strong></td><td>Full</td><td>View status</td></tr>
+      <tr><td><span class="sb sb-spare">awaiting_spares</span></td><td><strong>Request spares (ZYPO/ZYPR)</strong></td><td>Wait</td><td>Full</td><td>View expected delivery</td></tr>
+      <tr><td><span class="sb sb-proc">procurement_in_progress</span></td><td><strong>Acknowledge + Release spares</strong></td><td>Wait</td><td>Full</td><td>View procurement status</td></tr>
+      <tr><td><span class="sb sb-ready">ready_for_work</span></td><td>Monitor SLA</td><td><strong>Perform repair, upload post-repair photos</strong></td><td>Full</td><td>View status</td></tr>
+      <tr><td><span class="sb sb-done">work_complete</span></td><td><strong>Create billing record</strong></td><td>Done</td><td>Post to SFMS</td><td>View charges</td></tr>
+      <tr><td><span class="sb sb-closed">closed</span></td><td>Archive, view reports</td><td>Archive</td><td>Full reports</td><td>View final bill</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+</div><!-- /staff guide tab -->
+
+</div><!-- /tab-content -->
+
+<div style="background:#f1f5f9;border-top:1px solid var(--border);text-align:center;padding:12px;font-size:11px;color:#94a3b8;">
+  VGK4U Platform · EV Service Ticket Module · Generated from live system schema · <strong>Internal Use Only</strong>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

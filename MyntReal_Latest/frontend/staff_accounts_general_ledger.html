@@ -1,0 +1,2656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>General Ledger - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 24px; }
+        .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
+        .sidebar-expanded .main-content { margin-left: 260px; }
+
+        .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        .page-header h1 { font-size: 22px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 13px; color: #6b7280; margin: 3px 0 0 0; }
+
+        /* ── Summary bar (entry-level totals) ── */
+        .summary-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+        .summary-card { background: white; border-radius: 10px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid #6366f1; }
+        .summary-card.green  { border-left-color: #10b981; }
+        .summary-card.red    { border-left-color: #ef4444; }
+        .summary-card.purple { border-left-color: #8b5cf6; }
+        .summary-card .sc-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #6b7280; margin-bottom: 6px; }
+        .summary-card .sc-value { font-size: 22px; font-weight: 700; color: #1f2937; }
+        .summary-card.green  .sc-value { color: #10b981; }
+        .summary-card.red    .sc-value { color: #ef4444; }
+        .summary-card.purple .sc-value { color: #8b5cf6; }
+
+        /* ── Account-type stat bar (inside Chart of Accounts tab) ── */
+        .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
+        .stat-card { background: white; border-radius: 10px; padding: 14px 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); border-left: 4px solid #6366f1; }
+        .stat-card.cash    { border-left-color: #10b981; }
+        .stat-card.bank    { border-left-color: #3b82f6; }
+        .stat-card.income  { border-left-color: #06b6d4; }
+        .stat-card.expense { border-left-color: #ef4444; }
+        .stat-card .sc-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: #6b7280; margin-bottom: 4px; }
+        .stat-card .sc-val { font-size: 24px; font-weight: 800; color: #1f2937; }
+        .stat-card.cash   .sc-val { color: #10b981; }
+        .stat-card.bank   .sc-val { color: #3b82f6; }
+        .stat-card.income .sc-val { color: #06b6d4; }
+        .stat-card.expense .sc-val { color: #ef4444; }
+
+        /* ── Card ── */
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: none; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 14px 20px; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+        .card-body { padding: 20px; }
+
+        /* ── Tabs ── */
+        .tab-nav { display: flex; gap: 0; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { padding: 10px 18px; border: none; background: transparent; font-size: 12px; font-weight: 600; color: #6b7280; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 5px; }
+        .tab-btn:hover { color: #374151; background: #f9fafb; }
+        .tab-btn.active { color: #6366f1; border-bottom-color: #6366f1; }
+
+        /* ── Filters ── */
+        .filter-bar { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; padding: 16px; background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        .filter-group, .fg { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label, .fg label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-group select, .filter-group input, .fg select, .fg input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 130px; }
+        .filter-group select:focus, .filter-group input:focus, .fg select:focus, .fg input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+
+        .period-btns-row { display: flex; gap: 4px; flex-wrap: wrap; }
+        .period-btn { padding: 5px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; background: white; color: #374151; transition: all 0.15s; white-space: nowrap; }
+        .period-btn:hover { background: #f3f4f6; }
+        .period-btn.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+        /* ── Buttons ── */
+        .btn-indigo  { background: linear-gradient(135deg,#6366f1,#4f46e5); border: none; color: white; padding: 9px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-indigo:hover  { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(99,102,241,.3); }
+        .btn-indigo:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+        .btn-outline { background: white; border: 1px solid #d1d5db; color: #374151; padding: 9px 18px; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-outline:hover { background: #f9fafb; }
+        .btn-green   { background: linear-gradient(135deg,#10b981,#059669); border: none; color: white; padding: 9px 18px; border-radius: 8px; font-weight: 500; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-sm-edit { background: #ede9fe; color: #4f46e5; border: none; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .btn-sm-edit:hover { background: #ddd6fe; }
+        .btn-sm-view { background: #d1fae5; color: #065f46; border: none; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; margin-right: 3px; }
+        .btn-sm-view:hover { background: #a7f3d0; }
+        .btn-sm-del  { background: #fee2e2; color: #991b1b; border: none; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; margin-left: 3px; }
+        .btn-sm-del:hover  { background: #fecaca; }
+        /* Voucher View Modal */
+        #voucherViewModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9999; align-items:center; justify-content:center; padding:16px; }
+        #voucherViewModal.show { display:flex; }
+        #voucherViewModal .vvm-box { background:white; border-radius:14px; width:100%; max-width:820px; max-height:90vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+        #voucherViewModal .vvm-header { padding:16px 22px; border-bottom:1px solid #f3f4f6; display:flex; align-items:center; justify-content:space-between; background:#f9fafb; }
+        #voucherViewModal .vvm-body { padding:20px 22px; overflow-y:auto; flex:1; }
+        .btn-sm-tog  { padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; border: none; }
+        .btn-sm-tog.active   { background: #d1fae5; color: #065f46; }
+        .btn-sm-tog.inactive { background: #fee2e2; color: #991b1b; }
+
+        /* ── Table ── */
+        .table-wrap { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow: hidden; }
+        .table-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid #f3f4f6; }
+        .table-toolbar .tt-title { font-size: 14px; font-weight: 600; color: #1f2937; }
+        .table-toolbar .tt-info  { font-size: 12px; color: #6b7280; }
+        table { width: 100%; border-collapse: collapse; }
+        thead tr { background: #f9fafb; }
+        th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; letter-spacing: .4px; border-bottom: 1.5px solid #e5e7eb; white-space: nowrap; }
+        td { padding: 11px 14px; border-bottom: 1px solid #f3f4f6; font-size: 12px; vertical-align: middle; }
+        tbody tr:hover { background: #fafafa; }
+        .text-right { text-align: right; }
+        .mono { font-family: 'Courier New', monospace; font-size: 11px; }
+
+        /* ── Type badges (hc- = GL style, lc- = card style, both needed) ── */
+        .hc-badge, .lc-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .hc-CASH, .lc-CASH       { background: #d1fae5; color: #065f46; }
+        .hc-BANK, .lc-BANK       { background: #dbeafe; color: #1e40af; }
+        .hc-UPI,  .lc-UPI        { background: #ede9fe; color: #5b21b6; }
+        .hc-INCOME, .lc-INCOME   { background: #cffafe; color: #0e7490; }
+        .hc-EXPENSE, .lc-EXPENSE { background: #fee2e2; color: #991b1b; }
+        .hc-STOCK, .lc-STOCK     { background: #fef3c7; color: #92400e; }
+        .hc-PARTY, .lc-PARTY                 { background: #f3e8ff; color: #6d28d9; }
+        .hc-SUNDRY_DEBTOR, .lc-SUNDRY_DEBTOR { background: #e0f2fe; color: #0369a1; }
+        .hc-SUNDRY_CREDITOR, .lc-SUNDRY_CREDITOR { background: #fdf4ff; color: #7e22ce; }
+        .hc-DUTIES_TAXES, .lc-DUTIES_TAXES   { background: #fef9c3; color: #854d0e; }
+        .hc-CAPITAL, .lc-CAPITAL { background: #ecfdf5; color: #065f46; }
+        .hc-LOAN, .lc-LOAN       { background: #fef9c3; color: #713f12; }
+        .hc-LIABILITY, .lc-LIABILITY { background: #fce7f3; color: #9d174d; }
+        .hc-ASSET, .lc-ASSET     { background: #e0f2fe; color: #075985; }
+        .hc-VENDOR, .lc-VENDOR   { background: #fff7ed; color: #c2410c; }
+
+        /* ── Dr / Cr badges ── */
+        .badge-type { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .badge-DEBIT  { background: #fee2e2; color: #991b1b; }
+        .badge-CREDIT { background: #d1fae5; color: #065f46; }
+        .src-confirmed { background: #d1fae5; color: #065f46; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 600; }
+        .src-manual    { background: #fef3c7; color: #d97706; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 600; }
+        .src-tally     { background: #ede9fe; color: #7c3aed; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 600; }
+        .src-opening   { background: #dbeafe; color: #1e40af; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: 600; }
+        .ms-drop { position: relative; min-width: 150px; }
+        .ms-drop-btn { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; background: white; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 150px; white-space: nowrap; color: #374151; }
+        .ms-drop-btn:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+        .ms-drop-menu { display: none; position: absolute; top: calc(100% + 2px); left: 0; z-index: 300; background: white; border: 1px solid #d1d5db; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.12); min-width: 185px; padding: 4px 0; }
+        .ms-drop-menu.open { display: block; }
+        .ms-drop-item { display: flex; align-items: center; gap: 8px; padding: 7px 14px; cursor: pointer; font-size: 13px; color: #374151; margin: 0; font-weight: normal; }
+        .ms-drop-item:hover { background: #f3f4f6; }
+        .ms-drop-item input[type=checkbox] { accent-color: #6366f1; width: 14px; height: 14px; cursor: pointer; }
+
+        /* ── Ledger list (Chart of Accounts tab — table view) ── */
+        .ledger-grid { }
+        .lc { background: white; border-radius: 10px; border: 1.5px solid #e5e7eb; padding: 16px 18px; transition: all .2s; }
+        .lc:hover { box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+        .lc.inactive { opacity: .55; }
+        .lc-top  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .lc-name { font-size: 14px; font-weight: 700; color: #1f2937; flex: 1; }
+        .lc-code { font-size: 10px; color: #9ca3af; font-family: monospace; margin-top: 2px; }
+        .lc-row  { display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+        .lc-ob   { font-size: 15px; font-weight: 700; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f3f4f6; }
+        .lc-ob.dr { color: #ef4444; }
+        .lc-ob.cr { color: #10b981; }
+        .lc-desc { font-size: 11px; color: #9ca3af; margin-top: 4px; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .lc-actions { display: flex; gap: 6px; margin-top: 12px; }
+
+        /* ── Create / Edit form ── */
+        .form-grid   { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+        .form-group { margin-bottom: 0; }
+        .form-group label { display: block; font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .3px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 13px; }
+        .form-group textarea { resize: vertical; min-height: 65px; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+        .form-group .hint { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+        .ob-section { background: #faf5ff; border: 1.5px solid #ddd6fe; border-radius: 10px; padding: 16px; margin-top: 16px; }
+        .ob-title { font-size: 13px; font-weight: 700; color: #4f46e5; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+        /* ── Alerts ── */
+        .alert-success { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #065f46; margin-bottom: 16px; display: none; }
+        .alert-danger  { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #991b1b; margin-bottom: 16px; display: none; }
+
+        /* ── Edit modal ── */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 9000; align-items: center; justify-content: center; }
+        .modal-overlay.show { display: flex; }
+        .modal-box { background: white; border-radius: 14px; width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+        .modal-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+
+        /* ── Pagination ── */
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 16px; }
+        .pagination button { padding: 6px 14px; border-radius: 6px; border: 1px solid #d1d5db; background: white; cursor: pointer; font-size: 12px; font-weight: 500; }
+        .pagination button.active { background: #6366f1; color: white; border-color: #6366f1; }
+        .pagination button:disabled { opacity: .4; cursor: not-allowed; }
+        .pg-info { font-size: 12px; color: #6b7280; padding: 0 8px; }
+
+        /* ── Empty / Loading ── */
+        .empty-state { text-align: center; padding: 50px 20px; color: #9ca3af; }
+        .empty-icon  { font-size: 40px; margin-bottom: 12px; }
+        .loading-state { text-align: center; padding: 32px; color: #6b7280; }
+    </style>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+<div class="content-area">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1><i class="fas fa-book me-2" style="color:#6366f1;"></i>General Ledger</h1>
+            <p>Day Book · Chart of Accounts · Bank Accounts · Transaction Accounts · Parties · Company Summary</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button onclick="openAddPartyModal()" class="btn-outline" style="font-size:12px;padding:8px 14px;">
+                <i class="fas fa-user-plus"></i> Add Party
+            </button>
+            <a href="/staff/accounts/vendors" class="btn-outline" style="text-decoration:none;font-size:12px;padding:8px 14px;">
+                <i class="fas fa-store"></i> Add Vendor
+            </a>
+            <button onclick="switchTab('create'); window.scrollTo({top:0,behavior:'smooth'});" class="btn-outline" style="font-size:12px;padding:8px 14px;border-color:#6366f1;color:#4f46e5;">
+                <i class="fas fa-plus-circle"></i> Add Ledger
+            </button>
+            <a href="/staff/accounts/journal-voucher" class="btn-green" style="text-decoration:none;">
+                <i class="fas fa-exchange-alt"></i> New Journal / Transfer
+            </a>
+        </div>
+    </div>
+
+    <!-- Company context bar -->
+    <div id="companyContextBar" style="display:none;background:#ede9fe;border:1px solid #c4b5fd;border-radius:8px;padding:8px 16px;margin-bottom:14px;font-size:12px;color:#4f46e5;align-items:center;gap:8px;">
+        <i class="fas fa-building"></i>
+        <span>Showing data for: <strong id="companyContextLabel">All Companies</strong></span>
+    </div>
+
+    <!-- Entry-level summary (always visible) -->
+    <div class="summary-row">
+        <div class="summary-card">
+            <div class="sc-label">Total Entries</div>
+            <div class="sc-value" id="sumTotal">—</div>
+        </div>
+        <div class="summary-card green">
+            <div class="sc-label">Total Debit</div>
+            <div class="sc-value" id="sumDebit">—</div>
+        </div>
+        <div class="summary-card red">
+            <div class="sc-label">Total Credit</div>
+            <div class="sc-value" id="sumCredit">—</div>
+        </div>
+        <div class="summary-card purple">
+            <div class="sc-label">Net (Dr − Cr)</div>
+            <div class="sc-value" id="sumNet">—</div>
+        </div>
+    </div>
+
+    <!-- ═══ Tab Navigation ═══ -->
+    <div class="tab-nav">
+        <button class="tab-btn active" id="tab_entries" onclick="switchTab('entries')">
+            <i class="fas fa-book-open"></i>Day Book
+        </button>
+        <button class="tab-btn" id="tab_create" onclick="switchTab('create')">
+            <i class="fas fa-plus-circle"></i>Add Account
+        </button>
+        <button class="tab-btn" id="tab_cards" onclick="switchTab('cards')">
+            <i class="fas fa-layer-group"></i>Chart of Accounts
+        </button>
+        <button class="tab-btn" id="tab_banks" onclick="switchTab('banks')">
+            <i class="fas fa-university"></i>Bank Accounts
+        </button>
+        <button class="tab-btn" id="tab_txaccounts" onclick="switchTab('txaccounts')">
+            <i class="fas fa-list-alt"></i>Transaction Accounts
+        </button>
+        <button class="tab-btn" id="tab_parties" onclick="switchTab('parties')">
+            <i class="fas fa-users"></i>Parties &amp; Vendors
+        </button>
+        <button class="tab-btn" id="tab_cwise" onclick="switchTab('cwise')">
+            <i class="fas fa-building"></i>Company Summary
+        </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB: LEDGER ENTRIES
+    ═══════════════════════════════════════════════════════ -->
+    <div id="sec_entries">
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="fCompany"><option value="">All Companies</option></select>
+            </div>
+            <div class="filter-group">
+                <label>Account Type</label>
+                <select id="fType">
+                    <option value="">All Types</option>
+                    <optgroup label="Cash & Bank"><option>CASH</option><option>BANK</option><option>UPI</option></optgroup>
+                    <optgroup label="P&L"><option>INCOME</option><option>EXPENSE</option></optgroup>
+                    <optgroup label="Balance Sheet"><option>SUNDRY_DEBTOR</option><option>SUNDRY_CREDITOR</option><option>DUTIES_TAXES</option><option>STOCK</option><option>CAPITAL</option><option>LOAN</option><option>LIABILITY</option><option>ASSET</option></optgroup>
+                    <optgroup label="Legacy"><option>PARTY</option></optgroup>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Account Name</label>
+                <input type="text" id="fAcctName" placeholder="e.g. Cash Account">
+            </div>
+            <div class="filter-group">
+                <label>Period</label>
+                <div class="period-btns-row">
+                    <button class="period-btn" type="button" onclick="setPeriodRange('fFrom','fTo','month',this)">This Month</button>
+                    <button class="period-btn" type="button" onclick="setPeriodRange('fFrom','fTo','quarter',this)">This Quarter</button>
+                    <button class="period-btn" type="button" onclick="setPeriodRange('fFrom','fTo','fy',this)">This FY</button>
+                    <button class="period-btn" type="button" onclick="setPeriodRange('fFrom','fTo','overall',this)">Overall</button>
+                    <button class="period-btn" type="button" onclick="setPeriodRange('fFrom','fTo','custom',this)">Custom</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label>From Date</label>
+                <input type="date" id="fFrom">
+            </div>
+            <div class="filter-group">
+                <label>To Date</label>
+                <input type="date" id="fTo">
+            </div>
+            <div class="filter-group">
+                <label>Ref Type</label>
+                <select id="fRefType">
+                    <option value="">All</option>
+                    <option>INCOME</option><option>EXPENSE</option>
+                    <option>JOURNAL</option><option>PO</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Ref / Voucher #</label>
+                <input type="text" id="fRefNum" placeholder="IE/JV/PV number">
+            </div>
+            <div class="filter-group">
+                <label>Voucher Status</label>
+                <div class="ms-drop" id="glStatDrop">
+                    <button type="button" class="ms-drop-btn" onclick="toggleMsDrop('glStatDrop')">
+                        <span id="glStatLabel">All Statuses</span>
+                        <i class="fas fa-chevron-down" style="font-size:9px;color:#9ca3af;"></i>
+                    </button>
+                    <div class="ms-drop-menu" id="glStatMenu">
+                        <label class="ms-drop-item"><input type="checkbox" value="CONFIRMED" class="gl-stat-chk" onchange="updateGlStatLabel()"> Confirmed</label>
+                        <label class="ms-drop-item"><input type="checkbox" value="MANUAL" class="gl-stat-chk" onchange="updateGlStatLabel()"> Manual Entry</label>
+                        <label class="ms-drop-item"><input type="checkbox" value="TALLY_IMPORT" class="gl-stat-chk" onchange="updateGlStatLabel()"> Tally Import</label>
+                        <label class="ms-drop-item"><input type="checkbox" value="OPENING_BALANCE" class="gl-stat-chk" onchange="updateGlStatLabel()"> Opening Balance</label>
+                    </div>
+                </div>
+            </div>
+            <div class="filter-group" style="flex-direction:row;gap:8px;">
+                <button class="btn-indigo" onclick="loadLedger(1)"><i class="fas fa-search"></i> Search</button>
+                <button class="btn-outline" onclick="clearFilters()"><i class="fas fa-times"></i> Reset</button>
+            </div>
+            <div class="filter-group" style="align-items:flex-end;">
+                <span id="entriesCoLabel" style="font-size:12px;color:#6366f1;font-weight:600;"></span>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <div class="table-toolbar">
+                <span class="tt-title"><i class="fas fa-table me-2" style="color:#6366f1;"></i>Account Ledger Entries</span>
+                <span class="tt-info" id="tableInfo"></span>
+            </div>
+            <div id="tableBody"><div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div></div>
+        </div>
+        <div class="pagination" id="paginationBar"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB: ADD ACCOUNT (Create New Ledger)
+    ═══════════════════════════════════════════════════════ -->
+    <div id="sec_create" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <span><i class="fas fa-plus-circle me-2" style="color:#6366f1;"></i>Add New Ledger Account</span>
+            </div>
+            <div class="card-body">
+                <div id="createSuccess" class="alert-success"><i class="fas fa-check-circle me-2"></i><span id="createSuccessMsg"></span></div>
+                <div id="createError"   class="alert-danger"><i class="fas fa-exclamation-circle me-2"></i><span id="createErrorMsg"></span></div>
+
+                <div class="form-grid-3" style="margin-bottom:16px;">
+                    <div class="form-group">
+                        <label>Company *</label>
+                        <select id="cCompany" required><option value="">— Select Company —</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Account Type *</label>
+                        <select id="cType" onchange="toggleBankSection(this.value,'c'); onTypeChangeGroupSuggest()">
+                            <optgroup label="Cash & Bank">
+                                <option value="CASH">Cash</option>
+                                <option value="BANK">Bank Account</option>
+                                <option value="UPI">UPI Account</option>
+                            </optgroup>
+                            <optgroup label="P&L">
+                                <option value="INCOME">Income Head</option>
+                                <option value="EXPENSE">Expense Head</option>
+                            </optgroup>
+                            <optgroup label="Balance Sheet">
+                                <option value="ASSET">Asset</option>
+                                <option value="LIABILITY">Liability</option>
+                                <option value="CAPITAL">Capital / Equity</option>
+                                <option value="LOAN">Loan</option>
+                            </optgroup>
+                            <optgroup label="Parties (Balance Sheet)">
+                                <option value="SUNDRY_DEBTOR">Sundry Debtors</option>
+                                <option value="SUNDRY_CREDITOR">Sundry Creditors</option>
+                                <option value="DUTIES_TAXES">Duties &amp; Taxes</option>
+                            </optgroup>
+                            <optgroup label="Other">
+                                <option value="STOCK">Stock / Inventory</option>
+                                <option value="PARTY">Party (Legacy)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Account Name *</label>
+                        <input type="text" id="cName" placeholder="e.g. HDFC Savings A/c, Petty Cash">
+                        <div class="hint">Use a clear, unique name.</div>
+                    </div>
+                </div>
+
+                <div class="form-grid-3" style="margin-bottom:16px;">
+                    <div class="form-group">
+                        <label>Account Code <span style="color:#9ca3af;">(optional)</span></label>
+                        <input type="text" id="cCode" placeholder="e.g. HDFC-SAV" maxlength="40">
+                    </div>
+                    <div class="form-group">
+                        <label>Account Group <span style="color:#9ca3af;">(optional)</span></label>
+                        <input type="text" id="cGroup" list="groupList" placeholder="e.g. Indirect Expenses">
+                        <datalist id="groupList">
+                            <option>Current Assets</option><option>Fixed Assets</option>
+                            <option>Current Liabilities</option><option>Long-term Liabilities</option>
+                            <option>Revenue</option><option>Direct Income</option><option>Indirect Income</option>
+                            <option>Other Income</option><option>Direct Expenses</option>
+                            <option>Indirect Expenses</option><option>Salary &amp; Wages</option>
+                            <option>Rent &amp; Utilities</option><option>Administration</option>
+                            <option>Marketing &amp; Sales</option><option>Commission</option>
+                            <option>Capital</option><option>Equity</option><option>Reserves &amp; Surplus</option>
+                            <option>Investments</option><option>Loans &amp; Advances</option>
+                            <option>Borrowings</option><option>Bank Overdraft</option><option>Provisions</option>
+                        </datalist>
+                        <!-- DC-ADD-LEDGER-UX-20260617: smart group chips — filled by onTypeChangeGroupSuggest() -->
+                        <div id="groupChips" style="display:none;margin-top:8px;flex-wrap:wrap;gap:6px;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Description <span style="color:#9ca3af;">(optional)</span></label>
+                        <input type="text" id="cDesc" placeholder="Brief description">
+                    </div>
+                </div>
+
+                <div id="cBankSection" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:16px;margin-bottom:16px;">
+                    <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:12px;"><i class="fas fa-university me-2"></i>Bank Account Details</div>
+                    <div class="form-grid-3">
+                        <div class="form-group">
+                            <label>Account Number <span style="color:#9ca3af;">(optional)</span></label>
+                            <input type="text" id="cAccountNumber" placeholder="e.g. 12345678901234" maxlength="30">
+                        </div>
+                        <div class="form-group">
+                            <label>IFSC Code <span style="color:#9ca3af;">(optional)</span></label>
+                            <input type="text" id="cIfscCode" placeholder="e.g. HDFC0001234" maxlength="15" style="text-transform:uppercase;">
+                        </div>
+                        <div class="form-group">
+                            <label>Bank Name <span style="color:#9ca3af;">(optional)</span></label>
+                            <input type="text" id="cBankName" placeholder="e.g. HDFC Bank" maxlength="80">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ob-section">
+                    <div class="ob-title"><i class="fas fa-balance-scale"></i> Opening Balance <span style="font-weight:400;color:#9ca3af;font-size:11px;">(auto-posted to the ledger)</span></div>
+                    <div class="form-grid-3">
+                        <div class="form-group">
+                            <label>Opening Balance (₹)</label>
+                            <input type="number" id="cOB" min="0" step="0.01" placeholder="0.00">
+                            <div class="hint">Leave blank or 0 for no opening balance.</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Balance Type</label>
+                            <select id="cOBType">
+                                <option value="DEBIT">Debit (Dr) — Asset / Expense / Loss</option>
+                                <option value="CREDIT">Credit (Cr) — Liability / Income / Capital</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Opening Date</label>
+                            <input type="date" id="cOBDate">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                    <button class="btn-outline" onclick="resetCreateForm()"><i class="fas fa-undo"></i> Reset</button>
+                    <button class="btn-indigo" id="createBtn" onclick="createLedger()">
+                        <i class="fas fa-save"></i> Create Ledger Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB: CHART OF ACCOUNTS (Card Grid)
+    ═══════════════════════════════════════════════════════ -->
+    <div id="sec_cards" style="display:none;">
+        <div class="stats-row">
+            <div class="stat-card"><div class="sc-label">Total Accounts</div><div class="sc-val" id="statTotal">—</div></div>
+            <div class="stat-card cash"><div class="sc-label">Cash / UPI</div><div class="sc-val" id="statCash">—</div></div>
+            <div class="stat-card bank"><div class="sc-label">Bank</div><div class="sc-val" id="statBank">—</div></div>
+            <div class="stat-card income"><div class="sc-label">Income</div><div class="sc-val" id="statInc">—</div></div>
+            <div class="stat-card expense"><div class="sc-label">Expense</div><div class="sc-val" id="statExp">—</div></div>
+        </div>
+        <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 16px;margin-bottom:14px;font-size:12px;color:#92400e;">
+            <i class="fas fa-info-circle me-1"></i>
+            Shows formally defined ledger accounts (Chart of Accounts).
+            <a href="javascript:void(0)" onclick="switchTab('txaccounts')" style="color:#4f46e5;font-weight:700;margin-left:6px;">
+                <i class="fas fa-list-alt me-1"></i>View All Transaction Accounts →
+            </a>
+        </div>
+        <div class="filter-bar">
+            <div class="fg">
+                <label>Company</label>
+                <select id="lCompany" onchange="loadMasters()"><option value="">All Companies</option></select>
+            </div>
+            <div class="fg">
+                <label>Type</label>
+                <select id="lType" onchange="loadMasters()">
+                    <option value="">All Types</option>
+                    <option>CASH</option><option>BANK</option><option>UPI</option>
+                    <option>INCOME</option><option>EXPENSE</option><option>STOCK</option>
+                    <option>SUNDRY_DEBTOR</option><option>SUNDRY_CREDITOR</option><option>DUTIES_TAXES</option>
+                    <option>CAPITAL</option><option>LOAN</option>
+                    <option>LIABILITY</option><option>ASSET</option><option>PARTY</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label>Status</label>
+                <select id="lStatus" onchange="loadMasters()">
+                    <option value="">All</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label>Search Name</label>
+                <input type="text" id="lSearch" placeholder="Search ledger name…">
+            </div>
+            <div class="fg" style="flex-direction:row;gap:8px;">
+                <button class="btn-indigo" onclick="loadMasters()" style="padding:8px 14px;"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+        <div id="cardGrid" class="ledger-grid">
+            <div class="loading-state" style="grid-column:1/-1;"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB: BANK ACCOUNTS
+    ═══════════════════════════════════════════════════════ -->
+    <div id="sec_banks" style="display:none;">
+        <div class="filter-bar" style="margin-bottom:16px;">
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="headsCompany" onchange="loadHeads()"><option value="">All Companies</option></select>
+            </div>
+            <div class="filter-group" style="flex-direction:row;gap:8px;align-items:flex-end;">
+                <button class="btn-outline" onclick="resetHeadsFilter()"><i class="fas fa-times"></i> Reset</button>
+            </div>
+            <div class="filter-group" style="align-items:flex-end;">
+                <span id="headsCoLabel" style="font-size:12px;color:#6366f1;font-weight:600;"></span>
+            </div>
+        </div>
+        <div class="table-wrap" id="headsGrid">
+            <div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading bank accounts…</div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB: TRANSACTION ACCOUNTS
+    ═══════════════════════════════════════════════════════ -->
+    <div id="sec_txaccounts" style="display:none;">
+        <div class="filter-bar">
+            <div class="fg">
+                <label>Company</label>
+                <select id="aCompany" onchange="loadAccounts()"><option value="">All Companies</option></select>
+            </div>
+            <div class="fg">
+                <label>Account Type</label>
+                <select id="aType" onchange="loadAccounts()">
+                    <option value="">All Types</option>
+                    <option>CASH</option><option>BANK</option><option>UPI</option>
+                    <option>INCOME</option><option>EXPENSE</option><option>STOCK</option>
+                    <option>SUNDRY_DEBTOR</option><option>SUNDRY_CREDITOR</option><option>DUTIES_TAXES</option>
+                    <option>CAPITAL</option><option>LOAN</option>
+                    <option>LIABILITY</option><option>ASSET</option><option>PARTY</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label>Search Name</label>
+                <input type="text" id="aSearch" placeholder="Search account name…" oninput="filterAccountsLocal()">
+            </div>
+            <div class="fg" style="flex-direction:row;gap:8px;align-items:flex-end;">
+                <button class="btn-indigo" onclick="loadAccounts()" style="padding:8px 14px;"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <button class="btn-outline" onclick="resetAccountsFilter()" style="padding:8px 14px;"><i class="fas fa-times"></i> Reset</button>
+            </div>
+        </div>
+        <div class="card" style="margin-bottom:0;">
+            <div class="card-header">
+                <span><i class="fas fa-list-alt me-2" style="color:#6366f1;"></i>All Transaction Accounts</span>
+                <span style="font-size:12px;color:#6b7280;" id="aCount"></span>
+            </div>
+            <div class="table-wrap" id="accountsBody">
+                <div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB: PARTIES & VENDORS
+    ═══════════════════════════════════════════════════════ -->
+    <div id="sec_parties" style="display:none;">
+        <div class="filter-bar" style="margin-bottom:16px;">
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="pvCompany" onchange="loadParties()"><option value="">All Companies</option></select>
+            </div>
+            <div class="filter-group">
+                <label>Show</label>
+                <select id="pvShow" onchange="loadParties()">
+                    <option value="all">All (Parties + Vendors)</option>
+                    <option value="party">Party Ledgers only</option>
+                    <option value="vendor">Vendors only</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Search Name</label>
+                <input type="text" id="pvSearch" placeholder="Name or phone…" oninput="loadParties()">
+            </div>
+            <div class="filter-group" style="flex-direction:row;gap:8px;align-items:flex-end;">
+                <button class="btn-outline" onclick="resetPartiesFilter()"><i class="fas fa-times"></i> Reset</button>
+            </div>
+            <div class="filter-group" style="align-items:flex-end;">
+                <span id="pvCoLabel" style="font-size:12px;color:#6366f1;font-weight:600;"></span>
+            </div>
+        </div>
+        <div class="table-wrap">
+            <div class="table-toolbar">
+                <span class="tt-title"><i class="fas fa-users me-2" style="color:#8b5cf6;"></i>Parties &amp; Vendors</span>
+                <span class="tt-info" id="pvInfo"></span>
+            </div>
+            <div id="pvBody"><div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         TAB: COMPANY SUMMARY
+    ═══════════════════════════════════════════════════════ -->
+    <div id="sec_cwise" style="display:none;">
+        <div class="filter-bar" style="margin-bottom:16px;">
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="cwCompany" onchange="loadCompanyWise()"><option value="">All Companies</option></select>
+            </div>
+            <div class="filter-group">
+                <label>Account Type</label>
+                <select id="cwType" onchange="loadCompanyWise()">
+                    <option value="">All Types</option>
+                    <optgroup label="Cash &amp; Bank"><option>CASH</option><option>BANK</option><option>UPI</option></optgroup>
+                    <optgroup label="P&amp;L"><option>INCOME</option><option>EXPENSE</option></optgroup>
+                    <optgroup label="Balance Sheet"><option>SUNDRY_DEBTOR</option><option>SUNDRY_CREDITOR</option><option>DUTIES_TAXES</option><option>STOCK</option><option>CAPITAL</option><option>LOAN</option><option>LIABILITY</option><option>ASSET</option></optgroup>
+                    <optgroup label="Legacy"><option>PARTY</option></optgroup>
+                </select>
+            </div>
+            <div class="filter-group" style="flex-direction:row;gap:8px;align-items:flex-end;">
+                <button class="btn-indigo" onclick="loadCompanyWise()" style="padding:8px 14px;"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <button class="btn-outline" onclick="resetCwiseFilter()"><i class="fas fa-times"></i> Reset</button>
+            </div>
+        </div>
+        <div id="cwiseBody">
+            <div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading company-wise summary…</div>
+        </div>
+    </div>
+
+<!-- ═══ Entry Edit Modal ═══ -->
+<div class="modal-overlay" id="entryEditModal">
+    <div class="modal-box" style="max-width:620px;">
+        <h3><i class="fas fa-pen-to-square" style="color:#6366f1;"></i> Edit Day Book Entry</h3>
+        <input type="hidden" id="eeEntryId">
+        <input type="hidden" id="eeRefType">
+        <div id="eeWarn" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400e;">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            <strong>Auto-posted entry:</strong> This was created automatically from an invoice / income / expense.
+            Editing it will only change this raw ledger row — the source document is not updated. Proceed with care.
+        </div>
+        <div id="eeSuccess" class="alert-success" style="display:none;"><i class="fas fa-check-circle me-2"></i><span id="eeSuccessMsg"></span></div>
+        <div id="eeError"   class="alert-danger"  style="display:none;"><i class="fas fa-exclamation-circle me-2"></i><span id="eeErrorMsg"></span></div>
+
+        <div class="form-grid" style="margin-bottom:14px;">
+            <div class="form-group">
+                <label>Date *</label>
+                <input type="date" id="eeDate">
+            </div>
+            <div class="form-group">
+                <label>Dr / Cr *</label>
+                <select id="eeEntryType">
+                    <option value="DEBIT">DEBIT (Dr)</option>
+                    <option value="CREDIT">CREDIT (Cr)</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-grid" style="margin-bottom:14px;">
+            <div class="form-group">
+                <label>Amount (₹) *</label>
+                <input type="number" id="eeAmount" min="0" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Voucher Type</label>
+                <select id="eeVoucherType">
+                    <option value="">— None —</option>
+                    <option>Receipt</option><option>Payment</option>
+                    <option>Journal</option><option>Contra</option>
+                </select>
+            </div>
+        </div>
+        <input type="hidden" id="eeOrigAccountName">
+        <input type="hidden" id="eeCompanyId">
+        <div class="form-grid" style="margin-bottom:14px;">
+            <div class="form-group">
+                <label>Account Type</label>
+                <select id="eeAccountType" onchange="eeTogglePartyRow()">
+                    <option value="CASH">CASH</option><option value="BANK">BANK</option>
+                    <option value="UPI">UPI</option><option value="INCOME">INCOME</option>
+                    <option value="EXPENSE">EXPENSE</option><option value="STOCK">STOCK</option>
+                    <option value="SUNDRY_DEBTOR">SUNDRY_DEBTOR</option>
+                    <option value="SUNDRY_CREDITOR">SUNDRY_CREDITOR</option>
+                    <option value="DUTIES_TAXES">DUTIES_TAXES</option>
+                    <option value="CAPITAL">CAPITAL</option>
+                    <option value="LOAN">LOAN</option><option value="LIABILITY">LIABILITY</option>
+                    <option value="ASSET">ASSET</option>
+                    <option value="PARTY">PARTY</option>
+                </select>
+            </div>
+            <div class="form-group" style="position:relative;">
+                <label>Account Name *</label>
+                <div style="display:flex;gap:5px;align-items:center;">
+                    <input type="text" id="eeAccountName" placeholder="e.g. HDFC Bank" style="flex:1;" oninput="eeHideDropdown()" autocomplete="off">
+                    <button type="button" title="Search account names" onclick="eeSearchAccounts()" style="padding:7px 10px;background:#ede9fe;color:#4f46e5;border:1px solid #c4b5fd;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;"><i class="fas fa-search"></i></button>
+                </div>
+                <div id="eeAcctDropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);max-height:180px;overflow-y:auto;z-index:10000;"></div>
+            </div>
+        </div>
+        <!-- Party Type row — visible only when Account Type = PARTY -->
+        <div class="form-grid" id="eePartyTypeRow" style="margin-bottom:14px;display:none;">
+            <div class="form-group">
+                <label>Party Type</label>
+                <select id="eePartyType">
+                    <option value="CUSTOMER">CUSTOMER</option>
+                    <option value="VENDOR">VENDOR</option>
+                    <option value="EMPLOYEE">EMPLOYEE</option>
+                    <option value="EXTERNAL">EXTERNAL</option>
+                </select>
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-end;">
+                <span style="font-size:11px;color:#6b7280;padding-bottom:6px;"><i class="fas fa-info-circle me-1"></i>Changing party type will also update the matching party ledger entries.</span>
+            </div>
+        </div>
+        <div class="form-grid" style="margin-bottom:14px;">
+            <div class="form-group">
+                <label>Reference Number</label>
+                <input type="text" id="eeRefNum" placeholder="e.g. IE-2024-001">
+            </div>
+            <div class="form-group" style="position:relative;">
+                <label>Particulars</label>
+                <div style="display:flex;gap:5px;align-items:center;">
+                    <input type="text" id="eeParticulars" placeholder="Counter-account or description" style="flex:1;" autocomplete="off" oninput="eeHideParticularsDropdown()">
+                    <button type="button" title="Search account names" onclick="eeSearchParticulars()" style="padding:7px 10px;background:#ede9fe;color:#4f46e5;border:1px solid #c4b5fd;border-radius:6px;cursor:pointer;font-size:13px;white-space:nowrap;"><i class="fas fa-search"></i></button>
+                </div>
+                <div id="eeParticularsDropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);max-height:180px;overflow-y:auto;z-index:10000;"></div>
+            </div>
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+            <label>Narration / Notes</label>
+            <input type="text" id="eeNarration" placeholder="Additional notes">
+        </div>
+
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#0369a1;">
+            <i class="fas fa-info-circle me-1"></i>
+            <strong>Counter-entry ID (optional):</strong> If this entry has a paired counter-entry, enter its ID below to mirror amount/date changes and keep double-entry balanced.
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+                <input type="number" id="eeCounterId" placeholder="Counter entry ID (optional)" style="padding:6px 10px;border:1px solid #bae6fd;border-radius:6px;font-size:12px;width:200px;">
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button class="btn-outline" onclick="closeEntryEditModal()">Cancel</button>
+            <button class="btn-indigo" id="eeSubmitBtn" onclick="saveEntryEdit()">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Edit Modal ═══ -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-box">
+        <h3><i class="fas fa-edit" style="color:#6366f1;"></i> Edit Ledger Account</h3>
+        <input type="hidden" id="eMasterId">
+        <div id="editSuccess" class="alert-success"><i class="fas fa-check-circle me-2"></i><span id="editSuccessMsg"></span></div>
+        <div id="editError"   class="alert-danger"><i class="fas fa-exclamation-circle me-2"></i><span id="editErrorMsg"></span></div>
+
+        <div style="background:#f9fafb;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#374151;">
+            <strong>Type:</strong> <span id="eTypeDisplay" style="font-weight:700;color:#4f46e5;"></span> &nbsp;|&nbsp;
+            <strong>Company:</strong> <span id="eCompanyDisplay"></span>
+        </div>
+
+        <div class="form-grid" style="margin-bottom:14px;">
+            <div class="form-group">
+                <label>Account Name *</label>
+                <input type="text" id="eName">
+            </div>
+            <div class="form-group">
+                <label>Account Code</label>
+                <input type="text" id="eCode" maxlength="40">
+            </div>
+        </div>
+        <div class="form-grid" style="margin-bottom:14px;">
+            <div class="form-group">
+                <label>Account Group</label>
+                <input type="text" id="eGroup" list="groupList">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <input type="text" id="eDesc">
+            </div>
+        </div>
+
+        <div id="eBankSection" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:16px;margin-bottom:16px;">
+            <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:12px;"><i class="fas fa-university me-2"></i>Bank Account Details</div>
+            <div class="form-grid-3">
+                <div class="form-group">
+                    <label>Account Number</label>
+                    <input type="text" id="eAccountNumber" maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label>IFSC Code</label>
+                    <input type="text" id="eIfscCode" maxlength="15" style="text-transform:uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>Bank Name</label>
+                    <input type="text" id="eBankName" maxlength="80">
+                </div>
+            </div>
+        </div>
+
+        <div class="ob-section" style="margin-top:0;margin-bottom:16px;">
+            <div class="ob-title"><i class="fas fa-balance-scale"></i> Opening Balance</div>
+            <div class="form-grid-3">
+                <div class="form-group">
+                    <label>Amount (₹)</label>
+                    <input type="number" id="eOB" min="0" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Balance Type</label>
+                    <select id="eOBType">
+                        <option value="DEBIT">Debit (Dr)</option>
+                        <option value="CREDIT">Credit (Cr)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Opening Date</label>
+                    <input type="date" id="eOBDate">
+                </div>
+            </div>
+            <div style="font-size:11px;color:#7c3aed;margin-top:8px;">
+                <i class="fas fa-info-circle me-1"></i>Changing the opening balance will reverse the old entry and post a new one automatically.
+            </div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button class="btn-outline" onclick="closeEditModal()">Cancel</button>
+            <button class="btn-indigo" id="editSaveBtn" onclick="saveEdit()">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Scripts ═══ -->
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/shared/staff_inactivity_manager.js"></script>
+<script src="/staff_header.js"></script>
+<script>
+const API_BASE = '/api/v1/staff/accounts';
+let _companies  = [];
+let _page       = 1, _totalPages = 1;
+let _activeTab  = 'entries';
+
+/* ── After any mutation: refresh entries list + whichever summary tab is open ── */
+function _refreshAllViews() {
+    loadLedger(_page);
+    if      (_activeTab === 'cards')      loadMasters();
+    else if (_activeTab === 'banks')      loadHeads();
+    else if (_activeTab === 'txaccounts') loadAccounts();
+    else if (_activeTab === 'parties')    loadParties();
+    else if (_activeTab === 'cwise')      loadCompanyWise();
+}
+let _allMasters = [];
+let _editData   = null;
+let _acctData   = [];
+let _acctSort   = { col: 'account_name', dir: 1 };
+let _cwData     = [];
+let _mastersByKey = {};
+
+/* ── Format helper ─────────────────────────────────────────────────── */
+function fmt(n) {
+    if (n === null || n === undefined) return '—';
+    return '₹' + Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function typeClass(t) {
+    const m = { CASH:'lc-CASH',BANK:'lc-BANK',UPI:'lc-UPI',INCOME:'lc-INCOME',
+                EXPENSE:'lc-EXPENSE',STOCK:'lc-STOCK',PARTY:'lc-PARTY',
+                SUNDRY_DEBTOR:'lc-SUNDRY_DEBTOR',SUNDRY_CREDITOR:'lc-SUNDRY_CREDITOR',
+                DUTIES_TAXES:'lc-DUTIES_TAXES',
+                CAPITAL:'lc-CAPITAL',LOAN:'lc-LOAN',LIABILITY:'lc-LIABILITY',ASSET:'lc-ASSET' };
+    return m[t] || '';
+}
+
+/* ── Init ──────────────────────────────────────────────────────────── */
+async function init() {
+    if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+    if (typeof StaffHeader  !== 'undefined') { StaffHeader.inject('General Ledger - SFMS', 'fas fa-book'); StaffHeader.init(); }
+    if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+    document.getElementById('cOBDate').value = new Date().toISOString().slice(0,10);
+    try {
+        const resp = await staffFetch(`${API_BASE}/companies?page_size=100`);
+        const d = resp.ok ? await resp.json() : {};
+        _companies = d.companies || d.items || [];
+        ['fCompany','headsCompany','pvCompany','cwCompany','cCompany','lCompany','aCompany'].forEach(id => {
+            const sel = document.getElementById(id);
+            if (!sel) return;
+            _companies.forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id; o.textContent = c.company_name || c.name;
+                sel.appendChild(o);
+            });
+        });
+    } catch {}
+    // Restore session filter (from any cross-tab drill-down)
+    const sf_type = sessionStorage.getItem('gl_filter_type');
+    const sf_name = sessionStorage.getItem('gl_filter_name');
+    const sf_co   = sessionStorage.getItem('gl_filter_co');
+    if (sf_type || sf_name || sf_co) {
+        if (sf_type) document.getElementById('fType').value    = sf_type;
+        if (sf_name) document.getElementById('fAcctName').value = sf_name;
+        if (sf_co)   document.getElementById('fCompany').value  = sf_co;
+        sessionStorage.removeItem('gl_filter_type');
+        sessionStorage.removeItem('gl_filter_name');
+        sessionStorage.removeItem('gl_filter_co');
+    }
+    loadLedger(1);
+}
+
+/* ── Tab switching ─────────────────────────────────────────────────── */
+function switchTab(tab) {
+    _activeTab = tab;
+    const tabs = ['entries','create','cards','banks','txaccounts','parties','cwise'];
+    tabs.forEach(t => {
+        const btn = document.getElementById('tab_' + t);
+        const sec = document.getElementById('sec_' + t);
+        if (btn) btn.classList.toggle('active', t === tab);
+        if (sec) sec.style.display = (t === tab) ? '' : 'none';
+    });
+    if (tab === 'banks')      loadHeads();
+    if (tab === 'cards')      loadMasters();
+    if (tab === 'txaccounts') loadAccounts();
+    if (tab === 'parties')    loadParties();
+    if (tab === 'cwise')      loadCompanyWise();
+}
+
+/* ── Company label helpers ─────────────────────────────────────────── */
+function getCompanyName(coId) {
+    if (!coId) return 'All Companies';
+    const c = _companies.find(x => String(x.id) === String(coId));
+    return c ? (c.company_name || c.name) : `Company #${coId}`;
+}
+function updateCompanyLabel(filterSelectId, labelElId) {
+    const sel = document.getElementById(filterSelectId);
+    const lbl = document.getElementById(labelElId);
+    if (!sel || !lbl) return;
+    const coId = sel.value;
+    lbl.textContent = coId ? '📍 ' + getCompanyName(coId) : '';
+    const bar  = document.getElementById('companyContextBar');
+    const clbl = document.getElementById('companyContextLabel');
+    if (bar && clbl) { clbl.textContent = getCompanyName(coId); bar.style.display = coId ? 'flex' : 'none'; }
+}
+
+/* ── Account-type stat bar ─────────────────────────────────────────── */
+function updateStats(rows) {
+    document.getElementById('statTotal').textContent = rows.length;
+    document.getElementById('statCash').textContent  = rows.filter(r => ['CASH','UPI'].includes(r.account_type)).length;
+    document.getElementById('statBank').textContent  = rows.filter(r => r.account_type === 'BANK').length;
+    document.getElementById('statInc').textContent   = rows.filter(r => r.account_type === 'INCOME').length;
+    document.getElementById('statExp').textContent   = rows.filter(r => r.account_type === 'EXPENSE').length;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LEDGER ENTRIES
+═══════════════════════════════════════════════════════════════════ */
+async function loadLedger(page = 1) {
+    _page = page;
+    const body = document.getElementById('tableBody');
+    body.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading entries…</div>';
+    updateCompanyLabel('fCompany', 'entriesCoLabel');
+    let url = `${API_BASE}/general-ledger/entries?page=${page}&page_size=50`;
+    const co = document.getElementById('fCompany').value;
+    const tp = document.getElementById('fType').value;
+    const an = document.getElementById('fAcctName').value;
+    const df = document.getElementById('fFrom').value;
+    const dt = document.getElementById('fTo').value;
+    const rt  = document.getElementById('fRefType').value;
+    const gss = getGlStatuses();
+    const rn = document.getElementById('fRefNum').value;
+    if (co) url += `&company_id=${co}`;
+    if (tp) url += `&account_type=${encodeURIComponent(tp)}`;
+    if (an) url += `&account_name=${encodeURIComponent(an)}`;
+    if (df) url += `&date_from=${df}`;
+    if (dt) url += `&date_to=${dt}`;
+    if (rt)  url += `&reference_type=${encodeURIComponent(rt)}`;
+    if (gss) url += `&source_status=${encodeURIComponent(gss)}`;
+    if (rn) url += `&reference_number=${encodeURIComponent(rn)}`;
+    try {
+        const resp = await staffFetch(url);
+        const d = resp.ok ? await resp.json() : {};
+        const entries = d.entries || [];
+        const t = d.totals || {};
+        _totalPages = d.total_pages || 1;
+        document.getElementById('sumTotal').textContent  = (d.total || 0).toLocaleString('en-IN');
+        document.getElementById('sumDebit').textContent  = fmt(t.total_debit);
+        document.getElementById('sumCredit').textContent = fmt(t.total_credit);
+        const net = t.net_balance || 0;
+        document.getElementById('sumNet').textContent    = (net < 0 ? '−' : '') + fmt(Math.abs(net));
+        document.getElementById('tableInfo').textContent = `Page ${page} of ${_totalPages} · ${d.total || 0} entries`;
+        if (!entries.length) {
+            body.innerHTML = `<div class="empty-state"><div class="empty-icon">📒</div><p>No ledger entries found.<br>
+                Entries are posted automatically on income confirmation / expense approval.<br>
+                You can also post manual entries via <a href="/staff/accounts/journal-voucher">Journal Voucher</a>.</p></div>`;
+            renderPagination(); return;
+        }
+        const tcm = { CASH:'hc-CASH',BANK:'hc-BANK',UPI:'hc-UPI',INCOME:'hc-INCOME',EXPENSE:'hc-EXPENSE',STOCK:'hc-STOCK' };
+        const AUTO_TYPES = ['INCOME','EXPENSE','PURCHASE_INVOICE','SALES_INVOICE','VENDOR_TXN','CRM_REVENUE','FUND_TRANSFER','STOCK_TRANSFER'];
+        // ── DC-TALLY-GL-001: Tally-style daily breakup rendering ──
+        const _fmtAmt = v => { const n = parseFloat(v || 0); if (!n) return '<span style="color:#e5e7eb;">—</span>'; return `₹${n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`; };
+        // DC-AL-SIGN-001: dual-sign _fmtBal — account-type-aware Dr/Cr display.
+        // DEBIT-NORMAL  {BANK,CASH,UPI,EXPENSE,ASSET}: positive=Dr(red),  negative=Cr(green)
+        // CREDIT-NORMAL {PARTY,LIABILITY,INCOME,...}:  positive=Cr(green), negative=Dr(red)
+        const _DEBIT_NORMAL_TYPES = ['BANK','CASH','UPI','EXPENSE','ASSET'];
+        const _fmtBal = (v, accountType) => {
+            const n = parseFloat(v || 0);
+            const a = Math.abs(n);
+            const s = `₹${a.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+            if (!n) return '<span style="color:#6b7280;font-weight:600;">Nil</span>';
+            const isDebitNormal = _DEBIT_NORMAL_TYPES.includes((accountType||'').toUpperCase());
+            // isDr: true when the balance represents a Debit balance
+            const isDr = isDebitNormal ? (n > 0) : (n < 0);
+            if (isDr) return `<span style="color:#dc2626;font-weight:700;">${s}&nbsp;<small style="font-size:9px;font-weight:600;">Dr</small></span>`;
+            return `<span style="color:#059669;font-weight:700;">${s}&nbsp;<small style="font-size:9px;font-weight:600;">Cr</small></span>`;
+        };
+        const glFst     = entries[0];
+        // DC-AL-BAL-001: entries sorted DATE DESC → entries[0] is NEWEST = current balance.
+        // Opening Balance = current balance minus net of all transactions.
+        const glTotDr   = parseFloat(t.total_debit||0), glTotCr = parseFloat(t.total_credit||0);
+        // DC-GL-OB-MULTI-001: multi-account view opening balance fix.
+        // When no account_name filter is set (e.g. "All BANK accounts"), entries[0] is the
+        // newest entry of ONE arbitrary account — using its running_balance as the closing
+        // balance for ALL accounts produces a wildly wrong opening balance.
+        // Fix: collect the latest running_balance per distinct account_name (first occurrence
+        // in DATE-DESC sorted results = the newest entry for that account), then sum them.
+        // Single-account drilldown is unchanged: entries[0] is still the correct closing bal.
+        let glLastBal = 0;
+        const isMultiAccountView = !an; // `an` = fAcctName filter — empty means combined view
+        if (entries.length > 0) {
+            if (isMultiAccountView) {
+                const uniqueAccountBals = {};
+                entries.forEach(entry => {
+                    // First occurrence = most recent entry for this account (DATE DESC sort)
+                    if (!(entry.account_name in uniqueAccountBals)) {
+                        uniqueAccountBals[entry.account_name] = parseFloat(entry.running_balance || 0);
+                    }
+                });
+                glLastBal = Object.values(uniqueAccountBals).reduce((sum, val) => sum + val, 0);
+            } else {
+                glLastBal = parseFloat(entries[0].running_balance || 0);
+            }
+        }
+        // DC-AL-SIGN-001 Part 4: account-type-aware opening balance.
+        // Net movement sign depends on whether this is a debit-normal or credit-normal account.
+        // DEBIT-NORMAL:  net = Dr − Cr  → OB = closing − (Dr − Cr)
+        // CREDIT-NORMAL: net = Cr − Dr  → OB = closing − (Cr − Dr)
+        const _glIsDebitNormal = _DEBIT_NORMAL_TYPES.includes((tp || entries[0]?.account_type || '').toUpperCase());
+        const glOb = _glIsDebitNormal
+            ? glLastBal - (glTotDr - glTotCr)
+            : glLastBal - (glTotCr - glTotDr);
+        const glDays    = new Set(entries.map(e => e.transaction_date)).size || 1;
+        const glObRow   = `<tr style="background:#eff6ff;border-bottom:2px solid #bfdbfe;">
+            <td colspan="5" style="padding:9px 14px;font-weight:700;color:#1e40af;font-size:12px;"><i class="fas fa-bookmark me-1" style="font-size:10px;"></i>Opening Balance</td>
+            <td style="text-align:right;color:#d1d5db;">—</td>
+            <td style="text-align:right;color:#d1d5db;">—</td>
+            <td style="text-align:right;padding:9px 14px;">${_fmtBal(glOb, tp || entries[0]?.account_type || '')}</td>
+            <td></td>
+        </tr>`;
+        const glTotRow  = `<tr style="background:#f5f3ff;border-top:2px solid #8b5cf6;">
+            <td colspan="5" style="padding:9px 14px;font-weight:700;color:#4f46e5;font-size:12px;">Grand Total</td>
+            <td style="text-align:right;padding:9px 14px;color:#dc2626;font-weight:700;">₹${glTotDr.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+            <td style="text-align:right;padding:9px 14px;color:#059669;font-weight:700;">₹${glTotCr.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+            <td style="text-align:right;padding:9px 14px;">${_fmtBal(glLastBal, tp || entries[0]?.account_type || '')}</td>
+            <td></td>
+        </tr>
+        <tr style="background:#fafafa;border-top:1px dashed #e5e7eb;font-size:11px;color:#9ca3af;">
+            <td colspan="5" style="padding:6px 14px;font-style:italic;">Average (${glDays} day${glDays!==1?'s':''})</td>
+            <td style="text-align:right;padding:6px 14px;">₹${(glTotDr/glDays).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+            <td style="text-align:right;padding:6px 14px;">₹${(glTotCr/glDays).toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+            <td></td><td></td>
+        </tr>`;
+        body.innerHTML = `<div style="overflow-x:auto;"><table>
+            <thead>
+                <tr style="background:#f5f3ff;">
+                    <th rowspan="2" style="vertical-align:middle;min-width:90px;">Date</th>
+                    <th rowspan="2" style="vertical-align:middle;min-width:130px;">Account</th>
+                    <th rowspan="2" style="vertical-align:middle;">Type</th>
+                    <th rowspan="2" style="vertical-align:middle;min-width:160px;">Particulars / Narration</th>
+                    <th rowspan="2" style="vertical-align:middle;">Voucher / Ref</th>
+                    <th rowspan="2" style="vertical-align:middle;">Category</th>
+                    <th rowspan="2" style="vertical-align:middle;">Sub-Category</th>
+                    <th colspan="2" style="text-align:center;color:#4f46e5;border-bottom:1px solid #ddd6fe;padding:6px;">Transactions</th>
+                    <th rowspan="2" style="text-align:right;vertical-align:middle;min-width:130px;">Closing Balance</th>
+                    <th rowspan="2" style="vertical-align:middle;">Actions</th>
+                </tr>
+                <tr style="background:#f5f3ff;">
+                    <th style="text-align:right;color:#dc2626;min-width:100px;">Debit (₹)</th>
+                    <th style="text-align:right;color:#059669;min-width:100px;">Credit (₹)</th>
+                </tr>
+            </thead>
+            <tbody>${glObRow}${entries.map(e => {
+                const isAuto = AUTO_TYPES.includes(e.reference_type);
+                const safeRef = (e.reference_number || '').replace(/'/g, "\\'");
+                const viewBtn = e.reference_number ? `<button class="btn-sm-view" onclick="viewVoucher('${safeRef}',${e.company_id})" title="View Dr/Cr sides"><i class="fas fa-eye"></i></button>` : '';
+                const editBtn = `<button class="btn-sm-edit" onclick="openEntryEdit(${e.id})" title="Edit entry"><i class="fas fa-edit"></i></button>`;
+                const delBtn  = `<button class="btn-sm-del" onclick="deleteEntry(${e.id})" title="Delete entry"><i class="fas fa-trash"></i></button>`;
+                const part = (e.particulars || e.narration || '').replace(/"/g,'&quot;');
+                return `<tr>
+                <td style="white-space:nowrap;font-weight:600;">${e.transaction_date || '—'}</td>
+                <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;" title="${e.account_name}">${e.account_name}</td>
+                <td><span class="hc-badge ${tcm[e.account_type] || ''}">${e.account_type}</span>${(function(){const s=(e.source_status||'').toUpperCase();if(s==='MANUAL')return '<br><span class="src-manual">Manual</span>';if(s==='TALLY_IMPORT')return '<br><span class="src-tally">Tally</span>';if(s==='OPENING_BALANCE')return '<br><span class="src-opening">Opening</span>';if(s==='CONFIRMED')return '<br><span class="src-confirmed">Confirmed</span>';return '';})()}</td>
+                <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${part}">${part || '<span style="color:#d1d5db;">—</span>'}</td>
+                <td style="font-size:11px;white-space:nowrap;">${e.voucher_type?`<span class="vch-chip" style="font-size:10px;">${e.voucher_type}</span>`:''} ${e.reference_number?`<code style="font-size:10px;background:#f3f4f6;padding:1px 4px;border-radius:3px;">${e.reference_number}</code>`:''} ${!e.voucher_type&&!e.reference_number?'<span style="color:#d1d5db;">—</span>':''}</td>
+                <td style="white-space:nowrap;">${e.main_category_name?`<span style="background:#e0f2fe;color:#0c4a6e;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;">${e.main_category_name}</span>`:'<span style="color:#d1d5db;">—</span>'}</td>
+                <td style="white-space:nowrap;">${e.sub_category_name?`<span style="background:#ede9fe;color:#5b21b6;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:600;">${e.sub_category_name}</span>`:'<span style="color:#d1d5db;">—</span>'}</td>
+                <td style="text-align:right;padding-right:14px;color:#dc2626;font-weight:600;">${_fmtAmt(e.debit_amount)}</td>
+                <td style="text-align:right;padding-right:14px;color:#059669;font-weight:600;">${_fmtAmt(e.credit_amount)}</td>
+                <td style="text-align:right;padding-right:14px;">${_fmtBal(e.running_balance, e.account_type)}</td>
+                <td style="white-space:nowrap;">${isAuto ? `<span title="Auto-posted entry — edit with caution" style="cursor:help;">${viewBtn}${editBtn}${delBtn}</span>` : viewBtn + editBtn + delBtn}</td>
+            </tr>`;
+            }).join('')}${glTotRow}</tbody>
+        </table></div>`;
+        renderPagination();
+    } catch (e) {
+        body.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#ef4444;font-size:30px;"></i><p class="mt-2">${e.message}</p></div>`;
+    }
+}
+
+function renderPagination() {
+    const bar = document.getElementById('paginationBar');
+    if (_totalPages <= 1) { bar.innerHTML = ''; return; }
+    let html = `<button onclick="loadLedger(${_page-1})" ${_page<=1?'disabled':''}>← Prev</button>`;
+    const s = Math.max(1,_page-2), e = Math.min(_totalPages,_page+2);
+    for (let p = s; p <= e; p++) html += `<button class="${p===_page?'active':''}" onclick="loadLedger(${p})">${p}</button>`;
+    html += `<button onclick="loadLedger(${_page+1})" ${_page>=_totalPages?'disabled':''}>Next →</button>`;
+    html += `<span class="pg-info">Page ${_page} of ${_totalPages}</span>`;
+    bar.innerHTML = html;
+}
+
+function setPeriodRange(fromId, toId, period, btn) {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const today = new Date();
+    const fmt = d => d.toISOString().split('T')[0];
+    const endOfMonth = d => new Date(d.getFullYear(), d.getMonth()+1, 0);
+    const endOfQuarter = d => { const q=[2,2,2,5,5,5,8,8,8,11,11,11][d.getMonth()]; return new Date(d.getFullYear(),q+1,0); };
+    const fyStart = () => { const m=today.getMonth(); const y=m>=3?today.getFullYear():today.getFullYear()-1; return new Date(y,3,1); };
+    const cap = d => d > today ? today : d;
+    const fromEl = document.getElementById(fromId);
+    const toEl   = document.getElementById(toId);
+    if (!fromEl || !toEl) return;
+    if (period === 'month') {
+        fromEl.value = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+        toEl.value   = fmt(cap(endOfMonth(today)));
+    } else if (period === 'quarter') {
+        const qStart = [0,0,0,3,3,3,6,6,6,9,9,9][today.getMonth()];
+        fromEl.value = fmt(new Date(today.getFullYear(), qStart, 1));
+        toEl.value   = fmt(cap(endOfQuarter(today)));
+    } else if (period === 'fy') {
+        fromEl.value = fmt(fyStart());
+        toEl.value   = fmt(today);
+    } else if (period === 'overall') {
+        fromEl.value = '';
+        toEl.value   = fmt(today);
+    } else if (period === 'custom') {
+        fromEl.focus();
+    }
+}
+
+function clearFilters() {
+    ['fCompany','fType','fRefType'].forEach(id => document.getElementById(id).value = '');
+    document.querySelectorAll('.gl-stat-chk').forEach(c => c.checked = false); updateGlStatLabel();
+    ['fAcctName','fFrom','fTo','fRefNum'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('entriesCoLabel').textContent = '';
+    const bar = document.getElementById('companyContextBar');
+    if (bar) bar.style.display = 'none';
+    loadLedger(1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ENTRY EDIT / DELETE (Day Book)
+═══════════════════════════════════════════════════════════════════ */
+const AUTO_REF_TYPES = new Set(['INCOME','EXPENSE','PURCHASE_INVOICE','SALES_INVOICE','VENDOR_TXN','CRM_REVENUE','FUND_TRANSFER','STOCK_TRANSFER']);
+
+const _PARTY_LIKE_TYPES = new Set(['PARTY','SUNDRY_DEBTOR','SUNDRY_CREDITOR']);
+function eeTogglePartyRow() {
+    const type = document.getElementById('eeAccountType').value;
+    document.getElementById('eePartyTypeRow').style.display = _PARTY_LIKE_TYPES.has(type) ? '' : 'none';
+}
+
+function eeHideDropdown() { document.getElementById('eeAcctDropdown').style.display = 'none'; }
+function eeHideParticularsDropdown() { document.getElementById('eeParticularsDropdown').style.display = 'none'; }
+
+function eeShowDropdown(dropId, inputId, names) {
+    const drop = document.getElementById(dropId);
+    if (!names.length) { drop.style.display = 'none'; return; }
+    drop.innerHTML = names.map(n =>
+        `<div style="padding:7px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f3f4f6;"
+              onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background=''"
+              onclick="document.getElementById('${inputId}').value=this.textContent;document.getElementById('${dropId}').style.display='none';">${n}</div>`
+    ).join('');
+    drop.style.display = 'block';
+    document.addEventListener('click', function _hide(ev) {
+        if (!drop.contains(ev.target)) { drop.style.display = 'none'; document.removeEventListener('click', _hide); }
+    }, { once: false });
+}
+
+async function eeSearchAccounts() {
+    const type  = document.getElementById('eeAccountType').value;
+    const query = document.getElementById('eeAccountName').value.trim();
+    const coId  = document.getElementById('eeCompanyId').value;
+    let names = [];
+    try {
+        if (_PARTY_LIKE_TYPES.has(type)) {
+            let url = `${API_BASE}/party-ledger/summary?`;
+            if (coId) url += `company_id=${coId}`;
+            const res = await staffFetch(url);
+            const d = await res.json();
+            names = (d.parties || []).map(p => p.party_name)
+                .filter(n => !query || n.toLowerCase().includes(query.toLowerCase()));
+        } else {
+            let url = `${API_BASE}/ledger-masters?page_size=200&account_type=${type}`;
+            if (coId) url += `&company_id=${coId}`;
+            if (query) url += `&search=${encodeURIComponent(query)}`;
+            const res = await staffFetch(url);
+            const d = await res.json();
+            names = (d.masters || []).map(m => m.account_name);
+        }
+    } catch(e) { names = []; }
+    eeShowDropdown('eeAcctDropdown', 'eeAccountName', names);
+}
+
+async function eeSearchParticulars() {
+    const query = document.getElementById('eeParticulars').value.trim();
+    const coId  = document.getElementById('eeCompanyId').value;
+    let names = [];
+    try {
+        let url = `${API_BASE}/ledger-masters?page_size=200`;
+        if (coId) url += `&company_id=${coId}`;
+        if (query) url += `&search=${encodeURIComponent(query)}`;
+        const res = await staffFetch(url);
+        const d = await res.json();
+        names = (d.masters || []).map(m => m.account_name);
+        const res2 = await staffFetch(`${API_BASE}/party-ledger/summary?` + (coId ? `company_id=${coId}` : ''));
+        const d2 = await res2.json();
+        const partyNames = (d2.parties || []).map(p => p.party_name)
+            .filter(n => !query || n.toLowerCase().includes(query.toLowerCase()));
+        names = [...new Set([...names, ...partyNames])];
+    } catch(e) { names = []; }
+    eeShowDropdown('eeParticularsDropdown', 'eeParticulars', names);
+}
+
+async function openEntryEdit(entryId) {
+    document.getElementById('eeSuccess').style.display = 'none';
+    document.getElementById('eeError').style.display   = 'none';
+    document.getElementById('eeWarn').style.display    = 'none';
+    document.getElementById('eeCounterId').value       = '';
+    eeHideDropdown(); eeHideParticularsDropdown();
+    try {
+        const resp = await staffFetch(`${API_BASE}/general-ledger/entries/${entryId}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const d = await resp.json();
+        const e = d.entry;
+        document.getElementById('eeEntryId').value          = e.id;
+        document.getElementById('eeRefType').value          = e.reference_type || '';
+        document.getElementById('eeDate').value             = e.transaction_date || '';
+        document.getElementById('eeEntryType').value        = e.entry_type || 'DEBIT';
+        document.getElementById('eeAmount').value           = e.debit_amount > 0 ? e.debit_amount : e.credit_amount;
+        document.getElementById('eeVoucherType').value      = e.voucher_type || '';
+        document.getElementById('eeAccountType').value      = e.account_type || 'CASH';
+        document.getElementById('eeAccountName').value      = e.account_name || '';
+        document.getElementById('eeOrigAccountName').value  = e.account_name || '';
+        document.getElementById('eeCompanyId').value        = e.company_id || '';
+        document.getElementById('eeRefNum').value           = e.reference_number || '';
+        document.getElementById('eeParticulars').value      = e.particulars || '';
+        document.getElementById('eeNarration').value        = e.narration || '';
+        if (e.party_type) document.getElementById('eePartyType').value = e.party_type;
+        eeTogglePartyRow();
+        if (AUTO_REF_TYPES.has(e.reference_type)) {
+            document.getElementById('eeWarn').style.display = '';
+        }
+        document.getElementById('entryEditModal').classList.add('show');
+    } catch (err) {
+        alert('Failed to load entry: ' + err.message);
+    }
+}
+
+async function saveEntryEdit() {
+    const btn = document.getElementById('eeSubmitBtn');
+    document.getElementById('eeSuccess').style.display = 'none';
+    document.getElementById('eeError').style.display   = 'none';
+    const id       = document.getElementById('eeEntryId').value;
+    const amount   = parseFloat(document.getElementById('eeAmount').value);
+    const acctName = document.getElementById('eeAccountName').value.trim();
+    const acctType = document.getElementById('eeAccountType').value;
+    if (!acctName) { _eeError('Account name is required.'); return; }
+    if (isNaN(amount) || amount <= 0) { _eeError('Amount must be greater than zero.'); return; }
+    const counterId = document.getElementById('eeCounterId').value.trim();
+    const payload = {
+        transaction_date: document.getElementById('eeDate').value,
+        entry_type:       document.getElementById('eeEntryType').value,
+        amount:           amount,
+        voucher_type:     document.getElementById('eeVoucherType').value || null,
+        account_type:     acctType,
+        account_name:     acctName,
+        reference_number: document.getElementById('eeRefNum').value.trim() || null,
+        particulars:      document.getElementById('eeParticulars').value.trim() || null,
+        narration:        document.getElementById('eeNarration').value.trim() || null,
+    };
+    if (_PARTY_LIKE_TYPES.has(acctType)) {
+        payload.party_type = document.getElementById('eePartyType').value;
+    }
+    if (counterId) payload.counter_entry_id = parseInt(counterId);
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+    try {
+        const resp = await staffFetch(`${API_BASE}/general-ledger/entries/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload)
+        });
+        const d = await resp.json();
+        if (!d.success) throw new Error(d.message || d.detail || `Error ${resp.status}`);
+        _eeSuccess('Entry updated and balances recomputed.');
+        _refreshAllViews();
+    } catch (err) {
+        _eeError(err.message);
+    } finally {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+    }
+}
+
+async function deleteEntry(entryId) {
+    if (!confirm(`Delete ledger entry #${entryId}? This will recompute all running balances for the affected account. This cannot be undone.`)) return;
+    try {
+        const resp = await staffFetch(`${API_BASE}/general-ledger/entries/${entryId}`, { method: 'DELETE' });
+        const text = await resp.text();
+        let d;
+        try { d = JSON.parse(text); }
+        catch (_) {
+            const preview = text.trim().slice(0, 120);
+            throw new Error(preview.startsWith('<') ? `Server error (HTTP ${resp.status})` : (preview || `HTTP ${resp.status}`));
+        }
+        if (!d.success) throw new Error(d.message || d.detail || `Error ${resp.status}`);
+        _refreshAllViews();
+    } catch (err) {
+        if (err.message !== 'AUTH_EXPIRED') alert('Delete failed: ' + err.message);
+    }
+}
+
+function closeEntryEditModal() { document.getElementById('entryEditModal').classList.remove('show'); }
+function _eeSuccess(m) { document.getElementById('eeSuccessMsg').textContent = m; document.getElementById('eeSuccess').style.display = ''; }
+function _eeError(m)   { document.getElementById('eeErrorMsg').textContent   = m; document.getElementById('eeError').style.display   = ''; }
+
+/* ── Drill down into Ledger Entries for a given account ────────────── */
+function drillDown(type, name, co) {
+    switchTab('entries');
+    document.getElementById('fType').value     = type;
+    document.getElementById('fAcctName').value = name;
+    if (co) document.getElementById('fCompany').value = co;
+    loadLedger(1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ADD ACCOUNT (Create New Ledger)
+═══════════════════════════════════════════════════════════════════ */
+function toggleBankSection(type, prefix) {
+    const sec = document.getElementById(prefix + 'BankSection');
+    if (sec) sec.style.display = (type === 'BANK' || type === 'UPI') ? '' : 'none';
+}
+
+/* DC-ADD-LEDGER-UX-20260617: Smart group suggestion chips when Account Type changes */
+const _GROUP_CHIPS = {
+    EXPENSE:   { default: 'Indirect Expenses', chips: ['Direct Expenses','Indirect Expenses','Salary & Wages','Rent & Utilities','Administration','Marketing & Sales','Commission','Interest & Bank Charges','Depreciation','Miscellaneous Expense'] },
+    INCOME:    { default: 'Revenue',            chips: ['Direct Income','Indirect Income','Revenue','Commission Income','Interest Income','Rental Income','Other Income'] },
+    ASSET:     { default: 'Fixed Assets',       chips: ['Fixed Assets','Current Assets','Investments','Loans & Advances'] },
+    LIABILITY: { default: 'Current Liabilities',chips: ['Current Liabilities','Long-term Liabilities','Provisions','Duties & Taxes'] },
+    CAPITAL:   { default: 'Capital',            chips: ['Capital','Equity','Reserves & Surplus'] },
+    LOAN:      { default: 'Loans & Advances',   chips: ['Loans & Advances','Borrowings','Bank Overdraft','Secured Loans','Unsecured Loans'] },
+    STOCK:          { default: 'Stock / Inventory',  chips: [] },
+    PARTY:          { default: '',                   chips: [] },
+    SUNDRY_DEBTOR:  { default: 'Sundry Debtors',    chips: ['Sundry Debtors','Trade Receivables','Customers'] },
+    SUNDRY_CREDITOR:{ default: 'Sundry Creditors',  chips: ['Sundry Creditors','Trade Payables','Suppliers'] },
+    DUTIES_TAXES:   { default: 'Duties & Taxes',    chips: ['GST Payable','CGST Payable','SGST Payable','TDS Payable','Service Tax'] },
+    CASH:      { default: 'Current Assets',     chips: [] },
+    BANK:      { default: 'Current Assets',     chips: [] },
+    UPI:       { default: 'Current Assets',     chips: [] },
+};
+function onTypeChangeGroupSuggest() {
+    const type   = document.getElementById('cType').value;
+    const grpEl  = document.getElementById('cGroup');
+    const chips  = document.getElementById('groupChips');
+    const cfg    = _GROUP_CHIPS[type];
+    if (!cfg) { chips.style.display = 'none'; chips.innerHTML = ''; return; }
+    if (cfg.default) grpEl.value = cfg.default;
+    if (!cfg.chips.length) { chips.style.display = 'none'; chips.innerHTML = ''; return; }
+    chips.innerHTML = cfg.chips.map(g =>
+        `<span onclick="document.getElementById('cGroup').value='${g}'; document.getElementById('cGroup').focus();"
+               style="cursor:pointer;padding:3px 10px;background:#ede9fe;color:#4f46e5;border-radius:20px;font-size:11px;font-weight:600;border:1px solid #c4b5fd;white-space:nowrap;"
+               title="Click to use this group">${g}</span>`
+    ).join('');
+    chips.style.display = 'flex';
+}
+
+async function createLedger() {
+    const btn = document.getElementById('createBtn');
+    document.getElementById('createSuccess').style.display = 'none';
+    document.getElementById('createError').style.display   = 'none';
+    const company_id     = document.getElementById('cCompany').value;
+    const account_type   = document.getElementById('cType').value;
+    const account_name   = document.getElementById('cName').value.trim();
+    const account_code   = document.getElementById('cCode').value.trim();
+    const parent_group   = document.getElementById('cGroup').value.trim();
+    const description    = document.getElementById('cDesc').value.trim();
+    const ob             = parseFloat(document.getElementById('cOB').value) || 0;
+    const ob_type        = document.getElementById('cOBType').value;
+    const ob_date        = document.getElementById('cOBDate').value;
+    const account_number = document.getElementById('cAccountNumber').value.trim();
+    const ifsc_code      = document.getElementById('cIfscCode').value.trim().toUpperCase();
+    const bank_name      = document.getElementById('cBankName').value.trim();
+    if (!company_id)   { showCreateError('Please select a company.'); return; }
+    if (!account_name) { showCreateError('Please enter the account name.'); return; }
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
+    try {
+        const resp = await staffFetch(`${API_BASE}/ledger-masters`, {
+            method: 'POST',
+            body: JSON.stringify({
+                company_id: parseInt(company_id), account_type, account_name,
+                account_code: account_code || null,
+                parent_group: parent_group || null,
+                description:  description  || null,
+                opening_balance: ob > 0 ? ob : 0,
+                opening_balance_type: ob_type,
+                opening_balance_date: ob_date || null,
+                account_number: account_number || null,
+                ifsc_code:      ifsc_code      || null,
+                bank_name:      bank_name      || null,
+            })
+        });
+        if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.detail || e.message || `Error ${resp.status}`); }
+        const d = await resp.json();
+        const name = d.master?.account_name || account_name;
+        let msg = `Ledger "${name}" created successfully!`;
+        if (ob > 0) msg += ` Opening balance of ${fmt(ob)} (${ob_type}) posted to the general ledger.`;
+        showCreateSuccess(msg);
+        resetCreateForm();
+        _refreshAllViews();
+    } catch (e) {
+        showCreateError(e.message);
+    } finally {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Create Ledger Account';
+    }
+}
+
+function showCreateSuccess(msg) {
+    document.getElementById('createSuccessMsg').textContent = msg;
+    document.getElementById('createSuccess').style.display = '';
+    document.getElementById('createSuccess').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function showCreateError(msg) {
+    document.getElementById('createErrorMsg').textContent = msg;
+    document.getElementById('createError').style.display = '';
+    document.getElementById('createError').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function resetCreateForm() {
+    ['cCompany','cType'].forEach(id => document.getElementById(id).selectedIndex = 0);
+    ['cName','cCode','cGroup','cDesc','cOB','cAccountNumber','cIfscCode','cBankName'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cOBType').value = 'DEBIT';
+    document.getElementById('cOBDate').value = new Date().toISOString().slice(0,10);
+    document.getElementById('cBankSection').style.display = 'none';
+    document.getElementById('createSuccess').style.display = 'none';
+    document.getElementById('createError').style.display   = 'none';
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHART OF ACCOUNTS (Card Grid)
+═══════════════════════════════════════════════════════════════════ */
+async function loadMasters() {
+    const grid = document.getElementById('cardGrid');
+    grid.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div>';
+    const co = document.getElementById('lCompany').value;
+    const tp = document.getElementById('lType').value;
+    const st = document.getElementById('lStatus').value;
+    const sr = document.getElementById('lSearch').value;
+    let url = `${API_BASE}/ledger-masters?page_size=500`;
+    if (co) url += `&company_id=${co}`;
+    if (tp) url += `&account_type=${tp}`;
+    if (st !== '') url += `&is_active=${st}`;
+    if (sr) url += `&search=${encodeURIComponent(sr)}`;
+    try {
+        const resp = await staffFetch(url);
+        const d = resp.ok ? await resp.json() : {};
+        const rows = d.masters || [];
+        _allMasters = rows;
+        updateStats(rows);
+        if (!rows.length) {
+            grid.innerHTML = `<div class="empty-state">
+                <div class="empty-icon">📒</div>
+                <p>No ledger accounts yet.<br>Use the <a href="javascript:void(0)" onclick="switchTab('create')" style="color:#6366f1;font-weight:700;"><i class="fas fa-plus-circle me-1"></i>Add Account</a> tab to create your first account.</p>
+            </div>`;
+            return;
+        }
+        // DC-LEDGER-DELETE-001: table view — list instead of cards
+        const tbody = rows.map((r, i) => {
+            const ob     = r.opening_balance || 0;
+            const obCls  = ob > 0 ? (r.opening_balance_type === 'DEBIT' ? 'color:#ef4444' : 'color:#10b981') : 'color:#9ca3af';
+            const obTxt  = ob > 0 ? `${fmt(ob)} <small>${r.opening_balance_type === 'DEBIT' ? 'Dr' : 'Cr'}</small>` : '—';
+            const coName = getCompanyName(r.company_id);
+            const statusBadge = r.is_active
+                ? '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;">Active</span>'
+                : '<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;">Inactive</span>';
+            const postedBadge = (r.opening_balance_posted && ob > 0)
+                ? '<i class="fas fa-check-circle" style="color:#10b981;" title="Posted to ledger"></i>'
+                : '<span style="color:#d1d5db;">—</span>';
+            const safeAcct = r.account_name.replace(/'/g, "\\'");
+            const safeType = r.account_type;
+            return `<tr style="${r.is_active ? '' : 'opacity:.6;'}">
+                <td class="mono" style="color:#9ca3af;">${i + 1}</td>
+                <td><span class="hc-badge hc-${safeType}">${safeType}</span></td>
+                <td style="font-weight:600;color:#1f2937;max-width:200px;">
+                    <div>${r.account_name}</div>
+                    ${r.account_code ? `<div class="mono" style="font-size:10px;color:#9ca3af;">${r.account_code}</div>` : ''}
+                </td>
+                <td style="font-size:11px;color:#6b7280;">${r.parent_group || '—'}</td>
+                <td style="font-size:11px;color:#6b7280;max-width:160px;white-space:normal;">${r.description || '—'}</td>
+                <td style="font-size:11px;color:#6b7280;">${coName}</td>
+                <td class="text-right mono" style="${obCls};font-weight:600;">${obTxt}</td>
+                <td style="font-size:11px;color:#9ca3af;">${r.opening_balance_date || '—'}</td>
+                <td style="text-align:center;">${postedBadge}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    <div style="display:flex;gap:4px;flex-wrap:nowrap;">
+                        <button class="btn-sm-edit" onclick="openEdit(${r.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button class="btn-sm-tog ${r.is_active ? 'active' : 'inactive'}" onclick="toggleActive(${r.id},${!r.is_active})" title="${r.is_active ? 'Deactivate' : 'Activate'}" style="padding:5px 8px;">${r.is_active ? 'Active' : 'Inactive'}</button>
+                        <button class="btn-sm-edit" style="background:#fee2e2;color:#991b1b;" onclick="deleteLedgerMaster(${r.id},'${safeAcct}')" title="Delete ledger"><i class="fas fa-trash"></i></button>
+                        <button class="btn-sm-view" onclick="drillDown('${safeType}','${safeAcct}',${r.company_id})" title="View Ledger"><i class="fas fa-eye"></i></button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+        const coLabel = co ? ` · <span style="color:#6366f1;font-weight:600;">${getCompanyName(co)}</span>` : '';
+        grid.innerHTML = `<div class="table-wrap">
+            <div class="table-toolbar">
+                <span class="tt-title"><i class="fas fa-book me-2" style="color:#6366f1;"></i>Chart of Accounts</span>
+                <span class="tt-info">${rows.length} account${rows.length !== 1 ? 's' : ''}${coLabel}
+                    <span style="margin-left:10px;font-size:10px;color:#9ca3af;">🗑 Delete: MR10001 / MR10025 only</span>
+                </span>
+            </div>
+            <div style="overflow-x:auto;"><table>
+                <thead><tr>
+                    <th>#</th><th>Type</th><th>Account Name</th><th>Group</th><th>Description</th>
+                    <th>Company</th><th class="text-right">Opening Bal</th><th>OB Date</th>
+                    <th style="text-align:center;">Posted</th><th>Status</th><th>Actions</th>
+                </tr></thead>
+                <tbody>${tbody}</tbody>
+            </table></div>
+        </div>`;
+    } catch (e) {
+        grid.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#ef4444;font-size:30px;"></i><p class="mt-2">${e.message}</p></div>`;
+    }
+}
+
+// DC-LEDGER-DELETE-001: delete a ledger master (MR10001 / MR10025 only, no linked transactions)
+async function deleteLedgerMaster(id, name) {
+    if (!confirm(`Delete ledger "${name}"?\n\nThis is permanent. It will fail if any transactions are linked.\nOnly MR10001 or MR10025 (Subash) can proceed.`)) return;
+    try {
+        const resp = await staffFetch(`${API_BASE}/ledger-masters/${id}`, { method: 'DELETE' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+            alert('Cannot delete:\n' + (data.detail || data.message || `HTTP ${resp.status}`));
+            return;
+        }
+        _refreshAllViews();
+    } catch (e) {
+        alert('Delete failed: ' + e.message);
+    }
+}
+
+async function toggleActive(id, newState) {
+    try {
+        const resp = await staffFetch(`${API_BASE}/ledger-masters/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ is_active: newState })
+        });
+        if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.detail || e.message || `Error ${resp.status}`); }
+        _refreshAllViews();
+    } catch (e) { alert('Error: ' + e.message); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EDIT MODAL
+═══════════════════════════════════════════════════════════════════ */
+async function openEdit(id) {
+    document.getElementById('editSuccess').style.display = 'none';
+    document.getElementById('editError').style.display   = 'none';
+    try {
+        const resp = await staffFetch(`${API_BASE}/ledger-masters/${id}`);
+        const d = resp.ok ? await resp.json() : {};
+        const r = d.master;
+        _editData = r;
+        document.getElementById('eMasterId').value       = r.id;
+        document.getElementById('eName').value           = r.account_name;
+        document.getElementById('eCode').value           = r.account_code || '';
+        document.getElementById('eGroup').value          = r.parent_group || '';
+        document.getElementById('eDesc').value           = r.description  || '';
+        document.getElementById('eOB').value             = r.opening_balance > 0 ? r.opening_balance : '';
+        document.getElementById('eOBType').value         = r.opening_balance_type || 'DEBIT';
+        document.getElementById('eOBDate').value         = r.opening_balance_date || new Date().toISOString().slice(0,10);
+        document.getElementById('eTypeDisplay').textContent    = r.account_type;
+        const co = _companies.find(c => c.id === r.company_id);
+        document.getElementById('eCompanyDisplay').textContent = co ? (co.company_name || co.name) : `Co#${r.company_id}`;
+        document.getElementById('eAccountNumber').value = r.account_number || '';
+        document.getElementById('eIfscCode').value      = r.ifsc_code      || '';
+        document.getElementById('eBankName').value      = r.bank_name      || '';
+        toggleBankSection(r.account_type, 'e');
+        document.getElementById('editModal').classList.add('show');
+    } catch (e) { alert('Error loading: ' + e.message); }
+}
+
+async function saveEdit() {
+    const btn = document.getElementById('editSaveBtn');
+    document.getElementById('editSuccess').style.display = 'none';
+    document.getElementById('editError').style.display   = 'none';
+    const id   = document.getElementById('eMasterId').value;
+    const name = document.getElementById('eName').value.trim();
+    const ob   = parseFloat(document.getElementById('eOB').value) || 0;
+    if (!name) { showEditError('Account name is required.'); return; }
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+    try {
+        const resp = await staffFetch(`${API_BASE}/ledger-masters/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                account_name:         name,
+                account_code:         document.getElementById('eCode').value.trim() || null,
+                parent_group:         document.getElementById('eGroup').value.trim() || null,
+                description:          document.getElementById('eDesc').value.trim()  || null,
+                opening_balance:      ob,
+                opening_balance_type: document.getElementById('eOBType').value,
+                opening_balance_date: document.getElementById('eOBDate').value || null,
+                account_number:       document.getElementById('eAccountNumber').value.trim() || null,
+                ifsc_code:            document.getElementById('eIfscCode').value.trim().toUpperCase() || null,
+                bank_name:            document.getElementById('eBankName').value.trim() || null,
+            })
+        });
+        if (!resp.ok) { const e = await resp.json().catch(() => ({})); throw new Error(e.detail || e.message || `Error ${resp.status}`); }
+        showEditSuccess('Changes saved! Opening balance updated in the ledger.');
+        _refreshAllViews();
+    } catch (e) {
+        showEditError(e.message);
+    } finally {
+        btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+    }
+}
+function showEditSuccess(m) { document.getElementById('editSuccessMsg').textContent = m; document.getElementById('editSuccess').style.display = ''; }
+function showEditError(m)   { document.getElementById('editErrorMsg').textContent   = m; document.getElementById('editError').style.display   = ''; }
+function closeEditModal()   { document.getElementById('editModal').classList.remove('show'); _editData = null; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   BANK ACCOUNTS
+═══════════════════════════════════════════════════════════════════ */
+async function loadHeads() {
+    const grid = document.getElementById('headsGrid');
+    grid.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading bank accounts…</div>';
+    const co = document.getElementById('headsCompany').value;
+    updateCompanyLabel('headsCompany', 'headsCoLabel');
+    let mastersUrl = `${API_BASE}/ledger-masters?page_size=500&account_type=BANK`;
+    if (co) mastersUrl += `&company_id=${co}`;
+    let headsUrl = `${API_BASE}/general-ledger/heads?account_type=BANK`;
+    if (co) headsUrl += `&company_id=${co}`;
+    let banksUrl = `${API_BASE}/general-ledger/company-banks`;
+    if (co) banksUrl += `?company_id=${co}`;
+    try {
+        const [mr, hr, br] = await Promise.all([staffFetch(mastersUrl), staffFetch(headsUrl), staffFetch(banksUrl)]);
+        const masters   = mr.ok ? ((await mr.json()).masters || []) : [];
+        const glHeads   = hr.ok ? ((await hr.json()).heads   || []) : [];
+        const compBanks = br.ok ? ((await br.json()).banks   || []) : [];
+        const balMap = {};
+        glHeads.forEach(h => { balMap[`${h.account_name}|${h.company_id}`] = h; });
+        const masterBankNames = new Set(masters.map(m => `${m.account_name}|${m.company_id}`));
+        const bankOnlyAccounts = compBanks.filter(b => !masterBankNames.has(`${b.bank_name}|${b.company_id}`));
+        const total = masters.length + bankOnlyAccounts.length;
+        if (!total) {
+            grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🏦</div><p>No bank accounts found.<br><a href="javascript:void(0)" onclick="switchTab('create')" style="color:#6366f1;font-weight:700;">Add one in the Add Account tab.</a></p></div>`;
+            return;
+        }
+        let rowNum = 0;
+        const masterRows = masters.map(m => {
+            rowNum++;
+            const gl    = balMap[`${m.account_name}|${m.company_id}`];
+            const ob    = parseFloat(m.opening_balance || 0);
+            const obFmt = ob > 0 ? fmt(ob) : '—';
+            const posted = m.opening_balance_posted;
+            const bankNm = m.bank_name || '—';
+            const accNo  = m.account_number ? `••••${m.account_number.slice(-4)}` : '—';
+            const ifsc   = m.ifsc_code || '—';
+            const coNm   = getCompanyName(m.company_id);
+            const bal    = gl ? gl.balance : ob * (m.opening_balance_type === 'DEBIT' ? 1 : -1);
+            // DC-AL-SIGN-001: BANK is DEBIT-NORMAL → positive=Dr(red), negative=Cr(green/overdrawn)
+            const balHtml = bal !== 0
+                ? `<span style="color:${bal>=0?'#dc2626':'#059669'};font-weight:600;">${fmt(Math.abs(bal))} <small>${bal>=0?'Dr':'Cr'}</small></span>`
+                : '<span style="color:#9ca3af;">—</span>';
+            return `<tr style="cursor:pointer;" onclick="drillDown('BANK','${m.account_name.replace(/'/g,"\\'")}',${m.company_id})">
+                <td class="mono" style="color:#6366f1;">${rowNum}</td>
+                <td><span class="hc-badge hc-BANK">BANK</span></td>
+                <td style="font-weight:600;color:#1f2937;">${m.account_name}</td>
+                <td class="mono" style="color:#6b7280;">${m.account_code || '—'}</td>
+                <td style="font-size:11px;color:#6b7280;">${m.parent_group || '—'}</td>
+                <td style="font-size:11px;">${bankNm}</td>
+                <td class="mono">${accNo}</td>
+                <td class="mono">${ifsc}</td>
+                <td style="font-size:11px;color:#6b7280;">${coNm}</td>
+                <td class="text-right mono" style="color:#ef4444;font-weight:600;">${obFmt}</td>
+                <td>${ob>0?`<span class="badge-type badge-${m.opening_balance_type}">${m.opening_balance_type}</span>`:'—'}</td>
+                <td style="font-size:11px;">${m.opening_balance_date || '—'}</td>
+                <td>${posted?'<span style="color:#10b981;font-size:11px;font-weight:600;"><i class="fas fa-check me-1"></i>Yes</span>':'<span style="color:#9ca3af;font-size:11px;">No</span>'}</td>
+                <td>${balHtml}</td>
+                <td><span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;">Active</span></td>
+                <td style="white-space:nowrap;">
+                    <button class="btn-sm-view" onclick="event.stopPropagation();drillDown('${m.account_type}',${JSON.stringify(m.account_name)},${m.company_id})" title="View Ledger"><i class="fas fa-eye"></i></button>
+                    <button class="btn-sm-edit" onclick="event.stopPropagation();openEdit(${m.id})" title="Edit"><i class="fas fa-edit"></i></button>
+                    <button class="btn-sm-del" onclick="event.stopPropagation();deleteLedgerMaster(${m.id},${JSON.stringify(m.account_name)})" title="Delete"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        });
+        const companyRows = bankOnlyAccounts.map(b => {
+            rowNum++;
+            const accMask = b.account_number ? `••••${b.account_number.slice(-4)}` : '—';
+            const coNm    = getCompanyName(b.company_id);
+            const primaryBadge = b.is_primary ? ' <span style="font-size:9px;background:#dbeafe;color:#1d4ed8;border-radius:3px;padding:1px 4px;">Primary</span>' : '';
+            return `<tr>
+                <td class="mono" style="color:#6366f1;">${rowNum}</td>
+                <td><span class="hc-badge hc-BANK">BANK</span></td>
+                <td style="font-weight:600;color:#1f2937;">${b.bank_name}${primaryBadge}</td>
+                <td style="color:#9ca3af;">—</td><td style="color:#9ca3af;">${b.branch || '—'}</td>
+                <td style="color:#9ca3af;">—</td>
+                <td class="mono">${accMask}</td>
+                <td class="mono">${b.ifsc_code || '—'}</td>
+                <td style="font-size:11px;color:#6b7280;">${coNm}</td>
+                <td colspan="4" style="font-size:11px;color:#9ca3af;font-style:italic;">Company bank (no GL master)</td>
+                <td style="color:#9ca3af;">—</td>
+                <td><span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;">Active</span></td>
+                <td></td>
+            </tr>`;
+        });
+        const coLabel = co ? `· <span style="color:#6366f1;font-weight:600;">${getCompanyName(co)}</span>` : '· All Companies';
+        grid.innerHTML = `
+            <div class="table-toolbar">
+                <span class="tt-title"><i class="fas fa-university me-2" style="color:#6366f1;"></i>Bank Accounts</span>
+                <span class="tt-info">${total} account${total!==1?'s':''} ${coLabel}</span>
+            </div>
+            <div style="overflow-x:auto;"><table>
+                <thead><tr>
+                    <th>#</th><th>Type</th><th>Account Name</th><th>Code</th>
+                    <th>Group / Branch</th><th>Bank Name</th><th>Account No.</th><th>IFSC</th>
+                    <th>Company</th><th class="text-right">Opening Bal</th><th>OB Type</th>
+                    <th>OB Date</th><th>Posted?</th><th class="text-right">Balance</th>
+                    <th>Status</th><th>Edit</th>
+                </tr></thead>
+                <tbody>${[...masterRows, ...companyRows].join('')}</tbody>
+            </table></div>`;
+    } catch (e) {
+        grid.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#ef4444;font-size:30px;"></i><p class="mt-2">${e.message}</p></div>`;
+    }
+}
+
+function resetHeadsFilter() {
+    document.getElementById('headsCompany').value = '';
+    document.getElementById('headsCoLabel').textContent = '';
+    const bar = document.getElementById('companyContextBar');
+    if (bar) bar.style.display = 'none';
+    loadHeads();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TRANSACTION ACCOUNTS
+═══════════════════════════════════════════════════════════════════ */
+async function loadAccounts() {
+    const body = document.getElementById('accountsBody');
+    body.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading accounts…</div>';
+    const co = document.getElementById('aCompany').value;
+    const tp = document.getElementById('aType').value;
+    let url = `${API_BASE}/general-ledger/heads?`;
+    if (co) url += `company_id=${co}&`;
+    if (tp) url += `account_type=${tp}`;
+    let mUrl = `${API_BASE}/ledger-masters?page_size=500`;
+    if (co) mUrl += `&company_id=${co}`;
+    if (tp) mUrl += `&account_type=${encodeURIComponent(tp)}`;
+    try {
+        const [resp, mResp] = await Promise.all([staffFetch(url), staffFetch(mUrl)]);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const d  = await resp.json();
+        const md = mResp.ok ? await mResp.json() : {};
+        _acctData = d.heads || [];
+        _mastersByKey = {};
+        (md.masters || []).forEach(m => { _mastersByKey[`${m.account_name}|${m.company_id}`] = m; });
+        filterAccountsLocal();
+    } catch(e) {
+        body.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#ef4444;font-size:28px;"></i><p class="mt-2">${e.message}</p></div>`;
+    }
+}
+
+function filterAccountsLocal() {
+    const sr = (document.getElementById('aSearch').value || '').toLowerCase();
+    let rows = _acctData.filter(r => !sr || r.account_name.toLowerCase().includes(sr));
+    rows = rows.slice().sort((a,b) => {
+        let av = a[_acctSort.col], bv = b[_acctSort.col];
+        if (typeof av === 'string') av = av.toLowerCase();
+        if (typeof bv === 'string') bv = bv.toLowerCase();
+        return _acctSort.dir * (av < bv ? -1 : av > bv ? 1 : 0);
+    });
+    renderAccountsTable(rows);
+}
+
+function sortAccounts(col) {
+    if (_acctSort.col === col) _acctSort.dir *= -1;
+    else { _acctSort.col = col; _acctSort.dir = 1; }
+    filterAccountsLocal();
+    document.querySelectorAll('.acct-th').forEach(th => {
+        th.querySelector('.sort-icon').textContent = th.dataset.col === col ? (_acctSort.dir===1?' ▲':' ▼') : '';
+    });
+}
+
+function renderAccountsTable(rows) {
+    const body  = document.getElementById('accountsBody');
+    const count = document.getElementById('aCount');
+    count.textContent = `${rows.length} account${rows.length!==1?'s':''}`;
+    if (!rows.length) {
+        body.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><p>No transaction accounts found.<br>Try clearing the filters or check that journal vouchers have been posted.</p></div>';
+        return;
+    }
+    const sortIcon = col => `<span class="sort-icon">${_acctSort.col===col?(_acctSort.dir===1?'▲':'▼'):''}</span>`;
+    const colHead  = (col, label) =>
+        `<th class="acct-th" data-col="${col}" onclick="sortAccounts('${col}')" style="cursor:pointer;user-select:none;">${label}${sortIcon(col)}</th>`;
+    body.innerHTML = `<table>
+        <thead><tr>
+            <th>#</th>
+            ${colHead('account_type','Type')}
+            ${colHead('account_name','Account Name')}
+            <th>Company</th>
+            ${colHead('total_debit','Total Debit')}
+            ${colHead('total_credit','Total Credit')}
+            ${colHead('balance','Net Balance')}
+            ${colHead('last_date','Last Date')}
+            <th>Actions</th>
+        </tr></thead>
+        <tbody>${rows.map((r, i) => {
+            const co   = _companies.find(c => c.id === r.company_id);
+            const coNm = co ? (co.company_name || co.name) : `Co#${r.company_id}`;
+            const bal  = r.balance;
+            // DC-AL-SIGN-001: account-type-aware Dr/Cr colouring
+            const _dnTypes = ['BANK','CASH','UPI','EXPENSE','ASSET'];
+            const _isDebitNormal = _dnTypes.includes((r.account_type||'').toUpperCase());
+            const _isDr  = _isDebitNormal ? (bal > 0) : (bal < 0);
+            const balCls = bal !== 0 ? (_isDr ? 'color:#dc2626;' : 'color:#059669;') : 'color:#9ca3af;';
+            const _balLabel = bal !== 0 ? (_isDr ? 'Dr' : 'Cr') : '';
+            const mast = _mastersByKey[`${r.account_name}|${r.company_id}`];
+            const editBtn = mast ? `<button class="btn-sm-edit" onclick="openEdit(${mast.id})" title="Edit account"><i class="fas fa-edit"></i></button>` : '';
+            return `<tr>
+                <td class="mono" style="color:#9ca3af;">${i+1}</td>
+                <td><span class="lc-badge ${typeClass(r.account_type)}">${r.account_type}</span></td>
+                <td style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.account_name}">${r.account_name}</td>
+                <td style="font-size:11px;color:#6b7280;">${coNm}</td>
+                <td class="text-right mono" style="color:#ef4444;font-weight:600;">${fmt(r.total_debit)}</td>
+                <td class="text-right mono" style="color:#10b981;font-weight:600;">${fmt(r.total_credit)}</td>
+                <td class="text-right mono" style="font-weight:700;${balCls}">${bal !== 0 ? fmt(Math.abs(bal)) + ' <small style="font-weight:400;">' + _balLabel + '</small>' : '—'}</td>
+                <td style="font-size:11px;color:#6b7280;">${r.last_date || '—'}</td>
+                <td style="white-space:nowrap;">
+                    <a href="javascript:void(0)" onclick="drillDown('${r.account_type}','${r.account_name.replace(/'/g,"\\'")}',${r.company_id})" style="font-size:11px;color:#6366f1;text-decoration:none;font-weight:600;">
+                        <i class="fas fa-chart-line"></i> View Ledger
+                    </a>
+                    ${editBtn}
+                </td>
+            </tr>`;
+        }).join('')}</tbody>
+    </table>`;
+}
+
+function resetAccountsFilter() {
+    document.getElementById('aCompany').value = '';
+    document.getElementById('aType').value    = '';
+    document.getElementById('aSearch').value  = '';
+    _acctSort = { col: 'account_name', dir: 1 };
+    loadAccounts();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PARTIES & VENDORS
+═══════════════════════════════════════════════════════════════════ */
+async function loadParties() {
+    const body   = document.getElementById('pvBody');
+    const info   = document.getElementById('pvInfo');
+    body.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div>';
+    updateCompanyLabel('pvCompany', 'pvCoLabel');
+    const co     = document.getElementById('pvCompany').value;
+    const show   = document.getElementById('pvShow').value;
+    const search = document.getElementById('pvSearch').value.trim().toLowerCase();
+    try {
+        const rows = [];
+        if (show !== 'vendor') {
+            for (const ptype of ['PARTY','SUNDRY_DEBTOR','SUNDRY_CREDITOR']) {
+                let url = `${API_BASE}/ledger-masters?page_size=500&account_type=${ptype}`;
+                if (co) url += `&company_id=${co}`;
+                const r = await staffFetch(url);
+                const d = r.ok ? await r.json() : {};
+                (d.masters || []).forEach(m => rows.push({
+                    kind: ptype, name: m.account_name, phone: '', email: '',
+                    ob: m.opening_balance || 0, ob_type: m.opening_balance_type || 'DEBIT',
+                    code: m.account_code || '', company_id: m.company_id, id: m.id,
+                }));
+            }
+        }
+        if (show !== 'party') {
+            let url = `${API_BASE}/vendors?page_size=100`;
+            if (co) url += `&company_id=${co}`;
+            const r = await staffFetch(url);
+            const d = r.ok ? await r.json() : {};
+            (d.vendors || d.items || []).forEach(v => rows.push({
+                kind: 'VENDOR', name: v.vendor_name || v.name, phone: v.phone || '',
+                email: v.email || '', ob: v.opening_balance || 0,
+                ob_type: v.opening_balance_type || 'DEBIT', code: v.vendor_code || '',
+                company_id: v.company_id, gstin: v.gst_number || '',
+                bank: v.bank_name || '', acct: v.account_number || '', ifsc: v.ifsc_code || '',
+                id: v.id,
+            }));
+        }
+        const filtered = search ? rows.filter(r => (r.name||'').toLowerCase().includes(search) || (r.phone||'').includes(search)) : rows;
+        info.textContent = `${filtered.length} record${filtered.length!==1?'s':''}`;
+        if (!filtered.length) {
+            body.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><p>No parties or vendors found.</p></div>';
+            return;
+        }
+        body.innerHTML = `<div style="overflow-x:auto;"><table>
+            <thead><tr>
+                <th>Type</th><th>Name</th><th>Code</th><th>Phone / Email</th>
+                <th>GSTIN</th><th>Bank A/C</th><th>IFSC</th>
+                <th class="text-right">Opening Balance</th><th>Action</th>
+            </tr></thead>
+            <tbody>${filtered.map(r => `<tr>
+                <td><span class="hc-badge hc-${r.kind}">${r.kind}</span></td>
+                <td style="font-weight:600;">${r.name || '—'}</td>
+                <td class="mono">${r.code || '—'}</td>
+                <td style="font-size:11px;">${r.phone?`<div>${r.phone}</div>`:''}${r.email?`<div style="color:#6b7280;">${r.email}</div>`:''} ${!r.phone&&!r.email?'—':''}</td>
+                <td class="mono">${r.gstin || '—'}</td>
+                <td class="mono">${r.acct  || '—'}</td>
+                <td class="mono">${r.ifsc  || '—'}</td>
+                <td class="text-right">${r.ob > 0 ? fmt(r.ob) + ' ' + (r.ob_type||'') : '—'}</td>
+                <td style="white-space:nowrap;">
+                    <button class="btn-outline" style="padding:4px 10px;font-size:11px;" onclick="drillDown('PARTY','${(r.name||'').replace(/'/g,"\\'")}',${r.company_id||''})">
+                        <i class="fas fa-book-open"></i> Ledger
+                    </button>
+                    ${r.kind === 'PARTY' && r.id ? `<button class="btn-sm-edit" onclick="openEdit(${r.id})" title="Edit party account" style="margin-left:4px;"><i class="fas fa-edit"></i></button>` : ''}
+                    ${r.kind === 'VENDOR' ? `<a href="/staff/accounts/vendors" class="btn-sm-edit" style="text-decoration:none;margin-left:4px;" title="Manage in Vendors"><i class="fas fa-external-link-alt"></i></a>` : ''}
+                </td>
+            </tr>`).join('')}</tbody>
+        </table></div>`;
+    } catch (e) {
+        body.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#ef4444;font-size:30px;"></i><p class="mt-2">${e.message}</p></div>`;
+    }
+}
+
+function resetPartiesFilter() {
+    document.getElementById('pvCompany').value = '';
+    document.getElementById('pvShow').value    = 'all';
+    document.getElementById('pvSearch').value  = '';
+    document.getElementById('pvCoLabel').textContent = '';
+    const bar = document.getElementById('companyContextBar');
+    if (bar) bar.style.display = 'none';
+    loadParties();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMPANY SUMMARY
+═══════════════════════════════════════════════════════════════════ */
+async function loadCompanyWise() {
+    const body = document.getElementById('cwiseBody');
+    body.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin me-2"></i>Loading company-wise summary…</div>';
+    const co = document.getElementById('cwCompany').value;
+    const tp = document.getElementById('cwType').value;
+
+    let mastersUrl = `${API_BASE}/ledger-masters?page_size=500`;
+    if (co) mastersUrl += `&company_id=${co}`;
+    if (tp) mastersUrl += `&account_type=${encodeURIComponent(tp)}`;
+
+    let headsUrl = `${API_BASE}/general-ledger/heads?x=1`;
+    if (co) headsUrl += `&company_id=${co}`;
+    if (tp) headsUrl += `&account_type=${encodeURIComponent(tp)}`;
+
+    try {
+        const [mr, hr] = await Promise.all([staffFetch(mastersUrl), staffFetch(headsUrl)]);
+        const masters  = mr.ok ? ((await mr.json()).masters || []) : [];
+        const glHeads  = hr.ok ? ((await hr.json()).heads   || []) : [];
+
+        // Build a GL balance map keyed by "account_name|company_id"
+        const headMap = {};
+        glHeads.forEach(h => { headMap[`${h.account_name}|${h.company_id}`] = h; });
+
+        // Start from all masters — merge in GL data where available
+        const seen = new Set();
+        const merged = masters.map(m => {
+            const key = `${m.account_name}|${m.company_id}`;
+            seen.add(key);
+            const gl = headMap[key];
+            const ob = parseFloat(m.opening_balance || 0);
+            const obSigned = ob * (m.opening_balance_type === 'DEBIT' ? 1 : -1);
+            return {
+                account_type: m.account_type,
+                account_name: m.account_name,
+                company_id:   m.company_id,
+                master_id:    m.id,
+                total_debit:  gl ? (gl.total_debit  || 0) : (obSigned > 0 ? ob : 0),
+                total_credit: gl ? (gl.total_credit || 0) : (obSigned < 0 ? ob : 0),
+                balance:      gl ? (gl.balance      || 0) : obSigned,
+                last_date:    gl ? (gl.last_date    || null) : (m.opening_balance_date || null),
+                has_gl:       !!gl,
+            };
+        });
+
+        // Add any GL heads that have no matching master (e.g. auto-created accounts)
+        glHeads.forEach(h => {
+            const key = `${h.account_name}|${h.company_id}`;
+            if (!seen.has(key)) {
+                merged.push({
+                    account_type: h.account_type,
+                    account_name: h.account_name,
+                    company_id:   h.company_id,
+                    total_debit:  h.total_debit  || 0,
+                    total_credit: h.total_credit || 0,
+                    balance:      h.balance      || 0,
+                    last_date:    h.last_date    || null,
+                    has_gl:       true,
+                });
+            }
+        });
+
+        _cwData = merged;
+        renderCompanyWise(_cwData);
+    } catch(e) {
+        body.innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-circle" style="color:#ef4444;font-size:30px;"></i><p class="mt-2">${e.message}</p></div>`;
+    }
+}
+
+function renderCompanyWise(rows) {
+    const body = document.getElementById('cwiseBody');
+    if (!rows.length) {
+        body.innerHTML = '<div class="empty-state"><div class="empty-icon">🏢</div><p>No data found. Try clearing the filters.</p></div>';
+        return;
+    }
+    const groups = {};
+    rows.forEach(r => {
+        const co   = _companies.find(c => String(c.id) === String(r.company_id));
+        const coNm = co ? (co.company_name || co.name) : `Company #${r.company_id}`;
+        if (!groups[r.company_id]) groups[r.company_id] = { name: coNm, rows: [] };
+        groups[r.company_id].rows.push(r);
+    });
+    const sorted = Object.values(groups).sort((a,b) => a.name.localeCompare(b.name));
+    body.innerHTML = sorted.map(g => {
+        const totalDr = g.rows.reduce((s,r) => s + (r.total_debit  || 0), 0);
+        const totalCr = g.rows.reduce((s,r) => s + (r.total_credit || 0), 0);
+        const netBal  = totalDr - totalCr;
+        return `<div class="table-wrap" style="margin-bottom:18px;">
+            <div class="table-toolbar" style="background:#f5f3ff;border-bottom:1.5px solid #ddd6fe;flex-wrap:wrap;gap:8px;">
+                <span style="font-size:15px;font-weight:700;color:#4f46e5;"><i class="fas fa-building me-2"></i>${g.name}</span>
+                <div style="display:flex;gap:20px;font-size:12px;flex-wrap:wrap;">
+                    <span><span style="color:#6b7280;">Accounts:</span> <strong>${g.rows.length}</strong></span>
+                    <span><span style="color:#6b7280;">Total Dr:</span> <strong style="color:#ef4444;">${fmt(totalDr)}</strong></span>
+                    <span><span style="color:#6b7280;">Total Cr:</span> <strong style="color:#10b981;">${fmt(totalCr)}</strong></span>
+                    <span><span style="color:#6b7280;">Net:</span> <strong style="color:${netBal>0?'#ef4444':netBal<0?'#10b981':'#6b7280'};">${fmt(Math.abs(netBal))} ${netBal>0?'Dr':netBal<0?'Cr':''}</strong></span>
+                </div>
+            </div>
+            <div style="overflow-x:auto;"><table>
+                <thead><tr>
+                    <th>Type</th><th>Account Name</th>
+                    <th class="text-right">Total Debit</th><th class="text-right">Total Credit</th>
+                    <th class="text-right">Net Balance</th><th>Last Entry</th><th title="GL = has transactions · OB = opening balance only">Source</th><th>Action</th>
+                </tr></thead>
+                <tbody>${g.rows
+                    .sort((a,b) => a.account_type.localeCompare(b.account_type) || a.account_name.localeCompare(b.account_name))
+                    .map(r => {
+                        const bal    = r.balance || 0;
+                        // DC-AL-SIGN-001: account-type-aware Dr/Cr colouring
+                        const _tbDn   = ['BANK','CASH','UPI','EXPENSE','ASSET'].includes((r.account_type||'').toUpperCase());
+                        const _tbIsDr = _tbDn ? (bal > 0) : (bal < 0);
+                        const balCls  = bal !== 0 ? (_tbIsDr ? 'color:#dc2626;' : 'color:#059669;') : 'color:#9ca3af;';
+                        const srcBadge = r.has_gl
+                            ? '<span style="font-size:9px;background:#d1fae5;color:#065f46;border-radius:3px;padding:1px 5px;font-weight:700;">GL</span>'
+                            : '<span style="font-size:9px;background:#fef3c7;color:#92400e;border-radius:3px;padding:1px 5px;font-weight:700;">OB</span>';
+                        return `<tr>
+                            <td><span class="hc-badge hc-${r.account_type}">${r.account_type}</span></td>
+                            <td style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.account_name}">${r.account_name}</td>
+                            <td class="text-right mono" style="color:#ef4444;">${r.total_debit > 0 ? fmt(r.total_debit) : '—'}</td>
+                            <td class="text-right mono" style="color:#10b981;">${r.total_credit > 0 ? fmt(r.total_credit) : '—'}</td>
+                            <td class="text-right mono" style="font-weight:700;${balCls}">${bal !== 0 ? fmt(Math.abs(bal)) + ' <small>' + (_tbIsDr?'Dr':'Cr') + '</small>' : '—'}</td>
+                            <td style="font-size:11px;color:#6b7280;">${r.last_date || '—'}</td>
+                            <td style="text-align:center;">${srcBadge}</td>
+                            <td style="white-space:nowrap;">
+                                <button class="btn-outline" style="padding:4px 10px;font-size:11px;" onclick="drillDown('${r.account_type}','${r.account_name.replace(/'/g,"\\'")}',${r.company_id})">
+                                    <i class="fas fa-book-open"></i> Ledger
+                                </button>
+                                ${r.master_id ? `<button class="btn-sm-edit" onclick="openEdit(${r.master_id})" title="Edit account" style="margin-left:4px;"><i class="fas fa-edit"></i></button>` : ''}
+                            </td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table></div>
+        </div>`;
+    }).join('');
+}
+
+function resetCwiseFilter() {
+    document.getElementById('cwCompany').value = '';
+    document.getElementById('cwType').value    = '';
+    loadCompanyWise();
+}
+
+/* ── Boot ─────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', init);
+
+// ════ DC-ADD-PARTY-001: Add Party Modal ════
+let _apCompanies = [], _apSelectedCos = [];
+
+function openAddPartyModal() {
+    _apSelectedCos = [];
+    document.getElementById('apModalStep1').style.display = 'block';
+    document.getElementById('apModalStep2').style.display = 'none';
+    document.getElementById('apModalError').style.display = 'none';
+    document.getElementById('apModalSuccess').style.display = 'none';
+    document.getElementById('apModalOverlay').classList.add('show');
+    _apLoadCompanies();
+}
+function closeAddPartyModal() {
+    document.getElementById('apModalOverlay').classList.remove('show');
+    _apResetForms();
+}
+async function _apLoadCompanies() {
+    if (_apCompanies.length > 0) { _apPopulateCompanySelect(); return; }
+    try {
+        const r = await staffFetch(`${API_BASE}/companies?page_size=100`);
+        const d = r.ok ? await r.json() : {};
+        _apCompanies = d.companies || d.items || (Array.isArray(d) ? d : []);
+        _apPopulateCompanySelect();
+    } catch(e) { console.warn('[AP] companies load failed', e); }
+}
+function _apPopulateCompanySelect() {
+    const sel = document.getElementById('apVendorCompanySelect');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Select company to add —</option>';
+    _apCompanies.forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id;
+        o.textContent = c.company_name || c.name || c.id;
+        sel.appendChild(o);
+    });
+}
+function apSelectType(type) {
+    document.getElementById('apModalStep1').style.display = 'none';
+    document.getElementById('apModalStep2').style.display = 'block';
+    ['apVendorForm','apExternalForm','apPartnerInfo'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    if (type === 'VENDOR')   document.getElementById('apVendorForm').style.display = 'block';
+    if (type === 'EXTERNAL') document.getElementById('apExternalForm').style.display = 'block';
+    if (type === 'PARTNER')  document.getElementById('apPartnerInfo').style.display = 'block';
+}
+function apGoBack() {
+    document.getElementById('apModalStep1').style.display = 'block';
+    document.getElementById('apModalStep2').style.display = 'none';
+}
+function apSwitchVendorTab(tab) {
+    document.querySelectorAll('.ap-vtab-btn').forEach(b => {
+        const active = b.dataset.tab === tab;
+        b.style.color = active ? '#6366f1' : '#6b7280';
+        b.style.borderBottomColor = active ? '#6366f1' : 'transparent';
+    });
+    document.querySelectorAll('.ap-vtab-content').forEach(c => c.style.display = 'none');
+    const t = document.getElementById('apVtab-' + tab);
+    if (t) t.style.display = 'block';
+}
+function apGenVendorCode() {
+    const name = document.getElementById('apVendorName').value.trim();
+    if (!name) return;
+    const codeEl = document.getElementById('apVendorCode');
+    if (codeEl.dataset.manual === '1') return;
+    const words = name.toUpperCase().replace(/[^A-Z0-9 ]/g, '').split(' ').filter(Boolean);
+    const prefix = words.slice(0, 4).map(w => w[0]).join('');
+    codeEl.value = prefix + Date.now().toString().slice(-4);
+}
+function apAddCompanyBadge() {
+    const sel = document.getElementById('apVendorCompanySelect');
+    const val = sel.value, text = sel.options[sel.selectedIndex]?.text;
+    if (!val || _apSelectedCos.find(c => c.id == val)) { sel.value = ''; return; }
+    _apSelectedCos.push({ id: val, name: text });
+    sel.value = '';
+    _apRenderCoBadges();
+}
+function apRemoveCo(val) {
+    _apSelectedCos = _apSelectedCos.filter(c => c.id != val);
+    _apRenderCoBadges();
+}
+function _apRenderCoBadges() {
+    const el = document.getElementById('apVendorCompanyBadges');
+    if (!el) return;
+    el.innerHTML = _apSelectedCos.map(c =>
+        `<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#5b21b6;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;">${c.name}<button type="button" onclick="apRemoveCo('${c.id}')" style="background:none;border:none;cursor:pointer;color:#7c3aed;font-size:14px;line-height:1;padding:0;">×</button></span>`
+    ).join('');
+}
+async function apLookupPin(prefix) {
+    const pin = (document.getElementById(`ap${prefix}Pincode`) || {}).value?.trim();
+    if (!pin || pin.length !== 6) return;
+    try {
+        const r = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+        const d = await r.json();
+        if (d[0]?.Status === 'Success') {
+            const p = d[0].PostOffice[0];
+            const cityEl = document.getElementById(`ap${prefix}City`);
+            const stateEl = document.getElementById(`ap${prefix}State`);
+            if (cityEl && !cityEl.value) cityEl.value = p.Division || p.Name || '';
+            if (stateEl && !stateEl.value) stateEl.value = p.State || '';
+        }
+    } catch(e) {}
+}
+function _apShowMsg(type, msg) {
+    const el = document.getElementById(type === 'error' ? 'apModalError' : 'apModalSuccess');
+    if (!el) return;
+    el.textContent = msg; el.style.display = 'block';
+    if (type === 'error') setTimeout(() => el.style.display = 'none', 5000);
+    if (type === 'success') { const err = document.getElementById('apModalError'); if (err) err.style.display = 'none'; }
+}
+async function apSubmitVendor() {
+    const name = (document.getElementById('apVendorName')?.value || '').trim();
+    const code = (document.getElementById('apVendorCode')?.value || '').trim().toUpperCase();
+    if (!name) return _apShowMsg('error', 'Vendor name is required.');
+    if (!code) return _apShowMsg('error', 'Vendor code is required.');
+    if (!_apSelectedCos.length) return _apShowMsg('error', 'Please select at least one applicable company.');
+    const btn = document.getElementById('apVendorSubmitBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating…';
+    try {
+        const resp = await fetch('/api/v1/staff/accounts/vendors', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                vendor_name: name, vendor_code: code,
+                vendor_type: document.getElementById('apVendorType')?.value || 'BOTH',
+                phone: document.getElementById('apVendorPhone')?.value.trim() || null,
+                email: document.getElementById('apVendorEmail')?.value.trim().toLowerCase() || null,
+                gst_number: document.getElementById('apVendorGst')?.value.trim().toUpperCase() || null,
+                pan_number: document.getElementById('apVendorPan')?.value.trim().toUpperCase() || null,
+                gst_type: document.getElementById('apVendorGstType')?.value || 'CGST_SGST',
+                contact_person_1_name: document.getElementById('apVendorC1Name')?.value.trim() || null,
+                contact_person_1_phone: document.getElementById('apVendorC1Phone')?.value.trim() || null,
+                contact_person_1_designation: document.getElementById('apVendorC1Desig')?.value.trim() || null,
+                contact_person_2_name: document.getElementById('apVendorC2Name')?.value.trim() || null,
+                contact_person_2_phone: document.getElementById('apVendorC2Phone')?.value.trim() || null,
+                contact_person_2_designation: document.getElementById('apVendorC2Desig')?.value.trim() || null,
+                website_url: document.getElementById('apVendorWebsite')?.value.trim() || null,
+                address: document.getElementById('apVendorAddress')?.value.trim() || null,
+                pincode: document.getElementById('apVendorPincode')?.value.trim() || null,
+                city: document.getElementById('apVendorCity')?.value.trim() || null,
+                state: document.getElementById('apVendorState')?.value.trim() || null,
+                map_link_1_label: document.getElementById('apVendorML1Label')?.value.trim() || null,
+                map_link_1: document.getElementById('apVendorML1')?.value.trim() || null,
+                map_link_2_label: document.getElementById('apVendorML2Label')?.value.trim() || null,
+                map_link_2: document.getElementById('apVendorML2')?.value.trim() || null,
+                ship_to_address: document.getElementById('apVendorShipAddress')?.value.trim() || null,
+                ship_to_pincode: document.getElementById('apVendorShipPincode')?.value.trim() || null,
+                ship_to_city: document.getElementById('apVendorShipCity')?.value.trim() || null,
+                ship_to_state: document.getElementById('apVendorShipState')?.value.trim() || null,
+                bank_name: document.getElementById('apVendorBankName')?.value.trim() || null,
+                bank_branch: document.getElementById('apVendorBankBranch')?.value.trim() || null,
+                account_number: document.getElementById('apVendorAcctNo')?.value.trim() || null,
+                ifsc_code: document.getElementById('apVendorIfsc')?.value.trim().toUpperCase() || null,
+                account_holder_name: document.getElementById('apVendorAcctHolder')?.value.trim() || null,
+                upi_id: document.getElementById('apVendorUpi')?.value.trim() || null,
+                payment_terms: document.getElementById('apVendorPayTerms')?.value || 'COD',
+                credit_limit: parseFloat(document.getElementById('apVendorCreditLimit')?.value) || 0,
+                credit_days: parseInt(document.getElementById('apVendorCreditDays')?.value) || 0,
+                terms_conditions: document.getElementById('apVendorTerms')?.value.trim() || null,
+                applicable_companies: _apSelectedCos.map(c => parseInt(c.id)),
+            })
+        });
+        const result = await resp.json();
+        if (resp.ok) {
+            _apShowMsg('success', `Vendor "${name}" created! Party ledger auto-added to Chart of Accounts.`);
+            _apResetForms();
+            setTimeout(() => closeAddPartyModal(), 2000);
+        } else {
+            _apShowMsg('error', result.detail || result.message || 'Failed to create vendor.');
+        }
+    } catch(e) { _apShowMsg('error', 'Network error. Please try again.'); }
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Vendor';
+}
+async function apSubmitExternal() {
+    const name = (document.getElementById('apExtName')?.value || '').trim();
+    if (!name) return _apShowMsg('error', 'Name is required.');
+    const phone = (document.getElementById('apExtPhone')?.value || '').trim();
+    if (!phone) return _apShowMsg('error', 'Mobile number is required.');
+    const btn = document.getElementById('apExtSubmitBtn');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+    try {
+        const resp = await fetch('/api/v1/staff/accounts/party-search/add-manual', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                phone: document.getElementById('apExtPhone')?.value.trim() || null,
+                email: document.getElementById('apExtEmail')?.value.trim() || null,
+                notes: document.getElementById('apExtNotes')?.value.trim() || null,
+            })
+        });
+        const result = await resp.json();
+        if (resp.ok) {
+            _apShowMsg('success', `Party "${name}" saved successfully!`);
+            _apResetForms();
+            setTimeout(() => closeAddPartyModal(), 1800);
+        } else {
+            _apShowMsg('error', result.detail || result.message || 'Failed to save party.');
+        }
+    } catch(e) { _apShowMsg('error', 'Network error. Please try again.'); }
+    btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save Party';
+}
+function _apResetForms() {
+    ['apVendorName','apVendorCode','apVendorPhone','apVendorEmail','apVendorGst','apVendorPan',
+     'apVendorC1Name','apVendorC1Phone','apVendorC1Desig','apVendorC2Name','apVendorC2Phone','apVendorC2Desig',
+     'apVendorWebsite','apVendorAddress','apVendorPincode','apVendorCity','apVendorState',
+     'apVendorML1Label','apVendorML1','apVendorML2Label','apVendorML2',
+     'apVendorShipAddress','apVendorShipPincode','apVendorShipCity','apVendorShipState',
+     'apVendorBankName','apVendorBankBranch','apVendorAcctNo','apVendorIfsc','apVendorAcctHolder','apVendorUpi',
+     'apVendorCreditLimit','apVendorCreditDays','apVendorTerms',
+     'apExtName','apExtPhone','apExtEmail','apExtNotes'
+    ].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const vc = document.getElementById('apVendorCode');
+    if (vc) delete vc.dataset.manual;
+    _apSelectedCos = []; _apRenderCoBadges(); apSwitchVendorTab('basic');
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const vc = document.getElementById('apVendorCode');
+    if (vc) vc.addEventListener('input', () => { vc.dataset.manual = vc.value ? '1' : '0'; });
+});
+
+// DC-SOURCE-STATUS-001: Multi-select voucher status dropdown helpers
+function toggleMsDrop(id) {
+    const menu = document.querySelector('#' + id + ' .ms-drop-menu');
+    const wasOpen = menu.classList.contains('open');
+    document.querySelectorAll('.ms-drop-menu.open').forEach(m => m.classList.remove('open'));
+    if (!wasOpen) menu.classList.add('open');
+}
+document.addEventListener('click', function(ev) {
+    if (!ev.target.closest('.ms-drop')) {
+        document.querySelectorAll('.ms-drop-menu.open').forEach(m => m.classList.remove('open'));
+    }
+});
+function updateGlStatLabel() {
+    const sel = [...document.querySelectorAll('.gl-stat-chk:checked')].map(c => c.value);
+    const names = {CONFIRMED:'Confirmed', MANUAL:'Manual', TALLY_IMPORT:'Tally Import', OPENING_BALANCE:'Opening Bal'};
+    const lbl = document.getElementById('glStatLabel');
+    if (!sel.length) lbl.textContent = 'All Statuses';
+    else if (sel.length === 1) lbl.textContent = names[sel[0]] || sel[0];
+    else lbl.textContent = sel.length + ' selected';
+}
+function getGlStatuses() {
+    return [...document.querySelectorAll('.gl-stat-chk:checked')].map(c => c.value).join(',');
+}
+</script>
+
+<!-- ════ DC-ADD-PARTY-001: Add Party Modal ════ -->
+<div class="modal-overlay" id="apModalOverlay" onclick="if(event.target===this)closeAddPartyModal()">
+  <div style="background:white;border-radius:14px;width:100%;max-width:840px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 24px 14px;border-bottom:1px solid #e5e7eb;position:sticky;top:0;background:white;z-index:10;border-radius:14px 14px 0 0;">
+      <h3 style="margin:0;font-size:16px;font-weight:700;color:#1f2937;display:flex;align-items:center;gap:8px;"><i class="fas fa-user-plus" style="color:#6366f1;"></i> Add Party</h3>
+      <button onclick="closeAddPartyModal()" style="background:none;border:none;font-size:24px;cursor:pointer;color:#9ca3af;line-height:1;padding:0 2px;">&times;</button>
+    </div>
+    <div id="apModalError" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 16px;font-size:13px;color:#991b1b;margin:12px 24px 0;"></div>
+    <div id="apModalSuccess" style="display:none;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 16px;font-size:13px;color:#065f46;margin:12px 24px 0;"></div>
+    <!-- Step 1: Type selector -->
+    <div id="apModalStep1" style="padding:24px;">
+      <p style="font-size:13px;color:#6b7280;margin-bottom:18px;">What type of party would you like to add to the system?</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+        <div onclick="apSelectType('VENDOR')" style="cursor:pointer;background:#fffbeb;border:2px solid #fbbf24;border-radius:12px;padding:22px 16px;text-align:center;transition:transform .15s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+          <div style="font-size:30px;color:#f59e0b;margin-bottom:10px;"><i class="fas fa-store"></i></div>
+          <div style="font-size:14px;font-weight:700;color:#1f2937;margin-bottom:5px;">Vendor</div>
+          <div style="font-size:11px;color:#6b7280;line-height:1.5;">Supplier · Manufacturer<br>Full bank &amp; GST details</div>
+        </div>
+        <div onclick="apSelectType('EXTERNAL')" style="cursor:pointer;background:#ede9fe;border:2px solid #8b5cf6;border-radius:12px;padding:22px 16px;text-align:center;transition:transform .15s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+          <div style="font-size:30px;color:#7c3aed;margin-bottom:10px;"><i class="fas fa-user-alt"></i></div>
+          <div style="font-size:14px;font-weight:700;color:#1f2937;margin-bottom:5px;">External Party</div>
+          <div style="font-size:11px;color:#6b7280;line-height:1.5;">Any person or company<br>Quick one-off entries</div>
+        </div>
+        <div onclick="apSelectType('PARTNER')" style="cursor:pointer;background:#ecfdf5;border:2px solid #10b981;border-radius:12px;padding:22px 16px;text-align:center;transition:transform .15s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''">
+          <div style="font-size:30px;color:#059669;margin-bottom:10px;"><i class="fas fa-handshake"></i></div>
+          <div style="font-size:14px;font-weight:700;color:#1f2937;margin-bottom:5px;">Official Partner</div>
+          <div style="font-size:11px;color:#6b7280;line-height:1.5;">Dealer · Distributor<br>Service Center</div>
+        </div>
+      </div>
+    </div>
+    <!-- Step 2: Forms -->
+    <div id="apModalStep2" style="display:none;">
+      <div style="padding:12px 24px 0;">
+        <button onclick="apGoBack()" style="background:none;border:none;cursor:pointer;font-size:12px;color:#6366f1;font-weight:600;display:inline-flex;align-items:center;gap:5px;padding:4px 0;"><i class="fas fa-arrow-left"></i> Back to options</button>
+      </div>
+      <!-- VENDOR FORM -->
+      <div id="apVendorForm" style="display:none;padding:8px 24px 24px;">
+        <h4 style="font-size:14px;font-weight:700;color:#1f2937;padding:10px 0 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f3f4f6;margin-bottom:16px;"><i class="fas fa-store" style="color:#f59e0b;"></i> New Vendor</h4>
+        <div style="display:flex;border-bottom:2px solid #e5e7eb;margin-bottom:16px;">
+          <button class="ap-vtab-btn" data-tab="basic" onclick="apSwitchVendorTab('basic')" style="padding:8px 14px;border:none;background:transparent;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid #6366f1;margin-bottom:-2px;color:#6366f1;">Basic Info</button>
+          <button class="ap-vtab-btn" data-tab="contacts" onclick="apSwitchVendorTab('contacts')" style="padding:8px 14px;border:none;background:transparent;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#6b7280;">Contacts</button>
+          <button class="ap-vtab-btn" data-tab="address" onclick="apSwitchVendorTab('address')" style="padding:8px 14px;border:none;background:transparent;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#6b7280;">Address</button>
+          <button class="ap-vtab-btn" data-tab="bank" onclick="apSwitchVendorTab('bank')" style="padding:8px 14px;border:none;background:transparent;font-size:12px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;color:#6b7280;">Bank &amp; Payment</button>
+        </div>
+        <!-- Basic tab -->
+        <div id="apVtab-basic" class="ap-vtab-content">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div class="form-group"><label>Vendor Name *</label><input type="text" id="apVendorName" placeholder="Enter vendor name" oninput="apGenVendorCode()"></div>
+            <div class="form-group"><label>Vendor Code * <small style="font-weight:400;color:#9ca3af;text-transform:none;">(auto-generated)</small></label><input type="text" id="apVendorCode" placeholder="Auto-generated…" style="font-family:monospace;font-weight:600;color:#4c1d95;"></div>
+            <div class="form-group"><label>Vendor Type</label><select id="apVendorType"><option value="BOTH">Both (Product &amp; Service)</option><option value="PRODUCT">Product Only</option><option value="SERVICE">Service Only</option></select></div>
+            <div class="form-group"><label>Phone</label><input type="text" id="apVendorPhone" placeholder="Primary phone"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="apVendorEmail" placeholder="Email address"></div>
+            <div class="form-group"><label>GST Number</label><input type="text" id="apVendorGst" placeholder="15-char GSTIN" maxlength="15"></div>
+            <div class="form-group"><label>PAN Number</label><input type="text" id="apVendorPan" placeholder="10-char PAN" maxlength="10"></div>
+            <div class="form-group"><label>GST Type</label><select id="apVendorGstType"><option value="CGST_SGST">CGST + SGST (Intra-state)</option><option value="IGST">IGST (Inter-state)</option></select></div>
+          </div>
+          <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px;">
+            <label style="display:block;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.3px;margin-bottom:8px;">Applicable Companies *</label>
+            <select id="apVendorCompanySelect" onchange="apAddCompanyBadge()" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:13px;margin-bottom:8px;"><option value="">— Select company to add —</option></select>
+            <div id="apVendorCompanyBadges" style="display:flex;flex-wrap:wrap;gap:6px;min-height:20px;"></div>
+          </div>
+        </div>
+        <!-- Contacts tab -->
+        <div id="apVtab-contacts" class="ap-vtab-content" style="display:none;">
+          <div style="font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #f3f4f6;"><i class="fas fa-user me-1"></i>Contact Person 1 (Primary)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div class="form-group"><label>Name</label><input type="text" id="apVendorC1Name" placeholder="Contact name"></div>
+            <div class="form-group"><label>Phone</label><input type="text" id="apVendorC1Phone" placeholder="Phone number"></div>
+            <div class="form-group"><label>Designation</label><input type="text" id="apVendorC1Desig" placeholder="e.g., Sales Manager"></div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #f3f4f6;"><i class="fas fa-user-friends me-1"></i>Contact Person 2 (Secondary)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div class="form-group"><label>Name</label><input type="text" id="apVendorC2Name" placeholder="Contact name"></div>
+            <div class="form-group"><label>Phone</label><input type="text" id="apVendorC2Phone" placeholder="Phone number"></div>
+            <div class="form-group"><label>Designation</label><input type="text" id="apVendorC2Desig" placeholder="e.g., Accounts Manager"></div>
+          </div>
+          <div class="form-group"><label><i class="fas fa-globe me-1"></i>Website URL</label><input type="url" id="apVendorWebsite" placeholder="https://www.example.com"></div>
+        </div>
+        <!-- Address tab -->
+        <div id="apVtab-address" class="ap-vtab-content" style="display:none;">
+          <div style="font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;"><i class="fas fa-map-marker-alt me-1"></i>Primary Address</div>
+          <div class="form-group" style="margin-bottom:12px;"><label>Address</label><textarea id="apVendorAddress" placeholder="Full address" rows="2"></textarea></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;margin-bottom:14px;">
+            <div class="form-group"><label>Pincode</label><input type="text" id="apVendorPincode" placeholder="6-digit PIN" maxlength="6" oninput="if(this.value.length===6)apLookupPin('Vendor')"></div>
+            <div class="form-group"><label>City</label><input type="text" id="apVendorCity" placeholder="City"></div>
+            <div class="form-group"><label>State</label><input type="text" id="apVendorState" placeholder="State"></div>
+            <button type="button" onclick="apLookupPin('Vendor')" class="btn-indigo" style="padding:8px 12px;font-size:12px;"><i class="fas fa-search"></i></button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div class="form-group"><label>Map Link 1 Label</label><input type="text" id="apVendorML1Label" placeholder="e.g., Head Office"></div>
+            <div class="form-group"><label>Map Link 1 URL</label><input type="url" id="apVendorML1" placeholder="Google Maps URL"></div>
+            <div class="form-group"><label>Map Link 2 Label</label><input type="text" id="apVendorML2Label" placeholder="e.g., Warehouse"></div>
+            <div class="form-group"><label>Map Link 2 URL</label><input type="url" id="apVendorML2" placeholder="Google Maps URL"></div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;"><i class="fas fa-shipping-fast me-1"></i>Shipping Address (if different)</div>
+          <div class="form-group" style="margin-bottom:12px;"><textarea id="apVendorShipAddress" placeholder="Shipping address (leave blank if same)" rows="2"></textarea></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:end;">
+            <div class="form-group"><label>Pincode</label><input type="text" id="apVendorShipPincode" placeholder="6-digit PIN" maxlength="6" oninput="if(this.value.length===6)apLookupPin('VendorShip')"></div>
+            <div class="form-group"><label>City</label><input type="text" id="apVendorShipCity" placeholder="City"></div>
+            <div class="form-group"><label>State</label><input type="text" id="apVendorShipState" placeholder="State"></div>
+            <button type="button" onclick="apLookupPin('VendorShip')" class="btn-indigo" style="padding:8px 12px;font-size:12px;"><i class="fas fa-search"></i></button>
+          </div>
+        </div>
+        <!-- Bank tab -->
+        <div id="apVtab-bank" class="ap-vtab-content" style="display:none;">
+          <div style="font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;"><i class="fas fa-university me-1"></i>Bank Details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
+            <div class="form-group"><label>Bank Name</label><input type="text" id="apVendorBankName" placeholder="Bank name"></div>
+            <div class="form-group"><label>Branch</label><input type="text" id="apVendorBankBranch" placeholder="Branch name"></div>
+            <div class="form-group"><label>Account Number</label><input type="text" id="apVendorAcctNo" placeholder="Account number"></div>
+            <div class="form-group"><label>IFSC Code</label><input type="text" id="apVendorIfsc" placeholder="11-char IFSC" maxlength="11"></div>
+            <div class="form-group"><label>Account Holder Name</label><input type="text" id="apVendorAcctHolder" placeholder="Holder name"></div>
+            <div class="form-group"><label>UPI ID</label><input type="text" id="apVendorUpi" placeholder="e.g., vendor@upi"></div>
+          </div>
+          <div style="font-size:12px;font-weight:700;color:#4f46e5;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;"><i class="fas fa-credit-card me-1"></i>Payment Terms</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div class="form-group"><label>Payment Terms</label><select id="apVendorPayTerms"><option value="COD">Cash on Delivery</option><option value="ADVANCE">Advance</option><option value="CREDIT_15">Credit 15 Days</option><option value="CREDIT_30">Credit 30 Days</option><option value="CREDIT_45">Credit 45 Days</option><option value="CREDIT_60">Credit 60 Days</option></select></div>
+            <div class="form-group"><label>Credit Limit (₹)</label><input type="number" id="apVendorCreditLimit" placeholder="0.00" min="0" step="0.01"></div>
+            <div class="form-group"><label>Credit Days</label><input type="number" id="apVendorCreditDays" placeholder="0" min="0" max="365"></div>
+          </div>
+          <div class="form-group"><label>Terms &amp; Conditions</label><textarea id="apVendorTerms" placeholder="Custom terms and conditions" rows="2"></textarea></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;margin-top:16px;border-top:1px solid #e5e7eb;">
+          <button onclick="closeAddPartyModal()" style="padding:9px 18px;border:1px solid #d1d5db;background:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;">Cancel</button>
+          <button onclick="apSubmitVendor()" id="apVendorSubmitBtn" style="padding:9px 18px;background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;color:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-save"></i> Save Vendor</button>
+        </div>
+      </div>
+      <!-- EXTERNAL PARTY FORM -->
+      <div id="apExternalForm" style="display:none;padding:8px 24px 24px;">
+        <h4 style="font-size:14px;font-weight:700;color:#1f2937;padding:10px 0 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f3f4f6;margin-bottom:18px;"><i class="fas fa-user-alt" style="color:#7c3aed;"></i> New External Party</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;">
+          <div class="form-group"><label>Name *</label><input type="text" id="apExtName" placeholder="Full name of person / company"></div>
+          <div class="form-group"><label>Mobile Number *</label><input type="tel" id="apExtPhone" placeholder="10-digit mobile number" inputmode="numeric"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="apExtEmail" placeholder="Email address"></div>
+        </div>
+        <div class="form-group"><label>Notes</label><textarea id="apExtNotes" placeholder="Any additional notes…" rows="3"></textarea></div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:16px;margin-top:16px;border-top:1px solid #e5e7eb;">
+          <button onclick="closeAddPartyModal()" style="padding:9px 18px;border:1px solid #d1d5db;background:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;">Cancel</button>
+          <button onclick="apSubmitExternal()" id="apExtSubmitBtn" style="padding:9px 18px;background:linear-gradient(135deg,#7c3aed,#6d28d9);border:none;color:white;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;"><i class="fas fa-save"></i> Save Party</button>
+        </div>
+      </div>
+      <!-- OFFICIAL PARTNER INFO -->
+      <div id="apPartnerInfo" style="display:none;padding:24px;">
+        <div style="background:#ecfdf5;border:1.5px solid #10b981;border-radius:12px;padding:28px;text-align:center;">
+          <div style="font-size:36px;color:#059669;margin-bottom:14px;"><i class="fas fa-handshake"></i></div>
+          <h4 style="font-size:15px;font-weight:700;color:#1f2937;margin-bottom:10px;">Official Partner Onboarding</h4>
+          <p style="font-size:13px;color:#374151;max-width:420px;margin:0 auto 18px;line-height:1.6;">Dealers, Distributors, and Service Centers are registered through the Official Partner Management portal with full KYC, territory assignment, and commission setup.</p>
+          <a href="/staff/official-partners" onclick="closeAddPartyModal()" style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;background:#059669;color:white;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;"><i class="fas fa-external-link-alt"></i> Go to Partner Management</a>
+          <div style="margin-top:14px;font-size:12px;color:#6b7280;">For quick journal entries, use <strong>External Party</strong> with the dealer's name.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ═══ VOUCHER VIEW MODAL (Dr/Cr sides) ═══ -->
+<div id="voucherViewModal">
+  <div class="vvm-box">
+    <div class="vvm-header">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#1f2937;display:flex;align-items:center;gap:8px;">
+          <i class="fas fa-balance-scale" style="color:#6366f1;"></i>
+          <span id="vvTitle">Voucher Details</span>
+        </div>
+        <div style="font-size:12px;color:#6b7280;margin-top:2px;" id="vvMeta"></div>
+      </div>
+      <button onclick="closeVoucherViewModal()" style="background:none;border:none;font-size:20px;color:#9ca3af;cursor:pointer;line-height:1;">&times;</button>
+    </div>
+    <div class="vvm-body" id="vvBody">
+      <div style="text-align:center;padding:40px;color:#6b7280;"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function viewVoucher(refNumber, companyId) {
+    document.getElementById('voucherViewModal').classList.add('show');
+    document.getElementById('vvTitle').textContent = refNumber;
+    document.getElementById('vvMeta').textContent = '';
+    document.getElementById('vvBody').innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</div>';
+    try {
+        let url = `${API_BASE}/general-ledger/entries?page=1&page_size=100&reference_number=${encodeURIComponent(refNumber)}`;
+        if (companyId) url += `&company_id=${companyId}`;
+        const resp = await staffFetch(url);
+        const data = await resp.json();
+        const entries = (data.entries || data.items || []);
+        if (!entries.length) {
+            document.getElementById('vvBody').innerHTML = '<div style="text-align:center;padding:40px;color:#9ca3af;"><i class="fas fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;"></i>No ledger entries found for this voucher.</div>';
+            return;
+        }
+        const vType = entries[0].voucher_type || entries[0].reference_type || '';
+        const date  = entries[0].transaction_date || '';
+        document.getElementById('vvTitle').textContent = refNumber + (vType ? ' · ' + vType : '');
+        document.getElementById('vvMeta').textContent  = date ? 'Date: ' + date : '';
+
+        const fmtAmt = v => { const n = parseFloat(v || 0); return n ? '₹' + n.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '—'; };
+        const drEntries = entries.filter(e => parseFloat(e.debit_amount  || 0) > 0);
+        const crEntries = entries.filter(e => parseFloat(e.credit_amount || 0) > 0);
+        const totalDr   = drEntries.reduce((s, e) => s + parseFloat(e.debit_amount  || 0), 0);
+        const totalCr   = crEntries.reduce((s, e) => s + parseFloat(e.credit_amount || 0), 0);
+        const balanced  = Math.abs(totalDr - totalCr) < 0.01;
+
+        const renderRows = (list, side) => list.length
+            ? list.map(e => `<tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:8px 10px;font-weight:600;color:#1f2937;font-size:12px;">${e.account_name}</td>
+                <td style="padding:8px 10px;"><span class="hc-badge hc-${e.account_type}" style="font-size:10px;">${e.account_type}</span></td>
+                <td style="padding:8px 10px;text-align:right;font-weight:700;color:${side==='DR'?'#dc2626':'#059669'};font-size:13px;">${fmtAmt(side==='DR'?e.debit_amount:e.credit_amount)}</td>
+            </tr>`).join('')
+            : '<tr><td colspan="3" style="padding:14px;text-align:center;color:#9ca3af;font-size:12px;">—</td></tr>';
+
+        document.getElementById('vvBody').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div style="border:1.5px solid #fecaca;border-radius:10px;overflow:hidden;">
+                <div style="background:#fee2e2;padding:9px 14px;font-size:12px;font-weight:700;color:#991b1b;display:flex;align-items:center;gap:7px;">
+                    <i class="fas fa-arrow-right"></i> DEBIT SIDE
+                </div>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr style="background:#fef2f2;">
+                        <th style="padding:6px 10px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;">Account</th>
+                        <th style="padding:6px 10px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;">Type</th>
+                        <th style="padding:6px 10px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;">Amount</th>
+                    </tr></thead>
+                    <tbody>${renderRows(drEntries,'DR')}</tbody>
+                    <tfoot><tr style="background:#fef2f2;border-top:2px solid #fecaca;">
+                        <td colspan="2" style="padding:9px 10px;font-weight:700;font-size:12px;color:#991b1b;">Total Dr</td>
+                        <td style="padding:9px 10px;text-align:right;font-weight:800;font-size:14px;color:#dc2626;">₹${totalDr.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+                    </tr></tfoot>
+                </table>
+            </div>
+            <div style="border:1.5px solid #a7f3d0;border-radius:10px;overflow:hidden;">
+                <div style="background:#d1fae5;padding:9px 14px;font-size:12px;font-weight:700;color:#065f46;display:flex;align-items:center;gap:7px;">
+                    <i class="fas fa-arrow-left"></i> CREDIT SIDE
+                </div>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr style="background:#f0fdf4;">
+                        <th style="padding:6px 10px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;">Account</th>
+                        <th style="padding:6px 10px;text-align:left;font-size:11px;color:#6b7280;font-weight:600;">Type</th>
+                        <th style="padding:6px 10px;text-align:right;font-size:11px;color:#6b7280;font-weight:600;">Amount</th>
+                    </tr></thead>
+                    <tbody>${renderRows(crEntries,'CR')}</tbody>
+                    <tfoot><tr style="background:#f0fdf4;border-top:2px solid #a7f3d0;">
+                        <td colspan="2" style="padding:9px 10px;font-weight:700;font-size:12px;color:#065f46;">Total Cr</td>
+                        <td style="padding:9px 10px;text-align:right;font-weight:800;font-size:14px;color:#059669;">₹${totalCr.toLocaleString('en-IN',{minimumFractionDigits:2})}</td>
+                    </tr></tfoot>
+                </table>
+            </div>
+        </div>
+        <div style="margin-top:12px;text-align:center;font-size:12px;font-weight:600;${balanced?'color:#059669;':'color:#dc2626;'}">
+            <i class="fas ${balanced?'fa-check-circle':'fa-exclamation-triangle'} me-1"></i>
+            ${balanced ? 'Voucher is balanced · Dr = Cr' : 'Warning: Voucher is unbalanced · Dr ≠ Cr'}
+        </div>`;
+    } catch(err) {
+        document.getElementById('vvBody').innerHTML = `<div style="text-align:center;padding:30px;color:#dc2626;font-size:13px;"><i class="fas fa-exclamation-circle me-2"></i>${err.message}</div>`;
+    }
+}
+
+function closeVoucherViewModal() {
+    document.getElementById('voucherViewModal').classList.remove('show');
+}
+document.getElementById('voucherViewModal').addEventListener('click', function(e) {
+    if (e.target === this) closeVoucherViewModal();
+});
+</script>
+</body>
+</html>

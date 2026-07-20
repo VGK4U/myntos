@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Amenities</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .user-info-details { display: flex; flex-direction: column; }
+        .user-info-name { font-weight: 600; font-size: 14px; color: #1f2937; }
+        .user-info-role { padding: 2px 8px; border-radius: 12px; background: #d1fae5; color: #065f46; font-size: 11px; font-weight: 500; }
+
+        .content-area { padding: 24px; }
+        
+        .page-banner {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;
+        }
+        .page-banner h1 { font-size: 24px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 12px; }
+        .page-banner p { opacity: 0.9; margin: 0; font-size: 14px; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; margin-bottom: 24px; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 24px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; display: flex; align-items: center; gap: 8px; }
+        .card-body { padding: 24px; }
+        
+        .nav-tabs { border-bottom: none; padding: 0 20px; background: white; border-radius: 12px 12px 0 0; }
+        .nav-tabs .nav-link { 
+            color: #6b7280; border: none; padding: 16px 20px; font-weight: 500; 
+            border-bottom: 3px solid transparent; margin-bottom: -1px; transition: all 0.2s;
+        }
+        .nav-tabs .nav-link:hover { color: #1f2937; background: #f9fafb; }
+        .nav-tabs .nav-link.active { color: #10B981; border-bottom-color: #10B981; background: transparent; }
+        
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .stat-card .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 20px; }
+        .stat-card .value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-card .label { color: #6b7280; font-size: 13px; margin-top: 4px; }
+        
+        .stat-green .icon { background: #d1fae5; color: #059669; }
+        .stat-blue .icon { background: #dbeafe; color: #2563eb; }
+        .stat-purple .icon { background: #e9d5ff; color: #7c3aed; }
+        .stat-orange .icon { background: #fed7aa; color: #ea580c; }
+        .stat-pink .icon { background: #fce7f3; color: #db2777; }
+        .stat-yellow .icon { background: #fef3c7; color: #d97706; }
+        
+        .form-label { font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 14px; }
+        .form-control, .form-select {
+            border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 14px;
+            font-size: 14px; transition: all 0.2s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #10B981; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+        }
+        
+        .btn-primary { background: #10B981; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 500; }
+        .btn-primary:hover { background: #059669; }
+        .btn-outline-primary { border-color: #10B981; color: #10B981; }
+        .btn-outline-primary:hover { background: #10B981; color: white; }
+        .btn-outline-secondary { border-color: #d1d5db; color: #6b7280; }
+        .btn-outline-secondary:hover { background: #f3f4f6; color: #374151; }
+        
+        .company-card { border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 16px; cursor: pointer; transition: all 0.2s; }
+        .company-card:hover { border-color: #10B981; background: #f0fdf4; }
+        .company-card.selected { border-color: #10B981; background: #f0fdf4; }
+        .company-card.disabled { opacity: 0.6; cursor: not-allowed; }
+        .company-card .company-name { font-weight: 600; color: #1f2937; font-size: 16px; }
+        .company-card .company-code { color: #6b7280; font-size: 13px; font-family: monospace; }
+        .company-card .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .company-card .enabled { background: #d1fae5; color: #065f46; }
+        .company-card .not-enabled { background: #f3f4f6; color: #6b7280; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-top: none; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        .table tbody tr:hover { background: #f9fafb; }
+        
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .status-active { background: #d1fae5; color: #065f46; }
+        .status-inactive { background: #f3f4f6; color: #6b7280; }
+        
+        .icon-btn { width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+        
+        .amenity-category { margin-bottom: 24px; }
+        .amenity-category-header { font-weight: 600; color: #10B981; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+        .amenity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        .amenity-item { background: #f9fafb; padding: 12px 16px; border-radius: 8px; border: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; }
+        .amenity-item:hover { border-color: #10B981; }
+        .amenity-item i { color: #10B981; margin-right: 8px; }
+        
+        .banner-preview {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            border-radius: 12px; padding: 20px; color: white; text-align: center; margin-bottom: 24px;
+        }
+        .banner-preview h4 { margin: 0; font-weight: 700; font-size: 18px; }
+        .banner-preview p { margin: 8px 0 0; opacity: 0.9; font-size: 14px; }
+        
+        .modal-content { border-radius: 12px; border: none; }
+        .modal-header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; border-bottom: none; padding: 16px 24px; border-radius: 12px 12px 0 0; }
+        .modal-header .btn-close { filter: brightness(0) invert(1); }
+        .modal-body { padding: 24px; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; border-radius: 0 0 12px 12px; }
+        
+        .toast-container { position: fixed; top: 80px; right: 20px; z-index: 9999; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.4; color: #10B981; }
+        .empty-state h5 { color: #374151; margin-bottom: 8px; }
+        
+        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-radius: 50%; border-top-color: #10B981; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .form-switch .form-check-input { width: 48px; height: 24px; }
+        .form-switch .form-check-input:checked { background-color: #10B981; border-color: #10B981; }
+        
+        .color-preview { width: 40px; height: 40px; border-radius: 8px; border: 2px solid #e5e7eb; cursor: pointer; }
+        
+        .quick-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+        .quick-action-btn { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 8px; border: 1px solid #e5e7eb; background: white; color: #374151; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+        .quick-action-btn:hover { border-color: #10B981; background: #f0fdf4; color: #059669; }
+        .quick-action-btn i { font-size: 18px; }
+    
+        .header-logo {
+            height: 36px;
+            width: auto;
+        }
+        .user-info-details {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .user-info-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .user-info-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .user-info-role {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .role-badge-supreme { background: #fef2f2; color: #dc2626; }
+        .role-badge-hr { background: #f3e8ff; color: #7c3aed; }
+        .role-badge-leadership { background: #fef3c7; color: #d97706; }
+        .role-badge-default { background: #f3f4f6; color: #374151; }
+
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+        <div class="top-header">
+            <div class="header-left">
+                <img src="/assets/logos/myntreal_logo_new.png" alt="MyntReal" class="header-logo">
+                <div class="header-divider"></div>
+                <div id="backButtonContainer"></div>
+                <h1 class="page-title">
+                    <i class="fas fa-home"></i>
+                    Property Amenities
+                </h1>
+            </div>
+            <div class="header-right">
+                <div class="user-info-header" id="headerUserInfo">
+                    <div class="user-avatar-sm" id="headerUserInitials">--</div>
+                    <div class="user-info-details">
+                        <span class="user-info-name" id="headerUserName">Loading...</span>
+                        <div class="user-info-meta">
+                            <span class="user-info-role role-badge-default" id="headerUserRole">-</span>
+                            <span id="headerUserEmpId">-</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-logout" onclick="StaffSidebar.logout()">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+        <div class="page-banner">
+            <h1><i class="fas fa-home"></i> Property Amenities</h1>
+            <p>Manage property types, amenities, and promotional banners for your Real Estate marketplace</p>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <label class="form-label">Select Company</label>
+                <select class="form-select" id="companySelect" onchange="onCompanyChange()">
+                    <option value="">Loading companies...</option>
+                </select>
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">&nbsp;</label>
+                <div class="quick-actions">
+                    <button class="quick-action-btn" onclick="seedDefaults()" id="seedBtn" style="display:none;">
+                        <i class="fas fa-magic"></i> Seed Default Data
+                    </button>
+                    <a href="/rvz/real-dreams/partners" class="quick-action-btn" id="partnerManageBtn" style="display:none;">
+                        <i class="fas fa-user-tie"></i> Manage Partners
+                    </a>
+                    <a href="/staff/partners/master" class="quick-action-btn">
+                        <i class="fas fa-handshake"></i> Partner Orders
+                    </a>
+                    <a href="/staff/dashboard" class="quick-action-btn">
+                        <i class="fas fa-users"></i> Staff Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div id="notEnabledMessage" style="display:none;">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-building fa-3x mb-3 text-muted"></i>
+                    <h4>Real Dreams Not Enabled</h4>
+                    <p class="text-muted mb-4">Real Dreams is not enabled for this company. Enable it to start listing properties.</p>
+                    <button class="btn btn-primary" onclick="enableRealDreams()">
+                        <i class="fas fa-power-off me-2"></i> Enable Real Dreams
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboardContent" style="display:none;">
+            <div class="row mb-4" id="statsRow">
+                <div class="col-md-2 col-6 mb-3">
+                    <div class="stat-card stat-green">
+                        <div class="icon"><i class="fas fa-building"></i></div>
+                        <div class="value" id="statProperties">0</div>
+                        <div class="label">Properties</div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-3">
+                    <div class="stat-card stat-blue">
+                        <div class="icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="value" id="statApproved">0</div>
+                        <div class="label">Approved</div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-3">
+                    <div class="stat-card stat-orange">
+                        <div class="icon"><i class="fas fa-clock"></i></div>
+                        <div class="value" id="statPending">0</div>
+                        <div class="label">Pending</div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-3">
+                    <div class="stat-card stat-purple">
+                        <div class="icon"><i class="fas fa-user-tie"></i></div>
+                        <div class="value" id="statPartners">0</div>
+                        <div class="label">Partners</div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-3">
+                    <div class="stat-card stat-pink">
+                        <div class="icon"><i class="fas fa-phone"></i></div>
+                        <div class="value" id="statLeads">0</div>
+                        <div class="label">Leads</div>
+                    </div>
+                </div>
+                <div class="col-md-2 col-6 mb-3">
+                    <div class="stat-card stat-yellow">
+                        <div class="icon"><i class="fas fa-handshake"></i></div>
+                        <div class="value" id="statDeals">0</div>
+                        <div class="label">Deals</div>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="nav nav-tabs" id="mainTabs">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#tabPropertyTypes">
+                        <i class="fas fa-list me-2"></i> Property Types
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#tabAmenities">
+                        <i class="fas fa-swimming-pool me-2"></i> Amenities
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#tabBanner">
+                        <i class="fas fa-bullhorn me-2"></i> Promotional Banner
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#tabConfig">
+                        <i class="fas fa-cog me-2"></i> Company Config
+                    </a>
+                </li>
+            </ul>
+
+            <div class="tab-content card" style="border-radius: 0 0 12px 12px;">
+                <div class="tab-pane fade show active" id="tabPropertyTypes">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0">Property Types</h5>
+                            <button class="btn btn-primary" onclick="showAddPropertyTypeModal()">
+                                <i class="fas fa-plus me-2"></i> Add Type
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table" id="propertyTypesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Icon</th>
+                                        <th>Name</th>
+                                        <th>Slug</th>
+                                        <th>Description</th>
+                                        <th>Order</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="propertyTypesBody">
+                                    <tr><td colspan="7" class="text-center py-4">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tabAmenities">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="mb-0">Amenities</h5>
+                            <button class="btn btn-primary" onclick="showAddAmenityModal()">
+                                <i class="fas fa-plus me-2"></i> Add Amenity
+                            </button>
+                        </div>
+                        <div id="amenitiesContainer">
+                            <div class="text-center py-4">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tabBanner">
+                    <div class="card-body">
+                        <h5 class="mb-4">Promotional Banner Configuration</h5>
+                        
+                        <div id="bannerPreview" class="banner-preview mb-4">
+                            <h4 id="previewText">BOOK THIS PROPERTY & GET A FREE E-BIKE!</h4>
+                            <p id="previewSubtext">Terms & Conditions Apply</p>
+                        </div>
+                        
+                        <form id="bannerForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Banner Text</label>
+                                    <input type="text" class="form-control" id="bannerText" maxlength="200">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Subtext</label>
+                                    <input type="text" class="form-control" id="bannerSubtext" maxlength="300">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Background Color</label>
+                                    <div class="d-flex gap-2">
+                                        <input type="color" class="form-control form-control-color" id="bannerBgColor" value="#10B981">
+                                        <input type="text" class="form-control" id="bannerBgColorText" value="#10B981" style="width:100px;">
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Text Color</label>
+                                    <div class="d-flex gap-2">
+                                        <input type="color" class="form-control form-control-color" id="bannerTextColor" value="#FFFFFF">
+                                        <input type="text" class="form-control" id="bannerTextColorText" value="#FFFFFF" style="width:100px;">
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Banner Active</label>
+                                    <div class="form-check form-switch mt-2">
+                                        <input class="form-check-input" type="checkbox" id="bannerActive" checked>
+                                        <label class="form-check-label" for="bannerActive">Show banner on listings</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Offer Details</label>
+                                    <textarea class="form-control" id="bannerOfferDetails" rows="3"></textarea>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Terms & Conditions</label>
+                                    <textarea class="form-control" id="bannerTerms" rows="3"></textarea>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i> Save Banner Configuration
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tabConfig">
+                    <div class="card-body">
+                        <h5 class="mb-4">Company Configuration</h5>
+                        <form id="configForm">
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="configEnabled">
+                                        <label class="form-check-label" for="configEnabled"><strong>Real Dreams Enabled</strong></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6 class="mb-3">Listing Permissions</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="configPartnerListings" checked>
+                                        <label class="form-check-label" for="configPartnerListings">Allow Partner Listings</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="configEmployeeListings" checked>
+                                        <label class="form-check-label" for="configEmployeeListings">Allow Employee Listings</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="configMemberListings" checked>
+                                        <label class="form-check-label" for="configMemberListings">Allow MNR Member Listings</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6 class="mb-3">Auto-Approval Settings</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="configAutoApprovePartner">
+                                        <label class="form-check-label" for="configAutoApprovePartner">Auto-approve Partner Properties</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="configAutoApproveEmployee">
+                                        <label class="form-check-label" for="configAutoApproveEmployee">Auto-approve Employee Properties</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6 class="mb-3">Limits</h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Max Images per Property</label>
+                                    <input type="number" class="form-control" id="configMaxImages" min="1" max="20" value="10">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Max Properties per Member</label>
+                                    <input type="number" class="form-control" id="configMaxProperties" min="1" max="50" value="5">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Default Commission %</label>
+                                    <input type="number" class="form-control" id="configCommission" min="0" max="100" step="0.5" value="2">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i> Save Configuration
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="propertyTypeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="propertyTypeModalTitle">Add Property Type</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="propertyTypeForm">
+                        <input type="hidden" id="ptId">
+                        <div class="mb-3">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="ptName" required maxlength="100">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Slug <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="ptSlug" required maxlength="50" pattern="[a-z0-9_-]+">
+                            <small class="text-muted">Lowercase, no spaces (e.g., "flat", "villa-house")</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Icon (Font Awesome class)</label>
+                            <input type="text" class="form-control" id="ptIcon" placeholder="fa-building">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" id="ptDescription" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Display Order</label>
+                            <input type="number" class="form-control" id="ptOrder" value="0" min="0">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="savePropertyType()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="amenityModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="amenityModalTitle">Add Amenity</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="amenityForm">
+                        <input type="hidden" id="amId">
+                        <div class="mb-3">
+                            <label class="form-label">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="amCategory" required>
+                                <option value="SECURITY">Security</option>
+                                <option value="LIFESTYLE">Lifestyle</option>
+                                <option value="UTILITIES">Utilities</option>
+                                <option value="PARKING">Parking</option>
+                                <option value="OUTDOOR">Outdoor</option>
+                                <option value="INDOOR">Indoor</option>
+                                <option value="CONNECTIVITY">Connectivity</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="amName" required maxlength="100">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Icon (Font Awesome class)</label>
+                            <input type="text" class="form-control" id="amIcon" placeholder="fa-shield-alt">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Display Order</label>
+                            <input type="number" class="form-control" id="amOrder" value="0" min="0">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveAmenity()">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        const API_BASE = '/api/v1/real-dreams';
+        let currentCompanyId = null;
+        let currentConfig = null;
+        let propertyTypeModal, amenityModal;
+
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const name = userData.full_name || 'Staff Member';
+            const role = userData.role_name || 'Employee';
+            const empId = userData.emp_code || userData.employee_code || '-';
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            document.getElementById('headerUserInitials').textContent = initials;
+            document.getElementById('headerUserName').textContent = name;
+            document.getElementById('headerUserEmpId').textContent = empId;
+            const roleEl = document.getElementById('headerUserRole');
+            roleEl.textContent = role;
+            if (['VGK Mentor', 'VGK4U Supreme', 'VGK4U'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-supreme';
+            } else if (['HR', 'HR Manager'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-hr';
+            } else if (['Key Leadership', 'Leadership Role', 'Team Leader', 'Manager', 'Executive Admin'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-leadership';
+            } else {
+                roleEl.className = 'user-info-role role-badge-default';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            updateHeaderUserInfo();
+            
+            propertyTypeModal = new bootstrap.Modal(document.getElementById('propertyTypeModal'));
+            amenityModal = new bootstrap.Modal(document.getElementById('amenityModal'));
+            
+            loadUserInfo();
+            loadCompanies();
+            setupFormListeners();
+            setupColorPickers();
+        });
+
+        async function loadUserInfo() {
+            try {
+                await staffFetchJson('/api/v1/staff/auth/me');
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                console.error('[DC-PAGE] Network error loading user info:', e);
+            }
+        }
+
+        async function loadCompanies() {
+            try {
+                const data = await staffFetchJson(`${API_BASE}/config/companies`);
+                
+                const select = document.getElementById('companySelect');
+                select.innerHTML = '<option value="">-- Select Company --</option>';
+                
+                data.companies.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.company.id;
+                    opt.textContent = `${c.company.company_name} (${c.company.company_code})`;
+                    if (c.is_enabled) opt.textContent += ' [Enabled]';
+                    select.appendChild(opt);
+                });
+                
+                if (data.companies.length === 1) {
+                    select.value = data.companies[0].company.id;
+                    onCompanyChange();
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast('Failed to load companies', 'error');
+            }
+        }
+
+        async function onCompanyChange() {
+            currentCompanyId = document.getElementById('companySelect').value;
+            if (!currentCompanyId) {
+                document.getElementById('dashboardContent').style.display = 'none';
+                document.getElementById('notEnabledMessage').style.display = 'none';
+                return;
+            }
+            
+            await loadDashboard();
+        }
+
+        async function loadDashboard() {
+            try {
+                const data = await staffFetchJson(`${API_BASE}/dashboard/stats?company_id=${currentCompanyId}`);
+                
+                if (!data.enabled) {
+                    document.getElementById('dashboardContent').style.display = 'none';
+                    document.getElementById('notEnabledMessage').style.display = 'block';
+                    document.getElementById('seedBtn').style.display = 'none';
+                    document.getElementById('partnerManageBtn').style.display = 'none';
+                    return;
+                }
+                
+                document.getElementById('notEnabledMessage').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'block';
+                document.getElementById('seedBtn').style.display = 'inline-flex';
+                document.getElementById('partnerManageBtn').style.display = 'inline-flex';
+                
+                currentConfig = data.config;
+                
+                document.getElementById('statProperties').textContent = data.stats.total_properties;
+                document.getElementById('statApproved').textContent = data.stats.approved_properties;
+                document.getElementById('statPending').textContent = data.stats.pending_properties;
+                document.getElementById('statPartners').textContent = data.stats.total_partners;
+                document.getElementById('statLeads').textContent = data.stats.total_leads;
+                document.getElementById('statDeals').textContent = data.stats.total_deals;
+                
+                loadPropertyTypes();
+                loadAmenities();
+                loadBanner();
+                loadConfig();
+                
+            } catch (e) {
+                showToast('Failed to load dashboard', 'error');
+            }
+        }
+
+        async function enableRealDreams() {
+            try {
+                await staffFetchJson(`${API_BASE}/config/company`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        company_id: parseInt(currentCompanyId),
+                        is_enabled: true
+                    })
+                });
+                
+                showToast('Real Dreams enabled successfully!', 'success');
+                await loadDashboard();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast('Failed to enable Real Dreams', 'error');
+            }
+        }
+
+        async function seedDefaults() {
+            if (!confirm('This will add default property types and amenities. Continue?')) return;
+            
+            try {
+                const data = await staffFetchJson(`${API_BASE}/config/seed-defaults?company_id=${currentCompanyId}`, {
+                    method: 'POST'
+                });
+                
+                if (data.success) {
+                    showToast(`Created ${data.created_property_types} types and ${data.created_amenities} amenities`, 'success');
+                    loadPropertyTypes();
+                    loadAmenities();
+                }
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast('Failed to seed defaults', 'error');
+            }
+        }
+
+        async function loadPropertyTypes() {
+            try {
+                const data = await staffFetchJson(`${API_BASE}/config/property-types?company_id=${currentCompanyId}&include_inactive=true`);
+                
+                const tbody = document.getElementById('propertyTypesBody');
+                if (data.property_types.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4">No property types found. Click "Seed Default Data" to add common types.</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.property_types.map(pt => `
+                    <tr>
+                        <td><i class="fas ${pt.icon || 'fa-building'} text-success"></i></td>
+                        <td><strong>${pt.name}</strong></td>
+                        <td><code>${pt.slug}</code></td>
+                        <td>${pt.description || '-'}</td>
+                        <td>${pt.display_order}</td>
+                        <td><span class="status-badge ${pt.is_active ? 'status-active' : 'status-inactive'}">${pt.is_active ? 'Active' : 'Inactive'}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary icon-btn me-1" onclick="editPropertyType(${pt.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger icon-btn" onclick="deletePropertyType(${pt.id}, '${pt.name}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                document.getElementById('propertyTypesBody').innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Failed to load property types</td></tr>';
+            }
+        }
+
+        async function loadAmenities() {
+            try {
+                const data = await staffFetchJson(`${API_BASE}/config/amenities?company_id=${currentCompanyId}&include_inactive=true`);
+                
+                const container = document.getElementById('amenitiesContainer');
+                if (data.amenities.length === 0) {
+                    container.innerHTML = '<div class="text-center py-4">No amenities found. Click "Seed Default Data" to add common amenities.</div>';
+                    return;
+                }
+                
+                let html = '';
+                for (const [category, items] of Object.entries(data.by_category)) {
+                    html += `
+                        <div class="amenity-category">
+                            <div class="amenity-category-header">
+                                <i class="fas fa-folder"></i> ${category} (${items.length})
+                            </div>
+                            <div class="amenity-grid">
+                                ${items.map(am => `
+                                    <div class="amenity-item ${am.is_active ? '' : 'opacity-50'}">
+                                        <span><i class="fas ${am.icon || 'fa-check'}"></i> ${am.name}</span>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-primary icon-btn me-1" onclick="editAmenity(${am.id})"><i class="fas fa-edit"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger icon-btn" onclick="deleteAmenity(${am.id}, '${am.name}')"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                container.innerHTML = html;
+            } catch (e) {
+                document.getElementById('amenitiesContainer').innerHTML = '<div class="text-center py-4 text-danger">Failed to load amenities</div>';
+            }
+        }
+
+        async function loadBanner() {
+            try {
+                const data = await staffFetchJson(`${API_BASE}/config/banner?company_id=${currentCompanyId}`);
+                
+                if (data.banner) {
+                    document.getElementById('bannerText').value = data.banner.banner_text || '';
+                    document.getElementById('bannerSubtext').value = data.banner.banner_subtext || '';
+                    document.getElementById('bannerBgColor').value = data.banner.background_color || '#10B981';
+                    document.getElementById('bannerBgColorText').value = data.banner.background_color || '#10B981';
+                    document.getElementById('bannerTextColor').value = data.banner.text_color || '#FFFFFF';
+                    document.getElementById('bannerTextColorText').value = data.banner.text_color || '#FFFFFF';
+                    document.getElementById('bannerActive').checked = data.banner.is_active;
+                    document.getElementById('bannerOfferDetails').value = data.banner.offer_details || '';
+                    document.getElementById('bannerTerms').value = data.banner.terms_conditions || '';
+                    updateBannerPreview();
+                }
+            } catch (e) {
+                console.error('Failed to load banner:', e);
+            }
+        }
+
+        function loadConfig() {
+            if (!currentConfig) return;
+            document.getElementById('configEnabled').checked = currentConfig.is_enabled;
+            document.getElementById('configPartnerListings').checked = currentConfig.allow_partner_listings;
+            document.getElementById('configEmployeeListings').checked = currentConfig.allow_employee_listings;
+            document.getElementById('configMemberListings').checked = currentConfig.allow_member_listings;
+            document.getElementById('configAutoApprovePartner').checked = currentConfig.auto_approve_partner_properties;
+            document.getElementById('configAutoApproveEmployee').checked = currentConfig.auto_approve_employee_properties;
+            document.getElementById('configMaxImages').value = currentConfig.max_images_per_property;
+            document.getElementById('configMaxProperties').value = currentConfig.max_properties_per_member;
+            document.getElementById('configCommission').value = currentConfig.default_commission_percent || 2;
+        }
+
+        function setupFormListeners() {
+            document.getElementById('bannerForm').onsubmit = async (e) => {
+                e.preventDefault();
+                await saveBanner();
+            };
+            
+            document.getElementById('configForm').onsubmit = async (e) => {
+                e.preventDefault();
+                await saveConfig();
+            };
+            
+            document.getElementById('ptName').oninput = function() {
+                const slug = this.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                if (!document.getElementById('ptId').value) {
+                    document.getElementById('ptSlug').value = slug;
+                }
+            };
+        }
+
+        function setupColorPickers() {
+            document.getElementById('bannerBgColor').oninput = function() {
+                document.getElementById('bannerBgColorText').value = this.value;
+                updateBannerPreview();
+            };
+            document.getElementById('bannerBgColorText').oninput = function() {
+                document.getElementById('bannerBgColor').value = this.value;
+                updateBannerPreview();
+            };
+            document.getElementById('bannerTextColor').oninput = function() {
+                document.getElementById('bannerTextColorText').value = this.value;
+                updateBannerPreview();
+            };
+            document.getElementById('bannerTextColorText').oninput = function() {
+                document.getElementById('bannerTextColor').value = this.value;
+                updateBannerPreview();
+            };
+            document.getElementById('bannerText').oninput = updateBannerPreview;
+            document.getElementById('bannerSubtext').oninput = updateBannerPreview;
+        }
+
+        function updateBannerPreview() {
+            const preview = document.getElementById('bannerPreview');
+            const bgColor = document.getElementById('bannerBgColor').value;
+            const textColor = document.getElementById('bannerTextColor').value;
+            preview.style.background = `linear-gradient(135deg, ${bgColor} 0%, ${adjustColor(bgColor, -20)} 100%)`;
+            preview.style.color = textColor;
+            document.getElementById('previewText').textContent = document.getElementById('bannerText').value || 'Banner Text';
+            document.getElementById('previewSubtext').textContent = document.getElementById('bannerSubtext').value || 'Subtext';
+        }
+
+        function adjustColor(color, amount) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+            const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00FF) + amount));
+            const b = Math.min(255, Math.max(0, (num & 0x0000FF) + amount));
+            return '#' + (0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1);
+        }
+
+        function showAddPropertyTypeModal() {
+            document.getElementById('propertyTypeModalTitle').textContent = 'Add Property Type';
+            document.getElementById('ptId').value = '';
+            document.getElementById('ptName').value = '';
+            document.getElementById('ptSlug').value = '';
+            document.getElementById('ptIcon').value = '';
+            document.getElementById('ptDescription').value = '';
+            document.getElementById('ptOrder').value = '0';
+            propertyTypeModal.show();
+        }
+
+        async function editPropertyType(id) {
+            try {
+                const data = await staffFetchJson(`${API_BASE}/config/property-types?company_id=${currentCompanyId}&include_inactive=true`);
+                const pt = data.property_types.find(p => p.id === id);
+                if (!pt) return;
+                
+                document.getElementById('propertyTypeModalTitle').textContent = 'Edit Property Type';
+                document.getElementById('ptId').value = pt.id;
+                document.getElementById('ptName').value = pt.name;
+                document.getElementById('ptSlug').value = pt.slug;
+                document.getElementById('ptIcon').value = pt.icon || '';
+                document.getElementById('ptDescription').value = pt.description || '';
+                document.getElementById('ptOrder').value = pt.display_order;
+                propertyTypeModal.show();
+            } catch (e) {
+                showToast('Failed to load property type', 'error');
+            }
+        }
+
+        async function savePropertyType() {
+            const id = document.getElementById('ptId').value;
+            const data = {
+                company_id: parseInt(currentCompanyId),
+                name: document.getElementById('ptName').value,
+                slug: document.getElementById('ptSlug').value,
+                icon: document.getElementById('ptIcon').value || null,
+                description: document.getElementById('ptDescription').value || null,
+                display_order: parseInt(document.getElementById('ptOrder').value) || 0
+            };
+            
+            try {
+                if (id) {
+                    await staffFetchJson(`${API_BASE}/config/property-types/${id}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(data)
+                    });
+                } else {
+                    await staffFetchJson(`${API_BASE}/config/property-types`, {
+                        method: 'POST',
+                        body: JSON.stringify(data)
+                    });
+                }
+                
+                showToast('Property type saved', 'success');
+                propertyTypeModal.hide();
+                loadPropertyTypes();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast(e.message || 'Failed to save property type', 'error');
+            }
+        }
+
+        async function deletePropertyType(id, name) {
+            if (!confirm(`Delete "${name}"?`)) return;
+            
+            try {
+                const data = await staffFetchJson(`${API_BASE}/config/property-types/${id}`, {
+                    method: 'DELETE'
+                });
+                showToast(data.message, 'success');
+                loadPropertyTypes();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast('Failed to delete', 'error');
+            }
+        }
+
+        function showAddAmenityModal() {
+            document.getElementById('amenityModalTitle').textContent = 'Add Amenity';
+            document.getElementById('amId').value = '';
+            document.getElementById('amCategory').value = 'LIFESTYLE';
+            document.getElementById('amName').value = '';
+            document.getElementById('amIcon').value = '';
+            document.getElementById('amOrder').value = '0';
+            amenityModal.show();
+        }
+
+        async function editAmenity(id) {
+            try {
+                const data = await staffFetchJson(`${API_BASE}/config/amenities?company_id=${currentCompanyId}&include_inactive=true`);
+                const am = data.amenities.find(a => a.id === id);
+                if (!am) return;
+                
+                document.getElementById('amenityModalTitle').textContent = 'Edit Amenity';
+                document.getElementById('amId').value = am.id;
+                document.getElementById('amCategory').value = am.category;
+                document.getElementById('amName').value = am.name;
+                document.getElementById('amIcon').value = am.icon || '';
+                document.getElementById('amOrder').value = am.display_order;
+                amenityModal.show();
+            } catch (e) {
+                showToast('Failed to load amenity', 'error');
+            }
+        }
+
+        async function saveAmenity() {
+            const id = document.getElementById('amId').value;
+            const data = {
+                company_id: parseInt(currentCompanyId),
+                category: document.getElementById('amCategory').value,
+                name: document.getElementById('amName').value,
+                icon: document.getElementById('amIcon').value || null,
+                display_order: parseInt(document.getElementById('amOrder').value) || 0
+            };
+            
+            try {
+                if (id) {
+                    await staffFetchJson(`${API_BASE}/config/amenities/${id}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(data)
+                    });
+                } else {
+                    await staffFetchJson(`${API_BASE}/config/amenities`, {
+                        method: 'POST',
+                        body: JSON.stringify(data)
+                    });
+                }
+                
+                showToast('Amenity saved', 'success');
+                amenityModal.hide();
+                loadAmenities();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast(e.message || 'Failed to save amenity', 'error');
+            }
+        }
+
+        async function deleteAmenity(id, name) {
+            if (!confirm(`Delete "${name}"?`)) return;
+            
+            try {
+                const data = await staffFetchJson(`${API_BASE}/config/amenities/${id}`, {
+                    method: 'DELETE'
+                });
+                showToast(data.message, 'success');
+                loadAmenities();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast('Failed to delete', 'error');
+            }
+        }
+
+        async function saveBanner() {
+            if (!currentCompanyId) {
+                showToast('Please select a company first', 'error');
+                return;
+            }
+            try {
+                await staffFetchJson(`${API_BASE}/config/banner?company_id=${currentCompanyId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        banner_text: document.getElementById('bannerText').value,
+                        banner_subtext: document.getElementById('bannerSubtext').value,
+                        background_color: document.getElementById('bannerBgColor').value,
+                        text_color: document.getElementById('bannerTextColor').value,
+                        is_active: document.getElementById('bannerActive').checked,
+                        offer_details: document.getElementById('bannerOfferDetails').value,
+                        terms_conditions: document.getElementById('bannerTerms').value
+                    })
+                });
+                
+                showToast('Banner saved', 'success');
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast('Failed to save banner', 'error');
+            }
+        }
+
+        async function saveConfig() {
+            if (!currentCompanyId) {
+                showToast('Please select a company first', 'error');
+                return;
+            }
+            try {
+                await staffFetchJson(`${API_BASE}/config/company`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        company_id: parseInt(currentCompanyId),
+                        is_enabled: document.getElementById('configEnabled').checked,
+                        allow_partner_listings: document.getElementById('configPartnerListings').checked,
+                        allow_employee_listings: document.getElementById('configEmployeeListings').checked,
+                        allow_member_listings: document.getElementById('configMemberListings').checked,
+                        auto_approve_partner_properties: document.getElementById('configAutoApprovePartner').checked,
+                        auto_approve_employee_properties: document.getElementById('configAutoApproveEmployee').checked,
+                        max_images_per_property: parseInt(document.getElementById('configMaxImages').value),
+                        max_properties_per_member: parseInt(document.getElementById('configMaxProperties').value),
+                        default_commission_percent: parseFloat(document.getElementById('configCommission').value)
+                    })
+                });
+                
+                showToast('Configuration saved', 'success');
+                loadDashboard();
+            } catch (e) {
+                if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
+                showToast('Failed to save configuration', 'error');
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast show align-items-center text-white bg-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'primary'} border-0`;
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+    </script>
+    </div>
+</body>
+</html>

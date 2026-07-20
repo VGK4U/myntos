@@ -1,0 +1,3180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyntReal LLP - Tasks Assigned To Me</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+
+        .content-area { padding: 24px; }
+        
+        .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+        @media (max-width: 1200px) { .stats-row { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        .stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 16px; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .stat-card.active { border: 2px solid #4f46e5; }
+        .stat-icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .stat-icon.total { background: #e0e7ff; color: #4338ca; }
+        .stat-icon.pending { background: #fef3c7; color: #d97706; }
+        .stat-icon.in-progress { background: #dbeafe; color: #2563eb; }
+        .stat-icon.completed { background: #d1fae5; color: #059669; }
+        .stat-icon.overdue { background: #fee2e2; color: #dc2626; }
+        .stat-value { font-size: 28px; font-weight: 700; color: #1f2937; }
+        .stat-label { font-size: 14px; color: #6b7280; }
+        
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: none; }
+        .card-header { background: transparent; border-bottom: 1px solid #e5e7eb; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .card-header h5 { margin: 0; font-weight: 600; color: #1f2937; }
+        .card-body { padding: 0; }
+        
+        .filters-bar { padding: 16px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .filters-bar select, .filters-bar input { padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        
+        .table { margin: 0; }
+        .table th { font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase; padding: 12px 16px; border-top: none; background: #f9fafb; }
+        .table td { padding: 14px 16px; vertical-align: middle; color: #374151; font-size: 14px; }
+        
+        /* DC Protocol (Dec 21, 2025): Phase task styling */
+        .phase-task-row { background: linear-gradient(90deg, #f0f9ff 0%, #fff 100%); }
+        .phase-task-row:hover { background: linear-gradient(90deg, #e0f2fe 0%, #f8f9fa 100%); }
+        
+        /* DC Protocol (Dec 21, 2025): Phase timeline styles */
+        .phase-timeline { position: relative; padding-left: 24px; }
+        .phase-item { position: relative; padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb; }
+        .phase-item:hover { border-color: #d1d5db; }
+        .phase-connector { position: absolute; left: -16px; top: 20px; width: 2px; height: calc(100% + 8px); background: #d1d5db; }
+        .phase-connector.last { display: none; }
+        .phase-icon { position: absolute; left: -24px; top: 12px; width: 18px; height: 18px; border-radius: 50%; background: #f3f4f6; border: 2px solid #d1d5db; display: flex; align-items: center; justify-content: center; font-size: 8px; z-index: 1; }
+        .phase-item.phase-pending .phase-icon { border-color: #fbbf24; color: #fbbf24; }
+        .phase-item.phase-in-progress .phase-icon { border-color: #3b82f6; color: #3b82f6; background: #dbeafe; }
+        .phase-item.phase-completed .phase-icon { border-color: #10b981; color: #10b981; background: #d1fae5; }
+        .phase-item.phase-cancelled .phase-icon { border-color: #9ca3af; color: #9ca3af; }
+        .phase-item.phase-on-hold .phase-icon { border-color: #ec4899; color: #ec4899; }
+        .phase-content { margin-left: 8px; }
+        .phase-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .phase-title { font-weight: 600; color: #1f2937; }
+        .phase-meta { display: flex; gap: 16px; font-size: 12px; color: #6b7280; margin-top: 4px; flex-wrap: wrap; }
+        .phase-description { font-size: 13px; color: #4b5563; }
+        .phase-task-link { font-size: 12px; }
+        
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-pending { background: #fef3c7; color: #92400e; }
+        .badge-in_progress { background: #dbeafe; color: #1e40af; }
+        .badge-completed { background: #dcfce7; color: #166534; }
+        .badge-cancelled { background: #f3f4f6; color: #6b7280; }
+        .badge-on_hold { background: #fce7f3; color: #9d174d; }
+        
+        .badge-low { background: #d1fae5; color: #065f46; }
+        .badge-medium { background: #fef3c7; color: #92400e; }
+        .badge-high { background: #fee2e2; color: #991b1b; }
+        .badge-urgent { background: #dc2626; color: white; }
+        
+        .badge-category { background: #e0e7ff; color: #4338ca; }
+        .badge-primary-role { background: #4f46e5; color: white; font-size: 11px; }
+        .badge-secondary-role { background: #9ca3af; color: white; font-size: 11px; }
+        
+        .btn-sm { padding: 6px 10px; font-size: 13px; }
+        .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        
+        .modal-content { border-radius: 12px; border: none; }
+        .modal-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; border-bottom: none; padding: 16px 24px; border-radius: 12px 12px 0 0; }
+        .modal-header .btn-close { filter: invert(1); }
+        .modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; border-radius: 0 0 12px 12px; }
+        
+        .task-title { font-weight: 600; color: #1f2937; }
+        .task-title:hover { color: #4f46e5; cursor: pointer; }
+        
+        .assigned-by { font-size: 13px; color: #6b7280; }
+        .assigned-by strong { color: #374151; }
+        
+        .due-date { font-size: 13px; }
+        .due-date.overdue { color: #dc2626; font-weight: 600; }
+        .due-date.today { color: #d97706; font-weight: 600; }
+        .due-date.upcoming { color: #059669; }
+        
+        .progress-section { margin-bottom: 20px; }
+        .progress-slider { width: 100%; height: 8px; border-radius: 4px; background: #e5e7eb; appearance: none; cursor: pointer; }
+        .progress-slider::-webkit-slider-thumb { appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #4f46e5; cursor: pointer; }
+        
+        .time-entry-form { background: #f9fafb; border-radius: 8px; padding: 16px; margin-top: 16px; }
+        
+        .comments-section { margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 16px; }
+        .comment-item { padding: 12px; background: #f9fafb; border-radius: 8px; margin-bottom: 8px; }
+        .comment-author { font-weight: 600; color: #374151; }
+        .comment-time { font-size: 12px; color: #9ca3af; }
+        .comment-text { margin-top: 4px; color: #4b5563; }
+        
+        /* File Attachment Styles */
+        .file-attachment-list { margin-top: 12px; }
+        .attachment-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+        .attachment-info { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .attachment-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .attachment-icon.image { background: #dbeafe; color: #2563eb; }
+        .attachment-icon.document { background: #fee2e2; color: #dc2626; }
+        .attachment-details { flex: 1; }
+        .attachment-name { font-size: 13px; font-weight: 500; color: #1f2937; display: block; }
+        .attachment-meta { font-size: 11px; color: #6b7280; }
+        
+        /* Upload Progress Styles */
+        .upload-progress-container { margin-top: 12px; display: none; }
+        .upload-progress-container.active { display: block; }
+        .upload-progress-bar { width: 100%; height: 24px; background: #e5e7eb; border-radius: 12px; overflow: hidden; position: relative; }
+        .upload-progress-fill { height: 100%; background: linear-gradient(90deg, #4f46e5, #8b5cf6); transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; }
+        .upload-progress-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 12px; font-weight: 600; color: #374151; z-index: 1; }
+        .upload-progress-file { font-size: 13px; color: #6b7280; margin-top: 4px; }
+        @media (max-width: 768px) {
+            .content-area { padding: 12px; }
+            .stat-card { padding: 12px; gap: 10px; }
+            .stat-icon { width: 36px; height: 36px; font-size: 16px; }
+            .stat-value { font-size: 20px; }
+            .stat-label { font-size: 12px; }
+            .filters-bar { padding: 10px 12px; gap: 8px; }
+            .filters-bar select, .filters-bar input { padding: 6px 8px; font-size: 12px; min-width: 0; flex: 1 1 calc(50% - 4px); }
+            .card-header { padding: 12px 14px; gap: 8px; }
+            .card-header h5 { font-size: 14px; }
+            .table th { font-size: 10px; padding: 8px 6px; white-space: nowrap; }
+            .table td { padding: 10px 6px; font-size: 12px; }
+            .task-title { font-size: 13px; padding: 8px 4px; min-height: 44px; display: inline-flex; align-items: center; }
+            .badge { font-size: 10px; padding: 2px 6px; }
+            .badge-primary-role, .badge-secondary-role { font-size: 9px; }
+            .action-btns { gap: 4px; }
+            .btn-sm { padding: 6px 8px; font-size: 11px; min-width: 36px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+            .modal-dialog { margin: 8px; max-width: calc(100vw - 16px); }
+            .modal-dialog.modal-lg { max-width: calc(100vw - 16px); }
+            .modal-body { padding: 16px; max-height: 80vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            .modal-content { border-radius: 8px; }
+            .empty-state { padding: 30px 12px; }
+            .empty-state i { font-size: 32px; }
+            .phase-timeline { padding-left: 16px; }
+            .phase-item { padding: 8px 10px; }
+            .phase-title { font-size: 13px; }
+            .phase-meta { font-size: 11px; gap: 8px; }
+            .phase-content { margin-left: 4px; }
+            .assigned-by { font-size: 12px; }
+        }
+        th[data-sort-field] { user-select: none; }
+        th[data-sort-field]:hover { background: #e5e7eb !important; }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-group label { font-weight: 600; color: #374151; margin-bottom: 6px; display: block; }
+        .form-control, .form-select { border-radius: 8px; border: 1px solid #d1d5db; padding: 10px 14px; }
+        .form-control:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        
+        .employee-search-results { max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px; background: white; position: absolute; z-index: 1050; width: 100%; }
+        .employee-search-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #e5e7eb; }
+        .employee-search-item:hover { background: #f3f4f6; }
+        .employee-search-item:last-child { border-bottom: none; }
+        
+        .selected-assignees { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .selected-assignee { background: #e0e7ff; color: #4338ca; padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+        .selected-assignee.primary { background: #4f46e5; color: white; }
+        .selected-assignee .remove-btn { cursor: pointer; opacity: 0.7; }
+        .selected-assignee .remove-btn:hover { opacity: 1; }
+        
+        .char-counter { font-size: 12px; color: #6b7280; text-align: right; margin-top: 4px; }
+        .char-counter.warning { color: #d97706; }
+        .char-counter.error { color: #dc2626; }
+        
+        .file-preview { display: flex; flex-direction: column; gap: 8px; }
+        .file-preview-item { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between; }
+        .file-preview-info { display: flex; align-items: center; gap: 12px; flex: 1; }
+        .file-preview-icon { width: 40px; height: 40px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .file-preview-icon.image { background: #dbeafe; color: #2563eb; }
+        .file-preview-icon.document { background: #fee2e2; color: #dc2626; }
+        .file-preview-details { flex: 1; }
+        .file-preview-name { font-weight: 500; font-size: 14px; color: #1f2937; display: block; }
+        .file-preview-size { font-size: 12px; color: #6b7280; }
+        .file-preview-size.error { color: #dc2626; font-weight: 600; }
+        
+        .phase-saved-indicator { display: inline-flex; align-items: center; gap: 4px; color: #10b981; font-size: 12px; font-weight: 500; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .phase-item.phase-confirmed { background: linear-gradient(135deg, #f0fdf4 0%, #fff 100%); border-color: #86efac; }
+        .phase-confirmed-title { color: #166534; }
+        .phase-confirmed-details { color: #6b7280; }
+    </style>
+    <!-- DC-FIX: jQuery for staff pages -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="stats-row">
+                <div class="stat-card" onclick="filterByStatus('all')" id="stat-all">
+                    <div class="stat-icon total"><i class="fas fa-tasks"></i></div>
+                    <div>
+                        <div class="stat-value" id="totalCount">0</div>
+                        <div class="stat-label">Total Tasks</div>
+                    </div>
+                </div>
+                <div class="stat-card" onclick="filterByStatus('pending')" id="stat-pending">
+                    <div class="stat-icon pending"><i class="fas fa-clock"></i></div>
+                    <div>
+                        <div class="stat-value" id="pendingCount">0</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                </div>
+                <div class="stat-card" onclick="filterByStatus('in_progress')" id="stat-in_progress">
+                    <div class="stat-icon in-progress"><i class="fas fa-spinner"></i></div>
+                    <div>
+                        <div class="stat-value" id="inProgressCount">0</div>
+                        <div class="stat-label">In Progress</div>
+                    </div>
+                </div>
+                <div class="stat-card" onclick="filterByStatus('completed')" id="stat-completed">
+                    <div class="stat-icon completed"><i class="fas fa-check-circle"></i></div>
+                    <div>
+                        <div class="stat-value" id="completedCount">0</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                </div>
+                <div class="stat-card" onclick="filterByStatus('overdue')" id="stat-overdue">
+                    <div class="stat-icon overdue"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div>
+                        <div class="stat-value" id="overdueCount">0</div>
+                        <div class="stat-label">Overdue</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-list me-2"></i>My Tasks</h5>
+                    <button class="btn btn-primary btn-sm" onclick="openCreateTaskModal()">
+                        <i class="fas fa-plus me-1"></i>Create Task
+                    </button>
+                </div>
+                <div class="filters-bar">
+                    <select id="dateFilter" onchange="loadTasks()">
+                        <option value="all">All Tasks</option>
+                        <option value="today_pending">Today Pending</option>
+                        <option value="tomorrow_pending">Tomorrow Pending</option>
+                        <option value="next_week_pending">Next Week Pending</option>
+                        <option value="overdue_pending">Overdue Pending</option>
+                    </select>
+                    <select id="statusFilter" onchange="loadTasks()">
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="on_hold">On Hold</option>
+                    </select>
+                    <select id="priorityFilter" onchange="loadTasks()">
+                        <option value="all">All Priorities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                    <select id="roleFilter" onchange="loadTasks()">
+                        <option value="all">All Roles</option>
+                        <option value="primary">Primary Assignee</option>
+                        <option value="secondary">Secondary Assignee</option>
+                    </select>
+                    <input type="text" id="searchInput" placeholder="Search tasks..." onkeyup="debounceSearch()">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="loadTasks()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="cursor: pointer;" data-sort-field="title" onclick="sortTasks('title')">Task <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer;" data-sort-field="assigned_by_name" onclick="sortTasks('assigned_by_name')">Assigned By <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer;" data-sort-field="my_role" onclick="sortTasks('my_role')">My Role <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer;" data-sort-field="priority" onclick="sortTasks('priority')">Priority <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer;" data-sort-field="due_date" onclick="sortTasks('due_date')">Due Date <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer;" data-sort-field="created_at" onclick="sortTasks('created_at')">Assigned Date <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer;" data-sort-field="status" onclick="sortTasks('status')">Status <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer;" data-sort-field="progress" onclick="sortTasks('progress')">Progress <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer;" data-sort-field="phases_completed" onclick="sortTasks('phases_completed')">Subtasks <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer;" data-sort-field="pending_days" onclick="sortTasks('pending_days')">Pending Days <i class="fas fa-sort"></i></th>
+                                    <th style="cursor: pointer;" data-sort-field="attachment_count" onclick="sortTasks('attachment_count')">Attachments <i class="fas fa-sort"></i></th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tasksTableBody">
+                                <tr>
+                                    <td colspan="12" class="text-center py-5">
+                                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                                        <p class="mt-2">Loading tasks...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="taskDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-tasks me-2"></i>Task Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="taskDetailContent">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveProgressBtn" onclick="saveTaskProgress()">
+                        <i class="fas fa-save me-1"></i>Save Progress
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="addSubTaskModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Add Sub-Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="subTaskParentId">
+                    <div class="mb-3">
+                        <label class="form-label">Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="subTaskTitle" placeholder="Enter sub-task title" maxlength="256">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="subTaskDescription" rows="3" placeholder="Describe the sub-task..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Assign To <span class="text-danger">*</span></label>
+                        <select class="form-select" id="subTaskAssignee">
+                            <option value="">Select employee...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Target Date</label>
+                        <input type="date" class="form-control" id="subTaskTargetDate">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveNewSubTask()">
+                        <i class="fas fa-plus me-1"></i>Add Sub-Task
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="updatePhaseStatusModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Update Sub-Task Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="updatePhaseTaskId">
+                    <input type="hidden" id="updatePhaseId">
+                    <div class="mb-3">
+                        <label class="form-label">Sub-Task</label>
+                        <p id="updatePhaseTitleDisplay" class="fw-bold mb-0"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status <span class="text-danger">*</span></label>
+                        <select class="form-select" id="updatePhaseStatusSelect">
+                            <option value="pending">Pending</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="on_hold">On Hold</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="phaseCompletionNotesGroup" style="display: none;">
+                        <label class="form-label">Completion Notes</label>
+                        <textarea class="form-control" id="phaseCompletionNotesInput" rows="2" placeholder="Add notes..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="savePhaseStatusUpdate()">
+                        <i class="fas fa-save me-1"></i>Update Status
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="logTimeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-clock me-2"></i>Log Time</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="logTimeForm">
+                        <div class="form-group mb-3">
+                            <label class="form-label">Hours Worked <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="hoursWorked" min="0.25" max="24" step="0.25" required>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">Work Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="workDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" id="timeNotes" rows="3" placeholder="What did you work on?"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitTimeLog()">
+                        <i class="fas fa-plus me-1"></i>Log Time
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js?v=1764165148"></script>
+    <script>
+        let currentUser = null;
+        let currentTask = null;
+        let searchTimeout = null;
+        let sortField = null;
+        let sortDirection = 'asc';
+        let currentTasksData = [];
+        const API_BASE = '/api/v1';
+        let allEmployees = [];
+        let selectedPrimaryAssignee = null;
+        let selectedSecondaryAssignees = [];
+        let selectedCustomAssigner = null;
+        let taskPhases = [];
+        let phaseAssigneeSearchTimeouts = {};
+        let totalAvailableEmployees = 0;
+        let searchDebounceTimer = null;
+        let currentSearchToken = 0;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Tasks Assigned To Me', 'fas fa-inbox');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            currentUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
+
+            const nestedModalIds = ['addSubTaskModal', 'updatePhaseStatusModal', 'logTimeModal'];
+            nestedModalIds.forEach(modalId => {
+                const el = document.getElementById(modalId);
+                if (!el) return;
+                el.addEventListener('show.bs.modal', function() {
+                    const taskModal = document.getElementById('taskDetailModal');
+                    if (taskModal && taskModal.classList.contains('show')) {
+                        taskModal.style.opacity = '0';
+                        taskModal.style.pointerEvents = 'none';
+                    }
+                });
+                el.addEventListener('hidden.bs.modal', function() {
+                    const taskModal = document.getElementById('taskDetailModal');
+                    if (taskModal) {
+                        taskModal.style.opacity = '1';
+                        taskModal.style.pointerEvents = '';
+                    }
+                    if (document.querySelectorAll('.modal.show').length > 0) {
+                        document.body.classList.add('modal-open');
+                    }
+                });
+            });
+
+            document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+            
+            await loadTasks();
+            loadEmployees();
+            
+            const primaryInput = document.getElementById('primaryAssigneeSearch');
+            const secondaryInput = document.getElementById('secondaryAssigneeSearch');
+            const customAssignerInput = document.getElementById('customAssignerSearch');
+            
+            primaryInput.addEventListener('input', () => searchAssignees('primary'));
+            secondaryInput.addEventListener('input', () => searchAssignees('secondary'));
+            customAssignerInput.addEventListener('input', () => searchAssignees('customAssigner'));
+            
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#primaryAssigneeSearch') && !e.target.closest('#primarySearchResults')) {
+                    document.getElementById('primarySearchResults').style.display = 'none';
+                }
+                if (!e.target.closest('#secondaryAssigneeSearch') && !e.target.closest('#secondarySearchResults')) {
+                    document.getElementById('secondarySearchResults').style.display = 'none';
+                }
+                if (!e.target.closest('#customAssignerSearch') && !e.target.closest('#customAssignerSearchResults')) {
+                    document.getElementById('customAssignerSearchResults').style.display = 'none';
+                }
+            });
+        });
+        
+        async function loadTasks() {
+            const dateFilter = document.getElementById('dateFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            const priorityFilter = document.getElementById('priorityFilter').value;
+            const roleFilter = document.getElementById('roleFilter').value;
+            const search = document.getElementById('searchInput').value;
+            
+            let url = `${API_BASE}/staff/tasks/assigned-to-me?`;
+            if (dateFilter !== 'all') url += `date_filter=${dateFilter}&`;
+            if (statusFilter !== 'all') url += `status=${statusFilter}&`;
+            if (priorityFilter !== 'all') url += `priority=${priorityFilter}&`;
+            if (roleFilter !== 'all') url += `role=${roleFilter}&`;
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            
+            try {
+                const response = await staffFetch(url);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentTasksData = data.tasks || [];
+                    renderTasks(currentTasksData);
+                    updateStats(data.summary || {});
+                } else {
+                    showError('Failed to load tasks');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading tasks:', error);
+                showError('Error loading tasks');
+            }
+        }
+        
+        function renderTasks(tasks) {
+            const tbody = document.getElementById('tasksTableBody');
+            
+            if (!tasks || tasks.length === 0) {
+                tbody.innerHTML = `
+                    <tr><td colspan="12" class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No tasks assigned to you</p>
+                    </td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = tasks.map(task => {
+                const dueDateClass = getDueDateClass(task.due_date, task.status);
+                const roleMap = {
+                    'primary': { class: 'primary-role', label: 'Primary' },
+                    'secondary': { class: 'secondary-role', label: 'Secondary' }
+                };
+                const roleInfo = roleMap[task.my_role] || { class: 'secondary-role', label: 'Assignee' };
+                const roleClass = roleInfo.class;
+                const roleLabel = roleInfo.label;
+                
+                // DC Protocol (Dec 21, 2025): Show parent task context for phase tasks
+                const isPhaseTask = task.is_phase_task || false;
+                const parentTaskCode = task.parent_task_code || null;
+                const phaseIndicator = isPhaseTask ? `<span class="badge bg-info me-1" title="This is a phase of task ${parentTaskCode}"><i class="fas fa-layer-group"></i></span>` : '';
+                const parentLink = isPhaseTask && parentTaskCode ? 
+                    `<small class="text-muted d-block">Part of: <a href="javascript:void(0)" onclick="searchParentTask('${parentTaskCode}')" class="text-info">${parentTaskCode}</a></small>` : '';
+                
+                return `
+                    <tr class="${isPhaseTask ? 'phase-task-row' : ''}" style="cursor:pointer;" onclick="viewTask(${task.id})">
+                        <td>
+                            ${phaseIndicator}<div class="task-title d-inline">${escapeHtml(task.title)}</div>
+                            <small class="text-muted d-block">#${String(task.id ?? '').substring(0, 8)}</small>
+                            ${parentLink}
+                        </td>
+                        <td class="assigned-by">
+                            <strong>${escapeHtml(task.assigned_by?.full_name || 'Unknown')}</strong>
+                            <br><small>${task.assigned_by?.emp_code || ''}</small>
+                        </td>
+                        <td><span class="badge badge-${roleClass}">${roleLabel}</span></td>
+                        <td><span class="badge badge-${task.priority}">${capitalize(task.priority)}</span></td>
+                        <td><span class="due-date ${dueDateClass}">${formatDate(task.due_date)}</span></td>
+                        <td>${formatDate(task.created_at)}</td>
+                        <td><span class="badge badge-${task.status}">${formatStatus(task.status)}</span></td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">
+                                    <div style="height: 100%; background: linear-gradient(90deg, #4f46e5, #8b5cf6); width: ${task.progress || 0}%;"></div>
+                                </div>
+                                <small>${task.progress || 0}%</small>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            ${task.phases_count > 0 ? `<span class="badge bg-info">${task.phases_completed || 0}/${task.phases_count}</span>` : '<span class="text-muted">—</span>'}
+                        </td>
+                        <td class="text-center">
+                            ${(task.status !== 'completed' && task.status !== 'cancelled' && task.created_at) ? `<span class="${calcPendingDays(task) > 7 ? 'text-danger fw-bold' : 'text-muted'}">${calcPendingDays(task)}d</span>` : '<span class="text-muted">—</span>'}
+                        </td>
+                        <td class="text-center">
+                            ${renderAttachmentsButton(task)}
+                        </td>
+                        <td onclick="event.stopPropagation()">
+                            <div class="action-btns">
+                                <button class="btn btn-outline-primary btn-sm" onclick="viewTask(${task.id})" title="View & Update">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-success btn-sm" onclick="openLogTimeModal(${task.id})" title="Log Time">
+                                    <i class="fas fa-clock"></i>
+                                </button>
+                                ${task.status !== 'completed' ? `
+                                <button class="btn btn-success btn-sm" onclick="markComplete(${task.id})" title="Mark Complete">
+                                    <i class="fas fa-check"></i>
+                                </button>` : ''}
+                                <button class="btn btn-sm" onclick="event.stopPropagation();mnrWaTask('${(task.title||'').replace(/'/g,'').substring(0,40)}','${formatDate(task.due_date)}','${formatStatus(task.status)}','${task.contact_phone||''}')" title="Send WhatsApp" style="background:#25D366;color:#fff;border:none;padding:2px 7px;border-radius:4px;"><i class="fab fa-whatsapp"></i></button>
+                            </div>
+                        </td>
+                    </tr>`;
+            }).join('');
+        }
+        
+        function sortTasks(field) {
+            if (sortField === field) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortField = field;
+                sortDirection = 'asc';
+            }
+            
+            const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+            const statusOrder = { pending: 1, in_progress: 2, on_hold: 3, under_review: 4, completed: 5, cancelled: 6 };
+            
+            currentTasksData.sort((a, b) => {
+                let aVal, bVal;
+                
+                if (field === 'priority') {
+                    aVal = priorityOrder[a.priority] || 0;
+                    bVal = priorityOrder[b.priority] || 0;
+                } else if (field === 'status') {
+                    aVal = statusOrder[a.status] || 0;
+                    bVal = statusOrder[b.status] || 0;
+                } else if (field === 'pending_days') {
+                    aVal = calcPendingDays(a);
+                    bVal = calcPendingDays(b);
+                } else if (field === 'phases_completed') {
+                    aVal = (a.phases_completed || 0);
+                    bVal = (b.phases_completed || 0);
+                } else if (field === 'progress') {
+                    aVal = a.progress || 0;
+                    bVal = b.progress || 0;
+                } else if (field === 'attachment_count') {
+                    aVal = a.attachment_count || 0;
+                    bVal = b.attachment_count || 0;
+                } else if (field === 'due_date' || field === 'created_at') {
+                    aVal = a[field] ? new Date(a[field]).getTime() : 0;
+                    bVal = b[field] ? new Date(b[field]).getTime() : 0;
+                } else if (field === 'assigned_by_name') {
+                    aVal = (a.assigned_by?.full_name || '').toLowerCase();
+                    bVal = (b.assigned_by?.full_name || '').toLowerCase();
+                } else {
+                    aVal = (a[field] || '').toString().toLowerCase();
+                    bVal = (b[field] || '').toString().toLowerCase();
+                }
+                
+                if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            
+            updateSortIndicators(field);
+            renderTasks(currentTasksData);
+        }
+
+        function updateSortIndicators(activeField) {
+            document.querySelectorAll('th[data-sort-field]').forEach(th => {
+                const icon = th.querySelector('i.fas');
+                if (!icon) return;
+                if (th.dataset.sortField === activeField) {
+                    icon.className = sortDirection === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                } else {
+                    icon.className = 'fas fa-sort';
+                }
+            });
+        }
+
+        function calcPendingDays(task) {
+            if (task.status === 'completed' || task.status === 'cancelled') return -1;
+            if (!task.created_at) return 0;
+            const created = new Date(task.created_at);
+            const now = new Date();
+            return Math.floor((now - created) / (1000 * 60 * 60 * 24));
+        }
+        
+        function updateStats(stats) {
+            document.getElementById('totalCount').textContent = stats.total || 0;
+            document.getElementById('pendingCount').textContent = stats.pending || 0;
+            document.getElementById('inProgressCount').textContent = stats.in_progress || 0;
+            document.getElementById('completedCount').textContent = stats.completed || 0;
+            document.getElementById('overdueCount').textContent = stats.overdue || 0;
+        }
+        
+        function filterByStatus(status) {
+            document.querySelectorAll('.stat-card').forEach(card => card.classList.remove('active'));
+            document.getElementById(`stat-${status}`).classList.add('active');
+            
+            if (status === 'all' || status === 'overdue') {
+                document.getElementById('statusFilter').value = 'all';
+            } else {
+                document.getElementById('statusFilter').value = status;
+            }
+            loadTasks();
+        }
+        
+        async function viewTask(taskId) {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/${taskId}?include_attachments=true`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentTask = data.task || data;
+                    await renderTaskDetail(currentTask);
+                    new bootstrap.Modal(document.getElementById('taskDetailModal')).show();
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading task:', error);
+            }
+        }
+        
+        // DC/WVV FIX (Nov 29, 2025): Reload task data without reopening modal
+        // This prevents stale data display after upload/delete/comment operations
+        async function reloadCurrentTaskData() {
+            if (!currentTask) return;
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/${currentTask.id}?include_attachments=true`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentTask = data.task || data;
+                    // DC: Re-render modal content WITHOUT reopening modal (preserves user state)
+                    await renderTaskDetail(currentTask);
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error reloading task:', error);
+            }
+        }
+        
+        async function renderTaskDetail(task) {
+            const content = document.getElementById('taskDetailContent');
+            const canEdit = true;
+            
+            let attachmentsHTML = '';
+            const attachments = task.attachment_files || task.attachments || [];
+            
+            if (attachments.length > 0) {
+                attachmentsHTML = `
+                    <div class="mb-3">
+                        <strong><i class="fas fa-paperclip me-1"></i>Attachments (${attachments.length}):</strong>
+                        <div class="file-attachment-list">
+                            ${attachments.map(att => {
+                                const fileType = att.file_type || att.mime_type || '';
+                                const fileName = att.file_name || att.filename || `attachment_${att.id}`;
+                                const fileSize = att.file_size || att.size || null;
+                                const uploadedAt = att.uploaded_at || att.created_at || null;
+                                const isImage = fileType && fileType.startsWith('image/');
+                                const sizeKB = fileSize ? (fileSize / 1024).toFixed(2) : 'Unknown';
+                                return `
+                                    <div class="attachment-item">
+                                        <div class="attachment-info">
+                                            <div class="attachment-icon ${isImage ? 'image' : 'document'}">
+                                                <i class="fas fa-${isImage ? 'image' : 'file-alt'}"></i>
+                                            </div>
+                                            <div class="attachment-details">
+                                                <span class="attachment-name">${escapeHtml(fileName)}</span>
+                                                <span class="attachment-meta">${sizeKB !== 'Unknown' ? sizeKB + ' KB' : ''}${uploadedAt ? (sizeKB !== 'Unknown' ? ' • ' : '') + 'Uploaded ' + formatDate(uploadedAt) : ''}</span>
+                                            </div>
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-info" onclick="viewAttachment(${att.id})" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-outline-primary" onclick="downloadAttachment(${att.id}, '${escapeHtml(fileName)}')" title="Download">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="deleteAttachment(${att.id}, ${task.id})" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content.innerHTML = `
+                <div class="mb-4">
+                    <h4>${escapeHtml(task.title)}</h4>
+                    <div class="d-flex gap-2 flex-wrap mb-2">
+                        <span class="badge badge-${task.status}">${formatStatus(task.status)}</span>
+                        <span class="badge badge-${task.priority}">${capitalize(task.priority)}</span>
+                        <span class="badge badge-category">${capitalize(task.category)}</span>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Assigned By:</strong> ${escapeHtml(task.assigned_by?.full_name || 'Unknown')}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Due Date:</strong> <span class="due-date ${getDueDateClass(task.due_date, task.status)}">${formatDate(task.due_date)}</span>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Description:</strong>
+                    <p class="mt-1">${task.description ? escapeHtml(task.description) : '<em>No description</em>'}</p>
+                </div>
+                
+                ${attachmentsHTML}
+                
+                ${canEdit ? `
+                <div class="mb-4 task-upload-section">
+                    <h6><i class="fas fa-cloud-upload-alt me-1"></i>Upload Task Attachment</h6>
+                    <div class="upload-container">
+                        <label class="btn btn-outline-primary btn-sm mb-2">
+                            <i class="fas fa-file-upload me-1"></i>Choose File
+                            <input type="file" id="taskAttachmentFile" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" style="display: none;" onchange="previewTaskAttachment()">
+                        </label>
+                        <button class="btn btn-success btn-sm mb-2 ms-2" id="uploadTaskBtn" onclick="uploadTaskAttachment()" style="display: none;">
+                            <i class="fas fa-upload me-1"></i>Upload
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm mb-2 ms-2" id="cancelTaskUploadBtn" onclick="cancelTaskUpload()" style="display: none;">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </button>
+                        <div id="taskAttachmentPreview" class="mt-2"></div>
+                        <div id="taskUploadProgress" class="upload-progress-container" style="display: none;">
+                            <div class="upload-progress-bar">
+                                <div class="upload-progress-fill" id="taskProgressFill" style="width: 0%"></div>
+                                <div class="upload-progress-text" id="taskProgressText">0%</div>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-1">Images: up to 5MB (auto-compressed), Documents: up to 5MB. Allowed: Images, PDF, DOC, XLS, PPT, TXT, CSV, ZIP</small>
+                    </div>
+                </div>
+                
+                <div class="progress-section">
+                    <label class="form-label"><strong>Progress: <span id="progressValue">${task.progress || 0}</span>%</strong></label>
+                    <input type="range" class="progress-slider" id="progressSlider" min="0" max="100" step="5" value="${task.progress || 0}" 
+                        oninput="document.getElementById('progressValue').textContent = this.value">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>Update Status:</strong></label>
+                    <select class="form-select" id="statusUpdate">
+                        <option value="pending" ${task.status === 'pending' ? 'selected' : ''}>Pending</option>
+                        <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="on_hold" ${task.status === 'on_hold' ? 'selected' : ''}>On Hold</option>
+                        <option value="completed" ${task.status === 'completed' ? 'selected' : ''}>Completed</option>
+                    </select>
+                </div>
+                ` : ''}
+                
+                ${task.contact_phone ? `
+                <div class="mb-3">
+                    <strong><i class="fas fa-phone-alt me-1 text-info"></i>Contact:</strong>
+                    <a href="tel:${escapeHtml(task.contact_phone)}" class="text-info text-decoration-none ms-1">${escapeHtml(task.contact_phone)}</a>
+                    ${task.contact_person_name ? `<span class="text-muted ms-1">(${escapeHtml(task.contact_person_name)})</span>` : ''}
+                </div>` : ''}
+                
+                ${renderPhasesSection(task)}
+                
+                <div class="mb-3">
+                    <strong>Time Logged:</strong> ${task.actual_hours || 0} hours (Estimated: ${task.estimated_hours || 'N/A'} hours)
+                </div>
+                
+                <div class="comments-section">
+                    <h6><i class="fas fa-comments me-1"></i>Comments</h6>
+                    <div id="commentsList">
+                        ${(task.comments || []).length === 0 ? '<p class="text-muted">No comments yet</p>' : 
+                            task.comments.map(c => {
+                                const attachmentsHTML = (c.attachments && c.attachments.length > 0) ? 
+                                    c.attachments.map(att => {
+                                        const isImage = att.file_type && att.file_type.startsWith('image/');
+                                        const sizeKB = att.file_size ? (att.file_size / 1024).toFixed(2) : 'Unknown';
+                                        return `
+                                            <div class="attachment-item mt-2">
+                                                <div class="attachment-info">
+                                                    <div class="attachment-icon ${isImage ? 'image' : 'document'}">
+                                                        <i class="fas fa-${isImage ? 'image' : 'file-alt'}"></i>
+                                                    </div>
+                                                    <div class="attachment-details">
+                                                        <span class="attachment-name">${escapeHtml(att.filename)}</span>
+                                                        <span class="attachment-meta">${sizeKB} KB</span>
+                                                    </div>
+                                                </div>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-info" onclick="viewCommentAttachment(${c.id}, '${att.stored_filename}')" title="View">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-primary" onclick="downloadCommentAttachment(${c.id}, '${att.stored_filename}', '${escapeHtml(att.filename)}')" title="Download">
+                                                        <i class="fas fa-download"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('') : '';
+                                
+                                return `
+                                    <div class="comment-item">
+                                        <div class="comment-author">${escapeHtml(c.employee_name || 'Unknown')}</div>
+                                        <div class="comment-time">${formatDate(c.created_at)}</div>
+                                        ${c.comment ? `<div class="comment-text">${escapeHtml(c.comment)}</div>` : ''}
+                                        ${attachmentsHTML}
+                                    </div>
+                                `;
+                            }).join('')}
+                    </div>
+                    ${canEdit ? `
+                    <div class="mt-3">
+                        <textarea class="form-control" id="newComment" rows="2" placeholder="Add a comment (optional if you attach a file)..."></textarea>
+                        <div class="mt-2">
+                            <label class="btn btn-outline-secondary btn-sm me-2">
+                                <i class="fas fa-paperclip me-1"></i>Attach File (Optional)
+                                <input type="file" id="commentFile" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip" style="display: none;" onchange="previewCommentFile()">
+                            </label>
+                            <button class="btn btn-outline-primary btn-sm" onclick="addComment()">
+                                <i class="fas fa-paper-plane me-1"></i>Add Comment
+                            </button>
+                        </div>
+                        <small class="text-muted">Images/Documents: up to 5MB (images auto-compressed to <500KB). Allowed: Images, PDF, DOC, XLS, PPT, TXT, CSV, ZIP</small>
+                        <div id="commentFilePreview" class="mt-2"></div>
+                        <div id="commentUploadProgress" class="upload-progress-container">
+                            <div class="upload-progress-bar">
+                                <div class="upload-progress-fill" id="commentProgressFill" style="width: 0%"></div>
+                                <div class="upload-progress-text" id="commentProgressText">0%</div>
+                            </div>
+                            <div class="upload-progress-file" id="commentProgressFile"></div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            document.getElementById('saveProgressBtn').style.display = canEdit ? 'block' : 'none';
+        }
+        
+        async function saveTaskProgress() {
+            if (!currentTask) return;
+            
+            const progress = document.getElementById('progressSlider')?.value || currentTask.progress;
+            const status = document.getElementById('statusUpdate')?.value || currentTask.status;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/${currentTask.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ progress: parseInt(progress), status: status })
+                });
+                
+                if (response.ok) {
+                    document.activeElement?.blur();
+                    bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide();
+                    loadTasks();
+                    alert('Progress updated successfully!');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to update progress');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error updating progress:', error);
+                alert('Error updating progress');
+            }
+        }
+        
+        // WVV/DC: Global state for preview modal
+        let currentAttachment = null;
+        let currentZoom = 100;
+        let currentVersion = 'compressed';
+        let isPanning = false;
+        let startX = 0, startY = 0, scrollLeft = 0, scrollTop = 0;
+        
+        async function viewAttachment(attachmentId) {
+            try {
+                // WVV: Fetch attachment metadata first
+                const metaResponse = await staffFetch(`${API_BASE}/staff/tasks/attachments/${attachmentId}/metadata`);
+                
+                if (!metaResponse.ok) {
+                    throw new Error('Failed to load attachment metadata');
+                }
+                
+                const metaData = await metaResponse.json();
+                currentAttachment = metaData.attachment;
+                
+                // WVV: Determine file type for preview
+                const fileType = getFilePreviewType(currentAttachment.file_type, currentAttachment.file_name);
+                
+                // DC: Handle PDF files - open in separate tab
+                if (fileType === 'pdf') {
+                    // CRITICAL FIX: Fetch with Authorization header, then create blob URL
+                    try {
+                        const pdfResponse = await staffFetch(`${API_BASE}/staff/tasks/attachments/${attachmentId}/view`);
+                        
+                        if (!pdfResponse.ok) {
+                            throw new Error('Failed to load PDF');
+                        }
+                        
+                        const blob = await pdfResponse.blob();
+                        const blobUrl = window.URL.createObjectURL(blob);
+                        const newWindow = window.open(blobUrl, '_blank');
+                        
+                        // Cleanup blob URL after window loads
+                        if (newWindow) {
+                            newWindow.addEventListener('load', () => {
+                                setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+                            });
+                        }
+                        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+                        
+                        // DC: Log PDF preview in audit trail
+                        await logPreviewAction(attachmentId, 'original', 'pdf_tab');
+                    } catch (error) {
+                        if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                        console.error('Error opening PDF:', error);
+                        alert('Failed to open PDF: ' + error.message + '. Attempting download instead...');
+                        downloadAttachment(attachmentId, currentAttachment.file_name);
+                    }
+                    return;
+                }
+                
+                // Show preview modal
+                showPreviewModal(attachmentId, fileType);
+                
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error viewing file:', error);
+                alert('Error viewing file: ' + error.message);
+            }
+        }
+        
+        function getFilePreviewType(fileType, fileName) {
+            // WVV: Categorize files for appropriate preview
+            if (fileType.startsWith('image/')) return 'image';
+            if (fileType === 'application/pdf') return 'pdf';
+            if (fileType.includes('word') || fileType.includes('excel') || fileType.includes('powerpoint')) {
+                return 'document';
+            }
+            return 'download-only';
+        }
+        
+        async function showPreviewModal(attachmentId, fileType) {
+            const token = localStorage.getItem('staff_token');
+            
+            // Update modal title and metadata
+            document.getElementById('previewFileName').textContent = currentAttachment.file_name;
+            document.getElementById('previewFileNameDetail').textContent = currentAttachment.file_name;
+            
+            // Format file size
+            const fileSizeMB = (currentAttachment.file_size / (1024 * 1024)).toFixed(2);
+            const compressedSizeMB = currentAttachment.compressed_size_bytes 
+                ? (currentAttachment.compressed_size_bytes / (1024 * 1024)).toFixed(2) 
+                : null;
+            
+            document.getElementById('previewFileInfo').textContent = 
+                `${fileSizeMB} MB • Uploaded by ${currentAttachment.uploaded_by_name} • ${new Date(currentAttachment.uploaded_at).toLocaleString()}`;
+            
+            // Update processing status badge
+            const statusBadge = document.getElementById('previewProcessingStatus');
+            if (currentAttachment.processing_status === 'completed') {
+                statusBadge.className = 'badge bg-success';
+                statusBadge.textContent = 'compressed';
+            } else if (currentAttachment.processing_status === 'pending') {
+                statusBadge.className = 'badge bg-warning';
+                statusBadge.textContent = 'compressing...';
+            } else {
+                statusBadge.className = 'badge bg-secondary';
+                statusBadge.textContent = currentAttachment.processing_status || 'original';
+            }
+            
+            // Update file icon
+            const iconElement = document.getElementById('previewFileIcon');
+            if (fileType === 'image') {
+                iconElement.className = 'fas fa-image fa-2x text-primary me-3';
+            } else {
+                iconElement.className = 'fas fa-file fa-2x text-primary me-3';
+            }
+            
+            // Build preview content
+            const previewContainer = document.getElementById('previewContainer');
+            
+            if (fileType === 'image') {
+                // WVV: Show loading state
+                previewContainer.innerHTML = `
+                    <div class="text-center p-5">
+                        <i class="fas fa-spinner fa-spin fa-3x text-primary mb-3"></i>
+                        <p class="text-muted">Loading image preview...</p>
+                    </div>
+                `;
+                
+                // WVV: Use compressed version by default (faster load)
+                currentVersion = currentAttachment.has_compressed ? 'compressed' : 'original';
+                
+                // CRITICAL FIX: Fetch with Authorization header, then create blob URL
+                try {
+                    const imageResponse = await staffFetch(`${API_BASE}/staff/tasks/attachments/${attachmentId}/view?version=${currentVersion}`);
+                    
+                    if (!imageResponse.ok) {
+                        throw new Error('Failed to load image');
+                    }
+                    
+                    const blob = await imageResponse.blob();
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    
+                    previewContainer.innerHTML = `
+                        <div class="text-center p-4" style="cursor: move;" id="imageContainer">
+                            <img src="${blobUrl}" 
+                                 alt="${currentAttachment.file_name}"
+                                 id="previewImage"
+                                 data-blob-url="${blobUrl}"
+                                 style="max-width: 100%; max-height: 600px; transition: transform 0.2s; user-select: none;"
+                                 onerror="handlePreviewError(this)">
+                        </div>
+                    `;
+                    
+                    // Add pan/drag functionality
+                    addPanningListeners();
+                    
+                } catch (error) {
+                    if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                    previewContainer.innerHTML = `
+                        <div class="alert alert-danger text-center p-5">
+                            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                            <h5>Failed to load image preview</h5>
+                            <p class="text-muted">${error.message}</p>
+                            <button class="btn btn-primary mt-3" onclick="downloadAttachment(${attachmentId}, '${currentAttachment.file_name}')">
+                                <i class="fas fa-download"></i> Download Instead
+                            </button>
+                        </div>
+                    `;
+                }
+                
+                // Enable zoom controls
+                document.getElementById('zoomControls').style.display = 'block';
+                currentZoom = 100;
+                document.getElementById('zoomLevel').textContent = '100%';
+                
+                // Enable version toggle if compressed version exists
+                if (currentAttachment.has_compressed) {
+                    document.getElementById('versionToggle').style.display = 'block';
+                    document.getElementById('compressedSize').textContent = `${compressedSizeMB} MB`;
+                    document.getElementById('originalSize').textContent = `${fileSizeMB} MB`;
+                    
+                    // Set active button
+                    document.getElementById('btnCompressed').classList.add('active');
+                    document.getElementById('btnOriginal').classList.remove('active');
+                } else {
+                    document.getElementById('versionToggle').style.display = 'none';
+                }
+                
+            } else if (fileType === 'document') {
+                // Documents: Show download prompt
+                previewContainer.innerHTML = `
+                    <div class="alert alert-info text-center p-5">
+                        <i class="fas fa-file-alt fa-3x mb-3"></i>
+                        <h5>Preview not available for this file type</h5>
+                        <p class="text-muted">Please download the file to view its contents.</p>
+                        <button class="btn btn-primary mt-3" onclick="downloadAttachment(${attachmentId}, '${currentAttachment.file_name}')">
+                            <i class="fas fa-download"></i> Download File
+                        </button>
+                    </div>
+                `;
+                document.getElementById('zoomControls').style.display = 'none';
+                document.getElementById('versionToggle').style.display = 'none';
+            }
+            
+            // Setup download button
+            document.getElementById('btnDownloadPreview').onclick = () => {
+                downloadAttachment(attachmentId, currentAttachment.file_name);
+            };
+            
+            // Show modal
+            const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+            modal.show();
+            
+            // DC: Log preview action in audit trail
+            await logPreviewAction(attachmentId, currentVersion, 'inline');
+        }
+        
+        function addPanningListeners() {
+            const container = document.getElementById('imageContainer');
+            if (!container) return;
+            
+            container.addEventListener('mousedown', (e) => {
+                isPanning = true;
+                container.style.cursor = 'grabbing';
+                startX = e.pageX - container.offsetLeft;
+                startY = e.pageY - container.offsetTop;
+                scrollLeft = container.scrollLeft;
+                scrollTop = container.scrollTop;
+            });
+            
+            container.addEventListener('mouseleave', () => {
+                isPanning = false;
+                container.style.cursor = 'move';
+            });
+            
+            container.addEventListener('mouseup', () => {
+                isPanning = false;
+                container.style.cursor = 'move';
+            });
+            
+            container.addEventListener('mousemove', (e) => {
+                if (!isPanning) return;
+                e.preventDefault();
+                const x = e.pageX - container.offsetLeft;
+                const y = e.pageY - container.offsetTop;
+                const walkX = (x - startX) * 2;
+                const walkY = (y - startY) * 2;
+                container.scrollLeft = scrollLeft - walkX;
+                container.scrollTop = scrollTop - walkY;
+            });
+        }
+        
+        function zoomIn() {
+            currentZoom = Math.min(currentZoom + 25, 300);
+            applyZoom();
+        }
+        
+        function zoomOut() {
+            currentZoom = Math.max(currentZoom - 25, 50);
+            applyZoom();
+        }
+        
+        function resetZoom() {
+            currentZoom = 100;
+            applyZoom();
+        }
+        
+        function applyZoom() {
+            const img = document.getElementById('previewImage');
+            if (img) {
+                img.style.transform = `scale(${currentZoom / 100})`;
+                document.getElementById('zoomLevel').textContent = `${currentZoom}%`;
+            }
+        }
+        
+        async function switchVersion(version) {
+            if (!currentAttachment) return;
+            
+            currentVersion = version;
+            
+            const img = document.getElementById('previewImage');
+            if (img) {
+                // Revoke old blob URL to free memory
+                const oldBlobUrl = img.getAttribute('data-blob-url');
+                if (oldBlobUrl) {
+                    window.URL.revokeObjectURL(oldBlobUrl);
+                }
+                
+                // Show loading state
+                img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
+                img.alt = 'Loading...';
+                
+                // CRITICAL FIX: Fetch with Authorization header, then create blob URL
+                try {
+                    const imageResponse = await staffFetch(`${API_BASE}/staff/tasks/attachments/${currentAttachment.id}/view?version=${version}`);
+                    
+                    if (!imageResponse.ok) {
+                        throw new Error('Failed to load image version');
+                    }
+                    
+                    const blob = await imageResponse.blob();
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    
+                    img.src = blobUrl;
+                    img.setAttribute('data-blob-url', blobUrl);
+                    img.alt = currentAttachment.file_name;
+                } catch (error) {
+                    if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                    console.error('Error switching version:', error);
+                    alert('Failed to load ' + version + ' version: ' + error.message);
+                    return;
+                }
+            }
+            
+            // Update button states
+            if (version === 'compressed') {
+                document.getElementById('btnCompressed').classList.add('active');
+                document.getElementById('btnCompressed').classList.remove('btn-outline-primary');
+                document.getElementById('btnCompressed').classList.add('btn-primary');
+                
+                document.getElementById('btnOriginal').classList.remove('active');
+                document.getElementById('btnOriginal').classList.remove('btn-primary');
+                document.getElementById('btnOriginal').classList.add('btn-outline-secondary');
+            } else {
+                document.getElementById('btnOriginal').classList.add('active');
+                document.getElementById('btnOriginal').classList.remove('btn-outline-secondary');
+                document.getElementById('btnOriginal').classList.add('btn-primary');
+                
+                document.getElementById('btnCompressed').classList.remove('active');
+                document.getElementById('btnCompressed').classList.remove('btn-primary');
+                document.getElementById('btnCompressed').classList.add('btn-outline-primary');
+            }
+            
+            // DC: Log version switch
+            await logPreviewAction(currentAttachment.id, version, 'inline');
+        }
+        
+        async function logPreviewAction(attachmentId, version, method) {
+            // DC PROTOCOL: Log all preview actions for audit trail
+            try {
+                await staffFetch(`${API_BASE}/staff/tasks/attachments/${attachmentId}/log-preview?version=${version}&preview_method=${method}`, {
+                    method: 'POST'
+                });
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Failed to log preview action:', error);
+                // Don't block preview on logging failure
+            }
+        }
+        
+        function handlePreviewError(img) {
+            img.parentElement.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Failed to load image preview. 
+                    <button class="btn btn-sm btn-primary ms-2" onclick="downloadAttachment(${currentAttachment.id}, '${currentAttachment.file_name}')">
+                        Download Instead
+                    </button>
+                </div>
+            `;
+        }
+        
+        async function downloadAttachment(attachmentId, fileName) {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/attachments/${attachmentId}/download`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName || `attachment_${attachmentId}`;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // DC: Cleanup after download
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }, 100);
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    console.error('Download attachment failed:', errorData);
+                    alert('Failed to download file: ' + (errorData.detail || 'Please try again'));
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error downloading file:', error);
+                alert('Error downloading file: ' + error.message);
+            }
+        }
+        
+        async function deleteAttachment(attachmentId, taskId) {
+            if (!confirm('Are you sure you want to delete this attachment? This action cannot be undone.')) return;
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/attachments/${attachmentId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('File deleted successfully!');
+                    // DC/WVV: Reload task data to update attachment list (without reopening modal)
+                    await reloadCurrentTaskData();
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    console.error('Delete attachment failed:', errorData);
+                    alert('Failed to delete file: ' + (errorData.detail || 'Please try again'));
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error deleting file:', error);
+                alert('Error deleting file: ' + error.message);
+            }
+        }
+        
+        // DC Protocol: Task Attachment Upload Functions (NEW - Nov 29, 2025)
+        function previewTaskAttachment() {
+            const fileInput = document.getElementById('taskAttachmentFile');
+            const preview = document.getElementById('taskAttachmentPreview');
+            const uploadBtn = document.getElementById('uploadTaskBtn');
+            const cancelBtn = document.getElementById('cancelTaskUploadBtn');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                preview.innerHTML = '';
+                uploadBtn.style.display = 'none';
+                cancelBtn.style.display = 'none';
+                return;
+            }
+            
+            // DC: Validate file size - 5MB for images (auto-compressed), 5MB for documents
+            const sizeKB = (file.size / 1024).toFixed(2);
+            const isImage = file.type.startsWith('image/');
+            const maxSize = 5 * 1024 * 1024;  // 5MB for all files
+            const sizeExceeded = file.size > maxSize;
+            const maxLabel = '5MB';
+            
+            preview.innerHTML = `
+                <div class="alert ${sizeExceeded ? 'alert-danger' : 'alert-info'} d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-${isImage ? 'image' : 'file-alt'}"></i>
+                        <span>${escapeHtml(file.name)} (${sizeKB} KB)</span>
+                    </div>
+                    <button type="button" class="btn-close" onclick="cancelTaskUpload()"></button>
+                </div>
+                ${sizeExceeded ? `<small class="text-danger">File exceeds ${maxLabel} limit</small>` : (isImage && file.size > 512000 ? '<small class="text-info">Image will be auto-compressed</small>' : '')}
+            `;
+            
+            uploadBtn.style.display = sizeExceeded ? 'none' : 'inline-block';
+            cancelBtn.style.display = 'inline-block';
+        }
+        
+        function cancelTaskUpload() {
+            document.getElementById('taskAttachmentFile').value = '';
+            document.getElementById('taskAttachmentPreview').innerHTML = '';
+            document.getElementById('uploadTaskBtn').style.display = 'none';
+            document.getElementById('cancelTaskUploadBtn').style.display = 'none';
+        }
+        
+        async function uploadTaskAttachment() {
+            if (!currentTask) return;
+            
+            const fileInput = document.getElementById('taskAttachmentFile');
+            const file = fileInput ? fileInput.files[0] : null;
+            
+            if (!file) {
+                alert('Please select a file to upload');
+                return;
+            }
+            
+            // DC: Validate file size - 5MB for all files
+            const maxSize = 5 * 1024 * 1024;
+            const maxLabel = '5MB';
+            
+            if (file.size > maxSize) {
+                alert(`File size exceeds ${maxLabel} limit.`);
+                return;
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            const progressContainer = document.getElementById('taskUploadProgress');
+            const progressFill = document.getElementById('taskProgressFill');
+            const progressText = document.getElementById('taskProgressText');
+            const uploadBtn = document.getElementById('uploadTaskBtn');
+            const cancelBtn = document.getElementById('cancelTaskUploadBtn');
+            
+            progressContainer.style.display = 'block';
+            uploadBtn.disabled = true;
+            cancelBtn.disabled = true;
+            
+            try {
+                // DC/WVV: Use XMLHttpRequest for progress tracking with FormData
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    // WVV: Track upload progress
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            const percentComplete = Math.round((e.loaded / e.total) * 100);
+                            progressFill.style.width = `${percentComplete}%`;
+                            progressText.textContent = `${percentComplete}%`;
+                        }
+                    });
+                    
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve();
+                        } else {
+                            try {
+                                const error = JSON.parse(xhr.responseText);
+                                reject(new Error(error.detail || 'Failed to upload file'));
+                            } catch (e) {
+                                reject(new Error('Failed to upload file'));
+                            }
+                        }
+                    });
+                    
+                    xhr.addEventListener('error', () => {
+                        reject(new Error('Network error during file upload'));
+                    });
+                    
+                    // DC: Upload to task attachment endpoint
+                    xhr.open('POST', `${API_BASE}/staff/tasks/${currentTask.id}/attachments`);
+                    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                    xhr.send(formData);
+                });
+                
+                alert('File uploaded successfully!');
+                cancelTaskUpload();
+                progressContainer.style.display = 'none';
+                progressFill.style.width = '0%';
+                progressText.textContent = '0%';
+                
+                // DC/WVV: Reload task data to show new attachment (without reopening modal)
+                await reloadCurrentTaskData();
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                alert('Error uploading file: ' + error.message);
+                progressContainer.style.display = 'none';
+                uploadBtn.disabled = false;
+                cancelBtn.disabled = false;
+            }
+        }
+        
+        function previewCommentFile() {
+            const fileInput = document.getElementById('commentFile');
+            const preview = document.getElementById('commentFilePreview');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                preview.innerHTML = '';
+                return;
+            }
+            
+            // FIXED Nov 29, 2025: Unified 5MB validation for ALL files
+            const sizeKB = (file.size / 1024).toFixed(2);
+            const isImage = file.type.startsWith('image/');
+            const maxSize = 5 * 1024 * 1024;  // 5MB for images AND documents
+            const sizeExceeded = file.size > maxSize;
+            
+            preview.innerHTML = `
+                <div class="alert ${sizeExceeded ? 'alert-danger' : 'alert-info'} d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-${isImage ? 'image' : 'file-alt'}"></i>
+                        <span>${escapeHtml(file.name)} (${sizeKB} KB)</span>
+                    </div>
+                    <button type="button" class="btn-close" onclick="document.getElementById('commentFile').value=''; previewCommentFile();"></button>
+                </div>
+                ${sizeExceeded ? '<small class="text-danger">File exceeds 5MB limit</small>' : (isImage && file.size > 512000 ? '<small class="text-info">Image will be auto-compressed to <500KB</small>' : '')}
+            `;
+        }
+        
+        async function addComment() {
+            if (!currentTask) return;
+            
+            const content = document.getElementById('newComment').value.trim();
+            const fileInput = document.getElementById('commentFile');
+            const file = fileInput ? fileInput.files[0] : null;
+            
+            // DC: At least one of content or file must be provided
+            if (!content && !file) {
+                alert('Please enter a comment or attach a file');
+                return;
+            }
+            
+            // FIXED Nov 29, 2025: Unified 5MB validation for ALL files
+            if (file) {
+                const isImage = file.type.startsWith('image/');
+                const maxSize = 5 * 1024 * 1024;  // 5MB for images AND documents
+                
+                if (file.size > maxSize) {
+                    alert(`File size exceeds 5MB limit. ${isImage ? 'Images will be auto-compressed after upload.' : ''}`);
+                    return;
+                }
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            const progressContainer = document.getElementById('commentUploadProgress');
+            const progressFill = document.getElementById('commentProgressFill');
+            const progressText = document.getElementById('commentProgressText');
+            const progressFile = document.getElementById('commentProgressFile');
+            
+            if (file) {
+                progressContainer.classList.add('active');
+            }
+            
+            try {
+                // DC/WVv: Use XMLHttpRequest for progress tracking with FormData
+                await new Promise((resolve, reject) => {
+                    const xhr = new XMLHttpRequest();
+                    const formData = new FormData();
+                    if (content) formData.append('content', content);
+                    if (file) formData.append('file', file);
+                    
+                    // WVv: Track upload progress
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable && file) {
+                            const percentComplete = Math.round((e.loaded / e.total) * 100);
+                            progressFill.style.width = `${percentComplete}%`;
+                            progressText.textContent = `${percentComplete}%`;
+                            progressFile.textContent = `Uploading: ${file.name}`;
+                        }
+                    });
+                    
+                    xhr.addEventListener('load', () => {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            resolve();
+                        } else {
+                            try {
+                                const error = JSON.parse(xhr.responseText);
+                                reject(new Error(error.detail || 'Failed to add comment'));
+                            } catch (e) {
+                                reject(new Error('Failed to add comment'));
+                            }
+                        }
+                    });
+                    
+                    xhr.addEventListener('error', () => {
+                        reject(new Error('Network error during comment upload'));
+                    });
+                    
+                    // DC: Include source=comment for audit trail
+                    xhr.open('POST', `${API_BASE}/staff/tasks/${currentTask.id}/comments?source=comment`);
+                    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+                    xhr.send(formData);
+                });
+                
+                document.getElementById('newComment').value = '';
+                if (fileInput) fileInput.value = '';
+                document.getElementById('commentFilePreview').innerHTML = '';
+                // DC/WVV: Reload task data to show new comment (without reopening modal)
+                await reloadCurrentTaskData();
+            } catch (error) {
+                console.error('Error adding comment:', error);
+                alert('Error adding comment: ' + error.message);
+            } finally {
+                if (progressContainer) {
+                    progressContainer.classList.remove('active');
+                    progressFill.style.width = '0%';
+                    progressText.textContent = '0%';
+                    progressFile.textContent = '';
+                }
+            }
+        }
+        
+        async function viewCommentAttachment(commentId, filename) {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/comments/${commentId}/attachment/${filename}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const newWindow = window.open(url, '_blank');
+                    
+                    // DC/STF: Extended timeout for large files
+                    if (newWindow) {
+                        newWindow.addEventListener('load', () => {
+                            setTimeout(() => window.URL.revokeObjectURL(url), 2000);
+                        });
+                    }
+                    setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    alert('Failed to load file: ' + (errorData.detail || 'Please try again'));
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error viewing attachment:', error);
+                alert('Error viewing file: ' + error.message);
+            }
+        }
+        
+        async function downloadCommentAttachment(commentId, filename, originalName) {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/comments/${commentId}/attachment/${filename}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = originalName || filename;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // DC: Cleanup after download
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }, 100);
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    alert('Failed to download file: ' + (errorData.detail || 'Please try again'));
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error downloading attachment:', error);
+                alert('Error downloading file: ' + error.message);
+            }
+        }
+        
+        function openLogTimeModal(taskId) {
+            currentTask = { id: taskId };
+            document.getElementById('logTimeForm').reset();
+            document.getElementById('workDate').value = new Date().toISOString().split('T')[0];
+            new bootstrap.Modal(document.getElementById('logTimeModal')).show();
+        }
+        
+        async function submitTimeLog() {
+            if (!currentTask) return;
+            
+            const hours = parseFloat(document.getElementById('hoursWorked').value);
+            const workDate = document.getElementById('workDate').value;
+            const notes = document.getElementById('timeNotes').value.trim();
+            
+            if (!hours || hours <= 0) {
+                alert('Please enter valid hours');
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/${currentTask.id}/time-entry`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        hours: hours,
+                        work_date: workDate,
+                        notes: notes
+                    })
+                });
+                
+                if (response.ok) {
+                    document.activeElement?.blur();
+                    bootstrap.Modal.getInstance(document.getElementById('logTimeModal')).hide();
+                    loadTasks();
+                    alert('Time logged successfully!');
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to log time');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error logging time:', error);
+                alert('Error logging time');
+            }
+        }
+        
+        async function markComplete(taskId) {
+            if (!confirm('Mark this task as completed?')) return;
+            
+            try {
+                // DC Protocol: Use correct PUT endpoint matching backend contract
+                const response = await staffFetch(`${API_BASE}/staff/tasks/${taskId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        status: 'completed',
+                        progress: 100
+                    })
+                });
+                
+                if (response.ok) {
+                    loadTasks();
+                    alert('Task marked as completed!');
+                } else {
+                    // DC Protocol: Surface actual error message for audit trail
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to mark task as complete');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error marking task complete:', error);
+                alert('Error marking task complete. Please try again.');
+            }
+        }
+        
+        function showError(message) {
+            document.getElementById('tasksTableBody').innerHTML = `
+                <tr><td colspan="12" class="empty-state">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>${message}</p>
+                </td></tr>`;
+        }
+        
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(loadTasks, 300);
+        }
+        
+        function getDueDateClass(dueDate, status) {
+            if (status === 'completed' || status === 'cancelled') return '';
+            const due = new Date(dueDate);
+            const now = new Date();
+            const diff = due - now;
+            if (diff < 0) return 'overdue';
+            if (diff < 24 * 60 * 60 * 1000) return 'today';
+            return 'upcoming';
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function formatStatus(status) {
+            if (!status) return '';
+            return status.split('_').map(capitalize).join(' ');
+        }
+        
+        function capitalize(str) {
+            return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        async function loadEmployees() {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/assignable-employees`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allEmployees = data.employees || [];
+                    totalAvailableEmployees = data.total_available || allEmployees.length;
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading assignable employees:', error);
+            }
+        }
+        
+        function togglePhasesSection() {
+            const checkbox = document.getElementById('enablePhasesCheckbox');
+            const section = document.getElementById('phasesSection');
+            section.style.display = checkbox.checked ? 'block' : 'none';
+            if (!checkbox.checked) {
+                taskPhases = [];
+                document.getElementById('phasesContainer').innerHTML = '';
+            }
+        }
+        
+        function addPhase() {
+            const phaseNumber = taskPhases.length + 1;
+            const phaseId = `phase_${Date.now()}`;
+            
+            const phaseData = {
+                id: phaseId,
+                phase_number: phaseNumber,
+                phase_title: '',
+                phase_description: '',
+                phase_assignee_id: null,
+                phase_assignee: null,
+                target_date: null,
+                contact_phone: null,
+                contact_person_name: null,
+                confirmed: false
+            };
+            taskPhases.push(phaseData);
+            
+            const container = document.getElementById('phasesContainer');
+            const phaseHtml = `
+                <div class="phase-item border rounded p-2 mb-2" id="${phaseId}" data-phase-number="${phaseNumber}">
+                    <div class="phase-editing-state" id="phaseEditing_${phaseId}">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-info">Phase ${phaseNumber}</span>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-success btn-sm" id="phaseConfirmBtn_${phaseId}" 
+                                    onclick="confirmPhase('${phaseId}')" style="display: none;" title="Save Phase">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removePhase('${phaseId}')" title="Remove Phase">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control form-control-sm" 
+                                    id="phaseTitle_${phaseId}"
+                                    placeholder="Phase Title *" 
+                                    onchange="updatePhaseField('${phaseId}', 'phase_title', this.value); checkPhaseConfirmable('${phaseId}')"
+                                    oninput="updatePhaseField('${phaseId}', 'phase_title', this.value); checkPhaseConfirmable('${phaseId}')"
+                                    required>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="date" class="form-control form-control-sm" 
+                                    id="phaseTargetDate_${phaseId}"
+                                    placeholder="Target Date"
+                                    onchange="updatePhaseField('${phaseId}', 'target_date', this.value)">
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-12">
+                                <div class="position-relative">
+                                    <input type="text" class="form-control form-control-sm" 
+                                        id="phaseAssigneeSearch_${phaseId}"
+                                        placeholder="Search assignee by name or ID... *"
+                                        oninput="searchPhaseAssignee('${phaseId}', this.value)">
+                                    <div class="employee-search-results" id="phaseSearchResults_${phaseId}" style="display: none;"></div>
+                                    <div class="selected-assignees mt-1" id="phaseAssigneeSelected_${phaseId}"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-12">
+                                <textarea class="form-control form-control-sm" rows="1" 
+                                    id="phaseDescription_${phaseId}"
+                                    placeholder="Phase description (optional)"
+                                    onchange="updatePhaseField('${phaseId}', 'phase_description', this.value)"></textarea>
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-md-6">
+                                <input type="tel" class="form-control form-control-sm" 
+                                    id="phaseContactPhone_${phaseId}"
+                                    placeholder="Contact mobile number"
+                                    maxlength="20"
+                                    onchange="updatePhaseField('${phaseId}', 'contact_phone', this.value)">
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control form-control-sm" 
+                                    id="phaseContactPerson_${phaseId}"
+                                    placeholder="Contact person name (optional)"
+                                    maxlength="128"
+                                    onchange="updatePhaseField('${phaseId}', 'contact_person_name', this.value)">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="phase-confirmed-state" id="phaseConfirmed_${phaseId}" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-success"><i class="fas fa-check me-1"></i>Phase ${phaseNumber}</span>
+                                <span class="phase-confirmed-title fw-bold" id="phaseConfirmedTitle_${phaseId}"></span>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="editPhase('${phaseId}')" title="Edit Phase">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removePhase('${phaseId}')" title="Remove Phase">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="phase-confirmed-details mt-1 small text-muted">
+                            <span id="phaseConfirmedAssignee_${phaseId}"></span>
+                            <span id="phaseConfirmedDate_${phaseId}"></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', phaseHtml);
+        }
+        
+        function checkPhaseConfirmable(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            const confirmBtn = document.getElementById(`phaseConfirmBtn_${phaseId}`);
+            
+            if (phase && confirmBtn) {
+                const isValid = phase.phase_title && phase.phase_title.trim() && phase.phase_assignee_id;
+                confirmBtn.style.display = isValid ? 'inline-block' : 'none';
+            }
+        }
+        
+        function confirmPhase(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (!phase) return;
+            
+            if (!phase.phase_title || !phase.phase_title.trim()) {
+                alert('Please enter a phase title');
+                return;
+            }
+            if (!phase.phase_assignee_id) {
+                alert('Please select an assignee for this phase');
+                return;
+            }
+            
+            phase.confirmed = true;
+            
+            document.getElementById(`phaseConfirmedTitle_${phaseId}`).textContent = phase.phase_title;
+            document.getElementById(`phaseConfirmedAssignee_${phaseId}`).innerHTML = 
+                `<i class="fas fa-user me-1"></i>${escapeHtml(phase.phase_assignee?.full_name || 'Unknown')}`;
+            document.getElementById(`phaseConfirmedDate_${phaseId}`).innerHTML = 
+                phase.target_date ? ` | <i class="fas fa-calendar me-1"></i>${phase.target_date}` : '';
+            
+            document.getElementById(`phaseEditing_${phaseId}`).style.display = 'none';
+            document.getElementById(`phaseConfirmed_${phaseId}`).style.display = 'block';
+            
+            const phaseEl = document.getElementById(phaseId);
+            phaseEl.classList.add('phase-confirmed');
+        }
+        
+        function editPhase(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (!phase) return;
+            
+            phase.confirmed = false;
+            
+            document.getElementById(`phaseEditing_${phaseId}`).style.display = 'block';
+            document.getElementById(`phaseConfirmed_${phaseId}`).style.display = 'none';
+            
+            checkPhaseConfirmable(phaseId);
+            
+            const phaseEl = document.getElementById(phaseId);
+            phaseEl.classList.remove('phase-confirmed');
+        }
+        
+        function removePhase(phaseId) {
+            const index = taskPhases.findIndex(p => p.id === phaseId);
+            if (index > -1) {
+                taskPhases.splice(index, 1);
+                document.getElementById(phaseId).remove();
+                renumberPhases();
+            }
+        }
+        
+        function renumberPhases() {
+            taskPhases.forEach((phase, index) => {
+                phase.phase_number = index + 1;
+                const el = document.getElementById(phase.id);
+                if (el) {
+                    el.querySelector('.badge').textContent = `Phase ${index + 1}`;
+                    el.dataset.phaseNumber = index + 1;
+                }
+            });
+        }
+        
+        function updatePhaseField(phaseId, field, value) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (phase) {
+                phase[field] = value || null;
+            }
+        }
+        
+        async function searchPhaseAssignee(phaseId, query) {
+            clearTimeout(phaseAssigneeSearchTimeouts[phaseId]);
+            const resultsDiv = document.getElementById(`phaseSearchResults_${phaseId}`);
+            
+            if (!query || query.length < 2) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+            
+            phaseAssigneeSearchTimeouts[phaseId] = setTimeout(async () => {
+                try {
+                    const response = await staffFetch(`${API_BASE}/staff/tasks/assignable-employees?search=${encodeURIComponent(query)}&limit=10`);
+                    if (!response.ok) return;
+                    
+                    const data = await response.json();
+                    const employees = data.employees || [];
+                    
+                    if (employees.length === 0) {
+                        resultsDiv.innerHTML = '<div class="search-result-item text-muted">No employees found</div>';
+                    } else {
+                        resultsDiv.innerHTML = employees.map(emp => `
+                            <div class="search-result-item" onclick="selectPhaseAssignee('${phaseId}', ${JSON.stringify({
+                                id: emp.id,
+                                full_name: emp.full_name,
+                                emp_code: emp.employee_code,
+                                department_name: emp.department || 'No Dept'
+                            }).replace(/"/g, '&quot;')})">
+                                <strong>${escapeHtml(emp.full_name)}</strong>
+                                <small class="text-muted">${escapeHtml(emp.employee_code)} - ${escapeHtml(emp.department || 'No Dept')}</small>
+                            </div>
+                        `).join('');
+                    }
+                    resultsDiv.style.display = 'block';
+                } catch (error) {
+                    console.error('Error searching phase assignee:', error);
+                }
+            }, 300);
+        }
+        
+        function selectPhaseAssignee(phaseId, employee) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (phase) {
+                phase.phase_assignee_id = employee.id;
+                phase.phase_assignee = employee;
+            }
+            
+            document.getElementById(`phaseAssigneeSearch_${phaseId}`).value = '';
+            document.getElementById(`phaseSearchResults_${phaseId}`).style.display = 'none';
+            document.getElementById(`phaseAssigneeSelected_${phaseId}`).innerHTML = `
+                <span class="badge bg-primary me-1">
+                    ${escapeHtml(employee.full_name)} (${escapeHtml(employee.emp_code)})
+                    <i class="fas fa-times ms-1" style="cursor: pointer;" onclick="clearPhaseAssignee('${phaseId}')"></i>
+                </span>
+            `;
+            
+            checkPhaseConfirmable(phaseId);
+        }
+        
+        function clearPhaseAssignee(phaseId) {
+            const phase = taskPhases.find(p => p.id === phaseId);
+            if (phase) {
+                phase.phase_assignee_id = null;
+                phase.phase_assignee = null;
+            }
+            document.getElementById(`phaseAssigneeSelected_${phaseId}`).innerHTML = '';
+            
+            checkPhaseConfirmable(phaseId);
+        }
+        
+        function getValidPhases() {
+            return taskPhases.filter(p => p.phase_title && p.phase_assignee_id);
+        }
+        
+        function resetPhases() {
+            taskPhases = [];
+            document.getElementById('phasesContainer').innerHTML = '';
+            document.getElementById('enablePhasesCheckbox').checked = false;
+            document.getElementById('phasesSection').style.display = 'none';
+        }
+        
+        function openCreateTaskModal() {
+            document.getElementById('createTaskForm').reset();
+            selectedPrimaryAssignee = null;
+            selectedSecondaryAssignees = [];
+            selectedCustomAssigner = null;
+            document.getElementById('primaryAssigneeSelected').innerHTML = '';
+            document.getElementById('secondaryAssigneesSelected').innerHTML = '';
+            document.getElementById('customAssignerSelected').innerHTML = '';
+            
+            document.getElementById('assignToSelfCheckbox').checked = false;
+            document.getElementById('primaryAssigneeSection').style.display = 'block';
+            document.getElementById('assignerSection').style.display = 'none';
+            document.getElementById('assignerChoice').value = 'self';
+            document.getElementById('customAssignerSearchBox').style.display = 'none';
+            
+            resetPhases();
+            
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(17, 0, 0, 0);
+            document.getElementById('taskDueDate').value = tomorrow.toISOString().slice(0, 16);
+            
+            new bootstrap.Modal(document.getElementById('createTaskModal')).show();
+        }
+        
+        function previewFiles() {
+            const fileInput = document.getElementById('taskAttachments');
+            const preview = document.getElementById('filePreview');
+            const files = Array.from(fileInput.files);
+            
+            if (files.length > 2) {
+                alert('Maximum 2 files allowed. Only first 2 files will be used.');
+                const dt = new DataTransfer();
+                files.slice(0, 2).forEach(file => dt.items.add(file));
+                fileInput.files = dt.files;
+                return previewFiles();
+            }
+            
+            preview.innerHTML = '';
+            files.forEach((file, index) => {
+                const isImage = file.type.startsWith('image/');
+                const sizeKB = (file.size / 1024).toFixed(2);
+                const maxSize = 5 * 1024 * 1024;
+                const sizeExceeded = file.size > maxSize;
+                
+                preview.innerHTML += `
+                    <div class="file-preview-item">
+                        <div class="file-preview-info">
+                            <div class="file-preview-icon ${isImage ? 'image' : 'document'}">
+                                <i class="fas fa-${isImage ? 'image' : 'file-alt'}"></i>
+                            </div>
+                            <div class="file-preview-details">
+                                <span class="file-preview-name">${escapeHtml(file.name)}</span>
+                                <span class="file-preview-size ${sizeExceeded ? 'error' : ''}">
+                                    ${sizeKB} KB ${sizeExceeded ? '(Exceeds 5MB limit!)' : (isImage && file.size > 512000 ? '(will be compressed)' : '')}
+                                </span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFileFromPreview(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        }
+        
+        function removeFileFromPreview(index) {
+            const fileInput = document.getElementById('taskAttachments');
+            const dt = new DataTransfer();
+            const files = Array.from(fileInput.files);
+            files.splice(index, 1);
+            files.forEach(file => dt.items.add(file));
+            fileInput.files = dt.files;
+            previewFiles();
+        }
+
+        async function createTask() {
+            if (!selectedPrimaryAssignee) {
+                alert('Please select a primary assignee');
+                return;
+            }
+            
+            const title = document.getElementById('taskTitle').value.trim();
+            if (!title) {
+                alert('Please enter a task title');
+                return;
+            }
+            
+            const isSelfAssigned = document.getElementById('assignToSelfCheckbox').checked;
+            if (isSelfAssigned) {
+                const assignerChoice = document.getElementById('assignerChoice').value;
+                if (assignerChoice === 'other' && !selectedCustomAssigner) {
+                    alert('Please select an assigner when choosing "Someone Else"');
+                    return;
+                }
+            }
+            
+            const fileInput = document.getElementById('taskAttachments');
+            const files = Array.from(fileInput.files);
+            
+            for (const file of files) {
+                const maxSize = 5 * 1024 * 1024;
+                
+                if (file.size > maxSize) {
+                    alert(`File "${file.name}" exceeds 5MB limit.`);
+                    return;
+                }
+            }
+            
+            const token = localStorage.getItem('staff_token');
+            const createBtn = document.getElementById('createTaskBtn');
+            createBtn.disabled = true;
+            createBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Creating...';
+            
+            let customAssignerId = null;
+            
+            if (isSelfAssigned) {
+                const assignerChoice = document.getElementById('assignerChoice').value;
+                if (assignerChoice === 'other' && selectedCustomAssigner) {
+                    customAssignerId = selectedCustomAssigner.id;
+                }
+            }
+            
+            const taskData = {
+                title: title,
+                description: document.getElementById('taskDescription').value.trim(),
+                priority: document.getElementById('taskPriority').value,
+                category: document.getElementById('taskCategory').value,
+                due_date: document.getElementById('taskDueDate').value,
+                estimated_hours: parseFloat(document.getElementById('taskEstimatedHours').value) || null,
+                primary_assignee_id: selectedPrimaryAssignee.id,
+                secondary_assignee_ids: selectedSecondaryAssignees.map(e => e.id),
+                tags: document.getElementById('taskTags').value.split(',').map(t => t.trim()).filter(t => t),
+                contact_phone: document.getElementById('taskContactPhone').value.trim() || null,
+                contact_person_name: document.getElementById('taskContactPerson').value.trim() || null
+            };
+            
+            if (customAssignerId) {
+                taskData.custom_assigner_id = customAssignerId;
+            } else {
+                taskData.custom_assigner_id = null;
+            }
+            
+            const enablePhases = document.getElementById('enablePhasesCheckbox').checked;
+            if (enablePhases) {
+                const validPhases = getValidPhases();
+                if (validPhases.length > 0) {
+                    taskData.phases = validPhases.map(p => ({
+                        phase_number: p.phase_number,
+                        phase_title: p.phase_title,
+                        phase_description: p.phase_description || null,
+                        phase_assignee_id: p.phase_assignee_id,
+                        target_date: p.target_date || null,
+                        contact_phone: p.contact_phone || null,
+                        contact_person_name: p.contact_person_name || null
+                    }));
+                } else if (taskPhases.length > 0) {
+                    alert('Please complete all phase fields (Title and Assignee required) or disable phases');
+                    createBtn.disabled = false;
+                    createBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Create Task';
+                    return;
+                }
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/`, {
+                    method: 'POST',
+                    body: JSON.stringify(taskData)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const taskId = result.task.id;
+                    
+                    if (files.length > 0) {
+                        createBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading files...';
+                        const progressContainer = document.getElementById('createTaskUploadProgress');
+                        const progressFill = document.getElementById('createTaskProgressFill');
+                        const progressText = document.getElementById('createTaskProgressText');
+                        const progressFile = document.getElementById('createTaskProgressFile');
+                        
+                        progressContainer.classList.add('active');
+                        
+                        for (let i = 0; i < files.length; i++) {
+                            try {
+                                await uploadFileWithProgress(
+                                    `${API_BASE}/staff/tasks/${taskId}/attachments`,
+                                    files[i],
+                                    (percent, filename) => {
+                                        progressFill.style.width = `${percent}%`;
+                                        progressText.textContent = `${percent}%`;
+                                        progressFile.textContent = `Uploading ${i + 1}/${files.length}: ${filename}`;
+                                    }
+                                );
+                            } catch (error) {
+                                alert(`Failed to upload ${files[i].name}: ${error.message}`);
+                            }
+                        }
+                        
+                        progressContainer.classList.remove('active');
+                        progressFill.style.width = '0%';
+                        progressText.textContent = '0%';
+                        progressFile.textContent = '';
+                    }
+                    
+                    document.activeElement?.blur();
+                    bootstrap.Modal.getInstance(document.getElementById('createTaskModal')).hide();
+                    loadTasks();
+                    
+                    const phasesMsg = taskData.phases ? ` with ${taskData.phases.length} phase(s)` : '';
+                    alert('Task created successfully' + phasesMsg + (files.length > 0 ? ' and attachments!' : '!'));
+                    
+                    document.getElementById('createTaskForm').reset();
+                    document.getElementById('filePreview').innerHTML = '';
+                    resetPhases();
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || 'Failed to create task');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error creating task:', error);
+                alert('Error creating task');
+            } finally {
+                createBtn.disabled = false;
+                createBtn.innerHTML = '<i class="fas fa-plus me-1"></i>Create Task';
+            }
+        }
+        
+        async function searchAssignees(type) {
+            let input, results;
+            
+            if (type === 'customAssigner') {
+                input = document.getElementById('customAssignerSearch');
+                results = document.getElementById('customAssignerSearchResults');
+            } else {
+                input = document.getElementById(type === 'primary' ? 'primaryAssigneeSearch' : 'secondaryAssigneeSearch');
+                results = document.getElementById(type === 'primary' ? 'primarySearchResults' : 'secondarySearchResults');
+            }
+            
+            const query = input.value.toLowerCase().trim();
+            
+            if (query.length < 2) {
+                results.style.display = 'none';
+                return;
+            }
+            
+            const excludeIds = type === 'secondary' 
+                ? [selectedPrimaryAssignee?.id, ...selectedSecondaryAssignees.map(e => e.id)].filter(Boolean)
+                : type === 'customAssigner'
+                ? []
+                : selectedSecondaryAssignees.map(e => e.id);
+            
+            let filtered = allEmployees.filter(emp => 
+                !excludeIds.includes(emp.id) &&
+                (emp.full_name?.toLowerCase().includes(query) || 
+                 emp.employee_code?.toLowerCase().includes(query))
+            ).slice(0, 10);
+            
+            const hasUncachedEmployees = totalAvailableEmployees > allEmployees.length;
+            
+            if (hasUncachedEmployees) {
+                if (filtered.length > 0) {
+                    renderEmployeeResults(filtered, results, type);
+                } else {
+                    results.innerHTML = '<div class="employee-search-item text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Searching...</div>';
+                    results.style.display = 'block';
+                }
+                
+                const thisSearchToken = ++currentSearchToken;
+                
+                clearTimeout(searchDebounceTimer);
+                searchDebounceTimer = setTimeout(async () => {
+                    try {
+                        const response = await staffFetch(`${API_BASE}/staff/tasks/assignable-employees?search=${encodeURIComponent(query)}&limit=50`);
+                        
+                        if (thisSearchToken !== currentSearchToken) return;
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            const serverResults = (data.employees || []).filter(emp => !excludeIds.includes(emp.id));
+                            
+                            mergeEmployeesToCache(data.employees || []);
+                            
+                            const mergedFiltered = allEmployees.filter(emp => 
+                                !excludeIds.includes(emp.id) &&
+                                (emp.full_name?.toLowerCase().includes(query) || 
+                                 emp.employee_code?.toLowerCase().includes(query))
+                            ).slice(0, 10);
+                            
+                            renderEmployeeResults(mergedFiltered, results, type);
+                        }
+                    } catch (error) {
+                        if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                        console.error('Server search failed:', error);
+                    }
+                }, 300);
+                return;
+            }
+            
+            renderEmployeeResults(filtered, results, type);
+        }
+        
+        function mergeEmployeesToCache(newEmployees) {
+            const existingIds = new Set(allEmployees.map(e => e.id));
+            newEmployees.forEach(emp => {
+                if (!existingIds.has(emp.id)) {
+                    allEmployees.push(emp);
+                    existingIds.add(emp.id);
+                }
+            });
+        }
+        
+        function renderEmployeeResults(filtered, results, type) {
+            if (filtered.length === 0) {
+                results.innerHTML = '<div class="employee-search-item text-muted">No employees found</div>';
+            } else {
+                const functionName = type === 'customAssigner' ? 'selectCustomAssigner' : 'selectAssignee';
+                const args = type === 'customAssigner' ? '' : `'${type}', `;
+                
+                results.innerHTML = filtered.map(emp => `
+                    <div class="employee-search-item" onclick="${functionName}(${args}${JSON.stringify(emp).replace(/"/g, '&quot;')})">
+                        <strong>${escapeHtml(emp.full_name)}</strong>
+                        <br><small class="text-muted">${emp.employee_code} - ${emp.role_name || emp.designation || 'Staff'}</small>
+                    </div>
+                `).join('');
+            }
+            results.style.display = 'block';
+        }
+        
+        function selectAssignee(type, emp) {
+            if (type === 'primary') {
+                selectedPrimaryAssignee = emp;
+                document.getElementById('primaryAssigneeSearch').value = '';
+                document.getElementById('primarySearchResults').style.display = 'none';
+                document.getElementById('primaryAssigneeSelected').innerHTML = `
+                    <div class="selected-assignee primary">
+                        ${escapeHtml(emp.full_name)} (${emp.employee_code})
+                        <span class="remove-btn" onclick="removePrimaryAssignee()"><i class="fas fa-times"></i></span>
+                    </div>`;
+            } else {
+                if (selectedSecondaryAssignees.length >= 2) {
+                    alert('Maximum 2 secondary assignees allowed');
+                    return;
+                }
+                selectedSecondaryAssignees.push(emp);
+                document.getElementById('secondaryAssigneeSearch').value = '';
+                document.getElementById('secondarySearchResults').style.display = 'none';
+                renderSecondaryAssignees();
+            }
+        }
+        
+        function removePrimaryAssignee() {
+            selectedPrimaryAssignee = null;
+            document.getElementById('primaryAssigneeSelected').innerHTML = '';
+        }
+        
+        function removeSecondaryAssignee(index) {
+            selectedSecondaryAssignees.splice(index, 1);
+            renderSecondaryAssignees();
+        }
+        
+        function renderSecondaryAssignees() {
+            document.getElementById('secondaryAssigneesSelected').innerHTML = selectedSecondaryAssignees.map((emp, i) => `
+                <div class="selected-assignee">
+                    ${escapeHtml(emp.full_name)} (${emp.employee_code})
+                    <span class="remove-btn" onclick="removeSecondaryAssignee(${i})"><i class="fas fa-times"></i></span>
+                </div>
+            `).join('');
+        }
+        
+        function toggleSelfAssignment() {
+            const checkbox = document.getElementById('assignToSelfCheckbox');
+            const primarySection = document.getElementById('primaryAssigneeSection');
+            const assignerSection = document.getElementById('assignerSection');
+            
+            if (checkbox.checked) {
+                primarySection.style.display = 'none';
+                assignerSection.style.display = 'block';
+                
+                selectedPrimaryAssignee = {
+                    id: currentUser.id,
+                    full_name: currentUser.full_name,
+                    employee_code: currentUser.emp_code
+                };
+                
+                selectedCustomAssigner = null;
+                document.getElementById('assignerChoice').value = 'self';
+                document.getElementById('customAssignerSearchBox').style.display = 'none';
+            } else {
+                primarySection.style.display = 'block';
+                assignerSection.style.display = 'none';
+                
+                selectedPrimaryAssignee = null;
+                selectedCustomAssigner = null;
+                document.getElementById('primaryAssigneeSelected').innerHTML = '';
+            }
+        }
+        
+        function toggleAssignerSearch() {
+            const choice = document.getElementById('assignerChoice').value;
+            const searchBox = document.getElementById('customAssignerSearchBox');
+            
+            if (choice === 'other') {
+                searchBox.style.display = 'block';
+                selectedCustomAssigner = null;
+                document.getElementById('customAssignerSelected').innerHTML = '';
+            } else {
+                searchBox.style.display = 'none';
+                selectedCustomAssigner = null;
+            }
+        }
+        
+        function selectCustomAssigner(emp) {
+            selectedCustomAssigner = emp;
+            document.getElementById('customAssignerSearch').value = '';
+            document.getElementById('customAssignerSearchResults').style.display = 'none';
+            document.getElementById('customAssignerSelected').innerHTML = `
+                <div class="selected-assignee primary">
+                    ${escapeHtml(emp.full_name)} (${emp.employee_code})
+                    <span class="remove-btn" onclick="removeCustomAssigner()"><i class="fas fa-times"></i></span>
+                </div>`;
+        }
+        
+        function removeCustomAssigner() {
+            selectedCustomAssigner = null;
+            document.getElementById('customAssignerSelected').innerHTML = '';
+        }
+        
+        // DC Protocol (Dec 21, 2025): Search for parent task by task code
+        function searchParentTask(taskCode) {
+            // Set search input and trigger search
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput) {
+                searchInput.value = taskCode;
+                loadTasks();
+            }
+        }
+        
+        function renderPhasesSection(task) {
+            const phases = task.phases || [];
+            const completedCount = phases.filter(p => p.status === 'completed').length;
+            const canEdit = task.status !== 'completed' && task.status !== 'cancelled';
+            
+            return `
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong><i class="fas fa-layer-group me-1"></i>Sub-Tasks (${phases.length})${phases.length > 0 ? ` — ${completedCount}/${phases.length} done` : ''}</strong>
+                        ${canEdit ? `<button class="btn btn-primary btn-sm" onclick="showAddSubTaskModal(${task.id})"><i class="fas fa-plus me-1"></i>Add Sub-Task</button>` : ''}
+                    </div>
+                    ${phases.length === 0 ? `<p class="text-muted mb-0"><em>No sub-tasks. Break this task into smaller steps.</em></p>` : `
+                    <div class="phase-timeline mt-2">
+                        ${phases.map((phase, index) => {
+                            const statusClass = getPhaseStatusClass(phase.status);
+                            const statusIcon = getPhaseStatusIcon(phase.status);
+                            const targetDate = phase.target_date ? formatDate(phase.target_date) : 'No target';
+                            const completedDate = phase.completed_at ? formatDate(phase.completed_at) : null;
+                            const assigneeName = phase.assignee_name || phase.assignee?.full_name || 'Unknown';
+                            
+                            return `
+                                <div class="phase-item ${statusClass}">
+                                    <div class="phase-connector ${index === phases.length - 1 ? 'last' : ''}"></div>
+                                    <div class="phase-icon">
+                                        <i class="fas ${statusIcon}"></i>
+                                    </div>
+                                    <div class="phase-content">
+                                        <div class="phase-header">
+                                            <span class="phase-title">${escapeHtml(phase.title)}</span>
+                                            <span class="badge badge-${phase.status}">${formatStatus(phase.status)}</span>
+                                            <button class="btn btn-outline-secondary btn-sm ms-auto" onclick="showUpdatePhaseStatusModal(${task.id}, ${phase.id}, '${escapeHtml(phase.title)}', '${phase.status}')" title="Update Status">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                        <div class="phase-meta">
+                                            <span><i class="fas fa-user me-1"></i>${escapeHtml(assigneeName)}</span>
+                                            ${(phase.secondary_assignees && phase.secondary_assignees.length > 0) ? phase.secondary_assignees.map(sa => `<span class="text-info"><i class="fas fa-user-plus me-1"></i>${escapeHtml(sa.employee_name || sa.full_name || 'Unknown')}</span>`).join('') : ''}
+                                            <span><i class="fas fa-calendar me-1"></i>${targetDate}</span>
+                                            ${completedDate ? `<span class="text-success"><i class="fas fa-check me-1"></i>Completed: ${completedDate}</span>` : ''}
+                                            ${phase.contact_phone ? `<span class="text-info"><i class="fas fa-phone-alt me-1"></i><a href="tel:${escapeHtml(phase.contact_phone)}" class="text-info text-decoration-none">${escapeHtml(phase.contact_phone)}</a>${phase.contact_person_name ? ` (${escapeHtml(phase.contact_person_name)})` : ''}</span>` : ''}
+                                        </div>
+                                        ${phase.description ? `<div class="phase-description mt-1">${escapeHtml(phase.description)}</div>` : ''}
+                                        ${phase.child_task_id ? `<div class="phase-task-link mt-1"><a href="javascript:void(0)" onclick="viewTask(${phase.child_task_id})" class="text-info"><i class="fas fa-external-link-alt me-1"></i>View Sub-Task</a></div>` : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    `}
+                </div>
+            `;
+        }
+        
+        function getPhaseStatusClass(status) {
+            const classes = {
+                'pending': 'phase-pending',
+                'in_progress': 'phase-in-progress',
+                'completed': 'phase-completed',
+                'cancelled': 'phase-cancelled',
+                'on_hold': 'phase-on-hold'
+            };
+            return classes[status] || 'phase-pending';
+        }
+        
+        function getPhaseStatusIcon(status) {
+            const icons = {
+                'pending': 'fa-circle',
+                'in_progress': 'fa-spinner fa-spin',
+                'completed': 'fa-check-circle',
+                'cancelled': 'fa-times-circle',
+                'on_hold': 'fa-pause-circle'
+            };
+            return icons[status] || 'fa-circle';
+        }
+
+        async function showAddSubTaskModal(taskId) {
+            document.getElementById('subTaskParentId').value = taskId;
+            document.getElementById('subTaskTitle').value = '';
+            document.getElementById('subTaskDescription').value = '';
+            document.getElementById('subTaskTargetDate').value = '';
+            
+            const assigneeSelect = document.getElementById('subTaskAssignee');
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/assignable-employees`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const employees = data.employees || data || [];
+                    assigneeSelect.innerHTML = '<option value="">Select employee...</option>' +
+                        employees.map(e => `<option value="${e.id}">${escapeHtml(e.full_name)} (${e.employee_code || e.emp_code || ''})</option>`).join('');
+                }
+            } catch (error) {
+                console.error('Failed to load employees:', error);
+            }
+            
+            new bootstrap.Modal(document.getElementById('addSubTaskModal')).show();
+        }
+
+        async function saveNewSubTask() {
+            const taskId = document.getElementById('subTaskParentId').value;
+            const title = document.getElementById('subTaskTitle').value.trim();
+            const description = document.getElementById('subTaskDescription').value.trim();
+            const assigneeId = document.getElementById('subTaskAssignee').value;
+            const targetDate = document.getElementById('subTaskTargetDate').value;
+
+            if (!title) { alert('Please enter a sub-task title'); return; }
+            if (!assigneeId) { alert('Please select an assignee'); return; }
+
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/${taskId}/phases`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phase_title: title,
+                        phase_description: description || undefined,
+                        phase_assignee_id: parseInt(assigneeId),
+                        target_date: targetDate || undefined
+                    })
+                });
+
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('addSubTaskModal')).hide();
+                    alert('Sub-task added successfully!');
+                    await reloadCurrentTaskData();
+                    loadTasks();
+                } else {
+                    const data = await response.json();
+                    alert(data.detail || 'Failed to add sub-task');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Failed to add sub-task: ' + error.message);
+            }
+        }
+
+        function showUpdatePhaseStatusModal(taskId, phaseId, phaseTitle, currentStatus) {
+            document.getElementById('updatePhaseTaskId').value = taskId;
+            document.getElementById('updatePhaseId').value = phaseId;
+            document.getElementById('updatePhaseTitleDisplay').textContent = phaseTitle;
+            document.getElementById('updatePhaseStatusSelect').value = currentStatus;
+            document.getElementById('phaseCompletionNotesInput').value = '';
+            document.getElementById('phaseCompletionNotesGroup').style.display = currentStatus === 'completed' ? 'block' : 'none';
+
+            document.getElementById('updatePhaseStatusSelect').onchange = function() {
+                document.getElementById('phaseCompletionNotesGroup').style.display = this.value === 'completed' ? 'block' : 'none';
+            };
+
+            new bootstrap.Modal(document.getElementById('updatePhaseStatusModal')).show();
+        }
+
+        async function savePhaseStatusUpdate() {
+            const taskId = document.getElementById('updatePhaseTaskId').value;
+            const phaseId = document.getElementById('updatePhaseId').value;
+            const newStatus = document.getElementById('updatePhaseStatusSelect').value;
+            const notes = document.getElementById('phaseCompletionNotesInput').value.trim();
+
+            const payload = { phase_status: newStatus };
+            if (notes) payload.completion_notes = notes;
+
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/${taskId}/phases/${phaseId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('updatePhaseStatusModal')).hide();
+                    alert('Sub-task status updated!');
+                    await reloadCurrentTaskData();
+                    loadTasks();
+                } else {
+                    const data = await response.json();
+                    alert(data.detail || 'Failed to update status');
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                alert('Failed to update status: ' + error.message);
+            }
+        }
+        
+        // ==================== ATTACHMENTS COLUMN FUNCTIONALITY ====================
+        
+        function renderAttachmentsButton(task) {
+            const attachments = task.attachment_files || [];
+            const count = attachments.length;
+            
+            if (count === 0) {
+                return '<span class="text-muted"><i class="fas fa-paperclip"></i> 0</span>';
+            }
+            
+            return `
+                <button class="btn btn-sm btn-outline-primary" onclick="openAttachmentsModal('${task.id}', '${escapeHtml(task.title)}')">
+                    <i class="fas fa-paperclip"></i> ${count}
+                </button>
+            `;
+        }
+        
+        async function openAttachmentsModal(taskId, taskTitle) {
+            const modal = new bootstrap.Modal(document.getElementById('attachmentsModal'));
+            document.getElementById('attachmentsModalTitle').textContent = `Attachments - ${taskTitle}`;
+            document.getElementById('attachmentsModalBody').innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+            modal.show();
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/${taskId}?include_attachments=true`);
+                
+                if (!response.ok) throw new Error('Failed to load attachments');
+                
+                const data = await response.json();
+                const attachments = data.task?.attachment_files || [];
+                
+                renderAttachmentsList(attachments, taskId);
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading attachments:', error);
+                document.getElementById('attachmentsModalBody').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>Failed to load attachments
+                    </div>
+                `;
+            }
+        }
+        
+        function renderAttachmentsList(attachments, taskId) {
+            const container = document.getElementById('attachmentsModalBody');
+            const currentUserId = parseInt(localStorage.getItem('staff_user_id'));
+            
+            if (attachments.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-5">
+                        <i class="fas fa-paperclip fa-3x mb-3"></i>
+                        <p>No attachments found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = attachments.map(att => {
+                // User wants: Show compressed size (serving_size) in the list
+                const sizeKB = (att.serving_size / 1024).toFixed(2);
+                const isImage = att.file_type?.startsWith('image/');
+                const canDelete = att.uploaded_by === currentUserId;
+                const statusBadge = att.has_compressed ? '<span class="badge bg-success ms-2">Compressed</span>' : 
+                                  (att.processing_status === 'processing' ? '<span class="badge bg-warning ms-2">Processing...</span>' : '');
+                
+                return `
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="fas fa-${isImage ? 'image' : 'file-alt'} me-2"></i>
+                                        ${escapeHtml(att.filename)}
+                                        ${statusBadge}
+                                    </h6>
+                                    <small class="text-muted">Size: ${sizeKB} KB</small>
+                                    ${att.uploaded_by_name ? `<br><small class="text-muted">Uploaded by: ${escapeHtml(att.uploaded_by_name)}</small>` : ''}
+                                </div>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="downloadAttachment(${att.id}, '${escapeHtml(att.filename)}')" title="Download">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    ${canDelete ? `
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTaskAttachment(${taskId}, ${att.id}, '${escapeHtml(att.filename)}', '${sizeKB} KB')" title="Delete">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function downloadAttachment(attachmentId, filename) {
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/attachments/${attachmentId}/download`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename || `attachment_${attachmentId}`;
+                    a.style.display = 'none';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }, 100);
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    alert('Failed to download file: ' + (errorData.detail || 'Please try again'));
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error downloading attachment:', error);
+                alert('Error downloading file: ' + error.message);
+            }
+        }
+        
+        async function deleteTaskAttachment(taskId, attachmentId, filename, fileSize) {
+            // WVV: Always show confirmation with file details
+            if (!confirm(`Delete this file?\n\nFilename: ${filename}\nSize: ${fileSize}\n\nThis action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const response = await staffFetch(`${API_BASE}/staff/tasks/attachments/${attachmentId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('File deleted successfully!');
+                    // Reload the attachments list in the modal
+                    await openAttachmentsModal(taskId, document.getElementById('attachmentsModalTitle').textContent.replace('Attachments - ', ''));
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    alert('Failed to delete file: ' + (errorData.detail || 'Please try again'));
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error deleting attachment:', error);
+                alert('Error deleting file: ' + error.message);
+            }
+        }
+
+        // ── DC_WA_TEMPLATES_SEED_001: Quick WhatsApp helpers ──────────────────
+        function mnrWaOpen(phone, msg) {
+            let ph = (phone || '').replace(/\D/g, '');
+            if (!ph || ph.length < 10) {
+                ph = (window.prompt('Enter WhatsApp number (e.g. 919876543210):', '91') || '').replace(/\D/g, '');
+            }
+            if (!ph || ph.length < 10) return;
+            window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(msg), '_blank');
+        }
+        function mnrWaTask(title, due, status, phone) {
+            const msg = '📋 *Task Update*\n\nTask: ' + title + '\nDue: ' + due + '\nStatus: ' + status + '\n\nPlease review and take action.';
+            mnrWaOpen(phone, msg);
+        }
+    </script>
+    
+    <!-- Attachments Modal -->
+    <div class="modal fade" id="attachmentsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="attachmentsModalTitle"><i class="fas fa-paperclip me-2"></i>Attachments</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="attachmentsModalBody">
+                    <!-- Attachments list will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Attachment Preview Modal (NEW: DC/WVV Compliant Image Preview) -->
+    <div class="modal fade" id="previewModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-eye me-2"></i>
+                        <span id="previewFileName">Attachment Preview</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                    <!-- File Metadata -->
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-file fa-2x text-primary me-3" id="previewFileIcon"></i>
+                                        <div>
+                                            <h6 class="mb-1" id="previewFileNameDetail">—</h6>
+                                            <small class="text-muted" id="previewFileInfo">—</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 text-end">
+                                    <span class="badge bg-success" id="previewProcessingStatus">—</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview Container -->
+                    <div id="previewContainer" class="position-relative" style="min-height: 400px; background: #f8f9fa; border-radius: 8px; overflow: hidden;">
+                        <!-- Image preview will be inserted here -->
+                    </div>
+                    
+                    <!-- Zoom Controls (for images) -->
+                    <div id="zoomControls" class="mt-3 text-center" style="display: none;">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary" onclick="zoomOut()">
+                                <i class="fas fa-search-minus"></i> Zoom Out
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetZoom()">
+                                <i class="fas fa-compress"></i> Reset
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="zoomIn()">
+                                <i class="fas fa-search-plus"></i> Zoom In
+                            </button>
+                        </div>
+                        <span class="ms-3 text-muted" id="zoomLevel">100%</span>
+                    </div>
+                    
+                    <!-- Version Toggle (DC: Dual Evidence) -->
+                    <div id="versionToggle" class="mt-3 text-center" style="display: none;">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary active" id="btnCompressed" onclick="switchVersion('compressed')">
+                                <i class="fas fa-compress-alt"></i> Compressed (<span id="compressedSize">—</span>)
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="btnOriginal" onclick="switchVersion('original')">
+                                <i class="fas fa-file"></i> Original (<span id="originalSize">—</span>)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnDownloadPreview">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="createTaskModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Create New Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createTaskForm">
+                        <div class="form-group">
+                            <label>Task Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="taskTitle" maxlength="200" required>
+                            <div class="char-counter"><span id="titleCharCount">0</span>/200</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea class="form-control" id="taskDescription" rows="4" maxlength="2000"></textarea>
+                            <div class="char-counter"><span id="descCharCount">0</span>/2000</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Priority <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="taskPriority" required>
+                                        <option value="low">Low</option>
+                                        <option value="medium" selected>Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="critical">Critical</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Category <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="taskCategory" required>
+                                        <option value="development">Development</option>
+                                        <option value="support">Support</option>
+                                        <option value="admin">Admin</option>
+                                        <option value="meeting">Meeting</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Due Date <span class="text-danger">*</span></label>
+                                    <input type="datetime-local" class="form-control" id="taskDueDate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Estimated Hours</label>
+                                    <input type="number" class="form-control" id="taskEstimatedHours" min="0" step="0.5" placeholder="e.g., 4">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="assignToSelfCheckbox" onchange="toggleSelfAssignment()">
+                                <label class="form-check-label" for="assignToSelfCheckbox">
+                                    <i class="fas fa-user-check me-1"></i>Assign to Me
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group" id="primaryAssigneeSection">
+                            <label>Primary Assignee <span class="text-danger">*</span> (1 required)</label>
+                            <input type="text" class="form-control" id="primaryAssigneeSearch" placeholder="Search employee by name or ID...">
+                            <div class="employee-search-results" id="primarySearchResults" style="display: none;"></div>
+                            <div class="selected-assignees" id="primaryAssigneeSelected"></div>
+                        </div>
+                        
+                        <div class="form-group" id="assignerSection" style="display: none;">
+                            <label>Assigned By <span class="text-danger">*</span></label>
+                            <select class="form-select" id="assignerChoice" onchange="toggleAssignerSearch()">
+                                <option value="self" selected>Self</option>
+                                <option value="other">Someone Else</option>
+                            </select>
+                            
+                            <div id="customAssignerSearchBox" style="display: none; margin-top: 10px;">
+                                <input type="text" class="form-control" id="customAssignerSearch" placeholder="Search employee by name or ID...">
+                                <div class="employee-search-results" id="customAssignerSearchResults" style="display: none;"></div>
+                                <div class="selected-assignees" id="customAssignerSelected"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Secondary Assignees (max 2)</label>
+                            <input type="text" class="form-control" id="secondaryAssigneeSearch" placeholder="Search employee by name or ID...">
+                            <div class="employee-search-results" id="secondarySearchResults" style="display: none;"></div>
+                            <div class="selected-assignees" id="secondaryAssigneesSelected"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Tags (comma separated)</label>
+                            <input type="text" class="form-control" id="taskTags" placeholder="e.g., urgent, frontend, bug-fix">
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label><i class="fas fa-phone-alt me-1 text-info"></i>Contact Mobile Number</label>
+                                    <input type="tel" class="form-control" id="taskContactPhone" maxlength="20" placeholder="e.g., 9876543210">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label><i class="fas fa-user me-1 text-info"></i>Contact Person Name <small class="text-muted">(Optional)</small></label>
+                                    <input type="text" class="form-control" id="taskContactPerson" maxlength="128" placeholder="e.g., Mr. Sharma">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mt-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="enablePhasesCheckbox" onchange="togglePhasesSection()">
+                                <label class="form-check-label" for="enablePhasesCheckbox">
+                                    <i class="fas fa-layer-group me-1"></i>Multi-Stage Task (Add Phases)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div id="phasesSection" style="display: none;">
+                            <div class="card border-info mb-3">
+                                <div class="card-header bg-info text-white py-2">
+                                    <i class="fas fa-tasks me-2"></i>Task Phases
+                                    <small class="float-end">Each phase creates a sub-task for the assigned person</small>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div id="phasesContainer"></div>
+                                    <button type="button" class="btn btn-sm btn-outline-info w-100" onclick="addPhase()">
+                                        <i class="fas fa-plus me-1"></i>Add Phase
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-paperclip me-1"></i>Attachments (Optional)
+                                <small class="text-muted">Max 2 files. Images/Documents: up to 5MB (images auto-compressed to <500KB). Allowed: Images (JPEG, PNG, GIF), Documents (PDF, DOC, XLS, PPT, TXT)</small>
+                            </label>
+                            <input type="file" class="form-control" id="taskAttachments" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" onchange="previewFiles()">
+                            <div id="filePreview" class="file-preview mt-2"></div>
+                            <div id="createTaskUploadProgress" class="upload-progress-container">
+                                <div class="upload-progress-bar">
+                                    <div class="upload-progress-fill" id="createTaskProgressFill" style="width: 0%"></div>
+                                    <div class="upload-progress-text" id="createTaskProgressText">0%</div>
+                                </div>
+                                <div class="upload-progress-file" id="createTaskProgressFile"></div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="createTaskBtn" onclick="createTask()">
+                        <i class="fas fa-plus me-1"></i>Create Task
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

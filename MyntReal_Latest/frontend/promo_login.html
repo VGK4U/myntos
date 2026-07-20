@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Promoter Portal — VGK4U | MyntReal</title>
+<link rel="icon" href="/mnr-logo.png" type="image/png">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;background:#f0f4ff;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px;position:relative;overflow-y:auto}
+body::before{content:'';position:fixed;top:0;left:0;right:0;bottom:0;background:linear-gradient(135deg,#1a237e 0%,#283593 40%,#1565c0 100%);z-index:0}
+body::after{content:'';position:fixed;top:-40%;right:-20%;width:700px;height:700px;border-radius:50%;background:rgba(255,255,255,.04);z-index:0}
+.bg-circle{position:fixed;bottom:-30%;left:-15%;width:600px;height:600px;border-radius:50%;background:rgba(255,255,255,.03);z-index:0}
+.wrap{position:relative;z-index:1;width:100%;max-width:420px}
+.brand-top{text-align:center;margin-bottom:24px}
+.brand-top img{height:52px;width:auto;display:inline-block;filter:drop-shadow(0 2px 12px rgba(0,0,0,.3))}
+.brand-top h2{color:rgba(255,255,255,.9);font-size:13px;font-weight:500;margin-top:10px;letter-spacing:.5px;text-transform:uppercase}
+.card{background:#ffffff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25),0 1px 0 rgba(255,255,255,.1);overflow:hidden}
+.card-top-bar{height:4px;background:linear-gradient(90deg,#ffd54f,#ffca28,#ffd740,#ffc107)}
+.card-body{padding:28px 28px 24px}
+/* Tabs */
+.tab-bar{display:flex;border-bottom:2px solid #e2e8f0;margin-bottom:20px;gap:0}
+.tab-btn{flex:1;padding:10px 0;font-size:13.5px;font-weight:700;color:#94a3b8;background:none;border:none;cursor:pointer;letter-spacing:.2px;border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .2s,border-color .2s}
+.tab-btn.active{color:#1a237e;border-bottom-color:#1a237e}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+/* Form */
+.form-group{margin-bottom:15px}
+.form-label{display:block;font-size:11px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.form-label .opt{font-weight:400;color:#94a3b8;text-transform:none;letter-spacing:0}
+.input-wrap{display:flex;align-items:center;border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;transition:border-color .2s,box-shadow .2s;background:#fafbff}
+.input-wrap:focus-within{border-color:#1565c0;box-shadow:0 0 0 3px rgba(21,101,192,.12);background:#fff}
+.input-icon{width:40px;height:46px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:14px;flex-shrink:0}
+.input-wrap input,.input-wrap select{flex:1;height:46px;border:none;outline:none;padding:0 12px 0 4px;font-size:14px;color:#1e293b;background:transparent}
+.input-wrap input::placeholder{color:#b0bad0}
+.input-wrap select{cursor:pointer;color:#1e293b}
+.input-wrap select option[value=""]{color:#b0bad0}
+.toggle-eye{width:40px;height:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#94a3b8;background:none;border:none;flex-shrink:0;transition:color .15s}
+.toggle-eye:hover{color:#475569}
+.btn-action{width:100%;height:50px;background:linear-gradient(135deg,#1565c0,#1a237e);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .2s,transform .15s,box-shadow .2s;margin-top:8px;letter-spacing:.2px;box-shadow:0 4px 16px rgba(21,101,192,.35)}
+.btn-action:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 6px 20px rgba(21,101,192,.45)}
+.btn-action:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
+.alert{border-radius:8px;padding:11px 14px;font-size:13px;font-weight:500;margin-bottom:14px;display:flex;align-items:flex-start;gap:8px}
+.alert-danger{background:#fef2f2;color:#c0392b;border:1px solid #fecaca}
+.alert-success{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
+.divider{height:1px;background:#e2e8f0;margin:18px 0}
+.footer-links{text-align:center;font-size:12px;color:#94a3b8}
+.footer-links a{color:#1565c0;text-decoration:none;font-weight:600}
+.footer-links a:hover{text-decoration:underline}
+.footer-company{text-align:center;font-size:11px;color:#b0bad0;margin-top:10px}
+/* Platform checkboxes */
+.platform-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.plat-label{display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;transition:border-color .15s,background .15s;user-select:none}
+.plat-label:has(input:checked){border-color:#1565c0;background:#eff6ff;color:#1565c0;font-weight:600}
+.plat-label input{accent-color:#1565c0;cursor:pointer}
+/* Success screen */
+.success-panel{text-align:center;padding:8px 0}
+.success-icon{width:64px;height:64px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:28px;color:#16a34a}
+.success-title{font-size:18px;font-weight:800;color:#166534;margin-bottom:8px}
+.success-msg{font-size:13px;color:#475569;line-height:1.6}
+.success-code{margin:14px auto;background:#f1f5f9;border-radius:8px;padding:10px 16px;display:inline-block;font-size:12px;color:#475569}
+.success-code strong{font-size:16px;color:#1a237e;font-weight:800;letter-spacing:1px}
+</style>
+</head>
+<body>
+<a href="/hub" style="position:fixed;top:16px;right:20px;z-index:9999;background:rgba(0,0,0,0.28);border:1.5px solid rgba(255,255,255,0.5);color:#fff;padding:9px 20px;border-radius:50px;font-size:0.82rem;font-weight:700;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:all .25s ease;" onmouseover="this.style.background='rgba(0,0,0,0.42)'" onmouseout="this.style.background='rgba(0,0,0,0.28)'"><i class="fas fa-home"></i> Home</a>
+<div class="bg-circle"></div>
+<div class="wrap">
+    <div class="brand-top">
+        <img src="/public/vgk4u-logo-200.png" onerror="this.src='/mnr-logo.png'" alt="VGK4U | MyntReal">
+        <h2>Influencer &amp; Promoter Portal</h2>
+    </div>
+    <div class="card">
+        <div class="card-top-bar"></div>
+        <div class="card-body">
+            <!-- Tab Bar -->
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="switchTab('login')" id="tabLogin">Sign In</button>
+                <button class="tab-btn" onclick="switchTab('signup')" id="tabSignup">Sign Up</button>
+            </div>
+
+            <!-- ── LOGIN PANEL ── -->
+            <div class="tab-panel active" id="panelLogin">
+                <div class="alert alert-danger" id="loginError" role="alert" style="display:none">
+                    <i class="fas fa-exclamation-circle" style="margin-top:2px"></i><span id="loginErrorMsg"></span>
+                </div>
+                <form id="loginForm" onsubmit="doLogin(event)" autocomplete="off" novalidate>
+                    <div class="form-group">
+                        <label class="form-label">Email or Phone</label>
+                        <div class="input-wrap">
+                            <div class="input-icon"><i class="fas fa-user"></i></div>
+                            <input type="text" id="loginId" placeholder="your@email.com or 9XXXXXXXXX" required autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <div class="input-wrap">
+                            <div class="input-icon"><i class="fas fa-lock"></i></div>
+                            <input type="password" id="loginPw" placeholder="Enter your password" required autocomplete="current-password">
+                            <button type="button" class="toggle-eye" onclick="togglePw('loginPw','eyeIconLogin')"><i class="fas fa-eye" id="eyeIconLogin"></i></button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-action" id="loginBtn">
+                        <span id="loginBtnText"><i class="fas fa-sign-in-alt"></i>&nbsp; Sign In</span>
+                        <span id="loginBtnSpinner" style="display:none"><i class="fas fa-spinner fa-spin"></i>&nbsp; Signing in…</span>
+                    </button>
+                </form>
+
+                <!-- DC-OTP-RESET-002: Influencer Portal Forgot Password -->
+                <div style="text-align:center;margin-top:10px">
+                    <button type="button" onclick="var p=document.getElementById('infFPPanel');p.style.display=p.style.display==='none'?'block':'none';" style="background:none;border:none;color:#0d9488;font-size:12px;cursor:pointer;text-decoration:underline;padding:0">
+                        <i class="fas fa-key" style="margin-right:4px"></i>Forgot Password?
+                    </button>
+                </div>
+                <div id="infFPPanel" style="display:none;margin-top:12px;background:rgba(13,148,136,.08);border:1.5px solid rgba(13,148,136,.4);border-radius:12px;padding:14px 16px">
+                    <div style="font-size:13px;font-weight:700;color:#0d9488;margin-bottom:12px"><i class="fas fa-shield-alt" style="margin-right:6px"></i>Reset via WhatsApp OTP</div>
+                    <div id="infFPStep1">
+                        <label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Your Email or Phone</label>
+                        <input id="infFPUserId" type="text" placeholder="Email or phone used to sign in" style="width:100%;padding:9px 12px;border:1.5px solid rgba(13,148,136,.4);border-radius:8px;font-size:13px;margin:6px 0 10px;box-sizing:border-box;background:rgba(255,255,255,.7);color:#1e293b">
+                        <button onclick="infFPSendOTP()" style="width:100%;padding:10px;background:linear-gradient(135deg,#0d9488,#065f46);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+                            <i class="fas fa-paper-plane" style="margin-right:6px"></i>Send OTP to WhatsApp
+                        </button>
+                    </div>
+                    <div id="infFPStep2" style="display:none">
+                        <div style="font-size:12px;color:#64748b;margin-bottom:8px">OTP sent to your registered WhatsApp. Valid 10 minutes.</div>
+                        <label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">6-Digit OTP</label>
+                        <input id="infFPOtp" type="text" maxlength="6" placeholder="Enter OTP" style="width:100%;padding:9px 12px;border:1.5px solid rgba(13,148,136,.4);border-radius:8px;font-size:18px;letter-spacing:6px;margin:6px 0 10px;box-sizing:border-box;background:rgba(255,255,255,.7);color:#1e293b;text-align:center">
+                        <button onclick="infFPVerifyOTP()" style="width:100%;padding:10px;background:linear-gradient(135deg,#0d9488,#065f46);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+                            <i class="fas fa-check" style="margin-right:6px"></i>Verify OTP
+                        </button>
+                        <div style="text-align:center;margin-top:8px">
+                            <button type="button" onclick="infFPSendOTP()" style="background:none;border:none;color:#64748b;font-size:12px;cursor:pointer;text-decoration:underline">Resend OTP</button>
+                        </div>
+                    </div>
+                    <div id="infFPStep3" style="display:none">
+                        <label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">New Password</label>
+                        <input id="infFPNewPwd" type="password" placeholder="At least 6 characters" style="width:100%;padding:9px 12px;border:1.5px solid rgba(13,148,136,.4);border-radius:8px;font-size:14px;margin:6px 0 8px;box-sizing:border-box;background:rgba(255,255,255,.7);color:#1e293b">
+                        <label style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em">Confirm Password</label>
+                        <input id="infFPConfPwd" type="password" placeholder="Repeat password" style="width:100%;padding:9px 12px;border:1.5px solid rgba(13,148,136,.4);border-radius:8px;font-size:14px;margin:6px 0 10px;box-sizing:border-box;background:rgba(255,255,255,.7);color:#1e293b">
+                        <button onclick="infFPResetPwd()" style="width:100%;padding:10px;background:linear-gradient(135deg,#0d9488,#065f46);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">
+                            <i class="fas fa-lock" style="margin-right:6px"></i>Reset Password
+                        </button>
+                    </div>
+                    <div id="infFPMsg" style="margin-top:10px;font-size:13px;font-weight:600;text-align:center"></div>
+                </div>
+
+                <div class="divider"></div>
+                <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px">
+                    <a href="/landing" style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;background:#f0f4ff;border:1.5px solid #93c5fd;color:#1d4ed8;border-radius:10px;text-decoration:none;font-size:12px;font-weight:700">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                    <a href="/vendor/login" style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;background:#f0fdf4;border:1.5px solid #6ee7b7;color:#047857;border-radius:10px;text-decoration:none;font-size:12px;font-weight:700">
+                        <i class="fas fa-store"></i> Vendor Login
+                    </a>
+                    <a href="/vgk/login" style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;background:#faf5ff;border:1.5px solid #c4b5fd;color:#7c3aed;border-radius:10px;text-decoration:none;font-size:12px;font-weight:700">
+                        <i class="fas fa-sign-in-alt"></i> VGK4U Login
+                    </a>
+                    <a href="/landing" onclick="event.preventDefault();sessionStorage.setItem('showLoginSelection','true');window.location.href='/landing';" style="display:inline-flex;align-items:center;gap:5px;padding:8px 16px;background:#f9fafb;border:1.5px solid #e5e7eb;color:#374151;border-radius:10px;text-decoration:none;font-size:12px;font-weight:700">
+                        <i class="fas fa-th"></i> All Logins
+                    </a>
+                </div>
+                <div class="footer-company">MyntReal LLP — ISO 9001:2015 Certified</div>
+            </div>
+
+            <!-- ── SIGNUP PANEL ── -->
+            <div class="tab-panel" id="panelSignup">
+                <div class="alert alert-danger" id="signupError" style="display:none">
+                    <i class="fas fa-exclamation-circle" style="margin-top:2px"></i><span id="signupErrorMsg"></span>
+                </div>
+                <!-- Success state (hidden initially) -->
+                <div id="signupSuccess" style="display:none">
+                    <div class="success-panel">
+                        <div class="success-icon"><i class="fas fa-check"></i></div>
+                        <div class="success-title">Registration Submitted!</div>
+                        <div class="success-msg">Your account is <strong>pending approval</strong> by our team. You will be notified once your account is activated.</div>
+                        <div class="success-code">Your referral code: <br><strong id="successCode">—</strong></div>
+                        <div class="success-msg" style="font-size:12px;color:#94a3b8;margin-top:8px">Keep this code safe — you'll use it to track your promotions.</div>
+                    </div>
+                    <div class="divider"></div>
+                    <button class="btn-action" onclick="switchTab('login')" style="background:linear-gradient(135deg,#0d9488,#065f46)">
+                        <i class="fas fa-sign-in-alt"></i>&nbsp; Go to Sign In
+                    </button>
+                </div>
+                <!-- Signup form -->
+                <form id="signupForm" onsubmit="doSignup(event)" autocomplete="off" novalidate>
+                    <div class="form-group">
+                        <label class="form-label">Name <span style="color:#ef4444">*</span></label>
+                        <div style="display:flex;gap:8px;align-items:stretch">
+                            <div class="input-wrap" style="flex:0 0 90px">
+                                <select id="sgTitle" style="height:46px;width:100%;border:none;outline:none;padding:0 8px;font-size:14px;color:#1e293b;background:transparent;cursor:pointer">
+                                    <option value="">Title</option>
+                                    <option value="Mr.">Mr.</option>
+                                    <option value="Ms.">Ms.</option>
+                                    <option value="Mrs.">Mrs.</option>
+                                    <option value="Dr.">Dr.</option>
+                                </select>
+                            </div>
+                            <div class="input-wrap" style="flex:1">
+                                <input type="text" id="sgFirstName" placeholder="First name" required style="padding-left:10px">
+                            </div>
+                            <div class="input-wrap" style="flex:1">
+                                <input type="text" id="sgLastName" placeholder="Last name" style="padding-left:10px">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gender <span style="color:#ef4444">*</span></label>
+                        <div class="input-wrap">
+                            <div class="input-icon"><i class="fas fa-venus-mars"></i></div>
+                            <select id="sgGender" required>
+                                <option value="">Select gender…</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                                <option value="Prefer not to say">Prefer not to say</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mobile Number <span style="color:#ef4444">*</span></label>
+                        <div class="input-wrap">
+                            <div class="input-icon"><i class="fas fa-phone"></i></div>
+                            <input type="tel" id="sgPhone" placeholder="10-digit mobile number" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email <span class="opt">(optional)</span></label>
+                        <div class="input-wrap">
+                            <div class="input-icon"><i class="fas fa-envelope"></i></div>
+                            <input type="email" id="sgEmail" placeholder="your@email.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Platforms You Promote On <span class="opt">(select all that apply)</span></label>
+                        <div class="platform-grid" id="sgPlatformGrid">
+                            <label class="plat-label"><input type="checkbox" value="instagram"> <i class="fab fa-instagram" style="color:#e1306c"></i> Instagram</label>
+                            <label class="plat-label"><input type="checkbox" value="youtube"> <i class="fab fa-youtube" style="color:#ff0000"></i> YouTube</label>
+                            <label class="plat-label"><input type="checkbox" value="facebook"> <i class="fab fa-facebook" style="color:#1877f2"></i> Facebook</label>
+                            <label class="plat-label"><input type="checkbox" value="whatsapp"> <i class="fab fa-whatsapp" style="color:#25d366"></i> WhatsApp</label>
+                            <label class="plat-label"><input type="checkbox" value="other"> <i class="fas fa-link" style="color:#64748b"></i> Other</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Monthly Promotion Budget <span class="opt">(optional)</span></label>
+                        <div class="input-wrap">
+                            <div class="input-icon"><i class="fas fa-rupee-sign"></i></div>
+                            <select id="sgBudget">
+                                <option value="">Select your budget range…</option>
+                                <option value="Up to ₹1,000">Up to ₹1,000</option>
+                                <option value="₹1,001–₹3,000">₹1,001 – ₹3,000</option>
+                                <option value="₹3,001–₹5,000">₹3,001 – ₹5,000</option>
+                                <option value="₹5,001–₹10,000">₹5,001 – ₹10,000</option>
+                                <option value="Above ₹10,000">Above ₹10,000</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password <span style="color:#ef4444">*</span></label>
+                        <div class="input-wrap">
+                            <div class="input-icon"><i class="fas fa-lock"></i></div>
+                            <input type="password" id="sgPw" placeholder="Minimum 6 characters" required>
+                            <button type="button" class="toggle-eye" onclick="togglePw('sgPw','eyeIconSg')"><i class="fas fa-eye" id="eyeIconSg"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm Password <span style="color:#ef4444">*</span></label>
+                        <div class="input-wrap">
+                            <div class="input-icon"><i class="fas fa-lock"></i></div>
+                            <input type="password" id="sgPwConfirm" placeholder="Re-enter your password" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-action" id="signupBtn">
+                        <span id="signupBtnText"><i class="fas fa-user-plus"></i>&nbsp; Create Account</span>
+                        <span id="signupBtnSpinner" style="display:none"><i class="fas fa-spinner fa-spin"></i>&nbsp; Submitting…</span>
+                    </button>
+                </form>
+                <div class="divider"></div>
+                <div class="footer-links">Already have an account? <a href="#" onclick="switchTab('login');return false">Sign In</a></div>
+                <div class="footer-company">MyntReal LLP — ISO 9001:2015 Certified</div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(async function checkCrossToken() {
+    const ct = new URLSearchParams(window.location.search).get('ct');
+    if (ct) {
+        document.body.style.opacity = '0.5';
+        try {
+            const resp = await fetch('/api/v1/promo/cross-auth/redeem-to-promo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cross_token: ct })
+            });
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+                sessionStorage.setItem('promo_token', data.token);
+                sessionStorage.setItem('promo_influencer', JSON.stringify(data.influencer));
+                window.location.href = '/promo/dashboard';
+                return;
+            } else {
+                document.body.style.opacity = '1';
+                alert(data.detail || 'Switch link expired. Please log in manually.');
+            }
+        } catch(e) {
+            document.body.style.opacity = '1';
+        }
+    }
+})();
+
+function switchTab(tab) {
+    document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+    document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
+    document.getElementById('panelLogin').classList.toggle('active', tab === 'login');
+    document.getElementById('panelSignup').classList.toggle('active', tab === 'signup');
+}
+// Auto-activate tab from URL ?tab=signup or ?tab=login
+(function() {
+    const _t = new URLSearchParams(window.location.search).get('tab');
+    if (_t === 'signup' || _t === 'login') switchTab(_t);
+})();
+
+function togglePw(inputId, iconId) {
+    const inp = document.getElementById(inputId);
+    const ico = document.getElementById(iconId);
+    if (inp.type === 'password') { inp.type = 'text'; ico.className = 'fas fa-eye-slash'; }
+    else { inp.type = 'password'; ico.className = 'fas fa-eye'; }
+}
+
+async function doLogin(e) {
+    e.preventDefault();
+    const login = document.getElementById('loginId').value.trim();
+    const password = document.getElementById('loginPw').value;
+    document.getElementById('loginError').style.display = 'none';
+    if (!login || !password) {
+        document.getElementById('loginErrorMsg').textContent = 'Please enter your login ID and password.';
+        document.getElementById('loginError').style.display = 'flex';
+        return;
+    }
+    document.getElementById('loginBtnText').style.display = 'none';
+    document.getElementById('loginBtnSpinner').style.display = '';
+    document.getElementById('loginBtn').disabled = true;
+    try {
+        const resp = await fetch('/api/v1/promo/login', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ login, password })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            sessionStorage.setItem('promo_token', data.token);
+            sessionStorage.setItem('promo_influencer', JSON.stringify(data.influencer));
+            window.location.href = '/promo/dashboard';
+        } else {
+            document.getElementById('loginErrorMsg').textContent = data.detail || 'Invalid credentials. Please try again.';
+            document.getElementById('loginError').style.display = 'flex';
+        }
+    } catch(err) {
+        document.getElementById('loginErrorMsg').textContent = 'Network error. Please try again.';
+        document.getElementById('loginError').style.display = 'flex';
+    } finally {
+        document.getElementById('loginBtnText').style.display = '';
+        document.getElementById('loginBtnSpinner').style.display = 'none';
+        document.getElementById('loginBtn').disabled = false;
+    }
+}
+
+function getSgPlatforms() {
+    const checks = document.querySelectorAll('#sgPlatformGrid input[type=checkbox]:checked');
+    return Array.from(checks).map(c => c.value).join(',');
+}
+
+async function doSignup(e) {
+    e.preventDefault();
+    const err = (msg) => {
+        document.getElementById('signupErrorMsg').textContent = msg;
+        document.getElementById('signupError').style.display = 'flex';
+    };
+    document.getElementById('signupError').style.display = 'none';
+    const title     = document.getElementById('sgTitle').value.trim();
+    const firstName = document.getElementById('sgFirstName').value.trim();
+    const lastName  = document.getElementById('sgLastName').value.trim();
+    const gender    = document.getElementById('sgGender').value;
+    const phone     = document.getElementById('sgPhone').value.trim();
+    const email     = document.getElementById('sgEmail').value.trim();
+    const password  = document.getElementById('sgPw').value;
+    const confirm   = document.getElementById('sgPwConfirm').value;
+    const budget    = document.getElementById('sgBudget').value;
+    const platforms = getSgPlatforms();
+    // Build full name from parts
+    const nameParts = [title, firstName, lastName].filter(Boolean);
+    const name = nameParts.join(' ') || firstName;
+    if (!firstName) { err('First name is required.'); return; }
+    if (!gender) { err('Please select your gender.'); return; }
+    if (!phone) { err('Mobile number is required.'); return; }
+    if (!password) { err('Password is required.'); return; }
+    if (password.length < 6) { err('Password must be at least 6 characters.'); return; }
+    if (password !== confirm) { err('Passwords do not match.'); return; }
+    document.getElementById('signupBtnText').style.display = 'none';
+    document.getElementById('signupBtnSpinner').style.display = '';
+    document.getElementById('signupBtn').disabled = true;
+    try {
+        const body = { name, phone, password, first_name: firstName, last_name: lastName || undefined, gender };
+        if (title) body.name_title = title;
+        if (email) body.email = email;
+        if (platforms) body.platforms = platforms;
+        if (budget) body.budget_range = budget;
+        const resp = await fetch('/api/v1/promo/self-register', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(body)
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            document.getElementById('signupForm').style.display = 'none';
+            document.getElementById('signupError').style.display = 'none';
+            document.getElementById('successCode').textContent = data.referral_code || '—';
+            document.getElementById('signupSuccess').style.display = 'block';
+        } else {
+            err(data.detail || 'Registration failed. Please try again.');
+        }
+    } catch(e2) {
+        err('Network error. Please try again.');
+    } finally {
+        document.getElementById('signupBtnText').style.display = '';
+        document.getElementById('signupBtnSpinner').style.display = 'none';
+        document.getElementById('signupBtn').disabled = false;
+    }
+}
+
+// DC-OTP-RESET-002: Influencer Portal Forgot Password
+function infFPMsg(txt, color) {
+    var el = document.getElementById('infFPMsg');
+    el.style.color = color || '#0d9488';
+    el.textContent = txt;
+}
+async function infFPSendOTP() {
+    var uid = document.getElementById('infFPUserId').value.trim();
+    if (!uid) { infFPMsg('Please enter your email or phone', '#dc2626'); return; }
+    infFPMsg('Sending OTP…', '#0d9488');
+    try {
+        var r = await fetch('/api/v1/password-reset/portal/influencer/forgot-password', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({user_id: uid})
+        });
+        var d = await r.json();
+        if (d.success || r.ok) {
+            document.getElementById('infFPStep1').style.display = 'none';
+            document.getElementById('infFPStep2').style.display = 'block';
+            infFPMsg('OTP sent! Check your WhatsApp.', '#0d9488');
+        } else {
+            infFPMsg(d.detail || 'Could not send OTP', '#dc2626');
+        }
+    } catch(e) { infFPMsg('Network error. Try again.', '#dc2626'); }
+}
+async function infFPVerifyOTP() {
+    var uid = document.getElementById('infFPUserId').value.trim();
+    var otp = document.getElementById('infFPOtp').value.trim();
+    if (otp.length !== 6) { infFPMsg('Enter the 6-digit OTP', '#dc2626'); return; }
+    infFPMsg('Verifying…', '#0d9488');
+    try {
+        var r = await fetch('/api/v1/password-reset/portal/influencer/verify-otp', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({user_id: uid, otp_code: otp})
+        });
+        var d = await r.json();
+        if (d.success) {
+            document.getElementById('infFPStep2').style.display = 'none';
+            document.getElementById('infFPStep3').style.display = 'block';
+            infFPMsg('OTP verified! Set your new password.', '#0d9488');
+        } else {
+            infFPMsg(d.detail || 'Invalid OTP', '#dc2626');
+        }
+    } catch(e) { infFPMsg('Network error.', '#dc2626'); }
+}
+async function infFPResetPwd() {
+    var uid = document.getElementById('infFPUserId').value.trim();
+    var otp = document.getElementById('infFPOtp').value.trim();
+    var np = document.getElementById('infFPNewPwd').value;
+    var cp = document.getElementById('infFPConfPwd').value;
+    if (np.length < 6) { infFPMsg('Password must be at least 6 characters', '#dc2626'); return; }
+    if (np !== cp) { infFPMsg('Passwords do not match', '#dc2626'); return; }
+    infFPMsg('Resetting password…', '#0d9488');
+    try {
+        var r = await fetch('/api/v1/password-reset/portal/influencer/reset-password', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({user_id: uid, otp_code: otp, new_password: np})
+        });
+        var d = await r.json();
+        if (d.success) {
+            infFPMsg('✅ ' + d.message, '#0d9488');
+            setTimeout(function(){ document.getElementById('infFPPanel').style.display='none'; }, 3000);
+        } else {
+            infFPMsg(d.detail || 'Reset failed', '#dc2626');
+        }
+    } catch(e) { infFPMsg('Network error.', '#dc2626'); }
+}
+</script>
+</body>
+</html>

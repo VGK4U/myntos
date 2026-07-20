@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AI Segments & Brochures — Mynt Real LLP</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="/staff_sidebar.css"/>
+<style>
+:root{--accent:#6366f1;--accent-light:#e0e7ff;--green:#16a34a;--red:#dc2626;--card-radius:14px}
+body{background:#f5f5ff;font-family:'Inter',system-ui,sans-serif;color:#1e1b4b}
+.page-header{background:#fff;border-bottom:1px solid #e0e1fd;padding:18px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.page-header h4{margin:0;font-size:18px;font-weight:800;color:#1e1b4b;display:flex;align-items:center;gap:10px}
+.layout{display:grid;grid-template-columns:270px 1fr;gap:20px;padding:24px;min-height:calc(100vh - 80px)}
+.seg-panel{background:#fff;border-radius:var(--card-radius);border:1px solid #e0e1fd;overflow:hidden;height:fit-content;position:sticky;top:20px}
+.seg-panel-head{padding:14px 18px;border-bottom:1px solid #f0f1fe;font-weight:700;font-size:13px;color:#374151;display:flex;align-items:center;justify-content:space-between}
+.seg-item{padding:12px 18px;border-bottom:1px solid #f8f8ff;cursor:pointer;font-size:13px;color:#374151;display:flex;align-items:center;justify-content:space-between;gap:8px;transition:all .15s}
+.seg-item:hover{background:#f5f5ff}
+.seg-item.active{background:var(--accent-light);color:var(--accent);font-weight:700}
+.seg-pill{background:#f0f1fe;color:#6366f1;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.seg-item.active .seg-pill{background:#6366f1;color:#fff}
+.content-panel{display:flex;flex-direction:column;gap:20px}
+.card-box{background:#fff;border-radius:var(--card-radius);border:1px solid #e0e1fd;overflow:hidden}
+.card-box-head{padding:16px 20px;border-bottom:1px solid #f0f1fe;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-box-head h6{margin:0;font-size:14px;font-weight:700;color:#374151;display:flex;align-items:center;gap:8px}
+.card-box-body{padding:20px}
+.btn-seg{padding:7px 16px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all .2s}
+.btn-primary-seg{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff}
+.btn-ghost-seg{background:#f5f5ff;color:#6366f1;border:1.5px solid #e0e1fd}
+.btn-success-seg{background:#dcfce7;color:#15803d;border:1.5px solid #bbf7d0}
+.btn-danger-seg{background:#fee2e2;color:#dc2626;border:1.5px solid #fecaca}
+.btn-seg:disabled{opacity:.5;cursor:not-allowed}
+.upload-zone{border:2px dashed #c7d2fe;border-radius:12px;padding:36px 24px;text-align:center;background:#fafafe;cursor:pointer;transition:all .2s;position:relative}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:#eeefff}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.entry-card{border:1px solid #e0e1fd;border-radius:10px;padding:14px 16px;margin-bottom:10px;background:#fafafe}
+.entry-card .cat-badge{background:var(--accent-light);color:var(--accent);font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;display:inline-block;margin-bottom:6px}
+.entry-card h6{margin:0 0 4px;font-size:13px;font-weight:700;color:#1e1b4b}
+.entry-card p{margin:0;font-size:12px;color:#6b7280;line-height:1.5}
+.entry-card .entry-actions{display:flex;gap:6px;margin-top:10px}
+.badge-active{background:#dcfce7;color:#15803d;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.badge-inactive{background:#f3f4f6;color:#9ca3af;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.progress-bar-wrap{height:6px;background:#e0e1fd;border-radius:3px;overflow:hidden;margin:8px 0}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,#6366f1,#a855f7);transition:width .4s}
+.spinner{animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:60px 20px;color:#9ca3af}
+.empty-state i{font-size:48px;margin-bottom:16px;opacity:.4}
+.form-input{width:100%;padding:8px 12px;border:1.5px solid #e0e1fd;border-radius:8px;font-size:13px;outline:none;transition:border .15s;background:#fafafe}
+.form-input:focus{border-color:var(--accent)}
+textarea.form-input{min-height:90px;resize:vertical}
+.tab-row{display:flex;gap:4px;margin-bottom:20px;background:#f0f1fe;border-radius:10px;padding:4px;width:fit-content}
+.tab-btn{padding:7px 18px;border-radius:7px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:transparent;color:#6b7280;transition:all .15s}
+.tab-btn.active{background:#fff;color:var(--accent);box-shadow:0 1px 4px rgba(99,102,241,.15)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(30,27,75,.45);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.2);width:95%;max-width:560px;overflow:hidden}
+.modal-head{padding:18px 22px;border-bottom:1px solid #f0f1fe;display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:15px}
+.modal-body{padding:22px}
+.modal-foot{padding:14px 22px;border-top:1px solid #f0f1fe;display:flex;gap:10px;justify-content:flex-end}
+@media(max-width:768px){.layout{grid-template-columns:1fr;}.seg-panel{position:static}}
+</style>
+</head>
+<body>
+<div id="staffSidebarMount"></div>
+<div class="main-content" id="mainContent">
+
+<div class="page-header">
+  <h4><i class="fas fa-layer-group" style="color:var(--accent)"></i> AI Segments &amp; Brochures</h4>
+  <div style="display:flex;gap:10px;align-items:center">
+    <button class="btn-seg btn-ghost-seg" onclick="location.href='/staff_ai_calling.html'">
+      <i class="fas fa-arrow-left"></i> Back to AI Calling
+    </button>
+    <button class="btn-seg btn-primary-seg" onclick="showAddSegModal()">
+      <i class="fas fa-plus"></i> New Segment
+    </button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- LEFT: Segments list -->
+  <div class="seg-panel">
+    <div class="seg-panel-head">
+      <span><i class="fas fa-tags me-2" style="color:var(--accent)"></i>Segments</span>
+      <span id="segCount" style="font-size:11px;color:#9ca3af"></span>
+    </div>
+    <div id="segList">
+      <div style="padding:40px;text-align:center;color:#9ca3af"><i class="fas fa-spinner spinner"></i></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Content area -->
+  <div class="content-panel" id="contentArea">
+    <div class="empty-state">
+      <i class="fas fa-layer-group"></i>
+      <p style="font-size:14px;font-weight:600;color:#6b7280;margin-bottom:4px">Select or create a segment</p>
+      <p style="font-size:12px">Segments group your AI knowledge base. Each segment can have its own brochures and product info.</p>
+    </div>
+  </div>
+
+</div>
+</div><!-- /main-content -->
+
+<!-- Add/Edit Entry Modal -->
+<div class="modal-overlay" id="modalEntry">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span id="modalEntryTitle"><i class="fas fa-edit me-2" style="color:var(--accent)"></i>Add Entry</span>
+      <button class="btn-seg btn-ghost-seg" style="padding:4px 10px" onclick="closeM('modalEntry')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="entryId"/>
+      <div style="display:grid;gap:14px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;display:block">Category *</label>
+          <select class="form-input" id="eCategory">
+            <option>Project Details</option><option>Pricing</option><option>Location</option>
+            <option>Amenities</option><option>Payment Plan</option><option>RERA &amp; Legal</option>
+            <option>USPs</option><option>Contact</option><option>General</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;display:block">Title *</label>
+          <input class="form-input" id="eTitle" placeholder="e.g. Starting Price, Location Highlights"/>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;display:block">Content * <span style="color:#9ca3af;font-weight:400">(the AI reads this during calls)</span></label>
+          <textarea class="form-input" id="eContent" placeholder="Write clear factual content. The AI will use this to answer customer questions.&#10;&#10;Example: Our project 'Green Valley' in Shamirpet offers 2BHK and 3BHK apartments starting at ₹45 lakhs. RERA registration: TS/01/2024/001."></textarea>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;display:block">Sort Order</label>
+            <input type="number" class="form-input" id="eSortOrder" value="0" min="0"/>
+          </div>
+          <div>
+            <label style="font-size:12px;font-weight:600;color:#374151;margin-bottom:4px;display:block">Status</label>
+            <select class="form-input" id="eActive">
+              <option value="true">Active (AI uses this)</option>
+              <option value="false">Inactive (hidden)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-seg btn-ghost-seg" onclick="closeM('modalEntry')">Cancel</button>
+      <button class="btn-seg btn-primary-seg" onclick="saveEntry()"><i class="fas fa-check"></i> Save Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- New Segment Modal -->
+<div class="modal-overlay" id="modalNewSeg">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-head">
+      <span><i class="fas fa-plus me-2" style="color:var(--accent)"></i>New Segment</span>
+      <button class="btn-seg btn-ghost-seg" style="padding:4px 10px" onclick="closeM('modalNewSeg')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <label style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;display:block">Segment Name *</label>
+      <input class="form-input" id="newSegName" placeholder="e.g. Residential, Commercial, Luxury Villas"/>
+      <p style="font-size:11px;color:#9ca3af;margin-top:8px">This creates an empty segment. You can then add entries or upload a brochure.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-seg btn-ghost-seg" onclick="closeM('modalNewSeg')">Cancel</button>
+      <button class="btn-seg btn-primary-seg" onclick="createSegment()"><i class="fas fa-check"></i> Create Segment</button>
+    </div>
+  </div>
+</div>
+
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/staff_header.js"></script>
+<script>
+const API = '/api/v1/staff/ai-calling';
+let _segs = [];
+let _currentSeg = null;
+let _entries = [];
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', async () => {
+  if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+  if (typeof StaffHeader !== 'undefined') {
+    StaffHeader.inject('AI Segments', 'fas fa-layer-group');
+    StaffHeader.init();
+  }
+  loadSegments();
+});
+
+// ── Load segments ──
+async function loadSegments() {
+  try {
+    const d = await sfetch(`${API}/segments-overview`);
+    _segs = d.segments || [];
+    renderSegList();
+    document.getElementById('segCount').textContent = `${_segs.length} segment${_segs.length!==1?'s':''}`;
+  } catch(e) {
+    document.getElementById('segList').innerHTML = `<div style="padding:20px;color:#dc2626;font-size:12px">${e.message}</div>`;
+  }
+}
+
+function renderSegList() {
+  const el = document.getElementById('segList');
+  if (!_segs.length) {
+    el.innerHTML = `<div style="padding:30px;text-align:center;color:#9ca3af;font-size:12px">No segments yet.<br/>Click "New Segment" to create one.</div>`;
+    return;
+  }
+  el.innerHTML = _segs.map(s => `
+    <div class="seg-item ${_currentSeg===s.name?'active':''}" onclick="selectSeg('${esc(s.name)}')">
+      <span style="font-weight:${_currentSeg===s.name?700:500}">${s.name}</span>
+      <span class="seg-pill">${s.active}</span>
+    </div>
+  `).join('');
+}
+
+// ── Select segment ──
+async function selectSeg(name) {
+  _currentSeg = name;
+  renderSegList();
+  renderContent();
+  await loadEntries(name);
+}
+
+function renderContent() {
+  document.getElementById('contentArea').innerHTML = `
+    <div class="card-box">
+      <div class="card-box-head">
+        <h6><i class="fas fa-tag" style="color:var(--accent)"></i> ${_currentSeg}</h6>
+        <div style="display:flex;gap:8px">
+          <button class="btn-seg btn-ghost-seg btn-sm" onclick="openEntryModal()"><i class="fas fa-plus"></i> Add Entry</button>
+          <button class="btn-seg btn-danger-seg btn-sm" onclick="deleteSeg('${esc(_currentSeg)}')"><i class="fas fa-trash"></i> Delete Segment</button>
+        </div>
+      </div>
+      <div class="card-box-body">
+        <!-- Brochure Upload -->
+        <div style="margin-bottom:24px">
+          <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+            <i class="fas fa-file-upload" style="color:#a855f7"></i> Upload Brochure (PDF or Image)
+          </div>
+          <div class="upload-zone" id="uploadZone" ondragover="onDrag(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+            <input type="file" id="brochureFile" accept=".pdf,.jpg,.jpeg,.png" onchange="onFileSelected(event)"/>
+            <i class="fas fa-cloud-upload-alt" style="font-size:32px;color:#c7d2fe;display:block;margin-bottom:10px"></i>
+            <div style="font-size:13px;font-weight:600;color:#6b7280">Drag & drop a brochure here or click to browse</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:4px">Supports PDF, JPG, PNG — AI will extract and structure the content</div>
+          </div>
+          <div id="uploadStatus" style="display:none;margin-top:12px"></div>
+        </div>
+        <!-- Entries -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:700;color:#374151"><i class="fas fa-database me-2" style="color:var(--accent)"></i>Knowledge Entries</div>
+          <span id="entryCount" style="font-size:11px;color:#9ca3af"></span>
+        </div>
+        <div id="entriesList"><div style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner spinner"></i></div></div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Load entries ──
+async function loadEntries(seg) {
+  try {
+    const d = await sfetch(`${API}/catalogue?segment=${encodeURIComponent(seg)}`);
+    // API returns { items: [...] }
+    _entries = Array.isArray(d.items) ? d.items : Array.isArray(d.entries) ? d.entries : Array.isArray(d) ? d : [];
+    renderEntries();
+  } catch(e) {
+    const el = document.getElementById('entriesList');
+    if (el) el.innerHTML = `<div style="color:#dc2626;font-size:12px;padding:12px"><i class="fas fa-exclamation-circle me-1"></i>${e.message}</div>`;
+    document.getElementById('entryCount').textContent = '0 entries';
+  }
+}
+
+function renderEntries() {
+  const el = document.getElementById('entriesList');
+  document.getElementById('entryCount').textContent = `${_entries.length} entr${_entries.length!==1?'ies':'y'}`;
+  if (!_entries.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:40px 20px"><i class="fas fa-inbox" style="font-size:36px"></i><p style="margin:12px 0 4px;font-size:13px;font-weight:600">No entries yet</p><p style="font-size:12px">Upload a brochure or add entries manually.</p></div>`;
+    return;
+  }
+  el.innerHTML = _entries.map(e => `
+    <div class="entry-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <span class="cat-badge">${e.category||'General'}</span>
+          <h6>${e.title}</h6>
+          <p>${e.content}</p>
+        </div>
+        <span class="${e.is_active?'badge-active':'badge-inactive'}">${e.is_active?'Active':'Off'}</span>
+      </div>
+      <div class="entry-actions">
+        <button class="btn-seg btn-ghost-seg" style="padding:4px 10px;font-size:11px" onclick="editEntry(${e.id})"><i class="fas fa-edit"></i> Edit</button>
+        <button class="btn-seg btn-danger-seg" style="padding:4px 10px;font-size:11px" onclick="deleteEntry(${e.id})"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Brochure upload ──
+let _pendingExtracted = [];
+
+function onDrag(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag-over'); }
+function onDragLeave(e) { document.getElementById('uploadZone').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) processFile(f);
+}
+function onFileSelected(e) {
+  const f = e.target.files[0];
+  if (f) processFile(f);
+  // Reset so same file can be selected again
+  e.target.value = '';
+}
+
+async function processFile(file) {
+  const status = document.getElementById('uploadStatus');
+  if (!status) return;
+  _pendingExtracted = [];
+  status.style.display = '';
+  status.innerHTML = `
+    <div style="background:#f5f5ff;border-radius:10px;padding:14px 16px;border:1px solid #e0e1fd">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <i class="fas fa-spinner spinner" style="color:var(--accent)"></i>
+        <span style="font-size:13px;font-weight:600;color:#374151">Reading <strong>${file.name}</strong> — AI is extracting content…</span>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="extractProgress" style="width:25%"></div></div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:4px">This may take 15–30 seconds for large PDFs</div>
+    </div>`;
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = localStorage.getItem('staffToken') || sessionStorage.getItem('staffToken') || '';
+
+    const prog = document.getElementById('extractProgress');
+    if (prog) prog.style.width = '55%';
+
+    const resp = await fetch(
+      `${API}/brochure-extract?segment=${encodeURIComponent(_currentSeg)}&save=0`,
+      { method: 'POST', headers: { 'X-Staff-Token': token }, body: formData }
+    );
+
+    let errBody = {};
+    if (!resp.ok) {
+      try { errBody = await resp.json(); } catch(_) {}
+      throw new Error(errBody.detail || `Server error ${resp.status} — please try again`);
+    }
+
+    if (prog) prog.style.width = '100%';
+    const d = await resp.json();
+    _pendingExtracted = d.entries || [];
+    showExtractedPreview(_pendingExtracted, file.name);
+  } catch(e) {
+    status.innerHTML = `
+      <div style="background:#fee2e2;border-radius:10px;padding:14px 16px;border:1px solid #fecaca">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <i class="fas fa-exclamation-circle" style="color:#dc2626"></i>
+          <span style="font-size:13px;font-weight:700;color:#dc2626">Extraction failed</span>
+        </div>
+        <div style="font-size:12px;color:#7f1d1d">${e.message}</div>
+        <button class="btn-seg btn-ghost-seg" style="margin-top:10px;font-size:11px;padding:4px 12px" onclick="document.getElementById('uploadStatus').style.display='none'">Dismiss</button>
+      </div>`;
+  }
+}
+
+function showExtractedPreview(entries, filename) {
+  const status = document.getElementById('uploadStatus');
+  if (!status) return;
+  status.innerHTML = `
+    <div style="background:#f0fdf4;border-radius:12px;padding:16px;border:1px solid #bbf7d0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <i class="fas fa-check-circle" style="color:#16a34a;font-size:18px"></i>
+          <span style="font-size:13px;font-weight:700;color:#15803d">Extracted ${entries.length} entries from <em>${filename}</em></span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-seg btn-ghost-seg" style="font-size:12px;padding:5px 12px" onclick="document.getElementById('uploadStatus').style.display='none';_pendingExtracted=[]">Discard</button>
+          <button class="btn-seg btn-success-seg" style="font-size:12px;padding:5px 12px" onclick="saveExtracted()">
+            <i class="fas fa-save"></i> Save All to Catalogue
+          </button>
+        </div>
+      </div>
+      <div style="max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+        ${entries.map(e => `
+          <div style="background:#fff;border-radius:8px;padding:10px 12px;border:1px solid #dcfce7">
+            <span style="background:#e0e7ff;color:#4f46e5;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;display:inline-block;margin-bottom:4px">${e.category||'General'}</span>
+            <div style="font-size:12px;font-weight:700;color:#1e1b4b;margin-bottom:3px">${e.title||''}</div>
+            <div style="font-size:11px;color:#6b7280;line-height:1.5">${e.content||''}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+}
+
+async function saveExtracted() {
+  const entries = _pendingExtracted;
+  if (!entries.length) { toast('Nothing to save', true); return; }
+  try {
+    for (const e of entries) {
+      await sfetch(`${API}/catalogue`, {
+        method: 'POST',
+        body: JSON.stringify({
+          segment: _currentSeg,
+          category: e.category || 'General',
+          title: e.title || 'Untitled',
+          content: e.content || '',
+          sort_order: 0,
+          is_active: true,
+        }),
+      });
+    }
+    _pendingExtracted = [];
+    document.getElementById('uploadStatus').style.display = 'none';
+    toast(`✅ ${entries.length} entries saved to catalogue!`);
+    await loadEntries(_currentSeg);
+    await loadSegments();
+  } catch(e) {
+    toast(`❌ ${e.message}`, true);
+  }
+}
+
+// ── Entry CRUD ──
+function openEntryModal(id) {
+  document.getElementById('entryId').value = '';
+  document.getElementById('eCategory').value = 'Project Details';
+  document.getElementById('eTitle').value = '';
+  document.getElementById('eContent').value = '';
+  document.getElementById('eSortOrder').value = '0';
+  document.getElementById('eActive').value = 'true';
+  document.getElementById('modalEntryTitle').innerHTML = '<i class="fas fa-plus me-2" style="color:var(--accent)"></i>Add Entry';
+  showM('modalEntry');
+}
+
+function editEntry(id) {
+  const e = _entries.find(x => x.id === id);
+  if (!e) return;
+  document.getElementById('entryId').value = id;
+  document.getElementById('eCategory').value = e.category || 'General';
+  document.getElementById('eTitle').value = e.title || '';
+  document.getElementById('eContent').value = e.content || '';
+  document.getElementById('eSortOrder').value = e.sort_order || 0;
+  document.getElementById('eActive').value = e.is_active ? 'true' : 'false';
+  document.getElementById('modalEntryTitle').innerHTML = '<i class="fas fa-edit me-2" style="color:var(--accent)"></i>Edit Entry';
+  showM('modalEntry');
+}
+
+async function saveEntry() {
+  const id = document.getElementById('entryId').value;
+  const payload = {
+    segment: _currentSeg,
+    category: document.getElementById('eCategory').value,
+    title: document.getElementById('eTitle').value.trim(),
+    content: document.getElementById('eContent').value.trim(),
+    sort_order: parseInt(document.getElementById('eSortOrder').value) || 0,
+    is_active: document.getElementById('eActive').value === 'true',
+  };
+  if (!payload.title || !payload.content) { toast('Title and content are required', true); return; }
+  try {
+    if (id) {
+      await sfetch(`${API}/catalogue/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    } else {
+      await sfetch(`${API}/catalogue`, { method: 'POST', body: JSON.stringify(payload) });
+    }
+    closeM('modalEntry');
+    toast(id ? '✅ Entry updated' : '✅ Entry added');
+    await loadEntries(_currentSeg);
+    await loadSegments();
+  } catch(e) {
+    toast(`❌ ${e.message}`, true);
+  }
+}
+
+async function deleteEntry(id) {
+  if (!confirm('Delete this entry?')) return;
+  try {
+    await sfetch(`${API}/catalogue/${id}`, { method: 'DELETE' });
+    toast('Entry deleted');
+    await loadEntries(_currentSeg);
+    await loadSegments();
+  } catch(e) { toast(`❌ ${e.message}`, true); }
+}
+
+// ── New segment ──
+function showAddSegModal() {
+  document.getElementById('newSegName').value = '';
+  showM('modalNewSeg');
+}
+
+async function createSegment() {
+  const name = document.getElementById('newSegName').value.trim();
+  if (!name) { toast('Segment name is required', true); return; }
+  try {
+    await sfetch(`${API}/catalogue`, {
+      method: 'POST',
+      body: JSON.stringify({ segment: name, category: 'General', title: `About ${name}`, content: `This segment covers ${name} properties.`, sort_order: 0, is_active: true }),
+    });
+    closeM('modalNewSeg');
+    toast(`✅ Segment "${name}" created`);
+    await loadSegments();
+    selectSeg(name);
+  } catch(e) { toast(`❌ ${e.message}`, true); }
+}
+
+async function deleteSeg(name) {
+  if (!confirm(`Delete ALL entries in segment "${name}"? This cannot be undone.`)) return;
+  const entries = _entries;
+  try {
+    for (const e of entries) { await sfetch(`${API}/catalogue/${e.id}`, { method: 'DELETE' }); }
+    toast(`Segment "${name}" deleted`);
+    _currentSeg = null;
+    document.getElementById('contentArea').innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i><p>Select or create a segment</p></div>';
+    await loadSegments();
+  } catch(e) { toast(`❌ ${e.message}`, true); }
+}
+
+// ── Helpers ──
+function esc(s) { return (s||'').replace(/'/g,"\\'"); }
+
+async function sfetch(url, opts = {}) {
+  const token = localStorage.getItem('staffToken') || sessionStorage.getItem('staffToken') || '';
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', 'X-Staff-Token': token, ...(opts.headers||{}) },
+    ...opts,
+  });
+  if (!res.ok) { const d = await res.json().catch(()=>({})); throw new Error(d.detail || `HTTP ${res.status}`); }
+  return res.json();
+}
+
+function showM(id) { document.getElementById(id).classList.add('show'); }
+function closeM(id) { document.getElementById(id).classList.remove('show'); }
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target===o) closeM(o.id); }));
+
+let _toastTimer;
+function toast(msg, err=false) {
+  clearTimeout(_toastTimer);
+  const el = document.createElement('div');
+  el.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:9999;background:${err?'#dc2626':'#16a34a'};color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.2)`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  _toastTimer = setTimeout(() => el.remove(), 3500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Payments | Partner Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #0f0f1a; color: #e2e8f0; font-family: 'Segoe UI', sans-serif; margin: 0; }
+        .partner-main-content { margin-left: 260px; min-height: 100vh; padding: 30px; }
+        .page-header { background: linear-gradient(135deg, #4a1d96, #6d28d9); border-radius: 12px; padding: 24px 28px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .page-header h1 { margin: 0; font-size: 1.6rem; font-weight: 700; color: #fff; }
+        .btn-back { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: #fff; padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s; }
+        .btn-back:hover { background: rgba(255,255,255,0.25); color: #fff; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: #1a1a2e; border: 1px solid #374151; border-radius: 10px; padding: 16px; text-align: center; }
+        .stat-card .num { font-size: 1.6rem; font-weight: 700; color: #8b5cf6; }
+        .stat-card .lbl { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+        .card { background: #1a1a2e; border: 1px solid #374151; border-radius: 12px; margin-bottom: 20px; }
+        .card-header { background: transparent; border-bottom: 1px solid #2d2d44; padding: 16px 20px; }
+        .card-header h5 { margin: 0; color: #8b5cf6; font-weight: 600; }
+        .card-body { padding: 20px; }
+        .table { color: #e2e8f0; }
+        .table thead th { border-bottom: 1px solid #374151; color: #9ca3af; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 10px 12px; }
+        .table td { border-bottom: 1px solid #1f2937; padding: 12px; vertical-align: middle; }
+        .table tbody tr:hover { background: #232340; }
+        .badge-pst { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .pst-PENDING  { background: #fef3c7; color: #92400e; }
+        .pst-VERIFIED { background: #d1fae5; color: #065f46; }
+        .pst-REJECTED { background: #fee2e2; color: #991b1b; }
+        .pst-REFUNDED { background: #ede9fe; color: #5b21b6; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state i { font-size: 48px; margin-bottom: 16px; color: #374151; }
+        .pagination-row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+        .btn-pg { background: #1a1a2e; border: 1px solid #374151; color: #e2e8f0; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .btn-pg:hover:not(:disabled) { background: #232340; }
+        .btn-pg:disabled { opacity: 0.4; cursor: not-allowed; }
+        @media (max-width: 768px) { .partner-main-content { margin-left: 0; } }
+    </style>
+</head>
+<body>
+    <div id="sidebarContainer"></div>
+    <div class="partner-main-content">
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-money-check-alt me-2"></i>My Payments</h1>
+                <p class="mb-0 mt-1" style="color:rgba(255,255,255,0.75);font-size:14px">Payment history for all your orders</p>
+            </div>
+            <a href="javascript:history.back()" class="btn-back"><i class="fas fa-arrow-left"></i> Back</a>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card"><div class="num" id="statTotal">—</div><div class="lbl">Total Records</div></div>
+            <div class="stat-card"><div class="num" id="statVerified" style="color:#10b981">—</div><div class="lbl">Verified</div></div>
+            <div class="stat-card"><div class="num" id="statPending" style="color:#f59e0b">—</div><div class="lbl">Pending</div></div>
+            <div class="stat-card"><div class="num" id="statAmount" style="color:#8b5cf6;font-size:1.1rem">—</div><div class="lbl">Total Paid (Verified)</div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h5>Payment Records</h5></div>
+            <div class="card-body">
+                <div id="paymentsBody">
+                    <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading payments…</p></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PARTNER_BASE = '/api/v1/partner';
+        let currentPage = 1;
+        function partnerAuthHdrs() {
+            const t = localStorage.getItem('partner_token');
+            const pi = JSON.parse(localStorage.getItem('partner_info') || '{}');
+            const h = t ? { 'Authorization': 'Bearer ' + t } : {};
+            if (pi.primary_company_id) h['X-Company-ID'] = String(pi.primary_company_id);
+            return h;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const token = localStorage.getItem('partner_token');
+            if (!token) { window.location.href = '/partner/login'; return; }
+            initPartnerSidebar('sidebarContainer');
+            loadPayments(1);
+        });
+
+        async function loadPayments(page) {
+            currentPage = page || 1;
+            document.getElementById('paymentsBody').innerHTML = '<div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading…</p></div>';
+            try {
+                const r = await fetch(`${PARTNER_BASE}/auth/my-payments?page=${currentPage}&limit=15`, { headers: partnerAuthHdrs() });
+                if (r.status === 401) { window.location.href = '/partner/login'; return; }
+                if (r.status === 403) {
+                    document.getElementById('paymentsBody').innerHTML = '<div class="empty-state"><i class="fas fa-lock"></i><p>Access restricted. Contact your administrator.</p></div>';
+                    ['statTotal','statVerified','statPending'].forEach(id => document.getElementById(id).textContent = '0');
+                    document.getElementById('statAmount').textContent = '₹0';
+                    return;
+                }
+                const d = await r.json();
+                if (!d.success || !d.payments || !d.payments.length) {
+                    document.getElementById('paymentsBody').innerHTML = '<div class="empty-state"><i class="fas fa-money-check-alt"></i><p>No payment records found.</p></div>';
+                    ['statTotal','statVerified','statPending'].forEach(id => document.getElementById(id).textContent = '0');
+                    document.getElementById('statAmount').textContent = '₹0';
+                    return;
+                }
+                const all = d.payments;
+                document.getElementById('statTotal').textContent = d.total;
+                document.getElementById('statVerified').textContent = all.filter(p => p.status === 'VERIFIED').length;
+                document.getElementById('statPending').textContent = all.filter(p => p.status === 'PENDING').length;
+                const totalAmt = all.filter(p => p.status === 'VERIFIED').reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+                document.getElementById('statAmount').textContent = '₹' + totalAmt.toLocaleString('en-IN');
+                renderPayments(all, d.total, d.page);
+            } catch(e) {
+                document.getElementById('paymentsBody').innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error loading payments.</p></div>';
+            }
+        }
+
+        function renderPayments(payments, total, page) {
+            const limit = 15;
+            const pages = Math.max(1, Math.ceil(total / limit));
+            let rows = payments.map(p => {
+                const ps = p.status || 'PENDING';
+                const dt = p.payment_date ? new Date(p.payment_date).toLocaleDateString('en-IN') : '—';
+                const amt = p.amount ? '₹' + parseFloat(p.amount).toLocaleString('en-IN') : '—';
+                return `<tr>
+                    <td>${dt}</td>
+                    <td><strong>${amt}</strong></td>
+                    <td>${p.payment_mode || '—'}</td>
+                    <td style="font-size:12px;color:#9ca3af">${p.reference_number || '—'}</td>
+                    <td><span class="badge-pst pst-${ps}">${ps}</span></td>
+                </tr>`;
+            }).join('');
+
+            const pagination = `<div class="pagination-row">
+                <span style="color:#9ca3af;font-size:13px">Page ${page} of ${pages} (${total} records)</span>
+                <div style="display:flex;gap:8px">
+                    <button class="btn-pg" onclick="loadPayments(${page-1})" ${page<=1?'disabled':''}>← Prev</button>
+                    <button class="btn-pg" onclick="loadPayments(${page+1})" ${page>=pages?'disabled':''}>Next →</button>
+                </div>
+            </div>`;
+
+            document.getElementById('paymentsBody').innerHTML = `
+                <div style="overflow-x:auto">
+                    <table class="table table-hover mb-0">
+                        <thead><tr>
+                            <th>Date</th><th>Amount</th><th>Mode</th><th>Reference</th><th>Status</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>${pagination}`;
+        }
+    </script>
+    <script src="/partner_sidebar.js?v=1"></script>
+</body>
+</html>

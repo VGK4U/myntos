@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mynt Real LLP Staff Portal - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f3f4f6; 
+            min-height: 100vh;
+        }
+
+        .header-logo {
+            height: 36px;
+            width: auto;
+        }
+        .user-info-details {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .user-info-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .user-info-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .user-info-role {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .role-badge-supreme { background: #fef2f2; color: #dc2626; }
+        .role-badge-hr { background: #f3e8ff; color: #7c3aed; }
+        .role-badge-leadership { background: #fef3c7; color: #d97706; }
+        .role-badge-default { background: #f3f4f6; color: #374151; }
+        
+        .content-area { padding: 24px; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+        }
+        
+        .stat-icon.blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .stat-icon.green { background: linear-gradient(135deg, #10b981, #059669); }
+        .stat-icon.purple { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+        .stat-icon.orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        
+        .stat-info h3 { font-size: 28px; font-weight: 700; color: #1f2937; margin: 0; }
+        .stat-info p { font-size: 13px; color: #6b7280; margin: 0; }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: none;
+            margin-bottom: 20px;
+        }
+        
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 16px 20px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .card-body { padding: 20px; }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+        
+        .quick-action-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            color: #374151;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .quick-action-btn:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+            color: #1f2937;
+        }
+        
+        .quick-action-btn i { color: #6366f1; }
+        
+        .profile-info { display: grid; gap: 12px; }
+        .profile-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        .profile-row:last-child { border-bottom: none; }
+        .profile-label { color: #6b7280; font-size: 14px; }
+        .profile-value { color: #1f2937; font-weight: 500; font-size: 14px; }
+        
+        .badge-status {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-enabled { background: #dcfce7; color: #166534; }
+        .badge-disabled { background: #fee2e2; color: #991b1b; }
+
+        /* My Earnings widget */
+        .earn-banner {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 12px; padding: 18px 22px; color: #fff; margin-bottom: 16px;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+        }
+        .earn-total { font-size: 2rem; font-weight: 800; line-height: 1; }
+        .earn-label { font-size: 0.76rem; opacity: 0.85; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+        .earn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+        .earn-cat {
+            background: #f8fafc; border-radius: 8px; padding: 10px 12px;
+            border-left: 3px solid #6366f1; text-align: left;
+        }
+        .earn-cat.has-bonus { border-left-color: #f59e0b; background: #fffbeb; }
+        .earn-cat-name { font-size: 0.72rem; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+        .earn-cat-amt  { font-size: 1rem; font-weight: 700; color: #4f46e5; margin-top: 2px; }
+        .earn-cat-detail { font-size: 0.68rem; color: #9ca3af; margin-top: 1px; }
+
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+    <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+                    <div class="stat-info">
+                        <h3 id="totalEmployees">0</h3>
+                        <p>Total Employees</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fas fa-user-check"></i></div>
+                    <div class="stat-info">
+                        <h3 id="activeEmployees">0</h3>
+                        <p>Active Employees</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fas fa-building"></i></div>
+                    <div class="stat-info">
+                        <h3 id="totalDepartments">0</h3>
+                        <p>Departments</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fas fa-calendar-alt"></i></div>
+                    <div class="stat-info">
+                        <h3 id="lastLogin">-</h3>
+                        <p>Last Login</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ── My Incentive Earnings widget ───────────────────────────── -->
+            <div class="card mb-4" id="earningsWidget">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <span><i class="fas fa-trophy me-2 text-warning"></i>My Incentive Earnings — <span id="earnMonthLabel" class="text-primary fw-semibold"></span></span>
+                    <a href="/staff/my-lead-incentives" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-external-link-alt me-1"></i>Full Details
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div id="earnLoading" class="text-center py-3 text-muted">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>Loading your earnings…
+                    </div>
+                    <div id="earnContent" style="display:none">
+                        <div class="earn-banner">
+                            <div>
+                                <div class="earn-label">Total Earned This Month</div>
+                                <div class="earn-total" id="earnTotal">₹0.00</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="earn-label">Self Leads ₹</div>
+                                <div style="font-size:1.1rem;font-weight:700;" id="earnSelf">₹0</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="earn-label">Company Leads ₹</div>
+                                <div style="font-size:1.1rem;font-weight:700;" id="earnCompany">₹0</div>
+                            </div>
+                        </div>
+                        <div class="earn-grid" id="earnCatGrid"></div>
+                    </div>
+                    <div id="earnEmpty" style="display:none" class="text-center py-3 text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>No incentive activity recorded this month yet.
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-bolt me-2"></i>Quick Actions
+                        </div>
+                        <div class="card-body">
+                            <div class="quick-actions">
+                                <a href="/staff/employees" class="quick-action-btn">
+                                    <i class="fas fa-user-plus"></i>
+                                    <span>Add Employee</span>
+                                </a>
+                                <a href="/staff/departments" class="quick-action-btn">
+                                    <i class="fas fa-plus-circle"></i>
+                                    <span>Add Department</span>
+                                </a>
+                                <a href="#" class="quick-action-btn" onclick="loadDashboardData(); return false;">
+                                    <i class="fas fa-sync-alt"></i>
+                                    <span>Refresh Data</span>
+                                </a>
+                                <a href="/staff/change-password" class="quick-action-btn">
+                                    <i class="fas fa-key"></i>
+                                    <span>Change Password</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="fas fa-user me-2"></i>Your Profile
+                        </div>
+                        <div class="card-body">
+                            <div class="profile-info">
+                                <div class="profile-row">
+                                    <span class="profile-label">Employee Code:</span>
+                                    <span class="profile-value" id="profileCode">-</span>
+                                </div>
+                                <div class="profile-row">
+                                    <span class="profile-label">Email:</span>
+                                    <span class="profile-value" id="profileEmail">-</span>
+                                </div>
+                                <div class="profile-row">
+                                    <span class="profile-label">Department:</span>
+                                    <span class="profile-value" id="profileDept">-</span>
+                                </div>
+                                <div class="profile-row">
+                                    <span class="profile-label">Designation:</span>
+                                    <span class="profile-value" id="profileDesignation">-</span>
+                                </div>
+                                <div class="profile-row">
+                                    <span class="profile-label">Date of Joining:</span>
+                                    <span class="profile-value" id="profileDOJ">-</span>
+                                </div>
+                                <div class="profile-row">
+                                    <span class="profile-label">2FA Status:</span>
+                                    <span class="profile-value" id="profile2FA">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script src="/staff_header.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+            StaffHeader.inject('Dashboard', 'fas fa-tachometer-alt');
+            if (typeof StaffHeader !== 'undefined') StaffHeader.init();
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+            updateHeaderUserInfo();
+            loadDashboardData();
+            loadProfileData();
+            loadMyEarnings();
+        });
+        
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            const name = userData.full_name || 'Staff Member';
+            const role = userData.role_name || 'Employee';
+            const empId = userData.emp_code || userData.employee_code || '-';
+            
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            
+            document.getElementById('headerUserInitials').textContent = initials;
+            document.getElementById('headerUserName').textContent = name;
+            document.getElementById('headerUserEmpId').textContent = empId;
+            
+            const roleEl = document.getElementById('headerUserRole');
+            roleEl.textContent = role;
+            
+            if (role.includes('Supreme') || role.includes('VGK4U')) {
+                roleEl.className = 'user-info-role role-badge-supreme';
+            } else if (role.includes('HR')) {
+                roleEl.className = 'user-info-role role-badge-hr';
+            } else if (role.includes('Leadership') || role.includes('Leader')) {
+                roleEl.className = 'user-info-role role-badge-leadership';
+            } else {
+                roleEl.className = 'user-info-role role-badge-default';
+            }
+        }
+        
+        async function loadDashboardData() {
+            try {
+                const [empRes, deptRes] = await Promise.all([
+                    staffFetch('/api/v1/staff/employees?status=active'),
+                    staffFetch('/api/v1/staff/departments')
+                ]);
+                
+                if (empRes.ok) {
+                    const data = await empRes.json();
+                    const employees = data.employees || [];
+                    document.getElementById('totalEmployees').textContent = employees.length;
+                    document.getElementById('activeEmployees').textContent = employees.filter(e => e.is_active).length;
+                }
+                
+                if (deptRes.ok) {
+                    const data = await deptRes.json();
+                    const departments = data.departments || [];
+                    document.getElementById('totalDepartments').textContent = departments.length;
+                }
+                
+                document.getElementById('lastLogin').textContent = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+        
+        async function loadMyEarnings() {
+            const now   = new Date();
+            const month = now.getMonth() + 1;
+            const year  = now.getFullYear();
+            const MNTH  = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+            const CAT   = { training:'ETC Students', solar:'Solar', ev_b2c:'B2C', ev_b2b:'B2B', insurance:'Insurance', real_estate:'Real Estate' };
+            const UNIT  = { training:'students', solar:'deals', ev_b2c:'deals', ev_b2b:'deals', insurance:'₹', real_estate:'₹' };
+            const fmt   = n => '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+            const fmtS  = n => '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0});
+            document.getElementById('earnMonthLabel').textContent = MNTH[month] + ' ' + year;
+            try {
+                const r = await staffFetch(`/api/v1/staff/performance/my-incentive-achievements?month=${month}&year=${year}`);
+                document.getElementById('earnLoading').style.display = 'none';
+                if (!r.ok) { document.getElementById('earnEmpty').style.display = ''; return; }
+                const d = await r.json();
+                const emp = (d.data || [])[0];
+                if (!emp || !emp.total_incentive_earned) { document.getElementById('earnEmpty').style.display = ''; return; }
+
+                const activeCats = (emp.categories || []).filter(c => c.incentive_earned > 0);
+                if (!activeCats.length) { document.getElementById('earnEmpty').style.display = ''; return; }
+
+                let totalSelf = 0, totalCo = 0;
+                activeCats.forEach(c => { totalSelf += (c.self_incentive||0); totalCo += (c.company_incentive_base||0) + (c.bonus_applied ? (c.incentive_earned - c.self_incentive - c.company_incentive_base) : 0); });
+
+                document.getElementById('earnTotal').textContent   = fmt(emp.total_incentive_earned);
+                document.getElementById('earnSelf').textContent    = fmtS(totalSelf);
+                document.getElementById('earnCompany').textContent = fmtS(totalCo);
+
+                const ORDER = ['training','solar','ev_b2c','ev_b2b','insurance','real_estate'];
+                const sorted = ORDER.map(s => activeCats.find(c => c.slug === s)).filter(Boolean);
+                const grid = document.getElementById('earnCatGrid');
+                grid.innerHTML = sorted.map(c => {
+                    const unit    = UNIT[c.slug] || '';
+                    const count   = (c.self_count||0) + (c.company_count||0);
+                    const achDisp = unit === '₹' ? fmtS(c.achieved_amount) : count + ' ' + unit;
+                    const bonus   = c.bonus_applied ? ` <span style="font-size:0.65rem;background:#f59e0b;color:#fff;padding:1px 5px;border-radius:3px;vertical-align:middle;">×${c.bonus_multiplier} BONUS</span>` : '';
+                    return `<div class="earn-cat${c.bonus_applied?' has-bonus':''}">
+                        <div class="earn-cat-name">${CAT[c.slug]||c.slug}</div>
+                        <div class="earn-cat-amt">${fmt(c.incentive_earned)}${bonus}</div>
+                        <div class="earn-cat-detail">${achDisp} achieved</div>
+                    </div>`;
+                }).join('');
+                document.getElementById('earnContent').style.display = '';
+            } catch(e) {
+                document.getElementById('earnLoading').style.display = 'none';
+                document.getElementById('earnEmpty').style.display   = '';
+            }
+        }
+
+        async function loadProfileData() {
+            try {
+                const response = await staffFetch('/api/v1/staff/auth/me');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const profile = data.employee || data;
+                    document.getElementById('profileCode').textContent = profile.emp_code || profile.employee_code || '-';
+                    document.getElementById('profileEmail').textContent = profile.email || '-';
+                    document.getElementById('profileDept').textContent = profile.department_name || 'Not Assigned';
+                    document.getElementById('profileDesignation').textContent = profile.designation || '-';
+                    document.getElementById('profileDOJ').textContent = profile.date_of_joining || '-';
+                    
+                    const twoFaSpan = document.getElementById('profile2FA');
+                    if (profile.is_2fa_enabled || profile.totp_enabled) {
+                        twoFaSpan.innerHTML = '<span class="badge-status badge-enabled">Enabled</span>';
+                    } else {
+                        twoFaSpan.innerHTML = '<span class="badge-status badge-disabled">Disabled</span>';
+                    }
+                }
+            } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
+                console.error('Error loading profile:', error);
+            }
+        }
+    </script>
+</body>
+</html>

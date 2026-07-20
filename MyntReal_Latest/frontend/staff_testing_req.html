@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Testing Requirements — MNR Platform</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        :root { --accent: #0d9488; --accent-hover: #0f766e; --accent-light: rgba(13,148,136,0.15); --accent-glow: rgba(13,148,136,0.2); --bg: #0b1120; --surface: #111827; --surface2: #1e293b; --border: #1e2d3d; --text: #e2e8f0; --text2: #94a3b8; --crit: #ef4444; --high: #f97316; --med: #3b82f6; --low: #22c55e; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        .header-area { background: linear-gradient(135deg,#0b1120 0%,#0d2a28 100%); border-bottom: 2px solid var(--accent); padding: 1.5rem 2rem; position: relative; }
+        .logos { display: flex; align-items: center; gap: 14px; margin-bottom: 0.75rem; }
+        .logos img { height: 38px; object-fit: contain; }
+        .header-area h1 { font-size: 1.8rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.6rem; }
+        .header-area h1 i { color: var(--accent); }
+        .header-area .subtitle { color: var(--text2); font-size: 0.95rem; }
+        .header-area .stats { color: var(--accent); font-size: 0.85rem; margin-top: 0.25rem; font-weight: 600; }
+        .back-nav { position: absolute; right: 2rem; top: 1.5rem; display: flex; align-items: center; gap: 8px; }
+        .back-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: #fff; padding: 0.5rem 1rem; border-radius: 6px; text-decoration: none; transition: background 0.2s; white-space: nowrap; font-size: 0.875rem; }
+        .back-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+        .logout-btn { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,180,180,0.85); background: transparent; border: 1px solid rgba(255,100,100,0.3); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.875rem; cursor: pointer; transition: all 0.2s; font-family: inherit; white-space: nowrap; }
+        .logout-btn:hover { color: #fca5a5; border-color: rgba(255,100,100,0.7); background: rgba(220,38,38,0.15); }
+        .search-box { margin-top: 0.75rem; position: relative; max-width: 450px; }
+        .search-box input { width: 100%; padding: 0.6rem 1rem 0.6rem 2.5rem; background: rgba(0,0,0,0.3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.875rem; outline: none; }
+        .search-box input:focus { border-color: var(--accent); }
+        .search-box i { position: absolute; left: 0.8rem; top: 50%; transform: translateY(-50%); color: var(--text2); font-size: 0.85rem; }
+        .page-layout { display: flex; min-height: calc(100vh - 160px); }
+        .left-sidebar { width: 220px; min-width: 220px; background: var(--surface); border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+        .sidebar-hdr { padding: 1rem; border-bottom: 1px solid var(--border); }
+        .sidebar-hdr p { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); }
+        .phase-tab { padding: 0.75rem 1rem; cursor: pointer; border-left: 3px solid transparent; transition: all 0.2s; font-size: 0.82rem; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+        .phase-tab:hover { background: var(--accent-light); color: var(--text); }
+        .phase-tab.active { border-left-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight: 600; }
+        .phase-tab i { width: 16px; text-align: center; }
+        .main-content { flex: 1; overflow-y: auto; }
+        .content-area { padding: 2rem; max-width: 1100px; }
+        .phase-panel { display: none; }
+        .phase-panel.active { display: block; }
+        .phase-title { font-size: 1.3rem; font-weight: 700; color: var(--accent); margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; }
+        .phase-desc { color: var(--text2); font-size: 0.88rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+        .mod-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 1rem; overflow: hidden; }
+        .mod-hdr { padding: 0.85rem 1.1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: background 0.2s; user-select: none; }
+        .mod-hdr:hover { background: var(--accent-light); }
+        .toggle-arrow { color: var(--text2); font-size: 0.8rem; transition: transform 0.2s; display: inline-block; }
+        .mod-body.open ~ .toggle-arrow, .mod-hdr.expanded .toggle-arrow { transform: rotate(180deg); }
+        .mod-hdr-left { display: flex; align-items: center; gap: 10px; }
+        .mod-hdr-left strong { font-size: 0.92rem; color: var(--text); }
+        .mod-hdr-left span { font-size: 0.75rem; color: var(--text2); }
+        .mod-body { padding: 1rem 1.1rem; border-top: 1px solid var(--border); display: none; }
+        .mod-body.open { display: block; }
+        .req-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .req-block { background: var(--surface2); border-radius: 7px; padding: 0.75rem; }
+        .req-block h5 { font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); margin-bottom: 0.5rem; }
+        .req-block ul { list-style: none; }
+        .req-block ul li { font-size: 0.82rem; color: var(--text2); padding: 2px 0; display: flex; gap: 6px; }
+        .req-block ul li::before { content: "›"; color: var(--accent); flex-shrink: 0; }
+        .badge { display: inline-block; font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; }
+        .badge-crit { background: rgba(239,68,68,0.15); color: var(--crit); border: 1px solid rgba(239,68,68,0.3); }
+        .badge-high { background: rgba(249,115,22,0.15); color: var(--high); border: 1px solid rgba(249,115,22,0.3); }
+        .badge-med { background: rgba(59,130,246,0.15); color: var(--med); border: 1px solid rgba(59,130,246,0.3); }
+        .badge-low { background: rgba(34,197,94,0.15); color: var(--low); border: 1px solid rgba(34,197,94,0.3); }
+        .nfr-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(320px,1fr)); gap: 1rem; }
+        .nfr-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem; }
+        .nfr-card h4 { font-size: 0.88rem; color: var(--accent); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 7px; }
+        .nfr-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 0.5rem; font-size: 0.82rem; color: var(--text2); }
+        .nfr-row i { color: var(--accent); margin-top: 2px; flex-shrink: 0; }
+        .matrix-tbl { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-bottom: 1.5rem; }
+        .matrix-tbl th { background: var(--surface2); padding: 0.6rem 0.8rem; text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); border-bottom: 2px solid var(--border); }
+        .matrix-tbl td { padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .matrix-tbl tr:hover td { background: rgba(13,148,136,0.05); }
+        .day-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem; margin-bottom: 1rem; }
+        .day-card h4 { font-size: 0.9rem; color: var(--accent); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 7px; }
+        .day-item { display: flex; gap: 10px; margin-bottom: 0.5rem; font-size: 0.82rem; }
+        .day-num { background: var(--accent-light); color: var(--accent); border-radius: 4px; padding: 1px 7px; font-size: 0.7rem; font-weight: 700; flex-shrink: 0; min-width: 30px; text-align: center; margin-top: 1px; }
+        .day-text { color: var(--text2); }
+        .checklist { list-style: none; }
+        .checklist li { padding: 0.4rem 0; font-size: 0.83rem; color: var(--text2); display: flex; align-items: flex-start; gap: 8px; border-bottom: 1px solid var(--border); }
+        .checklist li:last-child { border-bottom: none; }
+        .checklist li i { color: var(--accent); margin-top: 2px; flex-shrink: 0; }
+        .criteria-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .criteria-card { background: var(--surface); border-radius: 10px; padding: 1.1rem; border: 1px solid var(--border); }
+        .criteria-card h4 { font-size: 0.88rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 7px; }
+        .criteria-card.entry h4 { color: var(--low); }
+        .criteria-card.exit h4 { color: var(--crit); }
+        .defect-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 1rem; }
+        .defect-table th { background: var(--surface2); padding: 0.6rem 0.8rem; text-align: left; font-size: 0.72rem; text-transform: uppercase; color: var(--text2); }
+        .defect-table td { padding: 0.55rem 0.8rem; border-bottom: 1px solid var(--border); }
+        .print-btn { position: fixed; bottom: 24px; right: 24px; background: var(--accent); color: white; border: none; width: 48px; height: 48px; border-radius: 50%; box-shadow: 0 4px 12px rgba(13,148,136,0.4); cursor: pointer; font-size: 18px; z-index: 50; display: flex; align-items: center; justify-content: center; }
+        .print-btn:hover { background: var(--accent-hover); }
+        @media print {
+            body { background: #fff; color: #000; }
+            .header-area { background: #fff; border-bottom: 2px solid var(--accent); }
+            .left-sidebar, .print-btn, .search-box, .back-nav { display: none !important; }
+            .phase-panel { display: block !important; page-break-before: always; }
+            .phase-panel:first-of-type { page-break-before: auto; }
+            .mod-body { display: block !important; }
+        }
+        @media (max-width: 768px) { .header-area { padding: 1rem; } .header-area h1 { font-size: 1.3rem; } .back-nav { position: static; margin-top: 0.5rem; display: inline-flex; } .req-grid,.criteria-grid { grid-template-columns: 1fr; } }
+
+        .login-overlay { position: fixed; inset: 0; background: rgba(5,15,20,0.97); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
+        .login-overlay.hidden { display: none !important; }
+        .login-card { background: #0f1f1e; border: 1px solid #1a3535; border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 380px; box-shadow: 0 25px 60px rgba(0,0,0,0.7); }
+        .login-logos { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 24px; }
+        .login-logos img { height: 38px; object-fit: contain; }
+        .login-logos .ldiv { width: 1px; height: 30px; background: rgba(255,255,255,0.2); }
+        .login-heading { text-align: center; font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+        .login-sub { text-align: center; font-size: 0.82rem; color: #4b7a78; margin-bottom: 28px; }
+        .lf-group { margin-bottom: 16px; }
+        .lf-group label { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; margin-bottom: 6px; }
+        .lf-group input { width: 100%; padding: 10px 14px; background: #061010; border: 1px solid #1a3535; border-radius: 8px; color: #f1f5f9; font-size: 0.95rem; font-family: inherit; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        .lf-group input:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
+        .login-btn { width: 100%; padding: 11px; background: #0d9488; color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; margin-top: 8px; font-family: inherit; }
+        .login-btn:hover { opacity: 0.88; }
+        .login-error { color: #ef4444; font-size: 0.82rem; text-align: center; margin-top: 12px; display: none; }
+        .login-error.show { display: block; }
+        .login-footer { text-align: center; font-size: 0.72rem; color: #2a4f4e; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="login-overlay" id="loginOverlay">
+        <div class="login-card">
+            <div class="login-logos">
+                <img src="/public/mnr-logo.png" alt="MNR" onerror="this.style.display='none'">
+                <div class="ldiv"></div>
+                <img src="/public/myntreal-logo.png" alt="Myntreal" onerror="this.style.display='none'">
+            </div>
+            <div class="login-heading">Testing Requirements</div>
+            <div class="login-sub">Restricted access — authorised personnel only</div>
+            <form id="loginForm" onsubmit="handleLogin(event)" autocomplete="off">
+                <div class="lf-group">
+                    <label>Member ID</label>
+                    <input type="text" id="loginUser" placeholder="e.g. MR10001" required>
+                </div>
+                <div class="lf-group">
+                    <label>Password</label>
+                    <input type="password" id="loginPass" placeholder="Enter password" required>
+                </div>
+                <button type="submit" class="login-btn">Access Document</button>
+                <div class="login-error" id="loginError">Invalid credentials. Please try again.</div>
+            </form>
+            <div class="login-footer">MyntReal LLP &mdash; Confidential Internal Document</div>
+        </div>
+    </div>
+
+    <div class="header-area">
+        <div class="logos">
+            <img src="/public/mnr-logo.png" alt="MNR" onerror="this.style.display='none'">
+            <img src="/public/myntreal-logo.png" alt="Mynt Real" onerror="this.style.display='none'">
+        </div>
+        <h1><i class="fas fa-flask"></i> Testing Requirements</h1>
+        <div class="subtitle">Functional &amp; Non-Functional — Single-Person Test Plan for MNR Platform</div>
+        <div class="stats" id="headerStats">30 modules &bull; 6 phases &bull; Functional + Non-Functional</div>
+        <div class="back-nav">
+            <a href="/staff/dashboard" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+            <button class="logout-btn" onclick="doLogout()"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search modules, requirements, test cases...">
+        </div>
+    </div>
+
+    <div class="page-layout">
+        <aside class="left-sidebar">
+            <div class="sidebar-hdr"><p>Phases</p></div>
+            <div id="phaseTabs">
+                <div class="phase-tab active" data-phase="functional"><i class="fas fa-check-circle"></i> Functional Req.</div>
+                <div class="phase-tab" data-phase="nonfunctional"><i class="fas fa-tachometer-alt"></i> Non-Functional</div>
+                <div class="phase-tab" data-phase="priority"><i class="fas fa-exclamation-triangle"></i> Priority Matrix</div>
+                <div class="phase-tab" data-phase="plan"><i class="fas fa-calendar-alt"></i> 1-Person Test Plan</div>
+                <div class="phase-tab" data-phase="environment"><i class="fas fa-server"></i> Test Data & Env</div>
+                <div class="phase-tab" data-phase="criteria"><i class="fas fa-flag-checkered"></i> Entry & Exit Criteria</div>
+            </div>
+        </aside>
+        <div class="main-content">
+            <div class="content-area">
+                <div class="phase-panel active" id="panel-functional"></div>
+                <div class="phase-panel" id="panel-nonfunctional"></div>
+                <div class="phase-panel" id="panel-priority"></div>
+                <div class="phase-panel" id="panel-plan"></div>
+                <div class="phase-panel" id="panel-environment"></div>
+                <div class="phase-panel" id="panel-criteria"></div>
+            </div>
+        </div>
+    </div>
+
+    <button class="print-btn" onclick="window.print()" title="Print"><i class="fas fa-print"></i></button>
+
+    <script>
+    const FUNCTIONAL_MODULES = [
+      { id:'F01', name:'Authentication & Access Control', risk:'crit', scenarios:[
+          'Staff login with valid/invalid credentials','MNR member login with valid/invalid credentials',
+          'Partner login with valid/invalid credentials','JWT token expiry forces re-login',
+          'Zero-Default Policy: new staff has NO menu access','Staff granted menu access sees only assigned pages',
+          'Staff denied access sees 403, not blank page','Session logout clears all tokens',
+          'Password reset flow end-to-end','NDA enforcement middleware blocks unaccepted users'
+        ], expected:[
+          'Valid credentials → dashboard with role-specific menu','Invalid credentials → clear error, no token issued',
+          'Token expiry → redirect to login, no data leak','New staff → zero pages until admin grants access',
+          'Access denied → 403 page shown immediately','Logout → all cookies/tokens cleared'
+        ]},
+      { id:'F02', name:'Member Registration & Binary Tree Placement', risk:'crit', scenarios:[
+          'New member registration with valid sponsor ID','Binary tree auto-placement (left/right leg logic)',
+          'Duplicate MNR ID rejected','Invalid sponsor ID rejected',
+          'Member profile completeness after registration','Signup category selection and document requirements',
+          'Mobile number validation (Indian format)','Referral chain correctly recorded in DB'
+        ], expected:[
+          'Valid registration → MNR ID generated, placed in correct binary position',
+          'Left/right placement follows spillover logic','Duplicate ID → clear error, no DB record',
+          'Sponsor ID not found → informative error'
+        ]},
+      { id:'F03', name:'KYC & Bank Approval Flow', risk:'crit', scenarios:[
+          'Member uploads KYC documents (Aadhaar, PAN)','Staff reviews and approves KYC',
+          'Staff reviews and rejects KYC with reason','Bank details submission and verification',
+          'Independent KYC and Bank approval tracking','Re-submission after rejection',
+          'KYC approval unlocks income eligibility','Bulk KYC approval by admin'
+        ], expected:[
+          'Upload accepted for valid file types/sizes','Approval toggles member status immediately',
+          'Rejection sends notification with reason','Re-submission clears old rejection flag',
+          'Income blocked until both KYC + Bank approved'
+        ]},
+      { id:'F04', name:'Income Calculation — 4 Streams', risk:'crit', scenarios:[
+          'Direct Referral income on new member join','Matching Referral income on pair matching (left+right)',
+          'Ved Income calculation on team volume','Guru Dakshina income on leadership qualification',
+          'Daily auto-approval trigger runs at correct time','Income credited to Earning wallet',
+          'Platinum member PIN points = 1.0','Diamond member PIN points = 0.5',
+          'Star member PIN points = 0.0','Income blocked for unverified member'
+        ], expected:[
+          'Direct Referral: credited same day as join','Matching: credited on valid pair, not double-counted',
+          'Ved: calculated on correct downline depth','Guru Dakshina: only for qualified leaders',
+          'All incomes → Earning wallet (not Withdrawable directly)'
+        ]},
+      { id:'F05', name:'Wallet & Withdrawal System', risk:'crit', scenarios:[
+          'Earning wallet receives income correctly','Package-specific wallet split (Earning/Withdrawable/Upgrade)',
+          'Withdrawal request on Mon–Sat 7AM only','Withdrawal amount must be > Rs 2,000',
+          'Rs 1,000 buffer always maintained in wallet','8% Admin charge deducted on withdrawal',
+          '2% TDS deducted on withdrawal','Manual withdrawal approval by admin',
+          'Withdrawal rejected by admin with reason','Transfer from Earning to Withdrawable wallet',
+          'Upgrade wallet used for package upgrades only'
+        ], expected:[
+          'Withdrawal on Sunday → blocked with clear message','Amount ≤ Rs 2,000 → blocked',
+          'Buffer enforced: Rs 1,000 always stays','Approved withdrawal → net amount after deductions',
+          'Rejected → amount returns to wallet, notification sent'
+        ]},
+      { id:'F06', name:'Awards System (6-Stage Lifecycle)', risk:'high', scenarios:[
+          'Award nomination at Stage 1','Progression through all 6 stages',
+          'Award approval at each stage','Award rejection with reason',
+          'EV Coupon 6-benefit redemption flow','Coupon validity period enforced',
+          'Expired coupon blocked from redemption','Award history visible to member'
+        ], expected:[
+          'Each stage transition requires correct approval','Rejected at any stage → notified, workflow paused',
+          'Coupon benefits: each of 6 benefits redeemable once','Expired coupon → clear expiry message'
+        ]},
+      { id:'F07', name:'Staff Management & HR', risk:'high', scenarios:[
+          'Staff onboarding: profile, NDA, KYC, documents','Staff KYC independent approval (field-by-field)',
+          'Payroll creation for ONROLE and OFFROLE staff','Payroll SFMS integration produces correct ledger entries',
+          'Attendance marking (present/absent/leave)','Leave request approval workflow',
+          'Staff offboarding process and access revocation','Previous experience 7 documents upload and approval',
+          'Welcome coupon assignment to specific staff','Field allowance Group A and Group B terminology'
+        ], expected:[
+          'Onboarding complete → all mandatory fields captured','Payroll → SFMS integration creates correct accounting entries',
+          'Leave approved → auto-marked in attendance sheet','Offboarding → all access revoked immediately'
+        ]},
+      { id:'F08', name:'GPS & Journey Tracking', risk:'high', scenarios:[
+          'Journey start with company selection','Real-time GPS coordinates captured and stored',
+          'Dynamic transport rate applied correctly','WVV Protocol compliance check',
+          'Journey end with distance calculation','Journey SFMS integration (expense ledger)',
+          'Pub/Sub GPS events broadcast to subscribers','Offline journey queuing on mobile app',
+          'Journey history visible to manager'
+        ], expected:[
+          'GPS coordinates stored at correct intervals','Transport rate = distance × rate for selected company',
+          'Journey expense → SFMS creates expense entry','Offline queue syncs when connection restored'
+        ]},
+      { id:'F09', name:'Day Planner & Timesheet', risk:'high', scenarios:[
+          'Day plan creation with time allocation','KRA entry and completion marking',
+          'Timesheet auto-sync from KRA/Task/Journey/Lead/Ticket','Timesheet approval by manager',
+          'On-leave employees shown in "On Leave" section','Self always in "My Progress" tab',
+          'TIME SHEET column shows "Updated/Approved" breakdown','Team progress overview loads correctly'
+        ], expected:[
+          'Auto-sync captures time from all 6 source systems','On-leave detection: HR attendance + approved leave requests',
+          'Timesheet approval unlocks next period','Time breakdown visible per activity type'
+        ]},
+      { id:'F10', name:'SFMS — Accounting & ERP', risk:'high', scenarios:[
+          'Multi-company account setup','Income entry creation and approval',
+          'Expense entry creation and approval','Purchase invoice processing',
+          'Sales invoice processing','Stock item creation (multi-company)',
+          'Ledger entries correct for all transaction types','Balance Sheet Dashboard accuracy',
+          'HSN/SAC code assignment to items','GST calculation on invoices'
+        ], expected:[
+          'Each transaction → double-entry ledger (debit/credit)','Balance sheet totals match sum of ledger entries',
+          'GST amounts calculated per HSN/SAC rate','Multi-company: no data crossover'
+        ]},
+      { id:'F11', name:'Real Estate Marketplace (Real Dreams)', risk:'med', scenarios:[
+          'Property listing creation with all fields','Property images upload and display',
+          'Lead capture from property inquiry','CRM assignment to handler',
+          'Lead status progression','Cross-selling to insurance/other products',
+          'Auto-sync of leads to SFMS','Property search and filter'
+        ], expected:[
+          'Listing visible in marketplace immediately after approval','Lead captured → auto-assigned per routing rules',
+          'Cross-sell creates linked lead in target module','Search filters return accurate results'
+        ]},
+      { id:'F12', name:'Official Partner Order Management', risk:'med', scenarios:[
+          'Dealer/Distributor/Vendor order creation','Order approval workflow',
+          'Stock deduction on order fulfillment','Invoice generation for B2B orders',
+          'Order status tracking by partner','Service center ticket creation',
+          'EV service ticket lifecycle (open→in-progress→resolved→closed)'
+        ], expected:[
+          'Order created → stock reserved','Approval → stock deducted, invoice generated',
+          'Partner can track order status in real time','Service ticket SLA timer starts on creation'
+        ]},
+      { id:'F13', name:'Announcements System', risk:'med', scenarios:[
+          'Member submits announcement','Admin reviews and approves/rejects',
+          'Approved announcement visible to correct roles','Media attachment (image/video) with announcement',
+          'Role-based visibility (member vs staff vs admin)','Announcement expiry/archiving'
+        ], expected:[
+          'Submitted → pending state, not visible to members','Approved → visible to target roles immediately',
+          'Rejected → submitter notified, can resubmit','Media displayed correctly on all devices'
+        ]},
+      { id:'F14', name:'MNR Points & Bonanza', risk:'med', scenarios:[
+          'MNR Points earned on qualifying activity','Unique receipt number generated for each point transaction',
+          'Staff Bonanza creation and eligibility check','Bonanza payout calculation',
+          'Points balance visible to member','Points history with receipt numbers'
+        ], expected:[
+          'Receipt number format matches specification','Points credited immediately on qualifying action',
+          'Bonanza eligibility verified before payout'
+        ]},
+      { id:'F15', name:'Staff MNR Access & Sidebar', risk:'med', scenarios:[
+          'Staff user granted MNR portal access','Staff sees MNR member data with audit log',
+          'Audit log records every staff access to MNR data','Staff cannot exceed granted MNR permissions',
+          'RVZ sidebar menu visible for authorized staff'
+        ], expected:[
+          'Audit log entry created for every MNR data view/edit','Permission boundary enforced at API level'
+        ]},
+      { id:'F16', name:'Member Lifecycle Tracker (9 Stages)', risk:'low', scenarios:[
+          'Stage 1: Registration complete','Stage 2: KYC approved',
+          'Stage 3: Bank approved','Stage 4: First income received',
+          'Stage 5: First withdrawal','Stage 6: Award Stage 1 qualified',
+          'Stage 7–9: Progressive leadership stages','Lifecycle visible on member profile'
+        ], expected:['Each stage auto-updates on qualifying event','Cannot skip stages','History immutable']},
+      { id:'F17', name:'Team View Data Visibility', risk:'crit', scenarios:[
+          'Manager views Day Progress — own data in My Progress section only, never in Team section',
+          'Manager views Team Planner — subordinates listed, self excluded from team grid',
+          'Manager views KRA Team Summary — self excluded, only downline shown',
+          'Manager views Team Timesheet — own entries not in team section',
+          'Manager views Team Attendance — self not duplicated in team list',
+          'Manager views CRM Team Leads — self excluded from team lead views',
+          'Manager views Team Journeys — self excluded from team GPS views',
+          'Manager views Team Tasks — self excluded from team activity analytics',
+          'Manager views Team Progress — self excluded from team overview grid',
+          'Manager views Field Work Approvals — self excluded from pending list',
+          'Department filter works correctly with team member exclusions applied'
+        ], expected:[
+          'Manager sees own row ONLY in My/Self section at top — zero duplication in team grid',
+          'All 10 modules consistent: Day Plans, Timesheet, KRA, Time Tracker, Attendance, Tasks, Progress, CRM, Journeys, Field Work',
+          'Web and Mobile return identical team data — backend-only enforcement, zero frontend filtering'
+        ]}
+    ];
+
+    const NFR_CATEGORIES = [
+      { icon:'fa-bolt', name:'Performance', color:'#f97316', items:[
+          'Page load ≤ 2 seconds on 4G connection',
+          'API response ≤ 500ms for standard queries',
+          'Binary tree load ≤ 3 seconds for 10,000 members',
+          'Income calculation batch completes ≤ 5 minutes',
+          'Dashboard loads ≤ 1.5 seconds on mobile',
+          'Search results appear ≤ 800ms after keystroke',
+          'File upload completes for 5MB within 10 seconds'
+        ]},
+      { icon:'fa-shield-alt', name:'Security', color:'#ef4444', items:[
+          'SQL injection: all input fields sanitized and parameterized',
+          'Path traversal: file upload rejects ../ sequences',
+          'XSS: all user-generated content HTML-escaped',
+          'JWT token cannot be forged or replayed',
+          'Expired JWT rejected with 401, not 500',
+          'Sensitive fields (bank, Aadhaar) encrypted at rest',
+          'Admin-only endpoints return 403 for member tokens',
+          'Brute force protection on login (lockout after 5 fails)',
+          'TrustedHostMiddleware blocks unauthorized origins',
+          'MNR ID format validated server-side before any lookup'
+        ]},
+      { icon:'fa-universal-access', name:'Usability & Accessibility', color:'#3b82f6', items:[
+          'WCAG 2.1 AA: all interactive elements keyboard-navigable',
+          'Colour contrast ratio ≥ 4.5:1 for normal text',
+          'Error messages are descriptive and actionable',
+          'Form validation shows field-level errors (not just top-level)',
+          'Loading states shown for all async operations',
+          'Empty states explained with next-action guidance',
+          'All icons have aria-label or tooltip text',
+          'Mobile tap targets ≥ 44×44px'
+        ]},
+      { icon:'fa-database', name:'Data Integrity & Reliability', color:'#22c55e', items:[
+          'All financial amounts stored as DECIMAL(15,2), never float',
+          'Binary tree: no duplicate left/right child assignments',
+          'Orphan detection: no transaction without valid member link',
+          'Soft-delete policy: no hard deletes for financial records',
+          'Foreign key constraints enforced at DB level',
+          'Concurrent wallet debit: race condition prevented (DB lock)',
+          'Auto-backup confirmation before data migration',
+          'Rollback tested for failed multi-step transactions'
+        ]},
+      { icon:'fa-mobile-alt', name:'Mobile Compatibility', color:'#a78bfa', items:[
+          'All web features available on mobile (Web-Mobile Parity Rule)',
+          'Capacitor app: biometric authentication functional',
+          'Offline API queue syncs correctly on reconnect',
+          'Selfie capture works on iOS and Android camera',
+          'GPS tracking works in background on mobile',
+          'Mobile forms usable with virtual keyboard open',
+          'Push notifications delivered within 30 seconds',
+          'App works on Android 9+ and iOS 14+'
+        ]},
+      { icon:'fa-globe', name:'Browser Compatibility', color:'#0d9488', items:[
+          'Chrome 100+ (primary)',
+          'Safari 15+ (iOS and macOS)',
+          'Firefox 100+',
+          'Edge 100+',
+          'Mobile Safari (iPhone — key user device)',
+          'Chrome Mobile (Android)',
+          'No console errors on any supported browser'
+        ]},
+      { icon:'fa-expand-arrows-alt', name:'Scalability & Load', color:'#f59e0b', items:[
+          '50 concurrent staff users — no degradation',
+          '500 concurrent member logins — response ≤ 2s',
+          'Income batch for 10,000 members — completes within schedule',
+          'File storage scales without hardcoded path limits',
+          'DB connection pool handles peak load without exhaustion',
+          'APScheduler jobs do not overlap on overload'
+        ]}
+    ];
+
+    const PRIORITY_MATRIX = [
+      { id:'P01', module:'Login & Auth', req:'Valid login → correct role dashboard', priority:'crit', method:'Manual', effort:'0.5h' },
+      { id:'P02', module:'Login & Auth', req:'Invalid login → error, no token', priority:'crit', method:'Manual', effort:'0.25h' },
+      { id:'P03', module:'Login & Auth', req:'Zero-Default access for new staff', priority:'crit', method:'Manual', effort:'0.5h' },
+      { id:'P04', module:'Binary Tree', req:'New member placed in correct leg', priority:'crit', method:'Manual', effort:'1h' },
+      { id:'P05', module:'Income', req:'Direct Referral income credited on join', priority:'crit', method:'Manual+DB', effort:'1h' },
+      { id:'P06', module:'Income', req:'Matching income on pair completion', priority:'crit', method:'Manual+DB', effort:'1h' },
+      { id:'P07', module:'Wallet', req:'Withdrawal Mon-Sat only, >Rs 2,000, Rs 1,000 buffer', priority:'crit', method:'Manual', effort:'1h' },
+      { id:'P08', module:'Wallet', req:'8% Admin + 2% TDS deducted correctly', priority:'crit', method:'Manual+DB', effort:'0.5h' },
+      { id:'P09', module:'KYC', req:'Income blocked until KYC+Bank approved', priority:'crit', method:'Manual', effort:'0.5h' },
+      { id:'P10', module:'Security', req:'SQL injection rejected on all inputs', priority:'crit', method:'Automated', effort:'1h' },
+      { id:'P11', module:'Security', req:'JWT forge attempt returns 401', priority:'crit', method:'Tool', effort:'0.5h' },
+      { id:'P12', module:'Staff Access', req:'Staff cannot see unauthorized pages', priority:'crit', method:'Manual', effort:'1h' },
+      { id:'P13', module:'SFMS', req:'Income/withdrawal creates correct ledger entries', priority:'high', method:'Manual+DB', effort:'1h' },
+      { id:'P14', module:'GPS', req:'Journey distance and rate calculation correct', priority:'high', method:'Manual', effort:'1h' },
+      { id:'P15', module:'Payroll', req:'ONROLE payroll creates correct SFMS entries', priority:'high', method:'Manual+DB', effort:'1h' },
+      { id:'P16', module:'Awards', req:'6-stage lifecycle transitions work correctly', priority:'high', method:'Manual', effort:'1.5h' },
+      { id:'P17', module:'Mobile', req:'All web features functional on mobile', priority:'high', method:'Device', effort:'2h' },
+      { id:'P18', module:'Performance', req:'Page load ≤ 2s, API ≤ 500ms', priority:'high', method:'DevTools', effort:'1h' },
+      { id:'P19', module:'Real Estate', req:'Lead capture and CRM assignment', priority:'med', method:'Manual', effort:'0.5h' },
+      { id:'P20', module:'Partners', req:'B2B order → stock deduction → invoice', priority:'med', method:'Manual', effort:'1h' },
+      { id:'P21', module:'Announcements', req:'Approval workflow and role visibility', priority:'med', method:'Manual', effort:'0.5h' },
+      { id:'P22', module:'MNR Points', req:'Unique receipt number generated', priority:'med', method:'Manual+DB', effort:'0.5h' },
+      { id:'P23', module:'Timesheet', req:'Auto-sync from all 6 source systems', priority:'med', method:'Manual', effort:'1h' },
+      { id:'P24', module:'Accessibility', req:'WCAG 2.1 AA — keyboard navigation', priority:'med', method:'Tool', effort:'0.5h' },
+      { id:'P25', module:'Lifecycle', req:'9-stage member lifecycle tracks correctly', priority:'low', method:'Manual', effort:'0.5h' },
+      { id:'P26', module:'Browser', req:'No errors on Chrome, Safari, Firefox, Edge', priority:'low', method:'Manual', effort:'1h' },
+      { id:'P27', module:'Guides', req:'Staff Guide and MNR Guide load after auth', priority:'low', method:'Manual', effort:'0.25h' },
+      { id:'P28', module:'Bonanza', req:'Staff bonanza eligibility and payout', priority:'low', method:'Manual', effort:'0.5h' },
+    ];
+
+    const TEST_PLAN_DAYS = [
+      { day:'Day 1 (3–4h)', icon:'fa-key', label:'Auth + Member + Tree', tasks:[
+          'Test all 3 login portals (Staff, Member, Partner) with valid and invalid credentials',
+          'Verify Zero-Default Policy: create new staff account, confirm no menu access',
+          'Register a new MNR member with valid sponsor ID, confirm binary tree placement',
+          'Attempt registration with duplicate ID and invalid sponsor — confirm rejections',
+          'Upload KYC documents, approve as admin, verify status change',
+          'Upload bank details, approve independently, verify income unlock'
+        ]},
+      { day:'Day 2 (4–5h)', icon:'fa-coins', label:'Income + Wallet + Withdrawal', tasks:[
+          'Trigger Direct Referral income by adding member under sponsor, verify Earning wallet credit',
+          'Create matching pair (left + right), verify Matching income credited',
+          'Verify Ved Income calculates correctly on qualifying team volume',
+          'Check Guru Dakshina: only eligible leaders receive it',
+          'Attempt withdrawal on Sunday — confirm blocked',
+          'Attempt withdrawal of Rs 1,500 — confirm blocked (min Rs 2,000)',
+          'Verify Rs 1,000 buffer: cannot withdraw amount that would leave < Rs 1,000',
+          'Approve a valid withdrawal, confirm 8% Admin + 2% TDS deducted from gross'
+        ]},
+      { day:'Day 3 (3–4h)', icon:'fa-users', label:'Staff HR + KYC + Payroll', tasks:[
+          'Complete staff onboarding: profile → NDA → KYC → document upload',
+          'Test independent KYC field-level approvals (each field approved separately)',
+          'Create ONROLE payroll, verify SFMS ledger entries are correct',
+          'Submit leave request, approve as manager, confirm attendance updated',
+          'Test staff offboarding: revoke access, confirm immediately locked out',
+          'Assign welcome coupon to eligible staff, verify visibility'
+        ]},
+      { day:'Day 4 (3–4h)', icon:'fa-map-marker-alt', label:'GPS + Journey + Day Planner', tasks:[
+          'Start journey with company selection, verify GPS coordinates captured',
+          'End journey, verify distance calculation and transport rate applied',
+          'Confirm SFMS expense entry created for journey',
+          'Create day plan items, mark as complete, verify time tracking',
+          'Submit KRA, verify timesheet auto-sync picks up KRA time',
+          'Test manager timesheet approval workflow'
+        ]},
+      { day:'Day 5 (4–5h)', icon:'fa-file-invoice-dollar', label:'SFMS + Accounting', tasks:[
+          'Create income and expense entries for two different companies — verify no data crossover',
+          'Process purchase invoice with HSN code and GST calculation',
+          'Process sales invoice, verify stock deduction',
+          'Check Balance Sheet Dashboard totals match ledger sum',
+          'Create stock item, assign to company, verify availability in invoices',
+          'Verify all ledger entries follow double-entry (debit = credit)'
+        ]},
+      { day:'Day 6 (2–3h)', icon:'fa-building', label:'Real Estate + Partners + Announcements', tasks:[
+          'Create real estate listing, approve, verify visible in marketplace',
+          'Submit inquiry — verify lead auto-created and assigned to CRM handler',
+          'Create B2B partner order, approve, verify stock deducted and invoice generated',
+          'Submit announcement as member, approve as admin, verify role visibility',
+          'Create EV service ticket, progress through all lifecycle stages'
+        ]},
+      { day:'Day 7 (3–4h)', icon:'fa-mobile-alt', label:'Mobile + Security + Non-Functional', tasks:[
+          'Test login on mobile device (iOS and Android)',
+          'Verify all Day 1–6 features accessible on mobile (parity check)',
+          'Test biometric authentication on Capacitor app',
+          'Attempt SQL injection on all major input fields — confirm rejection',
+          'Forge/modify JWT token — confirm 401 response',
+          'Run page load timing on 5 key pages — confirm ≤ 2 seconds',
+          'Test Ctrl+P blocked for MR10001 on all 4 document pages',
+          'Test keyboard-only navigation on key forms (WCAG check)'
+        ]}
+    ];
+
+    const TEST_ENV = {
+      accounts:[
+        { role:'Super Admin', id:'MR10001 (or highest admin)', purpose:'Create all test data, approve all requests' },
+        { role:'Staff Manager', id:'Create during test', purpose:'Test manager approvals (timesheets, leave, KRA)' },
+        { role:'Staff Employee', id:'Create during test', purpose:'Test employee workflows (day planner, journey, timesheet)' },
+        { role:'MNR Member A (Sponsor)', id:'Create during test', purpose:'Act as sponsor for new member registrations' },
+        { role:'MNR Member B (New)', id:'Create during test', purpose:'Test binary tree placement, income triggers' },
+        { role:'Partner (Dealer)', id:'Create during test', purpose:'Test B2B order management' }
+      ],
+      testData:[
+        'Aadhaar image (test-safe dummy) for KYC upload',
+        'PAN card image (test-safe dummy) for KYC upload',
+        'Bank account number and IFSC for bank verification',
+        'Property image for Real Estate listing',
+        'Product image for Stock item creation',
+        'GPS coordinates pair (start + end) for journey testing',
+        'CSV file for bulk import testing (if applicable)'
+      ],
+      browsers:['Chrome 120+ (primary)', 'Safari 16+ (iOS device)', 'Firefox 120+', 'Edge 120+'],
+      devices:['Desktop/Laptop (primary testing)', 'iPhone (Safari — key user device)', 'Android phone (Chrome)'],
+      tools:['Browser DevTools (Network tab for API timings)', 'Postman (JWT manipulation tests)', 'Lighthouse (accessibility and performance)', 'Any SQL injection tool or manual payloads']
+    };
+
+    function renderFunctional() {
+      let h = `<div class="phase-title"><i class="fas fa-check-circle"></i> Functional Testing Requirements</div>
+               <div class="phase-desc">All major functional modules and their test scenarios. Each module lists what to test, how, and what the expected outcome is.</div>`;
+      FUNCTIONAL_MODULES.forEach(m => {
+        const searchText = (m.name + ' ' + m.scenarios.join(' ') + ' ' + m.expected.join(' ')).replace(/"/g, '').replace(/'/g, '');
+        h += `<div class="mod-card" data-search="${searchText}">
+          <div class="mod-hdr" onclick="toggleMod(this)">
+            <div class="mod-hdr-left">
+              <span class="badge badge-${m.risk}">${m.risk.toUpperCase()}</span>
+              <strong>${m.id} — ${m.name}</strong>
+              <span>${m.scenarios.length} test scenarios</span>
+            </div>
+            <span class="toggle-arrow">&#9660;</span>
+          </div>
+          <div class="mod-body">
+            <div class="req-grid">
+              <div class="req-block">
+                <h5><i class="fas fa-vial me-1"></i> Test Scenarios</h5>
+                <ul>${m.scenarios.map(s=>`<li>${s}</li>`).join('')}</ul>
+              </div>
+              <div class="req-block">
+                <h5><i class="fas fa-check me-1"></i> Expected Outcomes</h5>
+                <ul>${m.expected.map(e=>`<li>${e}</li>`).join('')}</ul>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      });
+      document.getElementById('panel-functional').innerHTML = h;
+      const firstBody = document.querySelector('#panel-functional .mod-body');
+      if (firstBody) {
+        firstBody.classList.add('open');
+        const firstArrow = firstBody.previousElementSibling && firstBody.previousElementSibling.querySelector('.toggle-arrow');
+        if (firstArrow) firstArrow.style.transform = 'rotate(180deg)';
+      }
+    }
+
+    function renderNonFunctional() {
+      let h = `<div class="phase-title"><i class="fas fa-tachometer-alt"></i> Non-Functional Testing Requirements</div>
+               <div class="phase-desc">Performance, security, usability, data integrity, mobile compatibility, browser compatibility, and scalability requirements.</div>
+               <div class="nfr-grid">`;
+      NFR_CATEGORIES.forEach(c => {
+        h += `<div class="nfr-card">
+          <h4 style="color:${c.color}"><i class="fas ${c.icon}"></i> ${c.name}</h4>
+          ${c.items.map(i=>`<div class="nfr-row"><i class="fas fa-check-circle"></i><span>${i}</span></div>`).join('')}
+        </div>`;
+      });
+      h += '</div>';
+      document.getElementById('panel-nonfunctional').innerHTML = h;
+    }
+
+    function renderPriority() {
+      const groups = { crit:'Critical — Must Pass Before Go-Live', high:'High — Core Business Functions', med:'Medium — Secondary Features', low:'Low — Good to Have' };
+      const colors = { crit:'var(--crit)', high:'var(--high)', med:'var(--med)', low:'var(--low)' };
+      let h = `<div class="phase-title"><i class="fas fa-exclamation-triangle"></i> Priority Test Matrix</div>
+               <div class="phase-desc">All test requirements ranked by priority. Total estimated effort for one tester: ~22–26 hours across 7 test days.</div>`;
+      ['crit','high','med','low'].forEach(lvl => {
+        const items = PRIORITY_MATRIX.filter(p => p.priority === lvl);
+        h += `<h4 style="color:${colors[lvl]};margin:1.5rem 0 0.75rem;font-size:0.9rem;"><i class="fas fa-circle" style="font-size:0.6rem;margin-right:6px;"></i>${groups[lvl]} (${items.length} items)</h4>
+              <table class="matrix-tbl"><thead><tr><th>ID</th><th>Module</th><th>Requirement</th><th>Method</th><th>Effort</th></tr></thead><tbody>`;
+        items.forEach(p => {
+          h += `<tr><td><span class="badge badge-${p.priority}">${p.id}</span></td><td style="color:var(--text)">${p.module}</td><td style="color:var(--text2)">${p.req}</td><td style="color:var(--text2)">${p.method}</td><td style="color:${colors[lvl]};font-weight:600">${p.effort}</td></tr>`;
+        });
+        h += '</tbody></table>';
+      });
+      document.getElementById('panel-priority').innerHTML = h;
+    }
+
+    function renderPlan() {
+      let total = TEST_PLAN_DAYS.reduce((a,d)=>{ const m = d.day.match(/(\d+)–(\d+)/); return a+(m?((+m[1]+ +m[2])/2):0); }, 0);
+      let h = `<div class="phase-title"><i class="fas fa-calendar-alt"></i> One-Person Test Execution Plan</div>
+               <div class="phase-desc">7-day structured test plan optimised for a single tester. Covers all modules in logical dependency order. Estimated total: ~24–29 hours.</div>`;
+      TEST_PLAN_DAYS.forEach((d,i) => {
+        h += `<div class="day-card">
+          <h4><i class="fas ${d.icon}" style="color:var(--accent)"></i> ${d.day} — ${d.label}</h4>
+          ${d.tasks.map((t,j)=>`<div class="day-item"><span class="day-num">${(j+1).toString().padStart(2,'0')}</span><span class="day-text">${t}</span></div>`).join('')}
+        </div>`;
+      });
+      h += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.1rem;margin-top:0.5rem;">
+        <h4 style="color:var(--accent);font-size:0.88rem;margin-bottom:0.75rem;"><i class="fas fa-info-circle"></i> Single-Tester Tips</h4>
+        <ul class="checklist">
+          <li><i class="fas fa-lightbulb"></i> Always test in a dedicated test environment — never in production</li>
+          <li><i class="fas fa-lightbulb"></i> Create all test accounts on Day 1 before starting module tests</li>
+          <li><i class="fas fa-lightbulb"></i> Keep a pass/fail spreadsheet updated as you go through each day</li>
+          <li><i class="fas fa-lightbulb"></i> Screenshot all failures with the URL and timestamp visible</li>
+          <li><i class="fas fa-lightbulb"></i> Test negative/invalid inputs for every form before positive cases</li>
+          <li><i class="fas fa-lightbulb"></i> Always verify DB state for financial transactions (not just UI confirmation)</li>
+          <li><i class="fas fa-lightbulb"></i> Retest any failed item after developer fix before marking as passed</li>
+        </ul>
+      </div>`;
+      document.getElementById('panel-plan').innerHTML = h;
+    }
+
+    function renderEnvironment() {
+      let h = `<div class="phase-title"><i class="fas fa-server"></i> Test Data &amp; Environment Setup</div>
+               <div class="phase-desc">Everything a single tester needs to prepare before starting test execution.</div>`;
+      h += `<h4 style="color:var(--accent);font-size:0.88rem;margin-bottom:0.75rem;"><i class="fas fa-user-cog"></i> Test Accounts to Create</h4>
+            <table class="matrix-tbl"><thead><tr><th>Role</th><th>ID/Credential</th><th>Purpose</th></tr></thead><tbody>`;
+      TEST_ENV.accounts.forEach(a => {
+        h += `<tr><td style="color:var(--accent);font-weight:600">${a.role}</td><td style="color:var(--text)">${a.id}</td><td style="color:var(--text2)">${a.purpose}</td></tr>`;
+      });
+      h += `</tbody></table>`;
+
+      h += `<h4 style="color:var(--accent);font-size:0.88rem;margin:1.5rem 0 0.75rem;"><i class="fas fa-folder-open"></i> Test Data Files to Prepare</h4>
+            <ul class="checklist">`;
+      TEST_ENV.testData.forEach(t => { h += `<li><i class="fas fa-file"></i>${t}</li>`; });
+      h += `</ul>`;
+
+      h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1.5rem;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.1rem;">
+          <h4 style="color:var(--accent);font-size:0.85rem;margin-bottom:0.75rem;"><i class="fas fa-globe"></i> Browsers to Test</h4>
+          <ul class="checklist">${TEST_ENV.browsers.map(b=>`<li><i class="fas fa-check"></i>${b}</li>`).join('')}</ul>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.1rem;">
+          <h4 style="color:var(--accent);font-size:0.85rem;margin-bottom:0.75rem;"><i class="fas fa-mobile-alt"></i> Devices to Test</h4>
+          <ul class="checklist">${TEST_ENV.devices.map(d=>`<li><i class="fas fa-check"></i>${d}</li>`).join('')}</ul>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.1rem;margin-top:1rem;">
+        <h4 style="color:var(--accent);font-size:0.85rem;margin-bottom:0.75rem;"><i class="fas fa-tools"></i> Tools Required</h4>
+        <ul class="checklist">${TEST_ENV.tools.map(t=>`<li><i class="fas fa-wrench"></i>${t}</li>`).join('')}</ul>
+      </div>`;
+      document.getElementById('panel-environment').innerHTML = h;
+    }
+
+    function renderCriteria() {
+      let h = `<div class="phase-title"><i class="fas fa-flag-checkered"></i> Entry &amp; Exit Criteria</div>
+               <div class="phase-desc">Conditions that must be met before testing starts and before testing is considered complete. Includes defect classification.</div>
+               <div class="criteria-grid">
+        <div class="criteria-card entry">
+          <h4><i class="fas fa-play-circle"></i> Entry Criteria (Before Testing Starts)</h4>
+          <ul class="checklist">
+            <li><i class="fas fa-check"></i> Test environment deployed and accessible</li>
+            <li><i class="fas fa-check"></i> All test accounts created and roles assigned</li>
+            <li><i class="fas fa-check"></i> Test data files prepared (KYC docs, images, CSV)</li>
+            <li><i class="fas fa-check"></i> All 4 document pages require login (verified working)</li>
+            <li><i class="fas fa-check"></i> Backend API is running with no startup errors</li>
+            <li><i class="fas fa-check"></i> Database migrations applied successfully</li>
+            <li><i class="fas fa-check"></i> At least 1 complete build deployed to test environment</li>
+            <li><i class="fas fa-check"></i> This test plan reviewed and agreed with stakeholder</li>
+          </ul>
+        </div>
+        <div class="criteria-card exit">
+          <h4><i class="fas fa-stop-circle"></i> Exit Criteria (Testing Complete When)</h4>
+          <ul class="checklist">
+            <li><i class="fas fa-check"></i> All Critical (P01–P12) tests PASSED</li>
+            <li><i class="fas fa-check"></i> ≥ 90% of High priority tests PASSED</li>
+            <li><i class="fas fa-check"></i> ≥ 80% of Medium priority tests PASSED</li>
+            <li><i class="fas fa-check"></i> Zero open Critical defects</li>
+            <li><i class="fas fa-check"></i> Zero open High defects blocking core business flow</li>
+            <li><i class="fas fa-check"></i> All financial calculations verified against DB values</li>
+            <li><i class="fas fa-check"></i> Mobile parity confirmed on at least 1 iOS + 1 Android device</li>
+            <li><i class="fas fa-check"></i> Sign-off obtained from business stakeholder</li>
+          </ul>
+        </div>
+      </div>
+      <h4 style="color:var(--text);font-size:0.88rem;margin:1.5rem 0 0.75rem;">Defect Classification</h4>
+      <table class="defect-table">
+        <thead><tr><th>Level</th><th>Definition</th><th>Resolution Target</th><th>Go-Live Decision</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-crit">CRITICAL</span></td><td style="color:var(--text2)">System crash, data loss, auth bypass, financial miscalculation</td><td style="color:var(--crit)">Fix before next test cycle</td><td style="color:var(--crit)">BLOCK</td></tr>
+          <tr><td><span class="badge badge-high">HIGH</span></td><td style="color:var(--text2)">Core feature broken, workflow blocked, wrong calculation shown</td><td style="color:var(--high)">Fix within 24 hours</td><td style="color:var(--high)">BLOCK if core flow</td></tr>
+          <tr><td><span class="badge badge-med">MEDIUM</span></td><td style="color:var(--text2)">Feature works but incorrect UI, minor data mismatch, slow response</td><td style="color:var(--med)">Fix in next sprint</td><td style="color:var(--med)">PASS with note</td></tr>
+          <tr><td><span class="badge badge-low">LOW</span></td><td style="color:var(--text2)">Cosmetic issue, typo, minor UI inconsistency, non-critical UX</td><td style="color:var(--low)">Fix at convenience</td><td style="color:var(--low)">PASS</td></tr>
+        </tbody>
+      </table>
+      <div style="background:var(--surface);border:1px solid var(--accent);border-radius:10px;padding:1.1rem;margin-top:0.5rem;">
+        <h4 style="color:var(--accent);font-size:0.85rem;margin-bottom:0.75rem;"><i class="fas fa-signature"></i> Sign-Off Checklist</h4>
+        <ul class="checklist">
+          <li><i class="fas fa-square" style="color:var(--text2)"></i> Test execution complete — all days covered</li>
+          <li><i class="fas fa-square" style="color:var(--text2)"></i> Pass/Fail report shared with stakeholder</li>
+          <li><i class="fas fa-square" style="color:var(--text2)"></i> All Critical and High defects resolved or risk-accepted</li>
+          <li><i class="fas fa-square" style="color:var(--text2)"></i> Financial calculations independently verified by finance team</li>
+          <li><i class="fas fa-square" style="color:var(--text2)"></i> Mobile parity sign-off from mobile team</li>
+          <li><i class="fas fa-square" style="color:var(--text2)"></i> Business stakeholder sign-off obtained</li>
+        </ul>
+      </div>`;
+      document.getElementById('panel-criteria').innerHTML = h;
+    }
+
+    function renderAll() {
+      renderFunctional();
+      renderNonFunctional();
+      renderPriority();
+      renderPlan();
+      renderEnvironment();
+      renderCriteria();
+    }
+
+    function toggleMod(hdr) {
+      const body = hdr.nextElementSibling;
+      body.classList.toggle('open');
+      const arrow = hdr.querySelector('.toggle-arrow');
+      if (arrow) arrow.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : '';
+    }
+
+    document.getElementById('phaseTabs').addEventListener('click', function(e) {
+      const tab = e.target.closest('.phase-tab');
+      if (!tab) return;
+      document.querySelectorAll('.phase-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.phase-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.phase).classList.add('active');
+    });
+
+    document.getElementById('searchInput').addEventListener('input', function() {
+      const q = this.value.toLowerCase().trim();
+      document.querySelectorAll('.mod-card').forEach(card => {
+        const text = (card.getAttribute('data-search') || '').toLowerCase();
+        card.style.display = (!q || text.includes(q)) ? '' : 'none';
+      });
+    });
+
+    var AUTH_PAGE_KEY = 'testreq';
+    var AUTH_CREDS = [
+      { user: 'MR10001', pass: 'Testreq', canPrint: false },
+      { user: 'MR10002', pass: 'MR10001', canPrint: true }
+    ];
+
+    function initAuth() {
+      var stored = sessionStorage.getItem('mnr_doc_' + AUTH_PAGE_KEY);
+      if (stored) {
+        try {
+          var d = JSON.parse(stored);
+          var cred = AUTH_CREDS.find(function(c) { return c.user === d.u && c.pass === d.p; });
+          if (cred) { applyDocPermissions(cred.canPrint); document.getElementById('loginOverlay').classList.add('hidden'); renderAll(); return; }
+        } catch(e) {}
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      var user = document.getElementById('loginUser').value.trim();
+      var pass = document.getElementById('loginPass').value;
+      var cred = AUTH_CREDS.find(function(c) { return c.user === user && c.pass === pass; });
+      if (cred) {
+        sessionStorage.setItem('mnr_doc_' + AUTH_PAGE_KEY, JSON.stringify({ u: user, p: pass }));
+        document.getElementById('loginOverlay').classList.add('hidden');
+        applyDocPermissions(cred.canPrint);
+        renderAll();
+      } else {
+        document.getElementById('loginError').classList.add('show');
+        document.getElementById('loginPass').value = '';
+      }
+    }
+
+    function applyDocPermissions(canPrint) {
+      if (!canPrint) {
+        var btn = document.querySelector('.print-btn');
+        if (btn) btn.style.display = 'none';
+        var s = document.createElement('style');
+        s.textContent = '@media print { body { display: none !important; } }';
+        document.head.appendChild(s);
+        document.addEventListener('keydown', function(e) {
+          if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); e.stopPropagation(); }
+        }, true);
+      }
+    }
+
+    function doLogout() {
+      sessionStorage.removeItem('mnr_doc_' + AUTH_PAGE_KEY);
+      location.reload();
+    }
+
+    initAuth();
+    </script>
+</body>
+</html>

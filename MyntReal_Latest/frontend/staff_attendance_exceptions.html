@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exception Approvals - MNR</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #0284c7;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --light: #f3f4f6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f3f4f6;
+            min-height: 100vh;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease; padding-top: 88px;
+        }
+        
+        @media (max-width: 767px) {
+            .main-content {
+                margin-left: 0;
+            }
+        }
+
+        .header-logo {
+            height: 36px;
+            width: auto;
+        }
+
+        .user-info-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-info-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .user-info-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .user-info-role {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .role-badge-supreme { background: #fef2f2; color: #dc2626; }
+        .role-badge-hr { background: #f3e8ff; color: #7c3aed; }
+        .role-badge-leadership { background: #fef3c7; color: #d97706; }
+        .role-badge-default { background: #f3f4f6; color: #374151; }
+
+        .content-area {
+            flex: 1;
+            padding: 24px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            background: transparent;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        .filter-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 6px;
+            display: block;
+            text-transform: uppercase;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .btn-apply-filter {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-clear-filter {
+            background: #f3f4f6;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .exceptions-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .exceptions-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            text-transform: uppercase;
+        }
+
+        .exceptions-table td {
+            padding: 12px 16px;
+            font-size: 14px;
+            color: #374151;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .exceptions-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge-bypass {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-no-timesheet {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .badge-mismatch {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .badge-manual {
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        .reason-cell {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .pagination-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .pagination-btn {
+            padding: 8px 16px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: #f3f4f6;
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            color: #d1d5db;
+        }
+
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e5e7eb;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .stats-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .view-details-btn {
+            padding: 4px 10px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #374151;
+        }
+
+        .view-details-btn:hover {
+            background: #e5e7eb;
+        }
+    </style>
+    <script src="/staff_header.js"></script>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    
+    <div class="main-content">
+            <div id="headerContainer"></div>
+
+    <div class="content-area">
+            <div class="stats-row" id="statsRow">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalExceptions">0</div>
+                    <div class="stat-label">Total Exceptions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="thisMonthCount">0</div>
+                    <div class="stat-label">This Month</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="noTimesheetCount">0</div>
+                    <div class="stat-label">No Timesheet Bypasses</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalHoursGiven">0</div>
+                    <div class="stat-label">Hours Exception Given</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalDaysGiven">0</div>
+                    <div class="stat-label">Days Exception Given</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-filter"></i>
+                        Filters
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label>From Date</label>
+                            <input type="date" id="filterFromDate">
+                        </div>
+                        <div class="filter-group">
+                            <label>To Date</label>
+                            <input type="date" id="filterToDate">
+                        </div>
+                        <div class="filter-group">
+                            <label>Department</label>
+                            <select id="filterDepartment">
+                                <option value="">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Approved By</label>
+                            <select id="filterApprover">
+                                <option value="">All Approvers</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Bypass Type</label>
+                            <select id="filterBypassType">
+                                <option value="">All Types</option>
+                                <option value="no_timesheet">No Timesheet</option>
+                                <option value="mismatch_override">Mismatch Override</option>
+                                <option value="manual_adjustment">Manual Adjustment</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn-apply-filter" onclick="applyFilters()">
+                            <i class="fas fa-search"></i> Apply Filters
+                        </button>
+                        <button class="btn-clear-filter" onclick="clearFilters()">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-list"></i>
+                        Exception Records
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div id="loadingState" class="loading-spinner" style="display: none;">
+                        <div class="spinner"></div>
+                    </div>
+                    
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <i class="fas fa-check-circle"></i>
+                        <p>No exception records found</p>
+                        <small>Exception approvals will appear here when EA/VGK bypass the timesheet requirement</small>
+                    </div>
+
+                    <div class="table-responsive" id="tableContainer" style="display: none;">
+                        <table class="exceptions-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th>Bypass Type</th>
+                                    <th>Reason</th>
+                                    <th>Hours</th>
+                                    <th>Approved By</th>
+                                    <th>Approved At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exceptionsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination-container" id="paginationContainer" style="display: none;">
+                        <div class="pagination-info" id="paginationInfo">Showing 0 of 0 records</div>
+                        <div class="pagination-buttons" id="paginationButtons"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="detailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Exception Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="detailsModalBody">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/staff_sidebar.js?v=20260602c"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script>
+        const API_BASE = '/api/v1/staff/attendance-sheet';
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentUser = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('staff_token');
+            if (!token) {
+                window.location.href = '/staff/login';
+                return;
+            }
+            
+            // Initialize staff sidebar (handles auth and user data)
+            if (typeof StaffSidebar !== 'undefined') {
+                await StaffSidebar.init();
+            StaffHeader.inject('Exception Approvals', 'fas fa-shield-alt');
+            }
+            updateHeaderUserInfo();
+            await loadDepartments();
+            await loadExceptions();
+        });
+
+        function updateHeaderUserInfo() {
+            const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+            currentUser = userData;
+            
+            const name = userData.full_name || 'Staff Member';
+            const role = userData.role_name || 'Employee';
+            const empId = userData.emp_code || userData.employee_code || '-';
+            
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            
+            document.getElementById('headerUserInitials').textContent = initials;
+            document.getElementById('headerUserName').textContent = name;
+            document.getElementById('headerUserEmpId').textContent = empId;
+            
+            const roleEl = document.getElementById('headerUserRole');
+            roleEl.textContent = role;
+            
+            if (['VGK Mentor', 'VGK4U Supreme', 'VGK4U'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-supreme';
+            } else if (['HR', 'HR Manager'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-hr';
+            } else if (['Key Leadership', 'Leadership Role', 'Team Leader', 'Manager', 'Executive Admin'].includes(role)) {
+                roleEl.className = 'user-info-role role-badge-leadership';
+            } else {
+                roleEl.className = 'user-info-role role-badge-default';
+            }
+        }
+
+        async function loadDepartments() {
+            try {
+                const response = await fetch('/api/v1/staff/departments', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('filterDepartment');
+                    (data.departments || data || []).forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading departments:', error);
+            }
+        }
+
+        async function loadExceptions() {
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('paginationContainer').style.display = 'none';
+
+            try {
+                const params = new URLSearchParams();
+                params.append('page', currentPage);
+                params.append('per_page', 50);
+
+                const fromDate = document.getElementById('filterFromDate').value;
+                const toDate = document.getElementById('filterToDate').value;
+                const department = document.getElementById('filterDepartment').value;
+                const approver = document.getElementById('filterApprover').value;
+                const bypassType = document.getElementById('filterBypassType').value;
+
+                if (fromDate) params.append('from_date', fromDate);
+                if (toDate) params.append('to_date', toDate);
+                if (department) params.append('department_id', department);
+                if (approver) params.append('approver_id', approver);
+                if (bypassType) params.append('bypass_type', bypassType);
+
+                const response = await fetch(`${API_BASE}/exceptions?${params.toString()}`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}` }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load exceptions');
+                }
+
+                const data = await response.json();
+                document.getElementById('loadingState').style.display = 'none';
+
+                if (!data.records || data.records.length === 0) {
+                    document.getElementById('emptyState').style.display = 'block';
+                    updateStats(0, 0, 0, 0, 0);
+                    return;
+                }
+
+                renderExceptions(data.records);
+                updatePagination(data.pagination);
+                updateApproverFilter(data.filter_options?.approvers || []);
+                
+                const thisMonth = new Date().toISOString().substring(0, 7);
+                const thisMonthRecords = data.records.filter(r => r.date.startsWith(thisMonth)).length;
+                const noTimesheetCount = data.records.filter(r => r.bypass_type === 'no_timesheet').length;
+                const totalHoursGiven = data.records.reduce((sum, r) => sum + (r.approved_hours || 0), 0);
+                const totalDaysGiven = totalHoursGiven / 8;
+                updateStats(data.pagination.total, thisMonthRecords, noTimesheetCount, totalHoursGiven, totalDaysGiven);
+
+                document.getElementById('tableContainer').style.display = 'block';
+                document.getElementById('paginationContainer').style.display = 'flex';
+
+            } catch (error) {
+                console.error('Error loading exceptions:', error);
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('emptyState').innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error loading exception records</p>
+                    <small>${error.message}</small>
+                `;
+            }
+        }
+
+        function renderExceptions(records) {
+            const tbody = document.getElementById('exceptionsTableBody');
+            tbody.innerHTML = '';
+
+            records.forEach(record => {
+                const row = document.createElement('tr');
+                
+                const bypassClass = record.bypass_type === 'no_timesheet' ? 'badge-no-timesheet' :
+                                   record.bypass_type === 'mismatch_override' ? 'badge-mismatch' : 'badge-manual';
+                
+                const bypassLabel = record.bypass_type === 'no_timesheet' ? 'No Timesheet' :
+                                   record.bypass_type === 'mismatch_override' ? 'Mismatch Override' : 'Manual Adjustment';
+                
+                const createdAt = record.created_at ? new Date(record.created_at).toLocaleString('en-IN', {
+                    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                }) : 'N/A';
+
+                row.innerHTML = `
+                    <td>${formatDate(record.date)}</td>
+                    <td>
+                        <strong>${record.employee_name}</strong>
+                        <br><small class="text-muted">${record.employee_code}</small>
+                    </td>
+                    <td>${record.department}</td>
+                    <td><span class="badge-bypass ${bypassClass}">${bypassLabel}</span></td>
+                    <td class="reason-cell" title="${escapeHtml(record.exception_reason)}">${escapeHtml(record.exception_reason)}</td>
+                    <td><strong>${record.approved_hours} hrs</strong></td>
+                    <td>
+                        ${record.approver_name}
+                        <br><small class="text-muted">${record.approver_role.toUpperCase()}</small>
+                    </td>
+                    <td>${createdAt}</td>
+                    <td>
+                        <button class="view-details-btn" onclick='viewDetails(${JSON.stringify(record)})'>
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateStats(total, thisMonth, noTimesheet, totalHours, totalDays) {
+            document.getElementById('totalExceptions').textContent = total;
+            document.getElementById('thisMonthCount').textContent = thisMonth;
+            document.getElementById('noTimesheetCount').textContent = noTimesheet;
+            document.getElementById('totalHoursGiven').textContent = totalHours.toFixed(1);
+            document.getElementById('totalDaysGiven').textContent = totalDays.toFixed(2);
+        }
+
+        function updatePagination(pagination) {
+            totalPages = pagination.total_pages;
+            currentPage = pagination.page;
+
+            document.getElementById('paginationInfo').textContent = 
+                `Showing ${(pagination.page - 1) * pagination.per_page + 1} - ${Math.min(pagination.page * pagination.per_page, pagination.total)} of ${pagination.total} records`;
+
+            const buttons = document.getElementById('paginationButtons');
+            buttons.innerHTML = '';
+
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'pagination-btn';
+            prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i> Prev';
+            prevBtn.disabled = currentPage <= 1;
+            prevBtn.onclick = () => goToPage(currentPage - 1);
+            buttons.appendChild(prevBtn);
+
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                const btn = document.createElement('button');
+                btn.className = 'pagination-btn' + (i === currentPage ? ' active' : '');
+                btn.textContent = i;
+                btn.onclick = () => goToPage(i);
+                buttons.appendChild(btn);
+            }
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'pagination-btn';
+            nextBtn.innerHTML = 'Next <i class="fas fa-chevron-right"></i>';
+            nextBtn.disabled = currentPage >= totalPages;
+            nextBtn.onclick = () => goToPage(currentPage + 1);
+            buttons.appendChild(nextBtn);
+        }
+
+        function updateApproverFilter(approvers) {
+            const select = document.getElementById('filterApprover');
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">All Approvers</option>';
+            approvers.forEach(approver => {
+                const option = document.createElement('option');
+                option.value = approver.id;
+                option.textContent = approver.name;
+                if (approver.id == currentValue) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            loadExceptions();
+        }
+
+        function applyFilters() {
+            currentPage = 1;
+            loadExceptions();
+        }
+
+        function clearFilters() {
+            document.getElementById('filterFromDate').value = '';
+            document.getElementById('filterToDate').value = '';
+            document.getElementById('filterDepartment').value = '';
+            document.getElementById('filterApprover').value = '';
+            document.getElementById('filterBypassType').value = '';
+            currentPage = 1;
+            loadExceptions();
+        }
+
+        function viewDetails(record) {
+            const modal = new bootstrap.Modal(document.getElementById('detailsModal'));
+            const snapshot = record.reconciliation_snapshot || {};
+            
+            document.getElementById('detailsModalBody').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Employee Information</h6>
+                        <p><strong>Name:</strong> ${record.employee_name}</p>
+                        <p><strong>Employee Code:</strong> ${record.employee_code}</p>
+                        <p><strong>Department:</strong> ${record.department}</p>
+                        <p><strong>Date:</strong> ${formatDate(record.date)}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Exception Details</h6>
+                        <p><strong>Bypass Type:</strong> ${record.bypass_type.replace('_', ' ').toUpperCase()}</p>
+                        <p><strong>Approved Hours:</strong> ${record.approved_hours} hrs</p>
+                        <p><strong>Approved By:</strong> ${record.approver_name} (${record.approver_role.toUpperCase()})</p>
+                        <p><strong>Approved At:</strong> ${new Date(record.created_at).toLocaleString('en-IN')}</p>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="text-muted mb-3"><i class="fas fa-clock me-2"></i>Time Entry Details</h6>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <div class="bg-success bg-opacity-10 p-3 rounded text-center">
+                            <i class="fas fa-sign-in-alt text-success mb-2" style="font-size: 24px;"></i>
+                            <p class="mb-0 text-muted small">Clock In</p>
+                            <strong class="text-success">${record.clock_in || 'Not Available'}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-danger bg-opacity-10 p-3 rounded text-center">
+                            <i class="fas fa-sign-out-alt text-danger mb-2" style="font-size: 24px;"></i>
+                            <p class="mb-0 text-muted small">Clock Out</p>
+                            <strong class="text-danger">${record.clock_out || 'Not Available'}</strong>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-primary bg-opacity-10 p-3 rounded text-center">
+                            <i class="fas fa-hourglass-half text-primary mb-2" style="font-size: 24px;"></i>
+                            <p class="mb-0 text-muted small">Total Hours</p>
+                            <strong class="text-primary">${record.total_hours || 'N/A'}</strong>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <h6 class="text-muted mb-3">Exception Reason</h6>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${escapeHtml(record.exception_reason)}
+                </div>
+                <hr>
+                <h6 class="text-muted mb-3">Original Reconciliation Snapshot</h6>
+                <div class="bg-light p-3 rounded">
+                    <p class="mb-1"><strong>Marked Hours:</strong> ${snapshot.marked_hours || 'N/A'}</p>
+                    <p class="mb-1"><strong>Timesheet Hours:</strong> ${snapshot.timesheet_hours || 'N/A (No Entry)'}</p>
+                    <p class="mb-0"><strong>Original Status:</strong> ${snapshot.reconciliation_status || 'N/A'}</p>
+                </div>
+            `;
+            modal.show();
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+    </script>
+</body>
+</html>

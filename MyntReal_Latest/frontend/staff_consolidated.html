@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consolidated Reports - SFMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        .content-area { padding: 24px; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+        .page-header h1 { font-size: 22px; font-weight: 700; color: #1f2937; margin: 0; }
+        .page-header p { font-size: 13px; color: #6b7280; margin: 2px 0 0 0; }
+        .filter-bar { background: white; padding: 14px 18px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+        .filter-group select, .filter-group input { padding: 7px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; min-width: 140px; }
+        .period-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+        .period-btn { padding: 7px 12px; border-radius: 6px; border: 1px solid #d1d5db; background: white; font-size: 12px; cursor: pointer; transition: all .2s; }
+        .period-btn.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+        .period-btn:hover:not(.active) { background: #f9fafb; }
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+        .card-stat { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1); text-align: center; }
+        .card-stat .val { font-size: 20px; font-weight: 700; }
+        .card-stat .lbl { font-size: 11px; color: #6b7280; margin-top: 4px; }
+        .card-stat.green .val { color: #059669; }
+        .card-stat.red .val { color: #dc2626; }
+        .card-stat.blue .val { color: #1d4ed8; }
+        .card-stat.teal .val { color: #0891b2; }
+        .card-stat.orange .val { color: #b45309; }
+        .card-stat.amber .val { color: #d97706; }
+        .card-stat.purple .val { color: #7c3aed; }
+        .card-stat.gray .val { color: #374151; }
+
+        /* Tabs */
+        .report-tabs { display:flex; gap:4px; background:white; border-radius:10px 10px 0 0; padding: 8px 8px 0; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 0; flex-wrap: wrap; }
+        .report-tab { padding: 10px 18px; border: none; background: transparent; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; border-bottom: 3px solid transparent; transition: all .15s; border-radius: 6px 6px 0 0; }
+        .report-tab:hover { color: #1f2937; background: #f9fafb; }
+        .report-tab.active { color: #1d4ed8; border-bottom-color: #1d4ed8; background: #eff6ff; }
+        .report-tab i { margin-right: 6px; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        /* Balance Sheet */
+        .bs-container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+        @media(max-width:768px) { .bs-container { grid-template-columns: 1fr; } }
+        .bs-card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1); overflow: hidden; }
+        .bs-card-hdr { padding: 12px 16px; font-weight: 700; font-size: 14px; }
+        .bs-card-hdr.liab { background: #fef2f2; color: #dc2626; border-left: 4px solid #dc2626; }
+        .bs-card-hdr.asset { background: #f0fdf4; color: #059669; border-left: 4px solid #059669; }
+        .bs-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+        .bs-item.sub { padding-left: 28px; color: #6b7280; font-size: 12px; }
+        .bs-item.highlight { background: #f9fafb; font-weight: 600; }
+        .bs-item.profit-row { background: #d1fae5; color: #059669; font-weight: 600; }
+        .bs-item.loss-row { background: #fee2e2; color: #dc2626; font-weight: 600; }
+        .bs-item.total-row { background: #1f2937; color: white; font-weight: 700; }
+        .bs-item .lbl { flex: 1; }
+        .bs-item .amt { font-weight: 600; font-family: monospace; text-align: right; min-width: 120px; }
+        .bs-item .amt.cr { color: #059669; }
+        .bs-item .amt.dr { color: #dc2626; }
+        .section-divider { text-align:center; padding: 6px; font-size:11px; color:#9ca3af; font-weight:700; letter-spacing:1px; text-transform:uppercase; background:#f9fafb; }
+        .diff-note { font-size:11px; color:#d97706; padding:8px 16px; background:#fffbeb; }
+        .as-on-badge { font-size: 12px; background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+        .bank-sub { font-size: 11px; color: #6b7280; }
+
+        /* P&L */
+        .pl-container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        @media(max-width:768px) { .pl-container { grid-template-columns: 1fr; } }
+        .pl-card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+        .pl-card-hdr { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-weight: 700; font-size: 14px; }
+        .pl-card-hdr.debit { background: #fff5f5; color: #dc2626; border-left: 4px solid #dc2626; border-radius: 10px 10px 0 0; }
+        .pl-card-hdr.credit { background: #f0fdf4; color: #059669; border-left: 4px solid #059669; border-radius: 10px 10px 0 0; }
+        .pl-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+        .pl-item.sub { padding-left: 28px; color: #6b7280; font-size: 12px; }
+        .pl-item.highlight { background: #f9fafb; font-weight: 600; }
+        .pl-item.total-row { background: #1f2937; color: white; font-weight: 700; border-radius: 0 0 10px 10px; }
+        .pl-item.profit-row { background: #d1fae5; color: #059669; font-weight: 700; }
+        .pl-item.loss-row { background: #fee2e2; color: #dc2626; font-weight: 700; }
+        .pl-item .lbl { flex: 1; }
+        .pl-item .amt { font-weight: 600; font-family: monospace; text-align: right; min-width: 120px; }
+        .pl-item .amt.cr { color: #059669; }
+        .pl-item .amt.dr { color: #dc2626; }
+        .breakdown-list { display: block; padding: 4px 16px 4px 32px; background: #faf5ff; }
+        .breakdown-list div { display: flex; justify-content: space-between; font-size: 11px; color: #6b7280; padding: 3px 0; border-bottom: 1px solid #ede9fe; }
+
+        /* Tables (Sales/Purchases) */
+        .card { background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1); border: none; }
+        .card-hdr { padding: 14px 18px; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #1f2937; display: flex; justify-content: space-between; align-items: center; }
+        .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .tbl th { background: #f9fafb; padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; }
+        .tbl td { padding: 12px 14px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+        .tbl tr.month-row { cursor: pointer; }
+        .tbl tr.month-row:hover { background: #eff6ff; }
+        .tbl tr.month-row.expanded { background: #eff6ff; font-weight: 600; }
+        .tbl tr.drill-header td { background: #1d4ed8; color: white; font-weight: 600; font-size: 12px; }
+        .tbl tr.drill-row td { background: #f0f7ff; font-size: 12px; }
+        .tbl tr.drill-row:hover td { background: #dbeafe; }
+        .tbl tr.company-row td { background: #f8faff; font-size: 12px; padding: 8px 20px; color: #4b5563; }
+        .tbl tr.grand-total td { background: #1f2937; color: white; font-weight: 700; }
+        .pur-tbl tr.month-row:hover, .pur-tbl tr.month-row.expanded { background: #fffbeb; }
+        .pur-tbl tr.drill-header td { background: #b45309; }
+        .pur-tbl tr.drill-row td { background: #fffbf0; }
+        .pur-tbl tr.drill-row:hover td { background: #fde68a; }
+        .pur-tbl tr.company-row td { background: #fefce8; }
+        .amt-credit { color: #059669; }
+        .amt-debit { color: #dc2626; }
+        .amt-cancel { color: #dc2626; }
+        .badge-pill { padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+        .badge-confirmed { background: #d1fae5; color: #059669; }
+        .badge-draft { background: #fef3c7; color: #d97706; }
+        .badge-cancelled { background: #fee2e2; color: #dc2626; }
+        .badge-pending { background: #fef3c7; color: #d97706; }
+        .badge-entry { background: #ede9fe; color: #7c3aed; }
+        .badge-expense { background: #ede9fe; color: #7c3aed; }
+        .expand-icon { transition: transform .2s; display: inline-block; }
+        .expanded .expand-icon { transform: rotate(90deg); }
+        .tbl-wrap { overflow-x: auto; }
+
+        /* Common */
+        .company-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+        .company-tab { padding: 6px 14px; border-radius: 20px; border: 1px solid #d1d5db; background: white; font-size: 12px; cursor: pointer; transition: all .2s; }
+        .company-tab.active { background: #1d4ed8; color: white; border-color: #1d4ed8; }
+        .company-tab:hover:not(.active) { background: #eff6ff; }
+        .loader { text-align: center; padding: 60px 20px; color: #6b7280; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #9ca3af; }
+        .empty-state i { font-size: 40px; margin-bottom: 12px; }
+        .btn-load { padding: 7px 16px; background: #1d4ed8; color: white; border: none; border-radius: 6px; font-size: 13px; cursor: pointer; }
+        .btn-load:hover { background: #1e40af; }
+        .custom-range { display: none; }
+        .custom-range.visible { display: flex; gap: 8px; align-items: flex-end; }
+        .drill-link { color: inherit; text-decoration: none; cursor: pointer; border-bottom: 1px dashed transparent; transition: all .15s; }
+        .drill-link:hover { color: #1d4ed8; border-bottom-color: #1d4ed8; }
+        .drill-ico { font-size: 9px; opacity: 0.4; margin-left: 4px; }
+        .drill-link:hover .drill-ico { opacity: 0.9; }
+        .sales-drill-link { color: #1d4ed8; text-decoration: none; font-size: 11px; }
+        .sales-drill-link:hover { text-decoration: underline; }
+        .pur-drill-link { color: #b45309; text-decoration: none; font-size: 11px; }
+        .pur-drill-link:hover { text-decoration: underline; }
+    </style>
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+</head>
+<body>
+<nav id="staffSidebar"></nav>
+<div class="main-content">
+<div id="headerContainer"></div>
+    <div class="content-area" id="mainContent">
+        <div class="page-header">
+            <div>
+                <h1><i class="fas fa-chart-pie" style="color:#1d4ed8;margin-right:8px;"></i>Consolidated Reports</h1>
+                <p id="periodLabel">Loading…</p>
+            </div>
+            <button class="btn-load" onclick="refreshActiveTab()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+        </div>
+
+        <!-- Shared filter bar -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Company</label>
+                <select id="companySelect" onchange="onFilterChange()">
+                    <option value="0">All Companies</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Period</label>
+                <div class="period-btns">
+                    <button class="period-btn" data-period="THIS_MONTH" onclick="setPeriod('THIS_MONTH')">This Month</button>
+                    <button class="period-btn" data-period="THIS_QUARTER" onclick="setPeriod('THIS_QUARTER')">This Quarter</button>
+                    <button class="period-btn active" data-period="THIS_FY" onclick="setPeriod('THIS_FY')">This FY</button>
+                    <button class="period-btn" data-period="OVERALL" onclick="setPeriod('OVERALL')">Overall</button>
+                    <button class="period-btn" data-period="CUSTOM" onclick="setPeriod('CUSTOM')">Custom</button>
+                </div>
+            </div>
+            <div class="custom-range" id="customRange">
+                <div class="filter-group">
+                    <label>From</label>
+                    <input type="date" id="dateFrom" onchange="onFilterChange()">
+                </div>
+                <div class="filter-group">
+                    <label>To</label>
+                    <input type="date" id="dateTo" onchange="onFilterChange()">
+                </div>
+            </div>
+            <div class="filter-group" id="asOnGroup">
+                <label>As on Date</label>
+                <input type="date" id="asOnDate" onchange="onAsOnChange()">
+            </div>
+            <button class="btn-load" onclick="onFilterChange()">Apply</button>
+        </div>
+
+        <!-- Report tabs -->
+        <div class="report-tabs">
+            <button class="report-tab active" data-tab="bs" onclick="switchReportTab('bs')"><i class="fas fa-file-invoice-dollar"></i>Balance Sheet</button>
+            <button class="report-tab" data-tab="pl" onclick="switchReportTab('pl')"><i class="fas fa-balance-scale"></i>Profit &amp; Loss</button>
+            <button class="report-tab" data-tab="sales" onclick="switchReportTab('sales')"><i class="fas fa-chart-line"></i>Sales</button>
+            <button class="report-tab" data-tab="purchases" onclick="switchReportTab('purchases')"><i class="fas fa-shopping-cart"></i>Purchases</button>
+        </div>
+
+        <!-- BALANCE SHEET PANE -->
+        <div class="tab-pane active" id="pane-bs">
+            <div style="height:12px;"></div>
+            <div class="summary-cards">
+                <div class="card-stat blue"><div class="val" id="bs_sumAssets">₹0</div><div class="lbl">Total Assets</div></div>
+                <div class="card-stat red"><div class="val" id="bs_sumLiab">₹0</div><div class="lbl">Total Liabilities</div></div>
+                <div class="card-stat green"><div class="val" id="bs_sumStock">₹0</div><div class="lbl">Closing Stock</div></div>
+                <div class="card-stat teal"><div class="val" id="bs_sumBank">₹0</div><div class="lbl">Bank Balance</div></div>
+            </div>
+            <div id="bs_companyTabsContainer" class="company-tabs" style="display:none;"></div>
+            <div id="bsContent"><div class="loader"><i class="fas fa-spinner fa-spin me-2"></i>Loading Balance Sheet…</div></div>
+        </div>
+
+        <!-- P&L PANE -->
+        <div class="tab-pane" id="pane-pl">
+            <div style="height:12px;"></div>
+            <div class="summary-cards">
+                <div class="card-stat blue"><div class="val" id="pl_sumRevenue">₹0</div><div class="lbl">Total Revenue</div></div>
+                <div class="card-stat orange"><div class="val" id="pl_sumPurchases">₹0</div><div class="lbl">Total Purchases</div></div>
+                <div class="card-stat red"><div class="val" id="pl_sumExpenses">₹0</div><div class="lbl">Total Expenses</div></div>
+                <div class="card-stat green" id="pl_netCard"><div class="val" id="pl_sumNet">₹0</div><div class="lbl" id="pl_netLbl">Net Profit</div></div>
+            </div>
+            <div id="pl_companyTabsContainer" class="company-tabs" style="display:none;"></div>
+            <div id="plContent"><div class="loader"><i class="fas fa-spinner fa-spin me-2"></i>Loading P&L…</div></div>
+        </div>
+
+        <!-- SALES PANE -->
+        <div class="tab-pane" id="pane-sales">
+            <div style="height:12px;"></div>
+            <div class="summary-cards">
+                <div class="card-stat blue"><div class="val" id="sales_sumTotal">₹0</div><div class="lbl">Total Sales (Cr)</div></div>
+                <div class="card-stat green"><div class="val" id="sales_sumBalance">₹0</div><div class="lbl">Closing Balance</div></div>
+                <div class="card-stat amber"><div class="val" id="sales_sumCount">0</div><div class="lbl">Total Transactions</div></div>
+            </div>
+            <div class="card">
+                <div class="card-hdr"><span>Monthly Ledger Summary</span><small class="text-muted" id="sales_rowCount"></small></div>
+                <div class="tbl-wrap">
+                    <table class="tbl" id="salesTable">
+                        <thead><tr>
+                            <th style="width:30px;"></th><th>Particulars</th>
+                            <th style="text-align:right;">Debit</th><th style="text-align:right;">Credit</th>
+                            <th style="text-align:right;">Closing Balance</th><th style="text-align:right;">Count</th>
+                        </tr></thead>
+                        <tbody id="salesTableBody"><tr><td colspan="6" class="loader"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- PURCHASES PANE -->
+        <div class="tab-pane" id="pane-purchases">
+            <div style="height:12px;"></div>
+            <div class="summary-cards">
+                <div class="card-stat orange"><div class="val" id="pur_sumTotal">₹0</div><div class="lbl">Total Purchases (Dr)</div></div>
+                <div class="card-stat red"><div class="val" id="pur_sumBalance">₹0</div><div class="lbl">Cumulative Spend</div></div>
+                <div class="card-stat gray"><div class="val" id="pur_sumCount">0</div><div class="lbl">Total Transactions</div></div>
+            </div>
+            <div class="card">
+                <div class="card-hdr"><span>Monthly Purchase Ledger</span><small class="text-muted" id="pur_rowCount"></small></div>
+                <div class="tbl-wrap">
+                    <table class="tbl pur-tbl" id="purchasesTable">
+                        <thead><tr>
+                            <th style="width:30px;"></th><th>Particulars</th>
+                            <th style="text-align:right;">Debit</th><th style="text-align:right;">Credit</th>
+                            <th style="text-align:right;">Closing Balance</th><th style="text-align:right;">Count</th>
+                        </tr></thead>
+                        <tbody id="purchasesTableBody"><tr><td colspan="6" class="loader"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Shared filter state
+    let currentPeriod = 'THIS_FY';
+    let activeTab = 'bs';
+
+    // Per-tab cache: { signature: string|null, data: any }
+    const tabCache = {
+        bs: { sig: null, data: null, activeCoIdx: -1, autoFallback: false },
+        pl: { sig: null, data: null, activeCoIdx: -1, autoFallback: false },
+        sales: { sig: null, data: null, expanded: new Set(), autoFallback: false },
+        purchases: { sig: null, data: null, expanded: new Set(), autoFallback: false }
+    };
+
+    function fmt(n) { return '₹' + (parseFloat(n)||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+    function _periodEndDate(period) {
+        const today = new Date();
+        const yyyy = today.getFullYear(), m = today.getMonth();
+        let end;
+        if (period === 'THIS_MONTH') end = new Date(yyyy, m + 1, 0);
+        else if (period === 'THIS_QUARTER') { const qs = Math.floor(m/3)*3; end = new Date(yyyy, qs+3, 0); }
+        else if (period === 'THIS_FY') { const fy = (m >= 3) ? yyyy + 1 : yyyy; end = new Date(fy, 2, 31); }
+        else end = today;
+        if (end > today) end = today;
+        const yy = end.getFullYear();
+        const mm = String(end.getMonth()+1).padStart(2,'0');
+        const dd = String(end.getDate()).padStart(2,'0');
+        return `${yy}-${mm}-${dd}`;
+    }
+
+    function getFilterSig() {
+        const cid = document.getElementById('companySelect').value;
+        const aod = document.getElementById('asOnDate').value;
+        const df = document.getElementById('dateFrom').value;
+        const dt = document.getElementById('dateTo').value;
+        return `${cid}|${currentPeriod}|${aod}|${df}|${dt}`;
+    }
+
+    function invalidateAllCaches() {
+        Object.keys(tabCache).forEach(k => { tabCache[k].sig = null; tabCache[k].data = null; });
+        // reset auto-fallback flags so each tab can try once per filter change
+        tabCache.bs.autoFallback = false;
+        tabCache.pl.autoFallback = false;
+        tabCache.sales.autoFallback = false;
+        tabCache.purchases.autoFallback = false;
+    }
+
+    function setPeriod(p) {
+        currentPeriod = p;
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === p));
+        document.getElementById('customRange').classList.toggle('visible', p === 'CUSTOM');
+        if (p !== 'CUSTOM') {
+            const aod = document.getElementById('asOnDate');
+            if (aod) aod.value = _periodEndDate(p);
+        }
+        if (p !== 'CUSTOM') onFilterChange();
+    }
+
+    function setPeriodProgrammatic(p) { setPeriod(p); }
+
+    function onAsOnChange() {
+        currentPeriod = 'CUSTOM';
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === 'CUSTOM'));
+        document.getElementById('customRange').classList.toggle('visible', true);
+        onFilterChange();
+    }
+
+    function onFilterChange() {
+        invalidateAllCaches();
+        loadActiveTab();
+    }
+
+    function refreshActiveTab() {
+        // Force-refresh: invalidate only the active tab's cache
+        tabCache[activeTab].sig = null;
+        tabCache[activeTab].data = null;
+        loadActiveTab();
+    }
+
+    function drillToPL(companyId) {
+        // BS → P&L drill: align the shared Company filter with the BS company sub-tab the user was viewing.
+        // companyId === 0 means the user was on the "Consolidated" sub-tab (All Companies).
+        try {
+            const sel = document.getElementById('companySelect');
+            const target = String(companyId || 0);
+            if (sel && sel.value !== target) {
+                const hasOpt = Array.from(sel.options).some(o => o.value === target);
+                if (hasOpt) {
+                    sel.value = target;
+                    // Filter signature changed → invalidate caches so PL fetches fresh for this company
+                    Object.keys(tabCache).forEach(k => { tabCache[k].sig = null; tabCache[k].data = null; });
+                }
+            }
+        } catch (e) { console.error('[CONSOLIDATED] drillToPL company sync failed:', e); }
+        switchReportTab('pl');
+    }
+
+    function switchReportTab(tab) {
+        activeTab = tab;
+        document.querySelectorAll('.report-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + tab));
+        // Show/hide as-on-date for BS only; from/to (customRange) is for PL/Sales/Purchases only
+        const asOnGroup = document.getElementById('asOnGroup');
+        if (asOnGroup) asOnGroup.style.display = (tab === 'bs') ? '' : 'none';
+        const customRange = document.getElementById('customRange');
+        if (customRange) {
+            if (tab === 'bs') {
+                customRange.classList.remove('visible');
+            } else if (currentPeriod === 'CUSTOM') {
+                customRange.classList.add('visible');
+            } else {
+                customRange.classList.remove('visible');
+            }
+        }
+        loadActiveTab();
+    }
+
+    function loadActiveTab() {
+        const sig = getFilterSig();
+        const c = tabCache[activeTab];
+        if (c.sig === sig && c.data) {
+            // Render from cache
+            renderActive();
+            return;
+        }
+        // Fetch fresh
+        if (activeTab === 'bs') loadBS();
+        else if (activeTab === 'pl') loadPL();
+        else if (activeTab === 'sales') loadSales();
+        else if (activeTab === 'purchases') loadPurchases();
+    }
+
+    function renderActive() {
+        if (activeTab === 'bs') renderBS(tabCache.bs.data);
+        else if (activeTab === 'pl') renderPL(tabCache.pl.data);
+        else if (activeTab === 'sales') renderSalesTable(tabCache.sales.data);
+        else if (activeTab === 'purchases') renderPurchasesTable(tabCache.purchases.data);
+    }
+
+    async function initPage() {
+        console.log('[CONSOLIDATED] initPage start');
+        document.getElementById('mainContent').style.display = 'block';
+        try { if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init(); } catch (e) { console.error('[CONSOLIDATED] sidebar init failed:', e); }
+        try {
+            if (typeof StaffHeader !== 'undefined') { StaffHeader.inject('Consolidated Reports', 'fas fa-chart-pie'); StaffHeader.init(); }
+            if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
+        } catch (e) { console.error('[CONSOLIDATED] header init failed:', e); }
+        try {
+            const aod = document.getElementById('asOnDate');
+            if (aod) aod.value = _periodEndDate(currentPeriod);
+        } catch(e){}
+        try { await loadCompanies(); } catch (e) { console.error('[CONSOLIDATED] loadCompanies failed:', e); }
+        // Default tab is BS
+        loadActiveTab();
+    }
+
+    async function loadCompanies() {
+        try {
+            const r = await fetch('/api/v1/staff/accounts/companies?page_size=50');
+            const d = await r.json();
+            const sel = document.getElementById('companySelect');
+            (d.companies || []).forEach(c => {
+                const o = document.createElement('option');
+                o.value = c.id; o.textContent = c.company_name;
+                sel.appendChild(o);
+            });
+        } catch(e) {}
+    }
+
+    /* ============================================================ */
+    /* BALANCE SHEET                                                 */
+    /* ============================================================ */
+
+    let _bsDrillCtx = { cid: 0, asOn: '' };
+    function _bsq(extraParams) {
+        const p = new URLSearchParams();
+        if (_bsDrillCtx.cid) p.set('company_id', _bsDrillCtx.cid);
+        if (_bsDrillCtx.asOn) { p.set('to_date', _bsDrillCtx.asOn); p.set('date_to', _bsDrillCtx.asOn); p.set('as_on', _bsDrillCtx.asOn); }
+        if (extraParams) Object.entries(extraParams).forEach(([k,v]) => { if (v != null && v !== '') p.set(k,v); });
+        return p.toString();
+    }
+    function _bsDrill(label, path, params) {
+        const qs = _bsq(params || {});
+        const url = path + (qs ? '?' + qs : '');
+        return `<a href="${url}" target="_blank" rel="noopener" class="drill-link" title="View source data → ${path}">${label}<i class="fas fa-external-link-alt drill-ico"></i></a>`;
+    }
+
+    async function loadBS() {
+        const companyId = document.getElementById('companySelect').value;
+        const asOn = document.getElementById('asOnDate').value;
+        let url = `/api/v1/staff/accounts/consolidated/balance-sheet?company_id=${companyId}`;
+        if (asOn) url += `&as_on_date=${asOn}`;
+        if (currentPeriod) url += `&period=${currentPeriod}`;
+        document.getElementById('bsContent').innerHTML = '<div class="loader"><i class="fas fa-spinner fa-spin me-2"></i>Computing Balance Sheet…</div>';
+        try {
+            const r = await fetch(url);
+            const res = await r.json();
+            if (!res.success) throw new Error(res.detail || 'Load failed');
+            tabCache.bs.sig = getFilterSig();
+            tabCache.bs.data = res.data;
+            tabCache.bs.activeCoIdx = -1;
+            if (activeTab === 'bs') renderBS(res.data);
+        } catch(e) {
+            document.getElementById('bsContent').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle d-block mb-2" style="font-size:32px;"></i>${e.message}</div>`;
+        }
+    }
+
+    function renderBS(data) {
+        if (!data) return;
+        const asOn = data.as_on_date || '';
+        const periodBadge = data.period_label ? ` &nbsp;| <span class="as-on-badge" style="background:#f3e8ff;color:#7c3aed;">${data.period_label}</span>` : '';
+        document.getElementById('periodLabel').innerHTML = `As on <span class="as-on-badge">${asOn}</span> &nbsp;| FY Start: ${data.fy_start || ''}${periodBadge}`;
+
+        const co = data.consolidated || {};
+        document.getElementById('bs_sumAssets').textContent = fmt(co.assets?.total || 0);
+        document.getElementById('bs_sumLiab').textContent = fmt(co.liabilities?.total || 0);
+        document.getElementById('bs_sumStock').textContent = fmt(co.assets?.closing_stock || 0);
+        document.getElementById('bs_sumBank').textContent = fmt(co.assets?.bank_accounts || 0);
+
+        const companies = data.company_data || [];
+        const activeCoIdx = tabCache.bs.activeCoIdx;
+        const _cid = (activeCoIdx === -1) ? 0 : (companies[activeCoIdx]?.company_id || 0);
+        _bsDrillCtx = { cid: _cid, asOn: asOn };
+
+        const tabsEl = document.getElementById('bs_companyTabsContainer');
+        if (companies.length > 1) {
+            tabsEl.style.display = 'flex';
+            tabsEl.innerHTML =
+                `<button class="company-tab${activeCoIdx===-1?' active':''}" onclick="switchBSCompany(-1)">Consolidated</button>` +
+                companies.map((c, i) => `<button class="company-tab${activeCoIdx===i?' active':''}" onclick="switchBSCompany(${i})">${c.company_name}</button>`).join('');
+        } else {
+            tabsEl.style.display = 'none';
+        }
+
+        if (activeCoIdx === -1) renderConsolidatedBS(data);
+        else {
+            const co_data = companies[activeCoIdx] || companies[0];
+            if (co_data) renderCompanyBS(co_data);
+            else document.getElementById('bsContent').innerHTML = `<div class="empty-state">
+                <i class="fas fa-inbox d-block mb-2" style="font-size:32px;"></i>
+                No balance sheet data as on <strong>${data.as_on_date || 'today'}</strong>.
+            </div>`;
+        }
+    }
+
+    function switchBSCompany(idx) {
+        tabCache.bs.activeCoIdx = idx;
+        renderBS(tabCache.bs.data);
+    }
+
+    function renderConsolidatedBS(data) {
+        const co = data.consolidated;
+        const coData = data.company_data || [];
+        const totalAssets = co.assets?.total || 0;
+        const totalLiab = co.liabilities?.total || 0;
+        const diff = Math.abs(totalAssets - totalLiab);
+        const diffNote = diff > 0.01
+            ? `<div class="diff-note"><i class="fas fa-info-circle me-1"></i>Difference in balances: ${fmt(diff)} — Capital/Loans may need updating to balance.</div>` : '';
+        let plSummary = '';
+        coData.forEach(c => {
+            const pl = c.liabilities?.profit_and_loss || {};
+            plSummary += `<div class="bs-item sub">
+                <span class="lbl">↳ ${c.company_name}: ${pl.is_profit ? 'Profit' : 'Loss'}</span>
+                <span class="amt ${pl.is_profit?'cr':'dr'}">${fmt(Math.abs(pl.value||0))}</span>
+            </div>`;
+        });
+        const bankDetail = coData.flatMap(c => (c.assets?.bank_accounts?.detail||[]).map(b => ({...b, co: c.company_name})));
+        document.getElementById('bsContent').innerHTML = buildBSHtml({
+            liabilities: {
+                capital_account: co.liabilities?.capital_account || 0,
+                loans: co.liabilities?.loans || 0,
+                pl_value: coData.reduce((s,c)=>s+(c.liabilities?.profit_and_loss?.value||0),0),
+                pl_sub: plSummary,
+                sundry_creditors: co.liabilities?.sundry_creditors || 0,
+                duties_and_taxes: co.liabilities?.duties_and_taxes || 0,
+                total: totalLiab,
+            },
+            assets: {
+                closing_stock: co.assets?.closing_stock || 0,
+                sundry_debtors: co.assets?.sundry_debtors || 0,
+                cash_in_hand: co.assets?.cash_in_hand || 0,
+                bank_total: co.assets?.bank_accounts || 0,
+                bank_detail: bankDetail,
+                total: totalAssets,
+            },
+            diffNote, company_name: 'Consolidated',
+        });
+    }
+
+    function renderCompanyBS(co_data) {
+        const liab = co_data.liabilities || {};
+        const assets = co_data.assets || {};
+        const pl = liab.profit_and_loss || {};
+        const totalAssets = assets.total || 0;
+        const totalLiab = liab.total || 0;
+        const diff = Math.abs(totalAssets - totalLiab);
+        const diffNote = diff > 0.01 ? `<div class="diff-note"><i class="fas fa-info-circle me-1"></i>Difference in balances: ${fmt(diff)}</div>` : '';
+        document.getElementById('bsContent').innerHTML = buildBSHtml({
+            liabilities: {
+                capital_account: liab.capital_account || 0,
+                loans: liab.loans || 0,
+                pl_value: pl.value || 0,
+                pl_sub: `<div class="bs-item sub">
+                    <span class="lbl">↳ Revenue: ${fmt(pl.fy_revenue||0)} | Expenses: ${fmt(pl.fy_expense||0)}</span>
+                    <span class="amt"></span>
+                </div>`,
+                sundry_creditors: liab.sundry_creditors || 0,
+                duties_and_taxes: liab.duties_and_taxes || 0,
+                total: totalLiab,
+            },
+            assets: {
+                closing_stock: assets.closing_stock || 0,
+                sundry_debtors: assets.sundry_debtors || 0,
+                cash_in_hand: assets.cash_in_hand || 0,
+                bank_total: assets.bank_accounts?.total || 0,
+                bank_detail: assets.bank_accounts?.detail || [],
+                total: totalAssets,
+            },
+            diffNote, company_name: co_data.company_name,
+        });
+    }
+
+    function buildBSHtml(d) {
+        const liab = d.liabilities; const assets = d.assets;
+        const plIsProfit = (liab.pl_value || 0) >= 0;
+        const bankDetailHtml = (assets.bank_detail || []).map(b =>
+            `<div class="bs-item sub"><span class="lbl">↳ ${b.name}${b.co?' ('+b.co+')':''}</span><span class="amt">${fmt(b.balance)}</span></div>`
+        ).join('');
+        // BS → P&L drill: switch tab in-place, carrying the active BS company sub-tab into the shared Company filter
+        const plDrillCid = _bsDrillCtx.cid || 0;
+        const plDrill = `<a href="javascript:void(0)" onclick="drillToPL(${plDrillCid})" class="drill-link">Profit &amp; Loss A/c<i class="fas fa-external-link-alt drill-ico"></i></a>`;
+        return `${d.diffNote || ''}
+        <div style="font-weight:700;font-size:13px;color:#374151;margin-bottom:8px;padding:0 2px;">
+            Balance Sheet — ${d.company_name}
+        </div>
+        <div class="bs-container">
+            <div class="bs-card">
+                <div class="bs-card-hdr liab">Liabilities</div>
+                <div class="bs-item highlight"><span class="lbl">${_bsDrill('Capital Account', '/staff/accounts/capital')}</span><span class="amt">${fmt(liab.capital_account)}</span></div>
+                <div class="bs-item highlight"><span class="lbl">${_bsDrill('Loans (Liability)', '/staff/accounts/general-ledger', {account_type:'LOAN'})}</span><span class="amt">${fmt(liab.loans)}</span></div>
+                <div class="bs-item ${plIsProfit?'profit-row':'loss-row'}">
+                    <span class="lbl">${plDrill}<br><small style="font-weight:400;">${plIsProfit?'Current Period Profit':'Current Period Loss'}</small></span>
+                    <span class="amt ${plIsProfit?'cr':'dr'}">${fmt(Math.abs(liab.pl_value||0))}</span>
+                </div>
+                ${liab.pl_sub||''}
+                <div class="section-divider">Current Liabilities</div>
+                <div class="bs-item highlight"><span class="lbl">${_bsDrill('Sundry Creditors', '/staff/accounts/payables')}</span><span class="amt">${fmt(liab.sundry_creditors)}</span></div>
+                <div class="bs-item highlight"><span class="lbl">${_bsDrill('Duties & Taxes (GST)', '/staff/accounts/duties-taxes')}</span><span class="amt">${fmt(liab.duties_and_taxes)}</span></div>
+                <div class="bs-item total-row"><span class="lbl">Total</span><span class="amt">${fmt(liab.total)}</span></div>
+            </div>
+            <div class="bs-card">
+                <div class="bs-card-hdr asset">Assets</div>
+                <div class="section-divider">Current Assets</div>
+                <div class="bs-item highlight"><span class="lbl">${_bsDrill('Closing Stock', '/staff/accounts/stock-items')}</span><span class="amt cr">${fmt(assets.closing_stock)}</span></div>
+                <div class="bs-item highlight"><span class="lbl">${_bsDrill('Sundry Debtors', '/staff/accounts/receivables')}</span><span class="amt cr">${fmt(assets.sundry_debtors)}</span></div>
+                <div class="bs-item highlight"><span class="lbl">${_bsDrill('Cash-in-Hand', '/staff/accounts/cash-in-hand')}</span><span class="amt cr">${fmt(assets.cash_in_hand)}</span></div>
+                <div class="bs-item highlight"><span class="lbl">${_bsDrill('Bank Accounts', '/staff/accounts/general-ledger', {account_type:'BANK'})}</span><span class="amt cr">${fmt(assets.bank_total)}</span></div>
+                ${bankDetailHtml}
+                <div class="bs-item total-row"><span class="lbl">Total</span><span class="amt">${fmt(assets.total)}</span></div>
+            </div>
+        </div>`;
+    }
+
+    /* ============================================================ */
+    /* PROFIT & LOSS                                                 */
+    /* ============================================================ */
+
+    let _plDrillCtx = { cid: 0, df: '', dt: '' };
+    function _plq(extraParams) {
+        const p = new URLSearchParams();
+        if (_plDrillCtx.cid) p.set('company_id', _plDrillCtx.cid);
+        if (extraParams) Object.entries(extraParams).forEach(([k,v]) => { if (v != null && v !== '') p.set(k,v); });
+        return p.toString();
+    }
+    function _plDrill(label, path, params) {
+        const qs = _plq(params || {});
+        const url = path + (qs ? '?' + qs : '');
+        return `<a href="${url}" target="_blank" rel="noopener" class="drill-link" title="View source data → ${path}">${label}<i class="fas fa-external-link-alt drill-ico"></i></a>`;
+    }
+    const _PL_DATE_RANGE = () => ({ from_date: _plDrillCtx.df, to_date: _plDrillCtx.dt });
+    const _PL_DATE_RANGE_ALT = () => ({ date_from: _plDrillCtx.df, date_to: _plDrillCtx.dt });
+
+    async function loadPL() {
+        const companyId = document.getElementById('companySelect').value;
+        let url = `/api/v1/staff/accounts/consolidated/pl?company_id=${companyId}&period=${currentPeriod}`;
+        if (currentPeriod === 'CUSTOM') {
+            const df = document.getElementById('dateFrom').value;
+            const dt = document.getElementById('dateTo').value;
+            if (df) url += `&date_from=${df}`;
+            if (dt) url += `&date_to=${dt}`;
+        }
+        const aod = document.getElementById('asOnDate')?.value;
+        if (aod) url += `&as_on_date=${aod}`;
+        document.getElementById('plContent').innerHTML = '<div class="loader"><i class="fas fa-spinner fa-spin me-2"></i>Computing P&L…</div>';
+        try {
+            const r = await fetch(url);
+            const res = await r.json();
+            if (!res.success) throw new Error(res.detail || 'Load failed');
+            tabCache.pl.sig = getFilterSig();
+            tabCache.pl.data = res.data;
+            tabCache.pl.activeCoIdx = -1;
+            if (activeTab === 'pl') renderPL(res.data);
+        } catch(e) {
+            document.getElementById('plContent').innerHTML = `<div class="empty-state"><i class="fas fa-exclamation-triangle d-block mb-2" style="font-size:32px;"></i>${e.message}</div>`;
+        }
+    }
+
+    function renderPL(data) {
+        if (!data) return;
+        if (activeTab === 'pl') document.getElementById('periodLabel').textContent = data.period_label || '';
+        const cs = data.consolidated_summary || {};
+        const companies = data.company_data || [];
+        const activeCoIdx = tabCache.pl.activeCoIdx;
+        const _cid = (activeCoIdx === -1) ? 0 : (companies[activeCoIdx]?.company_id || 0);
+        _plDrillCtx = { cid: _cid, df: data.date_from || '', dt: data.date_to || '' };
+
+        const noActivity = (companies.length === 0) || (
+            (cs.total_revenue || 0) === 0 && (cs.total_purchases || 0) === 0 &&
+            (cs.direct_expenses || 0) === 0 && (cs.indirect_expenses || 0) === 0
+        );
+        if (noActivity && !tabCache.pl.autoFallback && currentPeriod === 'THIS_FY') {
+            tabCache.pl.autoFallback = true;
+            console.log('[CONSOLIDATED-PL] THIS_FY empty — auto-switching to OVERALL');
+            setPeriodProgrammatic('OVERALL');
+            return;
+        }
+
+        document.getElementById('pl_sumRevenue').textContent = fmt(cs.total_revenue || 0);
+        document.getElementById('pl_sumPurchases').textContent = fmt(cs.total_purchases || 0);
+        document.getElementById('pl_sumExpenses').textContent = fmt((cs.direct_expenses||0) + (cs.indirect_expenses||0));
+        const np = cs.net_profit || 0;
+        document.getElementById('pl_sumNet').textContent = fmt(Math.abs(np));
+        document.getElementById('pl_netLbl').textContent = np >= 0 ? 'Net Profit' : 'Net Loss';
+        document.getElementById('pl_netCard').className = 'card-stat ' + (np >= 0 ? 'green' : 'red');
+
+        const tabsEl = document.getElementById('pl_companyTabsContainer');
+        if (companies.length > 1) {
+            tabsEl.style.display = 'flex';
+            tabsEl.innerHTML = `<button class="company-tab${activeCoIdx===-1?' active':''}" onclick="switchPLCompany(-1)">Consolidated</button>` +
+                companies.map((c, i) => `<button class="company-tab${activeCoIdx===i?' active':''}" onclick="switchPLCompany(${i})">${c.company_name}</button>`).join('');
+        } else {
+            tabsEl.style.display = 'none';
+        }
+        if (activeCoIdx === -1) renderConsolidatedPL(data);
+        else {
+            const co = companies[activeCoIdx] || companies[0];
+            if (co) renderCompanyPL(co);
+            else document.getElementById('plContent').innerHTML = `<div class="empty-state">
+                <i class="fas fa-inbox d-block mb-2" style="font-size:32px;"></i>
+                No P&amp;L activity for <strong>${data.period_label || 'this period'}</strong>.<br>
+                <button class="btn-load mt-3" onclick="setPeriodProgrammatic('OVERALL')"><i class="fas fa-history me-1"></i>Show All History</button>
+            </div>`;
+        }
+    }
+
+    function switchPLCompany(idx) {
+        tabCache.pl.activeCoIdx = idx;
+        renderPL(tabCache.pl.data);
+    }
+
+    function renderConsolidatedPL(data) {
+        const cs = data.consolidated_summary || {};
+        const tradingDebit = (cs.opening_stock||0) + (cs.total_purchases||0) + (cs.direct_expenses||0);
+        const tradingCredit = (cs.total_revenue||0) + (cs.closing_stock||0);
+        const gp = tradingCredit - tradingDebit;
+        const gp_pos = Math.max(gp, 0); const gl_pos = Math.max(-gp, 0);
+        const plDebit = cs.indirect_expenses || 0;
+        const plCredit = gp_pos;
+        const np = plCredit - plDebit;
+        const np_pos = Math.max(np, 0); const nl_pos = Math.max(-np, 0);
+        const trad_tot = tradingDebit + gp_pos;
+        const pl_tot = plDebit + np_pos;
+        document.getElementById('plContent').innerHTML = buildPLHtml({
+            trading: {
+                debit: { opening_stock: cs.opening_stock||0, purchases: cs.total_purchases||0, direct_expenses: cs.direct_expenses||0, direct_breakdown: [], gross_profit_co: gp_pos, total: trad_tot },
+                credit: { sales: cs.total_revenue||0, sales_invoices: 0, income_entries: 0, closing_stock: cs.closing_stock||0, gross_loss_co: gl_pos, total: trad_tot },
+            },
+            pl: {
+                debit: { indirect_expenses: plDebit, indirect_breakdown: [], net_profit: np_pos, total: pl_tot },
+                credit: { gross_profit_bf: gp_pos, net_loss: nl_pos, total: pl_tot },
+            },
+            company_name: 'All Companies',
+        });
+    }
+    function renderCompanyPL(co) { document.getElementById('plContent').innerHTML = buildPLHtml(co); }
+
+    function buildPLHtml(co) {
+        const t = co.trading; const p = co.pl;
+        const td = t.debit; const tc = t.credit; const pd = p.debit; const pc = p.credit;
+        const gp = td.gross_profit_co || 0; const gl = tc.gross_loss_co || 0;
+        const np = pd.net_profit || 0; const nl = pc.net_loss || 0;
+        let directBreakdownHtml = '';
+        if (td.direct_breakdown && td.direct_breakdown.length) {
+            directBreakdownHtml = `<div class="breakdown-list">` +
+                td.direct_breakdown.map(b => `<div><span>${b.name}</span><span>${fmt(b.amount)}</span></div>`).join('') + `</div>`;
+        }
+        let indirectBreakdownHtml = '';
+        if (pd.indirect_breakdown && pd.indirect_breakdown.length) {
+            indirectBreakdownHtml = `<div class="breakdown-list">` +
+                pd.indirect_breakdown.map(b => `<div><span>${b.name}</span><span>${fmt(b.amount)}</span></div>`).join('') + `</div>`;
+        }
+        return `
+        <div style="font-weight:700;font-size:13px;color:#374151;margin-bottom:8px;padding:0 2px;">Trading Account — ${co.company_name || ''}</div>
+        <div class="pl-container">
+            <div class="pl-card">
+                <div class="pl-card-hdr debit">Dr (Debit Side)</div>
+                <div class="pl-item highlight"><span class="lbl">${_plDrill('Opening Stock', '/staff/accounts/stock-items')}</span><span class="amt dr">${fmt(td.opening_stock)}</span></div>
+                <div class="pl-item highlight"><span class="lbl">${_plDrill('Purchase Accounts', '/staff/accounts/purchase-invoices', _PL_DATE_RANGE())}</span><span class="amt dr">${fmt(td.purchases)}</span></div>
+                <div class="pl-item highlight"><span class="lbl">${_plDrill('Direct Expenses', '/staff/accounts/expense-entries', _PL_DATE_RANGE())}</span><span class="amt dr">${fmt(td.direct_expenses)}</span></div>
+                ${directBreakdownHtml}
+                ${gp > 0 ? `<div class="pl-item profit-row"><span class="lbl">Gross Profit c/o</span><span class="amt cr">${fmt(gp)}</span></div>` : ''}
+                <div class="pl-item total-row"><span class="lbl">Total</span><span class="amt">${fmt(td.total)}</span></div>
+            </div>
+            <div class="pl-card">
+                <div class="pl-card-hdr credit">Cr (Credit Side)</div>
+                <div class="pl-item highlight"><span class="lbl">${_plDrill('Sales Accounts', '/staff/accounts/sales-invoices', _PL_DATE_RANGE())}</span><span class="amt cr">${fmt(tc.sales)}</span></div>
+                <div class="pl-item sub"><span class="lbl">↳ ${_plDrill('Sales Invoices', '/staff/accounts/sales-invoices', _PL_DATE_RANGE())}</span><span class="amt">${fmt(tc.sales_invoices||0)}</span></div>
+                <div class="pl-item sub"><span class="lbl">↳ ${_plDrill('Income Entries', '/staff/accounts/income-entries', _PL_DATE_RANGE_ALT())}</span><span class="amt">${fmt(tc.income_entries||0)}</span></div>
+                <div class="pl-item highlight"><span class="lbl">${_plDrill('Closing Stock', '/staff/accounts/stock-items')}</span><span class="amt cr">${fmt(tc.closing_stock)}</span></div>
+                ${gl > 0 ? `<div class="pl-item loss-row"><span class="lbl">Gross Loss c/o</span><span class="amt dr">${fmt(gl)}</span></div>` : ''}
+                <div class="pl-item total-row"><span class="lbl">Total</span><span class="amt">${fmt(tc.total)}</span></div>
+            </div>
+        </div>
+        <div style="font-weight:700;font-size:13px;color:#374151;margin:16px 0 8px;padding:0 2px;">Profit & Loss Account — ${co.company_name || ''}</div>
+        <div class="pl-container">
+            <div class="pl-card">
+                <div class="pl-card-hdr debit">Dr (Debit Side)</div>
+                <div class="pl-item highlight"><span class="lbl">${_plDrill('Indirect Expenses', '/staff/accounts/expense-entries', _PL_DATE_RANGE())}</span><span class="amt dr">${fmt(pd.indirect_expenses)}</span></div>
+                ${indirectBreakdownHtml}
+                ${np > 0 ? `<div class="pl-item profit-row"><span class="lbl">Net Profit</span><span class="amt cr">${fmt(np)}</span></div>` : ''}
+                <div class="pl-item total-row"><span class="lbl">Total</span><span class="amt">${fmt(pd.total)}</span></div>
+            </div>
+            <div class="pl-card">
+                <div class="pl-card-hdr credit">Cr (Credit Side)</div>
+                <div class="pl-item highlight"><span class="lbl">Gross Profit b/f</span><span class="amt cr">${fmt(pc.gross_profit_bf)}</span></div>
+                ${nl > 0 ? `<div class="pl-item loss-row"><span class="lbl">Net Loss</span><span class="amt dr">${fmt(nl)}</span></div>` : ''}
+                <div class="pl-item total-row"><span class="lbl">Total</span><span class="amt">${fmt(pc.total)}</span></div>
+            </div>
+        </div>`;
+    }
+
+    /* ============================================================ */
+    /* SALES                                                         */
+    /* ============================================================ */
+
+    async function loadSales(drillMonth = null) {
+        const companyId = document.getElementById('companySelect').value;
+        let url = `/api/v1/staff/accounts/consolidated/sales?company_id=${companyId}&period=${currentPeriod}`;
+        if (currentPeriod === 'CUSTOM') {
+            const df = document.getElementById('dateFrom').value;
+            const dt = document.getElementById('dateTo').value;
+            if (df) url += `&date_from=${df}`;
+            if (dt) url += `&date_to=${dt}`;
+        }
+        if (drillMonth) url += `&drill_month=${drillMonth}`;
+        document.getElementById('salesTableBody').innerHTML = '<tr><td colspan="6" class="loader"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+        try {
+            const r = await fetch(url);
+            const res = await r.json();
+            if (!res.success) throw new Error(res.detail || 'Load failed');
+            tabCache.sales.sig = getFilterSig();
+            tabCache.sales.data = res.data;
+            if (activeTab === 'sales') renderSalesTable(res.data);
+        } catch(e) {
+            document.getElementById('salesTableBody').innerHTML = `<tr><td colspan="6" class="empty-state"><i class="fas fa-exclamation-triangle"></i><br>${e.message}</td></tr>`;
+        }
+    }
+
+    function renderSalesTable(data) {
+        if (!data) return;
+        if (activeTab === 'sales') document.getElementById('periodLabel').textContent = data.period_label || '';
+        document.getElementById('sales_sumTotal').textContent = fmt(data.summary?.total_credit || 0);
+        document.getElementById('sales_sumBalance').textContent = fmt(data.summary?.closing_balance || 0);
+        document.getElementById('sales_sumCount').textContent = (data.summary?.invoice_count || 0).toLocaleString();
+        const rows = data.monthly_rows || [];
+        document.getElementById('sales_rowCount').textContent = rows.length + ' months';
+
+        if (!rows.length) {
+            if (!tabCache.sales.autoFallback && currentPeriod === 'THIS_FY') {
+                tabCache.sales.autoFallback = true;
+                setPeriodProgrammatic('OVERALL');
+                return;
+            }
+            document.getElementById('salesTableBody').innerHTML = `<tr><td colspan="6" class="empty-state">
+                <i class="fas fa-inbox d-block mb-2" style="font-size:32px;"></i>
+                No sales data for <strong>${data.period_label || 'this period'}</strong>.<br>
+                <button class="btn-load mt-3" onclick="setPeriodProgrammatic('OVERALL')"><i class="fas fa-history me-1"></i>Show All History</button>
+            </td></tr>`;
+            return;
+        }
+        const expanded = tabCache.sales.expanded;
+        let html = '';
+        rows.forEach(row => {
+            const isExp = expanded.has(row.month);
+            html += `<tr class="month-row${isExp?' expanded':''}" onclick="toggleSalesMonth('${row.month}')">
+                <td><span class="expand-icon">▶</span></td>
+                <td><strong>${row.month_label}</strong></td>
+                <td style="text-align:right;" class="amt">—</td>
+                <td style="text-align:right;" class="amt amt-credit">${fmt(row.credit)}</td>
+                <td style="text-align:right;" class="amt">${fmt(row.closing_balance)}</td>
+                <td style="text-align:right;">${row.count}</td>
+            </tr>`;
+            if (isExp && row.company_breakdown && row.company_breakdown.length > 0) {
+                html += `<tr class="drill-header"><td colspan="6">&nbsp;&nbsp;Company Breakdown — ${row.month_label}</td></tr>`;
+                row.company_breakdown.forEach(co => {
+                    html += `<tr class="company-row">
+                        <td></td>
+                        <td>&nbsp;&nbsp;&nbsp;<i class="fas fa-building me-1" style="color:#6b7280;"></i>${co.company_name}</td>
+                        <td style="text-align:right;" class="amt">—</td>
+                        <td style="text-align:right;" class="amt amt-credit">${fmt(co.total)}</td>
+                        <td style="text-align:right; font-size:11px; color:#6b7280;">Invoices: ${fmt(co.sales_invoice_total)}</td>
+                        <td style="text-align:right;">${co.count}</td>
+                    </tr>`;
+                });
+                html += `<tr><td colspan="6" style="padding:4px 14px; background:#f0f7ff;">
+                    <a class="sales-drill-link" href="#" onclick="loadSalesDrillDown('${row.month}');return false;">
+                        <i class="fas fa-list me-1"></i>View individual transactions for ${row.month_label} →
+                    </a>
+                </td></tr>`;
+            }
+        });
+        const grandTotal = data.summary?.total_credit || 0;
+        const grandBalance = data.summary?.closing_balance || 0;
+        html += `<tr class="grand-total">
+            <td></td><td>Grand Total</td>
+            <td style="text-align:right;" class="amt">—</td>
+            <td style="text-align:right;" class="amt">${fmt(grandTotal)}</td>
+            <td style="text-align:right;" class="amt">${fmt(grandBalance)}</td>
+            <td style="text-align:right;">${data.summary?.invoice_count || 0}</td>
+        </tr>`;
+        document.getElementById('salesTableBody').innerHTML = html;
+        if (data.drill_rows !== null && data.drill_rows !== undefined) renderSalesDrillDown(data.drill_rows);
+    }
+    function toggleSalesMonth(month) {
+        const exp = tabCache.sales.expanded;
+        if (exp.has(month)) exp.delete(month); else exp.add(month);
+        if (tabCache.sales.data) renderSalesTable(tabCache.sales.data);
+    }
+    async function loadSalesDrillDown(month) {
+        tabCache.sales.expanded.add(month);
+        await loadSales(month);
+    }
+    function renderSalesDrillDown(rows) {
+        if (!rows || !rows.length) return;
+        const tbody = document.getElementById('salesTableBody');
+        let html = tbody.innerHTML;
+        html += `<tr class="drill-header"><td colspan="6"><i class="fas fa-list me-1"></i>Transaction Detail (${rows.length} records)</td></tr>`;
+        rows.forEach(r => {
+            const srcBadge = r.source === 'Invoice'
+                ? `<span class="badge-pill badge-confirmed">${r.source}</span>`
+                : `<span class="badge-pill badge-entry">${r.source}</span>`;
+            html += `<tr class="drill-row">
+                <td></td>
+                <td>${srcBadge}<a href="${r.drill_link}" class="sales-drill-link ms-2">${r.number || '—'}</a><br>
+                    <small style="color:#6b7280;">${r.party_name || ''} · ${r.company_name}</small></td>
+                <td style="text-align:right; color:#6b7280;">${r.date || ''}</td>
+                <td style="text-align:right;" class="amt amt-credit">${fmt(r.amount)}</td>
+                <td style="text-align:right; font-size:11px; color:#6b7280;">Tax: ${fmt(r.tax)}</td>
+                <td style="text-align:center;">
+                    <span class="badge-pill ${r.status==='CONFIRMED'||r.status==='APPROVED'?'badge-confirmed':r.status==='CANCELLED'?'badge-cancelled':'badge-draft'}">${r.status}</span>
+                </td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    /* ============================================================ */
+    /* PURCHASES                                                     */
+    /* ============================================================ */
+
+    async function loadPurchases(drillMonth = null) {
+        const companyId = document.getElementById('companySelect').value;
+        let url = `/api/v1/staff/accounts/consolidated/purchases?company_id=${companyId}&period=${currentPeriod}`;
+        if (currentPeriod === 'CUSTOM') {
+            const df = document.getElementById('dateFrom').value;
+            const dt = document.getElementById('dateTo').value;
+            if (df) url += `&date_from=${df}`;
+            if (dt) url += `&date_to=${dt}`;
+        }
+        if (drillMonth) url += `&drill_month=${drillMonth}`;
+        document.getElementById('purchasesTableBody').innerHTML = '<tr><td colspan="6" class="loader"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+        try {
+            const r = await fetch(url);
+            const res = await r.json();
+            if (!res.success) throw new Error(res.detail || 'Load failed');
+            tabCache.purchases.sig = getFilterSig();
+            tabCache.purchases.data = res.data;
+            if (activeTab === 'purchases') renderPurchasesTable(res.data);
+        } catch(e) {
+            document.getElementById('purchasesTableBody').innerHTML = `<tr><td colspan="6" class="empty-state"><i class="fas fa-exclamation-triangle"></i><br>${e.message}</td></tr>`;
+        }
+    }
+
+    function renderPurchasesTable(data) {
+        if (!data) return;
+        if (activeTab === 'purchases') document.getElementById('periodLabel').textContent = data.period_label || '';
+        document.getElementById('pur_sumTotal').textContent = fmt(data.summary?.total_debit || 0);
+        document.getElementById('pur_sumBalance').textContent = fmt(data.summary?.closing_balance || 0);
+        document.getElementById('pur_sumCount').textContent = (data.summary?.count || 0).toLocaleString();
+        const rows = data.monthly_rows || [];
+        document.getElementById('pur_rowCount').textContent = rows.length + ' months';
+
+        if (!rows.length) {
+            if (!tabCache.purchases.autoFallback && currentPeriod === 'THIS_FY') {
+                tabCache.purchases.autoFallback = true;
+                setPeriodProgrammatic('OVERALL');
+                return;
+            }
+            document.getElementById('purchasesTableBody').innerHTML = `<tr><td colspan="6" class="empty-state">
+                <i class="fas fa-inbox d-block mb-2" style="font-size:32px;"></i>
+                No purchase data for <strong>${data.period_label || 'this period'}</strong>.<br>
+                <button class="btn-load mt-3" onclick="setPeriodProgrammatic('OVERALL')"><i class="fas fa-history me-1"></i>Show All History</button>
+            </td></tr>`;
+            return;
+        }
+        const expanded = tabCache.purchases.expanded;
+        let html = '';
+        rows.forEach(row => {
+            const isExp = expanded.has(row.month);
+            html += `<tr class="month-row${isExp?' expanded':''}" onclick="togglePurMonth('${row.month}')">
+                <td><span class="expand-icon">▶</span></td>
+                <td><strong>${row.month_label}</strong></td>
+                <td style="text-align:right;" class="amt amt-debit">${fmt(row.debit)}</td>
+                <td style="text-align:right;" class="amt">—</td>
+                <td style="text-align:right;" class="amt">${fmt(row.closing_balance)}</td>
+                <td style="text-align:right;">${row.count}</td>
+            </tr>`;
+            if (isExp && row.company_breakdown && row.company_breakdown.length > 0) {
+                html += `<tr class="drill-header"><td colspan="6">&nbsp;&nbsp;Company Breakdown — ${row.month_label}</td></tr>`;
+                row.company_breakdown.forEach(co => {
+                    html += `<tr class="company-row">
+                        <td></td>
+                        <td>&nbsp;&nbsp;&nbsp;<i class="fas fa-building me-1" style="color:#6b7280;"></i>${co.company_name}</td>
+                        <td style="text-align:right;" class="amt amt-debit">${fmt(co.total)}</td>
+                        <td style="text-align:right;">—</td>
+                        <td style="text-align:right; font-size:11px; color:#6b7280;">PI: ${fmt(co.purchase_invoice_total)} | Exp: ${fmt(co.direct_expense_total)} | CT: ${fmt(co.transport_courier_total)}</td>
+                        <td style="text-align:right;">${co.count}</td>
+                    </tr>`;
+                });
+                html += `<tr><td colspan="6" style="padding:4px 14px; background:#fef9c3;">
+                    <a class="pur-drill-link" href="#" onclick="loadPurchasesDrillDown('${row.month}');return false;">
+                        <i class="fas fa-list me-1"></i>View individual transactions for ${row.month_label} →
+                    </a>
+                </td></tr>`;
+            }
+        });
+        html += `<tr class="grand-total">
+            <td></td><td>Grand Total</td>
+            <td style="text-align:right;" class="amt">${fmt(data.summary?.total_debit || 0)}</td>
+            <td style="text-align:right;" class="amt">—</td>
+            <td style="text-align:right;" class="amt">${fmt(data.summary?.closing_balance || 0)}</td>
+            <td style="text-align:right;">${data.summary?.count || 0}</td>
+        </tr>`;
+        document.getElementById('purchasesTableBody').innerHTML = html;
+        if (data.drill_rows !== null && data.drill_rows !== undefined) renderPurchasesDrillDown(data.drill_rows);
+    }
+    function togglePurMonth(month) {
+        const exp = tabCache.purchases.expanded;
+        if (exp.has(month)) exp.delete(month); else exp.add(month);
+        if (tabCache.purchases.data) renderPurchasesTable(tabCache.purchases.data);
+    }
+    async function loadPurchasesDrillDown(month) {
+        tabCache.purchases.expanded.add(month);
+        await loadPurchases(month);
+    }
+    function renderPurchasesDrillDown(rows) {
+        if (!rows || !rows.length) return;
+        const tbody = document.getElementById('purchasesTableBody');
+        let html = tbody.innerHTML;
+        html += `<tr class="drill-header"><td colspan="6"><i class="fas fa-list me-1"></i>Transaction Detail (${rows.length} records)</td></tr>`;
+        rows.forEach(r => {
+            const srcBadge = r.source.startsWith('Purchase')
+                ? `<span class="badge-pill badge-confirmed">${r.source}</span>`
+                : `<span class="badge-pill badge-expense">${r.source}</span>`;
+            html += `<tr class="drill-row">
+                <td></td>
+                <td>${srcBadge}<a href="${r.drill_link}" class="pur-drill-link ms-2">${r.number || '—'}</a><br>
+                    <small style="color:#6b7280;">${r.party_name || ''} · ${r.company_name}</small></td>
+                <td style="text-align:right; color:#6b7280;">${r.date || ''}</td>
+                <td style="text-align:right;" class="amt amt-debit">${fmt(r.amount)}</td>
+                <td></td>
+                <td style="text-align:center;">
+                    <span class="badge-pill ${r.status==='CONFIRMED'||r.status==='APPROVED'?'badge-confirmed':'badge-pending'}">${r.status}</span>
+                </td>
+            </tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    document.addEventListener('DOMContentLoaded', initPage);
+</script>
+<script src="/staff_sidebar.js?v=20260602c"></script>
+<script src="/staff_header.js"></script>
+</body>
+</html>
